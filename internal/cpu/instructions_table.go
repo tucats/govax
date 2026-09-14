@@ -95,9 +95,9 @@ var instructionTable = newTable([]*Instruction{
 	{
 		Name:         "CRC",
 		Opcode:       Opcode{Extended: 0x00, Function: 0x0B},
-		OperandCount: 0,
-		Scale:        [6]int{0, 0, 0, 0, 0, 0},
-		Access:       [6]AccessKind{AccessNone, AccessNone, AccessNone, AccessNone, AccessNone, AccessNone},
+		OperandCount: 4,
+		Scale:        [6]int{1, 4, 2, 1, 0, 0},
+		Access:       [6]AccessKind{AccessAddress, AccessRead, AccessRead, AccessAddress, AccessNone, AccessNone},
 		Type:         ShortLiteralInt,
 	},
 	{

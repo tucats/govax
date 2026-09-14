@@ -127,6 +127,16 @@ var knownTableFixes = map[string]field{
 		scale: [6]int{8, 0, 0, 0, 0, 0}, typ: "OP_TYPE_FLOAT", count: 1,
 		access: [6]string{"OP_RD", "OP_NL", "OP_NL", "OP_NL", "OP_NL", "OP_NL"},
 	},
+	// CRC's C header entry has all-zero operand count/scale/access, matching
+	// emul_crc.c's own empty-stub implementation (see docs/PHASE-06.md's
+	// design notes and docs/DEVIATIONS.md) -- there was never a working
+	// operand shape to preserve. Scale/access below is transcribed directly
+	// from vax_instr_set.pdf's CRC format line: `tbl.ab, inicrc.rl,
+	// strlen.rw, stream.ab`.
+	"CRC": {
+		scale: [6]int{1, 4, 2, 1, 0, 0}, typ: "OP_TYPE_INT", count: 4,
+		access: [6]string{"OP_AD", "OP_RD", "OP_RD", "OP_AD", "OP_NL", "OP_NL"},
+	},
 }
 
 // applyKnownFixes patches fields in place per knownTableFixes, preserving

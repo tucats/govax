@@ -148,3 +148,30 @@ self-contained, well-testable group.
   start path and its two zero-length Notes.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean.
+
+### 2026-09-14 — Sub-phase 6: CRC
+
+- Patched CRC's generated instruction-table row via `internal/cpu/gen`'s
+  `knownTableFixes` (same mechanism Phase 05 used for its D-floating table gaps):
+  the C header's row is all-zero operand count/scale/access, matching
+  `emul_crc.c`'s own empty no-op stub — nothing to preserve, so the row now
+  reflects `vax_instr_set.pdf`'s actual CRC format (`tbl.ab, inicrc.rl, strlen.rw,
+  stream.ab`) instead.
+- Added `internal/cpu/crc.go`, implementing CRC from the manual rather than
+  porting C (per the earlier answered design question, see this doc's Open
+  questions / notes). Uses the nibble-at-a-time table-driven form the manual's
+  Note 6 documents as equivalent to the bit-at-a-time algorithm its main
+  description spells out, using all 16 of the table operand's entries.
+- Verified the algorithm against real, independent CRC data before trusting it in
+  Go: built the manual's own `LIB$CRC_TABLE` generation routine and both the
+  bit-at-a-time and nibble-table forms as standalone Python, confirmed they agree
+  with each other, and confirmed both reproduce the well-known CRC-16/ARC test
+  vector (CRC of the ASCII string "123456789" is `0xBB3D`) using the manual's own
+  CRC-16 polynomial from its Note 5 (octal `120001` == `0xA001`) — not just derived
+  from the prose description.
+- `internal/cpu/crc_test.go` checks against that same CRC-16/ARC test vector (table
+  values computed the same way, not hand-typed from memory — an initial hand-typed
+  table was in fact wrong and caught by the test failing) and the zero-length
+  "returns the initial CRC unchanged" case (Note 7).
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean.
