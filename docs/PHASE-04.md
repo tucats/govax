@@ -428,3 +428,15 @@ opcode table slots they occupy stay on `unimplementedHandler` until then.
   SOBGTR/SOBGEQ's zero-boundary distinction, and the shared overflow/carry-unaffected
   fix reusing the same `INT32_MAX` case as sub-phase 5's INC test.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
+
+### 2026-09-14 — Sub-phase 13: integration smoke test
+
+- Added `internal/cpu/smoke_test.go`: `TestSmokeSumLoop`, a hand-encoded 12-byte VAX
+  program (no assembler yet — Phase 11) run through `Engine.Run` rather than
+  individual `Step` calls or direct handler invocation the way the rest of this
+  phase's tests do — `CLRL R0; MOVL S^#5,R1; LOOP: ADDL2 R1,R0; SOBGTR R1,LOOP; HALT`,
+  summing 5 down to 1 into R0 via a real SOBGTR-driven loop. Exercises data movement
+  (CLR, MOV with a short-literal immediate), integer arithmetic (ADD), loop control
+  (SOBGTR), and HALT together, matching this phase's stated deliverable. Verifies the
+  final sum (15), the loop counter reaching exactly 0, and PC landing right after HALT.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
