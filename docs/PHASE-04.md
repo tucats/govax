@@ -255,3 +255,42 @@ opcode table slots they occupy stay on `unimplementedHandler` until then.
   reproducing the `INT32_MAX`/`INT32_MIN` boundary the C source's truncation trick
   can't detect, and a word test confirming upper-byte preservation.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
+
+### 2026-09-14 — Sub-phase 6: integer arithmetic/logical + XOR
+
+- Added `internal/cpu/integermath.go`: `emulAdd`/`emulSub`/`emulMul`/`emulDiv`/
+  `emulBis`/`emulBic`/`emulXor`/`emulAdwc`/`emulSbwc`, one handler per operation
+  (registered across each opcode's byte/word/long/2-op/3-op variants) built on the
+  `addResult`/`subResult`/`mulResult`/`divResult`/`addCarryResult`/`subCarryResult`
+  helpers added in sub-phase 5, plus a `setLogicalPSL` (N/Z from result, V<-0, C
+  unaffected) for BIS/BIC/XOR. Unlike `emul_integer_math.c`'s single opcode-decomposing
+  routine, each opcode gets its own small registered handler — decode already carries
+  operand count/size per opcode, so there's nothing left to decompose from the raw
+  function byte at runtime.
+- Cross-checking the full family against `vax_instr_set.pdf` found two more confirmed
+  issues beyond what sub-phase 5 already fixed generically (both written up in
+  `docs/DEVIATIONS.md`, folded into that sub-phase's now-substantially-rewritten entry):
+  BIS force-clears C where the manual specifies unaffected, and BIC computes a
+  meaningless arithmetic-carry value instead of leaving C alone — both fixed via the
+  shared `setLogicalPSL`.
+- Found and logged one more deferred, table-structural finding while writing this:
+  `instruction_table.h`'s `BISB3` entry declares its destination operand as
+  longword-scaled (`{1, 1, 4, ...}`) where every sibling `Bxx3` instruction correctly
+  uses byte (`{1, 1, 1, ...}`) — a clear transcription error, but (per the same
+  reasoning as the ADWC/SBWC sizing finding) out of scope to fix since it's baked into
+  the mechanically generated table. `internal/cpu/integermath.go`'s handlers use each
+  operand's own declared size generically rather than assuming uniform sizing, so this
+  surfaces naturally without needing special-case code to reproduce it.
+- Pinned down operand ordering carefully for SUB/DIV/BIC, where (unlike commutative
+  ADD/MUL/BIS/XOR) getting operand 0 vs. operand 1 backwards silently produces a
+  plausible-looking but wrong answer — confirmed against the manual's format lines for
+  both the 2-operand and 3-operand forms of each.
+- Added `internal/cpu/integermath_test.go`: ADD's signed-overflow-without-carry and
+  carry-without-overflow cases, SUB's operand order (2- and 3-operand forms) plus
+  borrow/overflow, MUL's overflow (product doesn't fit a byte) with C always clear,
+  DIV's normal/negative-truncation case plus the divide-by-zero and `MinInt/-1` guards
+  (both would panic in Go without them), BIS/BIC/XOR's condition codes including the
+  C-unaffected fix, the BISB3 destination-scale deviation reproduced end-to-end via a
+  register destination, and ADWC/SBWC carry/borrow propagation across a simulated
+  multi-word add/subtract.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.

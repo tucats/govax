@@ -301,6 +301,29 @@ sub-phase 2.
   rather than left as C's undefined behavior; see each sub-phase's progress log entry
   for the specific tests.
 
+### [Phase 04, deferred] BISB3's destination operand is declared longword-sized
+
+- **Where**: `reference/eVAX/eVAX/Headers/instruction_table.h`'s `BISB3` entry
+  (~line 1524-1533): operand scales `{1, 1, 4, 0, 0, 0}` — the third (destination)
+  operand is 4 bytes. Every sibling instruction of the identical `Bxx3` shape (ADDB3,
+  SUBB3, MULB3, DIVB3, BICB3, XORB3) correctly declares all three operands as
+  byte-sized (`{1, 1, 1, ...}`).
+- **What**: this looks like a plain transcription error in the reference table (a
+  stray `4` where every neighboring entry has `1`), not a deliberate design choice —
+  there's no ISA reading under which BISB3 alone would have a wider destination than
+  BISB2 or its own siblings. Concretely, `BISB3 mask,src,Rn` with a register
+  destination overwrites all 4 bytes of `Rn` (the byte OR result zero-extended)
+  instead of only the low byte the way every other `Bxx3`/`Bxx2` form does.
+- **Status**: deferred, replicated as-is, for the same reason as the ADWC/SBWC sizing
+  finding above: the operand size is baked into the *mechanically generated*
+  `instructions_table.go`, so a real fix means changing generated table data or the
+  generator, out of scope for a Phase 04 handler change. `internal/cpu/integermath.go`'s
+  handlers use each operand's own declared size generically (no special-casing), so
+  this deviation surfaces naturally rather than needing separate code to reproduce it.
+  Verified (not just asserted) by `internal/cpu/integermath_test.go`'s
+  `TestEmulBisb3DestinationScaleDeviation`. Revisit in Phase 12 or alongside
+  `instruction_table.h` generation, together with the ADWC/SBWC finding.
+
 <!--
 Entry template:
 
