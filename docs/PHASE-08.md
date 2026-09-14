@@ -268,3 +268,41 @@ SHOW, and friends — plus the DCL grammar-driven command parser, and stand up
   paths; and an NVRAM save→load round trip.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
   all clean. `go test ./internal/console -cover`: 82.7%.
+
+### 2026-09-14 — Sub-phase 5: SET/SHOW core
+
+- `console_set.c` (1306 lines) and `console_show.c` (1929 lines) are by far
+  this phase's largest C files, covering dozens of sub-forms — most either
+  device-, assembler-, or RTL/microkernel-dependent (deferred per doc.go) or
+  low-value debug-tracing toggles with no consumer yet in this port (SET
+  MODE/STEP-default/MKVALID, SET PTE, SET DEBUG/ASM flags, SET [NO]EXPAND/
+  SHARE, SET FAULT history size; SHOW INSTRUCTIONS/TRACE/SCB/TB/MAP/IMAGES/
+  CALL_FRAMES/REGIONS/SHARE/ROM/NVRAM/PAGE/WATCHPOINTS/ERROR/MODE/SHIM/
+  STRING/EXPAND/COMMAND_ARGS/CLOCK/XTEST). Implemented the high-value core
+  both commands actually center on:
+  - `set.go`: `Console.SetSymbol` replicates `console_set`'s own dispatch
+    order for its `NAME=value` syntax — a general register name, then a
+    privileged register name (`privRegNames`, matching `pr_names[]`'s
+    subset with an architected name in `internal/vax/registers.go`), then
+    the literal name `PSL` (whole-PSL assignment), falling back to a plain
+    user symbol definition. `Console.SetRadix` implements `SET RADIX`.
+  - `show.go`: `Console.ShowRegisters`/`ShowPSL`/`ShowMemory`/`ShowSymbols`/
+    `ShowBreakpoints`/`ShowRadix`/`ShowBase`/`ShowStack` (KSP/ESP/SSP/ISP/
+    USP)/`ShowCPU`/`ShowVersion` — deliberately reformatted for readability
+    rather than matching `console_show.c`'s exact `printf` layout
+    byte-for-byte, since only the underlying values are behaviorally
+    meaningful here, not the C source's specific column spacing.
+  - `ShowVersion` also stands in for `ABOUT` (which the C source reaches
+    via the same `/entry=exe$about` indirection this port doesn't implement
+    — see the Sub-phase 3 entry above on deferred `/entry=` commands) with
+    a small Go-native banner, rather than leaving `ABOUT`/`SHOW VERSION`
+    with no output at all.
+  - These are not yet wired into the DCL grammar's `SET`/`SHOW` verb
+    dispatch or `cmd/govax`'s command loop — that wiring, along with
+    CLEAR/ZERO/TIME/PRINT/HELP/QUIT/INCLUDE and the real entry point, is
+    the next sub-phase.
+- `internal/console/set_test.go` covers `SetSymbol`'s three special-cased
+  name kinds plus the plain-symbol fallback, `SetRadix`'s valid/invalid
+  cases, and each `Show*` method's basic output.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
+  all clean. `go test ./internal/console -cover`: 82.2%.
