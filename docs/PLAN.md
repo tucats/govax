@@ -3,7 +3,7 @@
 This document describes the *high-level* plan for the project, including project phases created
 through pre-planning, and progress logging.
 
-This is a conversion (from C to Go) of the VAX emulator project at https://github.com/tucats/evax and
+This is a conversion (from C to Go) of the VAX emulator project at [GitHub](https://github.com/tucats/evax) and
 currently hosted on the local development system at /Users/tom/Documents/Projects/eVAX. This project is
 not a cross-compilation, but a careful evaluation of the C version of the emulator followed by
 rewriting it from scratch as Go code, using the benefits of the Go language to implement features

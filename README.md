@@ -1,5 +1,6 @@
 # govax
+
 VAX emulator, written in Go
 
-This is a translation (not cross-compile) of the evAX project at https://github.com/tucats/eVAX, originall written in C.
-
+This is a translation (not cross-compile) of the `evax` project on
+[github](https://github.com/tucats/evax), originaly written in C.
