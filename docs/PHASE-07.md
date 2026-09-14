@@ -129,3 +129,30 @@ instructions, and everything else that doesn't fit the earlier families.
   TBIA/TBIS's no-op behavior.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
   all clean.
+
+### 2026-09-14 — Sub-phase 3: ADAWI, EMUL, EDIV
+
+- Added `internal/cpu/interlock.go` (ADAWI, the only interlocked instruction this
+  emulator implements) and `internal/cpu/extended.go` (EMUL, EDIV), porting
+  `emul_interlock.c` and `emul_extended.c`. `emul_extended.c`'s longword-pair swap
+  dance around its `union XLONG` (a 64-bit-`LONGWORD`-build workaround, see
+  `reference/AUDIT.md`) isn't ported — this port computes both instructions'
+  64-bit product/dividend directly with Go's native `int64`.
+- Found two deviations from the manual in `emul_interlock.c`'s ADAWI condition
+  codes, and one in `emul_extended.c`'s EDIV, all logged in `docs/DEVIATIONS.md`
+  and replicated as-is (not covered by this phase's CALL/RET-specific fix
+  direction): ADAWI's C is always cleared rather than reflecting a real carry
+  (`SETCONDITIONBITS`'s unsigned-vs-zero comparison can never be true); ADAWI's
+  N/Z come from the untruncated 32-bit sum rather than the word actually stored,
+  which disagree exactly in the overflow case; and EDIV never detects a genuine
+  quotient-overflow (only a zero divisor sets V), consistent with no instruction
+  in this codebase yet raising the architected arithmetic-trap fault for an
+  integer-overflow V at all.
+- `internal/cpu/interlock_test.go`/`extended_test.go` cover ADAWI's normal-add
+  path, its overflow/V case (also demonstrating the untruncated-sum N/Z
+  deviation), its never-sets-carry deviation, its register-mode-destination and
+  odd-address reserved-operand faults; EMUL's positive/negative/zero-product
+  condition codes; and EDIV's normal division, negative-dividend remainder-sign
+  (Note 1), and divide-by-zero fallback (Note 3).
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
+  all clean.

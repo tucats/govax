@@ -772,6 +772,43 @@ practice. Not resolved either way — replicated as the C source's sign-extend-t
 guessed at. Revisit with the hardware/architecture reference in hand, or ask, rather
 than deciding unilaterally.
 
+### [Phase 07] ADAWI's condition codes don't match the manual in two ways
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_interlock.c`'s `emul_interlock()`
+  (the `case 0x58` ADAWI branch), ported to `internal/cpu/interlock.go`'s
+  `emulAdawi`.
+- **What**: two separate gaps against the manual's "N <- sum LSS 0; ... C <- {carry
+  from most-significant bit}":
+  - C is supposed to be the addition's carry out, but the C source's
+    `SETCONDITIONBITS(data, 0L)` call compares `data` against the constant `0`, both
+    cast to `ULONGWORD` — an unsigned value is never less than zero, so this can only
+    ever clear C, never set it.
+  - N/Z are computed from `data`, the _untruncated_ 32-bit sum of the two sign-
+    extended word operands, not from the word actually stored to the sum operand.
+    The two disagree exactly in the overflow case: `32767 + 1 = 32768` is positive
+    as a 32-bit sum (N clear) even though the word actually stored (`32768`
+    truncated to a signed word) is `-32768` (would be N set, if N were computed from
+    the truncated result instead).
+- **Status**: not fixed — replicated as-is in `emulAdawi`. Verified by
+  `internal/cpu/interlock_test.go`'s `TestEmulAdawiNeverSetsCarry`/
+  `TestEmulAdawiOverflowSetsV`.
+
+### [Phase 07] EDIV never detects quotient overflow
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_extended.c`'s `emul_ediv()`, ported
+  to `internal/cpu/extended.go`'s `emulEdiv`.
+- **What**: the manual lists two conditions for EDIV's `V` bit: the divisor is zero,
+  or the quotient doesn't fit in 32 bits (both, per Note 2, fall back to "quotient <-
+  bits 31:0 of the dividend, remainder <- 0"). `emul_ediv.c` only ever checks for a
+  zero divisor; a genuine quotient overflow (e.g. a large quadword dividend divided
+  by a small divisor) is computed and silently truncated with no V set and no
+  fallback applied.
+- **Status**: not fixed — replicated as-is in `emulEdiv` (only the zero-divisor case
+  sets V). Also worth noting: no instruction in this codebase yet raises the
+  architected arithmetic-trap fault for an integer-overflow V regardless of the
+  `IV` PSL bit (see `emulDiv` in `internal/cpu/integermath.go`), so this isn't a gap
+  unique to EDIV — the whole trap-on-overflow mechanism is unimplemented project-wide.
+
 <!--
 Entry template:
 
