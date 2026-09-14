@@ -64,3 +64,20 @@ self-contained, well-testable group.
   fault for an immediate (short-literal) base.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean.
+
+### 2026-09-14 — Sub-phase 2: bit-branch instructions
+
+- Added `internal/cpu/bitbranch.go`: BBS/BBC and BBSS/BBCS/BBSC/BBCC/BBSSI/BBCCI,
+  porting `emul_bitfield.c`'s `emul_bb`/`emul_bbstate`. Both reuse sub-phase 1's
+  `getRegisterField`/`setRegisterField`/`getMemoryField`/`setMemoryField` at size 1
+  rather than porting `emul_bbstate`'s own separate byte-pointer-based bit access —
+  same defined single-bit test/set/clear semantics, with no pointer/endianness
+  mechanism to inherit in a value-based operand model. `BBSSI`/`BBCCI` are handled by
+  normalizing to their non-interlocked equivalents before computing the shared
+  test/set-value decode, matching this project not emulating multiple processors.
+- `internal/cpu/bitbranch_test.go` covers BBS/BBC (register and memory base, plus the
+  immediate-base reserved-operand fault) and all six BBSS-family opcodes' test/
+  branch/write-back combinations, including confirming the interlocked variants
+  behave identically to their plain counterparts.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean.
