@@ -88,6 +88,22 @@ _None yet._
   second-guessing an ISA judgment call. Verified by
   `internal/cpu/operand_test.go`'s `TestDecodeOperandDoubleIndexedFaults`.
 
+### [Phase 03] `set_mode_stack` sets `MAPEN = 1` on every non-interrupt-stack mode switch
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/interrupt.c`, `set_mode_stack()`
+  (~line 481): `vax.MAPEN = 1;        /* Not sure about this!! */`.
+- **What**: the C source's own comment flags this write as uncertain — every switch to
+  a KSP/ESP/SSP/USP-based mode (as opposed to the interrupt stack, which explicitly
+  sets `MAPEN = 0`) unconditionally forces virtual memory _on_, regardless of whatever
+  `MAPEN` held before the exception. This isn't obviously wrong (kernel-mode exception
+  handlers on a running VMS-like OS would have VM enabled anyway), but it's also not
+  obviously right for early boot / console-level fault handling before VM is set up,
+  and the original author didn't resolve it either.
+- **Status**: deferred — replicated as-is in `Engine.setModeStack`
+  (`internal/cpu/handlefault.go`), per this project's policy of not second-guessing an
+  ISA judgment call the original author explicitly marked as unresolved. Revisit in
+  Phase 12 or whenever VM-disabled fault handling is actually exercised end-to-end.
+
 ## Open questions carried forward (not yet findings)
 
 ### [Phase 03] Register mode used where an address is required (`OP_AD`/`OP_VA`/`OP_BR` access)

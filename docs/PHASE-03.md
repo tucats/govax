@@ -350,3 +350,35 @@ Each is one buildable, testable commit, following Phase 01/02's pattern.
   attached.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
   clean.
+
+### 2026-09-14 — Sub-phase 4: fault/exception machinery
+
+- Added `internal/cpu/engine.go`: `Engine`, composing `*vax.CPU` + `*vm.Memory` + the
+  instruction table with the decode/execute-only state Phase 01 deliberately deferred
+  (`instructionPC`, `halted`) — see this doc's design notes on why it's a new type
+  rather than growing `vax.CPU`.
+- Added `internal/cpu/handlefault.go`: `Engine.HandleFault`, the port of
+  `interrupt.c`'s `handle_fault` (SCB vector fetch with virtual memory forced off
+  around it, matching `handle_fault`'s save/clear/restore of `MAPEN`; stack/access-mode
+  switch; pushing the old PSL, the instruction's start PC, and up to two signal
+  arguments; setting PC to the vector), and `Engine.setModeStack`, the port of
+  `set_mode_stack` (per-mode stack pointer swap, `CUR_MOD`/`PRV_MOD`/`IS` PSL field
+  updates — folded into the single canonical `vax.PSL` rather than C's separate
+  `pslw` shadow, consistent with Phase 01). `ErrNoExceptionHandler` and
+  `ErrUnhandledVector` cover the two "no real vector" cases (`0xFFFFFFFF` — this
+  emulator's own "let the console handle it" convention, no-op here since Phase 08
+  doesn't exist yet; and a zero vector, where — matching the C source exactly — the
+  fault frame is still pushed and PC still set before the error is reported).
+- Logged one more `docs/DEVIATIONS.md` entry while porting: `set_mode_stack`
+  unconditionally sets `MAPEN = 1` on every non-interrupt-stack mode switch, which the
+  C source's own comment flags as uncertain (`/* Not sure about this!! */`) — deferred
+  rather than second-guessed, per policy, since the original author didn't resolve it
+  either.
+- Added `internal/cpu/handlefault_test.go`: the full push-frame round-trip (PSL/PC/
+  args read back from memory), the SCB vector fetch bypassing translation (proved via
+  a page table where the vector address would fault if not bypassed, while the
+  fault-frame push target is backed by one valid S0 PTE so it succeeds regardless),
+  `setModeStack`'s mechanics in isolation (mode/stack-pointer swap, `MAPEN` write, and
+  the same-mode no-op case), the interrupt-stack path, and both no-real-vector cases.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
+  clean.
