@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/console/dcl"
+	iodev "github.com/tucats/govax/internal/io"
 )
 
 // Dispatcher routes one command line to either a fixed-spelling handler
@@ -134,6 +135,48 @@ func (d *Dispatcher) bindGrammar() {
 	// register name shortcuts (SHOW R0, SHOW PC, SHOW P0BR, ...).
 	g.Bind("SHOW", func(id int64, r *dcl.Result) error {
 		return d.Console.ShowRegisterOrPrivReg(r.Keyword("SHOW_TYPE"))
+	})
+
+	// Phase 09 (internal/io): device abstraction and logical name tables.
+	g.Bind("SHOW_DEVICE", func(id int64, r *dcl.Result) error {
+		return d.Console.ShowDevices(r.String("NAME"), r.Present("FULL"))
+	})
+	g.Bind("DEFINE_DEVICE", func(id int64, r *dcl.Result) error {
+		d.Console.DefineDevice(r.String("NAME"), iodev.DeviceOptions{
+			Cluster:     uint32(r.Int("CLUSTER")),
+			Cylinders:   uint32(r.Int("CYLINDERS")),
+			DevBufSize:  uint32(r.Int("DEVBUFSIZE")),
+			DevChar:     uint32(r.Int("DEVCHAR")),
+			DevChar2:    uint32(r.Int("DEVCHAR2")),
+			DevClass:    iodev.DeviceClass(r.Int("DEVCLASS")),
+			DevDepend:   uint32(r.Int("DEVDEPEND")),
+			DevDepend2:  uint32(r.Int("DEVDEPEND2")),
+			DevType:     uint32(r.Int("DEVTYPE")),
+			FreeBlocks:  uint32(r.Int("FREEBLOCKS")),
+			LockID:      uint32(r.Int("LOCKID")),
+			MaxBlock:    uint32(r.Int("MAXBLOCK")),
+			MaxFiles:    uint32(r.Int("MAXFILES")),
+			OwnUIC:      uint32(r.Int("OWNUIC")),
+			RecSize:     uint32(r.Int("RECSIZE")),
+			Sectors:     uint32(r.Int("SECTORS")),
+			Serial:      uint32(r.Int("SERIAL")),
+			VolName:     r.String("VOLNAME"),
+			MediaName:   r.String("MEDIANAME"),
+			MediaType:   r.String("MEDIATYPE"),
+			RootDevName: r.String("ROOTDEVNAME"),
+		})
+		return nil
+	})
+
+	g.Bind("SHOW_LOGICAL", func(id int64, r *dcl.Result) error {
+		return d.Console.ShowLogicals(r.String("TABLE"), r.String("NAME"))
+	})
+	g.Bind("DEFINE_LOGICAL", func(id int64, r *dcl.Result) error {
+		table := r.String("TABLE")
+		if table == "" {
+			table = "LNM_PROCESS" // define_logical.c's own default
+		}
+		return d.Console.DefineLogical(table, r.String("NAME"), r.String("VALUE"))
 	})
 }
 

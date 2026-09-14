@@ -26,6 +26,10 @@ console and the RTL.
 - Confirm the device model's shape once RMS (Phase 10) requirements are clearer — file
   I/O and device abstraction are tightly coupled in VMS, so this phase may need minor
   revisiting once Phase 10 starts.
+- SYS$GETDVIW/SYS$ASSIGN/SYS$TRNLNM (the RTL system-service calls built on top of this
+  phase's data structures) and channel assignment need the RTL calling convention
+  (argc/argv marshaling from VAX memory) and a process/PID/UIC concept, neither of
+  which exist yet — left for Phase 10.
 
 ## Progress Log
 
@@ -82,3 +86,80 @@ console and the RTL.
   `AllMatching`'s table/name filtering.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test
   ./...` all clean. `go test ./internal/io -cover`: 98.6%.
+
+### 2026-09-14 — Sub-phase 2: console wiring, close out Phase 09
+
+- Added `internal/console/device.go`: `Console.DefineDevice`/`ShowDevices`
+  (`define_device.c`/`show_device.c`) and `Console.DefineLogical`/
+  `ShowLogicals` (`define_logical.c`/`show_logical.c`) against the new
+  `Console.Devices`/`Logicals` fields (`machine.go`) — matching those C
+  handlers' own lack of a `vax_init` check (devices/logical tables exist
+  independent of `INIT`, so these commands work before/without one).
+  `Console.New` seeds `Logicals` via `InitLogicals` unconditionally,
+  matching `init_symbols.c`'s `init_system_symbols` calling
+  `logical_names.c`'s `init_logicals()` once as part of one-time process
+  startup (not gated behind `INIT` either).
+  `ShowDevices` replicates `show_device.c`'s own asymmetry against
+  `ShowLogicals`/`show_logical.c`: a no-match `SHOW DEVICE` prints nothing
+  at all, while a no-match `SHOW LOGICAL_NAMES` prints "No matching
+  logical names." — confirmed in the C source, not an inconsistency
+  introduced by this port.
+- Wired `DEFINE_DEVICE`/`SHOW_DEVICE`/`DEFINE_LOGICAL`/`SHOW_LOGICAL` into
+  `dispatch.go`'s `bindGrammar`, closing the two `SHOW`/`DEFINE`
+  sub-dispatches (`show_types`'s `devices`/`logical_names` keywords,
+  `define`'s `device`/`logical` qualifiers) Phase 08's close-out entry
+  explicitly deferred here. `DEFINE/LOGICAL`'s default table
+  ("LNM_PROCESS" when `/TABLE` isn't given) is applied in the bind
+  closure, matching `define_logical.c`'s own default.
+- Found and fixed a real bug in Phase 08's `internal/console/dcl` package
+  while wiring `DEFINE_DEVICE`'s `DEVCLASS`/`DEVTYPE` qualifiers (both
+  keyword-typed, per `evax.dcl`'s `dev_class`/`dev_type` grammar types):
+  `dcl.Result.Int`'s own doc comment promises "the matched Keyword's ID
+  for a keyword-typed value," but a keyword match and a plain string match
+  were both stored with only `isString = true` and no further tag, so
+  `Int` (which returned 0 for any `isString` value) silently returned 0
+  for every keyword-typed qualifier — never previously caught because no
+  Phase 08 command happened to call `Int` on a keyword-typed field
+  (`SHOW_TYPE`'s keyword dispatch, the only prior keyword-typed consumer,
+  uses `Keyword` instead). Separately, `String`/`Keyword` shared the same
+  under-specified check, so `String` would (contrary to its own doc
+  comment) return a keyword's display name instead of `""`, and `Keyword`
+  would (contrary to *its* doc comment) accept a plain string field. This
+  is RTL-console tooling, not emulated VAX ISA behavior — like the rest of
+  `internal/console/dcl` (Phase 08's own scope note) — so
+  `docs/DEVIATIONS.md`'s ISA-fidelity policy doesn't apply; it's a clear,
+  obvious doc/implementation mismatch, fixed directly per `CLAUDE.md`'s
+  bug-fixing policy rather than logged and deferred. Fixed by adding an
+  explicit `Value.IsKeyword`/`matchedValue.isKeyword` discriminator (set
+  only at the one keyword-match construction site in `resolveValue`) and
+  updating all three accessors to check it; verified not to regress any
+  existing caller (`SHOW_TYPE`'s `Keyword` call, and every existing
+  `Int`/`String` test, all target fields whose type was already
+  unambiguous under the old code). Regression test:
+  `internal/console/dcl/parse_test.go`'s
+  `TestResult_keywordValueDiscriminator`, using this phase's own
+  `DEFINE/DEVICE .../DEVCLASS=DISK` as the concrete keyword-typed case.
+- `internal/console/device_test.go` covers: `DefineDevice`/`ShowDevices`
+  (plain and `/FULL`, including the disk-class-only detail block and the
+  no-match-prints-nothing case) and `DefineLogical`/`ShowLogicals`
+  (including the no-match message and that `Logicals` comes pre-seeded at
+  construction) directly against `Console`, plus `DEFINE/DEVICE`/
+  `SHOW DEVICES`/`DEFINE/LOGICAL` (both with and without `/TABLE`)/
+  `SHOW LOGICAL_NAMES` end-to-end through the real DCL grammar via
+  `Dispatcher.Dispatch`. `dispatch_test.go`'s
+  `TestDispatch_unboundShowSubformErrors` (which asserted `SHOW DEVICES`
+  was unbound, true before this sub-phase) now targets `SHOW NVRAM`, still
+  genuinely unbound, to keep checking that an unimplemented `SHOW`
+  sub-form still reports a clear dispatch error.
+- Full `docs/DEVIATIONS.md`-policy review for this phase: no VAX ISA/
+  hardware-fidelity findings — `devices.c`/`logical_names.c` and
+  `internal/console/dcl` are all RTL/console tooling, not emulated VAX
+  instruction-set behavior. The two real bugs found this phase
+  (`get_dev_class_name`'s loop bound, sub-phase 1; the `dcl.Result`
+  keyword-value discriminator, this sub-phase) are both documented at the
+  point they were found rather than only here, per this project's own
+  established pattern (e.g. Phase 08's SHOW PAGE/READ/WRITE fix).
+- Full-repo `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
+  `go test ./...` all clean; `go test ./internal/console/... -cover`:
+  79.2%; `go test ./internal/console/dcl/... -cover`: 80.9%. Phase
+  complete.

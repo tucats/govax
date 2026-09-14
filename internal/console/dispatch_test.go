@@ -173,9 +173,9 @@ func TestDispatch_entryPointCommandErrors(t *testing.T) {
 
 func TestDispatch_unboundShowSubformErrors(t *testing.T) {
 	d, _ := newTestDispatcher(t)
-	err := d.Dispatch("SHOW DEVICES")
+	err := d.Dispatch("SHOW NVRAM")
 	if err == nil {
-		t.Error("expected an error for the unimplemented SHOW DEVICES")
+		t.Error("expected an error for the unimplemented SHOW NVRAM")
 	}
 }
 

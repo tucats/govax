@@ -43,11 +43,17 @@ func (t *Type) lookup(name string) (kw *Keyword, negated bool, err error) {
 }
 
 // Value holds a literal default (or matched) value for a Parameter or
-// Qualifier, matching struct DCL_VALUE.
+// Qualifier, matching struct DCL_VALUE. A keyword-typed match populates
+// all three fields at once (IsString/Str carry the matched keyword's name,
+// Int its ID) — IsKeyword distinguishes that case from a genuine string
+// value (IsString/Str only) so Result.String/Result.Int/Result.Keyword can
+// each return exactly the one of those three a caller asked for, matching
+// their own doc comments.
 type Value struct {
-	IsString bool
-	Str      string
-	Int      int64
+	IsString  bool
+	IsKeyword bool
+	Str       string
+	Int       int64
 }
 
 // Parameter is one positional parameter of an Entry, matching a grammar

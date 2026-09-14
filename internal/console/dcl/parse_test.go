@@ -2,6 +2,40 @@ package dcl
 
 import "testing"
 
+// TestResult_keywordValueDiscriminator regresses a bug found while wiring
+// Phase 09's DEFINE/DEVICE command: a keyword-typed qualifier's matched
+// value used to be indistinguishable, internally, from a plain string
+// value (both set isString true with no further tag), so Int() — which is
+// documented to return a keyword's matched ID — always returned 0 for one,
+// and String()/Keyword() didn't cleanly separate "a real string" from "a
+// keyword's display name" either. DEVCLASS (testdata/dcl/evax.dcl's
+// define_device syntax) is a real keyword-typed qualifier (type
+// dev_class), giving a concrete case to check all three accessors against.
+func TestResult_keywordValueDiscriminator(t *testing.T) {
+	g := loadEvaxGrammar(t)
+	r, err := g.Parse(`DEFINE/DEVICE DKA0/DEVCLASS=DISK`)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if got := r.Int("DEVCLASS"); got != 1 {
+		t.Errorf(`Int("DEVCLASS") = %d, want 1 (dev_class's disk keyword ID)`, got)
+	}
+	if got := r.Keyword("DEVCLASS"); got != "DISK" {
+		t.Errorf(`Keyword("DEVCLASS") = %q, want "DISK"`, got)
+	}
+	if got := r.String("DEVCLASS"); got != "" {
+		t.Errorf(`String("DEVCLASS") = %q, want "" (DEVCLASS is a keyword value, not a plain string)`, got)
+	}
+
+	// A genuine string-typed field must be unaffected by the fix.
+	if got := r.String("NAME"); got != "DKA0" {
+		t.Errorf(`String("NAME") = %q, want "DKA0"`, got)
+	}
+	if got := r.Keyword("NAME"); got != "" {
+		t.Errorf(`Keyword("NAME") = %q, want "" (NAME is a plain string, not a keyword)`, got)
+	}
+}
+
 func TestParse_showRegisters(t *testing.T) {
 	g := loadEvaxGrammar(t)
 	r, err := g.Parse("SHOW REG")

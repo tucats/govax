@@ -18,12 +18,13 @@ type Result struct {
 }
 
 type matchedValue struct {
-	id       int64
-	present  bool
-	negated  bool
-	isString bool
-	str      string
-	i        int64
+	id        int64
+	present   bool
+	negated   bool
+	isString  bool
+	isKeyword bool
+	str       string
+	i         int64
 }
 
 func newResult() *Result { return &Result{values: map[string]*matchedValue{}} }
@@ -46,7 +47,7 @@ func (r *Result) Negated(name string) bool {
 // (matching DCLgetstring); "" if absent or the value is a keyword/integer.
 func (r *Result) String(name string) string {
 	v, ok := r.values[upcase(name)]
-	if !ok || !v.isString {
+	if !ok || !v.isString || v.isKeyword {
 		return ""
 	}
 	return v.str
@@ -58,7 +59,7 @@ func (r *Result) String(name string) string {
 // is a plain string.
 func (r *Result) Int(name string) int64 {
 	v, ok := r.values[upcase(name)]
-	if !ok || v.isString {
+	if !ok || (v.isString && !v.isKeyword) {
 		return 0
 	}
 	return v.i
@@ -69,7 +70,7 @@ func (r *Result) Int(name string) int64 {
 // "MEMORY"); "" if absent or not a keyword value.
 func (r *Result) Keyword(name string) string {
 	v, ok := r.values[upcase(name)]
-	if !ok || !v.isString {
+	if !ok || !v.isKeyword {
 		return ""
 	}
 	return v.str
@@ -78,7 +79,7 @@ func (r *Result) Keyword(name string) string {
 func (r *Result) set(name string, id int64, negated bool, val Value) {
 	r.values[upcase(name)] = &matchedValue{
 		id: id, present: true, negated: negated,
-		isString: val.IsString, str: val.Str, i: val.Int,
+		isString: val.IsString, isKeyword: val.IsKeyword, str: val.Str, i: val.Int,
 	}
 }
 
@@ -266,7 +267,7 @@ func (g *Grammar) resolveValue(typ ValueType, typeName string, token string) (va
 		if err != nil {
 			return Value{}, "", false, err
 		}
-		return Value{IsString: true, Str: kw.Name, Int: kw.ID}, kw.Syntax, neg, nil
+		return Value{IsString: true, IsKeyword: true, Str: kw.Name, Int: kw.ID}, kw.Syntax, neg, nil
 
 	default: // TypeAny, TypeName, TypeString, TypeRestOfLine, TypeSwitch
 		return Value{IsString: true, Str: token}, "", false, nil

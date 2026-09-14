@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/tucats/govax/internal/cpu"
+	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 )
@@ -54,6 +55,16 @@ type Console struct {
 
 	VMInitValid bool // set by VMINIT (vminit.go); cleared by INIT/ZERO
 
+	// Devices/Logicals are Phase 09's device-abstraction/logical-name-table
+	// state (internal/io) — separate from the vax_init-gated machine state
+	// above, matching the C source's own devices/tables globals, which
+	// exist independent of alloc_vax and are never reset by ZERO. Logicals
+	// is seeded with the default tables at construction (see New), matching
+	// init_symbols.c's init_system_symbols calling init_logicals once as
+	// part of one-time process startup rather than per-INIT.
+	Devices  *iodev.DeviceTable
+	Logicals *iodev.LogicalNameTable
+
 	quit bool // set by Quit (misc.go); read via Running
 
 	Out io.Writer
@@ -63,10 +74,14 @@ type Console struct {
 // C source's terms) — an INIT command (see init.go) must run before most
 // other commands will accept.
 func New(out io.Writer) *Console {
+	logicals := iodev.NewLogicalNameTable()
+	logicals.InitLogicals()
 	return &Console{
-		Symbols: NewSymbolTable(),
-		Radix:   16, // alloc_vax's own default
-		Out:     out,
+		Symbols:  NewSymbolTable(),
+		Radix:    16, // alloc_vax's own default
+		Out:      out,
+		Devices:  iodev.NewDeviceTable(),
+		Logicals: logicals,
 	}
 }
 
