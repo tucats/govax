@@ -161,3 +161,50 @@ SHOW, and friends — plus the DCL grammar-driven command parser, and stand up
   ASCII and unknown-register cases, and the pre-Init error path.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
   all clean. `go test ./internal/console -cover`: 85.3%.
+
+### 2026-09-14 — Sub-phase 3: RUN/STEP and breakpoints
+
+- Found that `console_run.c`'s `console_run` (the `RUN` verb) is *not* "run
+  the CPU" — it's VMS executable-image activation (`image_load`/
+  `image_fixup`, an `.exe` file's Image Control Block/Image Section
+  Descriptors, `LIB$INITIALIZE` calling and shared-image linking), needing
+  the real assembler (`assemble_direct`, Phase 11) and RTL (`lib_initialize`,
+  Phase 10) — none of which exist yet. The command this phase's own
+  "RUN/STEP against Phase 04-07 fixtures" deliverable actually means is
+  `console_exec.c`'s `console_exec`, bound to the dispatch table's separate
+  `EXEC`/`GO`/`G` verb: "start the CPU executing at an address." Ported that
+  one (as `Console.Execute`) and left the VMS image-loading `RUN` command
+  for Phase 10/11 (see `doc.go`); `console_call` (the `CALL` verb, a
+  CALLS-style frame builder for calling into a mask-prefixed procedure) is
+  deferred alongside it — useful mainly for RTL entry points, per the same
+  rationale as `ABOUT`/`FORTH`/`XTEST`'s `/entry=` commands.
+- Added `run.go`: `Console.Execute` runs `Engine.Step` in a loop, checking
+  an address-breakpoint list before each instruction (skipping the very
+  address execution started from, matching `vax.c`'s `initial_PC` special
+  case, so resuming from a breakpoint doesn't immediately re-trigger it) and
+  stopping on `cpu.ErrHalted` or any other error — the breakpoint-on-top-of-
+  `Step` layering `docs/PHASE-03.md` explicitly reserved for this phase.
+  `Console.Step` runs exactly one instruction (`console_step.c`'s
+  `STEP_INSTRUCTION`/default mode). `STEP_OVER`/`STEP_RETURN` are
+  deliberately not implemented (both act as a synonym for a single
+  instruction step instead of skipping over a called subroutine) — real
+  step-over needs the same temporary-breakpoint-at-return-address machinery
+  `vax.c`'s `STEP_OVER` case uses, and building it has no other consumer to
+  justify the cost right now; noted here rather than silently behaving
+  differently from its name.
+- `Breakpoint`/`AddBreakpoint`/`RemoveBreakpoint`/`ClearAllBreakpoints`
+  implement only address breakpoints (`struct BREAKSTR`'s `BREAK_ADDRESS`
+  case) — fault-code breakpoints (`BREAK_FAULT`) aren't implemented, since
+  `Engine.HandleFault` delivers a fault to the SCB internally before
+  `Step` ever returns, giving the console no hook to intercept the raw
+  fault code without further `internal/cpu` API surface; left as a gap to
+  revisit if a real use for it shows up (e.g. once SET/SHOW BREAKPOINT's
+  DCL grammar work is wired up in a later sub-phase).
+- `internal/console/run_test.go` builds tiny NOP/HALT programs directly via
+  `Deposit` (no assembler yet) and covers: running to HALT, stopping at a
+  breakpoint, the breakpoint-at-start-doesn't-immediately-refire case,
+  single-instruction STEP (including that a second STEP without a new start
+  address continues from where the CPU is), breakpoint add/remove/clear
+  (including a no-op duplicate add), and the pre-Init error path.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
+  all clean.

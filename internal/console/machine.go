@@ -43,15 +43,6 @@ type Console struct {
 	Out io.Writer
 }
 
-// Breakpoint is a simple address-triggered breakpoint (the "instruction
-// breakpoint at a given address" case of console_run.c's richer
-// struct BREAKSTR list, which also supports fault-code and opcode
-// breakpoints — see docs/PHASE-08.md's progress log for why only this,
-// most commonly used, case is implemented).
-type Breakpoint struct {
-	Addr uint32
-}
-
 // New returns a Console with no machine allocated yet (vax_init == 0 in the
 // C source's terms) — an INIT command (see init.go) must run before most
 // other commands will accept.
