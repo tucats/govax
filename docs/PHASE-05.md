@@ -322,3 +322,24 @@ Each is one buildable, testable commit, following Phase 04's pattern.
   (including a negative source setting N).
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean. Coverage on this file: 85.1%.
+
+### 2026-09-14 — Sub-phase 5: MOVF/MOVD, MNEGF/MNEGD
+
+- Added `internal/cpu/movfloat.go`: `emulMoveFloat` (MOVF/MOVD) and `emulNegateFloat`
+  (MNEGF/MNEGD), one handler each shared across F/D via `loadFloat`/`storeFloat`,
+  rather than the C source's one-function-per-pair-branching-on-opcode
+  (`emul_movf`/`emul_movd`, which despite the names live in `emul_mov.c` alongside
+  the integer MOV family — noted in this doc's scope mapping).
+- Confirmed (not assumed) that the C source's omission of any `vax.pslw.c` write is
+  *correct* here, unlike the superficially similar ADD/SUB/MUL/DIV omission
+  (sub-phase 3): floating MNEG is a pure sign-bit flip, always exactly representable,
+  with no analogue of integer MNEG's real carry-out computation for the most-negative-
+  value edge case — so "C unaffected" is the right definition, and the C source's
+  never touching it already matches. `setFloatMovePSL` leaves C alone accordingly; no
+  `docs/DEVIATIONS.md` entry needed (nothing to fix).
+- Added `internal/cpu/movfloat_test.go`: MOVF/MOVD round-trip (C deliberately primed
+  dirty beforehand to confirm it's left alone, not cleared), MNEGF's positive/negative
+  cases, and the zero case (both instructions, confirming Z sets correctly for +0.0
+  and negating 0.0 doesn't set N).
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean.
