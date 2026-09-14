@@ -54,6 +54,8 @@ type Console struct {
 
 	VMInitValid bool // set by VMINIT (vminit.go); cleared by INIT/ZERO
 
+	quit bool // set by Quit (misc.go); read via Running
+
 	Out io.Writer
 }
 

@@ -306,3 +306,39 @@ SHOW, and friends — plus the DCL grammar-driven command parser, and stand up
   cases, and each `Show*` method's basic output.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
   all clean. `go test ./internal/console -cover`: 82.2%.
+
+### 2026-09-14 — Sub-phase 6: CLEAR/PRINT/QUIT/TIME/INCLUDE/HELP
+
+- Added `misc.go`: `Print` (`console_print.c`'s quoted-string/expression-list
+  PRINT/ECHO, always treated as verbose — `SET [NO]VERBOSE` isn't
+  implemented), `Quit`/`Running` (`console_exit_dcl`'s
+  `vax.console.running` flag, for `cmd/govax`'s command loop to check),
+  `Time` (runs one command via an injected dispatch function and reports
+  wall-clock elapsed time — `console_time.c`'s Mac-only MIPS/instruction-
+  count reporting isn't ported, since `internal/cpu.Engine` has no
+  instruction counter to read), `Include` (a simplified, non-stack-based
+  stand-in for `push_include`'s nested-file-include machinery — reads one
+  file line by line and dispatches each non-comment line, sufficient for
+  this port's only in-scope consumer, a `vax.init`-style startup script),
+  and `ClearSymbol`/`ClearBreakpoint` (`console_clear.c`'s `CLEAR SYMBOL`/
+  `CLEAR BREAKPOINT`, wired to the existing `SymbolTable`/`Breakpoints`
+  machinery from earlier sub-phases; `CLEAR`'s other sub-forms — INTERRUPT,
+  MEMORY statistics, PROFILES, STRINGS, TB, ERROR — aren't implemented,
+  each tied to state this port doesn't model).
+- Added `help.go`: a from-scratch parser for `vax.help`'s own documented
+  format (`$`-prefixed comma-separated 4-character-token topic keys, one or
+  more of which can stack with no body between them to share the following
+  section — letting `SHOW`/`SH` synonyms resolve to the same text — body
+  text runs to the next `$` line or EOF), matching `help.c`'s key
+  construction (`helpKey`, verified against the file's own worked example:
+  "HELP SET TRACE" → `$SET ,TRAC`) and section-matching behavior. Tested
+  against the real `testdata/dcl/vax.help` fixture, not just a synthetic
+  one, including the documented `SET TRACE` key-construction example.
+- `internal/console/{misc,help}_test.go` cover: Print's literal/expression
+  mix, Quit/Running, Time's dispatch-and-report cycle, Include dispatching
+  each non-comment line of a temp script, ClearSymbol/ClearBreakpoint's
+  specific-item and `/ALL` forms, and Help's exact-key, abbreviated-
+  synonym-key, missing-topic, and nil-Help cases (the last two synthetic;
+  the exact/synonym cases against the real `vax.help` fixture).
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
+  all clean. `go test ./internal/console -cover`: 83.2%.
