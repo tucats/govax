@@ -33,6 +33,51 @@ _None yet._
 
 ## Resolved findings
 
+### [Phase 05] `emul_float_math.c`'s D-floating arithmetic path calls `fpu_load` with its source longwords swapped
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_float_math.c`'s `emul_float_math()`,
+  the `dsize == 3` (D_FLOAT) branch of the basic-math `switch`:
+  `rc = fpu_load( d[1], d[0], &float1 );` (and the identical pattern for `float2`).
+- **What**: `fpu_load`'s signature is `fpu_load(LONGWORD src1, LONGWORD src2, double
+  *result)`; the correct convention — confirmed empirically, not by tracing `fpu.c`'s
+  byte-shuffle loops (see `docs/PHASE-05.md`'s design notes) — is `src1` = the
+  operand's low-address (first) longword, `src2` = its high-address (second) longword.
+  `emul_mov.c`'s `emul_movd` (MOVD/MNEGD) calls `fpu_load(data[0], data[1], &dbl)`,
+  the correct order; `emul_float_math.c`'s D-floating math path passes them reversed.
+  Verified with a standalone C harness built against the real `fpu.c`
+  (`clang -DLINUX86 -I eVAX/Headers probe.c fpu.c`): storing `3.14159265358979` as
+  D_floating and reading it back via `fpu_load(data[1], data[0])` (this bug's order)
+  returns `-5.4687269079054549e-19`; via `fpu_load(data[0], data[1])` (the correct
+  order) it returns the original value exactly. This corrupts every D-floating source
+  read the C reference actually dispatches: `ADDD2/3`, `SUBD3`, `MULD2/3`, `DIVD2/3`,
+  and `CVTBD`/`CVTWD`/`CVTLD`.
+- **Status**: fixed in Go. `internal/cpu/fpu.go`'s `fpuLoad` is a single, from-scratch
+  implementation used uniformly by every D-floating consumer (arithmetic, conversion,
+  MOV/MNEG, compare/test, ACB) — there is only one calling convention in the Go port,
+  and it's the confirmed-correct one, so this bug has no way to resurface per-caller
+  the way it did across `emul_float_math.c`/`emul_mov.c`'s two separate C
+  implementations. Verified by `internal/cpu/fpu_test.go`'s
+  `TestFpuStoreDoubleFloatingKnownValues`/`TestFpuLoadRoundTrip` (D_floating cases)
+  using the harness's own known-good raw bit patterns.
+
+### [Phase 05] `fpu_store`'s underflow flush-to-zero is dead code
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/fpu.c`'s `fpu_store()`, the underflow
+  branch (`if( expon < -127 )`): `local = 0.0; expon = 0;` when `PSL<FU>` is clear.
+- **What**: `local` is a separate `double` from `source` (the function's actual
+  parameter); every bit-extraction line below this assignment reads through `pd`,
+  which was set up earlier as `pd = (ULONGWORD *) &source` — aliasing the original,
+  un-zeroed parameter, never `local`. The intended flush to `0.0` therefore has no
+  effect on the function's output. Confirmed with the same standalone C harness used
+  for the finding above: storing `1e-100` with `PSL<FU>` clear returns `rc == 0` (no
+  fault, as expected) but a nonzero raw longword (`0xF977405F`, not `0x00000000`) —
+  the original tiny value's mantissa bits with only the exponent field forced to a
+  fixed value, not a flush to zero.
+- **Status**: fixed in Go. `internal/cpu/fpu.go`'s `fpuStore` returns a genuine `0` on
+  underflow with `PSL<FU>` clear, matching the explicit `value == 0` short-circuit one
+  branch above it in the same function. Verified by `internal/cpu/fpu_test.go`'s
+  `TestFpuStoreUnderflowFlushesToZeroWhenFUClear`.
+
 ### [Phase 03] Autoincrement Deferred (`@(Rn)+`) eagerly loads the operand's value instead of resolving its address
 
 - **Where**: `reference/eVAX/eVAX/Source/CPU/decode_operand.c`, `decode_operand()`'s
