@@ -378,3 +378,33 @@ opcode table slots they occupy stay on `unimplementedHandler` until then.
   BSBB's push-then-jump (return address verified on the stack), JSB reusing the same
   logic through an address operand, and BLBS/BLBC's low-bit test.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
+
+### 2026-09-14 — Sub-phase 11: ACB and CASE
+
+- Added `internal/cpu/branchacb.go`: `emulAcb` (ACBB/ACBW/ACBL, one size-parameterized
+  builder) and `emulCase` (CASEB/CASEW/CASEL). ACB reuses `addResult` (the manual's
+  own overflow note — "the index operand is replaced by the low-order bits of the true
+  result" — is exactly what `addResult`'s wraparound already does) and leaves C
+  untouched entirely, matching both the manual and the C source (which never assigns
+  `vax.pslw.c` in `emul_acb` at all — the one instance in this phase where the C source
+  gets an "unaffected" condition code right by simply never touching it).
+- Found and fixed a confirmed branch-condition bug while cross-checking ACB against the
+  manual: for a non-negative addend, `emul_acb.c` branches only when the updated index
+  is strictly less than the limit, but the manual specifies less-than-*or-equal* —
+  silently dropping a counting-up loop's final iteration when the index lands exactly
+  on the limit. Fixed in Go; full writeup in `docs/DEVIATIONS.md`.
+- Worked through CASE carefully since the C source's condition-code and branch/skip
+  arithmetic looked, at first read, like it might hide more bugs of the kind found
+  elsewhere this phase — cross-checked every formula (N/Z/V/C, the skip-distance
+  calculation, the table-index calculation, note 1's "PC already points at displ[0]")
+  against the manual line by line and found it's actually all correct. The one open
+  question — whether the byte/word `selector`/`base`/`limit` operands should be
+  sign-extended to 32 bits before the internal arithmetic (what the C source does) or
+  computed at their own declared width (the convention every other instruction in this
+  phase follows) — the manual's own text doesn't settle, so it's logged as a genuine
+  open question in `docs/DEVIATIONS.md` (not a confirmed finding) and replicated as-is.
+- Added `internal/cpu/branchacb_test.go`: ACB's positive- and negative-addend boundary
+  cases (index landing exactly on the limit), the loop-exit case, C left unaffected,
+  and CASE's in-range/at-the-limit/out-of-range (table-skip) cases with their
+  respective condition codes and PC targets.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.

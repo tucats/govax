@@ -348,6 +348,44 @@ sub-phase 2.
   Verified by `internal/cpu/cvt_test.go`'s `TestEmulCvtOverflowNZFromDestination` (the
   sign-flip case) and `TestEmulCvtByteOverflowRangeCheck` (the byte constant fix).
 
+### [Phase 04] ACB's branch condition uses strict `<` where the manual specifies `<=`
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_branch.c`'s `emul_acb()`, the
+  non-negative-addend branch condition (present identically in all four size
+  variants): `if( addend_b >= 0 && index_b < limit_b ) branch = 1;`.
+- **What**: `vax_instr_set.pdf`'s ACB entry: "If the addend operand is positive (or
+  zero) and the comparison is less than or equal to zero [index <= limit] ... the
+  branch displacement is added to the PC." The C source's strict `<` misses the
+  boundary case where a counting-up loop's index lands exactly on the limit on its
+  final iteration — e.g. `ACBL #10, #1, index, loop` with `index` reaching exactly
+  10 fails to branch, silently dropping the last iteration. The negative-addend
+  condition (`index >= limit`) was already correct — inclusive, matching the manual's
+  "greater than or equal to zero."
+- **Status**: fixed in Go. `internal/cpu/branchacb.go`'s `emulAcb` uses `<=` for the
+  non-negative-addend case. Verified by `internal/cpu/branchacb_test.go`'s
+  `TestEmulAcbPositiveAddendBoundary` (an index landing exactly on the limit) and
+  `TestEmulAcbNotTaken` (confirming the loop still correctly exits once past it).
+
+## Open questions carried forward (not yet findings)
+
+### [Phase 04] CASE's internal arithmetic width for byte/word selector, base, and limit
+
+`emul_case.c` reads the byte/word `selector`/`base`/`limit` operands through a signed
+`char`/`short` pointer, so they're sign-extended to full 32 bits before the
+subtraction (`idx = selector - base`), the unsigned comparison against `limit`, and
+the table-index/skip-distance arithmetic. `vax_instr_set.pdf`'s own note ("the
+selector and base operands can both be considered as either signed or unsigned
+integers") doesn't settle whether the *internal* arithmetic is meant to happen at the
+operand's own declared width (the convention every other instruction in this phase
+uses — CMPB, ADDB, etc. all compute purely within their declared byte/word/long size)
+or genuinely widened to 32 bits the way the C source does. The two choices only
+produce different results when an operand's own high bit is set (e.g. a `CASEB` with a
+`selector` byte of 0x80 or above), which is a fairly unusual case values would take in
+practice. Not resolved either way — replicated as the C source's sign-extend-then-
+32-bit-arithmetic behavior in `internal/cpu/branchacb.go`'s `emulCase` rather than
+guessed at. Revisit with the hardware/architecture reference in hand, or ask, rather
+than deciding unilaterally.
+
 <!--
 Entry template:
 
