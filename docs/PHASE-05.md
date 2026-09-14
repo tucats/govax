@@ -411,3 +411,39 @@ Each is one buildable, testable commit, following Phase 04's pattern.
   `BEQL` read `CMPD`'s `Z` correctly at the moment it mattered.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean.
+
+### 2026-09-14 — Sub-phase 9: close-out
+
+- Reviewed sub-phases 1-8 against this doc's Goal/Deliverables: verified directly
+  (not just asserted) by enumerating every opcode in the F-floating and D-floating
+  ranges (0x40-0x77) and checking its registered dispatch `Handler` against
+  `unimplementedHandler` — every instruction this phase's Deliverables and Design
+  notes name (`ADDF`/`SUBF`/`MULF`/`DIVF`, `CVTFB`/`W`/`L`/`RFL`, `CVTBF`/`W`/`L`,
+  `ACBF`, `MOVF`, `CMPF`, `MNEGF`, `TSTF`, and every D-floating counterpart including
+  the seven fixed in sub-phase 2) has a real handler; `EMODF`/`POLYF`/`CVTFD`,
+  `EMODD`/`POLYD`/`CVTDF`, and the queue/interlocked-memory instructions sharing this
+  opcode range (`ADAWI`, `INSQHI`/`TI`, `REMQHI`/`TI`) remain on
+  `unimplementedHandler`, correctly — none of them were ever in this phase's named
+  scope (extended-precision/packed-decimal-adjacent float ops and Phase 06/07
+  territory, respectively).
+- Full `docs/DEVIATIONS.md` tally for this phase: 6 resolved findings (the D-floating
+  `fpu_load` argument-order bug, `fpu_store`'s dead-code underflow flush, the seven
+  D-floating table/dispatch gaps, floating arithmetic's missing V/C clear plus
+  F_floating's swallowed overflow fault, `CVTRFL`/`CVTRDL`'s always-fault gap, and
+  the ACBF branch-condition off-by-one folded into Phase 04's existing entry), 0
+  deferred findings, 0 open questions carried forward — every finding this phase
+  turned up had a clear-cut fix, unlike Phase 04's one genuinely unresolved CASE
+  question. Every fix was confirmed against either `reference/vax_instr_set.pdf` or,
+  for the bit-level `fpuLoad`/`fpuStore` conversion algorithm and the D-floating
+  argument-order bug specifically, a standalone C harness built directly against the
+  real `fpu.c` — not asserted from reading the C source alone, consistent with this
+  project's `AUDIT.md` precedent for exactly this class of low-level bit-manipulation
+  question.
+- `go test ./internal/cpu -cover`: 90.8% statement coverage (matching Phase 03's
+  closing 90.5% and Phase 04's 90.8% almost exactly). The uncovered lines follow the
+  same pattern both prior phases' close-outs already judged not worth chasing further:
+  `if err != nil { return err }` propagation after an `Operand.Load`/`Store`/
+  `loadFloat`/`storeFloat` call, already exercised generically by Phase 03's
+  `operandaccess_test.go`.
+- Full-repo `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
+  `go test ./...` all clean. Phase complete.
