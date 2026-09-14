@@ -118,4 +118,44 @@ unit-tested, ready for Phase 13 to drive through a real loaded image.
 
 ## Progress Log
 
-_Not started._
+### 2026-09-14 — Sub-phase 1: XFC opcode
+
+- Added `internal/cpu/services.go` (`SystemServices` hook interface — console
+  I/O, DCL parse callback, SYS$ dispatch, LIB$/CRTL shim dispatch) and
+  `internal/cpu/xfc.go` (full `emul_xfc.c` port), closing out Phase 07's
+  deferred XFC opcode. `Engine.SetSystemServices` installs the hook; every
+  selector that needs it (0x01-0x03, 0x79, 0x7A, 0x7D) faults
+  `ExcPrivileged` when none is installed, matching an XFC executed before
+  the microkernel environment it depends on exists. The VM-probe selectors
+  (0x7E/0x7F) and quit/halt (0x78/0x7B/0x7C) need no hook — implemented
+  directly against `Engine`'s own CPU/memory.
+- `XFC$P1VECTOR`'s `pc` argument is `vax.PC - 2` (the XFC opcode's own
+  address) rather than `emul_xfc.c`'s literal `vax.PC - 4` — this port's
+  `Engine.Step` advances PC past the whole instruction (opcode + one-byte
+  immediate operand = 2 bytes total) before dispatching, not just past a
+  4-byte fixed-format opcode word the way the C source's inline dispatch
+  loop does; verified by `TestEmulXfcP1Vector` asserting the exact `pc`
+  value a fake hook receives.
+- One pre-existing `internal/vm.Translate` edge case found (not fixed, out
+  of this phase's scope): translating virtual address 0 with `MAPEN=1` and
+  an all-zero `P0BR`/`P0LR` recurses infinitely (`page > P0LR` is `0 > 0` =
+  false, so page 0 is treated as in-range, and its PTE address resolves to
+  0 again). Not exercised by any existing test; found by an early draft of
+  this phase's own VM-probe test using address 0, which was changed to a
+  realistic nonzero address instead of chasing a Phase 02/03-owned fix here.
+  Worth a look in Phase 12 if a real page-zero access ever needs to work.
+- `internal/cpu/xfc_test.go` covers every selector against a `fakeServices`
+  test double: console write/read/command-dispatch (including the
+  empty-length no-op), quit/halt/halt-silent, all four DCL subfunctions
+  (including the "no buffer available" `DCLGetString` case) and an unknown
+  subfunction fault, SYS$ dispatch (handled, unhandled-faults, and an
+  error propagated from the hook), shim dispatch (handled and
+  unhandled-faults), both VM-probe selectors' failure path plus MAPEN
+  restoration, an unknown top-level selector, and the no-services-installed
+  fault path. The kernel-mode check for `XFC$QUIT_EMULATION` is tested by
+  calling `emulXfc` directly rather than through `Engine.Step`, following
+  `procreg_test.go`'s established pattern for avoiding the `setModeStack`
+  MAPEN side effect (docs/DEVIATIONS.md) a real User→Kernel mode switch
+  would otherwise require a page table for.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
+  all clean.
