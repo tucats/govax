@@ -406,3 +406,41 @@ Each is one buildable, testable commit, following Phase 01/02's pattern.
   disturb neighboring memory.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
   clean.
+
+### 2026-09-14 — Sub-phase 6: fetch-decode-execute loop
+
+- Added `internal/cpu/dispatch.go`: `Handler`, `unimplementedHandler` (the
+  `emul_unimplemented` equivalent, faulting `ExcPrivileged`), `Table.SetHandler`/
+  `HandlerFor` (a `map[*Instruction]Handler` on `Table`, populated by Phases 04-07 at
+  package init rather than baked into the generated table — see this doc's Design
+  notes on why `Instruction` stayed data-only in sub-phase 1), and `wrapMemError`,
+  which turns a raw `*vm.TranslationFault`/`*vm.PhysicalAddressError` into the matching
+  `*Fault` (mirroring how `decode_opcode.c`/`decode_operand.c`'s own inlined fast-path
+  memory fetches call `set_fault(EXC_ACCVIO, ...)` directly). Found one more fidelity
+  gap while writing this: `vm.TranslationFault` (Phase 02) has a single
+  `AccessViolation` kind where `vm.c` actually signals two different subcodes (region
+  length/base violation vs. protection violation) — logged to `docs/DEVIATIONS.md` as a
+  Phase 02 gap noticed here, deferred rather than reopening Phase 02 mid-Phase-03.
+- Added `Engine.Step`/`Engine.Run` to `internal/cpu/engine.go`: the port of
+  `execute_vax`'s core cycle — decode, advance PC, dispatch to the instruction's
+  Handler — stripped of the console/disassembly, breakpoint/single-step, and device-
+  interrupt-queue/clock concerns interleaved with it in the C source (all out of scope
+  per this doc's Design notes). `Engine.raise` is the shared path a decode-time fault
+  and a Handler-returned fault both go through: wrap it if it's a raw memory error,
+  reset PC to the instruction's start address, and call `HandleFault` — matching
+  `execute_vax`'s two fault sites, which both reset `vax.PC` the same way (a local
+  `saved_pc` for one, `vax.instruction_PC` for the other) before calling `handle_fault`.
+  `ErrHalted` (returned by a future HALT `Handler`, Phase 04) stops `Run`'s loop
+  without going through fault handling at all.
+- Added `internal/cpu/dispatch_test.go` and `internal/cpu/engine_test.go`: `Table`
+  dispatch (default-to-unimplemented, registering a `Handler`), `wrapMemError` for both
+  `vm.TranslationFault` kinds and `vm.PhysicalAddressError`, `Step` dispatching to a
+  registered `Handler` with `PC` already advanced, an unimplemented instruction
+  faulting and `Step` still returning `nil` (fault handled, execution continues), a
+  `Handler`-returned `ErrHalted` stopping `Run`, a `Handler`-returned ordinary error
+  propagating out of `Run`, and a decode-time fault (the illegal-short-literal-write
+  case from sub-phase 3) handled end-to-end through `Step`. Dispatch tests build a
+  private `Table` rather than mutating the shared package-level `instructionTable`, to
+  avoid leaking registered handlers into other tests.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
+  clean; `internal/cpu` package coverage 87.2%.

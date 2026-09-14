@@ -42,6 +42,10 @@ type Instruction struct {
 type Table struct {
 	single   [256]*Instruction
 	extended map[uint16]*Instruction
+	// handlers holds each Instruction's dispatch Handler, populated by
+	// SetHandler (Phases 04-07 register into it at package init) rather
+	// than at table-generation time — see dispatch.go.
+	handlers map[*Instruction]Handler
 }
 
 func extendedKey(op Opcode) uint16 {

@@ -104,6 +104,25 @@ _None yet._
   ISA judgment call the original author explicitly marked as unresolved. Revisit in
   Phase 12 or whenever VM-disabled fault handling is actually exercised end-to-end.
 
+### [Phase 02, noticed in Phase 03] `vm.TranslationFault` collapses `EXC_ACCVIO`'s two distinct signal subcodes
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/vm.c`'s `vm()` (~lines 423-503): a region
+  length/base violation signals `set_fault(EXC_ACCVIO, 2, addr, 0x0001)`, a protection
+  violation signals `set_fault(EXC_ACCVIO, 2, addr, 0x0002)` — the second signal
+  argument distinguishes *why* the access violation happened. `internal/vm/translate.go`
+  (Phase 02) has a single `AccessViolation` `FaultKind` for both cases (see its
+  `accessViolation` helper), losing that distinction.
+- **What**: Phase 02 predates fault-signaling entirely (`docs/PHASE-02.md` explicitly
+  left `set_fault`'s translation to Phase 03), so this wasn't a fidelity question until
+  now — `Engine.fault`'s `vm.TranslationFault` → `cpu.Fault` mapping (`internal/cpu/
+  dispatch.go`) has no subcode to recover and reports `0x0001` (length/base violation)
+  unconditionally for every `AccessViolation`, matching the more common of the two C
+  call sites (and the same subcode `decode_opcode.c`/`decode_operand.c`'s own inlined
+  physical-address-resolution faults already use).
+- **Status**: deferred. A real fix means widening `vm.TranslationFault.Kind` with a
+  third case (or a length-vs-protection sub-field) in Phase 02's territory, which is
+  out of scope for a Phase 03 change; revisit alongside Phase 02 or in Phase 12.
+
 ## Open questions carried forward (not yet findings)
 
 ### [Phase 03] Register mode used where an address is required (`OP_AD`/`OP_VA`/`OP_BR` access)
