@@ -543,6 +543,66 @@ sub-phase 2.
   `emulMovc5`'s already-correct structure. Verified by `internal/cpu/cmpc_test.go`'s
   `TestEmulCmpc5/one-sided_zero_length_is_still_fill-padded`.
 
+### [Phase 06] `emul_scanc`'s Z-bit polarity is backwards for both SCANC and SPANC
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_movc.c`'s `emul_scanc()` (shared by
+  both SCANC and SPANC): `vax.pslw.z` is initialized to `0` and set to `1` only when
+  a match is found (`if ((test && ch) || (!test && !ch)) { vax.pslw.z = 1; break; }`).
+- **What**: both instructions' manual entries state the opposite verbatim — SCANC:
+  "If a nonzero AND result is detected, the condition code Z-bit is cleared;
+  otherwise, the Z-bit is set"; SPANC: the same with "zero" in place of "nonzero".
+  I.e. Z should be *cleared* when a match is found and *set* when the string is
+  exhausted without one — exactly backwards from what the C source does. This also
+  produces a second, separately-documented symptom: both instructions' own Notes
+  state a zero-length string should set Z ("just as though the entire string were
+  scanned/spanned" — the no-match outcome), but a zero-length string never enters
+  the loop at all, so the C source's un-fixed `z = 0` default leaves Z clear instead.
+- **Status**: fixed in Go. `internal/cpu/scanc.go`'s `emulScanc` sets `Z <- !found`
+  (found = a match was located before the string was exhausted), matching both
+  manual entries and making the zero-length case correct for free (nothing found,
+  so `!found` is true) without a separate special case. Verified by
+  `internal/cpu/scanc_test.go`'s `TestEmulScanc` (match found, no match, and the
+  zero-length regression) and `TestEmulSpanc`.
+
+### [Phase 06] `emul_movtc`'s backward-copy branch indexes the table by the source address instead of the source byte
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_movc.c`'s `emul_movtc()`, the
+  `else` (backward-copy, taken when `src <= dst`) branch's translate step:
+  `load_byte(tmp2, &ch); load_byte(tbladdr + tmp2, &ch);` — the second call
+  overwrites `ch` using `tmp2` (the *source address* being read from) as the table
+  index, discarding the byte the first call just loaded.
+- **What**: the forward-copy branch two loops above it in the same function gets
+  this right (`load_byte(tmp2, &ch); load_byte(tbladdr + ch, &ch);` — indexes by
+  `ch`, the loaded byte value). This is a variable-substitution slip between two
+  otherwise-parallel code blocks in the same function, not an ISA judgment call:
+  whenever MOVTC's overlap handling selects the backward-copy branch (source
+  address at or below the destination address), every translated byte comes from
+  `table[srcaddr & 0xFF]`-ish garbage instead of `table[source byte]`.
+- **Status**: fixed in Go. `internal/cpu/movtc.go`'s `emulMovtc` shares one
+  `translate` closure between both branches, so there's only one (correct) indexing
+  expression to get right, not two to keep in sync. Verified by
+  `internal/cpu/movtc_test.go`'s
+  `TestEmulMovtcOverlappingBackwardCopyTranslatesCorrectly`.
+
+### [Phase 06] `emul_movtuc` uses bitwise AND for its loop guard, and never zeroes R2
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_movc.c`'s `emul_movtuc()`:
+  `while (tmp1 & tmp3) { ... }`, and no assignment to `vax.R2` anywhere in the
+  function.
+- **What**: `tmp1 & tmp3` is a bitwise AND of the two remaining lengths, true only
+  when they happen to share a set bit — e.g. remaining lengths 2 (`0b10`) and 1
+  (`0b01`) give `0`, falsely ending the loop even though both are nonzero. Every
+  sibling string instruction in this file guards its loops with `!= 0 &&`/short-
+  circuit logical AND; this one clear character (`&` for `&&`, or equivalently a
+  missing `!= 0` on each side) is a plain typo, not an ISA reading. Separately, the
+  manual's Notes list `R2 = 0` for MOVTUC same as every other instruction in this
+  family, but the C source never writes `vax.R2` at all, leaving it stale.
+- **Status**: fixed in Go. `internal/cpu/movtc.go`'s `emulMovtuc` loop guard is
+  `len1 != 0 && len2 != 0`, and it sets `R2` to `0` unconditionally alongside the
+  rest of its register outputs. Verified by `internal/cpu/movtc_test.go`'s
+  `TestEmulMovtuc/remaining_lengths_sharing_no_set_bit_still_both_nonzero` and the
+  `R2` assertion in `TestEmulMovtuc/translates_until_escape`.
+
 ## Open questions carried forward (not yet findings)
 
 ### [Phase 06] Character-string length operands: signed `short` or unsigned word?

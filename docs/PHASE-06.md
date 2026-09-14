@@ -104,3 +104,25 @@ self-contained, well-testable group.
   zero-length edge cases the manual calls out by name.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean.
+
+### 2026-09-14 — Sub-phase 4: MOVTC/MOVTUC, SCANC/SPANC
+
+- Added `internal/cpu/movtc.go` (MOVTC/MOVTUC) and `internal/cpu/scanc.go`
+  (SCANC/SPANC, a single shared handler matching the C source's own dispatch),
+  porting `emul_movc.c`'s remaining three handlers.
+- Found and fixed three bugs, all confirmed directly against the manual's
+  Condition Codes/Notes sections (`vax_instr_set.pdf`, read via `pdftotext` for
+  this sub-phase) rather than inferred: `emul_scanc`'s Z-bit is set exactly
+  backwards for both SCANC and SPANC (contradicts both instructions' Condition
+  Codes text verbatim, and separately breaks the documented zero-length-string
+  case); `emul_movtc`'s backward-copy (overlap) branch indexes its translation
+  table by the source *address* instead of the source *byte* it just loaded,
+  discarding the correct forward-copy branch's own logic four lines above it in
+  the same function; `emul_movtuc` guards its main loop with a bitwise `&` of the
+  two remaining lengths instead of a logical AND (silently exits early whenever
+  the two counts share no set bit) and never zeroes R2 as the manual specifies.
+  All three logged in `docs/DEVIATIONS.md`.
+- `internal/cpu/movtc_test.go`/`scanc_test.go` cover normal translation/scan
+  behavior plus a dedicated regression test for each of the three fixes above.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean.
