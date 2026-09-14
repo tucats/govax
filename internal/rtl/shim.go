@@ -49,4 +49,9 @@ func (t *ShimTable) Lookup(code uint32) (ShimFunc, bool) {
 func registerShims(t *ShimTable) {
 	registerMathShims(t)
 	registerTimeShims(t)
+	registerStringShims(t)
+	registerMemoryShims(t)
+	registerPrintShims(t)
+	registerFileShims(t)
+	registerInputShims(t)
 }

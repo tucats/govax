@@ -1,7 +1,9 @@
 package rtl
 
 import (
+	"bufio"
 	"io"
+	"os"
 
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/vax"
@@ -60,14 +62,29 @@ type Environment struct {
 	// Environment.
 	pid, uic uint32
 
-	// consoleOut/ifiFiles/nextIFI are RMS's "internal file index" table
-	// (rms.c's ifi[256]): consoleOut backs IFI 1 (rmsinit's ifi[1] = stdout,
-	// and rms_create's TTA0: special case); ifiFiles holds files SYS$CREATE
-	// opened dynamically, keyed by IFI starting at 4 (0-3 are the fixed
-	// invalid/stdout/stdin/stderr slots) — see rms.go.
-	consoleOut io.Writer
-	ifiFiles   map[uint16]io.Writer
-	nextIFI    uint16
+	// consoleIn/consoleInBuf back DECC$GETS/EXE$INPUT/EXE$READ's console
+	// line reading (input.go). consoleOut/ifiFiles/nextIFI are RMS's
+	// "internal file index" table (rms.c's ifi[256]): consoleOut backs IFI
+	// 1 (rmsinit's ifi[1] = stdout, and rms_create's TTA0: special case);
+	// ifiFiles holds files SYS$CREATE opened dynamically, keyed by IFI
+	// starting at 4 (0-3 are the fixed invalid/stdout/stdin/stderr slots)
+	// — see rms.go.
+	consoleIn    io.Reader
+	consoleInBuf *bufio.Reader
+	consoleOut   io.Writer
+	ifiFiles     map[uint16]io.Writer
+	nextIFI      uint16
+
+	// memAllocated/memFreed back the LIB$GET_VM/malloc allocator (memory.go).
+	memAllocated, memFreed []*memBlock
+
+	// openFiles/nextFID back exe_open/close/read/write's raw file-descriptor
+	// shims (file.go) — a synthetic descriptor space (starting past the
+	// conventional 0/1/2 stdin/stdout/stderr numbers, matching a real
+	// process's own next-available-fd convention) rather than real host
+	// file descriptors, since Go doesn't expose files as bare ints.
+	openFiles map[uint32]*os.File
+	nextFID   uint32
 }
 
 // nominalPID/nominalUIC are arbitrary but fixed nonzero values distinguishing
@@ -81,8 +98,10 @@ const (
 // NewEnvironment returns an Environment for one VAX process, driving mem/cpu
 // and sharing devices/logicals with whatever else (the console) also uses
 // them. consoleOut is where RMS internal file index 1 (rms.c's ifi[1] =
-// stdout) writes — typically the same io.Writer as Console.Out.
-func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, logicals *iodev.LogicalNameTable, consoleOut io.Writer) *Environment {
+// stdout) writes — typically the same io.Writer as Console.Out; consoleIn
+// is where DECC$GETS/EXE$INPUT read from — typically the console's own
+// input stream.
+func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, logicals *iodev.LogicalNameTable, consoleIn io.Reader, consoleOut io.Writer) *Environment {
 	env := &Environment{
 		mem:        mem,
 		cpu:        cpu,
@@ -92,8 +111,11 @@ func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, lo
 		Logicals:   logicals,
 		pid:        nominalPID,
 		uic:        nominalUIC,
+		consoleIn:  consoleIn,
 		consoleOut: consoleOut,
 		ifiFiles:   map[uint16]io.Writer{},
+		openFiles:  map[uint32]*os.File{},
+		nextFID:    3,
 	}
 	registerShims(env.shims)
 	registerServices(env.services)

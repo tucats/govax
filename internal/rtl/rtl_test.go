@@ -20,7 +20,7 @@ func fixture() (*Environment, *bytes.Buffer) {
 	logicals := iodev.NewLogicalNameTable()
 	logicals.InitLogicals()
 	out := &bytes.Buffer{}
-	env := NewEnvironment(cpu, mem, devices, logicals, out)
+	env := NewEnvironment(cpu, mem, devices, logicals, bytes.NewReader(nil), out)
 	return env, out
 }
 
