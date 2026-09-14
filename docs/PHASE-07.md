@@ -156,3 +156,50 @@ instructions, and everything else that doesn't fit the earlier families.
   (Note 1), and divide-by-zero fallback (Note 3).
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
   all clean.
+
+### 2026-09-14 — Sub-phase 4: BUGL/BUGW, INDEX, BISPSW/BICPSW, PUSHR/POPR, BPT, PROBER/PROBEW, MOVPSL
+
+- Added `internal/cpu/misc.go`, porting `emul_misc.c`'s remaining handlers not
+  already claimed by earlier phases (HALT/NOP in Phase 03/04, the six queue
+  instructions in Phase 06). PROBER/PROBEW's accessibility test replicates the
+  C source's `VM_NOSIGNAL` translation mode by simply discarding any error
+  `vm.Memory.Translate` returns (access violation or translation-not-valid
+  alike) rather than raising it as a real fault — matching `vm()`'s own
+  `signal` flag, which guards every `set_fault` call in the function, not just
+  some of them.
+- No new fixed bugs or logged deviations this sub-phase — every handler here
+  was a direct, faithful port with no manual/comment mismatch found.
+- `internal/cpu/misc_test.go` covers BPT and BUGL's fault delivery, INDEX's
+  in-range and out-of-range (arithmetic fault, nothing stored) paths,
+  BISPSW/BICPSW's bit set/clear and reserved-bits fault, a PUSHR/POPR round
+  trip, PROBER's accessible (VM disabled) and not-accessible (a real
+  `Translate` failure on a different, unmapped page from the one the PROBER
+  instruction itself runs out of, so decode succeeds and only the probe target
+  fails) cases without raising a fault either way, and MOVPSL.
+- Verified directly (not just asserted) that every opcode named in this
+  phase's scope has a real registered `Handler`, not `unimplementedHandler`:
+  REI, RET, CALLG, CALLS, MTPR, MFPR, ADAWI, EMUL, EDIV, BPT, INDEX, PROBER,
+  PROBEW, BISPSW, BICPSW, POPR, PUSHR, MOVPSL, BUGL, BUGW — 20 opcodes in all.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
+  all clean. `go test ./internal/cpu -cover`: 86.8% statement coverage.
+
+### 2026-09-14 — Phase 07 close-out
+
+- Full `docs/DEVIATIONS.md` tally for this phase: 2 new resolved findings
+  (ADAWI's two condition-code deviations, and EDIV's missing quotient-overflow
+  detection — both replicated as-is, not covered by this phase's CALL/RET-
+  specific fix direction). Separately, per explicit user direction
+  (2026-09-14), four CALLS/CALLG/RET PSW-effect gaps against the manual were
+  fixed directly in the Go port rather than only logged as deviations — see
+  Sub-phase 1's entry above for the full list — since these instructions are
+  too load-bearing to leave imperfect by default.
+- LDPCTX/SVPCTX (`emul_procreg.c`) and XFC (`emul_xfc.c`) are deliberately
+  deferred, left as `unimplementedHandler` — see this doc's open questions for
+  why. REI's AST/software-interrupt delivery tail, RET's console-CALL-command
+  sentinel, and several of MTPR/MFPR's device/interrupt side effects are
+  likewise deferred pending Phase 09 (device I/O) and Phase 08 (console).
+- With CALLS/CALLG/RET/REI, MTPR/MFPR, ADAWI, EMUL/EDIV, and the remaining
+  `emul_misc.c` instructions all landed, the CPU instruction set (Phases
+  03-07) is complete for every opcode in scope across those phases.
+- Full-repo `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
+  `go test ./...` all clean. Phase complete.
