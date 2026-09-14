@@ -27,9 +27,10 @@ const (
 	ExcChangeModeU   Exception = 0x4C
 )
 
-// Fault reports a VAX exception: what happened, and the data the exception
-// handler (once ported in sub-phase 4) needs to build the signal-argument
-// stack frame. This is the Go equivalent of interrupt.c's set_fault, minus
+// Fault reports a VAX exception: what happened, and the data
+// Engine.HandleFault (internal/cpu/handlefault.go) needs to build the
+// signal-argument stack frame. This is the Go equivalent of interrupt.c's
+// set_fault, minus
 // the parts of struct FAULT that are console/history bookkeeping
 // (history_id, the fault-history linked list) rather than exception state.
 type Fault struct {

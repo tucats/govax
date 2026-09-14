@@ -442,6 +442,68 @@ func TestDecodeOperandPCByteRelativeDeferred(t *testing.T) {
 	}
 }
 
+func TestDecodeOperandPCWordRelative(t *testing.T) {
+	cpu, mem := fixture()
+	putBytes(t, cpu, mem, base, 0xCF, 0x10, 0x00) // mode C, reg 15 == PC, disp +16
+
+	pc := uint32(base)
+	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, ShortLiteralInt, false)
+	if err != nil {
+		t.Fatalf("decodeOperand: %v", err)
+	}
+	want := uint32(base + 3 + 16)
+	if op.Kind != OperandMemory || op.Addr != want {
+		t.Errorf("op = %+v, want Kind=Memory Addr=%#x", op, want)
+	}
+}
+
+func TestDecodeOperandPCWordRelativeDeferred(t *testing.T) {
+	cpu, mem := fixture()
+	putBytes(t, cpu, mem, base, 0xDF, 0x10, 0x00) // mode D, reg 15 == PC, disp +16
+	putLongword(t, cpu, mem, base+3+16, 0x24242424)
+
+	pc := uint32(base)
+	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, ShortLiteralInt, false)
+	if err != nil {
+		t.Fatalf("decodeOperand: %v", err)
+	}
+	if op.Kind != OperandMemory || op.Addr != 0x24242424 {
+		t.Errorf("op = %+v, want Kind=Memory Addr=0x24242424", op)
+	}
+}
+
+func TestDecodeOperandPCLongRelative(t *testing.T) {
+	cpu, mem := fixture()
+	putBytes(t, cpu, mem, base, 0xEF)
+	putLongword(t, cpu, mem, base+1, 0x100)
+
+	pc := uint32(base)
+	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, ShortLiteralInt, false)
+	if err != nil {
+		t.Fatalf("decodeOperand: %v", err)
+	}
+	want := uint32(base + 5 + 0x100)
+	if op.Kind != OperandMemory || op.Addr != want {
+		t.Errorf("op = %+v, want Kind=Memory Addr=%#x", op, want)
+	}
+}
+
+func TestDecodeOperandPCLongRelativeDeferred(t *testing.T) {
+	cpu, mem := fixture()
+	putBytes(t, cpu, mem, base, 0xFF)
+	putLongword(t, cpu, mem, base+1, 0x100)
+	putLongword(t, cpu, mem, base+5+0x100, 0x99887766)
+
+	pc := uint32(base)
+	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, ShortLiteralInt, false)
+	if err != nil {
+		t.Fatalf("decodeOperand: %v", err)
+	}
+	if op.Kind != OperandMemory || op.Addr != 0x99887766 {
+		t.Errorf("op = %+v, want Kind=Memory Addr=0x99887766", op)
+	}
+}
+
 func TestDecodeOperandAccessBranch(t *testing.T) {
 	cpu, mem := fixture()
 	putBytes(t, cpu, mem, base, 0x10) // raw signed byte displacement, +16, no mode byte

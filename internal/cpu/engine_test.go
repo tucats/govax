@@ -16,6 +16,21 @@ func testEngine(instructions []*Instruction) *Engine {
 	return &Engine{cpu: cpu, mem: mem, table: newTable(instructions)}
 }
 
+func TestEngineAccessors(t *testing.T) {
+	cpu, mem := fixture()
+	e := NewEngine(cpu, mem)
+
+	if e.CPU() != cpu {
+		t.Error("CPU() did not return the constructing CPU")
+	}
+	if e.Memory() != mem {
+		t.Error("Memory() did not return the constructing Memory")
+	}
+	if e.Halted() {
+		t.Error("Halted() = true for a freshly constructed Engine")
+	}
+}
+
 func TestEngineStepDispatchesHandler(t *testing.T) {
 	inst := &Instruction{Name: "TESTNOP", Opcode: Opcode{Function: 0x01}}
 	e := testEngine([]*Instruction{inst})

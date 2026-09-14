@@ -114,11 +114,12 @@ _None yet._
   `accessViolation` helper), losing that distinction.
 - **What**: Phase 02 predates fault-signaling entirely (`docs/PHASE-02.md` explicitly
   left `set_fault`'s translation to Phase 03), so this wasn't a fidelity question until
-  now — `Engine.fault`'s `vm.TranslationFault` → `cpu.Fault` mapping (`internal/cpu/
-  dispatch.go`) has no subcode to recover and reports `0x0001` (length/base violation)
-  unconditionally for every `AccessViolation`, matching the more common of the two C
-  call sites (and the same subcode `decode_opcode.c`/`decode_operand.c`'s own inlined
-  physical-address-resolution faults already use).
+  now — `wrapMemError`'s `vm.TranslationFault` → `cpu.Fault` mapping (`internal/cpu/
+  dispatch.go`, called from `Engine.raise` in `internal/cpu/engine.go`) has no subcode
+  to recover and reports `0x0001` (length/base violation) unconditionally for every
+  `AccessViolation`, matching the more common of the two C call sites (and the same
+  subcode `decode_opcode.c`/`decode_operand.c`'s own inlined physical-address-
+  resolution faults already use).
 - **Status**: deferred. A real fix means widening `vm.TranslationFault.Kind` with a
   third case (or a length-vs-protection sub-field) in Phase 02's territory, which is
   out of scope for a Phase 03 change; revisit alongside Phase 02 or in Phase 12.

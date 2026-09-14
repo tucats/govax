@@ -444,3 +444,39 @@ Each is one buildable, testable commit, following Phase 01/02's pattern.
   avoid leaking registered handlers into other tests.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
   clean; `internal/cpu` package coverage 87.2%.
+
+### 2026-09-14 — Sub-phase 7: close-out
+
+- Reviewed sub-phases 1-6 against this doc's Goal/Deliverables: an `internal/cpu`
+  decode step that walks any VAX opcode + operand specifiers against `internal/vm`/
+  `internal/vax.CPU`, and an execute dispatch mechanism ready for Phases 04-07, are both
+  in place (`decodeInstruction`, `Table.SetHandler`/`HandlerFor`, `Engine.Step`/`Run`).
+  One planning-doc deviation worth noting: the original sub-phase 1 description put the
+  `Handler` type and dispatch registration in sub-phase 1 alongside the table; building
+  it revealed `Handler`'s signature needs `Engine`/`Decoded`, which don't exist until
+  sub-phases 4 and 3 — so dispatch registration moved to sub-phase 6 where those types
+  are real, and `Instruction` (sub-phase 1) stayed pure static data, matching the C
+  source's own separation between `instruction_table.h`'s static data and
+  `init_emulators.c`'s separately-attached `routine` field.
+- Cross-checked the ported decode logic against `reference/AUDIT.md`'s CPU-subsystem
+  findings (C1-C3): all three were confirmed fixed *purely* by the closed audit's
+  `LONGWORD`-width fix, with no `decode_operand.c`/`storage.c`/`fpu.c` code changes —
+  meaning the current reference source's `mode==5` register-fast-path (no `scale==8`
+  special case) is the *correct*, already-fixed form, not a residual bug, and the
+  Rn/Rn+1 register-pair combination for quadword register operands (implicit in the
+  C source's pointer arithmetic once `vax.reg[]` is genuinely 4 bytes per element) is
+  exactly what `internal/cpu/operandaccess.go`'s `Load`/`Store` implement explicitly.
+  Added `TestDecodeInstructionQuadwordRegisterPair` (`decode_test.go`), replicating
+  `AUDIT.md` C2's own live-test scenario (`MOVQ R2,R4` round-tripping `R2:R3` into
+  `R4:R5`) end-to-end from a real decoded instruction, not a hand-built `Operand`.
+- Filled the two addressing-mode gaps `go test -cover` turned up (PC-relative Word and
+  Long Relative/Relative-Deferred were exercised for the general-register displacement
+  modes but not the PC-relative ones) plus a few trivial-but-real accessor/`Error()`
+  tests; `internal/cpu` coverage went from 87.2% to 90.5%.
+- Fixed a stale reference in `docs/DEVIATIONS.md`'s Phase 02/03 entry (`Engine.fault`,
+  an earlier working name) to the method's actual name, `Engine.raise`.
+- No new `docs/DEVIATIONS.md` entries beyond what earlier sub-phases already logged;
+  the one open question (Register mode + `OP_AD` access) stays open, deferred to
+  Phase 04 as previously noted.
+- Full-repo `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
+  `go test ./...` all clean; `internal/cpu` coverage 90.5%. Phase complete.
