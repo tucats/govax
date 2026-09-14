@@ -138,6 +138,12 @@ opcode table slots they occupy stay on `unimplementedHandler` until then.
 
 - ~~Register mode used where `OP_AD`/`OP_VA` access is required~~ — resolved per user
   direction: fixed in Go at decode time. See Design notes above.
+- CASE's internal arithmetic width for byte/word `selector`/`base`/`limit` (sign-extend
+  to 32 bits, matching the C source, vs. compute at the operand's own declared width,
+  matching every other instruction in this phase) — genuinely unresolved, not a
+  confirmed finding either way; see `docs/DEVIATIONS.md`'s entry under "Open questions
+  carried forward." Deferred to Phase 12 or a direct question to the user, rather than
+  guessed at.
 
 ## Progress Log
 
@@ -440,3 +446,40 @@ opcode table slots they occupy stay on `unimplementedHandler` until then.
   (SOBGTR), and HALT together, matching this phase's stated deliverable. Verifies the
   final sum (15), the loop counter reaching exactly 0, and PC landing right after HALT.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
+
+### 2026-09-14 — Sub-phase 14: close-out
+
+- Reviewed sub-phases 1-13 against this doc's Goal/Deliverables: every C source file
+  in the original scope mapping (`emul_mov.c`, `emul_mova.c`, `emul_clr.c`,
+  `emul_push.c`, `emul_increment.c`, `emul_integer_math.c`, `emul_integer_cvt.c`,
+  `emul_cmp.c`, `emul_ash.c`, `emul_branch.c`, `emul_loop.c`) has its integer paths
+  fully ported and registered into the Phase 03 dispatch table, with table-driven unit
+  tests covering operand combinations, condition-code outcomes, and overflow/carry edge
+  cases per instruction family. The integration smoke test (sub-phase 13) runs a real
+  hand-encoded program end-to-end through `Engine.Run`, in place of the doc's original
+  "assemble-and-run" phrasing (the assembler itself is Phase 11, as already noted when
+  this phase was planned). Floating operand types (MOVF/MOVD/MNEGF/MNEGD, CMPF/TSTF,
+  ACBF, and the CVTxF/CVTFx family, which was never in this phase's scope to begin
+  with) are confirmed still unimplemented, on `unimplementedHandler`, ready for
+  Phase 05's `fpu_load`/`fpu_store` port.
+- Final `docs/DEVIATIONS.md` tally for this phase: 9 resolved findings (fixed in Go,
+  each with a before/after test), 2 deferred findings (ADWC/SBWC's word-vs-longword
+  sizing and BISB3's mis-scaled destination — both structural, baked into the
+  mechanically generated instruction table, out of scope for a handler-level change),
+  and 1 open question (CASE's internal arithmetic width) — plus the register-mode
+  `OP_AD`/`OP_VA` fault fix carried forward from Phase 03 and resolved here per user
+  direction. Every fix was verified against `reference/vax_instr_set.pdf`'s own
+  Condition Codes tables rather than asserted from memory or from the C source's
+  comments alone — several of the confirmed bugs (MNEG's carry formula, the
+  byte-range/longword-truncation overflow checks, ACB's boundary condition, CVT's
+  N/Z timing) would have been easy to miss or to mis-diagnose without the manual open
+  side by side with the C source.
+- `go test ./internal/cpu -cover`: 90.8% statement coverage (Phase 03 closed at
+  90.5%). The uncovered lines are almost entirely `if err != nil { return err }`
+  propagation after an `Operand.Load`/`Store` call inside each handler — Phase 03's
+  `operandaccess_test.go` already exercises `Load`/`Store`'s own fault paths
+  thoroughly, so a dedicated fault-injection test per Phase 04 handler would mostly
+  re-test that same plumbing rather than this phase's own logic; not pursued further,
+  consistent with Phase 03's close-out judgment call on the same tradeoff.
+- Full-repo `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
+  `go test ./...` all clean. Phase complete.
