@@ -313,3 +313,23 @@ opcode table slots they occupy stay on `unimplementedHandler` until then.
   N/Z-from-destination fix demonstrated concretely (128 → 0x80, N must be true), the
   byte-range V-check fix, and a plain positive-value conversion.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
+
+### 2026-09-14 — Sub-phase 8: compare/bit-test/test
+
+- Added `internal/cpu/cmp.go`: `emulCmp` (CMPB/W/L), `emulBit` (BITB/W/L), `emulTst`
+  (TSTB/W/L). `emulCmp` reuses `subResult`'s V/C computation (CMP's condition codes are
+  exactly "src1 - src2, discarded"), forcing V to 0 as the manual specifies (CMP's own
+  V is always 0, unlike SUB's). `emulBit` reuses `setLogicalPSL` from the integer-math
+  sub-phase. `CMPL`'s C-source table entry attaches a separate, size-specialized
+  `emul_cmpl` purely as a performance optimization (`init_emulators.c`) — not ported as
+  a separate handler, same category of speed hack Phase 03 already declined to carry
+  over, and `emulCmp` is already generic over size.
+- Fixed the BIT C-bit deviation flagged ahead of time in sub-phase 2's design notes
+  (`docs/DEVIATIONS.md`'s "BIT's carry flag is force-cleared" entry, now marked
+  resolved): `emul_cmp.c`'s shared handler zeroes C for BIT where the manual specifies
+  unaffected; TST was already correct.
+- Added `internal/cpu/cmp_test.go`: CMP's signed/unsigned-disagreement case (N and C
+  can point opposite ways for the same comparison, V always 0 regardless), confirming
+  operands are never modified, CMPL routing through the shared generic handler, BIT's
+  C-unaffected fix, and TST's zero/nonzero condition codes.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.

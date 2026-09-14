@@ -200,9 +200,11 @@ _None yet._
   after the switch.
 - **What**: `vax_instr_set.pdf`'s BIT entry specifies `C <- C` (unchanged); its TST
   entry specifies `C <- 0`, which the C source gets right. Only BIT is wrong.
-- **Status**: to be fixed when this phase's compare/bit-test/test sub-phase lands (see
-  `docs/PHASE-04.md`'s sub-phase list) — noted here now since it was found while
-  reading `emul_cmp.c` ahead of that sub-phase, not deferred to avoid forgetting it.
+- **Status**: fixed in Go. `internal/cpu/cmp.go`'s `emulBit` uses `setLogicalPSL` (the
+  same BIS/BIC/XOR-shaped "N/Z from result, V <- 0, C unaffected" helper from
+  `internal/cpu/integermath.go`) instead of reusing CMP's C computation; `emulTst`
+  explicitly sets both V and C to 0, matching the C source's (already-correct) TST
+  behavior. Verified by `internal/cpu/cmp_test.go`'s `TestEmulBitLeavesCarryUnaffected`.
 
 ### [Phase 04, deferred] ADWC/SBWC operate on word operands; the manual specifies longword
 
