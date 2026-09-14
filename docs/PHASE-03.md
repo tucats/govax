@@ -24,7 +24,7 @@ yet execute) any instruction opcode and its operand specifiers.
 ## Deliverables
 
 - An `internal/cpu` package with a decode step that can walk any VAX opcode + operand
-  specifiers against `internal/vm` memory and `internal/vax.Machine` registers, and an
+  specifiers against `internal/vm` memory and `internal/vax.CPU` registers, and an
   execute dispatch mechanism ready for Phases 04-07 to register instruction handlers
   into.
 - Unit tests: decode correctness for a representative opcode from each addressing mode
@@ -32,11 +32,236 @@ yet execute) any instruction opcode and its operand specifiers.
   `reference/eVAX/AUDIT.md` and the VAX ISA manual for any previously-fixed corner
   cases.
 
+## Design notes (from C source inventory)
+
+### Dispatch mechanism — resolved
+
+Per user direction: a function dispatch table, matching the C source's own design
+(`instruction[opcode.index].routine`, an array of function pointers built once by
+`init_emulators.c`). No architectural or performance reason favors a big switch or
+per-family sub-dispatch instead — a table is what Phases 04-07 will want to register
+handlers into incrementally anyway (mirroring `init_emulators.c`'s "only the
+implemented ones get overridden, the rest fault" pattern), so this isn't revisited.
+
+### Instruction table: generated, not hand-transcribed
+
+`instruction_table.h` is itself machine-generated in the C project (its own header
+comment says so) and has ~284 entries in a rigidly consistent 9-field-per-entry format.
+Hand-transcribing that into a Go literal risks silent transcription errors in opcode
+values, operand scales, and access modes — exactly the kind of bug this project's
+"comprehensive unit test suite the C version never had" goal exists to prevent, but
+better avoided than caught. Instead: a small generator
+(`internal/cpu/gen/main.go`, run via `go generate`) parses
+`reference/eVAX/eVAX/Headers/instruction_table.h` directly and emits
+`internal/cpu/instructions_table.go`. This keeps the Go table mechanically traceable to
+the reference file rather than hand-copied, and can be re-run if upstream ever changes.
+
+Table lookup: single-byte opcodes (`0x00`-`0xFC`) index a flat `[256]*Instruction`
+array directly, matching the C source. Extended (two-byte, prefix `0xFD`/`0xFE`/`0xFF`)
+opcodes use a `map[uint16]*Instruction` keyed by `extended<<8|opcode` instead of the C
+source's linear scan from index 256 — same result, O(1) instead of O(n); this is a pure
+lookup-strategy improvement with no behavioral difference (same category as Phase 01/02
+not porting 1999-era speed hacks like `PSL_W` or the TB/STC cache), not logged to
+`DEVIATIONS.md`.
+
+### Operand representation: value-based, not pointer-based
+
+The single biggest departure from the C source's mechanism, and worth explaining up
+front since Phases 04-07's instruction handlers are built against it.
+
+The C source's `decode_operand()` resolves each operand to a **raw pointer**
+(`opcode->address[n]`) into either the register file or a scratch "temporary register"
+slot (`vax.reg[16..]`), so that `get_operand()`/`put_operand()` can later
+read/write through that pointer uniformly regardless of whether the operand is a
+register, a memory location, or a literal. Short literals and immediates are copied
+into scratch registers *purely* to get a pointer to dereference; quadword memory
+operands are reassembled into a pair of scratch registers for the same reason. This
+pointer-uniformity trick is also the direct cause of `AUDIT.md` finding C2 (quadword
+operand reconstruction bug) — the scratch-register bookkeeping it requires is a real
+source of bugs, not an incidental detail.
+
+Go has no equivalent need: a method can provide the same uniform read/write interface
+without aliasing through a pointer into shared state. So `cpu.Operand` instead carries
+enough information to resolve its value **on demand**:
+
+```go
+type OperandKind int
+
+const (
+    OperandRegister  OperandKind = iota // value lives in a GPR (Reg)
+    OperandMemory                       // value lives at a VAX virtual address (Addr)
+    OperandImmediate                    // value is resolved at decode time (Value)
+)
+
+type Operand struct {
+    Access AccessKind  // this operand's access mode from the instruction table
+    Kind   OperandKind
+    Reg    vax.Reg      // valid when Kind == OperandRegister
+    Addr   uint32       // valid when Kind == OperandMemory; also the resolved
+                         // address itself for OP_AD/OP_BR/OP_VA-access operands
+                         // (used directly, never dereferenced — same as VAXaddr[n]
+                         // in the C source)
+    Value  uint64        // valid when Kind == OperandImmediate
+    Size   int           // operand size in bytes: 1, 2, 4, or 8
+}
+```
+
+Consequences of this choice, so later phases aren't surprised:
+
+- No scratch/temporary-register bookkeeping (`vax.treg`, the two-counter dance between
+  decode-time literal placement and execute-time quadword reassembly) is ported at
+  all — there's nothing for it to do once operand access is value-based rather than
+  pointer-based. `vax.CPU`'s register file (R0-R63) is not used as decode scratch
+  space by this port; registers 16-63 remain available as ordinary addressable
+  temporaries the way the C source's `T0`-`T5` mnemonics use them, just not as
+  operand-decode plumbing.
+- `Operand.Load`/`Operand.Store` (Phase 03 sub-phase 5, the `get_operand`/
+  `put_operand` equivalents) take `*vax.CPU`/`*vm.Memory` and resolve the value fresh
+  each call — no aliasing, so `AUDIT.md` C2's bug class can't recur here by
+  construction.
+- Autoincrement/autodecrement/deferred addressing still mutate the base register
+  **once, at decode time**, exactly as the C source does — only the later
+  "how do I get the value" step changed, not addressing-mode semantics.
+
+### Short-literal floating operands: decoded structurally, resolved in Phase 05
+
+`decode_operand.c`'s short-literal path (addressing modes 0-3) calls `fpu_store()` to
+convert `short_double[]` table entries into VAX F/D-floating bit patterns when the
+instruction's short-literal type is `OP_TYPE_FLOAT`. `fpu_store` is a nontrivial,
+easy-to-get-wrong bit-twiddling routine (pointer-cast byte reordering, and its
+`BIGENDIAN`-branch `LSB`/`MSB` macros disagree with their own inline comments — e.g.
+`pd[ LSB /* 0 */ ]` where `LSB` is `1` on the non-`BIGENDIAN` branch this port
+targets), and it's explicitly Phase 05's deliverable (`docs/PHASE-05.md`: "port F/D-
+floating conversion and arithmetic"). Reverse-engineering it ahead of schedule for one
+decode corner case, with no test yet built to verify it, is a good way to bake in a
+silent wrong-bit-pattern bug.
+
+Mode/PC-advancement is unaffected either way (a short literal is the addressing-mode
+byte itself; no extra bytes are read regardless of int-vs-float interpretation), so
+this doesn't block full addressing-mode coverage. Decode resolves this case
+structurally — correct mode recognition, correct 6-bit index, correct
+`OperandImmediate` classification — and carries the value as the *native* `float64`
+from `short_double[]` (via `math.Float64bits`) rather than a VAX F/D-floating bit
+pattern. Phase 05's float instruction handlers, which need the real `fpu_store`/
+`fpu_load` port anyway, are what convert it the rest of the way. Not logged to
+`DEVIATIONS.md` — this is a sequencing choice, not a suspected fidelity issue.
+
+### Fault/exception handling is in scope; device interrupts are not
+
+`interrupt.c`'s `set_fault`/`handle_fault`/`set_mode_stack` (build a fault frame,
+consult the SCB vector at `SCBB + code`, push PC/PSL/signal-args on the
+appropriately-chosen stack, switch access mode) is self-contained CPU/memory state
+with no dependency on device interrupts, the console, or disassembly — it's what
+`decode_operand.c`'s `set_fault(EXC_RESADDR, ...)` etc. already call into, so it has to
+exist for decode-time faults to mean anything. This is ported now as `cpu.Fault` (the
+`struct FAULT` equivalent: exception code, signal args, faulting PC) plus
+`Engine.HandleFault`.
+
+Explicitly **out of scope**, deferred to their already-assigned phases:
+
+- The device interrupt queue (`vax.iqueue`, `interrupt()`, IPL-based interrupt
+  admission, the periodic clock/`ICCS` handling in `execute_vax`'s "quantum" block) —
+  Phase 09 I/O. Nothing in decode or fault-handling requires it; `handle_fault` only
+  *consumes* an already-chosen IPL, it doesn't decide interrupt admission.
+- `memory_io.c` (`load_io`/`store_io`, memory-mapped device register stubs) — Phase 09
+  I/O; confirmed by reading it, it's device-specific stub code, not a CPU-loop
+  dependency (`storage.c`'s I/O-space dispatch itself is Phase 09 territory, since the
+  physical address ranges involved are device-specific).
+- Breakpoints, single-step (`STEP_*`), disassembly output, and register-change
+  tracking in `execute_vax` — Phase 08 console and Phase 11 disassembler.
+- `format_exception`'s "no SCB handler installed" console fallback — Phase 08 console.
+
+`set_mode_stack`'s `vax.MAPEN = 1` on a non-interrupt-stack mode switch is flagged by
+the C source's own comment as uncertain (`/* Not sure about this!! */`). Per this
+project's bug-fixing policy this is a suspected-fidelity question, not a clear-cut
+error, so it's replicated as-is and logged to `docs/DEVIATIONS.md` when fault handling
+lands (sub-phase 4) rather than second-guessed.
+
+### New composing type: `cpu.Engine`
+
+Fault handling and the fetch-decode-execute loop both need `*vax.CPU` and `*vm.Memory`
+together, plus decode/execute-only state the C source keeps on the global `vax`
+struct but Phase 01 deliberately deferred: `instruction_PC` (PC at the start of the
+current instruction, used by fault reporting) and `halted`. These don't belong on
+`vax.CPU` (registers/PSL only, per Phase 01's scope) or on `vm.Memory` (owns RAM, not
+CPU-loop state), so Phase 03 introduces `cpu.Engine` to hold them alongside the
+instruction dispatch table. This is a different type from the `vax.Machine` Phase 01's
+naming note left room for — that name stays reserved for a possible later top-level
+type composing CPU+memory+console+I/O (Phase 08+); `cpu.Engine` is scoped to exactly
+what the decode/execute loop needs now.
+
+Instruction handlers (Phases 04-07) have the signature
+`type Handler func(e *Engine, d *Decoded) error`, returning `nil`, a `*Fault`, or the
+`ErrHalted` sentinel (the Go equivalent of the C source's `VAX_HALT`/`vax.halted = 1`,
+returned by the future HALT handler in Phase 04 rather than reaching into `Engine`
+directly).
+
+### Main loop: minimal core only
+
+`execute_vax()` in `vax.c` is ~450 lines, but the large majority of it is console
+concerns already ruled out above (breakpoints, STEP modes, disassembly output,
+register-change tracking) or I/O concerns (the interrupt queue, the periodic clock).
+Stripped to what's actually Phase 03's — fetch, decode, dispatch, fault handling, loop
+— the core reduces to: decode one instruction, look up its handler in the dispatch
+table, call it, and on a `*Fault` result call `Engine.HandleFault` and continue;
+`ErrHalted` stops the loop. This becomes `Engine.Step()` (one instruction) and
+`Engine.Run()` (loop until halted or a non-fault error), with Phase 08's console
+expected to layer STEP/breakpoint semantics on top of `Step` rather than Phase 03
+reimplementing them.
+
+## Sub-phases
+
+Each is one buildable, testable commit, following Phase 01/02's pattern.
+
+1. **Core decode types & generated instruction table** — `AccessKind`/`OperandKind`
+   constants, the `Instruction` table-entry type, `Handler`/dispatch `Table` type
+   (`[256]*Instruction` + extended map), and `internal/cpu/gen`'s generator producing
+   `instructions_table.go` from `instruction_table.h`. Unit tests: entry count matches
+   the reference file, spot-checks of several opcodes across the single-byte and
+   extended ranges (HALT, MOVL, INDEX, BUGL/BUGW), table lookup by (extended, opcode).
+
+2. **Operand decode** — port of `decode_operand.c`: register mode fast path, short
+   literals (int and float, per the design note above), all indexed/displacement/
+   deferred/autoincrement/autodecrement modes, PC-relative modes (immediate, absolute,
+   byte/word/long relative and deferred), indexed-mode recursion, and the
+   reserved-addressing-mode fault for illegal write-to-literal. Unit tests: one
+   representative opcode/operand encoding per addressing mode, indexed-mode
+   composition, the illegal-write-to-literal fault case, register-mode PC/SP/FP/AP
+   aliasing.
+
+3. **Opcode fetch & full decode** — port of `decode_opcode.c`: single-byte vs.
+   extended-opcode fetch, the operand-loop drive using sub-phase 2, and the
+   unimplemented-opcode fault. Unit tests: decode across varying operand counts and
+   opcode lengths, an extended opcode, a bad/reserved opcode faulting correctly.
+
+4. **Fault/exception machinery** — `cpu.Fault`, `Engine.SetFault`/`Engine.HandleFault`/
+   `set_mode_stack` equivalents (SCB vector fetch, stack push, access-mode switch), and
+   mapping `vm.TranslationFault` into the right `EXC_ACCVIO`/`EXC_TNV` fault. Unit
+   tests: vector fetch and PC/PSL/signal-arg stack push round-trip, mode switching
+   across all four `CHMx` codes, a translation fault propagating as the right
+   exception. `docs/DEVIATIONS.md` entry for `set_mode_stack`'s uncertain `MAPEN`
+   write.
+
+5. **Operand value access** — `Operand.Load`/`Operand.Store` (the `get_operand`/
+   `put_operand` equivalents), built directly on `vm.Memory`'s typed accessors per the
+   value-based design above (no scratch-register mechanism to port). Unit tests:
+   load/store round-trip for each `OperandKind` at each size, illegal store to an
+   immediate operand.
+
+6. **Fetch-decode-execute loop** — `Engine.Step`/`Engine.Run`, the minimal core
+   described above. Unit tests: `Step` dispatches to the correct (stub/unimplemented)
+   handler, an unimplemented opcode faults `EXC_PRIV` the way `emul_unimplemented`
+   does, a fault during `Step` is handled and execution continues, `ErrHalted` stops
+   `Run`.
+
+7. **Close-out** — gap review against this doc's Goal/Deliverables, any addressing-mode
+   corner cases cross-checked against the VAX ISA manual, final `docs/DEVIATIONS.md`
+   pass, progress log, full-repo `go build`/`go vet`/`go test` clean.
+
 ## Open questions / notes
 
-- Decide the instruction-dispatch mechanism in Go: a big switch, a table of function
-  values, or per-family sub-dispatch — likely informed by how Phases 04-07 end up
-  grouping instructions.
+- ~~Decide the instruction-dispatch mechanism~~ — resolved: function dispatch table,
+  per user direction; see Design notes above.
 
 ## Progress Log
 
