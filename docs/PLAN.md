@@ -3,7 +3,7 @@
 This document describes the *high-level* plan for the project, including project phases created
 through pre-planning, and progress logging.
 
-This is a conversion (from C to Go) of the VAX emulator project at https://github.com/tucats/eVAX and
+This is a conversion (from C to Go) of the VAX emulator project at https://github.com/tucats/evax and
 currently hosted on the local development system at /Users/tom/Documents/Projects/eVAX. This project is
 not a cross-compilation, but a careful evaluation of the C version of the emulator followed by
 rewriting it from scratch as Go code, using the benefits of the Go language to implement features
@@ -19,3 +19,47 @@ create a comprehensive suite of unit tests for each of the main components of th
 - Integerated I/O capabilityies
 - Runtime Library (RTL) simulators
 
+## Locked-in decisions
+
+Established during initial project planning (2026-09-14):
+
+- **State model**: machine state lives in an instantiated struct (constructor-created,
+  passed explicitly / receiver-bound), not a package-level singleton mirroring the C
+  source's global `struct VAX vax`. Enables isolated unit tests and multiple machines
+  per process.
+- **Source import**: the full eVAX C source tree is copied into `reference/eVAX/` as a
+  read-only reference for diffing during conversion (imported via `git archive` from
+  the upstream `tucats/evax` repo, so only tracked source came across). Loose
+  root-level fixtures from that repo are organized under `testdata/` (`asm/`, `exe/`,
+  `rom/`, `dcl/`).
+- **Phase order**: bottom-up, matching the subsystem list above — CPU hardware
+  definition → virtual memory → instruction set → console → I/O → RTL — with the
+  assembler last and an integration pass at the end. See the phase breakdown below.
+- **Correctness reference**: the current C source has already been through a closed
+  portability audit (`reference/eVAX/AUDIT.md`, no open findings) that fixed a
+  root-cause 32-vs-64-bit `LONGWORD` typedef bug and its downstream consequences. It is
+  treated as the primary behavioral reference for the port; the VAX ISA manual
+  (`~/Documents/Technical Doc/VMS/vax_instr_set.pdf`) is consulted when something looks
+  suspicious or underdocumented, rather than re-deriving every instruction from the
+  spec.
+
+## Phases
+
+Each phase has its own document in `docs/PHASE-nn.md`, with scope, deliverables, open
+questions, and a progress log extended as that phase is worked.
+
+| Phase | Doc | Summary |
+| --- | --- | --- |
+| 00 | [PHASE-00.md](PHASE-00.md) | Project bootstrap & source import |
+| 01 | [PHASE-01.md](PHASE-01.md) | CPU hardware definition |
+| 02 | [PHASE-02.md](PHASE-02.md) | Virtual memory support |
+| 03 | [PHASE-03.md](PHASE-03.md) | Instruction decode engine |
+| 04 | [PHASE-04.md](PHASE-04.md) | Core instruction families (move/integer/branch) |
+| 05 | [PHASE-05.md](PHASE-05.md) | Floating point |
+| 06 | [PHASE-06.md](PHASE-06.md) | String, bitfield & queue instructions |
+| 07 | [PHASE-07.md](PHASE-07.md) | Procedure calls, privileged & misc instructions |
+| 08 | [PHASE-08.md](PHASE-08.md) | Console functionality |
+| 09 | [PHASE-09.md](PHASE-09.md) | I/O & device support |
+| 10 | [PHASE-10.md](PHASE-10.md) | RTL simulators |
+| 11 | [PHASE-11.md](PHASE-11.md) | Assembler / disassembler |
+| 12 | [PHASE-12.md](PHASE-12.md) | Integration & regression |

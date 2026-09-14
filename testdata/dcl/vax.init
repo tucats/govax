@@ -1,0 +1,64 @@
+;
+;  Initialization file for eVAX
+;
+
+;
+;  Initialize memory with 2mb of physical RAM
+;
+
+init ^d4096
+
+if defined("console$arg_file" ) then set noverbose
+
+;
+;   Now, create page tables for the rest of memory. 
+;   Allocate more than there is physical memory for;
+;   we allow sparse address spaces.  Note these values
+;   are all in decimal pages.
+
+vminit /p0=2048 /p1=8192 /s0=2048 /ksp=20
+
+;	Load the console ROM into ROM storage, if there is one found.
+;	Also allocate the NVRAM storage area.
+;
+
+load/rom/noerror
+load/nvram/noerror
+
+;	Assemble the microkernel
+
+print
+print "Type HELP for information on available commands."
+print
+print "Building Microkernel..."
+
+asm  "kernel.asm"
+clear sym/all
+
+
+set quantum 1
+go exe$initialize
+;if defined("exe$forth_init" ) call exe$forth_init
+
+set PC=200
+
+set debug nouserhalt
+set debug process
+
+print " "
+
+; Create devices
+
+define/device tta0/devclass=term/devtype=vt100/devbufsiz=80
+
+define/logical tt tta0
+
+; If there was a command line argument, assume it is the full text of the
+; command to run, and do it.  Alternatively, a command could be put on
+; the INCLUDE/COMMAND which would be run, and use substitution operators
+; to get parts of the command.  Note that if there is a command line arg,
+; then this command exits the emulator when it's done.  If you just want
+; to process the command and not exit the emulator, then just use a
+; substition operator like &&CONSOLE$ARG_CMD to run the command.
+
+include/command_line

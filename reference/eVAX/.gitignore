@@ -1,0 +1,31 @@
+build/
+*.d
+*.dia
+*.hmap
+
+# Xcode user-specific state
+eVAX.xcodeproj/xcuserdata/
+eVAX.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Xcode derived data / indexing / caches (found checked out inside eVAX/eVAX/)
+eVAX/CompilationCache.noindex/
+eVAX/ModuleCache.noindex/
+eVAX/SDKStatCaches.noindex/
+eVAX/SDKExplicitPrecompiledModules/
+eVAX/SymbolCache.noindex/
+eVAX/eVAX-*/
+eVAX/Debug/
+eVAX/Release/
+
+# CVS legacy metadata
+CVS/
+
+# macOS
+.DS_Store
+
+# Claude Code session-local state
+.claude/
+
+# Stray compiled precompiled-header binary (no extension, not source)
+eVAX/Headers/vax
+

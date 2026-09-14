@@ -1,0 +1,132 @@
+//
+//  Copyright (C) 1997,1998,1999 Forest Edge Software, see License.txt for Rights
+//
+//  Program:    eVAX, a "Virtual VAX" for Mac OS Computers
+//
+//  Author:     Tom Cole
+//
+//  Module:     vaxrc.h
+//
+//  Purpose:    This module contains definitions how return codes are
+//              assembled, and the list of defined return codes.  This
+//              is included from vax.pch.
+//
+//  History:    02/23/98    Header standardization
+//
+//
+
+
+
+//  Facilities
+
+#define FAC_EMULATOR        1
+#define FAC_PROCESSOR       2
+#define FAC_ASSEMBLER       3
+
+
+//  Severities
+
+#define SEV_WARNING         0
+#define SEV_SUCCESS         1
+#define SEV_ERROR           2
+#define SEV_INFO            3
+#define SEV_FATAL           4
+#define SEV_FATAL2          5
+#define SEV_FATAL3          6
+
+
+#define ERRORCODE( f, s, n )    (( s ) + (( n ) << 3 ) + (( f ) << 18 ))
+
+//  Emulator return codes
+
+#define VAX_OK              0           //  Success     ( special case )
+#define VAX_NORMAL          1           //  Emulation completd   (ditto)
+
+#define VAX_MEM             ERRORCODE( FAC_EMULATOR, SEV_FATAL,     2  )
+#define VAX_UNIMP           ERRORCODE( FAC_EMULATOR, SEV_ERROR,     3  )
+#define VAX_ASSERT          ERRORCODE( FAC_EMULATOR, SEV_FATAL,     4  )
+#define VAX_UNKPARM         ERRORCODE( FAC_EMULATOR, SEV_ERROR,     5  )
+#define VAX_UNKCMD          ERRORCODE( FAC_EMULATOR, SEV_ERROR,     6  )
+#define VAX_NOHELPFILE      ERRORCODE( FAC_EMULATOR, SEV_ERROR,     7  )
+#define VAX_NOHELP          ERRORCODE( FAC_EMULATOR, SEV_WARNING,   8  )
+#define VAX_NOVAX           ERRORCODE( FAC_EMULATOR, SEV_FATAL,     9  )
+#define VAX_SYNTAX          ERRORCODE( FAC_EMULATOR, SEV_ERROR,     10 )
+#define VAX_TNV             ERRORCODE( FAC_EMULATOR, SEV_ERROR,     12 )
+#define VAX_INVSETASM       ERRORCODE( FAC_EMULATOR, SEV_ERROR,     13 )
+#define VAX_UNKSTRUCT       ERRORCODE( FAC_EMULATOR, SEV_ERROR,     14 )
+#define VAX_INVENDADDR      ERRORCODE( FAC_EMULATOR, SEV_ERROR,     15 )
+#define VAX_INCOMPLETE      ERRORCODE( FAC_EMULATOR, SEV_ERROR,     16 )
+#define VAX_FNF             ERRORCODE( FAC_EMULATOR, SEV_ERROR,     17 )
+#define VAX_UNKTEST         ERRORCODE( FAC_EMULATOR, SEV_ERROR,     18 )
+#define VAX_INVINSTR        ERRORCODE( FAC_EMULATOR, SEV_INFO,      19 )
+#define VAX_EXTRACMD        ERRORCODE( FAC_EMULATOR, SEV_WARNING,   20 )
+#define VAX_INVVMSYN        ERRORCODE( FAC_EMULATOR, SEV_ERROR,     21 )
+#define VAX_INVVMSIZE       ERRORCODE( FAC_EMULATOR, SEV_ERROR,     22 )
+#define VAX_INVS0SIZE       ERRORCODE( FAC_EMULATOR, SEV_ERROR,     23 )
+#define VAX_EXPENTRY        ERRORCODE( FAC_EMULATOR, SEV_ERROR,     24 )
+#define VAX_INVARGLIST      ERRORCODE( FAC_EMULATOR, SEV_ERROR,     25 )
+#define VAX_NOFRAMES        ERRORCODE( FAC_EMULATOR, SEV_INFO,      26 )
+#define VAX_INVSETDBG       ERRORCODE( FAC_EMULATOR, SEV_ERROR,     27 )
+#define VAX_INVSETPSL       ERRORCODE( FAC_EMULATOR, SEV_ERROR,     28 )
+#define VAX_NOTKERNEL       ERRORCODE( FAC_EMULATOR, SEV_ERROR,     29 )
+#define VAX_ATTENTION       ERRORCODE( FAC_EMULATOR, SEV_INFO,      30 )
+#define VAX_MAPEXISTS       ERRORCODE( FAC_EMULATOR, SEV_WARNING,   31 )
+#define VAX_MAPNF           ERRORCODE( FAC_EMULATOR, SEV_ERROR,     32 )
+#define VAX_STEPENTRY       ERRORCODE( FAC_EMULATOR, SEV_WARNING,   33 )
+#define VAX_NOMK            ERRORCODE( FAC_EMULATOR, SEV_ERROR,     34 )
+#define VAX_NOVMINIT        ERRORCODE( FAC_EMULATOR, SEV_ERROR,     35 )
+#define VAX_DELMK           ERRORCODE( FAC_EMULATOR, SEV_INFO,      36 )
+#define VAX_BADROM          ERRORCODE( FAC_EMULATOR, SEV_ERROR,     37 )
+#define VAX_BADNVR          ERRORCODE( FAC_EMULATOR, SEV_ERROR,     38 )
+#define VAX_INVREGUSE       ERRORCODE( FAC_EMULATOR, SEV_ERROR,     39 );
+
+//  Virtual machine states
+
+#define VAX_ILLADDRFAULT    ERRORCODE( FAC_PROCESSOR, SEV_ERROR,     1 )
+#define VAX_TBIT            ERRORCODE( FAC_PROCESSOR, SEV_INFO,      2 )
+#define VAX_HALT            ERRORCODE( FAC_PROCESSOR, SEV_INFO,      3 )
+#define VAX_ACCVIO          ERRORCODE( FAC_PROCESSOR, SEV_ERROR,     4 )
+#define VAX_ACCVIORD        ( VAX_ACCVIO + ( OP_RD << 3 ))
+#define VAX_ACCVIOWR        ( VAX_ACCVIO + ( OP_WR << 3 ))
+#define VAX_ACCVIOMD        ( VAX_ACCVIO + ( OP_MD << 3 ))
+#define VAX_FAULT           ERRORCODE( FAC_PROCESSOR, SEV_ERROR,    11 )
+#define VAX_BREAK           ERRORCODE( FAC_PROCESSOR, SEV_ERROR,    12 )
+#define VAX_UNHANDLED       ERRORCODE( FAC_PROCESSOR, SEV_ERROR,    13 )
+#define VAX_NOSERVICE       ERRORCODE( FAC_PROCESSOR, SEV_ERROR,    14 )
+#define VAX_USERHALT        ERRORCODE( FAC_PROCESSOR, SEV_INFO,     15 )
+
+//  Assembler states
+
+#define VAX_ASMNOTPSEUDO    ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,     1 )
+#define VAX_ASMUNDSYM       ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,     2 )
+#define VAX_ASMINVPR        ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,     3 )
+#define VAX_ASMINVMODE      ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,     4 )
+#define VAX_ASMINVREG       ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,     5 )
+#define VAX_ASMINVCONST     ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,     6 )
+#define VAX_ASMINSFOPERANDS ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,     7 )
+#define VAX_ASMINVOPCODE    ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,     8 )
+#define VAX_ASMINVPSEUDO    ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,     9 )
+#define VAX_ASMNOOPCODE     ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    10 )
+#define VAX_ASMFDISPBYTE    ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    11 )
+#define VAX_ASMFDISPWORD    ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    12 )
+#define VAX_ASMUNDSYMS      ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    13 )
+#define VAX_ASMINVBYTE      ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    14 )
+#define VAX_ASMINVWORD      ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    15 )
+#define VAX_ASMFORWARD      ERRORCODE( FAC_ASSEMBLER, SEV_WARNING,  16 )
+#define VAX_ASMINVMASK      ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    17 )
+#define VAX_ASMINVPTE       ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    18 )
+#define VAX_ASMFLOAT        ERRORCODE( FAC_ASSEMBLER, SEV_INFO,     19 )
+#define VAX_ASMINVFLOAT     ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    20 )
+#define VAX_ASMNOTIMP       ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    21 )
+#define VAX_ASMINVFEX       ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    22 )
+#define VAX_ASMUNRESTMP     ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    23 )
+#define VAX_ASMDUPSYM       ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    24 )
+#define VAX_ASMINVSCB       ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    25 )
+#define VAX_ASMINVRGN       ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    26 )
+#define VAX_ASMSPOVF        ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    27 )
+#define VAX_ASMINVFARG      ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    28 )
+#define VAX_ASMNUMFARG      ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    29 )
+#define VAX_ASMMMFARG       ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    30 )
+#define VAX_ASMNOTFUN       ERRORCODE( FAC_ASSEMBLER, SEV_INFO,     31 )
+#define VAX_ASMINVIND       ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    32 )
+#define VAX_ASMINVCHARLIT   ERRORCODE( FAC_ASSEMBLER, SEV_ERROR,    33 )
