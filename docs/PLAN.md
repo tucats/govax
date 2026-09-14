@@ -63,3 +63,13 @@ questions, and a progress log extended as that phase is worked.
 | 10 | [PHASE-10.md](PHASE-10.md) | RTL simulators |
 | 11 | [PHASE-11.md](PHASE-11.md) | Assembler / disassembler |
 | 12 | [PHASE-12.md](PHASE-12.md) | Integration & regression |
+| 13 | [PHASE-13.md](PHASE-13.md) | VMS image activation (RUN) |
+
+Phase 13 was split out of Phase 10 once that phase's own investigation found that
+`console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
+mapping, sharable-image G^/.ADDRESS fixups, `LIB$INITIALIZE` calling) is a large,
+separable concern on top of the RTL calling convention rather than a small wiring step —
+see `docs/PHASE-10.md`'s own notes. Phase 10's RTL layer (SYS$/LIB$ services, RMS, CLI)
+is fully unit-testable without a working image loader, so the split lets Phase 10 close
+out on its own merits and Phase 13 land later, after Phase 11 exists if that turns out to
+help (see PHASE-13.md's own notes on whether it truly needs the assembler).
