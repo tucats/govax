@@ -120,3 +120,20 @@ Each is one buildable, testable commit:
   round-trips for both register files, alias/named-register storage-sharing checks,
   and `Reset`.
 - `go build ./...`, `go vet ./...`, `go test ./internal/vax/...` all clean.
+
+### 2026-09-14 — Sub-phase 2: PSL and condition codes
+
+- Added `internal/vax/psl.go`: `PSL uint32` with bit-masking get/set methods for every
+  field in `struct PSL_BITS` (condition codes N/Z/V/C, T/IV/FU/DV enables, IPL,
+  CUR_MOD/PRV_MOD via a new `AccessMode` type, IS, FPD, TP, CM), plus `SetNZVC` as the
+  common "instruction just computed a result" convenience. `struct PSL_W` (the C
+  source's cached-bits-as-longs speed hack) is deliberately not ported — see Design
+  notes above.
+- Wired `psl PSL` into `CPU`, with `PSL()`/`SetPSL()` whole-word accessors.
+- Added `internal/vax/psl_test.go`: condition-code round-trips, a full-field
+  no-overlap check (every field set to a distinct value, then cleared one at a time
+  with neighbors verified undisturbed), IPL/access-mode masking of out-of-range input,
+  whole-word round-trip, and a direct bit-offset check of the layout against the
+  architecture manual's PSL diagram (independent of the accessor methods, as a guard
+  against a future refactor silently shifting a field).
+- `go build ./...`, `go vet ./...`, `go test ./internal/vax/...` all clean.

@@ -84,20 +84,21 @@ const (
 const MaxPrivReg = 128
 
 // CPU holds a VAX processor's register state: the general register file, the
-// privileged register file, and (from sub-phase 2) the processor status
-// longword. It is created with New and passed explicitly / receiver-bound —
-// see docs/PLAN.md's locked-in state model.
+// privileged register file, and the processor status longword. It is created
+// with New and passed explicitly / receiver-bound — see docs/PLAN.md's
+// locked-in state model.
 type CPU struct {
 	gpr [MaxReg + 1]uint32
 	pr  [MaxPrivReg + 1]uint32
+	psl PSL
 }
 
-// New returns a CPU with all registers zeroed.
+// New returns a CPU with all registers and the PSL zeroed.
 func New() *CPU {
 	return &CPU{}
 }
 
-// Reset zeroes all registers, equivalent to a freshly constructed CPU.
+// Reset zeroes all registers and the PSL, equivalent to a freshly constructed CPU.
 func (c *CPU) Reset() {
 	*c = CPU{}
 }
