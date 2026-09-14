@@ -487,6 +487,13 @@ sub-phase 2.
   non-negative-addend case. Verified by `internal/cpu/branchacb_test.go`'s
   `TestEmulAcbPositiveAddendBoundary` (an index landing exactly on the limit) and
   `TestEmulAcbNotTaken` (confirming the loop still correctly exits once past it).
+- **[Phase 05] update**: the same bug is present, identically, in `emul_acb.c`'s
+  `ACBF` case (the one floating ACB variant the C reference actually implements —
+  `case 0x4F`). Fixed the same way in `internal/cpu/branchacbfloat.go`'s
+  `emulAcbFloat`, shared by both `ACBF` and the freshly-implemented `ACBD` (no C
+  reference exists for `ACBD` at all — see this file's D-floating table/dispatch
+  entry). Verified by `internal/cpu/branchacbfloat_test.go`'s
+  `TestEmulAcbFloatPositiveAddendBoundary`/`TestEmulAcbFloatNotTaken`.
 
 ## Open questions carried forward (not yet findings)
 

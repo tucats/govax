@@ -362,3 +362,27 @@ Each is one buildable, testable commit, following Phase 04's pattern.
   not merely left unaffected, matching the integer TST precedent from Phase 04).
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean. Coverage on this file: 85.3%.
+
+### 2026-09-14 — Sub-phase 7: ACBF, ACBD
+
+- Added `internal/cpu/branchacbfloat.go`: `emulAcbFloat`, one handler shared by both
+  `ACBF` and `ACBD` (built on `loadFloat`/`storeFloat`, `setFloatMovePSL` for its
+  N/Z/V-only, C-unaffected condition-code shape). `ACBD` has no C reference at all (no
+  `case`, no dispatch entry — see this doc's design notes) and is implemented fresh by
+  direct analogy to `ACBF`.
+- Applied Phase 04's already-established ACB branch-condition fix (`<=`, not `<`, for
+  a non-negative addend) here too: `emul_acb.c`'s `ACBF` case has the identical bug —
+  found by checking, not assumed from the integer finding alone. `docs/DEVIATIONS.md`'s
+  existing ACB entry extended to cover this rather than duplicated.
+- Confirmed `emul_acb.c`'s own "`vax.pslw.v = 0; /* Need overflow detection here */`"
+  comment on the `ACBF` case flags a non-issue, not a live gap: `fpuStore` already
+  faults synchronously on genuine overflow before a `V` write here would ever run, the
+  same reasoning `floatmath.go`'s `setFloatPSL` already established — no
+  `docs/DEVIATIONS.md` entry needed.
+- Added `internal/cpu/branchacbfloat_test.go`, following `branchacb_test.go`'s
+  established pattern (explicit taken/not-taken PC arithmetic against the real
+  instruction encoding, not helper abstractions): the boundary case, not-taken, the
+  negative-addend direction, `ACBD` end-to-end, and `C` confirmed unaffected (primed
+  dirty beforehand).
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean. Coverage on this file: 85.3%.
