@@ -192,3 +192,22 @@ opcode table slots they occupy stay on `unimplementedHandler` until then.
   (positive/negative/zero/overflow cases) plus a word/long sanity check for the shared
   `emulMneg`.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
+
+### 2026-09-14 — Sub-phase 3: MOVA/PUSHA + PUSHL family
+
+- Added `internal/cpu/mova.go`: `emulMova` (MOVAB/MOVAW/MOVAL/MOVAQ — one handler,
+  since the address computation doesn't depend on the addressed datum's size, matching
+  the C source's single shared `emul_mova`), `emulPusha` (PUSHAB/PUSHAW/PUSHAL/PUSHAQ),
+  and `emulPushl`, plus a small shared `push` helper (`SP -= 4; store longword`) that
+  Phase 07's CALLS/CALLG/BSB/JSB will also want. Neither MOVAx nor PUSHAx touch
+  condition codes (confirmed against `emul_mova.c`/`emul_push.c`, which never write
+  `vax.pslw` on either path, and the manual, which doesn't list MOVA as affecting
+  N/Z/V/C).
+- This is the first sub-phase to actually exercise the register-mode `OP_AD` fault
+  fixed in sub-phase 2 — both MOVAx and PUSHAx now get it for free instead of
+  reimplementing `emul_mova.c`/`emul_push.c`'s own `is_register[0]` checks.
+- Added `internal/cpu/mova_test.go`: MOVAL computing an address through Register
+  deferred mode with condition codes confirmed unaffected, MOVAL with a register-mode
+  source faulting end-to-end through `Engine.Step`/`HandleFault`, PUSHAL pushing an
+  address, and PUSHL pushing a register's value (not its address).
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
