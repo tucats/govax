@@ -354,3 +354,27 @@ opcode table slots they occupy stay on `unimplementedHandler` until then.
   leaving the value unchanged, and ASHQ's quadword counterparts including its own
   overflow case (`INT64_MAX` shifted left, built from a register pair).
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
+
+### 2026-09-14 — Sub-phase 10: simple/generic branches
+
+- Added `internal/cpu/branch.go`: `emulBranchAlways` (BRB/BRW/JMP), the twelve
+  `condBranch`-built conditional branches (BNEQ/BEQL/BGTR/BLEQ/BGEQ/BLSS/BGTRU/BLEQU/
+  BVC/BVS/BGEQU/BCS), and `emulRsb`/`emulBsb`/`emulJsb`/`emulBlbs`/`emulBlbc`. Verified
+  the exact opcode-to-C-handler mapping against `init_emulators.c` rather than assuming
+  it from the instruction table alone (JMP and JSB share a table shape with BRW/BSBB
+  respectively but use different handlers in the C source; JSB turned out to be
+  identical in behavior to BSB once decode has already resolved the target into
+  `Operand.Addr`, so it just calls `emulBsb`).
+- Double-checked BLBS/BLBC's C-source comparison (`data == (opcode->function == 0xE8) ?
+  1 : 0`), which reads like it could be an operator-precedence bug at first glance —
+  worked through the actual precedence (`==` binds tighter than `?:`) and confirmed
+  it's correct despite the confusing style, so nothing to fix or log here.
+- Noted (comment only, not a `docs/DEVIATIONS.md` entry — this isn't an ISA question)
+  that `emul_branch.c`'s RSB case ignores `load_register`'s return value entirely, so a
+  faulting pop would silently continue in the C source; Go's explicit error return
+  makes that class of mistake impossible to reproduce by accident.
+- Added `internal/cpu/branch_test.go`: BRB/JMP target computation, all twelve
+  conditional branches' taken/not-taken behavior (table-driven), RSB's pop-and-jump,
+  BSBB's push-then-jump (return address verified on the stack), JSB reusing the same
+  logic through an address operand, and BLBS/BLBC's low-bit test.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
