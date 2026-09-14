@@ -295,3 +295,30 @@ Each is one buildable, testable commit, following Phase 04's pattern.
   short-literal source operand.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean. Coverage on this file: 84.8%.
+
+### 2026-09-14 — Sub-phase 4: float↔integer conversion
+
+- Added `internal/cpu/cvtfloat.go`: `emulCvtFloatToInt` (`CVTFB/W/L`, `CVTDB/W/L`,
+  truncate toward zero), `emulCvtRoundFloatToInt` (`CVTRFL`/`CVTRDL`, round to
+  nearest — see below), and `emulCvtIntToFloat` (`CVTBF/W/L`, `CVTBD/W/L`, `CVTLD`).
+  Named byte/word/long overflow bounds (`byteMin`/`Max` etc., already in `fpu.go`,
+  matching the already-fixed N2 bounds) used for the float→int range check.
+- `emulCvtRoundFloatToInt` implements real round-to-nearest (ties away from zero,
+  `math.Round`) for `CVTRFL`/`CVTRDL` — unimplemented in the C reference, which always
+  faults `EXC_PRIV` for these two instead (see this doc's design notes); implemented
+  fresh from the manual, not ported. Logged in `docs/DEVIATIONS.md`.
+- Both float→int handlers use `loadFloat`, which already dispatches on the source
+  operand's own declared size — generically fixing another latent bug in the shared C
+  handler (`d1 = *(LONGWORD*)src1` unconditionally reads only 4 bytes regardless of
+  `dsize`, which would have broken any dispatched D-floating conversion; moot in the
+  C reference since none of `CVTDB`/`CVTDW`/`CVTDL`/`CVTRDL` were ever dispatched
+  there, but worth noting since this port's `CVTDB`/etc. are implemented fresh
+  against the correct, size-aware behavior).
+- Added `internal/cpu/cvtfloat_test.go`: truncation across `CVTFB`/`CVTFW`/`CVTFL`/
+  `CVTDB` (positive, negative, zero), an exact-value byte case, overflow-fault
+  propagation (handler called directly, matching sub-phase 3's pattern), the round-
+  vs-truncate distinction for `CVTRFL` (including a tie and a rounding-causes-overflow
+  case via `CVTRDL`), and `CVTBF`/`CVTWF`/`CVTLF`/`CVTBD`/`CVTLD` int→float conversion
+  (including a negative source setting N).
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean. Coverage on this file: 85.1%.

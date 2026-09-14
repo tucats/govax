@@ -133,6 +133,27 @@ _None yet._
   `TestEmulFAddZeroSetsZ` (C explicitly primed dirty beforehand) and
   `TestEmulFAddOverflowFaults`.
 
+### [Phase 05] CVTRFL/CVTRDL (round-to-nearest float→long) always fault instead of rounding
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_float_math.c`'s `emul_float_math()`,
+  the `func == 4` (float→integer) handler's `switch( dsize2 )`.
+- **What**: the switch only has cases for `0` (Byte), `1` (Word), and `2` (Long);
+  `dsize2 == 3` — `op & 0x03 == 3`, which is exactly `CVTRFL`/`CVTRDL` — falls to
+  `default: set_fault( EXC_PRIV, 0 ); return VAX_FAULT;`. `CVTRFL`/`CVTRDL` are
+  correctly tabled and dispatched (this is a gap in the shared handler's own switch,
+  unlike this doc's D-floating table/dispatch finding above), so every use of either
+  instruction in the C reference faults as a reserved/privileged-instruction violation
+  rather than rounding — there is no working "truncate instead of round" behavior to
+  preserve either, it simply never executes.
+- **Status**: fixed in Go. `internal/cpu/cvtfloat.go`'s `emulCvtRoundFloatToInt`
+  implements real round-to-nearest (ties away from zero, via `math.Round`, applied
+  before the overflow bounds check since rounding can itself push an in-range value
+  out of range) — implemented fresh from the manual's `CVTRFL`/`CVTRDL` entries, not
+  ported from C. Verified by `internal/cpu/cvtfloat_test.go`'s
+  `TestEmulCvtRoundVsTruncate` (rounding vs. truncation, including a tie case and a
+  negative-direction case) and `TestEmulCvtRoundFloatToIntOverflow` (a value that only
+  overflows after rounding).
+
 ### [Phase 03] Autoincrement Deferred (`@(Rn)+`) eagerly loads the operand's value instead of resolving its address
 
 - **Where**: `reference/eVAX/eVAX/Source/CPU/decode_operand.c`, `decode_operand()`'s
