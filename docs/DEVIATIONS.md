@@ -603,6 +603,90 @@ sub-phase 2.
   `TestEmulMovtuc/remaining_lengths_sharing_no_set_bit_still_both_nonzero` and the
   `R2` assertion in `TestEmulMovtuc/translates_until_escape`.
 
+### [Phase 06] `emul_insqhi.c`/`emul_insqti.c`'s emptiness test corrupts the queue on a second insertion
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_misc.c`'s `emul_insqhi()` and
+  `emul_insqti()` (identical bug in both): `hf = header + load(header); hb = header +
+  load(header+4); if (hf == hb) { /* treat as first entry */ }`.
+- **What**: `hf == hb` is intended to detect an empty queue, but it's also true —
+  wrongly — whenever the queue already holds *exactly one* real entry: after the
+  first insertion, both of the header's link fields are set to the *same* offset
+  (pointing at that one entry), so `hf` and `hb` both resolve to the entry's address,
+  not the header's. A *second* insertion then re-enters the "first entry" branch,
+  which overwrites the header's links to point only at the new entry — silently
+  orphaning the first one, with no fault or other signal. Confirmed empirically (not
+  just reasoned about): a standalone Python simulation of the literal algorithm
+  inserting three entries loses the first two, producing a one-entry "queue" instead
+  of three; using `hf == header` (comparing against the header's own address, which
+  the correct check should be — a self-relative queue header is empty exactly when
+  its own forward link points back to itself) produces the correct three-entry
+  circular list, forward and backward, in the same simulation. `emul_remqhi.c`/
+  `emul_remqti.c` (which this project's port confirms are otherwise correct) already
+  use the unambiguous form of this check (comparing the *raw stored offset* to
+  literal `0`, not two *resolved* addresses to each other), corroborating that
+  `hf == header` (or equivalently, the raw offset at `header` being `0`) was the
+  intended test here too.
+- **Status**: fixed in Go. `internal/cpu/queue.go`'s `emulInsqhi`/`emulInsqti` check
+  `hf == header`. Separately, neither C function explicitly clears `vax.pslw.z` on
+  the non-empty insertion path (only the empty-queue branch sets it, to `1`) — left
+  at whatever it held before the instruction, where the manual specifies `Z <- 0`
+  whenever insertion doesn't produce a first entry; fixed the same way, explicitly.
+  Verified by `internal/cpu/queue_test.go`'s `TestEmulInsqhi`/`TestEmulInsqti`,
+  which insert three entries and walk the resulting queue both forward and
+  backward, not just checking Z.
+
+### [Phase 06] `emul_insqti.c`'s non-empty branch updates the wrong link field of the previous tail entry
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_misc.c`'s `emul_insqti()`, the
+  non-empty branch's first store: `offset = entry - hb; store_memory(hb+4, &offset,
+  4);`, commented `/* Fix current last entry's forward link to be new entry */`.
+- **What**: the comment says "forward link," but `hb+4` is the *backward*-link
+  field position (matching this file's own consistent `header`/`header+4` = forward/
+  backward convention, used correctly everywhere else in the same function and in
+  `emul_insqhi()`). A tail insertion needs the *previous* last entry's forward link
+  updated to point to the new entry (so a forward traversal keeps working); writing
+  to its backward link instead leaves that forward link stale, pointing past the
+  new entry straight back to the header. Confirmed by the same kind of standalone
+  simulation as the emptiness-test finding above: with only the emptiness check
+  fixed, inserting three entries via INSQTI still collapses to a broken one-entry
+  loop (`header -> first-entry -> header`, second and third entries unreachable);
+  changing this one store's target from `hb+4` to `hb` produces a correct,
+  bidirectionally-traversable three-entry queue in the same simulation. This is a
+  second, independent bug from the shared emptiness-test one above — fixing only
+  one of the two still leaves INSQTI broken for three or more entries.
+- **Status**: fixed in Go. `internal/cpu/queue.go`'s `emulInsqti` stores to `hb`'s
+  forward field (`storeLink(e, hb, 0, entry)`), not its backward field. Verified by
+  `internal/cpu/queue_test.go`'s `TestEmulInsqti`, which checks both the forward and
+  backward traversal of a three-entry queue (the backward check specifically
+  regresses this finding, since the forward-only check from the emptiness-test fix
+  alone wouldn't have caught it).
+
+### [Phase 06] REMQUE/REMQHI/REMQTI's second operand is tabled as an address operand, not the write-longword destination the manual and the C handlers themselves use
+
+- **Where**: `reference/eVAX/eVAX/Headers/instruction_table.h`'s REMQUE, REMQHI, and
+  REMQTI rows all declare their second operand `OP_AD` (address access) — REMQHI/
+  REMQTI's row is otherwise a byte-for-byte copy of INSQHI/INSQTI's (`{1, 8}` scale,
+  `OP_AD, OP_AD` access), despite the two pairs of instructions having a different
+  operand order and a genuinely different second-operand type.
+- **What**: `vax_instr_set.pdf`'s format lines are unambiguous — `entry.ab, addr.wl`
+  for REMQUE, `header.aq, addr.wl` for REMQHI/REMQTI — the second operand in every
+  case is `addr.wl`, a *write longword* destination for the removed entry's address,
+  not an address-yielding operand. `emul_remque.c`/`emul_remqhi.c`/`emul_remqti.c`'s
+  own handlers already agree with the manual over their own table row: every one of
+  them calls `put_operand(opcode, 1, OP_WR, ...)` explicitly. As tabled, this
+  project's decoder (which, per the "Register mode used where OP_AD/OP_VA access is
+  required" finding above, faults `AccessAddress` operands resolving to Register
+  mode) would wrongly reject the common, legal case of writing the removed entry's
+  address straight into a register (e.g. `REMQUE @h, R2`).
+- **Status**: fixed in the generated table. `internal/cpu/gen`'s `knownTableFixes`
+  patches all three rows' second operand to `OP_WR` (REMQUE's scale was already
+  correct at 4; REMQHI/REMQTI's scale is corrected to `{8, 4}`, matching `header.aq`/
+  `addr.wl`, rather than the copied-over `{1, 8}`). `internal/cpu/queue.go`'s
+  `emulRemque`/`emulRemqhi`/`emulRemqti` use `Operand.Store` for this operand
+  accordingly. Verified indirectly: `internal/cpu/queue_test.go`'s tests write the
+  removed entry's address into a register destination (`REMQHI header, R0`, etc.),
+  which would fault at decode time before this fix.
+
 ## Open questions carried forward (not yet findings)
 
 ### [Phase 03/04, noticed in Phase 06] PC-relative Immediate mode isn't rejected for an `AccessAddress` operand

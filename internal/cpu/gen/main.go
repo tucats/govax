@@ -137,6 +137,33 @@ var knownTableFixes = map[string]field{
 		scale: [6]int{1, 4, 2, 1, 0, 0}, typ: "OP_TYPE_INT", count: 4,
 		access: [6]string{"OP_AD", "OP_RD", "OP_RD", "OP_AD", "OP_NL", "OP_NL"},
 	},
+	// REMQHI/REMQTI's C header rows are byte-for-byte copies of
+	// INSQHI/INSQTI's ({1,8}/OP_AD,OP_AD) despite having a different operand
+	// order and second-operand type: vax_instr_set.pdf's format line is
+	// `header.aq, addr.wl` (header first, an address operand -- matches
+	// OP_AD/scale irrelevant; addr second, a *write longword* destination,
+	// not an address operand at all), and emul_remqhi.c/emul_remqti.c's own
+	// handlers already call `put_operand(opcode, 1, OP_WR, ...)` explicitly
+	// -- the handler's own intent already disagrees with its table row.
+	// Fixed here to OP_WR/scale 4 for operand 1 (matching both the manual
+	// and the handler), OP_AD/scale 8 for operand 0 (matching INSQHI/
+	// INSQTI's own already-correct header.aq). See docs/DEVIATIONS.md.
+	"REMQHI": {
+		scale: [6]int{8, 4, 0, 0, 0, 0}, typ: "OP_TYPE_INT", count: 2,
+		access: [6]string{"OP_AD", "OP_WR", "OP_NL", "OP_NL", "OP_NL", "OP_NL"},
+	},
+	"REMQTI": {
+		scale: [6]int{8, 4, 0, 0, 0, 0}, typ: "OP_TYPE_INT", count: 2,
+		access: [6]string{"OP_AD", "OP_WR", "OP_NL", "OP_NL", "OP_NL", "OP_NL"},
+	},
+	// REMQUE has the identical OP_AD-should-be-OP_WR mistake for its second
+	// operand (`entry.ab, addr.wl` per the manual; emul_remque.c also calls
+	// `put_operand(opcode, 1, OP_WR, &entry)` explicitly). Scale was already
+	// correct (4, matching a longword write) -- only access needed fixing.
+	"REMQUE": {
+		scale: [6]int{4, 4, 0, 0, 0, 0}, typ: "OP_TYPE_INT", count: 2,
+		access: [6]string{"OP_AD", "OP_WR", "OP_NL", "OP_NL", "OP_NL", "OP_NL"},
+	},
 }
 
 // applyKnownFixes patches fields in place per knownTableFixes, preserving

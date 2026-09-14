@@ -175,3 +175,61 @@ self-contained, well-testable group.
   "returns the initial CRC unchanged" case (Note 7).
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean.
+
+### 2026-09-14 — Sub-phase 7: queue instructions (INSQUE/REMQUE, INSQHI/INSQTI/REMQHI/REMQTI)
+
+- Added `internal/cpu/queue.go`, porting the six queue-instruction handlers pulled
+  from `emul_misc.c` (see this doc's scope note above). INSQUE/REMQUE (absolute-
+  queue format) and REMQHI/REMQTI (self-relative format) ported cleanly with no
+  bugs found. INSQHI/INSQTI needed real fixes — see below.
+- Found and fixed the most severe bug this phase turned up: `emul_insqhi.c`'s and
+  `emul_insqti.c`'s shared "is this queue empty?" check (`hf == hb`) is also true
+  for a queue holding exactly one entry, so a *second* insertion silently corrupts
+  the queue (overwrites the header to point only at the new entry, orphaning the
+  first). Confirmed by direct simulation, not just review, before trusting the fix
+  — see `docs/DEVIATIONS.md`. Also fixed a second, independent bug found only in
+  `emul_insqti.c`: its non-empty branch updates the wrong link field of the
+  previous last entry (writes to its backward link where the tail-insertion
+  semantics — and the C source's own comment — call for its forward link), which
+  alone would still break a three-or-more-entry tail-inserted queue even with the
+  emptiness check fixed. And a smaller, shared omission: neither function
+  explicitly clears Z on a successful non-empty insertion.
+- Found and fixed a second class of finding, unrelated to the queue-corruption
+  bugs: REMQUE/REMQHI/REMQTI's second (`addr`) operand is declared as an address
+  operand in the generated table (REMQHI/REMQTI's row a byte-for-byte copy of
+  INSQHI/INSQTI's), when the manual and the C handlers' own explicit
+  `put_operand(..., OP_WR, ...)` calls agree it's a write-longword destination —
+  fixed via `internal/cpu/gen`'s `knownTableFixes`, same mechanism used for CRC's
+  table row this phase and Phase 05's D-floating gaps.
+- `internal/cpu/queue_test.go` builds real 3-entry queues through INSQHI/INSQTI and
+  walks them both forward and backward to confirm structural integrity (not just
+  checking condition codes, which the corruption bugs wouldn't have shown up in),
+  plus REMQHI/REMQTI removal-to-empty and INSQUE/REMQUE coverage.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean.
+
+### 2026-09-14 — Phase 06 close-out
+
+- Verified directly (not just asserted) that every opcode named in this phase's
+  scope has a real registered `Handler`, not `unimplementedHandler`: bitfield
+  (EXTV/EXTZV/CMPV/CMPZV/INSV/FFS/FFC), bit-branch (BBS/BBC/BBSS/BBCS/BBSC/BBCC/
+  BBSSI/BBCCI), the string family (MOVC3/CMPC3/SCANC/SPANC/MOVC5/CMPC5/MOVTC/
+  MOVTUC/MATCHC/LOCC/SKPC), CRC, and the six queue instructions.
+- Full `docs/DEVIATIONS.md` tally for this phase: 10 fixed findings (the
+  register-field cross-register split off-by-one, the CMPC5 outer-gate bug, three
+  bugs in `emul_scanc`/`emul_movtc`/`emul_movtuc`, the two independent INSQHI/
+  INSQTI queue-corruption bugs plus their shared missing-Z-clear, and the REMQUE/
+  REMQHI/REMQTI table-access-type fix), 1 deferred finding (`emul_cmpc5`'s
+  fill-loops-continue-after-an-inequality-break quirk, intrinsic to its own design
+  with no sibling to check against), and 2 open questions carried forward
+  (character-string length operand signedness across the whole family; a
+  Phase 03/04 decode-layer gap in `operand.go` noticed in passing, not caused by
+  this phase's own work). Two findings were confirmed by direct simulation of the
+  literal C algorithm before trusting a fix (INSQHI/INSQTI's queue corruption) and
+  one by cross-checking a from-scratch implementation against a public test vector
+  (CRC-16/ARC) rather than by code review alone — both a step beyond this
+  project's usual "read the manual, compare to the C source" verification standard
+  for findings with real behavioral stakes.
+- `go test ./internal/cpu -cover`: 86.4% statement coverage.
+- Full-repo `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
+  `go test ./...` all clean. Phase complete.
