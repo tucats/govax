@@ -26,6 +26,8 @@ SHOW, and friends — plus the DCL grammar-driven command parser, and stand up
   fields — carry that fix forward).
 - `reference/eVAX/eVAX/Source/Console/errors.c`, `help.c` — error reporting, HELP text
   (`testdata/dcl/vax.help`).
+- When implementing the driver, adopt github.com/chzyer/readline package to provide
+  prompted input, witt support for history/recall and in-line editing, etc.
 
 ## Deliverables
 
