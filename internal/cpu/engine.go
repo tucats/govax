@@ -31,6 +31,13 @@ type Engine struct {
 	// comment on decodeInstruction.
 	instructionPC uint32
 	halted        bool
+
+	// services is the XFC opcode's hook into console/RTL state (see
+	// services.go and xfc.go). nil until SetSystemServices is called, in
+	// which case every XFC selector that needs it reports a reserved-
+	// operand fault, matching an XFC executed before the microkernel
+	// environment it depends on exists.
+	services SystemServices
 }
 
 // NewEngine returns an Engine driving cpu and mem, using the built-in VAX
@@ -38,6 +45,10 @@ type Engine struct {
 func NewEngine(cpu *vax.CPU, mem *vm.Memory) *Engine {
 	return &Engine{cpu: cpu, mem: mem, table: instructionTable}
 }
+
+// SetSystemServices installs s as the XFC opcode's hook into console/RTL
+// state — see services.go.
+func (e *Engine) SetSystemServices(s SystemServices) { e.services = s }
 
 // CPU returns the engine's CPU.
 func (e *Engine) CPU() *vax.CPU { return e.cpu }
