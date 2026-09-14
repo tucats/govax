@@ -25,19 +25,19 @@ read/write primitives.
 
 ## Deliverables
 
-- An instantiated `vax.Machine` (or similarly named) struct in `internal/vax/` with:
-  general registers, PSL fields/condition codes, a constructor (`New()`), and
-  register read/write methods.
+- An instantiated `vax.CPU` struct in `internal/vax/` with: general registers, PSL
+  fields/condition codes, a constructor (`New()`), and register read/write methods.
 - Unit tests covering register read/write and PSL/condition-code bit manipulation in
   isolation (no memory or instruction execution involved yet).
 
 ## Open questions / notes
 
-- Decide the exact split between `internal/vax` (this phase) and `internal/vm` (Phase
-  02) once `struct VAX`'s fields are fully inventoried — some fields may not cleanly
-  separate.
-- Confirm naming: `Machine` vs `CPU` vs `VAX` as the struct name, and whether privileged
-  registers get their own sub-struct.
+- ~~Decide the exact split between `internal/vax` (this phase) and `internal/vm`
+  (Phase 02)~~ — resolved by the C source inventory below: everything not registers/PSL
+  (VM regions, memory pointers, fault/interrupt queues, console/assembler sub-state)
+  is out of scope for this phase and deferred to where it's listed.
+- ~~Confirm naming: `Machine` vs `CPU` vs `VAX`, and whether privileged registers get
+  their own sub-struct~~ — resolved: `CPU`, no sub-struct. See "Naming decision" below.
 
 ## Design notes (from C source inventory)
 
@@ -137,3 +137,15 @@ Each is one buildable, testable commit:
   architecture manual's PSL diagram (independent of the accessor methods, as a guard
   against a future refactor silently shifting a field).
 - `go build ./...`, `go vet ./...`, `go test ./internal/vax/...` all clean.
+
+### 2026-09-14 — Sub-phase 3: close-out
+
+- Reviewed sub-phases 1-2 for gaps against the phase Goal/Deliverables: `New`/`Reset`
+  already cover the "constructor" deliverable and zero the PSL along with both
+  register files, so no further additions were needed.
+- Resolved the two open questions from planning in place (struct naming → `CPU`, no
+  privileged-register sub-struct; `vax`/`vm` split → everything but registers/PSL is
+  out of scope here) by cross-referencing them to the Design notes section above where
+  they're explained.
+- Full-repo `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
+  `go test ./...` all clean; phase complete.
