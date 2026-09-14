@@ -103,3 +103,61 @@ SHOW, and friends — plus the DCL grammar-driven command parser, and stand up
   coverage (the uncovered remainder is almost entirely defensive error
   paths for malformed grammar-definition text, which `evax.dcl` itself
   never exercises).
+
+### 2026-09-14 — Sub-phase 2: console core, EXAMINE/DEPOSIT, INIT/ZERO
+
+- Added `internal/console`: `Console` (`machine.go`) wraps an
+  `internal/cpu.Engine`/`internal/vax.CPU`/`internal/vm.Memory` trio that's
+  `nil` until `Init` runs (the Go equivalent of the C source's `vax_init`
+  flag, checked by `requireInit` the way every `console_*.c` handler checks
+  `vax_init` itself), plus a simplified `SymbolTable` (`symbols.go` — a
+  `map[string]*Symbol` replacing `struct SYMBOL`'s linked list and
+  forward-reference-patching machinery, which has no purpose here since this
+  port's expression evaluator never forward-references a symbol) and the
+  console's own radix/deposit-address/verbose/verify settings.
+- Added `expr.go`: a small, from-scratch recursive-descent expression
+  evaluator (comparison → +/- → */÷ → atom, matching `asm_expr`/
+  `asm_expr2`/`asm_expr3`'s three-tier precedence) standing in for the real
+  assembler's `asm_expr`/`asm_hex`/`asm_dec` (`reference/eVAX/eVAX/Source/
+  Assembler/asm_expr.c`, `asm_value.c` — Phase 11's scope, not this one's).
+  Supports numeric literals in the console's default radix or with a
+  `^D`/`^X`/`^O`/`^B` prefix override (matching `asm_hex`'s own prefix
+  handling, confirmed against the actual prefixes `testdata/dcl/vax.init`
+  uses, e.g. `init ^d4096`), symbol lookup, `.` for the current deposit
+  address, parentheses, and the C source's `=`/`<>`/`<=`/`<`/`>=`/`>`
+  comparison operators. Deliberately not ported: register names and
+  indirect (`@`) register/PSL references (EXAMINE/DEPOSIT special-case a
+  bare register name themselves before ever reaching the evaluator, matching
+  `console_exam.c`'s own short-circuit, and no other in-scope command needs
+  them), the `DEFINED()`-style function-call syntax, and quoted-string-to-
+  string-pool literals (needs string-pool memory management with no other
+  consumer yet).
+- Added `init.go`: `Console.Init` (`alloc_vax`, minus ROM/NVRAM allocation —
+  deferred to Phase 09, see `doc.go`) and `Console.Zero` (`console_zero.c`'s
+  ZERO command, including its region/stack-register reset and symbol-table
+  wipe), with `Init` also calling `Zero` at the end matching
+  `console_init.c`'s own flow. `allocPhysMemory` replicates `alloc_vax`'s
+  512-byte-rounding/8192-minimum sizing exactly, including its quirk where a
+  too-small request gets clamped to 8192 and *then* bumped by a further 512
+  bytes (since the clamped value no longer equals the raw request) — caught
+  by a test that initially expected the more "obvious" plain-8192 result.
+- Added `exam.go`: `Console.Examine` (`console_exam.c`'s EXAMINE, covering
+  registers and BYTE/WORD/LONGWORD/ASCII/PTE memory display — the address-
+  structure formats this port doesn't implement, F_FLOATING/D_FLOATING/
+  DESCRIPTOR/COUNTED/ZERO-terminated, are noted in `doc.go`/`exam.go`'s
+  comments as a deliberately deferred enhancement, not a fidelity gap, since
+  the core byte/word/longword/ASCII/PTE path covers everyday register and
+  memory debugging) and `Console.Deposit`. The C source has **no** standalone
+  DEPOSIT command of its own — memory is normally modified through the
+  inline mini-assembler's immediate mode, which is Phase 11's scope — so
+  `Deposit` is a deliberate, Go-native addition implementing the "DEPOSIT"
+  deliverable this phase's doc names explicitly, reusing Examine's exact
+  register/address/size conventions rather than inventing a different one.
+- `internal/console/{expr,exam}_test.go` cover: every evaluator feature
+  above (radix prefixes, symbols, precedence, comparisons, division by
+  zero, undefined-symbol and unparsed-remainder cases); Init's memory
+  allocation/rounding and Zero's memory+symbol-table clearing; Examine/
+  Deposit register and memory round trips at each size, including the
+  ASCII and unknown-register cases, and the pre-Init error path.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
+  all clean. `go test ./internal/console -cover`: 85.3%.
