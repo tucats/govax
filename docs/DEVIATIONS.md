@@ -124,21 +124,120 @@ _None yet._
   third case (or a length-vs-protection sub-field) in Phase 02's territory, which is
   out of scope for a Phase 03 change; revisit alongside Phase 02 or in Phase 12.
 
-## Open questions carried forward (not yet findings)
+### [Phase 04] Register mode used where `OP_AD`/`OP_VA` access is required
 
-### [Phase 03] Register mode used where an address is required (`OP_AD`/`OP_VA`/`OP_BR` access)
+- **Where**: `reference/eVAX/eVAX/Source/CPU/decode_operand.c`'s `decode_operand()`
+  never rejects Register mode (`mode == 5`) for an operand whose access is `OP_AD`
+  (e.g. `MOVAL`/`PUSHAL`, `JMP`/`JSB`) or `OP_VA` — a register has no VAX address. A few
+  individual C handlers (`emul_mova.c`, half of `emul_push.c`) work around this ad hoc
+  by testing `opcode->is_register[0]` themselves and faulting `EXC_RESADDR`, but decode
+  itself never enforces it, so any future `OP_AD`/`OP_VA` consumer that forgets the
+  check would silently accept an illegal encoding.
+- **What**: per user direction (explicitly requested when starting Phase 04), this
+  should fault, and generally rather than per-handler.
+- **Status**: fixed in Go, at decode time. `decodeOperand`'s register-mode fast path
+  (`internal/cpu/operand.go`) now returns `&Fault{Code: ExcReservedAddr}` for any
+  `AccessAddress`/`AccessVarField` operand that resolves to Register mode — one fix
+  covering every current and future `OP_AD`/`OP_VA` consumer (Phase 04's
+  `MOVAx`/`PUSHAx`/`JMP`/`JSB` now, Phase 06's bitfield `OP_VA` operands later) rather
+  than a check repeated in each handler. Verified by `internal/cpu/operand_test.go`'s
+  `TestDecodeOperandAccessAddressRejectsRegisterMode`.
 
-`decode_operand.c` never rejects Register mode (`mode == 5`) for an operand whose
-access is `OP_AD` (e.g. `MOVAL`/`PUSHAL`, `INSQUE`/`REMQUE`) — a register has no VAX
-address, so this is plausibly a reserved-addressing-mode fault case the C source
-simply doesn't check (unlike the short-literal-for-write check it does have). In this
-Go port, `Operand{Kind: OperandRegister}` has no `Addr` field to be garbage in the way
-the C source's stale, never-reset `VAXaddr[n]` would be for this case, so the
-dangerous failure mode doesn't reproduce here either way — but whether decode should
-actively fault this case (rather than silently letting it through as the C source
-does) is a real open question, not resolved in this phase. Deferred to whichever of
-Phase 04-07 implements the first `OP_AD`-consuming instruction family (Phase 04's
-`MOVA`/`PUSHA`), with the VAX architecture manual in hand rather than guessed at here.
+### [Phase 04] `emul_movb_negated`'s stray extra `vax.pslw.v = 0` discards MNEGB's overflow flag
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_mov.c`'s `emul_movb_negated()`
+  (~line 172): `vax.pslw.v = 0;` runs unconditionally right after the `n`/`z` are set,
+  a few lines after the MNEGB overflow branch already set `vax.pslw.v = 1`.
+  `emul_movw_negated`/`emul_movl_negated` don't have this extra line.
+- **What**: a clear copy-paste bug, not an ISA judgment call — MNEGB can never actually
+  report overflow in the C source, while MNEGW/MNEGL (same shape, same file) do.
+- **Status**: fixed in Go. `emulMneg` (`internal/cpu/mov.go`), shared across
+  MNEGB/MNEGW/MNEGL, sets V once and doesn't clobber it. Verified by
+  `internal/cpu/mov_test.go`'s `TestEmulMneg/overflow_(largest_negative)`.
+
+### [Phase 04] MNEGx's carry flag uses "source LSS 0" instead of the manual's "source NEQ 0"
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_mov.c`'s `emul_movb_negated`/
+  `emul_movw_negated`/`emul_movl_negated`, the MNEG branch: `vax.pslw.c = (data < 0) ?
+  1 : 0;` where `data` is the *original* source value.
+- **What**: `vax_instr_set.pdf`'s MNEG entry defines `C <- dst NEQ 0`. Since negation
+  maps zero to zero and nothing else to zero (including the overflow case, which
+  leaves `dst` as the unchanged nonzero source), `dst NEQ 0` is equivalent to `source
+  NEQ 0` — true for *any* nonzero source, not just a negative one. The C source's
+  formula agrees only when the source is already negative or zero; for a positive
+  source (e.g. negating 5) the manual says C should be 1 (0 − 5 borrows) but the C
+  source computes 0.
+- **Status**: fixed in Go. `emulMneg` (`internal/cpu/mov.go`) sets `C` from `source !=
+  0`. Verified by `internal/cpu/mov_test.go`'s `TestEmulMneg` table (`"positive"` and
+  `"negative"` cases both expect `C=true`).
+
+### [Phase 04] The `SETCONDITIONBITS(x, 0L)` idiom incidentally forces C false and skips V
+
+- **Where**: several `emul_*.c` handlers call `SETCONDITIONBITS(data, 0L)` purely to
+  get N/Z ("is the result negative/zero") as a side effect of the macro's two-operand
+  compare shape (`vax.h`'s `SETCONDITIONBITS`). Confirmed instances in this phase's
+  scope: `emul_mov.c`'s `emul_movq`, `emul_ash.c`'s `emul_rotl`/`emul_ash` (both ASHL
+  and ASHQ), and `emul_loop.c`'s `emul_aobleq`/`emul_aoblss`/`emul_sobgtr`/
+  `emul_sobgeq`.
+- **What**: the macro's C formula (`(ULONGWORD)(v1) < (ULONGWORD)(v2)`) is always false
+  when `v2` is a literal 0 (nothing is less than unsigned zero), and the macro never
+  touches V at all. `vax_instr_set.pdf` specifies `C <- C` (unchanged) for every one of
+  these instructions, and a real V formula for ROTL (`V <- 0`, matching what the macro
+  accidentally produces) and ASHL/ASHQ/the four loop instructions (`V <- {integer
+  overflow}`, never computed by the C source at all — V is left as whatever the
+  previous instruction set it to).
+- **Status**: fixed in Go, per instruction, as each is ported: N/Z computed explicitly,
+  V computed per the manual's overflow definition where one applies (0 for MOVQ/ROTL;
+  a real shift/increment overflow check for ASHL/ASHQ/AOBLEQ/AOBLSS/SOBGTR/SOBGEQ), C
+  left untouched. MOVQ fixed in `internal/cpu/mov.go` (this sub-phase); ROTL/ASHL/ASHQ
+  and the loop instructions follow the same fix when their sub-phases land.
+
+### [Phase 04] BIT's carry flag is force-cleared instead of left unchanged
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_cmp.c`'s `emul_cmp()`: `cbit` is
+  initialized to 0 and only ever reassigned in the CMP case (`func == 0`); BIT and TST
+  both fall through with `cbit == 0`, and `vax.pslw.c = cbit;` runs unconditionally
+  after the switch.
+- **What**: `vax_instr_set.pdf`'s BIT entry specifies `C <- C` (unchanged); its TST
+  entry specifies `C <- 0`, which the C source gets right. Only BIT is wrong.
+- **Status**: to be fixed when this phase's compare/bit-test/test sub-phase lands (see
+  `docs/PHASE-04.md`'s sub-phase list) — noted here now since it was found while
+  reading `emul_cmp.c` ahead of that sub-phase, not deferred to avoid forgetting it.
+
+### [Phase 04, deferred] ADWC/SBWC operate on word operands; the manual specifies longword
+
+- **Where**: `reference/eVAX/eVAX/Headers/instruction_table.h`'s ADWC/SBWC entries
+  (operand scale `{2, 2, ...}`, i.e. word) and `emul_integer_math.c`'s `emul_integer_
+  math()`, which special-cases `op == 0xD8`/`0xD9` to `dsize = 5` (word) rather than
+  falling through to the longword (`dsize == 6`) case its opcode range would otherwise
+  select.
+- **What**: `vax_instr_set.pdf`'s ADWC format line reads `add.rl, sum.ml` — longword
+  operands (`.rl`/`.ml`), not word.
+- **Status**: deferred, replicated as-is (word-sized). The operand size is baked into
+  the *mechanically generated* `instructions_table.go` (see Phase 03's sub-phase 1 —
+  generated from `instruction_table.h`, not hand-maintained), so a real fix means
+  changing generated table data or the generator itself, not a Phase 04 handler change
+  — out of scope for this phase. Revisit in Phase 12 or alongside `instruction_table.h`
+  generation.
+
+### [Phase 04, deferred] Byte/word carry-flag formulas use signed narrow-type arithmetic
+
+- **Where**: `emul_increment.c` (INCx/DECx) and `emul_integer_math.c`'s byte/word paths
+  (ADDx/SUBx/ADWC/SBWC) read the source operand(s) as a *signed* `char`/`short`, then
+  test `data & 0x100`/`0x10000` (a bit above the operand's width) for carry-out.
+- **What**: this only matches `vax_instr_set.pdf`'s "carry from the most significant
+  bit" definition when the operand's sign bit is clear. E.g. incrementing byte 0xFF
+  (255 unsigned, -1 signed): the C source computes `d1 = -1`, `data = d1 + 1 = 0`,
+  `data & 0x100 == 0` → C reported as 0, but the true unsigned carry (255 + 1 = 256)
+  should set C. The bug only appears when the source's high bit is set — the common
+  case (small positive values) is unaffected, which is presumably why it's gone
+  unnoticed.
+- **Status**: deferred, replicated as-is. This is a pervasive pattern across most of
+  this phase's integer arithmetic, not an isolated bug — fixing it well means
+  redesigning the carry computation consistently across every affected handler, which
+  risks introducing new bugs mid-phase rather than "fits naturally in scope." Revisit
+  in Phase 12 with real test vectors (including hardware-verified ones if available)
+  rather than guessing at the fix under phase-completion pressure.
 
 <!--
 Entry template:

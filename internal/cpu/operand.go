@@ -127,6 +127,17 @@ func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, 
 		// common addressing mode.
 		op.Kind = OperandRegister
 		op.Reg = reg
+		if access == AccessAddress || access == AccessVarField {
+			// A register has no VAX address, so an OP_AD/OP_VA operand
+			// (e.g. MOVAL/PUSHAL/JMP's destination, a bitfield base)
+			// resolving to Register mode is a reserved addressing mode
+			// fault. decode_operand.c never checks this generically — only
+			// a few individual handlers work around it themselves
+			// (emul_mova.c, half of emul_push.c) — so this is fixed here,
+			// once, for every OP_AD/OP_VA consumer at once. See
+			// docs/DEVIATIONS.md.
+			return op, &Fault{Code: ExcReservedAddr}
+		}
 		return op, nil
 
 	case mode < 4: // Short literal: S^#n (integer) or S^#f (float).

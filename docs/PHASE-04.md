@@ -156,3 +156,39 @@ opcode table slots they occupy stay on `unimplementedHandler` until then.
   needs page tables this test has no reason to set up); what matters here is only that
   HALT itself reports `ExcPrivileged` outside kernel mode.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
+
+### 2026-09-14 — Sub-phase 2: MOV family (integer)
+
+- Added `internal/cpu/condcodes.go`: shared size-aware condition-code helpers
+  (`signExtend`, `maskToSize`, `signBit`, `isZero`, `minSigned`, `setNZ`) reused across
+  every remaining Phase 04 sub-phase, so this and later handlers don't each reinvent
+  sign-extension/truncation at sizes 1/2/4/8.
+- Added `internal/cpu/mov.go`: `emulMove` (MOVB/MOVW/MOVL/MOVQ and
+  MOVZBL/MOVZBW/MOVZWL — one handler, since a zero-extended value's sign bit at the
+  destination size is always 0, reproducing MOVZ's "N <- 0" without a special case),
+  `emulMcom` (MCOMB/MCOMW/MCOML), and `emulMneg` (MNEGB/MNEGW/MNEGL), registered for
+  their respective opcodes via a package `init()`. Floating MOVF/MOVD/MNEGF/MNEGD are
+  Phase 05's; their table slots stay unimplemented.
+- Cross-checked every handler's condition codes against `reference/vax_instr_set.pdf`'s
+  MOV/MOVZ/MCOM/MNEG entries and found three confirmed fidelity issues, all fixed here
+  (see `docs/DEVIATIONS.md` for full detail): `emul_movb_negated`'s stray extra
+  `vax.pslw.v = 0` clobbers MNEGB's overflow flag (copy-paste bug, MOVW/MOVL's negated
+  handlers don't have it); MNEGx's carry flag uses "source LSS 0" where the manual
+  specifies "source NEQ 0" (wrong for a positive source); and `emul_movq`'s
+  `SETCONDITIONBITS(data, 0L)` idiom force-clears C and skips V entirely where the
+  manual wants C unaffected and V explicitly 0 (the first instance of a pattern that
+  recurs in ROTL/ASHL/ASHQ/the loop instructions — logged once as a general finding,
+  fixed per-instruction as each lands).
+- Implemented this phase's Design-notes item: `decodeOperand`'s register-mode fast path
+  (`internal/cpu/operand.go`) now faults `ExcReservedAddr` for `AccessAddress`/
+  `AccessVarField` operands resolving to Register mode, per user direction. Added
+  `TestDecodeOperandAccessAddressRejectsRegisterMode` (both access kinds) and
+  `TestDecodeOperandAccessAddressAllowsMemoryModes` to `internal/cpu/operand_test.go`.
+  `docs/DEVIATIONS.md`'s open question from Phase 03 is now a resolved finding.
+- Added `internal/cpu/mov_test.go`: table-driven tests across MOVB/W/L and
+  MOVZBL/BW/WL (register-to-register, N/Z outcomes, byte/word destination writes
+  preserving the register's upper bytes, C left unaffected), MOVQ (register-pair
+  source/destination, zero case), MCOMB (complement + condition codes), and MNEGB
+  (positive/negative/zero/overflow cases) plus a word/long sanity check for the shared
+  `emulMneg`.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.

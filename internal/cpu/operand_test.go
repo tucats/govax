@@ -522,6 +522,39 @@ func TestDecodeOperandAccessBranch(t *testing.T) {
 	}
 }
 
+func TestDecodeOperandAccessAddressRejectsRegisterMode(t *testing.T) {
+	for _, access := range []AccessKind{AccessAddress, AccessVarField} {
+		cpu, mem := fixture()
+		putBytes(t, cpu, mem, base, 0x53) // mode 5, reg 3 -- Register direct
+
+		pc := uint32(base)
+		op, err := decodeOperand(cpu, mem, &pc, access, 4, ShortLiteralInt, false)
+
+		var f *Fault
+		if !errors.As(err, &f) || f.Code != ExcReservedAddr {
+			t.Fatalf("access=%v: decodeOperand err = %v, want *Fault{Code: ExcReservedAddr}", access, err)
+		}
+		if op.Kind != OperandRegister || op.Reg != vax.R3 {
+			t.Errorf("access=%v: op = %+v, want Kind=Register Reg=R3 (still populated alongside the fault)", access, op)
+		}
+	}
+}
+
+func TestDecodeOperandAccessAddressAllowsMemoryModes(t *testing.T) {
+	cpu, mem := fixture()
+	cpu.SetGPR(vax.R3, 0xABCD1000)
+	putBytes(t, cpu, mem, base, 0x63) // mode 6, reg 3 -- Register deferred: (R3)
+
+	pc := uint32(base)
+	op, err := decodeOperand(cpu, mem, &pc, AccessAddress, 4, ShortLiteralInt, false)
+	if err != nil {
+		t.Fatalf("decodeOperand: %v", err)
+	}
+	if op.Kind != OperandMemory || op.Addr != 0xABCD1000 {
+		t.Errorf("op = %+v, want Kind=Memory Addr=0xABCD1000", op)
+	}
+}
+
 func TestDecodeOperandAccessImmediate(t *testing.T) {
 	cpu, mem := fixture()
 	putLongword(t, cpu, mem, base, 0x11223344) // raw literal, no mode byte
