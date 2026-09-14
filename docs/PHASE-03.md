@@ -326,3 +326,27 @@ Each is one buildable, testable commit, following Phase 01/02's pattern.
   a byte-sized PC-relative immediate.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
   clean.
+
+### 2026-09-14 — Sub-phase 3: opcode fetch & full decode
+
+- Added `internal/cpu/decode.go`: `Decoded` (the value-based `struct OPCODE`
+  equivalent — `Opcode`, `*Instruction`, up to 6 `Operand`s, `NextPC`) and
+  `decodeInstruction`, the port of `decode_opcode.c`'s `decode_instruction` — single-
+  byte vs. extended (two-byte) opcode fetch, instruction table lookup, driving
+  `decodeOperand` (sub-phase 2) across all of the instruction's operands, and an
+  `ExcPrivileged` fault for an undefined extended opcode (single-byte opcodes can't hit
+  this, per sub-phase 1's confirmed full 0x00-0xFF table coverage, but `Table.Lookup`
+  returning nil is still handled generically rather than assumed impossible).
+  Deliberately does not port `vax.PC`'s several intermediate write-back points during
+  decode: tracing through `execute_vax`'s fault paths shows they reset PC to the
+  instruction's start address regardless of where mid-decode it got to, so the
+  intermediate writes are never actually observed — `decodeInstruction` just returns
+  `NextPC` and leaves PC bookkeeping to `Engine.Step` (sub-phase 6).
+- Added `internal/cpu/decode_test.go`: a zero-operand instruction (HALT), a two-operand
+  single-byte instruction (MOVL) with correct per-operand results and `NextPC`, an
+  extended-opcode instruction (BUGL) with its longword immediate operand, an undefined
+  extended opcode faulting `ExcPrivileged`, and an operand-decode fault (illegal write
+  to a short literal) propagating with the partially-decoded `Instruction` still
+  attached.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
+  clean.
