@@ -159,3 +159,69 @@ unit-tested, ready for Phase 13 to drive through a real loaded image.
   would otherwise require a page table for.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
   all clean.
+
+### 2026-09-14 — Sub-phase 2: RTL calling convention, SYS$ services, RMS, CLI
+
+- Added `internal/rtl`: `Environment` (the per-process calling-convention
+  state), `ShimTable`/`ServiceTable` (numeric-code and name-keyed
+  registries, matching `internal/cpu`'s `Table`/`Handler` shape per the
+  explicit design constraint recorded above), and `p1vector.go` (the full
+  `p1_vector.c` address table, copied verbatim minus its one commented-out
+  entry, indexed by matching address for `SystemService`'s pc-based
+  lookup).
+- Ported every `SYS$`/`LIB$` routine the C source actually implements
+  outside the string/print/memory/file/input shims (left for the next
+  sub-phase): `service.c`'s `SYS$SETAST`/`DCLEXH`/`EXPREG`/`CLREF`/`SETEF`/
+  `READEF`/`GETJPIW`; `devices.c`'s `SYS$ASSIGN`/`GETDVIW` (a minimal
+  channel type plus the nominal PID/UIC process stub the scope note above
+  calls for); `logical_names.c`'s `SYS$TRNLNM`; `rms.c`'s `SYS$CREATE`/
+  `CONNECT`/`PUT`; `cli.c`'s `SYS$CLI`; and the shim table's first two
+  entries, `LIB$ADAWI`/`DECC$TIME`.
+- `rms.go` uses the real, standard VMS FAB/RAB field byte offsets directly
+  rather than porting `structure_mapping.c`'s `map()`/`STROFF` two-offset
+  indirection — confirmed by hand-deriving both the C source's own
+  sequential (`MAPNEXT`) VAX-side offsets and `fab.h`/`rab.h`'s native
+  struct offsets field-by-field: they coincide exactly (the struct's field
+  ordering happens to introduce zero compiler padding at any point RMS
+  touches), and with no native C struct to marshal into on the Go side,
+  the indirection has nothing left to abstract over. See `rms.go`'s own
+  doc comment for the full derivation.
+- Found and fixed one real bug (RTL tooling, not ISA behavior — same
+  policy as `internal/io`, see its own `doc.go`): `rms_put`'s invalid-RAC
+  branch has its `return SS_INVARG` nested inside an `if (debug flag)`
+  block, a misplaced-brace bug that silently drops the error whenever
+  debugging is off (RMS's normal mode) instead of reporting it
+  unconditionally. Fixed to always report `SS_INVARG`.
+- `SYS$TRNLNM` needed `internal/io.LogicalNameTable.Get`'s single `ok`
+  bool split into two cases (no such table vs. table exists but no such
+  name) that the real service reports as different status codes; added
+  `LogicalNameTable.HasTable` (Phase 09's package) rather than guess at
+  it from outside — a small, low-risk addition in the same spirit as that
+  phase's own `Delete` (CRUD-completeness the C source didn't need but
+  this port's callers do).
+- `SYS$CLI`'s halt-on-unrecognized-request behavior surfaces through a new
+  package-local `rtl.ErrHalt` sentinel (kept local rather than importing
+  `internal/cpu.ErrHalted`, so this package doesn't need to depend on
+  `internal/cpu` at all) — whatever wires an `Environment` into
+  `cpu.SystemServices` (Console, next sub-phase) translates it. This
+  exposed a real ordering bug in Sub-phase 1's `emulXfcP1Vector`/
+  `emulXfcShim`: both checked a handler's error before setting R0, so a
+  handled call that also requested a halt (like `SYS$CLI`) would drop its
+  status code entirely instead of leaving it in R0 the way
+  `call_service`'s own unconditional `vax.R0 = rc` (before the caller's
+  next `vax.halted` check) does. Fixed in `internal/cpu/xfc.go`; regression
+  test `TestEmulXfcP1VectorSetsR0EvenWhenHandledCallErrors`.
+- Full `docs/DEVIATIONS.md`-policy review for this sub-phase: no VAX ISA/
+  hardware-fidelity findings — everything ported here is RTL/emulator
+  tooling (SYS$/LIB$ service semantics), not emulated VAX instruction-set
+  behavior, so the policy doesn't apply; the two real bugs found (RMS's
+  misplaced brace, the XFC R0-ordering issue) are both documented at the
+  point they were found rather than only here.
+- `internal/rtl`'s new files each have their own test file exercising every
+  handler directly (constructing the argument list / VAX-memory scenario
+  by hand, no image loader needed — see `docs/PHASE-13.md`), including
+  argument-count and unknown-item-code/unknown-address error paths;
+  `TestRegisteredServicesExistInP1Vector` guards against registering a
+  service under a name with no real `p1Vector` entry (unreachable through
+  `SystemService`'s address-based lookup). `go build ./...`,
+  `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
