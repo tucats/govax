@@ -59,6 +59,15 @@ func (t *LogicalNameTable) InitLogicals() {
 	t.Set("LNM$FILE_DEV", "SYS$ERROR", "TTA0:", 0)
 }
 
+// HasTable reports whether a table named name has been created, letting a
+// caller (e.g. internal/rtl's SYS$TRNLNM) distinguish "no such table" from
+// "table exists, but no such name in it" — two different SS_ status codes
+// on the real service that Get's own single ok bool can't tell apart.
+func (t *LogicalNameTable) HasTable(name string) bool {
+	_, ok := t.tables[name]
+	return ok
+}
+
 func (t *LogicalNameTable) table(name string, create bool) *logicalTable {
 	if tb, ok := t.tables[name]; ok {
 		return tb

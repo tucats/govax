@@ -155,37 +155,43 @@ func emulXfcDCL(e *Engine) error {
 // Engine.Step), so the address of the XFC opcode itself — call_service's own
 // pc argument — is d.NextPC - 2. Since Handler doesn't receive d.NextPC
 // directly, e.cpu.GPR(vax.PC) (already advanced) minus 2 is equivalent.
+//
+// A handled call always sets R0 before returning, even when it also reports
+// an error (e.g. a service that requests a halt) — matching call_service's
+// own "vax.R0 = rc" happening unconditionally after the native handler
+// returns, before the caller's fetch loop next checks vax.halted.
 func emulXfcP1Vector(e *Engine) error {
 	if e.services == nil {
 		return &Fault{Code: ExcPrivileged}
 	}
 	pc := e.cpu.GPR(vax.PC) - 2
 	r0, handled, err := e.services.SystemService(pc)
-	if err != nil {
-		return err
-	}
 	if !handled {
+		if err != nil {
+			return err
+		}
 		return &Fault{Code: ExcReservedOp}
 	}
 	e.cpu.SetGPR(vax.R0, r0)
-	return nil
+	return err
 }
 
 // emulXfcShim is XFC$SHIM: R0 selects a LIB$/CRTL shim routine by numeric
-// code, matching emul_xfc.c's `return shim()`.
+// code, matching emul_xfc.c's `return shim()`. See emulXfcP1Vector's doc
+// comment on setting R0 even when a handled call also reports an error.
 func emulXfcShim(e *Engine) error {
 	if e.services == nil {
 		return &Fault{Code: ExcPrivileged}
 	}
 	r0, handled, err := e.services.Shim(e.cpu.GPR(vax.R0))
-	if err != nil {
-		return err
-	}
 	if !handled {
+		if err != nil {
+			return err
+		}
 		return &Fault{Code: ExcReservedOp}
 	}
 	e.cpu.SetGPR(vax.R0, r0)
-	return nil
+	return err
 }
 
 // emulXfcVM is XFC$VMW/XFC$VMR: translates the virtual address in R0 to a

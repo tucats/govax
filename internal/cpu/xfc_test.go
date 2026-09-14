@@ -299,6 +299,28 @@ func TestEmulXfcP1VectorPropagatesError(t *testing.T) {
 	}
 }
 
+// TestEmulXfcP1VectorSetsR0EvenWhenHandledCallErrors matches call_service's
+// own "vax.R0 = rc" happening unconditionally right after the native handler
+// returns, before the caller's fetch loop next checks vax.halted -- a
+// handled call that also requests a halt (e.g. an unrecognized SYS$CLI
+// request) still leaves its status in R0.
+func TestEmulXfcP1VectorSetsR0EvenWhenHandledCallErrors(t *testing.T) {
+	e, f := xfcEngine()
+	wantErr := errors.New("halt requested")
+	f.serviceHandled = true
+	f.serviceRC = 0xDEAD
+	f.serviceErr = wantErr
+
+	e.cpu.SetGPR(vax.PC, base)
+	putBytes(t, e.cpu, e.mem, base, 0xFC, xfcP1Vector)
+	if err := e.Step(); !errors.Is(err, wantErr) {
+		t.Errorf("Step() = %v, want %v", err, wantErr)
+	}
+	if got := e.cpu.GPR(vax.R0); got != 0xDEAD {
+		t.Errorf("R0 = %#x, want 0xdead (set before the error propagated)", got)
+	}
+}
+
 func TestEmulXfcShim(t *testing.T) {
 	e, f := xfcEngine()
 	f.shimHandled = true
