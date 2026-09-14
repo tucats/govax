@@ -8,10 +8,20 @@ self-contained, well-testable group.
 ## Scope / C source mapping
 
 - `reference/eVAX/eVAX/Source/CPU/emul_bitfield.c` — bitfield instructions
-  (EXTV/INSV/etc.).
+  (EXTV/EXTZV/CMPV/CMPZV/INSV/FFS/FFC), plus the bit-branch instructions
+  (BBS/BBC/BBSS/BBCS/BBSC/BBCC/BBSSI/BBCCI) that live in the same file.
 - `reference/eVAX/eVAX/Source/CPU/emul_cmpc.c`, `emul_locc.c`, `emul_matchc.c`,
-  `emul_movc.c`, `emul_skpc.c` — character-string instructions.
+  `emul_movc.c`, `emul_skpc.c` — character-string instructions (MOVC3/MOVC5,
+  CMPC3/CMPC5, MOVTC/MOVTUC, SCANC/SPANC — all in `emul_movc.c` despite the
+  filename — LOCC, SKPC, MATCHC).
 - `reference/eVAX/eVAX/Source/CPU/emul_crc.c` — CRC instruction.
+- `reference/eVAX/eVAX/Source/CPU/emul_misc.c` — *not* listed in the original scope
+  for this phase, but it's where INSQUE/REMQUE/INSQHI/INSQTI/REMQHI/REMQTI (the
+  "queue instructions" named in this phase's title) actually live in the C source;
+  only those six handlers are pulled from this file into Phase 06, same precedent as
+  HALT/NOP already having been split out of it into an earlier phase. The file's
+  remaining, unrelated instructions (BUGL/BUGW, INDEX, BISPSW/BICPSW, PUSHR/POPR,
+  BPT, PROBEx, MOVPSL) are Phase 07 territory ("everything else").
 
 ## Deliverables
 
@@ -24,8 +34,33 @@ self-contained, well-testable group.
 
 ## Open questions / notes
 
-- None yet.
+- **CRC**: `emul_crc.c`'s C implementation is a complete no-op stub (`return
+  VAX_OK;`, no computation at all) — there is no existing C behavior to port. Per
+  user direction (2026-09-14), the Go port implements real CRC from the VAX
+  architecture manual's table-driven algorithm rather than replicating the stub.
 
 ## Progress Log
 
-_Not started._
+### 2026-09-14 — Sub-phase 1: bitfield field instructions
+
+- Added `internal/cpu/bitfield.go`: EXTV/EXTZV, CMPV/CMPZV, INSV, FFS/FFC, porting
+  `emul_bitfield.c`'s field-instruction handlers and their `get_register_field`/
+  `set_register_field`/`get_memory_field`/`set_memory_field`/`bit_sext` helpers.
+  Register-field access replaces the C source's byte-pointer arithmetic (the pointer
+  trick `emul_bbstate`'s register path uses elsewhere in the same file, not these
+  routines) with direct shift/mask arithmetic against the value-based `Operand`
+  model; memory-field access replaces the C source's bit-by-bit loop with an
+  equivalent load-span/shift/mask (at most 5 bytes for any 32-bit field at any
+  sub-byte offset) — same defined semantics, no ISA behavior riding on the loop
+  shape itself.
+- Found and fixed a genuine off-by-one in `get_register_field`/`set_register_field`'s
+  cross-register split arithmetic (uses `31` where `32`, the register width,
+  belongs) — logged in `docs/DEVIATIONS.md`.
+- `internal/cpu/bitfield_test.go` covers both field-storage backends directly
+  (register including the exact-32-bit-fill boundary case the C source's own
+  boundary check gets wrong, and memory including a byte-boundary-spanning field and
+  a negative bit displacement reaching before the base address) and all six
+  instructions end-to-end through `Engine.Step`, including the reserved-operand
+  fault for an immediate (short-literal) base.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean.

@@ -495,6 +495,34 @@ sub-phase 2.
   entry). Verified by `internal/cpu/branchacbfloat_test.go`'s
   `TestEmulAcbFloatPositiveAddendBoundary`/`TestEmulAcbFloatNotTaken`.
 
+### [Phase 06] `get_register_field`/`set_register_field` split a cross-register field one bit short of the base register
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_bitfield.c`'s `get_register_field()`
+  and `set_register_field()` (identical bug in both): the single-vs-two-register
+  branch tests `position + size < 32` (so `position + size == 32` — a field that
+  exactly fills the base register — wrongly takes the two-register path), and the
+  two-register branch computes `size2 = (position + size) - 31` / `size3 = size -
+  size2`, using `31` where the register width `32` belongs.
+- **What**: a field genuinely spanning `base` and `base+1` should take `32 -
+  position` bits from `base` and the remaining `size - (32 - position)` bits from
+  `base+1`. The C source's `-31` constant is one bit too low: e.g. `position=30,
+  size=4` should take 2 bits from `base` (bits 30-31) and 2 from `base+1` (bits 0-1),
+  but the C formula computes `size2 = 3, size3 = 1` — 1 bit from `base`, 3 from
+  `base+1`, silently misplacing every bit at and above the split point. This isn't an
+  ISA judgment call — the manual's cross-register field layout is unambiguous, and
+  the C source's own single-register branch already uses the correct `32` implicitly
+  (by using plain `<< position`/`>> position` against a 32-bit register) — it's a
+  transcription slip between two related magic numbers in the same function, the
+  same class of "clear, obvious constant error" already fixed elsewhere in this
+  project (e.g. Phase 04's byte-size V-range-check finding).
+- **Status**: fixed in Go. `internal/cpu/bitfield.go`'s `getRegisterField`/
+  `setRegisterField` split at `loBits := 32 - int(position)` (single-register
+  whenever `size <= loBits`, i.e. inclusive of the exact-fit case) rather than
+  porting the C formula. Verified by `internal/cpu/bitfield_test.go`'s
+  `TestGetRegisterField` ("exactly fills the base register" and "spans base and
+  base+1" subtests, the latter checked against hand-computed expected nibbles) and
+  `TestSetRegisterField`'s round-trip subtest.
+
 ## Open questions carried forward (not yet findings)
 
 ### [Phase 04] CASE's internal arithmetic width for byte/word selector, base, and limit
