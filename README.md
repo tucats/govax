@@ -46,7 +46,7 @@ The [PLAN](docs/PLAN.md) file describes the overall porting plan,
 the parameters given to Claude Code for the port, and a breakdown
 of each of the major phases of the port. Each phase is documented
 in much more detail in the [docs](docs/) directory, with each
-phase describing it's sub-tasks, progress details, and issues 
+phase describing it's sub-tasks, progress details, and issues
 that were found. Finally, the [deviations](docs/DEVIATIONS.md)
 file describes deviations from the machine architecture or ISA
 specifications found and either addressed or left outstanding
@@ -67,7 +67,7 @@ Future objectives:
   the RTL emulation built into `govax`.
 - Be able to run the resulting ".exe" executable files using
   `govax`
-  
+
 At this point, it isn't the plan to emulate all hardware (i.e.
 disk controllers, network controllers, etc.) or to be able
 to boot up VMS. If you want something that can do that, I
