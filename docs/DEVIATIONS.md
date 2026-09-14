@@ -523,7 +523,69 @@ sub-phase 2.
   base+1" subtests, the latter checked against hand-computed expected nibbles) and
   `TestSetRegisterField`'s round-trip subtest.
 
+### [Phase 06] `emul_cmpc5`'s outer length gate skips fill-padding for a one-sided zero-length string
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_cmpc.c`'s `emul_cmpc5()`: the dual-
+  string compare loop *and both* fill-padding loops are nested inside a single `if
+  (tmp1 > 0 && tmp3 > 0)`.
+- **What**: the manual describes CMPC5 as comparing two strings after conceptually
+  extending the shorter one with the fill byte — which must include the case where
+  one string's length is exactly 0 (an empty string, entirely fill). The outer gate
+  skips all three loops whenever *either* length starts at 0, so e.g. `src1len=0,
+  src2len=3` never compares string2 against fill at all — only the fallback
+  length-vs-length condition-code default applies, not an actual fill comparison.
+  The structurally identical `emul_movc5()` (same file) doesn't have this outer
+  gate — its fill loops are each guarded only by their own remaining length — making
+  this look like a stray extra condition added to one twin but not the other, not a
+  deliberate design choice.
+- **Status**: fixed in Go. `internal/cpu/cmpc.go`'s `emulCmpc5` drops the outer gate,
+  each of the three loops using only its own natural condition, mirroring
+  `emulMovc5`'s already-correct structure. Verified by `internal/cpu/cmpc_test.go`'s
+  `TestEmulCmpc5/one-sided_zero_length_is_still_fill-padded`.
+
 ## Open questions carried forward (not yet findings)
+
+### [Phase 06] Character-string length operands: signed `short` or unsigned word?
+
+`emul_movc.c`/`emul_cmpc.c` (and, per its own file's shared shape, `emul_locc.c`/
+`emul_matchc.c`/`emul_skpc.c`) declare every string-instruction length operand as a
+signed `short`/`LONGWORD` sign-extended from one, and gate their main loops on
+`> 0`. If a length operand's high bit is set (a count of 32768 or more), this
+signed interpretation makes the count negative and skips the whole operation (and,
+for `emul_cmpc3`/`emul_movc3`'s backward-copy branch specifically, produces an
+arithmetically-consistent-but-strange result — see each handler's own comment).
+The manual's operand notation (`len.rw` etc.) doesn't explicitly settle whether
+these are meant to be a genuinely unsigned 16-bit count (as VAX byte counts
+conventionally are) or a signed one exactly as ported. Not resolved either way —
+`internal/cpu/movc.go`/`cmpc.go` replicate the C source's signed-`short` reading
+faithfully rather than guessing. Given how large a string a real MACRO-32 program
+would need to trigger this (32KB+ in one instruction), low priority to chase further
+unless it turns out to matter for a real test fixture.
+
+### [Phase 06] `emul_cmpc5`'s fill-padding loops still run after the main loop finds an inequality
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_cmpc.c`'s `emul_cmpc5()`: the
+  dual-string compare loop's only exit conditions are "both lengths exhausted" (the
+  `while` condition) or `break` on the first unequal byte pair; either of its two
+  fill-padding loops that follow runs unconditionally on whatever length is left
+  over, regardless of *why* the main loop stopped.
+- **What**: the manual states "comparison proceeds until inequality is detected or
+  all bytes of the strings have been examined, [and] condition codes are affected by
+  the result of the last byte comparison" — read plainly, once an inequality is
+  found, comparison is over. But if the main loop stops due to inequality while
+  *both* strings still have bytes left, the source-string fill loop (and,
+  potentially, the destination-string one) still executes next, re-running
+  `SETCONDITIONBITS` against the *fill* byte and the *same already-mismatched*
+  source byte the main loop just examined — silently discarding the actual mismatch
+  the manual says should be the final answer, in favor of an unrelated
+  byte-vs-fill comparison.
+- **Status**: not resolved either way, unlike this doc's other Phase 06 CMPC5
+  finding above (that one confirmed by direct comparison against the structurally
+  identical, unaffected `emul_movc5`; this one is intrinsic to CMPC5's own design
+  and has no such sibling to check against). `internal/cpu/cmpc.go`'s `emulCmpc5`
+  replicates the literal three-sequential-loop structure, so this behavior
+  reproduces as-is. Revisit with the hardware/architecture reference in hand, or
+  ask, rather than guessing at intended VAX behavior for this case.
 
 ### [Phase 04] CASE's internal arithmetic width for byte/word selector, base, and limit
 

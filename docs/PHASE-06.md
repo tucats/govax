@@ -81,3 +81,26 @@ self-contained, well-testable group.
   behave identically to their plain counterparts.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean.
+
+### 2026-09-14 — Sub-phase 3: MOVC3/MOVC5, CMPC3/CMPC5
+
+- Added `internal/cpu/movc.go` (MOVC3/MOVC5) and `internal/cpu/cmpc.go`
+  (CMPC3/CMPC5), porting `emul_movc.c`'s and `emul_cmpc.c`'s namesake handlers.
+  Register-mode source/destination operands already fault at decode time
+  (`AccessAddress`), superseding each handler's own `is_register[]` check.
+- Found and fixed a bug in `emul_cmpc5`: its dual-string and both fill-padding
+  compare loops are all nested inside one `if (tmp1 > 0 && tmp3 > 0)` gate, which
+  the structurally identical `emul_movc5` doesn't have — skipping the manual's
+  documented fill-padding behavior whenever either string starts at exactly zero
+  length. Logged in `docs/DEVIATIONS.md`.
+- Logged two related open questions (not fixed, C behavior replicated as-is):
+  whether the whole string-instruction family's length operands should be treated
+  as unsigned rather than the C source's signed `short`, and `emul_cmpc5`'s own
+  fill-padding loops still running (against the same stale, already-mismatched
+  byte) after its main loop stops due to an inequality rather than exhaustion.
+- `internal/cpu/movc_test.go`/`cmpc_test.go` cover both instructions' overlap
+  handling (MOVC3's forward/backward copy direction), fill-padding in both
+  directions (MOVC5/CMPC5), the CMPC5 outer-gate regression specifically, and the
+  zero-length edge cases the manual calls out by name.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean.
