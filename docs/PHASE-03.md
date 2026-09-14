@@ -292,3 +292,37 @@ Each is one buildable, testable commit, following Phase 01/02's pattern.
   undefined function byte.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
   clean.
+
+### 2026-09-14 — Sub-phase 2: operand decode
+
+- Added `internal/cpu/exception.go`: `Exception` (`EXC_*` codes) and a minimal `Fault`
+  (`Code` + `Args`) — just enough for decode-time faults to have somewhere to go;
+  fleshed out with PC/PSL/R0/R1 and `Engine.HandleFault` in sub-phase 4, same
+  incremental-growth pattern as Phase 01's `CPU`/`PSL`.
+- Added `internal/cpu/shortdouble.go`: `decode_operand.c`'s `short_double[64]` table,
+  verbatim.
+- Added `internal/cpu/operand.go`: `Operand`/`OperandKind` (the value-based design from
+  this doc's Design notes) and `decodeOperand`, the port of `decode_operand.c` — the
+  `OP_BR`/`OP_IM` access fast path, the register-mode fast path, short literals
+  (int and float, per the design note on deferring F/D-floating bit-pattern resolution
+  to Phase 05), all PC-relative modes (Immediate, Absolute, Byte/Word/Long Relative
+  direct and deferred), and all general-register modes (Indexed, Register deferred,
+  Autodecrement, Autoincrement [deferred], Byte/Word/Long displacement direct and
+  deferred).
+- Found and fixed two fidelity issues while porting (both logged to
+  `docs/DEVIATIONS.md` with full rationale, since the fixes are clear-cut and fit
+  naturally in this change's scope per the bug-fixing policy — not silently patched):
+  Autoincrement Deferred (`@(Rn)+`) eagerly loading the operand's *value* during
+  decode instead of resolving its address (would silently discard any write through
+  this mode), and double-nested Indexed mode's rejection using a fault sentinel
+  disconnected from the normal fault-signaling path. Also logged one genuinely open
+  question (not a finding): whether Register mode should fault for `OP_AD`-access
+  operands, deferred to whichever of Phase 04-07 implements the first such instruction.
+- Added `internal/cpu/operand_test.go`: one test per addressing mode (register direct
+  incl. PC/SP/FP/AP aliasing, short literal int/float, register deferred, autodecrement,
+  autoincrement [deferred], byte/word/long displacement direct and deferred, indexed,
+  all PC-relative forms, and the `OP_BR`/`OP_IM` direct-access cases), plus the
+  illegal-write-to-literal fault, the double-indexed-mode fault, and sign-extension of
+  a byte-sized PC-relative immediate.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
+  clean.
