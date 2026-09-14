@@ -99,3 +99,27 @@ through.
   being set on a page's first write but not on a read.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
   clean.
+
+### 2026-09-14 — Sub-phase 3: load/store primitive layer
+
+- Added `internal/vm/storage.go`: `LoadByte`/`StoreByte` (translate + single-byte
+  physical access) and, built on those, `Load`/`Store` (arbitrary-length, always
+  byte-at-a-time — see the file's header comment for why that's a deliberate
+  simplification of storage.c's spans-pages-only fallback rather than a fidelity gap:
+  `Translate` has no page-boundary-crossing cache to make the C source's "one wide
+  translation, unless it spans pages" special case worth the extra code path), the
+  typed `LoadWord`/`StoreWord`/`LoadLongword`/`StoreLongword`/`LoadQuadword`/
+  `StoreQuadword` accessors (little-endian, via `encoding/binary`; storage.c's
+  quadword-as-two-longwords split is a big-endian-host byte-order fix with no effect on
+  this little-endian-only Go port, so it's collapsed into a single 8-byte decode), and
+  `LoadRegister` (`load_register`'s architected-register-preserves-upper-bytes vs.
+  scratch-register-zeroes-first distinction; sign/zero-extension stays the caller's
+  job, same as the C source).
+- Added `internal/vm/storage_test.go`: byte/word/longword/quadword round-trips
+  (including little-endian byte-order checks), a round-trip through `Translate` (not
+  just identity-mapped physical memory), a value deliberately spanning two physically
+  disjoint pages to prove per-byte translation is happening rather than one lucky wide
+  copy, `LoadRegister`'s architected-preserves/scratch-zeroes distinction and a full
+  4-byte load, and the `PhysicalAddressError` case for an out-of-range physical access.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
+  clean.
