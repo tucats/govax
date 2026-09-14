@@ -2,6 +2,7 @@ package rtl
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 
@@ -142,6 +143,25 @@ func readArgs(cpu *vax.CPU, mem *vm.Memory, ap uint32) ([]uint32, error) {
 	return argv, nil
 }
 
+// callHandler invokes fn(env, argv), recovering a panic into an error.
+// Real VAX system services/shims never bounds-check argc against what a
+// handler expects to index (the C source has no equivalent concept — an
+// under-supplied argument list just reads whatever garbage was on the
+// native argv array), so every handler here indexes argv directly the same
+// way. In Go that turns "garbage in" into a slice-bounds panic instead, and
+// a bug in one handler (or a genuinely malformed calling program supplying
+// too few arguments) shouldn't be able to crash the whole process — this is
+// the one safety net at the dispatch boundary that keeps every handler free
+// to index its own expected arguments without its own recover().
+func callHandler(fn func(*Environment, []uint32) (uint32, error), env *Environment, argv []uint32) (r0 uint32, err error) {
+	defer func() {
+		if p := recover(); p != nil {
+			err = fmt.Errorf("rtl: handler panic: %v", p)
+		}
+	}()
+	return fn(env, argv)
+}
+
 // Shim implements cpu.SystemServices' RTL half (XFC$SHIM): dispatch a LIB$/
 // CRTL shim call by numeric code, with its argument list read from AP —
 // matching shim()'s own argc/argv-from-vax.AP marshaling.
@@ -154,7 +174,7 @@ func (env *Environment) Shim(code uint32) (uint32, bool, error) {
 	if err != nil {
 		return 0, true, err
 	}
-	r0, err := fn(env, argv)
+	r0, err := callHandler(fn, env, argv)
 	return r0, true, err
 }
 
@@ -180,6 +200,6 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 	if err != nil {
 		return 0, true, err
 	}
-	r0, err := fn(env, argv)
+	r0, err := callHandler(fn, env, argv)
 	return r0, true, err
 }

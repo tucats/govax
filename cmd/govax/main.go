@@ -59,11 +59,17 @@ func run(dataDir string, out io.Writer, in io.ReadCloser, args []string) error {
 	}
 
 	c := console.New(out)
+	if in != nil {
+		c.In = in
+	} else {
+		c.In = os.Stdin
+	}
 	if err := c.Init(minimumVAXMemory); err != nil {
 		return fmt.Errorf("allocating initial VAX: %w", err)
 	}
 
 	d := console.NewDispatcher(c, grammar, help)
+	c.Dispatcher = d
 
 	if len(args) == 0 {
 		fmt.Fprintf(out, "govax — a Go port of eVAX (docs/PLAN.md)\n\n")

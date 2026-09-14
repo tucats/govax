@@ -104,6 +104,22 @@ func TestEnvironmentShim(t *testing.T) {
 	}
 }
 
+func TestEnvironmentSystemServiceRecoversHandlerPanic(t *testing.T) {
+	env, _ := fixture()
+	// SYS$SETEF expects one argument; calling it with none indexes argv[0]
+	// out of range -- exactly the kind of malformed-argument-list scenario
+	// callHandler's recover() exists for (see environment.go's doc comment).
+	putArgs(t, env, 0x2000, nil)
+
+	_, handled, err := env.SystemService(0x7FFEE000) // SYS$SETEF
+	if !handled {
+		t.Fatal("SYS$SETEF not handled")
+	}
+	if err == nil {
+		t.Fatal("err = nil, want the recovered panic reported as an error")
+	}
+}
+
 func TestEnvironmentShimUnregisteredCode(t *testing.T) {
 	env, _ := fixture()
 	putArgs(t, env, 0x2000, nil)

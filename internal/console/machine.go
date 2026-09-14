@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/cpu"
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/rtl"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 )
@@ -65,8 +66,31 @@ type Console struct {
 	Devices  *iodev.DeviceTable
 	Logicals *iodev.LogicalNameTable
 
+	// RTL is Phase 10's SYS$/LIB$ calling-convention environment, backing
+	// this Console's cpu.SystemServices implementation (services.go) for
+	// the XFC$P1VECTOR/XFC$SHIM selectors. Created fresh alongside the
+	// Engine on every Init/Zero (see init.go), since it's addressed
+	// through the same CPU/Memory pair.
+	RTL *rtl.Environment
+
+	// Dispatcher backs XFC$CONSOLE_CMD (a running VAX program asking the
+	// console to execute a command line on its behalf). Unlike Engine/RTL,
+	// this isn't created by Init/Zero — a Dispatcher needs the DCL grammar
+	// and help text (cmd/govax's own startup sequence), which Console
+	// itself knows nothing about — so it's nil until whoever constructs
+	// both (see cmd/govax/main.go) assigns it explicitly. XFC$CONSOLE_CMD
+	// reports failure if this is still nil.
+	Dispatcher *Dispatcher
+
 	quit bool // set by Quit (misc.go); read via Running
 
+	// In/Out are the console's byte-level terminal streams: In backs
+	// XFC$CONSOLE_READ and (shared with RTL) DECC$GETS/EXE$INPUT/EXE$READ's
+	// fid-0 case; Out backs XFC$CONSOLE_WRITE and every other console
+	// output path already using it. In is optional (nil is a legal "no
+	// interactive input source" Console, matching every existing Out-only
+	// caller/test) — reads against a nil In report EOF rather than panic.
+	In  io.Reader
 	Out io.Writer
 }
 
