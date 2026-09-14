@@ -265,4 +265,30 @@ Each is one buildable, testable commit, following Phase 01/02's pattern.
 
 ## Progress Log
 
-_Not started._
+### 2026-09-14 — Sub-phase 1: core decode types & generated instruction table
+
+- Added `internal/cpu/access.go`: `AccessKind` (`OP_NL`/`OP_RD`/`OP_WR`/`OP_MD`/
+  `OP_AD`/`OP_VA`/`OP_BR`/`OP_IM`) and `ShortLiteralType` (`OP_TYPE_INT`/
+  `OP_TYPE_FLOAT`).
+- Added `internal/cpu/instruction.go`: `Opcode` (extended+function byte pair),
+  `Instruction` (the static-data subset of `struct INSTRUCTION` — name, opcode,
+  operand count/scale/access, short-literal type; `routine`/`use_count`/`debugdata`
+  are deliberately not part of this type, see Design notes), and `Table`
+  (`[256]*Instruction` for single-byte opcodes + a `map[uint16]*Instruction` for
+  extended opcodes, replacing the C source's linear scan of the extended range).
+- Added `internal/cpu/gen/main.go`: a `go generate`-driven parser for
+  `instruction_table.h`'s fixed 9-field entry format, emitting
+  `internal/cpu/instructions_table.go` (284 entries, matching the reference file
+  exactly — a structural regex over the whole file, not a line-oriented parser, since
+  the C header itself says it's machine-generated in this exact shape). Confirmed the
+  single-byte opcode range (0x00-0xFF) has no gaps, including the `EXT_FD`/`EXT_FE`/
+  `EXT_FF` filler entries at 0xFD-0xFF that exist only so the C source's array-
+  position-equals-opcode-value convention holds (those three opcode values are always
+  intercepted as extended-opcode prefixes before a single-byte lookup happens; ported
+  in sub-phase 3).
+- Added `internal/cpu/instruction_test.go`: entry count against the reference file,
+  single-byte range completeness, `Lookup` for representative single-byte/extended/
+  6-operand (`INDEX`) opcodes, `Lookup` returning nil for a defined prefix with an
+  undefined function byte.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
+  clean.
