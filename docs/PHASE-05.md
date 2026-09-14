@@ -343,3 +343,22 @@ Each is one buildable, testable commit, following Phase 04's pattern.
   and negating 0.0 doesn't set N).
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean.
+
+### 2026-09-14 — Sub-phase 6: CMPF/TSTF, CMPD/TSTD
+
+- Added `internal/cpu/cmpfloat.go`: `emulCmpFloat` (CMPF/CMPD) and `emulTstFloat`
+  (TSTF/TSTD), separate from `cmp.go`'s integer `emulCmp`/`emulTst` (matching the
+  project's established one-handler-per-opcode-family convention, and the C source's
+  own float/integer branch split within its shared `emul_cmp`). CMPD/TSTD implemented
+  fresh — see this doc's design notes (no working C implementation: no dispatch entry
+  for either, and `emul_cmp.c`'s own `switch(dsize)` has no D_FLOAT case at all).
+- Confirmed, not assumed, that float compare's `C <- 0` (always, unlike integer CMP's
+  real unsigned-borrow C) is correct: `emul_cmp.c`'s shared `cbit` variable is only
+  ever set in the `dsize > 3` (integer) branch, staying `0` for the float path — no
+  `docs/DEVIATIONS.md` entry needed.
+- Added `internal/cpu/cmpfloat_test.go`: CMPF/CMPD less/greater/equal (both operands
+  confirmed unmodified), C confirmed always-false despite being primed dirty
+  beforehand, and TSTF/TSTD negative/zero/positive (C also confirmed forced to false,
+  not merely left unaffected, matching the integer TST precedent from Phase 04).
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean. Coverage on this file: 85.3%.
