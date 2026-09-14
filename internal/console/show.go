@@ -1,6 +1,11 @@
 package console
 
-import "github.com/tucats/govax/internal/vax"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/tucats/govax/internal/vax"
+)
 
 // This file implements the subset of console_show.c's dozens of SHOW
 // sub-displays this port covers: registers, PSL, memory size, symbols,
@@ -156,4 +161,25 @@ func (c *Console) ShowCPU() error {
 func (c *Console) ShowVersion() error {
 	c.Printf("govax — a Go port of eVAX (docs/PLAN.md)\n")
 	return nil
+}
+
+// ShowRegisterOrPrivReg implements the plain register/privileged-register
+// name shortcuts of SHOW (e.g. "SHOW R0", "SHOW PC", "SHOW P0BR") —
+// testdata/dcl/evax.dcl's show_types keywords with no /syntax= redirect of
+// their own, which stay on the bare SHOW verb (see dispatch.go's
+// bindGrammar).
+func (c *Console) ShowRegisterOrPrivReg(name string) error {
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+	name = strings.ToUpper(name)
+	if r, ok := registerNames[name]; ok {
+		c.Printf("%-4s = %08X\n", name, c.CPU.GPR(r))
+		return nil
+	}
+	if pr, ok := privRegNames[name]; ok {
+		c.Printf("%-6s = %08X\n", name, c.CPU.PR(pr))
+		return nil
+	}
+	return fmt.Errorf("console: SHOW %s is not implemented", name)
 }

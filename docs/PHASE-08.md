@@ -385,3 +385,59 @@ SHOW, and friends — plus the DCL grammar-driven command parser, and stand up
   error paths.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
   all clean. `go test ./internal/console -cover`: 84.7%.
+
+### 2026-09-14 — Sub-phase 8: command dispatch integration
+
+- Added `dispatch.go`: `Dispatcher` ties every earlier sub-phase together,
+  matching `console_dispatch.c`'s own two-tier structure — a fixed,
+  `console_dispatch_table`-equivalent map of exact (≤4-character, matching
+  `read_verb`'s own truncate-to-4 rule) verb spellings, falling back to the
+  DCL grammar for anything unmatched. `fixedCommands` follows the C
+  table's real-function-vs-`-1` split (`SHOW`/`EXIT`/`QUIT`/`CLEAR`/`TEST`/
+  `VMINIT` are DCL-driven; `EXAMINE`/`SET`/`STEP`/... are fixed) with two
+  documented deviations: `DEPOSIT` (a Go-native addition, see exam.go) and
+  `RUN`/`R`, remapped from the C source's VMS-image-activation meaning
+  (not ported, see run.go's sub-phase 3 entry) to plain CPU execution —
+  the same as `EXEC`/`GO`/`G` — since a dead command spelling would be
+  strictly worse than a useful, clearly-documented reinterpretation in an
+  emulator with no image loader.
+- `bindGrammar` binds a Go handler to every DCL verb/syntax this port
+  actually implements (`EXIT`, `VMINIT`, four `CLEAR_*` forms, ten
+  `SHOW_*` syntaxes plus the bare `SHOW` verb itself for the plain
+  register/privileged-register name shortcuts like `SHOW R0`/`SHOW PC`/
+  `SHOW P0BR` — reached whenever a `show_types` keyword carries no
+  `/syntax=` redirect of its own) and deliberately leaves everything else
+  (device/RTL/assembler-dependent `SHOW`/`CLEAR`/`DEFINE` sub-forms, `TEST`)
+  unbound: `Grammar.Dispatch`'s existing "no handler bound for X" error
+  already reports that clearly, so no per-command stub code is needed. A
+  command reached via `/entry=` (`ABOUT`, `FORTH`, `SHOW VERSION`'s
+  `XTEST`/`exe$about` indirection, ...) is caught even earlier, in
+  `Dispatch` itself, before ever calling `Grammar.Dispatch`.
+- Hit, then fixed, a real Go gotcha while wiring `TIME`'s "run a sub-command
+  and report how long it took" behavior: `fixedCommands` as a plain package
+  `var` initializer referencing `cmdTime`, whose body passes the
+  `Dispatcher.Dispatch` method value, created a compiler-rejected
+  initialization cycle (`fixedCommands → cmdTime → Dispatch →
+  fixedCommands`) even though nothing is actually invoked at package-init
+  time — moved the map literal into an `init()` function, which isn't
+  subject to that static dependency check.
+- Confirmed, while writing the DEPOSIT/EXAMINE round-trip test, a genuine
+  (not invented) VAX DCL/MACRO-32 number-syntax quirk already present in
+  `expr.go`'s port of `asm_expr3`: a hex literal beginning with a letter
+  A-F (e.g. `ABCD1234`) is parsed as a symbol-name reference, not a number
+  — a bare hex literal must start with a digit (or use the `^X`/`0X`
+  prefix) — documented in the test itself after the first version of it
+  (using such a literal) failed for exactly this reason.
+- `internal/console/dispatch_test.go` exercises the fully wired system
+  end-to-end against the real `testdata/dcl/evax.dcl` grammar: fixed-table
+  dispatch and its 4-character truncation rule, SET/EXAMINE/DEPOSIT/STEP/
+  GO round trips, RUN's remapping to Execute, SHOW via DCL (both a bound
+  syntax and the bare-verb register shortcut), CLEAR BREAKPOINT/ALL via
+  DCL, VMINIT via DCL, EXIT stopping the run loop, the `/entry=` and
+  unbound-DCL-syntax error paths, a not-implemented fixed command, SAVE/
+  LOAD's qualifier requirement, HELP, and blank-line/comment no-ops.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
+  all clean. `go test ./internal/console -cover`: 78.0% (dipped slightly
+  from 84.7% purely because this sub-phase added a large amount of new,
+  well-covered glue code alongside it, not because coverage of existing
+  code regressed).
