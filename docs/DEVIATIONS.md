@@ -186,11 +186,12 @@ _None yet._
   accidentally produces) and ASHL/ASHQ/the four loop instructions (`V <- {integer
   overflow}`, never computed by the C source at all — V is left as whatever the
   previous instruction set it to).
-- **Status**: fixed in Go, per instruction, as each is ported: N/Z computed explicitly,
-  V computed per the manual's overflow definition where one applies (0 for MOVQ/ROTL;
-  a real shift/increment overflow check for ASHL/ASHQ/AOBLEQ/AOBLSS/SOBGTR/SOBGEQ), C
-  left untouched. MOVQ fixed in `internal/cpu/mov.go` (this sub-phase); ROTL/ASHL/ASHQ
-  and the loop instructions follow the same fix when their sub-phases land.
+- **Status**: fixed in Go, all eight instances. N/Z computed explicitly, V computed per
+  the manual's overflow definition where one applies (0 for MOVQ/ROTL; a real
+  shift/increment overflow check for ASHL/ASHQ/AOBLEQ/AOBLSS/SOBGTR/SOBGEQ, the latter
+  four reusing `addResult`/`subResult` since they're arithmetically exactly
+  INCL/DECL), C left untouched throughout. MOVQ: `internal/cpu/mov.go`. ROTL/ASHL/ASHQ:
+  `internal/cpu/ash.go`. AOBLEQ/AOBLSS/SOBGTR/SOBGEQ: `internal/cpu/loop.go`.
 
 ### [Phase 04] BIT's carry flag is force-cleared instead of left unchanged
 

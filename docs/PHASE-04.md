@@ -408,3 +408,23 @@ opcode table slots they occupy stay on `unimplementedHandler` until then.
   and CASE's in-range/at-the-limit/out-of-range (table-skip) cases with their
   respective condition codes and PC targets.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
+
+### 2026-09-14 — Sub-phase 12: loop instructions
+
+- Added `internal/cpu/loop.go`: `emulAobleq`/`emulAoblss`/`emulSobgtr`/`emulSobgeq`,
+  built on a shared `stepIndex` helper. AOBLEQ/AOBLSS are arithmetically exactly INCL
+  and SOBGTR/SOBGEQ exactly DECL, so `stepIndex` reuses `addResult`/`subResult`
+  directly rather than reimplementing the ±1 overflow formula a third time.
+- This closes out the last four instances of the `SETCONDITIONBITS(x, 0L)`-idiom
+  finding opened in sub-phase 5 (`docs/DEVIATIONS.md`, now marked fully resolved
+  across all eight affected instructions): the C source never computed V for any of
+  these four (stale from whatever instruction ran before), and force-cleared C where
+  the manual specifies unaffected — unlike INC/DEC, which do get a real carry/borrow
+  in C, these four leave C alone entirely per the manual, so `stepIndex` never writes
+  it.
+- Added `internal/cpu/loop_test.go`: AOBLEQ/AOBLSS's inclusive-vs-exclusive boundary
+  distinction (index landing exactly on the limit branches for AOBLEQ but not
+  AOBLSS — pinning down the one-bit difference between the two instructions),
+  SOBGTR/SOBGEQ's zero-boundary distinction, and the shared overflow/carry-unaffected
+  fix reusing the same `INT32_MAX` case as sub-phase 5's INC test.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
