@@ -47,6 +47,14 @@ instructions, and everything else that doesn't fit the earlier families.
 - **RET's console-CALL-command sentinel**: `emul_ret`'s magic-`FFFFDEAF`-frame
   halt handling is a Phase 08 console feature (returning from a console `CALL`
   command) with no console yet to drive it — not ported.
+- **MTPR/MFPR device/interrupt side effects**: `emul_procreg.c`'s `set_priv_reg`
+  has register-specific side effects this port doesn't model yet — IPL/SIRR's
+  pending-interrupt delivery (both call `interrupt()`, deferred to Phase 09 same
+  as REI's tail above), and ICCS/RXCS/TXCS/TXDB's console/clock device modeling
+  (also Phase 09 I/O). All fall through to a plain register store in
+  `internal/cpu/procreg.go`'s `setPrivReg` rather than replicating device
+  behavior that doesn't exist yet. TBIA/TBIS are no-ops (no TB cache exists to
+  invalidate — see Phase 02's design notes).
 
 ## Progress Log
 
@@ -92,5 +100,32 @@ instructions, and everything else that doesn't fit the earlier families.
   the restore reads the frame, not live state), and REI reversing a hand-built
   mode-switch frame (PC, full PSL including CurMod, and both mode stack
   pointers).
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
+  all clean.
+
+### 2026-09-14 — Sub-phase 2: MTPR/MFPR
+
+- Added `internal/cpu/procreg.go`, porting `emul_procreg.c`'s `emul_mtpr`,
+  `emul_mfpr`, and `set_priv_reg` (including the `init_reg_access`
+  privileged-register access-kind table). LDPCTX/SVPCTX, also in this C file,
+  remain deferred per this doc's open questions.
+- Register-specific side effects that depend on subsystems this project hasn't
+  built yet (device-interrupt admission, console/clock devices, the
+  translation-buffer cache) are not replicated — see this doc's open questions
+  above for the full list and rationale. Everything else (bounds/mode/access
+  checking, IPL's PSL mirroring, ASTLVL's range check, SIRR's SISR queuing,
+  every other register's plain read/write) is ported faithfully.
+- Found one asymmetry worth noting but not fixing (out of scope per the user's
+  CALL/RET-specific direction above): `emul_mtpr.c` truncates its register-
+  number operand to a 16-bit signed `short` before range-checking it, while
+  `emul_mfpr.c` checks its own register-number operand at full 32-bit width —
+  both replicated as read.
+- `internal/cpu/procreg_test.go` covers a default-register MTPR/MFPR round
+  trip, the kernel-mode check (called directly rather than through
+  `Engine.Step`, to avoid needing a page table for the mode-switch side effect
+  `docs/DEVIATIONS.md` already covers elsewhere), out-of-range and no-access
+  register faults for both instructions, IPL's masking/PSL-mirroring, ASTLVL's
+  bounds check (both the fault and a valid case), SIRR's SISR-queuing, and
+  TBIA/TBIS's no-op behavior.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
   all clean.
