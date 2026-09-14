@@ -605,6 +605,29 @@ sub-phase 2.
 
 ## Open questions carried forward (not yet findings)
 
+### [Phase 03/04, noticed in Phase 06] PC-relative Immediate mode isn't rejected for an `AccessAddress` operand
+
+- **Where**: `internal/cpu/operand.go`'s `decodePCRelative`, `case 0x08` (Immediate:
+  `I^#n`): only faults `ExcReservedAddr` for `access == AccessModify ||
+  access == AccessWrite`, unlike the short-literal path a few lines above in
+  `decodeOperand` (`case mode < 4`), which faults for *any* non-`AccessRead` access
+  — including `AccessAddress` — and unlike Register mode's own `AccessAddress`/
+  `AccessVarField` check (the fix in this doc's "Register mode used where OP_AD/
+  OP_VA access is required" finding).
+- **What**: an `AccessAddress` operand (e.g. LOCC/SKPC/MATCHC's address operands
+  this phase, or MOVAL/PUSHAL/JMP from Phase 04) that happens to be encoded as
+  `I^#n` has no VAX address either — same underlying problem the Register-mode fix
+  already solved — but decode doesn't currently catch this specific encoding of it.
+  Noticed while confirming decode already covers `emul_locc.c`'s
+  `is_register[2] != OP_MEMORY` check for this phase's LOCC (it does, for every
+  addressing mode actually exercised by this phase's tests, but not this one).
+- **Status**: not fixed. Genuinely out of this phase's scope (the fix belongs in
+  Phase 03/04's `operand.go`, decided project-wide rather than patched per
+  instruction), and no current test exercises this specific encoding either in this
+  phase or the ones that already shipped `AccessAddress` operands. Revisit
+  alongside Phase 12 or the next time `operand.go`'s addressing-mode fault coverage
+  is touched.
+
 ### [Phase 06] Character-string length operands: signed `short` or unsigned word?
 
 `emul_movc.c`/`emul_cmpc.c` (and, per its own file's shared shape, `emul_locc.c`/

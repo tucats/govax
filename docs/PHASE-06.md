@@ -126,3 +126,25 @@ self-contained, well-testable group.
   behavior plus a dedicated regression test for each of the three fixes above.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean.
+
+### 2026-09-14 — Sub-phase 5: LOCC, SKPC, MATCHC
+
+- Added `internal/cpu/locc.go`, `skpc.go`, `matchc.go`, porting each of their
+  namesake C source files. LOCC/SKPC were already correct (their lengths are
+  genuinely `unsigned short` in the C source, sidestepping this phase's broader
+  signed-length open question) and ported as straightforward direct translations,
+  no fixes needed. MATCHC's naive-substring-search-with-backtracking arithmetic
+  looked worth double-checking given how terse it is; traced it by hand against
+  `vax_instr_set.pdf`'s three MATCHC Notes (match found, zero-length object,
+  zero-length source with nonzero object) and confirmed it's correct as written —
+  ported faithfully, including matching its `unsigned short` truncation semantics
+  in the backtracking math.
+- Noticed (not fixed, logged as an open question) that `internal/cpu/operand.go`'s
+  PC-relative Immediate decoding doesn't reject an `AccessAddress` operand the way
+  Register mode and short-literal mode both already do — a Phase 03/04 decode-layer
+  gap, out of this phase's scope to fix.
+- `internal/cpu/locc_test.go`/`matchc_test.go` cover both instructions' found/
+  not-found/zero-length cases, including MATCHC's backtracking-through-a-false-
+  start path and its two zero-length Notes.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean.
