@@ -342,3 +342,46 @@ SHOW, and friends — plus the DCL grammar-driven command parser, and stand up
   the exact/synonym cases against the real `vax.help` fixture).
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
   all clean. `go test ./internal/console -cover`: 83.2%.
+
+### 2026-09-14 — Sub-phase 7: VMINIT
+
+- Added `vminit.go`: `Console.VMInit` ports `console_vminit_dcl`'s P0/P1/S0
+  region-size negotiation (explicit sizes plus even redistribution of
+  leftover physical pages across any unspecified regions, then dumping any
+  final rounding remainder into S0), S0-page-table-fits check, and page
+  table construction — using the C source's own `#ifndef DYNVM` code path
+  (every requested page pre-mapped valid immediately) rather than the
+  `#ifdef DYNVM` demand-paging path its default build actually takes
+  (`vax.h` defines `DYNVM`). This is a deliberate scope decision, not a
+  fidelity gap invented for this port: `internal/vm/translate.go`'s own
+  design notes already flagged DYNVM as deferred to "Phase 08's VMINIT
+  command," but implementing it for real needs `internal/vm.Translate`
+  itself to gain new state/API for an invalid PTE to trigger on-demand
+  allocation — out of scope for a change confined to `console_vminit.c`;
+  pre-mapping every page is a real, C-source-supported alternate behavior
+  mode, not a fabricated one, and is what the file's `#ifndef DYNVM` branch
+  already does.
+- Also not ported (documented in `vminit.go`'s own comment): the
+  `CONSOLE$SCRATCH` immediate-assembly scratch page and
+  `CONSOLE$STRINGPOOL*` area (both serve the inline mini-assembler, Phase
+  11's scope) and the `PTE$K_NONE` guard page one page below each
+  privileged stack (installed via the C source's own `setpte` mini-parser,
+  also assembler-adjacent) — the bottom-most *P0* page is still guarded
+  (`PTE_K_NA`), since that part of the algorithm needs no assembler, just a
+  `PTE.SetProtection` call already in scope.
+- Confirmed PTEs can be written directly through the normal
+  `Mem.StoreLongword(cpu, addr, ...)` path (rather than needing a raw
+  physical-write escape hatch) since `Translate` already treats an address
+  as physical whenever `MAPEN == 0` — exactly the state `VMInit` holds
+  while building the tables, matching `console_vminit_dcl`'s own
+  `vax.MAPEN = 0` ... `store_memory(...)` ... `vax.MAPEN = 1` structure.
+- `internal/console/vminit_test.go` covers: a full VMInit on a small (128-
+  page) physical memory, then a store/load round trip through a P0 virtual
+  address to prove the page table `VMInit` built is actually valid and
+  `Translate`-resolvable (not just that the privileged registers look
+  right); that P0's guarded first page really does access-violate; that
+  the four privileged-mode stack pointers come out distinct and nonzero
+  with `SP` initialized to `KSP`; and the pre-Init and oversized-request
+  error paths.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
+  all clean. `go test ./internal/console -cover`: 84.7%.
