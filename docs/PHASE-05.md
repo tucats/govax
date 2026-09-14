@@ -241,3 +241,26 @@ Each is one buildable, testable commit, following Phase 04's pattern.
   (the uncovered lines are `fpuStore`'s F_floating rounding-carry-into-overflow edge
   and `loadFloat`/`storeFloat`'s `Operand.Load`/`Store` error-propagation paths,
   already covered generically by Phase 03's `operandaccess_test.go`).
+
+### 2026-09-14 — Sub-phase 2: D-floating table/dispatch fix
+
+- Added `internal/cpu/gen/main.go`'s `knownTableFixes` map and `applyKnownFixes`,
+  applied between parsing `instruction_table.h` and generating
+  `instructions_table.go`, patching the seven broken D-floating entries identified in
+  this doc's design notes (`SUBD2`, `CVTDB`, `CVTDW`, `CVTDL`, `CVTRDL`, `CMPD`,
+  `TSTD`) to mirror their already-correct F-floating/sibling D-floating rows. Applied
+  at generation time rather than hand-edited into the generated (DO-NOT-EDIT)
+  `instructions_table.go`, so the fix survives a future `go generate` instead of
+  being silently reverted by it; `applyKnownFixes` fails loudly if an expected name
+  goes missing, so a future `instruction_table.h` change that fixes these upstream
+  won't go unnoticed either.
+- Ran `go generate ./internal/cpu` and confirmed via `git diff` that exactly these
+  seven entries changed, nothing else.
+- Logged the full finding (severity, confirmation method, fix) in
+  `docs/DEVIATIONS.md`.
+- Added `internal/cpu/instruction_test.go`'s `TestInstructionTableDFloatingFixedEntries`,
+  pinning down each of the seven entries' operand count/scale/access/type directly at
+  the table level, independent of any handler (none exist yet for the five
+  previously-undispatched opcodes — that's sub-phases 3/4/6).
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean.

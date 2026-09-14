@@ -78,6 +78,35 @@ _None yet._
   branch above it in the same function. Verified by `internal/cpu/fpu_test.go`'s
   `TestFpuStoreUnderflowFlushesToZeroWhenFUClear`.
 
+### [Phase 05] Seven D-floating opcodes have no working operand data or dispatch in the C reference
+
+- **Where**: `reference/eVAX/eVAX/Headers/instruction_table.h` (`SUBD2` at 0x62,
+  `CVTDB`/`CVTDW`/`CVTDL`/`CVTRDL` at 0x68-0x6B, `CMPD`/`TSTD` at 0x71/0x73) and
+  `reference/eVAX/eVAX/Source/Initialization/init_emulators.c`.
+- **What**: `SUBD2`'s table row has `OperandCount: 0` despite correctly populated
+  scale/access columns (a pure data-transcription slip — its siblings `MULD2`/`DIVD2`
+  are correct) and _does_ have a dispatch entry (`instruction[0x62].routine =
+  emul_float_math`), so decode would read it as a zero-operand instruction despite the
+  handler expecting two. `CVTDB`/`CVTDW`/`CVTDL`/`CVTRDL`/`CMPD`/`TSTD` are worse: an
+  all-zero table row (count, scale, _and_ access all zero) _and_ no
+  `init_emulators.c` dispatch entry at all — genuinely never wired up, not just
+  mis-tabled. `emul_cmp.c`'s shared handler (which `CMPD`/`TSTD` would need) has no
+  `case 3` (D_FLOAT) in its `switch(dsize)` either, so even a hypothetical dispatch fix
+  would have no working logic behind it. Confirmed by reading the C source directly
+  (not inferred); severity (non-functional, not just subtly wrong, unlike Phase 04's
+  BISB3 finding) surfaced to the user rather than decided unilaterally, since it cuts
+  into this phase's own named D-floating deliverables.
+- **Status**: fixed, per user direction. `internal/cpu/gen/main.go`'s
+  `knownTableFixes` patches these seven entries at `go generate` time (so the fix
+  survives regeneration rather than being hand-edited into the generated,
+  DO-NOT-EDIT `instructions_table.go` and later silently reverted), mirroring each
+  entry's already-correct F-floating/sibling D-floating row. Since five of the seven
+  have no working C implementation to port at all, their instruction handlers
+  (`internal/cpu/`) are implemented from the ISA manual and by direct analogy to the
+  F-floating/D-floating siblings that _do_ work, not ported from C. Verified by
+  `internal/cpu/instruction_test.go`'s `TestInstructionTableDFloatingFixedEntries`
+  (table-level) and by each opcode's own handler tests as they land.
+
 ### [Phase 03] Autoincrement Deferred (`@(Rn)+`) eagerly loads the operand's value instead of resolving its address
 
 - **Where**: `reference/eVAX/eVAX/Source/CPU/decode_operand.c`, `decode_operand()`'s

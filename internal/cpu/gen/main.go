@@ -84,6 +84,74 @@ func parse(src string) []field {
 	return out
 }
 
+// knownTableFixes patches instruction_table.h entries that are themselves
+// wrong in the C reference (not a parsing issue): seven D-floating opcodes
+// (SUBD2, CVTDB, CVTDW, CVTDL, CVTRDL, CMPD, TSTD) have all-zero (or, for
+// SUBD2, zero operand-count-only) scale/access/count columns in the C
+// header, and in most cases no init_emulators.c dispatch entry either — they
+// were never correctly wired up in the C reference at all, confirmed via
+// docs/PHASE-05.md's design notes. Applied here, at generation time, rather
+// than hand-edited into the generated instructions_table.go, so the fix
+// survives a future `go generate` instead of being silently reverted by it.
+// See docs/DEVIATIONS.md for the full writeup.
+//
+// Each fix mirrors the corresponding already-correct sibling row: SUBD2
+// mirrors MULD2/DIVD2's shape; the CVTDx conversions mirror CVTFB/CVTFW/
+// CVTFL/CVTRFL with the source scaled to 8 bytes; CMPD/TSTD mirror CMPF/TSTF.
+var knownTableFixes = map[string]field{
+	"SUBD2": {
+		scale: [6]int{8, 8, 0, 0, 0, 0}, typ: "OP_TYPE_FLOAT", count: 2,
+		access: [6]string{"OP_RD", "OP_MD", "OP_NL", "OP_NL", "OP_NL", "OP_NL"},
+	},
+	"CVTDB": {
+		scale: [6]int{8, 1, 0, 0, 0, 0}, typ: "OP_TYPE_FLOAT", count: 2,
+		access: [6]string{"OP_RD", "OP_WR", "OP_NL", "OP_NL", "OP_NL", "OP_NL"},
+	},
+	"CVTDW": {
+		scale: [6]int{8, 2, 0, 0, 0, 0}, typ: "OP_TYPE_FLOAT", count: 2,
+		access: [6]string{"OP_RD", "OP_WR", "OP_NL", "OP_NL", "OP_NL", "OP_NL"},
+	},
+	"CVTDL": {
+		scale: [6]int{8, 4, 0, 0, 0, 0}, typ: "OP_TYPE_FLOAT", count: 2,
+		access: [6]string{"OP_RD", "OP_WR", "OP_NL", "OP_NL", "OP_NL", "OP_NL"},
+	},
+	"CVTRDL": {
+		scale: [6]int{8, 4, 0, 0, 0, 0}, typ: "OP_TYPE_FLOAT", count: 2,
+		access: [6]string{"OP_RD", "OP_WR", "OP_NL", "OP_NL", "OP_NL", "OP_NL"},
+	},
+	"CMPD": {
+		scale: [6]int{8, 8, 0, 0, 0, 0}, typ: "OP_TYPE_FLOAT", count: 2,
+		access: [6]string{"OP_RD", "OP_RD", "OP_NL", "OP_NL", "OP_NL", "OP_NL"},
+	},
+	"TSTD": {
+		scale: [6]int{8, 0, 0, 0, 0, 0}, typ: "OP_TYPE_FLOAT", count: 1,
+		access: [6]string{"OP_RD", "OP_NL", "OP_NL", "OP_NL", "OP_NL", "OP_NL"},
+	},
+}
+
+// applyKnownFixes patches fields in place per knownTableFixes, preserving
+// each entry's parsed name/ext/opcode (identity), and fails loudly if an
+// expected name isn't found — the fix list is stale, which is a bug in the
+// generator, not something to silently skip.
+func applyKnownFixes(fields []field) {
+	remaining := make(map[string]bool, len(knownTableFixes))
+	for name := range knownTableFixes {
+		remaining[name] = true
+	}
+	for i, f := range fields {
+		fix, ok := knownTableFixes[f.name]
+		if !ok {
+			continue
+		}
+		fix.name, fix.ext, fix.opcode = f.name, f.ext, f.opcode
+		fields[i] = fix
+		delete(remaining, f.name)
+	}
+	for name := range remaining {
+		log.Fatalf("gen: knownTableFixes entry %q not found in parsed table", name)
+	}
+}
+
 var accessName = map[string]string{
 	"OP_NL": "AccessNone",
 	"OP_RD": "AccessRead",
@@ -158,6 +226,7 @@ func main() {
 	}
 
 	fields := parse(string(src))
+	applyKnownFixes(fields)
 	code := generate(fields, *in)
 
 	if err := os.WriteFile(*out, code, 0o644); err != nil {
