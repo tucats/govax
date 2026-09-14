@@ -382,3 +382,27 @@ Each is one buildable, testable commit, following Phase 01/02's pattern.
   the same-mode no-op case), the interrupt-stack path, and both no-real-vector cases.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
   clean.
+
+### 2026-09-14 — Sub-phase 5: operand value access
+
+- Added `internal/cpu/operandaccess.go`: `Operand.Load`/`Operand.Store`, the port of
+  `storage.c`'s `get_operand`/`put_operand` onto the value-based `Operand` design —
+  each call resolves the value fresh against `*vax.CPU`/`*vm.Memory` rather than
+  aliasing through a pointer, so there's no scratch-register bookkeeping to get wrong
+  (see sub-phase 2's `AUDIT.md`-adjacent finding for what that bookkeeping cost the C
+  source). A register operand smaller than a longword only touches its low bytes on
+  both read and write, preserving the rest — matching `put_operand`'s byte-limited copy
+  and `vm.Memory.LoadRegister`'s identical Phase 02 behavior. A quadword (8-byte)
+  register operand reads/writes the register pair `Reg`/`Reg+1` (low/high longword) —
+  made explicit here since the C source gets this "for free" from `vax.reg[]`'s
+  contiguous array layout and a raw 8-byte pointer read, which this port's `Operand`
+  has no pointer to alias through. `ErrImmutableOperand` is a defensive backstop for
+  `Store` on an immediate operand — unreachable from real VAX code since decode already
+  faults any write-access operand that resolves to a literal.
+- Added `internal/cpu/operandaccess_test.go`: immediate load/store (including the
+  immutability error), register round-trips at each size with the byte/word partial-
+  write-preserves-upper-bytes behavior explicitly asserted, the quadword register-pair
+  case, and memory round-trips at each size including a check that a byte store doesn't
+  disturb neighboring memory.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
+  clean.
