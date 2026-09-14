@@ -211,3 +211,47 @@ opcode table slots they occupy stay on `unimplementedHandler` until then.
   source faulting end-to-end through `Engine.Step`/`HandleFault`, PUSHAL pushing an
   address, and PUSHL pushing a register's value (not its address).
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
+
+### 2026-09-14 — Sub-phase 4: CLR family
+
+- Added `internal/cpu/clr.go`: `emulClr` (CLRB/CLRW/CLRL/CLRQ), one handler for all
+  four sizes since clearing has nothing size-specific about it beyond how many bytes
+  `Operand.Store` writes. N/Z/V match the manual and the C source exactly (`N<-0,
+  Z<-1, V<-0, C<-C`) — no deviation here.
+- Added `internal/cpu/clr_test.go`: CLRB/W/L condition codes and C-unaffected, CLRB
+  preserving the register's upper bytes, CLRQ clearing a register pair.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
+
+### 2026-09-14 — Sub-phase 5: INC/DEC family
+
+- Cross-checking `emul_increment.c` against `vax_instr_set.pdf`'s INC/DEC entries (V is
+  explicitly "integer overflow occurs if the largest positive/negative integer is
+  incremented/decremented") surfaced deeper, confirmed problems than expected — see the
+  substantially revised `docs/DEVIATIONS.md` entry (originally logged as "deferred" in
+  sub-phase 2's commit, now rewritten in place with the full analysis and superseded
+  correctly rather than silently edited): the byte-size V range check uses the wrong
+  constants entirely (127/-128 confused with 255/-256), and the longword `data==udata`
+  overflow-detection trick is a tautology now that `LONGWORD` is genuinely 32-bit — it
+  can never detect anything, confirmed concretely with `INT32_MAX + 1`.
+- Given INCx/DECx are specified as exactly equivalent to `ADDx S^#1`/`SUBx S^#1`, and
+  Go has native 64-bit arithmetic to compute the manual's formulas *correctly* (the
+  same "widen, then check for truncation" technique the C source's longword path was
+  reaching for but structurally couldn't achieve), this was upgraded from "defer, risky
+  to fix broadly" to "fix now, using shared spec-derived helpers" — used by this
+  sub-phase and, next, by ADD/SUB/ADWC/SBWC, so the two families can't disagree on
+  condition codes for what the manual defines as the identical operation.
+- Added to `internal/cpu/condcodes.go`: `setArithPSL` (the shared "N/Z from result, V/C
+  as given" pattern) and `addResult`/`addCarryResult`/`subResult`/`subCarryResult`/
+  `mulResult`/`divResult` — size-parameterized, wide-arithmetic (`int64`) condition-code
+  helpers implementing the manual's ADD/SUB/MUL/DIV formulas exactly, replacing the C
+  source's narrow/wrong-constant/tautological ones. `addCarryResult`/`subCarryResult`
+  (for ADWC/SBWC) and `mulResult`/`divResult` (for MUL/DIV) aren't exercised until the
+  next sub-phase but land together since they're one coherent set of formulas.
+- Added `internal/cpu/increment.go`: `emulInc`/`emulDec`, built on `addResult`/
+  `subResult`.
+- Added `internal/cpu/increment_test.go`: table-driven byte-size tests for both INCB
+  and DECB covering the two confirmed-wrong-in-C cases directly (INCB of 0x7F must
+  overflow; INCB of 0xFF must carry; DECB of 0x00 must borrow), a longword test
+  reproducing the `INT32_MAX`/`INT32_MIN` boundary the C source's truncation trick
+  can't detect, and a word test confirming upper-byte preservation.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.

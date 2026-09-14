@@ -220,24 +220,86 @@ _None yet._
   — out of scope for this phase. Revisit in Phase 12 or alongside `instruction_table.h`
   generation.
 
-### [Phase 04, deferred] Byte/word carry-flag formulas use signed narrow-type arithmetic
+### [Phase 04] `emul_increment.c`/`emul_integer_math.c`'s N/Z/V/C formulas are broken for byte and longword sizes, and for BIS/BIC's C
 
-- **Where**: `emul_increment.c` (INCx/DECx) and `emul_integer_math.c`'s byte/word paths
-  (ADDx/SUBx/ADWC/SBWC) read the source operand(s) as a *signed* `char`/`short`, then
-  test `data & 0x100`/`0x10000` (a bit above the operand's width) for carry-out.
-- **What**: this only matches `vax_instr_set.pdf`'s "carry from the most significant
-  bit" definition when the operand's sign bit is clear. E.g. incrementing byte 0xFF
-  (255 unsigned, -1 signed): the C source computes `d1 = -1`, `data = d1 + 1 = 0`,
-  `data & 0x100 == 0` → C reported as 0, but the true unsigned carry (255 + 1 = 256)
-  should set C. The bug only appears when the source's high bit is set — the common
-  case (small positive values) is unaffected, which is presumably why it's gone
-  unnoticed.
-- **Status**: deferred, replicated as-is. This is a pervasive pattern across most of
-  this phase's integer arithmetic, not an isolated bug — fixing it well means
-  redesigning the carry computation consistently across every affected handler, which
-  risks introducing new bugs mid-phase rather than "fits naturally in scope." Revisit
-  in Phase 12 with real test vectors (including hardware-verified ones if available)
-  rather than guessing at the fix under phase-completion pressure.
+This entry originally read "deferred" — logged below is the superseded reasoning,
+followed by what actually shipped. Kept for the record rather than silently rewritten.
+
+**Superseded plan**: the first pass through `emul_increment.c` found that its byte/word
+carry computation reads the source as a *signed* `char`/`short` and tests
+`data & 0x100`/`0x10000` for carry-out, which only matches the manual's "carry from the
+most significant bit" when the operand's sign bit is clear (e.g. incrementing byte 0xFF:
+C source computes `d1 = -1`, `data = 0`, reports C=0, but the true unsigned carry
+(255+1=256) should set C). This looked like a pervasive, hard-to-fix-safely pattern
+across INC/DEC and ADD/SUB/ADWC/SBWC, so the plan was to replicate it as-is and defer a
+proper fix to Phase 12.
+
+**What changed**: while deriving INC/DEC's overflow formula from the manual's own
+explicit notes ("integer overflow occurs if the largest positive integer is
+incremented"), a wider check of `emul_integer_math.c`'s V/C formulas against
+`vax_instr_set.pdf`'s ADD/SUB/MUL/DIV/BIS/BIC entries turned up more, and worse,
+confirmed defects than the carry-flag one alone:
+
+- **Byte-size V range check uses the wrong constants.** `emul_increment.c`/
+  `emul_integer_math.c`'s byte case tests `data > 255 || data < -256` for overflow. The
+  analogous word case correctly tests `data > 32767 || data < -32768` — exactly
+  `INT16_MAX`/`INT16_MIN`, the true signed-word bounds. The byte case's bounds (255,
+  -256) are not the signed-byte bounds (127, -128) at all; concretely, incrementing byte
+  0x7F (127, the largest positive byte) computes `data = 128`, and `128 > 255` is false,
+  so no overflow is reported — but incrementing the largest positive integer is the
+  textbook overflow case the manual's own INC note calls out by name. Comparing the
+  (correct) word case to the (wrong) byte case in the same function makes this a clear,
+  obvious constant error, not an ISA judgment call.
+- **The longword V check via `data == udata` cannot detect anything, ever, now that
+  `LONGWORD` is genuinely 32-bit.** This "compute the same add as both signed and
+  unsigned, overflow iff they disagree" trick only works if the comparison happens in
+  *wider* precision than the operands — which is exactly what the pre-audit-fix 64-bit
+  `LONGWORD` accidentally provided. Post-fix, both `data` (`LONGWORD`) and `udata`
+  (declared `LONGWORD` in `emul_increment.c`, `ULONGWORD` in `emul_integer_math.c`) are
+  computed at the *same* 32-bit width as the inputs; two's-complement addition produces
+  an identical bit pattern whether the intermediate type is signed or unsigned, so
+  `(ULONGWORD)data == udata` is a tautology — always true, always reporting "no
+  overflow." Verified concretely: `d1 = 0x7FFFFFFF`, `d2 = 1` — `data` and `udata` both
+  come out `0x80000000`, so the check reports no overflow for `INT32_MAX + 1`, a
+  textbook signed overflow. This is a real, confirmed regression: the
+  `reference/eVAX/AUDIT.md` `LONGWORD`-width fix that closed the C project's own audit
+  silently broke this particular overflow-detection idiom everywhere it's used at
+  longword size, since the idiom was never widening on purpose — it was relying on
+  `LONGWORD` accidentally already being wider than a VAX longword.
+- **BIS's C is force-cleared, and BIC's uses the (already-broken) arithmetic carry
+  formula.** `emul_integer_math()`'s byte/word cases special-case `func == 4` (BIS) to
+  `vax.pslw.c = 0` and fall through to the generic (broken) `data & 0x100` computation
+  for `func == 5` (BIC); the manual specifies `C <- C` (unchanged) for both — they're
+  bitwise ops, carry has no meaning for them at all.
+- **DIV's V doesn't cover the `MinInt / -1` overflow case** (only division-by-zero),
+  and dividing by zero unconditionally before the `d1 == 0` check is undefined behavior
+  in C (and a runtime panic in Go — the reason this file was touched in the first place;
+  see below).
+
+None of this needed guessing at ISA intent — every formula above (`ADD`'s "same-sign
+operands, different-sign result", `SUB`'s "borrow" and "different-sign operands,
+result differs from the minuend's sign", `MUL`'s "product doesn't fit the destination",
+`DIV`'s "divisor is zero, or `MinInt / -1`", `BIS`/`BIC`'s "C unaffected") is stated
+explicitly in `vax_instr_set.pdf`'s Condition Codes section for that instruction, and Go
+has native 64-bit arithmetic to implement each one *correctly* by computing in wider
+precision and checking for truncation — the exact technique the C source's own longword
+path was reaching for and structurally couldn't achieve. Given that, and given that
+INCx/DECx are specified as exactly equivalent to `ADDx S^#1`/`SUBx S^#1` (so shipping
+INC with a correct formula while ADD keeps the broken one would make two opcodes
+computing the identical operation disagree on their own condition codes), this was
+reclassified from "defer, pervasive and risky" to "fix now, per-instruction, using
+spec-derived formulas" — the same bar already used for MNEG's overflow/carry fixes in
+sub-phase 2.
+
+- **Status**: fixed in Go. `internal/cpu/condcodes.go` gained generic, size-parameterized
+  `addResult`/`subResult`/`mulResult`/`divResult` helpers (wide-arithmetic overflow/carry
+  per the formulas above); `internal/cpu/increment.go` (sub-phase 5) and
+  `internal/cpu/integermath.go` (sub-phase 6) use them for INC/DEC and
+  ADD/SUB/MUL/DIV/BIS/BIC/ADWC/SBWC respectively, replacing every one of the narrow/
+  tautological/wrong-constant formulas described above. Divide-by-zero and
+  `MinInt / -1` are guarded before the actual Go division (which would otherwise panic)
+  rather than left as C's undefined behavior; see each sub-phase's progress log entry
+  for the specific tests.
 
 <!--
 Entry template:
