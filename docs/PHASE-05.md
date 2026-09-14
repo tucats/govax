@@ -386,3 +386,28 @@ Each is one buildable, testable commit, following Phase 04's pattern.
   dirty beforehand).
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean. Coverage on this file: 85.3%.
+
+### 2026-09-14 — Sub-phase 8: integration smoke test
+
+- Added `internal/cpu/smokefloat_test.go`'s
+  `TestSmokeFloatArithmeticConversionCompare`: a hand-encoded program (`MOVF`/`MOVD`
+  short-literal operands, `ADDF2`, `CVTFL`, `CVTLD`, `CMPD`, `BEQL`/`BRB`, `HALT`) run
+  through `Engine.Run`, matching Phase 04's smoke test's shape and reasoning. Adds a
+  `shortFloatLit` test helper (searches `shortDouble` for a value's short-literal
+  mode byte) so the program reads in terms of the actual float values used rather
+  than pre-computed magic hex, and builds the branch displacements from the emitted
+  byte slice's own lengths instead of hand-counting instruction bytes — this
+  program's more varied operand encodings (short literals, register pairs) made
+  hand-counting a real error risk in a way Phase 04's shorter, uniform-encoding
+  program wasn't.
+- Round-trips `1.5 + 2.5` through float add, float→int, int→double conversion, and
+  confirms the result against an independently-loaded double `4.0` via `CMPD` and a
+  conditional branch — exercising data movement, arithmetic, both conversion
+  directions, compare, and branch together, matching this phase's stated deliverable.
+  Caught one test-design mistake of its own along the way (not an implementation bug):
+  an initial version asserted `Z` after `HALT`, not realizing the success path's own
+  `MOVL #1,R8` naturally overwrites `Z` (to false, since 1 is nonzero) after `CMPD`
+  sets it — fixed by asserting on `R8`'s final value instead, which already confirms
+  `BEQL` read `CMPD`'s `Z` correctly at the moment it mattered.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean.
