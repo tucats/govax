@@ -225,3 +225,109 @@ unit-tested, ready for Phase 13 to drive through a real loaded image.
   service under a name with no real `p1Vector` entry (unreachable through
   `SystemService`'s address-based lookup). `go build ./...`,
   `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
+
+### 2026-09-14 — Sub-phase 3: remaining LIB$/CRTL shims
+
+- Ported every shim `shim_init` actually declares that Sub-phase 2 left
+  out: `librtl_strings.c` (`STR$UPCASE`, `DECC$STRCMP`/`STRNCMP`/
+  `STRNCPY`/`ATOI`, twelve `DECC$ISxxx` classifiers), `librtl_memory.c`
+  (`DECC$MALLOC`/`FREE`, `LIB$GET_VM`/`FREE_VM`/`DELETE_VM_ZONE`),
+  `librtl_print.c` (`DECC$PRINTF`/`SPRINTF`), `librtl_file.c` (`EXE$OPEN`/
+  `CLOSE`/`READ`/`WRITE`), and `librtl_input.c` (`DECC$GETS`/`EXE$INPUT`).
+  All 32 `rtl_entry_list` codes `shim_init` declares are now registered —
+  confirmed by direct comparison against the C source's own list, not
+  just "looks complete."
+- `memory.go`'s allocator is a from-scratch reimplementation of
+  `decc_malloc`/`decc_free`'s free-list bookkeeping using Go slices
+  instead of manual `struct MEMBLK` pointer-splicing — same observable
+  behavior (including the C source's own documented "doesn't recursively
+  re-merge adjacent free blocks after a coalesce" limitation, replicated
+  because it's an acknowledged limitation, not a bug, per that file's own
+  TODO comment), idiomatic storage.
+- `print.go` reuses Go's `fmt.Sprintf` for the actual `%`-directive
+  formatting (after stripping the one syntax difference, C's `l` length
+  modifier, which Go's `fmt` has no equivalent for and doesn't need)
+  instead of hand-rolling a printf clone from `decc_apply_format`'s
+  width/precision-parsing loop — this is RTL tooling, not ISA behavior,
+  so there's no fidelity reason to reimplement formatting logic Go
+  already has correct.
+- `librtl_math.c`'s D-floating `%f` support needed VAX D-floating decode;
+  copied `internal/cpu`'s unexported `fpuLoad` algorithm locally (it
+  isn't exported, and this package has no other reason to depend on
+  `internal/cpu`) rather than exporting it for one caller.
+- Every routine has its own direct-call unit test; `go build ./...`,
+  `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
+
+### 2026-09-14 — Sub-phase 4: wire Console into cpu.SystemServices
+
+- `internal/console/services.go` makes `Console` implement
+  `cpu.SystemServices`: `SystemService`/`Shim` delegate to a new
+  `Console.RTL` (`*rtl.Environment`), created fresh alongside the Engine
+  on every `Init`/`Zero` (`init.go`) since both are addressed through the
+  same CPU/Memory pair; `ConsoleWriteByte`/`ReadByte`/`ConsoleCommand` are
+  handled directly against new `Console.In`/`Dispatcher` fields.
+  `rtl.ErrHalt` is translated to `cpu.ErrHalted` at this boundary
+  (`translateHalt`), keeping `internal/rtl` free of any `internal/cpu`
+  dependency.
+- The `XFC$DCL` callback methods (`DCLPresent`/`GetKeyword`/`GetString`/
+  `GetInteger`) are left as documented stubs: Phase 08's DCL engine has no
+  API for "look up one qualifier's value from an already-parsed command
+  line by name," and nothing reaches `XFC$DCL` at all until Phase 13's
+  kernel.asm bootstrap exists to call it — building real qualifier-lookup
+  semantics now would mean guessing at an interface with no way to verify
+  it against a real caller.
+- `cmd/govax` wires `Console.In` (real `os.Stdin`, or the injected test
+  reader) and `Console.Dispatcher` once it exists, so a running VAX
+  program can now reach the interactive console's own command line via
+  `XFC$CONSOLE_CMD`.
+- Found and fixed a real robustness gap while writing this sub-phase's own
+  integration test (not an ISA/RTL-fidelity bug, a Go-vs-C robustness
+  difference): every SYS$/LIB$ handler indexes its own `argv` directly
+  with no bounds checking, matching the C source's own convention (an
+  under-supplied VAX argument list just reads native stack garbage there,
+  not a hard crash) — but a Go slice-bounds panic is process-fatal by
+  default. Added a `recover()`-based safety net at `Environment.Shim`/
+  `SystemService`'s dispatch boundary (`callHandler`) rather than
+  defensive bounds checks in every handler, so a malformed or buggy
+  calling program now surfaces as a reported error for that one call
+  instead of taking down the whole emulator. Regression test:
+  `TestEnvironmentSystemServiceRecoversHandlerPanic`.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test
+  ./...` all clean.
+
+### 2026-09-14 — Phase 10 close-out
+
+- Verified full parity with the C source's own actually-implemented
+  surface (not just "every file has some port"): all 14 services
+  `declare_services()` registers (`SYS$CLREF`/`SETEF`/`READEF`/`EXPREG`/
+  `TRNLNM`/`DCLEXH`/`ASSIGN`/`GETDVIW`/`GETJPIW`/`SETAST`/`CLI`/`CREATE`/
+  `CONNECT`/`PUT`) and all 32 codes `shim_init()` declares are ported and
+  registered — checked entry-by-entry against the C source, not assumed.
+  Everything `p1_vector.c`/`shim.c` themselves leave as a null handler
+  (the remaining ~300 `p1Vector` addresses, the dead codes in
+  `rtl_entry_list`) is correctly unimplemented here too, reported the
+  same "not handled" way `call_service`/`shim()` report it.
+- Full `docs/DEVIATIONS.md`-policy review across the whole phase: no VAX
+  ISA/hardware-fidelity findings anywhere in `internal/rtl` or the
+  `internal/cpu`/`internal/console` wiring around it — every C source file
+  this phase ports (`p1_vector.c`, `shim.c`, `service.c`, `devices.c`,
+  `logical_names.c`, `cli.c`, `rms.c`, `structure_mapping.c`, the eight
+  `librtl_*.c` files) is RTL/emulator tooling, not emulated VAX
+  instruction-set behavior — the same category as Phase 08's DCL engine
+  and Phase 09's device/logical-name tables, so the ISA-fidelity policy
+  doesn't apply (`emul_xfc.c` is the one exception, a real opcode, and its
+  own findings were logged in Sub-phase 1). The real bugs found along the
+  way (RMS's misplaced-brace `RAC` check, the XFC R0-ordering issue, the
+  Go slice-bounds-panic robustness gap) are all fixed and documented at
+  the point they were found, per this project's established pattern.
+- Deliverables against `docs/PLAN.md`'s original phase list: the RTL
+  calling convention, RMS, CLI, and every LIB$ routine the C source
+  implements are done and unit-tested; `console_run.c`'s `RUN` command
+  (VMS image activation) was split out to `docs/PHASE-13.md` early in this
+  phase once scoping found it to be a large, separable concern — see that
+  doc and this phase's own scope note above for the full rationale.
+  Running the named `testdata/exe/` fixtures end-to-end is Phase 13's
+  milestone to hit, not this phase's.
+- Full-repo `go build ./...`, `go vet ./...`, `gofmt -l .` (no output),
+  and `go test ./...` all clean. `go test ./internal/rtl/... -cover`:
+  76.8%; `go test ./internal/console/... -cover`: 79.4%. Phase complete.
