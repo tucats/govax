@@ -38,6 +38,20 @@ type Console struct {
 
 	Breakpoints []*Breakpoint
 
+	// ROM/NVRAM are separate byte buffers outside vm.Memory's main RAM,
+	// matching the C source's own rom/nvram globals (reference/eVAX/eVAX/
+	// Source/CPU/vm.c) — see internal/vm/memory.go's doc comment: physical
+	// resolution beyond RAM belongs to this phase (the file format; see
+	// rom.go) and Phase 09 (mapping them into the address space actually
+	// translated by internal/vm.Translate, not done here).
+	ROM     []byte
+	ROMBase uint32
+	ROMEnd  uint32
+
+	NVRAM     []byte
+	NVRAMBase uint32
+	NVRAMEnd  uint32
+
 	VMInitValid bool // set by VMINIT (vminit.go); cleared by INIT/ZERO
 
 	Out io.Writer

@@ -208,3 +208,63 @@ SHOW, and friends — plus the DCL grammar-driven command parser, and stand up
   (including a no-op duplicate add), and the pre-Init error path.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
   all clean.
+
+### 2026-09-14 — Sub-phase 4: SAVE/LOAD binary ROM/NVRAM image format
+
+- Found that `save_binary.c`'s main `save_binary` (the plain `SAVE` command,
+  producing a `.VAX` file) dumps `struct VAX` wholesale, byte-for-byte,
+  including raw pointers — inherently tied to one C compiler's exact struct
+  layout and meaningless to reproduce in Go (`reference/AUDIT.md`'s V1
+  finding calls this out as a cross-build hazard even on the C side, "no
+  fixture currently ships in this format"). Not ported; this phase's actual
+  "SAVE/LOAD round-trip test against `testdata/rom/xdefault.rom`" deliverable
+  is the separate, self-contained, portable `SAVE/ROM`↔`LOAD/ROM` binary
+  format (`save_rom`/`load_rom`), which *is* ported, faithfully, in full.
+- Decoded that format directly against `xdefault.rom`'s real bytes (not just
+  the source): an exact 8-byte magic `;ROMIMG\r` (trailing CR, matching this
+  project's own noted Mac-1997-99 line-ending heritage — `console_rom`'s
+  reader only `fgets`s 7 of these 8 bytes, leaving `load_rom`'s first read to
+  consume the CR; this port just treats the whole 8 bytes as one fixed
+  value), big-endian `rom_base`/`rom_end` longwords (confirmed big-endian by
+  cross-checking the decoded base, `0x20040000`, against `console_init.c`'s
+  own documented ROM default base), then a sequence of big-endian
+  (ROM-relative offset, page-count-always-1) headers each followed by 512
+  bytes of page data, for every non-all-zero page, terminated by a
+  zero-count entry — matching `reference/AUDIT.md`'s V1 finding that these
+  fields must be pinned to a literal 4 bytes each (already reflected in the
+  C source read for this port, not a live bug to route around).
+  `SAVE/NVRAM`↔`LOAD/NVRAM` (`save_nvram`/`load_nvram`) use the same
+  big-endian-longword convention but no magic header and no per-page
+  framing — the whole buffer is one big-endian `(base, size)` header plus
+  `size` raw bytes.
+- Added `rom.go`: `Console.SaveROM`/`LoadROM`/`SaveNVRAM`/`LoadNVRAM`
+  against new `Console.ROM`/`ROMBase`/`ROMEnd`/`NVRAM`/`NVRAMBase`/
+  `NVRAMEnd` fields — separate byte buffers outside `vm.Memory`'s RAM,
+  matching the C source's own `rom`/`nvram` globals and consistent with
+  `internal/vm/memory.go`'s own design note that physical resolution beyond
+  RAM is split between this phase (the file format, landed here) and Phase
+  09 (actually mapping them into the address space `vm.Translate`
+  resolves, not done here — nothing yet reads `Console.ROM` during address
+  translation).
+- Found, while writing the round-trip test against the real fixture, that
+  `xdefault.rom` itself contains two page entries at addresses that aren't
+  512-aligned (`0xD00` = 3328 and `0x10D80` = 68864, each overlapping its
+  neighbor by 256 bytes) — inconsistent with `save_rom`'s own strict
+  `base = page * 512` convention, so whatever produced this fixture wasn't
+  the current `save_rom` (or hit a bug later fixed). Confirmed this is a
+  property of the fixture, not a loader bug, by hand-parsing the file's raw
+  `(addr, count)` entries directly (all 246 headers, zero duplicates, only
+  those two misaligned) before writing any Go code to read it. Consequence:
+  a load→save→reload round trip reproduces identical final memory content
+  (what the test actually checks) but not an identical on-disk byte layout
+  (`SaveROM` always emits clean 512-aligned pages) — documented in the
+  test itself rather than silently loosening the assertion without
+  explanation.
+- `internal/console/rom_test.go` covers: loading the real fixture and
+  checking its decoded base/end/size plus a hand-verified byte spot-check;
+  the content-preserving round trip above; a synthetic save→load round trip
+  with a mix of zero and non-zero pages (checking the all-zero page is
+  correctly skipped on save); the wrong-magic and no-ROM-loaded error
+  paths; and an NVRAM save→load round trip.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
+  all clean. `go test ./internal/console -cover`: 82.7%.
