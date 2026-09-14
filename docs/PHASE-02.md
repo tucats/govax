@@ -123,3 +123,27 @@ through.
   4-byte load, and the `PhysicalAddressError` case for an out-of-range physical access.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
   clean.
+
+### 2026-09-14 — Sub-phase 4: close-out
+
+- Reviewed sub-phases 1-3 against this doc's Goal/Deliverables: address translation,
+  typed byte/word/longword/quadword accessors, and unit tests covering page table
+  setup, translation faults, load/store round-trips, and boundary/alignment cases are
+  all in place; no gaps found.
+- Added a few more `internal/vm` tests aimed at coverage rather than new behavior:
+  `Memory.Size`, both `TranslationFault`/`PhysicalAddressError` `Error()` strings, a
+  table of out-of-range-physical-address propagation through every multi-byte
+  accessor and `LoadRegister`, and a case where a P0 PTE's own recursive (system-space)
+  translation fails and that failure propagates rather than being masked. Package
+  coverage went from 85.6% to 94.5%.
+- All three open questions from planning are resolved in place (see Open questions
+  above): `vm.Memory` owns raw RAM and takes `*vax.CPU` by parameter; `memmap.h`'s
+  struct-mapping logic and the TB/STC caches are out of scope/not ported; DYNVM dynamic
+  paging is deferred to Phase 08.
+- No `docs/DEVIATIONS.md` entries were needed — every place the Go port diverges from
+  `vm.c`/`storage.c` (TB/STC caching, DYNVM, the table-driven protection-check
+  alternative) is a performance hack or dead code with no effect on results, not an
+  ISA/behavior fidelity question; see the Open questions above for the reasoning on
+  each.
+- Full-repo `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
+  `go test ./...` all clean; phase complete.

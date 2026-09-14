@@ -212,6 +212,43 @@ func TestTranslateSetsModifyBitOnFirstWrite(t *testing.T) {
 	}
 }
 
+func TestTranslateFaultErrorMessages(t *testing.T) {
+	av := &TranslationFault{Kind: AccessViolation, Addr: 0x1234}
+	if av.Error() == "" {
+		t.Error("AccessViolation Error() returned an empty string")
+	}
+	tnv := &TranslationFault{Kind: TranslationNotValid, Addr: 0x1234}
+	if tnv.Error() == "" {
+		t.Error("TranslationNotValid Error() returned an empty string")
+	}
+	if av.Error() == tnv.Error() {
+		t.Error("AccessViolation and TranslationNotValid produced identical messages")
+	}
+}
+
+// TestTranslateP0PTEItselfFaults exercises the recursive translation of a
+// P0 PTE's own (system-virtual) address failing — here, because P0BR points
+// at a system page beyond SLR — and checks that failure propagates out of
+// the outer P0 translation rather than being masked.
+func TestTranslateP0PTEItselfFaults(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+
+	// Point P0BR at a system virtual page number beyond SLR (3), so the
+	// recursive S0 translation of the PTE address itself faults.
+	cpu.SetPR(vax.P0BR, sysBase+10*pageSize)
+
+	vaddr := uint32(0)
+	_, err := mem.Translate(cpu, vaddr, AccessRead)
+
+	var tf *TranslationFault
+	if !errors.As(err, &tf) {
+		t.Fatalf("error = %v (%T), want *TranslationFault", err, err)
+	}
+	if tf.Kind != AccessViolation {
+		t.Errorf("Kind = %v, want AccessViolation", tf.Kind)
+	}
+}
+
 func assertAccessViolation(t *testing.T, err error, wantAddr uint32) {
 	t.Helper()
 	var tf *TranslationFault

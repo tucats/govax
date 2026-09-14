@@ -230,4 +230,45 @@ func TestPhysicalAddressOutOfRange(t *testing.T) {
 	if pe.Addr != 100 {
 		t.Errorf("Addr = %d, want 100", pe.Addr)
 	}
+	if pe.Error() == "" {
+		t.Error("Error() returned an empty string")
+	}
+}
+
+func TestMemorySize(t *testing.T) {
+	mem := NewMemory(4096)
+	if got := mem.Size(); got != 4096 {
+		t.Errorf("Size() = %d, want 4096", got)
+	}
+}
+
+// TestOutOfRangeErrorPropagates checks that a physical-bounds failure deep
+// in a multi-byte or register load surfaces as a *PhysicalAddressError
+// rather than being swallowed or panicking, for the accessors built on top
+// of LoadByte/StoreByte.
+func TestOutOfRangeErrorPropagates(t *testing.T) {
+	cpu := identityCPU()
+	mem := NewMemory(4) // addresses 0-3 only
+
+	cases := []struct {
+		name string
+		call func() error
+	}{
+		{"StoreWord", func() error { return mem.StoreWord(cpu, 3, 0xBEEF) }},
+		{"LoadWord", func() error { _, err := mem.LoadWord(cpu, 3); return err }},
+		{"StoreLongword", func() error { return mem.StoreLongword(cpu, 2, 0xDEADBEEF) }},
+		{"LoadLongword", func() error { _, err := mem.LoadLongword(cpu, 2); return err }},
+		{"StoreQuadword", func() error { return mem.StoreQuadword(cpu, 0, 1) }},
+		{"LoadQuadword", func() error { _, err := mem.LoadQuadword(cpu, 0); return err }},
+		{"LoadRegister", func() error { return mem.LoadRegister(cpu, vax.R1, 2, 4) }},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.call()
+			var pe *PhysicalAddressError
+			if !errors.As(err, &pe) {
+				t.Fatalf("error = %v (%T), want *PhysicalAddressError", err, err)
+			}
+		})
+	}
 }
