@@ -107,6 +107,32 @@ _None yet._
   `internal/cpu/instruction_test.go`'s `TestInstructionTableDFloatingFixedEntries`
   (table-level) and by each opcode's own handler tests as they land.
 
+### [Phase 05] Floating ADD/SUB/MUL/DIV never clear V/C, and F_floating overflow silently swallows the fault
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_float_math.c`'s `emul_float_math()`,
+  the basic-math `switch(dsize)` block (func 0-3).
+- **What**: two related omissions. First, the function sets `vax.pslw.n`/`vax.pslw.z`
+  from the result but never explicitly clears `vax.pslw.v`/`vax.pslw.c` on the normal
+  path — the manual's ADDF/SUBF/MULF/DIVF (and D-floating counterparts) entry specifies
+  `V <- 0, C <- 0`, the same "forgot to clear" pattern already found and fixed
+  repeatedly elsewhere in this project via the `SETCONDITIONBITS(x, 0L)` idiom (Phase
+  04), just without even that idiom's incidental C-clearing here. Second, and more
+  serious: on F_floating overflow specifically, `fpu_store`'s fault return sets
+  `vax.pslw.v = 1` but — unlike the D_floating branch two lines below it in the same
+  `if`/`else`, which correctly does `if( rc ) return rc;` — falls through to
+  `put_operand`, writing whatever `fpu_store` left in its (never actually populated on
+  the fault path) destination longword and returning success instead of propagating
+  the synchronous arithmetic fault. A real VAX floating overflow is always a
+  synchronous exception; this is an inconsistency between two nearly-identical
+  branches of the same conditional, not a considered design choice.
+- **Status**: fixed in Go. `internal/cpu/floatmath.go`'s `setFloatPSL` always sets
+  `V <- 0, C <- 0` on the surviving path (genuine overflow already faults before this
+  runs); `storeFloatResult`/`storeFloat`/`fpuStore` propagate a real `*Fault` uniformly
+  for both F_floating and D_floating, with no special-casing that could reintroduce
+  the asymmetry. Verified by `internal/cpu/floatmath_test.go`'s
+  `TestEmulFAddZeroSetsZ` (C explicitly primed dirty beforehand) and
+  `TestEmulFAddOverflowFaults`.
+
 ### [Phase 03] Autoincrement Deferred (`@(Rn)+`) eagerly loads the operand's value instead of resolving its address
 
 - **Where**: `reference/eVAX/eVAX/Source/CPU/decode_operand.c`, `decode_operand()`'s

@@ -264,3 +264,34 @@ Each is one buildable, testable commit, following Phase 04's pattern.
   previously-undispatched opcodes — that's sub-phases 3/4/6).
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean.
+
+### 2026-09-14 — Sub-phase 3: floating arithmetic
+
+- Added `internal/cpu/floatmath.go`: `emulFAdd`/`emulFSub`/`emulFMul`/`emulFDiv`, one
+  handler per operation registered across `ADDF2/3`/`ADDD2/3` etc. (now that sub-phase
+  2 gives `SUBD2` real operand data), built on `loadFloat`/`storeFloat`. Since there's
+  only one `fpuLoad` in the Go port, this naturally fixes the D-floating argument-order
+  bug (see sub-phase 1) for every arithmetic consumer at once, with no per-instruction
+  special-casing needed.
+- Found and fixed two more confirmed issues while cross-checking against the manual:
+  `emul_float_math.c` never explicitly clears V/C on the normal path (the same
+  "forgot to clear" pattern as Phase 04's `SETCONDITIONBITS` findings, just without
+  even that idiom's incidental C-clearing), and F_floating overflow specifically sets
+  V but swallows the fault instead of propagating it — inconsistent with the
+  D_floating branch two lines below it in the same C function, which does it
+  correctly. Both fixed via `setFloatPSL`/`storeFloatResult`; full writeup in
+  `docs/DEVIATIONS.md`.
+- Pinned down operand ordering for SUB/DIV (op0 is always the modifier — subtrahend/
+  divisor — matching the integer SUB/DIV convention from Phase 04) with a dedicated
+  test for each, the same "easy to get backwards silently" concern Phase 04 called out
+  for its own SUB/DIV/BIC tests.
+- Added `internal/cpu/floatmath_test.go`: `setFloatReg`/`getFloatReg` helpers built on
+  the already-verified `fpuStore`/`fpuLoad` rather than hand-derived raw bit literals;
+  tests cover both F_floating and D_floating (non-overlapping register pairs for the
+  size-8 case), the 2- and 3-operand forms, SUB/DIV operand order, zero-result Z (with
+  C deliberately primed dirty beforehand to confirm the clear), overflow fault
+  propagation (handler called directly, not through `Engine.Step`, matching
+  `control_test.go`'s established reasoning for avoiding a full SCB setup), and a
+  short-literal source operand.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean. Coverage on this file: 84.8%.
