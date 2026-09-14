@@ -441,3 +441,100 @@ SHOW, and friends — plus the DCL grammar-driven command parser, and stand up
   from 84.7% purely because this sub-phase added a large amount of new,
   well-covered glue code alongside it, not because coverage of existing
   code regressed).
+
+### 2026-09-14 — Sub-phase 9: cmd/govax entry point
+
+- Added `github.com/chzyer/readline` (named explicitly in this phase doc's
+  own scope note) as a dependency, and filled in `cmd/govax/main.go`:
+  loads the DCL grammar and HELP text, allocates a minimal machine
+  (`minimumVAXMemory`, matching `driver.c`'s own `MINIMUM_VAX_MEMORY`),
+  runs `vax.init` as the real startup script (via `Console.Include`), then
+  drops into a readline-backed command loop until `EXIT`/`QUIT` — matching
+  `driver.c`'s own `main()` sequence (grammar → minimal `alloc_vax` →
+  `INCLUDE "vax.init"` → prompt loop).
+- Made one explicit file-location decision the phase doc left open:
+  `cmd/govax` takes a `-data` flag (default `testdata/dcl`) naming the
+  directory holding `evax.dcl`/`vax.help`/`vax.init`, rather than
+  `driver.c`'s hard-coded CWD-relative `"evax.dcl"` lookup or a `go:embed`.
+  `go:embed` isn't actually usable here without duplicating the files: an
+  embed pattern can't cross a `..` directory boundary, and `testdata/dcl`
+  isn't a subdirectory of `cmd/govax`'s own package directory. The `-data`
+  flag keeps `testdata/dcl` as the single canonical copy (also used by
+  every test in this phase) and mirrors this project's own documented
+  convention for the *original* C binary (`reference/CLAUDE.md`: "run with
+  its working directory set to the repo root").
+- Ran the built binary interactively (piped commands) as a real smoke test,
+  not just `go build`: confirmed `INIT`/`VMINIT`/`DEPOSIT`/`EXAMINE`/`SET`/
+  `SHOW` genuinely work together end-to-end through a translated virtual
+  address (`D/L 200=12345678` then `EXAM/L 200` reads it back through the
+  page table `VMINIT` built). This run also turned up a concrete,
+  real-world confirmation of Sub-phase 7's documented DYNVM trade-off:
+  `vax.init`'s own `vminit /p0=2048 /p1=8192 /s0=2048 ...` requests 12288
+  total virtual pages after only allocating 4096 physical pages
+  (`init ^d4096`) — relying on DYNVM's on-demand physical-page allocation,
+  which this port's non-DYNVM `VMInit` doesn't have, so that step of the
+  real startup script legitimately fails here (`"requested VM size exceeds
+  physical memory"`) — expected and consistent with the documented
+  decision, not a new bug, and confirmed by running the *real* fixture
+  rather than reasoning about it in the abstract. `vax.init` also exercises
+  several other not-yet-built subsystems (the inline assembler for
+  building `kernel.asm`, `DEFINE/DEVICE`/`DEFINE/LOGICAL`, RTL's
+  `exe$initialize`, `SET DEBUG`/`SET QUANTUM`, `IF`/`INCLUDE/COMMAND_LINE`)
+  and reports a clear per-line error for each rather than aborting the
+  whole script, letting the rest of startup still complete.
+- `cmd/govax/main_test.go` covers startup completing without a fatal error
+  against the real `testdata/dcl` fixtures (not asserting vax.init runs
+  clean, for the reasons above) and the missing-grammar-file error path.
+  `run` takes an injectable `io.ReadCloser` for readline's stdin so tests
+  get a deterministic, immediately-EOF input source instead of depending
+  on the test process's real stdin, and skips writing a history file
+  whenever that injected reader is used.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
+  all clean (verified with stdin explicitly closed, to rule out any
+  accidental dependence on an interactive terminal).
+
+### 2026-09-14 — Phase 08 close-out
+
+- Reviewed this phase's Goal/Deliverables against what actually landed:
+  EXAMINE/DEPOSIT, RUN/STEP (as `Execute`/`Step`, since the C source's own
+  `RUN` verb turned out to mean VMS image activation — see Sub-phase 3),
+  SAVE/LOAD (ROM/NVRAM binary format, round-tripped against the real
+  `testdata/rom/xdefault.rom` fixture), SHOW (a real, working core subset),
+  the DCL grammar-driven command parser (a from-scratch reimplementation
+  targeting full behavioral compatibility with the actual grammar
+  `testdata/dcl/evax.dcl` uses, not a port of `dclrtl.c`'s FSM internals),
+  and `cmd/govax` as a real, runnable entry point are all in place and
+  exercised by tests that load the project's actual fixture files
+  (`evax.dcl`, `vax.help`, `xdefault.rom`, and `vax.init` via the built
+  binary itself) rather than synthetic stand-ins throughout.
+- Consciously out of scope for this phase, each documented at the point it
+  came up rather than only here: device-dependent commands (`SHOW DEVICE`,
+  `DEFINE/DEVICE`, `SHOW LOGICAL`/`DEFINE/LOGICAL`) — deferred to Phase 09
+  per this doc's own original scope note and the user's explicit go-ahead
+  to stub them; RTL/microkernel-entry-point commands (`CALL`, `BOOT`,
+  `ABOUT`, `FORTH`, `XTEST`, `RUN`'s real VMS-image-activation meaning) —
+  Phase 10; the inline mini-assembler and disassembler (`ASM`/`ASSEMBLE`/
+  `DISASSEMBLE`, and by extension `EXAMINE`'s `/INSTRUCTION` disassembly
+  format and the assembler's own richer expression grammar, replaced here
+  by a small purpose-built `Evaluator`) — Phase 11; true DYNVM on-demand
+  paging (`VMInit` uses the C source's own alternate `#ifndef DYNVM`
+  pre-map-everything code path instead) — deferred pending new
+  `internal/vm.Translate` API, out of scope for a change confined to
+  `console_vminit.c`; `STEP_OVER`/`STEP_RETURN`'s real skip-a-subroutine
+  behavior, fault-code breakpoints, `DO`/`IF` scripted control flow, and
+  most of `SET`/`SHOW`'s dozens of lower-value or debug-tracing-only
+  sub-forms.
+- Full `docs/DEVIATIONS.md`-policy review for this phase: no VAX ISA/
+  hardware-fidelity findings were logged, because none of this phase's
+  work touches emulated VAX instruction-set behavior — the DCL engine,
+  console commands, and file formats are all the emulator's *own* tooling,
+  which `CLAUDE.md`'s bug-fixing policy explicitly scopes `DEVIATIONS.md`
+  away from. Where this phase's own C source had a bug or notable quirk
+  worth recording, it's captured in this progress log at the point it was
+  found instead (e.g. Sub-phase 1's `SHOW PAGE/READ/WRITE` REST_OF_LINE
+  ordering fix, Sub-phase 4's two non-512-aligned entries in
+  `xdefault.rom`, Sub-phase 8's DEPOSIT hex-literal-must-start-with-a-digit
+  note).
+- Full-repo `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
+  `go test ./...` all clean; `go test ./internal/console/...` and
+  `./cmd/govax/...` both pass with stdin explicitly closed. Phase complete.
