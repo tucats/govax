@@ -333,3 +333,24 @@ opcode table slots they occupy stay on `unimplementedHandler` until then.
   operands are never modified, CMPL routing through the shared generic handler, BIT's
   C-unaffected fix, and TST's zero/nonzero condition codes.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
+
+### 2026-09-14 — Sub-phase 9: shift/rotate
+
+- Added `internal/cpu/ash.go`: `emulRotl` (ROTL, built on `math/bits.RotateLeft32` --
+  its negative-count-rotates-right convention matches ROTL's own, so the C source's
+  manual bit-by-bit loop doesn't need porting), `emulAshl`/`emulAshq` (ASHL/ASHQ, using
+  Go's native shift semantics directly rather than the C source's explicit
+  `count > 32`/`count <= -31` boundary checks — a shift count exceeding the type's
+  width is well-defined in Go the same way the manual's own boundary notes describe,
+  so no extra handling was needed).
+- Fixed this phase's first `SETCONDITIONBITS(x, 0L)`-idiom instance flagged back in
+  sub-phase 5's `docs/DEVIATIONS.md` entry: added `shiftOverflow32`/`shiftOverflow64`
+  to `internal/cpu/condcodes.go` (the manual's real ASHL/ASHQ overflow formula — shift
+  left then back right and check the original value survives), and left C untouched
+  entirely (never written) rather than force-cleared, for all three instructions.
+- Added `internal/cpu/ash_test.go`: ROTL's left/right rotation (negative count) with
+  C confirmed unaffected, ASHL's left-shift overflow (`INT32_MAX` shifted left),
+  right-shift never overflowing (arithmetic sign-extension confirmed), zero count
+  leaving the value unchanged, and ASHQ's quadword counterparts including its own
+  overflow case (`INT64_MAX` shifted left, built from a register pair).
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.

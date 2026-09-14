@@ -145,6 +145,25 @@ func subCarryResult(minuend, subtrahend uint64, borrowIn bool, size int) (result
 	return result, v, c
 }
 
+// shiftOverflow32 reports whether left-shifting v by count bits (count > 0)
+// loses any bit that disagrees with the resulting sign bit -- the manual's
+// ASHL overflow definition ("integer overflow occurs on a left shift if any
+// bit shifted into the sign bit position differs from the sign bit of the
+// source operand"). Implemented by shifting left then back right the same
+// amount -- Go's >> on a signed type is an arithmetic, sign-extending
+// shift -- and checking whether the original value comes back; a
+// shift-count >= the type's width is well-defined in Go (yields 0 for a
+// left shift, full sign-fill for a right shift), matching the manual's own
+// "shift more than the width" notes without any extra boundary handling.
+func shiftOverflow32(v int32, count uint) bool {
+	return (v<<count)>>count != v
+}
+
+// shiftOverflow64 is shiftOverflow32 for ASHQ's 64-bit operand.
+func shiftOverflow64(v int64, count uint) bool {
+	return (v<<count)>>count != v
+}
+
 // convertResult sign-extends source (read at srcSize) and truncates it to
 // dstSize, returning the masked result and V (per the manual's CVT entry:
 // "integer overflow occurs if any truncated bits of the source operand are
