@@ -58,6 +58,16 @@ Once the basic port is complete and validated, the next major
 steps are to continue support for RTL emulation such that basic
 `VAX` executables can be loaded and run.
 
+Future objectives:
+
+- Write a functional MACRO assembler tool that can read `VAX`
+  ".mar" assembly files and produce a `VAX` ".obj" object file.
+- Write a functional LINKER that can assemble the object files
+  into a runnable `VAX` ".exe" executable, using knowledge of
+  the RTL emulation built into `govax`.
+- Be able to run the resulting ".exe" executable files using
+  `govax`
+  
 At this point, it isn't the plan to emulate all hardware (i.e.
 disk controllers, network controllers, etc.) or to be able
 to boot up VMS. If you want something that can do that, I
