@@ -80,3 +80,22 @@ through.
   `allows` across representative protection codes/modes/access types.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
   `go test ./internal/vm/...` all clean.
+
+### 2026-09-14 — Sub-phase 2: address translation
+
+- Added `internal/vm/translate.go`: `Memory.Translate` ports `vm.c`'s `vm()` region
+  dispatch (P0/P1/S0 base-and-length checks, P1's inverted length-register sense, S1
+  always faulting), the recursive translation of a P0/P1 PTE's own (system-virtual)
+  address, the protection check via `Protection.allows`, and the write-sets-M-bit
+  update — all as reported in the Open questions above (no TB/STC cache, no DYNVM). VM
+  faults come back as `*TranslationFault` (`AccessViolation`/`TranslationNotValid` +
+  faulting address) rather than the C source's `set_fault`, which is Phase 03's
+  machinery to build.
+- Added `internal/vm/translate_test.go`: a two-level page-table fixture (an S0 table
+  whose one active entry locates P0's own page table, mirroring how process page tables
+  are themselves found via system-space translation on real VAX), covering a P0
+  round-trip, P0/P1/S0 length violations (including P1's inverted sense) and S1's
+  unconditional fault, a protection violation, an invalid-PTE TNV fault, and the M-bit
+  being set on a page's first write but not on a read.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...` all
+  clean.
