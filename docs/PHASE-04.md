@@ -294,3 +294,22 @@ opcode table slots they occupy stay on `unimplementedHandler` until then.
   register destination, and ADWC/SBWC carry/borrow propagation across a simulated
   multi-word add/subtract.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.
+
+### 2026-09-14 — Sub-phase 7: integer conversion
+
+- Added `internal/cpu/cvt.go`: `emulCvt` (CVTBL/CVTBW/CVTWL/CVTWB/CVTLB/CVTLW), one
+  handler for every pair since the conversion logic is fully generic over source/
+  destination size. Built on a new `convertResult` helper in `internal/cpu/
+  condcodes.go` (sign-extend at source size, truncate to destination size, V from the
+  manual's own "truncated bits don't match the destination's sign bit" definition).
+- Found and fixed another confirmed fidelity issue while cross-checking against the
+  manual: `emul_integer_cvt.c` computes N/Z from the *source* value (sign-extended, but
+  not yet truncated) rather than the destination (post-truncation) value the manual
+  specifies — these only disagree on overflow, but can disagree outright when
+  truncation flips the sign (128 long → byte truncates to -128). Its byte-destination V
+  check has the same wrong-constants bug already fixed in sub-phases 5-6. Full
+  writeup in `docs/DEVIATIONS.md`.
+- Added `internal/cpu/cvt_test.go`: sign-extending conversion with no overflow, the
+  N/Z-from-destination fix demonstrated concretely (128 → 0x80, N must be true), the
+  byte-range V-check fix, and a plain positive-value conversion.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all clean.

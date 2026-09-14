@@ -324,6 +324,28 @@ sub-phase 2.
   `TestEmulBisb3DestinationScaleDeviation`. Revisit in Phase 12 or alongside
   `instruction_table.h` generation, together with the ADWC/SBWC finding.
 
+### [Phase 04] CVTxy computes N/Z from the source value instead of the truncated destination
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_integer_cvt.c`'s `emul_integer_cvt()`:
+  `SETCONDITIONBITS(data, 0L)` runs right after `data` is read and sign-extended at the
+  *source* size, before the second `switch` that truncates it to the destination size
+  and writes it out. Its byte-destination V check also uses the same wrong constants
+  (`255`/`-256` instead of `127`/`-128`) already found in `emul_increment.c`/
+  `emul_integer_math.c`.
+- **What**: `vax_instr_set.pdf`'s CVT entry specifies `N <- dst LSS 0`, `Z <- dst EQL 0`
+  — the *destination* (post-truncation) value. These only disagree when the conversion
+  overflows, but then they can disagree outright: converting long `0x00000080` (128,
+  positive) to byte truncates to `0x80` (-128, negative) — the manual's N is true, the
+  C source's is false.
+- **Status**: fixed in Go, using the same wide-arithmetic approach as the other
+  integer-arithmetic findings in this phase. `internal/cpu/condcodes.go`'s
+  `convertResult` sign-extends the source and truncates to the destination size,
+  returning the masked result and a truncation-based V (the manual's own definition:
+  "any truncated bits not equal to the sign bit of the destination"); `internal/cpu/
+  cvt.go`'s `emulCvt` computes N/Z from that result, not the pre-truncation source.
+  Verified by `internal/cpu/cvt_test.go`'s `TestEmulCvtOverflowNZFromDestination` (the
+  sign-flip case) and `TestEmulCvtByteOverflowRangeCheck` (the byte constant fix).
+
 <!--
 Entry template:
 

@@ -145,6 +145,17 @@ func subCarryResult(minuend, subtrahend uint64, borrowIn bool, size int) (result
 	return result, v, c
 }
 
+// convertResult sign-extends source (read at srcSize) and truncates it to
+// dstSize, returning the masked result and V (per the manual's CVT entry:
+// "integer overflow occurs if any truncated bits of the source operand are
+// not equal to the sign bit of the destination operand," the same
+// truncation-changes-the-value check as mulResult's V).
+func convertResult(source uint64, srcSize, dstSize int) (result uint64, v bool) {
+	s := signExtend(source, srcSize)
+	result = maskToSize(s, dstSize)
+	return result, signExtend(result, dstSize) != s
+}
+
 // mulResult computes a*b at the given size, returning the masked result and
 // V (the true product doesn't fit the destination size) per the manual's
 // MUL entry; C is always 0 for MUL. Safe for sizes up to 4 bytes: two
