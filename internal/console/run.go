@@ -45,6 +45,9 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.CLI_ACTIVATE, err, fn)
 	}
+	if c.CPU.DebugEnabled(vax.DebugImages) {
+		c.Printf("Main image is %s\n", main.Name)
+	}
 
 	for _, dep := range c.ICBList {
 		if err := c.imageFixup(dep); err != nil {
@@ -70,6 +73,16 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 	}
 
 	return c.Call(driverAddr, opts.Step)
+}
+
+// DefaultRunInits reports RUN's own default for whether to invoke each
+// dependency's LIB$INITIALIZE before any /INIT or /NOINIT qualifier
+// overrides it, matching console_run.c:208's `run_inits = vax.debug &
+// DBG_LIBINIT` -- DebugLibinit defaults on (vax.DebugDefault), so
+// LIB$INITIALIZE runs by default, not only when /INIT is given explicitly.
+// See dispatch.go's parseRunQualifier, the DCL-facing counterpart.
+func (c *Console) DefaultRunInits() bool {
+	return c.CPU != nil && c.CPU.DebugEnabled(vax.DebugLibinit)
 }
 
 // mainTransferAddress selects icb's own user-mode entry point, matching
@@ -119,6 +132,9 @@ func (c *Console) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, 
 			initAddr, ok := c.Symbols.Get(fmt.Sprintf("SHARE$%s_INITIALIZE", dep.Name))
 			if !ok {
 				continue
+			}
+			if c.CPU.DebugEnabled(vax.DebugImages) {
+				c.Printf("Preparing call to LIB$INITIALIZE entry %08X for image %s\n", initAddr, dep.Name)
 			}
 			// LIBRTL's LIB$INITIALIZE apparently wants 100 as a special
 			// flag argument -- console_run.c's own comment says as much

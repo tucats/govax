@@ -1,11 +1,13 @@
 package console
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/tucats/govax/internal/console/dcl"
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -57,6 +59,17 @@ func (d *Dispatcher) Dispatch(line string) error {
 		_, rest := readCommandVerb(line)
 
 		return h(d, rest)
+	}
+
+	// DBG_DCL: console_dispatch.c:121 sets the third-party DCL parser
+	// library's own verbosity knob (DCLsetdebug) before falling through to
+	// it. internal/console/dcl is this port's own grammar interpreter, not
+	// a wrapped external library with a separate verbosity knob to set, so
+	// this traces the line being handed to it instead -- the closest
+	// equivalent visibility this port can offer. See docs/PHASE-17.md
+	// sub-phase 5.
+	if d.Console.CPU != nil && d.Console.CPU.DebugEnabled(vax.DebugDCL) {
+		fmt.Fprintf(d.Console.CPU.DebugWriter(), "DEBUG(DCL): parsing %q\n", line)
 	}
 
 	r, err := d.Grammar.Parse(line)
@@ -416,9 +429,11 @@ func cmdExecute(d *Dispatcher, rest string) error {
 // /NOINIT, /INIT, /BREAK|/DEBUG|/STEP, or /NOEXECUTE, matched by its first
 // four characters (an unrecognized "/word" is left in place for the
 // filename parse to reject, exactly as console_run puts back its saved
-// pointer on a mismatch).
-func parseRunQualifier(rest string) (RunOptions, string) {
-	var opts RunOptions
+// pointer on a mismatch). defaultRunInits (Console.DefaultRunInits) seeds
+// RunInits before either /INIT or /NOINIT can override it, matching
+// console_run.c's own `run_inits = vax.debug & DBG_LIBINIT` default.
+func parseRunQualifier(rest string, defaultRunInits bool) (RunOptions, string) {
+	opts := RunOptions{RunInits: defaultRunInits}
 
 	rest = strings.TrimLeft(rest, " \t")
 	if !strings.HasPrefix(rest, "/") {
@@ -466,7 +481,7 @@ func parseRunQualifier(rest string) (RunOptions, string) {
 }
 
 func cmdRun(d *Dispatcher, rest string) error {
-	opts, rest := parseRunQualifier(rest)
+	opts, rest := parseRunQualifier(rest, d.Console.DefaultRunInits())
 
 	fn := strings.Trim(strings.TrimSpace(rest), `"`)
 	if fn == "" {

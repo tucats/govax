@@ -1,10 +1,13 @@
 package console
 
 import (
+	"bytes"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/vax"
 )
 
 // callBounded runs Console.Call's own logic with a hard step cap, so a
@@ -28,6 +31,49 @@ func callBounded(t *testing.T, c *Console, addr uint32, maxSteps int) (err error
 		return err, false
 	}
 	return nil, true
+}
+
+func TestDefaultRunInits(t *testing.T) {
+	c := newRunnableConsole(t)
+	if !c.DefaultRunInits() {
+		t.Error("DefaultRunInits() = false, want true (DebugLibinit is on by default)")
+	}
+
+	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugLibinit)
+	if c.DefaultRunInits() {
+		t.Error("DefaultRunInits() = true, want false once DebugLibinit is cleared")
+	}
+}
+
+func TestParseRunQualifier_defaultAndOverride(t *testing.T) {
+	opts, rest := parseRunQualifier("foo.exe", true)
+	if !opts.RunInits || rest != "foo.exe" {
+		t.Errorf("parseRunQualifier(no qualifier, default=true) = %+v, %q, want RunInits=true", opts, rest)
+	}
+
+	opts, rest = parseRunQualifier("/NOINIT foo.exe", true)
+	if opts.RunInits || rest != " foo.exe" {
+		t.Errorf("parseRunQualifier(/NOINIT, default=true) = %+v, %q, want RunInits=false", opts, rest)
+	}
+
+	opts, rest = parseRunQualifier("/INIT foo.exe", false)
+	if !opts.RunInits || rest != " foo.exe" {
+		t.Errorf("parseRunQualifier(/INIT, default=false) = %+v, %q, want RunInits=true", opts, rest)
+	}
+}
+
+func TestRun_debugImagesTrace(t *testing.T) {
+	c := newRunnableConsole(t)
+	c.CPU.SetDebug(vax.DebugImages)
+
+	if err := c.Run(exeFixturePath(t, "simple.exe"), RunOptions{NoExecute: true}); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	out := c.Out.(*bytes.Buffer).String()
+	if !strings.Contains(out, "Main image is") {
+		t.Errorf("output = %q, want a \"Main image is\" trace", out)
+	}
 }
 
 // TestRun_noExecuteLoadsAndFixesUpOnly exercises Console.Run's actual

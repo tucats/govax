@@ -19,7 +19,7 @@ tracing), `logical_names.c`/`devices.c`/`rms.c`/`service.c`/`p1_vector.c` (RTL
 tracing), and `console_run.c`/`console_dispatch.c`/`console_step.c`/
 `asm_symbols.c` (console-level tracing).
 
-**Status: sub-phases 1-4 complete; sub-phase 5 in progress.**
+**Status: complete.**
 
 ## Design decisions
 
@@ -209,22 +209,43 @@ item-code sub-case:
 - **`PROCESS`** — `internal/rtl/core.go`'s `serviceSysGetjpiw`, matching
   `service.c:152`.
 
-## Sub-phase 5: `internal/console` tracing (`IMAGES`, `LIBINIT`, `DCL`, `COMMAND`)
+## Sub-phase 5: `internal/console` tracing (`IMAGES`, `LIBINIT`, `DCL`)
 
-- **`IMAGES`** — `run.go`'s image-load path traces the image name/transfer
-  address, matching `console_run.c:67`/`console_run.c:343`.
-- **`LIBINIT`** — `run.go`: whether `RUN` invokes the image's
-  `LIB$INITIALIZE` default gated on `DebugLibinit` (currently always-on
-  behavior in this port, matching the flag's default-on seed), matching
-  `console_run.c:208`'s `run_inits = vax.debug & DBG_LIBINIT`.
-- **`DCL`** — `dispatch.go`'s DCL-grammar dispatch path traces the parsed verb,
-  matching `console_dispatch.c:121`.
-- **`COMMAND`** — `dispatch.go`'s command-line substitution path traces the
-  expanded line when a substitution actually happened, matching
-  `console_dispatch.c:216`'s `(vax.debug & DBG_EXPAND) && did_sub` guard.
+- **`IMAGES`** — `run.go`'s `Run` (once the main image is loaded) and
+  `buildImageInitDriver` (once per dependency whose `LIB$INITIALIZE` entry
+  is being wired into the driver procedure) trace, matching
+  `console_run.c:67`/`console_run.c:343`.
+- **`LIBINIT`** — implementing this flag's trace surfaced a real fidelity
+  bug in `RunOptions.RunInits`'s default: `console_run.c:208` seeds
+  `run_inits` from `vax.debug & DBG_LIBINIT` (on by default) *before* an
+  explicit `/INIT`/`/NOINIT` qualifier can override it, but this port's
+  `parseRunQualifier` defaulted to Go's zero value (`false`) when neither
+  qualifier was given — meaning a plain `RUN foo.exe` never ran
+  `LIB$INITIALIZE` by default, unlike the C reference. Fixed by threading
+  `Console.DefaultRunInits()` (reading `DebugLibinit`) into
+  `parseRunQualifier` as its seed.
+- **`DCL`** — `dispatch.go`'s `Dispatch`, at the point it falls through to
+  the DCL grammar, traces the line being parsed. `console_dispatch.c:121`'s
+  own consumer (`DCLsetdebug(2, 0)`) sets a *third-party DCL parser
+  library's* own verbosity knob — this port's `internal/console/dcl` is its
+  own grammar interpreter, not a wrapped external library with a separate
+  knob, so this is the closest equivalent visibility rather than a literal
+  port of that one call.
 
 ## Explicitly out of scope
 
+- **`COMMAND` (`DBG_EXPAND`)** — the C source's consumer
+  (`console_dispatch.c`'s own `'symbol'`-substitution preprocessor,
+  `did_sub`/the surrounding scan) is a full VMS-style command-line symbol-
+  substitution feature this port has never implemented at all (confirmed:
+  no substitution mechanism anywhere in `internal/console`) — not an
+  existing-but-untraced behavior the way every other flag in this phase
+  was. Building that feature is well beyond "wire a debug trace" and
+  belongs in its own phase (`docs/PHASE-16.md` already named `SHOW
+  COMMAND_ARGS`/`SHOW EXPAND` as blocked on the same missing data source).
+  The flag itself remains settable/showable (Sub-phase 1); no trace is
+  wired, and `SHOW DEBUG`'s `COMMAND` row will simply never turn on until
+  that feature exists.
 - **`REGISTERS`/`FULLDISASM`** (register-change dump and full-operand
   disassembly at `STEP`) — the C source's version
   (`vax.c:449-506`) is built on a `save_regset`/`check_regset`
@@ -237,6 +258,41 @@ item-code sub-case:
   register-dump/full-disassembly behavior is deferred.
 
 ## Progress Log
+
+### 2026-09-15 — Sub-phase 5 complete: `internal/console` tracing; phase complete
+
+`IMAGES`: `Run` traces the resolved main image once loaded; `buildImageInitDriver`
+traces each dependency's `LIB$INITIALIZE` entry as it's wired into the driver.
+
+`LIBINIT`: found and fixed a real fidelity bug while implementing this
+flag's trace (not just wiring one): `RunOptions.RunInits` defaulted to
+Go's zero value (`false`) when `RUN` was given no `/INIT`/`/NOINIT`
+qualifier, so `LIB$INITIALIZE` never ran by default — but the C reference
+defaults `run_inits` from `vax.debug & DBG_LIBINIT`, which is *on* by
+default (`DebugDefault`). `parseRunQualifier` now takes that default as a
+parameter (`Console.DefaultRunInits()`), overridden by an explicit
+qualifier exactly as before.
+
+`DCL`: `Dispatch` traces the line handed to the DCL grammar parser — the
+closest equivalent to `console_dispatch.c`'s own `DCLsetdebug` call, which
+sets a third-party parser library's own knob this port's independent
+grammar interpreter has no equivalent of.
+
+`COMMAND` (`DBG_EXPAND`): scoped out — see "Explicitly out of scope" above;
+its C-side consumer is an entire unimplemented command-line substitution
+feature, not an existing behavior needing only a trace.
+
+Tests: `internal/console/run_test.go` (`TestDefaultRunInits`,
+`TestParseRunQualifier_defaultAndOverride`, `TestRun_debugImagesTrace`),
+`dispatch_test.go` (`TestDispatch_debugDCLTrace`). `go build ./...`,
+`go vet ./...`, `go test ./...` all clean.
+
+**All five sub-phases are now complete. Every `DBG_*` flag from
+`vax.h:320-346` is settable via `SET DEBUG`/`SET DBG`, all 20 C-side-shown
+ones are reported by `SHOW DEBUG`, and every flag with a real, portable
+C-side consumer has one wired here — see "Flags with no wired behavior"
+and "Explicitly out of scope" above for the handful that don't (each with
+its own documented reason, not a silent gap).**
 
 ### 2026-09-15 — Sub-phase 4 complete: `internal/rtl` tracing
 

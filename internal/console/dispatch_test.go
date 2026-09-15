@@ -260,6 +260,21 @@ func TestDispatch_unboundShowSubformErrors(t *testing.T) {
 	}
 }
 
+func TestDispatch_debugDCLTrace(t *testing.T) {
+	c, buf := newTestConsole(t)
+	g := loadEvaxGrammar(t)
+	d := NewDispatcher(c, g, nil)
+	c.CPU.SetDebug(vax.DebugDCL)
+
+	if err := d.Dispatch("SHOW RADIX"); err != nil {
+		t.Fatalf("Dispatch: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), `DEBUG(DCL): parsing "SHOW RADIX"`) {
+		t.Errorf("output = %q, want a DEBUG(DCL) parse trace", buf.String())
+	}
+}
+
 func TestDispatch_setDebugAndShowDebug(t *testing.T) {
 	d, c := newTestDispatcher(t)
 
