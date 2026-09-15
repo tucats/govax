@@ -199,9 +199,19 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 
 	c.CPU.SetPR(vax.SCBB, paddr)
 
+	// The first S0 virtual address past every VMINIT-reserved region (page
+	// tables, privileged stacks, CONSOLE$SCRATCH, the SHIM$ stub page, and
+	// the SCB) -- where a live ASM session's own S0 content must start
+	// (see asmSession's doc comment and asm.go's Assemble): the assembler's
+	// own default S0 origin (0x80000000) is really only valid for a
+	// standalone assembly with no live page table backing it, since that
+	// literal address is where this VM's S0 page table itself lives.
+	c.s0Free = 0x80000000 + paddr
+
 	c.DepositAddr = 0x200
 	c.CPU.SetPR(vax.MAPEN, 1)
 	c.VMInitValid = true
+	c.asmSession = nil // a fresh address space invalidates any prior ASM session's state
 
 	return nil
 }

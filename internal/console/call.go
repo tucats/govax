@@ -8,23 +8,18 @@ import (
 )
 
 // Call implements the console CALL command's core mechanism (see
-// docs/PHASE-13.md): invokes the procedure at addr with zero arguments,
-// then runs Engine.Step in a loop until it returns (cpu.CallEntry/
-// ErrConsoleCallReturned) or halts (cpu.ErrHalted). If step is true, each
-// instruction executed is traced with its resulting PC, matching
-// console_run.c's /STEP qualifier on RUN.
-//
-// This is Phase 13's own primitive need (RUN's single call to its
-// IMAGE$INIT driver procedure) rather than a full port of console_call.c's
-// CALL verb: it has no argument-list syntax and isn't yet wired to a DCL
-// command of its own. See cpu.Engine.CallEntry's doc comment for why an
-// argument list isn't needed here.
-func (c *Console) Call(addr uint32, step bool) error {
+// docs/PHASE-13.md): invokes the procedure at addr with the given arguments
+// (pushed right-to-left, matching a real CALLS instruction -- see
+// cpu.Engine.CallEntry), then runs Engine.Step in a loop until it returns
+// (cpu.CallEntry/ErrConsoleCallReturned) or halts (cpu.ErrHalted). If step
+// is true, each instruction executed is traced with its resulting PC,
+// matching console_run.c's /STEP qualifier on RUN.
+func (c *Console) Call(addr uint32, step bool, args ...uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
 
-	if err := c.Engine.CallEntry(addr); err != nil {
+	if err := c.Engine.CallEntry(addr, args...); err != nil {
 		return err
 	}
 

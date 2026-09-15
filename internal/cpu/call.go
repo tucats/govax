@@ -276,16 +276,23 @@ var ErrConsoleCallReturned = errors.New("cpu: console call returned")
 // RET is caught by emulRet and reported via ErrConsoleCallReturned instead
 // of resuming at that meaningless address.
 //
-// Only the zero-argument case is implemented: console_exec.c's own optional
-// "(args...)" list is a console-CALL-command-only feature with no consumer
-// in this port yet -- Phase 13's RUN command always invokes its IMAGE$INIT
-// driver procedure with no arguments; the driver's own inner CALLS to
-// LIB$INITIALIZE/the main image push their own arguments via ordinary
-// PUSHL/CALLS instructions, already fully implemented by emulCall above.
-func (e *Engine) CallEntry(entry uint32) error {
+// args is the console CALL command's optional "(args...)" list
+// (console_exec.c's console_call): pushed right-to-left exactly like a real
+// CALLS instruction's own argument list, followed by the argument count,
+// before the frame itself is built. Phase 13's own call site (RUN's
+// IMAGE$INIT driver) always passes none.
+func (e *Engine) CallEntry(entry uint32, args ...uint32) error {
+	for i := len(args) - 1; i >= 0; i-- {
+		sp := e.cpu.GPR(vax.SP) - 4
+		e.cpu.SetGPR(vax.SP, sp)
+		if err := e.mem.StoreLongword(e.cpu, sp, args[i]); err != nil {
+			return err
+		}
+	}
+
 	sp := e.cpu.GPR(vax.SP) - 4
 	e.cpu.SetGPR(vax.SP, sp)
-	if err := e.mem.StoreLongword(e.cpu, sp, 0); err != nil { // argument count: 0
+	if err := e.mem.StoreLongword(e.cpu, sp, uint32(len(args))); err != nil {
 		return err
 	}
 	newAP := sp

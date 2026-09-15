@@ -217,6 +217,56 @@ func TestEngineCallEntryRunsUntilSentinelReturn(t *testing.T) {
 	}
 }
 
+// TestEngineCallEntryWithArguments checks the console CALL command's
+// argument-list extension (Phase 12): args are pushed right-to-left, ahead
+// of the argument count, exactly like a real CALLS instruction's own
+// argument list -- so a procedure reading (AP) for the count and 4(AP)/
+// 8(AP) for the first/second argument sees the same layout it would from a
+// real CALLS #2,... instruction.
+func TestEngineCallEntryWithArguments(t *testing.T) {
+	cpu, mem := fixture()
+	e := NewEngine(cpu, mem)
+
+	cpu.SetGPR(vax.SP, 0x9000)
+
+	// MOVL (AP),R0 ; MOVL 4(AP),R1 ; MOVL 8(AP),R2 ; RET
+	putBytes(t, cpu, mem, 0x2000,
+		0x00, 0x00, // entry mask: no registers saved
+		0xD0, 0x6C, 0x50, // MOVL (AP),R0
+		0xD0, 0xAC, 0x04, 0x51, // MOVL 4(AP),R1
+		0xD0, 0xAC, 0x08, 0x52, // MOVL 8(AP),R2
+		0x04, // RET
+	)
+
+	if err := e.CallEntry(0x2000, 0x11111111, 0x22222222); err != nil {
+		t.Fatalf("CallEntry: %v", err)
+	}
+
+	for {
+		err := e.Step()
+		if err == nil {
+			continue
+		}
+		if errors.Is(err, ErrConsoleCallReturned) {
+			break
+		}
+		t.Fatalf("Step: %v", err)
+	}
+
+	if got := cpu.GPR(vax.R0); got != 2 {
+		t.Errorf("R0 (arg count) = %d, want 2", got)
+	}
+	if got := cpu.GPR(vax.R1); got != 0x11111111 {
+		t.Errorf("R1 (arg 1) = %#x, want 0x11111111", got)
+	}
+	if got := cpu.GPR(vax.R2); got != 0x22222222 {
+		t.Errorf("R2 (arg 2) = %#x, want 0x22222222", got)
+	}
+	if got := cpu.GPR(vax.SP); got != 0x9000 {
+		t.Errorf("SP after return = %#x, want 0x9000", got)
+	}
+}
+
 // TestEmulCallgArglistIsOperandAddress checks CALLG's AP is set to its
 // arglist operand's address directly (never dereferenced), per the manual's
 // "The AP is replaced by the arglist operand."

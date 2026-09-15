@@ -28,6 +28,13 @@ const (
 	// keeps these in a separate "system symbols" table; this port keeps
 	// one table but still records the distinction.
 	SymSystem
+	// SymBuiltin marks a symbol seeded by seedBuiltinSymbols at
+	// construction time (XFC$/PTE$/EXC$/OPC$_... system constants), as
+	// opposed to one this assembly itself defined — distinct from
+	// SymPermanent, which a user program can also set via "::"/.SET
+	// PERMANENT. Symbols (below) uses this to return only a program's own
+	// symbols.
+	SymBuiltin
 )
 
 // fixupKind says how a pending forward reference's value should be written
@@ -293,4 +300,21 @@ func (a *Assembler) hasUnresolvedSymbols() bool {
 		}
 	}
 	return false
+}
+
+// Symbols returns every symbol this assembly itself defined (labels,
+// .ENTRY points, .SET values, .SHIM stubs, ...) with no pending forward
+// references — excluding the fixed set seeded by seedBuiltinSymbols at
+// construction time (see SymBuiltin). Used by the console's ASM command
+// (Phase 12) to merge a freshly assembled program's own symbol table into
+// Console.Symbols once its bytes have been deposited into live memory.
+func (a *Assembler) Symbols() map[string]uint32 {
+	out := make(map[string]uint32)
+	for name, s := range a.symbols.byName {
+		if s.flags&SymBuiltin != 0 || len(s.forward) != 0 {
+			continue
+		}
+		out[name] = s.value
+	}
+	return out
 }

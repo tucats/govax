@@ -42,6 +42,9 @@ type Assembler struct {
 	regionIsS0 bool
 	p0Deposit  uint32
 	s0Deposit  uint32
+	// s0Origin is the configured S0 base, the S0 counterpart of origin —
+	// see SetS0Origin.
+	s0Origin uint32
 
 	// curEntry is the active local-symbol scope name (vax.assembler.cur_entry).
 	curEntry string
@@ -94,6 +97,7 @@ func New() *Assembler {
 		origin:    defaultOrigin,
 		p0Deposit: defaultOrigin,
 		s0Deposit: defaultS0Base,
+		s0Origin:  defaultS0Base,
 		radix:     16,
 		verbose:   true, // matches initialization.c's default CONSOLE_VERBOSE flag
 	}
@@ -150,6 +154,25 @@ func (a *Assembler) SetIncludeResolver(resolve func(name string) (string, error)
 // expression after END, e.g. "END MAIN"), and whether one was given.
 func (a *Assembler) Entry() (uint32, bool) { return a.entryAddr, a.entrySeen }
 
+// TakeEntry is Entry, plus clearing the "an entry was named" flag it
+// reports -- matching asm_pseudo.c's own ASM_ENTRY flag, which console.c's
+// post-command hook clears (`vax.assembler.flags &= ~ASM_ENTRY`) the moment
+// it fires the one-shot "CALL __ENTRY" this flag triggers. Since a bare
+// ".END" with no name never sets the flag in the first place (see case 11
+// in asm_pseudo.c) but doesn't clear it either, a persistent Assembler
+// reused across several "ASM <file>" commands (internal/console/asm.go)
+// needs this one-shot consumption so an earlier file's ".END name" doesn't
+// spuriously re-trigger on a later, entry-less file.
+func (a *Assembler) TakeEntry() (uint32, bool) {
+	addr, ok := a.entryAddr, a.entrySeen
+	a.entrySeen = false
+	return addr, ok
+}
+
+// Origin returns the configured P0 base address (see SetOrigin), the
+// address Bytes()'s returned span starts at.
+func (a *Assembler) Origin() uint32 { return a.origin }
+
 // Bytes returns the assembled P0-region program: the contiguous span from
 // the configured origin to the final P0 deposit location. Addresses in
 // that range that were never written (alignment padding, a forward .BASE
@@ -171,10 +194,25 @@ func (a *Assembler) BytesRange(from, to uint32) []byte {
 	return a.image.Bytes(from, to)
 }
 
-// S0Origin returns the configured S0 base address (0x80000000, matching
-// initialization.c's vax.console.s0_deposit, unless changed by a .REGION
-// switch's own bookkeeping before any S0 data was written).
-func (a *Assembler) S0Origin() uint32 { return defaultS0Base }
+// S0Origin returns the configured S0 base address: 0x80000000 by default,
+// matching initialization.c's vax.console.s0_deposit, or whatever
+// SetS0Origin last configured.
+func (a *Assembler) S0Origin() uint32 { return a.s0Origin }
+
+// SetS0Origin sets the initial S0 deposit location (default 0x80000000).
+// Only meaningful before Assemble is called. A standalone assembly with no
+// live VM backing it (e.g. internal/asm's own fixture tests) has no reason
+// to move this, but a live console session (internal/console/asm.go) does:
+// VMINIT's page tables, privileged stacks, and scratch pages already
+// occupy low S0 addresses starting at the literal default, so depositing a
+// program there would corrupt the running page table it's mapped through.
+func (a *Assembler) SetS0Origin(addr uint32) {
+	a.s0Origin = addr
+	a.s0Deposit = addr
+	if a.regionIsS0 {
+		a.deposit = addr
+	}
+}
 
 // S0End returns the final S0 deposit location — the S0 counterpart to
 // Bytes' implicit P0 range end.
@@ -206,6 +244,14 @@ func (a *Assembler) p0End() uint32 {
 // bytes assembled so far (see Bytes) unless a statement fails, in which
 // case the error identifies the 1-based source line.
 func (a *Assembler) Assemble(source string) ([]byte, error) {
+	// A prior top-level Assemble call on this same Assembler (the console's
+	// ASM command reuses one instance across multiple files -- see
+	// internal/console/asm.go) may have left a.stop set by its own .END;
+	// clear it here so this new source doesn't immediately no-op on its
+	// first line. assembleLines itself must NOT do this reset, since
+	// .INCLUDE calls it directly mid-assembly and relies on a still-set
+	// a.stop (an .END inside an included file) unwinding the includer too.
+	a.stop = false
 	if err := a.assembleLines(source); err != nil {
 		return nil, err
 	}

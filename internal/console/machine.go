@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/cpu"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/rtl"
@@ -101,6 +102,25 @@ type Console struct {
 	// address on a later RUN.
 	shimBase   uint32
 	shimsReady bool
+
+	// s0Free is the first S0 virtual address past every region VMInit
+	// itself reserves -- see vminit.go's own doc comment on why a live ASM
+	// session's S0 content must start here rather than at the assembler's
+	// literal default origin.
+	s0Free uint32
+
+	// asmSession is the ASM command's persistent assembler state (Phase 12,
+	// asm.go): matching the reference tool's own vax.assembler being a
+	// single session-wide object, multiple "ASM <file>" commands in a row
+	// share one location counter and one symbol table, so a later file can
+	// reference an earlier one's labels (e.g. testdata/asm/hello.asm's
+	// "@#lib$put_output" resolving to testdata/asm/kernel.asm's own
+	// .ENTRY lib$put_output, once kernel.asm has been ASMed first in the
+	// same session) exactly as vax.init's own boot sequence relies on.
+	// Reset (nil, so the next ASM lazily creates a fresh one) by VMInit,
+	// since its symbol table and deposit pointer would otherwise reference
+	// a since-wiped address space.
+	asmSession *asm.Assembler
 
 	// ICBList is Phase 13's loaded-image list (console_run.c's icb_list),
 	// in load order (main image first, each dependency appended as loaded

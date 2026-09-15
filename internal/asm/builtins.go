@@ -80,7 +80,7 @@ func (a *Assembler) seedBuiltinSymbols() {
 	for name, value := range builtinSymbols {
 		sym := a.symbols.create(name)
 		sym.value = value
-		sym.flags |= SymPermanent
+		sym.flags |= SymPermanent | SymBuiltin
 	}
 
 	table := cpu.Instructions()
@@ -91,6 +91,6 @@ func (a *Assembler) seedBuiltinSymbols() {
 		}
 		sym := a.symbols.create("OPC$_" + inst.Name)
 		sym.value = uint32(i)
-		sym.flags |= SymPermanent
+		sym.flags |= SymPermanent | SymBuiltin
 	}
 }

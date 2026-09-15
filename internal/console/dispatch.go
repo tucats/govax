@@ -217,9 +217,9 @@ func init() {
 
 		"SET": cmdSet,
 
-		"ASM": cmdAssembleNotWired, "ASSE": cmdAssembleNotWired,
+		"ASM": cmdAssemble, "ASSE": cmdAssemble,
 		"DISA": cmdDisassemble, "DIS": cmdDisassemble,
-		"CALL": cmdNotImplemented("CALL", "the RTL microkernel"),
+		"CALL": cmdCall,
 		"BOOT": cmdNotImplemented("BOOT", "device/RTL support"),
 		"ROM":  cmdNotImplemented("ROM", "device support"),
 	}
@@ -231,15 +231,25 @@ func cmdNotImplemented(name, dependency string) fixedHandler {
 	}
 }
 
-// cmdAssembleNotWired reports ASM/ASSEMBLE as unimplemented. internal/asm
-// (Phase 11) has a complete, tested assembler now — what's missing is
-// wiring it to deposit into a running Console's live vm.Memory (and to
-// merge its symbol table into Console.Symbols) rather than internal/asm's
-// own address-space-agnostic, unrelated-to-any-machine image; see
-// docs/PHASE-11.md's progress log for why that's left as follow-up work
-// rather than done as part of that phase.
-func cmdAssembleNotWired(d *Dispatcher, rest string) error {
-	return fmt.Errorf("console: ASM/ASSEMBLE needs internal/asm wired to live memory deposit (not yet implemented, see docs/PHASE-11.md)")
+// cmdAssemble implements the batch "ASM <filename>" form (Console.Assemble,
+// Phase 12) -- see that method's doc comment for why the bare, interactive
+// "ASM" (no filename) REPL mode isn't implemented.
+func cmdAssemble(d *Dispatcher, rest string) error {
+	path := strings.Trim(strings.TrimSpace(rest), `"`)
+	if path == "" {
+		return fmt.Errorf("console: interactive ASM mode (no filename) is not implemented; use ASM <filename>")
+	}
+	entryAddr, hasEntry, err := d.Console.Assemble(path)
+	if err != nil {
+		return err
+	}
+	if hasEntry {
+		// console.c's own post-command hook: a .END-named entry address
+		// auto-invokes "CALL __ENTRY" (no arguments) once the file
+		// finishes assembling.
+		return d.Console.Call(entryAddr, false)
+	}
+	return nil
 }
 
 func cmdInit(d *Dispatcher, rest string) error {
@@ -324,6 +334,77 @@ func cmdRun(d *Dispatcher, rest string) error {
 		return fmt.Errorf("console: missing file name to run")
 	}
 	return d.Console.Run(fn, opts)
+}
+
+// parseCallQualifier reads CALL's optional leading /STEP|/BREAK|/DEBUG
+// qualifier, matching console_call's own read_verb-and-CHAR4-compare check
+// (see docs/PHASE-13.md's design notes on RUN's identical convention).
+func parseCallQualifier(rest string) (step bool, tail string) {
+	rest = strings.TrimLeft(rest, " \t")
+	if !strings.HasPrefix(rest, "/") {
+		return false, rest
+	}
+	i := 1
+	for i < len(rest) && rest[i] != ' ' && rest[i] != '\t' {
+		i++
+	}
+	word := strings.ToUpper(rest[1:i])
+	if len(word) > 4 {
+		word = word[:4]
+	}
+	switch word {
+	case "STEP", "BREA", "DEBU", "DBG":
+		return true, rest[i:]
+	default:
+		return false, rest
+	}
+}
+
+// cmdCall implements the CALL command (Console.Call, Phase 13's own
+// primitive extended in Phase 12 with console_call's argument-list syntax):
+// CALL [/STEP] <entry-expr>[(arg1[,arg2...])].
+func cmdCall(d *Dispatcher, rest string) error {
+	step, rest := parseCallQualifier(rest)
+	rest = strings.TrimSpace(rest)
+	if rest == "" {
+		return fmt.Errorf("console: CALL requires an entry-point address or symbol")
+	}
+
+	ev := d.Console.Evaluator()
+	addr, remainder, err := ev.Eval(rest)
+	if err != nil {
+		return err
+	}
+
+	var args []uint32
+	remainder = strings.TrimSpace(remainder)
+	if strings.HasPrefix(remainder, "(") {
+		remainder = remainder[1:]
+		for {
+			remainder = strings.TrimSpace(remainder)
+			if strings.HasPrefix(remainder, ")") {
+				remainder = remainder[1:]
+				break
+			}
+			if remainder == "" {
+				return fmt.Errorf("console: CALL: incomplete argument list")
+			}
+			if len(args) > 0 {
+				if !strings.HasPrefix(remainder, ",") {
+					return fmt.Errorf("console: CALL: expected ',' in argument list")
+				}
+				remainder = remainder[1:]
+			}
+			var v uint32
+			v, remainder, err = ev.Eval(remainder)
+			if err != nil {
+				return err
+			}
+			args = append(args, v)
+		}
+	}
+
+	return d.Console.Call(addr, step, args...)
 }
 
 func cmdTime(d *Dispatcher, rest string) error {
