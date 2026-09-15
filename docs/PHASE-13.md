@@ -239,3 +239,50 @@ knowable by actually loading and running it, which is this phase's job to find o
   fixtures were historically run against) turned out to be sufficient.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test
   ./...` all clean.
+
+### 2026-09-15 — Sub-phase 4: Console.Run, DCL wiring, milestone check -- Phase complete
+
+- `internal/console/run.go`'s `Console.Run` wires `imageLoad`/`imageFixup`/
+  `ensureShims`/`Console.Call` together, matching `console_run`'s own
+  structure: reset the ICB list, load the main image (recursively loading
+  dependencies), fix up every loaded ICB, restore the caller's mode
+  (matching the C source's own restore-before-running-the-target ordering,
+  not after -- the loaded program actually executes in whatever mode RUN
+  itself was invoked from), build a small `IMAGE$INIT` driver procedure at
+  `CONSOLE$SCRATCH+8` (one `PUSHL`/`PUSHL`/`PUSHL`/`CALLS` sequence per
+  dependency's `LIB$INITIALIZE` entry point when `/INIT` is given, then a
+  final `CALLS` to the main image's own entry point and a `RET`, written as
+  raw opcode bytes directly per this doc's "Key finding"), and run it via
+  `Console.Call`. `RunOptions` (`RunInits`/`Step`/`NoExecute`) mirrors the
+  C source's single-leading-qualifier parsing (`/NOINIT`/`/INIT`,
+  `/BREAK`|`/DEBUG`|`/STEP`, `/NOEXECUTE`) -- `dispatch.go`'s
+  `parseRunQualifier` is the DCL-facing counterpart, matched by 4-character
+  prefix exactly like every other fixed-table verb in this file.
+- `RUN`/`R` in `dispatch.go`'s `fixedCommands` now reach `cmdRun` (real VMS
+  image activation) instead of being remapped to plain CPU execution
+  (`cmdExecute`, still reachable via `EXEC`/`GO`/`G`) -- that remap was a
+  deliberate stand-in noted in this file's own doc comment "since that's
+  far more useful in an emulator with no image loader than a dead command
+  spelling"; there's a real image loader now.
+  `TestDispatch_runActivatesImage` replaces the old
+  `TestDispatch_runIsRemappedToExecute`, which asserted the now-superseded
+  behavior.
+- Milestone check (this phase's own named deliverable): `put.exe`,
+  `putc.exe`, `cli.exe`, `sieve.exe`, `simple.exe` all load, fix up, and run
+  through `Console.Run`'s full path with a bounded step count (so a genuine
+  infinite loop can't hang the test suite -- `TestRun_everyMilestoneFixture`
+  in `run_test.go`). None hang or panic; each reaches a definite, reported
+  outcome: `putc.exe` and `simple.exe` run to a clean completion (RET
+  through the `SentinelReturn` frame); `put.exe` and `cli.exe` fault on an
+  unregistered SHIM$/SYS$ entry point (reported as a clear "exception
+  vector is zero" -- no SCB vector is installed for it, matching this
+  phase's own bar of "reported clearly, not silently misbehaving," not "the
+  RTL surface must be complete"); `sieve.exe` hits an access violation.
+  None of these three are chased further here -- that's Phase 12's
+  regression-suite/debugging-pass territory (or a future dedicated pass),
+  not this phase's own milestone requirement.
+- Full-repo `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
+  `go test ./...` all clean. Phase 13 complete: every `docs/PLAN.md`
+  deliverable (`image_load`, `image_fixup`, `Console.Call`, `Console.Run`
+  with its qualifiers, and the named-fixture milestone) is done and
+  unit-tested. Resuming Phase 12 (integration & regression) is unblocked.

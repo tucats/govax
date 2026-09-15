@@ -103,14 +103,26 @@ func TestDispatch_stepAndGo(t *testing.T) {
 	}
 }
 
-func TestDispatch_runIsRemappedToExecute(t *testing.T) {
-	d, c := newTestDispatcher(t)
-	loadProgram(t, c, 0x200, opHalt)
-	if err := d.Dispatch("RUN 200"); err != nil {
-		t.Fatalf("Dispatch(RUN): %v", err)
+// TestDispatch_runActivatesImage checks that RUN (and its /NOEXECUTE
+// qualifier) reach Console.Run -- real VMS image activation (Phase 13),
+// not plain CPU execution (that's EXEC/GO/G, see TestDispatch_stepAndGo).
+func TestDispatch_runActivatesImage(t *testing.T) {
+	c := newRunnableConsole(t)
+	g := loadEvaxGrammar(t)
+	d := NewDispatcher(c, g, nil)
+
+	if err := d.Dispatch("RUN/NOEXECUTE " + exeFixturePath(t, "simple.exe")); err != nil {
+		t.Fatalf("Dispatch(RUN/NOEXECUTE): %v", err)
 	}
-	if !c.Engine.Halted() {
-		t.Error("expected RUN to execute until HALT")
+	if len(c.ICBList) == 0 {
+		t.Fatal("expected RUN to have loaded at least the main image")
+	}
+
+	// simple.exe (per docs/PHASE-13.md's own milestone notes) runs to a
+	// clean completion, so a real (non-/NOEXECUTE) RUN can be dispatched
+	// end-to-end here too, via the "R" abbreviation.
+	if err := d.Dispatch("R " + exeFixturePath(t, "simple.exe")); err != nil {
+		t.Fatalf("Dispatch(R): %v", err)
 	}
 }
 

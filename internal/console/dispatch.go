@@ -17,13 +17,12 @@ import (
 //
 // The fixed-spelling set and DCL/verb split here follows console_dispatch_
 // table's own -1-vs-real-function split (SHOW, EXIT/QUIT, CLEAR, TEST,
-// VMINIT are DCL-driven; EXAMINE, SET, STEP, ... are fixed) with two
-// deliberate deviations, both documented where they're implemented:
-// DEPOSIT (exam.go) is a Go-native addition with no C-source command of
-// its own, and RUN/R (which the C source maps to VMS executable-image
-// activation, not ported — see run.go) is remapped to plain CPU execution,
-// the same as EXEC/GO/G, since that's far more useful in an emulator with
-// no image loader than a dead command spelling.
+// VMINIT are DCL-driven; EXAMINE, SET, STEP, ... are fixed) with one
+// deliberate deviation, documented where it's implemented: DEPOSIT
+// (exam.go) is a Go-native addition with no C-source command of its own.
+// RUN/R now means what it does in the C source (see run.go's Console.Run,
+// Phase 13) — VMS executable-image activation, not plain CPU execution
+// (that's EXEC/GO/G, unaffected).
 type Dispatcher struct {
 	Console *Console
 	Grammar *dcl.Grammar
@@ -206,7 +205,7 @@ func init() {
 		"STEP": cmdStep, "ST": cmdStep, "S": cmdStep,
 
 		"EXEC": cmdExecute, "GO": cmdExecute, "G": cmdExecute,
-		"RUN": cmdExecute, "R": cmdExecute,
+		"RUN": cmdRun, "R": cmdRun,
 
 		"SAVE": cmdSave,
 		"LOAD": cmdLoad,
@@ -275,6 +274,56 @@ func cmdExecute(d *Dispatcher, rest string) error {
 		return err
 	}
 	return d.Console.Execute(&v)
+}
+
+// parseRunQualifier reads RUN's optional single leading qualifier, matching
+// console_run's own read_verb-and-CHAR4-compare parsing: at most one of
+// /NOINIT, /INIT, /BREAK|/DEBUG|/STEP, or /NOEXECUTE, matched by its first
+// four characters (an unrecognized "/word" is left in place for the
+// filename parse to reject, exactly as console_run puts back its saved
+// pointer on a mismatch).
+func parseRunQualifier(rest string) (RunOptions, string) {
+	rest = strings.TrimLeft(rest, " \t")
+	var opts RunOptions
+	if !strings.HasPrefix(rest, "/") {
+		return opts, rest
+	}
+	i := 1
+	for i < len(rest) && rest[i] != ' ' && rest[i] != '\t' {
+		i++
+	}
+	word := strings.ToUpper(rest[1:i])
+	word4 := word
+	if len(word4) > 4 {
+		word4 = word4[:4]
+	}
+	tail := rest[i:]
+
+	switch word4 {
+	case "NOIN":
+		opts.RunInits = false
+		return opts, tail
+	case "INIT":
+		opts.RunInits = true
+		return opts, tail
+	case "BREA", "DEBU", "STEP":
+		opts.Step = true
+		return opts, tail
+	case "NOEX":
+		opts.NoExecute = true
+		return opts, tail
+	default:
+		return opts, rest // unrecognized qualifier; leave it for the filename parse
+	}
+}
+
+func cmdRun(d *Dispatcher, rest string) error {
+	opts, rest := parseRunQualifier(rest)
+	fn := strings.Trim(strings.TrimSpace(rest), `"`)
+	if fn == "" {
+		return fmt.Errorf("console: missing file name to run")
+	}
+	return d.Console.Run(fn, opts)
 }
 
 func cmdTime(d *Dispatcher, rest string) error {
