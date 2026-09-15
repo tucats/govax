@@ -172,7 +172,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		}
 
 		if err := d.Dispatch(line); err != nil {
-			fmt.Fprintln(out, "%", err)
+			fmt.Fprintln(out, "%"+err.Error())
 		}
 	}
 
