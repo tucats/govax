@@ -53,6 +53,31 @@ func (t *SymbolTable) Get(name string) (uint32, bool) {
 	return s.Value, true
 }
 
+// Find returns the full Symbol record for name (case-insensitive), or
+// (nil, false) if undefined -- unlike Get, which only reports the value,
+// for a caller (SHOW SYMBOL) that also needs Kind.
+func (t *SymbolTable) Find(name string) (*Symbol, bool) {
+	s, ok := t.m[strings.ToUpper(name)]
+
+	return s, ok
+}
+
+// FindByValue returns the name of a symbol (in All's sorted order, for
+// determinism, when more than one matches) whose value equals v, or ("",
+// false) if none — a simplified stand-in for find_label's SYM_LABEL/
+// SYM_ENTRY-kind-filtered reverse lookup: this port's SymbolKind doesn't
+// distinguish a label/entry point from any other kind of symbol (see
+// docs/PHASE-16.md sub-phase 1c), so every symbol is a candidate here.
+func (t *SymbolTable) FindByValue(v uint32) (string, bool) {
+	for _, s := range t.All() {
+		if s.Value == v {
+			return s.Name, true
+		}
+	}
+
+	return "", false
+}
+
 // Delete removes one symbol by name.
 func (t *SymbolTable) Delete(name string) {
 	delete(t.m, strings.ToUpper(name))

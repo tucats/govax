@@ -265,7 +265,7 @@ grammar evax
         keyword         p0br
         keyword         p0lr
         keyword         p1br
-        keyword         p1l4
+        keyword         p1lr
         keyword         sbr
         keyword         slr
         keyword         pcbb

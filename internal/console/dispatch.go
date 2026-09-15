@@ -92,6 +92,24 @@ func readCommandVerb(s string) (verb, rest string) {
 	return s, ""
 }
 
+// parseHexOrEmpty parses a SHOW STACK-family "count" parameter, matching
+// console_show.c's own asm_hex parse of it (always hexadecimal,
+// independent of the console's current default radix); "" (the parameter
+// wasn't supplied) returns 0, meaning "use the default".
+func parseHexOrEmpty(s string) (uint32, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, nil
+	}
+
+	v, err := strconv.ParseUint(s, 16, 32)
+	if err != nil {
+		return 0, fmt.Errorf("console: invalid hex value %q", s)
+	}
+
+	return uint32(v), nil
+}
+
 // bindGrammar binds every DCL verb/syntax this port implements a handler
 // for. Everything else (device/RTL/assembler-dependent SHOW/CLEAR/DEFINE
 // sub-forms, TEST, CALL's DCL entry — unreachable anyway since CALL is
@@ -125,18 +143,103 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("SHOW_REG", func(id int64, r *dcl.Result) error { return d.Console.ShowRegisters() })
 	g.Bind("SHOW_PSL", func(id int64, r *dcl.Result) error { return d.Console.ShowPSL() })
 	g.Bind("SHOW_MEMORY", func(id int64, r *dcl.Result) error { return d.Console.ShowMemory() })
-	g.Bind("SHOW_SYM", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbols() })
+	g.Bind("SHOW_SYM", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbol(r.String("SYMBOL")) })
 	g.Bind("SHOW_SYM_ALL", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbols() })
+	g.Bind("SHOW_SYM_SYS", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbolsSystem() })
 	g.Bind("SHOW_BREAK", func(id int64, r *dcl.Result) error { return d.Console.ShowBreakpoints() })
 	g.Bind("SHOW_RADIX", func(id int64, r *dcl.Result) error { return d.Console.ShowRadix() })
 	g.Bind("SHOW_BASE", func(id int64, r *dcl.Result) error { return d.Console.ShowBase() })
 	g.Bind("SHOW_CPU", func(id int64, r *dcl.Result) error { return d.Console.ShowCPU() })
 	g.Bind("SHOW_VERSION", func(id int64, r *dcl.Result) error { return d.Console.ShowVersion() })
-	g.Bind("SHOW_KSP", func(id int64, r *dcl.Result) error { return d.Console.ShowStack(StackKSP) })
-	g.Bind("SHOW_ESP", func(id int64, r *dcl.Result) error { return d.Console.ShowStack(StackESP) })
-	g.Bind("SHOW_SSP", func(id int64, r *dcl.Result) error { return d.Console.ShowStack(StackSSP) })
-	g.Bind("SHOW_ISP", func(id int64, r *dcl.Result) error { return d.Console.ShowStack(StackISP) })
-	g.Bind("SHOW_USP", func(id int64, r *dcl.Result) error { return d.Console.ShowStack(StackUSP) })
+
+	g.Bind("SHOW_STACK", func(id int64, r *dcl.Result) error {
+		count, err := parseHexOrEmpty(r.String("COUNT"))
+		if err != nil {
+			return err
+		}
+
+		return d.Console.ShowStack(StackKSP, true, count, r.Present("ALL"))
+	})
+	g.Bind("SHOW_KSP", func(id int64, r *dcl.Result) error {
+		count, err := parseHexOrEmpty(r.String("COUNT"))
+		if err != nil {
+			return err
+		}
+
+		return d.Console.ShowStack(StackKSP, false, count, r.Present("ALL"))
+	})
+	g.Bind("SHOW_ESP", func(id int64, r *dcl.Result) error {
+		count, err := parseHexOrEmpty(r.String("COUNT"))
+		if err != nil {
+			return err
+		}
+
+		return d.Console.ShowStack(StackESP, false, count, r.Present("ALL"))
+	})
+	g.Bind("SHOW_SSP", func(id int64, r *dcl.Result) error {
+		count, err := parseHexOrEmpty(r.String("COUNT"))
+		if err != nil {
+			return err
+		}
+
+		return d.Console.ShowStack(StackSSP, false, count, r.Present("ALL"))
+	})
+	g.Bind("SHOW_ISP", func(id int64, r *dcl.Result) error {
+		count, err := parseHexOrEmpty(r.String("COUNT"))
+		if err != nil {
+			return err
+		}
+
+		return d.Console.ShowStack(StackISP, false, count, r.Present("ALL"))
+	})
+	g.Bind("SHOW_USP", func(id int64, r *dcl.Result) error {
+		count, err := parseHexOrEmpty(r.String("COUNT"))
+		if err != nil {
+			return err
+		}
+
+		return d.Console.ShowStack(StackUSP, false, count, r.Present("ALL"))
+	})
+
+	g.Bind("SHOW_NVRAM", func(id int64, r *dcl.Result) error { return d.Console.ShowNVRAM() })
+	g.Bind("SHOW_ROM", func(id int64, r *dcl.Result) error { return d.Console.ShowROM() })
+	g.Bind("SHOW_MODE", func(id int64, r *dcl.Result) error { return d.Console.ShowMode() })
+	g.Bind("SHOW_SHIM", func(id int64, r *dcl.Result) error { return d.Console.ShowShim() })
+	g.Bind("SHOW_STRING", func(id int64, r *dcl.Result) error { return d.Console.ShowString() })
+
+	g.Bind("SHOW_PAGE", func(id int64, r *dcl.Result) error {
+		return d.Console.ShowPage(r.String("ADDRESS"), r.Present("WRITE"))
+	})
+
+	g.Bind("SHOW_SCB", func(id int64, r *dcl.Result) error {
+		if r.Present("ALL") {
+			return d.Console.ShowSCBAll()
+		}
+
+		return d.Console.ShowSCB()
+	})
+
+	g.Bind("SHOW_CALL_FRAMES", func(id int64, r *dcl.Result) error {
+		return d.Console.ShowCallFrames(r.String("COUNT"))
+	})
+
+	g.Bind("SHOW_REGIONS", func(id int64, r *dcl.Result) error { return d.Console.ShowRegions() })
+	g.Bind("SHOW_SHARE", func(id int64, r *dcl.Result) error { return d.Console.ShowSharePrefix() })
+	g.Bind("SHOW_IMAGES", func(id int64, r *dcl.Result) error { return d.Console.ShowImages(r.Present("FULL")) })
+
+	g.Bind("SHOW_QUANTUM", func(id int64, r *dcl.Result) error { return d.Console.ShowQuantum() })
+	g.Bind("SHOW_CLOCK", func(id int64, r *dcl.Result) error { return d.Console.ShowClock() })
+	g.Bind("SHOW_FAULT", func(id int64, r *dcl.Result) error { return d.Console.ShowFault() })
+
+	g.Bind("SHOW_MAP", func(id int64, r *dcl.Result) error { return d.Console.ShowMap() })
+	g.Bind("SHOW_TB", func(id int64, r *dcl.Result) error { return d.Console.ShowTB() })
+
+	g.Bind("SHOW_INSTRUCTIONS", func(id int64, r *dcl.Result) error {
+		return d.Console.ShowInstructions(
+			r.Present("MODES"), r.Present("PROFILE"), r.Present("UNIMPLEMENTED"), r.Present("ALL"),
+			r.String("OPCODE"),
+		)
+	})
 
 	// The bare SHOW verb is reached for every show_types keyword with no
 	// /syntax= redirect of its own — the plain register/privileged-

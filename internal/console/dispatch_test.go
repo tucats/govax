@@ -250,9 +250,12 @@ func TestDispatch_entryPointCommandErrors(t *testing.T) {
 
 func TestDispatch_unboundShowSubformErrors(t *testing.T) {
 	d, _ := newTestDispatcher(t)
-	err := d.Dispatch("SHOW NVRAM")
+	// SHOW DEBUG remains unbound -- it needs the DBG_* bitmask state
+	// docs/PHASE-16.md sub-phase 3's SET DEBUG would add, not yet
+	// implemented (see that document's sub-phase 1c).
+	err := d.Dispatch("SHOW DEBUG")
 	if err == nil {
-		t.Error("expected an error for the unimplemented SHOW NVRAM")
+		t.Error("expected an error for the unimplemented SHOW DEBUG")
 	}
 }
 

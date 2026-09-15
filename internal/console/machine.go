@@ -51,10 +51,12 @@ type Console struct {
 	ROM     []byte
 	ROMBase uint32
 	ROMEnd  uint32
+	ROMFile string // path passed to the last successful LoadROM, for SHOW ROM
 
 	NVRAM     []byte
 	NVRAMBase uint32
 	NVRAMEnd  uint32
+	NVRAMFile string // path passed to the last successful LoadNVRAM, for SHOW NVRAM
 
 	VMInitValid bool // set by VMINIT (vminit.go); cleared by INIT/ZERO
 

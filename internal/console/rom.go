@@ -119,6 +119,7 @@ func (c *Console) LoadROM(path string) error {
 	c.ROM = rom
 	c.ROMBase = base
 	c.ROMEnd = end
+	c.ROMFile = path
 	return nil
 }
 
@@ -172,6 +173,7 @@ func (c *Console) LoadNVRAM(path string) error {
 	c.NVRAM = nvram
 	c.NVRAMBase = base
 	c.NVRAMEnd = base + size - 1
+	c.NVRAMFile = path
 	return nil
 }
 

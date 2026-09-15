@@ -547,6 +547,86 @@ generally, not only `SHOW`.
 
 ## Progress Log
 
+### 2026-09-15 — Sub-phase 1 implemented (missing SHOW commands)
+
+Landed nearly everything in sub-phase 1a/1b/1d/1e (see per-item detail below);
+sub-phase 1c and the `SHOW ERROR`/`XTEST` items in 1f remain genuinely blocked or
+deferred, as this document's own inventory already said they'd be — this entry
+records what actually shipped, not a re-scope of the plan above.
+
+- **1a, shipped in full** except `SHOW COMMAND_ARGS`/`SHOW EXPAND` (still blocked —
+  neither has an underlying data source in this port: no `CONSOLE$ARG_*` symbol
+  population at `govax` startup, no `SET EXPAND` state): `SHOW NVRAM`/`SHOW ROM`
+  (new `Console.ROMFile`/`NVRAMFile` fields, set by `LoadROM`/`LoadNVRAM`), `SHOW
+  MODE`, `SHOW SHIM` (reports each stub's numeric dispatch code and whether
+  `internal/rtl.Environment.HasShim` — a new non-invoking predicate — has a live
+  handler for it, not a second resolved label the way C's `shim_dump` does; see
+  `ShowShim`'s own doc comment for why), `SHOW STRING`, `SHOW PAGE`/`PTE` (new
+  `internal/vm.Memory.LookupPTE` read-only PTE walk plus `Protection.Allows`/
+  `String`, since a diagnostic display needs to report even a page a real access
+  would refuse), `SHOW SCB`, `SHOW CALL_FRAMES`/`CALLS` (decoded against this
+  port's own real-VAX-architecture mask-word bit layout — see
+  `internal/cpu/call.go`'s `emulRet` — not console_show.c's own `union MASKREG`
+  bit-field declaration, a different and irrelevant layout for what this port's
+  frames actually contain), `SHOW REGIONS`, `SHOW SHARE_PREFIX`, `SHOW IMAGES`,
+  `SHOW SYMBOL <name>` (now a real single-symbol lookup, `ShowSymbol` — previously
+  `SHOW_SYM` ignored the `symbol` parameter and dumped everything) and `SHOW
+  SYMBOL/SYSTEM`.
+- **1b, shipped for real** (Phase 14 landed since this document's original
+  audit, which is exactly what these were blocked on): `SHOW QUANTUM`, `SHOW
+  CLOCK` (`clock_running` read directly off `ICCS<0>`, matching `vax.h`'s own
+  "Copy of ICCS<0>" comment — no separate mirrored field needed), and `SHOW
+  FAULT`'s pending-interrupt half (new `Engine.PendingInterrupts`, exposing
+  `interrupt_pending`/`iqueue`, now real state since Phase 14). `SHOW FAULT`'s
+  *other* half — `show_faults()`'s fault/event history ring buffer — is **not**
+  ported: it needs new recorder instrumentation hooked into
+  `internal/cpu/handlefault.go` with no existing state to build on (unlike the
+  pending-interrupt half), deliberately left for a follow-up per this document's
+  own recommendation to split the two.
+- **1d, both fidelity mismatches fixed**: `ShowBase` now reports
+  `Console.DepositAddr` ("Next storage address is..."), matching the C command;
+  `ShowStack` now does a real memory dump from the mode's stack pointer (not just
+  the register value), plus the previously-unbound bare `SHOW STACK` form — all
+  without adding a live mode-switch primitive: `stackPointerFor` reads
+  `GPR(SP)` when the requested mode is the one currently active, otherwise the
+  matching privileged register (`KSP`/`ESP`/`SSP`/`USP`/`ISP`), which already
+  holds that mode's saved pointer from the last time it was actually live (see
+  `internal/cpu/handlefault.go`/`call.go`'s own mode-transition code for where
+  that save happens) — same observable result as C's own save/switch/dump/restore
+  sequence, no new mode-stack state required.
+- **1e, the base form and its non-blocked qualifiers**: `SHOW INSTRUCTIONS`'
+  four-per-line opcode/name grid (default and `/UNIMPLEMENTED`), `/ALL`, and the
+  opcode filter now all work, backed by two new `internal/cpu.Table` methods
+  (`All`, a deterministic single-then-extended enumeration; `Implemented`, the
+  has-a-real-handler check). `/MODES` and `/PROFILE` remain unimplemented (return
+  an error naming why) — this document's own assessment of them (no addressing-
+  mode legality table exposed, no per-opcode execution counters, arguably
+  instrumentation rather than emulated VAX behavior) didn't change.
+- **1f, the two "recommend a stub" items**: `SHOW MAP` and `SHOW TB` now report
+  "not applicable to this port" (RMS field access is hardcoded Go offsets, not a
+  runtime registry; `Translate` does an uncached page-table walk) instead of
+  either fabricating data or being silently unbound. `SHOW ERROR` remains
+  unbound — its design question (adopt a VAX-style status-code space, or shrink
+  scope to "print the last error string"?) is still open, per this document's own
+  "flag for the user rather than guessing."
+- **Found and fixed alongside this work** (a clear, obvious copy-paste mistake
+  with no ISA-fidelity question attached, not a new finding — this document's own
+  cross-cutting open questions section already named it): `evax.dcl`'s
+  `show_types` keyword table had `p1l4` where every surrounding register name
+  expects `p1lr`, which made `SHOW P1LR` unparseable; fixed in both copies
+  (`testdata/dcl/evax.dcl` and `internal/bootdata/files/evax.dcl`).
+- All new/changed behavior has direct test coverage (`internal/vm/translate_test.go`,
+  `internal/cpu/instruction_test.go`/`interrupt_test.go`, `internal/rtl/rtl_test.go`,
+  `internal/console/show_test.go` and small edits to existing `dispatch_test.go`/
+  `set_test.go`); `go build ./...`, `go vet ./...`, `go test ./...` all clean.
+- **Deliberately still not done, matching this document's own categorization**:
+  sub-phase 1c in full (needs sub-phase 2-4 cross-cutting state: `SET STEP`/
+  `DEBUG`/`ASSEMBLER` flags, a watchpoint subsystem, temporary/unresolved symbol
+  kinds); `SHOW COMMAND_ARGS`/`SHOW EXPAND` (no data source yet); `SHOW
+  INSTRUCTIONS`'s `/MODES`/`/PROFILE`; `SHOW ERROR`; the fault-history-ring-buffer
+  half of `SHOW FAULT`. None of these were silently skipped — each was a named,
+  reasoned exclusion in this document before this pass started.
+
 ### 2026-09-15 — Audit complete, phase created
 
 - Catalogued every `SHOW` sub-display in `console_show.c` (30 `show_types` keywords

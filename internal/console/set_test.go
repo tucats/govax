@@ -142,7 +142,7 @@ func TestShowStack(t *testing.T) {
 	c, buf := newTestConsole(t)
 	c.CPU.SetPR(vax.ESP, 0x99887766)
 	buf.Reset()
-	if err := c.ShowStack(StackESP); err != nil {
+	if err := c.ShowStack(StackESP, false, 0, false); err != nil {
 		t.Fatalf("ShowStack: %v", err)
 	}
 	if !strings.Contains(buf.String(), "99887766") {
