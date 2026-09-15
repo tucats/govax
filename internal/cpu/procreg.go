@@ -165,6 +165,81 @@ func setPrivReg(e *Engine, reg int, value uint32) error {
 			e.cpu.SetPR(vax.SIRR, value)
 		}
 
+	case vax.ICCS:
+		// Only these bits are settable via MTPR, matching set_priv_reg's own
+		// mask; RUN/DON reflect current status rather than being freely
+		// writable.
+		value &= 0x800000F1
+		iccs := e.cpu.PR(vax.ICCS)
+
+		if value&iccsInt != 0 { // write to ICCS<INT>: clear it
+			iccs &^= iccsInt
+		}
+		if value&iccsRun != 0 { // write to ICCS<RUN>: set it
+			iccs |= iccsRun
+		} else {
+			iccs &^= iccsRun
+		}
+		if value&iccsXFR != 0 { // write to ICCS<XFR>: reload ICR from NICR
+			e.cpu.SetPR(vax.ICR, e.cpu.PR(vax.NICR))
+		}
+		if value&iccsSGL != 0 { // write to ICCS<SGL>: increment the clock
+			e.cpu.SetPR(vax.ICR, e.cpu.PR(vax.ICR)+1)
+		}
+		iccs = (iccs &^ deviceIE) | (value & deviceIE) // write to ICCS<IE>
+		if value&iccsErr != 0 {                        // write to ICCS<ERR>: clear it
+			iccs &^= iccsErr
+		}
+		e.cpu.SetPR(vax.ICCS, iccs)
+
+	case vax.RXCS:
+		// Only the IE bit is writable; DON is status-only.
+		value &= deviceIE
+		old := e.cpu.PR(vax.RXCS)
+		wasIE := old & deviceIE
+		rxcs := (old & 0x80) | value
+		e.cpu.SetPR(vax.RXCS, rxcs)
+
+		// If IE was already set and a byte is (still) waiting, (re-)signal
+		// the interrupt -- matching set_priv_reg's own case 32, including
+		// its one-tick delay.
+		if wasIE != 0 && rxcs&0xC0 != 0 {
+			e.Interrupt(ExcConRead, 20, 1)
+		}
+
+	case vax.TXCS:
+		// Only the IE bit is writable; RDY is always set (a real console
+		// transmitter completes instantly in this emulator).
+		value &= deviceIE
+		if value != 0 {
+			e.cpu.SetPR(vax.TXCS, 0xC0)
+			// Real VAX IPL for the console terminal is 20 (0x14); the C
+			// reference's own two TXCS/TXDB call sites use the literal
+			// 0x20 (32 decimal) here despite this same case's own comment
+			// saying "IPL 20", and despite RXCS's IE-bit case just above
+			// (and vax.c's own poll_keyboard) consistently using decimal
+			// 20 for the same conceptual interrupt -- an internal
+			// self-contradiction, not a deliberate ISA choice, so fixed
+			// directly rather than replicated; see docs/DEVIATIONS.md.
+			e.Interrupt(ExcConWrite, 20, 0)
+		} else {
+			e.cpu.SetPR(vax.TXCS, 0x80)
+		}
+
+	case vax.TXDB:
+		value &= 0x7F
+		if e.services != nil {
+			e.services.ConsoleWriteByte(byte(value))
+		}
+
+		txcs := e.cpu.PR(vax.TXCS)
+		wasIE := txcs & 0x60 // matches set_priv_reg's own (unusual) mask
+		txcs |= 0x80
+		e.cpu.SetPR(vax.TXCS, txcs)
+		if wasIE != 0 {
+			e.Interrupt(ExcConWrite, 20, 0) // see the IPL note on case TXCS above
+		}
+
 	case vax.TBIA, vax.TBIS:
 		// No-op; see the doc comment above.
 
@@ -193,9 +268,21 @@ func emulMfpr(e *Engine, d *Decoded) error {
 		return &Fault{Code: ExcReservedOp}
 	}
 
-	// emul_mfpr.c clears RXCS's DON bit as a side effect of reading RXDB
-	// (33); a console-device effect not modeled yet, see the doc comment on
-	// setPrivReg.
+	if vax.PrivReg(reg) == vax.RXDB {
+		// Pull a real byte from the console's own input source (the same
+		// one XFC$CONSOLE_READ uses) as this read's side effect, rather
+		// than returning whatever stale value happens to be sitting in the
+		// register -- see docs/DEVIATIONS.md's poll_keyboard finding on why
+		// the C reference's own RXDB was never reliably populated on its
+		// target (Linux) platform.
+		if e.services != nil {
+			e.cpu.SetPR(vax.RXDB, uint32(e.services.ConsoleReadByte()))
+		}
+		// emul_mfpr.c's own "clear DON bit" side effect (`vax.RXCS &= 0x40`
+		// -- clears every bit except IE, not just DON).
+		e.cpu.SetPR(vax.RXCS, e.cpu.PR(vax.RXCS)&deviceIE)
+	}
+
 	value := e.cpu.PR(vax.PrivReg(reg))
 	return d.Operands[1].Store(e.cpu, e.mem, uint64(value))
 }

@@ -1,8 +1,10 @@
 package console
 
 import (
+	"bytes"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/vax"
@@ -91,25 +93,24 @@ func TestAssemble_persistentSessionSharesSymbolsAcrossFiles(t *testing.T) {
 // with a bounded step count so a real gap anywhere in the CHMK/RTL dispatch
 // chain reports as a clear, logged outcome rather than hanging the suite.
 //
-// This currently hits the step cap, not a clean completion: kernel.asm's
-// own EXE$$PUT_CONSOLE (CHMK 0) writes each byte by clearing a memory flag
-// (exe$tx_ready), doing MTPR to TXDB, then spin-waiting on that same flag
-// -- expecting the EXC$CONWRITE interrupt kernel.asm's own ISR (exe$tx)
-// handles to set it back to 1. setPrivReg's TXCS/TXDB cases are a plain
-// register store with no device/interrupt modeling (see its own doc
-// comment: deferred to Phase 09, which never actually implemented this),
-// so exe$tx_ready is only ever cleared, never reset -- the byte after the
-// first spins forever. This is exactly the mechanism the user asked about
-// while this finding was still being chased (2026-09-15): not a countdown
-// timer, but a missing interrupt-delivery path. Tracked as a real, well-
-// understood Phase 09 gap rather than a hang/panic bug; revisit there or
-// in a dedicated follow-up. This test's own bar is only "reaches the step
-// cap in a controlled, non-panicking way" -- if it ever completes cleanly
-// instead, that's progress, not a regression, and this test should be
-// updated to expect it.
+// Through Phase 12, this test hit its step cap every time: kernel.asm's own
+// EXE$$PUT_CONSOLE (CHMK 0) writes each byte by clearing a memory flag
+// (exe$tx_ready), doing MTPR to TXDB, then spin-waiting on that same flag --
+// expecting the EXC$CONWRITE interrupt kernel.asm's own ISR (exe$tx) handles
+// to set it back to 1, which setPrivReg's then-plain-register-store TXCS/
+// TXDB cases never delivered. Phase 14 closes that gap (interrupt.go's
+// Engine.Interrupt/quantum-boundary delivery, wired into TXCS/TXDB in
+// procreg.go) -- this test now enables TXCS<IE> directly (the same effect
+// as kernel.asm's own EXE$INITIALIZE, without also running that routine's
+// separate, unrelated boot-message-printing and page-protection machinery,
+// which this test has no need to exercise) and expects hello.asm's whole
+// "Hello world" print plus its own 1,000,000-iteration ADDF2/SOBGTR delay
+// loop to run to completion, not hit the cap.
 func TestAssemble_kernelThenHelloRunsBounded(t *testing.T) {
 	c := newRunnableConsole(t)
 	c.asmSession = nil // start from a clean session explicitly, for clarity
+	out := &bytes.Buffer{}
+	c.Out = out
 
 	if _, hasEntry, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
@@ -125,11 +126,28 @@ func TestAssemble_kernelThenHelloRunsBounded(t *testing.T) {
 		t.Fatal("expected hello.asm's \".end main\" to report an entry address")
 	}
 
-	err, hitCap := callBounded(t, c, entryAddr, 2_000_000)
+	// Enable TXCS<IE> -- the same one-time setup EXE$INITIALIZE's own
+	// `mtpr #40,#VAX$PR_TXCS` performs -- so EXE$$PUT_CONSOLE's ready-flag
+	// wait loop actually gets woken up by the EXC$CONWRITE interrupt its own
+	// ISR (exe$tx) delivers, instead of spinning forever after the first
+	// byte. See this test's own doc comment on why EXE$INITIALIZE itself
+	// isn't run here.
+	c.CPU.SetPR(vax.TXCS, 0x40)
+
+	// hello.asm's own delay loop ("movl #1000000,r5") costs far more than
+	// its literal decimal reading suggests: this assembler's default radix
+	// is hex (no "^d"/"^o" prefix on the literal), so r5 actually starts at
+	// 0x1000000 (16,777,216) -- a ~33.5M-step ADDF2/SOBGTR loop, not 2M. The
+	// print and kernel-dispatch overhead around it (a few hundred steps per
+	// character) is negligible by comparison.
+	err, hitCap := callBounded(t, c, entryAddr, 40_000_000)
 	if err != nil {
-		t.Errorf("hello.asm: unexpected error (want either a clean finish or the step cap): %v", err)
+		t.Fatalf("hello.asm: %v", err)
 	}
-	if !hitCap {
-		t.Log("hello.asm completed cleanly -- the TXCS/TXDB interrupt-delivery gap this test documents may be fixed; update this test's expectations")
+	if hitCap {
+		t.Fatalf("hello.asm hit the step cap instead of completing -- output so far=%q", out.String())
+	}
+	if !strings.Contains(out.String(), "Hello world") {
+		t.Errorf("console output = %q, want it to contain \"Hello world\"", out.String())
 	}
 }

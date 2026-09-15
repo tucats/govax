@@ -33,6 +33,49 @@ _None yet._
 
 ## Resolved findings
 
+### [Phase 14] `emulChmx` (this port's own CHMK/CHME/CHMS/CHMU handler) never updates `e.instructionPC`, so its handler's return address is the CHMx instruction's own start, not the instruction after it
+
+- **Where**: `internal/cpu/changemode.go`'s `emulChmx`, as it stood before this
+  fix -- not a C-reference porting gap (`reference/eVAX/eVAX/Source/CPU/
+  interrupt.c`'s `emul_chmx` gets this right: `vax.instruction_PC = vax.PC;`
+  runs immediately before its own `set_fault` call), but a Go-port-only
+  regression from Phase 07's original CHMK implementation, which never
+  carried that line over.
+- **What**: every *other* synchronous fault this port raises relies on
+  `Engine.Step`'s generic, before-decode `e.instructionPC = e.cpu.GPR(vax.PC)`
+  (matching `decode_opcode.c`'s own `vax.instruction_PC = pc = vax.PC;`) --
+  correct for those, since re-executing the same faulting instruction once
+  whatever's wrong is fixed up (a resized stack, a paged-in page) is exactly
+  the right behavior for an access violation or reserved-operand fault. CHMx
+  is architecturally different: like a system call, it's expected to
+  complete once and resume at the *next* instruction, not retry itself. By
+  the time `emulChmx` runs, decode has already advanced `e.cpu.GPR(vax.PC)`
+  past the whole CHMx instruction (opcode and operand) -- but `Engine.raise`
+  (the fault path every `Handler` error goes through) unconditionally resets
+  `e.cpu.GPR(vax.PC)` back to `e.instructionPC` before calling `HandleFault`,
+  discarding that already-correct advance and pushing the CHMx instruction's
+  *own* address as the saved return PC. A CHMK handler that completes and
+  returns (RET or REI) therefore resumes execution *at the CHMK instruction
+  itself*, re-trapping it -- invisible for a CHMK issued exactly once, but an
+  infinite loop for any caller that issues CHMK a second time after the
+  first one's handler returns, e.g. `kernel.asm`'s own `LIB$PUT_ONE`
+  (`_loop: movb (r2)+,r5; chmk #EXE$PUT_CONSOLE; ...; sobgtr r6,_loop`) --
+  every byte after the first re-triggers the *first* byte's own CHMK
+  indefinitely, never advancing `r2`/`r5`/`r6`. Found while building Phase
+  14's own `LIB$PUT_OUTPUT`-prints-a-multibyte-string end-to-end test (the
+  first fixture in this project to ever complete one CHMK handler and then
+  issue a second CHMK from the same call site) -- symptom was the console
+  repeating only the *first* character of any multi-character string
+  forever, not a step-cap hang, which is what led here.
+- **Status**: fixed in Go. `emulChmx` now sets `e.instructionPC =
+  e.cpu.GPR(vax.PC)` immediately before returning its `*Fault`, mirroring
+  `emul_chmx.c`'s own explicit line. Verified by
+  `internal/cpu/changemode_test.go`'s
+  `TestEmulChmxReturnsPastTheChmxInstruction` (two back-to-back CHMKs, each
+  with a trivial REI-based handler, confirming the second one actually
+  executes rather than re-trapping the first) and, end to end, by
+  `internal/console/asm_test.go`'s `TestAssemble_kernelThenHelloRunsBounded`.
+
 ### [Phase 14] `handle_fault` saves the stale `instruction_PC` as an interrupt's return address
 
 - **Where**: `reference/eVAX/eVAX/Source/CPU/vax.c`'s `execute_vax` (~lines
