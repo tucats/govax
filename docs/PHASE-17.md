@@ -1,4 +1,4 @@
-# Phase 17: `SET DEBUG` / `SHOW DEBUG` and the `DBG_*` tracing flags
+# Phase 17: `SET DEBUG` / `SHOW DEBUG`, `SET TRACE` / `SHOW TRACE`, and the `DBG_*`/instruction-trace tracing flags
 
 ## Goal
 
@@ -8,7 +8,11 @@ blocked on cross-cutting state this port didn't have: `vax.h`'s `DBG_*` bitmask
 toggles scattered across the C reference's CPU, VM, RTL, and console layers.
 This phase adds that bitmask, the two console commands that read/write it, and
 wires real behavior for the flags whose C-side consumer has a clean Go
-analogue.
+analogue. Sub-phases 6-8 (added after the first five sub-phases landed, per a
+follow-up user request) extend this to `vax.console.disasm`'s own `SET TRACE`/
+`SHOW TRACE` pair and the instruction-tracing mechanism it and two `DBG_*`
+flags (`REGISTERS`, `FULLDISASM`) are built on — closing the one gap the
+original five sub-phases had deliberately deferred.
 
 Unlike Phases 00-14 (one C source file family each) or Phase 16 (an audit of
 one console command surface), this phase's C-source mapping is deliberately
@@ -19,7 +23,7 @@ tracing), `logical_names.c`/`devices.c`/`rms.c`/`service.c`/`p1_vector.c` (RTL
 tracing), and `console_run.c`/`console_dispatch.c`/`console_step.c`/
 `asm_symbols.c` (console-level tracing).
 
-**Status: complete.**
+**Status: sub-phases 1-5 complete; sub-phases 6-8 in progress.**
 
 ## Design decisions
 
@@ -246,18 +250,139 @@ item-code sub-case:
   The flag itself remains settable/showable (Sub-phase 1); no trace is
   wired, and `SHOW DEBUG`'s `COMMAND` row will simply never turn on until
   that feature exists.
-- **`REGISTERS`/`FULLDISASM`** (register-change dump and full-operand
-  disassembly at `STEP`) — the C source's version
-  (`vax.c:449-506`) is built on a `save_regset`/`check_regset`
-  snapshot-and-diff mechanism this port's `Console.Step`/`cmdStep` has no
-  equivalent of at all (not just an unwired flag — the diffing mechanism
-  itself doesn't exist). Building that mechanism is a self-contained feature
-  in its own right, not a small addition to this phase's flag-wiring work;
-  left for a future phase. The flags remain settable/showable now (Sub-phase
-  1), so `SET DEBUG NOREGISTERS`/`SHOW DEBUG` etc. all work — only the actual
-  register-dump/full-disassembly behavior is deferred.
+`REGISTERS`/`FULLDISASM` were also deferred here in the original five-sub-phase
+pass (needed a snapshot/diff mechanism `Console.Step` had no equivalent of at
+all) — **no longer deferred**, see Sub-phases 6-8 below, added after a
+follow-up user request to also port `SET TRACE`/`SHOW TRACE` and the
+instruction-tracing mechanism those two flags (and `vax.console.disasm`)
+are built on.
 
-## Progress Log
+## Sub-phase 6: `SET TRACE`/`SET NOTRACE` and `SHOW TRACE` (`internal/console`)
+
+### Scope / C source mapping
+
+- `console_set.c:928-939` — `SET TRACE`/`SET DISASSEMBLY` (aliases) set
+  `vax.console.disasm = 1`; `SET NOTRACE`/`SET NODISASSEMBLE` clear it.
+  Unlike `SET DEBUG`, this is a single on/off flag, not a bitmask — no
+  per-item list syntax.
+- `console_show.c:992-999` — `SHOW TRACE` (id `147`, keywords `TRACE`/
+  `DISASSEMBLY`, already bound in `evax.dcl` from Phase 16's audit pass,
+  same situation `SHOW DEBUG` was in before Sub-phase 1 of this phase):
+  reports `vax.console.disasm` as "enabled"/"disabled", and — only when
+  enabled — a second line reporting `DBG_REGISTERS`' own state (`SHOW
+  TRACE` is the one place in the C source that reads a `DBG_*` flag outside
+  `SHOW DEBUG` itself).
+
+### Design
+
+- New `Console.Trace bool` field (`internal/console/machine.go`), matching
+  `vax.console.disasm`. Like `Radix`/`Verbose`/`Verify`, this is a plain
+  `Console` struct field `Init`/`Zero` never touch, so it's automatically
+  preserved across a re-`INIT` — matching `console_init.c`'s own
+  save/restore list (`radix`/`disasm`/`verify`), which `Console.Init`'s
+  existing doc comment already described in spirit even though it named
+  `Verbose` rather than a `disasm`-equivalent field (there wasn't one to
+  name yet).
+- `Console.SetTrace(bool)`, wired into `cmdSet`'s `"TRACE"`/`"DISASSEMBLY"`
+  (set true) and `"NOTRACE"`/`"NODISASSEMBLE"` (set false) cases.
+- `Console.ShowTrace()`, wired into `bindGrammar`'s `SHOW_TRACE`.
+
+## Sub-phase 7: instruction-trace infrastructure
+
+### Scope / C source mapping
+
+`vax.c:437-454`'s own `if (disasm) { ... }` block inside `execute_vax`'s main
+loop: before dispatching each instruction's `Handler`, print
+`[<stack> <SP>] <disassembled instruction>` — `<stack>` is `ISP` on the
+interrupt stack or else the current mode's stack-pointer name (`KSP`/`ESP`/
+`SSP`/`USP`, `vax.c:113`'s own `mode_name[]` — not to be confused with
+`console_show.c`'s differently-named `mode_names[]`, KERNEL/EXEC/SUPER/USER;
+two arrays with an unfortunately similar name for two different things in
+the C source itself). `disasm` is `vax.console.disasm` (`Console.Trace`) for
+`EXEC`/`GO`/`CALL`/`RUN` (`console_exec.c:80,389`), always `1` for plain
+`STEP` (`console_step.c:117`, "Always in trace mode" per its own comment)
+regardless of `Console.Trace`, and `vax.console.disasm` again for `STEP/
+OVER`/`STEP/RETURN` (`console_step.c:129`).
+
+### Design
+
+- This port has no single `execute_vax`-equivalent loop — `Console.Execute`
+  (`EXEC`/`GO`), `Console.Step` (`STEP`), and `Console.Call` (`CALL`, and
+  `RUN` via its synthesized driver procedure) each run their own loop
+  around `cpu.Engine.Step`, matching `docs/PHASE-03.md`'s original design
+  split (CPU-loop mechanics in `internal/cpu`, STEP/BREAK/CALL semantics
+  layered on top in `internal/console`). So the trace hook is added at all
+  three call sites rather than in one shared place — see `trace.go` (new
+  file), whose one entry point (`Console.traceStep`) each of the three
+  loops calls identically.
+- The disassembly text itself reuses `internal/asm.Disassemble` (via
+  `disasm.go`'s existing `memByteReader`, already built for the
+  `DISASSEMBLE` command) rather than adding a second decoder — this is a
+  purely textual, static disassembly of the bytes at the about-to-execute
+  PC, matching what `decode_instruction`'s own disassembly-buffer
+  construction (`decode_opcode.c:76-206`) does before the C source's
+  `disasm_operand` calls fill in operand text; a best-effort call (a
+  disassembly failure prints a placeholder rather than aborting execution,
+  since this is a developer trace, not part of instruction dispatch).
+- `Console.Step` always traces (`force = true`, matching `execute_vax(1)`);
+  `Execute`/`Call` trace only when `Console.Trace` is set — matching the
+  `vax.console.disasm`-gated call sites.
+- **Found, not fixed, while implementing this**: `Console.Call`'s existing
+  `step bool` parameter prints `"Stepped to %08X\n"` after *every*
+  instruction for the *entire* call (looping until return/halt) when true —
+  but the real C source's `CALL/STEP` (`console_exec.c:377-379`) does
+  exactly **one** `console_step` call and returns control to the console
+  prompt; it does not run the call to completion at all. This is a
+  pre-existing divergence (from Phase 13, predating this phase), not
+  something introduced here, and changing `Call`'s stepping semantics is a
+  bigger, separately-scoped behavior change than "add instruction tracing" —
+  flagged here for the user rather than silently changed or silently left
+  unmentioned.
+
+## Sub-phase 8: wire `REGISTERS` and `FULLDISASM` into the trace point
+
+### Scope / C source mapping
+
+- `REGISTERS` (`registers.c:61-87`, `save_regset`/`check_regset`): a
+  snapshot of `R0`-`R11`/`AP`/`FP`/`PSL` taken before the instruction runs,
+  diffed after — only the registers that actually changed are printed
+  (`SP`/`PC` excluded: matching `check_regset`'s own `n<14` bound, since
+  both change on every instruction and would be pure noise here).
+- `FULLDISASM` (`console_disasm.c:183-207`, `format_operands`): for each of
+  the just-decoded instruction's operands, print its access kind (read/
+  write/modify/address/bitfield/branch/immediate) and either the register
+  name+value (register-direct operands) or the computed VAX address
+  (memory operands) — printed *before* the instruction executes in the C
+  source.
+
+### Design
+
+- `REGISTERS`: `Console.traceStep` snapshots `R0`-`R11`/`AP`/`FP`/`PSL`
+  before calling `cpu.Engine.Step`, and diffs after, matching
+  `check_regset`'s own format (`registers.c:76-85`) exactly — this needs no
+  new `internal/cpu` state at all, just register reads `Console` already
+  has access to.
+- `FULLDISASM`: needs the just-decoded instruction's *resolved* operand
+  data (which register, which computed address) — the static disassembler
+  `Sub-phase 7` uses for the trace line doesn't have this (it never
+  resolves addresses against live register/memory state). `cpu.Engine`
+  grows one new accessor, `LastDecoded() Decoded`, returning whatever the
+  most recent `Step` call decoded (the same value already cached in
+  `Engine`'s own reused-per-call field, `docs/PHASE-03.md`'s "avoid a
+  fresh heap allocation every instruction" design already relies on this
+  being a single reused field — `LastDecoded` just exposes it read-only).
+  **Documented deviation from the C source**: because `Engine.Step` decodes
+  and executes in one call with no gap in between, this dump necessarily
+  reads register/memory state *after* the instruction ran, not before like
+  `format_operands`. For every `AccessRead` operand this is unobservable
+  (nothing changed it); for `AccessWrite`/`AccessModify` operands it shows
+  the operand's *new* value rather than its old one. Restructuring
+  `Engine.Step` into a separate decode-then-execute pair to fix this
+  precisely would be a much larger change for a low-stakes, developer-only
+  trace of the emulator's own operand resolution (not emulated-VAX
+  behavior) — not undertaken here; noted rather than silently accepted.
+
+## Explicitly out of scope
 
 ### 2026-09-15 — Sub-phase 5 complete: `internal/console` tracing; phase complete
 
