@@ -38,6 +38,11 @@ type Engine struct {
 	// operand fault, matching an XFC executed before the microkernel
 	// environment it depends on exists.
 	services SystemServices
+
+	// decoded is Step's own reusable Decoded buffer -- see Step's doc
+	// comment on why this exists (a Phase 12 performance-pass finding, not
+	// part of the original Phase 03 design).
+	decoded Decoded
 }
 
 // NewEngine returns an Engine driving cpu and mem, using the built-in VAX
@@ -73,22 +78,35 @@ func (e *Engine) Halted() bool { return e.halted }
 // continue;`. A Handler returning ErrHalted stops the machine and is
 // returned as-is; any other Handler error is treated as a *Fault the same
 // way a decode-time one is.
+// Step decodes and executes exactly one instruction.
+//
+// decodeInstruction returns a Decoded by value; taking &d on a plain local
+// and passing it through handler (an indirectly-called function value)
+// defeats Go's escape analysis, forcing a fresh heap allocation of the
+// whole [6]Operand-sized struct on every single instruction -- confirmed
+// by profiling (docs/PHASE-12.md's own performance-pass sub-phase):
+// ~1 allocation per Step call, no exceptions, all attributed directly to
+// this function. Decoding into e.decoded (a field of the already-heap-
+// resident *Engine, reused across every Step call) instead avoids that
+// allocation entirely -- copying the freshly decoded value into it is a
+// plain, non-escaping struct copy, not a new allocation.
 func (e *Engine) Step() error {
 	e.instructionPC = e.cpu.GPR(vax.PC)
 
-	d, err := decodeInstruction(e.cpu, e.mem, e.table)
+	dec, err := decodeInstruction(e.cpu, e.mem, e.table)
 	if err != nil {
 		return e.raise(err)
 	}
+	e.decoded = dec
 
 	// Advance PC past the instruction before dispatching, matching
 	// decode_opcode.c leaving vax.PC there on a successful decode — a
 	// branch/jump Handler expects PC to already be "the next sequential
 	// instruction" as its starting point.
-	e.cpu.SetGPR(vax.PC, d.NextPC)
+	e.cpu.SetGPR(vax.PC, e.decoded.NextPC)
 
-	handler := e.table.HandlerFor(d.Instruction)
-	if err := handler(e, &d); err != nil {
+	handler := e.table.HandlerFor(e.decoded.Instruction)
+	if err := handler(e, &e.decoded); err != nil {
 		if errors.Is(err, ErrHalted) {
 			e.halted = true
 			return ErrHalted

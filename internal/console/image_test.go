@@ -21,7 +21,7 @@ func exeFixturePath(t *testing.T, name string) string {
 // newRunnableConsole returns a Console with enough physical/virtual memory
 // set up (INIT + VMINIT) and running in kernel mode to exercise imageLoad,
 // matching console_run's own "switch to kernel mode" precondition.
-func newRunnableConsole(t *testing.T) *Console {
+func newRunnableConsole(t testing.TB) *Console {
 	t.Helper()
 	c := New(&bytes.Buffer{})
 	if err := c.Init(4096 * 512); err != nil {

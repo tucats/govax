@@ -384,3 +384,51 @@ Phase 12]` tag).
 
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean.
+
+### 2026-09-15 — Sub-phase 6: performance pass
+
+`internal/console/bench_test.go`'s new `BenchmarkSieve` is this phase's own named
+performance-pass target (`bench.asm`): it calls the fixture's `SIEVE` routine
+directly (bypassing `MAIN`'s own `LIB$PUT_OUTPUT`-style printing, which would run
+into the console-I/O interrupt gap `docs/PHASE-14.md` now tracks) with a fixed
+argument (10000), so it profiles a pure, self-contained, CPU-bound VAX computation
+with a checkable result (R0 = 9973, the largest prime below 10000).
+
+Profiling (`-cpuprofile`/`-memprofile`) found one clear, worth-fixing hotspot:
+`Engine.Step` allocated a fresh `Decoded` (a `[6]Operand`-sized struct) on the heap
+*every single instruction* — `decodeInstruction` returns one by value, but taking
+its address and passing it through `handler` (an indirectly-called function value)
+defeats Go's escape analysis, forcing heap promotion regardless of the value's
+actual lifetime. Confirmed by an allocation profile: 180,891 allocations/op (~1 per
+VAX instruction executed), 57.8 MB/op, both attributed directly to `Step`'s own
+frame. Fixed by giving `Engine` a reusable `decoded Decoded` field, decoding into a
+local and copying it there (a plain, non-escaping struct copy — the field's memory
+already exists as part of the already-heap-resident `*Engine`) instead of taking the
+address of a fresh local each time.
+
+Before/after, `go test ./internal/console -bench BenchmarkSieve -benchmem`
+(`benchtime=200x`, Apple M5 Max):
+
+| | ns/op | B/op | allocs/op |
+| --- | --- | --- | --- |
+| before | 17,539,626 | — (not measured) | — |
+| after | 11,004,645 | 24 | 3 |
+
+Wall-clock time dropped ~37% (17.5ms → 11ms per `sieve(10000)` call) and allocations
+dropped from 180,891/op to 3/op (the 3 remaining are `testing.B`'s own loop
+bookkeeping, not this emulator's). A second post-fix profile confirms the
+improvement is real, not measurement noise: hot samples are now dominated by
+`vm.Memory.Translate`/`LoadByte`/`decodeOperand`/`decodeInstruction` — exactly the
+work you'd expect an instruction-level emulator's fetch-decode path to spend time
+on, with `runtime.duffcopy` (plain struct-copy work, not allocation) the next-largest
+single contributor and no other single frame standing out disproportionately. Not
+chased further: this is normal, proportionate cost for the work being done, not a
+second "obvious hotspot" the way the allocation was.
+
+`Engine` is single-threaded by design (one machine, stepped sequentially — nothing
+in this codebase runs `Step` concurrently on the same `Engine`), so the new shared
+`decoded` field needed no synchronization; confirmed with `go test -race ./...`
+(clean) alongside the full suite.
+
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` and
+  `go test -race ./...` both clean.

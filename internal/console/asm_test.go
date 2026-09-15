@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vax"
 )
 
-func asmFixturePath(t *testing.T, name string) string {
+func asmFixturePath(t testing.TB, name string) string {
 	t.Helper()
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
