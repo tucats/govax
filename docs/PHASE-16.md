@@ -2,19 +2,24 @@
 
 ## Goal
 
-An audit-only phase (per user direction, 2026-09-15: **document, do not implement**)
-cataloguing console commands `reference/eVAX/eVAX/Source/Console/console_show.c`,
-`console_clear.c`, and `console_set.c` implement that this Go port
-(`internal/console/show.go`, `dispatch.go`'s `bindGrammar`, `set.go`) does not yet
-have — so this can be picked up later as fit-and-finish work without re-deriving the
-C-side inventory from scratch. Started from a `SHOW`-only ask (`SHOW PAGE`, `SHOW
-QUANTUM`, `SHOW TB`, `SHOW CALLS`, etc. were named as examples) and broadened, per the
-user's own mid-task direction, to catalogue every other missing console command found
-along the way (`CLEAR`, `SET`, and a few structural gaps like the DCL `/entry=`
-redirect mechanism).
+Catalogue and then implement the console commands
+`reference/eVAX/eVAX/Source/Console/console_show.c`, `console_clear.c`, and
+`console_set.c` support that this Go port (`internal/console/show.go`,
+`dispatch.go`'s `bindGrammar`, `set.go`) doesn't yet — fit-and-finish work
+against the SHOW/CLEAR/SET command surface, plus the handful of other missing
+console mechanisms found along the way. Started from a `SHOW`-only ask (`SHOW
+PAGE`, `SHOW QUANTUM`, `SHOW TB`, `SHOW CALLS`, etc. were named as examples) and
+broadened, per the user's own mid-task direction, to catalogue every other missing
+console command found along the way (`CLEAR`, `SET`, and a few structural gaps
+like the DCL `/entry=` redirect mechanism).
 
-**Status: not started. This document is a planning/inventory placeholder — no code
-changes.**
+**Status: in development.** Started as an audit-only phase (2026-09-15: "document,
+do not implement") — the inventory below was written before any of it was
+implemented, and is kept as originally written (findings, "recommend"s, open
+questions and all) rather than rewritten after the fact, so it still reads as a
+plan. The Progress Log at the bottom is the authoritative record of what has
+actually landed; treat an inventory item above it as done only once the Progress
+Log says so, not because the prose reads as settled.
 
 ## Scope / C source mapping
 
