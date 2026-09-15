@@ -46,6 +46,10 @@ type Table struct {
 	// SetHandler (Phases 04-07 register into it at package init) rather
 	// than at table-generation time — see dispatch.go.
 	handlers map[*Instruction]Handler
+	// byName lazily indexes instructions by mnemonic for ByName; built on
+	// first use rather than at table-generation time, same rationale as
+	// handlers above.
+	byName map[string]*Instruction
 }
 
 func extendedKey(op Opcode) uint16 {
@@ -86,3 +90,29 @@ func (t *Table) Lookup(op Opcode) *Instruction {
 	}
 	return t.extended[extendedKey(op)]
 }
+
+// ByName returns the Instruction with the given mnemonic (matched exactly,
+// case-sensitively — callers such as internal/asm are responsible for any
+// case-folding), or nil if no opcode has that name. Used by the assembler
+// (Phase 11) to translate a source mnemonic into its opcode/operand
+// metadata without duplicating the instruction table.
+func (t *Table) ByName(name string) *Instruction {
+	if t.byName == nil {
+		t.byName = make(map[string]*Instruction)
+		for _, inst := range t.single {
+			if inst != nil {
+				t.byName[inst.Name] = inst
+			}
+		}
+		for _, inst := range t.extended {
+			t.byName[inst.Name] = inst
+		}
+	}
+	return t.byName[name]
+}
+
+// Instructions returns the built-in VAX instruction table, for use by
+// callers outside this package (such as internal/asm's assembler/
+// disassembler) that need to resolve a mnemonic or Opcode to its operand
+// metadata.
+func Instructions() *Table { return instructionTable }

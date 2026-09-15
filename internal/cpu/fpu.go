@@ -62,26 +62,65 @@ func wordSwap(v uint32) uint32 {
 // a rounding carry into an overflow fault), matching fpu_store's explicit
 // rounding block.
 func fpuStore(cpu *vax.CPU, size int, value float64) (uint64, error) {
-	if value == 0 {
+	bits, underflow, overflow := encodeFloatCore(size, value)
+	if underflow {
+		if cpu.PSL().FU() {
+			return 0, &Fault{Code: ExcArithmetic, Args: []uint32{faultFltUnd}}
+		}
 		return 0, nil
 	}
+	if overflow {
+		return 0, &Fault{Code: ExcArithmetic, Args: []uint32{faultFltOvf}}
+	}
+	return bits, nil
+}
 
-	bits := math.Float64bits(value)
-	hi32 := uint32(bits >> 32)
-	lo32 := uint32(bits)
+// EncodeFloat is fpuStore's no-CPU sibling, exported for internal/asm's
+// assembler: it needs to encode F_FLOAT/D_FLOAT literals (.F_FLOAT/
+// .D_FLOAT, and floating "#"/"I^#" immediate operands) with no live CPU/PSL
+// to consult for the underflow trap. Underflow always flushes to zero (as
+// it would with PSL<FU> clear); overflow is reported via the bool return
+// instead of a machine fault.
+func EncodeFloat(size int, value float64) (bits uint64, overflow bool) {
+	bits, _, overflow = encodeFloatCore(size, value)
+	return bits, overflow
+}
+
+// DecodeFloat converts VAX F_floating (size 4) or D_floating (size 8) bits
+// to a float64, exported for internal/asm's disassembler. Unlike fpuLoad, a
+// reserved (malformed) encoding decodes as 0 rather than reporting the
+// reserved-operand fault fpuLoad raises on a live CPU — there's no fault to
+// deliver when just formatting bytes for display, with no CPU at hand.
+func DecodeFloat(bits uint64, size int) float64 {
+	v, err := fpuLoad(bits, size)
+	if err != nil {
+		return 0
+	}
+	return v
+}
+
+// encodeFloatCore is the pure bit-arithmetic half of VAX F_floating/
+// D_floating encoding, shared by fpuStore (which layers on the CPU-trap
+// semantics for an out-of-range result) and EncodeFloat above. bits is only
+// meaningful when both underflow and overflow are false.
+func encodeFloatCore(size int, value float64) (bits uint64, underflow, overflow bool) {
+	if value == 0 {
+		return 0, false, false
+	}
+
+	raw := math.Float64bits(value)
+	hi32 := uint32(raw >> 32)
+	lo32 := uint32(raw)
 
 	sign := hi32 >> 31
 	ieeeExp := int((hi32 >> 20) & 0x7FF)
 	vaxExp := ieeeExp - 1023 + 1
 
 	if vaxExp < -127 {
-		if cpu.PSL().FU() {
-			return 0, &Fault{Code: ExcArithmetic, Args: []uint32{faultFltUnd}}
-		}
-		return 0, nil
+		return 0, true, false
 	}
 	if vaxExp > 127 {
-		return 0, &Fault{Code: ExcArithmetic, Args: []uint32{faultFltOvf}}
+		return 0, false, true
 	}
 
 	biasedExp := uint32(vaxExp + 128)
@@ -96,17 +135,17 @@ func fpuStore(cpu *vax.CPU, size int, value float64) (uint64, error) {
 				biasedExp++
 			}
 			if biasedExp > 255 {
-				return 0, &Fault{Code: ExcArithmetic, Args: []uint32{faultFltOvf}}
+				return 0, false, true
 			}
 		}
 		natural := sign<<31 | biasedExp<<23 | frac23
-		return uint64(wordSwap(natural)), nil
+		return uint64(wordSwap(natural)), false, false
 	}
 
 	natural := sign<<31 | biasedExp<<23 | frac23
 	lowLong := wordSwap(natural)
 	highLong := wordSwap(lo32 << 3)
-	return uint64(lowLong) | uint64(highLong)<<32, nil
+	return uint64(lowLong) | uint64(highLong)<<32, false, false
 }
 
 // fpuLoad converts VAX F_floating (size 4) or D_floating (size 8) bits (in

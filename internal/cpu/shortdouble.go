@@ -14,3 +14,22 @@ var shortDouble = [64]float64{
 	32., 36., 40., 44., 48., 52., 56., 60.,
 	64., 72., 80., 88., 96., 104., 112., 120.,
 }
+
+// ShortFloat returns the short-literal float value at index i (0-63),
+// exported for internal/asm's assembler/disassembler, which encodes and
+// decodes S^#n float literals against this same table rather than a
+// duplicate copy.
+func ShortFloat(i int) float64 { return shortDouble[i] }
+
+// FindShortFloat returns the index of value in the short-literal float
+// table, and whether it was found — the encoding-side counterpart to
+// ShortFloat, used when assembling an "S^#n" (or a bare "#n" small enough
+// to use short-literal form) floating operand.
+func FindShortFloat(value float64) (int, bool) {
+	for i, v := range shortDouble {
+		if v == value {
+			return i, true
+		}
+	}
+	return 0, false
+}

@@ -218,10 +218,8 @@ func init() {
 
 		"SET": cmdSet,
 
-		"ASM":  cmdNotImplemented("ASM", "the inline assembler"),
-		"ASSE": cmdNotImplemented("ASSEMBLE", "the inline assembler"),
-		"DISA": cmdNotImplemented("DISASSEMBLE", "the disassembler"),
-		"DIS":  cmdNotImplemented("DISASSEMBLE", "the disassembler"),
+		"ASM": cmdAssembleNotWired, "ASSE": cmdAssembleNotWired,
+		"DISA": cmdDisassemble, "DIS": cmdDisassemble,
 		"CALL": cmdNotImplemented("CALL", "the RTL microkernel"),
 		"BOOT": cmdNotImplemented("BOOT", "device/RTL support"),
 		"ROM":  cmdNotImplemented("ROM", "device support"),
@@ -232,6 +230,17 @@ func cmdNotImplemented(name, dependency string) fixedHandler {
 	return func(d *Dispatcher, rest string) error {
 		return fmt.Errorf("console: %s requires %s (not yet implemented, see docs/PHASE-08.md)", name, dependency)
 	}
+}
+
+// cmdAssembleNotWired reports ASM/ASSEMBLE as unimplemented. internal/asm
+// (Phase 11) has a complete, tested assembler now — what's missing is
+// wiring it to deposit into a running Console's live vm.Memory (and to
+// merge its symbol table into Console.Symbols) rather than internal/asm's
+// own address-space-agnostic, unrelated-to-any-machine image; see
+// docs/PHASE-11.md's progress log for why that's left as follow-up work
+// rather than done as part of that phase.
+func cmdAssembleNotWired(d *Dispatcher, rest string) error {
+	return fmt.Errorf("console: ASM/ASSEMBLE needs internal/asm wired to live memory deposit (not yet implemented, see docs/PHASE-11.md)")
 }
 
 func cmdInit(d *Dispatcher, rest string) error {
@@ -370,6 +379,31 @@ func cmdDeposit(d *Dispatcher, rest string) error {
 		return err
 	}
 	return d.Console.Deposit("", addr, sz, val)
+}
+
+// cmdDisassemble implements DISASSEMBLE/DISA: an optional [start[ end]]
+// address range (each an expression, matching EXAMINE's own convention),
+// defaulting start to the current deposit address and end to start (a
+// single instruction) — matching console_disasm.c's own argument parsing.
+func cmdDisassemble(d *Dispatcher, rest string) error {
+	rest = strings.TrimSpace(rest)
+	if rest == "" {
+		return d.Console.Disassemble(d.Console.DepositAddr, d.Console.DepositAddr)
+	}
+
+	ev := d.Console.Evaluator()
+	start, remainder, err := ev.Eval(rest)
+	if err != nil {
+		return err
+	}
+	end := start
+	if remainder = strings.TrimSpace(remainder); remainder != "" {
+		end, _, err = ev.Eval(remainder)
+		if err != nil {
+			return err
+		}
+	}
+	return d.Console.Disassemble(start, end)
 }
 
 // cmdSet implements SET's own small syntax: SET RADIX n, SET BREAKPOINT
