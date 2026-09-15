@@ -141,3 +141,30 @@ func (pr Protection) allows(mode vax.AccessMode, access AccessType) bool {
 	}
 	return false
 }
+
+// Allows is the exported form of allows, for callers outside this package
+// (SHOW PAGE, internal/console) that need to report whether a page's
+// protection code would permit a given access without actually performing
+// it.
+func (pr Protection) Allows(mode vax.AccessMode, access AccessType) bool {
+	return pr.allows(mode, access)
+}
+
+// protectionNames matches tracevm's own prot_name[] table (vm.c) — the
+// architected PTE$K_* mnemonic for each of the 16 possible protection
+// codes (code 1 has no architected mnemonic, hence "RESERVED").
+var protectionNames = [16]string{
+	"NONE", "RESERVED", "KW", "KR",
+	"ALL", "EW", "ERKW", "ER",
+	"SW", "SREW", "SRKW", "SR",
+	"URSW", "UREW", "URKW", "UR",
+}
+
+// String returns the protection code's PTE$K_* mnemonic, matching
+// tracevm's own prot_name[] lookup (used by SHOW PAGE).
+func (pr Protection) String() string {
+	if int(pr) < len(protectionNames) {
+		return protectionNames[pr]
+	}
+	return "?"
+}

@@ -98,6 +98,73 @@ func TestTranslateP0LengthViolation(t *testing.T) {
 	assertAccessViolation(t, err, vaddr)
 }
 
+func TestLookupPTEP0RoundTrip(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+
+	vaddr := uint32(2*pageSize) + 0x10
+	region, pteAddr, pte, err := mem.LookupPTE(cpu, vaddr)
+	if err != nil {
+		t.Fatalf("LookupPTE: %v", err)
+	}
+	if region != 0 {
+		t.Errorf("region = %d, want 0 (P0)", region)
+	}
+	wantPTEAddr := cpu.PR(vax.P0BR) + 2*4
+	if pteAddr != wantPTEAddr {
+		t.Errorf("pteAddr = %#08x, want %#08x", pteAddr, wantPTEAddr)
+	}
+	if !pte.Valid() {
+		t.Error("expected the PTE to be valid")
+	}
+	wantPFN := uint32(ptBase>>9) + 2
+	if pte.PFN() != wantPFN {
+		t.Errorf("PFN = %#x, want %#x", pte.PFN(), wantPFN)
+	}
+}
+
+// LookupPTE must report an invalid or protection-denying PTE's raw
+// contents rather than erroring, unlike Translate -- SHOW PAGE's whole
+// point is to inspect pages Translate itself would refuse to use.
+func TestLookupPTEReportsInvalidPageWithoutError(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+
+	vaddr := uint32(1 * pageSize)
+	pteAddr := uint32(p0PTPhys) + 1*4 // physical: see newTranslateFixture's layout comment
+	raw, err := mem.readPhysLongword(pteAddr)
+	if err != nil {
+		t.Fatalf("readPhysLongword: %v", err)
+	}
+	pte := PTE(raw)
+	pte.SetValid(false)
+	if err := mem.writePhysLongword(pteAddr, uint32(pte)); err != nil {
+		t.Fatalf("writePhysLongword: %v", err)
+	}
+
+	_, _, got, err := mem.LookupPTE(cpu, vaddr)
+	if err != nil {
+		t.Fatalf("LookupPTE: %v", err)
+	}
+	if got.Valid() {
+		t.Error("expected LookupPTE to report the invalid bit as-is")
+	}
+}
+
+func TestLookupPTEMAPENDisabledFaults(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+	cpu.SetPR(vax.MAPEN, 0)
+
+	_, _, _, err := mem.LookupPTE(cpu, 0x1000)
+	assertAccessViolation(t, err, 0x1000)
+}
+
+func TestLookupPTELengthViolation(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+
+	vaddr := uint32(4 * pageSize) // beyond P0LR == 3
+	_, _, _, err := mem.LookupPTE(cpu, vaddr)
+	assertAccessViolation(t, err, vaddr)
+}
+
 func TestTranslateP1LengthViolation(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 

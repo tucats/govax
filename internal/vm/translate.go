@@ -146,7 +146,7 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 	if err != nil {
 		return 0, err
 	}
-	
+
 	pte := PTE(raw)
 
 	if !pte.Protection().allows(cpu.PSL().CurMod(), access) {
@@ -165,4 +165,77 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 	}
 
 	return pte.PFN()<<9 + byteOffset, nil
+}
+
+// LookupPTE walks the page table for a virtual address the same way
+// Translate does (region/page selection, P0/P1/S0 base-length-register
+// check, recursive P0/P1 PTE-address translation), but performs no access
+// itself: no protection or valid-bit check, no modify-bit update. For
+// read-only diagnostic use (SHOW PAGE, console_show.c's tracevm) that
+// wants to report a PTE's raw contents even for a page that wouldn't
+// currently be a legal access.
+//
+// Returns the region index (0=P0, 1=P1, 2=S0) and the PTE's own address
+// exactly as tracevm's own "PTE Address" line reports it (a virtual
+// address for P0/P1, already-physical for S0, matching Translate's own
+// pteVirtAddr before recursion), plus the PTE itself. Reports a
+// *TranslationFault (AccessViolation) if MAPEN is off (there is no page
+// table to walk) or the page number is outside the region's base/length
+// registers, matching tracevm's own length-violation check.
+func (m *Memory) LookupPTE(cpu *vax.CPU, addr uint32) (region int, pteAddr uint32, pte PTE, err error) {
+	if cpu.PR(vax.MAPEN) == 0 {
+		return 0, 0, 0, accessViolation(addr)
+	}
+
+	region = int((addr >> 30) & 0x3)
+	page := (addr & 0x3FFFFFFF) >> 9
+
+	var (
+		pteVirtAddr  uint32
+		pteRecursive bool
+	)
+
+	switch region {
+	case 0:
+		if page > cpu.PR(vax.P0LR) {
+			return region, 0, 0, accessViolation(addr)
+		}
+
+		pteVirtAddr = cpu.PR(vax.P0BR) + page*4
+		pteRecursive = true
+
+	case 1:
+		if page <= cpu.PR(vax.P1LR) {
+			return region, 0, 0, accessViolation(addr)
+		}
+
+		pteVirtAddr = cpu.PR(vax.P1BR) + page*4
+		pteRecursive = true
+
+	case 2:
+		if page > cpu.PR(vax.SLR) {
+			return region, 0, 0, accessViolation(addr)
+		}
+
+		pteVirtAddr = cpu.PR(vax.SBR) + page*4
+		pteRecursive = false
+
+	default:
+		return region, 0, 0, accessViolation(addr)
+	}
+
+	physPTEAddr := pteVirtAddr
+	if pteRecursive {
+		physPTEAddr, err = m.Translate(cpu, pteVirtAddr, AccessRead)
+		if err != nil {
+			return region, pteVirtAddr, 0, err
+		}
+	}
+
+	raw, err := m.readPhysLongword(physPTEAddr)
+	if err != nil {
+		return region, pteVirtAddr, 0, err
+	}
+
+	return region, pteVirtAddr, PTE(raw), nil
 }
