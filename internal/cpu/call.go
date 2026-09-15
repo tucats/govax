@@ -23,15 +23,18 @@ func init() {
 // own emul_call, which dispatches on opcode->function internally rather than
 // having two separate routines).
 //
-// CALLG's arglist operand (operand 0) is table-declared AccessAddress, so a
-// register-mode arglist already faults a reserved-addressing-mode exception
-// at decode time (internal/cpu/operand.go's global OP_AD-register-mode fix
-// from Phase 03/04). emul_call.c's own `is_register[0]` branch -- which
-// treats a register-mode arglist as legal and uses the register's *value* as
-// the arglist address -- is therefore dead in this port: the manual's own
-// "arglist.ab" (access type A) notation forbids register mode the same way
-// MOVAx/PUSHAx's address operands do, so this isn't a behavior loss, just
-// the same Phase 03/04 fix applying here too.
+// CALLG's arglist operand (operand 0, table-declared AccessAddress) accepts
+// Register mode, using the register's own *value* as the arglist address --
+// matching emul_call.c's own `is_register[0]` branch. A Phase 04 change
+// briefly made decode fault this generically for every OP_AD/OP_VA
+// consumer, reasoning the manual's "arglist.ab" (access type A) notation
+// forbids register mode and the C source's own workaround was therefore
+// dead code; Phase 12's first real end-to-end run of kernel.asm (this
+// project's own hand-written microkernel) found that its CHMK dispatcher's
+// `callg ap, (r0)` genuinely depends on exactly this: a tail-call that
+// reuses the caller's own AP register value as the new arglist address
+// without redundantly rebuilding it in memory. Reverted per user direction
+// (2026-09-15); see operand.go's doc comment and docs/DEVIATIONS.md.
 //
 // Unlike emul_call.c, this port implements the manual's full PSW-effect
 // description rather than replicating the C source's gap: the entry mask's
@@ -56,6 +59,8 @@ func emulCall(e *Engine, d *Decoded) error {
 			return err
 		}
 		newAP = sp
+	} else if d.Operands[0].Kind == OperandRegister {
+		newAP = e.cpu.GPR(d.Operands[0].Reg)
 	} else {
 		newAP = d.Operands[0].Addr
 	}

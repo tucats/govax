@@ -108,7 +108,34 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				return err
 			}
 			a.deposit++
-			return a.assembleOperandRec(c, inst, opIndex, true)
+			if err := a.assembleOperandRec(c, inst, opIndex, true); err != nil {
+				return err
+			}
+			// The recursive call above parses the base ("(Rn)", "@#addr",
+			// a displacement mode, ...); most of its own code paths
+			// return as soon as the base itself is fully consumed,
+			// leaving the trailing "[Rx]" text this function's own
+			// lookahead already turned into a byte still unconsumed in
+			// the cursor. Skip over it here, once, regardless of which
+			// base-mode branch the recursive call actually took, rather
+			// than teaching each one individually to check for it (the
+			// bug this replaces: only the few branches that happened to
+			// fall through to the "already at '['" special case below
+			// consumed it; every other base mode -- e.g. "(Rn)[Rx]",
+			// exercised for real by testdata/asm/kernel.asm's own
+			// EXE$DISPATCH -- silently left it in place, corrupting
+			// whatever operand parsing came next).
+			c.skipBlanks()
+			if c.peek() == '[' {
+				c.next()
+				for !c.atEnd() && c.peek() != ']' && c.peek() != ',' {
+					c.next()
+				}
+				if c.peek() == ']' {
+					c.next()
+				}
+			}
+			return nil
 		}
 	}
 

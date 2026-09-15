@@ -81,6 +81,24 @@ func TestAddressingModes(t *testing.T) {
 	}
 }
 
+// TestIndexedModeFollowedByAnotherOperand hand-verifies a regression this
+// project's own Phase 12 integration testing found: assembleOperandRec's
+// index-prefix lookahead (an operand written as "BASE[Rx]") writes the
+// index byte, then recurses to parse BASE alone -- but several BASE-mode
+// branches (register deferred, "(Rn)", among them) returned as soon as the
+// base itself was consumed, without checking for and skipping the trailing
+// "[Rx]" text still sitting in the cursor. For a single-operand instruction
+// (TestAddressingModes' own "indexed" case, CLRL 4(R2)[R3]) there's nothing
+// after to corrupt, so this was invisible; testdata/asm/kernel.asm's own
+// EXE$DISPATCH ("movl (r3)[r2], r0", a real, working microkernel routine)
+// is a genuine multi-operand instance that surfaced it: the leftover
+// "[r2]" text got reinterpreted as the start of the destination operand,
+// corrupting the whole instruction's encoding.
+func TestIndexedModeFollowedByAnotherOperand(t *testing.T) {
+	got := assembleBytes(t, "MOVL (R3)[R2], R0")
+	requireBytes(t, got, 0xD0, 0x42, 0x63, 0x50)
+}
+
 // TestInsv hand-verifies insv.asm's own instructions byte-for-byte against
 // the ISA manual, as docs/PHASE-11.md calls for by name.
 func TestInsv(t *testing.T) {

@@ -46,6 +46,23 @@ func TestEmulMovaRegisterModeFaults(t *testing.T) {
 	}
 }
 
+func TestEmulPushaRegisterModeFaults(t *testing.T) {
+	e := newEngine()
+	cpu := e.cpu
+	cpu.SetGPR(vax.PC, base)
+	putBytes(t, cpu, e.mem, base, 0xDF, regMode(vax.R1)) // PUSHAL R1
+	cpu.SetGPR(vax.SP, 0x7000)
+	cpu.SetPR(vax.KSP, 0x7000)
+	putVector(t, e, ExcReservedAddr, 0x300, 0)
+
+	if err := e.Step(); err != nil {
+		t.Fatalf("Step: %v (fault should be handled, not propagated)", err)
+	}
+	if cpu.GPR(vax.PC) != 0x300 {
+		t.Errorf("PC = %#x, want 0x300 (fault vector)", cpu.GPR(vax.PC))
+	}
+}
+
 func TestEmulPushal(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)

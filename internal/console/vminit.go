@@ -199,6 +199,18 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 
 	c.CPU.SetPR(vax.SCBB, paddr)
 
+	// Reserve a dedicated page for the SCB itself -- matching
+	// console_vminit_dcl's own treatment (a full page, mirrored by its
+	// SCBB$BASE convenience symbol), and, more importantly, unlike
+	// CONSOLE$SCRATCH/the shim page above, this address was previously
+	// never actually advanced past: SCBB pointed at "whatever comes next"
+	// with nothing reserving it. That was harmless before Phase 12 (nothing
+	// yet computed "the first free S0 address" from it), but a live ASM
+	// session depositing kernel.asm's own code starting exactly there would
+	// silently overwrite the .SCB vector table it had just written a few
+	// bytes into the same page.
+	paddr += 512
+
 	// The first S0 virtual address past every VMINIT-reserved region (page
 	// tables, privileged stacks, CONSOLE$SCRATCH, the SHIM$ stub page, and
 	// the SCB) -- where a live ASM session's own S0 content must start

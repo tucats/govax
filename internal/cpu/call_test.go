@@ -292,27 +292,28 @@ func TestEmulCallgArglistIsOperandAddress(t *testing.T) {
 	}
 }
 
-// TestEmulCallgRegisterArglistFaults confirms that a register-mode arglist
-// operand faults at decode time (internal/cpu/operand.go's OP_AD-register
-// fix), rather than emul_call.c's own is_register[0] special case (which
-// would use the register's value as the arglist address -- see call.go's
-// doc comment on why that's not replicated).
-func TestEmulCallgRegisterArglistFaults(t *testing.T) {
-	e := newEngine()
-	cpu := e.cpu
+// TestEmulCallgRegisterArglistUsesRegisterValue confirms that a
+// register-mode arglist operand is legal and uses the register's own
+// *value* as the new AP -- emul_call.c's own is_register[0] special case,
+// the real tail-call idiom kernel.asm's CHMK dispatcher relies on
+// (`callg ap, (r0)`, reusing the caller's own AP value as the new arglist
+// address rather than rebuilding it in memory). See call.go's doc comment.
+func TestEmulCallgRegisterArglistUsesRegisterValue(t *testing.T) {
+	cpu, mem := fixture()
+	e := NewEngine(cpu, mem)
 
-	cpu.SetGPR(vax.SP, 0x7000)
-	cpu.SetPR(vax.KSP, 0x7000)
+	cpu.SetGPR(vax.SP, 0x9000)
 	cpu.SetGPR(vax.R1, 0x3000)
-	putVector(t, e, ExcReservedAddr, 0x300, 0)
+	putBytes(t, cpu, mem, 0x2000, 0x00, 0x00) // empty entry mask
 
-	cpu.SetGPR(vax.PC, base)
-	putBytes(t, cpu, e.mem, base, 0xFA, regMode(vax.R1), 0x9F, 0x00, 0x20, 0x00, 0x00)
-	if err := e.Step(); err != nil {
-		t.Fatalf("Step: %v (fault should be handled, not propagated)", err)
+	// CALLG R1, @#0x2000
+	stepInstruction(t, e, 0xFA, regMode(vax.R1), 0x9F, 0x00, 0x20, 0x00, 0x00)
+
+	if got := cpu.GPR(vax.AP); got != 0x3000 {
+		t.Errorf("AP = %#x, want 0x3000 (R1's own value)", got)
 	}
-	if got := cpu.GPR(vax.PC); got != 0x300 {
-		t.Errorf("PC = %#x, want 0x300 (reserved-addressing-mode fault vector)", got)
+	if got := cpu.GPR(vax.PC); got != 0x2002 {
+		t.Errorf("PC = %#x, want 0x2002", got)
 	}
 }
 

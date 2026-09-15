@@ -117,3 +117,108 @@ regression suite, and do a final polish pass before considering the port complet
   fully clear in Phase 13.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test
   ./...` all clean.
+
+### 2026-09-15 — Sub-phase 2: chasing kernel.asm+hello.asm to (nearly) completion
+
+Sub-phase 1's own noted follow-up (`kernel.asm` then `hello.asm` faulting with a
+garbage-looking `vm: no physical storage at 0xfffffffc`) turned out to be five
+separate, real bugs stacked on top of each other — this microkernel had never
+actually been assembled into a live address space and run before, so nothing in
+Phases 01-11 could have caught any of them. Chased one at a time, each fix exposing
+the next:
+
+1. **`Console.Assemble`'s S0 origin collided with VMINIT's own S0 page table.**
+   `internal/asm`'s default S0 origin (0x80000000) is only meaningful for a
+   standalone assembly with no live VM backing it; a real VMINIT'd console's S0
+   virtual page 0 is identity-mapped to the *physical* page the S0 page table itself
+   occupies, so depositing `kernel.asm`'s own code starting there corrupted the
+   table it was mapped through. Fixed with `asm.Assembler.SetS0Origin`/`Origin`
+   (new) and `Console.s0Free` (`vminit.go`, the first free S0 address past every
+   VMINIT-reserved region), used when `Console.Assemble` lazily creates its
+   persistent session.
+2. **VMINIT never actually reserved a page for the SCB.** Unlike
+   `CONSOLE$SCRATCH`/the shim page (each explicitly `paddr += 512`), `SCBB` was set
+   to `paddr` with nothing advancing past it — harmless before this phase (nothing
+   yet computed "the next free S0 address" from it), but once fix 1 introduced
+   exactly that, kernel.asm's own code (deposited starting there) silently
+   overwrote its own `.SCB` vector table a few bytes in. Fixed by reserving a
+   dedicated page for the SCB, matching `CONSOLE$SCRATCH`/the shim page's own
+   treatment (and `console_vminit_dcl`'s real, dedicated-page SCB layout).
+3. **`.SCB`'s poke never reached live memory at all.** `pseudoSCB` writes a
+   longword directly at `0x80000000+SCBB+code` — deliberately *below* where
+   `Console.Assemble`'s normal `[S0Origin, S0End)` copy range starts (kernel.asm's
+   own code goes *after* the SCB page, not inside it) — so it stayed in the
+   assembler's own private image buffer forever, never reaching `c.Mem`. This is
+   the exact class of bug the user flagged mid-session ("the assembler's workspace
+   memory and the real memory" possibly diverging) — checked for other instances
+   (`.VECTOR`/`.PSL`/`.MODE`/`.PTE`/`.CONSOLE` are recognized-but-unimplemented
+   no-ops per `pseudo.go`'s own doc comment, and none are used by any current
+   fixture including kernel.asm; `.BASE`/`.ALIGN`/`.REGION` all move the ordinary,
+   tracked deposit counter rather than poking an untracked address) — `.SCB` was
+   the only real instance. Fixed by also depositing the SCB page's current content
+   on every `Assemble` call (idempotent).
+4. **CHMK/CHME/CHMS/CHMU had no execute-time handler at all.** The generated
+   instruction table has always had correct rows for all four opcodes (0xBC-0xBF,
+   matching `instruction_table.h` exactly — a red herring early on, since a
+   sloppy grep match briefly suggested a table transcription bug that further
+   inspection ruled out), but no phase ever registered a `Handler` for them, so
+   every real CHMK — i.e. every SYS$/LIB$ call this whole project's RTL layer is
+   built on — silently fell through to `unimplementedHandler` (a reserved-
+   instruction fault) the instant real code exercised one; nothing before this
+   phase ever ran a real CHMK. `internal/cpu/changemode.go`'s new `emulChmx` ports
+   `emul_chmx` (raise the corresponding synchronous exception with the operand's
+   sign-extended code as its one signal argument); the manual's own "refuse on the
+   interrupt stack" and 12-byte new-stack probe aren't ported (no current fixture
+   exercises either).
+5. **`internal/cpu/operand.go`'s Phase 04 Register-mode reject for `AccessAddress`/
+   `AccessVarField` operands broke CALLG's own legitimate use of Register mode**
+   (kernel.asm's CHMK dispatcher does `callg ap, (r0)`, a real tail-call idiom) —
+   see `docs/DEVIATIONS.md`'s "Register mode used where OP_AD/OP_VA access is
+   required" entry for the full story and revert. Found only because fix 4 let
+   execution reach this instruction for the first time.
+6. **`internal/asm`'s own indexed-addressing-mode encoder corrupted the operand
+   after an indexed one.** `assembleOperandRec`'s index-prefix lookahead ("BASE[Rx]")
+   writes the index byte, then recurses to parse BASE alone — but the `(Rn)`
+   register-deferred branch (and, structurally, several sibling branches) returned
+   as soon as the base itself was consumed, without skipping the trailing "[Rx]"
+   text still sitting in the cursor. Invisible for a single-operand instruction
+   (`TestAddressingModes`' own "indexed" case only ever exercised this on `CLRL`,
+   which has nothing after to corrupt); kernel.asm's real, working
+   `EXE$DISPATCH` (`movl (r3)[r2], r0`) is a genuine two-operand instance — the
+   leftover `[r2]` got reinterpreted as the start of the destination operand,
+   producing a garbled multi-byte encoding that decoded as a nonsense instruction
+   at runtime (an early, confusing symptom: a wild PC jump into never-assembled
+   memory, chased at length before the real cause was found). Fixed by consuming
+   the leftover `[Rx]` once, at the single call site that recurses with
+   `parsingIndex=true`, rather than teaching each base-mode branch individually.
+   `internal/asm/operand_test.go`'s new `TestIndexedModeFollowedByAnotherOperand`
+   regresses this directly.
+
+With all six fixed, `kernel.asm` then `hello.asm` (in one ASM session, matching
+`vax.init`'s own boot sequence) now runs correctly through `main` →
+`LIB$PUT_OUTPUT` → `LIB$PUT_ONE` → a real CHMK 0 (`EXE$PUT_CONSOLE`) dispatch,
+successfully writing the first byte of "Hello world" — as far as this port's
+current I/O modeling goes. It doesn't complete: `EXE$$PUT_CONSOLE`'s own design
+clears a memory flag (`exe$tx_ready`), does `MTPR` to TXDB, then spin-waits on
+that same flag, expecting the `EXC$CONWRITE` interrupt kernel.asm's own ISR
+(`exe$tx`) handles to set it back to 1. `internal/cpu/procreg.go`'s `setPrivReg`
+TXCS/TXDB cases are a plain register store with no device or interrupt-delivery
+modeling (its own doc comment already flagged this as deferred to Phase 09, which
+evidently never actually implemented it) — so `exe$tx_ready` is only ever cleared,
+never reset, and the byte after the first spins forever. This is exactly the
+mechanism the user asked about mid-session, suspecting "the byte-at-a-time VAX
+hardware console... involving process-privilege registers and a count down timer"
+— confirmed correct in spirit (it is a console-hardware simulation gap causing
+what looks like an infinite loop), though the actual missing piece is interrupt
+*delivery* (`vax.interrupt_pending`/`vax.iqueue` admission, checked between
+instructions in `vax.c`'s main loop — a real, moderately-sized feature with no Go
+port yet at all) rather than a timer specifically; the reference's own TXCS/TXDB
+handling has no delay of any kind ("the RDY bit is always set; we never have to
+wait for a console transmit to complete"). Tracked as a genuine, well-understood
+Phase 09 gap (device/interrupt modeling) rather than chased further as part of
+this phase — `internal/console/asm_test.go`'s `TestAssemble_kernelThenHelloRunsBounded`
+documents this explicitly and asserts the current (bounded, non-panicking) outcome
+rather than a false "it works" claim.
+
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean.

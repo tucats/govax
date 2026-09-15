@@ -256,13 +256,47 @@ _None yet._
   check would silently accept an illegal encoding.
 - **What**: per user direction (explicitly requested when starting Phase 04), this
   should fault, and generally rather than per-handler.
-- **Status**: fixed in Go, at decode time. `decodeOperand`'s register-mode fast path
-  (`internal/cpu/operand.go`) now returns `&Fault{Code: ExcReservedAddr}` for any
+- **Status (Phase 04)**: fixed in Go, at decode time. `decodeOperand`'s register-mode
+  fast path (`internal/cpu/operand.go`) returned `&Fault{Code: ExcReservedAddr}` for any
   `AccessAddress`/`AccessVarField` operand that resolves to Register mode — one fix
   covering every current and future `OP_AD`/`OP_VA` consumer (Phase 04's
-  `MOVAx`/`PUSHAx`/`JMP`/`JSB` now, Phase 06's bitfield `OP_VA` operands later) rather
-  than a check repeated in each handler. Verified by `internal/cpu/operand_test.go`'s
-  `TestDecodeOperandAccessAddressRejectsRegisterMode`.
+  `MOVAx`/`PUSHAx`/`JMP`/`JSB` then, Phase 06's bitfield `OP_VA` operands later) rather
+  than a check repeated in each handler.
+- **[Phase 12] reverted**: this "fix" was itself wrong. Phase 12's first real
+  end-to-end run of `testdata/asm/kernel.asm` (this project's own hand-written
+  microkernel, assembled and executed for real via the new `ASM`/`CALL` console
+  commands — never previously exercised this way) found that its CHMK dispatcher's
+  `callg ap, (r0)` genuinely depends on `emul_call.c`'s own `is_register[0]` branch
+  (`new_ap = vax.reg[opcode->regnum[0]]` — using the register's own *value* as the
+  arglist address, a real tail-call idiom: the dispatcher reuses its caller's own AP
+  register directly rather than rebuilding an arglist in memory) — confirmed not just
+  by reading the C source but by the CPU jumping to a wild, garbage PC once decode's
+  blanket reject was defeated by a *different* bug (see the assembler indexed-mode
+  finding below) and this one was reached. `internal/cpu/bitfield.go`'s `loadField`/
+  `storeField` were *also* already written expecting a register-mode base to be legal
+  (a real, defined VAX feature for that instruction family — the field spans adjacent
+  registers rather than memory — not a reserved encoding at all), and were silently
+  unreachable in that shape for the same reason. Given two of the three affected
+  consumers turned out to need the old behavior for real, reverted per user direction
+  (2026-09-15) rather than narrowed to just CALLG: decode
+  (`internal/cpu/operand.go`) no longer rejects Register mode for `AccessAddress`/
+  `AccessVarField` at all (matching `decode_operand.c` exactly — it never did either).
+  `MOVAx`/`PUSHAx` (`internal/cpu/mova.go`) now self-check `Operand.Kind ==
+  OperandRegister` and fault, mirroring `emul_mova.c`/`emul_push.c`'s own
+  `is_register[0]` checks; `CALLS`/`CALLG` (`internal/cpu/call.go`'s `emulCall`) uses
+  the register's value as the new AP when its arglist operand is Register mode,
+  mirroring `emul_call.c`. `JMP`/`JSB` never had an `is_register` check in the C source
+  either (nor a meaningful fallback — `VAXaddr[n]` is simply left stale/uninitialized
+  for that case), so they're deliberately left with no check here too, matching that
+  gap rather than inventing a fallback the reference never had; no current fixture
+  exercises a register-mode JMP/JSB operand. Verified by
+  `internal/cpu/operand_test.go`'s `TestDecodeOperandAccessAddressAllowsRegisterMode`
+  (decode no longer faults), `TestEmulMovaRegisterModeFaults`/
+  `TestEmulPushaRegisterModeFaults` (mova_test.go, self-check still faults), and
+  `TestEmulCallgRegisterArglistUsesRegisterValue` (call_test.go, the restored
+  behavior) — plus, end to end, `internal/console/asm_test.go`'s
+  `TestAssemble_kernelThenHelloRunsBounded`, which now gets past this exact
+  instruction instead of faulting there.
 
 ### [Phase 04] `emul_movb_negated`'s stray extra `vax.pslw.v = 0` discards MNEGB's overflow flag
 

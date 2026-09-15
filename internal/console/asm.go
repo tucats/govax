@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/asm"
+	"github.com/tucats/govax/internal/vax"
 )
 
 // Assemble implements the batch form of the ASM <filename> command
@@ -53,6 +54,14 @@ func (c *Console) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 		// origin (0x80000000) collides with this live VM's own S0 page
 		// table, which is mapped starting at that exact virtual address.
 		c.asmSession.SetS0Origin(c.s0Free)
+		// .SCB/.VECTOR compute their target address from the assembler's
+		// own configured SCBB (pseudoSCB writes to 0x80000000+scbb+code),
+		// which must match the live SCBB privileged register VMINIT set --
+		// otherwise a kernel.asm .SCB entry lands at a physical address
+		// the CPU's own exception dispatch never actually consults,
+		// leaving every real exception vector reading whatever garbage
+		// happens to be at the live SCBB instead.
+		c.asmSession.SetSCBB(c.CPU.PR(vax.SCBB))
 	}
 	a := c.asmSession
 
@@ -73,6 +82,20 @@ func (c *Console) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 	}
 	if s0 := a.BytesRange(a.S0Origin(), a.S0End()); len(s0) > 0 {
 		if err := c.storeBytes(a.S0Origin(), s0); err != nil {
+			return 0, false, fmt.Errorf("console: depositing %s: %w", path, err)
+		}
+	}
+	// .SCB/.VECTOR poke a longword directly at 0x80000000+SCBB+code (see
+	// pseudoSCB), a fixed address in VMINIT's own dedicated SCB page --
+	// deliberately *below* S0Origin (kernel.asm's own code starts past the
+	// SCB page, not inside it), so it falls outside the BytesRange above
+	// and would otherwise sit forever in the assembler's own image buffer,
+	// never reaching live memory. Depositing this page on every Assemble
+	// call is harmless (idempotent) even for a file with no .SCB of its
+	// own.
+	scbb := 0x80000000 + c.CPU.PR(vax.SCBB)
+	if scb := a.BytesRange(scbb, scbb+512); len(scb) > 0 {
+		if err := c.storeBytes(scbb, scb); err != nil {
 			return 0, false, fmt.Errorf("console: depositing %s: %w", path, err)
 		}
 	}

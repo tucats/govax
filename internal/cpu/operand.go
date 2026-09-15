@@ -127,17 +127,27 @@ func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, 
 		// common addressing mode.
 		op.Kind = OperandRegister
 		op.Reg = reg
-		if access == AccessAddress || access == AccessVarField {
-			// A register has no VAX address, so an OP_AD/OP_VA operand
-			// (e.g. MOVAL/PUSHAL/JMP's destination, a bitfield base)
-			// resolving to Register mode is a reserved addressing mode
-			// fault. decode_operand.c never checks this generically — only
-			// a few individual handlers work around it themselves
-			// (emul_mova.c, half of emul_push.c) — so this is fixed here,
-			// once, for every OP_AD/OP_VA consumer at once. See
-			// docs/DEVIATIONS.md.
-			return op, &Fault{Code: ExcReservedAddr}
-		}
+		// A register has no VAX address, so an OP_AD/OP_VA operand (e.g.
+		// MOVAL/PUSHAL's destination, a bitfield base) resolving to
+		// Register mode has no address to report here -- but, per
+		// decode_operand.c itself, decode does NOT fault this generically:
+		// only a few individual handlers work around it themselves
+		// (emul_mova.c and half of emul_push.c self-check and fault;
+		// emul_call.c's CALLG/CALLS arglist operand instead uses the
+		// register's own value as the address). A Phase 04 change made
+		// this fault here, uniformly, for every OP_AD/OP_VA consumer at
+		// once -- but Phase 12's first real end-to-end run of kernel.asm
+		// (this project's own hand-written microkernel) found that its
+		// CHMK dispatcher's `callg ap, (r0)` genuinely depends on the
+		// old, per-handler behavior (reusing the caller's AP register
+		// value as the new arglist address, a real tail-call idiom), and
+		// bitfield.go's loadField/storeField already implement the
+		// analogous OperandRegister case for a register-mode bitfield
+		// base (a real, defined VAX feature -- the field spans adjacent
+		// registers rather than memory) that this fault made unreachable.
+		// Reverted per user direction (2026-09-15) rather than narrowed to
+		// just CALLG, since neither of those other two consumers ever had
+		// this check in the C source either. See docs/DEVIATIONS.md.
 		return op, nil
 
 	case mode < 4: // Short literal: S^#n (integer) or S^#f (float).

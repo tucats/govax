@@ -522,20 +522,26 @@ func TestDecodeOperandAccessBranch(t *testing.T) {
 	}
 }
 
-func TestDecodeOperandAccessAddressRejectsRegisterMode(t *testing.T) {
+// TestDecodeOperandAccessAddressAllowsRegisterMode checks that decode
+// itself never faults an OP_AD/OP_VA operand resolving to Register mode
+// (matching decode_operand.c, which has no such generic check) -- a Phase
+// 04 change briefly added one, but Phase 12 reverted it once kernel.asm's
+// own CHMK dispatcher (`callg ap, (r0)`) turned out to depend on the old,
+// per-handler behavior; see operand.go's doc comment. Individual consumers
+// that need to reject Register mode (MOVAx/PUSHAx) self-check
+// Operand.Kind now instead.
+func TestDecodeOperandAccessAddressAllowsRegisterMode(t *testing.T) {
 	for _, access := range []AccessKind{AccessAddress, AccessVarField} {
 		cpu, mem := fixture()
 		putBytes(t, cpu, mem, base, 0x53) // mode 5, reg 3 -- Register direct
 
 		pc := uint32(base)
 		op, err := decodeOperand(cpu, mem, &pc, access, 4, ShortLiteralInt, false)
-
-		var f *Fault
-		if !errors.As(err, &f) || f.Code != ExcReservedAddr {
-			t.Fatalf("access=%v: decodeOperand err = %v, want *Fault{Code: ExcReservedAddr}", access, err)
+		if err != nil {
+			t.Fatalf("access=%v: decodeOperand: %v", access, err)
 		}
 		if op.Kind != OperandRegister || op.Reg != vax.R3 {
-			t.Errorf("access=%v: op = %+v, want Kind=Register Reg=R3 (still populated alongside the fault)", access, op)
+			t.Errorf("access=%v: op = %+v, want Kind=Register Reg=R3", access, op)
 		}
 	}
 }

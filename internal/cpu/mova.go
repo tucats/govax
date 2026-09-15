@@ -29,13 +29,19 @@ func init() {
 // size).
 //
 // Register mode for the source -- an address-only (OP_AD) operand, and a
-// register has no VAX address -- already faults a reserved-addressing-mode
-// exception at decode time (internal/cpu/operand.go), replacing
-// emul_mova.c's own `is_register[0]` check; see docs/DEVIATIONS.md.
+// register has no VAX address -- self-checks and faults a reserved-
+// addressing-mode exception here, matching emul_mova.c's own
+// `is_register[0]` check: decode itself doesn't reject Register mode for an
+// OP_AD/OP_VA operand generically (see operand.go's doc comment; a
+// generic decode-time reject briefly existed but broke CALLG's own
+// legitimate use of Register mode, so it was reverted).
 //
 // MOVAx doesn't touch any condition codes: emul_mova.c never writes
 // vax.pslw, matching the manual (MOVA isn't listed as affecting N/Z/V/C).
 func emulMova(e *Engine, d *Decoded) error {
+	if d.Operands[0].Kind == OperandRegister {
+		return &Fault{Code: ExcReservedAddr}
+	}
 	return d.Operands[1].Store(e.cpu, e.mem, uint64(d.Operands[0].Addr))
 }
 
@@ -44,6 +50,9 @@ func emulMova(e *Engine, d *Decoded) error {
 // (`opcode->function != 0xDD`). Same register-mode fault and
 // no-condition-codes behavior as MOVAx.
 func emulPusha(e *Engine, d *Decoded) error {
+	if d.Operands[0].Kind == OperandRegister {
+		return &Fault{Code: ExcReservedAddr}
+	}
 	return push(e, d.Operands[0].Addr)
 }
 
