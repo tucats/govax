@@ -3,128 +3,202 @@
 ## Goal
 
 Port the interrupt *admission and delivery* mechanism `vax.c`'s main loop and
-`interrupt.c` implement — the piece nothing before this phase has touched — and use
-it to give the interval timer (ICCS/NICR/ICR) and the console TTY (TXCS/TXDB/RXCS/
-RXDB) real, working interrupts instead of the plain-register-store stand-in
-`internal/cpu/procreg.go`'s `setPrivReg` currently falls back to.
-
-**Status: not started. This document is a planning placeholder**, written during
-Phase 12's own integration work once running `testdata/asm/kernel.asm` for real (for
-the first time, via Phase 12's new `ASM`/`CALL` console commands) found that its
-`EXE$$PUT_CONSOLE`/`LIB$GET_INPUT` routines spin forever waiting for an
-`EXC$CONWRITE`/`EXC$CONREAD` interrupt this port has never delivered — see
-`docs/PHASE-12.md`'s sub-phase 2 progress log and
-`internal/console/asm_test.go`'s `TestAssemble_kernelThenHelloRunsBounded`. Recorded
-now, per the user's own request while that finding was still being chased, so the
-shape of the problem doesn't have to be rediscovered when this phase actually starts.
+`interrupt.c` implement, and use it to give the interval timer (ICCS/NICR/ICR)
+and the console TTY (TXCS/TXDB/RXCS/RXDB) real, working interrupts instead of
+the plain-register-store stand-in `internal/cpu/procreg.go`'s `setPrivReg`
+fell back to through Phase 12. Key deliverable: assembled code can use
+`LIB$PUT_OUTPUT` to print a multibyte string to the console without hanging
+or crashing — the exact gap `docs/PHASE-12.md`'s own progress log and
+`internal/console/asm_test.go`'s `TestAssemble_kernelThenHelloRunsBounded`
+found and left recorded for this phase.
 
 ## Why this wasn't caught by Phases 03/07/09
 
-Phase 07 ("privileged & misc instructions") and Phase 09 ("I/O & device support")
-both predate any code path that actually *executes* a CHMK-driven RTL routine —
-Phase 10's own RTL services are unit-tested by constructing an argument scenario
-directly in `vm.Memory` and invoking the relevant registry entry (see
-`docs/PHASE-13.md`'s notes on why Phase 10 didn't need a working image loader), never
-by running real VAX code that polls a ready-bit in a loop. `internal/cpu/procreg.go`'s
-`setPrivReg` already has an honest doc comment flagging ICCS/RXCS/TXCS/TXDB's
-"console/clock device modeling" as deferred to Phase 09 — but Phase 09 itself only
-built the device-*table*/logical-*name* abstraction (`internal/io`), not any
-interrupt-generating behavior for a specific device, and nothing before Phase 12
-ever drove a real microkernel far enough to notice the gap.
+Phase 07 ("privileged & misc instructions") and Phase 09 ("I/O & device
+support") both predate any code path that actually *executes* a CHMK-driven
+RTL routine — Phase 10's own RTL services are unit-tested by constructing an
+argument scenario directly in `vm.Memory` and invoking the relevant registry
+entry, never by running real VAX code that polls a ready-bit in a loop.
+`internal/cpu/procreg.go`'s `setPrivReg` already had an honest doc comment
+flagging ICCS/RXCS/TXCS/TXDB's "console/clock device modeling" as deferred —
+but nothing before Phase 12 ever drove a real microkernel far enough to
+notice the gap, and Phase 12 itself only recorded the finding rather than
+fixing it (see this doc's own original placeholder text, now superseded).
 
-## Scope / C source mapping
+## Design: deterministic instruction-count quantum, not a wall-clock timer
 
-- `reference/eVAX/eVAX/Source/CPU/vax.c`'s `execute_vax` main loop (~lines 110-310):
-  the "quantum" mechanism — a counter decremented every instruction, and on
-  reaching zero, (1) reloading itself, (2) advancing the interval-clock/ICCS state,
-  (3) polling the keyboard on a coarser UI-quantum boundary, and (4) scanning
-  `vax.iqueue` for a pending interrupt whose `age` has reached zero and whose IPL
-  exceeds the current PSL IPL, delivering exactly one per quantum tick via
-  `set_fault`. This is **instruction-count-driven, not wall-clock-driven** — no
-  timers or threads anywhere in it.
-- `reference/eVAX/eVAX/Source/CPU/interrupt.c`'s `interrupt()` (~line 491): the
-  admission routine every device-interrupt call site (TXCS/TXDB/RXCS/RXDB writes,
-  the ICCS timer tick) goes through — either sets `vax.interrupt_pending` directly
-  (if nothing else is already pending/masked) or queues a `struct INTERRUPT`
-  (code/IPL/age) onto `vax.iqueue` for the main loop to age out later.
-- `reference/eVAX/eVAX/Source/CPU/emul_procreg.c`'s `set_priv_reg`, `case 24`
-  (ICCS, ~line 236: RUN/XFR/SGL/IE/ERR bit semantics, `vax.clock`/`vax.NICR`/
-  `vax.ICR`), `case 32`/`34` (RXCS/TXCS, ~line 283/297: the always-instantly-ready
-  console device, IE-gated `interrupt()` calls at IPL 0x14/0x20 depending on
-  reading — the two call sites disagree on the exact IPL constant, worth
-  double-checking against the SRM rather than copying either blindly), and
-  `case 33`/`35` (RXDB/TXDB: the actual byte transfer, also IE-gated interrupts).
-  Already partially ported (the bit-level register semantics minus any interrupt);
-  see `internal/cpu/procreg.go`'s `setPrivReg`/`emulMfpr`.
-- `testdata/asm/kernel.asm`'s own consumers, useful as an executable spec: `.scb
-  exc$conwrite, exe$tx` / `.scb exc$conread, exe$rx` (the ISR entry points —
-  `exe$tx`/`exe$rx` presumably set the polled memory flags
-  `exe$tx_ready`/an analogous read-ready flag back to 1); `EXE$$PUT_CONSOLE`
-  (CHMK 0)/`EXE$$GET_CONSOLE` (CHMK 2)'s own poll loops; `.set` `VAX$PR_ICCS`/
-  `VAX$PR_NICR`-style symbols already seeded in `internal/asm/builtins.go` if this
-  phase's own test fixtures need to program the timer directly.
+Per explicit user direction (2026-09-15), this phase uses an
+instruction-count-driven "quantum" model rather than reintroducing real
+wall-clock timers/goroutines into the emulator. This matters because the C
+reference's *own* driving mechanism for both the quantum counter and the
+interval clock is a real `SIGALRM` handler (`console.c`'s `todr_timer`) —
+`vax.c`'s own "decrement every instruction" comment describes aspirational
+intent, but the actual per-instruction decrement it would take
+(`vax.quantum.current--`) is commented out in favor of the signal handler's
+real-time-driven one. `internal/cpu/interrupt.go`'s `Engine.tickQuantum`
+(called once per `Engine.Step`) is this port's from-scratch replacement:
+deterministic, reproducible, and consistent with this project's design
+elsewhere (see `docs/PLAN.md`'s locked-in decisions). A useful side effect:
+"SET QUANTUM 1" — a value calibrated for the C source's millisecond-scale
+wall clock — does *not* translate literally to this model (it would mean
+"re-evaluate every single instruction," firing the interval timer roughly
+every 10 instructions instead of every ~10ms/thousands of instructions);
+the default quantum (20, matching `initialization.c`'s own non-alarm-driven
+default) is the sane choice for this model, and the phase's own tests use it.
 
-## Key design questions (not yet decided)
+## Deliverables
 
-- **Where does the quantum tick live in this port's own step loop?** `internal/cpu`'s
-  `Engine.Step()` executes exactly one instruction with no notion of a "loop" at all
-  — the loop lives in each *caller* (`Console.Call`/`Execute`, `console.callBounded`
-  in tests, `cmd/govax`'s own REPL). A quantum-driven tick that's supposed to fire
-  every N instructions regardless of which caller is stepping probably belongs
-  inside `Engine` itself (a counter field, checked at the top or bottom of `Step`)
-  rather than duplicated in every caller — needs a design pass before writing code,
-  not an assumption.
-- **Interrupt queue representation**: a plain slice of `{code, ipl, age}` mirroring
-  `struct INTERRUPT`/`vax.iqueue` is probably sufficient — this project has
-  generally preferred a plain, obvious Go structure over porting a C linked-list
-  shape verbatim (see e.g. `internal/io`'s `LogicalNameTable` split, Phase 09).
-- **IPL constants**: `emul_procreg.c`'s own two device-interrupt call sites use
-  different literal IPL values for what both comment as "Console Term
-  Trans"/similar (0x14 in one MTPR case's comment math, 0x20 in the actual
-  `interrupt()` call argument in a couple of places, 0x10 implied elsewhere) —
-  worth resolving against the VAX SRM's real IPL assignments (console terminal is
-  architecturally IPL 20 = 0x14) rather than copying whichever literal happens to
-  be closest, since this is exactly the kind of "the C source's own comment doesn't
-  agree with itself" situation `docs/DEVIATIONS.md`'s policy exists for.
-- **Idle detection** (explicitly *not* to be implemented yet, per the user
-  (2026-09-15) — recorded here only so the idea isn't lost): once real interrupt
-  delivery exists, a program that's legitimately waiting for one (like
-  `EXE$$PUT_CONSOLE`'s own poll loop, or a real OS's idle loop) will busy-spin
-  `Engine.Step()` until the quantum tick eventually delivers something — fine for a
-  bounded test, wasteful for an interactive session. `simh` (a mature, widely-used
-  VAX/PDP simulator) treats certain self-referencing branch patterns (a `JMP` to its
-  own address is its specific example) not as a real infinite loop but as a cue that
-  the simulated CPU can go idle until the next timer event, rather than burning host
-  CPU re-executing the same no-op branch. A govax equivalent would need: (1) a way
-  to recognize "this instruction stream provably cannot change state before the next
-  interrupt" (simh's narrow self-branch check, or something broader), and (2) a
-  defined "idle" outcome distinct from both "faulted" and "ran to completion" for
-  `Console.Call`/`Execute` to report — neither exists yet, and both need real design
-  thought (not a quick add) before this is attempted. Whether Go timers/goroutines
-  ever belong here (e.g. to let idle time actually elapse in wall-clock terms for an
-  interactive console session, as opposed to the deterministic instruction-count
-  model everywhere else in this emulator) is part of the same open question — the
-  step-count-driven model matches this project's existing architecture and test
-  determinism far better than real concurrency would, so the bar for introducing
-  goroutines/timers here should be high.
+- **Quantum-driven interrupt admission/delivery core**
+  (`internal/cpu/interrupt.go`): `Engine.Interrupt` (port of `interrupt()`:
+  immediate delivery when unmasked and nothing pending, otherwise queued for
+  quantum-boundary aging), `Engine.tickQuantum`/`scanInterruptQueue` (port of
+  `execute_vax`'s own quantum block: interval-clock tick, one queued
+  interrupt admitted per boundary), and `Engine.deliverPendingInterrupt`,
+  wired into the top of `Engine.Step`. IPL (case 18) and SIRR (case 20) in
+  `procreg.go` now correctly call `Interrupt` for their own pending-interrupt
+  delivery, previously deferred for lack of this mechanism.
+- **ICCS/NICR/ICR interval timer** (`procreg.go`'s ICCS case,
+  `interrupt.go`'s `tickIntervalClock`): RUN/XFR/SGL/IE/ERR bit semantics,
+  and a real quantum-tick-driven countdown that fires `EXC$INTERVAL` at
+  IPL 22 and reloads from NICR — the actual driving algorithm ported from
+  `emul_procreg.c`'s case 24 combined with `console.c`'s `todr_timer` (the
+  *real* mechanism; `vax.c`'s own copy is dead code — see the design note
+  above), substituting one quantum tick for one wall-clock tick.
+- **Real TXCS/TXDB/RXCS/RXDB console-I/O device modeling**
+  (`procreg.go`'s TXCS/TXDB/RXCS cases, `emulMfpr`'s RXDB read side effect):
+  TXDB writes a real byte via `SystemServices.ConsoleWriteByte` and admits a
+  genuine `EXC$CONWRITE` interrupt when TXCS's IE bit is set, closing the
+  exact `EXE$$PUT_CONSOLE`/`exe$tx_ready` spin-forever gap
+  `TestAssemble_kernelThenHelloRunsBounded` documented. RXDB reads pull a
+  real byte from the same console input source `XFC$CONSOLE_READ` uses
+  (fixing a confirmed-broken C-reference behavior — see below) and RXCS
+  admits `EXC$CONREAD` on the IE-already-set/DON-pending case, matching
+  `emul_procreg.c`'s own case 32. `Engine.DeliverConsoleByte` ports what
+  `poll_keyboard`'s own (Mac/Windows-only) intended behavior does — deposit
+  a byte, set DON, admit an interrupt if IE is set — as a real, callable
+  primitive.
+- Two real, confirmed C-reference/Go-port bugs found and fixed along the way
+  (both logged in `docs/DEVIATIONS.md`, both clear-cut fixes rather than
+  deferrals — see that doc for full detail):
+  - `interrupt.c`'s own `handle_fault` saves the *stale* `instruction_PC`
+    (the previous instruction's address, not the current one) as an
+    interrupt's return PC — a genuine architectural bug in the C reference.
+    This port's `deliverPendingInterrupt` uses the current PC instead.
+  - This port's own `emulChmx` (CHMK/CHME/CHMS/CHMU, Phase 07) never updated
+    `e.instructionPC` before faulting, so a CHMK handler's RET/REI resumed
+    at the CHMK instruction's own address instead of the instruction after
+    it — invisible for a single CHMK, an infinite re-trap loop for any
+    caller issuing CHMK a second time after the first one's handler
+    returns (exactly `kernel.asm`'s own `LIB$PUT_ONE` per-byte CHMK loop).
+    This was the actual, final blocker on the phase's key deliverable —
+    without it, only the first character of any string ever printed.
+  - Also fixed, smaller: the C reference's own TXCS/TXDB call sites use the
+    literal `0x20` (32 decimal) for what their own comments call "IPL 20"
+    — inconsistent with RXCS's own call site (which correctly uses decimal
+    20) and with the real VAX SRM's console-terminal IPL assignment (20).
+    Corrected to decimal 20 directly rather than replicated, since the C
+    source's own comment states the intended value.
+- The IPL literal question the original placeholder text flagged as
+  needing SRM research is resolved by the finding above: console-terminal
+  I/O is architecturally IPL 20 (`0x14`) for both directions; the interval
+  clock's own call site already correctly used decimal 22, unrelated to
+  this inconsistency.
 
-## Deliverables (draft — expect revision once this phase actually starts)
+## Deliberately out of scope
 
-- An `Engine`-level quantum/instruction counter and a pending-interrupt admission
-  queue, ported from `interrupt()`/`vax.c`'s own scan loop.
-- Real ICCS/NICR/ICR interval-timer modeling: `RUN`/`XFR`/`SGL` bit semantics
-  already partially there in spirit (plain register store); wire the actual
-  clock-tick-on-quantum-boundary behavior and its IPL 0x18-ish (`EXC$INTERVAL`,
-  already a builtin symbol at 0xC0) interrupt.
-- Real TXCS/TXDB/RXCS/RXDB console-I/O interrupts (`EXC$CONWRITE`/`EXC$CONREAD`,
-  0xFC/0xF8), closing the exact gap `TestAssemble_kernelThenHelloRunsBounded`
-  documents — that test's own doc comment says to update its expectations once this
-  lands.
-- Whatever minimal idle/quiescent-detection strategy comes out of the open question
-  above, if this phase's own scope ends up including it (may be split into its own
-  follow-up phase instead, once the shape is clearer).
+- **Idle detection** (per the user, 2026-09-15): a program legitimately
+  waiting for an interrupt (a real OS's idle loop, or a poll loop like
+  `EXE$$PUT_CONSOLE`'s own) will busy-spin `Engine.Step` until the quantum
+  tick delivers something — fine for a bounded test, wasteful for a live
+  interactive session. Recognizing this and reporting a distinct "idle"
+  outcome (`simh`-style) needs real design work with no current consumer to
+  validate it against; left for a future phase if it becomes a real problem.
+- **Real, OS-level non-blocking keyboard polling**: `Engine.DeliverConsoleByte`
+  is the correct, working interrupt-admission primitive, but nothing in this
+  phase wires a live terminal byte source into it — `vax.c`'s own
+  `poll_keyboard` is a permanent no-op outside Mac/Windows builds (including
+  this project's own `LINUX86` reference target), so there's no working
+  upstream behavior to port either, and no current fixture exercises this
+  path (`LIB$GET_INPUT`/`EXE$INPUT` already work correctly via a Go RTL shim
+  that reads `Console.In` directly, bypassing RXCS/RXDB entirely — see
+  `internal/rtl/input.go`). A real interactive front end wiring a live byte
+  source to `DeliverConsoleByte` is future work.
+- **Assembler/session-placement issue found during this phase's own testing,
+  not fixed here**: assembling a second file in the same `asmSession` after
+  a file that switches `.region` (`kernel.asm`'s own trailing `.region p0`)
+  can place the new file's code overlapping the first file's own S0-region
+  code, becoming a real protection violation once page protection is
+  actually active (kernel.asm's own `.console SET PAGE ... PROT=...`
+  pseudo-ops, which *do* work in this port). This is a distinct,
+  `internal/asm`/`internal/console` session-bookkeeping concern (not
+  interrupts/timers), found only because this phase's own testing was the
+  first to combine a large, `vax.init`-realistic `VMInit` allocation with
+  actually running kernel.asm's own initialization code between two
+  `Assemble` calls — most existing tests use a small, non-representative
+  `VMInit` where the bug happens not to manifest. `docs/PHASE-14.md`'s own
+  end-to-end test works around it by not re-running the full `vax.init`
+  boot sequence (enabling TXCS<IE> directly instead of via
+  `GO EXE$INITIALIZE`). Worth a dedicated look in a future phase; not
+  chased further here.
 
 ## Progress Log
 
-_Not started. This document exists as a planning placeholder only — see the header
-note above._
+### 2026-09-15 — Sub-phase 1: quantum-driven interrupt admission/delivery core
+
+- `internal/cpu/interrupt.go`: `Engine.Interrupt`, `tickQuantum`,
+  `scanInterruptQueue`, `deliverPendingInterrupt`, wired into `Engine.Step`.
+  New `Exception` constants `ExcInterval`/`ExcConRead`/`ExcConWrite`/
+  `ExcSoftware1` (`internal/cpu/exception.go`).
+- `procreg.go`'s IPL (case 18) and SIRR (case 20) now call `Interrupt` for
+  their own pending-interrupt admission, matching `set_priv_reg` exactly
+  (previously a plain register store with the interrupt-delivery half
+  silently skipped).
+- Found and fixed (immediately, not deferred — a clear-cut correctness bug,
+  not an ISA question): `interrupt.c`'s own `handle_fault` saves the stale
+  `instruction_PC` as an interrupt's return address; see
+  `docs/DEVIATIONS.md`.
+- `internal/cpu/interrupt_test.go`, plus updated `procreg_test.go` SIRR
+  tests (the existing `TestEmulMtprSirrQueuesSoftwareInterrupt` asserted the
+  old, incomplete "always latch" behavior; split into
+  `TestEmulMtprSirrLatchesWhenAtOrAboveCurrentIPL`/
+  `TestEmulMtprSirrDeliversImmediatelyWhenAboveCurrentIPL`, plus a new
+  `TestEmulMtprIPLAdmitsLatchedSoftwareInterruptOnceExposed`).
+- `go build ./...`, `go vet ./...`, `go test ./...` all clean; committed.
+
+### 2026-09-15 — Sub-phases 2-3: ICCS interval timer, TXCS/TXDB console output, and closing the key deliverable
+
+- `procreg.go`'s ICCS/RXCS/TXCS/TXDB cases and `emulMfpr`'s RXDB read side
+  effect implemented for real (see Deliverables above);
+  `interrupt.go`'s `tickIntervalClock`/`DeliverConsoleByte` added.
+  `internal/cpu/devices_test.go` covers all of it.
+- Chasing the phase's own key deliverable end to end
+  (`TestAssemble_kernelThenHelloRunsBounded`, updated to enable TXCS's IE
+  bit and assert a clean completion with "Hello world" actually reaching
+  the console output, not just "doesn't hit the step cap") surfaced three
+  more findings along the way, in order:
+  1. `newRunnableConsole`'s small `VMInit` allocation can't support
+     `GO EXE$INITIALIZE` (its user-mode stack pointer, a fixed constant,
+     lands outside the mapped P1 region unless `VMInit`'s own P1 size is
+     large enough to reach it) — worked around by not running
+     `EXE$INITIALIZE` in this test, enabling TXCS<IE> directly instead
+     (see "Deliberately out of scope" above for the session-placement issue
+     found alongside this).
+  2. `kernel.asm`'s own boot-message print (`EXE$PRINTINITMSG`, gated by
+     `exe$verbose`) hit the CHMK bug below independently, printing "K"
+     (`"Kernel initialized..."`'s first letter) forever — not investigated
+     further once isolated as the same root cause as finding 3, and worked
+     around by silencing `exe$verbose` in the test rather than needed for
+     the actual deliverable.
+  3. The `emulChmx` return-address bug (see Deliverables above) — the real,
+     final blocker. `internal/cpu/changemode_test.go`'s
+     `TestEmulChmxReturnsPastTheChmxInstruction` regresses it directly.
+  4. hello.asm's own delay loop ("`movl #1000000,r5`") is ~16.7M iterations
+     under this assembler's default-hex-radix convention, not 1M under a
+     literal decimal reading — not a bug, just an undersized step cap in
+     the test itself once the real hang was fixed; corrected to 40M.
+- `go build ./...`, `go vet ./...`, `go test ./...` all clean;
+  `TestAssemble_kernelThenHelloRunsBounded` now completes in ~2s. Committed.
+  Phase 14 complete: quantum/interrupt core, interval timer, and
+  console-I/O device interrupts are all real and tested; the key
+  deliverable (a multibyte `LIB$PUT_OUTPUT` string prints cleanly) is
+  verified end to end.

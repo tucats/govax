@@ -77,11 +77,15 @@ is fully unit-testable without a working image loader, so the split lets Phase 1
 out on its own merits and Phase 13 land later, after Phase 11 exists if that turns out to
 help (see PHASE-13.md's own notes on whether it truly needs the assembler).
 
-Phase 14 is a planning placeholder (not started), added during Phase 12's own
-integration work once running `kernel.asm` for real found that the interval timer/
-console-I/O interrupt delivery `internal/cpu/procreg.go`'s `setPrivReg` always deferred
-to "Phase 09" was never actually implemented anywhere — see PHASE-14.md's own header
-note and PHASE-12.md's sub-phase 2 progress log for how it was found.
+Phase 14, added during Phase 12's own integration work once running `kernel.asm` for
+real found that the interval timer/console-I/O interrupt delivery
+`internal/cpu/procreg.go`'s `setPrivReg` always deferred to "Phase 09" was never
+actually implemented anywhere, is complete: a deterministic, instruction-count-driven
+quantum/interrupt-admission core (`internal/cpu/interrupt.go`), a real ICCS interval
+timer, and real TXCS/TXDB/RXCS/RXDB console-I/O interrupts, closing the exact
+`LIB$PUT_OUTPUT`-hangs-after-one-character gap PHASE-12.md's sub-phase 2 progress log
+recorded — see PHASE-14.md's own progress log, including two real bugs (one in the C
+reference, one in this port's own CHMK handler) found and fixed along the way.
 
 Phase 15 is an open-ended, accumulating phase (not started) for `govax`-command UX/
 ease-of-use improvements not tied to any single emulated subsystem — unlike every
