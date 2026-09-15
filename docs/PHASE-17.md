@@ -19,7 +19,7 @@ tracing), `logical_names.c`/`devices.c`/`rms.c`/`service.c`/`p1_vector.c` (RTL
 tracing), and `console_run.c`/`console_dispatch.c`/`console_step.c`/
 `asm_symbols.c` (console-level tracing).
 
-**Status: sub-phase 1 complete; sub-phases 2-5 in progress.**
+**Status: sub-phases 1-2 complete; sub-phases 3-5 in progress.**
 
 ## Design decisions
 
@@ -166,8 +166,11 @@ below says exactly what it traces.
   `deliverPendingInterrupt`) — matches `interrupt.c:536`/`interrupt.c:543`'s
   queue/set-immediately messages and `vax.c:240`/`vax.c:273`'s aging-scan/
   taken messages.
-- **`CHM`** (`changemode.go`'s `emulChmx`) — one line on an actual mode change,
-  matching `emul_call.c:322`'s `old_mode != vax.pslw.cur_mod` guard exactly.
+- **`CHM`** (`call.go`'s `emulRei`, *not* `changemode.go`'s `emulChmx` — the
+  C source's trace is on the mode-switch's reversal on return, not the
+  CHMx request that starts it; see the Progress Log entry below for how this
+  was found) — one line on an actual mode change, matching
+  `emul_call.c:322`'s `old_mode != vax.pslw.cur_mod` guard exactly.
 - **`KEYBOARD`** — see "Flags with no wired behavior" above for why this is a
   Go-appropriate analogue rather than a port: `interrupt.go`'s
   `DeliverConsoleByte` traces the byte delivered and whether it overwrote
@@ -232,6 +235,49 @@ item-code sub-case:
   register-dump/full-disassembly behavior is deferred.
 
 ## Progress Log
+
+### 2026-09-15 — Sub-phase 2 complete: `internal/cpu` tracing
+
+`emulHalt` (`control.go`) now checks `DebugUserHalt` for real, closing the gap
+its own doc comment had named since Phase 08 (and fixing a latent fidelity
+mismatch this uncovered: the C default has `DBG_USERHALT` *on*, so HALT from
+any mode is the C reference's actual default behavior, not the always-
+kernel-only check the Go code had before this landed).
+
+`EXCEPTIONS`: `engine.go`'s `raise` prints the `SET` line (`interrupt.c:188`'s
+`%02X` code width, args list included), `handlefault.go`'s `HandleFault`
+prints the `TAKE` line (`interrupt.c:286`'s `%04X` code width — genuinely a
+different width from `SET`'s in the C source itself, not a transcription
+slip).
+
+`INTERRUPTS`: `interrupt.go`'s `Interrupt` (immediate-delivery and queue
+cases), `scanInterruptQueue` (per-entry aging-scan and admission), matching
+`interrupt.c:536/543` and `vax.c:240/273`. Note: the C source's aging-scan
+trace also prints the interrupt's original `quantum` value; Go's
+`queuedInterrupt` deliberately doesn't retain that field (see the type's own
+doc comment), so the ported trace omits it rather than fabricating a value.
+
+`CHM`: found during this sub-phase that `console_set.c`'s trace is actually
+inside `emul_rei` (REI, the mode-switch's *reversal*), not `emul_chmx`
+(CHMx only *requests* the switch via the fault mechanism) — `docs/PHASE-17.md`
+sub-phase 2's plan initially assumed `changemode.go`; corrected to
+`call.go`'s `emulRei` before implementing, comparing `PSL.CurMod()` before
+and after the restore.
+
+`KEYBOARD`: `interrupt.go`'s `DeliverConsoleByte` traces the "already
+pending, ignoring" case. Implementing the trace surfaced a real behavior gap
+in the byte-delivery primitive itself (it unconditionally overwrote RXDB
+even when the previous byte hadn't been read, unlike `poll_keyboard`'s own
+guard) — fixed alongside the trace, since printing "ignoring" while actually
+overwriting would have been a lie about what the code does, not a pre-
+existing, separately-scoped issue.
+
+Tests: `internal/cpu/control_test.go` (`TestEmulHaltAllowedOutsideKernelModeWithUserHaltDebugFlag`,
+and the existing kernel-mode-fault test updated to explicitly clear
+`DebugUserHalt` first), `engine_test.go`, `handlefault_test.go`,
+`interrupt_test.go`, `call_test.go` (one trace-present + one trace-absent
+test per wired flag). `go build ./...`, `go vet ./...`, `go test ./...` all
+clean.
 
 ### 2026-09-15 — Sub-phase 1 complete: `DebugFlags` bitmask + `SET`/`SHOW DEBUG`
 

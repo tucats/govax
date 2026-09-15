@@ -1,7 +1,9 @@
 package cpu
 
 import (
+	"bytes"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/vax"
@@ -183,6 +185,47 @@ func TestHandleFaultZeroVector(t *testing.T) {
 	}
 	if e.cpu.GPR(vax.SP) == 0x8000 {
 		t.Error("SP unchanged, want the frame to have been pushed despite the zero vector")
+	}
+}
+
+func TestHandleFaultDebugExceptionsTrace(t *testing.T) {
+	e := newEngine()
+	e.instructionPC = 0x4000
+	e.cpu.SetGPR(vax.SP, 0x7000)
+	e.cpu.SetPR(vax.KSP, 0x7000)
+	putVector(t, e, ExcReservedAddr, 0x100, 0)
+
+	var buf bytes.Buffer
+	e.cpu.SetDebugWriter(&buf)
+	e.cpu.SetDebug(e.cpu.Debug() | vax.DebugExceptions)
+
+	if err := e.HandleFault(&Fault{Code: ExcReservedAddr, Args: []uint32{0xAAAA, 1}}); err != nil {
+		t.Fatalf("HandleFault: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "DEBUG(EXCEPTION): TAKE, CODE=001C") || !strings.Contains(out, "VECTOR=00000100") {
+		t.Errorf("output = %q, want a DEBUG(EXCEPTION): TAKE line naming CODE=001C VECTOR=00000100", out)
+	}
+}
+
+func TestHandleFaultNoDebugTraceWhenFlagClear(t *testing.T) {
+	e := newEngine()
+	e.instructionPC = 0x4000
+	e.cpu.SetGPR(vax.SP, 0x7000)
+	e.cpu.SetPR(vax.KSP, 0x7000)
+	putVector(t, e, ExcReservedAddr, 0x100, 0)
+
+	var buf bytes.Buffer
+	e.cpu.SetDebugWriter(&buf)
+	e.cpu.SetDebug(e.cpu.Debug() &^ vax.DebugExceptions)
+
+	if err := e.HandleFault(&Fault{Code: ExcReservedAddr}); err != nil {
+		t.Fatalf("HandleFault: %v", err)
+	}
+
+	if buf.Len() != 0 {
+		t.Errorf("output = %q, want no trace output with DebugExceptions clear", buf.String())
 	}
 }
 

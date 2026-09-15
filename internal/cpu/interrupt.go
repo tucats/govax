@@ -1,6 +1,10 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import (
+	"fmt"
+
+	"github.com/tucats/govax/internal/vax"
+)
 
 // This file is the Go port of interrupt.c's interrupt() (device/software
 // interrupt admission) and vax.c's execute_vax's own "quantum" block (the
@@ -94,6 +98,10 @@ func (e *Engine) Interrupt(code Exception, ipl uint32, quantum int) {
 	}
 
 	if !queue {
+		if e.cpu.DebugEnabled(vax.DebugInterrupts) {
+			fmt.Fprintf(e.cpu.DebugWriter(), "DEBUG(INTERRUPTS): set interrupt %04X, IPL %d, quantum %d\n",
+				code, ipl, quantum)
+		}
 		e.interruptPending = true
 		e.interruptCode = code
 		e.interruptIPL = ipl
@@ -103,6 +111,10 @@ func (e *Engine) Interrupt(code Exception, ipl uint32, quantum int) {
 	age := 0
 	if e.quantumInitial > 0 {
 		age = quantum / e.quantumInitial
+	}
+	if e.cpu.DebugEnabled(vax.DebugInterrupts) {
+		fmt.Fprintf(e.cpu.DebugWriter(), "DEBUG(INTERRUPTS): queue interrupt %04X, IPL %d, age=%d, quantum %d\n",
+			code, ipl, age, quantum)
 	}
 	e.iqueue = append(e.iqueue, &queuedInterrupt{code: code, ipl: ipl, age: age})
 
@@ -141,8 +153,13 @@ func (e *Engine) scanInterruptQueue() {
 	}
 
 	ipl := e.cpu.PSL().IPL()
+	debug := e.cpu.DebugEnabled(vax.DebugInterrupts)
 	remaining := e.iqueue[:0]
 	for _, ip := range e.iqueue {
+		if debug {
+			fmt.Fprintf(e.cpu.DebugWriter(), "DEBUG(INTERRUPTS): quantum; evaluating interrupt %04X, IPL %d, age=%d\n",
+				ip.code, ip.ipl, ip.age)
+		}
 		switch {
 		case ip.age > 0:
 			ip.age--
@@ -153,6 +170,9 @@ func (e *Engine) scanInterruptQueue() {
 			e.interruptPending = true
 			e.interruptCode = ip.code
 			e.interruptIPL = ip.ipl
+			if debug {
+				fmt.Fprintf(e.cpu.DebugWriter(), "DEBUG(INTERRUPTS): set interrupt %04X\n", ip.code)
+			}
 		default:
 			remaining = append(remaining, ip)
 		}
@@ -249,7 +269,22 @@ func (e *Engine) tickIntervalClock() {
 // (a future interactive front end reading a live terminal, or a test) can
 // deliver it correctly, IE-gating and all, addressing a gap the C reference
 // itself never closed. See docs/DEVIATIONS.md.
+//
+// If RXCS's DON bit is already set (the previous byte hasn't been read
+// yet), the new byte is dropped rather than overwriting RXDB, matching
+// poll_keyboard's own `if (vax.RXCS & 0x80) { ...; return 0; }` guard --
+// noticed while wiring DebugKeyboard's trace (docs/PHASE-17.md sub-phase 2)
+// and fixed here rather than left silently overwriting, since the trace
+// text itself ("not read yet, ignoring") would otherwise be a lie about
+// what this port actually does.
 func (e *Engine) DeliverConsoleByte(b byte) {
+	if e.cpu.PR(vax.RXCS)&0x80 != 0 {
+		if e.cpu.DebugEnabled(vax.DebugKeyboard) {
+			fmt.Fprintln(e.cpu.DebugWriter(), "KBD: hit, not read yet, ignoring")
+		}
+		return
+	}
+
 	e.cpu.SetPR(vax.RXDB, uint32(b))
 	rxcs := e.cpu.PR(vax.RXCS) | 0x80
 	e.cpu.SetPR(vax.RXCS, rxcs)

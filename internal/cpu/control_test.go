@@ -27,10 +27,13 @@ func TestEmulHaltInKernelMode(t *testing.T) {
 // mode would also exercise setModeStack's unconditional MAPEN=1 write on a
 // real mode switch (see docs/DEVIATIONS.md), which needs page tables this
 // test has no reason to set up. What matters here is only that HALT itself
-// reports the privileged-instruction fault outside kernel mode.
+// reports the privileged-instruction fault outside kernel mode when
+// DebugUserHalt is off (not the default -- see
+// TestEmulHaltAllowedOutsideKernelModeWithUserHaltDebugFlag).
 func TestEmulHaltFaultsOutsideKernelMode(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
+	cpu.SetDebug(cpu.Debug() &^ vax.DebugUserHalt)
 	psl := cpu.PSL()
 	psl.SetCurMod(vax.User)
 	cpu.SetPSL(psl)
@@ -43,6 +46,21 @@ func TestEmulHaltFaultsOutsideKernelMode(t *testing.T) {
 	}
 	if e.Halted() {
 		t.Error("Halted() = true, want false (privileged fault, not a halt)")
+	}
+}
+
+// TestEmulHaltAllowedOutsideKernelModeWithUserHaltDebugFlag confirms
+// DebugUserHalt's escape hatch (on by default, matching alloc_vax) lets HALT
+// stop the machine from any mode instead of faulting.
+func TestEmulHaltAllowedOutsideKernelModeWithUserHaltDebugFlag(t *testing.T) {
+	cpu, mem := fixture()
+	e := NewEngine(cpu, mem)
+	psl := cpu.PSL()
+	psl.SetCurMod(vax.User)
+	cpu.SetPSL(psl)
+
+	if err := emulHalt(e, &Decoded{}); !errors.Is(err, ErrHalted) {
+		t.Fatalf("emulHalt() = %v, want ErrHalted", err)
 	}
 }
 

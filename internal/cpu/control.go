@@ -9,13 +9,12 @@ func init() {
 
 // emulHalt is the port of emul_misc.c's emul_halt. HALT is privileged: outside
 // kernel mode it's a privileged-instruction fault rather than actually
-// halting. The C source has a `vax.debug & DBG_USERHALT` escape hatch that
-// lets the console allow HALT from any mode for debugging convenience — a
-// Phase 08 console concern with no `vax.debug` equivalent yet, so this always
-// enforces the architected kernel-mode check (the same behavior as that debug
-// flag being off, which is the correct default anyway).
+// halting, unless DebugUserHalt is set (default: on, matching
+// initialization.c's alloc_vax default and emul_misc.c:215's
+// `!(vax.debug & DBG_USERHALT) && vax.pslw.cur_mod > 0` check), which lets
+// HALT stop the machine from any mode. See docs/PHASE-17.md sub-phase 2.
 func emulHalt(e *Engine, d *Decoded) error {
-	if e.cpu.PSL().CurMod() != vax.Kernel {
+	if !e.cpu.DebugEnabled(vax.DebugUserHalt) && e.cpu.PSL().CurMod() != vax.Kernel {
 		return &Fault{Code: ExcPrivileged}
 	}
 	return ErrHalted

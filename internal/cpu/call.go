@@ -1,6 +1,8 @@
 package cpu
 
 import (
+	"fmt"
+
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -370,5 +372,14 @@ func emulRei(e *Engine, d *Decoded) error {
 	e.cpu.SetGPR(vax.SP, e.cpu.PR(vax.PrivReg(e.cpu.PSL().CurMod())))
 	e.cpu.SetGPR(vax.PC, newPC)
 
+	if newMode := e.cpu.PSL().CurMod(); e.cpu.DebugEnabled(vax.DebugCHM) && oldPSL.CurMod() != newMode {
+		fmt.Fprintf(e.cpu.DebugWriter(), "DEBUG(CHM): CHANGE MODE FROM %s TO %s AT %08X\n",
+			accessModeNames[oldPSL.CurMod()], accessModeNames[newMode], e.instructionPC)
+	}
+
 	return nil
 }
+
+// accessModeNames matches emul_call.c's own mode_name[] (KERNEL/EXEC/SUPER/
+// USER), used by emulRei's DebugCHM trace.
+var accessModeNames = [4]string{"KERNEL", "EXEC", "SUPER", "USER"}

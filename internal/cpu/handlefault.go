@@ -1,9 +1,15 @@
 package cpu
 
 import (
+	"fmt"
+
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
+
+// stackNames matches interrupt.c:216's stackname[] -- the mode-stack names
+// handle_fault's own DBG_EXCEPTIONS trace reports.
+var stackNames = [4]string{"KSP", "ESP", "SSP", "USP"}
 
 // ErrNoExceptionHandler is returned by Engine.HandleFault when the SCB
 // vector for the faulting exception is 0xFFFFFFFF — this emulator's own
@@ -76,6 +82,15 @@ func (e *Engine) HandleFault(f *Fault) error {
 	}
 
 	sp := e.cpu.GPR(vax.SP)
+
+	if e.cpu.DebugEnabled(vax.DebugExceptions) {
+		stackDesc := "ISP, VM=OFF"
+		if stack == 0 {
+			stackDesc = stackNames[newMode]
+		}
+		fmt.Fprintf(e.cpu.DebugWriter(), "DEBUG(EXCEPTION): TAKE, CODE=%04X  VECTOR=%08X  STACK=%08X [%s]\n",
+			f.Code, vector, sp, stackDesc)
+	}
 
 	sp -= 4
 	if err := e.mem.StoreLongword(e.cpu, sp, uint32(savedPSL)); err != nil {

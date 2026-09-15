@@ -1,6 +1,8 @@
 package cpu
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/vax"
@@ -90,6 +92,66 @@ func TestInterruptDeliverySavesCurrentPCNotStale(t *testing.T) {
 	}
 	if savedPC != 0x1001 {
 		t.Errorf("saved return PC = %#x, want 0x1001 (the next instruction, not the stale 0x1000)", savedPC)
+	}
+}
+
+func TestInterruptDebugInterruptsTrace(t *testing.T) {
+	e := interruptEngine(t)
+	var buf bytes.Buffer
+	e.cpu.SetDebugWriter(&buf)
+	e.cpu.SetDebug(vax.DebugInterrupts)
+
+	e.Interrupt(ExcConWrite, 20, 0) // unmasked: delivered immediately
+	if !strings.Contains(buf.String(), "DEBUG(INTERRUPTS): set interrupt") {
+		t.Errorf("output = %q, want an immediate-delivery trace line", buf.String())
+	}
+
+	buf.Reset()
+	e.interruptPending = false // clear the delivery above so the next Interrupt call is masked by IPL, not by it
+	e.SetQuantum(4)
+	psl := e.cpu.PSL()
+	psl.SetIPL(20)
+	e.cpu.SetPSL(psl)
+	e.Interrupt(ExcConRead, 20, 0) // masked: queued
+
+	if !strings.Contains(buf.String(), "DEBUG(INTERRUPTS): queue interrupt") {
+		t.Errorf("output = %q, want a queue trace line", buf.String())
+	}
+
+	buf.Reset()
+	e.tickQuantum()
+	if !strings.Contains(buf.String(), "DEBUG(INTERRUPTS): quantum; evaluating interrupt") {
+		t.Errorf("output = %q, want a quantum-scan trace line", buf.String())
+	}
+}
+
+func TestInterruptNoDebugTraceWhenFlagClear(t *testing.T) {
+	e := interruptEngine(t)
+	var buf bytes.Buffer
+	e.cpu.SetDebugWriter(&buf)
+	e.cpu.SetDebug(0)
+
+	e.Interrupt(ExcConWrite, 20, 0)
+	if buf.Len() != 0 {
+		t.Errorf("output = %q, want no trace output with DebugInterrupts clear", buf.String())
+	}
+}
+
+func TestDeliverConsoleByteDropsAndTracesWhenAlreadyPending(t *testing.T) {
+	e := interruptEngine(t)
+	var buf bytes.Buffer
+	e.cpu.SetDebugWriter(&buf)
+	e.cpu.SetDebug(vax.DebugKeyboard)
+
+	e.DeliverConsoleByte('A')
+	buf.Reset()
+	e.DeliverConsoleByte('B') // RXCS<7> still set: dropped, not overwritten
+
+	if got := e.cpu.PR(vax.RXDB); got != uint32('A') {
+		t.Errorf("RXDB = %#x, want 'A' (second byte should have been dropped)", got)
+	}
+	if !strings.Contains(buf.String(), "KBD: hit, not read yet, ignoring") {
+		t.Errorf("output = %q, want the ignoring trace line", buf.String())
 	}
 }
 

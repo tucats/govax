@@ -1,7 +1,9 @@
 package cpu
 
 import (
+	"bytes"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/vax"
@@ -70,6 +72,32 @@ func TestEngineStepUnimplementedFaultsAndContinues(t *testing.T) {
 	}
 	if e.cpu.GPR(vax.PC) != 0x200 {
 		t.Errorf("PC = %#x, want 0x200 (fault vector)", e.cpu.GPR(vax.PC))
+	}
+}
+
+func TestEngineStepRaiseDebugExceptionsSetTrace(t *testing.T) {
+	inst := &Instruction{Name: "TESTUNIMP", Opcode: Opcode{Function: 0x01}}
+	e := testEngine([]*Instruction{inst}) // no handler registered
+	e.cpu.SetGPR(vax.PC, base)
+	putBytes(t, e.cpu, e.mem, base, 0x01)
+	e.cpu.SetGPR(vax.SP, 0x7000)
+	e.cpu.SetPR(vax.KSP, 0x7000)
+	putVector(t, e, ExcPrivileged, 0x200, 0)
+
+	var buf bytes.Buffer
+	e.cpu.SetDebugWriter(&buf)
+	e.cpu.SetDebug(vax.DebugExceptions)
+
+	if err := e.Step(); err != nil {
+		t.Fatalf("Step: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "DEBUG(EXCEPTION): SET, CODE=10") {
+		t.Errorf("output = %q, want a DEBUG(EXCEPTION): SET line naming CODE=10 (ExcPrivileged)", out)
+	}
+	if !strings.Contains(out, "DEBUG(EXCEPTION): TAKE, CODE=0010") {
+		t.Errorf("output = %q, want a DEBUG(EXCEPTION): TAKE line too", out)
 	}
 }
 

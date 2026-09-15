@@ -2,6 +2,7 @@ package cpu
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/tucats/govax/internal/vax"
@@ -168,6 +169,27 @@ func (e *Engine) raise(err error) error {
 		return err
 	}
 	e.cpu.SetGPR(vax.PC, e.instructionPC)
+
+	if e.cpu.DebugEnabled(vax.DebugExceptions) {
+		w := e.cpu.DebugWriter()
+		fmt.Fprintf(w, "DEBUG(EXCEPTION): SET, CODE=%02X  PC=%08X  PSL=%08X  ARGC=%d\n",
+			f.Code, e.instructionPC, uint32(e.cpu.PSL()), len(f.Args))
+		if len(f.Args) > 0 {
+			plural := "S"
+			if len(f.Args) == 1 {
+				plural = ""
+			}
+			fmt.Fprintf(w, "DEBUG(EXCEPTION): ARG%s = ", plural)
+			for i, arg := range f.Args {
+				if i > 0 {
+					fmt.Fprint(w, ", ")
+				}
+				fmt.Fprintf(w, "%08X", arg)
+			}
+			fmt.Fprintln(w)
+		}
+	}
+
 	return e.HandleFault(f)
 }
 

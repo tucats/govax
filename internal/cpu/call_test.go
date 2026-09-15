@@ -1,7 +1,9 @@
 package cpu
 
 import (
+	"bytes"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/vax"
@@ -299,7 +301,7 @@ func TestEmulCallgArglistIsOperandAddress(t *testing.T) {
 	if got := cpu.GPR(vax.AP); got != 0x3000 {
 		t.Errorf("AP = %#x, want 0x3000 (the arglist operand's address)", got)
 	}
-	
+
 	if got := cpu.GPR(vax.PC); got != 0x2002 {
 		t.Errorf("PC = %#x, want 0x2002", got)
 	}
@@ -506,5 +508,63 @@ func TestEmulReiReversesModeSwitch(t *testing.T) {
 	}
 	if got := cpu.PR(vax.KSP); got != kernelFrame+8 {
 		t.Errorf("KSP after REI = %#x, want %#x (old SP, past the popped frame)", got, kernelFrame+8)
+	}
+}
+
+func TestEmulReiDebugCHMTrace(t *testing.T) {
+	cpu, mem := fixture()
+	e := NewEngine(cpu, mem)
+
+	const userSP = 0x8000
+	const kernelFrame = 0x6050
+	const faultingPC = 0x5000
+
+	psl := cpu.PSL()
+	psl.SetCurMod(vax.Kernel)
+	cpu.SetPSL(psl)
+	cpu.SetGPR(vax.SP, kernelFrame)
+	cpu.SetPR(vax.USP, userSP)
+
+	putLongword(t, cpu, mem, kernelFrame, faultingPC)
+	restoredPSL := psl
+	restoredPSL.SetCurMod(vax.User)
+	putLongword(t, cpu, mem, kernelFrame+4, uint32(restoredPSL))
+
+	var buf bytes.Buffer
+	cpu.SetDebugWriter(&buf)
+	cpu.SetDebug(vax.DebugCHM)
+
+	stepInstruction(t, e, 0x02) // REI
+
+	out := buf.String()
+	if !strings.Contains(out, "DEBUG(CHM): CHANGE MODE FROM KERNEL TO USER AT") {
+		t.Errorf("output = %q, want a DEBUG(CHM) mode-change trace line", out)
+	}
+}
+
+func TestEmulReiNoDebugCHMTraceWhenModeUnchanged(t *testing.T) {
+	cpu, mem := fixture()
+	e := NewEngine(cpu, mem)
+
+	const kernelFrame = 0x6050
+	const faultingPC = 0x5000
+
+	psl := cpu.PSL()
+	psl.SetCurMod(vax.Kernel)
+	cpu.SetPSL(psl)
+	cpu.SetGPR(vax.SP, kernelFrame)
+	cpu.SetPR(vax.KSP, kernelFrame+8)
+
+	putLongword(t, cpu, mem, kernelFrame, faultingPC)
+	putLongword(t, cpu, mem, kernelFrame+4, uint32(psl)) // same mode (Kernel)
+
+	var buf bytes.Buffer
+	cpu.SetDebugWriter(&buf)
+	cpu.SetDebug(vax.DebugCHM)
+
+	stepInstruction(t, e, 0x02) // REI
+
+	if buf.Len() != 0 {
+		t.Errorf("output = %q, want no trace output when REI doesn't change mode", buf.String())
 	}
 }
