@@ -64,6 +64,7 @@ questions, and a progress log extended as that phase is worked.
 | 11 | [PHASE-11.md](PHASE-11.md) | Assembler / disassembler |
 | 12 | [PHASE-12.md](PHASE-12.md) | Integration & regression |
 | 13 | [PHASE-13.md](PHASE-13.md) | VMS image activation (RUN) |
+| 14 | [PHASE-14.md](PHASE-14.md) | Interval timer & device-interrupt delivery |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -73,3 +74,9 @@ see `docs/PHASE-10.md`'s own notes. Phase 10's RTL layer (SYS$/LIB$ services, RM
 is fully unit-testable without a working image loader, so the split lets Phase 10 close
 out on its own merits and Phase 13 land later, after Phase 11 exists if that turns out to
 help (see PHASE-13.md's own notes on whether it truly needs the assembler).
+
+Phase 14 is a planning placeholder (not started), added during Phase 12's own
+integration work once running `kernel.asm` for real found that the interval timer/
+console-I/O interrupt delivery `internal/cpu/procreg.go`'s `setPrivReg` always deferred
+to "Phase 09" was never actually implemented anywhere — see PHASE-14.md's own header
+note and PHASE-12.md's sub-phase 2 progress log for how it was found.
