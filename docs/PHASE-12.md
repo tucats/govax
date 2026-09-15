@@ -268,3 +268,62 @@ Phase 08) that already run under the same `go test ./...`.
   correctness by `internal/asm/fixtures_test.go`'s `TestAssembleForth`).
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean.
+
+### 2026-09-15 — Sub-phase 4: cross-check against reference/eVAX/AUDIT.md
+
+Went through this phase's own named acceptance checklist (N1, N2, V1, V7, V8, R1) —
+the C project's own closed 32-vs-64-bit `LONGWORD` audit, plus its live-testing
+follow-ups — to confirm each is genuinely addressed in the Go port, not just
+inherited by assumption:
+
+- **V1** (ROM/NVRAM binary formats broken against `xdefault.rom`): already fixed and
+  directly cross-referenced — `internal/console/rom.go`'s own doc comments cite V1's
+  4-byte field pinning by name; `TestLoadROM_realFixture`/`TestSaveROM_round
+  TripsRealFixtureContent` exercise the real fixture (Phase 08).
+- **N2** (`CVTFL`/`CVTRFL`/`CVTDL` reusing the byte-case's `[-128,127]` overflow
+  bounds instead of a real longword-range check): already fixed with the correct,
+  size-specific bounds — `internal/cpu/fpu.go`'s `longMin`/`longMax` constants cite
+  N2 by name directly in their own doc comment (Phase 05).
+- **N1** (native host pointers smuggled through `LONGWORD`/symbol `value` fields —
+  the assembler's own symbol table, `console_dispatch`'s string-argument passing):
+  doesn't apply — this bug class only exists because C's `LONGWORD` was standing in
+  for both a 4-byte VAX value and, in these specific spots, a native host pointer.
+  This port's `asm.symbol.value`/`console.Symbol.Value` are plain `uint32`s with no
+  such dual use anywhere; a host-side string (e.g. a future `CONSOLE$ARG_CMD`) would
+  live in an ordinary Go `string` field, impossible to conflate with a VAX-facing
+  numeric value by construction. Already reasoned through once, independently, in
+  `docs/PHASE-10.md`'s own open-questions section.
+- **R1** (`FAB`/`RAB` pointer-typed fields declared as native 8-byte pointers,
+  populated with only 4 VAX-side bytes, leaving garbage high bits on every RMS file
+  operation) — and, by the same root cause, **R2-R5** (`SYS$CLI`'s buffer index,
+  every system-service `argv` slot, `str_get`/`str_put`'s descriptor-data pointer,
+  `SYS$GETDVIW`/`SYS$GETJPIW`'s item-list addresses): none apply, for the same
+  structural reason as N1. `internal/rtl`'s service handlers uniformly take
+  `argv []uint32` (checked across every `service*.go`/`cli.go`/`devices.go`
+  file — no exceptions found), and `rms.go`'s FAB/RAB field access reads a real VAX
+  address via `vm.Memory.LoadLongword` and resolves it through `loadString`/further
+  memory accesses on demand (`serviceSysCreate`'s `fabFNA` read, e.g.) — RMS's own
+  "internal file identifier" is a `uint16` handle into `env.ifiFiles`, not a native
+  pointer at all. There is no 8-byte-native/4-byte-VAX size mismatch anywhere in this
+  design for a "garbage high bits" bug to occur in.
+- **V7** (`union VALUE`'s bitfield/longword union-size pattern, the same family as
+  the already-fixed `MASKREG`/`PTE` unions): doesn't apply — `internal/asm`'s
+  `.BYTE`/`.WORD`/`.LONG` pseudo-ops (`pseudo.go`'s `storeScaled`) call explicitly
+  byte/word/longword-sized `image.storeByte`/`storeWord`/`storeLongword`, the same
+  pattern V9 (the audit's own "good existing practice" counter-example) recommends;
+  Go has no `union` construct for this size-mismatch class of bug to hide in at all.
+- **V8** (VMS image-header structs vs. loading the repo's own `.exe` fixtures) —
+  the audit's own explicitly **unresolved** finding, left as "read `console_run.c`'s
+  image-loading path directly... before triaging this further": confirmed, by
+  direct inspection of `console_run.c` (every `IHD`/`IHI`/`ISD`/`IAF` field is read
+  via an individual `load_memory` call at a computed offset — never a raw struct
+  cast over the file buffer), that its better-case branch applies, so V8 was never a
+  live bug to begin with. This is now recorded directly in
+  `internal/console/image.go`'s own doc comment, alongside the "field-by-field, not
+  a generic struct-mapping port" design note Phase 13 already had reasoning parallel
+  to it.
+
+No action items came out of this pass beyond the one doc-comment addition (V8) —
+every other finding was already fixed-and-cross-referenced (V1, N2) or structurally
+inapplicable to a Go port with no `LONGWORD`/native-pointer/union conflation to
+reproduce in the first place (N1, R1-R5, V7).
