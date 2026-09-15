@@ -1,6 +1,11 @@
 package rtl
 
-import iodev "github.com/tucats/govax/internal/io"
+import (
+	"fmt"
+
+	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/vax"
+)
 
 // Port of devices.c's sys_assign/sys_getdviw — the two SYS$ services built
 // on Phase 09's internal/io.DeviceTable, deferred to this phase per
@@ -143,6 +148,10 @@ func serviceSysGetdviw(env *Environment, argv []uint32) (uint32, error) {
 
 	default:
 		return ssIvDevNam, nil
+	}
+
+	if env.cpu.DebugEnabled(vax.DebugDevices) {
+		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: SYS$GETDVIW looks up device %s\n", dp.Name)
 	}
 
 	status := env.walkItemList(argv[3], func(e itemListEntry) uint32 {

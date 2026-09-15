@@ -1,6 +1,10 @@
 package rtl
 
-import "github.com/tucats/govax/internal/vax"
+import (
+	"fmt"
+
+	"github.com/tucats/govax/internal/vax"
+)
 
 // Port of service.c's SYS$ services that don't need internal/io or the RMS
 // layer: event flags, the exit-handler/AST recording stubs, virtual address
@@ -110,11 +114,22 @@ func serviceSysReadef(env *Environment, argv []uint32) (uint32, error) {
 // CLINAME), both hardcoded stand-ins with no real per-process attribute
 // storage — matching the C source, which has none either. argv[2] (an
 // optional process-name string descriptor) is read by service.c purely for
-// a debug printf and never otherwise consulted; not read here since this
-// port has no equivalent trace output to feed.
+// a debug printf and was previously not read here for lack of an
+// equivalent trace to feed; now read for DebugProcess's own trace (see
+// docs/PHASE-17.md sub-phase 4).
 func serviceSysGetjpiw(env *Environment, argv []uint32) (uint32, error) {
 	if len(argv) != 7 {
 		return ssInsfArg, nil
+	}
+
+	if env.cpu.DebugEnabled(vax.DebugProcess) {
+		prcnam := ""
+		if argv[2] != 0 {
+			if s, ok, err := strGet(env, argv[2], 63); err == nil && ok {
+				prcnam = s
+			}
+		}
+		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: SYS$GETJPIW EFN=%d PRCNAM=%q\n", argv[0], prcnam)
 	}
 
 	status := env.walkItemList(argv[3], func(e itemListEntry) uint32 {

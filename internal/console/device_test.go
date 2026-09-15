@@ -5,7 +5,41 @@ import (
 	"testing"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/vax"
 )
+
+func TestDefineLogicalDebugLogicalsTrace(t *testing.T) {
+	c, buf := newTestConsole(t)
+	c.CPU.SetDebug(vax.DebugLogicals)
+
+	if err := c.DefineLogical("LNM$FILE_DEV", "FOO", "BAR"); err != nil {
+		t.Fatalf("DefineLogical: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), `DEFINE/LOGICAL FOO/TABLE=LNM$FILE_DEV "BAR"`) {
+		t.Errorf("output = %q, want a DEFINE/LOGICAL trace", buf.String())
+	}
+}
+
+func TestDefineLogicalNoDebugTraceWhenFlagClear(t *testing.T) {
+	c, buf := newTestConsole(t)
+	c.CPU.SetDebug(0)
+
+	if err := c.DefineLogical("LNM$FILE_DEV", "FOO", "BAR"); err != nil {
+		t.Fatalf("DefineLogical: %v", err)
+	}
+
+	if buf.Len() != 0 {
+		t.Errorf("output = %q, want no trace output with DebugLogicals clear", buf.String())
+	}
+}
+
+func TestDefineLogicalBeforeInitDoesNotPanic(t *testing.T) {
+	c := New(nil)
+	if err := c.DefineLogical("LNM$FILE_DEV", "FOO", "BAR"); err != nil {
+		t.Fatalf("DefineLogical: %v", err)
+	}
+}
 
 func TestConsoleDefineAndShowDevices(t *testing.T) {
 	c, buf := newTestConsole(t)

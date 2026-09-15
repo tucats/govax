@@ -1,8 +1,12 @@
 package rtl
 
 import (
+	"bytes"
 	"os"
+	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/vax"
 )
 
 func TestRMSCreateConnectPutToConsole(t *testing.T) {
@@ -65,6 +69,64 @@ func TestRMSCreateConnectPutToConsole(t *testing.T) {
 
 	if got := out.String(); got != record+"\n" {
 		t.Errorf("console output = %q, want %q (record plus the console-IFI newline)", got, record+"\n")
+	}
+}
+
+func TestRMSCreateConnectPutDebugRMSTrace(t *testing.T) {
+	env, _ := fixture()
+
+	fabAddr, fnaAddr := uint32(0x1000), uint32(0x1100)
+	putString(t, env, fnaAddr, "TTA0:")
+	if err := env.mem.StoreByte(env.cpu, fabAddr+fabFAC, fabFACPut); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.mem.StoreLongword(env.cpu, fabAddr+fabFNA, fnaAddr); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.mem.StoreByte(env.cpu, fabAddr+fabFNS, 5); err != nil {
+		t.Fatal(err)
+	}
+
+	var buf bytes.Buffer
+	env.cpu.SetDebugWriter(&buf)
+	env.cpu.SetDebug(vax.DebugRMS)
+
+	if r0, err := serviceSysCreate(env, []uint32{fabAddr}); err != nil || r0 != ssNormal {
+		t.Fatalf("SYS$CREATE: r0=%d err=%v", r0, err)
+	}
+	if !strings.Contains(buf.String(), "In SYS$CREATE function") {
+		t.Errorf("output = %q, want a SYS$CREATE trace", buf.String())
+	}
+
+	rabAddr := uint32(0x1200)
+	if err := env.mem.StoreLongword(env.cpu, rabAddr+rabFAB, fabAddr); err != nil {
+		t.Fatal(err)
+	}
+	buf.Reset()
+	if r0, err := serviceSysConnect(env, []uint32{rabAddr}); err != nil || r0 != ssNormal {
+		t.Fatalf("SYS$CONNECT: r0=%d err=%v", r0, err)
+	}
+	if !strings.Contains(buf.String(), "In SYS$CONNECT function") {
+		t.Errorf("output = %q, want a SYS$CONNECT trace", buf.String())
+	}
+
+	recBuf := uint32(0x1300)
+	putString(t, env, recBuf, "HI")
+	if err := env.mem.StoreByte(env.cpu, rabAddr+rabRAC, rabRACSeq); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.mem.StoreWord(env.cpu, rabAddr+rabRSZ, 2); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.mem.StoreLongword(env.cpu, rabAddr+rabRBF, recBuf); err != nil {
+		t.Fatal(err)
+	}
+	buf.Reset()
+	if r0, err := serviceSysPut(env, []uint32{rabAddr}); err != nil || r0 != ssNormal {
+		t.Fatalf("SYS$PUT: r0=%d err=%v", r0, err)
+	}
+	if !strings.Contains(buf.String(), "In SYS$PUT function") {
+		t.Errorf("output = %q, want a SYS$PUT trace", buf.String())
 	}
 }
 

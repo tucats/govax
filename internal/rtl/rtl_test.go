@@ -2,6 +2,7 @@ package rtl
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	iodev "github.com/tucats/govax/internal/io"
@@ -161,6 +162,23 @@ func TestEnvironmentSystemService(t *testing.T) {
 	}
 	if r0 != ssNormal {
 		t.Errorf("r0 = %d, want ssNormal", r0)
+	}
+}
+
+func TestEnvironmentSystemServiceDebugServicesTrace(t *testing.T) {
+	env, _ := fixture()
+	putArgs(t, env, 0x2000, []uint32{5})
+
+	var buf bytes.Buffer
+	env.cpu.SetDebugWriter(&buf)
+	env.cpu.SetDebug(vax.DebugServices)
+
+	if _, handled, err := env.SystemService(0x7FFEE000); err != nil || !handled {
+		t.Fatalf("SystemService: handled=%v err=%v", handled, err)
+	}
+
+	if !strings.Contains(buf.String(), "DEBUG(SERVICES): SYS$SETEF(") {
+		t.Errorf("output = %q, want a DEBUG(SERVICES) trace naming SYS$SETEF", buf.String())
 	}
 }
 

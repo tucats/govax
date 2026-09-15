@@ -1,6 +1,8 @@
 package rtl
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/vax"
@@ -159,6 +161,28 @@ func TestServiceSysGetjpiw(t *testing.T) {
 	}
 	if cliname != "DCL" {
 		t.Errorf("cliname = %q, want \"DCL\"", cliname)
+	}
+}
+
+func TestServiceSysGetjpiwDebugProcessTrace(t *testing.T) {
+	env, _ := fixture()
+	nameAddr, nameStr := uint32(0x1000), uint32(0x1100)
+	putDescriptor(t, env, nameAddr, nameStr, "MYPROC")
+
+	var buf bytes.Buffer
+	env.cpu.SetDebugWriter(&buf)
+	env.cpu.SetDebug(vax.DebugProcess)
+
+	argv := make([]uint32, 7)
+	argv[0] = 5 // EFN
+	argv[2] = nameAddr
+
+	if _, err := serviceSysGetjpiw(env, argv); err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(buf.String(), `DEBUG: SYS$GETJPIW EFN=5 PRCNAM="MYPROC"`) {
+		t.Errorf("output = %q, want a SYS$GETJPIW trace naming EFN and PRCNAM", buf.String())
 	}
 }
 

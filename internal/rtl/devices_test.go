@@ -1,9 +1,12 @@
 package rtl
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/vax"
 )
 
 func defineTestDevice(env *Environment, name string, class iodev.DeviceClass) *iodev.Device {
@@ -103,6 +106,36 @@ func TestServiceSysGetdviwByChannel(t *testing.T) {
 	}
 	if iodev.DeviceClass(class) != iodev.DeviceClassDisk {
 		t.Errorf("class = %d, want DeviceClassDisk", class)
+	}
+}
+
+func TestServiceSysGetdviwDebugDevicesTrace(t *testing.T) {
+	env, _ := fixture()
+	dp := defineTestDevice(env, "DKA0", iodev.DeviceClassDisk)
+	c := &channel{Name: "DKA0", Number: 8, Device: dp}
+	env.channels = append(env.channels, c)
+
+	itemList, buf := uint32(0x2000), uint32(0x3000)
+	putWord(t, env, itemList, 1)
+	putWord(t, env, itemList+2, dviDevClass)
+	putLongword(t, env, itemList+4, buf)
+	putLongword(t, env, itemList+8, 0)
+	putLongword(t, env, itemList+12, 0)
+
+	argv := make([]uint32, 8)
+	argv[1] = 8
+	argv[3] = itemList
+
+	var traceBuf bytes.Buffer
+	env.cpu.SetDebugWriter(&traceBuf)
+	env.cpu.SetDebug(vax.DebugDevices)
+
+	if _, err := serviceSysGetdviw(env, argv); err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(traceBuf.String(), "DEBUG: SYS$GETDVIW looks up device DKA0") {
+		t.Errorf("output = %q, want a SYS$GETDVIW lookup trace", traceBuf.String())
 	}
 }
 

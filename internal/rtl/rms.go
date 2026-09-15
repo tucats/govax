@@ -1,8 +1,11 @@
 package rtl
 
 import (
+	"fmt"
 	"io"
 	"os"
+
+	"github.com/tucats/govax/internal/vax"
 )
 
 // Port of rms.c's rms_create/rms_connect/rms_put — the only three RMS
@@ -141,6 +144,11 @@ func serviceSysCreate(env *Environment, argv []uint32) (uint32, error) {
 		env.ifiFiles[ifi] = w
 	}
 
+	if env.cpu.DebugEnabled(vax.DebugRMS) {
+		fmt.Fprintf(env.cpu.DebugWriter(), "RMS: In SYS$CREATE function, FAB=%08X, FAC=%d, FN=%q, writing to IFI[%d]\n",
+			fabAddr, fac, fn, ifi)
+	}
+
 	if err := env.mem.StoreWord(env.cpu, fabAddr+fabIFI, ifi); err != nil {
 		return ssAccVio, nil
 	}
@@ -154,6 +162,10 @@ func serviceSysCreate(env *Environment, argv []uint32) (uint32, error) {
 // IFI.
 func serviceSysConnect(env *Environment, argv []uint32) (uint32, error) {
 	rabAddr := argv[0]
+
+	if env.cpu.DebugEnabled(vax.DebugRMS) {
+		fmt.Fprintf(env.cpu.DebugWriter(), "RMS: In SYS$CONNECT function, RAB=%08X.\n", rabAddr)
+	}
 
 	fabAddr, err := env.mem.LoadLongword(env.cpu, rabAddr+rabFAB)
 	if err != nil {
@@ -191,6 +203,11 @@ func serviceSysPut(env *Environment, argv []uint32) (uint32, error) {
 	fabIfi, err := env.mem.LoadWord(env.cpu, fabAddr+fabIFI)
 	if err != nil {
 		return ssAccVio, nil
+	}
+
+	if env.cpu.DebugEnabled(vax.DebugRMS) {
+		fmt.Fprintf(env.cpu.DebugWriter(), "RMS: In SYS$PUT function, RAB=%08X, FAB=%08X  IFI=%d\n",
+			rabAddr, fabAddr, fabIfi)
 	}
 
 	w, ok := env.ifiWriter(fabIfi)

@@ -1,6 +1,11 @@
 package rtl
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/tucats/govax/internal/vax"
+)
 
 // Port of logical_names.c's sys_trnlnm — the SYS$ service built on Phase
 // 09's internal/io.LogicalNameTable, deferred to this phase per
@@ -65,12 +70,27 @@ func serviceSysTrnlnm(env *Environment, argv []uint32) (uint32, error) {
 		logname = strings.ToUpper(logname)
 	}
 
+	debug := env.cpu.DebugEnabled(vax.DebugLogicals)
+
 	if !env.Logicals.HasTable(tabnam) {
+		if debug {
+			fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: $TRNLNM(%s,%s), table not found.\n", tabnam, logname)
+		}
 		return ssNoLogTab, nil
 	}
 	ln, found := env.Logicals.Get(tabnam, logname, 0)
 	if !found {
+		if debug {
+			fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: $TRNLNM(%s,%s), logical name not found.\n", tabnam, logname)
+		}
 		return ssNoLogNam, nil
+	}
+	if debug {
+		value := ln.Value
+		if value == "" {
+			value = "<undefined>"
+		}
+		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: $TRNLNM(%s,%s), value=%q\n", tabnam, logname, value)
 	}
 
 	accmode := uint32(env.cpu.PSL().CurMod())

@@ -1,6 +1,55 @@
 package rtl
 
-import "testing"
+import (
+	"bytes"
+	"strings"
+	"testing"
+
+	"github.com/tucats/govax/internal/vax"
+)
+
+func TestServiceSysTrnlnmDebugLogicalsTrace(t *testing.T) {
+	env, _ := fixture()
+
+	tabAddr, tabStr := uint32(0x1000), uint32(0x1100)
+	putDescriptor(t, env, tabAddr, tabStr, "LNM$FILE_DEV")
+	nameAddr, nameStr := uint32(0x1200), uint32(0x1300)
+	putDescriptor(t, env, nameAddr, nameStr, "SYS$OUTPUT")
+
+	var buf bytes.Buffer
+	env.cpu.SetDebugWriter(&buf)
+	env.cpu.SetDebug(vax.DebugLogicals)
+
+	if _, err := serviceSysTrnlnm(env, []uint32{0, tabAddr, nameAddr, 0, 0}); err != nil {
+		t.Fatal(err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, `DEBUG: $TRNLNM(LNM$FILE_DEV,SYS$OUTPUT), value="TTA0:"`) {
+		t.Errorf("output = %q, want a $TRNLNM value trace", out)
+	}
+}
+
+func TestServiceSysTrnlnmNoDebugTraceWhenFlagClear(t *testing.T) {
+	env, _ := fixture()
+
+	tabAddr, tabStr := uint32(0x1000), uint32(0x1100)
+	putDescriptor(t, env, tabAddr, tabStr, "LNM$FILE_DEV")
+	nameAddr, nameStr := uint32(0x1200), uint32(0x1300)
+	putDescriptor(t, env, nameAddr, nameStr, "SYS$OUTPUT")
+
+	var buf bytes.Buffer
+	env.cpu.SetDebugWriter(&buf)
+	env.cpu.SetDebug(0)
+
+	if _, err := serviceSysTrnlnm(env, []uint32{0, tabAddr, nameAddr, 0, 0}); err != nil {
+		t.Fatal(err)
+	}
+
+	if buf.Len() != 0 {
+		t.Errorf("output = %q, want no trace output with DebugLogicals clear", buf.String())
+	}
+}
 
 func TestServiceSysTrnlnm(t *testing.T) {
 	env, _ := fixture()

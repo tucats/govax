@@ -19,7 +19,7 @@ tracing), `logical_names.c`/`devices.c`/`rms.c`/`service.c`/`p1_vector.c` (RTL
 tracing), and `console_run.c`/`console_dispatch.c`/`console_step.c`/
 `asm_symbols.c` (console-level tracing).
 
-**Status: sub-phases 1-3 complete; sub-phases 4-5 in progress.**
+**Status: sub-phases 1-4 complete; sub-phase 5 in progress.**
 
 ## Design decisions
 
@@ -196,7 +196,9 @@ item-code sub-case:
 - **`LOGICALS`** — `internal/console/device.go`'s `Console.DefineLogical`
   (the `DEFINE/LOGICAL` console command, matching `set_logical`'s trace) and
   `internal/rtl/logicals.go`'s `serviceSysTrnlnm` (matching `get_logical`'s).
-- **`DEVICES`** — `internal/rtl/devices.go`'s `serviceSysAssign`.
+- **`DEVICES`** — `internal/rtl/devices.go`'s `serviceSysGetdviw` (all 5 of
+  `devices.c`'s `DBG_DEVICES` sites are there, not in `sys_assign` as
+  initially assumed before checking the source).
 - **`RMS`** — `internal/rtl/rms.go`'s `serviceSysCreate`/`serviceSysConnect`/
   `serviceSysPut`.
 - **`SERVICES`** — `internal/rtl/environment.go`'s `SystemService`, the single
@@ -235,6 +237,44 @@ item-code sub-case:
   register-dump/full-disassembly behavior is deferred.
 
 ## Progress Log
+
+### 2026-09-15 — Sub-phase 4 complete: `internal/rtl` tracing
+
+`LOGICALS`: `Console.DefineLogical` (`internal/console/device.go`, guarded
+against a nil `c.CPU` since this command deliberately doesn't require
+`INIT`) and `serviceSysTrnlnm` (`internal/rtl/logicals.go`), matching
+`set_logical`/`get_logical`'s three outcomes (table not found/name not
+found/value) rather than the item-list sub-case prints.
+
+`DEVICES`: found while implementing that all 5 of `devices.c`'s
+`DBG_DEVICES` call sites are actually in `sys_getdviw`, not `sys_assign` as
+`PHASE-17.md`'s initial plan assumed — corrected before landing the code (in
+both the plan section above and here). Traces the resolved device name once,
+matching `devices.c:326`.
+
+`RMS`: `serviceSysCreate`/`serviceSysConnect`/`serviceSysPut`
+(`internal/rtl/rms.go`), one summary line each matching `rms_create`/
+`rms_connect`/`rms_put`'s own entry traces (not their further per-branch
+prints).
+
+`SERVICES`: `Environment.SystemService` (`internal/rtl/environment.go`) —
+the single choke point every `SYS$` call already goes through in this
+port's table-driven dispatch, so one trace call covers what `p1_vector.c`
+needed its own dedicated `call_service` switch case for.
+
+`PROCESS`: `serviceSysGetjpiw` (`internal/rtl/core.go`) — this closed a
+small pre-existing gap the function's own doc comment had flagged: `argv[2]`
+(an optional process-name descriptor) was deliberately left unread because
+"this port has no equivalent trace output to feed"; now that it does, it's
+read and traced, and the comment updated to say so.
+
+Tests: one trace-present test per wired call site, plus explicit
+trace-absent tests for `serviceSysTrnlnm` and `Console.DefineLogical`
+(the latter also covered for the pre-`INIT` nil-`CPU` case, since this
+command doesn't require it) — `internal/rtl/logicals_test.go`,
+`devices_test.go`, `rms_test.go`, `rtl_test.go`, `core_test.go`,
+`internal/console/device_test.go`. `go build ./...`, `go vet ./...`,
+`go test ./...` all clean.
 
 ### 2026-09-15 — Sub-phase 3 complete: `internal/vm` tracing
 

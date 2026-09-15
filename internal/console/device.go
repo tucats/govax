@@ -1,6 +1,11 @@
 package console
 
-import iodev "github.com/tucats/govax/internal/io"
+import (
+	"fmt"
+
+	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/vax"
+)
 
 // DefineDevice implements the DEFINE/DEVICE console command
 // (define_device.c), registering a new device in c.Devices. Unlike most
@@ -62,6 +67,10 @@ func (c *Console) ShowDevices(name string, full bool) error {
 // (define_logical.c), defining name's value within table. Also doesn't
 // require INIT, matching define_logical.c.
 func (c *Console) DefineLogical(table, name, value string) error {
+	if c.CPU != nil && c.CPU.DebugEnabled(vax.DebugLogicals) {
+		fmt.Fprintf(c.CPU.DebugWriter(), "DEBUG: DEFINE/LOGICAL %s/TABLE=%s %q\n", name, table, value)
+	}
+
 	c.Logicals.Set(table, name, value, 0)
 
 	return nil

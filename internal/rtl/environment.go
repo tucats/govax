@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/vax"
@@ -210,5 +211,19 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 		return 0, true, err
 	}
 	r0, err := callHandler(fn, env, argv)
+
+	// DBG_SERVICES: matches p1_vector.c:433's own "Debug P1 system service
+	// calls?" trace -- this port's table-driven service dispatch (see
+	// docs/PHASE-17.md sub-phase 4) gives every SYS$ call a single choke
+	// point, unlike the C source's switch-based call_service.
+	if env.cpu.DebugEnabled(vax.DebugServices) {
+		args := make([]string, len(argv))
+		for i, a := range argv {
+			args[i] = fmt.Sprintf("%08X", a)
+		}
+		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(SERVICES): %s( %s ), returns %08X\n",
+			entry.Name, strings.Join(args, ", "), r0)
+	}
+
 	return r0, true, err
 }
