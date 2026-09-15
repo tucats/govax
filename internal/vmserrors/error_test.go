@@ -10,4 +10,12 @@ func TestErrorAccvioWithArgument(t *testing.T) {
 	if got := err.Error(); got != want {
 		t.Errorf("Error() = %q, want %q", got, want)
 	}
+
+	err = New(0x42, "Custard")
+	got := err.Error()
+
+	const want2 = `SYS$UNKNOWN, Unknown error 00000042 ["Custard"]`
+	if got != want2 {
+		t.Errorf("Error() = %q, want %q", got, want2)
+	}
 }

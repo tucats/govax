@@ -406,7 +406,7 @@ func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (uint32, error) {
 		switch {
 		case ch == '+' && !haveSign:
 			haveSign = true
-			
+
 			c.next()
 
 		case ch == '-' && !haveSign:
@@ -462,6 +462,7 @@ func (a *Assembler) hexDigits(c *cursor) (uint32, error) {
 		}
 
 		digits++
+
 		c.next()
 	}
 }
@@ -470,37 +471,48 @@ func (a *Assembler) hexDigits(c *cursor) (uint32, error) {
 // characters, packed little-endian: the first character is the constant's
 // low-order byte), with \n/\r/\t escapes — matching char_literal().
 func (a *Assembler) charLiteral(c *cursor) (uint32, error) {
+	var value uint32
+
 	if c.peek() != '\'' {
 		return 0, fmt.Errorf("invalid character literal")
 	}
+
 	c.next()
 
-	var value uint32
 	size := 0
+
 	for c.peek() != '\'' {
 		if c.atEnd() {
 			return 0, fmt.Errorf("unterminated character literal")
 		}
+
 		if size > 3 {
 			return 0, fmt.Errorf("character literal too long")
 		}
+
 		ch := c.next()
 		if ch == '\\' {
 			switch c.peek() {
 			case 'n':
 				ch = '\n'
+
 			case 'r':
 				ch = '\r'
+
 			case 't':
 				ch = '\t'
+
 			default:
 				ch = c.peek()
 			}
+
 			c.next()
 		}
+
 		value |= uint32(ch) << (8 * uint(size))
 		size++
 	}
+
 	c.next() // closing quote
 
 	return value, nil

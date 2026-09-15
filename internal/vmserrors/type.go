@@ -5,16 +5,33 @@ package vmserrors
 
 const (
 	// Mask values to extract bit fields from a VMS status code.
-	Severity = 0x3 << 0
-	Facility = 0x1FF << 3
-	Customer = 0x1 << 12
-	Message  = 0xFFFF << 16
+	// +----------+----------+----------+---------+----------+
+	// | Reserved | Facility | Customer | Message | Severity |
+	// +----------+----------+----------+---------+----------+
+	// | 31..29   | 28..20   | 19       | 18..3   | 2..0     |
+	// +----------+----------+----------+---------+----------+
+	// The following constants define the bit masks for each field
+	// in the status code.
+
+	SeverityPosition = 0
+	MessagePosition  = 3
+	CustomerPosition = 19
+	FacilityPosition = 20
+	ReservedPosition = 29
+
+	Severity = 0x7
+	Message  = 0xFFFF << MessagePosition
+	Customer = 0x1 << CustomerPosition
+	Facility = 0x1FF << FacilityPosition
+	Reserved = 0x7 << ReservedPosition
 
 	// Well known faciity codes.
-	SYSFacility = 0
-	RMSFacility = 1
-	CLIFacility = 2
-	DBGFacility = 3
+	SYSFacility = 0  // System and system service facility
+	RMSFacility = 1  // RMS (file I/O) facility
+	CLIFacility = 2  // Command line or DCL errors
+	DBGFacility = 3  // Messages from the debugger
+	LIBFacility = 6  // MEssages from the LIBRTL shims and runtimes
+	VAXFacility = 15 // This is the facility used by govax internal messages
 
 	// Well known names for the severity field values.
 	StatusWarning = 0
@@ -36,13 +53,16 @@ const (
 	// SYS facility, which is the most common source of errors.
 	SYS_STATUS uint32 = 0
 	SYS_ACCVIO uint32 = 1
+
+	CLI_UNKVERB uint32 = 1
 )
 
 // Well known error codes, constructed from the above constnats.
 
 const (
-	SS_STATIS = SYSFacility | SYS_STATUS | StatusSuccess
-	SS_ACCVIO = SYSFacility | SYS_ACCVIO | StatusError
+	SS_STATUS  = SYSFacility<<FacilityPosition | SYS_STATUS<<MessagePosition | StatusSuccess
+	SS_ACCVIO  = SYSFacility<<FacilityPosition | SYS_ACCVIO<<MessagePosition | StatusSevere
+	SS_UNKVERB = CLIFacility<<FacilityPosition | CLI_UNKVERB<<MessagePosition | StatusError
 )
 
 // Structure of an error, which is a 32-bit status code and an optional list of arguments that
@@ -69,14 +89,11 @@ var FacilityNames = map[uint32]string{
 	RMSFacility: "RMS",
 	CLIFacility: "CLI",
 	DBGFacility: "DBG",
+	LIBFacility: "LIB",
+	VAXFacility: "VAX", // These are the erorrs used by govax internally
 }
 
-var MessageNames = map[uint32]map[uint32]string{
-	SYSFacility: {
-		SYS_STATUS: "STATUS",
-		SYS_ACCVIO: "ACCVIO",
-	},
-}
+var MessageNames = map[uint32]string{}
 
 // Test to see if an error matches a given knwon status code,
 // irrespective of the arguments.

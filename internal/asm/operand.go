@@ -348,6 +348,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		}
 
 		c.skipBlanks()
+
 		if c.next() != ')' {
 			return fmt.Errorf("invalid addressing mode")
 		}
@@ -388,11 +389,13 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		}
 
 		c.skipBlanks()
+
 		if c.next() != ')' {
 			return fmt.Errorf("invalid addressing mode")
 		}
 
 		mode := byte(0x60)
+		
 		if c.peek() == '+' {
 			mode = 0x80
 

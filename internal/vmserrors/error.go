@@ -1,6 +1,7 @@
 package vmserrors
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -8,7 +9,27 @@ import (
 func (e VMSError) Error() string {
 	msg, ok := Messages[e.Status]
 	if !ok {
-		return "SYS$UNKNOWN, Unknown error" + strconv.FormatUint(uint64(e.Status), 16)
+		msg = "SYS$UNKNOWN, Unknown error " + fmt.Sprintf("%08X", e.Status)
+
+		if len(e.Arguments) > 0 {
+			msg = msg + " ["
+
+			for idx, arg := range e.Arguments {
+				if idx > 0 {
+					msg = msg + ", "
+				}
+
+				if t, ok := arg.(string); ok {
+					msg = msg + strconv.Quote(t)
+				} else {
+					msg = msg + fmt.Sprintf("%v", arg)
+				}
+			}
+
+			msg = msg + "]"
+		}
+
+		return msg
 	}
 
 	if len(e.Arguments) == 0 {

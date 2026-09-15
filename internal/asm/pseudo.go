@@ -54,7 +54,7 @@ func (a *Assembler) assemblePseudo(c *cursor) (handled bool, err error) {
 	name := c.s[start:c.pos]
 	if !pseudoNames[name] {
 		c.pos = save
-		
+
 		return false, nil
 	}
 
@@ -997,12 +997,15 @@ func (a *Assembler) pseudoSpace(c *cursor) error {
 		a.deposit += n
 		return nil
 	}
+
 	for i := uint32(0); i < n; i++ {
 		if err := a.image.storeByte(a.deposit, fill); err != nil {
 			return err
 		}
+
 		a.deposit++
 	}
+
 	return nil
 }
 
