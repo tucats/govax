@@ -249,7 +249,7 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, rest s
 	if !haveVal {
 		if q.Default != nil {
 			r.set(q.Name, q.ID, negated, *q.Default)
-			
+
 			return active, nextParam, rest, nil
 		}
 
@@ -266,6 +266,7 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, rest s
 	}
 
 	r.set(q.Name, q.ID, kwNegated, val)
+	
 	if redirect != "" {
 		target, ok := g.entries[redirect]
 		if !ok {

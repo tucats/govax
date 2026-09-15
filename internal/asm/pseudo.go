@@ -54,6 +54,7 @@ func (a *Assembler) assemblePseudo(c *cursor) (handled bool, err error) {
 	name := c.s[start:c.pos]
 	if !pseudoNames[name] {
 		c.pos = save
+		
 		return false, nil
 	}
 
@@ -221,7 +222,7 @@ func readFileArg(c *cursor) string {
 		}
 
 		name := c.s[start:c.pos]
-		
+
 		if c.peek() == '"' {
 			c.next()
 		}

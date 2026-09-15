@@ -54,6 +54,7 @@ func (g *Grammar) validate() error {
 			if _, _, err := e.qualifier(d.Qual1); err != nil {
 				return fmt.Errorf("dcl: entry %q: disallow qualifier %q not found", e.Name, d.Qual1)
 			}
+			
 			if _, _, err := e.qualifier(d.Qual2); err != nil {
 				return fmt.Errorf("dcl: entry %q: disallow qualifier %q not found", e.Name, d.Qual2)
 			}

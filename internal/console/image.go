@@ -249,7 +249,7 @@ func (c *Console) readIAF(addr uint32) (IAF, error) {
 	if iaf.ShrImgCnt, err = c.loadLong(addr + 0x1C); err != nil {
 		return iaf, err
 	}
-	
+
 	return iaf, nil
 }
 
@@ -329,6 +329,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 			var sname string
 
 			v += icb.Base
+			
 			if icb.Name != "<MAIN>" {
 				if n == 0 {
 					sname = fmt.Sprintf("SHARE$%s_INITIALIZE", icb.Name)
