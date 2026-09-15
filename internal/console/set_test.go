@@ -110,6 +110,23 @@ func TestSetDebug_invalidFlag(t *testing.T) {
 	}
 }
 
+func TestSetTrace(t *testing.T) {
+	c, _ := newTestConsole(t)
+	if c.Trace {
+		t.Error("Trace = true, want false by default")
+	}
+
+	c.SetTrace(true)
+	if !c.Trace {
+		t.Error("Trace = false, want true after SetTrace(true)")
+	}
+
+	c.SetTrace(false)
+	if c.Trace {
+		t.Error("Trace = true, want false after SetTrace(false)")
+	}
+}
+
 func TestShowRegisters(t *testing.T) {
 	c, buf := newTestConsole(t)
 	c.CPU.SetGPR(vax.R3, 0x11223344)

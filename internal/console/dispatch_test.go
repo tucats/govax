@@ -275,6 +275,28 @@ func TestDispatch_debugDCLTrace(t *testing.T) {
 	}
 }
 
+func TestDispatch_setTraceAndShowTrace(t *testing.T) {
+	d, c := newTestDispatcher(t)
+
+	if err := d.Dispatch("SET TRACE"); err != nil {
+		t.Fatalf("Dispatch(SET TRACE): %v", err)
+	}
+	if !c.Trace {
+		t.Error("Trace = false, want true after SET TRACE")
+	}
+
+	if err := d.Dispatch("SHOW TRACE"); err != nil {
+		t.Fatalf("Dispatch(SHOW TRACE): %v", err)
+	}
+
+	if err := d.Dispatch("SET NOTRACE"); err != nil {
+		t.Fatalf("Dispatch(SET NOTRACE): %v", err)
+	}
+	if c.Trace {
+		t.Error("Trace = true, want false after SET NOTRACE")
+	}
+}
+
 func TestDispatch_setDebugAndShowDebug(t *testing.T) {
 	d, c := newTestDispatcher(t)
 

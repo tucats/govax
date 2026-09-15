@@ -41,6 +41,13 @@ type Console struct {
 	Verbose     bool
 	Verify      bool
 
+	// Trace matches vax.console.disasm (SET TRACE/NOTRACE, SHOW TRACE):
+	// whether EXEC/GO/CALL/RUN disassemble each instruction as they execute
+	// it. STEP always traces regardless of this flag, matching
+	// console_step.c's own "Always in trace mode" behavior — see trace.go
+	// and docs/PHASE-17.md sub-phases 6-7.
+	Trace bool
+
 	Breakpoints []*Breakpoint
 
 	// ROM/NVRAM are separate byte buffers outside vm.Memory's main RAM,

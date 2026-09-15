@@ -123,6 +123,13 @@ func (c *Console) SetDebug(names []string) error {
 	return nil
 }
 
+// SetTrace implements SET TRACE/SET DISASSEMBLY (enable) and SET NOTRACE/
+// SET NODISASSEMBLE (disable), matching console_set.c:928-939's own
+// vax.console.disasm assignment.
+func (c *Console) SetTrace(on bool) {
+	c.Trace = on
+}
+
 // SetRadix implements SET RADIX <8|10|16>.
 func (c *Console) SetRadix(radix int) error {
 	if radix != 8 && radix != 10 && radix != 16 {

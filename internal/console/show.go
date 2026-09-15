@@ -1367,3 +1367,27 @@ func (c *Console) ShowDebug() error {
 
 	return nil
 }
+
+// ShowTrace implements SHOW TRACE (also reached via the DISASSEMBLY
+// keyword), matching console_show.c's case 147.
+func (c *Console) ShowTrace() error {
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	state := "disabled"
+	if c.Trace {
+		state = "enabled"
+	}
+	c.Printf("    Execution trace disassembly is %s\n", state)
+
+	if c.Trace {
+		regState := "disabled"
+		if c.CPU.DebugEnabled(vax.DebugRegisters) {
+			regState = "enabled"
+		}
+		c.Printf("    Register tracking is %s\n", regState)
+	}
+
+	return nil
+}

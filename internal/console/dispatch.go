@@ -247,6 +247,7 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("SHOW_MAP", func(id int64, r *dcl.Result) error { return d.Console.ShowMap() })
 	g.Bind("SHOW_TB", func(id int64, r *dcl.Result) error { return d.Console.ShowTB() })
 	g.Bind("SHOW_DEBUG", func(id int64, r *dcl.Result) error { return d.Console.ShowDebug() })
+	g.Bind("SHOW_TRACE", func(id int64, r *dcl.Result) error { return d.Console.ShowTrace() })
 
 	g.Bind("SHOW_INSTRUCTIONS", func(id int64, r *dcl.Result) error {
 		return d.Console.ShowInstructions(
@@ -792,6 +793,14 @@ func cmdSet(d *Dispatcher, rest string) error {
 
 		d.Console.AddBreakpoint(addr)
 
+		return nil
+
+	case "TRACE", "DISASSEMBLY":
+		d.Console.SetTrace(true)
+		return nil
+
+	case "NOTRACE", "NODISASSEMBLE":
+		d.Console.SetTrace(false)
 		return nil
 
 	case "DEBUG", "DBG":
