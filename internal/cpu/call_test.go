@@ -1,6 +1,7 @@
 package cpu
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/tucats/govax/internal/vax"
@@ -148,6 +149,71 @@ func TestEmulCallsRoundTrip(t *testing.T) {
 	}
 	if got := cpu.GPR(vax.R3); got != 0x22222222 {
 		t.Errorf("R3 after RET = %#x, want 0x22222222", got)
+	}
+}
+
+// TestEngineCallEntryRunsUntilSentinelReturn exercises the Console-facing
+// CallEntry primitive (docs/PHASE-13.md's Console.Call, built on this): a
+// zero-argument call built directly (no CALLS instruction), stepped through
+// a procedure body that itself CALLS/RETs a nested routine before returning,
+// ending in ErrConsoleCallReturned rather than a fault at the sentinel PC.
+func TestEngineCallEntryRunsUntilSentinelReturn(t *testing.T) {
+	cpu, mem := fixture()
+	e := NewEngine(cpu, mem)
+
+	cpu.SetGPR(vax.SP, 0x9000)
+	cpu.SetGPR(vax.FP, 0x1234)
+	cpu.SetGPR(vax.AP, 0x5678)
+
+	// Outer procedure at 0x2000: empty entry mask, CALLS a nested procedure
+	// at 0x3000, then RET.
+	putBytes(t, cpu, mem, 0x2000,
+		0x00, 0x00, // entry mask: no registers saved
+		0xFB, shortLiteral(0), 0x9F, 0x00, 0x30, 0x00, 0x00, // CALLS #0, @#0x3000
+		0x04, // RET
+	)
+	// Nested procedure at 0x3000: empty entry mask, RET immediately.
+	putBytes(t, cpu, mem, 0x3000, 0x00, 0x00, 0x04)
+
+	if err := e.CallEntry(0x2000); err != nil {
+		t.Fatalf("CallEntry: %v", err)
+	}
+	if got := cpu.GPR(vax.PC); got != 0x2002 {
+		t.Fatalf("PC after CallEntry = %#x, want 0x2002", got)
+	}
+
+	steps := 0
+	for {
+		steps++
+		if steps > 10 {
+			t.Fatal("too many steps without reaching ErrConsoleCallReturned")
+		}
+		err := e.Step()
+		if err == nil {
+			continue
+		}
+		if errors.Is(err, ErrConsoleCallReturned) {
+			break
+		}
+		t.Fatalf("Step: %v", err)
+	}
+
+	// SP/AP round-trip back to what they were before CallEntry, exactly as a
+	// real caller's RET would restore them. PC/FP are left at SentinelReturn
+	// -- there is no real caller context to restore them to, since the
+	// "caller" here was never a VAX procedure -- which is exactly what tells
+	// Console.Call the outermost call is done.
+	if got := cpu.GPR(vax.SP); got != 0x9000 {
+		t.Errorf("SP after return = %#x, want 0x9000", got)
+	}
+	if got := cpu.GPR(vax.AP); got != 0x5678 {
+		t.Errorf("AP after return = %#x, want 0x5678", got)
+	}
+	if got := cpu.GPR(vax.FP); got != SentinelReturn {
+		t.Errorf("FP after return = %#x, want SentinelReturn", got)
+	}
+	if got := cpu.GPR(vax.PC); got != SentinelReturn {
+		t.Errorf("PC after return = %#x, want SentinelReturn", got)
 	}
 }
 

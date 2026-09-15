@@ -97,4 +97,43 @@ knowable by actually loading and running it, which is this phase's job to find o
 
 ## Progress Log
 
-_Not started._
+### 2026-09-15 — Sub-phase 1: CONSOLE$SCRATCH, Engine.CallEntry, Console.Call
+
+- `internal/console/vminit.go`'s `VMInit` now reserves the S0
+  `CONSOLE$SCRATCH` page (one page after the privileged-mode stacks,
+  matching `console_vminit_dcl`'s own placement) and defines the symbol --
+  previously deferred at Phase 08 for lack of a consumer; this phase's
+  image loader and SHIM$ stub synthesis (sub-phases to follow) are that
+  consumer. `TestVMInit_reservesConsoleScratch` checks it round-trips a
+  store/load in kernel mode.
+- `internal/cpu/call.go`: factored `emulCall`'s frame-construction body out
+  into `Engine.buildCallFrame` (parametrized by the frame's return PC/FP,
+  rather than always reading the live registers), and added
+  `Engine.CallEntry` on top of it -- builds a CALLS-shaped frame directly
+  (no instruction fetch/decode) with `SentinelReturn` (`0xFFFFDEAF`) as the
+  return PC/FP, the same magic value `console_exec.c`'s `console_call`
+  uses. `emulRet` now recognizes a popped frame with both PC and FP equal
+  to `SentinelReturn` and reports `ErrConsoleCallReturned` instead of
+  resuming at that address -- the Go equivalent of `emul_call.c`'s
+  `vax.console.CALL_active`/FFFFDEAF check, minus the C source's
+  `CALL_active` guard flag (redundant here: `SentinelReturn` is deliberately
+  a value no real CALLS instruction can ever produce, so there's no
+  legitimate-program false-positive to guard against). Only the zero-
+  argument case is implemented -- see `CallEntry`'s doc comment for why
+  that's sufficient for this phase's actual call site (RUN's single call to
+  its synthesized `IMAGE$INIT` driver procedure; that procedure's own inner
+  CALLS to `LIB$INITIALIZE`/the main image use ordinary, already-correct
+  PUSHL/CALLS instructions, not this primitive).
+  `TestEngineCallEntryRunsUntilSentinelReturn` builds a two-level call chain
+  and steps it to completion.
+- `internal/console/call.go`'s `Console.Call` wraps `CallEntry` in a
+  step-until-done loop (mirroring `execute.go`'s `Execute`'s HALT handling),
+  with an optional per-instruction trace for the future `/STEP` qualifier.
+  `TestCall_returnsCleanlyThroughSentinelFrame` exercises it end-to-end.
+- Renamed `internal/console/run.go`/`run_test.go` to `execute.go`/
+  `execute_test.go` (per the user's request) since their actual export is
+  `Console.Execute`/`Console.Step` (the GO/EXEC/STEP commands), freeing the
+  `run.go` name for this phase's own `RUN <filename>` command once it
+  lands.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test
+  ./...` all clean.

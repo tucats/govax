@@ -1,6 +1,10 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import (
+	"errors"
+
+	"github.com/tucats/govax/internal/vax"
+)
 
 // This is the Go port of emul_call.c: CALLS/CALLG procedure-call stack-frame
 // construction, RET, and REI.
@@ -64,6 +68,19 @@ func emulCall(e *Engine, d *Decoded) error {
 	savedSP := e.cpu.GPR(vax.SP)
 	e.cpu.SetGPR(vax.SP, savedSP&0xFFFFFFFC)
 
+	return e.buildCallFrame(newAP, newPC, savedSP, e.cpu.GPR(vax.PC), e.cpu.GPR(vax.FP), calls)
+}
+
+// buildCallFrame does the shared frame-construction work behind CALLS/CALLG
+// and Engine.CallEntry: reads the entry mask at newPC, checks its reserved
+// bits (Note 1), saves R0-R11 per the mask, pushes the return context
+// (returnPC/returnFP -- the live PC/FP for a real CALLS/CALLG, or
+// SentinelReturn for a console-initiated call with no real caller frame to
+// return to), applies the manual's PSL effects, and leaves FP/AP/PC pointing
+// at the new frame/entry point. savedSP is the pre-alignment SP the caller
+// captured (for the frame's spa bits); newAP/newPC are the resolved
+// argument-pointer and entry-point values already computed by the caller.
+func (e *Engine) buildCallFrame(newAP, newPC, savedSP, returnPC, returnFP uint32, calls bool) error {
 	mask, err := e.mem.LoadWord(e.cpu, newPC)
 	if err != nil {
 		return err
@@ -72,7 +89,7 @@ func emulCall(e *Engine, d *Decoded) error {
 
 	// Note 1: a reserved operand fault occurs if bits 13:12 of the entry
 	// mask are not zero. SP has already moved (the CALLS count push and the
-	// alignment above), matching Note 2's "on a reserved operand fault,
+	// caller's alignment), matching Note 2's "on a reserved operand fault,
 	// condition codes are UNPREDICTABLE" allowance for partial side effects;
 	// nothing else about the frame (registers, PC/FP/AP, the mask longword)
 	// has been touched yet.
@@ -91,13 +108,14 @@ func emulCall(e *Engine, d *Decoded) error {
 		}
 	}
 
-	if err := push(e, e.cpu.GPR(vax.PC)); err != nil {
+	oldAP := e.cpu.GPR(vax.AP)
+	if err := push(e, returnPC); err != nil {
 		return err
 	}
-	if err := push(e, e.cpu.GPR(vax.FP)); err != nil {
+	if err := push(e, returnFP); err != nil {
 		return err
 	}
-	if err := push(e, e.cpu.GPR(vax.AP)); err != nil {
+	if err := push(e, oldAP); err != nil {
 		return err
 	}
 
@@ -152,9 +170,15 @@ func emulCall(e *Engine, d *Decoded) error {
 // MACRO-32 procedure-return convention, not an edge case worth only
 // documenting.
 //
-// The C source's console-CALL-command sentinel handling (halting the machine
-// when returning through a magic FFFFDEAF frame) is a Phase 08 console
-// concern with no console yet to drive it, so it's not ported here.
+// If this frame was built by Engine.CallEntry (its saved PC and FP are both
+// SentinelReturn -- a combination no real CALLS instruction can produce),
+// this reports that completion via ErrConsoleCallReturned instead of
+// resuming at the sentinel "address", matching emul_call.c's own
+// vax.console.CALL_active/FFFFDEAF check in its emul_ret (see
+// docs/PHASE-13.md). Unlike the C source, this skips the CALL_active guard
+// flag: SentinelReturn is defined precisely because no legitimate program
+// state can produce it (see the C source's own comment to that effect), so
+// the flag only guards against an already-impossible coincidence.
 func emulRet(e *Engine, d *Decoded) error {
 	sp := e.cpu.GPR(vax.FP) + 4
 
@@ -225,7 +249,51 @@ func emulRet(e *Engine, d *Decoded) error {
 	e.cpu.SetGPR(vax.FP, fp)
 	e.cpu.SetGPR(vax.PC, pc)
 	e.cpu.SetGPR(vax.SP, sp)
+
+	if fp == SentinelReturn && pc == SentinelReturn {
+		return ErrConsoleCallReturned
+	}
 	return nil
+}
+
+// SentinelReturn is the magic PC/FP value console_exec.c's console CALL
+// command calls FFFFDEAF ("if-def"): a return-frame value no real CALLS
+// instruction can ever produce (see emul_call.c), used by Engine.CallEntry
+// so a subsequent RET can be recognized as returning from a console-
+// initiated call rather than to a real caller.
+const SentinelReturn = 0xFFFFDEAF
+
+// ErrConsoleCallReturned is returned by Step (via emulRet) when RET pops a
+// frame built by Engine.CallEntry, signalling clean completion of that call.
+var ErrConsoleCallReturned = errors.New("cpu: console call returned")
+
+// CallEntry builds a CALLS-shaped procedure-call frame directly (bypassing
+// instruction fetch/decode, the way console_exec.c's console_call hand-
+// builds its own frame rather than executing a real CALLS instruction)
+// to invoke entry with zero arguments -- the "caller" here is the console,
+// which has no VAX PC/FP context of its own to save, so the frame's return
+// PC/FP are SentinelReturn rather than live register values. A subsequent
+// RET is caught by emulRet and reported via ErrConsoleCallReturned instead
+// of resuming at that meaningless address.
+//
+// Only the zero-argument case is implemented: console_exec.c's own optional
+// "(args...)" list is a console-CALL-command-only feature with no consumer
+// in this port yet -- Phase 13's RUN command always invokes its IMAGE$INIT
+// driver procedure with no arguments; the driver's own inner CALLS to
+// LIB$INITIALIZE/the main image push their own arguments via ordinary
+// PUSHL/CALLS instructions, already fully implemented by emulCall above.
+func (e *Engine) CallEntry(entry uint32) error {
+	sp := e.cpu.GPR(vax.SP) - 4
+	e.cpu.SetGPR(vax.SP, sp)
+	if err := e.mem.StoreLongword(e.cpu, sp, 0); err != nil { // argument count: 0
+		return err
+	}
+	newAP := sp
+
+	savedSP := e.cpu.GPR(vax.SP)
+	e.cpu.SetGPR(vax.SP, savedSP&0xFFFFFFFC)
+
+	return e.buildCallFrame(newAP, entry, savedSP, SentinelReturn, SentinelReturn, true)
 }
 
 // emulRei is REI: return from exception or interrupt, restoring the mode the

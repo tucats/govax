@@ -71,6 +71,33 @@ func TestVMInit_stackPointersAreDistinctAndInS0(t *testing.T) {
 	}
 }
 
+func TestVMInit_reservesConsoleScratch(t *testing.T) {
+	c := New(&bytes.Buffer{})
+	if err := c.Init(128 * 512); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2); err != nil {
+		t.Fatalf("VMInit: %v", err)
+	}
+	scratch, ok := c.Symbols.Get("CONSOLE$SCRATCH")
+	if !ok {
+		t.Fatal("expected CONSOLE$SCRATCH symbol to be defined")
+	}
+	if scratch < 0x80000000 {
+		t.Errorf("expected CONSOLE$SCRATCH in S0 space, got %#x", scratch)
+	}
+	if err := c.Mem.StoreLongword(c.CPU, scratch, 0xCAFEF00D); err != nil {
+		t.Fatalf("StoreLongword through CONSOLE$SCRATCH: %v", err)
+	}
+	v, err := c.Mem.LoadLongword(c.CPU, scratch)
+	if err != nil {
+		t.Fatalf("LoadLongword through CONSOLE$SCRATCH: %v", err)
+	}
+	if v != 0xCAFEF00D {
+		t.Errorf("got %#x, want 0xcafef00d", v)
+	}
+}
+
 func TestVMInit_requiresInit(t *testing.T) {
 	c := New(&bytes.Buffer{})
 	if err := c.VMInit(1, 1, 0, 1, 1, 1, 1); err == nil {

@@ -37,6 +37,24 @@ func TestExecute_runsUntilHalt(t *testing.T) {
 	}
 }
 
+func TestCall_returnsCleanlyThroughSentinelFrame(t *testing.T) {
+	c, _ := newTestConsole(t)
+
+	// Procedure at 0x200: empty entry mask, CALLS a nested procedure at
+	// 0x300, then RET.
+	loadProgram(t, c, 0x200,
+		0x00, 0x00, // entry mask: no registers saved
+		0xFB, 0x00, 0x9F, 0x00, 0x03, 0x00, 0x00, // CALLS #0, @#0x300
+		0x04, // RET
+	)
+	// Nested procedure at 0x300: empty entry mask, RET immediately.
+	loadProgram(t, c, 0x300, 0x00, 0x00, 0x04)
+
+	if err := c.Call(0x200, false); err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+}
+
 func TestExecute_stopsAtBreakpoint(t *testing.T) {
 	c, buf := newTestConsole(t)
 	loadProgram(t, c, 0x200, opNop, opNop, opNop, opHalt)

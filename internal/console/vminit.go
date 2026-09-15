@@ -31,12 +31,12 @@ const (
 // scope (console_vminit.c only); pre-mapping every requested page is a
 // real, C-source-supported behavior mode, not a fabricated one.
 //
-// Also not ported, as pure conveniences with no other consumer yet: the
-// CONSOLE$SCRATCH immediate-assembly scratch page and CONSOLE$STRINGPOOL*
-// area (both serve the inline mini-assembler, Phase 11's scope), and the
-// PTE$K_NONE guard page installed one page below each privileged stack
-// (done via the C source's own `setpte` mini-parser, also assembler-
-// adjacent).
+// Also not ported, as pure conveniences with no other consumer yet:
+// CONSOLE$STRINGPOOL* (serves the inline mini-assembler, Phase 11's scope)
+// and the PTE$K_NONE guard page installed one page below each privileged
+// stack (done via the C source's own `setpte` mini-parser, also assembler-
+// adjacent). CONSOLE$SCRATCH itself *is* reserved below, now that Phase 13's
+// image loader and SHIM$ stub synthesis are real consumers.
 func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages, ispPages uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -170,7 +170,17 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	psl.SetPrvMod(vax.User)
 	c.CPU.SetPSL(psl)
 
-	c.CPU.SetPR(vax.SCBB, paddr+512)
+	// The console scratch page: a single S0 page reserved for synthesizing
+	// small code sequences directly (no assembler needed -- see Phase 13's
+	// image loader and SHIM$ stub synthesis), matching
+	// console_vminit_dcl's own CONSOLE$SCRATCH symbol -- ported now that
+	// Phase 13 gives it a real consumer (see this file's earlier doc
+	// comment on why it wasn't ported at Phase 08).
+	scratch := 0x80000000 + paddr
+	c.Symbols.Set("CONSOLE$SCRATCH", scratch, SymbolSystem)
+	paddr += 512
+
+	c.CPU.SetPR(vax.SCBB, paddr)
 
 	c.DepositAddr = 0x200
 	c.CPU.SetPR(vax.MAPEN, 1)
