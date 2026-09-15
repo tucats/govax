@@ -133,6 +133,20 @@ func TestEnvironmentShimUnregisteredCode(t *testing.T) {
 	}
 }
 
+// TestEnvironmentHasShim checks the non-invoking predicate SHOW SHIM
+// (internal/console) uses to report which numeric dispatch codes are live
+// without actually calling them.
+func TestEnvironmentHasShim(t *testing.T) {
+	env, _ := fixture()
+
+	if !env.HasShim(32) { // DECC$TIME, registered by TestEnvironmentShim
+		t.Error("HasShim(32) = false, want true")
+	}
+	if env.HasShim(250) {
+		t.Error("HasShim(250) = true, want false (no such shim registered)")
+	}
+}
+
 func TestEnvironmentSystemService(t *testing.T) {
 	env, _ := fixture()
 	putArgs(t, env, 0x2000, []uint32{5})

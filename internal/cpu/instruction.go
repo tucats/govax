@@ -1,5 +1,7 @@
 package cpu
 
+import "sort"
+
 //go:generate go run ./gen -in ../../reference/eVAX/eVAX/Headers/instruction_table.h -out instructions_table.go
 
 // Opcode identifies an instruction: the extended-opcode prefix byte (0 for
@@ -109,6 +111,43 @@ func (t *Table) ByName(name string) *Instruction {
 		}
 	}
 	return t.byName[name]
+}
+
+// All returns every defined Instruction, single-byte opcodes first (in
+// ascending opcode order), then extended (two-byte) opcodes (in ascending
+// Opcode order) — a deterministic enumeration for callers that need to
+// walk the whole table (SHOW INSTRUCTIONS), not the exact declaration
+// order of the C source's instruction[] array.
+func (t *Table) All() []*Instruction {
+	out := make([]*Instruction, 0, 256+len(t.extended))
+
+	for _, inst := range t.single {
+		if inst != nil {
+			out = append(out, inst)
+		}
+	}
+
+	keys := make([]uint16, 0, len(t.extended))
+	for k := range t.extended {
+		keys = append(keys, k)
+	}
+
+	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+
+	for _, k := range keys {
+		out = append(out, t.extended[k])
+	}
+
+	return out
+}
+
+// Implemented reports whether inst has a real registered Handler, as
+// opposed to defaulting to unimplementedHandler — the Go equivalent of
+// console_show.c's own `instruction[i].routine == 0L` check (SHOW
+// INSTRUCTIONS' implemented/unimplemented split).
+func (t *Table) Implemented(inst *Instruction) bool {
+	_, ok := t.handlers[inst]
+	return ok
 }
 
 // Instructions returns the built-in VAX instruction table, for use by

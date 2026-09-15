@@ -178,6 +178,14 @@ func (env *Environment) Shim(code uint32) (uint32, bool, error) {
 	return r0, true, err
 }
 
+// HasShim reports whether code has a registered ShimFunc, without
+// invoking it — for a diagnostic caller (SHOW SHIM, internal/console) that
+// wants to know whether a numeric dispatch code is live, not run it.
+func (env *Environment) HasShim(code uint32) bool {
+	_, ok := env.shims.Lookup(code)
+	return ok
+}
+
 // SystemService implements cpu.SystemServices' RTL half (XFC$P1VECTOR):
 // dispatch a SYS$ system-service call whose calling instruction is at pc,
 // with its argument list read from AP — matching call_service's own

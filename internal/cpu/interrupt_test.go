@@ -127,6 +127,44 @@ func TestInterruptMaskedByCurrentIPLIsQueuedNotDelivered(t *testing.T) {
 	}
 }
 
+// TestPendingInterruptsReportsBothHalves checks SHOW FAULT's own data
+// source: PendingInterrupts must surface both the immediately-deliverable
+// interrupt (if any) and everything still aging in the quantum queue.
+func TestPendingInterruptsReportsBothHalves(t *testing.T) {
+	e := interruptEngine(t)
+	e.SetQuantum(4)
+
+	pending, queued := e.PendingInterrupts()
+	if pending != nil || len(queued) != 0 {
+		t.Fatalf("expected no pending interrupts initially, got pending=%v queued=%v", pending, queued)
+	}
+
+	psl := e.cpu.PSL()
+	psl.SetIPL(20)
+	e.cpu.SetPSL(psl)
+	e.Interrupt(ExcConWrite, 20, 0) // masked: queued, not delivered
+
+	pending, queued = e.PendingInterrupts()
+	if pending != nil {
+		t.Fatalf("expected no immediately-pending interrupt, got %+v", pending)
+	}
+	if len(queued) != 1 || queued[0].Code != ExcConWrite || queued[0].IPL != 20 {
+		t.Fatalf("queued = %+v, want one ExcConWrite entry at IPL 20", queued)
+	}
+
+	psl.SetIPL(0)
+	e.cpu.SetPSL(psl)
+	e.Interrupt(ExcConRead, 21, 0) // unmasked: delivered immediately
+
+	pending, queued = e.PendingInterrupts()
+	if pending == nil || pending.Code != ExcConRead || pending.IPL != 21 {
+		t.Fatalf("pending = %+v, want ExcConRead at IPL 21", pending)
+	}
+	if len(queued) != 1 {
+		t.Fatalf("expected the earlier queued entry to remain, got %+v", queued)
+	}
+}
+
 func TestInterruptQuantumDelayDefersEvenWhenUnmasked(t *testing.T) {
 	e := interruptEngine(t)
 	e.SetQuantum(5)

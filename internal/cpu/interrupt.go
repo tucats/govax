@@ -53,6 +53,31 @@ func (e *Engine) Quantum() (current, initial int) {
 	return e.quantumCurrent, e.quantumInitial
 }
 
+// QueuedInterrupt is one interrupt still waiting in Engine's quantum-aging
+// queue, mirroring queuedInterrupt's own fields for callers outside this
+// package (SHOW FAULT).
+type QueuedInterrupt struct {
+	Code Exception
+	IPL  uint32
+	Age  int
+}
+
+// PendingInterrupts reports Engine's own immediately-pending interrupt (if
+// any, deliverable on the next Step) and every interrupt still waiting in
+// its quantum-aging queue, matching console_show.c's own SHOW FAULT dump
+// of vax.interrupt_pending/vax.iqueue.
+func (e *Engine) PendingInterrupts() (pending *QueuedInterrupt, queued []QueuedInterrupt) {
+	if e.interruptPending {
+		pending = &QueuedInterrupt{Code: e.interruptCode, IPL: e.interruptIPL}
+	}
+
+	for _, ip := range e.iqueue {
+		queued = append(queued, QueuedInterrupt{Code: ip.code, IPL: ip.ipl, Age: ip.age})
+	}
+
+	return pending, queued
+}
+
 // Interrupt admits a device or software interrupt request, the Go port of
 // interrupt.c's interrupt(): delivered immediately (Engine's own
 // interruptPending state, picked up by Step before its next decode) if

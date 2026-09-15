@@ -36,6 +36,57 @@ func TestInstructionTableCount(t *testing.T) {
 	}
 }
 
+func TestTableAllCountMatchesLookup(t *testing.T) {
+	got := len(instructionTable.All())
+	if got != wantInstructionCount {
+		t.Fatalf("len(All()) = %d, want %d", got, wantInstructionCount)
+	}
+}
+
+// All's enumeration order must be deterministic (single-byte opcodes
+// ascending, then extended opcodes ascending) -- SHOW INSTRUCTIONS relies
+// on stable output across repeated calls in the same session.
+func TestTableAllOrderIsDeterministic(t *testing.T) {
+	first := instructionTable.All()
+	second := instructionTable.All()
+	if len(first) != len(second) {
+		t.Fatalf("len mismatch: %d vs %d", len(first), len(second))
+	}
+	for i := range first {
+		if first[i] != second[i] {
+			t.Fatalf("order mismatch at index %d: %s vs %s", i, first[i].Name, second[i].Name)
+		}
+	}
+
+	lastExtended := false
+	for i, inst := range first {
+		if inst.Opcode.Extended == 0 {
+			if lastExtended {
+				t.Fatalf("index %d: single-byte %s found after an extended opcode", i, inst.Name)
+			}
+			continue
+		}
+		lastExtended = true
+	}
+}
+
+func TestTableImplemented(t *testing.T) {
+	halt := instructionTable.ByName("HALT")
+	if halt == nil {
+		t.Fatal("ByName(HALT) = nil")
+	}
+	if !instructionTable.Implemented(halt) {
+		t.Error("expected HALT to be Implemented (Phase 04 registers a real handler)")
+	}
+
+	// A fresh table with no handlers registered defaults every entry to
+	// unimplementedHandler, matching HandlerFor's own fallback.
+	fresh := newTable([]*Instruction{halt})
+	if fresh.Implemented(halt) {
+		t.Error("expected a fresh table with no SetHandler calls to report Implemented == false")
+	}
+}
+
 func TestInstructionTableSingleByteRangeComplete(t *testing.T) {
 	// decode_opcode.c relies on every single-byte slot 0x00-0xFF being
 	// populated (0xFD-0xFF by the EXT_FD/FE/FF filler entries, since those
