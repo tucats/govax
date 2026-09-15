@@ -40,10 +40,12 @@ func emulAcb(size int) Handler {
 		if err != nil {
 			return err
 		}
+
 		addend, err := d.Operands[1].Load(e.cpu, e.mem)
 		if err != nil {
 			return err
 		}
+
 		index, err := d.Operands[2].Load(e.cpu, e.mem)
 		if err != nil {
 			return err
@@ -55,21 +57,26 @@ func emulAcb(size int) Handler {
 		psl.SetZ(isZero(result, size))
 		psl.SetV(v)
 		e.cpu.SetPSL(psl)
+
 		if err := d.Operands[2].Store(e.cpu, e.mem, result); err != nil {
 			return err
 		}
 
 		newIndex := signExtend(result, size)
 		limitSigned := signExtend(limit, size)
+
 		var branch bool
+
 		if signExtend(addend, size) >= 0 {
 			branch = newIndex <= limitSigned
 		} else {
 			branch = newIndex >= limitSigned
 		}
+
 		if branch {
 			e.cpu.SetGPR(vax.PC, d.Operands[3].Addr)
 		}
+
 		return nil
 	}
 }
@@ -98,10 +105,12 @@ func emulCase(size int) Handler {
 		if err != nil {
 			return err
 		}
+
 		baseRaw, err := d.Operands[1].Load(e.cpu, e.mem)
 		if err != nil {
 			return err
 		}
+
 		limitRaw, err := d.Operands[2].Load(e.cpu, e.mem)
 		if err != nil {
 			return err
@@ -128,6 +137,7 @@ func emulCase(size int) Handler {
 			psl.SetC(false)
 			e.cpu.SetPSL(psl)
 			e.cpu.SetGPR(vax.PC, tableBase+2+limit*2)
+			
 			return nil
 		}
 
@@ -139,7 +149,9 @@ func emulCase(size int) Handler {
 		if err != nil {
 			return err
 		}
+
 		e.cpu.SetGPR(vax.PC, uint32(int32(tableBase)+int32(int16(branchword))))
+
 		return nil
 	}
 }

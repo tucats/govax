@@ -183,18 +183,22 @@ func TestEngineCallEntryRunsUntilSentinelReturn(t *testing.T) {
 	}
 
 	steps := 0
+
 	for {
 		steps++
 		if steps > 10 {
 			t.Fatal("too many steps without reaching ErrConsoleCallReturned")
 		}
+
 		err := e.Step()
 		if err == nil {
 			continue
 		}
+
 		if errors.Is(err, ErrConsoleCallReturned) {
 			break
 		}
+
 		t.Fatalf("Step: %v", err)
 	}
 
@@ -206,12 +210,15 @@ func TestEngineCallEntryRunsUntilSentinelReturn(t *testing.T) {
 	if got := cpu.GPR(vax.SP); got != 0x9000 {
 		t.Errorf("SP after return = %#x, want 0x9000", got)
 	}
+
 	if got := cpu.GPR(vax.AP); got != 0x5678 {
 		t.Errorf("AP after return = %#x, want 0x5678", got)
 	}
+
 	if got := cpu.GPR(vax.FP); got != SentinelReturn {
 		t.Errorf("FP after return = %#x, want SentinelReturn", got)
 	}
+
 	if got := cpu.GPR(vax.PC); got != SentinelReturn {
 		t.Errorf("PC after return = %#x, want SentinelReturn", got)
 	}
@@ -247,21 +254,26 @@ func TestEngineCallEntryWithArguments(t *testing.T) {
 		if err == nil {
 			continue
 		}
+
 		if errors.Is(err, ErrConsoleCallReturned) {
 			break
 		}
+
 		t.Fatalf("Step: %v", err)
 	}
 
 	if got := cpu.GPR(vax.R0); got != 2 {
 		t.Errorf("R0 (arg count) = %d, want 2", got)
 	}
+
 	if got := cpu.GPR(vax.R1); got != 0x11111111 {
 		t.Errorf("R1 (arg 1) = %#x, want 0x11111111", got)
 	}
+
 	if got := cpu.GPR(vax.R2); got != 0x22222222 {
 		t.Errorf("R2 (arg 2) = %#x, want 0x22222222", got)
 	}
+
 	if got := cpu.GPR(vax.SP); got != 0x9000 {
 		t.Errorf("SP after return = %#x, want 0x9000", got)
 	}
@@ -287,6 +299,7 @@ func TestEmulCallgArglistIsOperandAddress(t *testing.T) {
 	if got := cpu.GPR(vax.AP); got != 0x3000 {
 		t.Errorf("AP = %#x, want 0x3000 (the arglist operand's address)", got)
 	}
+	
 	if got := cpu.GPR(vax.PC); got != 0x2002 {
 		t.Errorf("PC = %#x, want 0x2002", got)
 	}

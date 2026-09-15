@@ -116,12 +116,15 @@ func (e *Engine) buildCallFrame(newAP, newPC, savedSP, returnPC, returnFP uint32
 	}
 
 	oldAP := e.cpu.GPR(vax.AP)
+
 	if err := push(e, returnPC); err != nil {
 		return err
 	}
+
 	if err := push(e, returnFP); err != nil {
 		return err
 	}
+
 	if err := push(e, oldAP); err != nil {
 		return err
 	}
@@ -147,10 +150,12 @@ func (e *Engine) buildCallFrame(newAP, newPC, savedSP, returnPC, returnFP uint32
 	if calls {
 		calltypeBit = 1
 	}
+
 	maskWord := (savedSP&0x3)<<30 | calltypeBit<<29 | (uint32(mask)&0x0FFF)<<16 | snapshotPSW
 	if err := push(e, maskWord); err != nil {
 		return err
 	}
+
 	if err := push(e, 0); err != nil {
 		return err
 	}
@@ -158,6 +163,7 @@ func (e *Engine) buildCallFrame(newAP, newPC, savedSP, returnPC, returnFP uint32
 	e.cpu.SetGPR(vax.FP, e.cpu.GPR(vax.SP))
 	e.cpu.SetGPR(vax.AP, newAP)
 	e.cpu.SetGPR(vax.PC, newPC)
+
 	return nil
 }
 
@@ -206,30 +212,36 @@ func emulRet(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	sp += 4
 
 	fp, err := e.mem.LoadLongword(e.cpu, sp)
 	if err != nil {
 		return err
 	}
+	
 	sp += 4
 
 	pc, err := e.mem.LoadLongword(e.cpu, sp)
 	if err != nil {
 		return err
 	}
-	sp += 4
 
+	sp += 4
 	mask := (maskWord >> 16) & 0x0FFF
+
 	for n := 0; n <= 11; n++ {
 		if mask&(1<<uint(n)) == 0 {
 			continue
 		}
+
 		v, err := e.mem.LoadLongword(e.cpu, sp)
 		if err != nil {
 			return err
 		}
+
 		sp += 4
+
 		e.cpu.SetGPR(vax.Reg(n), v)
 	}
 
@@ -245,6 +257,7 @@ func emulRet(e *Engine, d *Decoded) error {
 		if err != nil {
 			return err
 		}
+
 		sp += 4 + count*4
 	}
 
@@ -260,6 +273,7 @@ func emulRet(e *Engine, d *Decoded) error {
 	if fp == SentinelReturn && pc == SentinelReturn {
 		return ErrConsoleCallReturned
 	}
+
 	return nil
 }
 
@@ -292,16 +306,19 @@ func (e *Engine) CallEntry(entry uint32, args ...uint32) error {
 	for i := len(args) - 1; i >= 0; i-- {
 		sp := e.cpu.GPR(vax.SP) - 4
 		e.cpu.SetGPR(vax.SP, sp)
+		
 		if err := e.mem.StoreLongword(e.cpu, sp, args[i]); err != nil {
 			return err
 		}
 	}
 
 	sp := e.cpu.GPR(vax.SP) - 4
+
 	e.cpu.SetGPR(vax.SP, sp)
 	if err := e.mem.StoreLongword(e.cpu, sp, uint32(len(args))); err != nil {
 		return err
 	}
+
 	newAP := sp
 
 	savedSP := e.cpu.GPR(vax.SP)
@@ -330,12 +347,14 @@ func emulRei(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	sp += 4
 
 	newPSL, err := e.mem.LoadLongword(e.cpu, sp)
 	if err != nil {
 		return err
 	}
+
 	sp += 4
 
 	oldPSL := e.cpu.PSL()
@@ -350,5 +369,6 @@ func emulRei(e *Engine, d *Decoded) error {
 
 	e.cpu.SetGPR(vax.SP, e.cpu.PR(vax.PrivReg(e.cpu.PSL().CurMod())))
 	e.cpu.SetGPR(vax.PC, newPC)
+
 	return nil
 }

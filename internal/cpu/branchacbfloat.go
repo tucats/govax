@@ -41,10 +41,12 @@ func emulAcbFloat(size int) Handler {
 		if err != nil {
 			return err
 		}
+
 		addend, err := loadFloat(e.cpu, e.mem, d.Operands[1])
 		if err != nil {
 			return err
 		}
+
 		index, err := loadFloat(e.cpu, e.mem, d.Operands[2])
 		if err != nil {
 			return err
@@ -62,9 +64,11 @@ func emulAcbFloat(size int) Handler {
 		} else {
 			branch = index >= limit
 		}
+
 		if branch {
 			e.cpu.SetGPR(vax.PC, d.Operands[3].Addr)
 		}
+		
 		return nil
 	}
 }

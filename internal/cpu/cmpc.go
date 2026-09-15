@@ -162,6 +162,7 @@ func emulCmpc5(e *Engine, d *Decoded) error {
 
 		if b1 != b2 {
 			inequality = true
+			
 			break
 		}
 

@@ -5,17 +5,22 @@ import "testing"
 func evalTest(t *testing.T, radix int, syms map[string]uint32, expr string) uint32 {
 	t.Helper()
 	st := NewSymbolTable()
+
 	for k, v := range syms {
 		st.Set(k, v, SymbolUser)
 	}
+
 	e := &Evaluator{Symbols: st, Radix: radix, Here: 0x1000}
+
 	v, rest, err := e.Eval(expr)
 	if err != nil {
 		t.Fatalf("Eval(%q): %v", expr, err)
 	}
+
 	if rest != "" {
 		t.Fatalf("Eval(%q): unparsed remainder %q", expr, rest)
 	}
+
 	return v
 }
 
@@ -23,6 +28,7 @@ func TestEvaluator_defaultRadix(t *testing.T) {
 	if got := evalTest(t, 16, nil, "200"); got != 0x200 {
 		t.Errorf("got %#x, want 0x200", got)
 	}
+
 	if got := evalTest(t, 10, nil, "200"); got != 200 {
 		t.Errorf("got %d, want 200", got)
 	}
@@ -36,6 +42,7 @@ func TestEvaluator_radixPrefix(t *testing.T) {
 		"^O17":   15,
 		"^B101":  5,
 	}
+	
 	for expr, want := range cases {
 		if got := evalTest(t, 16, nil, expr); got != want {
 			t.Errorf("Eval(%q) = %#x, want %#x", expr, got, want)

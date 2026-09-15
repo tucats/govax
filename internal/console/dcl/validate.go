@@ -34,18 +34,22 @@ func (g *Grammar) validate() error {
 				if !ok {
 					return vmserrors.New(vmserrors.CLI_TYPENOTFOUND, "Qualifier", q.Name, q.TypeName)
 				}
+				
 				q.typeRef = t
 			}
+
 			if q.Syntax != "" {
 				if _, ok := g.entries[q.Syntax]; !ok {
 					return vmserrors.New(vmserrors.CLI_SYNTAXNOTFOUND, q.Name, q.Syntax)
 				}
 			}
+
 			if q.Alias != "" {
 				target, _, err := e.qualifier(q.Alias)
 				if err != nil {
 					return vmserrors.New(vmserrors.CLI_QUALALIASNOTFOUND, q.Name, q.Alias)
 				}
+
 				q.aliasRef = target
 			}
 		}

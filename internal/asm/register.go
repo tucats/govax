@@ -61,15 +61,19 @@ func parseRegister(c *cursor, first byte) (vax.Reg, error) {
 // only by parseRegister for the digits after "R".
 func parseSimpleDecimal(c *cursor) (int, bool) {
 	start := c.pos
+
 	for isDigit(c.peek()) {
 		c.pos++
 	}
+
 	if c.pos == start {
 		return 0, false
 	}
+
 	n := 0
 	for _, ch := range []byte(c.s[start:c.pos]) {
 		n = n*10 + int(ch-'0')
 	}
+	
 	return n, true
 }

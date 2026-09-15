@@ -329,6 +329,7 @@ func (g *Grammar) checkRequirements(active *Entry, r *Result) error {
 		if q.aliasRef != nil {
 			continue
 		}
+
 		if !r.Present(q.Name) && q.Default != nil {
 			r.set(q.Name, q.ID, false, *q.Default)
 		}
@@ -337,6 +338,7 @@ func (g *Grammar) checkRequirements(active *Entry, r *Result) error {
 	for _, d := range active.Disallows {
 		s1 := r.Present(d.Qual1) && r.Negated(d.Qual1) == d.Negated1
 		s2 := r.Present(d.Qual2) && r.Negated(d.Qual2) == d.Negated2
+		
 		if s1 && s2 {
 			return vmserrors.New(vmserrors.CLI_BADQUALIFIERCOMBO, d.Qual1, d.Qual2)
 		}

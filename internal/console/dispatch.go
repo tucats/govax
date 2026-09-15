@@ -803,7 +803,7 @@ func cmdSave(d *Dispatcher, rest string) error {
 		return err
 	}
 
-	if kind == "ROM" {
+	if kind == "ROM" { //nolint:goconst
 		return d.Console.SaveROM(file)
 	}
 

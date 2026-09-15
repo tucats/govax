@@ -3,10 +3,10 @@
 ;
 
 ;
-;  Initialize memory with 2mb of physical RAM
+;  Initialize memory with 4mb of physical RAM
 ;
 
-init ^d4096
+init ^d8192
 
 if defined("console$arg_file" ) then set noverbose
 

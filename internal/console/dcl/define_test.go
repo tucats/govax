@@ -80,7 +80,7 @@ func TestLoadEvaxGrammar(t *testing.T) {
 		t.Fatalf("lookup MEMORY keyword: %v", err)
 	}
 
-	if kw.Syntax != "SHOW_MEMORY" {
+	if kw.Syntax != "SHOW_MEMORY" { //nolint:goconst
 		t.Errorf("MEMORY keyword syntax = %q, want SHOW_MEMORY", kw.Syntax)
 	}
 }
@@ -98,5 +98,6 @@ func verbNames(g *Grammar) []string {
 	for i, e := range g.verbOrder {
 		names[i] = e.Name
 	}
+	
 	return names
 }

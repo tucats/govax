@@ -86,6 +86,7 @@ func (c *Console) ensureShims() error {
 	}
 
 	addr := c.shimBase
+
 	for _, e := range shimTable {
 		stub := []byte{
 			0x00, 0x00, // entry mask: no registers saved
@@ -96,6 +97,7 @@ func (c *Console) ensureShims() error {
 			0x7D, // #XFC$SHIM
 			0x04, // RET
 		}
+
 		if err := c.storeBytes(addr, stub); err != nil {
 			return err
 		}
@@ -107,5 +109,6 @@ func (c *Console) ensureShims() error {
 	}
 
 	c.shimsReady = true
+	
 	return nil
 }

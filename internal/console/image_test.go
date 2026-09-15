@@ -99,6 +99,7 @@ func TestImageLoad_simpleExe(t *testing.T) {
 	for _, shr := range icb.SHRList[1:] {
 		gotNames[shr.Name] = true
 	}
+	
 	for _, want := range []string{"LIBRTL", "DECC$SHR", "MTHRTL", "CMA$TIS_SHR"} {
 		if !gotNames[want] {
 			t.Errorf("SHR dependency %q not found among %v", want, gotNames)

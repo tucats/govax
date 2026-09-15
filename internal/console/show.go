@@ -658,6 +658,7 @@ func (c *Console) showSCB(all bool) error {
 
 		if vector == 0xFFFFFFFF {
 			c.Printf("     %02X   EXC$%-10s  <console handler>\n", n, scbVectorNames[n])
+			
 			continue
 		}
 

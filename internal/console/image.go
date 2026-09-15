@@ -181,34 +181,43 @@ func (c *Console) readISD(addr uint32) (*ISD, uint32, error) {
 	if err != nil {
 		return nil, 0, err
 	}
+
 	if size == 0 {
 		return nil, 0, nil
 	}
+
 	pages, err := c.loadWord(addr + 2)
 	if err != nil {
 		return nil, 0, err
 	}
+
 	vpn, err := c.loadWord(addr + 4)
 	if err != nil {
 		return nil, 0, err
 	}
+
 	flags, err := c.loadLong(addr + 8)
 	if err != nil {
 		return nil, 0, err
 	}
+
 	vbn, err := c.loadLong(addr + 12)
 	if err != nil {
 		return nil, 0, err
 	}
+
 	sectionID, err := c.loadLong(addr + 16)
 	if err != nil {
 		return nil, 0, err
 	}
+
 	count, err := c.loadByte(addr + 20)
 	if err != nil {
 		return nil, 0, err
 	}
+
 	name := "<NONE>"
+
 	if count >= 1 && count <= 39 {
 		buf := make([]byte, count)
 		for i := range buf {
@@ -216,8 +225,10 @@ func (c *Console) readISD(addr uint32) (*ISD, uint32, error) {
 			if err != nil {
 				return nil, 0, err
 			}
+
 			buf[i] = b
 		}
+
 		name = string(buf)
 	}
 
@@ -280,6 +291,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 	if err != nil {
 		return nil, err
 	}
+	
 	if len(data) < 512 {
 		return nil, vmserrors.New(vmserrors.RMS_SHORTHEADER, fn)
 	}
@@ -298,6 +310,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 	if headerLen > len(data) {
 		headerLen = len(data)
 	}
+
 	if err := c.storeBytes(base, data[:headerLen]); err != nil {
 		return nil, err
 	}
@@ -360,6 +373,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 		}
 
 		isdAddr += size
+
 		icb.ISDList = append(icb.ISDList, isd)
 	}
 

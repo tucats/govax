@@ -84,6 +84,7 @@ var (
 // specifically replicated.
 func emulRsb(e *Engine, d *Decoded) error {
 	sp := e.cpu.GPR(vax.SP)
+	
 	ret, err := e.mem.LoadLongword(e.cpu, sp)
 	if err != nil {
 		return err

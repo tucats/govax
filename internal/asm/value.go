@@ -189,13 +189,16 @@ func (a *Assembler) exprMath(c *cursor, st *exprState) (uint32, error) {
 
 			break
 		}
+
 		c.next()
 
 		v2, err := a.exprTerm(c, st)
 		if err != nil {
 			return 0, err
 		}
+
 		st.usedOperator = true
+
 		if ch == '+' {
 			v1 += v2
 		} else {
@@ -216,25 +219,30 @@ func (a *Assembler) exprTerm(c *cursor, st *exprState) (uint32, error) {
 	for {
 		save := c.pos
 		c.skipBlanks()
+
 		ch := c.peek()
 		if ch != '*' && ch != '/' {
 			c.pos = save
 
 			break
 		}
+
 		c.next()
 
 		v2, err := a.exprAtom(c, st)
 		if err != nil {
 			return 0, err
 		}
+
 		st.usedOperator = true
+		
 		if ch == '*' {
 			v1 *= v2
 		} else {
 			if v2 == 0 {
 				return 0, vmserrors.New(vmserrors.VAX_DIVZERO)
 			}
+
 			v1 /= v2
 		}
 	}
@@ -535,35 +543,43 @@ func (a *Assembler) maskLiteral(c *cursor) (uint32, error) {
 	c.next()
 
 	var mask uint32
+
 	for {
 		c.skipBlanks()
 		if c.peek() == ',' {
 			c.next()
+
 			continue
 		}
+
 		if c.peek() == '>' || c.atEnd() {
 			break
 		}
 
 		var b []byte
+
 		for !c.atEnd() && c.peek() != ',' && c.peek() != '>' {
 			if ch := c.peek(); ch != ' ' {
 				b = append(b, ch)
 			}
+
 			c.pos++
 		}
+
 		name := string(b)
 
 		bit, ok := maskBit(name)
 		if !ok {
 			return 0, vmserrors.New(vmserrors.VAX_BADMASKENTRY, name)
 		}
+
 		mask |= 1 << bit
 	}
 
 	if c.peek() != '>' {
 		return 0, vmserrors.New(vmserrors.VAX_BADMASK)
 	}
+
 	c.next()
 
 	return mask, nil
@@ -578,5 +594,6 @@ var maskBits = map[string]uint{
 
 func maskBit(name string) (uint, bool) {
 	bit, ok := maskBits[name]
+
 	return bit, ok
 }

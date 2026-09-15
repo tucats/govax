@@ -241,6 +241,7 @@ func readFileArg(c *cursor) string {
 func (a *Assembler) pseudoData(c *cursor, scale int) error {
 	for {
 		c.skipBlanks()
+		
 		if c.atEnd() {
 			return nil
 		}
@@ -250,6 +251,7 @@ func (a *Assembler) pseudoData(c *cursor, scale int) error {
 		}
 
 		loc := a.deposit
+
 		v, _, err := a.exprValue(c, loc, addrFixup(scale))
 		if err != nil {
 			return err
@@ -523,6 +525,7 @@ func (a *Assembler) pseudoEnd(c *cursor) error {
 	}
 
 	a.stop = true
+
 	return nil
 }
 
@@ -924,6 +927,7 @@ func (a *Assembler) pseudoShim(c *cursor) error {
 	}
 
 	c.skipBlanks()
+
 	if c.peek() == ',' {
 		c.next()
 	}
@@ -985,18 +989,23 @@ func (a *Assembler) pseudoSpace(c *cursor) error {
 	}
 
 	var fill byte
+
 	c.skipBlanks()
+
 	if c.peek() == ',' {
 		c.next()
+
 		v, err := a.exprNoForward(c)
 		if err != nil {
 			return err
 		}
+
 		fill = byte(v)
 	}
 
 	if fill == 0 {
 		a.deposit += n
+
 		return nil
 	}
 
@@ -1025,17 +1034,21 @@ func (a *Assembler) pseudoJcc(c *cursor, invByte byte) error {
 		if err := a.image.storeByte(a.deposit, b); err != nil {
 			return err
 		}
+
 		a.deposit++
 	}
 
 	loc := a.deposit
+
 	v, _, err := a.exprValue(c, loc, fixAddrL)
 	if err != nil {
 		return err
 	}
+
 	if err := a.image.storeLongword(a.deposit, v); err != nil {
 		return err
 	}
+
 	a.deposit += 4
 
 	return nil
@@ -1060,6 +1073,7 @@ func (a *Assembler) pseudoConsole(c *cursor) error {
 			switch readToken(c) {
 			case "DEC", "DECIMAL":
 				a.radix = 10
+			
 			case "HEX", "HEXADECIMAL":
 				a.radix = 16
 			}
@@ -1076,10 +1090,12 @@ func (a *Assembler) pseudoInclude(c *cursor) error {
 	if a.includeResolver == nil {
 		return vmserrors.New(vmserrors.RMS_NORESOLVER, name)
 	}
+
 	src, err := a.includeResolver(name)
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.RMS_INCLUDE, err, name)
 	}
+
 	return a.assembleLines(src)
 }
 
@@ -1096,6 +1112,7 @@ func (a *Assembler) pseudoIf(c *cursor) error {
 
 	c.skipBlanks()
 	save := c.pos
+
 	if readToken(c) != "THEN" {
 		c.pos = save
 	}

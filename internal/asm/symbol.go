@@ -122,7 +122,9 @@ func (t *symbolTable) clear(name string) bool {
 	if _, ok := t.byName[name]; !ok {
 		return false
 	}
+
 	delete(t.byName, name)
+	
 	return true
 }
 

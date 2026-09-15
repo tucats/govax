@@ -154,8 +154,9 @@ func setRegisterField(cpu *vax.CPU, position int32, size int, base vax.Reg, data
 
 	hiBits := size - loBits
 	loMask := bitFieldMask(loBits) << uint(position)
-	cpu.SetGPR(base, (cpu.GPR(base)&^loMask)|((data<<uint(position))&loMask))
 	hiMask := bitFieldMask(hiBits)
+
+	cpu.SetGPR(base, (cpu.GPR(base)&^loMask)|((data<<uint(position))&loMask))
 	cpu.SetGPR(base+1, (cpu.GPR(base+1)&^hiMask)|((data>>uint(loBits))&hiMask))
 
 	return nil
@@ -230,6 +231,7 @@ func setMemoryField(cpu *vax.CPU, mem *vm.Memory, position int32, size int, base
 
 		orig |= uint64(b) << (8 * i)
 	}
+
 	mask := (uint64(1)<<(bitOff+uint(size)) - 1) &^ (uint64(1)<<bitOff - 1)
 	v := (orig &^ mask) | ((uint64(data) << bitOff) & mask)
 
@@ -364,8 +366,10 @@ func emulFf(e *Engine, d *Decoded) error {
 		if field&1 == testBit {
 			psl.SetZ(false)
 			e.cpu.SetPSL(psl)
+
 			return d.Operands[3].Store(e.cpu, e.mem, uint64(uint32(position)+uint32(n)))
 		}
+		
 		field >>= 1
 	}
 

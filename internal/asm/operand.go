@@ -424,6 +424,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		if err := a.image.storeByte(a.deposit, 0x8F); err != nil {
 			return err
 		}
+
 		a.deposit++
 
 		if dtype == cpu.ShortLiteralFloat {
@@ -456,6 +457,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	// @#address: absolute.
 	if ch == '@' && c.peek() == '#' {
 		c.next()
+		
 		if err := a.image.storeByte(a.deposit, 0x9F); err != nil {
 			return err
 		}
@@ -553,6 +555,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		}
 
 		c.skipBlanks()
+
 		if c.next() != ')' {
 			return vmserrors.New(vmserrors.VAX_BADMODE)
 		}
@@ -657,6 +660,7 @@ func (a *Assembler) assembleBranchOrImplicit(c *cursor, access cpu.AccessKind, s
 	}
 
 	loc := a.deposit
+	
 	value, _, err := a.exprValue(c, loc, fx)
 	if err != nil {
 		return err
@@ -669,6 +673,7 @@ func (a *Assembler) assembleBranchOrImplicit(c *cursor, access cpu.AccessKind, s
 	if err := a.storeScaled(a.deposit, value, scale); err != nil {
 		return err
 	}
+
 	a.deposit += uint32(scale)
 
 	return nil
@@ -682,6 +687,7 @@ func (a *Assembler) assembleBranchOrImplicit(c *cursor, access cpu.AccessKind, s
 // high-nibble-only forms (e.g. 0xAF/0xA0 for byte).
 func (a *Assembler) assembleDisplacement(c *cursor, deferred byte, size int, relMode, dispMode byte) error {
 	loc := a.deposit + 1 // the mode byte comes first; the displacement follows it.
+
 	value, _, err := a.exprValue(c, loc, dispFixup(size))
 	if err != nil {
 		return err
@@ -704,6 +710,7 @@ func (a *Assembler) assembleDisplacement(c *cursor, deferred byte, size int, rel
 		mode = dispMode | deferred | reg
 
 		c.skipBlanks()
+
 		if c.next() != ')' {
 			return vmserrors.New(vmserrors.VAX_BADMODE)
 		}

@@ -30,7 +30,9 @@ func ParseHelp(text string) *Help {
 		if len(pendingKeys) == 0 {
 			return
 		}
+
 		text := body.String()
+
 		for _, k := range pendingKeys {
 			h.sections[k] = text
 		}
@@ -107,6 +109,7 @@ func helpKey(words []string) string {
 func (c *Console) Help(h *Help, words []string) error {
 	if h == nil {
 		c.Printf("No help file available\n")
+
 		return nil
 	}
 
@@ -117,6 +120,7 @@ func (c *Console) Help(h *Help, words []string) error {
 	body, ok := h.sections[key]
 	if !ok {
 		c.Printf("No help available for that topic\n")
+		
 		return nil
 	}
 
