@@ -222,3 +222,49 @@ rather than a false "it works" claim.
 
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean.
+
+### 2026-09-15 — Sub-phase 3: fixture-driven regression suite (asm side)
+
+`internal/console/regression_test.go` is this phase's own named deliverable: every
+`testdata/asm/*.asm` fixture not already covered elsewhere (`xor.asm` in
+`asm_test.go`; `hello.asm`, `kernel.asm` itself, and `forth.asm`'s own assembly-only
+check in `internal/asm/fixtures_test.go`) is now assembled and run through the real
+ASM/CALL pipeline sub-phases 1-2 built, alongside the existing exe-fixture milestone
+check (`run_test.go`, Phase 13) and ROM/NVRAM save/load round trip (`rom_test.go`,
+Phase 08) that already run under the same `go test ./...`.
+
+- `movq.asm`/`movc3.asm`: hand-verified exact results (R0, the quadword round-tripped
+  through `data2`, the moved string bytes) — the two fixtures whose expected outcome
+  is simple enough to state exactly. `movq.asm`'s own `.ENTRY main, ^m<r4,r5,r6,r7>`
+  mask restores R4-R7 on RET, so those two registers read back as their pre-call
+  value of 0 after `Call` returns; checking them post-return would only re-test
+  CALLS/RET's own save/restore (already covered directly in `internal/cpu`), so
+  only R0 and the `data2` memory side effect are asserted.
+- `ff.asm`/`insv.asm`/`dbl.asm` (FFS/INSV/EXTZV bit-field and D-floating math) and
+  `float1.asm` (F-floating divide, run PC-first via `Console.Execute` rather than
+  `CALL` — it's a plain label ending in `HALT`, not a real `.ENTRY` procedure ending
+  in `RET`): held to a bounded-completion bar rather than hand-derived exact bit
+  patterns, since each underlying instruction already has dedicated, hand-verified
+  unit coverage (`internal/cpu`'s own `bitfield_test.go`/`cvt_test.go`/`fpu_test.go`)
+  — this suite's own value is catching a regression in the assemble-deposit-call
+  pipeline driving them, not re-deriving expected values by hand a second time here.
+- `foo.asm`/`atoi.asm`/`fmt.asm`/`input.asm`/`logname.asm`/`test.asm`: assembled
+  against a real `kernel.asm` in the same session first (matching `vax.init`'s own
+  boot sequence), then bounded-run. Confirmed empirically (not assumed) which
+  currently complete/fault cleanly (`atoi.asm`, `fmt.asm`, `logname.asm`) versus
+  which hang at the step cap (`foo.asm`, `input.asm`, `test.asm` — all three call
+  either `LIB$PUT_OUTPUT` or `LIB$GET_INPUT`, both of which poll a ready/available
+  flag only an `EXC$CONWRITE`/`EXC$CONREAD` interrupt's own kernel.asm ISR can reset
+  — the same TXCS/TXDB interrupt-delivery gap sub-phase 2 found and documented via
+  `hello.asm`). The test records this split explicitly (a `wantHitCap` table) rather
+  than either failing the suite for a known, already-documented gap or silently
+  accepting any outcome, which would mask a real future regression.
+- Not attempted here: `bench.asm` (no `.END` entry and no single canonical call the
+  way the others have — its own header comment says to invoke it interactively,
+  `TIME CALL main(^d10000)`, and it's this phase's own named fixture for the later
+  performance-profiling sub-phase instead) and `forth.asm` (a large, interactive
+  FORTH interpreter with no single well-defined entry point to drive here, and its
+  own separate `.MICROKERNEL` configuration — already covered for assembly
+  correctness by `internal/asm/fixtures_test.go`'s `TestAssembleForth`).
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean.
