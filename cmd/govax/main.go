@@ -15,6 +15,11 @@
 // (internal/bootdata) is always the last, implicit search location, so
 // "govax" with no -path flags at all still boots correctly with no
 // testdata/ checkout nearby.
+//
+// -instruction-limit/-time-limit (docs/PHASE-15.md's sub-phase 2, no C
+// reference equivalent) bound how long a single GO/CALL/STEP command may
+// run the emulated CPU, so a runaway program under development doesn't
+// hang the session; both default to unlimited.
 package main
 
 import (
@@ -24,6 +29,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/chzyer/readline"
 	"github.com/tucats/govax/internal/bootdata"
@@ -57,9 +63,11 @@ func (p *pathFlag) Set(dir string) error {
 func main() {
 	var paths pathFlag
 	flag.Var(&paths, "path", "directory to search for unqualified file names (e.g. vax.init, kernel.asm); may be given more than once, searched in order given, after an embedded fallback copy")
+	timeLimit := flag.Duration("time-limit", 0, "maximum wall-clock time (e.g. 5s, 15ms) a single GO/CALL/STEP command may run the emulated CPU before it's stopped; 0 (default) is unlimited")
+	instructionLimit := flag.Int("instruction-limit", 0, "maximum number of instructions a single GO/CALL/STEP command may execute before it's stopped; 0 (default) is unlimited")
 	flag.Parse()
 
-	if err := run(paths, os.Stdout, nil, flag.Args()); err != nil {
+	if err := run(paths, *instructionLimit, *timeLimit, os.Stdout, nil, flag.Args()); err != nil {
 		fmt.Fprintln(os.Stderr, "govax:", err)
 		os.Exit(1)
 	}
@@ -68,8 +76,12 @@ func main() {
 // run drives startup and the command loop. in, when non-nil, is used as
 // readline's input source instead of the real os.Stdin — tests pass a
 // controlled reader so startup can be exercised deterministically without
-// depending on the test process's own stdin.
-func run(paths []string, out io.Writer, in io.ReadCloser, args []string) error {
+// depending on the test process's own stdin. instructionLimit/timeLimit are
+// -instruction-limit/-time-limit (docs/PHASE-15.md's sub-phase 2), applied
+// only once vax.init's own startup script has finished running — a limit
+// meant to catch a runaway *user* program shouldn't also cut short the
+// emulator's own boot sequence.
+func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.Writer, in io.ReadCloser, args []string) error {
 	resolver := respath.New(paths, bootdata.FS)
 
 	grammarSrc, err := resolver.ReadFile("evax.dcl")
@@ -113,6 +125,10 @@ func run(paths []string, out io.Writer, in io.ReadCloser, args []string) error {
 	if !c.Running() {
 		return nil
 	}
+
+	// Applied only from here on, not during vax.init's own boot sequence
+	// above -- see this function's own doc comment.
+	c.Engine.SetLimits(instructionLimit, timeLimit)
 
 	historyFile := ""
 	if in == nil { // real interactive use, not a test with an injected reader

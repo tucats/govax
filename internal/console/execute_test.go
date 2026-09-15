@@ -132,6 +132,44 @@ func TestBreakpoints_addRemoveClear(t *testing.T) {
 	}
 }
 
+// TestExecute_stopsAtInstructionLimit exercises govax's own -instruction-limit
+// flag (docs/PHASE-15.md's sub-phase 2): an infinite loop (NOP; BRB back to
+// itself) must not hang Execute when a limit is configured -- it should stop
+// cleanly, reporting the limit rather than propagating an error.
+func TestExecute_stopsAtInstructionLimit(t *testing.T) {
+	c, buf := newTestConsole(t)
+	loadProgram(t, c, 0x200,
+		opNop,
+		0x11, 0xFD, // BRB base (displacement -3: back to the NOP)
+	)
+	c.Engine.SetLimits(5, 0)
+
+	addr := uint32(0x200)
+	if err := c.Execute(&addr); err != nil {
+		t.Fatalf("Execute: %v (want a clean stop, not an error)", err)
+	}
+	if !strings.Contains(buf.String(), "INSTRLIMIT") {
+		t.Errorf("output = %q, want an instruction-limit message", buf.String())
+	}
+}
+
+// TestExecute_beginRunGivesEachCommandAFreshBudget confirms a second Execute
+// call gets its own full instruction budget rather than inheriting the
+// first call's exhaustion (Engine.BeginRun's own contract).
+func TestExecute_beginRunGivesEachCommandAFreshBudget(t *testing.T) {
+	c, _ := newTestConsole(t)
+	loadProgram(t, c, 0x200, opNop, 0x11, 0xFD)
+	c.Engine.SetLimits(3, 0)
+
+	addr := uint32(0x200)
+	if err := c.Execute(&addr); err != nil {
+		t.Fatalf("first Execute: %v", err)
+	}
+	if err := c.Execute(&addr); err != nil {
+		t.Fatalf("second Execute: %v (want a fresh budget, not immediate exhaustion)", err)
+	}
+}
+
 func TestExecute_requiresInit(t *testing.T) {
 	c := New(&strings.Builder{})
 	if err := c.Execute(nil); err == nil {

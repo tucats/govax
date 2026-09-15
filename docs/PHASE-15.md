@@ -11,7 +11,7 @@ path support, below) and is expected to grow additional sub-phases over time as 
 ease-of-use gaps are found, the same way `docs/DEVIATIONS.md` accumulates findings
 rather than being written once.
 
-**Status: sub-phase 1 complete.**
+**Status: sub-phases 1-2 complete.**
 
 ## Sub-phase 1: `-path` search path for unqualified file names
 
@@ -134,6 +134,80 @@ without the caller pointing `-data` at a checkout of this repo's `testdata/` tre
 - Update `cmd/govax/main.go`'s own doc comment (currently explains *why* embedding
   wasn't used) once this changes that.
 
+## Sub-phase 2: `-instruction-limit`/`-time-limit` runaway-program guards
+
+### Problem
+
+Nothing bounds how long a single `GO`/`CALL`/`STEP` command can run the emulated
+CPU. A program under development with a genuine infinite loop (or one that's
+merely much slower than expected) hangs the whole interactive session — the only
+recourse is killing the process, losing whatever console state (breakpoints,
+deposited memory, symbol table) had accumulated. Requested by the user, inspired
+directly by Phase 14's own testing, where several dead-end debugging runs needed
+an artificial step cap (`internal/console/run_test.go`'s `callBounded`) that has
+no interactive-session equivalent.
+
+### Proposed behavior
+
+- Two new `govax` flags, both optional and defaulting to unlimited ("infinite"):
+  `-instruction-limit <n>` (maximum instructions a single run may execute) and
+  `-time-limit <d>` (maximum wall-clock time, a standard Go duration string —
+  `5s`, `15ms`, etc.). `0` (the flag's own zero value when unset) means
+  unlimited for both, rather than a separate "was this flag given" tracking
+  field — the ordinary convention for this kind of CLI limit flag.
+- Applies to every top-level "run the CPU" console operation (`GO`/`EXEC`,
+  `CALL`, `STEP`, and `RUN` — which funnels through `CALL`) uniformly, each
+  getting its own fresh budget rather than a single pool shared across the
+  whole session: a runaway program in one command shouldn't consume the budget
+  of an unrelated later one, and time genuinely spent stopped at a breakpoint
+  or typing the next command must never count against the time limit.
+- When a limit is reached, the run stops cleanly and reports it (`%VAX-I-
+  INSTRLIMIT`/`%VAX-I-TIMELIMIT`, matching this project's existing `%VAX-`
+  message style), the same way a `HALT` or a breakpoint already does — not a
+  crash, not a Go-level error propagated up through the dispatcher.
+- Both flags are applied only *after* `vax.init`'s own boot sequence finishes,
+  not during it — a limit meant to catch a runaway *user* program shouldn't
+  also cut short the emulator's own startup script.
+- Explicit non-goal, per the user: avoid any `time` package cost when
+  `-time-limit` isn't set at all — no `time.Now()` call on the hot per-
+  instruction path unless a time limit is actually configured.
+
+### Key design questions
+
+- **Where does the budget reset?** Not globally per `govax` process (see above)
+  — each call into `Console.Execute`/`Call`/`Step` resets it, matching "a
+  runaway program's own debt doesn't roll over."
+- **What, precisely, counts as "engine time"?** Wall-clock time only across the
+  actual `Engine.Step` loop inside one `Execute`/`Call`/`Step` call — console-
+  side work (breakpoint formatting, `Printf` output, waiting for the next
+  command at the prompt) never starts the clock. This also means the time
+  limit measures real process wall-clock time, not "CPU time spent emulating"
+  in some more precise sense — pausing the *Go process itself* in a debugger
+  mid-run elapses the deadline in the background, so a resumed run reports the
+  time limit as reached almost immediately; see `Engine.BeginRun`'s own doc
+  comment for this caveat in full. `-instruction-limit` has no such issue and
+  is the better choice when debugging `govax`'s own Go code with a debugger.
+
+### Deliverables
+
+- `internal/cpu/limits.go`: `Engine.SetLimits`/`BeginRun`, `ErrInstructionLimitExceeded`/
+  `ErrTimeLimitExceeded`, wired into `Engine.Step` as its own first check.
+- `internal/console/execute.go`'s new `Console.reportStopReason` (shared by
+  `Execute`/`Step`/`Call`): prints the matching message and returns `nil` for
+  `ErrHalted`/`ErrInstructionLimitExceeded`/`ErrTimeLimitExceeded` alike,
+  propagates anything else unchanged. `Execute`/`Step`/`Call` each call
+  `Engine.BeginRun` once at the start of their own loop.
+- `cmd/govax/main.go`'s `-instruction-limit`/`-time-limit` flags (`flag.Int`/
+  `flag.Duration`), applied via `Engine.SetLimits` right after `vax.init`
+  finishes, before the interactive prompt loop starts.
+- Tests: `internal/cpu/limits_test.go` (instruction/time limits stop a genuine
+  infinite loop, `0` means unlimited for either, `BeginRun` gives each run a
+  fresh budget); `internal/console/execute_test.go`'s two new cases (the
+  console-level message and per-command-fresh-budget behavior);
+  `cmd/govax/main_test.go`'s `TestRun_instructionLimitStopsARunawayProgram`/
+  `TestRun_timeLimitStopsARunawayProgram` (full CLI-flag-to-console path, an
+  interactively deposited infinite loop actually gets stopped).
+
 ## Future sub-phases
 
 None yet planned — add here as further UX/ease-of-use gaps are identified, each as
@@ -220,6 +294,39 @@ behavior / Key design questions / Deliverables) as sub-phase 1 above.
   `vax.init` in the working directory beats a `-path`-supplied one).
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
   clean.
+
+### 2026-09-15 — Sub-phase 2 complete
+
+- `internal/cpu/limits.go`/`engine.go`: `Engine.SetLimits`/`BeginRun`, new
+  `ErrInstructionLimitExceeded`/`ErrTimeLimitExceeded` sentinels, `Step`'s own
+  `checkLimits` as its first action (refuses to start a new instruction once
+  either budget is exhausted; nothing about machine state changes when it
+  does). `BeginRun` costs nothing (no `time.Now()`) when no time limit is
+  configured, per the user's own explicit requirement.
+- `internal/console/execute.go`'s `reportStopReason` centralizes the "print a
+  message, return nil" handling `Execute`/`Step`/`Call` previously duplicated
+  for `ErrHalted` alone, now covering the two new sentinels too
+  (`%VAX-I-INSTRLIMIT`/`%VAX-I-TIMELIMIT`); each of those three now calls
+  `Engine.BeginRun()` once before its own `Engine.Step` loop.
+- `cmd/govax/main.go`: `-instruction-limit`(`flag.Int`)/`-time-limit`
+  (`flag.Duration`) added; `run`'s own signature grew the two values,
+  applying them via `Engine.SetLimits` right after `vax.init` finishes
+  (deliberately not during boot — see "Proposed behavior" above), before the
+  interactive prompt loop starts.
+- Tests: `internal/cpu/limits_test.go` (a genuine NOP+BRB self-loop stopped
+  by either limit, `0` meaning unlimited for both, `BeginRun` giving a
+  second run its own fresh budget rather than inheriting the first's
+  exhaustion); `internal/console/execute_test.go`'s
+  `TestExecute_stopsAtInstructionLimit`/
+  `TestExecute_beginRunGivesEachCommandAFreshBudget`; `cmd/govax/main_test.go`'s
+  `TestRun_instructionLimitStopsARunawayProgram`/
+  `TestRun_timeLimitStopsARunawayProgram`, each driving a real interactive
+  session (embedded `vax.init` boots, then `D`/`GO` commands injected via the
+  same `io.ReadCloser` mechanism the rest of this file's tests use) that
+  deposits an infinite loop and confirms `GO` returns control instead of
+  hanging the test.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...`
+  all clean.
 
 ## Follow-up ideas not pursued in this sub-phase
 

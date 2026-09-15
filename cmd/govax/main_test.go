@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // emptyStdin lets tests pass a deterministic, immediately-EOF input source
@@ -21,11 +22,45 @@ func emptyStdin() io.ReadCloser { return io.NopCloser(strings.NewReader("")) }
 // testdata/ checkout required.
 func TestRun_startupBootsFromEmbeddedFilesAlone(t *testing.T) {
 	var buf bytes.Buffer
-	if err := run(nil, &buf, emptyStdin(), nil); err != nil {
+	if err := run(nil, 0, 0, &buf, emptyStdin(), nil); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	if !strings.Contains(buf.String(), "govax") {
 		t.Errorf("output = %q, want the startup banner", buf.String())
+	}
+}
+
+// TestRun_instructionLimitStopsARunawayProgram exercises govax's own
+// -instruction-limit flag end to end (docs/PHASE-15.md's sub-phase 2):
+// after the embedded vax.init finishes booting (leaving PC at 0x200, per
+// its own "SET PC=200"), an interactively deposited infinite loop (NOP;
+// BRB back to itself) must not hang the process when a low instruction
+// limit is configured -- GO should return control to the prompt instead.
+func TestRun_instructionLimitStopsARunawayProgram(t *testing.T) {
+	script := "D 200 01\nD 201 11\nD 202 0FD\nGO\n"
+	in := io.NopCloser(strings.NewReader(script))
+
+	var buf bytes.Buffer
+	if err := run(nil, 5, 0, &buf, in, nil); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if !strings.Contains(buf.String(), "INSTRLIMIT") {
+		t.Errorf("output = %q, want an instruction-limit message", buf.String())
+	}
+}
+
+// TestRun_timeLimitStopsARunawayProgram is -time-limit's own counterpart to
+// TestRun_instructionLimitStopsARunawayProgram above.
+func TestRun_timeLimitStopsARunawayProgram(t *testing.T) {
+	script := "D 200 01\nD 201 11\nD 202 0FD\nGO\n"
+	in := io.NopCloser(strings.NewReader(script))
+
+	var buf bytes.Buffer
+	if err := run(nil, 0, 10*time.Millisecond, &buf, in, nil); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if !strings.Contains(buf.String(), "TIMELIMIT") {
+		t.Errorf("output = %q, want a time-limit message", buf.String())
 	}
 }
 
@@ -42,7 +77,7 @@ func TestRun_pathOverridesEmbeddedForThatFileOnly(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := run([]string{dir}, &buf, emptyStdin(), nil); err != nil {
+	if err := run([]string{dir}, 0, 0, &buf, emptyStdin(), nil); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	if !strings.Contains(buf.String(), "custom-vax-init-ran") {
@@ -70,7 +105,7 @@ func TestRun_asGivenPathWinsOverPathFlag(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := run([]string{pathDir}, &buf, emptyStdin(), nil); err != nil {
+	if err := run([]string{pathDir}, 0, 0, &buf, emptyStdin(), nil); err != nil {
 		t.Fatalf("run: %v", err)
 	}
 	if !strings.Contains(buf.String(), "as-given-vax-init-ran") {

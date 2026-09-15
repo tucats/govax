@@ -2,6 +2,7 @@ package cpu
 
 import (
 	"errors"
+	"time"
 
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
@@ -53,6 +54,13 @@ type Engine struct {
 	interruptPending               bool
 	interruptCode                  Exception
 	interruptIPL                   uint32
+
+	// Per-run instruction/time budget -- see limits.go. Both zero-valued
+	// (no limit) on a freshly constructed Engine.
+	instrLimit  int
+	instrCount  int
+	timeLimit   time.Duration
+	runDeadline time.Time
 }
 
 // NewEngine returns an Engine driving cpu and mem, using the built-in VAX
@@ -107,6 +115,11 @@ func (e *Engine) Halted() bool { return e.halted }
 // allocation entirely -- copying the freshly decoded value into it is a
 // plain, non-escaping struct copy, not a new allocation.
 func (e *Engine) Step() error {
+	if err := e.checkLimits(); err != nil {
+		return err
+	}
+	e.instrCount++
+
 	e.tickQuantum()
 	if e.interruptPending {
 		if err := e.deliverPendingInterrupt(); err != nil {

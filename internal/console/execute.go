@@ -74,6 +74,7 @@ func (c *Console) Execute(startAddr *uint32) error {
 	if startAddr != nil {
 		c.CPU.SetGPR(vax.PC, *startAddr)
 	}
+	c.Engine.BeginRun()
 
 	first := true
 	for {
@@ -87,11 +88,7 @@ func (c *Console) Execute(startAddr *uint32) error {
 		first = false
 
 		if err := c.Engine.Step(); err != nil {
-			if errors.Is(err, cpu.ErrHalted) {
-				c.Printf("HALT instruction executed at PC = %08X\n", c.CPU.GPR(vax.PC))
-				return nil
-			}
-			return err
+			return c.reportStopReason(err)
 		}
 	}
 }
@@ -111,15 +108,35 @@ func (c *Console) Step(startAddr *uint32) error {
 	if startAddr != nil {
 		c.CPU.SetGPR(vax.PC, *startAddr)
 	}
+	c.Engine.BeginRun()
 
 	if err := c.Engine.Step(); err != nil {
-		if errors.Is(err, cpu.ErrHalted) {
-			c.Printf("HALT instruction executed at PC = %08X\n", c.CPU.GPR(vax.PC))
-			return nil
-		}
-		return err
+		return c.reportStopReason(err)
 	}
 
 	c.Printf("Stepped to %08X\n", c.CPU.GPR(vax.PC))
 	return nil
+}
+
+// reportStopReason handles every "the run stopped for a benign, expected
+// reason" outcome Engine.Step can produce -- a HALT instruction, and this
+// project's own -instruction-limit/-time-limit guards (docs/PHASE-15.md's
+// sub-phase 2) -- by printing a matching console message and returning nil,
+// so Execute/Call/Step's own loops can just `return c.reportStopReason(err)`
+// on any Step error. Any other error (an unhandled fault, a real Go error)
+// is returned unchanged for the caller to propagate.
+func (c *Console) reportStopReason(err error) error {
+	switch {
+	case errors.Is(err, cpu.ErrHalted):
+		c.Printf("HALT instruction executed at PC = %08X\n", c.CPU.GPR(vax.PC))
+		return nil
+	case errors.Is(err, cpu.ErrInstructionLimitExceeded):
+		c.Printf("%%VAX-I-INSTRLIMIT, instruction limit reached at PC = %08X\n", c.CPU.GPR(vax.PC))
+		return nil
+	case errors.Is(err, cpu.ErrTimeLimitExceeded):
+		c.Printf("%%VAX-I-TIMELIMIT, time limit reached at PC = %08X\n", c.CPU.GPR(vax.PC))
+		return nil
+	default:
+		return err
+	}
 }

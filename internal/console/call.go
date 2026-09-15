@@ -22,6 +22,7 @@ func (c *Console) Call(addr uint32, step bool, args ...uint32) error {
 	if err := c.Engine.CallEntry(addr, args...); err != nil {
 		return err
 	}
+	c.Engine.BeginRun()
 
 	for {
 		err := c.Engine.Step()
@@ -34,10 +35,6 @@ func (c *Console) Call(addr uint32, step bool, args ...uint32) error {
 		if errors.Is(err, cpu.ErrConsoleCallReturned) {
 			return nil
 		}
-		if errors.Is(err, cpu.ErrHalted) {
-			c.Printf("HALT instruction executed at PC = %08X\n", c.CPU.GPR(vax.PC))
-			return nil
-		}
-		return err
+		return c.reportStopReason(err)
 	}
 }
