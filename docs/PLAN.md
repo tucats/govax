@@ -65,6 +65,7 @@ questions, and a progress log extended as that phase is worked.
 | 12 | [PHASE-12.md](PHASE-12.md) | Integration & regression |
 | 13 | [PHASE-13.md](PHASE-13.md) | VMS image activation (RUN) |
 | 14 | [PHASE-14.md](PHASE-14.md) | Interval timer & device-interrupt delivery |
+| 15 | [PHASE-15.md](PHASE-15.md) | UX / ease-of-use support |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -80,3 +81,11 @@ integration work once running `kernel.asm` for real found that the interval time
 console-I/O interrupt delivery `internal/cpu/procreg.go`'s `setPrivReg` always deferred
 to "Phase 09" was never actually implemented anywhere — see PHASE-14.md's own header
 note and PHASE-12.md's sub-phase 2 progress log for how it was found.
+
+Phase 15 is an open-ended, accumulating phase (not started) for `govax`-command UX/
+ease-of-use improvements not tied to any single emulated subsystem — unlike every
+other phase it isn't scoped to one C source area, and is expected to grow further
+sub-phases as more gaps are found. Its first sub-phase (a `-path` search path for
+locating unqualified file names like `vax.init`/`vax.help`/`evax.dcl`/`kernel.asm`/
+`ssdef.asm`, falling back to an embedded copy) was requested by the user on
+2026-09-15 — see PHASE-15.md.
