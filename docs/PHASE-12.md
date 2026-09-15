@@ -432,3 +432,34 @@ in this codebase runs `Step` concurrently on the same `Engine`), so the new shar
 
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` and
   `go test -race ./...` both clean.
+
+### 2026-09-15 — Sub-phase 7: documentation polish — Phase complete
+
+- `README.md`'s "What's Next?" section dated from before Phases 11-13 existed (it
+  described writing an assembler and an image loader as future objectives — both
+  long since built). Replaced with a "Current status" section naming what's actually
+  built and unit-tested, and pointing at the two remaining, already-tracked gaps
+  (`docs/PHASE-14.md`'s interrupt-delivery work; `docs/DEVIATIONS.md`'s deliberately-
+  kept ISA judgment calls) rather than leaving the project's public-facing status
+  page stale.
+- `docs/PLAN.md`'s phase table already picked up Phase 14 in sub-phase 2's own
+  commit (added alongside the phase doc itself, since leaving a doc undiscoverable
+  from the plan's own index would have been its own small staleness bug); no further
+  changes needed there.
+- `reference/eVAX/`: kept as permanent historical reference, not trimmed. Every
+  phase doc and `docs/DEVIATIONS.md` cross-references specific C source files/line
+  numbers throughout (confirmed by this same phase's own AUDIT.md cross-check,
+  sub-phase 4) — it remains this project's primary behavioral reference per
+  `CLAUDE.md`'s own stated policy, not a one-time scaffold to discard once porting
+  finished.
+
+Phase 12 complete: every scope item has a corresponding sub-phase above (asm/exe/ROM
+fixture regression suite, sub-phases 1-3; the AUDIT.md cross-check, sub-phase 4;
+`docs/DEVIATIONS.md` fully resolved, sub-phase 5, with `docs/PHASE-14.md` split out
+for the one gap that turned out to be a real, separate feature rather than a
+documentation-only judgment call; the performance pass, sub-phase 6; this
+documentation polish, sub-phase 7) and both named deliverables are met: a green,
+fixture-driven regression suite (`internal/console/regression_test.go` plus the
+pre-existing exe-milestone and ROM/NVRAM tests, all under one `go test ./...`), and
+every `docs/DEVIATIONS.md` entry resolved (fixed in Go, or deliberately kept with
+rationale — none left as a bare "not resolved").

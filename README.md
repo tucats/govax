@@ -52,24 +52,42 @@ file describes deviations from the machine architecture or ISA
 specifications found and either addressed or left outstanding
 from the port process.
 
-## What's Next?
+## Current status
 
-Once the basic port is complete and validated, the next major
-steps are to continue support for RTL emulation such that basic
-`VAX` executables can be loaded and run.
+The port covers the full stack the original objectives called for: CPU
+instruction set (including both VAX floating-point formats), virtual
+memory, an interactive console with a DCL-style command language, RTL/
+system-service simulation, a MACRO-32-style assembler/disassembler, and
+real VMS image activation (`RUN` loads and executes the project's own
+`.exe` test fixtures end to end, resolving sharable-image dependencies and
+applying load-time fixups). Every phase in [PLAN](docs/PLAN.md)'s table is
+built and covered by its own unit tests; Phase 12 added a fixture-driven
+regression suite that assembles and runs every `testdata/asm/*.asm`
+program and every real `testdata/exe/*.exe` binary the project ships,
+alongside the ROM/NVRAM save-and-load round trip.
 
-Future objectives:
+Known gaps, tracked in their own docs rather than silently left unstated:
 
-- Write a functional MACRO assembler tool that can read `VAX`
-  ".mar" assembly files and produce a `VAX` ".obj" object file.
-- Write a functional LINKER that can assemble the object files
-  into a runnable `VAX` ".exe" executable, using knowledge of
-  the RTL emulation built into `govax`.
-- Be able to run the resulting ".exe" executable files using
-  `govax`
+- **Interrupt delivery.** The interval timer (ICCS/NICR/ICR) and console
+  TTY (TXCS/TXDB/RXCS/RXDB) privileged registers have their bit-level
+  semantics but no actual interrupt admission/delivery behind them yet, so
+  a real VMS-style program that polls a device-ready flag in a loop (as
+  the project's own microkernel, `kernel.asm`, does for console output)
+  will spin rather than complete. See
+  [PHASE-14.md](docs/PHASE-14.md) (not started — a planning placeholder).
+- **A handful of deliberately-kept ISA judgment calls** — places where the
+  VAX architecture manual itself is ambiguous, or where the original
+  author's own C comments flagged something as unresolved — documented
+  with their reasoning in [DEVIATIONS.md](docs/DEVIATIONS.md) rather than
+  guessed at.
 
-At this point, it isn't the plan to emulate all hardware (i.e.
-disk controllers, network controllers, etc.) or to be able
-to boot up VMS. If you want something that can do that, I
-recommend starting with the excellent [simh](https://simh.trailing-edge.com)
-emulator which can in fact boot up a functioning VMS system.
+## What's next?
+
+With the assembler, RTL, and image loader all in place, the natural next
+step is Phase 14 (interrupt delivery) — it's what stands between the
+current state and a real microkernel program running to completion rather
+than a bounded, documented stop. Beyond that, this project was never aiming
+to emulate real hardware (disk controllers, network controllers, etc.) or
+boot an unmodified VMS distribution — for that, the excellent
+[simh](https://simh.trailing-edge.com) emulator can actually boot a
+functioning VMS system.
