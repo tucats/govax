@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/rtl"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 )
@@ -85,6 +86,8 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// page tables, matching console_vminit_dcl's own initial zero pass.
 	c.Mem = vm.NewMemory(c.Mem.Size())
 	c.Engine = cpu.NewEngine(c.CPU, c.Mem)
+	c.RTL = rtl.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.In, c.Out)
+	c.Engine.SetSystemServices(c)
 	c.CPU.SetPR(vax.MAPEN, 0)
 
 	paddr := uint32(0)
@@ -172,12 +175,26 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 
 	// The console scratch page: a single S0 page reserved for synthesizing
 	// small code sequences directly (no assembler needed -- see Phase 13's
-	// image loader and SHIM$ stub synthesis), matching
-	// console_vminit_dcl's own CONSOLE$SCRATCH symbol -- ported now that
-	// Phase 13 gives it a real consumer (see this file's earlier doc
-	// comment on why it wasn't ported at Phase 08).
+	// RUN command, which builds its IMAGE$INIT driver procedure here),
+	// matching console_vminit_dcl's own CONSOLE$SCRATCH symbol -- ported
+	// now that Phase 13 gives it a real consumer (see this file's earlier
+	// doc comment on why it wasn't ported at Phase 08).
 	scratch := 0x80000000 + paddr
 	c.Symbols.Set("CONSOLE$SCRATCH", scratch, SymbolSystem)
+	paddr += 512
+
+	// A second, dedicated page for Phase 13's synthesized SHIM$ stubs
+	// (shim.go's ensureShims): unlike CONSOLE$SCRATCH, which RUN reuses
+	// and overwrites on every invocation for its transient IMAGE$INIT
+	// driver, these stubs must stay valid for the life of the process once
+	// a G^ fixup resolves to one -- matching the real system's kernel.asm
+	// boot assembly writing its `.shim` table into the running microkernel
+	// image itself, not into the interactive scratch area. Tracked
+	// internally (shimBase) rather than as a named VAX symbol: nothing in
+	// the on-disk image format ever references this area directly, only
+	// the individual SHIM$<name>_<offset> symbols pointing into it.
+	c.shimBase = 0x80000000 + paddr
+	c.shimsReady = false
 	paddr += 512
 
 	c.CPU.SetPR(vax.SCBB, paddr)

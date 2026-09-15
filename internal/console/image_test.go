@@ -132,6 +132,62 @@ func TestImageLoad_alreadyLoadedIsNoOp(t *testing.T) {
 	}
 }
 
+// TestImageFixup_simpleExe loads simple.exe and its (recursively loaded --
+// tolerantly, since none of its dependencies are present as real files
+// under testdata/) sharable-image dependencies, then fixes it up: every G^
+// fixup must resolve through ensureShims's synthesized SHIM$ symbols, since
+// none of DECC$SHR/MTHRTL/LIBRTL/CMA$TIS_SHR is an actually-loaded ICB.
+func TestImageFixup_simpleExe(t *testing.T) {
+	c := newRunnableConsole(t)
+	c.Engine.SetModeStack(vax.Kernel, false)
+	if err := c.ensureShims(); err != nil {
+		t.Fatalf("ensureShims: %v", err)
+	}
+
+	icb, err := c.imageLoad(exeFixturePath(t, "simple.exe"), icbMain)
+	if err != nil {
+		t.Fatalf("imageLoad: %v", err)
+	}
+
+	if err := c.imageFixup(icb); err != nil {
+		t.Fatalf("imageFixup: %v", err)
+	}
+	if icb.Flags&icbFixed == 0 {
+		t.Error("expected ICB_FIXED set after a successful fixup")
+	}
+
+	// A second fixup pass must be a no-op (already fixed), not an error or
+	// a re-application of the same rewrite.
+	if err := c.imageFixup(icb); err != nil {
+		t.Fatalf("imageFixup (again): %v", err)
+	}
+}
+
+// TestImageFixup_everyRealFixtureFixesUp runs imageLoad+imageFixup across
+// every real fixture (mirroring TestImageLoad_everyRealFixtureLoads),
+// reporting whichever SHIM$ symbol (if any) is missing so a gap in
+// shimTable is easy to see, matching docs/PHASE-13.md's own bar: an
+// unresolved reference should be reported clearly, not silently ignored.
+func TestImageFixup_everyRealFixtureFixesUp(t *testing.T) {
+	for _, name := range []string{"cli.exe", "dbl.exe", "getvm.exe", "put.exe", "putc.exe", "sieve.exe", "simple.exe"} {
+		t.Run(name, func(t *testing.T) {
+			c := newRunnableConsole(t)
+			c.Engine.SetModeStack(vax.Kernel, false)
+			if err := c.ensureShims(); err != nil {
+				t.Fatalf("ensureShims: %v", err)
+			}
+
+			icb, err := c.imageLoad(exeFixturePath(t, name), icbMain)
+			if err != nil {
+				t.Fatalf("imageLoad(%s): %v", name, err)
+			}
+			if err := c.imageFixup(icb); err != nil {
+				t.Errorf("imageFixup(%s): %v", name, err)
+			}
+		})
+	}
+}
+
 // TestImageLoad_everyRealFixtureLoads is a smoke test: imageLoad must
 // succeed against every real fixture in testdata/exe/ (put1.exe is a
 // zero-byte file, excluded per docs/PHASE-12.md's own scope note), each in

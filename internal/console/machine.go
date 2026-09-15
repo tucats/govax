@@ -93,6 +93,15 @@ type Console struct {
 	In  io.Reader
 	Out io.Writer
 
+	// shimBase/shimsReady back Phase 13's SHIM$ stub synthesis (shim.go):
+	// shimBase is the dedicated S0 page VMInit reserves for these stubs,
+	// and shimsReady guards ensureShims so the table (and the SHIM$
+	// symbols pointing into it) is only ever built once per VMInit, since
+	// a G^ fixup performed on one RUN must still resolve to the same
+	// address on a later RUN.
+	shimBase   uint32
+	shimsReady bool
+
 	// ICBList is Phase 13's loaded-image list (console_run.c's icb_list),
 	// in load order (main image first, each dependency appended as loaded
 	// -- see image.go's doc comment on why this differs from, but is

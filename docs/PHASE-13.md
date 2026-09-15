@@ -2,18 +2,19 @@
 
 ## Goal
 
-Port `console_run.c`'s `RUN` command: load a real VMS `.exe` file into P0 space,
-resolve its sharable-image dependencies, apply load-time fixups, and transfer control
-to it — the last piece needed to run `testdata/exe/*.exe` as real user-mode programs
-rather than hand-assembled test fixtures.
+Port `console_run.c`'s `RUN` command: load a real VMS `.exe` file into P0
+space, resolve its sharable-image dependencies, apply load-time fixups, and
+transfer control to it — the last piece needed to run `testdata/exe/*.exe`
+as real user-mode programs rather than hand-assembled test fixtures.
 
-This phase was split out of Phase 10 (RTL simulators) once starting that phase's own
-investigation found `RUN` to be a large, separable concern layered *on top of* the RTL
-calling convention, not a small wiring step alongside it — see `docs/PHASE-10.md`'s own
-notes on the split and `docs/PLAN.md`'s phase-table note. Phase 10's RTL layer (SYS$/
-LIB$ services, RMS, CLI) is fully exercised by direct unit tests (construct a scenario in
-`vm.Memory`, invoke the relevant registry entry, assert the result) and doesn't need a
-working image loader to be complete on its own.
+This phase was split out of Phase 10 (RTL simulators) once starting that
+phase's own investigation found `RUN` to be a large, separable concern layered
+*on top of* the RTL calling convention, not a small wiring step alongside it —
+see `docs/PHASE-10.md`'s own notes on the split and `docs/PLAN.md`'s phase-
+table note. Phase 10's RTL layer (SYS$/LIB$ services, RMS, CLI) is fully
+exercised by direct unit tests (construct a scenario in `vm.Memory`, invoke
+the relevant registry entry, assert the result) and doesn't need a working
+image loader to be complete on its own.
 
 ## Scope / C source mapping
 
@@ -78,7 +79,7 @@ knowable by actually loading and running it, which is this phase's job to find o
 
 ## Deliverables
 
-- Port `image_load`: read the IHD/IHI/ISD headers via a Go equivalent of
+- Port `image_load`: read the IHD/IHI/ISD/IAF headers via a Go equivalent of
   `init_ihd_maps`'s declarative field table, load each ISD's pages (including DZRO
   zeroing), track the P0 high-water mark via Phase 10's `Environment.RegionSize`,
   recursively resolve the SHR (sharable-image) list, tolerating a missing secondary image
@@ -185,5 +186,56 @@ knowable by actually loading and running it, which is this phase's job to find o
   `TestImageLoad_alreadyLoadedIsNoOp` and
   `TestImageLoad_missingFileReportsError` cover `image_load`'s other two
   documented outcomes.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test
+  ./...` all clean.
+
+### 2026-09-15 — Sub-phase 3: SHIM$ stub synthesis, image_fixup
+
+- Found and fixed two real bugs in `internal/console/vminit.go`'s `VMInit`
+  while writing this sub-phase's own tests (the first XFC$SHIM dispatch to
+  actually run *after* a VMINIT, rather than only after a bare INIT --
+  every prior XFC/RTL test happened not to exercise this exact
+  combination): `VMInit` replaces `c.Engine` and `c.Mem` (a fresh, wiped
+  address space) but was never re-running `c.Engine.SetSystemServices(c)`
+  (so `e.services` stayed nil after the reassignment) nor recreating
+  `c.RTL` (so `rtl.Environment` kept a stale reference to the *pre-VMINIT*
+  `vm.Memory`, with no page tables -- reads through it access-violated even
+  though the same address read fine through the live `c.Mem`). Both are
+  plain missing-reassignment bugs, not ISA/hardware-fidelity questions
+  (RTL/console wiring, not emulated VAX behavior -- same category as this
+  phase's other loader-side fixes), caught immediately by
+  `TestEnsureShims_stubDispatchesThroughXFCShim` failing with "exception
+  vector is zero" until both were fixed.
+- `internal/console/shim.go`: `shimTable`, a direct transcription of
+  `kernel.asm`'s two `.shim` pseudo-op tables (lines ~1146-1177,
+  ~1546-1555) as Go data, and `Console.ensureShims`, which synthesizes each
+  entry's stub (`MOVL #code,R0` / `XFC #0x7D` / `RET`, matching
+  `asm_pseudo.c`'s own `.SHIM` code-generation case byte-for-byte, code 0
+  entries included -- see the file's doc comment on why a "dead" stub needs
+  no special-casing: `internal/rtl.ShimTable.Lookup(0)` already misses
+  naturally) into a dedicated S0 page `VMInit` now reserves (`shimBase`,
+  separate from `CONSOLE$SCRATCH`, which stays reserved for RUN's own
+  transient `IMAGE$INIT` driver -- conflating the two was an early design
+  mistake caught before writing any fixup code, once it was clear real
+  shims must outlive any single RUN while the driver procedure doesn't),
+  and registers each stub's `SHIM$<library>_<offset>` symbol. Idempotent
+  (`shimsReady`), so repeated RUNs keep resolving to the same addresses.
+- `internal/console/image.go`'s `Console.imageFixup`, ported from
+  `image_fixup`: walks the G^ fixup list (each fixup-vector slot initially
+  holds an offset into the target sharable image and is overwritten *in
+  place* with the resolved absolute address -- this is what a `G^`
+  reference in the compiled code actually indirects through, not a
+  separate patch site) and the `.ADDRESS` list (each slot names a
+  *different* longword elsewhere in the image whose current offset-into-
+  the-dependency value gets rebased by the dependency's load base).
+  Resolution order matches the C source exactly: an already-loaded ICB by
+  name first, a `SHIM$<name>_<offset>` symbol otherwise -- surfacing a
+  clear error if neither exists, exactly as `image_fixup` does (a real gap
+  in `shimTable` should be visible, not silently skipped).
+- `TestImageFixup_everyRealFixtureFixesUp` runs `imageLoad`+`imageFixup`
+  against every real `testdata/exe/` fixture: all seven resolve every G^
+  fixup against `shimTable` cleanly, with no unresolved-symbol gaps --
+  `shimTable`'s 42 entries (transcribed from the same `kernel.asm` these
+  fixtures were historically run against) turned out to be sufficient.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test
   ./...` all clean.

@@ -436,6 +436,151 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 	return icb, nil
 }
 
+// findSHRByID returns the SHR entry with the given id from icb's dependency
+// list, or nil.
+func findSHRByID(icb *ICB, id uint32) *SHR {
+	for _, shr := range icb.SHRList {
+		if shr.ID == id {
+			return shr
+		}
+	}
+	return nil
+}
+
+// findLoadedICB returns the already-loaded ICB with the given name, or nil,
+// matching image_fixup's own inline "is it on an ICB list we already have"
+// scan.
+func (c *Console) findLoadedICB(name string) *ICB {
+	for _, icb := range c.ICBList {
+		if icb.Name == name {
+			return icb
+		}
+	}
+	return nil
+}
+
+// resolveFixupTarget returns the absolute address a G^ fixup naming shr and
+// requesting offset resolves to: either shr's own already-loaded base plus
+// offset (if shr is itself a real loaded image, found by name on ICBList),
+// or the SHIM$<shr.Name>_<offset> stub address ensureShims registered,
+// matching image_fixup's own "on the ICB list, else look for a shim" order.
+func (c *Console) resolveFixupTarget(shr *SHR, offset uint32) (uint32, error) {
+	if dep := c.findLoadedICB(shr.Name); dep != nil {
+		return dep.Base + offset, nil
+	}
+	name := fmt.Sprintf("SHIM$%s_%08X", shr.Name, offset)
+	v, ok := c.Symbols.Get(name)
+	if !ok {
+		return 0, fmt.Errorf("console: unresolved shim symbol %s", name)
+	}
+	return v, nil
+}
+
+// imageFixup performs load-time linking for icb: G^ fixups (each fixup
+// vector slot at naddr initially holds an offset into the target sharable
+// image and is overwritten in place with the resolved absolute address --
+// this is what a G^ reference in the compiled code actually indirects
+// through) and .ADDRESS fixups (each slot names a *different* longword
+// elsewhere in icb's own memory whose current offset-into-the-dependency
+// value gets rebased by the dependency's load base). Matches image_fixup;
+// requires ensureShims to have already run (see runImage in run.go) since
+// an unresolved G^ target falls back to a SHIM$ symbol lookup.
+func (c *Console) imageFixup(icb *ICB) error {
+	if icb.FixupISD == nil {
+		return nil
+	}
+	if icb.Flags&icbFixed != 0 {
+		return nil
+	}
+
+	addr := icb.Base + (uint32(icb.FixupISD.VPN) << 9)
+	iaf := icb.IAF
+
+	if iaf.OffsetGFix != 0 {
+		naddr := addr + iaf.OffsetGFix
+		fixupCount, err := c.loadLong(naddr)
+		if err != nil {
+			return err
+		}
+
+		for fixupCount != 0 {
+			naddr += 4
+			imageID, err := c.loadLong(naddr)
+			if err != nil {
+				return err
+			}
+			shr := findSHRByID(icb, imageID)
+			if shr == nil {
+				fixupCount = 0
+			} else {
+				for n := uint32(0); n < fixupCount; n++ {
+					naddr += 4
+					offset, err := c.loadLong(naddr)
+					if err != nil {
+						return err
+					}
+					value, err := c.resolveFixupTarget(shr, offset)
+					if err != nil {
+						return err
+					}
+					if err := c.storeLong(naddr, value); err != nil {
+						return err
+					}
+				}
+			}
+
+			naddr += 4
+			if fixupCount, err = c.loadLong(naddr); err != nil {
+				return err
+			}
+		}
+	}
+
+	if iaf.OffsetAddr != 0 {
+		naddr := addr + iaf.OffsetAddr
+		fixupCount, err := c.loadLong(naddr)
+		if err != nil {
+			return err
+		}
+
+		for fixupCount != 0 {
+			naddr += 4
+			imageID, err := c.loadLong(naddr)
+			if err != nil {
+				return err
+			}
+			shr := findSHRByID(icb, imageID)
+			if shr == nil {
+				fixupCount = 0
+			} else {
+				for n := uint32(0); n < fixupCount; n++ {
+					naddr += 4
+					offset, err := c.loadLong(naddr)
+					if err != nil {
+						return err
+					}
+					vaddr := icb.Base + offset
+					target, err := c.loadLong(vaddr)
+					if err != nil {
+						return err
+					}
+					if err := c.storeLong(vaddr, target+shr.Base); err != nil {
+						return err
+					}
+				}
+			}
+
+			naddr += 4
+			if fixupCount, err = c.loadLong(naddr); err != nil {
+				return err
+			}
+		}
+	}
+
+	icb.Flags |= icbFixed
+	return nil
+}
+
 // findImage locates fn on the native filesystem, matching find_image: try
 // it verbatim (adding a .exe suffix if it doesn't already have one), then
 // with SharePrefix prepended, then lowercased -- stopping at the first
