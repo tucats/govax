@@ -61,6 +61,55 @@ func TestSetRadix(t *testing.T) {
 	}
 }
 
+func TestSetDebug_defaultFlags(t *testing.T) {
+	c, _ := newTestConsole(t)
+	if got := c.CPU.Debug(); got != vax.DebugDefault {
+		t.Errorf("Debug() = %#x, want DebugDefault (%#x)", got, vax.DebugDefault)
+	}
+}
+
+func TestSetDebug_setAndClear(t *testing.T) {
+	c, _ := newTestConsole(t)
+	if err := c.SetDebug([]string{"VM", "RMS"}); err != nil {
+		t.Fatalf("SetDebug: %v", err)
+	}
+	if !c.CPU.DebugEnabled(vax.DebugVM) || !c.CPU.DebugEnabled(vax.DebugRMS) {
+		t.Errorf("Debug() = %#x, want VM and RMS set", c.CPU.Debug())
+	}
+	// The default REGISTERS/USERHALT/LIBINIT bits are untouched by setting
+	// unrelated flags.
+	if !c.CPU.DebugEnabled(vax.DebugUserHalt) {
+		t.Errorf("Debug() = %#x, want USERHALT still set", c.CPU.Debug())
+	}
+
+	if err := c.SetDebug([]string{"NOUSERHALT"}); err != nil {
+		t.Fatalf("SetDebug: %v", err)
+	}
+	if c.CPU.DebugEnabled(vax.DebugUserHalt) {
+		t.Errorf("Debug() = %#x, want USERHALT cleared", c.CPU.Debug())
+	}
+	if !c.CPU.DebugEnabled(vax.DebugVM) {
+		t.Errorf("Debug() = %#x, want VM still set", c.CPU.Debug())
+	}
+}
+
+func TestSetDebug_bareSetsNativeDebugger(t *testing.T) {
+	c, _ := newTestConsole(t)
+	if err := c.SetDebug(nil); err != nil {
+		t.Fatalf("SetDebug: %v", err)
+	}
+	if !c.CPU.DebugEnabled(vax.DebugNative) {
+		t.Errorf("Debug() = %#x, want DEBUG (native debugger) set", c.CPU.Debug())
+	}
+}
+
+func TestSetDebug_invalidFlag(t *testing.T) {
+	c, _ := newTestConsole(t)
+	if err := c.SetDebug([]string{"BOGUS"}); err == nil {
+		t.Error("expected an error for an invalid SET DEBUG flag")
+	}
+}
+
 func TestShowRegisters(t *testing.T) {
 	c, buf := newTestConsole(t)
 	c.CPU.SetGPR(vax.R3, 0x11223344)

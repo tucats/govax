@@ -19,7 +19,7 @@ tracing), `logical_names.c`/`devices.c`/`rms.c`/`service.c`/`p1_vector.c` (RTL
 tracing), and `console_run.c`/`console_dispatch.c`/`console_step.c`/
 `asm_symbols.c` (console-level tracing).
 
-**Status: complete.**
+**Status: sub-phase 1 complete; sub-phases 2-5 in progress.**
 
 ## Design decisions
 
@@ -232,6 +232,24 @@ item-code sub-case:
   register-dump/full-disassembly behavior is deferred.
 
 ## Progress Log
+
+### 2026-09-15 — Sub-phase 1 complete: `DebugFlags` bitmask + `SET`/`SHOW DEBUG`
+
+Added `internal/vax/debug.go` (`DebugFlags`, all 26 named constants,
+`DebugDefault`) and the `debug`/`debugOut` fields + accessors on `CPU`;
+`vax.New`/`Reset` both seed `DebugDefault`. `Console.Init` points the new
+CPU's debug writer at `Console.Out`. `Console.SetDebug` (`set.go`) implements
+`SET DEBUG`/`SET DBG`'s real syntax (one verb, per-item `NO`-prefixing, bare
+form sets the native-debugger bit), wired into `cmdSet`
+(`dispatch.go`). `Console.ShowDebug` (`show.go`) reproduces `printbit`'s
+format and the C source's exact 20-of-25-name display list. `SHOW_DEBUG`
+bound in `bindGrammar` (the DCL grammar entry already existed from Phase 16).
+New `vmserrors.CLI_BADDEBUGFLAG`. Tests:
+`internal/console/set_test.go` (`TestSetDebug_*`), `show_test.go`
+(`TestShowDebug`), `dispatch_test.go` (`TestDispatch_setDebugAndShowDebug`;
+the old `TestDispatch_unboundShowSubformErrors` now points at `SHOW
+ASSEMBLER_FLAGS`, still genuinely unbound, instead of the now-implemented
+`SHOW DEBUG`). `go build ./...`, `go vet ./...`, `go test ./...` all clean.
 
 ### 2026-09-15 — Phase created, scope and design decisions recorded
 

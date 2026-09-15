@@ -1,5 +1,7 @@
 package vax
 
+import "io"
+
 // Reg indexes the general register file. R0-R15 are architecturally defined;
 // R16 and up are reusable temporaries (see arch.h's T0-T5 mnemonics), carried
 // over from the C source's oversized reg[] array so later phases that burn
@@ -87,20 +89,30 @@ const MaxPrivReg = 128
 // privileged register file, and the processor status longword. It is created
 // with New and passed explicitly / receiver-bound — see docs/PLAN.md's
 // locked-in state model.
+//
+// debug/debugOut (see debug.go) are the C source's `vax.debug` and its
+// implicit "trace to the same stream as console output" destination —
+// carried on CPU, not a separate type, since CPU is already threaded (by
+// value or by parameter) into every layer (internal/cpu, internal/vm,
+// internal/rtl) that needs to check a DBG_* flag. See docs/PHASE-17.md.
 type CPU struct {
 	gpr [MaxReg + 1]uint32
 	pr  [MaxPrivReg + 1]uint32
 	psl PSL
+
+	debug    DebugFlags
+	debugOut io.Writer
 }
 
-// New returns a CPU with all registers and the PSL zeroed.
+// New returns a CPU with all registers and the PSL zeroed, and the debug
+// flags set to DebugDefault, matching initialization.c's alloc_vax.
 func New() *CPU {
-	return &CPU{}
+	return &CPU{debug: DebugDefault}
 }
 
 // Reset zeroes all registers and the PSL, equivalent to a freshly constructed CPU.
 func (c *CPU) Reset() {
-	*c = CPU{}
+	*c = CPU{debug: DebugDefault}
 }
 
 // GPR reads a general register.

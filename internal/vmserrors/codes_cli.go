@@ -42,6 +42,7 @@ const (
 	cliBadRadixVal
 	cliNeedBreakAddr
 	cliBadSetSyntax
+	cliBadDebugFlag
 	cliNeedRomNvram
 	cliNeedFilename
 	cliVMTooLarge
@@ -132,6 +133,7 @@ const (
 	CLI_BADRADIXVAL    = CLIFacility<<FacilityPosition | cliBadRadixVal<<MessagePosition | StatusError
 	CLI_NEEDBREAKADDR  = CLIFacility<<FacilityPosition | cliNeedBreakAddr<<MessagePosition | StatusError
 	CLI_BADSETSYNTAX   = CLIFacility<<FacilityPosition | cliBadSetSyntax<<MessagePosition | StatusError
+	CLI_BADDEBUGFLAG   = CLIFacility<<FacilityPosition | cliBadDebugFlag<<MessagePosition | StatusError
 	CLI_NEEDROMNVRAM   = CLIFacility<<FacilityPosition | cliNeedRomNvram<<MessagePosition | StatusError
 	CLI_NEEDFILENAME   = CLIFacility<<FacilityPosition | cliNeedFilename<<MessagePosition | StatusError
 	CLI_VMTOOLARGE     = CLIFacility<<FacilityPosition | cliVMTooLarge<<MessagePosition | StatusError
@@ -218,6 +220,7 @@ func init() {
 	DefineMessage(CLI_BADRADIXVAL, CLIFacility, "BADRADIXVAL", "Invalid radix !Q")
 	DefineMessage(CLI_NEEDBREAKADDR, CLIFacility, "NEEDBREAKADDR", "SET BREAKPOINT requires an address")
 	DefineMessage(CLI_BADSETSYNTAX, CLIFacility, "BADSETSYNTAX", "Unrecognized SET syntax !Q")
+	DefineMessage(CLI_BADDEBUGFLAG, CLIFacility, "BADDEBUGFLAG", "Invalid SET DEBUG flag !Q")
 	DefineMessage(CLI_NEEDROMNVRAM, CLIFacility, "NEEDROMNVRAM", "SAVE/LOAD requires /ROM or /NVRAM (the plain .VAX form isn't implemented)")
 	DefineMessage(CLI_NEEDFILENAME, CLIFacility, "NEEDFILENAME", "!S requires a file name")
 	DefineMessage(CLI_VMTOOLARGE, CLIFacility, "VMTOOLARGE", "Requested VM size exceeds physical memory")

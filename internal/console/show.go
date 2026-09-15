@@ -1312,3 +1312,58 @@ func (c *Console) showInstructionsDetail(table *cpu.Table, opmatch int32) error 
 
 	return nil
 }
+
+// debugShowEntry is one row of ShowDebug's display, in the exact order
+// console_show.c's case 129 (SHOW DEBUG) prints them (console_show.c:439-564).
+// Not every SETDBG-settable name appears here — MEMORY/P1-P4 are settable
+// but never shown, matching the C source; see docs/PHASE-17.md.
+type debugShowEntry struct {
+	flag vax.DebugFlags
+	name string
+	desc string
+}
+
+var debugShowEntries = []debugShowEntry{
+	{vax.DebugNative, "DEBUG", "Invoke native debugger?"},
+	{vax.DebugVM, "VM", "Debug virtual memory translations?"},
+	{vax.DebugTB, "TB", "Debug translation buffer caching?"},
+	{vax.DebugSymbols, "SYMBOLS", "Debug symbol table handling?"},
+	{vax.DebugExceptions, "EXCEPTIONS", "Debug exception handling?"},
+	{vax.DebugInterrupts, "INTERRUPTS", "Debug interrupt handling?"},
+	{vax.DebugCHM, "CHM", "Debug change-mode operations?"},
+	{vax.DebugRegisters, "REGISTERS", "Display changed registers on STEP?"},
+	{vax.DebugFullDisasm, "FULLDISASM", "Display operand values on disasm?"},
+	{vax.DebugUserHalt, "USERHALT", "HALT in user mode halts CPU?"},
+	{vax.DebugKeyboard, "KEYBOARD", "Debug console keyboard input?"},
+	{vax.DebugImages, "IMAGES", "Display image info on RUN command?"},
+	{vax.DebugServices, "SERVICES", "Debug P1 system service calls?"},
+	{vax.DebugDCL, "DCL", "Debug DCL parsing?"},
+	{vax.DebugExpand, "COMMAND", "Display command line expansions?"},
+	{vax.DebugLogicals, "LOGICALS", "Debug logical name operations?"},
+	{vax.DebugDevices, "DEVICES", "Debug device operations?"},
+	{vax.DebugProcess, "PROCESSES", "Debug process operations?"},
+	{vax.DebugLibinit, "LIBINIT", "Invoke LIB$INITIALIZE for images?"},
+	{vax.DebugRMS, "RMS", "Debug RMS operations?"},
+}
+
+// ShowDebug implements SHOW DEBUG, matching console_show.c's case 129 and
+// its printbit helper: a bit that's set prints its plain name, a clear bit
+// prints "NO"+name, both followed by the flag's description.
+func (c *Console) ShowDebug() error {
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	debug := c.CPU.Debug()
+
+	c.Printf("DEBUG SETTINGS:\n")
+	for _, e := range debugShowEntries {
+		name := e.name
+		if debug&e.flag == 0 {
+			name = "NO" + name
+		}
+		c.Printf("    %-20s    %s\n", name, e.desc)
+	}
+
+	return nil
+}

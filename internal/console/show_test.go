@@ -429,6 +429,29 @@ func TestShowClock(t *testing.T) {
 	}
 }
 
+func TestShowDebug(t *testing.T) {
+	d, _, buf := newShowDispatcher(t)
+
+	if err := d.Dispatch("SHOW DEBUG"); err != nil {
+		t.Fatalf("Dispatch: %v", err)
+	}
+
+	out := buf.String()
+	// Default flags: REGISTERS/USERHALT/LIBINIT set, everything else clear.
+	if !strings.Contains(out, "REGISTERS  ") || strings.Contains(out, "NOREGISTERS") {
+		t.Errorf("output = %q, want REGISTERS reported set by default", out)
+	}
+	if !strings.Contains(out, "NOVM  ") {
+		t.Errorf("output = %q, want VM reported clear by default", out)
+	}
+	// MEMORY/P1-P4 are settable but never displayed, matching the C source
+	// (SERVICES' own description legitimately contains the substring "P1",
+	// so check for the padded name column, not a bare substring).
+	if strings.Contains(out, "MEMORY") || strings.Contains(out, "    P1  ") || strings.Contains(out, "NOP1") {
+		t.Errorf("output = %q, want MEMORY/P1-P4 absent from SHOW DEBUG", out)
+	}
+}
+
 func TestShowFault(t *testing.T) {
 	d, c, buf := newShowDispatcher(t)
 

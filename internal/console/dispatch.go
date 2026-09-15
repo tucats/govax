@@ -233,6 +233,7 @@ func (d *Dispatcher) bindGrammar() {
 
 	g.Bind("SHOW_MAP", func(id int64, r *dcl.Result) error { return d.Console.ShowMap() })
 	g.Bind("SHOW_TB", func(id int64, r *dcl.Result) error { return d.Console.ShowTB() })
+	g.Bind("SHOW_DEBUG", func(id int64, r *dcl.Result) error { return d.Console.ShowDebug() })
 
 	g.Bind("SHOW_INSTRUCTIONS", func(id int64, r *dcl.Result) error {
 		return d.Console.ShowInstructions(
@@ -777,6 +778,18 @@ func cmdSet(d *Dispatcher, rest string) error {
 		d.Console.AddBreakpoint(addr)
 
 		return nil
+
+	case "DEBUG", "DBG":
+		var names []string
+		for _, f := range fields[1:] {
+			for _, n := range strings.Split(f, ",") {
+				if n = strings.TrimSpace(n); n != "" {
+					names = append(names, n)
+				}
+			}
+		}
+
+		return d.Console.SetDebug(names)
 	}
 
 	eq := strings.IndexByte(rest, '=')

@@ -250,12 +250,32 @@ func TestDispatch_entryPointCommandErrors(t *testing.T) {
 
 func TestDispatch_unboundShowSubformErrors(t *testing.T) {
 	d, _ := newTestDispatcher(t)
-	// SHOW DEBUG remains unbound -- it needs the DBG_* bitmask state
-	// docs/PHASE-16.md sub-phase 3's SET DEBUG would add, not yet
-	// implemented (see that document's sub-phase 1c).
-	err := d.Dispatch("SHOW DEBUG")
+	// SHOW ASSEMBLER_FLAGS remains unbound -- it needs SET ASSEMBLER's flag
+	// set, not yet implemented (docs/PHASE-16.md sub-phase 1c). SHOW DEBUG,
+	// previously unbound here too, is now implemented -- see
+	// docs/PHASE-17.md and TestDispatch_showDebug.
+	err := d.Dispatch("SHOW ASSEMBLER_FLAGS")
 	if err == nil {
-		t.Error("expected an error for the unimplemented SHOW DEBUG")
+		t.Error("expected an error for the unimplemented SHOW ASSEMBLER_FLAGS")
+	}
+}
+
+func TestDispatch_setDebugAndShowDebug(t *testing.T) {
+	d, c := newTestDispatcher(t)
+
+	if err := d.Dispatch("SET DEBUG VM,NOUSERHALT"); err != nil {
+		t.Fatalf("Dispatch(SET DEBUG): %v", err)
+	}
+	if !c.CPU.DebugEnabled(vax.DebugVM) || c.CPU.DebugEnabled(vax.DebugUserHalt) {
+		t.Errorf("Debug() = %#x, want VM set and USERHALT cleared", c.CPU.Debug())
+	}
+
+	if err := d.Dispatch("SHOW DEBUG"); err != nil {
+		t.Fatalf("Dispatch(SHOW DEBUG): %v", err)
+	}
+
+	if err := d.Dispatch("SET DEBUG BOGUS"); err == nil {
+		t.Error("expected an error for an invalid SET DEBUG flag")
 	}
 }
 

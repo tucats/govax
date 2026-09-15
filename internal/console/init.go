@@ -19,6 +19,7 @@ func (c *Console) Init(physBytes uint32) error {
 	size := allocPhysMemory(physBytes)
 
 	c.CPU = vax.New()
+	c.CPU.SetDebugWriter(c.Out)
 	c.Mem = vm.NewMemory(size)
 	c.Engine = cpu.NewEngine(c.CPU, c.Mem)
 	c.RTL = rtl.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.In, c.Out)
