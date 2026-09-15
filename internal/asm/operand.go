@@ -1,9 +1,8 @@
 package asm
 
 import (
-	"fmt"
-
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // addrFixup/dispFixup/branchFixup pick the fixup kind matching a scale (1,
@@ -56,7 +55,7 @@ func (a *Assembler) storeScaled(addr uint32, value uint32, scale int) error {
 		return a.image.storeLongword(addr, value)
 	}
 
-	return fmt.Errorf("unsupported operand scale %d", scale)
+	return vmserrors.New(vmserrors.VAX_BADSCALE, scale)
 }
 
 // assembleOperand assembles one instruction operand at the current deposit
@@ -180,7 +179,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	// conversion.
 	if access == cpu.AccessImmediate {
 		if c.peek() != '#' {
-			return fmt.Errorf("implicit immediate operand requires '#'")
+			return vmserrors.New(vmserrors.VAX_NEEDHASH)
 		}
 
 		c.next()
@@ -253,7 +252,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			c.next() // '^'
 
 			if c.next() != '#' {
-				return fmt.Errorf("invalid short literal syntax")
+				return vmserrors.New(vmserrors.VAX_BADSHORTLIT)
 			}
 
 			if dtype == cpu.ShortLiteralInt {
@@ -263,7 +262,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				}
 
 				if v >= 64 {
-					return fmt.Errorf("short literal out of range")
+					return vmserrors.New(vmserrors.VAX_SHORTRANGE)
 				}
 
 				litValue = v
@@ -275,7 +274,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 				idx, ok := cpu.FindShortFloat(f)
 				if !ok {
-					return fmt.Errorf("value is not a valid short float literal")
+					return vmserrors.New(vmserrors.VAX_BADSHORTFLOAT)
 				}
 
 				litValue = uint32(idx)
@@ -314,7 +313,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		c.skipBlanks()
 
 		if c.next() != '(' {
-			return fmt.Errorf("invalid addressing mode")
+			return vmserrors.New(vmserrors.VAX_BADMODE)
 		}
 
 		reg, err := parseRegister(c, 0)
@@ -331,7 +330,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		c.skipBlanks()
 
 		if c.next() != ')' {
-			return fmt.Errorf("invalid addressing mode")
+			return vmserrors.New(vmserrors.VAX_BADMODE)
 		}
 
 		return nil
@@ -350,7 +349,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		c.skipBlanks()
 
 		if c.next() != ')' {
-			return fmt.Errorf("invalid addressing mode")
+			return vmserrors.New(vmserrors.VAX_BADMODE)
 		}
 
 		mode := byte(0x90)
@@ -391,11 +390,11 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		c.skipBlanks()
 
 		if c.next() != ')' {
-			return fmt.Errorf("invalid addressing mode")
+			return vmserrors.New(vmserrors.VAX_BADMODE)
 		}
 
 		mode := byte(0x60)
-		
+
 		if c.peek() == '+' {
 			mode = 0x80
 
@@ -418,7 +417,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			c.next() // '^'
 
 			if c.next() != '#' {
-				return fmt.Errorf("invalid immediate literal syntax")
+				return vmserrors.New(vmserrors.VAX_BADIMMLIT)
 			}
 		}
 
@@ -483,7 +482,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		mode := byte(0xB0) | byte(reg)
 
 		if c.next() != ')' {
-			return fmt.Errorf("invalid addressing mode")
+			return vmserrors.New(vmserrors.VAX_BADMODE)
 		}
 
 		if err := a.image.storeByte(a.deposit, mode); err != nil {
@@ -555,7 +554,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 		c.skipBlanks()
 		if c.next() != ')' {
-			return fmt.Errorf("invalid addressing mode")
+			return vmserrors.New(vmserrors.VAX_BADMODE)
 		}
 
 		if wasForward && a.lastSymbol != nil && len(a.lastSymbol.forward) > 0 {
@@ -607,7 +606,7 @@ func (a *Assembler) storeImmediateInt(scale int, value uint32) error {
 func (a *Assembler) storeImmediateFloat(scale int, f float64) error {
 	bits, overflow := cpu.EncodeFloat(scale, f)
 	if overflow {
-		return fmt.Errorf("floating literal out of range")
+		return vmserrors.New(vmserrors.VAX_FLOATRANGE)
 	}
 
 	if err := a.image.storeLongword(a.deposit, uint32(bits)); err != nil {
@@ -706,7 +705,7 @@ func (a *Assembler) assembleDisplacement(c *cursor, deferred byte, size int, rel
 
 		c.skipBlanks()
 		if c.next() != ')' {
-			return fmt.Errorf("invalid addressing mode")
+			return vmserrors.New(vmserrors.VAX_BADMODE)
 		}
 	}
 

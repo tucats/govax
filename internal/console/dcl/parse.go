@@ -1,8 +1,9 @@
 package dcl
 
 import (
-	"fmt"
 	"strings"
+
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // Result holds everything DCLdump/DCLresults would have handed back after a
@@ -41,7 +42,7 @@ func (r *Result) Present(name string) bool {
 // form.
 func (r *Result) Negated(name string) bool {
 	v, ok := r.values[upcase(name)]
-	
+
 	return ok && v.negated
 }
 
@@ -52,7 +53,7 @@ func (r *Result) String(name string) string {
 	if !ok || !v.isString || v.isKeyword {
 		return ""
 	}
-	
+
 	return v.str
 }
 
@@ -65,7 +66,7 @@ func (r *Result) Int(name string) int64 {
 	if !ok || (v.isString && !v.isKeyword) {
 		return 0
 	}
-	
+
 	return v.i
 }
 
@@ -77,7 +78,7 @@ func (r *Result) Keyword(name string) string {
 	if !ok || !v.isKeyword {
 		return ""
 	}
-	
+
 	return v.str
 }
 
@@ -103,7 +104,7 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 
 	pos := strings.TrimSpace(line)
 	if pos == "" {
-		return nil, fmt.Errorf("dcl: empty command")
+		return nil, vmserrors.New(vmserrors.CLI_EMPTYCOMMAND)
 	}
 
 	verbTok, pos := readBareToken(pos)
@@ -153,7 +154,7 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 		}
 
 		if nextParam >= len(active.Parameters) {
-			return nil, fmt.Errorf("dcl: unexpected extra parameter near %q", pos)
+			return nil, vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, pos)
 		}
 
 		p := active.Parameters[nextParam]
@@ -167,7 +168,7 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 
 		val, redirect, negated, err := g.resolveValue(p.Type, p.TypeName, token)
 		if err != nil {
-			return nil, fmt.Errorf("parameter %s: %w", p.Name, err)
+			return nil, vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
 		}
 
 		r.set(p.Name, p.ID, negated, val)
@@ -198,7 +199,7 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, rest string) (*Entry, int, string, error) {
 	name, rest := readBareToken(rest)
 	if name == "" {
-		return nil, 0, "", fmt.Errorf("dcl: expected a qualifier name after '/'")
+		return nil, 0, "", vmserrors.New(vmserrors.CLI_NEEDQUALIFIERNAME)
 	}
 
 	q, negated, err := matchQualifier(active.Qualifiers, name)
@@ -207,7 +208,7 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, rest s
 	}
 
 	if negated && q.NoNegate {
-		return nil, 0, "", fmt.Errorf("dcl: cannot negate qualifier %q", q.Name)
+		return nil, 0, "", vmserrors.New(vmserrors.CLI_NONEGATE, q.Name)
 	}
 
 	if q.aliasRef != nil {
@@ -229,7 +230,7 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, rest s
 
 	if !q.hasValue() {
 		if haveVal {
-			return nil, 0, "", fmt.Errorf("dcl: qualifier %s does not take a value", q.Name)
+			return nil, 0, "", vmserrors.New(vmserrors.CLI_NOQUALIFIERVALUE, q.Name)
 		}
 
 		r.markPresent(q.Name, q.ID, negated)
@@ -237,7 +238,7 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, rest s
 		if q.Syntax != "" {
 			target, ok := g.entries[q.Syntax]
 			if !ok {
-				return nil, 0, "", fmt.Errorf("dcl: qualifier %s: syntax %q not found", q.Name, q.Syntax)
+				return nil, 0, "", vmserrors.New(vmserrors.CLI_SYNTAXNOTFOUND, q.Name, q.Syntax)
 			}
 
 			return target, 0, rest, nil
@@ -253,12 +254,12 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, rest s
 			return active, nextParam, rest, nil
 		}
 
-		return nil, 0, "", fmt.Errorf("dcl: required value for qualifier %s not found", q.Name)
+		return nil, 0, "", vmserrors.New(vmserrors.CLI_NEEDQUALIFIERVALUE, q.Name)
 	}
 
 	val, redirect, kwNegated, err := g.resolveValue(q.Type, q.TypeName, token)
 	if err != nil {
-		return nil, 0, "", fmt.Errorf("qualifier %s: %w", q.Name, err)
+		return nil, 0, "", vmserrors.Wrap(vmserrors.CLI_BADQUALIFIER, err, q.Name)
 	}
 
 	if negated {
@@ -266,11 +267,11 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, rest s
 	}
 
 	r.set(q.Name, q.ID, kwNegated, val)
-	
+
 	if redirect != "" {
 		target, ok := g.entries[redirect]
 		if !ok {
-			return nil, 0, "", fmt.Errorf("dcl: qualifier %s: syntax %q not found", q.Name, redirect)
+			return nil, 0, "", vmserrors.New(vmserrors.CLI_SYNTAXNOTFOUND, q.Name, redirect)
 		}
 
 		return target, 0, rest, nil
@@ -296,7 +297,7 @@ func (g *Grammar) resolveValue(typ ValueType, typeName string, token string) (va
 	case TypeKeyword:
 		t, ok := g.types[typeName]
 		if !ok {
-			return Value{}, "", false, fmt.Errorf("dcl: unknown type %q", typeName)
+			return Value{}, "", false, vmserrors.New(vmserrors.CLI_UNKNOWNTYPE, typeName)
 		}
 
 		kw, neg, err := t.lookup(token)
@@ -320,7 +321,7 @@ func (g *Grammar) resolveValue(typ ValueType, typeName string, token string) (va
 func (g *Grammar) checkRequirements(active *Entry, r *Result) error {
 	for _, p := range active.Parameters {
 		if p.required() && !r.Present(p.Name) {
-			return fmt.Errorf("dcl: required parameter %s not found", p.Name)
+			return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, p.Name)
 		}
 	}
 
@@ -337,7 +338,7 @@ func (g *Grammar) checkRequirements(active *Entry, r *Result) error {
 		s1 := r.Present(d.Qual1) && r.Negated(d.Qual1) == d.Negated1
 		s2 := r.Present(d.Qual2) && r.Negated(d.Qual2) == d.Negated2
 		if s1 && s2 {
-			return fmt.Errorf("dcl: invalid combination of qualifiers %s and %s", d.Qual1, d.Qual2)
+			return vmserrors.New(vmserrors.CLI_BADQUALIFIERCOMBO, d.Qual1, d.Qual2)
 		}
 	}
 
@@ -384,7 +385,7 @@ func parseDCLInteger(token string) (int64, error) {
 			v = v*10 + int64(ch-'0')
 
 		default:
-			return 0, fmt.Errorf("dcl: invalid integer %q", token)
+			return 0, vmserrors.New(vmserrors.CLI_BADINTEGER, token)
 		}
 	}
 
@@ -447,7 +448,7 @@ func readValueToken(s string) (token, rest string, err error) {
 	if strings.HasPrefix(s, `"`) {
 		end := strings.IndexByte(s[1:], '"')
 		if end < 0 {
-			return "", "", fmt.Errorf("dcl: unterminated quoted string")
+			return "", "", vmserrors.New(vmserrors.CLI_UNTERMSTR)
 		}
 
 		return s[1 : end+1], s[end+2:], nil

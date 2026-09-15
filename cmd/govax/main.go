@@ -36,6 +36,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/dcl"
 	"github.com/tucats/govax/internal/respath"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // minimumVAXMemory matches driver.c's own MINIMUM_VAX_MEMORY (2048 pages,
@@ -96,12 +97,12 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 
 	grammarSrc, err := resolver.ReadFile("evax.dcl")
 	if err != nil {
-		return fmt.Errorf("loading command grammar: %w", err)
+		return vmserrors.Wrap(vmserrors.VAX_GRAMMAR, err)
 	}
 
 	grammar, err := dcl.ParseGrammar(string(grammarSrc))
 	if err != nil {
-		return fmt.Errorf("loading command grammar: %w", err)
+		return vmserrors.Wrap(vmserrors.VAX_GRAMMAR, err)
 	}
 
 	var help *console.Help
@@ -114,7 +115,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 
 	c := console.New(out)
 	c.Paths = resolver
-	
+
 	if in != nil {
 		c.In = in
 	} else {
@@ -122,7 +123,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	}
 
 	if err := c.Init(minimumVAXMemory); err != nil {
-		return fmt.Errorf("allocating initial VAX: %w", err)
+		return vmserrors.Wrap(vmserrors.VAX_ALLOCVAX, err)
 	}
 
 	d := console.NewDispatcher(c, grammar, help)
@@ -155,7 +156,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		Stdin:       in,
 	})
 	if err != nil {
-		return fmt.Errorf("initializing readline: %w", err)
+		return vmserrors.Wrap(vmserrors.VAX_READLINE, err)
 	}
 
 	defer rl.Close()

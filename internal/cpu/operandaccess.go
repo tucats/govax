@@ -1,11 +1,11 @@
 package cpu
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // ErrImmutableOperand is returned by Operand.Store when called on an
@@ -14,7 +14,7 @@ import (
 // resolved to an immediate (see decodeOperand and decodePCRelative), so a
 // well-behaved instruction Handler should never reach this — it exists as a
 // defensive backstop, not a path real VAX code can trigger.
-var ErrImmutableOperand = errors.New("cpu: cannot store to an immediate operand")
+var ErrImmutableOperand = vmserrors.New(vmserrors.VAX_IMMOPND)
 
 // Load resolves op's current value, sized to op.Size bytes (1, 2, 4, or 8),
 // zero-extended into the result. This is the Go port of storage.c's

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // This file is the Go port of console_run.c's image_load/image_fixup and
@@ -271,7 +273,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 
 	path, ok := c.findImage(fn)
 	if !ok {
-		return nil, fmt.Errorf("console: image %s not found", fn)
+		return nil, vmserrors.New(vmserrors.RMS_IMAGENOTFOUND, fn)
 	}
 
 	data, err := c.Paths.ReadFile(path)
@@ -279,7 +281,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 		return nil, err
 	}
 	if len(data) < 512 {
-		return nil, fmt.Errorf("console: image %s: file too short for a header", fn)
+		return nil, vmserrors.New(vmserrors.RMS_SHORTHEADER, fn)
 	}
 
 	nblocks := data[16]
@@ -329,7 +331,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 			var sname string
 
 			v += icb.Base
-			
+
 			if icb.Name != "<MAIN>" {
 				if n == 0 {
 					sname = fmt.Sprintf("SHARE$%s_INITIALIZE", icb.Name)
@@ -513,7 +515,7 @@ func (c *Console) resolveFixupTarget(shr *SHR, offset uint32) (uint32, error) {
 	name := fmt.Sprintf("SHIM$%s_%08X", shr.Name, offset)
 	v, ok := c.Symbols.Get(name)
 	if !ok {
-		return 0, fmt.Errorf("console: unresolved shim symbol %s", name)
+		return 0, vmserrors.New(vmserrors.LIB_UNRESOLVED, name)
 	}
 	return v, nil
 }

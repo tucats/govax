@@ -2,9 +2,10 @@ package console
 
 import (
 	"encoding/binary"
-	"fmt"
 	"io"
 	"os"
+
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // romMagic is the exact 8-byte header a binary ROM image file starts with —
@@ -26,7 +27,7 @@ var romMagic = [8]byte{';', 'R', 'O', 'M', 'I', 'M', 'G', '\r'}
 // port, not a live bug to route around).
 func (c *Console) SaveROM(path string) error {
 	if len(c.ROM) == 0 {
-		return fmt.Errorf("console: no ROM image loaded")
+		return vmserrors.New(vmserrors.RMS_NOIMAGE, "ROM")
 	}
 
 	f, err := os.Create(path)
@@ -78,19 +79,19 @@ func (c *Console) LoadROM(path string) error {
 
 	var magic [8]byte
 	if _, err := io.ReadFull(f, magic[:]); err != nil {
-		return fmt.Errorf("console: reading ROM magic: %w", err)
+		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "ROM", "magic")
 	}
 	if magic != romMagic {
-		return fmt.Errorf("console: %s is not a binary ROM image", path)
+		return vmserrors.New(vmserrors.RMS_BADMAGIC, path)
 	}
 
 	base, err := readBE32(f)
 	if err != nil {
-		return fmt.Errorf("console: reading ROM base address: %w", err)
+		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "ROM", "base address")
 	}
 	end, err := readBE32(f)
 	if err != nil {
-		return fmt.Errorf("console: reading ROM end address: %w", err)
+		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "ROM", "end address")
 	}
 
 	size := end + 1 - base
@@ -109,10 +110,10 @@ func (c *Console) LoadROM(path string) error {
 			break
 		}
 		if uint64(addr)+uint64(count)*512 > uint64(size) {
-			return fmt.Errorf("console: ROM image too large; error loading page at %08X", addr)
+			return vmserrors.New(vmserrors.RMS_IMAGETOOLARGE, "ROM", addr)
 		}
 		if _, err := io.ReadFull(f, rom[addr:addr+count*512]); err != nil {
-			return fmt.Errorf("console: reading ROM page at %08X: %w", addr, err)
+			return vmserrors.Wrap(vmserrors.RMS_READPAGE, err, "ROM", addr)
 		}
 	}
 
@@ -128,7 +129,7 @@ func (c *Console) LoadROM(path string) error {
 // header, and no per-page structure — the whole buffer is written at once).
 func (c *Console) SaveNVRAM(path string) error {
 	if len(c.NVRAM) == 0 {
-		return fmt.Errorf("console: no NVRAM image loaded")
+		return vmserrors.New(vmserrors.RMS_NOIMAGE, "NVRAM")
 	}
 
 	f, err := os.Create(path)
@@ -158,16 +159,16 @@ func (c *Console) LoadNVRAM(path string) error {
 
 	base, err := readBE32(f)
 	if err != nil {
-		return fmt.Errorf("console: reading NVRAM base address: %w", err)
+		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "NVRAM", "base address")
 	}
 	size, err := readBE32(f)
 	if err != nil {
-		return fmt.Errorf("console: reading NVRAM size: %w", err)
+		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "NVRAM", "size")
 	}
 
 	nvram := make([]byte, size)
 	if _, err := io.ReadFull(f, nvram); err != nil {
-		return fmt.Errorf("console: reading NVRAM data: %w", err)
+		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "NVRAM", "data")
 	}
 
 	c.NVRAM = nvram

@@ -1,9 +1,8 @@
 package console
 
 import (
-	"fmt"
-
 	"github.com/tucats/govax/internal/asm"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // memByteReader adapts a live vax.CPU + vm.Memory pair to asm.ByteReader,
@@ -39,7 +38,7 @@ func (c *Console) Disassemble(start, end uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
-	
+
 	if end < start {
 		end = start
 	}
@@ -48,7 +47,7 @@ func (c *Console) Disassemble(start, end uint32) error {
 	for pc := start; pc <= end; {
 		dec, err := asm.Disassemble(r, pc)
 		if err != nil {
-			return fmt.Errorf("console: disassemble at %08X: %w", pc, err)
+			return vmserrors.Wrap(vmserrors.CLI_DISASM, err, pc)
 		}
 
 		c.Printf("%08X: %s\n", pc, dec.String())

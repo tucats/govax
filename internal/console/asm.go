@@ -1,12 +1,12 @@
 package console
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // Assemble implements the batch form of the ASM <filename> command
@@ -62,7 +62,7 @@ func (c *Console) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 		// happens to be at the live SCBB instead.
 		c.asmSession.SetSCBB(c.CPU.PR(vax.SCBB))
 	}
-	
+
 	a := c.asmSession
 
 	// .INCLUDE names (e.g. kernel.asm's own "ssdef.asm") are resolved
@@ -78,18 +78,18 @@ func (c *Console) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 	})
 
 	if _, err := a.Assemble(string(src)); err != nil {
-		return 0, false, fmt.Errorf("console: assembling %s: %w", path, err)
+		return 0, false, vmserrors.Wrap(vmserrors.CLI_ASSEMBLING, err, path)
 	}
 
 	if p0 := a.Bytes(); len(p0) > 0 {
 		if err := c.storeBytes(a.Origin(), p0); err != nil {
-			return 0, false, fmt.Errorf("console: depositing %s: %w", path, err)
+			return 0, false, vmserrors.Wrap(vmserrors.CLI_DEPOSITING, err, path)
 		}
 	}
 
 	if s0 := a.BytesRange(a.S0Origin(), a.S0End()); len(s0) > 0 {
 		if err := c.storeBytes(a.S0Origin(), s0); err != nil {
-			return 0, false, fmt.Errorf("console: depositing %s: %w", path, err)
+			return 0, false, vmserrors.Wrap(vmserrors.CLI_DEPOSITING, err, path)
 		}
 	}
 	// .SCB/.VECTOR poke a longword directly at 0x80000000+SCBB+code (see
@@ -103,7 +103,7 @@ func (c *Console) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 	scbb := 0x80000000 + c.CPU.PR(vax.SCBB)
 	if scb := a.BytesRange(scbb, scbb+512); len(scb) > 0 {
 		if err := c.storeBytes(scbb, scb); err != nil {
-			return 0, false, fmt.Errorf("console: depositing %s: %w", path, err)
+			return 0, false, vmserrors.Wrap(vmserrors.CLI_DEPOSITING, err, path)
 		}
 	}
 

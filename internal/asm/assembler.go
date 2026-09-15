@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/tucats/govax/internal/vmserrors"
+
 	"github.com/tucats/govax/internal/cpu"
 )
 
@@ -168,7 +170,7 @@ func (a *Assembler) Entry() (uint32, bool) { return a.entryAddr, a.entrySeen }
 func (a *Assembler) TakeEntry() (uint32, bool) {
 	addr, ok := a.entryAddr, a.entrySeen
 	a.entrySeen = false
-	
+
 	return addr, ok
 }
 
@@ -272,7 +274,7 @@ func (a *Assembler) assembleLines(source string) error {
 	defer func() { a.includeDepth-- }()
 
 	if a.includeDepth > 64 {
-		return fmt.Errorf("include nesting too deep (possible cycle)")
+		return vmserrors.New(vmserrors.VAX_INCLUDEDEPTH)
 	}
 
 	for i, raw := range strings.Split(source, "\n") {

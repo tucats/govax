@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // This file implements the subset of console_show.c's dozens of SHOW
@@ -318,7 +319,7 @@ func (c *Console) ShowRegisterOrPrivReg(name string) error {
 		return nil
 	}
 
-	return fmt.Errorf("console: SHOW %s is not implemented", name)
+	return vmserrors.New(vmserrors.CLI_NOTIMPL, name)
 }
 
 // ShowMode prints the current privileged access mode, matching SHOW MODE.
@@ -432,17 +433,17 @@ func (c *Console) ShowString() error {
 
 	base, ok := c.Symbols.Get("CONSOLE$STRINGPOOL_BASE")
 	if !ok {
-		return fmt.Errorf("console: CONSOLE$STRINGPOOL_BASE is undefined (boot the microkernel first)")
+		return vmserrors.New(vmserrors.CLI_NOSTRINGPOOL)
 	}
 
 	size, ok := c.Symbols.Get("CONSOLE$STRINGPOOL_SIZE")
 	if !ok {
-		return fmt.Errorf("console: CONSOLE$STRINGPOOL_SIZE is undefined")
+		return vmserrors.New(vmserrors.CLI_NOPOOLSIZE)
 	}
 
 	current, ok := c.Symbols.Get("CONSOLE$STRINGPOOL")
 	if !ok {
-		return fmt.Errorf("console: CONSOLE$STRINGPOOL is undefined")
+		return vmserrors.New(vmserrors.CLI_NOPOOL)
 	}
 
 	c.Printf("STRING POOL\n")
@@ -701,7 +702,7 @@ func (c *Console) ShowCallFrames(countExpr string) error {
 	if s := strings.TrimSpace(countExpr); s != "" {
 		v, err := strconv.ParseUint(s, 16, 32)
 		if err != nil {
-			return fmt.Errorf("console: invalid count %q: %w", s, err)
+			return vmserrors.Wrap(vmserrors.CLI_BADCOUNT, err, s)
 		}
 
 		count = uint32(v)
@@ -711,7 +712,7 @@ func (c *Console) ShowCallFrames(countExpr string) error {
 	ap := c.CPU.GPR(vax.AP)
 
 	if fp == 0 || ap == 0 {
-		return fmt.Errorf("console: no call frames (FP/AP not established)")
+		return vmserrors.New(vmserrors.CLI_NOFRAMES)
 	}
 
 	for ; count > 0; count-- {
@@ -983,7 +984,7 @@ func (c *Console) ShowSymbol(name string) error {
 
 	sym, ok := c.Symbols.Find(name)
 	if !ok {
-		return fmt.Errorf("console: undefined symbol %q", name)
+		return vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
 	}
 
 	kind := "user"
@@ -1190,11 +1191,11 @@ func (c *Console) ShowInstructions(modes, profile, unimplemented, all bool, opco
 	}
 
 	if profile {
-		return fmt.Errorf("console: SHOW INSTRUCTIONS/PROFILE is not implemented (no per-opcode execution counters in this port)")
+		return vmserrors.New(vmserrors.CLI_NOPROFILE)
 	}
 
 	if modes {
-		return fmt.Errorf("console: SHOW INSTRUCTIONS/MODES is not implemented (no addressing-mode legality table exposed by this port)")
+		return vmserrors.New(vmserrors.CLI_NOMODES)
 	}
 
 	table := cpu.Instructions()
@@ -1203,7 +1204,7 @@ func (c *Console) ShowInstructions(modes, profile, unimplemented, all bool, opco
 	if s := strings.TrimSpace(opcodeExpr); s != "" {
 		v, err := strconv.ParseUint(s, 16, 8)
 		if err != nil {
-			return fmt.Errorf("console: invalid opcode %q: %w", s, err)
+			return vmserrors.Wrap(vmserrors.CLI_BADOPCODE, err, s)
 		}
 
 		opmatch = int32(v)

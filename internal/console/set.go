@@ -1,10 +1,10 @@
 package console
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // privRegNames matches vax.c's pr_names[] table (the subset with an
@@ -57,7 +57,7 @@ func (c *Console) SetSymbol(name string, value uint32) error {
 // SetRadix implements SET RADIX <8|10|16>.
 func (c *Console) SetRadix(radix int) error {
 	if radix != 8 && radix != 10 && radix != 16 {
-		return fmt.Errorf("console: invalid radix %d (must be 8, 10, or 16)", radix)
+		return vmserrors.New(vmserrors.CLI_BADRADIX, radix)
 	}
 	c.Radix = radix
 	return nil

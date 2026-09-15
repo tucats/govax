@@ -2,10 +2,11 @@ package dcl
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // ParseGrammar parses grammar-definition text (the dialect
@@ -30,7 +31,7 @@ func ParseGrammar(text string) (*Grammar, error) {
 
 		directive, name, switches, err := tokenizeStatement(stmt)
 		if err != nil {
-			return nil, fmt.Errorf("dcl: line %d: %w", lineNo+1, err)
+			return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
 		}
 
 		switch directive {
@@ -43,7 +44,7 @@ func ParseGrammar(text string) (*Grammar, error) {
 
 		case "TYPE":
 			if g == nil {
-				return nil, fmt.Errorf("dcl: line %d: TYPE outside of a grammar", lineNo+1)
+				return nil, vmserrors.New(vmserrors.CLI_OUTSIDE, lineNo+1, "TYPE", "a grammar")
 			}
 
 			curType = &Type{Name: name}
@@ -52,7 +53,7 @@ func ParseGrammar(text string) (*Grammar, error) {
 
 		case "KEYWORD":
 			if curType == nil {
-				return nil, fmt.Errorf("dcl: line %d: KEYWORD outside of a TYPE", lineNo+1)
+				return nil, vmserrors.New(vmserrors.CLI_OUTSIDE, lineNo+1, "KEYWORD", "a TYPE")
 			}
 
 			kw := &Keyword{Name: upcase(name)}
@@ -66,11 +67,11 @@ func ParseGrammar(text string) (*Grammar, error) {
 					kw.Syntax = upcase(v)
 
 				default:
-					err = fmt.Errorf("unsupported keyword switch /%s", k)
+					err = vmserrors.New(vmserrors.CLI_BADSWITCH, "keyword", k)
 				}
 
 				if err != nil {
-					return nil, fmt.Errorf("dcl: line %d: %w", lineNo+1, err)
+					return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
 				}
 			}
 
@@ -78,7 +79,7 @@ func ParseGrammar(text string) (*Grammar, error) {
 
 		case "VERB", "SYNTAX":
 			if g == nil {
-				return nil, fmt.Errorf("dcl: line %d: %s outside of a grammar", lineNo+1, directive)
+				return nil, vmserrors.New(vmserrors.CLI_OUTSIDE, lineNo+1, directive, "a grammar")
 			}
 
 			e := &Entry{Name: upcase(name), IsVerb: directive == "VERB"}
@@ -95,16 +96,16 @@ func ParseGrammar(text string) (*Grammar, error) {
 					e.Alias = upcase(v)
 
 				default:
-					err = fmt.Errorf("unsupported %s switch /%s", directive, k)
+					err = vmserrors.New(vmserrors.CLI_BADSWITCH, directive, k)
 				}
 
 				if err != nil {
-					return nil, fmt.Errorf("dcl: line %d: %w", lineNo+1, err)
+					return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
 				}
 			}
 
 			if _, exists := g.entries[e.Name]; exists {
-				return nil, fmt.Errorf("dcl: line %d: %s %q redefined", lineNo+1, directive, e.Name)
+				return nil, vmserrors.New(vmserrors.CLI_REDEFINED, lineNo+1, directive, e.Name)
 			}
 
 			g.entries[e.Name] = e
@@ -116,17 +117,17 @@ func ParseGrammar(text string) (*Grammar, error) {
 
 		case "PARAMETER":
 			if cur == nil {
-				return nil, fmt.Errorf("dcl: line %d: PARAMETER outside of a VERB/SYNTAX", lineNo+1)
+				return nil, vmserrors.New(vmserrors.CLI_OUTSIDE, lineNo+1, "PARAMETER", "a VERB/SYNTAX")
 			}
 
 			p := &Parameter{Name: upcase(name)}
 			if err := applyValueSwitches(switches, &p.Type, &p.TypeName, &p.Default); err != nil {
-				return nil, fmt.Errorf("dcl: line %d: %w", lineNo+1, err)
+				return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
 			}
 
 			if id, ok := switches["ID"]; ok {
 				if p.ID, err = parseID(id); err != nil {
-					return nil, fmt.Errorf("dcl: line %d: %w", lineNo+1, err)
+					return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
 				}
 			}
 
@@ -138,17 +139,17 @@ func ParseGrammar(text string) (*Grammar, error) {
 
 		case "QUALIFIER":
 			if cur == nil {
-				return nil, fmt.Errorf("dcl: line %d: QUALIFIER outside of a VERB/SYNTAX", lineNo+1)
+				return nil, vmserrors.New(vmserrors.CLI_OUTSIDE, lineNo+1, "QUALIFIER", "a VERB/SYNTAX")
 			}
 
 			q := &Qualifier{Name: upcase(name)}
 			if err := applyValueSwitches(switches, &q.Type, &q.TypeName, &q.Default); err != nil {
-				return nil, fmt.Errorf("dcl: line %d: %w", lineNo+1, err)
+				return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
 			}
 
 			if id, ok := switches["ID"]; ok {
 				if q.ID, err = parseID(id); err != nil {
-					return nil, fmt.Errorf("dcl: line %d: %w", lineNo+1, err)
+					return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
 				}
 			}
 
@@ -168,23 +169,23 @@ func ParseGrammar(text string) (*Grammar, error) {
 
 		case "DISALLOW":
 			if cur == nil {
-				return nil, fmt.Errorf("dcl: line %d: DISALLOW outside of a VERB/SYNTAX", lineNo+1)
+				return nil, vmserrors.New(vmserrors.CLI_OUTSIDE, lineNo+1, "DISALLOW", "a VERB/SYNTAX")
 			}
 
 			d, err := parseDisallow(name)
 			if err != nil {
-				return nil, fmt.Errorf("dcl: line %d: %w", lineNo+1, err)
+				return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
 			}
 
 			cur.Disallows = append(cur.Disallows, d)
 
 		default:
-			return nil, fmt.Errorf("dcl: line %d: unknown directive %q", lineNo+1, directive)
+			return nil, vmserrors.New(vmserrors.CLI_BADDIRECTIVE, lineNo+1, directive)
 		}
 	}
 
 	if g == nil {
-		return nil, fmt.Errorf("dcl: no GRAMMAR statement found")
+		return nil, vmserrors.New(vmserrors.CLI_NOGRAMMAR)
 	}
 
 	if err := g.validate(); err != nil {
@@ -253,7 +254,7 @@ func tokenizeStatement(stmt string) (directive, name string, switches map[string
 	}
 
 	if len(segments) == 0 {
-		return "", "", nil, fmt.Errorf("empty statement")
+		return "", "", nil, vmserrors.New(vmserrors.CLI_EMPTYSTATEMENT)
 	}
 
 	head := strings.Join(strings.Fields(segments[0]), " ")
@@ -262,7 +263,7 @@ func tokenizeStatement(stmt string) (directive, name string, switches map[string
 	directive = upcase(fields[0])
 	if directive == "DISALLOW" {
 		if len(fields) < 2 {
-			return "", "", nil, fmt.Errorf("DISALLOW requires an expression")
+			return "", "", nil, vmserrors.New(vmserrors.CLI_DISALLOWEXPR)
 		}
 
 		return directive, strings.TrimSpace(fields[1]), nil, nil
@@ -315,7 +316,7 @@ func splitUnquoted(s string, sep byte) ([]string, error) {
 		if ch == sep && !inQuote {
 			out = append(out, cur.String())
 			cur.Reset()
-			
+
 			continue
 		}
 
@@ -323,7 +324,7 @@ func splitUnquoted(s string, sep byte) ([]string, error) {
 	}
 
 	if inQuote {
-		return nil, fmt.Errorf("unterminated quoted string in %q", s)
+		return nil, vmserrors.New(vmserrors.CLI_UNTERMQUOTE, s)
 	}
 
 	out = append(out, cur.String())
@@ -376,7 +377,7 @@ func applyValueSwitches(switches map[string]string, typ *ValueType, typeName *st
 func parseDisallow(expr string) (*Disallow, error) {
 	fields := strings.Fields(expr)
 	if len(fields) != 3 || upcase(fields[1]) != "AND" {
-		return nil, fmt.Errorf("malformed DISALLOW expression %q (want \"Q1 and Q2\")", expr)
+		return nil, vmserrors.New(vmserrors.CLI_BADDISALLOW, expr)
 	}
 
 	q1, neg1 := splitNegated(upcase(fields[0]))

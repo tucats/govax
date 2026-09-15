@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // ExamSize is a EXAMINE/DEPOSIT data size/format, matching the subset of
@@ -56,7 +57,7 @@ func (c *Console) Examine(reg string, addr uint32, count uint32, sz ExamSize) er
 	if reg != "" {
 		r, ok := registerNames[strings.ToUpper(reg)]
 		if !ok {
-			return fmt.Errorf("console: unknown register %q", reg)
+			return vmserrors.New(vmserrors.CLI_BADREG, reg)
 		}
 
 		c.Printf("%-4s: %s\n", strings.ToUpper(reg), c.formatOne(0, sz, c.CPU.GPR(r)))
@@ -115,7 +116,7 @@ func (c *Console) formatOne(addr uint32, sz ExamSize, v uint32) string {
 		if ch < ' ' || ch > 127 {
 			ch = '.'
 		}
-		
+
 		return string(ch)
 
 	case SizePTE:
@@ -155,7 +156,7 @@ func (c *Console) Deposit(reg string, addr uint32, sz ExamSize, value uint32) er
 	if reg != "" {
 		r, ok := registerNames[strings.ToUpper(reg)]
 		if !ok {
-			return fmt.Errorf("console: unknown register %q", reg)
+			return vmserrors.New(vmserrors.CLI_BADREG, reg)
 		}
 
 		c.CPU.SetGPR(r, value)

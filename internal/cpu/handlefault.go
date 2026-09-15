@@ -1,9 +1,8 @@
 package cpu
 
 import (
-	"errors"
-
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // ErrNoExceptionHandler is returned by Engine.HandleFault when the SCB
@@ -13,14 +12,14 @@ import (
 // format_exception() in that case. No console exists yet to provide that
 // fallback (Phase 08), so this is surfaced as an error instead; no state is
 // changed when this is returned.
-var ErrNoExceptionHandler = errors.New("cpu: no exception handler installed for this SCB vector")
+var ErrNoExceptionHandler = vmserrors.New(vmserrors.VAX_NOHANDLER)
 
 // ErrUnhandledVector is returned by Engine.HandleFault when the SCB vector
 // is zero. Unlike ErrNoExceptionHandler, the C source (and this port) still
 // builds and pushes the full exception stack frame and sets PC to the
 // (zero) vector before reporting this — matching interrupt.c's handle_fault
 // returning VAX_UNHANDLED only after doing so.
-var ErrUnhandledVector = errors.New("cpu: exception vector is zero")
+var ErrUnhandledVector = vmserrors.New(vmserrors.VAX_UNHANDLED)
 
 // HandleFault runs the VAX exception-delivery sequence for f: fetch the
 // handler vector from the System Control Block (at SCBB + f.Code, read with

@@ -6,12 +6,13 @@ import (
 
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // ErrHalted is returned by a Handler (starting with Phase 04's HALT) to
 // stop the machine, and by Engine.Run when that happens — the Go
 // equivalent of the C source's vax.halted flag and VAX_HALT return code.
-var ErrHalted = errors.New("cpu: halted")
+var ErrHalted = vmserrors.New(vmserrors.VAX_HALTED)
 
 // Engine composes a vax.CPU and vm.Memory with the decode/execute-only state
 // the C source keeps on the global vax struct but Phase 01 deliberately left

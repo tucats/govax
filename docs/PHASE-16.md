@@ -259,14 +259,20 @@ worth the user's attention before deciding whether to fix now or track in
 
 - **`SHOW ERROR`** (`show_error`, C: `console_show.c:326`) — decodes a VAX status
   code to text via `vaxmsg()`, a static VMS-style message-code-to-string table, and
-  also reports the last command's `$STATUS` symbol. This port uses native Go `error`
-  values with their own message text instead of a VAX status-code integer space
-  (confirmed: no `VAX_*`-style status-code table or `vaxmsg`-equivalent function
-  found anywhere under `internal/`). There's no direct port of "decode this status
-  code" without first deciding whether `govax` should adopt a parallel VAX-style
-  status-code space for commands to report through, or whether this command's scope
-  should shrink to "print the last error string" only. Flag for the user rather than
-  guessing.
+  also reports the last command's `$STATUS` symbol. **Design question resolved**:
+  `internal/vmserrors` (added after this entry was written) now gives govax exactly
+  the parallel VAX-style status-code space this entry asked for — a `VMSError` type
+  encoding facility/message/severity into one `uint32`, a `Messages` table mapping
+  each registered code to `vaxmsg()`-style display text, and per-facility catalogs
+  (`codes_sys.go`/`codes_cli.go`/`codes_vax.go`/`codes_lib.go`/`codes_rms.go`) —
+  and the ad-hoc Go `error` values this port's CLI/command-processing/assembler code
+  used to construct via `fmt.Errorf`/`errors.New` have all been converted to it
+  (govax-wide sweep, 2026-09-15; see that change's own notes for the facility/
+  severity assignments). `SHOW ERROR` itself is still unbound — decoding *a given*
+  status code to text is now straightforward (`vmserrors.Messages[code]` or
+  constructing a `VMSError{Status: code}` and calling `.Error()`), but reporting the
+  last command's own `$STATUS` needs a "last error" slot on `Console` that doesn't
+  exist yet. Worth picking up as a follow-on, not part of this resolved question.
 - **`SHOW MAP`** (`show_map`, C: `structure_mapping.c:23`, body `map_dump()`) —
   dumps `structure_mapping.c`'s own runtime FAB/RAB field-offset registry
   (`STROFF`/`map()`/`map_add()`). `internal/rtl/rms.go`'s own doc comment
@@ -311,8 +317,9 @@ cases; the rest are missing:
   cache exists" gap as `SHOW TB` (Sub-phase 1f). If that design question resolves to
   "don't add a cache," this command becomes a no-op stub rather than a real port.
 - **`CLEAR ERROR`** (id `113`, C: `console_clear.c:144`) — resets `$STATUS`/last-error
-  state. Depends on how `SHOW ERROR`'s status-code design question (Sub-phase 1f) is
-  resolved.
+  state. `SHOW ERROR`'s status-code design question (Sub-phase 1f) is now resolved
+  (`internal/vmserrors`); this command still needs the same not-yet-existing "last
+  error" slot on `Console` that entry flags before there's any state here to clear.
 - **`CLEAR PROFILES`** (id `104`, C: `console_clear.c:149`) — resets the
   per-opcode profiling counters `SHOW INSTRUCTIONS/PROFILE` would report (Sub-phase
   1e) — blocked on the same missing profiling instrumentation.

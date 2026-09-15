@@ -1,9 +1,10 @@
 package console
 
 import (
-	"fmt"
 	"strings"
 	"time"
+
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // Print implements the PRINT/ECHO console command: a comma-separated list
@@ -20,41 +21,41 @@ func (c *Console) Print(text string) error {
 		if pos == "" {
 			break
 		}
-	
+
 		if pos[0] == ',' {
 			pos = pos[1:]
-			
+
 			continue
 		}
-	
+
 		if pos[0] == '"' {
 			end := strings.IndexByte(pos[1:], '"')
 			if end < 0 {
-				return fmt.Errorf("console: unterminated quoted string")
+				return vmserrors.New(vmserrors.CLI_UNTERMSTR)
 			}
-	
+
 			c.Printf("%s", pos[1:end+1])
 			pos = pos[end+2:]
-	
+
 			continue
 		}
-	
+
 		v, rest, err := ev.Eval(pos)
 		if err != nil {
 			return err
 		}
-	
+
 		if c.Radix == 10 {
 			c.Printf("%d", int32(v))
 		} else {
 			c.Printf("%08X", v)
 		}
-	
+
 		pos = rest
 	}
-	
+
 	c.Printf("\n")
-	
+
 	return nil
 }
 
@@ -68,9 +69,9 @@ func (c *Console) Quit() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
-	
+
 	c.quit = true
-	
+
 	return nil
 }
 
@@ -82,7 +83,7 @@ func (c *Console) Time(cmd string, dispatch func(string) error) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
-	
+
 	if strings.TrimSpace(cmd) == "" {
 		c.Printf("Time is %s\n", time.Now().Format(time.RFC1123))
 		return nil
@@ -93,7 +94,7 @@ func (c *Console) Time(cmd string, dispatch func(string) error) error {
 	elapsed := time.Since(start)
 
 	c.Printf("Elapsed time: %f seconds\n", elapsed.Seconds())
-	
+
 	return err
 }
 
@@ -112,7 +113,7 @@ func (c *Console) Include(path string, dispatch func(string) error) error {
 	if err != nil {
 		return err
 	}
-	
+
 	for _, line := range strings.Split(string(b), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, ";") || strings.HasPrefix(line, "!") {
@@ -122,7 +123,7 @@ func (c *Console) Include(path string, dispatch func(string) error) error {
 			c.Printf("%s: %v\n", path, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -134,14 +135,14 @@ func (c *Console) ClearSymbol(name string, all bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
-	
+
 	if all {
 		c.Symbols.ClearAll()
 		return nil
 	}
-	
+
 	c.Symbols.Delete(name)
-	
+
 	return nil
 }
 
@@ -154,13 +155,13 @@ func (c *Console) ClearBreakpoint(addr uint32, all bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
-	
+
 	if all {
 		c.ClearAllBreakpoints()
 		return nil
 	}
-	
+
 	c.RemoveBreakpoint(addr)
-	
+
 	return nil
 }

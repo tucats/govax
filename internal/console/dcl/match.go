@@ -1,8 +1,9 @@
 package dcl
 
 import (
-	"fmt"
 	"strings"
+
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 func upcase(s string) string { return strings.ToUpper(s) }
@@ -11,11 +12,11 @@ func upcase(s string) string { return strings.ToUpper(s) }
 // two distinct error messages ("unrecognized keyword %s" vs. "ambigious
 // keyword %s") for an unmatched or ambiguous abbreviation.
 func unrecognizedError(kind, token string) error {
-	return fmt.Errorf("dcl: unrecognized %s %q", kind, token)
+	return vmserrors.New(vmserrors.CLI_UNRECOGNIZED, kind, token)
 }
 
 func ambiguousError(kind, token string) error {
-	return fmt.Errorf("dcl: ambiguous %s %q", kind, token)
+	return vmserrors.New(vmserrors.CLI_AMBIGUOUS, kind, token)
 }
 
 // matchKeyword resolves token (already upcased) against keywords by
@@ -25,7 +26,7 @@ func ambiguousError(kind, token string) error {
 // (unused by any keyword in testdata/dcl/evax.dcl).
 func matchKeyword(keywords []*Keyword, token string) (kw *Keyword, negated bool, err error) {
 	var found *Keyword
-	
+
 	count := 0
 	exact := false
 

@@ -1,8 +1,9 @@
 package console
 
 import (
-	"fmt"
 	"strings"
+
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // Evaluator parses console address/value expressions — a small, from-scratch
@@ -39,12 +40,12 @@ func (e *Evaluator) parseCompare(s string) (uint32, string, error) {
 
 	for {
 		trimmed := strings.TrimLeft(rest, " \t")
-		
+
 		op, opLen := compareOp(trimmed)
 		if op == "" {
 			return v1, rest, nil
 		}
-	
+
 		v2, r2, err := e.parseAddSub(trimmed[opLen:])
 		if err != nil {
 			return 0, "", err
@@ -167,7 +168,7 @@ func (e *Evaluator) parseMulDiv(s string) (uint32, string, error) {
 			v1 = v1 * v2
 		} else {
 			if v2 == 0 {
-				return 0, "", fmt.Errorf("console: division by zero")
+				return 0, "", vmserrors.New(vmserrors.CLI_DIVZERO)
 			}
 
 			v1 = v1 / v2
@@ -180,7 +181,7 @@ func (e *Evaluator) parseMulDiv(s string) (uint32, string, error) {
 func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 	s = strings.TrimLeft(s, " \t")
 	if s == "" {
-		return 0, "", fmt.Errorf("console: expected an expression")
+		return 0, "", vmserrors.New(vmserrors.CLI_NEEDEXPR)
 	}
 
 	if s[0] == '(' {
@@ -191,7 +192,7 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 
 		rest = strings.TrimLeft(rest, " \t")
 		if !strings.HasPrefix(rest, ")") {
-			return 0, "", fmt.Errorf("console: expected ')'")
+			return 0, "", vmserrors.New(vmserrors.CLI_NEEDPAREN)
 		}
 
 		return v, rest[1:], nil
@@ -215,7 +216,7 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 
 		v, ok := e.Symbols.Get(name)
 		if !ok {
-			return 0, "", fmt.Errorf("console: undefined symbol %q", name)
+			return 0, "", vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
 		}
 
 		return v, rest, nil
@@ -233,26 +234,26 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 func (e *Evaluator) parseDefined(s string) (uint32, string, error) {
 	s = strings.TrimLeft(s, " \t")
 	if !strings.HasPrefix(s, "(") {
-		return 0, "", fmt.Errorf("console: DEFINED() requires an argument")
+		return 0, "", vmserrors.New(vmserrors.CLI_DEFARG)
 	}
 
 	s = strings.TrimLeft(s[1:], " \t")
 	if !strings.HasPrefix(s, `"`) {
-		return 0, "", fmt.Errorf("console: DEFINED() requires a quoted symbol name")
+		return 0, "", vmserrors.New(vmserrors.CLI_DEFQUOTE)
 	}
 
 	s = s[1:]
 
 	end := strings.IndexByte(s, '"')
 	if end < 0 {
-		return 0, "", fmt.Errorf("console: unterminated quoted string in DEFINED()")
+		return 0, "", vmserrors.New(vmserrors.CLI_UNTERMSTR)
 	}
 
 	name := s[:end]
 
 	s = strings.TrimLeft(s[end+1:], " \t")
 	if !strings.HasPrefix(s, ")") {
-		return 0, "", fmt.Errorf("console: expected ')'")
+		return 0, "", vmserrors.New(vmserrors.CLI_NEEDPAREN)
 	}
 
 	_, ok := e.Symbols.Get(name)
@@ -300,7 +301,7 @@ func (e *Evaluator) parseNumber(s string) (uint32, string, error) {
 			radix, s = 2, s[2:]
 
 		default:
-			return 0, "", fmt.Errorf("console: unsupported radix prefix \"^%c\"", s[1])
+			return 0, "", vmserrors.New(vmserrors.CLI_BADRADIXPREFIX, s[1])
 		}
 	} else if len(s) >= 2 && s[0] == '0' && (s[1] == 'X' || s[1] == 'x') {
 		radix, s = 16, s[2:]
@@ -320,7 +321,7 @@ func (e *Evaluator) parseNumber(s string) (uint32, string, error) {
 	}
 
 	if i == 0 {
-		return 0, "", fmt.Errorf("console: invalid number %q", s)
+		return 0, "", vmserrors.New(vmserrors.CLI_BADNUMBER, s)
 	}
 
 	return v, s[i:], nil

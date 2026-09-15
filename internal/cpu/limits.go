@@ -1,8 +1,9 @@
 package cpu
 
 import (
-	"errors"
 	"time"
+
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // This file implements govax's own -instruction-limit/-time-limit flags
@@ -17,11 +18,11 @@ import (
 // current run (see BeginRun). No state changes when this is returned --
 // the machine is left exactly as it stood after the last instruction that
 // did execute.
-var ErrInstructionLimitExceeded = errors.New("cpu: instruction limit exceeded")
+var ErrInstructionLimitExceeded = vmserrors.New(vmserrors.VAX_INSTLIM)
 
 // ErrTimeLimitExceeded is Engine.Step's time-limit counterpart to
 // ErrInstructionLimitExceeded.
-var ErrTimeLimitExceeded = errors.New("cpu: time limit exceeded")
+var ErrTimeLimitExceeded = vmserrors.New(vmserrors.VAX_TIMELIM)
 
 // SetLimits configures the instruction-count and wall-clock limits applied
 // to each top-level run (see BeginRun) -- govax's own -instruction-limit/

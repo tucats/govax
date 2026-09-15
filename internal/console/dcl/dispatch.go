@@ -1,6 +1,6 @@
 package dcl
 
-import "fmt"
+import "github.com/tucats/govax/internal/vmserrors"
 
 // Dispatch calls the Handler bound (via Bind) to r's active entry, passing
 // the active entry's ID — the Go equivalent of DCLdispatch, which always
@@ -8,8 +8,8 @@ import "fmt"
 func (g *Grammar) Dispatch(r *Result) error {
 	h, ok := g.handlers[r.Active]
 	if !ok {
-		return fmt.Errorf("dcl: no handler bound for %s", r.Active)
+		return vmserrors.New(vmserrors.CLI_NOHANDLER, r.Active)
 	}
-	
+
 	return h(r.ActiveID, r)
 }

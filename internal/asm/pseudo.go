@@ -3,6 +3,8 @@ package asm
 import (
 	"fmt"
 	"strings"
+
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // pseudoNames is every recognized ".xxx" pseudo-op name, plus the bare
@@ -150,7 +152,7 @@ func (a *Assembler) dispatchPseudo(name string, c *cursor) error {
 		return a.pseudoRegion(c)
 
 	case "VECTOR":
-		return fmt.Errorf(".%s is not supported outside a live console/VM", name)
+		return vmserrors.New(vmserrors.VAX_NOTLIVE, "."+name)
 
 	case "CONSOLE":
 		return a.pseudoConsole(c)
@@ -254,11 +256,11 @@ func (a *Assembler) pseudoData(c *cursor, scale int) error {
 		}
 
 		if scale == 1 && v > 0xFF {
-			return fmt.Errorf(".BYTE value %d out of range", v)
+			return vmserrors.New(vmserrors.VAX_DATARANGE, ".BYTE", v)
 		}
 
 		if scale == 2 && v > 0xFFFF {
-			return fmt.Errorf(".WORD value %d out of range", v)
+			return vmserrors.New(vmserrors.VAX_DATARANGE, ".WORD", v)
 		}
 
 		if err := a.storeScaled(a.deposit, v, scale); err != nil {
@@ -365,7 +367,7 @@ func (a *Assembler) pseudoClear(c *cursor) error {
 
 	name := scanName(c)
 	if !a.symbols.clear(name) {
-		return fmt.Errorf("undefined symbol %q", name)
+		return vmserrors.New(vmserrors.VAX_UNDEFSYM, name)
 	}
 
 	return nil
@@ -732,7 +734,7 @@ func (a *Assembler) pseudoCase(c *cursor) error {
 			return err
 		}
 		if v > 0xFFFF {
-			return fmt.Errorf(".CASE value %d out of range", v)
+			return vmserrors.New(vmserrors.VAX_DATARANGE, ".CASE", v)
 		}
 		if err := a.image.storeWord(a.deposit, uint16(v)); err != nil {
 			return err
@@ -748,7 +750,7 @@ func (a *Assembler) pseudoCase(c *cursor) error {
 // notion of "the microkernel being built".
 func (a *Assembler) pseudoSCB(c *cursor) error {
 	if !a.microkernel {
-		return fmt.Errorf(".SCB requires .MICROKERNEL")
+		return vmserrors.New(vmserrors.VAX_NEEDMICRO, ".SCB")
 	}
 
 	code, err := a.exprNoForward(c)
@@ -756,7 +758,7 @@ func (a *Assembler) pseudoSCB(c *cursor) error {
 		return err
 	}
 	if code > 0xFF || code&0x3 != 0 {
-		return fmt.Errorf(".SCB vector code %#x out of range", code)
+		return vmserrors.New(vmserrors.VAX_SCBCODE, code)
 	}
 
 	saved := a.deposit
@@ -776,7 +778,7 @@ func (a *Assembler) pseudoSCB(c *cursor) error {
 
 	if value != 0xFFFFFFFF && value&0x3 != 0 {
 		a.deposit = saved
-		return fmt.Errorf(".SCB target address %#x is not quadword aligned", value)
+		return vmserrors.New(vmserrors.VAX_SCBALIGN, value)
 	}
 
 	c.skipBlanks()
@@ -791,7 +793,7 @@ func (a *Assembler) pseudoSCB(c *cursor) error {
 			// +0, but named for clarity at the call site.
 		default:
 			a.deposit = saved
-			return fmt.Errorf(".SCB: invalid stack specifier")
+			return vmserrors.New(vmserrors.VAX_SCBSTACK)
 		}
 	}
 
@@ -811,7 +813,7 @@ func (a *Assembler) pseudoAlign(c *cursor) error {
 		return err
 	}
 	if size == 0 {
-		return fmt.Errorf(".ALIGN size must be nonzero")
+		return vmserrors.New(vmserrors.VAX_ALIGNZERO)
 	}
 	n := (a.deposit / size) * size
 	if n < a.deposit {
@@ -825,7 +827,7 @@ func (a *Assembler) pseudoAlign(c *cursor) error {
 // case 27. Requires .MICROKERNEL.
 func (a *Assembler) pseudoRegion(c *cursor) error {
 	if !a.microkernel {
-		return fmt.Errorf(".REGION requires .MICROKERNEL")
+		return vmserrors.New(vmserrors.VAX_NEEDMICRO, ".REGION")
 	}
 
 	var toS0 bool
@@ -838,7 +840,7 @@ func (a *Assembler) pseudoRegion(c *cursor) error {
 		toS0 = false
 
 	default:
-		return fmt.Errorf(".REGION: invalid region specifier")
+		return vmserrors.New(vmserrors.VAX_REGIONSPEC)
 	}
 
 	if toS0 == a.regionIsS0 {
@@ -868,7 +870,7 @@ func (a *Assembler) pseudoRegion(c *cursor) error {
 // .MICROKERNEL.
 func (a *Assembler) pseudoShim(c *cursor) error {
 	if !a.microkernel {
-		return fmt.Errorf(".SHIM requires .MICROKERNEL")
+		return vmserrors.New(vmserrors.VAX_NEEDMICRO, ".SHIM")
 	}
 
 	a.scopeSymbols()
@@ -1072,11 +1074,11 @@ func (a *Assembler) pseudoConsole(c *cursor) error {
 func (a *Assembler) pseudoInclude(c *cursor) error {
 	name := readFileArg(c)
 	if a.includeResolver == nil {
-		return fmt.Errorf(".INCLUDE %q: no include resolver configured", name)
+		return vmserrors.New(vmserrors.RMS_NORESOLVER, name)
 	}
 	src, err := a.includeResolver(name)
 	if err != nil {
-		return fmt.Errorf(".INCLUDE %q: %w", name, err)
+		return vmserrors.Wrap(vmserrors.RMS_INCLUDE, err, name)
 	}
 	return a.assembleLines(src)
 }

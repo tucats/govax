@@ -1,12 +1,12 @@
 package console
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/tucats/govax/internal/console/dcl"
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // Dispatcher routes one command line to either a fixed-spelling handler
@@ -65,7 +65,7 @@ func (d *Dispatcher) Dispatch(line string) error {
 	}
 
 	if r.EntryPoint != "" {
-		return fmt.Errorf("console: %s requires the RTL microkernel (not yet implemented, see docs/PHASE-08.md)", r.Active)
+		return vmserrors.New(vmserrors.CLI_NEEDRTL, r.Active)
 	}
 
 	return d.Grammar.Dispatch(r)
@@ -104,7 +104,7 @@ func parseHexOrEmpty(s string) (uint32, error) {
 
 	v, err := strconv.ParseUint(s, 16, 32)
 	if err != nil {
-		return 0, fmt.Errorf("console: invalid hex value %q", s)
+		return 0, vmserrors.New(vmserrors.CLI_BADHEXVAL, s)
 	}
 
 	return uint32(v), nil
@@ -343,7 +343,7 @@ func init() {
 
 func cmdNotImplemented(name, dependency string) fixedHandler {
 	return func(d *Dispatcher, rest string) error {
-		return fmt.Errorf("console: %s requires %s (not yet implemented, see docs/PHASE-08.md)", name, dependency)
+		return vmserrors.New(vmserrors.CLI_NEEDDEP, name, dependency)
 	}
 }
 
@@ -353,7 +353,7 @@ func cmdNotImplemented(name, dependency string) fixedHandler {
 func cmdAssemble(d *Dispatcher, rest string) error {
 	path := strings.Trim(strings.TrimSpace(rest), `"`)
 	if path == "" {
-		return fmt.Errorf("console: interactive ASM mode (no filename) is not implemented; use ASM <filename>")
+		return vmserrors.New(vmserrors.CLI_NOASMREPL)
 	}
 
 	entryAddr, hasEntry, err := d.Console.Assemble(path)
@@ -374,7 +374,7 @@ func cmdAssemble(d *Dispatcher, rest string) error {
 func cmdInit(d *Dispatcher, rest string) error {
 	v, _, err := (&Evaluator{Symbols: d.Console.Symbols, Radix: d.Console.Radix}).Eval(strings.TrimSpace(rest))
 	if err != nil {
-		return fmt.Errorf("console: INIT requires a page count: %w", err)
+		return vmserrors.Wrap(vmserrors.CLI_NEEDPAGES, err)
 	}
 
 	return d.Console.Init(v * 512)
@@ -469,7 +469,7 @@ func cmdRun(d *Dispatcher, rest string) error {
 
 	fn := strings.Trim(strings.TrimSpace(rest), `"`)
 	if fn == "" {
-		return fmt.Errorf("console: missing file name to run")
+		return vmserrors.New(vmserrors.CLI_NOFILE)
 	}
 
 	return d.Console.Run(fn, opts)
@@ -511,7 +511,7 @@ func cmdCall(d *Dispatcher, rest string) error {
 	rest = strings.TrimSpace(rest)
 
 	if rest == "" {
-		return fmt.Errorf("console: CALL requires an entry-point address or symbol")
+		return vmserrors.New(vmserrors.CLI_NEEDENTRY)
 	}
 
 	ev := d.Console.Evaluator()
@@ -536,12 +536,12 @@ func cmdCall(d *Dispatcher, rest string) error {
 			}
 
 			if remainder == "" {
-				return fmt.Errorf("console: CALL: incomplete argument list")
+				return vmserrors.New(vmserrors.CLI_INCOMPLETEARGS)
 			}
 
 			if len(args) > 0 {
 				if !strings.HasPrefix(remainder, ",") {
-					return fmt.Errorf("console: CALL: expected ',' in argument list")
+					return vmserrors.New(vmserrors.CLI_NEEDCOMMA)
 				}
 
 				remainder = remainder[1:]
@@ -671,7 +671,7 @@ func cmdExamine(d *Dispatcher, rest string) error {
 		}
 
 		if end < addr {
-			return fmt.Errorf("console: end address before start address")
+			return vmserrors.New(vmserrors.CLI_BADRANGE)
 		}
 
 		count = (end-addr)/sizeBytes(sz) + 1
@@ -691,7 +691,7 @@ func cmdDeposit(d *Dispatcher, rest string) error {
 	} else if fields := strings.Fields(rest); len(fields) >= 2 {
 		targetStr, valueStr = fields[0], fields[1]
 	} else {
-		return fmt.Errorf("console: DEPOSIT requires an address/register and a value")
+		return vmserrors.New(vmserrors.CLI_NEEDDEPOSIT)
 	}
 
 	ev := d.Console.Evaluator()
@@ -724,7 +724,7 @@ func cmdDisassemble(d *Dispatcher, rest string) error {
 	}
 
 	ev := d.Console.Evaluator()
-	
+
 	start, remainder, err := ev.Eval(rest)
 	if err != nil {
 		return err
@@ -748,25 +748,25 @@ func cmdSet(d *Dispatcher, rest string) error {
 
 	fields := strings.Fields(rest)
 	if len(fields) == 0 {
-		return fmt.Errorf("console: SET requires an argument")
+		return vmserrors.New(vmserrors.CLI_NEEDSETARG)
 	}
 
 	switch strings.ToUpper(fields[0]) {
 	case "RADIX":
 		if len(fields) < 2 {
-			return fmt.Errorf("console: SET RADIX requires a value")
+			return vmserrors.New(vmserrors.CLI_NEEDRADIX)
 		}
 
 		n, err := strconv.Atoi(fields[1])
 		if err != nil {
-			return fmt.Errorf("console: invalid radix %q", fields[1])
+			return vmserrors.New(vmserrors.CLI_BADRADIXVAL, fields[1])
 		}
 
 		return d.Console.SetRadix(n)
 
 	case "BREAKPOINT", "BREAK":
 		if len(fields) < 2 {
-			return fmt.Errorf("console: SET BREAKPOINT requires an address")
+			return vmserrors.New(vmserrors.CLI_NEEDBREAKADDR)
 		}
 
 		addr, _, err := d.Console.Evaluator().Eval(fields[1])
@@ -781,7 +781,7 @@ func cmdSet(d *Dispatcher, rest string) error {
 
 	eq := strings.IndexByte(rest, '=')
 	if eq < 0 {
-		return fmt.Errorf("console: unrecognized SET syntax %q", rest)
+		return vmserrors.New(vmserrors.CLI_BADSETSYNTAX, rest)
 	}
 
 	name := strings.TrimSpace(rest[:eq])
@@ -834,12 +834,12 @@ func parseRomOrNvramArg(rest string) (kind, file string, err error) {
 		kind, rest = "NVRAM", rest[6:]
 
 	default:
-		return "", "", fmt.Errorf("console: SAVE/LOAD requires /ROM or /NVRAM (the plain .VAX form isn't implemented — see rom.go)")
+		return "", "", vmserrors.New(vmserrors.CLI_NEEDROMNVRAM)
 	}
 
 	file = strings.Trim(strings.TrimSpace(rest), `"`)
 	if file == "" {
-		return "", "", fmt.Errorf("console: %s requires a file name", kind)
+		return "", "", vmserrors.New(vmserrors.CLI_NEEDFILENAME, kind)
 	}
 
 	return kind, file, nil

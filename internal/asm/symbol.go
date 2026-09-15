@@ -3,6 +3,8 @@ package asm
 import (
 	"fmt"
 	"math"
+
+	"github.com/tucats/govax/internal/vmserrors"
 	"strings"
 )
 
@@ -190,7 +192,7 @@ func (a *Assembler) getSymbol(name string, allowForward bool, location uint32, f
 		a.lastSymbol = sym
 		return sym.value, false, nil
 	case !found && !allowForward:
-		return 0, false, fmt.Errorf("undefined symbol %q", name)
+		return 0, false, vmserrors.New(vmserrors.VAX_UNDEFSYM, name)
 	case found && !allowForward:
 		a.lastSymbol = sym
 		return sym.value, false, nil
@@ -222,7 +224,7 @@ func (a *Assembler) setSymbol(name string, value uint32, flags SymFlag, unique b
 
 	sym, found := a.symbols.find(resolved)
 	if unique && found && len(sym.forward) == 0 {
-		return fmt.Errorf("duplicate symbol definition %q", name)
+		return vmserrors.New(vmserrors.VAX_DUPSYM, name)
 	}
 	if !found {
 		sym = a.symbols.create(resolved)
@@ -260,7 +262,7 @@ func (a *Assembler) applyFixup(fp forwardRef, value, ivalue uint32) error {
 	case fixCaseW:
 		d := int64(value) - int64(ivalue)
 		if d < math.MinInt16 || d > math.MaxInt16 {
-			return fmt.Errorf("forward reference displacement %d out of word range", d)
+			return vmserrors.New(vmserrors.VAX_FWDWORD, d)
 		}
 
 		return a.image.storeWord(fp.location, uint16(int16(d)))
@@ -272,7 +274,7 @@ func (a *Assembler) applyFixup(fp forwardRef, value, ivalue uint32) error {
 
 	case fixDispB, fixBranchB:
 		if disp < -128 || disp > 127 {
-			return fmt.Errorf("forward reference displacement %d out of byte range", disp)
+			return vmserrors.New(vmserrors.VAX_FWDBYTE, disp)
 		}
 
 		return a.image.storeByte(fp.location, byte(int8(disp)))
@@ -284,7 +286,7 @@ func (a *Assembler) applyFixup(fp forwardRef, value, ivalue uint32) error {
 
 	case fixDispW, fixBranchW:
 		if disp < -32768 || disp > 32767 {
-			return fmt.Errorf("forward reference displacement %d out of word range", disp)
+			return vmserrors.New(vmserrors.VAX_FWDWORD, disp)
 		}
 		return a.image.storeWord(fp.location, uint16(int16(disp)))
 
@@ -297,7 +299,7 @@ func (a *Assembler) applyFixup(fp forwardRef, value, ivalue uint32) error {
 		return a.image.storeLongword(fp.location, uint32(int32(disp)))
 	}
 
-	return fmt.Errorf("internal: unhandled fixup kind %d", fp.kind)
+	return vmserrors.New(vmserrors.VAX_INTERNAL, fmt.Sprintf("unhandled fixup kind %d", fp.kind))
 }
 
 // hasUnresolvedSymbols reports whether any symbol still has pending forward
@@ -320,7 +322,7 @@ func (a *Assembler) hasUnresolvedSymbols() bool {
 // Console.Symbols once its bytes have been deposited into live memory.
 func (a *Assembler) Symbols() map[string]uint32 {
 	out := make(map[string]uint32)
-	
+
 	for name, s := range a.symbols.byName {
 		if s.flags&SymBuiltin != 0 || len(s.forward) != 0 {
 			continue

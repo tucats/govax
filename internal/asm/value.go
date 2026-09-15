@@ -1,8 +1,9 @@
 package asm
 
 import (
-	"fmt"
 	"strconv"
+
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // parseFloat reads a floating-point literal (digits, '.', a leading sign,
@@ -26,12 +27,12 @@ func (a *Assembler) parseFloat(c *cursor) (float64, error) {
 
 	s := c.s[start:c.pos]
 	if s == "" {
-		return 0, fmt.Errorf("invalid floating point value")
+		return 0, vmserrors.New(vmserrors.VAX_BADFLOAT, s)
 	}
 
 	v, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return 0, fmt.Errorf("invalid floating point value %q", s)
+		return 0, vmserrors.New(vmserrors.VAX_BADFLOAT, s)
 	}
 
 	return v, nil
@@ -77,7 +78,7 @@ func (a *Assembler) exprValue(c *cursor, loc uint32, fx fixupKind) (value uint32
 		return 0, false, err
 	}
 	if st.usedOperator && st.wasForward {
-		return 0, false, fmt.Errorf("a forward-referenced symbol cannot be combined with an operator")
+		return 0, false, vmserrors.New(vmserrors.VAX_FWDOPERATOR)
 	}
 	return v, st.wasForward, nil
 }
@@ -232,7 +233,7 @@ func (a *Assembler) exprTerm(c *cursor, st *exprState) (uint32, error) {
 			v1 *= v2
 		} else {
 			if v2 == 0 {
-				return 0, fmt.Errorf("division by zero")
+				return 0, vmserrors.New(vmserrors.VAX_DIVZERO)
 			}
 			v1 /= v2
 		}
@@ -329,7 +330,7 @@ func (a *Assembler) lookupSymbolValue(name string, st *exprState) (uint32, error
 func (a *Assembler) numericLiteral(c *cursor, st *exprState) (uint32, error) {
 	c.skipBlanks()
 	if c.atEnd() {
-		return 0, fmt.Errorf("incomplete numeric value")
+		return 0, vmserrors.New(vmserrors.VAX_INCOMPLETENUM)
 	}
 
 	if c.peek() == '^' && c.peekAt(1) == 'D' {
@@ -351,7 +352,7 @@ func (a *Assembler) numericLiteral(c *cursor, st *exprState) (uint32, error) {
 	}
 
 	if c.peek() == '^' && c.peekAt(1) == 'F' {
-		return 0, fmt.Errorf("floating point value not valid here")
+		return 0, vmserrors.New(vmserrors.VAX_FLOATHERE)
 	}
 
 	if a.radix == 10 {
@@ -384,7 +385,7 @@ func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (uint32, error) {
 		c.skip(2)
 	}
 	if c.peek() == '^' && c.peekAt(1) == 'F' {
-		return 0, fmt.Errorf("floating point value not valid here")
+		return 0, vmserrors.New(vmserrors.VAX_FLOATHERE)
 	}
 	if isUpperAlpha(c.peek()) || c.peek() == '_' || c.peek() == '$' {
 		name := scanName(c)
@@ -428,7 +429,7 @@ func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (uint32, error) {
 
 		default:
 			if digits == 0 {
-				return 0, fmt.Errorf("invalid decimal constant")
+				return 0, vmserrors.New(vmserrors.VAX_BADDECIMAL)
 			}
 
 			return uint32(value * sign), nil
@@ -455,7 +456,7 @@ func (a *Assembler) hexDigits(c *cursor) (uint32, error) {
 
 		default:
 			if digits == 0 {
-				return 0, fmt.Errorf("invalid hexadecimal constant")
+				return 0, vmserrors.New(vmserrors.VAX_BADHEX)
 			}
 
 			return value, nil
@@ -474,7 +475,7 @@ func (a *Assembler) charLiteral(c *cursor) (uint32, error) {
 	var value uint32
 
 	if c.peek() != '\'' {
-		return 0, fmt.Errorf("invalid character literal")
+		return 0, vmserrors.New(vmserrors.VAX_BADCHARLIT)
 	}
 
 	c.next()
@@ -483,11 +484,11 @@ func (a *Assembler) charLiteral(c *cursor) (uint32, error) {
 
 	for c.peek() != '\'' {
 		if c.atEnd() {
-			return 0, fmt.Errorf("unterminated character literal")
+			return 0, vmserrors.New(vmserrors.VAX_UNTERMCHAR)
 		}
 
 		if size > 3 {
-			return 0, fmt.Errorf("character literal too long")
+			return 0, vmserrors.New(vmserrors.VAX_CHARTOOLONG)
 		}
 
 		ch := c.next()
@@ -529,7 +530,7 @@ func (a *Assembler) maskLiteral(c *cursor) (uint32, error) {
 		c.skipBlanks()
 	}
 	if c.peek() != '<' {
-		return 0, fmt.Errorf("invalid register mask")
+		return 0, vmserrors.New(vmserrors.VAX_BADMASK)
 	}
 	c.next()
 
@@ -555,13 +556,13 @@ func (a *Assembler) maskLiteral(c *cursor) (uint32, error) {
 
 		bit, ok := maskBit(name)
 		if !ok {
-			return 0, fmt.Errorf("invalid register mask entry %q", name)
+			return 0, vmserrors.New(vmserrors.VAX_BADMASKENTRY, name)
 		}
 		mask |= 1 << bit
 	}
 
 	if c.peek() != '>' {
-		return 0, fmt.Errorf("invalid register mask")
+		return 0, vmserrors.New(vmserrors.VAX_BADMASK)
 	}
 	c.next()
 

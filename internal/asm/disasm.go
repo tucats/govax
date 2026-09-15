@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // ByteReader supplies bytes for disassembly by VAX virtual address.
@@ -92,7 +93,7 @@ func Disassemble(r ByteReader, pc uint32) (Decoded, error) {
 
 	inst := cpu.Instructions().Lookup(op)
 	if inst == nil {
-		return Decoded{}, fmt.Errorf("invalid opcode at %08X", start)
+		return Decoded{}, vmserrors.New(vmserrors.VAX_BADOPCODEAT, start)
 	}
 
 	dec := Decoded{Mnemonic: inst.Name}
@@ -102,10 +103,10 @@ func Disassemble(r ByteReader, pc uint32) (Decoded, error) {
 		if err != nil {
 			return Decoded{}, err
 		}
-	
+
 		dec.Operands = append(dec.Operands, text)
 	}
-	
+
 	dec.Length = pc - start
 
 	return dec, nil
@@ -116,10 +117,10 @@ func loadSized(r ByteReader, addr uint32, size int) uint32 {
 	switch size {
 	case 1:
 		return uint32(r.ByteAt(addr))
-	
+
 	case 2:
 		return uint32(r.ByteAt(addr)) | uint32(r.ByteAt(addr+1))<<8
-	
+
 	default:
 		return uint32(r.ByteAt(addr)) | uint32(r.ByteAt(addr+1))<<8 |
 			uint32(r.ByteAt(addr+2))<<16 | uint32(r.ByteAt(addr+3))<<24
@@ -143,10 +144,10 @@ func formatIntHex(v uint32, size int) string {
 	switch size {
 	case 1:
 		return fmt.Sprintf("%02X", v)
-	
+
 	case 2:
 		return fmt.Sprintf("%04X", v)
-	
+
 	default:
 		return fmt.Sprintf("%08X", v)
 	}
@@ -267,11 +268,11 @@ func formatPCRelative(r ByteReader, pc *uint32, mode byte, size int, litType cpu
 	case 0x0E, 0x0F: // Long relative [deferred]
 		raw := loadSized(r, *pc, 4)
 		*pc += 4
-		
+
 		return formatPCRelTarget(*pc, signExtend(raw, 4), "L^", mode == 0x0F), nil
 	}
 
-	return "", fmt.Errorf("internal: unreachable PC-relative mode %X", mode)
+	return "", vmserrors.New(vmserrors.VAX_INTERNAL, fmt.Sprintf("unreachable PC-relative mode %X", mode))
 }
 
 func formatPCRelTarget(pc uint32, disp int32, prefix string, deferred bool) string {
@@ -293,7 +294,7 @@ func formatGeneral(r ByteReader, pc *uint32, mode, reg byte, access cpu.AccessKi
 	switch mode {
 	case 0x04: // Indexed: base[Rx]
 		if indexed {
-			return "", fmt.Errorf("indexed addressing mode may not nest")
+			return "", vmserrors.New(vmserrors.VAX_INDEXNEST)
 		}
 
 		base, err := formatOperand(r, pc, access, size, litType, true)
@@ -334,7 +335,7 @@ func formatGeneral(r ByteReader, pc *uint32, mode, reg byte, access cpu.AccessKi
 		return formatDisplacement("L^", raw, 4, rn, mode == 0x0F), nil
 	}
 
-	return "", fmt.Errorf("internal: unreachable addressing mode %X", mode)
+	return "", vmserrors.New(vmserrors.VAX_INTERNAL, fmt.Sprintf("unreachable addressing mode %X", mode))
 }
 
 func formatDisplacement(prefix string, raw uint32, size int, rn string, deferred bool) string {

@@ -1,6 +1,6 @@
 package dcl
 
-import "fmt"
+import "github.com/tucats/govax/internal/vmserrors"
 
 // validate resolves every named cross-reference a grammar statement could
 // only record as a string at definition time (a verb's /alias=, a
@@ -13,7 +13,7 @@ func (g *Grammar) validate() error {
 		if e.Alias != "" {
 			target, ok := g.entries[e.Alias]
 			if !ok {
-				return fmt.Errorf("dcl: verb %q: alias target %q not found", e.Name, e.Alias)
+				return vmserrors.New(vmserrors.CLI_ALIASNOTFOUND, e.Name, e.Alias)
 			}
 			e.aliasRef = target
 		}
@@ -22,7 +22,7 @@ func (g *Grammar) validate() error {
 			if p.Type == TypeKeyword {
 				t, ok := g.types[p.TypeName]
 				if !ok {
-					return fmt.Errorf("dcl: parameter %q: type %q not found", p.Name, p.TypeName)
+					return vmserrors.New(vmserrors.CLI_TYPENOTFOUND, "Parameter", p.Name, p.TypeName)
 				}
 				p.typeRef = t
 			}
@@ -32,19 +32,19 @@ func (g *Grammar) validate() error {
 			if q.Type == TypeKeyword {
 				t, ok := g.types[q.TypeName]
 				if !ok {
-					return fmt.Errorf("dcl: qualifier %q: type %q not found", q.Name, q.TypeName)
+					return vmserrors.New(vmserrors.CLI_TYPENOTFOUND, "Qualifier", q.Name, q.TypeName)
 				}
 				q.typeRef = t
 			}
 			if q.Syntax != "" {
 				if _, ok := g.entries[q.Syntax]; !ok {
-					return fmt.Errorf("dcl: qualifier %q: syntax %q not found", q.Name, q.Syntax)
+					return vmserrors.New(vmserrors.CLI_SYNTAXNOTFOUND, q.Name, q.Syntax)
 				}
 			}
 			if q.Alias != "" {
 				target, _, err := e.qualifier(q.Alias)
 				if err != nil {
-					return fmt.Errorf("dcl: qualifier %q: alias target %q not found", q.Name, q.Alias)
+					return vmserrors.New(vmserrors.CLI_QUALALIASNOTFOUND, q.Name, q.Alias)
 				}
 				q.aliasRef = target
 			}
@@ -52,11 +52,11 @@ func (g *Grammar) validate() error {
 
 		for _, d := range e.Disallows {
 			if _, _, err := e.qualifier(d.Qual1); err != nil {
-				return fmt.Errorf("dcl: entry %q: disallow qualifier %q not found", e.Name, d.Qual1)
+				return vmserrors.New(vmserrors.CLI_DISALLOWNOTFOUND, e.Name, d.Qual1)
 			}
-			
+
 			if _, _, err := e.qualifier(d.Qual2); err != nil {
-				return fmt.Errorf("dcl: entry %q: disallow qualifier %q not found", e.Name, d.Qual2)
+				return vmserrors.New(vmserrors.CLI_DISALLOWNOTFOUND, e.Name, d.Qual2)
 			}
 		}
 	}
@@ -65,7 +65,7 @@ func (g *Grammar) validate() error {
 		for _, kw := range t.Keywords {
 			if kw.Syntax != "" {
 				if _, ok := g.entries[kw.Syntax]; !ok {
-					return fmt.Errorf("dcl: type %q: keyword %q: syntax %q not found", t.Name, kw.Name, kw.Syntax)
+					return vmserrors.New(vmserrors.CLI_KEYWORDSYNTAXNOTFOUND, t.Name, kw.Name, kw.Syntax)
 				}
 			}
 		}

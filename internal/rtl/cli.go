@@ -1,6 +1,6 @@
 package rtl
 
-import "errors"
+import "github.com/tucats/govax/internal/vmserrors"
 
 // Port of cli.c's sys_cli — the SYS$CLI callback service a running image
 // uses to ask its command-line interpreter (DCL) to do something on its
@@ -23,7 +23,7 @@ const cliUndefinedSymbol = 0x38140
 // ErrHalted so this package doesn't need to import internal/cpu — whatever
 // wires an Environment into internal/cpu.SystemServices (internal/console)
 // translates this into cpu.ErrHalted.
-var ErrHalt = errors.New("rtl: halt requested")
+var ErrHalt = vmserrors.New(vmserrors.LIB_HALT)
 
 // serviceSysCli is SYS$CLI: dispatches one fixed-format callback request.
 // Every request other than "get symbol" is unimplemented in the C source

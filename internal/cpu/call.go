@@ -1,9 +1,8 @@
 package cpu
 
 import (
-	"errors"
-
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // This is the Go port of emul_call.c: CALLS/CALLG procedure-call stack-frame
@@ -60,7 +59,7 @@ func emulCall(e *Engine, d *Decoded) error {
 		if err := e.mem.StoreLongword(e.cpu, sp, uint32(count)); err != nil {
 			return err
 		}
-		
+
 		newAP = sp
 	} else if d.Operands[0].Kind == OperandRegister {
 		newAP = e.cpu.GPR(d.Operands[0].Reg)
@@ -273,7 +272,7 @@ const SentinelReturn = 0xFFFFDEAF
 
 // ErrConsoleCallReturned is returned by Step (via emulRet) when RET pops a
 // frame built by Engine.CallEntry, signalling clean completion of that call.
-var ErrConsoleCallReturned = errors.New("cpu: console call returned")
+var ErrConsoleCallReturned = vmserrors.New(vmserrors.VAX_CALLRET)
 
 // CallEntry builds a CALLS-shaped procedure-call frame directly (bypassing
 // instruction fetch/decode, the way console_exec.c's console_call hand-

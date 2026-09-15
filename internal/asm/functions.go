@@ -1,6 +1,6 @@
 package asm
 
-import "fmt"
+import "github.com/tucats/govax/internal/vmserrors"
 
 // callFunction recognizes an expression function call — name already
 // consumed, c positioned right after it — matching asm_function(). Reports
@@ -41,14 +41,14 @@ func (a *Assembler) callDefined(c *cursor) (uint32, bool, error) {
 	c.skipBlanks()
 
 	if c.peek() != '(' {
-		return 0, true, fmt.Errorf("DEFINED() requires an argument")
+		return 0, true, vmserrors.New(vmserrors.VAX_DEFARG)
 	}
 
 	c.next()
 	c.skipBlanks()
 
 	if c.peek() != '"' {
-		return 0, true, fmt.Errorf("DEFINED() requires a quoted symbol name")
+		return 0, true, vmserrors.New(vmserrors.VAX_DEFQUOTE)
 	}
 
 	c.next()

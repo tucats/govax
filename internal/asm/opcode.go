@@ -1,6 +1,6 @@
 package asm
 
-import "fmt"
+import "github.com/tucats/govax/internal/vmserrors"
 
 // opcodeAliases maps an alternate mnemonic spelling to the real instruction
 // name the assembler should look up instead, matching asm_opcode.c's
@@ -46,7 +46,7 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 
 	inst := a.table.ByName(name)
 	if inst == nil {
-		return fmt.Errorf("invalid opcode %q", name)
+		return vmserrors.New(vmserrors.VAX_BADOPCODE, name)
 	}
 
 	if inst.Opcode.Extended != 0 {
@@ -68,17 +68,17 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 		c.skipBlanks()
 
 		if c.atEnd() {
-			return fmt.Errorf("%s: insufficient operands", inst.Name)
+			return vmserrors.New(vmserrors.VAX_BADOPERANDS, inst.Name)
 		}
 
 		if err := a.assembleOperand(c, inst, n); err != nil {
-			return fmt.Errorf("%s operand %d: %w", inst.Name, n+1, err)
+			return vmserrors.Wrap(vmserrors.VAX_OPERANDERR, err, inst.Name, n+1)
 		}
 
 		c.skipBlanks()
-		
+
 		if n < inst.OperandCount-1 && c.atEnd() {
-			return fmt.Errorf("%s: insufficient operands", inst.Name)
+			return vmserrors.New(vmserrors.VAX_BADOPERANDS, inst.Name)
 		}
 
 		if c.peek() == ',' {

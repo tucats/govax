@@ -1,9 +1,8 @@
 package asm
 
 import (
-	"fmt"
-
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // parseRegister parses a register specifier at the cursor — Rn (0-15), or
@@ -22,39 +21,39 @@ func parseRegister(c *cursor, first byte) (vax.Reg, error) {
 	case 'R':
 		n, ok := parseSimpleDecimal(c)
 		if !ok || n < 0 || n > 15 {
-			return 0, fmt.Errorf("invalid register specification")
+			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
 		if isSymbolChar(c.peek()) {
-			return 0, fmt.Errorf("invalid register specification")
+			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
 		return vax.Reg(n), nil
 
 	case 'A':
 		if c.next() != 'P' || isSymbolChar(c.peek()) {
-			return 0, fmt.Errorf("invalid register specification")
+			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
 		return vax.AP, nil
 
 	case 'F':
 		if c.next() != 'P' || isSymbolChar(c.peek()) {
-			return 0, fmt.Errorf("invalid register specification")
+			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
 		return vax.FP, nil
 
 	case 'S':
 		if c.next() != 'P' || isSymbolChar(c.peek()) {
-			return 0, fmt.Errorf("invalid register specification")
+			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
 		return vax.SP, nil
 
 	case 'P':
 		if c.next() != 'C' || isSymbolChar(c.peek()) {
-			return 0, fmt.Errorf("invalid register specification")
+			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
 		return vax.PC, nil
 	}
 
-	return 0, fmt.Errorf("invalid register specification")
+	return 0, vmserrors.New(vmserrors.VAX_BADREG)
 }
 
 // parseSimpleDecimal reads an unsigned decimal integer with no sign, radix

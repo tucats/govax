@@ -9,6 +9,7 @@ import (
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // Environment is one VAX "process" worth of RTL state: the calling-convention
@@ -156,7 +157,7 @@ func readArgs(cpu *vax.CPU, mem *vm.Memory, ap uint32) ([]uint32, error) {
 func callHandler(fn func(*Environment, []uint32) (uint32, error), env *Environment, argv []uint32) (r0 uint32, err error) {
 	defer func() {
 		if p := recover(); p != nil {
-			err = fmt.Errorf("rtl: handler panic: %v", p)
+			err = vmserrors.New(vmserrors.LIB_PANIC, fmt.Sprintf("%v", p))
 		}
 	}()
 	return fn(env, argv)

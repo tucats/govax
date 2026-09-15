@@ -11,6 +11,7 @@ import (
 	"github.com/tucats/govax/internal/rtl"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // minPhysMemory/physMemAlign match alloc_vax's own minimum (8K) and
@@ -177,7 +178,7 @@ func (c *Console) Initialized() bool { return c.Engine != nil }
 // every console_*.c handler's own "if (!vax_init) return VAX_NOVAX;" check.
 func (c *Console) requireInit() error {
 	if !c.Initialized() {
-		return fmt.Errorf("console: no VAX processor allocated (use INIT first)")
+		return vmserrors.New(vmserrors.CLI_NOVAX)
 	}
 	return nil
 }
@@ -186,7 +187,7 @@ func (c *Console) requireInit() error {
 // that additionally refuse to run outside kernel mode.
 func (c *Console) requireKernelMode() error {
 	if c.CPU.PSL().CurMod() != vax.Kernel {
-		return fmt.Errorf("console: not permitted outside kernel mode")
+		return vmserrors.New(vmserrors.CLI_NOTKERNEL)
 	}
 	return nil
 }

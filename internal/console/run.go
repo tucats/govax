@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // RunOptions controls RUN's optional qualifier, matching console_run's own
@@ -42,12 +43,12 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 
 	main, err := c.imageLoad(fn, icbMain)
 	if err != nil {
-		return fmt.Errorf("console: unable to activate %s: %w", fn, err)
+		return vmserrors.Wrap(vmserrors.CLI_ACTIVATE, err, fn)
 	}
 
 	for _, dep := range c.ICBList {
 		if err := c.imageFixup(dep); err != nil {
-			return fmt.Errorf("console: relocation/fixup error for image %s: %w", dep.Name, err)
+			return vmserrors.Wrap(vmserrors.CLI_FIXUP, err, dep.Name)
 		}
 	}
 
@@ -104,7 +105,7 @@ func (c *Console) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, 
 
 	base, found := c.Symbols.Get("CONSOLE$SCRATCH")
 	if !found {
-		return 0, false, fmt.Errorf("console: no CONSOLE$SCRATCH area (VMINIT required)")
+		return 0, false, vmserrors.New(vmserrors.CLI_NOSCRATCH)
 	}
 	driverAddr := base + 8
 
