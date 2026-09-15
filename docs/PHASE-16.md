@@ -179,11 +179,11 @@ fields exist); the gap is purely a missing `show.go` function + grammar binding.
 - **`SHOW STEP_MODE`** (`show_step`, C: `console_show.c:765`) — needs `SET STEP`'s
   `STEP_OVER`/`STEP_RETURN`/(default `INTO`) state, which `Console` doesn't currently
   track at all (see Sub-phase 3's `SET STEP` entry).
-- **`SHOW DEBUG`** (`show_debug`, C: `console_show.c:439`) — needs `SET DEBUG`'s
-  `DBG_*` bitmask (18 named flags: `DEBUG`, `VM`, `TB`, `SYMBOLS`, `EXCEPTIONS`,
-  `INTERRUPTS`, `CHM`, `REGISTERS`, `FULLDISASM`, `USERHALT`, `KEYBOARD`, `IMAGES`,
-  `SERVICES`, `DCL`, `COMMAND`/expand, `LOGICALS`, `DEVICES`, `PROCESSES`, `LIBINIT`,
-  `RMS`), which `Console` has no field for. See Sub-phase 3.
+- **`SHOW DEBUG`** — **done, see `docs/PHASE-17.md`.** That phase also
+  corrected two assumptions this entry made before any of it was
+  implemented: `SET DEBUG`/`SET NODEBUG` turned out to be one verb with
+  per-item `NO`-prefixing, not a verb pair, and `SHOW DEBUG` displays 20 of
+  the 25 settable names, not all of them.
 - **`SHOW ASSEMBLER_FLAGS`** (`show_assembler_flags`, C: `console_show.c:567`) —
   needs `SET ASSEMBLER`'s flag set (`ADDRESS_PROMPT`, `FORWARD_WARNINGS`,
   `BRANCH_DESTINATION`, `SYMBOLS`, `RESOLVE_TEMP`, `SCOPENAMES`). Check whether
@@ -352,10 +352,11 @@ cases; the rest are missing:
 
 `internal/console/set.go` currently implements only `SET <name>=<value>` (register /
 privileged register / PSL / plain symbol) and, via `dispatch.go`'s hand-parsed
-`cmdSet`, `SET RADIX` and `SET BREAKPOINT`. `set.go`'s own doc comment already lists
-the gap in one line ("SET PSL <field>=value, SET MODE, SET STEP, SET MKVALID/NOMK,
-SET PTE, SET DEBUG/ASM flags, SET [NO]EXPAND/SHARE, SET FAULT ... not implemented");
-this sub-phase expands that into concrete subtasks.
+`cmdSet`, `SET RADIX`, `SET BREAKPOINT`, and (added by `docs/PHASE-17.md`) `SET
+DEBUG`. `set.go`'s own doc comment already lists the remaining gap in one line
+("SET PSL <field>=value, SET MODE, SET STEP, SET MKVALID/NOMK, SET PTE, SET ASM
+flags, SET [NO]EXPAND/SHARE, SET FAULT ... not implemented"); this sub-phase
+expands that into concrete subtasks.
 
 **Structural note:** unlike `SHOW`/`CLEAR`, `SET` is **not** driven by the DCL
 grammar in the C source at all — `evax.dcl` has no `verb set` block. `console_set`
@@ -395,11 +396,9 @@ the reference.
 - **`SET ASSEMBLER <flag>`** / **`SET NOASSEMBLER <flag>`** (C:
   `console_set.c:504-579`) — the six `ASM_*` flags `SHOW ASSEMBLER_FLAGS`
   (Sub-phase 1c) would report; same "check `internal/asm` first" caveat applies.
-- **`SET DEBUG <flag>`** / **`SET NODEBUG <flag>`** (C: `console_set.c:581-639`) —
-  the ~19 `DBG_*` flags backing `SHOW DEBUG` (Sub-phase 1c). Needs a new
-  `Console.DebugFlags`-style bitmask field; most individual flags (VM/TB/SYMBOLS/
-  EXCEPTIONS/etc. tracing) have no consumer anywhere in this port yet either, so this
-  is genuinely new cross-cutting infrastructure, not just a setter.
+- **`SET DEBUG`** — **done, see `docs/PHASE-17.md`** (the bitmask lives on
+  `internal/vax.CPU`, and most individual flags now have real tracing
+  behavior wired too, not just the setter).
 - **`SET VM`** / **`SET MAPEN`** / **`SET NOVM`** / **`SET NOMAPEN`** (C:
   `console_set.c:641-661`) — toggles the `MAPEN` privileged register, which already
   exists (`privRegNames["MAPEN"]`) — this may already work today via the generic

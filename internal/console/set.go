@@ -27,10 +27,10 @@ var privRegNames = map[string]vax.PrivReg{
 // privileged-register-or-PSL name, then symbol).
 //
 // The richer SET subcommands (SET PSL <field>=value, SET MODE, SET STEP,
-// SET MKVALID/NOMK, SET PTE, SET DEBUG/ASM flags, SET [NO]EXPAND/SHARE, SET
+// SET MKVALID/NOMK, SET PTE, SET ASM flags, SET [NO]EXPAND/SHARE, SET
 // FAULT) are not implemented — see docs/PHASE-08.md's progress log; most
-// are device/assembler/debug-tracing state with no consumer yet in this
-// port.
+// are device/assembler state with no consumer yet in this port. SET DEBUG
+// (SetDebug, below) is implemented — see docs/PHASE-17.md.
 func (c *Console) SetSymbol(name string, value uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
