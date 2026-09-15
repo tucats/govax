@@ -406,6 +406,7 @@ func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (uint32, error) {
 		switch {
 		case ch == '+' && !haveSign:
 			haveSign = true
+			
 			c.next()
 
 		case ch == '-' && !haveSign:
@@ -422,7 +423,7 @@ func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (uint32, error) {
 			haveSign = true
 			value = value*10 + int32(ch-'0')
 			digits++
-			
+
 			c.next()
 
 		default:

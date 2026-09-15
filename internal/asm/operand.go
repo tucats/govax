@@ -312,7 +312,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	// -(Rn): autodecrement.
 	if ch == '-' {
 		c.skipBlanks()
-		
+
 		if c.next() != '(' {
 			return fmt.Errorf("invalid addressing mode")
 		}
@@ -444,7 +444,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			if err != nil {
 				return err
 			}
-			
+
 			litValue = v
 		}
 
@@ -457,9 +457,9 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		if err := a.image.storeByte(a.deposit, 0x9F); err != nil {
 			return err
 		}
-		
+
 		a.deposit++
-		
+
 		return a.storeAddrValue(c)
 	}
 
@@ -531,7 +531,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 	a.deposit++
 	loc := a.deposit
-	
+
 	value, wasForward, err := a.exprValue(c, loc, fixAddrL)
 	if err != nil {
 		return err
@@ -687,7 +687,9 @@ func (a *Assembler) assembleDisplacement(c *cursor, deferred byte, size int, rel
 
 	mode := relMode | deferred
 	haveReg := c.peek() == '('
+
 	var reg byte
+
 	if haveReg {
 		c.next()
 

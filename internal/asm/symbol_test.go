@@ -212,7 +212,9 @@ func TestTakeEntry(t *testing.T) {
 func TestSetS0Origin(t *testing.T) {
 	a := New()
 	a.SetMicrokernel(true)
+
 	const newBase = 0x80100000
+
 	a.SetS0Origin(newBase)
 
 	if got := a.S0Origin(); got != newBase {

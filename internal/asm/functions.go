@@ -93,6 +93,7 @@ func skipEmptyArgs(c *cursor) {
 
 	c.next()
 	c.skipBlanks()
+
 	if c.peek() == ')' {
 		c.next()
 

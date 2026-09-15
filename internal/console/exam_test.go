@@ -164,6 +164,7 @@ func TestZero_clearsMemoryAndSymbols(t *testing.T) {
 	if err := c.Deposit("", 0x1000, SizeLongword, 0xFFFFFFFF); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
+	
 	c.Symbols.Set("FOO", 42, SymbolUser)
 
 	if err := c.Zero(); err != nil {
