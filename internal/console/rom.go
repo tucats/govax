@@ -67,9 +67,10 @@ func (c *Console) SaveROM(path string) error {
 	return writeBE32(f, 0)
 }
 
-// LoadROM reads a binary ROM image file, matching load_rom.
+// LoadROM reads a binary ROM image file, matching load_rom. path is
+// resolved through c.Paths (docs/PHASE-15.md).
 func (c *Console) LoadROM(path string) error {
-	f, err := os.Open(path)
+	f, err := c.Paths.Open(path)
 	if err != nil {
 		return err
 	}
@@ -145,9 +146,10 @@ func (c *Console) SaveNVRAM(path string) error {
 	return err
 }
 
-// LoadNVRAM reads an NVRAM image file, matching load_nvram.
+// LoadNVRAM reads an NVRAM image file, matching load_nvram. path is
+// resolved through c.Paths (docs/PHASE-15.md).
 func (c *Console) LoadNVRAM(path string) error {
-	f, err := os.Open(path)
+	f, err := c.Paths.Open(path)
 	if err != nil {
 		return err
 	}

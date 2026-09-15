@@ -2,7 +2,6 @@ package console
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -43,7 +42,7 @@ func (c *Console) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 		return 0, false, err
 	}
 
-	src, err := os.ReadFile(path)
+	src, err := c.Paths.ReadFile(path)
 	if err != nil {
 		return 0, false, err
 	}
@@ -65,9 +64,13 @@ func (c *Console) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 	}
 	a := c.asmSession
 
-	dir := filepath.Dir(path)
+	// .INCLUDE names (e.g. kernel.asm's own "ssdef.asm") are resolved
+	// alongside path's own directory first (WithDir), falling through to
+	// c.Paths' own search directories/embedded fallback — see
+	// docs/PHASE-15.md.
+	includePaths := c.Paths.WithDir(filepath.Dir(path))
 	a.SetIncludeResolver(func(name string) (string, error) {
-		b, err := os.ReadFile(filepath.Join(dir, name))
+		b, err := includePaths.ReadFile(name)
 		return string(b), err
 	})
 

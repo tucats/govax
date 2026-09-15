@@ -2,7 +2,6 @@ package console
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 )
@@ -89,9 +88,12 @@ func (c *Console) Time(cmd string, dispatch func(string) error) error {
 // nested includes via a file stack, /VERIFY echoing, and an ASM-mode
 // variant): this port just runs straight through one file, recursively,
 // since INCLUDE's only in-scope consumer right now is loading a startup
-// script like testdata/dcl/vax.init (see cmd/govax/main.go).
+// script like vax.init (see cmd/govax/main.go). path is resolved through
+// c.Paths (docs/PHASE-15.md), so an unqualified name like "vax.init" is
+// found via the configured search path / embedded fallback, not just a
+// literal relative-to-cwd read.
 func (c *Console) Include(path string, dispatch func(string) error) error {
-	b, err := os.ReadFile(path)
+	b, err := c.Paths.ReadFile(path)
 	if err != nil {
 		return err
 	}

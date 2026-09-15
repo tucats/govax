@@ -7,6 +7,7 @@ import (
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/cpu"
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rtl"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
@@ -139,6 +140,16 @@ type Console struct {
 	// matching find_image's own check; empty (the default) searches
 	// alongside the loading image with no prefix.
 	SharePrefix string
+
+	// Paths is the search-path policy (docs/PHASE-15.md) every file-reading
+	// method on Console (Include, Assemble, imageLoad, LoadROM, LoadNVRAM)
+	// resolves an unqualified name through: the name as given, then each of
+	// Paths' own search directories, then its embedded fallback. A nil
+	// Paths (the default for a Console built without cmd/govax's own
+	// startup wiring, e.g. most tests) makes every one of those methods
+	// behave exactly as a plain os.ReadFile/os.Open — see
+	// internal/respath's own doc comment.
+	Paths *respath.Resolver
 }
 
 // New returns a Console with no machine allocated yet (vax_init == 0 in the

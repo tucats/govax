@@ -1,17 +1,20 @@
 // Command govax is the interactive entry point for the VAX emulator —
 // the Go equivalent of reference/eVAX/eVAX/Source/Console/driver.c's
 // main(), matching its startup sequence (load the DCL grammar, allocate a
-// minimal machine, run testdata/dcl/vax.init as the real startup script,
-// then prompt) — see docs/PHASE-08.md's progress log for the two spots
-// this deliberately departs from driver.c: file-location strategy (a
-// -data flag pointing at the directory holding evax.dcl/vax.help/vax.init,
-// rather than driver.c's hard CWD-relative "evax.dcl" lookup — go:embed
-// isn't usable here since testdata/dcl isn't a subdirectory of this
-// package, and the project's own reference/CLAUDE.md already documents
-// the C binary's own working-directory convention this mirrors) and
-// prompted input (via github.com/chzyer/readline for history/editing,
-// named explicitly in docs/PHASE-08.md's scope note, rather than a bare
-// fgets(stdin)).
+// minimal machine, run vax.init as the real startup script, then prompt)
+// — see docs/PHASE-08.md's progress log for one deliberate departure from
+// driver.c: prompted input (via github.com/chzyer/readline for
+// history/editing, named explicitly in docs/PHASE-08.md's scope note,
+// rather than a bare fgets(stdin)).
+//
+// File location (evax.dcl/vax.help/vax.init/kernel.asm/ssdef.asm, and any
+// other file a console command names) is docs/PHASE-15.md's own departure
+// from driver.c's hard CWD-relative "evax.dcl" lookup: a repeatable -path
+// flag names directories searched, in order, after the name exactly as
+// given; an embedded copy of the required startup files
+// (internal/bootdata) is always the last, implicit search location, so
+// "govax" with no -path flags at all still boots correctly with no
+// testdata/ checkout nearby.
 package main
 
 import (
@@ -23,8 +26,10 @@ import (
 	"path/filepath"
 
 	"github.com/chzyer/readline"
+	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/dcl"
+	"github.com/tucats/govax/internal/respath"
 )
 
 // minimumVAXMemory matches driver.c's own MINIMUM_VAX_MEMORY (2048 pages,
@@ -32,11 +37,29 @@ import (
 // real INIT/VMINIT.
 const minimumVAXMemory = 2048 * 512
 
+// pathFlag implements flag.Value for a repeatable "-path <dir>" flag —
+// each occurrence appends to the list, in the order given, matching a
+// PATH-variable's own left-to-right search order.
+type pathFlag []string
+
+func (p *pathFlag) String() string {
+	if p == nil {
+		return ""
+	}
+	return fmt.Sprint([]string(*p))
+}
+
+func (p *pathFlag) Set(dir string) error {
+	*p = append(*p, dir)
+	return nil
+}
+
 func main() {
-	dataDir := flag.String("data", "testdata/dcl", "directory containing evax.dcl, vax.help, and vax.init")
+	var paths pathFlag
+	flag.Var(&paths, "path", "directory to search for unqualified file names (e.g. vax.init, kernel.asm); may be given more than once, searched in order given, after an embedded fallback copy")
 	flag.Parse()
 
-	if err := run(*dataDir, os.Stdout, nil, flag.Args()); err != nil {
+	if err := run(paths, os.Stdout, nil, flag.Args()); err != nil {
 		fmt.Fprintln(os.Stderr, "govax:", err)
 		os.Exit(1)
 	}
@@ -46,19 +69,27 @@ func main() {
 // readline's input source instead of the real os.Stdin — tests pass a
 // controlled reader so startup can be exercised deterministically without
 // depending on the test process's own stdin.
-func run(dataDir string, out io.Writer, in io.ReadCloser, args []string) error {
-	grammar, err := dcl.LoadGrammarFile(filepath.Join(dataDir, "evax.dcl"))
+func run(paths []string, out io.Writer, in io.ReadCloser, args []string) error {
+	resolver := respath.New(paths, bootdata.FS)
+
+	grammarSrc, err := resolver.ReadFile("evax.dcl")
+	if err != nil {
+		return fmt.Errorf("loading command grammar: %w", err)
+	}
+	grammar, err := dcl.ParseGrammar(string(grammarSrc))
 	if err != nil {
 		return fmt.Errorf("loading command grammar: %w", err)
 	}
 
-	help, err := console.LoadHelpFile(filepath.Join(dataDir, "vax.help"))
-	if err != nil {
+	var help *console.Help
+	if helpSrc, err := resolver.ReadFile("vax.help"); err != nil {
 		fmt.Fprintln(out, "Warning: no help file available:", err)
-		help = nil
+	} else {
+		help = console.ParseHelp(string(helpSrc))
 	}
 
 	c := console.New(out)
+	c.Paths = resolver
 	if in != nil {
 		c.In = in
 	} else {
@@ -75,11 +106,8 @@ func run(dataDir string, out io.Writer, in io.ReadCloser, args []string) error {
 		fmt.Fprintf(out, "govax — a Go port of eVAX (docs/PLAN.md)\n\n")
 	}
 
-	initPath := filepath.Join(dataDir, "vax.init")
-	if _, err := os.Stat(initPath); err == nil {
-		if err := c.Include(initPath, d.Dispatch); err != nil {
-			fmt.Fprintln(out, "vax.init:", err)
-		}
+	if err := c.Include("vax.init", d.Dispatch); err != nil {
+		fmt.Fprintln(out, "vax.init:", err)
 	}
 
 	if !c.Running() {

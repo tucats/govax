@@ -11,7 +11,7 @@ path support, below) and is expected to grow additional sub-phases over time as 
 ease-of-use gaps are found, the same way `docs/DEVIATIONS.md` accumulates findings
 rather than being written once.
 
-**Status: not started.**
+**Status: sub-phase 1 complete.**
 
 ## Sub-phase 1: `-path` search path for unqualified file names
 
@@ -142,4 +142,99 @@ behavior / Key design questions / Deliverables) as sub-phase 1 above.
 
 ## Progress Log
 
-_Not started._
+### 2026-09-15 — Sub-phase 1 complete
+
+- Resolved the two open design questions before implementing (see "Key design
+  questions" above): the user confirmed `-data` is removed outright rather than
+  kept as a synonym or left alongside `-path`; the resolver lives as a small,
+  nil-receiver-safe `*Resolver` type in a new `internal/respath` package (an
+  `fs.FS`-based common interface — `os.Open`/`os.DirFS`-shaped real directories,
+  the embedded `embed.FS` fallback — rather than a `Console` method, so it's usable
+  from `cmd/govax/main.go` before a `Console` exists).
+- `internal/respath.Resolver`: `Open`/`ReadFile` implement the as-given → `Dirs` in
+  order → `Fallback` `fs.FS` search; `NotFoundError` lists every location tried.
+  A nil `*Resolver` (every method's receiver is nil-safe) behaves as a plain,
+  unwrapped `os.ReadFile`/`os.Open` with no search/fallback — this is what keeps
+  the large existing body of `console.New(...)`-based tests working unchanged,
+  since none of them assign a `Console.Paths`. `WithDir` returns a copy that
+  additionally searches one more directory ahead of the configured list, used by
+  the assembler `.INCLUDE` resolver below to keep searching alongside the
+  including file's own directory (kernel.asm's own `ssdef.asm` `.include`) without
+  losing `-path`/embedded fallback for names that aren't there.
+- `internal/bootdata`: a `//go:embed files` of copies of `vax.init`, `vax.help`,
+  `evax.dcl`, `kernel.asm`, `ssdef.asm` (copied from `testdata/dcl`/`testdata/asm`
+  — go:embed can only embed files under its own package directory, confirming the
+  reason `main.go`'s old doc comment gave for not embedding), exposed as
+  `bootdata.FS fs.FS` via `fs.Sub` so names match the bare filenames a resolver
+  looks up (`"vax.init"`, not `"files/vax.init"`).
+- Every call site the "Where does this resolver live?" survey found now goes
+  through `Console.Paths` (a new `*respath.Resolver` field) or, in `main.go`
+  before a `Console` exists, the resolver built there directly: `cmd/govax/main.go`
+  (grammar/help/init — now `resolver.ReadFile` + `dcl.ParseGrammar`/
+  `console.ParseHelp` directly rather than through `LoadGrammarFile`/
+  `LoadHelpFile`, which stay as plain literal-path convenience wrappers unchanged,
+  still used by existing tests), `internal/console/misc.go`'s `Console.Include`,
+  `internal/console/asm.go`'s `Assemble` and its `SetIncludeResolver` closure
+  (via `c.Paths.WithDir(filepath.Dir(path))`), `internal/console/image.go`'s
+  `imageLoad` (the path `findImage` already resolved to an existing file, so this
+  always hits the as-given leg — wrapped for policy consistency, not because it
+  changes behavior), `internal/console/rom.go`'s `LoadROM`/`LoadNVRAM` (`Open`, not
+  `ReadFile`, to keep their existing incremental `io.ReadFull` reads).
+  `internal/console/dcl/define.go`'s `LoadGrammarFile` and
+  `internal/console/help.go`'s `LoadHelpFile` were deliberately left as
+  plain-path-only utilities (no resolver parameter) rather than threading a
+  resolver through every test call site that already passes a concrete
+  `testdata/...` path — `main.go`'s own grammar/help loading calls their
+  underlying `ParseGrammar`/`ParseHelp` directly against resolver-read bytes
+  instead of calling through them, which was enough to keep the "no direct `os`
+  read for a name that came from a console command or startup flag" bar met
+  without changing either function's signature.
+- `cmd/govax/main.go`: `-data` removed; `-path` is a repeatable flag (a small
+  `flag.Value` implementation appending each occurrence, in order given) threaded
+  into `respath.New(paths, bootdata.FS)`, assigned to `Console.Paths` before
+  `Init`/`Include` run. Updated the package doc comment (previously explained why
+  embedding *wasn't* used).
+- Verified end-to-end by hand, not just unit tests: built the `govax` binary and
+  ran it from `/private/tmp` (no repo, no `testdata/`, no `-path`) — `evax.dcl`,
+  `vax.help`, `vax.init`, and (via `vax.init`'s own `asm "kernel.asm"`, which
+  `.include`s `ssdef.asm`) both assembler source files all resolved purely from
+  `internal/bootdata`'s embedded copies, reaching "Building Microkernel..." and an
+  actual (unrelated) assembly-deposit failure — i.e. real file discovery, not just
+  a grammar-load success. The remaining mid-script errors on that run (VM size vs.
+  the minimal machine's default memory, `LOAD/ROM/NOERROR`'s `/NOERROR` qualifier
+  not being stripped before the filename argument, `exe$initialize` undefined) are
+  pre-existing script-execution gaps unrelated to file *discovery* — the same ones
+  `TestRun_startupBootsFromEmbeddedFilesAlone`'s own doc comment already expected
+  and tolerates (matching `TestRun_startupDoesNotFatallyFail`'s original comment,
+  which this test replaces) — not something this sub-phase's scope covers.
+- Tests: `internal/respath/respath_test.go` (as-given precedence over both
+  `-path` dirs and the fallback, dir search order, fallback, not-found-anywhere
+  `NotFoundError.Tried` listing every location, nil-receiver plain-read behavior,
+  `WithDir` precedence). `cmd/govax/main_test.go` replaced its old
+  `-data`-based tests with `TestRun_startupBootsFromEmbeddedFilesAlone` (this
+  sub-phase's own named deliverable: zero `-path` flags still boots),
+  `TestRun_pathOverridesEmbeddedForThatFileOnly` (a `-path` dir holding only a
+  customized `vax.init` is used for `vax.init` while `evax.dcl`/`vax.help` still
+  fall through to the embedded copies — the "partial override" behavior called out
+  in "Proposed behavior" above), and `TestRun_asGivenPathWinsOverPathFlag` (a
+  `vax.init` in the working directory beats a `-path`-supplied one).
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean.
+
+## Follow-up ideas not pursued in this sub-phase
+
+- `internal/console/image.go`'s `findImage` (the `RUN <filename>` `.exe` loader's
+  own `.exe`-suffix/`SharePrefix`/lowercase-fallback search) is a distinct,
+  purpose-built resolution mechanism predating this phase — it wasn't folded into
+  `respath.Resolver`'s own search order, since its semantics (suffix guessing,
+  `SharePrefix`) don't map cleanly onto "as-given / `-path` dirs / embedded" and
+  the C source's own `find_image` doesn't work that way either. Worth a look if a
+  future sub-phase wants `RUN` to honor `-path` too (today it only checks the
+  literal name, `SharePrefix`+name, and lowercase variants of both — not `-path`).
+- The pre-existing `LOAD/ROM/NOERROR` qualifier bug noticed during hand-testing
+  above (`/NOERROR` isn't stripped before the filename argument, so
+  `parseRomOrNvramArg` treats the literal text `"/NOERROR"` as the file name) is
+  unrelated to file *discovery* and wasn't touched here — worth its own fix or a
+  `docs/DEVIATIONS.md` entry (it's console/DCL parsing, not emulated VAX ISA
+  behavior, so this project's bug-fixing policy in `CLAUDE.md` doesn't obviously
+  require the latter, but it's not this sub-phase's own scope either way).

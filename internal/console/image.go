@@ -266,7 +266,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 		return nil, fmt.Errorf("console: image %s not found", fn)
 	}
 
-	data, err := os.ReadFile(path)
+	data, err := c.Paths.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
