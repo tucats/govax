@@ -1,7 +1,9 @@
 package vm
 
 import (
+	"bytes"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/vax"
@@ -86,6 +88,42 @@ func TestTranslateP0RoundTrip(t *testing.T) {
 	wantPhys := uint32(ptBase+2*pageSize) + 0x10
 	if got != wantPhys {
 		t.Errorf("Translate(%#08x) = %#08x, want %#08x", vaddr, got, wantPhys)
+	}
+}
+
+func TestTranslateDebugVMAndTBTrace(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+	var buf bytes.Buffer
+	cpu.SetDebugWriter(&buf)
+	cpu.SetDebug(vax.DebugVM | vax.DebugTB)
+
+	vaddr := uint32(2*pageSize) + 0x10
+	if _, err := mem.Translate(cpu, vaddr, AccessRead); err != nil {
+		t.Fatalf("Translate: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "DEBUG(VM): VA=00000410") {
+		t.Errorf("output = %q, want a DEBUG(VM) line naming VA=00000410", out)
+	}
+	if !strings.Contains(out, "DEBUG(TB): VA=00000410") {
+		t.Errorf("output = %q, want a DEBUG(TB) line naming VA=00000410", out)
+	}
+}
+
+func TestTranslateNoDebugTraceWhenFlagsClear(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+	var buf bytes.Buffer
+	cpu.SetDebugWriter(&buf)
+	cpu.SetDebug(0)
+
+	vaddr := uint32(2*pageSize) + 0x10
+	if _, err := mem.Translate(cpu, vaddr, AccessRead); err != nil {
+		t.Fatalf("Translate: %v", err)
+	}
+
+	if buf.Len() != 0 {
+		t.Errorf("output = %q, want no trace output with VM/TB flags clear", buf.String())
 	}
 }
 

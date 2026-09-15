@@ -149,6 +149,24 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 
 	pte := PTE(raw)
 
+	if cpu.DebugEnabled(vax.DebugVM) || cpu.DebugEnabled(vax.DebugTB) {
+		pa := pte.PFN()<<9 + byteOffset
+		w := cpu.DebugWriter()
+		if cpu.DebugEnabled(vax.DebugVM) {
+			fmt.Fprintf(w, "DEBUG(VM): VA=%08X  R=%02d PTEA=%08X PTE=%08X P=%02X M=%02X PA=%08X\n",
+				addr, region, pteAddr, uint32(pte), pte.Protection(), access, pa)
+		}
+		if cpu.DebugEnabled(vax.DebugTB) {
+			// This port's Translate does an uncached page-table walk with
+			// no separate TB-hit/miss state (see this function's own doc
+			// comment and docs/PHASE-17.md sub-phase 3) -- TB traces the
+			// same translation event VM does rather than a distinct
+			// cache-hit/miss event that doesn't exist here.
+			fmt.Fprintf(w, "DEBUG(TB): VA=%08X  R=%02d PTEA=%08X PTE=%08X P=%02X M=%02X PA=%08X\n",
+				addr, region, pteAddr, uint32(pte), pte.Protection(), access, pa)
+		}
+	}
+
 	if !pte.Protection().allows(cpu.PSL().CurMod(), access) {
 		return 0, protectionViolation(addr)
 	}

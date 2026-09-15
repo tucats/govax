@@ -19,7 +19,7 @@ tracing), `logical_names.c`/`devices.c`/`rms.c`/`service.c`/`p1_vector.c` (RTL
 tracing), and `console_run.c`/`console_dispatch.c`/`console_step.c`/
 `asm_symbols.c` (console-level tracing).
 
-**Status: sub-phases 1-2 complete; sub-phases 3-5 in progress.**
+**Status: sub-phases 1-3 complete; sub-phases 4-5 in progress.**
 
 ## Design decisions
 
@@ -235,6 +235,23 @@ item-code sub-case:
   register-dump/full-disassembly behavior is deferred.
 
 ## Progress Log
+
+### 2026-09-15 — Sub-phase 3 complete: `internal/vm` tracing
+
+`Translate` (`translate.go`) traces `VM`/`TB` right after reading the PTE
+(matching `vm.c`'s own placement — the C trace fires once the PTE is loaded
+regardless of whether the protection/valid checks that follow it then fault,
+so this port's trace point matches that, not "only on a fully successful
+translation"). `TB` prints the identical VA/region/PTE-address/PTE/
+protection/access/physical-address line under its own `DEBUG(TB):` label
+(no separate cache state to report — see the design-decision note above).
+`LookupPTE` (the `SHOW PAGE`-only diagnostic walk, a different C function —
+`tracevm`, not `vm()`) is untouched, since neither of `vm.c`'s two `DBG_VM`
+call sites is inside it.
+
+Tests: `internal/vm/translate_test.go`'s `TestTranslateDebugVMAndTBTrace`/
+`TestTranslateNoDebugTraceWhenFlagsClear`. `go build ./...`, `go vet ./...`,
+`go test ./...` all clean.
 
 ### 2026-09-15 — Sub-phase 2 complete: `internal/cpu` tracing
 
