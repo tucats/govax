@@ -280,6 +280,35 @@ func TestDispatch_helpFixedCommand(t *testing.T) {
 	}
 }
 
+// TestDispatch_if exercises the IF <expr> [THEN] <command> console verb
+// (cmdIf) against the same pattern vax.init uses (IF DEFINED("...") THEN
+// SET ...): the conditioned command runs only when the expression is
+// nonzero, and THEN is optional either way.
+func TestDispatch_if(t *testing.T) {
+	d, c := newTestDispatcher(t)
+
+	if err := d.Dispatch(`IF DEFINED("CONSOLE$ARG_FILE") THEN SET R0=1`); err != nil {
+		t.Fatalf("Dispatch(IF, false): %v", err)
+	}
+	if got := c.CPU.GPR(vax.R0); got != 0 {
+		t.Errorf("R0 = %#x, want 0 (condition should be false)", got)
+	}
+
+	if err := d.Dispatch(`IF 1 THEN SET R0=1`); err != nil {
+		t.Fatalf("Dispatch(IF, true, THEN): %v", err)
+	}
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Errorf("R0 = %#x, want 1", got)
+	}
+
+	if err := d.Dispatch(`IF 1=1 SET R0=2`); err != nil {
+		t.Fatalf("Dispatch(IF, true, no THEN): %v", err)
+	}
+	if got := c.CPU.GPR(vax.R0); got != 2 {
+		t.Errorf("R0 = %#x, want 2", got)
+	}
+}
+
 func TestDispatch_emptyLineIsNoop(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	if err := d.Dispatch("   "); err != nil {

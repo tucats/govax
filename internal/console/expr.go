@@ -207,17 +207,57 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 			i++
 		}
 
-		name := s[:i]
+		name, rest := s[:i], s[i:]
+
+		if strings.EqualFold(name, "DEFINED") {
+			return e.parseDefined(rest)
+		}
 
 		v, ok := e.Symbols.Get(name)
 		if !ok {
 			return 0, "", fmt.Errorf("console: undefined symbol %q", name)
 		}
 
-		return v, s[i:], nil
+		return v, rest, nil
 	}
 
 	return e.parseNumber(s)
+}
+
+// parseDefined parses DEFINED("SYMBOL")'s parenthesized, double-quoted
+// argument and reports 1 if the named console symbol exists, 0 otherwise —
+// matching asm_function()'s DEFINED case (see internal/asm/functions.go's
+// callDefined, the assembler's own equivalent), needed here for the IF
+// console verb (cmdIf in dispatch.go), which vax.init uses: "IF
+// DEFINED(\"CONSOLE$ARG_FILE\") THEN SET NOVERBOSE".
+func (e *Evaluator) parseDefined(s string) (uint32, string, error) {
+	s = strings.TrimLeft(s, " \t")
+	if !strings.HasPrefix(s, "(") {
+		return 0, "", fmt.Errorf("console: DEFINED() requires an argument")
+	}
+
+	s = strings.TrimLeft(s[1:], " \t")
+	if !strings.HasPrefix(s, `"`) {
+		return 0, "", fmt.Errorf("console: DEFINED() requires a quoted symbol name")
+	}
+
+	s = s[1:]
+
+	end := strings.IndexByte(s, '"')
+	if end < 0 {
+		return 0, "", fmt.Errorf("console: unterminated quoted string in DEFINED()")
+	}
+
+	name := s[:end]
+
+	s = strings.TrimLeft(s[end+1:], " \t")
+	if !strings.HasPrefix(s, ")") {
+		return 0, "", fmt.Errorf("console: expected ')'")
+	}
+
+	_, ok := e.Symbols.Get(name)
+
+	return boolToUint32(ok), s[1:], nil
 }
 
 func peekByte(s string, i int) byte {

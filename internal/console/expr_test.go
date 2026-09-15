@@ -104,6 +104,25 @@ func TestEvaluator_divisionByZero(t *testing.T) {
 	}
 }
 
+func TestEvaluator_definedFunction(t *testing.T) {
+	if got := evalTest(t, 16, map[string]uint32{"FOO": 1}, `DEFINED("FOO")`); got != 1 {
+		t.Errorf(`Eval(DEFINED("FOO")) = %d, want 1`, got)
+	}
+	if got := evalTest(t, 16, nil, `DEFINED("NOSUCH")`); got != 0 {
+		t.Errorf(`Eval(DEFINED("NOSUCH")) = %d, want 0`, got)
+	}
+	// Case-insensitive function name, matching asm_function()'s own
+	// upcase-before-compare handling.
+	if got := evalTest(t, 16, map[string]uint32{"FOO": 1}, `defined("FOO")`); got != 1 {
+		t.Errorf(`Eval(defined("FOO")) = %d, want 1`, got)
+	}
+	// DEFINED() composes with the rest of the expression grammar, since
+	// cmdIf (dispatch.go) evaluates it as one ordinary expression.
+	if got := evalTest(t, 16, nil, `DEFINED("NOSUCH")=0`); got != 1 {
+		t.Errorf(`Eval(DEFINED("NOSUCH")=0) = %d, want 1`, got)
+	}
+}
+
 func TestEvaluator_trailingRemainder(t *testing.T) {
 	// A second address (e.g. EXAMINE's optional end-address) is left
 	// unconsumed for the caller to parse separately.

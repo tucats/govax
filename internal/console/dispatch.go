@@ -232,6 +232,7 @@ func init() {
 		"ASM": cmdAssemble, "ASSE": cmdAssemble,
 		"DISA": cmdDisassemble, "DIS": cmdDisassemble,
 		"CALL": cmdCall,
+		"IF":   cmdIf,
 		"BOOT": cmdNotImplemented("BOOT", "device/RTL support"),
 		"ROM":  cmdNotImplemented("ROM", "device support"),
 	}
@@ -455,6 +456,34 @@ func cmdCall(d *Dispatcher, rest string) error {
 	}
 
 	return d.Console.Call(addr, step, args...)
+}
+
+// cmdIf implements the IF <expression> [THEN] <command> console verb
+// (console_if, reference/eVAX/eVAX/Source/Console/console_include.c): if
+// expression evaluates nonzero, the rest of the line is dispatched
+// recursively as one command (so it can itself be another fixed or DCL
+// command) -- vax.init uses "IF DEFINED(\"CONSOLE$ARG_FILE\") THEN SET
+// NOVERBOSE" (see expr.go's DEFINED() support, added alongside this).
+// Otherwise the rest of the line is simply not executed. Matches
+// console_if's own optional "THEN" keyword (present or absent, either is
+// accepted) ahead of the conditioned command.
+func cmdIf(d *Dispatcher, rest string) error {
+	v, rest, err := d.Console.Evaluator().Eval(rest)
+	if err != nil {
+		return err
+	}
+
+	rest = strings.TrimSpace(rest)
+
+	if then, tail := readCommandVerb(rest); strings.EqualFold(then, "THEN") {
+		rest = strings.TrimSpace(tail)
+	}
+
+	if v == 0 {
+		return nil
+	}
+
+	return d.Dispatch(rest)
 }
 
 func cmdTime(d *Dispatcher, rest string) error {

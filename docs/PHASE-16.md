@@ -482,6 +482,32 @@ generally, not only `SHOW`.
   explicitly stubbed (`cmdNotImplemented`) rather than silently missing — flagging
   here only for completeness of this audit's "other missing commands" sweep, not as
   a new finding; no further investigation done on their C-side behavior in this pass.
+- **`IF <expr> [THEN] <command>`** (`console_if`, C:
+  `console_include.c:174`, dispatch table slot 22 in `initialization.c`'s
+  `console_dispatch_table`) — an entire fixed console verb missing from
+  `dispatch.go`'s `fixedCommands`, found outside this audit's original SHOW/CLEAR/SET
+  sweep (user noticed it while reading `vax.init`, which depends on it directly:
+  `IF DEFINED("CONSOLE$ARG_FILE") THEN SET NOVERBOSE`). Before the fix below, that
+  line in `vax.init` errored on every `govax` startup (harmlessly swallowed by
+  `Console.Include`'s continue-on-error loop, but still wrong).
+  **Fixed 2026-09-15**: added `cmdIf` (`dispatch.go`) — evaluates the leading
+  expression, optionally consumes a `THEN` keyword (present or absent, matching
+  `console_if`'s own check), and recursively dispatches the rest of the line only if
+  the expression is nonzero. This needed one supporting piece: the console's own
+  small expression evaluator (`expr.go`, a from-scratch stand-in for the real
+  assembler's `asm_expr`, see that file's doc comment) had no function-call syntax at
+  all, so `DEFINED("SYMBOL")` — the one function `vax.init` actually calls — was
+  added there too (`Evaluator.parseDefined`), checking `Console.Symbols` rather than
+  the assembler's separate symbol table (`internal/asm/functions.go`'s own
+  `DEFINED()`, used by the assembler's unrelated `.IF` pseudo-op — see
+  `docs/PHASE-11.md` — is a different, independent implementation over a different
+  symbol table; the two were never shared in the C source either, since
+  `console_if` and the assembler's `.IF` both call the same underlying `asm_expr`/
+  `asm_function` against one global symbol table, a unification this port's
+  deliberately-separated console/assembler symbol tables don't replicate).
+  **Not fixed, tracked separately**: the conditioned `SET NOVERBOSE` in `vax.init`'s
+  own IF line is still a no-op today — `SET VERBOSE`/`NOVERBOSE` remains
+  unimplemented, see Sub-phase 3's existing entry for it.
 
 ---
 
@@ -535,3 +561,17 @@ generally, not only `SHOW`.
   implies.
 - No code changes in this phase — documentation/inventory only, per explicit user
   instruction.
+
+### 2026-09-15 — `IF` console verb found and fixed
+
+- While reading `vax.init` (unrelated to this audit's original SHOW/CLEAR/SET scope),
+  the user noticed the `IF`/`THEN` console verb (`console_if`) had no Go
+  implementation at all — a gap this document didn't originally catalogue since it's
+  neither SHOW, CLEAR, nor SET. Catalogued above (Sub-phase 4) and fixed in the same
+  pass, since it was small, self-contained, and (unlike this phase's SHOW/CLEAR/SET
+  backlog) actually blocks `govax`'s own startup script from parsing cleanly: `cmdIf`
+  added to `dispatch.go`'s `fixedCommands`, plus `DEFINED("SYMBOL")` function-call
+  support added to the console's own expression evaluator (`expr.go`) to evaluate
+  the one call `vax.init` actually makes. `SET NOVERBOSE` (the conditioned command in
+  `vax.init`'s own IF line) remains unimplemented — left for Sub-phase 3, unchanged
+  by this entry.
