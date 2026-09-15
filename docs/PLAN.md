@@ -66,6 +66,7 @@ questions, and a progress log extended as that phase is worked.
 | 13 | [PHASE-13.md](PHASE-13.md) | VMS image activation (RUN) |
 | 14 | [PHASE-14.md](PHASE-14.md) | Interval timer & device-interrupt delivery |
 | 15 | [PHASE-15.md](PHASE-15.md) | UX / ease-of-use support |
+| 16 | [PHASE-16.md](PHASE-16.md) | Console command fit-and-finish (SHOW/CLEAR/SET gaps) |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -89,3 +90,9 @@ sub-phases as more gaps are found. Its first sub-phase (a `-path` search path fo
 locating unqualified file names like `vax.init`/`vax.help`/`evax.dcl`/`kernel.asm`/
 `ssdef.asm`, falling back to an embedded copy) was requested by the user on
 2026-09-15 — see PHASE-15.md.
+
+Phase 16 is an audit-only inventory (not started; no code changes), created
+2026-09-15 at the user's request: a catalogue of `SHOW`/`CLEAR`/`SET` console
+commands the C reference implements that this port doesn't yet, plus a few
+cross-cutting console mechanisms (watchpoints, instruction/fault-kind breakpoints,
+the DCL `/entry=` redirect) found missing along the way — see PHASE-16.md.
