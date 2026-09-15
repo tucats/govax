@@ -241,14 +241,13 @@ func TestEmulXor(t *testing.T) {
 	}
 }
 
-// TestEmulBisb3DestinationScaleDeviation documents and pins down a known,
-// deferred deviation: instruction_table.h declares BISB3's destination
-// operand as longword-scaled (a transcription error -- every sibling Bxx3
-// form uses a byte destination), replicated as-is in the generated Go
-// table. A register destination therefore gets fully overwritten (the
-// byte result zero-extended to 4 bytes) rather than only its low byte
-// updated. See docs/DEVIATIONS.md.
-func TestEmulBisb3DestinationScaleDeviation(t *testing.T) {
+// TestEmulBisb3DestinationScaleFixed checks the fix for a known
+// instruction_table.h transcription error: BISB3's destination operand was
+// declared longword-scaled (every sibling Bxx3 form uses a byte
+// destination), fully overwriting a register destination instead of only
+// its low byte. Fixed in Phase 12 (internal/cpu/gen/main.go's
+// knownTableFixes) -- see docs/DEVIATIONS.md.
+func TestEmulBisb3DestinationScaleFixed(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 	cpu.SetGPR(vax.R1, 0x0F)
@@ -257,8 +256,8 @@ func TestEmulBisb3DestinationScaleDeviation(t *testing.T) {
 
 	stepInstruction(t, e, 0x89, regMode(vax.R1), regMode(vax.R2), regMode(vax.R3)) // BISB3
 
-	if got := cpu.GPR(vax.R3); got != 0x000000FF {
-		t.Errorf("R3 = %#x, want 0x000000ff (all 4 bytes written, per the table deviation)", got)
+	if got := cpu.GPR(vax.R3); got != 0xAAAAAAFF {
+		t.Errorf("R3 = %#x, want 0xaaaaaaff (only the low byte written)", got)
 	}
 }
 
@@ -286,6 +285,30 @@ func TestEmulAdwcCarryPropagation(t *testing.T) {
 	}
 	if cpu.PSL().V() {
 		t.Error("V = true, want false")
+	}
+}
+
+// TestEmulAdwcOperatesOnLongwords checks the fix for a known
+// instruction_table.h deviation: ADWC's C-header row scaled both operands
+// as word, and emul_integer_math.c special-cased this opcode to word width
+// too, though the manual's own format line (`add.rl, sum.ml`) is longword.
+// Fixed in Phase 12 (internal/cpu/gen/main.go's knownTableFixes) -- see
+// docs/DEVIATIONS.md. A word-sized ADWC would store only the low 16 bits
+// of the sum, leaving its upper 16 bits (0x0001) stale at 0x00010000;
+// longword-sized correctly produces 0x00020000.
+func TestEmulAdwcOperatesOnLongwords(t *testing.T) {
+	cpu, mem := fixture()
+	e := NewEngine(cpu, mem)
+	cpu.SetGPR(vax.R1, 0x0001FFFF)
+	cpu.SetGPR(vax.R2, 0x00000001)
+
+	stepInstruction(t, e, 0xD8, regMode(vax.R1), regMode(vax.R2)) // ADWC, no carry-in
+
+	if got := cpu.GPR(vax.R2); got != 0x00020000 {
+		t.Errorf("R2 = %#x, want 0x00020000 (longword add, not word)", got)
+	}
+	if cpu.PSL().C() {
+		t.Error("C = true, want false (0x0001FFFF+1 doesn't overflow a longword)")
 	}
 }
 

@@ -30,11 +30,11 @@ func TestEmulAdawiNormal(t *testing.T) {
 	}
 }
 
-// TestEmulAdawiOverflowSetsV also documents a second replicated
-// emul_interlock.c deviation: N/Z come from the *untruncated* 32-bit sum,
-// not the word actually stored -- 32767+1 = 32768 is positive as a 32-bit
-// sum (N clear) even though the stored word (-32768 once truncated) is
-// negative. See docs/DEVIATIONS.md and interlock.go's doc comment.
+// TestEmulAdawiOverflowSetsV checks N/Z now come from the truncated word
+// result actually stored, not the untruncated 32-bit sum: 32767+1 = 32768
+// is positive as a 32-bit sum, but the stored word (-32768 once truncated)
+// is negative, so N must be true -- fixed in Phase 12, see
+// docs/DEVIATIONS.md.
 func TestEmulAdawiOverflowSetsV(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
@@ -49,8 +49,8 @@ func TestEmulAdawiOverflowSetsV(t *testing.T) {
 	if !cpu.PSL().V() {
 		t.Error("V = false, want true (32768 overflows a signed word)")
 	}
-	if cpu.PSL().N() {
-		t.Error("N = true, want false (computed from the untruncated 32-bit sum 32768, which is positive)")
+	if !cpu.PSL().N() {
+		t.Error("N = false, want true (computed from the truncated word -32768, which is negative)")
 	}
 
 	got, err := mem.LoadWord(cpu, 0x2000)
@@ -62,11 +62,10 @@ func TestEmulAdawiOverflowSetsV(t *testing.T) {
 	}
 }
 
-// TestEmulAdawiNeverSetsCarry checks the replicated emul_interlock.c
-// deviation: C is always cleared, never the real carry out of the addition
-// the manual describes -- see docs/DEVIATIONS.md and interlock.go's doc
-// comment.
-func TestEmulAdawiNeverSetsCarry(t *testing.T) {
+// TestEmulAdawiSetsRealCarry checks C now reflects a real carry out of bit
+// 15, matching the manual, rather than always reading false -- fixed in
+// Phase 12, see docs/DEVIATIONS.md.
+func TestEmulAdawiSetsRealCarry(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 	putBytes(t, cpu, mem, 0x2000, 0xFF, 0xFF) // sum = -1 as a signed word
@@ -77,8 +76,8 @@ func TestEmulAdawiNeverSetsCarry(t *testing.T) {
 	bytes = append(bytes, absoluteMode(0x2000)...)
 	stepInstruction(t, e, bytes...)
 
-	if cpu.PSL().C() {
-		t.Error("C = true, want false (emul_interlock.c's SETCONDITIONBITS(data,0L) can never set C)")
+	if !cpu.PSL().C() {
+		t.Error("C = false, want true (a real carry out of bit 15: 0xFFFF + 1 = 0x10000)")
 	}
 	if !cpu.PSL().Z() {
 		t.Error("Z = false, want true")

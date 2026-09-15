@@ -327,3 +327,60 @@ No action items came out of this pass beyond the one doc-comment addition (V8) �
 every other finding was already fixed-and-cross-referenced (V1, N2) or structurally
 inapplicable to a Go port with no `LONGWORD`/native-pointer/union conflation to
 reproduce in the first place (N1, R1-R5, V7).
+
+### 2026-09-15 — Sub-phase 5: resolving `docs/DEVIATIONS.md`'s remaining open items
+
+Per this doc's own policy ("Entries get resolved... during Phase 12"), went through
+every entry still marked deferred/not-fixed/not-resolved and made a final call on
+each — fixed six with clear, manual-backed answers and no real judgment call
+involved; confirmed three as genuinely, deliberately kept (re-checked against new
+evidence rather than left stale):
+
+- **CMPC5's fill-padding loops running after an inequality was found**: settled
+  directly against `vax_instr_set.pdf`'s own CMPC entry ("comparison proceeds until
+  inequality is detected **or** all bytes... examined[;] condition codes affected by
+  the **last** byte comparison") — an inequality ends the operation, so the two
+  fill loops must not run afterward. Fixed in `internal/cpu/cmpc.go`'s `emulCmpc5`.
+- **ADAWI's condition codes** (C always false; N/Z from the untruncated 32-bit sum):
+  fixed using the same wide-arithmetic `addResult` helper ADD/ADWC already use.
+- **EDIV's missing quotient-overflow detection**: fixed, checking the true quotient
+  against `longMin`/`longMax` and applying the manual's Note 3 fallback, the same as
+  the already-handled zero-divisor case.
+- **ADWC/SBWC's word-sized operands** (the manual specifies longword) and **BISB3's
+  longword-scaled destination** (every sibling `Bxx3` form is byte-scaled): both
+  fixed via `internal/cpu/gen/main.go`'s `knownTableFixes` mechanism (the same one
+  already used for the D-floating/REMQUE/REMQHI/REMQTI table fixes) and a `go
+  generate` re-run — no handler code changes needed, since both handler families
+  already derive operand width generically from the table.
+- **`vm.TranslationFault` collapsing `EXC_ACCVIO`'s length-vs-protection subcode**:
+  fixed by splitting `vm.AccessViolation` into `AccessViolation`/`ProtectionViolation`
+  `FaultKind`s and threading the right subcode (0x0001/0x0002) through
+  `wrapMemError`.
+- **`set_mode_stack`'s unconditional `MAPEN=1`** and **CASE's internal arithmetic
+  width**: both re-examined (VM-disabled fault handling still isn't exercised
+  anywhere in this port; `vax_instr_set.pdf`'s own CASE Note 2 is confirmed, by
+  direct reading, to be genuinely silent on signed-vs-widened arithmetic, not just
+  unchecked) and left deliberately kept, since nothing new resolves either.
+- **PC-relative Immediate mode not rejected for an `AccessAddress` operand**:
+  deliberately left open rather than fixed, and for a concrete reason found this
+  same phase — its own cited precedent (the Phase 04 Register-mode reject) was
+  itself reverted this phase once `kernel.asm` running for real showed it broke
+  CALLG's legitimate use of Register mode. Adding a *new* blanket decode-time reject
+  for an addressing mode no current fixture exercises either way risks the exact
+  same mistake, so this stays open until a real program actually needs one behavior
+  or the other.
+- **Character-string length operands' signed/unsigned reading**: unchanged — no new
+  fixture in this phase's regression suite exercises a length anywhere near the
+  32KB+ needed to expose the difference, so the existing "low priority" disposition
+  still holds.
+
+Every fix has a dedicated regression test (`TestEmulCmpc5/inequality_found_...`,
+`TestEmulAdawiOverflowSetsV`/`TestEmulAdawiSetsRealCarry`,
+`TestEmulEdivQuotientOverflow`, `TestEmulAdwcOperatesOnLongwords`,
+`TestEmulBisb3DestinationScaleFixed`, `TestTranslateProtectionViolation`/
+`TestWrapMemErrorProtectionViolation`) and an updated `docs/DEVIATIONS.md` entry
+(moved to "Resolved findings" where it wasn't already there, with a `[..., resolved
+Phase 12]` tag).
+
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test ./...` all
+  clean.

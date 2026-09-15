@@ -18,17 +18,19 @@ func init() {
 // (internal/cpu/operand.go) doesn't apply here.
 //
 // emul_interlock.c's condition-code handling doesn't match the manual in two
-// ways, both replicated as-is here -- see docs/DEVIATIONS.md:
+// ways -- see docs/DEVIATIONS.md, fixed in Phase 12 using the same
+// wide-arithmetic addResult helper ADD/ADWC already use, rather than
+// replicating either gap:
 //   - C is supposed to be the carry out of the addition, but the C source's
 //     SETCONDITIONBITS(data, 0L) call -- data compared against the constant
 //     zero, both cast to ULONGWORD -- can only ever be false (an unsigned
-//     value is never less than zero), so C always ends up cleared.
-//   - N/Z are computed from the *untruncated* 32-bit sum (data, a LONGWORD
+//     value is never less than zero), so C always ended up cleared there.
+//   - N/Z were computed from the *untruncated* 32-bit sum (data, a LONGWORD
 //     local holding addend+sum before it's narrowed to a word result), not
 //     from the word actually stored. The two disagree exactly in the
 //     overflow case: e.g. 32767+1 = 32768, positive as a 32-bit sum (N
-//     clear) but -32768 once truncated to the stored word (N would be set
-//     if computed from the truncated result instead).
+//     clear) but -32768 once truncated to the stored word (N set, computed
+//     from the truncated result as the manual specifies).
 func emulAdawi(e *Engine, d *Decoded) error {
 	if d.Operands[1].Kind != OperandMemory {
 		return &Fault{Code: ExcReservedOp}
@@ -46,16 +48,20 @@ func emulAdawi(e *Engine, d *Decoded) error {
 		return err
 	}
 
-	addend := int32(int16(uint16(addendRaw)))
-	sum := int32(int16(uint16(sumRaw)))
-	result := addend + sum
+	// N/Z from the truncated word result actually stored, V from the
+	// manual's own "same-sign operands, opposite-sign result" overflow,
+	// and C from a real carry out of bit 15 -- using the same wide-
+	// arithmetic addResult helper ADD/ADWC use, rather than the
+	// untruncated-32-bit-sum N/Z and always-false C this replaced. See
+	// docs/DEVIATIONS.md's ADAWI finding, fixed in Phase 12.
+	result, v, c := addResult(addendRaw, sumRaw, 2)
 
 	psl := e.cpu.PSL()
-	psl.SetN(result < 0)
-	psl.SetZ(result == 0)
-	psl.SetV(result > 32767 || result < -32768)
-	psl.SetC(false)
+	psl.SetN(signBit(result, 2))
+	psl.SetZ(isZero(result, 2))
+	psl.SetV(v)
+	psl.SetC(c)
 	e.cpu.SetPSL(psl)
 
-	return d.Operands[1].Store(e.cpu, e.mem, uint64(uint16(int16(result))))
+	return d.Operands[1].Store(e.cpu, e.mem, result)
 }

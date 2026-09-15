@@ -120,6 +120,40 @@ func TestEmulCmpc5(t *testing.T) {
 		}
 	})
 
+	t.Run("inequality found with bytes remaining on both sides is not overwritten by fill padding", func(t *testing.T) {
+		// Regression for docs/DEVIATIONS.md's CMPC5 finding, confirmed
+		// against the manual's own CMPC entry ("comparison proceeds until
+		// inequality is detected or all the bytes of the strings have
+		// been examined[;] condition codes are affected by the result of
+		// the last byte comparison") and fixed in Phase 12: once the main
+		// loop finds a mismatch with bytes still remaining on both sides,
+		// the two fill-padding loops must not also run and clobber the
+		// condition codes/R0-R3 with a comparison against the fill byte.
+		cpu, mem := fixture()
+		e := NewEngine(cpu, mem)
+		putBytes(t, cpu, mem, 0x2000, 'A', 'Z')
+		putBytes(t, cpu, mem, 0x3000, 'A', 'B')
+
+		bytes := []byte{0x2D, 2}
+		bytes = append(bytes, absoluteMode(0x2000)...) // src1len=2, src1addr
+		bytes = append(bytes, '.')                     // fill
+		bytes = append(bytes, 2)
+		bytes = append(bytes, absoluteMode(0x3000)...) // src2len=2, src2addr
+		stepInstruction(t, e, bytes...)
+
+		// 'Z' (0x5A) vs 'B' (0x42): positive difference, no borrow.
+		got := cpu.PSL()
+		if got.N() || got.Z() || got.C() {
+			t.Errorf("PSL = %+v, want N=0 Z=0 C=0 ('Z' vs 'B', not 'Z' vs fill)", got)
+		}
+		if cpu.GPR(vax.R0) != 1 || cpu.GPR(vax.R2) != 1 {
+			t.Errorf("R0/R2 = %d/%d, want both 1 (the mismatching byte still counted as remaining)", cpu.GPR(vax.R0), cpu.GPR(vax.R2))
+		}
+		if cpu.GPR(vax.R1) != 0x2001 || cpu.GPR(vax.R3) != 0x3001 {
+			t.Errorf("R1/R3 = %#x/%#x, want 0x2001/0x3001 (pointing at the mismatching bytes)", cpu.GPR(vax.R1), cpu.GPR(vax.R3))
+		}
+	})
+
 	t.Run("both zero length compare equal", func(t *testing.T) {
 		cpu, mem := fixture()
 		e := NewEngine(cpu, mem)

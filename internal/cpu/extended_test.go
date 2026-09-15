@@ -158,3 +158,34 @@ func TestEmulEdivDivideByZero(t *testing.T) {
 		t.Error("V = false, want true (divide by zero)")
 	}
 }
+
+// TestEmulEdivQuotientOverflow checks the manual's second V condition (a
+// genuine quotient overflow, distinct from divide-by-zero): a large
+// quadword dividend divided by a small divisor whose true quotient doesn't
+// fit in 32 bits falls back to the same Note 3 behavior divide-by-zero
+// uses (quotient <- bits 31:0 of the dividend, remainder <- 0, V set) --
+// fixed in Phase 12, see docs/DEVIATIONS.md.
+func TestEmulEdivQuotientOverflow(t *testing.T) {
+	cpu, mem := fixture()
+	e := NewEngine(cpu, mem)
+
+	if err := mem.StoreQuadword(cpu, 0x4000, 0x0000000200000000); err != nil {
+		t.Fatalf("StoreQuadword: %v", err)
+	}
+	cpu.SetGPR(vax.R1, 1) // divisor: true quotient is 0x200000000, doesn't fit in 32 bits
+
+	bytes := []byte{0x7B, regMode(vax.R1)}
+	bytes = append(bytes, absoluteMode(0x4000)...)
+	bytes = append(bytes, regMode(vax.R2), regMode(vax.R3))
+	stepInstruction(t, e, bytes...)
+
+	if got := cpu.GPR(vax.R2); got != 0 {
+		t.Errorf("quotient = %#x, want 0 (bits 31:0 of the dividend)", got)
+	}
+	if got := cpu.GPR(vax.R3); got != 0 {
+		t.Errorf("remainder = %#x, want 0", got)
+	}
+	if !cpu.PSL().V() {
+		t.Error("V = false, want true (quotient overflow)")
+	}
+}

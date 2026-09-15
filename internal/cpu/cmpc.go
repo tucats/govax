@@ -123,6 +123,18 @@ func emulCmpc5(e *Engine, d *Decoded) error {
 	psl.SetZ(isZero(result, 4))
 	psl.SetC(c)
 
+	// inequality tracks whether the main loop below stopped because it
+	// found a mismatching byte pair, as opposed to running one or both
+	// strings to exhaustion -- the manual's own CMPC entry is explicit
+	// that "comparison proceeds until inequality is detected or all the
+	// bytes of the strings have been examined[;] condition codes are
+	// affected by the result of the last byte comparison": once an
+	// inequality is found, the whole operation is over, so the two
+	// fill-padding loops below must not run and re-run SETCONDITIONBITS
+	// against the fill byte, discarding the real mismatch result. See
+	// docs/DEVIATIONS.md's own CMPC5 finding, confirmed against the
+	// manual and fixed here in Phase 12.
+	inequality := false
 	for len1 != 0 && len2 != 0 {
 		b1, err := e.mem.LoadByte(e.cpu, src1)
 		if err != nil {
@@ -137,6 +149,7 @@ func emulCmpc5(e *Engine, d *Decoded) error {
 		psl.SetZ(isZero(result, 1))
 		psl.SetC(c)
 		if b1 != b2 {
+			inequality = true
 			break
 		}
 		len1--
@@ -144,7 +157,7 @@ func emulCmpc5(e *Engine, d *Decoded) error {
 		len2--
 		src2++
 	}
-	for len1 != 0 {
+	for !inequality && len1 != 0 {
 		b, err := e.mem.LoadByte(e.cpu, src1)
 		if err != nil {
 			return err
@@ -159,7 +172,7 @@ func emulCmpc5(e *Engine, d *Decoded) error {
 		len1--
 		src1++
 	}
-	for len2 != 0 {
+	for !inequality && len2 != 0 {
 		b, err := e.mem.LoadByte(e.cpu, src2)
 		if err != nil {
 			return err

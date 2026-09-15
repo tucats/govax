@@ -220,12 +220,16 @@ _None yet._
   handlers on a running VMS-like OS would have VM enabled anyway), but it's also not
   obviously right for early boot / console-level fault handling before VM is set up,
   and the original author didn't resolve it either.
-- **Status**: deferred — replicated as-is in `Engine.setModeStack`
+- **Status**: deliberately kept — replicated as-is in `Engine.setModeStack`
   (`internal/cpu/handlefault.go`), per this project's policy of not second-guessing an
-  ISA judgment call the original author explicitly marked as unresolved. Revisit in
-  Phase 12 or whenever VM-disabled fault handling is actually exercised end-to-end.
+  ISA judgment call the original author explicitly marked as unresolved. Re-checked
+  at Phase 12 (this doc's own named revisit point): VM-disabled fault handling still
+  hasn't been exercised end to end by anything in this port's test suite or the
+  fixture-driven regression pass (VMINIT always leaves `MAPEN=1` set from the moment
+  it runs), so there's still no concrete scenario to weigh this against. Staying
+  deferred; revisit only if one actually comes up.
 
-### [Phase 02, noticed in Phase 03] `vm.TranslationFault` collapses `EXC_ACCVIO`'s two distinct signal subcodes
+### [Phase 02, noticed in Phase 03, resolved Phase 12] `vm.TranslationFault` collapses `EXC_ACCVIO`'s two distinct signal subcodes
 
 - **Where**: `reference/eVAX/eVAX/Source/CPU/vm.c`'s `vm()` (~lines 423-503): a region
   length/base violation signals `set_fault(EXC_ACCVIO, 2, addr, 0x0001)`, a protection
@@ -241,9 +245,16 @@ _None yet._
   `AccessViolation`, matching the more common of the two C call sites (and the same
   subcode `decode_opcode.c`/`decode_operand.c`'s own inlined physical-address-
   resolution faults already use).
-- **Status**: deferred. A real fix means widening `vm.TranslationFault.Kind` with a
-  third case (or a length-vs-protection sub-field) in Phase 02's territory, which is
-  out of scope for a Phase 03 change; revisit alongside Phase 02 or in Phase 12.
+- **Status**: fixed in Go, in Phase 12. `internal/vm/translate.go`'s `FaultKind` now
+  has a distinct `ProtectionViolation` alongside `AccessViolation` (a new
+  `protectionViolation` helper, used only by the one protection-check call site;
+  every length/base-violation call site is unchanged); `wrapMemError`
+  (`internal/cpu/dispatch.go`) reports subcode `0x0002` for `ProtectionViolation` and
+  `0x0001` for `AccessViolation`, recovering the real distinction instead of always
+  reporting the length/base subcode. Verified by `internal/vm/translate_test.go`'s
+  updated `TestTranslateProtectionViolation` (now asserts `ProtectionViolation`, not
+  `AccessViolation`) and `internal/cpu/dispatch_test.go`'s new
+  `TestWrapMemErrorProtectionViolation`.
 
 ### [Phase 04] Register mode used where `OP_AD`/`OP_VA` access is required
 
@@ -362,7 +373,7 @@ _None yet._
   explicitly sets both V and C to 0, matching the C source's (already-correct) TST
   behavior. Verified by `internal/cpu/cmp_test.go`'s `TestEmulBitLeavesCarryUnaffected`.
 
-### [Phase 04, deferred] ADWC/SBWC operate on word operands; the manual specifies longword
+### [Phase 04, resolved Phase 12] ADWC/SBWC operate on word operands; the manual specifies longword
 
 - **Where**: `reference/eVAX/eVAX/Headers/instruction_table.h`'s ADWC/SBWC entries
   (operand scale `{2, 2, ...}`, i.e. word) and `emul_integer_math.c`'s `emul_integer_
@@ -371,12 +382,14 @@ _None yet._
   select.
 - **What**: `vax_instr_set.pdf`'s ADWC format line reads `add.rl, sum.ml` — longword
   operands (`.rl`/`.ml`), not word.
-- **Status**: deferred, replicated as-is (word-sized). The operand size is baked into
-  the *mechanically generated* `instructions_table.go` (see Phase 03's sub-phase 1 —
-  generated from `instruction_table.h`, not hand-maintained), so a real fix means
-  changing generated table data or the generator itself, not a Phase 04 handler change
-  — out of scope for this phase. Revisit in Phase 12 or alongside `instruction_table.h`
-  generation.
+- **Status**: fixed in Go, in Phase 12, per user direction. `internal/cpu/gen/main.go`'s
+  `knownTableFixes` patches both rows to `{4, 4, ...}` (the same mechanism already
+  used for the D-floating/REMQUE/REMQHI/REMQTI table fixes), so `emulAdwc`/`emulSbwc`
+  (`internal/cpu/integermath.go`) — which already derived their operand width
+  generically from the table via `loadPair` — now operate at longword width with no
+  handler code change needed. Verified by `internal/cpu/integermath_test.go`'s new
+  `TestEmulAdwcOperatesOnLongwords` (a value that only produces the correct result at
+  32 bits, not 16).
 
 ### [Phase 04] `emul_increment.c`/`emul_integer_math.c`'s N/Z/V/C formulas are broken for byte and longword sizes, and for BIS/BIC's C
 
@@ -459,7 +472,7 @@ sub-phase 2.
   rather than left as C's undefined behavior; see each sub-phase's progress log entry
   for the specific tests.
 
-### [Phase 04, deferred] BISB3's destination operand is declared longword-sized
+### [Phase 04, resolved Phase 12] BISB3's destination operand is declared longword-sized
 
 - **Where**: `reference/eVAX/eVAX/Headers/instruction_table.h`'s `BISB3` entry
   (~line 1524-1533): operand scales `{1, 1, 4, 0, 0, 0}` — the third (destination)
@@ -472,15 +485,14 @@ sub-phase 2.
   BISB2 or its own siblings. Concretely, `BISB3 mask,src,Rn` with a register
   destination overwrites all 4 bytes of `Rn` (the byte OR result zero-extended)
   instead of only the low byte the way every other `Bxx3`/`Bxx2` form does.
-- **Status**: deferred, replicated as-is, for the same reason as the ADWC/SBWC sizing
-  finding above: the operand size is baked into the *mechanically generated*
-  `instructions_table.go`, so a real fix means changing generated table data or the
-  generator, out of scope for a Phase 04 handler change. `internal/cpu/integermath.go`'s
-  handlers use each operand's own declared size generically (no special-casing), so
-  this deviation surfaces naturally rather than needing separate code to reproduce it.
-  Verified (not just asserted) by `internal/cpu/integermath_test.go`'s
-  `TestEmulBisb3DestinationScaleDeviation`. Revisit in Phase 12 or alongside
-  `instruction_table.h` generation, together with the ADWC/SBWC finding.
+- **Status**: fixed in Go, in Phase 12, per user direction, using the same
+  `knownTableFixes` mechanism as the ADWC/SBWC finding above: the destination
+  operand's scale is patched to `1`, matching every sibling `Bxx3` form.
+  `internal/cpu/integermath.go`'s handlers already used each operand's own declared
+  size generically (no special-casing), so no handler change was needed. Verified by
+  `internal/cpu/integermath_test.go`'s `TestEmulBisb3DestinationScaleFixed` (renamed
+  from `TestEmulBisb3DestinationScaleDeviation`, now asserting only the low byte of a
+  register destination is written).
 
 ### [Phase 04] CVTxy computes N/Z from the source value instead of the truncated destination
 
@@ -721,6 +733,81 @@ sub-phase 2.
   removed entry's address into a register destination (`REMQHI header, R0`, etc.),
   which would fault at decode time before this fix.
 
+### [Phase 06, resolved Phase 12] `emul_cmpc5`'s fill-padding loops still run after the main loop finds an inequality
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_cmpc.c`'s `emul_cmpc5()`: the
+  dual-string compare loop's only exit conditions are "both lengths exhausted" (the
+  `while` condition) or `break` on the first unequal byte pair; either of its two
+  fill-padding loops that follow runs unconditionally on whatever length is left
+  over, regardless of *why* the main loop stopped.
+- **What**: the manual states "comparison proceeds until inequality is detected or
+  all bytes of the strings have been examined, [and] condition codes are affected by
+  the result of the last byte comparison" — read plainly, once an inequality is
+  found, comparison is over. But if the main loop stops due to inequality while
+  *both* strings still have bytes left, the source-string fill loop (and,
+  potentially, the destination-string one) still executes next, re-running
+  `SETCONDITIONBITS` against the *fill* byte and the *same already-mismatched*
+  source byte the main loop just examined — silently discarding the actual mismatch
+  the manual says should be the final answer, in favor of an unrelated
+  byte-vs-fill comparison.
+- **Status**: fixed in Go, in Phase 12. Settled against `vax_instr_set.pdf`'s own
+  CMPC entry directly (not guessed at): "comparison proceeds until inequality is
+  detected **or** all the bytes of the strings have been examined[;] condition codes
+  are affected by the result of the **last** byte comparison" — an inequality ends
+  the whole operation, so the fill-padding loops must not run afterward and
+  overwrite that result. `internal/cpu/cmpc.go`'s `emulCmpc5` now tracks whether the
+  main loop's exit was due to a mismatch (`inequality`) and skips both fill loops
+  when it was. Verified by `internal/cpu/cmpc_test.go`'s new
+  `TestEmulCmpc5/inequality_found_with_bytes_remaining_on_both_sides_is_not_
+  overwritten_by_fill_padding` (checks condition codes and R0-R3 all still reflect
+  the true mismatch, not a comparison against the fill byte).
+
+### [Phase 07, resolved Phase 12] ADAWI's condition codes don't match the manual in two ways
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_interlock.c`'s `emul_interlock()`
+  (the `case 0x58` ADAWI branch), ported to `internal/cpu/interlock.go`'s
+  `emulAdawi`.
+- **What**: two separate gaps against the manual's "N <- sum LSS 0; ... C <- {carry
+  from most-significant bit}":
+  - C is supposed to be the addition's carry out, but the C source's
+    `SETCONDITIONBITS(data, 0L)` call compares `data` against the constant `0`, both
+    cast to `ULONGWORD` — an unsigned value is never less than zero, so this can only
+    ever clear C, never set it.
+  - N/Z are computed from `data`, the _untruncated_ 32-bit sum of the two sign-
+    extended word operands, not from the word actually stored to the sum operand.
+    The two disagree exactly in the overflow case: `32767 + 1 = 32768` is positive
+    as a 32-bit sum (N clear) even though the word actually stored (`32768`
+    truncated to a signed word) is `-32768` (would be N set, if N were computed from
+    the truncated result instead).
+- **Status**: fixed in Go, in Phase 12, using the same wide-arithmetic `addResult`
+  helper ADD/ADWC already use (`internal/cpu/condcodes.go`) instead of either gap:
+  N/Z now come from the truncated word result actually stored, and C from a real
+  carry out of bit 15. Verified by `internal/cpu/interlock_test.go`'s
+  `TestEmulAdawiOverflowSetsV` (updated to expect N set) and
+  `TestEmulAdawiSetsRealCarry` (renamed from `TestEmulAdawiNeverSetsCarry`, now
+  expecting a real carry).
+
+### [Phase 07, resolved Phase 12] EDIV never detects quotient overflow
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_extended.c`'s `emul_ediv()`, ported
+  to `internal/cpu/extended.go`'s `emulEdiv`.
+- **What**: the manual lists two conditions for EDIV's `V` bit: the divisor is zero,
+  or the quotient doesn't fit in 32 bits (both, per Note 2, fall back to "quotient <-
+  bits 31:0 of the dividend, remainder <- 0"). `emul_ediv.c` only ever checks for a
+  zero divisor; a genuine quotient overflow (e.g. a large quadword dividend divided
+  by a small divisor) is computed and silently truncated with no V set and no
+  fallback applied.
+- **Status**: fixed in Go, in Phase 12. `emulEdiv` now checks the computed quotient
+  against `longMin`/`longMax` (the same longword bounds `internal/cpu/fpu.go`'s
+  float-to-integer conversions already use) and applies the manual's Note 3 fallback
+  (quotient <- low 32 bits of the dividend, remainder <- 0, V set) on overflow, the
+  same as the zero-divisor case. Verified by `internal/cpu/extended_test.go`'s new
+  `TestEmulEdivQuotientOverflow`. Still true, and unchanged by this fix: no
+  instruction in this codebase raises the architected arithmetic-trap fault for an
+  integer-overflow V regardless of the `IV` PSL bit (see `emulDiv` in
+  `internal/cpu/integermath.go`) — the whole trap-on-overflow mechanism is
+  unimplemented project-wide, a separate gap from EDIV's own V-bit computation.
+
 ## Open questions carried forward (not yet findings)
 
 ### [Phase 03/04, noticed in Phase 06] PC-relative Immediate mode isn't rejected for an `AccessAddress` operand
@@ -739,12 +826,19 @@ sub-phase 2.
   Noticed while confirming decode already covers `emul_locc.c`'s
   `is_register[2] != OP_MEMORY` check for this phase's LOCC (it does, for every
   addressing mode actually exercised by this phase's tests, but not this one).
-- **Status**: not fixed. Genuinely out of this phase's scope (the fix belongs in
-  Phase 03/04's `operand.go`, decided project-wide rather than patched per
-  instruction), and no current test exercises this specific encoding either in this
-  phase or the ones that already shipped `AccessAddress` operands. Revisit
-  alongside Phase 12 or the next time `operand.go`'s addressing-mode fault coverage
-  is touched.
+- **Status**: not fixed, and — re-examined at Phase 12 (this doc's own named revisit
+  point) — this finding's own cited precedent ("same underlying problem the
+  Register-mode fix already solved") no longer holds: that Register-mode fix was
+  itself reverted this same phase, once running `kernel.asm` for real (for the first
+  time ever, via the new `ASM`/`CALL` console commands) found it broke CALLG's own
+  legitimate use of Register mode for its arglist operand — see this doc's "Register
+  mode used where OP_AD/OP_VA access is required" entry. That's a direct, concrete
+  lesson about adding a *new* blanket decode-time reject for an addressing mode
+  without a real fixture exercising it either way: still no current fixture uses
+  Immediate mode for an `AccessAddress` operand, so there's no way to confirm this
+  fault wouldn't have the same problem. Staying deliberately open rather than fixed
+  unilaterally; revisit only once a real program is found that needs one behavior or
+  the other, or ask.
 
 ### [Phase 06] Character-string length operands: signed `short` or unsigned word?
 
@@ -763,31 +857,6 @@ faithfully rather than guessing. Given how large a string a real MACRO-32 progra
 would need to trigger this (32KB+ in one instruction), low priority to chase further
 unless it turns out to matter for a real test fixture.
 
-### [Phase 06] `emul_cmpc5`'s fill-padding loops still run after the main loop finds an inequality
-
-- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_cmpc.c`'s `emul_cmpc5()`: the
-  dual-string compare loop's only exit conditions are "both lengths exhausted" (the
-  `while` condition) or `break` on the first unequal byte pair; either of its two
-  fill-padding loops that follow runs unconditionally on whatever length is left
-  over, regardless of *why* the main loop stopped.
-- **What**: the manual states "comparison proceeds until inequality is detected or
-  all bytes of the strings have been examined, [and] condition codes are affected by
-  the result of the last byte comparison" — read plainly, once an inequality is
-  found, comparison is over. But if the main loop stops due to inequality while
-  *both* strings still have bytes left, the source-string fill loop (and,
-  potentially, the destination-string one) still executes next, re-running
-  `SETCONDITIONBITS` against the *fill* byte and the *same already-mismatched*
-  source byte the main loop just examined — silently discarding the actual mismatch
-  the manual says should be the final answer, in favor of an unrelated
-  byte-vs-fill comparison.
-- **Status**: not resolved either way, unlike this doc's other Phase 06 CMPC5
-  finding above (that one confirmed by direct comparison against the structurally
-  identical, unaffected `emul_movc5`; this one is intrinsic to CMPC5's own design
-  and has no such sibling to check against). `internal/cpu/cmpc.go`'s `emulCmpc5`
-  replicates the literal three-sequential-loop structure, so this behavior
-  reproduces as-is. Revisit with the hardware/architecture reference in hand, or
-  ask, rather than guessing at intended VAX behavior for this case.
-
 ### [Phase 04] CASE's internal arithmetic width for byte/word selector, base, and limit
 
 `emul_case.c` reads the byte/word `selector`/`base`/`limit` operands through a signed
@@ -803,45 +872,13 @@ produce different results when an operand's own high bit is set (e.g. a `CASEB` 
 `selector` byte of 0x80 or above), which is a fairly unusual case values would take in
 practice. Not resolved either way — replicated as the C source's sign-extend-then-
 32-bit-arithmetic behavior in `internal/cpu/branchacb.go`'s `emulCase` rather than
-guessed at. Revisit with the hardware/architecture reference in hand, or ask, rather
-than deciding unilaterally.
-
-### [Phase 07] ADAWI's condition codes don't match the manual in two ways
-
-- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_interlock.c`'s `emul_interlock()`
-  (the `case 0x58` ADAWI branch), ported to `internal/cpu/interlock.go`'s
-  `emulAdawi`.
-- **What**: two separate gaps against the manual's "N <- sum LSS 0; ... C <- {carry
-  from most-significant bit}":
-  - C is supposed to be the addition's carry out, but the C source's
-    `SETCONDITIONBITS(data, 0L)` call compares `data` against the constant `0`, both
-    cast to `ULONGWORD` — an unsigned value is never less than zero, so this can only
-    ever clear C, never set it.
-  - N/Z are computed from `data`, the _untruncated_ 32-bit sum of the two sign-
-    extended word operands, not from the word actually stored to the sum operand.
-    The two disagree exactly in the overflow case: `32767 + 1 = 32768` is positive
-    as a 32-bit sum (N clear) even though the word actually stored (`32768`
-    truncated to a signed word) is `-32768` (would be N set, if N were computed from
-    the truncated result instead).
-- **Status**: not fixed — replicated as-is in `emulAdawi`. Verified by
-  `internal/cpu/interlock_test.go`'s `TestEmulAdawiNeverSetsCarry`/
-  `TestEmulAdawiOverflowSetsV`.
-
-### [Phase 07] EDIV never detects quotient overflow
-
-- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_extended.c`'s `emul_ediv()`, ported
-  to `internal/cpu/extended.go`'s `emulEdiv`.
-- **What**: the manual lists two conditions for EDIV's `V` bit: the divisor is zero,
-  or the quotient doesn't fit in 32 bits (both, per Note 2, fall back to "quotient <-
-  bits 31:0 of the dividend, remainder <- 0"). `emul_ediv.c` only ever checks for a
-  zero divisor; a genuine quotient overflow (e.g. a large quadword dividend divided
-  by a small divisor) is computed and silently truncated with no V set and no
-  fallback applied.
-- **Status**: not fixed — replicated as-is in `emulEdiv` (only the zero-divisor case
-  sets V). Also worth noting: no instruction in this codebase yet raises the
-  architected arithmetic-trap fault for an integer-overflow V regardless of the
-  `IV` PSL bit (see `emulDiv` in `internal/cpu/integermath.go`), so this isn't a gap
-  unique to EDIV — the whole trap-on-overflow mechanism is unimplemented project-wide.
+guessed at. Re-checked directly against `vax_instr_set.pdf`'s own CASE entry at
+Phase 12 (this doc's own named revisit point, "with the hardware/architecture
+reference in hand"): Note 2 there is exactly the sentence quoted above, and the
+manual has nothing else on the subject — the ambiguity is in the primary source
+itself, not something a closer reading resolves. Staying deliberately kept, as the
+C source's own (equally legitimate, per Note 2) reading of "signed integers,
+widened."
 
 <!--
 Entry template:

@@ -144,7 +144,17 @@ func TestTranslateProtectionViolation(t *testing.T) {
 
 	vaddr := uint32(1 * pageSize)
 	_, err := mem.Translate(cpu, vaddr, AccessRead)
-	assertAccessViolation(t, err, vaddr)
+
+	var tf *TranslationFault
+	if !errors.As(err, &tf) {
+		t.Fatalf("error = %v (%T), want *TranslationFault", err, err)
+	}
+	if tf.Kind != ProtectionViolation {
+		t.Errorf("Kind = %v, want ProtectionViolation (not AccessViolation -- see docs/DEVIATIONS.md's now-resolved length-vs-protection subcode finding)", tf.Kind)
+	}
+	if tf.Addr != vaddr {
+		t.Errorf("Addr = %#08x, want %#08x", tf.Addr, vaddr)
+	}
 }
 
 func TestTranslateInvalidPageIsTNV(t *testing.T) {

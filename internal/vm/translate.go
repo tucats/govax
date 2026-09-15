@@ -23,9 +23,15 @@ type FaultKind int
 
 const (
 	// AccessViolation: the page number is outside the region's base/length
-	// registers, or the page's protection code denies this access at the
-	// current privilege mode.
+	// registers -- vm.c's own EXC_ACCVIO subcode 0x0001.
 	AccessViolation FaultKind = iota
+	// ProtectionViolation: the page is in range, but its protection code
+	// denies this access at the current privilege mode -- vm.c's own
+	// EXC_ACCVIO subcode 0x0002. Split out from AccessViolation in Phase
+	// 12 (previously collapsed into one kind, always reporting the
+	// length/base subcode regardless of which check actually failed) --
+	// see docs/DEVIATIONS.md.
+	ProtectionViolation
 	// TranslationNotValid: the page is in range and the access is
 	// permitted, but the page table entry's valid bit is clear.
 	TranslationNotValid
@@ -45,6 +51,8 @@ func (f *TranslationFault) Error() string {
 	switch f.Kind {
 	case TranslationNotValid:
 		return fmt.Sprintf("vm: translation not valid at %#08x", f.Addr)
+	case ProtectionViolation:
+		return fmt.Sprintf("vm: protection violation at %#08x", f.Addr)
 	default:
 		return fmt.Sprintf("vm: access violation at %#08x", f.Addr)
 	}
@@ -52,6 +60,10 @@ func (f *TranslationFault) Error() string {
 
 func accessViolation(addr uint32) error {
 	return &TranslationFault{Kind: AccessViolation, Addr: addr}
+}
+
+func protectionViolation(addr uint32) error {
+	return &TranslationFault{Kind: ProtectionViolation, Addr: addr}
 }
 
 func translationNotValid(addr uint32) error {
@@ -131,7 +143,7 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 	pte := PTE(raw)
 
 	if !pte.Protection().allows(cpu.PSL().CurMod(), access) {
-		return 0, accessViolation(addr)
+		return 0, protectionViolation(addr)
 	}
 
 	if !pte.Valid() {

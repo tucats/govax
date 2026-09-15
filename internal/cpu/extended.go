@@ -57,14 +57,16 @@ func emulEmul(e *Engine, d *Decoded) error {
 //
 // Per Note 3, a zero divisor doesn't fault -- the quotient becomes bits
 // 31:0 of the dividend, the remainder becomes zero, and V is set. The
-// manual also lists a genuine quotient-overflow case as a second V
-// condition ("integer overflow occurs if the quotient exceeds 32 bits");
-// emul_extended.c never checks for this at all (it computes and truncates
-// the quotient unconditionally), so this port doesn't either -- see
-// docs/DEVIATIONS.md. No other instruction in this codebase raises the
-// architected arithmetic-trap fault for an integer-overflow V yet either
-// (see emulDiv in internal/cpu/integermath.go), so this isn't a gap unique
-// to EDIV.
+// manual's own second V condition, a genuine quotient overflow ("the
+// divisor operand is... small compared to the dividend operand, [and] the
+// quotient... will not fit into 32 bits" -- same fallback as Note 3),
+// wasn't checked at all by emul_extended.c (it computed and truncated the
+// quotient unconditionally); fixed here in Phase 12 using the same
+// longMin/longMax bounds check the float->integer conversions already use
+// -- see docs/DEVIATIONS.md. No other instruction in this codebase raises
+// the architected arithmetic-trap fault for an integer-overflow V yet
+// either (see emulDiv in internal/cpu/integermath.go), so this isn't a gap
+// unique to EDIV.
 func emulEdiv(e *Engine, d *Decoded) error {
 	divrRaw, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
@@ -80,15 +82,22 @@ func emulEdiv(e *Engine, d *Decoded) error {
 
 	var quo, rem int32
 	v := false
-	if divr == 0 {
+	switch {
+	case divr == 0:
 		quo = int32(uint32(dividendRaw))
 		rem = 0
 		v = true
-	} else {
+	default:
 		q := dividend / int64(divr)
 		r := dividend % int64(divr)
-		quo = int32(q)
-		rem = int32(r)
+		if q < longMin || q > longMax {
+			quo = int32(uint32(dividendRaw))
+			rem = 0
+			v = true
+		} else {
+			quo = int32(q)
+			rem = int32(r)
+		}
 	}
 
 	psl := e.cpu.PSL()

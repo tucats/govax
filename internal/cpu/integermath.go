@@ -173,9 +173,11 @@ func emulXor(e *Engine, d *Decoded) error {
 	return storeResult(e, d, result)
 }
 
-// emulAdwc is ADWC: sum <- sum + add + C. Word-sized, matching the C source
-// and the generated instruction table rather than the manual's longword
-// format line -- see docs/DEVIATIONS.md's ADWC/SBWC entry.
+// emulAdwc is ADWC: sum <- sum + add + C. Longword-sized, matching the
+// manual's `add.rl, sum.ml` format line -- the generated instruction
+// table's scale columns were fixed to match (internal/cpu/gen/main.go's
+// knownTableFixes) in Phase 12, since the C reference itself special-cased
+// this opcode to word width; see docs/DEVIATIONS.md's ADWC/SBWC entry.
 func emulAdwc(e *Engine, d *Decoded) error {
 	addend, sum, size, err := loadPair(e, d)
 	if err != nil {
@@ -187,7 +189,7 @@ func emulAdwc(e *Engine, d *Decoded) error {
 	return storeResult(e, d, result)
 }
 
-// emulSbwc is SBWC: dif <- dif - sub - C. Word-sized, see emulAdwc.
+// emulSbwc is SBWC: dif <- dif - sub - C. Longword-sized, see emulAdwc.
 func emulSbwc(e *Engine, d *Decoded) error {
 	subtrahend, minuend, size, err := loadPair(e, d)
 	if err != nil {

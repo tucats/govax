@@ -164,6 +164,34 @@ var knownTableFixes = map[string]field{
 		scale: [6]int{4, 4, 0, 0, 0, 0}, typ: "OP_TYPE_INT", count: 2,
 		access: [6]string{"OP_AD", "OP_WR", "OP_NL", "OP_NL", "OP_NL", "OP_NL"},
 	},
+	// ADWC/SBWC's C header row scales both operands as word (2), and
+	// emul_integer_math.c special-cases these two opcodes to dsize=5
+	// (word) rather than falling through to the longword case its opcode
+	// range would otherwise select -- but vax_instr_set.pdf's format line
+	// is `add.rl, sum.ml` (SBWC: `sub.rl, dif.ml`), longword throughout.
+	// Fixed here in Phase 12, per user direction, rather than left
+	// deferred as a generated-table matter out of a handler phase's own
+	// scope. See docs/DEVIATIONS.md.
+	"ADWC": {
+		scale: [6]int{4, 4, 0, 0, 0, 0}, typ: "OP_TYPE_INT", count: 2,
+		access: [6]string{"OP_RD", "OP_MD", "OP_NL", "OP_NL", "OP_NL", "OP_NL"},
+	},
+	"SBWC": {
+		scale: [6]int{4, 4, 0, 0, 0, 0}, typ: "OP_TYPE_INT", count: 2,
+		access: [6]string{"OP_RD", "OP_MD", "OP_NL", "OP_NL", "OP_NL", "OP_NL"},
+	},
+	// BISB3's C header row declares its destination (third) operand
+	// longword-sized (4) despite every sibling Bxx3 instruction of the
+	// identical shape (ADDB3, SUBB3, MULB3, DIVB3, BICB3, XORB3)
+	// correctly declaring all three operands byte-sized -- a plain
+	// transcription error, not a deliberate design choice (there's no ISA
+	// reading under which BISB3 alone would have a wider destination than
+	// BISB3's own 2-operand form or its Bxx3 siblings). Fixed here in
+	// Phase 12, per user direction. See docs/DEVIATIONS.md.
+	"BISB3": {
+		scale: [6]int{1, 1, 1, 0, 0, 0}, typ: "OP_TYPE_INT", count: 3,
+		access: [6]string{"OP_RD", "OP_RD", "OP_WR", "OP_NL", "OP_NL", "OP_NL"},
+	},
 }
 
 // applyKnownFixes patches fields in place per knownTableFixes, preserving

@@ -70,6 +70,28 @@ func TestWrapMemErrorAccessViolation(t *testing.T) {
 	}
 }
 
+// TestWrapMemErrorProtectionViolation checks the fix for a known
+// deviation: vm.TranslationFault used to collapse EXC_ACCVIO's two
+// distinct signal subcodes (length/base violation vs protection
+// violation) into one, always reporting 0x0001. Fixed in Phase 12 by
+// splitting vm.AccessViolation into vm.AccessViolation/
+// vm.ProtectionViolation -- see docs/DEVIATIONS.md.
+func TestWrapMemErrorProtectionViolation(t *testing.T) {
+	src := &vm.TranslationFault{Kind: vm.ProtectionViolation, Addr: 0x2000}
+	err := wrapMemError(src)
+
+	var f *Fault
+	if !errors.As(err, &f) {
+		t.Fatalf("err = %v, want *Fault", err)
+	}
+	if f.Code != ExcAccessViol {
+		t.Errorf("Code = %#x, want ExcAccessViol", f.Code)
+	}
+	if len(f.Args) != 2 || f.Args[0] != 0x2000 || f.Args[1] != 2 {
+		t.Errorf("Args = %v, want [0x2000, 2]", f.Args)
+	}
+}
+
 func TestWrapMemErrorPhysicalAddress(t *testing.T) {
 	src := &vm.PhysicalAddressError{Addr: 0x3000}
 	err := wrapMemError(src)
