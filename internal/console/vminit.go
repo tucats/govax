@@ -41,6 +41,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	if err := c.requireInit(); err != nil {
 		return err
 	}
+	
 	if err := c.requireKernelMode(); err != nil {
 		return err
 	}
@@ -49,7 +50,9 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 
 	size := [3]uint32{p0Pages, p1Pages, s0Pages}
 	explicitTotal := size[0] + size[1] + size[2]
-	if explicitTotal > physPages {
+
+	// NOPE, these are virtual pages and this will never be an error...
+	if false && (explicitTotal > physPages) {
 		return vmserrors.New(vmserrors.CLI_VMTOOLARGE)
 	}
 
@@ -61,12 +64,10 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		}
 	}
 
-	remaining := physPages - explicitTotal
-
 	var share uint32
 
-	if zcount > 0 {
-		share = remaining / zcount
+	if zcount > 0 && physPages > explicitTotal {
+		share = (physPages - explicitTotal) / zcount
 	}
 
 	for i := range size {
@@ -75,8 +76,16 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		}
 	}
 
-	if leftover := physPages - (size[0] + size[1] + size[2]); leftover > 0 {
-		size[2] += leftover
+	// Any physical pages left over after the explicit/shared sizes above
+	// get folded into S0. size[0..2] are virtual page counts and are
+	// allowed to exceed physPages (sparse address spaces are intentional,
+	// see the disabled check above), so this must only run when there
+	// really is a positive leftover: doing the subtraction unconditionally
+	// in uint32 underflows and wraps size[2] up to billions of pages,
+	// which then runs the S0 page-table-build loop below straight off the
+	// end of physical memory.
+	if total := size[0] + size[1] + size[2]; physPages > total {
+		size[2] += physPages - total
 	}
 
 	page := uint32(0)
@@ -122,6 +131,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// P0 region: grows up from virtual address 0.
 	paddr = roundUpPage(paddr)
 	p0br := paddr
+	
 	c.CPU.SetPR(vax.P0LR, size[0])
 
 	for i := uint32(0); i < size[0]; i++ {
