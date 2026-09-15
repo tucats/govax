@@ -21,8 +21,10 @@ type Help struct {
 func ParseHelp(text string) *Help {
 	h := &Help{sections: map[string]string{}}
 
-	var pendingKeys []string
-	var body strings.Builder
+	var (
+		pendingKeys []string
+		body        strings.Builder
+	)
 
 	flush := func() {
 		if len(pendingKeys) == 0 {
@@ -32,26 +34,33 @@ func ParseHelp(text string) *Help {
 		for _, k := range pendingKeys {
 			h.sections[k] = text
 		}
+
 		pendingKeys = nil
+
 		body.Reset()
 	}
 
 	sc := bufio.NewScanner(strings.NewReader(text))
 	sc.Buffer(make([]byte, 0, 4096), 1<<20)
+
 	for sc.Scan() {
 		line := sc.Text()
 		if strings.HasPrefix(line, "$") {
 			if body.Len() > 0 {
 				flush()
 			}
+
 			pendingKeys = append(pendingKeys, strings.TrimSpace(line[1:]))
+
 			continue
 		}
+
 		if len(pendingKeys) > 0 {
 			body.WriteString(line)
 			body.WriteString("\n")
 		}
 	}
+
 	flush()
 
 	return h
@@ -63,6 +72,7 @@ func LoadHelpFile(path string) (*Help, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return ParseHelp(string(b)), nil
 }
 
@@ -74,7 +84,9 @@ func helpKey(words []string) string {
 	if len(words) == 0 {
 		return "HELP"
 	}
+
 	toks := make([]string, len(words))
+
 	for i, w := range words {
 		w = strings.ToUpper(w)
 		if len(w) >= 4 {
@@ -83,6 +95,7 @@ func helpKey(words []string) string {
 			toks[i] = w + strings.Repeat(" ", 4-len(w))
 		}
 	}
+
 	return strings.Join(toks, ",")
 }
 
@@ -96,13 +109,18 @@ func (c *Console) Help(h *Help, words []string) error {
 		c.Printf("No help file available\n")
 		return nil
 	}
+
 	key := helpKey(words)
-	body, ok := h.sections[key]
+	
 	c.Printf("\n")
+
+	body, ok := h.sections[key]
 	if !ok {
 		c.Printf("No help available for that topic\n")
 		return nil
 	}
+
 	c.Printf("%s", body)
+
 	return nil
 }

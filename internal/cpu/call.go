@@ -45,19 +45,22 @@ func init() {
 // -- per the user's direction (2026-09-14) -- fixed here rather than only
 // logged in docs/DEVIATIONS.md.
 func emulCall(e *Engine, d *Decoded) error {
-	calls := d.Opcode.Function == 0xFB
-
 	var newAP uint32
+
+	calls := d.Opcode.Function == 0xFB
 	if calls {
 		count, err := d.Operands[0].Load(e.cpu, e.mem)
 		if err != nil {
 			return err
 		}
+
 		sp := e.cpu.GPR(vax.SP) - 4
 		e.cpu.SetGPR(vax.SP, sp)
+
 		if err := e.mem.StoreLongword(e.cpu, sp, uint32(count)); err != nil {
 			return err
 		}
+		
 		newAP = sp
 	} else if d.Operands[0].Kind == OperandRegister {
 		newAP = e.cpu.GPR(d.Operands[0].Reg)

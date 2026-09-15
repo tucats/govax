@@ -97,14 +97,17 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 	page := (addr & 0x3FFFFFFF) >> 9
 	byteOffset := addr & (pageSize - 1)
 
-	var pteVirtAddr uint32
-	var pteRecursive bool
+	var (
+		pteVirtAddr  uint32
+		pteRecursive bool
+	)
 
 	switch region {
 	case 0: // P0: process program region
 		if page > cpu.PR(vax.P0LR) {
 			return 0, accessViolation(addr)
 		}
+
 		pteVirtAddr = cpu.PR(vax.P0BR) + page*4
 		pteRecursive = true
 
@@ -113,6 +116,7 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 		if page <= cpu.PR(vax.P1LR) {
 			return 0, accessViolation(addr)
 		}
+
 		pteVirtAddr = cpu.PR(vax.P1BR) + page*4
 		pteRecursive = true
 
@@ -120,6 +124,7 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 		if page > cpu.PR(vax.SLR) {
 			return 0, accessViolation(addr)
 		}
+
 		pteVirtAddr = cpu.PR(vax.SBR) + page*4
 		pteRecursive = false
 
@@ -130,6 +135,7 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 	pteAddr := pteVirtAddr
 	if pteRecursive {
 		var err error
+
 		pteAddr, err = m.Translate(cpu, pteVirtAddr, AccessRead)
 		if err != nil {
 			return 0, err
@@ -140,6 +146,7 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 	if err != nil {
 		return 0, err
 	}
+	
 	pte := PTE(raw)
 
 	if !pte.Protection().allows(cpu.PSL().CurMod(), access) {

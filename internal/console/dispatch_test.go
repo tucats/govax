@@ -142,7 +142,9 @@ func TestDispatch_asmThenCall(t *testing.T) {
 	if err := d.Dispatch("CALL TEST"); err != nil {
 		t.Fatalf("Dispatch(CALL): %v", err)
 	}
+
 	const want = 0xC8600 ^ 0x10
+
 	if got := c.CPU.GPR(vax.R4); got != want {
 		t.Errorf("R4 = %#x, want %#x", got, want)
 	}

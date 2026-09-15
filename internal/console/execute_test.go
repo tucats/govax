@@ -14,6 +14,7 @@ const (
 
 func loadProgram(t *testing.T, c *Console, addr uint32, bytes ...byte) {
 	t.Helper()
+	
 	for i, b := range bytes {
 		if err := c.Deposit("", addr+uint32(i), SizeByte, uint32(b)); err != nil {
 			t.Fatalf("Deposit: %v", err)

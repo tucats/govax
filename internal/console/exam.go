@@ -58,7 +58,9 @@ func (c *Console) Examine(reg string, addr uint32, count uint32, sz ExamSize) er
 		if !ok {
 			return fmt.Errorf("console: unknown register %q", reg)
 		}
+
 		c.Printf("%-4s: %s\n", strings.ToUpper(reg), c.formatOne(0, sz, c.CPU.GPR(r)))
+
 		return nil
 	}
 
@@ -69,14 +71,17 @@ func (c *Console) Examine(reg string, addr uint32, count uint32, sz ExamSize) er
 	step := sizeBytes(sz)
 	for n := uint32(0); n < count; n++ {
 		a := addr + n*step
+
 		v, err := c.loadSized(a, sz)
 		if err != nil {
 			return err
 		}
+
 		c.Printf("%08X: %s\n", a, c.formatOne(a, sz, v))
 	}
 
 	c.DepositAddr = addr + count*step
+
 	return nil
 }
 
@@ -84,10 +89,14 @@ func (c *Console) loadSized(addr uint32, sz ExamSize) (uint32, error) {
 	switch sz {
 	case SizeWord:
 		v, err := c.Mem.LoadWord(c.CPU, addr)
+
 		return uint32(v), err
+
 	case SizeByte, SizeASCII:
 		v, err := c.Mem.LoadByte(c.CPU, addr)
+
 		return uint32(v), err
+
 	default: // SizeLongword, SizePTE
 		return c.Mem.LoadLongword(c.CPU, addr)
 	}
@@ -97,26 +106,34 @@ func (c *Console) formatOne(addr uint32, sz ExamSize, v uint32) string {
 	switch sz {
 	case SizeByte:
 		return fmt.Sprintf("%02X", v&0xFF)
+
 	case SizeWord:
 		return fmt.Sprintf("%04X", v&0xFFFF)
+
 	case SizeASCII:
 		ch := byte(v & 0xFF)
 		if ch < ' ' || ch > 127 {
 			ch = '.'
 		}
+		
 		return string(ch)
+
 	case SizePTE:
-		pte := vm.PTE(v)
 		valid := 0
+
+		pte := vm.PTE(v)
 		if pte.Valid() {
 			valid = 1
 		}
+
 		modified := 0
 		if pte.Modified() {
 			modified = 1
 		}
+
 		return fmt.Sprintf("%08X   V:%d  PROT:%02d  M:%d  OWN:%d  PFN:%08X",
 			uint32(pte), valid, pte.Protection(), modified, pte.Owner(), pte.PFN()<<9)
+
 	default:
 		return fmt.Sprintf("%08X", v)
 	}
@@ -140,7 +157,9 @@ func (c *Console) Deposit(reg string, addr uint32, sz ExamSize, value uint32) er
 		if !ok {
 			return fmt.Errorf("console: unknown register %q", reg)
 		}
+
 		c.CPU.SetGPR(r, value)
+
 		return nil
 	}
 
@@ -149,10 +168,12 @@ func (c *Console) Deposit(reg string, addr uint32, sz ExamSize, value uint32) er
 		if err := c.Mem.StoreWord(c.CPU, addr, uint16(value)); err != nil {
 			return err
 		}
+
 	case SizeByte, SizeASCII:
 		if err := c.Mem.StoreByte(c.CPU, addr, byte(value)); err != nil {
 			return err
 		}
+
 	default:
 		if err := c.Mem.StoreLongword(c.CPU, addr, value); err != nil {
 			return err
@@ -160,5 +181,6 @@ func (c *Console) Deposit(reg string, addr uint32, sz ExamSize, value uint32) er
 	}
 
 	c.DepositAddr = addr + sizeBytes(sz)
+
 	return nil
 }

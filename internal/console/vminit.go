@@ -55,21 +55,27 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	}
 
 	zcount := uint32(0)
+
 	for _, s := range size {
 		if s == 0 {
 			zcount++
 		}
 	}
+
 	remaining := physPages - explicitTotal
+
 	var share uint32
+	
 	if zcount > 0 {
 		share = remaining / zcount
 	}
+	
 	for i := range size {
 		if size[i] == 0 {
 			size[i] = share
 		}
 	}
+	
 	if leftover := physPages - (size[0] + size[1] + size[2]); leftover > 0 {
 		size[2] += leftover
 	}
@@ -78,6 +84,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	for _, s := range size {
 		page += (s*4)/512 + 1
 	}
+	
 	if page+32 > size[2] {
 		return fmt.Errorf("console: S0 region too small to hold its own page tables")
 	}
@@ -87,6 +94,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	c.Mem = vm.NewMemory(c.Mem.Size())
 	c.Engine = cpu.NewEngine(c.CPU, c.Mem)
 	c.RTL = rtl.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.In, c.Out)
+	
 	c.Engine.SetSystemServices(c)
 	c.CPU.SetPR(vax.MAPEN, 0)
 
@@ -96,15 +104,19 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// S0 system region: identity-style page table starting at physical 0.
 	c.CPU.SetPR(vax.SBR, 0)
 	c.CPU.SetPR(vax.SLR, size[2])
+	
 	for i := uint32(0); i < size[2]; i++ {
 		var pte vm.PTE
+	
 		pte.SetValid(true)
 		pte.SetProtection(vm.ProtURKW)
 		pte.SetPFN(page)
 		page++
+	
 		if err := c.Mem.StoreLongword(c.CPU, paddr, uint32(pte)); err != nil {
 			return err
 		}
+	
 		paddr += 4
 	}
 
@@ -112,20 +124,26 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	paddr = roundUpPage(paddr)
 	p0br := paddr
 	c.CPU.SetPR(vax.P0LR, size[0])
+	
 	for i := uint32(0); i < size[0]; i++ {
 		var pte vm.PTE
+	
 		pte.SetValid(true)
 		pte.SetProtection(vm.ProtUW)
 		pte.SetPFN(page)
 		page++
+	
 		if i == 0 {
 			pte.SetProtection(vm.ProtNA) // guard the bottom-most page
 		}
+	
 		if err := c.Mem.StoreLongword(c.CPU, paddr, uint32(pte)); err != nil {
 			return err
 		}
+	
 		paddr += 4
 	}
+	
 	c.CPU.SetPR(vax.P0BR, p0br+0x80000000)
 
 	// P1 region: grows down towards virtual address maxP1.
@@ -133,15 +151,19 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	p1lr := uint32(p1TotalSlots) - size[1]
 	c.CPU.SetPR(vax.P1LR, p1lr)
 	c.CPU.SetPR(vax.P1BR, (paddr+0x80000000)-p1lr*4)
+	
 	for i := uint32(0); i < size[1]; i++ {
 		var pte vm.PTE
+	
 		pte.SetValid(true)
 		pte.SetProtection(vm.ProtUW)
 		pte.SetPFN(page)
 		page++
+	
 		if err := c.Mem.StoreLongword(c.CPU, paddr, uint32(pte)); err != nil {
 			return err
 		}
+	
 		paddr += 4
 	}
 

@@ -99,7 +99,9 @@ func TestEmulCaseInRangeBranches(t *testing.T) {
 
 	instrEnd := base + 4 // opcode + 3 register-mode bytes
 	tableBase := uint32(instrEnd)
+
 	putBytes(t, cpu, mem, base, 0x8F, regMode(vax.R1), regMode(vax.R2), regMode(vax.R3)) // CASEB
+
 	// Table entries for idx 0..3; idx 2 (selected) branches +100.
 	for i, disp := range []int16{10, 20, 100, 30} {
 		putBytes(t, cpu, mem, tableBase+uint32(i*2), byte(disp), byte(disp>>8))
@@ -108,13 +110,16 @@ func TestEmulCaseInRangeBranches(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	if got := cpu.GPR(vax.PC); got != tableBase+100 {
 		t.Errorf("PC = %#x, want %#x", got, tableBase+100)
 	}
+
 	psl := cpu.PSL()
 	if !psl.N() || psl.Z() || psl.V() {
 		t.Errorf("N=%v Z=%v V=%v, want N=true Z=false V=false (idx=2 < limit=3)", psl.N(), psl.Z(), psl.V())
 	}
+
 	if !psl.C() {
 		t.Error("C = false, want true (idx < limit)")
 	}
@@ -123,6 +128,7 @@ func TestEmulCaseInRangeBranches(t *testing.T) {
 func TestEmulCaseAtLimit(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
+
 	cpu.SetGPR(vax.R1, 6) // selector
 	cpu.SetGPR(vax.R2, 3) // base -> idx = 3 == limit
 	cpu.SetGPR(vax.R3, 3) // limit
@@ -130,7 +136,9 @@ func TestEmulCaseAtLimit(t *testing.T) {
 
 	instrEnd := base + 4
 	tableBase := uint32(instrEnd)
+
 	putBytes(t, cpu, mem, base, 0x8F, regMode(vax.R1), regMode(vax.R2), regMode(vax.R3))
+
 	for i, disp := range []int16{10, 20, 30, 40} {
 		putBytes(t, cpu, mem, tableBase+uint32(i*2), byte(disp), byte(disp>>8))
 	}
@@ -138,13 +146,16 @@ func TestEmulCaseAtLimit(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	if got := cpu.GPR(vax.PC); got != tableBase+40 {
 		t.Errorf("PC = %#x, want %#x", got, tableBase+40)
 	}
+
 	psl := cpu.PSL()
 	if !psl.Z() {
 		t.Error("Z = false, want true (idx == limit)")
 	}
+
 	if psl.C() {
 		t.Error("C = true, want false (idx not < limit)")
 	}
@@ -153,13 +164,16 @@ func TestEmulCaseAtLimit(t *testing.T) {
 func TestEmulCaseOutOfRangeSkipsTable(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
+
 	cpu.SetGPR(vax.R1, 10) // selector
 	cpu.SetGPR(vax.R2, 3)  // base -> idx = 7, > limit
 	cpu.SetGPR(vax.R3, 3)  // limit (4 entries)
 	cpu.SetGPR(vax.PC, base)
 
 	tableBase := uint32(base + 4)
+
 	putBytes(t, cpu, mem, base, 0x8F, regMode(vax.R1), regMode(vax.R2), regMode(vax.R3))
+
 	for i, disp := range []int16{10, 20, 30, 40} {
 		putBytes(t, cpu, mem, tableBase+uint32(i*2), byte(disp), byte(disp>>8))
 	}
@@ -172,6 +186,7 @@ func TestEmulCaseOutOfRangeSkipsTable(t *testing.T) {
 	if got := cpu.GPR(vax.PC); got != want {
 		t.Errorf("PC = %#x, want %#x (past the displacement table)", got, want)
 	}
+
 	psl := cpu.PSL()
 	if psl.Z() || psl.C() {
 		t.Errorf("Z=%v C=%v, want both false", psl.Z(), psl.C())

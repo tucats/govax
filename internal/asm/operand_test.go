@@ -33,6 +33,7 @@ func requireBytes(t *testing.T, got []byte, want ...byte) {
 	if len(got) != len(want) {
 		t.Fatalf("got %d bytes % X, want %d bytes % X", len(got), got, len(want), want)
 	}
+	
 	for i := range want {
 		if got[i] != want[i] {
 			t.Fatalf("byte %d = %#02X, want %#02X (got % X, want % X)", i, got[i], want[i], got, want)

@@ -250,6 +250,7 @@ func (a *Assembler) setSymbol(name string, value uint32, flags SymFlag, unique b
 // than from the fixup's own location).
 func (a *Assembler) applyFixup(fp forwardRef, value, ivalue uint32) error {
 	disp := int64(value) - int64(fp.location)
+
 	switch fp.kind {
 	case fixBranchB, fixBranchW, fixBranchL:
 		disp -= fixupSize(fp.kind)
@@ -261,20 +262,26 @@ func (a *Assembler) applyFixup(fp forwardRef, value, ivalue uint32) error {
 		if d < math.MinInt16 || d > math.MaxInt16 {
 			return fmt.Errorf("forward reference displacement %d out of word range", d)
 		}
+
 		return a.image.storeWord(fp.location, uint16(int16(d)))
 
 	case fixAddrB:
 		disp = int64(int8(value))
+
 		fallthrough
+
 	case fixDispB, fixBranchB:
 		if disp < -128 || disp > 127 {
 			return fmt.Errorf("forward reference displacement %d out of byte range", disp)
 		}
+
 		return a.image.storeByte(fp.location, byte(int8(disp)))
 
 	case fixAddrW:
 		disp = int64(int32(value))
+
 		fallthrough
+
 	case fixDispW, fixBranchW:
 		if disp < -32768 || disp > 32767 {
 			return fmt.Errorf("forward reference displacement %d out of word range", disp)
@@ -283,7 +290,9 @@ func (a *Assembler) applyFixup(fp forwardRef, value, ivalue uint32) error {
 
 	case fixAddrL:
 		disp = int64(int32(value))
+
 		fallthrough
+
 	case fixDispL, fixBranchL:
 		return a.image.storeLongword(fp.location, uint32(int32(disp)))
 	}
@@ -299,6 +308,7 @@ func (a *Assembler) hasUnresolvedSymbols() bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -310,11 +320,14 @@ func (a *Assembler) hasUnresolvedSymbols() bool {
 // Console.Symbols once its bytes have been deposited into live memory.
 func (a *Assembler) Symbols() map[string]uint32 {
 	out := make(map[string]uint32)
+	
 	for name, s := range a.symbols.byName {
 		if s.flags&SymBuiltin != 0 || len(s.forward) != 0 {
 			continue
 		}
+
 		out[name] = s.value
 	}
+
 	return out
 }

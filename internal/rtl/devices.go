@@ -116,6 +116,7 @@ func serviceSysGetdviw(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	chanNum := argv[1]
+	
 	var dp *iodev.Device
 
 	switch {

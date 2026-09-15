@@ -12,22 +12,28 @@ import (
 // to atof().
 func (a *Assembler) parseFloat(c *cursor) (float64, error) {
 	start := c.pos
+
 	for {
 		ch := c.peek()
 		if isDigit(ch) || ch == '.' || ch == '-' || ch == '+' || ch == 'E' {
 			c.next()
+
 			continue
 		}
+
 		break
 	}
+
 	s := c.s[start:c.pos]
 	if s == "" {
 		return 0, fmt.Errorf("invalid floating point value")
 	}
+
 	v, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return 0, fmt.Errorf("invalid floating point value %q", s)
 	}
+
 	return v, nil
 }
 
@@ -96,28 +102,42 @@ func (a *Assembler) exprTop(c *cursor, st *exprState) (uint32, error) {
 		c.skipBlanks()
 
 		op := 0
+
 		switch {
 		case c.peek() == '=':
 			op = 1
+
 			c.next()
+
 		case c.peek() == '<' && c.peekAt(1) == '>':
 			op = 2
+
 			c.skip(2)
+
 		case c.peek() == '<' && c.peekAt(1) == '=':
 			op = 3
+
 			c.skip(2)
+
 		case c.peek() == '<':
 			op = 4
+
 			c.next()
+
 		case c.peek() == '>' && c.peekAt(1) == '=':
 			op = 5
+
 			c.skip(2)
+
 		case c.peek() == '>':
 			op = 6
+
 			c.next()
 		}
+
 		if op == 0 {
 			c.pos = save
+
 			break
 		}
 
@@ -125,19 +145,25 @@ func (a *Assembler) exprTop(c *cursor, st *exprState) (uint32, error) {
 		if err != nil {
 			return 0, err
 		}
+
 		st.usedOperator = true
 
 		switch op {
 		case 1:
 			v1 = boolToU32(v1 == v2)
+
 		case 2:
 			v1 = boolToU32(v1 != v2)
+
 		case 3:
 			v1 = boolToU32(int32(v1) <= int32(v2))
+
 		case 4:
 			v1 = boolToU32(int32(v1) < int32(v2))
+
 		case 5:
 			v1 = boolToU32(int32(v1) >= int32(v2))
+
 		case 6:
 			v1 = boolToU32(int32(v1) > int32(v2))
 		}
@@ -159,6 +185,7 @@ func (a *Assembler) exprMath(c *cursor, st *exprState) (uint32, error) {
 		ch := c.peek()
 		if ch != '+' && ch != '-' {
 			c.pos = save
+
 			break
 		}
 		c.next()
@@ -191,6 +218,7 @@ func (a *Assembler) exprTerm(c *cursor, st *exprState) (uint32, error) {
 		ch := c.peek()
 		if ch != '*' && ch != '/' {
 			c.pos = save
+
 			break
 		}
 		c.next()
@@ -229,33 +257,41 @@ func (a *Assembler) exprAtom(c *cursor, st *exprState) (uint32, error) {
 	case '-':
 		c.next()
 		v, err := a.exprAtom(c, st)
+
 		return uint32(-int32(v)), err
 	case '+':
 		c.next()
+
 		return a.exprAtom(c, st)
 	case '.':
 		if !isSymbolChar(c.peekAt(1)) {
 			c.next()
+
 			return a.deposit, nil
 		}
 	case '(':
 		c.next()
+
 		v, err := a.exprTop(c, st)
 		if err != nil {
 			return 0, err
 		}
+
 		c.skipBlanks()
 		if c.peek() == ')' {
 			c.next()
 		}
+
 		return v, nil
 	}
 
 	if isUpperAlpha(c.peek()) || c.peek() == '_' || c.peek() == '$' {
 		name := scanName(c)
+
 		if v, matched, err := a.callFunction(name, c); matched {
 			return v, err
 		}
+
 		return a.lookupSymbolValue(name, st)
 	}
 
@@ -267,9 +303,11 @@ func (a *Assembler) exprAtom(c *cursor, st *exprState) (uint32, error) {
 // by the time any parser sees it (see Assembler.preprocessLine).
 func scanName(c *cursor) string {
 	start := c.pos
+
 	for isSymbolChar(c.peek()) {
 		c.pos++
 	}
+
 	return c.s[start:c.pos]
 }
 
@@ -278,6 +316,7 @@ func (a *Assembler) lookupSymbolValue(name string, st *exprState) (uint32, error
 	if wasForward {
 		st.wasForward = true
 	}
+
 	return v, err
 }
 
@@ -295,16 +334,22 @@ func (a *Assembler) numericLiteral(c *cursor, st *exprState) (uint32, error) {
 
 	if c.peek() == '^' && c.peekAt(1) == 'D' {
 		c.skip(2)
+
 		return a.decimalLiteral(c, st)
 	}
+
 	if c.peek() == '^' && c.peekAt(1) == 'M' {
 		c.skip(2)
+
 		return a.maskLiteral(c)
 	}
+
 	if (c.peek() == '^' && c.peekAt(1) == 'X') || (c.peek() == '0' && c.peekAt(1) == 'X') {
 		c.skip(2)
+
 		return a.hexDigits(c)
 	}
+
 	if c.peek() == '^' && c.peekAt(1) == 'F' {
 		return 0, fmt.Errorf("floating point value not valid here")
 	}
@@ -315,6 +360,7 @@ func (a *Assembler) numericLiteral(c *cursor, st *exprState) (uint32, error) {
 
 	if isUpperAlpha(c.peek()) || c.peek() == '_' || c.peek() == '$' {
 		name := scanName(c)
+
 		return a.lookupSymbolValue(name, st)
 	}
 	if c.peek() == '\'' {
@@ -331,6 +377,7 @@ func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (uint32, error) {
 
 	if (c.peek() == '^' && c.peekAt(1) == 'X') || (c.peek() == '0' && c.peekAt(1) == 'X') {
 		c.skip(2)
+
 		return a.hexDigits(c)
 	}
 	if c.peek() == '^' && c.peekAt(1) == 'D' {
@@ -341,6 +388,7 @@ func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (uint32, error) {
 	}
 	if isUpperAlpha(c.peek()) || c.peek() == '_' || c.peek() == '$' {
 		name := scanName(c)
+
 		return a.lookupSymbolValue(name, st)
 	}
 	if c.peek() == '\'' {
@@ -354,14 +402,18 @@ func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (uint32, error) {
 
 	for {
 		ch := c.peek()
+
 		switch {
 		case ch == '+' && !haveSign:
 			haveSign = true
 			c.next()
+
 		case ch == '-' && !haveSign:
 			haveSign = true
 			sign = -1
+
 			c.next()
+
 		case isDigit(ch):
 			// Matches asm_dec()'s own double-duty use of its sign flag:
 			// reading a digit also closes off the leading-sign position,
@@ -370,11 +422,14 @@ func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (uint32, error) {
 			haveSign = true
 			value = value*10 + int32(ch-'0')
 			digits++
+			
 			c.next()
+
 		default:
 			if digits == 0 {
 				return 0, fmt.Errorf("invalid decimal constant")
 			}
+
 			return uint32(value * sign), nil
 		}
 	}
@@ -386,19 +441,25 @@ func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (uint32, error) {
 func (a *Assembler) hexDigits(c *cursor) (uint32, error) {
 	value := uint32(0)
 	digits := 0
+
 	for {
 		ch := c.peek()
+
 		switch {
 		case ch >= '0' && ch <= '9':
 			value = value<<4 + uint32(ch-'0')
+
 		case ch >= 'A' && ch <= 'F':
 			value = value<<4 + uint32(ch-'A') + 10
+
 		default:
 			if digits == 0 {
 				return 0, fmt.Errorf("invalid hexadecimal constant")
 			}
+
 			return value, nil
 		}
+
 		digits++
 		c.next()
 	}

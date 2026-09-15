@@ -22,11 +22,15 @@ func (c *Console) ShowDevices(name string, full bool) error {
 		if name != "" && d.Name != name {
 			continue
 		}
+
 		c.Printf("Device %s\n", d.Name)
+		
 		if !full {
 			continue
 		}
+		
 		c.Printf("    DEVCLASS=%d (%s)   DEVTYPE=%d\n", d.DevClass, iodev.DeviceClassName(d.DevClass), d.DevType)
+		
 		if d.DevClass == iodev.DeviceClassDisk {
 			c.Printf("    ACPPID=%08X\n", d.ACPPID)
 			c.Printf("    CLUSTER=%d\n", d.Cluster)
@@ -41,6 +45,7 @@ func (c *Console) ShowDevices(name string, full bool) error {
 			c.Printf("    MEDIATYPE=%s\n", d.MediaType)
 			c.Printf("    ROOTDEVNAME=%s\n", d.RootDevName)
 		}
+
 		c.Printf("    DEVBUFSIZE=%d\n", d.DevBufSize)
 		c.Printf("    RECSIZE=%d\n", d.RecSize)
 		c.Printf("    DEVCHAR=%08X    DEVCHAR2=%08X\n", d.DevChar, d.DevChar2)
@@ -49,6 +54,7 @@ func (c *Console) ShowDevices(name string, full bool) error {
 		c.Printf("    LOCKID=%08X\n", d.LockID)
 		c.Printf("    REFCNT=%d\n", d.RefCnt)
 	}
+
 	return nil
 }
 
@@ -57,6 +63,7 @@ func (c *Console) ShowDevices(name string, full bool) error {
 // require INIT, matching define_logical.c.
 func (c *Console) DefineLogical(table, name, value string) error {
 	c.Logicals.Set(table, name, value, 0)
+
 	return nil
 }
 
@@ -73,8 +80,10 @@ func (c *Console) ShowLogicals(table, name string) error {
 	for _, e := range entries {
 		c.Printf("%s [%s] = %q\n", e.Name.Name, e.Table, e.Name.Value)
 	}
+
 	if len(entries) == 0 {
 		c.Printf("No matching logical names.\n")
 	}
+	
 	return nil
 }

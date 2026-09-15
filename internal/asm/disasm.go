@@ -23,6 +23,7 @@ func (s SliceReader) ByteAt(addr uint32) byte {
 	if addr >= uint32(len(s)) {
 		return 0
 	}
+
 	return s[addr]
 }
 
@@ -47,14 +48,17 @@ type Decoded struct {
 // compare bytes.
 func (dec Decoded) String() string {
 	s := dec.Mnemonic
+
 	for i, op := range dec.Operands {
 		if i == 0 {
 			s += " "
 		} else {
 			s += ","
 		}
+
 		s += op
 	}
+
 	return s
 }
 
@@ -92,13 +96,16 @@ func Disassemble(r ByteReader, pc uint32) (Decoded, error) {
 	}
 
 	dec := Decoded{Mnemonic: inst.Name}
+
 	for i := 0; i < inst.OperandCount; i++ {
 		text, err := formatOperand(r, &pc, inst.Access[i], inst.Scale[i], inst.Type, false)
 		if err != nil {
 			return Decoded{}, err
 		}
+	
 		dec.Operands = append(dec.Operands, text)
 	}
+	
 	dec.Length = pc - start
 
 	return dec, nil
@@ -109,8 +116,10 @@ func loadSized(r ByteReader, addr uint32, size int) uint32 {
 	switch size {
 	case 1:
 		return uint32(r.ByteAt(addr))
+	
 	case 2:
 		return uint32(r.ByteAt(addr)) | uint32(r.ByteAt(addr+1))<<8
+	
 	default:
 		return uint32(r.ByteAt(addr)) | uint32(r.ByteAt(addr+1))<<8 |
 			uint32(r.ByteAt(addr+2))<<16 | uint32(r.ByteAt(addr+3))<<24
@@ -121,8 +130,10 @@ func signExtend(raw uint32, size int) int32 {
 	switch size {
 	case 1:
 		return int32(int8(raw))
+
 	case 2:
 		return int32(int16(raw))
+
 	default:
 		return int32(raw)
 	}
@@ -132,8 +143,10 @@ func formatIntHex(v uint32, size int) string {
 	switch size {
 	case 1:
 		return fmt.Sprintf("%02X", v)
+	
 	case 2:
 		return fmt.Sprintf("%04X", v)
+	
 	default:
 		return fmt.Sprintf("%08X", v)
 	}
@@ -157,6 +170,7 @@ func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, li
 	case cpu.AccessImmediate:
 		v := loadSized(r, *pc, size)
 		*pc += uint32(size)
+
 		return "#" + formatIntHex(v, size), nil
 
 	case cpu.AccessBranch:
@@ -164,6 +178,7 @@ func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, li
 		disp := signExtend(raw, size)
 		*pc += uint32(size)
 		dest := uint32(int32(*pc) + disp)
+
 		return fmt.Sprintf("%08X", dest), nil
 	}
 
@@ -177,6 +192,7 @@ func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, li
 		if litType == cpu.ShortLiteralFloat {
 			return "S^#" + formatFloatValue(cpu.ShortFloat(int(optype))), nil
 		}
+
 		return fmt.Sprintf("S^#%02X", optype), nil
 
 	case mode == 5:
@@ -204,13 +220,14 @@ func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, li
 // relative displacement itself. Printing the raw displacement byte instead
 // would silently reassemble to a wrong target unless it happened to also be
 // a valid absolute address, so this is treated as a fixable disassembler
-// bug rather than reference behavior worth replicating — see
+// issue rather than reference behavior worth replicating — see
 // docs/PHASE-11.md.
 func formatPCRelative(r ByteReader, pc *uint32, mode byte, size int, litType cpu.ShortLiteralType) (string, error) {
 	switch mode {
 	case 0x08: // Immediate: I^#n
 		if litType == cpu.ShortLiteralFloat && (size == 4 || size == 8) {
 			var bits uint64
+
 			if size == 4 {
 				bits = uint64(loadSized(r, *pc, 4))
 			} else {
@@ -218,31 +235,39 @@ func formatPCRelative(r ByteReader, pc *uint32, mode byte, size int, litType cpu
 				hi := uint64(loadSized(r, *pc+4, 4))
 				bits = lo | hi<<32
 			}
+
 			*pc += uint32(size)
+
 			return "I^#" + formatFloatValue(cpu.DecodeFloat(bits, size)), nil
 		}
+
 		v := loadSized(r, *pc, size)
 		*pc += uint32(size)
+
 		return "I^#" + formatIntHex(v, size), nil
 
 	case 0x09: // Absolute: @#addr
 		v := loadSized(r, *pc, 4)
 		*pc += 4
+
 		return fmt.Sprintf("@#%08X", v), nil
 
 	case 0x0A, 0x0B: // Byte relative [deferred]
 		raw := loadSized(r, *pc, 1)
 		*pc++
+
 		return formatPCRelTarget(*pc, signExtend(raw, 1), "B^", mode == 0x0B), nil
 
 	case 0x0C, 0x0D: // Word relative [deferred]
 		raw := loadSized(r, *pc, 2)
 		*pc += 2
+
 		return formatPCRelTarget(*pc, signExtend(raw, 2), "W^", mode == 0x0D), nil
 
 	case 0x0E, 0x0F: // Long relative [deferred]
 		raw := loadSized(r, *pc, 4)
 		*pc += 4
+		
 		return formatPCRelTarget(*pc, signExtend(raw, 4), "L^", mode == 0x0F), nil
 	}
 
@@ -251,9 +276,11 @@ func formatPCRelative(r ByteReader, pc *uint32, mode byte, size int, litType cpu
 
 func formatPCRelTarget(pc uint32, disp int32, prefix string, deferred bool) string {
 	dest := uint32(int32(pc) + disp)
+
 	if deferred {
 		prefix = "@" + prefix
 	}
+
 	return fmt.Sprintf("%s%08X", prefix, dest)
 }
 
@@ -268,10 +295,12 @@ func formatGeneral(r ByteReader, pc *uint32, mode, reg byte, access cpu.AccessKi
 		if indexed {
 			return "", fmt.Errorf("indexed addressing mode may not nest")
 		}
+
 		base, err := formatOperand(r, pc, access, size, litType, true)
 		if err != nil {
 			return "", err
 		}
+
 		return base + "[" + rn + "]", nil
 
 	case 0x06: // Register deferred: (Rn)
@@ -289,16 +318,19 @@ func formatGeneral(r ByteReader, pc *uint32, mode, reg byte, access cpu.AccessKi
 	case 0x0A, 0x0B: // Byte displacement [deferred]: B^n(Rn) / @B^n(Rn)
 		raw := loadSized(r, *pc, 1)
 		*pc++
+
 		return formatDisplacement("B^", raw, 1, rn, mode == 0x0B), nil
 
 	case 0x0C, 0x0D: // Word displacement [deferred]
 		raw := loadSized(r, *pc, 2)
 		*pc += 2
+
 		return formatDisplacement("W^", raw, 2, rn, mode == 0x0D), nil
 
 	case 0x0E, 0x0F: // Long displacement [deferred]
 		raw := loadSized(r, *pc, 4)
 		*pc += 4
+
 		return formatDisplacement("L^", raw, 4, rn, mode == 0x0F), nil
 	}
 
@@ -309,5 +341,6 @@ func formatDisplacement(prefix string, raw uint32, size int, rn string, deferred
 	if deferred {
 		prefix = "@" + prefix
 	}
+
 	return fmt.Sprintf("%s%s(%s)", prefix, formatIntHex(raw, size), rn)
 }

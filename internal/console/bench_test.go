@@ -32,6 +32,7 @@ func BenchmarkSieve(b *testing.B) {
 			b.Fatalf("Call(SIEVE): %v", err)
 		}
 	}
+	
 	b.StopTimer()
 
 	if got := c.CPU.GPR(vax.R0); got != 9973 {

@@ -25,6 +25,7 @@ func TestRun_startupBootsFromEmbeddedFilesAlone(t *testing.T) {
 	if err := run(nil, 0, 0, &buf, emptyStdin(), nil); err != nil {
 		t.Fatalf("run: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "govax") {
 		t.Errorf("output = %q, want the startup banner", buf.String())
 	}
@@ -44,6 +45,7 @@ func TestRun_instructionLimitStopsARunawayProgram(t *testing.T) {
 	if err := run(nil, 5, 0, &buf, in, nil); err != nil {
 		t.Fatalf("run: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "INSTRLIMIT") {
 		t.Errorf("output = %q, want an instruction-limit message", buf.String())
 	}
@@ -56,9 +58,11 @@ func TestRun_timeLimitStopsARunawayProgram(t *testing.T) {
 	in := io.NopCloser(strings.NewReader(script))
 
 	var buf bytes.Buffer
+
 	if err := run(nil, 0, 10*time.Millisecond, &buf, in, nil); err != nil {
 		t.Fatalf("run: %v", err)
 	}
+	
 	if !strings.Contains(buf.String(), "TIMELIMIT") {
 		t.Errorf("output = %q, want a time-limit message", buf.String())
 	}
@@ -72,14 +76,17 @@ func TestRun_timeLimitStopsARunawayProgram(t *testing.T) {
 func TestRun_pathOverridesEmbeddedForThatFileOnly(t *testing.T) {
 	dir := t.TempDir()
 	custom := `print "custom-vax-init-ran"` + "\n"
+
 	if err := os.WriteFile(filepath.Join(dir, "vax.init"), []byte(custom), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	var buf bytes.Buffer
+
 	if err := run([]string{dir}, 0, 0, &buf, emptyStdin(), nil); err != nil {
 		t.Fatalf("run: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "custom-vax-init-ran") {
 		t.Errorf("output = %q, want the overriding vax.init's own PRINT output", buf.String())
 	}
@@ -93,10 +100,12 @@ func TestRun_asGivenPathWinsOverPathFlag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	asGiven := filepath.Join(wd, "vax.init")
 	if err := os.WriteFile(asGiven, []byte(`print "as-given-vax-init-ran"`+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+
 	t.Cleanup(func() { os.Remove(asGiven) })
 
 	pathDir := t.TempDir()
@@ -105,9 +114,11 @@ func TestRun_asGivenPathWinsOverPathFlag(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
+
 	if err := run([]string{pathDir}, 0, 0, &buf, emptyStdin(), nil); err != nil {
 		t.Fatalf("run: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "as-given-vax-init-ran") {
 		t.Errorf("output = %q, want the CWD-relative vax.init's own PRINT output", buf.String())
 	}

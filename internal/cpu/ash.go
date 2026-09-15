@@ -28,15 +28,18 @@ func emulRotl(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	value, err := d.Operands[1].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	result := uint64(bits.RotateLeft32(uint32(value), int(int8(countRaw))))
 	setNZ(e.cpu, result, 4)
 	psl := e.cpu.PSL()
 	psl.SetV(false)
 	e.cpu.SetPSL(psl)
+
 	return d.Operands[2].Store(e.cpu, e.mem, result)
 }
 
@@ -50,15 +53,20 @@ func emulAshl(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	source, err := d.Operands[1].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	count := int8(countRaw)
 	s := int32(uint32(source))
 
-	var result int32
-	var v bool
+	var (
+		result int32
+		v      bool
+	)
+
 	if count >= 0 {
 		shift := uint(count)
 		result = s << shift
@@ -72,6 +80,7 @@ func emulAshl(e *Engine, d *Decoded) error {
 	psl := e.cpu.PSL()
 	psl.SetV(v)
 	e.cpu.SetPSL(psl)
+
 	return d.Operands[2].Store(e.cpu, e.mem, r)
 }
 
@@ -81,15 +90,20 @@ func emulAshq(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	source, err := d.Operands[1].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	count := int8(countRaw)
 	s := int64(source)
 
-	var result int64
-	var v bool
+	var (
+		result int64
+		v      bool
+	)
+
 	if count >= 0 {
 		shift := uint(count)
 		result = s << shift
@@ -103,5 +117,6 @@ func emulAshq(e *Engine, d *Decoded) error {
 	psl := e.cpu.PSL()
 	psl.SetV(v)
 	e.cpu.SetPSL(psl)
+	
 	return d.Operands[2].Store(e.cpu, e.mem, r)
 }

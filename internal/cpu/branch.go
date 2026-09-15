@@ -41,6 +41,7 @@ func init() {
 // OP_AD finding -- for JMP).
 func emulBranchAlways(e *Engine, d *Decoded) error {
 	e.cpu.SetGPR(vax.PC, d.Operands[0].Addr)
+
 	return nil
 }
 
@@ -53,6 +54,7 @@ func condBranch(test func(vax.PSL) bool) Handler {
 		if test(e.cpu.PSL()) {
 			e.cpu.SetGPR(vax.PC, d.Operands[0].Addr)
 		}
+
 		return nil
 	}
 }
@@ -86,8 +88,10 @@ func emulRsb(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	e.cpu.SetGPR(vax.SP, sp+4)
 	e.cpu.SetGPR(vax.PC, ret)
+
 	return nil
 }
 
@@ -98,7 +102,9 @@ func emulBsb(e *Engine, d *Decoded) error {
 	if err := push(e, e.cpu.GPR(vax.PC)); err != nil {
 		return err
 	}
+
 	e.cpu.SetGPR(vax.PC, d.Operands[0].Addr)
+
 	return nil
 }
 
@@ -117,9 +123,11 @@ func emulBlbs(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	if v&1 != 0 {
 		e.cpu.SetGPR(vax.PC, d.Operands[1].Addr)
 	}
+
 	return nil
 }
 
@@ -130,8 +138,10 @@ func emulBlbc(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	if v&1 == 0 {
 		e.cpu.SetGPR(vax.PC, d.Operands[1].Addr)
 	}
+	
 	return nil
 }

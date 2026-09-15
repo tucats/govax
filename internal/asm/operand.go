@@ -48,11 +48,14 @@ func (a *Assembler) storeScaled(addr uint32, value uint32, scale int) error {
 	switch scale {
 	case 1:
 		return a.image.storeByte(addr, byte(value))
+
 	case 2:
 		return a.image.storeWord(addr, uint16(value))
+
 	case 4:
 		return a.image.storeLongword(addr, value)
 	}
+
 	return fmt.Errorf("unsupported operand scale %d", scale)
 }
 
@@ -84,29 +87,36 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	// call's main loop below just skips over once it gets there) as the
 	// base operand.
 	if !parsingIndex {
+		var indexMode byte
+
 		save := c.pos
 		foundIndex := false
-		var indexMode byte
 
 		for !c.atEnd() && c.peek() != ',' {
 			if c.peek() == '[' {
 				c.next()
+
 				reg, err := parseRegister(c, 0)
 				if err != nil {
 					return err
 				}
+
 				indexMode = 0x40 | byte(reg)
 				foundIndex = true
+
 				break
 			}
+
 			c.next()
 		}
+
 		c.pos = save
 
 		if foundIndex {
 			if err := a.image.storeByte(a.deposit, indexMode); err != nil {
 				return err
 			}
+
 			a.deposit++
 			if err := a.assembleOperandRec(c, inst, opIndex, true); err != nil {
 				return err
@@ -119,27 +129,32 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			// the cursor. Skip over it here, once, regardless of which
 			// base-mode branch the recursive call actually took, rather
 			// than teaching each one individually to check for it (the
-			// bug this replaces: only the few branches that happened to
+			// issue this replaces: only the few branches that happened to
 			// fall through to the "already at '['" special case below
 			// consumed it; every other base mode -- e.g. "(Rn)[Rx]",
 			// exercised for real by testdata/asm/kernel.asm's own
 			// EXE$DISPATCH -- silently left it in place, corrupting
 			// whatever operand parsing came next).
 			c.skipBlanks()
+
 			if c.peek() == '[' {
 				c.next()
+
 				for !c.atEnd() && c.peek() != ']' && c.peek() != ',' {
 					c.next()
 				}
+
 				if c.peek() == ']' {
 					c.next()
 				}
 			}
+
 			return nil
 		}
 	}
 
 	c.skipBlanks()
+
 	if c.atEnd() || c.peek() == ',' {
 		return nil
 	}
@@ -148,12 +163,15 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		// The index prefix for this operand was already encoded above;
 		// just skip over the "[Rx]" text.
 		c.next()
+
 		for !c.atEnd() && c.peek() != ']' && c.peek() != ',' {
 			c.next()
 		}
+
 		if c.peek() == ']' {
 			c.next()
 		}
+
 		return nil
 	}
 
@@ -164,6 +182,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		if c.peek() != '#' {
 			return fmt.Errorf("implicit immediate operand requires '#'")
 		}
+
 		c.next()
 	}
 
@@ -177,9 +196,12 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	// referenced, else immediate literal (I^#n) — decided once the value
 	// is known, but the '#' and value are only parsed here, once.
 	constant := litNone
-	var litValue uint32  // the short-literal value/table-index (int or float)
-	var litFloat float64 // the parsed float, valid when dtype is float
-	var litWasForward bool
+
+	var (
+		litValue      uint32  // the short-literal value/table-index (int or float)
+		litFloat      float64 // the parsed float, valid when dtype is float
+		litWasForward bool
+	)
 
 	if ch == '#' {
 		loc := a.deposit
@@ -190,13 +212,16 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			if err != nil {
 				return err
 			}
+
 			litValue, litWasForward = v, wasForward
 		} else {
 			f, err := a.parseFloat(c)
 			if err != nil {
 				return err
 			}
+
 			litFloat = f
+
 			if idx, ok := cpu.FindShortFloat(f); ok {
 				litValue = uint32(idx)
 			} else {
@@ -206,6 +231,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 		if litWasForward || litValue >= 64 {
 			constant = litImmediate
+
 			if litWasForward {
 				// The fixup we just queued assumed the value starts right
 				// at `loc` (the short-literal layout); since this turns
@@ -225,69 +251,89 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	if constant == litShort || (ch == 'S' && c.peek() == '^') {
 		if constant != litShort {
 			c.next() // '^'
+
 			if c.next() != '#' {
 				return fmt.Errorf("invalid short literal syntax")
 			}
+
 			if dtype == cpu.ShortLiteralInt {
 				v, err := a.hexDigits(c)
 				if err != nil {
 					return err
 				}
+
 				if v >= 64 {
 					return fmt.Errorf("short literal out of range")
 				}
+
 				litValue = v
 			} else {
 				f, err := a.parseFloat(c)
 				if err != nil {
 					return err
 				}
+
 				idx, ok := cpu.FindShortFloat(f)
 				if !ok {
 					return fmt.Errorf("value is not a valid short float literal")
 				}
+
 				litValue = uint32(idx)
 			}
 		}
+
 		if err := a.image.storeByte(a.deposit, byte(litValue)); err != nil {
 			return err
 		}
+
 		a.deposit++
+
 		return nil
 	}
 
 	// Rn / AP / FP / SP / PC: register mode.
 	if ch == 'R' || ch == 'S' || ch == 'A' || ch == 'F' || ch == 'P' {
 		save := c.pos
+
 		if reg, err := parseRegister(c, ch); err == nil {
 			mode := byte(0x50) | byte(reg)
 			if err := a.image.storeByte(a.deposit, mode); err != nil {
 				return err
 			}
+
 			a.deposit++
+
 			return nil
 		}
+
 		c.pos = save
 	}
 
 	// -(Rn): autodecrement.
 	if ch == '-' {
 		c.skipBlanks()
+		
 		if c.next() != '(' {
 			return fmt.Errorf("invalid addressing mode")
 		}
+
 		reg, err := parseRegister(c, 0)
 		if err != nil {
 			return err
 		}
+
 		if err := a.image.storeByte(a.deposit, byte(0x70)|byte(reg)); err != nil {
 			return err
 		}
+
 		a.deposit++
+
 		c.skipBlanks()
+
 		if c.next() != ')' {
 			return fmt.Errorf("invalid addressing mode")
 		}
+
 		return nil
 	}
 
@@ -295,35 +341,42 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	// zero-displacement byte-deferred form asm_operand.c encodes for it.
 	if ch == '@' && c.peek() == '(' {
 		c.next()
+
 		reg, err := parseRegister(c, 0)
 		if err != nil {
 			return err
 		}
+
 		c.skipBlanks()
 		if c.next() != ')' {
 			return fmt.Errorf("invalid addressing mode")
 		}
 
 		mode := byte(0x90)
+
 		hasPlus := c.peek() == '+'
 		if !hasPlus {
 			mode = 0xB0
 		} else {
 			c.next()
 		}
+
 		mode |= byte(reg)
 
 		if err := a.image.storeByte(a.deposit, mode); err != nil {
 			return err
 		}
+
 		a.deposit++
 
 		if mode >= 0xB0 {
 			if err := a.image.storeByte(a.deposit, 0); err != nil {
 				return err
 			}
+
 			a.deposit++
 		}
+
 		return nil
 	}
 
@@ -333,6 +386,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		if err != nil {
 			return err
 		}
+
 		c.skipBlanks()
 		if c.next() != ')' {
 			return fmt.Errorf("invalid addressing mode")
@@ -341,12 +395,16 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		mode := byte(0x60)
 		if c.peek() == '+' {
 			mode = 0x80
+
 			c.next()
 		}
+
 		if err := a.image.storeByte(a.deposit, mode|byte(reg)); err != nil {
 			return err
 		}
+
 		a.deposit++
+
 		return nil
 	}
 
@@ -355,6 +413,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	if constant == litImmediate || (ch == 'I' && c.peek() == '^') {
 		if constant != litImmediate {
 			c.next() // '^'
+
 			if c.next() != '#' {
 				return fmt.Errorf("invalid immediate literal syntax")
 			}
@@ -371,19 +430,24 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				if err != nil {
 					return err
 				}
+
 				litFloat = f
 			}
+
 			return a.storeImmediateFloat(scale, litFloat)
 		}
 
 		if constant != litImmediate {
 			loc := a.deposit
+
 			v, _, err := a.exprValue(c, loc, addrFixup(scale))
 			if err != nil {
 				return err
 			}
+			
 			litValue = v
 		}
+
 		return a.storeImmediateInt(scale, litValue)
 	}
 
@@ -393,7 +457,9 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		if err := a.image.storeByte(a.deposit, 0x9F); err != nil {
 			return err
 		}
+		
 		a.deposit++
+		
 		return a.storeAddrValue(c)
 	}
 
@@ -410,34 +476,43 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		if err != nil {
 			return err
 		}
+
 		mode := byte(0xB0) | byte(reg)
+
 		if c.next() != ')' {
 			return fmt.Errorf("invalid addressing mode")
 		}
+
 		if err := a.image.storeByte(a.deposit, mode); err != nil {
 			return err
 		}
+
 		a.deposit++
 		if err := a.image.storeByte(a.deposit, 0); err != nil {
 			return err
 		}
+
 		a.deposit++
+
 		return nil
 	}
 
 	// B^address / B^displacement(Rn): byte relative [deferred].
 	if ch == 'B' && c.peek() == '^' {
 		c.next()
+
 		return a.assembleDisplacement(c, deferred, 1, 0xAF, 0xA0)
 	}
 	// W^address / W^displacement(Rn): word relative [deferred].
 	if ch == 'W' && c.peek() == '^' {
 		c.next()
+
 		return a.assembleDisplacement(c, deferred, 2, 0xCF, 0xC0)
 	}
 	// L^address / L^displacement(Rn): long relative [deferred].
 	if ch == 'L' && c.peek() == '^' {
 		c.next()
+
 		return a.assembleDisplacement(c, deferred, 4, 0xEF, 0xE0)
 	}
 
@@ -449,12 +524,14 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	c.pos-- // put back `ch`; the value parser needs the whole token.
 
 	modeAddr := a.deposit
+
 	if err := a.image.storeByte(a.deposit, 0x9F); err != nil {
 		return err
 	}
-	a.deposit++
 
+	a.deposit++
 	loc := a.deposit
+	
 	value, wasForward, err := a.exprValue(c, loc, fixAddrL)
 	if err != nil {
 		return err
@@ -462,18 +539,22 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 	if c.peek() == '(' {
 		c.next()
+
 		reg, err := parseRegister(c, 0)
 		if err != nil {
 			return err
 		}
+
 		mode := byte(0xE0) | deferred | byte(reg)
 		if err := a.image.storeByte(modeAddr, mode); err != nil {
 			return err
 		}
+
 		c.skipBlanks()
 		if c.next() != ')' {
 			return fmt.Errorf("invalid addressing mode")
 		}
+
 		if wasForward && a.lastSymbol != nil && len(a.lastSymbol.forward) > 0 {
 			a.lastSymbol.forward[0].kind = fixDispL
 		}
@@ -482,6 +563,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	if err := a.image.storeLongword(a.deposit, value); err != nil {
 		return err
 	}
+
 	a.deposit += 4
 
 	return nil
@@ -502,7 +584,9 @@ func (a *Assembler) storeImmediateInt(scale int, value uint32) error {
 	if err := a.storeScaled(a.deposit, value, scale); err != nil {
 		return err
 	}
+
 	a.deposit += uint32(scale)
+
 	return nil
 }
 
@@ -522,15 +606,19 @@ func (a *Assembler) storeImmediateFloat(scale int, f float64) error {
 	if overflow {
 		return fmt.Errorf("floating literal out of range")
 	}
+
 	if err := a.image.storeLongword(a.deposit, uint32(bits)); err != nil {
 		return err
 	}
+
 	if scale == 8 {
 		if err := a.image.storeLongword(a.deposit+4, uint32(bits>>32)); err != nil {
 			return err
 		}
 	}
+
 	a.deposit += uint32(scale)
+
 	return nil
 }
 
@@ -538,14 +626,18 @@ func (a *Assembler) storeImmediateFloat(scale int, f float64) error {
 // used by the "@#address" case.
 func (a *Assembler) storeAddrValue(c *cursor) error {
 	loc := a.deposit
+
 	value, _, err := a.exprValue(c, loc, fixAddrL)
 	if err != nil {
 		return err
 	}
+
 	if err := a.image.storeLongword(a.deposit, value); err != nil {
 		return err
 	}
+
 	a.deposit += 4
+
 	return nil
 }
 
@@ -598,12 +690,15 @@ func (a *Assembler) assembleDisplacement(c *cursor, deferred byte, size int, rel
 	var reg byte
 	if haveReg {
 		c.next()
+
 		r, err := parseRegister(c, 0)
 		if err != nil {
 			return err
 		}
+
 		reg = byte(r)
 		mode = dispMode | deferred | reg
+
 		c.skipBlanks()
 		if c.next() != ')' {
 			return fmt.Errorf("invalid addressing mode")
@@ -613,11 +708,13 @@ func (a *Assembler) assembleDisplacement(c *cursor, deferred byte, size int, rel
 	if err := a.image.storeByte(a.deposit, mode); err != nil {
 		return err
 	}
+
 	a.deposit++
 
 	if err := a.storeScaled(a.deposit, value, size); err != nil {
 		return err
 	}
+
 	a.deposit += uint32(size)
 
 	return nil

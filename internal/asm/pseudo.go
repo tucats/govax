@@ -46,11 +46,12 @@ func (a *Assembler) assemblePseudo(c *cursor) (handled bool, err error) {
 	}
 
 	start := c.pos
+
 	for !c.atEnd() && !isBlank(c.peek()) && c.peek() != '/' {
 		c.pos++
 	}
-	name := c.s[start:c.pos]
 
+	name := c.s[start:c.pos]
 	if !pseudoNames[name] {
 		c.pos = save
 		return false, nil
@@ -69,84 +70,125 @@ func (a *Assembler) dispatchPseudo(name string, c *cursor) error {
 	switch name {
 	case "BYTE":
 		return a.pseudoData(c, 1)
+
 	case "WORD":
 		return a.pseudoData(c, 2)
+
 	case "LONG":
 		return a.pseudoData(c, 4)
+
 	case "BASE":
 		return a.pseudoBase(c)
+
 	case "SET":
 		return a.pseudoSet(c)
+
 	case "CLEAR":
 		return a.pseudoClear(c)
+
 	case "ASCII":
 		return a.pseudoAscii(c, asciiPlain)
+
 	case "ASCIZ":
 		return a.pseudoAscii(c, asciiZ)
+
 	case "ASCIC":
 		return a.pseudoAscii(c, asciiCounted)
+
 	case "ASCID":
 		return a.pseudoAscii(c, asciiDescriptor)
+
 	case "END":
 		return a.pseudoEnd(c)
+
 	case "PSL":
 		_, err := a.exprNoForward(c)
+
 		return err
+
 	case "PRINT":
 		return a.pseudoPrint(c)
+
 	case "MASK":
 		return a.pseudoMask(c)
+
 	case "F_FLOAT":
 		return a.pseudoFloat(c, 4)
+
 	case "D_FLOAT":
 		return a.pseudoFloat(c, 8)
+
 	case "BLKB":
 		return a.pseudoBlock(c, 1)
+
 	case "BLKW":
 		return a.pseudoBlock(c, 2)
+
 	case "BLKL", "BLKF":
 		return a.pseudoBlock(c, 4)
+
 	case "BLKD":
 		return a.pseudoBlock(c, 8)
+
 	case "ENTRY":
 		return a.pseudoEntry(c)
+
 	case "SYM":
 		return nil // recognized but a no-op; see pseudoNames' doc comment.
+
 	case "CASE":
 		return a.pseudoCase(c)
+
 	case "SCB":
 		return a.pseudoSCB(c)
+
 	case "ALIGN":
 		return a.pseudoAlign(c)
+
 	case "REGION":
 		return a.pseudoRegion(c)
+
 	case "VECTOR":
 		return fmt.Errorf(".%s is not supported outside a live console/VM", name)
+
 	case "CONSOLE":
 		return a.pseudoConsole(c)
+
 	case "INCLUDE":
 		return a.pseudoInclude(c)
+
 	case "IF":
 		return a.pseudoIf(c)
+
 	case "SHIM":
 		return a.pseudoShim(c)
+
 	case "MICROKERNEL":
 		a.microkernel = true
+
 		return nil
+
 	case "SPACE":
 		return a.pseudoSpace(c)
+
 	case "DATA", "TEXT":
 		_, err := a.exprNoForward(c)
+
 		return err
+
 	case "JEQL", "JEQLU":
 		return a.pseudoJcc(c, 0x12) // BNEQ, inverted around a JMP.
+
 	case "JNEQ", "JNEQU":
 		return a.pseudoJcc(c, 0x13) // BEQL, inverted around a JMP.
+
 	case "P1VECTOR":
 		return a.pseudoP1Vector(c)
+
 	case "SCOPE":
 		return a.pseudoScope(c)
 	}
+
 	panic("asm: pseudoNames/dispatchPseudo out of sync for " + name)
 }
 
@@ -157,9 +199,11 @@ func (a *Assembler) dispatchPseudo(name string, c *cursor) error {
 func readToken(c *cursor) string {
 	c.skipBlanks()
 	start := c.pos
+
 	for !c.atEnd() && !isBlank(c.peek()) {
 		c.pos++
 	}
+
 	return c.s[start:c.pos]
 }
 
@@ -171,15 +215,20 @@ func readFileArg(c *cursor) string {
 	if c.peek() == '"' {
 		c.next()
 		start := c.pos
+
 		for !c.atEnd() && c.peek() != '"' {
 			c.pos++
 		}
+
 		name := c.s[start:c.pos]
+		
 		if c.peek() == '"' {
 			c.next()
 		}
+
 		return name
 	}
+
 	return readToken(c)
 }
 
@@ -192,6 +241,7 @@ func (a *Assembler) pseudoData(c *cursor, scale int) error {
 		if c.atEnd() {
 			return nil
 		}
+
 		if c.peek() == ',' {
 			c.next()
 		}
@@ -201,15 +251,19 @@ func (a *Assembler) pseudoData(c *cursor, scale int) error {
 		if err != nil {
 			return err
 		}
+
 		if scale == 1 && v > 0xFF {
 			return fmt.Errorf(".BYTE value %d out of range", v)
 		}
+
 		if scale == 2 && v > 0xFFFF {
 			return fmt.Errorf(".WORD value %d out of range", v)
 		}
+
 		if err := a.storeScaled(a.deposit, v, scale); err != nil {
 			return err
 		}
+
 		a.deposit += uint32(scale)
 	}
 }
@@ -218,11 +272,14 @@ func (a *Assembler) pseudoData(c *cursor, scale int) error {
 // closing out the active local-symbol scope first (matching case 4).
 func (a *Assembler) pseudoBase(c *cursor) error {
 	a.scopeSymbols()
+
 	v, err := a.exprNoForward(c)
 	if err != nil {
 		return err
 	}
+
 	a.deposit = v
+
 	return nil
 }
 
@@ -238,15 +295,20 @@ qualifiers:
 	for {
 		save := c.pos
 		tok := readToken(c)
+
 		switch verbPrefix4(tok) {
 		case "/PER", "/PRM":
 			flags |= SymPermanent
+
 		case "/ENT":
 			flags |= SymEntry
+
 		case "/LAB", "/LBL":
 			flags |= SymLabel
+
 		default:
 			c.pos = save
+
 			break qualifiers
 		}
 	}
@@ -274,6 +336,7 @@ func verbPrefix4(s string) string {
 	if len(s) >= 4 {
 		return s[:4]
 	}
+
 	return s + strings.Repeat(" ", 4-len(s))
 }
 
@@ -281,9 +344,11 @@ func verbPrefix4(s string) string {
 // or end of line.
 func scanSetName(c *cursor) string {
 	start := c.pos
+
 	for !c.atEnd() && !isBlank(c.peek()) && c.peek() != ',' && c.peek() != '=' {
 		c.pos++
 	}
+
 	return c.s[start:c.pos]
 }
 
@@ -293,12 +358,15 @@ func (a *Assembler) pseudoClear(c *cursor) error {
 	c.skipBlanks()
 	if c.atEnd() {
 		a.symbols.clearAll()
+
 		return nil
 	}
+
 	name := scanName(c)
 	if !a.symbols.clear(name) {
 		return fmt.Errorf("undefined symbol %q", name)
 	}
+
 	return nil
 }
 
@@ -321,8 +389,9 @@ const (
 // data immediately following it (.ASCID). Matches asm_pseudo.c's cases
 // 7-10.
 func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
-	countPC := a.deposit
 	var count uint16
+
+	countPC := a.deposit
 
 	switch kind {
 	case asciiCounted:
@@ -330,18 +399,23 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 			return err
 		}
 		a.deposit += 2
+
 	case asciiDescriptor:
 		if err := a.image.storeWord(countPC, 0); err != nil { // length (patched below)
 			return err
 		}
+
 		if err := a.image.storeWord(countPC+2, 0); err != nil { // dtype/class: string
 			return err
 		}
+
 		a.deposit += 4
 		stringPC := a.deposit + 4
+
 		if err := a.image.storeLongword(a.deposit, stringPC); err != nil {
 			return err
 		}
+
 		a.deposit += 4
 	}
 
@@ -352,6 +426,7 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 		}
 
 		var q byte
+
 		switch c.peek() {
 		case '/', '\'', '"':
 			q = c.peek()
@@ -362,6 +437,7 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 			if q != 0 && c.peek() == q {
 				break
 			}
+
 			if q == 0 && isBlank(c.peek()) {
 				break
 			}
@@ -371,18 +447,24 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 				switch c.peek() {
 				case 'n':
 					ch = '\n'
+
 				case 'r':
 					ch = '\r'
+
 				case 't':
 					ch = '\t'
+
 				default:
 					ch = c.peek()
 				}
+
 				c.next()
 			}
+
 			if err := a.image.storeByte(a.deposit, ch); err != nil {
 				return err
 			}
+
 			a.deposit++
 			count++
 		}
@@ -395,6 +477,7 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 		if c.peek() != ',' {
 			break
 		}
+
 		c.next()
 	}
 
@@ -403,7 +486,9 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 		if err := a.image.storeByte(a.deposit, 0); err != nil {
 			return err
 		}
+
 		a.deposit++
+
 	case asciiCounted, asciiDescriptor:
 		if err := a.image.storeWord(countPC, count); err != nil {
 			return err
@@ -425,9 +510,11 @@ func (a *Assembler) pseudoEnd(c *cursor) error {
 		if err != nil {
 			return err
 		}
+
 		if err := a.setSymbol("__ENTRY", v, SymNone, false); err != nil {
 			return err
 		}
+
 		a.entrySeen = true
 		a.entryAddr = v
 	}
@@ -448,25 +535,33 @@ func (a *Assembler) pseudoPrint(c *cursor) error {
 	}
 
 	var sb strings.Builder
+
 	for {
 		c.skipBlanks()
 		if c.atEnd() {
 			break
 		}
+
 		if c.peek() == ',' {
 			c.next()
+
 			continue
 		}
+
 		if c.peek() == '"' {
 			c.next()
 			start := c.pos
+
 			for !c.atEnd() && c.peek() != '"' {
 				c.pos++
 			}
+
 			sb.WriteString(c.s[start:c.pos])
+
 			if c.peek() == '"' {
 				c.next()
 			}
+
 			continue
 		}
 
@@ -474,6 +569,7 @@ func (a *Assembler) pseudoPrint(c *cursor) error {
 		if err != nil {
 			return err
 		}
+
 		if a.radix == 10 {
 			fmt.Fprintf(&sb, "%d", int32(v))
 		} else {
@@ -482,6 +578,7 @@ func (a *Assembler) pseudoPrint(c *cursor) error {
 	}
 
 	a.prints = append(a.prints, sb.String())
+
 	return nil
 }
 
@@ -492,10 +589,13 @@ func (a *Assembler) pseudoMask(c *cursor) error {
 	if err != nil {
 		return err
 	}
+
 	if err := a.image.storeWord(a.deposit, uint16(m)); err != nil {
 		return err
 	}
+
 	a.deposit += 2
+
 	return nil
 }
 
@@ -510,13 +610,16 @@ func (a *Assembler) pseudoFloat(c *cursor, size int) error {
 		if c.atEnd() {
 			return nil
 		}
+
 		if c.peek() == ',' {
 			c.next()
 		}
+
 		f, err := a.parseFloat(c)
 		if err != nil {
 			return err
 		}
+
 		if err := a.storeImmediateFloat(size, f); err != nil {
 			return err
 		}
@@ -532,11 +635,14 @@ func (a *Assembler) pseudoFloat(c *cursor, size int) error {
 // what can be a very large count.
 func (a *Assembler) pseudoBlock(c *cursor, size int) error {
 	c.skipBlanks()
+
 	n, err := a.exprNoForward(c)
 	if err != nil {
 		return err
 	}
+
 	a.deposit += n * uint32(size)
+
 	return nil
 }
 
@@ -549,9 +655,11 @@ func (a *Assembler) pseudoEntry(c *cursor) error {
 
 	c.skipBlanks()
 	name := scanName(c)
+
 	if err := a.setSymbol(name, a.deposit, SymEntry, true); err != nil {
 		return err
 	}
+
 	a.curEntry = name
 
 	c.skipBlanks()
@@ -560,6 +668,7 @@ func (a *Assembler) pseudoEntry(c *cursor) error {
 	}
 
 	var mask uint32
+
 	c.skipBlanks()
 	if !c.atEnd() {
 		m, err := a.maskLiteral(c)
@@ -572,7 +681,9 @@ func (a *Assembler) pseudoEntry(c *cursor) error {
 	if err := a.image.storeWord(a.deposit, uint16(mask)); err != nil {
 		return err
 	}
+
 	a.deposit += 2
+
 	return nil
 }
 
@@ -583,10 +694,12 @@ func (a *Assembler) pseudoScope(c *cursor) error {
 	a.scopeSymbols()
 
 	c.skipBlanks()
+
 	name := scanName(c)
 	if err := a.setSymbol(name, a.deposit, SymLabel, true); err != nil {
 		return err
 	}
+
 	a.curEntry = name
 
 	return nil
@@ -607,6 +720,7 @@ func (a *Assembler) pseudoCase(c *cursor) error {
 		if c.atEnd() {
 			return nil
 		}
+
 		if c.peek() == ',' {
 			c.next()
 		}
@@ -714,11 +828,14 @@ func (a *Assembler) pseudoRegion(c *cursor) error {
 	}
 
 	var toS0 bool
+
 	switch readToken(c) {
 	case "2", "S0", "SYSTEM":
 		toS0 = true
+
 	case "0", "P0", "PROCESS":
 		toS0 = false
+
 	default:
 		return fmt.Errorf(".REGION: invalid region specifier")
 	}
@@ -726,6 +843,7 @@ func (a *Assembler) pseudoRegion(c *cursor) error {
 	if toS0 == a.regionIsS0 {
 		return nil
 	}
+
 	if a.regionIsS0 {
 		a.s0Deposit = a.deposit
 		a.deposit = a.p0Deposit
@@ -733,6 +851,7 @@ func (a *Assembler) pseudoRegion(c *cursor) error {
 		a.p0Deposit = a.deposit
 		a.deposit = a.s0Deposit
 	}
+
 	a.regionIsS0 = toS0
 
 	return nil
@@ -752,35 +871,41 @@ func (a *Assembler) pseudoShim(c *cursor) error {
 	}
 
 	a.scopeSymbols()
-
 	c.skipBlanks()
+
 	name := scanName(c)
 
 	c.skipBlanks()
 	if c.peek() == ',' {
 		c.next()
 	}
+
 	c.skipBlanks()
 
 	var code uint32
+
 	if c.peek() != ',' {
 		v, err := a.exprNoForward(c)
 		if err != nil {
 			return err
 		}
+
 		code = v
 	}
 
 	var shimAddr uint32
+
 	if code != 0 {
 		if err := a.setSymbol(name, a.deposit, SymEntry, true); err != nil {
 			return err
 		}
+
 		shimAddr = a.deposit
 
 		if err := a.image.storeWord(a.deposit, 0); err != nil { // empty entry mask word
 			return err
 		}
+
 		a.deposit += 2
 
 		if err := a.storeShimStub(code); err != nil {
@@ -791,6 +916,7 @@ func (a *Assembler) pseudoShim(c *cursor) error {
 		if err != nil {
 			return err
 		}
+
 		shimAddr = v
 	}
 
@@ -798,19 +924,23 @@ func (a *Assembler) pseudoShim(c *cursor) error {
 	if c.peek() == ',' {
 		c.next()
 	}
+
 	c.skipBlanks()
+
 	rtlName := scanName(c)
 
 	c.skipBlanks()
 	if c.peek() == ',' {
 		c.next()
 	}
+
 	offset, err := a.exprNoForward(c)
 	if err != nil {
 		return err
 	}
 
 	shimSymbol := fmt.Sprintf("SHIM$%s_%08X", rtlName, offset)
+
 	return a.setSymbol(shimSymbol, shimAddr, SymNone, false)
 }
 
@@ -824,9 +954,11 @@ func (a *Assembler) storeShimStub(code uint32) error {
 		}
 		a.deposit++
 	}
+
 	if err := a.image.storeLongword(a.deposit, code); err != nil {
 		return err
 	}
+
 	a.deposit += 4
 
 	tail := []byte{0x50, 0xFC, 0x7D, 0x04} // R0 ; XFC #XFC$SHIM ; RET
@@ -834,8 +966,10 @@ func (a *Assembler) storeShimStub(code uint32) error {
 		if err := a.image.storeByte(a.deposit, b); err != nil {
 			return err
 		}
+
 		a.deposit++
 	}
+
 	return nil
 }
 

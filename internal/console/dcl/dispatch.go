@@ -10,5 +10,6 @@ func (g *Grammar) Dispatch(r *Result) error {
 	if !ok {
 		return fmt.Errorf("dcl: no handler bound for %s", r.Active)
 	}
+	
 	return h(r.ActiveID, r)
 }

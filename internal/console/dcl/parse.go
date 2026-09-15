@@ -33,6 +33,7 @@ func newResult() *Result { return &Result{values: map[string]*matchedValue{}} }
 // (matching DCLpresent).
 func (r *Result) Present(name string) bool {
 	v, ok := r.values[upcase(name)]
+
 	return ok && v.present
 }
 
@@ -40,6 +41,7 @@ func (r *Result) Present(name string) bool {
 // form.
 func (r *Result) Negated(name string) bool {
 	v, ok := r.values[upcase(name)]
+	
 	return ok && v.negated
 }
 
@@ -50,6 +52,7 @@ func (r *Result) String(name string) string {
 	if !ok || !v.isString || v.isKeyword {
 		return ""
 	}
+	
 	return v.str
 }
 
@@ -62,6 +65,7 @@ func (r *Result) Int(name string) int64 {
 	if !ok || (v.isString && !v.isKeyword) {
 		return 0
 	}
+	
 	return v.i
 }
 
@@ -73,6 +77,7 @@ func (r *Result) Keyword(name string) string {
 	if !ok || !v.isKeyword {
 		return ""
 	}
+	
 	return v.str
 }
 
@@ -95,12 +100,14 @@ func (r *Result) markPresent(name string, id int64, negated bool) {
 // calls Parse.
 func (g *Grammar) Parse(line string) (*Result, error) {
 	line = upcaseOutsideQuotes(line)
+
 	pos := strings.TrimSpace(line)
 	if pos == "" {
 		return nil, fmt.Errorf("dcl: empty command")
 	}
 
 	verbTok, pos := readBareToken(pos)
+
 	verb, err := g.matchVerb(verbTok)
 	if err != nil {
 		return nil, err
@@ -129,34 +136,44 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 			if err != nil {
 				return nil, err
 			}
+
 			continue
 		}
 
 		if nextParam < len(active.Parameters) && active.Parameters[nextParam].Type == TypeRestOfLine {
 			p := active.Parameters[nextParam]
 			val := strings.TrimSpace(pos)
+
 			r.set(p.Name, p.ID, false, Value{IsString: true, Str: val})
+
 			nextParam++
 			pos = ""
+
 			break
 		}
 
 		if nextParam >= len(active.Parameters) {
 			return nil, fmt.Errorf("dcl: unexpected extra parameter near %q", pos)
 		}
+
 		p := active.Parameters[nextParam]
+
 		token, rem, err := readValueToken(pos)
 		if err != nil {
 			return nil, err
 		}
+
 		pos = rem
 
 		val, redirect, negated, err := g.resolveValue(p.Type, p.TypeName, token)
 		if err != nil {
 			return nil, fmt.Errorf("parameter %s: %w", p.Name, err)
 		}
+
 		r.set(p.Name, p.ID, negated, val)
+
 		nextParam++
+
 		if redirect != "" {
 			active = g.entries[redirect]
 			nextParam = 0
@@ -170,6 +187,7 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 	r.Active = active.Name
 	r.ActiveID = active.ID
 	r.EntryPoint = active.EntryPoint
+
 	return r, nil
 }
 
@@ -187,20 +205,25 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, rest s
 	if err != nil {
 		return nil, 0, "", err
 	}
+
 	if negated && q.NoNegate {
 		return nil, 0, "", fmt.Errorf("dcl: cannot negate qualifier %q", q.Name)
 	}
+
 	if q.aliasRef != nil {
 		q = q.aliasRef
 	}
 
 	var token string
+
 	haveVal := false
+
 	if strings.HasPrefix(rest, "=") {
 		token, rest, err = readValueToken(rest[1:])
 		if err != nil {
 			return nil, 0, "", err
 		}
+
 		haveVal = true
 	}
 
@@ -208,22 +231,28 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, rest s
 		if haveVal {
 			return nil, 0, "", fmt.Errorf("dcl: qualifier %s does not take a value", q.Name)
 		}
+
 		r.markPresent(q.Name, q.ID, negated)
+
 		if q.Syntax != "" {
 			target, ok := g.entries[q.Syntax]
 			if !ok {
 				return nil, 0, "", fmt.Errorf("dcl: qualifier %s: syntax %q not found", q.Name, q.Syntax)
 			}
+
 			return target, 0, rest, nil
 		}
+
 		return active, nextParam, rest, nil
 	}
 
 	if !haveVal {
 		if q.Default != nil {
 			r.set(q.Name, q.ID, negated, *q.Default)
+			
 			return active, nextParam, rest, nil
 		}
+
 		return nil, 0, "", fmt.Errorf("dcl: required value for qualifier %s not found", q.Name)
 	}
 
@@ -231,17 +260,21 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, rest s
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("qualifier %s: %w", q.Name, err)
 	}
+
 	if negated {
 		kwNegated = negated
 	}
+
 	r.set(q.Name, q.ID, kwNegated, val)
 	if redirect != "" {
 		target, ok := g.entries[redirect]
 		if !ok {
 			return nil, 0, "", fmt.Errorf("dcl: qualifier %s: syntax %q not found", q.Name, redirect)
 		}
+
 		return target, 0, rest, nil
 	}
+
 	return active, nextParam, rest, nil
 }
 
@@ -256,6 +289,7 @@ func (g *Grammar) resolveValue(typ ValueType, typeName string, token string) (va
 		if err != nil {
 			return Value{}, "", false, err
 		}
+
 		return Value{Int: n}, "", false, nil
 
 	case TypeKeyword:
@@ -263,10 +297,12 @@ func (g *Grammar) resolveValue(typ ValueType, typeName string, token string) (va
 		if !ok {
 			return Value{}, "", false, fmt.Errorf("dcl: unknown type %q", typeName)
 		}
+
 		kw, neg, err := t.lookup(token)
 		if err != nil {
 			return Value{}, "", false, err
 		}
+
 		return Value{IsString: true, IsKeyword: true, Str: kw.Name, Int: kw.ID}, kw.Syntax, neg, nil
 
 	default: // TypeAny, TypeName, TypeString, TypeRestOfLine, TypeSwitch
@@ -303,6 +339,7 @@ func (g *Grammar) checkRequirements(active *Entry, r *Result) error {
 			return fmt.Errorf("dcl: invalid combination of qualifiers %s and %s", d.Qual1, d.Qual2)
 		}
 	}
+
 	return nil
 }
 
@@ -315,32 +352,41 @@ func parseDCLInteger(token string) (int64, error) {
 	if token == "" {
 		return 0, nil
 	}
+
 	mult := int64(1)
 	digits := token
+
 	switch token[len(token)-1] {
 	case 'K':
 		mult = 1024
 		digits = token[:len(token)-1]
+
 	case 'M':
 		mult = 1024000
 		digits = token[:len(token)-1]
+
 	case 'G':
 		mult = 1024000000
 		digits = token[:len(token)-1]
 	}
 
 	var v int64
+
 	for i := 0; i < len(digits); i++ {
 		ch := digits[i]
+
 		switch {
 		case ch == '-':
 			mult = -mult
+
 		case ch >= '0' && ch <= '9':
 			v = v*10 + int64(ch-'0')
+
 		default:
 			return 0, fmt.Errorf("dcl: invalid integer %q", token)
 		}
 	}
+
 	return v * mult, nil
 }
 
@@ -349,15 +395,19 @@ func parseDCLInteger(token string) (int64, error) {
 // DCLupcase.
 func upcaseOutsideQuotes(s string) string {
 	var b strings.Builder
+
 	inQuote := false
+
 	for i := 0; i < len(s); i++ {
 		ch := s[i]
 		if ch == '"' {
 			inQuote = !inQuote
 		}
+
 		if !inQuote && ch == ';' {
 			break
 		}
+
 		if inQuote {
 			b.WriteByte(ch)
 		} else if ch >= 'a' && ch <= 'z' {
@@ -366,6 +416,7 @@ func upcaseOutsideQuotes(s string) string {
 			b.WriteByte(ch)
 		}
 	}
+
 	return b.String()
 }
 
@@ -379,8 +430,10 @@ func readBareToken(s string) (token, rest string) {
 		case '=', '/', ' ', '\t':
 			return s[:i], s[i:]
 		}
+
 		i++
 	}
+
 	return s, ""
 }
 
@@ -395,15 +448,19 @@ func readValueToken(s string) (token, rest string, err error) {
 		if end < 0 {
 			return "", "", fmt.Errorf("dcl: unterminated quoted string")
 		}
+
 		return s[1 : end+1], s[end+2:], nil
 	}
+
 	i := 0
 	for i < len(s) {
 		switch s[i] {
 		case '/', ' ', '\t':
 			return s[:i], s[i:], nil
 		}
+
 		i++
 	}
+
 	return s, "", nil
 }

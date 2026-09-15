@@ -23,6 +23,7 @@ func (r memByteReader) ByteAt(addr uint32) byte {
 	if err != nil {
 		return 0
 	}
+
 	return b
 }
 
@@ -38,6 +39,7 @@ func (c *Console) Disassemble(start, end uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
+	
 	if end < start {
 		end = start
 	}
@@ -48,6 +50,7 @@ func (c *Console) Disassemble(start, end uint32) error {
 		if err != nil {
 			return fmt.Errorf("console: disassemble at %08X: %w", pc, err)
 		}
+
 		c.Printf("%08X: %s\n", pc, dec.String())
 		pc += dec.Length
 	}

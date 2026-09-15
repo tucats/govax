@@ -30,6 +30,7 @@ func (c *Console) AddBreakpoint(addr uint32) {
 	if c.breakpointAt(addr) != nil {
 		return
 	}
+
 	c.Breakpoints = append(c.Breakpoints, &Breakpoint{Kind: BreakAddress, Addr: addr})
 }
 
@@ -39,6 +40,7 @@ func (c *Console) RemoveBreakpoint(addr uint32) {
 	for i, bp := range c.Breakpoints {
 		if bp.Kind == BreakAddress && bp.Addr == addr {
 			c.Breakpoints = append(c.Breakpoints[:i], c.Breakpoints[i+1:]...)
+
 			return
 		}
 	}
@@ -56,6 +58,7 @@ func (c *Console) breakpointAt(addr uint32) *Breakpoint {
 			return bp
 		}
 	}
+
 	return nil
 }
 
@@ -71,20 +74,25 @@ func (c *Console) Execute(startAddr *uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
+
 	if startAddr != nil {
 		c.CPU.SetGPR(vax.PC, *startAddr)
 	}
+
 	c.Engine.BeginRun()
 
 	first := true
+
 	for {
 		pc := c.CPU.GPR(vax.PC)
 		if !first {
 			if bp := c.breakpointAt(pc); bp != nil {
 				c.Printf("Break at %08X\n", pc)
+
 				return nil
 			}
 		}
+
 		first = false
 
 		if err := c.Engine.Step(); err != nil {
@@ -105,9 +113,11 @@ func (c *Console) Step(startAddr *uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
+
 	if startAddr != nil {
 		c.CPU.SetGPR(vax.PC, *startAddr)
 	}
+
 	c.Engine.BeginRun()
 
 	if err := c.Engine.Step(); err != nil {
@@ -115,6 +125,7 @@ func (c *Console) Step(startAddr *uint32) error {
 	}
 
 	c.Printf("Stepped to %08X\n", c.CPU.GPR(vax.PC))
+
 	return nil
 }
 
@@ -129,13 +140,19 @@ func (c *Console) reportStopReason(err error) error {
 	switch {
 	case errors.Is(err, cpu.ErrHalted):
 		c.Printf("HALT instruction executed at PC = %08X\n", c.CPU.GPR(vax.PC))
+
 		return nil
+
 	case errors.Is(err, cpu.ErrInstructionLimitExceeded):
 		c.Printf("%%VAX-I-INSTRLIMIT, instruction limit reached at PC = %08X\n", c.CPU.GPR(vax.PC))
+
 		return nil
+
 	case errors.Is(err, cpu.ErrTimeLimitExceeded):
 		c.Printf("%%VAX-I-TIMELIMIT, time limit reached at PC = %08X\n", c.CPU.GPR(vax.PC))
+
 		return nil
+
 	default:
 		return err
 	}

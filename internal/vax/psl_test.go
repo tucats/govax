@@ -4,6 +4,7 @@ import "testing"
 
 func TestPSLConditionCodes(t *testing.T) {
 	var p PSL
+
 	p.SetNZVC(true, false, true, false)
 
 	if !p.N() || p.Z() || !p.V() || p.C() {
@@ -21,6 +22,7 @@ func TestPSLFieldsDoNotOverlap(t *testing.T) {
 	// getter still reads back exactly what its own setter put there and
 	// nothing else, i.e. no two fields share a bit.
 	var p PSL
+
 	p.SetN(true)
 	p.SetZ(true)
 	p.SetV(true)
@@ -62,6 +64,7 @@ func TestPSLFieldsDoNotOverlap(t *testing.T) {
 	if p.N() {
 		t.Error("SetN(false) did not clear N")
 	}
+
 	if p != before&^pslN {
 		t.Errorf("SetN(false) disturbed other fields: got %#010x, want %#010x", uint32(p), uint32(before&^pslN))
 	}
@@ -69,6 +72,7 @@ func TestPSLFieldsDoNotOverlap(t *testing.T) {
 
 func TestPSLIPLMasksToFiveBits(t *testing.T) {
 	var p PSL
+
 	p.SetIPL(0xFF) // out-of-range input; only the low 5 bits are architected
 	if got := p.IPL(); got != 0x1F {
 		t.Errorf("IPL() = %d, want 31 (masked to 5 bits)", got)
@@ -77,6 +81,7 @@ func TestPSLIPLMasksToFiveBits(t *testing.T) {
 
 func TestPSLAccessModesMasksToTwoBits(t *testing.T) {
 	var p PSL
+	
 	p.SetCurMod(User)
 	p.SetPrvMod(Kernel)
 	if p.CurMod() != User {

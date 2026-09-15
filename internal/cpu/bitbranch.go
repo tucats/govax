@@ -37,6 +37,7 @@ func bitBranchPosition(e *Engine, posOp Operand) (int32, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return int32(signExtend(p, posOp.Size)), nil
 }
 
@@ -49,17 +50,21 @@ func emulBb(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	bit, err := loadField(e, d.Operands[1], position, 1)
 	if err != nil {
 		return err
 	}
+
 	test := uint32(1)
 	if d.Opcode.Function == 0xE1 { // BBC
 		test = 0
 	}
+
 	if bit == test {
 		e.cpu.SetGPR(vax.PC, d.Operands[2].Addr)
 	}
+
 	return nil
 }
 
@@ -77,7 +82,9 @@ func emulBbState(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	base := d.Operands[1]
+
 	original, err := loadField(e, base, position, 1)
 	if err != nil {
 		return err
@@ -87,13 +94,16 @@ func emulBbState(e *Engine, d *Decoded) error {
 	if f == 0xE6 { // BBSSI -> BBSS
 		f = 0xE2
 	}
+
 	if f == 0xE7 { // BBCCI -> BBCC
 		f = 0xE5
 	}
+
 	test := uint32(1)
 	if f&0x01 != 0 {
 		test = 0
 	}
+
 	newBit := uint32(0)
 	if f&0x02 != 0 {
 		newBit = 1
@@ -102,8 +112,10 @@ func emulBbState(e *Engine, d *Decoded) error {
 	if err := storeField(e, base, position, 1, newBit); err != nil {
 		return err
 	}
+
 	if original == test {
 		e.cpu.SetGPR(vax.PC, d.Operands[2].Addr)
 	}
+
 	return nil
 }

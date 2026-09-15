@@ -62,6 +62,7 @@ func (c *Console) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 		// happens to be at the live SCBB instead.
 		c.asmSession.SetSCBB(c.CPU.PR(vax.SCBB))
 	}
+	
 	a := c.asmSession
 
 	// .INCLUDE names (e.g. kernel.asm's own "ssdef.asm") are resolved
@@ -69,8 +70,10 @@ func (c *Console) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 	// c.Paths' own search directories/embedded fallback — see
 	// docs/PHASE-15.md.
 	includePaths := c.Paths.WithDir(filepath.Dir(path))
+
 	a.SetIncludeResolver(func(name string) (string, error) {
 		b, err := includePaths.ReadFile(name)
+
 		return string(b), err
 	})
 
@@ -83,6 +86,7 @@ func (c *Console) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 			return 0, false, fmt.Errorf("console: depositing %s: %w", path, err)
 		}
 	}
+
 	if s0 := a.BytesRange(a.S0Origin(), a.S0End()); len(s0) > 0 {
 		if err := c.storeBytes(a.S0Origin(), s0); err != nil {
 			return 0, false, fmt.Errorf("console: depositing %s: %w", path, err)
@@ -108,9 +112,11 @@ func (c *Console) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 		if strings.ContainsRune(name, '$') {
 			kind = SymbolSystem
 		}
+
 		c.Symbols.Set(name, value, kind)
 	}
 
 	addr, ok := a.TakeEntry()
+
 	return addr, ok, nil
 }

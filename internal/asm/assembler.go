@@ -102,6 +102,7 @@ func New() *Assembler {
 		verbose:   true, // matches initialization.c's default CONSOLE_VERBOSE flag
 	}
 	a.seedBuiltinSymbols()
+
 	return a
 }
 
@@ -141,6 +142,7 @@ func (a *Assembler) SetRadix(radix int) {
 	if radix != 10 && radix != 16 {
 		panic("asm: radix must be 10 or 16")
 	}
+
 	a.radix = radix
 }
 
@@ -166,6 +168,7 @@ func (a *Assembler) Entry() (uint32, bool) { return a.entryAddr, a.entrySeen }
 func (a *Assembler) TakeEntry() (uint32, bool) {
 	addr, ok := a.entryAddr, a.entrySeen
 	a.entrySeen = false
+	
 	return addr, ok
 }
 
@@ -209,6 +212,7 @@ func (a *Assembler) S0Origin() uint32 { return a.s0Origin }
 func (a *Assembler) SetS0Origin(addr uint32) {
 	a.s0Origin = addr
 	a.s0Deposit = addr
+
 	if a.regionIsS0 {
 		a.deposit = addr
 	}
@@ -220,6 +224,7 @@ func (a *Assembler) S0End() uint32 {
 	if a.regionIsS0 {
 		return a.deposit
 	}
+
 	return a.s0Deposit
 }
 
@@ -234,6 +239,7 @@ func (a *Assembler) p0End() uint32 {
 	if a.regionIsS0 {
 		return a.p0Deposit
 	}
+
 	return a.deposit
 }
 
@@ -255,6 +261,7 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 	if err := a.assembleLines(source); err != nil {
 		return nil, err
 	}
+
 	return a.Bytes(), nil
 }
 
@@ -263,6 +270,7 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 func (a *Assembler) assembleLines(source string) error {
 	a.includeDepth++
 	defer func() { a.includeDepth-- }()
+
 	if a.includeDepth > 64 {
 		return fmt.Errorf("include nesting too deep (possible cycle)")
 	}
@@ -271,10 +279,12 @@ func (a *Assembler) assembleLines(source string) error {
 		if a.stop {
 			return nil
 		}
+
 		line := preprocessLine(raw)
 		if line == "" {
 			continue
 		}
+
 		if err := a.assembleStatement(line); err != nil {
 			return &Error{Line: i + 1, Err: err}
 		}
@@ -292,8 +302,13 @@ type Error struct {
 	Err  error
 }
 
-func (e *Error) Error() string { return fmt.Sprintf("line %d: %v", e.Line, e.Err) }
-func (e *Error) Unwrap() error { return e.Err }
+func (e *Error) Error() string {
+	return fmt.Sprintf("line %d: %v", e.Line, e.Err)
+}
+
+func (e *Error) Unwrap() error {
+	return e.Err
+}
 
 // preprocessLine strips a trailing ";" comment and uppercases everything
 // outside single- or double-quoted regions, matching parse.c's uppercase()
@@ -312,19 +327,24 @@ func preprocessLine(line string) string {
 
 		if inDouble && ch == '"' && i > 0 && b[i-1] == '\\' {
 			out = append(out, ch)
+
 			continue
 		}
+
 		if ch == '\'' {
 			inSingle = !inSingle
 		} else if ch == '"' && !inSingle {
 			inDouble = !inDouble
 		}
+
 		if !inSingle && !inDouble && ch == ';' {
 			break
 		}
+
 		if !inSingle && !inDouble && ch >= 'a' && ch <= 'z' {
 			ch -= 32
 		}
+
 		out = append(out, ch)
 	}
 
@@ -339,6 +359,7 @@ func preprocessLine(line string) string {
 func (a *Assembler) assembleStatement(line string) error {
 	c := newCursor(line)
 	c.skipBlanks()
+
 	if c.atEnd() || c.peek() == '#' { // GNU-style leading "#" comment line
 		return nil
 	}
@@ -346,7 +367,9 @@ func (a *Assembler) assembleStatement(line string) error {
 	if err := a.parseLabel(c); err != nil {
 		return err
 	}
+
 	c.skipBlanks()
+
 	if c.atEnd() {
 		return nil
 	}
@@ -355,6 +378,7 @@ func (a *Assembler) assembleStatement(line string) error {
 	if err != nil {
 		return err
 	}
+
 	if handled {
 		return nil
 	}
@@ -369,22 +393,27 @@ func (a *Assembler) parseLabel(c *cursor) error {
 	c.skipBlanks()
 	start := c.pos
 	i := c.pos
+
 	for i < len(c.s) {
 		ch := c.s[i]
 		if isBlank(ch) {
 			return nil
 		}
+
 		if ch == ':' {
 			break
 		}
+
 		i++
 	}
+
 	if i >= len(c.s) {
 		return nil
 	}
 
 	name := c.s[start:i]
 	flags := SymLabel
+
 	end := i + 1
 	if end < len(c.s) && c.s[end] == ':' {
 		end++

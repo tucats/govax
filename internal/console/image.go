@@ -225,23 +225,31 @@ func (c *Console) readISD(addr uint32) (*ISD, uint32, error) {
 // readIAF reads the fixed part of an Image Attribute/Fixup header at addr,
 // matching init_ihd_maps's IAF field table.
 func (c *Console) readIAF(addr uint32) (IAF, error) {
-	var iaf IAF
-	var err error
+	var (
+		iaf IAF
+		err error
+	)
+
 	if iaf.OffsetGFix, err = c.loadLong(addr + 0x0C); err != nil {
 		return iaf, err
 	}
+
 	if iaf.OffsetAddr, err = c.loadLong(addr + 0x10); err != nil {
 		return iaf, err
 	}
+
 	if iaf.OffsetChgprot, err = c.loadLong(addr + 0x14); err != nil {
 		return iaf, err
 	}
+
 	if iaf.OffsetShl, err = c.loadLong(addr + 0x18); err != nil {
 		return iaf, err
 	}
+
 	if iaf.ShrImgCnt, err = c.loadLong(addr + 0x1C); err != nil {
 		return iaf, err
 	}
+	
 	return iaf, nil
 }
 
@@ -298,12 +306,14 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 	} else {
 		icb.Name = fn
 	}
+
 	c.ICBList = append(c.ICBList, icb)
 
 	transferOffset, err := c.readIHDTransferOffset(base)
 	if err != nil {
 		return nil, err
 	}
+
 	identOffset, err := c.readIHDIdentOffset(base)
 	if err != nil {
 		return nil, err
@@ -314,9 +324,11 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		if v != 0 {
-			v += icb.Base
 			var sname string
+
+			v += icb.Base
 			if icb.Name != "<MAIN>" {
 				if n == 0 {
 					sname = fmt.Sprintf("SHARE$%s_INITIALIZE", icb.Name)
@@ -326,8 +338,10 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 			} else {
 				sname = "MAIN"
 			}
+
 			c.Symbols.Set(sname, v, SymbolSystem)
 		}
+
 		icb.Transfer[n] = v
 	}
 
@@ -337,9 +351,11 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		if isd == nil {
 			break
 		}
+
 		isdAddr += size
 		icb.ISDList = append(icb.ISDList, isd)
 	}
@@ -362,31 +378,38 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 				if addr >= c.RTL.RegionSize[0] {
 					c.RTL.RegionSize[0] = addr + 512
 				}
+
 				if addr+0x1FF > icb.End {
 					icb.End = addr + 0x1FF
 				}
+
 				if err := c.storeBytes(addr, make([]byte, 512)); err != nil {
 					return nil, err
 				}
 			}
+
 			continue
 		}
 
 		fileAddr := int64(isd.VBN-1) * 512
+
 		for n := uint32(0); n < uint32(isd.Pages); n++ {
 			addr := icb.Base + ((n + uint32(isd.VPN)) << 9)
 			if addr >= c.RTL.RegionSize[0] {
 				c.RTL.RegionSize[0] = addr + 512
 			}
+
 			if addr+0x1FF > icb.End {
 				icb.End = addr + 0x1FF
 			}
 
-			off := fileAddr + int64(n)*512
 			block := make([]byte, 512)
+
+			off := fileAddr + int64(n)*512
 			if off >= 0 && off < int64(len(data)) {
 				copy(block, data[off:])
 			}
+
 			if err := c.storeBytes(addr, block); err != nil {
 				return nil, err
 			}
@@ -397,6 +420,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 
 	if icb.FixupISD != nil {
 		addr := icb.Base + (uint32(icb.FixupISD.VPN) << 9)
+
 		iaf, err := c.readIAF(addr)
 		if err != nil {
 			return nil, err
@@ -413,7 +437,9 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 		icb.SHRList = append(icb.SHRList, self)
 
 		naddr := addr + iaf.OffsetShl + 16 + iaf.OffsetNames
+
 		var imageID uint32
+
 		for n := uint32(1); n < iaf.ShrImgCnt; n++ {
 			nameAddr := naddr + 0x08
 			naddr += 0x40
@@ -524,6 +550,7 @@ func (c *Console) imageFixup(icb *ICB) error {
 			if err != nil {
 				return err
 			}
+
 			shr := findSHRByID(icb, imageID)
 			if shr == nil {
 				fixupCount = 0
@@ -534,10 +561,12 @@ func (c *Console) imageFixup(icb *ICB) error {
 					if err != nil {
 						return err
 					}
+
 					value, err := c.resolveFixupTarget(shr, offset)
 					if err != nil {
 						return err
 					}
+
 					if err := c.storeLong(naddr, value); err != nil {
 						return err
 					}
@@ -574,11 +603,13 @@ func (c *Console) imageFixup(icb *ICB) error {
 					if err != nil {
 						return err
 					}
+
 					vaddr := icb.Base + offset
 					target, err := c.loadLong(vaddr)
 					if err != nil {
 						return err
 					}
+
 					if err := c.storeLong(vaddr, target+shr.Base); err != nil {
 						return err
 					}

@@ -68,14 +68,17 @@ func TestEnsureShims_stubDispatchesThroughXFCShim(t *testing.T) {
 	if err := c.Engine.CallEntry(addr); err != nil {
 		t.Fatalf("CallEntry: %v", err)
 	}
+
 	for {
 		err := c.Engine.Step()
 		if err == nil {
 			continue
 		}
+
 		if errors.Is(err, cpu.ErrConsoleCallReturned) {
 			break
 		}
+		
 		t.Fatalf("Step: %v", err)
 	}
 

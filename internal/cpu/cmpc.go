@@ -43,26 +43,32 @@ func emulCmpc3(e *Engine, d *Decoded) error {
 		psl.SetZ(true)
 		psl.SetC(false)
 	}
+
 	for length > 0 {
 		b1, err := e.mem.LoadByte(e.cpu, src1)
 		if err != nil {
 			return err
 		}
+
 		b2, err := e.mem.LoadByte(e.cpu, src2)
 		if err != nil {
 			return err
 		}
+
 		result, _, c := subResult(uint64(b1), uint64(b2), 1)
 		psl.SetN(signBit(result, 1))
 		psl.SetZ(isZero(result, 1))
 		psl.SetC(c)
+
 		if b1 != b2 {
 			break
 		}
+
 		length--
 		src1++
 		src2++
 	}
+
 	psl.SetV(false)
 	e.cpu.SetPSL(psl)
 
@@ -70,6 +76,7 @@ func emulCmpc3(e *Engine, d *Decoded) error {
 	e.cpu.SetGPR(vax.R1, src1)
 	e.cpu.SetGPR(vax.R2, uint32(length))
 	e.cpu.SetGPR(vax.R3, src2)
+
 	return nil
 }
 
@@ -100,20 +107,22 @@ func emulCmpc5(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	len1 := int32(signExtend(l1v, d.Operands[0].Size))
 
 	l2v, err := d.Operands[3].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	len2 := int32(signExtend(l2v, d.Operands[3].Size))
 
 	fillv, err := d.Operands[2].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
-	fill := byte(fillv)
 
+	fill := byte(fillv)
 	src1 := d.Operands[1].Addr
 	src2 := d.Operands[4].Addr
 
@@ -140,50 +149,62 @@ func emulCmpc5(e *Engine, d *Decoded) error {
 		if err != nil {
 			return err
 		}
+
 		b2, err := e.mem.LoadByte(e.cpu, src2)
 		if err != nil {
 			return err
 		}
+
 		result, _, c := subResult(uint64(b1), uint64(b2), 1)
 		psl.SetN(signBit(result, 1))
 		psl.SetZ(isZero(result, 1))
 		psl.SetC(c)
+
 		if b1 != b2 {
 			inequality = true
 			break
 		}
+
 		len1--
 		src1++
 		len2--
 		src2++
 	}
+
 	for !inequality && len1 != 0 {
 		b, err := e.mem.LoadByte(e.cpu, src1)
 		if err != nil {
 			return err
 		}
+
 		result, _, c := subResult(uint64(b), uint64(fill), 1)
 		psl.SetN(signBit(result, 1))
 		psl.SetZ(isZero(result, 1))
 		psl.SetC(c)
+
 		if b != fill {
 			break
 		}
+
 		len1--
 		src1++
 	}
+
 	for !inequality && len2 != 0 {
 		b, err := e.mem.LoadByte(e.cpu, src2)
 		if err != nil {
 			return err
 		}
+
 		result, _, c := subResult(uint64(fill), uint64(b), 1)
 		psl.SetN(signBit(result, 1))
 		psl.SetZ(isZero(result, 1))
 		psl.SetC(c)
+
 		if fill != b {
 			break
 		}
+
 		len2--
 		src2++
 	}
@@ -195,5 +216,6 @@ func emulCmpc5(e *Engine, d *Decoded) error {
 	e.cpu.SetGPR(vax.R1, src1)
 	e.cpu.SetGPR(vax.R2, uint32(len2))
 	e.cpu.SetGPR(vax.R3, src2)
+
 	return nil
 }

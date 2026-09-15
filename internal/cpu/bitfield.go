@@ -38,9 +38,11 @@ func bitFieldMask(size int) uint32 {
 	if size <= 0 {
 		return 0
 	}
+
 	if size >= 32 {
 		return 0xFFFFFFFF
 	}
+
 	return uint32(1)<<uint(size) - 1
 }
 
@@ -52,9 +54,11 @@ func signExtendBitField(value uint32, size int) uint32 {
 	if size <= 0 || size >= 32 {
 		return value
 	}
+
 	if value&(1<<uint(size-1)) != 0 {
 		return value | ^bitFieldMask(size)
 	}
+
 	return value & bitFieldMask(size)
 }
 
@@ -69,10 +73,12 @@ func fieldOperands(cpu *vax.CPU, mem *vm.Memory, posOp, sizeOp Operand) (positio
 	if err != nil {
 		return 0, 0, err
 	}
+
 	s, err := sizeOp.Load(cpu, mem)
 	if err != nil {
 		return 0, 0, err
 	}
+
 	return int32(signExtend(p, posOp.Size)), int(signExtend(s, sizeOp.Size)), nil
 }
 
@@ -83,8 +89,10 @@ func loadField(e *Engine, base Operand, position int32, size int) (uint32, error
 	switch base.Kind {
 	case OperandRegister:
 		return getRegisterField(e.cpu, position, size, base.Reg)
+
 	case OperandMemory:
 		return getMemoryField(e.cpu, e.mem, position, size, base.Addr)
+
 	default:
 		return 0, &Fault{Code: ExcReservedOp}
 	}
@@ -95,8 +103,10 @@ func storeField(e *Engine, base Operand, position int32, size int, data uint32) 
 	switch base.Kind {
 	case OperandRegister:
 		return setRegisterField(e.cpu, position, size, base.Reg, data)
+
 	case OperandMemory:
 		return setMemoryField(e.cpu, e.mem, position, size, base.Addr, data)
+
 	default:
 		return &Fault{Code: ExcReservedOp}
 	}
@@ -111,13 +121,17 @@ func getRegisterField(cpu *vax.CPU, position int32, size int, base vax.Reg) (uin
 	if size < 0 || size > 32 || position < 0 || position > 31 || (base == vax.PC && int(position)+size > 31) {
 		return 0, &Fault{Code: ExcReservedOp}
 	}
+
 	lo := cpu.GPR(base) >> uint(position)
 	loBits := 32 - int(position)
+
 	if size <= loBits {
 		return lo & bitFieldMask(size), nil
 	}
+
 	hiBits := size - loBits
 	hi := cpu.GPR(base+1) & bitFieldMask(hiBits)
+
 	return (lo & bitFieldMask(loBits)) | hi<<uint(loBits), nil
 }
 
@@ -128,17 +142,22 @@ func setRegisterField(cpu *vax.CPU, position int32, size int, base vax.Reg, data
 	if size < 0 || size > 32 || position < 0 || position > 31 || (base == vax.PC && int(position)+size > 31) {
 		return &Fault{Code: ExcReservedOp}
 	}
+
 	loBits := 32 - int(position)
+
 	if size <= loBits {
 		mask := bitFieldMask(size) << uint(position)
 		cpu.SetGPR(base, (cpu.GPR(base)&^mask)|((data<<uint(position))&mask))
+
 		return nil
 	}
+
 	hiBits := size - loBits
 	loMask := bitFieldMask(loBits) << uint(position)
 	cpu.SetGPR(base, (cpu.GPR(base)&^loMask)|((data<<uint(position))&loMask))
 	hiMask := bitFieldMask(hiBits)
 	cpu.SetGPR(base+1, (cpu.GPR(base+1)&^hiMask)|((data>>uint(loBits))&hiMask))
+
 	return nil
 }
 
@@ -162,19 +181,25 @@ func getMemoryField(cpu *vax.CPU, mem *vm.Memory, position int32, size int, base
 	if size < 0 || size > 32 {
 		return 0, &Fault{Code: ExcReservedOp}
 	}
+
 	if size == 0 {
 		return 0, nil
 	}
+
 	addr, bitOff := bitFieldByteSpan(base, position)
 	nBytes := (bitOff + uint(size) + 7) / 8
+
 	var v uint64
+
 	for i := uint32(0); i < uint32(nBytes); i++ {
 		b, err := mem.LoadByte(cpu, addr+i)
 		if err != nil {
 			return 0, err
 		}
+
 		v |= uint64(b) << (8 * i)
 	}
+
 	return uint32(v>>bitOff) & bitFieldMask(size), nil
 }
 
@@ -187,26 +212,33 @@ func setMemoryField(cpu *vax.CPU, mem *vm.Memory, position int32, size int, base
 	if size < 0 || size > 32 {
 		return &Fault{Code: ExcReservedOp}
 	}
+
 	if size == 0 {
 		return nil
 	}
+
 	addr, bitOff := bitFieldByteSpan(base, position)
 	nBytes := (bitOff + uint(size) + 7) / 8
+
 	var orig uint64
+
 	for i := uint32(0); i < uint32(nBytes); i++ {
 		b, err := mem.LoadByte(cpu, addr+i)
 		if err != nil {
 			return err
 		}
+
 		orig |= uint64(b) << (8 * i)
 	}
 	mask := (uint64(1)<<(bitOff+uint(size)) - 1) &^ (uint64(1)<<bitOff - 1)
 	v := (orig &^ mask) | ((uint64(data) << bitOff) & mask)
+
 	for i := uint32(0); i < uint32(nBytes); i++ {
 		if err := mem.StoreByte(cpu, addr+i, byte(v>>(8*i))); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -219,19 +251,23 @@ func emulExtv(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	field, err := loadField(e, d.Operands[2], position, size)
 	if err != nil {
 		return err
 	}
+
 	if d.Opcode.Function == 0xEE { // EXTV
 		field = signExtendBitField(field, size)
 	}
+
 	psl := e.cpu.PSL()
 	psl.SetN(signBit(uint64(field), 4))
 	psl.SetZ(isZero(uint64(field), 4))
 	psl.SetV(false)
 	psl.SetC(false)
 	e.cpu.SetPSL(psl)
+
 	return d.Operands[3].Store(e.cpu, e.mem, uint64(field))
 }
 
@@ -245,17 +281,21 @@ func emulCmpv(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	field, err := loadField(e, d.Operands[2], position, size)
 	if err != nil {
 		return err
 	}
+
 	if d.Opcode.Function == 0xEC { // CMPV
 		field = signExtendBitField(field, size)
 	}
+
 	data, err := d.Operands[3].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	result, _, c := subResult(uint64(field), data, 4)
 	psl := e.cpu.PSL()
 	psl.SetN(signBit(result, 4))
@@ -263,6 +303,7 @@ func emulCmpv(e *Engine, d *Decoded) error {
 	psl.SetV(false)
 	psl.SetC(c)
 	e.cpu.SetPSL(psl)
+
 	return nil
 }
 
@@ -275,10 +316,12 @@ func emulInsv(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	position, size, err := fieldOperands(e.cpu, e.mem, d.Operands[1], d.Operands[2])
 	if err != nil {
 		return err
 	}
+
 	return storeField(e, d.Operands[3], position, size, uint32(data))
 }
 
@@ -294,6 +337,7 @@ func emulFf(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	field, err := loadField(e, d.Operands[2], position, size)
 	if err != nil {
 		return err
@@ -307,6 +351,7 @@ func emulFf(e *Engine, d *Decoded) error {
 	if size == 0 {
 		psl.SetZ(true)
 		e.cpu.SetPSL(psl)
+
 		return d.Operands[3].Store(e.cpu, e.mem, uint64(uint32(position)))
 	}
 
@@ -326,5 +371,6 @@ func emulFf(e *Engine, d *Decoded) error {
 
 	psl.SetZ(true)
 	e.cpu.SetPSL(psl)
+
 	return d.Operands[3].Store(e.cpu, e.mem, uint64(uint32(position)+uint32(size)))
 }

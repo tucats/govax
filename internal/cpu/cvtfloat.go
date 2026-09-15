@@ -24,9 +24,11 @@ func init() {
 	for _, fn := range []byte{0x48, 0x49, 0x4A, 0x68, 0x69, 0x6A} { // CVTFB/W/L, CVTDB/W/L
 		reg(fn, emulCvtFloatToInt)
 	}
+
 	for _, fn := range []byte{0x4B, 0x6B} { // CVTRFL, CVTRDL
 		reg(fn, emulCvtRoundFloatToInt)
 	}
+	
 	for _, fn := range []byte{0x4C, 0x4D, 0x4E, 0x6C, 0x6D, 0x6E} { // CVTBF/W/L, CVTBD/W/L/CVTLD
 		reg(fn, emulCvtIntToFloat)
 	}
@@ -36,14 +38,17 @@ func init() {
 // (1, 2, or 4), per the VAX ISA manual's §8.3 "Data Types" -- the named
 // byteMin/Max/wordMin/Max/longMin/Max constants in fpu.go, already fixed
 // per reference/eVAX/AUDIT.md's N2 finding.
-func intOverflowBounds(size int) (min, max float64) {
+func intOverflowBounds(size int) (minValue, maxValue float64) {
 	switch size {
 	case 1:
 		return byteMin, byteMax
+
 	case 2:
 		return wordMin, wordMax
+
 	case 4:
 		return longMin, longMax
+
 	default:
 		panic("cpu: unsupported integer conversion size")
 	}

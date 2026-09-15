@@ -27,18 +27,21 @@ var opcodeAliases = map[string]string{
 // duplicate copy, per docs/PHASE-11.md.
 func (a *Assembler) assembleOpcode(c *cursor) error {
 	c.skipBlanks()
+
 	if c.atEnd() {
 		return nil // a label with nothing else on the line is fine
 	}
 
 	start := c.pos
+
 	for !isBlank(c.peek()) && !c.atEnd() {
 		c.pos++
 	}
+
 	name := c.s[start:c.pos]
 
-	if real, ok := opcodeAliases[name]; ok {
-		name = real
+	if realName, ok := opcodeAliases[name]; ok {
+		name = realName
 	}
 
 	inst := a.table.ByName(name)
@@ -50,17 +53,20 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 		if err := a.image.storeByte(a.deposit, inst.Opcode.Extended); err != nil {
 			return err
 		}
+
 		a.deposit++
 	}
+
 	if err := a.image.storeByte(a.deposit, inst.Opcode.Function); err != nil {
 		return err
 	}
-	a.deposit++
 
+	a.deposit++
 	a.caseBase = 0
 
 	for n := 0; n < inst.OperandCount; n++ {
 		c.skipBlanks()
+
 		if c.atEnd() {
 			return fmt.Errorf("%s: insufficient operands", inst.Name)
 		}
@@ -70,9 +76,11 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 		}
 
 		c.skipBlanks()
+		
 		if n < inst.OperandCount-1 && c.atEnd() {
 			return fmt.Errorf("%s: insufficient operands", inst.Name)
 		}
+
 		if c.peek() == ',' {
 			c.next()
 		}

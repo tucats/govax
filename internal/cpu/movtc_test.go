@@ -44,11 +44,12 @@ func TestEmulMovtc(t *testing.T) {
 
 func TestEmulMovtcOverlappingBackwardCopyTranslatesCorrectly(t *testing.T) {
 	// Regression for the tbladdr+tmp2 (address) vs tbladdr+ch (byte value)
-	// bug: src < dst, forcing the backward-copy branch.
+	// issue: src < dst, forcing the backward-copy branch.
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 	putBytes(t, cpu, mem, 0x2000, 'a', 'b', 'c')
-	for n := 0; n < 256; n++ {
+
+	for n := range 256 {
 		v := byte(n)
 		if v >= 'a' && v <= 'z' {
 			v -= 'a' - 'A'

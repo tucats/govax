@@ -136,6 +136,7 @@ func TestRoundTripFixtures(t *testing.T) {
 			}
 
 			stop := a.origin + uint32(len(out))
+			
 			if tc.dataLabel != "" {
 				sym, ok := a.symbols.find(tc.dataLabel)
 				if !ok {
@@ -156,6 +157,7 @@ func TestRoundTripFixtures(t *testing.T) {
 					t.Fatalf("at %08X: %s reassembled to %d bytes, want %d (% X vs % X)",
 						pc, dec.String(), len(reassembled), len(original), reassembled, original)
 				}
+
 				for i := range original {
 					if reassembled[i] != original[i] {
 						t.Fatalf("at %08X: %s reassembled to % X, want % X",

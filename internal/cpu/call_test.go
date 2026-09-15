@@ -123,7 +123,7 @@ func TestEmulCallsRoundTrip(t *testing.T) {
 	}
 
 	// R2/R3 were clobbered by the entry mask save; corrupt them further so a
-	// bug in RET's register restore would be visible.
+	// issue in RET's register restore would be visible.
 	cpu.SetGPR(vax.R2, 0)
 	cpu.SetGPR(vax.R3, 0)
 
@@ -269,7 +269,7 @@ func TestEngineCallEntryWithArguments(t *testing.T) {
 
 // TestEmulCallgArglistIsOperandAddress checks CALLG's AP is set to its
 // arglist operand's address directly (never dereferenced), per the manual's
-// "The AP is replaced by the arglist operand."
+// "The AP is replaced by the arglist operand".
 func TestEmulCallgArglistIsOperandAddress(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)

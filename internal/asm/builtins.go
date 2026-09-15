@@ -89,6 +89,7 @@ func (a *Assembler) seedBuiltinSymbols() {
 		if inst == nil {
 			continue
 		}
+		
 		sym := a.symbols.create("OPC$_" + inst.Name)
 		sym.value = uint32(i)
 		sym.flags |= SymPermanent | SymBuiltin

@@ -25,6 +25,7 @@ func ambiguousError(kind, token string) error {
 // (unused by any keyword in testdata/dcl/evax.dcl).
 func matchKeyword(keywords []*Keyword, token string) (kw *Keyword, negated bool, err error) {
 	var found *Keyword
+	
 	count := 0
 	exact := false
 
@@ -33,6 +34,7 @@ func matchKeyword(keywords []*Keyword, token string) (kw *Keyword, negated bool,
 			if !exact {
 				found, count = k, count+1
 			}
+
 			if k.Name == token {
 				found, count, exact = k, 1, true
 			}
@@ -50,6 +52,7 @@ func matchKeyword(keywords []*Keyword, token string) (kw *Keyword, negated bool,
 	if count == 0 {
 		return nil, false, unrecognizedError("keyword", token)
 	}
+
 	return nil, false, ambiguousError("keyword", token)
 }
 
@@ -58,6 +61,7 @@ func matchKeyword(keywords []*Keyword, token string) (kw *Keyword, negated bool,
 // negation rule as matchKeyword — a direct port of DCLqualsearch.
 func matchQualifier(quals []*Qualifier, token string) (q *Qualifier, negated bool, err error) {
 	var found *Qualifier
+
 	count := 0
 	exact := false
 
@@ -66,6 +70,7 @@ func matchQualifier(quals []*Qualifier, token string) (q *Qualifier, negated boo
 			if !exact {
 				found, count = cand, count+1
 			}
+
 			if cand.Name == token {
 				found, count, exact = cand, 1, true
 			}
@@ -81,12 +86,14 @@ func matchQualifier(quals []*Qualifier, token string) (q *Qualifier, negated boo
 		if err == nil {
 			return q, true, nil
 		}
+
 		return nil, false, err
 	}
 
 	if count == 0 {
 		return nil, false, unrecognizedError("qualifier", token)
 	}
+
 	return nil, false, ambiguousError("qualifier", token)
 }
 
@@ -96,6 +103,7 @@ func matchQualifier(quals []*Qualifier, token string) (q *Qualifier, negated boo
 // during DCLparse's "verb" FSM state.
 func (g *Grammar) matchVerb(token string) (*Entry, error) {
 	var found *Entry
+
 	count := 0
 	exact := false
 
@@ -104,6 +112,7 @@ func (g *Grammar) matchVerb(token string) (*Entry, error) {
 			if !exact {
 				found, count = e, count+1
 			}
+
 			if e.Name == token {
 				found, count, exact = e, 1, true
 			}
@@ -113,11 +122,14 @@ func (g *Grammar) matchVerb(token string) (*Entry, error) {
 	if count == 0 {
 		return nil, unrecognizedError("verb", token)
 	}
+
 	if count > 1 {
 		return nil, ambiguousError("verb", token)
 	}
+
 	if found.aliasRef != nil {
 		return found.aliasRef, nil
 	}
+
 	return found, nil
 }

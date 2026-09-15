@@ -20,6 +20,7 @@ func (c *cursor) peek() byte {
 	if c.atEnd() {
 		return 0
 	}
+
 	return c.s[c.pos]
 }
 
@@ -30,6 +31,7 @@ func (c *cursor) peekAt(off int) byte {
 	if i < 0 || i >= len(c.s) {
 		return 0
 	}
+
 	return c.s[i]
 }
 
@@ -38,8 +40,10 @@ func (c *cursor) next() byte {
 	if c.atEnd() {
 		return 0
 	}
+
 	ch := c.s[c.pos]
 	c.pos++
+	
 	return ch
 }
 

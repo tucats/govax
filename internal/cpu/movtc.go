@@ -83,35 +83,41 @@ func emulMovtc(e *Engine, d *Decoded) error {
 			dst++
 		}
 	} else {
-		min := len1
+		minLen := len1
 		if uint32(len2) < uint32(len1) {
-			min = len2
+			minLen = len2
 		}
+
 		len2Saved := len2
-		src = uint32(int32(src) + min)
+		src = uint32(int32(src) + minLen)
 		dst = uint32(int32(dst) + len2Saved)
 
 		for len2 > len1 {
 			len2--
 			dst--
+
 			if err := e.mem.StoreByte(e.cpu, dst, fill); err != nil {
 				return err
 			}
 		}
+
 		for len2 != 0 {
 			len1--
 			src--
 			len2--
 			dst--
+
 			ch, err := translate(src)
 			if err != nil {
 				return err
 			}
+
 			if err := e.mem.StoreByte(e.cpu, dst, ch); err != nil {
 				return err
 			}
 		}
-		src = uint32(int32(src) + min)
+
+		src = uint32(int32(src) + minLen)
 		dst = uint32(int32(dst) + len2Saved)
 	}
 
@@ -129,6 +135,7 @@ func emulMovtc(e *Engine, d *Decoded) error {
 	psl.SetV(false)
 	psl.SetC(c)
 	e.cpu.SetPSL(psl)
+
 	return nil
 }
 
@@ -153,24 +160,25 @@ func emulMovtuc(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	srcLen := int16(signExtend(l1v, d.Operands[0].Size))
 
 	l2v, err := d.Operands[4].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	dstLen := int16(signExtend(l2v, d.Operands[4].Size))
 
 	escv, err := d.Operands[2].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
-	esc := byte(escv)
 
+	esc := byte(escv)
 	src := d.Operands[1].Addr
 	tbl := d.Operands[3].Addr
 	dst := d.Operands[5].Addr
-
 	len1, len2 := int32(srcLen), int32(dstLen)
 	escaped := false
 
@@ -179,17 +187,21 @@ func emulMovtuc(e *Engine, d *Decoded) error {
 		if err != nil {
 			return err
 		}
+
 		translated, err := e.mem.LoadByte(e.cpu, tbl+uint32(ch))
 		if err != nil {
 			return err
 		}
+
 		if translated == esc {
 			escaped = true
 			break
 		}
+
 		if err := e.mem.StoreByte(e.cpu, dst, translated); err != nil {
 			return err
 		}
+
 		len1--
 		src++
 		len2--
@@ -210,5 +222,6 @@ func emulMovtuc(e *Engine, d *Decoded) error {
 	psl.SetV(escaped)
 	psl.SetC(c)
 	e.cpu.SetPSL(psl)
+	
 	return nil
 }

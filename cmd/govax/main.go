@@ -52,19 +52,29 @@ func (p *pathFlag) String() string {
 	if p == nil {
 		return ""
 	}
+
 	return fmt.Sprint([]string(*p))
 }
 
 func (p *pathFlag) Set(dir string) error {
 	*p = append(*p, dir)
+
 	return nil
 }
 
 func main() {
 	var paths pathFlag
-	flag.Var(&paths, "path", "directory to search for unqualified file names (e.g. vax.init, kernel.asm); may be given more than once, searched in order given, after an embedded fallback copy")
-	timeLimit := flag.Duration("time-limit", 0, "maximum wall-clock time (e.g. 5s, 15ms) a single GO/CALL/STEP command may run the emulated CPU before it's stopped; 0 (default) is unlimited")
-	instructionLimit := flag.Int("instruction-limit", 0, "maximum number of instructions a single GO/CALL/STEP command may execute before it's stopped; 0 (default) is unlimited")
+
+	flag.Var(&paths,
+		"path",
+		"directory to search for unqualified file names")
+
+	timeLimit := flag.Duration(
+		"time-limit", 0, "maximum emulation wall-clock time; default is unlimited")
+
+	instructionLimit := flag.Int(
+		"instruction-limit", 0, "maximum number of instructions to executed; default is unlimited")
+
 	flag.Parse()
 
 	if err := run(paths, *instructionLimit, *timeLimit, os.Stdout, nil, flag.Args()); err != nil {
@@ -88,12 +98,14 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	if err != nil {
 		return fmt.Errorf("loading command grammar: %w", err)
 	}
+
 	grammar, err := dcl.ParseGrammar(string(grammarSrc))
 	if err != nil {
 		return fmt.Errorf("loading command grammar: %w", err)
 	}
 
 	var help *console.Help
+
 	if helpSrc, err := resolver.ReadFile("vax.help"); err != nil {
 		fmt.Fprintln(out, "Warning: no help file available:", err)
 	} else {
@@ -102,11 +114,13 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 
 	c := console.New(out)
 	c.Paths = resolver
+	
 	if in != nil {
 		c.In = in
 	} else {
 		c.In = os.Stdin
 	}
+
 	if err := c.Init(minimumVAXMemory); err != nil {
 		return fmt.Errorf("allocating initial VAX: %w", err)
 	}
@@ -134,6 +148,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	if in == nil { // real interactive use, not a test with an injected reader
 		historyFile = historyFilePath()
 	}
+
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:      "VAX> ",
 		HistoryFile: historyFile,
@@ -142,6 +157,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	if err != nil {
 		return fmt.Errorf("initializing readline: %w", err)
 	}
+
 	defer rl.Close()
 
 	for c.Running() {
@@ -150,8 +166,10 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 			if errors.Is(err, readline.ErrInterrupt) {
 				continue
 			}
+
 			break
 		}
+
 		if err := d.Dispatch(line); err != nil {
 			fmt.Fprintln(out, "%", err)
 		}
@@ -168,5 +186,6 @@ func historyFilePath() string {
 	if err != nil {
 		return ""
 	}
+
 	return filepath.Join(home, ".govax_history")
 }

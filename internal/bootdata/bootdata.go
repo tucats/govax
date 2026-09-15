@@ -29,5 +29,6 @@ func mustSub(f embed.FS, dir string) fs.FS {
 	if err != nil {
 		panic(err)
 	}
+	
 	return sub
 }

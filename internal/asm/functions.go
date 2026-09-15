@@ -20,14 +20,18 @@ func (a *Assembler) callFunction(name string, c *cursor) (value uint32, matched 
 		return a.callDefined(c)
 	case "VERBOSE":
 		skipEmptyArgs(c)
+
 		return boolToU32(a.verbose), true, nil
 	case "MKVALID":
 		skipEmptyArgs(c)
+
 		return boolToU32(a.microkernel), true, nil
 	case "VMVALID":
 		skipEmptyArgs(c)
+
 		return 1, true, nil
 	}
+
 	return 0, false, nil
 }
 
@@ -35,25 +39,34 @@ func (a *Assembler) callFunction(name string, c *cursor) (value uint32, matched 
 // defined (with no pending forward references), 0 otherwise.
 func (a *Assembler) callDefined(c *cursor) (uint32, bool, error) {
 	c.skipBlanks()
+
 	if c.peek() != '(' {
 		return 0, true, fmt.Errorf("DEFINED() requires an argument")
 	}
+
 	c.next()
 	c.skipBlanks()
+
 	if c.peek() != '"' {
 		return 0, true, fmt.Errorf("DEFINED() requires a quoted symbol name")
 	}
+
 	c.next()
 
 	start := c.pos
+
 	for !c.atEnd() && c.peek() != '"' {
 		c.pos++
 	}
+
 	name := c.s[start:c.pos]
+
 	if c.peek() == '"' {
 		c.next()
 	}
+
 	c.skipBlanks()
+
 	if c.peek() == ')' {
 		c.next()
 	}
@@ -69,16 +82,22 @@ func (a *Assembler) callDefined(c *cursor) (uint32, bool, error) {
 // "NAME" or "NAME()").
 func skipEmptyArgs(c *cursor) {
 	save := c.pos
+
 	c.skipBlanks()
+
 	if c.peek() != '(' {
 		c.pos = save
+
 		return
 	}
+
 	c.next()
 	c.skipBlanks()
 	if c.peek() == ')' {
 		c.next()
+
 		return
 	}
+
 	c.pos = save
 }

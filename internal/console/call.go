@@ -22,6 +22,7 @@ func (c *Console) Call(addr uint32, step bool, args ...uint32) error {
 	if err := c.Engine.CallEntry(addr, args...); err != nil {
 		return err
 	}
+
 	c.Engine.BeginRun()
 
 	for {
@@ -30,11 +31,14 @@ func (c *Console) Call(addr uint32, step bool, args ...uint32) error {
 			if step {
 				c.Printf("Stepped to %08X\n", c.CPU.GPR(vax.PC))
 			}
+
 			continue
 		}
+		
 		if errors.Is(err, cpu.ErrConsoleCallReturned) {
 			return nil
 		}
+
 		return c.reportStopReason(err)
 	}
 }
