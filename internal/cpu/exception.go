@@ -25,6 +25,18 @@ const (
 	ExcChangeModeE   Exception = 0x44
 	ExcChangeModeS   Exception = 0x48
 	ExcChangeModeU   Exception = 0x4C
+	ExcSoftware1     Exception = 0x84 // Base of the 15 SIRR-requestable software interrupts (IPL 1-15)
+
+	// ExcInterval/ExcConRead/ExcConWrite are eVAX's own device-interrupt
+	// vector assignments (not real VAX architectural exceptions -- there is
+	// no single standard SCB layout for a simulated console/clock device),
+	// matching internal/asm/builtins.go's EXC$INTERVAL/EXC$CONREAD/
+	// EXC$CONWRITE symbols and interrupt.c's own call sites (vax.c's
+	// interval-clock tick, emul_procreg.c's RXCS/TXCS/TXDB cases). See
+	// docs/PHASE-14.md.
+	ExcInterval Exception = 0xC0
+	ExcConRead  Exception = 0xF8
+	ExcConWrite Exception = 0xFC
 )
 
 // Fault reports a VAX exception: what happened, and the data

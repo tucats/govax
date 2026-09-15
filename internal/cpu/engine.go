@@ -43,12 +43,28 @@ type Engine struct {
 	// comment on why this exists (a Phase 12 performance-pass finding, not
 	// part of the original Phase 03 design).
 	decoded Decoded
+
+	// Quantum/interrupt-admission state -- see interrupt.go. quantumCurrent/
+	// quantumInitial are zero-valued (quantum disabled, admission masking
+	// still active) on an Engine built directly as a struct literal rather
+	// than via NewEngine; existing tests that predate Phase 14 rely on this.
+	quantumCurrent, quantumInitial int
+	iqueue                         []*queuedInterrupt
+	interruptPending               bool
+	interruptCode                  Exception
+	interruptIPL                   uint32
 }
 
 // NewEngine returns an Engine driving cpu and mem, using the built-in VAX
 // instruction table.
 func NewEngine(cpu *vax.CPU, mem *vm.Memory) *Engine {
-	return &Engine{cpu: cpu, mem: mem, table: instructionTable}
+	return &Engine{
+		cpu:            cpu,
+		mem:            mem,
+		table:          instructionTable,
+		quantumCurrent: defaultQuantum,
+		quantumInitial: defaultQuantum,
+	}
 }
 
 // SetSystemServices installs s as the XFC opcode's hook into console/RTL
@@ -91,6 +107,13 @@ func (e *Engine) Halted() bool { return e.halted }
 // allocation entirely -- copying the freshly decoded value into it is a
 // plain, non-escaping struct copy, not a new allocation.
 func (e *Engine) Step() error {
+	e.tickQuantum()
+	if e.interruptPending {
+		if err := e.deliverPendingInterrupt(); err != nil {
+			return err
+		}
+	}
+
 	e.instructionPC = e.cpu.GPR(vax.PC)
 
 	dec, err := decodeInstruction(e.cpu, e.mem, e.table)

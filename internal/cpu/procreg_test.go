@@ -134,6 +134,37 @@ func TestEmulMtprIPLUpdatesPSLAndTruncates(t *testing.T) {
 	}
 }
 
+// TestEmulMtprIPLAdmitsLatchedSoftwareInterruptOnceExposed covers set_priv_reg's
+// case 18 SISR scan: a software interrupt latched while IPL was too high to
+// take it immediately is admitted once a later MTPR IPL lowers the IPL back
+// below it.
+func TestEmulMtprIPLAdmitsLatchedSoftwareInterruptOnceExposed(t *testing.T) {
+	e := kernelEngine()
+	cpu := e.cpu
+	psl := cpu.PSL()
+	psl.SetIPL(5)
+	cpu.SetPSL(psl)
+
+	cpu.SetGPR(vax.R1, 3) // latched: 3 <= current IPL (5)
+	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.SIRR))...)
+	if e.interruptPending {
+		t.Fatal("expected the SIRR request to be latched, not delivered, while IPL is 5")
+	}
+
+	cpu.SetGPR(vax.R1, 0) // lower IPL to 0, exposing the latched level-3 request
+	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.IPL))...)
+
+	if !e.interruptPending {
+		t.Fatal("expected lowering IPL below the latched SISR bit to admit it")
+	}
+	if e.interruptCode != ExcSoftware1+2*4 || e.interruptIPL != 3 {
+		t.Errorf("interruptCode/IPL = %#x/%d, want %#x/3", e.interruptCode, e.interruptIPL, ExcSoftware1+2*4)
+	}
+	if got := cpu.PR(vax.SISR); got&(1<<3) != 0 {
+		t.Errorf("PR(SISR) bit 3 still set after admission, want cleared")
+	}
+}
+
 func TestEmulMtprAstlvlBoundsCheck(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
@@ -161,11 +192,17 @@ func TestEmulMtprAstlvlValid(t *testing.T) {
 	}
 }
 
-func TestEmulMtprSirrQueuesSoftwareInterrupt(t *testing.T) {
+// TestEmulMtprSirrLatchesWhenAtOrAboveCurrentIPL covers set_priv_reg's own
+// case 20 "else" branch (value <= current IPL): the request is only latched
+// into SISR/SIRR for later, not taken immediately.
+func TestEmulMtprSirrLatchesWhenAtOrAboveCurrentIPL(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
+	psl := cpu.PSL()
+	psl.SetIPL(5)
+	cpu.SetPSL(psl)
 
-	cpu.SetGPR(vax.R1, 0xF3) // low 4 bits: 3
+	cpu.SetGPR(vax.R1, 0xF3) // low 4 bits: 3, at/below the current IPL (5)
 	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.SIRR))...)
 
 	if got := cpu.PR(vax.SIRR); got != 3 {
@@ -173,6 +210,30 @@ func TestEmulMtprSirrQueuesSoftwareInterrupt(t *testing.T) {
 	}
 	if got := cpu.PR(vax.SISR); got&(1<<3) == 0 {
 		t.Errorf("PR(SISR) = %#x, want bit 3 set", got)
+	}
+	if e.interruptPending {
+		t.Error("expected no immediate delivery when the request is at or below the current IPL")
+	}
+}
+
+// TestEmulMtprSirrDeliversImmediatelyWhenAboveCurrentIPL covers set_priv_reg's
+// own case 20 "if" branch: a request above the current IPL is taken right
+// away (via Engine.Interrupt), and SISR/SIRR are left untouched.
+func TestEmulMtprSirrDeliversImmediatelyWhenAboveCurrentIPL(t *testing.T) {
+	e := kernelEngine()
+	cpu := e.cpu // current IPL defaults to 0
+
+	cpu.SetGPR(vax.R1, 0xF3) // low 4 bits: 3, above the current IPL (0)
+	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.SIRR))...)
+
+	if !e.interruptPending {
+		t.Fatal("expected immediate delivery when the request exceeds the current IPL")
+	}
+	if e.interruptCode != ExcSoftware1+2*4 || e.interruptIPL != 3 {
+		t.Errorf("interruptCode/IPL = %#x/%d, want %#x/3", e.interruptCode, e.interruptIPL, ExcSoftware1+2*4)
+	}
+	if got := cpu.PR(vax.SISR); got != 0 {
+		t.Errorf("PR(SISR) = %#x, want 0 (not latched on the immediate-delivery path)", got)
 	}
 }
 

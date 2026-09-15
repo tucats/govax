@@ -33,6 +33,71 @@ _None yet._
 
 ## Resolved findings
 
+### [Phase 14] `handle_fault` saves the stale `instruction_PC` as an interrupt's return address
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/vax.c`'s `execute_vax` (~lines
+  294-321), the `if (vax.interrupt_pending)` block, and `interrupt.c`'s
+  `set_fault`/`handle_fault`, which push `vax.fault.pc = vax.instruction_PC`.
+- **What**: `vax.instruction_PC` is only updated by `decode_opcode.c`'s
+  `decode_instruction`, at the *start* of decoding an instruction. The
+  interrupt-delivery block runs *before* `decode_instruction` is called for
+  the upcoming instruction, so at that point `vax.instruction_PC` still holds
+  the *previous* instruction's start address, while `vax.PC` has already been
+  advanced (by that previous instruction's own decode) to the address that
+  should actually resume once the ISR returns via REI. Concretely: a `MTPR
+  TXDB` instruction that admits a console-transmit interrupt as its own side
+  effect, followed by `MOVL #..., R0`, would push the `MTPR`'s own address as
+  the return PC, not the `MOVL`'s — causing the `MTPR` (and hence the
+  interrupt admission itself) to re-run after every REI, rather than
+  resuming at the intended next instruction. This is a genuine architectural
+  bug (interrupts are precise and must resume exactly where execution left
+  off), not an ISA judgment call — real VAX hardware's whole distinction
+  between interrupts (asynchronous, between instructions) and synchronous
+  faults (mid-instruction, where `instruction_PC` *is* the right address) is
+  exactly what this conflates.
+- **Status**: fixed in Go, immediately (a clear-cut correctness bug with no
+  ambiguity about the correct behavior, not a case needing deferral).
+  `internal/cpu/interrupt.go`'s `deliverPendingInterrupt` sets
+  `e.instructionPC` from the *current* PC (already advanced past whatever
+  last executed) immediately before calling `HandleFault`, rather than
+  leaving whatever `Step`'s previous decode left there. Verified by
+  `internal/cpu/interrupt_test.go`'s
+  `TestInterruptDeliverySavesCurrentPCNotStale`, which admits an interrupt as
+  a one-instruction side effect and checks the pushed return PC is the
+  *following* instruction's address, not the side-effecting instruction's
+  own.
+
+### [Phase 14] `poll_keyboard` (console-terminal receive interrupt) is a permanent no-op outside Mac/Windows builds
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/vax.c`'s `poll_keyboard()`: the
+  entire body is guarded by `#if defined(macintosh) || defined(WIN)`; on
+  every other platform (including `LINUX86`, the platform macro
+  `reference/CLAUDE.md` says the Xcode target actually builds with
+  regardless of host OS) the function is empty and always returns 0.
+- **What**: this is the only call site that ever sets `vax.RXDB`/`vax.RXCS`'s
+  DON bit from a real keystroke, so on the reference build's own target
+  platform, console-terminal *receive* interrupts (`EXC_CONREAD` via a real
+  keypress, as opposed to the RXCS-write-triggered case in
+  `emul_procreg.c`'s case 32) have never actually fired — `EXE$$GET_CONSOLE`
+  (CHMK 2)'s unconditional `mfpr RXDB, r0` reads whatever stale value
+  happens to be sitting in the register. Found while auditing this phase's
+  RXCS/RXDB scope, per explicit user direction (2026-09-15) to fix this if a
+  real opportunity presented itself, rather than reproduce it.
+- **Status**: fixed in Go, differently from a literal port (there is no
+  working behavior to replicate — the C reference's own mechanism never
+  fires on its own reference platform). `internal/cpu/procreg.go`'s
+  `emulMfpr` now pulls a real byte from `SystemServices.ConsoleReadByte`
+  (already used by `XFC$CONSOLE_READ`) as an RXDB read's own side effect,
+  making `EXE$$GET_CONSOLE`'s plain `mfpr RXDB, r0` genuinely return live
+  console input instead of garbage. `Engine.DeliverConsoleByte`
+  (`internal/cpu/interrupt.go`) separately ports what `poll_keyboard`'s
+  *intended* (Mac/Windows) behavior actually does -- deposit a byte, set
+  RXCS's DON bit, and admit an `EXC$CONREAD` interrupt when RXCS's IE bit is
+  set -- as a real, callable primitive rather than a platform keyboard-hit
+  poll, for any future caller with a real asynchronous byte source. Verified
+  by `internal/cpu/procreg_test.go`'s RXDB read tests and
+  `internal/cpu/interrupt_test.go`'s `DeliverConsoleByte` tests.
+
 ### [Phase 05] `emul_float_math.c`'s D-floating arithmetic path calls `fpu_load` with its source longwords swapped
 
 - **Where**: `reference/eVAX/eVAX/Source/CPU/emul_float_math.c`'s `emul_float_math()`,

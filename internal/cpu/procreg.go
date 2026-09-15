@@ -108,17 +108,14 @@ func emulMtpr(e *Engine, d *Decoded) error {
 // bounds/mode/access checks and register-specific side effects as
 // emul_procreg.c's set_priv_reg.
 //
-// Several of set_priv_reg's register-specific cases have side effects this
-// port doesn't model yet and are deliberately not replicated -- see
-// docs/PHASE-07.md's open questions: IPL/SIRR's pending-interrupt delivery
-// (both call interrupt(), the device-interrupt-queue admission routine
-// Phase 03 already deferred to Phase 09) and ICCS/RXCS/TXCS/TXDB's
-// console/clock device modeling (Phase 09 I/O) fall through to a plain
-// register store here rather than replicating device behavior that doesn't
-// exist yet. TBIA/TBIS are no-ops: Phase 02 never ported the translation-
-// buffer cache (a pure 1999-era performance hack with no result-visible
-// effect -- see internal/vm/translate.go's design notes), so there is
-// nothing to invalidate.
+// IPL/SIRR's pending-interrupt delivery and ICCS/RXCS/TXCS/TXDB's console/
+// clock device modeling, both previously deferred (see docs/PHASE-07.md's
+// open questions) for lack of an interrupt-admission mechanism, are wired up
+// as of Phase 14 -- see interrupt.go's Engine.Interrupt. TBIA/TBIS remain
+// no-ops: Phase 02 never ported the translation-buffer cache (a pure
+// 1999-era performance hack with no result-visible effect -- see
+// internal/vm/translate.go's design notes), so there is nothing to
+// invalidate.
 func setPrivReg(e *Engine, reg int, value uint32) error {
 	if reg < 0 || reg > vax.MaxPrivReg {
 		return &Fault{Code: ExcReservedOp}
@@ -139,6 +136,18 @@ func setPrivReg(e *Engine, reg int, value uint32) error {
 		e.cpu.SetPSL(psl)
 		e.cpu.SetPR(vax.IPL, value)
 
+		// Lowering the IPL can expose a software interrupt already latched
+		// in SISR at a level now above the new IPL; admit each one, highest
+		// level first, matching set_priv_reg's own `for (n = 15; n > value;
+		// n--)` scan.
+		for n := uint32(15); n > value; n-- {
+			sisr := e.cpu.PR(vax.SISR)
+			if sisr&(1<<n) != 0 {
+				e.cpu.SetPR(vax.SISR, sisr&^(1<<n))
+				e.Interrupt(ExcSoftware1+Exception((n-1)*4), n, 0)
+			}
+		}
+
 	case vax.ASTLVL:
 		if value > 4 {
 			return &Fault{Code: ExcReservedOp}
@@ -147,8 +156,14 @@ func setPrivReg(e *Engine, reg int, value uint32) error {
 
 	case vax.SIRR:
 		value &= 0x0F
-		e.cpu.SetPR(vax.SISR, e.cpu.PR(vax.SISR)|(1<<value))
-		e.cpu.SetPR(vax.SIRR, value)
+		if value > e.cpu.PSL().IPL() {
+			// Higher priority than the current IPL: take it now rather than
+			// merely latching SISR, matching set_priv_reg's own case 20.
+			e.Interrupt(ExcSoftware1+Exception((value-1)*4), value, 0)
+		} else {
+			e.cpu.SetPR(vax.SISR, e.cpu.PR(vax.SISR)|(1<<value))
+			e.cpu.SetPR(vax.SIRR, value)
+		}
 
 	case vax.TBIA, vax.TBIS:
 		// No-op; see the doc comment above.
