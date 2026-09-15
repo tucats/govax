@@ -33,6 +33,21 @@ func TestEngineAccessors(t *testing.T) {
 	}
 }
 
+func TestEngineLastDecoded(t *testing.T) {
+	e := testEngine([]*Instruction{{Name: "TESTNOP", Opcode: Opcode{Function: 0x01}}})
+	e.table.SetHandler(e.table.Lookup(Opcode{Function: 0x01}), func(e *Engine, d *Decoded) error { return nil })
+	e.cpu.SetGPR(vax.PC, base)
+	putBytes(t, e.cpu, e.mem, base, 0x01)
+
+	if err := e.Step(); err != nil {
+		t.Fatalf("Step: %v", err)
+	}
+
+	if got := e.LastDecoded(); got.Instruction.Name != "TESTNOP" {
+		t.Errorf("LastDecoded().Instruction.Name = %q, want TESTNOP", got.Instruction.Name)
+	}
+}
+
 func TestEngineStepDispatchesHandler(t *testing.T) {
 	inst := &Instruction{Name: "TESTNOP", Opcode: Opcode{Function: 0x01}}
 	e := testEngine([]*Instruction{inst})

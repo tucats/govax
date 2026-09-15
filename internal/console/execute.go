@@ -95,9 +95,11 @@ func (c *Console) Execute(startAddr *uint32) error {
 
 		first = false
 
+		finish := c.traceStep(pc, false)
 		if err := c.Engine.Step(); err != nil {
 			return c.reportStopReason(err)
 		}
+		finish()
 	}
 }
 
@@ -120,9 +122,14 @@ func (c *Console) Step(startAddr *uint32) error {
 
 	c.Engine.BeginRun()
 
+	// STEP always traces, regardless of Console.Trace, matching
+	// console_step.c:117's own "Always in trace mode" (execute_vax(1)) --
+	// see docs/PHASE-17.md sub-phase 7.
+	finish := c.traceStep(c.CPU.GPR(vax.PC), true)
 	if err := c.Engine.Step(); err != nil {
 		return c.reportStopReason(err)
 	}
+	finish()
 
 	c.Printf("Stepped to %08X\n", c.CPU.GPR(vax.PC))
 

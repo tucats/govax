@@ -91,6 +91,15 @@ func (e *Engine) Memory() *vm.Memory { return e.mem }
 // otherwise been asked to stop; see ErrHalted).
 func (e *Engine) Halted() bool { return e.halted }
 
+// LastDecoded returns whatever instruction the most recent Step call
+// decoded — the same value Step reuses across calls to avoid a fresh heap
+// allocation every instruction (this function's own doc comment explains
+// why), exposed read-only for a caller that wants to inspect the
+// just-executed instruction's operands (e.g. internal/console's
+// DebugFullDisasm trace — see docs/PHASE-17.md sub-phase 8). The zero
+// value if Step has never been called.
+func (e *Engine) LastDecoded() Decoded { return e.decoded }
+
 // Step decodes and executes one instruction. This is the Go port of
 // execute_vax's core fetch-decode-execute cycle, minus the console/
 // disassembly, breakpoint/single-step, and device-interrupt-queue/clock

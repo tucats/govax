@@ -38,6 +38,115 @@ func TestExecute_runsUntilHalt(t *testing.T) {
 	}
 }
 
+// movR0Program is "MOVL #0x12345678, R0" followed by HALT: 0xD0 (MOVL),
+// 0x8F (immediate-longword source), the 4 immediate bytes, 0x50 (register-
+// direct destination, R0), then opHalt -- enough to exercise the
+// instruction trace, the DebugRegisters changed-register dump (R0
+// changes), and the DebugFullDisasm operand dump (one read, one write
+// operand) all at once.
+func movR0Program(t *testing.T, c *Console, addr uint32) {
+	t.Helper()
+	loadProgram(t, c, addr, 0xD0, 0x8F, 0x78, 0x56, 0x34, 0x12, 0x50, opHalt)
+}
+
+func TestExecute_tracesWhenTraceEnabled(t *testing.T) {
+	c, buf := newTestConsole(t)
+	movR0Program(t, c, 0x200)
+	c.Trace = true
+
+	addr := uint32(0x200)
+	if err := c.Execute(&addr); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "[KSP ") || !strings.Contains(out, "MOVL") {
+		t.Errorf("output = %q, want a [KSP ...] MOVL trace line", out)
+	}
+}
+
+func TestExecute_noTraceByDefault(t *testing.T) {
+	c, buf := newTestConsole(t)
+	movR0Program(t, c, 0x200)
+
+	addr := uint32(0x200)
+	if err := c.Execute(&addr); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+
+	if strings.Contains(buf.String(), "MOVL") {
+		t.Errorf("output = %q, want no MOVL trace line with Trace off", buf.String())
+	}
+}
+
+func TestStep_alwaysTracesRegardlessOfConsoleTrace(t *testing.T) {
+	c, buf := newTestConsole(t)
+	movR0Program(t, c, 0x200)
+	c.Trace = false
+
+	addr := uint32(0x200)
+	if err := c.Step(&addr); err != nil {
+		t.Fatalf("Step: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "[KSP ") || !strings.Contains(out, "MOVL") {
+		t.Errorf("output = %q, want STEP to trace even though Console.Trace is off", out)
+	}
+}
+
+func TestExecute_debugRegistersChangeDump(t *testing.T) {
+	c, buf := newTestConsole(t)
+	movR0Program(t, c, 0x200)
+	c.Trace = true
+	c.CPU.SetDebug(c.CPU.Debug() | vax.DebugRegisters)
+
+	addr := uint32(0x200)
+	if err := c.Execute(&addr); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "R0:  12345678") {
+		t.Errorf("output = %q, want a changed-R0 register dump line", buf.String())
+	}
+}
+
+func TestExecute_noRegisterDumpWhenDebugRegistersClear(t *testing.T) {
+	c, buf := newTestConsole(t)
+	movR0Program(t, c, 0x200)
+	c.Trace = true
+	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugRegisters)
+
+	addr := uint32(0x200)
+	if err := c.Execute(&addr); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+
+	if strings.Contains(buf.String(), "R0:  12345678") {
+		t.Errorf("output = %q, want no register dump with DebugRegisters clear", buf.String())
+	}
+}
+
+func TestExecute_debugFullDisasmOperandDump(t *testing.T) {
+	c, buf := newTestConsole(t)
+	movR0Program(t, c, 0x200)
+	c.Trace = true
+	c.CPU.SetDebug(c.CPU.Debug() | vax.DebugFullDisasm)
+
+	addr := uint32(0x200)
+	if err := c.Execute(&addr); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "#0 read") {
+		t.Errorf("output = %q, want an operand #0 read line", out)
+	}
+	if !strings.Contains(out, "#1 write") || !strings.Contains(out, "R0 = 12345678") {
+		t.Errorf("output = %q, want an operand #1 write line naming R0 = 12345678", out)
+	}
+}
+
 func TestCall_returnsCleanlyThroughSentinelFrame(t *testing.T) {
 	c, _ := newTestConsole(t)
 
@@ -53,6 +162,25 @@ func TestCall_returnsCleanlyThroughSentinelFrame(t *testing.T) {
 
 	if err := c.Call(0x200, false); err != nil {
 		t.Fatalf("Call: %v", err)
+	}
+}
+
+func TestCall_tracesWhenTraceEnabled(t *testing.T) {
+	c, buf := newTestConsole(t)
+	loadProgram(t, c, 0x200,
+		0x00, 0x00, // entry mask: no registers saved
+		0xFB, 0x00, 0x9F, 0x00, 0x03, 0x00, 0x00, // CALLS #0, @#0x300
+		0x04, // RET
+	)
+	loadProgram(t, c, 0x300, 0x00, 0x00, 0x04)
+	c.Trace = true
+
+	if err := c.Call(0x200, false); err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "[KSP ") {
+		t.Errorf("output = %q, want [KSP ...] trace lines during CALL", buf.String())
 	}
 }
 

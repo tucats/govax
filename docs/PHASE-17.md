@@ -23,7 +23,7 @@ tracing), `logical_names.c`/`devices.c`/`rms.c`/`service.c`/`p1_vector.c` (RTL
 tracing), and `console_run.c`/`console_dispatch.c`/`console_step.c`/
 `asm_symbols.c` (console-level tracing).
 
-**Status: sub-phases 1-5 complete; sub-phases 6-8 in progress.**
+**Status: complete (all 8 sub-phases).**
 
 ## Design decisions
 
@@ -382,7 +382,56 @@ OVER`/`STEP/RETURN` (`console_step.c:129`).
   trace of the emulator's own operand resolution (not emulated-VAX
   behavior) — not undertaken here; noted rather than silently accepted.
 
-## Explicitly out of scope
+## Progress Log
+
+### 2026-09-15 — Sub-phases 6-8 complete: `SET`/`SHOW TRACE` and instruction tracing
+
+**Sub-phase 6**: `Console.Trace` (`machine.go`), `Console.SetTrace`
+(`set.go`, wired into `cmdSet`'s `TRACE`/`DISASSEMBLY`/`NOTRACE`/
+`NODISASSEMBLE` cases), `Console.ShowTrace` (`show.go`, bound to the
+already-existing `SHOW_TRACE` grammar entry). Confirmed `SET [NO]VERBOSE`
+(`Console.Verbose`) is a genuinely separate, still-unimplemented C feature
+(`CONSOLE_VERBOSE`, "prattle on about things as we do them" console
+messages) rather than a misnamed stand-in for `disasm`/`Trace` — checked
+before considering reusing the field, since it was otherwise dead (zero
+consumers anywhere in `internal/console`).
+
+**Sub-phase 7**: new `internal/console/trace.go`. `Console.traceStep(pc,
+force)` prints `[<stack> <SP>] <addr>: <disassembly>` before an instruction
+runs (reusing `internal/asm.Disassemble` via `disasm.go`'s existing
+`memByteReader` — no second decoder), called from all three loops that
+drive `cpu.Engine.Step` (`Execute`, `Step`, `Call`). `Step` always traces
+(`force=true`); `Execute`/`Call` trace only when `Console.Trace` is set.
+Found, documented, and deliberately not fixed: `Console.Call`'s own `step`
+parameter already diverges from the real C `CALL/STEP` semantics (traces
+every instruction to completion instead of single-stepping once and
+returning to the prompt) — a pre-existing Phase 13 behavior, not something
+this sub-phase introduced or was asked to fix.
+
+**Sub-phase 8**: `traceStep`'s returned `finish` closure prints
+`DebugRegisters`' changed-register dump (`snapshotTraceRegs`/
+`printRegisterChanges`, matching `check_regset` exactly: `R0`-`R11` in
+hex+decimal, `AP`/`FP` in hex only, `PSL` last if changed, `SP`/`PC`
+excluded as pure per-instruction noise) and `DebugFullDisasm`'s operand
+dump (`printOperandDump`, matching `format_operands`'s access-kind-plus-
+value format). The latter needed one new `internal/cpu` accessor,
+`Engine.LastDecoded()`, exposing the `Decoded` value `Step` already caches
+and reuses internally — the one deliberate, documented fidelity gap in
+this sub-phase: because `Step` decodes and executes in a single call with
+no gap to hook between the two, the operand dump necessarily reflects
+post-execution state, so a written operand shows its new value rather than
+the C source's pre-execution one.
+
+Tests: `internal/console/execute_test.go` (trace-line presence/absence for
+`Execute`/`Step`/`Call`, the `DebugRegisters` dump with and without the
+flag, the `DebugFullDisasm` operand dump — using a hand-built
+`MOVL #0x12345678, R0` fixture exercising both a read and a write operand),
+`internal/console/set_test.go`/`show_test.go`/`dispatch_test.go`
+(`SetTrace`/`ShowTrace`/`SET TRACE`+`SHOW TRACE` round-trip),
+`internal/cpu/engine_test.go` (`TestEngineLastDecoded`). `go build ./...`,
+`go vet ./...`, `go test ./...` all clean.
+
+**All eight sub-phases are now complete.**
 
 ### 2026-09-15 — Sub-phase 5 complete: `internal/console` tracing; phase complete
 

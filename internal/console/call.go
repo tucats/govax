@@ -26,8 +26,12 @@ func (c *Console) Call(addr uint32, step bool, args ...uint32) error {
 	c.Engine.BeginRun()
 
 	for {
+		pc := c.CPU.GPR(vax.PC)
+		finish := c.traceStep(pc, false)
 		err := c.Engine.Step()
 		if err == nil {
+			finish()
+
 			if step {
 				c.Printf("Stepped to %08X\n", c.CPU.GPR(vax.PC))
 			}
