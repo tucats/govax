@@ -106,6 +106,15 @@ func (e *Engine) HandleFault(f *Fault) error {
 	return nil
 }
 
+// SetModeStack is setModeStack exported for non-fault-handling console
+// callers (see docs/PHASE-13.md's RUN command, which -- like the C source's
+// own console_run.c -- must run image loading and fixups in kernel mode
+// regardless of the mode the console happened to be in, then restore it
+// afterward).
+func (e *Engine) SetModeStack(newMode vax.AccessMode, interruptStack bool) {
+	e.setModeStack(newMode, interruptStack)
+}
+
 // setModeStack switches to a new access mode's stack (interruptStack false,
 // newMode the target mode) or to the interrupt stack (interruptStack true;
 // newMode is unused in that case, matching set_mode_stack's mode-parameter

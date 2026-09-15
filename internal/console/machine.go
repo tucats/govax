@@ -92,6 +92,24 @@ type Console struct {
 	// caller/test) — reads against a nil In report EOF rather than panic.
 	In  io.Reader
 	Out io.Writer
+
+	// ICBList is Phase 13's loaded-image list (console_run.c's icb_list),
+	// in load order (main image first, each dependency appended as loaded
+	// -- see image.go's doc comment on why this differs from, but is
+	// equivalent to, the C source's own insert-at-front design intent).
+	// Reset by RUN itself (matching reset_icb_list, called at the start of
+	// every RUN) rather than by Zero/Init, since a loaded image's memory
+	// survives independently of the ICB bookkeeping describing it.
+	ICBList []*ICB
+
+	// SharePrefix is a directory/filename prefix consulted when locating a
+	// sharable image dependency that isn't found under its bare name,
+	// matching vax.console.share_prefix (SET SHARE, not yet ported --
+	// there is no console command that sets this field yet). A literal
+	// ESC (0x1B) prefix means "don't search for sharable images at all",
+	// matching find_image's own check; empty (the default) searches
+	// alongside the loading image with no prefix.
+	SharePrefix string
 }
 
 // New returns a Console with no machine allocated yet (vax_init == 0 in the

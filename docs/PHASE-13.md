@@ -137,3 +137,53 @@ knowable by actually loading and running it, which is this phase's job to find o
   lands.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test
   ./...` all clean.
+
+### 2026-09-15 — Sub-phase 2: image_load
+
+- `internal/console/image.go`: `ICB`/`ISD`/`IAF`/`SHR` Go types and
+  `Console.imageLoad`, ported from `console_run.c`'s `image_load` and
+  `imgdef.h`. Per the precedent already set by `internal/rtl/rms.go`'s own
+  FAB/RAB field access, this reads each struct's fields directly at their
+  documented byte offsets (taken from `init_ihd_maps`'s own table) rather
+  than porting `structure_mapping.c`'s generic name-keyed `map()`/`STROFF`
+  machinery, which exists in the C source only to serve interactive
+  EXAMINE/DEPOSIT struct support this port doesn't have.
+- Reads go through `vm.Memory`'s ordinary virtual-address Load/Store calls
+  (kernel mode, VM already on via VMINIT) rather than the C source's
+  translate-to-physical-then-poke-the-array dance (`vm(&paddr,...)` then
+  `vax.memory[paddr]`) -- functionally identical since kernel mode already
+  has full access to every P0/S0 page VMINIT mapped, and significantly
+  simpler than reproducing raw physical-address plumbing that exists in C
+  only because there was no higher-level virtual accessor to call instead.
+- Found and fixed one clear, obvious bug while porting the ISD walk (not a
+  DEVIATIONS.md matter -- this is loader/tooling code, not emulated VAX
+  instruction-set behavior, the same category Phase 10's own RTL/console
+  findings fell into): `image_load`'s "no user stack loads" skip compares
+  the unsigned, byte-extracted `ISD_B_TYPE` value against `-3`, which it
+  can never equal (the real constant, `ISD_K_USRSTACK`, is `253`) -- dead
+  code in the C source. Fixed directly by comparing against `253`.
+- Confirmed by hand against a raw hexdump of `testdata/exe/simple.exe`
+  (its `IHD.offset_ident` locates an `IHI` block at file offset `0x60`
+  whose name field reads "SIMPLE" directly in the raw bytes, and its
+  transfer array's first two longwords are `0x7FFEDF68`/`0x00000200`,
+  matching `console_run`'s own transfer[0]-then-transfer[1] main-entry
+  fallback) -- `TestImageLoad_simpleExe` checks these ground-truth values,
+  plus the loaded ICB's FIXUPVEC/SHR-list shape. Chasing this down also
+  surfaced a real ambiguity worth recording here rather than in
+  DEVIATIONS.md (it's a file-format-reading detail, not an ISA question):
+  several of `simple.exe`'s ISDs carry a *fuller*, version-suffixed name in
+  their own `ISD.NAME` field (e.g. `"DECC$SHR_001"`, a GBL-section-type
+  naming convention this port doesn't otherwise consume) that is easy to
+  confuse with the *shorter*, unversioned names the IAF's own sharable-
+  image name list carries (`"DECC$SHR"`) -- confirmed correct because the
+  short form is what matches `kernel.asm`'s own `.shim` pseudo-op library
+  field spellings, which `SHIM$<name>_<offset>` fixup resolution (next
+  sub-phase) depends on matching exactly.
+- `TestImageLoad_everyRealFixtureLoads` runs `imageLoad` against every real
+  fixture in `testdata/exe/` (`put1.exe` excluded, per
+  `docs/PHASE-12.md`'s own scope note -- a zero-byte file) as a smoke test;
+  `TestImageLoad_alreadyLoadedIsNoOp` and
+  `TestImageLoad_missingFileReportsError` cover `image_load`'s other two
+  documented outcomes.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test
+  ./...` all clean.
