@@ -36,6 +36,7 @@ func boolToR0(b bool) uint32 {
 	if b {
 		return 1
 	}
+
 	return 0
 }
 
@@ -49,25 +50,30 @@ func classifyShim(fn func(byte) bool) ShimFunc {
 // string descriptor.
 func shimStrUpcase(env *Environment, argv []uint32) (uint32, error) {
 	addr := argv[0]
+
 	length, err := env.mem.LoadWord(env.cpu, addr)
 	if err != nil {
 		return 0, err
 	}
+
 	daddr, err := env.mem.LoadLongword(env.cpu, addr+4)
 	if err != nil {
 		return 0, err
 	}
+
 	for n := uint16(0); n < length; n++ {
 		ch, err := env.mem.LoadByte(env.cpu, daddr+uint32(n))
 		if err != nil {
 			return 0, err
 		}
+
 		if ch >= 'a' && ch <= 'z' {
 			if err := env.mem.StoreByte(env.cpu, daddr+uint32(n), ch-32); err != nil {
 				return 0, err
 			}
 		}
 	}
+
 	return 1, nil
 }
 
@@ -79,19 +85,24 @@ func cAtoi(s string) int32 {
 	for i < len(s) && isSpaceASCII(s[i]) {
 		i++
 	}
+
 	neg := false
 	if i < len(s) && (s[i] == '+' || s[i] == '-') {
 		neg = s[i] == '-'
 		i++
 	}
+
 	var v int32
+
 	for i < len(s) && isDigitASCII(s[i]) {
 		v = v*10 + int32(s[i]-'0')
 		i++
 	}
+
 	if neg {
 		return -v
 	}
+
 	return v
 }
 
@@ -101,6 +112,7 @@ func shimDeccAtoi(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return uint32(cAtoi(s)), nil
 }
 
@@ -124,10 +136,12 @@ func shimDeccStrcmp(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	b, err := loadDString(env, argv[1])
 	if err != nil {
 		return 0, err
 	}
+
 	return cStrcmp(a, b), nil
 }
 
@@ -137,17 +151,21 @@ func shimDeccStrncmp(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	b, err := loadDString(env, argv[1])
 	if err != nil {
 		return 0, err
 	}
+
 	n := int(argv[2])
 	if len(a) > n {
 		a = a[:n]
 	}
+
 	if len(b) > n {
 		b = b[:n]
 	}
+
 	return cStrcmp(a, b), nil
 }
 
@@ -160,19 +178,23 @@ func shimDeccStrncpy(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	length := int(argv[2])
 	if len(s) < length {
 		length = len(s) + 1
 	}
+
 	for i := 0; i < length; i++ {
 		var ch byte
 		if i < len(s) {
 			ch = s[i]
 		}
+
 		if err := env.mem.StoreByte(env.cpu, argv[0]+uint32(i), ch); err != nil {
 			return 0, err
 		}
 	}
+	
 	return uint32(length), nil
 }
 

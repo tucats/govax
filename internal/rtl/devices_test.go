@@ -24,6 +24,7 @@ func TestServiceSysAssign(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if r0 != ssNormal {
 		t.Fatalf("r0 = %d, want ssNormal", r0)
 	}
@@ -32,6 +33,7 @@ func TestServiceSysAssign(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if chanNum != 8 {
 		t.Errorf("channel number = %d, want 8 (first channel, next_channel += 8)", chanNum)
 	}
@@ -40,12 +42,15 @@ func TestServiceSysAssign(t *testing.T) {
 	if !found {
 		t.Fatal("channel not found after SYS$ASSIGN")
 	}
+
 	if c.Device.Name != "TTA0" {
 		t.Errorf("channel device = %q, want TTA0", c.Device.Name)
 	}
+
 	if c.Device.RefCnt != 1 {
 		t.Errorf("device RefCnt = %d, want 1", c.Device.RefCnt)
 	}
+
 	if c.Device.PID != nominalPID || c.Device.OwnUIC != nominalUIC {
 		t.Errorf("device PID/UIC = %#x/%#x, want the process stub's own %#x/%#x",
 			c.Device.PID, c.Device.OwnUIC, nominalPID, nominalUIC)
@@ -61,6 +66,7 @@ func TestServiceSysAssignNoSuchDevice(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if r0 != ssIvDevNam {
 		t.Errorf("r0 = %d, want ssIvDevNam", r0)
 	}
@@ -71,6 +77,7 @@ func TestServiceSysAssignArgCounts(t *testing.T) {
 	if r0, err := serviceSysAssign(env, []uint32{1}); err != nil || r0 != ssInsfArg {
 		t.Errorf("1 arg: r0=%d err=%v, want ssInsfArg", r0, err)
 	}
+	
 	if r0, err := serviceSysAssign(env, []uint32{1, 2, 3, 4, 5, 6}); err != nil || r0 != ssTooManyArgs {
 		t.Errorf("6 args: r0=%d err=%v, want ssTooManyArgs", r0, err)
 	}
@@ -97,13 +104,16 @@ func TestServiceSysGetdviwByChannel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if r0 != ssNormal {
 		t.Fatalf("r0 = %d, want ssNormal", r0)
 	}
+
 	class, err := env.mem.LoadByte(env.cpu, buf)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if iodev.DeviceClass(class) != iodev.DeviceClassDisk {
 		t.Errorf("class = %d, want DeviceClassDisk", class)
 	}
@@ -127,6 +137,7 @@ func TestServiceSysGetdviwDebugDevicesTrace(t *testing.T) {
 	argv[3] = itemList
 
 	var traceBuf bytes.Buffer
+
 	env.cpu.SetDebugWriter(&traceBuf)
 	env.cpu.SetDebug(vax.DebugDevices)
 
@@ -161,13 +172,16 @@ func TestServiceSysGetdviwByName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if r0 != ssNormal {
 		t.Fatalf("r0 = %d, want ssNormal", r0)
 	}
+
 	bufSize, err := env.mem.LoadLongword(env.cpu, buf)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if bufSize != 512 {
 		t.Errorf("devbufsiz = %d, want 512", bufSize)
 	}
@@ -177,10 +191,12 @@ func TestServiceSysGetdviwInvalidChannel(t *testing.T) {
 	env, _ := fixture()
 	argv := make([]uint32, 8)
 	argv[1] = 42
+
 	r0, err := serviceSysGetdviw(env, argv)
 	if err != nil {
 		t.Fatal(err)
 	}
+	
 	if r0 != ssIvChan {
 		t.Errorf("r0 = %d, want ssIvChan", r0)
 	}

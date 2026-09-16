@@ -35,26 +35,31 @@ func serviceSysTrnlnm(env *Environment, argv []uint32) (uint32, error) {
 	if len(argv) < 5 {
 		return ssInsfArg, nil
 	}
+
 	if len(argv) > 5 {
 		return ssTooManyArgs, nil
 	}
 
 	var attr uint32
+
 	if argv[0] != 0 {
 		v, err := env.mem.LoadLongword(env.cpu, argv[0])
 		if err != nil {
 			return ssAccVio, nil
 		}
+
 		attr = v
 	}
 
 	if argv[1] == 0 {
 		return ssIvLogTab, nil
 	}
+
 	tabnam, ok, err := strGet(env, argv[1], 63)
 	if err != nil {
 		return ssAccVio, nil
 	}
+
 	if !ok || tabnam == "" {
 		return ssIvLogTab, nil
 	}
@@ -63,9 +68,11 @@ func serviceSysTrnlnm(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return ssAccVio, nil
 	}
+
 	if !ok || logname == "" {
 		return ssIvLogNam, nil
 	}
+
 	if attr&lnmCaseBlind != 0 {
 		logname = strings.ToUpper(logname)
 	}
@@ -76,29 +83,36 @@ func serviceSysTrnlnm(env *Environment, argv []uint32) (uint32, error) {
 		if debug {
 			fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: $TRNLNM(%s,%s), table not found.\n", tabnam, logname)
 		}
+
 		return ssNoLogTab, nil
 	}
+
 	ln, found := env.Logicals.Get(tabnam, logname, 0)
 	if !found {
 		if debug {
 			fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: $TRNLNM(%s,%s), logical name not found.\n", tabnam, logname)
 		}
+
 		return ssNoLogNam, nil
 	}
+
 	if debug {
 		value := ln.Value
 		if value == "" {
 			value = "<undefined>"
 		}
+
 		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: $TRNLNM(%s,%s), value=%q\n", tabnam, logname, value)
 	}
 
 	accmode := uint32(env.cpu.PSL().CurMod())
+
 	if argv[3] != 0 {
 		v, err := env.mem.LoadByte(env.cpu, argv[3])
 		if err != nil {
 			return ssAccVio, nil
 		}
+
 		accmode = uint32(v)
 	}
 
@@ -112,12 +126,14 @@ func serviceSysTrnlnm(env *Environment, argv []uint32) (uint32, error) {
 			if err := env.mem.StoreByte(env.cpu, e.BuffAddr, byte(accmode)); err != nil {
 				return ssAccVio
 			}
+
 			return env.setRetLen(e, 1)
 
 		case lnmAttributes:
 			if err := env.mem.StoreLongword(env.cpu, e.BuffAddr, ln.Attr); err != nil {
 				return ssAccVio
 			}
+
 			return env.setRetLen(e, 4)
 
 		case lnmLength:
@@ -125,6 +141,7 @@ func serviceSysTrnlnm(env *Environment, argv []uint32) (uint32, error) {
 			if err := env.mem.StoreWord(env.cpu, e.BuffAddr, size); err != nil {
 				return ssAccVio
 			}
+
 			return env.setRetLen(e, 4)
 
 		case lnmMaxIndex:
@@ -134,27 +151,32 @@ func serviceSysTrnlnm(env *Environment, argv []uint32) (uint32, error) {
 			if err := env.mem.StoreWord(env.cpu, e.BuffAddr, 1); err != nil {
 				return ssAccVio
 			}
+
 			return env.setRetLen(e, 4)
 
 		case lnmString:
 			if err := storeString(env, ln.Value, e.BuffAddr, len(ln.Value)); err != nil {
 				return ssAccVio
 			}
+
 			return env.setRetLen(e, uint16(len(ln.Value)))
 
 		case lnmTable:
 			if err := strPut(env, e.BuffAddr, tabnam); err != nil {
 				return ssAccVio
 			}
+
 			return env.setRetLen(e, uint16(len(tabnam)))
 
 		default:
 			return 0
 		}
 	})
+
 	if status != 0 {
 		return status, nil
 	}
+	
 	return ssNormal, nil
 }
 

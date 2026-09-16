@@ -20,13 +20,16 @@ func fixture() (*Environment, *bytes.Buffer) {
 	devices := iodev.NewDeviceTable()
 	logicals := iodev.NewLogicalNameTable()
 	logicals.InitLogicals()
+
 	out := &bytes.Buffer{}
 	env := NewEnvironment(cpu, mem, devices, logicals, bytes.NewReader(nil), out)
+
 	return env, out
 }
 
 func putLongword(t *testing.T, env *Environment, addr, v uint32) {
 	t.Helper()
+
 	if err := env.mem.StoreLongword(env.cpu, addr, v); err != nil {
 		t.Fatalf("StoreLongword(%#x): %v", addr, err)
 	}
@@ -34,11 +37,13 @@ func putLongword(t *testing.T, env *Environment, addr, v uint32) {
 
 func putString(t *testing.T, env *Environment, addr uint32, s string) {
 	t.Helper()
+
 	for i := 0; i < len(s); i++ {
 		if err := env.mem.StoreByte(env.cpu, addr+uint32(i), s[i]); err != nil {
 			t.Fatalf("StoreByte(%#x): %v", addr+uint32(i), err)
 		}
 	}
+
 	if err := env.mem.StoreByte(env.cpu, addr+uint32(len(s)), 0); err != nil {
 		t.Fatalf("StoreByte(%#x): %v", addr+uint32(len(s)), err)
 	}
@@ -49,12 +54,15 @@ func putString(t *testing.T, env *Environment, addr uint32, s string) {
 // stored at strAddr, matching every str_get/str_put caller's own layout.
 func putDescriptor(t *testing.T, env *Environment, addr uint32, strAddr uint32, s string) {
 	t.Helper()
+
 	if err := env.mem.StoreWord(env.cpu, addr, uint16(len(s))); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := env.mem.StoreWord(env.cpu, addr+2, 0); err != nil {
 		t.Fatal(err)
 	}
+
 	putLongword(t, env, addr+4, strAddr)
 	putString(t, env, strAddr, s)
 }
@@ -63,10 +71,13 @@ func putDescriptor(t *testing.T, env *Environment, addr uint32, strAddr uint32, 
 // points the AP register at it, matching CALLS/CALLG's own layout.
 func putArgs(t *testing.T, env *Environment, ap uint32, argv []uint32) {
 	t.Helper()
+
 	putLongword(t, env, ap, uint32(len(argv)))
+
 	for n, v := range argv {
 		putLongword(t, env, ap+uint32(n+1)*4, v)
 	}
+
 	env.cpu.SetGPR(vax.AP, ap)
 }
 
@@ -78,10 +89,12 @@ func TestReadArgs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("readArgs: %v", err)
 	}
+
 	want := []uint32{0x11, 0x22, 0x33}
 	if len(argv) != len(want) {
 		t.Fatalf("argv = %v, want %v", argv, want)
 	}
+
 	for i := range want {
 		if argv[i] != want[i] {
 			t.Errorf("argv[%d] = %#x, want %#x", i, argv[i], want[i])
@@ -97,9 +110,11 @@ func TestEnvironmentShim(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Shim: %v", err)
 	}
+
 	if !handled {
 		t.Fatal("Shim(32) not handled, want DECC$TIME registered")
 	}
+
 	if r0 == 0 {
 		t.Error("r0 = 0, want a nonzero Unix timestamp")
 	}
@@ -116,6 +131,7 @@ func TestEnvironmentSystemServiceRecoversHandlerPanic(t *testing.T) {
 	if !handled {
 		t.Fatal("SYS$SETEF not handled")
 	}
+
 	if err == nil {
 		t.Fatal("err = nil, want the recovered panic reported as an error")
 	}
@@ -129,6 +145,7 @@ func TestEnvironmentShimUnregisteredCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Shim: %v", err)
 	}
+
 	if handled {
 		t.Error("Shim(250) handled, want no such shim registered")
 	}
@@ -143,6 +160,7 @@ func TestEnvironmentHasShim(t *testing.T) {
 	if !env.HasShim(32) { // DECC$TIME, registered by TestEnvironmentShim
 		t.Error("HasShim(32) = false, want true")
 	}
+
 	if env.HasShim(250) {
 		t.Error("HasShim(250) = true, want false (no such shim registered)")
 	}
@@ -157,9 +175,11 @@ func TestEnvironmentSystemService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SystemService: %v", err)
 	}
+
 	if !handled {
 		t.Fatal("SystemService(SYS$SETEF's address) not handled")
 	}
+
 	if r0 != ssNormal {
 		t.Errorf("r0 = %d, want ssNormal", r0)
 	}
@@ -170,6 +190,7 @@ func TestEnvironmentSystemServiceDebugServicesTrace(t *testing.T) {
 	putArgs(t, env, 0x2000, []uint32{5})
 
 	var buf bytes.Buffer
+
 	env.cpu.SetDebugWriter(&buf)
 	env.cpu.SetDebug(vax.DebugServices)
 
@@ -190,6 +211,7 @@ func TestEnvironmentSystemServiceUnknownAddress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SystemService: %v", err)
 	}
+
 	if handled {
 		t.Error("SystemService(0xdeadbeef) handled, want no such address in p1Vector")
 	}
@@ -204,6 +226,7 @@ func TestEnvironmentSystemServiceKnownAddressUnregisteredHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SystemService: %v", err)
 	}
+	
 	if handled {
 		t.Error("SystemService(SYS$OPEN) handled, want unimplemented")
 	}

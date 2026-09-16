@@ -18,15 +18,18 @@ func storeString(env *Environment, s string, addr uint32, maxLen int) error {
 	if maxLen <= 0 || maxLen > len(s) {
 		maxLen = len(s)
 	}
+
 	for i := 0; i < maxLen; i++ {
 		ch := s[i]
 		if err := env.mem.StoreByte(env.cpu, addr+uint32(i), ch); err != nil {
 			return err
 		}
+
 		if ch == 0 {
 			break
 		}
 	}
+
 	return nil
 }
 
@@ -35,16 +38,20 @@ func storeString(env *Environment, s string, addr uint32, maxLen int) error {
 // load_dstring (maxCStringLen, effectively unbounded).
 func loadString(env *Environment, addr uint32, maxLen int) (string, error) {
 	buf := make([]byte, 0, maxLen)
+
 	for n := 0; n < maxLen; n++ {
 		ch, err := env.mem.LoadByte(env.cpu, addr+uint32(n))
 		if err != nil {
 			return "", err
 		}
+
 		if ch == 0 {
 			break
 		}
+
 		buf = append(buf, ch)
 	}
+
 	return string(buf), nil
 }
 
@@ -66,21 +73,26 @@ func strGet(env *Environment, addr uint32, maxLen int) (s string, ok bool, err e
 	if err != nil {
 		return "", false, err
 	}
+	
 	if int(dlen) > maxLen {
 		return "", false, nil
 	}
+
 	daddr, err := env.mem.LoadLongword(env.cpu, addr+4)
 	if err != nil {
 		return "", false, err
 	}
+
 	buf := make([]byte, dlen)
 	for i := range buf {
 		ch, err := env.mem.LoadByte(env.cpu, daddr+uint32(i))
 		if err != nil {
 			return "", false, err
 		}
+
 		buf[i] = ch
 	}
+
 	return string(buf), true, nil
 }
 
@@ -98,12 +110,15 @@ func strPut(env *Environment, addr uint32, s string) error {
 	if err != nil {
 		return err
 	}
+
 	daddr, err := env.mem.LoadLongword(env.cpu, addr+4)
 	if err != nil {
 		return err
 	}
+
 	for n := 0; n < int(dlen); n++ {
 		var ch byte
+
 		switch {
 		case n < len(s):
 			ch = s[n]
@@ -112,9 +127,11 @@ func strPut(env *Environment, addr uint32, s string) error {
 		default:
 			ch = ' '
 		}
+
 		if err := env.mem.StoreByte(env.cpu, daddr+uint32(n), ch); err != nil {
 			return err
 		}
 	}
+	
 	return nil
 }

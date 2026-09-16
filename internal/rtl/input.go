@@ -18,8 +18,10 @@ func (env *Environment) consoleReader() *bufio.Reader {
 		if src == nil {
 			src = strings.NewReader("")
 		}
+
 		env.consoleInBuf = bufio.NewReader(src)
 	}
+
 	return env.consoleInBuf
 }
 
@@ -31,19 +33,24 @@ func (env *Environment) consoleReader() *bufio.Reader {
 func readConsoleLine(env *Environment, maxLen int) (string, error) {
 	r := env.consoleReader()
 	buf := make([]byte, 0, maxLen)
+
 	for len(buf) < maxLen {
 		b, err := r.ReadByte()
 		if err != nil {
 			if len(buf) == 0 {
 				return "", err
 			}
+
 			break
 		}
+
 		buf = append(buf, b)
+
 		if b == '\n' {
 			break
 		}
 	}
+
 	return string(buf), nil
 }
 
@@ -54,13 +61,16 @@ func shimDeccGets(env *Environment, argv []uint32) (uint32, error) {
 	if len(argv) != 1 {
 		return 0, nil
 	}
+
 	line, err := readConsoleLine(env, 511)
 	if err != nil {
 		line = ""
 	}
+
 	if err := storeString(env, line+"\x00", argv[0], len(line)+1); err != nil {
 		return 0, err
 	}
+
 	return argv[0], nil
 }
 
@@ -71,12 +81,14 @@ func shimExeInput(env *Environment, argv []uint32) (uint32, error) {
 	if len(argv) != 2 {
 		return 0, nil
 	}
+
 	buffAddr, buffLen := argv[0], argv[1]
 
 	line, err := readConsoleLine(env, int(buffLen))
 	if err != nil {
 		line = ""
 	}
+
 	n := len(line)
 	if n > 0 && (line[n-1] == '\r' || line[n-1] == '\n') {
 		n--
@@ -87,6 +99,7 @@ func shimExeInput(env *Environment, argv []uint32) (uint32, error) {
 			return 0, nil
 		}
 	}
+	
 	return uint32(n), nil
 }
 

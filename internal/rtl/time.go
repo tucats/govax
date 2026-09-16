@@ -14,6 +14,7 @@ func shimDeccTime(env *Environment, argv []uint32) (uint32, error) {
 			return 0, err
 		}
 	}
+	
 	return now, nil
 }
 

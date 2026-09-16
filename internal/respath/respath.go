@@ -43,12 +43,15 @@ func New(dirs []string, fallback fs.FS) *Resolver {
 // this name (e.g. an assembler .INCLUDE resolved relative to the including
 // file's own directory) without losing the wider search list or fallback.
 func (r *Resolver) WithDir(dir string) *Resolver {
-	dirs := []string{dir}
 	var fallback fs.FS
+
+	dirs := []string{dir}
+
 	if r != nil {
 		dirs = append(dirs, r.Dirs...)
 		fallback = r.Fallback
 	}
+
 	return &Resolver{Dirs: dirs, Fallback: fallback}
 }
 
@@ -108,6 +111,8 @@ func (r *Resolver) ReadFile(name string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	
 	defer f.Close()
+
 	return io.ReadAll(f)
 }

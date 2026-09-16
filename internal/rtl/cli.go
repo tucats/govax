@@ -37,14 +37,17 @@ func serviceSysCli(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return ssAccVio, nil
 	}
+
 	subrequest, err := env.mem.LoadByte(env.cpu, reqAddr+1)
 	if err != nil {
 		return ssAccVio, nil
 	}
+
 	length, err := env.mem.LoadLongword(env.cpu, reqAddr+4)
 	if err != nil {
 		return ssAccVio, nil
 	}
+
 	ptr, err := env.mem.LoadLongword(env.cpu, reqAddr+8)
 	if err != nil {
 		return ssAccVio, nil
@@ -57,6 +60,7 @@ func serviceSysCli(env *Environment, argv []uint32) (uint32, error) {
 		if _, err := loadString(env, ptr, int(length)); err != nil {
 			return ssAccVio, nil
 		}
+		
 		return cliUndefinedSymbol, nil
 
 	default:

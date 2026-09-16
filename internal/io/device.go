@@ -148,6 +148,7 @@ func (t *DeviceTable) Define(name string, opts DeviceOptions) *Device {
 		RootDevName: opts.RootDevName,
 	}
 	t.devices = append([]*Device{d}, t.devices...)
+
 	return d
 }
 
@@ -161,6 +162,7 @@ func (t *DeviceTable) Find(name string) (*Device, bool) {
 			return d, true
 		}
 	}
+
 	return nil, false
 }
 
@@ -170,5 +172,6 @@ func (t *DeviceTable) Find(name string) (*Device, bool) {
 func (t *DeviceTable) All() []*Device {
 	out := make([]*Device, len(t.devices))
 	copy(out, t.devices)
+	
 	return out
 }

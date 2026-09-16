@@ -7,12 +7,15 @@ import (
 
 func putRequest(t *testing.T, env *Environment, addr uint32, request, subrequest byte, length, ptr uint32) {
 	t.Helper()
+
 	if err := env.mem.StoreByte(env.cpu, addr, request); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := env.mem.StoreByte(env.cpu, addr+1, subrequest); err != nil {
 		t.Fatal(err)
 	}
+
 	putLongword(t, env, addr+4, length)
 	putLongword(t, env, addr+8, ptr)
 }
@@ -27,6 +30,7 @@ func TestServiceSysCliGetSymbol(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if r0 != cliUndefinedSymbol {
 		t.Errorf("r0 = %#x, want CLI$_UNDSYM (%#x)", r0, cliUndefinedSymbol)
 	}
@@ -41,6 +45,7 @@ func TestServiceSysCliUnknownRequestHalts(t *testing.T) {
 	if !errors.Is(err, ErrHalt) {
 		t.Errorf("err = %v, want ErrHalt", err)
 	}
+	
 	if r0 != ssInvArg {
 		t.Errorf("r0 = %d, want ssInvArg", r0)
 	}

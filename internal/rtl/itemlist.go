@@ -30,17 +30,21 @@ func (env *Environment) walkItemList(ptr uint32, visit func(itemListEntry) uint3
 		if err != nil {
 			return ssAccVio
 		}
+
 		itemCode, err := env.mem.LoadWord(env.cpu, ptr+2)
 		if err != nil {
 			return ssAccVio
 		}
+
 		if buffLen == 0 && itemCode == 0 {
 			return 0
 		}
+
 		buffAddr, err := env.mem.LoadLongword(env.cpu, ptr+4)
 		if err != nil {
 			return ssAccVio
 		}
+
 		retAddr, err := env.mem.LoadLongword(env.cpu, ptr+8)
 		if err != nil {
 			return ssAccVio
@@ -63,8 +67,10 @@ func (env *Environment) setRetLen(e itemListEntry, size uint16) uint32 {
 	if e.RetAddr == 0 {
 		return 0
 	}
+
 	if err := env.mem.StoreWord(env.cpu, e.RetAddr, size); err != nil {
 		return ssAccVio
 	}
+	
 	return 0
 }

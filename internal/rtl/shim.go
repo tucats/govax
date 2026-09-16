@@ -40,6 +40,7 @@ func (t *ShimTable) Lookup(code uint32) (ShimFunc, bool) {
 	if !ok {
 		return nil, false
 	}
+	
 	return e.fn, true
 }
 

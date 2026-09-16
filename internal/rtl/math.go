@@ -13,6 +13,7 @@ func shimLibAdawi(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	base, err := env.mem.LoadLongword(env.cpu, baseAddr)
 	if err != nil {
 		return 0, err
@@ -21,11 +22,14 @@ func shimLibAdawi(env *Environment, argv []uint32) (uint32, error) {
 	base += sum
 
 	var sign uint32
+
 	switch {
 	case int32(base) < 0:
 		sign = 0xFFFFFFFF // -1
+
 	case base == 0:
 		sign = 0
+
 	default:
 		sign = 1
 	}
@@ -33,6 +37,7 @@ func shimLibAdawi(env *Environment, argv []uint32) (uint32, error) {
 	if err := env.mem.StoreLongword(env.cpu, signAddr, sign); err != nil {
 		return 0, err
 	}
+	
 	return 1, nil
 }
 

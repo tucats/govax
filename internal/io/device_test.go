@@ -33,6 +33,7 @@ func TestDeviceTableDefineAndFind(t *testing.T) {
 	if !ok {
 		t.Fatalf("Find(dka0): not found")
 	}
+
 	if d.Cylinders != 1024 || d.VolName != "SYSTEM" || d.DevClass != DeviceClassDisk {
 		t.Errorf("Find(dka0) = %+v, unexpected fields", d)
 	}
@@ -56,9 +57,11 @@ func TestDeviceTableDefineDuplicateNameShadowsOlder(t *testing.T) {
 	if !ok {
 		t.Fatalf("Find(DKA0): not found")
 	}
+
 	if d.Cylinders != 200 {
 		t.Errorf("Find(DKA0).Cylinders = %d, want 200 (most recent definition should win)", d.Cylinders)
 	}
+
 	if len(dt.All()) != 2 {
 		t.Errorf("All() len = %d, want 2 (both definitions kept, not replaced)", len(dt.All()))
 	}
@@ -80,5 +83,6 @@ func names(ds []*Device) []string {
 	for i, d := range ds {
 		out[i] = d.Name
 	}
+	
 	return out
 }

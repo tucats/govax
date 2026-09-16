@@ -32,6 +32,7 @@ func (env *Environment) zeroRange(addr, size uint32) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -47,7 +48,9 @@ func shimDeccMalloc(env *Environment, argv []uint32) (uint32, error) {
 	if len(argv) > 1 {
 		flag = argv[1]
 	}
+
 	var zone uint32
+
 	if len(argv) > 2 {
 		zone = argv[2]
 	}
@@ -57,6 +60,7 @@ func shimDeccMalloc(env *Environment, argv []uint32) (uint32, error) {
 		if p.size < size {
 			continue
 		}
+
 		env.memFreed = append(env.memFreed[:i], env.memFreed[i+1:]...)
 
 		if p.size > roundedSize {
@@ -79,6 +83,7 @@ func shimDeccMalloc(env *Environment, argv []uint32) (uint32, error) {
 				return 0xFFFFFFFF, nil
 			}
 		}
+
 		return p.addr, nil
 	}
 
@@ -107,6 +112,7 @@ func shimDeccMalloc(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	env.RegionSize[0] = region + pageRounded
+
 	return q.addr, nil
 }
 
@@ -115,15 +121,19 @@ func shimDeccMalloc(env *Environment, argv []uint32) (uint32, error) {
 // if addr doesn't fall inside any currently allocated block.
 func (env *Environment) freeBlock(addr uint32) bool {
 	idx := -1
+
 	for i, p := range env.memAllocated {
 		if addr >= p.addr && addr < p.addr+p.size {
 			idx = i
+
 			break
 		}
 	}
+
 	if idx == -1 {
 		return false
 	}
+
 	p := env.memAllocated[idx]
 	env.memAllocated = append(env.memAllocated[:idx], env.memAllocated[idx+1:]...)
 	p.flags = 0
@@ -134,15 +144,19 @@ func (env *Environment) freeBlock(addr uint32) bool {
 		switch {
 		case q.addr+q.size == p.addr: // q immediately precedes p
 			q.size += p.size
+
 			return true
+
 		case p.addr+p.size == q.addr: // q immediately follows p
 			q.addr = p.addr
 			q.size += p.size
+
 			return true
 		}
 	}
 
 	env.memFreed = append(env.memFreed, p)
+
 	return true
 }
 
@@ -151,6 +165,7 @@ func shimDeccFree(env *Environment, argv []uint32) (uint32, error) {
 	if !env.freeBlock(argv[0]) {
 		return 0xFFFFFFFF, nil // -1
 	}
+
 	return 0, nil
 }
 
@@ -176,6 +191,7 @@ func shimLibGetVM(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	if addr == 0 {
 		return ssInsfMem, nil
 	}
@@ -183,19 +199,23 @@ func shimLibGetVM(env *Environment, argv []uint32) (uint32, error) {
 	if err := env.mem.StoreLongword(env.cpu, retAddr, addr); err != nil {
 		return ssAccVio, nil
 	}
+
 	return ssNormal, nil
 }
 
 // shimLibFreeVM is LIB$FREE_VM.
 func shimLibFreeVM(env *Environment, argv []uint32) (uint32, error) {
 	retAddr := argv[1]
+
 	addr, err := env.mem.LoadLongword(env.cpu, retAddr)
 	if err != nil {
 		return ssAccVio, nil
 	}
+
 	if !env.freeBlock(addr) {
 		return ssInvArg, nil
 	}
+
 	return ssNormal, nil
 }
 
@@ -203,20 +223,24 @@ func shimLibFreeVM(env *Environment, argv []uint32) (uint32, error) {
 // the given zone.
 func shimLibDeleteVMZone(env *Environment, argv []uint32) (uint32, error) {
 	zoneAddr := argv[0]
+
 	zone, err := env.mem.LoadLongword(env.cpu, zoneAddr)
 	if err != nil {
 		return ssAccVio, nil
 	}
 
 	var toFree []uint32
+
 	for _, p := range env.memAllocated {
 		if p.zone == zone {
 			toFree = append(toFree, p.addr)
 		}
 	}
+
 	for _, addr := range toFree {
 		env.freeBlock(addr)
 	}
+	
 	return ssNormal, nil
 }
 

@@ -122,6 +122,7 @@ func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, lo
 	}
 	registerShims(env.shims)
 	registerServices(env.services)
+
 	return env
 }
 
@@ -134,14 +135,18 @@ func readArgs(cpu *vax.CPU, mem *vm.Memory, ap uint32) ([]uint32, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	argv := make([]uint32, argc)
+
 	for n := uint32(0); n < argc; n++ {
 		v, err := mem.LoadLongword(cpu, ap+(n+1)*4)
 		if err != nil {
 			return nil, err
 		}
+
 		argv[n] = v
 	}
+
 	return argv, nil
 }
 
@@ -161,6 +166,7 @@ func callHandler(fn func(*Environment, []uint32) (uint32, error), env *Environme
 			err = vmserrors.New(vmserrors.LIB_PANIC, fmt.Sprintf("%v", p))
 		}
 	}()
+
 	return fn(env, argv)
 }
 
@@ -172,11 +178,14 @@ func (env *Environment) Shim(code uint32) (uint32, bool, error) {
 	if !ok {
 		return 0, false, nil
 	}
+
 	argv, err := readArgs(env.cpu, env.mem, env.cpu.GPR(vax.AP))
 	if err != nil {
 		return 0, true, err
 	}
+
 	r0, err := callHandler(fn, env, argv)
+
 	return r0, true, err
 }
 
@@ -185,6 +194,7 @@ func (env *Environment) Shim(code uint32) (uint32, bool, error) {
 // wants to know whether a numeric dispatch code is live, not run it.
 func (env *Environment) HasShim(code uint32) bool {
 	_, ok := env.shims.Lookup(code)
+
 	return ok
 }
 
@@ -197,6 +207,7 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 	if !ok {
 		return 0, false, nil
 	}
+
 	fn, ok := env.services.Lookup(entry.Name)
 	if !ok {
 		// Matches call_service's own "Unimplemented native service"
@@ -206,10 +217,12 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 		// both mean "this service isn't implemented."
 		return 0, false, nil
 	}
+
 	argv, err := readArgs(env.cpu, env.mem, env.cpu.GPR(vax.AP))
 	if err != nil {
 		return 0, true, err
 	}
+
 	r0, err := callHandler(fn, env, argv)
 
 	// DBG_SERVICES: matches p1_vector.c:433's own "Debug P1 system service
@@ -221,6 +234,7 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 		for i, a := range argv {
 			args[i] = fmt.Sprintf("%08X", a)
 		}
+		
 		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(SERVICES): %s( %s ), returns %08X\n",
 			entry.Name, strings.Join(args, ", "), r0)
 	}

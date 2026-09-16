@@ -10,6 +10,7 @@ func TestLogicalNameTableSetAndGet(t *testing.T) {
 	if !ok {
 		t.Fatalf("Get: not found")
 	}
+
 	if ln.Value != "DKA0:[SCRATCH]" {
 		t.Errorf("Get.Value = %q, want DKA0:[SCRATCH]", ln.Value)
 	}
@@ -17,6 +18,7 @@ func TestLogicalNameTableSetAndGet(t *testing.T) {
 	if _, ok := lt.Get("LNM_PROCESS", "NOSUCH", 0); ok {
 		t.Errorf("Get(NOSUCH) unexpectedly found")
 	}
+	
 	if _, ok := lt.Get("NOSUCHTABLE", "SYS$SCRATCH", 0); ok {
 		t.Errorf("Get with unknown table unexpectedly found")
 	}
@@ -41,9 +43,11 @@ func TestLogicalNameTableSetRedefineKeepsOriginalAttr(t *testing.T) {
 	if !ok {
 		t.Fatalf("Get: not found")
 	}
+
 	if ln.Value != "second" {
 		t.Errorf("Value = %q, want second", ln.Value)
 	}
+
 	if ln.Attr != 0x1234 {
 		t.Errorf("Attr = %#x, want %#x (redefinition must not change attr)", ln.Attr, 0x1234)
 	}
@@ -56,6 +60,7 @@ func TestLogicalNameTableGetAttrFilter(t *testing.T) {
 	if _, ok := lt.Get("T", "NAME", LNMTerminal); ok {
 		t.Errorf("Get with mismatched attr filter unexpectedly found")
 	}
+
 	if _, ok := lt.Get("T", "NAME", LNMTable); !ok {
 		t.Errorf("Get with matching attr filter not found")
 	}
@@ -68,12 +73,15 @@ func TestLogicalNameTableDelete(t *testing.T) {
 	if !lt.Delete("T", "NAME") {
 		t.Errorf("Delete: reported not-found for an existing entry")
 	}
+
 	if _, ok := lt.Get("T", "NAME", 0); ok {
 		t.Errorf("Get after Delete unexpectedly found")
 	}
+
 	if lt.Delete("T", "NAME") {
 		t.Errorf("Delete of an already-deleted entry should report false")
 	}
+
 	if lt.Delete("NOSUCHTABLE", "NAME") {
 		t.Errorf("Delete against an unknown table should report false")
 	}
@@ -87,8 +95,10 @@ func TestLogicalNameTableInitLogicals(t *testing.T) {
 		ln, ok := lt.Get("LNM$FILE_DEV", name, 0)
 		if !ok {
 			t.Errorf("Get(LNM$FILE_DEV, %s) not found", name)
+
 			continue
 		}
+
 		if ln.Value != "TTA0:" {
 			t.Errorf("Get(LNM$FILE_DEV, %s).Value = %q, want TTA0:", name, ln.Value)
 		}

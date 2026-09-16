@@ -25,21 +25,27 @@ const (
 
 func posixFlagsToGo(mode uint32) int {
 	flags := os.O_RDONLY
+
 	switch {
 	case mode&posixORdwr != 0:
 		flags = os.O_RDWR
+
 	case mode&posixOWronly != 0:
 		flags = os.O_WRONLY
 	}
+
 	if mode&posixOCreat != 0 {
 		flags |= os.O_CREATE
 	}
+
 	if mode&posixOTrunc != 0 {
 		flags |= os.O_TRUNC
 	}
+
 	if mode&posixOAppend != 0 {
 		flags |= os.O_APPEND
 	}
+
 	return flags
 }
 
@@ -48,6 +54,7 @@ func shimExeOpen(env *Environment, argv []uint32) (uint32, error) {
 	if len(argv) < 2 {
 		return 0, nil
 	}
+
 	name, err := loadString(env, argv[0], 255)
 	if err != nil {
 		return 0, err
@@ -61,6 +68,7 @@ func shimExeOpen(env *Environment, argv []uint32) (uint32, error) {
 	fid := env.nextFID
 	env.nextFID++
 	env.openFiles[fid] = f
+
 	return fid, nil
 }
 
@@ -71,6 +79,7 @@ func shimExeClose(env *Environment, argv []uint32) (uint32, error) {
 		f.Close()
 		delete(env.openFiles, fid)
 	}
+
 	return fid, nil
 }
 
@@ -80,15 +89,19 @@ func shimExeRead(env *Environment, argv []uint32) (uint32, error) {
 	if len(argv) != 3 {
 		return 0, nil
 	}
+
 	fid, addr, length := argv[0], argv[1], argv[2]
 
 	var data []byte
+
 	if fid == 0 {
 		line, err := readConsoleLine(env, int(length))
 		if err != nil {
 			return 0, nil
 		}
+
 		data = []byte(line)
+
 		if n := len(data); n > 0 && data[n-1] == '\r' {
 			data = data[:n-1]
 		}
@@ -97,6 +110,7 @@ func shimExeRead(env *Environment, argv []uint32) (uint32, error) {
 		if !ok {
 			return 0, nil
 		}
+
 		buf := make([]byte, length)
 		n, _ := f.Read(buf)
 		data = buf[:n]
@@ -107,6 +121,7 @@ func shimExeRead(env *Environment, argv []uint32) (uint32, error) {
 			return 0, nil
 		}
 	}
+
 	return uint32(len(data)), nil
 }
 
@@ -116,6 +131,7 @@ func shimExeWrite(env *Environment, argv []uint32) (uint32, error) {
 	if len(argv) != 3 {
 		return 0, nil
 	}
+
 	fid, addr, length := argv[0], argv[1], argv[2]
 
 	buf := make([]byte, length)
@@ -124,6 +140,7 @@ func shimExeWrite(env *Environment, argv []uint32) (uint32, error) {
 		if err != nil {
 			return 0, nil
 		}
+
 		buf[i] = b
 	}
 
@@ -133,6 +150,7 @@ func shimExeWrite(env *Environment, argv []uint32) (uint32, error) {
 				return 0, nil
 			}
 		}
+
 		return length, nil
 	}
 
@@ -140,10 +158,12 @@ func shimExeWrite(env *Environment, argv []uint32) (uint32, error) {
 	if !ok {
 		return 0, nil
 	}
+
 	n, err := f.Write(buf)
 	if err != nil {
 		return 0, nil
 	}
+	
 	return uint32(n), nil
 }
 

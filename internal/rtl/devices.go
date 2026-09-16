@@ -40,6 +40,7 @@ func (env *Environment) findChannel(number uint32) (*channel, bool) {
 			return c, true
 		}
 	}
+
 	return nil, false
 }
 
@@ -57,9 +58,11 @@ func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 	if len(argv) < 2 {
 		return ssInsfArg, nil
 	}
+
 	if len(argv) > 5 {
 		return ssTooManyArgs, nil
 	}
+
 	if argv[0] == 0 || argv[1] == 0 {
 		return ssInsfArg, nil
 	}
@@ -68,6 +71,7 @@ func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return ssAccVio, nil
 	}
+
 	if !ok {
 		return ssBadParam, nil
 	}
@@ -94,11 +98,14 @@ func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 		if err != nil {
 			return ssAccVio, nil
 		}
+
 		if !ok {
 			return ssBadParam, nil
 		}
+
 		c.Mailbox = mbx
 	}
+
 	if len(argv) > 4 {
 		c.Flags = argv[4]
 	}
@@ -130,6 +137,7 @@ func serviceSysGetdviw(env *Environment, argv []uint32) (uint32, error) {
 		if !found {
 			return ssIvChan, nil
 		}
+
 		dp = c.Device
 
 	case argv[2] != 0:
@@ -137,10 +145,13 @@ func serviceSysGetdviw(env *Environment, argv []uint32) (uint32, error) {
 		if err != nil {
 			return ssAccVio, nil
 		}
+
 		if !ok {
 			return ssBadParam, nil
 		}
+
 		found := false
+
 		dp, found = env.Devices.Find(name)
 		if !found {
 			return ssNoSuchDev, nil
@@ -160,27 +171,32 @@ func serviceSysGetdviw(env *Environment, argv []uint32) (uint32, error) {
 			if err := env.mem.StoreByte(env.cpu, e.BuffAddr, byte(dp.DevClass)); err != nil {
 				return ssAccVio
 			}
+
 			return env.setRetLen(e, 1)
 
 		case dviDevType:
 			if err := env.mem.StoreByte(env.cpu, e.BuffAddr, byte(dp.DevType)); err != nil {
 				return ssAccVio
 			}
+
 			return env.setRetLen(e, 1)
 
 		case dviDevBufSize:
 			if err := env.mem.StoreLongword(env.cpu, e.BuffAddr, dp.DevBufSize); err != nil {
 				return ssAccVio
 			}
+
 			return env.setRetLen(e, 4)
 
 		default:
 			return ssBadParam
 		}
 	})
+
 	if status != 0 {
 		return status, nil
 	}
+	
 	return ssNormal, nil
 }
 

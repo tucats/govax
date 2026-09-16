@@ -65,6 +65,7 @@ func (t *LogicalNameTable) InitLogicals() {
 // on the real service that Get's own single ok bool can't tell apart.
 func (t *LogicalNameTable) HasTable(name string) bool {
 	_, ok := t.tables[name]
+
 	return ok
 }
 
@@ -72,12 +73,15 @@ func (t *LogicalNameTable) table(name string, create bool) *logicalTable {
 	if tb, ok := t.tables[name]; ok {
 		return tb
 	}
+
 	if !create {
 		return nil
 	}
+	
 	tb := &logicalTable{attr: LNMTable, names: map[string]*LogicalName{}}
 	t.tables[name] = tb
 	t.order = append(t.order, name)
+
 	return tb
 }
 
@@ -91,13 +95,16 @@ func (t *LogicalNameTable) table(name string, create bool) *logicalTable {
 // (the assignment lives inside the creation branch alone).
 func (t *LogicalNameTable) Set(table, name, value string, attr uint32) *LogicalName {
 	tb := t.table(table, true)
+
 	ln, ok := tb.names[name]
 	if !ok {
 		ln = &LogicalName{Name: name, Attr: attr}
 		tb.names[name] = ln
 		tb.order = append(tb.order, name)
 	}
+
 	ln.Value = value
+
 	return ln
 }
 
@@ -123,17 +130,21 @@ func (t *LogicalNameTable) Get(tabnam, logname string, attr uint32) (*LogicalNam
 	if tabnam == "" {
 		tabnam = "LNM$ROOT"
 	}
+
 	tb, ok := t.tables[tabnam]
 	if !ok {
 		return nil, false
 	}
+
 	ln, ok := tb.names[logname]
 	if !ok {
 		return nil, false
 	}
+
 	if attr != 0 && ln.Attr != attr {
 		return nil, false
 	}
+
 	return ln, true
 }
 
@@ -151,16 +162,21 @@ func (t *LogicalNameTable) Delete(table, name string) bool {
 	if !ok {
 		return false
 	}
+
 	if _, ok := tb.names[name]; !ok {
 		return false
 	}
+
 	delete(tb.names, name)
+
 	for i, n := range tb.order {
 		if n == name {
 			tb.order = append(tb.order[:i], tb.order[i+1:]...)
+
 			break
 		}
 	}
+
 	return true
 }
 
@@ -177,17 +193,21 @@ type LogicalNameEntry struct {
 // insertion order — matching show_logical's own nested-loop enumeration.
 func (t *LogicalNameTable) AllMatching(table, name string) []LogicalNameEntry {
 	var out []LogicalNameEntry
+
 	for _, tname := range t.order {
 		if table != "" && tname != table {
 			continue
 		}
+
 		tb := t.tables[tname]
 		for _, nname := range tb.order {
 			if name != "" && nname != name {
 				continue
 			}
+
 			out = append(out, LogicalNameEntry{Table: tname, Name: tb.names[nname]})
 		}
 	}
+
 	return out
 }

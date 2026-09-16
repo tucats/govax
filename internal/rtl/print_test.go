@@ -12,10 +12,12 @@ func TestShimDeccPrintf(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	want := "count=42 name=vax\n"
 	if out.String() != want {
 		t.Errorf("output = %q, want %q", out.String(), want)
 	}
+
 	if int(r0) != len(want) {
 		t.Errorf("r0 = %d, want %d", r0, len(want))
 	}
@@ -29,6 +31,7 @@ func TestShimDeccPrintfHexAndChar(t *testing.T) {
 	if _, err := shimDeccPrintf(env, []uint32{fmtAddr, 0xFF, uint32('A')}); err != nil {
 		t.Fatal(err)
 	}
+
 	if got := out.String(); got != "FF A" {
 		t.Errorf("output = %q, want \"FF A\"", got)
 	}
@@ -42,6 +45,7 @@ func TestShimDeccPrintfEscapes(t *testing.T) {
 	if _, err := shimDeccPrintf(env, []uint32{fmtAddr}); err != nil {
 		t.Fatal(err)
 	}
+
 	if got := out.String(); got != "a\tb\n" {
 		t.Errorf("output = %q, want %q", got, "a\tb\n")
 	}
@@ -55,6 +59,7 @@ func TestShimDeccPrintfLiteralPercent(t *testing.T) {
 	if _, err := shimDeccPrintf(env, []uint32{fmtAddr}); err != nil {
 		t.Fatal(err)
 	}
+
 	if got := out.String(); got != "100% done" {
 		t.Errorf("output = %q, want \"100%% done\"", got)
 	}
@@ -69,13 +74,16 @@ func TestShimDeccSprintf(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if r0 != 0 {
 		t.Errorf("r0 = %d, want 0", r0)
 	}
+
 	got, err := loadString(env, bufAddr, 32)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if got != "x=7" {
 		t.Errorf("buffer = %q, want \"x=7\"", got)
 	}
@@ -89,6 +97,7 @@ func TestShimDeccPrintfWidthFlags(t *testing.T) {
 	if _, err := shimDeccPrintf(env, []uint32{fmtAddr, 3, 3}); err != nil {
 		t.Fatal(err)
 	}
+	
 	if got := out.String(); got != "[    3][3    ]" {
 		t.Errorf("output = %q, want \"[    3][3    ]\"", got)
 	}

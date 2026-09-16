@@ -40,6 +40,7 @@ func loadDFloat(lo, hi uint32) float64 {
 	sign := lowLong >> 31
 	biasedExp := lowLong >> 23 & 0xFF
 	frac23 := lowLong & 0x7FFFFF
+
 	if biasedExp == 0 {
 		return 0
 	}
@@ -50,6 +51,7 @@ func loadDFloat(lo, hi uint32) float64 {
 	lo32 := frac23&0x7<<29 | highLong>>3
 
 	bits := uint64(hi32)<<32 | uint64(lo32)
+
 	return math.Float64frombits(bits)
 }
 
@@ -63,8 +65,10 @@ func deccFormat(env *Environment, argv []uint32, startPos int) (string, error) {
 	}
 
 	var out strings.Builder
+
 	pos := startPos + 1
 	i := 0
+
 	for i < len(fmtStr) {
 		ch := fmtStr[i]
 		switch ch {
@@ -76,6 +80,7 @@ func deccFormat(env *Environment, argv []uint32, startPos int) (string, error) {
 			if i >= len(fmtStr) {
 				break
 			}
+
 			switch fmtStr[i] {
 			case 'n':
 				out.WriteByte('\n')
@@ -88,14 +93,17 @@ func deccFormat(env *Environment, argv []uint32, startPos int) (string, error) {
 			default:
 				out.WriteByte(fmtStr[i])
 			}
+
 			i++
 
 		case '%':
 			start := i
 			i++
+
 			for i < len(fmtStr) && !strings.ContainsRune(formatCodes, rune(fmtStr[i])) {
 				i++
 			}
+
 			if i >= len(fmtStr) {
 				// Malformed directive with no terminator; nothing sensible
 				// to substitute, matching decc_apply_format's own
@@ -103,12 +111,14 @@ func deccFormat(env *Environment, argv []uint32, startPos int) (string, error) {
 				// no output for it).
 				return out.String(), nil
 			}
+
 			i++ // include the terminating code character
 			spec := fmtStr[start:i]
 			code := spec[len(spec)-1]
 
 			if code == '%' {
 				out.WriteByte('%')
+
 				continue
 			}
 
@@ -119,43 +129,59 @@ func deccFormat(env *Environment, argv []uint32, startPos int) (string, error) {
 				if pos >= len(argv) {
 					return out.String(), nil
 				}
+
 				fmt.Fprintf(&out, cleaned, int32(argv[pos]))
+
 				pos++
+
 			case 'x', 'X':
 				if pos >= len(argv) {
 					return out.String(), nil
 				}
+
 				fmt.Fprintf(&out, cleaned, argv[pos])
+
 				pos++
+
 			case 'c':
 				if pos >= len(argv) {
 					return out.String(), nil
 				}
+
 				fmt.Fprintf(&out, cleaned, rune(argv[pos]&0xFF))
+
 				pos++
+
 			case 'f':
 				if pos+1 >= len(argv) {
 					return out.String(), nil
 				}
+
 				fmt.Fprintf(&out, cleaned, loadDFloat(argv[pos], argv[pos+1]))
 				pos += 2
+
 			case 's':
 				if pos >= len(argv) {
 					return out.String(), nil
 				}
+
 				s, err := loadDString(env, argv[pos])
 				if err != nil {
 					s = ""
 				}
+
 				fmt.Fprintf(&out, cleaned, s)
+
 				pos++
 			}
 
 		default:
 			out.WriteByte(ch)
+			
 			i++
 		}
 	}
+
 	return out.String(), nil
 }
 
@@ -168,11 +194,13 @@ func shimDeccPrintf(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	if env.consoleOut != nil {
 		if _, err := env.consoleOut.Write([]byte(s)); err != nil {
 			return 0, err
 		}
 	}
+
 	return uint32(len(s)), nil
 }
 
@@ -183,9 +211,11 @@ func shimDeccSprintf(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	if err := storeString(env, s+"\x00", argv[0], len(s)+1); err != nil {
 		return 0xFFFFFFFF, nil
 	}
+
 	return 0, nil
 }
 

@@ -352,6 +352,7 @@ var p1VectorByMatchAddr = func() map[uint32]p1VectorEntry {
 		}
 		m[addr] = e
 	}
+
 	return m
 }()
 
@@ -359,5 +360,6 @@ var p1VectorByMatchAddr = func() map[uint32]p1VectorEntry {
 // pc, matching call_service's own linear search.
 func lookupP1Vector(pc uint32) (p1VectorEntry, bool) {
 	e, ok := p1VectorByMatchAddr[pc]
+	
 	return e, ok
 }

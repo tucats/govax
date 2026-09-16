@@ -60,12 +60,15 @@ func (env *Environment) allocIFI() uint16 {
 	if env.nextIFI < 4 {
 		env.nextIFI = 4
 	}
+
 	for {
 		if _, used := env.ifiFiles[env.nextIFI]; !used {
 			id := env.nextIFI
 			env.nextIFI++
+
 			return id
 		}
+
 		env.nextIFI++
 	}
 }
@@ -83,6 +86,7 @@ func (env *Environment) ifiWriter(ifi uint16) (io.Writer, bool) {
 		return nil, false
 	default:
 		w, ok := env.ifiFiles[ifi]
+
 		return w, ok
 	}
 }
@@ -94,6 +98,7 @@ func (env *Environment) storeRMSStatus(base uint32, stsOffset, stvOffset uint32)
 	if err := env.mem.StoreLongword(env.cpu, base+stsOffset, ssNormal); err != nil {
 		return err
 	}
+
 	return env.mem.StoreLongword(env.cpu, base+stvOffset, ssNormal)
 }
 
@@ -107,6 +112,7 @@ func serviceSysCreate(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return ssAccVio, nil
 	}
+
 	if fac != fabFACPut {
 		return ssNoSuchFac, nil
 	}
@@ -115,14 +121,17 @@ func serviceSysCreate(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return ssAccVio, nil
 	}
+
 	maxLen := int(fns)
 	if maxLen == 0 {
 		maxLen = 255
 	}
+
 	fna, err := env.mem.LoadLongword(env.cpu, fabAddr+fabFNA)
 	if err != nil {
 		return ssAccVio, nil
 	}
+
 	fn, err := loadString(env, fna, maxLen)
 	if err != nil {
 		return ssAccVio, nil
@@ -133,6 +142,7 @@ func serviceSysCreate(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	var ifi uint16
+	
 	if fn == "TTA0:" {
 		ifi = 1
 	} else {
@@ -140,6 +150,7 @@ func serviceSysCreate(env *Environment, argv []uint32) (uint32, error) {
 		if err != nil {
 			return ssNoSuchFile, nil
 		}
+
 		ifi = env.allocIFI()
 		env.ifiFiles[ifi] = w
 	}
@@ -152,9 +163,11 @@ func serviceSysCreate(env *Environment, argv []uint32) (uint32, error) {
 	if err := env.mem.StoreWord(env.cpu, fabAddr+fabIFI, ifi); err != nil {
 		return ssAccVio, nil
 	}
+
 	if err := env.storeRMSStatus(fabAddr, fabSTS, fabSTV); err != nil {
 		return ssAccVio, nil
 	}
+
 	return ssNormal, nil
 }
 
@@ -171,6 +184,7 @@ func serviceSysConnect(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return ssAccVio, nil
 	}
+
 	ifi, err := env.mem.LoadWord(env.cpu, fabAddr+fabIFI)
 	if err != nil {
 		return ssAccVio, nil
@@ -179,9 +193,11 @@ func serviceSysConnect(env *Environment, argv []uint32) (uint32, error) {
 	if err := env.mem.StoreWord(env.cpu, rabAddr+rabISI, ifi); err != nil {
 		return ssAccVio, nil
 	}
+
 	if err := env.storeRMSStatus(rabAddr, rabSTS, rabSTV); err != nil {
 		return ssAccVio, nil
 	}
+
 	return ssNormal, nil
 }
 
@@ -200,6 +216,7 @@ func serviceSysPut(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return ssAccVio, nil
 	}
+
 	fabIfi, err := env.mem.LoadWord(env.cpu, fabAddr+fabIFI)
 	if err != nil {
 		return ssAccVio, nil
@@ -219,6 +236,7 @@ func serviceSysPut(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return ssAccVio, nil
 	}
+
 	if rac != rabRACSeq {
 		return ssInvArg, nil
 	}
@@ -227,6 +245,7 @@ func serviceSysPut(env *Environment, argv []uint32) (uint32, error) {
 	if err != nil {
 		return ssAccVio, nil
 	}
+
 	rbf, err := env.mem.LoadLongword(env.cpu, rabAddr+rabRBF)
 	if err != nil {
 		return ssAccVio, nil
@@ -238,11 +257,14 @@ func serviceSysPut(env *Environment, argv []uint32) (uint32, error) {
 		if err != nil {
 			return ssAccVio, nil
 		}
+
 		buf[i] = b
 	}
+
 	if _, err := w.Write(buf); err != nil {
 		return ssAccVio, nil
 	}
+
 	if fabIfi <= 3 {
 		if _, err := w.Write([]byte{'\n'}); err != nil {
 			return ssAccVio, nil
@@ -252,6 +274,7 @@ func serviceSysPut(env *Environment, argv []uint32) (uint32, error) {
 	if err := env.storeRMSStatus(rabAddr, rabSTS, rabSTV); err != nil {
 		return ssAccVio, nil
 	}
+
 	return ssNormal, nil
 }
 

@@ -32,6 +32,7 @@ func (t *ServiceTable) Register(name string, fn ServiceFunc) {
 // Lookup returns the ServiceFunc registered under name.
 func (t *ServiceTable) Lookup(name string) (ServiceFunc, bool) {
 	fn, ok := t.entries[name]
+	
 	return fn, ok
 }
 

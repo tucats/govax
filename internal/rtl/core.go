@@ -23,6 +23,7 @@ const (
 // currently delivers an AST — see Environment.astEnabled's doc comment.
 func serviceSysSetast(env *Environment, argv []uint32) (uint32, error) {
 	env.astEnabled = byte(argv[0]) != 0
+
 	return ssNormal, nil
 }
 
@@ -30,6 +31,7 @@ func serviceSysSetast(env *Environment, argv []uint32) (uint32, error) {
 // currently invokes it — see Environment.exitHandler's doc comment.
 func serviceSysDclexh(env *Environment, argv []uint32) (uint32, error) {
 	env.exitHandler = argv[0]
+	
 	return ssNormal, nil
 }
 
@@ -47,7 +49,7 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 
 	curMod := uint32(env.cpu.PSL().CurMod())
 	if mode < curMod {
-		mode = curMod
+		mode = curMod //nolint:ineffassign // leftover from C port to Go
 	}
 
 	size := pageCount * 512
@@ -59,11 +61,14 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 		if err := env.mem.StoreLongword(env.cpu, retAddr, start); err != nil {
 			return ssAccVio, nil
 		}
+
 		if err := env.mem.StoreLongword(env.cpu, retAddr+4, end); err != nil {
 			return ssAccVio, nil
 		}
 	}
+
 	env.cpu.SetGPR(vax.R1, start) // "expected side effect", matching sys_expreg's own comment
+
 	return ssNormal, nil
 }
 
@@ -82,6 +87,7 @@ func efSlotBit(n uint32) (slot, bit uint32) {
 func serviceSysClref(env *Environment, argv []uint32) (uint32, error) {
 	slot, bit := efSlotBit(argv[0] % 0x00FF)
 	env.eventFlags[slot] &^= 1 << bit
+
 	return ssNormal, nil
 }
 
@@ -89,6 +95,7 @@ func serviceSysClref(env *Environment, argv []uint32) (uint32, error) {
 func serviceSysSetef(env *Environment, argv []uint32) (uint32, error) {
 	slot, bit := efSlotBit(argv[0] % 0x00FF)
 	env.eventFlags[slot] |= 1 << bit
+
 	return ssNormal, nil
 }
 
@@ -106,6 +113,7 @@ func serviceSysReadef(env *Environment, argv []uint32) (uint32, error) {
 	if env.eventFlags[slot]&(1<<bit) != 0 {
 		return ssWasSet, nil
 	}
+
 	return ssWasClr, nil
 }
 
@@ -124,11 +132,13 @@ func serviceSysGetjpiw(env *Environment, argv []uint32) (uint32, error) {
 
 	if env.cpu.DebugEnabled(vax.DebugProcess) {
 		prcnam := ""
+
 		if argv[2] != 0 {
 			if s, ok, err := strGet(env, argv[2], 63); err == nil && ok {
 				prcnam = s
 			}
 		}
+
 		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: SYS$GETJPIW EFN=%d PRCNAM=%q\n", argv[0], prcnam)
 	}
 
@@ -138,21 +148,25 @@ func serviceSysGetjpiw(env *Environment, argv []uint32) (uint32, error) {
 			if err := storeString(env, "USER    ", e.BuffAddr, 8); err != nil {
 				return ssAccVio
 			}
+
 			return env.setRetLen(e, 4)
 
 		case jpiCliName:
 			if err := storeString(env, "DCL\x00", e.BuffAddr, 4); err != nil {
 				return ssAccVio
 			}
+
 			return env.setRetLen(e, 3)
 
 		default:
 			return ssBadParam
 		}
 	})
+
 	if status != 0 {
 		return status, nil
 	}
+	
 	return ssNormal, nil
 }
 

@@ -25,6 +25,7 @@ func TestShimLibAdawi(t *testing.T) {
 			if err != nil {
 				t.Fatalf("shimLibAdawi: %v", err)
 			}
+
 			if r0 != 1 {
 				t.Errorf("r0 = %d, want 1 (matches lib_adawi's own return, not VAX_OK)", r0)
 			}
@@ -33,6 +34,7 @@ func TestShimLibAdawi(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			
 			if sign != c.wantSign {
 				t.Errorf("sign = %#x, want %#x", sign, c.wantSign)
 			}

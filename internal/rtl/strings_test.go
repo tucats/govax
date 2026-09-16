@@ -19,15 +19,18 @@ func TestClassifyShims(t *testing.T) {
 		{28, 0xFF, 1}, // isascii always true
 	}
 	env, _ := fixture()
+
 	for _, c := range cases {
 		fn, ok := env.shims.Lookup(c.code)
 		if !ok {
 			t.Fatalf("shim code %d not registered", c.code)
 		}
+
 		got, err := fn(env, []uint32{uint32(c.ch)})
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		if got != c.want {
 			t.Errorf("code %d ch %#x: got %d, want %d", c.code, c.ch, got, c.want)
 		}
@@ -43,13 +46,16 @@ func TestShimStrUpcase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if r0 != 1 {
 		t.Errorf("r0 = %d, want 1", r0)
 	}
+
 	got, err := loadString(env, strAddr, 32)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if got != "HELLO, WORLD!" {
 		t.Errorf("upcased = %q, want %q", got, "HELLO, WORLD!")
 	}
@@ -66,6 +72,7 @@ func TestCAtoi(t *testing.T) {
 		"12abc":   12,
 		"   -100": -100,
 	}
+
 	for in, want := range cases {
 		if got := cAtoi(in); got != want {
 			t.Errorf("cAtoi(%q) = %d, want %d", in, got, want)
@@ -77,10 +84,12 @@ func TestShimDeccAtoi(t *testing.T) {
 	env, _ := fixture()
 	addr := uint32(0x1000)
 	putString(t, env, addr, "  42")
+
 	r0, err := shimDeccAtoi(env, []uint32{addr})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if int32(r0) != 42 {
 		t.Errorf("r0 = %d, want 42", int32(r0))
 	}
@@ -91,10 +100,12 @@ func TestShimDeccStrcmp(t *testing.T) {
 	a, b := uint32(0x1000), uint32(0x2000)
 	putString(t, env, a, "abc")
 	putString(t, env, b, "abd")
+
 	r0, err := shimDeccStrcmp(env, []uint32{a, b})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if int32(r0) >= 0 {
 		t.Errorf("r0 = %d, want negative (\"abc\" < \"abd\")", int32(r0))
 	}
@@ -103,6 +114,7 @@ func TestShimDeccStrcmp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if r0 != 0 {
 		t.Errorf("r0 = %d, want 0 (equal strings)", r0)
 	}
@@ -113,10 +125,12 @@ func TestShimDeccStrncmp(t *testing.T) {
 	a, b := uint32(0x1000), uint32(0x2000)
 	putString(t, env, a, "abcXXX")
 	putString(t, env, b, "abcYYY")
+
 	r0, err := shimDeccStrncmp(env, []uint32{a, b, 3})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if r0 != 0 {
 		t.Errorf("r0 = %d, want 0 (first 3 bytes equal)", r0)
 	}
@@ -131,13 +145,16 @@ func TestShimDeccStrncpy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	
 	if r0 != 3 { // strlen("hi")+1
 		t.Errorf("r0 = %d, want 3", r0)
 	}
+
 	got, err := loadString(env, dst, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if got != "hi" {
 		t.Errorf("copied = %q, want \"hi\"", got)
 	}
@@ -147,6 +164,7 @@ func TestShimDeccStrncpy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if r0 != 1 {
 		t.Errorf("r0 = %d, want 1 (truncated, no room for the NUL)", r0)
 	}

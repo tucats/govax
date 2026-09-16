@@ -13,10 +13,12 @@ func TestServiceSysTrnlnmDebugLogicalsTrace(t *testing.T) {
 
 	tabAddr, tabStr := uint32(0x1000), uint32(0x1100)
 	putDescriptor(t, env, tabAddr, tabStr, "LNM$FILE_DEV")
+
 	nameAddr, nameStr := uint32(0x1200), uint32(0x1300)
 	putDescriptor(t, env, nameAddr, nameStr, "SYS$OUTPUT")
 
 	var buf bytes.Buffer
+
 	env.cpu.SetDebugWriter(&buf)
 	env.cpu.SetDebug(vax.DebugLogicals)
 
@@ -35,10 +37,12 @@ func TestServiceSysTrnlnmNoDebugTraceWhenFlagClear(t *testing.T) {
 
 	tabAddr, tabStr := uint32(0x1000), uint32(0x1100)
 	putDescriptor(t, env, tabAddr, tabStr, "LNM$FILE_DEV")
+
 	nameAddr, nameStr := uint32(0x1200), uint32(0x1300)
 	putDescriptor(t, env, nameAddr, nameStr, "SYS$OUTPUT")
 
 	var buf bytes.Buffer
+
 	env.cpu.SetDebugWriter(&buf)
 	env.cpu.SetDebug(0)
 
@@ -56,6 +60,7 @@ func TestServiceSysTrnlnm(t *testing.T) {
 
 	tabAddr, tabStr := uint32(0x1000), uint32(0x1100)
 	putDescriptor(t, env, tabAddr, tabStr, "LNM$FILE_DEV")
+
 	nameAddr, nameStr := uint32(0x1200), uint32(0x1300)
 	putDescriptor(t, env, nameAddr, nameStr, "SYS$OUTPUT")
 
@@ -70,6 +75,7 @@ func TestServiceSysTrnlnm(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if r0 != ssNormal {
 		t.Fatalf("r0 = %d, want ssNormal", r0)
 	}
@@ -78,6 +84,7 @@ func TestServiceSysTrnlnm(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if got != "TTA0:" {
 		t.Errorf("value = %q, want \"TTA0:\" (InitLogicals' own default)", got)
 	}
@@ -87,13 +94,16 @@ func TestServiceSysTrnlnmNoItemList(t *testing.T) {
 	env, _ := fixture()
 	tabAddr, tabStr := uint32(0x1000), uint32(0x1100)
 	putDescriptor(t, env, tabAddr, tabStr, "LNM$FILE_DEV")
+
 	nameAddr, nameStr := uint32(0x1200), uint32(0x1300)
+
 	putDescriptor(t, env, nameAddr, nameStr, "SYS$INPUT")
 
 	r0, err := serviceSysTrnlnm(env, []uint32{0, tabAddr, nameAddr, 0, 0})
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if r0 != ssNormal {
 		t.Errorf("r0 = %d, want ssNormal", r0)
 	}
@@ -103,6 +113,7 @@ func TestServiceSysTrnlnmNoSuchName(t *testing.T) {
 	env, _ := fixture()
 	tabAddr, tabStr := uint32(0x1000), uint32(0x1100)
 	putDescriptor(t, env, tabAddr, tabStr, "LNM$FILE_DEV")
+
 	nameAddr, nameStr := uint32(0x1200), uint32(0x1300)
 	putDescriptor(t, env, nameAddr, nameStr, "NOSUCHNAME")
 
@@ -110,6 +121,7 @@ func TestServiceSysTrnlnmNoSuchName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if r0 != ssNoLogNam {
 		t.Errorf("r0 = %d, want ssNoLogNam", r0)
 	}
@@ -119,6 +131,7 @@ func TestServiceSysTrnlnmNoSuchTable(t *testing.T) {
 	env, _ := fixture()
 	tabAddr, tabStr := uint32(0x1000), uint32(0x1100)
 	putDescriptor(t, env, tabAddr, tabStr, "NOSUCHTABLE")
+
 	nameAddr, nameStr := uint32(0x1200), uint32(0x1300)
 	putDescriptor(t, env, nameAddr, nameStr, "SYS$INPUT")
 
@@ -126,6 +139,7 @@ func TestServiceSysTrnlnmNoSuchTable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if r0 != ssNoLogTab {
 		t.Errorf("r0 = %d, want ssNoLogTab", r0)
 	}
@@ -140,6 +154,7 @@ func TestServiceSysTrnlnmCaseBlind(t *testing.T) {
 
 	tabAddr, tabStr := uint32(0x1000), uint32(0x1100)
 	putDescriptor(t, env, tabAddr, tabStr, "MYTABLE")
+
 	nameAddr, nameStr := uint32(0x1200), uint32(0x1300)
 	putDescriptor(t, env, nameAddr, nameStr, "myname")
 
@@ -147,6 +162,7 @@ func TestServiceSysTrnlnmCaseBlind(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	
 	if r0 != ssNormal {
 		t.Errorf("r0 = %d, want ssNormal (case-blind lookup should have upcased \"myname\")", r0)
 	}
@@ -157,6 +173,7 @@ func TestServiceSysTrnlnmAttributesAndTable(t *testing.T) {
 
 	tabAddr, tabStr := uint32(0x1000), uint32(0x1100)
 	putDescriptor(t, env, tabAddr, tabStr, "LNM$FILE_DEV")
+
 	nameAddr, nameStr := uint32(0x1200), uint32(0x1300)
 	putDescriptor(t, env, nameAddr, nameStr, "SYS$OUTPUT")
 
@@ -183,6 +200,7 @@ func TestServiceSysTrnlnmAttributesAndTable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if r0 != ssNormal {
 		t.Fatalf("r0 = %d, want ssNormal", r0)
 	}
@@ -191,6 +209,7 @@ func TestServiceSysTrnlnmAttributesAndTable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if tableName != "LNM$FILE_DEV" {
 		t.Errorf("table name = %q, want \"LNM$FILE_DEV\"", tableName)
 	}
