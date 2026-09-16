@@ -35,8 +35,10 @@ func TestFpuStoreFloatingKnownValues(t *testing.T) {
 		got, err := fpuStore(cpu, 4, c.value)
 		if err != nil {
 			t.Errorf("fpuStore(4, %v) error: %v", c.value, err)
+
 			continue
 		}
+
 		if got != c.raw {
 			t.Errorf("fpuStore(4, %v) = %#010x, want %#010x", c.value, got, c.raw)
 		}
@@ -61,8 +63,10 @@ func TestFpuStoreDoubleFloatingKnownValues(t *testing.T) {
 		got, err := fpuStore(cpu, 8, c.value)
 		if err != nil {
 			t.Errorf("fpuStore(8, %v) error: %v", c.value, err)
+
 			continue
 		}
+
 		if got != c.raw {
 			t.Errorf("fpuStore(8, %v) = %#018x, want %#018x", c.value, got, c.raw)
 		}
@@ -71,16 +75,19 @@ func TestFpuStoreDoubleFloatingKnownValues(t *testing.T) {
 
 func TestFpuLoadRoundTrip(t *testing.T) {
 	cpu, _ := fixture()
+
 	vals := []float64{1.0, -1.0, 2.0, 0.5, -3.5, 100.0, 1000.0, -100000.0, 65536.0, 1e10}
 	for _, v := range vals {
 		raw, err := fpuStore(cpu, 4, v)
 		if err != nil {
 			t.Fatalf("fpuStore(4, %v): %v", v, err)
 		}
+
 		back, err := fpuLoad(raw, 4)
 		if err != nil {
 			t.Fatalf("fpuLoad(4, %v raw): %v", v, err)
 		}
+
 		if back != v {
 			t.Errorf("F round-trip %v -> raw %#x -> %v, want exact", v, raw, back)
 		}
@@ -89,10 +96,12 @@ func TestFpuLoadRoundTrip(t *testing.T) {
 		if err != nil {
 			t.Fatalf("fpuStore(8, %v): %v", v, err)
 		}
+
 		backD, err := fpuLoad(rawD, 8)
 		if err != nil {
 			t.Fatalf("fpuLoad(8, %v raw): %v", v, err)
 		}
+
 		if backD != v {
 			t.Errorf("D round-trip %v -> raw %#x -> %v, want exact", v, rawD, backD)
 		}
@@ -105,14 +114,17 @@ func TestFpuLoadDoubleFullPrecision(t *testing.T) {
 	// round-trip exactly, unlike F's already-confirmed-lossy 3.1415927...
 	cpu, _ := fixture()
 	v := 3.14159265358979
+
 	rawD, err := fpuStore(cpu, 8, v)
 	if err != nil {
 		t.Fatalf("fpuStore(8, %v): %v", v, err)
 	}
+
 	back, err := fpuLoad(rawD, 8)
 	if err != nil {
 		t.Fatalf("fpuLoad: %v", err)
 	}
+
 	if back != v {
 		t.Errorf("D_floating round-trip = %.17g, want exact %.17g", back, v)
 	}
@@ -121,22 +133,27 @@ func TestFpuLoadDoubleFullPrecision(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fpuStore(4, %v): %v", v, err)
 	}
+
 	backF, err := fpuLoad(rawF, 4)
 	if err != nil {
 		t.Fatalf("fpuLoad: %v", err)
 	}
+
 	if backF == v {
 		t.Error("F_floating round-trip came back exact; expected lossy (only 23 mantissa bits)")
 	}
 }
 
 func TestFpuStoreOverflowFaults(t *testing.T) {
-	cpu, _ := fixture()
-	_, err := fpuStore(cpu, 4, 1e60)
 	var f *Fault
+
+	cpu, _ := fixture()
+
+	_, err := fpuStore(cpu, 4, 1e60)
 	if !errors.As(err, &f) {
 		t.Fatalf("fpuStore(1e60) err = %v, want *Fault", err)
 	}
+
 	if f.Code != ExcArithmetic || len(f.Args) != 1 || f.Args[0] != faultFltOvf {
 		t.Errorf("fault = %+v, want {ExcArithmetic, [faultFltOvf]}", f)
 	}
@@ -157,6 +174,7 @@ func TestFpuStoreUnderflowFlushesToZeroWhenFUClear(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fpuStore(1e-100) with FU clear: unexpected error %v", err)
 	}
+
 	if got != 0 {
 		t.Errorf("fpuStore(1e-100) with FU clear = %#x, want 0 (flush to zero)", got)
 	}
@@ -169,10 +187,13 @@ func TestFpuStoreUnderflowFaultsWhenFUSet(t *testing.T) {
 	cpu.SetPSL(psl)
 
 	_, err := fpuStore(cpu, 4, 1e-100)
+
 	var f *Fault
+
 	if !errors.As(err, &f) {
 		t.Fatalf("fpuStore(1e-100) with FU set err = %v, want *Fault", err)
 	}
+
 	if f.Code != ExcArithmetic || len(f.Args) != 1 || f.Args[0] != faultFltUnd {
 		t.Errorf("fault = %+v, want {ExcArithmetic, [faultFltUnd]}", f)
 	}
@@ -183,10 +204,13 @@ func TestFpuLoadReservedOperandFault(t *testing.T) {
 	// encoding. Constructed and confirmed against the C reference harness
 	// (raw 0x34568012, natural form 0x80123456 before word-swapping).
 	_, err := fpuLoad(0x34568012, 4)
+
 	var f *Fault
+
 	if !errors.As(err, &f) {
 		t.Fatalf("fpuLoad(reserved) err = %v, want *Fault", err)
 	}
+
 	if f.Code != ExcReservedOp || len(f.Args) != 0 {
 		t.Errorf("fault = %+v, want {ExcReservedOp, []}", f)
 	}
@@ -200,6 +224,7 @@ func TestFpuLoadNegativeZeroIsZeroNotReserved(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fpuLoad(negative zero): unexpected error %v", err)
 	}
+
 	if got != 0 {
 		t.Errorf("fpuLoad(negative zero) = %v, want 0", got)
 	}
@@ -210,6 +235,7 @@ func TestFpuLoadZero(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fpuLoad(0): unexpected error %v", err)
 	}
+
 	if got != 0 {
 		t.Errorf("fpuLoad(0) = %v, want 0", got)
 	}
@@ -221,10 +247,12 @@ func TestLoadFloatShortLiteralIsPreDecoded(t *testing.T) {
 	// bits) -- loadFloat must read it straight through, not via fpuLoad.
 	cpu, mem := fixture()
 	op := Operand{Kind: OperandImmediate, Value: math.Float64bits(0.5), Size: 4}
+
 	got, err := loadFloat(cpu, mem, op)
 	if err != nil {
 		t.Fatalf("loadFloat: %v", err)
 	}
+
 	if got != 0.5 {
 		t.Errorf("loadFloat(short literal 0.5) = %v, want 0.5", got)
 	}
@@ -232,14 +260,17 @@ func TestLoadFloatShortLiteralIsPreDecoded(t *testing.T) {
 
 func TestStoreFloatRegisterRoundTrip(t *testing.T) {
 	cpu, mem := fixture()
+
 	op := Operand{Kind: OperandRegister, Reg: 1, Size: 4, Access: AccessWrite}
 	if err := storeFloat(cpu, mem, op, 2.0); err != nil {
 		t.Fatalf("storeFloat: %v", err)
 	}
+
 	got, err := loadFloat(cpu, mem, Operand{Kind: OperandRegister, Reg: 1, Size: 4, Access: AccessRead})
 	if err != nil {
 		t.Fatalf("loadFloat: %v", err)
 	}
+	
 	if got != 2.0 {
 		t.Errorf("round trip via storeFloat/loadFloat = %v, want 2.0", got)
 	}

@@ -232,6 +232,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 
 	// Privileged-mode stacks, allocated in S0 space after the page tables.
 	paddr = roundUpPage(paddr)
+	
 	c.CPU.SetGPR(vax.SP, spP1) // USP, set below via SetPR too
 
 	ksp := 0x80000000 + paddr + kspPages*512 - 4

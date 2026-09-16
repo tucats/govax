@@ -146,6 +146,7 @@ func (c *Console) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, 
 			if dep.Name == "LIBRTL" {
 				flag = 100
 			}
+			
 			code = append(code, encodePushl(0)...)
 			code = append(code, encodePushl(0)...)
 			code = append(code, encodePushl(flag)...)

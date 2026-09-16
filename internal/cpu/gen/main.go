@@ -52,6 +52,7 @@ func parseInt(s string) int {
 	if err != nil {
 		log.Fatalf("gen: bad integer %q: %v", s, err)
 	}
+
 	return int(n)
 }
 
@@ -62,6 +63,7 @@ func parse(src string) []field {
 	}
 
 	var out []field
+
 	for _, m := range matches {
 		f := field{
 			typ:    m[7],
@@ -71,16 +73,20 @@ func parse(src string) []field {
 			access: [6]string{m[11], m[12], m[13], m[14], m[15], m[16]},
 			name:   m[17],
 		}
+
 		for i := 0; i < 6; i++ {
 			f.scale[i] = parseInt(m[1+i])
 		}
+
 		if f.name == "" {
 			// The table's end-of-array sentinel entry (empty name); not a
 			// real instruction.
 			continue
 		}
+
 		out = append(out, f)
 	}
+
 	return out
 }
 
@@ -203,15 +209,19 @@ func applyKnownFixes(fields []field) {
 	for name := range knownTableFixes {
 		remaining[name] = true
 	}
+	
 	for i, f := range fields {
 		fix, ok := knownTableFixes[f.name]
 		if !ok {
 			continue
 		}
+
 		fix.name, fix.ext, fix.opcode = f.name, f.ext, f.opcode
 		fields[i] = fix
+
 		delete(remaining, f.name)
 	}
+
 	for name := range remaining {
 		log.Fatalf("gen: knownTableFixes entry %q not found in parsed table", name)
 	}
@@ -243,13 +253,16 @@ func generate(fields []field, sourcePath string) []byte {
 
 	for _, f := range fields {
 		access := make([]string, 6)
+
 		for i, a := range f.access {
 			name, ok := accessName[a]
 			if !ok {
 				log.Fatalf("gen: unknown access kind %q in entry %q", a, f.name)
 			}
+
 			access[i] = name
 		}
+
 		typ, ok := typeName[f.typ]
 		if !ok {
 			log.Fatalf("gen: unknown short-literal type %q in entry %q", f.typ, f.name)
@@ -273,6 +286,7 @@ func generate(fields []field, sourcePath string) []byte {
 	if err != nil {
 		log.Fatalf("gen: generated source doesn't compile: %v", err)
 	}
+
 	return out
 }
 

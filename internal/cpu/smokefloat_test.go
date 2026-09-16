@@ -65,17 +65,20 @@ func TestSmokeFloatArithmeticConversionCompare(t *testing.T) {
 	emit(0x71, regMode(vax.R4), regMode(vax.R6)) // CMPD R4,R6
 
 	beqlAt := len(prog)
-	emit(0x13, 0x00) // BEQL SUCCESS (patched below)
 
+	emit(0x13, 0x00) // BEQL SUCCESS (patched below)
 	emit(0xD0, 0x00, regMode(vax.R8)) // MOVL #0,R8 (not taken)
 
 	brbAt := len(prog)
+
 	emit(0x11, 0x00) // BRB DONE (patched below)
 
 	successAt := len(prog)
+
 	emit(0xD0, 0x01, regMode(vax.R8)) // SUCCESS: MOVL #1,R8
 
 	doneAt := len(prog)
+	
 	emit(0x00) // DONE: HALT
 
 	prog[beqlAt+1] = byte(int8(successAt - (beqlAt + 2)))

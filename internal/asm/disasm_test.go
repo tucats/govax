@@ -50,6 +50,7 @@ func TestDisassembleBranch(t *testing.T) {
 	// BEQL +5 at address 0: opcode(1)+disp(1)=2 bytes, so PC after the
 	// operand is 2; destination = 2+5 = 7.
 	bytes := []byte{0x13, 0x05}
+	
 	dec, err := Disassemble(SliceReader(bytes), 0)
 	if err != nil {
 		t.Fatal(err)
@@ -86,6 +87,7 @@ func TestRoundTripAddressingModes(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Disassemble(% X): %v", want, err)
 		}
+
 		got := assembleBytes(t, dec.String())
 		requireBytes(t, got, want...)
 	}
@@ -96,13 +98,16 @@ func TestRoundTripAddressingModes(t *testing.T) {
 func TestRoundTripFloatShortLiteral(t *testing.T) {
 	// ADDF2 S^#n, r0 -- the short-literal table's index 8 is 1.0.
 	want := []byte{0x40, 0x08, 0x50}
+
 	dec, err := Disassemble(SliceReader(want), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if dec.Operands[0] != "S^#1" {
 		t.Errorf("operand = %q, want S^#1", dec.Operands[0])
 	}
+
 	got := assembleBytes(t, dec.String())
 	requireBytes(t, got, want...)
 }

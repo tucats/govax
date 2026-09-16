@@ -77,10 +77,13 @@ func emulBit(e *Engine, d *Decoded) error {
 // C both 0 -- per the manual (matching emul_cmp.c, which gets TST right).
 func emulTst(e *Engine, d *Decoded) error {
 	size := d.Operands[0].Size
+
 	v, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	setArithPSL(e.cpu, v, false, false, size)
+
 	return nil
 }

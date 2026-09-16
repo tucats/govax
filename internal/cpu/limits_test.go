@@ -93,20 +93,26 @@ func TestEngineTimeLimitStopsRun(t *testing.T) {
 
 	deadline := time.Now().Add(2 * time.Second)
 	steps := 0
+
 	for {
 		if time.Now().After(deadline) {
 			t.Fatal("time limit was never enforced within a generous real-time deadline")
 		}
+
 		err := e.Step()
 		if err == nil {
 			steps++
+
 			continue
 		}
+
 		if errors.Is(err, ErrTimeLimitExceeded) {
 			break
 		}
+
 		t.Fatalf("Step: %v", err)
 	}
+	
 	if steps == 0 {
 		t.Error("expected at least one instruction to execute before the time limit hit")
 	}

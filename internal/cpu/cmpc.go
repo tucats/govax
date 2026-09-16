@@ -144,6 +144,7 @@ func emulCmpc5(e *Engine, d *Decoded) error {
 	// docs/DEVIATIONS.md's own CMPC5 finding, confirmed against the
 	// manual and fixed here in Phase 12.
 	inequality := false
+	
 	for len1 != 0 && len2 != 0 {
 		b1, err := e.mem.LoadByte(e.cpu, src1)
 		if err != nil {

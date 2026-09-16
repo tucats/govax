@@ -75,7 +75,9 @@ func (e *Engine) FaultBreakpoints() []Exception {
 	for code := range e.faultBreaks {
 		out = append(out, code)
 	}
+
 	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
+	
 	return out
 }
 

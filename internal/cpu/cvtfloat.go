@@ -81,8 +81,8 @@ func cvtFloatToInt(e *Engine, d *Decoded, round bool) error {
 		value = math.Round(value) // VAX round-to-nearest: ties away from zero, matching math.Round.
 	}
 
-	min, max := intOverflowBounds(dst.Size)
-	if value < min || value > max {
+	minSize, maxSize := intOverflowBounds(dst.Size)
+	if value < minSize || value > maxSize {
 		return &Fault{Code: ExcArithmetic, Args: []uint32{trapIntOvf}}
 	}
 

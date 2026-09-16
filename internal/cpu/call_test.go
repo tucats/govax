@@ -31,8 +31,11 @@ func TestEmulCallsFrameLayout(t *testing.T) {
 	e := NewEngine(cpu, mem)
 
 	const sp0 = 0x9003
+
 	const fp0 = 0x1234
+
 	const ap0 = 0x5678
+
 	cpu.SetGPR(vax.SP, sp0)
 	cpu.SetGPR(vax.FP, fp0)
 	cpu.SetGPR(vax.AP, ap0)
@@ -46,9 +49,13 @@ func TestEmulCallsFrameLayout(t *testing.T) {
 	stepInstruction(t, e, 0xFB, shortLiteral(3), 0x9F, 0x00, 0x20, 0x00, 0x00)
 
 	const wantSP = 0x8FE0
+
 	const wantAP = 0x8FFF // address of the pushed count longword
+
 	const wantFP = 0x8FE0
+
 	const wantPC = 0x2002         // entry point + 2 (past the entry mask)
+
 	const wantReturnAddr = 0x1007 // instruction is 7 bytes, starting at base
 
 	if got := cpu.GPR(vax.SP); got != wantSP {
@@ -67,25 +74,32 @@ func TestEmulCallsFrameLayout(t *testing.T) {
 	if got := mustLongword(t, cpu, mem, 0x8FE0); got != 0 {
 		t.Errorf("condition-handler placeholder at FP = %#x, want 0", got)
 	}
+
 	const wantMask = 0xE00C0000 // spa=3, calltype=1 (CALLS), mask=0x00C, psw=0
+
 	if got := mustLongword(t, cpu, mem, 0x8FE4); got != wantMask {
 		t.Errorf("mask longword at FP+4 = %#x, want %#x", got, wantMask)
 	}
+
 	if got := mustLongword(t, cpu, mem, 0x8FE8); got != ap0 {
 		t.Errorf("saved AP at FP+8 = %#x, want %#x", got, ap0)
 	}
+
 	if got := mustLongword(t, cpu, mem, 0x8FEC); got != fp0 {
 		t.Errorf("saved FP at FP+12 = %#x, want %#x", got, fp0)
 	}
+
 	if got := mustLongword(t, cpu, mem, 0x8FF0); got != wantReturnAddr {
 		t.Errorf("saved PC at FP+16 = %#x, want %#x", got, wantReturnAddr)
 	}
+
 	if got := mustLongword(t, cpu, mem, 0x8FF4); got != 0x11111111 {
 		t.Errorf("saved R2 at FP+20 = %#x, want 0x11111111", got)
 	}
 	if got := mustLongword(t, cpu, mem, 0x8FF8); got != 0x22222222 {
 		t.Errorf("saved R3 at FP+24 = %#x, want 0x22222222", got)
 	}
+	
 	if got := mustLongword(t, cpu, mem, 0x8FFF); got != 3 {
 		t.Errorf("pushed count at AP = %#x, want 3", got)
 	}
@@ -104,9 +118,12 @@ func TestEmulCallsRoundTrip(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 
-	const sp0 = 0x9000
-	const fp0 = 0x1234
-	const ap0 = 0x5678
+	const (
+		sp0 = 0x9000
+		fp0 = 0x1234
+		ap0 = 0x5678
+	)
+
 	cpu.SetGPR(vax.SP, sp0)
 	cpu.SetGPR(vax.FP, fp0)
 	cpu.SetGPR(vax.AP, ap0)
@@ -403,6 +420,7 @@ func TestEmulRetReservedOperandFault(t *testing.T) {
 	cpu := e.cpu
 
 	const fp = 0x8000
+
 	cpu.SetGPR(vax.FP, fp)
 	cpu.SetGPR(vax.SP, 0x7000)
 	cpu.SetPR(vax.KSP, 0x7000)
@@ -475,7 +493,9 @@ func TestEmulReiReversesModeSwitch(t *testing.T) {
 	e := NewEngine(cpu, mem)
 
 	const userSP = 0x8000
+
 	const kernelFrame = 0x6050
+
 	const faultingPC = 0x5000
 
 	psl := cpu.PSL()
@@ -516,7 +536,9 @@ func TestEmulReiDebugCHMTrace(t *testing.T) {
 	e := NewEngine(cpu, mem)
 
 	const userSP = 0x8000
+
 	const kernelFrame = 0x6050
+
 	const faultingPC = 0x5000
 
 	psl := cpu.PSL()
@@ -531,6 +553,7 @@ func TestEmulReiDebugCHMTrace(t *testing.T) {
 	putLongword(t, cpu, mem, kernelFrame+4, uint32(restoredPSL))
 
 	var buf bytes.Buffer
+
 	cpu.SetDebugWriter(&buf)
 	cpu.SetDebug(vax.DebugCHM)
 
@@ -547,6 +570,7 @@ func TestEmulReiNoDebugCHMTraceWhenModeUnchanged(t *testing.T) {
 	e := NewEngine(cpu, mem)
 
 	const kernelFrame = 0x6050
+
 	const faultingPC = 0x5000
 
 	psl := cpu.PSL()
@@ -559,6 +583,7 @@ func TestEmulReiNoDebugCHMTraceWhenModeUnchanged(t *testing.T) {
 	putLongword(t, cpu, mem, kernelFrame+4, uint32(psl)) // same mode (Kernel)
 
 	var buf bytes.Buffer
+
 	cpu.SetDebugWriter(&buf)
 	cpu.SetDebug(vax.DebugCHM)
 

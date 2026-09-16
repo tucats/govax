@@ -92,6 +92,7 @@ func (c *Console) Time(cmd string, dispatch func(string) error) error {
 
 	if strings.TrimSpace(cmd) == "" {
 		c.Printf("Time is %s\n", time.Now().Format(time.RFC1123))
+
 		return nil
 	}
 
@@ -125,6 +126,7 @@ func (c *Console) Include(path string, dispatch func(string) error) error {
 		if line == "" || strings.HasPrefix(line, ";") || strings.HasPrefix(line, "!") {
 			continue
 		}
+
 		if err := dispatch(line); err != nil {
 			c.Printf("%s: %v\n", path, err)
 		}
@@ -143,6 +145,7 @@ func (c *Console) ClearSymbol(name string, all bool) error {
 
 	if all {
 		c.Symbols.ClearAll()
+
 		return nil
 	}
 
@@ -240,6 +243,7 @@ func (c *Console) ClearInterrupt(code uint32) error {
 	if n == 1 {
 		plural = ""
 	}
+
 	c.Printf("\tCleared %d pending interrupt%s\n", n, plural)
 
 	return nil
@@ -259,6 +263,7 @@ func (c *Console) ClearAllInterrupts() error {
 	if n == 1 {
 		plural = ""
 	}
+
 	c.Printf("\tCleared %d pending interrupt%s\n", n, plural)
 
 	return nil
@@ -282,6 +287,7 @@ func (c *Console) ClearBreakpoint(addr uint32, all bool) error {
 
 	if all {
 		c.ClearAllBreakpoints()
+
 		return nil
 	}
 

@@ -54,6 +54,7 @@ func emulMatchc(e *Engine, d *Decoded) error {
 			objPtr++
 			remainSrc--
 			srcPtr++
+
 			continue
 		}
 		// Mismatch: back the object pointer up to its start, advance the
@@ -65,6 +66,7 @@ func emulMatchc(e *Engine, d *Decoded) error {
 		srcPtr = uint32(int32(srcPtr) - (matched - 1))
 		remainObj = origObjLen
 	}
+
 	if remainSrc < remainObj {
 		// Ran out of source before completing a match anywhere: report "not
 		// found" (R3 = one past the whole source string, R2 = 0).
@@ -83,5 +85,6 @@ func emulMatchc(e *Engine, d *Decoded) error {
 	psl.SetV(false)
 	psl.SetC(false)
 	e.cpu.SetPSL(psl)
+	
 	return nil
 }

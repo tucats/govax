@@ -110,6 +110,7 @@ func (e *Engine) FaultHistory() []FaultRecord {
 
 	out := make([]FaultRecord, count)
 	start := (e.faultHistoryNext - count + e.faultHistoryMax) % e.faultHistoryMax
+	
 	for i := 0; i < count; i++ {
 		out[i] = e.faultHistory[(start+i)%e.faultHistoryMax]
 	}

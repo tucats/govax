@@ -510,6 +510,7 @@ func TestShowTrace(t *testing.T) {
 	}
 
 	c.Trace = true
+	
 	buf.Reset()
 
 	if err := d.Dispatch("SHOW TRACE"); err != nil {

@@ -148,12 +148,12 @@ func emulMovc5(e *Engine, d *Decoded) error {
 			dst++
 		}
 	} else {
-		min := len1
+		minLength := len1
 		if uint32(len2) < uint32(len1) {
-			min = len2
+			minLength = len2
 		}
 		len2Saved := len2
-		src = uint32(int32(src) + min)
+		src = uint32(int32(src) + minLength)
 		dst = uint32(int32(dst) + len2Saved)
 
 		for len2 > len1 {
@@ -176,7 +176,7 @@ func emulMovc5(e *Engine, d *Decoded) error {
 				return err
 			}
 		}
-		src = uint32(int32(src) + min)
+		src = uint32(int32(src) + minLength)
 		dst = uint32(int32(dst) + len2Saved)
 	}
 

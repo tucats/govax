@@ -173,6 +173,7 @@ func fpuLoad(raw uint64, size int) (float64, error) {
 	hi32 := sign<<31 | ieeeExp<<20 | frac23>>3
 
 	var lo32 uint32
+
 	if size == 8 {
 		highLong := wordSwap(uint32(raw >> 32))
 		lo32 = frac23&0x7<<29 | highLong>>3
@@ -193,9 +194,11 @@ func loadFloat(cpu *vax.CPU, mem *vm.Memory, op Operand) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	if op.Kind == OperandImmediate {
 		return math.Float64frombits(raw), nil
 	}
+
 	return fpuLoad(raw, op.Size)
 }
 
@@ -208,5 +211,6 @@ func storeFloat(cpu *vax.CPU, mem *vm.Memory, op Operand, value float64) error {
 	if err != nil {
 		return err
 	}
+	
 	return op.Store(cpu, mem, raw)
 }

@@ -32,10 +32,12 @@ func (c *Console) ConsoleWriteByte(b byte) {
 // getchar() at EOF returning a sentinel the C source doesn't itself check
 // for either.
 func (c *Console) ConsoleReadByte() byte {
+	var buf [1]byte
+
 	if c.In == nil {
 		return 0
 	}
-	var buf [1]byte
+	
 	if _, err := c.In.Read(buf[:]); err != nil {
 		return 0
 	}

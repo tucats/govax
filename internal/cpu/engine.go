@@ -249,11 +249,13 @@ func (e *Engine) Step() error {
 // handle_fault, regardless of whether the fault came from decode or from
 // the instruction Handler.
 func (e *Engine) raise(err error) error {
-	err = wrapMemError(err)
 	var f *Fault
+
+	err = wrapMemError(err)
 	if !errors.As(err, &f) {
 		return err
 	}
+
 	e.cpu.SetGPR(vax.PC, e.instructionPC)
 
 	// recordFault matches set_fault's own unconditional store_fault call —
@@ -265,18 +267,23 @@ func (e *Engine) raise(err error) error {
 		w := e.cpu.DebugWriter()
 		fmt.Fprintf(w, "DEBUG(EXCEPTION): SET, CODE=%02X  PC=%08X  PSL=%08X  ARGC=%d\n",
 			f.Code, e.instructionPC, uint32(e.cpu.PSL()), len(f.Args))
+
 		if len(f.Args) > 0 {
 			plural := "S"
 			if len(f.Args) == 1 {
 				plural = ""
 			}
+
 			fmt.Fprintf(w, "DEBUG(EXCEPTION): ARG%s = ", plural)
+
 			for i, arg := range f.Args {
 				if i > 0 {
 					fmt.Fprint(w, ", ")
 				}
+
 				fmt.Fprintf(w, "%08X", arg)
 			}
+
 			fmt.Fprintln(w)
 		}
 	}
@@ -303,5 +310,6 @@ func (e *Engine) Run() error {
 			return err
 		}
 	}
+	
 	return ErrHalted
 }

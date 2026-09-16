@@ -59,13 +59,16 @@ func TestTableAllOrderIsDeterministic(t *testing.T) {
 	}
 
 	lastExtended := false
+
 	for i, inst := range first {
 		if inst.Opcode.Extended == 0 {
 			if lastExtended {
 				t.Fatalf("index %d: single-byte %s found after an extended opcode", i, inst.Name)
 			}
+
 			continue
 		}
+
 		lastExtended = true
 	}
 }
@@ -75,6 +78,7 @@ func TestTableImplemented(t *testing.T) {
 	if halt == nil {
 		t.Fatal("ByName(HALT) = nil")
 	}
+	
 	if !instructionTable.Implemented(halt) {
 		t.Error("expected HALT to be Implemented (Phase 04 registers a real handler)")
 	}
@@ -142,7 +146,7 @@ func TestInstructionTableLookupUndefined(t *testing.T) {
 func TestInstructionTableDFloatingFixedEntries(t *testing.T) {
 	// SUBD2, CVTDB, CVTDW, CVTDL, CVTRDL, CMPD, TSTD have zeroed-out operand
 	// data in the C reference's own instruction_table.h (confirmed a real
-	// bug in the C source, not a Go transcription issue -- see
+	// issue in the C source, not a Go transcription issue -- see
 	// docs/PHASE-05.md's design notes and docs/DEVIATIONS.md); the generator
 	// (internal/cpu/gen's knownTableFixes) patches them to mirror their
 	// already-correct F-floating/sibling D-floating rows. This test pins

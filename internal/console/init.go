@@ -47,6 +47,7 @@ func (c *Console) Zero() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
+	
 	if err := c.requireKernelMode(); err != nil {
 		return err
 	}

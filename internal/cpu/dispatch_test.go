@@ -25,6 +25,7 @@ func TestTableSetHandler(t *testing.T) {
 	table := newTable([]*Instruction{inst})
 
 	called := false
+
 	table.SetHandler(inst, func(e *Engine, d *Decoded) error {
 		called = true
 		return nil
@@ -33,6 +34,7 @@ func TestTableSetHandler(t *testing.T) {
 	if err := table.HandlerFor(inst)(nil, nil); err != nil {
 		t.Fatalf("registered handler returned %v", err)
 	}
+
 	if !called {
 		t.Error("registered handler was not invoked")
 	}
@@ -43,12 +45,15 @@ func TestWrapMemErrorTranslationNotValid(t *testing.T) {
 	err := wrapMemError(src)
 
 	var f *Fault
+
 	if !errors.As(err, &f) {
 		t.Fatalf("err = %v, want *Fault", err)
 	}
+
 	if f.Code != ExcTranslationNV {
 		t.Errorf("Code = %#x, want ExcTranslationNV", f.Code)
 	}
+
 	if len(f.Args) != 2 || f.Args[0] != 0x1000 || f.Args[1] != 0 {
 		t.Errorf("Args = %v, want [0x1000, 0]", f.Args)
 	}
@@ -59,12 +64,15 @@ func TestWrapMemErrorAccessViolation(t *testing.T) {
 	err := wrapMemError(src)
 
 	var f *Fault
+
 	if !errors.As(err, &f) {
 		t.Fatalf("err = %v, want *Fault", err)
 	}
+
 	if f.Code != ExcAccessViol {
 		t.Errorf("Code = %#x, want ExcAccessViol", f.Code)
 	}
+
 	if len(f.Args) != 2 || f.Args[0] != 0x2000 || f.Args[1] != 1 {
 		t.Errorf("Args = %v, want [0x2000, 1]", f.Args)
 	}
@@ -81,12 +89,15 @@ func TestWrapMemErrorProtectionViolation(t *testing.T) {
 	err := wrapMemError(src)
 
 	var f *Fault
+
 	if !errors.As(err, &f) {
 		t.Fatalf("err = %v, want *Fault", err)
 	}
+
 	if f.Code != ExcAccessViol {
 		t.Errorf("Code = %#x, want ExcAccessViol", f.Code)
 	}
+
 	if len(f.Args) != 2 || f.Args[0] != 0x2000 || f.Args[1] != 2 {
 		t.Errorf("Args = %v, want [0x2000, 2]", f.Args)
 	}
@@ -97,9 +108,11 @@ func TestWrapMemErrorPhysicalAddress(t *testing.T) {
 	err := wrapMemError(src)
 
 	var f *Fault
+
 	if !errors.As(err, &f) {
 		t.Fatalf("err = %v, want *Fault", err)
 	}
+
 	if f.Code != ExcAccessViol || len(f.Args) != 2 || f.Args[0] != 0x3000 {
 		t.Errorf("f = %+v, want {ExcAccessViol, [0x3000, 1]}", f)
 	}
@@ -110,6 +123,7 @@ func TestWrapMemErrorPassesThroughOther(t *testing.T) {
 	if got := wrapMemError(original); got != error(original) {
 		t.Errorf("wrapMemError(*Fault) = %v, want unchanged", got)
 	}
+	
 	if wrapMemError(nil) != nil {
 		t.Error("wrapMemError(nil) != nil")
 	}

@@ -151,6 +151,7 @@ func TestEngineRunPropagatesOtherHandlerError(t *testing.T) {
 	e.cpu.SetGPR(vax.PC, base)
 	putBytes(t, e.cpu, e.mem, base, 0x00)
 	wantErr := errors.New("boom")
+	
 	e.table.SetHandler(inst, func(eng *Engine, d *Decoded) error { return wantErr })
 
 	err := e.Run()

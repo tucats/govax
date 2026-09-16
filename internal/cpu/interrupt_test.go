@@ -61,6 +61,7 @@ func TestInterruptDeliverySavesCurrentPCNotStale(t *testing.T) {
 	inst := &Instruction{Name: "TESTINT", Opcode: Opcode{Function: 0x01}}
 	e.table = newTable([]*Instruction{inst})
 	handlerCalls := 0
+
 	e.table.SetHandler(inst, func(eng *Engine, d *Decoded) error {
 		handlerCalls++
 		if handlerCalls == 1 {
@@ -72,6 +73,7 @@ func TestInterruptDeliverySavesCurrentPCNotStale(t *testing.T) {
 		// already masked at IPL 20, so this is a harmless no-op admission.
 		return nil
 	})
+
 	putBytes(t, e.cpu, e.mem, 0x1000, 0x01)
 	putBytes(t, e.cpu, e.mem, 0x400, 0x01)
 	e.cpu.SetGPR(vax.PC, 0x1000)
@@ -79,6 +81,7 @@ func TestInterruptDeliverySavesCurrentPCNotStale(t *testing.T) {
 	if err := e.Step(); err != nil { // executes the side-effecting instruction
 		t.Fatalf("Step (side-effecting instruction): %v", err)
 	}
+
 	if err := e.Step(); err != nil { // delivers the interrupt, admitted above
 		t.Fatalf("Step (interrupt delivery): %v", err)
 	}
@@ -86,10 +89,12 @@ func TestInterruptDeliverySavesCurrentPCNotStale(t *testing.T) {
 	if got := e.cpu.GPR(vax.PC); got != 0x401 {
 		t.Fatalf("PC after delivery+one instruction = %#x, want 0x401", got)
 	}
+
 	savedPC, err := e.mem.LoadLongword(e.cpu, e.cpu.GPR(vax.SP))
 	if err != nil {
 		t.Fatalf("LoadLongword(saved PC): %v", err)
 	}
+
 	if savedPC != 0x1001 {
 		t.Errorf("saved return PC = %#x, want 0x1001 (the next instruction, not the stale 0x1000)", savedPC)
 	}
@@ -97,7 +102,9 @@ func TestInterruptDeliverySavesCurrentPCNotStale(t *testing.T) {
 
 func TestInterruptDebugInterruptsTrace(t *testing.T) {
 	e := interruptEngine(t)
+
 	var buf bytes.Buffer
+
 	e.cpu.SetDebugWriter(&buf)
 	e.cpu.SetDebug(vax.DebugInterrupts)
 
@@ -127,7 +134,9 @@ func TestInterruptDebugInterruptsTrace(t *testing.T) {
 
 func TestInterruptNoDebugTraceWhenFlagClear(t *testing.T) {
 	e := interruptEngine(t)
+
 	var buf bytes.Buffer
+
 	e.cpu.SetDebugWriter(&buf)
 	e.cpu.SetDebug(0)
 
@@ -139,7 +148,9 @@ func TestInterruptNoDebugTraceWhenFlagClear(t *testing.T) {
 
 func TestDeliverConsoleByteDropsAndTracesWhenAlreadyPending(t *testing.T) {
 	e := interruptEngine(t)
+
 	var buf bytes.Buffer
+
 	e.cpu.SetDebugWriter(&buf)
 	e.cpu.SetDebug(vax.DebugKeyboard)
 
@@ -166,6 +177,7 @@ func TestInterruptMaskedByCurrentIPLIsQueuedNotDelivered(t *testing.T) {
 	if e.interruptPending {
 		t.Fatal("expected Interrupt to queue, not deliver immediately, when ipl <= current IPL")
 	}
+
 	if len(e.iqueue) != 1 {
 		t.Fatalf("len(iqueue) = %d, want 1", len(e.iqueue))
 	}
@@ -210,6 +222,7 @@ func TestPendingInterruptsReportsBothHalves(t *testing.T) {
 	if pending != nil {
 		t.Fatalf("expected no immediately-pending interrupt, got %+v", pending)
 	}
+
 	if len(queued) != 1 || queued[0].Code != ExcConWrite || queued[0].IPL != 20 {
 		t.Fatalf("queued = %+v, want one ExcConWrite entry at IPL 20", queued)
 	}
@@ -222,6 +235,7 @@ func TestPendingInterruptsReportsBothHalves(t *testing.T) {
 	if pending == nil || pending.Code != ExcConRead || pending.IPL != 21 {
 		t.Fatalf("pending = %+v, want ExcConRead at IPL 21", pending)
 	}
+	
 	if len(queued) != 1 {
 		t.Fatalf("expected the earlier queued entry to remain, got %+v", queued)
 	}

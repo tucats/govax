@@ -15,6 +15,7 @@ func (g *Grammar) validate() error {
 			if !ok {
 				return vmserrors.New(vmserrors.CLI_ALIASNOTFOUND, e.Name, e.Alias)
 			}
+
 			e.aliasRef = target
 		}
 
@@ -24,6 +25,7 @@ func (g *Grammar) validate() error {
 				if !ok {
 					return vmserrors.New(vmserrors.CLI_TYPENOTFOUND, "Parameter", p.Name, p.TypeName)
 				}
+				
 				p.typeRef = t
 			}
 		}

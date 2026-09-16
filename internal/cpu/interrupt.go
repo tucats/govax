@@ -95,8 +95,10 @@ func (e *Engine) ClearInterrupt(code Exception) int {
 	for _, ip := range e.iqueue {
 		if ip.code == code {
 			n++
+
 			continue
 		}
+
 		remaining = append(remaining, ip)
 	}
 
@@ -225,7 +227,7 @@ func (e *Engine) scanInterruptQueue() {
 // no interrupt-specific behavior to add here).
 //
 // Deviation from the C source, fixed rather than replicated (a clear-cut
-// bug, not an ISA judgment call -- see docs/DEVIATIONS.md): handle_fault
+// issue, not an ISA judgment call -- see docs/DEVIATIONS.md): handle_fault
 // saves vax.instruction_PC as the interrupted return address, but for a
 // genuine interrupt (as opposed to a fault raised mid-instruction)
 // vax.instruction_PC still holds the *previous* instruction's start

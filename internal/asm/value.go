@@ -540,6 +540,7 @@ func (a *Assembler) maskLiteral(c *cursor) (uint32, error) {
 	if c.peek() != '<' {
 		return 0, vmserrors.New(vmserrors.VAX_BADMASK)
 	}
+	
 	c.next()
 
 	var mask uint32
