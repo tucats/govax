@@ -294,3 +294,66 @@ func (m *Memory) LookupPTE(cpu *vax.CPU, addr uint32) (region int, pteAddr uint3
 
 	return region, pteVirtAddr, PTE(raw), nil
 }
+
+// StorePTE writes pte back to the page table entry for a virtual address,
+// the write-side counterpart to LookupPTE — matching console_set.c's setpte
+// (SET PTE/SET PAGE): the same region/base/length-register walk LookupPTE
+// does, but resolving all the way to the entry's physical address (via
+// Translate for a recursively-mapped P0/P1 PTE) so the new value can
+// actually be stored. This port has no translation-buffer cache to flush
+// afterward (see LookupPTE's own doc comment and ShowTB's "not applicable to
+// this port"), so there is no invalidate_page equivalent to call.
+func (m *Memory) StorePTE(cpu *vax.CPU, addr uint32, pte PTE) error {
+	if cpu.PR(vax.MAPEN) == 0 {
+		return accessViolation(addr)
+	}
+
+	region := (addr >> 30) & 0x3
+	page := (addr & 0x3FFFFFFF) >> 9
+
+	var (
+		pteVirtAddr  uint32
+		pteRecursive bool
+	)
+
+	switch region {
+	case 0:
+		if page > cpu.PR(vax.P0LR) {
+			return accessViolation(addr)
+		}
+
+		pteVirtAddr = cpu.PR(vax.P0BR) + page*4
+		pteRecursive = true
+
+	case 1:
+		if page <= cpu.PR(vax.P1LR) {
+			return accessViolation(addr)
+		}
+
+		pteVirtAddr = cpu.PR(vax.P1BR) + page*4
+		pteRecursive = true
+
+	case 2:
+		if page > cpu.PR(vax.SLR) {
+			return accessViolation(addr)
+		}
+
+		pteVirtAddr = cpu.PR(vax.SBR) + page*4
+		pteRecursive = false
+
+	default:
+		return accessViolation(addr)
+	}
+
+	physPTEAddr := pteVirtAddr
+	if pteRecursive {
+		var err error
+
+		physPTEAddr, err = m.Translate(cpu, pteVirtAddr, AccessRead)
+		if err != nil {
+			return err
+		}
+	}
+
+	return m.writePhysLongword(physPTEAddr, uint32(pte))
+}

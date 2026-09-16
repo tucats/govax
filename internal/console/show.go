@@ -341,15 +341,6 @@ func (c *Console) ShowCPU() error {
 	return nil
 }
 
-// ShowVersion prints a version banner, matching SHOW VERSION (and ABOUT,
-// which in the C source shares the same /entry= routine — see doc.go on
-// why that indirection isn't ported).
-func (c *Console) ShowVersion() error {
-	c.Printf("govax — a Go port of eVAX (docs/PLAN.md)\n")
-
-	return nil
-}
-
 // ShowRegisterOrPrivReg implements the plain register/privileged-register
 // name shortcuts of SHOW (e.g. "SHOW R0", "SHOW PC", "SHOW P0BR") —
 // testdata/dcl/evax.dcl's show_types keywords with no /syntax= redirect of
@@ -1044,8 +1035,14 @@ func (c *Console) ShowSymbol(name string) error {
 	if sym.Kind == SymbolSystem {
 		kind = "system"
 	}
+	if sym.Permanent {
+		kind += ", permanent"
+	}
 	if sym.IsEntry {
 		kind += ", entry"
+	}
+	if sym.IsLabel {
+		kind += ", label"
 	}
 
 	c.Printf("    %s = %08X (hex)   %12d (dec)  (%s)\n", sym.Name, sym.Value, int32(sym.Value), kind)

@@ -82,6 +82,44 @@ func (e *Engine) PendingInterrupts() (pending *QueuedInterrupt, queued []QueuedI
 	return pending, queued
 }
 
+// ClearInterrupt removes every queued interrupt whose code matches, matching
+// console_clear.c's CLEAR INTERRUPT <id> (case 102). Returns the number of
+// entries removed, matching that command's own "Cleared %d pending
+// interrupt%s" report. Does not touch Engine's own immediately-pending
+// interrupt (interruptPending) — the C source's equivalent loop only ever
+// walks vax.iqueue, not vax.interrupt_pending, for this id-specific form.
+func (e *Engine) ClearInterrupt(code Exception) int {
+	n := 0
+	remaining := e.iqueue[:0]
+
+	for _, ip := range e.iqueue {
+		if ip.code == code {
+			n++
+			continue
+		}
+		remaining = append(remaining, ip)
+	}
+
+	e.iqueue = remaining
+
+	return n
+}
+
+// ClearAllInterrupts empties the interrupt queue and cancels Engine's own
+// immediately-pending interrupt, matching console_clear.c's CLEAR
+// INTERRUPT/ALL (case 110). Returns the number of queued entries removed
+// (matching that command's own count, which — like the C source — doesn't
+// separately count a cancelled interrupt_pending in its total).
+func (e *Engine) ClearAllInterrupts() int {
+	n := len(e.iqueue)
+	e.iqueue = nil
+	e.interruptPending = false
+	e.interruptCode = 0
+	e.interruptIPL = 0
+
+	return n
+}
+
 // Interrupt admits a device or software interrupt request, the Go port of
 // interrupt.c's interrupt(): delivered immediately (Engine's own
 // interruptPending state, picked up by Step before its next decode) if

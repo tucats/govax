@@ -395,6 +395,21 @@ func TestShowSymbol(t *testing.T) {
 	}
 }
 
+func TestShowSymbol_permanentAndLabelAttributes(t *testing.T) {
+	d, c, buf := newShowDispatcher(t)
+
+	c.Symbols.SetQualified("MYSYM", 0x1234, true, false, true)
+
+	if err := d.Dispatch("SHOW SYMBOL MYSYM"); err != nil {
+		t.Fatalf("Dispatch: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "permanent") || !strings.Contains(out, "label") {
+		t.Errorf("output = %q, want it to report the permanent and label attributes", out)
+	}
+}
+
 func TestShowSymbol_undefined(t *testing.T) {
 	d, _, _ := newShowDispatcher(t)
 

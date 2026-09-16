@@ -30,6 +30,22 @@ type Symbol struct {
 	// routine's register-save mask word instead of misdecoding it as an
 	// instruction (matching decode_opcode.c's own SYM_ENTRY scan).
 	IsEntry bool
+
+	// Permanent marks a symbol defined with SET/PERMANENT -- SYM_PERMANENT
+	// in the C reference (console_set.c's own qualifier scan ahead of its
+	// NAME=value symbol path). CLEAR SYMBOL/TEMPORARY (ClearTemporary,
+	// below) removes every user symbol *without* this flag, leaving
+	// permanent ones untouched -- the C source's own "non-permanent user
+	// symbols" wording for that command. An ordinary SET NAME=value (no
+	// qualifier) leaves this false, matching set_symbol's own perm==0
+	// default.
+	Permanent bool
+
+	// IsLabel marks a symbol defined with SET/LABEL -- SYM_LABEL in the C
+	// reference. Tracked purely for SHOW SYMBOL's attribute display; unlike
+	// IsEntry, nothing else in this port currently branches on it (the C
+	// source's own find_label also matches SYM_ENTRY, not SYM_LABEL).
+	IsLabel bool
 }
 
 // SymbolTable is the console's symbol table — a simplified, map-based
@@ -55,6 +71,16 @@ func (t *SymbolTable) Set(name string, value uint32, kind SymbolKind) {
 // (or a .SHIM stub) — see Symbol.IsEntry.
 func (t *SymbolTable) SetEntry(name string, value uint32, kind SymbolKind) {
 	t.m[strings.ToUpper(name)] = &Symbol{Name: strings.ToUpper(name), Value: value, Kind: kind, IsEntry: true}
+}
+
+// SetQualified defines or redefines a user symbol with the /PERMANENT,
+// /ENTRY, /LABEL attributes SET's own qualifier scan supports (set.go's
+// cmdSet) — see Symbol.Permanent/IsEntry/IsLabel.
+func (t *SymbolTable) SetQualified(name string, value uint32, permanent, entry, label bool) {
+	t.m[strings.ToUpper(name)] = &Symbol{
+		Name: strings.ToUpper(name), Value: value, Kind: SymbolUser,
+		Permanent: permanent, IsEntry: entry, IsLabel: label,
+	}
 }
 
 // Get looks up a symbol by name (case-insensitive).
@@ -120,6 +146,22 @@ func (t *SymbolTable) ClearAll() {
 			delete(t.m, k)
 		}
 	}
+}
+
+// ClearTemporary removes every non-permanent user symbol, matching CLEAR
+// SYMBOL/TEMPORARY (console_clear.c's clear_temp_symbols) — a permanent one
+// (SET/PERMANENT, Symbol.Permanent) survives, as does every system symbol.
+// Returns the count removed, matching CLEAR SYMBOL/ALL's own report
+// convention (see ClearSymbol, misc.go).
+func (t *SymbolTable) ClearTemporary() int {
+	n := 0
+	for k, s := range t.m {
+		if s.Kind == SymbolUser && !s.Permanent {
+			delete(t.m, k)
+			n++
+		}
+	}
+	return n
 }
 
 // All returns every symbol, sorted by name, for SHOW SYMBOL.

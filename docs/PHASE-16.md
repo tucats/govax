@@ -710,3 +710,179 @@ records what actually shipped, not a re-scope of the plan above.
   full list. New: `internal/console/set_test.go`'s `TestShowMemory_afterVMInit`.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...`
   all clean.
+
+### 2026-09-16 — Sub-phases 2/3/4: most of CLEAR/SET implemented, `/entry=` wired
+
+Picked up the "grind out the rest" ask directly (per-user direction, expanded mid-task
+to include implementing genuine gaps found along the way, not just the originally
+catalogued CLEAR/SET items, and fixing any clear bugs hit in scope). Landed nearly
+everything in sub-phases 2-4 that this document's own inventory called "ready" or
+"a smaller, standalone gap" — the items it flagged as needing a design decision or new
+core-package instrumentation are still open; see "Still not done" below and the
+session's own final report to the user for the discussion points on each.
+
+**Sub-phase 2 (CLEAR), shipped:**
+
+- **`CLEAR STRINGS`** (`ClearString`, misc.go) — resets `CONSOLE$STRINGPOOL` to
+  `_BASE` and zeroes the pool's backing bytes, the write side of the already-shipped
+  `SHOW STRING`.
+- **`CLEAR TB`** (`ClearTB`) — reports "not modeled by this port," matching `SHOW
+  TB`'s own established stub pattern (no translation cache exists to reset).
+- **`CLEAR MEMORY`** (`ClearMemory`) — found while implementing: the C source's own
+  case 103 body is literally a call to `console_zero()`, not a memory-specific
+  routine (its own module comment says as much: "CLEAR MEMORY is mapped to the ZERO
+  command") — so this is just `Console.Zero`, not new logic.
+- **`CLEAR MEMORY/STATISTICS`** (`ClearMemoryStatistics`) — stub, matching `SHOW
+  TB`/`SHOW MAP`'s "not modeled" precedent (this port's `internal/vm.Memory` is a
+  fixed byte slice, not a tracked allocator).
+- **`CLEAR INTERRUPT <id>` / `CLEAR INTERRUPT/ALL`** (`ClearInterrupt`/
+  `ClearAllInterrupts`) — now unblocked by Phase 14's interrupt-queue state (this
+  document's own inventory hadn't caught up to that): new `cpu.Engine.ClearInterrupt`/
+  `ClearAllInterrupts` methods remove matching (or all) `iqueue` entries, the latter
+  also cancelling any immediately-pending interrupt, matching `console_clear.c`'s own
+  two cases.
+- **`CLEAR SYMBOL/TEMPORARY`** (`ClearSymbolTemporary`) — this needed real new state,
+  not just wiring: `Symbol` gained a `Permanent` bool (set via `SET`'s own
+  `/PERMANENT` qualifier — see below) distinguishing it from the existing
+  `SymbolUser`/`SymbolSystem` `Kind`, and `SymbolTable.ClearTemporary` removes every
+  non-permanent user symbol, leaving permanent and system symbols alone — matching
+  `clear_temp_symbols`'s own "non-permanent user symbols" semantics exactly (this is
+  a different axis than the `SymbolKind` question sub-phase 1c's inventory entry
+  speculated about; no "temporary symbol *kind*" was needed, just a flag).
+- **Still not done, as flagged**: `CLEAR ERROR` (needs a "last `$STATUS`" slot and a
+  decision on how broadly `Dispatcher.Dispatch` should set it — see the session's own
+  report), `CLEAR PROFILES` (needs the same per-opcode execution-counter
+  instrumentation `SHOW INSTRUCTIONS/PROFILE` does, itself an open design question per
+  this document's own sub-phase 1e), `CLEAR BREAKPOINT/FAULT[/ALL]` (needs the
+  `BreakFault` `BreakKind` execute.go's own doc comment defers).
+
+**Sub-phase 3 (SET), shipped:**
+
+- **`SET PSL <field>=<value>[,...]`** (`SetPSLField`, dispatch.go's `cmdSetPSL`) —
+  every field `vax.PSL` already had a setter for (`CM`/`TP`/`FPD`/`IS`/`DV`/`FU`/`IV`/
+  `T`/`N`/`Z`/`V`/`C`/`IPL`/`PRV_MOD`), plus `CUR_MOD` (and a bare `MODE` alias)
+  routed through the same `SetMode` primitive `SET MODE` itself uses. Deliberately
+  does **not** replicate `console_set.c`'s own pending-AST check on a `CUR_MOD`
+  change (`if (cur_mod >= ASTLVL) interrupt(0x88, 2, 0)`) — this port has no
+  AST-delivery mechanism anywhere yet (confirmed: no `ASTLVL`/interrupt-code-0x88
+  consumer exists in `internal/cpu`), so there is nothing for that check to feed into;
+  noted in `SetPSLField`'s own doc comment rather than logged to `DEVIATIONS.md`,
+  since it's an absent *feature*, not an ISA-fidelity mismatch in a feature that
+  exists.
+- **`SET MODE <KERNEL|EXEC|SUPER|USER|INTERRUPT>`** (`SetMode`) — reuses
+  `cpu.Engine.SetModeStack` (already exported for Phase 13's `RUN`), the same
+  primitive `set_mode_stack` is in the C source; same AST-check omission as above.
+- **`SET PTE <addr>[ TO <addr2>] <field>=<value>[,...]`** / **`SET PAGE`**
+  (`SetPTE`, `cmdSetPTE`) — the write-side counterpart to `SHOW PAGE`'s already-shipped
+  `vm.Memory.LookupPTE`; needed one new `internal/vm` primitive, `Memory.StorePTE`
+  (`translate.go`), since `LookupPTE`'s own returned `pteAddr` is deliberately a
+  pre-recursion *virtual* address for P0/P1 (matching `tracevm`'s own display
+  convention) and writing the entry back needs the real *physical* one — `StorePTE`
+  repeats `LookupPTE`'s region/length-register walk but resolves all the way through
+  `Translate` first. All six fields (`VALID`/`PROT`/`MODIFY`/`OWNER`/`SOFTWARE`/`PFN`,
+  plus the C source's short spellings `V`/`M`/`OWN`/`S`) are supported, along with the
+  `TO`-range multi-page form (`setpte_multiple`'s own 512-byte-aligned loop).
+- **`SET VM` / `SET MAPEN` / `SET NOVM` / `SET NOMAPEN`** (`SetVM`) — confirmed
+  during implementation that the generic `SET MAPEN=<value>` form already worked via
+  `SetSymbol`/`privRegNames` (this document's own inventory note was right to flag
+  that as the only real question); this adds the bare on/off keyword spellings,
+  requiring kernel mode (`requireKernelMode`, matching the C source's own `EXC_PRIV`
+  check — reported as this port's other kernel-mode-gated commands are, not as a
+  synthesized real fault delivery, since no console command does that).
+- **`SET BASE <addr>`** (`SetBase`) — sets `Console.DepositAddr` directly, confirming
+  this document's own suspicion that it's not a real gap beyond a missing binding.
+- **`SET VERBOSE` / `SET VERIFY` / `SET NOVERBOSE`** (`SetVerbose`/`SetVerify`/
+  `SetNoVerbose`) — **found a real bug while wiring these**: `Console.Verbose`
+  defaulted to Go's zero value (`false`), but `initialization.c` defaults
+  `vax.console.flags` to `CONSOLE_EXPAND | CONSOLE_VERBOSE` (verbose **on**) at
+  startup — fixed (`New` now sets `Verbose: true`). Also found `Print` (`PRINT`/
+  `ECHO`) had never actually gated on `CONSOLE_VERBOSE` at all, despite its own doc
+  comment claiming the port "always treats [verbose] as on" as a deliberate
+  simplification — the real C `console_print` is a hard no-op whenever
+  `CONSOLE_VERBOSE` is clear (it doesn't even print blank output, just silently
+  consumes the line), so `Print` now checks `c.Verbose` for real. Both are "clear,
+  obvious logic errors" under `CLAUDE.md`'s bug-fixing policy (a stale doc comment
+  describing behavior that was never implemented, and a default that didn't match
+  the C source with no ISA-fidelity question attached), fixed directly rather than
+  logged to `DEVIATIONS.md`.
+- **`SET QUANTUM <n>`** (`SetQuantum`) — now real, backed by Phase 14's own
+  `Engine.SetQuantum`/`Engine.Quantum` (this document's sub-phase 1b already noted
+  `SHOW QUANTUM` had become portable for the same reason; `SET` was the missing
+  write side), including the C source's own resumed/suspended informational message
+  when `n` crosses the zero boundary.
+- **`SET UIQUANTUM <n>`** (`SetUIQuantum`) — stub matching `ShowQuantum`'s own
+  "not modeled" report for the same reason (no cooperative host-UI-polling loop in
+  this port); parses and accepts the value rather than erroring, since the real
+  command's own syntax is otherwise legal.
+- **`SET RADIX HEX|HEXA|DEC|DECI`** keyword forms (`parseRadixArg`, dispatch.go) —
+  added alongside (not replacing) the pre-existing bare-numeric form, which is a more
+  lenient superset the C source doesn't actually offer (no octal keyword exists in
+  `console_set.c`'s own `SET RADIX` switch) but which this port had already shipped
+  and there's no reason to regress.
+- **`SET BREAKPOINT/TEMPORARY`** (`AddTemporaryBreakpoint`, execute.go) — turned out
+  to be genuinely small, as this document's own inventory guessed:
+  `Breakpoint.Temporary` already existed (STEP/OVER's/STEP/RETURN's own internal
+  one-shot breakpoints already used it) — this just exposes a user-facing way to set
+  one.
+- **`SET`'s own `/PERMANENT`, `/ENTRY`, `/LABEL` qualifiers** on the general
+  `NAME=value` symbol form (`cmdSet`'s new leading-qualifier scan,
+  `Console.SetSymbolQualified`) — a genuine gap found while scoping `CLEAR
+  SYMBOL/TEMPORARY` above (that command's only meaning depends on some symbols being
+  marked permanent): `Symbol` gained `Permanent`/`IsLabel` fields (`IsEntry` already
+  existed, from `.ENTRY`/`.SHIM` symbols); `SHOW SYMBOL`'s attribute string
+  (`ShowSymbol`, show.go) now reports `permanent`/`label` too, closing out two of the
+  four attributes sub-phase 1a's own `SHOW SYMBOL <name>` entry had flagged as
+  remaining (`local`/`string` are a different axis — assembler-local temporary
+  symbols and string-descriptor values — and stay out of scope).
+- **Still not done, as flagged**: `SET MKVALID`/`SET NOMK` (the document's own
+  "is there already an implicit signal?" question is still open — `VMInitValid`
+  exists but isn't the same semantic, and none of the already-shipped `SHOW`
+  commands this would gate actually check it), `SET ASSEMBLER`/`SET NOASSEMBLER`
+  (confirmed by grep: `internal/asm` has no `ADDRESS_PROMPT`/`FORWARD_WARNINGS`/etc.
+  state at all to set), `SET WATCH` (needs the watchpoint subsystem sub-phase 4
+  already flagged as its own future phase), `SET FAULT/HISTORY` (needs a fault-event
+  recorder hooked into `internal/cpu/handlefault.go` — a core-package instrumentation
+  decision, not a console-layer wiring task), `SET BREAK/FAULT` (needs `BreakFault`,
+  same as `CLEAR BREAKPOINT/FAULT` above).
+
+**Sub-phase 4, shipped:**
+
+- **The DCL `/entry=` redirect now actually works** (`Dispatcher.Dispatch`,
+  dispatch.go): instead of unconditionally returning "requires the RTL microkernel,"
+  a `/entry=` result now resolves the entry name (already uppercased by the grammar,
+  e.g. `EXE$ABOUT`) as a VAX symbol via the same `Evaluator` every other address
+  expression uses, and `CALL`s it with no arguments — exactly the primitive this
+  document's own audit recommended. Unblocks **`ABOUT`**, **`FORTH`**, and
+  **`XTEST`** (all three now reach real `kernel.asm`-defined `.ENTRY` routines once a
+  microkernel is booted; without one, they now fail with the accurate "Undefined
+  symbol `EXE$ABOUT`" rather than a misleading "not yet implemented").
+- **Found and fixed in passing**: `SHOW VERSION`'s own grammar syntax
+  (`evax.dcl`'s `syntax show_version/entry=exe$about`) *also* carries `/entry=` — it
+  shares `ABOUT`'s real routine in the C source. Because `Dispatch`'s `EntryPoint`
+  check ran unconditionally before ever consulting the bound-handler table, the
+  `SHOW_VERSION` grammar bind (→ `Console.ShowVersion`, a Go-native placeholder
+  banner explicitly documented in Phase 08's own progress log as "rather than
+  leaving `ABOUT`/`SHOW VERSION` with no output at all") was **already unreachable
+  dead code** before this change — `SHOW VERSION` always hit the same
+  "not-yet-implemented" error `ABOUT` did, silently. Removed the placeholder
+  (`ShowVersion` method, its dead grammar bind, and `doc.go`'s stale "stubbed
+  pending Phase 10" comment) now that the real redirect makes it behave correctly.
+  A latent bug found while implementing an unrelated item, not an ISA-fidelity
+  question — fixed directly per `CLAUDE.md`'s bug-fixing policy.
+- **Still not done, as flagged**: the watchpoint subsystem and fault-kind
+  breakpoints — both already tracked by this document as likely future sub-phases
+  of `docs/PHASE-18.md`, unchanged by this pass.
+
+**Testing**: every new/changed method has direct unit coverage (`internal/vm/
+translate_test.go`'s `TestStorePTE*`, `internal/cpu/interrupt_test.go`'s
+`TestClearInterrupt`/`TestClearAllInterrupts`, and new cases in
+`internal/console/set_test.go`, `misc_test.go`, `dispatch_test.go`, `show_test.go`),
+including two end-to-end `Dispatch("ABOUT"/"SHOW VERSION")` tests against a really
+-booted `kernel.asm` (bounded by `Engine.SetLimits`, since `LIB$PUT_OUTPUT`'s
+character-at-a-time `TXCS` busy-wait never completes in this port — the same
+documented limitation `regression_test.go`'s `TestRegression_rtlDependentAsmFixtures`
+already tracks for other `TXCS`/`RXCS`-polling fixtures — so the test only checks
+that the banner's first character reaches `Console.Out`, not the full string).
+`go build ./...`, `go vet ./...`, `gofmt -l .` (clean on every file this pass
+touched — a handful of pre-existing, unrelated files were already gofmt-dirty before
+this pass and are left as found), and `go test ./...` all clean.

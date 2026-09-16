@@ -187,6 +187,80 @@ func TestLookupPTEReportsInvalidPageWithoutError(t *testing.T) {
 	}
 }
 
+// StorePTE is LookupPTE's write-side counterpart (SET PTE/SET PAGE) — this
+// checks a round trip through a recursively-translated P0 PTE actually
+// lands at the same physical PTE address LookupPTE itself reports.
+func TestStorePTEP0RoundTrip(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+
+	vaddr := uint32(2*pageSize) + 0x10
+
+	_, _, pte, err := mem.LookupPTE(cpu, vaddr)
+	if err != nil {
+		t.Fatalf("LookupPTE: %v", err)
+	}
+
+	pte.SetProtection(ProtKR)
+	pte.SetPFN(0x77)
+
+	if err := mem.StorePTE(cpu, vaddr, pte); err != nil {
+		t.Fatalf("StorePTE: %v", err)
+	}
+
+	_, _, got, err := mem.LookupPTE(cpu, vaddr)
+	if err != nil {
+		t.Fatalf("LookupPTE after StorePTE: %v", err)
+	}
+	if got.Protection() != ProtKR {
+		t.Errorf("Protection() = %s, want KR", got.Protection())
+	}
+	if got.PFN() != 0x77 {
+		t.Errorf("PFN() = %#x, want 0x77", got.PFN())
+	}
+}
+
+func TestStorePTES0RoundTrip(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+
+	vaddr := uint32(sysBase) // region 2 (S0), page 0 -- within SLR (npages-1 == 3)
+
+	_, _, pte, err := mem.LookupPTE(cpu, vaddr)
+	if err != nil {
+		t.Fatalf("LookupPTE: %v", err)
+	}
+
+	pte.SetValid(true)
+	pte.SetPFN(0x55)
+
+	if err := mem.StorePTE(cpu, vaddr, pte); err != nil {
+		t.Fatalf("StorePTE: %v", err)
+	}
+
+	_, _, got, err := mem.LookupPTE(cpu, vaddr)
+	if err != nil {
+		t.Fatalf("LookupPTE after StorePTE: %v", err)
+	}
+	if got.PFN() != 0x55 {
+		t.Errorf("PFN() = %#x, want 0x55", got.PFN())
+	}
+}
+
+func TestStorePTEMAPENDisabledFaults(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+	cpu.SetPR(vax.MAPEN, 0)
+
+	err := mem.StorePTE(cpu, 0x1000, PTE(0))
+	assertAccessViolation(t, err, 0x1000)
+}
+
+func TestStorePTELengthViolation(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+
+	vaddr := uint32(4 * pageSize) // beyond P0LR == 3
+	err := mem.StorePTE(cpu, vaddr, PTE(0))
+	assertAccessViolation(t, err, vaddr)
+}
+
 func TestLookupPTEMAPENDisabledFaults(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 	cpu.SetPR(vax.MAPEN, 0)

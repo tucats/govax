@@ -48,6 +48,221 @@ func TestSetSymbol_userSymbol(t *testing.T) {
 	}
 }
 
+func TestSetSymbolQualified_permanentSurvivesClearTemporary(t *testing.T) {
+	c, _ := newTestConsole(t)
+	if err := c.SetSymbolQualified("PERMFOO", 1, true, false, false); err != nil {
+		t.Fatalf("SetSymbolQualified: %v", err)
+	}
+	if err := c.SetSymbolQualified("TEMPFOO", 2, false, false, false); err != nil {
+		t.Fatalf("SetSymbolQualified: %v", err)
+	}
+
+	c.Symbols.ClearTemporary()
+
+	if _, ok := c.Symbols.Get("PERMFOO"); !ok {
+		t.Error("expected PERMFOO (permanent) to survive ClearTemporary")
+	}
+	if _, ok := c.Symbols.Get("TEMPFOO"); ok {
+		t.Error("expected TEMPFOO (not permanent) to be removed by ClearTemporary")
+	}
+}
+
+func TestSetPSLField_bit(t *testing.T) {
+	c, _ := newTestConsole(t)
+	if err := c.SetPSLField("T", 1); err != nil {
+		t.Fatalf("SetPSLField: %v", err)
+	}
+	if !c.CPU.PSL().T() {
+		t.Error("expected PSL.T set")
+	}
+	if err := c.SetPSLField("T", 0); err != nil {
+		t.Fatalf("SetPSLField: %v", err)
+	}
+	if c.CPU.PSL().T() {
+		t.Error("expected PSL.T cleared")
+	}
+}
+
+func TestSetPSLField_ipl(t *testing.T) {
+	c, _ := newTestConsole(t)
+	if err := c.SetPSLField("IPL", 15); err != nil {
+		t.Fatalf("SetPSLField: %v", err)
+	}
+	if got := c.CPU.PSL().IPL(); got != 15 {
+		t.Errorf("IPL() = %d, want 15", got)
+	}
+	if err := c.SetPSLField("IPL", 99); err == nil {
+		t.Error("expected an error for IPL out of range")
+	}
+}
+
+func TestSetPSLField_curModSwitchesStack(t *testing.T) {
+	c, _ := newTestConsole(t)
+	c.CPU.SetPR(vax.KSP, 0x1000)
+	c.CPU.SetPR(vax.ESP, 0x2000)
+	c.CPU.SetGPR(vax.SP, 0x1000)
+
+	if err := c.SetPSLField("CUR_MOD", uint32(vax.Executive)); err != nil {
+		t.Fatalf("SetPSLField: %v", err)
+	}
+	if got := c.CPU.PSL().CurMod(); got != vax.Executive {
+		t.Errorf("CurMod() = %d, want Executive", got)
+	}
+	if got := c.CPU.GPR(vax.SP); got != 0x2000 {
+		t.Errorf("SP = %#x, want ESP's own 0x2000 after switching to Executive", got)
+	}
+}
+
+func TestSetMode(t *testing.T) {
+	c, _ := newTestConsole(t)
+	c.CPU.SetPR(vax.USP, 0x3000)
+
+	if err := c.SetMode("USER"); err != nil {
+		t.Fatalf("SetMode: %v", err)
+	}
+	if got := c.CPU.PSL().CurMod(); got != vax.User {
+		t.Errorf("CurMod() = %d, want User", got)
+	}
+
+	if err := c.SetMode("INTERRUPT"); err != nil {
+		t.Fatalf("SetMode: %v", err)
+	}
+	if !c.CPU.PSL().IS() {
+		t.Error("expected PSL.IS set after SET MODE INTERRUPT")
+	}
+
+	if err := c.SetMode("BOGUS"); err == nil {
+		t.Error("expected an error for an unknown mode")
+	}
+}
+
+func TestSetVM_requiresKernelMode(t *testing.T) {
+	c, _ := newTestConsole(t)
+	psl := c.CPU.PSL()
+	psl.SetCurMod(vax.User)
+	c.CPU.SetPSL(psl)
+
+	if err := c.SetVM(true); err == nil {
+		t.Error("expected an error setting MAPEN outside kernel mode")
+	}
+}
+
+func TestSetVM(t *testing.T) {
+	c, _ := newTestConsole(t)
+	if err := c.SetVM(true); err != nil {
+		t.Fatalf("SetVM(true): %v", err)
+	}
+	if c.CPU.PR(vax.MAPEN) != 1 {
+		t.Errorf("MAPEN = %d, want 1", c.CPU.PR(vax.MAPEN))
+	}
+	if err := c.SetVM(false); err != nil {
+		t.Fatalf("SetVM(false): %v", err)
+	}
+	if c.CPU.PR(vax.MAPEN) != 0 {
+		t.Errorf("MAPEN = %d, want 0", c.CPU.PR(vax.MAPEN))
+	}
+}
+
+func TestSetBase(t *testing.T) {
+	c, _ := newTestConsole(t)
+	if err := c.SetBase(0x4000); err != nil {
+		t.Fatalf("SetBase: %v", err)
+	}
+	if c.DepositAddr != 0x4000 {
+		t.Errorf("DepositAddr = %#x, want 0x4000", c.DepositAddr)
+	}
+}
+
+func TestSetVerboseVerifyNoVerbose(t *testing.T) {
+	c, _ := newTestConsole(t)
+	if !c.Verbose {
+		t.Fatal("expected Verbose true by default (initialization.c's own CONSOLE_VERBOSE default)")
+	}
+
+	if err := c.SetVerify(); err != nil {
+		t.Fatalf("SetVerify: %v", err)
+	}
+	if !c.Verify {
+		t.Error("expected Verify set")
+	}
+	if !c.Verbose {
+		t.Error("SetVerify must not touch Verbose")
+	}
+
+	if err := c.SetNoVerbose(); err != nil {
+		t.Fatalf("SetNoVerbose: %v", err)
+	}
+	if c.Verbose || c.Verify {
+		t.Errorf("Verbose=%v Verify=%v, want both false after SET NOVERBOSE", c.Verbose, c.Verify)
+	}
+
+	if err := c.SetVerbose(); err != nil {
+		t.Fatalf("SetVerbose: %v", err)
+	}
+	if !c.Verbose {
+		t.Error("expected Verbose set")
+	}
+}
+
+func TestSetQuantum(t *testing.T) {
+	c, buf := newTestConsole(t)
+	buf.Reset()
+	if err := c.SetQuantum(0); err != nil {
+		t.Fatalf("SetQuantum: %v", err)
+	}
+	if !strings.Contains(buf.String(), "NOINTERRUPTS") {
+		t.Errorf("output = %q, want the suspended-delivery message", buf.String())
+	}
+	current, initial := c.Engine.Quantum()
+	if current != 0 || initial != 0 {
+		t.Errorf("Quantum() = (%d, %d), want (0, 0)", current, initial)
+	}
+
+	buf.Reset()
+	if err := c.SetQuantum(20); err != nil {
+		t.Fatalf("SetQuantum: %v", err)
+	}
+	if !strings.Contains(buf.String(), "INTERRUPTS") {
+		t.Errorf("output = %q, want the resumed-delivery message", buf.String())
+	}
+}
+
+func TestSetPTE_roundTrip(t *testing.T) {
+	c, _ := newTestConsole(t)
+	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2); err != nil {
+		t.Fatalf("VMInit: %v", err)
+	}
+
+	addr := uint32(0x1000)
+	if err := c.SetPTE(addr, "VALID", 1); err != nil {
+		t.Fatalf("SetPTE VALID: %v", err)
+	}
+	if err := c.SetPTE(addr, "PFN", 0x42); err != nil {
+		t.Fatalf("SetPTE PFN: %v", err)
+	}
+
+	_, _, pte, err := c.Mem.LookupPTE(c.CPU, addr)
+	if err != nil {
+		t.Fatalf("LookupPTE: %v", err)
+	}
+	if !pte.Valid() {
+		t.Error("expected the valid bit set")
+	}
+	if pte.PFN() != 0x42 {
+		t.Errorf("PFN() = %#x, want 0x42", pte.PFN())
+	}
+}
+
+func TestSetPTE_badField(t *testing.T) {
+	c, _ := newTestConsole(t)
+	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2); err != nil {
+		t.Fatalf("VMInit: %v", err)
+	}
+	if err := c.SetPTE(0x1000, "BOGUS", 1); err == nil {
+		t.Error("expected an error for an unknown PTE field")
+	}
+}
+
 func TestSetRadix(t *testing.T) {
 	c, _ := newTestConsole(t)
 	if err := c.SetRadix(8); err != nil {

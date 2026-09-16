@@ -48,6 +48,19 @@ func (c *Console) AddBreakpoint(addr uint32) {
 	c.Breakpoints = append(c.Breakpoints, &Breakpoint{Kind: BreakAddress, Addr: addr})
 }
 
+// AddTemporaryBreakpoint sets a one-shot address breakpoint, matching SET
+// BREAKPOINT/TEMPORARY (console_set.c's BREAK_ADDRESS|BREAK_TEMPORARY
+// case) — removed the moment it's hit (runLoop's own Breakpoint.Temporary
+// handling, shared with STEP/OVER's and STEP/RETURN's internal one-shot
+// breakpoints). A duplicate address is a no-op, matching AddBreakpoint.
+func (c *Console) AddTemporaryBreakpoint(addr uint32) {
+	if c.breakpointAt(addr) != nil {
+		return
+	}
+
+	c.Breakpoints = append(c.Breakpoints, &Breakpoint{Kind: BreakAddress, Addr: addr, Temporary: true})
+}
+
 // RemoveBreakpoint clears one address breakpoint, matching CLEAR
 // BREAKPOINT <address>.
 func (c *Console) RemoveBreakpoint(addr uint32) {

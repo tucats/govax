@@ -227,6 +227,56 @@ func TestPendingInterruptsReportsBothHalves(t *testing.T) {
 	}
 }
 
+// TestClearInterrupt checks CLEAR INTERRUPT <id>'s own selective removal:
+// only matching-code entries in the queue are removed, everything else
+// (a non-matching code, Engine's own immediately-pending interrupt) is
+// left alone.
+func TestClearInterrupt(t *testing.T) {
+	e := interruptEngine(t)
+	e.SetQuantum(4)
+	psl := e.cpu.PSL()
+	psl.SetIPL(20)
+	e.cpu.SetPSL(psl)
+
+	e.Interrupt(ExcConWrite, 20, 0)
+	e.Interrupt(ExcConRead, 20, 0)
+	e.Interrupt(ExcConWrite, 20, 0)
+
+	if n := e.ClearInterrupt(ExcConWrite); n != 2 {
+		t.Fatalf("ClearInterrupt(ExcConWrite) = %d, want 2", n)
+	}
+
+	_, queued := e.PendingInterrupts()
+	if len(queued) != 1 || queued[0].Code != ExcConRead {
+		t.Fatalf("queued = %+v, want only the ExcConRead entry left", queued)
+	}
+}
+
+// TestClearAllInterrupts checks CLEAR INTERRUPT/ALL: both the queue and any
+// immediately-pending interrupt are cleared.
+func TestClearAllInterrupts(t *testing.T) {
+	e := interruptEngine(t)
+	e.SetQuantum(4)
+
+	psl := e.cpu.PSL()
+	psl.SetIPL(20)
+	e.cpu.SetPSL(psl)
+	e.Interrupt(ExcConWrite, 20, 0) // masked: queued
+
+	psl.SetIPL(0)
+	e.cpu.SetPSL(psl)
+	e.Interrupt(ExcConRead, 21, 0) // unmasked: delivered immediately
+
+	if n := e.ClearAllInterrupts(); n != 1 {
+		t.Fatalf("ClearAllInterrupts() = %d, want 1 (queue length only)", n)
+	}
+
+	pending, queued := e.PendingInterrupts()
+	if pending != nil || len(queued) != 0 {
+		t.Fatalf("expected everything cleared, got pending=%v queued=%v", pending, queued)
+	}
+}
+
 func TestInterruptQuantumDelayDefersEvenWhenUnmasked(t *testing.T) {
 	e := interruptEngine(t)
 	e.SetQuantum(5)

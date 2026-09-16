@@ -240,11 +240,69 @@ func TestDispatch_exitStopsRunning(t *testing.T) {
 	}
 }
 
-func TestDispatch_entryPointCommandErrors(t *testing.T) {
+// TestDispatch_entryPointCommandUndefinedWithoutMicrokernel checks that a
+// DCL /entry= command (ABOUT, FORTH, XTEST, SHOW VERSION — see
+// docs/PHASE-16.md sub-phase 4) reports the entry symbol as undefined
+// rather than as a categorically-unimplemented mechanism, once no
+// microkernel has been booted to define it — the same "Undefined symbol"
+// error CALL EXE$ABOUT would report directly.
+func TestDispatch_entryPointCommandUndefinedWithoutMicrokernel(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	err := d.Dispatch("ABOUT")
-	if err == nil || !strings.Contains(err.Error(), "RTL microkernel") {
-		t.Errorf("Dispatch(ABOUT) = %v, want an RTL-not-implemented error", err)
+	if err == nil || !strings.Contains(err.Error(), "Undefined symbol") || !strings.Contains(err.Error(), "EXE$ABOUT") {
+		t.Errorf("Dispatch(ABOUT) = %v, want an undefined-symbol error naming EXE$ABOUT", err)
+	}
+}
+
+// TestDispatch_entryPointCommandCallsRealRoutine boots kernel.asm (which
+// defines EXE$ABOUT as a real .ENTRY, see kernel.asm's own "ABOUT console
+// command" section) and checks that both ABOUT and SHOW VERSION — the two
+// DCL surfaces that redirect to it via /entry=exe$about — actually resolve
+// the symbol and CALL it, reaching kernel.asm's own LIB$PUT_OUTPUT/TXCS
+// character-output loop (confirmed by the banner's first character
+// appearing in Console.Out) rather than failing outright. It can't check
+// for the full banner: LIB$PUT_OUTPUT writes one character at a time via
+// TXCS/TXDB and busy-waits on TXCS's ready bit between them, which this
+// port's TXCS emulation never asserts again after the first write (no
+// interrupt-delivery modeling for it — the same documented limitation
+// regression_test.go's own TestRegression_rtlDependentAsmFixtures tracks
+// for other TXCS/RXCS-polling fixtures), so the run always ends by hitting
+// the instruction-limit guard rather than completing — a benign stop
+// (reportStopReason), not a Dispatch error.
+func TestDispatch_entryPointCommandCallsRealRoutine(t *testing.T) {
+	for _, cmd := range []string{"ABOUT", "SHOW VERSION"} {
+		t.Run(cmd, func(t *testing.T) {
+			// Inlines newRunnableConsole's own body (image_test.go) rather
+			// than calling it directly: RTL's console-output writer is
+			// captured by value at Init time (rtl.NewEnvironment's
+			// consoleOut), so the buffer this test inspects has to be in
+			// place before Init runs, not swapped in afterward.
+			var buf strings.Builder
+			c := New(&buf)
+			if err := c.Init(4096 * 512); err != nil {
+				t.Fatalf("Init: %v", err)
+			}
+			if err := c.VMInit(2000, 100, 0, 4, 4, 4, 4); err != nil {
+				t.Fatalf("VMInit: %v", err)
+			}
+
+			g := loadEvaxGrammar(t)
+			d := NewDispatcher(c, g, nil)
+
+			if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+				t.Fatalf("Assemble(kernel.asm): %v", err)
+			}
+
+			c.Engine.SetLimits(100_000, 0)
+
+			if err := d.Dispatch(cmd); err != nil {
+				t.Fatalf("Dispatch(%s): %v", cmd, err)
+			}
+
+			if out := buf.String(); !strings.HasPrefix(out, "e") {
+				t.Errorf("Dispatch(%s) output = %q, want it to start with EXE$ABOUT's banner ('eVAX 1.1...')", cmd, out)
+			}
+		})
 	}
 }
 
@@ -313,6 +371,210 @@ func TestDispatch_setDebugAndShowDebug(t *testing.T) {
 
 	if err := d.Dispatch("SET DEBUG BOGUS"); err == nil {
 		t.Error("expected an error for an invalid SET DEBUG flag")
+	}
+}
+
+// TestDispatch_setPSL checks SET PSL's own comma-separated field=value
+// clause list (cmdSetPSL), including its CUR_MOD alias for SET MODE.
+func TestDispatch_setPSL(t *testing.T) {
+	d, c := newTestDispatcher(t)
+
+	// IPL=10 is evaluated in the console's default radix 16, so this sets
+	// IPL to 16 decimal, not ten -- matching every other numeric literal
+	// this evaluator parses.
+	if err := d.Dispatch("SET PSL N=1,V=1,IPL=10"); err != nil {
+		t.Fatalf("Dispatch(SET PSL): %v", err)
+	}
+	psl := c.CPU.PSL()
+	if !psl.N() || !psl.V() || psl.IPL() != 16 {
+		t.Errorf("PSL = %#x, want N/V set and IPL=16 (0x10)", uint32(psl))
+	}
+
+	if err := d.Dispatch("SET PSL BOGUS=1"); err == nil {
+		t.Error("expected an error for an unknown PSL field")
+	}
+}
+
+func TestDispatch_setMode(t *testing.T) {
+	d, c := newTestDispatcher(t)
+	c.CPU.SetPR(vax.ESP, 0x5000)
+
+	if err := d.Dispatch("SET MODE EXEC"); err != nil {
+		t.Fatalf("Dispatch(SET MODE): %v", err)
+	}
+	if got := c.CPU.PSL().CurMod(); got != vax.Executive {
+		t.Errorf("CurMod() = %d, want Executive", got)
+	}
+}
+
+func TestDispatch_setVMAndNoVM(t *testing.T) {
+	d, c := newTestDispatcher(t)
+
+	if err := d.Dispatch("SET VM"); err != nil {
+		t.Fatalf("Dispatch(SET VM): %v", err)
+	}
+	if c.CPU.PR(vax.MAPEN) != 1 {
+		t.Errorf("MAPEN = %d, want 1", c.CPU.PR(vax.MAPEN))
+	}
+
+	if err := d.Dispatch("SET NOMAPEN"); err != nil {
+		t.Fatalf("Dispatch(SET NOMAPEN): %v", err)
+	}
+	if c.CPU.PR(vax.MAPEN) != 0 {
+		t.Errorf("MAPEN = %d, want 0", c.CPU.PR(vax.MAPEN))
+	}
+}
+
+func TestDispatch_setBaseAndVerbose(t *testing.T) {
+	d, c := newTestDispatcher(t)
+
+	if err := d.Dispatch("SET BASE 3000"); err != nil {
+		t.Fatalf("Dispatch(SET BASE): %v", err)
+	}
+	if c.DepositAddr != 0x3000 {
+		t.Errorf("DepositAddr = %#x, want 0x3000", c.DepositAddr)
+	}
+
+	if err := d.Dispatch("SET NOVERBOSE"); err != nil {
+		t.Fatalf("Dispatch(SET NOVERBOSE): %v", err)
+	}
+	if c.Verbose {
+		t.Error("expected Verbose false after SET NOVERBOSE")
+	}
+
+	if err := d.Dispatch("SET VERIFY"); err != nil {
+		t.Fatalf("Dispatch(SET VERIFY): %v", err)
+	}
+	if !c.Verify {
+		t.Error("expected Verify true after SET VERIFY")
+	}
+}
+
+func TestDispatch_setRadixKeywords(t *testing.T) {
+	d, c := newTestDispatcher(t)
+
+	if err := d.Dispatch("SET RADIX DEC"); err != nil {
+		t.Fatalf("Dispatch(SET RADIX DEC): %v", err)
+	}
+	if c.Radix != 10 {
+		t.Errorf("Radix = %d, want 10", c.Radix)
+	}
+
+	if err := d.Dispatch("SET RADIX HEX"); err != nil {
+		t.Fatalf("Dispatch(SET RADIX HEX): %v", err)
+	}
+	if c.Radix != 16 {
+		t.Errorf("Radix = %d, want 16", c.Radix)
+	}
+
+	// The pre-existing bare-numeric form must keep working too.
+	if err := d.Dispatch("SET RADIX 8"); err != nil {
+		t.Fatalf("Dispatch(SET RADIX 8): %v", err)
+	}
+	if c.Radix != 8 {
+		t.Errorf("Radix = %d, want 8", c.Radix)
+	}
+}
+
+func TestDispatch_setBreakTemporary(t *testing.T) {
+	d, c := newTestDispatcher(t)
+
+	if err := d.Dispatch("SET BREAK/TEMPORARY 400"); err != nil {
+		t.Fatalf("Dispatch(SET BREAK/TEMPORARY): %v", err)
+	}
+	if len(c.Breakpoints) != 1 || !c.Breakpoints[0].Temporary {
+		t.Fatalf("Breakpoints = %+v, want one temporary breakpoint", c.Breakpoints)
+	}
+}
+
+// TestDispatch_setSymbolQualifiers checks SET's own /PERMANENT and /ENTRY
+// qualifier scan ahead of the general NAME=value symbol form.
+func TestDispatch_setSymbolQualifiers(t *testing.T) {
+	d, c := newTestDispatcher(t)
+
+	if err := d.Dispatch("SET /PERMANENT PERMSYM=100"); err != nil {
+		t.Fatalf("Dispatch(SET /PERMANENT): %v", err)
+	}
+	sym, ok := c.Symbols.Find("PERMSYM")
+	if !ok || !sym.Permanent {
+		t.Errorf("PERMSYM = %+v, ok=%v; want a permanent symbol", sym, ok)
+	}
+
+	if err := d.Dispatch("SET/ENTRY ENTRYSYM=200"); err != nil {
+		t.Fatalf("Dispatch(SET/ENTRY): %v", err)
+	}
+	sym, ok = c.Symbols.Find("ENTRYSYM")
+	if !ok || !sym.IsEntry {
+		t.Errorf("ENTRYSYM = %+v, ok=%v; want an entry symbol", sym, ok)
+	}
+}
+
+func TestDispatch_setPTEWithRange(t *testing.T) {
+	d, c, _ := newShowRunnableDispatcher(t)
+
+	if err := d.Dispatch("SET PTE 200 TO 400 VALID=1,PFN=10"); err != nil {
+		t.Fatalf("Dispatch(SET PTE ... TO ...): %v", err)
+	}
+
+	for _, addr := range []uint32{0x200, 0x400} {
+		_, _, pte, err := c.Mem.LookupPTE(c.CPU, addr)
+		if err != nil {
+			t.Fatalf("LookupPTE(%#x): %v", addr, err)
+		}
+		if !pte.Valid() {
+			t.Errorf("addr %#x: expected valid bit set", addr)
+		}
+	}
+
+	// 0x000 (page 0) is below the range and must be untouched.
+	if _, _, pte, err := c.Mem.LookupPTE(c.CPU, 0x000); err != nil {
+		t.Fatalf("LookupPTE(0x0): %v", err)
+	} else if pte.Valid() {
+		t.Error("addr 0x0: expected the valid bit untouched (outside the TO range)")
+	}
+}
+
+func TestDispatch_clearStringsAndInterrupt(t *testing.T) {
+	d, c := newTestDispatcher(t)
+
+	c.Symbols.Set("CONSOLE$STRINGPOOL_BASE", 0x2000, SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL_SIZE", 8, SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL", 0x2008, SymbolSystem)
+
+	if err := d.Dispatch("CLEAR STRINGS"); err != nil {
+		t.Fatalf("Dispatch(CLEAR STRINGS): %v", err)
+	}
+	if got, _ := c.Symbols.Get("CONSOLE$STRINGPOOL"); got != 0x2000 {
+		t.Errorf("CONSOLE$STRINGPOOL = %#x, want reset to 0x2000", got)
+	}
+
+	psl := c.CPU.PSL()
+	psl.SetIPL(20)
+	c.CPU.SetPSL(psl)
+	c.Engine.SetQuantum(4)
+	c.Engine.Interrupt(0x24, 20, 0)
+
+	if err := d.Dispatch("CLEAR INTERRUPT/ALL"); err != nil {
+		t.Fatalf("Dispatch(CLEAR INTERRUPT/ALL): %v", err)
+	}
+	if _, queued := c.Engine.PendingInterrupts(); len(queued) != 0 {
+		t.Errorf("queued = %+v, want empty after CLEAR INTERRUPT/ALL", queued)
+	}
+}
+
+func TestDispatch_clearSymbolTemporary(t *testing.T) {
+	d, c := newTestDispatcher(t)
+	c.Symbols.SetQualified("PERM", 1, true, false, false)
+	c.Symbols.SetQualified("TEMP", 2, false, false, false)
+
+	if err := d.Dispatch("CLEAR SYMBOL/TEMPORARY"); err != nil {
+		t.Fatalf("Dispatch(CLEAR SYMBOL/TEMPORARY): %v", err)
+	}
+	if _, ok := c.Symbols.Get("PERM"); !ok {
+		t.Error("expected PERM to survive")
+	}
+	if _, ok := c.Symbols.Get("TEMP"); ok {
+		t.Error("expected TEMP to be cleared")
 	}
 }
 

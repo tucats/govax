@@ -200,7 +200,8 @@ func New(out io.Writer) *Console {
 	logicals.InitLogicals()
 	return &Console{
 		Symbols:  NewSymbolTable(),
-		Radix:    16, // alloc_vax's own default
+		Radix:    16,   // alloc_vax's own default
+		Verbose:  true, // initialization.c's own vax.console.flags = CONSOLE_EXPAND | CONSOLE_VERBOSE default
 		Out:      out,
 		Devices:  iodev.NewDeviceTable(),
 		Logicals: logicals,

@@ -4,15 +4,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // Print implements the PRINT/ECHO console command: a comma-separated list
 // of double-quoted literal strings and/or expressions (printed in the
-// console's current radix), matching console_print.c — minus its
-// SET [NO]VERBOSE gate (CONSOLE_VERBOSE), which this port always treats as
-// on (SET [NO]VERBOSE isn't implemented, see doc.go).
+// console's current radix), matching console_print.c — including its
+// CONSOLE_VERBOSE gate (console_print's own leading check): PRINT is
+// silent whenever SET NOVERBOSE has turned Console.Verbose off (see
+// set.go's SetVerbose/SetNoVerbose).
 func (c *Console) Print(text string) error {
+	if !c.Verbose {
+		return nil
+	}
+
 	ev := c.Evaluator()
 	pos := text
 
@@ -129,8 +135,7 @@ func (c *Console) Include(path string, dispatch func(string) error) error {
 
 // ClearSymbol implements CLEAR SYMBOL: a specific name, or every user
 // symbol (CLEAR SYMBOL/ALL) — matching console_clear.c's clear_symbols
-// case, minus its /TEMPORARY distinction (this port's SymbolTable doesn't
-// track a separate temporary category — see symbols.go).
+// case. Its /TEMPORARY distinction is ClearSymbolTemporary, below.
 func (c *Console) ClearSymbol(name string, all bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -142,6 +147,119 @@ func (c *Console) ClearSymbol(name string, all bool) error {
 	}
 
 	c.Symbols.Delete(name)
+
+	return nil
+}
+
+// ClearSymbolTemporary implements CLEAR SYMBOL/TEMPORARY, matching
+// console_clear.c's clear_temp_symbols (case 115) — see
+// SymbolTable.ClearTemporary.
+func (c *Console) ClearSymbolTemporary() error {
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	c.Symbols.ClearTemporary()
+
+	return nil
+}
+
+// ClearString implements CLEAR STRINGS, matching console_clear.c's case
+// 105: resets CONSOLE$STRINGPOOL back to CONSOLE$STRINGPOOL_BASE and zeroes
+// the pool's backing storage — the write side of ShowString, requiring the
+// same booted-microkernel symbols.
+func (c *Console) ClearString() error {
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	base, ok := c.Symbols.Get("CONSOLE$STRINGPOOL_BASE")
+	if !ok {
+		return vmserrors.New(vmserrors.CLI_NOSTRINGPOOL)
+	}
+
+	size, ok := c.Symbols.Get("CONSOLE$STRINGPOOL_SIZE")
+	if !ok {
+		return vmserrors.New(vmserrors.CLI_NOPOOLSIZE)
+	}
+
+	c.Symbols.Set("CONSOLE$STRINGPOOL", base, SymbolSystem)
+
+	return c.Mem.Store(c.CPU, base, make([]byte, size))
+}
+
+// ClearTB reports that this port has no translation-cache state to reset,
+// matching ShowTB's own "not applicable to this port" stance (see
+// docs/PHASE-16.md sub-phase 1f: internal/vm.Memory.Translate does an
+// uncached page-table walk, so console_clear.c's CLEAR TB — which resets
+// tb_hit/tb_try/cached_page_hit/cached_page_try counters this port never
+// maintains — has nothing to do here).
+func (c *Console) ClearTB() error {
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	c.Printf("Translation buffer statistics are not modeled by this port (uncached page-table walk).\n")
+
+	return nil
+}
+
+// ClearMemory implements CLEAR MEMORY, matching console_clear.c's case 103
+// — which simply calls console_zero(), the same routine the ZERO command
+// itself runs (see console_clear.c's own module comment: "CLEAR MEMORY is
+// mapped to the ZERO command").
+func (c *Console) ClearMemory() error {
+	return c.Zero()
+}
+
+// ClearMemoryStatistics implements CLEAR MEMORY/STATISTICS, matching
+// console_clear.c's case 114 — which resets allocator byte-counters
+// (total_allocated/count_allocated/total_freed/count_freed) this port has
+// no equivalent of (internal/vm.Memory is a fixed-size byte slice, not a
+// tracked heap allocator).
+func (c *Console) ClearMemoryStatistics() error {
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	c.Printf("Memory allocation statistics are not modeled by this port.\n")
+
+	return nil
+}
+
+// ClearInterrupt implements CLEAR INTERRUPT <id>, matching console_clear.c's
+// case 102: removes every queued interrupt whose code matches id.
+func (c *Console) ClearInterrupt(code uint32) error {
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	n := c.Engine.ClearInterrupt(cpu.Exception(code))
+
+	plural := "s"
+	if n == 1 {
+		plural = ""
+	}
+	c.Printf("\tCleared %d pending interrupt%s\n", n, plural)
+
+	return nil
+}
+
+// ClearAllInterrupts implements CLEAR INTERRUPT/ALL, matching
+// console_clear.c's case 110: empties the interrupt queue and cancels any
+// immediately-pending interrupt.
+func (c *Console) ClearAllInterrupts() error {
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	n := c.Engine.ClearAllInterrupts()
+
+	plural := "s"
+	if n == 1 {
+		plural = ""
+	}
+	c.Printf("\tCleared %d pending interrupt%s\n", n, plural)
 
 	return nil
 }

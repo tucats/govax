@@ -60,6 +60,11 @@ const (
 	cliBadRadix
 	cliNeedStepMode
 	cliNeedBreakOpcode
+	cliInvSetPSL
+	cliNeedMode
+	cliBadMode
+	cliBadPTEField
+	cliBadQualPrefix
 
 	// internal/console/dcl (the DCL command-grammar interpreter).
 	cliUnrecognized
@@ -152,6 +157,11 @@ const (
 	CLI_BADRADIX        = CLIFacility<<FacilityPosition | cliBadRadix<<MessagePosition | StatusError
 	CLI_NEEDSTEPMODE    = CLIFacility<<FacilityPosition | cliNeedStepMode<<MessagePosition | StatusError
 	CLI_NEEDBREAKOPCODE = CLIFacility<<FacilityPosition | cliNeedBreakOpcode<<MessagePosition | StatusError
+	CLI_INVSETPSL       = CLIFacility<<FacilityPosition | cliInvSetPSL<<MessagePosition | StatusError
+	CLI_NEEDMODE        = CLIFacility<<FacilityPosition | cliNeedMode<<MessagePosition | StatusError
+	CLI_BADMODE         = CLIFacility<<FacilityPosition | cliBadMode<<MessagePosition | StatusError
+	CLI_BADPTEFIELD     = CLIFacility<<FacilityPosition | cliBadPTEField<<MessagePosition | StatusError
+	CLI_BADQUALPREFIX   = CLIFacility<<FacilityPosition | cliBadQualPrefix<<MessagePosition | StatusError
 
 	// internal/console/dcl
 	CLI_UNRECOGNIZED          = CLIFacility<<FacilityPosition | cliUnrecognized<<MessagePosition | StatusError
@@ -240,6 +250,11 @@ func init() {
 	DefineMessage(CLI_BADRADIX, CLIFacility, "BADRADIX", "Invalid radix !D (must be 8, 10, or 16)")
 	DefineMessage(CLI_NEEDSTEPMODE, CLIFacility, "NEEDSTEPMODE", "SET STEP requires OVER, INTO, or RETURN")
 	DefineMessage(CLI_NEEDBREAKOPCODE, CLIFacility, "NEEDBREAKOPCODE", "SET BREAK/INSTRUCTION requires an opcode mnemonic")
+	DefineMessage(CLI_INVSETPSL, CLIFacility, "INVSETPSL", "Invalid SET PSL field or value !Q")
+	DefineMessage(CLI_NEEDMODE, CLIFacility, "NEEDMODE", "SET MODE requires KERNEL, EXEC, SUPER, USER, or INTERRUPT")
+	DefineMessage(CLI_BADMODE, CLIFacility, "BADMODE", "Unknown mode !Q")
+	DefineMessage(CLI_BADPTEFIELD, CLIFacility, "BADPTEFIELD", "Unknown SET PTE field !Q")
+	DefineMessage(CLI_BADQUALPREFIX, CLIFacility, "BADQUALPREFIX", "Unknown qualifier /!S")
 
 	DefineMessage(CLI_UNRECOGNIZED, CLIFacility, "UNRECOGNIZED", "Unrecognized !S !Q")
 	DefineMessage(CLI_AMBIGUOUS, CLIFacility, "AMBIGUOUS", "Ambiguous !S !Q")

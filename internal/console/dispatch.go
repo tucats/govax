@@ -85,8 +85,21 @@ func (d *Dispatcher) Dispatch(line string) error {
 		return err
 	}
 
+	// A DCL /entry= redirect (ABOUT, FORTH, XTEST, SHOW VERSION -- the C
+	// source's exe$about/exe$forth_dcl/exe$xtest, all real VAX routines
+	// defined in kernel.asm itself, not native C functions -- see
+	// docs/PHASE-16.md sub-phase 4) resolves the entry name as a VAX symbol
+	// (populated by an .ENTRY once kernel.asm has been ASMed/booted) and
+	// CALLs it with no arguments, the same primitive the CALL command
+	// itself uses. Requires a booted microkernel exactly as the C source
+	// does (exe$about etc. simply don't exist otherwise).
 	if r.EntryPoint != "" {
-		return vmserrors.New(vmserrors.CLI_NEEDRTL, r.Active)
+		addr, _, err := d.Console.Evaluator().Eval(r.EntryPoint)
+		if err != nil {
+			return err
+		}
+
+		return d.Console.Call(addr, false)
 	}
 
 	return d.Grammar.Dispatch(r)
@@ -167,6 +180,22 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.RemoveInstructionBreakpoint(r.String("P1"))
 	})
 
+	g.Bind("CLEAR_SYM_TEMP", func(id int64, r *dcl.Result) error { return d.Console.ClearSymbolTemporary() })
+	g.Bind("CLEAR_STRINGS", func(id int64, r *dcl.Result) error { return d.Console.ClearString() })
+	g.Bind("CLEAR_TB", func(id int64, r *dcl.Result) error { return d.Console.ClearTB() })
+	g.Bind("CLEAR_MEMORY", func(id int64, r *dcl.Result) error { return d.Console.ClearMemory() })
+	g.Bind("CLEAR_MEM_STAT", func(id int64, r *dcl.Result) error { return d.Console.ClearMemoryStatistics() })
+
+	g.Bind("CLEAR_INTERRUPT", func(id int64, r *dcl.Result) error {
+		code, err := parseHexOrEmpty(r.String("INTERRUPT_ID"))
+		if err != nil {
+			return err
+		}
+
+		return d.Console.ClearInterrupt(code)
+	})
+	g.Bind("CLEAR_INTERRUPT_ALL", func(id int64, r *dcl.Result) error { return d.Console.ClearAllInterrupts() })
+
 	g.Bind("SHOW_REG", func(id int64, r *dcl.Result) error { return d.Console.ShowRegisters() })
 	g.Bind("SHOW_PSL", func(id int64, r *dcl.Result) error { return d.Console.ShowPSL() })
 	g.Bind("SHOW_MEMORY", func(id int64, r *dcl.Result) error { return d.Console.ShowMemory() })
@@ -178,7 +207,13 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("SHOW_RADIX", func(id int64, r *dcl.Result) error { return d.Console.ShowRadix() })
 	g.Bind("SHOW_BASE", func(id int64, r *dcl.Result) error { return d.Console.ShowBase() })
 	g.Bind("SHOW_CPU", func(id int64, r *dcl.Result) error { return d.Console.ShowCPU() })
-	g.Bind("SHOW_VERSION", func(id int64, r *dcl.Result) error { return d.Console.ShowVersion() })
+	// SHOW VERSION has no bind of its own: its grammar syntax carries
+	// /entry=exe$about (evax.dcl's own "syntax show_version/entry=exe$about"
+	// — it shares ABOUT's real VAX routine), so Dispatch's EntryPoint check
+	// above reaches it before Grammar.Dispatch ever would. The Go-native
+	// ShowVersion stand-in this bind used to call (docs/PHASE-08.md's own
+	// "rather than leaving ABOUT/SHOW VERSION with no output at all") is
+	// retired now that the real /entry= redirect works.
 
 	g.Bind("SHOW_STACK", func(id int64, r *dcl.Result) error {
 		count, err := parseHexOrEmpty(r.String("COUNT"))
@@ -797,11 +832,58 @@ func cmdDisassemble(d *Dispatcher, rest string) error {
 	return d.Console.Disassemble(start, end)
 }
 
+// leadingQualifier reads one leading "/word" token off s (up to the next
+// space or '/'), matching console_set.c's own read_verb-based qualifier
+// scan for SET's /PERMANENT, /ENTRY, /LABEL qualifiers (console_set.c:
+// 137-178) — unlike SET BREAK's qualifier (attached with no space to the
+// verb, see the "verb, qualifier, _ := strings.Cut" split below), these are
+// their own space-separated tokens ahead of the NAME=value symbol form.
+func leadingQualifier(s string) (qual, tail string, ok bool) {
+	s = strings.TrimSpace(s)
+	if !strings.HasPrefix(s, "/") {
+		return "", s, false
+	}
+
+	i := 1
+	for i < len(s) && s[i] != ' ' && s[i] != '\t' && s[i] != '/' {
+		i++
+	}
+
+	return s[1:i], s[i:], true
+}
+
 // cmdSet implements SET's own small syntax: SET RADIX n, SET BREAKPOINT
-// addr, SET BREAKPOINT/INSTRUCTION mnemonic, or the general SET
-// <name>=<value> form (see set.go).
+// addr, SET BREAKPOINT/INSTRUCTION mnemonic, SET PSL <field>=<value>[,...],
+// SET MODE, SET PTE/PAGE, SET VM/MAPEN, SET BASE, SET VERBOSE/VERIFY/
+// NOVERBOSE, SET QUANTUM/UIQUANTUM, or the general SET [/PERMANENT]
+// [/ENTRY] [/LABEL] <name>=<value> form (see set.go).
 func cmdSet(d *Dispatcher, rest string) error {
-	rest = strings.TrimSpace(rest)
+	// SET's own /PERMANENT, /ENTRY, /LABEL qualifiers (console_set.c:
+	// 131-178) are consumed before anything else -- none of the verb-switch
+	// keywords below start with '/', so this loop never collides with them.
+	var permQual, entryQual, labelQual bool
+
+	for {
+		q, tail, ok := leadingQualifier(rest)
+		if !ok {
+			rest = tail
+			break
+		}
+
+		uq := strings.ToUpper(q)
+		switch {
+		case uq != "" && strings.HasPrefix("PERMANENT", uq):
+			permQual = true
+		case uq != "" && strings.HasPrefix("ENTRY", uq):
+			entryQual = true
+		case uq != "" && strings.HasPrefix("LABEL", uq):
+			labelQual = true
+		default:
+			return vmserrors.New(vmserrors.CLI_BADQUALPREFIX, q)
+		}
+
+		rest = tail
+	}
 
 	fields := strings.Fields(rest)
 	if len(fields) == 0 {
@@ -810,35 +892,56 @@ func cmdSet(d *Dispatcher, rest string) error {
 
 	// A "/qualifier" is attached directly to the verb (no space), matching
 	// console_set.c's own read_verb-based qualifier check for SET BREAK —
-	// see console_set.c:716-798. Only BREAK[POINT] currently reads one.
+	// see console_set.c:716-798.
 	verb, qualifier, _ := strings.Cut(fields[0], "/")
+	uverb := strings.ToUpper(verb)
+	uqual := strings.ToUpper(qualifier)
 
-	switch strings.ToUpper(verb) {
+	// after is everything following the verb token, trimmed -- used by the
+	// cases below that need the raw remainder rather than space-split
+	// fields (PSL's comma list, PTE's address+field-list, BASE's
+	// expression).
+	after := strings.TrimSpace(rest[len(fields[0]):])
+
+	switch uverb {
 	case "RADIX":
 		if len(fields) < 2 {
 			return vmserrors.New(vmserrors.CLI_NEEDRADIX)
 		}
 
-		n, err := strconv.Atoi(fields[1])
-		if err != nil {
+		n, ok := parseRadixArg(fields[1])
+		if !ok {
 			return vmserrors.New(vmserrors.CLI_BADRADIXVAL, fields[1])
 		}
 
 		return d.Console.SetRadix(n)
 
 	case "BREAKPOINT", "BREAK":
-		if strings.HasPrefix(strings.ToUpper(qualifier), "INS") { // /INSTRUCTION, /INS, ...
+		switch {
+		case strings.HasPrefix(uqual, "INS"): // /INSTRUCTION, /INS, ...
 			if len(fields) < 2 {
 				return vmserrors.New(vmserrors.CLI_NEEDBREAKOPCODE)
 			}
 
 			return d.Console.AddInstructionBreakpoint(fields[1])
-		}
 
-		if qualifier != "" {
-			// /FAULT and /TEMPORARY are recognized by the C source but not
-			// implemented by this port — see execute.go's BreakKind doc
-			// comment.
+		case uqual != "" && (strings.HasPrefix("TEMPORARY", uqual) || strings.HasPrefix("TMP", uqual)):
+			if len(fields) < 2 {
+				return vmserrors.New(vmserrors.CLI_NEEDBREAKADDR)
+			}
+
+			addr, _, err := d.Console.Evaluator().Eval(fields[1])
+			if err != nil {
+				return err
+			}
+
+			d.Console.AddTemporaryBreakpoint(addr)
+
+			return nil
+
+		case qualifier != "":
+			// /FAULT is recognized by the C source but not implemented by
+			// this port — see execute.go's BreakKind doc comment.
 			return vmserrors.New(vmserrors.CLI_BADQUALIFIER, qualifier)
 		}
 
@@ -881,6 +984,62 @@ func cmdSet(d *Dispatcher, rest string) error {
 		}
 
 		return d.Console.SetDebug(names)
+
+	case "PSL":
+		return cmdSetPSL(d, after)
+
+	case "MODE":
+		if len(fields) < 2 {
+			return vmserrors.New(vmserrors.CLI_NEEDMODE)
+		}
+
+		return d.Console.SetMode(fields[1])
+
+	case "PTE", "PAGE":
+		return cmdSetPTE(d, after)
+
+	case "VM", "MAPEN":
+		return d.Console.SetVM(true)
+
+	case "NOVM", "NOMAPEN":
+		return d.Console.SetVM(false)
+
+	case "BASE":
+		if after == "" {
+			return vmserrors.New(vmserrors.CLI_NEEDSETARG)
+		}
+
+		addr, _, err := d.Console.Evaluator().Eval(after)
+		if err != nil {
+			return err
+		}
+
+		return d.Console.SetBase(addr)
+
+	case "VERBOSE":
+		return d.Console.SetVerbose()
+
+	case "VERIFY":
+		return d.Console.SetVerify()
+
+	case "NOVERBOSE":
+		return d.Console.SetNoVerbose()
+
+	case "QUANTUM":
+		n, err := parseSetDecimal(fields)
+		if err != nil {
+			return err
+		}
+
+		return d.Console.SetQuantum(n)
+
+	case "UIQUANTUM":
+		n, err := parseSetDecimal(fields)
+		if err != nil {
+			return err
+		}
+
+		return d.Console.SetUIQuantum(n)
 	}
 
 	eq := strings.IndexByte(rest, '=')
@@ -895,7 +1054,143 @@ func cmdSet(d *Dispatcher, rest string) error {
 		return err
 	}
 
-	return d.Console.SetSymbol(name, val)
+	return d.Console.SetSymbolQualified(name, val, permQual, entryQual, labelQual)
+}
+
+// parseRadixArg accepts either console_set.c's own HEX/HEXA/16/DEC/DECI/10
+// keyword forms or a bare number (this port's own pre-existing, more
+// lenient numeric form, kept for backward compatibility — SetRadix itself
+// rejects anything but 8/10/16 either way).
+func parseRadixArg(s string) (int, bool) {
+	switch strings.ToUpper(s) {
+	case "HEX", "HEXA":
+		return 16, true
+	case "DEC", "DECI":
+		return 10, true
+	}
+
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, false
+	}
+
+	return n, true
+}
+
+// parseSetDecimal parses SET QUANTUM/SET UIQUANTUM's single decimal
+// argument, matching console_set.c's own asm_dec parse.
+func parseSetDecimal(fields []string) (int, error) {
+	if len(fields) < 2 {
+		return 0, vmserrors.New(vmserrors.CLI_NEEDSETARG)
+	}
+
+	n, err := strconv.Atoi(fields[1])
+	if err != nil {
+		return 0, vmserrors.New(vmserrors.CLI_BADNUMBER, fields[1])
+	}
+
+	return n, nil
+}
+
+// cmdSetPSL implements SET PSL's own comma-separated "<field>=<value>[,...]"
+// clause list, matching console_set.c:256-357's parsing loop.
+func cmdSetPSL(d *Dispatcher, clauses string) error {
+	if clauses == "" {
+		return vmserrors.New(vmserrors.CLI_INVSETPSL, "")
+	}
+
+	for _, clause := range strings.Split(clauses, ",") {
+		clause = strings.TrimSpace(clause)
+		if clause == "" {
+			continue
+		}
+
+		eq := strings.IndexByte(clause, '=')
+		if eq < 0 {
+			return vmserrors.New(vmserrors.CLI_INVSETPSL, clause)
+		}
+
+		field := strings.TrimSpace(clause[:eq])
+
+		v, _, err := d.Console.Evaluator().Eval(strings.TrimSpace(clause[eq+1:]))
+		if err != nil {
+			return err
+		}
+
+		if err := d.Console.SetPSLField(field, v); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// cmdSetPTE implements SET PTE/SET PAGE: "<addr> [TO <addr2>]
+// <field>=<value>[,...]", matching console_set.c's setpte_multiple/setpte/
+// parse_pte_changes. A TO range applies the same field list to every
+// 512-byte-aligned page from addr to addr2 inclusive, matching
+// setpte_multiple's own loop.
+func cmdSetPTE(d *Dispatcher, rest string) error {
+	ev := d.Console.Evaluator()
+
+	addr1, rest, err := ev.Eval(rest)
+	if err != nil {
+		return err
+	}
+	rest = strings.TrimSpace(rest)
+
+	addrs := []uint32{addr1}
+
+	if len(rest) >= 3 && strings.EqualFold(rest[:2], "TO") && (rest[2] == ' ' || rest[2] == '\t') {
+		var addr2 uint32
+
+		addr2, rest, err = ev.Eval(strings.TrimSpace(rest[2:]))
+		if err != nil {
+			return err
+		}
+		rest = strings.TrimSpace(rest)
+
+		a1, a2 := addr1&^0x1FF, addr2&^0x1FF
+		if a2 < a1 {
+			return vmserrors.New(vmserrors.CLI_BADRANGE)
+		}
+
+		addrs = addrs[:0]
+		for a := a1; a <= a2; a += 512 {
+			addrs = append(addrs, a)
+		}
+	}
+
+	if rest == "" {
+		return vmserrors.New(vmserrors.CLI_BADSETSYNTAX, rest)
+	}
+
+	for _, addr := range addrs {
+		for _, clause := range strings.Split(rest, ",") {
+			clause = strings.TrimSpace(clause)
+			if clause == "" {
+				continue
+			}
+
+			eq := strings.IndexByte(clause, '=')
+			if eq < 0 {
+				return vmserrors.New(vmserrors.CLI_BADPTEFIELD, clause)
+			}
+
+			field := strings.TrimSpace(clause[:eq])
+
+			v, _, err := ev.Eval(strings.TrimSpace(clause[eq+1:]))
+			if err != nil {
+				return err
+			}
+
+			if err := d.Console.SetPTE(addr, field, v); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // cmdSave/cmdLoad implement SAVE/LOAD's "/ROM <file>" and "/NVRAM <file>"

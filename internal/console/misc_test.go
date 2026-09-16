@@ -139,6 +139,108 @@ func TestClearBreakpoint(t *testing.T) {
 	}
 }
 
+func TestClearSymbolTemporary(t *testing.T) {
+	c, _ := newTestConsole(t)
+	c.Symbols.SetQualified("PERM", 1, true, false, false)
+	c.Symbols.SetQualified("TEMP", 2, false, false, false)
+	c.Symbols.Set("SYS$FOO", 3, SymbolSystem)
+
+	if err := c.ClearSymbolTemporary(); err != nil {
+		t.Fatalf("ClearSymbolTemporary: %v", err)
+	}
+
+	if _, ok := c.Symbols.Get("PERM"); !ok {
+		t.Error("expected PERM to survive CLEAR SYMBOL/TEMPORARY")
+	}
+	if _, ok := c.Symbols.Get("TEMP"); ok {
+		t.Error("expected TEMP to be cleared")
+	}
+	if _, ok := c.Symbols.Get("SYS$FOO"); !ok {
+		t.Error("expected the system symbol to survive")
+	}
+}
+
+func TestClearString(t *testing.T) {
+	c, _ := newTestConsole(t)
+
+	if err := c.ClearString(); err == nil {
+		t.Error("expected an error before the string-pool symbols exist")
+	}
+
+	base := uint32(0x2000)
+	c.Symbols.Set("CONSOLE$STRINGPOOL_BASE", base, SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL_SIZE", 16, SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL", base+8, SymbolSystem)
+
+	if err := c.Mem.StoreLongword(c.CPU, base, 0xDEADBEEF); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	if err := c.ClearString(); err != nil {
+		t.Fatalf("ClearString: %v", err)
+	}
+
+	if got, _ := c.Symbols.Get("CONSOLE$STRINGPOOL"); got != base {
+		t.Errorf("CONSOLE$STRINGPOOL = %#x, want reset to base %#x", got, base)
+	}
+
+	got, err := c.Mem.LoadLongword(c.CPU, base)
+	if err != nil {
+		t.Fatalf("LoadLongword: %v", err)
+	}
+	if got != 0 {
+		t.Errorf("pool storage = %#x, want zeroed", got)
+	}
+}
+
+func TestClearMemory_reinitializes(t *testing.T) {
+	c, _ := newTestConsole(t)
+	c.Symbols.Set("FOO", 1, SymbolUser)
+	if err := c.Mem.StoreLongword(c.CPU, 0x100, 0xCAFEBABE); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	if err := c.ClearMemory(); err != nil {
+		t.Fatalf("ClearMemory: %v", err)
+	}
+
+	if _, ok := c.Symbols.Get("FOO"); ok {
+		t.Error("expected CLEAR MEMORY (== ZERO) to clear symbols too")
+	}
+	got, err := c.Mem.LoadLongword(c.CPU, 0x100)
+	if err != nil {
+		t.Fatalf("LoadLongword: %v", err)
+	}
+	if got != 0 {
+		t.Errorf("memory at 0x100 = %#x, want zeroed", got)
+	}
+}
+
+func TestClearInterruptAndClearAllInterrupts(t *testing.T) {
+	c, _ := newTestConsole(t)
+
+	psl := c.CPU.PSL()
+	psl.SetIPL(20)
+	c.CPU.SetPSL(psl)
+	c.Engine.SetQuantum(4)
+	c.Engine.Interrupt(0x24, 20, 0) // masked: queued
+
+	if err := c.ClearInterrupt(0x24); err != nil {
+		t.Fatalf("ClearInterrupt: %v", err)
+	}
+	if _, queued := c.Engine.PendingInterrupts(); len(queued) != 0 {
+		t.Errorf("queued = %+v, want empty after ClearInterrupt", queued)
+	}
+
+	c.Engine.Interrupt(0x24, 20, 0)
+	if err := c.ClearAllInterrupts(); err != nil {
+		t.Fatalf("ClearAllInterrupts: %v", err)
+	}
+	if pending, queued := c.Engine.PendingInterrupts(); pending != nil || len(queued) != 0 {
+		t.Errorf("pending=%v queued=%v, want both empty after ClearAllInterrupts", pending, queued)
+	}
+}
+
 func TestHelp_lookupAndMissingTopic(t *testing.T) {
 	h := ParseHelp("$SHOW,LOGI\n$SH  ,LOGI\nShows logical names.\nMore text.\n$OTHER\nOther text.\n")
 	c, buf := newTestConsole(t)
