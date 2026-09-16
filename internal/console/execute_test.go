@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -296,6 +297,55 @@ func TestExecute_beginRunGivesEachCommandAFreshBudget(t *testing.T) {
 	}
 	if err := c.Execute(&addr); err != nil {
 		t.Fatalf("second Execute: %v (want a fresh budget, not immediate exhaustion)", err)
+	}
+}
+
+// TestExecute_stopsOnAttention exercises Ctrl-C interrupting a running VAX
+// program (cpu.Engine.Attention, wired up in cmd/govax's own terminal
+// plumbing -- see attention.go): once something else has called Attention
+// mid-run, Execute's own Step loop must stop cleanly -- at the end of
+// whatever instruction is currently in flight, not mid-instruction -- and
+// report it via reportStopReason, rather than hang (this program is an
+// infinite loop) or propagate an error. Attention is set from a separate
+// goroutine, exactly matching its real caller (cmd/govax's background
+// terminal-reading goroutine) and its documented "safe to call from any
+// goroutine" contract; a generous instruction-limit safety net keeps this
+// deterministic-in-practice test from ever truly hanging if that contract
+// were somehow broken.
+func TestExecute_stopsOnAttention(t *testing.T) {
+	c, buf := newTestConsole(t)
+	loadProgram(t, c, 0x200,
+		opNop,
+		0x11, 0xFD, // BRB base (displacement -3: back to the NOP)
+	)
+	c.Engine.SetLimits(1_000_000, 0)
+
+	go c.Engine.Attention()
+
+	addr := uint32(0x200)
+	if err := c.Execute(&addr); err != nil {
+		t.Fatalf("Execute: %v (want a clean stop, not an error)", err)
+	}
+	if !strings.Contains(buf.String(), "ATTENTION") {
+		t.Errorf("output = %q, want an attention/interrupt message", buf.String())
+	}
+	if strings.Contains(buf.String(), "INSTRLIMIT") {
+		t.Errorf("output = %q, stopped via the instruction-limit safety net instead of Attention", buf.String())
+	}
+}
+
+// TestReportStopReason_attention is a direct, non-racy unit test of the
+// message reportStopReason prints for ErrAttention, complementing
+// TestExecute_stopsOnAttention's own end-to-end (if inherently
+// timing-dependent) coverage above.
+func TestReportStopReason_attention(t *testing.T) {
+	c, buf := newTestConsole(t)
+
+	if err := c.reportStopReason(cpu.ErrAttention); err != nil {
+		t.Fatalf("reportStopReason(ErrAttention) = %v, want nil (a benign, reported stop)", err)
+	}
+	if !strings.Contains(buf.String(), "ATTENTION") {
+		t.Errorf("output = %q, want an attention/interrupt message", buf.String())
 	}
 }
 

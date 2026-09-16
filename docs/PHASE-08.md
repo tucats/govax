@@ -581,3 +581,78 @@ SHOW, and friends — plus the DCL grammar-driven command parser, and stand up
   `TestTranslateDemandPagingExhausted`.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
   `go test ./...` all clean.
+
+### 2026-09-15 — Ctrl-C interrupts a running VAX program (real port of console.c's attention())
+
+- Requested by the user directly: Ctrl-C should stop a GO/CALL/STEP loop at
+  the end of the instruction in flight and return control to the console,
+  rather than requiring HALT, a breakpoint, or -instruction-limit/
+  -time-limit. Unlike those two flags (`docs/PHASE-15.md` sub-phase 2, no
+  C-source equivalent), this genuinely is a port: `console.c`'s
+  `console()` installs `signal(SIGINT, attention)`, and `attention()`'s
+  entire body is `vax.halted = VAX_ATTENTION`, observed the same way any
+  other halt reason is, at the top of `execute_vax`'s
+  `while (!vax.halted)` loop (`vax.c`) -- which also explicitly resets
+  `vax.halted = 0` on every entry, so a Ctrl-C that arrived while idle at
+  the prompt has no lingering effect on the next run.
+- `internal/cpu.Engine` gained `Attention()`/`AttentionRequested()`
+  (`engine.go`) and `ErrAttention` (`vmserrors.VAX_ATTENTION`, `StatusInfo`
+  like the C source's own `SEV_INFO` -- see `internal/vmserrors/
+  codes_vax.go`), backed by an `atomic.Bool` field since, unlike every
+  other piece of Engine state, this one is written from a different
+  goroutine than the one calling `Step`. Named `Attention`, not
+  `Interrupt`, to avoid colliding with Engine's existing, unrelated
+  `Interrupt` method (`interrupt.go`, VAX device/software interrupt
+  admission -- a different concept entirely). `Step` refuses to start
+  another instruction once set, matching `checkLimits`'s own "refuse to
+  start, don't tear out mid-instruction" shape; `BeginRun` clears it,
+  matching `execute_vax`'s own `vax.halted = 0`.
+  `internal/console/execute.go`'s `reportStopReason` (shared by
+  Execute/Call/Step) reports it as `%VAX-I-ATTENTION, ...`, alongside the
+  existing HALT/INSTRLIMIT/TIMELIMIT cases.
+- The real work was getting an actual Ctrl-C keystroke to reach
+  `Engine.Attention` at all. `github.com/chzyer/readline` puts the
+  terminal into raw mode (`Lflag &^= ... ISIG ...`) for the entire life of
+  the process, not just while a `Readline()` call is blocked reading a
+  line -- so once readline has started, a real SIGINT is *never* generated
+  by Ctrl-C again; readline instead recognizes byte `0x03` itself, inside
+  its own read loop, and returns `readline.ErrInterrupt` from `Readline()`
+  (already handled in `main.go`'s command loop). That mechanism only helps
+  while sitting idle at the "VAX> " prompt: during a GO/CALL/STEP loop,
+  nothing is reading the terminal at all (`Engine.Step`'s loop never calls
+  Read itself unless the running VAX program does console I/O via
+  `Console.ConsoleReadByte`/`XFC$CONSOLE_READ`), so a Ctrl-C keystroke
+  would just sit unread in the kernel's tty buffer until the run happened
+  to finish on its own -- too late to matter. `cmd/govax/attention.go`'s
+  `attentionStdin` solves this: one background goroutine, started once at
+  process startup, owns the real terminal for the process's whole
+  lifetime, filtering `0x03` into an `Engine.Attention()` call (looked up
+  fresh each time via a closure, since `Console.Engine` is replaced
+  wholesale by INIT/ZERO/VMINIT) instead of ever forwarding it as data --
+  the same thing a real terminal's ISIG would do, reimplemented in
+  software since readline has already turned ISIG off. Every other byte is
+  relayed through a channel to whichever of readline's own line editor or
+  `Console.ConsoleReadByte` reads next, so there remains only one real
+  reader of the terminal (no risk of the two racing for the same
+  keystroke). `run` (`main.go`) now builds this wrapper for real
+  interactive use and points both `Console.In` and
+  `readline.Config.Stdin` at it (previously `Config.Stdin` was left `nil`
+  for real use, letting readline default to its own unwrapped `os.Stdin`
+  reader); a test-injected reader is used as-is, unchanged, on both sides.
+- Verified: `internal/cpu/limits_test.go`'s
+  `TestEngineAttentionStopsRunButLeavesStateIntact`/
+  `TestEngineBeginRunClearsAttentionBetweenRuns`;
+  `internal/console/execute_test.go`'s `TestExecute_stopsOnAttention`
+  (Attention called from a separate goroutine mid-`Execute`, matching the
+  real call site, with a generous instruction-limit safety net) and the
+  non-racy `TestReportStopReason_attention`;
+  `cmd/govax/attention_test.go`'s direct coverage of `attentionStdin`
+  (ordinary-byte forwarding, Ctrl-C filtering, EOF/Close handling, and a
+  nil-engine-is-safe case for a Ctrl-C arriving before Init). Manually
+  smoke-tested `govax` end to end with piped input (a real terminal's raw
+  SIGINT-suppression behavior isn't exercisable through a pipe, but this
+  confirms the new `attentionStdin`-wrapped startup path doesn't disturb
+  ordinary non-interactive boot/dispatch/exit).
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output beyond one
+  pre-existing, unrelated trailing-whitespace line in `execute_test.go`),
+  and `go test ./... -race` all clean.

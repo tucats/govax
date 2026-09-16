@@ -112,6 +112,66 @@ func TestEngineTimeLimitStopsRun(t *testing.T) {
 	}
 }
 
+func TestEngineAttentionStopsRunButLeavesStateIntact(t *testing.T) {
+	e := limitsEngine(t)
+	e.BeginRun()
+
+	for i := 0; i < 3; i++ {
+		if err := e.Step(); err != nil {
+			t.Fatalf("Step %d: %v", i, err)
+		}
+	}
+
+	e.Attention()
+
+	if !e.AttentionRequested() {
+		t.Fatal("AttentionRequested() = false right after Attention()")
+	}
+
+	err := e.Step()
+	if !errors.Is(err, ErrAttention) {
+		t.Fatalf("Step after Attention() = %v, want ErrAttention", err)
+	}
+
+	// Refusing the next instruction must not have changed anything --
+	// calling Step again keeps refusing, matching the instruction-limit
+	// case above, not somehow recovering or corrupting PC.
+	pc := e.cpu.GPR(vax.PC)
+	if err := e.Step(); !errors.Is(err, ErrAttention) {
+		t.Fatalf("second Step = %v, want ErrAttention again", err)
+	}
+	if got := e.cpu.GPR(vax.PC); got != pc {
+		t.Errorf("PC changed from %#x to %#x across a refused Step", pc, got)
+	}
+}
+
+func TestEngineBeginRunClearsAttentionBetweenRuns(t *testing.T) {
+	e := limitsEngine(t)
+	e.BeginRun()
+	e.Attention()
+
+	if err := e.Step(); !errors.Is(err, ErrAttention) {
+		t.Fatalf("Step = %v, want ErrAttention", err)
+	}
+
+	// A fresh run (BeginRun again, as Console.Execute/Call/Step do at the
+	// start of each command) must not still be carrying a stale Attention
+	// from before -- matching execute_vax's own `vax.halted = 0` at the
+	// top of every run: a Ctrl-C pressed while idle at the prompt has no
+	// lingering effect on the next command.
+	e.BeginRun()
+
+	if e.AttentionRequested() {
+		t.Error("AttentionRequested() = true right after BeginRun()")
+	}
+
+	for i := 0; i < 5; i++ {
+		if err := e.Step(); err != nil {
+			t.Fatalf("Step %d after BeginRun: %v (want the stale Attention cleared)", i, err)
+		}
+	}
+}
+
 func TestEngineTimeLimitZeroMeansUnlimited(t *testing.T) {
 	e := limitsEngine(t)
 	e.SetLimits(0, 0)

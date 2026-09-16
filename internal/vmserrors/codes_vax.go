@@ -11,6 +11,7 @@ const (
 	vaxHalted uint32 = iota + 1
 	vaxInstLimit
 	vaxTimeLimit
+	vaxAttention
 	vaxNoHandler
 	vaxUnhandled
 	vaxImmOperand
@@ -79,6 +80,13 @@ const (
 	// machine itself is fine, so these are warnings, not errors.
 	VAX_INSTLIM = VAXFacility<<FacilityPosition | vaxInstLimit<<MessagePosition | StatusWarning
 	VAX_TIMELIM = VAXFacility<<FacilityPosition | vaxTimeLimit<<MessagePosition | StatusWarning
+	// VAX_ATTENTION reports Engine.Step stopping because the user pressed
+	// Ctrl-C (cpu.ErrInterrupted) -- matching console.c's own attention()/
+	// vax.halted = VAX_ATTENTION (SEV_INFO in the C source, hence
+	// StatusInfo here, not StatusWarning like the two budget-exceeded
+	// codes above): the machine is fine, execution was just asked to
+	// pause.
+	VAX_ATTENTION = VAXFacility<<FacilityPosition | vaxAttention<<MessagePosition | StatusInfo
 	// VAX_NOHANDLER/VAX_UNHANDLED report Engine.HandleFault finding no
 	// usable SCB vector for a fault (cpu.ErrNoExceptionHandler/
 	// ErrUnhandledVector) -- genuine failures, hence StatusSevere.
@@ -150,6 +158,7 @@ func init() {
 	DefineMessage(VAX_HALTED, VAXFacility, "HALTED", "CPU halted")
 	DefineMessage(VAX_INSTLIM, VAXFacility, "INSTLIM", "Instruction limit exceeded")
 	DefineMessage(VAX_TIMELIM, VAXFacility, "TIMELIM", "Time limit exceeded")
+	DefineMessage(VAX_ATTENTION, VAXFacility, "ATTENTION", "User requested attention (Ctrl-C)")
 	DefineMessage(VAX_NOHANDLER, VAXFacility, "NOHANDLER", "No exception handler installed for this SCB vector")
 	DefineMessage(VAX_UNHANDLED, VAXFacility, "UNHANDLED", "Exception vector is zero")
 	DefineMessage(VAX_IMMOPND, VAXFacility, "IMMOPND", "Cannot store to an immediate operand")

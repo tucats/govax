@@ -33,15 +33,16 @@ func (e *Engine) SetLimits(maxInstructions int, maxDuration time.Duration) {
 	e.timeLimit = maxDuration
 }
 
-// BeginRun resets the instruction/time budget for a new top-level run --
-// called once by Console.Execute/Call/Step at the start of their own
-// Engine.Step loop, not once per instruction. This is what keeps time spent
-// outside actual instruction execution (console output, formatting,
-// sitting at a breakpoint waiting for the next command, single-stepping
-// interactively) from ever counting against the budget: the clock (when a
-// time limit is configured at all) only starts ticking here, and a
-// runaway program in one run doesn't consume the budget of an unrelated
-// later one, since each call to Execute/Call/Step starts fresh.
+// BeginRun resets the instruction/time budget, and any pending Ctrl-C
+// interrupt (see Attention), for a new top-level run -- called once by
+// Console.Execute/Call/Step at the start of their own Engine.Step loop, not
+// once per instruction. This is what keeps time spent outside actual
+// instruction execution (console output, formatting, sitting at a
+// breakpoint waiting for the next command, single-stepping interactively)
+// from ever counting against the budget: the clock (when a time limit is
+// configured at all) only starts ticking here, and a runaway program in one
+// run doesn't consume the budget of an unrelated later one, since each call
+// to Execute/Call/Step starts fresh.
 //
 // A BeginRun call with no time limit configured touches nothing but a
 // couple of int/time.Time fields -- no time.Now() call -- matching the
@@ -58,6 +59,7 @@ func (e *Engine) SetLimits(maxInstructions int, maxDuration time.Duration) {
 // has no such issue) when debugging govax's own Go code with a debugger.
 func (e *Engine) BeginRun() {
 	e.instrCount = 0
+	e.attentionRequested.Store(false)
 	if e.timeLimit > 0 {
 		e.runDeadline = time.Now().Add(e.timeLimit)
 	}

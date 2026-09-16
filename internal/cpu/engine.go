@@ -3,6 +3,7 @@ package cpu
 import (
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/tucats/govax/internal/vax"
@@ -14,6 +15,18 @@ import (
 // stop the machine, and by Engine.Run when that happens — the Go
 // equivalent of the C source's vax.halted flag and VAX_HALT return code.
 var ErrHalted = vmserrors.New(vmserrors.VAX_HALTED)
+
+// ErrAttention is returned by Engine.Step when Attention has been called
+// since the last BeginRun — the Go equivalent of console.c's attention()
+// setting vax.halted = VAX_ATTENTION on SIGINT, observed the same way
+// vax.c's own `while (!vax.halted)` loop observes it: refused at the start
+// of the next instruction, once whatever's currently executing finishes,
+// not torn out mid-instruction. Named Attention rather than Interrupt to
+// avoid colliding with Engine's own, unrelated Interrupt method
+// (interrupt.go): that one admits a VAX device/software interrupt request
+// into the emulated machine's own interrupt queue, a completely different
+// concept from a host Ctrl-C asking the console to regain control.
+var ErrAttention = vmserrors.New(vmserrors.VAX_ATTENTION)
 
 // Engine composes a vax.CPU and vm.Memory with the decode/execute-only state
 // the C source keeps on the global vax struct but Phase 01 deliberately left
@@ -34,6 +47,14 @@ type Engine struct {
 	// comment on decodeInstruction.
 	instructionPC uint32
 	halted        bool
+
+	// attentionRequested backs Attention/AttentionRequested — the Go
+	// equivalent of vax.halted's VAX_ATTENTION value, set by console.c's
+	// SIGINT handler attention(). Unlike every other Engine field, this one
+	// is written from outside the goroutine that calls Step (cmd/govax's
+	// own process-wide Ctrl-C plumbing runs on a separate goroutine), hence
+	// atomic.Bool rather than a plain bool.
+	attentionRequested atomic.Bool
 
 	// services is the XFC opcode's hook into console/RTL state (see
 	// services.go and xfc.go). nil until SetSystemServices is called, in
@@ -91,6 +112,22 @@ func (e *Engine) Memory() *vm.Memory { return e.mem }
 // otherwise been asked to stop; see ErrHalted).
 func (e *Engine) Halted() bool { return e.halted }
 
+// Attention requests that the next Engine.Step call stop before executing
+// another instruction, returning ErrAttention once whatever's currently
+// running finishes — the Go equivalent of console.c's attention(). Named to
+// avoid colliding with Engine's own, unrelated Interrupt method (see
+// ErrAttention's own doc comment). Safe to call from any goroutine, unlike
+// virtually every other Engine method; see cmd/govax's own Ctrl-C handling,
+// the only intended caller. A fresh top-level run (BeginRun) clears this,
+// matching execute_vax's own `vax.halted = 0` at the top of every run — a
+// Ctrl-C pressed while idle at the console prompt, with nothing running,
+// has no effect on the next command.
+func (e *Engine) Attention() { e.attentionRequested.Store(true) }
+
+// AttentionRequested reports whether Attention has been called since the
+// last BeginRun.
+func (e *Engine) AttentionRequested() bool { return e.attentionRequested.Load() }
+
 // LastDecoded returns whatever instruction the most recent Step call
 // decoded — the same value Step reuses across calls to avoid a fresh heap
 // allocation every instruction (this function's own doc comment explains
@@ -128,6 +165,9 @@ func (e *Engine) LastDecoded() Decoded { return e.decoded }
 func (e *Engine) Step() error {
 	if err := e.checkLimits(); err != nil {
 		return err
+	}
+	if e.attentionRequested.Load() {
+		return ErrAttention
 	}
 	e.instrCount++
 

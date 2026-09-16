@@ -35,6 +35,7 @@ import (
 	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/dcl"
+	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -116,10 +117,23 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	c := console.New(out)
 	c.Paths = resolver
 
+	// rlStdin is what readline.Config.Stdin gets below -- the same reader
+	// c.In uses, so there is only ever one real reader of the terminal
+	// (see attentionStdin's own doc comment). A test-injected in is used
+	// as-is, exactly as before; real interactive use gets an
+	// attentionStdin wrapping the real os.Stdin, so Ctrl-C interrupts a
+	// running VAX program (see cpu.Engine.Attention) instead of arriving
+	// as ordinary input or, since readline's raw mode disables the
+	// terminal's own SIGINT generation, being silently lost.
+	var rlStdin io.ReadCloser
+
 	if in != nil {
 		c.In = in
+		rlStdin = in
 	} else {
-		c.In = os.Stdin
+		attn := newAttentionStdin(os.Stdin, func() *cpu.Engine { return c.Engine })
+		c.In = attn
+		rlStdin = attn
 	}
 
 	if err := c.Init(minimumVAXMemory); err != nil {
@@ -153,7 +167,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:      "VAX> ",
 		HistoryFile: historyFile,
-		Stdin:       in,
+		Stdin:       rlStdin,
 	})
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.VAX_READLINE, err)
