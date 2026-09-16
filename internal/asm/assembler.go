@@ -178,6 +178,48 @@ func (a *Assembler) TakeEntry() (uint32, bool) {
 // address Bytes()'s returned span starts at.
 func (a *Assembler) Origin() uint32 { return a.origin }
 
+// Deposit returns the current active location counter (vax.console.deposit)
+// — whichever of the P0/S0 counters .REGION has made active. A live
+// console session (internal/console/asm.go) mirrors this into its own
+// shared "current address" register (Console.DepositAddr) after every
+// statement, matching the reference tool's own single shared field.
+func (a *Assembler) Deposit() uint32 { return a.deposit }
+
+// HasUnresolvedSymbols reports whether any symbol assembled so far still has
+// pending forward references, matching check_unresolved_symbols(0) — the
+// reference tool's interactive bare-END warns with this when ASM_WARNFORWARD
+// (on by default) is set; see docs/PHASE-19.md.
+func (a *Assembler) HasUnresolvedSymbols() bool { return a.hasUnresolvedSymbols() }
+
+// BeginInteractive prepares the Assembler for a fresh interactive REPL
+// session (the console's bare "ASM" command, docs/PHASE-19.md): clears the
+// "assembly stopped" flag a previous interactive session's own END may have
+// left set, exactly mirroring Assemble's own reset on every top-level call
+// for the same reason — a persistent session (internal/console/asm.go's
+// asmSession) is reused across multiple ASM invocations, batch or
+// interactive, in a row.
+func (a *Assembler) BeginInteractive() { a.stop = false }
+
+// AssembleLine assembles one interactively-typed statement — the console's
+// bare "ASM" REPL mode (docs/PHASE-19.md) — depositing directly into this
+// Assembler's own image/symbol table exactly like one line of Assemble's own
+// per-line loop. Reports done=true once a bare or dotted END statement has
+// stopped assembly (matching assemble()'s single-statement entry point in
+// the reference tool, which the interactive console prompt calls once per
+// line read instead of pre-splitting a whole file).
+func (a *Assembler) AssembleLine(line string) (done bool, err error) {
+	line = preprocessLine(line)
+	if line == "" {
+		return a.stop, nil
+	}
+
+	if err := a.assembleStatement(line); err != nil {
+		return false, err
+	}
+
+	return a.stop, nil
+}
+
 // Bytes returns the assembled P0-region program: the contiguous span from
 // the configured origin to the final P0 deposit location. Addresses in
 // that range that were never written (alignment padding, a forward .BASE

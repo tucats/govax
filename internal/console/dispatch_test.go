@@ -316,10 +316,16 @@ func TestDispatch_setDebugAndShowDebug(t *testing.T) {
 	}
 }
 
+// TestDispatch_notImplementedFixedCommand checks BOOT, still gated behind
+// cmdNotImplemented (device/RTL support) -- ASM used to be this test's own
+// example (its bare, no-filename form returned CLI_NOASMREPL) until
+// docs/PHASE-19.md implemented interactive assembler mode; see
+// TestDispatchASM_bareEntersInteractiveMode (asm_repl_test.go) for its
+// current behavior.
 func TestDispatch_notImplementedFixedCommand(t *testing.T) {
 	d, _ := newTestDispatcher(t)
-	if err := d.Dispatch("ASM"); err == nil {
-		t.Error("expected an error for ASM")
+	if err := d.Dispatch("BOOT"); err == nil {
+		t.Error("expected an error for BOOT")
 	}
 }
 

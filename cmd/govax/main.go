@@ -176,6 +176,17 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	defer rl.Close()
 
 	for c.Running() {
+		// driver.c's own prompt switches from "VAX> " to "ASM> " while a
+		// bare ASM command has put the console into interactive assembler
+		// mode (docs/PHASE-19.md) -- the ASM_ADDRPROMPT variant that also
+		// shows the current deposit address isn't implemented (off by
+		// default in the reference tool; see PHASE-19.md's own scope note).
+		if c.InAssemblerMode() {
+			rl.SetPrompt("ASM> ")
+		} else {
+			rl.SetPrompt("VAX> ")
+		}
+
 		line, err := rl.Readline()
 		if err != nil { // io.EOF (Ctrl-D) or readline.ErrInterrupt (Ctrl-C)
 			if errors.Is(err, readline.ErrInterrupt) {

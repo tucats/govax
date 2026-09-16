@@ -123,3 +123,33 @@ func TestRun_asGivenPathWinsOverPathFlag(t *testing.T) {
 		t.Errorf("output = %q, want the CWD-relative vax.init's own PRINT output", buf.String())
 	}
 }
+
+// TestRun_interactiveAsmRepl exercises docs/PHASE-19.md's own interactive
+// "ASM" mode end to end through the real readline loop: a bare ASM enters
+// assembler mode, several lines are typed one at a time (matching what a
+// real terminal session would feed the readline loop), and "END <entry>"
+// both exits the mode and auto-CALLs the routine just typed -- confirmed by
+// EXAMINE-ing the register it set afterward, back in ordinary command mode.
+func TestRun_interactiveAsmRepl(t *testing.T) {
+	script := strings.Join([]string{
+		"ASM",
+		".ENTRY MYTEST,^M<>",
+		"MOVL #42,R0",
+		"RET",
+		"END MYTEST",
+		"EXAM R0",
+	}, "\n") + "\n"
+
+	in := io.NopCloser(strings.NewReader(script))
+
+	var buf bytes.Buffer
+	if err := run(nil, 0, 0, &buf, in, nil); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+
+	// #42 is hex (this port's -- and the reference tool's -- default
+	// numeric radix; see docs/PHASE-11.md's own progress log on this).
+	if !strings.Contains(buf.String(), "00000042") {
+		t.Errorf("output = %q, want R0 = 00000042 from the auto-CALLed routine", buf.String())
+	}
+}

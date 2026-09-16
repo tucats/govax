@@ -156,6 +156,13 @@ type Console struct {
 	// a since-wiped address space.
 	asmSession *asm.Assembler
 
+	// assemblerMode is vax.console.assembler_mode (docs/PHASE-19.md): once a
+	// bare "ASM" command sets this, Dispatcher.Dispatch hands every
+	// subsequent line straight to Console.AssembleInteractiveLine instead of
+	// the normal verb table/DCL grammar, matching console_dispatch.c's own
+	// check ahead of read_verb. Reset alongside asmSession (see above).
+	assemblerMode bool
+
 	// ICBList is Phase 13's loaded-image list (console_run.c's icb_list),
 	// in load order (main image first, each dependency appended as loaded
 	// -- see image.go's doc comment on why this differs from, but is

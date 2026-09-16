@@ -309,6 +309,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	c.VMInitValid = true
 	c.Mem.SetVMValid(true) // let Translate demand-page invalid P0/P1 PTEs from here on
 	c.asmSession = nil     // a fresh address space invalidates any prior ASM session's state
+	c.assemblerMode = false
 
 	return nil
 }

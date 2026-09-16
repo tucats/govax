@@ -48,6 +48,14 @@ func (d *Dispatcher) Dispatch(line string) error {
 		return nil
 	}
 
+	// console_dispatch.c checks vax.console.assembler_mode before ever
+	// reading a verb: while interactive ASM mode (docs/PHASE-19.md) is on,
+	// every line -- including one that happens to spell a command name --
+	// is a statement for the assembler, not a console command.
+	if d.Console.assemblerMode {
+		return d.assembleInteractiveLine(line)
+	}
+
 	verb, _ := readCommandVerb(line)
 
 	verb4 := strings.ToUpper(verb)
@@ -370,13 +378,13 @@ func cmdNotImplemented(name, dependency string) fixedHandler {
 	}
 }
 
-// cmdAssemble implements the batch "ASM <filename>" form (Console.Assemble,
-// Phase 12) -- see that method's doc comment for why the bare, interactive
-// "ASM" (no filename) REPL mode isn't implemented.
+// cmdAssemble implements ASM: the batch "ASM <filename>" form
+// (Console.Assemble) when a name is given, or AssembleBegin's interactive
+// REPL mode (docs/PHASE-19.md) for a bare "ASM".
 func cmdAssemble(d *Dispatcher, rest string) error {
 	path := strings.Trim(strings.TrimSpace(rest), `"`)
 	if path == "" {
-		return vmserrors.New(vmserrors.CLI_NOASMREPL)
+		return d.Console.AssembleBegin()
 	}
 
 	entryAddr, hasEntry, err := d.Console.Assemble(path)
@@ -388,6 +396,23 @@ func cmdAssemble(d *Dispatcher, rest string) error {
 		// console.c's own post-command hook: a .END-named entry address
 		// auto-invokes "CALL __ENTRY" (no arguments) once the file
 		// finishes assembling.
+		return d.Console.Call(entryAddr, false)
+	}
+
+	return nil
+}
+
+// assembleInteractiveLine hands one line to Console.AssembleInteractiveLine
+// while InAssemblerMode is true, matching cmdAssemble's own "hasEntry ->
+// CALL __ENTRY" post-command hook for whichever statement (bare or dotted
+// END) finally stops assembly.
+func (d *Dispatcher) assembleInteractiveLine(line string) error {
+	done, entryAddr, hasEntry, err := d.Console.AssembleInteractiveLine(line)
+	if err != nil {
+		return err
+	}
+
+	if done && hasEntry {
 		return d.Console.Call(entryAddr, false)
 	}
 

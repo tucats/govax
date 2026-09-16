@@ -79,5 +79,8 @@ func (c *Console) Zero() error {
 	c.CPU.SetPR(vax.USP, sp)
 
 	c.VMInitValid = false
+	c.asmSession = nil // matching vminit.go's own reset -- a zeroed address space invalidates any prior ASM session's state
+	c.assemblerMode = false
+
 	return nil
 }

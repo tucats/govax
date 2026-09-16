@@ -69,6 +69,7 @@ questions, and a progress log extended as that phase is worked.
 | 16 | [PHASE-16.md](PHASE-16.md) | Console command fit-and-finish (SHOW/CLEAR/SET gaps) |
 | 17 | [PHASE-17.md](PHASE-17.md) | `SET`/`SHOW DEBUG`, `SET`/`SHOW TRACE`, instruction-trace infrastructure |
 | 18 | [PHASE-18.md](PHASE-18.md) | Flow of control: `STEP`/`SET STEP`/`SHOW STEP_MODE`, future breakpoints/watchpoints |
+| 19 | [PHASE-19.md](PHASE-19.md) | Interactive `ASM` REPL mode |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -120,3 +121,7 @@ breakpoint mechanism shared with `EXEC`/`GO`'s own breakpoint handling), not jus
 console command binding. It's also the intended home for the watchpoint and
 instruction/fault-kind-breakpoint mechanisms Phase 16 found missing but didn't
 implement — see PHASE-18.md.
+
+Phase 19, requested by the user 2026-09-16, ports the reference tool's bare `ASM`
+(no filename) interactive assembler-mode REPL — the one piece of `PHASE-11.md`'s own
+scope its closeout explicitly left for follow-up. See PHASE-19.md.

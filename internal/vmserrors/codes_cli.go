@@ -29,7 +29,6 @@ const (
 	cliNeedRTL
 	cliBadHexVal
 	cliNeedDep
-	cliNoAsmRepl
 	cliNeedPages
 	cliNoFile
 	cliNeedEntry
@@ -122,7 +121,6 @@ const (
 	CLI_NEEDRTL         = CLIFacility<<FacilityPosition | cliNeedRTL<<MessagePosition | StatusError
 	CLI_BADHEXVAL       = CLIFacility<<FacilityPosition | cliBadHexVal<<MessagePosition | StatusError
 	CLI_NEEDDEP         = CLIFacility<<FacilityPosition | cliNeedDep<<MessagePosition | StatusError
-	CLI_NOASMREPL       = CLIFacility<<FacilityPosition | cliNoAsmRepl<<MessagePosition | StatusError
 	CLI_NEEDPAGES       = CLIFacility<<FacilityPosition | cliNeedPages<<MessagePosition | StatusError
 	CLI_NOFILE          = CLIFacility<<FacilityPosition | cliNoFile<<MessagePosition | StatusError
 	CLI_NEEDENTRY       = CLIFacility<<FacilityPosition | cliNeedEntry<<MessagePosition | StatusError
@@ -211,7 +209,6 @@ func init() {
 	DefineMessage(CLI_NEEDRTL, CLIFacility, "NEEDRTL", "!S requires the RTL microkernel (not yet implemented, see docs/PHASE-08.md)")
 	DefineMessage(CLI_BADHEXVAL, CLIFacility, "BADHEXVAL", "Invalid hex value !Q")
 	DefineMessage(CLI_NEEDDEP, CLIFacility, "NEEDDEP", "!S requires !S (not yet implemented, see docs/PHASE-08.md)")
-	DefineMessage(CLI_NOASMREPL, CLIFacility, "NOASMREPL", "Interactive ASM mode (no filename) is not implemented; use ASM <filename>")
 	DefineMessage(CLI_NEEDPAGES, CLIFacility, "NEEDPAGES", "INIT requires a page count")
 	DefineMessage(CLI_NOFILE, CLIFacility, "NOFILE", "Missing file name to run")
 	DefineMessage(CLI_NEEDENTRY, CLIFacility, "NEEDENTRY", "CALL requires an entry-point address or symbol")
