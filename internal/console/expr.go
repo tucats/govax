@@ -28,6 +28,13 @@ type Evaluator struct {
 
 // Eval parses a leading expression from s and returns its value and
 // whatever text remains unconsumed.
+//
+// TODO - This item does not yet support string pooling in the console.
+// When the microkernel is valid, a string constants like "Hello" should
+// store the string value in the console string pool area and create a
+// descriptor to that string, and then use the VAX address of the
+// descriptor as the result of the operaiton. This was supported in the
+// C "reference" version of eVAX but has not yet been ported here.
 func (e *Evaluator) Eval(s string) (uint32, string, error) {
 	return e.parseCompare(s)
 }
