@@ -29,6 +29,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/chzyer/readline"
@@ -44,6 +45,15 @@ import (
 // 1MB): the minimal machine allocated before vax.init runs and does the
 // real INIT/VMINIT.
 const minimumVAXMemory = 2048 * 512
+
+// Version string. This is injected by the build tool by default, but defaults
+// to t this string if built with "go build" rather than the build tool.
+
+var BuildVersion = "- go build version"
+
+// Build timestamp
+
+var BuildTime string
 
 // pathFlag implements flag.Value for a repeatable "-path <dir>" flag —
 // each occurrence appends to the list, in the order given, matching a
@@ -94,6 +104,23 @@ func main() {
 // meant to catch a runaway *user* program shouldn't also cut short the
 // emulator's own boot sequence.
 func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.Writer, in io.ReadCloser, args []string) error {
+	var help *console.Help
+
+	// Squirrel away the command line arguments.
+	argText := strings.Builder{}
+	for _, arg := range args {
+		if strings.TrimSpace(arg) != "" {
+			if argText.Len() > 0 {
+				argText.WriteRune(' ')
+			}
+
+			argText.WriteString(arg)
+		}
+	}
+	console.CommandLineString = argText.String()
+
+	// Set up the fall-back path resolver for including files that might need to be found in the
+	// default bootdata embedded file system.
 	resolver := respath.New(paths, bootdata.FS)
 
 	grammarSrc, err := resolver.ReadFile("evax.dcl")
@@ -105,8 +132,6 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.VAX_GRAMMAR, err)
 	}
-
-	var help *console.Help
 
 	if helpSrc, err := resolver.ReadFile("vax.help"); err != nil {
 		fmt.Fprintln(out, "Warning: no help file available:", err)
@@ -144,7 +169,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	c.Dispatcher = d
 
 	if len(args) == 0 {
-		fmt.Fprintf(out, "govax — a Go port of eVAX (docs/PLAN.md)\n\n")
+		fmt.Fprintf(out, "govax %s\n", BuildVersion)
 	}
 
 	if err := c.Include("vax.init", d.Dispatch); err != nil {

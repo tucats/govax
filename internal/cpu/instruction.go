@@ -2,7 +2,7 @@ package cpu
 
 import "sort"
 
-//go:generate go run ./gen -in ../../reference/eVAX/eVAX/Headers/instruction_table.h -out instructions_table.go
+// /* disabled unless neede dagian */ go:generate go run ./gen -in ../../reference/eVAX/eVAX/Headers/instruction_table.h -out instructions_table.go
 
 // Opcode identifies an instruction: the extended-opcode prefix byte (0 for
 // an ordinary single-byte opcode) and the opcode byte itself. Matches

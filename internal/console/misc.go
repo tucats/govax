@@ -8,6 +8,13 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
+// This string contains any "left over" text from the CLI invocation. It is put
+// here by the main() function when it parses the CLI. It exists so you can issue
+// the command "include/command_line" and it implies that the command line text
+// should be treated as a command that is read and dispatched. If the string is
+// empty there is no effect.
+var CommandLineString string
+
 // Print implements the PRINT/ECHO console command: a comma-separated list
 // of double-quoted literal strings and/or expressions (printed in the
 // console's current radix), matching console_print.c — including its
@@ -116,6 +123,21 @@ func (c *Console) Time(cmd string, dispatch func(string) error) error {
 // found via the configured search path / embedded fallback, not just a
 // literal relative-to-cwd read.
 func (c *Console) Include(path string, dispatch func(string) error) error {
+	// If the path is the special case of "/command_line" then we fetch the
+	// command line args that were unused by CLI parsing and form them into
+	// the command to dispatch.
+	if strings.EqualFold(strings.TrimSpace(path), "/command_line") {
+		if CommandLineString != "" {
+			text := CommandLineString
+			CommandLineString = ""
+
+			return dispatch(text)
+		}
+
+		return nil
+	}
+
+	// not the special flag, so try to read from the named file.
 	b, err := c.Paths.ReadFile(path)
 	if err != nil {
 		return err

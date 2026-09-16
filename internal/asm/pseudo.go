@@ -2,6 +2,7 @@ package asm
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/tucats/govax/internal/vmserrors"
@@ -23,15 +24,49 @@ import (
 // pre-existing dead pseudo-op in the reference tool, replicated as-is
 // since it's harmless either way.
 var pseudoNames = map[string]bool{
-	"BYTE": true, "WORD": true, "LONG": true, "BASE": true, "SET": true,
-	"CLEAR": true, "ASCII": true, "ASCIZ": true, "ASCIC": true, "ASCID": true,
-	"END": true, "PSL": true, "PRINT": true, "MASK": true, "F_FLOAT": true,
-	"D_FLOAT": true, "BLKB": true, "BLKW": true, "BLKL": true, "BLKF": true,
-	"BLKD": true, "ENTRY": true, "SYM": true, "CASE": true, "SCB": true,
-	"ALIGN": true, "REGION": true, "VECTOR": true, "CONSOLE": true,
-	"INCLUDE": true, "IF": true, "SHIM": true, "MICROKERNEL": true,
-	"SPACE": true, "DATA": true, "TEXT": true, "JEQL": true, "JEQLU": true,
-	"JNEQ": true, "JNEQU": true, "P1VECTOR": true, "SCOPE": true,
+	"BYTE":        true, // Declare a 8-bit integer constant value
+	"WORD":        true, // Declare a 16-bit integer constant values
+	"LONG":        true, // Declare a 32-bit integer constant values
+	"BASE":        true, // Set the address of the next instruction to be assembled
+	"SET":         true, // Set various assembler or console flags
+	"CLEAR":       true, // Clear vaiorus assembler or console flags
+	"ASCII":       true, // Declare a string of ASCII text
+	"ASCIZ":       true, // Declare a null-terminated string of ASCII text
+	"ASCIC":       true, // Declare a counted ASCII string of text (16-bit length)
+	"ASCID":       true, // Declare an ASCII string using a VAX string descriptor
+	"END":         true, // Terminate assembly
+	"PSL":         true, // Declare a Processor Status Longword
+	"PRINT":       true, // Print an arbitrary message to the console
+	"MASK":        true, // Define a 16-bit entry mast value
+	"F_FLOAT":     true, // Declare a 32-bit F_FLOAT value
+	"D_FLOAT":     true, // Declare a 64-bit D_FLOAT value
+	"BLKB":        true, // Declare a block of bytes (8-bit zeroes) of a given size
+	"BLKW":        true, // Declare a block of words (16-bit zeroes) of a given size
+	"BLKL":        true, // Declare a block of longwords (32-bit zeroes) of a given size
+	"BLKF":        true, // Declare a block of F_FLOATs (32-bit zeroes) of a given size
+	"BLKD":        true, // Declare a block of D_FLOATs (65-bit zeroes) of a given size
+	"ENTRY":       true, // Declare an entry point symbol and register mask
+	"SYM":         true, // Define a symbol table value
+	"CASE":        true, // Define a case label
+	"SCB":         true, // Define a System Control Block (SCB) entry
+	"ALIGN":       true, // Ensure the next storage is aligend on a given boundary (1/2/4/8)
+	"REGION":      true, // Indicate that following code is stored in a specific retion (P0/P1/S0)
+	"VECTOR":      true, // Define an exception vector entry
+	"CONSOLE":     true, // Send a command to the console
+	"INCLUDE":     true, // Include an external file
+	"IF":          true, // Conditionally assemble or execute a directive
+	"SHIM":        true, // Define a runtime library (RTL) shim entry
+	"MICROKERNEL": true, // Declare that the microkernel is active
+	"SPACE":       true,
+	"DATA":        true, // Define an area of store that is writable
+	"TEXT":        true, // Define an area of storage that is read-only
+	"JEQL":        true, // Posix/UNIX VAX instruction set alias for BEQL
+	"JEQLU":       true, // Posix/UNIX VAX instruction set alias for BEQLU
+	"JNEQ":        true, // Posix/UNIX VAX instruction set alias for BNEQ
+	"JNEQU":       true, // Posix/UNIX VAX instruction set alias for BEQLU
+	"P1VECTOR":    true, // Declare a P1Vector page table entry
+	"SCOPE":       true,
+	"VERSION":     true, // Declare the microkernel version string
 }
 
 // assemblePseudo tries to assemble the statement at c as a pseudo-op,
@@ -191,6 +226,9 @@ func (a *Assembler) dispatchPseudo(name string, c *cursor) error {
 
 	case "SCOPE":
 		return a.pseudoScope(c)
+
+	case "VERSION":
+		return a.pseudoVersion(c)
 	}
 
 	panic("asm: pseudoNames/dispatchPseudo out of sync for " + name)
@@ -243,7 +281,7 @@ func readFileArg(c *cursor) string {
 func (a *Assembler) pseudoData(c *cursor, scale int) error {
 	for {
 		c.skipBlanks()
-		
+
 		if c.atEnd() {
 			return nil
 		}
@@ -335,6 +373,19 @@ qualifiers:
 	}
 
 	return a.setSymbol(name, v, flags, false)
+}
+
+// pseudoSet assembles .VERSION "string" value, which stores the symbol
+// value or "SYS$MK_VERSION".
+func (a *Assembler) pseudoVersion(c *cursor) error {
+	tok := readToken(c)
+
+	v, err := strconv.Atoi(tok)
+	if err != nil {
+		return vmserrors.Wrap(vmserrors.CLI_BADINTEGER, err, tok)
+	}
+
+	return a.setSymbol("SYS$MK_VERSION", uint32(v), SymPermanent, true)
 }
 
 // verbPrefix4 returns s's first 4 characters, space-padded if shorter —
@@ -686,7 +737,7 @@ func (a *Assembler) pseudoEntry(c *cursor) error {
 	var mask uint32
 
 	c.skipBlanks()
-	
+
 	if !c.atEnd() {
 		m, err := a.maskLiteral(c)
 		if err != nil {
@@ -1106,7 +1157,7 @@ func (a *Assembler) pseudoConsole(c *cursor) error {
 			switch readToken(c) {
 			case "DEC", "DECIMAL":
 				a.radix = 10
-			
+
 			case "HEX", "HEXADECIMAL":
 				a.radix = 16
 			}

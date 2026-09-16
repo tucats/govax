@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -39,9 +40,11 @@ func (c *Console) SaveROM(path string) error {
 	if _, err := f.Write(romMagic[:]); err != nil {
 		return err
 	}
+
 	if err := writeBE32(f, c.ROMBase); err != nil {
 		return err
 	}
+
 	if err := writeBE32(f, c.ROMEnd); err != nil {
 		return err
 	}
@@ -51,12 +54,15 @@ func (c *Console) SaveROM(path string) error {
 		if allZero(page) {
 			continue
 		}
+
 		if err := writeBE32(f, base); err != nil {
 			return err
 		}
+
 		if err := writeBE32(f, 1); err != nil {
 			return err
 		}
+
 		if _, err := f.Write(page); err != nil {
 			return err
 		}
@@ -65,22 +71,37 @@ func (c *Console) SaveROM(path string) error {
 	if err := writeBE32(f, 0); err != nil {
 		return err
 	}
+
 	return writeBE32(f, 0)
 }
 
 // LoadROM reads a binary ROM image file, matching load_rom. path is
 // resolved through c.Paths (docs/PHASE-15.md).
 func (c *Console) LoadROM(path string) error {
+	var ignoreError bool
+
+	if strings.TrimSpace(strings.ToUpper(path)) == "/NOERROR" {
+		ignoreError = true
+		path = "default.rom"
+	}
+
 	f, err := c.Paths.Open(path)
 	if err != nil {
+		if ignoreError {
+			return nil
+		}
+
 		return err
 	}
+
 	defer f.Close()
 
 	var magic [8]byte
+
 	if _, err := io.ReadFull(f, magic[:]); err != nil {
 		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "ROM", "magic")
 	}
+
 	if magic != romMagic {
 		return vmserrors.New(vmserrors.RMS_BADMAGIC, path)
 	}
@@ -89,6 +110,7 @@ func (c *Console) LoadROM(path string) error {
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "ROM", "base address")
 	}
+
 	end, err := readBE32(f)
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "ROM", "end address")
@@ -102,16 +124,20 @@ func (c *Console) LoadROM(path string) error {
 		if err != nil {
 			break // matches load_rom's own "short read ends the loop" behavior
 		}
+
 		count, err := readBE32(f)
 		if err != nil {
 			break
 		}
+
 		if count == 0 {
 			break
 		}
+
 		if uint64(addr)+uint64(count)*512 > uint64(size) {
 			return vmserrors.New(vmserrors.RMS_IMAGETOOLARGE, "ROM", addr)
 		}
+
 		if _, err := io.ReadFull(f, rom[addr:addr+count*512]); err != nil {
 			return vmserrors.Wrap(vmserrors.RMS_READPAGE, err, "ROM", addr)
 		}
@@ -121,6 +147,7 @@ func (c *Console) LoadROM(path string) error {
 	c.ROMBase = base
 	c.ROMEnd = end
 	c.ROMFile = path
+
 	return nil
 }
 
@@ -141,26 +168,42 @@ func (c *Console) SaveNVRAM(path string) error {
 	if err := writeBE32(f, c.NVRAMBase); err != nil {
 		return err
 	}
+
 	if err := writeBE32(f, uint32(len(c.NVRAM))); err != nil {
 		return err
 	}
+
 	_, err = f.Write(c.NVRAM)
+
 	return err
 }
 
 // LoadNVRAM reads an NVRAM image file, matching load_nvram. path is
 // resolved through c.Paths (docs/PHASE-15.md).
 func (c *Console) LoadNVRAM(path string) error {
+	var ignoreError bool
+
+	if strings.TrimSpace(strings.ToUpper(path)) == "/NOERROR" {
+		ignoreError = true
+		path = "default.nvram"
+	}
+
 	f, err := c.Paths.Open(path)
 	if err != nil {
+		if ignoreError {
+			return nil
+		}
+
 		return err
 	}
+
 	defer f.Close()
 
 	base, err := readBE32(f)
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "NVRAM", "base address")
 	}
+
 	size, err := readBE32(f)
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "NVRAM", "size")
@@ -175,6 +218,7 @@ func (c *Console) LoadNVRAM(path string) error {
 	c.NVRAMBase = base
 	c.NVRAMEnd = base + size - 1
 	c.NVRAMFile = path
+
 	return nil
 }
 
@@ -184,6 +228,7 @@ func allZero(b []byte) bool {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -193,6 +238,7 @@ func writeBE32(w io.Writer, v uint32) error {
 	binary.BigEndian.PutUint32(buf[:], v)
 
 	_, err := w.Write(buf[:])
+
 	return err
 }
 
@@ -202,6 +248,6 @@ func readBE32(r io.Reader) (uint32, error) {
 	if _, err := io.ReadFull(r, buf[:]); err != nil {
 		return 0, err
 	}
-	
+
 	return binary.BigEndian.Uint32(buf[:]), nil
 }

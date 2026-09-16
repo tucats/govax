@@ -352,6 +352,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 	// page VMInit installs, see vminit.go), then treats everything from
 	// there on as belonging to the image itself.
 	base := c.RTL.RegionSize[0] + 0x200
+
 	headerLen := int(nblocks) * 512
 	if headerLen > len(data) {
 		headerLen = len(data)
@@ -687,7 +688,7 @@ func (c *Console) imageFixup(icb *ICB) error {
 					}
 
 					vaddr := icb.Base + offset
-					
+
 					target, err := c.loadLong(vaddr)
 					if err != nil {
 						return err
