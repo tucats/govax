@@ -7,10 +7,12 @@ import (
 
 func readFixture(t *testing.T, name string) string {
 	t.Helper()
+
 	b, err := os.ReadFile("../../testdata/asm/" + name)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	return string(b)
 }
 
@@ -25,13 +27,16 @@ func TestAssembleFixtures(t *testing.T) {
 		"foo.asm", "hello.asm", "input.asm", "insv.asm", "logname.asm",
 		"movc3.asm", "movq.asm", "rotl.asm", "test.asm", "xor.asm",
 	}
+
 	for _, name := range names {
 		t.Run(name, func(t *testing.T) {
 			a := New()
+			
 			out, err := a.Assemble(readFixture(t, name))
 			if err != nil {
 				t.Fatalf("assemble: %v", err)
 			}
+
 			if len(out) == 0 {
 				t.Fatal("expected a non-empty assembled program")
 			}
@@ -48,6 +53,7 @@ func TestAssembleFixtures(t *testing.T) {
 func TestAssembleForth(t *testing.T) {
 	a := New()
 	a.SetMicrokernel(true)
+
 	if _, err := a.Assemble(readFixture(t, "forth.asm")); err != nil {
 		t.Fatalf("assemble: %v", err)
 	}
@@ -99,6 +105,7 @@ func TestAssembleKernel(t *testing.T) {
 	if !ok || len(sym.forward) != 0 {
 		t.Fatal("expected EXE$CHMK to be a fully resolved label")
 	}
+
 	scbAddr := a.S0Origin() + 0x40 // EXC$CHMK
 	got := a.BytesRange(scbAddr, scbAddr+4)
 	want := []byte{
@@ -142,6 +149,7 @@ func TestRoundTripFixtures(t *testing.T) {
 				if !ok {
 					t.Fatalf("expected label %q to be defined", tc.dataLabel)
 				}
+
 				stop = sym.value
 			}
 
@@ -152,6 +160,7 @@ func TestRoundTripFixtures(t *testing.T) {
 				}
 
 				original := a.BytesRange(pc, pc+dec.Length)
+
 				reassembled := assembleBytesAt(t, pc, dec.String())
 				if len(reassembled) != len(original) {
 					t.Fatalf("at %08X: %s reassembled to %d bytes, want %d (% X vs % X)",

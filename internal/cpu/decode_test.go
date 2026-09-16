@@ -16,9 +16,11 @@ func TestDecodeInstructionNoOperands(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decodeInstruction: %v", err)
 	}
+
 	if d.Instruction.Name != "HALT" {
 		t.Errorf("Instruction.Name = %q, want HALT", d.Instruction.Name)
 	}
+
 	if d.NextPC != base+1 {
 		t.Errorf("NextPC = %#x, want %#x", d.NextPC, base+1)
 	}
@@ -35,15 +37,19 @@ func TestDecodeInstructionTwoOperands(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decodeInstruction: %v", err)
 	}
+
 	if d.Instruction.Name != "MOVL" {
 		t.Fatalf("Instruction.Name = %q, want MOVL", d.Instruction.Name)
 	}
+
 	if d.Operands[0].Kind != OperandRegister || d.Operands[0].Reg != vax.R1 {
 		t.Errorf("Operands[0] = %+v, want Kind=Register Reg=R1", d.Operands[0])
 	}
+
 	if d.Operands[1].Kind != OperandRegister || d.Operands[1].Reg != vax.R2 {
 		t.Errorf("Operands[1] = %+v, want Kind=Register Reg=R2", d.Operands[1])
 	}
+
 	if d.NextPC != base+3 {
 		t.Errorf("NextPC = %#x, want %#x", d.NextPC, base+3)
 	}
@@ -60,15 +66,19 @@ func TestDecodeInstructionExtendedOpcode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decodeInstruction: %v", err)
 	}
+
 	if d.Instruction.Name != "BUGL" {
 		t.Fatalf("Instruction.Name = %q, want BUGL", d.Instruction.Name)
 	}
+
 	if d.Opcode != (Opcode{Extended: 0xFF, Function: 0xFD}) {
 		t.Errorf("Opcode = %+v, want {FF FD}", d.Opcode)
 	}
+
 	if d.Operands[0].Kind != OperandImmediate || uint32(d.Operands[0].Value) != 0x12345678 {
 		t.Errorf("Operands[0] = %+v, want Kind=Immediate Value=0x12345678", d.Operands[0])
 	}
+
 	if d.NextPC != base+6 {
 		t.Errorf("NextPC = %#x, want %#x", d.NextPC, base+6)
 	}
@@ -82,6 +92,7 @@ func TestDecodeInstructionUndefinedExtendedOpcodeFaults(t *testing.T) {
 	_, err := decodeInstruction(cpu, mem, instructionTable)
 
 	var f *Fault
+
 	if !errors.As(err, &f) || f.Code != ExcPrivileged {
 		t.Fatalf("err = %v, want *Fault{Code: ExcPrivileged}", err)
 	}
@@ -111,9 +122,11 @@ func TestDecodeInstructionQuadwordRegisterPair(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decodeInstruction: %v", err)
 	}
+
 	if d.Instruction.Name != "MOVQ" {
 		t.Fatalf("Instruction.Name = %q, want MOVQ", d.Instruction.Name)
 	}
+
 	if d.Operands[0].Size != 8 || d.Operands[1].Size != 8 {
 		t.Fatalf("Operand sizes = %d, %d, want 8, 8", d.Operands[0].Size, d.Operands[1].Size)
 	}
@@ -122,6 +135,7 @@ func TestDecodeInstructionQuadwordRegisterPair(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
+
 	if want := uint64(0x12345678ABCDEF01); v != want {
 		t.Errorf("Load() = %#x, want %#x (R3:R2 combined)", v, want)
 	}
@@ -129,9 +143,11 @@ func TestDecodeInstructionQuadwordRegisterPair(t *testing.T) {
 	if err := d.Operands[1].Store(cpu, mem, v); err != nil {
 		t.Fatalf("Store: %v", err)
 	}
+
 	if cpu.GPR(vax.R4) != 0xABCDEF01 {
 		t.Errorf("R4 (low) = %#x, want 0xABCDEF01", cpu.GPR(vax.R4))
 	}
+
 	if cpu.GPR(vax.R5) != 0x12345678 {
 		t.Errorf("R5 (high) = %#x, want 0x12345678 (would be 0 under AUDIT.md's C2 bug)", cpu.GPR(vax.R5))
 	}
@@ -150,6 +166,7 @@ func TestDecodeInstructionOperandFaultPropagates(t *testing.T) {
 	if !errors.As(err, &f) || f.Code != ExcReservedAddr {
 		t.Fatalf("err = %v, want *Fault{Code: ExcReservedAddr}", err)
 	}
+	
 	if d.Instruction == nil || d.Instruction.Name != "MOVL" {
 		t.Errorf("Instruction = %+v, want MOVL still recorded despite the fault", d.Instruction)
 	}

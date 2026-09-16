@@ -26,30 +26,35 @@ func parseRegister(c *cursor, first byte) (vax.Reg, error) {
 		if isSymbolChar(c.peek()) {
 			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
+
 		return vax.Reg(n), nil
 
 	case 'A':
 		if c.next() != 'P' || isSymbolChar(c.peek()) {
 			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
+
 		return vax.AP, nil
 
 	case 'F':
 		if c.next() != 'P' || isSymbolChar(c.peek()) {
 			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
+
 		return vax.FP, nil
 
 	case 'S':
 		if c.next() != 'P' || isSymbolChar(c.peek()) {
 			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
+
 		return vax.SP, nil
 
 	case 'P':
 		if c.next() != 'C' || isSymbolChar(c.peek()) {
 			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
+		
 		return vax.PC, nil
 	}
 

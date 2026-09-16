@@ -42,6 +42,7 @@ func emulMova(e *Engine, d *Decoded) error {
 	if d.Operands[0].Kind == OperandRegister {
 		return &Fault{Code: ExcReservedAddr}
 	}
+
 	return d.Operands[1].Store(e.cpu, e.mem, uint64(d.Operands[0].Addr))
 }
 
@@ -53,6 +54,7 @@ func emulPusha(e *Engine, d *Decoded) error {
 	if d.Operands[0].Kind == OperandRegister {
 		return &Fault{Code: ExcReservedAddr}
 	}
+
 	return push(e, d.Operands[0].Addr)
 }
 
@@ -65,6 +67,7 @@ func emulPushl(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	return push(e, uint32(v))
 }
 
@@ -73,5 +76,6 @@ func emulPushl(e *Engine, d *Decoded) error {
 func push(e *Engine, v uint32) error {
 	sp := e.cpu.GPR(vax.SP) - 4
 	e.cpu.SetGPR(vax.SP, sp)
+	
 	return e.mem.StoreLongword(e.cpu, sp, v)
 }

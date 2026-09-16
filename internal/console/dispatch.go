@@ -547,7 +547,7 @@ func parseRunQualifier(rest string, defaultRunInits bool) (RunOptions, string) {
 
 		return opts, tail
 
-	case "BREA", "DEBU", "STEP":
+	case "BREA", "DEBU", "STEP": //nolint:goconst
 		opts.Step = true
 
 		return opts, tail
@@ -874,17 +874,22 @@ func cmdSet(d *Dispatcher, rest string) error {
 		q, tail, ok := leadingQualifier(rest)
 		if !ok {
 			rest = tail
+
 			break
 		}
 
 		uq := strings.ToUpper(q)
+
 		switch {
 		case uq != "" && strings.HasPrefix("PERMANENT", uq):
 			permQual = true
+
 		case uq != "" && strings.HasPrefix("ENTRY", uq):
 			entryQual = true
+
 		case uq != "" && strings.HasPrefix("LABEL", uq):
 			labelQual = true
+
 		default:
 			return vmserrors.New(vmserrors.CLI_BADQUALPREFIX, q)
 		}
@@ -979,14 +984,17 @@ func cmdSet(d *Dispatcher, rest string) error {
 
 	case "TRACE", "DISASSEMBLY":
 		d.Console.SetTrace(true)
+
 		return nil
 
 	case "NOTRACE", "NODISASSEMBLE":
 		d.Console.SetTrace(false)
+
 		return nil
 
 	case "DEBUG", "DBG":
 		var names []string
+
 		for _, f := range fields[1:] {
 			for _, n := range strings.Split(f, ",") {
 				if n = strings.TrimSpace(n); n != "" {
@@ -1157,6 +1165,7 @@ func cmdSetPTE(d *Dispatcher, rest string) error {
 	if err != nil {
 		return err
 	}
+
 	rest = strings.TrimSpace(rest)
 
 	addrs := []uint32{addr1}
@@ -1168,6 +1177,7 @@ func cmdSetPTE(d *Dispatcher, rest string) error {
 		if err != nil {
 			return err
 		}
+		
 		rest = strings.TrimSpace(rest)
 
 		a1, a2 := addr1&^0x1FF, addr2&^0x1FF

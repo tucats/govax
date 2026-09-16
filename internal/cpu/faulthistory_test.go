@@ -7,6 +7,7 @@ func TestFaultHistoryDefaultSize(t *testing.T) {
 	if got := e.FaultHistorySize(); got != defaultFaultHistory {
 		t.Errorf("FaultHistorySize() = %d, want %d", got, defaultFaultHistory)
 	}
+
 	if hist := e.FaultHistory(); hist != nil {
 		t.Errorf("FaultHistory() = %+v, want nil before any fault is recorded", hist)
 	}
@@ -24,6 +25,7 @@ func TestFaultHistoryRingBufferWraps(t *testing.T) {
 	if len(hist) != 2 {
 		t.Fatalf("len(FaultHistory()) = %d, want 2 (ring size 2, oldest overwritten)", len(hist))
 	}
+
 	if hist[0].Code != ExcCustomer || hist[1].Code != ExcReservedOp {
 		t.Errorf("history codes = [%#02x, %#02x], want [%#02x, %#02x]",
 			hist[0].Code, hist[1].Code, ExcCustomer, ExcReservedOp)
@@ -33,6 +35,7 @@ func TestFaultHistoryRingBufferWraps(t *testing.T) {
 	if hist[0].Seq != 2 || hist[1].Seq != 3 {
 		t.Errorf("Seq = %d, %d, want 2, 3", hist[0].Seq, hist[1].Seq)
 	}
+
 	if len(hist[0].Args) != 2 || hist[0].Args[0] != 1 || hist[0].Args[1] != 2 {
 		t.Errorf("Args = %v, want [1 2]", hist[0].Args)
 	}
@@ -48,6 +51,7 @@ func TestFaultHistorySetSizeResetsButKeepsSequence(t *testing.T) {
 	e.recordFault(ExcCustomer, nil, 0x200, 0)
 
 	e.SetFaultHistorySize(4)
+	
 	if hist := e.FaultHistory(); hist != nil {
 		t.Errorf("FaultHistory() after resize = %+v, want nil (buffer emptied)", hist)
 	}
@@ -57,6 +61,7 @@ func TestFaultHistorySetSizeResetsButKeepsSequence(t *testing.T) {
 	if len(hist) != 1 {
 		t.Fatalf("len(FaultHistory()) = %d, want 1", len(hist))
 	}
+
 	if hist[0].Seq != 3 {
 		t.Errorf("Seq = %d, want 3 (continuing from the two faults recorded before the resize)", hist[0].Seq)
 	}

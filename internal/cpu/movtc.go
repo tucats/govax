@@ -33,20 +33,22 @@ func emulMovtc(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	srcLen := int16(signExtend(l1v, d.Operands[0].Size))
 
 	l2v, err := d.Operands[4].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	dstLen := int16(signExtend(l2v, d.Operands[4].Size))
 
 	fillv, err := d.Operands[2].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
-	fill := byte(fillv)
 
+	fill := byte(fillv)
 	src := d.Operands[1].Addr
 	tbl := d.Operands[3].Addr
 	dst := d.Operands[5].Addr
@@ -56,6 +58,7 @@ func emulMovtc(e *Engine, d *Decoded) error {
 		if err != nil {
 			return 0, err
 		}
+
 		return e.mem.LoadByte(e.cpu, tbl+uint32(ch))
 	}
 
@@ -67,18 +70,22 @@ func emulMovtc(e *Engine, d *Decoded) error {
 			if err != nil {
 				return err
 			}
+
 			if err := e.mem.StoreByte(e.cpu, dst, ch); err != nil {
 				return err
 			}
+
 			len1--
 			src++
 			len2--
 			dst++
 		}
+
 		for len2 != 0 {
 			if err := e.mem.StoreByte(e.cpu, dst, fill); err != nil {
 				return err
 			}
+
 			len2--
 			dst++
 		}
@@ -195,6 +202,7 @@ func emulMovtuc(e *Engine, d *Decoded) error {
 
 		if translated == esc {
 			escaped = true
+			
 			break
 		}
 

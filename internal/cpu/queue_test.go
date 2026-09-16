@@ -73,21 +73,25 @@ func TestEmulInsqhi(t *testing.T) {
 	// first: header -> 0x8000 -> 0x7000 -> 0x6000 -> header.
 	forward := []uint32{0x8000, 0x7000, 0x6000, header}
 	cur := header
+
 	for i, want := range forward {
 		next := selfRelForward(t, cpu, mem, cur)
 		if next != want {
 			t.Fatalf("forward step %d: %#x -> %#x, want %#x", i, cur, next, want)
 		}
+
 		cur = next
 	}
 
 	backward := []uint32{0x6000, 0x7000, 0x8000, header}
 	cur = header
+
 	for i, want := range backward {
 		prev := selfRelBackward(t, cpu, mem, cur)
 		if prev != want {
 			t.Fatalf("backward step %d: %#x <- %#x, want %#x", i, cur, prev, want)
 		}
+
 		cur = prev
 	}
 }
@@ -106,17 +110,20 @@ func TestEmulInsqti(t *testing.T) {
 	if cpu.PSL().Z() {
 		t.Error("Z = true after inserting a second entry, want false")
 	}
+
 	insqti(t, e, 0x8000, header)
 
 	// INSQTI inserts at the tail, so entries come out in insertion order:
 	// header -> 0x6000 -> 0x7000 -> 0x8000 -> header.
 	forward := []uint32{0x6000, 0x7000, 0x8000, header}
 	cur := header
+
 	for i, want := range forward {
 		next := selfRelForward(t, cpu, mem, cur)
 		if next != want {
 			t.Fatalf("forward step %d: %#x -> %#x, want %#x", i, cur, next, want)
 		}
+
 		cur = next
 	}
 
@@ -126,6 +133,7 @@ func TestEmulInsqti(t *testing.T) {
 	// too.
 	backward := []uint32{0x8000, 0x7000, 0x6000, header}
 	cur = header
+
 	for i, want := range backward {
 		prev := selfRelBackward(t, cpu, mem, cur)
 		if prev != want {
@@ -155,6 +163,7 @@ func TestEmulRemqhi(t *testing.T) {
 	if got := remove(); got != 0x7000 {
 		t.Errorf("first removal = %#x, want 0x7000 (most recently inserted)", got)
 	}
+
 	if cpu.PSL().Z() || cpu.PSL().V() {
 		t.Errorf("after first removal: Z=%v V=%v, want both false (queue non-empty, removal succeeded)",
 			cpu.PSL().Z(), cpu.PSL().V())
@@ -163,6 +172,7 @@ func TestEmulRemqhi(t *testing.T) {
 	if got := remove(); got != 0x6000 {
 		t.Errorf("second removal = %#x, want 0x6000", got)
 	}
+
 	if !cpu.PSL().Z() || cpu.PSL().V() {
 		t.Errorf("after second removal: Z=%v V=%v, want Z=true V=false (queue now empty)",
 			cpu.PSL().Z(), cpu.PSL().V())
@@ -191,6 +201,7 @@ func TestEmulRemqti(t *testing.T) {
 	if got := cpu.GPR(vax.R0); got != 0x7000 {
 		t.Errorf("removal = %#x, want 0x7000 (the tail entry)", got)
 	}
+	
 	if cpu.PSL().Z() || cpu.PSL().V() {
 		t.Errorf("Z=%v V=%v, want both false", cpu.PSL().Z(), cpu.PSL().V())
 	}

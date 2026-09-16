@@ -177,11 +177,12 @@ func (c *Console) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) err
 		}
 
 		first = false
-
 		finish := trace(pc)
+
 		if err := c.Engine.Step(); err != nil {
 			return c.reportStopReason(err)
 		}
+
 		finish()
 	}
 }

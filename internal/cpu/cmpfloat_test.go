@@ -38,13 +38,16 @@ func TestEmulCmpFloat(t *testing.T) {
 			if psl.N() != c.wantN || psl.Z() != c.wantZ {
 				t.Errorf("N=%v Z=%v, want N=%v Z=%v", psl.N(), psl.Z(), c.wantN, c.wantZ)
 			}
+
 			if psl.V() || psl.C() {
 				t.Errorf("V=%v C=%v, want both false", psl.V(), psl.C())
 			}
+
 			// operands unmodified
 			if got := getFloatReg(t, cpu, c.size, vax.R1); got != c.a {
 				t.Errorf("src1 modified: = %v, want %v", got, c.a)
 			}
+
 			if got := getFloatReg(t, cpu, c.size, r2); got != c.b {
 				t.Errorf("src2 modified: = %v, want %v", got, c.b)
 			}
@@ -95,9 +98,11 @@ func TestEmulTstFloat(t *testing.T) {
 			if psl.N() != c.wantN || psl.Z() != c.wantZ {
 				t.Errorf("N=%v Z=%v, want N=%v Z=%v", psl.N(), psl.Z(), c.wantN, c.wantZ)
 			}
+
 			if psl.V() || psl.C() {
 				t.Errorf("V=%v C=%v, want both false", psl.V(), psl.C())
 			}
+			
 			if got := getFloatReg(t, cpu, c.size, vax.R1); got != c.value {
 				t.Errorf("source modified: = %v, want %v", got, c.value)
 			}

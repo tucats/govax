@@ -45,7 +45,9 @@ func emulMoveFloat(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+	
 	setFloatMovePSL(e.cpu, value)
+
 	return storeFloat(e.cpu, e.mem, d.Operands[1], value)
 }
 
@@ -55,7 +57,9 @@ func emulNegateFloat(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	result := -value
 	setFloatMovePSL(e.cpu, result)
+
 	return storeFloat(e.cpu, e.mem, d.Operands[1], result)
 }

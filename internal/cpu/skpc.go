@@ -20,12 +20,14 @@ func emulSkpc(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+	
 	ch := byte(chv)
 
 	lenv, err := d.Operands[1].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	length := uint16(lenv)
 	addr := d.Operands[2].Addr
 
@@ -34,9 +36,11 @@ func emulSkpc(e *Engine, d *Decoded) error {
 		if err != nil {
 			return err
 		}
+
 		if ch != ch2 {
 			break
 		}
+
 		length--
 		addr++
 	}
@@ -50,5 +54,6 @@ func emulSkpc(e *Engine, d *Decoded) error {
 	psl.SetV(false)
 	psl.SetC(false)
 	e.cpu.SetPSL(psl)
+
 	return nil
 }

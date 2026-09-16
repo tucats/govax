@@ -20,16 +20,20 @@ func callBounded(t *testing.T, c *Console, addr uint32, maxSteps int) (err error
 	if err := c.Engine.CallEntry(addr); err != nil {
 		return err, false
 	}
+
 	for i := 0; i < maxSteps; i++ {
 		err := c.Engine.Step()
 		if err == nil {
 			continue
 		}
+
 		if errors.Is(err, cpu.ErrConsoleCallReturned) || errors.Is(err, cpu.ErrHalted) {
 			return nil, false
 		}
+
 		return err, false
 	}
+
 	return nil, true
 }
 
@@ -112,15 +116,18 @@ func TestRun_everyMilestoneFixture(t *testing.T) {
 			if err != nil {
 				t.Fatalf("imageLoad(%s): %v", name, err)
 			}
+
 			for _, dep := range c.ICBList {
 				if err := c.imageFixup(dep); err != nil {
 					t.Fatalf("imageFixup(%s dependency %s): %v", name, dep.Name, err)
 				}
 			}
+
 			driverAddr, ok, err := c.buildImageInitDriver(mainICB, false)
 			if err != nil {
 				t.Fatalf("buildImageInitDriver(%s): %v", name, err)
 			}
+
 			if !ok {
 				t.Fatalf("%s: no usable transfer address", name)
 			}
@@ -129,6 +136,7 @@ func TestRun_everyMilestoneFixture(t *testing.T) {
 			if hitCap {
 				t.Errorf("%s: did not reach a HALT/return within 2,000,000 steps", name)
 			}
+			
 			t.Logf("%s: terminating outcome: %v", name, runErr)
 		})
 	}

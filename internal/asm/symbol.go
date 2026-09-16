@@ -72,6 +72,7 @@ func fixupSize(k fixupKind) int64 {
 	case fixAddrL, fixDispL, fixBranchL:
 		return 4
 	}
+
 	return 0
 }
 
@@ -130,17 +131,6 @@ func (t *symbolTable) clear(name string) bool {
 
 // clearAll removes every symbol, matching .CLEAR with no name.
 func (t *symbolTable) clearAll() { t.byName = make(map[string]*symbol) }
-
-// scopeName rewrites a leading-underscore "local" name to be scoped under
-// entry, matching asm_symbols.c's scope_name(): a name starting with a
-// single "_" (not "__") is rewritten to "<entry>_<rest>"; anything else is
-// returned unchanged. Reports whether scoping was applied.
-func scopeName(name, entry string) (string, bool) {
-	if len(name) < 2 || name[0] != '_' || name[1] == '_' {
-		return name, false
-	}
-	return entry + "_" + name[1:], true
-}
 
 // entryScope returns the current scope prefix for local ("_name") symbols,
 // generating an anonymous numbered scope the first time it's needed since
@@ -242,6 +232,7 @@ func (a *Assembler) setSymbol(name string, value uint32, flags SymFlag, unique b
 			return err
 		}
 	}
+	
 	sym.forward = nil
 
 	return nil

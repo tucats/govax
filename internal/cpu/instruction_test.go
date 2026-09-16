@@ -12,20 +12,26 @@ import "testing"
 const wantInstructionCount = 284
 
 func allInstructions(t *Table) []*Instruction {
-	seen := make(map[*Instruction]bool)
 	var out []*Instruction
+
+	seen := make(map[*Instruction]bool)
+
 	for _, inst := range t.single {
 		if inst != nil && !seen[inst] {
 			seen[inst] = true
+
 			out = append(out, inst)
 		}
 	}
+
 	for _, inst := range t.extended {
 		if !seen[inst] {
 			seen[inst] = true
+
 			out = append(out, inst)
 		}
 	}
+
 	return out
 }
 
@@ -52,6 +58,7 @@ func TestTableAllOrderIsDeterministic(t *testing.T) {
 	if len(first) != len(second) {
 		t.Fatalf("len mismatch: %d vs %d", len(first), len(second))
 	}
+
 	for i := range first {
 		if first[i] != second[i] {
 			t.Fatalf("order mismatch at index %d: %s vs %s", i, first[i].Name, second[i].Name)
@@ -59,13 +66,16 @@ func TestTableAllOrderIsDeterministic(t *testing.T) {
 	}
 
 	lastExtended := false
+
 	for i, inst := range first {
 		if inst.Opcode.Extended == 0 {
 			if lastExtended {
 				t.Fatalf("index %d: single-byte %s found after an extended opcode", i, inst.Name)
 			}
+
 			continue
 		}
+
 		lastExtended = true
 	}
 }
@@ -75,6 +85,7 @@ func TestTableImplemented(t *testing.T) {
 	if halt == nil {
 		t.Fatal("ByName(HALT) = nil")
 	}
+
 	if !instructionTable.Implemented(halt) {
 		t.Error("expected HALT to be Implemented (Phase 04 registers a real handler)")
 	}
@@ -120,9 +131,11 @@ func TestInstructionTableLookup(t *testing.T) {
 			if inst == nil {
 				t.Fatalf("Lookup(%+v) = nil, want %q", c.opcode, c.want)
 			}
+
 			if inst.Name != c.want {
 				t.Errorf("Lookup(%+v).Name = %q, want %q", c.opcode, inst.Name, c.want)
 			}
+
 			if inst.Opcode != c.opcode {
 				t.Errorf("Lookup(%+v).Opcode = %+v, want %+v", c.opcode, inst.Opcode, c.opcode)
 			}
@@ -142,7 +155,7 @@ func TestInstructionTableLookupUndefined(t *testing.T) {
 func TestInstructionTableDFloatingFixedEntries(t *testing.T) {
 	// SUBD2, CVTDB, CVTDW, CVTDL, CVTRDL, CMPD, TSTD have zeroed-out operand
 	// data in the C reference's own instruction_table.h (confirmed a real
-	// bug in the C source, not a Go transcription issue -- see
+	// issue in the C source, not a Go transcription issue -- see
 	// docs/PHASE-05.md's design notes and docs/DEVIATIONS.md); the generator
 	// (internal/cpu/gen's knownTableFixes) patches them to mirror their
 	// already-correct F-floating/sibling D-floating rows. This test pins
@@ -169,21 +182,26 @@ func TestInstructionTableDFloatingFixedEntries(t *testing.T) {
 		{"TSTD", 0x73, 1, [6]int{8, 0, 0, 0, 0, 0},
 			[6]AccessKind{AccessRead, AccessNone, AccessNone, AccessNone, AccessNone, AccessNone}},
 	}
+
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			inst := instructionTable.Lookup(Opcode{Function: c.opcode})
 			if inst == nil || inst.Name != c.name {
 				t.Fatalf("Lookup(0x%02X) = %+v, want %q", c.opcode, inst, c.name)
 			}
+
 			if inst.OperandCount != c.count {
 				t.Errorf("%s.OperandCount = %d, want %d", c.name, inst.OperandCount, c.count)
 			}
+
 			if inst.Scale != c.scale {
 				t.Errorf("%s.Scale = %v, want %v", c.name, inst.Scale, c.scale)
 			}
+
 			if inst.Access != c.access {
 				t.Errorf("%s.Access = %v, want %v", c.name, inst.Access, c.access)
 			}
+
 			if inst.Type != ShortLiteralFloat {
 				t.Errorf("%s.Type = %v, want ShortLiteralFloat", c.name, inst.Type)
 			}
@@ -196,13 +214,16 @@ func TestInstructionTableIndexOperands(t *testing.T) {
 	if inst == nil || inst.Name != "INDEX" {
 		t.Fatalf("Lookup(INDEX) = %+v", inst)
 	}
+
 	if inst.OperandCount != 6 {
 		t.Fatalf("INDEX.OperandCount = %d, want 6", inst.OperandCount)
 	}
+
 	wantAccess := [6]AccessKind{AccessRead, AccessRead, AccessRead, AccessRead, AccessRead, AccessWrite}
 	if inst.Access != wantAccess {
 		t.Errorf("INDEX.Access = %+v, want %+v", inst.Access, wantAccess)
 	}
+	
 	wantScale := [6]int{4, 4, 4, 4, 4, 4}
 	if inst.Scale != wantScale {
 		t.Errorf("INDEX.Scale = %+v, want %+v", inst.Scale, wantScale)

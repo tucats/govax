@@ -130,6 +130,7 @@ func (c *Console) findMainICB() *ICB {
 			return icb
 		}
 	}
+
 	return nil
 }
 
@@ -146,6 +147,7 @@ func (c *Console) storeBytes(addr uint32, data []byte) error {
 				return err
 			}
 		}
+
 		return nil
 	})
 }
@@ -155,6 +157,7 @@ func (c *Console) loadByte(addr uint32) (byte, error) {
 
 	err := c.withKernelMode(func() (err error) {
 		v, err = c.Mem.LoadByte(c.CPU, addr)
+
 		return err
 	})
 
@@ -166,6 +169,7 @@ func (c *Console) loadWord(addr uint32) (uint16, error) {
 
 	err := c.withKernelMode(func() (err error) {
 		v, err = c.Mem.LoadWord(c.CPU, addr)
+
 		return err
 	})
 
@@ -177,6 +181,7 @@ func (c *Console) loadLong(addr uint32) (uint32, error) {
 
 	err := c.withKernelMode(func() (err error) {
 		v, err = c.Mem.LoadLongword(c.CPU, addr)
+
 		return err
 	})
 
@@ -200,11 +205,13 @@ func (c *Console) storeLong(addr, v uint32) error {
 // printing, with no consumer in this port.
 func (c *Console) readIHDTransferOffset(base uint32) (uint32, error) {
 	v, err := c.loadWord(base + 2)
+
 	return uint32(v), err
 }
 
 func (c *Console) readIHDIdentOffset(base uint32) (uint32, error) {
 	v, err := c.loadWord(base + 6)
+
 	return uint32(v), err
 }
 
@@ -330,7 +337,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if len(data) < 512 {
 		return nil, vmserrors.New(vmserrors.RMS_SHORTHEADER, fn)
 	}
@@ -424,6 +431,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 		if isdType(isd.Flags) == isdUsrStack {
 			continue
 		}
+
 		if isd.Flags&isdGBL != 0 {
 			continue
 		}
@@ -486,12 +494,12 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		iaf.OffsetNames = namesOffset
 		icb.IAF = iaf
 
 		self := &SHR{Name: icb.Name, ID: 0, Base: icb.Base, Icb: icb}
 		icb.SHRList = append(icb.SHRList, self)
-
 		naddr := addr + iaf.OffsetShl + 16 + iaf.OffsetNames
 
 		var imageID uint32
@@ -504,12 +512,15 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 			if err != nil {
 				return nil, err
 			}
+
 			buf := make([]byte, nameLen)
+
 			for i := range buf {
 				b, err := c.loadByte(nameAddr + 1 + uint32(i))
 				if err != nil {
 					return nil, err
 				}
+
 				buf[i] = b
 			}
 
@@ -521,10 +532,12 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 			if shr.ID == 0 {
 				continue
 			}
+
 			dep, err := c.imageLoad(shr.Name, icbSecondary)
 			if err != nil {
 				continue // matches image_load's VAX_FNF-is-tolerated handling
 			}
+
 			shr.Icb = dep
 			shr.Base = dep.Base
 		}
@@ -541,6 +554,7 @@ func findSHRByID(icb *ICB, id uint32) *SHR {
 			return shr
 		}
 	}
+
 	return nil
 }
 
@@ -553,6 +567,7 @@ func (c *Console) findLoadedICB(name string) *ICB {
 			return icb
 		}
 	}
+
 	return nil
 }
 
@@ -565,11 +580,14 @@ func (c *Console) resolveFixupTarget(shr *SHR, offset uint32) (uint32, error) {
 	if dep := c.findLoadedICB(shr.Name); dep != nil {
 		return dep.Base + offset, nil
 	}
+
 	name := fmt.Sprintf("SHIM$%s_%08X", shr.Name, offset)
+
 	v, ok := c.Symbols.Get(name)
 	if !ok {
 		return 0, vmserrors.New(vmserrors.LIB_UNRESOLVED, name)
 	}
+
 	return v, nil
 }
 
@@ -586,6 +604,7 @@ func (c *Console) imageFixup(icb *ICB) error {
 	if icb.FixupISD == nil {
 		return nil
 	}
+
 	if icb.Flags&icbFixed != 0 {
 		return nil
 	}
@@ -595,6 +614,7 @@ func (c *Console) imageFixup(icb *ICB) error {
 
 	if iaf.OffsetGFix != 0 {
 		naddr := addr + iaf.OffsetGFix
+
 		fixupCount, err := c.loadLong(naddr)
 		if err != nil {
 			return err
@@ -602,6 +622,7 @@ func (c *Console) imageFixup(icb *ICB) error {
 
 		for fixupCount != 0 {
 			naddr += 4
+
 			imageID, err := c.loadLong(naddr)
 			if err != nil {
 				return err
@@ -609,10 +630,11 @@ func (c *Console) imageFixup(icb *ICB) error {
 
 			shr := findSHRByID(icb, imageID)
 			if shr == nil {
-				fixupCount = 0
+				fixupCount = 0 //nolint:ineffassign // holdover from C code port
 			} else {
 				for n := uint32(0); n < fixupCount; n++ {
 					naddr += 4
+
 					offset, err := c.loadLong(naddr)
 					if err != nil {
 						return err
@@ -638,6 +660,7 @@ func (c *Console) imageFixup(icb *ICB) error {
 
 	if iaf.OffsetAddr != 0 {
 		naddr := addr + iaf.OffsetAddr
+
 		fixupCount, err := c.loadLong(naddr)
 		if err != nil {
 			return err
@@ -645,22 +668,26 @@ func (c *Console) imageFixup(icb *ICB) error {
 
 		for fixupCount != 0 {
 			naddr += 4
+
 			imageID, err := c.loadLong(naddr)
 			if err != nil {
 				return err
 			}
+
 			shr := findSHRByID(icb, imageID)
 			if shr == nil {
-				fixupCount = 0
+				fixupCount = 0 //nolint:ineffassign // holdover from C code port
 			} else {
 				for n := uint32(0); n < fixupCount; n++ {
 					naddr += 4
+
 					offset, err := c.loadLong(naddr)
 					if err != nil {
 						return err
 					}
 
 					vaddr := icb.Base + offset
+					
 					target, err := c.loadLong(vaddr)
 					if err != nil {
 						return err
@@ -680,6 +707,7 @@ func (c *Console) imageFixup(icb *ICB) error {
 	}
 
 	icb.Flags |= icbFixed
+
 	return nil
 }
 
@@ -698,14 +726,17 @@ func (c *Console) findImage(fn string) (string, bool) {
 	if c.SharePrefix != "" && c.SharePrefix[0] != 0x1B {
 		candidates = append(candidates, c.SharePrefix+fn+suffix)
 	}
+
 	for _, cand := range candidates {
 		if _, err := os.Stat(cand); err == nil {
 			return cand, true
 		}
+
 		lower := strings.ToLower(cand)
 		if _, err := os.Stat(lower); err == nil {
 			return lower, true
 		}
 	}
+
 	return "", false
 }

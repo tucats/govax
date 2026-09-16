@@ -33,6 +33,7 @@ func DeviceClassName(class DeviceClass) string {
 	if name, ok := deviceClassNames[class]; ok {
 		return name
 	}
+
 	return "<unknown>"
 }
 
@@ -44,7 +45,7 @@ func DeviceClassName(class DeviceClass) string {
 // fidelity reason to keep the C spelling. PID/OwnUIC are left for a caller
 // to fill in (define_device.c reads OwnUIC from a qualifier and otherwise
 // leaves PID at 0 until SYS$ASSIGN sets it from the calling process — no
-// process/PID concept exists yet in this port; see doc.go's Phase 10 note)
+// process/PID concept exists yet in this port; see doc.go's Phase 10 note).
 type Device struct {
 	Name string
 

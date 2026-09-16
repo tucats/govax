@@ -95,8 +95,10 @@ func (e *Engine) ClearInterrupt(code Exception) int {
 	for _, ip := range e.iqueue {
 		if ip.code == code {
 			n++
+
 			continue
 		}
+
 		remaining = append(remaining, ip)
 	}
 
@@ -140,9 +142,11 @@ func (e *Engine) Interrupt(code Exception, ipl uint32, quantum int) {
 			fmt.Fprintf(e.cpu.DebugWriter(), "DEBUG(INTERRUPTS): set interrupt %04X, IPL %d, quantum %d\n",
 				code, ipl, quantum)
 		}
+
 		e.interruptPending = true
 		e.interruptCode = code
 		e.interruptIPL = ipl
+
 		return
 	}
 
@@ -150,10 +154,12 @@ func (e *Engine) Interrupt(code Exception, ipl uint32, quantum int) {
 	if e.quantumInitial > 0 {
 		age = quantum / e.quantumInitial
 	}
+
 	if e.cpu.DebugEnabled(vax.DebugInterrupts) {
 		fmt.Fprintf(e.cpu.DebugWriter(), "DEBUG(INTERRUPTS): queue interrupt %04X, IPL %d, age=%d, quantum %d\n",
 			code, ipl, age, quantum)
 	}
+
 	e.iqueue = append(e.iqueue, &queuedInterrupt{code: code, ipl: ipl, age: age})
 
 	if e.quantumInitial > 0 && e.quantumCurrent > quantum {
@@ -170,6 +176,7 @@ func (e *Engine) tickQuantum() {
 	if e.quantumCurrent > 0 {
 		return
 	}
+
 	e.quantumCurrent = e.quantumInitial
 
 	e.tickIntervalClock()
@@ -193,28 +200,35 @@ func (e *Engine) scanInterruptQueue() {
 	ipl := e.cpu.PSL().IPL()
 	debug := e.cpu.DebugEnabled(vax.DebugInterrupts)
 	remaining := e.iqueue[:0]
+
 	for _, ip := range e.iqueue {
 		if debug {
 			fmt.Fprintf(e.cpu.DebugWriter(), "DEBUG(INTERRUPTS): quantum; evaluating interrupt %04X, IPL %d, age=%d\n",
 				ip.code, ip.ipl, ip.age)
 		}
+
 		switch {
 		case ip.age > 0:
 			ip.age--
 			remaining = append(remaining, ip)
+
 		case e.interruptPending:
 			remaining = append(remaining, ip)
+
 		case ip.ipl > ipl:
 			e.interruptPending = true
 			e.interruptCode = ip.code
 			e.interruptIPL = ip.ipl
+
 			if debug {
 				fmt.Fprintf(e.cpu.DebugWriter(), "DEBUG(INTERRUPTS): set interrupt %04X\n", ip.code)
 			}
+
 		default:
 			remaining = append(remaining, ip)
 		}
 	}
+
 	e.iqueue = remaining
 }
 
@@ -225,7 +239,7 @@ func (e *Engine) scanInterruptQueue() {
 // no interrupt-specific behavior to add here).
 //
 // Deviation from the C source, fixed rather than replicated (a clear-cut
-// bug, not an ISA judgment call -- see docs/DEVIATIONS.md): handle_fault
+// issue, not an ISA judgment call -- see docs/DEVIATIONS.md): handle_fault
 // saves vax.instruction_PC as the interrupted return address, but for a
 // genuine interrupt (as opposed to a fault raised mid-instruction)
 // vax.instruction_PC still holds the *previous* instruction's start
@@ -249,6 +263,7 @@ func (e *Engine) deliverPendingInterrupt() error {
 	// this same delivery path (set_fault, then the BREAK_FAULT check, both
 	// ahead of handle_fault) — see faulthistory.go/faultbreak.go.
 	e.recordFault(code, nil, e.instructionPC, e.cpu.PSL())
+
 	if e.faultBreakHit(code) {
 		return &FaultBreak{Code: code}
 	}
@@ -290,10 +305,12 @@ func (e *Engine) tickIntervalClock() {
 		if iccs&iccsInt != 0 {
 			iccs |= iccsErr
 		}
+
 		iccs |= iccsInt
 		if iccs&deviceIE != 0 {
 			e.Interrupt(ExcInterval, 22, 0)
 		}
+
 		clock = nicr
 	}
 
@@ -329,12 +346,14 @@ func (e *Engine) DeliverConsoleByte(b byte) {
 		if e.cpu.DebugEnabled(vax.DebugKeyboard) {
 			fmt.Fprintln(e.cpu.DebugWriter(), "KBD: hit, not read yet, ignoring")
 		}
+
 		return
 	}
 
 	e.cpu.SetPR(vax.RXDB, uint32(b))
 	rxcs := e.cpu.PR(vax.RXCS) | 0x80
 	e.cpu.SetPR(vax.RXCS, rxcs)
+	
 	if rxcs&deviceIE != 0 {
 		e.Interrupt(ExcConRead, 20, 0)
 	}

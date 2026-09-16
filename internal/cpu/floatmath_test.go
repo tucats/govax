@@ -17,7 +17,9 @@ func setFloatReg(t *testing.T, cpu *vax.CPU, size int, r vax.Reg, value float64)
 	if err != nil {
 		t.Fatalf("fpuStore(%v): %v", value, err)
 	}
+
 	cpu.SetGPR(r, uint32(raw))
+
 	if size == 8 {
 		cpu.SetGPR(r+1, uint32(raw>>32))
 	}
@@ -30,10 +32,12 @@ func getFloatReg(t *testing.T, cpu *vax.CPU, size int, r vax.Reg) float64 {
 	if size == 8 {
 		raw |= uint64(cpu.GPR(r+1)) << 32
 	}
+
 	v, err := fpuLoad(raw, size)
 	if err != nil {
 		t.Fatalf("fpuLoad: %v", err)
 	}
+
 	return v
 }
 
@@ -43,6 +47,7 @@ func TestEmulFAdd(t *testing.T) {
 		if size == 8 {
 			opcode = 0x60 // ADDD2
 		}
+
 		cpu, mem := fixture()
 		e := NewEngine(cpu, mem)
 		// R1:R2 and R3:R4 -- non-overlapping register pairs, needed for the
@@ -56,6 +61,7 @@ func TestEmulFAdd(t *testing.T) {
 		if got := getFloatReg(t, cpu, size, vax.R3); got != 6.5 {
 			t.Errorf("size %d: R3 = %v, want 6.5", size, got)
 		}
+
 		psl := cpu.PSL()
 		if psl.N() || psl.Z() || psl.V() || psl.C() {
 			t.Errorf("size %d: N=%v Z=%v V=%v C=%v, want all false", size, psl.N(), psl.Z(), psl.V(), psl.C())
@@ -66,6 +72,7 @@ func TestEmulFAdd(t *testing.T) {
 func TestEmulFAdd3(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
+
 	setFloatReg(t, cpu, 4, vax.R1, 2.5)
 	setFloatReg(t, cpu, 4, vax.R2, 4.0)
 
@@ -82,6 +89,7 @@ func TestEmulFSubOperandOrder(t *testing.T) {
 	// SUB family's convention.
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
+
 	setFloatReg(t, cpu, 4, vax.R1, 1.5) // subtrahend
 	setFloatReg(t, cpu, 4, vax.R2, 4.0) // minuend
 
@@ -95,6 +103,7 @@ func TestEmulFSubOperandOrder(t *testing.T) {
 func TestEmulFMul(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
+
 	setFloatReg(t, cpu, 8, vax.R1, 2.5)
 	setFloatReg(t, cpu, 8, vax.R3, -2.0) // R3:R4 pair (avoid overlapping R1:R2)
 
@@ -103,6 +112,7 @@ func TestEmulFMul(t *testing.T) {
 	if got := getFloatReg(t, cpu, 8, vax.R3); got != -5.0 {
 		t.Errorf("R3:R4 = %v, want -5.0", got)
 	}
+
 	psl := cpu.PSL()
 	if !psl.N() {
 		t.Error("N = false, want true (-5.0 is negative)")
@@ -113,6 +123,7 @@ func TestEmulFDivOperandOrder(t *testing.T) {
 	// DIVF2 div,quo: quo <- quo / div -- op0 is the divisor.
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
+
 	setFloatReg(t, cpu, 4, vax.R1, 2.0)  // divisor
 	setFloatReg(t, cpu, 4, vax.R2, 10.0) // dividend
 
@@ -126,6 +137,7 @@ func TestEmulFDivOperandOrder(t *testing.T) {
 func TestEmulFAddZeroSetsZ(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
+
 	setFloatReg(t, cpu, 4, vax.R1, 3.0)
 	setFloatReg(t, cpu, 4, vax.R2, -3.0)
 	setC(cpu, true) // confirm C is cleared, not left stale
@@ -135,6 +147,7 @@ func TestEmulFAddZeroSetsZ(t *testing.T) {
 	if got := getFloatReg(t, cpu, 4, vax.R2); got != 0.0 {
 		t.Errorf("R2 = %v, want 0.0", got)
 	}
+
 	psl := cpu.PSL()
 	if !psl.Z() || psl.N() || psl.V() || psl.C() {
 		t.Errorf("N=%v Z=%v V=%v C=%v, want Z=true, rest false", psl.N(), psl.Z(), psl.V(), psl.C())
@@ -149,6 +162,7 @@ func TestEmulFAddOverflowFaults(t *testing.T) {
 	// reasoning for emulHalt.
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
+
 	setFloatReg(t, cpu, 4, vax.R1, 1.6e38)
 	setFloatReg(t, cpu, 4, vax.R2, 1.6e38)
 	cpu.SetGPR(vax.PC, base)
@@ -158,9 +172,11 @@ func TestEmulFAddOverflowFaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decodeInstruction: %v", err)
 	}
+
 	err = emulFAdd(e, &d)
 
 	var f *Fault
+
 	if !errors.As(err, &f) || f.Code != ExcArithmetic {
 		t.Fatalf("emulFAdd() = %v, want *Fault{Code: ExcArithmetic} (result exceeds F_floating range)", err)
 	}
@@ -172,6 +188,7 @@ func TestEmulFAddShortLiteralSource(t *testing.T) {
 	// exactly representable in shortDouble[64].
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
+	
 	setFloatReg(t, cpu, 4, vax.R2, 1.0)
 
 	stepInstruction(t, e, 0x40, 0x00, regMode(vax.R2)) // ADDF2 S^#0.5, R2

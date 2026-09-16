@@ -32,16 +32,19 @@ func emulCmpFloat(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	src2, err := loadFloat(e.cpu, e.mem, d.Operands[1])
 	if err != nil {
 		return err
 	}
+
 	psl := e.cpu.PSL()
 	psl.SetN(src1 < src2)
 	psl.SetZ(src1 == src2)
 	psl.SetV(false)
 	psl.SetC(false)
 	e.cpu.SetPSL(psl)
+
 	return nil
 }
 
@@ -53,11 +56,13 @@ func emulTstFloat(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	psl := e.cpu.PSL()
 	psl.SetN(value < 0.0)
 	psl.SetZ(value == 0.0)
 	psl.SetV(false)
 	psl.SetC(false)
 	e.cpu.SetPSL(psl)
+	
 	return nil
 }

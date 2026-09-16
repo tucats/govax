@@ -396,6 +396,7 @@ func TestShowMemory_afterVMInit(t *testing.T) {
 	if !strings.Contains(out, "physical pages mapped") {
 		t.Errorf("output = %q, want a mapped/free page count", out)
 	}
+
 	for _, name := range []string{"P0 Region", "P1 Region", "S0 Region"} {
 		if !strings.Contains(out, name) {
 			t.Errorf("output = %q, want it to contain %q", out, name)
@@ -407,9 +408,11 @@ func TestShowSymbols(t *testing.T) {
 	c, buf := newTestConsole(t)
 	c.Symbols.Set("MYSYM", 0xABCD, SymbolUser)
 	buf.Reset()
+
 	if err := c.ShowSymbols(); err != nil {
 		t.Fatalf("ShowSymbols: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "MYSYM") || !strings.Contains(buf.String(), "0000ABCD") {
 		t.Errorf("output = %q, want it to contain MYSYM and its value", buf.String())
 	}
@@ -418,18 +421,22 @@ func TestShowSymbols(t *testing.T) {
 func TestShowBreakpoints(t *testing.T) {
 	c, buf := newTestConsole(t)
 	buf.Reset()
+
 	if err := c.ShowBreakpoints(); err != nil {
 		t.Fatalf("ShowBreakpoints: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "No breakpoints") {
 		t.Errorf("output = %q, want a no-breakpoints message", buf.String())
 	}
 
 	c.AddBreakpoint(0x300)
 	buf.Reset()
+
 	if err := c.ShowBreakpoints(); err != nil {
 		t.Fatalf("ShowBreakpoints: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "00000300") {
 		t.Errorf("output = %q, want it to contain the breakpoint address", buf.String())
 	}
@@ -438,9 +445,11 @@ func TestShowBreakpoints(t *testing.T) {
 func TestShowRadix(t *testing.T) {
 	c, buf := newTestConsole(t)
 	buf.Reset()
+
 	if err := c.ShowRadix(); err != nil {
 		t.Fatalf("ShowRadix: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "16") {
 		t.Errorf("output = %q, want it to contain the default radix 16", buf.String())
 	}
@@ -450,9 +459,11 @@ func TestShowStack(t *testing.T) {
 	c, buf := newTestConsole(t)
 	c.CPU.SetPR(vax.ESP, 0x99887766)
 	buf.Reset()
+
 	if err := c.ShowStack(StackESP, false, 0, false); err != nil {
 		t.Fatalf("ShowStack: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "99887766") {
 		t.Errorf("output = %q, want it to contain the ESP value", buf.String())
 	}
@@ -461,9 +472,11 @@ func TestShowStack(t *testing.T) {
 func TestShowCPU(t *testing.T) {
 	c, buf := newTestConsole(t)
 	buf.Reset()
+
 	if err := c.ShowCPU(); err != nil {
 		t.Fatalf("ShowCPU: %v", err)
 	}
+	
 	if !strings.Contains(buf.String(), "running") {
 		t.Errorf("output = %q, want it to say running", buf.String())
 	}

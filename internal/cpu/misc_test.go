@@ -127,6 +127,7 @@ func TestEmulPushrPoprRoundTrip(t *testing.T) {
 
 	// PUSHR^M #^M<R0,R2,R5>: mask bits 0, 2, 5.
 	const mask = 1<<0 | 1<<2 | 1<<5
+
 	stepInstruction(t, e, 0xBB, shortLiteral(mask))
 
 	if got := cpu.GPR(vax.SP); got != 0x9000-12 {
@@ -188,12 +189,17 @@ func TestEmulProberNotAccessibleSetsZWithoutFaulting(t *testing.T) {
 	e := NewEngine(cpu, mem)
 
 	const sbr = 0x3000   // physical: the (two-entry) S0 page table
+
 	const codePFN = 0x10 // page 0 -> physical 0x2000
+
 	const codeVA = 0x80000000
+
 	const codePhys = 0x2000
+
 	const probeTargetVA = 0x80000200 // S0 page 1: in range, no valid PTE
 
 	var pte vm.PTE
+	
 	pte.SetValid(true)
 	pte.SetProtection(vm.ProtKW)
 	pte.SetPFN(codePFN)

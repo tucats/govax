@@ -21,5 +21,6 @@ func emulClr(e *Engine, d *Decoded) error {
 	psl.SetZ(true)
 	psl.SetV(false)
 	e.cpu.SetPSL(psl)
+	
 	return d.Operands[0].Store(e.cpu, e.mem, 0)
 }

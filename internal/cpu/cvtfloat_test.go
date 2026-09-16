@@ -44,6 +44,7 @@ func TestEmulCvtFloatToIntTruncates(t *testing.T) {
 			if psl.N() != c.wantN || psl.Z() != c.wantZ {
 				t.Errorf("N=%v Z=%v, want N=%v Z=%v", psl.N(), psl.Z(), c.wantN, c.wantZ)
 			}
+
 			if psl.V() || psl.C() {
 				t.Errorf("V=%v C=%v, want both false", psl.V(), psl.C())
 			}
@@ -185,6 +186,7 @@ func TestEmulCvtIntToFloatNegativeSetsN(t *testing.T) {
 	if !cpu.PSL().N() {
 		t.Error("N = false, want true")
 	}
+	
 	if got := getFloatReg(t, cpu, 4, vax.R2); got != -1.0 {
 		t.Errorf("result = %v, want -1.0", got)
 	}

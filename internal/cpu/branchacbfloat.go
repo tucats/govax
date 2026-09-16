@@ -36,6 +36,8 @@ func init() {
 // ACB variants and here in the one floating variant the C source actually
 // implements) -- fixed here directly rather than reproduced a fifth time.
 func emulAcbFloat(size int) Handler {
+	_ = size // ignored for now
+
 	return func(e *Engine, d *Decoded) error {
 		limit, err := loadFloat(e.cpu, e.mem, d.Operands[0])
 		if err != nil {
@@ -54,6 +56,7 @@ func emulAcbFloat(size int) Handler {
 
 		index += addend
 		setFloatMovePSL(e.cpu, index) // N/Z/V, C left unaffected -- see below
+
 		if err := storeFloat(e.cpu, e.mem, d.Operands[2], index); err != nil {
 			return err
 		}
@@ -68,7 +71,7 @@ func emulAcbFloat(size int) Handler {
 		if branch {
 			e.cpu.SetGPR(vax.PC, d.Operands[3].Addr)
 		}
-		
+
 		return nil
 	}
 }

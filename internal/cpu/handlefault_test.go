@@ -54,9 +54,11 @@ func TestHandleFaultBasicFrame(t *testing.T) {
 	if arg0 != 0xAAAA || arg1 != 1 {
 		t.Errorf("pushed args = (%#x, %#x), want (0xAAAA, 1)", arg0, arg1)
 	}
+
 	if pc != 0x4000 {
 		t.Errorf("pushed PC = %#x, want 0x4000 (instructionPC)", pc)
 	}
+	
 	_ = psl // exact PSL bit layout is exercised by TestHandleFaultModeSwitch below
 }
 
@@ -71,10 +73,13 @@ func TestHandleFaultReadsVectorWithVMDisabled(t *testing.T) {
 	// an S0-region stack address instead, backed by one valid PTE, so it
 	// succeeds independent of whether the vector-read bypass worked.
 	const stackVA = 0x80000100 // S0 region, page 0 (with room below it in the same page)
+
 	const sbr = 0x3000         // physical address of the (one-entry) S0 page table
+
 	const pfn = 0x20           // backing physical frame -> address 0x4000
 
 	var pte vm.PTE
+
 	pte.SetValid(true)
 	pte.SetProtection(vm.ProtKW)
 	pte.SetPFN(pfn)
@@ -91,9 +96,11 @@ func TestHandleFaultReadsVectorWithVMDisabled(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HandleFault: %v (vector fetch should bypass translation)", err)
 	}
+
 	if e.cpu.PR(vax.MAPEN) != 1 {
 		t.Errorf("MAPEN = %d, want 1 (restored after the vector fetch)", e.cpu.PR(vax.MAPEN))
 	}
+
 	if e.cpu.GPR(vax.PC) != 0x200 {
 		t.Errorf("PC = %#x, want 0x200 (the vector, proving it was read correctly)", e.cpu.GPR(vax.PC))
 	}
@@ -117,15 +124,19 @@ func TestSetModeStackSwitchToKernel(t *testing.T) {
 	if got := e.cpu.PSL().CurMod(); got != vax.Kernel {
 		t.Errorf("CurMod = %v, want Kernel", got)
 	}
+
 	if got := e.cpu.PSL().PrvMod(); got != vax.User {
 		t.Errorf("PrvMod = %v, want User (the mode we switched from)", got)
 	}
+
 	if e.cpu.PR(vax.USP) != 0x8000 {
 		t.Errorf("USP = %#x, want 0x8000 (old SP saved to the mode we left)", e.cpu.PR(vax.USP))
 	}
+
 	if e.cpu.GPR(vax.SP) != 0x6000 {
 		t.Errorf("SP = %#x, want 0x6000 (KSP)", e.cpu.GPR(vax.SP))
 	}
+
 	if e.cpu.PR(vax.MAPEN) != 1 {
 		t.Errorf("MAPEN = %d, want 1 (see docs/DEVIATIONS.md)", e.cpu.PR(vax.MAPEN))
 	}
@@ -145,12 +156,15 @@ func TestHandleFaultInterruptStack(t *testing.T) {
 	if !e.cpu.PSL().IS() {
 		t.Error("PSL.IS() = false, want true (on interrupt stack)")
 	}
+
 	if got := e.cpu.PSL().CurMod(); got != vax.Kernel {
 		t.Errorf("CurMod = %v, want Kernel", got)
 	}
+
 	if e.cpu.PR(vax.MAPEN) != 0 {
 		t.Errorf("MAPEN = %d, want 0 (VM off on the interrupt stack)", e.cpu.PR(vax.MAPEN))
 	}
+
 	if want := uint32(0x9000 - 8); e.cpu.GPR(vax.SP) != want {
 		t.Errorf("SP = %#x, want %#x (ISP minus PC+PSL)", e.cpu.GPR(vax.SP), want)
 	}
@@ -165,6 +179,7 @@ func TestHandleFaultNoHandlerVector(t *testing.T) {
 	if !errors.Is(err, ErrNoExceptionHandler) {
 		t.Fatalf("err = %v, want ErrNoExceptionHandler", err)
 	}
+
 	if e.cpu.GPR(vax.SP) != 0x8000 {
 		t.Errorf("SP = %#x, want unchanged 0x8000 (no frame pushed)", e.cpu.GPR(vax.SP))
 	}
@@ -180,9 +195,11 @@ func TestHandleFaultZeroVector(t *testing.T) {
 	if !errors.Is(err, ErrUnhandledVector) {
 		t.Fatalf("err = %v, want ErrUnhandledVector", err)
 	}
+
 	if e.cpu.GPR(vax.PC) != 0 {
 		t.Errorf("PC = %#x, want 0 (frame still pushed and PC set)", e.cpu.GPR(vax.PC))
 	}
+
 	if e.cpu.GPR(vax.SP) == 0x8000 {
 		t.Error("SP unchanged, want the frame to have been pushed despite the zero vector")
 	}
@@ -196,6 +213,7 @@ func TestHandleFaultDebugExceptionsTrace(t *testing.T) {
 	putVector(t, e, ExcReservedAddr, 0x100, 0)
 
 	var buf bytes.Buffer
+
 	e.cpu.SetDebugWriter(&buf)
 	e.cpu.SetDebug(e.cpu.Debug() | vax.DebugExceptions)
 
@@ -217,6 +235,7 @@ func TestHandleFaultNoDebugTraceWhenFlagClear(t *testing.T) {
 	putVector(t, e, ExcReservedAddr, 0x100, 0)
 
 	var buf bytes.Buffer
+
 	e.cpu.SetDebugWriter(&buf)
 	e.cpu.SetDebug(e.cpu.Debug() &^ vax.DebugExceptions)
 

@@ -45,10 +45,12 @@ func emulMove(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	setNZ(e.cpu, v, d.Operands[1].Size)
 	psl := e.cpu.PSL()
 	psl.SetV(false)
 	e.cpu.SetPSL(psl)
+
 	return d.Operands[1].Store(e.cpu, e.mem, v)
 }
 
@@ -58,15 +60,18 @@ func emulMove(e *Engine, d *Decoded) error {
 // C, only the MNEG branch does).
 func emulMcom(e *Engine, d *Decoded) error {
 	size := d.Operands[0].Size
+
 	v, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	result := maskToSize(^signExtend(v, size), size)
 	setNZ(e.cpu, result, size)
 	psl := e.cpu.PSL()
 	psl.SetV(false)
 	e.cpu.SetPSL(psl)
+
 	return d.Operands[1].Store(e.cpu, e.mem, result)
 }
 
@@ -90,23 +95,29 @@ func emulMcom(e *Engine, d *Decoded) error {
 // Both are fixed here uniformly across B/W/L. See docs/DEVIATIONS.md.
 func emulMneg(e *Engine, d *Decoded) error {
 	size := d.Operands[0].Size
+
 	v, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	source := signExtend(v, size)
 
 	psl := e.cpu.PSL()
 	psl.SetC(source != 0)
 
 	var result int64
+
 	if source == minSigned(size) {
 		psl.SetV(true)
+
 		result = source
 	} else {
 		psl.SetV(false)
+		
 		result = -source
 	}
+	
 	masked := maskToSize(result, size)
 	psl.SetN(signBit(masked, size))
 	psl.SetZ(isZero(masked, size))

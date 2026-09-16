@@ -90,15 +90,18 @@ func TestEmulIncDecLongword(t *testing.T) {
 	if got := cpu.GPR(vax.R1); got != 0x80000000 {
 		t.Errorf("result = %#x, want 0x80000000", got)
 	}
+	
 	if !cpu.PSL().V() {
 		t.Error("V = false, want true (INT32_MAX + 1 overflows)")
 	}
 
 	cpu.SetGPR(vax.R1, 0x80000000) // INT32_MIN
 	stepInstruction(t, e, 0xD7, regMode(vax.R1))
+
 	if got := cpu.GPR(vax.R1); got != 0x7FFFFFFF {
 		t.Errorf("result = %#x, want 0x7fffffff", got)
 	}
+
 	if !cpu.PSL().V() {
 		t.Error("V = false, want true (INT32_MIN - 1 overflows)")
 	}

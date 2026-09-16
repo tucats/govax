@@ -48,6 +48,7 @@ func (c *Console) ShowPSL() error {
 	}
 
 	p := c.CPU.PSL()
+
 	c.Printf("PSL = %08X\n", uint32(p))
 	c.Printf("  CurMod=%d PrvMod=%d IPL=%d IS=%v FPD=%v TP=%v CM=%v\n",
 		p.CurMod(), p.PrvMod(), p.IPL(), p.IS(), p.FPD(), p.TP(), p.CM())
@@ -91,6 +92,7 @@ func (c *Console) ShowMemory() error {
 	// know about it either way.
 	if !c.VMInitValid {
 		c.Printf("        Virtual memory configuration is unknown.\n")
+
 		return nil
 	}
 
@@ -126,9 +128,11 @@ func (c *Console) ShowSymbols() error {
 
 	for _, s := range c.Symbols.All() {
 		kind := "user"
+
 		if s.Kind == SymbolSystem {
 			kind = "system"
 		}
+
 		if s.IsEntry {
 			kind += ", entry"
 		}
@@ -150,17 +154,21 @@ func (c *Console) ShowBreakpoints() error {
 
 	if len(c.Breakpoints) == 0 && len(faults) == 0 {
 		c.Printf("No breakpoints set\n")
+
 		return nil
 	}
 
 	for _, bp := range c.Breakpoints {
 		tag := ""
+
 		switch {
 		case bp.Step:
 			tag = " <step>"
+
 		case bp.Temporary:
 			tag = " <temporary>"
 		}
+
 		c.Printf("Breakpoint at %08X%s\n", bp.Addr, tag)
 	}
 
@@ -323,12 +331,14 @@ func (c *Console) ShowStack(kind StackKind, current bool, count uint32, all bool
 		if (psl.CurMod() == 3 && mapen != 0 && addr >= 0x7FFFFFFF) ||
 			(mapen == 0 && addr >= c.Mem.Size()) {
 			c.Printf("      <end of memory>\n")
+
 			break
 		}
 
 		v, err := c.Mem.LoadLongword(c.CPU, addr)
 		if err != nil {
 			c.Printf("      <end of stack>\n")
+
 			break
 		}
 
@@ -372,11 +382,13 @@ func (c *Console) ShowRegisterOrPrivReg(name string) error {
 	name = strings.ToUpper(name)
 	if r, ok := registerNames[name]; ok {
 		c.Printf("%-4s = %08X\n", name, c.CPU.GPR(r))
+
 		return nil
 	}
 
 	if pr, ok := privRegNames[name]; ok {
 		c.Printf("%-6s = %08X\n", name, c.CPU.PR(pr))
+
 		return nil
 	}
 
@@ -406,6 +418,7 @@ func (c *Console) ShowNVRAM() error {
 
 	if len(c.NVRAM) == 0 {
 		c.Printf("No NVRAM initialized\n")
+
 		return nil
 	}
 
@@ -427,6 +440,7 @@ func (c *Console) ShowROM() error {
 
 	if len(c.ROM) == 0 {
 		c.Printf("No ROM loaded\n")
+
 		return nil
 	}
 
@@ -457,18 +471,21 @@ func (c *Console) ShowShim() error {
 
 	if !c.shimsReady {
 		c.Printf("No RTL shims defined.\n")
+
 		return nil
 	}
 
 	c.Printf("RTL SHIMS:\n")
 
 	addr := c.shimBase
+
 	for _, e := range shimTable {
 		name := fmt.Sprintf("SHIM$%s_%08X", e.library, e.offset)
 
 		status := "dead (no numeric dispatch)"
 		if e.code != 0 {
 			status = "unimplemented"
+
 			if c.RTL.HasShim(e.code) {
 				status = "live"
 			}
@@ -889,6 +906,7 @@ func (c *Console) ShowCallFrames(countExpr string) error {
 			for n := uint32(1); n <= argc; n++ {
 				if n > 15 {
 					c.Printf("            ...and %d more...\n", argc-n)
+
 					break
 				}
 
@@ -1159,12 +1177,15 @@ func (c *Console) ShowFault() error {
 
 			if len(fr.Args) > 0 {
 				c.Printf(" ARGS(")
+
 				for i, a := range fr.Args {
 					if i > 0 {
 						c.Printf(",")
 					}
+					
 					c.Printf("%08X", a)
 				}
+
 				c.Printf(") ")
 			}
 
@@ -1447,11 +1468,13 @@ func (c *Console) ShowDebug() error {
 	debug := c.CPU.Debug()
 
 	c.Printf("DEBUG SETTINGS:\n")
+
 	for _, e := range debugShowEntries {
 		name := e.name
 		if debug&e.flag == 0 {
 			name = "NO" + name
 		}
+
 		c.Printf("    %-20s    %s\n", name, e.desc)
 	}
 
@@ -1476,6 +1499,7 @@ func (c *Console) ShowTrace() error {
 		if c.CPU.DebugEnabled(vax.DebugRegisters) {
 			regState = "enabled"
 		}
+
 		c.Printf("    Register tracking is %s\n", regState)
 	}
 

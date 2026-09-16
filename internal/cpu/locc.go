@@ -19,12 +19,14 @@ func emulLocc(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	match := byte(matchv)
 
 	lenv, err := d.Operands[1].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	length := uint16(lenv)
 	addr := d.Operands[2].Addr
 
@@ -38,13 +40,16 @@ func emulLocc(e *Engine, d *Decoded) error {
 		if err != nil {
 			return err
 		}
+
 		if ch == match {
 			e.cpu.SetGPR(vax.R0, uint32(length))
 			e.cpu.SetGPR(vax.R1, addr)
 			psl.SetZ(false)
 			e.cpu.SetPSL(psl)
+
 			return nil
 		}
+
 		addr++
 		length--
 	}
@@ -53,5 +58,6 @@ func emulLocc(e *Engine, d *Decoded) error {
 	e.cpu.SetGPR(vax.R1, addr)
 	psl.SetZ(true)
 	e.cpu.SetPSL(psl)
+	
 	return nil
 }

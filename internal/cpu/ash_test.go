@@ -18,10 +18,12 @@ func TestEmulRotl(t *testing.T) {
 	if got := cpu.GPR(vax.R3); got != 0x00000003 {
 		t.Errorf("result = %#x, want 0x00000003", got)
 	}
+
 	psl := cpu.PSL()
 	if psl.V() {
 		t.Error("V = true, want false")
 	}
+
 	if !psl.C() {
 		t.Error("C = false, want unaffected (true)")
 	}
@@ -52,10 +54,12 @@ func TestEmulAshlLeftOverflow(t *testing.T) {
 	if got := cpu.GPR(vax.R3); got != 0xFFFFFFFE {
 		t.Errorf("result = %#x, want 0xfffffffe", got)
 	}
+
 	psl := cpu.PSL()
 	if !psl.V() {
 		t.Error("V = false, want true (shifting INT32_MAX left overflows)")
 	}
+
 	if !psl.C() {
 		t.Error("C = false, want unaffected (true)")
 	}
@@ -72,6 +76,7 @@ func TestEmulAshlRightNeverOverflows(t *testing.T) {
 	if got := cpu.GPR(vax.R3); got != 0xC0000000 {
 		t.Errorf("result = %#x, want 0xc0000000 (arithmetic shift, sign-extended)", got)
 	}
+
 	if cpu.PSL().V() {
 		t.Error("V = true, want false (right shift never overflows)")
 	}
@@ -88,6 +93,7 @@ func TestEmulAshlZeroCount(t *testing.T) {
 	if got := cpu.GPR(vax.R3); got != 0x12345678 {
 		t.Errorf("result = %#x, want unchanged 0x12345678", got)
 	}
+
 	if cpu.PSL().V() {
 		t.Error("V = true, want false")
 	}
@@ -105,6 +111,7 @@ func TestEmulAshq(t *testing.T) {
 	if cpu.GPR(vax.R4) != 16 || cpu.GPR(vax.R5) != 0 {
 		t.Errorf("result pair = %#x:%#x, want 16:0", cpu.GPR(vax.R4), cpu.GPR(vax.R5))
 	}
+	
 	if cpu.PSL().V() {
 		t.Error("V = true, want false")
 	}

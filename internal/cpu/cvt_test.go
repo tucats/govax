@@ -42,12 +42,15 @@ func TestEmulCvtOverflowNZFromDestination(t *testing.T) {
 	if !psl.N() {
 		t.Error("N = false, want true (destination value 0x80 is negative, even though the source 128 was positive)")
 	}
+
 	if psl.Z() {
 		t.Error("Z = true, want false")
 	}
+
 	if !psl.V() {
 		t.Error("V = false, want true (128 doesn't fit in a signed byte)")
 	}
+
 	if psl.C() {
 		t.Error("C = true, want false (CVT always clears C)")
 	}
@@ -67,6 +70,7 @@ func TestEmulCvtByteOverflowRangeCheck(t *testing.T) {
 	if !cpu.PSL().V() {
 		t.Error("V = false, want true (300 doesn't fit in a signed byte)")
 	}
+
 	if got := byte(cpu.GPR(vax.R2)); got != 44 { // 300 mod 256
 		t.Errorf("result = %d, want 44", got)
 	}
@@ -82,6 +86,7 @@ func TestEmulCvtNoOverflowPositive(t *testing.T) {
 	if got := uint16(cpu.GPR(vax.R2)); got != 100 {
 		t.Errorf("result = %d, want 100", got)
 	}
+	
 	psl := cpu.PSL()
 	if psl.N() || psl.Z() || psl.V() {
 		t.Errorf("N=%v Z=%v V=%v, want all false", psl.N(), psl.Z(), psl.V())

@@ -99,8 +99,8 @@ func setPSLBit(set func(bool), v uint32) error {
 	return nil
 }
 
-func setPSLRange(set func(uint32), v, max uint32) error {
-	if v > max {
+func setPSLRange(set func(uint32), v, maxValue uint32) error {
+	if v > maxValue {
 		return vmserrors.New(vmserrors.CLI_INVSETPSL, v)
 	}
 	set(v)
@@ -183,11 +183,12 @@ func (c *Console) SetDebug(names []string) error {
 	}
 
 	flags := c.CPU.Debug()
+
 	for _, name := range names {
 		name = strings.ToUpper(strings.TrimSpace(name))
-		clear := strings.HasPrefix(name, "NO")
+		clearFlag := strings.HasPrefix(name, "NO")
 		lookup := name
-		if clear {
+		if clearFlag {
 			lookup = name[2:]
 		}
 
@@ -196,13 +197,15 @@ func (c *Console) SetDebug(names []string) error {
 			return vmserrors.New(vmserrors.CLI_BADDEBUGFLAG, name)
 		}
 
-		if clear {
+		if clearFlag {
 			flags &^= flag
 		} else {
 			flags |= flag
 		}
 	}
+
 	c.CPU.SetDebug(flags)
+
 	return nil
 }
 
@@ -269,7 +272,9 @@ func (c *Console) SetRadix(radix int) error {
 	if radix != 8 && radix != 10 && radix != 16 {
 		return vmserrors.New(vmserrors.CLI_BADRADIX, radix)
 	}
+
 	c.Radix = radix
+
 	return nil
 }
 
@@ -286,6 +291,7 @@ func (c *Console) SetVM(on bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
+
 	if err := c.requireKernelMode(); err != nil {
 		return err
 	}
@@ -294,6 +300,7 @@ func (c *Console) SetVM(on bool) error {
 	if on {
 		v = 1
 	}
+
 	c.CPU.SetPR(vax.MAPEN, v)
 
 	return nil
@@ -319,7 +326,9 @@ func (c *Console) SetVerbose() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
+
 	c.Verbose = true
+
 	return nil
 }
 
@@ -329,7 +338,9 @@ func (c *Console) SetVerify() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
+
 	c.Verify = true
+
 	return nil
 }
 
@@ -341,8 +352,10 @@ func (c *Console) SetNoVerbose() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
+
 	c.Verbose = false
 	c.Verify = false
+
 	return nil
 }
 
@@ -361,6 +374,7 @@ func (c *Console) SetQuantum(n int) error {
 	switch {
 	case initial == 0 && n > 0:
 		c.Printf("%%VAX-I-INTERRUPTS, interrupt delivery resumed (quantum>0)\n")
+
 	case initial > 0 && n == 0:
 		c.Printf("%%VAX-I-NOINTERRUPTS, interrupt delivery suspended (quantum=0)\n")
 	}
@@ -434,6 +448,7 @@ func (c *Console) SetPTE(addr uint32, field string, value uint32) error {
 
 	if c.CPU.PR(vax.MAPEN) == 0 {
 		c.Printf("Cannot SET PAGE when virtual memory is disabled.\n")
+
 		return nil
 	}
 
@@ -445,6 +460,7 @@ func (c *Console) SetPTE(addr uint32, field string, value uint32) error {
 	_, _, pte, err := c.Mem.LookupPTE(c.CPU, addr)
 	if err != nil {
 		c.Printf("ACCVIO, page table length violation\n")
+		
 		return nil
 	}
 

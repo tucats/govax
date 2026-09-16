@@ -34,14 +34,17 @@ func init() {
 // overflow), reused here even though CMP never writes a result.
 func emulCmp(e *Engine, d *Decoded) error {
 	size := d.Operands[0].Size
+
 	src1, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	src2, err := d.Operands[1].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	result, _, c := subResult(src1, src2, size)
 	psl := e.cpu.PSL()
 	psl.SetN(signBit(result, size))
@@ -49,6 +52,7 @@ func emulCmp(e *Engine, d *Decoded) error {
 	psl.SetV(false)
 	psl.SetC(c)
 	e.cpu.SetPSL(psl)
+
 	return nil
 }
 
@@ -59,16 +63,20 @@ func emulCmp(e *Engine, d *Decoded) error {
 // docs/DEVIATIONS.md.
 func emulBit(e *Engine, d *Decoded) error {
 	size := d.Operands[0].Size
+
 	mask, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	src, err := d.Operands[1].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	result := maskToSize(int64(mask&src), size)
 	setLogicalPSL(e.cpu, result, size)
+	
 	return nil
 }
 
@@ -77,10 +85,13 @@ func emulBit(e *Engine, d *Decoded) error {
 // C both 0 -- per the manual (matching emul_cmp.c, which gets TST right).
 func emulTst(e *Engine, d *Decoded) error {
 	size := d.Operands[0].Size
+
 	v, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	setArithPSL(e.cpu, v, false, false, size)
+
 	return nil
 }

@@ -34,15 +34,19 @@ func emulInsque(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	if err := e.mem.StoreLongword(e.cpu, entry, predForward); err != nil {
 		return err
 	}
+
 	if err := e.mem.StoreLongword(e.cpu, entry+4, pred); err != nil {
 		return err
 	}
+
 	if err := e.mem.StoreLongword(e.cpu, predForward+4, entry); err != nil {
 		return err
 	}
+
 	if err := e.mem.StoreLongword(e.cpu, pred, entry); err != nil {
 		return err
 	}
@@ -54,6 +58,7 @@ func emulInsque(e *Engine, d *Decoded) error {
 	psl.SetV(false)
 	psl.SetC(c)
 	e.cpu.SetPSL(psl)
+
 	return nil
 }
 
@@ -69,6 +74,7 @@ func emulRemque(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	succ, err := e.mem.LoadLongword(e.cpu, entry)
 	if err != nil {
 		return err
@@ -85,9 +91,11 @@ func emulRemque(e *Engine, d *Decoded) error {
 	if err := e.mem.StoreLongword(e.cpu, pred, succ); err != nil {
 		return err
 	}
+
 	if err := e.mem.StoreLongword(e.cpu, succ+4, pred); err != nil {
 		return err
 	}
+
 	return d.Operands[1].Store(e.cpu, e.mem, uint64(entry))
 }
 
@@ -102,6 +110,7 @@ func resolveLink(e *Engine, node, fieldOffset uint32) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return node + off, nil
 }
 
@@ -145,34 +154,44 @@ func emulInsqhi(e *Engine, d *Decoded) error {
 		if err := storeLink(e, header, 0, entry); err != nil {
 			return err
 		}
+
 		if err := storeLink(e, header, 4, entry); err != nil {
 			return err
 		}
+
 		if err := storeLink(e, entry, 0, header); err != nil {
 			return err
 		}
+
 		if err := storeLink(e, entry, 4, header); err != nil {
 			return err
 		}
+
 		psl.SetZ(true)
 		e.cpu.SetPSL(psl)
+
 		return nil
 	}
 
 	if err := storeLink(e, hf, 4, entry); err != nil {
 		return err
 	}
+
 	if err := storeLink(e, entry, 4, header); err != nil {
 		return err
 	}
+
 	if err := storeLink(e, header, 0, entry); err != nil {
 		return err
 	}
+
 	if err := storeLink(e, entry, 0, hf); err != nil {
 		return err
 	}
+
 	psl.SetZ(false)
 	e.cpu.SetPSL(psl)
+
 	return nil
 }
 
@@ -206,17 +225,22 @@ func emulInsqti(e *Engine, d *Decoded) error {
 		if err := storeLink(e, header, 0, entry); err != nil {
 			return err
 		}
+
 		if err := storeLink(e, header, 4, entry); err != nil {
 			return err
 		}
+
 		if err := storeLink(e, entry, 0, header); err != nil {
 			return err
 		}
+
 		if err := storeLink(e, entry, 4, header); err != nil {
 			return err
 		}
+
 		psl.SetZ(true)
 		e.cpu.SetPSL(psl)
+
 		return nil
 	}
 
@@ -224,20 +248,26 @@ func emulInsqti(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	if err := storeLink(e, hb, 0, entry); err != nil {
 		return err
 	}
+
 	if err := storeLink(e, entry, 0, header); err != nil {
 		return err
 	}
+
 	if err := storeLink(e, header, 4, entry); err != nil {
 		return err
 	}
+
 	if err := storeLink(e, entry, 4, hb); err != nil {
 		return err
 	}
+
 	psl.SetZ(false)
 	e.cpu.SetPSL(psl)
+
 	return nil
 }
 
@@ -264,6 +294,7 @@ func emulRemqhi(e *Engine, d *Decoded) error {
 		psl.SetZ(true)
 		psl.SetV(true)
 		e.cpu.SetPSL(psl)
+
 		return d.Operands[1].Store(e.cpu, e.mem, uint64(header))
 	}
 
@@ -271,21 +302,26 @@ func emulRemqhi(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	removed := header + fwdOff
 
 	if fwdOff == backOff {
 		if err := d.Operands[1].Store(e.cpu, e.mem, uint64(removed)); err != nil {
 			return err
 		}
+
 		if err := e.mem.StoreLongword(e.cpu, header, 0); err != nil {
 			return err
 		}
+
 		if err := e.mem.StoreLongword(e.cpu, header+4, 0); err != nil {
 			return err
 		}
+
 		psl.SetZ(true)
 		psl.SetV(false)
 		e.cpu.SetPSL(psl)
+
 		return nil
 	}
 
@@ -293,20 +329,25 @@ func emulRemqhi(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	newFirstOff := fwdOff + nextFwdOff
 	if err := e.mem.StoreLongword(e.cpu, header, newFirstOff); err != nil {
 		return err
 	}
+
 	newFirst := header + newFirstOff
 	if err := e.mem.StoreLongword(e.cpu, newFirst+4, -newFirstOff); err != nil {
 		return err
 	}
+
 	if err := d.Operands[1].Store(e.cpu, e.mem, uint64(removed)); err != nil {
 		return err
 	}
+
 	psl.SetZ(false)
 	psl.SetV(false)
 	e.cpu.SetPSL(psl)
+
 	return nil
 }
 
@@ -328,6 +369,7 @@ func emulRemqti(e *Engine, d *Decoded) error {
 		psl.SetZ(true)
 		psl.SetV(true)
 		e.cpu.SetPSL(psl)
+
 		return nil
 	}
 
@@ -335,21 +377,26 @@ func emulRemqti(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	removed := header + backOff
 
 	if backOff == fwdOff {
 		if err := d.Operands[1].Store(e.cpu, e.mem, uint64(removed)); err != nil {
 			return err
 		}
+
 		if err := e.mem.StoreLongword(e.cpu, header, 0); err != nil {
 			return err
 		}
+		
 		if err := e.mem.StoreLongword(e.cpu, header+4, 0); err != nil {
 			return err
 		}
+
 		psl.SetZ(true)
 		psl.SetV(false)
 		e.cpu.SetPSL(psl)
+
 		return nil
 	}
 
@@ -357,19 +404,24 @@ func emulRemqti(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	newLastOff := backOff + prevBackOff
 	if err := e.mem.StoreLongword(e.cpu, header+4, newLastOff); err != nil {
 		return err
 	}
+
 	newLast := header + newLastOff
 	if err := e.mem.StoreLongword(e.cpu, newLast, -newLastOff); err != nil {
 		return err
 	}
+
 	if err := d.Operands[1].Store(e.cpu, e.mem, uint64(removed)); err != nil {
 		return err
 	}
+
 	psl.SetZ(false)
 	psl.SetV(false)
 	e.cpu.SetPSL(psl)
+
 	return nil
 }

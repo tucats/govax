@@ -25,6 +25,7 @@ func maskToSize(v int64, size int) uint64 {
 	if size >= 8 {
 		return uint64(v)
 	}
+
 	return uint64(v) & (1<<(uint(size)*8) - 1)
 }
 
@@ -74,6 +75,7 @@ func sizeMax(size int) uint64 {
 	if size >= 8 {
 		return ^uint64(0)
 	}
+
 	return 1<<(uint(size)*8) - 1
 }
 
@@ -97,6 +99,7 @@ func addResult(a, b uint64, size int) (result uint64, v, c bool) {
 	result = maskToSize(sum, size)
 	v = signBit(a, size) == signBit(b, size) && signBit(result, size) != signBit(a, size)
 	c = maskToSize(int64(a), size)+maskToSize(int64(b), size) > sizeMax(size)
+
 	return result, v, c
 }
 
@@ -106,13 +109,16 @@ func addResult(a, b uint64, size int) (result uint64, v, c bool) {
 func addCarryResult(a, b uint64, carryIn bool, size int) (result uint64, v, c bool) {
 	sum := signExtend(a, size) + signExtend(b, size)
 	usum := maskToSize(int64(a), size) + maskToSize(int64(b), size)
+
 	if carryIn {
 		sum++
 		usum++
 	}
+
 	result = maskToSize(sum, size)
 	v = signBit(a, size) == signBit(b, size) && signBit(result, size) != signBit(a, size)
 	c = usum > sizeMax(size)
+
 	return result, v, c
 }
 
@@ -125,6 +131,7 @@ func subResult(minuend, subtrahend uint64, size int) (result uint64, v, c bool) 
 	result = maskToSize(diff, size)
 	v = signBit(minuend, size) != signBit(subtrahend, size) && signBit(result, size) != signBit(minuend, size)
 	c = maskToSize(int64(minuend), size) < maskToSize(int64(subtrahend), size)
+
 	return result, v, c
 }
 
@@ -135,13 +142,16 @@ func subCarryResult(minuend, subtrahend uint64, borrowIn bool, size int) (result
 	diff := signExtend(minuend, size) - signExtend(subtrahend, size)
 	um := maskToSize(int64(minuend), size)
 	need := maskToSize(int64(subtrahend), size)
+
 	if borrowIn {
 		diff--
 		need++
 	}
+
 	result = maskToSize(diff, size)
 	v = signBit(minuend, size) != signBit(subtrahend, size) && signBit(result, size) != signBit(minuend, size)
 	c = um < need
+
 	return result, v, c
 }
 
@@ -172,6 +182,7 @@ func shiftOverflow64(v int64, count uint) bool {
 func convertResult(source uint64, srcSize, dstSize int) (result uint64, v bool) {
 	s := signExtend(source, srcSize)
 	result = maskToSize(s, dstSize)
+
 	return result, signExtend(result, dstSize) != s
 }
 
@@ -182,6 +193,7 @@ func convertResult(source uint64, srcSize, dstSize int) (result uint64, v bool) 
 func mulResult(a, b uint64, size int) (result uint64, v bool) {
 	product := signExtend(a, size) * signExtend(b, size)
 	result = maskToSize(product, size)
+
 	return result, signExtend(result, size) != product
 }
 
@@ -200,5 +212,6 @@ func divResult(dividend, divisor uint64, size int) (result uint64, v bool) {
 	if s == 0 || (d == minSigned(size) && s == -1) {
 		return maskToSize(d, size), true
 	}
+	
 	return maskToSize(d/s, size), false
 }

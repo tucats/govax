@@ -28,12 +28,14 @@ func TestEmulMtprIccsRunAndIEBits(t *testing.T) {
 
 	cpu.SetGPR(vax.R1, 0x41) // RUN | IE
 	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.ICCS))...)
+
 	if got := cpu.PR(vax.ICCS); got&iccsRun == 0 || got&deviceIE == 0 {
 		t.Errorf("PR(ICCS) = %#x, want RUN and IE both set", got)
 	}
 
 	cpu.SetGPR(vax.R1, 0) // clear RUN (IE bit copied as 0 too)
 	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.ICCS))...)
+
 	if got := cpu.PR(vax.ICCS); got&iccsRun != 0 {
 		t.Errorf("PR(ICCS) = %#x, want RUN cleared", got)
 	}
@@ -62,9 +64,11 @@ func TestEmulMtprTxcsIEEnablesInterruptImmediately(t *testing.T) {
 	if got := cpu.PR(vax.TXCS); got != 0xC0 {
 		t.Errorf("PR(TXCS) = %#x, want 0xC0 (RDY|IE)", got)
 	}
+
 	if !e.interruptPending {
 		t.Fatal("expected enabling TXCS<IE> to admit EXC$CONWRITE immediately")
 	}
+
 	if e.interruptCode != ExcConWrite || e.interruptIPL != 20 {
 		t.Errorf("interruptCode/IPL = %#x/%d, want ExcConWrite/20", e.interruptCode, e.interruptIPL)
 	}
@@ -83,9 +87,11 @@ func TestEmulMtprTxdbWritesByteAndInterruptsWhenIESet(t *testing.T) {
 	if f.writtenByte != 'H' {
 		t.Errorf("ConsoleWriteByte got %q, want 'H'", f.writtenByte)
 	}
+
 	if !e.interruptPending {
 		t.Fatal("expected TXDB write with TXCS<IE> set to admit EXC$CONWRITE")
 	}
+
 	if e.interruptCode != ExcConWrite || e.interruptIPL != 20 {
 		t.Errorf("interruptCode/IPL = %#x/%d, want ExcConWrite/20", e.interruptCode, e.interruptIPL)
 	}
@@ -102,6 +108,7 @@ func TestEmulMtprTxdbNoInterruptWhenIEClear(t *testing.T) {
 	if e.interruptPending {
 		t.Error("expected no interrupt when TXCS<IE> is clear")
 	}
+
 	if got := e.cpu.PR(vax.TXCS); got&0x80 == 0 {
 		t.Errorf("PR(TXCS) = %#x, want RDY bit set", got)
 	}
@@ -140,6 +147,7 @@ func TestEmulMtprRxcsNoSignalWhenIEWasNotAlreadySet(t *testing.T) {
 	if e.interruptPending || len(e.iqueue) != 0 {
 		t.Error("expected no admission when IE was not already set before this write")
 	}
+
 	if got := cpu.PR(vax.RXCS); got != 0x80|deviceIE {
 		t.Errorf("PR(RXCS) = %#x, want DON|IE", got)
 	}
@@ -159,6 +167,7 @@ func TestEmulMfprRxdbReadsLiveByteAndClearsDon(t *testing.T) {
 	if got := cpu.GPR(vax.R2); got != 'Q' {
 		t.Errorf("R2 = %q, want 'Q' (live byte from ConsoleReadByte)", got)
 	}
+
 	if got := cpu.PR(vax.RXCS); got != deviceIE {
 		t.Errorf("PR(RXCS) = %#x, want IE only (DON cleared)", got)
 	}
@@ -173,9 +182,11 @@ func TestDeliverConsoleByteAdmitsInterruptWhenIESet(t *testing.T) {
 	if got := e.cpu.PR(vax.RXDB); got != 'Z' {
 		t.Errorf("PR(RXDB) = %q, want 'Z'", got)
 	}
+
 	if got := e.cpu.PR(vax.RXCS); got&0x80 == 0 {
 		t.Errorf("PR(RXCS) = %#x, want DON bit set", got)
 	}
+
 	if !e.interruptPending || e.interruptCode != ExcConRead {
 		t.Errorf("expected an immediate ExcConRead admission, interruptPending=%v code=%#x", e.interruptPending, e.interruptCode)
 	}
@@ -189,6 +200,7 @@ func TestDeliverConsoleByteNoInterruptWhenIEClear(t *testing.T) {
 	if e.interruptPending {
 		t.Error("expected no interrupt admission when RXCS<IE> is clear")
 	}
+	
 	if got := e.cpu.PR(vax.RXDB); got != 'Z' {
 		t.Errorf("PR(RXDB) = %q, want 'Z' (byte still deposited)", got)
 	}

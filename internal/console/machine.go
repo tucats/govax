@@ -198,6 +198,7 @@ type Console struct {
 func New(out io.Writer) *Console {
 	logicals := iodev.NewLogicalNameTable()
 	logicals.InitLogicals()
+
 	return &Console{
 		Symbols:  NewSymbolTable(),
 		Radix:    16,   // alloc_vax's own default
@@ -218,6 +219,7 @@ func (c *Console) requireInit() error {
 	if !c.Initialized() {
 		return vmserrors.New(vmserrors.CLI_NOVAX)
 	}
+
 	return nil
 }
 
@@ -227,6 +229,7 @@ func (c *Console) requireKernelMode() error {
 	if c.CPU.PSL().CurMod() != vax.Kernel {
 		return vmserrors.New(vmserrors.CLI_NOTKERNEL)
 	}
+
 	return nil
 }
 
@@ -272,8 +275,10 @@ func allocPhysMemory(bytes uint32) uint32 {
 	if aligned < minPhysMemory {
 		aligned = minPhysMemory
 	}
+	
 	if aligned != bytes {
 		aligned += physMemAlign
 	}
+
 	return aligned
 }

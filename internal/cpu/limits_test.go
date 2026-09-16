@@ -41,9 +41,11 @@ func TestEngineInstructionLimitStopsRunButLeavesStateIntact(t *testing.T) {
 	// Refusing the 4th instruction must not have changed anything -- calling
 	// Step again keeps refusing, not somehow recovering or corrupting PC.
 	pc := e.cpu.GPR(vax.PC)
+
 	if err := e.Step(); !errors.Is(err, ErrInstructionLimitExceeded) {
 		t.Fatalf("Step 5 = %v, want ErrInstructionLimitExceeded again", err)
 	}
+
 	if got := e.cpu.GPR(vax.PC); got != pc {
 		t.Errorf("PC changed from %#x to %#x across a refused Step", pc, got)
 	}
@@ -71,6 +73,7 @@ func TestEngineBeginRunResetsInstructionCountBetweenRuns(t *testing.T) {
 			t.Fatalf("first run, step %d: %v", i, err)
 		}
 	}
+
 	if err := e.Step(); !errors.Is(err, ErrInstructionLimitExceeded) {
 		t.Fatalf("first run's 3rd step = %v, want ErrInstructionLimitExceeded", err)
 	}
@@ -93,20 +96,26 @@ func TestEngineTimeLimitStopsRun(t *testing.T) {
 
 	deadline := time.Now().Add(2 * time.Second)
 	steps := 0
+
 	for {
 		if time.Now().After(deadline) {
 			t.Fatal("time limit was never enforced within a generous real-time deadline")
 		}
+
 		err := e.Step()
 		if err == nil {
 			steps++
+
 			continue
 		}
+
 		if errors.Is(err, ErrTimeLimitExceeded) {
 			break
 		}
+
 		t.Fatalf("Step: %v", err)
 	}
+
 	if steps == 0 {
 		t.Error("expected at least one instruction to execute before the time limit hit")
 	}
@@ -137,9 +146,11 @@ func TestEngineAttentionStopsRunButLeavesStateIntact(t *testing.T) {
 	// calling Step again keeps refusing, matching the instruction-limit
 	// case above, not somehow recovering or corrupting PC.
 	pc := e.cpu.GPR(vax.PC)
+
 	if err := e.Step(); !errors.Is(err, ErrAttention) {
 		t.Fatalf("second Step = %v, want ErrAttention again", err)
 	}
+	
 	if got := e.cpu.GPR(vax.PC); got != pc {
 		t.Errorf("PC changed from %#x to %#x across a refused Step", pc, got)
 	}

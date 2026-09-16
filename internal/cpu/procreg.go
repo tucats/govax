@@ -14,7 +14,6 @@ import "github.com/tucats/govax/internal/vax"
 type privAccess = AccessKind
 
 const (
-	privNone   = AccessNone
 	privRead   = AccessRead
 	privWrite  = AccessWrite
 	privModify = AccessModify
@@ -99,6 +98,7 @@ func emulMtpr(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	reg := int(int16(uint16(regRaw)))
 
 	return setPrivReg(e, reg, uint32(valueRaw))
@@ -120,9 +120,11 @@ func setPrivReg(e *Engine, reg int, value uint32) error {
 	if reg < 0 || reg > vax.MaxPrivReg {
 		return &Fault{Code: ExcReservedOp}
 	}
+
 	if e.cpu.PSL().CurMod() != vax.Kernel {
 		return &Fault{Code: ExcPrivileged}
 	}
+
 	access := privRegAccessTable[reg]
 	if access != privModify && access != privWrite {
 		return &Fault{Code: ExcReservedOp}
@@ -152,6 +154,7 @@ func setPrivReg(e *Engine, reg int, value uint32) error {
 		if value > 4 {
 			return &Fault{Code: ExcReservedOp}
 		}
+
 		e.cpu.SetPR(vax.ASTLVL, value)
 
 	case vax.SIRR:
@@ -175,21 +178,26 @@ func setPrivReg(e *Engine, reg int, value uint32) error {
 		if value&iccsInt != 0 { // write to ICCS<INT>: clear it
 			iccs &^= iccsInt
 		}
+
 		if value&iccsRun != 0 { // write to ICCS<RUN>: set it
 			iccs |= iccsRun
 		} else {
 			iccs &^= iccsRun
 		}
+
 		if value&iccsXFR != 0 { // write to ICCS<XFR>: reload ICR from NICR
 			e.cpu.SetPR(vax.ICR, e.cpu.PR(vax.NICR))
 		}
+
 		if value&iccsSGL != 0 { // write to ICCS<SGL>: increment the clock
 			e.cpu.SetPR(vax.ICR, e.cpu.PR(vax.ICR)+1)
 		}
+
 		iccs = (iccs &^ deviceIE) | (value & deviceIE) // write to ICCS<IE>
 		if value&iccsErr != 0 {                        // write to ICCS<ERR>: clear it
 			iccs &^= iccsErr
 		}
+
 		e.cpu.SetPR(vax.ICCS, iccs)
 
 	case vax.RXCS:
@@ -236,6 +244,7 @@ func setPrivReg(e *Engine, reg int, value uint32) error {
 		wasIE := txcs & 0x60 // matches set_priv_reg's own (unusual) mask
 		txcs |= 0x80
 		e.cpu.SetPR(vax.TXCS, txcs)
+
 		if wasIE != 0 {
 			e.Interrupt(ExcConWrite, 20, 0) // see the IPL note on case TXCS above
 		}
@@ -246,6 +255,7 @@ func setPrivReg(e *Engine, reg int, value uint32) error {
 	default:
 		e.cpu.SetPR(vax.PrivReg(reg), value)
 	}
+
 	return nil
 }
 
@@ -255,14 +265,16 @@ func emulMfpr(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
-	reg := int(int32(uint32(regRaw)))
 
+	reg := int(int32(uint32(regRaw)))
 	if reg < 0 || reg > vax.MaxPrivReg {
 		return &Fault{Code: ExcReservedOp}
 	}
+
 	if e.cpu.PSL().CurMod() != vax.Kernel {
 		return &Fault{Code: ExcPrivileged}
 	}
+
 	access := privRegAccessTable[reg]
 	if access != privModify && access != privRead {
 		return &Fault{Code: ExcReservedOp}
@@ -284,5 +296,6 @@ func emulMfpr(e *Engine, d *Decoded) error {
 	}
 
 	value := e.cpu.PR(vax.PrivReg(reg))
+
 	return d.Operands[1].Store(e.cpu, e.mem, uint64(value))
 }

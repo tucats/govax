@@ -109,6 +109,7 @@ func TestExpressionVerboseFunction(t *testing.T) {
 	if got := evalNoForward(t, a, "VERBOSE()"); got != 1 {
 		t.Errorf("VERBOSE() = %d, want 1 (default on)", got)
 	}
+
 	a.SetVerbose(false)
 	if got := evalNoForward(t, a, "VERBOSE"); got != 0 {
 		t.Errorf("VERBOSE = %d, want 0", got)
@@ -122,12 +123,15 @@ func TestRegisterParsing(t *testing.T) {
 	}{
 		{"R0", 0}, {"R15", 15}, {"AP", 12}, {"FP", 13}, {"SP", 14}, {"PC", 15},
 	}
+
 	for _, tc := range cases {
 		c := newCursor(tc.src)
+
 		reg, err := parseRegister(c, 0)
 		if err != nil {
 			t.Fatalf("parseRegister(%q): %v", tc.src, err)
 		}
+
 		if int(reg) != tc.want {
 			t.Errorf("parseRegister(%q) = %d, want %d", tc.src, reg, tc.want)
 		}
@@ -137,6 +141,7 @@ func TestRegisterParsing(t *testing.T) {
 func TestRegisterParsingInvalid(t *testing.T) {
 	for _, src := range []string{"R16", "AX", "ZP"} {
 		c := newCursor(src)
+		
 		if _, err := parseRegister(c, 0); err == nil {
 			t.Errorf("parseRegister(%q): expected error", src)
 		}

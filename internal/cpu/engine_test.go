@@ -25,9 +25,11 @@ func TestEngineAccessors(t *testing.T) {
 	if e.CPU() != cpu {
 		t.Error("CPU() did not return the constructing CPU")
 	}
+
 	if e.Memory() != mem {
 		t.Error("Memory() did not return the constructing Memory")
 	}
+
 	if e.Halted() {
 		t.Error("Halted() = true for a freshly constructed Engine")
 	}
@@ -54,20 +56,26 @@ func TestEngineStepDispatchesHandler(t *testing.T) {
 	e.cpu.SetGPR(vax.PC, base)
 	putBytes(t, e.cpu, e.mem, base, 0x01)
 
-	var gotPC uint32
-	var gotInst *Instruction
+	var (
+		gotPC   uint32
+		gotInst *Instruction
+	)
+
 	e.table.SetHandler(inst, func(eng *Engine, d *Decoded) error {
 		gotPC = eng.cpu.GPR(vax.PC)
 		gotInst = d.Instruction
+
 		return nil
 	})
 
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	if gotInst != inst {
 		t.Errorf("handler saw Instruction %+v, want %+v", gotInst, inst)
 	}
+
 	if gotPC != base+1 {
 		t.Errorf("PC at handler call = %#x, want %#x (advanced past the instruction)", gotPC, base+1)
 	}
@@ -85,6 +93,7 @@ func TestEngineStepUnimplementedFaultsAndContinues(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v (fault should be handled, not propagated)", err)
 	}
+
 	if e.cpu.GPR(vax.PC) != 0x200 {
 		t.Errorf("PC = %#x, want 0x200 (fault vector)", e.cpu.GPR(vax.PC))
 	}
@@ -100,6 +109,7 @@ func TestEngineStepRaiseDebugExceptionsSetTrace(t *testing.T) {
 	putVector(t, e, ExcPrivileged, 0x200, 0)
 
 	var buf bytes.Buffer
+
 	e.cpu.SetDebugWriter(&buf)
 	e.cpu.SetDebug(vax.DebugExceptions)
 
@@ -111,6 +121,7 @@ func TestEngineStepRaiseDebugExceptionsSetTrace(t *testing.T) {
 	if !strings.Contains(out, "DEBUG(EXCEPTION): SET, CODE=10") {
 		t.Errorf("output = %q, want a DEBUG(EXCEPTION): SET line naming CODE=10 (ExcPrivileged)", out)
 	}
+
 	if !strings.Contains(out, "DEBUG(EXCEPTION): TAKE, CODE=0010") {
 		t.Errorf("output = %q, want a DEBUG(EXCEPTION): TAKE line too", out)
 	}
@@ -127,6 +138,7 @@ func TestEngineStepHandlerReturnsErrHalted(t *testing.T) {
 	if !errors.Is(err, ErrHalted) {
 		t.Fatalf("err = %v, want ErrHalted", err)
 	}
+
 	if !e.Halted() {
 		t.Error("Halted() = false, want true")
 	}
@@ -151,6 +163,7 @@ func TestEngineRunPropagatesOtherHandlerError(t *testing.T) {
 	e.cpu.SetGPR(vax.PC, base)
 	putBytes(t, e.cpu, e.mem, base, 0x00)
 	wantErr := errors.New("boom")
+
 	e.table.SetHandler(inst, func(eng *Engine, d *Decoded) error { return wantErr })
 
 	err := e.Run()
@@ -174,6 +187,7 @@ func TestEngineStepDecodeFaultHandled(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+	
 	if cpu.GPR(vax.PC) != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (fault vector)", cpu.GPR(vax.PC))
 	}

@@ -46,6 +46,7 @@ func emulChmx(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	code := uint32(int32(int16(uint16(raw))))
 
 	// CHMx is a synchronous "system call" exception, not a retry-the-faulting-
@@ -67,5 +68,6 @@ func emulChmx(e *Engine, d *Decoded) error {
 	e.instructionPC = e.cpu.GPR(vax.PC)
 
 	modeIndex := d.Opcode.Function - 0xBC // 0=K, 1=E, 2=S, 3=U
+	
 	return &Fault{Code: ExcChangeModeK + Exception(modeIndex*4), Args: []uint32{code}}
 }

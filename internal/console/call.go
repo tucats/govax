@@ -33,9 +33,11 @@ func (c *Console) Call(addr uint32, step bool, args ...uint32) error {
 	for {
 		pc := c.CPU.GPR(vax.PC)
 		finish := c.traceStep(pc, false)
+
 		if err := c.Engine.Step(); err != nil {
 			return c.reportStopReason(err)
 		}
+		
 		finish()
 	}
 }

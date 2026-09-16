@@ -37,13 +37,16 @@ func (op Operand) Load(cpu *vax.CPU, mem *vm.Memory) (uint64, error) {
 		if op.Size == 8 {
 			lo := uint64(cpu.GPR(op.Reg))
 			hi := uint64(cpu.GPR(op.Reg + 1))
+
 			return lo | hi<<32, nil
 		}
+
 		return uint64(maskLow(cpu.GPR(op.Reg), op.Size)), nil
 
 	case OperandMemory:
 		return loadValue(cpu, mem, op.Addr, op.Size)
 	}
+
 	panic(fmt.Sprintf("cpu: invalid OperandKind %d", op.Kind))
 }
 
@@ -66,14 +69,18 @@ func (op Operand) Store(cpu *vax.CPU, mem *vm.Memory, value uint64) error {
 		if op.Size == 8 {
 			cpu.SetGPR(op.Reg, uint32(value))
 			cpu.SetGPR(op.Reg+1, uint32(value>>32))
+
 			return nil
 		}
+
 		cpu.SetGPR(op.Reg, mergeLow(cpu.GPR(op.Reg), uint32(value), op.Size))
+
 		return nil
 
 	case OperandMemory:
 		return storeValue(cpu, mem, op.Addr, op.Size, value)
 	}
+
 	panic(fmt.Sprintf("cpu: invalid OperandKind %d", op.Kind))
 }
 
@@ -82,6 +89,7 @@ func maskLow(v uint32, size int) uint32 {
 	if size >= 4 {
 		return v
 	}
+
 	return v & (1<<(uint(size)*8) - 1)
 }
 
@@ -91,7 +99,9 @@ func mergeLow(orig, v uint32, size int) uint32 {
 	if size >= 4 {
 		return v
 	}
+
 	mask := uint32(1<<(uint(size)*8) - 1)
+
 	return (orig &^ mask) | (v & mask)
 }
 
@@ -99,7 +109,9 @@ func loadValue(cpu *vax.CPU, mem *vm.Memory, addr uint32, size int) (uint64, err
 	if size == 8 {
 		return mem.LoadQuadword(cpu, addr)
 	}
+
 	v, err := loadSized(cpu, mem, addr, size)
+
 	return uint64(v), err
 }
 
@@ -107,12 +119,16 @@ func storeValue(cpu *vax.CPU, mem *vm.Memory, addr uint32, size int, value uint6
 	switch size {
 	case 1:
 		return mem.StoreByte(cpu, addr, byte(value))
+
 	case 2:
 		return mem.StoreWord(cpu, addr, uint16(value))
+
 	case 4:
 		return mem.StoreLongword(cpu, addr, uint32(value))
+
 	case 8:
 		return mem.StoreQuadword(cpu, addr, value)
+		
 	default:
 		panic(fmt.Sprintf("cpu: unsupported operand size %d", size))
 	}

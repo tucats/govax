@@ -58,18 +58,22 @@ func emulIndex(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	lowRaw, err := d.Operands[1].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	highRaw, err := d.Operands[2].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	sizeRaw, err := d.Operands[3].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	inRaw, err := d.Operands[4].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
@@ -105,10 +109,12 @@ func emulBitpsw(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	mask := uint16(maskRaw)
 	if mask&0xFF00 != 0 {
 		return &Fault{Code: ExcReservedOp}
 	}
+
 	longmask := uint32(mask) & 0xFF
 
 	psl := uint32(e.cpu.PSL())
@@ -117,7 +123,9 @@ func emulBitpsw(e *Engine, d *Decoded) error {
 	} else { // BICPSW
 		psl &^= longmask
 	}
+
 	e.cpu.SetPSL(vax.PSL(psl))
+
 	return nil
 }
 
@@ -129,16 +137,19 @@ func emulPushr(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	mask := uint16(maskRaw)
 
 	for n := 14; n >= 0; n-- {
 		if mask&(1<<uint(n)) == 0 {
 			continue
 		}
+
 		if err := push(e, e.cpu.GPR(vax.Reg(n))); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -149,20 +160,25 @@ func emulPopr(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	mask := uint16(maskRaw)
 
 	for n := 0; n <= 14; n++ {
 		if mask&(1<<uint(n)) == 0 {
 			continue
 		}
+
 		sp := e.cpu.GPR(vax.SP)
+
 		v, err := e.mem.LoadLongword(e.cpu, sp)
 		if err != nil {
 			return err
 		}
+
 		e.cpu.SetGPR(vax.SP, sp+4)
 		e.cpu.SetGPR(vax.Reg(n), v)
 	}
+
 	return nil
 }
 
@@ -183,12 +199,13 @@ func emulProbe(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	lenRaw, err := d.Operands[1].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
-	base := d.Operands[2].Addr
 
+	base := d.Operands[2].Addr
 	mode := int8(uint8(modeRaw))
 	length := int16(uint16(lenRaw))
 
@@ -207,6 +224,7 @@ func emulProbe(e *Engine, d *Decoded) error {
 	e.cpu.SetPSL(testPSL)
 
 	_, err1 := e.mem.Translate(e.cpu, base, access)
+
 	ok := err1 == nil
 	if ok {
 		last := uint32(int32(base) + int32(length) - 1)
@@ -221,6 +239,7 @@ func emulProbe(e *Engine, d *Decoded) error {
 	psl.SetZ(!ok)
 	psl.SetV(false)
 	e.cpu.SetPSL(psl)
+	
 	return nil
 }
 

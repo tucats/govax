@@ -132,8 +132,11 @@ func (c *Console) traceStep(pc uint32, force bool) (finish func()) {
 
 	trackRegs := c.CPU.DebugEnabled(vax.DebugRegisters)
 
-	var before [numTraceRegs]uint32
-	var beforePSL vax.PSL
+	var (
+		before    [numTraceRegs]uint32
+		beforePSL vax.PSL
+	)
+	
 	if trackRegs {
 		before, beforePSL = c.snapshotTraceRegs()
 	}

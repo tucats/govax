@@ -15,15 +15,19 @@ func init() {
 	reg := func(fn byte, h Handler) {
 		instructionTable.SetHandler(instructionTable.Lookup(Opcode{Function: fn}), h)
 	}
+
 	for _, fn := range []byte{0x40, 0x41, 0x60, 0x61} { // ADDF2/3, ADDD2/3
 		reg(fn, emulFAdd)
 	}
+
 	for _, fn := range []byte{0x42, 0x43, 0x62, 0x63} { // SUBF2/3, SUBD2/3
 		reg(fn, emulFSub)
 	}
+
 	for _, fn := range []byte{0x44, 0x45, 0x64, 0x65} { // MULF2/3, MULD2/3
 		reg(fn, emulFMul)
 	}
+
 	for _, fn := range []byte{0x46, 0x47, 0x66, 0x67} { // DIVF2/3, DIVD2/3
 		reg(fn, emulFDiv)
 	}
@@ -35,7 +39,9 @@ func loadFloatPair(e *Engine, d *Decoded) (float1, float2 float64, err error) {
 	if float1, err = loadFloat(e.cpu, e.mem, d.Operands[0]); err != nil {
 		return
 	}
+
 	float2, err = loadFloat(e.cpu, e.mem, d.Operands[1])
+
 	return
 }
 
@@ -44,6 +50,7 @@ func loadFloatPair(e *Engine, d *Decoded) (float1, float2 float64, err error) {
 // (integermath.go).
 func storeFloatResult(e *Engine, d *Decoded, result float64) error {
 	dst := d.Instruction.OperandCount - 1
+
 	return storeFloat(e.cpu, e.mem, d.Operands[dst], result)
 }
 
@@ -79,8 +86,10 @@ func emulFAdd(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	result := op1 + op0
 	setFloatPSL(e.cpu, result)
+
 	return storeFloatResult(e, d, result)
 }
 
@@ -92,8 +101,10 @@ func emulFSub(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	result := minuend - subtrahend
 	setFloatPSL(e.cpu, result)
+
 	return storeFloatResult(e, d, result)
 }
 
@@ -104,8 +115,10 @@ func emulFMul(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	result := op1 * op0
 	setFloatPSL(e.cpu, result)
+
 	return storeFloatResult(e, d, result)
 }
 
@@ -124,7 +137,9 @@ func emulFDiv(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	result := dividend / divisor
 	setFloatPSL(e.cpu, result)
+	
 	return storeFloatResult(e, d, result)
 }

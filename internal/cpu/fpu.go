@@ -67,11 +67,14 @@ func fpuStore(cpu *vax.CPU, size int, value float64) (uint64, error) {
 		if cpu.PSL().FU() {
 			return 0, &Fault{Code: ExcArithmetic, Args: []uint32{faultFltUnd}}
 		}
+
 		return 0, nil
 	}
+
 	if overflow {
 		return 0, &Fault{Code: ExcArithmetic, Args: []uint32{faultFltOvf}}
 	}
+
 	return bits, nil
 }
 
@@ -83,6 +86,7 @@ func fpuStore(cpu *vax.CPU, size int, value float64) (uint64, error) {
 // instead of a machine fault.
 func EncodeFloat(size int, value float64) (bits uint64, overflow bool) {
 	bits, _, overflow = encodeFloatCore(size, value)
+
 	return bits, overflow
 }
 
@@ -96,6 +100,7 @@ func DecodeFloat(bits uint64, size int) float64 {
 	if err != nil {
 		return 0
 	}
+
 	return v
 }
 
@@ -119,6 +124,7 @@ func encodeFloatCore(size int, value float64) (bits uint64, underflow, overflow 
 	if vaxExp < -127 {
 		return 0, true, false
 	}
+
 	if vaxExp > 127 {
 		return 0, false, true
 	}
@@ -134,17 +140,21 @@ func encodeFloatCore(size int, value float64) (bits uint64, underflow, overflow 
 				frac23 = 0
 				biasedExp++
 			}
+
 			if biasedExp > 255 {
 				return 0, false, true
 			}
 		}
+
 		natural := sign<<31 | biasedExp<<23 | frac23
+
 		return uint64(wordSwap(natural)), false, false
 	}
 
 	natural := sign<<31 | biasedExp<<23 | frac23
 	lowLong := wordSwap(natural)
 	highLong := wordSwap(lo32 << 3)
+
 	return uint64(lowLong) | uint64(highLong)<<32, false, false
 }
 
@@ -166,6 +176,7 @@ func fpuLoad(raw uint64, size int) (float64, error) {
 		if lowLong&0x7FFFFFFF == 0 {
 			return 0, nil
 		}
+		
 		return 0, &Fault{Code: ExcReservedOp}
 	}
 
@@ -173,6 +184,7 @@ func fpuLoad(raw uint64, size int) (float64, error) {
 	hi32 := sign<<31 | ieeeExp<<20 | frac23>>3
 
 	var lo32 uint32
+
 	if size == 8 {
 		highLong := wordSwap(uint32(raw >> 32))
 		lo32 = frac23&0x7<<29 | highLong>>3
@@ -193,9 +205,11 @@ func loadFloat(cpu *vax.CPU, mem *vm.Memory, op Operand) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	if op.Kind == OperandImmediate {
 		return math.Float64frombits(raw), nil
 	}
+
 	return fpuLoad(raw, op.Size)
 }
 
@@ -208,5 +222,6 @@ func storeFloat(cpu *vax.CPU, mem *vm.Memory, op Operand, value float64) error {
 	if err != nil {
 		return err
 	}
+
 	return op.Store(cpu, mem, raw)
 }

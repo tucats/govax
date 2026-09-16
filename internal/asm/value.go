@@ -73,6 +73,7 @@ func (a *Assembler) exprNoForward(c *cursor) (uint32, error) {
 // producing a value that can never be corrected later.
 func (a *Assembler) exprValue(c *cursor, loc uint32, fx fixupKind) (value uint32, wasForward bool, err error) {
 	st := &exprState{allowForward: true, loc: loc, fx: fx}
+
 	v, err := a.exprTop(c, st)
 	if err != nil {
 		return 0, false, err
@@ -80,6 +81,7 @@ func (a *Assembler) exprValue(c *cursor, loc uint32, fx fixupKind) (value uint32
 	if st.usedOperator && st.wasForward {
 		return 0, false, vmserrors.New(vmserrors.VAX_FWDOPERATOR)
 	}
+
 	return v, st.wasForward, nil
 }
 
@@ -87,6 +89,7 @@ func boolToU32(b bool) uint32 {
 	if b {
 		return 1
 	}
+	
 	return 0
 }
 
@@ -183,6 +186,7 @@ func (a *Assembler) exprMath(c *cursor, st *exprState) (uint32, error) {
 	for {
 		save := c.pos
 		c.skipBlanks()
+
 		ch := c.peek()
 		if ch != '+' && ch != '-' {
 			c.pos = save
@@ -540,6 +544,7 @@ func (a *Assembler) maskLiteral(c *cursor) (uint32, error) {
 	if c.peek() != '<' {
 		return 0, vmserrors.New(vmserrors.VAX_BADMASK)
 	}
+
 	c.next()
 
 	var mask uint32

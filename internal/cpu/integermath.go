@@ -17,27 +17,35 @@ func init() {
 	reg := func(fn byte, h Handler) {
 		instructionTable.SetHandler(instructionTable.Lookup(Opcode{Function: fn}), h)
 	}
+
 	for _, fn := range []byte{0x80, 0x81, 0xA0, 0xA1, 0xC0, 0xC1} { // ADDx2/3
 		reg(fn, emulAdd)
 	}
+
 	for _, fn := range []byte{0x82, 0x83, 0xA2, 0xA3, 0xC2, 0xC3} { // SUBx2/3
 		reg(fn, emulSub)
 	}
+
 	for _, fn := range []byte{0x84, 0x85, 0xA4, 0xA5, 0xC4, 0xC5} { // MULx2/3
 		reg(fn, emulMul)
 	}
+
 	for _, fn := range []byte{0x86, 0x87, 0xA6, 0xA7, 0xC6, 0xC7} { // DIVx2/3
 		reg(fn, emulDiv)
 	}
+
 	for _, fn := range []byte{0x88, 0x89, 0xA8, 0xA9, 0xC8, 0xC9} { // BISx2/3
 		reg(fn, emulBis)
 	}
+
 	for _, fn := range []byte{0x8A, 0x8B, 0xAA, 0xAB, 0xCA, 0xCB} { // BICx2/3
 		reg(fn, emulBic)
 	}
+
 	for _, fn := range []byte{0x8C, 0x8D, 0xAC, 0xAD, 0xCC, 0xCD} { // XORx2/3
 		reg(fn, emulXor)
 	}
+
 	reg(0xD8, emulAdwc)
 	reg(0xD9, emulSbwc)
 }
@@ -50,10 +58,13 @@ func init() {
 // transcription error).
 func loadPair(e *Engine, d *Decoded) (a, b uint64, size int, err error) {
 	size = d.Operands[0].Size
+
 	if a, err = d.Operands[0].Load(e.cpu, e.mem); err != nil {
 		return
 	}
+
 	b, err = d.Operands[1].Load(e.cpu, e.mem)
+
 	return
 }
 
@@ -63,6 +74,7 @@ func loadPair(e *Engine, d *Decoded) (a, b uint64, size int, err error) {
 // (separate destination) forms.
 func storeResult(e *Engine, d *Decoded, result uint64) error {
 	dst := d.Instruction.OperandCount - 1
+
 	return d.Operands[dst].Store(e.cpu, e.mem, result)
 }
 
@@ -74,8 +86,10 @@ func emulAdd(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	result, v, c := addResult(a, b, size)
 	setArithPSL(e.cpu, result, v, c, size)
+
 	return storeResult(e, d, result)
 }
 
@@ -88,8 +102,10 @@ func emulSub(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	result, v, c := subResult(minuend, subtrahend, size)
 	setArithPSL(e.cpu, result, v, c, size)
+
 	return storeResult(e, d, result)
 }
 
@@ -100,8 +116,10 @@ func emulMul(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+	
 	result, v := mulResult(a, b, size)
 	setArithPSL(e.cpu, result, v, false, size)
+
 	return storeResult(e, d, result)
 }
 
@@ -117,8 +135,10 @@ func emulDiv(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	result, v := divResult(dividend, divisor, size)
 	setArithPSL(e.cpu, result, v, false, size)
+
 	return storeResult(e, d, result)
 }
 
@@ -142,8 +162,10 @@ func emulBis(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	result := maskToSize(int64(a|b), size)
 	setLogicalPSL(e.cpu, result, size)
+
 	return storeResult(e, d, result)
 }
 
@@ -155,8 +177,10 @@ func emulBic(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	result := maskToSize(int64(val&^mask), size)
 	setLogicalPSL(e.cpu, result, size)
+	
 	return storeResult(e, d, result)
 }
 
@@ -168,8 +192,10 @@ func emulXor(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	result := maskToSize(int64(a^b), size)
 	setLogicalPSL(e.cpu, result, size)
+
 	return storeResult(e, d, result)
 }
 
@@ -183,9 +209,11 @@ func emulAdwc(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	carryIn := e.cpu.PSL().C()
 	result, v, c := addCarryResult(addend, sum, carryIn, size)
 	setArithPSL(e.cpu, result, v, c, size)
+
 	return storeResult(e, d, result)
 }
 
@@ -195,8 +223,10 @@ func emulSbwc(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	borrowIn := e.cpu.PSL().C()
 	result, v, c := subCarryResult(minuend, subtrahend, borrowIn, size)
 	setArithPSL(e.cpu, result, v, c, size)
+
 	return storeResult(e, d, result)
 }

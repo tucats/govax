@@ -100,6 +100,7 @@ func TestEmulSubByteBorrowAndOverflow(t *testing.T) {
 	cpu.SetGPR(vax.R1, 1)
 	cpu.SetGPR(vax.R2, 0x80)
 	stepInstruction(t, e, 0x82, regMode(vax.R1), regMode(vax.R2))
+
 	if !cpu.PSL().V() {
 		t.Error("V = false, want true (largest negative byte minus 1 overflows)")
 	}
@@ -111,9 +112,11 @@ func TestEmulMulByte(t *testing.T) {
 	cpu.SetGPR(vax.R1, 5)
 	cpu.SetGPR(vax.R2, 3)
 	stepInstruction(t, e, 0x84, regMode(vax.R1), regMode(vax.R2)) // MULB2
+
 	if got := byte(cpu.GPR(vax.R2)); got != 15 {
 		t.Errorf("result = %d, want 15", got)
 	}
+
 	if cpu.PSL().V() {
 		t.Error("V = true, want false")
 	}
@@ -122,9 +125,11 @@ func TestEmulMulByte(t *testing.T) {
 	cpu.SetGPR(vax.R1, 200)
 	cpu.SetGPR(vax.R2, 200)
 	stepInstruction(t, e, 0x84, regMode(vax.R1), regMode(vax.R2))
+
 	if !cpu.PSL().V() {
 		t.Error("V = false, want true (product doesn't fit a byte)")
 	}
+
 	if cpu.PSL().C() {
 		t.Error("C = true, want false (MUL always clears C)")
 	}
@@ -136,9 +141,11 @@ func TestEmulDivByte(t *testing.T) {
 	cpu.SetGPR(vax.R1, 3) // divisor
 	cpu.SetGPR(vax.R2, 0xF7 /* -9 */)
 	stepInstruction(t, e, 0x86, regMode(vax.R1), regMode(vax.R2)) // DIVB2
+
 	if got := int8(cpu.GPR(vax.R2)); got != -3 {
 		t.Errorf("result = %d, want -3 (truncated toward zero)", got)
 	}
+
 	if cpu.PSL().V() {
 		t.Error("V = true, want false")
 	}
@@ -155,6 +162,7 @@ func TestEmulDivByZeroGuarded(t *testing.T) {
 	if got := cpu.GPR(vax.R2); got != 10 {
 		t.Errorf("result = %d, want 10 (dividend left unchanged)", got)
 	}
+
 	if !cpu.PSL().V() {
 		t.Error("V = false, want true (divide by zero)")
 	}
@@ -171,6 +179,7 @@ func TestEmulDivMinIntOverflowGuarded(t *testing.T) {
 	if got := byte(cpu.GPR(vax.R2)); got != 0x80 {
 		t.Errorf("result = %#x, want 0x80 (unchanged)", got)
 	}
+
 	if !cpu.PSL().V() {
 		t.Error("V = false, want true (MinInt / -1 overflows)")
 	}
@@ -188,6 +197,7 @@ func TestEmulLogicalOpsLeaveCarryUnaffected(t *testing.T) {
 		{"BICB2", 0x8A},
 		{"XORB2", 0x8C},
 	}
+
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
@@ -201,6 +211,7 @@ func TestEmulLogicalOpsLeaveCarryUnaffected(t *testing.T) {
 			if !cpu.PSL().C() {
 				t.Error("C = false, want unaffected (true)")
 			}
+
 			if cpu.PSL().V() {
 				t.Error("V = true, want false")
 			}
@@ -214,6 +225,7 @@ func TestEmulBis(t *testing.T) {
 	cpu.SetGPR(vax.R1, 0x0F)
 	cpu.SetGPR(vax.R2, 0xF0)
 	stepInstruction(t, e, 0x88, regMode(vax.R1), regMode(vax.R2)) // BISB2
+
 	if got := byte(cpu.GPR(vax.R2)); got != 0xFF {
 		t.Errorf("result = %#x, want 0xff", got)
 	}
@@ -225,6 +237,7 @@ func TestEmulBic(t *testing.T) {
 	cpu.SetGPR(vax.R1, 0x0F)                                      // mask
 	cpu.SetGPR(vax.R2, 0xFF)                                      // dst
 	stepInstruction(t, e, 0x8A, regMode(vax.R1), regMode(vax.R2)) // BICB2
+	
 	if got := byte(cpu.GPR(vax.R2)); got != 0xF0 {
 		t.Errorf("result = %#x, want 0xf0", got)
 	}
@@ -236,6 +249,7 @@ func TestEmulXor(t *testing.T) {
 	cpu.SetGPR(vax.R1, 0xFF)
 	cpu.SetGPR(vax.R2, 0x0F)
 	stepInstruction(t, e, 0x8C, regMode(vax.R1), regMode(vax.R2)) // XORB2
+
 	if got := byte(cpu.GPR(vax.R2)); got != 0xF0 {
 		t.Errorf("result = %#x, want 0xf0", got)
 	}
@@ -269,9 +283,11 @@ func TestEmulAdwcCarryPropagation(t *testing.T) {
 	cpu.SetGPR(vax.R1, 0xFFFF)
 	cpu.SetGPR(vax.R2, 1)
 	stepInstruction(t, e, 0xA0, regMode(vax.R1), regMode(vax.R2)) // ADDW2: 0xFFFF+1 -> 0, C=true
+
 	if got := uint16(cpu.GPR(vax.R2)); got != 0 {
 		t.Fatalf("low word = %#x, want 0", got)
 	}
+
 	if !cpu.PSL().C() {
 		t.Fatal("C = false after low-word add, want true")
 	}
@@ -283,6 +299,7 @@ func TestEmulAdwcCarryPropagation(t *testing.T) {
 	if got := uint16(cpu.GPR(vax.R4)); got != 1 {
 		t.Errorf("high word = %#x, want 1 (carry propagated)", got)
 	}
+
 	if cpu.PSL().V() {
 		t.Error("V = true, want false")
 	}
@@ -307,6 +324,7 @@ func TestEmulAdwcOperatesOnLongwords(t *testing.T) {
 	if got := cpu.GPR(vax.R2); got != 0x00020000 {
 		t.Errorf("R2 = %#x, want 0x00020000 (longword add, not word)", got)
 	}
+
 	if cpu.PSL().C() {
 		t.Error("C = true, want false (0x0001FFFF+1 doesn't overflow a longword)")
 	}
@@ -318,6 +336,7 @@ func TestEmulSbwcBorrowPropagation(t *testing.T) {
 	cpu.SetGPR(vax.R1, 1)
 	cpu.SetGPR(vax.R2, 0)
 	stepInstruction(t, e, 0xA2, regMode(vax.R1), regMode(vax.R2)) // SUBW2: 0-1 -> borrow
+
 	if !cpu.PSL().C() {
 		t.Fatal("C = false after low-word sub, want true")
 	}

@@ -33,11 +33,14 @@ func init() {
 func emulCvt(e *Engine, d *Decoded) error {
 	srcSize := d.Operands[0].Size
 	dstSize := d.Operands[1].Size
+
 	v, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	result, ov := convertResult(v, srcSize, dstSize)
 	setArithPSL(e.cpu, result, ov, false, dstSize)
+	
 	return d.Operands[1].Store(e.cpu, e.mem, result)
 }

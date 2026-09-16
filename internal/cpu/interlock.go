@@ -35,6 +35,7 @@ func emulAdawi(e *Engine, d *Decoded) error {
 	if d.Operands[1].Kind != OperandMemory {
 		return &Fault{Code: ExcReservedOp}
 	}
+	
 	if d.Operands[1].Addr&1 != 0 {
 		return &Fault{Code: ExcReservedOp}
 	}
@@ -43,6 +44,7 @@ func emulAdawi(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	sumRaw, err := d.Operands[1].Load(e.cpu, e.mem)
 	if err != nil {
 		return err

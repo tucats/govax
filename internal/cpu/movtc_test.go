@@ -10,6 +10,7 @@ func TestEmulMovtc(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 	putBytes(t, cpu, mem, 0x3000, 'h', 'i') // source
+
 	for n := 0; n < 256; n++ {
 		v := byte(n)
 		if v >= 'a' && v <= 'z' {
@@ -17,6 +18,7 @@ func TestEmulMovtc(t *testing.T) {
 		}
 		putBytes(t, cpu, mem, 0x4000+uint32(n), v)
 	}
+
 	putBytes(t, cpu, mem, 0x2000, 0, 0, 0, 0, 0)
 
 	bytes := []byte{0x2E, 2}
@@ -33,10 +35,12 @@ func TestEmulMovtc(t *testing.T) {
 		if err != nil {
 			t.Fatalf("LoadByte: %v", err)
 		}
+
 		if got != w {
 			t.Errorf("byte %d = %q, want %q (result %q)", i, got, w, want)
 		}
 	}
+
 	if cpu.GPR(vax.R3) != 0x4000 {
 		t.Errorf("R3 = %#x, want 0x4000 (table address)", cpu.GPR(vax.R3))
 	}
@@ -54,6 +58,7 @@ func TestEmulMovtcOverlappingBackwardCopyTranslatesCorrectly(t *testing.T) {
 		if v >= 'a' && v <= 'z' {
 			v -= 'a' - 'A'
 		}
+
 		putBytes(t, cpu, mem, 0x4000+uint32(n), v)
 	}
 
@@ -73,6 +78,7 @@ func TestEmulMovtcOverlappingBackwardCopyTranslatesCorrectly(t *testing.T) {
 		if err != nil {
 			t.Fatalf("LoadByte: %v", err)
 		}
+
 		if got != w {
 			t.Errorf("byte %d = %q, want %q (result %q)", i, got, w, want)
 		}
@@ -84,13 +90,16 @@ func TestEmulMovtuc(t *testing.T) {
 		cpu, mem := fixture()
 		e := NewEngine(cpu, mem)
 		putBytes(t, cpu, mem, 0x3000, 'h', 'i', '!', 'x')
+
 		for n := 0; n < 256; n++ {
 			v := byte(n)
 			if v >= 'a' && v <= 'z' {
 				v -= 'a' - 'A'
 			}
+
 			putBytes(t, cpu, mem, 0x4000+uint32(n), v)
 		}
+
 		putBytes(t, cpu, mem, 0x2000, 0, 0, 0, 0)
 
 		bytes := []byte{0x2F, 4}
@@ -107,16 +116,20 @@ func TestEmulMovtuc(t *testing.T) {
 			if err != nil {
 				t.Fatalf("LoadByte: %v", err)
 			}
+
 			if got != w {
 				t.Errorf("byte %d = %q, want %q", i, got, w)
 			}
 		}
+
 		if !cpu.PSL().V() {
 			t.Error("V = false, want true (terminated by escape)")
 		}
+
 		if cpu.GPR(vax.R2) != 0 {
 			t.Errorf("R2 = %d, want 0", cpu.GPR(vax.R2))
 		}
+
 		if cpu.GPR(vax.R0) != 2 {
 			t.Errorf("R0 = %d, want 2 (including the escaping byte)", cpu.GPR(vax.R0))
 		}
@@ -126,13 +139,16 @@ func TestEmulMovtuc(t *testing.T) {
 		cpu, mem := fixture()
 		e := NewEngine(cpu, mem)
 		putBytes(t, cpu, mem, 0x3000, 'h', 'i')
+
 		for n := 0; n < 256; n++ {
 			v := byte(n)
 			if v >= 'a' && v <= 'z' {
 				v -= 'a' - 'A'
 			}
+
 			putBytes(t, cpu, mem, 0x4000+uint32(n), v)
 		}
+
 		putBytes(t, cpu, mem, 0x2000, 0, 0)
 
 		bytes := []byte{0x2F, 2}
@@ -144,18 +160,22 @@ func TestEmulMovtuc(t *testing.T) {
 		stepInstruction(t, e, bytes...)
 
 		want := []byte("HI")
+
 		for i, w := range want {
 			got, err := mem.LoadByte(cpu, 0x2000+uint32(i))
 			if err != nil {
 				t.Fatalf("LoadByte: %v", err)
 			}
+
 			if got != w {
 				t.Errorf("byte %d = %q, want %q", i, got, w)
 			}
 		}
+
 		if cpu.PSL().V() {
 			t.Error("V = true, want false (not terminated by escape)")
 		}
+
 		if cpu.GPR(vax.R0) != 0 {
 			t.Errorf("R0 = %d, want 0", cpu.GPR(vax.R0))
 		}
@@ -168,9 +188,11 @@ func TestEmulMovtuc(t *testing.T) {
 		cpu, mem := fixture()
 		e := NewEngine(cpu, mem)
 		putBytes(t, cpu, mem, 0x3000, 'h', 'i')
+
 		for n := 0; n < 256; n++ {
 			putBytes(t, cpu, mem, 0x4000+uint32(n), byte(n))
 		}
+
 		putBytes(t, cpu, mem, 0x2000, 0)
 
 		bytes := []byte{0x2F, 2}
@@ -185,6 +207,7 @@ func TestEmulMovtuc(t *testing.T) {
 		if err != nil {
 			t.Fatalf("LoadByte: %v", err)
 		}
+		
 		if got != 'h' {
 			t.Errorf("byte 0 = %q, want 'h' (loop must run despite 2 & 1 == 0)", got)
 		}

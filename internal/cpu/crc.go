@@ -35,21 +35,25 @@ func emulCrc(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	crc := uint32(inicrcV)
 
 	lenV, err := d.Operands[2].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	length := uint16(lenV)
 	stream := d.Operands[3].Addr
 
 	var table [16]uint32
+
 	for i := range table {
 		v, err := e.mem.LoadLongword(e.cpu, tbl+uint32(i*4))
 		if err != nil {
 			return err
 		}
+
 		table[i] = v
 	}
 
@@ -58,6 +62,7 @@ func emulCrc(e *Engine, d *Decoded) error {
 		if err != nil {
 			return err
 		}
+
 		crc ^= uint32(b)
 		crc = (crc >> 4) ^ table[crc&0xF]
 		crc = (crc >> 4) ^ table[crc&0xF]
@@ -75,5 +80,6 @@ func emulCrc(e *Engine, d *Decoded) error {
 	psl.SetV(false)
 	psl.SetC(false)
 	e.cpu.SetPSL(psl)
+	
 	return nil
 }

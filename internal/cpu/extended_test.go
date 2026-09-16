@@ -23,10 +23,13 @@ func TestEmulEmulPositive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadQuadword: %v", err)
 	}
+
 	const want = uint64(1000000)*1000000 + 500
+
 	if got != want {
 		t.Errorf("product = %d, want %d", got, want)
 	}
+
 	psl := cpu.PSL()
 	if psl.N() || psl.Z() || psl.V() || psl.C() {
 		t.Errorf("condition codes = N=%v Z=%v V=%v C=%v, want all clear", psl.N(), psl.Z(), psl.V(), psl.C())
@@ -50,10 +53,12 @@ func TestEmulEmulNegative(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadQuadword: %v", err)
 	}
+
 	wantProduct := int64(-2000000)
 	if want := uint64(wantProduct); got != want {
 		t.Errorf("product = %#x, want %#x (-2000000)", got, want)
 	}
+
 	if !cpu.PSL().N() {
 		t.Error("N = false, want true (negative product)")
 	}
@@ -83,6 +88,7 @@ func TestEmulEdivNormal(t *testing.T) {
 	if err := mem.StoreQuadword(cpu, 0x4000, 100); err != nil {
 		t.Fatalf("StoreQuadword: %v", err)
 	}
+
 	cpu.SetGPR(vax.R1, 7) // divisor
 
 	// EDIV R1, @#0x4000, R2, R3
@@ -94,9 +100,11 @@ func TestEmulEdivNormal(t *testing.T) {
 	if got := int32(cpu.GPR(vax.R2)); got != 14 {
 		t.Errorf("quotient = %d, want 14", got)
 	}
+
 	if got := int32(cpu.GPR(vax.R3)); got != 2 {
 		t.Errorf("remainder = %d, want 2", got)
 	}
+
 	psl := cpu.PSL()
 	if psl.N() || psl.Z() || psl.V() {
 		t.Errorf("condition codes = N=%v Z=%v V=%v, want all clear", psl.N(), psl.Z(), psl.V())
@@ -113,6 +121,7 @@ func TestEmulEdivNegativeDividendRemainderSign(t *testing.T) {
 	if err := mem.StoreQuadword(cpu, 0x4000, uint64(dividend)); err != nil {
 		t.Fatalf("StoreQuadword: %v", err)
 	}
+
 	cpu.SetGPR(vax.R1, 7)
 
 	bytes := []byte{0x7B, regMode(vax.R1)}
@@ -123,9 +132,11 @@ func TestEmulEdivNegativeDividendRemainderSign(t *testing.T) {
 	if got := int32(cpu.GPR(vax.R2)); got != -14 {
 		t.Errorf("quotient = %d, want -14", got)
 	}
+
 	if got := int32(cpu.GPR(vax.R3)); got != -2 {
 		t.Errorf("remainder = %d, want -2 (same sign as the dividend)", got)
 	}
+
 	if !cpu.PSL().N() {
 		t.Error("N = false, want true (negative quotient)")
 	}
@@ -141,6 +152,7 @@ func TestEmulEdivDivideByZero(t *testing.T) {
 	if err := mem.StoreQuadword(cpu, 0x4000, 0x0000000123456789); err != nil {
 		t.Fatalf("StoreQuadword: %v", err)
 	}
+
 	cpu.SetGPR(vax.R1, 0) // divisor
 
 	bytes := []byte{0x7B, regMode(vax.R1)}
@@ -151,9 +163,11 @@ func TestEmulEdivDivideByZero(t *testing.T) {
 	if got := cpu.GPR(vax.R2); got != 0x23456789 {
 		t.Errorf("quotient = %#x, want 0x23456789 (bits 31:0 of the dividend)", got)
 	}
+
 	if got := cpu.GPR(vax.R3); got != 0 {
 		t.Errorf("remainder = %#x, want 0", got)
 	}
+
 	if !cpu.PSL().V() {
 		t.Error("V = false, want true (divide by zero)")
 	}
@@ -182,9 +196,11 @@ func TestEmulEdivQuotientOverflow(t *testing.T) {
 	if got := cpu.GPR(vax.R2); got != 0 {
 		t.Errorf("quotient = %#x, want 0 (bits 31:0 of the dividend)", got)
 	}
+
 	if got := cpu.GPR(vax.R3); got != 0 {
 		t.Errorf("remainder = %#x, want 0", got)
 	}
+	
 	if !cpu.PSL().V() {
 		t.Error("V = false, want true (quotient overflow)")
 	}

@@ -46,6 +46,7 @@ func (e *Engine) HandleFault(f *Fault) error {
 	e.cpu.SetPR(vax.MAPEN, 0)
 	rawVector, err := e.mem.LoadLongword(e.cpu, scbb+uint32(f.Code))
 	e.cpu.SetPR(vax.MAPEN, savedMAPEN)
+
 	if err != nil {
 		return err
 	}
@@ -88,6 +89,7 @@ func (e *Engine) HandleFault(f *Fault) error {
 		if stack == 0 {
 			stackDesc = stackNames[newMode]
 		}
+
 		fmt.Fprintf(e.cpu.DebugWriter(), "DEBUG(EXCEPTION): TAKE, CODE=%04X  VECTOR=%08X  STACK=%08X [%s]\n",
 			f.Code, vector, sp, stackDesc)
 	}
@@ -96,6 +98,7 @@ func (e *Engine) HandleFault(f *Fault) error {
 	if err := e.mem.StoreLongword(e.cpu, sp, uint32(savedPSL)); err != nil {
 		return err
 	}
+
 	sp -= 4
 	if err := e.mem.StoreLongword(e.cpu, sp, e.instructionPC); err != nil {
 		return err
@@ -111,12 +114,14 @@ func (e *Engine) HandleFault(f *Fault) error {
 			return err
 		}
 	}
+
 	e.cpu.SetGPR(vax.SP, sp)
 	e.cpu.SetGPR(vax.PC, vector)
 
 	if vector == 0 {
 		return ErrUnhandledVector
 	}
+	
 	return nil
 }
 

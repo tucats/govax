@@ -23,6 +23,7 @@ func TestAttentionStdin_forwardsOrdinaryBytes(t *testing.T) {
 	if _, err := s.Read(buf); err != nil {
 		t.Fatalf("Read: %v", err)
 	}
+
 	if buf[0] != 'A' {
 		t.Errorf("Read = %q, want 'A'", buf[0])
 	}
@@ -30,6 +31,7 @@ func TestAttentionStdin_forwardsOrdinaryBytes(t *testing.T) {
 	if _, err := s.Read(buf); err != nil {
 		t.Fatalf("Read: %v", err)
 	}
+
 	if buf[0] != 'B' {
 		t.Errorf("Read = %q, want 'B'", buf[0])
 	}
@@ -48,6 +50,7 @@ func TestAttentionStdin_filtersCtrlCAndCallsAttention(t *testing.T) {
 	if _, err := s.Read(buf); err != nil {
 		t.Fatalf("Read: %v", err)
 	}
+
 	if buf[0] != 'A' {
 		t.Fatalf("Read = %q, want 'A'", buf[0])
 	}
@@ -57,6 +60,7 @@ func TestAttentionStdin_filtersCtrlCAndCallsAttention(t *testing.T) {
 	if _, err := s.Read(buf); err != nil {
 		t.Fatalf("Read: %v", err)
 	}
+
 	if buf[0] != 'B' {
 		t.Errorf("Read = %q, want 'B' (0x03 should be filtered, not delivered)", buf[0])
 	}
@@ -106,6 +110,7 @@ func TestAttentionStdin_nilEngineIsSafe(t *testing.T) {
 	if _, err := s.Read(buf); err != nil {
 		t.Fatalf("Read: %v", err)
 	}
+	
 	if buf[0] != 'B' {
 		t.Errorf("Read = %q, want 'B'", buf[0])
 	}

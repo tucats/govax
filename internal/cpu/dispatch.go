@@ -23,6 +23,7 @@ func (t *Table) SetHandler(inst *Instruction, h Handler) {
 	if t.handlers == nil {
 		t.handlers = make(map[*Instruction]Handler)
 	}
+
 	t.handlers[inst] = h
 }
 
@@ -32,6 +33,7 @@ func (t *Table) HandlerFor(inst *Instruction) Handler {
 	if h, ok := t.handlers[inst]; ok {
 		return h
 	}
+
 	return unimplementedHandler
 }
 
@@ -47,6 +49,7 @@ func wrapMemError(err error) error {
 	}
 
 	var tf *vm.TranslationFault
+
 	if errors.As(err, &tf) {
 		if tf.Kind == vm.TranslationNotValid {
 			return &Fault{Code: ExcTranslationNV, Args: []uint32{tf.Addr, 0}}
@@ -60,6 +63,7 @@ func wrapMemError(err error) error {
 		if tf.Kind == vm.ProtectionViolation {
 			subcode = 2
 		}
+		
 		return &Fault{Code: ExcAccessViol, Args: []uint32{tf.Addr, subcode}}
 	}
 

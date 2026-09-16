@@ -38,31 +38,38 @@ func emulScanc(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	length := int32(signExtend(lv, d.Operands[0].Size))
 	addr := d.Operands[1].Addr
 	tbl := d.Operands[2].Addr
+
 	maskv, err := d.Operands[3].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
-	mask := byte(maskv)
 
+	mask := byte(maskv)
 	scanc := d.Opcode.Function == 0x2A // else SPANC
 
 	var n int32
+
 	found := false
+
 	for ; n < length; n++ {
 		ch, err := e.mem.LoadByte(e.cpu, addr+uint32(n))
 		if err != nil {
 			return err
 		}
+
 		entry, err := e.mem.LoadByte(e.cpu, tbl+uint32(ch))
 		if err != nil {
 			return err
 		}
+
 		entry &= mask
 		if (scanc && entry != 0) || (!scanc && entry == 0) {
 			found = true
+
 			break
 		}
 	}
@@ -78,5 +85,6 @@ func emulScanc(e *Engine, d *Decoded) error {
 	psl.SetV(false)
 	psl.SetC(false)
 	e.cpu.SetPSL(psl)
+	
 	return nil
 }

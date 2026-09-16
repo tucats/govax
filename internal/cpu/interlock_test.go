@@ -21,9 +21,11 @@ func TestEmulAdawiNormal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadWord: %v", err)
 	}
+
 	if got != 0x15 {
 		t.Errorf("sum = %#x, want 0x15", got)
 	}
+
 	psl := cpu.PSL()
 	if psl.N() || psl.Z() || psl.V() || psl.C() {
 		t.Errorf("condition codes = N=%v Z=%v V=%v C=%v, want all clear", psl.N(), psl.Z(), psl.V(), psl.C())
@@ -49,6 +51,7 @@ func TestEmulAdawiOverflowSetsV(t *testing.T) {
 	if !cpu.PSL().V() {
 		t.Error("V = false, want true (32768 overflows a signed word)")
 	}
+
 	if !cpu.PSL().N() {
 		t.Error("N = false, want true (computed from the truncated word -32768, which is negative)")
 	}
@@ -57,6 +60,7 @@ func TestEmulAdawiOverflowSetsV(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadWord: %v", err)
 	}
+
 	if int16(got) != -32768 {
 		t.Errorf("stored sum = %#x, want -32768 (32768 truncated to a word)", got)
 	}
@@ -79,6 +83,7 @@ func TestEmulAdawiSetsRealCarry(t *testing.T) {
 	if !cpu.PSL().C() {
 		t.Error("C = false, want true (a real carry out of bit 15: 0xFFFF + 1 = 0x10000)")
 	}
+	
 	if !cpu.PSL().Z() {
 		t.Error("Z = false, want true")
 	}

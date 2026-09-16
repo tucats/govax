@@ -23,9 +23,11 @@ func TestEmulAcbPositiveAddendBoundary(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	if got := byte(cpu.GPR(vax.R3)); got != 10 {
 		t.Errorf("index = %d, want 10", got)
 	}
+
 	want := uint32(base + 6 + 16) // taken
 	if got := cpu.GPR(vax.PC); got != want {
 		t.Errorf("PC = %#x, want %#x (branch taken: index reached limit exactly)", got, want)
@@ -44,6 +46,7 @@ func TestEmulAcbNegativeAddendBoundary(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	want := uint32(base + 6 + 16)
 	if got := cpu.GPR(vax.PC); got != want {
 		t.Errorf("PC = %#x, want %#x (branch taken: index still >= limit)", got, want)
@@ -62,6 +65,7 @@ func TestEmulAcbNotTaken(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	want := uint32(base + 6) // not taken
 	if got := cpu.GPR(vax.PC); got != want {
 		t.Errorf("PC = %#x, want %#x (loop exits)", got, want)
@@ -81,6 +85,7 @@ func TestEmulAcbCarryUnaffected(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+	
 	if !cpu.PSL().C() {
 		t.Error("C = false, want unaffected (true)")
 	}

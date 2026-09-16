@@ -21,6 +21,7 @@ func TestEmulAcbFloatPositiveAddendBoundary(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+	
 	if got := getFloatReg(t, cpu, 4, vax.R3); got != 10.0 {
 		t.Errorf("index = %v, want 10.0", got)
 	}
@@ -42,9 +43,11 @@ func TestEmulAcbFloatNotTaken(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	if got := getFloatReg(t, cpu, 4, vax.R3); got != 11.0 {
 		t.Errorf("index = %v, want 11.0", got)
 	}
+
 	want := uint32(base + 6) // not taken
 	if got := cpu.GPR(vax.PC); got != want {
 		t.Errorf("PC = %#x, want %#x (loop exits)", got, want)
@@ -64,6 +67,7 @@ func TestEmulAcbFloatNegativeAddend(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	want := uint32(base + 6 + 16)
 	if got := cpu.GPR(vax.PC); got != want {
 		t.Errorf("PC = %#x, want %#x (branch taken: index still >= limit)", got, want)
@@ -84,9 +88,11 @@ func TestEmulAcbDouble(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	if got := getFloatReg(t, cpu, 8, vax.R5); got != 4.0 {
 		t.Errorf("index = %v, want 4.0", got)
 	}
+
 	want := uint32(base + 6 + 16) // taken (4.0 < limit 5.0)
 	if got := cpu.GPR(vax.PC); got != want {
 		t.Errorf("PC = %#x, want %#x", got, want)
@@ -106,6 +112,7 @@ func TestEmulAcbFloatCUnaffected(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	if !cpu.PSL().C() {
 		t.Error("C = false, want true (ACBF/ACBD leave C unaffected)")
 	}

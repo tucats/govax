@@ -22,6 +22,7 @@ func TestGetRegisterField(t *testing.T) {
 		if err != nil {
 			t.Fatalf("getRegisterField: %v", err)
 		}
+
 		if want := uint32(0x23); got != want {
 			t.Errorf("field = %#x, want %#x", got, want)
 		}
@@ -34,6 +35,7 @@ func TestGetRegisterField(t *testing.T) {
 		if err != nil {
 			t.Fatalf("getRegisterField: %v", err)
 		}
+
 		if got != 0xABCD1234 {
 			t.Errorf("field = %#x, want 0xABCD1234 (R3 must not be consulted)", got)
 		}
@@ -46,6 +48,7 @@ func TestGetRegisterField(t *testing.T) {
 		if err != nil {
 			t.Fatalf("getRegisterField: %v", err)
 		}
+
 		if want := uint32(0x0A); got != want {
 			t.Errorf("field = %#x, want %#x", got, want)
 		}
@@ -80,9 +83,11 @@ func TestSetRegisterField(t *testing.T) {
 	t.Run("within one register preserves surrounding bits", func(t *testing.T) {
 		cpu, _ := fixture()
 		cpu.SetGPR(vax.R2, 0xFFFFFFFF)
+
 		if err := setRegisterField(cpu, 4, 8, vax.R2, 0x00); err != nil {
 			t.Fatalf("setRegisterField: %v", err)
 		}
+
 		if want := uint32(0xFFFFF00F); cpu.GPR(vax.R2) != want {
 			t.Errorf("R2 = %#x, want %#x", cpu.GPR(vax.R2), want)
 		}
@@ -92,12 +97,15 @@ func TestSetRegisterField(t *testing.T) {
 		cpu, _ := fixture()
 		cpu.SetGPR(vax.R2, 0x00000000)
 		cpu.SetGPR(vax.R3, 0x00000000)
+
 		if err := setRegisterField(cpu, 28, 8, vax.R2, 0xFF); err != nil {
 			t.Fatalf("setRegisterField: %v", err)
 		}
+
 		if cpu.GPR(vax.R2) != 0xF0000000 {
 			t.Errorf("R2 = %#x, want 0xF0000000", cpu.GPR(vax.R2))
 		}
+
 		if cpu.GPR(vax.R3) != 0x0000000F {
 			t.Errorf("R3 = %#x, want 0x0000000F", cpu.GPR(vax.R3))
 		}
@@ -107,16 +115,20 @@ func TestSetRegisterField(t *testing.T) {
 		cpu, _ := fixture()
 		cpu.SetGPR(vax.R2, 0)
 		cpu.SetGPR(vax.R3, 0)
+
 		if err := setRegisterField(cpu, 0, 32, vax.R2, 0xDEADBEEF); err != nil {
 			t.Fatalf("setRegisterField: %v", err)
 		}
+
 		got, err := getRegisterField(cpu, 0, 32, vax.R2)
 		if err != nil {
 			t.Fatalf("getRegisterField: %v", err)
 		}
+
 		if got != 0xDEADBEEF {
 			t.Errorf("round-trip = %#x, want 0xDEADBEEF", got)
 		}
+
 		if cpu.GPR(vax.R3) != 0 {
 			t.Errorf("R3 = %#x, want untouched 0", cpu.GPR(vax.R3))
 		}
@@ -134,6 +146,7 @@ func TestGetMemoryField(t *testing.T) {
 		if err != nil {
 			t.Fatalf("getMemoryField: %v", err)
 		}
+
 		if want := uint32(0xF); got != want {
 			t.Errorf("field = %#x, want %#x", got, want)
 		}
@@ -144,6 +157,7 @@ func TestGetMemoryField(t *testing.T) {
 		if err != nil {
 			t.Fatalf("getMemoryField: %v", err)
 		}
+
 		if want := uint32(0xFF); got != want {
 			t.Errorf("field = %#x, want %#x", got, want)
 		}
@@ -154,6 +168,7 @@ func TestGetMemoryField(t *testing.T) {
 		if err != nil {
 			t.Fatalf("getMemoryField: %v", err)
 		}
+
 		if want := uint32(0x0); got != want {
 			t.Errorf("field = %#x, want %#x", got, want)
 		}
@@ -164,6 +179,7 @@ func TestGetMemoryField(t *testing.T) {
 		if err != nil {
 			t.Fatalf("getMemoryField: %v", err)
 		}
+
 		if got != 0 {
 			t.Errorf("field = %#x, want 0", got)
 		}
@@ -183,10 +199,12 @@ func TestSetMemoryField(t *testing.T) {
 	if err := setMemoryField(cpu, mem, 4, 16, 0x2000, 0x0000); err != nil {
 		t.Fatalf("setMemoryField: %v", err)
 	}
+
 	got, err := getMemoryField(cpu, mem, 0, 32, 0x2000)
 	if err != nil {
 		t.Fatalf("getMemoryField: %v", err)
 	}
+
 	// Bits 4-19 cleared, bits 0-3 and 20-31 left as 1.
 	if want := uint32(0xFFF0000F); got != want {
 		t.Errorf("field = %#x, want %#x", got, want)
@@ -198,6 +216,7 @@ func TestSetMemoryField(t *testing.T) {
 // an out-of-range position or size.
 func isReservedOp(err error) bool {
 	f, ok := err.(*Fault)
+
 	return ok && f.Code == ExcReservedOp
 }
 
@@ -214,6 +233,7 @@ func TestEmulExtv(t *testing.T) {
 		{"EXTV sign-extends", 0xEE, 0x00000AB0, 0xFFFFFFAB, true},
 		{"EXTZV zero-extends", 0xEF, 0x00000AB0, 0x000000AB, false},
 	}
+
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
@@ -233,9 +253,11 @@ func TestEmulExtv(t *testing.T) {
 			if got.N() != tc.wantN {
 				t.Errorf("N = %v, want %v", got.N(), tc.wantN)
 			}
+
 			if got.Z() {
 				t.Error("Z = true, want false (nonzero result)")
 			}
+
 			if got.V() || got.C() {
 				t.Errorf("V=%v C=%v, want both false", got.V(), got.C())
 			}
@@ -282,6 +304,7 @@ func TestEmulExtvImmediateBaseFaults(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v (fault should be handled, not propagated)", err)
 	}
+
 	if cpu.GPR(vax.PC) != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (fault vector)", cpu.GPR(vax.PC))
 	}
@@ -314,9 +337,11 @@ func TestEmulCmpv(t *testing.T) {
 			if got.N() != tc.wantN {
 				t.Errorf("N = %v, want %v", got.N(), tc.wantN)
 			}
+
 			if got.Z() != tc.wantZ {
 				t.Errorf("Z = %v, want %v", got.Z(), tc.wantZ)
 			}
+			
 			if got.V() {
 				t.Error("V = true, want false")
 			}
@@ -352,6 +377,7 @@ func TestEmulInsv(t *testing.T) {
 		if want := uint32(0xFFFFF00F); cpu.GPR(vax.R2) != want {
 			t.Errorf("R2 = %#x, want %#x", cpu.GPR(vax.R2), want)
 		}
+
 		got := cpu.PSL()
 		if got.N() != true || got.Z() != true || got.V() != true || got.C() != true {
 			t.Errorf("PSL = %+v, want unaffected (all true, as pre-set)", got)
@@ -372,6 +398,7 @@ func TestEmulInsv(t *testing.T) {
 		if err != nil {
 			t.Fatalf("getMemoryField: %v", err)
 		}
+
 		if want := uint32(0x000FF000); got != want {
 			t.Errorf("memory field = %#x, want %#x", got, want)
 		}
@@ -394,6 +421,7 @@ func TestEmulFf(t *testing.T) {
 		// FFS with no set bits in the field: result is position+size.
 		{"FFS finds nothing", 0xEA, 0x00, 8, true},
 	}
+
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
@@ -406,6 +434,7 @@ func TestEmulFf(t *testing.T) {
 			if got := cpu.GPR(vax.R2); got != tc.wantResult {
 				t.Errorf("R2 = %#x, want %#x", got, tc.wantResult)
 			}
+
 			if got := cpu.PSL().Z(); got != tc.wantZ {
 				t.Errorf("Z = %v, want %v", got, tc.wantZ)
 			}
@@ -423,6 +452,7 @@ func TestEmulFfZeroSizeField(t *testing.T) {
 	if got := cpu.GPR(vax.R2); got != 9 {
 		t.Errorf("R2 = %#x, want 9 (position returned unchanged)", got)
 	}
+
 	if !cpu.PSL().Z() {
 		t.Error("Z = false, want true")
 	}

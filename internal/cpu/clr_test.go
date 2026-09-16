@@ -31,6 +31,7 @@ func TestEmulClr(t *testing.T) {
 			if got.N() || !got.Z() || got.V() {
 				t.Errorf("N=%v Z=%v V=%v, want N=false Z=true V=false", got.N(), got.Z(), got.V())
 			}
+
 			if !got.C() {
 				t.Error("C = false, want unaffected (true)")
 			}
@@ -61,6 +62,7 @@ func TestEmulClrq(t *testing.T) {
 	if cpu.GPR(vax.R1) != 0 || cpu.GPR(vax.R2) != 0 {
 		t.Errorf("register pair = %#x:%#x, want 0:0", cpu.GPR(vax.R1), cpu.GPR(vax.R2))
 	}
+	
 	if !cpu.PSL().Z() {
 		t.Error("Z = false, want true")
 	}

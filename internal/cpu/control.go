@@ -17,6 +17,7 @@ func emulHalt(e *Engine, d *Decoded) error {
 	if !e.cpu.DebugEnabled(vax.DebugUserHalt) && e.cpu.PSL().CurMod() != vax.Kernel {
 		return &Fault{Code: ExcPrivileged}
 	}
+	
 	return ErrHalted
 }
 

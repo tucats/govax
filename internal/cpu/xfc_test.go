@@ -93,8 +93,10 @@ func TestEmulXfcConsoleWrite(t *testing.T) {
 func TestEmulXfcConsoleRead(t *testing.T) {
 	e, f := xfcEngine()
 	f.readByte = 'Z'
+
 	e.cpu.SetGPR(vax.R0, 0xAABBCC11)
 	stepInstruction(t, e, 0xFC, xfcConsoleRead)
+	
 	if got := e.cpu.GPR(vax.R0); got != 0xAABBCC5A {
 		t.Errorf("R0 = %#x, want 0xaabbcc5a (only low byte replaced)", got)
 	}
@@ -196,28 +198,36 @@ func TestEmulXfcDCL(t *testing.T) {
 	e.cpu.SetGPR(vax.R3, 0x33)
 
 	f.dclPresentRC = 1
+
 	e.cpu.SetGPR(vax.R0, dclPresent)
 	stepInstruction(t, e, 0xFC, xfcDCL)
+
 	if got := e.cpu.GPR(vax.R0); got != 1 {
 		t.Errorf("DCLPresent: R0 = %d, want 1", got)
 	}
+
 	if f.dclR1 != 0x11 || f.dclR2 != 0x22 {
 		t.Errorf("DCLPresent args = (%#x,%#x), want (0x11,0x22)", f.dclR1, f.dclR2)
 	}
 
 	f.dclKeywordRC = 7
+
 	e.cpu.SetGPR(vax.R0, dclGetKeyword)
 	stepInstruction(t, e, 0xFC, xfcDCL)
+
 	if got := e.cpu.GPR(vax.R0); got != 7 {
 		t.Errorf("DCLGetKeyword: R0 = %d, want 7", got)
 	}
+
 	if f.dclR3 != 0x33 {
 		t.Errorf("DCLGetKeyword r3 = %#x, want 0x33", f.dclR3)
 	}
 
 	f.dclIntegerRC = 99
+
 	e.cpu.SetGPR(vax.R0, dclGetInteger)
 	stepInstruction(t, e, 0xFC, xfcDCL)
+
 	if got := e.cpu.GPR(vax.R0); got != 99 {
 		t.Errorf("DCLGetInteger: R0 = %d, want 99", got)
 	}
@@ -227,16 +237,20 @@ func TestEmulXfcDCLGetString(t *testing.T) {
 	e, f := xfcEngine()
 
 	f.dclStringOK = false
+
 	e.cpu.SetGPR(vax.R0, dclGetString)
 	stepInstruction(t, e, 0xFC, xfcDCL)
+
 	if got := e.cpu.GPR(vax.R0); got != 0 {
 		t.Errorf("no buffer available: R0 = %#x, want 0", got)
 	}
 
 	f.dclStringOK = true
 	f.dclStringAddr = 0x4000
+
 	e.cpu.SetGPR(vax.R0, dclGetString)
 	stepInstruction(t, e, 0xFC, xfcDCL)
+
 	if got := e.cpu.GPR(vax.R0); got != 0x4000 {
 		t.Errorf("R0 = %#x, want 0x4000", got)
 	}
@@ -246,6 +260,7 @@ func TestEmulXfcDCLUnknownSubfunctionFaults(t *testing.T) {
 	e := newEngine()
 	e.cpu.SetGPR(vax.SP, 0x7000)
 	e.cpu.SetPR(vax.KSP, 0x7000)
+
 	e.SetSystemServices(&fakeServices{})
 	putVector(t, e, ExcReservedOp, 0x300, 0)
 

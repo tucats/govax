@@ -27,10 +27,12 @@ func emulEmul(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	muldRaw, err := d.Operands[1].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	addRaw, err := d.Operands[2].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
@@ -72,6 +74,7 @@ func emulEdiv(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	dividendRaw, err := d.Operands[1].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
@@ -81,15 +84,19 @@ func emulEdiv(e *Engine, d *Decoded) error {
 	dividend := int64(dividendRaw)
 
 	var quo, rem int32
+	
 	v := false
+
 	switch {
 	case divr == 0:
 		quo = int32(uint32(dividendRaw))
 		rem = 0
 		v = true
+
 	default:
 		q := dividend / int64(divr)
 		r := dividend % int64(divr)
+
 		if q < longMin || q > longMax {
 			quo = int32(uint32(dividendRaw))
 			rem = 0
@@ -110,5 +117,6 @@ func emulEdiv(e *Engine, d *Decoded) error {
 	if err := d.Operands[2].Store(e.cpu, e.mem, uint64(uint32(quo))); err != nil {
 		return err
 	}
+
 	return d.Operands[3].Store(e.cpu, e.mem, uint64(uint32(rem)))
 }

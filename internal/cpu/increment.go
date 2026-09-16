@@ -21,23 +21,29 @@ func init() {
 // emulInc is INC{B,W,L}: the operand is replaced by itself plus one.
 func emulInc(e *Engine, d *Decoded) error {
 	size := d.Operands[0].Size
+
 	v, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	result, ov, c := addResult(v, 1, size)
 	setArithPSL(e.cpu, result, ov, c, size)
+
 	return d.Operands[0].Store(e.cpu, e.mem, result)
 }
 
 // emulDec is DEC{B,W,L}: the operand is replaced by itself minus one.
 func emulDec(e *Engine, d *Decoded) error {
 	size := d.Operands[0].Size
+
 	v, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	result, ov, c := subResult(v, 1, size)
 	setArithPSL(e.cpu, result, ov, c, size)
+	
 	return d.Operands[0].Store(e.cpu, e.mem, result)
 }

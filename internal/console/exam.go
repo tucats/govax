@@ -119,6 +119,8 @@ func (c *Console) loadSized(addr uint32, sz ExamSize) (v uint32, err error) {
 }
 
 func (c *Console) formatOne(addr uint32, sz ExamSize, v uint32) string {
+	_ = addr // ignored for now
+	
 	switch sz {
 	case SizeByte:
 		return fmt.Sprintf("%02X", v&0xFF)

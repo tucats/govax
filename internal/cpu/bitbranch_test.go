@@ -41,9 +41,11 @@ func TestEmulBb(t *testing.T) {
 			if tc.wantBranch {
 				want = taken
 			}
+
 			if got := cpu.GPR(vax.PC); got != want {
 				t.Errorf("PC = %#x, want %#x", got, want)
 			}
+
 			// BBS/BBC never modify the tested operand.
 			if got := cpu.GPR(vax.R1); got != tc.regValue {
 				t.Errorf("R1 = %#x, want unchanged %#x", got, tc.regValue)
@@ -81,6 +83,7 @@ func TestEmulBbImmediateBaseFaults(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v (fault should be handled, not propagated)", err)
 	}
+
 	if cpu.GPR(vax.PC) != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (fault vector)", cpu.GPR(vax.PC))
 	}
@@ -105,6 +108,7 @@ func TestEmulBbState(t *testing.T) {
 		{"BBSSI behaves like BBSS", 0xE6, 1, true, 1},
 		{"BBCCI behaves like BBCC", 0xE7, 0, true, 0},
 	}
+	
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
@@ -118,13 +122,16 @@ func TestEmulBbState(t *testing.T) {
 			if tc.wantBranch {
 				want = taken
 			}
+
 			if got := cpu.GPR(vax.PC); got != want {
 				t.Errorf("PC = %#x, want %#x", got, want)
 			}
+
 			gotBit, err := getRegisterField(cpu, 0, 1, vax.R1)
 			if err != nil {
 				t.Fatalf("getRegisterField: %v", err)
 			}
+
 			if gotBit != tc.wantBitAfter {
 				t.Errorf("bit after = %d, want %d", gotBit, tc.wantBitAfter)
 			}
@@ -146,10 +153,12 @@ func TestEmulBbStateMemoryBase(t *testing.T) {
 	if got := cpu.GPR(vax.PC); got != nextPC {
 		t.Errorf("PC = %#x, want %#x (not taken)", got, nextPC)
 	}
+	
 	got, err := getMemoryField(cpu, mem, 0, 8, 0x2000)
 	if err != nil {
 		t.Fatalf("getMemoryField: %v", err)
 	}
+
 	if want := uint32(0x10); got != want {
 		t.Errorf("byte at 0x2000 = %#x, want %#x", got, want)
 	}

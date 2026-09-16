@@ -19,14 +19,15 @@ func TestFaultBreakpointsAddRemoveClear(t *testing.T) {
 	}
 
 	e.RemoveFaultBreakpoint(ExcPrivileged)
+
 	if got := e.FaultBreakpoints(); len(got) != 1 || got[0] != ExcCustomer {
 		t.Fatalf("after RemoveFaultBreakpoint: %v, want [%#02x]", got, ExcCustomer)
 	}
 
 	// Removing an unarmed code is a no-op, not an error.
 	e.RemoveFaultBreakpoint(ExcPrivileged)
-
 	e.ClearFaultBreakpoints()
+
 	if got := e.FaultBreakpoints(); len(got) != 0 {
 		t.Fatalf("after ClearFaultBreakpoints: %v, want empty", got)
 	}
@@ -49,9 +50,11 @@ func TestFaultBreakInterceptsRaise(t *testing.T) {
 	if !errors.As(err, &fb) {
 		t.Fatalf("raise() = %v, want a *FaultBreak", err)
 	}
+
 	if fb.Code != ExcPrivileged {
 		t.Errorf("Code = %#02x, want %#02x", fb.Code, ExcPrivileged)
 	}
+
 	if got := e.cpu.GPR(vax.PC); got != 0x4000 {
 		t.Errorf("PC = %#x, want 0x4000 (delivery skipped, PC left at the fault)", got)
 	}
@@ -81,6 +84,7 @@ func TestFaultBreakDoesNotInterceptUnarmedCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("raise() = %v, want nil (real delivery, unarmed code)", err)
 	}
+
 	if got := e.cpu.GPR(vax.PC); got != 0x100 {
 		t.Errorf("PC = %#x, want 0x100 (the vector, meaning delivery actually ran)", got)
 	}
@@ -104,6 +108,7 @@ func TestFaultBreakInterceptsDeliverPendingInterrupt(t *testing.T) {
 	if !errors.As(err, &fb) || fb.Code != ExcConWrite {
 		t.Fatalf("deliverPendingInterrupt() = %v, want *FaultBreak{Code: ExcConWrite}", err)
 	}
+	
 	if got := e.cpu.GPR(vax.PC); got != 0x5000 {
 		t.Errorf("PC = %#x, want 0x5000 (delivery skipped)", got)
 	}

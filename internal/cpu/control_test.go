@@ -17,6 +17,7 @@ func TestEmulHaltInKernelMode(t *testing.T) {
 	if !errors.Is(err, ErrHalted) {
 		t.Fatalf("Step() = %v, want ErrHalted", err)
 	}
+
 	if !e.Halted() {
 		t.Error("Halted() = false, want true")
 	}
@@ -44,6 +45,7 @@ func TestEmulHaltFaultsOutsideKernelMode(t *testing.T) {
 	if !errors.As(err, &f) || f.Code != ExcPrivileged {
 		t.Fatalf("emulHalt() = %v, want *Fault{Code: ExcPrivileged}", err)
 	}
+	
 	if e.Halted() {
 		t.Error("Halted() = true, want false (privileged fault, not a halt)")
 	}
@@ -73,9 +75,11 @@ func TestEmulNop(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	if e.Halted() {
 		t.Error("Halted() = true, want false")
 	}
+
 	if cpu.GPR(vax.PC) != base+1 {
 		t.Errorf("PC = %#x, want %#x", cpu.GPR(vax.PC), base+1)
 	}

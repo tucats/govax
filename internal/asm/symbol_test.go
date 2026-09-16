@@ -73,6 +73,7 @@ func TestForwardReferenceFixups(t *testing.T) {
 			if err := a.setSymbol("FWD", tc.value, SymNone, false); err != nil {
 				t.Fatalf("setSymbol: %v", err)
 			}
+
 			tc.verify(t, a)
 		})
 	}
@@ -80,9 +81,11 @@ func TestForwardReferenceFixups(t *testing.T) {
 
 func TestForwardReferenceOutOfRange(t *testing.T) {
 	a := New()
+
 	if _, _, err := a.getSymbol("FWD", true, 0x300, fixDispB); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := a.setSymbol("FWD", 0x1000, SymNone, false); err == nil {
 		t.Fatal("expected an out-of-range byte displacement error")
 	}
@@ -90,6 +93,7 @@ func TestForwardReferenceOutOfRange(t *testing.T) {
 
 func TestUndefinedSymbolWithoutForward(t *testing.T) {
 	a := New()
+
 	if _, _, err := a.getSymbol("NOPE", false, 0, fixNone); err == nil {
 		t.Fatal("expected an undefined-symbol error")
 	}
@@ -97,9 +101,11 @@ func TestUndefinedSymbolWithoutForward(t *testing.T) {
 
 func TestDuplicateSymbolDefinition(t *testing.T) {
 	a := New()
+
 	if err := a.setSymbol("FOO", 1, SymLabel, true); err != nil {
 		t.Fatal(err)
 	}
+
 	if err := a.setSymbol("FOO", 2, SymLabel, true); err == nil {
 		t.Fatal("expected a duplicate-definition error")
 	}
@@ -112,6 +118,7 @@ func TestLocalSymbolScoping(t *testing.T) {
 	if err := a.setSymbol("_LOOP", 0x100, SymLabel, true); err != nil {
 		t.Fatal(err)
 	}
+
 	if _, ok := a.symbols.find("MAIN_LOOP"); !ok {
 		t.Fatal("expected _LOOP to resolve under the MAIN_LOOP scoped name")
 	}
@@ -120,6 +127,7 @@ func TestLocalSymbolScoping(t *testing.T) {
 	if err := a.setSymbol("_LOOP", 0x200, SymLabel, true); err != nil {
 		t.Fatal(err)
 	}
+
 	if _, ok := a.symbols.find("OTHER_LOOP"); !ok {
 		t.Fatal("expected the second _LOOP to scope independently under OTHER_LOOP")
 	}
@@ -129,6 +137,7 @@ func TestLocalSymbolScoping(t *testing.T) {
 	if err := a.setSymbol("__ENTRY", 0x300, SymNone, false); err != nil {
 		t.Fatal(err)
 	}
+
 	if _, ok := a.symbols.find("__ENTRY"); !ok {
 		t.Fatal("expected __ENTRY to be stored unscoped")
 	}
@@ -136,10 +145,12 @@ func TestLocalSymbolScoping(t *testing.T) {
 
 func TestBuiltinSymbolsSeeded(t *testing.T) {
 	a := New()
+
 	sym, ok := a.symbols.find("EXC$CHMK")
 	if !ok {
 		t.Fatal("expected EXC$CHMK to be a predefined system symbol")
 	}
+
 	if sym.value != 0x40 {
 		t.Errorf("EXC$CHMK = %#x, want 0x40", sym.value)
 	}
@@ -148,6 +159,7 @@ func TestBuiltinSymbolsSeeded(t *testing.T) {
 	if !ok {
 		t.Fatal("expected OPC$_HALT to be predefined from the instruction table")
 	}
+
 	if sym.value != 0 {
 		t.Errorf("OPC$_HALT = %#x, want 0", sym.value)
 	}
@@ -167,15 +179,19 @@ func TestSymbols(t *testing.T) {
 	if _, ok := syms["EXC$CHMK"]; ok {
 		t.Error("expected a builtin symbol (EXC$CHMK) to be excluded from Symbols()")
 	}
+
 	if _, ok := syms["OPC$_HALT"]; ok {
 		t.Error("expected a builtin symbol (OPC$_HALT) to be excluded from Symbols()")
 	}
+
 	if v, ok := syms["FOO"]; !ok || v.Value != a.origin {
 		t.Errorf("FOO = (%#x, %v), want (%#x, true)", v.Value, ok, a.origin)
 	}
+
 	if v, ok := syms["FOO"]; !ok || v.Entry {
 		t.Errorf("FOO.Entry = %v, want false (it's a label, not a .ENTRY)", v.Entry)
 	}
+
 	if v, ok := syms["BAR"]; !ok || v.Value != 0x10 {
 		t.Errorf("BAR = (%#x, %v), want (0x10, true)", v.Value, ok)
 	}
@@ -187,6 +203,7 @@ func TestSymbols(t *testing.T) {
 // its own symbol table for the disassembler's entry-mask detection.
 func TestSymbolsEntryFlag(t *testing.T) {
 	a := New()
+
 	if _, err := a.Assemble("\t.ENTRY\tMAIN,^M<R2>\n\tRET\nOTHER:\tHALT\n"); err != nil {
 		t.Fatalf("Assemble: %v", err)
 	}
@@ -195,6 +212,7 @@ func TestSymbolsEntryFlag(t *testing.T) {
 	if v, ok := syms["MAIN"]; !ok || !v.Entry {
 		t.Errorf("MAIN.Entry = (%v, %v), want (true, true)", v.Entry, ok)
 	}
+
 	if v, ok := syms["OTHER"]; !ok || v.Entry {
 		t.Errorf("OTHER.Entry = (%v, %v), want (false, true)", v.Entry, ok)
 	}
@@ -206,6 +224,7 @@ func TestSymbolsEntryFlag(t *testing.T) {
 // file's named entry).
 func TestTakeEntry(t *testing.T) {
 	a := New()
+
 	if _, err := a.Assemble("MAIN:\tHALT\n\t.END\tMAIN\n"); err != nil {
 		t.Fatalf("Assemble: %v", err)
 	}
@@ -222,6 +241,7 @@ func TestTakeEntry(t *testing.T) {
 	if _, err := a.Assemble("\tHALT\n\t.END\n"); err != nil {
 		t.Fatalf("Assemble (second file): %v", err)
 	}
+
 	if _, ok := a.TakeEntry(); ok {
 		t.Error("expected a bare .END (no name) not to report an entry")
 	}
@@ -246,6 +266,7 @@ func TestSetS0Origin(t *testing.T) {
 	if _, err := a.Assemble(".REGION SYSTEM\nX:\t.BLKL\t1\n"); err != nil {
 		t.Fatalf("Assemble: %v", err)
 	}
+	
 	if v, ok := a.Symbols()["X"]; !ok || v.Value != newBase {
 		t.Errorf("X = (%#x, %v), want (%#x, true)", v.Value, ok, newBase)
 	}

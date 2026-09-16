@@ -31,6 +31,7 @@ func TestEmulJmp(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	if got := cpu.GPR(vax.PC); got != 0x9000 {
 		t.Errorf("PC = %#x, want 0x9000", got)
 	}
@@ -58,6 +59,7 @@ func TestCondBranches(t *testing.T) {
 		{"BGEQU taken", 0x1E, func(p *vax.PSL) { p.SetC(false) }, true},
 		{"BCS taken", 0x1F, func(p *vax.PSL) { p.SetC(true) }, true},
 	}
+
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
@@ -71,10 +73,12 @@ func TestCondBranches(t *testing.T) {
 			if err := e.Step(); err != nil {
 				t.Fatalf("Step: %v", err)
 			}
+
 			want := uint32(base + 2)
 			if tc.taken {
 				want += 16
 			}
+
 			if got := cpu.GPR(vax.PC); got != want {
 				t.Errorf("PC = %#x, want %#x (taken=%v)", got, want, tc.taken)
 			}
@@ -93,9 +97,11 @@ func TestEmulRsb(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	if got := cpu.GPR(vax.PC); got != 0x12345678 {
 		t.Errorf("PC = %#x, want 0x12345678", got)
 	}
+
 	if got := cpu.GPR(vax.SP); got != 0x8004 {
 		t.Errorf("SP = %#x, want 0x8004", got)
 	}
@@ -111,17 +117,21 @@ func TestEmulBsb(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	wantReturn := uint32(base + 2)
 	if got := cpu.GPR(vax.PC); got != wantReturn+16 {
 		t.Errorf("PC = %#x, want %#x", got, wantReturn+16)
 	}
+
 	if got := cpu.GPR(vax.SP); got != 0x7FFC {
 		t.Fatalf("SP = %#x, want 0x7ffc", got)
 	}
+
 	pushed, err := mem.LoadLongword(cpu, 0x7FFC)
 	if err != nil {
 		t.Fatalf("LoadLongword: %v", err)
 	}
+
 	if pushed != wantReturn {
 		t.Errorf("pushed return address = %#x, want %#x", pushed, wantReturn)
 	}
@@ -138,9 +148,11 @@ func TestEmulJsb(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	if got := cpu.GPR(vax.PC); got != 0x9000 {
 		t.Errorf("PC = %#x, want 0x9000", got)
 	}
+
 	if cpu.GPR(vax.SP) != 0x7FFC {
 		t.Errorf("SP = %#x, want 0x7ffc", cpu.GPR(vax.SP))
 	}
@@ -169,10 +181,12 @@ func TestEmulBlbsBlbc(t *testing.T) {
 			if err := e.Step(); err != nil {
 				t.Fatalf("Step: %v", err)
 			}
+			
 			want := uint32(base + 3)
 			if tc.taken {
 				want += 16
 			}
+
 			if got := cpu.GPR(vax.PC); got != want {
 				t.Errorf("PC = %#x, want %#x (taken=%v)", got, want, tc.taken)
 			}

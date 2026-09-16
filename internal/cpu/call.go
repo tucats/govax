@@ -94,6 +94,7 @@ func (e *Engine) buildCallFrame(newAP, newPC, savedSP, returnPC, returnFP uint32
 	if err != nil {
 		return err
 	}
+
 	newPC += 2
 
 	// Note 1: a reserved operand fault occurs if bits 13:12 of the entry
@@ -110,8 +111,10 @@ func (e *Engine) buildCallFrame(newAP, newPC, savedSP, returnPC, returnFP uint32
 		if mask&(1<<uint(n)) == 0 {
 			continue
 		}
+
 		sp := e.cpu.GPR(vax.SP) - 4
 		e.cpu.SetGPR(vax.SP, sp)
+
 		if err := e.mem.StoreLongword(e.cpu, sp, e.cpu.GPR(vax.Reg(n))); err != nil {
 			return err
 		}
@@ -201,6 +204,7 @@ func emulRet(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	sp += 4
 
 	// Note 1: a reserved operand fault occurs if tmp1<15:8> is nonzero.
@@ -317,6 +321,7 @@ func (e *Engine) CallEntry(entry uint32, args ...uint32) error {
 	sp := e.cpu.GPR(vax.SP) - 4
 
 	e.cpu.SetGPR(vax.SP, sp)
+	
 	if err := e.mem.StoreLongword(e.cpu, sp, uint32(len(args))); err != nil {
 		return err
 	}

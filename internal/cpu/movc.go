@@ -40,6 +40,7 @@ func emulMovc3(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	length := int32(signExtend(lv, d.Operands[0].Size))
 	src := d.Operands[1].Addr
 	dst := d.Operands[2].Addr
@@ -50,9 +51,11 @@ func emulMovc3(e *Engine, d *Decoded) error {
 			if err != nil {
 				return err
 			}
+
 			if err := e.mem.StoreByte(e.cpu, dst, b); err != nil {
 				return err
 			}
+
 			length--
 			src++
 			dst++
@@ -61,18 +64,22 @@ func emulMovc3(e *Engine, d *Decoded) error {
 		n := length
 		src = uint32(int32(src) + n)
 		dst = uint32(int32(dst) + n)
+
 		for length > 0 {
 			length--
 			src--
 			dst--
+
 			b, err := e.mem.LoadByte(e.cpu, src)
 			if err != nil {
 				return err
 			}
+
 			if err := e.mem.StoreByte(e.cpu, dst, b); err != nil {
 				return err
 			}
 		}
+
 		src = uint32(int32(src) + n)
 		dst = uint32(int32(dst) + n)
 	}
@@ -90,6 +97,7 @@ func emulMovc3(e *Engine, d *Decoded) error {
 	psl.SetV(false)
 	psl.SetC(false)
 	e.cpu.SetPSL(psl)
+
 	return nil
 }
 
@@ -107,23 +115,24 @@ func emulMovc5(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	srcLen := int16(signExtend(l1v, d.Operands[0].Size))
 
 	l2v, err := d.Operands[3].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
+
 	dstLen := int16(signExtend(l2v, d.Operands[3].Size))
 
 	fillv, err := d.Operands[2].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
-	fill := byte(fillv)
 
+	fill := byte(fillv)
 	src := d.Operands[1].Addr
 	dst := d.Operands[4].Addr
-
 	len1, len2 := int32(srcLen), int32(dstLen)
 
 	if src > dst {
@@ -132,51 +141,61 @@ func emulMovc5(e *Engine, d *Decoded) error {
 			if err != nil {
 				return err
 			}
+
 			if err := e.mem.StoreByte(e.cpu, dst, b); err != nil {
 				return err
 			}
+
 			len1--
 			src++
 			len2--
 			dst++
 		}
+
 		for len2 != 0 {
 			if err := e.mem.StoreByte(e.cpu, dst, fill); err != nil {
 				return err
 			}
+
 			len2--
 			dst++
 		}
 	} else {
-		min := len1
+		minLength := len1
 		if uint32(len2) < uint32(len1) {
-			min = len2
+			minLength = len2
 		}
+
 		len2Saved := len2
-		src = uint32(int32(src) + min)
+		src = uint32(int32(src) + minLength)
 		dst = uint32(int32(dst) + len2Saved)
 
 		for len2 > len1 {
 			len2--
 			dst--
+
 			if err := e.mem.StoreByte(e.cpu, dst, fill); err != nil {
 				return err
 			}
 		}
+
 		for len2 != 0 {
 			len1--
 			src--
 			len2--
 			dst--
+
 			b, err := e.mem.LoadByte(e.cpu, src)
 			if err != nil {
 				return err
 			}
+
 			if err := e.mem.StoreByte(e.cpu, dst, b); err != nil {
 				return err
 			}
 		}
-		src = uint32(int32(src) + min)
+
+		src = uint32(int32(src) + minLength)
 		dst = uint32(int32(dst) + len2Saved)
 	}
 
@@ -194,5 +213,6 @@ func emulMovc5(e *Engine, d *Decoded) error {
 	psl.SetV(false)
 	psl.SetC(c)
 	e.cpu.SetPSL(psl)
+	
 	return nil
 }

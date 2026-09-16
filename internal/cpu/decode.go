@@ -40,6 +40,7 @@ func fetchOpcode(cpu *vax.CPU, mem *vm.Memory, pc uint32) (Opcode, uint32, error
 	if err != nil {
 		return Opcode{}, 0, err
 	}
+
 	pc++
 
 	if f > 0xFC {
@@ -49,7 +50,9 @@ func fetchOpcode(cpu *vax.CPU, mem *vm.Memory, pc uint32) (Opcode, uint32, error
 		if err != nil {
 			return Opcode{}, 0, err
 		}
+
 		pc++
+
 		return Opcode{Extended: f, Function: f2}, pc, nil
 	}
 
@@ -95,11 +98,13 @@ func decodeInstruction(cpu *vax.CPU, mem *vm.Memory, table *Table) (Decoded, err
 	for i := 0; i < inst.OperandCount; i++ {
 		op, err := decodeOperand(cpu, mem, &pc, inst.Access[i], inst.Scale[i], inst.Type, false)
 		d.Operands[i] = op
+
 		if err != nil {
 			return d, err
 		}
 	}
 
 	d.NextPC = pc
+	
 	return d, nil
 }

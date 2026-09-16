@@ -65,6 +65,7 @@ func (e *Engine) SetFaultHistorySize(n int) {
 	if n < 0 {
 		n = 0
 	}
+
 	e.faultHistoryMax = n
 	e.faultHistory = nil
 	e.faultHistoryNext = 0
@@ -83,6 +84,7 @@ func (e *Engine) recordFault(code Exception, args []uint32, pc uint32, psl vax.P
 	if e.faultHistoryMax <= 0 {
 		return
 	}
+
 	if e.faultHistory == nil {
 		e.faultHistory = make([]FaultRecord, e.faultHistoryMax)
 	}
@@ -91,6 +93,7 @@ func (e *Engine) recordFault(code Exception, args []uint32, pc uint32, psl vax.P
 	e.faultHistory[e.faultHistoryNext] = FaultRecord{
 		Code: code, PC: pc, PSL: psl, Args: append([]uint32(nil), args...), Seq: e.faultHistorySeq,
 	}
+	
 	e.faultHistoryNext = (e.faultHistoryNext + 1) % e.faultHistoryMax
 	if e.faultHistoryCount < e.faultHistoryMax {
 		e.faultHistoryCount++
@@ -110,6 +113,7 @@ func (e *Engine) FaultHistory() []FaultRecord {
 
 	out := make([]FaultRecord, count)
 	start := (e.faultHistoryNext - count + e.faultHistoryMax) % e.faultHistoryMax
+
 	for i := 0; i < count; i++ {
 		out[i] = e.faultHistory[(start+i)%e.faultHistoryMax]
 	}

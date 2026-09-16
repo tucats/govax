@@ -30,21 +30,28 @@ func stepIndex(e *Engine, d *Decoded, idx int, delta int64) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	var result uint64
-	var overflow bool
+
+	var (
+		result   uint64
+		overflow bool
+	)
+
 	if delta > 0 {
 		result, overflow, _ = addResult(v, uint64(delta), 4)
 	} else {
 		result, overflow, _ = subResult(v, uint64(-delta), 4)
 	}
+
 	psl := e.cpu.PSL()
 	psl.SetN(signBit(result, 4))
 	psl.SetZ(isZero(result, 4))
 	psl.SetV(overflow)
 	e.cpu.SetPSL(psl)
+
 	if err := d.Operands[idx].Store(e.cpu, e.mem, result); err != nil {
 		return 0, err
 	}
+
 	return signExtend(result, 4), nil
 }
 
@@ -54,13 +61,16 @@ func emulAobleq(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	index, err := stepIndex(e, d, 1, 1)
 	if err != nil {
 		return err
 	}
+
 	if index <= signExtend(limit, 4) {
 		e.cpu.SetGPR(vax.PC, d.Operands[2].Addr)
 	}
+
 	return nil
 }
 
@@ -70,13 +80,16 @@ func emulAoblss(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	index, err := stepIndex(e, d, 1, 1)
 	if err != nil {
 		return err
 	}
+
 	if index < signExtend(limit, 4) {
 		e.cpu.SetGPR(vax.PC, d.Operands[2].Addr)
 	}
+
 	return nil
 }
 
@@ -86,9 +99,11 @@ func emulSobgtr(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	if index > 0 {
 		e.cpu.SetGPR(vax.PC, d.Operands[1].Addr)
 	}
+
 	return nil
 }
 
@@ -98,8 +113,10 @@ func emulSobgeq(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	if index >= 0 {
 		e.cpu.SetGPR(vax.PC, d.Operands[1].Addr)
 	}
+	
 	return nil
 }

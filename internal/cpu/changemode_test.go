@@ -27,6 +27,7 @@ func TestEmulChmxReturnsPastTheChmxInstruction(t *testing.T) {
 	// (SP)+,R0) before REI, matching what any real handler does before
 	// returning.
 	const handlerAddr = 0x900
+
 	putVector(t, e, ExcChangeModeK, handlerAddr, 0)
 	putBytes(t, cpu, e.mem, handlerAddr,
 		0xD0, 0x8E, 0x50, // MOVL (SP)+,R0
@@ -37,21 +38,26 @@ func TestEmulChmxReturnsPastTheChmxInstruction(t *testing.T) {
 	// literal operand), matching LIB$PUT_ONE_LOOP's own repeated
 	// "chmk #EXE$PUT_CONSOLE" shape.
 	const base = 0x1000
+
 	putBytes(t, cpu, e.mem, base, 0xBC, 0x00, 0xBC, 0x00)
 	cpu.SetGPR(vax.PC, base)
 
 	if err := e.Step(); err != nil { // CHMK #1: decode/fault/deliver -- lands at the handler
 		t.Fatalf("Step (first CHMK, fault delivery): %v", err)
 	}
+
 	if got := cpu.GPR(vax.PC); got != handlerAddr {
 		t.Fatalf("PC after first CHMK's fault delivery = %#x, want handlerAddr %#x", got, uint32(handlerAddr))
 	}
+
 	if err := e.Step(); err != nil { // MOVL (SP)+,R0 (discard the signal arg)
 		t.Fatalf("Step (first MOVL): %v", err)
 	}
+
 	if err := e.Step(); err != nil { // REI
 		t.Fatalf("Step (first REI): %v", err)
 	}
+
 	if got := cpu.GPR(vax.PC); got != base+2 {
 		t.Fatalf("PC after first CHMK's handler returns = %#x, want %#x (the instruction after CHMK, not CHMK's own address)", got, uint32(base+2))
 	}
@@ -59,15 +65,19 @@ func TestEmulChmxReturnsPastTheChmxInstruction(t *testing.T) {
 	if err := e.Step(); err != nil { // CHMK #2: must actually execute CHMK again, not re-trap the first one
 		t.Fatalf("Step (second CHMK, fault delivery): %v", err)
 	}
+
 	if got := cpu.GPR(vax.PC); got != handlerAddr {
 		t.Fatalf("PC after second CHMK's fault delivery = %#x, want handlerAddr %#x (confirms CHMK #2 actually executed, not a re-trap of CHMK #1)", got, uint32(handlerAddr))
 	}
+
 	if err := e.Step(); err != nil { // MOVL (SP)+,R0 (discard the signal arg)
 		t.Fatalf("Step (second MOVL): %v", err)
 	}
+
 	if err := e.Step(); err != nil { // REI
 		t.Fatalf("Step (second REI): %v", err)
 	}
+	
 	if got := cpu.GPR(vax.PC); got != base+4 {
 		t.Fatalf("PC after second CHMK's handler returns = %#x, want %#x", got, uint32(base+4))
 	}

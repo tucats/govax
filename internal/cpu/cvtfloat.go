@@ -81,13 +81,14 @@ func cvtFloatToInt(e *Engine, d *Decoded, round bool) error {
 		value = math.Round(value) // VAX round-to-nearest: ties away from zero, matching math.Round.
 	}
 
-	min, max := intOverflowBounds(dst.Size)
-	if value < min || value > max {
+	minSize, maxSize := intOverflowBounds(dst.Size)
+	if value < minSize || value > maxSize {
 		return &Fault{Code: ExcArithmetic, Args: []uint32{trapIntOvf}}
 	}
 
 	result := maskToSize(int64(value), dst.Size)
 	setArithPSL(e.cpu, result, false, false, dst.Size)
+
 	return dst.Store(e.cpu, e.mem, result)
 }
 
@@ -120,8 +121,10 @@ func emulCvtIntToFloat(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	value := float64(signExtend(raw, src.Size))
 
 	setFloatPSL(e.cpu, value)
+	
 	return storeFloat(e.cpu, e.mem, dst, value)
 }

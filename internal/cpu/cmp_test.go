@@ -70,6 +70,7 @@ func TestEmulBitLeavesCarryUnaffected(t *testing.T) {
 	if !psl.Z() || psl.N() || psl.V() {
 		t.Errorf("N=%v Z=%v V=%v, want N=false Z=true V=false", psl.N(), psl.Z(), psl.V())
 	}
+	
 	if !psl.C() {
 		t.Error("C = false, want unaffected (true)")
 	}

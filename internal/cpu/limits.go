@@ -60,6 +60,7 @@ func (e *Engine) SetLimits(maxInstructions int, maxDuration time.Duration) {
 func (e *Engine) BeginRun() {
 	e.instrCount = 0
 	e.attentionRequested.Store(false)
+
 	if e.timeLimit > 0 {
 		e.runDeadline = time.Now().Add(e.timeLimit)
 	}
@@ -72,8 +73,10 @@ func (e *Engine) checkLimits() error {
 	if e.instrLimit > 0 && e.instrCount >= e.instrLimit {
 		return ErrInstructionLimitExceeded
 	}
+
 	if e.timeLimit > 0 && !time.Now().Before(e.runDeadline) {
 		return ErrTimeLimitExceeded
 	}
+	
 	return nil
 }

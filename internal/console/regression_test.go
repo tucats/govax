@@ -88,6 +88,7 @@ func TestRegression_movc3(t *testing.T) {
 	if !ok {
 		t.Fatal("expected DST to be defined")
 	}
+	
 	want := "This is a string of text to be moved around."[:5]
 	for i := 0; i < len(want); i++ {
 		b, err := c.loadByte(dst + uint32(i))

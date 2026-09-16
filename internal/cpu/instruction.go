@@ -69,7 +69,9 @@ func newTable(instructions []*Instruction) *Table {
 			if t.single[inst.Opcode.Function] != nil {
 				panic("cpu: duplicate opcode " + inst.Name)
 			}
+
 			t.single[inst.Opcode.Function] = inst
+
 			continue
 		}
 
@@ -77,6 +79,7 @@ func newTable(instructions []*Instruction) *Table {
 		if _, exists := t.extended[key]; exists {
 			panic("cpu: duplicate extended opcode " + inst.Name)
 		}
+
 		t.extended[key] = inst
 	}
 
@@ -90,6 +93,7 @@ func (t *Table) Lookup(op Opcode) *Instruction {
 	if op.Extended == 0 {
 		return t.single[op.Function]
 	}
+
 	return t.extended[extendedKey(op)]
 }
 
@@ -106,10 +110,12 @@ func (t *Table) ByName(name string) *Instruction {
 				t.byName[inst.Name] = inst
 			}
 		}
+
 		for _, inst := range t.extended {
 			t.byName[inst.Name] = inst
 		}
 	}
+
 	return t.byName[name]
 }
 
@@ -147,6 +153,7 @@ func (t *Table) All() []*Instruction {
 // INSTRUCTIONS' implemented/unimplemented split).
 func (t *Table) Implemented(inst *Instruction) bool {
 	_, ok := t.handlers[inst]
+	
 	return ok
 }
 

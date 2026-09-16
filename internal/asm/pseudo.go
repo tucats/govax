@@ -43,6 +43,7 @@ var pseudoNames = map[string]bool{
 func (a *Assembler) assemblePseudo(c *cursor) (handled bool, err error) {
 	save := c.pos
 	c.skipBlanks()
+
 	if c.peek() == '.' {
 		c.next()
 	}
@@ -215,6 +216,7 @@ func readToken(c *cursor) string {
 // token.
 func readFileArg(c *cursor) string {
 	c.skipBlanks()
+
 	if c.peek() == '"' {
 		c.next()
 		start := c.pos
@@ -322,6 +324,7 @@ qualifiers:
 	name := scanSetName(c)
 
 	c.skipBlanks()
+
 	if c.peek() == '=' || c.peek() == ',' {
 		c.next()
 	}
@@ -361,6 +364,7 @@ func scanSetName(c *cursor) string {
 // is removed; with one, just that symbol (an error if it doesn't exist).
 func (a *Assembler) pseudoClear(c *cursor) error {
 	c.skipBlanks()
+
 	if c.atEnd() {
 		a.symbols.clearAll()
 
@@ -403,6 +407,7 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 		if err := a.image.storeWord(countPC, 0); err != nil {
 			return err
 		}
+
 		a.deposit += 2
 
 	case asciiDescriptor:
@@ -426,6 +431,7 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 
 	for {
 		c.skipBlanks()
+
 		if c.atEnd() {
 			break
 		}
@@ -479,6 +485,7 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 		}
 
 		c.skipBlanks()
+
 		if c.peek() != ',' {
 			break
 		}
@@ -544,6 +551,7 @@ func (a *Assembler) pseudoPrint(c *cursor) error {
 
 	for {
 		c.skipBlanks()
+
 		if c.atEnd() {
 			break
 		}
@@ -613,6 +621,7 @@ func (a *Assembler) pseudoMask(c *cursor) error {
 func (a *Assembler) pseudoFloat(c *cursor, size int) error {
 	for {
 		c.skipBlanks()
+
 		if c.atEnd() {
 			return nil
 		}
@@ -669,6 +678,7 @@ func (a *Assembler) pseudoEntry(c *cursor) error {
 	a.curEntry = name
 
 	c.skipBlanks()
+
 	if c.peek() == ',' {
 		c.next()
 	}
@@ -676,11 +686,13 @@ func (a *Assembler) pseudoEntry(c *cursor) error {
 	var mask uint32
 
 	c.skipBlanks()
+	
 	if !c.atEnd() {
 		m, err := a.maskLiteral(c)
 		if err != nil {
 			return err
 		}
+
 		mask = m
 	}
 
@@ -723,6 +735,7 @@ func (a *Assembler) pseudoCase(c *cursor) error {
 
 	for {
 		c.skipBlanks()
+
 		if c.atEnd() {
 			return nil
 		}
@@ -732,16 +745,20 @@ func (a *Assembler) pseudoCase(c *cursor) error {
 		}
 
 		loc := a.deposit
+
 		v, _, err := a.exprValue(c, loc, fixCaseW)
 		if err != nil {
 			return err
 		}
+
 		if v > 0xFFFF {
 			return vmserrors.New(vmserrors.VAX_DATARANGE, ".CASE", v)
 		}
+
 		if err := a.image.storeWord(a.deposit, uint16(v)); err != nil {
 			return err
 		}
+
 		a.deposit += 2
 	}
 }
@@ -760,6 +777,7 @@ func (a *Assembler) pseudoSCB(c *cursor) error {
 	if err != nil {
 		return err
 	}
+
 	if code > 0xFF || code&0x3 != 0 {
 		return vmserrors.New(vmserrors.VAX_SCBCODE, code)
 	}
@@ -768,19 +786,23 @@ func (a *Assembler) pseudoSCB(c *cursor) error {
 	a.deposit = 0x80000000 + a.scbb + code
 
 	c.skipBlanks()
+
 	if c.peek() == ',' {
 		c.next()
 	}
 
 	loc := a.deposit
+
 	value, _, err := a.exprValue(c, loc, addrFixup(4))
 	if err != nil {
 		a.deposit = saved
+
 		return err
 	}
 
 	if value != 0xFFFFFFFF && value&0x3 != 0 {
 		a.deposit = saved
+
 		return vmserrors.New(vmserrors.VAX_SCBALIGN, value)
 	}
 
@@ -788,23 +810,30 @@ func (a *Assembler) pseudoSCB(c *cursor) error {
 	if c.peek() == ',' {
 		c.next()
 	}
+
 	if !c.atEnd() {
 		switch readToken(c) {
 		case "ISP":
 			value++
+
 		case "KSP", "USP", "SSP":
 			// +0, but named for clarity at the call site.
+
 		default:
 			a.deposit = saved
+
 			return vmserrors.New(vmserrors.VAX_SCBSTACK)
 		}
 	}
 
 	if err := a.image.storeLongword(a.deposit, value); err != nil {
 		a.deposit = saved
+
 		return err
 	}
+
 	a.deposit = saved
+
 	return nil
 }
 
@@ -815,13 +844,16 @@ func (a *Assembler) pseudoAlign(c *cursor) error {
 	if err != nil {
 		return err
 	}
+
 	if size == 0 {
 		return vmserrors.New(vmserrors.VAX_ALIGNZERO)
 	}
+
 	n := (a.deposit / size) * size
 	if n < a.deposit {
 		a.deposit = n + size
 	}
+
 	return nil
 }
 
@@ -959,6 +991,7 @@ func (a *Assembler) storeShimStub(code uint32) error {
 		if err := a.image.storeByte(a.deposit, b); err != nil {
 			return err
 		}
+
 		a.deposit++
 	}
 
@@ -1079,6 +1112,7 @@ func (a *Assembler) pseudoConsole(c *cursor) error {
 			}
 		}
 	}
+
 	return nil
 }
 

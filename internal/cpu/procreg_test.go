@@ -62,10 +62,13 @@ func TestEmulMtprRequiresKernelMode(t *testing.T) {
 	}}
 
 	err := emulMtpr(NewEngine(cpu, mem), d)
+
 	var f *Fault
+
 	if !errors.As(err, &f) {
 		t.Fatalf("emulMtpr err = %v, want *Fault", err)
 	}
+	
 	if f.Code != ExcPrivileged {
 		t.Errorf("fault code = %#x, want ExcPrivileged", f.Code)
 	}
