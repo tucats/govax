@@ -256,7 +256,7 @@ func (c *Console) withKernelMode(fn func() error) error {
 // Evaluator returns an Evaluator bound to this console's symbol table,
 // radix, and current deposit address.
 func (c *Console) Evaluator() *Evaluator {
-	return &Evaluator{Symbols: c.Symbols, Radix: c.Radix, Here: c.DepositAddr}
+	return &Evaluator{Symbols: c.Symbols, Radix: c.Radix, Here: c.DepositAddr, Mem: c.Mem, CPU: c.CPU}
 }
 
 // Printf writes to the console's output stream, matching the C source's

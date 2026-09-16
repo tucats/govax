@@ -27,7 +27,7 @@ func newRunnableConsole(t testing.TB) *Console {
 	if err := c.Init(4096 * 512); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	if err := c.VMInit(2000, 100, 0, 4, 4, 4, 4); err != nil {
+	if err := c.VMInit(2000, 100, 0, 4, 4, 4, 4, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
 	return c

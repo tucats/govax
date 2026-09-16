@@ -3,6 +3,8 @@ package console
 import (
 	"strings"
 
+	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -24,17 +26,16 @@ type Evaluator struct {
 	Symbols *SymbolTable
 	Radix   int    // 8, 10, or 16 — the default for a prefix-less numeric literal
 	Here    uint32 // value of "." (the current deposit address)
+
+	// Mem/CPU back a quoted-string literal's writes into the console
+	// string pool (parseQuotedString) — nil whenever this Evaluator is
+	// used only for address/value arithmetic that never touches memory.
+	Mem *vm.Memory
+	CPU *vax.CPU
 }
 
 // Eval parses a leading expression from s and returns its value and
 // whatever text remains unconsumed.
-//
-// TODO - This item does not yet support string pooling in the console.
-// When the microkernel is valid, a string constants like "Hello" should
-// store the string value in the console string pool area and create a
-// descriptor to that string, and then use the VAX address of the
-// descriptor as the result of the operaiton. This was supported in the
-// C "reference" version of eVAX but has not yet been ported here.
 func (e *Evaluator) Eval(s string) (uint32, string, error) {
 	return e.parseCompare(s)
 }
@@ -209,6 +210,10 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 		return e.Here, s[1:], nil
 	}
 
+	if s[0] == '"' {
+		return e.parseQuotedString(s)
+	}
+
 	if isSymbolStart(s[0]) {
 		i := 1
 		for i < len(s) && isSymbolChar(s[i]) {
@@ -230,6 +235,121 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 	}
 
 	return e.parseNumber(s)
+}
+
+// parseQuotedString parses a double-quoted string literal, matching
+// asm_expr3's own '"' case (reference/eVAX/eVAX/Source/Assembler/
+// asm_expr.c): it appends the string's bytes into the console string pool
+// (CONSOLE$STRINGPOOL_BASE/_SIZE, reserved by VMInit -- see vminit.go),
+// builds a VAX string descriptor for it, links the descriptor onto the
+// pool's singly linked chain (the same chain ShowString walks via
+// CONSOLE$STRINGPOOL_BASE's head-of-chain longword), and returns the
+// descriptor's address as the expression's value.
+//
+// The pool layout, per string, mirrors the C source exactly: a 4-byte
+// "link" cell (initially zero, later overwritten with this string's own
+// descriptor address by whichever *next* call retroactively points back to
+// it -- or, for the very first string, by this call pointing back into
+// CONSOLE$STRINGPOOL_BASE's head cell), immediately followed by the raw
+// string bytes, then (4-byte aligned) a 12-byte descriptor: length,
+// pointer-to-data, and a next-descriptor link that starts zeroed (chain
+// terminator) and is reused as the *following* string's own link cell.
+//
+// Matching the C source, a missing closing quote is not an error -- the
+// literal simply runs to the end of the input (or an embedded '\n'), same
+// as asm_expr3's own `!isend(*p)` loop guard.
+func (e *Evaluator) parseQuotedString(s string) (uint32, string, error) {
+	if e.Mem == nil {
+		return 0, "", vmserrors.New(vmserrors.CLI_NOVAX)
+	}
+
+	poolStart, ok := e.Symbols.Get("CONSOLE$STRINGPOOL")
+	if !ok {
+		return 0, "", vmserrors.New(vmserrors.CLI_NOPOOL)
+	}
+
+	poolSize, ok := e.Symbols.Get("CONSOLE$STRINGPOOL_SIZE")
+	if !ok {
+		return 0, "", vmserrors.New(vmserrors.CLI_NOPOOLSIZE)
+	}
+
+	poolBase, ok := e.Symbols.Get("CONSOLE$STRINGPOOL_BASE")
+	if !ok {
+		return 0, "", vmserrors.New(vmserrors.CLI_NOSTRINGPOOL)
+	}
+
+	s = s[1:] // consume the opening quote
+
+	linkage := poolStart
+	n := poolStart
+
+	if err := e.Mem.StoreLongword(e.CPU, n, 0); err != nil {
+		return 0, "", err
+	}
+
+	n += 4
+
+	var size uint32
+
+	for len(s) > 0 && s[0] != '"' && s[0] != '\n' {
+		if n > poolBase+poolSize+16 {
+			return 0, "", vmserrors.New(vmserrors.CLI_SPOOLOVF)
+		}
+
+		ch := s[0]
+		s = s[1:]
+
+		if ch == '\\' && len(s) > 0 {
+			esc := s[0]
+			s = s[1:]
+
+			switch esc {
+			case 'n':
+				ch = '\n'
+			case 'r':
+				ch = '\r'
+			case 't':
+				ch = '\t'
+			default:
+				ch = esc
+			}
+		}
+
+		if err := e.Mem.StoreByte(e.CPU, n, ch); err != nil {
+			return 0, "", err
+		}
+
+		size++
+		n++
+	}
+
+	if n&3 != 0 {
+		n = (n &^ 3) + 4
+	}
+
+	if err := e.Mem.StoreLongword(e.CPU, n, size); err != nil {
+		return 0, "", err
+	}
+
+	if err := e.Mem.StoreLongword(e.CPU, n+4, poolStart+4); err != nil {
+		return 0, "", err
+	}
+
+	if err := e.Mem.StoreLongword(e.CPU, linkage, n); err != nil {
+		return 0, "", err
+	}
+
+	if err := e.Mem.StoreLongword(e.CPU, n+8, 0); err != nil {
+		return 0, "", err
+	}
+
+	e.Symbols.Set("CONSOLE$STRINGPOOL", n+8, SymbolSystem)
+
+	if len(s) > 0 && s[0] == '"' {
+		s = s[1:]
+	}
+
+	return n, s, nil
 }
 
 // parseDefined parses DEFINED("SYMBOL")'s parenthesized, double-quoted

@@ -49,13 +49,14 @@ const (
 // of its own; only P0 and P1 pages start invalid and get demand-paged in on
 // first touch.
 //
-// Also not ported, as pure conveniences with no other consumer yet:
-// CONSOLE$STRINGPOOL* (serves the inline mini-assembler, Phase 11's scope)
-// and the PTE$K_NONE guard page installed one page below each privileged
-// stack (done via the C source's own `setpte` mini-parser, also assembler-
-// adjacent). CONSOLE$SCRATCH itself *is* reserved below, now that Phase 13's
-// image loader and SHIM$ stub synthesis are real consumers.
-func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages, ispPages uint32) error {
+// Also not ported, as a pure convenience with no other consumer yet: the
+// PTE$K_NONE guard page installed one page below each privileged stack
+// (done via the C source's own `setpte` mini-parser, assembler-adjacent).
+// CONSOLE$SCRATCH itself *is* reserved below, now that Phase 13's image
+// loader and SHIM$ stub synthesis are real consumers, and CONSOLE$STRINGPOOL*
+// is reserved below too, now that expr.go's quoted-string literal support
+// is a real consumer (see that file's parseQuotedString).
+func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages, ispPages, stringPoolPages uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -294,6 +295,60 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// silently overwrite the .SCB vector table it had just written a few
 	// bytes into the same page.
 	paddr += 512
+
+	// The string pool area, used by expr.go's quoted-string literal support
+	// to build VAX string descriptors on the fly -- matching
+	// console_vminit_dcl's own "after the SCB and such" placement.
+	// CONSOLE$STRINGPOOL is the bump-allocated insertion point (initially
+	// == CONSOLE$STRINGPOOL_BASE); the head-of-chain longword ShowString
+	// walks (via CONSOLE$STRINGPOOL_BASE) starts zeroed, matching the C
+	// source's own initial `store_memory(stringpool, &zero, 4)`. Zeroed via
+	// the physical address (paddr), not the virtual one (stringPoolBase):
+	// MAPEN is still off here (it isn't set until below), so translation is
+	// a no-op passthrough and a virtual S0 address would be read as a raw
+	// physical one instead -- unlike the C source, which turns MAPEN on
+	// earlier and so can use its virtual `stringpool` address directly for
+	// this same write.
+	stringPoolSize := stringPoolPages * 512
+	stringPoolBase := 0x80000000 + paddr
+
+	c.Symbols.Set("CONSOLE$STRINGPOOL", stringPoolBase, SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL_BASE", stringPoolBase, SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL_SIZE", stringPoolSize, SymbolSystem)
+
+	// Widen the pool's pages from the rest of S0's default protection
+	// (ProtURKW: every mode may read, only kernel may write) to PTE$K_ALL
+	// (every mode may read AND write), matching console_vminit_dcl's own
+	// `setpte_multiple("... PROT=PTE$K_ALL")` call over this exact address
+	// range. Without this, user-mode code building a string descriptor
+	// here (expr.go's parseQuotedString, or a running program's own RTL
+	// calls) takes a protection-violation page fault -- the S0 loop above
+	// leaves every page it creates, this range included, at ProtURKW.
+	// Read-modify-write via each page's raw physical PTE address (SBR==0
+	// for S0, so S0 page N's PTE lives at physical address N*4) rather
+	// than StorePTE/LookupPTE, which both require MAPEN already on -- not
+	// yet true this early in VMInit.
+	for off := uint32(0); off < stringPoolSize; off += 512 {
+		pteAddr := ((paddr + off) >> 9) * 4
+
+		raw, err := c.Mem.LoadLongword(c.CPU, pteAddr)
+		if err != nil {
+			return err
+		}
+
+		pte := vm.PTE(raw)
+		pte.SetProtection(vm.ProtUW)
+
+		if err := c.Mem.StoreLongword(c.CPU, pteAddr, uint32(pte)); err != nil {
+			return err
+		}
+	}
+
+	if err := c.Mem.StoreLongword(c.CPU, paddr, 0); err != nil {
+		return err
+	}
+
+	paddr += stringPoolSize
 
 	// The first S0 virtual address past every VMINIT-reserved region (page
 	// tables, privileged stacks, CONSOLE$SCRATCH, the SHIM$ stub page, and

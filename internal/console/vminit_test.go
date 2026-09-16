@@ -13,7 +13,7 @@ func TestVMInit_enablesTranslation(t *testing.T) {
 		t.Fatalf("Init: %v", err)
 	}
 
-	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2); err != nil {
+	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
 
@@ -43,7 +43,7 @@ func TestVMInit_guardsFirstP0Page(t *testing.T) {
 	if err := c.Init(128 * 512); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2); err != nil {
+	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
 	if _, err := c.Mem.LoadLongword(c.CPU, 0x0); err == nil {
@@ -56,7 +56,7 @@ func TestVMInit_stackPointersAreDistinctAndInS0(t *testing.T) {
 	if err := c.Init(128 * 512); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2); err != nil {
+	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
 	ksp := c.CPU.PR(vax.KSP)
@@ -76,7 +76,7 @@ func TestVMInit_reservesConsoleScratch(t *testing.T) {
 	if err := c.Init(128 * 512); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2); err != nil {
+	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
 	scratch, ok := c.Symbols.Get("CONSOLE$SCRATCH")
@@ -98,9 +98,47 @@ func TestVMInit_reservesConsoleScratch(t *testing.T) {
 	}
 }
 
+// TestVMInit_stringPoolWritableFromUserMode matches console_vminit_dcl's
+// own `setpte_multiple("... PROT=PTE$K_ALL")` override of the string pool's
+// pages: unlike the rest of S0 (ProtURKW -- every mode may read, only
+// kernel may write), the pool itself must also be writable from user mode,
+// since expr.go's parseQuotedString (and a running program's own RTL calls,
+// e.g. CALL LIB$PUT_OUTPUT("Hello")) build string descriptors there without
+// necessarily switching to kernel mode first.
+func TestVMInit_stringPoolWritableFromUserMode(t *testing.T) {
+	c := New(&bytes.Buffer{})
+	if err := c.Init(128 * 512); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
+		t.Fatalf("VMInit: %v", err)
+	}
+
+	base, ok := c.Symbols.Get("CONSOLE$STRINGPOOL_BASE")
+	if !ok {
+		t.Fatal("expected CONSOLE$STRINGPOOL_BASE symbol to be defined")
+	}
+
+	psl := c.CPU.PSL()
+	psl.SetCurMod(vax.User)
+	c.CPU.SetPSL(psl)
+
+	if err := c.Mem.StoreLongword(c.CPU, base+4, 0xCAFEF00D); err != nil {
+		t.Fatalf("StoreLongword through CONSOLE$STRINGPOOL_BASE from user mode: %v", err)
+	}
+
+	v, err := c.Mem.LoadLongword(c.CPU, base+4)
+	if err != nil {
+		t.Fatalf("LoadLongword through CONSOLE$STRINGPOOL_BASE: %v", err)
+	}
+	if v != 0xCAFEF00D {
+		t.Errorf("got %#x, want 0xcafef00d", v)
+	}
+}
+
 func TestVMInit_requiresInit(t *testing.T) {
 	c := New(&bytes.Buffer{})
-	if err := c.VMInit(1, 1, 0, 1, 1, 1, 1); err == nil {
+	if err := c.VMInit(1, 1, 0, 1, 1, 1, 1, 8); err == nil {
 		t.Error("expected error before Init")
 	}
 }
@@ -110,7 +148,7 @@ func TestVMInit_rejectsOversizedRequest(t *testing.T) {
 	if err := c.Init(128 * 512); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	if err := c.VMInit(1000, 1000, 0, 1, 1, 1, 1); err == nil {
+	if err := c.VMInit(1000, 1000, 0, 1, 1, 1, 1, 8); err == nil {
 		t.Error("expected error for a VM request exceeding physical memory")
 	}
 }

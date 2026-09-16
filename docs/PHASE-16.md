@@ -933,3 +933,75 @@ Remaining blockers from the previous entry, still open: `SET MKVALID/NOMK`,
 `SET ASSEMBLER` flags, the watchpoint subsystem (also tracked in
 `docs/PHASE-18.md`), `CLEAR PROFILES`/`SHOW INSTRUCTIONS/PROFILE`, and
 `SHOW`/`CLEAR ERROR` (`$STATUS` tracking).
+
+### 2026-09-16 — Console string pooling (`expr.go`'s quoted-string literal) ported
+
+`expr.go`'s `Evaluator.Eval` had a long-standing `TODO`: a double-quoted string
+literal (`"Hello"`) parsed but had nowhere to go, unlike `asm_expr3`'s own `'"'`
+case (`reference/eVAX/eVAX/Source/Assembler/asm_expr.c:390-488`), which builds a
+VAX string descriptor on the fly in the console string pool and evaluates to that
+descriptor's address. `SHOW STRING`/`CLEAR STRINGS` (Sub-phases 1a/2 above) already
+walked/reset that same pool, but nothing ever populated it, so both commands only
+ever reported it empty. Now ported in full:
+
+- **`vminit.go`**: `VMInit` gained an eighth parameter, `stringPoolPages` (the DCL
+  grammar's `/STRINGPOOL` qualifier, `evax.dcl` id 1808, default 8 — already wired
+  in the grammar file, just never threaded through). Reserves the pool area in S0
+  space right after the SCB page, matching `console_vminit_dcl`'s own "after the
+  SCB and such" placement (`console_vminit.c:483`), and defines
+  `CONSOLE$STRINGPOOL`/`_BASE`/`_SIZE`. One deliberate deviation from the C
+  source's own instruction order: the head-of-chain longword at the pool's base is
+  zeroed via its *physical* address, not the virtual (`0x80000000+`) one the C
+  source uses — `MAPEN` isn't turned on until later in this function, so a virtual
+  S0 address would pass through `Translate`'s MAPEN-off passthrough unmodified and
+  be treated as a literal (out-of-range) physical address instead. The C source
+  gets away with the virtual address only because it turns `MAPEN` on earlier in
+  its own version of this function.
+- **`expr.go`**: `Evaluator` gained `Mem`/`CPU` fields (nil-safe — an `Evaluator`
+  used only for arithmetic, e.g. `cmdInit`'s page-count expression before any VAX
+  exists, never touches them), and a new `parseQuotedString` implementing the full
+  C algorithm: a 4-byte "link" cell, the raw string bytes, then a 4-byte-aligned
+  12-byte descriptor (length, data pointer, next-link), with each new string's
+  link cell retroactively overwritten by the *next* string (or, for the first
+  string, by `CONSOLE$STRINGPOOL_BASE`'s own head cell) — the same singly linked
+  list `ShowString` already walks. Escape sequences (`\n`/`\r`/`\t`) and the
+  pool-overflow bounds check (`CLI_SPOOLOVF`, new — mirrors `VAX_ASMSPOVF`/`SPOVF`)
+  match the C source exactly. One faithfully-replicated C quirk: a missing closing
+  quote is *not* an error — the literal just runs to the end of the input (or an
+  embedded `\n`), matching `asm_expr3`'s own lenient `!isend(*p)` loop guard rather
+  than erroring like the unrelated `DEFINED("...")`/`CLI_UNTERMSTR` string-argument
+  parsers elsewhere in this same file. One safe, obvious fix over the C source
+  (`CLAUDE.md`'s "clear, obvious logic error" bucket, not logged as a deviation): a
+  trailing lone backslash at the very end of the input is treated as a literal
+  backslash instead of reading one byte past the string (undefined behavior in the
+  C source, since C strings are NUL-terminated and Go's aren't).
+- Both `Evaluator` construction sites (`machine.go`'s `Console.Evaluator`,
+  `dispatch.go`'s `cmdInit`) now pass `Mem`/`CPU` through so a quoted string
+  literal works from either.
+
+**Follow-up bug, found by the user via `CALL LIB$PUT_OUTPUT("Hello")`**: the
+first pass above ported the pool's *contents* but dropped one instruction from
+`console_vminit_dcl`'s own setup — its `setpte_multiple("... PROT=PTE$K_ALL")`
+call widening the pool's pages from S0's default protection (`ProtURKW`: every
+mode may read, only kernel may write) to `PTE$K_ALL` (every mode may read *and*
+write). Without it, every string-pool page stayed at the S0 default, so
+building a descriptor from user mode — `parseQuotedString` itself never
+switches privilege, and neither does a running program's own `CALL
+LIB$PUT_OUTPUT("...")` — took a protection-violation page fault. Fixed in
+`vminit.go` by widening each of the pool's pages to `ProtUW` right after
+reserving them: a read-modify-write of each page's raw physical PTE (`SBR==0`
+for S0, so S0 page N's PTE lives at physical address N*4) rather than
+`StorePTE`/`LookupPTE`, since both require `MAPEN` already on and this runs
+before `VMInit` turns it on. Added `TestVMInit_stringPoolWritableFromUserMode`
+(confirmed it fails without the fix, by temporarily reverting it) and verified
+the user's exact repro (`CALL LIB$PUT_OUTPUT("Hello")` against a booted
+`kernel.asm`) end-to-end.
+
+**Testing**: new cases in `expr_test.go` (`TestEvaluator_quotedString*`, six
+cases: basic round-trip, escapes, chain linkage via `CONSOLE$STRINGPOOL_BASE`,
+unterminated-string leniency, no-pool-defined error, overflow error) plus manual
+end-to-end verification (`VMINIT` → two `Eval` calls → `SHOW STRING` → `CLEAR
+STRINGS` → `SHOW STRING` again) confirming the descriptors, chain, and clear all
+round-trip correctly. Every existing `VMInit` call site (production and test) was
+updated for the new parameter. `go build ./...`, `go vet ./...`, and `go test
+./...` all clean.

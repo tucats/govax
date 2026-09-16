@@ -159,6 +159,7 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.VMInit(
 			uint32(r.Int("P0")), uint32(r.Int("P1")), uint32(r.Int("S0")),
 			uint32(r.Int("KSP")), uint32(r.Int("ESP")), uint32(r.Int("SSP")), uint32(r.Int("ISP")),
+			uint32(r.Int("STRINGPOOL")),
 		)
 	})
 
@@ -461,7 +462,7 @@ func (d *Dispatcher) assembleInteractiveLine(line string) error {
 }
 
 func cmdInit(d *Dispatcher, rest string) error {
-	v, _, err := (&Evaluator{Symbols: d.Console.Symbols, Radix: d.Console.Radix}).Eval(strings.TrimSpace(rest))
+	v, _, err := (&Evaluator{Symbols: d.Console.Symbols, Radix: d.Console.Radix, Mem: d.Console.Mem, CPU: d.Console.CPU}).Eval(strings.TrimSpace(rest))
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.CLI_NEEDPAGES, err)
 	}

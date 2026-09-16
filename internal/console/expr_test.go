@@ -1,6 +1,9 @@
 package console
 
-import "testing"
+import (
+	"bytes"
+	"testing"
+)
 
 func evalTest(t *testing.T, radix int, syms map[string]uint32, expr string) uint32 {
 	t.Helper()
@@ -140,5 +143,193 @@ func TestEvaluator_trailingRemainder(t *testing.T) {
 	}
 	if v != 0x200 || rest != " 300" {
 		t.Errorf("v=%#x rest=%q, want v=0x200 rest=\" 300\"", v, rest)
+	}
+}
+
+// vminitConsoleForStrings returns a booted Console (INIT + VMINIT with the
+// DCL grammar's default 8-page string pool) whose Evaluator can exercise
+// parseQuotedString -- the string-literal cases below all need real
+// backing memory and the CONSOLE$STRINGPOOL* symbols VMInit defines, unlike
+// every other Evaluator test above, which only needs a bare SymbolTable.
+func vminitConsoleForStrings(t *testing.T) *Console {
+	t.Helper()
+
+	c := New(&bytes.Buffer{})
+	if err := c.Init(4096 * 512); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	if err := c.VMInit(2000, 100, 0, 4, 4, 4, 4, 8); err != nil {
+		t.Fatalf("VMInit: %v", err)
+	}
+
+	return c
+}
+
+// TestEvaluator_quotedString matches asm_expr3's own '"' case
+// (reference/eVAX/eVAX/Source/Assembler/asm_expr.c): a quoted string
+// literal builds a VAX string descriptor in the console string pool and
+// evaluates to that descriptor's address.
+func TestEvaluator_quotedString(t *testing.T) {
+	c := vminitConsoleForStrings(t)
+	ev := c.Evaluator()
+
+	desc, rest, err := ev.Eval(`"Hello"`)
+	if err != nil {
+		t.Fatalf(`Eval("Hello"): %v`, err)
+	}
+	if rest != "" {
+		t.Errorf("rest = %q, want empty", rest)
+	}
+
+	length, err := c.Mem.LoadLongword(c.CPU, desc)
+	if err != nil {
+		t.Fatalf("load descriptor length: %v", err)
+	}
+	if length != 5 {
+		t.Errorf("descriptor length = %d, want 5", length)
+	}
+
+	dataAddr, err := c.Mem.LoadLongword(c.CPU, desc+4)
+	if err != nil {
+		t.Fatalf("load descriptor data address: %v", err)
+	}
+
+	got := make([]byte, 5)
+	if err := c.Mem.Load(c.CPU, dataAddr, got); err != nil {
+		t.Fatalf("load string data: %v", err)
+	}
+	if string(got) != "Hello" {
+		t.Errorf("string data = %q, want %q", got, "Hello")
+	}
+}
+
+// TestEvaluator_quotedStringEscapes matches asm_expr3's \n/\r/\t escape
+// handling for a quoted string literal.
+func TestEvaluator_quotedStringEscapes(t *testing.T) {
+	c := vminitConsoleForStrings(t)
+	ev := c.Evaluator()
+
+	desc, _, err := ev.Eval(`"a\nb\rc\td"`)
+	if err != nil {
+		t.Fatalf("Eval: %v", err)
+	}
+
+	length, err := c.Mem.LoadLongword(c.CPU, desc)
+	if err != nil {
+		t.Fatalf("load descriptor length: %v", err)
+	}
+	if length != 7 {
+		t.Fatalf("descriptor length = %d, want 7", length)
+	}
+
+	dataAddr, err := c.Mem.LoadLongword(c.CPU, desc+4)
+	if err != nil {
+		t.Fatalf("load descriptor data address: %v", err)
+	}
+
+	got := make([]byte, 7)
+	if err := c.Mem.Load(c.CPU, dataAddr, got); err != nil {
+		t.Fatalf("load string data: %v", err)
+	}
+	if string(got) != "a\nb\rc\td" {
+		t.Errorf("string data = %q, want %q", got, "a\nb\rc\td")
+	}
+}
+
+// TestEvaluator_quotedStringChain confirms successive string literals link
+// onto CONSOLE$STRINGPOOL_BASE's chain in order, matching ShowString's own
+// walk (show.go) of the same linked list asm_expr3 builds.
+func TestEvaluator_quotedStringChain(t *testing.T) {
+	c := vminitConsoleForStrings(t)
+	ev := c.Evaluator()
+
+	desc1, _, err := ev.Eval(`"first"`)
+	if err != nil {
+		t.Fatalf("Eval first: %v", err)
+	}
+	desc2, _, err := ev.Eval(`"second"`)
+	if err != nil {
+		t.Fatalf("Eval second: %v", err)
+	}
+
+	base, ok := c.Symbols.Get("CONSOLE$STRINGPOOL_BASE")
+	if !ok {
+		t.Fatal("expected CONSOLE$STRINGPOOL_BASE to be defined")
+	}
+
+	head, err := c.Mem.LoadLongword(c.CPU, base)
+	if err != nil {
+		t.Fatalf("load chain head: %v", err)
+	}
+	if head != desc1 {
+		t.Errorf("chain head = %#x, want first descriptor %#x", head, desc1)
+	}
+
+	next, err := c.Mem.LoadLongword(c.CPU, desc1+8)
+	if err != nil {
+		t.Fatalf("load first's next link: %v", err)
+	}
+	if next != desc2 {
+		t.Errorf("first's next link = %#x, want second descriptor %#x", next, desc2)
+	}
+
+	terminator, err := c.Mem.LoadLongword(c.CPU, desc2+8)
+	if err != nil {
+		t.Fatalf("load second's next link: %v", err)
+	}
+	if terminator != 0 {
+		t.Errorf("second's next link = %#x, want 0 (chain terminator)", terminator)
+	}
+}
+
+// TestEvaluator_quotedStringUnterminated matches asm_expr3's own leniency:
+// a missing closing quote is not an error, the literal just runs to the end
+// of the input.
+func TestEvaluator_quotedStringUnterminated(t *testing.T) {
+	c := vminitConsoleForStrings(t)
+	ev := c.Evaluator()
+
+	desc, rest, err := ev.Eval(`"unterminated`)
+	if err != nil {
+		t.Fatalf("Eval: %v", err)
+	}
+	if rest != "" {
+		t.Errorf("rest = %q, want empty", rest)
+	}
+
+	length, err := c.Mem.LoadLongword(c.CPU, desc)
+	if err != nil {
+		t.Fatalf("load descriptor length: %v", err)
+	}
+	if length != uint32(len("unterminated")) {
+		t.Errorf("descriptor length = %d, want %d", length, len("unterminated"))
+	}
+}
+
+// TestEvaluator_quotedStringNoPool matches asm_expr3's own get_symbol
+// failure path when CONSOLE$STRINGPOOL* isn't defined yet (no VMINIT).
+func TestEvaluator_quotedStringNoPool(t *testing.T) {
+	e := &Evaluator{Symbols: NewSymbolTable(), Radix: 16}
+	if _, _, err := e.Eval(`"Hello"`); err == nil {
+		t.Error("expected an error with no string pool defined")
+	}
+}
+
+// TestEvaluator_quotedStringOverflow matches asm_expr3's own VAX_ASMSPOVF
+// check: a string that would run the pool's bump pointer past
+// CONSOLE$STRINGPOOL_BASE + CONSOLE$STRINGPOOL_SIZE + 16 fails instead of
+// overrunning the pool's backing storage.
+func TestEvaluator_quotedStringOverflow(t *testing.T) {
+	c := vminitConsoleForStrings(t)
+	ev := c.Evaluator()
+
+	size, ok := c.Symbols.Get("CONSOLE$STRINGPOOL_SIZE")
+	if !ok {
+		t.Fatal("expected CONSOLE$STRINGPOOL_SIZE to be defined")
+	}
+
+	huge := `"` + string(make([]byte, size+64)) + `"`
+	if _, _, err := ev.Eval(huge); err == nil {
+		t.Error("expected a string pool overflow error")
 	}
 }

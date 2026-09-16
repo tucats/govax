@@ -43,7 +43,7 @@ func newShowRunnableDispatcher(t *testing.T) (*Dispatcher, *Console, *bytes.Buff
 		t.Fatalf("Init: %v", err)
 	}
 
-	if err := c.VMInit(2000, 100, 0, 4, 4, 4, 4); err != nil {
+	if err := c.VMInit(2000, 100, 0, 4, 4, 4, 4, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
 

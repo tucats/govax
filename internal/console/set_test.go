@@ -229,7 +229,7 @@ func TestSetQuantum(t *testing.T) {
 
 func TestSetPTE_roundTrip(t *testing.T) {
 	c, _ := newTestConsole(t)
-	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2); err != nil {
+	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
 
@@ -255,7 +255,7 @@ func TestSetPTE_roundTrip(t *testing.T) {
 
 func TestSetPTE_badField(t *testing.T) {
 	c, _ := newTestConsole(t)
-	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2); err != nil {
+	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
 	if err := c.SetPTE(0x1000, "BOGUS", 1); err == nil {
@@ -382,7 +382,7 @@ func TestShowMemory(t *testing.T) {
 
 func TestShowMemory_afterVMInit(t *testing.T) {
 	c, buf := newTestConsole(t)
-	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2); err != nil {
+	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
 	buf.Reset()

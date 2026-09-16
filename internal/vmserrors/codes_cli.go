@@ -58,6 +58,7 @@ const (
 	cliBadRadixPrefix
 	cliBadNumber
 	cliBadRadix
+	cliSpoolOvf
 	cliNeedStepMode
 	cliNeedBreakOpcode
 	cliInvSetPSL
@@ -155,6 +156,7 @@ const (
 	CLI_BADRADIXPREFIX  = CLIFacility<<FacilityPosition | cliBadRadixPrefix<<MessagePosition | StatusError
 	CLI_BADNUMBER       = CLIFacility<<FacilityPosition | cliBadNumber<<MessagePosition | StatusError
 	CLI_BADRADIX        = CLIFacility<<FacilityPosition | cliBadRadix<<MessagePosition | StatusError
+	CLI_SPOOLOVF        = CLIFacility<<FacilityPosition | cliSpoolOvf<<MessagePosition | StatusError
 	CLI_NEEDSTEPMODE    = CLIFacility<<FacilityPosition | cliNeedStepMode<<MessagePosition | StatusError
 	CLI_NEEDBREAKOPCODE = CLIFacility<<FacilityPosition | cliNeedBreakOpcode<<MessagePosition | StatusError
 	CLI_INVSETPSL       = CLIFacility<<FacilityPosition | cliInvSetPSL<<MessagePosition | StatusError
@@ -248,6 +250,7 @@ func init() {
 	DefineMessage(CLI_BADRADIXPREFIX, CLIFacility, "BADRADIXPREFIX", `Unsupported radix prefix "^!C"`)
 	DefineMessage(CLI_BADNUMBER, CLIFacility, "BADNUMBER", "Invalid number !Q")
 	DefineMessage(CLI_BADRADIX, CLIFacility, "BADRADIX", "Invalid radix !D (must be 8, 10, or 16)")
+	DefineMessage(CLI_SPOOLOVF, CLIFacility, "SPOVF", "String pool overflow; use CLEAR STRING to reset")
 	DefineMessage(CLI_NEEDSTEPMODE, CLIFacility, "NEEDSTEPMODE", "SET STEP requires OVER, INTO, or RETURN")
 	DefineMessage(CLI_NEEDBREAKOPCODE, CLIFacility, "NEEDBREAKOPCODE", "SET BREAK/INSTRUCTION requires an opcode mnemonic")
 	DefineMessage(CLI_INVSETPSL, CLIFacility, "INVSETPSL", "Invalid SET PSL field or value !Q")
