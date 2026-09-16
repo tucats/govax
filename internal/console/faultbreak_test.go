@@ -23,6 +23,7 @@ func TestFaultBreakpoints_addRemoveClear(t *testing.T) {
 	if err := c.RemoveFaultBreakpoint("10"); err != nil {
 		t.Fatalf("RemoveFaultBreakpoint: %v", err)
 	}
+
 	if got := c.Engine.FaultBreakpoints(); len(got) != 0 {
 		t.Fatalf("FaultBreakpoints() after remove = %v, want empty", got)
 	}
@@ -30,12 +31,15 @@ func TestFaultBreakpoints_addRemoveClear(t *testing.T) {
 	if err := c.AddFaultBreakpoint("10"); err != nil {
 		t.Fatalf("AddFaultBreakpoint: %v", err)
 	}
+
 	if err := c.AddFaultBreakpoint("14"); err != nil {
 		t.Fatalf("AddFaultBreakpoint: %v", err)
 	}
+
 	if err := c.ClearAllFaultBreakpoints(); err != nil {
 		t.Fatalf("ClearAllFaultBreakpoints: %v", err)
 	}
+
 	if got := c.Engine.FaultBreakpoints(); len(got) != 0 {
 		t.Fatalf("FaultBreakpoints() after ClearAll = %v, want empty", got)
 	}
@@ -45,11 +49,13 @@ func TestShowBreakpoints_mergesFaultBreakpoints(t *testing.T) {
 	c, buf := newTestConsole(t)
 
 	c.AddBreakpoint(0x400)
+
 	if err := c.AddFaultBreakpoint("10"); err != nil {
 		t.Fatalf("AddFaultBreakpoint: %v", err)
 	}
 
 	buf.Reset()
+
 	if err := c.ShowBreakpoints(); err != nil {
 		t.Fatalf("ShowBreakpoints: %v", err)
 	}
@@ -58,6 +64,7 @@ func TestShowBreakpoints_mergesFaultBreakpoints(t *testing.T) {
 	if !strings.Contains(out, "00000400") {
 		t.Errorf("output = %q, want the address breakpoint listed", out)
 	}
+
 	if !strings.Contains(out, "F Breakpoint on fault 10") {
 		t.Errorf("output = %q, want the fault breakpoint listed with an F marker", out)
 	}
@@ -69,6 +76,7 @@ func TestSetFaultHistory(t *testing.T) {
 	if err := c.SetFaultHistory(2); err != nil {
 		t.Fatalf("SetFaultHistory: %v", err)
 	}
+	
 	if got := c.Engine.FaultHistorySize(); got != 2 {
 		t.Errorf("FaultHistorySize() = %d, want 2", got)
 	}
@@ -78,9 +86,11 @@ func TestShowFault_reportsHistoryAndNoneYet(t *testing.T) {
 	c, buf := newTestConsole(t)
 
 	buf.Reset()
+
 	if err := c.ShowFault(); err != nil {
 		t.Fatalf("ShowFault: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "No exceptions or interrupts have occurred yet") {
 		t.Errorf("output = %q, want the no-history message", buf.String())
 	}
@@ -109,6 +119,7 @@ func TestDispatch_setBreakpointFaultInterceptsExecution(t *testing.T) {
 	}
 
 	buf.Reset()
+	
 	if err := d.Dispatch("GO"); err != nil {
 		t.Fatalf("Dispatch(GO): %v", err)
 	}
@@ -116,6 +127,7 @@ func TestDispatch_setBreakpointFaultInterceptsExecution(t *testing.T) {
 	if got := c.CPU.GPR(vax.PC); got != 0x200 {
 		t.Errorf("PC = %#x, want 0x200 (fault delivery skipped, not the SCB vector)", got)
 	}
+
 	if !strings.Contains(buf.String(), "Break on fault") {
 		t.Errorf("output = %q, want a fault-break message", buf.String())
 	}
@@ -132,6 +144,7 @@ func TestDispatch_setFaultHistory(t *testing.T) {
 	if err := d.Dispatch("SET FAULT 3"); err != nil {
 		t.Fatalf("Dispatch(SET FAULT): %v", err)
 	}
+
 	if got := c.Engine.FaultHistorySize(); got != 3 {
 		t.Errorf("FaultHistorySize() = %d, want 3", got)
 	}
@@ -139,6 +152,7 @@ func TestDispatch_setFaultHistory(t *testing.T) {
 	if err := d.Dispatch("SET HISTORY 5"); err != nil {
 		t.Fatalf("Dispatch(SET HISTORY): %v", err)
 	}
+
 	if got := c.Engine.FaultHistorySize(); got != 5 {
 		t.Errorf("FaultHistorySize() = %d, want 5", got)
 	}
@@ -150,6 +164,7 @@ func TestDispatch_clearBreakpointFault(t *testing.T) {
 	if err := d.Dispatch("SET BREAKPOINT/FAULT 10"); err != nil {
 		t.Fatalf("Dispatch(SET BREAKPOINT/FAULT): %v", err)
 	}
+
 	if err := d.Dispatch("SET BREAKPOINT/FAULT 14"); err != nil {
 		t.Fatalf("Dispatch(SET BREAKPOINT/FAULT): %v", err)
 	}
@@ -157,6 +172,7 @@ func TestDispatch_clearBreakpointFault(t *testing.T) {
 	if err := d.Dispatch("CLEAR BREAKPOINT/FAULT 10"); err != nil {
 		t.Fatalf("Dispatch(CLEAR BREAKPOINT/FAULT): %v", err)
 	}
+
 	got := c.Engine.FaultBreakpoints()
 	if len(got) != 1 || got[0] != cpu.ExcCustomer {
 		t.Fatalf("FaultBreakpoints() = %v, want [%#02x]", got, cpu.ExcCustomer)
@@ -165,6 +181,7 @@ func TestDispatch_clearBreakpointFault(t *testing.T) {
 	if err := d.Dispatch("CLEAR BREAKPOINT/FAULT/ALL"); err != nil {
 		t.Fatalf("Dispatch(CLEAR BREAKPOINT/FAULT/ALL): %v", err)
 	}
+
 	if got := c.Engine.FaultBreakpoints(); len(got) != 0 {
 		t.Fatalf("FaultBreakpoints() after /ALL = %v, want empty", got)
 	}

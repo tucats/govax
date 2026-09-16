@@ -11,10 +11,12 @@ import (
 
 func exeFixturePath(t *testing.T, name string) string {
 	t.Helper()
+
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("runtime.Caller failed")
 	}
+
 	return filepath.Join(filepath.Dir(file), "..", "..", "testdata", "exe", name)
 }
 
@@ -23,13 +25,16 @@ func exeFixturePath(t *testing.T, name string) string {
 // matching console_run's own "switch to kernel mode" precondition.
 func newRunnableConsole(t testing.TB) *Console {
 	t.Helper()
+
 	c := New(&bytes.Buffer{})
 	if err := c.Init(4096 * 512); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
+
 	if err := c.VMInit(2000, 100, 0, 4, 4, 4, 4, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
+
 	return c
 }
 
@@ -55,15 +60,19 @@ func TestImageLoad_simpleExe(t *testing.T) {
 	if icb.Transfer[0] != 0x7FFEDF68 {
 		t.Errorf("Transfer[0] = %#x, want 0x7ffedf68", icb.Transfer[0])
 	}
+
 	if icb.Transfer[1] != 0x00000200 {
 		t.Errorf("Transfer[1] = %#x, want 0x200", icb.Transfer[1])
 	}
+
 	if icb.Base != 0 {
 		t.Errorf("Base = %#x, want 0 (first image loaded)", icb.Base)
 	}
+
 	if len(icb.ISDList) == 0 {
 		t.Fatal("expected at least one ISD")
 	}
+
 	if icb.Flags&icbIncomplete != 0 {
 		t.Error("expected ICB_INCOMPLETE cleared after a successful load")
 	}
@@ -82,9 +91,11 @@ func TestImageLoad_simpleExe(t *testing.T) {
 	if icb.FixupISD == nil {
 		t.Fatal("expected a FIXUPVEC section")
 	}
+
 	if len(icb.SHRList) != 5 {
 		t.Fatalf("SHRList = %d entries, want 5 (self + 4 dependencies)", len(icb.SHRList))
 	}
+
 	if icb.SHRList[0].ID != 0 || icb.SHRList[0].Icb != icb {
 		t.Errorf("SHRList[0] should be the self-reference entry, got %+v", icb.SHRList[0])
 	}
@@ -115,19 +126,23 @@ func TestImageLoad_alreadyLoadedIsNoOp(t *testing.T) {
 	c.Engine.SetModeStack(vax.Kernel, false)
 
 	path := exeFixturePath(t, "put.exe")
+
 	first, err := c.imageLoad(path, icbSecondary)
 	if err != nil {
 		t.Fatalf("imageLoad: %v", err)
 	}
+	
 	highWater := c.RTL.RegionSize[0]
 
 	second, err := c.imageLoad(path, icbSecondary)
 	if err != nil {
 		t.Fatalf("imageLoad (again): %v", err)
 	}
+
 	if first != second {
 		t.Error("expected the same *ICB on a repeat load")
 	}
+
 	if c.RTL.RegionSize[0] != highWater {
 		t.Errorf("high-water mark changed on a repeat load: %#x -> %#x", highWater, c.RTL.RegionSize[0])
 	}
@@ -141,6 +156,7 @@ func TestImageLoad_alreadyLoadedIsNoOp(t *testing.T) {
 func TestImageFixup_simpleExe(t *testing.T) {
 	c := newRunnableConsole(t)
 	c.Engine.SetModeStack(vax.Kernel, false)
+
 	if err := c.ensureShims(); err != nil {
 		t.Fatalf("ensureShims: %v", err)
 	}
@@ -153,6 +169,7 @@ func TestImageFixup_simpleExe(t *testing.T) {
 	if err := c.imageFixup(icb); err != nil {
 		t.Fatalf("imageFixup: %v", err)
 	}
+
 	if icb.Flags&icbFixed == 0 {
 		t.Error("expected ICB_FIXED set after a successful fixup")
 	}
@@ -174,6 +191,7 @@ func TestImageFixup_everyRealFixtureFixesUp(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			c := newRunnableConsole(t)
 			c.Engine.SetModeStack(vax.Kernel, false)
+
 			if err := c.ensureShims(); err != nil {
 				t.Fatalf("ensureShims: %v", err)
 			}
@@ -182,6 +200,7 @@ func TestImageFixup_everyRealFixtureFixesUp(t *testing.T) {
 			if err != nil {
 				t.Fatalf("imageLoad(%s): %v", name, err)
 			}
+
 			if err := c.imageFixup(icb); err != nil {
 				t.Errorf("imageFixup(%s): %v", name, err)
 			}
@@ -204,9 +223,11 @@ func TestImageLoad_everyRealFixtureLoads(t *testing.T) {
 			if err != nil {
 				t.Fatalf("imageLoad(%s): %v", name, err)
 			}
+
 			if icb.Flags&icbIncomplete != 0 {
 				t.Errorf("%s: ICB_INCOMPLETE still set after load", name)
 			}
+
 			if len(icb.ISDList) == 0 {
 				t.Errorf("%s: expected at least one ISD", name)
 			}

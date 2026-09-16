@@ -485,6 +485,7 @@ func TestShowDebug(t *testing.T) {
 	if !strings.Contains(out, "REGISTERS  ") || strings.Contains(out, "NOREGISTERS") {
 		t.Errorf("output = %q, want REGISTERS reported set by default", out)
 	}
+	
 	if !strings.Contains(out, "NOVM  ") {
 		t.Errorf("output = %q, want VM reported clear by default", out)
 	}
@@ -502,9 +503,11 @@ func TestShowTrace(t *testing.T) {
 	if err := d.Dispatch("SHOW TRACE"); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "disassembly is disabled") {
 		t.Errorf("output = %q, want trace disassembly reported disabled", buf.String())
 	}
+
 	if strings.Contains(buf.String(), "Register tracking") {
 		t.Errorf("output = %q, want no register-tracking line while trace is disabled", buf.String())
 	}
@@ -516,9 +519,11 @@ func TestShowTrace(t *testing.T) {
 	if err := d.Dispatch("SHOW TRACE"); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "disassembly is enabled") {
 		t.Errorf("output = %q, want trace disassembly reported enabled", buf.String())
 	}
+
 	if !strings.Contains(buf.String(), "Register tracking is enabled") {
 		t.Errorf("output = %q, want register tracking reported enabled (DebugRegisters is on by default)", buf.String())
 	}

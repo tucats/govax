@@ -12,6 +12,7 @@ func TestSetSymbol_register(t *testing.T) {
 	if err := c.SetSymbol("R5", 0xCAFEBABE); err != nil {
 		t.Fatalf("SetSymbol: %v", err)
 	}
+
 	if got := c.CPU.GPR(vax.R5); got != 0xCAFEBABE {
 		t.Errorf("R5 = %#x, want 0xcafebabe", got)
 	}
@@ -22,6 +23,7 @@ func TestSetSymbol_privilegedRegister(t *testing.T) {
 	if err := c.SetSymbol("SIRR", 5); err != nil {
 		t.Fatalf("SetSymbol: %v", err)
 	}
+
 	if got := c.CPU.PR(vax.SIRR); got != 5 {
 		t.Errorf("SIRR = %d, want 5", got)
 	}
@@ -32,6 +34,7 @@ func TestSetSymbol_psl(t *testing.T) {
 	if err := c.SetSymbol("PSL", 0x001F0000); err != nil {
 		t.Fatalf("SetSymbol: %v", err)
 	}
+
 	if got := c.CPU.PSL(); uint32(got) != 0x001F0000 {
 		t.Errorf("PSL = %#x, want 0x1f0000", uint32(got))
 	}
@@ -42,6 +45,7 @@ func TestSetSymbol_userSymbol(t *testing.T) {
 	if err := c.SetSymbol("FOOBAR", 0x1234); err != nil {
 		t.Fatalf("SetSymbol: %v", err)
 	}
+
 	v, ok := c.Symbols.Get("FOOBAR")
 	if !ok || v != 0x1234 {
 		t.Errorf("FOOBAR = %#x, ok=%v; want 0x1234, true", v, ok)
@@ -53,6 +57,7 @@ func TestSetSymbolQualified_permanentSurvivesClearTemporary(t *testing.T) {
 	if err := c.SetSymbolQualified("PERMFOO", 1, true, false, false); err != nil {
 		t.Fatalf("SetSymbolQualified: %v", err)
 	}
+
 	if err := c.SetSymbolQualified("TEMPFOO", 2, false, false, false); err != nil {
 		t.Fatalf("SetSymbolQualified: %v", err)
 	}
@@ -62,6 +67,7 @@ func TestSetSymbolQualified_permanentSurvivesClearTemporary(t *testing.T) {
 	if _, ok := c.Symbols.Get("PERMFOO"); !ok {
 		t.Error("expected PERMFOO (permanent) to survive ClearTemporary")
 	}
+
 	if _, ok := c.Symbols.Get("TEMPFOO"); ok {
 		t.Error("expected TEMPFOO (not permanent) to be removed by ClearTemporary")
 	}
@@ -72,12 +78,15 @@ func TestSetPSLField_bit(t *testing.T) {
 	if err := c.SetPSLField("T", 1); err != nil {
 		t.Fatalf("SetPSLField: %v", err)
 	}
+
 	if !c.CPU.PSL().T() {
 		t.Error("expected PSL.T set")
 	}
+
 	if err := c.SetPSLField("T", 0); err != nil {
 		t.Fatalf("SetPSLField: %v", err)
 	}
+
 	if c.CPU.PSL().T() {
 		t.Error("expected PSL.T cleared")
 	}
@@ -88,9 +97,11 @@ func TestSetPSLField_ipl(t *testing.T) {
 	if err := c.SetPSLField("IPL", 15); err != nil {
 		t.Fatalf("SetPSLField: %v", err)
 	}
+
 	if got := c.CPU.PSL().IPL(); got != 15 {
 		t.Errorf("IPL() = %d, want 15", got)
 	}
+
 	if err := c.SetPSLField("IPL", 99); err == nil {
 		t.Error("expected an error for IPL out of range")
 	}
@@ -105,9 +116,11 @@ func TestSetPSLField_curModSwitchesStack(t *testing.T) {
 	if err := c.SetPSLField("CUR_MOD", uint32(vax.Executive)); err != nil {
 		t.Fatalf("SetPSLField: %v", err)
 	}
+
 	if got := c.CPU.PSL().CurMod(); got != vax.Executive {
 		t.Errorf("CurMod() = %d, want Executive", got)
 	}
+
 	if got := c.CPU.GPR(vax.SP); got != 0x2000 {
 		t.Errorf("SP = %#x, want ESP's own 0x2000 after switching to Executive", got)
 	}
@@ -120,6 +133,7 @@ func TestSetMode(t *testing.T) {
 	if err := c.SetMode("USER"); err != nil {
 		t.Fatalf("SetMode: %v", err)
 	}
+	
 	if got := c.CPU.PSL().CurMod(); got != vax.User {
 		t.Errorf("CurMod() = %d, want User", got)
 	}
@@ -127,6 +141,7 @@ func TestSetMode(t *testing.T) {
 	if err := c.SetMode("INTERRUPT"); err != nil {
 		t.Fatalf("SetMode: %v", err)
 	}
+
 	if !c.CPU.PSL().IS() {
 		t.Error("expected PSL.IS set after SET MODE INTERRUPT")
 	}
@@ -152,12 +167,15 @@ func TestSetVM(t *testing.T) {
 	if err := c.SetVM(true); err != nil {
 		t.Fatalf("SetVM(true): %v", err)
 	}
+
 	if c.CPU.PR(vax.MAPEN) != 1 {
 		t.Errorf("MAPEN = %d, want 1", c.CPU.PR(vax.MAPEN))
 	}
+
 	if err := c.SetVM(false); err != nil {
 		t.Fatalf("SetVM(false): %v", err)
 	}
+
 	if c.CPU.PR(vax.MAPEN) != 0 {
 		t.Errorf("MAPEN = %d, want 0", c.CPU.PR(vax.MAPEN))
 	}
@@ -168,6 +186,7 @@ func TestSetBase(t *testing.T) {
 	if err := c.SetBase(0x4000); err != nil {
 		t.Fatalf("SetBase: %v", err)
 	}
+
 	if c.DepositAddr != 0x4000 {
 		t.Errorf("DepositAddr = %#x, want 0x4000", c.DepositAddr)
 	}
@@ -182,9 +201,11 @@ func TestSetVerboseVerifyNoVerbose(t *testing.T) {
 	if err := c.SetVerify(); err != nil {
 		t.Fatalf("SetVerify: %v", err)
 	}
+
 	if !c.Verify {
 		t.Error("expected Verify set")
 	}
+
 	if !c.Verbose {
 		t.Error("SetVerify must not touch Verbose")
 	}
@@ -192,6 +213,7 @@ func TestSetVerboseVerifyNoVerbose(t *testing.T) {
 	if err := c.SetNoVerbose(); err != nil {
 		t.Fatalf("SetNoVerbose: %v", err)
 	}
+
 	if c.Verbose || c.Verify {
 		t.Errorf("Verbose=%v Verify=%v, want both false after SET NOVERBOSE", c.Verbose, c.Verify)
 	}
@@ -199,6 +221,7 @@ func TestSetVerboseVerifyNoVerbose(t *testing.T) {
 	if err := c.SetVerbose(); err != nil {
 		t.Fatalf("SetVerbose: %v", err)
 	}
+
 	if !c.Verbose {
 		t.Error("expected Verbose set")
 	}
@@ -207,21 +230,26 @@ func TestSetVerboseVerifyNoVerbose(t *testing.T) {
 func TestSetQuantum(t *testing.T) {
 	c, buf := newTestConsole(t)
 	buf.Reset()
+
 	if err := c.SetQuantum(0); err != nil {
 		t.Fatalf("SetQuantum: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "NOINTERRUPTS") {
 		t.Errorf("output = %q, want the suspended-delivery message", buf.String())
 	}
+
 	current, initial := c.Engine.Quantum()
 	if current != 0 || initial != 0 {
 		t.Errorf("Quantum() = (%d, %d), want (0, 0)", current, initial)
 	}
 
 	buf.Reset()
+
 	if err := c.SetQuantum(20); err != nil {
 		t.Fatalf("SetQuantum: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "INTERRUPTS") {
 		t.Errorf("output = %q, want the resumed-delivery message", buf.String())
 	}
@@ -237,6 +265,7 @@ func TestSetPTE_roundTrip(t *testing.T) {
 	if err := c.SetPTE(addr, "VALID", 1); err != nil {
 		t.Fatalf("SetPTE VALID: %v", err)
 	}
+
 	if err := c.SetPTE(addr, "PFN", 0x42); err != nil {
 		t.Fatalf("SetPTE PFN: %v", err)
 	}
@@ -245,9 +274,11 @@ func TestSetPTE_roundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LookupPTE: %v", err)
 	}
+
 	if !pte.Valid() {
 		t.Error("expected the valid bit set")
 	}
+
 	if pte.PFN() != 0x42 {
 		t.Errorf("PFN() = %#x, want 0x42", pte.PFN())
 	}
@@ -258,6 +289,7 @@ func TestSetPTE_badField(t *testing.T) {
 	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
+
 	if err := c.SetPTE(0x1000, "BOGUS", 1); err == nil {
 		t.Error("expected an error for an unknown PTE field")
 	}
@@ -268,9 +300,11 @@ func TestSetRadix(t *testing.T) {
 	if err := c.SetRadix(8); err != nil {
 		t.Fatalf("SetRadix: %v", err)
 	}
+
 	if c.Radix != 8 {
 		t.Errorf("Radix = %d, want 8", c.Radix)
 	}
+
 	if err := c.SetRadix(2); err == nil {
 		t.Error("expected error for invalid radix")
 	}
@@ -288,6 +322,7 @@ func TestSetDebug_setAndClear(t *testing.T) {
 	if err := c.SetDebug([]string{"VM", "RMS"}); err != nil {
 		t.Fatalf("SetDebug: %v", err)
 	}
+
 	if !c.CPU.DebugEnabled(vax.DebugVM) || !c.CPU.DebugEnabled(vax.DebugRMS) {
 		t.Errorf("Debug() = %#x, want VM and RMS set", c.CPU.Debug())
 	}
@@ -300,9 +335,11 @@ func TestSetDebug_setAndClear(t *testing.T) {
 	if err := c.SetDebug([]string{"NOUSERHALT"}); err != nil {
 		t.Fatalf("SetDebug: %v", err)
 	}
+
 	if c.CPU.DebugEnabled(vax.DebugUserHalt) {
 		t.Errorf("Debug() = %#x, want USERHALT cleared", c.CPU.Debug())
 	}
+
 	if !c.CPU.DebugEnabled(vax.DebugVM) {
 		t.Errorf("Debug() = %#x, want VM still set", c.CPU.Debug())
 	}
@@ -313,6 +350,7 @@ func TestSetDebug_bareSetsNativeDebugger(t *testing.T) {
 	if err := c.SetDebug(nil); err != nil {
 		t.Fatalf("SetDebug: %v", err)
 	}
+
 	if !c.CPU.DebugEnabled(vax.DebugNative) {
 		t.Errorf("Debug() = %#x, want DEBUG (native debugger) set", c.CPU.Debug())
 	}
@@ -332,11 +370,13 @@ func TestSetTrace(t *testing.T) {
 	}
 
 	c.SetTrace(true)
+
 	if !c.Trace {
 		t.Error("Trace = false, want true after SetTrace(true)")
 	}
 
 	c.SetTrace(false)
+
 	if c.Trace {
 		t.Error("Trace = true, want false after SetTrace(false)")
 	}
@@ -346,9 +386,11 @@ func TestShowRegisters(t *testing.T) {
 	c, buf := newTestConsole(t)
 	c.CPU.SetGPR(vax.R3, 0x11223344)
 	buf.Reset()
+
 	if err := c.ShowRegisters(); err != nil {
 		t.Fatalf("ShowRegisters: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "11223344") {
 		t.Errorf("output = %q, want it to contain the R3 value", buf.String())
 	}
@@ -357,9 +399,11 @@ func TestShowRegisters(t *testing.T) {
 func TestShowPSL(t *testing.T) {
 	c, buf := newTestConsole(t)
 	buf.Reset()
+
 	if err := c.ShowPSL(); err != nil {
 		t.Fatalf("ShowPSL: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "PSL") {
 		t.Errorf("output = %q, want it to mention PSL", buf.String())
 	}
@@ -368,13 +412,16 @@ func TestShowPSL(t *testing.T) {
 func TestShowMemory(t *testing.T) {
 	c, buf := newTestConsole(t)
 	buf.Reset()
+
 	if err := c.ShowMemory(); err != nil {
 		t.Fatalf("ShowMemory: %v", err)
 	}
+
 	out := buf.String()
 	if !strings.Contains(out, "0000FFFF") { // 64K - 1, the top physical address
 		t.Errorf("output = %q, want it to contain the top physical address", out)
 	}
+
 	if !strings.Contains(out, "configuration is unknown") {
 		t.Errorf("output = %q, want it to report VM as unconfigured before VMINIT", out)
 	}
@@ -385,14 +432,18 @@ func TestShowMemory_afterVMInit(t *testing.T) {
 	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
+
 	buf.Reset()
+	
 	if err := c.ShowMemory(); err != nil {
 		t.Fatalf("ShowMemory: %v", err)
 	}
+
 	out := buf.String()
 	if !strings.Contains(out, "Virtual Memory (currently ENABLED)") {
 		t.Errorf("output = %q, want MAPEN reported enabled", out)
 	}
+
 	if !strings.Contains(out, "physical pages mapped") {
 		t.Errorf("output = %q, want a mapped/free page count", out)
 	}

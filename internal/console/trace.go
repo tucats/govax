@@ -23,6 +23,7 @@ func (c *Console) snapshotTraceRegs() (regs [numTraceRegs]uint32, psl vax.PSL) {
 	for i := range regs {
 		regs[i] = c.CPU.GPR(vax.Reg(i))
 	}
+
 	return regs, c.CPU.PSL()
 }
 
@@ -37,6 +38,7 @@ func (c *Console) printRegisterChanges(before [numTraceRegs]uint32, beforePSL va
 		if after == before[i] {
 			continue
 		}
+
 		if i < 12 {
 			c.Printf("                    %3s:  %08X  %d\n", name, after, after)
 		} else {
@@ -81,8 +83,10 @@ func (c *Console) printOperandDump() {
 			} else {
 				c.Printf("            #%d %-9s  R%d = %08X\n", i, accessName, op.Reg, c.CPU.GPR(op.Reg))
 			}
+
 		case cpu.OperandImmediate:
 			c.Printf("            #%d %-9s  %08X\n", i, accessName, uint32(op.Value))
+
 		default: // cpu.OperandMemory
 			c.Printf("            #%d %-9s  %08X\n", i, accessName, op.Addr)
 		}
@@ -101,6 +105,7 @@ func traceStackName(psl vax.PSL) string {
 	if psl.IS() {
 		return "ISP"
 	}
+
 	return traceStackNames[psl.CurMod()]
 }
 
@@ -145,6 +150,7 @@ func (c *Console) traceStep(pc uint32, force bool) (finish func()) {
 		if trackRegs {
 			c.printRegisterChanges(before, beforePSL)
 		}
+		
 		if c.CPU.DebugEnabled(vax.DebugFullDisasm) {
 			c.printOperandDump()
 		}

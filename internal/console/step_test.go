@@ -40,6 +40,7 @@ func TestStepOver_runsCallToCompletion(t *testing.T) {
 	if !strings.Contains(out, "CALLS") {
 		t.Errorf("output = %q, want the CALLS instruction traced", out)
 	}
+
 	if !strings.Contains(out, "Stepped to") {
 		t.Errorf("output = %q, want a step message", out)
 	}
@@ -78,6 +79,7 @@ func TestStepOver_ordinaryInstructionActsLikeStepInto(t *testing.T) {
 	if got := c.CPU.GPR(vax.PC); got != 0x201 {
 		t.Errorf("PC after STEP/OVER of a NOP = %#x, want 0x201", got)
 	}
+
 	if !strings.Contains(buf.String(), "Stepped to") {
 		t.Errorf("output = %q, want a step message", buf.String())
 	}
@@ -91,9 +93,11 @@ func TestStepReturn_runsUntilCallerResumes(t *testing.T) {
 	// land inside the nested procedure with a real frame established.
 	c.CPU.SetGPR(vax.PC, 0x202)
 	c.Engine.BeginRun()
+
 	if err := c.Engine.Step(); err != nil {
 		t.Fatalf("Engine.Step (CALLS): %v", err)
 	}
+
 	if got := c.CPU.GPR(vax.PC); got != 0x302 {
 		t.Fatalf("PC after CALLS = %#x, want 0x302 (inside the nested procedure)", got)
 	}
@@ -105,6 +109,7 @@ func TestStepReturn_runsUntilCallerResumes(t *testing.T) {
 	if got := c.CPU.GPR(vax.PC); got != 0x209 {
 		t.Errorf("PC after STEP/RETURN = %#x, want 0x209 (back in the caller)", got)
 	}
+
 	if !strings.Contains(buf.String(), "Stepped to") {
 		t.Errorf("output = %q, want a step message", buf.String())
 	}
@@ -138,6 +143,7 @@ func TestStep_respectsBreakpointHitDuringStepOver(t *testing.T) {
 	if got := c.CPU.GPR(vax.PC); got != 0x302 {
 		t.Errorf("PC = %#x, want 0x302 (stopped at the permanent breakpoint)", got)
 	}
+
 	if !strings.Contains(buf.String(), "Break at") {
 		t.Errorf("output = %q, want a break message", buf.String())
 	}
@@ -163,6 +169,7 @@ func TestSetStepMode_andShowStepMode(t *testing.T) {
 		if err := c.SetStepMode(tc.word); err != nil {
 			t.Fatalf("SetStepMode(%q): %v", tc.word, err)
 		}
+
 		if c.StepMode != tc.want {
 			t.Errorf("SetStepMode(%q): StepMode = %v, want %v", tc.word, c.StepMode, tc.want)
 		}
@@ -173,10 +180,13 @@ func TestSetStepMode_andShowStepMode(t *testing.T) {
 	}
 
 	buf.Reset()
+	
 	c.StepMode = StepOver
+
 	if err := c.ShowStepMode(); err != nil {
 		t.Fatalf("ShowStepMode: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "STEP/OVER") {
 		t.Errorf("output = %q, want it to name STEP/OVER", buf.String())
 	}
@@ -189,6 +199,7 @@ func TestDispatch_stepQualifiers(t *testing.T) {
 	if err := d.Dispatch("SET STEP OVER"); err != nil {
 		t.Fatalf("Dispatch(SET STEP OVER): %v", err)
 	}
+
 	if c.StepMode != StepOver {
 		t.Fatalf("StepMode = %v, want StepOver", c.StepMode)
 	}
@@ -202,9 +213,11 @@ func TestDispatch_stepQualifiers(t *testing.T) {
 	if err := d.Dispatch("DEP PC = 202"); err != nil {
 		t.Fatalf("Dispatch(DEPOSIT PC): %v", err)
 	}
+
 	if err := d.Dispatch("STEP"); err != nil {
 		t.Fatalf("Dispatch(STEP): %v", err)
 	}
+
 	if got := c.CPU.GPR(vax.PC); got != 0x209 {
 		t.Errorf("PC after bare STEP (default OVER) = %#x, want 0x209", got)
 	}
@@ -213,9 +226,11 @@ func TestDispatch_stepQualifiers(t *testing.T) {
 	if err := d.Dispatch("DEP PC = 202"); err != nil {
 		t.Fatalf("Dispatch(DEPOSIT PC): %v", err)
 	}
+
 	if err := d.Dispatch("STEP/INTO"); err != nil {
 		t.Fatalf("Dispatch(STEP/INTO): %v", err)
 	}
+
 	if got := c.CPU.GPR(vax.PC); got != 0x302 {
 		t.Errorf("PC after STEP/INTO = %#x, want 0x302 (stepped into the call)", got)
 	}

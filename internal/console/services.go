@@ -41,6 +41,7 @@ func (c *Console) ConsoleReadByte() byte {
 	if _, err := c.In.Read(buf[:]); err != nil {
 		return 0
 	}
+
 	return buf[0]
 }
 
@@ -55,9 +56,11 @@ func (c *Console) ConsoleCommand(cmdLine string) uint32 {
 	if c.Dispatcher == nil {
 		return 1
 	}
+
 	if err := c.Dispatcher.Dispatch(cmdLine); err != nil {
 		return 1
 	}
+
 	return 0
 }
 
@@ -91,12 +94,14 @@ func (c *Console) DCLGetString(r1, r2 uint32) (uint32, bool) { return 0, false }
 // SystemService delegates to RTL (Phase 10's SYS$ dispatch).
 func (c *Console) SystemService(pc uint32) (uint32, bool, error) {
 	r0, handled, err := c.RTL.SystemService(pc)
+
 	return r0, handled, translateHalt(err)
 }
 
 // Shim delegates to RTL (Phase 10's LIB$/CRTL shim dispatch).
 func (c *Console) Shim(code uint32) (uint32, bool, error) {
 	r0, handled, err := c.RTL.Shim(code)
+
 	return r0, handled, translateHalt(err)
 }
 
@@ -109,5 +114,6 @@ func translateHalt(err error) error {
 	if errors.Is(err, rtl.ErrHalt) {
 		return cpu.ErrHalted
 	}
+	
 	return err
 }

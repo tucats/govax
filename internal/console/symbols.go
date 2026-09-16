@@ -89,6 +89,7 @@ func (t *SymbolTable) Get(name string) (uint32, bool) {
 	if !ok {
 		return 0, false
 	}
+
 	return s.Value, true
 }
 
@@ -155,21 +156,27 @@ func (t *SymbolTable) ClearAll() {
 // convention (see ClearSymbol, misc.go).
 func (t *SymbolTable) ClearTemporary() int {
 	n := 0
+
 	for k, s := range t.m {
 		if s.Kind == SymbolUser && !s.Permanent {
 			delete(t.m, k)
+			
 			n++
 		}
 	}
+
 	return n
 }
 
 // All returns every symbol, sorted by name, for SHOW SYMBOL.
 func (t *SymbolTable) All() []*Symbol {
 	out := make([]*Symbol, 0, len(t.m))
+
 	for _, s := range t.m {
 		out = append(out, s)
 	}
+
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+
 	return out
 }

@@ -13,27 +13,33 @@ import (
 
 func evaxGrammarPathForConsole(t *testing.T) string {
 	t.Helper()
+
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("runtime.Caller failed")
 	}
+
 	return filepath.Join(filepath.Dir(file), "..", "..", "testdata", "dcl", "evax.dcl")
 }
 
 func loadEvaxGrammar(t *testing.T) *dcl.Grammar {
 	t.Helper()
+
 	g, err := dcl.LoadGrammarFile(evaxGrammarPathForConsole(t))
 	if err != nil {
 		t.Fatalf("LoadGrammarFile: %v", err)
 	}
+
 	return g
 }
 
 func newTestDispatcher(t *testing.T) (*Dispatcher, *Console) {
 	t.Helper()
+
 	c, _ := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g, nil)
+
 	return d, c
 }
 
@@ -42,6 +48,7 @@ func TestDispatch_fixedTableExamine(t *testing.T) {
 	if err := d.Console.Deposit("", 0x1000, SizeLongword, 0x99887766); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
+
 	if err := d.Dispatch("EXAMINE 1000"); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
@@ -54,6 +61,7 @@ func TestDispatch_fourCharTruncation(t *testing.T) {
 	if err := d.Dispatch("EXAMINE R0"); err != nil {
 		t.Fatalf("Dispatch(EXAMINE R0): %v", err)
 	}
+
 	if err := d.Dispatch("EXAM R0"); err != nil {
 		t.Fatalf("Dispatch(EXAM R0): %v", err)
 	}
@@ -64,6 +72,7 @@ func TestDispatch_setAndExamineRegister(t *testing.T) {
 	if err := d.Dispatch("SET R4=1234"); err != nil {
 		t.Fatalf("Dispatch(SET): %v", err)
 	}
+
 	if got := c.CPU.GPR(vax.R4); got != 0x1234 {
 		t.Errorf("R4 = %#x, want 0x1234 (radix 16 default)", got)
 	}
@@ -78,10 +87,12 @@ func TestDispatch_depositAndExamine(t *testing.T) {
 	if err := d.Dispatch("D 2000=0ABCD123"); err != nil {
 		t.Fatalf("Dispatch(D): %v", err)
 	}
+
 	v, err := c.Mem.LoadLongword(c.CPU, 0x2000)
 	if err != nil {
 		t.Fatalf("LoadLongword: %v", err)
 	}
+
 	if v != 0x0ABCD123 {
 		t.Errorf("got %#x, want 0x0abcd123", v)
 	}
@@ -90,15 +101,19 @@ func TestDispatch_depositAndExamine(t *testing.T) {
 func TestDispatch_stepAndGo(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	loadProgram(t, c, 0x200, opNop, opNop, opHalt)
+
 	if err := d.Dispatch("STEP 200"); err != nil {
 		t.Fatalf("Dispatch(STEP): %v", err)
 	}
+
 	if c.CPU.GPR(vax.PC) != 0x201 {
 		t.Errorf("PC after STEP = %#x, want 0x201", c.CPU.GPR(vax.PC))
 	}
+
 	if err := d.Dispatch("GO"); err != nil {
 		t.Fatalf("Dispatch(GO): %v", err)
 	}
+
 	if c.CPU.GPR(vax.PC) != 0x203 {
 		t.Errorf("PC after GO = %#x, want 0x203", c.CPU.GPR(vax.PC))
 	}
@@ -115,6 +130,7 @@ func TestDispatch_runActivatesImage(t *testing.T) {
 	if err := d.Dispatch("RUN/NOEXECUTE " + exeFixturePath(t, "simple.exe")); err != nil {
 		t.Fatalf("Dispatch(RUN/NOEXECUTE): %v", err)
 	}
+
 	if len(c.ICBList) == 0 {
 		t.Fatal("expected RUN to have loaded at least the main image")
 	}
@@ -139,6 +155,7 @@ func TestDispatch_asmThenCall(t *testing.T) {
 	if err := d.Dispatch("ASM " + asmFixturePath(t, "xor.asm")); err != nil {
 		t.Fatalf("Dispatch(ASM): %v", err)
 	}
+
 	if err := d.Dispatch("CALL TEST"); err != nil {
 		t.Fatalf("Dispatch(CALL): %v", err)
 	}
@@ -160,6 +177,7 @@ func TestDispatch_callWithArgumentList(t *testing.T) {
 
 	src := "\t.entry\tdbltest, ^m<>\n\tmovl\t4(ap), r0\n\taddl2\tr0, r0\n\tret\n\t.end\n"
 	path := filepath.Join(t.TempDir(), "dbl_test.asm")
+
 	if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
@@ -167,9 +185,11 @@ func TestDispatch_callWithArgumentList(t *testing.T) {
 	if err := d.Dispatch("ASM " + path); err != nil {
 		t.Fatalf("Dispatch(ASM): %v", err)
 	}
+
 	if err := d.Dispatch("CALL DBLTEST(^D21)"); err != nil {
 		t.Fatalf("Dispatch(CALL): %v", err)
 	}
+
 	if got := c.CPU.GPR(vax.R0); got != 42 {
 		t.Errorf("R0 = %d, want 42", got)
 	}
@@ -186,6 +206,7 @@ func TestDispatch_callStepQualifier(t *testing.T) {
 	if err := d.Dispatch("ASM " + asmFixturePath(t, "xor.asm")); err != nil {
 		t.Fatalf("Dispatch(ASM): %v", err)
 	}
+
 	if err := d.Dispatch("CALL/STEP TEST"); err != nil {
 		t.Fatalf("Dispatch(CALL/STEP): %v", err)
 	}
@@ -205,6 +226,7 @@ func TestDispatch_callStepStopsAfterOneInstruction(t *testing.T) {
 
 	src := "\t.entry\tdbltest, ^m<>\n\tmovl\t4(ap), r0\n\taddl2\tr0, r0\n\tret\n\t.end\n"
 	path := filepath.Join(t.TempDir(), "dbl_test.asm")
+
 	if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
@@ -226,6 +248,7 @@ func TestDispatch_callStepStopsAfterOneInstruction(t *testing.T) {
 	if err := d.Dispatch("STEP"); err != nil {
 		t.Fatalf("Dispatch(STEP) [ADDL2]: %v", err)
 	}
+
 	if got := c.CPU.GPR(vax.R0); got != 42 {
 		t.Errorf("R0 after STEP = %d, want 42", got)
 	}
@@ -240,9 +263,11 @@ func TestDispatch_callStepStopsAfterOneInstruction(t *testing.T) {
 
 func TestDispatch_showViaDCL(t *testing.T) {
 	d, _ := newTestDispatcher(t)
+
 	if err := d.Dispatch("SHOW REGISTERS"); err != nil {
 		t.Fatalf("Dispatch(SHOW REGISTERS): %v", err)
 	}
+
 	if err := d.Dispatch("SHOW PSL"); err != nil {
 		t.Fatalf("Dispatch(SHOW PSL): %v", err)
 	}
@@ -251,6 +276,7 @@ func TestDispatch_showViaDCL(t *testing.T) {
 func TestDispatch_showRegisterShortcut(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	c.CPU.SetGPR(vax.R2, 0x55)
+
 	if err := d.Dispatch("SHOW R2"); err != nil {
 		t.Fatalf("Dispatch(SHOW R2): %v", err)
 	}
@@ -259,9 +285,11 @@ func TestDispatch_showRegisterShortcut(t *testing.T) {
 func TestDispatch_clearBreakpoint(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	c.AddBreakpoint(0x400)
+
 	if err := d.Dispatch("CLEAR BREAKPOINT/ALL"); err != nil {
 		t.Fatalf("Dispatch(CLEAR BREAKPOINT/ALL): %v", err)
 	}
+
 	if len(c.Breakpoints) != 0 {
 		t.Errorf("expected breakpoints cleared, got %d", len(c.Breakpoints))
 	}
@@ -272,6 +300,7 @@ func TestDispatch_vminitViaDCL(t *testing.T) {
 	if err := d.Dispatch("VMINIT/P0=20/P1=20/S0=0/KSP=2/ESP=2/SSP=2/ISP=2"); err != nil {
 		t.Fatalf("Dispatch(VMINIT): %v", err)
 	}
+
 	if !c.VMInitValid {
 		t.Error("expected VMInitValid true after VMINIT")
 	}
@@ -282,6 +311,7 @@ func TestDispatch_exitStopsRunning(t *testing.T) {
 	if err := d.Dispatch("EXIT"); err != nil {
 		t.Fatalf("Dispatch(EXIT): %v", err)
 	}
+
 	if c.Running() {
 		t.Error("expected Running() false after EXIT")
 	}
@@ -295,6 +325,7 @@ func TestDispatch_exitStopsRunning(t *testing.T) {
 // error CALL EXE$ABOUT would report directly.
 func TestDispatch_entryPointCommandUndefinedWithoutMicrokernel(t *testing.T) {
 	d, _ := newTestDispatcher(t)
+
 	err := d.Dispatch("ABOUT")
 	if err == nil || !strings.Contains(err.Error(), "Undefined symbol") || !strings.Contains(err.Error(), "EXE$ABOUT") {
 		t.Errorf("Dispatch(ABOUT) = %v, want an undefined-symbol error naming EXE$ABOUT", err)
@@ -325,10 +356,12 @@ func TestDispatch_entryPointCommandCallsRealRoutine(t *testing.T) {
 			// consoleOut), so the buffer this test inspects has to be in
 			// place before Init runs, not swapped in afterward.
 			var buf strings.Builder
+
 			c := New(&buf)
 			if err := c.Init(4096 * 512); err != nil {
 				t.Fatalf("Init: %v", err)
 			}
+
 			if err := c.VMInit(2000, 100, 0, 4, 4, 4, 4, 8); err != nil {
 				t.Fatalf("VMInit: %v", err)
 			}
@@ -386,6 +419,7 @@ func TestDispatch_setTraceAndShowTrace(t *testing.T) {
 	if err := d.Dispatch("SET TRACE"); err != nil {
 		t.Fatalf("Dispatch(SET TRACE): %v", err)
 	}
+
 	if !c.Trace {
 		t.Error("Trace = false, want true after SET TRACE")
 	}
@@ -397,6 +431,7 @@ func TestDispatch_setTraceAndShowTrace(t *testing.T) {
 	if err := d.Dispatch("SET NOTRACE"); err != nil {
 		t.Fatalf("Dispatch(SET NOTRACE): %v", err)
 	}
+
 	if c.Trace {
 		t.Error("Trace = true, want false after SET NOTRACE")
 	}
@@ -408,6 +443,7 @@ func TestDispatch_setDebugAndShowDebug(t *testing.T) {
 	if err := d.Dispatch("SET DEBUG VM,NOUSERHALT"); err != nil {
 		t.Fatalf("Dispatch(SET DEBUG): %v", err)
 	}
+
 	if !c.CPU.DebugEnabled(vax.DebugVM) || c.CPU.DebugEnabled(vax.DebugUserHalt) {
 		t.Errorf("Debug() = %#x, want VM set and USERHALT cleared", c.CPU.Debug())
 	}
@@ -432,6 +468,7 @@ func TestDispatch_setPSL(t *testing.T) {
 	if err := d.Dispatch("SET PSL N=1,V=1,IPL=10"); err != nil {
 		t.Fatalf("Dispatch(SET PSL): %v", err)
 	}
+
 	psl := c.CPU.PSL()
 	if !psl.N() || !psl.V() || psl.IPL() != 16 {
 		t.Errorf("PSL = %#x, want N/V set and IPL=16 (0x10)", uint32(psl))
@@ -449,6 +486,7 @@ func TestDispatch_setMode(t *testing.T) {
 	if err := d.Dispatch("SET MODE EXEC"); err != nil {
 		t.Fatalf("Dispatch(SET MODE): %v", err)
 	}
+
 	if got := c.CPU.PSL().CurMod(); got != vax.Executive {
 		t.Errorf("CurMod() = %d, want Executive", got)
 	}
@@ -460,6 +498,7 @@ func TestDispatch_setVMAndNoVM(t *testing.T) {
 	if err := d.Dispatch("SET VM"); err != nil {
 		t.Fatalf("Dispatch(SET VM): %v", err)
 	}
+
 	if c.CPU.PR(vax.MAPEN) != 1 {
 		t.Errorf("MAPEN = %d, want 1", c.CPU.PR(vax.MAPEN))
 	}
@@ -467,6 +506,7 @@ func TestDispatch_setVMAndNoVM(t *testing.T) {
 	if err := d.Dispatch("SET NOMAPEN"); err != nil {
 		t.Fatalf("Dispatch(SET NOMAPEN): %v", err)
 	}
+
 	if c.CPU.PR(vax.MAPEN) != 0 {
 		t.Errorf("MAPEN = %d, want 0", c.CPU.PR(vax.MAPEN))
 	}
@@ -478,6 +518,7 @@ func TestDispatch_setBaseAndVerbose(t *testing.T) {
 	if err := d.Dispatch("SET BASE 3000"); err != nil {
 		t.Fatalf("Dispatch(SET BASE): %v", err)
 	}
+
 	if c.DepositAddr != 0x3000 {
 		t.Errorf("DepositAddr = %#x, want 0x3000", c.DepositAddr)
 	}
@@ -485,6 +526,7 @@ func TestDispatch_setBaseAndVerbose(t *testing.T) {
 	if err := d.Dispatch("SET NOVERBOSE"); err != nil {
 		t.Fatalf("Dispatch(SET NOVERBOSE): %v", err)
 	}
+
 	if c.Verbose {
 		t.Error("expected Verbose false after SET NOVERBOSE")
 	}
@@ -492,6 +534,7 @@ func TestDispatch_setBaseAndVerbose(t *testing.T) {
 	if err := d.Dispatch("SET VERIFY"); err != nil {
 		t.Fatalf("Dispatch(SET VERIFY): %v", err)
 	}
+
 	if !c.Verify {
 		t.Error("expected Verify true after SET VERIFY")
 	}
@@ -503,6 +546,7 @@ func TestDispatch_setRadixKeywords(t *testing.T) {
 	if err := d.Dispatch("SET RADIX DEC"); err != nil {
 		t.Fatalf("Dispatch(SET RADIX DEC): %v", err)
 	}
+
 	if c.Radix != 10 {
 		t.Errorf("Radix = %d, want 10", c.Radix)
 	}
@@ -510,6 +554,7 @@ func TestDispatch_setRadixKeywords(t *testing.T) {
 	if err := d.Dispatch("SET RADIX HEX"); err != nil {
 		t.Fatalf("Dispatch(SET RADIX HEX): %v", err)
 	}
+
 	if c.Radix != 16 {
 		t.Errorf("Radix = %d, want 16", c.Radix)
 	}
@@ -518,6 +563,7 @@ func TestDispatch_setRadixKeywords(t *testing.T) {
 	if err := d.Dispatch("SET RADIX 8"); err != nil {
 		t.Fatalf("Dispatch(SET RADIX 8): %v", err)
 	}
+
 	if c.Radix != 8 {
 		t.Errorf("Radix = %d, want 8", c.Radix)
 	}
@@ -529,6 +575,7 @@ func TestDispatch_setBreakTemporary(t *testing.T) {
 	if err := d.Dispatch("SET BREAK/TEMPORARY 400"); err != nil {
 		t.Fatalf("Dispatch(SET BREAK/TEMPORARY): %v", err)
 	}
+
 	if len(c.Breakpoints) != 1 || !c.Breakpoints[0].Temporary {
 		t.Fatalf("Breakpoints = %+v, want one temporary breakpoint", c.Breakpoints)
 	}
@@ -542,6 +589,7 @@ func TestDispatch_setSymbolQualifiers(t *testing.T) {
 	if err := d.Dispatch("SET /PERMANENT PERMSYM=100"); err != nil {
 		t.Fatalf("Dispatch(SET /PERMANENT): %v", err)
 	}
+
 	sym, ok := c.Symbols.Find("PERMSYM")
 	if !ok || !sym.Permanent {
 		t.Errorf("PERMSYM = %+v, ok=%v; want a permanent symbol", sym, ok)
@@ -550,6 +598,7 @@ func TestDispatch_setSymbolQualifiers(t *testing.T) {
 	if err := d.Dispatch("SET/ENTRY ENTRYSYM=200"); err != nil {
 		t.Fatalf("Dispatch(SET/ENTRY): %v", err)
 	}
+
 	sym, ok = c.Symbols.Find("ENTRYSYM")
 	if !ok || !sym.IsEntry {
 		t.Errorf("ENTRYSYM = %+v, ok=%v; want an entry symbol", sym, ok)
@@ -568,6 +617,7 @@ func TestDispatch_setPTEWithRange(t *testing.T) {
 		if err != nil {
 			t.Fatalf("LookupPTE(%#x): %v", addr, err)
 		}
+
 		if !pte.Valid() {
 			t.Errorf("addr %#x: expected valid bit set", addr)
 		}
@@ -591,6 +641,7 @@ func TestDispatch_clearStringsAndInterrupt(t *testing.T) {
 	if err := d.Dispatch("CLEAR STRINGS"); err != nil {
 		t.Fatalf("Dispatch(CLEAR STRINGS): %v", err)
 	}
+
 	if got, _ := c.Symbols.Get("CONSOLE$STRINGPOOL"); got != 0x2000 {
 		t.Errorf("CONSOLE$STRINGPOOL = %#x, want reset to 0x2000", got)
 	}
@@ -604,6 +655,7 @@ func TestDispatch_clearStringsAndInterrupt(t *testing.T) {
 	if err := d.Dispatch("CLEAR INTERRUPT/ALL"); err != nil {
 		t.Fatalf("Dispatch(CLEAR INTERRUPT/ALL): %v", err)
 	}
+
 	if _, queued := c.Engine.PendingInterrupts(); len(queued) != 0 {
 		t.Errorf("queued = %+v, want empty after CLEAR INTERRUPT/ALL", queued)
 	}
@@ -617,9 +669,11 @@ func TestDispatch_clearSymbolTemporary(t *testing.T) {
 	if err := d.Dispatch("CLEAR SYMBOL/TEMPORARY"); err != nil {
 		t.Fatalf("Dispatch(CLEAR SYMBOL/TEMPORARY): %v", err)
 	}
+
 	if _, ok := c.Symbols.Get("PERM"); !ok {
 		t.Error("expected PERM to survive")
 	}
+
 	if _, ok := c.Symbols.Get("TEMP"); ok {
 		t.Error("expected TEMP to be cleared")
 	}
@@ -649,6 +703,7 @@ func TestDispatch_helpFixedCommand(t *testing.T) {
 	c, _ := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	h := ParseHelp("$HELP\nTop-level help.\n")
+
 	d := NewDispatcher(c, g, h)
 	if err := d.Dispatch("HELP"); err != nil {
 		t.Fatalf("Dispatch(HELP): %v", err)
@@ -665,6 +720,7 @@ func TestDispatch_if(t *testing.T) {
 	if err := d.Dispatch(`IF DEFINED("CONSOLE$ARG_FILE") THEN SET R0=1`); err != nil {
 		t.Fatalf("Dispatch(IF, false): %v", err)
 	}
+
 	if got := c.CPU.GPR(vax.R0); got != 0 {
 		t.Errorf("R0 = %#x, want 0 (condition should be false)", got)
 	}
@@ -672,6 +728,7 @@ func TestDispatch_if(t *testing.T) {
 	if err := d.Dispatch(`IF 1 THEN SET R0=1`); err != nil {
 		t.Fatalf("Dispatch(IF, true, THEN): %v", err)
 	}
+	
 	if got := c.CPU.GPR(vax.R0); got != 1 {
 		t.Errorf("R0 = %#x, want 1", got)
 	}
@@ -679,6 +736,7 @@ func TestDispatch_if(t *testing.T) {
 	if err := d.Dispatch(`IF 1=1 SET R0=2`); err != nil {
 		t.Fatalf("Dispatch(IF, true, no THEN): %v", err)
 	}
+
 	if got := c.CPU.GPR(vax.R0); got != 2 {
 		t.Errorf("R0 = %#x, want 2", got)
 	}
@@ -689,6 +747,7 @@ func TestDispatch_emptyLineIsNoop(t *testing.T) {
 	if err := d.Dispatch("   "); err != nil {
 		t.Fatalf("Dispatch(blank): %v", err)
 	}
+
 	if err := d.Dispatch("! a comment"); err != nil {
 		t.Fatalf("Dispatch(comment): %v", err)
 	}

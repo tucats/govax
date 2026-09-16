@@ -21,6 +21,7 @@ func BenchmarkSieve(b *testing.B) {
 	if _, _, err := c.Assemble(asmFixturePath(b, "bench.asm")); err != nil {
 		b.Fatalf("Assemble: %v", err)
 	}
+	
 	addr, ok := c.Symbols.Get("SIEVE")
 	if !ok {
 		b.Fatal("expected SIEVE to be defined")

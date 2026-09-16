@@ -108,7 +108,7 @@ func (c *Console) ShowMemory() error {
 			plural = " "
 		}
 
-		c.Printf("        %s Region\n            Region size = %08X (%5d decimal) pages\n            PFN database = %d page%s",
+		c.Printf("        %s Region\n            Size = %08X (%5d decimal) pages\n            PFN database = %d page%s",
 			r.name, r.size, r.size, r.pteCount, plural)
 
 		c.Printf("  %sBR = %08X    %sLR = %08X\n", r.name, bases[n], r.name, lens[n])
@@ -559,6 +559,7 @@ func (c *Console) ShowString() error {
 		}
 
 		n := descLen
+
 		truncated := n > 250
 		if truncated {
 			n = 250
@@ -599,6 +600,7 @@ func (c *Console) ShowPage(addrExpr string, write bool) error {
 
 	if c.CPU.PR(vax.MAPEN) == 0 {
 		c.Printf("Virtual memory is disabled.\n")
+
 		return nil
 	}
 
@@ -610,6 +612,7 @@ func (c *Console) ShowPage(addrExpr string, write bool) error {
 	region, pteAddr, pte, err := c.Mem.LookupPTE(c.CPU, v)
 	if err != nil {
 		c.Printf("ACCVIO, page table region %d length violation\n", region)
+
 		return nil
 	}
 
@@ -636,6 +639,7 @@ func (c *Console) ShowPage(addrExpr string, write bool) error {
 
 	if !pte.Protection().Allows(c.CPU.PSL().CurMod(), access) {
 		c.Printf("ACCVIO, protection violation\n")
+
 		return nil
 	}
 
@@ -706,6 +710,7 @@ func (c *Console) showSCB(all bool) error {
 	scbb := c.CPU.PR(vax.SCBB)
 	if scbb == 0 {
 		c.Printf("No SCB established (SCBB=0)\n")
+
 		return nil
 	}
 
@@ -736,7 +741,7 @@ func (c *Console) showSCB(all bool) error {
 
 		if vector == 0xFFFFFFFF {
 			c.Printf("     %02X   EXC$%-10s  <console handler>\n", n, scbVectorNames[n])
-			
+
 			continue
 		}
 
@@ -778,6 +783,7 @@ func (c *Console) ShowCallFrames(countExpr string) error {
 	}
 
 	count := uint32(1)
+
 	if s := strings.TrimSpace(countExpr); s != "" {
 		v, err := strconv.ParseUint(s, 16, 32)
 		if err != nil {
@@ -903,6 +909,7 @@ func (c *Console) ShowCallFrames(countExpr string) error {
 			c.Printf("        There %s %d argument%s:\n", word, argc, plural)
 
 			a := ap
+
 			for n := uint32(1); n <= argc; n++ {
 				if n > 15 {
 					c.Printf("            ...and %d more...\n", argc-n)
@@ -992,6 +999,7 @@ func (c *Console) ShowImages(full bool) error {
 
 	if len(c.ICBList) == 0 {
 		c.Printf("No VMS images loaded in memory.\n")
+
 		return nil
 	}
 
@@ -1071,12 +1079,15 @@ func (c *Console) ShowSymbol(name string) error {
 	if sym.Kind == SymbolSystem {
 		kind = "system"
 	}
+
 	if sym.Permanent {
 		kind += ", permanent"
 	}
+
 	if sym.IsEntry {
 		kind += ", entry"
 	}
+
 	if sym.IsLabel {
 		kind += ", label"
 	}
@@ -1182,7 +1193,7 @@ func (c *Console) ShowFault() error {
 					if i > 0 {
 						c.Printf(",")
 					}
-					
+
 					c.Printf("%08X", a)
 				}
 
@@ -1258,14 +1269,19 @@ func accessAbbrev(a cpu.AccessKind) string {
 	switch a {
 	case cpu.AccessRead:
 		return "src"
+
 	case cpu.AccessWrite:
 		return "dst"
+
 	case cpu.AccessModify:
 		return "mod"
+
 	case cpu.AccessAddress:
 		return "addr"
+
 	case cpu.AccessBranch:
 		return "br"
+
 	default:
 		return "x"
 	}
@@ -1276,12 +1292,16 @@ func sizeAbbrev(n int) string {
 	switch n {
 	case 1:
 		return ".b"
+
 	case 2:
 		return ".w"
+
 	case 4:
 		return ".l"
+
 	case 8:
 		return ".q"
+
 	default:
 		return ".x"
 	}
@@ -1311,8 +1331,8 @@ func (c *Console) ShowInstructions(modes, profile, unimplemented, all bool, opco
 	}
 
 	table := cpu.Instructions()
-
 	opmatch := int32(-1)
+
 	if s := strings.TrimSpace(opcodeExpr); s != "" {
 		v, err := strconv.ParseUint(s, 16, 8)
 		if err != nil {
@@ -1492,6 +1512,7 @@ func (c *Console) ShowTrace() error {
 	if c.Trace {
 		state = "enabled"
 	}
+	
 	c.Printf("    Execution trace disassembly is %s\n", state)
 
 	if c.Trace {

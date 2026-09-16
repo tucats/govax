@@ -10,9 +10,11 @@ import (
 func TestPrint_quotedAndExpression(t *testing.T) {
 	c, buf := newTestConsole(t)
 	buf.Reset()
+
 	if err := c.Print(`"Hello, " 200`); err != nil {
 		t.Fatalf("Print: %v", err)
 	}
+
 	got := buf.String()
 	if !strings.Contains(got, "Hello, ") || !strings.Contains(got, "00000200") {
 		t.Errorf("output = %q, want the literal text and hex value", got)
@@ -24,9 +26,11 @@ func TestQuit_setsRunningFalse(t *testing.T) {
 	if !c.Running() {
 		t.Fatal("expected Running() true before Quit")
 	}
+
 	if err := c.Quit(); err != nil {
 		t.Fatalf("Quit: %v", err)
 	}
+
 	if c.Running() {
 		t.Error("expected Running() false after Quit")
 	}
@@ -40,6 +44,7 @@ func TestTime_runsCommandAndReportsElapsed(t *testing.T) {
 
 	err := c.Time("NOP", func(cmd string) error {
 		called = true
+
 		if cmd != "NOP" {
 			t.Errorf("dispatch got %q, want NOP", cmd)
 		}
@@ -152,9 +157,11 @@ func TestClearSymbolTemporary(t *testing.T) {
 	if _, ok := c.Symbols.Get("PERM"); !ok {
 		t.Error("expected PERM to survive CLEAR SYMBOL/TEMPORARY")
 	}
+
 	if _, ok := c.Symbols.Get("TEMP"); ok {
 		t.Error("expected TEMP to be cleared")
 	}
+
 	if _, ok := c.Symbols.Get("SYS$FOO"); !ok {
 		t.Error("expected the system symbol to survive")
 	}
@@ -188,6 +195,7 @@ func TestClearString(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadLongword: %v", err)
 	}
+
 	if got != 0 {
 		t.Errorf("pool storage = %#x, want zeroed", got)
 	}
@@ -196,6 +204,7 @@ func TestClearString(t *testing.T) {
 func TestClearMemory_reinitializes(t *testing.T) {
 	c, _ := newTestConsole(t)
 	c.Symbols.Set("FOO", 1, SymbolUser)
+
 	if err := c.Mem.StoreLongword(c.CPU, 0x100, 0xCAFEBABE); err != nil {
 		t.Fatalf("seed: %v", err)
 	}
@@ -207,10 +216,12 @@ func TestClearMemory_reinitializes(t *testing.T) {
 	if _, ok := c.Symbols.Get("FOO"); ok {
 		t.Error("expected CLEAR MEMORY (== ZERO) to clear symbols too")
 	}
+
 	got, err := c.Mem.LoadLongword(c.CPU, 0x100)
 	if err != nil {
 		t.Fatalf("LoadLongword: %v", err)
 	}
+
 	if got != 0 {
 		t.Errorf("memory at 0x100 = %#x, want zeroed", got)
 	}
@@ -228,14 +239,17 @@ func TestClearInterruptAndClearAllInterrupts(t *testing.T) {
 	if err := c.ClearInterrupt(0x24); err != nil {
 		t.Fatalf("ClearInterrupt: %v", err)
 	}
+
 	if _, queued := c.Engine.PendingInterrupts(); len(queued) != 0 {
 		t.Errorf("queued = %+v, want empty after ClearInterrupt", queued)
 	}
 
 	c.Engine.Interrupt(0x24, 20, 0)
+	
 	if err := c.ClearAllInterrupts(); err != nil {
 		t.Fatalf("ClearAllInterrupts: %v", err)
 	}
+
 	if pending, queued := c.Engine.PendingInterrupts(); pending != nil || len(queued) != 0 {
 		t.Errorf("pending=%v queued=%v, want both empty after ClearAllInterrupts", pending, queued)
 	}
@@ -279,9 +293,11 @@ func TestHelp_lookupAndMissingTopic(t *testing.T) {
 func TestHelp_nilHelp(t *testing.T) {
 	c, buf := newTestConsole(t)
 	buf.Reset()
+
 	if err := c.Help(nil, nil); err != nil {
 		t.Fatalf("Help: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "No help file") {
 		t.Errorf("output = %q, want a no-help-file message", buf.String())
 	}

@@ -10,10 +10,12 @@ import (
 
 func romFixturePath(t *testing.T) string {
 	t.Helper()
+
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("runtime.Caller failed")
 	}
+
 	return filepath.Join(filepath.Dir(file), "..", "..", "testdata", "rom", "xdefault.rom")
 }
 
@@ -22,12 +24,15 @@ func TestLoadROM_realFixture(t *testing.T) {
 	if err := c.LoadROM(romFixturePath(t)); err != nil {
 		t.Fatalf("LoadROM: %v", err)
 	}
+
 	if c.ROMBase != 0x20040000 {
 		t.Errorf("ROMBase = %#08x, want 0x20040000", c.ROMBase)
 	}
+
 	if c.ROMEnd != 0x200BFFFF {
 		t.Errorf("ROMEnd = %#08x, want 0x200bffff", c.ROMEnd)
 	}
+
 	if len(c.ROM) != 0x80000 {
 		t.Errorf("len(ROM) = %#x, want 0x80000", len(c.ROM))
 	}
@@ -53,6 +58,7 @@ func TestSaveROM_roundTripsRealFixtureContent(t *testing.T) {
 	// via a load/save/reload cycle rather than a raw file diff.
 	c := New(&bytes.Buffer{})
 	orig := romFixturePath(t)
+
 	if err := c.LoadROM(orig); err != nil {
 		t.Fatalf("LoadROM: %v", err)
 	}
@@ -66,9 +72,11 @@ func TestSaveROM_roundTripsRealFixtureContent(t *testing.T) {
 	if err := c2.LoadROM(out); err != nil {
 		t.Fatalf("LoadROM(roundtrip): %v", err)
 	}
+
 	if c2.ROMBase != c.ROMBase || c2.ROMEnd != c.ROMEnd {
 		t.Errorf("base/end = %#x/%#x, want %#x/%#x", c2.ROMBase, c2.ROMEnd, c.ROMBase, c.ROMEnd)
 	}
+
 	if !bytes.Equal(c2.ROM, c.ROM) {
 		t.Error("re-saved and reloaded ROM content differs from the original load")
 	}
@@ -94,9 +102,11 @@ func TestSaveLoadROM_synthetic(t *testing.T) {
 	if err := c2.LoadROM(path); err != nil {
 		t.Fatalf("LoadROM: %v", err)
 	}
+
 	if c2.ROMBase != c.ROMBase || c2.ROMEnd != c.ROMEnd {
 		t.Errorf("base/end = %#x/%#x, want %#x/%#x", c2.ROMBase, c2.ROMEnd, c.ROMBase, c.ROMEnd)
 	}
+
 	if !bytes.Equal(c2.ROM, c.ROM) {
 		t.Errorf("ROM content mismatch after round trip")
 	}
@@ -107,6 +117,7 @@ func TestLoadROM_rejectsWrongMagic(t *testing.T) {
 	if err := os.WriteFile(path, []byte("not a rom image at all!"), 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
+
 	c := New(&bytes.Buffer{})
 	if err := c.LoadROM(path); err == nil {
 		t.Error("expected an error loading a non-ROM file")
@@ -127,9 +138,11 @@ func TestSaveLoadNVRAM_roundTrip(t *testing.T) {
 	if err := c2.LoadNVRAM(path); err != nil {
 		t.Fatalf("LoadNVRAM: %v", err)
 	}
+
 	if c2.NVRAMBase != c.NVRAMBase {
 		t.Errorf("NVRAMBase = %#x, want %#x", c2.NVRAMBase, c.NVRAMBase)
 	}
+	
 	if !bytes.Equal(c2.NVRAM, c.NVRAM) {
 		t.Errorf("NVRAM content mismatch: got % x, want % x", c2.NVRAM, c.NVRAM)
 	}

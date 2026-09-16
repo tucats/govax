@@ -7,6 +7,7 @@ import (
 
 func evalTest(t *testing.T, radix int, syms map[string]uint32, expr string) uint32 {
 	t.Helper()
+	
 	st := NewSymbolTable()
 
 	for k, v := range syms {
@@ -85,6 +86,7 @@ func TestEvaluator_arithmeticAndPrecedence(t *testing.T) {
 			t.Errorf("Eval(%q) = %d, want %d", expr, got, want)
 		}
 	}
+
 	if got := evalTest(t, 16, map[string]uint32{"FOO": 0x1234}, "FOO+4"); got != 0x1238 {
 		t.Errorf("Eval(FOO+4) = %#x, want 0x1238", got)
 	}
@@ -100,6 +102,7 @@ func TestEvaluator_comparisons(t *testing.T) {
 		"3>2":  1,
 		"2>=3": 0,
 	}
+
 	for expr, want := range cases {
 		if got := evalTest(t, 10, nil, expr); got != want {
 			t.Errorf("Eval(%q) = %d, want %d", expr, got, want)
@@ -118,6 +121,7 @@ func TestEvaluator_definedFunction(t *testing.T) {
 	if got := evalTest(t, 16, map[string]uint32{"FOO": 1}, `DEFINED("FOO")`); got != 1 {
 		t.Errorf(`Eval(DEFINED("FOO")) = %d, want 1`, got)
 	}
+
 	if got := evalTest(t, 16, nil, `DEFINED("NOSUCH")`); got != 0 {
 		t.Errorf(`Eval(DEFINED("NOSUCH")) = %d, want 0`, got)
 	}
@@ -137,10 +141,12 @@ func TestEvaluator_trailingRemainder(t *testing.T) {
 	// A second address (e.g. EXAMINE's optional end-address) is left
 	// unconsumed for the caller to parse separately.
 	e := &Evaluator{Symbols: NewSymbolTable(), Radix: 16}
+
 	v, rest, err := e.Eval("200 300")
 	if err != nil {
 		t.Fatalf("Eval: %v", err)
 	}
+
 	if v != 0x200 || rest != " 300" {
 		t.Errorf("v=%#x rest=%q, want v=0x200 rest=\" 300\"", v, rest)
 	}
@@ -158,6 +164,7 @@ func vminitConsoleForStrings(t *testing.T) *Console {
 	if err := c.Init(4096 * 512); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
+
 	if err := c.VMInit(2000, 100, 0, 4, 4, 4, 4, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
@@ -177,6 +184,7 @@ func TestEvaluator_quotedString(t *testing.T) {
 	if err != nil {
 		t.Fatalf(`Eval("Hello"): %v`, err)
 	}
+
 	if rest != "" {
 		t.Errorf("rest = %q, want empty", rest)
 	}
@@ -185,6 +193,7 @@ func TestEvaluator_quotedString(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load descriptor length: %v", err)
 	}
+
 	if length != 5 {
 		t.Errorf("descriptor length = %d, want 5", length)
 	}
@@ -198,6 +207,7 @@ func TestEvaluator_quotedString(t *testing.T) {
 	if err := c.Mem.Load(c.CPU, dataAddr, got); err != nil {
 		t.Fatalf("load string data: %v", err)
 	}
+
 	if string(got) != "Hello" {
 		t.Errorf("string data = %q, want %q", got, "Hello")
 	}
@@ -218,6 +228,7 @@ func TestEvaluator_quotedStringEscapes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load descriptor length: %v", err)
 	}
+
 	if length != 7 {
 		t.Fatalf("descriptor length = %d, want 7", length)
 	}
@@ -231,6 +242,7 @@ func TestEvaluator_quotedStringEscapes(t *testing.T) {
 	if err := c.Mem.Load(c.CPU, dataAddr, got); err != nil {
 		t.Fatalf("load string data: %v", err)
 	}
+
 	if string(got) != "a\nb\rc\td" {
 		t.Errorf("string data = %q, want %q", got, "a\nb\rc\td")
 	}
@@ -247,6 +259,7 @@ func TestEvaluator_quotedStringChain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Eval first: %v", err)
 	}
+
 	desc2, _, err := ev.Eval(`"second"`)
 	if err != nil {
 		t.Fatalf("Eval second: %v", err)
@@ -261,6 +274,7 @@ func TestEvaluator_quotedStringChain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load chain head: %v", err)
 	}
+
 	if head != desc1 {
 		t.Errorf("chain head = %#x, want first descriptor %#x", head, desc1)
 	}
@@ -269,6 +283,7 @@ func TestEvaluator_quotedStringChain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load first's next link: %v", err)
 	}
+
 	if next != desc2 {
 		t.Errorf("first's next link = %#x, want second descriptor %#x", next, desc2)
 	}
@@ -277,6 +292,7 @@ func TestEvaluator_quotedStringChain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load second's next link: %v", err)
 	}
+
 	if terminator != 0 {
 		t.Errorf("second's next link = %#x, want 0 (chain terminator)", terminator)
 	}
@@ -293,6 +309,7 @@ func TestEvaluator_quotedStringUnterminated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Eval: %v", err)
 	}
+
 	if rest != "" {
 		t.Errorf("rest = %q, want empty", rest)
 	}
@@ -301,6 +318,7 @@ func TestEvaluator_quotedStringUnterminated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load descriptor length: %v", err)
 	}
+
 	if length != uint32(len("unterminated")) {
 		t.Errorf("descriptor length = %d, want %d", length, len("unterminated"))
 	}

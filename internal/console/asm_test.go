@@ -12,10 +12,12 @@ import (
 
 func asmFixturePath(t testing.TB, name string) string {
 	t.Helper()
+
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("runtime.Caller failed")
 	}
+
 	return filepath.Join(filepath.Dir(file), "..", "..", "testdata", "asm", name)
 }
 
@@ -31,6 +33,7 @@ func TestAssemble_xorDepositsAndIsCallable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Assemble: %v", err)
 	}
+
 	if hasEntry {
 		t.Fatal("xor.asm's bare .end should not report an entry address")
 	}
@@ -65,6 +68,7 @@ func TestAssemble_persistentSessionSharesSymbolsAcrossFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Assemble(movq.asm): %v", err)
 	}
+
 	if !hasEntry1 {
 		t.Fatal("expected movq.asm's \".end main\" to report an entry address")
 	}
@@ -73,6 +77,7 @@ func TestAssemble_persistentSessionSharesSymbolsAcrossFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Assemble(xor.asm): %v", err)
 	}
+
 	if hasEntry2 {
 		t.Fatal("expected xor.asm's bare \".end\" to report no entry, even after movq.asm's did")
 	}
@@ -80,6 +85,7 @@ func TestAssemble_persistentSessionSharesSymbolsAcrossFiles(t *testing.T) {
 	if _, ok := c.Symbols.Get("MAIN"); !ok {
 		t.Error("expected movq.asm's \"main\" label to still be defined")
 	}
+
 	if _, ok := c.Symbols.Get("TEST"); !ok {
 		t.Error("expected xor.asm's \"test\" label to be defined")
 	}
@@ -104,12 +110,14 @@ func TestAssemble_helloEntrySymbolAndMask(t *testing.T) {
 	if !ok {
 		t.Fatal("expected hello.asm's \"main\" label to be merged into Console.Symbols")
 	}
+
 	if !sym.IsEntry {
 		t.Error("expected MAIN to be marked IsEntry, matching its .ENTRY definition")
 	}
 
 	out := &bytes.Buffer{}
 	c.Out = out
+
 	if err := c.Disassemble(sym.Value, sym.Value); err != nil {
 		t.Fatalf("Disassemble: %v", err)
 	}
@@ -157,6 +165,7 @@ func TestAssemble_kernelThenHelloRunsBounded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Assemble(hello.asm): %v", err)
 	}
+	
 	if !hasEntry {
 		t.Fatal("expected hello.asm's \".end main\" to report an entry address")
 	}
@@ -179,9 +188,11 @@ func TestAssemble_kernelThenHelloRunsBounded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("hello.asm: %v", err)
 	}
+
 	if hitCap {
 		t.Fatalf("hello.asm hit the step cap instead of completing -- output so far=%q", out.String())
 	}
+
 	if !strings.Contains(out.String(), "Hello world") {
 		t.Errorf("console output = %q, want it to contain \"Hello world\"", out.String())
 	}

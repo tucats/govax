@@ -9,6 +9,7 @@ func TestDisassemble_singleInstruction(t *testing.T) {
 	if err := c.Deposit("", 0x1000, SizeByte, 0xD4); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
+	
 	if err := c.Deposit("", 0x1001, SizeByte, 0x53); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
@@ -19,6 +20,7 @@ func TestDisassemble_singleInstruction(t *testing.T) {
 
 	got := buf.String()
 	want := "00001000: CLRL R3\n"
+
 	if got != want {
 		t.Errorf("Disassemble output = %q, want %q", got, want)
 	}
@@ -30,6 +32,7 @@ func TestDispatch_disassemble(t *testing.T) {
 	if err := d.Console.Deposit("", 0x2000, SizeByte, 0xD4); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
+
 	if err := d.Console.Deposit("", 0x2001, SizeByte, 0x53); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
@@ -37,6 +40,7 @@ func TestDispatch_disassemble(t *testing.T) {
 	if err := d.Dispatch("DISASSEMBLE 2000"); err != nil {
 		t.Fatalf("Dispatch(DISASSEMBLE): %v", err)
 	}
+
 	if err := d.Dispatch("DIS 2000"); err != nil {
 		t.Fatalf("Dispatch(DIS): %v", err)
 	}
@@ -57,6 +61,7 @@ func TestDisassemble_entryMask(t *testing.T) {
 	if err := c.Deposit("", 0x1000, SizeByte, 0x04); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
+
 	if err := c.Deposit("", 0x1001, SizeByte, 0x40); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
@@ -65,6 +70,7 @@ func TestDisassemble_entryMask(t *testing.T) {
 	if err := c.Deposit("", 0x1002, SizeByte, 0xD4); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
+
 	if err := c.Deposit("", 0x1003, SizeByte, 0x53); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
@@ -74,6 +80,7 @@ func TestDisassemble_entryMask(t *testing.T) {
 	}
 
 	got := buf.String()
+
 	want := "00001000: .ENTRY MAIN,^M<R2,DV>\n00001002: CLRL R3\n"
 	if got != want {
 		t.Errorf("Disassemble output = %q, want %q", got, want)
@@ -96,6 +103,7 @@ func TestDisassemble_range(t *testing.T) {
 
 	got := buf.String()
 	want := "00001000: CLRL R3\n00001002: RET\n"
+
 	if got != want {
 		t.Errorf("Disassemble output = %q, want %q", got, want)
 	}

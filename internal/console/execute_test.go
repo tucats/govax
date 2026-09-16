@@ -31,9 +31,11 @@ func TestExecute_runsUntilHalt(t *testing.T) {
 	if err := c.Execute(&addr); err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "HALT") {
 		t.Errorf("output = %q, want a HALT message", buf.String())
 	}
+
 	if got := c.CPU.GPR(vax.PC); got != 0x204 {
 		t.Errorf("PC after halt = %#x, want 0x204", got)
 	}
@@ -143,6 +145,7 @@ func TestExecute_debugFullDisasmOperandDump(t *testing.T) {
 	if !strings.Contains(out, "#0 read") {
 		t.Errorf("output = %q, want an operand #0 read line", out)
 	}
+
 	if !strings.Contains(out, "#1 write") || !strings.Contains(out, "R0 = 12345678") {
 		t.Errorf("output = %q, want an operand #1 write line naming R0 = 12345678", out)
 	}
@@ -194,9 +197,11 @@ func TestExecute_stopsAtBreakpoint(t *testing.T) {
 	if err := c.Execute(&addr); err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
+
 	if got := c.CPU.GPR(vax.PC); got != 0x202 {
 		t.Errorf("PC at breakpoint = %#x, want 0x202", got)
 	}
+
 	if !strings.Contains(buf.String(), "Break at") {
 		t.Errorf("output = %q, want a break message", buf.String())
 	}
@@ -227,9 +232,11 @@ func TestStep_advancesOneInstruction(t *testing.T) {
 	if err := c.Step(&addr, StepInto); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	if got := c.CPU.GPR(vax.PC); got != 0x201 {
 		t.Errorf("PC after one step = %#x, want 0x201", got)
 	}
+
 	if !strings.Contains(buf.String(), "Stepped to") {
 		t.Errorf("output = %q, want a step message", buf.String())
 	}
@@ -237,6 +244,7 @@ func TestStep_advancesOneInstruction(t *testing.T) {
 	if err := c.Step(nil, StepInto); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	if got := c.CPU.GPR(vax.PC); got != 0x202 {
 		t.Errorf("PC after second step = %#x, want 0x202", got)
 	}
@@ -247,16 +255,19 @@ func TestBreakpoints_addRemoveClear(t *testing.T) {
 	c.AddBreakpoint(0x300)
 	c.AddBreakpoint(0x300) // duplicate, should not double-add
 	c.AddBreakpoint(0x400)
+
 	if len(c.Breakpoints) != 2 {
 		t.Fatalf("len(Breakpoints) = %d, want 2", len(c.Breakpoints))
 	}
 
 	c.RemoveBreakpoint(0x300)
+
 	if len(c.Breakpoints) != 1 || c.breakpointAt(0x400) == nil {
 		t.Errorf("RemoveBreakpoint left unexpected state: %+v", c.Breakpoints)
 	}
 
 	c.ClearAllBreakpoints()
+	
 	if len(c.Breakpoints) != 0 {
 		t.Errorf("ClearAllBreakpoints left %d breakpoints", len(c.Breakpoints))
 	}
@@ -278,6 +289,7 @@ func TestExecute_stopsAtInstructionLimit(t *testing.T) {
 	if err := c.Execute(&addr); err != nil {
 		t.Fatalf("Execute: %v (want a clean stop, not an error)", err)
 	}
+
 	if !strings.Contains(buf.String(), "INSTRLIMIT") {
 		t.Errorf("output = %q, want an instruction-limit message", buf.String())
 	}
@@ -295,6 +307,7 @@ func TestExecute_beginRunGivesEachCommandAFreshBudget(t *testing.T) {
 	if err := c.Execute(&addr); err != nil {
 		t.Fatalf("first Execute: %v", err)
 	}
+
 	if err := c.Execute(&addr); err != nil {
 		t.Fatalf("second Execute: %v (want a fresh budget, not immediate exhaustion)", err)
 	}
@@ -326,9 +339,11 @@ func TestExecute_stopsOnAttention(t *testing.T) {
 	if err := c.Execute(&addr); err != nil {
 		t.Fatalf("Execute: %v (want a clean stop, not an error)", err)
 	}
+
 	if !strings.Contains(buf.String(), "ATTENTION") {
 		t.Errorf("output = %q, want an attention/interrupt message", buf.String())
 	}
+
 	if strings.Contains(buf.String(), "INSTRLIMIT") {
 		t.Errorf("output = %q, stopped via the instruction-limit safety net instead of Attention", buf.String())
 	}
@@ -344,6 +359,7 @@ func TestReportStopReason_attention(t *testing.T) {
 	if err := c.reportStopReason(cpu.ErrAttention); err != nil {
 		t.Fatalf("reportStopReason(ErrAttention) = %v, want nil (a benign, reported stop)", err)
 	}
+
 	if !strings.Contains(buf.String(), "ATTENTION") {
 		t.Errorf("output = %q, want an attention/interrupt message", buf.String())
 	}

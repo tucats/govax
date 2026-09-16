@@ -135,6 +135,7 @@ func TestExamine_ascii(t *testing.T) {
 	}
 	
 	buf.Reset()
+
 	if err := c.Examine("", 0x3000, 2, SizeASCII); err != nil {
 		t.Fatalf("Examine: %v", err)
 	}
@@ -175,9 +176,11 @@ func TestZero_clearsMemoryAndSymbols(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadLongword: %v", err)
 	}
+
 	if v != 0 {
 		t.Errorf("memory not zeroed: %#x", v)
 	}
+	
 	if _, ok := c.Symbols.Get("FOO"); ok {
 		t.Error("expected FOO symbol to be cleared")
 	}

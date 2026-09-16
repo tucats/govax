@@ -148,6 +148,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		pte.SetProtection(vm.ProtURKW)
 		pte.SetPFN(page)
 		c.Mem.ReservePage(page)
+
 		page++
 
 		if err := c.Mem.StoreLongword(c.CPU, paddr, uint32(pte)); err != nil {
@@ -215,6 +216,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		var pte vm.PTE
 
 		pte.SetProtection(vm.ProtUW)
+
 		page++
 
 		if err := c.Mem.StoreLongword(c.CPU, paddr, uint32(pte)); err != nil {
@@ -267,6 +269,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// doc comment on why it wasn't ported at Phase 08).
 	scratch := 0x80000000 + paddr
 	c.Symbols.Set("CONSOLE$SCRATCH", scratch, SymbolSystem)
+	
 	paddr += 512
 
 	// A second, dedicated page for Phase 13's synthesized SHIM$ stubs

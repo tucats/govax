@@ -46,6 +46,7 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.CLI_ACTIVATE, err, fn)
 	}
+
 	if c.CPU.DebugEnabled(vax.DebugImages) {
 		c.Printf("Main image is %s\n", main.Name)
 	}
@@ -65,10 +66,13 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 	if err != nil {
 		return err
 	}
+
 	if !ok {
 		c.Printf("No transfer address!\n")
+
 		return nil
 	}
+
 	if opts.NoExecute {
 		return nil
 	}
@@ -97,6 +101,7 @@ func mainTransferAddress(icb *ICB) (uint32, bool) {
 			return addr, true
 		}
 	}
+
 	return 0, false
 }
 
@@ -121,6 +126,7 @@ func (c *Console) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, 
 	if !found {
 		return 0, false, vmserrors.New(vmserrors.CLI_NOSCRATCH)
 	}
+
 	driverAddr := base + 8
 
 	code := []byte{0x00, 0x00} // entry mask: no registers saved
@@ -130,10 +136,12 @@ func (c *Console) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, 
 			if dep.Transfer[0] == 0 {
 				continue
 			}
+
 			initAddr, ok := c.Symbols.Get(fmt.Sprintf("SHARE$%s_INITIALIZE", dep.Name))
 			if !ok {
 				continue
 			}
+
 			if c.CPU.DebugEnabled(vax.DebugImages) {
 				c.Printf("Preparing call to LIB$INITIALIZE entry %08X for image %s\n", initAddr, dep.Name)
 			}
@@ -161,6 +169,7 @@ func (c *Console) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, 
 	if err := c.storeBytes(driverAddr, code); err != nil {
 		return 0, false, err
 	}
+	
 	return driverAddr, true, nil
 }
 

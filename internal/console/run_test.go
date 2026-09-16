@@ -17,6 +17,7 @@ import (
 // return/HALT) and whether the cap was hit.
 func callBounded(t *testing.T, c *Console, addr uint32, maxSteps int) (err error, hitCap bool) {
 	t.Helper()
+
 	if err := c.Engine.CallEntry(addr); err != nil {
 		return err, false
 	}
@@ -44,6 +45,7 @@ func TestDefaultRunInits(t *testing.T) {
 	}
 
 	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugLibinit)
+	
 	if c.DefaultRunInits() {
 		t.Error("DefaultRunInits() = true, want false once DebugLibinit is cleared")
 	}
@@ -88,9 +90,11 @@ func TestRun_noExecuteLoadsAndFixesUpOnly(t *testing.T) {
 	if err := c.Run(exeFixturePath(t, "simple.exe"), RunOptions{NoExecute: true}); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
+
 	if len(c.ICBList) == 0 {
 		t.Fatal("expected Run to have loaded at least the main image")
 	}
+
 	if c.ICBList[0].Flags&icbFixed == 0 {
 		t.Error("expected the main image to be fixed up")
 	}
@@ -112,6 +116,7 @@ func TestRun_everyMilestoneFixture(t *testing.T) {
 			if err := c.ensureShims(); err != nil {
 				t.Fatalf("ensureShims: %v", err)
 			}
+
 			mainICB, err := c.imageLoad(exeFixturePath(t, name), icbMain)
 			if err != nil {
 				t.Fatalf("imageLoad(%s): %v", name, err)

@@ -20,6 +20,7 @@ func TestVMInit_enablesTranslation(t *testing.T) {
 	if c.CPU.PR(vax.MAPEN) != 1 {
 		t.Fatal("expected MAPEN enabled after VMInit")
 	}
+
 	if !c.VMInitValid {
 		t.Error("expected VMInitValid true")
 	}
@@ -29,10 +30,12 @@ func TestVMInit_enablesTranslation(t *testing.T) {
 	if err := c.Mem.StoreLongword(c.CPU, 0x200, 0xDEADBEEF); err != nil {
 		t.Fatalf("StoreLongword through P0: %v", err)
 	}
+
 	v, err := c.Mem.LoadLongword(c.CPU, 0x200)
 	if err != nil {
 		t.Fatalf("LoadLongword through P0: %v", err)
 	}
+
 	if v != 0xDEADBEEF {
 		t.Errorf("got %#x, want 0xdeadbeef", v)
 	}
@@ -43,9 +46,11 @@ func TestVMInit_guardsFirstP0Page(t *testing.T) {
 	if err := c.Init(128 * 512); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
+
 	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
+
 	if _, err := c.Mem.LoadLongword(c.CPU, 0x0); err == nil {
 		t.Error("expected an access violation reading the guarded P0 page 0")
 	}
@@ -56,16 +61,20 @@ func TestVMInit_stackPointersAreDistinctAndInS0(t *testing.T) {
 	if err := c.Init(128 * 512); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
+
 	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
+
 	ksp := c.CPU.PR(vax.KSP)
 	esp := c.CPU.PR(vax.ESP)
 	ssp := c.CPU.PR(vax.SSP)
 	isp := c.CPU.PR(vax.ISP)
+
 	if ksp == esp || esp == ssp || ssp == isp || ksp == 0 {
 		t.Errorf("expected distinct nonzero stacks: KSP=%#x ESP=%#x SSP=%#x ISP=%#x", ksp, esp, ssp, isp)
 	}
+
 	if c.CPU.GPR(vax.SP) != ksp {
 		t.Errorf("SP = %#x, want KSP %#x", c.CPU.GPR(vax.SP), ksp)
 	}
@@ -76,23 +85,29 @@ func TestVMInit_reservesConsoleScratch(t *testing.T) {
 	if err := c.Init(128 * 512); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
+
 	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
+
 	scratch, ok := c.Symbols.Get("CONSOLE$SCRATCH")
 	if !ok {
 		t.Fatal("expected CONSOLE$SCRATCH symbol to be defined")
 	}
+
 	if scratch < 0x80000000 {
 		t.Errorf("expected CONSOLE$SCRATCH in S0 space, got %#x", scratch)
 	}
+
 	if err := c.Mem.StoreLongword(c.CPU, scratch, 0xCAFEF00D); err != nil {
 		t.Fatalf("StoreLongword through CONSOLE$SCRATCH: %v", err)
 	}
+
 	v, err := c.Mem.LoadLongword(c.CPU, scratch)
 	if err != nil {
 		t.Fatalf("LoadLongword through CONSOLE$SCRATCH: %v", err)
 	}
+
 	if v != 0xCAFEF00D {
 		t.Errorf("got %#x, want 0xcafef00d", v)
 	}
@@ -110,6 +125,7 @@ func TestVMInit_stringPoolWritableFromUserMode(t *testing.T) {
 	if err := c.Init(128 * 512); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
+
 	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
@@ -131,6 +147,7 @@ func TestVMInit_stringPoolWritableFromUserMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadLongword through CONSOLE$STRINGPOOL_BASE: %v", err)
 	}
+
 	if v != 0xCAFEF00D {
 		t.Errorf("got %#x, want 0xcafef00d", v)
 	}
@@ -148,6 +165,7 @@ func TestVMInit_rejectsOversizedRequest(t *testing.T) {
 	if err := c.Init(128 * 512); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
+	
 	if err := c.VMInit(1000, 1000, 0, 1, 1, 1, 1, 8); err == nil {
 		t.Error("expected error for a VM request exceeding physical memory")
 	}

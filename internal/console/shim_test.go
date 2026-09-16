@@ -26,6 +26,7 @@ func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 	if !ok {
 		t.Fatal("expected SHIM$LIBRTL_00000778 to be defined")
 	}
+
 	if addr != c.shimBase {
 		t.Errorf("first stub address = %#x, want shimBase %#x", addr, c.shimBase)
 	}
@@ -34,6 +35,7 @@ func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 	if !ok {
 		t.Fatal("expected SHIM$DECC$SHR_00000000 to be defined")
 	}
+	
 	if addr2 == addr {
 		t.Error("distinct table entries should get distinct stub addresses")
 	}
@@ -43,6 +45,7 @@ func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 	if err := c.ensureShims(); err != nil {
 		t.Fatalf("ensureShims (again): %v", err)
 	}
+
 	addrAgain, _ := c.Symbols.Get("SHIM$LIBRTL_00000778")
 	if addrAgain != addr {
 		t.Errorf("second ensureShims moved the stub: %#x -> %#x", addr, addrAgain)
@@ -60,6 +63,7 @@ func TestEnsureShims_stubDispatchesThroughXFCShim(t *testing.T) {
 	if err := c.ensureShims(); err != nil {
 		t.Fatalf("ensureShims: %v", err)
 	}
+
 	addr, ok := c.Symbols.Get("SHIM$DECC$SHR_00000028") // decc$isascii, code 28
 	if !ok {
 		t.Fatal("expected SHIM$DECC$SHR_00000028 to be defined")

@@ -181,9 +181,11 @@ func (c *Console) Step(startAddr *uint32, mode StepMode) error {
 // reports where it landed.
 func (c *Console) stepInto() error {
 	finish := c.traceStep(c.CPU.GPR(vax.PC), true)
+
 	if err := c.Engine.Step(); err != nil {
 		return c.reportStopReason(err)
 	}
+
 	finish()
 
 	c.Printf("Stepped to %08X\n", c.CPU.GPR(vax.PC))
@@ -204,9 +206,11 @@ func (c *Console) stepInto() error {
 // silencing of the stepped-over subroutine) until control returns there.
 func (c *Console) stepOver() error {
 	finish := c.traceStep(c.CPU.GPR(vax.PC), true)
+
 	if err := c.Engine.Step(); err != nil {
 		return c.reportStopReason(err)
 	}
+	
 	finish()
 
 	dec := c.Engine.LastDecoded()

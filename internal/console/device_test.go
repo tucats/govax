@@ -53,23 +53,29 @@ func TestConsoleDefineAndShowDevices(t *testing.T) {
 	if err := c.ShowDevices("", false); err != nil {
 		t.Fatalf("ShowDevices: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "Device DKA0") {
 		t.Errorf("ShowDevices output = %q, want it to mention Device DKA0", buf.String())
 	}
 
 	buf.Reset()
+
 	if err := c.ShowDevices("DKA0", true); err != nil {
 		t.Fatalf("ShowDevices full: %v", err)
 	}
+	
 	out := buf.String()
+
 	if !strings.Contains(out, "CYLINDERS=512") || !strings.Contains(out, "VOLNAME=SYSTEM") {
 		t.Errorf("ShowDevices /FULL output missing detail fields: %q", out)
 	}
 
 	buf.Reset()
+
 	if err := c.ShowDevices("NOSUCH", false); err != nil {
 		t.Fatalf("ShowDevices NOSUCH: %v", err)
 	}
+
 	if buf.String() != "" {
 		t.Errorf("ShowDevices for a nonexistent name printed output %q, want none (matches show_device.c: no fallback message)", buf.String())
 	}
@@ -85,14 +91,17 @@ func TestConsoleDefineAndShowLogicals(t *testing.T) {
 	if err := c.ShowLogicals("LNM_PROCESS", ""); err != nil {
 		t.Fatalf("ShowLogicals: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "MY_LOGICAL [LNM_PROCESS]") || !strings.Contains(buf.String(), "some value") {
 		t.Errorf("ShowLogicals output = %q, missing the defined name/value", buf.String())
 	}
 
 	buf.Reset()
+
 	if err := c.ShowLogicals("NOSUCHTABLE", ""); err != nil {
 		t.Fatalf("ShowLogicals NOSUCHTABLE: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "No matching logical names.") {
 		t.Errorf("ShowLogicals with no matches = %q, want the no-match message", buf.String())
 	}
@@ -104,6 +113,7 @@ func TestConsoleLogicalsSeededAtConstruction(t *testing.T) {
 	if err := c.ShowLogicals("LNM$FILE_DEV", "SYS$COMMAND"); err != nil {
 		t.Fatalf("ShowLogicals: %v", err)
 	}
+
 	if !strings.Contains(buf.String(), "TTA0:") {
 		t.Errorf("ShowLogicals(LNM$FILE_DEV, SYS$COMMAND) = %q, want it to show the seeded TTA0: value", buf.String())
 	}
@@ -120,6 +130,7 @@ func TestDispatch_defineAndShowDeviceViaDCL(t *testing.T) {
 	if !ok {
 		t.Fatalf("device DKA0 not registered")
 	}
+
 	if dev.DevClass != iodev.DeviceClassDisk || dev.Cylinders != 1024 || dev.VolName != "SYSTEM" {
 		t.Errorf("DKA0 = %+v, unexpected fields", dev)
 	}
@@ -145,6 +156,7 @@ func TestDispatch_defineAndShowLogicalViaDCL(t *testing.T) {
 	if err := d.Dispatch(`DEFINE/LOGICAL/TABLE=MYTABLE OTHERNAME "OTHERVALUE"`); err != nil {
 		t.Fatalf("DEFINE/LOGICAL/TABLE: %v", err)
 	}
+
 	ln, ok = c.Logicals.Get("MYTABLE", "OTHERNAME", 0)
 	if !ok || ln.Value != "OTHERVALUE" {
 		t.Errorf("Get(MYTABLE, OTHERNAME) = %v, %v, want OTHERVALUE, true", ln, ok)

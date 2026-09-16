@@ -30,14 +30,18 @@ import (
 func runAsmRegression(t *testing.T, fixture, entrySymbol string, maxSteps int) (*Console, error, bool) {
 	t.Helper()
 	c := newRunnableConsole(t)
+
 	if _, _, err := c.Assemble(asmFixturePath(t, fixture)); err != nil {
 		t.Fatalf("Assemble(%s): %v", fixture, err)
 	}
+
 	addr, ok := c.Symbols.Get(entrySymbol)
 	if !ok {
 		t.Fatalf("%s: expected symbol %q to be defined", fixture, entrySymbol)
 	}
+
 	err, hitCap := callBounded(t, c, addr, maxSteps)
+
 	return c, err, hitCap
 }
 
@@ -54,21 +58,26 @@ func TestRegression_movq(t *testing.T) {
 	if err != nil || hitCap {
 		t.Fatalf("movq.asm: err=%v hitCap=%v", err, hitCap)
 	}
+
 	if got := c.CPU.GPR(vax.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1", got)
 	}
+
 	data2, ok := c.Symbols.Get("DATA2")
 	if !ok {
 		t.Fatal("expected DATA2 to be defined")
 	}
+
 	lo, err := c.loadLong(data2)
 	if err != nil {
 		t.Fatalf("loadLong(data2): %v", err)
 	}
+
 	hi, err := c.loadLong(data2 + 4)
 	if err != nil {
 		t.Fatalf("loadLong(data2+4): %v", err)
 	}
+
 	if lo != 0x00110022 || hi != 0x00330044 {
 		t.Errorf("data2 = %#x:%#x, want 0x00110022:0x00330044", lo, hi)
 	}
@@ -81,9 +90,11 @@ func TestRegression_movc3(t *testing.T) {
 	if err != nil || hitCap {
 		t.Fatalf("movc3.asm: err=%v hitCap=%v", err, hitCap)
 	}
+
 	if got := c.CPU.GPR(vax.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1", got)
 	}
+
 	dst, ok := c.Symbols.Get("DST")
 	if !ok {
 		t.Fatal("expected DST to be defined")
@@ -95,6 +106,7 @@ func TestRegression_movc3(t *testing.T) {
 		if err != nil {
 			t.Fatalf("loadByte(dst+%d): %v", i, err)
 		}
+
 		if b != want[i] {
 			t.Fatalf("dst[%d] = %q, want %q", i, b, want[i])
 		}
@@ -133,10 +145,12 @@ func TestRegression_float1(t *testing.T) {
 	if _, _, err := c.Assemble(asmFixturePath(t, "float1.asm")); err != nil {
 		t.Fatalf("Assemble: %v", err)
 	}
+
 	addr, ok := c.Symbols.Get("MAIN")
 	if !ok {
 		t.Fatal("expected MAIN to be defined")
 	}
+
 	if err := c.Execute(&addr); err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
@@ -145,10 +159,12 @@ func TestRegression_float1(t *testing.T) {
 	if !ok {
 		t.Fatal("expected DATA to be defined")
 	}
+
 	raw, err := c.loadLong(dataAddr)
 	if err != nil {
 		t.Fatalf("loadLong(data): %v", err)
 	}
+
 	if raw == 0 {
 		t.Fatal("expected @#data to hold the F_floating result of 100.0/3.0, got 0")
 	}
@@ -163,17 +179,22 @@ func TestRegression_float1(t *testing.T) {
 func runAsmRegressionWithKernel(t *testing.T, fixture, entrySymbol string, maxSteps int) (*Console, error, bool) {
 	t.Helper()
 	c := newRunnableConsole(t)
+	
 	if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
+
 	if _, _, err := c.Assemble(asmFixturePath(t, fixture)); err != nil {
 		t.Fatalf("Assemble(%s): %v", fixture, err)
 	}
+
 	addr, ok := c.Symbols.Get(entrySymbol)
 	if !ok {
 		t.Fatalf("%s: expected symbol %q to be defined", fixture, entrySymbol)
 	}
+
 	err, hitCap := callBounded(t, c, addr, maxSteps)
+
 	return c, err, hitCap
 }
 
@@ -214,6 +235,7 @@ func TestRegression_rtlDependentAsmFixtures(t *testing.T) {
 			if hitCap != tc.wantHitCap {
 				t.Errorf("%s: hitCap = %v, want %v (terminating outcome: %v)", tc.fixture, hitCap, tc.wantHitCap, err)
 			}
+
 			t.Logf("%s: terminating outcome: %v (hitCap=%v)", tc.fixture, err, hitCap)
 		})
 	}

@@ -46,22 +46,29 @@ func (c *Console) SetSymbolQualified(name string, value uint32, permanent, entry
 	if err := c.requireInit(); err != nil {
 		return err
 	}
+
 	name = strings.ToUpper(name)
 
 	if r, ok := registerNames[name]; ok {
 		c.CPU.SetGPR(r, value)
+
 		return nil
 	}
+
 	if pr, ok := privRegNames[name]; ok {
 		c.CPU.SetPR(pr, value)
+
 		return nil
 	}
+
 	if name == "PSL" {
 		c.CPU.SetPSL(vax.PSL(value))
+
 		return nil
 	}
 
 	c.Symbols.SetQualified(name, value, permanent, entry, label)
+
 	return nil
 }
 
@@ -95,7 +102,9 @@ func setPSLBit(set func(bool), v uint32) error {
 	if v > 1 {
 		return vmserrors.New(vmserrors.CLI_INVSETPSL, v)
 	}
+
 	set(v != 0)
+
 	return nil
 }
 
@@ -103,7 +112,9 @@ func setPSLRange(set func(uint32), v, maxValue uint32) error {
 	if v > maxValue {
 		return vmserrors.New(vmserrors.CLI_INVSETPSL, v)
 	}
+
 	set(v)
+
 	return nil
 }
 
@@ -132,6 +143,7 @@ func (c *Console) SetPSLField(field string, value uint32) error {
 	if err := setter(&psl, value); err != nil {
 		return err
 	}
+
 	c.CPU.SetPSL(psl)
 
 	return nil
@@ -179,6 +191,7 @@ var debugFlagNames = map[string]vax.DebugFlags{
 func (c *Console) SetDebug(names []string) error {
 	if len(names) == 0 {
 		c.CPU.SetDebug(c.CPU.Debug() | vax.DebugNative)
+
 		return nil
 	}
 
@@ -188,6 +201,7 @@ func (c *Console) SetDebug(names []string) error {
 		name = strings.ToUpper(strings.TrimSpace(name))
 		clearFlag := strings.HasPrefix(name, "NO")
 		lookup := name
+
 		if clearFlag {
 			lookup = name[2:]
 		}
@@ -232,6 +246,7 @@ func (c *Console) SetMode(name string) error {
 	name = strings.ToUpper(strings.TrimSpace(name))
 	if name == "INTERRUPT" {
 		c.Engine.SetModeStack(vax.Kernel, true)
+		
 		return nil
 	}
 
