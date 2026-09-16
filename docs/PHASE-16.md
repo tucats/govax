@@ -344,10 +344,9 @@ cases; the rest are missing:
   this port"). See Sub-phase 4's breakpoint-kinds entry.
 - **`CLEAR BREAKPOINT/INSTRUCTION <opcode>`** (id `551`, C:
   `console_clear.c:89`) and **`CLEAR BREAKPOINT/INSTRUCTION/ALL`** (id `553`, C:
-  `console_clear.c:65`) — blocked on the missing opcode-level (instruction)
-  breakpoint mechanism entirely (no Go equivalent of C's `instruction[n].debugdata &
-  OP_DBG_BREAK` flag — confirmed, no such field exists on this port's instruction
-  table). See Sub-phase 4.
+  `console_clear.c:65`) — **implemented, see `docs/PHASE-18.md`'s sub-phase 2**
+  (`Console.RemoveInstructionBreakpoint`/`ClearAllInstructionBreakpoints`,
+  `internal/console/instbreak.go`), not this sub-phase.
 
 ---
 
@@ -412,10 +411,11 @@ the reference.
   read from — implement together.
 - **`SET BREAK[POINT] [/FAULT|/TEMPORARY|/INSTRUCTION] <addr>`** (C:
   `console_set.c:716-845`) — the existing `cmdSet`/`AddBreakpoint` only covers the
-  plain-address form. `/FAULT` and `/INSTRUCTION` are blocked on the same missing
-  breakpoint-kind support as their `SHOW`/`CLEAR` counterparts (Sub-phase 4);
-  `/TEMPORARY` (a `BreakKind`-adjacent one-shot flag) is a smaller, standalone gap
-  worth checking independently.
+  plain-address form. `/INSTRUCTION` is **implemented, see `docs/PHASE-18.md`'s
+  sub-phase 2** (`cmdSet`'s `BREAKPOINT`/`BREAK` case, `Console.AddInstructionBreakpoint`).
+  `/FAULT` remains blocked on the same missing breakpoint-kind support as its
+  `SHOW`/`CLEAR` counterparts (Sub-phase 4); `/TEMPORARY` (a `BreakKind`-adjacent
+  one-shot flag) is a smaller, standalone gap worth checking independently.
 - **`SET QUANTUM <n>`** (C: `console_set.c:846-862`) and **`SET UIQUANTUM <n>`** (C:
   `console_set.c:863-879`) — blocked on Phase 14, same as `SHOW QUANTUM`.
 - **`SET BASE <addr>`** (C: `console_set.c:880-887`) — sets `vax.console.deposit`,
@@ -475,14 +475,13 @@ generally, not only `SHOW`.
   address/size) also needs a hook into `internal/vm.Memory`'s store path, not just
   the bookkeeping list — check whether `vm.Memory`'s write primitives have room for
   such a hook before scoping this as a pure console-layer add.
-- **No instruction-level (opcode) breakpoint mechanism** — also tracked as a likely
-  future sub-phase of `docs/PHASE-18.md`. `SET BREAK/INSTRUCTION`,
-  `SHOW BREAK/INSTRUCTION` (C: `console_show.c:162`, DCL id `412`), and `CLEAR
-  BREAK/INSTRUCTION[/ALL]` (Sub-phase 2) all depend on a per-opcode "break on this
-  instruction" flag (C's `instruction[n].debugdata & OP_DBG_BREAK`) that has no
-  analogue on this port's `internal/cpu` instruction table (confirmed by grep — no
-  `DebugData`/break-flag field exists). A self-contained three-command feature once
-  that one flag exists on the instruction-table entry type.
+- **Instruction-level (opcode) breakpoint mechanism — implemented, see
+  `docs/PHASE-18.md`'s sub-phase 2** (`Console.InstructionBreakpoints`,
+  `internal/console/instbreak.go`). Rather than adding a `debugdata`-style
+  field to `internal/cpu`'s instruction-table entry type as this entry
+  originally anticipated, the flag lives entirely in `Console` (a
+  `map[*cpu.Instruction]bool`), keeping the instruction table itself
+  immutable shared data — see `docs/PHASE-18.md`'s design notes.
 - **No fault-kind breakpoints** — also tracked as a likely future sub-phase of
   `docs/PHASE-18.md`. `SET BREAK/FAULT`, `SHOW BREAK/FAULT` (the
   `/FAULT`/`/ADDRESSES` qualifiers on `SHOW BREAKPOINTS` itself, C:

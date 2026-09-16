@@ -55,6 +55,13 @@ type Console struct {
 
 	Breakpoints []*Breakpoint
 
+	// InstructionBreakpoints holds every opcode currently flagged to break
+	// on execution — SET BREAK/INSTRUCTION, the Go equivalent of vax.c's own
+	// instruction[n].debugdata & OP_DBG_BREAK flag. Kept entirely separate
+	// from Breakpoints/BreakKind because the C source itself never folds
+	// this into its breakpoint_list either — see instbreak.go.
+	InstructionBreakpoints map[*cpu.Instruction]bool
+
 	// ROM/NVRAM are separate byte buffers outside vm.Memory's main RAM,
 	// matching the C source's own rom/nvram globals (reference/eVAX/eVAX/
 	// Source/CPU/vm.c) — see internal/vm/memory.go's doc comment: physical

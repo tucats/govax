@@ -7,11 +7,17 @@ import (
 	"github.com/tucats/govax/internal/vax"
 )
 
-// BreakKind distinguishes the kinds of breakpoint console_run.c's
-// struct BREAKSTR supports. Only BreakAddress is implemented by this port —
-// see doc.go and this file's own comments for why BreakFault (a breakpoint
-// that fires when a given exception code is about to be delivered) is
-// deferred.
+// BreakKind distinguishes the kinds of breakpoint vax.h's struct BREAKSTR
+// supports that actually live in a breakpoint_list-like collection. Only
+// BreakAddress is implemented by this port — see doc.go and this file's own
+// comments for why BreakFault (a breakpoint that fires when a given
+// exception code is about to be delivered) is deferred. Instruction
+// (opcode) breakpoints are a third BREAKSTR-adjacent kind the C source
+// itself never stores in breakpoint_list at all (it flags the opcode
+// directly via instruction[n].debugdata instead — see console_set.c's own
+// BREAK_INSTRUCTION handling), so this port follows suit with an entirely
+// separate mechanism (Console.InstructionBreakpoints, instbreak.go) rather
+// than growing BreakKind to include it.
 type BreakKind int
 
 const (
@@ -93,7 +99,12 @@ func (c *Console) removeBreakpointPtr(target *Breakpoint) {
 // execution until a one-shot internal breakpoint is reached. This mirrors
 // vax.c's execute_vax: every one of these cases shares the same
 // breakpoint_list/set_break/clear_break machinery in the C source, not
-// separate mechanisms.
+// separate mechanisms. Instruction breakpoints (instructionBreakpointHit,
+// instbreak.go) are checked right alongside address breakpoints here too,
+// even though the C source stores them in an entirely separate mechanism
+// (instruction[n].debugdata, not breakpoint_list) — see instbreak.go's own
+// doc comments on why that storage split doesn't need to carry through to
+// this loop's stop condition as well.
 //
 // skipFirstCheck matches vax.c's own initial_PC tracking: a breakpoint
 // sitting exactly on the address this loop starts from must not fire
@@ -103,7 +114,15 @@ func (c *Console) removeBreakpointPtr(target *Breakpoint) {
 // after its first, call-like instruction has already executed) passes
 // false, since that phase's first PC is the callee's entry point, not the
 // original STEP command's starting address, and a breakpoint sitting there
-// must fire immediately.
+// must fire immediately. This port applies the same skipFirstCheck flag to
+// instruction breakpoints too, deliberately not replicating a C-source
+// quirk where whether an instruction breakpoint fires on a run's very first
+// instruction incidentally depends on whether the unrelated address/fault
+// breakpoint_list happens to be non-empty (vax.c's initial_PC guard for
+// BREAK_ADDRESS/BREAK_FAULT and the guard on decode_instruction's own
+// OP_DBG_BREAK check share one variable, but the former is set from inside
+// a block gated on `if (vax.console.breakpoint_list)`); a debugger-tool
+// quirk with no ISA-fidelity stakes, not logged to docs/DEVIATIONS.md.
 //
 // trace is called with each instruction's PC immediately before it
 // executes and must return a finish func to call once it has executed —
@@ -128,6 +147,12 @@ func (c *Console) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) err
 				} else {
 					c.Printf("Break at %08X\n", pc)
 				}
+
+				return nil
+			}
+
+			if c.instructionBreakpointHit() {
+				c.Printf("Instruction break at %08X\n", pc)
 
 				return nil
 			}

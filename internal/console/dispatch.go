@@ -152,6 +152,12 @@ func (d *Dispatcher) bindGrammar() {
 
 		return d.Console.ClearBreakpoint(addr, false)
 	})
+	g.Bind("CLEAR_BREAK_INSTR_ALL", func(id int64, r *dcl.Result) error {
+		return d.Console.ClearAllInstructionBreakpoints()
+	})
+	g.Bind("CLEAR_BREAK_INSTR", func(id int64, r *dcl.Result) error {
+		return d.Console.RemoveInstructionBreakpoint(r.String("P1"))
+	})
 
 	g.Bind("SHOW_REG", func(id int64, r *dcl.Result) error { return d.Console.ShowRegisters() })
 	g.Bind("SHOW_PSL", func(id int64, r *dcl.Result) error { return d.Console.ShowPSL() })
@@ -160,6 +166,7 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("SHOW_SYM_ALL", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbols() })
 	g.Bind("SHOW_SYM_SYS", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbolsSystem() })
 	g.Bind("SHOW_BREAK", func(id int64, r *dcl.Result) error { return d.Console.ShowBreakpoints() })
+	g.Bind("SHOW_BREAK_INSTR", func(id int64, r *dcl.Result) error { return d.Console.ShowInstructionBreakpoints() })
 	g.Bind("SHOW_RADIX", func(id int64, r *dcl.Result) error { return d.Console.ShowRadix() })
 	g.Bind("SHOW_BASE", func(id int64, r *dcl.Result) error { return d.Console.ShowBase() })
 	g.Bind("SHOW_CPU", func(id int64, r *dcl.Result) error { return d.Console.ShowCPU() })
@@ -766,7 +773,8 @@ func cmdDisassemble(d *Dispatcher, rest string) error {
 }
 
 // cmdSet implements SET's own small syntax: SET RADIX n, SET BREAKPOINT
-// addr, or the general SET <name>=<value> form (see set.go).
+// addr, SET BREAKPOINT/INSTRUCTION mnemonic, or the general SET
+// <name>=<value> form (see set.go).
 func cmdSet(d *Dispatcher, rest string) error {
 	rest = strings.TrimSpace(rest)
 
@@ -775,7 +783,12 @@ func cmdSet(d *Dispatcher, rest string) error {
 		return vmserrors.New(vmserrors.CLI_NEEDSETARG)
 	}
 
-	switch strings.ToUpper(fields[0]) {
+	// A "/qualifier" is attached directly to the verb (no space), matching
+	// console_set.c's own read_verb-based qualifier check for SET BREAK —
+	// see console_set.c:716-798. Only BREAK[POINT] currently reads one.
+	verb, qualifier, _ := strings.Cut(fields[0], "/")
+
+	switch strings.ToUpper(verb) {
 	case "RADIX":
 		if len(fields) < 2 {
 			return vmserrors.New(vmserrors.CLI_NEEDRADIX)
@@ -789,6 +802,21 @@ func cmdSet(d *Dispatcher, rest string) error {
 		return d.Console.SetRadix(n)
 
 	case "BREAKPOINT", "BREAK":
+		if strings.HasPrefix(strings.ToUpper(qualifier), "INS") { // /INSTRUCTION, /INS, ...
+			if len(fields) < 2 {
+				return vmserrors.New(vmserrors.CLI_NEEDBREAKOPCODE)
+			}
+
+			return d.Console.AddInstructionBreakpoint(fields[1])
+		}
+
+		if qualifier != "" {
+			// /FAULT and /TEMPORARY are recognized by the C source but not
+			// implemented by this port — see execute.go's BreakKind doc
+			// comment.
+			return vmserrors.New(vmserrors.CLI_BADQUALIFIER, qualifier)
+		}
+
 		if len(fields) < 2 {
 			return vmserrors.New(vmserrors.CLI_NEEDBREAKADDR)
 		}

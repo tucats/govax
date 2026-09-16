@@ -25,6 +25,37 @@ type Decoded struct {
 	NextPC uint32
 }
 
+// fetchOpcode reads the opcode byte(s) at pc from mem: one byte for an
+// ordinary opcode, or two (prefix + function, when the first byte is 0xFD
+// or 0xFC) for an extended one — decode_opcode.c's own "f > 0xFC" test.
+// Returns the decoded Opcode and the address immediately following it.
+// Shared by decodeInstruction and Engine.PeekInstruction, the latter needing
+// exactly this much of decode_opcode.c's own logic — opcode identification,
+// no operand decode — for instruction-level breakpoints (SET
+// BREAK/INSTRUCTION, docs/PHASE-18.md) to identify the next instruction
+// without the operand-decode side effects (autoincrement/autodecrement)
+// a full decode would incur.
+func fetchOpcode(cpu *vax.CPU, mem *vm.Memory, pc uint32) (Opcode, uint32, error) {
+	f, err := mem.LoadByte(cpu, pc)
+	if err != nil {
+		return Opcode{}, 0, err
+	}
+	pc++
+
+	if f > 0xFC {
+		// Extended (two-byte) opcode: f is the prefix, the next byte is the
+		// actual function code.
+		f2, err := mem.LoadByte(cpu, pc)
+		if err != nil {
+			return Opcode{}, 0, err
+		}
+		pc++
+		return Opcode{Extended: f, Function: f2}, pc, nil
+	}
+
+	return Opcode{Function: f}, pc, nil
+}
+
 // decodeInstruction fetches and fully decodes one instruction starting at
 // cpu's current PC, consulting table for the opcode and mem for the
 // instruction stream and any addressing-mode memory accesses.
@@ -46,24 +77,9 @@ type Decoded struct {
 func decodeInstruction(cpu *vax.CPU, mem *vm.Memory, table *Table) (Decoded, error) {
 	pc := cpu.GPR(vax.PC)
 
-	f, err := mem.LoadByte(cpu, pc)
+	opcode, pc, err := fetchOpcode(cpu, mem, pc)
 	if err != nil {
 		return Decoded{}, err
-	}
-	pc++
-
-	var opcode Opcode
-	if f > 0xFC {
-		// Extended (two-byte) opcode: f is the prefix, the next byte is the
-		// actual function code.
-		f2, err := mem.LoadByte(cpu, pc)
-		if err != nil {
-			return Decoded{}, err
-		}
-		pc++
-		opcode = Opcode{Extended: f, Function: f2}
-	} else {
-		opcode = Opcode{Function: f}
 	}
 
 	inst := table.Lookup(opcode)

@@ -137,6 +137,26 @@ func (e *Engine) AttentionRequested() bool { return e.attentionRequested.Load() 
 // value if Step has never been called.
 func (e *Engine) LastDecoded() Decoded { return e.decoded }
 
+// PeekInstruction identifies which Instruction would execute next at the
+// engine's current PC, without decoding operands, advancing PC, or
+// otherwise mutating any state — a side-effect-free lookup Console uses to
+// check instruction-level breakpoints (SET BREAK/INSTRUCTION,
+// docs/PHASE-18.md) before committing to a real Step; unlike a full decode,
+// this never triggers an operand's autoincrement/autodecrement side effect,
+// so a flagged instruction can be identified without disturbing machine
+// state if the breakpoint fires. Returns nil, nil for a reserved/undefined
+// opcode (matching Table.Lookup); a memory error reading the opcode byte(s)
+// themselves (e.g. a translation fault) is returned as-is and otherwise
+// ignored by the caller, left for the real Step to raise properly.
+func (e *Engine) PeekInstruction() (*Instruction, error) {
+	op, _, err := fetchOpcode(e.cpu, e.mem, e.cpu.GPR(vax.PC))
+	if err != nil {
+		return nil, err
+	}
+
+	return e.table.Lookup(op), nil
+}
+
 // Step decodes and executes one instruction. This is the Go port of
 // execute_vax's core fetch-decode-execute cycle, minus the console/
 // disassembly, breakpoint/single-step, and device-interrupt-queue/clock

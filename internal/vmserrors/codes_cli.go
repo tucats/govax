@@ -60,6 +60,7 @@ const (
 	cliBadNumber
 	cliBadRadix
 	cliNeedStepMode
+	cliNeedBreakOpcode
 
 	// internal/console/dcl (the DCL command-grammar interpreter).
 	cliUnrecognized
@@ -102,56 +103,57 @@ const (
 	// VMS's CLI$_UNKVERB.
 	CLI_UNKVERB = CLIFacility<<FacilityPosition | cliUnkverb<<MessagePosition | StatusError
 
-	CLI_BADREG         = CLIFacility<<FacilityPosition | cliBadReg<<MessagePosition | StatusError
-	CLI_DISASM         = CLIFacility<<FacilityPosition | cliDisasm<<MessagePosition | StatusError
-	CLI_ACTIVATE       = CLIFacility<<FacilityPosition | cliActivate<<MessagePosition | StatusError
-	CLI_FIXUP          = CLIFacility<<FacilityPosition | cliFixup<<MessagePosition | StatusError
-	CLI_NOSCRATCH      = CLIFacility<<FacilityPosition | cliNoScratch<<MessagePosition | StatusError
-	CLI_UNTERMSTR      = CLIFacility<<FacilityPosition | cliUntermStr<<MessagePosition | StatusError
-	CLI_NOTIMPL        = CLIFacility<<FacilityPosition | cliNotImpl<<MessagePosition | StatusError
-	CLI_NOSTRINGPOOL   = CLIFacility<<FacilityPosition | cliNoStringPool<<MessagePosition | StatusError
-	CLI_NOPOOLSIZE     = CLIFacility<<FacilityPosition | cliNoPoolSize<<MessagePosition | StatusError
-	CLI_NOPOOL         = CLIFacility<<FacilityPosition | cliNoPool<<MessagePosition | StatusError
-	CLI_BADCOUNT       = CLIFacility<<FacilityPosition | cliBadCount<<MessagePosition | StatusError
-	CLI_NOFRAMES       = CLIFacility<<FacilityPosition | cliNoFrames<<MessagePosition | StatusError
-	CLI_UNDEFSYM       = CLIFacility<<FacilityPosition | cliUndefSym<<MessagePosition | StatusError
-	CLI_NOPROFILE      = CLIFacility<<FacilityPosition | cliNoProfile<<MessagePosition | StatusError
-	CLI_NOMODES        = CLIFacility<<FacilityPosition | cliNoModes<<MessagePosition | StatusError
-	CLI_BADOPCODE      = CLIFacility<<FacilityPosition | cliBadOpcode<<MessagePosition | StatusError
-	CLI_NEEDRTL        = CLIFacility<<FacilityPosition | cliNeedRTL<<MessagePosition | StatusError
-	CLI_BADHEXVAL      = CLIFacility<<FacilityPosition | cliBadHexVal<<MessagePosition | StatusError
-	CLI_NEEDDEP        = CLIFacility<<FacilityPosition | cliNeedDep<<MessagePosition | StatusError
-	CLI_NOASMREPL      = CLIFacility<<FacilityPosition | cliNoAsmRepl<<MessagePosition | StatusError
-	CLI_NEEDPAGES      = CLIFacility<<FacilityPosition | cliNeedPages<<MessagePosition | StatusError
-	CLI_NOFILE         = CLIFacility<<FacilityPosition | cliNoFile<<MessagePosition | StatusError
-	CLI_NEEDENTRY      = CLIFacility<<FacilityPosition | cliNeedEntry<<MessagePosition | StatusError
-	CLI_INCOMPLETEARGS = CLIFacility<<FacilityPosition | cliIncompleteArgs<<MessagePosition | StatusError
-	CLI_NEEDCOMMA      = CLIFacility<<FacilityPosition | cliNeedComma<<MessagePosition | StatusError
-	CLI_BADRANGE       = CLIFacility<<FacilityPosition | cliBadRange<<MessagePosition | StatusError
-	CLI_NEEDDEPOSIT    = CLIFacility<<FacilityPosition | cliNeedDeposit<<MessagePosition | StatusError
-	CLI_NEEDSETARG     = CLIFacility<<FacilityPosition | cliNeedSetArg<<MessagePosition | StatusError
-	CLI_NEEDRADIX      = CLIFacility<<FacilityPosition | cliNeedRadix<<MessagePosition | StatusError
-	CLI_BADRADIXVAL    = CLIFacility<<FacilityPosition | cliBadRadixVal<<MessagePosition | StatusError
-	CLI_NEEDBREAKADDR  = CLIFacility<<FacilityPosition | cliNeedBreakAddr<<MessagePosition | StatusError
-	CLI_BADSETSYNTAX   = CLIFacility<<FacilityPosition | cliBadSetSyntax<<MessagePosition | StatusError
-	CLI_BADDEBUGFLAG   = CLIFacility<<FacilityPosition | cliBadDebugFlag<<MessagePosition | StatusError
-	CLI_NEEDROMNVRAM   = CLIFacility<<FacilityPosition | cliNeedRomNvram<<MessagePosition | StatusError
-	CLI_NEEDFILENAME   = CLIFacility<<FacilityPosition | cliNeedFilename<<MessagePosition | StatusError
-	CLI_VMTOOLARGE     = CLIFacility<<FacilityPosition | cliVMTooLarge<<MessagePosition | StatusError
-	CLI_S0TOOSMALL     = CLIFacility<<FacilityPosition | cliS0TooSmall<<MessagePosition | StatusError
-	CLI_ASSEMBLING     = CLIFacility<<FacilityPosition | cliAssembling<<MessagePosition | StatusError
-	CLI_DEPOSITING     = CLIFacility<<FacilityPosition | cliDepositing<<MessagePosition | StatusError
-	CLI_NOVAX          = CLIFacility<<FacilityPosition | cliNoVAX<<MessagePosition | StatusError
-	CLI_NOTKERNEL      = CLIFacility<<FacilityPosition | cliNotKernel<<MessagePosition | StatusError
-	CLI_DIVZERO        = CLIFacility<<FacilityPosition | cliDivZero<<MessagePosition | StatusError
-	CLI_NEEDEXPR       = CLIFacility<<FacilityPosition | cliNeedExpr<<MessagePosition | StatusError
-	CLI_NEEDPAREN      = CLIFacility<<FacilityPosition | cliNeedParen<<MessagePosition | StatusError
-	CLI_DEFARG         = CLIFacility<<FacilityPosition | cliDefArg<<MessagePosition | StatusError
-	CLI_DEFQUOTE       = CLIFacility<<FacilityPosition | cliDefQuote<<MessagePosition | StatusError
-	CLI_BADRADIXPREFIX = CLIFacility<<FacilityPosition | cliBadRadixPrefix<<MessagePosition | StatusError
-	CLI_BADNUMBER      = CLIFacility<<FacilityPosition | cliBadNumber<<MessagePosition | StatusError
-	CLI_BADRADIX       = CLIFacility<<FacilityPosition | cliBadRadix<<MessagePosition | StatusError
-	CLI_NEEDSTEPMODE   = CLIFacility<<FacilityPosition | cliNeedStepMode<<MessagePosition | StatusError
+	CLI_BADREG          = CLIFacility<<FacilityPosition | cliBadReg<<MessagePosition | StatusError
+	CLI_DISASM          = CLIFacility<<FacilityPosition | cliDisasm<<MessagePosition | StatusError
+	CLI_ACTIVATE        = CLIFacility<<FacilityPosition | cliActivate<<MessagePosition | StatusError
+	CLI_FIXUP           = CLIFacility<<FacilityPosition | cliFixup<<MessagePosition | StatusError
+	CLI_NOSCRATCH       = CLIFacility<<FacilityPosition | cliNoScratch<<MessagePosition | StatusError
+	CLI_UNTERMSTR       = CLIFacility<<FacilityPosition | cliUntermStr<<MessagePosition | StatusError
+	CLI_NOTIMPL         = CLIFacility<<FacilityPosition | cliNotImpl<<MessagePosition | StatusError
+	CLI_NOSTRINGPOOL    = CLIFacility<<FacilityPosition | cliNoStringPool<<MessagePosition | StatusError
+	CLI_NOPOOLSIZE      = CLIFacility<<FacilityPosition | cliNoPoolSize<<MessagePosition | StatusError
+	CLI_NOPOOL          = CLIFacility<<FacilityPosition | cliNoPool<<MessagePosition | StatusError
+	CLI_BADCOUNT        = CLIFacility<<FacilityPosition | cliBadCount<<MessagePosition | StatusError
+	CLI_NOFRAMES        = CLIFacility<<FacilityPosition | cliNoFrames<<MessagePosition | StatusError
+	CLI_UNDEFSYM        = CLIFacility<<FacilityPosition | cliUndefSym<<MessagePosition | StatusError
+	CLI_NOPROFILE       = CLIFacility<<FacilityPosition | cliNoProfile<<MessagePosition | StatusError
+	CLI_NOMODES         = CLIFacility<<FacilityPosition | cliNoModes<<MessagePosition | StatusError
+	CLI_BADOPCODE       = CLIFacility<<FacilityPosition | cliBadOpcode<<MessagePosition | StatusError
+	CLI_NEEDRTL         = CLIFacility<<FacilityPosition | cliNeedRTL<<MessagePosition | StatusError
+	CLI_BADHEXVAL       = CLIFacility<<FacilityPosition | cliBadHexVal<<MessagePosition | StatusError
+	CLI_NEEDDEP         = CLIFacility<<FacilityPosition | cliNeedDep<<MessagePosition | StatusError
+	CLI_NOASMREPL       = CLIFacility<<FacilityPosition | cliNoAsmRepl<<MessagePosition | StatusError
+	CLI_NEEDPAGES       = CLIFacility<<FacilityPosition | cliNeedPages<<MessagePosition | StatusError
+	CLI_NOFILE          = CLIFacility<<FacilityPosition | cliNoFile<<MessagePosition | StatusError
+	CLI_NEEDENTRY       = CLIFacility<<FacilityPosition | cliNeedEntry<<MessagePosition | StatusError
+	CLI_INCOMPLETEARGS  = CLIFacility<<FacilityPosition | cliIncompleteArgs<<MessagePosition | StatusError
+	CLI_NEEDCOMMA       = CLIFacility<<FacilityPosition | cliNeedComma<<MessagePosition | StatusError
+	CLI_BADRANGE        = CLIFacility<<FacilityPosition | cliBadRange<<MessagePosition | StatusError
+	CLI_NEEDDEPOSIT     = CLIFacility<<FacilityPosition | cliNeedDeposit<<MessagePosition | StatusError
+	CLI_NEEDSETARG      = CLIFacility<<FacilityPosition | cliNeedSetArg<<MessagePosition | StatusError
+	CLI_NEEDRADIX       = CLIFacility<<FacilityPosition | cliNeedRadix<<MessagePosition | StatusError
+	CLI_BADRADIXVAL     = CLIFacility<<FacilityPosition | cliBadRadixVal<<MessagePosition | StatusError
+	CLI_NEEDBREAKADDR   = CLIFacility<<FacilityPosition | cliNeedBreakAddr<<MessagePosition | StatusError
+	CLI_BADSETSYNTAX    = CLIFacility<<FacilityPosition | cliBadSetSyntax<<MessagePosition | StatusError
+	CLI_BADDEBUGFLAG    = CLIFacility<<FacilityPosition | cliBadDebugFlag<<MessagePosition | StatusError
+	CLI_NEEDROMNVRAM    = CLIFacility<<FacilityPosition | cliNeedRomNvram<<MessagePosition | StatusError
+	CLI_NEEDFILENAME    = CLIFacility<<FacilityPosition | cliNeedFilename<<MessagePosition | StatusError
+	CLI_VMTOOLARGE      = CLIFacility<<FacilityPosition | cliVMTooLarge<<MessagePosition | StatusError
+	CLI_S0TOOSMALL      = CLIFacility<<FacilityPosition | cliS0TooSmall<<MessagePosition | StatusError
+	CLI_ASSEMBLING      = CLIFacility<<FacilityPosition | cliAssembling<<MessagePosition | StatusError
+	CLI_DEPOSITING      = CLIFacility<<FacilityPosition | cliDepositing<<MessagePosition | StatusError
+	CLI_NOVAX           = CLIFacility<<FacilityPosition | cliNoVAX<<MessagePosition | StatusError
+	CLI_NOTKERNEL       = CLIFacility<<FacilityPosition | cliNotKernel<<MessagePosition | StatusError
+	CLI_DIVZERO         = CLIFacility<<FacilityPosition | cliDivZero<<MessagePosition | StatusError
+	CLI_NEEDEXPR        = CLIFacility<<FacilityPosition | cliNeedExpr<<MessagePosition | StatusError
+	CLI_NEEDPAREN       = CLIFacility<<FacilityPosition | cliNeedParen<<MessagePosition | StatusError
+	CLI_DEFARG          = CLIFacility<<FacilityPosition | cliDefArg<<MessagePosition | StatusError
+	CLI_DEFQUOTE        = CLIFacility<<FacilityPosition | cliDefQuote<<MessagePosition | StatusError
+	CLI_BADRADIXPREFIX  = CLIFacility<<FacilityPosition | cliBadRadixPrefix<<MessagePosition | StatusError
+	CLI_BADNUMBER       = CLIFacility<<FacilityPosition | cliBadNumber<<MessagePosition | StatusError
+	CLI_BADRADIX        = CLIFacility<<FacilityPosition | cliBadRadix<<MessagePosition | StatusError
+	CLI_NEEDSTEPMODE    = CLIFacility<<FacilityPosition | cliNeedStepMode<<MessagePosition | StatusError
+	CLI_NEEDBREAKOPCODE = CLIFacility<<FacilityPosition | cliNeedBreakOpcode<<MessagePosition | StatusError
 
 	// internal/console/dcl
 	CLI_UNRECOGNIZED          = CLIFacility<<FacilityPosition | cliUnrecognized<<MessagePosition | StatusError
@@ -240,6 +242,7 @@ func init() {
 	DefineMessage(CLI_BADNUMBER, CLIFacility, "BADNUMBER", "Invalid number !Q")
 	DefineMessage(CLI_BADRADIX, CLIFacility, "BADRADIX", "Invalid radix !D (must be 8, 10, or 16)")
 	DefineMessage(CLI_NEEDSTEPMODE, CLIFacility, "NEEDSTEPMODE", "SET STEP requires OVER, INTO, or RETURN")
+	DefineMessage(CLI_NEEDBREAKOPCODE, CLIFacility, "NEEDBREAKOPCODE", "SET BREAK/INSTRUCTION requires an opcode mnemonic")
 
 	DefineMessage(CLI_UNRECOGNIZED, CLIFacility, "UNRECOGNIZED", "Unrecognized !S !Q")
 	DefineMessage(CLI_AMBIGUOUS, CLIFacility, "AMBIGUOUS", "Ambiguous !S !Q")
