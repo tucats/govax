@@ -129,6 +129,18 @@ func (e *Engine) Memory() *vm.Memory { return e.mem }
 // otherwise been asked to stop; see ErrHalted).
 func (e *Engine) Halted() bool { return e.halted }
 
+// Halt marks the machine halted without going through a HALT instruction --
+// used by docs/PHASE-20.md's format_exception port, matching
+// interrupt.c's own direct `vax.halted = 1` when no condition handler wants
+// an unhandled exception.
+func (e *Engine) Halt() { e.halted = true }
+
+// ClearHalted unconditionally marks the machine not halted -- used by
+// docs/PHASE-20.md's Condition Handling Facility port (chf's own
+// `vax.halted = saved_halt` restore after invoking a handler, for the
+// unusual case where running the handler itself executed a HALT).
+func (e *Engine) ClearHalted() { e.halted = false }
+
 // Attention requests that the next Engine.Step call stop before executing
 // another instruction, returning ErrAttention once whatever's currently
 // running finishes — the Go equivalent of console.c's attention(). Named to

@@ -127,6 +127,10 @@ func TestDispatch_runActivatesImage(t *testing.T) {
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g, nil)
 
+	if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+		t.Fatalf("Assemble(kernel.asm): %v", err)
+	}
+
 	if err := d.Dispatch("RUN/NOEXECUTE " + exeFixturePath(t, "simple.exe")); err != nil {
 		t.Fatalf("Dispatch(RUN/NOEXECUTE): %v", err)
 	}

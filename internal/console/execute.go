@@ -259,8 +259,19 @@ func (c *Console) reportStopReason(err error) error {
 		c.Printf("%%VAX-I-TIMELIMIT, time limit reached at PC = %08X\n", c.CPU.GPR(vax.PC))
 
 		return nil
-
-	default:
-		return err
 	}
+
+	// A fault whose SCB vector is kernel.asm's own "console$handler"
+	// sentinel isn't a real Go-level error at all -- it's this port's cue to
+	// run the VMS Condition Handling Facility search and, failing that,
+	// report the exception natively and halt, matching interrupt.c's own
+	// handle_fault/format_exception split (see docs/PHASE-20.md). Checked
+	// via errors.As, not folded into the errors.Is switch above, matching
+	// the FaultBreak check's own precedent just above it.
+	var chf *cpu.ConsoleHandlerFault
+	if errors.As(err, &chf) {
+		return c.handleConsoleFault(chf)
+	}
+
+	return err
 }

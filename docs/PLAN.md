@@ -70,6 +70,7 @@ questions, and a progress log extended as that phase is worked.
 | 17 | [PHASE-17.md](PHASE-17.md) | `SET`/`SHOW DEBUG`, `SET`/`SHOW TRACE`, instruction-trace infrastructure |
 | 18 | [PHASE-18.md](PHASE-18.md) | Flow of control: `STEP`/`SET STEP`/`SHOW STEP_MODE`, future breakpoints/watchpoints |
 | 19 | [PHASE-19.md](PHASE-19.md) | Interactive `ASM` REPL mode |
+| 20 | [PHASE-20.md](PHASE-20.md) | RTL shim resolution fix, and console-native exception reporting (CHF) |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -125,3 +126,17 @@ implement — see PHASE-18.md.
 Phase 19, requested by the user 2026-09-16, ports the reference tool's bare `ASM`
 (no filename) interactive assembler-mode REPL — the one piece of `PHASE-11.md`'s own
 scope its closeout explicitly left for follow-up. See PHASE-19.md.
+
+Phase 20, complete, was triggered by a user report (2026-09-16) that `RUN`ning a real
+`.exe` fixture failed with what looked like "a JSB to a HALT instruction". Root cause:
+Phase 13's own `SHIM$` resolution mis-read `kernel.asm`'s `.shim` table — a code-0
+entry doesn't mean "dead, no numeric dispatch", it means "resolve by looking up the
+routine's own already-assembled label instead of synthesizing a stub", so every real
+fixture depending on `DECC$SHR` crashed calling into the C runtime library's own real
+startup routine, `decc$main`, via a fake stub whose leading placeholder bytes executed
+as a HALT. Fixing that also exposed (rather than introduced) a second, genuinely
+missing piece: `interrupt.c`'s Condition Handling Facility (`chf()`) and its
+console-native `format_exception()` fallback — ported now, since a real fault (e.g.
+`cli.exe`'s own still-unimplemented `SYS$`/`SHIM$` entry point) needs it to report
+cleanly and halt rather than abort `RUN` outright. See PHASE-20.md, including a
+one-character C-source bug (`&&` for `&`) found and fixed in `chf()` along the way.

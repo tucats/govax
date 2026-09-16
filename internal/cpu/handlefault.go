@@ -12,13 +12,45 @@ import (
 var stackNames = [4]string{"KSP", "ESP", "SSP", "USP"}
 
 // ErrNoExceptionHandler is returned by Engine.HandleFault when the SCB
-// vector for the faulting exception is 0xFFFFFFFF — this emulator's own
-// convention (not a VAX architectural value) for "no handler installed,
-// fall back to a built-in one," matching interrupt.c's handle_fault calling
-// format_exception() in that case. No console exists yet to provide that
-// fallback (Phase 08), so this is surfaced as an error instead; no state is
-// changed when this is returned.
+// vector for the faulting exception is 0xFFFFFFFF -- kernel.asm's own
+// "console$handler" convention (not a VAX architectural value) for "no
+// vector installed, let the console handle it": run the VMS Condition
+// Handling Facility frame search and, failing that, format+report the
+// exception natively and halt, matching interrupt.c's own handle_fault
+// calling format_exception() in that case. HandleFault always wraps this in
+// a *ConsoleHandlerFault (see below) rather than returning the bare
+// sentinel, so errors.Is(err, ErrNoExceptionHandler) still matches (via
+// ConsoleHandlerFault.Unwrap) while a caller that wants to actually run
+// that search (internal/console, the only place with the "invoke a nested
+// call and run it to completion" primitive that requires -- see
+// docs/PHASE-20.md) can errors.As for the richer type. No state is changed
+// when this is returned -- matching handle_fault's own early return before
+// any stack frame is pushed or mode/stack switch is made.
 var ErrNoExceptionHandler = vmserrors.New(vmserrors.VAX_NOHANDLER)
+
+// ConsoleHandlerFault is Engine.HandleFault's error when the SCB vector is
+// the console-handler sentinel: it carries everything docs/PHASE-20.md's
+// Condition Handling Facility port needs that HandleFault alone has access
+// to (the faulting instruction's own PC, distinct from the live PC which
+// decode has already advanced past the faulting instruction -- see
+// emulXfcP1Vector's doc comment on the same distinction; and the PSL/R0/R1
+// values as they stood at fault time). Reading live CPU state instead would
+// also work here (nothing executes between a fault being raised and
+// HandleFault running), but capturing it explicitly matches interrupt.c's
+// own set_fault snapshot (vax.fault.pc/psl/r0/r1) and documents exactly
+// what the C source's chf()/format_exception() actually consume.
+type ConsoleHandlerFault struct {
+	*Fault
+	PC  uint32
+	PSL vax.PSL
+	R0  uint32
+	R1  uint32
+}
+
+// Unwrap makes errors.Is(err, ErrNoExceptionHandler) match a
+// *ConsoleHandlerFault, preserving every existing caller/test that checks
+// for the sentinel without knowing about this richer type.
+func (f *ConsoleHandlerFault) Unwrap() error { return ErrNoExceptionHandler }
 
 // ErrUnhandledVector is returned by Engine.HandleFault when the SCB vector
 // is zero. Unlike ErrNoExceptionHandler, the C source (and this port) still
@@ -52,7 +84,13 @@ func (e *Engine) HandleFault(f *Fault) error {
 	}
 
 	if rawVector == 0xFFFFFFFF {
-		return ErrNoExceptionHandler
+		return &ConsoleHandlerFault{
+			Fault: f,
+			PC:    e.instructionPC,
+			PSL:   e.cpu.PSL(),
+			R0:    e.cpu.GPR(vax.R0),
+			R1:    e.cpu.GPR(vax.R1),
+		}
 	}
 
 	stack := rawVector & 0x3

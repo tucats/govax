@@ -18,6 +18,14 @@ func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 	c := newRunnableConsole(t)
 	c.Engine.SetModeStack(vax.Kernel, false)
 
+	// ensureShims's code-0 entries (e.g. decc$main, below) resolve by
+	// looking up kernel.asm's own already-assembled routine by name -- see
+	// shim.go's own doc comment -- so it must be assembled first here,
+	// matching vax.init's own boot sequence (ASM kernel.asm before any RUN).
+	if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+		t.Fatalf("Assemble(kernel.asm): %v", err)
+	}
+
 	if err := c.ensureShims(); err != nil {
 		t.Fatalf("ensureShims: %v", err)
 	}
@@ -31,13 +39,30 @@ func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 		t.Errorf("first stub address = %#x, want shimBase %#x", addr, c.shimBase)
 	}
 
-	addr2, ok := c.Symbols.Get("SHIM$DECC$SHR_00000000") // decc$main, code 0 (dead)
+	addr2, ok := c.Symbols.Get("SHIM$DECC$SHR_00000000") // decc$main, code 0
 	if !ok {
 		t.Fatal("expected SHIM$DECC$SHR_00000000 to be defined")
 	}
-	
+
 	if addr2 == addr {
 		t.Error("distinct table entries should get distinct stub addresses")
+	}
+
+	// A code-0 entry resolves by symbol lookup against kernel.asm's own
+	// real DECC$MAIN routine (see shim.go's own doc comment), not a
+	// synthesized stub in the shim page -- so it must fall well outside
+	// the shim page's own address range.
+	deccMain, ok := c.Symbols.Get("DECC$MAIN")
+	if !ok {
+		t.Fatal("expected kernel.asm to define DECC$MAIN")
+	}
+
+	if addr2 != deccMain {
+		t.Errorf("SHIM$DECC$SHR_00000000 = %#x, want kernel.asm's own DECC$MAIN (%#x)", addr2, deccMain)
+	}
+
+	if addr2 >= c.shimBase && addr2 < c.shimBase+uint32(len(shimTable))*shimStubSize {
+		t.Errorf("SHIM$DECC$SHR_00000000 = %#x, want an address outside the synthesized shim page", addr2)
 	}
 
 	// Idempotent: a second call must not move any stub (a fixup performed
@@ -59,6 +84,10 @@ func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 func TestEnsureShims_stubDispatchesThroughXFCShim(t *testing.T) {
 	c := newRunnableConsole(t)
 	c.Engine.SetModeStack(vax.Kernel, false)
+
+	if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+		t.Fatalf("Assemble(kernel.asm): %v", err)
+	}
 
 	if err := c.ensureShims(); err != nil {
 		t.Fatalf("ensureShims: %v", err)

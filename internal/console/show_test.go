@@ -97,7 +97,7 @@ func TestShowROM_loaded(t *testing.T) {
 }
 
 func TestShowShim(t *testing.T) {
-	d, c, buf := newShowDispatcher(t)
+	d, c, buf := newShowRunnableDispatcher(t)
 
 	if err := d.Dispatch("SHOW SHIM"); err != nil {
 		t.Fatalf("Dispatch: %v", err)
@@ -105,6 +105,14 @@ func TestShowShim(t *testing.T) {
 
 	if !strings.Contains(buf.String(), "No RTL shims") {
 		t.Errorf("output = %q, want a \"No RTL shims\" message before any are synthesized", buf.String())
+	}
+
+	// ensureShims's code-0 entries resolve by looking up kernel.asm's own
+	// already-assembled routine by name (see shim.go's own doc comment), so
+	// it must be assembled first here, matching vax.init's own boot
+	// sequence.
+	if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
 	if err := c.ensureShims(); err != nil {

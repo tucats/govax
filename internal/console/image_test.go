@@ -157,6 +157,10 @@ func TestImageFixup_simpleExe(t *testing.T) {
 	c := newRunnableConsole(t)
 	c.Engine.SetModeStack(vax.Kernel, false)
 
+	if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+		t.Fatalf("Assemble(kernel.asm): %v", err)
+	}
+
 	if err := c.ensureShims(); err != nil {
 		t.Fatalf("ensureShims: %v", err)
 	}
@@ -191,6 +195,10 @@ func TestImageFixup_everyRealFixtureFixesUp(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			c := newRunnableConsole(t)
 			c.Engine.SetModeStack(vax.Kernel, false)
+
+			if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+				t.Fatalf("Assemble(kernel.asm): %v", err)
+			}
 
 			if err := c.ensureShims(); err != nil {
 				t.Fatalf("ensureShims: %v", err)

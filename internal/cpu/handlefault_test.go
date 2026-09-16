@@ -185,6 +185,45 @@ func TestHandleFaultNoHandlerVector(t *testing.T) {
 	}
 }
 
+// TestHandleFaultNoHandlerVectorCarriesFaultContext checks that the
+// console-handler sentinel case (see docs/PHASE-20.md) returns the richer
+// *ConsoleHandlerFault type carrying everything the Condition Handling
+// Facility port needs -- the faulting instruction's own PC (distinct from
+// whatever decode already advanced the live PC to), PSL, R0/R1, and the
+// original *Fault's code/args -- not just the bare ErrNoExceptionHandler
+// sentinel.
+func TestHandleFaultNoHandlerVectorCarriesFaultContext(t *testing.T) {
+	e := newEngine()
+	e.instructionPC = 0x1234
+	e.cpu.SetGPR(vax.PC, 0x1236) // decode has already advanced past a 2-byte instruction
+	e.cpu.SetGPR(vax.R0, 0xAAAA)
+	e.cpu.SetGPR(vax.R1, 0xBBBB)
+	putLongword(t, e.cpu, e.mem, scbb+uint32(ExcReservedOp), 0xFFFFFFFF)
+
+	err := e.HandleFault(&Fault{Code: ExcReservedOp, Args: []uint32{7}})
+
+	var chf *ConsoleHandlerFault
+	if !errors.As(err, &chf) {
+		t.Fatalf("err = %v (%T), want *ConsoleHandlerFault", err, err)
+	}
+
+	if chf.Code != ExcReservedOp {
+		t.Errorf("Code = %#x, want ExcReservedOp", chf.Code)
+	}
+
+	if len(chf.Args) != 1 || chf.Args[0] != 7 {
+		t.Errorf("Args = %v, want [7]", chf.Args)
+	}
+
+	if chf.PC != 0x1234 {
+		t.Errorf("PC = %#x, want the faulting instruction's own PC 0x1234, not the live (already-advanced) PC", chf.PC)
+	}
+
+	if chf.R0 != 0xAAAA || chf.R1 != 0xBBBB {
+		t.Errorf("R0/R1 = %#x/%#x, want 0xAAAA/0xBBBB", chf.R0, chf.R1)
+	}
+}
+
 func TestHandleFaultZeroVector(t *testing.T) {
 	e := newEngine()
 	e.cpu.SetGPR(vax.SP, 0x8000)

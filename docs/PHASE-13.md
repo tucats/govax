@@ -31,8 +31,13 @@ image loader to be complete on its own.
   truth for every `SHIM$<library>_<vector-offset>` symbol a sharable-image G^ fixup can
   resolve to. Confirmed by direct inspection: this is the *only* place these symbols are
   defined in the whole C source (`shim.c`'s own `rtl_entry_list` only assigns numeric
-  dispatch codes 1-32 to a handful of them; most `.shim` entries in `kernel.asm` carry a
-  literal `0` and resolve to a dead/unimplemented stub even in the real C emulator).
+  dispatch codes 1-32 to a handful of them). A code-0 `.shim` entry is *not* dead --
+  `asm_pseudo.c`'s own `.SHIM` case 33 resolves it by looking up an already-defined
+  symbol (the routine's own real, hand-written `kernel.asm` label, e.g. `decc$main`)
+  instead of synthesizing a numeric-dispatch stub for it. This phase's own first pass
+  got that branch wrong (see `docs/PHASE-20.md`'s progress log for the bug this caused
+  and the fix), so `internal/console/shim.go`'s own doc comment is the up-to-date
+  reference for this distinction now, not this note.
 
 ## Key finding: this does not actually require Phase 11's assembler
 

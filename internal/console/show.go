@@ -453,17 +453,20 @@ func (c *Console) ShowROM() error {
 	return nil
 }
 
-// ShowShim prints every synthesized RTL shim stub (kernel.asm's `.shim`
-// table, see shim.go's ensureShims) and whether internal/rtl.Environment
-// has a live numeric-dispatch handler for it, matching shim.c's own
-// shim_dump — with one deliberate reporting difference: C's shim_dump
-// resolves each SHIM$<library>_<offset> symbol to a *second*,
-// separately-defined kernel.asm label at the same address (the real
-// routine it's equated to); this port's ensureShims instead synthesizes a
-// fresh stub directly (see that function's own doc comment), so there is
-// no second label to resolve — reporting the numeric dispatch code and
-// its live/dead status serves the same "does this shim actually do
-// anything" purpose.
+// ShowShim prints every RTL shim symbol (kernel.asm's `.shim` table, see
+// shim.go's ensureShims) matching shim.c's own shim_dump: for a nonzero
+// numeric-dispatch code, whether internal/rtl.Environment has a live
+// handler for it; for a code-0 entry, the already-assembled kernel.asm
+// routine it resolves to by name -- exactly shim_dump's own "resolves each
+// SHIM$<library>_<offset> symbol to a second, separately-defined label at
+// the same address" behavior, not a port-specific difference (an earlier
+// version of ensureShims synthesized a stub for every entry regardless and
+// this function's own doc comment claimed that as the reason for a
+// reporting difference from shim_dump; see shim.go's own doc comment for
+// why that was wrong, not just under-documented). Addresses are read back
+// from each entry's own registered symbol rather than recomputed from
+// shimBase, since a code-0 entry's address lives wherever kernel.asm
+// defined its routine, not in the synthesized-stub page at all.
 func (c *Console) ShowShim() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -477,12 +480,12 @@ func (c *Console) ShowShim() error {
 
 	c.Printf("RTL SHIMS:\n")
 
-	addr := c.shimBase
-
 	for _, e := range shimTable {
 		name := fmt.Sprintf("SHIM$%s_%08X", e.library, e.offset)
 
-		status := "dead (no numeric dispatch)"
+		addr, _ := c.Symbols.Get(name)
+
+		status := fmt.Sprintf("resolved to %s", e.name)
 		if e.code != 0 {
 			status = "unimplemented"
 
@@ -492,7 +495,6 @@ func (c *Console) ShowShim() error {
 		}
 
 		c.Printf("    %-32s = %08X  code=%-3d %s\n", name, addr, e.code, status)
-		addr += shimStubSize
 	}
 
 	return nil
