@@ -103,7 +103,6 @@ func TestEmulCallsFrameLayout(t *testing.T) {
 	if got := mustLongword(t, cpu, mem, 0x8FF8); got != 0x22222222 {
 		t.Errorf("saved R3 at FP+24 = %#x, want 0x22222222", got)
 	}
-
 	if got := mustLongword(t, cpu, mem, 0x8FFF); got != 3 {
 		t.Errorf("pushed count at AP = %#x, want 3", got)
 	}
@@ -471,7 +470,7 @@ func TestEmulRetRestoresFullPSWFromFrame(t *testing.T) {
 	putBytes(t, cpu, mem, 0x2000, 0x00, 0x40, 0x04)
 
 	stepInstruction(t, e, 0xFA, 0x9F, 0x00, 0x30, 0x00, 0x00, 0x9F, 0x00, 0x20, 0x00, 0x00)
-	
+
 	if !cpu.PSL().IV() {
 		t.Fatal("IV = false after CALLG, want true")
 	}

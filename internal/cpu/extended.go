@@ -84,7 +84,7 @@ func emulEdiv(e *Engine, d *Decoded) error {
 	dividend := int64(dividendRaw)
 
 	var quo, rem int32
-	
+
 	v := false
 
 	switch {
@@ -117,6 +117,5 @@ func emulEdiv(e *Engine, d *Decoded) error {
 	if err := d.Operands[2].Store(e.cpu, e.mem, uint64(uint32(quo))); err != nil {
 		return err
 	}
-
 	return d.Operands[3].Store(e.cpu, e.mem, uint64(uint32(rem)))
 }

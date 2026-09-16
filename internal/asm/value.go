@@ -89,7 +89,7 @@ func boolToU32(b bool) uint32 {
 	if b {
 		return 1
 	}
-	
+
 	return 0
 }
 
@@ -544,7 +544,6 @@ func (a *Assembler) maskLiteral(c *cursor) (uint32, error) {
 	if c.peek() != '<' {
 		return 0, vmserrors.New(vmserrors.VAX_BADMASK)
 	}
-
 	c.next()
 
 	var mask uint32

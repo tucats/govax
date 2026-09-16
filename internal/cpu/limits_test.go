@@ -115,7 +115,6 @@ func TestEngineTimeLimitStopsRun(t *testing.T) {
 
 		t.Fatalf("Step: %v", err)
 	}
-
 	if steps == 0 {
 		t.Error("expected at least one instruction to execute before the time limit hit")
 	}
@@ -150,7 +149,7 @@ func TestEngineAttentionStopsRunButLeavesStateIntact(t *testing.T) {
 	if err := e.Step(); !errors.Is(err, ErrAttention) {
 		t.Fatalf("second Step = %v, want ErrAttention again", err)
 	}
-	
+
 	if got := e.cpu.GPR(vax.PC); got != pc {
 		t.Errorf("PC changed from %#x to %#x across a refused Step", pc, got)
 	}

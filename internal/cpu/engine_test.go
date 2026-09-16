@@ -163,7 +163,6 @@ func TestEngineRunPropagatesOtherHandlerError(t *testing.T) {
 	e.cpu.SetGPR(vax.PC, base)
 	putBytes(t, e.cpu, e.mem, base, 0x00)
 	wantErr := errors.New("boom")
-
 	e.table.SetHandler(inst, func(eng *Engine, d *Decoded) error { return wantErr })
 
 	err := e.Run()
@@ -187,7 +186,7 @@ func TestEngineStepDecodeFaultHandled(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
-	
+
 	if cpu.GPR(vax.PC) != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (fault vector)", cpu.GPR(vax.PC))
 	}

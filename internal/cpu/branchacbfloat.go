@@ -56,7 +56,6 @@ func emulAcbFloat(size int) Handler {
 
 		index += addend
 		setFloatMovePSL(e.cpu, index) // N/Z/V, C left unaffected -- see below
-
 		if err := storeFloat(e.cpu, e.mem, d.Operands[2], index); err != nil {
 			return err
 		}

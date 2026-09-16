@@ -115,7 +115,6 @@ func (t *Table) ByName(name string) *Instruction {
 			t.byName[inst.Name] = inst
 		}
 	}
-
 	return t.byName[name]
 }
 
@@ -153,7 +152,7 @@ func (t *Table) All() []*Instruction {
 // INSTRUCTIONS' implemented/unimplemented split).
 func (t *Table) Implemented(inst *Instruction) bool {
 	_, ok := t.handlers[inst]
-	
+
 	return ok
 }
 

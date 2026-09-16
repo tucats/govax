@@ -52,7 +52,7 @@ func emulMatchc(e *Engine, d *Decoded) error {
 		if err != nil {
 			return err
 		}
-		
+
 		if a == b {
 			remainObj--
 			objPtr++
@@ -89,6 +89,5 @@ func emulMatchc(e *Engine, d *Decoded) error {
 	psl.SetV(false)
 	psl.SetC(false)
 	e.cpu.SetPSL(psl)
-
 	return nil
 }

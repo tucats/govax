@@ -60,7 +60,7 @@ func TestFpuStoreDoubleFloatingKnownValues(t *testing.T) {
 		{1e-10, 0xEDD8CEBDE6FE2FDB},
 	}
 	cpu, _ := fixture()
-	
+
 	for _, c := range cases {
 		got, err := fpuStore(cpu, 8, c.value)
 		if err != nil {
@@ -272,7 +272,6 @@ func TestStoreFloatRegisterRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadFloat: %v", err)
 	}
-
 	if got != 2.0 {
 		t.Errorf("round trip via storeFloat/loadFloat = %v, want 2.0", got)
 	}

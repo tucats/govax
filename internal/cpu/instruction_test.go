@@ -85,7 +85,6 @@ func TestTableImplemented(t *testing.T) {
 	if halt == nil {
 		t.Fatal("ByName(HALT) = nil")
 	}
-
 	if !instructionTable.Implemented(halt) {
 		t.Error("expected HALT to be Implemented (Phase 04 registers a real handler)")
 	}
@@ -223,7 +222,7 @@ func TestInstructionTableIndexOperands(t *testing.T) {
 	if inst.Access != wantAccess {
 		t.Errorf("INDEX.Access = %+v, want %+v", inst.Access, wantAccess)
 	}
-	
+
 	wantScale := [6]int{4, 4, 4, 4, 4, 4}
 	if inst.Scale != wantScale {
 		t.Errorf("INDEX.Scale = %+v, want %+v", inst.Scale, wantScale)

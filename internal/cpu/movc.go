@@ -194,7 +194,6 @@ func emulMovc5(e *Engine, d *Decoded) error {
 				return err
 			}
 		}
-
 		src = uint32(int32(src) + minLength)
 		dst = uint32(int32(dst) + len2Saved)
 	}
@@ -213,6 +212,6 @@ func emulMovc5(e *Engine, d *Decoded) error {
 	psl.SetV(false)
 	psl.SetC(c)
 	e.cpu.SetPSL(psl)
-	
+
 	return nil
 }

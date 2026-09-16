@@ -176,7 +176,7 @@ func fpuLoad(raw uint64, size int) (float64, error) {
 		if lowLong&0x7FFFFFFF == 0 {
 			return 0, nil
 		}
-		
+
 		return 0, &Fault{Code: ExcReservedOp}
 	}
 
@@ -222,6 +222,5 @@ func storeFloat(cpu *vax.CPU, mem *vm.Memory, op Operand, value float64) error {
 	if err != nil {
 		return err
 	}
-
 	return op.Store(cpu, mem, raw)
 }

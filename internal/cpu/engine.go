@@ -243,7 +243,7 @@ func (e *Engine) Step() error {
 
 		return e.raise(err)
 	}
-	
+
 	return nil
 }
 
@@ -317,6 +317,5 @@ func (e *Engine) Run() error {
 			return err
 		}
 	}
-
 	return ErrHalted
 }

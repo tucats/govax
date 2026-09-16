@@ -26,7 +26,7 @@ func TestInterruptImmediateDeliveryWhenUnmasked(t *testing.T) {
 	e.cpu.SetGPR(vax.PC, 0x1000)
 
 	e.Interrupt(ExcConWrite, 20, 0)
-	
+
 	if !e.interruptPending {
 		t.Fatal("expected Interrupt to admit immediately (unmasked, nothing pending)")
 	}
@@ -239,7 +239,6 @@ func TestPendingInterruptsReportsBothHalves(t *testing.T) {
 	if pending == nil || pending.Code != ExcConRead || pending.IPL != 21 {
 		t.Fatalf("pending = %+v, want ExcConRead at IPL 21", pending)
 	}
-
 	if len(queued) != 1 {
 		t.Fatalf("expected the earlier queued entry to remain, got %+v", queued)
 	}
