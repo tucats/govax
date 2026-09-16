@@ -59,6 +59,7 @@ const (
 	cliBadRadixPrefix
 	cliBadNumber
 	cliBadRadix
+	cliNeedStepMode
 
 	// internal/console/dcl (the DCL command-grammar interpreter).
 	cliUnrecognized
@@ -150,6 +151,7 @@ const (
 	CLI_BADRADIXPREFIX = CLIFacility<<FacilityPosition | cliBadRadixPrefix<<MessagePosition | StatusError
 	CLI_BADNUMBER      = CLIFacility<<FacilityPosition | cliBadNumber<<MessagePosition | StatusError
 	CLI_BADRADIX       = CLIFacility<<FacilityPosition | cliBadRadix<<MessagePosition | StatusError
+	CLI_NEEDSTEPMODE   = CLIFacility<<FacilityPosition | cliNeedStepMode<<MessagePosition | StatusError
 
 	// internal/console/dcl
 	CLI_UNRECOGNIZED          = CLIFacility<<FacilityPosition | cliUnrecognized<<MessagePosition | StatusError
@@ -237,6 +239,7 @@ func init() {
 	DefineMessage(CLI_BADRADIXPREFIX, CLIFacility, "BADRADIXPREFIX", `Unsupported radix prefix "^!C"`)
 	DefineMessage(CLI_BADNUMBER, CLIFacility, "BADNUMBER", "Invalid number !Q")
 	DefineMessage(CLI_BADRADIX, CLIFacility, "BADRADIX", "Invalid radix !D (must be 8, 10, or 16)")
+	DefineMessage(CLI_NEEDSTEPMODE, CLIFacility, "NEEDSTEPMODE", "SET STEP requires OVER, INTO, or RETURN")
 
 	DefineMessage(CLI_UNRECOGNIZED, CLIFacility, "UNRECOGNIZED", "Unrecognized !S !Q")
 	DefineMessage(CLI_AMBIGUOUS, CLIFacility, "AMBIGUOUS", "Ambiguous !S !Q")

@@ -178,9 +178,10 @@ fields exist); the gap is purely a missing `show.go` function + grammar binding.
   `add_watchpoint`/`delete_watchpoint`/`watchpoint_hit`) — see "Other missing console
   mechanisms" below. `SHOW WATCHPOINTS` is the trivial list-and-print half once that
   exists.
-- **`SHOW STEP_MODE`** (`show_step`, C: `console_show.c:765`) — needs `SET STEP`'s
-  `STEP_OVER`/`STEP_RETURN`/(default `INTO`) state, which `Console` doesn't currently
-  track at all (see Sub-phase 3's `SET STEP` entry).
+- **`SHOW STEP_MODE`** — **done, see `docs/PHASE-18.md`**, extracted into its own
+  phase (2026-09-15, at the user's request) rather than staying here: the work
+  touches the CPU engine (a call-like-instruction classifier, a one-shot internal
+  breakpoint mechanism), not just this console command surface.
 - **`SHOW DEBUG`** — **done, see `docs/PHASE-17.md`.** That phase also
   corrected two assumptions this entry made before any of it was
   implemented: `SET DEBUG`/`SET NODEBUG` turned out to be one verb with
@@ -378,11 +379,8 @@ the reference.
   1d) to switch the active stack pointer by privileged mode. Worth implementing
   alongside the `ShowStack` rework in 1d, since they share the underlying mode-switch
   logic.
-- **`SET STEP <OVER|INTO|RETURN>`** (C: `console_set.c:450-486`) — new `Console`
-  field for step mode (no equivalent today); read by `SHOW STEP_MODE` (Sub-phase 1c)
-  and (per the C source) by `STEP`'s own default behavior when no explicit qualifier
-  is given — check `internal/console`'s existing `cmdStep` (`dispatch.go:265`) for
-  whether it already has room for a default-mode concept or would need one added.
+- **`SET STEP <OVER|INTO|RETURN>`** — **done, see `docs/PHASE-18.md`**, extracted
+  into its own phase alongside `SHOW STEP_MODE` (Sub-phase 1c) for the same reason.
 - **`SET MKVALID`** / **`SET NOMK`** (C: `console_set.c:487-497`) — toggles the
   C source's `MKVALID` gate (guards `SHOW STRING`/`SHOW SHIM`/`SHOW IMAGES`/`SHOW
   SHARE_PREFIX`/`SHOW REGIONS`/`SHOW COMMAND_ARGS`, among others). This port has no
@@ -461,7 +459,9 @@ generally, not only `SHOW`.
   RTL/CPU work — this is now purely a console-dispatch wiring gap, not a "Phase 10"
   dependency the way the old doc.go comment frames it. Worth re-reading `doc.go`'s
   header comment and updating it once this phase's findings are acted on.
-- **No watchpoint subsystem at all** — C's `struct WATCHPOINT`/`add_watchpoint`/
+- **No watchpoint subsystem at all** — tracked as a likely future sub-phase of
+  `docs/PHASE-18.md` (the "flow of control" phase STEP/breakpoint work now lives
+  under), not this one. C's `struct WATCHPOINT`/`add_watchpoint`/
   `delete_watchpoint`/`watchpoint_hit`/`show_watchpoints` (all in
   `reference/eVAX/eVAX/Source/CPU/storage.c:44-140`) have no Go equivalent anywhere
   (confirmed by grep). This backs `SET WATCH` (Sub-phase 3), `SHOW WATCHPOINTS`
@@ -475,14 +475,16 @@ generally, not only `SHOW`.
   address/size) also needs a hook into `internal/vm.Memory`'s store path, not just
   the bookkeeping list — check whether `vm.Memory`'s write primitives have room for
   such a hook before scoping this as a pure console-layer add.
-- **No instruction-level (opcode) breakpoint mechanism** — `SET BREAK/INSTRUCTION`,
+- **No instruction-level (opcode) breakpoint mechanism** — also tracked as a likely
+  future sub-phase of `docs/PHASE-18.md`. `SET BREAK/INSTRUCTION`,
   `SHOW BREAK/INSTRUCTION` (C: `console_show.c:162`, DCL id `412`), and `CLEAR
   BREAK/INSTRUCTION[/ALL]` (Sub-phase 2) all depend on a per-opcode "break on this
   instruction" flag (C's `instruction[n].debugdata & OP_DBG_BREAK`) that has no
   analogue on this port's `internal/cpu` instruction table (confirmed by grep — no
   `DebugData`/break-flag field exists). A self-contained three-command feature once
   that one flag exists on the instruction-table entry type.
-- **No fault-kind breakpoints** — `SET BREAK/FAULT`, `SHOW BREAK/FAULT` (the
+- **No fault-kind breakpoints** — also tracked as a likely future sub-phase of
+  `docs/PHASE-18.md`. `SET BREAK/FAULT`, `SHOW BREAK/FAULT` (the
   `/FAULT`/`/ADDRESSES` qualifiers on `SHOW BREAKPOINTS` itself, C:
   `console_show.c:698-758`, distinguishing `BREAK_FAULT`-kind entries in its print
   loop), and `CLEAR BREAKPOINT/FAULT[/ALL]` (Sub-phase 2) all depend on

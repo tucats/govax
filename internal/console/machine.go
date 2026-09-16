@@ -43,10 +43,15 @@ type Console struct {
 
 	// Trace matches vax.console.disasm (SET TRACE/NOTRACE, SHOW TRACE):
 	// whether EXEC/GO/CALL/RUN disassemble each instruction as they execute
-	// it. STEP always traces regardless of this flag, matching
-	// console_step.c's own "Always in trace mode" behavior — see trace.go
-	// and docs/PHASE-17.md sub-phases 6-7.
+	// it. STEP's own tracing follows a different, per-mode rule instead of
+	// this flag — see step.go's StepInto/StepOver/StepReturn doc comments
+	// and docs/PHASE-17.md sub-phases 6-7, docs/PHASE-18.md.
 	Trace bool
+
+	// StepMode is STEP's default mode (SET STEP, SHOW STEP_MODE) — the Go
+	// equivalent of vax.console.stepmode, initialized to StepInto (its zero
+	// value) matching initialization.c's own startup default. See step.go.
+	StepMode StepMode
 
 	Breakpoints []*Breakpoint
 

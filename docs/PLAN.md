@@ -67,6 +67,8 @@ questions, and a progress log extended as that phase is worked.
 | 14 | [PHASE-14.md](PHASE-14.md) | Interval timer & device-interrupt delivery |
 | 15 | [PHASE-15.md](PHASE-15.md) | UX / ease-of-use support |
 | 16 | [PHASE-16.md](PHASE-16.md) | Console command fit-and-finish (SHOW/CLEAR/SET gaps) |
+| 17 | [PHASE-17.md](PHASE-17.md) | `SET`/`SHOW DEBUG`, `SET`/`SHOW TRACE`, instruction-trace infrastructure |
+| 18 | [PHASE-18.md](PHASE-18.md) | Flow of control: `STEP`/`SET STEP`/`SHOW STEP_MODE`, future breakpoints/watchpoints |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -95,8 +97,26 @@ locating unqualified file names like `vax.init`/`vax.help`/`evax.dcl`/`kernel.as
 `ssdef.asm`, falling back to an embedded copy) was requested by the user on
 2026-09-15 — see PHASE-15.md.
 
-Phase 16 is an audit-only inventory (not started; no code changes), created
-2026-09-15 at the user's request: a catalogue of `SHOW`/`CLEAR`/`SET` console
-commands the C reference implements that this port doesn't yet, plus a few
-cross-cutting console mechanisms (watchpoints, instruction/fault-kind breakpoints,
-the DCL `/entry=` redirect) found missing along the way — see PHASE-16.md.
+Phase 16 started as an audit-only inventory, created 2026-09-15 at the user's
+request: a catalogue of `SHOW`/`CLEAR`/`SET` console commands the C reference
+implements that this port doesn't yet, plus a few cross-cutting console mechanisms
+(watchpoints, instruction/fault-kind breakpoints, the DCL `/entry=` redirect) found
+missing along the way. Most of the catalogued `SHOW`/`CLEAR` gaps have since been
+implemented (see PHASE-16.md's own progress log); the watchpoint and
+instruction/fault-kind-breakpoint mechanisms it found missing are tracked as future
+sub-phases of PHASE-18.md instead of landing here.
+
+Phase 17, complete, added the `vax.debug`/`DBG_*` bitmask `docs/PHASE-16.md` found
+`SHOW DEBUG`/`SET DEBUG` blocked on, the two console commands that read/write it,
+and (in a follow-up sub-phase set) `SET TRACE`/`SHOW TRACE` plus the instruction-
+tracing infrastructure (`Engine.LastDecoded`, the `DebugRegisters`/`DebugFullDisasm`
+trace-point hooks) later reused by Phase 18's own `STEP/OVER` — see PHASE-17.md.
+
+Phase 18, its `STEP`/`SET STEP`/`SHOW STEP_MODE` sub-phase complete, was split out
+of Phase 16's own `SHOW STEP_MODE`/`SET STEP` entries at the user's request,
+2026-09-15: unlike Phase 16's other sub-phases, this one touches the CPU engine
+itself (a call-like-instruction classifier for `STEP/OVER`, a one-shot internal
+breakpoint mechanism shared with `EXEC`/`GO`'s own breakpoint handling), not just a
+console command binding. It's also the intended home for the watchpoint and
+instruction/fault-kind-breakpoint mechanisms Phase 16 found missing but didn't
+implement — see PHASE-18.md.

@@ -248,6 +248,7 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("SHOW_TB", func(id int64, r *dcl.Result) error { return d.Console.ShowTB() })
 	g.Bind("SHOW_DEBUG", func(id int64, r *dcl.Result) error { return d.Console.ShowDebug() })
 	g.Bind("SHOW_TRACE", func(id int64, r *dcl.Result) error { return d.Console.ShowTrace() })
+	g.Bind("SHOW_STEP", func(id int64, r *dcl.Result) error { return d.Console.ShowStepMode() })
 
 	g.Bind("SHOW_INSTRUCTIONS", func(id int64, r *dcl.Result) error {
 		return d.Console.ShowInstructions(
@@ -397,10 +398,16 @@ func cmdInit(d *Dispatcher, rest string) error {
 
 func cmdZero(d *Dispatcher, rest string) error { return d.Console.Zero() }
 
+// cmdStep implements STEP [/OVER|/INTO|/IN|/INSTRUCTION|/RETURN] [address]
+// (console_step.c): an optional leading qualifier (defaulting to
+// Console.StepMode — see docs/PHASE-18.md), then an optional starting
+// address expression exactly like EXEC/GO's own.
 func cmdStep(d *Dispatcher, rest string) error {
+	mode, rest := parseStepQualifier(rest, d.Console.StepMode)
+
 	rest = strings.TrimSpace(rest)
 	if rest == "" {
-		return d.Console.Step(nil)
+		return d.Console.Step(nil, mode)
 	}
 
 	v, _, err := d.Console.Evaluator().Eval(rest)
@@ -408,7 +415,7 @@ func cmdStep(d *Dispatcher, rest string) error {
 		return err
 	}
 
-	return d.Console.Step(&v)
+	return d.Console.Step(&v, mode)
 }
 
 func cmdExecute(d *Dispatcher, rest string) error {
@@ -794,6 +801,13 @@ func cmdSet(d *Dispatcher, rest string) error {
 		d.Console.AddBreakpoint(addr)
 
 		return nil
+
+	case "STEP":
+		if len(fields) < 2 {
+			return vmserrors.New(vmserrors.CLI_NEEDSTEPMODE)
+		}
+
+		return d.Console.SetStepMode(fields[1])
 
 	case "TRACE", "DISASSEMBLY":
 		d.Console.SetTrace(true)

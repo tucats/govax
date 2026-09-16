@@ -86,7 +86,7 @@ func TestStep_alwaysTracesRegardlessOfConsoleTrace(t *testing.T) {
 	c.Trace = false
 
 	addr := uint32(0x200)
-	if err := c.Step(&addr); err != nil {
+	if err := c.Step(&addr, StepInto); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
 
@@ -224,7 +224,7 @@ func TestStep_advancesOneInstruction(t *testing.T) {
 	loadProgram(t, c, 0x200, opNop, opNop)
 
 	addr := uint32(0x200)
-	if err := c.Step(&addr); err != nil {
+	if err := c.Step(&addr, StepInto); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
 	if got := c.CPU.GPR(vax.PC); got != 0x201 {
@@ -234,7 +234,7 @@ func TestStep_advancesOneInstruction(t *testing.T) {
 		t.Errorf("output = %q, want a step message", buf.String())
 	}
 
-	if err := c.Step(nil); err != nil {
+	if err := c.Step(nil, StepInto); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
 	if got := c.CPU.GPR(vax.PC); got != 0x202 {
