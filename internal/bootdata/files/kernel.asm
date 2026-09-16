@@ -273,7 +273,7 @@ exe$interval:   incl            @#exe$int_count
                 pushl           r0                ; save R0
                 mfpr            #VAX$PR_TODR,r0
                 tstl		r0                ; if zero, no TODR update
-                beql		_no_inc
+                beql		_noinc
                 
                 incl		r0
                 mtpr		r0, #VAX$PR_TODR
