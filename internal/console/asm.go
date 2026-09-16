@@ -107,13 +107,17 @@ func (c *Console) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 		}
 	}
 
-	for name, value := range a.Symbols() {
+	for name, info := range a.Symbols() {
 		kind := SymbolUser
 		if strings.ContainsRune(name, '$') {
 			kind = SymbolSystem
 		}
 
-		c.Symbols.Set(name, value, kind)
+		if info.Entry {
+			c.Symbols.SetEntry(name, info.Value, kind)
+		} else {
+			c.Symbols.Set(name, info.Value, kind)
+		}
 	}
 
 	addr, ok := a.TakeEntry()

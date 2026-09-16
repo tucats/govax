@@ -23,6 +23,13 @@ type Symbol struct {
 	Name  string
 	Value uint32
 	Kind  SymbolKind
+	// IsEntry marks a symbol defined by .ENTRY (or a .SHIM stub) --
+	// SYM_ENTRY in the C reference. Independent of Kind (an entry point
+	// can be either a user or a system symbol): SHOW SYMBOL displays it,
+	// and Disassemble/traceStep consult it (via EntryAt) to recognize a
+	// routine's register-save mask word instead of misdecoding it as an
+	// instruction (matching decode_opcode.c's own SYM_ENTRY scan).
+	IsEntry bool
 }
 
 // SymbolTable is the console's symbol table — a simplified, map-based
@@ -42,6 +49,12 @@ func NewSymbolTable() *SymbolTable {
 // Set defines or redefines a symbol.
 func (t *SymbolTable) Set(name string, value uint32, kind SymbolKind) {
 	t.m[strings.ToUpper(name)] = &Symbol{Name: strings.ToUpper(name), Value: value, Kind: kind}
+}
+
+// SetEntry defines or redefines a symbol with IsEntry set, matching .ENTRY
+// (or a .SHIM stub) — see Symbol.IsEntry.
+func (t *SymbolTable) SetEntry(name string, value uint32, kind SymbolKind) {
+	t.m[strings.ToUpper(name)] = &Symbol{Name: strings.ToUpper(name), Value: value, Kind: kind, IsEntry: true}
 }
 
 // Get looks up a symbol by name (case-insensitive).
@@ -71,6 +84,22 @@ func (t *SymbolTable) Find(name string) (*Symbol, bool) {
 func (t *SymbolTable) FindByValue(v uint32) (string, bool) {
 	for _, s := range t.All() {
 		if s.Value == v {
+			return s.Name, true
+		}
+	}
+
+	return "", false
+}
+
+// EntryAt returns the name of an IsEntry symbol whose value equals addr (in
+// All's sorted order, for determinism, when more than one matches), or
+// ("", false) if none — matching decode_opcode.c's own linear SYM_ENTRY
+// scan by PC. Used by Disassemble/traceStep to recognize a routine's
+// register-save mask word at its .ENTRY address instead of decoding it as
+// an instruction.
+func (t *SymbolTable) EntryAt(addr uint32) (string, bool) {
+	for _, s := range t.All() {
+		if s.IsEntry && s.Value == addr {
 			return s.Name, true
 		}
 	}

@@ -85,6 +85,41 @@ func TestAssemble_persistentSessionSharesSymbolsAcrossFiles(t *testing.T) {
 	}
 }
 
+// TestAssemble_helloEntrySymbolAndMask assembles testdata/asm/hello.asm on
+// its own and checks that ".entry main, ^m<>" (hello.asm:1) both marks
+// "MAIN" as an entry symbol in Console.Symbols (previously lost at
+// asm.Assembler.Symbols()'s map[string]uint32 boundary -- see symbol.go's
+// SymbolInfo) and that disassembling its address shows the register-save
+// mask word as ".ENTRY MAIN,^M<>" rather than misdecoding it as an
+// instruction.
+func TestAssemble_helloEntrySymbolAndMask(t *testing.T) {
+	c := newRunnableConsole(t)
+
+	_, _, err := c.Assemble(asmFixturePath(t, "hello.asm"))
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+
+	sym, ok := c.Symbols.Find("MAIN")
+	if !ok {
+		t.Fatal("expected hello.asm's \"main\" label to be merged into Console.Symbols")
+	}
+	if !sym.IsEntry {
+		t.Error("expected MAIN to be marked IsEntry, matching its .ENTRY definition")
+	}
+
+	out := &bytes.Buffer{}
+	c.Out = out
+	if err := c.Disassemble(sym.Value, sym.Value); err != nil {
+		t.Fatalf("Disassemble: %v", err)
+	}
+
+	want := ".ENTRY MAIN,^M<>"
+	if got := out.String(); !strings.Contains(got, want) {
+		t.Errorf("Disassemble output = %q, want it to contain %q", got, want)
+	}
+}
+
 // TestAssemble_kernelThenHelloRunsBounded assembles kernel.asm (the
 // microkernel image, defining LIB$PUT_OUTPUT and wiring the .SCB CHMK
 // vector) and then hello.asm on top, in the same session -- matching

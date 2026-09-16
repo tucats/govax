@@ -3,6 +3,7 @@ package asm
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -110,6 +111,35 @@ func Disassemble(r ByteReader, pc uint32) (Decoded, error) {
 	dec.Length = pc - start
 
 	return dec, nil
+}
+
+// FormatMask renders a 16-bit register-set mask as "^M<...>" text, matching
+// console_disasm.c's format_mask() — used to display a .ENTRY's saved-
+// register mask word during disassembly (see the console's own
+// entry-mask detection, which looks up SymbolInfo.Entry). Bit 15 is IV
+// (integer overflow trap enable), bit 14 is DV (decimal overflow trap
+// enable); bits 0-13 print as "R<n>", matching the reference tool's own
+// formatting even though only R0-R11 are ever settable through this
+// package's maskLiteral parser (see maskBits).
+func FormatMask(mask uint16) string {
+	var names []string
+
+	for n := 0; n < 16; n++ {
+		if mask&(1<<uint(n)) == 0 {
+			continue
+		}
+
+		switch n {
+		case 15:
+			names = append(names, "IV")
+		case 14:
+			names = append(names, "DV")
+		default:
+			names = append(names, fmt.Sprintf("R%d", n))
+		}
+	}
+
+	return "^M<" + strings.Join(names, ",") + ">"
 }
 
 // loadSized reads a 1, 2, or 4-byte little-endian value at addr.

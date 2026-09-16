@@ -129,6 +129,9 @@ func (c *Console) ShowSymbols() error {
 		if s.Kind == SymbolSystem {
 			kind = "system"
 		}
+		if s.IsEntry {
+			kind += ", entry"
+		}
 
 		c.Printf("%-31s = %08X  (%s)\n", s.Name, s.Value, kind)
 	}
@@ -1021,10 +1024,10 @@ func (c *Console) ShowImages(full bool) error {
 
 // ShowSymbol prints one symbol's value, matching the single-name form of
 // SHOW SYMBOL (console_show.c's case 149). Unlike the C source, this
-// reports only the value and user/system kind (matching ShowSymbols' own
-// existing kind label), not the fuller perm/entry/label/local/string
-// attribute set — this port's SymbolKind doesn't track those distinctions
-// (see docs/PHASE-16.md sub-phase 1c).
+// reports only the value, user/system kind, and entry attribute (matching
+// ShowSymbols' own existing kind label), not the fuller
+// perm/label/local/string attribute set — this port's SymbolKind doesn't
+// track those distinctions (see docs/PHASE-16.md sub-phase 1c).
 func (c *Console) ShowSymbol(name string) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -1040,6 +1043,9 @@ func (c *Console) ShowSymbol(name string) error {
 	kind := "user"
 	if sym.Kind == SymbolSystem {
 		kind = "system"
+	}
+	if sym.IsEntry {
+		kind += ", entry"
 	}
 
 	c.Printf("    %s = %08X (hex)   %12d (dec)  (%s)\n", sym.Name, sym.Value, int32(sym.Value), kind)

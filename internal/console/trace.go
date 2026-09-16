@@ -1,7 +1,6 @@
 package console
 
 import (
-	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vax"
 )
@@ -125,7 +124,7 @@ func (c *Console) traceStep(pc uint32, force bool) (finish func()) {
 	modep := traceStackName(c.CPU.PSL())
 	sp := c.CPU.GPR(vax.SP)
 
-	if dec, err := asm.Disassemble(memByteReader{c: c}, pc); err == nil {
+	if dec, err := c.decodeInstruction(memByteReader{c: c}, pc); err == nil {
 		c.Printf("[%s %08X] %08X: %s\n", modep, sp, pc, dec.String())
 	} else {
 		c.Printf("[%s %08X] %08X: <disassembly error: %s>\n", modep, sp, pc, err)

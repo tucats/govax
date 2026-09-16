@@ -316,21 +316,32 @@ func (a *Assembler) hasUnresolvedSymbols() bool {
 	return false
 }
 
+// SymbolInfo is one entry returned by Symbols(): a symbol's value plus
+// whether it was defined by .ENTRY (or a .SHIM stub) — SymEntry — so a
+// caller merging these into its own symbol table (the console's ASM
+// command) can preserve that attribute instead of losing it, which
+// previously left the disassembler with no way to recognize a routine's
+// register-save mask word (see decode_opcode.c's own SYM_ENTRY scan).
+type SymbolInfo struct {
+	Value uint32
+	Entry bool
+}
+
 // Symbols returns every symbol this assembly itself defined (labels,
 // .ENTRY points, .SET values, .SHIM stubs, ...) with no pending forward
 // references — excluding the fixed set seeded by seedBuiltinSymbols at
 // construction time (see SymBuiltin). Used by the console's ASM command
 // (Phase 12) to merge a freshly assembled program's own symbol table into
 // Console.Symbols once its bytes have been deposited into live memory.
-func (a *Assembler) Symbols() map[string]uint32 {
-	out := make(map[string]uint32)
+func (a *Assembler) Symbols() map[string]SymbolInfo {
+	out := make(map[string]SymbolInfo)
 
 	for name, s := range a.symbols.byName {
 		if s.flags&SymBuiltin != 0 || len(s.forward) != 0 {
 			continue
 		}
 
-		out[name] = s.value
+		out[name] = SymbolInfo{Value: s.value, Entry: s.flags&SymEntry != 0}
 	}
 
 	return out

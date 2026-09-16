@@ -170,11 +170,33 @@ func TestSymbols(t *testing.T) {
 	if _, ok := syms["OPC$_HALT"]; ok {
 		t.Error("expected a builtin symbol (OPC$_HALT) to be excluded from Symbols()")
 	}
-	if v, ok := syms["FOO"]; !ok || v != a.origin {
-		t.Errorf("FOO = (%#x, %v), want (%#x, true)", v, ok, a.origin)
+	if v, ok := syms["FOO"]; !ok || v.Value != a.origin {
+		t.Errorf("FOO = (%#x, %v), want (%#x, true)", v.Value, ok, a.origin)
 	}
-	if v, ok := syms["BAR"]; !ok || v != 0x10 {
-		t.Errorf("BAR = (%#x, %v), want (0x10, true)", v, ok)
+	if v, ok := syms["FOO"]; !ok || v.Entry {
+		t.Errorf("FOO.Entry = %v, want false (it's a label, not a .ENTRY)", v.Entry)
+	}
+	if v, ok := syms["BAR"]; !ok || v.Value != 0x10 {
+		t.Errorf("BAR = (%#x, %v), want (0x10, true)", v.Value, ok)
+	}
+}
+
+// TestSymbolsEntryFlag checks that Symbols() reports Entry=true for a name
+// defined by .ENTRY, and false for an ordinary label -- the flag the
+// console's ASM command (asm.go) relies on to merge entry-point-ness into
+// its own symbol table for the disassembler's entry-mask detection.
+func TestSymbolsEntryFlag(t *testing.T) {
+	a := New()
+	if _, err := a.Assemble("\t.ENTRY\tMAIN,^M<R2>\n\tRET\nOTHER:\tHALT\n"); err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+
+	syms := a.Symbols()
+	if v, ok := syms["MAIN"]; !ok || !v.Entry {
+		t.Errorf("MAIN.Entry = (%v, %v), want (true, true)", v.Entry, ok)
+	}
+	if v, ok := syms["OTHER"]; !ok || v.Entry {
+		t.Errorf("OTHER.Entry = (%v, %v), want (false, true)", v.Entry, ok)
 	}
 }
 
@@ -224,7 +246,7 @@ func TestSetS0Origin(t *testing.T) {
 	if _, err := a.Assemble(".REGION SYSTEM\nX:\t.BLKL\t1\n"); err != nil {
 		t.Fatalf("Assemble: %v", err)
 	}
-	if v, ok := a.Symbols()["X"]; !ok || v != newBase {
-		t.Errorf("X = (%#x, %v), want (%#x, true)", v, ok, newBase)
+	if v, ok := a.Symbols()["X"]; !ok || v.Value != newBase {
+		t.Errorf("X = (%#x, %v), want (%#x, true)", v.Value, ok, newBase)
 	}
 }

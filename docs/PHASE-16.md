@@ -131,7 +131,10 @@ fields exist); the gap is purely a missing `show.go` function + grammar binding.
   (dump *everything*), ignoring the `symbol` parameter entirely — so `SHOW SYMBOL FOO`
   today prints the whole table instead of just `FOO`. Worth a real single-symbol
   lookup path (`Console.Symbols` already supports point lookups), reusing
-  `ShowSymbols`'s existing kind-label logic for the attribute string.
+  `ShowSymbols`'s existing kind-label logic for the attribute string. **Update
+  2026-09-16:** the single-symbol lookup path (`Console.ShowSymbol`) and the "entry"
+  attribute both now exist — see `docs/PHASE-11.md`'s 2026-09-16 entry.
+  "perm"/"label"/"local"/"string" remain unimplemented.
 - **`SHOW SYMBOL/SYSTEM`** (id `151`) — `Console.Symbols` already distinguishes
   `SymbolSystem` from `SymbolUser` (`show.go`'s existing `ShowSymbols` kind logic) —
   just needs a filtered variant and a grammar binding for the `/SYSTEM` qualifier.

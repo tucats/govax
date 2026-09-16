@@ -151,3 +151,52 @@ commands and used generally for operand encoding — this unlocks assembling
   decimal.
 - `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), `go test
   ./...` all clean. `go test ./internal/asm/... -cover`: 76.7%.
+
+### 2026-09-16 — `.ENTRY` symbols merged into `Console.Symbols`; disassembler recognizes entry masks
+
+- Reported by the user: assembling `testdata/asm/hello.asm` and disassembling
+  the code at `main` didn't show its register-save mask word (`.entry main,
+  ^m<>`, `hello.asm:1`) as a `.ENTRY` mask the way the C reference tool does
+  — and `main` had no visible "entry" attribute in `SHOW SYMBOLS` either.
+  Root cause was two separate gaps, both now fixed:
+  1. `Assembler.Symbols()` (`internal/asm/symbol.go`) returned a bare
+     `map[string]uint32`, discarding each symbol's `SymFlag` bits — so the
+     `SymEntry` flag `pseudoEntry` (`pseudo.go`) correctly sets was lost at
+     this API boundary before `Console.Assemble` (`internal/console/asm.go`)
+     ever saw it. `Symbols()` now returns `map[string]SymbolInfo` (`{Value
+     uint32; Entry bool}`); `Console.Assemble`'s merge loop calls the
+     console's new `SymbolTable.SetEntry` instead of `Set` when `Entry` is
+     true.
+  2. `internal/console`'s `SymbolKind` (`symbols.go`) only ever distinguished
+     user/system — the general "attribute set" gap `docs/PHASE-16.md`
+     sub-phase 1c already flagged for `SHOW SYMBOL`. Added a standalone
+     `Symbol.IsEntry bool` (independent of `Kind`, since an entry point can
+     be either a user or a system symbol) plus `SymbolTable.EntryAt(addr)`,
+     a linear reverse lookup matching `decode_opcode.c`'s own `SYM_ENTRY`-by-
+     PC scan. `ShowSymbols`/`ShowSymbol` (`show.go`) now append an ", entry"
+     tag to the existing kind label when set — this resolves the "entry"
+     part of sub-phase 1c's deferred attribute list; "perm"/"label"/"local"/
+     "string" remain unimplemented, as that document still notes.
+  3. `internal/asm`'s `Disassemble` (`disasm.go`) never consulted a symbol
+     table at all — a narrower gap than the "symbolic operand formatting is
+     a display nicety, left to the caller" scope cut its own doc comment
+     describes: misdecoding a data word as an opcode is a correctness bug,
+     not a display nicety. Rather than widen `Disassemble`'s own signature
+     (it deliberately stays symbol-table-agnostic, callable on a bare byte
+     stream), the entry-mask check lives in a new `Console.decodeInstruction`
+     (`internal/console/disasm.go`): if `Symbols.EntryAt(pc)` finds a match,
+     the word there is decoded as a mask (`asm.FormatMask`, new — ports
+     `console_disasm.c`'s `format_mask()` byte-for-byte, including its literal
+     "R12"/"R13" for bits 12/13 that this package's own `maskLiteral` parser
+     never actually emits) into a synthetic `.ENTRY name,mask` `Decoded`
+     instead of calling `asm.Disassemble`. Both `Console.Disassemble`
+     (DISASSEMBLE/DIS) and `traceStep` (STEP/TRACE) now go through
+     `decodeInstruction`, matching the C reference's `decode_opcode.c`, where
+     the same combined execute/disassemble entry point does this check for
+     both console commands.
+- New tests: `internal/asm/symbol_test.go`'s `TestSymbolsEntryFlag`;
+  `internal/console/disasm_test.go`'s `TestDisassemble_entryMask`;
+  `internal/console/asm_test.go`'s `TestAssemble_helloEntrySymbolAndMask`
+  (end-to-end against the actual fixture the user reported this against).
+- `go build ./...`, `go vet ./...`, `golangci-lint run` (only pre-existing,
+  unrelated findings elsewhere in the tree), `go test ./...` all clean.

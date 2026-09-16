@@ -45,7 +45,7 @@ func (c *Console) Disassemble(start, end uint32) error {
 
 	r := memByteReader{c: c}
 	for pc := start; pc <= end; {
-		dec, err := asm.Disassemble(r, pc)
+		dec, err := c.decodeInstruction(r, pc)
 		if err != nil {
 			return vmserrors.Wrap(vmserrors.CLI_DISASM, err, pc)
 		}
@@ -55,4 +55,26 @@ func (c *Console) Disassemble(start, end uint32) error {
 	}
 
 	return nil
+}
+
+// decodeInstruction wraps asm.Disassemble with entry-mask detection: if pc
+// is a symbol's .ENTRY address (Console.Symbols' IsEntry, merged from
+// internal/asm's own SymEntry flag — see asm.go's Assemble), the word there
+// is a register-save mask, not an instruction, and is decoded as one —
+// matching decode_opcode.c's combined execute/disassemble entry point,
+// which scans the symbol table by PC for exactly this reason. Without this,
+// a mask word like hello.asm's ".entry main, ^m<>" either misdecodes as a
+// bogus opcode or, worse, as some unrelated real instruction.
+func (c *Console) decodeInstruction(r asm.ByteReader, pc uint32) (asm.Decoded, error) {
+	if name, ok := c.Symbols.EntryAt(pc); ok {
+		mask := uint16(r.ByteAt(pc)) | uint16(r.ByteAt(pc+1))<<8
+
+		return asm.Decoded{
+			Mnemonic: ".ENTRY",
+			Operands: []string{name, asm.FormatMask(mask)},
+			Length:   2,
+		}, nil
+	}
+
+	return asm.Disassemble(r, pc)
 }
