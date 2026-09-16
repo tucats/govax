@@ -68,6 +68,17 @@ type Console struct {
 
 	VMInitValid bool // set by VMINIT (vminit.go); cleared by INIT/ZERO
 
+	// Regions holds the P0/P1/S0 region bookkeeping VMInit computes (index
+	// 0/1/2, matching vax.h's own struct VMREGION array) — kept around
+	// purely so a later SHOW MEMORY can display it, matching that struct's
+	// own doc comment ("stored in the virtual machine so a SHOW VM command
+	// can display them"). Not to be confused with RTL's own RegionSize
+	// (rtl.Environment.RegionSize): that's SYS$EXPREG/image-activation
+	// high-water-mark bookkeeping for SHOW REGIONS, an unrelated concept
+	// that happens to share a name in the C source (see ShowRegions' own
+	// doc comment in show.go).
+	Regions [3]vmRegion
+
 	// Devices/Logicals are Phase 09's device-abstraction/logical-name-table
 	// state (internal/io) — separate from the vax_init-gated machine state
 	// above, matching the C source's own devices/tables globals, which

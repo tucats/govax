@@ -172,7 +172,9 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 	}
 
 	if !pte.Valid() {
-		return 0, translationNotValid(addr)
+		if !m.validatePage(pteAddr, &pte) {
+			return 0, translationNotValid(addr)
+		}
 	}
 
 	if access == AccessWrite && !pte.Modified() {
@@ -183,6 +185,41 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 	}
 
 	return pte.PFN()<<9 + byteOffset, nil
+}
+
+// validatePage is the Go equivalent of vm.c's validate_page: called when
+// Translate finds an in-range, protection-permitted but invalid PTE, it
+// claims a free physical page (AllocatePage) and writes the now-valid PTE
+// back to pteAddr, matching the DYNVM demand-paging path every region
+// (P0, P1, and — should a caller ever invalidate an S0 PTE — S0 too) now
+// takes unconditionally, DYNVM having become this port's only supported
+// mode per docs/PHASE-*.md rather than a build-time #ifdef.
+//
+// Reports false (leaving pte untouched, so the caller faults TNV exactly as
+// it did before demand-paging existed) if no VMINIT has run yet or physical
+// memory is exhausted, matching validate_page's own !VMVALID and
+// page_map-search-exhausted early-outs — the *pte, addr signature it built
+// on top of (an already-loaded copy of the PTE and the store_memory call
+// that publishes it) needs no MAPEN save/restore dance here, since
+// writePhysLongword already bypasses translation entirely.
+func (m *Memory) validatePage(pteAddr uint32, pte *PTE) bool {
+	if !m.vmValid {
+		return false
+	}
+
+	pfn, ok := m.AllocatePage()
+	if !ok {
+		return false
+	}
+
+	pte.SetValid(true)
+	pte.SetPFN(pfn)
+
+	if err := m.writePhysLongword(pteAddr, uint32(*pte)); err != nil {
+		return false
+	}
+
+	return true
 }
 
 // LookupPTE walks the page table for a virtual address the same way

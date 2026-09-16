@@ -174,7 +174,13 @@ func TestShowString(t *testing.T) {
 	}
 }
 
-func TestShowPage(t *testing.T) {
+// TestShowPage_beforeFirstTouch covers this port's DYNVM demand paging
+// (internal/vm.Memory.AllocatePage, wired into Translate): a freshly
+// VMINIT'd P0 page has no physical page assigned yet, matching
+// console_vminit.c's own `#ifdef DYNVM` PTE-creation branch, so SHOW
+// PAGE's read-only tracevm-style report (LookupPTE never demand-pages)
+// shows it invalid until something actually accesses it.
+func TestShowPage_beforeFirstTouch(t *testing.T) {
 	d, _, buf := newShowRunnableDispatcher(t)
 
 	if err := d.Dispatch("SHOW PAGE 200"); err != nil {
@@ -182,8 +188,31 @@ func TestShowPage(t *testing.T) {
 	}
 
 	out := buf.String()
+	if !strings.Contains(out, "VALID: 0") {
+		t.Errorf("output = %q, want an invalid, not-yet-demand-paged PTE", out)
+	}
+
+	if !strings.Contains(out, "Region:            00") {
+		t.Errorf("output = %q, want region 00 (P0) for address 0x200", out)
+	}
+}
+
+func TestShowPage(t *testing.T) {
+	d, c, buf := newShowRunnableDispatcher(t)
+
+	// Touch the page first, so Translate's demand paging assigns it a real
+	// physical page before SHOW PAGE reports on it.
+	if err := c.Mem.StoreLongword(c.CPU, 0x200, 0); err != nil {
+		t.Fatalf("StoreLongword through P0: %v", err)
+	}
+
+	if err := d.Dispatch("SHOW PAGE 200"); err != nil {
+		t.Fatalf("Dispatch: %v", err)
+	}
+
+	out := buf.String()
 	if !strings.Contains(out, "VALID: 1") {
-		t.Errorf("output = %q, want a valid PTE for a freshly VMINIT'd P0 page", out)
+		t.Errorf("output = %q, want a valid PTE for a demand-paged P0 page", out)
 	}
 
 	if !strings.Contains(out, "Region:            00") {

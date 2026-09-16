@@ -57,14 +57,63 @@ func (c *Console) ShowPSL() error {
 	return nil
 }
 
-// ShowMemory prints the size of physical memory, matching SHOW MEMORY.
+// ShowMemory prints physical memory size and, once VMINIT has established
+// page tables, per-region P0/P1/S0 accounting, matching show_regions()
+// (console_show.c) — the function that actually backs the plain SHOW
+// MEMORY case (console_show.c's own case 138), not to be confused with
+// this port's own ShowRegions (SHOW REGIONS, an unrelated C function that
+// happens to share the "regions" name — see that function's own doc
+// comment). SHOW MEMORY's other two forms, /PRINT (printmem) and /DUMP
+// (decc_dump_memory, gated on a microkernel being loaded), aren't ported —
+// see docs/PHASE-16.md sub-phase 1a.
 func (c *Console) ShowMemory() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
 
 	size := c.Mem.Size()
-	c.Printf("Physical memory: %08X bytes (%d pages)\n", size, size/512)
+	pages := size / 512
+
+	c.Printf("\n    Physical Memory\n        %08X (%d decimal) pages\n        Addresses  00000000 - %08X\n\n",
+		pages, pages, size-1)
+
+	state := "DISABLED"
+	if c.CPU.PR(vax.MAPEN) != 0 {
+		state = "ENABLED"
+	}
+
+	c.Printf("    Virtual Memory (currently %s)\n", state)
+
+	// If VMINIT has never been issued, this port has no console-specific
+	// knowledge of the memory layout, so it can't report on it — matching
+	// console_show.c's own !vax.vm_initialized/!VMVALID gate. VAX software
+	// may well have set up VM status of its own, but the console doesn't
+	// know about it either way.
+	if !c.VMInitValid {
+		c.Printf("        Virtual memory configuration is unknown.\n")
+		return nil
+	}
+
+	mapped := c.Mem.MappedPages()
+	c.Printf("    There are %d physical pages mapped, %d free.\n\n", mapped, int(pages)-mapped)
+
+	bases := [3]uint32{c.CPU.PR(vax.P0BR), c.CPU.PR(vax.P1BR), c.CPU.PR(vax.SBR)}
+	lens := [3]uint32{c.CPU.PR(vax.P0LR), c.CPU.PR(vax.P1LR), c.CPU.PR(vax.SLR)}
+
+	for n, r := range c.Regions {
+		plural := "s"
+		if r.pteCount == 1 {
+			plural = " "
+		}
+
+		c.Printf("        %s Region\n            Region size = %08X (%5d decimal) pages\n            PFN database = %d page%s",
+			r.name, r.size, r.size, r.pteCount, plural)
+
+		c.Printf("  %sBR = %08X    %sLR = %08X\n", r.name, bases[n], r.name, lens[n])
+
+		c.Printf("            Physical addresses = %08X-%08X\n            Virtual addresses  = %08X-%08X\n\n",
+			r.pStart, r.pEnd-1, r.vStart, r.vEnd-1)
+	}
 
 	return nil
 }
@@ -542,7 +591,7 @@ func (c *Console) ShowPage(addrExpr string, write bool) error {
 	c.Printf("    PTE Address:       %08X\n", pteAddr)
 	c.Printf("    PTE Longword:      %08X\n", uint32(pte))
 	c.Printf("        VALID: %s\n", boolToDigit(pte.Valid()))
-	c.Printf("        PROT:  %02X (PTE$K_%s)\n", pte.Protection(), pte.Protection())
+	c.Printf("        PROT:  %02X (PTE$K_%s)\n", uint8(pte.Protection()), pte.Protection())
 	c.Printf("        M:     %s\n", boolToDigit(pte.Modified()))
 	c.Printf("        OWNER: %X\n", pte.Owner())
 	c.Printf("        S:     %X\n", pte.Software())

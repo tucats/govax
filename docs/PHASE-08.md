@@ -538,3 +538,46 @@ SHOW, and friends — plus the DCL grammar-driven command parser, and stand up
 - Full-repo `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
   `go test ./...` all clean; `go test ./internal/console/...` and
   `./cmd/govax/...` both pass with stdin explicitly closed. Phase complete.
+
+### 2026-09-15 — real DYNVM demand paging (follow-up, prompted by Phase 16's SHOW MEMORY port)
+
+- This phase's close-out note above deferred true DYNVM on-demand paging,
+  reasoning it needed new `internal/vm.Translate` API out of scope for a
+  `console_vminit.c`-only change. Picked back up now, per explicit user
+  direction: "The Go port SHOULD support DYNVM everywhere... this #define
+  was used in the C development... as a switch, but should always be
+  assumed to be true in the Go version" — prompted by porting SHOW MEMORY's
+  `show_regions()` (Phase 16), whose "physical pages mapped" count only
+  means anything under real DYNVM semantics (see `docs/DEVIATIONS.md`'s new
+  entry on the C source's own `mapsize` off-by-one, found and fixed while
+  doing this).
+- `internal/vm.Memory` gained a real physical-page allocator
+  (`AllocatePage`/`ReservePage`/`MappedPages`, `SetVMValid`) — the Go
+  equivalent of `vm.c`'s global `page_map` array, `validate_page`, and
+  `mapped_pages`. `Translate` now demand-pages an invalid, in-range,
+  protection-permitted PTE via this allocator instead of always faulting
+  TNV, matching every one of `vm()`'s three region cases (P0/P1
+  unconditionally, S0 under `#ifdef DYNVM` — now this port's only mode).
+- `VMInit` (`internal/console/vminit.go`) now takes `console_vminit.c`'s
+  `#ifdef DYNVM` branch unconditionally: P0/P1 PTEs are written invalid
+  with no PFN assigned, left for `Translate` to fill in on first touch; S0
+  stays eagerly identity-mapped (the C source's own S0 loop has no DYNVM
+  branch at all), now also reserving each S0 PFN in the new allocator via
+  `ReservePage` so it can never be handed out to a later P0/P1 fault.
+- Also picked up while here, since it directly affects VMINIT's per-region
+  metadata used by SHOW MEMORY: `Console.Regions` (`vminit.go`) records the
+  P0/P1/S0 name/size/PTE-count/virtual-and-physical-address bookkeeping
+  `console_vminit.c` computes inline, the Go equivalent of `vax.h`'s own
+  `struct VMREGION region[3]` array — see Phase 16's own progress log for
+  the SHOW MEMORY display this feeds.
+- Existing tests written against the old eager-pre-map behavior updated
+  accordingly (a P0 page is no longer valid immediately after VMINIT until
+  something touches it) rather than left passing against a behavior that no
+  longer exists: `internal/console/show_test.go`'s `TestShowPage` now
+  writes through the page first; a new `TestShowPage_beforeFirstTouch`
+  documents the pre-touch invalid state directly. New coverage:
+  `internal/vm/memory_test.go` (the allocator itself) and
+  `internal/vm/translate_test.go`'s `TestTranslateDemandPagesInvalidPTE`/
+  `TestTranslateDemandPagingExhausted`.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
+  `go test ./...` all clean.

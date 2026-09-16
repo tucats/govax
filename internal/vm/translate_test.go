@@ -287,6 +287,82 @@ func TestTranslateInvalidPageIsTNV(t *testing.T) {
 	}
 }
 
+// TestTranslateDemandPagesInvalidPTE covers the DYNVM demand-paging path:
+// once SetVMValid(true) has run (VMINIT's own equivalent), Translate no
+// longer faults TNV on an invalid-but-in-range, protection-permitted PTE —
+// it claims a free physical page via AllocatePage and updates the PTE in
+// place, matching vm.c's validate_page as called from its own vm().
+func TestTranslateDemandPagesInvalidPTE(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+	mem.SetVMValid(true)
+
+	pteAddr := uint32(p0PTPhys + 1*4)
+
+	var pte PTE
+	pte.SetValid(false)
+	pte.SetProtection(ProtUW)
+	if err := mem.writePhysLongword(pteAddr, uint32(pte)); err != nil {
+		t.Fatalf("seed PTE: %v", err)
+	}
+
+	vaddr := uint32(1 * pageSize)
+	paddr, err := mem.Translate(cpu, vaddr, AccessRead)
+	if err != nil {
+		t.Fatalf("Translate: want demand paging to succeed, got %v", err)
+	}
+
+	raw, err := mem.readPhysLongword(pteAddr)
+	if err != nil {
+		t.Fatalf("read PTE after demand paging: %v", err)
+	}
+	got := PTE(raw)
+	if !got.Valid() {
+		t.Error("PTE not marked valid after demand paging")
+	}
+	if paddr != got.PFN()<<9 {
+		t.Errorf("Translate returned %#08x, want it to match the newly assigned PFN (%#08x)", paddr, got.PFN()<<9)
+	}
+	if got.PFN() == 0 {
+		t.Error("demand paging assigned physical page 0, want it reserved/unallocatable")
+	}
+}
+
+// TestTranslateDemandPagingExhausted covers AllocatePage returning no free
+// page: Translate must still fault TNV, exactly as it did before demand
+// paging existed, rather than silently returning a bogus translation.
+func TestTranslateDemandPagingExhausted(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+	mem.SetVMValid(true)
+
+	// Claim every physical page this 1MB fixture has, so AllocatePage has
+	// nothing left to hand out.
+	for {
+		if _, ok := mem.AllocatePage(); !ok {
+			break
+		}
+	}
+
+	pteAddr := uint32(p0PTPhys + 1*4)
+
+	var pte PTE
+	pte.SetValid(false)
+	pte.SetProtection(ProtUW)
+	if err := mem.writePhysLongword(pteAddr, uint32(pte)); err != nil {
+		t.Fatalf("seed PTE: %v", err)
+	}
+
+	vaddr := uint32(1 * pageSize)
+	_, err := mem.Translate(cpu, vaddr, AccessRead)
+
+	var tf *TranslationFault
+	if !errors.As(err, &tf) {
+		t.Fatalf("Translate error = %v (%T), want *TranslationFault", err, err)
+	}
+	if tf.Kind != TranslationNotValid {
+		t.Errorf("Kind = %v, want TranslationNotValid", tf.Kind)
+	}
+}
+
 func TestTranslateSetsModifyBitOnFirstWrite(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 

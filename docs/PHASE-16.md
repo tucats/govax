@@ -109,7 +109,9 @@ fields exist); the gap is purely a missing `show.go` function + grammar binding.
   `console_show.c:1029`) — prints P0/P1/S0 image-activation region limits via
   `get_region_size`. **Do not confuse with** the C helper function also named
   `show_regions()` (`console_show.c:1324`, a different routine used internally by
-  `SHOW MEMORY`, DCL id `138` — see 1b below) — same name, two unrelated dumps, a
+  `SHOW MEMORY`, DCL id `138` — **done, see the 2026-09-15 SHOW MEMORY progress log
+  entry below**; this note originally said "see 1b below", but 1b never actually
+  covered it) — same name, two unrelated dumps, a
   real gotcha when cross-referencing the C source. This one is straightforward:
   Phase 13 already added `Console.RTL.RegionSize` (used by `image.go`'s loader), so
   the data this command needs already exists.
@@ -666,3 +668,41 @@ records what actually shipped, not a re-scope of the plan above.
   the one call `vax.init` actually makes. `SET NOVERBOSE` (the conditioned command in
   `vax.init`'s own IF line) remains unimplemented — left for Sub-phase 3, unchanged
   by this entry.
+
+### 2026-09-15 — SHOW MEMORY ported to the real `show_regions()`
+
+- `ShowMemory` (`show.go`) previously printed only physical memory size — a
+  placeholder, not a port of anything in `console_show.c`. Replaced with a real port
+  of `show_regions()` (`console_show.c:1324`, the function that actually backs SHOW
+  MEMORY's plain case — see the corrected cross-reference note under Sub-phase 1's
+  `SHOW REGIONS` entry above, which had pointed at the wrong section): physical
+  memory size/address range, MAPEN-enabled state, "virtual memory configuration is
+  unknown" before VMINIT, and — once VMINIT has run — a mapped/free physical-page
+  count plus per-region (P0/P1/S0) size/PTE-count/physical-and-virtual-address
+  reporting.
+- Doing this properly required real physical-page accounting, which this port didn't
+  have: the C source's "physical pages mapped" figure only means anything under real
+  DYNVM demand-paging semantics (`vm.c`'s `page_map`/`validate_page`/
+  `mapped_pages`), not the eager pre-mapping `VMInit` used as a stand-in since Phase
+  08. Per user direction, picked that up as part of this same change rather than
+  reporting a number that would always just equal every requested page — see Phase
+  08's own 2026-09-15 follow-up progress-log entry and `docs/DEVIATIONS.md`'s new
+  entry (the C source's own `mapsize` off-by-one, found and deliberately not
+  replicated) for the full detail; `internal/vm.Memory` gained `AllocatePage`/
+  `ReservePage`/`MappedPages`/`SetVMValid`, and `Translate` now demand-pages an
+  invalid P0/P1 (or S0) PTE instead of always faulting TNV.
+- `Console.Regions` (`vminit.go`) is new: the Go equivalent of `vax.h`'s `struct
+  VMREGION region[3]`, populated by `VMInit` at the same points `console_vminit.c`
+  computes each field, and read back by `ShowMemory`.
+- Found and fixed in passing, unrelated to the above: `ShowPage`'s `PROT: %02X`
+  format on `pte.Protection()` — a type with a `String()` method — triggered Go's
+  "format a Stringer's `String()` result, not its numeric value, for `%x`/`%X`" rule,
+  printing the hex of the ASCII text "ALL" (`414C4C`) instead of the small numeric
+  protection code. A plain Go formatting-verb mistake, not a C-fidelity question, so
+  fixed directly rather than logged to `DEVIATIONS.md`.
+- Tests written against the old eager-pre-map assumption updated to match real
+  demand paging (a P0 page is invalid until first touched) rather than left passing
+  against behavior that no longer exists — see Phase 08's follow-up entry for the
+  full list. New: `internal/console/set_test.go`'s `TestShowMemory_afterVMInit`.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and `go test ./...`
+  all clean.

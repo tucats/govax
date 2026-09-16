@@ -33,6 +33,42 @@ _None yet._
 
 ## Resolved findings
 
+### [Phase 08/16] `validate_page`'s free-page search (and `mapped_pages`'s count) run one slot past the last real physical page
+
+- **Where**: `reference/eVAX/eVAX/Source/Initialization/initialization.c`'s
+  `alloc_vax` (~line 390): `mapsize = ( physmem >> 9 ) + 1;` — one more than
+  the actual number of physical pages (`physmem >> 9`). `vm.c`'s
+  `validate_page` (~line 1069, `for( n = 1; n < mapsize; n++ )`) and
+  `mapped_pages` (~line 1106, the same loop bound) both search/count up to
+  and including index `mapsize - 1`, i.e. `physmem >> 9` — a page index one
+  past the highest real physical page (valid PFNs are `0 .. (physmem>>9)-1`).
+- **What**: once every real physical page is claimed, `validate_page`'s
+  search can still find `page_map[ physmem>>9 ] == 0` (an array slot that
+  exists — `getmem(mapsize)` allocated the extra byte — but corresponds to
+  no real page of RAM) and hand it out as a PFN. Downstream, `PTE.pfn <<
+  9` for that PFN addresses one page past the end of `vax.memory[]`, an
+  out-of-bounds access on every subsequent read/write through that page.
+  This is exactly the kind of off-by-one the project's bug-fixing policy
+  treats as a plain, ISA-unrelated slip (a `+1` that belongs on neither
+  side of the loop bound it pairs with), not a hardware-definition choice —
+  nothing in the VAX architecture calls for a "reserved, past-the-end"
+  physical page here, and reproducing it in the Go port would have meant
+  deliberately building a memory model that can be told to touch bytes
+  beyond its own backing array.
+- **Status**: fixed in Go, immediately, while porting `validate_page`/
+  `mapped_pages`/`page_map` as part of adding real DYNVM demand-paging
+  support (per user direction 2026-09-15: this port should treat DYNVM as
+  its normal, only mode rather than the eager pre-mapping stand-in Phase 08
+  originally used — see `internal/console/vminit.go`'s own updated doc
+  comment). `internal/vm.Memory`'s `pageMap` is sized to exactly
+  `Size()/pageSize` physical pages (no extra slot), and `AllocatePage`'s
+  search — like `MappedPages`'s count — is bounded by `len(m.pageMap)`, so
+  neither can ever produce a PFN outside real physical memory. Verified by
+  `internal/vm/memory_test.go`'s `TestAllocatePage_exhausted` (a
+  2-page Memory correctly reports exhaustion after its one allocatable page
+  is claimed, rather than handing out a third, out-of-range page) and
+  `TestMappedPages_countsReservedAndAllocatedButNotPageZero`.
+
 ### [Phase 14] `emulChmx` (this port's own CHMK/CHME/CHMS/CHMU handler) never updates `e.instructionPC`, so its handler's return address is the CHMx instruction's own start, not the instruction after it
 
 - **Where**: `internal/cpu/changemode.go`'s `emulChmx`, as it stood before this

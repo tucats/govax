@@ -8,6 +8,22 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
+// vmRegion is one entry of Console.Regions, matching vax.h's own struct
+// VMREGION (name/pte_count/size/v_start/v_end/p_start/p_end) — see that
+// field's own doc comment. PStart/PEnd describe where VMInit's own PFN
+// counter had reached when the region's page table was written, exactly as
+// console_vminit.c's own "page" variable does — for P0/P1, whose pages are
+// now demand-paged (see below) rather than pre-mapped to that counter, this
+// remains purely descriptive bookkeeping carried over unchanged from the
+// C source's own (pre-DYNVM-support) display, not a claim that a page at
+// that physical address is actually resident yet.
+type vmRegion struct {
+	name           string
+	size, pteCount uint32
+	vStart, vEnd   uint32
+	pStart, pEnd   uint32
+}
+
 // maxP1 and spP1 match console_vminit.c's MAX_P1/SP_P1 constants: the top
 // of the 1GB P1 virtual address region, and the fixed initial user stack
 // pointer within it.
@@ -22,14 +38,16 @@ const (
 
 // VMInit implements the VMINIT command: builds P0/P1/S0 page tables and
 // turns on virtual memory, matching console_vminit.c's console_vminit_dcl
-// — using its `#ifndef DYNVM` code path (every page pre-mapped valid up
-// front) rather than the `#ifdef DYNVM` demand-paging path the C source's
-// default build actually uses (`vax.h` defines `DYNVM`) — see
-// docs/PHASE-08.md's progress log for why: DYNVM's on-first-touch page
-// allocation needs Phase 02's internal/vm.Translate itself to gain new
-// state/API for an invalid PTE to trigger it, which is out of this file's
-// scope (console_vminit.c only); pre-mapping every requested page is a
-// real, C-source-supported behavior mode, not a fabricated one.
+// — taking its `#ifdef DYNVM` demand-paging branch unconditionally (the
+// build the C source actually ships, `vax.h` always defining DYNVM), rather
+// than a prior version of this file's own `#ifndef DYNVM` eager-mapping
+// substitute (docs/PHASE-08.md's progress log has the original rationale
+// for that stand-in, which no longer applies now that internal/vm.Memory
+// has a real free-page allocator — see AllocatePage/ReservePage/
+// MappedPages and translate.go's Translate). S0 is still always eagerly
+// mapped, matching the C source's S0 PTE loop having no #ifdef DYNVM branch
+// of its own; only P0 and P1 pages start invalid and get demand-paged in on
+// first touch.
 //
 // Also not ported, as pure conveniences with no other consumer yet:
 // CONSOLE$STRINGPOOL* (serves the inline mini-assembler, Phase 11's scope)
@@ -41,7 +59,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	if err := c.requireInit(); err != nil {
 		return err
 	}
-	
+
 	if err := c.requireKernelMode(); err != nil {
 		return err
 	}
@@ -51,7 +69,13 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	size := [3]uint32{p0Pages, p1Pages, s0Pages}
 	explicitTotal := size[0] + size[1] + size[2]
 
-	// NOPE, these are virtual pages and this will never be an error...
+	// Under DYNVM (this port's only supported mode -- see this function's
+	// own doc comment), P0/P1 are virtual page counts backed by demand
+	// paging, not a pre-mapped allocation, so requesting more of them than
+	// exist in physical memory is not by itself an error -- matching
+	// console_vminit_dcl's own `#ifndef DYNVM` guard around this same
+	// check (i.e. it's skipped whenever DYNVM is the active build, which is
+	// unconditionally the case here).
 	if false && (explicitTotal > physPages) {
 		return vmserrors.New(vmserrors.CLI_VMTOOLARGE)
 	}
@@ -109,7 +133,10 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	paddr := uint32(0)
 	page = 0
 
-	// S0 system region: identity-style page table starting at physical 0.
+	// S0 system region: identity-style page table starting at physical 0,
+	// always eagerly mapped regardless of DYNVM (see the C source's own S0
+	// PTE-creation loop, which has no #ifdef DYNVM branch at all — only
+	// P0/P1 below start out demand-paged).
 	c.CPU.SetPR(vax.SBR, 0)
 	c.CPU.SetPR(vax.SLR, size[2])
 
@@ -119,6 +146,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		pte.SetValid(true)
 		pte.SetProtection(vm.ProtURKW)
 		pte.SetPFN(page)
+		c.Mem.ReservePage(page)
 		page++
 
 		if err := c.Mem.StoreLongword(c.CPU, paddr, uint32(pte)); err != nil {
@@ -128,23 +156,34 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		paddr += 4
 	}
 
-	// P0 region: grows up from virtual address 0.
+	c.Regions[2] = vmRegion{
+		name: "S0", size: size[2], pteCount: (size[2]*4)/512 + 1,
+		vStart: 0x80000000, vEnd: 0x80000000 + size[2]<<9,
+		pStart: 0, pEnd: size[2] << 9,
+	}
+
+	// P0 region: grows up from virtual address 0. PTEs start out invalid
+	// (no physical page assigned) and are demand-paged on first touch by
+	// internal/vm.Memory.Translate/AllocatePage — this port's only supported
+	// mode now, matching console_vminit.c's own #ifdef DYNVM branch (see
+	// docs/DEVIATIONS.md on why the non-DYNVM eager-mapping branch this
+	// file used to take is no longer replicated).
 	paddr = roundUpPage(paddr)
 	p0br := paddr
-	
+	p0PStart := page
+
 	c.CPU.SetPR(vax.P0LR, size[0])
 
 	for i := uint32(0); i < size[0]; i++ {
 		var pte vm.PTE
 
-		pte.SetValid(true)
 		pte.SetProtection(vm.ProtUW)
-		pte.SetPFN(page)
-		page++
 
 		if i == 0 {
 			pte.SetProtection(vm.ProtNA) // guard the bottom-most page
 		}
+
+		page++
 
 		if err := c.Mem.StoreLongword(c.CPU, paddr, uint32(pte)); err != nil {
 			return err
@@ -155,18 +194,26 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 
 	c.CPU.SetPR(vax.P0BR, p0br+0x80000000)
 
-	// P1 region: grows down towards virtual address maxP1.
+	c.Regions[0] = vmRegion{
+		name: "P0", size: size[0], pteCount: (size[0]*4)/512 + 1,
+		vStart: 0, vEnd: size[0] << 9,
+		pStart: p0PStart << 9, pEnd: (p0PStart + size[0]) << 9,
+	}
+
+	// P1 region: grows down towards virtual address maxP1. Demand-paged on
+	// first touch, same as P0 above.
 	paddr = roundUpPage(paddr)
 	p1lr := uint32(p1TotalSlots) - size[1]
+	p1Base := maxP1 - size[1]*512
+	p1PStart := page
+
 	c.CPU.SetPR(vax.P1LR, p1lr)
 	c.CPU.SetPR(vax.P1BR, (paddr+0x80000000)-p1lr*4)
 
 	for i := uint32(0); i < size[1]; i++ {
 		var pte vm.PTE
 
-		pte.SetValid(true)
 		pte.SetProtection(vm.ProtUW)
-		pte.SetPFN(page)
 		page++
 
 		if err := c.Mem.StoreLongword(c.CPU, paddr, uint32(pte)); err != nil {
@@ -174,6 +221,12 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		}
 
 		paddr += 4
+	}
+
+	c.Regions[1] = vmRegion{
+		name: "P1", size: size[1], pteCount: (size[1]*4)/512 + 1,
+		vStart: p1Base, vEnd: p1Base + size[1]<<9,
+		pStart: p1PStart << 9, pEnd: (p1PStart + size[1]) << 9,
 	}
 
 	// Privileged-mode stacks, allocated in S0 space after the page tables.
@@ -254,7 +307,8 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	c.DepositAddr = 0x200
 	c.CPU.SetPR(vax.MAPEN, 1)
 	c.VMInitValid = true
-	c.asmSession = nil // a fresh address space invalidates any prior ASM session's state
+	c.Mem.SetVMValid(true) // let Translate demand-page invalid P0/P1 PTEs from here on
+	c.asmSession = nil     // a fresh address space invalidates any prior ASM session's state
 
 	return nil
 }

@@ -156,8 +156,35 @@ func TestShowMemory(t *testing.T) {
 	if err := c.ShowMemory(); err != nil {
 		t.Fatalf("ShowMemory: %v", err)
 	}
-	if !strings.Contains(buf.String(), "10000") { // 64K in hex
-		t.Errorf("output = %q, want it to contain the memory size", buf.String())
+	out := buf.String()
+	if !strings.Contains(out, "0000FFFF") { // 64K - 1, the top physical address
+		t.Errorf("output = %q, want it to contain the top physical address", out)
+	}
+	if !strings.Contains(out, "configuration is unknown") {
+		t.Errorf("output = %q, want it to report VM as unconfigured before VMINIT", out)
+	}
+}
+
+func TestShowMemory_afterVMInit(t *testing.T) {
+	c, buf := newTestConsole(t)
+	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2); err != nil {
+		t.Fatalf("VMInit: %v", err)
+	}
+	buf.Reset()
+	if err := c.ShowMemory(); err != nil {
+		t.Fatalf("ShowMemory: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "Virtual Memory (currently ENABLED)") {
+		t.Errorf("output = %q, want MAPEN reported enabled", out)
+	}
+	if !strings.Contains(out, "physical pages mapped") {
+		t.Errorf("output = %q, want a mapped/free page count", out)
+	}
+	for _, name := range []string{"P0 Region", "P1 Region", "S0 Region"} {
+		if !strings.Contains(out, name) {
+			t.Errorf("output = %q, want it to contain %q", out, name)
+		}
 	}
 }
 
