@@ -227,6 +227,7 @@ func (e VMSError) Error() string {
 		}
 
 		b.WriteString(rendered)
+		
 		argIndex++
 		i += markerLen
 	}

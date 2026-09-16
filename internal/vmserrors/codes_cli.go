@@ -165,7 +165,7 @@ const (
 	CLI_BADPTEFIELD     = CLIFacility<<FacilityPosition | cliBadPTEField<<MessagePosition | StatusError
 	CLI_BADQUALPREFIX   = CLIFacility<<FacilityPosition | cliBadQualPrefix<<MessagePosition | StatusError
 
-	// internal/console/dcl
+	// internal/console/dcl.
 	CLI_UNRECOGNIZED          = CLIFacility<<FacilityPosition | cliUnrecognized<<MessagePosition | StatusError
 	CLI_AMBIGUOUS             = CLIFacility<<FacilityPosition | cliAmbiguous<<MessagePosition | StatusError
 	CLI_LINEERR               = CLIFacility<<FacilityPosition | cliLineErr<<MessagePosition | StatusError

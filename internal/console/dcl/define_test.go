@@ -74,7 +74,7 @@ func TestLoadEvaxGrammar(t *testing.T) {
 
 	// Sanity check a keyword-driven redirect resolved during validate().
 	showTypes := g.types["SHOW_TYPES"]
-	
+
 	kw, _, err := showTypes.lookup("MEMORY")
 	if err != nil {
 		t.Fatalf("lookup MEMORY keyword: %v", err)
@@ -98,6 +98,6 @@ func verbNames(g *Grammar) []string {
 	for i, e := range g.verbOrder {
 		names[i] = e.Name
 	}
-	
+
 	return names
 }
