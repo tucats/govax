@@ -230,6 +230,15 @@ func (c *Console) reportStopReason(err error) error {
 	}
 
 	switch {
+	// A RET popping a console-initiated CallEntry frame (Console.Call,
+	// whether or not /STEP) is clean, expected completion, not an error --
+	// matches emul_call.c's own CALL_active/FFFFDEAF handling, which just
+	// restores the console's state and falls through with VAX_OK. No
+	// message is printed here, matching Call's own pre-existing silent
+	// return on this same condition.
+	case errors.Is(err, cpu.ErrConsoleCallReturned):
+		return nil
+
 	case errors.Is(err, cpu.ErrHalted):
 		c.Printf("HALT instruction executed at PC = %08X\n", c.CPU.GPR(vax.PC))
 
