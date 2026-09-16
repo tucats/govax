@@ -1,14 +1,13 @@
 # govax
 
-VAX emulator, written in Go
+A VAX emulator, written in Go
 
 This is a translation (not cross-compile) of the `evax` project on
 [github](https://github.com/tucats/evax), originaly written in C.
-
 The original C code was written entirely by Tom Cole as a hobby
-project starting in the late 90's when `VAX` was still _slight_
-cool, though Compaq was working to replace it with the `Alpha`
-architecture aggressively.
+project starting in the late 90's when `VAX` was still _slightly_
+cool, though Compaq was already working hard to replace it with
+the new hot-ness of the `Alpha` architecture.
 
 This port to Go was intiailly completed entirely by Claude Code
 using the Sonnet 5 model, with direction from the developer. This
@@ -24,7 +23,8 @@ port had the following objectives:
 
 - The conversion also identified basic logic and coding errors
   in the original C code that were corrected on-the-fly during
-  the port to Go.
+  the port to Go, as well as some deviations from the VAX ISA
+  that had never been found in the C code.
 
 - A written-from-scratch support for the `VAX` floating-point
   datatypes (d-float and f-float) which are different from the
@@ -52,6 +52,11 @@ file describes deviations from the machine architecture or ISA
 specifications found and either addressed or left outstanding
 from the port process.
 
+The [docs](docs/) folder also contains multiple documents that
+describe each sequential phase of the port, including adding new
+features and updating the underlying code to strip out some of
+the artifacts from once having run on a MacOS 7 in the 1990's...
+
 ## Current status
 
 The port covers the full stack the original objectives called for: CPU
@@ -66,28 +71,18 @@ regression suite that assembles and runs every `testdata/asm/*.asm`
 program and every real `testdata/exe/*.exe` binary the project ships,
 alongside the ROM/NVRAM save-and-load round trip.
 
-Known gaps, tracked in their own docs rather than silently left unstated:
-
-- **Interrupt delivery.** The interval timer (ICCS/NICR/ICR) and console
-  TTY (TXCS/TXDB/RXCS/RXDB) privileged registers have their bit-level
-  semantics but no actual interrupt admission/delivery behind them yet, so
-  a real VMS-style program that polls a device-ready flag in a loop (as
-  the project's own microkernel, `kernel.asm`, does for console output)
-  will spin rather than complete. See
-  [PHASE-14.md](docs/PHASE-14.md) (not started — a planning placeholder).
-- **A handful of deliberately-kept ISA judgment calls** — places where the
-  VAX architecture manual itself is ambiguous, or where the original
-  author's own C comments flagged something as unresolved — documented
-  with their reasoning in [DEVIATIONS.md](docs/DEVIATIONS.md) rather than
-  guessed at.
-
 ## What's next?
 
-With the assembler, RTL, and image loader all in place, the natural next
-step is Phase 14 (interrupt delivery) — it's what stands between the
-current state and a real microkernel program running to completion rather
-than a bounded, documented stop. Beyond that, this project was never aiming
-to emulate real hardware (disk controllers, network controllers, etc.) or
-boot an unmodified VMS distribution — for that, the excellent
-[simh](https://simh.trailing-edge.com) emulator can actually boot a
-functioning VMS system.
+With the assembler, skelatal RTL, and image loader all in place, the
+natural next steps are:
+
+- flesh out the skeletal RTL support so more actual images could be
+  loaded and run.
+- Work on a version of the assembler that generates .OBJ files
+- Work on a linker that can assemble .OBJ files into an .EXE
+
+Beyond that, this project was never aiming to emulate real hardware
+(disk controllers, network controllers, etc.) or boot an unmodified
+VAX/VMS distribution — for that, the excellent
+[simh](https://simh.trailing-edge.com) emulator can be used today to
+actually boot a functioning VAX/VMS system.
