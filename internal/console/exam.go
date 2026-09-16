@@ -86,21 +86,36 @@ func (c *Console) Examine(reg string, addr uint32, count uint32, sz ExamSize) er
 	return nil
 }
 
-func (c *Console) loadSized(addr uint32, sz ExamSize) (uint32, error) {
-	switch sz {
-	case SizeWord:
-		v, err := c.Mem.LoadWord(c.CPU, addr)
+// loadSized reads through translation forced into kernel mode (see
+// withKernelMode): EXAMINE is console-driven memory access, on real VAX
+// hardware independent of whatever mode the CPU was last running in, so it
+// must not be gated by that program's own PSL (see kernel.asm's own
+// EXE$INITIALIZE, which legitimately drops to user mode and halts there as
+// its normal, designed completion).
+func (c *Console) loadSized(addr uint32, sz ExamSize) (v uint32, err error) {
+	err = c.withKernelMode(func() error {
+		switch sz {
+		case SizeWord:
+			w, err := c.Mem.LoadWord(c.CPU, addr)
+			v = uint32(w)
 
-		return uint32(v), err
+			return err
 
-	case SizeByte, SizeASCII:
-		v, err := c.Mem.LoadByte(c.CPU, addr)
+		case SizeByte, SizeASCII:
+			b, err := c.Mem.LoadByte(c.CPU, addr)
+			v = uint32(b)
 
-		return uint32(v), err
+			return err
 
-	default: // SizeLongword, SizePTE
-		return c.Mem.LoadLongword(c.CPU, addr)
-	}
+		default: // SizeLongword, SizePTE
+			var err error
+			v, err = c.Mem.LoadLongword(c.CPU, addr)
+
+			return err
+		}
+	})
+
+	return v, err
 }
 
 func (c *Console) formatOne(addr uint32, sz ExamSize, v uint32) string {
@@ -164,21 +179,22 @@ func (c *Console) Deposit(reg string, addr uint32, sz ExamSize, value uint32) er
 		return nil
 	}
 
-	switch sz {
-	case SizeWord:
-		if err := c.Mem.StoreWord(c.CPU, addr, uint16(value)); err != nil {
-			return err
-		}
+	// See loadSized's doc comment: DEPOSIT is console-driven memory access
+	// and must not be gated by whatever mode the CPU was last running in.
+	err := c.withKernelMode(func() error {
+		switch sz {
+		case SizeWord:
+			return c.Mem.StoreWord(c.CPU, addr, uint16(value))
 
-	case SizeByte, SizeASCII:
-		if err := c.Mem.StoreByte(c.CPU, addr, byte(value)); err != nil {
-			return err
-		}
+		case SizeByte, SizeASCII:
+			return c.Mem.StoreByte(c.CPU, addr, byte(value))
 
-	default:
-		if err := c.Mem.StoreLongword(c.CPU, addr, value); err != nil {
-			return err
+		default:
+			return c.Mem.StoreLongword(c.CPU, addr, value)
 		}
+	})
+	if err != nil {
+		return err
 	}
 
 	c.DepositAddr = addr + sizeBytes(sz)

@@ -199,6 +199,29 @@ func (c *Console) requireKernelMode() error {
 	return nil
 }
 
+// withKernelMode runs fn with the CPU temporarily forced into kernel mode,
+// restoring whatever mode was active before -- matching RUN's own identical
+// save/force/restore around image loading (run.go's own comment: "must run
+// ... in kernel mode regardless of the mode the console happened to be in").
+// Console-driven memory access (EXAMINE/DEPOSIT, ASM's own code deposit,
+// image loading, SHIM$ stub synthesis) is conceptually the operator's
+// console reaching into memory directly, not an access made by whatever
+// program the CPU was last running -- on real VAX hardware this is
+// privileged/physical console access, independent of the halted program's
+// own PSL. Without this, any of those console operations that touch S0
+// (kernel-write-only) pages fail with a protection violation the moment a
+// program has ever legitimately dropped the CPU to a non-kernel mode and
+// then halted there (see kernel.asm's own EXE$INITIALIZE, which does
+// exactly that as its normal, designed completion).
+func (c *Console) withKernelMode(fn func() error) error {
+	saved := c.CPU.PSL().CurMod()
+	c.Engine.SetModeStack(vax.Kernel, false)
+
+	defer c.Engine.SetModeStack(saved, false)
+
+	return fn()
+}
+
 // Evaluator returns an Evaluator bound to this console's symbol table,
 // radix, and current deposit address.
 func (c *Console) Evaluator() *Evaluator {

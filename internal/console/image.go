@@ -133,22 +133,61 @@ func (c *Console) findMainICB() *ICB {
 	return nil
 }
 
-// storeBytes writes data starting at virtual address addr, through
-// whatever translation is currently in effect (kernel mode, VM on, for
-// every caller in this file).
+// storeBytes writes data starting at virtual address addr, via translation
+// forced into kernel mode for the duration (see withKernelMode) regardless
+// of whatever mode the CPU was last left in -- this is console-driven
+// memory access (image loading, ASM's own code deposit, SHIM$ stub
+// synthesis), not an access made by a running program, so it must not be
+// gated by that program's own PSL.
 func (c *Console) storeBytes(addr uint32, data []byte) error {
-	for i, b := range data {
-		if err := c.Mem.StoreByte(c.CPU, addr+uint32(i), b); err != nil {
-			return err
+	return c.withKernelMode(func() error {
+		for i, b := range data {
+			if err := c.Mem.StoreByte(c.CPU, addr+uint32(i), b); err != nil {
+				return err
+			}
 		}
-	}
-	return nil
+		return nil
+	})
 }
 
-func (c *Console) loadByte(addr uint32) (byte, error)   { return c.Mem.LoadByte(c.CPU, addr) }
-func (c *Console) loadWord(addr uint32) (uint16, error) { return c.Mem.LoadWord(c.CPU, addr) }
-func (c *Console) loadLong(addr uint32) (uint32, error) { return c.Mem.LoadLongword(c.CPU, addr) }
-func (c *Console) storeLong(addr, v uint32) error       { return c.Mem.StoreLongword(c.CPU, addr, v) }
+func (c *Console) loadByte(addr uint32) (byte, error) {
+	var v byte
+
+	err := c.withKernelMode(func() (err error) {
+		v, err = c.Mem.LoadByte(c.CPU, addr)
+		return err
+	})
+
+	return v, err
+}
+
+func (c *Console) loadWord(addr uint32) (uint16, error) {
+	var v uint16
+
+	err := c.withKernelMode(func() (err error) {
+		v, err = c.Mem.LoadWord(c.CPU, addr)
+		return err
+	})
+
+	return v, err
+}
+
+func (c *Console) loadLong(addr uint32) (uint32, error) {
+	var v uint32
+
+	err := c.withKernelMode(func() (err error) {
+		v, err = c.Mem.LoadLongword(c.CPU, addr)
+		return err
+	})
+
+	return v, err
+}
+
+func (c *Console) storeLong(addr, v uint32) error {
+	return c.withKernelMode(func() error {
+		return c.Mem.StoreLongword(c.CPU, addr, v)
+	})
+}
 
 // readIHDTransferOffset/readIHDIdentOffset read the two IHD fields
 // console_run.c's image_load actually consults for control flow
