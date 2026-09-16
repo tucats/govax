@@ -27,10 +27,12 @@ func (m *Memory) LoadByte(cpu *vax.CPU, addr uint32) (byte, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	b, err := m.phys(paddr, 1)
 	if err != nil {
 		return 0, err
 	}
+
 	return b[0], nil
 }
 
@@ -41,11 +43,14 @@ func (m *Memory) StoreByte(cpu *vax.CPU, addr uint32, v byte) error {
 	if err != nil {
 		return err
 	}
+
 	b, err := m.phys(paddr, 1)
 	if err != nil {
 		return err
 	}
+
 	b[0] = v
+
 	return nil
 }
 
@@ -57,8 +62,10 @@ func (m *Memory) Load(cpu *vax.CPU, addr uint32, dest []byte) error {
 		if err != nil {
 			return err
 		}
+
 		dest[i] = b
 	}
+
 	return nil
 }
 
@@ -70,6 +77,7 @@ func (m *Memory) Store(cpu *vax.CPU, addr uint32, src []byte) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -79,29 +87,36 @@ func (m *Memory) LoadWord(cpu *vax.CPU, addr uint32) (uint16, error) {
 	if err := m.Load(cpu, addr, buf[:]); err != nil {
 		return 0, err
 	}
+
 	return binary.LittleEndian.Uint16(buf[:]), nil
 }
 
 // StoreWord writes a 16-bit word at a virtual address.
 func (m *Memory) StoreWord(cpu *vax.CPU, addr uint32, v uint16) error {
 	var buf [2]byte
+
 	binary.LittleEndian.PutUint16(buf[:], v)
+
 	return m.Store(cpu, addr, buf[:])
 }
 
 // LoadLongword reads a 32-bit longword at a virtual address.
 func (m *Memory) LoadLongword(cpu *vax.CPU, addr uint32) (uint32, error) {
 	var buf [4]byte
+
 	if err := m.Load(cpu, addr, buf[:]); err != nil {
 		return 0, err
 	}
+
 	return binary.LittleEndian.Uint32(buf[:]), nil
 }
 
 // StoreLongword writes a 32-bit longword at a virtual address.
 func (m *Memory) StoreLongword(cpu *vax.CPU, addr uint32, v uint32) error {
 	var buf [4]byte
+
 	binary.LittleEndian.PutUint32(buf[:], v)
+
 	return m.Store(cpu, addr, buf[:])
 }
 
@@ -114,16 +129,20 @@ func (m *Memory) StoreLongword(cpu *vax.CPU, addr uint32, v uint32) error {
 // ported — a straight little-endian 8-byte decode is equivalent.
 func (m *Memory) LoadQuadword(cpu *vax.CPU, addr uint32) (uint64, error) {
 	var buf [8]byte
+
 	if err := m.Load(cpu, addr, buf[:]); err != nil {
 		return 0, err
 	}
+
 	return binary.LittleEndian.Uint64(buf[:]), nil
 }
 
 // StoreQuadword writes a 64-bit quadword at a virtual address.
 func (m *Memory) StoreQuadword(cpu *vax.CPU, addr uint32, v uint64) error {
 	var buf [8]byte
+
 	binary.LittleEndian.PutUint64(buf[:], v)
+
 	return m.Store(cpu, addr, buf[:])
 }
 
@@ -137,6 +156,7 @@ func (m *Memory) StoreQuadword(cpu *vax.CPU, addr uint32, v uint64) error {
 // decision, same as in the C source).
 func (m *Memory) LoadRegister(cpu *vax.CPU, reg vax.Reg, addr uint32, count int) error {
 	var buf [4]byte
+
 	if err := m.Load(cpu, addr, buf[:count]); err != nil {
 		return err
 	}
@@ -145,10 +165,13 @@ func (m *Memory) LoadRegister(cpu *vax.CPU, reg vax.Reg, addr uint32, count int)
 	if reg > vax.R15 {
 		v = 0
 	}
+
 	for i := 0; i < count; i++ {
 		shift := uint(i * 8)
 		v = (v &^ (0xFF << shift)) | uint32(buf[i])<<shift
 	}
+
 	cpu.SetGPR(reg, v)
+	
 	return nil
 }

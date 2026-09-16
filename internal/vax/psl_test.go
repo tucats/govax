@@ -12,6 +12,7 @@ func TestPSLConditionCodes(t *testing.T) {
 	}
 
 	p.SetNZVC(false, true, false, true)
+
 	if p.N() || !p.Z() || p.V() || !p.C() {
 		t.Fatalf("SetNZVC(false,true,false,true): N=%v Z=%v V=%v C=%v", p.N(), p.Z(), p.V(), p.C())
 	}
@@ -42,18 +43,23 @@ func TestPSLFieldsDoNotOverlap(t *testing.T) {
 	if !p.N() || !p.Z() || !p.V() || !p.C() {
 		t.Errorf("condition codes lost: N=%v Z=%v V=%v C=%v", p.N(), p.Z(), p.V(), p.C())
 	}
+
 	if !p.T() || !p.IV() || !p.FU() || !p.DV() {
 		t.Errorf("trap enables lost: T=%v IV=%v FU=%v DV=%v", p.T(), p.IV(), p.FU(), p.DV())
 	}
+
 	if p.IPL() != 31 {
 		t.Errorf("IPL() = %d, want 31", p.IPL())
 	}
+
 	if p.CurMod() != Executive {
 		t.Errorf("CurMod() = %d, want %d", p.CurMod(), Executive)
 	}
+
 	if p.PrvMod() != User {
 		t.Errorf("PrvMod() = %d, want %d", p.PrvMod(), User)
 	}
+
 	if !p.IS() || !p.FPD() || !p.TP() || !p.CM() {
 		t.Errorf("privileged flags lost: IS=%v FPD=%v TP=%v CM=%v", p.IS(), p.FPD(), p.TP(), p.CM())
 	}
@@ -61,6 +67,7 @@ func TestPSLFieldsDoNotOverlap(t *testing.T) {
 	// Now clear each field one at a time and confirm nothing else moves.
 	before := p
 	p.SetN(false)
+
 	if p.N() {
 		t.Error("SetN(false) did not clear N")
 	}
@@ -74,6 +81,7 @@ func TestPSLIPLMasksToFiveBits(t *testing.T) {
 	var p PSL
 
 	p.SetIPL(0xFF) // out-of-range input; only the low 5 bits are architected
+
 	if got := p.IPL(); got != 0x1F {
 		t.Errorf("IPL() = %d, want 31 (masked to 5 bits)", got)
 	}
@@ -84,9 +92,11 @@ func TestPSLAccessModesMasksToTwoBits(t *testing.T) {
 	
 	p.SetCurMod(User)
 	p.SetPrvMod(Kernel)
+
 	if p.CurMod() != User {
 		t.Errorf("CurMod() = %d, want %d", p.CurMod(), User)
 	}
+
 	if p.PrvMod() != Kernel {
 		t.Errorf("PrvMod() = %d, want %d", p.PrvMod(), Kernel)
 	}
@@ -95,6 +105,7 @@ func TestPSLAccessModesMasksToTwoBits(t *testing.T) {
 func TestPSLWholeWordRoundTrip(t *testing.T) {
 	c := New()
 	c.SetPSL(0x12345678)
+
 	if got := c.PSL(); got != 0x12345678 {
 		t.Errorf("PSL() = %#x, want %#x", uint32(got), uint32(0x12345678))
 	}
@@ -122,17 +133,21 @@ func TestPSLBitLayoutMatchesArchitectureManual(t *testing.T) {
 		{"TP", pslTP, 30},
 		{"CM", pslCM, 31},
 	}
+	
 	for _, tc := range cases {
 		if tc.mask != 1<<tc.bit {
 			t.Errorf("%s mask = %#x, want bit %d (%#x)", tc.name, tc.mask, tc.bit, uint32(1)<<tc.bit)
 		}
 	}
+
 	if pslIPL != 0x1F<<16 {
 		t.Errorf("IPL mask = %#x, want bits 16-20", pslIPL)
 	}
+
 	if pslPrv != 0x3<<22 {
 		t.Errorf("PRV_MOD mask = %#x, want bits 22-23", pslPrv)
 	}
+
 	if pslCur != 0x3<<24 {
 		t.Errorf("CUR_MOD mask = %#x, want bits 24-25", pslCur)
 	}

@@ -66,5 +66,6 @@ func (c *CPU) DebugWriter() io.Writer {
 	if c.debugOut == nil {
 		return io.Discard
 	}
+	
 	return c.debugOut
 }

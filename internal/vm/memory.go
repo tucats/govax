@@ -69,6 +69,7 @@ func (m *Memory) AllocatePage() (pfn uint32, ok bool) {
 	for n := 1; n < len(m.pageMap); n++ {
 		if !m.pageMap[n] {
 			m.pageMap[n] = true
+
 			return uint32(n), true
 		}
 	}
@@ -110,6 +111,7 @@ func (m *Memory) phys(addr uint32, size uint32) ([]byte, error) {
 	if uint64(addr)+uint64(size) > uint64(len(m.ram)) {
 		return nil, &PhysicalAddressError{Addr: addr}
 	}
+
 	return m.ram[addr : addr+size], nil
 }
 
@@ -122,6 +124,7 @@ func (m *Memory) readPhysLongword(addr uint32) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return binary.LittleEndian.Uint32(b), nil
 }
 
@@ -130,6 +133,8 @@ func (m *Memory) writePhysLongword(addr uint32, v uint32) error {
 	if err != nil {
 		return err
 	}
+
 	binary.LittleEndian.PutUint32(b, v)
+	
 	return nil
 }

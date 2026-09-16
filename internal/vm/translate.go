@@ -133,6 +133,7 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 	}
 
 	pteAddr := pteVirtAddr
+
 	if pteRecursive {
 		var err error
 
@@ -152,10 +153,12 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 	if cpu.DebugEnabled(vax.DebugVM) || cpu.DebugEnabled(vax.DebugTB) {
 		pa := pte.PFN()<<9 + byteOffset
 		w := cpu.DebugWriter()
+
 		if cpu.DebugEnabled(vax.DebugVM) {
 			fmt.Fprintf(w, "DEBUG(VM): VA=%08X  R=%02d PTEA=%08X PTE=%08X P=%02X M=%02X PA=%08X\n",
 				addr, region, pteAddr, uint32(pte), pte.Protection(), access, pa)
 		}
+
 		if cpu.DebugEnabled(vax.DebugTB) {
 			// This port's Translate does an uncached page-table walk with
 			// no separate TB-hit/miss state (see this function's own doc
@@ -179,6 +182,7 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 
 	if access == AccessWrite && !pte.Modified() {
 		pte.SetModified(true)
+
 		if err := m.writePhysLongword(pteAddr, uint32(pte)); err != nil {
 			return 0, err
 		}
@@ -346,6 +350,7 @@ func (m *Memory) StorePTE(cpu *vax.CPU, addr uint32, pte PTE) error {
 	}
 
 	physPTEAddr := pteVirtAddr
+	
 	if pteRecursive {
 		var err error
 

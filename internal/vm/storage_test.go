@@ -21,10 +21,12 @@ func TestByteRoundTrip(t *testing.T) {
 	if err := mem.StoreByte(cpu, 0x100, 0xAB); err != nil {
 		t.Fatalf("StoreByte: %v", err)
 	}
+
 	got, err := mem.LoadByte(cpu, 0x100)
 	if err != nil {
 		t.Fatalf("LoadByte: %v", err)
 	}
+
 	if got != 0xAB {
 		t.Errorf("LoadByte() = %#02x, want 0xAB", got)
 	}
@@ -37,10 +39,12 @@ func TestWordRoundTrip(t *testing.T) {
 	if err := mem.StoreWord(cpu, 0x100, 0xBEEF); err != nil {
 		t.Fatalf("StoreWord: %v", err)
 	}
+
 	got, err := mem.LoadWord(cpu, 0x100)
 	if err != nil {
 		t.Fatalf("LoadWord: %v", err)
 	}
+
 	if got != 0xBEEF {
 		t.Errorf("LoadWord() = %#04x, want 0xBEEF", got)
 	}
@@ -48,6 +52,7 @@ func TestWordRoundTrip(t *testing.T) {
 	// VAX is little-endian: low byte at the low address.
 	lo, _ := mem.LoadByte(cpu, 0x100)
 	hi, _ := mem.LoadByte(cpu, 0x101)
+
 	if lo != 0xEF || hi != 0xBE {
 		t.Errorf("byte order = %02x %02x, want EF BE (little-endian)", lo, hi)
 	}
@@ -60,10 +65,12 @@ func TestLongwordRoundTrip(t *testing.T) {
 	if err := mem.StoreLongword(cpu, 0x100, 0xDEADBEEF); err != nil {
 		t.Fatalf("StoreLongword: %v", err)
 	}
+
 	got, err := mem.LoadLongword(cpu, 0x100)
 	if err != nil {
 		t.Fatalf("LoadLongword: %v", err)
 	}
+
 	if got != 0xDEADBEEF {
 		t.Errorf("LoadLongword() = %#08x, want 0xDEADBEEF", got)
 	}
@@ -77,10 +84,12 @@ func TestQuadwordRoundTrip(t *testing.T) {
 	if err := mem.StoreQuadword(cpu, 0x100, want); err != nil {
 		t.Fatalf("StoreQuadword: %v", err)
 	}
+
 	got, err := mem.LoadQuadword(cpu, 0x100)
 	if err != nil {
 		t.Fatalf("LoadQuadword: %v", err)
 	}
+
 	if got != want {
 		t.Errorf("LoadQuadword() = %#016x, want %#016x", got, want)
 	}
@@ -88,6 +97,7 @@ func TestQuadwordRoundTrip(t *testing.T) {
 	// Two little-endian longwords, low longword at the low address.
 	lo, _ := mem.LoadLongword(cpu, 0x100)
 	hi, _ := mem.LoadLongword(cpu, 0x104)
+
 	if lo != 0x89ABCDEF || hi != 0x01234567 {
 		t.Errorf("longword halves = %#08x %#08x, want 0x89abcdef 0x01234567", lo, hi)
 	}
@@ -104,10 +114,12 @@ func TestLoadStoreThroughTranslation(t *testing.T) {
 	// Verify it actually landed at the translated physical address, not
 	// just readable back through the same virtual address by coincidence.
 	physAddr := uint32(ptBase+1*pageSize) + 0x20
+
 	got, err := mem.readPhysLongword(physAddr)
 	if err != nil {
 		t.Fatalf("readPhysLongword: %v", err)
 	}
+
 	if got != 0x11223344 {
 		t.Errorf("physical memory at %#08x = %#08x, want 0x11223344", physAddr, got)
 	}
@@ -116,6 +128,7 @@ func TestLoadStoreThroughTranslation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadLongword: %v", err)
 	}
+
 	if viaVirt != 0x11223344 {
 		t.Errorf("LoadLongword() = %#08x, want 0x11223344", viaVirt)
 	}
@@ -130,10 +143,14 @@ func TestLoadStoreSpansPageBoundary(t *testing.T) {
 	// genuinely straddling the boundary can only round-trip correctly if
 	// each byte is independently translated.
 	var pte PTE
+
 	pte.SetValid(true)
 	pte.SetProtection(ProtUW)
+
 	const farPhysPage = 0x10000
+
 	pte.SetPFN(farPhysPage >> 9)
+
 	if err := mem.writePhysLongword(p0PTPhys+1*4, uint32(pte)); err != nil {
 		t.Fatalf("seed PTE: %v", err)
 	}
@@ -147,6 +164,7 @@ func TestLoadStoreSpansPageBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadLongword: %v", err)
 	}
+
 	if got != 0xCAFEBABE {
 		t.Errorf("LoadLongword() across page boundary = %#08x, want 0xCAFEBABE", got)
 	}
@@ -158,10 +176,12 @@ func TestLoadStoreSpansPageBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("phys: %v", err)
 	}
+
 	page1Bytes, err := mem.phys(farPhysPage, 2)
 	if err != nil {
 		t.Fatalf("phys: %v", err)
 	}
+
 	if page0Bytes[0] != 0xBE || page0Bytes[1] != 0xBA || page1Bytes[0] != 0xFE || page1Bytes[1] != 0xCA {
 		t.Errorf("split bytes = %02x %02x / %02x %02x, want be ba / fe ca",
 			page0Bytes[0], page0Bytes[1], page1Bytes[0], page1Bytes[1])
@@ -173,6 +193,7 @@ func TestLoadRegisterArchitectedPreservesUpperBytes(t *testing.T) {
 	mem := NewMemory(1 << 12)
 
 	cpu.SetGPR(vax.R2, 0xFFFFFFFF)
+
 	if err := mem.StoreWord(cpu, 0x100, 0xBEEF); err != nil {
 		t.Fatalf("StoreWord: %v", err)
 	}
@@ -180,6 +201,7 @@ func TestLoadRegisterArchitectedPreservesUpperBytes(t *testing.T) {
 	if err := mem.LoadRegister(cpu, vax.R2, 0x100, 2); err != nil {
 		t.Fatalf("LoadRegister: %v", err)
 	}
+
 	if got, want := cpu.GPR(vax.R2), uint32(0xFFFF0000)|0xBEEF; got != want {
 		t.Errorf("R2 = %#08x, want %#08x (upper bytes preserved)", got, want)
 	}
@@ -190,7 +212,9 @@ func TestLoadRegisterScratchZeroesFirst(t *testing.T) {
 	mem := NewMemory(1 << 12)
 
 	const scratch = vax.Reg(20) // > R15, a reusable temporary
+
 	cpu.SetGPR(scratch, 0xFFFFFFFF)
+
 	if err := mem.StoreByte(cpu, 0x100, 0x42); err != nil {
 		t.Fatalf("StoreByte: %v", err)
 	}
@@ -198,6 +222,7 @@ func TestLoadRegisterScratchZeroesFirst(t *testing.T) {
 	if err := mem.LoadRegister(cpu, scratch, 0x100, 1); err != nil {
 		t.Fatalf("LoadRegister: %v", err)
 	}
+
 	if got := cpu.GPR(scratch); got != 0x42 {
 		t.Errorf("scratch register = %#08x, want 0x42 (zero-extended)", got)
 	}
@@ -210,26 +235,31 @@ func TestLoadRegisterFullLongword(t *testing.T) {
 	if err := mem.StoreLongword(cpu, 0x100, 0x12345678); err != nil {
 		t.Fatalf("StoreLongword: %v", err)
 	}
+
 	if err := mem.LoadRegister(cpu, vax.R3, 0x100, 4); err != nil {
 		t.Fatalf("LoadRegister: %v", err)
 	}
+
 	if got := cpu.GPR(vax.R3); got != 0x12345678 {
 		t.Errorf("R3 = %#08x, want 0x12345678", got)
 	}
 }
 
 func TestPhysicalAddressOutOfRange(t *testing.T) {
+	var pe *PhysicalAddressError
+
 	cpu := identityCPU()
 	mem := NewMemory(16)
 
 	_, err := mem.LoadByte(cpu, 100)
-	var pe *PhysicalAddressError
 	if !errors.As(err, &pe) {
 		t.Fatalf("error = %v (%T), want *PhysicalAddressError", err, err)
 	}
+
 	if pe.Addr != 100 {
 		t.Errorf("Addr = %d, want 100", pe.Addr)
 	}
+
 	if pe.Error() == "" {
 		t.Error("Error() returned an empty string")
 	}
@@ -254,18 +284,48 @@ func TestOutOfRangeErrorPropagates(t *testing.T) {
 		name string
 		call func() error
 	}{
-		{"StoreWord", func() error { return mem.StoreWord(cpu, 3, 0xBEEF) }},
-		{"LoadWord", func() error { _, err := mem.LoadWord(cpu, 3); return err }},
-		{"StoreLongword", func() error { return mem.StoreLongword(cpu, 2, 0xDEADBEEF) }},
-		{"LoadLongword", func() error { _, err := mem.LoadLongword(cpu, 2); return err }},
-		{"StoreQuadword", func() error { return mem.StoreQuadword(cpu, 0, 1) }},
-		{"LoadQuadword", func() error { _, err := mem.LoadQuadword(cpu, 0); return err }},
-		{"LoadRegister", func() error { return mem.LoadRegister(cpu, vax.R1, 2, 4) }},
+		{"StoreWord",
+			func() error {
+				return mem.StoreWord(cpu, 3, 0xBEEF)
+			}},
+		{"LoadWord",
+			func() error {
+				_, err := mem.LoadWord(cpu, 3)
+
+				return err
+			}},
+		{"StoreLongword",
+			func() error {
+				return mem.StoreLongword(cpu, 2, 0xDEADBEEF)
+			}},
+		{"LoadLongword",
+			func() error {
+				_, err := mem.LoadLongword(cpu, 2)
+
+				return err
+			}},
+		{"StoreQuadword",
+			func() error {
+				return mem.StoreQuadword(cpu, 0, 1)
+			}},
+		{"LoadQuadword",
+			func() error {
+				_, err := mem.LoadQuadword(cpu, 0)
+
+				return err
+			}},
+		{"LoadRegister",
+			func() error {
+				return mem.LoadRegister(cpu, vax.R1, 2, 4)
+			}},
 	}
+
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			err := c.call()
+
 			var pe *PhysicalAddressError
+
 			if !errors.As(err, &pe) {
 				t.Fatalf("error = %v (%T), want *PhysicalAddressError", err, err)
 			}

@@ -25,7 +25,7 @@ const (
 	pteShiftOwn = 23
 	pteMaskOwn  = 0x3 // bits 23-24
 
-	pteBitZ = 1 << 25 // bit 25, must-be-zero
+	// pteBitZ = 1 << 25 // bit 25, must-be-zero.
 	pteBitM = 1 << 26 // bit 26, modify
 
 	pteShiftProt = 27
@@ -133,12 +133,15 @@ func (pr Protection) allows(mode vax.AccessMode, access AccessType) bool {
 	if code == uint32(ProtUW) {
 		return true
 	}
+
 	if cm < wm {
 		return true
 	}
+
 	if access == AccessRead && cm <= rm {
 		return true
 	}
+
 	return false
 }
 
@@ -166,5 +169,6 @@ func (pr Protection) String() string {
 	if int(pr) < len(protectionNames) {
 		return protectionNames[pr]
 	}
+
 	return "?"
 }

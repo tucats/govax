@@ -40,9 +40,11 @@ func newTranslateFixture(t *testing.T, npages int) (*vax.CPU, *Memory) {
 	cpu.SetPR(vax.SLR, uint32(npages-1))
 
 	var s0pte PTE
+
 	s0pte.SetValid(true)
 	s0pte.SetProtection(ProtUW)
 	s0pte.SetPFN(p0PTPhys >> 9)
+
 	if err := mem.writePhysLongword(sysPTBase+1*4, uint32(s0pte)); err != nil {
 		t.Fatalf("seed S0 PTE: %v", err)
 	}
@@ -52,9 +54,11 @@ func newTranslateFixture(t *testing.T, npages int) (*vax.CPU, *Memory) {
 
 	for i := 0; i < npages; i++ {
 		var pte PTE
+
 		pte.SetValid(true)
 		pte.SetProtection(ProtUW) // wide open, so tests can focus on one thing
 		pte.SetPFN((ptBase >> 9) + uint32(i))
+
 		if err := mem.writePhysLongword(p0PTPhys+uint32(i)*4, uint32(pte)); err != nil {
 			t.Fatalf("seed P0 PTE %d: %v", i, err)
 		}
@@ -71,6 +75,7 @@ func TestTranslateMAPENDisabledIsIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Translate: %v", err)
 	}
+
 	if got != 0xDEADBE00 {
 		t.Errorf("Translate() = %#08x, want identity 0xDEADBE00", got)
 	}
@@ -81,10 +86,12 @@ func TestTranslateP0RoundTrip(t *testing.T) {
 
 	// P0 page 2, virtual address region 0, page 2, byte 0x10.
 	vaddr := uint32(2*pageSize) + 0x10
+
 	got, err := mem.Translate(cpu, vaddr, AccessRead)
 	if err != nil {
 		t.Fatalf("Translate: %v", err)
 	}
+
 	wantPhys := uint32(ptBase+2*pageSize) + 0x10
 	if got != wantPhys {
 		t.Errorf("Translate(%#08x) = %#08x, want %#08x", vaddr, got, wantPhys)
@@ -93,7 +100,9 @@ func TestTranslateP0RoundTrip(t *testing.T) {
 
 func TestTranslateDebugVMAndTBTrace(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
+
 	var buf bytes.Buffer
+
 	cpu.SetDebugWriter(&buf)
 	cpu.SetDebug(vax.DebugVM | vax.DebugTB)
 
@@ -106,6 +115,7 @@ func TestTranslateDebugVMAndTBTrace(t *testing.T) {
 	if !strings.Contains(out, "DEBUG(VM): VA=00000410") {
 		t.Errorf("output = %q, want a DEBUG(VM) line naming VA=00000410", out)
 	}
+
 	if !strings.Contains(out, "DEBUG(TB): VA=00000410") {
 		t.Errorf("output = %q, want a DEBUG(TB) line naming VA=00000410", out)
 	}
@@ -113,7 +123,9 @@ func TestTranslateDebugVMAndTBTrace(t *testing.T) {
 
 func TestTranslateNoDebugTraceWhenFlagsClear(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
+
 	var buf bytes.Buffer
+
 	cpu.SetDebugWriter(&buf)
 	cpu.SetDebug(0)
 
@@ -133,6 +145,7 @@ func TestTranslateP0LengthViolation(t *testing.T) {
 	// Page 4 is beyond P0LR == 3.
 	vaddr := uint32(4 * pageSize)
 	_, err := mem.Translate(cpu, vaddr, AccessRead)
+
 	assertAccessViolation(t, err, vaddr)
 }
 
@@ -140,20 +153,25 @@ func TestLookupPTEP0RoundTrip(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 
 	vaddr := uint32(2*pageSize) + 0x10
+
 	region, pteAddr, pte, err := mem.LookupPTE(cpu, vaddr)
 	if err != nil {
 		t.Fatalf("LookupPTE: %v", err)
 	}
+
 	if region != 0 {
 		t.Errorf("region = %d, want 0 (P0)", region)
 	}
+
 	wantPTEAddr := cpu.PR(vax.P0BR) + 2*4
 	if pteAddr != wantPTEAddr {
 		t.Errorf("pteAddr = %#08x, want %#08x", pteAddr, wantPTEAddr)
 	}
+
 	if !pte.Valid() {
 		t.Error("expected the PTE to be valid")
 	}
+
 	wantPFN := uint32(ptBase>>9) + 2
 	if pte.PFN() != wantPFN {
 		t.Errorf("PFN = %#x, want %#x", pte.PFN(), wantPFN)
@@ -168,12 +186,15 @@ func TestLookupPTEReportsInvalidPageWithoutError(t *testing.T) {
 
 	vaddr := uint32(1 * pageSize)
 	pteAddr := uint32(p0PTPhys) + 1*4 // physical: see newTranslateFixture's layout comment
+
 	raw, err := mem.readPhysLongword(pteAddr)
 	if err != nil {
 		t.Fatalf("readPhysLongword: %v", err)
 	}
+
 	pte := PTE(raw)
 	pte.SetValid(false)
+
 	if err := mem.writePhysLongword(pteAddr, uint32(pte)); err != nil {
 		t.Fatalf("writePhysLongword: %v", err)
 	}
@@ -182,6 +203,7 @@ func TestLookupPTEReportsInvalidPageWithoutError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LookupPTE: %v", err)
 	}
+
 	if got.Valid() {
 		t.Error("expected LookupPTE to report the invalid bit as-is")
 	}
@@ -211,9 +233,11 @@ func TestStorePTEP0RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LookupPTE after StorePTE: %v", err)
 	}
+
 	if got.Protection() != ProtKR {
 		t.Errorf("Protection() = %s, want KR", got.Protection())
 	}
+
 	if got.PFN() != 0x77 {
 		t.Errorf("PFN() = %#x, want 0x77", got.PFN())
 	}
@@ -240,6 +264,7 @@ func TestStorePTES0RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LookupPTE after StorePTE: %v", err)
 	}
+
 	if got.PFN() != 0x55 {
 		t.Errorf("PFN() = %#x, want 0x55", got.PFN())
 	}
@@ -265,7 +290,7 @@ func TestLookupPTEMAPENDisabledFaults(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 	cpu.SetPR(vax.MAPEN, 0)
 
-	_, _, _, err := mem.LookupPTE(cpu, 0x1000)
+	_, _, _, err := mem.LookupPTE(cpu, 0x1000) //nolint:dogsled
 	assertAccessViolation(t, err, 0x1000)
 }
 
@@ -273,7 +298,7 @@ func TestLookupPTELengthViolation(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 
 	vaddr := uint32(4 * pageSize) // beyond P0LR == 3
-	_, _, _, err := mem.LookupPTE(cpu, vaddr)
+	_, _, _, err := mem.LookupPTE(cpu, vaddr) //nolint:dogsled
 	assertAccessViolation(t, err, vaddr)
 }
 
@@ -310,9 +335,11 @@ func TestTranslateProtectionViolation(t *testing.T) {
 	// Narrow P0 page 1's protection to kernel-only, then access it from
 	// user mode.
 	var pte PTE
+
 	pte.SetValid(true)
 	pte.SetProtection(ProtKW)
 	pte.SetPFN(ptBase >> 9)
+
 	if err := mem.writePhysLongword(p0PTPhys+1*4, uint32(pte)); err != nil {
 		t.Fatalf("seed PTE: %v", err)
 	}
@@ -325,12 +352,15 @@ func TestTranslateProtectionViolation(t *testing.T) {
 	_, err := mem.Translate(cpu, vaddr, AccessRead)
 
 	var tf *TranslationFault
+
 	if !errors.As(err, &tf) {
 		t.Fatalf("error = %v (%T), want *TranslationFault", err, err)
 	}
+
 	if tf.Kind != ProtectionViolation {
 		t.Errorf("Kind = %v, want ProtectionViolation (not AccessViolation -- see docs/DEVIATIONS.md's now-resolved length-vs-protection subcode finding)", tf.Kind)
 	}
+
 	if tf.Addr != vaddr {
 		t.Errorf("Addr = %#08x, want %#08x", tf.Addr, vaddr)
 	}
@@ -340,8 +370,10 @@ func TestTranslateInvalidPageIsTNV(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 
 	var pte PTE
+
 	pte.SetValid(false)
 	pte.SetProtection(ProtUW)
+
 	if err := mem.writePhysLongword(p0PTPhys+1*4, uint32(pte)); err != nil {
 		t.Fatalf("seed PTE: %v", err)
 	}
@@ -350,12 +382,15 @@ func TestTranslateInvalidPageIsTNV(t *testing.T) {
 	_, err := mem.Translate(cpu, vaddr, AccessRead)
 
 	var tf *TranslationFault
+
 	if !errors.As(err, &tf) {
 		t.Fatalf("Translate error = %v (%T), want *TranslationFault", err, err)
 	}
+
 	if tf.Kind != TranslationNotValid {
 		t.Errorf("Kind = %v, want TranslationNotValid", tf.Kind)
 	}
+
 	if tf.Addr != vaddr {
 		t.Errorf("Addr = %#08x, want %#08x", tf.Addr, vaddr)
 	}
@@ -373,13 +408,16 @@ func TestTranslateDemandPagesInvalidPTE(t *testing.T) {
 	pteAddr := uint32(p0PTPhys + 1*4)
 
 	var pte PTE
+
 	pte.SetValid(false)
 	pte.SetProtection(ProtUW)
+
 	if err := mem.writePhysLongword(pteAddr, uint32(pte)); err != nil {
 		t.Fatalf("seed PTE: %v", err)
 	}
 
 	vaddr := uint32(1 * pageSize)
+
 	paddr, err := mem.Translate(cpu, vaddr, AccessRead)
 	if err != nil {
 		t.Fatalf("Translate: want demand paging to succeed, got %v", err)
@@ -389,13 +427,16 @@ func TestTranslateDemandPagesInvalidPTE(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read PTE after demand paging: %v", err)
 	}
+
 	got := PTE(raw)
 	if !got.Valid() {
 		t.Error("PTE not marked valid after demand paging")
 	}
+
 	if paddr != got.PFN()<<9 {
 		t.Errorf("Translate returned %#08x, want it to match the newly assigned PFN (%#08x)", paddr, got.PFN()<<9)
 	}
+
 	if got.PFN() == 0 {
 		t.Error("demand paging assigned physical page 0, want it reserved/unallocatable")
 	}
@@ -419,8 +460,10 @@ func TestTranslateDemandPagingExhausted(t *testing.T) {
 	pteAddr := uint32(p0PTPhys + 1*4)
 
 	var pte PTE
+
 	pte.SetValid(false)
 	pte.SetProtection(ProtUW)
+
 	if err := mem.writePhysLongword(pteAddr, uint32(pte)); err != nil {
 		t.Fatalf("seed PTE: %v", err)
 	}
@@ -432,6 +475,7 @@ func TestTranslateDemandPagingExhausted(t *testing.T) {
 	if !errors.As(err, &tf) {
 		t.Fatalf("Translate error = %v (%T), want *TranslationFault", err, err)
 	}
+
 	if tf.Kind != TranslationNotValid {
 		t.Errorf("Kind = %v, want TranslationNotValid", tf.Kind)
 	}
@@ -441,10 +485,12 @@ func TestTranslateSetsModifyBitOnFirstWrite(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 
 	pteAddr := uint32(p0PTPhys + 1*4)
+
 	raw, err := mem.readPhysLongword(pteAddr)
 	if err != nil {
 		t.Fatalf("read PTE: %v", err)
 	}
+
 	if PTE(raw).Modified() {
 		t.Fatal("fixture PTE already has M set, test needs it clear")
 	}
@@ -458,6 +504,7 @@ func TestTranslateSetsModifyBitOnFirstWrite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read PTE after write: %v", err)
 	}
+
 	if !PTE(raw).Modified() {
 		t.Error("M bit not set after first write translation")
 	}
@@ -465,12 +512,15 @@ func TestTranslateSetsModifyBitOnFirstWrite(t *testing.T) {
 	// A read should never set the M bit.
 	pte := PTE(raw)
 	pte.SetModified(false)
+
 	if err := mem.writePhysLongword(pteAddr, uint32(pte)); err != nil {
 		t.Fatalf("reset M bit: %v", err)
 	}
+
 	if _, err := mem.Translate(cpu, vaddr, AccessRead); err != nil {
 		t.Fatalf("Translate (read): %v", err)
 	}
+
 	raw, _ = mem.readPhysLongword(pteAddr)
 	if PTE(raw).Modified() {
 		t.Error("M bit set by a read translation")
@@ -482,10 +532,12 @@ func TestTranslateFaultErrorMessages(t *testing.T) {
 	if av.Error() == "" {
 		t.Error("AccessViolation Error() returned an empty string")
 	}
+
 	tnv := &TranslationFault{Kind: TranslationNotValid, Addr: 0x1234}
 	if tnv.Error() == "" {
 		t.Error("TranslationNotValid Error() returned an empty string")
 	}
+
 	if av.Error() == tnv.Error() {
 		t.Error("AccessViolation and TranslationNotValid produced identical messages")
 	}
@@ -509,6 +561,7 @@ func TestTranslateP0PTEItselfFaults(t *testing.T) {
 	if !errors.As(err, &tf) {
 		t.Fatalf("error = %v (%T), want *TranslationFault", err, err)
 	}
+	
 	if tf.Kind != AccessViolation {
 		t.Errorf("Kind = %v, want AccessViolation", tf.Kind)
 	}
@@ -516,13 +569,17 @@ func TestTranslateP0PTEItselfFaults(t *testing.T) {
 
 func assertAccessViolation(t *testing.T, err error, wantAddr uint32) {
 	t.Helper()
+
 	var tf *TranslationFault
+
 	if !errors.As(err, &tf) {
 		t.Fatalf("error = %v (%T), want *TranslationFault", err, err)
 	}
+
 	if tf.Kind != AccessViolation {
 		t.Errorf("Kind = %v, want AccessViolation", tf.Kind)
 	}
+
 	if tf.Addr != wantAddr {
 		t.Errorf("Addr = %#08x, want %#08x", tf.Addr, wantAddr)
 	}

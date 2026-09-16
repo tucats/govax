@@ -56,6 +56,7 @@ func setFlag(v PSL, mask uint32, on bool) PSL {
 	if on {
 		return v | PSL(mask)
 	}
+	
 	return v &^ PSL(mask)
 }
 
