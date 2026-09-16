@@ -8,16 +8,21 @@ import (
 )
 
 // BreakKind distinguishes the kinds of breakpoint vax.h's struct BREAKSTR
-// supports that actually live in a breakpoint_list-like collection. Only
-// BreakAddress is implemented by this port — see doc.go and this file's own
-// comments for why BreakFault (a breakpoint that fires when a given
-// exception code is about to be delivered) is deferred. Instruction
-// (opcode) breakpoints are a third BREAKSTR-adjacent kind the C source
-// itself never stores in breakpoint_list at all (it flags the opcode
-// directly via instruction[n].debugdata instead — see console_set.c's own
+// supports that actually live in a breakpoint_list-like collection.
+// BreakAddress is the only kind represented here: fault-kind breakpoints
+// (a breakpoint that fires when a given exception code is about to be
+// delivered, C's BREAK_FAULT) are implemented — see SET BREAKPOINT/FAULT,
+// docs/PHASE-16.md — but deliberately live on cpu.Engine instead of growing
+// this type, since they're checked synchronously inside Engine.Step's own
+// fault-delivery path (see cpu/faultbreak.go's own doc comment for why that
+// rules out Console.Breakpoints, which this file's runLoop only ever
+// consults between Step calls). Instruction (opcode) breakpoints are a
+// third BREAKSTR-adjacent kind the C source itself never stores in
+// breakpoint_list at all (it flags the opcode directly via
+// instruction[n].debugdata instead — see console_set.c's own
 // BREAK_INSTRUCTION handling), so this port follows suit with an entirely
 // separate mechanism (Console.InstructionBreakpoints, instbreak.go) rather
-// than growing BreakKind to include it.
+// than growing BreakKind to include it either.
 type BreakKind int
 
 const (
@@ -212,6 +217,18 @@ func (c *Console) Execute(startAddr *uint32) error {
 // on any Step error. Any other error (an unhandled fault, a real Go error)
 // is returned unchanged for the caller to propagate.
 func (c *Console) reportStopReason(err error) error {
+	// A fault-kind breakpoint (SET BREAKPOINT/FAULT) carries the fault code
+	// it hit, so it's checked via errors.As rather than folded into the
+	// errors.Is switch below — matching vax.c's own BREAK_FAULT check,
+	// execution stops with PC exactly where the fault was raised (no
+	// vector taken, no stack frame pushed; see cpu/faultbreak.go).
+	var fb *cpu.FaultBreak
+	if errors.As(err, &fb) {
+		c.Printf("Break on fault %02X %s at PC = %08X\n", uint8(fb.Code), exceptionName(fb.Code), c.CPU.GPR(vax.PC))
+
+		return nil
+	}
+
 	switch {
 	case errors.Is(err, cpu.ErrHalted):
 		c.Printf("HALT instruction executed at PC = %08X\n", c.CPU.GPR(vax.PC))

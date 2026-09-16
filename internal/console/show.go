@@ -146,13 +146,31 @@ func (c *Console) ShowBreakpoints() error {
 		return err
 	}
 
-	if len(c.Breakpoints) == 0 {
+	faults := c.Engine.FaultBreakpoints()
+
+	if len(c.Breakpoints) == 0 && len(faults) == 0 {
 		c.Printf("No breakpoints set\n")
 		return nil
 	}
 
 	for _, bp := range c.Breakpoints {
-		c.Printf("Breakpoint at %08X\n", bp.Addr)
+		tag := ""
+		switch {
+		case bp.Step:
+			tag = " <step>"
+		case bp.Temporary:
+			tag = " <temporary>"
+		}
+		c.Printf("Breakpoint at %08X%s\n", bp.Addr, tag)
+	}
+
+	// Fault-kind breakpoints are a separate list from Console.Breakpoints
+	// (see execute.go's BreakKind doc comment on why), but console_show.c's
+	// own SHOW BREAK prints both kinds together in one listing -- matched
+	// here by simply printing this second group right after the first,
+	// each entry marked 'F' the way that C source's own print loop does.
+	for _, code := range faults {
+		c.Printf("F Breakpoint on fault %02X %s\n", uint8(code), exceptionName(code))
 	}
 
 	return nil
@@ -1117,22 +1135,42 @@ func (c *Console) ShowClock() error {
 	return nil
 }
 
-// ShowFault reports pending device/software interrupts, matching
-// console_show.c's own SHOW FAULT case (id 145) — now partially portable
-// per Phase 14's own Engine.PendingInterrupts (vax.interrupt_pending/
-// vax.iqueue), see docs/PHASE-16.md sub-phase 1b. The C source's other
-// half, show_faults() (a fault/exception *event history* ring buffer, a
-// separate mechanism from the live pending-interrupt queue this reports),
-// is not ported: it needs new recorder instrumentation hooked into
-// internal/cpu/handlefault.go with no existing state to build on, unlike
-// the pending-interrupt half — left for a follow-up (see docs/PHASE-16.md
-// sub-phase 1b's own recommendation to split these).
+// ShowFault reports the fault/exception event history and pending device/
+// software interrupts, matching console_show.c's own SHOW FAULT case
+// (id 145): show_faults()'s history-ring dump (interrupt.c, now backed by
+// cpu.Engine.FaultHistory — see docs/PHASE-16.md's own fault-handling
+// follow-up) followed by Phase 14's own Engine.PendingInterrupts
+// (vax.interrupt_pending/vax.iqueue).
 func (c *Console) ShowFault() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
 
-	c.Printf("    Fault/exception event history is not recorded by this port (see docs/PHASE-16.md sub-phase 1b).\n")
+	history := c.Engine.FaultHistory()
+
+	if len(history) == 0 {
+		c.Printf("    No exceptions or interrupts have occurred yet\n")
+	} else {
+		c.Printf("FAULT/EXCEPTION EVENT HISTORY:\n")
+
+		for _, fr := range history {
+			c.Printf("%02X %-40s SEQ(%d)  PC(%08X) PSL(%08X) ",
+				uint8(fr.Code), exceptionName(fr.Code), fr.Seq, fr.PC, uint32(fr.PSL))
+
+			if len(fr.Args) > 0 {
+				c.Printf(" ARGS(")
+				for i, a := range fr.Args {
+					if i > 0 {
+						c.Printf(",")
+					}
+					c.Printf("%08X", a)
+				}
+				c.Printf(") ")
+			}
+
+			c.Printf("\n")
+		}
+	}
 
 	pending, queued := c.Engine.PendingInterrupts()
 

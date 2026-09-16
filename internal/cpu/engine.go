@@ -84,17 +84,34 @@ type Engine struct {
 	instrCount  int
 	timeLimit   time.Duration
 	runDeadline time.Time
+
+	// faultBreaks holds every exception code currently armed as a
+	// break-before-delivery breakpoint (SET BREAKPOINT/FAULT) -- see
+	// faultbreak.go. Checked synchronously inside raise/
+	// deliverPendingInterrupt, so (unlike address breakpoints, which
+	// Console's own runLoop checks between Engine.Step calls) this can't
+	// live on Console.Breakpoints; see faultbreak.go's own doc comment.
+	faultBreaks map[Exception]bool
+
+	// Fault/exception event history ring buffer (SET FAULT/HISTORY, the
+	// history half of SHOW FAULT) -- see faulthistory.go.
+	faultHistory      []FaultRecord
+	faultHistoryMax   int
+	faultHistoryNext  int
+	faultHistoryCount int
+	faultHistorySeq   uint64
 }
 
 // NewEngine returns an Engine driving cpu and mem, using the built-in VAX
 // instruction table.
 func NewEngine(cpu *vax.CPU, mem *vm.Memory) *Engine {
 	return &Engine{
-		cpu:            cpu,
-		mem:            mem,
-		table:          instructionTable,
-		quantumCurrent: defaultQuantum,
-		quantumInitial: defaultQuantum,
+		cpu:             cpu,
+		mem:             mem,
+		table:           instructionTable,
+		quantumCurrent:  defaultQuantum,
+		quantumInitial:  defaultQuantum,
+		faultHistoryMax: defaultFaultHistory,
 	}
 }
 
@@ -239,6 +256,11 @@ func (e *Engine) raise(err error) error {
 	}
 	e.cpu.SetGPR(vax.PC, e.instructionPC)
 
+	// recordFault matches set_fault's own unconditional store_fault call —
+	// see faulthistory.go's own doc comment on why this runs ahead of the
+	// fault-breakpoint check below, not just ahead of HandleFault.
+	e.recordFault(f.Code, f.Args, e.instructionPC, e.cpu.PSL())
+
 	if e.cpu.DebugEnabled(vax.DebugExceptions) {
 		w := e.cpu.DebugWriter()
 		fmt.Fprintf(w, "DEBUG(EXCEPTION): SET, CODE=%02X  PC=%08X  PSL=%08X  ARGC=%d\n",
@@ -257,6 +279,14 @@ func (e *Engine) raise(err error) error {
 			}
 			fmt.Fprintln(w)
 		}
+	}
+
+	// A fault-kind breakpoint (SET BREAKPOINT/FAULT) intercepts delivery
+	// entirely — see faultbreak.go's own top comment on why this matches
+	// vax.c's own "set vax.fault_pending, return VAX_BREAK" rather than
+	// running handle_fault first.
+	if e.faultBreakHit(f.Code) {
+		return &FaultBreak{Code: f.Code}
 	}
 
 	return e.HandleFault(f)

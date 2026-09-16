@@ -1,4 +1,4 @@
-# Phase 18: Flow of control — `STEP`/`SET STEP`/`SHOW STEP_MODE`, and a future home for breakpoints/watchpoints
+# Phase 18: Flow of control — `STEP`/`SET STEP`/`SHOW STEP_MODE`, breakpoints and watchpoints
 
 ## Goal
 
@@ -94,6 +94,65 @@ STEP-adjacent phase document later.
   `BreakKind`'s doc comment), `misc.go` (`ClearBreakpoint`'s doc comment),
   `dispatch.go` (`cmdSet`'s qualifier parsing, three new grammar bindings),
   `internal/vmserrors/codes_cli.go` (`CLI_NEEDBREAKOPCODE`).
+
+### Sub-phase 3: fault-kind breakpoints, and the fault-history ring buffer
+
+- `reference/eVAX/eVAX/Headers/vax.h:432` — `#define BREAK_FAULT 1`.
+- `reference/eVAX/eVAX/Source/CPU/vax.c` — the three sites `execute_vax`
+  checks a fault-kind breakpoint ahead of `handle_fault`: pending-interrupt
+  delivery (~line 308), a decode-time fault (~line 417), and a
+  Handler-returned fault (~line 484) — all three share one shape:
+  `brkp->pc == vax.fault.code` (the breakpoint's `pc` field doubles as a
+  fault *code* for this kind), and on a match, `vax.fault_pending` is set
+  and `VAX_BREAK` is returned **without** calling `handle_fault` at all — no
+  stack frame, no vector taken, execution just stops with `PC` exactly
+  where the fault was raised.
+- `reference/eVAX/eVAX/Source/Console/console_set.c:716-798` — `SET
+  BREAK[POINT]/FAULT <code>`'s own dispatch (`verb = BREAK_FAULT`), sharing
+  the same `asm_value`-based numeric parse every other `SET BREAK` form
+  uses; unlike `/TEMPORARY`, `/FAULT` cannot be combined with a skip count
+  (`console_set.c`'s own explicit rejection message) — moot here anyway,
+  since this port's `Breakpoint`/fault-breakpoint state has never modeled
+  a skip count at all.
+- `reference/eVAX/eVAX/Source/Console/console_clear.c:214-in` — `CLEAR
+  BREAK/FAULT <code>` (case 108) and `CLEAR BREAK/FAULT/ALL` (case 109).
+- `reference/eVAX/eVAX/Source/Console/console_show.c:698-758` — `SHOW BREAK`
+  (case 132, `show_break`): **correction to this document's own earlier
+  "Not yet implemented" entry**, which described this as gated behind
+  separate `/FAULT`/`/ADDRESSES` qualifiers on `SHOW BREAKPOINTS` — there
+  are no such qualifiers anywhere in `evax.dcl` (confirmed: `show_break`'s
+  only qualifier is `/INSTRUCTIONS`). The real behavior is simpler: `SHOW
+  BREAK` prints **one unified list**, address and fault breakpoints
+  together (both live in the same `breakpoint_list` in C), each fault-kind
+  entry prefixed with an `F` column and showing the exception mnemonic
+  instead of a resolved symbol/address.
+- `reference/eVAX/eVAX/Source/CPU/interrupt.c:43-151` — `set_fault`'s own
+  unconditional `store_fault` call (the fault/exception event-history ring
+  buffer this document's sibling, `docs/PHASE-16.md` sub-phase 1b, split
+  out as a separate follow-up: `fault_history`/`fault_history_p`/
+  `fault_history_count`/`fault_history_max`, `set_fault_history` (`SET
+  FAULT`/`SET HIST`, one verb with two C spellings, not a qualifier), and
+  `show_faults` (the history half of `SHOW FAULT`, printed ahead of the
+  already-shipped pending-interrupt half). Picked up alongside fault-kind
+  breakpoints in this same sub-phase because both need a hook at the exact
+  same choke point: `raise`/`deliverPendingInterrupt`
+  (`internal/cpu/engine.go`/`interrupt.go`), the two places every fault
+  this Engine ever raises funnels through on its way to `HandleFault` —
+  matching `set_fault` itself being the single call site both
+  `store_fault` and the `BREAK_FAULT` check sit next to in the C source.
+- `internal/cpu/faultbreak.go` (new), `internal/cpu/faulthistory.go` (new),
+  `engine.go` (`Engine`'s new fields, `raise`'s new record+break-check),
+  `interrupt.go` (`deliverPendingInterrupt`'s matching record+break-check),
+  `internal/console/faultbreak.go` (new: the console-facing `Add`/`Remove`/
+  `ClearAll` wrappers), `execute.go` (`reportStopReason`'s new
+  `*cpu.FaultBreak` case, `BreakKind`'s doc comment updated again),
+  `set.go` (`SetFaultHistory`), `show.go` (`ShowBreakpoints`'s merged
+  listing, `ShowFault`'s real history dump), `dispatch.go` (`cmdSet`'s
+  `BREAK` case gains a `/FAULT` branch, a new `FAULT`/`HIST`/`HISTORY`
+  case; two new grammar bindings, `CLEAR_BREAK_FAULT`/
+  `CLEAR_BREAK_FAULT_ALL`, for `evax.dcl` syntax entries `clear_break_fault`/
+  `clear_break_fault_all` (ids `108`/`109`) that were already carried
+  unbound).
 
 ## Design decisions
 
@@ -205,6 +264,68 @@ additionally restricts to a leading `/`, matching `console_step.c`'s own
 narrower acceptance — see `parseStepQualifier`). This is a console
 input-parsing convenience with no ISA-fidelity stakes, not a case for
 `docs/DEVIATIONS.md`.
+
+### Fault-kind breakpoints live on `cpu.Engine`, not `Console.Breakpoints`
+
+Sub-phase 3: `SET BREAKPOINT/FAULT <code>`, `CLEAR BREAKPOINT/FAULT[/ALL]`,
+and `SHOW BREAKPOINTS`' now-merged address+fault listing. A deliberate
+architecture departure from the C source, following the precedent
+instruction breakpoints already set (see "A wholly separate mechanism"
+above) but for a different reason: the C source folds `BREAK_FAULT` into
+the very same `breakpoint_list` `BREAK_ADDRESS` uses, and that works there
+because `execute_vax` is one big loop that owns both checks together. This
+port split address-breakpoint checking out into `Console.runLoop`, which
+only ever runs *between* `Engine.Step` calls — but a fault can only be
+detected *during* a `Step` call, deep inside its own decode/execute/
+deliver-interrupt machinery, with no opportunity for `Console` to intercept
+it beforehand the way it does an address. So the check has to live where
+the fault itself is raised: `Engine.raise` (the choke point for every
+decode-time or Handler-returned fault) and `Engine.deliverPendingInterrupt`
+(the device/software-interrupt delivery path) — both in `internal/cpu`, not
+`internal/console`. `cpu.Engine` gained its own small `faultBreaks
+map[Exception]bool` plus `SetFaultBreakpoint`/`RemoveFaultBreakpoint`/
+`ClearFaultBreakpoints`/`FaultBreakpoints` methods; `Console`'s own
+`AddFaultBreakpoint`/`RemoveFaultBreakpoint`/`ClearAllFaultBreakpoints`
+(`internal/console/faultbreak.go`) are thin wrappers.
+
+**Delivery is skipped entirely, not merely interrupted afterward.** Matching
+`vax.c`'s own "set `vax.fault_pending`, return `VAX_BREAK`" (all three of
+its `BREAK_FAULT` check sites run *before* `handle_fault`, not after): when
+a fault's code is armed, `raise`/`deliverPendingInterrupt` return a new
+`*cpu.FaultBreak{Code}` error instead of calling `HandleFault` at all — no
+signal frame is pushed, no SCB vector is taken, and the CPU's `PC` is left
+exactly where the fault was raised (already reset to `instructionPC` ahead
+of the check in `raise`; never touched at all in
+`deliverPendingInterrupt`, since normal interrupt delivery doesn't move
+`PC` until `HandleFault` itself runs). `Console.reportStopReason`
+recognizes `*cpu.FaultBreak` via `errors.As` (it carries a payload, unlike
+`ErrHalted`/`ErrAttention`'s plain sentinels) and reports it as a benign
+stop, the same category as an address or instruction breakpoint.
+
+**The fault-history ring buffer records a fault a breakpoint intercepts,
+too.** `set_fault`'s own unconditional `store_fault` call runs *before*
+`vax.c`'s `BREAK_FAULT` check, at every one of the same three sites — so a
+fault that a breakpoint stops from ever reaching `handle_fault` is still
+recorded in the event history. `Engine.recordFault` (`faulthistory.go`) is
+called first, at the very same two choke points, ahead of the
+`faultBreakHit` check — matching that ordering exactly.
+
+**One correctness fix over the C source's own fault-history bookkeeping,
+not a replicated bug.** `show_faults`' own loop bound is `min(
+fault_history_max, fault_history_count)`, where `fault_history_count` is
+never reset by `set_fault_history` (a resize) — only tolerable in C because
+every ring slot starts as a `NULL` pointer show_faults' own `if (fp) {
+... }` check silently skips, so a stale, too-large loop bound after a
+resize just produces extra no-op iterations rather than wrong output. This
+port's ring buffer is a plain `[]FaultRecord` with no per-slot "populated"
+sentinel to check the same way, so naively reusing the never-reset
+`faultHistorySeq` counter for `FaultHistory`'s own bound would return
+stale or zero-valued entries instead of silently skipping them. Added a
+second counter, `faultHistoryCount` (entries written since the last
+resize, capped at the buffer's own size), reset by `SetFaultHistorySize`
+specifically to avoid that — a clear, obvious fix for a Go-shaped problem
+the C source's own incidental `NULL`-check happened to paper over, not an
+ISA-fidelity question (see `SetFaultHistorySize`'s own doc comment).
 
 ### Instruction-level (opcode) breakpoints
 
@@ -379,16 +500,78 @@ return — see its own doc comment.
   later still must), and an end-to-end `Dispatch` round trip
   (`SET BREAK/INSTRUCTION`, `SHOW BREAKPOINTS/INSTRUCTIONS`, `EXEC`
   actually stopping, `CLEAR BREAKPOINT/INSTRUCTION`, `CLEAR
-  BREAKPOINT/INSTRUCTION/ALL`), plus the two new `cmdSet` error paths
-  (missing opcode, unimplemented `/FAULT` qualifier). `go build ./...`,
-  `go vet ./...`, and `go test ./...` all clean.
+  BREAKPOINT/INSTRUCTION/ALL`), plus the `cmdSet` error path for a missing
+  opcode (its other error path at the time, an unimplemented `/FAULT`
+  qualifier, no longer applies now that sub-phase 3 implements `/FAULT` —
+  see below). `go build ./...`, `go vet ./...`, and `go test ./...` all
+  clean.
+
+**Sub-phase 3 — fault-kind breakpoints, and the fault-history ring
+buffer:**
+
+- `internal/cpu/faultbreak.go` (new): `*cpu.FaultBreak` (the
+  intercepted-delivery error `raise`/`deliverPendingInterrupt` return);
+  `Engine.SetFaultBreakpoint`/`RemoveFaultBreakpoint`/
+  `ClearFaultBreakpoints`/`FaultBreakpoints` (sorted, for `SHOW
+  BREAKPOINTS`)/`faultBreakHit`.
+- `internal/cpu/faulthistory.go` (new): `FaultRecord` (code/PC/PSL/args/a
+  monotonic `Seq`, matching `struct FAULT` minus its unused `r0`/`r1`
+  fields); `Engine.SetFaultHistorySize`/`FaultHistorySize`/`recordFault`/
+  `FaultHistory`; `defaultFaultHistory` (8, matching
+  `fault_history_max`'s own C default).
+- `internal/cpu/engine.go`: `Engine`'s new fields (`faultBreaks`,
+  `faultHistory`/`faultHistoryMax`/`faultHistoryNext`/
+  `faultHistoryCount`/`faultHistorySeq`); `NewEngine` now seeds
+  `faultHistoryMax` to the default; `raise` now calls `recordFault` then
+  checks `faultBreakHit` ahead of `HandleFault`.
+- `internal/cpu/interrupt.go`: `deliverPendingInterrupt` gets the same
+  record-then-check treatment as `raise`.
+- `internal/console/faultbreak.go` (new): `Console.AddFaultBreakpoint`/
+  `RemoveFaultBreakpoint`/`ClearAllFaultBreakpoints` — thin wrappers over
+  the `cpu.Engine` methods, evaluating the code argument through this
+  port's own expression evaluator (not `asm_value`'s exact conventions —
+  a console-command-scope convenience, not an ISA-fidelity question).
+- `internal/console/execute.go`: `reportStopReason` recognizes
+  `*cpu.FaultBreak` via `errors.As` (checked ahead of its existing
+  `errors.Is` switch, since this error carries a payload the others
+  don't) and prints `"Break on fault %02X %s at PC = %08X"`; `BreakKind`'s
+  doc comment updated to explain why fault breakpoints live on `cpu.Engine`
+  instead of growing this type.
+- `internal/console/set.go`: `SetFaultHistory` (`SET FAULT`/`SET HIST`/
+  `SET HISTORY`, all three spellings accepted — see this file's own
+  full-keyword convention).
+- `internal/console/show.go`: `ShowBreakpoints` now merges
+  `Console.Breakpoints` with `Engine.FaultBreakpoints()` into one listing,
+  each fault entry marked `F`, matching `show_break`'s own unified list
+  (see the corrected scope note above on why this isn't a separate
+  qualifier); `ShowFault` now prints `Engine.FaultHistory()`'s real
+  dump (`show_faults`' own format) ahead of the already-shipped
+  pending-interrupt half, replacing the old "not recorded by this port"
+  placeholder.
+- `internal/console/dispatch.go`: `cmdSet`'s `BREAK`/`BREAKPOINT` case
+  gains a `/FAU…` (`/FAULT`) branch calling `AddFaultBreakpoint`; a new
+  `FAULT`/`HIST`/`HISTORY` case calling `SetFaultHistory`; two new grammar
+  bindings, `CLEAR_BREAK_FAULT`/`CLEAR_BREAK_FAULT_ALL`.
+- Tests: `internal/cpu/faultbreak_test.go` (arm/remove/clear, `raise`
+  intercepting an armed code with PC left at the fault and the fault still
+  recorded, an unarmed code still delivering normally,
+  `deliverPendingInterrupt` intercepted the same way);
+  `internal/cpu/faulthistory_test.go` (default size, ring-buffer wraparound
+  with `Seq` continuing past what the ring still holds, a resize emptying
+  the buffer without resetting `Seq`, size `0` disabling recording
+  entirely); `internal/console/faultbreak_test.go` (add/remove/clear,
+  `ShowBreakpoints`'s merged listing, `SetFaultHistory`, `ShowFault`'s
+  empty-history message, an end-to-end `Dispatch` round trip driving a real
+  undefined-extended-opcode fault into an armed `SET BREAKPOINT/FAULT`
+  and confirming `GO` stops with `PC` at the fault rather than the SCB
+  vector, `SET FAULT`/`SET HISTORY` both working, `CLEAR BREAKPOINT/FAULT`
+  and `/ALL`). `internal/console/instbreak_test.go`'s own
+  `TestDispatch_setBreakBadQualifier` updated to use a genuinely
+  unrecognized qualifier (`/BOGUS`) now that `/FAULT` is implemented.
+  `go build ./...`, `go vet ./...`, and `go test ./...` all clean.
 
 ## Not yet implemented (future sub-phases under this same document)
 
-- **Fault-kind breakpoints** — `SET BREAK/FAULT`, the `/FAULT`/`/ADDRESSES`
-  qualifiers on `SHOW BREAKPOINTS`, `CLEAR BREAKPOINT/FAULT[/ALL]`
-  (`docs/PHASE-16.md` sub-phase 4): needs `BreakKind` to gain a `BreakFault`
-  value and a hook into `internal/cpu/handlefault.go`'s exception dispatch.
 - **Watchpoints** — `SET WATCH`, `SHOW WATCHPOINTS`, `CLEAR WATCH`
   (`docs/PHASE-16.md` sub-phase 4, `storage.c:44-140` in the C reference):
   no Go equivalent of `struct WATCHPOINT`/`add_watchpoint`/
@@ -438,3 +621,44 @@ how sub-phases 1c/3 already point here for `STEP`/`SET STEP`.
 Fault-kind breakpoints and the watchpoint subsystem remain the two
 not-yet-implemented mechanisms this document is the intended home for; see
 "Not yet implemented" above.
+
+### 2026-09-16 — Fault-kind breakpoints and the fault-history ring buffer implemented (sub-phase 3)
+
+Picked up as a grouped "fault handling" subtask at the user's request
+(explicitly asked to do fault-kind breakpoints and the fault-history ring
+buffer together, since both hook the same two choke points in
+`internal/cpu`). Implemented `SET BREAKPOINT/FAULT <code>`, `CLEAR
+BREAKPOINT/FAULT[/ALL]`, `SHOW BREAKPOINTS`' now-unified address+fault
+listing, `SET FAULT`/`SET HIST`/`SET HISTORY <n>`, and `SHOW FAULT`'s real
+event-history dump, in full — see "What's implemented" above for the
+shipped surface and "Design decisions" for the fidelity choices made along
+the way: fault breakpoints living on `cpu.Engine` rather than
+`Console.Breakpoints` (the check has to run synchronously inside
+`Engine.Step`'s own fault-delivery path, which `Console`'s `runLoop` never
+gets a chance to intercept ahead of), delivery skipped entirely rather than
+interrupted after the fact (matching `vax.c`'s own "set `fault_pending`,
+return `VAX_BREAK`" ahead of `handle_fault`, not after), the fault-history
+ring buffer recording a fault even when a breakpoint intercepts it
+(matching `store_fault` running inside `set_fault`, ahead of the
+`BREAK_FAULT` check), and one correctness fix over the C source's own
+`fault_history_count`-across-a-resize bookkeeping (a real Go-shaped bug the
+C source's incidental `NULL`-slot check happened to mask, not something
+worth replicating).
+
+**Correction to this document's own prior scope note**, found while reading
+`console_show.c`'s real `show_break` case rather than relying on
+`docs/PHASE-16.md`'s earlier secondhand description of it: there are no
+separate `/FAULT`/`/ADDRESSES` qualifiers on `SHOW BREAKPOINTS` anywhere in
+`evax.dcl` (`show_break`'s only qualifier is `/INSTRUCTIONS`) — the C
+source's `SHOW BREAK` has always printed address and fault breakpoints
+together in one list, distinguished only by an `F` marker column. This
+port's `ShowBreakpoints` now matches that directly instead of the
+qualifier-gated shape the earlier note assumed.
+
+`docs/PHASE-16.md` sub-phase 4's fault-breakpoint entry and sub-phase
+1b/3's fault-history entries should be treated as superseded by this
+document going forward, matching how sub-phases 1c/3 already point here for
+`STEP`/`SET STEP` and instruction breakpoints.
+
+The watchpoint subsystem remains the one not-yet-implemented mechanism this
+document is the intended home for; see "Not yet implemented" above.

@@ -172,7 +172,9 @@ fields exist); the gap is purely a missing `show.go` function + grammar binding.
   queue dump (`vax.interrupt_pending`, `vax.iqueue`), which has no Go equivalent
   until Phase 14 builds the interrupt-admission/delivery mechanism. Recommend
   splitting: the fault-history half can be a Phase 16 deliverable on its own, the
-  pending-interrupt half stays blocked.
+  pending-interrupt half stays blocked. **Update 2026-09-16**: both halves are
+  now implemented — see `docs/PHASE-18.md`'s sub-phase 3 (grouped with fault-kind
+  breakpoints, since both hook the same `internal/cpu` choke points).
 
 ### 1c. Blocked on other missing state this same phase should add (see Sub-phases 2-4)
 
@@ -344,7 +346,10 @@ cases; the rest are missing:
   **`CLEAR BREAKPOINT/FAULT/ALL`** (id `109`, C: `console_clear.c:303`) — blocked on
   the missing `BreakFault` breakpoint kind (`internal/console/execute.go`'s
   `BreakKind` doc comment already flags this: "Only `BreakAddress` is implemented by
-  this port"). See Sub-phase 4's breakpoint-kinds entry.
+  this port"). See Sub-phase 4's breakpoint-kinds entry. **Update 2026-09-16**:
+  implemented — see `docs/PHASE-18.md`'s sub-phase 3 (`Console.RemoveFaultBreakpoint`/
+  `ClearAllFaultBreakpoints`, kept on `cpu.Engine` rather than growing `BreakKind`
+  after all — see that document's own design-decision note on why).
 - **`CLEAR BREAKPOINT/INSTRUCTION <opcode>`** (id `551`, C:
   `console_clear.c:89`) and **`CLEAR BREAKPOINT/INSTRUCTION/ALL`** (id `553`, C:
   `console_clear.c:65`) — **implemented, see `docs/PHASE-18.md`'s sub-phase 2**
@@ -411,14 +416,18 @@ the reference.
   Sub-phase 4's watchpoint entry; this is the write side.
 - **`SET FAULT/HISTORY <n>`** (C: `console_set.c:706-715`, `set_fault_history`) —
   sizes the fault-event ring buffer `SHOW FAULT`'s history half (Sub-phase 1b) would
-  read from — implement together.
+  read from — implement together. **Update 2026-09-16**: implemented, see
+  `docs/PHASE-18.md`'s sub-phase 3 (`Console.SetFaultHistory`; `SET FAULT`/`SET
+  HIST`/`SET HISTORY` all three accepted).
 - **`SET BREAK[POINT] [/FAULT|/TEMPORARY|/INSTRUCTION] <addr>`** (C:
   `console_set.c:716-845`) — the existing `cmdSet`/`AddBreakpoint` only covers the
   plain-address form. `/INSTRUCTION` is **implemented, see `docs/PHASE-18.md`'s
   sub-phase 2** (`cmdSet`'s `BREAKPOINT`/`BREAK` case, `Console.AddInstructionBreakpoint`).
-  `/FAULT` remains blocked on the same missing breakpoint-kind support as its
-  `SHOW`/`CLEAR` counterparts (Sub-phase 4); `/TEMPORARY` (a `BreakKind`-adjacent
-  one-shot flag) is a smaller, standalone gap worth checking independently.
+  `/TEMPORARY` is **implemented, see `docs/PHASE-16.md`'s own 2026-09-16 progress
+  log entry** (`Console.AddTemporaryBreakpoint`). `/FAULT` is **implemented, see
+  `docs/PHASE-18.md`'s sub-phase 3** (`Console.AddFaultBreakpoint`) — kept on
+  `cpu.Engine` rather than growing `BreakKind`, see that document's own
+  design-decision note on why.
 - **`SET QUANTUM <n>`** (C: `console_set.c:846-862`) and **`SET UIQUANTUM <n>`** (C:
   `console_set.c:863-879`) — blocked on Phase 14, same as `SHOW QUANTUM`.
 - **`SET BASE <addr>`** (C: `console_set.c:880-887`) — sets `vax.console.deposit`,
@@ -494,7 +503,16 @@ generally, not only `SHOW`.
   file's own doc comment already flags this as deliberately deferred. A breakpoint
   that fires on a *fault code* rather than a *PC address* also needs a hook in
   whatever exception-dispatch path `internal/cpu/handlefault.go` runs, similar in
-  shape to the watchpoint hook question above.
+  shape to the watchpoint hook question above. **Update 2026-09-16**: implemented
+  — see `docs/PHASE-18.md`'s sub-phase 3. Two corrections this audit's original
+  guess got wrong, found while actually reading the C source: `SHOW BREAKPOINTS`
+  has no separate `/FAULT`/`/ADDRESSES` qualifiers at all (`evax.dcl`'s
+  `show_break` only has `/INSTRUCTIONS`) — it always printed address and fault
+  breakpoints together in one unified, `F`-marked list; and `BreakKind` did *not*
+  end up gaining a `BreakFault` value — fault breakpoints live on `cpu.Engine`
+  instead, since the check has to run synchronously inside `Engine.Step`'s own
+  fault-delivery path, someplace `Console`'s `runLoop` (which only ever checks
+  `BreakKind`-based breakpoints between `Step` calls) can't reach.
 - **`BOOT`** and **`ROM`** (fixed commands, `dispatch.go:223-224`) are already
   explicitly stubbed (`cmdNotImplemented`) rather than silently missing — flagging
   here only for completeness of this audit's "other missing commands" sweep, not as
@@ -886,3 +904,32 @@ that the banner's first character reaches `Console.Out`, not the full string).
 `go build ./...`, `go vet ./...`, `gofmt -l .` (clean on every file this pass
 touched — a handful of pre-existing, unrelated files were already gofmt-dirty before
 this pass and are left as found), and `go test ./...` all clean.
+
+### 2026-09-16 — Fault-kind breakpoints and the fault-history ring buffer moved to and implemented in docs/PHASE-18.md
+
+The two items this document's own "blocker" list flagged as needing more
+design discussion after the previous entry — fault-kind breakpoints
+(`SET`/`CLEAR`/`SHOW BREAKPOINT/FAULT`) and the fault-history half of `SHOW
+FAULT` (`SET FAULT/HISTORY`) — were picked up together at the user's
+request, as a grouped "fault handling" subtask (both hook the same two
+`internal/cpu` choke points, `Engine.raise`/`deliverPendingInterrupt`).
+Implemented in full in `docs/PHASE-18.md`'s new sub-phase 3, the document
+this port's own instruction-breakpoint/STEP work already established as
+the home for CPU-engine-adjacent breakpoint mechanisms, rather than staying
+here — see that document's own Progress Log entry for what shipped and its
+Design decisions section for the fidelity choices (fault breakpoints living
+on `cpu.Engine` rather than `Console.Breakpoints`/`BreakKind`, delivery
+skipped entirely rather than interrupted after the fact, the fault-history
+ring buffer recording even an intercepted fault, and one correctness fix
+over the C source's own resize/sequence-counter bookkeeping). This
+document's own inline inventory entries for both (Sub-phase 1b's `SHOW
+FAULT`, Sub-phase 2's `CLEAR BREAKPOINT/FAULT`, Sub-phase 3's `SET
+FAULT/HISTORY`/`SET BREAK/FAULT`, and Sub-phase 4's fault-kind-breakpoints
+entry) are annotated in place with pointers to `docs/PHASE-18.md`, matching
+how `SET STEP`/`SHOW STEP_MODE`/instruction breakpoints were handled when
+those moved there too.
+
+Remaining blockers from the previous entry, still open: `SET MKVALID/NOMK`,
+`SET ASSEMBLER` flags, the watchpoint subsystem (also tracked in
+`docs/PHASE-18.md`), `CLEAR PROFILES`/`SHOW INSTRUCTIONS/PROFILE`, and
+`SHOW`/`CLEAR ERROR` (`$STATUS` tracking).

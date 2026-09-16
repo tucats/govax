@@ -386,6 +386,21 @@ func (c *Console) SetUIQuantum(n int) error {
 	return nil
 }
 
+// SetFaultHistory implements SET FAULT/SET HIST <n> (console_set.c's own
+// CHAR4('F','A','U','L')/CHAR4('H','I','S','T') cases, both spellings for
+// one verb, not a verb+qualifier — "HISTORY" is accepted too, matching this
+// file's own full-keyword convention): resizes cpu.Engine's fault/exception
+// event-history ring buffer, matching set_fault_history.
+func (c *Console) SetFaultHistory(n int) error {
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	c.Engine.SetFaultHistorySize(n)
+
+	return nil
+}
+
 // pteFieldNames matches console_set.c's parse_pte_changes sub-switch,
 // spelled out in full (see this file's own convention) rather than
 // CHAR4-abbreviated.

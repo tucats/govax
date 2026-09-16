@@ -214,7 +214,7 @@ func TestDispatch_setBreakInstructionRequiresOpcode(t *testing.T) {
 func TestDispatch_setBreakBadQualifier(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 
-	if err := d.Dispatch("SET BREAK/FAULT 100"); err == nil {
-		t.Error("expected an error for the unimplemented SET BREAK/FAULT")
+	if err := d.Dispatch("SET BREAK/BOGUS 100"); err == nil {
+		t.Error("expected an error for an unrecognized SET BREAK qualifier")
 	}
 }

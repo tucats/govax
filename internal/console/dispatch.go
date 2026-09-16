@@ -179,6 +179,12 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("CLEAR_BREAK_INSTR", func(id int64, r *dcl.Result) error {
 		return d.Console.RemoveInstructionBreakpoint(r.String("P1"))
 	})
+	g.Bind("CLEAR_BREAK_FAULT_ALL", func(id int64, r *dcl.Result) error {
+		return d.Console.ClearAllFaultBreakpoints()
+	})
+	g.Bind("CLEAR_BREAK_FAULT", func(id int64, r *dcl.Result) error {
+		return d.Console.RemoveFaultBreakpoint(r.String("P1"))
+	})
 
 	g.Bind("CLEAR_SYM_TEMP", func(id int64, r *dcl.Result) error { return d.Console.ClearSymbolTemporary() })
 	g.Bind("CLEAR_STRINGS", func(id int64, r *dcl.Result) error { return d.Console.ClearString() })
@@ -939,9 +945,14 @@ func cmdSet(d *Dispatcher, rest string) error {
 
 			return nil
 
+		case uqual != "" && strings.HasPrefix("FAULT", uqual):
+			if len(fields) < 2 {
+				return vmserrors.New(vmserrors.CLI_NEEDBREAKADDR)
+			}
+
+			return d.Console.AddFaultBreakpoint(fields[1])
+
 		case qualifier != "":
-			// /FAULT is recognized by the C source but not implemented by
-			// this port — see execute.go's BreakKind doc comment.
 			return vmserrors.New(vmserrors.CLI_BADQUALIFIER, qualifier)
 		}
 
@@ -997,6 +1008,14 @@ func cmdSet(d *Dispatcher, rest string) error {
 
 	case "PTE", "PAGE":
 		return cmdSetPTE(d, after)
+
+	case "FAULT", "HIST", "HISTORY":
+		n, err := parseSetDecimal(fields)
+		if err != nil {
+			return err
+		}
+
+		return d.Console.SetFaultHistory(n)
 
 	case "VM", "MAPEN":
 		return d.Console.SetVM(true)

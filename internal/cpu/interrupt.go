@@ -244,6 +244,15 @@ func (e *Engine) deliverPendingInterrupt() error {
 
 	e.cpu.SetPR(vax.IPL, ipl)
 	e.instructionPC = e.cpu.GPR(vax.PC)
+
+	// recordFault/faultBreakHit match vax.c's own execute_vax handling of
+	// this same delivery path (set_fault, then the BREAK_FAULT check, both
+	// ahead of handle_fault) — see faulthistory.go/faultbreak.go.
+	e.recordFault(code, nil, e.instructionPC, e.cpu.PSL())
+	if e.faultBreakHit(code) {
+		return &FaultBreak{Code: code}
+	}
+
 	return e.HandleFault(&Fault{Code: code})
 }
 
