@@ -25,7 +25,7 @@ func TestTranslateSTCHit(t *testing.T) {
 	// newTranslateFixture's doc comment) counts its own STC try, so
 	// compare deltas across the repeat rather than absolute totals.
 	stcTriesBefore, stcHitsBefore := mem.STCStats()
-	tbTriesBefore, _, _, _ := mem.TBStats()
+	tbTriesBefore, _, _, _ := mem.TBStats() //nolint:dogsled
 
 	if _, err := mem.Translate(cpu, vaddr, AccessRead); err != nil {
 		t.Fatalf("Translate (repeat): %v", err)
@@ -37,7 +37,7 @@ func TestTranslateSTCHit(t *testing.T) {
 			stcTriesAfter, stcHitsAfter, stcTriesBefore+1, stcHitsBefore+1)
 	}
 
-	tbTriesAfter, _, _, _ := mem.TBStats()
+	tbTriesAfter, _, _, _ := mem.TBStats() //nolint:dogsled
 	if tbTriesAfter != tbTriesBefore {
 		t.Errorf("TBStats() tries changed from %d to %d on an STC hit, want unchanged", tbTriesBefore, tbTriesAfter)
 	}
@@ -61,7 +61,7 @@ func TestTranslateTBHitAfterSTCMiss(t *testing.T) {
 		t.Fatalf("Translate B: %v", err)
 	}
 
-	_, hitsBefore, _, _ := mem.TBStats()
+	_, hitsBefore, _, _ := mem.TBStats() //nolint:dogsled
 
 	got, err := mem.Translate(cpu, addrA, AccessRead)
 	if err != nil {
@@ -73,7 +73,7 @@ func TestTranslateTBHitAfterSTCMiss(t *testing.T) {
 		t.Errorf("Translate(A) = %#08x, want %#08x", got, want)
 	}
 
-	_, hitsAfter, _, _ := mem.TBStats()
+	_, hitsAfter, _, _ := mem.TBStats() //nolint:dogsled
 	if hitsAfter != hitsBefore+1 {
 		t.Errorf("TBStats() hits = %d, want %d (one new TB hit)", hitsAfter, hitsBefore+1)
 	}
@@ -95,7 +95,7 @@ func TestInvalidateTBClearsEverything(t *testing.T) {
 		t.Fatalf("TBSnapshot() empty before InvalidateTB, want at least one populated slot")
 	}
 
-	_, _, flushesBefore, _ := mem.TBStats()
+	_, _, flushesBefore, _ := mem.TBStats() //nolint:dogsled
 
 	mem.InvalidateTB()
 
@@ -103,18 +103,18 @@ func TestInvalidateTBClearsEverything(t *testing.T) {
 		t.Errorf("TBSnapshot() len = %d after InvalidateTB, want 0", got)
 	}
 
-	_, _, flushesAfter, _ := mem.TBStats()
+	_, _, flushesAfter, _ := mem.TBStats() //nolint:dogsled
 	if flushesAfter != flushesBefore+1 {
 		t.Errorf("TBStats() flushes = %d, want %d", flushesAfter, flushesBefore+1)
 	}
 
-	_, hitsBefore, _, _ := mem.TBStats()
+	_, hitsBefore, _, _ := mem.TBStats() //nolint:dogsled
 
 	if _, err := mem.Translate(cpu, vaddr, AccessRead); err != nil {
 		t.Fatalf("Translate after InvalidateTB: %v", err)
 	}
 
-	_, hitsAfter, _, _ := mem.TBStats()
+	_, hitsAfter, _, _ := mem.TBStats() //nolint:dogsled
 	if hitsAfter != hitsBefore {
 		t.Errorf("TBStats() hits changed across a post-flush translation, want a miss (full walk), not a hit")
 	}
@@ -147,13 +147,13 @@ func TestInvalidatePageClearsOnlyOneSlot(t *testing.T) {
 	}
 
 	// B's own slot must still be a hit.
-	_, hitsBefore, _, _ := mem.TBStats()
+	_, hitsBefore, _, _ := mem.TBStats() //nolint:dogsled
 
 	if _, err := mem.Translate(cpu, addrB, AccessRead); err != nil {
 		t.Fatalf("Translate B again: %v", err)
 	}
 
-	_, hitsAfter, _, _ := mem.TBStats()
+	_, hitsAfter, _, _ := mem.TBStats() //nolint:dogsled
 	if hitsAfter != hitsBefore+1 {
 		t.Errorf("TBStats() hits = %d, want %d (B's slot untouched by InvalidatePage(A))", hitsAfter, hitsBefore+1)
 	}
@@ -178,13 +178,13 @@ func TestInvalidateProtectionKeepsMappingButForcesRecheck(t *testing.T) {
 		t.Errorf("TBSnapshot() empty after InvalidateProtection, want the mapping to survive")
 	}
 
-	_, hitsBefore, _, _ := mem.TBStats()
+	_, hitsBefore, _, _ := mem.TBStats() //nolint:dogsled
 
 	if _, err := mem.Translate(cpu, vaddr, AccessRead); err != nil {
 		t.Fatalf("Translate after InvalidateProtection: %v", err)
 	}
 
-	_, hitsAfter, _, _ := mem.TBStats()
+	_, hitsAfter, _, _ := mem.TBStats() //nolint:dogsled
 	if hitsAfter != hitsBefore {
 		t.Errorf("TBStats() hits changed right after InvalidateProtection, want a miss (re-checked protection)")
 	}
@@ -196,13 +196,13 @@ func TestInvalidateProtectionKeepsMappingButForcesRecheck(t *testing.T) {
 		t.Fatalf("Translate other: %v", err)
 	}
 
-	_, hitsBefore2, _, _ := mem.TBStats()
+	_, hitsBefore2, _, _ := mem.TBStats() //nolint:dogsled
 
 	if _, err := mem.Translate(cpu, vaddr, AccessRead); err != nil {
 		t.Fatalf("Translate again: %v", err)
 	}
 
-	_, hitsAfter2, _, _ := mem.TBStats()
+	_, hitsAfter2, _, _ := mem.TBStats() //nolint:dogsled
 	if hitsAfter2 != hitsBefore2+1 {
 		t.Errorf("TBStats() hits = %d, want %d (re-cached after the forced recheck)", hitsAfter2, hitsBefore2+1)
 	}
@@ -229,7 +229,7 @@ func TestProbeTranslateNeverHitsSTC(t *testing.T) {
 		t.Errorf("STCStats() hits = %d, want 0 -- ProbeTranslate must never hit the STC", hits)
 	}
 
-	_, tbHits, _, _ := mem.TBStats()
+	_, tbHits, _, _ := mem.TBStats() //nolint:dogsled
 	if tbHits == 0 {
 		t.Errorf("TBStats() hits = 0, want at least one TB hit from the repeated ProbeTranslate")
 	}
@@ -270,13 +270,13 @@ func TestTBDRDisablesConsultationNotPopulation(t *testing.T) {
 		t.Fatalf("Translate other: %v", err)
 	}
 
-	_, hitsBefore, _, _ := mem.TBStats()
+	_, hitsBefore, _, _ := mem.TBStats() //nolint:dogsled
 
 	if _, err := mem.Translate(cpu, vaddr, AccessRead); err != nil {
 		t.Fatalf("Translate (TBDR clear): %v", err)
 	}
 
-	_, hitsAfter, _, _ := mem.TBStats()
+	_, hitsAfter, _, _ := mem.TBStats() //nolint:dogsled
 	if hitsAfter != hitsBefore+1 {
 		t.Errorf("TBStats() hits = %d, want %d (the TBDR-disabled walk's own population survives)", hitsAfter, hitsBefore+1)
 	}
@@ -349,7 +349,7 @@ func TestResetTBCountersLeavesFlushesAndSTCAlone(t *testing.T) {
 
 	mem.InvalidateTB() // bumps flushes
 
-	_, _, flushesBefore, _ := mem.TBStats()
+	_, _, flushesBefore, _ := mem.TBStats() //nolint:dogsled
 	stcTriesBefore, stcHitsBefore := mem.STCStats()
 
 	mem.ResetTBCounters()
