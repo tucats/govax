@@ -165,7 +165,7 @@ func TestAssemble_kernelThenHelloRunsBounded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Assemble(hello.asm): %v", err)
 	}
-	
+
 	if !hasEntry {
 		t.Fatal("expected hello.asm's \".end main\" to report an entry address")
 	}

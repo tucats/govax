@@ -4,11 +4,14 @@ import "testing"
 
 func evalNoForward(t *testing.T, a *Assembler, src string) uint32 {
 	t.Helper()
+
 	c := newCursor(src)
+
 	v, err := a.exprNoForward(c)
 	if err != nil {
 		t.Fatalf("exprNoForward(%q): %v", src, err)
 	}
+
 	return v
 }
 
@@ -100,9 +103,11 @@ func TestExpressionDefinedFunction(t *testing.T) {
 	if got := evalNoForward(t, a, `DEFINED("NOSUCHSYM")`); got != 0 {
 		t.Errorf("DEFINED(undefined) = %d, want 0", got)
 	}
+
 	if err := a.setSymbol("MYSYM", 42, SymNone, false); err != nil {
 		t.Fatal(err)
 	}
+	
 	if got := evalNoForward(t, a, `DEFINED("MYSYM")`); got != 1 {
 		t.Errorf("DEFINED(defined) = %d, want 1", got)
 	}
@@ -115,6 +120,7 @@ func TestExpressionVerboseFunction(t *testing.T) {
 	}
 
 	a.SetVerbose(false)
+
 	if got := evalNoForward(t, a, "VERBOSE"); got != 0 {
 		t.Errorf("VERBOSE = %d, want 0", got)
 	}

@@ -63,6 +63,7 @@ type exprState struct {
 // of which route through asm_value's fixup machinery).
 func (a *Assembler) exprNoForward(c *cursor) (uint32, error) {
 	st := &exprState{}
+
 	return a.exprTop(c, st)
 }
 
@@ -78,6 +79,7 @@ func (a *Assembler) exprValue(c *cursor, loc uint32, fx fixupKind) (value uint32
 	if err != nil {
 		return 0, false, err
 	}
+
 	if st.usedOperator && st.wasForward {
 		return 0, false, vmserrors.New(vmserrors.VAX_FWDOPERATOR)
 	}
@@ -291,6 +293,7 @@ func (a *Assembler) exprAtom(c *cursor, st *exprState) (uint32, error) {
 		}
 
 		c.skipBlanks()
+
 		if c.peek() == ')' {
 			c.next()
 		}
@@ -341,6 +344,7 @@ func (a *Assembler) lookupSymbolValue(name string, st *exprState) (uint32, error
 // digit.
 func (a *Assembler) numericLiteral(c *cursor, st *exprState) (uint32, error) {
 	c.skipBlanks()
+
 	if c.atEnd() {
 		return 0, vmserrors.New(vmserrors.VAX_INCOMPLETENUM)
 	}
@@ -376,6 +380,7 @@ func (a *Assembler) numericLiteral(c *cursor, st *exprState) (uint32, error) {
 
 		return a.lookupSymbolValue(name, st)
 	}
+
 	if c.peek() == '\'' {
 		return a.charLiteral(c)
 	}
@@ -393,17 +398,21 @@ func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (uint32, error) {
 
 		return a.hexDigits(c)
 	}
+
 	if c.peek() == '^' && c.peekAt(1) == 'D' {
 		c.skip(2)
 	}
+
 	if c.peek() == '^' && c.peekAt(1) == 'F' {
 		return 0, vmserrors.New(vmserrors.VAX_FLOATHERE)
 	}
+
 	if isUpperAlpha(c.peek()) || c.peek() == '_' || c.peek() == '$' {
 		name := scanName(c)
 
 		return a.lookupSymbolValue(name, st)
 	}
+
 	if c.peek() == '\'' {
 		return a.charLiteral(c)
 	}
@@ -537,19 +546,23 @@ func (a *Assembler) charLiteral(c *cursor) (uint32, error) {
 // trap) is bit 14 — the two non-register bits an entry mask can carry.
 func (a *Assembler) maskLiteral(c *cursor) (uint32, error) {
 	c.skipBlanks()
+	
 	if c.peek() == '^' && c.peekAt(1) == 'M' {
 		c.skip(2)
 		c.skipBlanks()
 	}
+
 	if c.peek() != '<' {
 		return 0, vmserrors.New(vmserrors.VAX_BADMASK)
 	}
+
 	c.next()
 
 	var mask uint32
 
 	for {
 		c.skipBlanks()
+
 		if c.peek() == ',' {
 			c.next()
 

@@ -23,6 +23,7 @@ func parseRegister(c *cursor, first byte) (vax.Reg, error) {
 		if !ok || n < 0 || n > 15 {
 			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
+		
 		if isSymbolChar(c.peek()) {
 			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}

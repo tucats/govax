@@ -106,6 +106,7 @@ func newSymbolTable() *symbolTable {
 
 func (t *symbolTable) find(name string) (*symbol, bool) {
 	s, ok := t.byName[name]
+
 	return s, ok
 }
 
@@ -114,7 +115,9 @@ func (t *symbolTable) create(name string) *symbol {
 	if strings.ContainsRune(name, '$') {
 		s.flags |= SymSystem
 	}
+
 	t.byName[name] = s
+
 	return s
 }
 
@@ -141,6 +144,7 @@ func (a *Assembler) entryScope() string {
 		a.tempSeq++
 		a.curEntry = fmt.Sprintf("__%d", a.tempSeq)
 	}
+
 	return a.curEntry
 }
 
@@ -155,6 +159,7 @@ func (a *Assembler) resolvedName(name string) (resolved string, wasLocal bool) {
 	if len(name) < 2 || name[0] != '_' || name[1] == '_' {
 		return name, false
 	}
+
 	return a.entryScope() + "_" + name[1:], true
 }
 
@@ -182,11 +187,15 @@ func (a *Assembler) getSymbol(name string, allowForward bool, location uint32, f
 	switch {
 	case found && len(sym.forward) == 0:
 		a.lastSymbol = sym
+
 		return sym.value, false, nil
+
 	case !found && !allowForward:
 		return 0, false, vmserrors.New(vmserrors.VAX_UNDEFSYM, name)
+
 	case found && !allowForward:
 		a.lastSymbol = sym
+
 		return sym.value, false, nil
 	}
 
@@ -218,6 +227,7 @@ func (a *Assembler) setSymbol(name string, value uint32, flags SymFlag, unique b
 	if unique && found && len(sym.forward) == 0 {
 		return vmserrors.New(vmserrors.VAX_DUPSYM, name)
 	}
+
 	if !found {
 		sym = a.symbols.create(resolved)
 	}
@@ -281,6 +291,7 @@ func (a *Assembler) applyFixup(fp forwardRef, value, ivalue uint32) error {
 		if disp < -32768 || disp > 32767 {
 			return vmserrors.New(vmserrors.VAX_FWDWORD, disp)
 		}
+		
 		return a.image.storeWord(fp.location, uint16(int16(disp)))
 
 	case fixAddrL:

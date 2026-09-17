@@ -1023,6 +1023,7 @@ func (a *Assembler) pseudoShim(c *cursor) error {
 	rtlName := scanName(c)
 
 	c.skipBlanks()
+	
 	if c.peek() == ',' {
 		c.next()
 	}

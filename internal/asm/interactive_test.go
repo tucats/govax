@@ -58,6 +58,7 @@ func TestAssembleLine_stopsAtEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AssembleLine(END): %v", err)
 	}
+
 	if !done {
 		t.Fatal("expected bare END to report done=true")
 	}
@@ -84,6 +85,7 @@ func TestAssembleLine_errorStaysInteractive(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error for an unrecognized opcode")
 	}
+	
 	if done {
 		t.Fatal("a statement error must not report done=true")
 	}
@@ -112,6 +114,7 @@ func TestBeginInteractive_resetsStop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AssembleLine after BeginInteractive: %v", err)
 	}
+
 	if done {
 		t.Fatal("a real statement right after BeginInteractive must not report done=true")
 	}

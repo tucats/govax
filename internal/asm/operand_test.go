@@ -36,6 +36,7 @@ func assembleBytesAt(t *testing.T, origin uint32, src string) []byte {
 
 func requireBytes(t *testing.T, got []byte, want ...byte) {
 	t.Helper()
+	
 	if len(got) != len(want) {
 		t.Fatalf("got %d bytes % X, want %d bytes % X", len(got), got, len(want), want)
 	}

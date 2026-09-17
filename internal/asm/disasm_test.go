@@ -33,9 +33,11 @@ func TestDisassembleAddressingModes(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Disassemble: %v", err)
 			}
+
 			if got := dec.String(); got != tc.want {
 				t.Errorf("Disassemble(% X) = %q, want %q", tc.bytes, got, tc.want)
 			}
+
 			if int(dec.Length) != len(tc.bytes) {
 				t.Errorf("Length = %d, want %d", dec.Length, len(tc.bytes))
 			}
@@ -55,6 +57,7 @@ func TestDisassembleBranch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	
 	if got, want := dec.String(), "BEQL 00000007"; got != want {
 		t.Errorf("Disassemble = %q, want %q", got, want)
 	}

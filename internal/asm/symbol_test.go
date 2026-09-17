@@ -70,6 +70,7 @@ func TestForwardReferenceFixups(t *testing.T) {
 			if _, _, err := a.getSymbol("FWD", true, tc.loc, tc.kind); err != nil {
 				t.Fatalf("getSymbol (forward): %v", err)
 			}
+			
 			if err := a.setSymbol("FWD", tc.value, SymNone, false); err != nil {
 				t.Fatalf("setSymbol: %v", err)
 			}

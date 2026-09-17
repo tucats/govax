@@ -81,6 +81,7 @@ func TestAssembleKernel(t *testing.T) {
 		if err != nil {
 			return "", err
 		}
+		
 		return string(b), nil
 	})
 
