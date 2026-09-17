@@ -6,11 +6,14 @@ import "testing"
 // resulting P0-region bytes, failing the test on any error.
 func assembleBytes(t *testing.T, src string) []byte {
 	t.Helper()
-	a := New()
+
+	a := New(true)
+
 	out, err := a.Assemble(src)
 	if err != nil {
 		t.Fatalf("assemble %q: %v", src, err)
 	}
+
 	return out
 }
 
@@ -19,12 +22,15 @@ func assembleBytes(t *testing.T, src string) []byte {
 // whose encoding depends on the address it's assembled at.
 func assembleBytesAt(t *testing.T, origin uint32, src string) []byte {
 	t.Helper()
-	a := New()
+
+	a := New(true)
 	a.SetOrigin(origin)
+
 	out, err := a.Assemble(src)
 	if err != nil {
 		t.Fatalf("assemble %q at %#x: %v", src, origin, err)
 	}
+	
 	return out
 }
 

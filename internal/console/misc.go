@@ -1,6 +1,7 @@
 package console
 
 import (
+	"os"
 	"strings"
 	"time"
 
@@ -131,7 +132,12 @@ func (c *Console) Include(path string, dispatch func(string) error) error {
 			text := CommandLineString
 			CommandLineString = ""
 
-			return dispatch(text)
+			status := dispatch(text)
+			if status == nil {
+				os.Exit(0)
+			}
+
+			return status
 		}
 
 		return nil

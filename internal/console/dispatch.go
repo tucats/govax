@@ -691,7 +691,9 @@ func cmdTime(d *Dispatcher, rest string) error {
 	return d.Console.Time(strings.TrimSpace(rest), d.Dispatch)
 }
 
-func cmdPrint(d *Dispatcher, rest string) error { return d.Console.Print(rest) }
+func cmdPrint(d *Dispatcher, rest string) error {
+	return d.Console.Print(rest)
+}
 
 func cmdHelp(d *Dispatcher, rest string) error {
 	return d.Console.Help(d.Help, strings.Fields(rest))
@@ -1177,7 +1179,7 @@ func cmdSetPTE(d *Dispatcher, rest string) error {
 		if err != nil {
 			return err
 		}
-		
+
 		rest = strings.TrimSpace(rest)
 
 		a1, a2 := addr1&^0x1FF, addr2&^0x1FF

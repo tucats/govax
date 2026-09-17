@@ -1,6 +1,8 @@
 package cpu
 
 import (
+	"os"
+
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 )
@@ -51,13 +53,16 @@ func emulXfc(e *Engine, d *Decoded) error {
 		if e.services == nil {
 			return &Fault{Code: ExcPrivileged}
 		}
+
 		e.services.ConsoleWriteByte(byte(e.cpu.GPR(vax.R0)))
+
 		return nil
 
 	case xfcConsoleRead:
 		if e.services == nil {
 			return &Fault{Code: ExcPrivileged}
 		}
+
 		ch := e.services.ConsoleReadByte()
 		e.cpu.SetGPR(vax.R0, (e.cpu.GPR(vax.R0)&0xFFFFFF00)|uint32(ch))
 		return nil
@@ -69,6 +74,17 @@ func emulXfc(e *Engine, d *Decoded) error {
 		if e.cpu.PSL().CurMod() != vax.Kernel {
 			return &Fault{Code: ExcPrivileged}
 		}
+
+		// Up for debate... this opcode is meant to stop the entire
+		// emulator; i.e. if you ran a command from the shell, this
+		// would end the program and let the shell resume.
+
+		if true {
+			status := e.cpu.PR(0)
+
+			os.Exit(int(status))
+		}
+
 		return ErrHalted
 
 	case xfcDCL:

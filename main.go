@@ -140,7 +140,9 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	}
 
 	c := console.New(out)
+
 	c.Paths = resolver
+	c.Verbose = (console.CommandLineString == "")
 
 	// rlStdin is what readline.Config.Stdin gets below -- the same reader
 	// c.In uses, so there is only ever one real reader of the terminal

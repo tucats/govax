@@ -10,13 +10,14 @@ import "testing"
 func TestAssembleLineMatchesBatch(t *testing.T) {
 	src := readFixture(t, "xor.asm")
 
-	batch := New()
+	batch := New(true)
+
 	want, err := batch.Assemble(src)
 	if err != nil {
 		t.Fatalf("Assemble: %v", err)
 	}
 
-	interactive := New()
+	interactive := New(true)
 
 	var done bool
 
@@ -47,7 +48,7 @@ func TestAssembleLineMatchesBatch(t *testing.T) {
 // exactly like a dotted ".END", and that no further statements are needed
 // once done is reported.
 func TestAssembleLine_stopsAtEnd(t *testing.T) {
-	a := New()
+	a := New(true)
 
 	if done, err := a.AssembleLine("START: MOVL #1,R0"); err != nil || done {
 		t.Fatalf("AssembleLine(MOVL) = done=%v, err=%v", done, err)
@@ -77,7 +78,7 @@ func TestAssembleLine_stopsAtEnd(t *testing.T) {
 // a bad statement's error without ever touching assembler_mode, so a typo
 // doesn't kick the caller out of interactive mode.
 func TestAssembleLine_errorStaysInteractive(t *testing.T) {
-	a := New()
+	a := New(true)
 
 	done, err := a.AssembleLine("NOTANOPCODE R0,R1")
 	if err == nil {
@@ -99,7 +100,7 @@ func TestAssembleLine_errorStaysInteractive(t *testing.T) {
 // (internal/console/asm.go reuses one Assembler across several ASM
 // commands).
 func TestBeginInteractive_resetsStop(t *testing.T) {
-	a := New()
+	a := New(true)
 
 	if _, err := a.AssembleLine("END"); err != nil {
 		t.Fatalf("first END: %v", err)
@@ -119,7 +120,7 @@ func TestBeginInteractive_resetsStop(t *testing.T) {
 // TestDeposit confirms Deposit() tracks the active location counter as
 // statements are assembled, matching vax.console.deposit.
 func TestDeposit(t *testing.T) {
-	a := New()
+	a := New(true)
 
 	start := a.Deposit()
 
@@ -135,7 +136,7 @@ func TestDeposit(t *testing.T) {
 // TestHasUnresolvedSymbols confirms a forward reference to a never-defined
 // label is reported, and a real one isn't.
 func TestHasUnresolvedSymbols(t *testing.T) {
-	a := New()
+	a := New(true)
 
 	if _, err := a.AssembleLine("JMP UNDEFINED_LABEL"); err != nil {
 		t.Fatalf("AssembleLine: %v", err)
@@ -145,7 +146,7 @@ func TestHasUnresolvedSymbols(t *testing.T) {
 		t.Error("expected a forward reference to UNDEFINED_LABEL to be unresolved")
 	}
 
-	b := New()
+	b := New(true)
 	if _, err := b.AssembleLine("HERE: JMP HERE"); err != nil {
 		t.Fatalf("AssembleLine: %v", err)
 	}

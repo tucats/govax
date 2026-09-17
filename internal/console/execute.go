@@ -241,7 +241,9 @@ func (c *Console) reportStopReason(err error) error {
 		return nil
 
 	case errors.Is(err, cpu.ErrHalted):
-		c.Printf("HALT instruction executed at PC = %08X\n", c.CPU.GPR(vax.PC))
+		if c.Verbose {
+			c.Printf("HALT instruction executed at PC = %08X\n", c.CPU.GPR(vax.PC))
+		}
 
 		return nil
 

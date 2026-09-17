@@ -41,7 +41,7 @@ func TestExpressionArithmetic(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.src, func(t *testing.T) {
-			a := New()
+			a := New(true)
 			if got := evalNoForward(t, a, tc.src); got != tc.want {
 				t.Errorf("eval(%q) = %#x, want %#x", tc.src, got, tc.want)
 			}
@@ -50,8 +50,9 @@ func TestExpressionArithmetic(t *testing.T) {
 }
 
 func TestExpressionHere(t *testing.T) {
-	a := New()
+	a := New(true)
 	a.deposit = 0x1234
+
 	if got := evalNoForward(t, a, "."); got != 0x1234 {
 		t.Errorf(". = %#x, want 0x1234", got)
 	}
@@ -67,7 +68,7 @@ func TestExpressionCharLiteral(t *testing.T) {
 		{`'\n'`, 0x0A},
 	}
 	for _, tc := range cases {
-		a := New()
+		a := New(true)
 		if got := evalNoForward(t, a, tc.src); got != tc.want {
 			t.Errorf("eval(%q) = %#x, want %#x", tc.src, got, tc.want)
 		}
@@ -75,8 +76,10 @@ func TestExpressionCharLiteral(t *testing.T) {
 }
 
 func TestExpressionMask(t *testing.T) {
-	a := New()
+	a := New(true)
+
 	got := evalNoForward(t, a, "^M<R0,R2,R11,IV>")
+
 	want := uint32(1<<0 | 1<<2 | 1<<11 | 1<<15)
 	if got != want {
 		t.Errorf("mask = %#x, want %#x", got, want)
@@ -84,15 +87,16 @@ func TestExpressionMask(t *testing.T) {
 }
 
 func TestExpressionDivisionByZero(t *testing.T) {
-	a := New()
+	a := New(true)
 	c := newCursor("^D1/^D0")
+
 	if _, err := a.exprNoForward(c); err == nil {
 		t.Fatal("expected division-by-zero error")
 	}
 }
 
 func TestExpressionDefinedFunction(t *testing.T) {
-	a := New()
+	a := New(true)
 	if got := evalNoForward(t, a, `DEFINED("NOSUCHSYM")`); got != 0 {
 		t.Errorf("DEFINED(undefined) = %d, want 0", got)
 	}
@@ -105,7 +109,7 @@ func TestExpressionDefinedFunction(t *testing.T) {
 }
 
 func TestExpressionVerboseFunction(t *testing.T) {
-	a := New()
+	a := New(true)
 	if got := evalNoForward(t, a, "VERBOSE()"); got != 1 {
 		t.Errorf("VERBOSE() = %d, want 1 (default on)", got)
 	}

@@ -207,6 +207,7 @@ func (c *Console) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 	}
 
 	sigargs := c.CPU.GPR(vax.SP) - 4
+
 	if _, err := push(uint32(3 + len(f.Args))); err != nil {
 		restore()
 
@@ -240,6 +241,7 @@ func (c *Console) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 	}
 
 	mechargs := c.CPU.GPR(vax.SP) - 4
+	
 	if _, err := push(4); err != nil {
 		restore()
 
@@ -251,6 +253,7 @@ func (c *Console) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 	}
 
 	callErr := c.Call(handler, false, sigargs, mechargs)
+
 	restore()
 
 	if callErr != nil {

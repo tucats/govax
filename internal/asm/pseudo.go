@@ -568,6 +568,7 @@ func (a *Assembler) pseudoEnd(c *cursor) error {
 	a.scopeSymbols()
 
 	c.skipBlanks()
+
 	if !c.atEnd() {
 		v, err := a.exprNoForward(c)
 		if err != nil {
@@ -858,6 +859,7 @@ func (a *Assembler) pseudoSCB(c *cursor) error {
 	}
 
 	c.skipBlanks()
+
 	if c.peek() == ',' {
 		c.next()
 	}
@@ -965,6 +967,7 @@ func (a *Assembler) pseudoShim(c *cursor) error {
 	name := scanName(c)
 
 	c.skipBlanks()
+
 	if c.peek() == ',' {
 		c.next()
 	}
@@ -1221,5 +1224,7 @@ func (a *Assembler) pseudoIf(c *cursor) error {
 // deferred, matching this project's usual policy for a finding that's
 // large enough to revisit deliberately rather than block a phase on.
 func (a *Assembler) pseudoP1Vector(c *cursor) error {
+	_ = c
+
 	return nil
 }

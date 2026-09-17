@@ -85,7 +85,9 @@ func (c *Console) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 // "ASM <file>"/interactive-mode command in a row.
 func (c *Console) ensureAsmSession() *asm.Assembler {
 	if c.asmSession == nil {
-		c.asmSession = asm.New()
+		// Pass down the console's verbose flag to the assember
+		c.asmSession = asm.New(c.Verbose)
+
 		// vax.console.deposit is one shared "current address" register in
 		// the reference tool -- EXAMINE/DEPOSIT/interactive-ASM all read
 		// and advance the same field. This port tracks it as

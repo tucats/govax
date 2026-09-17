@@ -30,8 +30,8 @@ func TestAssembleFixtures(t *testing.T) {
 
 	for _, name := range names {
 		t.Run(name, func(t *testing.T) {
-			a := New()
-			
+			a := New(true)
+
 			out, err := a.Assemble(readFixture(t, name))
 			if err != nil {
 				t.Fatalf("assemble: %v", err)
@@ -51,7 +51,7 @@ func TestAssembleFixtures(t *testing.T) {
 // in the same, by-then-already-microkernel-valid console session — see
 // pseudoRegion's doc comment.
 func TestAssembleForth(t *testing.T) {
-	a := New()
+	a := New(true)
 	a.SetMicrokernel(true)
 
 	if _, err := a.Assemble(readFixture(t, "forth.asm")); err != nil {
@@ -75,7 +75,7 @@ func TestAssembleForth(t *testing.T) {
 // switches there early via .REGION SYSTEM and stays there for the rest of
 // the file), so this checks the S0 region rather than Bytes()'s P0 range.
 func TestAssembleKernel(t *testing.T) {
-	a := New()
+	a := New(true)
 	a.SetIncludeResolver(func(name string) (string, error) {
 		b, err := os.ReadFile("../../testdata/asm/" + name)
 		if err != nil {
@@ -136,14 +136,15 @@ func TestRoundTripFixtures(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			a := New()
+			a := New(true)
+			
 			out, err := a.Assemble(readFixture(t, tc.name))
 			if err != nil {
 				t.Fatalf("assemble: %v", err)
 			}
 
 			stop := a.origin + uint32(len(out))
-			
+
 			if tc.dataLabel != "" {
 				sym, ok := a.symbols.find(tc.dataLabel)
 				if !ok {

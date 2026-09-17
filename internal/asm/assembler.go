@@ -90,7 +90,7 @@ type Assembler struct {
 
 // New returns an Assembler ready to assemble source, using the built-in VAX
 // instruction table.
-func New() *Assembler {
+func New(verbose bool) *Assembler {
 	a := &Assembler{
 		table:     cpu.Instructions(),
 		symbols:   newSymbolTable(),
@@ -101,7 +101,7 @@ func New() *Assembler {
 		s0Deposit: defaultS0Base,
 		s0Origin:  defaultS0Base,
 		radix:     16,
-		verbose:   true, // matches initialization.c's default CONSOLE_VERBOSE flag
+		verbose:   verbose,
 	}
 	a.seedBuiltinSymbols()
 

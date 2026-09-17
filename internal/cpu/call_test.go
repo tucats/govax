@@ -103,6 +103,7 @@ func TestEmulCallsFrameLayout(t *testing.T) {
 	if got := mustLongword(t, cpu, mem, 0x8FF8); got != 0x22222222 {
 		t.Errorf("saved R3 at FP+24 = %#x, want 0x22222222", got)
 	}
+	
 	if got := mustLongword(t, cpu, mem, 0x8FFF); got != 3 {
 		t.Errorf("pushed count at AP = %#x, want 3", got)
 	}
