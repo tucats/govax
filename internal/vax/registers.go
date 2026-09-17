@@ -47,38 +47,38 @@ type PrivReg int
 // preg[] mnemonics. Indices with no architected mnemonic are still valid
 // PrivReg values (0..MaxPrivReg) but have no named constant here.
 const (
-	KSP    PrivReg = 0
-	ESP    PrivReg = 1
-	SSP    PrivReg = 2
-	USP    PrivReg = 3
-	ISP    PrivReg = 4
-	P0BR   PrivReg = 8
-	P0LR   PrivReg = 9
-	P1BR   PrivReg = 10
-	P1LR   PrivReg = 11
-	SBR    PrivReg = 12
-	SLR    PrivReg = 13
-	PCBB   PrivReg = 16
-	SCBB   PrivReg = 17
-	IPL    PrivReg = 18
-	ASTLVL PrivReg = 19
-	SIRR   PrivReg = 20
-	SISR   PrivReg = 21
-	ICCS   PrivReg = 24
-	NICR   PrivReg = 25
-	ICR    PrivReg = 26
-	TODR   PrivReg = 27
-	RXCS   PrivReg = 32
-	RXDB   PrivReg = 33
-	TXCS   PrivReg = 34
-	TXDB   PrivReg = 35
-	TBDR   PrivReg = 36
-	MAPEN  PrivReg = 56
-	TBIA   PrivReg = 57
-	TBIS   PrivReg = 58
-	PMR    PrivReg = 61
-	SID    PrivReg = 62
-	TBCHK  PrivReg = 63
+	KSP    PrivReg = 0  // KERNEL mode stack pointer value
+	ESP    PrivReg = 1  // EXEC mode stack pointer value
+	SSP    PrivReg = 2  // SUPERVISOR mode stack pointer value
+	USP    PrivReg = 3  // USER mode stack pointer value
+	ISP    PrivReg = 4  // INTERRUPT mode stack pointer value
+	P0BR   PrivReg = 8  // P0 base address register
+	P0LR   PrivReg = 9  // P0 length register
+	P1BR   PrivReg = 10 // P1 base address register
+	P1LR   PrivReg = 11 // P1 length register
+	SBR    PrivReg = 12 // System base register
+	SLR    PrivReg = 13 // System length register
+	PCBB   PrivReg = 16 // Process Control Block base address
+	SCBB   PrivReg = 17 // System Control Block base address
+	IPL    PrivReg = 18 // Interrupt processing level
+	ASTLVL PrivReg = 19 // Asynchronous System Trap (AST) level
+	SIRR   PrivReg = 20 // Software Interrupt Request Register
+	SISR   PrivReg = 21 // Software Interrupt Summary Register
+	ICCS   PrivReg = 24 // Interval Clock Control and Status
+	NICR   PrivReg = 25 // Next Interval Count Register
+	ICR    PrivReg = 26 // Interval Count Register
+	TODR   PrivReg = 27 // Time-of-Year Clock Register
+	RXCS   PrivReg = 32 // Console Receive Control and Status
+	RXDB   PrivReg = 33 // Console Receive Data Buffer
+	TXCS   PrivReg = 34 // Console Transmit Control and Status
+	TXDB   PrivReg = 35 // Console Transmit Data Buffer
+	TBDR   PrivReg = 36 // Trnaslation Buffer Group Disable Register
+	MAPEN  PrivReg = 56 // Virtual memory mapping enabled
+	TBIA   PrivReg = 57 // Translation Buffer Invalidate All
+	TBIS   PrivReg = 58 // Translation Buffer Invalidate Single
+	PMR    PrivReg = 61 // Performance Monitoring Register
+	SID    PrivReg = 62 // System Identification REgister
+	TBCHK  PrivReg = 63 // Translation Buffer Check
 )
 
 // MaxPrivReg is the highest valid PrivReg index, matching the C source's

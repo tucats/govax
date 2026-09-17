@@ -16,25 +16,25 @@ package vax
 type PSL uint32
 
 const (
-	pslC      = 1 << 0
-	pslV      = 1 << 1
-	pslZ      = 1 << 2
-	pslN      = 1 << 3
-	pslT      = 1 << 4
-	pslIV     = 1 << 5
-	pslFU     = 1 << 6
-	pslDV     = 1 << 7
+	pslC      = 1 << 0 // Set if the last operation generated a carry or borrow
+	pslV      = 1 << 1 // Set if the last operation resulted in an arithmetic overflow
+	pslZ      = 1 << 2 // Set if the last operation was exactly zero
+	pslN      = 1 << 3 // Set if the last operation was negative
+	pslT      = 1 << 4 // When set, a TRACE fault occurs after this instruction
+	pslIV     = 1 << 5 // When set, an integer overflow is a hardware exception
+	pslFU     = 1 << 6 // When set, a floating underflow is a hardware exception
+	pslDV     = 1 << 7 // when set, a packed decimal overflow is a hardware exception
 	pslIPLLo  = 16
 	pslIPLLen = 5
-	pslIPL    = 0x1F << pslIPLLo
+	pslIPL    = 0x1F << pslIPLLo // Current hardware IPL level
 	pslPrvLo  = 22
-	pslPrv    = 0x3 << pslPrvLo
+	pslPrv    = 0x3 << pslPrvLo // Previous privilege setting of current process
 	pslCurLo  = 24
-	pslCur    = 0x3 << pslCurLo
-	pslIS     = 1 << 26
-	pslFPD    = 1 << 27
-	pslTP     = 1 << 30
-	pslCM     = 1 << 31
+	pslCur    = 0x3 << pslCurLo // Current privilege setting of current process
+	pslIS     = 1 << 26         // Set when processing handling an interrupt
+	pslFPD    = 1 << 27         // Set when multipart instruction was interrupted
+	pslTP     = 1 << 30         // Remembers that a TRACE trap is pending
+	pslCM     = 1 << 31         // When set, allow PDP-11 instructions
 )
 
 // AccessMode is one of the four VAX processor access modes, used by CUR_MOD
@@ -56,7 +56,7 @@ func setFlag(v PSL, mask uint32, on bool) PSL {
 	if on {
 		return v | PSL(mask)
 	}
-	
+
 	return v &^ PSL(mask)
 }
 
