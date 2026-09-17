@@ -32,6 +32,8 @@ type fakeServices struct {
 	shimRC      uint32
 	shimHandled bool
 	shimErr     error
+
+	quitRequested bool
 }
 
 func (f *fakeServices) ConsoleWriteByte(b byte) { f.writtenByte = b }
@@ -71,6 +73,8 @@ func (f *fakeServices) Shim(code uint32) (uint32, bool, error) {
 	f.shimCode = code
 	return f.shimRC, f.shimHandled, f.shimErr
 }
+
+func (f *fakeServices) RequestQuit() { f.quitRequested = true }
 
 // xfcEngine returns an Engine with fakeServices installed as its hooks.
 func xfcEngine() (*Engine, *fakeServices) {
@@ -142,7 +146,7 @@ func TestEmulXfcConsoleCmdEmptyLengthIgnored(t *testing.T) {
 }
 
 func TestEmulXfcQuitEmulator(t *testing.T) {
-	e, _ := xfcEngine()
+	e, f := xfcEngine()
 	psl := e.cpu.PSL()
 	psl.SetCurMod(vax.Kernel)
 	e.cpu.SetPSL(psl)
@@ -151,6 +155,9 @@ func TestEmulXfcQuitEmulator(t *testing.T) {
 	putBytes(t, e.cpu, e.mem, base, 0xFC, xfcQuitEmulator)
 	if err := e.Step(); !errors.Is(err, ErrHalted) {
 		t.Errorf("Step() = %v, want ErrHalted", err)
+	}
+	if !f.quitRequested {
+		t.Error("RequestQuit was not called, want the console asked to stop entirely")
 	}
 }
 
@@ -182,11 +189,14 @@ func TestEmulXfcQuitEmulatorFaultsOutsideKernelMode(t *testing.T) {
 
 func TestEmulXfcHaltAndHaltSilent(t *testing.T) {
 	for _, code := range []byte{xfcHaltSilent, xfcHalt} {
-		e, _ := xfcEngine()
+		e, f := xfcEngine()
 		e.cpu.SetGPR(vax.PC, base)
 		putBytes(t, e.cpu, e.mem, base, 0xFC, code)
 		if err := e.Step(); !errors.Is(err, ErrHalted) {
 			t.Errorf("code %#x: Step() = %v, want ErrHalted", code, err)
+		}
+		if f.quitRequested {
+			t.Errorf("code %#x: RequestQuit was called, want only XFC$QUIT_EMULATION to stop the console", code)
 		}
 	}
 }

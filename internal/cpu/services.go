@@ -45,4 +45,13 @@ type SystemServices interface {
 	// unregistered code, matching shim()'s own "Unimplemented SHIM
 	// invocation" path.
 	Shim(code uint32) (r0 uint32, handled bool, err error)
+
+	// RequestQuit implements the vax.console.running = 0 half of
+	// XFC$QUIT_EMULATION (emul_xfc.c case 0x78) -- the half that reaches
+	// past the CPU's own halt into the console's command loop, asking it
+	// to stop entirely rather than just fall back to the "VAX>" prompt.
+	// The halt itself is reported the ordinary way, via ErrHalted (see
+	// xfc.go's emulXfc), matching console_exec.c treating VAX_USERHALT
+	// (this opcode's halt reason) identically to a plain VAX_HALT.
+	RequestQuit()
 }

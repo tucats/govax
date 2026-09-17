@@ -23,6 +23,31 @@ func loadProgram(t *testing.T, c *Console, addr uint32, bytes ...byte) {
 	}
 }
 
+// TestExecute_xfcQuitEmulatorStopsConsole exercises XFC$QUIT_EMULATION
+// (opcode 0xFC, selector 0x78) end to end through the console layer: it
+// must both halt the CPU (Execute returns cleanly, like any HALT) and stop
+// the console's own command loop (Running() goes false), matching
+// emul_xfc.c's own vax.halted = VAX_USERHALT plus vax.console.running = 0 --
+// the two-part effect cmd/govax's main() relies on (via Console.Running) to
+// exit the whole program instead of just returning to the "VAX>" prompt.
+func TestExecute_xfcQuitEmulatorStopsConsole(t *testing.T) {
+	c, _ := newTestConsole(t)
+	loadProgram(t, c, 0x200, 0xFC, 0x78) // XFC #XFC$QUIT_EMULATION
+
+	if !c.Running() {
+		t.Fatal("Running() = false before Execute, want true")
+	}
+
+	addr := uint32(0x200)
+	if err := c.Execute(&addr); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+
+	if c.Running() {
+		t.Error("Running() = true after XFC$QUIT_EMULATION, want false")
+	}
+}
+
 func TestExecute_runsUntilHalt(t *testing.T) {
 	c, buf := newTestConsole(t)
 	loadProgram(t, c, 0x200, opNop, opNop, opNop, opHalt)

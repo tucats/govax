@@ -105,6 +105,18 @@ func (c *Console) Shim(code uint32) (uint32, bool, error) {
 	return r0, handled, translateHalt(err)
 }
 
+// RequestQuit is XFC$QUIT_EMULATION's "stop the console entirely" half
+// (see cpu.SystemServices' own doc comment): the same effect as Quit
+// (misc.go, bound to the QUIT/EXIT console commands), reached here from a
+// running VAX program instead of a typed command. Console is already
+// initialized by the time any XFC executes, so this skips Quit's own
+// requireInit guard rather than plumbing an error return XFC's caller
+// (Engine.Step) has nowhere to put -- RequestQuit's signature is fixed by
+// the SystemServices interface.
+func (c *Console) RequestQuit() {
+	c.quit = true
+}
+
 // translateHalt turns rtl.ErrHalt (a SYS$ service or shim requesting the
 // machine halt, e.g. an unrecognized SYS$CLI request) into cpu.ErrHalted,
 // the sentinel Engine.Step actually recognizes — kept as a translation at

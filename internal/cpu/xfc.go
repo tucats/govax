@@ -1,8 +1,6 @@
 package cpu
 
 import (
-	"os"
-
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 )
@@ -75,14 +73,18 @@ func emulXfc(e *Engine, d *Decoded) error {
 			return &Fault{Code: ExcPrivileged}
 		}
 
-		// Up for debate... this opcode is meant to stop the entire
-		// emulator; i.e. if you ran a command from the shell, this
-		// would end the program and let the shell resume.
-
-		if true {
-			status := e.cpu.PR(0)
-
-			os.Exit(int(status))
+		// Matches emul_xfc.c's own vax.halted = VAX_USERHALT plus
+		// vax.console.running = 0: this opcode stops the entire
+		// emulator (driver.c's main() loop exits), not just the
+		// running VAX program -- unlike xfcHalt/xfcHaltSilent below,
+		// which only halt the CPU and return control to the console
+		// prompt. RequestQuit carries the "stop the console too" half
+		// up through Engine's SystemServices hook rather than an
+		// os.Exit call here, which used to tear down the whole host
+		// process from inside the emulation layer and made this path
+		// untestable.
+		if e.services != nil {
+			e.services.RequestQuit()
 		}
 
 		return ErrHalted
