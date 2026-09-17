@@ -161,6 +161,12 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		attn := newAttentionStdin(os.Stdin, func() *cpu.Engine { return c.Engine })
 		c.In = attn
 		rlStdin = attn
+
+		// Covers the window attentionStdin's own byte filtering can't --
+		// see installSigintAttention's own doc comment (attention.go) for
+		// why a real SIGINT, not just a 0x03 byte, needs handling here too.
+		stopSigint := installSigintAttention(func() *cpu.Engine { return c.Engine })
+		defer stopSigint()
 	}
 
 	if err := c.Init(minimumVAXMemory); err != nil {

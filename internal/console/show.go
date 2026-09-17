@@ -1133,7 +1133,7 @@ func (c *Console) ShowQuantum() error {
 	current, initial := c.Engine.Quantum()
 
 	c.Printf("QUANTUM\n    INTERRUPTS  Initial=%d  Current=%d\n", initial, current)
-	c.Printf("    USER INTF   Not modeled by this port (no cooperative host-UI polling loop)\n")
+	//c.Printf("    USER INTF   Not modeled by this port (no cooperative host-UI polling loop)\n")
 
 	return nil
 }
@@ -1514,7 +1514,7 @@ func (c *Console) ShowTrace() error {
 	if c.Trace {
 		state = "enabled"
 	}
-	
+
 	c.Printf("    Execution trace disassembly is %s\n", state)
 
 	if c.Trace {
