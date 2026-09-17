@@ -17,6 +17,7 @@ func TestEmulCvtNoOverflow(t *testing.T) {
 	if got := cpu.GPR(vax.R2); got != 0xFFFFFFFF {
 		t.Errorf("R2 = %#x, want 0xffffffff (sign-extended)", got)
 	}
+
 	psl := cpu.PSL()
 	if !psl.N() || psl.Z() || psl.V() || psl.C() {
 		t.Errorf("N=%v Z=%v V=%v C=%v, want N=true Z=false V=false C=false", psl.N(), psl.Z(), psl.V(), psl.C())
@@ -38,6 +39,7 @@ func TestEmulCvtOverflowNZFromDestination(t *testing.T) {
 	if got := byte(cpu.GPR(vax.R2)); got != 0x80 {
 		t.Errorf("result = %#x, want 0x80 (truncated)", got)
 	}
+	
 	psl := cpu.PSL()
 	if !psl.N() {
 		t.Error("N = false, want true (destination value 0x80 is negative, even though the source 128 was positive)")

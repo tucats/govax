@@ -57,6 +57,7 @@ func TestFaultHistorySetSizeResetsButKeepsSequence(t *testing.T) {
 	}
 
 	e.recordFault(ExcReservedOp, nil, 0x300, 0)
+	
 	hist := e.FaultHistory()
 	if len(hist) != 1 {
 		t.Fatalf("len(FaultHistory()) = %d, want 1", len(hist))

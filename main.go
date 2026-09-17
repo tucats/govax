@@ -48,12 +48,13 @@ const minimumVAXMemory = 2048 * 512
 
 // Version string. This is injected by the build tool by default, but defaults
 // to t this string if built with "go build" rather than the build tool.
-
 var BuildVersion = "- go build version"
 
-// Build timestamp
-
+// Build timestamp, injected by build tool else empty string.
 var BuildTime string
+
+// Do we dump out statistics when execution finishes?
+var stats *bool
 
 // pathFlag implements flag.Value for a repeatable "-path <dir>" flag —
 // each occurrence appends to the list, in the order given, matching a
@@ -87,6 +88,10 @@ func main() {
 	instructionLimit := flag.Int(
 		"instruction-limit", 0, "maximum number of instructions to executed; default is unlimited")
 
+	stats = flag.Bool(
+		"stats", false, "Show execution statistics",
+	)
+
 	flag.Parse()
 
 	if err := run(paths, *instructionLimit, *timeLimit, os.Stdout, nil, flag.Args()); err != nil {
@@ -108,6 +113,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 
 	// Squirrel away the command line arguments.
 	argText := strings.Builder{}
+
 	for _, arg := range args {
 		if strings.TrimSpace(arg) != "" {
 			if argText.Len() > 0 {
@@ -117,6 +123,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 			argText.WriteString(arg)
 		}
 	}
+
 	console.CommandLineString = argText.String()
 
 	// Set up the fall-back path resolver for including files that might need to be found in the
@@ -184,57 +191,71 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		fmt.Fprintln(out, "vax.init:", err)
 	}
 
-	if !c.Running() {
-		return nil
-	}
+	// After that, if we're still runing, do a console loop.
+	if c.Running() {
 
-	// Applied only from here on, not during vax.init's own boot sequence
-	// above -- see this function's own doc comment.
-	c.Engine.SetLimits(instructionLimit, timeLimit)
+		// Applied only from here on, not during vax.init's own boot sequence
+		// above -- see this function's own doc comment.
+		c.Engine.SetLimits(instructionLimit, timeLimit)
 
-	historyFile := ""
-	if in == nil { // real interactive use, not a test with an injected reader
-		historyFile = historyFilePath()
-	}
-
-	rl, err := readline.NewEx(&readline.Config{
-		Prompt:      "VAX> ",
-		HistoryFile: historyFile,
-		Stdin:       rlStdin,
-	})
-	if err != nil {
-		return vmserrors.Wrap(vmserrors.VAX_READLINE, err)
-	}
-
-	defer rl.Close()
-
-	for c.Running() {
-		// driver.c's own prompt switches from "VAX> " to "ASM> " while a
-		// bare ASM command has put the console into interactive assembler
-		// mode (docs/PHASE-19.md) -- the ASM_ADDRPROMPT variant that also
-		// shows the current deposit address isn't implemented (off by
-		// default in the reference tool; see PHASE-19.md's own scope note).
-		if c.InAssemblerMode() {
-			rl.SetPrompt("ASM> ")
-		} else {
-			rl.SetPrompt("VAX> ")
+		historyFile := ""
+		if in == nil { // real interactive use, not a test with an injected reader
+			historyFile = historyFilePath()
 		}
 
-		line, err := rl.Readline()
-		if err != nil { // io.EOF (Ctrl-D) or readline.ErrInterrupt (Ctrl-C)
-			if errors.Is(err, readline.ErrInterrupt) {
-				continue
+		rl, err := readline.NewEx(&readline.Config{
+			Prompt:      "VAX> ",
+			HistoryFile: historyFile,
+			Stdin:       rlStdin,
+		})
+		if err != nil {
+			return vmserrors.Wrap(vmserrors.VAX_READLINE, err)
+		}
+
+		defer rl.Close()
+
+		for c.Running() {
+			// driver.c's own prompt switches from "VAX> " to "ASM> " while a
+			// bare ASM command has put the console into interactive assembler
+			// mode (docs/PHASE-19.md) -- the ASM_ADDRPROMPT variant that also
+			// shows the current deposit address isn't implemented (off by
+			// default in the reference tool; see PHASE-19.md's own scope note).
+			if c.InAssemblerMode() {
+				rl.SetPrompt("ASM> ")
+			} else {
+				rl.SetPrompt("VAX> ")
 			}
 
-			break
-		}
+			line, err := rl.Readline()
+			if err != nil { // io.EOF (Ctrl-D) or readline.ErrInterrupt (Ctrl-C)
+				if errors.Is(err, readline.ErrInterrupt) {
+					continue
+				}
 
-		if err := d.Dispatch(line); err != nil {
-			fmt.Fprintln(out, "%"+err.Error())
+				break
+			}
+
+			if err := d.Dispatch(line); err != nil {
+				fmt.Fprintln(out, "%"+err.Error())
+			}
 		}
 	}
 
+	// See if we have trailing stats to print out here.
+	printStats(c, out, *stats)
+
 	return nil
+}
+
+// printStatus dumps out stats if they are enabled to the console when the emulation finishes.
+func printStats(c *console.Console, out io.Writer, flag bool) {
+	if flag {
+		count := c.Engine.InstructionCount()
+
+		fmt.Fprintf(out, "\nEmulation Statistics:\n")
+		fmt.Fprintf(out, "    Instructions:  %10d\n", count)
+	}
+
 }
 
 // historyFilePath returns a per-user location for readline's command

@@ -53,6 +53,7 @@ func TestEmulIndexInRange(t *testing.T) {
 	if got := cpu.GPR(vax.R5); got != 12 { // (0+3)*4
 		t.Errorf("out = %d, want 12", got)
 	}
+
 	if cpu.PSL().N() || cpu.PSL().Z() {
 		t.Error("N/Z set, want both clear for a positive nonzero result")
 	}
@@ -79,6 +80,7 @@ func TestEmulIndexOutOfRangeFaults(t *testing.T) {
 	if got := cpu.GPR(vax.PC); got != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (arithmetic fault vector)", got)
 	}
+
 	if got := cpu.GPR(vax.R5); got != 0xDEADBEEF {
 		t.Errorf("R5 = %#x, want unchanged 0xDEADBEEF (not stored on fault)", got)
 	}
@@ -91,11 +93,13 @@ func TestEmulBispswBicpsw(t *testing.T) {
 	// #0x40 (pslFU) exceeds the short-literal range (0-63), so use I^#0x40
 	// (a word-sized immediate) instead.
 	stepInstruction(t, e, 0xB8, 0x8F, 0x40, 0x00) // BISPSW #0x40 -> sets FU
+
 	if !cpu.PSL().FU() {
 		t.Fatal("FU = false after BISPSW #0x40, want true")
 	}
 
 	stepInstruction(t, e, 0xB9, 0x8F, 0x40, 0x00) // BICPSW #0x40 -> clears FU
+	
 	if cpu.PSL().FU() {
 		t.Error("FU = true after BICPSW #0x40, want false")
 	}
@@ -143,12 +147,15 @@ func TestEmulPushrPoprRoundTrip(t *testing.T) {
 	if got := cpu.GPR(vax.SP); got != 0x9000 {
 		t.Errorf("SP after POPR = %#x, want 0x9000", got)
 	}
+
 	if got := cpu.GPR(vax.R0); got != 0x11111111 {
 		t.Errorf("R0 = %#x, want 0x11111111", got)
 	}
+
 	if got := cpu.GPR(vax.R2); got != 0x22222222 {
 		t.Errorf("R2 = %#x, want 0x22222222", got)
 	}
+
 	if got := cpu.GPR(vax.R5); got != 0x55555555 {
 		t.Errorf("R5 = %#x, want 0x55555555", got)
 	}
@@ -170,9 +177,11 @@ func TestEmulProberAccessibleWithVMDisabled(t *testing.T) {
 	if cpu.PSL().Z() {
 		t.Error("Z = true, want false (accessible with MAPEN disabled)")
 	}
+
 	if cpu.PSL().N() {
 		t.Error("N = true, want false")
 	}
+
 	if !cpu.PSL().C() {
 		t.Error("C = false, want true (PROBEx doesn't touch C)")
 	}
@@ -222,6 +231,7 @@ func TestEmulProberNotAccessibleSetsZWithoutFaulting(t *testing.T) {
 	if !cpu.PSL().Z() {
 		t.Error("Z = false, want true (not accessible)")
 	}
+
 	if got := cpu.GPR(vax.PC); got != codeVA+uint32(len(bytes)) {
 		t.Errorf("PC = %#x, want the next instruction (PROBEx never signals a real fault)", got)
 	}

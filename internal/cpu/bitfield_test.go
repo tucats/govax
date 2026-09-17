@@ -249,6 +249,7 @@ func TestEmulExtv(t *testing.T) {
 			if got := cpu.GPR(vax.R2); got != tc.wantResult {
 				t.Errorf("R2 = %#x, want %#x", got, tc.wantResult)
 			}
+			
 			got := cpu.PSL()
 			if got.N() != tc.wantN {
 				t.Errorf("N = %v, want %v", got.N(), tc.wantN)

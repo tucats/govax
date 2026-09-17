@@ -62,7 +62,7 @@ func parse(src string) []field {
 		log.Fatalf("gen: no entries matched in source")
 	}
 
-	var out []field
+	out := make([]field, 0, len(matches))
 
 	for _, m := range matches {
 		f := field{
@@ -209,7 +209,7 @@ func applyKnownFixes(fields []field) {
 	for name := range knownTableFixes {
 		remaining[name] = true
 	}
-	
+
 	for i, f := range fields {
 		fix, ok := knownTableFixes[f.name]
 		if !ok {

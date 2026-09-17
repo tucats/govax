@@ -166,6 +166,12 @@ func (e *Engine) AttentionRequested() bool { return e.attentionRequested.Load() 
 // value if Step has never been called.
 func (e *Engine) LastDecoded() Decoded { return e.decoded }
 
+// InstructionCount returns the number of instructions that have been decoded
+// and executed by the emulation engine.
+func (e *Engine) InstructionCount() int {
+	return e.instrCount
+}
+
 // PeekInstruction identifies which Instruction would execute next at the
 // engine's current PC, without decoding operands, advancing PC, or
 // otherwise mutating any state — a side-effect-free lookup Console uses to
@@ -329,5 +335,6 @@ func (e *Engine) Run() error {
 			return err
 		}
 	}
+	
 	return ErrHalted
 }

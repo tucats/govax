@@ -33,6 +33,7 @@ func TestEmulAddByte(t *testing.T) {
 			if got := byte(cpu.GPR(vax.R2)); got != tc.wantResult {
 				t.Errorf("result = %#x, want %#x", got, tc.wantResult)
 			}
+			
 			psl := cpu.PSL()
 			if psl.V() != tc.wantV || psl.C() != tc.wantC {
 				t.Errorf("V=%v C=%v, want V=%v C=%v", psl.V(), psl.C(), tc.wantV, tc.wantC)

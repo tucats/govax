@@ -13,6 +13,7 @@ import (
 // codes/opcode wiring, not re-deriving raw bit patterns by hand.
 func setFloatReg(t *testing.T, cpu *vax.CPU, size int, r vax.Reg, value float64) {
 	t.Helper()
+
 	raw, err := fpuStore(cpu, size, value)
 	if err != nil {
 		t.Fatalf("fpuStore(%v): %v", value, err)
@@ -28,6 +29,7 @@ func setFloatReg(t *testing.T, cpu *vax.CPU, size int, r vax.Reg, value float64)
 // getFloatReg is setFloatReg's inverse, via the already-verified fpuLoad.
 func getFloatReg(t *testing.T, cpu *vax.CPU, size int, r vax.Reg) float64 {
 	t.Helper()
+	
 	raw := uint64(cpu.GPR(r))
 	if size == 8 {
 		raw |= uint64(cpu.GPR(r+1)) << 32

@@ -186,6 +186,7 @@ func TestEmulEdivQuotientOverflow(t *testing.T) {
 	if err := mem.StoreQuadword(cpu, 0x4000, 0x0000000200000000); err != nil {
 		t.Fatalf("StoreQuadword: %v", err)
 	}
+	
 	cpu.SetGPR(vax.R1, 1) // divisor: true quotient is 0x200000000, doesn't fit in 32 bits
 
 	bytes := []byte{0x7B, regMode(vax.R1)}

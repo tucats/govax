@@ -16,6 +16,7 @@ func TestEmulMovtc(t *testing.T) {
 		if v >= 'a' && v <= 'z' {
 			v -= 'a' - 'A'
 		}
+		
 		putBytes(t, cpu, mem, 0x4000+uint32(n), v)
 	}
 

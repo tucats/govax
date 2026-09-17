@@ -25,6 +25,7 @@ func TestEmulAcbFloatPositiveAddendBoundary(t *testing.T) {
 	if got := getFloatReg(t, cpu, 4, vax.R3); got != 10.0 {
 		t.Errorf("index = %v, want 10.0", got)
 	}
+	
 	want := uint32(base + 6 + 16) // taken
 	if got := cpu.GPR(vax.PC); got != want {
 		t.Errorf("PC = %#x, want %#x (branch taken: index reached limit exactly)", got, want)

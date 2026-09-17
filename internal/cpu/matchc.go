@@ -89,5 +89,6 @@ func emulMatchc(e *Engine, d *Decoded) error {
 	psl.SetV(false)
 	psl.SetC(false)
 	e.cpu.SetPSL(psl)
+	
 	return nil
 }

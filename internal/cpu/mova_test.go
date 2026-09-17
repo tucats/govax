@@ -23,6 +23,7 @@ func TestEmulMova(t *testing.T) {
 	if got := cpu.GPR(vax.R5); got != 0x2000 {
 		t.Errorf("R5 = %#x, want 0x2000 (the address held in R3, not its contents)", got)
 	}
+
 	got := cpu.PSL()
 	if got.N() != true || got.Z() != true || got.V() != true || got.C() != true {
 		t.Errorf("PSL = %+v, want unaffected (all true, as pre-set)", got)
@@ -41,6 +42,7 @@ func TestEmulMovaRegisterModeFaults(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v (fault should be handled, not propagated)", err)
 	}
+
 	if cpu.GPR(vax.PC) != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (fault vector)", cpu.GPR(vax.PC))
 	}
@@ -58,6 +60,7 @@ func TestEmulPushaRegisterModeFaults(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v (fault should be handled, not propagated)", err)
 	}
+
 	if cpu.GPR(vax.PC) != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (fault vector)", cpu.GPR(vax.PC))
 	}
@@ -74,10 +77,12 @@ func TestEmulPushal(t *testing.T) {
 	if cpu.GPR(vax.SP) != 0x7FFC {
 		t.Fatalf("SP = %#x, want 0x7FFC", cpu.GPR(vax.SP))
 	}
+	
 	v, err := mem.LoadLongword(cpu, cpu.GPR(vax.SP))
 	if err != nil {
 		t.Fatalf("LoadLongword: %v", err)
 	}
+
 	if v != 0x2000 {
 		t.Errorf("pushed value = %#x, want 0x2000 (the address held in R3)", v)
 	}
@@ -94,10 +99,12 @@ func TestEmulPushl(t *testing.T) {
 	if cpu.GPR(vax.SP) != 0x7FFC {
 		t.Fatalf("SP = %#x, want 0x7FFC", cpu.GPR(vax.SP))
 	}
+
 	v, err := mem.LoadLongword(cpu, cpu.GPR(vax.SP))
 	if err != nil {
 		t.Fatalf("LoadLongword: %v", err)
 	}
+
 	if v != 0x12345678 {
 		t.Errorf("pushed value = %#x, want 0x12345678 (R1's value)", v)
 	}

@@ -12,6 +12,7 @@ import (
 // the string bytes and mask.
 func identityTable(t *testing.T, cpu *vax.CPU, mem *vm.Memory, addr uint32) {
 	t.Helper()
+
 	for n := 0; n < 256; n++ {
 		putBytes(t, cpu, mem, addr+uint32(n), byte(n))
 	}
@@ -33,12 +34,15 @@ func TestEmulScanc(t *testing.T) {
 		if cpu.PSL().Z() {
 			t.Error("Z = true, want false (a match was found)")
 		}
+
 		if cpu.GPR(vax.R0) != 2 {
 			t.Errorf("R0 = %d, want 2 (bytes remaining including the match)", cpu.GPR(vax.R0))
 		}
+
 		if cpu.GPR(vax.R1) != 0x2002 {
 			t.Errorf("R1 = %#x, want 0x2002 (address of the matching byte)", cpu.GPR(vax.R1))
 		}
+
 		if cpu.GPR(vax.R3) != 0x4000 {
 			t.Errorf("R3 = %#x, want 0x4000 (table address)", cpu.GPR(vax.R3))
 		}
@@ -59,9 +63,11 @@ func TestEmulScanc(t *testing.T) {
 		if !cpu.PSL().Z() {
 			t.Error("Z = false, want true (no match)")
 		}
+
 		if cpu.GPR(vax.R0) != 0 {
 			t.Errorf("R0 = %d, want 0", cpu.GPR(vax.R0))
 		}
+
 		if cpu.GPR(vax.R1) != 0x2003 {
 			t.Errorf("R1 = %#x, want 0x2003 (one past the string)", cpu.GPR(vax.R1))
 		}
@@ -102,9 +108,11 @@ func TestEmulSpanc(t *testing.T) {
 	if cpu.PSL().Z() {
 		t.Error("Z = true, want false (a zero AND result was found)")
 	}
+
 	if cpu.GPR(vax.R0) != 2 {
 		t.Errorf("R0 = %d, want 2", cpu.GPR(vax.R0))
 	}
+	
 	if cpu.GPR(vax.R1) != 0x2002 {
 		t.Errorf("R1 = %#x, want 0x2002", cpu.GPR(vax.R1))
 	}

@@ -28,6 +28,7 @@ func TestTableSetHandler(t *testing.T) {
 
 	table.SetHandler(inst, func(e *Engine, d *Decoded) error {
 		called = true
+		
 		return nil
 	})
 

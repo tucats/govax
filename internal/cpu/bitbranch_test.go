@@ -12,6 +12,7 @@ import (
 // in this file's instruction shape.
 func bitBranchTargets(disp byte) (nextPC, taken uint32) {
 	nextPC = uint32(base) + 4
+
 	return nextPC, nextPC + uint32(int32(int8(disp)))
 }
 
@@ -38,6 +39,7 @@ func TestEmulBb(t *testing.T) {
 
 			nextPC, taken := bitBranchTargets(0x10)
 			want := nextPC
+
 			if tc.wantBranch {
 				want = taken
 			}
@@ -65,6 +67,7 @@ func TestEmulBbMemoryBase(t *testing.T) {
 	stepInstruction(t, e, bytes...)
 
 	nextPC := uint32(base) + uint32(len(bytes))
+
 	want := nextPC + 0x10
 	if got := cpu.GPR(vax.PC); got != want {
 		t.Errorf("PC = %#x, want %#x", got, want)
@@ -118,6 +121,7 @@ func TestEmulBbState(t *testing.T) {
 			stepInstruction(t, e, tc.opcode, 0, regMode(vax.R1), 0x10)
 
 			nextPC, taken := bitBranchTargets(0x10)
+			
 			want := nextPC
 			if tc.wantBranch {
 				want = taken

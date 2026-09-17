@@ -24,6 +24,7 @@ func TestEmulCrc(t *testing.T) {
 			t.Fatalf("StoreLongword: %v", err)
 		}
 	}
+	
 	streamAddr := uint32(0x2000)
 	putBytes(t, cpu, mem, streamAddr, []byte("123456789")...)
 

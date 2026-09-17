@@ -23,6 +23,7 @@ func kernelEngine() *Engine {
 	psl := e.cpu.PSL()
 	psl.SetCurMod(vax.Kernel)
 	e.cpu.SetPSL(psl)
+	
 	return e
 }
 
@@ -32,11 +33,13 @@ func TestEmulMtprMfprDefaultRegisterRoundTrip(t *testing.T) {
 
 	cpu.SetGPR(vax.R1, 0xDEADBEEF)
 	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.P0BR))...)
+
 	if got := cpu.PR(vax.P0BR); got != 0xDEADBEEF {
 		t.Fatalf("PR(P0BR) = %#x, want 0xDEADBEEF", got)
 	}
 
 	stepInstruction(t, e, mfprBytes(uint32(vax.P0BR), vax.R2)...)
+
 	if got := cpu.GPR(vax.R2); got != 0xDEADBEEF {
 		t.Errorf("R2 after MFPR = %#x, want 0xDEADBEEF", got)
 	}
@@ -132,6 +135,7 @@ func TestEmulMtprIPLUpdatesPSLAndTruncates(t *testing.T) {
 	if got := cpu.PR(vax.IPL); got != 0x1F {
 		t.Errorf("PR(IPL) = %#x, want 0x1F", got)
 	}
+
 	if got := cpu.PSL().IPL(); got != 0x1F {
 		t.Errorf("PSL.IPL() = %#x, want 0x1F", got)
 	}
@@ -150,6 +154,7 @@ func TestEmulMtprIPLAdmitsLatchedSoftwareInterruptOnceExposed(t *testing.T) {
 
 	cpu.SetGPR(vax.R1, 3) // latched: 3 <= current IPL (5)
 	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.SIRR))...)
+
 	if e.interruptPending {
 		t.Fatal("expected the SIRR request to be latched, not delivered, while IPL is 5")
 	}
@@ -160,9 +165,11 @@ func TestEmulMtprIPLAdmitsLatchedSoftwareInterruptOnceExposed(t *testing.T) {
 	if !e.interruptPending {
 		t.Fatal("expected lowering IPL below the latched SISR bit to admit it")
 	}
+
 	if e.interruptCode != ExcSoftware1+2*4 || e.interruptIPL != 3 {
 		t.Errorf("interruptCode/IPL = %#x/%d, want %#x/3", e.interruptCode, e.interruptIPL, ExcSoftware1+2*4)
 	}
+
 	if got := cpu.PR(vax.SISR); got&(1<<3) != 0 {
 		t.Errorf("PR(SISR) bit 3 still set after admission, want cleared")
 	}
@@ -211,9 +218,11 @@ func TestEmulMtprSirrLatchesWhenAtOrAboveCurrentIPL(t *testing.T) {
 	if got := cpu.PR(vax.SIRR); got != 3 {
 		t.Errorf("PR(SIRR) = %d, want 3", got)
 	}
+
 	if got := cpu.PR(vax.SISR); got&(1<<3) == 0 {
 		t.Errorf("PR(SISR) = %#x, want bit 3 set", got)
 	}
+
 	if e.interruptPending {
 		t.Error("expected no immediate delivery when the request is at or below the current IPL")
 	}
@@ -232,9 +241,11 @@ func TestEmulMtprSirrDeliversImmediatelyWhenAboveCurrentIPL(t *testing.T) {
 	if !e.interruptPending {
 		t.Fatal("expected immediate delivery when the request exceeds the current IPL")
 	}
+
 	if e.interruptCode != ExcSoftware1+2*4 || e.interruptIPL != 3 {
 		t.Errorf("interruptCode/IPL = %#x/%d, want %#x/3", e.interruptCode, e.interruptIPL, ExcSoftware1+2*4)
 	}
+
 	if got := cpu.PR(vax.SISR); got != 0 {
 		t.Errorf("PR(SISR) = %#x, want 0 (not latched on the immediate-delivery path)", got)
 	}
@@ -246,11 +257,13 @@ func TestEmulMtprTbiaTbisAreNoOps(t *testing.T) {
 
 	cpu.SetGPR(vax.R1, 0x12345678)
 	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.TBIA))...)
+
 	if got := cpu.PR(vax.TBIA); got != 0 {
 		t.Errorf("PR(TBIA) = %#x, want 0 (no-op, not stored)", got)
 	}
 
 	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.TBIS))...)
+
 	if got := cpu.PR(vax.TBIS); got != 0 {
 		t.Errorf("PR(TBIS) = %#x, want 0 (no-op, not stored)", got)
 	}

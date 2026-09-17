@@ -13,9 +13,11 @@ import (
 // somewhere to go.
 func interruptEngine(t *testing.T) *Engine {
 	t.Helper()
+
 	e := newEngine()
 	e.cpu.SetGPR(vax.SP, 0x7000)
 	e.cpu.SetPR(vax.KSP, 0x7000)
+
 	return e
 }
 
@@ -117,6 +119,7 @@ func TestInterruptDebugInterruptsTrace(t *testing.T) {
 	}
 
 	buf.Reset()
+
 	e.interruptPending = false // clear the delivery above so the next Interrupt call is masked by IPL, not by it
 	e.SetQuantum(4)
 	psl := e.cpu.PSL()
@@ -130,6 +133,7 @@ func TestInterruptDebugInterruptsTrace(t *testing.T) {
 
 	buf.Reset()
 	e.tickQuantum()
+
 	if !strings.Contains(buf.String(), "DEBUG(INTERRUPTS): quantum; evaluating interrupt") {
 		t.Errorf("output = %q, want a quantum-scan trace line", buf.String())
 	}
@@ -144,6 +148,7 @@ func TestInterruptNoDebugTraceWhenFlagClear(t *testing.T) {
 	e.cpu.SetDebug(0)
 
 	e.Interrupt(ExcConWrite, 20, 0)
+
 	if buf.Len() != 0 {
 		t.Errorf("output = %q, want no trace output with DebugInterrupts clear", buf.String())
 	}
@@ -178,6 +183,7 @@ func TestInterruptMaskedByCurrentIPLIsQueuedNotDelivered(t *testing.T) {
 	e.cpu.SetPSL(psl)
 
 	e.Interrupt(ExcConWrite, 20, 0) // ipl == current IPL: masked
+
 	if e.interruptPending {
 		t.Fatal("expected Interrupt to queue, not deliver immediately, when ipl <= current IPL")
 	}
@@ -200,6 +206,7 @@ func TestInterruptMaskedByCurrentIPLIsQueuedNotDelivered(t *testing.T) {
 	e.cpu.SetPSL(psl)
 
 	e.tickQuantum()
+
 	if !e.interruptPending {
 		t.Fatal("expected the queued interrupt to be admitted once its IPL exceeds the (now-lowered) current IPL")
 	}
@@ -236,9 +243,11 @@ func TestPendingInterruptsReportsBothHalves(t *testing.T) {
 	e.Interrupt(ExcConRead, 21, 0) // unmasked: delivered immediately
 
 	pending, queued = e.PendingInterrupts()
+
 	if pending == nil || pending.Code != ExcConRead || pending.IPL != 21 {
 		t.Fatalf("pending = %+v, want ExcConRead at IPL 21", pending)
 	}
+
 	if len(queued) != 1 {
 		t.Fatalf("expected the earlier queued entry to remain, got %+v", queued)
 	}
@@ -299,9 +308,11 @@ func TestInterruptQuantumDelayDefersEvenWhenUnmasked(t *testing.T) {
 	e.SetQuantum(5)
 
 	e.Interrupt(ExcConRead, 20, 5) // fully unmasked (IPL 0), but a 5-tick delay requested
+
 	if e.interruptPending {
 		t.Fatal("expected a nonzero quantum delay to queue even when otherwise immediately admittable")
 	}
+
 	if len(e.iqueue) != 1 || e.iqueue[0].age != 1 {
 		t.Fatalf("iqueue = %+v, want one entry with age 1 (5/5)", e.iqueue)
 	}
@@ -317,9 +328,11 @@ func TestScanInterruptQueueTakesOnlyOnePerTick(t *testing.T) {
 	}
 
 	e.tickQuantum()
+
 	if !e.interruptPending {
 		t.Fatal("expected one interrupt to be admitted")
 	}
+
 	if len(e.iqueue) != 1 {
 		t.Errorf("len(iqueue) after one tick = %d, want 1 (the second entry stays queued)", len(e.iqueue))
 	}
@@ -336,17 +349,22 @@ func TestTickIntervalClockFiresAtIPL22WhenRunAndIESet(t *testing.T) {
 
 	for i := 0; i < 3; i++ {
 		e.tickQuantum()
+
 		if e.interruptPending {
 			t.Fatalf("interval interrupt admitted after %d ticks, want 4", i+1)
 		}
 	}
+	
 	e.tickQuantum()
+
 	if !e.interruptPending {
 		t.Fatal("expected the interval-clock interrupt to be admitted on the 4th tick")
 	}
+
 	if e.interruptCode != ExcInterval || e.interruptIPL != 22 {
 		t.Errorf("interruptCode/IPL = %#x/%d, want ExcInterval/22", e.interruptCode, e.interruptIPL)
 	}
+
 	if got := e.cpu.PR(vax.ICR); got != e.cpu.PR(vax.NICR) {
 		t.Errorf("ICR = %#x after firing, want reloaded from NICR (%#x)", got, e.cpu.PR(vax.NICR))
 	}
@@ -362,6 +380,7 @@ func TestTickIntervalClockNoOpWhenNotRunning(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		e.tickQuantum()
 	}
+
 	if e.interruptPending {
 		t.Error("interval-clock interrupt admitted while ICCS<RUN> was clear")
 	}

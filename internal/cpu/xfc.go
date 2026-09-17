@@ -44,6 +44,7 @@ func emulXfc(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
+
 	code := uint32(raw)
 
 	switch code {
@@ -63,6 +64,7 @@ func emulXfc(e *Engine, d *Decoded) error {
 
 		ch := e.services.ConsoleReadByte()
 		e.cpu.SetGPR(vax.R0, (e.cpu.GPR(vax.R0)&0xFFFFFF00)|uint32(ch))
+
 		return nil
 
 	case xfcConsoleCmd:
@@ -118,20 +120,26 @@ func emulXfcConsoleCmd(e *Engine) error {
 	if e.services == nil {
 		return &Fault{Code: ExcPrivileged}
 	}
+	
 	addr := e.cpu.GPR(vax.R0)
+
 	rawLen, err := e.mem.LoadWord(e.cpu, addr)
 	if err != nil {
 		return err
 	}
+
 	slen := int16(rawLen)
 	if slen <= 0 {
 		return nil
 	}
+
 	buf := make([]byte, slen)
 	if err := e.mem.Load(e.cpu, addr+2, buf); err != nil {
 		return err
 	}
+
 	e.cpu.SetGPR(vax.R0, e.services.ConsoleCommand(string(buf)))
+
 	return nil
 }
 
@@ -146,24 +154,30 @@ func emulXfcDCL(e *Engine) error {
 	if e.services == nil {
 		return &Fault{Code: ExcPrivileged}
 	}
+
 	r1, r2, r3 := e.cpu.GPR(vax.R1), e.cpu.GPR(vax.R2), e.cpu.GPR(vax.R3)
 
 	switch e.cpu.GPR(vax.R0) {
 	case dclPresent:
 		e.cpu.SetGPR(vax.R0, e.services.DCLPresent(r1, r2))
+
 	case dclGetKeyword:
 		e.cpu.SetGPR(vax.R0, e.services.DCLGetKeyword(r1, r2, r3))
+
 	case dclGetString:
 		if addr, ok := e.services.DCLGetString(r1, r2); ok {
 			e.cpu.SetGPR(vax.R0, addr)
 		} else {
 			e.cpu.SetGPR(vax.R0, 0)
 		}
+
 	case dclGetInteger:
 		e.cpu.SetGPR(vax.R0, e.services.DCLGetInteger(r1, r2))
+
 	default:
 		return &Fault{Code: ExcReservedOp}
 	}
+
 	return nil
 }
 
@@ -182,15 +196,20 @@ func emulXfcP1Vector(e *Engine) error {
 	if e.services == nil {
 		return &Fault{Code: ExcPrivileged}
 	}
+
 	pc := e.cpu.GPR(vax.PC) - 2
+
 	r0, handled, err := e.services.SystemService(pc)
 	if !handled {
 		if err != nil {
 			return err
 		}
+
 		return &Fault{Code: ExcReservedOp}
 	}
+
 	e.cpu.SetGPR(vax.R0, r0)
+
 	return err
 }
 
@@ -201,14 +220,18 @@ func emulXfcShim(e *Engine) error {
 	if e.services == nil {
 		return &Fault{Code: ExcPrivileged}
 	}
+
 	r0, handled, err := e.services.Shim(e.cpu.GPR(vax.R0))
 	if !handled {
 		if err != nil {
 			return err
 		}
+
 		return &Fault{Code: ExcReservedOp}
 	}
+
 	e.cpu.SetGPR(vax.R0, r0)
+
 	return err
 }
 
@@ -231,11 +254,14 @@ func emulXfcVM(e *Engine, code uint32) error {
 	e.cpu.SetPR(vax.MAPEN, savedMapen)
 
 	psl := e.cpu.PSL()
+
 	if err != nil {
 		psl.SetV(true)
 	} else {
 		e.cpu.SetGPR(vax.R0, paddr)
 	}
+
 	e.cpu.SetPSL(psl)
+
 	return nil
 }

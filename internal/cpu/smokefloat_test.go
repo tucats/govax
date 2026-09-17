@@ -13,12 +13,15 @@ import (
 // 4.0) rather than pre-computed magic mode bytes.
 func shortFloatLit(t *testing.T, value float64) byte {
 	t.Helper()
+
 	for i, v := range shortDouble {
 		if v == value {
 			return byte(i)
 		}
 	}
+
 	t.Fatalf("shortFloatLit(%v): not exactly representable as a VAX float short literal", value)
+
 	return 0
 }
 
@@ -55,6 +58,7 @@ func TestSmokeFloatArithmeticConversionCompare(t *testing.T) {
 	lit4 := shortFloatLit(t, 4.0)
 
 	var prog []byte
+
 	emit := func(b ...byte) { prog = append(prog, b...) }
 
 	emit(0x50, lit15, regMode(vax.R1))           // MOVF S^#1.5,R1
@@ -91,15 +95,19 @@ func TestSmokeFloatArithmeticConversionCompare(t *testing.T) {
 	if !errors.Is(err, ErrHalted) {
 		t.Fatalf("Run() = %v, want ErrHalted", err)
 	}
+
 	if got := getFloatReg(t, cpu, 4, vax.R1); got != 4.0 {
 		t.Errorf("R1 = %v, want 4.0 (1.5 + 2.5)", got)
 	}
+
 	if got := int32(cpu.GPR(vax.R2)); got != 4 {
 		t.Errorf("R2 = %d, want 4", got)
 	}
+
 	if got := getFloatReg(t, cpu, 8, vax.R4); got != 4.0 {
 		t.Errorf("R4:R5 = %v, want 4.0", got)
 	}
+
 	if got := getFloatReg(t, cpu, 8, vax.R6); got != 4.0 {
 		t.Errorf("R6:R7 = %v, want 4.0", got)
 	}
@@ -111,6 +119,7 @@ func TestSmokeFloatArithmeticConversionCompare(t *testing.T) {
 	if got := cpu.GPR(vax.R8); got != 1 {
 		t.Errorf("R8 = %d, want 1 (BEQL taken -- every conversion/compare step agreed)", got)
 	}
+	
 	if got := cpu.GPR(vax.PC); got != base+uint32(doneAt)+1 {
 		t.Errorf("PC = %#x, want %#x (address after HALT)", got, base+uint32(doneAt)+1)
 	}

@@ -25,19 +25,24 @@ func TestEmulMovc3(t *testing.T) {
 			if err != nil {
 				t.Fatalf("LoadByte: %v", err)
 			}
+
 			if got != want {
 				t.Errorf("byte %d = %q, want %q", i, got, want)
 			}
 		}
+
 		if cpu.GPR(vax.R1) != 0x3005 {
 			t.Errorf("R1 = %#x, want 0x3005 (one past source)", cpu.GPR(vax.R1))
 		}
+
 		if cpu.GPR(vax.R3) != 0x2005 {
 			t.Errorf("R3 = %#x, want 0x2005 (one past destination)", cpu.GPR(vax.R3))
 		}
+
 		if cpu.GPR(vax.R0) != 0 || cpu.GPR(vax.R2) != 0 || cpu.GPR(vax.R4) != 0 || cpu.GPR(vax.R5) != 0 {
 			t.Error("R0/R2/R4/R5 = nonzero, want all 0")
 		}
+
 		got := cpu.PSL()
 		if got.N() || !got.Z() || got.V() || got.C() {
 			t.Errorf("PSL = %+v, want N=0 Z=1 V=0 C=0", got)
@@ -62,6 +67,7 @@ func TestEmulMovc3(t *testing.T) {
 			if err != nil {
 				t.Fatalf("LoadByte: %v", err)
 			}
+
 			if got != w {
 				t.Errorf("byte %d = %q, want %q (result %q)", i, got, w, want)
 			}
@@ -89,13 +95,16 @@ func TestEmulMovc5(t *testing.T) {
 			if err != nil {
 				t.Fatalf("LoadByte: %v", err)
 			}
+
 			if got != w {
 				t.Errorf("byte %d = %q, want %q (result %q)", i, got, w, want)
 			}
 		}
+
 		if cpu.GPR(vax.R0) != 0 {
 			t.Errorf("R0 = %#x, want 0 (source not longer than destination)", cpu.GPR(vax.R0))
 		}
+		
 		got := cpu.PSL()
 		if !got.N() || got.Z() || got.V() || !got.C() {
 			// srclen(2) LSS dstlen(5) is true (N); LSSU true too (C).
@@ -122,13 +131,16 @@ func TestEmulMovc5(t *testing.T) {
 			if err != nil {
 				t.Fatalf("LoadByte: %v", err)
 			}
+
 			if got != w {
 				t.Errorf("byte %d = %q, want %q", i, got, w)
 			}
 		}
+
 		if cpu.GPR(vax.R0) != 3 {
 			t.Errorf("R0 = %d, want 3 (unmoved source bytes)", cpu.GPR(vax.R0))
 		}
+
 		if cpu.GPR(vax.R1) != 0x3002 {
 			t.Errorf("R1 = %#x, want 0x3002 (one past last byte moved)", cpu.GPR(vax.R1))
 		}
@@ -152,10 +164,12 @@ func TestEmulMovc5(t *testing.T) {
 			if err != nil {
 				t.Fatalf("LoadByte: %v", err)
 			}
+
 			if got != w {
 				t.Errorf("byte %d = %q, want %q", i, got, w)
 			}
 		}
+
 		if !cpu.PSL().Z() {
 			t.Error("Z = false, want true (equal lengths)")
 		}

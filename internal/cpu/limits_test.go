@@ -13,12 +13,14 @@ import (
 // -instruction-limit/-time-limit exist to bound.
 func limitsEngine(t *testing.T) *Engine {
 	t.Helper()
+
 	e := newEngine()
 	e.cpu.SetGPR(vax.PC, base)
 	putBytes(t, e.cpu, e.mem, base,
 		0x01,       // NOP
 		0x11, 0xFD, // BRB base (displacement -3: back past both the NOP and this BRB)
 	)
+	
 	return e
 }
 
@@ -68,6 +70,7 @@ func TestEngineBeginRunResetsInstructionCountBetweenRuns(t *testing.T) {
 	e.SetLimits(2, 0)
 
 	e.BeginRun()
+
 	for i := 0; i < 2; i++ {
 		if err := e.Step(); err != nil {
 			t.Fatalf("first run, step %d: %v", i, err)
@@ -82,6 +85,7 @@ func TestEngineBeginRunResetsInstructionCountBetweenRuns(t *testing.T) {
 	// start of each command) must get its own full budget, not inherit the
 	// first run's exhaustion.
 	e.BeginRun()
+
 	for i := 0; i < 2; i++ {
 		if err := e.Step(); err != nil {
 			t.Fatalf("second run, step %d: %v", i, err)
@@ -115,6 +119,7 @@ func TestEngineTimeLimitStopsRun(t *testing.T) {
 
 		t.Fatalf("Step: %v", err)
 	}
+
 	if steps == 0 {
 		t.Error("expected at least one instruction to execute before the time limit hit")
 	}
@@ -186,6 +191,7 @@ func TestEngineTimeLimitZeroMeansUnlimited(t *testing.T) {
 	e := limitsEngine(t)
 	e.SetLimits(0, 0)
 	e.BeginRun()
+
 	if !e.runDeadline.IsZero() {
 		t.Error("runDeadline should stay zero (no time.Now() call) when no time limit is configured")
 	}

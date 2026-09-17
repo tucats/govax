@@ -36,6 +36,7 @@ func TestEmulIncByte(t *testing.T) {
 			if got := byte(cpu.GPR(vax.R1)); got != tc.wantResult {
 				t.Errorf("result = %#x, want %#x", got, tc.wantResult)
 			}
+
 			psl := cpu.PSL()
 			if psl.N() != tc.wantN || psl.Z() != tc.wantZ || psl.V() != tc.wantV || psl.C() != tc.wantC {
 				t.Errorf("N=%v Z=%v V=%v C=%v, want N=%v Z=%v V=%v C=%v",
@@ -68,6 +69,7 @@ func TestEmulDecByte(t *testing.T) {
 			if got := byte(cpu.GPR(vax.R1)); got != tc.wantResult {
 				t.Errorf("result = %#x, want %#x", got, tc.wantResult)
 			}
+			
 			psl := cpu.PSL()
 			if psl.N() != tc.wantN || psl.Z() != tc.wantZ || psl.V() != tc.wantV || psl.C() != tc.wantC {
 				t.Errorf("N=%v Z=%v V=%v C=%v, want N=%v Z=%v V=%v C=%v",

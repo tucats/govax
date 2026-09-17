@@ -31,6 +31,7 @@ func TestEmulCmp(t *testing.T) {
 			if cpu.GPR(vax.R1) != tc.src1 || cpu.GPR(vax.R2) != tc.src2 {
 				t.Error("CMP modified an operand")
 			}
+
 			psl := cpu.PSL()
 			if psl.N() != tc.wantN || psl.Z() != tc.wantZ || psl.V() != tc.wantV || psl.C() != tc.wantC {
 				t.Errorf("N=%v Z=%v V=%v C=%v, want N=%v Z=%v V=%v C=%v",
@@ -66,6 +67,7 @@ func TestEmulBitLeavesCarryUnaffected(t *testing.T) {
 	if cpu.GPR(vax.R1) != 0x0F || cpu.GPR(vax.R2) != 0xF0 {
 		t.Error("BIT modified an operand")
 	}
+
 	psl := cpu.PSL()
 	if !psl.Z() || psl.N() || psl.V() {
 		t.Errorf("N=%v Z=%v V=%v, want N=false Z=true V=false", psl.N(), psl.Z(), psl.V())
@@ -101,6 +103,7 @@ func TestEmulTst(t *testing.T) {
 	if cpu.GPR(vax.R1) != 0x80 {
 		t.Error("TST modified its operand")
 	}
+	
 	psl := cpu.PSL()
 	if !psl.N() || psl.Z() || psl.V() || psl.C() {
 		t.Errorf("N=%v Z=%v V=%v C=%v, want N=true Z=false V=false C=false", psl.N(), psl.Z(), psl.V(), psl.C())

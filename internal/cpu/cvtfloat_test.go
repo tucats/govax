@@ -30,9 +30,11 @@ func TestEmulCvtFloatToIntTruncates(t *testing.T) {
 			e := NewEngine(cpu, mem)
 			setFloatReg(t, cpu, c.size, vax.R1, c.value)
 			dstReg := vax.R2
+
 			if c.size == 8 {
 				dstReg = vax.R3 // avoid overlapping R1:R2
 			}
+
 			cpu.SetGPR(dstReg, 0xFFFFFFFF)
 
 			stepInstruction(t, e, c.opcode, regMode(vax.R1), regMode(dstReg))
@@ -40,6 +42,7 @@ func TestEmulCvtFloatToIntTruncates(t *testing.T) {
 			if got := signExtend(uint64(cpu.GPR(dstReg)), c.dstSize); got != c.want {
 				t.Errorf("result = %d, want %d", got, c.want)
 			}
+
 			psl := cpu.PSL()
 			if psl.N() != c.wantN || psl.Z() != c.wantZ {
 				t.Errorf("N=%v Z=%v, want N=%v Z=%v", psl.N(), psl.Z(), c.wantN, c.wantZ)
@@ -75,6 +78,7 @@ func TestEmulCvtFloatToIntOverflowFaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decodeInstruction: %v", err)
 	}
+
 	err = emulCvtFloatToInt(e, &d)
 
 	var f *Fault
@@ -129,6 +133,7 @@ func TestEmulCvtRoundFloatToIntOverflow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decodeInstruction: %v", err)
 	}
+
 	err = emulCvtRoundFloatToInt(e, &d)
 
 	var f *Fault
@@ -158,6 +163,7 @@ func TestEmulCvtIntToFloat(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
 			cpu.SetGPR(vax.R1, c.srcVal)
+			
 			dstReg := vax.R2
 			if c.dst == 8 {
 				dstReg = vax.R3
@@ -168,6 +174,7 @@ func TestEmulCvtIntToFloat(t *testing.T) {
 			if got := getFloatReg(t, cpu, c.dst, dstReg); got != c.want {
 				t.Errorf("result = %v, want %v", got, c.want)
 			}
+
 			psl := cpu.PSL()
 			if psl.V() || psl.C() {
 				t.Errorf("V=%v C=%v, want both false (exact int->float conversion never overflows)", psl.V(), psl.C())

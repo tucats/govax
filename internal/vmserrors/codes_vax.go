@@ -67,6 +67,9 @@ const (
 	vaxGrammar
 	vaxAllocVAX
 	vaxReadline
+
+	// Clean exit from emulation.
+	vaxQuit
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -152,6 +155,9 @@ const (
 	VAX_GRAMMAR  = VAXFacility<<FacilityPosition | vaxGrammar<<MessagePosition | StatusSevere
 	VAX_ALLOCVAX = VAXFacility<<FacilityPosition | vaxAllocVAX<<MessagePosition | StatusSevere
 	VAX_READLINE = VAXFacility<<FacilityPosition | vaxReadline<<MessagePosition | StatusSevere
+
+	// Return code to exit the emulation engine entirely.
+	VAX_QUIT = VAXFacility<<FacilityPosition | vaxQuit<<MessagePosition | StatusSuccess
 )
 
 func init() {

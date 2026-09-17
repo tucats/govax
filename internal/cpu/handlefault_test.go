@@ -15,6 +15,7 @@ const scbb = 0x9000
 func newEngine() *Engine {
 	cpu, mem := fixture()
 	cpu.SetPR(vax.SCBB, scbb)
+	
 	return NewEngine(cpu, mem)
 }
 

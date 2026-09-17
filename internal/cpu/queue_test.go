@@ -11,10 +11,12 @@ import (
 // absolute address it points to.
 func selfRelForward(t *testing.T, cpu *vax.CPU, mem *vm.Memory, node uint32) uint32 {
 	t.Helper()
+
 	off, err := mem.LoadLongword(cpu, node)
 	if err != nil {
 		t.Fatalf("LoadLongword(%#x): %v", node, err)
 	}
+
 	return node + off
 }
 
@@ -23,15 +25,18 @@ func selfRelForward(t *testing.T, cpu *vax.CPU, mem *vm.Memory, node uint32) uin
 // to the absolute address it points to.
 func selfRelBackward(t *testing.T, cpu *vax.CPU, mem *vm.Memory, node uint32) uint32 {
 	t.Helper()
+
 	off, err := mem.LoadLongword(cpu, node+4)
 	if err != nil {
 		t.Fatalf("LoadLongword(%#x): %v", node+4, err)
 	}
+
 	return node + off
 }
 
 func insqhi(t *testing.T, e *Engine, entry, header uint32) {
 	t.Helper()
+
 	bytes := []byte{0x5C}
 	bytes = append(bytes, absoluteMode(entry)...)
 	bytes = append(bytes, absoluteMode(header)...)
@@ -40,6 +45,7 @@ func insqhi(t *testing.T, e *Engine, entry, header uint32) {
 
 func insqti(t *testing.T, e *Engine, entry, header uint32) {
 	t.Helper()
+
 	bytes := []byte{0x5D}
 	bytes = append(bytes, absoluteMode(entry)...)
 	bytes = append(bytes, absoluteMode(header)...)
@@ -53,11 +59,13 @@ func TestEmulInsqhi(t *testing.T) {
 	putBytes(t, cpu, mem, header, 0, 0, 0, 0, 0, 0, 0, 0)
 
 	insqhi(t, e, 0x6000, header)
+
 	if !cpu.PSL().Z() {
 		t.Error("Z = false after inserting the first entry, want true")
 	}
 
 	insqhi(t, e, 0x7000, header)
+
 	if cpu.PSL().Z() {
 		t.Error("Z = true after inserting a second entry, want false " +
 			"(regression: emul_insqhi.c's hf==hb emptiness test is also " +
@@ -65,6 +73,7 @@ func TestEmulInsqhi(t *testing.T) {
 	}
 
 	insqhi(t, e, 0x8000, header)
+
 	if cpu.PSL().Z() {
 		t.Error("Z = true after inserting a third entry, want false")
 	}
@@ -103,10 +112,13 @@ func TestEmulInsqti(t *testing.T) {
 	putBytes(t, cpu, mem, header, 0, 0, 0, 0, 0, 0, 0, 0)
 
 	insqti(t, e, 0x6000, header)
+
 	if !cpu.PSL().Z() {
 		t.Error("Z = false after inserting the first entry, want true")
 	}
+
 	insqti(t, e, 0x7000, header)
+
 	if cpu.PSL().Z() {
 		t.Error("Z = true after inserting a second entry, want false")
 	}
@@ -139,6 +151,7 @@ func TestEmulInsqti(t *testing.T) {
 		if prev != want {
 			t.Fatalf("backward step %d: %#x <- %#x, want %#x", i, cur, prev, want)
 		}
+
 		cur = prev
 	}
 }
@@ -147,16 +160,20 @@ func TestEmulRemqhi(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 	header := uint32(0x5000)
+
 	putBytes(t, cpu, mem, header, 0, 0, 0, 0, 0, 0, 0, 0)
 	insqhi(t, e, 0x6000, header) // head -> 0x6000
 	insqhi(t, e, 0x7000, header) // head -> 0x7000 -> 0x6000
 
 	remove := func() uint32 {
 		t.Helper()
+
 		bytes := []byte{0x5E}
 		bytes = append(bytes, absoluteMode(header)...)
 		bytes = append(bytes, regMode(vax.R0))
+
 		stepInstruction(t, e, bytes...)
+
 		return cpu.GPR(vax.R0)
 	}
 
@@ -179,6 +196,7 @@ func TestEmulRemqhi(t *testing.T) {
 	}
 
 	remove() // queue already empty
+
 	if !cpu.PSL().Z() || !cpu.PSL().V() {
 		t.Errorf("removing from an empty queue: Z=%v V=%v, want both true",
 			cpu.PSL().Z(), cpu.PSL().V())
@@ -217,6 +235,7 @@ func TestEmulInsqueRemque(t *testing.T) {
 
 	insque := func(entry, pred uint32) {
 		t.Helper()
+		
 		bytes := []byte{0x0E}
 		bytes = append(bytes, absoluteMode(entry)...)
 		bytes = append(bytes, absoluteMode(pred)...)
@@ -224,11 +243,13 @@ func TestEmulInsqueRemque(t *testing.T) {
 	}
 
 	insque(0x6000, header)
+
 	if !cpu.PSL().Z() {
 		t.Error("Z = false after inserting the first entry, want true")
 	}
 
 	insque(0x7000, 0x6000) // insert after 0x6000
+
 	if cpu.PSL().Z() {
 		t.Error("Z = true after inserting a second entry, want false")
 	}
@@ -237,9 +258,11 @@ func TestEmulInsqueRemque(t *testing.T) {
 	if got, err := mem.LoadLongword(cpu, header); err != nil || got != 0x6000 {
 		t.Errorf("header forward link = %#x, want 0x6000", got)
 	}
+
 	if got, err := mem.LoadLongword(cpu, 0x6000); err != nil || got != 0x7000 {
 		t.Errorf("0x6000's forward link = %#x, want 0x7000", got)
 	}
+
 	if got, err := mem.LoadLongword(cpu, 0x7000); err != nil || got != header {
 		t.Errorf("0x7000's forward link = %#x, want header (%#x)", got, header)
 	}
@@ -252,6 +275,7 @@ func TestEmulInsqueRemque(t *testing.T) {
 	if cpu.GPR(vax.R1) != 0x6000 {
 		t.Errorf("R1 = %#x, want 0x6000 (the removed entry's own address)", cpu.GPR(vax.R1))
 	}
+
 	if got, err := mem.LoadLongword(cpu, header); err != nil || got != 0x7000 {
 		t.Errorf("header forward link after removal = %#x, want 0x7000", got)
 	}

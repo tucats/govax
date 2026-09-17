@@ -115,6 +115,7 @@ func (t *Table) ByName(name string) *Instruction {
 			t.byName[inst.Name] = inst
 		}
 	}
+	
 	return t.byName[name]
 }
 

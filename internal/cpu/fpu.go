@@ -222,5 +222,6 @@ func storeFloat(cpu *vax.CPU, mem *vm.Memory, op Operand, value float64) error {
 	if err != nil {
 		return err
 	}
+	
 	return op.Store(cpu, mem, raw)
 }

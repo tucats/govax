@@ -41,15 +41,19 @@ func TestSmokeSumLoop(t *testing.T) {
 	if !errors.Is(err, ErrHalted) {
 		t.Fatalf("Run() = %v, want ErrHalted", err)
 	}
+
 	if !e.Halted() {
 		t.Error("Halted() = false, want true")
 	}
+
 	if got := cpu.GPR(vax.R0); got != 15 {
 		t.Errorf("R0 = %d, want 15 (5+4+3+2+1)", got)
 	}
+
 	if got := cpu.GPR(vax.R1); got != 0 {
 		t.Errorf("R1 = %d, want 0", got)
 	}
+	
 	if got := cpu.GPR(vax.PC); got != base+12 {
 		t.Errorf("PC = %#x, want %#x (address after HALT)", got, base+12)
 	}

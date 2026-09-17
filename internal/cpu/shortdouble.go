@@ -31,5 +31,6 @@ func FindShortFloat(value float64) (int, bool) {
 			return i, true
 		}
 	}
+	
 	return 0, false
 }

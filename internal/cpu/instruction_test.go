@@ -55,6 +55,7 @@ func TestTableAllCountMatchesLookup(t *testing.T) {
 func TestTableAllOrderIsDeterministic(t *testing.T) {
 	first := instructionTable.All()
 	second := instructionTable.All()
+	
 	if len(first) != len(second) {
 		t.Fatalf("len mismatch: %d vs %d", len(first), len(second))
 	}
@@ -85,6 +86,7 @@ func TestTableImplemented(t *testing.T) {
 	if halt == nil {
 		t.Fatal("ByName(HALT) = nil")
 	}
+
 	if !instructionTable.Implemented(halt) {
 		t.Error("expected HALT to be Implemented (Phase 04 registers a real handler)")
 	}

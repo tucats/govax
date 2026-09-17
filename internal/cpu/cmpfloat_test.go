@@ -27,11 +27,12 @@ func TestEmulCmpFloat(t *testing.T) {
 			e := NewEngine(cpu, mem)
 			setFloatReg(t, cpu, c.size, vax.R1, c.a)
 			r2 := vax.R2
+
 			if c.size == 8 {
 				r2 = vax.R3
 			}
-			setFloatReg(t, cpu, c.size, r2, c.b)
 
+			setFloatReg(t, cpu, c.size, r2, c.b)
 			stepInstruction(t, e, c.opcode, regMode(vax.R1), regMode(r2))
 
 			psl := cpu.PSL()

@@ -1,7 +1,6 @@
 package console
 
 import (
-	"os"
 	"strings"
 	"time"
 
@@ -134,7 +133,7 @@ func (c *Console) Include(path string, dispatch func(string) error) error {
 
 			status := dispatch(text)
 			if status == nil {
-				os.Exit(0)
+				return vmserrors.Wrap(vmserrors.VAX_QUIT, nil)
 			}
 
 			return status
@@ -156,6 +155,14 @@ func (c *Console) Include(path string, dispatch func(string) error) error {
 		}
 
 		if err := dispatch(line); err != nil {
+			if ve, ok := err.(vmserrors.VMSError); ok {
+				if ve.Status == vmserrors.VAX_QUIT {
+					c.quit = true
+
+					return nil
+				}
+			}
+
 			c.Printf("%s: %v\n", path, err)
 		}
 	}

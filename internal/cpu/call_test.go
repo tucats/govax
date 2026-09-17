@@ -15,10 +15,12 @@ func shortLiteral(n uint32) byte { return byte(n) }
 
 func mustLongword(t *testing.T, cpu *vax.CPU, mem *vm.Memory, addr uint32) uint32 {
 	t.Helper()
+
 	v, err := mem.LoadLongword(cpu, addr)
 	if err != nil {
 		t.Fatalf("LoadLongword(%#x): %v", addr, err)
 	}
+
 	return v
 }
 
@@ -525,7 +527,9 @@ func TestEmulReiReversesModeSwitch(t *testing.T) {
 	// The frame a real fault delivery would have left: saved PC, then saved
 	// PSL (CurMod=User, N set) -- see emul_rei.c's own read order.
 	putLongword(t, cpu, mem, kernelFrame, faultingPC)
+
 	restoredPSL := psl
+
 	restoredPSL.SetCurMod(vax.User)
 	restoredPSL.SetN(true)
 	putLongword(t, cpu, mem, kernelFrame+4, uint32(restoredPSL))
@@ -570,6 +574,7 @@ func TestEmulReiDebugCHMTrace(t *testing.T) {
 	cpu.SetPR(vax.USP, userSP)
 
 	putLongword(t, cpu, mem, kernelFrame, faultingPC)
+	
 	restoredPSL := psl
 	restoredPSL.SetCurMod(vax.User)
 	putLongword(t, cpu, mem, kernelFrame+4, uint32(restoredPSL))

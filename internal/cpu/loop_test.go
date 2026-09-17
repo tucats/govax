@@ -27,13 +27,16 @@ func TestEmulAobleq(t *testing.T) {
 			if err := e.Step(); err != nil {
 				t.Fatalf("Step: %v", err)
 			}
+
 			if got := cpu.GPR(vax.R2); got != tc.idx+1 {
 				t.Errorf("index = %d, want %d", got, tc.idx+1)
 			}
+
 			want := uint32(base + 4)
 			if tc.wantTaken {
 				want += 16
 			}
+
 			if got := cpu.GPR(vax.PC); got != want {
 				t.Errorf("PC = %#x, want %#x (taken=%v)", got, want, tc.wantTaken)
 			}
@@ -54,6 +57,7 @@ func TestEmulAoblss(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
+
 			cpu.SetGPR(vax.R1, tc.limit)
 			cpu.SetGPR(vax.R2, tc.idx)
 			cpu.SetGPR(vax.PC, base)
@@ -62,10 +66,12 @@ func TestEmulAoblss(t *testing.T) {
 			if err := e.Step(); err != nil {
 				t.Fatalf("Step: %v", err)
 			}
+
 			want := uint32(base + 4)
 			if tc.wantTaken {
 				want += 16
 			}
+
 			if got := cpu.GPR(vax.PC); got != want {
 				t.Errorf("PC = %#x, want %#x (taken=%v)", got, want, tc.wantTaken)
 			}
@@ -86,6 +92,7 @@ func TestEmulSobgtr(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
+
 			cpu.SetGPR(vax.R1, tc.idx)
 			cpu.SetGPR(vax.PC, base)
 			putBytes(t, cpu, mem, base, 0xF5, regMode(vax.R1), 0x10) // SOBGTR +16
@@ -93,10 +100,12 @@ func TestEmulSobgtr(t *testing.T) {
 			if err := e.Step(); err != nil {
 				t.Fatalf("Step: %v", err)
 			}
+
 			want := uint32(base + 3)
 			if tc.wantTaken {
 				want += 16
 			}
+
 			if got := cpu.GPR(vax.PC); got != want {
 				t.Errorf("PC = %#x, want %#x (taken=%v)", got, want, tc.wantTaken)
 			}
@@ -117,6 +126,7 @@ func TestEmulSobgeq(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
+
 			cpu.SetGPR(vax.R1, tc.idx)
 			cpu.SetGPR(vax.PC, base)
 			putBytes(t, cpu, mem, base, 0xF4, regMode(vax.R1), 0x10) // SOBGEQ +16
@@ -124,10 +134,12 @@ func TestEmulSobgeq(t *testing.T) {
 			if err := e.Step(); err != nil {
 				t.Fatalf("Step: %v", err)
 			}
+
 			want := uint32(base + 3)
 			if tc.wantTaken {
 				want += 16
 			}
+
 			if got := cpu.GPR(vax.PC); got != want {
 				t.Errorf("PC = %#x, want %#x (taken=%v)", got, want, tc.wantTaken)
 			}
@@ -150,9 +162,11 @@ func TestEmulLoopOverflowAndCarryUnaffected(t *testing.T) {
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
+
 	if !cpu.PSL().V() {
 		t.Error("V = false, want true (INT32_MAX + 1 overflows)")
 	}
+	
 	if !cpu.PSL().C() {
 		t.Error("C = false, want unaffected (true)")
 	}

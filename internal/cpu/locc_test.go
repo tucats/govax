@@ -19,9 +19,11 @@ func TestEmulLocc(t *testing.T) {
 		if cpu.PSL().Z() {
 			t.Error("Z = true, want false (character found)")
 		}
+
 		if cpu.GPR(vax.R0) != 2 {
 			t.Errorf("R0 = %d, want 2 (remaining including the match)", cpu.GPR(vax.R0))
 		}
+
 		if cpu.GPR(vax.R1) != 0x2002 {
 			t.Errorf("R1 = %#x, want 0x2002", cpu.GPR(vax.R1))
 		}
@@ -39,9 +41,11 @@ func TestEmulLocc(t *testing.T) {
 		if !cpu.PSL().Z() {
 			t.Error("Z = false, want true (character not found)")
 		}
+
 		if cpu.GPR(vax.R0) != 0 {
 			t.Errorf("R0 = %d, want 0", cpu.GPR(vax.R0))
 		}
+		
 		if cpu.GPR(vax.R1) != 0x2003 {
 			t.Errorf("R1 = %#x, want 0x2003 (one past the string)", cpu.GPR(vax.R1))
 		}
@@ -74,9 +78,11 @@ func TestEmulSkpc(t *testing.T) {
 		if cpu.PSL().Z() {
 			t.Error("Z = true, want false (an unequal byte was found)")
 		}
+
 		if cpu.GPR(vax.R0) != 2 {
 			t.Errorf("R0 = %d, want 2 (remaining including the unequal byte)", cpu.GPR(vax.R0))
 		}
+
 		if cpu.GPR(vax.R1) != 0x2002 {
 			t.Errorf("R1 = %#x, want 0x2002", cpu.GPR(vax.R1))
 		}
@@ -94,6 +100,7 @@ func TestEmulSkpc(t *testing.T) {
 		if !cpu.PSL().Z() {
 			t.Error("Z = false, want true (every byte equal)")
 		}
+
 		if cpu.GPR(vax.R0) != 0 {
 			t.Errorf("R0 = %d, want 0", cpu.GPR(vax.R0))
 		}
