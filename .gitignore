@@ -2,8 +2,9 @@
 # https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
 #
 # Binaries for programs and plugins
-*.exe
+# *.exe we want these for VMS image files
 *.exe~
+
 *.dll
 *.so
 *.dylib
