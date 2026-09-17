@@ -188,6 +188,8 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 		}
 	}
 
+	m.translationCount++
+
 	return pte.PFN()<<9 + byteOffset, nil
 }
 
@@ -350,7 +352,7 @@ func (m *Memory) StorePTE(cpu *vax.CPU, addr uint32, pte PTE) error {
 	}
 
 	physPTEAddr := pteVirtAddr
-	
+
 	if pteRecursive {
 		var err error
 

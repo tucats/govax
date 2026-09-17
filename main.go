@@ -31,6 +31,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/chzyer/readline"
 	"github.com/tucats/govax/internal/bootdata"
@@ -39,6 +40,8 @@ import (
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/vmserrors"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 )
 
 // minimumVAXMemory matches driver.c's own MINIMUM_VAX_MEMORY (2048 pages,
@@ -55,6 +58,10 @@ var BuildTime string
 
 // Do we dump out statistics when execution finishes?
 var stats *bool
+
+// Wall-clock time when we started up. Not the same as actual instruction
+// execution time if the user uses the console, etc.
+var startTime time.Time = time.Now()
 
 // pathFlag implements flag.Value for a repeatable "-path <dir>" flag —
 // each occurrence appends to the list, in the order given, matching a
@@ -191,7 +198,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		fmt.Fprintln(out, "vax.init:", err)
 	}
 
-	// After that, if we're still runing, do a console loop.
+	// After that, if we're still running, do a console loop.
 	if c.Running() {
 
 		// Applied only from here on, not during vax.init's own boot sequence
@@ -251,11 +258,63 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 func printStats(c *console.Console, out io.Writer, flag bool) {
 	if flag {
 		count := c.Engine.InstructionCount()
+		translate, read, write := c.Engine.Memory().Stats()
+		elapsed := time.Since(startTime)
 
 		fmt.Fprintf(out, "\nEmulation Statistics:\n")
-		fmt.Fprintf(out, "    Instructions:  %10d\n", count)
+		fmt.Fprintf(out, "  CPU:\n")
+		fmt.Fprintf(out, "    Elapased Time:       %16s\n", formatDuration(elapsed))
+		fmt.Fprintf(out, "    Instructions:        %16s\n", formatLargeNumber(int64(count)))
+
+		fmt.Fprintf(out, "\n  Memory:\n")
+		fmt.Fprintf(out, "    Page Translations:   %16s\n", formatLargeNumber(translate))
+		fmt.Fprintf(out, "    Bytes Read:          %16s\n", formatLargeNumber(read))
+		fmt.Fprintf(out, "    Bytes Written:       %16s\n", formatLargeNumber(write))
+	}
+}
+
+func formatDuration(d time.Duration) string {
+	text := d.String()
+
+	result := strings.Builder{}
+	decimal := false
+	digits := 0
+
+	for _, ch := range text {
+		if ch == '.' {
+			decimal = true
+		}
+
+		// If it's not a decimal, just copy it and continue
+		if !unicode.IsDigit(ch) {
+			result.WriteRune(ch)
+
+			continue
+		}
+
+		// It is a digit. See if we've already seen the decimal and
+		// enough places to ignore this value.
+		if decimal && digits > 2 {
+			continue
+		}
+
+		if decimal {
+			digits++
+		}
+
+		result.WriteRune(ch)
 	}
 
+	return result.String()
+}
+
+// formatLargeNumber formats an int64 using commas for ease of readability.
+// This uses the experimental text package.
+func formatLargeNumber(v int64) string {
+	p := message.NewPrinter(language.English)
+	result := p.Sprintf("%d", v)
+
+	return result
 }
 
 // historyFilePath returns a per-user location for readline's command

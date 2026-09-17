@@ -25,9 +25,12 @@ import (
 // MappedPages and internal/console/vminit.go, which is the only writer of
 // vmValid and the initial S0 reservations.
 type Memory struct {
-	ram     []byte
-	pageMap []bool
-	vmValid bool
+	ram              []byte
+	pageMap          []bool
+	vmValid          bool
+	translationCount int64
+	readCount        int64
+	writeCount       int64
 }
 
 // NewMemory returns a Memory with size bytes of zeroed RAM and every
@@ -92,8 +95,20 @@ func (m *Memory) MappedPages() int {
 	return count
 }
 
+// Stats returns the key statistics for memory usage. If the translation
+// count is zero, then virtual memory is off.
+func (m *Memory) Stats() (translations int64, reads int64, writes int64) {
+	translations = m.translationCount
+	reads = m.readCount
+	writes = m.writeCount
+
+	return
+}
+
 // Size returns the number of bytes of RAM.
-func (m *Memory) Size() uint32 { return uint32(len(m.ram)) }
+func (m *Memory) Size() uint32 {
+	return uint32(len(m.ram))
+}
 
 // PhysicalAddressError reports an access to a physical address with no
 // backing storage in this Memory.
@@ -125,6 +140,8 @@ func (m *Memory) readPhysLongword(addr uint32) (uint32, error) {
 		return 0, err
 	}
 
+	m.readCount++
+
 	return binary.LittleEndian.Uint32(b), nil
 }
 
@@ -134,7 +151,9 @@ func (m *Memory) writePhysLongword(addr uint32, v uint32) error {
 		return err
 	}
 
+	m.writeCount++
+
 	binary.LittleEndian.PutUint32(b, v)
-	
+
 	return nil
 }

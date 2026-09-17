@@ -165,7 +165,7 @@ func TestEmulMfprRxdbReadsLiveByteAndClearsDon(t *testing.T) {
 	stepInstruction(t, e, mfprBytes(uint32(vax.RXDB), vax.R2)...)
 
 	if got := cpu.GPR(vax.R2); got != 'Q' {
-		t.Errorf("R2 = %q, want 'Q' (live byte from ConsoleReadByte)", got)
+		t.Errorf("R2 = %v, want 'Q' (live byte from ConsoleReadByte)", got)
 	}
 
 	if got := cpu.PR(vax.RXCS); got != deviceIE {
@@ -180,7 +180,7 @@ func TestDeliverConsoleByteAdmitsInterruptWhenIESet(t *testing.T) {
 	e.DeliverConsoleByte('Z')
 
 	if got := e.cpu.PR(vax.RXDB); got != 'Z' {
-		t.Errorf("PR(RXDB) = %q, want 'Z'", got)
+		t.Errorf("PR(RXDB) = %v, want 'Z'", got)
 	}
 
 	if got := e.cpu.PR(vax.RXCS); got&0x80 == 0 {
@@ -200,8 +200,8 @@ func TestDeliverConsoleByteNoInterruptWhenIEClear(t *testing.T) {
 	if e.interruptPending {
 		t.Error("expected no interrupt admission when RXCS<IE> is clear")
 	}
-	
+
 	if got := e.cpu.PR(vax.RXDB); got != 'Z' {
-		t.Errorf("PR(RXDB) = %q, want 'Z' (byte still deposited)", got)
+		t.Errorf("PR(RXDB) = %v, want 'Z' (byte still deposited)", got)
 	}
 }

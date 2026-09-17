@@ -33,6 +33,8 @@ func (m *Memory) LoadByte(cpu *vax.CPU, addr uint32) (byte, error) {
 		return 0, err
 	}
 
+	m.readCount++
+
 	return b[0], nil
 }
 
@@ -49,6 +51,7 @@ func (m *Memory) StoreByte(cpu *vax.CPU, addr uint32, v byte) error {
 		return err
 	}
 
+	m.writeCount++
 	b[0] = v
 
 	return nil
@@ -172,6 +175,6 @@ func (m *Memory) LoadRegister(cpu *vax.CPU, reg vax.Reg, addr uint32, count int)
 	}
 
 	cpu.SetGPR(reg, v)
-	
+
 	return nil
 }
