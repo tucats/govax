@@ -95,7 +95,7 @@ type VMSError struct {
 // or modify the messages.
 
 var FacilityNames = map[uint32]string{
-	SYSFacility: "SYS",
+	SYSFacility: "SYSTEM",
 	RMSFacility: "RMS",
 	CLIFacility: "CLI",
 	DBGFacility: "DBG",

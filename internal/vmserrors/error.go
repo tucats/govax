@@ -151,7 +151,7 @@ func toInt64(a any) (int64, bool) {
 func (e VMSError) Error() string {
 	msg, ok := Messages[e.Status]
 	if !ok {
-		msg = "SYS$UNKNOWN, Unknown error " + fmt.Sprintf("%08X", e.Status)
+		msg = "SYSTEM-F-UNKNOWNERR, Unknown error " + fmt.Sprintf("%08X", e.Status)
 
 		if len(e.Arguments) > 0 {
 			msg = msg + " ["
@@ -227,7 +227,7 @@ func (e VMSError) Error() string {
 		}
 
 		b.WriteString(rendered)
-		
+
 		argIndex++
 		i += markerLen
 	}

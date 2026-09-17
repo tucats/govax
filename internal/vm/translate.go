@@ -45,16 +45,17 @@ const (
 type TranslationFault struct {
 	Kind FaultKind
 	Addr uint32
+	Mask byte
 }
 
 func (f *TranslationFault) Error() string {
 	switch f.Kind {
 	case TranslationNotValid:
-		return fmt.Sprintf("vm: translation not valid at %#08x", f.Addr)
+		return fmt.Sprintf("SYSTEM-F-TNV, translation not valid, address %#08x", f.Addr)
 	case ProtectionViolation:
-		return fmt.Sprintf("vm: protection violation at %#08x", f.Addr)
+		return fmt.Sprintf("SYSTEM-F-ACCVIO, access violation, reason mask=%02X, address %#08x", f.Mask, f.Addr)
 	default:
-		return fmt.Sprintf("vm: access violation at %#08x", f.Addr)
+		return fmt.Sprintf("SYSTEM-F-ACCVIO, access violation, address %#08x", f.Addr)
 	}
 }
 
@@ -62,8 +63,8 @@ func accessViolation(addr uint32) error {
 	return &TranslationFault{Kind: AccessViolation, Addr: addr}
 }
 
-func protectionViolation(addr uint32) error {
-	return &TranslationFault{Kind: ProtectionViolation, Addr: addr}
+func protectionViolation(addr uint32, mask byte) error {
+	return &TranslationFault{Kind: ProtectionViolation, Addr: addr, Mask: mask}
 }
 
 func translationNotValid(addr uint32) error {
@@ -170,8 +171,10 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 		}
 	}
 
+	modeMask := access
+
 	if !pte.Protection().allows(cpu.PSL().CurMod(), access) {
-		return 0, protectionViolation(addr)
+		return 0, protectionViolation(addr, byte(modeMask))
 	}
 
 	if !pte.Valid() {

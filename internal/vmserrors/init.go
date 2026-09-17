@@ -13,5 +13,10 @@ var Messages = map[uint32]string{}
 // template, using "!X"/"!XB"/"!XW"/"!XL"/"!D"/"!UL"/"!S"/"!Q"/"!C" markers
 // for positional argument substitution (see error.go's argFormatters).
 func DefineMessage(status uint32, fac uint32, id, text string) {
-	Messages[status] = FacilityNames[fac] + "$" + id + ", " + text
+	severityFlag := []string{"W", "S", "E", "I", "F", "X", "X", "X"}
+
+	facility := FacilityNames[fac]
+	severity := severityFlag[status&Severity]
+
+	Messages[status] = facility + "-" + severity + "-" + id + ", " + text
 }
