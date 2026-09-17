@@ -118,7 +118,7 @@ func (c *Console) Time(cmd string, dispatch func(string) error) error {
 // nested includes via a file stack, /VERIFY echoing, and an ASM-mode
 // variant): this port just runs straight through one file, recursively,
 // since INCLUDE's only in-scope consumer right now is loading a startup
-// script like vax.init (see cmd/govax/main.go). path is resolved through
+// script like vax.init (see main.go). path is resolved through
 // c.Paths (docs/PHASE-15.md), so an unqualified name like "vax.init" is
 // found via the configured search path / embedded fallback, not just a
 // literal relative-to-cwd read.
@@ -226,18 +226,19 @@ func (c *Console) ClearString() error {
 	return c.Mem.Store(c.CPU, base, make([]byte, size))
 }
 
-// ClearTB reports that this port has no translation-cache state to reset,
-// matching ShowTB's own "not applicable to this port" stance (see
-// docs/PHASE-16.md sub-phase 1f: internal/vm.Memory.Translate does an
-// uncached page-table walk, so console_clear.c's CLEAR TB — which resets
-// tb_hit/tb_try/cached_page_hit/cached_page_try counters this port never
-// maintains — has nothing to do here).
+// ClearTB implements CLEAR TB, matching console_clear.c's case 107: a full
+// translation-buffer flush plus a reset of its tries/hits/pflushes
+// counters — tb_flush itself and the sequential translation cache's own
+// try/hit counters are deliberately left alone, matching the C source
+// exactly (see docs/PHASE-21.md). Silent on success, matching the C
+// source's own lack of any confirmation printf here.
 func (c *Console) ClearTB() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
 
-	c.Printf("Translation buffer statistics are not modeled by this port (uncached page-table walk).\n")
+	c.Mem.InvalidateTB()
+	c.Mem.ResetTBCounters()
 
 	return nil
 }

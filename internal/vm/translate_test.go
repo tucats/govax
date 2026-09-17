@@ -98,6 +98,11 @@ func TestTranslateP0RoundTrip(t *testing.T) {
 	}
 }
 
+// TestTranslateDebugVMAndTBTrace matches vm.c's own DBG_VM/DBG_TB behavior
+// now that Translate has a real translation-buffer cache (docs/PHASE-21.md):
+// DBG_VM traces every full page-table walk (a cold TB miss); DBG_TB traces
+// only an actual TB cache *hit*, never a miss -- vm.c's own DBG_TB printf
+// only exists on the tb_hit path, there is no equivalent trace on a miss.
 func TestTranslateDebugVMAndTBTrace(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 
@@ -106,9 +111,15 @@ func TestTranslateDebugVMAndTBTrace(t *testing.T) {
 	cpu.SetDebugWriter(&buf)
 	cpu.SetDebug(vax.DebugVM | vax.DebugTB)
 
-	vaddr := uint32(2*pageSize) + 0x10
-	if _, err := mem.Translate(cpu, vaddr, AccessRead); err != nil {
-		t.Fatalf("Translate: %v", err)
+	addrA := uint32(2*pageSize) + 0x10 // VA=00000410
+	addrB := uint32(3*pageSize) + 0x20 // VA=00000620, a different TB slot
+
+	if _, err := mem.Translate(cpu, addrA, AccessRead); err != nil {
+		t.Fatalf("Translate A: %v", err)
+	}
+
+	if _, err := mem.Translate(cpu, addrB, AccessRead); err != nil {
+		t.Fatalf("Translate B: %v", err)
 	}
 
 	out := buf.String()
@@ -116,8 +127,31 @@ func TestTranslateDebugVMAndTBTrace(t *testing.T) {
 		t.Errorf("output = %q, want a DEBUG(VM) line naming VA=00000410", out)
 	}
 
-	if !strings.Contains(out, "DEBUG(TB): VA=00000410") {
-		t.Errorf("output = %q, want a DEBUG(TB) line naming VA=00000410", out)
+	if !strings.Contains(out, "DEBUG(VM): VA=00000620") {
+		t.Errorf("output = %q, want a DEBUG(VM) line naming VA=00000620", out)
+	}
+
+	// Not asserting the absence of DEBUG(TB) here: this fixture's P0 page
+	// table lives entirely within one system page (newTranslateFixture's
+	// own doc comment), so B's own recursive PTE-address lookup
+	// legitimately hits the TB slot A's own recursive lookup populated
+	// moments earlier -- a real, faithful TB hit, not a test artifact.
+
+	buf.Reset()
+
+	// The STC's one slot now points at B, so re-translating A misses the
+	// STC but should hit A's still-cached 128-entry TB slot.
+	if _, err := mem.Translate(cpu, addrA, AccessRead); err != nil {
+		t.Fatalf("Translate A again: %v", err)
+	}
+
+	out = buf.String()
+	if !strings.Contains(out, "DEBUG(TB):  TB CACHE HIT") || !strings.Contains(out, "VA=00000410") {
+		t.Errorf("output = %q, want a DEBUG(TB) cache-hit line naming VA=00000410", out)
+	}
+
+	if strings.Contains(out, "DEBUG(VM)") {
+		t.Errorf("output = %q, want no DEBUG(VM) line on a TB cache hit -- no full walk happens", out)
 	}
 }
 

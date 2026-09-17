@@ -56,7 +56,10 @@ expect adjustment as phases land):
 - `internal/io` — device abstraction, logical names (Phase 09).
 - `internal/rtl` — VMS RTL/system-service simulation (Phase 10).
 - `internal/asm` — assembler/disassembler (Phase 11).
-- `cmd/govax` — main entry point, built out in Phase 08.
+- `main.go` (repo root, package `main`) — main entry point, built out in Phase 08.
+  Originally `cmd/govax`; moved to the repo root and the `govax` CLI promoted to
+  `main` (2026-09-17) — a plain `go build ./...`/`go run .` from the repo root
+  now builds/runs it directly, no `cmd/govax` subpackage to `cd` into or name.
 
 ## Bug-fixing policy while porting
 

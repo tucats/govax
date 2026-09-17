@@ -194,6 +194,11 @@ func emulPopr(e *Engine, d *Decoded) error {
 // Translation Not Valid exception as still possible in one specific
 // (system-page-table-entry) case; emul_misc.c doesn't implement that
 // distinction and neither does this port.
+//
+// Both byte tests use ProbeTranslate rather than Translate, matching
+// VM_NOSIGNAL's other effect (see docs/PHASE-21.md): a PROBEx-driven
+// translation can populate/consult the 128-entry translation buffer, but
+// can never hit the one-slot sequential translation cache.
 func emulProbe(e *Engine, d *Decoded) error {
 	modeRaw, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
@@ -223,12 +228,12 @@ func emulProbe(e *Engine, d *Decoded) error {
 	testPSL.SetCurMod(vax.AccessMode(mode))
 	e.cpu.SetPSL(testPSL)
 
-	_, err1 := e.mem.Translate(e.cpu, base, access)
+	_, err1 := e.mem.ProbeTranslate(e.cpu, base, access)
 
 	ok := err1 == nil
 	if ok {
 		last := uint32(int32(base) + int32(length) - 1)
-		_, err2 := e.mem.Translate(e.cpu, last, access)
+		_, err2 := e.mem.ProbeTranslate(e.cpu, last, access)
 		ok = err2 == nil
 	}
 

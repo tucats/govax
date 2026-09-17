@@ -31,6 +31,7 @@ type Memory struct {
 	translationCount int64
 	readCount        int64
 	writeCount       int64
+	tb               tb
 }
 
 // NewMemory returns a Memory with size bytes of zeroed RAM and every

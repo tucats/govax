@@ -63,7 +63,7 @@ const (
 	vaxBadMask
 	vaxBadMaskEntry
 
-	// cmd/govax's top-level startup diagnostics.
+	// main.go's top-level startup diagnostics.
 	vaxGrammar
 	vaxAllocVAX
 	vaxReadline
@@ -150,7 +150,7 @@ const (
 	VAX_BADMASK       = VAXFacility<<FacilityPosition | vaxBadMask<<MessagePosition | StatusError
 	VAX_BADMASKENTRY  = VAXFacility<<FacilityPosition | vaxBadMaskEntry<<MessagePosition | StatusError
 
-	// cmd/govax's top-level startup diagnostics -- StatusSevere, since
+	// main.go's top-level startup diagnostics -- StatusSevere, since
 	// each one aborts startup entirely.
 	VAX_GRAMMAR  = VAXFacility<<FacilityPosition | vaxGrammar<<MessagePosition | StatusSevere
 	VAX_ALLOCVAX = VAXFacility<<FacilityPosition | vaxAllocVAX<<MessagePosition | StatusSevere

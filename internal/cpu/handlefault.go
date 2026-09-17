@@ -184,6 +184,21 @@ func (e *Engine) setModeStack(newMode vax.AccessMode, interruptStack bool) {
 		return
 	}
 
+	// CurMod is actually changing value (the interrupt-stack path always
+	// forces Kernel, same as below) -- the Go equivalent of registers.c's
+	// read_psl_bits/write_psl_bits noticing vax.psl.bit.cur_mod !=
+	// vax.pslw.cur_mod and calling invalidate_tb_prot(); this port has no
+	// wide/narrow PSL duality to compare, so the check is against the
+	// real transition itself. See docs/PHASE-21.md.
+	actualNewMode := newMode
+	if interruptStack {
+		actualNewMode = vax.Kernel
+	}
+
+	if curMod != actualNewMode {
+		e.mem.InvalidateProtection()
+	}
+
 	psl.SetPrvMod(curMod)
 
 	var newSP uint32

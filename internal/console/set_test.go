@@ -40,6 +40,45 @@ func TestSetSymbol_psl(t *testing.T) {
 	}
 }
 
+// TestSetSymbol_pslInvalidatesProtectionOnModeChange matches
+// console_set.c's own bare "SET PSL=value" case, which calls
+// read_psl_bits() right after -- invalidating cached TB protection state
+// if CurMod actually changed (docs/PHASE-21.md). The cached mapping
+// itself must survive; only its verified access mode is reset.
+func TestSetSymbol_pslInvalidatesProtectionOnModeChange(t *testing.T) {
+	c := newRunnableConsole(t)
+
+	if _, err := c.Mem.LoadLongword(c.CPU, 0x200); err != nil {
+		t.Fatalf("LoadLongword: %v", err)
+	}
+
+	entries := c.Mem.TBSnapshot()
+	if len(entries) == 0 || !entries[0].ProtValid() {
+		t.Fatalf("TBSnapshot() = %+v, want a populated, protection-valid entry first", entries)
+	}
+
+	// CurMod occupies PSL bits 25:24 -- switch it from Kernel (0) to User
+	// (3), leaving every other bit as Init/VMInit left it.
+	newPSL := uint32(c.CPU.PSL())&^(0x3<<24) | (3 << 24)
+
+	if err := c.SetSymbol("PSL", newPSL); err != nil {
+		t.Fatalf("SetSymbol: %v", err)
+	}
+
+	if got := c.CPU.PSL().CurMod(); got != vax.User {
+		t.Fatalf("CurMod() = %v, want User (the SET PSL should have taken effect)", got)
+	}
+
+	entries = c.Mem.TBSnapshot()
+	if len(entries) == 0 {
+		t.Fatalf("TBSnapshot() empty after SET PSL, want the mapping to survive")
+	}
+
+	if entries[0].ProtValid() {
+		t.Errorf("entries[0].ProtValid() = true after SET PSL changed CurMod, want false (forced recheck)")
+	}
+}
+
 func TestSetSymbol_userSymbol(t *testing.T) {
 	c, _ := newTestConsole(t)
 	if err := c.SetSymbol("FOOBAR", 0x1234); err != nil {

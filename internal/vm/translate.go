@@ -76,27 +76,99 @@ func translationNotValid(addr uint32) error {
 // and current access mode (PSL cur_mod). If virtual memory is disabled
 // (MAPEN == 0) addr is returned unchanged, matching vm.c's vm().
 //
-// This is a direct port of vm.c's vm() routine, minus two things that are
-// deliberately out of scope here:
-//
-//   - The translation-buffer and single-page "sequential translation cache"
-//     (struct TB / the STC cached_* globals) are pure 1999-era performance
-//     hacks with no effect on the result, same rationale as Phase 01 not
-//     porting struct PSL_W — see docs/PHASE-01.md.
-//   - DYNVM dynamic page-in-on-demand (validate_page(), gated on
-//     vax.console.vminit_valid/page_map) is console/microkernel state that
-//     belongs to Phase 08's VMINIT command; until that exists, an invalid
-//     page table entry always faults TNV here, which is also exactly what
-//     validate_page() itself does whenever VMVALID is false (the normal case
-//     until a real OS or VMINIT has run).
+// This is a direct port of vm.c's vm() routine called with a "real",
+// signaling access -- see ProbeTranslate for the VM_NOSIGNAL counterpart,
+// and docs/PHASE-21.md for the translation-buffer/sequential-translation-
+// cache design this and ProbeTranslate share via translate.
 func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32, error) {
+	return m.translate(cpu, addr, access, true)
+}
+
+// ProbeTranslate is Translate for a caller matching vm.c's VM_NOSIGNAL
+// mode flag: PROBEx's own addressability check (emul_misc.c's emul_probe),
+// and LookupPTE's recursive PTE-address step (tracevm's own VM_NOSIGNAL
+// call for the same purpose). The only observable difference from
+// Translate is that the sequential translation cache's own one-slot hit
+// check is never taken -- vm.c's STC compares the *raw* mode parameter
+// (which carries the VM_NOSIGNAL bit for these callers) against a
+// cached_mbit that's only ever written with that bit already stripped, so
+// a VM_NOSIGNAL translation can never hit the STC, only the 128-entry TB
+// (whose own hit-check runs after the bit is stripped in the C source).
+// Population of either cache on a successful walk is unaffected: vm.c
+// does that unconditionally regardless of the flag. See docs/PHASE-21.md.
+func (m *Memory) ProbeTranslate(cpu *vax.CPU, addr uint32, access AccessType) (uint32, error) {
+	return m.translate(cpu, addr, access, false)
+}
+
+// translate is the shared implementation behind Translate/ProbeTranslate.
+// signal is true for a real (Translate) access and false for a probing
+// (ProbeTranslate) one -- see that function's doc comment for its one
+// effect (gating the STC hit-check).
+//
+// DYNVM dynamic page-in-on-demand (validate_page(), gated on
+// vax.console.vminit_valid/page_map) is console/microkernel state that
+// belongs to Phase 08's VMINIT command; until that exists, an invalid page
+// table entry always faults TNV here, which is also exactly what
+// validate_page() itself does whenever VMVALID is false (the normal case
+// until a real OS or VMINIT has run).
+func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal bool) (uint32, error) {
 	if cpu.PR(vax.MAPEN) == 0 {
 		return addr, nil
 	}
 
+	vpage := addr &^ uint32(pageSize-1)
+	byteOffset := addr & (pageSize - 1)
+
+	// The sequential translation cache: a one-slot fast path for the
+	// (very common) case of the same page/mode as the immediately
+	// preceding translation, consulted before the 128-entry TB and
+	// unaffected by TBDR -- matching vm.c's own #if STC block, always
+	// compiled in. See ProbeTranslate's doc comment for why this check is
+	// gated on signal.
+	m.tb.stcTries++
+
+	if signal && m.tb.stcValid && vpage == m.tb.stcVPage && access == m.tb.stcMode {
+		m.tb.stcHits++
+
+		return m.tb.stcPPage + byteOffset, nil
+	}
+
 	region := (addr >> 30) & 0x3
 	page := (addr & 0x3FFFFFFF) >> 9
-	byteOffset := addr & (pageSize - 1)
+
+	idx := tbIndex(region, page)
+	entry := &m.tb.entries[idx]
+
+	// The 128-entry translation buffer, consulted only when TBDR == 0
+	// ("TB caching enabled") -- matching vm.c's `if (!vax.TBDR)`. Note
+	// this gates consultation only: a successful full walk below still
+	// populates entry regardless of TBDR, exactly as vm.c does.
+	if cpu.PR(vax.TBDR) == 0 {
+		m.tb.tries++
+
+		if entry.valid && entry.page == page && entry.protMode == access {
+			m.tb.hits++
+
+			paddr := entry.paddr + byteOffset
+
+			m.tb.stcValid = true
+			m.tb.stcVPage = vpage
+			m.tb.stcPPage = entry.paddr
+			m.tb.stcMode = access
+
+			if cpu.DebugEnabled(vax.DebugTB) {
+				ratio := 0.0
+				if m.tb.tries > 0 {
+					ratio = float64(m.tb.hits) / float64(m.tb.tries) * 100.0
+				}
+
+				fmt.Fprintf(cpu.DebugWriter(), "DEBUG(TB):  TB CACHE HIT IDX=%02X; VA=%08X  PA=%08X RATIO=%d%%\n",
+					idx, addr, paddr, int(ratio))
+			}
+
+			return paddr, nil
+		}
+	}
 
 	var (
 		pteVirtAddr  uint32
@@ -106,6 +178,9 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 	switch region {
 	case 0: // P0: process program region
 		if page > cpu.PR(vax.P0LR) {
+			*entry = tbEntry{}
+			m.tb.stcFlush()
+
 			return 0, accessViolation(addr)
 		}
 
@@ -115,6 +190,9 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 	case 1: // P1: process control region. P1BR/P1LR list invalid pages, so
 		// the length comparison is inverted relative to P0.
 		if page <= cpu.PR(vax.P1LR) {
+			*entry = tbEntry{}
+			m.tb.stcFlush()
+
 			return 0, accessViolation(addr)
 		}
 
@@ -123,6 +201,9 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 
 	case 2: // S0: system region. SBR is already a physical address.
 		if page > cpu.PR(vax.SLR) {
+			*entry = tbEntry{}
+			m.tb.stcFlush()
+
 			return 0, accessViolation(addr)
 		}
 
@@ -130,6 +211,9 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 		pteRecursive = false
 
 	default: // S1: unsupported by this implementation, same as the C source.
+		*entry = tbEntry{}
+		m.tb.stcFlush()
+
 		return 0, accessViolation(addr)
 	}
 
@@ -151,34 +235,30 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 
 	pte := PTE(raw)
 
-	if cpu.DebugEnabled(vax.DebugVM) || cpu.DebugEnabled(vax.DebugTB) {
+	if cpu.DebugEnabled(vax.DebugVM) {
 		pa := pte.PFN()<<9 + byteOffset
-		w := cpu.DebugWriter()
 
-		if cpu.DebugEnabled(vax.DebugVM) {
-			fmt.Fprintf(w, "DEBUG(VM): VA=%08X  R=%02d PTEA=%08X PTE=%08X P=%02X M=%02X PA=%08X\n",
-				addr, region, pteAddr, uint32(pte), pte.Protection(), access, pa)
-		}
-
-		if cpu.DebugEnabled(vax.DebugTB) {
-			// This port's Translate does an uncached page-table walk with
-			// no separate TB-hit/miss state (see this function's own doc
-			// comment and docs/PHASE-17.md sub-phase 3) -- TB traces the
-			// same translation event VM does rather than a distinct
-			// cache-hit/miss event that doesn't exist here.
-			fmt.Fprintf(w, "DEBUG(TB): VA=%08X  R=%02d PTEA=%08X PTE=%08X P=%02X M=%02X PA=%08X\n",
-				addr, region, pteAddr, uint32(pte), pte.Protection(), access, pa)
-		}
+		fmt.Fprintf(cpu.DebugWriter(), "DEBUG(VM): VA=%08X  R=%02d PTEA=%08X PTE=%08X P=%02X M=%02X PA=%08X\n",
+			addr, region, pteAddr, uint32(pte), pte.Protection(), access, pa)
 	}
 
-	modeMask := access
-
 	if !pte.Protection().allows(cpu.PSL().CurMod(), access) {
-		return 0, protectionViolation(addr, byte(modeMask))
+		*entry = tbEntry{}
+		m.tb.stcFlush()
+
+		return 0, protectionViolation(addr, byte(access))
 	}
 
 	if !pte.Valid() {
-		if !m.validatePage(pteAddr, &pte) {
+		ok := m.validatePage(pteAddr, &pte)
+
+		// Matching vm.c's own `tbp->page = -1L; STC_FLUSH;` immediately
+		// around its validate_page() call: the current slot is
+		// invalidated regardless of whether demand-paging succeeded.
+		*entry = tbEntry{}
+		m.tb.stcFlush()
+
+		if !ok {
 			return 0, translationNotValid(addr)
 		}
 	}
@@ -193,7 +273,16 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 
 	m.translationCount++
 
-	return pte.PFN()<<9 + byteOffset, nil
+	paddr := pte.PFN()<<9 + byteOffset
+
+	*entry = tbEntry{valid: true, page: page, paddr: pte.PFN() << 9, code: pte.Protection(), protMode: access}
+
+	m.tb.stcValid = true
+	m.tb.stcVPage = vpage
+	m.tb.stcPPage = pte.PFN() << 9
+	m.tb.stcMode = access
+
+	return paddr, nil
 }
 
 // validatePage is the Go equivalent of vm.c's validate_page: called when
@@ -290,7 +379,10 @@ func (m *Memory) LookupPTE(cpu *vax.CPU, addr uint32) (region int, pteAddr uint3
 
 	physPTEAddr := pteVirtAddr
 	if pteRecursive {
-		physPTEAddr, err = m.Translate(cpu, pteVirtAddr, AccessRead)
+		// Matching tracevm's own recursive PTE-address translation, which
+		// passes VM_READ | VM_NOSIGNAL -- see ProbeTranslate's doc
+		// comment.
+		physPTEAddr, err = m.ProbeTranslate(cpu, pteVirtAddr, AccessRead)
 		if err != nil {
 			return region, pteVirtAddr, 0, err
 		}
@@ -309,9 +401,9 @@ func (m *Memory) LookupPTE(cpu *vax.CPU, addr uint32) (region int, pteAddr uint3
 // (SET PTE/SET PAGE): the same region/base/length-register walk LookupPTE
 // does, but resolving all the way to the entry's physical address (via
 // Translate for a recursively-mapped P0/P1 PTE) so the new value can
-// actually be stored. This port has no translation-buffer cache to flush
-// afterward (see LookupPTE's own doc comment and ShowTB's "not applicable to
-// this port"), so there is no invalidate_page equivalent to call.
+// actually be stored. Invalidates addr's own translation-buffer slot on a
+// successful write, matching setpte's own invalidate_page(addr) call — the
+// PFN database entry just changed, so any cached mapping for it is stale.
 func (m *Memory) StorePTE(cpu *vax.CPU, addr uint32, pte PTE) error {
 	if cpu.PR(vax.MAPEN) == 0 {
 		return accessViolation(addr)
@@ -365,5 +457,11 @@ func (m *Memory) StorePTE(cpu *vax.CPU, addr uint32, pte PTE) error {
 		}
 	}
 
-	return m.writePhysLongword(physPTEAddr, uint32(pte))
+	if err := m.writePhysLongword(physPTEAddr, uint32(pte)); err != nil {
+		return err
+	}
+
+	m.InvalidatePage(addr)
+
+	return nil
 }

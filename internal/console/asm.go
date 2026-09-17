@@ -179,7 +179,7 @@ func (c *Console) mergeAsmSymbols(a *asm.Assembler) {
 
 // InAssemblerMode reports whether a bare "ASM" command has put the console
 // into interactive assembler-mode (docs/PHASE-19.md) -- Dispatcher.Dispatch
-// consults this ahead of normal verb-table lookup, and cmd/govax's own
+// consults this ahead of normal verb-table lookup, and main.go's own
 // readline prompt consults it to switch to "ASM> ", both matching the
 // reference tool.
 func (c *Console) InAssemblerMode() bool { return c.assemblerMode }

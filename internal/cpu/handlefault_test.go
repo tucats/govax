@@ -301,3 +301,57 @@ func TestSetModeStackSameModeNoOp(t *testing.T) {
 		t.Errorf("SP = %#x, want unchanged 0x1234", e.cpu.GPR(vax.SP))
 	}
 }
+
+// TestSetModeStackRealModeChangeInvalidatesProtection matches
+// docs/PHASE-21.md's design decision: a real CurMod transition through
+// setModeStack (fault/interrupt delivery, and Phase 13's RUN) must call
+// Memory.InvalidateProtection -- the cached mapping survives, but its
+// verified access mode is reset, forcing the next access to re-check
+// protection.
+func TestSetModeStackRealModeChangeInvalidatesProtection(t *testing.T) {
+	e := newEngine()
+	cpu := e.cpu
+
+	psl := cpu.PSL()
+	psl.SetCurMod(vax.Kernel)
+	cpu.SetPSL(psl)
+
+	const (
+		sbrPhys = 0x2000
+		pfn     = 2
+		vaddr   = 0x80000000 // S0 region, page 0
+	)
+
+	cpu.SetPR(vax.SBR, sbrPhys)
+	cpu.SetPR(vax.SLR, 0)
+
+	var pte vm.PTE
+	pte.SetValid(true)
+	pte.SetProtection(vm.ProtUW)
+	pte.SetPFN(pfn)
+	putLongword(t, cpu, e.mem, sbrPhys, uint32(pte))
+
+	cpu.SetPR(vax.MAPEN, 1)
+
+	if _, err := e.mem.Translate(cpu, vaddr, vm.AccessRead); err != nil {
+		t.Fatalf("Translate: %v", err)
+	}
+
+	cpu.SetPR(vax.MAPEN, 0)
+
+	entries := e.mem.TBSnapshot()
+	if len(entries) == 0 || !entries[0].ProtValid() {
+		t.Fatalf("TBSnapshot() = %+v, want one entry with ProtValid() true before the mode change", entries)
+	}
+
+	e.setModeStack(vax.User, false) // a real Kernel -> User transition
+
+	entries = e.mem.TBSnapshot()
+	if len(entries) == 0 {
+		t.Fatalf("TBSnapshot() empty after a mode change, want the mapping to survive")
+	}
+
+	if entries[0].ProtValid() {
+		t.Errorf("entries[0].ProtValid() = true after a real mode change, want false (forced recheck)")
+	}
+}

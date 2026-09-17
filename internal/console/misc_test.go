@@ -227,6 +227,34 @@ func TestClearMemory_reinitializes(t *testing.T) {
 	}
 }
 
+// TestClearTB matches console_clear.c's own CLEAR TB (case 107): a full
+// translation-buffer flush plus a tries/hits/pflushes counter reset,
+// leaving the flush counter itself untouched -- see docs/PHASE-21.md.
+func TestClearTB(t *testing.T) {
+	c := newRunnableConsole(t)
+
+	if _, err := c.Mem.LoadLongword(c.CPU, 0x200); err != nil {
+		t.Fatalf("LoadLongword: %v", err)
+	}
+
+	if len(c.Mem.TBSnapshot()) == 0 {
+		t.Fatalf("TBSnapshot() empty before CLEAR TB, want a populated slot")
+	}
+
+	if err := c.ClearTB(); err != nil {
+		t.Fatalf("ClearTB: %v", err)
+	}
+
+	if got := len(c.Mem.TBSnapshot()); got != 0 {
+		t.Errorf("TBSnapshot() len = %d after CLEAR TB, want 0", got)
+	}
+
+	tries, hits, _, pflushes := c.Mem.TBStats()
+	if tries != 0 || hits != 0 || pflushes != 0 {
+		t.Errorf("TBStats() after CLEAR TB = tries=%d hits=%d pflushes=%d, want all 0", tries, hits, pflushes)
+	}
+}
+
 func TestClearInterruptAndClearAllInterrupts(t *testing.T) {
 	c, _ := newTestConsole(t)
 

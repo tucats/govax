@@ -62,7 +62,16 @@ func (c *Console) SetSymbolQualified(name string, value uint32, permanent, entry
 	}
 
 	if name == "PSL" {
+		oldMode := c.CPU.PSL().CurMod()
 		c.CPU.SetPSL(vax.PSL(value))
+
+		// Matching console_set.c's own "SET PSL=value" case: a bare
+		// register overwrite calls read_psl_bits() right after, which
+		// invalidates cached TB protection state if CurMod changed. See
+		// docs/PHASE-21.md.
+		if newMode := c.CPU.PSL().CurMod(); newMode != oldMode {
+			c.Mem.InvalidateProtection()
+		}
 
 		return nil
 	}

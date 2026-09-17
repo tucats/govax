@@ -111,9 +111,9 @@ type Console struct {
 	// Dispatcher backs XFC$CONSOLE_CMD (a running VAX program asking the
 	// console to execute a command line on its behalf). Unlike Engine/RTL,
 	// this isn't created by Init/Zero — a Dispatcher needs the DCL grammar
-	// and help text (cmd/govax's own startup sequence), which Console
+	// and help text (main.go's own startup sequence), which Console
 	// itself knows nothing about — so it's nil until whoever constructs
-	// both (see cmd/govax/main.go) assigns it explicitly. XFC$CONSOLE_CMD
+	// both (see main.go) assigns it explicitly. XFC$CONSOLE_CMD
 	// reports failure if this is still nil.
 	Dispatcher *Dispatcher
 
@@ -185,7 +185,7 @@ type Console struct {
 	// method on Console (Include, Assemble, imageLoad, LoadROM, LoadNVRAM)
 	// resolves an unqualified name through: the name as given, then each of
 	// Paths' own search directories, then its embedded fallback. A nil
-	// Paths (the default for a Console built without cmd/govax's own
+	// Paths (the default for a Console built without main.go's own
 	// startup wiring, e.g. most tests) makes every one of those methods
 	// behave exactly as a plain os.ReadFile/os.Open — see
 	// internal/respath's own doc comment.

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vm"
 )
 
 // mtprBytes returns the byte sequence for MTPR src, #reg where src is a
@@ -251,20 +252,82 @@ func TestEmulMtprSirrDeliversImmediatelyWhenAboveCurrentIPL(t *testing.T) {
 	}
 }
 
-func TestEmulMtprTbiaTbisAreNoOps(t *testing.T) {
+// TestEmulMtprTbiaInvalidatesTB matches emul_procreg.c's own TBIA case
+// (invalidate_tb()): a real full flush of the translation buffer, wired up
+// as of Phase 21 (see docs/PHASE-21.md) -- TBIA/TBIS are not stored into
+// the register array either way (the C source's switch case has no
+// fallthrough to its default `vax.preg[reg] = value`), which this test
+// keeps checking alongside the real invalidation.
+func TestEmulMtprTbiaInvalidatesTB(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
+
+	_, _, flushesBefore, _ := e.mem.TBStats()
 
 	cpu.SetGPR(vax.R1, 0x12345678)
 	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.TBIA))...)
 
 	if got := cpu.PR(vax.TBIA); got != 0 {
-		t.Errorf("PR(TBIA) = %#x, want 0 (no-op, not stored)", got)
+		t.Errorf("PR(TBIA) = %#x, want 0 (not stored, same as the C source)", got)
 	}
 
+	_, _, flushesAfter, _ := e.mem.TBStats()
+	if flushesAfter != flushesBefore+1 {
+		t.Errorf("TBStats() flushes = %d, want %d (MTPR TBIA must call InvalidateTB)", flushesAfter, flushesBefore+1)
+	}
+}
+
+// TestEmulMtprTbisInvalidatesPage matches emul_procreg.c's own TBIS case
+// (invalidate_page(value)): flushes only the one TB slot the given address
+// maps to, using the MTPR operand's own value as that address.
+func TestEmulMtprTbisInvalidatesPage(t *testing.T) {
+	e := kernelEngine()
+	cpu := e.cpu
+
+	// A minimal S0 identity setup: SBR/SLR covering one page, whose PTE
+	// (physical page 1) maps virtual page 0 of S0 onto physical page 2.
+	const (
+		sbrPhys = 0x1000
+		pfn     = 2
+	)
+
+	cpu.SetPR(vax.SBR, sbrPhys)
+	cpu.SetPR(vax.SLR, 0)
+
+	var pte vm.PTE
+	pte.SetValid(true)
+	pte.SetProtection(vm.ProtUW)
+	pte.SetPFN(pfn)
+
+	// MAPEN is still off here, so this is a direct physical-address write.
+	putLongword(t, cpu, e.mem, sbrPhys, uint32(pte))
+
+	cpu.SetPR(vax.MAPEN, 1)
+
+	const vaddr = 0x80000000 // S0 region, page 0
+
+	if _, err := e.mem.Translate(cpu, vaddr, vm.AccessRead); err != nil {
+		t.Fatalf("Translate: %v", err)
+	}
+
+	if len(e.mem.TBSnapshot()) == 0 {
+		t.Fatalf("TBSnapshot() empty before MTPR TBIS, want the slot populated")
+	}
+
+	// MAPEN back off: stepInstruction fetches the MTPR instruction itself
+	// from a fixed physical-style test address (base, 0x1000) that has no
+	// P0 page table backing it here, and MTPR's own register-mode operand
+	// needs no translation regardless.
+	cpu.SetPR(vax.MAPEN, 0)
+
+	cpu.SetGPR(vax.R1, vaddr)
 	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.TBIS))...)
 
 	if got := cpu.PR(vax.TBIS); got != 0 {
-		t.Errorf("PR(TBIS) = %#x, want 0 (no-op, not stored)", got)
+		t.Errorf("PR(TBIS) = %#x, want 0 (not stored, same as the C source)", got)
+	}
+
+	if got := len(e.mem.TBSnapshot()); got != 0 {
+		t.Errorf("TBSnapshot() len = %d after MTPR TBIS, want 0 (its own slot invalidated)", got)
 	}
 }

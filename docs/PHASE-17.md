@@ -185,11 +185,14 @@ below says exactly what it traces.
 
 - `translate.go`'s `Translate`/`LookupPTE` trace address-to-PTE resolution
   (`VM`) and mirror `vm.c`'s `DBG_TB` sites' intent (this port's `Translate`
-  does an uncached page-table walk with no separate TB-hit/miss state of its
+  did an uncached page-table walk with no separate TB-hit/miss state of its
   own — `docs/PHASE-16.md`'s `SHOW TB` entry already noted this — so `TB`
-  traces the same translation event as `VM` rather than a distinct cache-hit/
+  traced the same translation event as `VM` rather than a distinct cache-hit/
   miss event that doesn't exist in this port; documented inline rather than
-  silently aliasing the two).
+  silently aliasing the two). **Superseded by Phase 21** (2026-09-17): a real
+  translation buffer now exists, so `TB` traces a real cache hit (matching
+  `vm.c`'s own `DBG_TB` printf, which likewise only ever fires on a hit) and
+  is no longer an alias of `VM` — see docs/PHASE-21.md.
 
 ## Sub-phase 4: `internal/rtl` tracing (`LOGICALS`, `DEVICES`, `RMS`, `SERVICES`, `PROCESS`)
 

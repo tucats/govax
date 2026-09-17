@@ -56,8 +56,11 @@ var BuildVersion = "- go build version"
 // Build timestamp, injected by build tool else empty string.
 var BuildTime string
 
-// Do we dump out statistics when execution finishes?
-var stats *bool
+// Do we dump out statistics when execution finishes? Defaults to a real
+// (false) *bool rather than nil, so a test calling run directly without
+// going through main's flag.Bool assignment doesn't dereference a nil
+// pointer at the *stats call below.
+var stats = new(bool)
 
 // Wall-clock time when we started up. Not the same as actual instruction
 // execution time if the user uses the console, etc.
@@ -270,6 +273,16 @@ func printStats(c *console.Console, out io.Writer, flag bool) {
 		fmt.Fprintf(out, "    Page Translations:   %16s\n", formatLargeNumber(translate))
 		fmt.Fprintf(out, "    Bytes Read:          %16s\n", formatLargeNumber(read))
 		fmt.Fprintf(out, "    Bytes Written:       %16s\n", formatLargeNumber(write))
+
+		stcTries, stcHits := c.Engine.Memory().STCStats()
+		tbTries, tbHits, tbFlushes, _ := c.Engine.Memory().TBStats()
+
+		fmt.Fprintf(out, "\n  Translation Buffer:\n")
+		fmt.Fprintf(out, "    Sequential Cache Tries: %13s\n", formatLargeNumber(stcTries))
+		fmt.Fprintf(out, "    Sequential Cache Hits:  %13s\n", formatLargeNumber(stcHits))
+		fmt.Fprintf(out, "    TB Cache Tries:         %13s\n", formatLargeNumber(tbTries))
+		fmt.Fprintf(out, "    TB Cache Hits:          %13s\n", formatLargeNumber(tbHits))
+		fmt.Fprintf(out, "    TB Flushes:             %13s\n", formatLargeNumber(tbFlushes))
 	}
 }
 

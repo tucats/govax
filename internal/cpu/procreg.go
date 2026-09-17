@@ -111,11 +111,9 @@ func emulMtpr(e *Engine, d *Decoded) error {
 // IPL/SIRR's pending-interrupt delivery and ICCS/RXCS/TXCS/TXDB's console/
 // clock device modeling, both previously deferred (see docs/PHASE-07.md's
 // open questions) for lack of an interrupt-admission mechanism, are wired up
-// as of Phase 14 -- see interrupt.go's Engine.Interrupt. TBIA/TBIS remain
-// no-ops: Phase 02 never ported the translation-buffer cache (a pure
-// 1999-era performance hack with no result-visible effect -- see
-// internal/vm/translate.go's design notes), so there is nothing to
-// invalidate.
+// as of Phase 14 -- see interrupt.go's Engine.Interrupt. TBIA/TBIS are wired
+// up as of Phase 21 to the real translation-buffer cache internal/vm now
+// maintains -- see docs/PHASE-21.md.
 func setPrivReg(e *Engine, reg int, value uint32) error {
 	if reg < 0 || reg > vax.MaxPrivReg {
 		return &Fault{Code: ExcReservedOp}
@@ -249,8 +247,11 @@ func setPrivReg(e *Engine, reg int, value uint32) error {
 			e.Interrupt(ExcConWrite, 20, 0) // see the IPL note on case TXCS above
 		}
 
-	case vax.TBIA, vax.TBIS:
-		// No-op; see the doc comment above.
+	case vax.TBIA:
+		e.mem.InvalidateTB()
+
+	case vax.TBIS:
+		e.mem.InvalidatePage(value)
 
 	default:
 		e.cpu.SetPR(vax.PrivReg(reg), value)

@@ -1243,24 +1243,65 @@ func (c *Console) ShowMap() error {
 	return nil
 }
 
-// ShowTB reports that this port's virtual memory has no translation cache
-// to report statistics on, matching SHOW TB's intent (console_show.c's own
-// cached_page_*/tb_*/dump_tb counters) against a deliberately different
-// design: internal/vm.Memory.Translate does a direct page-table walk on
-// every access (see that file's own doc comment on why a translation
-// buffer/"sequential translation cache" wasn't ported) — there are no
-// hit/miss counters to report, so this says so rather than fabricating
-// zeroes.
+// tbModeNames matches vm.c's mode_name[] ({"READ", "WRITE", "-NONE-"}),
+// indexed by a TBEntry's ProtMode (AccessRead/AccessWrite, or the
+// tbProtInvalid sentinel value 2 -- see internal/vm.TBEntry.ProtValid).
+var tbModeNames = [3]string{"READ", "WRITE", "-NONE-"}
+
+// ShowTB implements SHOW TB, a direct port of console_show.c's case 155
+// plus vm.c's dump_tb(): the sequential translation cache's own try/hit/
+// miss/ratio line, whether TBDR has TB caching enabled, the 128-entry
+// translation buffer's own try/hit/miss/ratio/flush/pflush counters, and
+// one line per currently-populated TB slot. Ported as of Phase 21, which
+// added the real cache this command reports on -- see docs/PHASE-21.md
+// (supersedes the "not applicable to this port" stub docs/PHASE-16.md sub-
+// phase 1f left behind).
 func (c *Console) ShowTB() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
 
-	c.Printf("Not applicable to this port: internal/vm.Memory.Translate does a direct\n")
-	c.Printf("page-table walk on every access, with no translation cache to report\n")
-	c.Printf("hit/miss statistics on — see docs/PHASE-16.md sub-phase 1f.\n")
+	stcTries, stcHits := c.Mem.STCStats()
+
+	c.Printf("Sequential Translation Cache\n")
+	c.Printf("    Tries=%d    Hits=%d    Misses=%d    Ratio = %d%%\n",
+		stcTries, stcHits, stcTries-stcHits, ratioPercent(stcTries, stcHits))
+
+	enabled := "enabled"
+	if c.CPU.PR(vax.TBDR) != 0 {
+		enabled = "disabled"
+	}
+
+	c.Printf("\nTranslation buffer caching is %s\n", enabled)
+
+	tries, hits, flushes, pflushes := c.Mem.TBStats()
+
+	c.Printf("    Tries=%d    Hits=%d    Misses=%d    Ratio = %d%%\n",
+		tries, hits, tries-hits, ratioPercent(tries, hits))
+	c.Printf("    Flushes=%d   PFlushes=%d\n", flushes, pflushes)
+
+	for _, e := range c.Mem.TBSnapshot() {
+		prefix := ""
+		if e.ProtValid() {
+			prefix = modeNames[c.CPU.PSL().CurMod()] + " "
+		}
+
+		c.Printf("    TB(%02X)  VA=%08X  PA=%08X  PROT=%-4s  MODE=%s%s\n",
+			e.Index, e.VA, e.PA, e.Prot, prefix, tbModeNames[e.ProtMode])
+	}
 
 	return nil
+}
+
+// ratioPercent matches SHOW TB's own hit-ratio calculation (a float cast
+// truncated to an int for display), reporting 0 rather than dividing by
+// zero when tries hasn't happened yet.
+func ratioPercent(tries, hits int64) int64 {
+	if tries == 0 {
+		return 0
+	}
+
+	return int64(float64(hits) / float64(tries) * 100.0)
 }
 
 // accessAbbrev matches show_instructions()'s own operand-kind abbreviation

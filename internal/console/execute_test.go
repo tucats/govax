@@ -28,7 +28,7 @@ func loadProgram(t *testing.T, c *Console, addr uint32, bytes ...byte) {
 // must both halt the CPU (Execute returns cleanly, like any HALT) and stop
 // the console's own command loop (Running() goes false), matching
 // emul_xfc.c's own vax.halted = VAX_USERHALT plus vax.console.running = 0 --
-// the two-part effect cmd/govax's main() relies on (via Console.Running) to
+// the two-part effect main.go's main() relies on (via Console.Running) to
 // exit the whole program instead of just returning to the "VAX>" prompt.
 func TestExecute_xfcQuitEmulatorStopsConsole(t *testing.T) {
 	c, _ := newTestConsole(t)
@@ -339,13 +339,13 @@ func TestExecute_beginRunGivesEachCommandAFreshBudget(t *testing.T) {
 }
 
 // TestExecute_stopsOnAttention exercises Ctrl-C interrupting a running VAX
-// program (cpu.Engine.Attention, wired up in cmd/govax's own terminal
+// program (cpu.Engine.Attention, wired up in main.go's own terminal
 // plumbing -- see attention.go): once something else has called Attention
 // mid-run, Execute's own Step loop must stop cleanly -- at the end of
 // whatever instruction is currently in flight, not mid-instruction -- and
 // report it via reportStopReason, rather than hang (this program is an
 // infinite loop) or propagate an error. Attention is set from a separate
-// goroutine, exactly matching its real caller (cmd/govax's background
+// goroutine, exactly matching its real caller (main.go's background
 // terminal-reading goroutine) and its documented "safe to call from any
 // goroutine" contract; a generous instruction-limit safety net keeps this
 // deterministic-in-practice test from ever truly hanging if that contract

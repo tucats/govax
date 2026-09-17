@@ -51,7 +51,7 @@ type Engine struct {
 	// attentionRequested backs Attention/AttentionRequested — the Go
 	// equivalent of vax.halted's VAX_ATTENTION value, set by console.c's
 	// SIGINT handler attention(). Unlike every other Engine field, this one
-	// is written from outside the goroutine that calls Step (cmd/govax's
+	// is written from outside the goroutine that calls Step (main.go's
 	// own process-wide Ctrl-C plumbing runs on a separate goroutine), hence
 	// atomic.Bool rather than a plain bool.
 	attentionRequested atomic.Bool
@@ -146,7 +146,7 @@ func (e *Engine) ClearHalted() { e.halted = false }
 // running finishes — the Go equivalent of console.c's attention(). Named to
 // avoid colliding with Engine's own, unrelated Interrupt method (see
 // ErrAttention's own doc comment). Safe to call from any goroutine, unlike
-// virtually every other Engine method; see cmd/govax's own Ctrl-C handling,
+// virtually every other Engine method; see main.go's own Ctrl-C handling,
 // the only intended caller. A fresh top-level run (BeginRun) clears this,
 // matching execute_vax's own `vax.halted = 0` at the top of every run — a
 // Ctrl-C pressed while idle at the console prompt, with nothing running,

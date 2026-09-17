@@ -367,6 +367,13 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	c.CPU.SetPR(vax.MAPEN, 1)
 	c.VMInitValid = true
 	c.Mem.SetVMValid(true) // let Translate demand-page invalid P0/P1 PTEs from here on
+
+	// Matching console_vminit.c's own "Dump the translation buffer"
+	// step: invalidate_tb() plus a reset of its tries/hits/pflushes
+	// counters (tb_flush itself and the STC's own counters are left
+	// alone, same asymmetry as CLEAR TB — see docs/PHASE-21.md).
+	c.Mem.InvalidateTB()
+	c.Mem.ResetTBCounters()
 	c.asmSession = nil     // a fresh address space invalidates any prior ASM session's state
 	c.assemblerMode = false
 

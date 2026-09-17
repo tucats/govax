@@ -300,7 +300,9 @@ worth the user's attention before deciding whether to fix now or track in
   (add a cache purely to have something to report on, vs. report "not modeled,
   translation is uncached" the way the C source's own `#if 0`-disabled
   `SHOW MEMORY STAT` sibling gets skipped in "optimized build") rather than a
-  straightforward port.
+  straightforward port. **Resolved by Phase 21** (user request, 2026-09-17): the
+  cache was added after all, and `SHOW TB` now reports real statistics — see
+  docs/PHASE-21.md.
 - **`XTEST`** (id `5001`, entry `exe$xtest`) — not itself a `SHOW` command, but
   listed as a `show_types` keyword; per `reference/CLAUDE.md`'s own description,
   `console_test.c`/`XTEST`/`TEST` are "a grab-bag of low-level, partly-undocumented
@@ -322,8 +324,9 @@ cases; the rest are missing:
   Portable alongside `SHOW STRING`.
 - **`CLEAR TB`** / **`CLEAR TRANSLATION_BUFFER`** (id `107`, C:
   `console_clear.c:133`) — resets translation-cache state; blocked on the same "no TB
-  cache exists" gap as `SHOW TB` (Sub-phase 1f). If that design question resolves to
-  "don't add a cache," this command becomes a no-op stub rather than a real port.
+  cache exists" gap as `SHOW TB` (Sub-phase 1f). **Resolved by Phase 21**: a real
+  translation buffer now exists, and `CLEAR TB` does a real flush — see
+  docs/PHASE-21.md.
 - **`CLEAR ERROR`** (id `113`, C: `console_clear.c:144`) — resets `$STATUS`/last-error
   state. `SHOW ERROR`'s status-code design question (Sub-phase 1f) is now resolved
   (`internal/vmserrors`); this command still needs the same not-yet-existing "last
@@ -632,10 +635,11 @@ records what actually shipped, not a re-scope of the plan above.
   an error naming why) — this document's own assessment of them (no addressing-
   mode legality table exposed, no per-opcode execution counters, arguably
   instrumentation rather than emulated VAX behavior) didn't change.
-- **1f, the two "recommend a stub" items**: `SHOW MAP` and `SHOW TB` now report
-  "not applicable to this port" (RMS field access is hardcoded Go offsets, not a
-  runtime registry; `Translate` does an uncached page-table walk) instead of
-  either fabricating data or being silently unbound. `SHOW ERROR` remains
+- **1f, the two "recommend a stub" items**: `SHOW MAP` now reports "not applicable
+  to this port" (RMS field access is hardcoded Go offsets, not a runtime registry).
+  `SHOW TB` was also a stub here, but Phase 21 (2026-09-17) ported the real
+  translation-buffer cache it reports on — see docs/PHASE-21.md; this entry's
+  original reasoning is left below for history. `SHOW ERROR` remains
   unbound — its design question (adopt a VAX-style status-code space, or shrink
   scope to "print the last error string"?) is still open, per this document's own
   "flag for the user rather than guessing."
@@ -744,8 +748,10 @@ session's own final report to the user for the discussion points on each.
 - **`CLEAR STRINGS`** (`ClearString`, misc.go) — resets `CONSOLE$STRINGPOOL` to
   `_BASE` and zeroes the pool's backing bytes, the write side of the already-shipped
   `SHOW STRING`.
-- **`CLEAR TB`** (`ClearTB`) — reports "not modeled by this port," matching `SHOW
-  TB`'s own established stub pattern (no translation cache exists to reset).
+- **`CLEAR TB`** (`ClearTB`) — reported "not modeled by this port" at the time,
+  matching `SHOW TB`'s own established stub pattern (no translation cache existed
+  to reset); superseded by Phase 21 (2026-09-17), which added a real cache and made
+  this a real flush — see docs/PHASE-21.md.
 - **`CLEAR MEMORY`** (`ClearMemory`) — found while implementing: the C source's own
   case 103 body is literally a call to `console_zero()`, not a memory-specific
   routine (its own module comment says as much: "CLEAR MEMORY is mapped to the ZERO

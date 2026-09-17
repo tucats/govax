@@ -41,6 +41,9 @@ through.
 - The C source's translation-buffer/"sequential translation cache" (`struct TB`, the
   `cached_*` STC globals in `vm.c`) is a pure performance optimization with no effect on
   translation results; not ported, same rationale as Phase 01 skipping `struct PSL_W`.
+  **Superseded by Phase 21** (user request, 2026-09-17): it is ported after all, so
+  `SHOW TB`/`CLEAR TB` can report real cache statistics and so PTE-mutating operations
+  have real cache state to invalidate — see docs/PHASE-21.md.
 - `DYNVM` dynamic page-in-on-demand (`validate_page()`, gated on
   `vax.console.vminit_valid`/`page_map`) is console/microkernel state owned by Phase
   08's VMINIT command. Until that exists, an invalid PTE always faults

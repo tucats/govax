@@ -41,6 +41,30 @@ func TestVMInit_enablesTranslation(t *testing.T) {
 	}
 }
 
+// TestVMInit_flushesTranslationBuffer matches console_vminit.c's own
+// "Dump the translation buffer" step: invalidate_tb() plus a tries/hits/
+// pflushes counter reset, run right alongside enabling MAPEN --
+// docs/PHASE-21.md.
+func TestVMInit_flushesTranslationBuffer(t *testing.T) {
+	c := New(&bytes.Buffer{})
+	if err := c.Init(128 * 512); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+
+	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
+		t.Fatalf("VMInit: %v", err)
+	}
+
+	if got := len(c.Mem.TBSnapshot()); got != 0 {
+		t.Errorf("TBSnapshot() len = %d right after VMInit, want 0", got)
+	}
+
+	tries, hits, _, pflushes := c.Mem.TBStats()
+	if tries != 0 || hits != 0 || pflushes != 0 {
+		t.Errorf("TBStats() right after VMInit = tries=%d hits=%d pflushes=%d, want all 0", tries, hits, pflushes)
+	}
+}
+
 func TestVMInit_guardsFirstP0Page(t *testing.T) {
 	c := New(&bytes.Buffer{})
 	if err := c.Init(128 * 512); err != nil {

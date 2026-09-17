@@ -71,6 +71,7 @@ questions, and a progress log extended as that phase is worked.
 | 18 | [PHASE-18.md](PHASE-18.md) | Flow of control: `STEP`/`SET STEP`/`SHOW STEP_MODE`, future breakpoints/watchpoints |
 | 19 | [PHASE-19.md](PHASE-19.md) | Interactive `ASM` REPL mode |
 | 20 | [PHASE-20.md](PHASE-20.md) | RTL shim resolution fix, and console-native exception reporting (CHF) |
+| 21 | [PHASE-21.md](PHASE-21.md) | Translation buffer / sequential translation cache |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -140,3 +141,14 @@ console-native `format_exception()` fallback — ported now, since a real fault 
 `cli.exe`'s own still-unimplemented `SYS$`/`SHIM$` entry point) needs it to report
 cleanly and halt rather than abort `RUN` outright. See PHASE-20.md, including a
 one-character C-source bug (`&&` for `&`) found and fixed in `chf()` along the way.
+
+Phase 21, requested by the user 2026-09-17, ports `vm.c`'s translation-buffer cache
+(`struct TB tb[128]`) and its one-slot "sequential translation cache" into
+`internal/vm` — reversing Phase 02's own decision, and Phase 16 sub-phase 1f's `SHOW TB`
+audit, not to port it (a "pure performance hack with no result-visible effect"). The
+request was specifically to let `SHOW TB`/`CLEAR TB` report real cache statistics the
+way the reference tool does, and to model the cache-invalidation events a real VAX (and
+this port's own PTE-mutating operations — `TBIS`/`TBIA`, `SET PTE`/`SET PAGE`, demand
+paging) require. See PHASE-21.md, including how this port hooks the mode-change
+protection-invalidation behavior (`invalidate_tb_prot`) given Phase 01's own decision not
+to carry over the C source's wide/narrow `PSL` duality.

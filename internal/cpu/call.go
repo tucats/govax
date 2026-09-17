@@ -377,9 +377,17 @@ func emulRei(e *Engine, d *Decoded) error {
 	e.cpu.SetGPR(vax.SP, e.cpu.PR(vax.PrivReg(e.cpu.PSL().CurMod())))
 	e.cpu.SetGPR(vax.PC, newPC)
 
-	if newMode := e.cpu.PSL().CurMod(); e.cpu.DebugEnabled(vax.DebugCHM) && oldPSL.CurMod() != newMode {
-		fmt.Fprintf(e.cpu.DebugWriter(), "DEBUG(CHM): CHANGE MODE FROM %s TO %s AT %08X\n",
-			accessModeNames[oldPSL.CurMod()], accessModeNames[newMode], e.instructionPC)
+	if newMode := e.cpu.PSL().CurMod(); oldPSL.CurMod() != newMode {
+		// Matching registers.c's read_psl_bits/write_psl_bits noticing a
+		// CurMod change and calling invalidate_tb_prot() -- see
+		// docs/PHASE-21.md and handlefault.go's setModeStack, this port's
+		// other real mode-change site.
+		e.mem.InvalidateProtection()
+
+		if e.cpu.DebugEnabled(vax.DebugCHM) {
+			fmt.Fprintf(e.cpu.DebugWriter(), "DEBUG(CHM): CHANGE MODE FROM %s TO %s AT %08X\n",
+				accessModeNames[oldPSL.CurMod()], accessModeNames[newMode], e.instructionPC)
+		}
 	}
 
 	return nil

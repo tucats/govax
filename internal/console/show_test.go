@@ -638,8 +638,37 @@ func TestShowTB(t *testing.T) {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "Not applicable") {
-		t.Errorf("output = %q, want a not-applicable stub", buf.String())
+	out := buf.String()
+	for _, want := range []string{
+		"Sequential Translation Cache",
+		"Translation buffer caching is enabled",
+		"Flushes=0   PFlushes=0",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output = %q, want it to contain %q", out, want)
+		}
+	}
+}
+
+// TestShowTB_dumpsPopulatedEntry exercises a real, translated memory
+// access first (MAPEN must be on), so SHOW TB has a real translation-
+// buffer slot to dump — matching dump_tb()'s own per-slot output line.
+func TestShowTB_dumpsPopulatedEntry(t *testing.T) {
+	d, c, buf := newShowRunnableDispatcher(t)
+
+	if _, err := c.Mem.LoadLongword(c.CPU, 0x200); err != nil {
+		t.Fatalf("LoadLongword: %v", err)
+	}
+
+	buf.Reset()
+
+	if err := d.Dispatch("SHOW TB"); err != nil {
+		t.Fatalf("Dispatch: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "TB(") {
+		t.Errorf("output = %q, want at least one populated TB(nn) slot", out)
 	}
 }
 
