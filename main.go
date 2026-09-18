@@ -24,7 +24,6 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -34,6 +33,8 @@ import (
 	"unicode"
 
 	"github.com/chzyer/readline"
+	"github.com/tucats/gopackages/app-cli/app"
+	"github.com/tucats/gopackages/i18n"
 	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/dcl"
@@ -51,60 +52,34 @@ const minimumVAXMemory = 2048 * 512
 
 // Version string. This is injected by the build tool by default, but defaults
 // to t this string if built with "go build" rather than the build tool.
-var BuildVersion = "- go build version"
+var BuildVersion = "0.0-0"
 
 // Build timestamp, injected by build tool else empty string.
 var BuildTime string
-
-// Do we dump out statistics when execution finishes? Defaults to a real
-// (false) *bool rather than nil, so a test calling run directly without
-// going through main's flag.Bool assignment doesn't dereference a nil
-// pointer at the *stats call below.
-var stats = new(bool)
 
 // Wall-clock time when we started up. Not the same as actual instruction
 // execution time if the user uses the console, etc.
 var startTime time.Time = time.Now()
 
-// pathFlag implements flag.Value for a repeatable "-path <dir>" flag —
-// each occurrence appends to the list, in the order given, matching a
-// PATH-variable's own left-to-right search order.
-type pathFlag []string
-
-func (p *pathFlag) String() string {
-	if p == nil {
-		return ""
-	}
-
-	return fmt.Sprint([]string(*p))
-}
-
-func (p *pathFlag) Set(dir string) error {
-	*p = append(*p, dir)
-
-	return nil
-}
-
 func main() {
-	var paths pathFlag
+	// Register the application specific localizations.
+	i18n.Register(nil)
 
-	flag.Var(&paths,
-		"path",
-		"directory to search for unqualified file names")
+	// Disable subcommands and options we don't use.
+	app.MakePrivate("logon")
+	app.MakePrivate("format")
+	app.MakePrivate("log")
+	app.MakePrivate("log-file")
+	app.MakePrivate("insecure")
+	app.MakePrivate("quiet")
 
-	timeLimit := flag.Duration(
-		"time-limit", 0, "maximum emulation wall-clock time; default is unlimited")
+	app := app.New("govax: VAX/VMS emulator")
+	app.SetVersion(parseVersion(BuildVersion))
+	app.SetCopyright("(C) Copyright Tom Cole 2026")
+	app.Action = consoleCmd
 
-	instructionLimit := flag.Int(
-		"instruction-limit", 0, "maximum number of instructions to executed; default is unlimited")
-
-	stats = flag.Bool(
-		"stats", false, "Show execution statistics",
-	)
-
-	flag.Parse()
-
-	if err := run(paths, *instructionLimit, *timeLimit, os.Stdout, nil, flag.Args()); err != nil {
+	err := app.Run(grammar, os.Args)
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "govax:", err)
 		os.Exit(1)
 	}
@@ -203,7 +178,6 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 
 	// After that, if we're still running, do a console loop.
 	if c.Running() {
-
 		// Applied only from here on, not during vax.init's own boot sequence
 		// above -- see this function's own doc comment.
 		c.Engine.SetLimits(instructionLimit, timeLimit)
@@ -252,7 +226,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	}
 
 	// See if we have trailing stats to print out here.
-	printStats(c, out, *stats)
+	printStats(c, out, stats)
 
 	return nil
 }
@@ -340,4 +314,27 @@ func historyFilePath() string {
 	}
 
 	return filepath.Join(home, ".govax_history")
+}
+
+// parseVersion is a helper function that parses a version string into its major, minor, and build components.
+// The version string is expected to be in the format "major.minor-build". If the version string does not match
+// this format, an error message is printed to the console, and the program exits with a status code of 1.
+//
+// Parameters:
+//
+//	version (string): The version string to be parsed.
+//
+// Returns:
+//
+//	major (int): The major component of the version.
+//	minor (int): The minor component of the version.
+//	build (int): The build component of the version.
+func parseVersion(version string) (major int, minor int, build int) {
+	count, err := fmt.Sscanf(version, "%d.%d-%d", &major, &minor, &build)
+	if count != 3 || err != nil {
+		fmt.Printf("Invalid version string: %s\n", version)
+		os.Exit(1)
+	}
+
+	return
 }

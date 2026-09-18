@@ -326,6 +326,7 @@ func TestSetModeStackRealModeChangeInvalidatesProtection(t *testing.T) {
 	cpu.SetPR(vax.SLR, 0)
 
 	var pte vm.PTE
+	
 	pte.SetValid(true)
 	pte.SetProtection(vm.ProtUW)
 	pte.SetPFN(pfn)

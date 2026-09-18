@@ -24,7 +24,7 @@ func kernelEngine() *Engine {
 	psl := e.cpu.PSL()
 	psl.SetCurMod(vax.Kernel)
 	e.cpu.SetPSL(psl)
-	
+
 	return e
 }
 
@@ -72,7 +72,7 @@ func TestEmulMtprRequiresKernelMode(t *testing.T) {
 	if !errors.As(err, &f) {
 		t.Fatalf("emulMtpr err = %v, want *Fault", err)
 	}
-	
+
 	if f.Code != ExcPrivileged {
 		t.Errorf("fault code = %#x, want ExcPrivileged", f.Code)
 	}
@@ -262,7 +262,7 @@ func TestEmulMtprTbiaInvalidatesTB(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
 
-	_, _, flushesBefore, _ := e.mem.TBStats()
+	_, _, flushesBefore, _ := e.mem.TBStats() //nolint:dogsled
 
 	cpu.SetGPR(vax.R1, 0x12345678)
 	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.TBIA))...)
@@ -271,7 +271,7 @@ func TestEmulMtprTbiaInvalidatesTB(t *testing.T) {
 		t.Errorf("PR(TBIA) = %#x, want 0 (not stored, same as the C source)", got)
 	}
 
-	_, _, flushesAfter, _ := e.mem.TBStats()
+	_, _, flushesAfter, _ := e.mem.TBStats() //nolint:dogsled
 	if flushesAfter != flushesBefore+1 {
 		t.Errorf("TBStats() flushes = %d, want %d (MTPR TBIA must call InvalidateTB)", flushesAfter, flushesBefore+1)
 	}
@@ -295,6 +295,7 @@ func TestEmulMtprTbisInvalidatesPage(t *testing.T) {
 	cpu.SetPR(vax.SLR, 0)
 
 	var pte vm.PTE
+
 	pte.SetValid(true)
 	pte.SetProtection(vm.ProtUW)
 	pte.SetPFN(pfn)
