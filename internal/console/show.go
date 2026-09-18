@@ -11,6 +11,11 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
+const (
+	enabledState  = "enabled"
+	disabledState = "disabled"
+)
+
 // This file implements the subset of console_show.c's dozens of SHOW
 // sub-displays this port covers — see docs/PHASE-16.md sub-phase 1 for the
 // inventory this file works through and what's still deliberately left
@@ -78,9 +83,9 @@ func (c *Console) ShowMemory() error {
 	c.Printf("\n    Physical Memory\n        %08X (%d decimal) pages\n        Addresses  00000000 - %08X\n\n",
 		pages, pages, size-1)
 
-	state := "DISABLED"
+	state := disabledState
 	if c.CPU.PR(vax.MAPEN) != 0 {
-		state = "ENABLED"
+		state = enabledState
 	}
 
 	c.Printf("    Virtual Memory (currently %s)\n", state)
@@ -1267,9 +1272,9 @@ func (c *Console) ShowTB() error {
 	c.Printf("    Tries=%d    Hits=%d    Misses=%d    Ratio = %d%%\n",
 		stcTries, stcHits, stcTries-stcHits, ratioPercent(stcTries, stcHits))
 
-	enabled := "enabled"
+	enabled := enabledState
 	if c.CPU.PR(vax.TBDR) != 0 {
-		enabled = "disabled"
+		enabled = disabledState
 	}
 
 	c.Printf("\nTranslation buffer caching is %s\n", enabled)
@@ -1551,17 +1556,17 @@ func (c *Console) ShowTrace() error {
 		return err
 	}
 
-	state := "disabled"
+	state := disabledState
 	if c.Trace {
-		state = "enabled"
+		state = enabledState
 	}
 
 	c.Printf("    Execution trace disassembly is %s\n", state)
 
 	if c.Trace {
-		regState := "disabled"
+		regState := disabledState
 		if c.CPU.DebugEnabled(vax.DebugRegisters) {
-			regState = "enabled"
+			regState = enabledState
 		}
 
 		c.Printf("    Register tracking is %s\n", regState)
