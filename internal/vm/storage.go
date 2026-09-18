@@ -6,6 +6,11 @@ import (
 	"github.com/tucats/govax/internal/vax"
 )
 
+// This is the mask for an address that converts the address to the
+// base address of the page containing that address (i.e. clears the
+// first 9 bits which are the address within the page).
+const PageMask = 0xFFFFFE00
+
 // This file is the Go port of storage.c's load_memory/store_memory/
 // load_register primitive layer (get_operand/put_operand stay out of scope
 // here — they belong to Phase 03's operand-decode engine, per
@@ -34,6 +39,13 @@ import (
 // LoadByte reads one byte at a virtual address, translating and
 // fault-checking through cpu.
 //
+// The Load and Store operations for word, longword, and quadword have an
+// optimization where they determine if the value being read fits entirely
+// in a single page. If so, instead of reading the values a byte-at-a-time
+// a single virtual address translation is performed on the page containing
+// all the bytes of the value, so it can be read/written in a single
+// operation to physical memory.
+//
 // The `(byte, error)` return signature — a result value paired with an
 // error that's non-nil exactly when something went wrong — is Go's normal
 // substitute for exceptions: rather than throwing, a function that can fail
@@ -53,7 +65,7 @@ func (m *Memory) LoadByte(cpu *vax.CPU, addr uint32) (byte, error) {
 		return 0, err
 	}
 
-	m.readCount++
+	m.singlebyteReadCount++
 
 	return b[0], nil
 }
@@ -71,7 +83,7 @@ func (m *Memory) StoreByte(cpu *vax.CPU, addr uint32, v byte) error {
 		return err
 	}
 
-	m.writeCount++
+	m.singlebyteWriteCount++
 	b[0] = v
 
 	return nil
@@ -133,6 +145,26 @@ func (m *Memory) Store(cpu *vax.CPU, addr uint32, src []byte) error {
 // LoadWord reads a 16-bit word at a virtual address.
 func (m *Memory) LoadWord(cpu *vax.CPU, addr uint32) (uint16, error) {
 	var buf [2]byte
+
+	// If the value doesn't cross a page boundary, short-cut the read operation
+	// to use a single VM translation to access all the bytes of the value at once.
+	if (addr & PageMask) == ((addr + 1) & PageMask) {
+		paddr, err := m.Translate(cpu, addr, AccessRead)
+		if err != nil {
+			return 0, err
+		}
+
+		b, err := m.phys(paddr, uint32(len(buf)))
+		if err != nil {
+			return 0, err
+		}
+
+		m.multibyteReadCount++
+
+		return binary.LittleEndian.Uint16(b[:]), nil
+	}
+
+	// Nope, value spans pages so we must read byte-at-a-time.
 	if err := m.Load(cpu, addr, buf[:]); err != nil {
 		return 0, err
 	}
@@ -144,6 +176,27 @@ func (m *Memory) LoadWord(cpu *vax.CPU, addr uint32) (uint16, error) {
 func (m *Memory) StoreWord(cpu *vax.CPU, addr uint32, v uint16) error {
 	var buf [2]byte
 
+	// If the value doesn't cross a page boundary, short-cut the write operation
+	// to use a single VM translation to store all the bytes of the value at once.
+	if (addr & PageMask) == ((addr + 1) & PageMask) {
+		paddr, err := m.Translate(cpu, addr, AccessWrite)
+		if err != nil {
+			return err
+		}
+
+		b, err := m.phys(paddr, uint32(len(buf)))
+		if err != nil {
+			return err
+		}
+
+		binary.LittleEndian.PutUint16(b[:], v)
+
+		m.multibyteWriteCount++
+
+		return nil
+	}
+
+	// Nope, value spans pages so we must write byte-at-a-time.
 	binary.LittleEndian.PutUint16(buf[:], v)
 
 	return m.Store(cpu, addr, buf[:])
@@ -153,6 +206,27 @@ func (m *Memory) StoreWord(cpu *vax.CPU, addr uint32, v uint16) error {
 func (m *Memory) LoadLongword(cpu *vax.CPU, addr uint32) (uint32, error) {
 	var buf [4]byte
 
+	// If the value doesn't cross a page boundary, short-cut the read operation
+	// to use a single VM translation to access all the bytes of the value at once.
+	if (addr & PageMask) == ((addr + 3) & PageMask) {
+		paddr, err := m.Translate(cpu, addr, AccessRead)
+		if err != nil {
+			return 0, err
+		}
+
+		b, err := m.phys(paddr, uint32(len(buf)))
+		if err != nil {
+			return 0, err
+		}
+
+		m.multibyteReadCount++
+
+		return binary.LittleEndian.Uint32(b[:]), nil
+	}
+
+	// Nope, it splits pages, so read a byte-at-a-time, which is much slower
+	// but handles the page translations correctly across page boundaries for
+	// the addresses occupied by this value.
 	if err := m.Load(cpu, addr, buf[:]); err != nil {
 		return 0, err
 	}
@@ -164,6 +238,27 @@ func (m *Memory) LoadLongword(cpu *vax.CPU, addr uint32) (uint32, error) {
 func (m *Memory) StoreLongword(cpu *vax.CPU, addr uint32, v uint32) error {
 	var buf [4]byte
 
+	// If the value doesn't cross a page boundary, short-cut the write operation
+	// to use a single VM translation to store all the bytes of the value at once.
+	if (addr & PageMask) == ((addr + 3) & PageMask) {
+		paddr, err := m.Translate(cpu, addr, AccessWrite)
+		if err != nil {
+			return err
+		}
+
+		b, err := m.phys(paddr, uint32(len(buf)))
+		if err != nil {
+			return err
+		}
+
+		binary.LittleEndian.PutUint32(b[:], v)
+
+		m.multibyteWriteCount++
+
+		return nil
+	}
+
+	// Nope, value spans pages so we must write byte-at-a-time.
 	binary.LittleEndian.PutUint32(buf[:], v)
 
 	return m.Store(cpu, addr, buf[:])
@@ -179,6 +274,25 @@ func (m *Memory) StoreLongword(cpu *vax.CPU, addr uint32, v uint32) error {
 func (m *Memory) LoadQuadword(cpu *vax.CPU, addr uint32) (uint64, error) {
 	var buf [8]byte
 
+	// If the value doesn't cross a page boundary, short-cut the read operation
+	// to use a single VM translation to access all the bytes of the value at once.
+	if (addr & PageMask) == ((addr + 7) & PageMask) {
+		paddr, err := m.Translate(cpu, addr, AccessRead)
+		if err != nil {
+			return 0, err
+		}
+
+		b, err := m.phys(paddr, uint32(len(buf)))
+		if err != nil {
+			return 0, err
+		}
+
+		m.multibyteReadCount++
+
+		return binary.LittleEndian.Uint64(b[:]), nil
+	}
+
+	// Nope, value spans pages so we must read byte-at-a-time.
 	if err := m.Load(cpu, addr, buf[:]); err != nil {
 		return 0, err
 	}
@@ -190,6 +304,27 @@ func (m *Memory) LoadQuadword(cpu *vax.CPU, addr uint32) (uint64, error) {
 func (m *Memory) StoreQuadword(cpu *vax.CPU, addr uint32, v uint64) error {
 	var buf [8]byte
 
+	// If the value doesn't cross a page boundary, short-cut the write operation
+	// to use a single VM translation to store all the bytes of the value at once.
+	if (addr & PageMask) == ((addr + 7) & PageMask) {
+		paddr, err := m.Translate(cpu, addr, AccessWrite)
+		if err != nil {
+			return err
+		}
+
+		b, err := m.phys(paddr, uint32(len(buf)))
+		if err != nil {
+			return err
+		}
+
+		binary.LittleEndian.PutUint64(b[:], v)
+
+		m.multibyteWriteCount++
+
+		return nil
+	}
+
+	// Nope, value spans pages so we must write byte-at-a-time.
 	binary.LittleEndian.PutUint64(buf[:], v)
 
 	return m.Store(cpu, addr, buf[:])
@@ -219,16 +354,49 @@ func (m *Memory) StoreQuadword(cpu *vax.CPU, addr uint32, v uint64) error {
 // bytes (1, 2, or 4) — the same no-copy slicing idea used throughout this
 // file, just with an explicit upper bound instead of the implicit
 // "whole array" of buf[:].
+//
+// Note the optimizatoin where if the value being read from memory fits
+// entirely in a single page, a single VM address translation is done
+// and then the memory is accessed directly from the physical storage
+// resulting from that translation. If the value spans pages, then it
+// falls back to the byte-at-a-time mechanism which does a translation
+// for each byte position (more costly, but detects ACCVIO when a page
+// boundary is crossed).
 func (m *Memory) LoadRegister(cpu *vax.CPU, reg vax.Reg, addr uint32, count int) error {
 	var buf [4]byte
 
-	if err := m.Load(cpu, addr, buf[:count]); err != nil {
-		return err
+	// IF the address we're loading from fits on a page, we can do this with a simpler
+	// translation and read of physical memory instead of doing a translate-per-byte
+	if (addr & PageMask) == ((addr + uint32(count) - 1) & PageMask) {
+		paddr, err := m.Translate(cpu, addr, AccessRead)
+		if err != nil {
+			return err
+		}
+
+		b, err := m.phys(paddr, uint32(count))
+		if err != nil {
+			return err
+		}
+
+		for i := range count {
+			buf[i] = b[i]
+		}
+
+		m.multibyteReadCount++
+	} else {
+		// Nope, can't do a page read, so read byte-by-byte
+		err := m.Load(cpu, addr, buf[:count])
+		if err != nil {
+			return err
+		}
 	}
 
-	v := cpu.GPR(reg)
-	if reg > vax.R15 {
-		v = 0
+	// Get the initial value of the register. If it's a scratch register
+	// as opposed to a general-purpose-register, assume it starts as zero.
+	var v uint32
+
+	if reg <= vax.R15 {
+		v = cpu.GPR(reg)
 	}
 
 	// Merge the newly-loaded bytes into v one at a time, from the

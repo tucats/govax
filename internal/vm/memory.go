@@ -52,10 +52,12 @@ type Memory struct {
 	// instead of byte granularity: len(pageMap) == len(ram)/pageSize.
 	pageMap []bool
 
-	vmValid          bool
-	translationCount int64
-	readCount        int64
-	writeCount       int64
+	vmValid              bool
+	translationCount     int64
+	singlebyteReadCount  int64
+	multibyteReadCount   int64
+	singlebyteWriteCount int64
+	multibyteWriteCount  int64
 
 	// tb is the translation-buffer/sequential-translation-cache state;
 	// see tb.go's own doc comment. It's embedded as a plain (non-pointer)
@@ -149,10 +151,12 @@ func (m *Memory) MappedPages() int {
 
 // Stats returns the key statistics for memory usage. If the translation
 // count is zero, then virtual memory is off.
-func (m *Memory) Stats() (translations int64, reads int64, writes int64) {
+func (m *Memory) Stats() (translations, reads, writes, pageReads, pageWrites int64) {
 	translations = m.translationCount
-	reads = m.readCount
-	writes = m.writeCount
+	reads = m.singlebyteReadCount
+	writes = m.singlebyteWriteCount
+	pageReads = m.multibyteReadCount
+	pageWrites = m.multibyteWriteCount
 
 	return
 }
@@ -232,7 +236,7 @@ func (m *Memory) readPhysLongword(addr uint32) (uint32, error) {
 		return 0, err
 	}
 
-	m.readCount++
+	m.multibyteReadCount++
 
 	return binary.LittleEndian.Uint32(b), nil
 }
@@ -243,7 +247,7 @@ func (m *Memory) writePhysLongword(addr uint32, v uint32) error {
 		return err
 	}
 
-	m.writeCount++
+	m.multibyteWriteCount++
 
 	binary.LittleEndian.PutUint32(b, v)
 

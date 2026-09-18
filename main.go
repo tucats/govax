@@ -235,7 +235,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 func printStats(c *console.Console, out io.Writer, flag bool) {
 	if flag {
 		count := c.Engine.InstructionCount()
-		translate, read, write := c.Engine.Memory().Stats()
+		translate, readCount, writeCount, mbReadCount, mbWriteCount := c.Engine.Memory().Stats()
 		elapsed := time.Since(startTime)
 
 		fmt.Fprintf(out, "\nEmulation Statistics:\n")
@@ -245,8 +245,10 @@ func printStats(c *console.Console, out io.Writer, flag bool) {
 
 		fmt.Fprintf(out, "\n  Memory:\n")
 		fmt.Fprintf(out, "    Page Translations:   %16s\n", formatLargeNumber(translate))
-		fmt.Fprintf(out, "    Bytes Read:          %16s\n", formatLargeNumber(read))
-		fmt.Fprintf(out, "    Bytes Written:       %16s\n", formatLargeNumber(write))
+		fmt.Fprintf(out, "    Single-Byte Reads:   %16s\n", formatLargeNumber(readCount))
+		fmt.Fprintf(out, "    Single-Byte Writes:  %16s\n", formatLargeNumber(writeCount))
+		fmt.Fprintf(out, "    Multi-byte Reads:    %16s\n", formatLargeNumber(mbReadCount))
+		fmt.Fprintf(out, "    Multi-byte Writes:   %16s\n", formatLargeNumber(mbWriteCount))
 
 		stcTries, stcHits := c.Engine.Memory().STCStats()
 		tbTries, tbHits, tbFlushes, _ := c.Engine.Memory().TBStats()
