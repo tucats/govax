@@ -172,7 +172,7 @@ func TestSetMode(t *testing.T) {
 	if err := c.SetMode("USER"); err != nil {
 		t.Fatalf("SetMode: %v", err)
 	}
-	
+
 	if got := c.CPU.PSL().CurMod(); got != vax.User {
 		t.Errorf("CurMod() = %d, want User", got)
 	}
@@ -473,13 +473,13 @@ func TestShowMemory_afterVMInit(t *testing.T) {
 	}
 
 	buf.Reset()
-	
+
 	if err := c.ShowMemory(); err != nil {
 		t.Fatalf("ShowMemory: %v", err)
 	}
 
 	out := buf.String()
-	if !strings.Contains(out, "Virtual Memory (currently ENABLED)") {
+	if !strings.Contains(out, "Virtual Memory (currently enabled)") {
 		t.Errorf("output = %q, want MAPEN reported enabled", out)
 	}
 
@@ -566,7 +566,7 @@ func TestShowCPU(t *testing.T) {
 	if err := c.ShowCPU(); err != nil {
 		t.Fatalf("ShowCPU: %v", err)
 	}
-	
+
 	if !strings.Contains(buf.String(), "running") {
 		t.Errorf("output = %q, want it to say running", buf.String())
 	}

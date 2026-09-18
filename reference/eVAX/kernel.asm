@@ -830,7 +830,7 @@ _nocmd:        ; calls            #0, @#exe$forth
 		calls		#1, @#lib$put_output
 		ret
 
-_msg1:		.ascid		"eVAX 1.1  MicroKernel 2.0"
+_msg1:		.ascid		"govax MicroKernel 2.0"
 _msg2:		.ascid		"By Tom Cole"
 
 
