@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vax"
@@ -665,37 +666,62 @@ func boolToDigit(b bool) string {
 	return "0"
 }
 
-// scbVectorNames matches showscb's own vector_name[] table (console_show.c)
-// — the EXC$<name> mnemonic for each of the SCB's 64 four-byte slots.
-var scbVectorNames = [64]string{
-	"UNUSED", "CHECK", "KSNV", "POWER",
-	"PRIV", "CUSTOMER", "RESOP", "RESADDR",
-	"ACCVIO", "TNV", "TP", "BPT",
-	"COMPAT", "ARITH", "RESERVED38", "RESERVED3C",
-	"CHMK", "CHME", "CHMS", "CHMU",
-	"SBI", "CMRD", "SBIALERT", "SBIFAULT",
-	"MWT", "RESERVED64", "RESERVED68", "RESERVED6C",
-	"RESERVED70", "RESERVED74", "RESERVED78", "RESERVED7C",
-	"RESERVED80", "SOFTWARE1", "SOFTWARE2", "SOFTWARE3",
-	"SOFTWARE4", "SOFTWARE5", "SOFTWARE6", "SOFTWARE7",
-	"SOFTWARE8", "SOFTWARE9", "SOFTWARE10", "SOFTWARE11",
-	"SOFTWARE12", "SOFTWARE13", "SOFTWARE14", "SOFTWARE15",
-	"RESERVEDC0", "RESERVEDC4", "RESERVEDC8", "RESERVEDCC",
-	"RESERVEDD0", "RESERVEDD4", "RESERVEDD8", "RESERVEDDC",
-	"RESERVEDE0", "RESERVEDE4", "RESERVEDE8", "RESERVEDEC",
-	"RESERVEDF0", "RESERVEDF4", "CONREAD", "CONWRITE",
+// scbVectorNames maps SCP vector byte offsets with exception names.
+type scbVectorInfo struct {
+	name string
+	desc string
+}
+
+var scbVectorNames = map[cpu.Exception]scbVectorInfo{
+	0x00: {"UNUSED", "Passive Release/Unused"},
+	0x04: {"CHECK", " Machine Check"},
+	0x08: {"KSNV", "Kernel Stack Not Valid"},
+	0x0C: {"POWER", "Power Fail"},
+	0x10: {"PRIV", "Reserved or Illegal Instruction"},
+	0x14: {"CUSTOMER", "Customer Reserved Exception"},
+	0x18: {"RESOP", "Reserved Operand Fault"},
+	0x1c: {"READDR", "Reserved Addressing Mode Fault"},
+	0x20: {"ACCVIO", "Access Violation"},
+	0x24: {"TNV", "Translation Not Valid"},
+	0x29: {"TP", "Trace Pending (debugger)"},
+	0x2C: {"BPT", "Breakpoint Trap"},
+	0x30: {"COMPAT", "Compatibility Mode"},
+	0x34: {"ARITH", "Arithmetic Exception"},
+	0x40: {"CHMK", "Change Mode to Kernel"},
+	0x44: {"CHME", "Change Mode to Exec"},
+	0x48: {"CHMS", "Chnage Mode to Supervisor"},
+	0x4C: {"CHMU", "Change Mode to User"},
+	0x84: {"SOFTWARE1", "Software Interrupt 1"},
+	0x88: {"SOFTWARE2", "Software Interrupt 2"},
+	0x8C: {"SOFTWARE3", "Software Interrupt 3"},
+	0x90: {"SOFTWARE4", "Software Interrupt 4"},
+	0xC0: {"INTERVAL", "Interval Timer Interrupt"},
+	0xF8: {"CONRC", "Console Receive"},
+	0xFC: {"CONTX", "Console Transmit"},
 }
 
 // exceptionName returns code's EXC$<name> mnemonic from scbVectorNames
 // (code doubles as the SCB byte offset, so code/4 is the slot index), or
 // "?" if out of range.
 func exceptionName(code cpu.Exception) string {
-	i := int(code) / 4
-	if i < 0 || i >= len(scbVectorNames) {
-		return "?"
+	name, found := scbVectorNames[code]
+	if !found {
+		return fmt.Sprintf("RESERVED%0x2", code)
 	}
 
-	return scbVectorNames[i]
+	return name.name
+}
+
+// exceptionDesc returns code's EXC$<name> mnemonic from scbVectorNames
+// (code doubles as the SCB byte offset, so code/4 is the slot index), or
+// "?" if out of range.
+func exceptionDesc(code cpu.Exception) string {
+	name, found := scbVectorNames[code]
+	if !found {
+		return fmt.Sprintf("RESERVED Exception %0x2", code)
+	}
+
+	return fmt.Sprintf("%-10s %s", name.name, name.desc)
 }
 
 // ShowSCB dumps the 64 System Control Block exception-vector slots from
@@ -730,8 +756,11 @@ func (c *Console) showSCB(all bool) error {
 
 	count := 0
 
-	for n := uint32(0); n < 64; n++ {
-		vector, err := c.Mem.LoadLongword(c.CPU, scbb+n*4)
+	for n := range uint32(64) {
+		// Calculate offset into SCB vector slot
+		offset := n << 2
+
+		vector, err := c.Mem.LoadLongword(c.CPU, scbb+offset)
 		if err != nil {
 			return err
 		}
@@ -745,9 +774,16 @@ func (c *Console) showSCB(all bool) error {
 		}
 
 		count++
+		code := cpu.Exception(offset) // Convert SCB offset to exception code
+
+		// Get exception code name, or fall back to default name
+		name := fmt.Sprintf("RESERVED%0x2", code)
+		if item, found := scbVectorNames[code]; found {
+			name = item.name
+		}
 
 		if vector == 0xFFFFFFFF {
-			c.Printf("     %02X   EXC$%-10s  <console handler>\n", n, scbVectorNames[n])
+			c.Printf("     %02X   EXC$%-10s  <emul>  \n", code, name)
 
 			continue
 		}
@@ -765,7 +801,7 @@ func (c *Console) showSCB(all bool) error {
 			ispFlag = "(ISP)"
 		}
 
-		c.Printf("     %02X   EXC$%-10s  %08X %s %s\n", n, scbVectorNames[n], addr, ispFlag, label)
+		c.Printf("     %02X   EXC$%-10s  %08X %s %s\n", code, name, addr, ispFlag, label)
 	}
 
 	if count == 0 {
@@ -1137,8 +1173,13 @@ func (c *Console) ShowQuantum() error {
 
 	current, initial := c.Engine.Quantum()
 
-	c.Printf("QUANTUM\n    INTERRUPTS  Initial=%d  Current=%d\n", initial, current)
-	//c.Printf("    USER INTF   Not modeled by this port (no cooperative host-UI polling loop)\n")
+	if c.Engine.HardwareClock() {
+		c.Printf("QUANTUM\n    INTERRUPTS      Disabled, Initial=%d\n", initial)
+		c.Printf("    HARDWARE CLOCK  Enabled\n")
+	} else {
+		c.Printf("QUANTUM\n    INTERRUPTS      Initial=%d  Current=%d\n", initial, current)
+		c.Printf("    HARDWARE CLOCK  Disabled\n")
+	}
 
 	return nil
 }
@@ -1153,6 +1194,21 @@ func (c *Console) ShowClock() error {
 		return err
 	}
 
+	// 1. Get number of ticks from the TODR register
+	var ticks int64 = int64(c.Engine.CPU().PR(vax.TODR))
+
+	// 2. Define the target year's starting point (January 1st at midnight)
+	currentYear := time.Now().Year()
+	baseTime := time.Date(currentYear, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+	// 3. Convert ticks to a Go time.Duration
+	// 10 milliseconds * number of ticks
+	duration := time.Duration(ticks) * 10 * time.Millisecond
+
+	// 4. Add the duration to the baseline date and format a value for the TODR
+	resultingTime := baseTime.Add(duration)
+	todr := resultingTime.Format("Jan-02 15:04:05")
+
 	running := c.CPU.PR(vax.ICCS)&1 != 0
 	runWord := "not "
 
@@ -1160,13 +1216,22 @@ func (c *Console) ShowClock() error {
 		runWord = ""
 	}
 
+	hwClock := "configured"
+	if !c.Engine.HardwareClock() {
+		hwClock = "emulated"
+	}
+
 	c.Printf("   CPU CLOCK STATES:\n")
-	c.Printf("      HARDWARE CLOCK=implemented, clock is currently %srunning\n", runWord)
+	c.Printf("      HARDWARE CLOCK=%s, clock is currently %srunning\n", hwClock, runWord)
 	c.Printf("      ICR  = %08X (%4d)  [Current clock value]\n", c.CPU.PR(vax.ICR), c.CPU.PR(vax.ICR))
 	c.Printf("      NICR = %08X (%4d)  [Reload  clock value]\n", c.CPU.PR(vax.NICR), c.CPU.PR(vax.NICR))
+	c.Printf("      TODR = %08X (%s)\n", ticks, strings.ToUpper(todr))
 
-	current, initial := c.Engine.Quantum()
-	c.Printf("  QUANTUM\n    INITIAL=%d\n    CURRENT=%d\n", initial, current)
+	// If we are using the quantum clock mechanism, report on that now.
+	if !c.Engine.HardwareClock() {
+		current, initial := c.Engine.Quantum()
+		c.Printf("  QUANTUM\n    INITIAL=%d\n    CURRENT=%d\n", initial, current)
+	}
 
 	return nil
 }
@@ -1191,7 +1256,7 @@ func (c *Console) ShowFault() error {
 
 		for _, fr := range history {
 			c.Printf("%02X %-40s SEQ(%d)  PC(%08X) PSL(%08X) ",
-				uint8(fr.Code), exceptionName(fr.Code), fr.Seq, fr.PC, uint32(fr.PSL))
+				uint8(fr.Code), exceptionDesc(fr.Code), fr.Seq, fr.PC, uint32(fr.PSL))
 
 			if len(fr.Args) > 0 {
 				c.Printf(" ARGS(")

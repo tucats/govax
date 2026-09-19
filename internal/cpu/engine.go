@@ -265,10 +265,10 @@ func (e *Engine) Step() error {
 
 			// Also, update the TODR clock value
 			// 1. Get the current time
-			now := time.Now().UTC()
+			now := time.Now()
 
 			// 2. Define midnight of January 1st for the current year
-			janFirst := time.Date(now.Year(), time.January, 1, 0, 0, 0, 0, time.UTC)
+			janFirst := time.Date(now.Year(), time.January, 1, 0, 0, 0, 0, now.Location())
 
 			// 3. Calculate the duration elapsed since Jan 1st
 			durationElapsed := now.Sub(janFirst)

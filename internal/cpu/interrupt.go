@@ -57,6 +57,12 @@ func (e *Engine) Quantum() (current, initial int) {
 	return e.quantumCurrent, e.quantumInitial
 }
 
+// HardwareClock reports if the emulator is running with a hardware versus
+// simulated (quantum) clock.
+func (e *Engine) HardwareClock() bool {
+	return e.hardwareClock
+}
+
 // QueuedInterrupt is one interrupt still waiting in Engine's quantum-aging
 // queue, mirroring queuedInterrupt's own fields for callers outside this
 // package (SHOW FAULT).

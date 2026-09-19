@@ -52,18 +52,47 @@ var builtinSymbols = map[string]uint32{
 	// (Phases 04-07 only needed the CPU-fault-raised subset; these also
 	// include interrupt-only and console vectors kernel.asm's .SCB table
 	// references).
-	"EXC$UNUSED": 0x00, "EXC$CHECK": 0x04, "EXC$KSNV": 0x08, "EXC$POWER": 0x0C,
-	"EXC$PRIV": 0x10, "EXC$CUSTOMER": 0x14, "EXC$RESOP": 0x18, "EXC$RESADDR": 0x1C,
-	"EXC$ACCVIO": 0x20, "EXC$TNV": 0x24, "EXC$TP": 0x28, "EXC$BPT": 0x2C,
-	"EXC$COMPAT": 0x30, "EXC$ARITH": 0x34,
-	"EXC$CHMK": 0x40, "EXC$CHME": 0x44, "EXC$CHMS": 0x48, "EXC$CHMU": 0x4C,
-	"EXC$SBI": 0x50, "EXC$CMRD": 0x54, "EXC$SBIALERT": 0x58, "EXC$SBIFAULT": 0x5C,
-	"EXC$MWT":       0x60,
-	"EXC$SOFTWARE1": 0x84, "EXC$SOFTWARE2": 0x88, "EXC$SOFTWARE3": 0x8C, "EXC$SOFTWARE4": 0x90,
-	"EXC$SOFTWARE5": 0x94, "EXC$SOFTWARE6": 0x98, "EXC$SOFTWARE7": 0x9C, "EXC$SOFTWARE8": 0xA0,
-	"EXC$SOFTWARE9": 0xA4, "EXC$SOFTWARE10": 0xA8, "EXC$SOFTWARE11": 0xAC, "EXC$SOFTWARE12": 0xB0,
-	"EXC$SOFTWARE13": 0xB4, "EXC$SOFTWARE14": 0xB8, "EXC$SOFTWARE15": 0xBC,
-	"EXC$INTERVAL": 0xC0, "EXC$CONREAD": 0xF8, "EXC$CONWRITE": 0xFC,
+	"EXC$UNUSED":     0x00,
+	"EXC$CHECK":      0x04,
+	"EXC$KSNV":       0x08,
+	"EXC$POWER":      0x0C,
+	"EXC$PRIV":       0x10,
+	"EXC$CUSTOMER":   0x14,
+	"EXC$RESOP":      0x18,
+	"EXC$RESADDR":    0x1C,
+	"EXC$ACCVIO":     0x20,
+	"EXC$TNV":        0x24,
+	"EXC$TP":         0x28,
+	"EXC$BPT":        0x2C,
+	"EXC$COMPAT":     0x30,
+	"EXC$ARITH":      0x34,
+	"EXC$CHMK":       0x40,
+	"EXC$CHME":       0x44,
+	"EXC$CHMS":       0x48,
+	"EXC$CHMU":       0x4C,
+	"EXC$SBI":        0x50,
+	"EXC$CMRD":       0x54,
+	"EXC$SBIALERT":   0x58,
+	"EXC$SBIFAULT":   0x5C,
+	"EXC$MWT":        0x60,
+	"EXC$SOFTWARE1":  0x84,
+	"EXC$SOFTWARE2":  0x88,
+	"EXC$SOFTWARE3":  0x8C,
+	"EXC$SOFTWARE4":  0x90,
+	"EXC$SOFTWARE5":  0x94,
+	"EXC$SOFTWARE6":  0x98,
+	"EXC$SOFTWARE7":  0x9C,
+	"EXC$SOFTWARE8":  0xA0,
+	"EXC$SOFTWARE9":  0xA4,
+	"EXC$SOFTWARE10": 0xA8,
+	"EXC$SOFTWARE11": 0xAC,
+	"EXC$SOFTWARE12": 0xB0,
+	"EXC$SOFTWARE13": 0xB4,
+	"EXC$SOFTWARE14": 0xB8,
+	"EXC$SOFTWARE15": 0xBC,
+	"EXC$INTERVAL":   0xC0,
+	"EXC$CONREAD":    0xF8,
+	"EXC$CONWRITE":   0xFC,
 
 	"CONSOLE$HANDLER": 0xFFFFFFFF,
 	"$STATUS":         0,
@@ -89,7 +118,7 @@ func (a *Assembler) seedBuiltinSymbols() {
 		if inst == nil {
 			continue
 		}
-		
+
 		sym := a.symbols.create("OPC$_" + inst.Name)
 		sym.value = uint32(i)
 		sym.flags |= SymPermanent | SymBuiltin

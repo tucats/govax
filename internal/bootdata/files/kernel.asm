@@ -266,6 +266,11 @@ _haltmsg:       .asciz          "\n%%MKHALT-I-HALT, microkernel halted\n"
 
 ;--------------------------------------------------------------------
 ;   INTERVAL TIMER HANDLER
+;
+;   Each time the interval timer goes off (approximately every millisec)
+;   this increments the TODR register, which was initially loaded by the
+;   CPU initialization and then tracks time for the CPU while it's running.
+;   This isn't done if the TODR is set to zero (disabled).
 ;--------------------------------------------------------------------
 
                 .align          8
