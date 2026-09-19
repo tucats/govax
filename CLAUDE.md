@@ -56,10 +56,19 @@ expect adjustment as phases land):
 - `internal/io` — device abstraction, logical names (Phase 09).
 - `internal/rtl` — VMS RTL/system-service simulation (Phase 10).
 - `internal/asm` — assembler/disassembler (Phase 11).
-- `main.go` (repo root, package `main`) — main entry point, built out in Phase 08.
-  Originally `cmd/govax`; moved to the repo root and the `govax` CLI promoted to
-  `main` (2026-09-17) — a plain `go build ./...`/`go run .` from the repo root
-  now builds/runs it directly, no `cmd/govax` subpackage to `cd` into or name.
+- `cmd/govax` — `main.go` (CLI entry point) plus `grammar.go` (the `tucats/gopackages`
+  `app-cli/cli` option/subcommand grammar — `stats`/`path`/`instruction-limit`/
+  `time-limit` options, `console`/`asm`/`run` subcommands). Briefly moved to the repo
+  root (2026-09-17); moved back into `cmd/govax` as the more standard layout
+  (`go build ./...`/`go run ./cmd/govax`).
+- `tucats/gopackages` also brings config-settings support (`app-cli/settings`), read at
+  `Engine` construction (`internal/cpu/engine.go`'s `NewEngine`). Settings implemented
+  so far: `vax.hardware.clock` (bool) — when true, `Engine.Step` drives the interval
+  clock/TODR off `time.Now().UnixMilli()` instead of the deterministic instruction-quantum
+  mechanism (see `tickQuantum`/`tickIntervalClock` in `internal/cpu/interrupt.go`); when
+  false/unset, the old quantum-driven path is used. `vax.quantum` (int) — default
+  quantum-tick interval instead of the hard-coded `defaultQuantum` (20); only takes
+  effect if `> 0`.
 
 ## Bug-fixing policy while porting
 

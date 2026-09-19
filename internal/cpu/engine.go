@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/tucats/gopackages/app-cli/settings"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -77,6 +78,13 @@ type Engine struct {
 	interruptPending               bool
 	interruptCode                  Exception
 	interruptIPL                   uint32
+	interruptCount                 uint64
+
+	// Hardware clock support? True if the config item vax.hardware.clock
+	// is true, and supports using time.Now().UnixMilli() to capture the
+	// real hardware clock in real time.
+	hardwareClock bool
+	lastClock     uint64
 
 	// Per-run instruction/time budget -- see limits.go. Both zero-valued
 	// (no limit) on a freshly constructed Engine.
@@ -105,13 +113,21 @@ type Engine struct {
 // NewEngine returns an Engine driving cpu and mem, using the built-in VAX
 // instruction table.
 func NewEngine(cpu *vax.CPU, mem *vm.Memory) *Engine {
+	quantum := defaultQuantum
+
+	if v := settings.GetInt("vax.quantum"); v > 0 {
+		quantum = v
+	}
+
 	return &Engine{
 		cpu:             cpu,
 		mem:             mem,
 		table:           instructionTable,
-		quantumCurrent:  defaultQuantum,
-		quantumInitial:  defaultQuantum,
+		quantumCurrent:  quantum,
+		quantumInitial:  quantum,
 		faultHistoryMax: defaultFaultHistory,
+		hardwareClock:   settings.GetBool("vax.hardware.clock"),
+		lastClock:       uint64(time.Now().UnixMilli()),
 	}
 }
 
@@ -172,6 +188,12 @@ func (e *Engine) InstructionCount() int {
 	return e.instrCount
 }
 
+// InterruptCount returns the number of interrupts that have been processed
+// during engine execution.
+func (e *Engine) InterruptCount() uint64 {
+	return e.interruptCount
+}
+
 // PeekInstruction identifies which Instruction would execute next at the
 // engine's current PC, without decoding operands, advancing PC, or
 // otherwise mutating any state — a side-effect-free lookup Console uses to
@@ -228,7 +250,44 @@ func (e *Engine) Step() error {
 
 	e.instrCount++
 
-	e.tickQuantum()
+	// If we are using a "hardware" clock, then every millisecond,
+	// tick the ICS register and check for interrupt state.
+	if e.hardwareClock {
+		t := uint64(time.Now().UnixMilli())
+		// Has at least one millisecond passed since we last did this?
+		if t != e.lastClock {
+			e.lastClock = t
+			e.tickIntervalClock()
+
+			if !e.interruptPending {
+				e.scanInterruptQueue()
+			}
+
+			// Also, update the TODR clock value
+			// 1. Get the current time
+			now := time.Now().UTC()
+
+			// 2. Define midnight of January 1st for the current year
+			janFirst := time.Date(now.Year(), time.January, 1, 0, 0, 0, 0, time.UTC)
+
+			// 3. Calculate the duration elapsed since Jan 1st
+			durationElapsed := now.Sub(janFirst)
+
+			// 4. Convert the duration into 10-millisecond ticks
+			// (1 tick = 10 milliseconds). Mask it down to 32
+			// bits, and store the value in the TODR privileged
+			// register.
+			ticks := uint64(durationElapsed.Milliseconds() / 10)
+			vaxtodr := uint32(ticks & 0xFFFFFFFF)
+
+			e.cpu.SetPR(vax.TODR, vaxtodr)
+		}
+	} else {
+		// Not bound to hardware clock (which is required for deterministic)
+		// behavior, so use the fake "quantum" which triggers an interval clock
+		// tick every `quantum` instructions of execution.
+		e.tickQuantum()
+	}
 
 	if e.interruptPending {
 		if err := e.deliverPendingInterrupt(); err != nil {
@@ -335,6 +394,6 @@ func (e *Engine) Run() error {
 			return err
 		}
 	}
-	
+
 	return ErrHalted
 }

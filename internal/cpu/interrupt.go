@@ -255,6 +255,7 @@ func (e *Engine) deliverPendingInterrupt() error {
 	e.interruptPending = false
 	e.interruptCode = 0
 	e.interruptIPL = 0
+	e.interruptCount++
 
 	e.cpu.SetPR(vax.IPL, ipl)
 	e.instructionPC = e.cpu.GPR(vax.PC)
@@ -353,7 +354,7 @@ func (e *Engine) DeliverConsoleByte(b byte) {
 	e.cpu.SetPR(vax.RXDB, uint32(b))
 	rxcs := e.cpu.PR(vax.RXCS) | 0x80
 	e.cpu.SetPR(vax.RXCS, rxcs)
-	
+
 	if rxcs&deviceIE != 0 {
 		e.Interrupt(ExcConRead, 20, 0)
 	}

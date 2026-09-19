@@ -234,14 +234,16 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 // printStatus dumps out stats if they are enabled to the console when the emulation finishes.
 func printStats(c *console.Console, out io.Writer, flag bool) {
 	if flag {
-		count := c.Engine.InstructionCount()
+		instructionCount := c.Engine.InstructionCount()
+		interruptCount := c.Engine.InterruptCount()
 		translate, readCount, writeCount, mbReadCount, mbWriteCount := c.Engine.Memory().Stats()
 		elapsed := time.Since(startTime)
 
 		fmt.Fprintf(out, "\nEmulation Statistics:\n")
 		fmt.Fprintf(out, "  CPU:\n")
 		fmt.Fprintf(out, "    Elapased Time:       %16s\n", formatDuration(elapsed))
-		fmt.Fprintf(out, "    Instructions:        %16s\n", formatLargeNumber(int64(count)))
+		fmt.Fprintf(out, "    Instructions:        %16s\n", formatLargeNumber(int64(instructionCount)))
+		fmt.Fprintf(out, "    Interrupts:          %16s\n", formatLargeNumber(int64(interruptCount)))
 
 		fmt.Fprintf(out, "\n  Memory:\n")
 		fmt.Fprintf(out, "    Page Translations:   %16s\n", formatLargeNumber(translate))
