@@ -2,10 +2,12 @@ package main
 
 import (
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/tucats/gopackages/app-cli/cli"
+	"github.com/tucats/gopackages/app-cli/settings"
 )
 
 var (
@@ -104,6 +106,8 @@ func setPaths(c *cli.Context) error {
 }
 
 func consoleCmd(c *cli.Context) error {
+	paths = loadConfigPaths(paths)
+
 	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{})
 }
 
@@ -122,5 +126,37 @@ func doCmd(c *cli.Context, cmd string) error {
 		args = append(args, arg)
 	}
 
+	paths = loadConfigPaths(paths)
+
 	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, args)
+}
+
+// See if there is a "vax.path" config item. If so, add it to the
+// provided path list.
+func loadConfigPaths(paths []string) []string {
+	text := settings.Get("vax.path")
+	if text == "" {
+		return paths
+	}
+
+	// You can specify multiple path names by quoting them and separating
+	// them by commas.
+	delim := ","
+
+	// Split the string and evaluate each one. If the item is quoted, then
+	// strip away the quotes.
+	items := strings.Split(text, delim)
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		if strings.HasPrefix(item, "\"") {
+			if unquoted, err := strconv.Unquote(strings.TrimSpace(item)); err == nil {
+				item = unquoted
+			}
+		}
+
+		// Aadd to the path list.
+		paths = append(paths, item)
+	}
+
+	return paths
 }
