@@ -319,7 +319,7 @@ func historyFilePath() string {
 		return ""
 	}
 
-	return filepath.Join(home, ".govax_history")
+	return filepath.Join(home, ".govax", "history.txt")
 }
 
 // parseVersion is a helper function that parses a version string into its major, minor, and build components.
