@@ -191,6 +191,7 @@ var debugFlagNames = map[string]vax.DebugFlags{
 	"LIBINIT":    vax.DebugLibinit,
 	"PROCESS":    vax.DebugProcess,
 	"PROCESSES":  vax.DebugProcess,
+	"USERSTEP":   vax.DebugUserStep,
 }
 
 // SetDebug implements SET DEBUG [name[,name...]] (alias SET DBG):
@@ -255,7 +256,7 @@ func (c *Console) SetMode(name string) error {
 	name = strings.ToUpper(strings.TrimSpace(name))
 	if name == "INTERRUPT" {
 		c.Engine.SetModeStack(vax.Kernel, true)
-		
+
 		return nil
 	}
 
@@ -484,7 +485,7 @@ func (c *Console) SetPTE(addr uint32, field string, value uint32) error {
 	_, _, pte, err := c.Mem.LookupPTE(c.CPU, addr)
 	if err != nil {
 		c.Printf("ACCVIO, page table length violation\n")
-		
+
 		return nil
 	}
 

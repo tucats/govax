@@ -39,10 +39,11 @@ const (
 	DebugP2         DebugFlags = 0x02000000 // DBG_P2 (no consumer, settable only)
 	DebugP3         DebugFlags = 0x04000000 // DBG_P3 (no consumer, settable only)
 	DebugP4         DebugFlags = 0x08000000 // DBG_P4 (no consumer, settable only)
+	DebugUserStep   DebugFlags = 0x0C000000 // DBG_USERSTEP
 
 	// DebugDefault matches initialization.c's alloc_vax default assignment
 	// (vax.debug = DBG_REGISTERS | DBG_USERHALT | DBG_LIBINIT).
-	DebugDefault = DebugRegisters | DebugUserHalt | DebugLibinit
+	DebugDefault = DebugRegisters | DebugUserHalt | DebugLibinit | DebugUserStep
 )
 
 // Debug returns the current debug/tracing flag bitmask.
@@ -66,6 +67,6 @@ func (c *CPU) DebugWriter() io.Writer {
 	if c.debugOut == nil {
 		return io.Discard
 	}
-	
+
 	return c.debugOut
 }

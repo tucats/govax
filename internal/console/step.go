@@ -179,11 +179,29 @@ func (c *Console) Step(startAddr *uint32, mode StepMode) error {
 // stepInto executes exactly one instruction, always traced regardless of
 // Console.Trace (console_step.c's own "Always in trace mode"), and always
 // reports where it landed.
+//
+// The default is USER-mode stepping, so we just keep running the CPU loop
+// if we get out of USER mdoe (for example, handling an interrupt). Use the
+// SET DEBUG commadn to turn on USER mode stepping if you need to step into
+// KERNEL mode, etc.
 func (c *Console) stepInto() error {
 	finish := c.traceStep(c.CPU.GPR(vax.PC), true)
 
-	if err := c.Engine.Step(); err != nil {
-		return c.reportStopReason(err)
+	userStep := c.Engine.CPU().DebugEnabled(vax.DebugUserStep)
+
+	for {
+		if err := c.Engine.Step(); err != nil {
+			return c.reportStopReason(err)
+		}
+
+		// If USER-mode only stepping is enabled and we are not in USER
+		// mode, just keep running. This allows a STEP operation to trace
+		// just USER mode code and ingnores timer interrupts, etc.
+		if userStep && c.Engine.CPU().PSL().CurMod() < 0b11 {
+			continue
+		}
+
+		break
 	}
 
 	finish()
@@ -206,11 +224,23 @@ func (c *Console) stepInto() error {
 // silencing of the stepped-over subroutine) until control returns there.
 func (c *Console) stepOver() error {
 	finish := c.traceStep(c.CPU.GPR(vax.PC), true)
+	userStep := c.Engine.CPU().DebugEnabled(vax.DebugUserStep)
 
-	if err := c.Engine.Step(); err != nil {
-		return c.reportStopReason(err)
+	for {
+		if err := c.Engine.Step(); err != nil {
+			return c.reportStopReason(err)
+		}
+
+		// If USER-mode only stepping is enabled and we are not in USER
+		// mode, just keep running. This allows a STEP operation to trace
+		// just USER mode code and ingnores timer interrupts, etc.
+		if userStep && c.Engine.CPU().PSL().CurMod() < 0b11 {
+			continue
+		}
+
+		break
 	}
-	
+
 	finish()
 
 	dec := c.Engine.LastDecoded()

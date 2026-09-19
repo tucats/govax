@@ -1588,6 +1588,7 @@ var debugShowEntries = []debugShowEntry{
 	{vax.DebugProcess, "PROCESSES", "Debug process operations?"},
 	{vax.DebugLibinit, "LIBINIT", "Invoke LIB$INITIALIZE for images?"},
 	{vax.DebugRMS, "RMS", "Debug RMS operations?"},
+	{vax.DebugUserStep, "USERSTEP", "Step only affects USER mode?"},
 }
 
 // ShowDebug implements SHOW DEBUG, matching console_show.c's case 129 and
