@@ -3,6 +3,8 @@ package cpu
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -110,15 +112,59 @@ type Engine struct {
 	faultHistorySeq   uint64
 }
 
+var debugConfig = map[string]vax.DebugFlags{
+	"vax.debug.vm":         vax.DebugVM,
+	"vax.debug.tb":         vax.DebugTB,
+	"vax.debug.symbols":    vax.DebugSymbols,
+	"vax.debug.exceptions": vax.DebugExceptions,
+	"vax.debug.interrupts": vax.DebugInterrupts,
+	"vax.debug.chm":        vax.DebugCHM,
+	"vax.debug.registers":  vax.DebugRegisters,
+	"vax.debug.fulldisasm": vax.DebugFullDisasm,
+	"vax.debug.userhalt":   vax.DebugUserHalt,
+	"vax.debug.keyboard":   vax.DebugKeyboard,
+	"vax.debug.images":     vax.DebugImages,
+	"vax.debug.servcies":   vax.DebugServices,
+	"vax.debug.dcl":        vax.DebugDCL,
+	"vax.debug.command":    vax.DebugExpand,
+	"vax.debug.logicals":   vax.DebugLogicals,
+	"vax.debug.devices":    vax.DebugDevices,
+	"vax.debug.process":    vax.DebugProcess,
+	"vax.debug.libinit":    vax.DebugLibinit,
+	"vax.debug.rms":        vax.DebugRMS,
+	"vax.debug.userstep":   vax.DebugUserStep,
+}
+
 // NewEngine returns an Engine driving cpu and mem, using the built-in VAX
 // instruction table.
 func NewEngine(cpu *vax.CPU, mem *vm.Memory) *Engine {
 	quantum := defaultQuantum
 
+	// If there is a defalt quantum value defined in the configuration, use it.
 	if v := settings.GetInt("vax.quantum"); v > 0 {
 		quantum = v
 	}
 
+	// Search for config items that define the default debug settings as well. IF
+	// the value is given in the config, set or clear the debug mask bits accordingly.
+	debugMask := cpu.Debug()
+
+	for key, mask := range debugConfig {
+		if text := settings.Get(key); text != "" {
+			value, err := strconv.ParseBool(strings.TrimSpace(text))
+			if err == nil {
+				if value {
+					debugMask |= mask
+				} else {
+					debugMask &= ^mask
+				}
+			}
+		}
+	}
+
+	cpu.SetDebug(debugMask)
+
+	// Return an emulation engine object
 	return &Engine{
 		cpu:             cpu,
 		mem:             mem,

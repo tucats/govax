@@ -73,12 +73,14 @@ func main() {
 	app.MakePrivate("insecure")
 	app.MakePrivate("quiet")
 
-	app := app.New("govax: VAX/VMS emulator")
-	app.SetVersion(parseVersion(BuildVersion))
-	app.SetCopyright("(C) Copyright Tom Cole 2026")
-	app.Action = consoleCmd
+	govaxApp := app.New("govax: VAX/VMS emulator")
+	govaxApp.SetVersion(parseVersion(BuildVersion))
+	govaxApp.SetCopyright("(C) Copyright Tom Cole 2026")
+	govaxApp.SetProfileDirectory(".govax")
 
-	err := app.Run(grammar, os.Args)
+	govaxApp.Action = consoleCmd
+
+	err := govaxApp.Run(grammar, os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "govax:", err)
 		os.Exit(1)
