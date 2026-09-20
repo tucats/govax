@@ -34,6 +34,7 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/tucats/gopackages/app-cli/app"
+	"github.com/tucats/gopackages/app-cli/settings"
 	"github.com/tucats/gopackages/i18n"
 	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/console"
@@ -85,6 +86,8 @@ func main() {
 		fmt.Fprintln(os.Stderr, "govax:", err)
 		os.Exit(1)
 	}
+
+	auditConfig()
 }
 
 // run drives startup and the command loop. in, when non-nil, is used as
@@ -343,4 +346,49 @@ func parseVersion(version string) (major int, minor int, build int) {
 	}
 
 	return
+}
+
+// This is a list of all valid govax configuration keys. During startup, if a
+// configuration key is found that isn't in this list, a warning is printed.
+// It usually means the user misspelled something.
+//
+// ALWAYS ADD NEW CONFIG ITEMS TO THIS LIST!
+var validConfigs = map[string]bool{
+	"vax.debug.vm":         true,
+	"vax.debug.tb":         true,
+	"vax.debug.symbols":    true,
+	"vax.debug.exceptions": true,
+	"vax.debug.interrupts": true,
+	"vax.debug.chm":        true,
+	"vax.debug.registers":  true,
+	"vax.debug.fulldisasm": true,
+	"vax.debug.userhalt":   true,
+	"vax.debug.keyboard":   true,
+	"vax.debug.images":     true,
+	"vax.debug.servcies":   true,
+	"vax.debug.dcl":        true,
+	"vax.debug.command":    true,
+	"vax.debug.logicals":   true,
+	"vax.debug.devices":    true,
+	"vax.debug.process":    true,
+	"vax.debug.libinit":    true,
+	"vax.debug.rms":        true,
+	"vax.debug.userstep":   true,
+	"vax.hardware.clock":   true,
+	"vax.quantum":          true,
+}
+
+func auditConfig() {
+	count := 0
+	keys := settings.Keys()
+
+	for _, key := range keys {
+		if !validConfigs[key] {
+			if count == 0 {
+				fmt.Printf("\nWarning, the following invalid or unrecognized config value(s) will be ignored:\n")
+			}
+
+			fmt.Printf("   %s\n", key)
+		}
+	}
 }
