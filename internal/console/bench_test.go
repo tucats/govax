@@ -21,21 +21,17 @@ func BenchmarkSieve(b *testing.B) {
 	if _, _, err := c.Assemble(asmFixturePath(b, "bench.asm")); err != nil {
 		b.Fatalf("Assemble: %v", err)
 	}
-	
+
 	addr, ok := c.Symbols.Get("SIEVE")
 	if !ok {
 		b.Fatal("expected SIEVE to be defined")
 	}
 
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if err := c.Call(addr, false, 10000); err != nil {
 			b.Fatalf("Call(SIEVE): %v", err)
 		}
 	}
-
-	b.StopTimer()
 
 	if got := c.CPU.GPR(vax.R0); got != 9973 {
 		b.Fatalf("R0 = %d, want 9973 (the largest prime below 10000)", got)
