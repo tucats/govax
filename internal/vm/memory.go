@@ -46,6 +46,22 @@ type Memory struct {
 	// here; ram[n] is physical address n.
 	ram []byte
 
+	// ROM/NVRAM are separate byte buffers outside vm.Memory's main RAM,
+	// matching the C source's own rom/nvram globals (reference/eVAX/eVAX/
+	// Source/CPU/vm.c) — see internal/vm/memory.go's doc comment: physical
+	// resolution beyond RAM belongs to this phase (the file format; see
+	// rom.go) and Phase 09 (mapping them into the address space actually
+	// translated by internal/vm.Translate, not done here).
+	ROM     []byte
+	ROMBase uint32
+	ROMEnd  uint32
+	ROMFile string // path passed to the last successful LoadROM, for SHOW ROM
+
+	NVRAM     []byte
+	NVRAMBase uint32
+	NVRAMEnd  uint32
+	NVRAMFile string // path passed to the last successful LoadNVRAM, for SHOW NVRAM
+
 	// pageMap records, one bool per 512-byte physical page, whether that
 	// page is currently claimed by some virtual mapping (true) or still
 	// free (false). It's the same idea as ram but at page granularity
@@ -205,12 +221,40 @@ func (e *PhysicalAddressError) Error() string {
 // (as readPhysLongword/writePhysLongword's binary.LittleEndian calls do
 // below) therefore modifies m.ram itself in place — there is no hidden
 // copy.
+//
+// The same check for the physical address is also made against the mapped
+// ROM and NVRAM areas, which were optionally loaded (signified by a non-zero
+// base address). On a real VAX, these are mapped into the address space by
+// the memory hardware. We support them as separate byte-arrays, but since
+// phys() returns a slice to the actual storage, we can return a slice from
+// the ROM and the NVRAM if addressed properly.
+//
+// An address that isn't in RAM, ROM, or NVRAM is invalid.
 func (m *Memory) phys(addr uint32, size uint32) ([]byte, error) {
-	if uint64(addr)+uint64(size) > uint64(len(m.ram)) {
-		return nil, &PhysicalAddressError{Addr: addr}
+	// If the address is in physical RAM, return the slice from the RAM
+	if uint64(addr)+uint64(size) <= uint64(len(m.ram)) {
+		return m.ram[addr : addr+size], nil
 	}
 
-	return m.ram[addr : addr+size], nil
+	// If ROM is loaded and the address is in the ROM, return the
+	// slice from the ROM. m.ROM is indexed relative to ROMBase, not by the
+	// absolute physical address, so the offset must be translated first.
+	if m.ROMBase > 0 && addr >= m.ROMBase && uint64(addr)+uint64(size) <= uint64(m.ROMEnd)+1 {
+		off := addr - m.ROMBase
+
+		return m.ROM[off : off+size], nil
+	}
+
+	// If NVRAM is loaded and the address is in the NVRAM, return the
+	// slice from the NVRAM (relative to NVRAMBase; see ROM above).
+	if m.NVRAMBase > 0 && addr >= m.NVRAMBase && uint64(addr)+uint64(size) <= uint64(m.NVRAMEnd)+1 {
+		off := addr - m.NVRAMBase
+
+		return m.NVRAM[off : off+size], nil
+	}
+
+	// The physical address is not in RAM, ROM, or NVRAM. Invalid address!
+	return nil, &PhysicalAddressError{Addr: addr}
 }
 
 // readPhysLongword and writePhysLongword give translate.go direct,

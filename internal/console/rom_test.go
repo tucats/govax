@@ -20,28 +20,28 @@ func romFixturePath(t *testing.T) string {
 }
 
 func TestLoadROM_realFixture(t *testing.T) {
-	c := New(&bytes.Buffer{})
+	c, _ := newTestConsole(t)
 	if err := c.LoadROM(romFixturePath(t)); err != nil {
 		t.Fatalf("LoadROM: %v", err)
 	}
 
-	if c.ROMBase != 0x20040000 {
-		t.Errorf("ROMBase = %#08x, want 0x20040000", c.ROMBase)
+	if c.Engine.Memory().ROMBase != 0x20040000 {
+		t.Errorf("ROMBase = %#08x, want 0x20040000", c.Engine.Memory().ROMBase)
 	}
 
-	if c.ROMEnd != 0x200BFFFF {
-		t.Errorf("ROMEnd = %#08x, want 0x200bffff", c.ROMEnd)
+	if c.Engine.Memory().ROMEnd != 0x200BFFFF {
+		t.Errorf("ROMEnd = %#08x, want 0x200bffff", c.Engine.Memory().ROMEnd)
 	}
 
-	if len(c.ROM) != 0x80000 {
-		t.Errorf("len(ROM) = %#x, want 0x80000", len(c.ROM))
+	if len(c.Engine.Memory().ROM) != 0x80000 {
+		t.Errorf("len(ROM) = %#x, want 0x80000", len(c.Engine.Memory().ROM))
 	}
 	// A handful of bytes hand-decoded from the fixture's own hex dump, at
 	// ROM-relative offset 0 (the first page's data, right after the first
 	// page-header ISD).
 	want := []byte{0x11, 0x4e, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01}
-	if !bytes.Equal(c.ROM[:len(want)], want) {
-		t.Errorf("ROM[:8] = % x, want % x", c.ROM[:len(want)], want)
+	if !bytes.Equal(c.Engine.Memory().ROM[:len(want)], want) {
+		t.Errorf("ROM[:8] = % x, want % x", c.Engine.Memory().ROM[:len(want)], want)
 	}
 }
 
@@ -56,7 +56,7 @@ func TestSaveROM_roundTripsRealFixtureContent(t *testing.T) {
 	// byte-for-byte from this fixture in page framing while still decoding
 	// to identical final memory content — which is what this test checks,
 	// via a load/save/reload cycle rather than a raw file diff.
-	c := New(&bytes.Buffer{})
+	c, _ := newTestConsole(t)
 	orig := romFixturePath(t)
 
 	if err := c.LoadROM(orig); err != nil {
@@ -68,29 +68,31 @@ func TestSaveROM_roundTripsRealFixtureContent(t *testing.T) {
 		t.Fatalf("SaveROM: %v", err)
 	}
 
-	c2 := New(&bytes.Buffer{})
+	c2, _ := newTestConsole(t)
 	if err := c2.LoadROM(out); err != nil {
 		t.Fatalf("LoadROM(roundtrip): %v", err)
 	}
 
-	if c2.ROMBase != c.ROMBase || c2.ROMEnd != c.ROMEnd {
-		t.Errorf("base/end = %#x/%#x, want %#x/%#x", c2.ROMBase, c2.ROMEnd, c.ROMBase, c.ROMEnd)
+	if c2.Engine.Memory().ROMBase != c.Engine.Memory().ROMBase || c2.Engine.Memory().ROMEnd != c.Engine.Memory().ROMEnd {
+		t.Errorf("base/end = %#x/%#x, want %#x/%#x", 
+		c2.Engine.Memory().ROMBase, c2.Engine.Memory().ROMEnd, 
+		c.Engine.Memory().ROMBase, c.Engine.Memory().ROMEnd)
 	}
 
-	if !bytes.Equal(c2.ROM, c.ROM) {
+	if !bytes.Equal(c2.Engine.Memory().ROM, c.Engine.Memory().ROM) {
 		t.Error("re-saved and reloaded ROM content differs from the original load")
 	}
 }
 
 func TestSaveLoadROM_synthetic(t *testing.T) {
-	c := New(&bytes.Buffer{})
-	c.ROMBase = 0x20040000
-	c.ROMEnd = 0x20040000 + 3*512 - 1
-	c.ROM = make([]byte, 3*512)
+	c, _ := newTestConsole(t)
+	c.Engine.Memory().ROMBase = 0x20040000
+	c.Engine.Memory().ROMEnd = 0x20040000 + 3*512 - 1
+	c.Engine.Memory().ROM = make([]byte, 3*512)
 	// Page 0 all zero (should be skipped on save), page 1 has data, page 2
 	// all zero again.
 	for i := range 16 {
-		c.ROM[512+i] = byte(i + 1)
+		c.Engine.Memory().ROM[512+i] = byte(i + 1)
 	}
 
 	path := filepath.Join(t.TempDir(), "synthetic.rom")
@@ -98,16 +100,18 @@ func TestSaveLoadROM_synthetic(t *testing.T) {
 		t.Fatalf("SaveROM: %v", err)
 	}
 
-	c2 := New(&bytes.Buffer{})
+	c2, _ := newTestConsole(t)
 	if err := c2.LoadROM(path); err != nil {
 		t.Fatalf("LoadROM: %v", err)
 	}
 
-	if c2.ROMBase != c.ROMBase || c2.ROMEnd != c.ROMEnd {
-		t.Errorf("base/end = %#x/%#x, want %#x/%#x", c2.ROMBase, c2.ROMEnd, c.ROMBase, c.ROMEnd)
+	if c2.Engine.Memory().ROMBase != c.Engine.Memory().ROMBase || c2.Engine.Memory().ROMEnd != c.Engine.Memory().ROMEnd {
+		t.Errorf("base/end = %#x/%#x, want %#x/%#x", 
+		c2.Engine.Memory().ROMBase, c2.Engine.Memory().ROMEnd, 
+		c.Engine.Memory().ROMBase, c.Engine.Memory().ROMEnd)
 	}
 
-	if !bytes.Equal(c2.ROM, c.ROM) {
+	if !bytes.Equal(c2.Engine.Memory().ROM, c.Engine.Memory().ROM) {
 		t.Errorf("ROM content mismatch after round trip")
 	}
 }
@@ -118,38 +122,40 @@ func TestLoadROM_rejectsWrongMagic(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
-	c := New(&bytes.Buffer{})
+	c, _ := newTestConsole(t)
 	if err := c.LoadROM(path); err == nil {
 		t.Error("expected an error loading a non-ROM file")
 	}
 }
 
 func TestSaveLoadNVRAM_roundTrip(t *testing.T) {
-	c := New(&bytes.Buffer{})
-	c.NVRAMBase = 0x20140400
-	c.NVRAM = []byte{1, 2, 3, 4, 5, 6, 7, 8}
+	c, _ := newTestConsole(t)
+	c.Engine.Memory().NVRAMBase = 0x20140400
+	c.Engine.Memory().NVRAM = []byte{1, 2, 3, 4, 5, 6, 7, 8}
 
 	path := filepath.Join(t.TempDir(), "synthetic.nvram")
 	if err := c.SaveNVRAM(path); err != nil {
 		t.Fatalf("SaveNVRAM: %v", err)
 	}
 
-	c2 := New(&bytes.Buffer{})
+	c2, _ := newTestConsole(t)
 	if err := c2.LoadNVRAM(path); err != nil {
 		t.Fatalf("LoadNVRAM: %v", err)
 	}
 
-	if c2.NVRAMBase != c.NVRAMBase {
-		t.Errorf("NVRAMBase = %#x, want %#x", c2.NVRAMBase, c.NVRAMBase)
+	if c2.Engine.Memory().NVRAMBase != c.Engine.Memory().NVRAMBase {
+		t.Errorf("NVRAMBase = %#x, want %#x", c2.Engine.Memory().NVRAMBase, c.Engine.Memory().NVRAMBase)
 	}
-	
-	if !bytes.Equal(c2.NVRAM, c.NVRAM) {
-		t.Errorf("NVRAM content mismatch: got % x, want % x", c2.NVRAM, c.NVRAM)
+
+	if !bytes.Equal(c2.Engine.Memory().NVRAM, c.Engine.Memory().NVRAM) {
+		t.Errorf("NVRAM content mismatch: got % x, want % x",
+		 c2.Engine.Memory().NVRAM, 
+		 c.Engine.Memory().NVRAM)
 	}
 }
 
 func TestSaveROM_errorsWithNoImage(t *testing.T) {
-	c := New(&bytes.Buffer{})
+	c, _ := newTestConsole(t)
 	if err := c.SaveROM(filepath.Join(t.TempDir(), "x.rom")); err == nil {
 		t.Error("expected an error saving with no ROM loaded")
 	}

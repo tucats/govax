@@ -1229,6 +1229,13 @@ func cmdSetPTE(d *Dispatcher, rest string) error {
 // forms (rom.go); the plain (no qualifier) SAVE/LOAD .VAX-file form isn't
 // implemented — see rom.go's doc comment.
 func cmdSave(d *Dispatcher, rest string) error {
+	// console_save.c checks `if (!vax_init) return VAX_NOVAX;` before doing
+	// anything else -- ROM/NVRAM now live on Engine.Memory(), which doesn't
+	// exist until INIT has allocated a machine.
+	if err := d.Console.requireInit(); err != nil {
+		return err
+	}
+
 	kind, file, err := parseRomOrNvramArg(rest)
 	if err != nil {
 		return err
@@ -1242,6 +1249,12 @@ func cmdSave(d *Dispatcher, rest string) error {
 }
 
 func cmdLoad(d *Dispatcher, rest string) error {
+	// console_load.c checks `if (!vax_init) return VAX_NOVAX;` before doing
+	// anything else -- see cmdSave's identical guard above.
+	if err := d.Console.requireInit(); err != nil {
+		return err
+	}
+
 	kind, file, err := parseRomOrNvramArg(rest)
 	if err != nil {
 		return err

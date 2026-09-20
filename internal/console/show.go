@@ -422,16 +422,16 @@ func (c *Console) ShowNVRAM() error {
 		return err
 	}
 
-	if len(c.NVRAM) == 0 {
+	if len(c.Engine.Memory().NVRAM) == 0 {
 		c.Printf("No NVRAM initialized\n")
 
 		return nil
 	}
 
-	size := c.NVRAMEnd + 1 - c.NVRAMBase
-	c.Printf("    NVRAM  FILE=%q\n", c.NVRAMFile)
-	c.Printf("        CONSOLE$NVRAM_BASE = %08X\n", c.NVRAMBase)
-	c.Printf("        CONSOLE$NVRAM_END  = %08X\n", c.NVRAMEnd)
+	size := c.Engine.Memory().NVRAMEnd + 1 - c.Engine.Memory().NVRAMBase
+	c.Printf("    NVRAM  FILE=%q\n", c.Engine.Memory().NVRAMFile)
+	c.Printf("        CONSOLE$NVRAM_BASE = %08X\n", c.Engine.Memory().NVRAMBase)
+	c.Printf("        CONSOLE$NVRAM_END  = %08X\n", c.Engine.Memory().NVRAMEnd)
 	c.Printf("        CONSOLE$NVRAM_SIZE = %08X (%dK)\n", size, size/1024)
 
 	return nil
@@ -444,16 +444,16 @@ func (c *Console) ShowROM() error {
 		return err
 	}
 
-	if len(c.ROM) == 0 {
+	if len(c.Engine.Memory().ROM) == 0 {
 		c.Printf("No ROM loaded\n")
 
 		return nil
 	}
 
-	size := c.ROMEnd + 1 - c.ROMBase
-	c.Printf("    ROM FILE=%q\n", c.ROMFile)
-	c.Printf("        CONSOLE$ROM_BASE  = %08X\n", c.ROMBase)
-	c.Printf("        CONSOLE$ROM_END   = %08X\n", c.ROMEnd)
+	size := c.Engine.Memory().ROMEnd + 1 - c.Engine.Memory().ROMBase
+	c.Printf("    ROM FILE=%q\n", c.Engine.Memory().ROMFile)
+	c.Printf("        CONSOLE$ROM_BASE  = %08X\n", c.Engine.Memory().ROMBase)
+	c.Printf("        CONSOLE$ROM_END   = %08X\n", c.Engine.Memory().ROMEnd)
 	c.Printf("        CONSOLE$ROM_SIZE  = %08X (%dK)\n", size, size/1024)
 
 	return nil

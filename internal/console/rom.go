@@ -27,7 +27,7 @@ var romMagic = [8]byte{';', 'R', 'O', 'M', 'I', 'M', 'G', '\r'}
 // literal 4 bytes each (already reflected in the C source read for this
 // port, not a live bug to route around).
 func (c *Console) SaveROM(path string) error {
-	if len(c.ROM) == 0 {
+	if len(c.Engine.Memory().ROM) == 0 {
 		return vmserrors.New(vmserrors.RMS_NOIMAGE, "ROM")
 	}
 
@@ -41,16 +41,16 @@ func (c *Console) SaveROM(path string) error {
 		return err
 	}
 
-	if err := writeBE32(f, c.ROMBase); err != nil {
+	if err := writeBE32(f, c.Engine.Memory().ROMBase); err != nil {
 		return err
 	}
 
-	if err := writeBE32(f, c.ROMEnd); err != nil {
+	if err := writeBE32(f, c.Engine.Memory().ROMEnd); err != nil {
 		return err
 	}
 
-	for base := uint32(0); base+512 <= uint32(len(c.ROM)); base += 512 {
-		page := c.ROM[base : base+512]
+	for base := uint32(0); base+512 <= uint32(len(c.Engine.Memory().ROM)); base += 512 {
+		page := c.Engine.Memory().ROM[base : base+512]
 		if allZero(page) {
 			continue
 		}
@@ -143,10 +143,10 @@ func (c *Console) LoadROM(path string) error {
 		}
 	}
 
-	c.ROM = rom
-	c.ROMBase = base
-	c.ROMEnd = end
-	c.ROMFile = path
+	c.Engine.Memory().ROM = rom
+	c.Engine.Memory().ROMBase = base
+	c.Engine.Memory().ROMEnd = end
+	c.Engine.Memory().ROMFile = path
 
 	return nil
 }
@@ -155,7 +155,7 @@ func (c *Console) LoadROM(path string) error {
 // save_binary.c's save_nvram: big-endian base address and size (no magic
 // header, and no per-page structure — the whole buffer is written at once).
 func (c *Console) SaveNVRAM(path string) error {
-	if len(c.NVRAM) == 0 {
+	if len(c.Engine.Memory().NVRAM) == 0 {
 		return vmserrors.New(vmserrors.RMS_NOIMAGE, "NVRAM")
 	}
 
@@ -165,15 +165,15 @@ func (c *Console) SaveNVRAM(path string) error {
 	}
 	defer f.Close()
 
-	if err := writeBE32(f, c.NVRAMBase); err != nil {
+	if err := writeBE32(f, c.Engine.Memory().NVRAMBase); err != nil {
 		return err
 	}
 
-	if err := writeBE32(f, uint32(len(c.NVRAM))); err != nil {
+	if err := writeBE32(f, uint32(len(c.Engine.Memory().NVRAM))); err != nil {
 		return err
 	}
 
-	_, err = f.Write(c.NVRAM)
+	_, err = f.Write(c.Engine.Memory().NVRAM)
 
 	return err
 }
@@ -214,10 +214,10 @@ func (c *Console) LoadNVRAM(path string) error {
 		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "NVRAM", "data")
 	}
 
-	c.NVRAM = nvram
-	c.NVRAMBase = base
-	c.NVRAMEnd = base + size - 1
-	c.NVRAMFile = path
+	c.Engine.Memory().NVRAM = nvram
+	c.Engine.Memory().NVRAMBase = base
+	c.Engine.Memory().NVRAMEnd = base + size - 1
+	c.Engine.Memory().NVRAMFile = path
 
 	return nil
 }
