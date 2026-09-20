@@ -27,41 +27,64 @@ const (
 // SHOW ERROR: needs a design decision on whether this port adopts a
 // VAX-style status-code space at all).
 
-// ShowRegisters prints R0-R15 (with the AP/FP/SP/PC aliases), matching
-// SHOW REGISTERS.
+// ShowRegisters prints R0-R11 plus the AP/FP/SP/PC aliases in the same
+// four-column grid as the PSL beneath them, matching SHOW REGISTERS
+// (console_show.c's case 133, dump_registers()) — previously one register
+// per line, a formatting mismatch fixed here (see dumpRegisters).
 func (c *Console) ShowRegisters() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
 
-	for r := vax.R0; r <= vax.R11; r++ {
-		c.Printf("R%-3d = %08X\n", int(r), c.CPU.GPR(r))
-	}
-
-	c.Printf("AP   = %08X\n", c.CPU.GPR(vax.AP))
-	c.Printf("FP   = %08X\n", c.CPU.GPR(vax.FP))
-	c.Printf("SP   = %08X\n", c.CPU.GPR(vax.SP))
-	c.Printf("PC   = %08X\n", c.CPU.GPR(vax.PC))
+	c.dumpRegisters()
 
 	return nil
 }
 
+// dumpRegisters prints the R0-R11/AP/FP/SP/PC grid followed by the PSL
+// block, matching dump_registers() (registers.c) — shared by SHOW
+// REGISTERS (ShowRegisters) and SHOW CPU (ShowCPU), exactly as
+// dump_registers() itself is shared by both cases in the C source.
+func (c *Console) dumpRegisters() {
+	c.Printf("\n\n    Registers:\n\n")
+	c.Printf("    R0:  %08X      R4:  %08X     R8:  %08X     AP:  %08X\n",
+		c.CPU.GPR(vax.R0), c.CPU.GPR(vax.R4), c.CPU.GPR(vax.R8), c.CPU.GPR(vax.AP))
+	c.Printf("    R1:  %08X      R5:  %08X     R9:  %08X     FP:  %08X\n",
+		c.CPU.GPR(vax.R1), c.CPU.GPR(vax.R5), c.CPU.GPR(vax.R9), c.CPU.GPR(vax.FP))
+	c.Printf("    R2:  %08X      R6:  %08X     R10: %08X     SP:  %08X\n",
+		c.CPU.GPR(vax.R2), c.CPU.GPR(vax.R6), c.CPU.GPR(vax.R10), c.CPU.GPR(vax.SP))
+	c.Printf("    R3:  %08X      R7:  %08X     R11: %08X     PC:  %08X\n\n",
+		c.CPU.GPR(vax.R3), c.CPU.GPR(vax.R7), c.CPU.GPR(vax.R11), c.CPU.GPR(vax.PC))
+
+	c.dumpPSL()
+}
+
 // ShowPSL prints the processor status longword and its named fields,
-// matching SHOW PSL.
+// matching SHOW PSL (console_show.c's case 135, dump_psl()).
 func (c *Console) ShowPSL() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
 
-	p := c.CPU.PSL()
-
-	c.Printf("PSL = %08X\n", uint32(p))
-	c.Printf("  CurMod=%d PrvMod=%d IPL=%d IS=%v FPD=%v TP=%v CM=%v\n",
-		p.CurMod(), p.PrvMod(), p.IPL(), p.IS(), p.FPD(), p.TP(), p.CM())
-	c.Printf("  DV=%v FU=%v IV=%v T=%v  N=%v Z=%v V=%v C=%v\n",
-		p.DV(), p.FU(), p.IV(), p.T(), p.N(), p.Z(), p.V(), p.C())
+	c.dumpPSL()
 
 	return nil
+}
+
+// dumpPSL prints the PSL longword plus its PSW and PRIV field breakdowns,
+// matching dump_psl() (registers.c) — shared by SHOW PSL (ShowPSL) and
+// dump_registers (dumpRegisters), exactly as dump_psl() itself is shared
+// by both in the C source.
+func (c *Console) dumpPSL() {
+	p := c.CPU.PSL()
+
+	c.Printf("    PSL: %08X\n", uint32(p))
+	c.Printf("         PSW:  C=%s, V=%s, Z=%s, N=%s, T=%s, IV=%s, FU=%s, DV=%s\n",
+		boolToDigit(p.C()), boolToDigit(p.V()), boolToDigit(p.Z()), boolToDigit(p.N()),
+		boolToDigit(p.T()), boolToDigit(p.IV()), boolToDigit(p.FU()), boolToDigit(p.DV()))
+	c.Printf("         PRIV: IPL=%d, CUR_MOD=%s, PRV_MOD=%s, FPD=%s, TP=%s, CM=%s\n",
+		p.IPL(), modeNames[p.CurMod()], modeNames[p.PrvMod()],
+		boolToDigit(p.FPD()), boolToDigit(p.TP()), boolToDigit(p.CM()))
 }
 
 // ShowMemory prints physical memory size and, once VMINIT has established
@@ -208,9 +231,16 @@ func (c *Console) ShowBase() error {
 		return err
 	}
 
-	c.Printf("\n        Next storage address is %08X\n", c.DepositAddr)
+	c.printBase()
 
 	return nil
+}
+
+// printBase is ShowBase's body, factored out so ShowCPU can reproduce
+// console_show.c's own case 136 (SHOW CPU) falling through into case 137
+// (SHOW BASE) without duplicating the format string.
+func (c *Console) printBase() {
+	c.Printf("\n        Next storage address is %08X\n", c.DepositAddr)
 }
 
 // StackKind selects which privileged-mode stack ShowStack dumps.
@@ -358,19 +388,76 @@ func (c *Console) ShowStack(kind StackKind, current bool, count uint32, all bool
 	return nil
 }
 
-// ShowCPU prints a one-line machine status summary, matching SHOW
-// CPU_STATUS.
+// privRegDisplay lists the privileged registers SHOW CPU's own privileged-
+// register block prints, in the same order as pr_names[]/MAXPRIVREG's loop
+// in console_show.c's case 136 (indices 0-4 — the mode stack pointers —
+// are shown separately, in the stack-pointers block, and every unnamed
+// "_PRnn" slot in pr_names[] is simply absent here rather than skipped by
+// a name check).
+var privRegDisplay = []struct {
+	name string
+	reg  vax.PrivReg
+}{
+	{"P0BR", vax.P0BR}, {"P0LR", vax.P0LR}, {"P1BR", vax.P1BR}, {"P1LR", vax.P1LR},
+	{"SBR", vax.SBR}, {"SLR", vax.SLR},
+	{"PCBB", vax.PCBB}, {"SCBB", vax.SCBB}, {"IPL", vax.IPL}, {"ASTLVL", vax.ASTLVL},
+	{"SIRR", vax.SIRR}, {"SISR", vax.SISR},
+	{"ICCS", vax.ICCS}, {"NICR", vax.NICR}, {"ICR", vax.ICR}, {"TODR", vax.TODR},
+	{"RXCS", vax.RXCS}, {"RXDB", vax.RXDB}, {"TXCS", vax.TXCS}, {"TXDB", vax.TXDB}, {"TBDR", vax.TBDR},
+	{"MAPEN", vax.MAPEN}, {"TBIA", vax.TBIA}, {"TBIS", vax.TBIS},
+	{"PMR", vax.PMR}, {"SID", vax.SID}, {"TBCHK", vax.TBCHK},
+}
+
+// ShowCPU prints the registers/PSL, mode stack pointers, and privileged
+// register block, then falls through to SHOW BASE's "next storage
+// address" line, matching console_show.c's case 136 (SHOW CPU) falling
+// through into its own case 137 (SHOW BASE). The stack-pointer block reads
+// vax.KSP/ESP/SSP/USP/ISP (preg[0..4]) directly rather than the currently
+// active mode's live SP (GPR(SP)) — a quirk of the C source's own case 136
+// body, which prints those fields directly with no set_mode_stack() call
+// around it (contrast SHOW STACK's console_show.c case, which does call
+// set_mode_stack() and is ported via stackPointerFor for that reason); the
+// active mode's own preg[] slot is only refreshed when that mode is left,
+// so it reads stale here in both the C source and this port.
 func (c *Console) ShowCPU() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
 
-	state := "running"
-	if c.Engine.Halted() {
-		state = "halted"
+	c.dumpRegisters()
+
+	c.Printf("\n    Stack pointers:\n\n")
+	c.Printf("    USP: %08X   SSP: %08X   ESP: %08X   KSP: %08X\n    ISP: %08X\n\n",
+		c.CPU.PR(vax.USP), c.CPU.PR(vax.SSP), c.CPU.PR(vax.ESP), c.CPU.PR(vax.KSP),
+		c.CPU.PR(vax.ISP))
+
+	c.Printf("    Privileged registers:\n\n")
+
+	// Build up a line of entries, flushing it once it gets long enough --
+	// matching the C source's own buff/strcat loop. That loop's trailing
+	// flush checks buff[1], which is always non-null (buff is initialized
+	// to spaces, not empty) and so always true regardless of whether
+	// anything was actually appended -- a condition that plainly
+	// contradicts its own comment ("it would be null if the buffer was
+	// only initialized to a tab character"). Fixed here to check whether
+	// anything was appended since the last flush.
+	buff := "    "
+
+	for _, e := range privRegDisplay {
+		buff += fmt.Sprintf("    %-6s:  %08X", e.name, c.CPU.PR(e.reg))
+
+		if len(buff) > 60 {
+			c.Printf("%s\n", buff)
+
+			buff = "    "
+		}
 	}
 
-	c.Printf("CPU is %s, PC = %08X\n", state, c.CPU.GPR(vax.PC))
+	if len(buff) > 4 {
+		c.Printf("%s\n", buff)
+	}
+
+	c.printBase()
 
 	return nil
 }

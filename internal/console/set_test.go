@@ -561,13 +561,22 @@ func TestShowStack(t *testing.T) {
 
 func TestShowCPU(t *testing.T) {
 	c, buf := newTestConsole(t)
+	c.CPU.SetPR(vax.SBR, 0x11223344)
+	c.DepositAddr = 0x00000200
 	buf.Reset()
 
 	if err := c.ShowCPU(); err != nil {
 		t.Fatalf("ShowCPU: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "running") {
-		t.Errorf("output = %q, want it to say running", buf.String())
+	out := buf.String()
+
+	for _, want := range []string{
+		"Registers:", "PSL:", "Stack pointers:", "USP:", "ISP:",
+		"Privileged registers:", "SBR", "11223344", "Next storage address is 00000200",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output = %q, want it to contain %q", out, want)
+		}
 	}
 }

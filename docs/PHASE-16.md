@@ -1011,3 +1011,41 @@ STRINGS` → `SHOW STRING` again) confirming the descriptors, chain, and clear a
 round-trip correctly. Every existing `VMInit` call site (production and test) was
 updated for the new parameter. `go build ./...`, `go vet ./...`, and `go test
 ./...` all clean.
+
+### 2026-09-20 — `SHOW CPU` expanded to match `console_show.c`'s case 136
+
+The previous `ShowCPU` (`show.go`) was a placeholder one-liner ("CPU is
+running/halted, PC = ..."), not a port of anything in `console_show.c`. Reworked
+to match case 136 exactly: `dump_registers()` (the R0-R11/AP/FP/SP/PC grid plus
+`dump_psl()`'s PSL/PSW/PRIV breakdown), the mode stack pointers (`KSP`/`ESP`/
+`SSP`/`USP`/`ISP`), the privileged-register block (every named `preg[]` entry
+from index 5 up, wrapped into ~60-character lines), then falling through into
+case 137 (`SHOW BASE`)'s "next storage address" line — same structure this file's
+own `ShowBase` already implements.
+
+- `dump_registers()` and `dump_psl()` are now shared Go helpers (`dumpRegisters`/
+  `dumpPSL`) used by both `ShowCPU` and their own standalone commands
+  (`ShowRegisters`/`ShowPSL`), exactly as the C source shares one `dump_registers`/
+  `dump_psl` between `SHOW REGISTERS`/`SHOW PSL`/`SHOW CPU`. This also fixes
+  `ShowRegisters`, which previously printed one register per line instead of the
+  C source's four-column grid — a user-reported mismatch caught while porting
+  `SHOW CPU`.
+- The privileged-register line-wrap loop fixes one clear, obvious C logic bug
+  along the way (not logged as a deviation, per `CLAUDE.md`'s bug-fixing policy):
+  the C source's trailing-flush check (`if (buff[1])`) tests a byte that's always
+  a space (the buffer is initialized to `"    "`, not a tab, despite what the
+  comment above it claims), so it always fires even when nothing new was
+  appended since the last flush. Ported as "flush only if something was appended
+  beyond the initial padding."
+- The stack-pointer block deliberately reads `vax.KSP`/`ESP`/`SSP`/`USP`/`ISP`
+  (`preg[0..4]`) directly rather than through `stackPointerFor` (the "live value"
+  helper `ShowStack` uses): case 136's C body has no `set_mode_stack()` call
+  around it, unlike the real `SHOW STACK`/`KSP`/etc. cases, so it reads whatever
+  was last saved into the active mode's own slot rather than that mode's live
+  `SP` — a quirk of the C command being ported as-is, not a bug.
+- `TestShowCPU` (`set_test.go`) rewritten from a single "contains running"
+  assertion (checking behavior the new version no longer has) to check for the
+  new sections and a couple of representative values (an `SBR` write, the
+  deposit cursor). `go build ./...`, `go vet ./...`, and `go test ./...` clean
+  (aside from the pre-existing, unrelated `TestShowFault` flake, confirmed
+  failing identically on unmodified `main`).
