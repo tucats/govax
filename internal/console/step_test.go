@@ -25,6 +25,7 @@ func loadCallProgram(t *testing.T, c *Console) {
 
 func TestStepOver_runsCallToCompletion(t *testing.T) {
 	c, buf := newTestConsole(t)
+	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
 	loadCallProgram(t, c)
 
 	addr := uint32(0x202) // the CALLS instruction itself
@@ -53,6 +54,7 @@ func TestStepOver_runsCallToCompletion(t *testing.T) {
 // traced exactly once.
 func TestStepOver_silentInsideCalledRoutine(t *testing.T) {
 	c, buf := newTestConsole(t)
+	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
 	loadCallProgram(t, c)
 	c.Trace = true
 
@@ -69,6 +71,7 @@ func TestStepOver_silentInsideCalledRoutine(t *testing.T) {
 
 func TestStepOver_ordinaryInstructionActsLikeStepInto(t *testing.T) {
 	c, buf := newTestConsole(t)
+	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
 	loadProgram(t, c, 0x200, opNop, opNop)
 
 	addr := uint32(0x200)
@@ -127,6 +130,7 @@ func TestStepReturn_noFramesReportsError(t *testing.T) {
 
 func TestStep_respectsBreakpointHitDuringStepOver(t *testing.T) {
 	c, buf := newTestConsole(t)
+	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
 	loadCallProgram(t, c)
 	c.AddBreakpoint(0x302) // a real, permanent breakpoint at the callee's entry
 
@@ -194,6 +198,7 @@ func TestSetStepMode_andShowStepMode(t *testing.T) {
 
 func TestDispatch_stepQualifiers(t *testing.T) {
 	d, c := newTestDispatcher(t)
+	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
 	loadCallProgram(t, c)
 
 	if err := d.Dispatch("SET STEP OVER"); err != nil {

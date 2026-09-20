@@ -39,7 +39,7 @@ const (
 	DebugP2         DebugFlags = 0x02000000 // DBG_P2 (no consumer, settable only)
 	DebugP3         DebugFlags = 0x04000000 // DBG_P3 (no consumer, settable only)
 	DebugP4         DebugFlags = 0x08000000 // DBG_P4 (no consumer, settable only)
-	DebugUserStep   DebugFlags = 0x0C000000 // DBG_USERSTEP
+	DebugUserStep   DebugFlags = 0x10000000 // DBG_USERSTEP
 
 	// DebugDefault matches initialization.c's alloc_vax default assignment
 	// (vax.debug = DBG_REGISTERS | DBG_USERHALT | DBG_LIBINIT).

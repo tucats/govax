@@ -251,6 +251,7 @@ func TestExecute_breakpointAtStartDoesNotStopImmediately(t *testing.T) {
 
 func TestStep_advancesOneInstruction(t *testing.T) {
 	c, buf := newTestConsole(t)
+	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
 	loadProgram(t, c, 0x200, opNop, opNop)
 
 	addr := uint32(0x200)

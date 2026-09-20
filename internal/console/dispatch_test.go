@@ -100,6 +100,7 @@ func TestDispatch_depositAndExamine(t *testing.T) {
 
 func TestDispatch_stepAndGo(t *testing.T) {
 	d, c := newTestDispatcher(t)
+	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
 	loadProgram(t, c, 0x200, opNop, opNop, opHalt)
 
 	if err := d.Dispatch("STEP 200"); err != nil {
@@ -225,6 +226,7 @@ func TestDispatch_callStepQualifier(t *testing.T) {
 // printing "Stepped to" without ever actually stopping.
 func TestDispatch_callStepStopsAfterOneInstruction(t *testing.T) {
 	c := newRunnableConsole(t)
+	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g, nil)
 
