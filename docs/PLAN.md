@@ -72,6 +72,7 @@ questions, and a progress log extended as that phase is worked.
 | 19 | [PHASE-19.md](PHASE-19.md) | Interactive `ASM` REPL mode |
 | 20 | [PHASE-20.md](PHASE-20.md) | RTL shim resolution fix, and console-native exception reporting (CHF) |
 | 21 | [PHASE-21.md](PHASE-21.md) | Translation buffer / sequential translation cache |
+| 22 | [PHASE-22.md](PHASE-22.md) | RMS system services backed by `github.com/tucats/ods2` |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -152,3 +153,23 @@ this port's own PTE-mutating operations — `TBIS`/`TBIA`, `SET PTE`/`SET PAGE`,
 paging) require. See PHASE-21.md, including how this port hooks the mode-change
 protection-invalidation behavior (`invalidate_tb_prot`) given Phase 01's own decision not
 to carry over the C source's wide/narrow `PSL` duality.
+
+Phase 22, requested by the user 2026-09-22, is the first phase with no direct
+`reference/eVAX` counterpart to port: it introduces real, functional VMS RMS
+system-service support (`SYS$CREATE`/`CONNECT`/`OPEN`/`CLOSE`/`GET`/`PUT`) backed
+by genuine ODS-2 volume/file access via the sibling Go module
+`github.com/tucats/ods2`, plus a new console `MOUNT` command attaching a
+disk-image container to a device. Phase 10's existing `rms.c` port
+(`internal/rtl/rms.go`) is a stopgap that just `fopen`s an arbitrary host path
+and calls it "RMS" — incomplete, not VMS-faithful, and removed outright rather
+than kept as a fallback, per the user's explicit direction: the point of this
+phase is a true VMS-like file system, faithful enough (since `ods2` implements
+the real on-disk ODS-2 format) that a container should be interchangeable with
+`simh` and other VAX simulators. `reference/eVAX` has no `MOUNT` command anywhere
+either (only a dead `mountcount` field) — so this phase's correctness reference
+is the real VMS RMS manual and `fab.h`/`rab.h`'s `$FABDEF`/`$RABDEF` layouts, plus
+`ods2`'s own already-tested ODS-2 implementation, rather than the C source. See
+PHASE-22.md, including its own design note on why
+`internal/bootdata/files/evax.dcl` — not `testdata/dcl/evax.dcl` — is the grammar
+file `MOUNT`/`DISMOUNT` get added to. `INITIALIZE` and broader `ods2`-CLI command
+parity are deliberately deferred to a later phase.

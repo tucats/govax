@@ -1,0 +1,426 @@
+# Phase 22: RMS system services backed by `github.com/tucats/ods2`
+
+## Goal
+
+Introduce real, functional VMS RMS (Record Management Services) system-service
+support — `SYS$CREATE`, `SYS$OPEN`, `SYS$CLOSE`, `SYS$GET`, `SYS$PUT` (plus
+`SYS$CONNECT`, already ported in Phase 10) — backed by genuine ODS-2 volume/file
+access via the sibling Go module `github.com/tucats/ods2` (working directory
+`/Users/tom/go/src/github.com/tucats/ods2`).
+
+Phase 10's `internal/rtl/rms.go` is a stopgap that never implemented real RMS
+semantics at all: it just `fopen`s an arbitrary host path (or, for `TTA0:`,
+writes to the console) and calls that "RMS". That's incomplete, not faithful to
+VMS, and — per the user's explicit direction — gets **removed**, not kept
+alongside the new implementation. The whole point of this phase is a true
+VMS-like file system: because `ods2` implements the real, on-disk ODS-2 format
+(the same format `simh` and other VAX simulators use), a container built by
+`govax`'s new `MOUNT`/file-creation path should be mountable by `simh` and
+vice versa. Any file-system convenience that isn't genuine ODS-2 has no place
+here.
+
+A new console `MOUNT` command attaches a disk-image container file to a device
+(e.g. `DUA0:`), known simultaneously to `govax`'s own device table and to `ods2`'s
+volume layer. The phase's acceptance objective, verbatim from the request that
+started it: mount a disk container, assemble a VAX program that creates a file in
+the container, writes a few records, closes it, reopens it for reading, reads the
+records back to verify they're correct, and closes it again.
+
+Like Phase 15 (UX support) and Phase 18 (flow-of-control), this phase isn't a
+straight port of one `reference/eVAX` source file — see "Why this phase looks
+different" below — and is expected to grow further sub-phases (`INITIALIZE`, more
+RMS services, indexed/relative file organizations) once this first slice lands.
+
+**Status: planning.**
+
+## Why this phase looks different from most others
+
+`reference/eVAX/eVAX/Source/RTL/rms.c` never touches real ODS-2 structures — its
+three operations (`rms_create`/`rms_connect`/`rms_put`) just `fopen`/`fwrite`
+directly against the host filesystem, exactly matching what Phase 10's
+`internal/rtl/rms.go` already ports (see that file's own doc comment). There is no
+C-source counterpart for real volume/file-system semantics to diff against, and no
+`MOUNT` command anywhere in `reference/eVAX` (confirmed by search — the only
+"mount" hits in the whole C tree are `devices.c`'s `mountcount` field, initialized
+to 0 at device-creation and never read or written again anywhere else, and a
+handful of unrelated `SS$_` codes in `ss_def.h`). So this phase's correctness
+reference is **not** `reference/eVAX`; it's:
+
+- The real VMS RMS layout, from `reference/eVAX/eVAX/Headers/fab.h`/`rab.h` — the
+  actual `$FABDEF`/`$RABDEF` struct layouts the original C project's own `rms.c`
+  was built against (confirmed authoritative: `internal/rtl/rms.go`'s existing
+  `fabIFI`/`fabFAC`/`fabFNA`/... offsets already derive from these headers, not
+  guessed).
+- `~/Documents/Technical Doc/VMS/rms_manual.pdf` — service semantics ($CREATE/
+  $OPEN/$CLOSE/$GET/$PUT argument lists, completion codes, record-format rules)
+  neither header captures.
+- `github.com/tucats/ods2`'s own `volume`/`diskimage`/`ondisk`/`rms`/`filespec`
+  packages — a from-scratch, already-tested ODS-2 implementation this phase shims
+  onto rather than reimplementing. (Full API survey done during this doc's own
+  planning; summarized in "Design decisions" below.)
+
+Phase 10's existing three-op host-passthrough path is removed outright (see
+"Removing Phase 10's host-passthrough RMS" below), not kept alongside the new
+one. The one piece of it worth keeping is the `TTA0:` special case — that's
+legitimate terminal-device I/O, not a native-filesystem shortcut, and real VMS
+RMS genuinely does support `SYS$CREATE`/`SYS$PUT` against a terminal device —
+so it's carried forward into the new package rather than discarded with the
+rest.
+
+## Scope
+
+- `reference/eVAX/eVAX/Headers/fab.h`, `rab.h` — authoritative FAB/RAB field
+  offsets and bit layouts.
+- `reference/eVAX/eVAX/Headers/ss_def.h` — real `SS_DEVMOUNT` (108),
+  `SS_DEVNOTMOUNT` (124), `SS_NOMOUNT` (10380) for `MOUNT`/`DISMOUNT`'s own
+  operational errors.
+- `~/Documents/Technical Doc/VMS/rms_manual.pdf` — RMS service semantics and
+  status-code vocabulary.
+- `github.com/tucats/ods2`'s `diskimage`, `ondisk`, `volume`, `rms`, `filespec`
+  packages — the real mount/file/record engine.
+- `internal/io/device.go` — `Device`/`DeviceTable`, already carrying (unused since
+  Phase 09) `VolName`/`MediaName`/`MediaType`/`RootDevName`/`MountCount`/
+  `DeviceClassDisk` fields this phase finally populates for real.
+- `internal/bootdata/files/evax.dcl` — new `MOUNT`/`DISMOUNT` grammar (see the
+  "Grammar file" decision below — **not** `testdata/dcl/evax.dcl`).
+- `internal/rtl` — existing `ServiceTable`/`Environment`; `rms.go`'s three
+  host-passthrough handlers are removed and their `ServiceTable` slots
+  re-registered against the new package.
+- New package: `internal/rms` — the sole RMS implementation from this phase on.
+
+## Design decisions
+
+### Grammar file: `internal/bootdata/files/evax.dcl`, not `testdata/dcl/evax.dcl`
+
+`testdata/dcl/evax.dcl` is `git archive`-imported read-only from the upstream C
+repo (`CLAUDE.md`: "if upstream changes, re-import"). `internal/bootdata/files/
+evax.dcl` is a separate, byte-identical-today copy that's actually what `govax`
+parses at runtime (`cmd/govax/main.go`'s `resolver.ReadFile("evax.dcl")`, Phase
+15's embedded-fallback mechanism) — confirmed by diff (currently 0 bytes
+different) and by grepping every non-comment reference to either path. `MOUNT`/
+`DISMOUNT` have no upstream C-grammar counterpart to preserve, so per the user's
+own direction: add them directly to `internal/bootdata/files/evax.dcl`, and leave
+`testdata/dcl/evax.dcl` untouched as the pure historical import. The two files are
+expected to diverge from this phase on — a comment block at the new grammar's
+insertion point should say so explicitly, so a future "upstream changed, re-import
+`testdata/dcl/evax.dcl`" doesn't get mistakenly copied over the bootdata file and
+wipe govax-native commands.
+
+Fallout: `internal/console/dcl/define_test.go` and `parse_test.go` currently load
+`testdata/dcl/evax.dcl` directly for grammar-parser unit tests — switch both to
+load `internal/bootdata/files/evax.dcl` instead, since that's now the grammar
+source of truth their tests should track. Doc-comment references to
+`testdata/dcl/evax.dcl` elsewhere (`internal/console/dcl/{grammar,doc,match}.go`,
+`internal/io/device.go`, `internal/console/show.go`) that are describing
+*behavior the C reference's grammar originally defined* (e.g. `dev_class`/
+`dev_type` keyword tables) stay pointed at `testdata/dcl/evax.dcl` — those really
+are describing the untouched import; only the two direct-load tests need to move.
+
+Draft grammar shape (refined during implementation):
+
+```text
+syntax mount
+    parameter device/id=.../type=$name/prompt="Device"
+    parameter file/id=.../type=$string/prompt="Container file"
+    qualifier write/id=...
+    qualifier nowrite/id=...
+
+verb mount
+
+syntax dismount
+    parameter device/id=.../type=$name/prompt="Device"
+
+verb dismount
+```
+
+Kept deliberately minimal — device, container path, and a writable/read-only
+switch. Real VMS `MOUNT`'s fuller qualifier set (`/FOREIGN`, `/OVERRIDE=
+IDENTIFICATION`, `/SYSTEM`, volume-set qualifiers, ...) and `INITIALIZE` are
+explicitly out of scope this phase (see "Deferred" below) but the grammar/`verb
+mount` structure leaves room to add qualifiers later without restructuring.
+
+### `INITIALIZE` is deferred to a later phase
+
+Confirmed with the user: Phase 22's objective only needs an already-initialized
+`.dsk` container to mount. `ods2`'s own `diskimage.Create` + `volume.Initialize`
+(two calls, see `cmd/ods2/internal/session/initialize.go` for the reference usage)
+fully covers building a fresh container from a Go test helper, so this phase's own
+tests build fixtures that way rather than depending on a govax `INITIALIZE`
+command or on `ods2`'s separate `cmd/ods2` CLI tool being installed. A govax
+`INITIALIZE` console command (and the rest of the DCL-command parity with `ods2`'s
+own CLI the user's notes mention — `COPY`, `DIRECTORY`, etc.) becomes its own
+later phase.
+
+### Dependency: local `replace` directive
+
+`ods2` has no tagged releases (`git tag -l` is empty) and is actively
+co-developed alongside this phase. Add `replace github.com/tucats/ods2 =>
+../ods2` to `govax/go.mod` (both repos already sit as siblings under
+`/Users/tom/go/src/github.com/tucats/`) rather than waiting on a release to
+depend on via the module proxy. Revisit once `ods2` cuts a real tag.
+
+### New package `internal/rms`: the sole RMS implementation
+
+Mirrors `internal/rtl`'s own registry-over-switch convention
+([[feedback_table_driven_dispatch]]) and its `ServiceFunc` shape, but lives
+separately from `internal/rtl` because it owns real state (`ods2` handles) that
+Phase 10's stopgap never needed. It replaces `internal/rtl/rms.go` entirely —
+see "Removing Phase 10's host-passthrough RMS" below — and becomes the only
+place `SYS$CREATE`/`SYS$CONNECT`/`SYS$OPEN`/`SYS$CLOSE`/`SYS$GET`/`SYS$PUT` are
+implemented:
+
+- `internal/rms/mount.go` — a `MountTable`: device name -> `{container
+  diskimage.Container; vol *volume.Volume; writable bool}`. `Mount(device, path
+  string, writable bool) error` (`diskimage.OpenWritable`/`Open` +
+  `volume.Mount`), `Dismount(device string) error` (`vol.Dismount()` + remove),
+  `Lookup(device string) (*volume.Volume, bool)`. Owned by `internal/console`'s
+  `Console` (constructed once, alongside `Devices`/`Logicals`) and injected into
+  `rtl.Environment` the same way those two already are.
+- `internal/rms/fab.go`/`rab.go` — real `$FABDEF`/`$RABDEF` field offsets. Starts
+  from `internal/rtl/rms.go`'s existing `fabIFI`/`fabFAC`/`fabFNA`/`fabFNS`/
+  `fabSTS`/`fabSTV`/`rabFAB`/`rabISI`/`rabRAC`/`rabRSZ`/`rabRBF`/`rabSTS`/`rabSTV`
+  set (moved here, not duplicated) plus the new fields this phase needs:
+  `FAB$B_ORG`/`FAB$B_RFM`/`FAB$B_RAT`/`FAB$W_MRS` (record organization/format/
+  attributes/max-size, needed by `SYS$CREATE` to pick an `ondisk.RecordFormat`),
+  `RAB$L_UBF`/`RAB$W_USZ`/`RAB$W_RSZ` (user buffer/size/returned-size, needed by
+  `SYS$GET`). Verify every offset directly against `fab.h`/`rab.h` while writing
+  this file, not by re-deriving from the manual's prose.
+- `internal/rms/status.go` — real, literal `RMS$_` symbol values (`RMS$_NORMAL`,
+  `RMS$_EOF`, `RMS$_FNF`, ...) pulled from `rms_manual.pdf`, matching
+  `internal/rtl/status.go`'s own literal-constant style (**not** routed through
+  `internal/vmserrors`'s `RMSFacility` codes — those are govax's own internal
+  diagnostic-message IDs under the real RMS facility number, a different
+  numbering space from the fixed, well-known `$RMSDEF` values a real compiled VAX
+  program checks against; writing a vmserrors-assigned ID into `FAB$L_STS` would
+  be silently wrong for any real program). Exact values are an implementation-time
+  lookup, not guessed at here — see "Open questions".
+- `internal/rms/{create,connect,open,close,get,put}.go` — the service handlers,
+  each reading FAB/RAB fields from VAX memory, resolving the target device via
+  `filespec.Parse`, looking up the mounted `*volume.Volume`, calling into `ods2`'s
+  `volume`/`rms`/`filespec` packages, translating results/errors to `RMS$_`/`SS$_`
+  codes, and writing back FAB/RAB fields. `SYS$CREATE`/`SYS$PUT` additionally keep
+  the one piece of Phase 10's implementation worth carrying forward: a `TTA0:`
+  (and, generally, any `DeviceClassTT` device) target is real terminal I/O, not a
+  file, and continues to write straight to the console — everything else must
+  resolve to a mounted ODS-2 volume or fail with a real `RMS$_`/`SS$_` device
+  error (no more silent arbitrary-host-path `fopen`).
+- Its own IFI table (`allocIFI`/handle-by-IFI), generalized from Phase 10's
+  "`io.Writer` only" (write-only, host-passthrough) shape to a handle that's
+  either the console writer (the `TTA0:` case above) or an `ods2`-backed
+  `*volume.File` + `rms.Reader`/`rms.Writer` pair — this phase's first-ever read
+  support for RMS files.
+
+### Removing Phase 10's host-passthrough RMS
+
+`internal/rtl/rms.go`'s three handlers (`serviceSysCreate`/`serviceSysConnect`/
+`serviceSysPut`, plus `allocIFI`/`ifiWriter`/`storeRMSStatus`/`openRMSFile` and
+the `fab*`/`rab*` offset consts) are deleted outright, not kept as a fallback —
+per the user's explicit direction: this support is incomplete and doesn't
+represent real RMS behavior (arbitrary host-path `fopen` has no VMS analogue;
+real RMS always operates against a mounted device/volume), so there's nothing
+worth preserving behind a routing branch. `internal/rtl/rms_test.go` (if any
+exists exercising the removed handlers) moves to `internal/rms` and gets
+rewritten against the new implementation rather than kept as regression coverage
+for code that no longer exists. `internal/rtl`'s `registerRMSServices` shrinks to
+registering `internal/rms`'s handlers into the shared `ServiceTable`.
+
+### Container format fidelity / `simh` interoperability
+
+A hard non-negotiable for this phase: nothing `govax` writes to a mounted
+container may be a `govax`-specific extension to the ODS-2 on-disk format. Since
+`ods2` already implements the real format byte-for-byte (see its own README's
+"why not a line-by-line port" section — deliberate implementation-strategy
+deviations from a reference C tool, but not format deviations), this should hold
+for free as long as `internal/rms` only ever goes through `ods2`'s public API
+rather than writing raw blocks itself.
+
+The user has supplied two real containers on this dev machine, at
+`testdata/disks/` (gitignored wholesale except its `README.md` — see
+`.gitignore` — licensed VAX/VMS code and large binaries, never committed):
+
+- `rq0-ra92.dsk` (~152 MB) — a full, real VAX/VMS system disk. The primary
+  fidelity check: mount it **read-only**, list the MFD and at least one
+  subdirectory via `filespec.Glob`/`Directory.List`, open and read back one or
+  more real files' records — exercising `internal/rms`'s read path
+  (`SYS$OPEN`/`SYS$GET`, or the underlying `ods2` calls directly in an
+  `internal/rms` test) against a volume `govax` had no part in creating. This
+  is the container that actually proves ODS-2 read fidelity; `govax` reading
+  its own writes back proves nothing about compatibility with anything else.
+- `empty.dsk` (65 KB) — a minimal container `ods2` itself already initialized
+  (real home block, `INDEXF.SYS`, `BITMAP.SYS`, MFD, no user files). Useful two
+  ways: (a) as a quick local stand-in for the not-yet-built `INITIALIZE`
+  command during interactive `govax` testing this phase — copy it to get a
+  fresh empty volume instead of hand-running `ods2`'s own Go API — and (b) as
+  a second, real (not test-generated) starting point for a write-path check:
+  copy it to a scratch file, mount read/write, exercise `CREATE`/`PUT`/`CLOSE`
+  through `govax`, dismount, remount read-only, and confirm the file reads
+  back correctly.
+
+A small opt-in interop test (`internal/rms/simh_interop_test.go` or similar)
+looks for these two files by name under `testdata/disks/` and `t.Skip`s
+cleanly when either is absent — so it runs automatically on this dev machine
+but never on a fresh clone or in CI. This is separate from, and doesn't
+replace, the committed automated test suite's own fixtures (see "Test
+fixtures" below), which must stay fully portable and can't depend on anything
+under this gitignored directory.
+
+### Device model: `MOUNT` auto-creates the device record
+
+`internal/io.Device` needs no structural change — `VolName`/`MediaName`/
+`MediaType`/`RootDevName`/`MountCount`/`DeviceClassDisk` already exist from Phase
+09, unused until now. Rather than requiring a separate `DEFINE/DEVICE DUA0
+/DEVCLASS=DISK` ceremony before `MOUNT DUA0: foo.dsk` works, `MOUNT` auto-creates
+the device (`Devices.Define(name, iodev.DeviceOptions{DevClass:
+DeviceClassDisk})`) if it isn't already defined — matching how an operator would
+expect `MOUNT` to just work, and consistent with `devices.c`'s own dead
+`mountcount` field having anticipated exactly this without ever being wired up.
+`SHOW DEVICE/FULL` (`internal/console/device.go`'s `ShowDevices`) gains a
+mounted-volume line once a device has a live `MountTable` entry, using the
+`VolName`/`FreeBlocks`/etc. fields it already prints, now finally populated from
+the real mounted `*volume.Volume`.
+
+`SS_DEVMOUNT`/`SS_DEVNOTMOUNT`/`SS_NOMOUNT` (real `ss_def.h` values 108/124/
+10380) back `MOUNT`/`DISMOUNT`'s own operational-error reporting — add them to
+`internal/rtl/status.go`'s existing literal `ssXxx` table alongside the ones
+already there, rather than inventing new numbers.
+
+### Test fixtures: generated on the fly, not committed binaries
+
+The **committed** automated test suite builds its own throwaway `.dsk`
+containers in `t.TempDir()` via `ods2`'s own `diskimage.Create` +
+`volume.Initialize` directly from `internal/rms`'s Go tests, rather than
+depending on a binary fixture under `testdata/`. Keeps `go test ./...` fully
+hermetic and portable (works on a fresh clone, in CI, on any machine) with no
+binary blob in git.
+
+Separately, for interactive work on this dev machine during this phase (manual
+`govax` sessions, quick iteration before the automated suite exists, the
+opt-in `simh`-interop test above), `testdata/disks/empty.dsk` — a real
+container the user already initialized via `ods2` — is a ready-made stand-in
+for the not-yet-built `INITIALIZE` command: copy it to get a fresh empty
+volume rather than writing a one-off Go program to call `ods2`'s API by hand.
+This local convenience doesn't feed the committed test suite.
+
+## Subtasks
+
+1. `go.mod`: add the `replace` directive for `ods2`; `go build ./...`/`go vet
+   ./...` sanity check with the new dependency in place.
+2. `internal/bootdata/files/evax.dcl`: add `mount`/`dismount` syntax + `verb
+   mount`/`verb dismount`, with the divergence-from-`testdata` comment. Move
+   `internal/console/dcl`'s two direct-load tests onto the bootdata copy.
+3. Delete `internal/rtl/rms.go` (and its test, if any) — `serviceSysCreate`/
+   `serviceSysConnect`/`serviceSysPut`, `allocIFI`/`ifiWriter`/
+   `storeRMSStatus`/`openRMSFile`, and the `fab*`/`rab*` offset consts all go;
+   confirm nothing else in `internal/rtl` referenced them.
+4. `internal/rms`: mount table (`mount.go`), FAB/RAB offset tables (`fab.go`/
+   `rab.go`, seeded from the deleted file's consts plus the new fields, verified
+   against `fab.h`/`rab.h`), status-code table (`status.go`, verified against
+   `rms_manual.pdf`), IFI table (generalized read/write handle).
+5. `internal/rms`: `SYS$CREATE` — resolve device/directory/name via `filespec`;
+   a `DeviceClassTT` target (`TTA0:`) writes to the console as before; a mounted
+   disk device does `volume.CreateFile` with an `ondisk.RecAttr` built from the
+   FAB's `RFM`/`RAT`/`MRS` fields; anything else is a real device/file error, not
+   a host-path fallback. Store the new IFI back into the FAB.
+6. `internal/rms`: `SYS$CONNECT` (binding a RAB to an already-open IFI, console
+   or ODS2-backed).
+7. `internal/rms`: `SYS$PUT` — `rms.NewWriter`/`.Put` per record, matching
+   `RAB$B_RAC` (sequential-only).
+8. `internal/rms`: `SYS$CLOSE` — `rms.Writer.Close`/`volume.File.Close`
+   (writer case) or a plain `volume.File` release (reader case); release the IFI
+   slot.
+9. `internal/rms`: `SYS$OPEN` — `filespec.Parse` + `Directory.Lookup`/
+   `vol.OpenFID`, honoring `FAB$B_FAC` (GET vs. PUT vs. UPD) to decide whether to
+   arm the file for writing (`File.OpenForWrite`) or just read.
+10. `internal/rms`: `SYS$GET` — `rms.NewReader`/`.Next` per record, copying the
+    record into the RAB's `RBF`/`RSZ` (and `UBF`/`USZ` if distinct) fields,
+    `RMS$_EOF` on exhaustion.
+11. `internal/rtl`: `registerRMSServices` shrinks to registering `internal/rms`'s
+    handlers into the shared `ServiceTable`.
+12. `internal/io`/`internal/console/device.go`: `MOUNT`/`DISMOUNT` console
+    methods (auto-create device record, call `internal/rms.MountTable`); `SHOW
+    DEVICE/FULL` mounted-volume line.
+13. `internal/console/dispatch.go`: bind the new `MOUNT`/`DISMOUNT` grammar
+    entries.
+14. End-to-end acceptance test: build+mount a fresh container, assemble (via the
+    existing `ASM`/Phase 11 tooling) a small MACRO-32 program exercising
+    `CREATE`->`CONNECT`->`PUT` x N ->`CLOSE`->`OPEN`->`CONNECT`->`GET` x N ->
+    `CLOSE`, run it, verify the records read back match what was written. FAB/
+    RAB field values in the test program: hand-encoded literals rather than a
+    general `$FABDEF`/`$RABDEF` `.INCLUDE` macro-expansion facility (out of
+    scope this phase — no such `.asm` fixture exists yet; building one is
+    plausible future `internal/asm` work, not needed for this acceptance test).
+15. Opt-in `simh`-container interop test (`testdata/disks/`, gitignored —
+    "Container format fidelity" above): `rq0-ra92.dsk` mounted read-only,
+    list the MFD, read back at least one real file; `empty.dsk` copied to a
+    scratch file for a write-then-reread round trip. Skips cleanly when either
+    file is absent.
+16. Docs: this file's progress log; `docs/PLAN.md` phase-table row + narrative
+    paragraph; `CLAUDE.md` package-layout list gains `internal/rms`;
+    `docs/DEVIATIONS.md` entries for anything ambiguous found comparing
+    `rms_manual.pdf` against `ods2`'s actual record-format behavior along the
+    way.
+
+## Open questions
+
+- Exact real `RMS$_` symbol values needed this phase (`NORMAL`, `EOF`, `FNF`,
+  and whatever `SYS$OPEN`/`SYS$GET`/`SYS$PUT` error paths turn out to need) —
+  to be pulled from `rms_manual.pdf` during implementation of
+  `internal/rms/status.go`, not guessed at here.
+- Whether the FAB/RAB offsets beyond `internal/rtl/rms.go`'s existing set
+  (`ORG`/`RFM`/`RAT`/`MRS`, `RAB`'s `UBF`/`USZ`/`RSZ`) need any further fields
+  once `SYS$OPEN`/`SYS$GET` are actually implemented — verify against `fab.h`/
+  `rab.h` directly when writing `internal/rms/fab.go`/`rab.go`, not decided here.
+- Committed-fixture vs. generated-on-the-fly test containers (leaning generated;
+  see "Design decisions") — not locked in until the end-to-end test is actually
+  written.
+- Any `ods2` bugs found while integrating belong to the user (their package) —
+  report them rather than working around them silently in `govax`, per the
+  original request.
+
+## Progress Log
+
+### 2026-09-22 — Planning
+
+- Surveyed `github.com/tucats/ods2`'s public API (`diskimage`/`ondisk`/`volume`/
+  `rms`/`filespec`) via a research pass over its source and `cmd/ods2`'s own CLI
+  usage of it (the best real end-to-end usage examples: `initialize.go`,
+  `mount.go`, `copy.go`, `type.go`), and confirmed it has no `git` tags yet
+  (co-development, `replace` directive needed).
+- Confirmed `reference/eVAX` has no `MOUNT` counterpart at all (only a dead
+  `mountcount` field and unrelated `SS$_` codes) and that `rms.c`'s three
+  existing operations are host-filesystem passthrough, not ODS-2-aware —
+  settling this phase's correctness reference as the RMS manual + `fab.h`/
+  `rab.h` + `ods2` itself, not `reference/eVAX`.
+- Resolved, with the user: `internal/bootdata/files/evax.dcl` (not
+  `testdata/dcl/evax.dcl`) is the grammar file to extend, since it's the actual
+  runtime source and the testdata copy is meant to stay a pure, untouched
+  upstream import; `INITIALIZE` is deferred to a later phase, keeping this one
+  scoped to `MOUNT` + the five named RMS services (plus `SYS$CONNECT`, already
+  present from Phase 10).
+- User clarified mid-planning: Phase 10's `internal/rtl/rms.go` is a buggy,
+  incomplete stopgap (arbitrary host-path `fopen` masquerading as RMS) with no
+  real VMS fidelity, and gets removed outright rather than kept as a fallback
+  path — the whole point of this phase is a true, `ods2`-backed VMS file system,
+  faithful enough that a container should be interchangeable with `simh` and
+  other VAX simulators. Revised "New package `internal/rms`" and added
+  "Removing Phase 10's host-passthrough RMS" and "Container format fidelity /
+  `simh` interoperability" design-decision sections accordingly; the one thing
+  kept from the old file is its `TTA0:`-to-console special case, since that's
+  real terminal I/O, not a filesystem shortcut.
+- User offered real `simh`-produced VAX/VMS disk containers, available locally
+  on this dev machine for validation but never committable (licensed VAX/VMS
+  code, large binaries). Settled on `testdata/disks/`, added to `.gitignore`
+  wholesale except a tracked `README.md` documenting the convention (verified:
+  `git check-ignore` confirms the README stays tracked while any `.dsk` placed
+  there is ignored) so nothing symlinked/copied there is ever at risk of being
+  committed.
+- User has since placed two real containers there: `rq0-ra92.dsk` (~152 MB, a
+  full real VAX/VMS system disk — the primary read-fidelity check target) and
+  `empty.dsk` (65 KB, a minimal `ods2`-initialized container with no user
+  files — doubles as a local stand-in for the not-yet-built `INITIALIZE`
+  command and as a real starting point for a write-path round-trip check).
+  Updated "Container format fidelity / `simh` interoperability" and "Test
+  fixtures" with the concrete filenames and roles, and clarified that these
+  are separate from, and don't replace, the committed automated suite's own
+  `ods2`-generated (fully portable) fixtures.
+- No implementation started yet.

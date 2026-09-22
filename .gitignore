@@ -29,6 +29,12 @@ go.work.sum
 # env file
 .env
 
+# Local-only simh/real-VMS disk containers (docs/PHASE-22.md) — large binary
+# blobs containing licensed VAX/VMS code, symlinked or copied in here for
+# manual cross-simulator validation on this dev machine only, never committed.
+/testdata/disks/*
+!/testdata/disks/README.md
+
 # Editor/IDE
 # .idea/
 # .vscode/
