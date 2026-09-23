@@ -340,9 +340,11 @@ This local convenience doesn't feed the committed test suite.
    `govax` root, no `go.mod`/`go.sum` change — see "Dependency: `go.work`, not
    a `replace` directive". Verified with a real, disposable smoke package
    importing `ods2`; `go build ./...`/`go vet ./...`/`go test ./...` all clean.
-2. `internal/bootdata/files/evax.dcl`: add `mount`/`dismount` syntax + `verb
-   mount`/`verb dismount`, with the divergence-from-`testdata` comment. Move
-   `internal/console/dcl`'s two direct-load tests onto the bootdata copy.
+2. **Done.** `internal/bootdata/files/evax.dcl`: add `verb mount`/`verb
+   dismount`, with the divergence-from-`testdata` comment. Move
+   `internal/console/dcl`'s two direct-load tests (plus
+   `internal/console/dispatch_test.go`'s own direct load, found along the
+   way) onto the bootdata copy.
 3. Delete `internal/rtl/rms.go` (and its test, if any) — `serviceSysCreate`/
    `serviceSysConnect`/`serviceSysPut`, `allocIFI`/`ifiWriter`/
    `storeRMSStatus`/`openRMSFile`, and the `fab*`/`rab*` offset consts all go;
@@ -491,3 +493,57 @@ This local convenience doesn't feed the committed test suite.
   `internal/rms` package doesn't exist yet, starts at subtask 3/4). Marked
   subtask 1 done in the "Subtasks" list.
 - No other implementation started yet.
+
+### 2026-09-22 — Subtask 2 complete
+
+- Added `verb mount`/`verb dismount` to `internal/bootdata/files/evax.dcl`,
+  simplified from this doc's own draft sketch: a plain `verb` with its
+  `parameter`/`qualifier` statements directly underneath (matching `verb
+  vminit`'s existing shape) rather than a separate `syntax mount` entry
+  redirected into via `/id=` — no qualifier-driven sub-form redirect is
+  needed here (unlike `DEFINE`'s `/LOGICAL` vs. `/DEVICE` split), so the
+  extra indirection the draft sketched wasn't buying anything. `MOUNT` takes
+  two required parameters (`DEVICE`, `FILE`) and one switch qualifier
+  (`WRITE`); `/NOWRITE` reaches it for free via the grammar interpreter's
+  existing automatic "NO"-prefix negation (`match.go`'s `matchQualifier`),
+  so a second, separately declared `NOWRITE` qualifier (as the draft sketch
+  had) would have been redundant. `DISMOUNT` takes one required `DEVICE`
+  parameter. New IDs (700/701/702/703/710/711) picked clear of every ID
+  already in use elsewhere in the file — grammar IDs turn out to have no
+  uniqueness enforcement across the file at all (`define.go`'s `parseID` is
+  a bare integer parse; nothing checks for collisions), but keeping them
+  distinct avoids confusing a future reader.
+- Added the divergence comment at the insertion point (this file's own
+  "Grammar file" design decision, and `CLAUDE.md`'s general
+  re-import-from-upstream guidance) so a future `testdata/dcl/evax.dcl`
+  re-import doesn't get carelessly copied over this file and silently
+  delete `MOUNT`/`DISMOUNT` (or anything added after them).
+- Moved `internal/console/dcl/define_test.go` and `parse_test.go`'s shared
+  `evaxGrammarPath` helper onto the bootdata copy, per the doc's own planned
+  fallout. While doing so, found a third direct load of
+  `testdata/dcl/evax.dcl` this doc hadn't enumerated:
+  `internal/console/dispatch_test.go`'s `evaxGrammarPathForConsole`, used by
+  every dispatch test via `newTestDispatcher`. Since dispatch tests exist to
+  exercise the same grammar/handler wiring `cmd/govax` runs in production
+  (which loads the bootdata copy, not the testdata one), moved it too for
+  the same reason the doc gives for the other two — left out of the
+  "Fallout" list only because the initial planning search apparently didn't
+  turn it up, not because it's a different case.
+- Added grammar-level regression coverage: `TestLoadEvaxGrammar_mountDismount`
+  (structural: both verbs exist, right parameter/qualifier shapes) plus
+  `TestParse_mount`/`TestParse_mountNowrite`/`TestParse_dismount`/
+  `TestParse_mountMissingFile` (parse-level: happy path, automatic `/NOWRITE`
+  negation, missing-required-parameter error). Updated
+  `TestLoadEvaxGrammar`'s `wantVerbs` list and `TestLoadEvaxGrammar_verbCount`
+  (10 → 12 verbs) for the two new verbs.
+- `go build ./...`, `go vet ./...` clean. `go test ./...` clean except two
+  pre-existing failures confirmed unrelated to this change (reproduced
+  identically on a stashed pre-change tree, and confirmed flaky/timing-
+  dependent rather than deterministic): `TestShowFault` and
+  `TestExecute_stopsOnAttention` (the latter passes reliably in isolation,
+  fails only under full-suite timing pressure).
+- Nothing bound in `internal/console/dispatch.go` yet — `MOUNT`/`DISMOUNT`
+  have no handler to bind to until `internal/rms` exists (subtask 13, much
+  later); parsing them today just yields `Grammar.Dispatch`'s existing
+  "no handler bound" error, exactly like every other currently-unbound
+  syntax in this file.

@@ -444,6 +444,33 @@ grammar evax
             disallow    unimplemented and all
             disallow    unimplemented and profile
             disallow    profile and all
-        syntax          show_version/entry=exe$about            
-     
+        syntax          show_version/entry=exe$about
+
+    !
+    ! govax-native extension (Phase 22, internal/rms): MOUNT/DISMOUNT have no
+    ! reference/eVAX or testdata/dcl/evax.dcl counterpart at all -- the C
+    ! source never implemented real ODS-2 volume mounting (see
+    ! docs/PHASE-22.md, "Why this phase looks different"). This file and
+    ! testdata/dcl/evax.dcl are expected to diverge starting here: if
+    ! upstream eVAX ever changes and testdata/dcl/evax.dcl is re-imported
+    ! via `git archive`, do NOT copy that import over this file wholesale --
+    ! doing so would silently delete this block (and any other govax-native
+    ! grammar added below it).
+    !
+    verb mount/id=700
+
+        parameter   device/id=701               -
+                    /type=$name                 -
+                    /prompt="Device"
+        parameter   file/id=702                 -
+                    /type=$string               -
+                    /prompt="Container file"
+        qualifier   write/id=703
+
+    verb dismount/id=710
+
+        parameter   device/id=711               -
+                    /type=$name                 -
+                    /prompt="Device"
+
 end

@@ -253,6 +253,80 @@ func TestParse_testRestOfLine(t *testing.T) {
 	}
 }
 
+// TestParse_mount regresses Phase 22's MOUNT grammar addition: a bare
+// MOUNT with DEVICE and FILE parameters and no /WRITE parses cleanly, with
+// WRITE reported absent (not negated -- an unspecified switch qualifier is
+// neither present nor negated, distinct from an explicit /NOWRITE).
+func TestParse_mount(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	r, err := g.Parse("MOUNT DUA0 disk1.dsk")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	if r.Active != "MOUNT" {
+		t.Errorf("Active=%s, want MOUNT", r.Active)
+	}
+
+	if got := r.String("DEVICE"); got != "DUA0" {
+		t.Errorf("DEVICE=%q, want DUA0", got)
+	}
+
+	// The line gets upcased outside quotes (matching every other DCL
+	// command), so an unquoted file name comes back upcased too.
+	if got := r.String("FILE"); got != "DISK1.DSK" {
+		t.Errorf("FILE=%q, want DISK1.DSK", got)
+	}
+
+	if r.Present("WRITE") {
+		t.Error("expected WRITE absent when not specified")
+	}
+}
+
+// TestParse_mountNowrite regresses the automatic "NO"-prefix negation
+// (match.go's matchQualifier) applied to MOUNT's WRITE switch -- the
+// grammar only declares one qualifier (WRITE); /NOWRITE reaches it as a
+// negated match rather than needing a second, separately declared
+// qualifier.
+func TestParse_mountNowrite(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	r, err := g.Parse("MOUNT/NOWRITE DUA0 disk1.dsk")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	if !r.Present("WRITE") || !r.Negated("WRITE") {
+		t.Errorf("expected WRITE present+negated, got present=%v negated=%v", r.Present("WRITE"), r.Negated("WRITE"))
+	}
+}
+
+func TestParse_dismount(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	r, err := g.Parse("DISMOUNT DUA0")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	if r.Active != "DISMOUNT" {
+		t.Errorf("Active=%s, want DISMOUNT", r.Active)
+	}
+
+	if got := r.String("DEVICE"); got != "DUA0" {
+		t.Errorf("DEVICE=%q, want DUA0", got)
+	}
+}
+
+func TestParse_mountMissingFile(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	if _, err := g.Parse("MOUNT DUA0"); err == nil {
+		t.Error("expected error for missing required FILE parameter")
+	}
+}
+
 func TestParse_quotedStringPreservesCase(t *testing.T) {
 	g := loadEvaxGrammar(t)
 

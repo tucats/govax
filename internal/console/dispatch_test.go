@@ -11,6 +11,15 @@ import (
 	"github.com/tucats/govax/internal/vax"
 )
 
+// evaxGrammarPathForConsole locates internal/bootdata/files/evax.dcl, the
+// grammar govax actually parses at runtime (cmd/govax's own resolver, Phase
+// 15's embedded-fallback mechanism) -- not testdata/dcl/evax.dcl, a pure,
+// untouched `git archive` import from the upstream C repo that has diverged
+// from the bootdata copy since Phase 22 added MOUNT/DISMOUNT (see
+// docs/PHASE-22.md's "Grammar file" design decision). Dispatch tests exist
+// to exercise the same grammar/handler wiring cmd/govax uses, so they track
+// the bootdata copy exactly like internal/console/dcl's own grammar-parser
+// tests do.
 func evaxGrammarPathForConsole(t *testing.T) string {
 	t.Helper()
 
@@ -19,7 +28,7 @@ func evaxGrammarPathForConsole(t *testing.T) string {
 		t.Fatal("runtime.Caller failed")
 	}
 
-	return filepath.Join(filepath.Dir(file), "..", "..", "testdata", "dcl", "evax.dcl")
+	return filepath.Join(filepath.Dir(file), "..", "bootdata", "files", "evax.dcl")
 }
 
 func loadEvaxGrammar(t *testing.T) *dcl.Grammar {
