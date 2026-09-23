@@ -139,6 +139,19 @@ const (
 const (
 	facPut = 0x01 // FAB$V_PUT (bit 0): write access — every SYS$CREATE implies this.
 	facGet = 0x02 // FAB$V_GET (bit 1): read access — what SYS$OPEN normally asks for.
+
+	// facUpd is FAB$V_UPD (bit 3): update access — a calling program asks
+	// for this on SYS$OPEN when it wants to read AND rewrite an existing
+	// file's records in place, as opposed to plain facPut (open for
+	// writing new content). This package's SYS$OPEN (open.go) doesn't
+	// distinguish "update in place" from "write" any more finely than
+	// that: both simply arm the underlying ods2 volume.File for writing
+	// (volume.File.OpenForWrite) via the same openOnVolume helper
+	// SYS$CREATE's own createOnVolume mirrors — genuine record-level
+	// update-in-place semantics would matter for indexed/relative file
+	// organizations, neither of which this phase implements (fab.go's own
+	// orgSeq-only scope).
+	facUpd = 0x08
 )
 
 // FAB$C_ORG values (file organizations). orgSeq is the only one this

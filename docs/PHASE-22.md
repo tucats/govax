@@ -366,7 +366,7 @@ This local convenience doesn't feed the committed test suite.
 8. **Done.** `internal/rms`: `SYS$CLOSE` — `rms.Writer.Close`/`volume.File.Close`
    (writer case) or a plain `volume.File` release (reader case); release the IFI
    slot.
-9. `internal/rms`: `SYS$OPEN` — `filespec.Parse` + `Directory.Lookup`/
+9. **Done.** `internal/rms`: `SYS$OPEN` — `filespec.Parse` + `Directory.Lookup`/
    `vol.OpenFID`, honoring `FAB$B_FAC` (GET vs. PUT vs. UPD) to decide whether to
    arm the file for writing (`File.OpenForWrite`) or just read.
 10. `internal/rms`: `SYS$GET` — `rms.NewReader`/`.Next` per record, copying the
@@ -812,3 +812,63 @@ This local convenience doesn't feed the committed test suite.
 - No bugs found in the sibling `ods2` module while implementing this
   subtask.
 - `go build ./...`, `go vet ./...`, `go test ./...` all clean.
+
+### 2026-09-23 — Subtask 9 complete
+
+- Added `internal/rms/open.go` (`SysOpen`, the SYS$OPEN handler): mirrors
+  `SysCreate` (create.go) for the shared parts — console handling, logical-
+  name translation, `filespec.Parse`, and the FAB$W_IFI handback — but
+  resolves an *already-existing* file rather than making a new one:
+  `filespec.ResolveDirectory` + `Directory.Lookup` (by name and, if given,
+  an explicit version number) find the file's directory entry, and
+  `volume.Volume.OpenFID` opens it. The one genuinely new piece of logic is
+  honoring `FAB$B_FAC`'s `PUT`/`UPD` bits (a new `facUpd` constant added to
+  `fab.go`, real `FAB$V_UPD` bit 3 — confirmed against
+  `reference/eVAX/eVAX/Headers/fab.h`'s own `fab_r_fac_bits` layout, which
+  also confirmed `facPut`/`facGet`'s existing bit assignments from subtask
+  5 were already correct) to decide whether the found file also needs
+  `volume.File.OpenForWrite` — without that, a later SYS$CONNECT's
+  `armForFAC` (connect.go) can still construct a Writer, but the first
+  SYS$PUT that tried to extend the file would fail deep inside `ods2` (see
+  `ods2`'s own `writefile.go` `OpenForWrite` doc comment). Unlike
+  SYS$CREATE, a read-only FAC (`FAB$V_GET` alone) is allowed even on a
+  device mounted read-only — only actually asking to write is checked
+  against `MountTable.Writable` — matching real RMS.
+- Added `rmsInvalidVersion` (`RMS$_VER`, value 100092) to `status.go`,
+  transcribed from the same gitignored real-VMS `rmsdef.h` subtask 4 used
+  for every other status value in this package. `SysOpen`'s own version
+  handling (`parseOpenVersion`) deliberately supports only "no version" /
+  literal "0" (meaning the highest existing version, matching
+  `volume.Directory.Lookup`'s own convention) and an explicit positive
+  version number — real VMS's fuller `;*`/`;-N` wildcard/relative syntax is
+  what `ods2/filespec.Glob`'s own version-selector machinery already
+  implements for wildcard-listing use cases (a future `DIRECTORY` command,
+  say), not something a single-file SYS$OPEN needs to reimplement; anything
+  else is reported as `RMS$_VER` rather than silently guessed at.
+- Test coverage (`open_test.go`): the console path; a real disk-file OPEN
+  for read, verified end-to-end by then doing the SYS$CONNECT/read a real
+  VAX program would do next and confirming the record read back matches
+  what a `SysCreate`/`SysConnect`/`SysPut`/`SysClose` sequence had written
+  earlier in the same test (a new `createAndCloseTestFile` helper — the
+  first test in this package able to build its fixture files entirely
+  through this package's own already-tested services now that SYS$CLOSE
+  exists, rather than reaching into `ods2`'s own volume API directly the
+  way `TestSysConnect_readArming`/`TestSysPut_noWriteAccess` still do); a
+  real disk-file OPEN for write, verified by a following SYS$CONNECT
+  actually producing a usable Writer; an explicit version number resolving
+  correctly; an unsupported version wildcard (`RMS$_VER`); a device with
+  nothing mounted (`RMS$_DNR`); a read-only-mounted device with a FAB
+  asking to write (`RMS$_PRV`, `FAB$W_IFI` confirmed untouched) versus the
+  same mount asked only to read (succeeds, and the record reads back
+  correctly — a new `newReadOnlyFixtureWithFile` helper, since populating a
+  volume with a real file and *then* mounting it read-only needs a
+  separate writable mount to seed it first, `MountTable` having no
+  "create, then mount read-only" convenience of its own); a FAB asking for
+  none of GET/PUT/UPD (`RMS$_PRV`); a device-only spec with no file name at
+  all, a spec naming a nonexistent file, and a spec naming a nonexistent
+  subdirectory (all three `RMS$_FNF`); and logical-name translation
+  reaching the console path indirectly through a made-up logical.
+- No bugs found in the sibling `ods2` module while implementing this
+  subtask.
+- `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`) all
+  clean.

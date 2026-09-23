@@ -118,6 +118,17 @@ const (
 	// named a record format SYS$CREATE doesn't recognize.
 	rmsInvalidRFM = 99940
 
+	// rmsInvalidVersion is RMS$_VER: a file specification's version field
+	// (the text after ';' — filespec.Spec's own Version) named something
+	// SYS$OPEN (open.go) doesn't know how to resolve to a single file —
+	// this phase only supports an explicit positive version number, or no
+	// version at all (meaning "the highest existing version", matching
+	// ods2's own volume.Directory.Lookup convention for a 0 argument).
+	// Real VMS's fuller version syntax (";*" for every version, ";-1" for
+	// "N versions back from the highest") is a filespec.Glob-level wildcard
+	// concern this phase's plain-file SYS$OPEN doesn't need.
+	rmsInvalidVersion = 100092
+
 	// rmsRecordTooBig is RMS$_RSZ: a SYS$PUT record was longer than the
 	// file's own declared maximum record size (fab.go's fabMRS), or a
 	// SYS$GET record was longer than the caller's supplied buffer.
