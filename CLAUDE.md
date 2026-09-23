@@ -59,6 +59,15 @@ expect adjustment as phases land):
 - `internal/io` — device abstraction, logical names (Phase 09).
 - `internal/rtl` — VMS RTL/system-service simulation (Phase 10).
 - `internal/asm` — assembler/disassembler (Phase 11).
+- `internal/rms` — RMS (`SYS$CREATE`/`CONNECT`/`OPEN`/`CLOSE`/`GET`/`PUT`) file
+  I/O backed by the sibling Go module `github.com/tucats/ods2`'s real ODS-2
+  volume/file implementation, plus the `MOUNT`/`DISMOUNT`-facing `MountTable`
+  (Phase 22). The sole place in this project allowed to import `ods2`; owns its
+  own IFI (open-file) table separately from `internal/rtl`'s state, since it
+  tracks real `ods2` handles Phase 10's RTL layer never needed. Requires a
+  `go.work` file at the repo root (`use .` / `use ../ods2`, gitignored — see
+  `docs/PHASE-22.md`'s "Dependency: `go.work`, not a `replace` directive") to
+  build at all, since `ods2` isn't a `go.mod` dependency.
 - `cmd/govax` — `main.go` (CLI entry point) plus `grammar.go` (the `tucats/gopackages`
   `app-cli/cli` option/subcommand grammar — `stats`/`path`/`instruction-limit`/
   `time-limit` options, `console`/`asm`/`run` subcommands). Briefly moved to the repo

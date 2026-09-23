@@ -27,6 +27,37 @@ but not perfect. When a suspected ISA/behavior mismatch is found while porting:
 Entries get resolved (fixed or deliberately kept, with rationale) during Phase 12
 (`PHASE-12.md`) or whenever the relevant subsystem gets a dedicated debugging pass.
 
+## Phase 22 (RMS / `ods2`) findings
+
+Phase 22 (`PHASE-22.md`) has no `reference/eVAX` counterpart at all — its own
+correctness reference is the real VMS RMS manual (`rms_manual.pdf`) and the
+sibling `github.com/tucats/ods2` module's actual on-disk/record-format
+behavior, not the C source. The entries below are that phase's own findings
+in this same spirit (a real-RMS-vs-actual-implementation gap worth recording
+rather than silently guessing at), kept in this file per that phase's own
+"Bug-fixing policy"-style direction rather than starting a second log.
+
+### [Phase 22] `FAB$C_UDF` (undefined record format, `FAB$B_RFM` = 0) is rejected outright instead of resolved to a default
+
+- **Where**: `internal/rms/create.go`'s `createOnVolume` (`SYS$CREATE`'s
+  real-volume path): `format := ondisk.RecordFormat(rfm); if format <
+  ondisk.RecordFormatFixed || format > ondisk.RecordFormatStreamCR { return
+  0, rmsInvalidRFM, nil }` — `ondisk.RecordFormatUndefined` (`FAB$C_UDF`,
+  the real VMS value `0`) falls outside that range and is reported as
+  `RMS$_RFM`, a hard failure.
+- **What**: real RMS lets a calling program leave `FAB$B_RFM` unset (`0`,
+  `FAB$C_UDF`) and picks a sensible default record format on its behalf
+  (`rms_manual.pdf`'s own `$CREATE`/FAB description) rather than rejecting
+  the call outright. This phase's own acceptance-test program and every
+  unit-test fixture built so far always sets `FAB$B_RFM` explicitly (per
+  `docs/PHASE-22.md` subtask 5's own progress-log note), so there's no
+  concrete calling program yet to motivate *which* default `ods2` should
+  pick (Fixed? Stream? something derived from `FAB$B_RAT`?) — a real,
+  deliberate gap in what's implemented, not a bug in what is.
+- **Status**: open, deferred. Left rejecting `FAB$C_UDF` with `RMS$_RFM`
+  until a real calling program that relies on the default-format behavior
+  shows up to motivate the right default, rather than guessing one now.
+
 ## Open findings
 
 _None yet._

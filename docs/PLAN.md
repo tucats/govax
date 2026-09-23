@@ -172,4 +172,12 @@ is the real VMS RMS manual and `fab.h`/`rab.h`'s `$FABDEF`/`$RABDEF` layouts, pl
 PHASE-22.md, including its own design note on why
 `internal/bootdata/files/evax.dcl` — not `testdata/dcl/evax.dcl` — is the grammar
 file `MOUNT`/`DISMOUNT` get added to. `INITIALIZE` and broader `ods2`-CLI command
-parity are deliberately deferred to a later phase.
+parity are deliberately deferred to a later phase. This first slice is complete:
+a real, hand-written MACRO-32 program, assembled and executed for real, drives
+`CREATE`->`CONNECT`->`PUT`->`CLOSE`->`OPEN`->`CONNECT`->`GET`->`CLOSE` against a
+mounted device end to end (the first RMS test in the project to go through
+genuinely fetched/executed `CALLS`/`XFC` dispatch rather than calling
+`internal/rms` directly from Go — which surfaced and fixed a real, previously
+unexercised address-arithmetic bug in `internal/cpu`'s `XFC$P1VECTOR` handler),
+and an opt-in interop test confirms real read/write fidelity against a genuine
+`simh`-produced VAX/VMS system disk. See PHASE-22.md's progress log for both.

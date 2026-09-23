@@ -31,7 +31,11 @@ straight port of one `reference/eVAX` source file — see "Why this phase looks
 different" below — and is expected to grow further sub-phases (`INITIALIZE`, more
 RMS services, indexed/relative file organizations) once this first slice lands.
 
-**Status: planning.**
+**Status: first slice (`MOUNT`/`DISMOUNT` plus the six RMS services) complete,
+including an end-to-end acceptance test and an opt-in `simh`-interop check —
+see the Progress Log. `INITIALIZE` and further RMS/file-organization work
+remain future sub-phases, per "`INITIALIZE` is deferred to a later phase"
+above.**
 
 ## Why this phase looks different from most others
 
@@ -392,7 +396,7 @@ This local convenience doesn't feed the committed test suite.
     list the MFD, read back at least one real file; `empty.dsk` copied to a
     scratch file for a write-then-reread round trip. Skips cleanly when either
     file is absent.
-16. Docs: this file's progress log; `docs/PLAN.md` phase-table row + narrative
+16. **Done.** Docs: this file's progress log; `docs/PLAN.md` phase-table row + narrative
     paragraph; `CLAUDE.md` package-layout list gains `internal/rms`;
     `docs/DEVIATIONS.md` entries for anything ambiguous found comparing
     `rms_manual.pdf` against `ods2`'s actual record-format behavior along the
@@ -1361,3 +1365,48 @@ This local convenience doesn't feed the committed test suite.
 - `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`)
   all clean, both with the real fixture files present (both interop tests
   run and pass) and with them temporarily absent (both skip cleanly).
+
+### 2026-09-23 — Subtask 16 complete
+
+- This file: added this progress-log entry and the two preceding subtask
+  entries (14, 15); marked subtasks 14-16 **Done** in the "Subtasks" list;
+  updated the top-of-file **Status** line from "planning" to reflect that
+  this first slice — `MOUNT`/`DISMOUNT` plus all six RMS services, an
+  end-to-end acceptance test through real assembled/executed `CALLS`/`XFC`
+  dispatch, and an opt-in `simh`-interop check — is complete, while
+  `INITIALIZE`/further RMS work remain explicitly deferred future
+  sub-phases (unchanged from this doc's own original "Deferred" design
+  decision).
+- `docs/PLAN.md`: the Phase 22 phase-table row already existed from this
+  phase's initial planning (unchanged); extended its narrative paragraph
+  with a closing note on this first slice's completion, naming the
+  acceptance test's real `CALLS`/`XFC`-dispatch milestone (and the
+  `internal/cpu` bug it surfaced and fixed along the way) and the `simh`
+  interop check.
+- `CLAUDE.md`: added an `internal/rms` bullet to the package-layout list
+  (previously missing entirely, unlike every other package with a landed
+  phase), describing its role, that it's the sole package allowed to
+  import the sibling `ods2` module, and the `go.work`-based build
+  dependency `docs/PHASE-22.md`'s own "Dependency" design decision
+  documents.
+- `docs/DEVIATIONS.md`: added a new "Phase 22 (RMS / `ods2`)" section
+  (distinct from this file's main C-reference-vs-ISA log, since Phase 22
+  has no `reference/eVAX` counterpart at all — explained in the new
+  section's own header) with the one genuine real-RMS-vs-`ods2`-behavior
+  gap found across this phase's own progress log: `FAB$C_UDF` (undefined
+  record format) is rejected with `RMS$_RFM` outright
+  (`internal/rms/create.go`'s `createOnVolume`) rather than resolved to a
+  default the way real RMS does, first noted (but not logged here yet) in
+  subtask 5's own progress-log entry. Left open/deferred, matching that
+  entry's own reasoning: no concrete calling program exists yet to
+  motivate which default would be correct. No other ambiguous
+  `rms_manual.pdf`-vs-`ods2` findings turned up on review of the full
+  progress log — every other RMS-manual-facing decision this phase made
+  (status-code values, FAB/RAB offsets, the `TTA0:` console special case)
+  was resolved against an authoritative source (the real `rmsdef.h`/
+  `starlet.req` extracts, `fab.h`/`rab.h`) rather than left ambiguous.
+- No bugs found in the sibling `ods2` module while implementing this
+  subtask (a docs-only subtask).
+- `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`)
+  all clean — unchanged by this subtask's docs-only edits, re-run to
+  confirm nothing was accidentally left broken.
