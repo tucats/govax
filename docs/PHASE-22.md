@@ -349,10 +349,11 @@ This local convenience doesn't feed the committed test suite.
    `serviceSysConnect`/`serviceSysPut`, `allocIFI`/`ifiWriter`/
    `storeRMSStatus`/`openRMSFile`, and the `fab*`/`rab*` offset consts all go;
    confirm nothing else in `internal/rtl` referenced them.
-4. `internal/rms`: mount table (`mount.go`), FAB/RAB offset tables (`fab.go`/
-   `rab.go`, seeded from the deleted file's consts plus the new fields, verified
-   against `fab.h`/`rab.h`), status-code table (`status.go`, verified against
-   `rms_manual.pdf`), IFI table (generalized read/write handle).
+4. **Done.** `internal/rms`: mount table (`mount.go`), FAB/RAB offset tables
+   (`fab.go`/`rab.go`, seeded from the deleted file's consts plus the new
+   fields, verified against a real VMS system's `$FABDEF`/`$RABDEF`), status-
+   code table (`status.go`, verified against a real VMS system's `rmsdef.h`),
+   IFI table (generalized read/write handle, `ifi.go`).
 5. `internal/rms`: `SYS$CREATE` — resolve device/directory/name via `filespec`;
    a `DeviceClassTT` target (`TTA0:`) writes to the console as before; a mounted
    disk device does `volume.CreateFile` with an `ondisk.RecAttr` built from the
@@ -399,14 +400,22 @@ This local convenience doesn't feed the committed test suite.
 
 ## Open questions
 
-- Exact real `RMS$_` symbol values needed this phase (`NORMAL`, `EOF`, `FNF`,
-  and whatever `SYS$OPEN`/`SYS$GET`/`SYS$PUT` error paths turn out to need) —
-  to be pulled from `rms_manual.pdf` during implementation of
-  `internal/rms/status.go`, not guessed at here.
-- Whether the FAB/RAB offsets beyond `internal/rtl/rms.go`'s existing set
-  (`ORG`/`RFM`/`RAT`/`MRS`, `RAB`'s `UBF`/`USZ`/`RSZ`) need any further fields
-  once `SYS$OPEN`/`SYS$GET` are actually implemented — verify against `fab.h`/
-  `rab.h` directly when writing `internal/rms/fab.go`/`rab.go`, not decided here.
+- ~~Exact real `RMS$_` symbol values needed this phase~~ **Resolved (subtask
+  4)**: `rms_manual.pdf` turned out to have no numeric `$RMSDEF` table at all
+  (just symbol names/prose), and neither did the `vmssrc_archive` v7.3 source
+  tree the user separately made available. The user then extracted `rmsdef.h`
+  (a real VMS system's own compiled `$RMSDEF` C header) directly from a live
+  VMS system and placed it at the repo root (gitignored, never committed —
+  see `.gitignore`); `internal/rms/status.go`'s values are transcribed
+  straight from it.
+- ~~Whether the FAB/RAB offsets beyond `internal/rtl/rms.go`'s existing set...
+  need any further fields~~ **Resolved (subtask 4)**: the needed new fields
+  (`FAB$B_ORG`/`FAB$B_RAT`/`FAB$B_RFM`/`FAB$W_MRS`, `RAB$L_UBF`/`RAB$W_USZ`)
+  are exactly what docs/PHASE-22.md's "Design decisions" already anticipated,
+  no more. All offsets — old and new — were confirmed against a real VMS
+  system's own `starlet.req` (BLISS field definitions; also gitignored, never
+  committed), which caught one real bug in the now-deleted Phase 10 code's
+  own offset table: see `internal/rms/fab.go`'s `fabFNS` doc comment.
 - Committed-fixture vs. generated-on-the-fly test containers (leaning generated;
   see "Design decisions") — not locked in until the end-to-end test is actually
   written.
@@ -584,3 +593,61 @@ This local convenience doesn't feed the committed test suite.
   constants (unlike unused imports/locals) aren't a Go compiler error.
 - `go build ./...`, `go vet ./...`, `go test ./...` all clean (no flaky
   failures this run, unlike subtask 2's log entry).
+
+### 2026-09-22 — Subtask 4 complete
+
+- Spent most of this subtask nailing down the exact FAB/RAB byte offsets and
+  real `RMS$_` status values, since neither of this phase doc's own named
+  sources (`rms_manual.pdf`, `fab.h`/`rab.h`) turned out sufficient on their
+  own — see the two "Open questions" entries above (now resolved) for the
+  full story. Short version: `rms_manual.pdf`'s "Field Offset" table columns
+  turned out to be symbol names, not numbers, for both FAB and RAB; and
+  `reference/eVAX/eVAX/Headers/fab.h`'s literal C struct layout has an extra
+  `fab_l_jnl_overlay` union that, taken completely literally with natural
+  alignment, is internally inconsistent with that same header's own declared
+  `FAB_K_BLN = 80` — per the user's explicit direction ("if you find
+  discrepancies between the reference eVAX implementation [and] the RMS
+  documentation, that almost certainly just means it was a bug in the C
+  code"), this was treated as a C-reference bug, not reproduced. Resolved
+  two ways: (1) hand-walking `fab.h`/`rab.h`'s struct declarations
+  field-by-field with natural alignment, confirming the running total lands
+  exactly on `FAB_K_BLN`/`RAB_K_BLN` (80/68); (2) the user separately
+  supplied two real artifacts extracted from a live VAX/VMS 7.3 system —
+  `starlet.req` (BLISS field definitions, gitignored) and `rmsdef.h` (the
+  compiled `$RMSDEF` C header, gitignored) — which gave literal, authoritative
+  byte offsets and status-code values directly. All three sources agree on
+  every FAB/RAB offset. Along the way this caught a real bug in the
+  now-deleted Phase 10 stopgap: its `fabFNS` offset (48) was wrong by exactly
+  the width of the `FAB$L_DNA` field it missed; the real offset is 52 (see
+  `internal/rms/fab.go`'s own doc comment).
+- Added `internal/rms` (`go.mod`/`go.work` wiring from subtask 1 already
+  covered this): `doc.go` (package overview), `fab.go`/`rab.go` (FAB/RAB
+  offset and access-mode constants), `status.go` (real `RMS$_` completion
+  codes), `mount.go` (`MountTable`: `Mount`/`Dismount`/`Lookup`/`Writable`,
+  keyed by normalized VMS device name, opening containers via `ods2`'s
+  `diskimage.Open`/`OpenWritable` and `volume.Mount`), and `ifi.go`
+  (`FileTable`/`FileHandle`: the generalized IFI table replacing Phase 10's
+  `io.Writer`-only version — a handle is either the console pseudo-device or
+  a real `*volume.File` with an `ods2/rms.Reader` or `.Writer` armed once
+  connected).
+- `FileTable.Alloc` deliberately rescans from the lowest reserved-slot-free
+  IFI on every call rather than keeping a monotonically increasing cursor
+  (see its own doc comment) — a simplicity-over-micro-optimization choice,
+  and it means a `Release`d IFI is available for reuse immediately, unlike
+  the old code (which never implemented `Close`/`Release` at all).
+- Test coverage: `mount_test.go` (mount/lookup/writable/dismount, including
+  the "already mounted"/"not mounted"/missing-container-file error paths,
+  using `ods2`'s own `diskimage.Create`+`volume.Initialize` to build
+  throwaway fixtures — no binary blob under `testdata/`), `ifi_test.go`
+  (console seeding, reserved-slot skipping, alloc uniqueness, release-and-
+  reuse), `fab_test.go`/`rab_test.go` (structural: every offset fits inside
+  its block and none overlap another field), `status_test.go` (every status
+  value distinct/positive, plus a dedicated check that `rmsNormal`'s low 3
+  bits really do encode `STS$K_SUCCESS` — the one bit a real VAX program's
+  own `BLBC`-style success check actually branches on).
+- No handler files yet (`create.go`/`connect.go`/`open.go`/`close.go`/
+  `get.go`/`put.go` are subtasks 5-10) — `internal/rms` doesn't register
+  anything into `internal/rtl`'s `ServiceTable` yet, so `go build`/`go vet`/
+  `go test ./...` are clean but nothing in this new package is reachable
+  from a running VAX program yet.
+- `go build ./...`, `go vet ./...`, `go test ./...` all clean.

@@ -35,6 +35,13 @@ go.work.sum
 /testdata/disks/*
 !/testdata/disks/README.md
 
+# Real VMS 7.3 STARLET.REQ (BLISS symbol definitions) and rmsdef.h (C header),
+# both extracted from a live VMS system, used as a one-time reference for
+# exact $FABDEF/$RABDEF/$RMSDEF values while implementing Phase 22
+# (docs/PHASE-22.md) — never to be committed.
+/starlet.req
+/rmsdef.h
+
 # Editor/IDE
 # .idea/
 # .vscode/
