@@ -387,7 +387,7 @@ This local convenience doesn't feed the committed test suite.
     general `$FABDEF`/`$RABDEF` `.INCLUDE` macro-expansion facility (out of
     scope this phase — no such `.asm` fixture exists yet; building one is
     plausible future `internal/asm` work, not needed for this acceptance test).
-15. Opt-in `simh`-container interop test (`testdata/disks/`, gitignored —
+15. **Done.** Opt-in `simh`-container interop test (`testdata/disks/`, gitignored —
     "Container format fidelity" above): `rq0-ra92.dsk` mounted read-only,
     list the MFD, read back at least one real file; `empty.dsk` copied to a
     scratch file for a write-then-reread round trip. Skips cleanly when either
@@ -1308,3 +1308,56 @@ This local convenience doesn't feed the committed test suite.
   subtask.
 - `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`,
   three consecutive runs) all clean.
+
+### 2026-09-23 — Subtask 15 complete
+
+- Added `internal/rms/simh_interop_test.go`, this phase's opt-in
+  `simh`-container interop test, gated entirely on the two gitignored
+  files `testdata/disks/rq0-ra92.dsk`/`empty.dsk` actually being present
+  (`skipUnlessDiskPresent`, `os.Stat` + `t.Skip` per file — verified both
+  ways: ran clean against the real files on this dev machine, and, with
+  both files temporarily moved aside, confirmed both tests report `SKIP`
+  rather than fail or error).
+- `TestSimhInterop_readRealVMSDisk` mounts `rq0-ra92.dsk` **read-only**
+  (`diskimage.Open`, not `OpenWritable`) and goes straight through `ods2`'s
+  own `volume`/`ondisk` API rather than through this package's own
+  `SYS$OPEN`/`SYS$GET` handlers — matching the subtask's own wording ("or
+  the underlying `ods2` calls directly in an `internal/rms` test"), since
+  the whole point is discovering real file/directory names from a volume
+  this project had no part in creating, not asserting against a name
+  already known ahead of time the way every other fixture in this package
+  does. It opens the MFD via the well-known, fixed
+  `ondisk.MasterFileDirectoryFid`, lists it, descends into the first
+  non-empty `*.DIR` entry found and lists that too, then finds the first
+  non-directory entry with `RecordAttributes.HighestBlock != 0` (skipping
+  empty files) and reads its first record via `odsrms.NewReader` — the
+  same reader type `connect.go`'s `armForFAC` uses for real `SYS$GET`
+  dispatch, so this exercises real production read logic. Run against the
+  real fixture on this dev machine: 13 MFD entries, descended into
+  `000000.DIR` (also 13 entries), successfully read a 512-byte record from
+  `BADBLK.SYS` — genuine confirmation this port's ODS-2 support can read a
+  volume real VMS software wrote, not just one it wrote itself.
+- `TestSimhInterop_writeThenRereadEmptyDsk` copies `empty.dsk` to a
+  `t.TempDir()` scratch file (`copyFile`, plain `io.Copy` — the checked-in
+  fixture is never opened for writing), mounts it read/write under one
+  `MountTable`/`Context`, and exercises this package's own real
+  `SysCreate`/`SysConnect`/`SysPut`/`SysClose` handlers
+  (`createAndCloseTestFile`, already shared with `open_test.go`'s
+  fixtures) to write one 80-byte fixed-format record — proving the write
+  half goes through production RMS code, not a direct `ods2.CreateFile`
+  shortcut the way `open_test.go`'s own `newReadOnlyFixtureWithFile` seeds
+  its fixtures. It then dismounts, mounts the *same* scratch file
+  read-only under a completely separate, freshly built `MountTable`/
+  `Context` (nothing shared with the write half except the on-disk bytes
+  themselves — matching a real operator's own write-then-remount-readonly
+  workflow), and confirms `SysOpen`/`SysConnect`/`SysGet` reads the record
+  back correctly. Caught one arithmetic slip while writing this test
+  (`bytes.Repeat([]byte("interop"), 11)` is only 77 bytes, one repeat
+  short of the 80 bytes `newFAB`'s fixed record format requires — a
+  `slice bounds out of range` panic on the trailing `[:80]`), fixed by
+  repeating 12 times instead.
+- No bugs found in the sibling `ods2` module while implementing this
+  subtask.
+- `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`)
+  all clean, both with the real fixture files present (both interop tests
+  run and pass) and with them temporarily absent (both skip cleanly).
