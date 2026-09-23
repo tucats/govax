@@ -74,6 +74,7 @@ questions, and a progress log extended as that phase is worked.
 | 21 | [PHASE-21.md](PHASE-21.md) | Translation buffer / sequential translation cache |
 | 22 | [PHASE-22.md](PHASE-22.md) | RMS system services backed by `github.com/tucats/ods2` |
 | 23 | [PHASE-23.md](PHASE-23.md) | Console commands to support using Files-11 containers |
+| 24 | [PHASE-24.md](PHASE-24.md) | `.RMSDEF`/`.FAB`/`.RAB` assembler pseudo-ops |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
