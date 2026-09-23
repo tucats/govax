@@ -1,7 +1,7 @@
 //
 //  Copyright � 1997 Forest Edge Software, All Rights Reserved
 //
-//  Program:    VAX Emulator, a "Virtual VAX" for Mac OS Computers
+//  Program:    govax, a "Virtual VAX" written in Go
 //
 //  Author:     Tom Cole
 //
@@ -24,8 +24,9 @@
 //              02/20/02    Added SET FAULT
 //              09/23/26    Added MOUNT, DISMOUNT (govax internal/rms,
 //                          Phase 22 -- see docs/PHASE-22.md)
+//              09/23/26    Revised this help to remove legacy references
 
-This is the help documentation for the VAX emulator.  Topic sections are
+This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
 command as were parsed, separated by commas.  Note that if the token is 
 less than four characters long, it must be blank padded.  For example, 
@@ -138,7 +139,7 @@ $SH  ,INST,/UNI
 $SH  ,UNIM,INST
     The SHOW INSTRUCTIONS/UNIMPLEMENTED command displays a table of the
     VAX instructions that are *not* currently implemented in the current
-    version of eVAX.  Use of these instructions results in a reserved
+    version of govax.  Use of these instructions results in a reserved
     opcode fault.
 
     Syntax: 
@@ -378,9 +379,8 @@ $EXAM,REGI
 $INIT
 
     The INITIALIZE command (re-)initializes the virtual VAX, and specfies
-    the amount of physical RAM the machine is configured with.  Note that
-    the physical RAM must come from the heap allocaton of the emulator
-    process on the MacOS system.
+    the amount of physical RAM the machine is configured with. This storage
+    is allocated by the govax process from it's address space.
     
     Syntax:
     
@@ -623,7 +623,7 @@ $ASSE,PSEU,SHIM
     the micro-kernel to map runtime library vector points to support routines
     in the micro-kernel.  Some of these support routines are implemented in
     the micro-kernel itself, and some transfer control to native runtime code
-    in the eVAX emulator.
+    in the govax emulator.
     
     Syntax:
     
@@ -1361,14 +1361,12 @@ $SHOW,QUAN
 $SH  ,QUAN
 
     The SHOW QUANTUM command displays the execution quantum the emulator
-    guarantees before allowing the MacOS to execute other tasks.  This is
+    guarantees before allowing VAX interrupts to be processed. This is
     expressed as a number of instructions; after that many instructions
-    have been executed, the emulator yields to other tasks.  A quantum
-    of zero prevents any task yeilding except when I/O is performed to
-    the console display window. 
-    
-    The smaller the number is, the more responsive the Mac will be.  The
-    larger the number, the faster the emulator will execute VAX instructions.
+    have been executed, the processes any queued interrupts.  A quantum
+    of zero disables the quantum mechanism, and uses the realtime clock
+    instead to signal when to handle interrupts. The use of quantum is
+    largely to ensure that interrupt behavior is deterministic.
     
     Syntax:
     
@@ -1377,13 +1375,13 @@ $SH  ,QUAN
 $SET ,QUAN
 
     The SET QUANTUM command sets the execution quantum the emulator
-    guarantees before allowing the MacOS to execute other tasks.  This is
+    guarantees before allowing VAX interrupts to be processed. This is
     expressed as a number of instructions; after that many instructions
-    have been executed, the emulator yields to other tasks.
-    
-    The smaller the number is, the more responsive the Mac will be.  The
-    larger the number, the faster the emulator will execute VAX instructions.
-    
+    have been executed, the processes any queued interrupts.  A quantum
+    of zero disables the quantum mechanism, and uses the realtime clock
+    instead to signal when to handle interrupts. The use of quantum is
+    largely to ensure that interrupt behavior is deterministic.
+   
     Syntax:
     
         SET QUANTUM n
@@ -1391,9 +1389,7 @@ $SET ,QUAN
     Parameter:
     
         n       The number of instructions to be executed before the 
-                emulator will yeild control to the MacOS.  A value of
-                zero means that the emulator will never yeild control
-                except when console input or output occurs.
+                emulator will process interrupts deterministically.
 
 $SHOW,REG
 $SHOW,REGI
@@ -1525,7 +1521,7 @@ $SH  ,MEM ,STAT
     The SHOW MEMORY STATISTICS command will display information about the
     use of the native memory by the emulator.  The display shows how many 
     bytes have been allocated and freed, and which are for the emulator 
-    memory model itself.  Other consumers of memory by eVAX include
+    memory model itself.  Other consumers of memory by govax include
     buffers for console I/O, and storage used for symbol tables, etc. in 
     the assembler.
 
@@ -2471,23 +2467,22 @@ $PRIN
 $AUTH
 $ABOU
 
-    The eVAX is a project of Forest Edge Software.  The emulator is an
+    govax is a project of Forest Edge Software.  The emulator is an
     effort to emulate the behavior of a VAX 3100 class processor.
     
     For more information, write:
     
         Forest Edge Software
         112 Forest Edge Drive
-        Raleigh NC 27606-8447
+        Raleigh NC 27518
     
     or email
     
        tom.cole@forest-edge.net
 
-    eVAX is Open Source, you are free to download the source from
-    http://www.forest-edge.net/evax.html.  You can get a log of the
-    current changes to the source at http://www.forest-edge.net/changes.txt.
-    If you find bugs or want to contribute source, please contact me!  
+    govax is Open Source, you are free to download the source from
+    https://github.com/tucats/govax. IF you find bugs, please open 
+    a GitHub issue!
     
     Contributors to date include:
     
@@ -2589,7 +2584,7 @@ $XFC
     The instruction is always followed by a single immediate byte that
     contains the function operation to perform.
 
-    The eVAX emulator defines several XFC operations that can be used in
+    The govax emulator defines several XFC operations that can be used in
     assembler programs.  The operations can be identified by symbolic
     names as shown below.
 
@@ -2609,7 +2604,7 @@ $XFC
     XFC  #XFC$CONSOLE_CMD       ; 03
 
     The R0 register must point to a counted ASCII string that contains
-    a single eVAX console command.  The command is executed, and the
+    a single govax console command.  The command is executed, and the
     return code is stored back in R0, replacing it's contents.
 
     The command text *must* be in upper-case or it will not be 
