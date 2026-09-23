@@ -426,7 +426,7 @@ container was never created by anything this project wrote.
    shared `resolveVolume` helper), `Console`'s new field, `SET DEFAULT`
    (`dispatch.go`'s `cmdSet`) and `SHOW DEFAULT` (new grammar `syntax
    show_default`, bound in `bindGrammar`) wired end to end.
-4. `INITIALIZE/CONTAINER`: `internal/rms` handler
+4. **Done.** `INITIALIZE/CONTAINER`: `internal/rms` handler
    (`diskimage.Create`+`volume.Initialize`, no auto-mount) for the
    `initialize_container` syntax stubbed in subtask 1, console wrapper,
    tests.
@@ -714,3 +714,65 @@ container was never created by anything this project wrote.
   `cmd/ods2/internal/session/setshow.go` was read purely as the intended
   behavioral reference (`filespec.Parse`/`.String()` round trip), not
   modified.
+
+### 2026-09-23 — Subtask 4: `INITIALIZE/CONTAINER` handler
+
+- `internal/rms/initialize.go` (new): `InitializeContainer(path string,
+  blocks uint32, label string, clusterSize uint16) error`, a direct
+  functional match for `ods2`'s own `cmdInitialize`
+  (`diskimage.Create`+`volume.Initialize`, container closed via `defer`
+  either way, no mount performed — matching real VMS's own INITIALIZE and
+  this project's own MOUNT/INITIALIZE split per the design section).
+  `label`/`clusterSize` pass straight through to
+  `volume.InitializeOptions`; their own zero values (`""`/`0`) are already
+  `volume.Initialize`'s documented "use the default" (`NONAME`/1-block
+  clusters), so no default-filling logic was needed on this side.
+- `internal/console/initialize.go` (new): `Console.InitializeContainer`,
+  a thin wrapper mirroring `mount.go`/`default.go`'s own pattern —
+  translates any `internal/rms.InitializeContainer` failure into a new
+  `SS_BADPARAM` status (`internal/vmserrors/codes_sys.go`) rather than a
+  bare Go error.
+- New status code: `SS_BADPARAM` (real VMS `SS$_BADPARAM`, 20, confirmed
+  against `reference/eVAX/eVAX/Headers/ss_def.h`) — chosen over inventing
+  a non-real code because `ss_def.h` has no INIT-facility-specific status
+  this project could reuse (real VMS reports INITIALIZE failures through
+  a dedicated INIT facility this project doesn't model at all), and every
+  one of `INITIALIZE/CONTAINER`'s own failure modes (bad path, zero/too-
+  small block count, oversized label, ...) ultimately traces back to a
+  bad argument value — the same story `SS$_BADPARAM` tells for any other
+  system service. Kept in the SYS facility alongside `SS_DEVMOUNT`/
+  `SS_NOMOUNT`, matching the design section's "operator-console-facing
+  `SS$_` statuses, the same class MOUNT/DISMOUNT already use" framing.
+- `dispatch.go`: `bindGrammar` gained `g.Bind("INITIALIZE_CONTAINER",
+  ...)`, reading `PATH`/`SIZE`/`LABEL`/`CLUSTER` straight off the
+  `Result` (`PATH`/`SIZE` are guaranteed present by the grammar's own
+  `/prompt=`-driven requirement, unlike `INITIALIZE_VAX`'s `PAGES`; the
+  grammar's `LABEL`/`CLUSTER` don't need an explicit `Present` check
+  either, since `r.String`/`r.Int`'s own absent-value zero values already
+  match `InitializeContainer`'s own "use the default" convention) and
+  calling `Console.InitializeContainer`.
+- Removed `internal/console/dispatch_test.go`'s now-obsolete
+  `TestDispatch_initializeContainerNotYetImplemented` (subtask 1's "no
+  handler bound yet" placeholder) — real dispatch coverage now lives in
+  `internal/console/initialize_test.go`.
+- Tests: `internal/rms/initialize_test.go` (new) covers the happy path
+  (confirmed by mounting the result and reading its label back),
+  `""`-label defaulting to `NONAME`, a non-zero `clusterSize` actually
+  reaching the on-disk home block (read back via `Mount` +
+  `Volume.Devices[0].Home.ClusterSize`), confirms nothing is left mounted
+  afterward, and three failure paths (`blocks=0`, a 5-block volume too
+  small for the reserved-file layout — matching the sibling `ods2`
+  module's own `TestInitializeRejectsUndersizedVolume`'s choice of 5 —
+  and a nonexistent parent directory). `internal/console/initialize_test.go`
+  (new) covers the same happy path and two failure translations
+  (`SS_BADPARAM`) through the `Console`-level wrapper, plus DCL-dispatched
+  coverage: a full `INITIALIZE/CONTAINER "path" size label` command line
+  mounting successfully afterward, `INIT/CONTAINER` (the 4-letter
+  abbreviation) reaching the same handler, confirmation the command never
+  auto-mounts, and a bare `INITIALIZE/CONTAINER "path" size` with no
+  optional `LABEL`/`CLUSTER` dispatching successfully. Full `go build
+  ./...`, `go vet ./...`, and `go test ./...` all clean across the whole
+  module (including the peer `ods2` module, reachable via `go.work`).
+- No bugs found in the peer `ods2` module during this subtask; its own
+  `diskimage.Create`/`volume.Initialize`/`InitializeOptions` were read and
+  called exactly as documented, not modified.

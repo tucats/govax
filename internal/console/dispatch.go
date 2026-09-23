@@ -412,10 +412,7 @@ func (d *Dispatcher) bindGrammar() {
 	// the grammar (see evax.dcl's own comment on initialize_vax), so a
 	// missing page count is checked explicitly here rather than triggering
 	// a formal-requirement error with different wording -- preserving
-	// CLI_NEEDPAGES's exact original message either way. INITIALIZE_
-	// CONTAINER has no bind yet (Phase 23 subtask 4); until then,
-	// Grammar.Dispatch's own "no handler bound" error covers it, same as
-	// every other currently-unbound syntax in this file.
+	// CLI_NEEDPAGES's exact original message either way.
 	g.Bind("INITIALIZE_VAX", func(id int64, r *dcl.Result) error {
 		if !r.Present("PAGES") {
 			return vmserrors.New(vmserrors.CLI_NEEDPAGES)
@@ -427,6 +424,21 @@ func (d *Dispatcher) bindGrammar() {
 		}
 
 		return d.Console.Init(v * 512)
+	})
+
+	// Phase 23 (docs/PHASE-23.md, subtask 4): INITIALIZE/CONTAINER formats
+	// a brand-new, empty ODS-2 volume via internal/rms.InitializeContainer
+	// (Console.InitializeContainer, internal/console/initialize.go). PATH
+	// and SIZE both carry /prompt= in the grammar (evax.dcl's own
+	// initialize_container syntax), so -- unlike INITIALIZE_VAX's PAGES --
+	// Grammar.Dispatch's own prompting/required-parameter machinery already
+	// guarantees they're present by the time this closure runs; LABEL and
+	// CLUSTER are genuinely optional (r.String/r.Int's own zero values --
+	// "" and 0 -- are exactly what Console.InitializeContainer treats as
+	// "use the default" already, so no explicit r.Present check is needed
+	// for either).
+	g.Bind("INITIALIZE_CONTAINER", func(id int64, r *dcl.Result) error {
+		return d.Console.InitializeContainer(r.String("PATH"), uint32(r.Int("SIZE")), r.String("LABEL"), uint16(r.Int("CLUSTER")))
 	})
 }
 

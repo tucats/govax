@@ -372,7 +372,10 @@ func TestParse_initAbbreviatesInitialize(t *testing.T) {
 
 // TestParse_initializeContainerStub regresses the Phase 23 subtask 1 stub
 // for INITIALIZE/CONTAINER: the syntax itself parses (parameters/qualifiers
-// only, no handler bound until subtask 4).
+// only). This package's own tests only ever exercise Parse, never
+// dispatch -- the g.Bind("INITIALIZE_CONTAINER", ...) handler subtask 4
+// added lives in internal/console/dispatch.go and is regressed by that
+// package's own initialize_test.go instead.
 func TestParse_initializeContainerStub(t *testing.T) {
 	g := loadEvaxGrammar(t)
 

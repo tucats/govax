@@ -824,18 +824,6 @@ func TestDispatch_initializeBareErrors(t *testing.T) {
 	}
 }
 
-// TestDispatch_initializeContainerNotYetImplemented checks that
-// INITIALIZE/CONTAINER parses (the syntax is stubbed by subtask 1) but has
-// no handler bound yet -- its internal/rms implementation lands in Phase 23
-// subtask 4.
-func TestDispatch_initializeContainerNotYetImplemented(t *testing.T) {
-	d, _ := newTestDispatcher(t)
-
-	if err := d.Dispatch(`INITIALIZE/CONTAINER "disk1.dsk" 10000`); err == nil {
-		t.Error("expected an error for INITIALIZE/CONTAINER (no handler bound until subtask 4)")
-	}
-}
-
 func TestDispatch_emptyLineIsNoop(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	if err := d.Dispatch("   "); err != nil {
