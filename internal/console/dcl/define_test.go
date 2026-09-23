@@ -42,7 +42,7 @@ func TestLoadEvaxGrammar(t *testing.T) {
 		t.Errorf("grammar name = %q, want EVAX", g.Name)
 	}
 
-	wantVerbs := []string{"DEFINE", "ABOUT", "FORTH", "EXIT", "QUIT", "TEST", "CALL", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE", "DIRECTORY"}
+	wantVerbs := []string{"DEFINE", "ABOUT", "FORTH", "EXIT", "QUIT", "TEST", "CALL", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE", "DIRECTORY", "DELETE"}
 	for _, v := range wantVerbs {
 		if _, ok := g.entries[v]; !ok {
 			t.Errorf("missing verb %s", v)
@@ -92,11 +92,12 @@ func TestLoadEvaxGrammar(t *testing.T) {
 func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	g := loadEvaxGrammar(t)
 	// define, about, forth, exit, quit, test, call, clear, show, vminit,
-	// mount, dismount, initialize, directory (the last four are
+	// mount, dismount, initialize, directory, delete (the last five are
 	// govax-native additions -- Phase 22 for mount/dismount, Phase 23 for
-	// initialize/directory -- with no testdata/dcl/evax.dcl counterpart).
-	if len(g.verbOrder) != 14 {
-		t.Errorf("got %d verbs, want 14: %v", len(g.verbOrder), verbNames(g))
+	// initialize/directory/delete -- with no testdata/dcl/evax.dcl
+	// counterpart).
+	if len(g.verbOrder) != 15 {
+		t.Errorf("got %d verbs, want 15: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 
@@ -234,6 +235,27 @@ func TestLoadEvaxGrammar_directory(t *testing.T) {
 		if _, _, err := directory.qualifier(name); err != nil {
 			t.Errorf("DIRECTORY should have a %s qualifier: %v", name, err)
 		}
+	}
+}
+
+// TestLoadEvaxGrammar_delete regresses Phase 23 subtask 6's DELETE grammar
+// addition: a single, formally required SPEC parameter (/prompt=, since --
+// unlike DIRECTORY's SPEC -- a bare DELETE has no sensible "delete
+// everything in the current directory" default to fall back to).
+func TestLoadEvaxGrammar_delete(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	del, ok := g.entries["DELETE"]
+	if !ok {
+		t.Fatal("missing verb DELETE")
+	}
+
+	if len(del.Parameters) != 1 || del.Parameters[0].Name != "SPEC" {
+		t.Fatalf("DELETE parameters = %+v, want a single SPEC parameter", del.Parameters)
+	}
+
+	if !del.Parameters[0].required() {
+		t.Error("SPEC should be formally required (/prompt=) -- a bare DELETE has no sensible default, see docs/PHASE-23.md")
 	}
 }
 

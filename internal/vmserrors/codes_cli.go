@@ -101,6 +101,10 @@ const (
 	cliBadInteger
 	cliParamNotFound
 	cliBadFileSpec
+
+	// docs/PHASE-23.md subtask 6: DELETE's own "no version specified"
+	// argument-validation failure -- see internal/rms.VersionRequiredError.
+	cliNeedVersion
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -201,6 +205,15 @@ const (
 	CLI_BADINTEGER            = CLIFacility<<FacilityPosition | cliBadInteger<<MessagePosition | StatusError
 	CLI_PARAMNOTFOUND         = CLIFacility<<FacilityPosition | cliParamNotFound<<MessagePosition | StatusError
 	CLI_BADFILESPEC           = CLIFacility<<FacilityPosition | cliBadFileSpec<<MessagePosition | StatusError
+
+	// CLI_NEEDVERSION reports a DELETE with no specific version in its file
+	// specification (docs/PHASE-23.md subtask 6) -- real VMS has no exact
+	// equivalent status this project could reuse (the eVAX C source never
+	// implemented ODS-2 volume access at all), so this is a fresh CLI-
+	// facility argument-validation code, matching CLI_BADFILESPEC's own
+	// "console-command-argument validation" framing rather than an actual
+	// file-operation failure state.
+	CLI_NEEDVERSION = CLIFacility<<FacilityPosition | cliNeedVersion<<MessagePosition | StatusError
 )
 
 func init() {
@@ -296,4 +309,5 @@ func init() {
 	DefineMessage(CLI_BADINTEGER, CLIFacility, "BADINTEGER", "Invalid integer !Q")
 	DefineMessage(CLI_PARAMNOTFOUND, CLIFacility, "PARAMNOTFOUND", "Qualifier !Q: /parameter= target !Q not found")
 	DefineMessage(CLI_BADFILESPEC, CLIFacility, "BADFILESPEC", "Invalid file specification !Q")
+	DefineMessage(CLI_NEEDVERSION, CLIFacility, "NEEDVERSION", "!Q requires a specific version, e.g. ;3 or ;* (DELETE never defaults to a version)")
 }

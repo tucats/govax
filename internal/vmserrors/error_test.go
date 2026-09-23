@@ -21,9 +21,9 @@ func TestErrorAccvioWithArgument(t *testing.T) {
 }
 
 // TestSSMountCodesMatchRealSSDEF confirms SS_DEVMOUNT/SS_DEVNOTMOUNT/
-// SS_NOMOUNT's numeric values are exactly the real, literal SS$_DEVMOUNT/
-// SS$_DEVNOTMOUNT/SS$_NOMOUNT values from
-// reference/eVAX/eVAX/Headers/ss_def.h (108/124/10380) — unlike this
+// SS_NOMOUNT/SS_NOSUCHFILE's numeric values are exactly the real, literal
+// SS$_DEVMOUNT/SS$_DEVNOTMOUNT/SS$_NOMOUNT/SS$_NOSUCHFILE values from
+// reference/eVAX/eVAX/Headers/ss_def.h (108/124/10380/2320) — unlike this
 // package's other facilities (RMS/CLI/LIB/VAX), the SYS facility's whole
 // point is reproducing VMS's own real numbers (see codes_sys.go's own doc
 // comment), so a mismatch here would be a real fidelity bug, not just an
@@ -37,6 +37,7 @@ func TestSSMountCodesMatchRealSSDEF(t *testing.T) {
 		{"SS_DEVMOUNT", SS_DEVMOUNT, 108},
 		{"SS_DEVNOTMOUNT", SS_DEVNOTMOUNT, 124},
 		{"SS_NOMOUNT", SS_NOMOUNT, 10380},
+		{"SS_NOSUCHFILE", SS_NOSUCHFILE, 2320},
 	}
 
 	for _, tc := range cases {

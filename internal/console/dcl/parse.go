@@ -587,8 +587,17 @@ func parseDCLInteger(token string) (int64, error) {
 }
 
 // upcaseOutsideQuotes upcases every character not inside a double-quoted
-// substring, and truncates the line at an unquoted ';' — a direct port of
-// DCLupcase.
+// substring — a direct port of DCLupcase (reference/eVAX/eVAX/Source/
+// Console/dclrtl.c). A prior version of this function also truncated the
+// line at an unquoted ';', but the real DCLupcase does no such thing (it
+// only tracks quote state and upcases outside it) -- that truncation was a
+// plain porting bug, found while implementing docs/PHASE-23.md's DELETE
+// (subtask 6): unquoted ';' is exactly how an ODS-2 file version is
+// written (e.g. "FOO.TXT;1"), so it silently ate every file spec's version
+// field before Parse ever saw it. Fixed to match the real C source exactly,
+// per CLAUDE.md's bug-fixing policy (a clear, obvious logic error
+// contradicting this function's own "direct port" doc comment, not an ISA/
+// hardware fidelity question).
 func upcaseOutsideQuotes(s string) string {
 	var b strings.Builder
 
@@ -598,10 +607,6 @@ func upcaseOutsideQuotes(s string) string {
 		ch := s[i]
 		if ch == '"' {
 			inQuote = !inQuote
-		}
-
-		if !inQuote && ch == ';' {
-			break
 		}
 
 		if inQuote {

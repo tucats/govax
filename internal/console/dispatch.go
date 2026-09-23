@@ -460,6 +460,17 @@ func (d *Dispatcher) bindGrammar() {
 
 		return d.Console.Directory(r.String("SPEC"), opts)
 	})
+
+	// Phase 23 (docs/PHASE-23.md, subtask 6): DELETE reclaims a file's
+	// storage via internal/rms.Session.Delete (Console.Delete, internal/
+	// console/delete.go). SPEC carries /prompt= in the grammar (evax.dcl's
+	// own delete verb), so Grammar.Dispatch's own required-parameter
+	// machinery already guarantees it's present by the time this closure
+	// runs -- unlike DIRECTORY's SPEC, a bare DELETE has no sensible
+	// "delete everything" default to fall back to.
+	g.Bind("DELETE", func(id int64, r *dcl.Result) error {
+		return d.Console.Delete(r.String("SPEC"))
+	})
 }
 
 type fixedHandler func(d *Dispatcher, rest string) error

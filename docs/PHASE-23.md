@@ -435,9 +435,9 @@ container was never created by anything this project wrote.
    own output shape closely enough to be recognizable, not necessarily
    byte-identical), grammar, console wrapper, tests — including the opt-in
    `rq0-ra92.dsk` read-only-listing interop check.
-6. `DELETE`: required-version enforcement (matching `ods2`'s own "bare
-   `DELETE FOO.TXT` never defaults to a version" rule), grammar, console
-   wrapper, tests.
+6. **Done.** `DELETE`: required-version enforcement (matching `ods2`'s own
+   "bare `DELETE FOO.TXT` never defaults to a version" rule), grammar,
+   console wrapper, tests.
 7. `PURGE`: `/LIMIT=n` (default 1), grammar, console wrapper, tests.
 8. `TYPE`: single-match-only (no wildcards, matching `ods2`), record-format-
    aware text rendering (VFC/Fixed/Variable/Stream, reusing the same
@@ -480,8 +480,11 @@ container was never created by anything this project wrote.
   own open-file table, Phase 22, an unrelated concept).
 - `DELETE`/`PURGE`'s inherited-from-`ods2` restriction to single-device
   volumes: not expected to matter in practice, since Phase 22's `MountTable`
-  never mounts a multi-device volume set anyway, but worth a one-line
-  confirmation in subtask 6's own progress-log entry once implemented.
+  never mounts a multi-device volume set anyway. **Confirmed for `DELETE` in
+  subtask 6** (see its own progress-log entry) — not exercised by any test,
+  since nothing in this project can mount a multi-device set to begin with.
+  Still open for `PURGE` once subtask 7 implements it, though the same
+  reasoning is expected to apply unchanged.
 - Whether `DIRECTORY`'s output formatting should aim for closer visual parity
   with real VMS `DIRECTORY` (column-aligned multi-file-per-line listings)
   rather than `ods2`'s own simpler one-file-per-line style — `ods2`'s own
@@ -879,3 +882,108 @@ container was never created by anything this project wrote.
 - No bugs found in the peer `ods2` module during this subtask; its own
   `filespec.Glob`/`Volume.CreateFile`/`Directory.Insert` were read and
   called exactly as documented, not modified.
+
+### 2026-09-23 — Subtask 6: `DELETE`
+
+- `internal/rms/delete.go` (new): `Session.Delete(specText string)
+  ([]DeletedFile, error)`, a functional match for `ods2`'s own `cmdDelete`
+  (required-version check, `filespec.Glob`, group-by-directory +
+  `volume.DeleteFile` loop, deferred bitmap/index-bitmap flush so a
+  multi-match `DELETE` that fails partway through keeps whatever storage
+  it already freed) reproduced fresh rather than imported, per this
+  phase's own "behavioral reference, not code to link against" framing.
+  Two new exported error types, mirroring `NotMountedError`'s own
+  reasoning in `session.go` so the console layer can tell failures apart
+  via `errors.As` rather than error-text matching:
+  `VersionRequiredError` (a bare `FOO.TXT`, or a trailing-semicolon
+  `FOO.TXT;`, with no specific version — DELETE's own deliberate refusal
+  to default to "the newest version" the way DIRECTORY does) and
+  `NotFoundError` (the name/type/version pattern matched nothing on the
+  resolved volume).
+- `internal/console/delete.go` (new): `Console.Delete`, translating
+  `*rms.NotMountedError` to `SS_DEVNOTMOUNT` (matching `Console.
+  Directory`'s own convention), `*rms.VersionRequiredError` to a new
+  `CLI_NEEDVERSION` status, `*rms.NotFoundError` to a new `SS_NOSUCHFILE`
+  status, and everything else to `CLI_BADFILESPEC` (malformed spec, an
+  unsupported multi-device volume set, or a genuine I/O failure freeing
+  storage) — the same catch-all bucket `Console.Directory` already uses.
+  On success, prints one `%DELETE-S-DELETED, NAME.TYPE;version deleted`
+  line per file removed, matching `ods2`'s own `cmdDelete` output.
+- New status codes: `CLI_NEEDVERSION` (`internal/vmserrors/codes_cli.go`)
+  — a fresh CLI-facility argument-validation code, since real VMS has no
+  exact equivalent this project could reuse (the eVAX C source never
+  implemented ODS-2 volume access at all). `SS_NOSUCHFILE`
+  (`internal/vmserrors/codes_sys.go`) — real VMS's own `SS$_NOSUCHFILE`
+  (2320, confirmed against `reference/eVAX/eVAX/Headers/ss_def.h`), the
+  "not found" status the design section's "Status-code / error
+  translation" section earmarked for `DELETE`/`TYPE`/`COPY`; its real
+  encoded severity is *warning*, not error/severe (2320's low 3 bits are
+  0), matching real VMS's own long-standing convention that "file not
+  found" (its RMS-facility cousin `RMS$_FNF` is likewise W-severity) is a
+  normal, expected outcome rather than a hard failure.
+- `internal/bootdata/files/evax.dcl`: new govax-native `verb delete/
+  id=1100`, continuing the divergence block started at `MOUNT`/
+  `DIRECTORY` — a single, formally required `SPEC` parameter
+  (`/prompt=`, unlike `DIRECTORY`'s optional `SPEC`: there is no
+  sensible "delete everything in the current directory" default).
+  `testdata/dcl/evax.dcl`/`reference/eVAX/evax.dcl` untouched, per the
+  established convention. `DEL` (3 letters) reaches `DELETE` via
+  `Grammar.matchVerb`'s ordinary unambiguous-prefix matching — the
+  nearest other verb, `DEFINE`, diverges at the third character.
+- `dispatch.go`: `bindGrammar` gained `g.Bind("DELETE", ...)`, calling
+  `Console.Delete(r.String("SPEC"))`.
+- **Bug found and fixed in `internal/console/dcl` (not `ods2`), in scope
+  for this subtask per `CLAUDE.md`'s "clear, obvious logic error" bucket
+  — no need to log or defer it**: while wiring up `DELETE`'s own tests,
+  every unquoted file spec with a version (`FOO.TXT;1`) was silently
+  losing its `;1` before `Parse` ever saw it. Root cause:
+  `parse.go`'s `upcaseOutsideQuotes` — whose own doc comment claims it's
+  "a direct port of `DCLupcase`" (`reference/eVAX/eVAX/Source/Console/
+  dclrtl.c`) — also truncated the line at the first unquoted `;`, a
+  behavior the real `DCLupcase` does not have at all (confirmed by
+  reading it directly: it only tracks quote state and upcases outside
+  it, nothing else). Since an ODS-2 file version is written with exactly
+  that character (`NAME.TYPE;version`), this silently ate the version
+  field of every unquoted file spec passed to any DCL-dispatched command
+  — not just `DELETE`, though `DIRECTORY` (subtask 5) never happened to
+  exercise a version-bearing spec in its own tests, so the bug went
+  unnoticed until now. Fixed by removing the erroneous truncation so
+  `upcaseOutsideQuotes` matches the real C source exactly; no grammar or
+  test elsewhere in the tree depended on the old (wrong) behavior
+  (confirmed by grep for any test exercising a semicolon through
+  `Parse`/`Dispatch` before this fix — none existed). This also means
+  `COPY`/`TYPE`/`PURGE`'s own version-bearing specs (subtasks 7-10) will
+  work correctly without needing to quote them.
+- Tests: `internal/rms/delete_test.go` (new) builds its own small,
+  writable test volume pre-populated with `FOO.TXT;1`, `FOO.TXT;2`,
+  `BAR.TXT;1`, `BAR.TXT;2`, `BAZ.TXT;1` (mirroring `ods2`'s own
+  `delete_test.go` fixture shape) — covers a specific-version delete, an
+  all-versions (`;*`) delete, a wildcarded-name delete spanning multiple
+  files, both version-required rejection cases (bare and trailing-`;`),
+  both not-found cases (nonexistent name and nonexistent version),
+  storage reclamation actually reaching disk (reused for a subsequent
+  `CreateFile`, mirroring `ods2`'s own `TestCmdDeleteReclaimsStorageForReuse`),
+  and both `resolveVolume`-inherited failure modes
+  (`*NotMountedError`/a plain bad-file-spec error). `internal/console/
+  delete_test.go` (new) covers the `Console`-level wrapper's happy path
+  (including the printed confirmation line and a second delete of the
+  same file now correctly reporting `SS_NOSUCHFILE`), all four status-code
+  translations, and DCL-dispatched coverage (`DELETE`/`DEL` abbreviation,
+  a bare `DELETE` failing as a missing required parameter). `internal/
+  console/dcl/define_test.go` gained `TestLoadEvaxGrammar_delete`
+  (verb count 14→15) mirroring the existing structural checks, plus the
+  `upcaseOutsideQuotes` fix is exercised indirectly by every one of this
+  subtask's own version-bearing-file-spec dispatch tests (a dedicated
+  unit test for the function itself was judged unnecessary — the
+  behavior is already covered end to end). `internal/vmserrors/
+  error_test.go`'s `TestSSMountCodesMatchRealSSDEF` gained an
+  `SS_NOSUCHFILE`/2320 case. Full `go build ./...`, `go vet ./...`, and
+  `go test ./...` all clean across the whole module (including the peer
+  `ods2` module, reachable via `go.work`).
+- Confirmed the design section's own open question about `DELETE`/
+  `PURGE`'s inherited single-device-volume restriction: not exercised by
+  any test here (this project's `MountTable` never mounts a multi-device
+  volume set), matching the design section's own expectation.
+- No bugs found in the peer `ods2` module during this subtask; its own
+  `filespec.Glob`/`volume.DeleteFile`/`Bitmap`/`IndexBitmap` were read
+  and called exactly as documented, not modified.

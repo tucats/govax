@@ -24,6 +24,7 @@ const (
 	sysDevMount    uint32 = 13   // real SS$_DEVMOUNT's message field: 108 >> 3
 	sysDevNotMount uint32 = 15   // real SS$_DEVNOTMOUNT's message field: 124 >> 3
 	sysNoMount     uint32 = 1297 // real SS$_NOMOUNT's message field: 10380 >> 3
+	sysNoSuchFile  uint32 = 290  // real SS$_NOSUCHFILE's message field: 2320 >> 3
 )
 
 // SYS facility status codes -- SS_ prefix, matching real VMS's own SS$_
@@ -68,6 +69,19 @@ const (
 	// error while dismounting — as opposed to SS_DEVMOUNT/SS_DEVNOTMOUNT's
 	// more specific "wrong state" conditions above.
 	SS_NOMOUNT = SYSFacility<<FacilityPosition | sysNoMount<<MessagePosition | StatusSevere
+
+	// SS_NOSUCHFILE is real VMS's SS$_NOSUCHFILE (2320, per
+	// reference/eVAX/eVAX/Headers/ss_def.h): docs/PHASE-23.md's DELETE
+	// (internal/console/delete.go) reports this when a file specification's
+	// name/type/version pattern matches nothing on its resolved volume --
+	// the operator-console-facing "not found" status the design section's
+	// "Status-code / error translation" section earmarked for DELETE/TYPE/
+	// COPY. Real ss_def.h encodes this at warning severity (2320's low 3
+	// bits are 0), not error/severe -- matching real VMS's own long-standing
+	// convention that a "file not found" condition (its RMS-facility
+	// cousin, RMS$_FNF, is likewise a W-severity message) is a normal,
+	// expected outcome rather than a hard failure.
+	SS_NOSUCHFILE = SYSFacility<<FacilityPosition | sysNoSuchFile<<MessagePosition | StatusWarning
 )
 
 func init() {
@@ -77,4 +91,5 @@ func init() {
 	DefineMessage(SS_DEVMOUNT, SYSFacility, "DEVMOUNT", "Device !S already mounted")
 	DefineMessage(SS_DEVNOTMOUNT, SYSFacility, "DEVNOTMOUNT", "Device !S not mounted")
 	DefineMessage(SS_NOMOUNT, SYSFacility, "NOMOUNT", "Unable to complete MOUNT/DISMOUNT operation on device !S")
+	DefineMessage(SS_NOSUCHFILE, SYSFacility, "NOSUCHFILE", "File !S not found")
 }

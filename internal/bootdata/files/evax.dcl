@@ -550,4 +550,25 @@ grammar evax
         qualifier   size/id=904
         qualifier   date/id=905
 
+    !
+    ! govax-native extension (Phase 23, internal/rms + internal/console):
+    ! DELETE has no reference/eVAX or testdata/dcl/evax.dcl counterpart at
+    ! all -- see this file's own "govax-native extension" comment at MOUNT's
+    ! own definition above for why this file and testdata/dcl/evax.dcl are
+    ! expected to diverge starting at that point, which this block
+    ! continues. Unlike DIRECTORY's SPEC, DELETE's SPEC carries /prompt=:
+    ! ods2's own cmdDelete declares MinArgs=1 (there is no sensible "delete
+    ! everything in the current directory" default the way a bare DIRECTORY
+    ! has one), so a bare DELETE with nothing typed after it is a missing
+    ! required argument. The further rule that the spec name a *specific*
+    ! version (";3" or ";*", never defaulted) is enforced by
+    ! internal/rms.Session.Delete itself, not by this grammar -- see
+    ! docs/PHASE-23.md's subtask 6.
+    !
+    verb delete/id=1100
+
+        parameter   spec/id=1101               -
+                    /type=$string               -
+                    /prompt="File specification"
+
 end
