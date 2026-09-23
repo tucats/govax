@@ -471,6 +471,23 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("DELETE", func(id int64, r *dcl.Result) error {
 		return d.Console.Delete(r.String("SPEC"))
 	})
+
+	// Phase 23 (docs/PHASE-23.md, subtask 7): PURGE trims old versions via
+	// internal/rms.Session.Purge (Console.Purge, internal/console/purge.go).
+	// LIMIT carries no /prompt= in the grammar (evax.dcl's own purge verb),
+	// so an omitted /LIMIT reaches here as r.Present("LIMIT") == false --
+	// resolved to the default of 1 (ods2's own cmdPurge convention) here,
+	// rather than in internal/rms.Session.Purge itself, since r.Int's own
+	// zero value can't be told apart from an explicit, invalid /LIMIT=0
+	// (which Session.Purge does reject, as *rms.InvalidLimitError).
+	g.Bind("PURGE", func(id int64, r *dcl.Result) error {
+		limit := uint16(1)
+		if r.Present("LIMIT") {
+			limit = uint16(r.Int("LIMIT"))
+		}
+
+		return d.Console.Purge(r.String("SPEC"), limit)
+	})
 }
 
 type fixedHandler func(d *Dispatcher, rest string) error

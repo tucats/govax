@@ -42,7 +42,7 @@ func TestLoadEvaxGrammar(t *testing.T) {
 		t.Errorf("grammar name = %q, want EVAX", g.Name)
 	}
 
-	wantVerbs := []string{"DEFINE", "ABOUT", "FORTH", "EXIT", "QUIT", "TEST", "CALL", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE", "DIRECTORY", "DELETE"}
+	wantVerbs := []string{"DEFINE", "ABOUT", "FORTH", "EXIT", "QUIT", "TEST", "CALL", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE", "DIRECTORY", "DELETE", "PURGE"}
 	for _, v := range wantVerbs {
 		if _, ok := g.entries[v]; !ok {
 			t.Errorf("missing verb %s", v)
@@ -92,12 +92,12 @@ func TestLoadEvaxGrammar(t *testing.T) {
 func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	g := loadEvaxGrammar(t)
 	// define, about, forth, exit, quit, test, call, clear, show, vminit,
-	// mount, dismount, initialize, directory, delete (the last five are
-	// govax-native additions -- Phase 22 for mount/dismount, Phase 23 for
-	// initialize/directory/delete -- with no testdata/dcl/evax.dcl
-	// counterpart).
-	if len(g.verbOrder) != 15 {
-		t.Errorf("got %d verbs, want 15: %v", len(g.verbOrder), verbNames(g))
+	// mount, dismount, initialize, directory, delete, purge (the last six
+	// are govax-native additions -- Phase 22 for mount/dismount, Phase 23
+	// for initialize/directory/delete/purge -- with no testdata/dcl/
+	// evax.dcl counterpart).
+	if len(g.verbOrder) != 16 {
+		t.Errorf("got %d verbs, want 16: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 
@@ -256,6 +256,31 @@ func TestLoadEvaxGrammar_delete(t *testing.T) {
 
 	if !del.Parameters[0].required() {
 		t.Error("SPEC should be formally required (/prompt=) -- a bare DELETE has no sensible default, see docs/PHASE-23.md")
+	}
+}
+
+// TestLoadEvaxGrammar_purge regresses Phase 23 subtask 7's PURGE grammar
+// addition: an optional SPEC parameter (no /prompt=, matching DIRECTORY's
+// own "a bare verb has a sensible default" SPEC, not DELETE's required
+// one) plus an optional, value-taking LIMIT qualifier.
+func TestLoadEvaxGrammar_purge(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	purge, ok := g.entries["PURGE"]
+	if !ok {
+		t.Fatal("missing verb PURGE")
+	}
+
+	if len(purge.Parameters) != 1 || purge.Parameters[0].Name != "SPEC" {
+		t.Fatalf("PURGE parameters = %+v, want a single SPEC parameter", purge.Parameters)
+	}
+
+	if purge.Parameters[0].required() {
+		t.Error("SPEC should not be formally required (no /prompt=) -- a bare PURGE defaults to *.*, see docs/PHASE-23.md")
+	}
+
+	if _, _, err := purge.qualifier("LIMIT"); err != nil {
+		t.Errorf("PURGE should have a LIMIT qualifier: %v", err)
 	}
 }
 

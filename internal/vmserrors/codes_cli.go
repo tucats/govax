@@ -105,6 +105,10 @@ const (
 	// docs/PHASE-23.md subtask 6: DELETE's own "no version specified"
 	// argument-validation failure -- see internal/rms.VersionRequiredError.
 	cliNeedVersion
+
+	// docs/PHASE-23.md subtask 7: PURGE's own invalid /LIMIT value -- see
+	// internal/rms.InvalidLimitError.
+	cliBadLimit
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -214,6 +218,13 @@ const (
 	// "console-command-argument validation" framing rather than an actual
 	// file-operation failure state.
 	CLI_NEEDVERSION = CLIFacility<<FacilityPosition | cliNeedVersion<<MessagePosition | StatusError
+
+	// CLI_BADLIMIT reports a PURGE with a /LIMIT value it can't use --
+	// currently just zero (docs/PHASE-23.md subtask 7) -- matching
+	// CLI_NEEDVERSION's own "fresh CLI-facility argument-validation code"
+	// framing, since real VMS has no exact equivalent this project could
+	// reuse.
+	CLI_BADLIMIT = CLIFacility<<FacilityPosition | cliBadLimit<<MessagePosition | StatusError
 )
 
 func init() {
@@ -310,4 +321,5 @@ func init() {
 	DefineMessage(CLI_PARAMNOTFOUND, CLIFacility, "PARAMNOTFOUND", "Qualifier !Q: /parameter= target !Q not found")
 	DefineMessage(CLI_BADFILESPEC, CLIFacility, "BADFILESPEC", "Invalid file specification !Q")
 	DefineMessage(CLI_NEEDVERSION, CLIFacility, "NEEDVERSION", "!Q requires a specific version, e.g. ;3 or ;* (DELETE never defaults to a version)")
+	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

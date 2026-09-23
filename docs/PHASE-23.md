@@ -438,7 +438,7 @@ container was never created by anything this project wrote.
 6. **Done.** `DELETE`: required-version enforcement (matching `ods2`'s own
    "bare `DELETE FOO.TXT` never defaults to a version" rule), grammar,
    console wrapper, tests.
-7. `PURGE`: `/LIMIT=n` (default 1), grammar, console wrapper, tests.
+7. **Done.** `PURGE`: `/LIMIT=n` (default 1), grammar, console wrapper, tests.
 8. `TYPE`: single-match-only (no wildcards, matching `ods2`), record-format-
    aware text rendering (VFC/Fixed/Variable/Stream, reusing the same
    record-to-text logic `COPY`'s own text path needs — see subtask 10;
@@ -478,13 +478,11 @@ container was never created by anything this project wrote.
   `Console.ContainerSession *rms.Session` — chosen specifically to avoid
   reading as a collision with `rms.Context.Files` (a running VAX program's
   own open-file table, Phase 22, an unrelated concept).
-- `DELETE`/`PURGE`'s inherited-from-`ods2` restriction to single-device
-  volumes: not expected to matter in practice, since Phase 22's `MountTable`
-  never mounts a multi-device volume set anyway. **Confirmed for `DELETE` in
-  subtask 6** (see its own progress-log entry) — not exercised by any test,
-  since nothing in this project can mount a multi-device set to begin with.
-  Still open for `PURGE` once subtask 7 implements it, though the same
-  reasoning is expected to apply unchanged.
+- ~~`DELETE`/`PURGE`'s inherited-from-`ods2` restriction to single-device
+  volumes~~ **Confirmed for both in subtasks 6 and 7** (see their own
+  progress-log entries): not expected to matter in practice, and not
+  exercised by any test in either case, since Phase 22's `MountTable` never
+  mounts a multi-device volume set at all.
 - Whether `DIRECTORY`'s output formatting should aim for closer visual parity
   with real VMS `DIRECTORY` (column-aligned multi-file-per-line listings)
   rather than `ods2`'s own simpler one-file-per-line style — `ods2`'s own
@@ -986,4 +984,80 @@ container was never created by anything this project wrote.
   volume set), matching the design section's own expectation.
 - No bugs found in the peer `ods2` module during this subtask; its own
   `filespec.Glob`/`volume.DeleteFile`/`Bitmap`/`IndexBitmap` were read
+  and called exactly as documented, not modified.
+
+### 2026-09-23 — Subtask 7: `PURGE`
+
+- `internal/rms/purge.go` (new): `Session.Purge(specText string, keep
+  uint16) ([]string, error)`, a functional match for `ods2`'s own
+  `cmdPurge` (empty `specText` defaults to `"*.*"`; the parsed spec's own
+  version selector is unconditionally overridden to `"*"`, since PURGE
+  always considers every surviving version regardless of what, if
+  anything, was typed after a `;`; `filespec.Glob` + group-by-directory +
+  `volume.PurgeVersions` loop; the same deferred bitmap/index-bitmap
+  flush `DELETE` already established) reproduced fresh rather than
+  imported. Returns the distinct `"NAME.TYPE"` names actually touched
+  (via a new `distinctNames` helper, functionally matching `ods2`'s own
+  identically named/shaped one — `Glob`'s flat match list has one entry
+  per surviving version, but `PurgeVersions` only needs calling once per
+  distinct name), for the console layer to print one confirmation line
+  per name. `keep=0` is rejected up front as a new `*InvalidLimitError`
+  (mirroring `VersionRequiredError`/`NotFoundError`'s own reasoning) —
+  `volume.PurgeVersions` itself already rejects it too, but checking here
+  lets the console layer report a precise status without needing to
+  parse `PurgeVersions`' own generic wrapped-error text.
+- `internal/console/purge.go` (new): `Console.Purge`, translating
+  `*rms.NotMountedError` to `SS_DEVNOTMOUNT`, `*rms.InvalidLimitError` to
+  a new `CLI_BADLIMIT` status, and everything else to `CLI_BADFILESPEC` —
+  the same three-bucket shape `Console.Delete` already established, minus
+  a "not found" case (PURGE, like real VMS and `ods2`'s own `cmdPurge`,
+  treats a file spec matching nothing as a normal no-op, not an error —
+  see `TestSession_purgeNoMatchesIsNotAnError`). On success, prints one
+  `%PURGE-S-PURGED, NAME.TYPE purged (keeping N version(s))` line per
+  name, matching `ods2`'s own output.
+- New status code: `CLI_BADLIMIT` (`internal/vmserrors/codes_cli.go`) —
+  a fresh CLI-facility argument-validation code alongside `CLI_NEEDVERSION`,
+  since real VMS has no exact equivalent this project could reuse.
+- `internal/bootdata/files/evax.dcl`: new govax-native `verb purge/
+  id=1150`, continuing the divergence block started at `MOUNT`. Unlike
+  `DELETE`'s `SPEC`, `PURGE`'s `SPEC` carries no `/prompt=` (a bare
+  `PURGE` has a sensible `"*.*"` default, matching `DIRECTORY`'s own
+  optional `SPEC`); `LIMIT` is an optional, value-taking qualifier
+  (`/type=$integer`, no default of its own in the grammar — see below for
+  why). `testdata/dcl/evax.dcl`/`reference/eVAX/evax.dcl` untouched, per
+  the established convention. `PURG` (4 letters) reaches `PURGE` via
+  `Grammar.matchVerb`'s ordinary unambiguous-prefix matching — no other
+  verb in the grammar starts with those letters.
+- `dispatch.go`: `bindGrammar` gained `g.Bind("PURGE", ...)`. The default
+  `/LIMIT=1` is resolved here, not inside `internal/rms.Session.Purge`
+  itself: `r.Int("LIMIT")`'s own zero value can't be told apart from an
+  operator explicitly typing `/LIMIT=0` (which `Session.Purge` does
+  reject, as `*InvalidLimitError`), so the binding checks
+  `r.Present("LIMIT")` first and only then falls back to 1 — the same
+  "check `Present` before trusting a zero value" pattern
+  `INITIALIZE_VAX`'s own `PAGES` check already established for a
+  different reason.
+- Tests: `internal/rms/purge_test.go` (new) builds its own small,
+  writable test volume pre-populated with `FOO.TXT;1-3`, `BAR.TXT;1-2`,
+  `BAZ.TXT;1` (mirroring `ods2`'s own `purge_test.go` fixture shape) —
+  covers the default `/LIMIT=1`, an explicit `/LIMIT=2`, an empty
+  `specText` defaulting to `"*.*"` and touching every distinct name,
+  confirmation that a version typed on the spec has no effect on which
+  versions survive, `/LIMIT=0` rejection (and that nothing is touched
+  when it's rejected), both `resolveVolume`-inherited failure modes, and
+  the "no matches is not an error" case. `internal/console/purge_test.go`
+  (new) covers the `Console`-level wrapper's happy path (including the
+  printed confirmation line, verified end to end by confirming the purged
+  version is now `SS_NOSUCHFILE` via `Delete` while the surviving one
+  isn't), both status-code translations, and DCL-dispatched coverage
+  (`PURGE`/`PURG` abbreviation, an explicit `/LIMIT=2`, a bare `PURGE`
+  with `SPEC` omitted entirely). `internal/console/dcl/define_test.go`
+  gained `TestLoadEvaxGrammar_purge` (verb count 15→16) mirroring the
+  existing structural checks. Full `go build ./...`, `go vet ./...`, and
+  `go test ./...` all clean across the whole module (including the peer
+  `ods2` module, reachable via `go.work`) — clean on the first run this
+  time, since subtask 6's `upcaseOutsideQuotes` fix already covers
+  `PURGE`'s own version-bearing specs too.
+- No bugs found in the peer `ods2` module during this subtask; its own
+  `filespec.Glob`/`volume.PurgeVersions`/`Bitmap`/`IndexBitmap` were read
   and called exactly as documented, not modified.

@@ -571,4 +571,23 @@ grammar evax
                     /type=$string               -
                     /prompt="File specification"
 
+    !
+    ! govax-native extension (Phase 23, internal/rms + internal/console):
+    ! PURGE has no reference/eVAX or testdata/dcl/evax.dcl counterpart at
+    ! all -- see this file's own "govax-native extension" comment at MOUNT's
+    ! own definition above. Like DIRECTORY's SPEC (and unlike DELETE's),
+    ! PURGE's SPEC carries no /prompt=: a bare PURGE has a sensible default
+    ! ("*.*", the whole current default directory), matching ods2's own
+    ! cmdPurge. LIMIT is likewise optional -- absent, internal/rms.Session.
+    ! Purge's caller (dispatch.go's own PURGE binding) defaults it to 1,
+    ! the same "keep only the single most recent version" default ods2's
+    ! own cmdPurge uses -- see docs/PHASE-23.md's subtask 7.
+    !
+    verb purge/id=1150
+
+        parameter   spec/id=1151                -
+                    /type=$string
+        qualifier   limit/id=1152               -
+                    /type=$integer
+
 end
