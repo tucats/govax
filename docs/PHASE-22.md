@@ -361,7 +361,7 @@ This local convenience doesn't feed the committed test suite.
    a host-path fallback. Store the new IFI back into the FAB.
 6. **Done.** `internal/rms`: `SYS$CONNECT` (binding a RAB to an already-open IFI, console
    or ODS2-backed).
-7. `internal/rms`: `SYS$PUT` — `rms.NewWriter`/`.Put` per record, matching
+7. **Done.** `internal/rms`: `SYS$PUT` — `rms.NewWriter`/`.Put` per record, matching
    `RAB$B_RAC` (sequential-only).
 8. `internal/rms`: `SYS$CLOSE` — `rms.Writer.Close`/`volume.File.Close`
    (writer case) or a plain `volume.File` release (reader case); release the IFI
@@ -740,6 +740,41 @@ This local convenience doesn't feed the committed test suite.
   closing a file directly through `ods2`'s own `volume` API and reopening
   it fresh via `vol.OpenFID`, since SYS$OPEN (subtask 9) doesn't exist
   yet to produce a read-only handle through this package's own services.
+- No bugs found in the sibling `ods2` module while implementing this
+  subtask.
+- `go build ./...`, `go vet ./...`, `go test ./...` all clean.
+
+### 2026-09-23 — Subtask 7 complete
+
+- Added `internal/rms/put.go` (`SysPut`, the SYS$PUT handler): reads the
+  RAB's `RAB$W_ISI` (set by SYS$CONNECT) to find the open file, rejects
+  anything other than sequential access (`RAB$B_RAC` != `racSeq`,
+  `RMS$_RAC`) and any stream not armed for writing (`RMS$_PRV` — covers
+  both "the FAB never asked for `FAB$V_PUT`", which `armForFAC` already
+  catches at CONNECT time, and "this RAB was armed for GET instead"),
+  reads the outgoing record's bytes out of VAX memory via `RAB$L_RBF`/
+  `RAB$W_RSZ`, and either writes them straight to the console (the
+  `TTA0:` case, with a trailing newline appended — carried forward
+  unchanged from the deleted Phase 10 stopgap's own `SYS$PUT` behavior,
+  confirmed by reading that code back out of git history before
+  reimplementing it) or calls the SYS$CONNECT-armed `odsrms.Writer.Put`
+  for a real ODS-2 file. A `Writer.Put` failure (which, reading ods2's
+  own `rms.Writer` source, only ever happens for a record whose length
+  doesn't fit the file's declared record format) is reported as
+  `RMS$_RSZ` — `status.go`'s own `rmsRecordTooBig` doc comment had
+  already anticipated exactly this use back in subtask 4.
+- Test coverage (`put_test.go`): the console path (record + newline
+  landing in the fixture's console buffer); a real disk-file PUT,
+  independently re-verified by closing the SYS$CONNECT-armed `Writer`
+  directly (SYS$CLOSE is subtask 8, doesn't exist yet) and reading the
+  record back with a fresh `odsrms.Reader` over a freshly reopened
+  `volume.File`; three successive PUTs through the same RAB landing as
+  three distinct, correctly-ordered records; a RAB that was never
+  SYS$CONNECTed (`RMS$_IFI`); a non-sequential `RAB$B_RAC` (`RMS$_RAC`);
+  a RAB armed for reading only, built the same way
+  `TestSysConnect_readArming` builds its own read-only fixture
+  (`RMS$_PRV`); and a record whose length doesn't match the target
+  file's declared Fixed-format size (`RMS$_RSZ`).
 - No bugs found in the sibling `ods2` module while implementing this
   subtask.
 - `go build ./...`, `go vet ./...`, `go test ./...` all clean.
