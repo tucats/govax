@@ -354,7 +354,7 @@ This local convenience doesn't feed the committed test suite.
    fields, verified against a real VMS system's `$FABDEF`/`$RABDEF`), status-
    code table (`status.go`, verified against a real VMS system's `rmsdef.h`),
    IFI table (generalized read/write handle, `ifi.go`).
-5. `internal/rms`: `SYS$CREATE` — resolve device/directory/name via `filespec`;
+5. **Done.** `internal/rms`: `SYS$CREATE` — resolve device/directory/name via `filespec`;
    a `DeviceClassTT` target (`TTA0:`) writes to the console as before; a mounted
    disk device does `volume.CreateFile` with an `ondisk.RecAttr` built from the
    FAB's `RFM`/`RAT`/`MRS` fields; anything else is a real device/file error, not
@@ -650,4 +650,66 @@ This local convenience doesn't feed the committed test suite.
   anything into `internal/rtl`'s `ServiceTable` yet, so `go build`/`go vet`/
   `go test ./...` are clean but nothing in this new package is reachable
   from a running VAX program yet.
+- `go build ./...`, `go vet ./...`, `go test ./...` all clean.
+
+### 2026-09-23 — Subtask 5 complete
+
+- Added `internal/rms/create.go` (`SysCreate`, the SYS$CREATE handler) and
+  `internal/rms/context.go` (`Context`, a new self-contained bundle of
+  everything a handler needs — `*vm.Memory`/`*vax.CPU` for direct VAX-memory
+  access, `*MountTable`, `*FileTable`, `*iodev.LogicalNameTable`, and the
+  console `io.Writer` — plus small `ctx.load*`/`ctx.store*` forwarders and
+  `loadFixedString`, the non-NUL-terminated string reader RMS file specs
+  need). `Context` exists specifically so this package never has to import
+  `internal/rtl`: `internal/rtl.Environment` bundles almost the same state,
+  but its fields are unexported, and subtask 11 has `internal/rtl` register
+  this package's handlers into its own `ServiceTable` (`rtl` -> `rms`) —
+  the reverse dependency (`rms` -> `rtl`, needed only to spell
+  `*rtl.Environment` as a handler parameter type) would make the two
+  packages import each other, which Go refuses to build. Handler functions
+  in this package therefore take `(*Context, []uint32)` rather than
+  matching `rtl.ServiceFunc`'s literal signature; subtask 11 is where
+  `internal/rtl` adapts between the two (small closures over its own
+  private `mem`/`cpu`/`consoleOut` fields, calling into this package's
+  exported handlers).
+- Also added `status.go`'s `storeStatus` helper (forward-declared by that
+  file's own doc comment back in subtask 4, not implemented until now):
+  writes one `RMS$_` value into both of a FAB/RAB's status fields and
+  returns that same value, so every failing branch in a handler can end
+  with a single `return storeStatus(...)` line that's simultaneously
+  "what R0 becomes" and "what FAB$L_STS/STV record" — matching real RMS,
+  where a call's completion code is always both at once.
+  `SysCreate` follows that pattern throughout: the TTA0: console case
+  (unchanged from the deleted Phase 10 stopgap, down to the hardcoded
+  device-name check — see `create.go`'s `consoleDeviceName` doc comment
+  for why a literal check rather than an `internal/io` `DeviceClassTT`
+  lookup) just allocates an IFI against the console writer; the real-volume
+  case (`createOnVolume`) resolves the FAB's file spec through
+  `ods2/filespec.Parse`/`ResolveDirectory`, validates `FAB$B_ORG` (sequential
+  only) and `FAB$B_RFM` (one of the six defined non-`UDF` formats — see the
+  code comment on why `FAB$C_UDF`/0 is left unsupported rather than
+  resolved to a guessed default, a real but not-yet-motivated gap, not a
+  bug), and calls `volume.CreateFile` with an `ondisk.RecAttr` built from
+  `RFM`/`RAT`/`MRS`. A calling program's logical-name-translation step
+  (`LNM$FILE_DEV`, e.g. `SYS$OUTPUT` -> `TTA0:`) is preserved from the
+  deleted Phase 10 code unchanged.
+- Test coverage (`create_test.go`, all against throwaway `ods2`-initialized
+  fixtures via `mount_test.go`'s existing `newTestVolumeFile` helper — no
+  new binary blob under `testdata/`): the console path (including that the
+  allocated handle actually writes through to the console buffer); a real
+  disk-file create, independently re-verified by looking the new file back
+  up through the *same* mounted `*volume.Volume` `SysCreate` itself used
+  (not just this package's own IFI table agreeing with itself); a
+  read-only-mounted device (`RMS$_PRV`, and confirms `FAB$W_IFI` is left
+  untouched rather than partially written); an unmounted device
+  (`RMS$_DNR`); a FAB that never asked for `PUT` access (`RMS$_PRV`, before
+  the mount table is even consulted); unsupported `FAB$B_ORG`/`FAB$B_RFM`
+  values (`RMS$_ORG`/`RMS$_RFM`); a device-only spec with no file name at
+  all, and a spec naming a nonexistent subdirectory (both `RMS$_FNF`); and
+  logical-name translation reaching the console path indirectly through a
+  made-up logical. No handler is wired into `internal/rtl`'s `ServiceTable`
+  yet (still subtask 11) — `SysCreate` is only reachable by calling it
+  directly, exactly as this subtask's own tests do.
+- No bugs found in the sibling `ods2` module while implementing this
+  subtask.
 - `go build ./...`, `go vet ./...`, `go test ./...` all clean.

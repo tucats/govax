@@ -129,3 +129,31 @@ const (
 	// more specific RMS$_ value above.
 	rmsSystemError = 114956
 )
+
+// storeStatus writes sts into both of a control block's status fields —
+// fabSTS/fabSTV for a FAB, rabSTS/rabSTV for a RAB (fab.go/rab.go); base
+// is the block's own VAX address, stsOffset/stvOffset are whichever pair
+// applies — and returns sts unchanged as its own first result. That lets
+// a handler end a failing branch with a single line like
+//
+//	return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsFileNotFound)
+//
+// and have sts become both the FAB/RAB's own recorded completion status
+// AND the value the calling VAX program sees in R0 (this package's
+// handlers return that same (uint32, error) shape services.ServiceFunc
+// expects — see docs/PHASE-22.md's subtask 11 for how internal/rtl wires
+// that up). This mirrors real RMS, where a call's completion code is
+// always both of those things at once, never just one: an unmodified VAX
+// program is free to check either R0 right after the call, or FAB$L_STS
+// later, and both always agree.
+func storeStatus(ctx *Context, base, stsOffset, stvOffset uint32, sts uint32) (uint32, error) {
+	if err := ctx.storeLongword(base+stsOffset, sts); err != nil {
+		return 0, err
+	}
+
+	if err := ctx.storeLongword(base+stvOffset, sts); err != nil {
+		return 0, err
+	}
+
+	return sts, nil
+}
