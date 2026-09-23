@@ -1,9 +1,9 @@
 !
-!   DCLRTL grammar definition for eVAX console commands
+!   DCLRTL grammar definition for govax console commands
 !
 
 
-grammar evax
+grammar console
 
     syntax show_logical
         parameter name/id=301/type=$name
@@ -193,7 +193,7 @@ grammar evax
     
     type show_types
         ! DEFAULT (docs/PHASE-23.md, subtask 3) has no reference/eVAX or
-        ! testdata/dcl/evax.dcl counterpart -- see this file's own
+        ! testdata/dcl/console.dcl counterpart -- see this file's own
         ! "govax-native extension" comment at MOUNT's definition below.
         keyword         default         /syntax=show_default
         keyword		clock		/syntax=show_clock
@@ -451,17 +451,17 @@ grammar evax
         syntax          show_version/entry=exe$about
 
         ! DEFAULT (docs/PHASE-23.md, subtask 3) has no reference/eVAX or
-        ! testdata/dcl/evax.dcl counterpart -- see this file's own
+        ! testdata/dcl/console.dcl counterpart -- see this file's own
         ! "govax-native extension" comment at MOUNT's definition below.
         syntax          show_default/id=163
 
     !
     ! govax-native extension (Phase 22, internal/rms): MOUNT/DISMOUNT have no
-    ! reference/eVAX or testdata/dcl/evax.dcl counterpart at all -- the C
+    ! reference/eVAX or testdata/dcl/console.dcl counterpart at all -- the C
     ! source never implemented real ODS-2 volume mounting (see
     ! docs/PHASE-22.md, "Why this phase looks different"). This file and
-    ! testdata/dcl/evax.dcl are expected to diverge starting here: if
-    ! upstream eVAX ever changes and testdata/dcl/evax.dcl is re-imported
+    ! testdata/dcl/console.dcl are expected to diverge starting here: if
+    ! upstream eVAX ever changes and testdata/dcl/console.dcl is re-imported
     ! via `git archive`, do NOT copy that import over this file wholesale --
     ! doing so would silently delete this block (and any other govax-native
     ! grammar added below it).
@@ -531,10 +531,10 @@ grammar evax
 
     !
     ! govax-native extension (Phase 23, internal/rms + internal/console):
-    ! DIRECTORY has no reference/eVAX or testdata/dcl/evax.dcl counterpart
+    ! DIRECTORY has no reference/eVAX or testdata/dcl/console.dcl counterpart
     ! at all -- see this file's own "govax-native extension" comment at
     ! MOUNT's own definition above for why this file and testdata/dcl/
-    ! evax.dcl are expected to diverge starting at that point, which this
+    ! console.dcl are expected to diverge starting at that point, which this
     ! block continues. No /prompt= on SPEC: an omitted file spec is a
     ! perfectly normal way to run DIRECTORY (it lists the whole current
     ! default directory, "*.*;*"), not a missing required argument -- see
@@ -552,9 +552,9 @@ grammar evax
 
     !
     ! govax-native extension (Phase 23, internal/rms + internal/console):
-    ! DELETE has no reference/eVAX or testdata/dcl/evax.dcl counterpart at
+    ! DELETE has no reference/eVAX or testdata/dcl/console.dcl counterpart at
     ! all -- see this file's own "govax-native extension" comment at MOUNT's
-    ! own definition above for why this file and testdata/dcl/evax.dcl are
+    ! own definition above for why this file and testdata/dcl/console.dcl are
     ! expected to diverge starting at that point, which this block
     ! continues. Unlike DIRECTORY's SPEC, DELETE's SPEC carries /prompt=:
     ! ods2's own cmdDelete declares MinArgs=1 (there is no sensible "delete
@@ -573,7 +573,7 @@ grammar evax
 
     !
     ! govax-native extension (Phase 23, internal/rms + internal/console):
-    ! PURGE has no reference/eVAX or testdata/dcl/evax.dcl counterpart at
+    ! PURGE has no reference/eVAX or testdata/dcl/console.dcl counterpart at
     ! all -- see this file's own "govax-native extension" comment at MOUNT's
     ! own definition above. Like DIRECTORY's SPEC (and unlike DELETE's),
     ! PURGE's SPEC carries no /prompt=: a bare PURGE has a sensible default
@@ -592,7 +592,7 @@ grammar evax
 
     !
     ! govax-native extension (Phase 23, internal/rms + internal/console):
-    ! TYPE has no reference/eVAX or testdata/dcl/evax.dcl counterpart at
+    ! TYPE has no reference/eVAX or testdata/dcl/console.dcl counterpart at
     ! all -- see this file's own "govax-native extension" comment at MOUNT's
     ! own definition above. Like DELETE's SPEC (and unlike DIRECTORY's/
     ! PURGE's), TYPE's SPEC carries /prompt=: ods2's own cmdType declares
@@ -611,7 +611,7 @@ grammar evax
     !
     ! govax-native extension (Phase 23, internal/console/dcl + internal/rms
     ! + internal/console): COPY has no reference/eVAX or testdata/dcl/
-    ! evax.dcl counterpart at all -- see this file's own "govax-native
+    ! console.dcl counterpart at all -- see this file's own "govax-native
     ! extension" comment at MOUNT's own definition above. Unlike every
     ! other verb in this block, SOURCE and DESTINATION each carry their
     ! own private HOST qualifier (via /parameter=, internal/console/dcl's

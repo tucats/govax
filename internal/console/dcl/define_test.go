@@ -21,7 +21,7 @@ func evaxGrammarPath(t *testing.T) string {
 		t.Fatal("runtime.Caller failed")
 	}
 
-	return filepath.Join(filepath.Dir(file), "..", "..", "bootdata", "files", "evax.dcl")
+	return filepath.Join(filepath.Dir(file), "..", "..", "bootdata", "files", "console.dcl")
 }
 
 func loadEvaxGrammar(t *testing.T) *Grammar {
@@ -35,10 +35,10 @@ func loadEvaxGrammar(t *testing.T) *Grammar {
 	return g
 }
 
-func TestLoadEvaxGrammar(t *testing.T) {
+func TestLoadConsoleGrammar(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
-	if g.Name != "EVAX" {
+	if g.Name != "CONSOLE" {
 		t.Errorf("grammar name = %q, want EVAX", g.Name)
 	}
 

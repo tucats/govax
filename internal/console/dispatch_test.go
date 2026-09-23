@@ -28,7 +28,7 @@ func evaxGrammarPathForConsole(t *testing.T) string {
 		t.Fatal("runtime.Caller failed")
 	}
 
-	return filepath.Join(filepath.Dir(file), "..", "bootdata", "files", "evax.dcl")
+	return filepath.Join(filepath.Dir(file), "..", "bootdata", "files", "console.dcl")
 }
 
 func loadEvaxGrammar(t *testing.T) *dcl.Grammar {

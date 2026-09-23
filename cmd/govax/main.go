@@ -9,7 +9,7 @@
 //
 // File location (evax.dcl/vax.help/vax.init/kernel.asm/ssdef.asm, and any
 // other file a console command names) is docs/PHASE-15.md's own departure
-// from driver.c's hard CWD-relative "evax.dcl" lookup: a repeatable -path
+// from driver.c's hard CWD-relative "console.dcl" lookup: a repeatable -path
 // flag names directories searched, in order, after the name exactly as
 // given; an embedded copy of the required startup files
 // (internal/bootdata) is always the last, implicit search location, so
@@ -120,7 +120,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	// default bootdata embedded file system.
 	resolver := respath.New(paths, bootdata.FS)
 
-	grammarSrc, err := resolver.ReadFile("evax.dcl")
+	grammarSrc, err := resolver.ReadFile("console.dcl")
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.VAX_GRAMMAR, err)
 	}
