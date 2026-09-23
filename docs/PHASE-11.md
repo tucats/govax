@@ -69,12 +69,9 @@ commands and used generally for operand encoding — this unlocks assembling
   sub-forms (need a live mode stack / real page tables); dialect-restricted
   opcode aliases (the default `ASM_DIALECT_ANY` matches every alias
   regardless of its tagged dialect anyway, so the whole table is just applied
-  unconditionally). `.P1VECTOR` is recognized but a no-op — building the real
-  VMS P1 system-service vector needs `internal/rtl`'s service table, an
-  assembler-depends-on-RTL direction that's backwards, and confirmed by
-  `docs/PHASE-13.md`'s own investigation to not be needed for image
-  activation either (Phase 13 synthesizes `SHIM$` stubs directly as bytes,
-  not through `kernel.asm`'s pseudo-ops).
+  unconditionally). `.P1VECTOR` was originally recognized but a no-op — see
+  this doc's 2026-09-23 progress-log entry for why, and for its later real
+  implementation once RMS system services actually needed it.
 - Three bugs found and fixed rather than replicated (assembler tooling, not
   emulated VAX ISA/hardware behavior, so `docs/DEVIATIONS.md`'s policy for
   suspected fidelity issues doesn't apply — same reasoning Phase 10's
@@ -200,3 +197,113 @@ commands and used generally for operand encoding — this unlocks assembling
   (end-to-end against the actual fixture the user reported this against).
 - `go build ./...`, `go vet ./...`, `golangci-lint run` (only pre-existing,
   unrelated findings elsewhere in the tree), `go test ./...` all clean.
+
+### 2026-09-23 — `.P1VECTOR` implemented for real
+
+- Requested by the user: `testdata/asm/rms_roundtrip.asm` (docs/PHASE-22.md
+  subtask 14) had been hand-defining its six `SYS$xxx` symbols via `.SET
+  /PERM` and relying on `internal/console/rms_e2e_test.go` to deposit their
+  CALLS trampolines by hand, exactly the work `.P1VECTOR` (a no-op since
+  this phase's original pass) is supposed to do — now that RMS system
+  services actually exist to call through it, worth finishing rather than
+  deferring further.
+- Root design question first: `.P1VECTOR` needs the same fixed VMS P1
+  address table (~250 `SYS$xxx` entries) `internal/rtl/p1vector.go` already
+  has for dispatch — but `internal/asm` deliberately doesn't depend on
+  `internal/rtl` (this doc's own scope-cut note above explained the original
+  no-op that way). Asked the user rather than deciding unilaterally; picked
+  option (a) of three (duplicate the table in `internal/asm`; (b) export it
+  from `internal/rtl` and import that; (c) a new shared leaf package): a new
+  `internal/p1vector` package holding just the data (`Entry`/`Table`, copied
+  verbatim from `p1_vector.c`'s own array), imported by both
+  `internal/rtl` (`p1vector.go` now just builds its PC-match index over it)
+  and `internal/asm` — single source of truth, no new backwards dependency
+  either direction.
+- `internal/asm/pseudo.go`'s `pseudoP1Vector` now ports `p1_vector.c`'s own
+  `p1_init()` line-for-line (matching `asm_pseudo.c` case 40's `return
+  p1_init();` — the reference tool calls straight into it from the pseudo-op
+  itself, not from anywhere downstream of assembly, so despite this doc's
+  original note there was never a real "backwards for an assembler package"
+  problem with the *behavior*, just with where the *data* lived): for every
+  `internal/p1vector.Table` entry, defines the `SYS$xxx` symbol (permanent;
+  `SymEntry` for an ordinary CALL target, `SymLabel` for the one JMP-reached
+  entry, `SYS$SRCHANDLER`) and deposits a CALLS-compatible trampoline (zero
+  procedure-entry mask, `XFC #XFC$P1VECTOR`, `RET`) at its address, then
+  defines `EXE$P1_VECTOR_BASE`/`END` from the real min/max addresses seen.
+  Requires `.MICROKERNEL`, matching `.SCB`/`.SHIM`/`.REGION`. Not ported:
+  `p1_init()`'s own `declare_services()` call (this port already registers
+  every implemented `SYS$` handler statically at `internal/rtl` package
+  init, independent of assembly) and its closing `setpte_multiple(...
+  PROT=PTE$K_UR)` (no PTE-protection pseudo-op/enforcement this fine-grained
+  exists here, and every caller through this trampoline already works
+  without it).
+- Since `.P1VECTOR` writes its trampolines directly at fixed P1 addresses
+  via the assembler's own sparse image buffer (like every other pseudo-op —
+  nothing here touches live VM memory directly, unlike the reference tool's
+  own `store_memory`), `internal/console/asm.go`'s `depositAsmImage` needed
+  a new case to actually copy that range into live memory, the same role
+  its existing SCB-page special case already plays: a new
+  `Assembler.P1VectorRange()` accessor (backed by new `p1VectorBase`/
+  `p1VectorEnd`/`p1VectorSet` fields `pseudoP1Vector` populates) reports the
+  real `[min, max+5)` span so `depositAsmImage` knows what to
+  `BytesRange`/`storeBytes`.
+- **Found, and documented rather than fixed** (`docs/DEVIATIONS.md`'s policy
+  for a finding rooted in the C source's own data/logic, not a Go porting
+  mistake): three P1-vector table entries (`SYS$CLRAST_2`/`SYS$GL_ASTRET`,
+  both at the same address, and `SYS$GL_COMMON` right after them) sit close
+  enough together that `p1_init()`'s own unconditional, no-overlap-check
+  writes clobber each earlier entry's trailing `RET`/`XFC` byte with the
+  next entry's leading mask/opcode byte — confirmed present in the C source
+  itself (the same three addresses collide there, in the same order), not
+  introduced by this port. See `docs/DEVIATIONS.md`'s new "Phase 11
+  (assembler) findings" section for the full detail; `internal/asm/
+  p1vector_test.go`'s `TestPseudoP1VectorDefinesSymbolsAndTrampolines`
+  asserts the exact clobbered bytes rather than assuming every entry's
+  trampoline is untouched, so a future accidental fix of this ordering
+  quirk would be caught, not silently masked.
+- `testdata/asm/rms_roundtrip.asm` updated per the user's own request: the
+  six `.SET /PERM sys$xxx ...` lines replaced with a plain `.MICROKERNEL` /
+  `.P1VECTOR` pair, and `internal/console/rms_e2e_test.go`'s
+  `depositP1VectorTrampolines` helper (and its six duplicated address
+  constants) deleted outright — `.P1VECTOR` now does that work for real.
+  `TestRMSRoundTrip_assembledProgram` still passes unchanged otherwise.
+- Fallout: several `internal/console` tests assemble `kernel.asm` (which has
+  its own bare `.p1vector` statement, previously a no-op) against a
+  deliberately small `newRunnableConsole` (100 P1 pages) sized for image-
+  load/fixup tests that were never expected to touch real P1 addresses. Now
+  that `.p1vector` genuinely deposits at `internal/p1vector.Table`'s real
+  addresses (lowest one 145 pages below the top of P1 space), 100 pages
+  wasn't enough and assembling `kernel.asm` access-violated. Fixed by
+  raising `newRunnableConsole` (and two test-local inlined copies of its
+  same `VMInit` call, in `dispatch_test.go`/`show_test.go`) to 200 P1 pages —
+  comfortable headroom over the 145-page floor, not a tight fit.
+- **Bug found and fixed same-day, flagged by the user**: the initial
+  `pseudoP1Vector` passed `unique=true` to each `SYS$xxx` symbol's
+  `setSymbol` call, modeled on `.SHIM`'s own uniqueness-checked pattern —
+  wrong model. A real `govax` boot already runs `.p1vector` once via
+  `vax.init`'s own "asm kernel.asm"; requiring a fixture like
+  `rms_roundtrip.asm` to carry its own `.p1vector` line is purely an
+  artifact of its test running outside full console boot (no kernel.asm
+  assembled first to define those symbols for free) — so in a real,
+  already-booted console session, ASMing a second file with its own
+  `.p1vector` line must not blow up re-defining symbols kernel.asm's own
+  boot-time `.p1vector` already set. Traced back to
+  `reference/eVAX/eVAX/Source/Assembler/asm_symbols.c`'s `set_symbol`: the
+  duplicate-symbol rejection only fires when the caller has separately
+  raised the global `ASM_UNIQUE` flag ahead of the call, and
+  `p1_init()`'s own `set_symbol_direct` call sites never do — so the real
+  reference tool's `.P1VECTOR` was always naturally idempotent; this port's
+  `unique=true` was the deviation, not the reference's behavior. Fixed by
+  passing `unique=false` instead (no separate "already ran" guard needed —
+  re-running the whole loop just redefines every symbol/byte to the same
+  values). New tests: `TestPseudoP1VectorIsIdempotent`
+  (`internal/asm/p1vector_test.go`) and
+  `TestRMSRoundTrip_afterKernelAlreadyP1VectoredIsIdempotent`
+  (`internal/console/rms_e2e_test.go`, the real ASM-kernel.asm-then-ASM-
+  rms_roundtrip.asm shape).
+- New tests: `internal/asm/p1vector_test.go`
+  (`TestPseudoP1VectorRequiresMicrokernel`,
+  `TestPseudoP1VectorDefinesSymbolsAndTrampolines`). `go build ./...`,
+  `go vet ./...`, `gofmt -l .` (no new findings), `go test ./...` all clean
+  across the whole module (including the peer `ods2` module, reachable via
+  `go.work`).

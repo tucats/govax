@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/p1vector"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
@@ -243,7 +244,7 @@ func TestEnvironmentSystemServiceKnownAddressUnregisteredHandler(t *testing.T) {
 // catch immediately.
 func TestRegisteredServicesExistInP1Vector(t *testing.T) {
 	known := map[string]bool{}
-	for _, e := range p1Vector {
+	for _, e := range p1vector.Table {
 		known[e.Name] = true
 	}
 

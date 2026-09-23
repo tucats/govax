@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/tucats/govax/internal/p1vector"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -1213,19 +1214,104 @@ func (a *Assembler) pseudoIf(c *cursor) error {
 	return a.assembleStatement(c.rest())
 }
 
-// pseudoP1Vector assembles .P1VECTOR. The reference tool builds the VMS P1
-// system-service dispatch vector here (see p1_vector.c's p1_init(),
-// defining a SYS$xxx/LIB$xxx symbol and stub per Phase 10's RTL service
-// table for every real image to CALL into). No testdata/asm fixture
-// references any SYS$/LIB$ symbol it would define, and building it for
-// real would need internal/asm to import internal/rtl's service table —
-// backwards for an assembler package, and squarely VMS-image-activation
-// territory per docs/PLAN.md's Phase 13 split. So: recognized (so
-// kernel.asm's one ".p1vector" statement doesn't fail outright) and
-// deferred, matching this project's usual policy for a finding that's
-// large enough to revisit deliberately rather than block a phase on.
+// pseudoP1Vector assembles .P1VECTOR, matching asm_pseudo.c's case 40
+// (`return p1_init();`) — a direct call into p1_vector.c's own p1_init(),
+// not deferred to anything downstream of assembly. For every entry in
+// internal/p1vector's fixed VMS table it defines the SYS$xxx symbol
+// (permanent, SymEntry for an ordinary CALL target or SymLabel for the one
+// JMP-reached entry, SYS$SRCHANDLER — see p1vector.Entry.Jmp) and deposits
+// a CALLS-compatible trampoline at its address: a 2-byte zero procedure-
+// entry mask (skipped for the JMP entry, which has no CALL frame to build),
+// then "XFC #XFC$P1VECTOR" (0xFC 0x7A), then RET (0x04) — byte-for-byte
+// what p1_init() itself writes via store_memory. Also defines
+// EXE$P1_VECTOR_BASE/END from the real min/max addresses seen, which
+// internal/console/asm.go's depositAsmImage uses to know which range of
+// the assembled image to copy into live memory (this pseudo-op only
+// touches the assembler's own sparse image buffer, like every other
+// pseudo-op in this file — nothing here talks to live VM memory directly,
+// unlike the reference tool's own store_memory).
+//
+// p1_init()'s own declare_services() call (wiring each service's native
+// function pointer) has no Go counterpart to invoke here: this port's
+// internal/rtl already registers every implemented SYS$ handler statically
+// at package init (ServiceTable.Register), entirely independent of
+// assembly. Its final setpte_multiple(...PROT=PTE$K_UR) call is similarly
+// not replicated — this port has no PTE-protection pseudo-op or enforcement
+// this fine-grained (see this file's own scope-cut list), and every
+// existing caller through this trampoline already works without it (kernel
+// mode's own access already covers it; no fixture here runs the calling
+// program in user mode against page-protection checks that would need it).
+// Requires .MICROKERNEL, matching .SCB/.SHIM/.REGION.
 func (a *Assembler) pseudoP1Vector(c *cursor) error {
 	_ = c
 
-	return nil
+	if !a.microkernel {
+		return vmserrors.New(vmserrors.VAX_NEEDMICRO, ".P1VECTOR")
+	}
+
+	a.scopeSymbols()
+
+	min := uint32(0x7FFFFFFF)
+	max := uint32(0)
+
+	for _, e := range p1vector.Table {
+		flags := SymEntry
+		if e.Jmp {
+			flags = SymLabel
+		}
+
+		// unique=false: matching set_symbol_direct's own call in p1_init()
+		// (asm_symbols.c's set_symbol only rejects a redefinition when the
+		// caller has separately set ASM_UNIQUE ahead of the call — p1_init()
+		// never does), not .SHIM's own uniqueness-checked pseudoShim call
+		// this was originally modeled on. Running .P1VECTOR twice (e.g. a
+		// live console session that already booted kernel.asm's own
+		// ".p1vector" ASMing a second file — such as this project's own
+		// testdata/asm/rms_roundtrip.asm fixture, whose own ".p1vector"
+		// line exists only because its tests run outside full console
+		// boot/VMINIT and so never get kernel.asm's copy for free) just
+		// redefines every symbol to the same value again rather than
+		// failing with a duplicate-symbol error.
+		if err := a.setSymbol(e.Name, e.Addr, flags|SymPermanent, false); err != nil {
+			return err
+		}
+
+		addr := e.Addr
+
+		if !e.Jmp {
+			if err := a.image.storeWord(addr, 0); err != nil { // empty entry mask word
+				return err
+			}
+		} else {
+			addr -= 2
+		}
+
+		if err := a.image.storeByte(addr+2, 0xFC); err != nil { // XFC opcode
+			return err
+		}
+
+		if err := a.image.storeByte(addr+3, 0x7A); err != nil { // XFC$P1VECTOR selector
+			return err
+		}
+
+		if err := a.image.storeByte(addr+4, 0x04); err != nil { // RET
+			return err
+		}
+
+		if e.Addr > max {
+			max = e.Addr
+		}
+
+		if e.Addr < min {
+			min = e.Addr
+		}
+	}
+
+	if err := a.setSymbol("EXE$P1_VECTOR_BASE", min, SymNone, false); err != nil {
+		return err
+	}
+
+	a.p1VectorBase, a.p1VectorEnd, a.p1VectorSet = min, max+5, true
+
+	return a.setSymbol("EXE$P1_VECTOR_END", max, SymNone, false)
 }

@@ -73,6 +73,16 @@ type Assembler struct {
 	verbose     bool
 	memSize     uint32
 
+	// p1VectorBase/p1VectorEnd record the [base, end) byte range .P1VECTOR
+	// deposited its trampolines across (real min/max address seen in
+	// internal/p1vector's table, not a fixed constant), so depositAsmImage
+	// (internal/console/asm.go) knows what to copy into live memory — the
+	// same role a.scbb plays for .SCB/.VECTOR. p1VectorSet distinguishes
+	// "never ran .P1VECTOR" from a coincidental zero range.
+	p1VectorBase uint32
+	p1VectorEnd  uint32
+	p1VectorSet  bool
+
 	// prints accumulates .PRINT output, one entry per statement — see
 	// pseudoPrint's doc comment for why this is captured rather than
 	// written to stdout directly.
@@ -275,6 +285,13 @@ func (a *Assembler) S0End() uint32 {
 // ByteAt returns the single byte at addr in the assembled image (0 if
 // nothing was ever deposited there).
 func (a *Assembler) ByteAt(addr uint32) byte { return a.image.loadByte(addr) }
+
+// P1VectorRange reports the [base, end) byte range .P1VECTOR deposited its
+// trampolines across, and whether .P1VECTOR has run at all this assembly —
+// see p1VectorBase's own doc comment.
+func (a *Assembler) P1VectorRange() (base, end uint32, ok bool) {
+	return a.p1VectorBase, a.p1VectorEnd, a.p1VectorSet
+}
 
 // p0End returns the final P0 deposit location, whichever counter — the
 // active one, or the saved one from the last .REGION switch — currently

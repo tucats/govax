@@ -9,27 +9,19 @@
 ; directives at their real $FABDEF/$RABDEF byte offsets (see
 ; internal/rms/fab.go, rab.go) rather than expanded from a macro -- this
 ; project has no $FABDEF/$RABDEF .INCLUDE facility yet (explicitly out of
-; scope for docs/PHASE-22.md's subtask 14). SYS$xxx symbols below are
-; literal P1-vector addresses (internal/rtl/p1vector.go) called through
-; "@#", matching every other SYS$/LIB$ call in this project's own test
-; fixtures (e.g. hello.asm's "calls #1,@#lib$put_output"): a bare .SET
-; symbol pointing straight at the target address, no linker/image-activation
-; step involved.
+; scope for docs/PHASE-22.md's subtask 14). SYS$xxx symbols below are the
+; real P1-vector addresses .P1VECTOR defines (internal/p1vector.Table),
+; called through "@#", matching every other SYS$/LIB$ call in this
+; project's own test fixtures (e.g. hello.asm's "calls #1,@#lib$put_output").
 ;
-; The Go test driving this fixture (internal/console/rms_e2e_test.go) is
-; responsible for depositing an "XFC #XFC$P1VECTOR" trampoline at each of
-; the six SYS$xxx addresses below before running this program -- nothing in
-; internal/asm's own .P1VECTOR pseudo-op does that yet (see that pseudo-op's
-; own doc comment: building it for real would need internal/asm to import
-; internal/rtl's service table, deferred).
-;
+; .MICROKERNEL/.P1VECTOR below build the real VMS P1 system-service vector
+; (internal/asm/pseudo.go's pseudoP1Vector) -- every SYS$xxx symbol this
+; program calls, and the CALLS-reachable trampoline each one's address
+; actually holds, come from there rather than from hand-set symbols/a
+; test-side byte deposit.
 
-	.set	/perm	sys$create	^X7FFEE1C8
-	.set	/perm	sys$connect	^X7FFEE1C0
-	.set	/perm	sys$put		^X7FFEE188
-	.set	/perm	sys$close	^X7FFEE1B8
-	.set	/perm	sys$open	^X7FFEE208
-	.set	/perm	sys$get		^X7FFEE180
+	.microkernel
+	.p1vector
 
 	.entry	main, ^m<>
 

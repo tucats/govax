@@ -22,7 +22,16 @@ func exeFixturePath(t *testing.T, name string) string {
 
 // newRunnableConsole returns a Console with enough physical/virtual memory
 // set up (INIT + VMINIT) and running in kernel mode to exercise imageLoad,
-// matching console_run's own "switch to kernel mode" precondition.
+// matching console_run's own "switch to kernel mode" precondition. p1Pages
+// (200) is bigger than this helper's own lightweight sizing used to be
+// (100): most of its callers assemble kernel.asm, whose ".p1vector"
+// statement (internal/asm/pseudo.go's pseudoP1Vector, no longer a no-op)
+// deposits real trampolines across internal/p1vector.Table's fixed
+// addresses, the lowest of which (0x7FFEDE00) sits 145 pages below the top
+// of P1 space — below 145 pages, VMInit's own demand-paged P1 region
+// (grows down from maxP1) doesn't reach that low, and depositing there
+// access-violates. 200 leaves headroom rather than sizing exactly to the
+// boundary.
 func newRunnableConsole(t testing.TB) *Console {
 	t.Helper()
 
@@ -31,7 +40,7 @@ func newRunnableConsole(t testing.TB) *Console {
 		t.Fatalf("Init: %v", err)
 	}
 
-	if err := c.VMInit(2000, 100, 0, 4, 4, 4, 4, 8); err != nil {
+	if err := c.VMInit(2000, 200, 0, 4, 4, 4, 4, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
 

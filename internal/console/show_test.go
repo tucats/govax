@@ -43,7 +43,9 @@ func newShowRunnableDispatcher(t *testing.T) (*Dispatcher, *Console, *bytes.Buff
 		t.Fatalf("Init: %v", err)
 	}
 
-	if err := c.VMInit(2000, 100, 0, 4, 4, 4, 4, 8); err != nil {
+	// p1Pages 200, not newRunnableConsole's own 100 -- see that helper's
+	// doc comment on why kernel.asm's ".p1vector" needs it.
+	if err := c.VMInit(2000, 200, 0, 4, 4, 4, 4, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
 

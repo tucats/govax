@@ -27,6 +27,48 @@ but not perfect. When a suspected ISA/behavior mismatch is found while porting:
 Entries get resolved (fixed or deliberately kept, with rationale) during Phase 12
 (`PHASE-12.md`) or whenever the relevant subsystem gets a dedicated debugging pass.
 
+## Phase 11 (assembler) findings
+
+### [Phase 11] Three P1-vector table entries land close enough together that `p1_init()`'s own trampoline writes clobber each other's trailing `RET`/`XFC` bytes
+
+- **Where**: `reference/eVAX/eVAX/Source/RTL/p1_vector.c`'s `p1_vector[]`
+  initializer and its own `p1_init()` (ported as `internal/asm/pseudo.go`'s
+  `pseudoP1Vector`, backed by `internal/p1vector.Table`, a verbatim copy of
+  the same array). `SYS$CLRAST_2` (`0x7FFEE110`) and `SYS$GL_ASTRET` (also
+  `0x7FFEE110` — the same address) both deposit their 5-byte mask+XFC+RET
+  trampoline ending at `0x7FFEE114`; `SYS$GL_COMMON` (`0x7FFEE114`), later in
+  the array, then writes its own 2-byte zero mask word starting at that exact
+  address, clobbering the `RET` opcode (`0x04`) both earlier entries just
+  wrote there with `0x00`. `SYS$GL_COMMON`'s own trailing `RET` (at
+  `0x7FFEE118`) is in turn clobbered the same way by `SYS$SRCHANDLER`
+  (`0x7FFEE118`, the array's one JMP-reached entry, processed right after
+  it), whose XFC opcode byte (`0xFC`) lands on exactly that address.
+- **What**: `p1_init()` (and this port's faithful line-for-line translation
+  of it) writes every array entry's trampoline unconditionally, in array
+  order, with no check for a following entry's address falling inside the
+  5-byte span it just wrote. `SYS$GL_ASTRET`/`SYS$GL_COMMON` aren't really
+  independent callable service entry points at all — real VMS documents them
+  as plain longword "global location" data cells that happen to share this
+  table purely to get a symbol defined at their address — so clobbering their
+  own trailing bytes is likely harmless in practice (nothing legitimately
+  `CALLS`/`JMP`s into a `GL_` cell), but `SYS$CLRAST_2` is a real,
+  `CALL`-shaped entry whose `RET` this corrupts: a program that actually
+  reached it via `CALLS` would fall through into whatever garbage follows
+  once `XFC$P1VECTOR`'s handler returns, instead of unwinding cleanly.
+  Confirmed present in the C source itself (not a porting slip): the same
+  three addresses collide in `p1_vector.c` in the same order, so the real
+  reference tool's own `p1_init()` would produce byte-for-byte the same
+  corrupted output.
+- **Status**: open, deferred, per this project's default policy for a
+  finding rooted in the C source's own data/logic rather than a Go porting
+  mistake — `pseudoP1Vector` replicates `p1_init()`'s unconditional,
+  no-overlap-check write order exactly rather than special-casing these
+  three names. No fixture in this project calls `SYS$CLRAST_2`,
+  `SYS$GL_ASTRET`, or `SYS$GL_COMMON` (confirmed by inspection of every
+  `testdata/asm/*.asm`/`testdata/exe/*` fixture's actual `SYS$` call sites),
+  so this has no test-visible effect today. Revisit if a future fixture ever
+  needs a working `SYS$CLRAST_2`.
+
 ## Phase 22 (RMS / `ods2`) findings
 
 Phase 22 (`PHASE-22.md`) has no `reference/eVAX` counterpart at all — its own
