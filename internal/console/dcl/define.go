@@ -165,7 +165,31 @@ func ParseGrammar(text string) (*Grammar, error) {
 				q.NoNegate = true
 			}
 
-			cur.Qualifiers = append(cur.Qualifiers, q)
+			// /parameter=<name> is the opt-in marker for a Phase 23
+			// parameter-scoped qualifier: instead of this qualifier landing
+			// on the enclosing verb/syntax's own Qualifiers list (today's
+			// only behavior, and still the default when /parameter= is
+			// absent), it's attached to one specific, already-declared
+			// Parameter of the current entry. This has to be an explicit
+			// switch rather than something inferred from where the
+			// "qualifier" statement sits in the file: plenty of existing
+			// grammar text (e.g. DEFINE/DEVICE's "parameter name/prompt=..."
+			// immediately followed by a long run of entry-level qualifiers)
+			// already places a qualifier statement right after a parameter
+			// statement without meaning to scope it to that parameter, so
+			// mere adjacency can't be the signal.
+			if paramName, ok := switches["PARAMETER"]; ok {
+				target := findParameter(cur, upcase(paramName))
+				if target == nil {
+					err := vmserrors.New(vmserrors.CLI_PARAMNOTFOUND, q.Name, upcase(paramName))
+
+					return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
+				}
+
+				target.Qualifiers = append(target.Qualifiers, q)
+			} else {
+				cur.Qualifiers = append(cur.Qualifiers, q)
+			}
 
 		case "DISALLOW":
 			if cur == nil {
@@ -334,6 +358,23 @@ func splitUnquoted(s string, sep byte) ([]string, error) {
 
 func parseID(v string) (int64, error) {
 	return strconv.ParseInt(strings.TrimSpace(v), 10, 64)
+}
+
+// findParameter looks up an already-declared Parameter of entry e by its
+// (already-upcased) name, used to resolve a qualifier statement's
+// /parameter=<name> switch. Returns nil if no such parameter has been
+// declared yet — a qualifier's /parameter= switch must name a parameter that
+// appears earlier in the same verb/syntax block, matching how every other
+// name-based cross-reference in this file works (declare first, refer to it
+// after).
+func findParameter(e *Entry, name string) *Parameter {
+	for _, p := range e.Parameters {
+		if p.Name == name {
+			return p
+		}
+	}
+
+	return nil
 }
 
 // applyValueSwitches interprets the /type=/default= switches shared by

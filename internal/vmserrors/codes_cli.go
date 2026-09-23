@@ -99,6 +99,7 @@ const (
 	cliMissingParameter
 	cliBadQualifierCombo
 	cliBadInteger
+	cliParamNotFound
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -197,6 +198,7 @@ const (
 	CLI_MISSINGPARAMETER      = CLIFacility<<FacilityPosition | cliMissingParameter<<MessagePosition | StatusError
 	CLI_BADQUALIFIERCOMBO     = CLIFacility<<FacilityPosition | cliBadQualifierCombo<<MessagePosition | StatusError
 	CLI_BADINTEGER            = CLIFacility<<FacilityPosition | cliBadInteger<<MessagePosition | StatusError
+	CLI_PARAMNOTFOUND         = CLIFacility<<FacilityPosition | cliParamNotFound<<MessagePosition | StatusError
 )
 
 func init() {
@@ -290,4 +292,5 @@ func init() {
 	DefineMessage(CLI_MISSINGPARAMETER, CLIFacility, "MISSINGPARAMETER", "Required parameter !S not found")
 	DefineMessage(CLI_BADQUALIFIERCOMBO, CLIFacility, "BADQUALIFIERCOMBO", "Invalid combination of qualifiers !S and !S")
 	DefineMessage(CLI_BADINTEGER, CLIFacility, "BADINTEGER", "Invalid integer !Q")
+	DefineMessage(CLI_PARAMNOTFOUND, CLIFacility, "PARAMNOTFOUND", "Qualifier !Q: /parameter= target !Q not found")
 }

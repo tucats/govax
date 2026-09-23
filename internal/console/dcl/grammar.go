@@ -58,13 +58,29 @@ type Value struct {
 
 // Parameter is one positional parameter of an Entry, matching a grammar
 // "parameter" statement.
+//
+// Qualifiers holds this parameter's own, private list of qualifiers — a
+// Phase 23 addition for commands like COPY, which needs to write the same
+// switch name (/HOST) twice on one command line, once trailing each of its
+// two file-spec parameters, with each occurrence meaning something different
+// depending on which parameter it followed ("copy the source from the host
+// filesystem" vs. "copy the destination to the host filesystem"). A
+// grammar-definition "qualifier" statement is attached to a Parameter,
+// instead of to the enclosing Entry the way every qualifier worked before
+// this addition, only when its own statement explicitly carries a
+// /parameter=<name> switch naming that parameter (see define.go's QUALIFIER
+// case) — plain "qualifier" statements with no /parameter= switch are
+// entirely unaffected and still land on the Entry as before. This field is
+// nil (or empty) for the overwhelming majority of parameters, which declare
+// no qualifiers of their own at all.
 type Parameter struct {
-	Name     string
-	ID       int64
-	Type     ValueType
-	TypeName string // when Type == TypeKeyword, the referenced Type's name
-	Prompt   string
-	Default  *Value
+	Name       string
+	ID         int64
+	Type       ValueType
+	TypeName   string // when Type == TypeKeyword, the referenced Type's name
+	Prompt     string
+	Default    *Value
+	Qualifiers []*Qualifier
 
 	typeRef *Type // resolved by validate()
 }
@@ -74,6 +90,15 @@ type Parameter struct {
 // its grammar statement carries a /prompt= clause (see dclrtl.c's
 // DCLprompt).
 func (p *Parameter) required() bool { return p.Prompt != "" }
+
+// qualifier resolves name (an unambiguous prefix, "NO"-negation allowed)
+// against this parameter's own private qualifier list — the parameter-scoped
+// mirror of Entry.qualifier below, used by Parse when it's trying to match a
+// "/name" token against whichever parameter was most recently filled in on
+// the current command line.
+func (p *Parameter) qualifier(name string) (q *Qualifier, negated bool, err error) {
+	return matchQualifier(p.Qualifiers, name)
+}
 
 // Qualifier is one /-prefixed switch of an Entry, matching a grammar
 // "qualifier" statement.

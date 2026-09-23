@@ -16,6 +16,19 @@ type Result struct {
 	EntryPoint string
 
 	values map[string]*matchedValue
+
+	// paramValues holds the results of parameter-scoped qualifiers (Phase
+	// 23) — a qualifier that was matched against one specific Parameter's
+	// own Qualifiers list rather than the enclosing entry's. It's a nested
+	// map (outer key: the parameter's name; inner key: the qualifier's
+	// name) kept entirely separate from values above, on purpose: COPY
+	// declares a qualifier named HOST under both its SOURCE and DESTINATION
+	// parameters, and those two /HOST occurrences must be told apart
+	// (ParamPresent("SOURCE", "HOST") vs. ParamPresent("DESTINATION",
+	// "HOST")) rather than one overwriting the other in a single flat map,
+	// and also kept apart from any qualifier that happens to share the same
+	// name at the plain entry level.
+	paramValues map[string]map[string]*matchedValue
 }
 
 type matchedValue struct {
@@ -28,7 +41,9 @@ type matchedValue struct {
 	i         int64
 }
 
-func newResult() *Result { return &Result{values: map[string]*matchedValue{}} }
+func newResult() *Result {
+	return &Result{values: map[string]*matchedValue{}, paramValues: map[string]map[string]*matchedValue{}}
+}
 
 // Present reports whether the named parameter or qualifier was supplied
 // (matching DCLpresent).
@@ -93,6 +108,110 @@ func (r *Result) markPresent(name string, id int64, negated bool) {
 	r.values[upcase(name)] = &matchedValue{id: id, present: true, negated: negated}
 }
 
+// paramValue looks up the recorded match (if any) for a parameter-scoped
+// qualifier, keyed first by the owning parameter's name and then by the
+// qualifier's own name. Both names are upcased before lookup, matching every
+// other name lookup in this package (grammar names are always compared
+// upcased — see upcase in match.go).
+func (r *Result) paramValue(paramName, qualName string) (*matchedValue, bool) {
+	inner, ok := r.paramValues[upcase(paramName)]
+	if !ok {
+		return nil, false
+	}
+
+	v, ok := inner[upcase(qualName)]
+
+	return v, ok
+}
+
+// setParam and markParamPresent are the parameter-scoped counterparts of set
+// and markPresent above: they record a matched qualifier's value/presence
+// under (paramName, qualName) in paramValues instead of under a single flat
+// name in values, so that two identically-named qualifiers scoped to
+// different parameters (COPY's /HOST under SOURCE and again under
+// DESTINATION being the motivating case) don't collide.
+func (r *Result) setParam(paramName, qualName string, id int64, negated bool, val Value) {
+	paramName = upcase(paramName)
+
+	inner, ok := r.paramValues[paramName]
+	if !ok {
+		inner = map[string]*matchedValue{}
+		r.paramValues[paramName] = inner
+	}
+
+	inner[upcase(qualName)] = &matchedValue{
+		id: id, present: true, negated: negated,
+		isString: val.IsString, isKeyword: val.IsKeyword, str: val.Str, i: val.Int,
+	}
+}
+
+func (r *Result) markParamPresent(paramName, qualName string, id int64, negated bool) {
+	paramName = upcase(paramName)
+
+	inner, ok := r.paramValues[paramName]
+	if !ok {
+		inner = map[string]*matchedValue{}
+		r.paramValues[paramName] = inner
+	}
+
+	inner[upcase(qualName)] = &matchedValue{id: id, present: true, negated: negated}
+}
+
+// ParamPresent reports whether qualName was supplied on the command line
+// scoped to paramName — the parameter-scoped mirror of Present above. For
+// example, on "COPY FOO.TXT BAR.TXT/HOST", ParamPresent("DESTINATION",
+// "HOST") is true and ParamPresent("SOURCE", "HOST") is false, even though
+// both parameters' grammar declares a qualifier named HOST.
+func (r *Result) ParamPresent(paramName, qualName string) bool {
+	v, ok := r.paramValue(paramName, qualName)
+
+	return ok && v.present
+}
+
+// ParamNegated reports whether qualName, scoped to paramName, was supplied
+// in its "NO" form — the parameter-scoped mirror of Negated above.
+func (r *Result) ParamNegated(paramName, qualName string) bool {
+	v, ok := r.paramValue(paramName, qualName)
+
+	return ok && v.negated
+}
+
+// ParamString returns the string value of qualName scoped to paramName —
+// the parameter-scoped mirror of String above; "" if absent or the value is
+// a keyword/integer.
+func (r *Result) ParamString(paramName, qualName string) string {
+	v, ok := r.paramValue(paramName, qualName)
+	if !ok || !v.isString || v.isKeyword {
+		return ""
+	}
+
+	return v.str
+}
+
+// ParamInt returns the integer value of qualName scoped to paramName — the
+// parameter-scoped mirror of Int above; 0 if absent or the value is a plain
+// string.
+func (r *Result) ParamInt(paramName, qualName string) int64 {
+	v, ok := r.paramValue(paramName, qualName)
+	if !ok || (v.isString && !v.isKeyword) {
+		return 0
+	}
+
+	return v.i
+}
+
+// ParamKeyword returns the name of the matched keyword for a keyword-typed
+// qualifier scoped to paramName — the parameter-scoped mirror of Keyword
+// above; "" if absent or not a keyword value.
+func (r *Result) ParamKeyword(paramName, qualName string) string {
+	v, ok := r.paramValue(paramName, qualName)
+	if !ok || !v.isKeyword {
+		return ""
+	}
+
+	return v.str
+}
+
 // Parse parses one command line against the grammar — the Go equivalent of
 // DCLparse, minus its interactive re-prompting for a missing required
 // parameter/qualifier (see doc.go): a required item still missing once the
@@ -120,6 +239,18 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 	active := verb
 	nextParam := 0
 
+	// lastParam remembers whichever Parameter was most recently filled in
+	// on this command line (nil until the first one is), so that a "/name"
+	// qualifier token encountered right after it can be checked against
+	// that parameter's own private Qualifiers list first — see
+	// parseQualifier and the Parameter.Qualifiers doc comment in
+	// grammar.go. It's reset to nil whenever active itself changes (a
+	// qualifier's or a keyword parameter's /syntax= redirect switches to a
+	// different verb/syntax entry entirely), since a Parameter belonging to
+	// the entry we just left has no business being consulted against the
+	// new entry's command line.
+	var lastParam *Parameter
+
 	for {
 		pos = strings.TrimLeft(pos, " \t")
 		if pos == "" {
@@ -133,7 +264,7 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 		// (qualifier slashes included) and end the parse, matching
 		// DCLparse's fsm_allow_rest gate.
 		if pos[0] == '/' {
-			active, nextParam, pos, err = g.parseQualifier(r, active, nextParam, pos[1:])
+			active, nextParam, lastParam, pos, err = g.parseQualifier(r, active, nextParam, lastParam, pos[1:])
 			if err != nil {
 				return nil, err
 			}
@@ -146,6 +277,7 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 			val := strings.TrimSpace(pos)
 
 			r.set(p.Name, p.ID, false, Value{IsString: true, Str: val})
+			lastParam = p
 
 			nextParam++ //nolint:ineffassign
 			pos = ""
@@ -172,12 +304,14 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 		}
 
 		r.set(p.Name, p.ID, negated, val)
+		lastParam = p
 
 		nextParam++
 
 		if redirect != "" {
 			active = g.entries[redirect]
 			nextParam = 0
+			lastParam = nil
 		}
 	}
 
@@ -195,20 +329,51 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 // parseQualifier consumes one "/name" or "/name=value" qualifier (rest
 // points just past the leading '/'), applying any /syntax= redirect, and
 // returns the (possibly redirected) active entry, its next unfilled
-// parameter index, and the remaining unparsed text.
-func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, rest string) (*Entry, int, string, error) {
+// parameter index, the last-filled parameter to carry forward (unchanged
+// unless a redirect happened, in which case it becomes nil — see Parse's own
+// doc comment on lastParam), and the remaining unparsed text.
+//
+// lastParam is whichever positional parameter Parse most recently filled in,
+// or nil if none has been filled yet on this command line. When it's non-nil,
+// this function tries matching the "/name" token against that parameter's
+// own private Qualifiers list first (Phase 23's parameter-scoped
+// qualifiers); only when that lookup doesn't find anything does it fall back
+// to matching against the active entry's own Qualifiers list, exactly as
+// this function always worked before that addition. This ordering is what
+// keeps the change purely additive: a grammar that declares no
+// parameter-scoped qualifiers at all (every verb/syntax before Phase 23)
+// always misses the first lookup and falls straight through to the second,
+// unchanged.
+func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, lastParam *Parameter, rest string) (*Entry, int, *Parameter, string, error) {
 	name, rest := readBareToken(rest)
 	if name == "" {
-		return nil, 0, "", vmserrors.New(vmserrors.CLI_NEEDQUALIFIERNAME)
+		return nil, 0, nil, "", vmserrors.New(vmserrors.CLI_NEEDQUALIFIERNAME)
 	}
 
-	q, negated, err := matchQualifier(active.Qualifiers, name)
-	if err != nil {
-		return nil, 0, "", err
+	// scopeParam records which Parameter (if any) the matched qualifier
+	// came from, so its matched value can be filed into Result under the
+	// right (paramName, qualName) pair instead of the flat entry-level map.
+	var (
+		q          *Qualifier
+		negated    bool
+		err        error
+		scopeParam *Parameter
+	)
+
+	if lastParam != nil {
+		if q, negated, err = lastParam.qualifier(name); err == nil {
+			scopeParam = lastParam
+		}
+	}
+
+	if q == nil {
+		if q, negated, err = matchQualifier(active.Qualifiers, name); err != nil {
+			return nil, 0, nil, "", err
+		}
 	}
 
 	if negated && q.NoNegate {
-		return nil, 0, "", vmserrors.New(vmserrors.CLI_NONEGATE, q.Name)
+		return nil, 0, nil, "", vmserrors.New(vmserrors.CLI_NONEGATE, q.Name)
 	}
 
 	if q.aliasRef != nil {
@@ -222,7 +387,7 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, rest s
 	if strings.HasPrefix(rest, "=") {
 		token, rest, err = readValueToken(rest[1:])
 		if err != nil {
-			return nil, 0, "", err
+			return nil, 0, nil, "", err
 		}
 
 		haveVal = true
@@ -230,54 +395,66 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, rest s
 
 	if !q.hasValue() {
 		if haveVal {
-			return nil, 0, "", vmserrors.New(vmserrors.CLI_NOQUALIFIERVALUE, q.Name)
+			return nil, 0, nil, "", vmserrors.New(vmserrors.CLI_NOQUALIFIERVALUE, q.Name)
 		}
 
-		r.markPresent(q.Name, q.ID, negated)
+		if scopeParam != nil {
+			r.markParamPresent(scopeParam.Name, q.Name, q.ID, negated)
+		} else {
+			r.markPresent(q.Name, q.ID, negated)
+		}
 
 		if q.Syntax != "" {
 			target, ok := g.entries[q.Syntax]
 			if !ok {
-				return nil, 0, "", vmserrors.New(vmserrors.CLI_SYNTAXNOTFOUND, q.Name, q.Syntax)
+				return nil, 0, nil, "", vmserrors.New(vmserrors.CLI_SYNTAXNOTFOUND, q.Name, q.Syntax)
 			}
 
-			return target, 0, rest, nil
+			return target, 0, nil, rest, nil
 		}
 
-		return active, nextParam, rest, nil
+		return active, nextParam, lastParam, rest, nil
 	}
 
 	if !haveVal {
 		if q.Default != nil {
-			r.set(q.Name, q.ID, negated, *q.Default)
+			if scopeParam != nil {
+				r.setParam(scopeParam.Name, q.Name, q.ID, negated, *q.Default)
+			} else {
+				r.set(q.Name, q.ID, negated, *q.Default)
+			}
 
-			return active, nextParam, rest, nil
+			return active, nextParam, lastParam, rest, nil
 		}
 
-		return nil, 0, "", vmserrors.New(vmserrors.CLI_NEEDQUALIFIERVALUE, q.Name)
+		return nil, 0, nil, "", vmserrors.New(vmserrors.CLI_NEEDQUALIFIERVALUE, q.Name)
 	}
 
 	val, redirect, kwNegated, err := g.resolveValue(q.Type, q.TypeName, token)
 	if err != nil {
-		return nil, 0, "", vmserrors.Wrap(vmserrors.CLI_BADQUALIFIER, err, q.Name)
+		return nil, 0, nil, "", vmserrors.Wrap(vmserrors.CLI_BADQUALIFIER, err, q.Name)
 	}
 
 	if negated {
 		kwNegated = negated
 	}
 
-	r.set(q.Name, q.ID, kwNegated, val)
+	if scopeParam != nil {
+		r.setParam(scopeParam.Name, q.Name, q.ID, kwNegated, val)
+	} else {
+		r.set(q.Name, q.ID, kwNegated, val)
+	}
 
 	if redirect != "" {
 		target, ok := g.entries[redirect]
 		if !ok {
-			return nil, 0, "", vmserrors.New(vmserrors.CLI_SYNTAXNOTFOUND, q.Name, redirect)
+			return nil, 0, nil, "", vmserrors.New(vmserrors.CLI_SYNTAXNOTFOUND, q.Name, redirect)
 		}
 
-		return target, 0, rest, nil
+		return target, 0, nil, rest, nil
 	}
 
-	return active, nextParam, rest, nil
+	return active, nextParam, lastParam, rest, nil
 }
 
 // resolveValue type-checks token against typ (and, for TypeKeyword,
@@ -332,6 +509,21 @@ func (g *Grammar) checkRequirements(active *Entry, r *Result) error {
 
 		if !r.Present(q.Name) && q.Default != nil {
 			r.set(q.Name, q.ID, false, *q.Default)
+		}
+	}
+
+	// Each parameter's own private qualifiers (Phase 23) get the same
+	// missing-but-defaulted treatment as the entry-level ones just above,
+	// just filed into the parameter-scoped side of Result instead.
+	for _, p := range active.Parameters {
+		for _, q := range p.Qualifiers {
+			if q.aliasRef != nil {
+				continue
+			}
+
+			if !r.ParamPresent(p.Name, q.Name) && q.Default != nil {
+				r.setParam(p.Name, q.Name, q.ID, false, *q.Default)
+			}
 		}
 	}
 

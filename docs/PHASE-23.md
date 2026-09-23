@@ -304,6 +304,39 @@ this phase extends the grammar engine itself:
   phase's commands need it, since every example the user gave has `/HOST`
   trailing its file spec).
 
+**Resolved during subtask 2: how the grammar *text* itself marks a qualifier
+statement as nested, concretely.** The bullets above describe *Parse*'s
+runtime resolution order, but say nothing about how `define.go`'s
+grammar-definition parser is supposed to tell a parameter-scoped `qualifier`
+statement apart from an ordinary entry-level one while reading the grammar
+file — and it turns out mere textual adjacency ("this `qualifier` statement
+immediately follows a `parameter` statement") can't be the signal:
+`internal/bootdata/files/evax.dcl`'s own pre-existing `DEFINE/DEVICE` syntax
+already has a `parameter name/prompt="Name"` immediately followed by twenty
+more `qualifier` statements (`CLUSTER`, `CYLINDERS`, ...) that are genuinely
+entry-level, never meant to be scoped to `NAME`. Using adjacency would have
+silently misattributed all twenty. Implemented instead as an explicit,
+opt-in `/parameter=<name>` switch on the `qualifier` statement itself, naming
+the already-declared parameter it nests under — consistent with how every
+other structural link in this grammar language (`/syntax=`, `/alias=`) is
+already spelled out as a switch rather than inferred from position:
+
+```text
+parameter   source/id=.../type=$string/prompt="Source"
+qualifier   host/id=.../parameter=source
+
+parameter   destination/id=.../type=$string/prompt="Destination"
+qualifier   host/id=.../parameter=destination
+```
+
+A `/parameter=` naming a parameter not yet declared on the current
+verb/syntax is a grammar-definition-time error (`CLI_PARAMNOTFOUND`), not a
+silent fallback to entry-level — matching how every other named
+cross-reference in this file (`/syntax=`, `/alias=`, `/type=`) is validated.
+`Qualifier.Alias` on a parameter-scoped qualifier resolves against that same
+parameter's own qualifier list, not the whole entry's — aliasing across
+scopes isn't supported and no command in this project needs it.
+
 New `internal/console/dcl` unit tests (alongside `parse_test.go`) cover: a
 parameter-scoped qualifier attached with no space, with a space, on the first
 vs. second parameter of a two-parameter entry, a qualifier name absent from
@@ -382,7 +415,7 @@ container was never created by anything this project wrote.
    the grammar here too (parameters only) but its `internal/rms` handler
    isn't implemented until subtask 4 — this subtask is scoped to the
    verb-unification/fallout fix, not new container-formatting behavior.
-2. `internal/console/dcl`: parameter-scoped qualifier support (`Parameter.
+2. **Done.** `internal/console/dcl`: parameter-scoped qualifier support (`Parameter.
    Qualifiers`, `define.go`'s nested-`qualifier`-statement parsing, `parse.go`'s
    last-filled-parameter-aware qualifier resolution, `Result.ParamPresent`
    and friends). Grammar-engine-only; no console command uses it yet. Full
@@ -550,3 +583,68 @@ container was never created by anything this project wrote.
 - No bugs found in the peer `ods2` module during this subtask (it wasn't
   touched — subtask 1 is grammar-engine/dispatch-only, no `internal/rms`
   work yet).
+
+### 2026-09-23 — Subtask 2: parameter-scoped qualifier support in `internal/console/dcl`
+
+- `grammar.go`: `Parameter` gains a `Qualifiers []*Qualifier` field (nil for
+  the overwhelming majority of parameters, which declare none of their own)
+  plus a `qualifier(name string)` lookup method mirroring `Entry.qualifier`.
+- `define.go`: the `QUALIFIER` case gains an explicit, opt-in `/parameter=
+  <name>` switch. When present, the new `findParameter` helper resolves
+  `<name>` against the current entry's *already-declared* parameters (a
+  forward reference — naming a parameter not yet seen — is not supported,
+  matching every other name-based cross-reference in this file) and the
+  qualifier is appended to that `Parameter`'s own list instead of the
+  entry's; absent, behavior is completely unchanged. See the design
+  section's new "Resolved during subtask 2" note above for why this had to
+  be an explicit switch rather than inferred from adjacency in the grammar
+  text — `DEFINE/DEVICE`'s own existing `NAME` parameter immediately
+  followed by ~20 unrelated entry-level qualifiers would have been silently
+  misattributed otherwise.
+- `validate.go`: refactored the per-entry qualifier cross-reference
+  resolution (`/type=`, `/syntax=`, `/alias=`) out into a shared
+  `validateQualifiers` helper, called once for an entry's own `Qualifiers`
+  and once per parameter for that parameter's `Qualifiers` — so
+  parameter-scoped qualifiers get identical validation to entry-level ones,
+  including a new `CLI_PARAMNOTFOUND` status
+  (`internal/vmserrors/codes_cli.go`) for a `/parameter=` naming an
+  undeclared parameter. A parameter-scoped qualifier's `/alias=` resolves
+  against that same parameter's own list, not the whole entry's — aliasing
+  across scopes isn't needed by anything in this project.
+- `parse.go`: `Parse`'s main loop now tracks `lastParam *Parameter`, the
+  most recently filled positional parameter, reset to `nil` whenever a
+  `/syntax=` redirect switches `active` to a different entry entirely.
+  `parseQualifier` tries matching a `/name` token against `lastParam`'s own
+  qualifier list first, falling back to the entry-level list exactly as
+  before only when that lookup misses. `Result` gained a parallel,
+  parameter-namespaced value store (`paramValues`, keyed first by parameter
+  name then by qualifier name — deliberately separate from the flat
+  `values` map) and its own accessor family: `ParamPresent`, `ParamNegated`,
+  `ParamString`, `ParamInt`, `ParamKeyword`. `checkRequirements` now also
+  applies a parameter-scoped qualifier's `/default=` when it wasn't
+  supplied, mirroring the existing entry-level default-filling loop.
+- Confirmed the change is purely additive by running the full existing
+  suite unmodified before writing any new tests (all green), then adding
+  `TestLoadEvaxGrammar_unaffectedByParamQualifierFeature`, which walks every
+  entry in the real `evax.dcl` grammar and asserts no parameter ended up
+  with any parameter-scoped qualifiers, plus a spot check that
+  `DEFINE_DEVICE`'s `CLUSTER` qualifier is still entry-level despite
+  immediately following its `NAME` parameter in the file.
+- New tests: `internal/console/dcl/param_qualifier_test.go`, built against a
+  small self-contained grammar (not `evax.dcl`) shaped after `COPY`'s own
+  `SOURCE`/`DESTINATION`/`HOST` design, covering: `/parameter=` correctly
+  attaching each declaration to its named parameter
+  (`TestLoadParamQualifierGrammar_structure`); `/parameter=` naming an
+  undeclared parameter erroring at grammar-load time
+  (`TestParseGrammar_qualifierParameterNotFound`); a parameter-scoped
+  qualifier attached with no space, with a space, on the first vs. second
+  parameter, both at once, in negated (`/NOHOST`) form, and after a quoted
+  value containing an embedded `/` (the "Quoting" design section's own
+  concern, now regressed against this specific code path); and a qualifier
+  name absent from the just-filled parameter's own list correctly falling
+  through to entry-level matching. `go build ./...`, `go vet ./...`, and
+  `go test ./...` all clean across the whole module.
+- No console command uses this capability yet, as planned — `COPY` (subtask
+  9) is the first consumer.
+- No bugs found in the peer `ods2` module during this subtask (not
+  touched — this is `internal/console/dcl`-only, no `internal/rms` work).

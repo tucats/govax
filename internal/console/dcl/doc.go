@@ -15,7 +15,22 @@
 // required-parameter/qualifier and DISALLOW-combination checks) directly
 // against a Grammar data structure, built once by parsing the grammar
 // definition text (testdata/dcl/evax.dcl) rather than being derived
-// statement-by-statement through the FSM. This is a from-scratch,
+// statement-by-statement through the FSM.
+//
+// Phase 23 adds one grammar-language feature with no dclrtl.c counterpart at
+// all: a parameter-scoped qualifier. Writing "qualifier host/parameter=source"
+// nested under a "parameter source" statement attaches that qualifier to the
+// Parameter itself (Parameter.Qualifiers) instead of to the enclosing
+// verb/syntax (Entry.Qualifiers) — needed by commands like COPY, whose
+// SOURCE and DESTINATION parameters can each independently carry their own
+// /HOST. Parse resolves a "/name" token against whichever parameter was most
+// recently filled in first, falling back to the entry's own qualifiers only
+// if that lookup misses, and Result.ParamPresent/ParamString/etc. read the
+// matched values back out by (parameter name, qualifier name) pair. This is
+// additive: a grammar that declares no parameter-scoped qualifiers (every
+// verb/syntax before Phase 23) behaves identically to before.
+//
+// This is a from-scratch,
 // behavior-preserving reimplementation appropriate to this project's "not a
 // cross-compile" goal (see docs/PLAN.md), not a fidelity deviation — the DCL
 // engine is the console's own parsing tool, not emulated VAX ISA behavior,
