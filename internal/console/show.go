@@ -783,8 +783,8 @@ var scbVectorNames = map[cpu.Exception]scbVectorInfo{
 	0x8C: {"SOFTWARE3", "Software Interrupt 3"},
 	0x90: {"SOFTWARE4", "Software Interrupt 4"},
 	0xC0: {"INTERVAL", "Interval Timer Interrupt"},
-	0xF8: {"CONRC", "Console Receive"},
-	0xFC: {"CONTX", "Console Transmit"},
+	0xF8: {"CONREAD", "Console Receive"},
+	0xFC: {"CONWRITE", "Console Transmit"},
 }
 
 // exceptionName returns code's EXC$<name> mnemonic from scbVectorNames
