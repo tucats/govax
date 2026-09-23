@@ -488,6 +488,16 @@ func (d *Dispatcher) bindGrammar() {
 
 		return d.Console.Purge(r.String("SPEC"), limit)
 	})
+
+	// Phase 23 (docs/PHASE-23.md, subtask 8): TYPE writes one file's
+	// content to the console via internal/rms.Session.Type (Console.Type,
+	// internal/console/type.go). SPEC carries /prompt= in the grammar
+	// (evax.dcl's own type verb), so Grammar.Dispatch's own required-
+	// parameter machinery already guarantees it's present by the time this
+	// closure runs.
+	g.Bind("TYPE", func(id int64, r *dcl.Result) error {
+		return d.Console.Type(r.String("SPEC"))
+	})
 }
 
 type fixedHandler func(d *Dispatcher, rest string) error

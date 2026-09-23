@@ -590,4 +590,22 @@ grammar evax
         qualifier   limit/id=1152               -
                     /type=$integer
 
+    !
+    ! govax-native extension (Phase 23, internal/rms + internal/console):
+    ! TYPE has no reference/eVAX or testdata/dcl/evax.dcl counterpart at
+    ! all -- see this file's own "govax-native extension" comment at MOUNT's
+    ! own definition above. Like DELETE's SPEC (and unlike DIRECTORY's/
+    ! PURGE's), TYPE's SPEC carries /prompt=: ods2's own cmdType declares
+    ! MinArgs=1 (there is no sensible "type everything" default the way a
+    ! bare DIRECTORY/PURGE has one). The further rule that the resolved
+    ! spec match exactly one file (never a wildcard-matched several) is
+    ! enforced by internal/rms.Session.Type itself, not by this grammar --
+    ! see docs/PHASE-23.md's subtask 8.
+    !
+    verb type/id=1200
+
+        parameter   spec/id=1201                -
+                    /type=$string               -
+                    /prompt="File specification"
+
 end

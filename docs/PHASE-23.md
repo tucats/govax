@@ -439,11 +439,11 @@ container was never created by anything this project wrote.
    "bare `DELETE FOO.TXT` never defaults to a version" rule), grammar,
    console wrapper, tests.
 7. **Done.** `PURGE`: `/LIMIT=n` (default 1), grammar, console wrapper, tests.
-8. `TYPE`: single-match-only (no wildcards, matching `ods2`), record-format-
-   aware text rendering (VFC/Fixed/Variable/Stream, reusing the same
-   record-to-text logic `COPY`'s own text path needs — see subtask 10;
-   whichever of `TYPE`/`COPY` lands first implements it, the other reuses
-   it), grammar, console wrapper, tests.
+8. **Done.** `TYPE`: single-match-only (no wildcards, matching `ods2`),
+   record-format-aware text rendering (VFC/Fixed/Variable/Stream, reusing
+   the same record-to-text logic `COPY`'s own text path needs — see
+   subtask 10; `TYPE` landed first and implements it, `COPY` reuses it),
+   grammar, console wrapper, tests.
 9. `COPY`, core: grammar (`SOURCE`/`DESTINATION` parameters, `/HOST`
    declared under each per the parameter-scoped-qualifier design), all four
    direction combinations working for plain container-to-container and
@@ -1061,3 +1061,76 @@ container was never created by anything this project wrote.
 - No bugs found in the peer `ods2` module during this subtask; its own
   `filespec.Glob`/`volume.PurgeVersions`/`Bitmap`/`IndexBitmap` were read
   and called exactly as documented, not modified.
+
+### 2026-09-23 — Subtask 8: `TYPE`
+
+- `internal/rms/records.go` (new): `writeRecords(w io.Writer, f
+  *volume.File, lineEnding []byte) error`, the shared record-to-text
+  renderer this subtask's design section called for — a functional match
+  for `ods2`'s own `writeRecords`/`typeFile` (VFC records have their
+  carriage control expanded via `odsrms.FormatVFCRecord`, with
+  `lineEnding` not used for them at all; every other format gets
+  `lineEnding` appended after each record). Landed here rather than in a
+  shared location outside `internal/rms`, since `TYPE` is this pairing's
+  first implementer — subtask 10's `COPY` will call this same unexported
+  function directly, being in the same package, with no further wiring
+  needed. `lfLineEnding`/`crlfLineEnding` are both defined now (matching
+  `ods2`'s own pair) even though only the former has a caller yet; the
+  latter is there for `COPY`'s own future `/CRLF` qualifier.
+- `internal/rms/type.go` (new): `Session.Type(specText string) (string,
+  error)`, a functional match for `ods2`'s own `cmdType` — glob-matches
+  `specText` (an unspecified version defaults to the single highest
+  surviving version, the same default `DIRECTORY` relies on — no override
+  the way `PURGE` forces one), requires exactly one match, opens it via
+  `vol.OpenFID`, and renders its content through `writeRecords` into a
+  `bytes.Buffer`, returning the finished string for the console layer to
+  print — the same "rms computes, console prints" split `Session.
+  Directory` already established. A new `AmbiguousError` type (mirroring
+  `NotMountedError`/`NotFoundError`/`VersionRequiredError`'s own reasoning
+  elsewhere in this package) reports a wildcard matching more than one
+  file; a pattern matching nothing reuses the existing `*NotFoundError`
+  type `DELETE` already introduced, rather than a second, TYPE-specific
+  one.
+- `internal/console/type.go` (new): `Console.Type`, translating
+  `*rms.NotMountedError` to `SS_DEVNOTMOUNT`, `*rms.NotFoundError` to
+  `SS_NOSUCHFILE` (both reusing `DELETE`'s own translations exactly),
+  `*rms.AmbiguousError` to the *existing* `CLI_AMBIGUOUS` status
+  (`internal/console/dcl/match.go`'s own verb/qualifier-ambiguity code,
+  reused here rather than minting a new one — its generic "Ambiguous !S
+  !Q" template already fits a file specification just as well as a verb
+  or qualifier name), and everything else to `CLI_BADFILESPEC`. On
+  success, prints the returned text verbatim via `Console.Printf`.
+- `internal/bootdata/files/evax.dcl`: new govax-native `verb type/
+  id=1200`, continuing the divergence block started at `MOUNT`. Like
+  `DELETE`'s `SPEC` (and unlike `DIRECTORY`'s/`PURGE`'s), `TYPE`'s `SPEC`
+  carries `/prompt=`: there's no sensible "type everything" default.
+  `testdata/dcl/evax.dcl`/`reference/eVAX/evax.dcl` untouched, per the
+  established convention. `TYP` (3 letters) reaches `TYPE` via
+  `Grammar.matchVerb`'s ordinary unambiguous-prefix matching — no other
+  verb in the grammar starts with those letters.
+- `dispatch.go`: `bindGrammar` gained `g.Bind("TYPE", ...)`, calling
+  `Console.Type(r.String("SPEC"))`.
+- Tests: `internal/rms/type_test.go` (new) covers the basic Stream_LF
+  happy path (mirroring `ods2`'s own `TestCmdTypeStreamFile`), a
+  dedicated VFC-format fixture built directly against `odsrms.Writer`
+  (`createVFCTestFile`, since the project's existing `createTestFile`
+  helper only ever produces Stream_LF content) confirming carriage
+  control is actually expanded rather than left as raw framed bytes —
+  the one piece of "record-format-aware" this phase's Stream-only
+  fixtures elsewhere couldn't exercise — plus not-found, ambiguous-
+  wildcard, no-version-selects-highest, explicit-version, not-mounted,
+  and bad-file-spec cases (mirroring `ods2`'s own `type_test.go`
+  coverage). `internal/console/type_test.go` (new) covers the
+  `Console`-level wrapper's happy path (a new `createConsoleTestFileWithContent`
+  helper, since `delete_test.go`'s own `createConsoleTestFile` creates an
+  empty file — sufficient for `DELETE`/`PURGE`'s own tests, not for
+  `TYPE`'s), all four status-code translations, and DCL-dispatched
+  coverage (`TYPE`/`TYP` abbreviation, a bare `TYPE` failing as a missing
+  required parameter). `internal/console/dcl/define_test.go` gained
+  `TestLoadEvaxGrammar_type` (verb count 16→17) mirroring the existing
+  structural checks. Full `go build ./...`, `go vet ./...`, and `go test
+  ./...` all clean across the whole module (including the peer `ods2`
+  module, reachable via `go.work`).
+- No bugs found in the peer `ods2` module during this subtask; its own
+  `odsrms.NewReader`/`NewWriter`/`FormatVFCRecord` were read and called
+  exactly as documented, not modified.

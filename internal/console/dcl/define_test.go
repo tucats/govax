@@ -42,7 +42,7 @@ func TestLoadEvaxGrammar(t *testing.T) {
 		t.Errorf("grammar name = %q, want EVAX", g.Name)
 	}
 
-	wantVerbs := []string{"DEFINE", "ABOUT", "FORTH", "EXIT", "QUIT", "TEST", "CALL", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE", "DIRECTORY", "DELETE", "PURGE"}
+	wantVerbs := []string{"DEFINE", "ABOUT", "FORTH", "EXIT", "QUIT", "TEST", "CALL", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE", "DIRECTORY", "DELETE", "PURGE", "TYPE"}
 	for _, v := range wantVerbs {
 		if _, ok := g.entries[v]; !ok {
 			t.Errorf("missing verb %s", v)
@@ -92,12 +92,12 @@ func TestLoadEvaxGrammar(t *testing.T) {
 func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	g := loadEvaxGrammar(t)
 	// define, about, forth, exit, quit, test, call, clear, show, vminit,
-	// mount, dismount, initialize, directory, delete, purge (the last six
-	// are govax-native additions -- Phase 22 for mount/dismount, Phase 23
-	// for initialize/directory/delete/purge -- with no testdata/dcl/
-	// evax.dcl counterpart).
-	if len(g.verbOrder) != 16 {
-		t.Errorf("got %d verbs, want 16: %v", len(g.verbOrder), verbNames(g))
+	// mount, dismount, initialize, directory, delete, purge, type (the
+	// last seven are govax-native additions -- Phase 22 for mount/
+	// dismount, Phase 23 for initialize/directory/delete/purge/type --
+	// with no testdata/dcl/evax.dcl counterpart).
+	if len(g.verbOrder) != 17 {
+		t.Errorf("got %d verbs, want 17: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 
@@ -281,6 +281,27 @@ func TestLoadEvaxGrammar_purge(t *testing.T) {
 
 	if _, _, err := purge.qualifier("LIMIT"); err != nil {
 		t.Errorf("PURGE should have a LIMIT qualifier: %v", err)
+	}
+}
+
+// TestLoadEvaxGrammar_type regresses Phase 23 subtask 8's TYPE grammar
+// addition: a single, formally required SPEC parameter (/prompt=, matching
+// DELETE's own required SPEC, not DIRECTORY's/PURGE's optional one -- there
+// is no sensible "type everything" default).
+func TestLoadEvaxGrammar_type(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	typ, ok := g.entries["TYPE"]
+	if !ok {
+		t.Fatal("missing verb TYPE")
+	}
+
+	if len(typ.Parameters) != 1 || typ.Parameters[0].Name != "SPEC" {
+		t.Fatalf("TYPE parameters = %+v, want a single SPEC parameter", typ.Parameters)
+	}
+
+	if !typ.Parameters[0].required() {
+		t.Error("SPEC should be formally required (/prompt=) -- a bare TYPE has no sensible default, see docs/PHASE-23.md")
 	}
 }
 
