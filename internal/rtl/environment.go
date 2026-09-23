@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -33,6 +34,23 @@ type Environment struct {
 	// both need to see the same tables.
 	Devices  *iodev.DeviceTable
 	Logicals *iodev.LogicalNameTable
+
+	// Mounts is docs/PHASE-22.md's device-name -> mounted-ODS-2-volume
+	// table (internal/rms.MountTable), injected the same way Devices/
+	// Logicals are: it's owned by internal/console's Console (constructed
+	// once, alongside Devices/Logicals — a MOUNT command's effect must
+	// still be visible after a later VMInit/Zero rebuilds this Environment
+	// from scratch), not by this Environment itself.
+	Mounts *rms.MountTable
+
+	// files is internal/rms's own "internal file index" table (rms.c's
+	// ifi[256]) — unlike Mounts, this really is one-per-process state (a
+	// freshly opened file has no business surviving a VMInit/Zero that
+	// wipes the address space the FAB/RAB describing it lived in), so
+	// NewEnvironment builds a fresh one on every call rather than taking
+	// it as a constructor parameter, the same way Phase 10's now-removed
+	// ifiFiles/nextIFI fields used to be constructed fresh each time.
+	files *rms.FileTable
 
 	// RegionSize holds the P0/P1/S0 region high-water marks (index 0/1/2),
 	// the Go-native replacement for get_region_size/set_region_size's
@@ -96,12 +114,14 @@ const (
 )
 
 // NewEnvironment returns an Environment for one VAX process, driving mem/cpu
-// and sharing devices/logicals with whatever else (the console) also uses
-// them. consoleOut is where non-RMS console writes (print.go, file.go) and
-// the internal/rms package's own TTA0: special case go — typically the same
-// io.Writer as Console.Out; consoleIn is where DECC$GETS/EXE$INPUT read
-// from — typically the console's own input stream.
-func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, logicals *iodev.LogicalNameTable, consoleIn io.Reader, consoleOut io.Writer) *Environment {
+// and sharing devices/logicals/mounts with whatever else (the console) also
+// uses them. consoleOut is where non-RMS console writes (print.go, file.go)
+// and the internal/rms package's own TTA0: special case go — typically the
+// same io.Writer as Console.Out; consoleIn is where DECC$GETS/EXE$INPUT read
+// from — typically the console's own input stream. mounts is the shared
+// MountTable a MOUNT command populates (internal/console) — see the Mounts
+// field's own doc comment for why it's injected rather than owned here.
+func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, logicals *iodev.LogicalNameTable, mounts *rms.MountTable, consoleIn io.Reader, consoleOut io.Writer) *Environment {
 	env := &Environment{
 		mem:        mem,
 		cpu:        cpu,
@@ -109,6 +129,8 @@ func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, lo
 		services:   NewServiceTable(),
 		Devices:    devices,
 		Logicals:   logicals,
+		Mounts:     mounts,
+		files:      rms.NewFileTable(consoleOut),
 		pid:        nominalPID,
 		uic:        nominalUIC,
 		consoleIn:  consoleIn,
@@ -120,6 +142,26 @@ func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, lo
 	registerServices(env.services)
 
 	return env
+}
+
+// rmsContext bundles this Environment's memory/CPU/mount-table/file-table/
+// logical-name-table/console-output into the self-contained *rms.Context
+// every internal/rms handler function expects (see internal/rms/context.go's
+// own doc comment on why that package can't just take *Environment
+// directly: internal/rtl imports internal/rms, so the reverse import would
+// make the two packages depend on each other, which Go refuses to build).
+// Called fresh by each rms.go wrapper closure rather than cached in the
+// struct, since it's cheap to build and this keeps Environment itself free
+// of a field whose only reader is this one method.
+func (env *Environment) rmsContext() *rms.Context {
+	return &rms.Context{
+		Mem:      env.mem,
+		CPU:      env.cpu,
+		Mounts:   env.Mounts,
+		Files:    env.files,
+		Logicals: env.Logicals,
+		Console:  env.consoleOut,
+	}
 }
 
 // readArgs reads a VAX argument list off ap: a leading argument-count

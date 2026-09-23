@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/cpu"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/respath"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/rtl"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
@@ -84,6 +85,20 @@ type Console struct {
 	// part of one-time process startup rather than per-INIT.
 	Devices  *iodev.DeviceTable
 	Logicals *iodev.LogicalNameTable
+
+	// Mounts is docs/PHASE-22.md's device-name -> mounted-ODS-2-volume
+	// table (internal/rms.MountTable): which VAX device names currently
+	// have a real disk-image container mounted on them, populated by the
+	// console MOUNT/DISMOUNT commands (internal/console/device.go). Built
+	// once, here, alongside Devices/Logicals rather than by Init/Zero,
+	// since a mounted volume — like a defined device or logical name — is
+	// operator/session state that has nothing to do with the emulated
+	// VAX's own address space, and must survive an INIT/ZERO/VMINIT that
+	// wipes that address space (see RTL's own doc comment below for the
+	// contrast: RTL is recreated on every one of those, Mounts is not).
+	// Injected into each new rtl.Environment the same way Devices/Logicals
+	// already are (init.go, vminit.go).
+	Mounts *rms.MountTable
 
 	// RTL is Phase 10's SYS$/LIB$ calling-convention environment, backing
 	// this Console's cpu.SystemServices implementation (services.go) for
@@ -190,6 +205,7 @@ func New(out io.Writer) *Console {
 		Out:      out,
 		Devices:  iodev.NewDeviceTable(),
 		Logicals: logicals,
+		Mounts:   rms.NewMountTable(),
 	}
 }
 

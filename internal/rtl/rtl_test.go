@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 )
@@ -20,9 +21,10 @@ func fixture() (*Environment, *bytes.Buffer) {
 	devices := iodev.NewDeviceTable()
 	logicals := iodev.NewLogicalNameTable()
 	logicals.InitLogicals()
+	mounts := rms.NewMountTable()
 
 	out := &bytes.Buffer{}
-	env := NewEnvironment(cpu, mem, devices, logicals, bytes.NewReader(nil), out)
+	env := NewEnvironment(cpu, mem, devices, logicals, mounts, bytes.NewReader(nil), out)
 
 	return env, out
 }
@@ -221,14 +223,16 @@ func TestEnvironmentSystemServiceKnownAddressUnregisteredHandler(t *testing.T) {
 	env, _ := fixture()
 	putArgs(t, env, 0x2000, nil)
 
-	// SYS$OPEN is a real p1Vector entry with no registered handler yet.
-	_, handled, err := env.SystemService(0x7FFEE208)
+	// SYS$DISCONNECT is a real p1Vector entry with no registered handler
+	// yet (docs/PHASE-22.md's subtask 11 registered SYS$CREATE/SYS$CONNECT/
+	// SYS$OPEN/SYS$CLOSE/SYS$GET/SYS$PUT, but not SYS$DISCONNECT).
+	_, handled, err := env.SystemService(0x7FFEE1D0)
 	if err != nil {
 		t.Fatalf("SystemService: %v", err)
 	}
-	
+
 	if handled {
-		t.Error("SystemService(SYS$OPEN) handled, want unimplemented")
+		t.Error("SystemService(SYS$DISCONNECT) handled, want unimplemented")
 	}
 }
 

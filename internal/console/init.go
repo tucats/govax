@@ -22,7 +22,7 @@ func (c *Console) Init(physBytes uint32) error {
 	c.CPU.SetDebugWriter(c.Out)
 	c.Mem = vm.NewMemory(size)
 	c.Engine = cpu.NewEngine(c.CPU, c.Mem)
-	c.RTL = rtl.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.In, c.Out)
+	c.RTL = rtl.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.Mounts, c.In, c.Out)
 	c.Engine.SetSystemServices(c)
 
 	c.CPU.SetGPR(vax.SP, size-4)
@@ -55,7 +55,7 @@ func (c *Console) Zero() error {
 	size := c.Mem.Size()
 	c.Mem = vm.NewMemory(size)
 	c.Engine = cpu.NewEngine(c.CPU, c.Mem)
-	c.RTL = rtl.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.In, c.Out)
+	c.RTL = rtl.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.Mounts, c.In, c.Out)
 	c.Engine.SetSystemServices(c)
 
 	c.Symbols.ClearAll()

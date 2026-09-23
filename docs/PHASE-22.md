@@ -372,7 +372,7 @@ This local convenience doesn't feed the committed test suite.
 10. **Done.** `internal/rms`: `SYS$GET` — `rms.NewReader`/`.Next` per record, copying the
     record into the RAB's `RBF`/`RSZ` (and `UBF`/`USZ` if distinct) fields,
     `RMS$_EOF` on exhaustion.
-11. `internal/rtl`: `registerRMSServices` shrinks to registering `internal/rms`'s
+11. **Done.** `internal/rtl`: `registerRMSServices` shrinks to registering `internal/rms`'s
     handlers into the shared `ServiceTable`.
 12. `internal/io`/`internal/console/device.go`: `MOUNT`/`DISMOUNT` console
     methods (auto-create device record, call `internal/rms.MountTable`); `SHOW
@@ -921,6 +921,90 @@ This local convenience doesn't feed the committed test suite.
   round out `create_test.go`'s existing `putByte`/`putWord`/`readWord`/
   `readLongword` family for the first time this package needs to read
   individual bytes back out of VAX memory.
+- No bugs found in the sibling `ods2` module while implementing this
+  subtask.
+- `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`) all
+  clean.
+
+### 2026-09-23 — Subtask 11 complete
+
+- Added `internal/rtl/rms.go` (`registerRMSServices`): six thin wrapper
+  closures, one per `SYS$CREATE`/`SYS$CONNECT`/`SYS$OPEN`/`SYS$CLOSE`/
+  `SYS$GET`/`SYS$PUT`, each building a `*rms.Context` from the
+  `*Environment` a call was actually made against (`environment.go`'s new
+  `rmsContext` method) and forwarding `argv` straight through to
+  `internal/rms`'s already-implemented, already-tested handler. This is
+  all a wrapper closure can be: `ServiceTable.Register` wants a
+  `func(*Environment, []uint32) (uint32, error)` (`ServiceFunc`), and
+  `internal/rms`'s handlers are `func(*rms.Context, []uint32) (uint32,
+  error)` instead — same shape, different first-argument type, because
+  `internal/rms` can't import `internal/rtl` to spell out `*rtl.Environment`
+  itself without the two packages importing each other (subtask 5's
+  `context.go` doc comment anticipated exactly this back when `Context`
+  was first added). `service.go`'s `registerServices` now calls
+  `registerRMSServices(t)` alongside its four existing `register*` calls,
+  and its own doc comment was reworded from "registered separately by
+  `internal/rms` once that package exists" (aspirational, written before
+  any of this existed) to describe what's actually here now.
+- The wiring needed two new pieces of state on `Environment`
+  (`environment.go`): an exported `Mounts *rms.MountTable` field, injected
+  into `NewEnvironment` as a new parameter exactly the way `Devices`/
+  `Logicals` already are (design decision: `Mounts` is owned by
+  `internal/console`'s `Console`, constructed once, so a `MOUNT`'s effect
+  survives a later `VMInit`/`Zero` rebuilding the `Environment` — the same
+  reason `Devices`/`Logicals` are injected rather than owned here); and an
+  unexported `files *rms.FileTable`, built fresh inside `NewEnvironment`
+  itself via `rms.NewFileTable(consoleOut)` rather than taken as a
+  parameter, since an open file genuinely is one-per-process state (no
+  business surviving a `VMInit`/`Zero` that wipes the address space the
+  FAB/RAB describing it lived in) — mirroring how Phase 10's now-removed
+  `ifiFiles`/`nextIFI` fields used to be constructed fresh each time, not
+  how `Devices`/`Logicals`/`Mounts` behave. `internal/console`'s `Console`
+  (`machine.go`) gained the matching `Mounts *rms.MountTable` field,
+  constructed once in `New()` via `rms.NewMountTable()` alongside
+  `Devices`/`Logicals`, and all three `rtl.NewEnvironment` call sites
+  (`init.go`'s `Init`/`Zero`, `vminit.go`'s `VMInit`) now pass `c.Mounts`
+  through. `internal/console/device.go`'s actual `MOUNT`/`DISMOUNT`
+  commands that populate this table are still subtask 12, not this one —
+  this subtask only had to make sure a `MountTable` exists and reaches
+  `internal/rms`'s handlers; subtask 12 makes it possible to put anything
+  into it via the console.
+- Test coverage (`internal/rtl/rms_test.go`, new): unlike this package's
+  existing tests, these deliberately dispatch through `env.SystemService`
+  by p1Vector address — the same path a real `CALLS`/`CALLG` instruction
+  resolves through — rather than calling an `internal/rms` function
+  directly, since the whole point of this subtask is proving that path
+  actually reaches the real handlers now.
+  `TestRMSServices_consoleRoundTrip` drives `SYS$CREATE`->`SYS$CONNECT`->
+  `SYS$PUT`->`SYS$CLOSE` against the `TTA0:` console pseudo-device and
+  confirms the record (plus `SYS$PUT`'s own trailing newline) lands in
+  this `Environment`'s real console-output stream, proving `rmsContext`
+  threads `consoleOut` through correctly.
+  `TestRMSServices_diskRoundTrip` drives a full write-then-reopen-then-read
+  round trip (`SYS$CREATE`->`SYS$CONNECT`->`SYS$PUT`->`SYS$CLOSE`, then
+  `SYS$OPEN`->`SYS$CONNECT`->`SYS$GET`->`SYS$CLOSE`) against a real ODS-2
+  volume built with `diskimage.Create`+`volume.Initialize` (this file's own
+  `newMountedVolumeFixture`, since `internal/rms`'s equivalent test helper
+  is unexported and belongs to a different package) and mounted onto
+  `env.Mounts` directly, proving `Mounts` is the same table `NewEnvironment`
+  was given, not a stray unwired one.
+  `TestRMSServices_unmountedDeviceReachesEnvironmentMounts` is the negative
+  counterpart: `SYS$CREATE` against a disk device with nothing mounted
+  reaches `internal/rms`'s real "device not ready" handling rather than,
+  say, a nil-pointer panic from a badly wired `Mounts`.
+  The FAB/RAB byte offsets these tests poke are small, literal constants
+  duplicated at the top of the file (`testFabFAC`, `testRabRBF`, ...) —
+  `internal/rms`'s own `fab_test.go`/`rab_test.go` already exhaustively
+  verify those offsets are correct; this file can't import `internal/rms`'s
+  unexported constants directly (different package) and has no reason to
+  re-derive them, just to reuse known-good literal values.
+  `rtl_test.go`'s shared `fixture()` helper and one existing test
+  (`TestEnvironmentSystemServiceKnownAddressUnregisteredHandler`) needed
+  small updates: `fixture()` now builds and passes a `rms.NewMountTable()`
+  to `NewEnvironment`, and the "known p1Vector address, no handler
+  registered" test switched from asserting that about `SYS$OPEN` (now
+  registered, by this very subtask) to `SYS$DISCONNECT` (still genuinely
+  unimplemented).
 - No bugs found in the sibling `ods2` module while implementing this
   subtask.
 - `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`) all
