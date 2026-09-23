@@ -151,13 +151,46 @@ command or on `ods2`'s separate `cmd/ods2` CLI tool being installed. A govax
 own CLI the user's notes mention — `COPY`, `DIRECTORY`, etc.) becomes its own
 later phase.
 
-### Dependency: local `replace` directive
+### Dependency: `go.work`, not a `replace` directive
 
-`ods2` has no tagged releases (`git tag -l` is empty) and is actively
-co-developed alongside this phase. Add `replace github.com/tucats/ods2 =>
-../ods2` to `govax/go.mod` (both repos already sit as siblings under
-`/Users/tom/go/src/github.com/tucats/`) rather than waiting on a release to
-depend on via the module proxy. Revisit once `ods2` cuts a real tag.
+`ods2` is actively co-developed alongside this phase and has a real tag,
+`v0.1.3` (the repo was private during this doc's initial planning; the user
+has since made it public — see progress log). Verified experimentally: a
+`go.work` file at the `govax` repo root —
+
+```text
+go 1.26.0
+
+use .
+use ../ods2
+```
+
+— resolves `github.com/tucats/ods2` straight from the local sibling checkout
+(both repos already sit side by side under
+`/Users/tom/go/src/github.com/tucats/`) with **no `require` line needed in
+`govax/go.mod` at all** while the workspace is active: confirmed by building a
+throwaway test package that imported `ods2/diskimage` with no `ods2` entry in
+`go.mod` — `go build`/`go vet`/`go test` all succeeded offline, and neither
+`go.mod` nor `go.sum` were touched. This is the mechanism for local
+development regardless of the repo's visibility: nothing here ever needs to
+reach GitHub or the module proxy for `ods2` at all.
+
+Adding an explicit `require github.com/tucats/ods2 vX.Y.Z` pin to `go.mod`
+was tried and failed in this session specifically (`go get`'s own internal
+git fetch couldn't authenticate to GitHub even after the repo was made
+public and a plain `git ls-remote` in the same shell succeeded — an
+environment-specific restriction on this session's outbound package-fetch
+path, not a real blocker). So for now: **no `require` entry for `ods2` in
+`go.mod`.** `go.work`/`go.work.sum` are already in `.gitignore` (pre-dating
+this phase), so this is invisible to anyone else building `govax` — which
+also means, today, `govax` **cannot build at all without the workspace**
+(`../ods2` present and the `go.work` file in place) once any code imports
+`internal/rms`. That's fine for now (solo local dev); before `govax` ever
+needs to build standalone (CI, a release, someone else cloning just
+`govax`), run `go get github.com/tucats/ods2@v0.1.3` (or `go mod tidy`) from
+a normal terminal to populate a proper `require` + `go.sum` entry — should
+work cleanly now that the repo is public. `go.work`'s `use` directive still
+wins for local source resolution either way.
 
 ### New package `internal/rms`: the sole RMS implementation
 
@@ -303,8 +336,10 @@ This local convenience doesn't feed the committed test suite.
 
 ## Subtasks
 
-1. `go.mod`: add the `replace` directive for `ods2`; `go build ./...`/`go vet
-   ./...` sanity check with the new dependency in place.
+1. **Done.** Dependency wiring: `go.work` (`use .` / `use ../ods2`) at the
+   `govax` root, no `go.mod`/`go.sum` change — see "Dependency: `go.work`, not
+   a `replace` directive". Verified with a real, disposable smoke package
+   importing `ods2`; `go build ./...`/`go vet ./...`/`go test ./...` all clean.
 2. `internal/bootdata/files/evax.dcl`: add `mount`/`dismount` syntax + `verb
    mount`/`verb dismount`, with the divergence-from-`testdata` comment. Move
    `internal/console/dcl`'s two direct-load tests onto the bootdata copy.
@@ -423,4 +458,36 @@ This local convenience doesn't feed the committed test suite.
   fixtures" with the concrete filenames and roles, and clarified that these
   are separate from, and don't replace, the committed automated suite's own
   `ods2`-generated (fully portable) fixtures.
-- No implementation started yet.
+- `ods2` gained a real tag, `v0.1.3`. Settled the local-dependency mechanism
+  (superseding this doc's earlier "add a `replace` directive" note): a
+  `go.work` file at the `govax` root (`use .` / `use ../ods2`, already
+  covered by the pre-existing `.gitignore` entry for `go.work`/
+  `go.work.sum`) resolves `ods2` from the local sibling checkout with **no
+  `require` line needed in `go.mod`** — verified by building a throwaway
+  package that imported `ods2/diskimage` with no such entry present; `go
+  build`/`go vet`/`go test` all succeeded fully offline. `ods2` was private
+  at the time; the user made it public shortly after (a decision made
+  independently of this phase). Attempting to add a real `require
+  github.com/tucats/ods2 v0.1.3` pin via `go get` failed in this session
+  specifically — its internal git fetch couldn't authenticate even after the
+  repo went public and a plain `git ls-remote` in the same shell succeeded,
+  including with the Bash tool's sandbox explicitly disabled — an
+  environment-specific restriction on this session's outbound package-fetch
+  path, not a real blocker (`go.work` needs no such fetch at all). See
+  "Dependency: `go.work`, not a `replace` directive" for the full writeup,
+  including the one-time `go get`/`go mod tidy` step (from a normal
+  terminal) needed before `govax` can build standalone without the
+  workspace.
+
+### 2026-09-22 — Subtask 1 complete
+
+- After a VS Code restart (unrelated attempt to clear the session's own
+  `go get` git-auth restriction — didn't help; still the same failure even
+  post-restart, confirming it's not session-state related), re-verified the
+  `go.work`-based dependency wiring is solid: a fresh throwaway package under
+  `internal/rms` importing `ods2/diskimage`, `ods2/ondisk`, and `ods2/volume`
+  built, vetted, and tested cleanly with zero `go.mod`/`go.sum` changes, then
+  removed (not a real deliverable, just verification — the actual
+  `internal/rms` package doesn't exist yet, starts at subtask 3/4). Marked
+  subtask 1 done in the "Subtasks" list.
+- No other implementation started yet.
