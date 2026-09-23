@@ -230,6 +230,51 @@ func TestSimhInterop_readRealVMSDisk(t *testing.T) {
 	}
 }
 
+// TestSimhInterop_directoryListsRealVMSDisk is docs/PHASE-23.md subtask 5's
+// own opt-in interop check: run a real DIRECTORY (Session.Directory, not
+// ods2's lower-level Directory.List that TestSimhInterop_readRealVMSDisk
+// already exercises directly) against testdata/disks/rq0-ra92.dsk's master
+// file directory, mounted read-only exactly the way an operator would MOUNT
+// a real VAX/VMS system disk. This is the one DIRECTORY test in this phase
+// that lists a volume this project never wrote a single byte of, proving
+// the glob/formatting path handles a real system disk's MFD (likely much
+// larger and differently laid out than this package's own small, hermetic
+// test fixtures) rather than only ever exercising its own creations.
+func TestSimhInterop_directoryListsRealVMSDisk(t *testing.T) {
+	path := skipUnlessDiskPresent(t, "rq0-ra92.dsk")
+
+	mounts := NewMountTable()
+	if err := mounts.Mount("DUA0", path, false); err != nil {
+		t.Fatalf("Mount (read-only): %v", err)
+	}
+
+	defer func() {
+		if err := mounts.Dismount("DUA0"); err != nil {
+			t.Errorf("Dismount: %v", err)
+		}
+	}()
+
+	s := NewSession(mounts)
+	if err := s.SetDefault("DUA0:"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	out, err := s.Directory("", DirectoryOptions{Full: true})
+	if err != nil {
+		t.Fatalf("Directory: %v", err)
+	}
+
+	if !strings.Contains(out, "Directory DUA0:[]") {
+		t.Errorf("Directory output = %q, want it to contain a DUA0:[] header", out)
+	}
+
+	if !strings.Contains(out, "Total of ") {
+		t.Fatalf("Directory output = %q, want a file-count summary", out)
+	}
+
+	t.Logf("DIRECTORY/FULL of a real VAX/VMS system disk's MFD:\n%s", out)
+}
+
 // TestSimhInterop_writeThenRereadEmptyDsk is docs/PHASE-22.md's write-path
 // interop check: testdata/disks/empty.dsk is a real container `ods2`
 // itself already initialized (a real home block, INDEXF.SYS, BITMAP.SYS,

@@ -7,6 +7,26 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
+// NotMountedError reports that a parsed file specification named a device
+// with nothing currently mounted on it — resolveVolume's own "device not
+// mounted" failure, given a proper type (rather than a plain fmt.Errorf
+// string) specifically so a console-layer wrapper — e.g. internal/console/
+// directory.go's Console.Directory — can both recognize this particular
+// failure via errors.As and recover the exact device name for its own
+// diagnostic, without having to re-parse specText itself just to find it
+// again. Console.Directory reports this case as SS_DEVNOTMOUNT (matching
+// MOUNT/DISMOUNT's own convention for the same underlying condition) and
+// every other resolveVolume failure (a malformed file specification) as
+// CLI_BADFILESPEC (matching SET DEFAULT's own convention) — see its doc
+// comment for the full reasoning.
+type NotMountedError struct {
+	Device string
+}
+
+func (e *NotMountedError) Error() string {
+	return fmt.Sprintf("rms: %s: not mounted", e.Device)
+}
+
 // This file implements docs/PHASE-23.md subtask 3: Session, the piece of
 // operator-console state that DIRECTORY/DELETE/PURGE/COPY/TYPE (and
 // INITIALIZE/CONTAINER's sibling console commands) all need but that
@@ -115,7 +135,7 @@ func (s *Session) resolveVolume(specText string) (*volume.Volume, filespec.Spec,
 
 	vol, ok := s.Mounts.Lookup(spec.Device)
 	if !ok {
-		return nil, filespec.Spec{}, fmt.Errorf("rms: %s: not mounted", spec.Device)
+		return nil, filespec.Spec{}, &NotMountedError{Device: spec.Device}
 	}
 
 	return vol, spec, nil

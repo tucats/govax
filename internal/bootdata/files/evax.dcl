@@ -529,4 +529,25 @@ grammar evax
         qualifier   cluster/id=809               -
                     /type=$integer
 
+    !
+    ! govax-native extension (Phase 23, internal/rms + internal/console):
+    ! DIRECTORY has no reference/eVAX or testdata/dcl/evax.dcl counterpart
+    ! at all -- see this file's own "govax-native extension" comment at
+    ! MOUNT's own definition above for why this file and testdata/dcl/
+    ! evax.dcl are expected to diverge starting at that point, which this
+    ! block continues. No /prompt= on SPEC: an omitted file spec is a
+    ! perfectly normal way to run DIRECTORY (it lists the whole current
+    ! default directory, "*.*;*"), not a missing required argument -- see
+    ! docs/PHASE-23.md's subtask 5 and internal/rms.Session.Directory's own
+    ! doc comment.
+    !
+    verb directory/id=900
+
+        parameter   spec/id=901                 -
+                    /type=$string
+        qualifier   full/id=902
+        qualifier   file/id=903
+        qualifier   size/id=904
+        qualifier   date/id=905
+
 end

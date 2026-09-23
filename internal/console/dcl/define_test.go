@@ -42,7 +42,7 @@ func TestLoadEvaxGrammar(t *testing.T) {
 		t.Errorf("grammar name = %q, want EVAX", g.Name)
 	}
 
-	wantVerbs := []string{"DEFINE", "ABOUT", "FORTH", "EXIT", "QUIT", "TEST", "CALL", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE"}
+	wantVerbs := []string{"DEFINE", "ABOUT", "FORTH", "EXIT", "QUIT", "TEST", "CALL", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE", "DIRECTORY"}
 	for _, v := range wantVerbs {
 		if _, ok := g.entries[v]; !ok {
 			t.Errorf("missing verb %s", v)
@@ -92,11 +92,11 @@ func TestLoadEvaxGrammar(t *testing.T) {
 func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	g := loadEvaxGrammar(t)
 	// define, about, forth, exit, quit, test, call, clear, show, vminit,
-	// mount, dismount, initialize (the last three are govax-native
-	// additions -- Phase 22 for mount/dismount, Phase 23 for initialize --
-	// with no testdata/dcl/evax.dcl counterpart).
-	if len(g.verbOrder) != 13 {
-		t.Errorf("got %d verbs, want 13: %v", len(g.verbOrder), verbNames(g))
+	// mount, dismount, initialize, directory (the last four are
+	// govax-native additions -- Phase 22 for mount/dismount, Phase 23 for
+	// initialize/directory -- with no testdata/dcl/evax.dcl counterpart).
+	if len(g.verbOrder) != 14 {
+		t.Errorf("got %d verbs, want 14: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 
@@ -210,6 +210,33 @@ func TestLoadEvaxGrammar_initializeVaxContainer(t *testing.T) {
 // to a new show_default syntax with no parameters/qualifiers of its own
 // (unlike SHOW MEMORY or SHOW BREAK, DEFAULT has nothing to qualify --
 // see docs/PHASE-23.md's design section).
+// TestLoadEvaxGrammar_directory regresses Phase 23 subtask 5's DIRECTORY
+// grammar addition: a single, optional SPEC parameter (no /prompt=, since
+// an omitted file spec is a normal way to run DIRECTORY, not a missing
+// argument) plus the four FULL/FILE/SIZE/DATE switch qualifiers.
+func TestLoadEvaxGrammar_directory(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	directory, ok := g.entries["DIRECTORY"]
+	if !ok {
+		t.Fatal("missing verb DIRECTORY")
+	}
+
+	if len(directory.Parameters) != 1 || directory.Parameters[0].Name != "SPEC" {
+		t.Fatalf("DIRECTORY parameters = %+v, want a single SPEC parameter", directory.Parameters)
+	}
+
+	if directory.Parameters[0].required() {
+		t.Error("SPEC should not be formally required (no /prompt=) -- a bare DIRECTORY lists the current default directory, see docs/PHASE-23.md")
+	}
+
+	for _, name := range []string{"FULL", "FILE", "SIZE", "DATE"} {
+		if _, _, err := directory.qualifier(name); err != nil {
+			t.Errorf("DIRECTORY should have a %s qualifier: %v", name, err)
+		}
+	}
+}
+
 func TestLoadEvaxGrammar_showDefault(t *testing.T) {
 	g := loadEvaxGrammar(t)
 

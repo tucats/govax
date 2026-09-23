@@ -430,11 +430,11 @@ container was never created by anything this project wrote.
    (`diskimage.Create`+`volume.Initialize`, no auto-mount) for the
    `initialize_container` syntax stubbed in subtask 1, console wrapper,
    tests.
-5. `DIRECTORY`: `internal/rms` implementation (glob, per-directory grouping,
-   `/FULL`/`/FILE`/`/SIZE`/`/DATE` formatting, matching `ods2`'s own output
-   shape closely enough to be recognizable, not necessarily byte-identical),
-   grammar, console wrapper, tests — including the opt-in `rq0-ra92.dsk`
-   read-only-listing interop check.
+5. **Done.** `DIRECTORY`: `internal/rms` implementation (glob, per-directory
+   grouping, `/FULL`/`/FILE`/`/SIZE`/`/DATE` formatting, matching `ods2`'s
+   own output shape closely enough to be recognizable, not necessarily
+   byte-identical), grammar, console wrapper, tests — including the opt-in
+   `rq0-ra92.dsk` read-only-listing interop check.
 6. `DELETE`: required-version enforcement (matching `ods2`'s own "bare
    `DELETE FOO.TXT` never defaults to a version" rule), grammar, console
    wrapper, tests.
@@ -775,4 +775,107 @@ container was never created by anything this project wrote.
   module (including the peer `ods2` module, reachable via `go.work`).
 - No bugs found in the peer `ods2` module during this subtask; its own
   `diskimage.Create`/`volume.Initialize`/`InitializeOptions` were read and
+  called exactly as documented, not modified.
+
+### 2026-09-23 — Subtask 5: `DIRECTORY`
+
+- `internal/rms/directory.go` (new): `DirectoryOptions` (`Full`/`File`/
+  `Size`/`Date`, `Full` implying the other three, matching `ods2`'s own
+  `cmdDirectory`) and `Session.Directory(specText string, opts
+  DirectoryOptions) (string, error)`. Functionally mirrors `ods2`'s own
+  `cmdDirectory`/`groupMatchesByDir`/`formatDirectoryEntry` (`filespec.Glob`
+  against the resolved spec, grouped by directory, one line per file, a
+  trailing file/block-count summary) but reproduced fresh rather than
+  imported — that package lives under `cmd/ods2/internal/session`, off
+  limits per this phase's own "behavioral reference, not code to link
+  against" framing. Deliberately hands back a plain `string` rather than
+  writing to an `io.Writer` the way `ods2`'s own version writes straight to
+  `s.Stdout`: `internal/rms` has no notion of `internal/console.Console`'s
+  output stream (see `Session.SetDefault`/`DefaultString`'s own "rms
+  computes, console prints" split), so `internal/console/directory.go`'s
+  `Console.Directory` does the actual `Printf`. An empty `specText`
+  defaults to `"*.*;*"`, matching `ods2`'s own default. Confirmed by direct
+  observation that a freshly initialized volume's master file directory
+  already contains `ods2`'s own reserved files (`INDEXF.SYS`, `BITMAP.SYS`,
+  `BADBLK.SYS`, `BADLOG.SYS`, `CORIMG.SYS`, `VOLSET.SYS`, `CONTIN.SYS`,
+  `BACKUP.SYS`, `000000.DIR` — nine files total from `volume.Initialize`
+  alone), which every test below had to account for (either by scoping its
+  file-spec pattern narrowly enough to exclude them, or by not asserting an
+  exact total at all) rather than assuming a "bare, empty volume" starting
+  point.
+- Reused `ods2`'s own `cmdDirectory` quirk rather than "fixing" it: a
+  directory header for the master file directory itself prints as
+  `"Directory DUA0:[]"` (an empty joined `Dirs` slice, with no `[000000]`
+  fallback the way `filespec.Spec.String`/`formatDirPath`'s *error-message*
+  formatting applies elsewhere) — confirmed this is `ods2`'s own existing
+  behavior, not a defect introduced here, and left it exactly as observed
+  per this phase's own "matching `ods2`'s own output shape closely enough
+  to be recognizable, not necessarily byte-identical" framing (not a
+  license to diverge gratuitously in the one place a literal port would
+  have been just as easy).
+- `internal/rms/session.go`: `resolveVolume`'s "device not mounted" failure
+  changed from a plain `fmt.Errorf` string to a new, exported
+  `*NotMountedError{Device string}` type — needed so
+  `internal/console/directory.go`'s `Console.Directory` can distinguish
+  "bad file spec" from "device not mounted" (reported as `CLI_BADFILESPEC`
+  vs. `SS_DEVNOTMOUNT` respectively, matching `SET DEFAULT`'s and `MOUNT`/
+  `DISMOUNT`'s own conventions for the same two conditions) via `errors.As`
+  rather than by inspecting error text, and can recover the exact device
+  name for its own diagnostic without re-parsing `specText` itself.
+  `TestSession_resolveVolumeNotMounted`/`..._resolveVolumeBadSyntax`
+  (subtask 3) still pass unmodified — neither asserted on the previous
+  error text, only that an error was returned.
+- `internal/console/directory.go` (new): `Console.Directory`, translating
+  `*rms.NotMountedError` to `SS_DEVNOTMOUNT` and everything else to
+  `CLI_BADFILESPEC`, then printing the listing via `Console.Printf` on
+  success — no new status codes were needed for this subtask after all
+  (the design section's speculative `ssNoSuchFac`/`ssNoSuchFile` reuse
+  turned out not to fit DIRECTORY's own two failure modes; per its own
+  wording, those remain earmarked for `DELETE`/`TYPE`/`COPY`'s "not found"
+  cases in later subtasks instead).
+- `internal/bootdata/files/evax.dcl`: new govax-native `verb directory/
+  id=900`, continuing the divergence block started at `MOUNT` — a single
+  optional `SPEC` parameter (`$string`, no `/prompt=`: an omitted file spec
+  is normal, not a missing argument) plus `FULL`/`FILE`/`SIZE`/`DATE`
+  switch qualifiers. `testdata/dcl/evax.dcl`/`reference/eVAX/evax.dcl`
+  untouched, per the established convention. `DIR` (3 letters) reaches
+  `DIRECTORY` via `Grammar.matchVerb`'s ordinary unambiguous-prefix
+  matching — confirmed no other verb in the grammar starts with those
+  letters (`DISMOUNT` is the nearest, diverging at the third character).
+- `dispatch.go`: `bindGrammar` gained `g.Bind("DIRECTORY", ...)`, building
+  a `rms.DirectoryOptions` from `r.Present("FULL"/"FILE"/"SIZE"/"DATE")`
+  and calling `Console.Directory(r.String("SPEC"), opts)`.
+- Tests: `internal/rms/directory_test.go` (new) builds its own small,
+  writable test volume and populates it with real files via `ods2`'s
+  public `Volume.CreateFile`/`Directory.Insert` API directly (the same
+  calls `internal/rms/create.go`'s own `createOnVolume` makes on behalf of
+  a real `SYS$CREATE`, invoked here without going through a whole
+  simulated VAX FAB/RAB, since these tests only need files to exist, not a
+  running VAX program to create them through) — covers a bare listing
+  containing created files, a wildcard name/type filter actually
+  narrowing the results, an empty (zero-match) listing being success not
+  an error, `/FULL` including the record format and implying
+  `/FILE`+`/SIZE`+`/DATE`, `/SIZE` alone not including `/FULL`-only detail,
+  and both `resolveVolume` failure modes surfacing as the right error
+  shape (`*NotMountedError` vs. a plain error) for the console layer to
+  key off of. `internal/console/directory_test.go` (new) covers the
+  `Console`-level wrapper's happy path, both status-code translations, and
+  DCL-dispatched coverage (`DIRECTORY` and its `DIR` abbreviation, an
+  explicit file spec plus `/SIZE` threading through end to end).
+  `internal/console/dcl/define_test.go` gained
+  `TestLoadEvaxGrammar_directory` (verb count 13→14) mirroring the existing
+  structural checks. `internal/rms/simh_interop_test.go` gained the
+  subtask's own called-for opt-in interop check,
+  `TestSimhInterop_directoryListsRealVMSDisk` (skips cleanly when
+  `testdata/disks/rq0-ra92.dsk` isn't present): mounts the real VAX/VMS
+  system disk read-only and runs `DIRECTORY/FULL` against its master file
+  directory, confirmed by manual inspection of `t.Logf` output to produce
+  a sensible 13-file, 6885-block listing (`INDEXF.SYS`, `SYS0.DIR`,
+  `SYSEXE.DIR`, `VMS$COMMON.DIR`, ...) — proving the glob/formatting path
+  handles a real system disk's MFD, not only this package's own hermetic
+  fixtures. Full `go build ./...`, `go vet ./...`, and `go test ./...` all
+  clean across the whole module (including the peer `ods2` module,
+  reachable via `go.work`).
+- No bugs found in the peer `ods2` module during this subtask; its own
+  `filespec.Glob`/`Volume.CreateFile`/`Directory.Insert` were read and
   called exactly as documented, not modified.

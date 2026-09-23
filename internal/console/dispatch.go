@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/console/dcl"
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -439,6 +440,25 @@ func (d *Dispatcher) bindGrammar() {
 	// for either).
 	g.Bind("INITIALIZE_CONTAINER", func(id int64, r *dcl.Result) error {
 		return d.Console.InitializeContainer(r.String("PATH"), uint32(r.Int("SIZE")), r.String("LABEL"), uint16(r.Int("CLUSTER")))
+	})
+
+	// Phase 23 (docs/PHASE-23.md, subtask 5): DIRECTORY lists the files on
+	// a mounted volume via internal/rms.Session.Directory (Console.
+	// Directory, internal/console/directory.go). SPEC carries no /prompt=
+	// in the grammar (evax.dcl's own directory verb), so a bare DIRECTORY
+	// with nothing typed after it reaches here with r.String("SPEC") == ""
+	// -- exactly the "list the whole current default directory" case
+	// Console.Directory's own doc comment describes, not a missing
+	// argument.
+	g.Bind("DIRECTORY", func(id int64, r *dcl.Result) error {
+		opts := rms.DirectoryOptions{
+			Full: r.Present("FULL"),
+			File: r.Present("FILE"),
+			Size: r.Present("SIZE"),
+			Date: r.Present("DATE"),
+		}
+
+		return d.Console.Directory(r.String("SPEC"), opts)
 	})
 }
 
