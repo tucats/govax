@@ -503,3 +503,50 @@ container was never created by anything this project wrote.
   `evax.dcl`.
 - No code written yet; this document is the planning deliverable requested.
   Implementation starts at subtask 1 in a future session.
+
+### 2026-09-23 — Subtask 1: unify INIT/INITIALIZE onto the DCL grammar
+
+- `internal/bootdata/files/evax.dcl`: added the govax-native `verb
+  initialize` block (following the same "diverges from `testdata/dcl/
+  evax.dcl`" convention Phase 22 established for `MOUNT`/`DISMOUNT`,
+  extended with its own comment) — `/VAX` and `/CONTAINER` qualifiers
+  redirecting to `initialize_vax` and `initialize_container` respectively,
+  neither a default. `initialize_vax` declares a single `PAGES $rest_of_line`
+  parameter with no `/prompt=`, exactly as planned, so `INITIALIZE_VAX`'s
+  handler can preserve `CLI_NEEDPAGES`'s original wording via an explicit
+  `Result.Present` check rather than a formal-requirement error.
+  `initialize_container` is stubbed with its four parameters/qualifier
+  (`PATH`/`SIZE`/`LABEL`/`CLUSTER`) per the design doc, no handler bound yet.
+- `internal/console/dispatch.go`: removed `INIT` from `fixedCommands` and
+  deleted `cmdInit` entirely; added `bindGrammar`'s `INITIALIZE_VAX` bind,
+  carrying `cmdInit`'s exact body forward (same `Evaluator` construction,
+  same `v * 512` byte conversion, same `CLI_NEEDPAGES` wrap-on-eval-error).
+  Also extended the file's own top-of-file doc comment: INIT was a genuine
+  `console_dispatch_table` real-function (fixed) entry in the C source, so
+  moving it onto the DCL grammar is a third deliberate deviation from that
+  table's split, alongside the pre-existing DEPOSIT/RUN callouts.
+- `internal/bootdata/files/vax.init`: line 9's `init ^d4096` became
+  `init/vax ^d4096` — confirmed via `cmd/govax`'s existing
+  `TestRun_startupBootsFromEmbeddedFilesAlone`-family tests that the real
+  embedded boot script still boots end to end with the new mandatory `/VAX`
+  qualifier. `testdata/dcl/vax.init` and `reference/eVAX/vax.init` left
+  untouched, per Phase 22's established convention for this file pair.
+- Confirmed by grep (as the design section anticipated) that no other test
+  or fixture in the tree dispatches a bare `"INIT ..."`/`"INITIALIZE ..."`
+  command line; every other call site that exercises VAX memory
+  initialization goes through `Console.Init` directly, unaffected by the
+  verb-spelling change.
+- Tests added: `internal/console/dcl/define_test.go` (verb count 12→13,
+  `INITIALIZE` added to `TestLoadEvaxGrammar`'s verb list, a new
+  `TestLoadEvaxGrammar_initializeVaxContainer` structural check mirroring
+  the existing `..._mountDismount` one) and `parse_test.go`
+  (`TestParse_initializeVax`, `TestParse_initAbbreviatesInitialize`,
+  `TestParse_initializeContainerStub`, `TestParse_initializeBareHasNoDefault`);
+  `internal/console/dispatch_test.go` (`TestDispatch_initializeVax`,
+  `TestDispatch_initAbbreviatesInitializeVax`,
+  `TestDispatch_initializeVaxNeedsPages`, `TestDispatch_initializeBareErrors`,
+  `TestDispatch_initializeContainerNotYetImplemented`). Full `go build ./...`,
+  `go vet ./...`, and `go test ./...` all clean.
+- No bugs found in the peer `ods2` module during this subtask (it wasn't
+  touched — subtask 1 is grammar-engine/dispatch-only, no `internal/rms`
+  work yet).

@@ -327,6 +327,105 @@ func TestParse_mountMissingFile(t *testing.T) {
 	}
 }
 
+// TestParse_initializeVax regresses Phase 23 subtask 1's INITIALIZE/VAX
+// redirect: the qualifier carries no value of its own (it's a pure
+// /syntax= redirector, like DEFINE's /LOGICAL and /DEVICE), so parsing
+// lands in the INITIALIZE_VAX syntax with PAGES holding everything typed
+// after it.
+func TestParse_initializeVax(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	r, err := g.Parse("INITIALIZE/VAX ^d4096")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	if r.Active != "INITIALIZE_VAX" {
+		t.Errorf("Active=%s, want INITIALIZE_VAX", r.Active)
+	}
+
+	if got := r.String("PAGES"); got != "^D4096" {
+		t.Errorf("PAGES=%q, want \"^D4096\"", got)
+	}
+}
+
+// TestParse_initAbbreviatesInitialize checks that INIT -- the pre-Phase-23
+// fixed-table spelling -- still works, purely as DCL's own unambiguous-
+// prefix verb matching (Grammar.matchVerb) now that INITIALIZE is a real
+// grammar verb and nothing else in this file starts with "INIT".
+func TestParse_initAbbreviatesInitialize(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	r, err := g.Parse("INIT/VAX ^d4096")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	if r.Verb != "INITIALIZE" {
+		t.Errorf("Verb=%s, want INITIALIZE (INIT should resolve to it by unambiguous prefix)", r.Verb)
+	}
+
+	if r.Active != "INITIALIZE_VAX" {
+		t.Errorf("Active=%s, want INITIALIZE_VAX", r.Active)
+	}
+}
+
+// TestParse_initializeContainerStub regresses the Phase 23 subtask 1 stub
+// for INITIALIZE/CONTAINER: the syntax itself parses (parameters/qualifiers
+// only, no handler bound until subtask 4).
+func TestParse_initializeContainerStub(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	r, err := g.Parse(`INITIALIZE/CONTAINER "disk1.dsk" 10000 MYVOL/CLUSTER=2`)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	if r.Active != "INITIALIZE_CONTAINER" {
+		t.Errorf("Active=%s, want INITIALIZE_CONTAINER", r.Active)
+	}
+
+	if got := r.String("PATH"); got != "disk1.dsk" {
+		t.Errorf("PATH=%q, want \"disk1.dsk\" (case preserved inside quotes)", got)
+	}
+
+	if got := r.Int("SIZE"); got != 10000 {
+		t.Errorf("SIZE=%d, want 10000", got)
+	}
+
+	if got := r.String("LABEL"); got != "MYVOL" {
+		t.Errorf("LABEL=%q, want MYVOL", got)
+	}
+
+	if got := r.Int("CLUSTER"); got != 2 {
+		t.Errorf("CLUSTER=%d, want 2", got)
+	}
+}
+
+// TestParse_initializeBareHasNoDefault checks that a bare INITIALIZE (or
+// INIT) with no /VAX or /CONTAINER qualifier parses successfully -- the
+// grammar itself imposes no requirement -- but ends up active on the
+// top-level INITIALIZE entry, which Grammar.Dispatch reports as having no
+// bound handler (see dispatch_test.go for that half of the check). Neither
+// qualifier is a default, matching docs/PHASE-23.md's explicit "there is no
+// meaningful do-nothing form of this verb" design decision.
+func TestParse_initializeBareHasNoDefault(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	r, err := g.Parse("INITIALIZE")
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+
+	if r.Active != "INITIALIZE" {
+		t.Errorf("Active=%s, want INITIALIZE (no qualifier given, so no redirect happens)", r.Active)
+	}
+
+	if r.Present("VAX") || r.Present("CONTAINER") {
+		t.Error("expected neither VAX nor CONTAINER present on a bare INITIALIZE")
+	}
+}
+
 func TestParse_quotedStringPreservesCase(t *testing.T) {
 	g := loadEvaxGrammar(t)
 

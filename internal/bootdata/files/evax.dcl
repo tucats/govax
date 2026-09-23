@@ -473,4 +473,51 @@ grammar evax
                     /type=$name                 -
                     /prompt="Device"
 
+    !
+    ! govax-native extension (Phase 23, internal/console + internal/rms):
+    ! INITIALIZE unifies the pre-existing INIT (VAX-memory-allocation,
+    ! Console.Init -- previously one of dispatch.go's fixedCommands entries,
+    ! predating this grammar engine's own existence) and the new
+    ! INITIALIZE/CONTAINER (ODS-2 container formatting) under one verb,
+    ! selected by /VAX or /CONTAINER -- see docs/PHASE-23.md's "INITIALIZE:
+    ! unifying INIT and INITIALIZE under one verb" design section. Neither
+    ! qualifier is a default: this top-level entry has no handler of its
+    ! own, so a bare INITIALIZE (or INIT) with no qualifier falls through to
+    ! Grammar.Dispatch's own "no handler bound" error. INIT keeps working as
+    ! DCL's ordinary unambiguous-prefix abbreviation of INITIALIZE
+    ! (Grammar.matchVerb) -- it is not a second, separate verb.
+    !
+    verb initialize/id=800
+
+        qualifier   vax/id=801/syntax=initialize_vax
+        qualifier   container/id=802/syntax=initialize_container
+
+    ! No /prompt= on PAGES: cmdInit's original CLI_NEEDPAGES error (a
+    ! specific wording, not a formal interactive re-prompt) is preserved by
+    ! the INITIALIZE_VAX handler checking Result.Present("PAGES") itself,
+    ! rather than letting a formally required parameter produce a different
+    ! message -- see docs/PHASE-23.md.
+    syntax initialize_vax/id=803
+
+        parameter   pages/id=804                -
+                    /type=$rest_of_line
+
+    ! INITIALIZE/CONTAINER's own internal/rms handler lands in Phase 23
+    ! subtask 4 -- this syntax is stubbed (parameters/qualifiers only) here
+    ! so /CONTAINER parses instead of erroring, even though nothing is bound
+    ! to it yet (Grammar.Dispatch's "no handler bound" error covers it until
+    ! then).
+    syntax initialize_container/id=805
+
+        parameter   path/id=806                 -
+                    /type=$string                -
+                    /prompt="Container file"
+        parameter   size/id=807                 -
+                    /type=$integer               -
+                    /prompt="Size in blocks"
+        parameter   label/id=808                -
+                    /type=$string
+        qualifier   cluster/id=809               -
+                    /type=$integer
+
 end

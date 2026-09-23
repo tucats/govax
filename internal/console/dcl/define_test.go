@@ -42,7 +42,7 @@ func TestLoadEvaxGrammar(t *testing.T) {
 		t.Errorf("grammar name = %q, want EVAX", g.Name)
 	}
 
-	wantVerbs := []string{"DEFINE", "ABOUT", "FORTH", "EXIT", "QUIT", "TEST", "CALL", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT"}
+	wantVerbs := []string{"DEFINE", "ABOUT", "FORTH", "EXIT", "QUIT", "TEST", "CALL", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE"}
 	for _, v := range wantVerbs {
 		if _, ok := g.entries[v]; !ok {
 			t.Errorf("missing verb %s", v)
@@ -92,10 +92,11 @@ func TestLoadEvaxGrammar(t *testing.T) {
 func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	g := loadEvaxGrammar(t)
 	// define, about, forth, exit, quit, test, call, clear, show, vminit,
-	// mount, dismount (the last two are a govax-native Phase 22 addition
+	// mount, dismount, initialize (the last three are govax-native
+	// additions -- Phase 22 for mount/dismount, Phase 23 for initialize --
 	// with no testdata/dcl/evax.dcl counterpart).
-	if len(g.verbOrder) != 12 {
-		t.Errorf("got %d verbs, want 12: %v", len(g.verbOrder), verbNames(g))
+	if len(g.verbOrder) != 13 {
+		t.Errorf("got %d verbs, want 13: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 
@@ -135,6 +136,72 @@ func TestLoadEvaxGrammar_mountDismount(t *testing.T) {
 
 	if len(dismount.Parameters) != 1 || dismount.Parameters[0].Name != "DEVICE" {
 		t.Errorf("DISMOUNT parameters = %+v, want a single required DEVICE", dismount.Parameters)
+	}
+}
+
+// TestLoadEvaxGrammar_initializeVaxContainer regresses Phase 23 subtask 1's
+// INITIALIZE grammar addition: the bare verb has no handler of its own and
+// redirects via /VAX and /CONTAINER to two separate syntaxes -- see
+// docs/PHASE-23.md's "INITIALIZE: unifying INIT and INITIALIZE under one
+// verb" design section.
+func TestLoadEvaxGrammar_initializeVaxContainer(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	initialize, ok := g.entries["INITIALIZE"]
+	if !ok {
+		t.Fatal("missing verb INITIALIZE")
+	}
+
+	if len(initialize.Parameters) != 0 {
+		t.Errorf("INITIALIZE has %d parameters, want 0 (it never has its own handler)", len(initialize.Parameters))
+	}
+
+	vaxQual, _, err := initialize.qualifier("VAX")
+	if err != nil {
+		t.Fatalf("INITIALIZE should have a VAX qualifier: %v", err)
+	}
+
+	if vaxQual.Syntax != "INITIALIZE_VAX" {
+		t.Errorf("VAX qualifier syntax = %q, want INITIALIZE_VAX", vaxQual.Syntax)
+	}
+
+	containerQual, _, err := initialize.qualifier("CONTAINER")
+	if err != nil {
+		t.Fatalf("INITIALIZE should have a CONTAINER qualifier: %v", err)
+	}
+
+	if containerQual.Syntax != "INITIALIZE_CONTAINER" {
+		t.Errorf("CONTAINER qualifier syntax = %q, want INITIALIZE_CONTAINER", containerQual.Syntax)
+	}
+
+	initVax, ok := g.entries["INITIALIZE_VAX"]
+	if !ok {
+		t.Fatal("missing syntax INITIALIZE_VAX")
+	}
+
+	if len(initVax.Parameters) != 1 || initVax.Parameters[0].Name != "PAGES" {
+		t.Fatalf("INITIALIZE_VAX parameters = %+v, want a single PAGES parameter", initVax.Parameters)
+	}
+
+	if initVax.Parameters[0].Type != TypeRestOfLine {
+		t.Errorf("PAGES type = %v, want TypeRestOfLine", initVax.Parameters[0].Type)
+	}
+
+	if initVax.Parameters[0].required() {
+		t.Error("PAGES should not be formally required (no /prompt=) -- INITIALIZE_VAX's handler checks Present itself, see docs/PHASE-23.md")
+	}
+
+	initContainer, ok := g.entries["INITIALIZE_CONTAINER"]
+	if !ok {
+		t.Fatal("missing syntax INITIALIZE_CONTAINER")
+	}
+
+	if len(initContainer.Parameters) != 3 {
+		t.Fatalf("INITIALIZE_CONTAINER has %d parameters, want 3 (PATH, SIZE, LABEL)", len(initContainer.Parameters))
+	}
+
+	if _, _, err := initContainer.qualifier("CLUSTER"); err != nil {
+		t.Errorf("INITIALIZE_CONTAINER should have a CLUSTER qualifier: %v", err)
 	}
 }
 

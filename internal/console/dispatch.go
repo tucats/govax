@@ -19,12 +19,17 @@ import (
 //
 // The fixed-spelling set and DCL/verb split here follows console_dispatch_
 // table's own -1-vs-real-function split (SHOW, EXIT/QUIT, CLEAR, TEST,
-// VMINIT are DCL-driven; EXAMINE, SET, STEP, ... are fixed) with one
-// deliberate deviation, documented where it's implemented: DEPOSIT
+// VMINIT are DCL-driven; EXAMINE, SET, STEP, ... are fixed) with a few
+// deliberate deviations, documented where they're implemented: DEPOSIT
 // (exam.go) is a Go-native addition with no C-source command of its own.
 // RUN/R now means what it does in the C source (see run.go's Console.Run,
 // Phase 13) — VMS executable-image activation, not plain CPU execution
-// (that's EXEC/GO/G, unaffected).
+// (that's EXEC/GO/G, unaffected). INIT — a real-function fixed entry in the
+// C source — moved onto the DCL grammar in Phase 23 (see bindGrammar's
+// INITIALIZE_VAX bind) as part of unifying it with the new, govax-native
+// INITIALIZE/CONTAINER under one verb; it's no longer in fixedCommands
+// below, reaching INITIALIZE_VAX purely via Grammar.matchVerb's
+// unambiguous-prefix matching instead.
 type Dispatcher struct {
 	Console *Console
 	Grammar *dcl.Grammar
@@ -390,6 +395,30 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("DISMOUNT", func(id int64, r *dcl.Result) error {
 		return d.Console.Dismount(r.String("DEVICE"))
 	})
+
+	// Phase 23 (docs/PHASE-23.md, subtask 1): INITIALIZE/VAX carries
+	// forward the old fixed-table INIT command's exact behavior (cmdInit,
+	// removed) now that INIT/INITIALIZE are unified onto this grammar as
+	// one verb, redirected by /VAX vs. /CONTAINER. PAGES has no /prompt= in
+	// the grammar (see evax.dcl's own comment on initialize_vax), so a
+	// missing page count is checked explicitly here rather than triggering
+	// a formal-requirement error with different wording -- preserving
+	// CLI_NEEDPAGES's exact original message either way. INITIALIZE_
+	// CONTAINER has no bind yet (Phase 23 subtask 4); until then,
+	// Grammar.Dispatch's own "no handler bound" error covers it, same as
+	// every other currently-unbound syntax in this file.
+	g.Bind("INITIALIZE_VAX", func(id int64, r *dcl.Result) error {
+		if !r.Present("PAGES") {
+			return vmserrors.New(vmserrors.CLI_NEEDPAGES)
+		}
+
+		v, _, err := (&Evaluator{Symbols: d.Console.Symbols, Radix: d.Console.Radix, Mem: d.Console.Mem, CPU: d.Console.CPU}).Eval(r.String("PAGES"))
+		if err != nil {
+			return vmserrors.Wrap(vmserrors.CLI_NEEDPAGES, err)
+		}
+
+		return d.Console.Init(v * 512)
+	})
 }
 
 type fixedHandler func(d *Dispatcher, rest string) error
@@ -409,7 +438,6 @@ var fixedCommands map[string]fixedHandler
 
 func init() {
 	fixedCommands = map[string]fixedHandler{
-		"INIT": cmdInit,
 		"ZERO": cmdZero,
 
 		"EXAM": cmdExamine, "EX": cmdExamine, "DUMP": cmdExamine,
@@ -484,15 +512,6 @@ func (d *Dispatcher) assembleInteractiveLine(line string) error {
 	}
 
 	return nil
-}
-
-func cmdInit(d *Dispatcher, rest string) error {
-	v, _, err := (&Evaluator{Symbols: d.Console.Symbols, Radix: d.Console.Radix, Mem: d.Console.Mem, CPU: d.Console.CPU}).Eval(strings.TrimSpace(rest))
-	if err != nil {
-		return vmserrors.Wrap(vmserrors.CLI_NEEDPAGES, err)
-	}
-
-	return d.Console.Init(v * 512)
 }
 
 func cmdZero(d *Dispatcher, rest string) error { return d.Console.Zero() }

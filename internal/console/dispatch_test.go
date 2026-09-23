@@ -757,6 +757,85 @@ func TestDispatch_if(t *testing.T) {
 	}
 }
 
+// TestDispatch_initializeVax exercises Phase 23 subtask 1's unified
+// INITIALIZE verb end to end through the real Dispatcher: /VAX carries
+// forward INIT's exact pre-Phase-23 behavior (Console.Init, page count *
+// 512 bytes), now reached via the DCL grammar instead of dispatch.go's old
+// fixedCommands entry.
+func TestDispatch_initializeVax(t *testing.T) {
+	c, _ := newTestConsole(t)
+	g := loadEvaxGrammar(t)
+	d := NewDispatcher(c, g, nil)
+
+	if err := d.Dispatch("INITIALIZE/VAX ^d20"); err != nil {
+		t.Fatalf("Dispatch(INITIALIZE/VAX): %v", err)
+	}
+
+	if c.Mem == nil {
+		t.Fatal("expected memory allocated after INITIALIZE/VAX")
+	}
+
+	if got := c.Mem.Size(); got != 20*512 {
+		t.Errorf("Mem.Size() = %d, want %d (20 pages)", got, 20*512)
+	}
+}
+
+// TestDispatch_initAbbreviatesInitializeVax checks that the old "INIT"
+// spelling still works end to end -- purely as DCL's own unambiguous-
+// prefix verb matching now that INITIALIZE is a grammar verb, not a second
+// fixedCommands entry (removed by this subtask; see dispatch.go's own
+// bindGrammar comment on INITIALIZE_VAX).
+func TestDispatch_initAbbreviatesInitializeVax(t *testing.T) {
+	c, _ := newTestConsole(t)
+	g := loadEvaxGrammar(t)
+	d := NewDispatcher(c, g, nil)
+
+	if err := d.Dispatch("INIT/VAX ^d20"); err != nil {
+		t.Fatalf("Dispatch(INIT/VAX): %v", err)
+	}
+
+	if got := c.Mem.Size(); got != 20*512 {
+		t.Errorf("Mem.Size() = %d, want %d (20 pages)", got, 20*512)
+	}
+}
+
+// TestDispatch_initializeVaxNeedsPages checks that INITIALIZE/VAX with no
+// page count reports the same CLI_NEEDPAGES wording cmdInit always has,
+// even though PAGES carries no formal /prompt= in the grammar (see
+// evax.dcl's own comment on initialize_vax).
+func TestDispatch_initializeVaxNeedsPages(t *testing.T) {
+	d, _ := newTestDispatcher(t)
+
+	err := d.Dispatch("INITIALIZE/VAX")
+	if err == nil || !strings.Contains(err.Error(), "NEEDPAGES") {
+		t.Errorf("Dispatch(INITIALIZE/VAX) = %v, want a NEEDPAGES error", err)
+	}
+}
+
+// TestDispatch_initializeBareErrors checks that a bare INITIALIZE (no /VAX
+// or /CONTAINER) reaches Grammar.Dispatch's own "no handler bound" error --
+// per docs/PHASE-23.md, neither qualifier is a default, so there is no
+// meaningful do-nothing form of this verb.
+func TestDispatch_initializeBareErrors(t *testing.T) {
+	d, _ := newTestDispatcher(t)
+
+	if err := d.Dispatch("INITIALIZE"); err == nil {
+		t.Error("expected an error for a bare INITIALIZE with no /VAX or /CONTAINER")
+	}
+}
+
+// TestDispatch_initializeContainerNotYetImplemented checks that
+// INITIALIZE/CONTAINER parses (the syntax is stubbed by subtask 1) but has
+// no handler bound yet -- its internal/rms implementation lands in Phase 23
+// subtask 4.
+func TestDispatch_initializeContainerNotYetImplemented(t *testing.T) {
+	d, _ := newTestDispatcher(t)
+
+	if err := d.Dispatch(`INITIALIZE/CONTAINER "disk1.dsk" 10000`); err == nil {
+		t.Error("expected an error for INITIALIZE/CONTAINER (no handler bound until subtask 4)")
+	}
+}
+
 func TestDispatch_emptyLineIsNoop(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	if err := d.Dispatch("   "); err != nil {

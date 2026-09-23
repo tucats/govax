@@ -6,7 +6,7 @@
 ;  Initialize memory with 2mb of physical RAM
 ;
 
-init ^d4096
+init/vax ^d4096
 
 if defined("console$arg_file" ) then set noverbose
 
