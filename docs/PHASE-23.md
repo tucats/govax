@@ -371,7 +371,7 @@ container was never created by anything this project wrote.
 
 ## Subtasks
 
-1. Unify `INIT`/`INITIALIZE` onto the DCL grammar as a single `verb
+1. **Done.** Unify `INIT`/`INITIALIZE` onto the DCL grammar as a single `verb
    initialize` with `/VAX` and `/CONTAINER` syntax-redirecting qualifiers (no
    handler bound to the bare verb, so a qualifier is effectively mandatory —
    see the design section above), moving `INIT`'s existing VAX-memory-
