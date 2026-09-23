@@ -166,6 +166,33 @@ func (t *MountTable) Lookup(device string) (*volume.Volume, bool) {
 	return entry.Volume, true
 }
 
+// VolumeLabel returns the ASCII volume label recorded in device's mounted
+// volume's home block (real VMS's own VOLNAM: whatever INITIALIZE/VOLUME
+// SET wrote there when the container was first initialized — see the
+// sibling ods2 module's ondisk.HomeBlock.VolumeName), and whether device
+// has anything mounted at all.
+//
+// This exists purely so a caller displaying mount status (SHOW DEVICE/
+// FULL, internal/console/device.go's ShowDevices) doesn't need to import
+// the sibling ods2 module's own volume/ondisk types just to read one
+// string field — keeping that dependency confined to this package, the
+// one place govax code is allowed to reach into ods2 directly (see
+// mount.go's own package-level design note in docs/PHASE-22.md).
+//
+// A volume set's label lives on every member's home block identically (it
+// describes the logical volume as a whole, not any one member disk), so
+// reading it off the first member (Devices[0]) is always correct even for
+// a multi-disk mount — not that this phase's MountTable.Mount ever passes
+// more than one container in anyway (see its own doc comment).
+func (t *MountTable) VolumeLabel(device string) (string, bool) {
+	entry, ok := t.mounts[normalizeDeviceName(device)]
+	if !ok {
+		return "", false
+	}
+
+	return entry.Volume.Devices[0].Home.VolumeName, true
+}
+
 // Writable reports whether device's mounted volume was mounted with write
 // access (Mount's own writable argument) — what a later SYS$CREATE/
 // SYS$PUT handler is expected to check before attempting to write, so

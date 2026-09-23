@@ -175,3 +175,40 @@ func TestMountTable_dismountNotMounted(t *testing.T) {
 		t.Error("Dismount of an unmounted device = nil error, want an error")
 	}
 }
+
+// TestMountTable_volumeLabel confirms VolumeLabel returns the mounted
+// volume's real on-disk label (the same one TestMountTable_mountAndLookup
+// already reads directly off vol.Devices[0].Home.VolumeName), reports
+// "not mounted" for a device with nothing attached, and stops reporting a
+// label at all once Dismount has run — internal/console/device.go's
+// ShowDevices (SHOW DEVICE/FULL) relies on that last part to stop showing
+// a mounted-volume line for a device that was just dismounted.
+func TestMountTable_volumeLabel(t *testing.T) {
+	mt := NewMountTable()
+
+	if _, ok := mt.VolumeLabel("DUA0"); ok {
+		t.Error("VolumeLabel on an empty table = found, want not found")
+	}
+
+	path := newTestVolumeFile(t, "TESTVOL")
+	if err := mt.Mount("DUA0", path, true); err != nil {
+		t.Fatalf("Mount: %v", err)
+	}
+
+	label, ok := mt.VolumeLabel("dua0:")
+	if !ok {
+		t.Fatal("VolumeLabel after Mount = not found, want found")
+	}
+
+	if label != "TESTVOL" {
+		t.Errorf("VolumeLabel = %q, want %q", label, "TESTVOL")
+	}
+
+	if err := mt.Dismount("DUA0"); err != nil {
+		t.Fatalf("Dismount: %v", err)
+	}
+
+	if _, ok := mt.VolumeLabel("DUA0"); ok {
+		t.Error("VolumeLabel after Dismount = found, want not found")
+	}
+}

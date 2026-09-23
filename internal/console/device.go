@@ -49,6 +49,7 @@ func (c *Console) ShowDevices(name string, full bool) error {
 			c.Printf("    MEDIANAME=%s\n", d.MediaName)
 			c.Printf("    MEDIATYPE=%s\n", d.MediaType)
 			c.Printf("    ROOTDEVNAME=%s\n", d.RootDevName)
+			c.showMountedVolume(d.Name)
 		}
 
 		c.Printf("    DEVBUFSIZE=%d\n", d.DevBufSize)

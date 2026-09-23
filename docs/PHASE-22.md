@@ -374,7 +374,7 @@ This local convenience doesn't feed the committed test suite.
     `RMS$_EOF` on exhaustion.
 11. **Done.** `internal/rtl`: `registerRMSServices` shrinks to registering `internal/rms`'s
     handlers into the shared `ServiceTable`.
-12. `internal/io`/`internal/console/device.go`: `MOUNT`/`DISMOUNT` console
+12. **Done.** `internal/io`/`internal/console/device.go`: `MOUNT`/`DISMOUNT` console
     methods (auto-create device record, call `internal/rms.MountTable`); `SHOW
     DEVICE/FULL` mounted-volume line.
 13. `internal/console/dispatch.go`: bind the new `MOUNT`/`DISMOUNT` grammar
@@ -1005,6 +1005,87 @@ This local convenience doesn't feed the committed test suite.
   registered" test switched from asserting that about `SYS$OPEN` (now
   registered, by this very subtask) to `SYS$DISCONNECT` (still genuinely
   unimplemented).
+- No bugs found in the sibling `ods2` module while implementing this
+  subtask.
+- `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`) all
+  clean.
+
+### 2026-09-23 — Subtask 12 complete
+
+- Added `internal/console/mount.go`: `Console.Mount(device, path string,
+  write bool) error` and `Console.Dismount(device string) error`, the
+  console-facing layer on top of `internal/rms.MountTable` (subtask 4). Both
+  methods check `c.Mounts.Lookup` themselves before delegating to
+  `MountTable.Mount`/`Dismount`, rather than trying to distinguish "already
+  mounted" / "not mounted" from every other kind of failure by inspecting
+  `MountTable`'s plain Go error text afterward — a Go error string isn't a
+  stable, checkable contract, so this reads the same state `MountTable`
+  would have consulted internally and reports the precise real status
+  itself. `Mount` auto-creates a disk-class `internal/io.Device` record via
+  `c.Devices.Define` when `device` isn't already known (docs/PHASE-22.md's
+  "Device model" design decision), but only *after* the underlying mount
+  succeeds, so a failed `MOUNT` never leaves a phantom disk device behind;
+  it also leaves an already-`DEFINE/DEVICE`'d record's own fields untouched
+  rather than overwriting them. `Dismount` deliberately leaves the device
+  record itself in place — real VMS's `DISMOUNT` makes a device unmounted,
+  not undefined.
+- Refined this file's own "Device model" design decision while
+  implementing: it named `internal/rtl/status.go`'s unexported `ssXxx`
+  table as where `SS_DEVMOUNT`/`SS_DEVNOTMOUNT`/`SS_NOMOUNT` should live,
+  written before subtask 11 had settled that `MOUNT`/`DISMOUNT` are
+  `internal/console`-only DCL commands with no `SYS$` service/P1-vector
+  entry of their own — `internal/rtl/status.go`'s table is private to
+  package `rtl` and exists purely to back `ServiceFunc` R0 return values,
+  neither of which applies here. `internal/console` already has an
+  established, cross-package mechanism for exactly this need (a real,
+  numbered VMS status code becoming a Go `error` an operator-facing command
+  can return) in `internal/vmserrors`'s `SYS` facility (`codes_sys.go`),
+  which — unlike this package's other facilities (RMS/CLI/LIB/VAX) — is
+  specifically designed so that `SYSFacility`(0)'s
+  `FacilityPosition`/`MessagePosition` packing reproduces a real, literal
+  `ss_def.h` value exactly (already true of its existing `SS_STATUS`=1/
+  `SS_ACCVIO`=12, which coincide with real `SS$_NORMAL`/`SS$_ACCVIO`). Added
+  `SS_DEVMOUNT`/`SS_DEVNOTMOUNT`/`SS_NOMOUNT` there instead, with message
+  IDs (13/15/1297) chosen so the composite constants come out to exactly
+  108/124/10380 — confirmed by `TestSSMountCodesMatchRealSSDEF` decoding
+  each real header value's own severity/message-number bit fields.
+- Added `internal/rms.MountTable.VolumeLabel(device string) (string, bool)`
+  (`mount.go`): returns the mounted volume's real on-disk label
+  (`ondisk.HomeBlock.VolumeName`) without making `internal/console` import
+  the sibling `ods2` module's own `volume`/`ondisk` types directly —
+  `internal/rms` stays the one place in this project allowed to reach into
+  `ods2` (docs/PHASE-22.md's own scope section), and this keeps that
+  boundary intact for the one new piece of mount state `SHOW DEVICE/FULL`
+  needed to read.
+- `internal/console/device.go`'s `ShowDevices` gains a `MOUNTED=` line for
+  every disk-class device shown with `/FULL` (`showMountedVolume`,
+  `mount.go`): the real label and `READ/WRITE`/`READ ONLY` access when
+  something is mounted (read straight from `c.Mounts.VolumeLabel`/
+  `.Writable`, not from any field on the `internal/io.Device` record
+  itself), or an explicit `<not mounted>` otherwise — printed unconditionally
+  for a disk device so "nothing mounted" reads as genuine state rather than
+  a suspicious missing line.
+- Test coverage: `internal/vmserrors/error_test.go` gained
+  `TestSSMountCodesMatchRealSSDEF` (the three new codes' literal numeric
+  values against `ss_def.h`) and `TestErrorMountCodesFormatDeviceName`
+  (message-text rendering, including `SS_NOMOUNT`'s wrapped-cause case).
+  `internal/rms/mount_test.go` gained `TestMountTable_volumeLabel`.
+  `internal/console/mount_test.go` (new) covers `Mount`'s auto-create/
+  don't-redefine/already-mounted/bad-container paths, `Dismount`'s
+  not-mounted path and that it leaves the device record behind, a full
+  mount-dismount-remount cycle, and `ShowDevices`'s new `MOUNTED=` line in
+  its unmounted/writable-mount/read-only-mount states plus confirming it
+  never appears for a non-disk device. `internal/console/mount_test.go`'s
+  own `newTestContainer` fixture helper mirrors `internal/rms/mount_test.go`'s
+  `newTestVolumeFile` (same `diskimage.Create`+`volume.Initialize` pattern,
+  docs/PHASE-22.md's "Test fixtures" design decision) — duplicated rather
+  than exported from `internal/rms`, since a test-only helper isn't
+  something that package should have to expose from its public API.
+- `internal/console/dispatch.go` still has no `g.Bind("MOUNT", ...)`/
+  `g.Bind("DISMOUNT", ...)` calls — that's subtask 13, next; parsing a
+  `MOUNT`/`DISMOUNT` command line today still yields `Grammar.Dispatch`'s
+  existing "no handler bound" error, same as every other unbound syntax in
+  the grammar file, exactly as subtask 2's own log entry already noted.
 - No bugs found in the sibling `ods2` module while implementing this
   subtask.
 - `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`) all
