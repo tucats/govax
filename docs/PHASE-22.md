@@ -359,7 +359,7 @@ This local convenience doesn't feed the committed test suite.
    disk device does `volume.CreateFile` with an `ondisk.RecAttr` built from the
    FAB's `RFM`/`RAT`/`MRS` fields; anything else is a real device/file error, not
    a host-path fallback. Store the new IFI back into the FAB.
-6. `internal/rms`: `SYS$CONNECT` (binding a RAB to an already-open IFI, console
+6. **Done.** `internal/rms`: `SYS$CONNECT` (binding a RAB to an already-open IFI, console
    or ODS2-backed).
 7. `internal/rms`: `SYS$PUT` — `rms.NewWriter`/`.Put` per record, matching
    `RAB$B_RAC` (sequential-only).
@@ -710,6 +710,36 @@ This local convenience doesn't feed the committed test suite.
   made-up logical. No handler is wired into `internal/rtl`'s `ServiceTable`
   yet (still subtask 11) — `SysCreate` is only reachable by calling it
   directly, exactly as this subtask's own tests do.
+- No bugs found in the sibling `ods2` module while implementing this
+  subtask.
+- `go build ./...`, `go vet ./...`, `go test ./...` all clean.
+
+### 2026-09-23 — Subtask 6 complete
+
+- Added `internal/rms/connect.go` (`SysConnect`, the SYS$CONNECT handler):
+  reads the RAB's `RAB$L_FAB` to find its related FAB, reads that FAB's
+  `FAB$W_IFI` to find the already-open `FileTable` handle (`RMS$_IFI` if
+  it's stale or was never opened), copies the IFI into the RAB's own
+  `RAB$W_ISI`, and — for a real ODS-2-backed file (the console case needs
+  no further work) — arms it for record access via a small helper,
+  `armForFAC`, that inspects the FAB's `FAB$B_FAC` to decide direction:
+  `FAB$V_PUT` set constructs an `ods2/rms.Writer` (`odsrms.NewWriter`);
+  `FAB$V_GET` set constructs an `odsrms.Reader`; neither bit set is
+  `RMS$_PRV`, matching SYS$CREATE's own access-mode check. A second
+  SYS$CONNECT against an already-armed FAB (real VMS lets more than one
+  RAB share a FAB) reuses the existing Reader/Writer instance rather than
+  constructing a second, independent one over the same file, which would
+  otherwise let two write positions race over one linear file.
+- Test coverage (`connect_test.go`): the console path; a real disk-file
+  CONNECT that arms a Writer and confirms it's immediately usable for a
+  `Put` (a live look ahead at subtask 7's own write path); an invalid/
+  stale IFI (`RMS$_IFI`, with the RAB's `RAB$W_ISI` confirmed untouched);
+  a FAB with neither `FAB$V_PUT` nor `FAB$V_GET` set (`RMS$_PRV`); a
+  second CONNECT reusing rather than replacing an already-armed Writer;
+  and a GET-direction CONNECT arming a Reader — built by writing and
+  closing a file directly through `ods2`'s own `volume` API and reopening
+  it fresh via `vol.OpenFID`, since SYS$OPEN (subtask 9) doesn't exist
+  yet to produce a read-only handle through this package's own services.
 - No bugs found in the sibling `ods2` module while implementing this
   subtask.
 - `go build ./...`, `go vet ./...`, `go test ./...` all clean.
