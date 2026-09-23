@@ -1144,3 +1144,57 @@ This local convenience doesn't feed the committed test suite.
   subtask.
 - `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`) all
   clean.
+
+### 2026-09-23 — MOUNT/DISMOUNT console help text
+
+- At the user's request, documented `MOUNT`/`DISMOUNT` in
+  `internal/bootdata/files/vax.help` (the console `HELP` command's own
+  text, unrelated to the DCL grammar file of a similar name): a `$MOUN`
+  topic and a `$DISM` topic (both plain-verb keys, matching `helpKey`'s
+  truncate-to-4-characters rule — `MOUNT`/`DISMOUNT` truncate cleanly with
+  no padding needed, unlike a same-file historical entry this work
+  incidentally noticed, `$CLEA,MEM`, which looks like it can never actually
+  match a live `HELP CLEAR MEM` query because of how `ParseHelp`'s
+  `strings.TrimSpace` strips a trailing pad space off a key line's *last*
+  token — a latent parsing quirk affecting any existing entry whose last
+  word is under 4 characters, left alone since it predates this session and
+  isn't otherwise in scope). Also added both verbs to the `$HELP` topic
+  index's one-line command list, and a dated line to the file's own header
+  History comment block, matching that file's established convention.
+- While editing, discovered and fixed a real, unrelated encoding bug this
+  session's own edit introduced: the file's header copyright line has a
+  literal Latin-1 `©` byte (0xA9) that isn't valid UTF-8 on its own; the
+  Edit tool's UTF-8 round-trip silently corrupted it to the Unicode
+  replacement character (U+FFFD) on the first pass. Fixed by patching the
+  raw bytes directly (Python, `bytes.replace`) rather than going back
+  through a UTF-8-decoding edit path, confirmed byte-for-byte against `git
+  show HEAD` afterward.
+- Per the user's explicit follow-up direction, also removed
+  `testdata/dcl/vax.help` entirely (`git rm`) rather than keeping it as a
+  second, historical copy the way `testdata/dcl/evax.dcl` is deliberately
+  kept alongside `internal/bootdata/files/evax.dcl` (this file's own
+  "Grammar file" design decision) — unlike the DCL grammar, `vax.help` has
+  no ongoing reason to track a separate upstream-import lineage once
+  `internal/bootdata/files/vax.help` is the only copy anything reads.
+  Updated every reference: `internal/console/help_test.go`'s
+  `vaxHelpPath` now points at `internal/bootdata/files/vax.help`;
+  `internal/console/help.go`'s and `cmd/govax/main_test.go`'s doc comments
+  no longer cite the deleted testdata path; `CLAUDE.md`'s
+  `testdata/{asm,exe,rom,dcl}/` bullet no longer lists `vax.help` among
+  that directory's fixtures, with a note on why it was consolidated.
+  `docs/PHASE-00.md`/`PHASE-08.md`'s own historical progress-log mentions
+  of `testdata/dcl/vax.help` were left untouched, matching this project's
+  convention of not rewriting past phases' dated log entries after the
+  fact.
+- Test coverage: `cmd/govax/main_test.go`'s new
+  `TestRun_helpMountAndDismountFromEmbeddedFile` boots `govax` from
+  nothing but `internal/bootdata`'s embedded files (the same real,
+  end-to-end path `TestRun_startupBootsFromEmbeddedFilesAlone` already
+  exercises) and issues real `HELP MOUNT`/`HELP DISMOUNT` command lines,
+  confirming both new topics parse and resolve through the actual runtime
+  path an operator uses — not just `internal/console`'s own more granular
+  `ParseHelp`/`helpKey` unit tests. `internal/console/help_test.go`'s
+  existing `TestLoadHelpFile_realFixture`/`TestHelpKey_matchesDocumentedExample`
+  re-verified clean against the relocated fixture path.
+- `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`) all
+  clean.

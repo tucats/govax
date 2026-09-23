@@ -30,8 +30,11 @@ never had.
 - `reference/CLAUDE.md` — the C project's own CLAUDE.md, useful background on its
   architecture and gotchas (e.g. CR-only line endings in some files).
 - `testdata/{asm,exe,rom,dcl}/` — fixtures pulled from the C repo's root
-  (`.asm` sources, real VMS `.exe` binaries, `xdefault.rom`, `evax.dcl`/`vax.help`/
-  `vax.init`), organized by type for use in Go tests.
+  (`.asm` sources, real VMS `.exe` binaries, `xdefault.rom`, `evax.dcl`/
+  `vax.init`), organized by type for use in Go tests. `vax.help` used to have
+  a second copy here too; it was consolidated down to the single, live copy
+  at `internal/bootdata/files/vax.help` (Phase 22) since, unlike `evax.dcl`,
+  it had no ongoing reason to track a separate upstream-import lineage.
 - `~/Documents/Technical Doc/VMS/vax_instr_set.pdf` — the VAX architecture/
   instruction-set reference manual.
 

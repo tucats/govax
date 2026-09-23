@@ -31,6 +31,39 @@ func TestRun_startupBootsFromEmbeddedFilesAlone(t *testing.T) {
 	}
 }
 
+// TestRun_helpMountAndDismountFromEmbeddedFile confirms internal/bootdata's
+// embedded vax.help (the single copy this HELP command actually reads at
+// runtime, internal/console/help.go's ParseHelp fed by main.go's
+// resolver.ReadFile — see that file's own History comment for why there is
+// no separate testdata/dcl/vax.help any more) parses cleanly and resolves
+// "HELP MOUNT"/"HELP DISMOUNT" to real body text, not the "No help
+// available for that topic" fallback (internal/console/help.go's Console.
+// Help). This exercises the real end-to-end path a console operator
+// actually uses, not just internal/console's own more granular
+// ParseHelp/helpKey unit tests.
+func TestRun_helpMountAndDismountFromEmbeddedFile(t *testing.T) {
+	script := "HELP MOUNT\nHELP DISMOUNT\n"
+	in := io.NopCloser(strings.NewReader(script))
+
+	var buf bytes.Buffer
+	if err := run(nil, 0, 0, &buf, in, nil); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+
+	out := buf.String()
+	if strings.Contains(out, "No help available for that topic") {
+		t.Errorf("output = %q, want real MOUNT/DISMOUNT help text, not the fallback message", out)
+	}
+
+	if !strings.Contains(out, "MOUNT command attaches a disk-image container") {
+		t.Errorf("output = %q, want HELP MOUNT's own body text", out)
+	}
+
+	if !strings.Contains(out, "DISMOUNT command detaches") {
+		t.Errorf("output = %q, want HELP DISMOUNT's own body text", out)
+	}
+}
+
 // TestRun_instructionLimitStopsARunawayProgram exercises govax's own
 // -instruction-limit flag end to end (docs/PHASE-15.md's sub-phase 2):
 // after the embedded vax.init finishes booting (leaving PC at 0x200, per

@@ -1,5 +1,5 @@
 //
-//  Copyright © 1997 Forest Edge Software, All Rights Reserved
+//  Copyright ï¿½ 1997 Forest Edge Software, All Rights Reserved
 //
 //  Program:    VAX Emulator, a "Virtual VAX" for Mac OS Computers
 //
@@ -22,6 +22,8 @@
 //              07/14/99    Added RUN, related helps.
 //              11/05/01    Updated DEBUG flags, added BREAK/INST helps
 //              02/20/02    Added SET FAULT
+//              09/23/26    Added MOUNT, DISMOUNT (govax internal/rms,
+//                          Phase 22 -- see docs/PHASE-22.md)
 
 This is the help documentation for the VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1934,11 +1936,11 @@ $SET ,MODE
 
 $HELP
 
-    The eVAX emulator is a VAX software emulator.  It supports execution
-    of a subset of the VAX instruction set.  It also contains emulation
-    of VAX hardware, memory management, and console functions.  The
-    console functions are extended beyond existing VAX implementation to
-    include a "mini-assembler", disassembler, and minimal debugging tools.
+    govax a VAX software emulator.  It supports execution of a subset
+    of the VAX instruction set.  It also contains emulation of VAX hardware,
+    memory management, and console functions.  The console functions are
+    extended beyond existing VAX implementation to include an assembler, 
+    disassembler, and debugging tools like breakpoints.
 
     You can get help on a topic by using the HELP command, followed by
     one or more keywords.  For example, to get help on the SHOW command,
@@ -1957,12 +1959,14 @@ $HELP
     CALL            Execute instructions by calling into a procedure
     CLEAR           Clear memory, symbols, etc.
     DISASSEMBLE     Disassemble memory as VAX instructions
+    DISMOUNT        Detach a device's mounted disk-image container
     DO              Assemble and execute a single instruction
     EXAMINE         Examine the contents of memory
     GO              Execute VAX instructions
     INCLUDE         Execute a text file of console commands
     INITIALIZE      Initialize the virtual VAX
     LOAD            Load a saved memory image
+    MOUNT           Attach a disk-image container file to a device
     QUIT            Quit the virtual VAX
     SAVE            Save the machine state
     RUN             Load and run a VAX/VMS image
@@ -2623,6 +2627,74 @@ $XFC
     occurs because the page is not mapped to physical memory, then the
     V bit of the PSL is set and the result in R0 is undefined.
 
+
+$MOUN
+
+    The MOUNT command attaches a disk-image container file to a device
+    name, making a real ODS-2 volume available for RMS file access (the
+    SYS$CREATE, SYS$OPEN, SYS$CLOSE, SYS$GET, and SYS$PUT system services).
+    If the named device is not already known to the console, MOUNT creates
+    it automatically as a disk-class device.
+
+    Mounting a device that already has a container mounted on it is an
+    error; use DISMOUNT first if you want to attach a different container
+    to the same device name.
+
+    Syntax:
+
+        MOUNT [/WRITE] [/NOWRITE] <device> <file>
+
+    Parameters:
+
+        <device>        The device name to attach the container to, such
+                        as DUA0.  A trailing colon is optional.
+
+        <file>          The path to the disk-image container file on the
+                        native file system.  If the native file system is
+                        case sensitive, or the name contains embedded
+                        blanks, it should be enclosed in quotes to
+                        preserve case and spacing.
+
+    Qualifiers:
+
+        /WRITE          Mounts the volume for both reading and writing.
+                        This is the default.
+
+        /NOWRITE        Mounts the volume read-only.  Any attempt to
+                        create or write a file on the volume fails.
+
+    Examples:
+
+        MOUNT DUA0 disk1.dsk
+
+        MOUNT/NOWRITE DUA1 "system disk.dsk"
+
+    See also the help for DISMOUNT and SHOW DEVICE.
+
+$DISM
+
+    The DISMOUNT command detaches the disk-image container currently
+    mounted on a device, flushing any pending writes and closing the
+    underlying container file.  The device itself remains known to the
+    console; only its mounted volume is removed.  A later MOUNT command
+    can attach a different container to the same device name.
+
+    Dismounting a device with nothing currently mounted on it is an error.
+
+    Syntax:
+
+        DISMOUNT <device>
+
+    Parameter:
+
+        <device>        The device name to detach, such as DUA0.  A
+                        trailing colon is optional.
+
+    Example:
+
+        DISMOUNT DUA0
+
+    See also the help for MOUNT and SHOW DEVICE.
 
 $END-OF-FILE
  

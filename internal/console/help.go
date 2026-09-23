@@ -7,7 +7,9 @@ import (
 )
 
 // Help holds parsed HELP text, matching help.c's own vax.help file format
-// (documented in the file itself, testdata/dcl/vax.help): a "$"-prefixed
+// (documented in the file itself, internal/bootdata/files/vax.help -- the
+// single copy of this file; see that file's own History comment for why
+// there is no longer a separate testdata/dcl/vax.help): a "$"-prefixed
 // line marks a topic key (comma-separated 4-character, space-padded/
 // truncated tokens, one per HELP argument word); several consecutive "$"
 // lines with no text between them share the following body text (letting
