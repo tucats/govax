@@ -220,3 +220,30 @@ forty existing topics whose bare abbreviated form was under four characters
 before matching it against `helpKey`'s always-fully-padded query — both sides
 now share one `normalizeHelpKey`/`normalizeHelpToken` implementation. See
 PHASE-23.md's progress log for the full command-by-command breakdown.
+
+Phase 24, requested by the user 2026-09-23 directly following Phase 11's
+`.P1VECTOR` work, adds `.RMSDEF`/`.FAB`/`.RAB` to `internal/asm`: this port's
+own equivalent of real MACRO-32's `$FABDEF`/`$RABDEF`/`$RMSDEF`/`$FAB`/`$RAB`
+library macros, letting a fixture build a FAB/RAB by keyword
+(`.FAB FAC=FAB$M_PUT, ORG=FAB$C_SEQ, ...`) instead of hand-laying-out
+`.BLKB`/`.BYTE`/`.WORD`/`.LONG` blocks at byte offsets only a `;` comment
+documented. Like Phase 22/23, has no `reference/eVAX` counterpart (confirmed by
+grepping `asm_pseudo.c`'s own pseudo-op table); its correctness reference is
+`reference/vms/{fabdef,rabdef,rmsdef}.h`, real VAX/VMS 7.3 SDL-generated
+headers. Introduced `internal/vmsdef`, a shared data package (consolidated
+mid-planning from the narrower `internal/p1vector` this phase started from,
+once it was clear the asm/RTL-shared-static-VMS-data need — P1-vector
+addresses, now FAB/RAB field layouts — was going to keep recurring as more of
+the VMS system-service library gets ported) holding the complete FAB
+(33-field)/RAB (26-field) offset tables and a `go:generate` generator
+(mirroring `internal/cpu/gen`'s own precedent) producing a 393-entry constant
+table from all three headers' flat `#define` lines; `internal/rms/fab.go`/
+`rab.go`/`status.go` were migrated onto this same shared table instead of their
+own previously-private, separately-verified literals. `testdata/asm/
+rms_roundtrip.asm` (Phase 22's own end-to-end RMS fixture) was rewritten to use
+all three new pseudo-ops, surfacing one genuine pre-existing assembler
+limitation along the way (a forward-referenced symbol can't be combined with an
+operator, `VAX_FWDOPERATOR`) rather than a new bug. See PHASE-24.md's own
+"Design decisions" section and progress log for the full detail, including the
+`.P1VECTOR`-idempotency lesson (`unique=false` from the start, not discovered
+as a bug afterward) this phase's own `.RMSDEF` applied up front.

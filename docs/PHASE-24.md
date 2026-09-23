@@ -23,7 +23,7 @@ pseudo-ops:
   `$FAB` macro's own calling convention.
 - `.RAB` — same for a 68-byte RAB, matching `$RAB`.
 
-**Status: in progress — subtasks 1-5 done, subtask 6 (docs) remaining.**
+**Status: complete — all 6 subtasks done.**
 
 ## Why this phase looks different
 
@@ -251,11 +251,10 @@ subset exactly.)
    `.LONG` blocks and bare numeric literals — the concrete acceptance check
    for this phase, matching how Phase 22 subtask 14's own fixture already
    exercises the real SYS$ call path end to end.
-6. Docs: this file's progress log; `docs/PLAN.md` phase-table row + narrative
-   paragraph; `docs/DEVIATIONS.md` only if a genuine FAB/RAB field-value
-   ambiguity turns up while double-checking against `reference/vms` (not
-   expected — these are real VMS headers, not a from-scratch reimplementation
-   the way Phase 22's own RMS semantics work was).
+6. **Done.** Docs: this file's progress log; `docs/PLAN.md` phase-table row +
+   narrative paragraph; `docs/DEVIATIONS.md` only if a genuine FAB/RAB
+   field-value ambiguity turns up while double-checking against
+   `reference/vms` (none did — see this subtask's own progress-log entry).
 
 ## Open questions
 
@@ -538,3 +537,24 @@ subset exactly.)
   the old fixture's `fab_fac`/`rab_rac`/... sub-symbol names.
 - Subtask 5 complete. Subtask 6 (docs: this progress log, `docs/PLAN.md`)
   is next.
+
+### 2026-09-23 — Subtask 6: docs (phase complete)
+
+- `docs/PLAN.md`: added Phase 24's phase-table row (added earlier, during
+  planning) and a narrative paragraph (matching every other phase's own
+  entry) summarizing `.RMSDEF`/`.FAB`/`.RAB`, the `internal/vmsdef`
+  consolidation decision, the generator, the `internal/rms` migration, and
+  `rms_roundtrip.asm`'s rewrite.
+- `docs/DEVIATIONS.md`: no new entry. Every FAB/RAB field offset and every
+  one of the 393 generated `FAB$`/`RAB$`/`RMS$` constants was either
+  cross-checked directly against `reference/vms`'s own real VAX/VMS 7.3 SDL
+  headers (machine-generated, not hand-guessed) or independently
+  re-derived and confirmed against `internal/rms/fab.go`/`rab.go`'s own
+  pre-existing, separately-verified subset — no ambiguity or judgment call
+  came up worth logging, unlike Phase 22's own from-scratch RMS semantics
+  work (which had no equivalent authoritative source document to check
+  against).
+- This phase is now complete: all 6 subtasks done, `go build ./...`,
+  `go vet ./...`, `gofmt -l .` (no findings across every file this phase
+  touched), and `go test ./...` clean across the whole module including the
+  peer `ods2` module (reachable via `go.work`).
