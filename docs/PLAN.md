@@ -73,6 +73,7 @@ questions, and a progress log extended as that phase is worked.
 | 20 | [PHASE-20.md](PHASE-20.md) | RTL shim resolution fix, and console-native exception reporting (CHF) |
 | 21 | [PHASE-21.md](PHASE-21.md) | Translation buffer / sequential translation cache |
 | 22 | [PHASE-22.md](PHASE-22.md) | RMS system services backed by `github.com/tucats/ods2` |
+| 23 | [PHASE-23.md](PHASE-23.md) | Console commands to support using Files-11 containers |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -181,3 +182,40 @@ genuinely fetched/executed `CALLS`/`XFC` dispatch rather than calling
 unexercised address-arithmetic bug in `internal/cpu`'s `XFC$P1VECTOR` handler),
 and an opt-in interop test confirms real read/write fidelity against a genuine
 `simh`-produced VAX/VMS system disk. See PHASE-22.md's progress log for both.
+
+Phase 23, requested by the user 2026-09-23, rounds out the operator-facing command
+set Phase 22 started so a `govax` console session can do everything the separate
+`ods2` module's own `cmd/ods2` interactive session can do, without needing that
+second tool at all: `INITIALIZE/CONTAINER` (formatting a new, empty container),
+`DIRECTORY`, `SET`/`SHOW DEFAULT` (the operator's current default device/
+directory, resolving a partial file spec the way real VMS DCL does), `DELETE`,
+`PURGE`, `COPY` (host-to-container, container-to-host, and container-to-
+container, disambiguated per-argument by a new `/HOST` qualifier), and `TYPE`.
+Like Phase 22, it has no `reference/eVAX` counterpart at all — its behavioral
+reference is `github.com/tucats/ods2`'s own `cmd/ods2/internal/session` package,
+read-only (that package's own Go `internal/` visibility rules out importing it
+directly, so every command is a fresh `internal/rms` implementation against
+`ods2`'s public API, matched functionally rather than literally ported). Also
+unifies the pre-existing `INIT` (VAX-memory-allocation) and the new
+`INITIALIZE/CONTAINER` under one DCL verb, `INITIALIZE`, selected by `/VAX`/
+`/CONTAINER` qualifiers rather than shipping as two separately-named commands
+that happened to collide under `dispatch.go`'s fixed-command first-4-characters
+lookup; and adds parameter-scoped qualifiers to `internal/console/dcl`'s own
+grammar engine (`Parameter.Qualifiers`), a real, additive engine capability none
+of the twelve pre-existing verbs needed, purpose-built so `COPY`'s `/HOST` can
+independently modify either its `SOURCE` or `DESTINATION` parameter. See
+PHASE-23.md's own "Design decisions" section for the reasoning behind both, plus
+its progress log for each command's own subtask. A scripted end-to-end
+acceptance pass dispatches real command-line strings through one shared
+`Console`/mounted-volume session end to end (`INITIALIZE/CONTAINER` ->
+`MOUNT` -> `SET DEFAULT` -> file creation -> `DIRECTORY` -> `TYPE` -> `COPY` ->
+`DELETE` -> `PURGE` -> `DISMOUNT`), and an opt-in interop check runs `TYPE`
+against a real VAX/VMS system disk file. Documenting this phase's own new
+commands in `internal/bootdata/files/vax.help` also surfaced and fixed a
+pre-existing, unrelated bug in the console's `HELP` command itself: roughly
+forty existing topics whose bare abbreviated form was under four characters
+(`RUN`, `GO`, `SH`, `ST`, ...) silently returned "No help available", because
+`ParseHelp` was discarding the file's own documented trailing-space key padding
+before matching it against `helpKey`'s always-fully-padded query — both sides
+now share one `normalizeHelpKey`/`normalizeHelpToken` implementation. See
+PHASE-23.md's progress log for the full command-by-command breakdown.

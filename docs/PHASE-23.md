@@ -25,8 +25,7 @@ the rest of `cmd/ods2`'s command surface:
   `/HOST` qualifier" below).
 - `TYPE` — write one file's content to the console.
 
-**Status: in progress — subtasks 1-11 done (see "Subtasks" below); subtask
-12 (docs) remains.**
+**Status: complete — all 12 subtasks done (see "Subtasks" below).**
 
 ## Why this phase looks different from most others
 
@@ -463,17 +462,17 @@ container was never created by anything this project wrote.
     from a host fixture) -> `DIRECTORY` -> `TYPE` -> `COPY` (container ->
     host) -> `DELETE` -> `PURGE` -> `DISMOUNT`, plus whatever further opt-in
     `testdata/disks/` interop checks subtask 5 didn't already cover.
-12. Docs: this file's progress log; `docs/PLAN.md` phase-table row + narrative
-    paragraph; `docs/DEVIATIONS.md` entries for anything ambiguous found
-    comparing `ods2`'s own CLI behavior against real VMS DCL conventions
-    along the way (this phase's `AUDIT.md`-equivalent, per `CLAUDE.md`'s
-    bug-fixing policy — though note that policy is framed around VAX ISA/
-    hardware fidelity, and most of this phase's judgment calls are DCL-
-    engine/UX decisions instead, which is why they're captured directly in
-    this doc's own "Design decisions" rather than deferred to
-    `DEVIATIONS.md`). Also update `internal/bootdata/files/vax.help` to
-    document the commands added during this phase to the console's builtin
-    `help` command.
+12. **Done.** Docs: this file's progress log; `docs/PLAN.md` phase-table row +
+    narrative paragraph; `docs/DEVIATIONS.md` entries for anything ambiguous
+    found comparing `ods2`'s own CLI behavior against real VMS DCL
+    conventions along the way (this phase's `AUDIT.md`-equivalent, per
+    `CLAUDE.md`'s bug-fixing policy — though note that policy is framed
+    around VAX ISA/hardware fidelity, and most of this phase's judgment
+    calls are DCL-engine/UX decisions instead, which is why they're
+    captured directly in this doc's own "Design decisions" rather than
+    deferred to `DEVIATIONS.md`). Also update `internal/bootdata/files/
+    vax.help` to document the commands added during this phase to the
+    console's builtin `help` command.
 
 ## Open questions
 
@@ -488,15 +487,16 @@ container was never created by anything this project wrote.
   progress-log entries): not expected to matter in practice, and not
   exercised by any test in either case, since Phase 22's `MountTable` never
   mounts a multi-device volume set at all.
-- Whether `DIRECTORY`'s output formatting should aim for closer visual parity
-  with real VMS `DIRECTORY` (column-aligned multi-file-per-line listings)
-  rather than `ods2`'s own simpler one-file-per-line style — `ods2`'s own
-  `formatDirectoryEntry` doc comment already flags this as a deliberate
-  simplification on its side; this phase can either inherit that
-  simplification (fastest, keeps the two tools' output comparable) or invest
-  in closer VMS fidelity. Leaning toward inheriting it for now, matching this
-  phase's general "ods2's CLI is the reference" framing, but flagging it since
-  it's a visible, easily-second-guessed choice.
+- ~~Whether `DIRECTORY`'s output formatting should aim for closer visual
+  parity with real VMS `DIRECTORY` (column-aligned multi-file-per-line
+  listings) rather than `ods2`'s own simpler one-file-per-line style~~
+  **Resolved in subtask 12:** left inheriting `ods2`'s own simplification
+  for now (both this and the related `Directory DUA0:[]` MFD-header quirk),
+  logged as two open, deliberately-deferred findings in
+  `docs/DEVIATIONS.md`'s new "Phase 23 (Files-11 console commands) findings"
+  section rather than silently decided — nothing in this project's own test
+  suite depends on either shape, so there's no cost to leaving both open
+  until a concrete need for closer VMS visual fidelity shows up.
 - ~~Whether `COPY`'s "exactly one matched source file" restriction (subtask
   9, `*rms.MultipleMatchesError`) should be lifted as part of subtask 10's
   qualifier-parity work~~ **Resolved in subtask 10:** lifted, but only for
@@ -1472,3 +1472,85 @@ container was never created by anything this project wrote.
 - No bugs found in the peer `ods2` module during this subtask; nothing in
   it was touched or newly exercised beyond what subtasks 4-10 already
   called into.
+
+### 2026-09-23 — Subtask 12: docs (phase complete)
+
+- `internal/bootdata/files/vax.help`: rewrote the stale `$INIT` topic
+  (still describing the pre-subtask-1 bare `INITIALIZE <pages>` form) into
+  three topics -- a bare `INITIALIZE` overview explaining the now-mandatory
+  `/VAX`/`/CONTAINER` qualifier, `INITIALIZE/VAX` (the old content, updated
+  syntax), and `INITIALIZE/CONTAINER` (new) -- and appended new topics for
+  every other command this phase added: `DIRECTORY`/`DIR`, `DELETE`/`DEL`,
+  `PURGE`, `TYPE`/`TYP`, `COPY` (all eleven qualifiers from subtask 10,
+  each noting which copy direction(s) it actually affects), `SET DEFAULT`,
+  and `SHOW DEFAULT` -- following the file's own established conventions
+  (Syntax/Parameters/Qualifiers/Examples/"See also" sections, multiple `$`
+  keys sharing one body for an abbreviation, matching the pre-existing
+  `SHOW`/`SH` and `MOUNT`/`DISMOUNT` precedent) rather than inventing a new
+  shape. Also added `SET DEFAULT`/`SHOW DEFAULT` to the bare `$SET`/`$SHOW`
+  topics' own "see the help for..." menu lists, in alphabetical order
+  alongside their existing siblings.
+- **Bug found and fixed in `internal/console/help.go` (not `ods2`, not
+  ISA-related -- `CLAUDE.md`'s "clear, obvious logic error" bucket, no need
+  to log or defer), discovered while writing this subtask's own new
+  abbreviated-key entries (`DIR`, `DEL`, `TYP`, each meant to be hand-padded
+  with a trailing space) and finding they didn't resolve**: `ParseHelp`'s key extraction called plain
+  `strings.TrimSpace(line[1:])`, which -- for any `$`-line key whose *last*
+  comma-separated component is a bare word under four characters -- strips
+  off exactly the trailing blank-padding the file's own preamble documents
+  as required ("if the token is less than four characters long, it must be
+  blank padded"), while `helpKey` (building the query side of the same
+  lookup) always constructs a fully four-character-padded key. The two
+  sides silently disagreed, so any such topic returned "No help available"
+  unconditionally. Auditing the *existing* file for this pattern (not just
+  this phase's own new entries) found it was already pervasive -- confirmed
+  by direct probe against the real file that plain `HELP RUN`, `HELP GO`,
+  `HELP SH`, and roughly forty other pre-existing bare short-command topics
+  (`DO`, `VM`, `ASM`, `PSL`, `XFC`, `ST`, `EX`, among others) have silently
+  never worked. Root cause was compounded by a second, tooling-level fact
+  discovered along the way: this session's own file-writing tools trim
+  trailing whitespace before a newline, so even correctly *intending* to
+  hand-pad a key in the source file doesn't reliably survive being saved --
+  the same failure mode very plausibly explains how many of the pre-existing
+  entries lost their padding in the first place over the file's own history.
+  Fixed by introducing one shared `normalizeHelpToken`/`normalizeHelpKey`
+  pair used by *both* `ParseHelp` (parsing a key from the file) and
+  `helpKey` (building a query from typed HELP arguments) -- so a key can be
+  written in the file as a plain, unpadded word (`$DIR`, `$RUN`, `$SH`) and
+  is padded/upcased identically on both sides at lookup time, eliminating
+  the fragile-hand-padding failure mode entirely rather than just working
+  around it for this phase's own new entries.
+- Tests: `internal/console/help_test.go` gained
+  `TestLoadHelpFile_phase23Topics` (every new-this-phase topic, including
+  both spellings of each abbreviation, resolves to real body text
+  containing an expected phrase) and `TestLoadHelpFile_everyKeyResolves` --
+  a permanent, whole-file regression check parsing every `$`-line key in
+  the real `vax.help` independently of `ParseHelp` itself (deliberately not
+  sharing its normalization code, so a future regression reintroduced into
+  both sides at once would still be caught) and confirming each resolves
+  through `Console.Help` to real text, never the "No help available"
+  fallback. This second test incidentally covers every one of the roughly
+  forty pre-existing topics the `normalizeHelpKey` fix also repaired, not
+  just this phase's own new ones. Full `go build ./...`, `go vet ./...`,
+  and `go test ./...` clean across the whole module (including the peer
+  `ods2` module, reachable via `go.work`).
+- `docs/PLAN.md`: added Phase 23's phase-table row and a narrative
+  paragraph (matching every other phase's own entry) summarizing the
+  command set added, the `INITIALIZE` unification, the new parameter-
+  scoped-qualifier grammar-engine capability, subtask 11's acceptance pass,
+  and the `vax.help`-parsing bug found and fixed along the way.
+- `docs/DEVIATIONS.md`: added a new "Phase 23 (Files-11 console commands)
+  findings" section (mirroring Phase 22's own section, added right after
+  it) with two entries -- `DIRECTORY`'s `ods2`-inherited `Directory
+  DUA0:[]` MFD-header quirk (real VMS prints `[000000]`), and `DIRECTORY`'s
+  one-file-per-line output vs. real VMS's column-aligned multi-file-per-
+  line style -- both left open/deferred, matching the "Open questions"
+  section's own note that this doc's own design-decisions section already
+  captures most of this phase's actual judgment calls, so `DEVIATIONS.md`
+  only needed to catalogue the specific `ods2`-vs-real-VMS-DCL output-shape
+  divergences that are genuinely still unresolved rather than already
+  decided. Resolved this file's own last open "Open questions" entry
+  (`DIRECTORY` output formatting) by pointing at those two new entries.
+- This phase is now complete: all 12 subtasks done, `go build ./...`,
+  `go vet ./...`, and `go test ./...` clean across the whole module
+  including the peer `ods2` module.

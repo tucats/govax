@@ -58,6 +58,66 @@ rather than silently guessing at), kept in this file per that phase's own
   until a real calling program that relies on the default-format behavior
   shows up to motivate the right default, rather than guessing one now.
 
+## Phase 23 (Files-11 console commands) findings
+
+Phase 23 (`PHASE-23.md`) also has no `reference/eVAX` counterpart, like Phase
+22 before it — its own correctness reference is `github.com/tucats/ods2`'s own
+`cmd/ods2/internal/session` package's CLI behavior (read-only, per that
+phase's own "behavioral reference, not code to link against" framing) compared
+against real VMS DCL conventions. Most of this phase's own judgment calls
+(the `INIT`/`INITIALIZE` verb unification, the `COPY`/`/HOST` direction
+design, parameter-scoped qualifiers) are DCL-engine/UX decisions captured
+directly in `PHASE-23.md`'s own "Design decisions" section rather than logged
+here, per that doc's own subtask 12 note. The entries below are the two
+places where `ods2`'s own CLI output shape was found to visibly diverge from
+real VMS DCL's `DIRECTORY` conventions, left unresolved (not obviously a bug
+to fix, not obviously acceptable forever either) rather than silently
+guessed at.
+
+### [Phase 23] `DIRECTORY`'s master-file-directory header prints `Directory DUA0:[]` instead of real VMS's `[000000]` form
+
+- **Where**: `internal/rms/directory.go`'s `Session.Directory`, functionally
+  matched against `ods2`'s own `cmd/ods2/internal/session/directory.go`
+  (`formatDirectoryEntry`/`groupMatchesByDir`).
+- **What**: real VMS DCL's own `DIRECTORY` command headers a volume's master
+  file directory as `Directory DUA0:[000000]` (or whatever the device's MFD
+  path is) — never an empty bracket pair. `ods2`'s own `formatDirectoryEntry`
+  doc comment already flags this as a deliberate simplification on its own
+  side: an empty joined `Dirs` slice prints as `[]`, with no `[000000]`
+  fallback the way `filespec.Spec.String`'s own *error-message* formatting
+  applies elsewhere in that module. `Session.Directory` (subtask 5) reproduces
+  that same quirk rather than fixing it independently, matching this phase's
+  own "closely enough to be recognizable, not necessarily byte-identical"
+  framing for `DIRECTORY` output — but it is a real, visible divergence any
+  operator familiar with genuine VMS DCL would notice immediately.
+- **Status**: open, deferred. Kept matching `ods2`'s own current output rather
+  than diverging from the behavioral reference unilaterally, or second-guessing
+  `ods2`'s own documented simplification on this project's own initiative.
+  Revisit if `ods2` itself ever fixes this, or if a future phase decides
+  `DIRECTORY` output should target closer VMS-visual fidelity than `ods2`'s own
+  CLI provides (see the next entry, the same open question either way).
+
+### [Phase 23] `DIRECTORY`'s one-file-per-line output doesn't match real VMS's column-aligned multi-file-per-line listings
+
+- **Where**: `internal/rms/directory.go`'s `Session.Directory`, and `ods2`'s
+  own `formatDirectoryEntry` it was functionally matched against.
+- **What**: real VMS's `DIRECTORY` command packs several short file names per
+  line, column-aligned, once a directory has enough entries; both `ods2`'s own
+  CLI and this port's `Session.Directory` print exactly one file per line
+  regardless of how many entries there are. `ods2`'s own doc comment already
+  acknowledges this as a deliberate simplification on its own side, inherited
+  here rather than re-decided independently — see `PHASE-23.md`'s own "Open
+  questions" section, where this was explicitly flagged during planning and
+  left leaning toward inheriting the simplification (matching this phase's
+  general "`ods2`'s CLI is the reference" framing) rather than investing in
+  closer VMS visual fidelity.
+- **Status**: open, deferred, per explicit flagging in `PHASE-23.md` itself
+  rather than a silent, undocumented choice. No test in this project's own
+  suite currently depends on either the single- or multi-file-per-line shape,
+  so there is no compatibility cost either way today — revisit if an operator
+  workflow, or a future phase's own acceptance criteria, actually needs the
+  denser, real-VMS-style layout.
+
 ## Open findings
 
 _None yet._

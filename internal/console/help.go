@@ -54,7 +54,7 @@ func ParseHelp(text string) *Help {
 				flush()
 			}
 
-			pendingKeys = append(pendingKeys, strings.TrimSpace(line[1:]))
+			pendingKeys = append(pendingKeys, normalizeHelpKey(line[1:]))
 
 			continue
 		}
@@ -80,10 +80,24 @@ func LoadHelpFile(path string) (*Help, error) {
 	return ParseHelp(string(b)), nil
 }
 
+// normalizeHelpToken upcases and pads/truncates a single key component --
+// one HELP argument word, or one comma-separated piece of a "$"-line key
+// read from the help file -- to exactly four characters, the on-disk
+// format's own documented rule (vax.help's own preamble: "if the token is
+// less than four characters long, it must be blank padded").
+func normalizeHelpToken(tok string) string {
+	tok = strings.ToUpper(strings.TrimSpace(tok))
+	if len(tok) >= 4 {
+		return tok[:4]
+	}
+
+	return tok + strings.Repeat(" ", 4-len(tok))
+}
+
 // helpKey builds the "$"-line key for a HELP command's argument words,
 // matching help.c's read_verb-based key construction: each word is
-// upcased and space-padded/truncated to exactly 4 characters, joined by
-// commas; no arguments at all maps to the literal key "HELP".
+// normalized (normalizeHelpToken) and joined by commas; no arguments at
+// all maps to the literal key "HELP".
 func helpKey(words []string) string {
 	if len(words) == 0 {
 		return "HELP"
@@ -92,12 +106,29 @@ func helpKey(words []string) string {
 	toks := make([]string, len(words))
 
 	for i, w := range words {
-		w = strings.ToUpper(w)
-		if len(w) >= 4 {
-			toks[i] = w[:4]
-		} else {
-			toks[i] = w + strings.Repeat(" ", 4-len(w))
-		}
+		toks[i] = normalizeHelpToken(w)
+	}
+
+	return strings.Join(toks, ",")
+}
+
+// normalizeHelpKey applies normalizeHelpToken to each comma-separated
+// component of a raw "$"-line key straight from the help file, so a key
+// can be written there as a plain, unpadded word (e.g. "$DIR") without
+// its author having to remember to hand-pad it with trailing spaces --
+// which, in practice, a text editor that trims trailing whitespace on
+// save will silently destroy (confirmed by auditing vax.help itself: many
+// pre-existing short bare-command keys -- RUN, GO, DO, VM, ASM, PSL, XFC,
+// SH, ST, EX among them -- had lost their padding this way and could
+// never actually be looked up, since helpKey always builds a fully
+// four-character-padded query key to compare against). Using the exact
+// same normalization on both the file-parsing side and the query-building
+// side (helpKey) guarantees they can never drift apart like this again.
+func normalizeHelpKey(raw string) string {
+	toks := strings.Split(raw, ",")
+
+	for i, t := range toks {
+		toks[i] = normalizeHelpToken(t)
 	}
 
 	return strings.Join(toks, ",")

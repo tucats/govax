@@ -25,6 +25,11 @@
 //              09/23/26    Added MOUNT, DISMOUNT (govax internal/rms,
 //                          Phase 22 -- see docs/PHASE-22.md)
 //              09/23/26    Revised this help to remove legacy references
+//              09/23/26    Split INITIALIZE into /VAX and /CONTAINER;
+//                          added DIRECTORY, DELETE, PURGE, TYPE, COPY,
+//                          SET DEFAULT, SHOW DEFAULT (govax internal/rms +
+//                          internal/console, Phase 23 -- see
+//                          docs/PHASE-23.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -378,24 +383,77 @@ $EXAM,REGI
 
 $INIT
 
-    The INITIALIZE command (re-)initializes the virtual VAX, and specfies
-    the amount of physical RAM the machine is configured with. This storage
-    is allocated by the govax process from it's address space.
-    
+    The INITIALIZE command performs one of two unrelated operations,
+    selected by a required qualifier -- INITIALIZE (or its unambiguous
+    4-letter abbreviation, INIT) with no qualifier at all is an error.
+
+        INITIALIZE/VAX          (Re-)configures the amount of physical
+                                 RAM the virtual VAX is running with.
+
+        INITIALIZE/CONTAINER    Formats a new, empty ODS-2 disk-image
+                                 container file for use with MOUNT.
+
+    See the help for INITIALIZE/VAX and INITIALIZE/CONTAINER for the
+    syntax of each.
+
+$INIT,/VAX
+
+    The INITIALIZE/VAX command (re-)initializes the virtual VAX, and
+    specifies the amount of physical RAM the machine is configured with.
+    This storage is allocated by the govax process from its own address
+    space.
+
     Syntax:
-    
-        INITIALIZE <pages>
-    
-    Parameters:
-    
+
+        INITIALIZE/VAX <pages>
+
+    Parameter:
+
         <pages>         The number of physical pages of VAX memory that the
                         virtual machine is configured with.  Each page is
                         512 bytes, so a page count of 1024 would require a
-                        half-megabyte virtual machine, for example. 
-    
+                        half-megabyte virtual machine, for example.
+
     Example:
-    
-        INITIALIZE 8192   ; Create a 4mb virtual VAX
+
+        INITIALIZE/VAX 8192   ; Create a 4mb virtual VAX
+
+    See also the help for INITIALIZE and INITIALIZE/CONTAINER.
+
+$INIT,/CON
+
+    The INITIALIZE/CONTAINER command formats a new, empty ODS-2 disk-image
+    container file -- a real Files-11 volume, compatible with real VAX/VMS
+    and other emulators such as simh.  The new container is not mounted;
+    use MOUNT afterward to attach it to a device before using it.
+
+    Syntax:
+
+        INITIALIZE/CONTAINER <file> <size> [label] [/CLUSTER=<n>]
+
+    Parameters:
+
+        <file>          The path to the new disk-image container file on
+                        the native file system.  If the native file system
+                        is case sensitive, or the name contains embedded
+                        blanks, it should be enclosed in quotes to preserve
+                        case and spacing.
+
+        <size>          The size of the new volume, in 512-byte blocks.
+
+        [label]         The volume label to record in the container's home
+                        block.  If omitted, the volume is labeled NONAME.
+
+    Qualifier:
+
+        /CLUSTER=<n>    The number of blocks per storage cluster.  If
+                        omitted, the volume uses 1-block clusters.
+
+    Example:
+
+        INITIALIZE/CONTAINER "newdisk.dsk" 20000 WORK01
+
+    See also the help for INITIALIZE, INITIALIZE/VAX, and MOUNT.
 
 $QUIT
 
@@ -895,6 +953,7 @@ $SET
         SET BASE
         SET BREAK
         SET DEBUG
+        SET DEFAULT
         SET DISASSEMBLER
         SET FAULT
         SET MODE
@@ -1698,6 +1757,7 @@ $SH
         SHOW BREAKPOINTS
         SHOW CALLS
         SHOW CPU
+        SHOW DEFAULT
         SHOW DEVICE
         SHOW DISASSEMBLER
         SHOW ERROR
@@ -2690,6 +2750,278 @@ $DISM
         DISMOUNT DUA0
 
     See also the help for MOUNT and SHOW DEVICE.
+
+$DIRE
+$DIR
+
+    The DIRECTORY command lists files on a mounted ODS-2 volume.
+
+    Syntax:
+
+        DIRECTORY [/FULL] [/FILE] [/SIZE] [/DATE] [file-spec]
+
+    Parameter:
+
+        file-spec       The file specification to list, which may include
+                        wildcards (e.g. DUA0:[MYDIR]*.TXT;*).  Any part of
+                        the specification left out is filled in from the
+                        current default device/directory (see SET
+                        DEFAULT).  If omitted entirely, lists "*.*;*" --
+                        every file, every version, in the current default
+                        directory.
+
+    Qualifiers:
+
+        /FULL           Includes the record format, file size, and
+                        creation date for each file.  Implies /FILE,
+                        /SIZE, and /DATE.
+
+        /FILE           Includes each file's record format.
+
+        /SIZE           Includes each file's size, in blocks.
+
+        /DATE           Includes each file's creation date.
+
+    Examples:
+
+        DIRECTORY
+
+        DIRECTORY/SIZE *.TXT;*
+
+        DIR DUA0:[MYDIR]
+
+    See also the help for SET DEFAULT, SHOW DEFAULT, TYPE, and MOUNT.
+
+$DELE
+$DEL
+
+    The DELETE command removes a file from a mounted ODS-2 volume and
+    reclaims its storage.
+
+    A DELETE file specification must name a specific version -- either an
+    explicit version number (;3) or all versions (;*).  Unlike DIRECTORY,
+    TYPE, and COPY, DELETE never defaults an omitted version to "the
+    newest one"; this matches real VMS DCL's own DELETE, which requires an
+    explicit version to guard against accidentally deleting the wrong
+    copy of a file.
+
+    Syntax:
+
+        DELETE <file-spec>;<version>
+
+    Parameter:
+
+        <file-spec>;<version>
+                        The file, and version, to delete.  <file-spec> may
+                        include wildcards in its name/type; any part left
+                        out is filled in from the current default device/
+                        directory (see SET DEFAULT).
+
+    Examples:
+
+        DELETE FOO.TXT;1
+
+        DELETE OLDFILE.DAT;*
+
+        DEL *.TMP;1
+
+    See also the help for PURGE, DIRECTORY, and SET DEFAULT.
+
+$PURG
+
+    The PURGE command trims old versions of a file down to a specified
+    number of surviving versions, reclaiming the storage of each version
+    removed.  A file spec matching no files at all is not an error.
+
+    Syntax:
+
+        PURGE [/LIMIT=<n>] [file-spec]
+
+    Parameter:
+
+        file-spec       The file, or files (wildcards allowed), to purge.
+                        Any version selector typed as part of file-spec is
+                        ignored -- PURGE always considers every surviving
+                        version of a matched name.  Any part left out is
+                        filled in from the current default device/
+                        directory (see SET DEFAULT).  If omitted entirely,
+                        defaults to "*.*" -- every name in the current
+                        default directory.
+
+    Qualifier:
+
+        /LIMIT=<n>      The number of most-recent versions to keep for
+                        each matched name.  Defaults to 1 (keep only the
+                        newest version) if omitted.
+
+    Examples:
+
+        PURGE FOO.TXT
+
+        PURGE/LIMIT=2
+
+    See also the help for DELETE, DIRECTORY, and SET DEFAULT.
+
+$TYPE
+$TYP
+
+    The TYPE command writes one file's entire content to the console as
+    text, expanding VFC/Fixed/Variable/Stream record formats into
+    readable lines the same way COPY's own text-mode copying does.
+
+    TYPE requires its file specification to match exactly one file --
+    unlike DIRECTORY, it does not accept a wildcard that could match more
+    than one file.
+
+    Syntax:
+
+        TYPE <file-spec>
+
+    Parameter:
+
+        <file-spec>     The file to display.  An omitted version defaults
+                        to the highest surviving version.  Any part left
+                        out is filled in from the current default device/
+                        directory (see SET DEFAULT).
+
+    Examples:
+
+        TYPE FOO.TXT
+
+        TYPE DUA0:[MYDIR]README.TXT;2
+
+    See also the help for COPY, DIRECTORY, and SET DEFAULT.
+
+$COPY
+
+    The COPY command copies a file between a mounted ODS-2 volume and the
+    host file system, or between two locations on a mounted volume.  The
+    direction of each half of the copy is determined independently: a
+    SOURCE or DESTINATION naming a location on a mounted volume (e.g.
+    DUA0:[DIR]NAME.TYPE) is used as-is, while the /HOST qualifier,
+    attached to either parameter, tells COPY to instead treat that
+    parameter as an ordinary host file system path.
+
+    Syntax:
+
+        COPY <source>[/HOST] <destination>[/HOST] [qualifiers...]
+
+    Parameters:
+
+        <source>        The file to copy from.  With /HOST attached, this
+                        is a host file system path; otherwise it names a
+                        file (or, when <destination> names a directory,
+                        several wildcard-matched files) on a mounted
+                        volume.
+
+        <destination>   The file, or directory, to copy to.  With /HOST
+                        attached, this is a host file system path;
+                        otherwise it names a file, or directory, on a
+                        mounted volume.  A destination naming no file of
+                        its own (a bare directory, container or host)
+                        inherits each copied source file's own name and
+                        type.
+
+    Qualifiers:
+
+        /BINARY         Copies exact bytes rather than rendering the file
+                        as text -- no record-format interpretation, no
+                        line-ending translation.
+
+        /QUIET          Suppresses the normal %COPY-S-COPIED confirmation
+                        line.
+
+        /VERBOSE        Prints an additional %COPY-I-COPYING line before
+                        each file is copied.
+
+        /TEST           Shows what would be copied without actually
+                        copying anything.
+
+        /TIME           (Container-to-host copies only.)  Preserves the
+                        source file's own VMS revision date as the copied
+                        host file's modification time.
+
+        /IGNORE         (Copies to a host destination only.)  Recovers
+                        from a corrupt record partway through a file by
+                        restarting the copy as a raw byte-for-byte copy,
+                        rather than failing outright.
+
+        /DIRS           (Copies to a host destination only.)  Materializes
+                        a matched directory entry as an empty host
+                        directory, and mirrors each matched file's own
+                        volume subdirectory path under the destination
+                        directory, instead of flattening every match into
+                        one destination directory.
+
+        /STREAM         (Copies to a host destination only.)  Copies a
+                        Stream-format source file's exact bytes rather
+                        than normalizing its line endings.
+
+        /VFC            Accepted for command-line compatibility with the
+                        ods2 utility's own COPY command.  Not otherwise
+                        meaningful here: this project's text-mode copy
+                        already always expands a VFC file's carriage
+                        control, so there is no "un-interpreted" mode for
+                        this qualifier to select.
+
+        /CRLF           (Copies to a host destination only.)  Ends each
+                        copied text line with CRLF instead of the default
+                        LF.
+
+        /LF             (Copies to a host destination only.)  Ends each
+                        copied text line with LF.  This is the default;
+                        /CRLF and /LF cannot both be given.
+
+    Examples:
+
+        COPY FOO.TXT BAR.TXT
+
+        COPY foo.txt/HOST BAR.TXT
+
+        COPY FOO.TXT bar.txt/HOST
+
+        COPY "/Users/tom/foo.txt" /HOST BAR.TXT
+
+    See also the help for TYPE, DIRECTORY, MOUNT, and SET DEFAULT.
+
+$SET ,DEFA
+$SE  ,DEFA
+
+    The SET DEFAULT command establishes the operator's current default
+    device and directory, the same way a partial file specification is
+    resolved in real VMS DCL.  DIRECTORY, DELETE, PURGE, COPY, and TYPE
+    all fill in any part of a file specification left unspecified (device,
+    directory, or both) from this default.
+
+    Syntax:
+
+        SET DEFAULT <spec>
+
+    Parameter:
+
+        <spec>          A device and/or directory specification, such as
+                        DUA0:[MYDIR].  Any part omitted (e.g. just
+                        [MYDIR], or just DUA0:) is filled in from the
+                        *current* default, the same way a real VMS
+                        SET DEFAULT works.
+
+    Example:
+
+        SET DEFAULT DUA0:[MYDIR]
+
+    See also the help for SHOW DEFAULT.
+
+$SHOW,DEFA
+$SH  ,DEFA
+
+    The SHOW DEFAULT command displays the operator's current default
+    device and directory, as established by SET DEFAULT.
+
+    Syntax:
+
+        SHOW DEFAULT
+
+    See also the help for SET DEFAULT.
 
 $END-OF-FILE
  
