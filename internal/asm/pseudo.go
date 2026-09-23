@@ -70,6 +70,8 @@ var pseudoNames = map[string]bool{
 	"SCOPE":       true,
 	"VERSION":     true, // Declare the microkernel version string
 	"RMSDEF":      true, // Declare every FAB$/RAB$/RMS$ RMS symbol (docs/PHASE-24.md)
+	"FAB":         true, // Build a FAB (File Access Block) instance (docs/PHASE-24.md)
+	"RAB":         true, // Build a RAB (Record Access Block) instance (docs/PHASE-24.md)
 }
 
 // assemblePseudo tries to assemble the statement at c as a pseudo-op,
@@ -229,6 +231,12 @@ func (a *Assembler) dispatchPseudo(name string, c *cursor) error {
 
 	case "RMSDEF":
 		return a.pseudoRMSDEF(c)
+
+	case "FAB":
+		return a.pseudoFAB(c)
+
+	case "RAB":
+		return a.pseudoRAB(c)
 
 	case "SCOPE":
 		return a.pseudoScope(c)
@@ -1377,4 +1385,121 @@ func (a *Assembler) pseudoRMSDEF(c *cursor) error {
 	}
 
 	return nil
+}
+
+// pseudoFAB assembles .FAB [KEYWORD=value[, KEYWORD=value]...] — this
+// port's equivalent of real MACRO-32's $FAB macro (docs/PHASE-24.md):
+// builds an 80-byte FAB instance at the current deposit location. See
+// buildControlBlock's own doc comment for the shared implementation.
+func (a *Assembler) pseudoFAB(c *cursor) error {
+	return a.buildControlBlock(c, ".FAB", vmsdef.FABFields, 80, "FAB$C_BID", "FAB$K_BLN")
+}
+
+// pseudoRAB assembles .RAB [KEYWORD=value[, KEYWORD=value]...] — this
+// port's equivalent of real MACRO-32's $RAB macro: builds a 68-byte RAB
+// instance. See buildControlBlock's own doc comment.
+func (a *Assembler) pseudoRAB(c *cursor) error {
+	return a.buildControlBlock(c, ".RAB", vmsdef.RABFields, 68, "RAB$C_BID", "RAB$K_BLN")
+}
+
+// buildControlBlock is .FAB/.RAB's shared implementation. Matches real
+// $FAB/$RAB's own expansion: writes the block's BID/BLN identification
+// bytes unconditionally first (from vmsdef.Constants directly, not through
+// the assembler's own symbol table — so .FAB/.RAB need no preceding
+// .RMSDEF to produce a correctly self-identifying block; see .RMSDEF's own
+// doc comment on why *it* only matters once a value is written
+// symbolically), then parses zero or more comma-separated "KEYWORD=value"
+// (or "KEYWORD:value" or "KEYWORD,value" — matching .SET's own
+// scanSetName/separator convention) parameters against fields, placing
+// each value at that field's own real offset with the width (byte/word/
+// longword) its own Size gives — a value expression may itself reference
+// a symbolic constant (e.g. "ORG=FAB$C_SEQ"), including one .RMSDEF
+// defined, or a forward-referenced label (e.g. "FNA=fspec" for a fspec
+// defined later in the file, matching .LONG's own forward-reference
+// support via the same exprValue/addrFixup machinery).
+//
+// Every field not named in the parameter list is left at zero, matching
+// .BLKB's own "never written reads back as zero" convention (internal/asm/
+// image.go) — no explicit zero-fill pass is needed. A keyword naming a
+// field whose own Size isn't 1, 2, or 4 (RAB$W_RFA is the one such case;
+// see vmsdef.Field.Size's own doc comment) fails through storeScaled's
+// existing VAX_BADSCALE error rather than a bespoke one — that field isn't
+// independently settable via a single keyword value in real $RAB either.
+func (a *Assembler) buildControlBlock(c *cursor, name string, fields []vmsdef.Field, blockSize uint32, bidConst, blnConst string) error {
+	a.scopeSymbols()
+
+	base := a.deposit
+
+	bid, ok := lookupField(fields, "BID")
+	if !ok {
+		panic(name + ": no BID field in its own field table")
+	}
+
+	bln, ok := lookupField(fields, "BLN")
+	if !ok {
+		panic(name + ": no BLN field in its own field table")
+	}
+
+	if err := a.storeScaled(base+bid.Offset, vmsdef.Constants[bidConst], int(bid.Size)); err != nil {
+		return err
+	}
+
+	if err := a.storeScaled(base+bln.Offset, vmsdef.Constants[blnConst], int(bln.Size)); err != nil {
+		return err
+	}
+
+	c.skipBlanks()
+
+	for !c.atEnd() {
+		if c.peek() == ',' {
+			c.next()
+			c.skipBlanks()
+		}
+
+		if c.atEnd() {
+			break
+		}
+
+		keyword := scanSetName(c)
+
+		f, ok := lookupField(fields, keyword)
+		if !ok {
+			return vmserrors.New(vmserrors.VAX_UNDEFSYM, keyword)
+		}
+
+		c.skipBlanks()
+
+		if c.peek() == '=' || c.peek() == ':' || c.peek() == ',' {
+			c.next()
+		}
+
+		loc := base + f.Offset
+
+		v, _, err := a.exprValue(c, loc, addrFixup(int(f.Size)))
+		if err != nil {
+			return err
+		}
+
+		if err := a.storeScaled(loc, v, int(f.Size)); err != nil {
+			return err
+		}
+
+		c.skipBlanks()
+	}
+
+	a.deposit = base + blockSize
+
+	return nil
+}
+
+// lookupField finds keyword in fields (vmsdef.FABFields/RABFields), the
+// shared helper buildControlBlock's own keyword parsing uses.
+func lookupField(fields []vmsdef.Field, keyword string) (vmsdef.Field, bool) {
+	for _, f := range fields {
+		if f.Keyword == keyword {
+			return f, true
+		}
+	}
+
+	return vmsdef.Field{}, false
 }

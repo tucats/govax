@@ -23,7 +23,7 @@ pseudo-ops:
   `$FAB` macro's own calling convention.
 - `.RAB` — same for a 68-byte RAB, matching `$RAB`.
 
-**Status: in progress — subtasks 1-2 done, subtasks 3-6 remaining.**
+**Status: in progress — subtasks 1-4 done, subtasks 5-6 remaining.**
 
 ## Why this phase looks different
 
@@ -235,9 +235,12 @@ subset exactly.)
    entry plus each field's own `FAB$_`/`RAB$_` offset symbol, permanent,
    idempotent (`unique=false` from the start). Not gated on `.MICROKERNEL`
    (deposits no bytes, unlike `.P1VECTOR`/`.SHIM`/`.SCB`/`.REGION`).
-3. `.FAB` pseudo-op: `KEYWORD=value` parsing over the full 33-field table,
-   80-byte deposit, forward-reference-capable field values.
-4. `.RAB` pseudo-op: same for the 26-field, 68-byte RAB.
+3. **Done.** `.FAB` pseudo-op: `KEYWORD=value` parsing over the full
+   33-field table, 80-byte deposit, forward-reference-capable field values.
+4. **Done.** `.RAB` pseudo-op: same for the 26-field, 68-byte RAB — landed
+   together with subtask 3 via a shared `buildControlBlock` implementation
+   (identical shape, differing only in field table/block size/BID-BLN
+   constant names), not worth a separate change.
 5. Update `testdata/asm/rms_roundtrip.asm` to build its FAB/RAB via
    `.RMSDEF`/`.FAB`/`.RAB` instead of hand-laid-out `.BLKB`/`.BYTE`/`.WORD`/
    `.LONG` blocks and bare numeric literals — the concrete acceptance check
@@ -433,3 +436,52 @@ subset exactly.)
   `go test ./...` all clean across the whole module (including the peer
   `ods2` module, reachable via `go.work`).
 - Subtask 2 complete. Subtask 3 (`.FAB` pseudo-op) is next.
+
+### 2026-09-23 — Subtasks 3-4: `.FAB`/`.RAB` pseudo-ops
+
+- `internal/asm/pseudo.go`'s new `buildControlBlock` is the shared
+  implementation `pseudoFAB`/`pseudoRAB` both call (parametrized by field
+  table, block size, and the real `FAB$C_BID`/`FAB$K_BLN` vs.
+  `RAB$C_BID`/`RAB$K_BLN` constant names) — subtasks 3 and 4 turned out
+  identical in shape once the field-table abstraction from subtask 1 was in
+  place, so they landed together rather than as two near-duplicate
+  functions. Matches a real `$FAB`/`$RAB` macro's own expansion: writes the
+  block's `BID`/`BLN` identification bytes unconditionally first (read
+  directly from `vmsdef.Constants` in Go, not through the assembler's own
+  symbol table — so `.FAB`/`.RAB` need no preceding `.RMSDEF` to produce a
+  correctly self-identifying block), then parses zero or more
+  comma-separated `KEYWORD=value` parameters (`scanSetName` plus `=`/`:`/`,`
+  separator handling, reusing `.SET`'s own established pattern) against the
+  field table, placing each value at its real offset via the existing
+  `exprValue`/`addrFixup`/`storeScaled` machinery `.BYTE`/`.WORD`/`.LONG`
+  already use — so a keyword's value can be a symbolic constant
+  (`ORG=FAB$C_SEQ`, once `.RMSDEF` has defined it) or a forward-referenced
+  label (`FNA=fspec`), exactly like `.LONG` already supports. A field whose
+  own `Size` isn't 1/2/4 (`RAB$W_RFA`, see `vmsdef.Field.Size`'s own doc
+  comment) fails through `storeScaled`'s existing `VAX_BADSCALE` error
+  rather than a bespoke one — not worth a new error code for the single
+  known case. An unrecognized keyword reuses `VAX_UNDEFSYM` (a keyword
+  really is a name lookup that failed, the same shape as an undefined
+  symbol reference) rather than inventing a new status.
+- Every field not named in the parameter list is left at zero — no
+  explicit zero-fill pass needed, matching `.BLKB`'s own existing "never
+  written reads back as zero" convention (`internal/asm/image.go`'s sparse
+  map).
+- New tests (`internal/asm/fabrab_test.go`): `TestPseudoFAB_autoBIDBLN`/
+  `TestPseudoRAB_autoBIDBLN` (auto header bytes, correct block-size deposit
+  advance); `TestPseudoFAB_keywordsPlaceValues` (several real keywords —
+  `FAC`/`ORG`/`RFM`/`MRS`/`FNS` — landing at their real offsets, including a
+  symbolic constant value resolved through a preceding `.RMSDEF`);
+  `TestPseudoFAB_forwardReferenceValue` (`FNA=fspec` where `fspec` is
+  defined later in the same file); `TestPseudoFAB_unknownKeywordErrors`;
+  `TestPseudoFAB_unsettableFieldErrors` (`.RAB RFA=1`); and
+  `TestPseudoFAB_unwrittenFieldsAreZero`. One test bug caught immediately
+  by its own first run (not a bug in the pseudo-op): the `FNS=13` case
+  needed rewriting to `FNS=^D13`, since this assembler's default radix is
+  hex (`docs/PHASE-11.md`) — a bare `13` means `0x13` (19), the exact
+  radix pitfall `testdata/asm/rms_roundtrip.asm`'s own existing `^D13` use
+  already documents; the test now cites that same precedent inline.
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no new findings),
+  `go test ./...` all clean across the whole module (including the peer
+  `ods2` module, reachable via `go.work`).
+- Subtasks 3-4 complete. Subtask 5 (rewrite `rms_roundtrip.asm`) is next.
