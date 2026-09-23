@@ -25,8 +25,8 @@ the rest of `cmd/ods2`'s command surface:
   `/HOST` qualifier" below).
 - `TYPE` — write one file's content to the console.
 
-**Status: planning only (this document). No implementation has started — see
-"Subtasks" below for the intended breakdown once work begins.**
+**Status: in progress — subtasks 1-10 done (see "Subtasks" below); subtask
+11 (end-to-end acceptance pass) and subtask 12 (docs) remain.**
 
 ## Why this phase looks different from most others
 
@@ -450,10 +450,13 @@ container was never created by anything this project wrote.
    and `/HOST` copying with no other qualifier, `internal/rms`
    implementation, console wrapper, tests (including the quoted-host-path
    cases from the "Quoting" design section).
-10. `COPY`, full qualifier parity: `/BINARY`, `/QUIET`, `/VERBOSE`, `/TEST`,
-    `/TIME`, `/IGNORE`, `/DIRS`, `/STREAM`, `/VFC`, `/CRLF`, `/LF`, each
-    matched against `ods2`'s own documented semantics/restrictions per
+10. **Done.** `COPY`, full qualifier parity: `/BINARY`, `/QUIET`, `/VERBOSE`,
+    `/TEST`, `/TIME`, `/IGNORE`, `/DIRS`, `/STREAM`, `/VFC`, `/CRLF`, `/LF`,
+    each matched against `ods2`'s own documented semantics/restrictions per
     direction (see "COPY qualifier parity" above), tests per qualifier.
+    Also lifts subtask 9's single-match-only restriction for a wildcarded
+    `SOURCE` copied onto a directory destination (resolving this doc's own
+    open question, below).
 11. End-to-end acceptance pass: a scripted session exercising
     `INITIALIZE/CONTAINER` -> `MOUNT` -> `SET DEFAULT` -> file creation
     (reusing Phase 22's existing `SYS$CREATE`/`SYS$PUT` path, or `COPY/HOST`
@@ -494,18 +497,18 @@ container was never created by anything this project wrote.
   in closer VMS fidelity. Leaning toward inheriting it for now, matching this
   phase's general "ods2's CLI is the reference" framing, but flagging it since
   it's a visible, easily-second-guessed choice.
-- Whether `COPY`'s "exactly one matched source file" restriction (subtask
+- ~~Whether `COPY`'s "exactly one matched source file" restriction (subtask
   9, `*rms.MultipleMatchesError`) should be lifted as part of subtask 10's
-  qualifier-parity work, specifically alongside `/DIRS` (the qualifier
-  `ods2`'s own multi-file copying is most tightly coupled to, for how a
-  matched subdirectory entry is handled), or stay out of this phase's
-  scope entirely as a documented, permanent simplification. Neither the
-  original design section nor the user's own subtask breakdown says
-  explicitly; subtask 9 took the narrower reading ("core...with no other
-  qualifier" implies single-file only) since it kept the change reviewable
-  and matches every other new command this phase added (`TYPE`, most
-  notably, has the identical restriction). Flagging for a decision before
-  subtask 10 starts.
+  qualifier-parity work~~ **Resolved in subtask 10:** lifted, but only for
+  a destination that "is a directory" (a volume spec naming no file of its
+  own, or an already-existing host directory) — every other destination
+  still restricts a wildcarded `SOURCE` to a single match, matching `TYPE`'s
+  own identical restriction and `ods2`'s own `destAcceptsMultiple` rule.
+  `ods2`'s further destination-name wildcard-substitution case (renaming
+  every matched file's own name/type via a `*`/`%` in the destination
+  spec) is still not implemented — no example in this project's own design
+  doc calls for it, and nothing here needed it once the "directory
+  destination" reading was chosen.
 
 ## Progress Log
 
@@ -1270,3 +1273,151 @@ container was never created by anything this project wrote.
   `Directory.Lookup`/`Device.Bitmap`/`Device.IndexBitmap`, and `rms.
   NewWriter`/`Writer.Put`/`Writer.Close` were read and called exactly as
   documented, not modified.
+
+### 2026-09-23 — Subtask 10: `COPY`, full qualifier parity
+
+- `internal/rms/copy.go`: `CopyOptions` (`Binary`/`Quiet`/`Verbose`/`Test`/
+  `Time`/`Ignore`/`Dirs`/`Stream`/`CRLF` — `Quiet`/`Verbose` are carried
+  here but never read by this file, since they only affect which lines
+  `Console.Copy` prints, not what gets copied; `/VFC` isn't represented at
+  all, for the reason below) threads through every one of `Session.Copy`'s
+  four direction functions. `/BINARY` on a volume destination creates an
+  Undefined-format file and copies exact bytes (`createBinaryFile`/
+  `createBinaryFileFromHost`, `copyRawToVolume`/`copyHostRawToVolume`,
+  using `CloseWithFinalByte` rather than `Close`'s whole-block rounding so
+  a short final block is recorded accurately); on a host destination it's
+  `copyRawToHost`, functionally matching `ods2`'s own `copyBinary`.
+  `/STREAM` (host destination, Stream-format source only) and `/IGNORE`
+  (host destination, recovering from `odsrms.ErrCorruptRecord` mid-render
+  by restarting the output file from scratch as a raw copy) both reuse
+  `copyRawToHost` too. `/TIME` (`preserveFileTime`, `os.Chtimes` off the
+  source's own VMS revision date) is a non-fatal warning on failure,
+  carried back on `CopyResult.Warning` rather than failing the whole copy
+  — matching `ods2`'s own `%COPY-W-NOTIME` convention. `/DIRS` does two
+  things for a host destination, both functionally matching `ods2`'s own
+  `cmdCopy`: a matched directory entry is materialized as an empty host
+  directory instead of silently skipped (`copyDirEntryToHost`), and an
+  ordinary matched file's own source subdirectory path is mirrored under
+  the destination directory instead of flattening every match into it
+  (`resolveHostDestPath`). `/TEST` short-circuits every direction before
+  any read/write/create, reusing the same `CopyResult` shape with a
+  `CopyTested`/`CopyDirTested` `Kind` so `Console.Copy` can render an
+  identically shaped preview line. `/CRLF` only selects `writeRecords`'
+  line-ending byte sequence for a host destination's text rendering — a
+  volume destination's own records are always Stream_LF framing on disk
+  either way, so `copyRecordsAsLines` (the volume-destination text path)
+  always uses `lfLineEnding` regardless of `/CRLF`, matching `ods2`'s own
+  identical choice. `/VFC` is declared on the grammar (below) purely for
+  command-line compatibility with `ods2`'s own `COPY` — unlike `ods2`,
+  where VFC interpretation is opt-in, this project's default text-mode
+  copy already always expands a VFC file's carriage control the way
+  `TYPE` does, so there's no "un-interpreted" mode `/VFC` could opt out
+  of; it isn't read by any Go code in this package at all, only by
+  `dispatch.go`'s own `r.Present("VFC")` call, kept purely to document why
+  it's discarded (see below).
+- **Resolved this doc's own open question** (see "Open questions" below):
+  lifted subtask 9's single-match-only restriction for a wildcarded
+  `SOURCE`, but only when the destination "is a directory" — a volume
+  spec naming no file of its own, or an already-existing host directory.
+  Every matched file (skipping directory entries for a volume destination,
+  since there's no "create an empty directory" operation a plain file
+  copy could perform there, regardless of `/DIRS`) is copied in under its
+  own name/type; a source matching several files against any other kind
+  of destination still fails with `*MultipleMatchesError`, matching
+  `TYPE`'s own identical restriction and `ods2`'s own `destAcceptsMultiple`
+  rule. `ods2`'s further destination-name wildcard-substitution case
+  (renaming every match via a `*`/`%` in the destination spec) is still
+  not implemented — no example in this project's own design doc calls for
+  it.
+- `internal/console/copy.go`: `Console.Copy` grew a `printCopyResult`
+  helper rendering each of the four `CopyResultKind` shapes
+  (`CopyCopied`/`CopyTested`/`CopyDirCreated`/`CopyDirTested`), gating the
+  usual `%COPY-I-COPYING`/`%COPY-S-COPIED`/`%COPY-W-NOTIME` lines on
+  `opts.Verbose`/`opts.Quiet` exactly like `ods2`'s own `cmdCopy`; `/TEST`'s
+  `%COPY-I-TEST` line always prints regardless of either, matching `ods2`
+  checking `/TEST` before both. No new status-code translations were
+  needed — every failure mode subtask 10's qualifiers can produce (a bad
+  host directory, an I/O error mid-copy, `/DIRS`' own `os.MkdirAll`
+  failure) already falls into `Console.Copy`'s existing `CLI_BADFILESPEC`
+  catch-all from subtask 9.
+- `internal/bootdata/files/evax.dcl`: `verb copy`'s eleven new entry-level
+  qualifiers (`BINARY`/`QUIET`/`VERBOSE`/`TEST`/`TIME`/`IGNORE`/`DIRS`/
+  `STREAM`/`VFC`/`CRLF`/`LF`), plus `disallow crlf and lf` — the same
+  `DISALLOW` mechanism `SHOW BREAK`'s own `READ`/`WRITE` restriction
+  already uses, so `/CRLF` and `/LF` together are rejected by the grammar
+  engine itself (`CLI_BADQUALIFIERCOMBO`) rather than needing a check in
+  Go code; `LF` has no `CopyOptions` field of its own, since it's simply
+  `CRLF`'s absence (the default). `testdata/dcl/evax.dcl`/`reference/eVAX/
+  evax.dcl` untouched, per the established convention.
+- `dispatch.go`: `bindGrammar`'s `COPY` binding now builds an
+  `rms.CopyOptions` from the entry-level qualifiers (`r.Present(...)` for
+  each) alongside the existing `SOURCE`/`DESTINATION`
+  `r.ParamPresent(name, "HOST")` reads from subtask 9, and reads
+  `r.Present("VFC")` only to document (in the closure's own comment) that
+  it's intentionally never consulted.
+- Two doc-comment corrections made in scope, matching `CLAUDE.md`'s
+  "clear, obvious...not tied to ISA semantics" bucket (stale
+  subtask-number cross-references, not a behavior change): `internal/rms/
+  copy.go`'s and `evax.dcl`'s own top-of-file comments both originally
+  attributed wildcarded-source-onto-a-directory copying to subtask 9 (a
+  leftover from drafting before the open question above was actually
+  resolved) — corrected to attribute it to subtask 10, where it was
+  actually implemented (subtask 9, as committed, was single-match-only —
+  confirmed directly against that commit's own `internal/rms/copy.go`).
+- **Test-only issue found and fixed while finishing this subtask** (no
+  production-code bug — `CLAUDE.md`'s "clear, obvious logic error" bucket,
+  in the tests themselves rather than the code under test): the
+  wildcard-copy tests as originally drafted (`TestSessionCopy_
+  wildcardVolumeToVolumeDirectory` and its host-destination/rejection
+  counterparts) expected `"*.TXT"` to match all three of `FOO.TXT;1`,
+  `DUP.TXT;1`, and `DUP.TXT;2` — but `filespec.Glob`'s own default version
+  selector (confirmed by reading `ods2`'s `filespec/version.go`) is
+  "highest version only" absent an explicit `;*`/`;n`, exactly the same
+  default `Session.Type`/`Session.Directory` already rely on elsewhere in
+  this phase. `ods2`'s own `cmdCopy` calls `filespec.Glob` the same way
+  with no version override, so this was never a case where `ods2`'s
+  behavior differs from this project's — the test fixtures' own expected
+  counts were simply wrong. Corrected to expect two matches (`FOO.TXT;1`,
+  `DUP.TXT;2`) throughout.
+- **Second test-only issue found and fixed**: the original `/BINARY`
+  round-trip tests (`TestSessionCopy_binaryVolumeToVolume`/`..
+  _binaryFromHost`) verified their copied content by reading it back
+  through `Session.Type` — but `/BINARY` creates an Undefined-format
+  destination file, and `odsrms.Reader` (confirmed by reading `ods2`'s own
+  `rms/reader.go`) treats Undefined exactly like Fixed: every record read
+  as a constant `MaxRecordSize`-byte chunk (512, matching `ods2`'s own
+  `copyOneFileToVolume`/`copyHostFileToVolume` choice for the same
+  qualifier) with no framing of its own. A short test fixture ("abc", 3
+  bytes) isn't a multiple of that size, so `Reader.Next` hit
+  `ErrCorruptRecord` on the final short "record" even though the actual
+  copied bytes were exactly correct — an inherent limitation of treating
+  Undefined as fixed-size framing this way (shared with `ods2`'s own
+  `rms.Reader`, not a govax-specific defect, and out of this subtask's own
+  scope to fix). Corrected by adding `readRawVolumeFile` (block-by-block
+  reading via `odsrms.FileByteLength`, bypassing per-record-format parsing
+  entirely) to verify `/BINARY`'s exact byte content directly instead of
+  through `Session.Type`.
+- Tests: `internal/rms/copy_test.go` gained one new test per qualifier
+  (`TestSessionCopy_binaryVolumeToVolume`/`..binaryFromHost`/
+  `..binaryToHost`, `..streamPreservesRawBytesForStreamSource`/
+  `..withoutStreamNormalizesLineEndings`, `..crlf`,
+  `..ignoreRecoversFromCorruptRecord`/`..withoutIgnoreFailsOnCorruptRecord`,
+  `..time`, `..dirsPreservesSubdirectoriesAndMaterializesDirEntries`/
+  `..withoutDirsFlattensAndSkipsDirEntries`/`..dirsTest`) plus the
+  wildcard-onto-directory coverage above (both volume- and
+  host-destination directions, and both non-directory-destination
+  rejection cases). `internal/console/copy_test.go` gained
+  `TestConsoleCopy_quiet`/`..verbose`/`..test` (message-shape/gating
+  coverage against `Console.Copy` directly) and
+  `TestDispatch_copyQuietSuppressesConfirmation`/
+  `..copyCrlfAndLfDisallowed`/`..copyVfcAcceptedButIgnored` (DCL-dispatched
+  wiring coverage through the real grammar). `internal/console/dcl/
+  define_test.go`'s `TestLoadEvaxGrammar_copy` extended to check all
+  eleven new entry-level qualifiers by name, not just their count. Full
+  `go build ./...`, `go vet ./...`, and `go test ./...` all clean across
+  the whole module (including the peer `ods2` module, reachable via
+  `go.work`).
+- No bugs found in the peer `ods2` module during this subtask; its own
+  `rms.Reader`/`rms.FileByteLength`, `volume.File.ReadBlock`/`WriteBlock`/
+  `CloseWithFinalByte`, and `ondisk.RecordFormat` constants were read and
+  called exactly as documented, not modified.

@@ -499,19 +499,45 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.Type(r.String("SPEC"))
 	})
 
-	// Phase 23 (docs/PHASE-23.md, subtask 9): COPY moves one file's content
-	// between a mounted volume and the host filesystem, or between two
-	// mounted volumes, via internal/rms.Session.Copy (Console.Copy,
-	// internal/console/copy.go). SOURCE and DESTINATION each carry their
-	// own private HOST qualifier (evax.dcl's own copy verb, using the
-	// parameter-scoped-qualifier grammar feature from subtask 2), read
-	// here via r.ParamPresent(paramName, "HOST") rather than the ordinary
-	// entry-level r.Present -- see internal/console/dcl's parse.go/
-	// grammar.go for how that resolution works.
+	// Phase 23 (docs/PHASE-23.md, subtasks 9-10): COPY moves one or more
+	// files' content between a mounted volume and the host filesystem, or
+	// between two mounted volumes, via internal/rms.Session.Copy
+	// (Console.Copy, internal/console/copy.go). SOURCE and DESTINATION
+	// each carry their own private HOST qualifier (evax.dcl's own copy
+	// verb, using the parameter-scoped-qualifier grammar feature from
+	// subtask 2), read here via r.ParamPresent(paramName, "HOST") rather
+	// than the ordinary entry-level r.Present -- see internal/console/
+	// dcl's parse.go/grammar.go for how that resolution works. Every
+	// other qualifier is entry-level and folds into one rms.CopyOptions,
+	// threaded straight through Console.Copy into Session.Copy unchanged
+	// -- see CopyOptions' own doc comment for which direction(s) each one
+	// actually affects. VFC (r.Present("VFC")) is read here only to
+	// document that it's intentionally discarded: this project's default
+	// text-mode copy already always expands VFC carriage control the way
+	// TYPE does, so there is no "un-interpreted" mode /VFC could opt out
+	// of -- see CopyOptions' own doc comment for the fuller reasoning.
+	// /CRLF and /LF's mutual exclusivity is enforced by evax.dcl's own
+	// "disallow crlf and lf" grammar statement, so this closure never
+	// needs to check for both at once itself.
 	g.Bind("COPY", func(id int64, r *dcl.Result) error {
+		_ = r.Present("VFC") // accepted for compatibility, never consulted -- see comment above
+
+		opts := rms.CopyOptions{
+			Binary:  r.Present("BINARY"),
+			Quiet:   r.Present("QUIET"),
+			Verbose: r.Present("VERBOSE"),
+			Test:    r.Present("TEST"),
+			Time:    r.Present("TIME"),
+			Ignore:  r.Present("IGNORE"),
+			Dirs:    r.Present("DIRS"),
+			Stream:  r.Present("STREAM"),
+			CRLF:    r.Present("CRLF"),
+		}
+
 		return d.Console.Copy(
 			r.String("SOURCE"), r.ParamPresent("SOURCE", "HOST"),
 			r.String("DESTINATION"), r.ParamPresent("DESTINATION", "HOST"),
+			opts,
 		)
 	})
 }

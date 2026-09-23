@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -29,7 +30,7 @@ func TestConsoleCopy_volumeToVolume(t *testing.T) {
 
 	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "hello, world")
 
-	if err := c.Copy("FOO.TXT", false, "BAR.TXT", false); err != nil {
+	if err := c.Copy("FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{}); err != nil {
 		t.Fatalf("Copy: %v", err)
 	}
 
@@ -45,6 +46,101 @@ func TestConsoleCopy_volumeToVolume(t *testing.T) {
 
 	if !strings.Contains(buf.String(), "hello, world") {
 		t.Errorf("Type(BAR.TXT) output = %q, want it to contain the copied content", buf.String())
+	}
+}
+
+// TestConsoleCopy_quiet confirms Console.Copy suppresses its own
+// "%COPY-S-COPIED" confirmation line when opts.Quiet is set -- Session.Copy
+// itself never reads Quiet (rms.CopyOptions' own doc comment), so this is
+// purely Console.Copy's own printCopyResult gating.
+func TestConsoleCopy_quiet(t *testing.T) {
+	c, buf := newTestConsole(t)
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.SetDefault("DUA0:"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	vol, ok := c.Mounts.Lookup("DUA0")
+	if !ok {
+		t.Fatal("Lookup(DUA0) after mount = not found")
+	}
+
+	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "hello, world")
+
+	if err := c.Copy("FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{Quiet: true}); err != nil {
+		t.Fatalf("Copy: %v", err)
+	}
+
+	if strings.Contains(buf.String(), "%COPY-S-COPIED") {
+		t.Errorf("Copy output = %q, want no %%COPY-S-COPIED line under /QUIET", buf.String())
+	}
+}
+
+// TestConsoleCopy_verbose confirms Console.Copy prints a "%COPY-I-COPYING"
+// line before its usual "%COPY-S-COPIED" confirmation when opts.Verbose is
+// set.
+func TestConsoleCopy_verbose(t *testing.T) {
+	c, buf := newTestConsole(t)
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.SetDefault("DUA0:"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	vol, ok := c.Mounts.Lookup("DUA0")
+	if !ok {
+		t.Fatal("Lookup(DUA0) after mount = not found")
+	}
+
+	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "hello, world")
+
+	if err := c.Copy("FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{Verbose: true}); err != nil {
+		t.Fatalf("Copy: %v", err)
+	}
+
+	out := buf.String()
+
+	if !strings.Contains(out, "%COPY-I-COPYING, copying FOO.TXT;1 to DUA0:[000000]BAR.TXT;1") {
+		t.Errorf("Copy output = %q, want a %%COPY-I-COPYING line under /VERBOSE", out)
+	}
+
+	if !strings.Contains(out, "%COPY-S-COPIED, FOO.TXT;1 copied to DUA0:[000000]BAR.TXT;1") {
+		t.Errorf("Copy output = %q, want the usual %%COPY-S-COPIED line too", out)
+	}
+}
+
+// TestConsoleCopy_test confirms Console.Copy prints a "%COPY-I-TEST" preview
+// line, and nothing else, under opts.Test -- regardless of Quiet/Verbose,
+// matching Session.Copy's own CopyTested result never actually creating
+// anything.
+func TestConsoleCopy_test(t *testing.T) {
+	c, buf := newTestConsole(t)
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.SetDefault("DUA0:"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	vol, ok := c.Mounts.Lookup("DUA0")
+	if !ok {
+		t.Fatal("Lookup(DUA0) after mount = not found")
+	}
+
+	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "hello, world")
+
+	if err := c.Copy("FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{Test: true}); err != nil {
+		t.Fatalf("Copy: %v", err)
+	}
+
+	out := buf.String()
+
+	if !strings.Contains(out, "%COPY-I-TEST, would copy FOO.TXT;1 to DUA0:[000000]BAR.TXT") {
+		t.Errorf("Copy output = %q, want a %%COPY-I-TEST line", out)
+	}
+
+	if err := c.Type("BAR.TXT"); err == nil {
+		t.Error("BAR.TXT exists after a /TEST copy -- /TEST must not actually write anything")
 	}
 }
 
@@ -64,7 +160,7 @@ func TestConsoleCopy_fromHost(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
-	if err := c.Copy(hostPath, true, "BAZ.TXT", false); err != nil {
+	if err := c.Copy(hostPath, true, "BAZ.TXT", false, rms.CopyOptions{}); err != nil {
 		t.Fatalf("Copy: %v", err)
 	}
 
@@ -93,7 +189,7 @@ func TestConsoleCopy_toHost(t *testing.T) {
 
 	outPath := filepath.Join(t.TempDir(), "out.txt")
 
-	if err := c.Copy("FOO.TXT", false, outPath, true); err != nil {
+	if err := c.Copy("FOO.TXT", false, outPath, true, rms.CopyOptions{}); err != nil {
 		t.Fatalf("Copy: %v", err)
 	}
 
@@ -113,7 +209,7 @@ func TestConsoleCopy_toHost(t *testing.T) {
 func TestConsoleCopy_notMounted(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.Copy("DUB0:FOO.TXT", false, "BAR.TXT", false)
+	err := c.Copy("DUB0:FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{})
 	if err == nil {
 		t.Fatal("Copy from an unmounted device = nil error, want SS_DEVNOTMOUNT")
 	}
@@ -134,7 +230,7 @@ func TestConsoleCopy_notFound(t *testing.T) {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
-	err := c.Copy("NOSUCH.TXT", false, "BAR.TXT", false)
+	err := c.Copy("NOSUCH.TXT", false, "BAR.TXT", false, rms.CopyOptions{})
 	if err == nil {
 		t.Fatal("Copy of a nonexistent file = nil error, want SS_NOSUCHFILE")
 	}
@@ -163,7 +259,7 @@ func TestConsoleCopy_ambiguous(t *testing.T) {
 	createConsoleTestFile(t, vol, "DUP.TXT")
 	createConsoleTestFile(t, vol, "DUP.TXT")
 
-	err := c.Copy("DUP.TXT;*", false, "OUT.TXT", false)
+	err := c.Copy("DUP.TXT;*", false, "OUT.TXT", false, rms.CopyOptions{})
 	if err == nil {
 		t.Fatal("Copy of a wildcarded multi-version spec = nil error, want CLI_AMBIGUOUS")
 	}
@@ -185,7 +281,7 @@ func TestConsoleCopy_hostToHostRejected(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
-	err := c.Copy(src, true, filepath.Join(dir, "b.txt"), true)
+	err := c.Copy(src, true, filepath.Join(dir, "b.txt"), true, rms.CopyOptions{})
 	if err == nil {
 		t.Fatal("Copy with /HOST on both sides = nil error, want CLI_BADQUALIFIERCOMBO")
 	}
@@ -207,7 +303,7 @@ func TestConsoleCopy_badFileSpec(t *testing.T) {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
-	err := c.Copy("DUA0:[UNTERMINATED", false, "BAR.TXT", false)
+	err := c.Copy("DUA0:[UNTERMINATED", false, "BAR.TXT", false, rms.CopyOptions{})
 	if err == nil {
 		t.Fatal("Copy with an unterminated directory bracket = nil error, want CLI_BADFILESPEC")
 	}
@@ -365,5 +461,98 @@ func TestDispatch_copyRequiresBothParameters(t *testing.T) {
 
 	if err := d.Dispatch("COPY"); err == nil {
 		t.Fatal("Dispatch bare COPY = nil error, want a missing-parameter error")
+	}
+}
+
+// TestDispatch_copyQuietSuppressesConfirmation exercises subtask 10's own
+// dispatch.go wiring end to end: /QUIET, parsed through the real DCL
+// grammar's new entry-level qualifier, reaches bindGrammar's
+// rms.CopyOptions construction and suppresses the usual %COPY-S-COPIED
+// line, the same behavior TestConsoleCopy_quiet already confirms directly
+// against Console.Copy.
+func TestDispatch_copyQuietSuppressesConfirmation(t *testing.T) {
+	c, buf := newTestConsole(t)
+	g := loadEvaxGrammar(t)
+	d := NewDispatcher(c, g, nil)
+
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.SetDefault("DUA0:"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	vol, ok := c.Mounts.Lookup("DUA0")
+	if !ok {
+		t.Fatal("Lookup(DUA0) after mount = not found")
+	}
+
+	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "hello, world")
+
+	if err := d.Dispatch("COPY/QUIET FOO.TXT BAR.TXT"); err != nil {
+		t.Fatalf("Dispatch: %v", err)
+	}
+
+	if strings.Contains(buf.String(), "%COPY-S-COPIED") {
+		t.Errorf("Dispatch COPY/QUIET output = %q, want no %%COPY-S-COPIED line", buf.String())
+	}
+
+	buf.Reset()
+
+	if err := c.Type("BAR.TXT"); err != nil {
+		t.Errorf("Type(BAR.TXT): %v -- /QUIET must not stop the copy from actually happening", err)
+	}
+}
+
+// TestDispatch_copyCrlfAndLfDisallowed confirms evax.dcl's own "disallow
+// crlf and lf" statement (COPY's grammar entry, subtask 10) actually
+// rejects a command line carrying both at once, through the real DCL
+// parser -- the same CLI_BADQUALIFIERCOMBO status SHOW BREAK's own
+// READ/WRITE restriction already uses for an identical combination
+// elsewhere in this grammar, confirmed here as COPY's own wiring rather
+// than relying solely on that generic mechanism's own engine-level tests.
+func TestDispatch_copyCrlfAndLfDisallowed(t *testing.T) {
+	d, c := newTestDispatcher(t)
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.SetDefault("DUA0:"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	err := d.Dispatch("COPY/CRLF/LF FOO.TXT BAR.TXT/HOST")
+	if err == nil {
+		t.Fatal("Dispatch COPY/CRLF/LF = nil error, want CLI_BADQUALIFIERCOMBO")
+	}
+
+	if !errors.Is(err, vmserrors.New(vmserrors.CLI_BADQUALIFIERCOMBO)) {
+		t.Errorf("Dispatch error = %v, want CLI_BADQUALIFIERCOMBO", err)
+	}
+}
+
+// TestDispatch_copyVfcAcceptedButIgnored confirms /VFC parses successfully
+// (it's declared on COPY's grammar entry purely for command-line
+// compatibility with ods2's own COPY) and doesn't change the copy's own
+// behavior at all -- see rms.CopyOptions' and dispatch.go's own doc
+// comments for why it's read only to be explicitly discarded.
+func TestDispatch_copyVfcAcceptedButIgnored(t *testing.T) {
+	d, c := newTestDispatcher(t)
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.SetDefault("DUA0:"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	vol, ok := c.Mounts.Lookup("DUA0")
+	if !ok {
+		t.Fatal("Lookup(DUA0) after mount = not found")
+	}
+
+	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "hello, world")
+
+	if err := d.Dispatch("COPY/VFC FOO.TXT BAR.TXT"); err != nil {
+		t.Fatalf("Dispatch COPY/VFC: %v", err)
+	}
+
+	if err := c.Type("BAR.TXT"); err != nil {
+		t.Errorf("Type(BAR.TXT): %v", err)
 	}
 }

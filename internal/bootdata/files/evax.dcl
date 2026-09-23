@@ -622,10 +622,18 @@ grammar evax
     ! argument can independently name a host path instead of a location
     ! on a mounted volume ("COPY foo.txt/HOST BAR.TXT" is host-to-
     ! container; "COPY FOO.TXT bar.txt/HOST" is container-to-host).
-    ! This subtask (9) implements only the direction logic and /HOST
-    ! itself; the remaining qualifier parity (/BINARY, /QUIET, /VERBOSE,
-    ! /TEST, /TIME, /IGNORE, /DIRS, /STREAM, /VFC, /CRLF, /LF) is
-    ! subtask 10.
+    ! Subtask 9 implemented the direction logic and /HOST itself,
+    ! single-match-only; subtask 10 adds the remaining qualifiers below,
+    ! plus lifting that restriction for a wildcarded SOURCE copying onto
+    ! a directory destination (either a container directory or an
+    ! existing host directory) -- see docs/PHASE-23.md's "COPY
+    ! qualifier parity" design section and its own subtask 10 progress-
+    ! log entry for exactly which direction(s) each one applies to
+    ! (most only affect a host destination; only /BINARY, /QUIET,
+    ! /VERBOSE, and /TEST carry over to a volume destination). /CRLF and
+    ! /LF are mutually exclusive, enforced here via DISALLOW rather than
+    ! in Go code, the same mechanism SHOW BREAK's own READ/WRITE
+    ! restriction above already uses.
     !
     verb copy/id=1250
 
@@ -640,5 +648,18 @@ grammar evax
                     /prompt="Destination"
         qualifier   host/id=1254                -
                     /parameter=destination
+
+        qualifier   binary/id=1255
+        qualifier   quiet/id=1256
+        qualifier   verbose/id=1257
+        qualifier   test/id=1258
+        qualifier   time/id=1259
+        qualifier   ignore/id=1260
+        qualifier   dirs/id=1261
+        qualifier   stream/id=1262
+        qualifier   vfc/id=1263
+        qualifier   crlf/id=1264
+        qualifier   lf/id=1265
+        disallow    crlf and lf
 
 end

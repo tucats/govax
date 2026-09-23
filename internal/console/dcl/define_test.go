@@ -305,12 +305,14 @@ func TestLoadEvaxGrammar_type(t *testing.T) {
 	}
 }
 
-// TestLoadEvaxGrammar_copy regresses Phase 23 subtask 9's COPY grammar
-// addition: two formally required parameters, SOURCE and DESTINATION
-// (/prompt= on both -- there is no sensible default for either half of a
-// copy), each carrying its own private HOST qualifier attached via
-// /parameter= (internal/console/dcl's parameter-scoped-qualifier feature,
-// subtask 2) rather than one qualifier shared at the entry level.
+// TestLoadEvaxGrammar_copy regresses Phase 23 subtasks 9 and 10's COPY
+// grammar additions: two formally required parameters, SOURCE and
+// DESTINATION (/prompt= on both -- there is no sensible default for either
+// half of a copy), each carrying its own private HOST qualifier attached
+// via /parameter= (internal/console/dcl's parameter-scoped-qualifier
+// feature, subtask 2) rather than one qualifier shared at the entry level,
+// plus subtask 10's eleven entry-level qualifiers (BINARY, QUIET, VERBOSE,
+// TEST, TIME, IGNORE, DIRS, STREAM, VFC, CRLF, LF).
 func TestLoadEvaxGrammar_copy(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
@@ -341,8 +343,16 @@ func TestLoadEvaxGrammar_copy(t *testing.T) {
 		t.Errorf("DESTINATION.Qualifiers = %+v, want a single HOST qualifier", destination.Qualifiers)
 	}
 
-	if len(cp.Qualifiers) != 0 {
-		t.Errorf("COPY has %d entry-level qualifiers, want 0 (HOST is parameter-scoped on both SOURCE and DESTINATION, not entry-level)", len(cp.Qualifiers))
+	wantQualifiers := []string{"BINARY", "QUIET", "VERBOSE", "TEST", "TIME", "IGNORE", "DIRS", "STREAM", "VFC", "CRLF", "LF"}
+
+	if len(cp.Qualifiers) != len(wantQualifiers) {
+		t.Fatalf("COPY has %d entry-level qualifiers, want %d: %+v", len(cp.Qualifiers), len(wantQualifiers), cp.Qualifiers)
+	}
+
+	for _, name := range wantQualifiers {
+		if _, _, err := cp.qualifier(name); err != nil {
+			t.Errorf("COPY missing entry-level qualifier %s: %v", name, err)
+		}
 	}
 }
 
