@@ -356,7 +356,7 @@ inside quotes). Critically, `Parse`'s per-iteration qualifier check
 (`pos[0] == '/'`) only fires when the *current* character is a bare `/` — a
 quoted value starting with `/` begins with `"` instead, so it is never
 misread as a qualifier introducer in the first place; no engine change is
-needed for `COPY "/Users/tom/foo.txt" ... ` to parse correctly. This phase's
+needed for `COPY "/Users/tom/foo.txt" ...` to parse correctly. This phase's
 job here is verifying that with real test coverage (a quoted host path,
 including one immediately followed by a space then `/HOST`, and one
 containing an embedded space of its own), not fixing anything.
