@@ -25,8 +25,8 @@ the rest of `cmd/ods2`'s command surface:
   `/HOST` qualifier" below).
 - `TYPE` — write one file's content to the console.
 
-**Status: in progress — subtasks 1-10 done (see "Subtasks" below); subtask
-11 (end-to-end acceptance pass) and subtask 12 (docs) remain.**
+**Status: in progress — subtasks 1-11 done (see "Subtasks" below); subtask
+12 (docs) remains.**
 
 ## Why this phase looks different from most others
 
@@ -457,7 +457,7 @@ container was never created by anything this project wrote.
     Also lifts subtask 9's single-match-only restriction for a wildcarded
     `SOURCE` copied onto a directory destination (resolving this doc's own
     open question, below).
-11. End-to-end acceptance pass: a scripted session exercising
+11. **Done.** End-to-end acceptance pass: a scripted session exercising
     `INITIALIZE/CONTAINER` -> `MOUNT` -> `SET DEFAULT` -> file creation
     (reusing Phase 22's existing `SYS$CREATE`/`SYS$PUT` path, or `COPY/HOST`
     from a host fixture) -> `DIRECTORY` -> `TYPE` -> `COPY` (container ->
@@ -1421,3 +1421,54 @@ container was never created by anything this project wrote.
   `rms.Reader`/`rms.FileByteLength`, `volume.File.ReadBlock`/`WriteBlock`/
   `CloseWithFinalByte`, and `ondisk.RecordFormat` constants were read and
   called exactly as documented, not modified.
+
+### 2026-09-23 — Subtask 11: end-to-end acceptance pass
+
+- `internal/console/acceptance_test.go` (new):
+  `TestPhase23Acceptance_fullOperatorSession`, a single scripted operator
+  session that dispatches real command-line strings -- exactly what a
+  person would type, not direct `internal/rms`/`Console` method calls --
+  through one shared `Console`/`Dispatcher`/mounted-volume state, in the
+  order a real operator would actually use them:
+  `INITIALIZE/CONTAINER` -> `MOUNT` -> `SET DEFAULT` -> file creation
+  (`COPY/HOST` from two host fixtures, the design doc's own explicitly
+  offered alternative to standing up a full VAX-program
+  `SYS$CREATE`/`SYS$PUT` sequence just to get files onto the volume) ->
+  `DIRECTORY` (confirms both created names appear) -> `TYPE` (confirms the
+  copied-in content round-trips) -> `COPY` container-to-host (confirms the
+  written-out host file's content matches) -> `DELETE` (confirms the
+  `%DELETE-S-DELETED` line and that the file is genuinely gone afterward,
+  `SS_NOSUCHFILE`) -> `PURGE` (a second file, deliberately copied in twice
+  so it has two versions for `PURGE`'s default `/LIMIT=1` to have
+  something to trim; confirms the `%PURGE-S-PURGED` line, that the older
+  version is now `SS_NOSUCHFILE`, and that the newest version's own
+  content survives and is still readable) -> `DISMOUNT` (confirms the
+  volume is no longer mounted). Every individual command this phase added
+  already has its own focused per-command unit tests from subtasks 4-10;
+  this test's distinct job is proving they compose correctly end to end
+  against one piece of shared state, which none of those per-command
+  tests (each building its own fresh fixture) exercise.
+- `internal/rms/simh_interop_test.go` gained
+  `TestSimhInterop_typeReadsRealVMSFile`, the one opt-in
+  `testdata/disks/`-backed check subtask 5's own
+  `TestSimhInterop_directoryListsRealVMSDisk` didn't already cover: that
+  test proved `Session.Directory`'s glob/formatting path handles a real
+  VAX/VMS system disk's MFD, but nothing in this phase's suite had yet run
+  `Session.Type` -- the record-format-aware text-rendering path `TYPE` and
+  `COPY` both share (`records.go`'s `writeRecords`) -- against a file this
+  project never wrote a single byte of. Discovers a real, non-directory,
+  non-empty top-level MFD file the same way
+  `TestSimhInterop_readRealVMSDisk` discovers its own target file, then
+  confirms `Session.Type` renders it without error and produces non-empty
+  output (observed against `testdata/disks/rq0-ra92.dsk`, present on this
+  development machine: `TYPE BADBLK.SYS` rendered 1026 bytes). Skips
+  cleanly, like every other test in that file, when the disk fixture isn't
+  present.
+- No new status codes, grammar entries, or production-code changes were
+  needed for this subtask -- it is pure test coverage, composing already-
+  shipped subtask-4-through-10 functionality. Full `go build ./...`,
+  `go vet ./...`, and `go test ./...` all clean across the whole module
+  (including the peer `ods2` module, reachable via `go.work`).
+- No bugs found in the peer `ods2` module during this subtask; nothing in
+  it was touched or newly exercised beyond what subtasks 4-10 already
+  called into.

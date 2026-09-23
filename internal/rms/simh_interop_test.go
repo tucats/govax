@@ -275,6 +275,105 @@ func TestSimhInterop_directoryListsRealVMSDisk(t *testing.T) {
 	t.Logf("DIRECTORY/FULL of a real VAX/VMS system disk's MFD:\n%s", out)
 }
 
+// TestSimhInterop_typeReadsRealVMSFile is docs/PHASE-23.md subtask 11's own
+// opt-in interop check, filling the one gap subtask 5's own
+// TestSimhInterop_directoryListsRealVMSDisk left: that test proves
+// Session.Directory's glob/formatting path handles a real system disk's
+// MFD, but nothing in this phase's own test suite had yet run
+// Session.Type -- the record-format-aware text-rendering path TYPE and
+// COPY both share (records.go's writeRecords) -- against a file this
+// project never wrote a single byte of. Real VMS system files come in
+// whatever record format their own creator chose (Fixed, Variable, VFC,
+// ...), not just the Stream_LF this package's own hermetic fixtures
+// exclusively use, so this is this phase's own read-fidelity check for
+// that renderer, the same role TestSimhInterop_readRealVMSDisk already
+// plays for the lower-level odsrms.Reader it's built on.
+func TestSimhInterop_typeReadsRealVMSFile(t *testing.T) {
+	path := skipUnlessDiskPresent(t, "rq0-ra92.dsk")
+
+	mounts := NewMountTable()
+	if err := mounts.Mount("DUA0", path, false); err != nil {
+		t.Fatalf("Mount (read-only): %v", err)
+	}
+
+	defer func() {
+		if err := mounts.Dismount("DUA0"); err != nil {
+			t.Errorf("Dismount: %v", err)
+		}
+	}()
+
+	s := NewSession(mounts)
+	if err := s.SetDefault("DUA0:[000000]"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	// Discover a real, non-directory, non-empty top-level MFD file to TYPE
+	// -- the same "look at what's actually there" approach
+	// TestSimhInterop_readRealVMSDisk uses, since this test can't assume
+	// any particular file name exists on a real VAX/VMS system disk ahead
+	// of time. Restricted to the MFD itself (rather than also descending
+	// into subdirectories the way TestSimhInterop_readRealVMSDisk does) --
+	// real system disks reliably have at least one readable top-level file
+	// (e.g. INDEXF.SYS itself, or a top-level .COM/.DAT file), and keeping
+	// this test's own discovery logic simple is enough to exercise the
+	// renderer against unfamiliar, real content.
+	vol, ok := mounts.Lookup("DUA0")
+	if !ok {
+		t.Fatal("Lookup(DUA0) after mount = not found")
+	}
+
+	mfd, err := vol.OpenDirectory(ondisk.MasterFileDirectoryFid)
+	if err != nil {
+		t.Fatalf("OpenDirectory(MFD): %v", err)
+	}
+
+	mfdEntries, err := mfd.List()
+	if err != nil {
+		t.Fatalf("listing the MFD: %v", err)
+	}
+
+	var (
+		typeSpec string
+		typedOK  bool
+	)
+
+	for _, entry := range mfdEntries {
+		if strings.HasSuffix(entry.Name, ".DIR") {
+			continue
+		}
+
+		f, err := vol.OpenFID(entry.Fid)
+		if err != nil {
+			continue
+		}
+
+		if f.Header.RecordAttributes.HighestBlock == 0 {
+			continue
+		}
+
+		typeSpec = entry.Name
+
+		out, err := s.Type(typeSpec)
+		if err != nil {
+			continue
+		}
+
+		if out == "" {
+			continue
+		}
+
+		t.Logf("TYPE %s: %d bytes rendered", typeSpec, len(out))
+
+		typedOK = true
+
+		break
+	}
+
+	if !typedOK {
+		t.Fatal("found no top-level MFD file this project's own TYPE could render -- wrong volume, or a genuine read-fidelity failure")
+	}
+}
+
 // TestSimhInterop_writeThenRereadEmptyDsk is docs/PHASE-22.md's write-path
 // interop check: testdata/disks/empty.dsk is a real container `ods2`
 // itself already initialized (a real home block, INDEXF.SYS, BITMAP.SYS,
