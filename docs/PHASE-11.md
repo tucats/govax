@@ -307,3 +307,10 @@ commands and used generally for operand encoding — this unlocks assembling
   `go vet ./...`, `gofmt -l .` (no new findings), `go test ./...` all clean
   across the whole module (including the peer `ods2` module, reachable via
   `go.work`).
+
+**Later note (2026-09-23, during `docs/PHASE-24.md` planning):** the
+`internal/p1vector` package this entry describes was renamed/consolidated
+into `internal/vmsdef` (`P1VectorEntry`/`P1VectorTable`, same content) once
+FAB/RAB field data turned out to need the identical asm/RTL-shared-data
+treatment — see `PHASE-24.md`'s own design section. Every `internal/p1vector`
+path/name in this entry's text above is now historical, not current.

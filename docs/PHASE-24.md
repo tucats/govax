@@ -75,7 +75,7 @@ handlers use" would mean redoing this work in the very next phase.
 
 ## Design decisions
 
-### A new shared leaf package, `internal/rmsdef`, mirroring `internal/p1vector`
+### Shared data lives in `internal/vmsdef` (consolidated from `internal/p1vector`), not a new one-off package
 
 Both `internal/asm` (to place a `.FAB`/`.RAB` keyword's value at the right byte
 offset, and to define `.RMSDEF`'s symbols) and `internal/rms` (which already has
@@ -83,23 +83,44 @@ its own, currently-private, partial offset constants) need the same field-
 offset/symbol data. Per the same reasoning `docs/PHASE-11.md`'s `.P1VECTOR` work
 landed on (see that doc's own progress log): neither package is naturally
 "below" the other here, and hand-duplicating ~450 symbols in two places would be
-a real drift risk. `internal/rmsdef` holds:
+a real drift risk.
 
-- `FABFields`/`RABFields []Field{Name string; Offset uint32; Size uint32}` — the
-  complete, doubly-verified struct-offset tables (33 FAB fields to 80 bytes,
-  26 RAB fields to 68 bytes; see "Verifying the offset tables" below).
-- `Constants map[string]uint32` (or a typed `[]Constant{Name string; Value
-  uint32}`) — every `FAB$M_`/`FAB$C_`/`RAB$M_`/`RAB$C_`/`RMS$_` symbol and its
-  real numeric value, machine-generated (see "Generator, not hand-transcription"
-  below) directly from `reference/vms/{fabdef,rabdef,rmsdef}.h`.
+This phase's own planning originally sketched a second, FAB/RAB-only leaf
+package (`internal/rmsdef`) mirroring `internal/p1vector`'s existing shape —
+but the user flagged mid-planning that this asm/RTL-shared-static-VMS-data
+need is going to keep recurring as more of the VMS system-service library
+gets ported (more record organizations, more FAB/RAB-driven behavior, and
+whatever comes after that), and a fresh micro-package per topic doesn't scale.
+Resolved by consolidating instead of adding a sibling: `internal/p1vector`
+was renamed to **`internal/vmsdef`** (`P1VectorEntry`/`P1VectorTable`, same
+content, just renamed to avoid colliding with this phase's own `Field`/
+`Constant` types once they land in the same package) and this phase's FAB/RAB/
+RMS-status data becomes new files inside that same package rather than a new
+import path:
+
+- `internal/vmsdef/p1vector.go` — unchanged content, existing `.P1VECTOR` data.
+- `internal/vmsdef/fab.go`/`rab.go` (this phase, subtask 1) —
+  `FABFields`/`RABFields []Field{Symbol, Keyword string; Offset, Size uint32}`,
+  the complete, doubly-verified struct-offset tables (33 FAB fields to 80
+  bytes, 26 RAB fields to 68 bytes; see "Verifying the offset tables" below).
+- `internal/vmsdef/constants_generated.go` (this phase, subtask 1, generated —
+  see "Generator, not hand-transcription" below) — every `FAB$M_`/`FAB$C_`/
+  `RAB$M_`/`RAB$C_`/`RMS$_` symbol and its real numeric value.
+
+One package, not one per topic: a caller needing several of these tables at
+once (as `internal/asm`'s `.RMSDEF` already will, for both FAB and RAB data
+together) imports one path, and adding the next VMS-definitions table this
+project needs is "add a file here," not "stand up and wire in another
+near-identical micro-package." No interfaces, registries, or subpackages —
+still just flat Go data, organized by file within one package.
 
 `internal/rms/fab.go`/`rab.go` are updated to read their field offsets from
-`internal/rmsdef` instead of maintaining their own private literals (exactly
-how `internal/rtl/p1vector.go` was cut over to build its dispatch index over
-`internal/p1vector.Table` instead of owning its own copy) — a nice side effect
-of this phase: it deletes the last hand-duplicated-constant risk `fab.go`'s own
-doc comment already worried about (the `fabFNS`/48-vs-52 bug it documents was
-exactly this kind of drift, caught the hard way once already).
+`internal/vmsdef` instead of maintaining their own private literals (exactly
+how `internal/rtl/p1vector.go` was already cut over to build its dispatch
+index over `vmsdef.P1VectorTable` instead of owning its own copy) — a nice
+side effect of this phase: it deletes the last hand-duplicated-constant risk
+`fab.go`'s own doc comment already worried about (the `fabFNS`/48-vs-52 bug it
+documents was exactly this kind of drift, caught the hard way once already).
 
 ### Generator, not hand-transcription, for the flat constant tables
 
@@ -109,8 +130,8 @@ research, plus the two `$K_BLN`/`$C_BLN` struct-length pairs) — far too many t
 safely hand-transcribe (the exact mistake `internal/cpu/gen/main.go`'s own doc
 comment cites as the reason *it* exists, for `instruction_table.h`'s ~284-entry
 table: "rather than hand-transcribing ... entries"). This phase adds a sibling
-generator, `internal/rmsdef/gen/main.go`, run via `go generate` from
-`internal/rmsdef` (matching `internal/cpu/instruction.go`'s own `go:generate`
+generator, `internal/vmsdef/gen/main.go`, run via `go generate` from
+`internal/vmsdef` (matching `internal/cpu/instruction.go`'s own `go:generate`
 directive precedent exactly), parsing each header's `#define <PREFIX>$<NAME>
 <value>` lines with a simple regex (far simpler than `instruction_table.h`'s
 multi-field struct-literal entries — this is a flat, one-line-per-symbol
@@ -134,7 +155,7 @@ neither aware of the other's numbers), and both land exactly on `FAB$K_BLN`
 reproducing `fab.go`/`rab.go`'s existing, already-independently-verified subset
 exactly. Given only 33 + 26 = 59 fields total (small enough to review by eye,
 unlike the ~450-entry flat constant lists above), the offset tables are
-hand-transcribed into `internal/rmsdef` with both derivations' agreement
+hand-transcribed into `internal/vmsdef` with both derivations' agreement
 recorded as their provenance — not machine-generated, since a struct-layout
 parser for just two small, one-off structs would be more code than the data it
 produces, and the flat-constant generator already eliminates the actual
@@ -197,19 +218,20 @@ subset exactly.)
 - **RMS$_** — 267 completion-status codes (`rmsdef.h`), no struct of its own —
   pure status-code symbol definitions, the largest single piece of `.RMSDEF`'s
   own symbol table. `internal/rms/status.go` already has 18 of these as
-  private, verified Go constants; this phase's `internal/rmsdef.Constants`
+  private, verified Go constants; this phase's `internal/vmsdef.Constants`
   becomes the complete superset.
 
 ## Subtasks
 
-1. `internal/rmsdef`: the shared package (`Field`/`Constant` types, `FABFields`/
-   `RABFields`/`Constants`), the `internal/rmsdef/gen` generator (`go generate`
-   over `reference/vms/{fabdef,rabdef,rmsdef}.h`) producing the flat constant
-   tables, and the hand-transcribed, doubly-derived FAB/RAB offset tables.
-   Migrate `internal/rms/fab.go`/`rab.go` to read their offsets from this
-   package instead of their own private constants (behavior-preserving —
-   existing `internal/rms` tests must pass unchanged).
-2. `.RMSDEF` pseudo-op: defines every `internal/rmsdef.Constants` entry plus
+1. `internal/vmsdef` (consolidated package, see "Shared data lives in
+   `internal/vmsdef`" above): `fab.go`/`rab.go` (`Field` type, `FABFields`/
+   `RABFields`) and the `internal/vmsdef/gen` generator (`go generate` over
+   `reference/vms/{fabdef,rabdef,rmsdef}.h`) producing `Constants`, plus the
+   hand-transcribed, doubly-derived FAB/RAB offset tables. Migrate
+   `internal/rms/fab.go`/`rab.go` to read their offsets from this package
+   instead of their own private constants (behavior-preserving — existing
+   `internal/rms` tests must pass unchanged).
+2. `.RMSDEF` pseudo-op: defines every `internal/vmsdef.Constants` entry plus
    each field's own `FAB$_`/`RAB$_` offset symbol, permanent, idempotent
    (`unique=false` from the start).
 3. `.FAB` pseudo-op: `KEYWORD=value` parsing over the full 33-field table,
@@ -263,7 +285,7 @@ subset exactly.)
   `pseudoShim`/`pseudoP1Vector` (symbol+byte-deposit shape) and `pseudoSet`
   (`KEYWORD=value` parsing shape) as the closest reusable precedent, and
   `internal/cpu/gen/main.go` as the established `go:generate`-a-Go-table-
-  from-a-reference-header precedent this phase's own `internal/rmsdef/gen`
+  from-a-reference-header precedent this phase's own `internal/vmsdef/gen`
   will mirror; confirmed `docs/PHASE-22.md` subtask 14's own scope-cut note
   ("plausible future `internal/asm` work") anticipated exactly this. Ran
   an independent hand-derivation of both offset tables in parallel with the
@@ -278,3 +300,34 @@ subset exactly.)
   question (start narrow and widen later vs. build complete now).
 - No code written yet; this document is the planning deliverable requested.
   Implementation starts at subtask 1 in a future session.
+
+### 2026-09-23 — Subtask 1, part 1: consolidate `internal/p1vector` into `internal/vmsdef`
+
+- User flagged, after this doc's own initial planning pass sketched a second,
+  FAB/RAB-only `internal/rmsdef` leaf package: the asm/RTL-shared-static-VMS-
+  data need is going to keep recurring as more of the VMS system-service
+  library gets ported, so a fresh micro-package per topic doesn't scale —
+  explicitly left the call on whether to act on it now to this session's own
+  judgment ("this may introduce unneeded complexity, but ... we probably
+  will be at this point again").
+- Decided to consolidate rather than add a sibling: renamed
+  `internal/p1vector` to `internal/vmsdef` (`p1vector.go`'s own content
+  unchanged, `Entry`/`Table` renamed to `P1VectorEntry`/`P1VectorTable` to
+  leave room for this phase's own `Field`/`Constant` types in the same
+  package without a name collision), updated every consumer
+  (`internal/rtl/p1vector.go`, `internal/rtl/rtl_test.go`,
+  `internal/asm/pseudo.go`, `internal/asm/p1vector_test.go`) and every code
+  comment naming the old import path. This phase's own FAB/RAB/RMS-status
+  data (rest of subtask 1) lands as new files in this same package rather
+  than a new one — see "Shared data lives in `internal/vmsdef`" above, which
+  replaced this doc's own original `internal/rmsdef` design section
+  in-place rather than leaving both versions around to go stale against
+  each other.
+- `docs/PHASE-11.md`'s own `.P1VECTOR` progress-log entry (which predates
+  this rename) got one short addendum note pointing at this rename rather
+  than being rewritten — its own historical text still says
+  `internal/p1vector`, accurate as of when it was written.
+- `go build ./...`, `go vet ./...`, `go test ./...` all clean immediately
+  after the rename (behavior-preserving, no `.P1VECTOR` semantics touched).
+  Subtask 1's actual new content (FAB/RAB field tables, the constant
+  generator, `internal/rms` migration) continues from here.

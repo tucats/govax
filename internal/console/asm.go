@@ -155,7 +155,7 @@ func (c *Console) depositAsmImage(a *asm.Assembler) error {
 		}
 	}
 
-	// .P1VECTOR's trampolines live in P1 space (see internal/p1vector's
+	// .P1VECTOR's trampolines live in P1 space (see internal/vmsdef's
 	// fixed VMS addresses), well outside both the P0 range Bytes() returns
 	// and the S0 range above — the same "fixed address outside the normal
 	// regions" case the SCB page above is, just reported by the assembler

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tucats/govax/internal/p1vector"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -1217,9 +1217,9 @@ func (a *Assembler) pseudoIf(c *cursor) error {
 // pseudoP1Vector assembles .P1VECTOR, matching asm_pseudo.c's case 40
 // (`return p1_init();`) — a direct call into p1_vector.c's own p1_init(),
 // not deferred to anything downstream of assembly. For every entry in
-// internal/p1vector's fixed VMS table it defines the SYS$xxx symbol
+// internal/vmsdef's fixed VMS P1VectorTable it defines the SYS$xxx symbol
 // (permanent, SymEntry for an ordinary CALL target or SymLabel for the one
-// JMP-reached entry, SYS$SRCHANDLER — see p1vector.Entry.Jmp) and deposits
+// JMP-reached entry, SYS$SRCHANDLER — see vmsdef.P1VectorEntry.Jmp) and deposits
 // a CALLS-compatible trampoline at its address: a 2-byte zero procedure-
 // entry mask (skipped for the JMP entry, which has no CALL frame to build),
 // then "XFC #XFC$P1VECTOR" (0xFC 0x7A), then RET (0x04) — byte-for-byte
@@ -1254,7 +1254,7 @@ func (a *Assembler) pseudoP1Vector(c *cursor) error {
 	min := uint32(0x7FFFFFFF)
 	max := uint32(0)
 
-	for _, e := range p1vector.Table {
+	for _, e := range vmsdef.P1VectorTable {
 		flags := SymEntry
 		if e.Jmp {
 			flags = SymLabel

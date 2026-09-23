@@ -3,7 +3,7 @@ package asm
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/p1vector"
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // TestPseudoP1VectorRequiresMicrokernel matches .SCB/.REGION/.SHIM's own
@@ -80,7 +80,7 @@ func TestPseudoP1VectorDefinesSymbolsAndTrampolines(t *testing.T) {
 		"SYS$GL_COMMON": 0xFC, // SYS$SRCHANDLER's XFC opcode overwrites it
 	}
 
-	for _, e := range p1vector.Table {
+	for _, e := range vmsdef.P1VectorTable {
 		v, _, err := a.getSymbol(e.Name, false, 0, fixNone)
 		if err != nil {
 			t.Fatalf("%s: %v", e.Name, err)
@@ -136,7 +136,7 @@ func TestPseudoP1VectorDefinesSymbolsAndTrampolines(t *testing.T) {
 	}
 
 	wantMin, wantMax := uint32(0x7FFFFFFF), uint32(0)
-	for _, e := range p1vector.Table {
+	for _, e := range vmsdef.P1VectorTable {
 		if e.Addr < wantMin {
 			wantMin = e.Addr
 		}

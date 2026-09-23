@@ -1,28 +1,37 @@
-// Package p1vector holds the fixed VAX/VMS P1-space system-service vector
-// table: one (name, address, calling-convention) triple per SYS$ entry
-// point. These are architected VMS constants — a real compiled VMS
-// program's CALLS/JMP instruction targets one of them directly — not
-// something either consumer of this table gets to choose.
+// Package vmsdef holds static, architected VMS data tables that both
+// internal/asm (which emits symbols/bytes matching them at assembly time)
+// and an RTL-family package (which dispatches against them at run time)
+// need to agree on byte-for-byte — real VAX/VMS constants neither side gets
+// to choose, not something either package's own behavior. Named after the
+// real VMS "xxxdef.h"/$xxxDEF convention (fabdef.h, rabdef.h, rmsdef.h,
+// ssdef.h, ...) these tables are themselves sourced from, since that's
+// exactly what this package's job is: a Go home for that family of
+// definitions.
 //
 // It's a standalone leaf package, rather than living in (and being
 // imported from) either consumer, because neither internal/rtl nor
-// internal/asm is naturally "below" the other here: internal/rtl dispatches
-// a live SYS$ call once one of these addresses is reached
-// (internal/rtl/p1vector.go's lookupP1Vector), while internal/asm's
-// .P1VECTOR pseudo-op (internal/asm/pseudo.go's pseudoP1Vector) is what
-// defines the SYS$xxx symbols and deposits the CALLS-reachable trampoline
-// stub at each address in the first place, matching the reference tool's
-// own asm_pseudo.c case 40 calling straight into p1_vector.c's p1_init().
-// Letting internal/asm import internal/rtl for this would pull in RTL's
-// live service-dispatch machinery just to reach a static data table;
-// letting internal/rtl import internal/asm would be backwards the other
-// way (RTL has no business depending on the assembler). A tiny data-only
-// package both can depend on avoids both problems and the alternative of
-// hand-duplicating a ~250-row table in two places.
-package p1vector
+// internal/asm is naturally "below" the other for data like this: a
+// dispatch table is read at run time by whichever package handles a live
+// call (internal/rtl for SYS$ services), while internal/asm needs the same
+// facts to emit the matching symbols/bytes at assembly time. Letting
+// internal/asm import internal/rtl would pull in RTL's live dispatch
+// machinery just to reach a static data table; letting internal/rtl import
+// internal/asm would be backwards the other way. A shared data-only
+// package avoids both problems and the alternative of hand-duplicating a
+// ~250-row table in two places.
+//
+// One package rather than one micro-package per table (this file's own
+// P1Vector data started that way, as internal/p1vector, before this
+// consolidation): each topic gets its own file here instead, since the
+// packages-per-topic approach doesn't scale as more of VMS's system-
+// service library needs the same asm/RTL-shared treatment (FAB/RAB field
+// layouts are the next one — see docs/PHASE-24.md — and won't be the
+// last). A caller needing several of these tables at once imports one
+// package, not several near-identically-shaped ones.
+package vmsdef
 
-// Entry is one fixed VAX/VMS system-service-vector address.
-type Entry struct {
+// P1VectorEntry is one fixed VAX/VMS system-service-vector address.
+type P1VectorEntry struct {
 	Name string
 	Addr uint32
 	// Jmp is true only for SYS$SRCHANDLER, matching p1_vector.c's own
@@ -33,10 +42,10 @@ type Entry struct {
 	Jmp bool
 }
 
-// Table is copied verbatim from p1_vector.c's p1_vector[] initializer (the
-// commented-out SYS$CALL_HANDL entry excluded, matching what actually
-// compiles into the C source's array).
-var Table = []Entry{
+// P1VectorTable is copied verbatim from p1_vector.c's p1_vector[]
+// initializer (the commented-out SYS$CALL_HANDL entry excluded, matching
+// what actually compiles into the C source's array).
+var P1VectorTable = []P1VectorEntry{
 	{"SYS$ABORT_RU", 0x7FFEE640, false},
 	{"SYS$ABORT_TRANS", 0x7FFEE6E0, false},
 	{"SYS$ABORT_TRANSW", 0x7FFEE738, false},

@@ -26,7 +26,7 @@ func exeFixturePath(t *testing.T, name string) string {
 // (200) is bigger than this helper's own lightweight sizing used to be
 // (100): most of its callers assemble kernel.asm, whose ".p1vector"
 // statement (internal/asm/pseudo.go's pseudoP1Vector, no longer a no-op)
-// deposits real trampolines across internal/p1vector.Table's fixed
+// deposits real trampolines across internal/vmsdef.P1VectorTable's fixed
 // addresses, the lowest of which (0x7FFEDE00) sits 145 pages below the top
 // of P1 space — below 145 pages, VMInit's own demand-paged P1 region
 // (grows down from maxP1) doesn't reach that low, and depositing there

@@ -75,7 +75,7 @@ type Assembler struct {
 
 	// p1VectorBase/p1VectorEnd record the [base, end) byte range .P1VECTOR
 	// deposited its trampolines across (real min/max address seen in
-	// internal/p1vector's table, not a fixed constant), so depositAsmImage
+	// internal/vmsdef's P1VectorTable, not a fixed constant), so depositAsmImage
 	// (internal/console/asm.go) knows what to copy into live memory — the
 	// same role a.scbb plays for .SCB/.VECTOR. p1VectorSet distinguishes
 	// "never ran .P1VECTOR" from a coincidental zero range.
