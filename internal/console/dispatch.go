@@ -302,6 +302,15 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("SHOW_SHARE", func(id int64, r *dcl.Result) error { return d.Console.ShowSharePrefix() })
 	g.Bind("SHOW_IMAGES", func(id int64, r *dcl.Result) error { return d.Console.ShowImages(r.Present("FULL")) })
 
+	// Phase 23 (docs/PHASE-23.md, subtask 3): SHOW DEFAULT displays the
+	// operator's current default device/directory (internal/console/
+	// default.go's Console.ShowDefault, backed by internal/rms.Session).
+	// Unlike SET DEFAULT (cmdSet's own "DEFAULT" case above), this half is
+	// a real DCL grammar entry rather than a fixed-table sub-verb, since
+	// SHOW already has a large family of "syntax show_*" entries
+	// (show_map/show_tb/... above) that DEFAULT slots into the same way.
+	g.Bind("SHOW_DEFAULT", func(id int64, r *dcl.Result) error { return d.Console.ShowDefault() })
+
 	g.Bind("SHOW_QUANTUM", func(id int64, r *dcl.Result) error { return d.Console.ShowQuantum() })
 	g.Bind("SHOW_CLOCK", func(id int64, r *dcl.Result) error { return d.Console.ShowClock() })
 	g.Bind("SHOW_FAULT", func(id int64, r *dcl.Result) error { return d.Console.ShowFault() })
@@ -1114,6 +1123,22 @@ func cmdSet(d *Dispatcher, rest string) error {
 		}
 
 		return d.Console.SetUIQuantum(n)
+
+	// DEFAULT (docs/PHASE-23.md, subtask 3) establishes the operator's
+	// current default device/directory for DIRECTORY/DELETE/PURGE/COPY/TYPE
+	// -- the natural, minimal extension of this same switch, mirroring
+	// ods2's own cmdSet adding a "default" case alongside its register/
+	// symbol assignment (see internal/rms/session.go's own doc comment).
+	// Unlike SET DEFAULT's real VMS counterpart, there's nothing else on
+	// this line to validate ahead of time: whatever text follows the verb
+	// is handed straight to Session.SetDefault, which does its own file-
+	// specification-syntax checking.
+	case "DEFAULT":
+		if after == "" {
+			return vmserrors.New(vmserrors.CLI_NEEDSETARG)
+		}
+
+		return d.Console.SetDefault(after)
 	}
 
 	eq := strings.IndexByte(rest, '=')

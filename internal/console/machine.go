@@ -100,6 +100,21 @@ type Console struct {
 	// already are (init.go, vminit.go).
 	Mounts *rms.MountTable
 
+	// ContainerSession is docs/PHASE-23.md's operator-console state for
+	// working with an already-mounted ODS-2 container's files: the current
+	// default device/directory (SET DEFAULT/SHOW DEFAULT) a partial file
+	// spec typed at the console resolves against, plus (via its own Mounts
+	// field, set to this same *rms.MountTable — see NewSession's own doc
+	// comment) the shared lookup helper DIRECTORY/DELETE/PURGE/COPY/TYPE
+	// all need. Named "ContainerSession" rather than "Files" specifically
+	// to avoid reading as a collision with internal/rms.Context.Files —
+	// that's a genuinely different thing, a running VAX *program*'s own
+	// open-file table (Phase 22), not this operator console's default-
+	// directory state. Built once, here, alongside Mounts rather than by
+	// Init/Zero — same "operator/session state survives an address-space
+	// wipe" reasoning as Mounts's own doc comment above.
+	ContainerSession *rms.Session
+
 	// RTL is Phase 10's SYS$/LIB$ calling-convention environment, backing
 	// this Console's cpu.SystemServices implementation (services.go) for
 	// the XFC$P1VECTOR/XFC$SHIM selectors. Created fresh alongside the
@@ -198,14 +213,17 @@ func New(out io.Writer) *Console {
 	logicals := iodev.NewLogicalNameTable()
 	logicals.InitLogicals()
 
+	mounts := rms.NewMountTable()
+
 	return &Console{
-		Symbols:  NewSymbolTable(),
-		Radix:    16,   // alloc_vax's own default
-		Verbose:  true, // initialization.c's own vax.console.flags = CONSOLE_EXPAND | CONSOLE_VERBOSE default
-		Out:      out,
-		Devices:  iodev.NewDeviceTable(),
-		Logicals: logicals,
-		Mounts:   rms.NewMountTable(),
+		Symbols:          NewSymbolTable(),
+		Radix:            16,   // alloc_vax's own default
+		Verbose:          true, // initialization.c's own vax.console.flags = CONSOLE_EXPAND | CONSOLE_VERBOSE default
+		Out:              out,
+		Devices:          iodev.NewDeviceTable(),
+		Logicals:         logicals,
+		Mounts:           mounts,
+		ContainerSession: rms.NewSession(mounts),
 	}
 }
 

@@ -205,10 +205,10 @@ func (s *Session) SetDefault(text string) error   // filespec.Parse(text, s.Defa
 func (s *Session) DefaultString() string          // s.Default.String(), for SHOW DEFAULT
 ```
 
-`Console` gains one new field, e.g. `Files *rms.Session` (exact name TBD —
-`Console.Files` risks reading as a collision with `rms.Context.Files`, the
-*`VAX-program`* open-file table from Phase 22, which is a genuinely different
-thing; a name like `Console.ContainerSession` may read more clearly), constructed
+`Console` gains one new field — **resolved in subtask 3 as
+`ContainerSession *rms.Session`** (not `Files`: that would risk colliding in
+a reader's mind with `rms.Context.Files`, the *`VAX-program`* open-file
+table from Phase 22, which is a genuinely different thing) — constructed
 once alongside `Devices`/`Logicals`/`Mounts` and never reset by `ZERO` — same
 lifetime rule Phase 22 gave `Mounts` (`machine.go`'s own doc comment on why).
 
@@ -222,7 +222,9 @@ lookup independently.
 `SET DEFAULT` is **not** a new DCL verb — `SET` is already one of
 `dispatch.go`'s `fixedCommands` (a hand-parsed `NAME=value`/sub-verb command,
 `cmdSet`), and adding a `case "DEFAULT":` there (calling
-`d.Console.Files.SetDefault(after)`) is the natural, minimal extension —
+`d.Console.SetDefault(after)`, a thin console-layer wrapper around
+`ContainerSession.SetDefault` per the "Status-code / error translation"
+section below) is the natural, minimal extension —
 mirroring exactly how `ods2`'s own `cmdSet` adds a `"default"` case alongside
 its register/symbol assignment. `SHOW DEFAULT`, by contrast, **is** a new DCL
 grammar entry: `verb show` already exists with a large family of `syntax
@@ -420,7 +422,7 @@ container was never created by anything this project wrote.
    last-filled-parameter-aware qualifier resolution, `Result.ParamPresent`
    and friends). Grammar-engine-only; no console command uses it yet. Full
    unit test coverage per the "Quoting"/"COPY direction" design sections.
-3. `internal/rms`: the `Session` type (`Default filespec.Spec` plus the
+3. **Done.** `internal/rms`: the `Session` type (`Default filespec.Spec` plus the
    shared `resolveVolume` helper), `Console`'s new field, `SET DEFAULT`
    (`dispatch.go`'s `cmdSet`) and `SHOW DEFAULT` (new grammar `syntax
    show_default`, bound in `bindGrammar`) wired end to end.
@@ -470,10 +472,12 @@ container was never created by anything this project wrote.
 
 ## Open questions
 
-- Exact final naming for the new `internal/rms.Session` type and the
-  `Console` field that holds it (`Console.Files` risks reading as a
-  collision with `rms.Context.Files`, a genuinely different table) — sketched
-  above, to be settled in subtask 3.
+- ~~Exact final naming for the new `internal/rms.Session` type and the
+  `Console` field that holds it~~ **Resolved in subtask 3:** the type is
+  `internal/rms.Session` as sketched, and the `Console` field is
+  `Console.ContainerSession *rms.Session` — chosen specifically to avoid
+  reading as a collision with `rms.Context.Files` (a running VAX program's
+  own open-file table, Phase 22, an unrelated concept).
 - `DELETE`/`PURGE`'s inherited-from-`ods2` restriction to single-device
   volumes: not expected to matter in practice, since Phase 22's `MountTable`
   never mounts a multi-device volume set anyway, but worth a one-line
@@ -648,3 +652,65 @@ container was never created by anything this project wrote.
   9) is the first consumer.
 - No bugs found in the peer `ods2` module during this subtask (not
   touched — this is `internal/console/dcl`-only, no `internal/rms` work).
+
+### 2026-09-23 — Subtask 3: `internal/rms.Session`, `SET DEFAULT`/`SHOW DEFAULT`
+
+- `internal/rms/session.go` (new): `Session` holds `Mounts *MountTable`
+  (the same table a `Console` already owns — not a copy) and `Default
+  filespec.Spec`. `NewSession(mounts)`, `SetDefault(text string) error`
+  (`filespec.Parse` against the current `Default`, replacing it on
+  success), `DefaultString() string` (`Default.String()`, never fails —
+  even the zero-value `Default` renders as `"[000000]"`), and the shared
+  `resolveVolume(specText string) (*volume.Volume, filespec.Spec, error)`
+  helper every later subtask's command (`DIRECTORY`/`DELETE`/`PURGE`/
+  `COPY`/`TYPE`) will call: parses `specText` against `Default`, then looks
+  the resulting device up in `Mounts`, erroring clearly if nothing's
+  mounted there.
+- Resolved the design section's open naming question:
+  `Console.ContainerSession *rms.Session`, constructed alongside `Mounts`
+  in `machine.go`'s `New` (sharing the same `*rms.MountTable` — `mounts :=
+  rms.NewMountTable(); ... Mounts: mounts, ContainerSession:
+  rms.NewSession(mounts)`), never reset by `ZERO`/`Init`, matching
+  `Mounts`'s own lifetime rule and doc comment.
+- `internal/console/default.go` (new): `Console.SetDefault`/
+  `Console.ShowDefault`, thin wrappers mirroring `mount.go`'s own
+  `Mount`/`Dismount` pattern. `SetDefault` translates a malformed file
+  spec into a new `CLI_BADFILESPEC` status (`internal/vmserrors/
+  codes_cli.go`) rather than a bare Go error — chosen as a *CLI*-facility
+  code, not a *SYS*-facility one like `MOUNT`'s `SS_DEVMOUNT`/`SS_NOMOUNT`,
+  since this is plain console-command-argument validation (the same family
+  `SET RADIX`/`SET MODE`'s own `CLI_BADRADIXVAL`/`CLI_BADMODE` already
+  use), not an actual file-operation failure state — the design section's
+  "operator-console-facing `SS$_` statuses" framing turned out to describe
+  subtask 4 onward's actual file-operation commands (`INITIALIZE/
+  CONTAINER`, `DIRECTORY`, ...), not `SET DEFAULT` itself, which has no
+  device-mount precondition to check at all. `ShowDefault` never fails.
+- `dispatch.go`: `cmdSet` gained a `case "DEFAULT":` (erroring
+  `CLI_NEEDSETARG` on a bare `SET DEFAULT` with nothing after it, matching
+  every other SET sub-form's own missing-argument check), and
+  `bindGrammar` gained `g.Bind("SHOW_DEFAULT", ...)`.
+- `internal/bootdata/files/evax.dcl`: `type show_types` gained a `DEFAULT`
+  keyword redirecting to a new `syntax show_default/id=163` under `verb
+  show` — no parameters or qualifiers of its own, following the same
+  "govax-native extension" comment convention Phase 22 established at
+  `MOUNT`'s own definition. `testdata/dcl/evax.dcl`/`reference/eVAX/
+  evax.dcl` untouched, per that same established convention.
+- Tests: `internal/rms/session_test.go` (new) covers `SetDefault`/
+  `DefaultString`'s round trip, component inheritance across two calls,
+  relative-directory parsing, rejecting-and-leaving-`Default`-unchanged on
+  bad syntax, the fresh-session `"[000000]"` display, and `resolveVolume`'s
+  happy path plus its two error paths (not mounted, bad syntax).
+  `internal/console/default_test.go` (new) covers the same round trip
+  through the `Console`-level wrappers, `CLI_BADFILESPEC` translation, and
+  `SET DEFAULT`/`SHOW DEFAULT` dispatched through the real fixed-table/DCL
+  paths respectively (including `SHOW DEF`'s abbreviation and a bare `SET
+  DEFAULT`'s `CLI_NEEDSETARG`). `internal/console/dcl/define_test.go`
+  gained `TestLoadEvaxGrammar_showDefault`, a structural check mirroring
+  the existing `..._mountDismount`/`..._initializeVaxContainer` ones. Full
+  `go build ./...`, `go vet ./...`, and `go test ./...` all clean across
+  the whole module (including the peer `ods2` module, reachable via
+  `go.work`).
+- No bugs found in the peer `ods2` module during this subtask; its own
+  `cmd/ods2/internal/session/setshow.go` was read purely as the intended
+  behavioral reference (`filespec.Parse`/`.String()` round trip), not
+  modified.

@@ -192,6 +192,10 @@ grammar evax
     
     
     type show_types
+        ! DEFAULT (docs/PHASE-23.md, subtask 3) has no reference/eVAX or
+        ! testdata/dcl/evax.dcl counterpart -- see this file's own
+        ! "govax-native extension" comment at MOUNT's definition below.
+        keyword         default         /syntax=show_default
         keyword		clock		/syntax=show_clock
         keyword         watchpoints     /syntax=show_watchpoints
         keyword		logical_names	/syntax=show_logical
@@ -445,6 +449,11 @@ grammar evax
             disallow    unimplemented and profile
             disallow    profile and all
         syntax          show_version/entry=exe$about
+
+        ! DEFAULT (docs/PHASE-23.md, subtask 3) has no reference/eVAX or
+        ! testdata/dcl/evax.dcl counterpart -- see this file's own
+        ! "govax-native extension" comment at MOUNT's definition below.
+        syntax          show_default/id=163
 
     !
     ! govax-native extension (Phase 22, internal/rms): MOUNT/DISMOUNT have no

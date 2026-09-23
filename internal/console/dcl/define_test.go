@@ -205,6 +205,36 @@ func TestLoadEvaxGrammar_initializeVaxContainer(t *testing.T) {
 	}
 }
 
+// TestLoadEvaxGrammar_showDefault regresses Phase 23 subtask 3's SHOW
+// DEFAULT grammar addition: SHOW_TYPES gained a DEFAULT keyword redirecting
+// to a new show_default syntax with no parameters/qualifiers of its own
+// (unlike SHOW MEMORY or SHOW BREAK, DEFAULT has nothing to qualify --
+// see docs/PHASE-23.md's design section).
+func TestLoadEvaxGrammar_showDefault(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	showTypes := g.types["SHOW_TYPES"]
+
+	kw, _, err := showTypes.lookup("DEFAULT")
+	if err != nil {
+		t.Fatalf("lookup DEFAULT keyword: %v", err)
+	}
+
+	if kw.Syntax != "SHOW_DEFAULT" {
+		t.Errorf("DEFAULT keyword syntax = %q, want SHOW_DEFAULT", kw.Syntax)
+	}
+
+	showDefault, ok := g.entries["SHOW_DEFAULT"]
+	if !ok {
+		t.Fatal("missing syntax SHOW_DEFAULT")
+	}
+
+	if len(showDefault.Parameters) != 0 || len(showDefault.Qualifiers) != 0 {
+		t.Errorf("SHOW_DEFAULT has parameters=%+v qualifiers=%+v, want none",
+			showDefault.Parameters, showDefault.Qualifiers)
+	}
+}
+
 func verbNames(g *Grammar) []string {
 	names := make([]string, len(g.verbOrder))
 	for i, e := range g.verbOrder {
