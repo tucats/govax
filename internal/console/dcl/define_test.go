@@ -92,12 +92,12 @@ func TestLoadEvaxGrammar(t *testing.T) {
 func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	g := loadEvaxGrammar(t)
 	// define, about, forth, exit, quit, test, call, clear, show, vminit,
-	// mount, dismount, initialize, directory, delete, purge, type (the
-	// last seven are govax-native additions -- Phase 22 for mount/
-	// dismount, Phase 23 for initialize/directory/delete/purge/type --
+	// mount, dismount, initialize, directory, delete, purge, type, copy
+	// (the last eight are govax-native additions -- Phase 22 for mount/
+	// dismount, Phase 23 for initialize/directory/delete/purge/type/copy --
 	// with no testdata/dcl/evax.dcl counterpart).
-	if len(g.verbOrder) != 17 {
-		t.Errorf("got %d verbs, want 17: %v", len(g.verbOrder), verbNames(g))
+	if len(g.verbOrder) != 18 {
+		t.Errorf("got %d verbs, want 18: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 
@@ -302,6 +302,47 @@ func TestLoadEvaxGrammar_type(t *testing.T) {
 
 	if !typ.Parameters[0].required() {
 		t.Error("SPEC should be formally required (/prompt=) -- a bare TYPE has no sensible default, see docs/PHASE-23.md")
+	}
+}
+
+// TestLoadEvaxGrammar_copy regresses Phase 23 subtask 9's COPY grammar
+// addition: two formally required parameters, SOURCE and DESTINATION
+// (/prompt= on both -- there is no sensible default for either half of a
+// copy), each carrying its own private HOST qualifier attached via
+// /parameter= (internal/console/dcl's parameter-scoped-qualifier feature,
+// subtask 2) rather than one qualifier shared at the entry level.
+func TestLoadEvaxGrammar_copy(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	cp, ok := g.entries["COPY"]
+	if !ok {
+		t.Fatal("missing verb COPY")
+	}
+
+	if len(cp.Parameters) != 2 {
+		t.Fatalf("COPY has %d parameters, want 2", len(cp.Parameters))
+	}
+
+	source, destination := cp.Parameters[0], cp.Parameters[1]
+
+	if source.Name != "SOURCE" || !source.required() {
+		t.Errorf("COPY parameter 0 = %+v, want required SOURCE", source)
+	}
+
+	if destination.Name != "DESTINATION" || !destination.required() {
+		t.Errorf("COPY parameter 1 = %+v, want required DESTINATION", destination)
+	}
+
+	if len(source.Qualifiers) != 1 || source.Qualifiers[0].Name != "HOST" {
+		t.Errorf("SOURCE.Qualifiers = %+v, want a single HOST qualifier", source.Qualifiers)
+	}
+
+	if len(destination.Qualifiers) != 1 || destination.Qualifiers[0].Name != "HOST" {
+		t.Errorf("DESTINATION.Qualifiers = %+v, want a single HOST qualifier", destination.Qualifiers)
+	}
+
+	if len(cp.Qualifiers) != 0 {
+		t.Errorf("COPY has %d entry-level qualifiers, want 0 (HOST is parameter-scoped on both SOURCE and DESTINATION, not entry-level)", len(cp.Qualifiers))
 	}
 }
 

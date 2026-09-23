@@ -608,4 +608,37 @@ grammar evax
                     /type=$string               -
                     /prompt="File specification"
 
+    !
+    ! govax-native extension (Phase 23, internal/console/dcl + internal/rms
+    ! + internal/console): COPY has no reference/eVAX or testdata/dcl/
+    ! evax.dcl counterpart at all -- see this file's own "govax-native
+    ! extension" comment at MOUNT's own definition above. Unlike every
+    ! other verb in this block, SOURCE and DESTINATION each carry their
+    ! own private HOST qualifier (via /parameter=, internal/console/dcl's
+    ! new parameter-scoped-qualifier feature added for exactly this --
+    ! docs/PHASE-23.md's subtask 2) rather than one qualifier shared
+    ! across the whole command line -- see docs/PHASE-23.md's "COPY
+    ! direction and the /HOST qualifier" design section for why: either
+    ! argument can independently name a host path instead of a location
+    ! on a mounted volume ("COPY foo.txt/HOST BAR.TXT" is host-to-
+    ! container; "COPY FOO.TXT bar.txt/HOST" is container-to-host).
+    ! This subtask (9) implements only the direction logic and /HOST
+    ! itself; the remaining qualifier parity (/BINARY, /QUIET, /VERBOSE,
+    ! /TEST, /TIME, /IGNORE, /DIRS, /STREAM, /VFC, /CRLF, /LF) is
+    ! subtask 10.
+    !
+    verb copy/id=1250
+
+        parameter   source/id=1251              -
+                    /type=$string               -
+                    /prompt="Source"
+        qualifier   host/id=1252                -
+                    /parameter=source
+
+        parameter   destination/id=1253         -
+                    /type=$string               -
+                    /prompt="Destination"
+        qualifier   host/id=1254                -
+                    /parameter=destination
+
 end

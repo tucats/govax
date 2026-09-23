@@ -498,6 +498,22 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("TYPE", func(id int64, r *dcl.Result) error {
 		return d.Console.Type(r.String("SPEC"))
 	})
+
+	// Phase 23 (docs/PHASE-23.md, subtask 9): COPY moves one file's content
+	// between a mounted volume and the host filesystem, or between two
+	// mounted volumes, via internal/rms.Session.Copy (Console.Copy,
+	// internal/console/copy.go). SOURCE and DESTINATION each carry their
+	// own private HOST qualifier (evax.dcl's own copy verb, using the
+	// parameter-scoped-qualifier grammar feature from subtask 2), read
+	// here via r.ParamPresent(paramName, "HOST") rather than the ordinary
+	// entry-level r.Present -- see internal/console/dcl's parse.go/
+	// grammar.go for how that resolution works.
+	g.Bind("COPY", func(id int64, r *dcl.Result) error {
+		return d.Console.Copy(
+			r.String("SOURCE"), r.ParamPresent("SOURCE", "HOST"),
+			r.String("DESTINATION"), r.ParamPresent("DESTINATION", "HOST"),
+		)
+	})
 }
 
 type fixedHandler func(d *Dispatcher, rest string) error

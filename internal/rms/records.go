@@ -10,10 +10,11 @@ import (
 
 // This file implements the record-format-aware "render a file's content as
 // plain text" logic docs/PHASE-23.md's subtask 8 (TYPE) calls for, written
-// so subtask 10 (COPY's own container-to-host text path) can reuse it
-// unchanged rather than re-deriving the same VFC-decoding/line-ending logic
-// a second time -- see that subtask's own design note "whichever of TYPE/
-// COPY lands first implements it, the other reuses it". Its behavioral
+// so subtask 9 (COPY's own container-to-host and container-to-container
+// text paths, copy.go) can reuse it unchanged rather than re-deriving the
+// same VFC-decoding/line-ending logic a second time -- see that subtask's
+// own design note "whichever of TYPE/COPY lands first implements it, the
+// other reuses it". Its behavioral
 // reference is the sibling ods2 module's own cmd/ods2/internal/session/
 // type.go (writeRecords/typeFile), reproduced fresh here since that
 // package's own internal/ visibility rules this module out of importing it
@@ -37,7 +38,7 @@ import (
 
 // lfLineEnding and crlfLineEnding are the two line-ending byte sequences
 // writeRecords can be asked to use for non-VFC records -- plain '\n'
-// (Session.Type's own default, and Session.Copy's eventual default absent
+// (Session.Type's own default, and Session.Copy's own default too absent
 // a future /CRLF qualifier) or '\r\n' (/CRLF, once subtask 10 adds it).
 var (
 	lfLineEnding   = []byte{'\n'}

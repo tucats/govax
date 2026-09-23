@@ -444,12 +444,12 @@ container was never created by anything this project wrote.
    the same record-to-text logic `COPY`'s own text path needs — see
    subtask 10; `TYPE` landed first and implements it, `COPY` reuses it),
    grammar, console wrapper, tests.
-9. `COPY`, core: grammar (`SOURCE`/`DESTINATION` parameters, `/HOST`
-   declared under each per the parameter-scoped-qualifier design), all four
-   direction combinations working for plain container-to-container and
-   `/HOST` copying with no other qualifier, `internal/rms` implementation,
-   console wrapper, tests (including the quoted-host-path cases from the
-   "Quoting" design section).
+9. **Done.** `COPY`, core: grammar (`SOURCE`/`DESTINATION` parameters,
+   `/HOST` declared under each per the parameter-scoped-qualifier design),
+   all four direction combinations working for plain container-to-container
+   and `/HOST` copying with no other qualifier, `internal/rms`
+   implementation, console wrapper, tests (including the quoted-host-path
+   cases from the "Quoting" design section).
 10. `COPY`, full qualifier parity: `/BINARY`, `/QUIET`, `/VERBOSE`, `/TEST`,
     `/TIME`, `/IGNORE`, `/DIRS`, `/STREAM`, `/VFC`, `/CRLF`, `/LF`, each
     matched against `ods2`'s own documented semantics/restrictions per
@@ -492,6 +492,18 @@ container was never created by anything this project wrote.
   in closer VMS fidelity. Leaning toward inheriting it for now, matching this
   phase's general "ods2's CLI is the reference" framing, but flagging it since
   it's a visible, easily-second-guessed choice.
+- Whether `COPY`'s "exactly one matched source file" restriction (subtask
+  9, `*rms.MultipleMatchesError`) should be lifted as part of subtask 10's
+  qualifier-parity work, specifically alongside `/DIRS` (the qualifier
+  `ods2`'s own multi-file copying is most tightly coupled to, for how a
+  matched subdirectory entry is handled), or stay out of this phase's
+  scope entirely as a documented, permanent simplification. Neither the
+  original design section nor the user's own subtask breakdown says
+  explicitly; subtask 9 took the narrower reading ("core...with no other
+  qualifier" implies single-file only) since it kept the change reviewable
+  and matches every other new command this phase added (`TYPE`, most
+  notably, has the identical restriction). Flagging for a decision before
+  subtask 10 starts.
 
 ## Progress Log
 
@@ -1134,3 +1146,125 @@ container was never created by anything this project wrote.
 - No bugs found in the peer `ods2` module during this subtask; its own
   `odsrms.NewReader`/`NewWriter`/`FormatVFCRecord` were read and called
   exactly as documented, not modified.
+
+### 2026-09-23 — Subtask 9: `COPY`, core (direction logic + `/HOST`)
+
+- `internal/console/dcl`: no engine changes needed -- subtask 2 already
+  delivered parameter-scoped qualifiers, and `COPY` is simply the first
+  grammar entry to actually declare one (two, in fact: `SOURCE`'s own
+  `HOST` and `DESTINATION`'s own `HOST`, distinct `Qualifier` objects with
+  different IDs, resolved independently by `Result.ParamPresent`).
+- `internal/bootdata/files/evax.dcl`: new govax-native `verb copy/
+  id=1250`, continuing the divergence block started at `MOUNT`. `SOURCE`
+  and `DESTINATION` both carry `/prompt=` (there is no sensible default
+  for either half of a copy), each immediately followed by its own
+  `qualifier host/parameter=<name>` -- the grammar-text shape the design
+  section's own "Resolved during subtask 2" note anticipated exactly.
+  `testdata/dcl/evax.dcl`/`reference/eVAX/evax.dcl` untouched, per the
+  established convention.
+- `internal/rms/copy.go` (new): `Session.Copy(sourceText string,
+  sourceHost bool, destText string, destHost bool) (CopyResult, error)`,
+  dispatching to one of three direction functions
+  (`copyVolumeToVolume`/`copyFromHost`/`copyToHost`) or rejecting the
+  fourth (`sourceHost && destHost`) outright as a new `*HostToHostError`
+  -- per the design section's own framing, an ordinary host-to-host copy
+  isn't this command's job at all, matching `ods2`'s own
+  `cmdCopyFromHost` doc comment's identical reasoning for the same
+  restriction. Every direction that touches a mounted volume reframes
+  the file's content as plain `\n`-terminated text (no `/BINARY` yet --
+  subtask 10): the two container-source directions reuse `records.go`'s
+  `writeRecords` (the same renderer `TYPE` already established) via a new
+  `lineSplitWriter` adapter functionally matching `ods2`'s own
+  same-named type; the host-source direction reframes host text
+  line-by-line via a new `copyHostLinesAsRecords`, functionally matching
+  `ods2`'s own `copyHostRecordsToVolume`. A new `createTextFile` helper
+  (`CreateFile` + write + `Directory.Lookup` to recover the
+  auto-assigned version) is shared by both volume-destination directions,
+  functionally matching `ods2`'s own `copyOneFileToVolume`/
+  `copyHostFileToVolume` pairing. `resolveVolumeDest`/`hostBaseNameType`
+  are also fresh, functionally-matching reproductions of `ods2`'s own
+  same-named helpers, per this phase's own "behavioral reference, not
+  code to link against" framing throughout.
+- **Scoping decision, not previously called out in the design section:**
+  this subtask's source resolution requires an unambiguous, single-file
+  match (a new `*MultipleMatchesError`, worded for `COPY` specifically
+  rather than reusing `TYPE`'s own `AmbiguousError`, whose `Error()` text
+  is hardcoded to say "TYPE does not support wildcards") -- real
+  multi-file ("wildcard") copying is deliberately deferred, since `ods2`'s
+  own `cmdCopy` ties it directly to `/DIRS` (how a matched subdirectory
+  entry is handled) and to per-file destination-name wildcard
+  substitution, neither of which this subtask's "core...with no other
+  qualifier" scope calls for. Flagged in this file's own "Open questions"
+  below for whether it should land alongside subtask 10's `/DIRS` or
+  stay out of scope entirely.
+- A destination naming no file of its own (e.g. `COPY FOO.TXT DUA0:`)
+  inherits the source's own name/type (`destNameType`, a deliberately
+  simplified version of `ods2`'s own `volumeDestName` with no
+  wildcard-substitution case -- again, only relevant once several source
+  files can be copied at once).
+- `internal/console/copy.go` (new): `Console.Copy`, translating
+  `*rms.NotMountedError` to `SS_DEVNOTMOUNT`, `*rms.NotFoundError` to
+  `SS_NOSUCHFILE`, `*rms.MultipleMatchesError` to the existing
+  `CLI_AMBIGUOUS` (the same status `Console.Type` already uses for its
+  own single-match restriction), `*rms.HostToHostError` to the existing
+  `CLI_BADQUALIFIERCOMBO` (`internal/console/dcl`'s own "two qualifiers
+  can't both be set" status, reused here rather than minting a new one --
+  it already says exactly the right thing), and everything else to
+  `CLI_BADFILESPEC`. On success, prints one `%COPY-S-COPIED, SOURCE
+  copied to DEST` confirmation line, matching `ods2`'s own `cmdCopy`
+  convention (no `/QUIET`/`/VERBOSE` yet to vary this -- subtask 10). No
+  new status codes were needed: every failure mode this subtask's scope
+  produces already had a fitting existing code.
+- `dispatch.go`: `bindGrammar` gained `g.Bind("COPY", ...)`, reading
+  `SOURCE`/`DESTINATION` and their respective `ParamPresent(name,
+  "HOST")` off the `Result` and calling `Console.Copy`.
+- Tests: `internal/rms/copy_test.go` (new) covers all four directions'
+  happy paths (verified end to end by reading each container destination
+  back via the already-tested `Session.Type`, and each host destination
+  back via `os.ReadFile`), destination-name inheritance for both a
+  volume destination (a same-volume copy landing as a new version of the
+  source file itself) and a `/HOST` source (deriving the created name
+  from the host file's own base name), an existing-host-directory
+  destination, both `/HOST`-on-both-sides rejection and each of
+  `resolveVolume`'s inherited failure modes (not mounted, on both the
+  source and destination side), source-not-found, source-ambiguous
+  (a wildcarded multi-version spec), a missing host source file, and a
+  host source naming a directory instead of a file.
+  `internal/console/copy_test.go` (new) covers the `Console`-level
+  wrapper's three happy-path directions, all five status-code
+  translations, and DCL-dispatched coverage: a plain container-to-
+  container copy, `/HOST` attached directly to `SOURCE` with no space
+  (docs/PHASE-23.md's own first example, using a short relative host
+  filename so the no-embedded-`/` precondition that form actually needs
+  holds), the design doc's own quoted-absolute-host-path example
+  end to end (`COPY "/tmp/.../foo.txt" /HOST BAR.TXT`), a quoted
+  absolute path on the *destination* side with a trailing `/HOST`
+  (confirming the "most recently filled parameter" tracking correctly
+  moved on to `DESTINATION`), and a bare `COPY` failing as a missing
+  required parameter. `internal/console/dcl/define_test.go` gained
+  `TestLoadEvaxGrammar_copy` (verb count 17→18) mirroring the existing
+  structural checks, checking both `SOURCE`/`DESTINATION`'s own `HOST`
+  qualifiers and that `COPY` itself has zero *entry-level* qualifiers
+  (`HOST` lives on the parameters, not the entry).
+  `internal/console/dcl/param_qualifier_test.go`'s
+  `TestLoadEvaxGrammar_unaffectedByParamQualifierFeature` (subtask 2's
+  own regression check that no real grammar entry uses this feature)
+  now excludes `COPY` by name, since it's this feature's first
+  deliberate consumer -- updated rather than left failing, with a
+  comment explaining why and pointing at `TestLoadEvaxGrammar_copy`'s
+  own dedicated structural coverage instead. Full `go build ./...`,
+  `go vet ./...`, and `go test ./...` all clean across the whole module
+  (including the peer `ods2` module, reachable via `go.work`).
+- Two small, pre-existing doc-comment inaccuracies in `internal/rms/
+  records.go` fixed in scope (`CLAUDE.md`'s "clear, obvious...not tied to
+  ISA semantics" bucket -- plain stale cross-references, not a behavior
+  change): its top-of-file comment said `writeRecords` would be reused by
+  "subtask 10"; it's actually this subtask (9) that first calls it from
+  `COPY`. Likewise `lfLineEnding`'s own doc comment called `Session.
+  Copy`'s use of it "eventual" -- it's `Session.Copy`'s actual, current
+  default now.
+- No bugs found in the peer `ods2` module during this subtask; its own
+  `filespec.Parse`/`Glob`/`ResolveDirectory`, `volume.CreateFile`/
+  `Directory.Lookup`/`Device.Bitmap`/`Device.IndexBitmap`, and `rms.
+  NewWriter`/`Writer.Put`/`Writer.Close` were read and called exactly as
+  documented, not modified.

@@ -265,18 +265,26 @@ func TestParse_paramScopedQualifier_quotedValueThenQualifier(t *testing.T) {
 }
 
 // TestLoadEvaxGrammar_unaffectedByParamQualifierFeature is Phase 23 subtask
-// 2's regression check that the real, full evax.dcl grammar file -- which
-// declares no parameter-scoped qualifiers at all -- parses identically to
-// before this feature was added: every qualifier in it still ends up
-// exactly where it always did, on its enclosing entry, never misattributed
-// to whatever parameter happened to precede it in the file.
+// 2's regression check that the real, full evax.dcl grammar file parses
+// identically to before this feature was added, for every entry that
+// doesn't deliberately use it: every qualifier elsewhere in the file still
+// ends up exactly where it always did, on its enclosing entry, never
+// misattributed to whatever parameter happened to precede it in the file.
+// COPY (subtask 9, docs/PHASE-23.md's "COPY direction and the /HOST
+// qualifier" design section) is excluded from this walk -- it's this
+// feature's first and, so far, only real consumer, with its own dedicated
+// structural check (TestLoadEvaxGrammar_copy, define_test.go).
 func TestLoadEvaxGrammar_unaffectedByParamQualifierFeature(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
 	for _, e := range g.entries {
+		if e.Name == "COPY" {
+			continue
+		}
+
 		for _, p := range e.Parameters {
 			if len(p.Qualifiers) != 0 {
-				t.Errorf("%s parameter %s unexpectedly has parameter-scoped qualifiers %+v (evax.dcl declares none)",
+				t.Errorf("%s parameter %s unexpectedly has parameter-scoped qualifiers %+v (only COPY declares any)",
 					e.Name, p.Name, p.Qualifiers)
 			}
 		}
