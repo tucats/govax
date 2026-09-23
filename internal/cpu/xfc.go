@@ -182,11 +182,18 @@ func emulXfcDCL(e *Engine) error {
 }
 
 // emulXfcP1Vector is XFC$P1VECTOR: invokes a SYS$ system service, matching
-// emul_xfc.c's `return call_service(vax.PC - 4)`. vax.PC has already
-// advanced past the two-byte XFC instruction by the time a Handler runs (see
-// Engine.Step), so the address of the XFC opcode itself — call_service's own
-// pc argument — is d.NextPC - 2. Since Handler doesn't receive d.NextPC
-// directly, e.cpu.GPR(vax.PC) (already advanced) minus 2 is equivalent.
+// emul_xfc.c's `return call_service(vax.PC - 4)`. A real P1-vector entry
+// reached via CALLS (p1_vector.c's p1_init: every entry except the one
+// Jmp-style SYS$SRCHANDLER) is a genuine tiny procedure at its well-known
+// address: a 2-byte zero procedure-entry mask (which CALLS's own frame-build
+// logic reads and skips, landing PC two bytes past the entry address) then
+// the 2-byte XFC instruction itself. By the time this Handler runs, PC has
+// advanced past that whole 4-byte run (2-byte mask-skip + 2-byte XFC fetch),
+// so the entry address call_service (and p1VectorByMatchAddr, built to match
+// it -- see that table's own doc comment on the Jmp case's "Addr-2") expects
+// is PC-4, not merely "PC minus the XFC instruction's own 2 bytes": that
+// would land on the XFC opcode's address, not the CALLS target's, off by the
+// mask's own 2 bytes for every non-Jmp entry.
 //
 // A handled call always sets R0 before returning, even when it also reports
 // an error (e.g. a service that requests a halt) — matching call_service's
@@ -197,7 +204,7 @@ func emulXfcP1Vector(e *Engine) error {
 		return &Fault{Code: ExcPrivileged}
 	}
 
-	pc := e.cpu.GPR(vax.PC) - 2
+	pc := e.cpu.GPR(vax.PC) - 4
 
 	r0, handled, err := e.services.SystemService(pc)
 	if !handled {

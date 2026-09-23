@@ -307,10 +307,22 @@ func TestEmulXfcP1Vector(t *testing.T) {
 	f.serviceHandled = true
 	f.serviceRC = 0x12345678
 
-	stepInstruction(t, e, 0xFC, xfcP1Vector)
+	// Model a real CALLS-reached P1-vector entry (p1_vector.c's p1_init): a
+	// 2-byte zero procedure-entry mask at the vector's own address,
+	// immediately followed by the 2-byte XFC instruction -- CALLS's own
+	// frame-build logic is what actually reads and skips a mask during a
+	// full dispatch (buildCallFrame), so this test starts PC just past it,
+	// at the XFC itself, since it only exercises XFC's own handler.
+	putBytes(t, e.cpu, e.mem, base, 0x00, 0x00)
+	e.cpu.SetGPR(vax.PC, base+2)
+	putBytes(t, e.cpu, e.mem, base+2, 0xFC, xfcP1Vector)
+
+	if err := e.Step(); err != nil {
+		t.Fatalf("Step: %v", err)
+	}
 
 	if f.servicePC != base {
-		t.Errorf("SystemService called with pc=%#x, want %#x (the XFC opcode's own address)", f.servicePC, base)
+		t.Errorf("SystemService called with pc=%#x, want %#x (the CALLS target -- the mask word's own address)", f.servicePC, base)
 	}
 
 	if got := e.cpu.GPR(vax.R0); got != 0x12345678 {

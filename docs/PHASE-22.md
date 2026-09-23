@@ -379,7 +379,7 @@ This local convenience doesn't feed the committed test suite.
     DEVICE/FULL` mounted-volume line.
 13. **Done.** `internal/console/dispatch.go`: bind the new `MOUNT`/`DISMOUNT` grammar
     entries.
-14. End-to-end acceptance test: build+mount a fresh container, assemble (via the
+14. **Done.** End-to-end acceptance test: build+mount a fresh container, assemble (via the
     existing `ASM`/Phase 11 tooling) a small MACRO-32 program exercising
     `CREATE`->`CONNECT`->`PUT` x N ->`CLOSE`->`OPEN`->`CONNECT`->`GET` x N ->
     `CLOSE`, run it, verify the records read back match what was written. FAB/
@@ -1198,3 +1198,113 @@ This local convenience doesn't feed the committed test suite.
   re-verified clean against the relocated fixture path.
 - `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`) all
   clean.
+
+### 2026-09-23 — Subtask 14 complete
+
+- Added `testdata/asm/rms_roundtrip.asm`: a hand-written MACRO-32 program
+  (per this subtask's own scope note, hand-encoded FAB/RAB literals rather
+  than a `$FABDEF`/`$RABDEF` macro facility) that drives `SYS$CREATE` ->
+  `SYS$CONNECT` -> `SYS$PUT` x3 -> `SYS$CLOSE` -> `SYS$OPEN` ->
+  `SYS$CONNECT` -> `SYS$GET` x3 -> `SYS$CLOSE` against a mounted `DUA0:`
+  device, entirely through real `CALLS #n,@#SYS$xxx` instructions (the
+  `SYS$xxx` symbols are `.set /perm` literals pointing straight at
+  `internal/rtl/p1vector.go`'s real P1-vector addresses, matching how every
+  other SYS$/LIB$ call in this project's own `.asm` fixtures already
+  resolves a bare symbol). The FAB/RAB byte layouts are `.BLKB`/`.BYTE`/
+  `.WORD`/`.LONG` blocks laid out field-by-field at the real offsets
+  `internal/rms/fab.go`/`rab.go` already use, with named sub-labels
+  (`fab_fac`, `rab_rbf`, ...) so the body code never has to compute a
+  `label+offset` address by hand. Each of the fifteen RMS-call/record
+  checks branches on failure via `BLBS r0,okN` / `BRW fail` rather than a
+  direct `BLBC r0,fail` — discovered while first assembling this file: real
+  VAX conditional branches (`BLBC`/`BLBS`/`BNEQ`/...) only ever encode an
+  8-bit displacement, and this program's full sequence is far longer than
+  127 bytes end to end, so a direct conditional branch down to the shared
+  `fail:` label doesn't fit; inverting the condition and falling through to
+  an unconditional `BRW` (word displacement) over the real target is the
+  standard MACRO-32 idiom for this, and is what every check in the file
+  does. Three fixed-format 4-byte records (longwords `^X11111111`/
+  `^X22222222`/`^X33333333`) are written then read back and `CMPL`-checked
+  in order; `R0` ends up 1 (all three matched) or 0 (any RMS call failed or
+  any record mismatched) for the driving Go test to check.
+- A real, hand-caught assembler gotcha worth calling out for a future
+  reader of this file: this assembler's default radix is **hex**, not
+  decimal (`internal/asm/assembler.go`'s `radix: 16`), and a plain
+  multi-digit literal like `.blkb 12` or `movb #13, ...` is silently
+  parsed as hex (18 and 19 decimal respectively) unless explicitly prefixed
+  `^D`. The first drafts of this file's `.BLKB` reservation counts and the
+  file-spec-length immediate were written as plain decimal literals,
+  which shifted every FAB field after the first miscounted gap by the
+  hex/decimal difference and truncated/misread the file-spec string's
+  length — surfacing at runtime as an unexpected `RMS$_DNR` (device not
+  ready) from `SYS$CREATE`, traced by single-stepping the assembled program
+  and comparing each label's actual runtime address against its intended
+  offset. Fixed by adding explicit `^D` prefixes to every count/immediate
+  where hex and decimal spellings differ (single-digit counts are
+  unambiguous and left bare), with a comment on the FAB/RAB block
+  explaining the convention for whoever edits this file next.
+- Added `internal/console/rms_e2e_test.go`
+  (`TestRMSRoundTrip_assembledProgram`): builds a `newBootableConsole` (real
+  VMINIT-sized P1, needed so the literal P1-vector addresses below
+  `0x80000000` are actually mapped — `newRunnableConsole`'s much smaller P1
+  doesn't reach that low), mounts a throwaway `ods2`-initialized container
+  on `DUA0` (`mountFreshRMSVolume`, the same `diskimage.Create`+
+  `volume.Initialize` pattern `internal/rms/mount_test.go`'s
+  `newTestVolumeFile`/`internal/rtl/rms_test.go`'s
+  `newMountedVolumeFixture` already use, just wired through `Console.Mounts`
+  instead of a bare `*rms.MountTable`/`*rtl.Environment`), deposits a real
+  P1-vector stub at each of the six `SYS$xxx` addresses the program calls
+  (`depositP1VectorTrampolines` — see the real bug this surfaced, next
+  paragraph), assembles `rms_roundtrip.asm` via `Console.Assemble` (the
+  same real, production `ASM <file>` path `internal/console`'s other tests
+  already exercise), and runs it via the existing `callBounded` helper,
+  checking the program's own `R0` result. Every other RMS test in this
+  project (`internal/rms/*_test.go`, `internal/rtl/rms_test.go`) either
+  calls the `internal/rms` handlers directly or drives them through
+  `env.SystemService(pc)` from Go — never through genuinely assembled and
+  executed VAX instructions; this is the first one that does, exactly this
+  subtask's own point.
+- **A real bug, found and fixed in scope** (per the user's own direction
+  this session: bugs found elsewhere in `govax` while implementing this
+  subtask can be fixed in scope): building the P1-vector stub bytes by hand
+  for the first time (nothing in `internal/asm`/`internal/console` builds
+  one today — `internal/asm/pseudo.go`'s `.P1VECTOR` pseudo-op is a
+  deliberate no-op, deferred to a later phase) surfaced a genuine, 2-byte
+  address-arithmetic bug in `internal/cpu/xfc.go`'s `emulXfcP1Vector`: it
+  computed the SYS$-service dispatch address as `PC-2`, but its own doc
+  comment already said it should match `reference/eVAX/eVAX/Source/RTL/
+  p1_vector.c`'s `call_service(vax.PC - 4)` — and `internal/rtl/
+  p1vector.go`'s own `p1VectorByMatchAddr` table (its `Jmp` case's `Addr-2`
+  adjustment, and that field's own doc comment) was already built assuming
+  the `PC-4` formula, not `PC-2`. Nothing before this subtask ever
+  exercised a real `CALLS`-reached P1-vector stub (every prior RMS test
+  called `internal/rms`/`env.SystemService` directly, and `internal/cpu/
+  xfc_test.go`'s own `TestEmulXfcP1Vector` deposited a bare `XFC`
+  instruction with no preceding procedure-entry mask at all), so the
+  mismatch had never been caught: with a real mask-then-XFC stub (the only
+  layout a genuine `CALLS` — which unconditionally reads a 2-byte mask at
+  its target, real VAX ISA behavior — can ever reach), `PC-2` lands on the
+  XFC opcode's own address, two bytes past the table's real, well-known
+  `SYS$xxx` address, so dispatch could never succeed for any real,
+  assembled `CALLS`-based system-service call. Fixed by changing the
+  computation to `PC-4`, matching both the C reference and
+  `p1VectorByMatchAddr`'s own construction; updated that function's doc
+  comment to explain the mask+XFC layout the formula depends on instead of
+  the previous (incorrect) "PC has advanced past the 2-byte XFC
+  instruction, so PC-2" reasoning. `TestEmulXfcP1Vector`
+  (`internal/cpu/xfc_test.go`) — the one existing test whose expectation
+  was tied to the old formula — was updated to model a real mask-then-XFC
+  stub (2 zero mask bytes, then the XFC instruction, starting execution
+  just past the mask) rather than a bare, no-mask XFC, and now asserts the
+  dispatch address is the mask word's own address, matching a real CALLS
+  target. Also added the missing `RET` (opcode `0x04`) byte to
+  `depositP1VectorTrampolines`'s own stub, discovered the same way (the
+  reference tool's `p1_init` writes one at the end of every stub for
+  exactly this reason): without it, execution fell straight through past
+  the two-instruction stub into unrelated zeroed memory and hit an
+  incidental `HALT` (VAX opcode `0x00`) instead of returning to the
+  caller.
+- No bugs found in the sibling `ods2` module while implementing this
+  subtask.
+- `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`,
+  three consecutive runs) all clean.
