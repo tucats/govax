@@ -12,7 +12,7 @@ import "testing"
 // which would make this package's handlers unable to tell those two
 // conditions apart from the status code alone.
 func TestRMSStatusValuesAreDistinctAndPositive(t *testing.T) {
-	values := map[string]int{
+	values := map[string]uint32{
 		"rmsNormal":             rmsNormal,
 		"rmsCreated":            rmsCreated,
 		"rmsEOF":                rmsEOF,
@@ -31,7 +31,7 @@ func TestRMSStatusValuesAreDistinctAndPositive(t *testing.T) {
 		"rmsSystemError":        rmsSystemError,
 	}
 
-	seen := make(map[int]string, len(values))
+	seen := make(map[uint32]string, len(values))
 
 	for name, v := range values {
 		if v <= 0 {

@@ -23,7 +23,7 @@ pseudo-ops:
   `$FAB` macro's own calling convention.
 - `.RAB` — same for a 68-byte RAB, matching `$RAB`.
 
-**Status: planning — no subtasks started yet.**
+**Status: in progress — subtask 1 done, subtasks 2-6 remaining.**
 
 ## Why this phase looks different
 
@@ -223,14 +223,14 @@ subset exactly.)
 
 ## Subtasks
 
-1. `internal/vmsdef` (consolidated package, see "Shared data lives in
-   `internal/vmsdef`" above): `fab.go`/`rab.go` (`Field` type, `FABFields`/
+1. **Done.** `internal/vmsdef` (consolidated package, see "Shared data lives
+   in `internal/vmsdef`" above): `fab.go`/`rab.go` (`Field` type, `FABFields`/
    `RABFields`) and the `internal/vmsdef/gen` generator (`go generate` over
    `reference/vms/{fabdef,rabdef,rmsdef}.h`) producing `Constants`, plus the
-   hand-transcribed, doubly-derived FAB/RAB offset tables. Migrate
-   `internal/rms/fab.go`/`rab.go` to read their offsets from this package
-   instead of their own private constants (behavior-preserving — existing
-   `internal/rms` tests must pass unchanged).
+   hand-transcribed, doubly-derived FAB/RAB offset tables. Migrated
+   `internal/rms/fab.go`/`rab.go`/`status.go` to read their offsets/constants
+   from this package instead of their own private literals (behavior-
+   preserving — existing `internal/rms` tests pass unchanged).
 2. `.RMSDEF` pseudo-op: defines every `internal/vmsdef.Constants` entry plus
    each field's own `FAB$_`/`RAB$_` offset symbol, permanent, idempotent
    (`unique=false` from the start).
@@ -331,3 +331,67 @@ subset exactly.)
   after the rename (behavior-preserving, no `.P1VECTOR` semantics touched).
   Subtask 1's actual new content (FAB/RAB field tables, the constant
   generator, `internal/rms` migration) continues from here.
+
+### 2026-09-23 — Subtask 1, part 2: FAB/RAB field tables, constant generator, `internal/rms` migration — subtask complete
+
+- `internal/vmsdef/fab.go`/`rab.go` (new): the `Field` type
+  (`Symbol`/`Keyword`/`Offset`/`Size`) and the complete, hand-transcribed
+  `FABFields` (33 entries, 80 bytes) / `RABFields` (26 entries, 68 bytes)
+  tables — both `KBF`/`PBF`, `KSZ`/`PSZ`, and `BKT`/`DCT` real union-member
+  aliases included per this doc's own design note. `RAB$W_RFA` (offset 16,
+  size 6) is the one field with no single-value keyword form in real `$RAB`
+  either — included for `.RMSDEF`'s own offset-symbol definition, but
+  `Field.Size`'s own doc comment flags it as not placeable via `.FAB`/`.RAB`'s
+  1/2/4-byte keyword mechanism.
+- `internal/vmsdef/fields_test.go` (new): `TestFABFields_tileEightyBytes`/
+  `TestRABFields_tileSixtyEightBytes` confirm every field fits within its
+  struct's real size with no unexpected byte-range overlaps (the three known
+  alias pairs above are explicitly allowed; anything else overlapping would
+  be a real transcription bug), and `TestFieldTables_keywordsUnique` confirms
+  no duplicate keyword within either table (`.FAB`/`.RAB`'s own future
+  keyword lookup depends on this). Caught one real mistake immediately:
+  the first draft asserted FAB's highest field must end exactly at byte 80,
+  which is wrong — the struct's own trailing 4-byte reserved padding
+  (deliberately omitted, having no real field name) means the last *named*
+  field (`RCF`) ends at 76, not 80; fixed the test's own expectation rather
+  than the (correct) table.
+- `internal/vmsdef/gen/main.go` (new) + `internal/vmsdef/constants.go`'s
+  `go:generate` directive: parses all three `reference/vms/*.h` headers'
+  flat `#define <PREFIX>$<NAME> <value>` lines (case alone reliably
+  separates real upper-case value constants from each header's own
+  lower-case C-only field-access aliasing macros — see the generator's own
+  doc comment) into `internal/vmsdef/constants_generated.go`'s `Constants
+  map[string]uint32` — 393 entries (80 FAB$, 45 RAB$, 268 RMS$, the last
+  including `RMS$V_STVSTATUS` alongside the 267 `RMS$_` status codes proper).
+  Spot-checked generated values against this phase's own planning research
+  (`FAB$C_SEQ`=0, `FAB$C_FIX`=1, `FAB$K_BLN`=0x50=80, `RAB$K_BLN`=0x44=68,
+  `RMS$_NORMAL`=0x10001=65537, `RMS$_EOF`=0x1827a=98938) — all match.
+- Migrated `internal/rms/fab.go`/`rab.go`/`status.go`: their own
+  private `const` blocks (offsets, `FAB$M_`/`FAB$C_`/`RAB$C_` bit/code
+  values, all 17 `RMS$_` status codes this package's handlers use) became
+  `var` blocks initialized from `vmsdef.FABFields`/`RABFields`/`Constants`
+  via two small panic-on-miss lookup helpers (`fabOffset`/`rabOffset` in
+  fab.go/rab.go, `vmsConst` in fab.go, shared across all three files).
+  Cross-checked every one of the 17 `RMS$_` values against
+  `constants_generated.go` before touching status.go — all matched
+  status.go's own pre-migration literals exactly, confirming the migration
+  is value-preserving, not just build-preserving.
+- Two small type fallout fixes, both mechanics of switching `const` to `var`
+  rather than behavior changes: `facPut`/`facGet`/`facUpd`/`orgSeq`/`orgRel`/
+  `orgIdx`/`orgHsh`/`racSeq`/`racKey`/`racRFA` needed an explicit `byte(...)`
+  conversion (`vmsConst` returns `uint32`; these are compared against
+  `byte`-loaded FAB/RAB field values, and Go's untyped-constant-adapts-
+  automatically rule no longer applied once they became typed vars) — a
+  compile error caught this immediately, not a latent bug. `status_test.go`'s
+  own `TestRMSStatusValuesAreDistinctAndPositive` needed its `map[string]int`/
+  `map[int]string` changed to `uint32`, same reason.
+- No production behavior changed anywhere in this subtask — every value
+  placed into emulated VAX memory or compared against one is identical
+  before and after, confirmed by the full existing `internal/rms` suite
+  passing unchanged (`fab_test.go`'s own offset/size table in particular,
+  which independently re-asserts every offset this migration now sources
+  from `vmsdef.FABFields` instead of a literal).
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no output for any touched
+  file), `go test ./...` all clean across the whole module (including the
+  peer `ods2` module, reachable via `go.work`).
+- Subtask 1 complete. Subtask 2 (`.RMSDEF` pseudo-op) is next.
