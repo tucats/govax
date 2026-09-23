@@ -468,7 +468,9 @@ container was never created by anything this project wrote.
     hardware fidelity, and most of this phase's judgment calls are DCL-
     engine/UX decisions instead, which is why they're captured directly in
     this doc's own "Design decisions" rather than deferred to
-    `DEVIATIONS.md`).
+    `DEVIATIONS.md`). Also update `internal/bootdata/files/vax.help` to
+    document the commands added during this phase to the console's builtin
+    `help` command.
 
 ## Open questions
 
