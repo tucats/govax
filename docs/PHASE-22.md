@@ -369,7 +369,7 @@ This local convenience doesn't feed the committed test suite.
 9. **Done.** `internal/rms`: `SYS$OPEN` — `filespec.Parse` + `Directory.Lookup`/
    `vol.OpenFID`, honoring `FAB$B_FAC` (GET vs. PUT vs. UPD) to decide whether to
    arm the file for writing (`File.OpenForWrite`) or just read.
-10. `internal/rms`: `SYS$GET` — `rms.NewReader`/`.Next` per record, copying the
+10. **Done.** `internal/rms`: `SYS$GET` — `rms.NewReader`/`.Next` per record, copying the
     record into the RAB's `RBF`/`RSZ` (and `UBF`/`USZ` if distinct) fields,
     `RMS$_EOF` on exhaustion.
 11. `internal/rtl`: `registerRMSServices` shrinks to registering `internal/rms`'s
@@ -868,6 +868,59 @@ This local convenience doesn't feed the committed test suite.
   all, a spec naming a nonexistent file, and a spec naming a nonexistent
   subdirectory (all three `RMS$_FNF`); and logical-name translation
   reaching the console path indirectly through a made-up logical.
+- No bugs found in the sibling `ods2` module while implementing this
+  subtask.
+- `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`) all
+  clean.
+
+### 2026-09-23 — Subtask 10 complete
+
+- Added `internal/rms/get.go` (`SysGet`, the SYS$GET handler): the read-side
+  mirror of `SysPut` (put.go) — same `RAB$W_ISI` lookup, same `RAB$B_RAC`
+  sequential-only check — but reading a record via the SYS$CONNECT-armed
+  `odsrms.Reader.Next` (connect.go's `armForFAC`) instead of writing one.
+  `io.EOF` from `Reader.Next` becomes `RMS$_EOF` (already reserved in
+  `status.go` back in subtask 4); any other `Reader.Next` failure
+  (`odsrms.ErrCorruptRecord`, a genuinely truncated/corrupt on-disk record)
+  becomes a generic `RMS$_DEV`, the same convention every other `ods2`-layer
+  failure in this package already uses. The console pseudo-device (a plain
+  `io.Writer`, per `ifi.go`'s `FileHandle`) has no way to supply an input
+  record at all, so SYS$GET against it is rejected with `RMS$_PRV` — real
+  VMS RMS does support interactive terminal input via SYS$GET, but that's
+  out of this phase's scope (only the *output* side of `TTA0:` was carried
+  forward, per docs/PHASE-22.md's own "Why this phase looks different").
+- The one piece of new logic beyond `SysPut`'s own shape: honoring
+  `RAB$L_UBF`/`RAB$W_USZ` (`rab.go`'s `rabUBF`/`rabUSZ`, reserved back in
+  subtask 4 but unused until now) as an alternate destination a calling
+  program may supply instead of the ordinary `RAB$L_RBF`. When `RAB$L_UBF`
+  is nonzero, the record is copied there instead, and — since the caller
+  also declared `RAB$W_USZ` as that buffer's exact capacity — a record too
+  big to fit is `RMS$_RSZ`, the same status `SysPut` already uses for an
+  outgoing record that doesn't fit a file's declared format. The plain
+  `RAB$L_RBF` path (the ordinary case, no `RAB$L_UBF` supplied) has no such
+  capacity check at all: real RMS trusts the calling program to have sized
+  that buffer itself from the file's own `FAB$W_MRS`, mirroring how
+  `SysPut` already trusts the caller's declared `RAB$W_RSZ` on the way out.
+  `RAB$W_RSZ` is always overwritten with the record's true length on
+  success, regardless of which buffer it landed in — matching `rab.go`'s
+  own doc comment on that field's SYS$GET role.
+- Test coverage (`get_test.go`): a full write-then-reopen-then-read round
+  trip (`SysCreate`/`SysConnect`/`SysPut`/`SysClose`, then `SysOpen`/
+  `SysConnect`/`SysGet`) confirming both the record bytes and `RAB$W_RSZ`;
+  three successive records read back in order followed by a fourth
+  `SysGet` past the last one (`RMS$_EOF`); a `RAB$L_UBF`/`RAB$W_USZ` read
+  landing in the separate user buffer with `RAB$L_RBF`'s own memory
+  (seeded with a sentinel first) provably left untouched; a user buffer
+  one byte too small for the record (`RMS$_RSZ`); a RAB never
+  SYS$CONNECTed (`RMS$_IFI`); a non-sequential `RAB$B_RAC` (`RMS$_RAC`);
+  the `TTA0:` console case (`RMS$_PRV`); and a RAB armed for writing only
+  (`RMS$_PRV`, the mirror image of `put_test.go`'s own
+  `TestSysPut_noWriteAccess`). A new `openAndConnectForRead` test helper
+  (open_test.go's own `createAndCloseTestFile`, now paired with a
+  SYS$OPEN+SYS$CONNECT-for-GET counterpart) and a small `readByte` helper
+  round out `create_test.go`'s existing `putByte`/`putWord`/`readWord`/
+  `readLongword` family for the first time this package needs to read
+  individual bytes back out of VAX memory.
 - No bugs found in the sibling `ods2` module while implementing this
   subtask.
 - `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`) all
