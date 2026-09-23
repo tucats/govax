@@ -23,7 +23,7 @@ pseudo-ops:
   `$FAB` macro's own calling convention.
 - `.RAB` — same for a 68-byte RAB, matching `$RAB`.
 
-**Status: in progress — subtask 1 done, subtasks 2-6 remaining.**
+**Status: in progress — subtasks 1-2 done, subtasks 3-6 remaining.**
 
 ## Why this phase looks different
 
@@ -231,9 +231,10 @@ subset exactly.)
    `internal/rms/fab.go`/`rab.go`/`status.go` to read their offsets/constants
    from this package instead of their own private literals (behavior-
    preserving — existing `internal/rms` tests pass unchanged).
-2. `.RMSDEF` pseudo-op: defines every `internal/vmsdef.Constants` entry plus
-   each field's own `FAB$_`/`RAB$_` offset symbol, permanent, idempotent
-   (`unique=false` from the start).
+2. **Done.** `.RMSDEF` pseudo-op: defines every `internal/vmsdef.Constants`
+   entry plus each field's own `FAB$_`/`RAB$_` offset symbol, permanent,
+   idempotent (`unique=false` from the start). Not gated on `.MICROKERNEL`
+   (deposits no bytes, unlike `.P1VECTOR`/`.SHIM`/`.SCB`/`.REGION`).
 3. `.FAB` pseudo-op: `KEYWORD=value` parsing over the full 33-field table,
    80-byte deposit, forward-reference-capable field values.
 4. `.RAB` pseudo-op: same for the 26-field, 68-byte RAB.
@@ -395,3 +396,40 @@ subset exactly.)
   file), `go test ./...` all clean across the whole module (including the
   peer `ods2` module, reachable via `go.work`).
 - Subtask 1 complete. Subtask 2 (`.RMSDEF` pseudo-op) is next.
+
+### 2026-09-23 — Subtask 2: `.RMSDEF` pseudo-op
+
+- `internal/asm/pseudo.go`'s new `pseudoRMSDEF`: iterates
+  `vmsdef.Constants` (sorted by name, for deterministic assembly-error
+  ordering — map iteration order isn't otherwise meaningful here) plus
+  `vmsdef.FABFields`/`RABFields`, defining each as a permanent symbol via
+  `setSymbol(..., SymPermanent, false)`. The `unique=false` was chosen
+  deliberately from the start this time (not discovered as a bug after the
+  fact the way `.P1VECTOR`'s was — see `docs/PHASE-11.md`'s own progress
+  log): the design section above already worked out that real `$FABDEF`/
+  `$RABDEF`/`$RMSDEF`'s own `set_symbol_direct` calls never raise
+  `ASM_UNIQUE`, so a real `.INCLUDE`d-twice library macro is naturally
+  idempotent, and `.RMSDEF` should be too.
+- Deliberately **not** gated on `.MICROKERNEL`, unlike every other
+  pseudo-op that touches `internal/vmsdef` data (`.P1VECTOR`) or deposits
+  bytes at all (`.SHIM`/`.SCB`/`.REGION`): `.RMSDEF` deposits nothing into
+  the image, purely defines symbols, matching how a real `$FABDEF`
+  `.INCLUDE` works in any ordinary user-mode assembly regardless of
+  microkernel context — confirmed by a dedicated test
+  (`TestPseudoRMSDEFNoMicrokernelRequired`) that assembling a bare
+  `.RMSDEF` with no preceding `.MICROKERNEL` statement succeeds.
+- New tests (`internal/asm/rmsdef_test.go`):
+  `TestPseudoRMSDEFNoMicrokernelRequired`;
+  `TestPseudoRMSDEFDefinesEveryConstantAndOffsetSymbol` (a representative
+  spot-check sample plus a full sweep over every single
+  `vmsdef.Constants`/`FABFields`/`RABFields` entry, confirming each
+  resolves to its real value as an assembler symbol);
+  `TestPseudoRMSDEFIsIdempotent` (both within one source and across two
+  separate top-level `Assemble` calls on the same `Assembler` — the shape
+  a persistent console session's own `asmSession` actually produces);
+  `TestPseudoRMSDEFSymbolsAreNoBytes` (confirms `Bytes()` is unchanged
+  before/after, i.e. genuinely zero image footprint).
+- `go build ./...`, `go vet ./...`, `gofmt -l .` (no new findings),
+  `go test ./...` all clean across the whole module (including the peer
+  `ods2` module, reachable via `go.work`).
+- Subtask 2 complete. Subtask 3 (`.FAB` pseudo-op) is next.

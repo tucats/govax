@@ -2,6 +2,7 @@ package asm
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -68,6 +69,7 @@ var pseudoNames = map[string]bool{
 	"P1VECTOR":    true, // Declare a P1Vector page table entry
 	"SCOPE":       true,
 	"VERSION":     true, // Declare the microkernel version string
+	"RMSDEF":      true, // Declare every FAB$/RAB$/RMS$ RMS symbol (docs/PHASE-24.md)
 }
 
 // assemblePseudo tries to assemble the statement at c as a pseudo-op,
@@ -224,6 +226,9 @@ func (a *Assembler) dispatchPseudo(name string, c *cursor) error {
 
 	case "P1VECTOR":
 		return a.pseudoP1Vector(c)
+
+	case "RMSDEF":
+		return a.pseudoRMSDEF(c)
 
 	case "SCOPE":
 		return a.pseudoScope(c)
@@ -1314,4 +1319,62 @@ func (a *Assembler) pseudoP1Vector(c *cursor) error {
 	a.p1VectorBase, a.p1VectorEnd, a.p1VectorSet = min, max+5, true
 
 	return a.setSymbol("EXE$P1_VECTOR_END", max, SymNone, false)
+}
+
+// pseudoRMSDEF assembles .RMSDEF — this port's combined equivalent of real
+// MACRO-32's $FABDEF/$RABDEF/$RMSDEF library macros (docs/PHASE-24.md):
+// defines every real FAB$/RAB$/RMS$ symbol as a permanent assembler
+// symbol — each field's own offset symbol (internal/vmsdef.FABFields/
+// RABFields' Symbol, e.g. "FAB$B_FAC") plus every bitmask flag, named code
+// value, and RMS$_ completion-status code (internal/vmsdef.Constants,
+// machine-generated from reference/vms/{fabdef,rabdef,rmsdef}.h) — so a
+// program can address a FAB/RAB field the real-MACRO-32 way
+// (<label>+FAB$L_STS) and use symbolic names (FAB$C_SEQ, RMS$_NORMAL, ...)
+// anywhere an expression is expected, including as a .FAB/.RAB keyword's
+// own value.
+//
+// Deliberately not gated on .MICROKERNEL: unlike .P1VECTOR/.SHIM/.SCB/
+// .REGION, .RMSDEF deposits no bytes into the image at all — purely
+// symbol-table definition, exactly like a real program's own $FABDEF
+// .INCLUDE, which any ordinary user-mode assembly can use regardless of
+// microkernel context.
+//
+// unique=false on every setSymbol call, from the start (not a fix bolted
+// on after the fact the way .P1VECTOR's was — see docs/PHASE-11.md's own
+// progress log on that bug): running .RMSDEF twice in the same session
+// (e.g. a persistent console session's own kernel.asm boot having already
+// run it, then a second file's own ".RMSDEF" line) must not fail with a
+// duplicate-symbol error, matching real $FABDEF/$RABDEF/$RMSDEF's own
+// tolerance for being .INCLUDEd more than once.
+func (a *Assembler) pseudoRMSDEF(c *cursor) error {
+	_ = c
+
+	a.scopeSymbols()
+
+	names := make([]string, 0, len(vmsdef.Constants))
+	for name := range vmsdef.Constants {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+
+	for _, name := range names {
+		if err := a.setSymbol(name, vmsdef.Constants[name], SymPermanent, false); err != nil {
+			return err
+		}
+	}
+
+	for _, f := range vmsdef.FABFields {
+		if err := a.setSymbol(f.Symbol, f.Offset, SymPermanent, false); err != nil {
+			return err
+		}
+	}
+
+	for _, f := range vmsdef.RABFields {
+		if err := a.setSymbol(f.Symbol, f.Offset, SymPermanent, false); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
