@@ -363,7 +363,7 @@ This local convenience doesn't feed the committed test suite.
    or ODS2-backed).
 7. **Done.** `internal/rms`: `SYS$PUT` — `rms.NewWriter`/`.Put` per record, matching
    `RAB$B_RAC` (sequential-only).
-8. `internal/rms`: `SYS$CLOSE` — `rms.Writer.Close`/`volume.File.Close`
+8. **Done.** `internal/rms`: `SYS$CLOSE` — `rms.Writer.Close`/`volume.File.Close`
    (writer case) or a plain `volume.File` release (reader case); release the IFI
    slot.
 9. `internal/rms`: `SYS$OPEN` — `filespec.Parse` + `Directory.Lookup`/
@@ -775,6 +775,40 @@ This local convenience doesn't feed the committed test suite.
   `TestSysConnect_readArming` builds its own read-only fixture
   (`RMS$_PRV`); and a record whose length doesn't match the target
   file's declared Fixed-format size (`RMS$_RSZ`).
+- No bugs found in the sibling `ods2` module while implementing this
+  subtask.
+- `go build ./...`, `go vet ./...`, `go test ./...` all clean.
+
+### 2026-09-23 — Subtask 8 complete
+
+- Added `internal/rms/close.go` (`SysClose`, the SYS$CLOSE handler):
+  unlike SYS$CONNECT/SYS$PUT/SYS$GET, SYS$CLOSE takes a FAB address
+  directly (like SYS$CREATE), not a RAB — real VMS RMS has no per-RAB
+  close operation at all, since a RAB has no lifetime independent of its
+  FAB (rab.go's own doc comment). Looks up the FAB's `FAB$W_IFI`
+  (`RMS$_IFI` if it doesn't name a currently open file — covers both
+  "never successfully opened" and "already closed once"), does nothing
+  further for the console pseudo-device (nothing on disk to finalize,
+  and the console itself stays usable), and otherwise calls a small
+  `closeVolumeFile` helper that prefers `handle.Writer.Close()` when a
+  Writer was armed (the only path that knows the file's true final byte
+  length, mid-block though it usually ends) and falls back to a plain
+  `handle.File.Close()` otherwise — confirmed, by reading `ods2`'s own
+  `volume.File.Close` doc comment, that this is a documented no-op on a
+  File never armed for writing, so the reader-only case needs no special
+  detection here. `Files.Release` frees the IFI slot only after a
+  successful close, so a failed close doesn't let a calling program
+  believe an unflushed file was actually finalized.
+- Test coverage (`close_test.go`): the console path (IFI freed, no error
+  attempting to "close" a pseudo-device); a real disk write closed
+  through `SysClose` itself rather than by reaching into `ods2`'s
+  `Writer` directly (put_test.go's `TestSysPut_diskFile` did the latter,
+  since `SysClose` didn't exist yet) — re-verified by reopening the file
+  fresh and reading the record back; a read-only-armed handle (built the
+  same way `TestSysConnect_readArming`/`TestSysPut_noWriteAccess` build
+  theirs) closing cleanly via the `File.Close` fallback; a FAB that was
+  never opened (`RMS$_IFI`); and a second `SysClose` against an
+  already-closed FAB (`RMS$_IFI`, not a double-release panic).
 - No bugs found in the sibling `ods2` module while implementing this
   subtask.
 - `go build ./...`, `go vet ./...`, `go test ./...` all clean.
