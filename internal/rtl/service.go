@@ -38,12 +38,15 @@ func (t *ServiceTable) Lookup(name string) (ServiceFunc, bool) {
 
 // registerServices installs every implemented SYS$ service into t. Each
 // register* function lives alongside the routines it registers (service.go
-// itself for the service.c ports, devices.go, logicals.go, rms.go, cli.go),
-// matching declare_services' own per-service declare_service calls.
+// itself for the service.c ports, devices.go, logicals.go, cli.go), matching
+// declare_services' own per-service declare_service calls. RMS services
+// (SYS$CREATE/SYS$CONNECT/SYS$OPEN/SYS$CLOSE/SYS$GET/SYS$PUT) are registered
+// separately by internal/rms once that package exists (docs/PHASE-22.md) —
+// Phase 10's host-passthrough stopgap that used to register a subset of them
+// here has been removed outright, not kept as a fallback.
 func registerServices(t *ServiceTable) {
 	registerCoreServices(t)
 	registerDeviceServices(t)
 	registerLogicalServices(t)
-	registerRMSServices(t)
 	registerCLIService(t)
 }

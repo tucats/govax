@@ -3,10 +3,10 @@ package rtl
 import "os"
 
 // Port of librtl_file.c's exe_open/exe_close/exe_read/exe_write — raw POSIX-
-// style file-descriptor shims (distinct from RMS's own IFI-based file table
-// in rms.go). librtl_file.c declares a struct FILE_LIST/file_list globals
-// but never actually uses them anywhere in the file — dead scaffolding, not
-// ported here either.
+// style file-descriptor shims (distinct from RMS's own IFI-based file table,
+// which now lives in internal/rms — see docs/PHASE-22.md). librtl_file.c
+// declares a struct FILE_LIST/file_list globals but never actually uses them
+// anywhere in the file — dead scaffolding, not ported here either.
 //
 // exe_open's mode argument is the flags bitmask exe_open passes straight
 // through to the host's own POSIX open(2), whose O_WRONLY/O_CREAT/O_TRUNC/

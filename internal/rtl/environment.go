@@ -66,17 +66,14 @@ type Environment struct {
 	pid, uic uint32
 
 	// consoleIn/consoleInBuf back DECC$GETS/EXE$INPUT/EXE$READ's console
-	// line reading (input.go). consoleOut/ifiFiles/nextIFI are RMS's
-	// "internal file index" table (rms.c's ifi[256]): consoleOut backs IFI
-	// 1 (rmsinit's ifi[1] = stdout, and rms_create's TTA0: special case);
-	// ifiFiles holds files SYS$CREATE opened dynamically, keyed by IFI
-	// starting at 4 (0-3 are the fixed invalid/stdout/stdin/stderr slots)
-	// — see rms.go.
+	// line reading (input.go). consoleOut is also where non-RMS console
+	// writes go (print.go, file.go); RMS's own "internal file index" table
+	// (rms.c's ifi[256]) now lives in internal/rms (docs/PHASE-22.md), not
+	// here — Phase 10's stopgap version of that table was removed along
+	// with the rest of internal/rtl/rms.go.
 	consoleIn    io.Reader
 	consoleInBuf *bufio.Reader
 	consoleOut   io.Writer
-	ifiFiles     map[uint16]io.Writer
-	nextIFI      uint16
 
 	// memAllocated/memFreed back the LIB$GET_VM/malloc allocator (memory.go).
 	memAllocated, memFreed []*memBlock
@@ -100,10 +97,10 @@ const (
 
 // NewEnvironment returns an Environment for one VAX process, driving mem/cpu
 // and sharing devices/logicals with whatever else (the console) also uses
-// them. consoleOut is where RMS internal file index 1 (rms.c's ifi[1] =
-// stdout) writes — typically the same io.Writer as Console.Out; consoleIn
-// is where DECC$GETS/EXE$INPUT read from — typically the console's own
-// input stream.
+// them. consoleOut is where non-RMS console writes (print.go, file.go) and
+// the internal/rms package's own TTA0: special case go — typically the same
+// io.Writer as Console.Out; consoleIn is where DECC$GETS/EXE$INPUT read
+// from — typically the console's own input stream.
 func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, logicals *iodev.LogicalNameTable, consoleIn io.Reader, consoleOut io.Writer) *Environment {
 	env := &Environment{
 		mem:        mem,
@@ -116,7 +113,6 @@ func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, lo
 		uic:        nominalUIC,
 		consoleIn:  consoleIn,
 		consoleOut: consoleOut,
-		ifiFiles:   map[uint16]io.Writer{},
 		openFiles:  map[uint32]*os.File{},
 		nextFID:    3,
 	}

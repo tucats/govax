@@ -13,10 +13,11 @@ import (
 // structure_mapping.c's generic, name-keyed map()/STROFF machinery (built
 // for the C source's interactive EXAMINE/DEPOSIT struct support), this
 // port reads each struct's fields directly at their documented byte
-// offsets -- matching the precedent already set by internal/rtl/rms.go's
-// own port of FAB/RAB field access, which has the same "declarative offset
-// table in C, direct typed reads in Go" relationship. The offsets below are
-// exactly console_run.c's own init_ihd_maps table, not re-derived.
+// offsets -- matching the precedent already set by internal/rms's own port
+// of FAB/RAB field access (docs/PHASE-22.md), which has the same
+// "declarative offset table in C, direct typed reads in Go" relationship.
+// The offsets below are exactly console_run.c's own init_ihd_maps table, not
+// re-derived.
 //
 // This also answers reference/eVAX/AUDIT.md's own V8 finding, left
 // explicitly unresolved there ("read console_run.c's image-loading path

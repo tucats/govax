@@ -345,7 +345,7 @@ This local convenience doesn't feed the committed test suite.
    `internal/console/dcl`'s two direct-load tests (plus
    `internal/console/dispatch_test.go`'s own direct load, found along the
    way) onto the bootdata copy.
-3. Delete `internal/rtl/rms.go` (and its test, if any) — `serviceSysCreate`/
+3. **Done.** Delete `internal/rtl/rms.go` (and its test, if any) — `serviceSysCreate`/
    `serviceSysConnect`/`serviceSysPut`, `allocIFI`/`ifiWriter`/
    `storeRMSStatus`/`openRMSFile`, and the `fab*`/`rab*` offset consts all go;
    confirm nothing else in `internal/rtl` referenced them.
@@ -547,3 +547,40 @@ This local convenience doesn't feed the committed test suite.
   later); parsing them today just yields `Grammar.Dispatch`'s existing
   "no handler bound" error, exactly like every other currently-unbound
   syntax in this file.
+
+### 2026-09-22 — Subtask 3 complete
+
+- Deleted `internal/rtl/rms.go` and `internal/rtl/rms_test.go` outright, per
+  "Removing Phase 10's host-passthrough RMS": `serviceSysCreate`/
+  `serviceSysConnect`/`serviceSysPut`, `allocIFI`/`ifiWriter`/
+  `storeRMSStatus`/`openRMSFile`, and the `fab*`/`rab*` offset/access consts
+  are all gone, along with the six tests that exercised them.
+- Confirmed via grep that `ifiFiles`/`nextIFI` (the `Environment` fields
+  backing the removed IFI table) were referenced nowhere else in the tree,
+  so removed both fields and their initialization from
+  `internal/rtl/environment.go`, and updated that file's doc comments
+  (struct field block, `NewEnvironment`'s own comment) to stop describing an
+  IFI table that no longer lives here — it moves to `internal/rms` from
+  subtask 4 on. `consoleOut` itself stays: `print.go`/`file.go` still write
+  through it independently of RMS.
+- `internal/rtl/service.go`'s `registerServices` no longer calls
+  `registerRMSServices` (deleted with the rest of the file) — its doc
+  comment now explains RMS registration moves to `internal/rms` once that
+  package exists (subtask 11), rather than silently dropping the mention.
+- Updated three stale `internal/rtl/rms.go` references found by grep in
+  files this subtask didn't otherwise touch, so nothing in the tree points
+  at a deleted file: `internal/rtl/file.go`'s doc comment (IFI table now in
+  `internal/rms`), `internal/console/show.go`'s `ShowMap` (both its doc
+  comment and its printed "Not applicable" text, now pointing at
+  `internal/rms/fab.go`/`rab.go` — `TestShowMap` only asserts on the
+  "Not applicable" substring, so the reworded message doesn't break it),
+  and `internal/console/image.go`'s doc comment citing the FAB/RAB
+  direct-offset-read precedent.
+- Left `internal/rtl/status.go`'s `ssNoSuchFac`/`ssNoSuchFile` constants in
+  place even though nothing currently references them post-deletion — real,
+  generic `SS$_` codes (not RMS-specific) that subtask 5's `SYS$CREATE`
+  device/file-error paths will need again almost immediately; removing and
+  re-adding them within the same phase would be pure churn, and unused
+  constants (unlike unused imports/locals) aren't a Go compiler error.
+- `go build ./...`, `go vet ./...`, `go test ./...` all clean (no flaky
+  failures this run, unlike subtask 2's log entry).

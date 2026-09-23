@@ -1384,18 +1384,19 @@ func (c *Console) ShowFault() error {
 // ShowMap reports that this port has no RMS field-offset registry to
 // dump, matching SHOW MAP's intent (console_show.c's map_dump, over
 // structure_mapping.c's declarative FAB/RAB offset table) against a
-// deliberately different design: internal/rtl/rms.go reads/writes RMS
-// struct fields directly at hardcoded Go offsets rather than through a
-// runtime registry (see that file's own doc comment) — there is nothing
-// for this command to dump, so it reports that rather than an empty table.
+// deliberately different design: internal/rms (docs/PHASE-22.md) reads/
+// writes RMS struct fields directly at hardcoded Go offsets rather than
+// through a runtime registry (see that package's fab.go/rab.go) — there is
+// nothing for this command to dump, so it reports that rather than an empty
+// table.
 func (c *Console) ShowMap() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
 
 	c.Printf("Not applicable to this port: RMS struct fields are read/written directly at\n")
-	c.Printf("hardcoded Go offsets (internal/rtl/rms.go), not through a runtime field-offset\n")
-	c.Printf("registry — see docs/PHASE-16.md sub-phase 1f.\n")
+	c.Printf("hardcoded Go offsets (internal/rms/fab.go, rab.go), not through a runtime\n")
+	c.Printf("field-offset registry — see docs/PHASE-16.md sub-phase 1f.\n")
 
 	return nil
 }
