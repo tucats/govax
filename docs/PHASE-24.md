@@ -23,7 +23,7 @@ pseudo-ops:
   `$FAB` macro's own calling convention.
 - `.RAB` — same for a 68-byte RAB, matching `$RAB`.
 
-**Status: in progress — subtasks 1-4 done, subtasks 5-6 remaining.**
+**Status: in progress — subtasks 1-5 done, subtask 6 (docs) remaining.**
 
 ## Why this phase looks different
 
@@ -194,13 +194,18 @@ convention (`internal/asm/image.go`) — no explicit zero-fill pass needed, and
 matching real VMS's own expectation that a calling program supplies a
 zero-initialized block to begin with.
 
-Still open (see "Open questions"): whether `.FAB`/`.RAB` additionally define
+**Resolved during subtask 5 planning:** `.FAB`/`.RAB` do *not* define
 per-field sub-symbols (`<label>_FAC`, `<label>_STS`, ...) the way
-`rms_roundtrip.asm`'s current hand-rolled layout does today, or leave a program
-to address fields the real-MACRO-32 way (`<label>+FAB$L_FAC`) once `.RMSDEF`
-has defined the offset symbols — to be resolved during implementation once
-there's a concrete second fixture (per the design note) to judge which reads
-better in practice.
+`rms_roundtrip.asm`'s pre-Phase-24 hand-rolled layout did — a program
+addresses a field at runtime the real-MACRO-32 way instead,
+`<label>+FAB$B_FAC`, once `.RMSDEF` has defined the offset symbol. Confirmed
+working directly (a throwaway probe test assembled `movb #1,
+@#fab+FAB$B_FAC` and decoded the emitted absolute-mode operand address to
+confirm it resolved to the FAB's base plus the real offset, exactly) before
+committing to it for subtask 5's rewrite — ordinary `label+symbol` expression
+arithmetic already supported this with zero new code, since `.FAB`/`.RAB`'s
+own field values only ever need to be *set* by keyword at assembly time, not
+also independently *addressed* by keyword at runtime.
 
 ## Scope / field-and-symbol inventory
 
@@ -241,7 +246,7 @@ subset exactly.)
    together with subtask 3 via a shared `buildControlBlock` implementation
    (identical shape, differing only in field table/block size/BID-BLN
    constant names), not worth a separate change.
-5. Update `testdata/asm/rms_roundtrip.asm` to build its FAB/RAB via
+5. **Done.** Update `testdata/asm/rms_roundtrip.asm` to build its FAB/RAB via
    `.RMSDEF`/`.FAB`/`.RAB` instead of hand-laid-out `.BLKB`/`.BYTE`/`.WORD`/
    `.LONG` blocks and bare numeric literals — the concrete acceptance check
    for this phase, matching how Phase 22 subtask 14's own fixture already
@@ -254,12 +259,9 @@ subset exactly.)
 
 ## Open questions
 
-- Exact `.FAB`/`.RAB` sub-field addressing convention (auto-generated
-  `<label>_<FIELD>` sub-symbols vs. real-MACRO-32-style `<label>+FAB$L_<FIELD>`
-  addressing via `.RMSDEF`'s own offset symbols) — deferred to subtask 3/4,
-  once there's a second real fixture (per the design note's "more record
-  types" direction) to judge against, not just subtask 5's rewrite of the one
-  existing fixture.
+- ~~Exact `.FAB`/`.RAB` sub-field addressing convention~~ **Resolved** — see
+  the design section's own "Resolved during subtask 5 planning" note above:
+  real-MACRO-32-style `<label>+FAB$L_<FIELD>` addressing, no sub-symbols.
 - Whether `.RMSDEF` should also expose the `FAB$V_`-style single-bit-position
   aliases some real VMS macros define alongside their `FAB$M_` mask
   siblings (e.g. `FAB$V_PUT` as a bit index vs. `FAB$M_PUT`'s already-shifted
@@ -485,3 +487,54 @@ subset exactly.)
   `go test ./...` all clean across the whole module (including the peer
   `ods2` module, reachable via `go.work`).
 - Subtasks 3-4 complete. Subtask 5 (rewrite `rms_roundtrip.asm`) is next.
+
+### 2026-09-23 — Subtask 5: rewrite `rms_roundtrip.asm` via `.RMSDEF`/`.FAB`/`.RAB`
+
+- Resolved the design section's own open sub-field-addressing question
+  concretely, by trying it: a throwaway probe (`movb #1, @#fab+FAB$B_FAC`
+  after `fab: .FAB` with no parameters) assembled cleanly and, decoded back
+  from the emitted absolute-mode operand bytes, resolved to exactly the
+  FAB's base address plus the real `FAB$B_FAC` offset (`0x216` for a FAB at
+  `0x200`) — ordinary `label+symbol` expression arithmetic already
+  supported this with zero new pseudo-op code, so `.FAB`/`.RAB` don't
+  generate per-field sub-symbols; see the design section's own "Resolved
+  during subtask 5 planning" note.
+- That probe used a *backward* reference (the label was already defined).
+  The real fixture rewrite hit a real, pre-existing assembler limitation
+  the probe hadn't exercised: `rms_roundtrip.asm`'s code section runs
+  *before* its data (matching the original fixture's own layout, data
+  after `fail:`), so `@#rab+RAB$L_RBF` in the code was a *forward*
+  reference to `rab` combined with an operator — and this assembler's
+  forward-reference fixup mechanism (matching the reference tool's own)
+  can only defer a bare symbol, not one combined with `+`, failing with
+  `VAX-E-OPERANDERR`/`VAX-E-FWDOPERATOR`. Not a bug to fix (a real,
+  documented limitation, `internal/vmserrors`' existing `VAX_FWDOPERATOR`)
+  — fixed by moving the `.FAB`/`.RAB` declarations up, right after
+  `.RMSDEF` and before the code (rather than down with the rest of this
+  fixture's data), so `fab`/`rab` are already resolved by the time any
+  `label+offset-symbol` expression needs them. `FNA=fspec` inside `.FAB`
+  itself stays a *bare* forward reference (fspec is still declared down
+  with the rest of the data) and needed no change — only `label+offset`
+  combinations need the label pre-resolved.
+- Beyond the mechanical `.BLKB`/`.BYTE`/`.WORD`/`.LONG` → `.FAB`/`.RAB`
+  swap, used the now-available field table to drop several runtime
+  instructions the original fixture needed purely to initialize
+  never-changing fields: `RAB$L_FAB` (always pointing at the same `fab`)
+  and `RAB$B_RAC` (always `RAB$C_SEQ`, poked identically before both
+  CONNECTs in the original) are now `.RAB` keyword values instead of
+  `MOVAL`/`MOVL`/`MOVB` instructions run twice. `FAC`'s reopen-time change
+  (`FAB$M_GET`) and the genuinely per-call `RAB$L_RBF`/`RAB$W_RSZ` pokes
+  remain runtime code, now spelled with symbolic constants/offset symbols
+  (`FAB$M_GET`, `RAB$L_RBF`) instead of the original's bare numeric
+  literals with only a `;` comment naming them.
+- `TestRMSRoundTrip_assembledProgram` and
+  `TestRMSRoundTrip_afterKernelAlreadyP1VectoredIsIdempotent`
+  (`internal/console/rms_e2e_test.go`, unchanged from Phase 11) both pass
+  against the rewritten fixture with no test-side changes needed — the
+  concrete, planned acceptance check for this phase.
+- `go build ./...`, `go vet ./...`, `go test ./...` all clean across the
+  whole module (including the peer `ods2` module, reachable via
+  `go.work`). Confirmed by grep that nothing else in the tree referenced
+  the old fixture's `fab_fac`/`rab_rac`/... sub-symbol names.
+- Subtask 5 complete. Subtask 6 (docs: this progress log, `docs/PLAN.md`)
+  is next.

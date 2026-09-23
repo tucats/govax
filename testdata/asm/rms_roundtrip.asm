@@ -5,12 +5,17 @@
 ; SYS$CONNECT -> SYS$GET (x3) -> SYS$CLOSE against a mounted ODS-2 disk
 ; device (DUA0:), verifying each record read back matches what was written.
 ;
-; FAB/RAB fields below are hand-laid-out via .BLKB/.BYTE/.WORD/.LONG
-; directives at their real $FABDEF/$RABDEF byte offsets (see
-; internal/rms/fab.go, rab.go) rather than expanded from a macro -- this
-; project has no $FABDEF/$RABDEF .INCLUDE facility yet (explicitly out of
-; scope for docs/PHASE-22.md's subtask 14). SYS$xxx symbols below are the
-; real P1-vector addresses .P1VECTOR defines (internal/p1vector.Table),
+; FAB/RAB below are built via .FAB/.RAB (docs/PHASE-24.md), this project's
+; own equivalent of the real $FAB/$RAB macros -- .RMSDEF (this file's own
+; equivalent of $FABDEF/$RABDEF/$RMSDEF) defines every real FAB$/RAB$/RMS$
+; symbol first, so both the .FAB/.RAB keyword values below (FAB$M_PUT,
+; FAB$C_SEQ, ...) and the runtime field pokes further down
+; (@#fab+FAB$B_FAC, real-MACRO-32-style <label>+offset-symbol addressing --
+; .FAB/.RAB don't generate their own per-field sub-labels, see
+; docs/PHASE-24.md's own design notes on why) resolve to real, checked
+; values instead of the bare, only-comment-documented numeric literals this
+; fixture used before this phase. SYS$xxx symbols below are the real
+; P1-vector addresses .P1VECTOR defines (internal/vmsdef.P1VectorTable),
 ; called through "@#", matching every other SYS$/LIB$ call in this
 ; project's own test fixtures (e.g. hello.asm's "calls #1,@#lib$put_output").
 ;
@@ -22,21 +27,34 @@
 
 	.microkernel
 	.p1vector
+	.rmsdef
+
+; FAB/RAB built here, before the code below, rather than down with the rest
+; of this file's data (after "fail:") the way earlier fixtures in this
+; project keep data: the code below addresses fields at runtime the real-
+; MACRO-32 way ("@#rab+RAB$L_RBF"), and this assembler's forward-reference
+; fixup mechanism -- like the reference tool's own -- can't defer a symbol
+; combined with an operator (VAX_FWDOPERATOR), only a bare symbol. Placing
+; "fab"/"rab" ahead of every place that adds an offset to them keeps both
+; already resolved by the time the code needs to. FNA=fspec below is a bare
+; forward reference (fspec is still defined down in the data section) --
+; that's fine; only "label+offset-symbol" needs the label already resolved.
+;
+; Initial field values that never change across the whole program (FAC's
+; *initial* PUT-access value -- it's changed at runtime for the reopen,
+; below -- ORG, RFM, MRS, FNA/FNS, and RAB$L_FAB/RAB$B_RAC, which the pre-
+; Phase-24 version of this fixture re-set identically via runtime MOVB/
+; MOVAL/MOVL right before each CONNECT) are supplied directly as keyword
+; values here; only fields that genuinely vary at runtime (RAB$L_RBF/
+; RAB$W_RSZ, a different record each PUT/GET) are still poked via real-
+; MACRO-32-style "@#rab+RAB$L_RBF" addressing in the code below. FNS uses
+; "^D13" (decimal), not a bare "13" -- this assembler's default radix is
+; hex, so a plain "13" here would mean 0x13 (19), not decimal 13
+; (strlen("DUA0:TEST.DAT")).
+fab:	.fab	fac=FAB$M_PUT, org=FAB$C_SEQ, rfm=FAB$C_FIX, mrs=4, fna=fspec, fns=^D13
+rab:	.rab	fab=fab, rac=RAB$C_SEQ
 
 	.entry	main, ^m<>
-
-; ---- build the FAB for a fixed-format, 4-byte-record sequential file ----
-	movb	#1, @#fab_fac		; FAB$V_PUT
-	movb	#0, @#fab_org		; FAB$C_SEQ
-	movb	#1, @#fab_rfm		; FAB$C_FIX
-	movw	#4, @#fab_mrs		; 4-byte fixed records
-
-	moval	@#fspec, r1
-	movl	r1, @#fab_fna
-	movb	#^D13, @#fab_fns	; strlen("DUA0:TEST.DAT") -- ^D: this
-					; assembler's default radix is hex,
-					; so a plain "13" here would mean
-					; 0x13 (19), not decimal 13
 
 ; Every RMS call below is checked via "BLBS r0,okN / BRW fail" rather than
 ; a plain "BLBC r0,fail": real VAX conditional branches (BLBC/BLBS/BNEQ/...)
@@ -53,19 +71,15 @@
 ok1:
 
 ; ---- CONNECT a RAB to the just-created file and PUT three records ----
-	moval	@#fab, r1
-	movl	r1, @#rab_fab
 	pushal	@#rab
 	calls	#1, @#sys$connect
 	blbs	r0, ok2
 	brw	fail
 ok2:
 
-	movb	#0, @#rab_rac		; RAB$C_SEQ
-
 	moval	@#rec1, r1
-	movl	r1, @#rab_rbf
-	movw	#4, @#rab_rsz
+	movl	r1, @#rab+RAB$L_RBF
+	movw	#4, @#rab+RAB$W_RSZ
 	pushal	@#rab
 	calls	#1, @#sys$put
 	blbs	r0, ok3
@@ -73,8 +87,8 @@ ok2:
 ok3:
 
 	moval	@#rec2, r1
-	movl	r1, @#rab_rbf
-	movw	#4, @#rab_rsz
+	movl	r1, @#rab+RAB$L_RBF
+	movw	#4, @#rab+RAB$W_RSZ
 	pushal	@#rab
 	calls	#1, @#sys$put
 	blbs	r0, ok4
@@ -82,8 +96,8 @@ ok3:
 ok4:
 
 	moval	@#rec3, r1
-	movl	r1, @#rab_rbf
-	movw	#4, @#rab_rsz
+	movl	r1, @#rab+RAB$L_RBF
+	movw	#4, @#rab+RAB$W_RSZ
 	pushal	@#rab
 	calls	#1, @#sys$put
 	blbs	r0, ok5
@@ -97,25 +111,21 @@ ok5:
 ok6:
 
 ; ---- reopen the same file for reading, reusing the same FAB/RAB ----
-	movb	#2, @#fab_fac		; FAB$V_GET
+	movb	#FAB$M_GET, @#fab+FAB$B_FAC
 	pushal	@#fab
 	calls	#1, @#sys$open
 	blbs	r0, ok7
 	brw	fail
 ok7:
 
-	moval	@#fab, r1
-	movl	r1, @#rab_fab
 	pushal	@#rab
 	calls	#1, @#sys$connect
 	blbs	r0, ok8
 	brw	fail
 ok8:
 
-	movb	#0, @#rab_rac		; RAB$C_SEQ
-
 	moval	@#readbuf, r1
-	movl	r1, @#rab_rbf
+	movl	r1, @#rab+RAB$L_RBF
 	pushal	@#rab
 	calls	#1, @#sys$get
 	blbs	r0, ok9
@@ -128,7 +138,7 @@ ok9:
 ok10:
 
 	moval	@#readbuf, r1
-	movl	r1, @#rab_rbf
+	movl	r1, @#rab+RAB$L_RBF
 	pushal	@#rab
 	calls	#1, @#sys$get
 	blbs	r0, ok11
@@ -141,7 +151,7 @@ ok11:
 ok12:
 
 	moval	@#readbuf, r1
-	movl	r1, @#rab_rbf
+	movl	r1, @#rab+RAB$L_RBF
 	pushal	@#rab
 	calls	#1, @#sys$get
 	blbs	r0, ok13
@@ -172,48 +182,5 @@ rec1:	.long	^X11111111
 rec2:	.long	^X22222222
 rec3:	.long	^X33333333
 readbuf: .long	0
-
-; ---- FAB: 80 bytes total, offsets per internal/rms/fab.go ----
-; The ".blkb" counts below are byte counts in DECIMAL (matching the
-; comments' own decimal offsets) -- this assembler's default radix is hex,
-; so any two-digit count that could be misread as a hex value is spelled
-; with an explicit "^D" (decimal) prefix. A single digit (0-9) reads the
-; same in either radix and needs no prefix.
-fab:		.blkb	2	; 0-1  reserved
-fab_ifi:	.word	0	; 2-3  FAB$W_IFI
-		.blkb	4	; 4-7  reserved
-fab_sts:	.long	0	; 8-11 FAB$L_STS
-fab_stv:	.long	0	; 12-15 FAB$L_STV
-		.blkb	6	; 16-21 reserved
-fab_fac:	.byte	0	; 22   FAB$B_FAC
-		.blkb	6	; 23-28 reserved
-fab_org:	.byte	0	; 29   FAB$B_ORG
-fab_rat:	.byte	0	; 30   FAB$B_RAT
-fab_rfm:	.byte	0	; 31   FAB$B_RFM
-		.blkb	^D12	; 32-43 reserved
-fab_fna:	.long	0	; 44-47 FAB$L_FNA
-		.blkb	4	; 48-51 reserved (FAB$L_DNA)
-fab_fns:	.byte	0	; 52   FAB$B_FNS
-		.blkb	1	; 53   reserved
-fab_mrs:	.word	0	; 54-55 FAB$W_MRS
-		.blkb	^D24	; 56-79 reserved
-
-; ---- RAB: 68 bytes total, offsets per internal/rms/rab.go (same decimal-
-; ".blkb"-count convention as the FAB above) ----
-rab:		.blkb	2	; 0-1  reserved
-rab_isi:	.word	0	; 2-3  RAB$W_ISI
-		.blkb	4	; 4-7  reserved
-rab_sts:	.long	0	; 8-11 RAB$L_STS
-rab_stv:	.long	0	; 12-15 RAB$L_STV
-		.blkb	^D14	; 16-29 reserved
-rab_rac:	.byte	0	; 30   RAB$B_RAC
-		.blkb	1	; 31   reserved
-rab_usz:	.word	0	; 32-33 RAB$W_USZ
-rab_rsz:	.word	0	; 34-35 RAB$W_RSZ
-rab_ubf:	.long	0	; 36-39 RAB$L_UBF
-rab_rbf:	.long	0	; 40-43 RAB$L_RBF
-		.blkb	^D16	; 44-59 reserved
-rab_fab:	.long	0	; 60-63 RAB$L_FAB
-		.blkb	4	; 64-67 reserved
 
 	.end	main
