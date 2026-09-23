@@ -377,7 +377,7 @@ This local convenience doesn't feed the committed test suite.
 12. **Done.** `internal/io`/`internal/console/device.go`: `MOUNT`/`DISMOUNT` console
     methods (auto-create device record, call `internal/rms.MountTable`); `SHOW
     DEVICE/FULL` mounted-volume line.
-13. `internal/console/dispatch.go`: bind the new `MOUNT`/`DISMOUNT` grammar
+13. **Done.** `internal/console/dispatch.go`: bind the new `MOUNT`/`DISMOUNT` grammar
     entries.
 14. End-to-end acceptance test: build+mount a fresh container, assemble (via the
     existing `ASM`/Phase 11 tooling) a small MACRO-32 program exercising
@@ -1086,6 +1086,60 @@ This local convenience doesn't feed the committed test suite.
   `MOUNT`/`DISMOUNT` command line today still yields `Grammar.Dispatch`'s
   existing "no handler bound" error, same as every other unbound syntax in
   the grammar file, exactly as subtask 2's own log entry already noted.
+- No bugs found in the sibling `ods2` module while implementing this
+  subtask.
+- `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`) all
+  clean.
+
+### 2026-09-23 — Subtask 13 complete
+
+- Added two `g.Bind` closures to `internal/console/dispatch.go`'s
+  `bindGrammar`, right after the existing `DEFINE_LOGICAL` binding (the end
+  of the Phase 09 device/logical-table group, with a new comment marking
+  this as the start of the Phase 22 (`internal/rms`) group): `g.Bind("MOUNT",
+  ...)` calls `Console.Mount(r.String("DEVICE"), r.String("FILE"), write)`,
+  and `g.Bind("DISMOUNT", ...)` calls `Console.Dismount(r.String("DEVICE"))`
+  — both bind keys match the plain-verb naming convention already
+  established by `VMINIT` (a verb with no nested `/syntax=` redirect binds
+  under its own bare uppercased name), confirmed by re-reading
+  `dispatch.go`'s existing `g.Bind("VMINIT", ...)` before adding these.
+  This is genuinely the last piece needed to reach `internal/rms` from a
+  typed console command line — subtask 2 built the grammar, subtask 12
+  built `Console.Mount`/`Dismount`, and until this subtask ran, parsing
+  `MOUNT`/`DISMOUNT` still hit `Grammar.Dispatch`'s generic "no handler
+  bound" error (subtask 2's own log entry, and subtask 12's log entry,
+  both noted this explicitly).
+- The one piece of real logic in either closure: `write := !r.Negated("WRITE")`,
+  not `r.Present("WRITE")`. Read `internal/console/dcl/
+  parse_test.go`'s `TestParse_mount`/`TestParse_mountNowrite` (added back
+  in subtask 2) closely before writing this — they already establish that
+  a bare `MOUNT` (no `/WRITE` or `/NOWRITE` at all) leaves `WRITE`
+  *absent* (`Present`=false), while `/NOWRITE` leaves it *present and
+  negated* (`Present`=true, `Negated`=true); there is no way for `WRITE`
+  to end up `Present`+not-negated from typing `/WRITE` explicitly that
+  differs in any observable way from the default. So `r.Present("WRITE")`
+  alone would make a bare `MOUNT` non-writable (wrong — Console.Mount's
+  own doc comment from subtask 12 already documented `/WRITE` as the
+  default), where `!r.Negated("WRITE")` correctly reads true by default
+  (unmatched qualifiers report `Negated`=false, `dcl/parse.go`'s own
+  `Negated` doc comment) and false only when `/NOWRITE` was actually typed.
+- Test coverage (`internal/console/mount_test.go`): three new dispatch-
+  level tests layered on top of subtask 12's already-thorough direct
+  `Console.Mount`/`Dismount` coverage, since this subtask's own job is
+  narrowly "does a real command line reach them at all", not re-proving
+  their internal logic. `TestDispatch_mountAndDismountViaDCL` parses and
+  dispatches `MOUNT DUA0 "<path>"` then `DISMOUNT DUA0` through the real
+  grammar, checking the resulting `c.Mounts`/`c.Devices` state.
+  `TestDispatch_mountNowriteViaDCL` confirms `MOUNT/NOWRITE` reaches
+  `Console.Mount` as `write=false`. `TestDispatch_dismountNotMountedViaDCL`
+  confirms a `DISMOUNT` of an unmounted device surfaces the real
+  `SS_DEVNOTMOUNT` status through the full dispatch path, not just through
+  a direct `Console.Dismount` call. The container path in the DCL command
+  lines is double-quoted (`MOUNT DUA0 "<path>"`) rather than bare, since
+  DCL upcases an unquoted token (confirmed by `TestParse_mount`'s own doc
+  comment) and `t.TempDir()` paths are mixed-case — an unquoted path would
+  fail to open under its now-upcased spelling on a case-sensitive
+  filesystem.
 - No bugs found in the sibling `ods2` module while implementing this
   subtask.
 - `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`) all

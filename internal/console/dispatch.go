@@ -365,6 +365,31 @@ func (d *Dispatcher) bindGrammar() {
 
 		return d.Console.DefineLogical(table, r.String("NAME"), r.String("VALUE"))
 	})
+
+	// Phase 22 (internal/rms): MOUNT/DISMOUNT attach/detach a disk-image
+	// container file to a device name via internal/rms.MountTable
+	// (Console.Mount/Dismount, internal/console/mount.go). Neither verb has
+	// a reference/eVAX or testdata/dcl/evax.dcl counterpart -- see this
+	// package's own grammar file (internal/bootdata/files/evax.dcl)'s
+	// "govax-native extension" comment at MOUNT's definition.
+	g.Bind("MOUNT", func(id int64, r *dcl.Result) error {
+		// The WRITE qualifier defaults to present (a bare MOUNT is
+		// writable, matching Console.Mount's own doc comment): only an
+		// explicit /NOWRITE -- r.Negated, not r.Present, since an
+		// unspecified qualifier is "absent", not "negated" (see
+		// dcl.Result.Negated's own doc comment) -- turns it off. Real
+		// VMS's /NOWRITE reaches WRITE this same way, as the grammar's
+		// automatic "NO"-prefix negation of the one declared WRITE
+		// qualifier (this file's own DCL grammar comment, and
+		// TestParse_mountNowrite in internal/console/dcl/parse_test.go).
+		write := !r.Negated("WRITE")
+
+		return d.Console.Mount(r.String("DEVICE"), r.String("FILE"), write)
+	})
+
+	g.Bind("DISMOUNT", func(id int64, r *dcl.Result) error {
+		return d.Console.Dismount(r.String("DEVICE"))
+	})
 }
 
 type fixedHandler func(d *Dispatcher, rest string) error

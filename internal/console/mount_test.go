@@ -2,6 +2,7 @@ package console
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -287,5 +288,86 @@ func TestShowDevices_mountedVolumeLineOnlyForDisks(t *testing.T) {
 
 	if strings.Contains(buf.String(), "MOUNTED=") {
 		t.Errorf("ShowDevices for a terminal device printed a MOUNTED line: %q", buf.String())
+	}
+}
+
+// TestDispatch_mountAndDismountViaDCL exercises subtask 13's own new work
+// directly: parsing and dispatching real "MOUNT ..."/"DISMOUNT ..." command
+// lines through the DCL grammar (internal/bootdata/files/evax.dcl's "verb
+// mount"/"verb dismount", subtask 2) into the g.Bind("MOUNT", ...)/
+// g.Bind("DISMOUNT", ...) closures this subtask added (dispatch.go), which
+// in turn call the already-tested Console.Mount/Dismount (subtask 12).
+// Everything below subtask 13's own two closures was already covered by
+// TestConsoleMount_autoCreatesDevice/TestConsoleDismount and friends, so
+// this test's job is narrower: confirm a command line actually reaches
+// them at all, with its DEVICE/FILE/WRITE fields threaded through
+// correctly.
+//
+// The container path is double-quoted in the command line: DCL upcases an
+// unquoted token (TestParse_mount's own doc comment, internal/console/dcl/
+// parse_test.go), and t.TempDir() paths are mixed-case, so an unquoted
+// path here would fail to open under its now-upcased spelling on any
+// case-sensitive filesystem.
+func TestDispatch_mountAndDismountViaDCL(t *testing.T) {
+	d, c := newTestDispatcher(t)
+	path := newTestContainer(t, "TESTVOL")
+
+	if err := d.Dispatch(fmt.Sprintf(`MOUNT DUA0 "%s"`, path)); err != nil {
+		t.Fatalf("Dispatch MOUNT: %v", err)
+	}
+
+	if label, ok := c.Mounts.VolumeLabel("DUA0"); !ok || label != "TESTVOL" {
+		t.Errorf("VolumeLabel(DUA0) after MOUNT = %q, %v, want TESTVOL, true", label, ok)
+	}
+
+	if !c.Mounts.Writable("DUA0") {
+		t.Error("Writable(DUA0) after a plain MOUNT (no /NOWRITE) = false, want true")
+	}
+
+	if _, ok := c.Devices.Find("DUA0"); !ok {
+		t.Error("Devices.Find(DUA0) after MOUNT = not found, want an auto-created device")
+	}
+
+	if err := d.Dispatch("DISMOUNT DUA0"); err != nil {
+		t.Fatalf("Dispatch DISMOUNT: %v", err)
+	}
+
+	if _, ok := c.Mounts.Lookup("DUA0"); ok {
+		t.Error("Mounts.Lookup(DUA0) after DISMOUNT = found, want not found")
+	}
+}
+
+// TestDispatch_mountNowriteViaDCL confirms MOUNT/NOWRITE's automatic "NO"-
+// prefix negation (dispatch.go's MOUNT closure reads r.Negated("WRITE"),
+// not r.Present) actually reaches Console.Mount as writable=false, the
+// dispatch-level counterpart to TestParse_mountNowrite (which only checks
+// grammar-level parsing, never calls Console.Mount at all).
+func TestDispatch_mountNowriteViaDCL(t *testing.T) {
+	d, c := newTestDispatcher(t)
+	path := newTestContainer(t, "TESTVOL")
+
+	if err := d.Dispatch(fmt.Sprintf(`MOUNT/NOWRITE DUA0 "%s"`, path)); err != nil {
+		t.Fatalf("Dispatch MOUNT/NOWRITE: %v", err)
+	}
+
+	if c.Mounts.Writable("DUA0") {
+		t.Error("Writable(DUA0) after MOUNT/NOWRITE = true, want false")
+	}
+}
+
+// TestDispatch_dismountNotMountedViaDCL confirms a DISMOUNT of a device
+// with nothing mounted, dispatched through the real DCL grammar, surfaces
+// Console.Dismount's SS_DEVNOTMOUNT error rather than being swallowed
+// somewhere in the grammar-dispatch plumbing.
+func TestDispatch_dismountNotMountedViaDCL(t *testing.T) {
+	d, _ := newTestDispatcher(t)
+
+	err := d.Dispatch("DISMOUNT DUA0")
+	if err == nil {
+		t.Fatal("Dispatch DISMOUNT of an unmounted device = nil error, want SS_DEVNOTMOUNT")
+	}
+
+	if !errors.Is(err, vmserrors.New(vmserrors.SS_DEVNOTMOUNT)) {
+		t.Errorf("Dispatch DISMOUNT error = %v, want SS_DEVNOTMOUNT", err)
 	}
 }
