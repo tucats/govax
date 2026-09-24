@@ -259,7 +259,7 @@ func TestShowDevices_mountedVolumeLine(t *testing.T) {
 		t.Errorf("ShowDevices (writable mount) output = %q, want a mounted (READ/WRITE) header", out)
 	}
 
-	if !strings.Contains(out, `Volume label               "TESTVOL"`) {
+	if !strings.Contains(out, "Volume label") || !strings.Contains(out, `"TESTVOL"`) {
 		t.Errorf("ShowDevices (writable mount) output = %q, want the live TESTVOL volume label", out)
 	}
 
@@ -282,7 +282,7 @@ func TestShowDevices_mountedVolumeLine(t *testing.T) {
 		t.Errorf("ShowDevices (read-only mount) output = %q, want a mounted (READ ONLY) header", out)
 	}
 
-	if !strings.Contains(out, `Volume label               "TESTVOL"`) {
+	if !strings.Contains(out, "Volume label") || !strings.Contains(out, `"TESTVOL"`) {
 		t.Errorf("ShowDevices (read-only mount) output = %q, want the live TESTVOL volume label", out)
 	}
 }

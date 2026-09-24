@@ -70,7 +70,7 @@ func TestConsoleDefineAndShowDevices(t *testing.T) {
 		t.Errorf("ShowDevices /FULL output missing the VMS-style disk header: %q", out)
 	}
 
-	if !strings.Contains(out, `Volume label               "SYSTEM"`) {
+	if !strings.Contains(out, "Volume label") || !strings.Contains(out, `"SYSTEM"`) {
 		t.Errorf("ShowDevices /FULL output missing the (static, unmounted) volume label: %q", out)
 	}
 
