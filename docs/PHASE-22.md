@@ -1410,3 +1410,104 @@ This local convenience doesn't feed the committed test suite.
 - `go build ./...`, `go vet ./...`, `go test ./...` (including `-race`)
   all clean — unchanged by this subtask's docs-only edits, re-run to
   confirm nothing was accidentally left broken.
+
+### 2026-09-24 — `SHOW DEVICE/FULL` reformatted to real VMS disk-volume layout
+
+Not a subtask of the original plan (an ad-hoc, user-requested follow-up) —
+logged here rather than as a new subtask because it's cosmetic display
+work building directly on this phase's own `MOUNT`/`MOUNTED=` output
+(`internal/console/device.go`'s `ShowDevices`, `internal/console/mount.go`'s
+now-removed `showMountedVolume`), not a new RMS capability.
+
+- `internal/console/device.go`: the disk-class branch of `ShowDevices`
+  (previously a raw `DEVCLASS=`/`CLUSTER=`/`DEVCHAR=`/... field dump, the
+  same treatment every other device class still gets) is replaced by a
+  new `showDiskDeviceFull`, formatting real VMS `SHOW DEVICE/FULL`-style
+  output, e.g.:
+
+  ```text
+  Disk DUA0:, is online, mounted (READ/WRITE), file-oriented device.
+
+      Error count                    0    Operations completed                  0
+      Reference count                0    Default buffer size                 512
+      Total blocks                 400    Free blocks                         344
+
+      Volume label               "MYVOL"    Cluster size                          1
+      Number of files                0    Maximum files allowed                50
+  ```
+
+  "Reference count" is `Device.RefCnt`, the count `SYS$ASSIGN` already
+  maintains (`internal/rtl/devices.go`) — real VMS's own meaning (channel
+  assigns), not anything ODS-2-volume-specific (an earlier framing raised
+  mid-session and explicitly retracted before implementation started).
+  "Free blocks"/"Number of files"/"Total blocks"/"Cluster size"/"Maximum
+  files allowed" come live from the mounted volume (new
+  `MountTable.VolumeStats`, below) when one is mounted, falling back to
+  the static `internal/io.Device` fields (normally all zero — `MOUNT`'s
+  own auto-created device records never set them) otherwise; "Volume
+  label" similarly prefers the live `c.Mounts.VolumeLabel` over
+  `d.VolName`. `govax` has no online/offline concept, so every disk
+  device reports "is online" unconditionally; a `, device type X` clause
+  is included only when `internal/io.DeviceTypeName` (new, below) maps
+  the device's `DevType`, omitted otherwise rather than printing a
+  placeholder.
+- `internal/rms/mount.go`: new `MountTable.VolumeStats(device)` returning
+  `(volume.VolumeStats, mounted bool, err error)`, alongside the existing
+  `VolumeLabel`/`Writable`, wrapping a new `ods2` function (below).
+- Sibling `ods2` module, `volume/stats.go` (new file): `Stats(dev *Device)
+  (VolumeStats, error)` — read-only, so it works against a device mounted
+  `/NOWRITE` too, not just `/WRITE`. `ClusterSize`/`MaxFiles` come
+  straight off `dev.Home`; `TotalBlocks`/`FreeBlocks` come from
+  `BITMAP.SYS`, preferring `dev`'s already-open in-memory `Bitmap` cache
+  (`dev.bitmap`, populated by an earlier write-path `dev.Bitmap()` call)
+  over a fresh read straight off disk when one exists, and falling back
+  to the existing `loadBitmap` helper (already read-only-safe — the same
+  one `AnalyzeDisk` uses) otherwise. The in-memory-cache preference was a
+  genuine bug caught by this work's own end-to-end test
+  (`TestShowDevices_liveStatsReflectARealFile`, `internal/console/
+  mount_test.go`): a fresh `loadBitmap` read reported stale free-space
+  numbers for the rest of a mount session after every `CREATE`, since
+  this project's own bitmap caching strategy only flushes allocations to
+  disk explicitly (today, `DELETE`/`PURGE`, plus `Dismount`) — not
+  something `SHOW DEVICE/FULL` should have to wait for to reflect the
+  current session's own file creates. `FileCount` walks `INDEXF.SYS`
+  header slots from `HomeBlock.ReservedFiles+1` through `MaxFiles`
+  (excluding the volume's own bookkeeping files), mirroring
+  `AnalyzeDisk`'s own header-walk loop and its in-use-slot validity
+  check (`analyze.go`) — this one needed no cache preference, since file
+  headers are written to disk immediately on `CREATE`, unlike bitmap
+  allocation marks. New `volume/stats_test.go` covers a freshly
+  initialized empty volume, a volume with one real file created on it
+  (reusing `analyze_test.go`'s own fixture), and — the specific new
+  capability this phase's existing `Bitmap`/`IndexBitmap` couldn't
+  provide — a device mounted read-only via plain `diskimage.Open`.
+- `internal/io/device.go`: new `DeviceTypeName(t uint32) (string, bool)`,
+  mirroring the existing `DeviceClassName`/`deviceClassNames` pattern but
+  returning `ok = false` rather than an `"<unknown>"` fallback string (so
+  a caller can omit a clause entirely instead of printing a placeholder).
+  Its `deviceTypeNames` table restates `testdata/dcl/evax.dcl`'s existing
+  `dev_type` keyword table id-for-id (`rk06`=1, ... `vt100`=96) — not new
+  data, just making it queryable from Go. Deliberately does **not** add
+  `RD54` (the disk type named in the user's original real-VMS sample
+  output) to that table: nothing in `govax` sets a mounted disk's
+  `DevType` today (`MOUNT`'s auto-created device records never do), so
+  the "device type X" clause is simply omitted for every device this
+  project can currently produce, rather than growing a name for a device
+  type nothing can select.
+- Tests updated for the new format: `internal/console/device_test.go`'s
+  `TestConsoleDefineAndShowDevices`, and `internal/console/mount_test.go`'s
+  `TestShowDevices_mountedVolumeLine`/`TestShowDevices_mountedVolumeLineOnlyForDisks`
+  (assertions moved from the old `MOUNTED=...` line to the new header's
+  mount clause). New `internal/rms/mount_test.go`'s
+  `TestMountTable_volumeStats` (mirrors the existing `TestMountTable_
+  volumeLabel`) and `internal/console/mount_test.go`'s
+  `TestShowDevices_liveStatsReflectARealFile` (the end-to-end check that
+  caught the bitmap-caching bug above, via the ordinary `COPY` host-to-
+  container path).
+- Manually verified against `go run ./cmd/govax console`: `DEFINE/DEVICE`,
+  `INITIALIZE/CONTAINER`, `MOUNT`, and `SHOW DEVICE/FULL` together produce
+  the intended layout, and `DISMOUNT` + `MOUNT/NOWRITE` correctly flips the
+  header's `(READ/WRITE)` clause to `(READ ONLY)` while still reporting
+  live free-block/file-count numbers.
+- `go build ./...`, `go vet ./...`, `go test ./...` clean in both this
+  repo and the sibling `ods2` module.

@@ -104,30 +104,3 @@ func (c *Console) Dismount(device string) error {
 
 	return nil
 }
-
-// showMountedVolume prints SHOW DEVICE/FULL's mounted-volume line for a
-// disk-class device (device.go's ShowDevices, the "if d.DevClass ==
-// iodev.DeviceClassDisk" block) — the one piece of a mounted disk's state
-// that lives in c.Mounts (internal/rms.MountTable) rather than in the
-// internal/io.Device record ShowDevices otherwise prints straight from.
-//
-// Always prints exactly one line, whether or not anything is actually
-// mounted, so an operator running SHOW DEVICE/FULL on a disk-class device
-// sees an explicit "nothing mounted" rather than the line simply being
-// absent (which could otherwise be mistaken for a display bug rather than
-// genuine "not mounted" state).
-func (c *Console) showMountedVolume(name string) {
-	label, mounted := c.Mounts.VolumeLabel(name)
-	if !mounted {
-		c.Printf("    MOUNTED=<not mounted>\n")
-
-		return
-	}
-
-	access := "READ/WRITE"
-	if !c.Mounts.Writable(name) {
-		access = "READ ONLY"
-	}
-
-	c.Printf("    MOUNTED=%s (%s)\n", label, access)
-}

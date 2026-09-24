@@ -66,8 +66,12 @@ func TestConsoleDefineAndShowDevices(t *testing.T) {
 	
 	out := buf.String()
 
-	if !strings.Contains(out, "CYLINDERS=512") || !strings.Contains(out, "VOLNAME=SYSTEM") {
-		t.Errorf("ShowDevices /FULL output missing detail fields: %q", out)
+	if !strings.Contains(out, "Disk DKA0:, is online, file-oriented device.") {
+		t.Errorf("ShowDevices /FULL output missing the VMS-style disk header: %q", out)
+	}
+
+	if !strings.Contains(out, `Volume label               "SYSTEM"`) {
+		t.Errorf("ShowDevices /FULL output missing the (static, unmounted) volume label: %q", out)
 	}
 
 	buf.Reset()

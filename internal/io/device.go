@@ -37,6 +37,55 @@ func DeviceClassName(class DeviceClass) string {
 	return "<unknown>"
 }
 
+// deviceTypeNames mirrors testdata/dcl/evax.dcl's dev_type keyword
+// table id-for-id (rk06=1, rk07=2, ... vt100=96) -- the same numbers the
+// DCL grammar already assigns to DEFINE/DEVICE/DEVTYPE=, restated here so
+// Go code can turn a stored DevType back into its display name (e.g.
+// SHOW DEVICE/FULL's "device type RA81" clause) without depending on the
+// grammar package.
+var deviceTypeNames = map[uint32]string{
+	1:  "RK06",
+	2:  "RK07",
+	3:  "RP04",
+	4:  "RP05",
+	5:  "RP06",
+	6:  "RM03",
+	7:  "RP07",
+	8:  "RP07HT",
+	9:  "RL01",
+	10: "RL02",
+	11: "RX02",
+	12: "RX04",
+	13: "RM80",
+	14: "TU58",
+	15: "RM05",
+	16: "RX01",
+	17: "ML11",
+	18: "RB02",
+	19: "RB80",
+	20: "RA80",
+	21: "RA81",
+	22: "RA60",
+	23: "RZ01",
+	25: "RD51",
+	26: "RX50",
+	96: "VT100",
+}
+
+// DeviceTypeName returns t's display name and true, or "", false if t
+// isn't one of the known dev_type IDs above. Unlike DeviceClassName,
+// there's no "<unknown>" fallback string: a caller like SHOW DEVICE/FULL
+// wants to omit an unknown device type's clause entirely rather than
+// print a placeholder, since — unlike device class, which every device
+// genuinely has — most devices this emulator creates (in particular,
+// MOUNT's own auto-created disk devices) never have a DevType set at
+// all.
+func DeviceTypeName(t uint32) (string, bool) {
+	name, ok := deviceTypeNames[t]
+
+	return name, ok
+}
+
 // Device is one DEFINE/DEVICE-created device record, the Go equivalent of
 // devices.c's struct DEVICE. Field names follow the qualifier names in
 // testdata/dcl/evax.dcl's define_device syntax rather than the C struct's

@@ -212,3 +212,34 @@ func TestMountTable_volumeLabel(t *testing.T) {
 		t.Error("VolumeLabel after Dismount = found, want not found")
 	}
 }
+
+// TestMountTable_volumeStats confirms VolumeStats reports "not mounted"
+// for a device with nothing attached, and real, live volume.Stats data
+// (nonzero MaxFiles/TotalBlocks, zero FileCount on a freshly initialized
+// volume) once one is mounted — internal/console/device.go's ShowDevices
+// (SHOW DEVICE/FULL) relies on this for its "Free blocks"/"Number of
+// files"/"Maximum files allowed" fields.
+func TestMountTable_volumeStats(t *testing.T) {
+	mt := NewMountTable()
+
+	if _, mounted, err := mt.VolumeStats("DUA0"); mounted || err != nil {
+		t.Errorf("VolumeStats on an empty table = mounted=%v, err=%v, want mounted=false, err=nil", mounted, err)
+	}
+
+	path := newTestVolumeFile(t, "TESTVOL")
+	if err := mt.Mount("DUA0", path, true); err != nil {
+		t.Fatalf("Mount: %v", err)
+	}
+
+	stats, mounted, err := mt.VolumeStats("dua0:")
+	if !mounted || err != nil {
+		t.Fatalf("VolumeStats after Mount = mounted=%v, err=%v, want mounted=true, err=nil", mounted, err)
+	}
+
+	if stats.FileCount != 0 {
+		t.Errorf("VolumeStats.FileCount on a freshly initialized volume = %d, want 0", stats.FileCount)
+	}
+	if stats.MaxFiles == 0 || stats.TotalBlocks == 0 {
+		t.Errorf("VolumeStats = %+v, want nonzero MaxFiles/TotalBlocks", stats)
+	}
+}

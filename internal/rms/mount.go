@@ -193,6 +193,32 @@ func (t *MountTable) VolumeLabel(device string) (string, bool) {
 	return entry.Volume.Devices[0].Home.VolumeName, true
 }
 
+// VolumeStats returns device's mounted volume's live space/file-count
+// statistics (github.com/tucats/ods2/volume's own Stats, read straight
+// off the on-disk bitmaps -- see that function's doc comment for why it
+// works whether device was mounted /WRITE or /NOWRITE), and whether
+// device currently has anything mounted at all.
+//
+// Like VolumeLabel, this reads Devices[0] on the assumption that Mount
+// (this package's own, and console's Console.Mount above it) never
+// passes more than one container -- see VolumeLabel's own doc comment.
+//
+// A false mounted return means "nothing mounted here" (the zero
+// VolumeStats, nil error). A true mounted with a non-nil error means
+// something is mounted but the on-disk scan itself failed (a corrupt or
+// unreadable volume) -- distinct from "not mounted" so a caller like
+// SHOW DEVICE/FULL can tell the two apart if it ever needs to.
+func (t *MountTable) VolumeStats(device string) (volume.VolumeStats, bool, error) {
+	entry, ok := t.mounts[normalizeDeviceName(device)]
+	if !ok {
+		return volume.VolumeStats{}, false, nil
+	}
+
+	stats, err := volume.Stats(entry.Volume.Devices[0])
+
+	return stats, true, err
+}
+
 // Writable reports whether device's mounted volume was mounted with write
 // access (Mount's own writable argument) — what a later SYS$CREATE/
 // SYS$PUT handler is expected to check before attempting to write, so

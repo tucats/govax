@@ -3,11 +3,15 @@ package console
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
 	"github.com/tucats/ods2/diskimage"
 	"github.com/tucats/ods2/volume"
@@ -218,13 +222,13 @@ func TestConsoleMountThenRemount(t *testing.T) {
 	}
 }
 
-// TestShowDevices_mountedVolumeLine confirms SHOW DEVICE/FULL's new
-// mounted-volume line (device.go's showMountedVolume) reflects live
-// c.Mounts state: absent no mount at all it reports "<not mounted>",
-// after a writable Mount it reports the real on-disk label and
-// "READ/WRITE", and after a read-only Mount it reports "READ ONLY"
-// instead -- all three read straight from internal/rms.MountTable, not
-// from any field on the internal/io.Device record itself.
+// TestShowDevices_mountedVolumeLine confirms SHOW DEVICE/FULL's disk
+// header (device.go's showDiskDeviceFull) reflects live c.Mounts state:
+// with nothing mounted it omits the mount clause entirely, after a
+// writable Mount it reports "mounted (READ/WRITE)" and the real on-disk
+// volume label, and after a read-only Mount it reports "mounted (READ
+// ONLY)" instead -- all three read straight from internal/rms.MountTable,
+// not from any field on the internal/io.Device record itself.
 func TestShowDevices_mountedVolumeLine(t *testing.T) {
 	c, buf := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
@@ -235,8 +239,8 @@ func TestShowDevices_mountedVolumeLine(t *testing.T) {
 		t.Fatalf("ShowDevices (unmounted): %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "MOUNTED=<not mounted>") {
-		t.Errorf("ShowDevices (unmounted) output = %q, want a <not mounted> MOUNTED line", buf.String())
+	if !strings.Contains(buf.String(), "Disk DUA0:, is online, file-oriented device.") {
+		t.Errorf("ShowDevices (unmounted) output = %q, want the unmounted header (no mount clause)", buf.String())
 	}
 
 	buf.Reset()
@@ -250,8 +254,11 @@ func TestShowDevices_mountedVolumeLine(t *testing.T) {
 	}
 
 	out := buf.String()
-	if !strings.Contains(out, "MOUNTED=TESTVOL (READ/WRITE)") {
-		t.Errorf("ShowDevices (writable mount) output = %q, want a TESTVOL/READ/WRITE MOUNTED line", out)
+	if !strings.Contains(out, "Disk DUA0:, is online, mounted (READ/WRITE), file-oriented device.") {
+		t.Errorf("ShowDevices (writable mount) output = %q, want a mounted (READ/WRITE) header", out)
+	}
+	if !strings.Contains(out, `Volume label               "TESTVOL"`) {
+		t.Errorf("ShowDevices (writable mount) output = %q, want the live TESTVOL volume label", out)
 	}
 
 	buf.Reset()
@@ -269,14 +276,18 @@ func TestShowDevices_mountedVolumeLine(t *testing.T) {
 	}
 
 	out = buf.String()
-	if !strings.Contains(out, "MOUNTED=TESTVOL (READ ONLY)") {
-		t.Errorf("ShowDevices (read-only mount) output = %q, want a TESTVOL/READ ONLY MOUNTED line", out)
+	if !strings.Contains(out, "Disk DUA0:, is online, mounted (READ ONLY), file-oriented device.") {
+		t.Errorf("ShowDevices (read-only mount) output = %q, want a mounted (READ ONLY) header", out)
+	}
+	if !strings.Contains(out, `Volume label               "TESTVOL"`) {
+		t.Errorf("ShowDevices (read-only mount) output = %q, want the live TESTVOL volume label", out)
 	}
 }
 
-// TestShowDevices_mountedVolumeLineOnlyForDisks confirms showMountedVolume
-// is never reached for a non-disk device -- SHOW DEVICE/FULL's MOUNTED
-// line only makes sense for the device class MOUNT actually targets.
+// TestShowDevices_mountedVolumeLineOnlyForDisks confirms showDiskDeviceFull
+// is never reached for a non-disk device -- SHOW DEVICE/FULL's VMS-style
+// disk header only makes sense for the device class MOUNT actually
+// targets; every other class still gets the plain raw-field dump.
 func TestShowDevices_mountedVolumeLineOnlyForDisks(t *testing.T) {
 	c, buf := newTestConsole(t)
 
@@ -286,8 +297,84 @@ func TestShowDevices_mountedVolumeLineOnlyForDisks(t *testing.T) {
 		t.Fatalf("ShowDevices: %v", err)
 	}
 
-	if strings.Contains(buf.String(), "MOUNTED=") {
-		t.Errorf("ShowDevices for a terminal device printed a MOUNTED line: %q", buf.String())
+	if strings.Contains(buf.String(), "is online") {
+		t.Errorf("ShowDevices for a terminal device printed the disk-only header: %q", buf.String())
+	}
+}
+
+// statValue extracts the integer value SHOW DEVICE/FULL's statRow printed
+// after label (e.g. "Number of files", "Free blocks") from out, failing
+// the test if label isn't found -- avoids hard-coding statRow's exact
+// column widths/whitespace into these assertions, which only care about
+// the reported number.
+func statValue(t *testing.T, out, label string) int {
+	t.Helper()
+
+	re := regexp.MustCompile(regexp.QuoteMeta(label) + `\s+(\d+)`)
+
+	m := re.FindStringSubmatch(out)
+	if m == nil {
+		t.Fatalf("output has no %q stat: %q", label, out)
+	}
+
+	n, err := strconv.Atoi(m[1])
+	if err != nil {
+		t.Fatalf("parsing %q value %q: %v", label, m[1], err)
+	}
+
+	return n
+}
+
+// TestShowDevices_liveStatsReflectARealFile is this reformat's end-to-end
+// check: SHOW DEVICE/FULL's "Number of files"/"Free blocks" aren't just
+// display formatting over static fields, they come from actually scanning
+// the mounted volume (internal/rms.MountTable.VolumeStats, backed by the
+// sibling ods2 module's volume.Stats) -- so creating a real file through
+// the ordinary COPY path must move both numbers.
+func TestShowDevices_liveStatsReflectARealFile(t *testing.T) {
+	c, buf := newTestConsole(t)
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.SetDefault("DUA0:"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	if err := c.ShowDevices("DUA0", true); err != nil {
+		t.Fatalf("ShowDevices (before): %v", err)
+	}
+
+	before := buf.String()
+	filesBefore := statValue(t, before, "Number of files")
+	freeBefore := statValue(t, before, "Free blocks")
+
+	if filesBefore != 0 {
+		t.Errorf("Number of files on a freshly mounted, empty volume = %d, want 0", filesBefore)
+	}
+
+	hostPath := filepath.Join(t.TempDir(), "host.txt")
+	if err := os.WriteFile(hostPath, []byte("hello\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	if err := c.Copy(hostPath, true, "BAR.TXT", false, rms.CopyOptions{}); err != nil {
+		t.Fatalf("Copy: %v", err)
+	}
+
+	buf.Reset()
+
+	if err := c.ShowDevices("DUA0", true); err != nil {
+		t.Fatalf("ShowDevices (after): %v", err)
+	}
+
+	after := buf.String()
+	filesAfter := statValue(t, after, "Number of files")
+	freeAfter := statValue(t, after, "Free blocks")
+
+	if filesAfter != filesBefore+1 {
+		t.Errorf("Number of files after creating one file = %d, want %d", filesAfter, filesBefore+1)
+	}
+	if freeAfter >= freeBefore {
+		t.Errorf("Free blocks after creating a file = %d, want fewer than before (%d)", freeAfter, freeBefore)
 	}
 }
 
