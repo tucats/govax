@@ -38,7 +38,7 @@ func TestPhase23Acceptance_fullOperatorSession(t *testing.T) {
 
 	containerPath := filepath.Join(t.TempDir(), "accept.dsk")
 
-	if err := d.Dispatch(`INITIALIZE/CONTAINER "` + containerPath + `" 800 ACCEPT01`); err != nil {
+	if err := d.Dispatch(`INITIALIZE/CONTAINER "` + containerPath + `" /SIZE=800 ACCEPT01`); err != nil {
 		t.Fatalf("Dispatch INITIALIZE/CONTAINER: %v", err)
 	}
 

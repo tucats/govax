@@ -32,6 +32,7 @@ func newTestVolumeFile(t *testing.T, label string) string {
 
 	if err := volume.Initialize(c, volume.InitializeOptions{Label: label}); err != nil {
 		_ = c.Close()
+
 		t.Fatalf("volume.Initialize: %v", err)
 	}
 
@@ -239,6 +240,7 @@ func TestMountTable_volumeStats(t *testing.T) {
 	if stats.FileCount != 0 {
 		t.Errorf("VolumeStats.FileCount on a freshly initialized volume = %d, want 0", stats.FileCount)
 	}
+	
 	if stats.MaxFiles == 0 || stats.TotalBlocks == 0 {
 		t.Errorf("VolumeStats = %+v, want nonzero MaxFiles/TotalBlocks", stats)
 	}

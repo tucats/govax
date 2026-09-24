@@ -439,7 +439,13 @@ func (d *Dispatcher) bindGrammar() {
 	// "use the default" already, so no explicit r.Present check is needed
 	// for either).
 	g.Bind("INITIALIZE_CONTAINER", func(id int64, r *dcl.Result) error {
-		return d.Console.InitializeContainer(r.String("PATH"), uint32(r.Int("SIZE")), r.String("LABEL"), uint16(r.Int("CLUSTER")))
+		return d.Console.InitializeContainer(
+			r.String("PATH"),
+			uint32(r.Int("SIZE")),
+			r.String("LABEL"),
+			uint16(r.Int("CLUSTER")),
+			r.String("DEVICE"),
+		)
 	})
 
 	// Phase 23 (docs/PHASE-23.md, subtask 5): DIRECTORY lists the files on

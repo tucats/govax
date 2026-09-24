@@ -45,8 +45,8 @@ import (
 // one of this command's own failure modes ultimately traces back to a bad
 // argument value, the same story SS$_BADPARAM tells for any other system
 // service (see SS_BADPARAM's own doc comment in internal/vmserrors).
-func (c *Console) InitializeContainer(path string, blocks uint32, label string, clusterSize uint16) error {
-	if err := rms.InitializeContainer(path, blocks, label, clusterSize); err != nil {
+func (c *Console) InitializeContainer(path string, blocks uint32, label string, clusterSize uint16, devType string) error {
+	if err := rms.InitializeContainer(path, blocks, label, clusterSize, devType); err != nil {
 		return vmserrors.Wrap(vmserrors.SS_BADPARAM, err, path)
 	}
 

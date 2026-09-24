@@ -598,6 +598,7 @@ func copyOneFileToHost(src *volume.File, outPath, sourceDisplay string, opts Cop
 	copyErr := copyToHostFile(out, src, opts, lineEnding)
 
 	var warning string
+	
 	if copyErr == nil && opts.Time {
 		if timeErr := preserveFileTime(outPath, src); timeErr != nil {
 			warning = fmt.Sprintf("could not preserve date on %s: %v", outPath, timeErr)

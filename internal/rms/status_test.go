@@ -57,6 +57,7 @@ func TestRMSStatusValuesAreDistinctAndPositive(t *testing.T) {
 // about as fundamental a fidelity requirement as this package has.
 func TestRMSNormalIsSuccess(t *testing.T) {
 	const severityMask = 0x7
+	
 	const success = 1
 
 	if got := rmsNormal & severityMask; got != success {

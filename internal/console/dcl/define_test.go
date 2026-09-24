@@ -197,8 +197,8 @@ func TestLoadEvaxGrammar_initializeVaxContainer(t *testing.T) {
 		t.Fatal("missing syntax INITIALIZE_CONTAINER")
 	}
 
-	if len(initContainer.Parameters) != 3 {
-		t.Fatalf("INITIALIZE_CONTAINER has %d parameters, want 3 (PATH, SIZE, LABEL)", len(initContainer.Parameters))
+	if len(initContainer.Parameters) != 2 {
+		t.Fatalf("INITIALIZE_CONTAINER has %d parameters, want 2 (PATH, LABEL)", len(initContainer.Parameters))
 	}
 
 	if _, _, err := initContainer.qualifier("CLUSTER"); err != nil {

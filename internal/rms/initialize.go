@@ -2,7 +2,10 @@ package rms
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/vmserrors"
 	"github.com/tucats/ods2/diskimage"
 	"github.com/tucats/ods2/volume"
 )
@@ -62,7 +65,23 @@ import (
 // (initialize.go) is what translates that into a real, numbered VMS
 // status for the operator to see (docs/PHASE-23.md's "Status-code / error
 // translation" design section).
-func InitializeContainer(path string, blocks uint32, label string, clusterSize uint16) error {
+func InitializeContainer(path string, blocks uint32, label string, clusterSize uint16, devType string) error {
+	// If blocks were not specified, but a known device type was given, use it's max block
+	// size as the container size. If the device was specified but is invalid, complain that
+	// it's a bad device name. Otherwise, complain that SIZE was invalid/missing.
+	if blocks == 0 {
+		if devType != "" {
+			devType = strings.ToUpper(devType)
+			if devOptions, ok := io.KnownDeviceOptions[devType]; ok {
+				blocks = devOptions.MaxBlock
+			} else {
+				return vmserrors.New(vmserrors.CLI_BADQUALIFIER, "DEVICE")
+			}
+		} else {
+			return vmserrors.New(vmserrors.CLI_BADQUALIFIER, "SIZE")
+		}
+	}
+
 	c, err := diskimage.Create(path, blocks)
 	if err != nil {
 		return fmt.Errorf("rms: initializing %s: %w", path, err)

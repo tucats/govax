@@ -21,7 +21,7 @@ func mountFreshContainer(t *testing.T, c *Console, device string) {
 
 	path := filepath.Join(t.TempDir(), "dir.dsk")
 
-	if err := c.InitializeContainer(path, 400, "DIRVOL", 0); err != nil {
+	if err := c.InitializeContainer(path, 400, "DIRVOL", 0, "RD54"); err != nil {
 		t.Fatalf("InitializeContainer: %v", err)
 	}
 

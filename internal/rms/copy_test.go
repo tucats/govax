@@ -741,6 +741,7 @@ func TestSessionCopy_ignoreRecoversFromCorruptRecord(t *testing.T) {
 	s, vol := newCopyTestSession(t)
 
 	const corrupt = "line one\r\nbroken\r"
+	
 	createFormattedTestFile(t, vol, "CORRUPT.TXT", corrupt, ondisk.RecordFormatStreamCRLF)
 
 	outPath := filepath.Join(t.TempDir(), "ignored.out")

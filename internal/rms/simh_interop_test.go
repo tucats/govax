@@ -119,6 +119,7 @@ func TestSimhInterop_readRealVMSDisk(t *testing.T) {
 		// responsible for closing it again itself, or the open file
 		// handle leaks.
 		_ = container.Close()
+		
 		t.Fatalf("volume.Mount(%s): %v", path, err)
 	}
 

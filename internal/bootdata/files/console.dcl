@@ -56,6 +56,20 @@ grammar console
         keyword	rz01		/id=23
         keyword rd51		/id=25
         keyword rx50		/id=26
+        keyword RX33        /id=27
+        keyword rd31        /id=28
+        keyword RD52        /id=29
+        keyword RD32        /id=30
+        keyword RD33        /id=31
+        keyword RD53        /id=32
+        keyword RD54        /id=33
+        keyword RA70        /id=34
+        keyword RA82        /id=35
+        keyword RA71        /id=36
+        keyword RA72        /id=37
+        keyword RA90        /id=38
+        keyword RA92        /id=39
+        keyword RA73        /id=40
         keyword vt100		/id=96
         
     syntax define_device
@@ -519,15 +533,16 @@ grammar console
     syntax initialize_container/id=805
 
         parameter   path/id=806                 -
-                    /type=$string                -
+                    /type=$string               -
                     /prompt="Container file"
-        parameter   size/id=807                 -
-                    /type=$integer               -
-                    /prompt="Size in blocks"
         parameter   label/id=808                -
                     /type=$string
-        qualifier   cluster/id=809               -
+        qualifier   size/id=807                 -
                     /type=$integer
+        qualifier   cluster/id=809              -
+                    /type=$integer
+        qualifier   device/id=810               -
+                    /type=$string
 
     !
     ! govax-native extension (Phase 23, internal/rms + internal/console):

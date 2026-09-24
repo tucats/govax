@@ -181,6 +181,7 @@ func TestSysConnect_reusesExistingWriter(t *testing.T) {
 
 	// A second RAB, connecting to the same already-open file.
 	const secondRabAddr = testRabAddr + 0x100
+	
 	putLongwordAt(t, f.ctx, secondRabAddr+rabFAB, testFabAddr)
 
 	if _, err := SysConnect(f.ctx, []uint32{secondRabAddr}); err != nil {

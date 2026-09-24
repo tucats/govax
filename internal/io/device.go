@@ -69,6 +69,20 @@ var deviceTypeNames = map[uint32]string{
 	23: "RZ01",
 	25: "RD51",
 	26: "RX50",
+	27: "RX33",
+	28: "RD31",
+	29: "RD52",
+	30: "RD32",
+	31: "RD33",
+	32: "RD53",
+	33: "RD54",
+	34: "RA70",
+	35: "RA82",
+	36: "RA71",
+	37: "RA72",
+	38: "RA90",
+	39: "RA92",
+	40: "RA73",
 	96: "VT100",
 }
 
@@ -156,6 +170,128 @@ type DeviceTable struct {
 	devices []*Device
 }
 
+// KnownDeviceOptions is the default-geometry dictionary Define falls back to for
+// well-known disk device types when a DEFINE/DEVICE qualifier didn't
+// specify Cylinders/Sectors/MaxBlock explicitly. Values come from
+// reference/vms/disk-devices.md (sec/cyl/LBNs columns -> Sectors/Cylinders/
+// MaxBlock); that chart's "surf" column has no equivalent field here.
+var KnownDeviceOptions = map[string]DeviceOptions{
+	"RX50": {
+		Cylinders: 80,
+		Sectors:   10,
+		MaxBlock:  800,
+		DevClass:  DeviceClassDisk,
+	},
+	"RX33": {
+		Sectors:   15,
+		Cylinders: 80,
+		MaxBlock:  2400,
+		DevClass:  DeviceClassDisk,
+	},
+	"RD51": {
+		Sectors:   18,
+		Cylinders: 306,
+		MaxBlock:  21600,
+		DevClass:  DeviceClassDisk,
+	},
+	"RD31": {
+		Sectors:   17,
+		Cylinders: 615,
+		MaxBlock:  41560,
+		DevClass:  DeviceClassDisk,
+	},
+	"RD52": {
+		Sectors:   17,
+		Cylinders: 512,
+		MaxBlock:  60480,
+		DevClass:  DeviceClassDisk,
+	},
+	"RD32": {
+		Sectors:   17,
+		Cylinders: 820,
+		MaxBlock:  83204,
+		DevClass:  DeviceClassDisk,
+	},
+	"RD33": {
+		Sectors:   17,
+		Cylinders: 1170,
+		MaxBlock:  138565,
+		DevClass:  DeviceClassDisk,
+	},
+	"RD53": {
+		Sectors:   17,
+		Cylinders: 1024,
+		MaxBlock:  138672,
+		DevClass:  DeviceClassDisk,
+	},
+	"RD54": {
+		Sectors:   17,
+		Cylinders: 1225,
+		MaxBlock:  311200,
+		DevClass:  DeviceClassDisk,
+	},
+	"RA60": {
+		Sectors:   42,
+		Cylinders: 1600,
+		MaxBlock:  400176,
+		DevClass:  DeviceClassDisk,
+	},
+	"RA70": {
+		Sectors:   33,
+		Cylinders: 1507,
+		MaxBlock:  547041,
+		DevClass:  DeviceClassDisk,
+	},
+	"RA80": {
+		Sectors:   31,
+		Cylinders: 546,
+		MaxBlock:  237212,
+		DevClass:  DeviceClassDisk,
+	},
+	"RA81": {
+		Sectors:   51,
+		Cylinders: 1258,
+		MaxBlock:  891072,
+		DevClass:  DeviceClassDisk,
+	},
+	"RA82": {
+		Sectors:   57,
+		Cylinders: 1435,
+		MaxBlock:  1216665,
+		DevClass:  DeviceClassDisk,
+	},
+	"RA71": {
+		Sectors:   51,
+		Cylinders: 1921,
+		MaxBlock:  1367310,
+		DevClass:  DeviceClassDisk,
+	},
+	"RA72": {
+		Sectors:   51,
+		Cylinders: 1921,
+		MaxBlock:  1953300,
+		DevClass:  DeviceClassDisk,
+	},
+	"RA90": {
+		Sectors:   69,
+		Cylinders: 2656,
+		MaxBlock:  2376153,
+		DevClass:  DeviceClassDisk,
+	},
+	"RA92": {
+		Sectors:   73,
+		Cylinders: 3101,
+		MaxBlock:  2940951,
+		DevClass:  DeviceClassDisk,
+	},
+	"RA73": {
+		Sectors:   70,
+		Cylinders: 2667,
+		MaxBlock:  3920490,
+		DevClass:  DeviceClassDisk,
+	},
+}
+
 // NewDeviceTable returns an empty device table (matching devices == 0L).
 func NewDeviceTable() *DeviceTable { return &DeviceTable{} }
 
@@ -173,7 +309,7 @@ func normalizeDeviceName(name string) string {
 // this struct's zero value, so there's nothing to set explicitly for them.
 func (t *DeviceTable) Define(name string, opts DeviceOptions) *Device {
 	d := &Device{
-		Name:        name,
+		Name:        strings.ToUpper(name),
 		Cluster:     opts.Cluster,
 		Cylinders:   opts.Cylinders,
 		DevBufSize:  opts.DevBufSize,
@@ -196,6 +332,28 @@ func (t *DeviceTable) Define(name string, opts DeviceOptions) *Device {
 		MediaType:   opts.MediaType,
 		RootDevName: opts.RootDevName,
 	}
+
+	// Before we quit, if the user didn't specify something explicit
+	// and it's a well-known device, set it's physical attributes from
+	// default device dictionary.
+	if defs, ok := KnownDeviceOptions[strings.ToUpper(name)]; ok {
+		if d.DevClass == 0 {
+			d.DevClass = defs.DevClass
+		}
+
+		if d.Cylinders == 0 {
+			d.Cylinders = defs.Cylinders
+		}
+
+		if d.MaxBlock == 0 {
+			d.MaxBlock = defs.MaxBlock
+		}
+
+		if d.Sectors == 0 {
+			d.Sectors = defs.Sectors
+		}
+	}
+
 	t.devices = append([]*Device{d}, t.devices...)
 
 	return d
@@ -221,6 +379,6 @@ func (t *DeviceTable) Find(name string) (*Device, bool) {
 func (t *DeviceTable) All() []*Device {
 	out := make([]*Device, len(t.devices))
 	copy(out, t.devices)
-	
+
 	return out
 }

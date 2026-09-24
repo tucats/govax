@@ -86,7 +86,7 @@ func TestParse_showAbbreviated(t *testing.T) {
 
 func TestParse_clearBreakpointRestOfLine(t *testing.T) {
 	g := loadEvaxGrammar(t)
-	
+
 	r, err := g.Parse("CLEAR BREAKPOINT 200")
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
@@ -379,7 +379,7 @@ func TestParse_initAbbreviatesInitialize(t *testing.T) {
 func TestParse_initializeContainerStub(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
-	r, err := g.Parse(`INITIALIZE/CONTAINER "disk1.dsk" 10000 MYVOL/CLUSTER=2`)
+	r, err := g.Parse(`INITIALIZE/CONTAINER "disk1.dsk" /size=10000 MYVOL/CLUSTER=2`)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}

@@ -429,7 +429,7 @@ $INIT,/CON
 
     Syntax:
 
-        INITIALIZE/CONTAINER <file> <size> [label] [/CLUSTER=<n>]
+        INITIALIZE/CONTAINER <file> [label] [/SIZE=<n>] [/DEVICE=<dev>] [/CLUSTER=<n>]
 
     Parameters:
 
@@ -449,9 +449,15 @@ $INIT,/CON
         /CLUSTER=<n>    The number of blocks per storage cluster.  If
                         omitted, the volume uses 1-block clusters.
 
+        /DEVICE=<dev>   Specify the VAX device type for this container,
+                        which sets the maximum block count.
+        
+        /SIZE=<n>       Specify the maximum block count for the container.
+                        This is required if /DEVICE is not specified.
+
     Example:
 
-        INITIALIZE/CONTAINER "newdisk.dsk" 20000 WORK01
+        INITIALIZE/CONTAINER "newdisk.dsk" /DEVICE=RD54 WORK01
 
     See also the help for INITIALIZE, INITIALIZE/VAX, and MOUNT.
 

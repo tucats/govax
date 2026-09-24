@@ -20,7 +20,7 @@ func TestConsoleInitializeContainer_buildsAMountableVolume(t *testing.T) {
 	c, _ := newTestConsole(t)
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
-	if err := c.InitializeContainer(path, 400, "TESTVOL", 0); err != nil {
+	if err := c.InitializeContainer(path, 400, "TESTVOL", 0, "RD54"); err != nil {
 		t.Fatalf("InitializeContainer: %v", err)
 	}
 
@@ -42,7 +42,7 @@ func TestConsoleInitializeContainer_badPath(t *testing.T) {
 	c, _ := newTestConsole(t)
 	path := filepath.Join(t.TempDir(), "no-such-directory", "new.dsk")
 
-	err := c.InitializeContainer(path, 400, "TESTVOL", 0)
+	err := c.InitializeContainer(path, 400, "TESTVOL", 0, "RD54")
 	if err == nil {
 		t.Fatal("InitializeContainer with a nonexistent parent directory = nil error, want SS_BADPARAM")
 	}
@@ -60,7 +60,8 @@ func TestConsoleInitializeContainer_zeroBlocks(t *testing.T) {
 	c, _ := newTestConsole(t)
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
-	err := c.InitializeContainer(path, 0, "TESTVOL", 0)
+	// IF no device is given, then no default size is allowed.
+	err := c.InitializeContainer(path, 0, "TESTVOL", 0, "")
 	if err == nil {
 		t.Fatal("InitializeContainer with blocks=0 = nil error, want SS_BADPARAM")
 	}
@@ -89,7 +90,7 @@ func TestDispatch_initializeContainerViaDCL(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
-	if err := d.Dispatch(fmt.Sprintf(`INITIALIZE/CONTAINER "%s" 400 TESTVOL`, path)); err != nil {
+	if err := d.Dispatch(fmt.Sprintf(`INITIALIZE/CONTAINER "%s" /size=400 TESTVOL`, path)); err != nil {
 		t.Fatalf("Dispatch INITIALIZE/CONTAINER: %v", err)
 	}
 
@@ -114,7 +115,7 @@ func TestDispatch_initializeContainerAbbreviatedViaDCL(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
-	if err := d.Dispatch(fmt.Sprintf(`INIT/CONTAINER "%s" 400 TESTVOL`, path)); err != nil {
+	if err := d.Dispatch(fmt.Sprintf(`INIT/CONTAINER "%s" /size=400 TESTVOL`, path)); err != nil {
 		t.Fatalf("Dispatch INIT/CONTAINER: %v", err)
 	}
 }
@@ -128,7 +129,7 @@ func TestDispatch_initializeContainerDoesNotMount(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
-	if err := d.Dispatch(fmt.Sprintf(`INITIALIZE/CONTAINER "%s" 400 TESTVOL`, path)); err != nil {
+	if err := d.Dispatch(fmt.Sprintf(`INITIALIZE/CONTAINER "%s" /size=400 TESTVOL`, path)); err != nil {
 		t.Fatalf("Dispatch INITIALIZE/CONTAINER: %v", err)
 	}
 
@@ -148,7 +149,7 @@ func TestDispatch_initializeContainerDefaultCluster(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
-	if err := d.Dispatch(fmt.Sprintf(`INITIALIZE/CONTAINER "%s" 400`, path)); err != nil {
+	if err := d.Dispatch(fmt.Sprintf(`INITIALIZE/CONTAINER "%s" /size=400`, path)); err != nil {
 		t.Fatalf("Dispatch INITIALIZE/CONTAINER with no label/cluster: %v", err)
 	}
 }
