@@ -1,6 +1,8 @@
 package console
 
 import (
+	"strings"
+
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -76,5 +78,20 @@ func (c *Console) decodeInstruction(r asm.ByteReader, pc uint32) (asm.Decoded, e
 		}, nil
 	}
 
-	return asm.Disassemble(r, pc)
+	// Decode the instruction
+	instr, err := asm.Disassemble(r, pc)
+
+	// IF it was a CALLS or CALLG to a fixed address that is an entry point address,
+	// we can substitute the symbol name.
+	if instr.Mnemonic == "CALLS" || instr.Mnemonic == "CALLG" {
+		if len(instr.Operands) > 1 {
+			if strings.HasPrefix(instr.Operands[1], "@#") {
+				if name, ok := c.Symbols.EntryAt(instr.Values[1]); ok {
+					instr.Operands[1] = "@#" + name
+				}
+			}
+		}
+	}
+
+	return instr, err
 }

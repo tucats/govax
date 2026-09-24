@@ -40,6 +40,7 @@ var regNames = [16]string{
 type Decoded struct {
 	Mnemonic string
 	Operands []string
+	Values   []uint32
 	Length   uint32
 }
 
@@ -100,12 +101,13 @@ func Disassemble(r ByteReader, pc uint32) (Decoded, error) {
 	dec := Decoded{Mnemonic: inst.Name}
 
 	for i := 0; i < inst.OperandCount; i++ {
-		text, err := formatOperand(r, &pc, inst.Access[i], inst.Scale[i], inst.Type, false)
+		text, value, err := formatOperand(r, &pc, inst.Access[i], inst.Scale[i], inst.Type, false)
 		if err != nil {
 			return Decoded{}, err
 		}
 
 		dec.Operands = append(dec.Operands, text)
+		dec.Values = append(dec.Values, value)
 	}
 
 	dec.Length = pc - start
@@ -196,13 +198,13 @@ func formatFloatValue(f float64) string {
 // recursive call formatting Indexed mode's own base operand, to reject
 // Indexed mode nested inside itself the same way internal/cpu's
 // decodeOperand does.
-func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, litType cpu.ShortLiteralType, indexed bool) (string, error) {
+func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, litType cpu.ShortLiteralType, indexed bool) (string, uint32, error) {
 	switch access {
 	case cpu.AccessImmediate:
 		v := loadSized(r, *pc, size)
 		*pc += uint32(size)
 
-		return "#" + formatIntHex(v, size), nil
+		return "#" + formatIntHex(v, size), v, nil
 
 	case cpu.AccessBranch:
 		raw := loadSized(r, *pc, size)
@@ -210,7 +212,7 @@ func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, li
 		*pc += uint32(size)
 		dest := uint32(int32(*pc) + disp)
 
-		return fmt.Sprintf("%08X", dest), nil
+		return fmt.Sprintf("%08X", dest), dest, nil
 	}
 
 	optype := r.ByteAt(*pc)
@@ -221,13 +223,13 @@ func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, li
 	switch {
 	case mode < 4:
 		if litType == cpu.ShortLiteralFloat {
-			return "S^#" + formatFloatValue(cpu.ShortFloat(int(optype))), nil
+			return "S^#" + formatFloatValue(cpu.ShortFloat(int(optype))), uint32(optype), nil
 		}
 
-		return fmt.Sprintf("S^#%02X", optype), nil
+		return fmt.Sprintf("S^#%02X", optype), uint32(optype), nil
 
 	case mode == 5:
-		return regNames[reg], nil
+		return regNames[reg], uint32(reg), nil
 
 	case mode >= 8 && reg == 0x0F:
 		return formatPCRelative(r, pc, mode, size, litType)
@@ -253,7 +255,7 @@ func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, li
 // a valid absolute address, so this is treated as a fixable disassembler
 // issue rather than reference behavior worth replicating — see
 // docs/PHASE-11.md.
-func formatPCRelative(r ByteReader, pc *uint32, mode byte, size int, litType cpu.ShortLiteralType) (string, error) {
+func formatPCRelative(r ByteReader, pc *uint32, mode byte, size int, litType cpu.ShortLiteralType) (string, uint32, error) {
 	switch mode {
 	case 0x08: // Immediate: I^#n
 		if litType == cpu.ShortLiteralFloat && (size == 4 || size == 8) {
@@ -269,40 +271,40 @@ func formatPCRelative(r ByteReader, pc *uint32, mode byte, size int, litType cpu
 
 			*pc += uint32(size)
 
-			return "I^#" + formatFloatValue(cpu.DecodeFloat(bits, size)), nil
+			return "I^#" + formatFloatValue(cpu.DecodeFloat(bits, size)), 0, nil
 		}
 
 		v := loadSized(r, *pc, size)
 		*pc += uint32(size)
 
-		return "I^#" + formatIntHex(v, size), nil
+		return "I^#" + formatIntHex(v, size), v, nil
 
 	case 0x09: // Absolute: @#addr
 		v := loadSized(r, *pc, 4)
 		*pc += 4
 
-		return fmt.Sprintf("@#%08X", v), nil
+		return fmt.Sprintf("@#%08X", v), v, nil
 
 	case 0x0A, 0x0B: // Byte relative [deferred]
 		raw := loadSized(r, *pc, 1)
 		*pc++
 
-		return formatPCRelTarget(*pc, signExtend(raw, 1), "B^", mode == 0x0B), nil
+		return formatPCRelTarget(*pc, signExtend(raw, 1), "B^", mode == 0x0B), raw, nil
 
 	case 0x0C, 0x0D: // Word relative [deferred]
 		raw := loadSized(r, *pc, 2)
 		*pc += 2
 
-		return formatPCRelTarget(*pc, signExtend(raw, 2), "W^", mode == 0x0D), nil
+		return formatPCRelTarget(*pc, signExtend(raw, 2), "W^", mode == 0x0D), raw, nil
 
 	case 0x0E, 0x0F: // Long relative [deferred]
 		raw := loadSized(r, *pc, 4)
 		*pc += 4
 
-		return formatPCRelTarget(*pc, signExtend(raw, 4), "L^", mode == 0x0F), nil
+		return formatPCRelTarget(*pc, signExtend(raw, 4), "L^", mode == 0x0F), raw, nil
 	}
 
-	return "", vmserrors.New(vmserrors.VAX_INTERNAL, fmt.Sprintf("unreachable PC-relative mode %X", mode))
+	return "", 0, vmserrors.New(vmserrors.VAX_INTERNAL, fmt.Sprintf("unreachable PC-relative mode %X", mode))
 }
 
 func formatPCRelTarget(pc uint32, disp int32, prefix string, deferred bool) string {
@@ -318,54 +320,54 @@ func formatPCRelTarget(pc uint32, disp int32, prefix string, deferred bool) stri
 // formatGeneral formats the general-register addressing modes: Indexed,
 // Register deferred, Autodecrement, Autoincrement [deferred], and Byte/
 // Word/Long displacement (direct and deferred).
-func formatGeneral(r ByteReader, pc *uint32, mode, reg byte, access cpu.AccessKind, size int, litType cpu.ShortLiteralType, indexed bool) (string, error) {
+func formatGeneral(r ByteReader, pc *uint32, mode, reg byte, access cpu.AccessKind, size int, litType cpu.ShortLiteralType, indexed bool) (string, uint32, error) {
 	rn := regNames[reg]
 
 	switch mode {
 	case 0x04: // Indexed: base[Rx]
 		if indexed {
-			return "", vmserrors.New(vmserrors.VAX_INDEXNEST)
+			return "", 0, vmserrors.New(vmserrors.VAX_INDEXNEST)
 		}
 
-		base, err := formatOperand(r, pc, access, size, litType, true)
+		base, value, err := formatOperand(r, pc, access, size, litType, true)
 		if err != nil {
-			return "", err
+			return "", 0, err
 		}
 
-		return base + "[" + rn + "]", nil
+		return base + "[" + rn + "]", value, nil
 
 	case 0x06: // Register deferred: (Rn)
-		return "(" + rn + ")", nil
+		return "(" + rn + ")", uint32(reg), nil
 
 	case 0x07: // Autodecrement: -(Rn)
-		return "-(" + rn + ")", nil
+		return "-(" + rn + ")", uint32(reg), nil
 
 	case 0x08: // Autoincrement: (Rn)+
-		return "(" + rn + ")+", nil
+		return "(" + rn + ")+", uint32(reg), nil
 
 	case 0x09: // Autoincrement deferred: @(Rn)+
-		return "@(" + rn + ")+", nil
+		return "@(" + rn + ")+", uint32(reg), nil
 
 	case 0x0A, 0x0B: // Byte displacement [deferred]: B^n(Rn) / @B^n(Rn)
 		raw := loadSized(r, *pc, 1)
 		*pc++
 
-		return formatDisplacement("B^", raw, 1, rn, mode == 0x0B), nil
+		return formatDisplacement("B^", raw, 1, rn, mode == 0x0B), raw, nil
 
 	case 0x0C, 0x0D: // Word displacement [deferred]
 		raw := loadSized(r, *pc, 2)
 		*pc += 2
 
-		return formatDisplacement("W^", raw, 2, rn, mode == 0x0D), nil
+		return formatDisplacement("W^", raw, 2, rn, mode == 0x0D), raw, nil
 
 	case 0x0E, 0x0F: // Long displacement [deferred]
 		raw := loadSized(r, *pc, 4)
 		*pc += 4
 
-		return formatDisplacement("L^", raw, 4, rn, mode == 0x0F), nil
+		return formatDisplacement("L^", raw, 4, rn, mode == 0x0F), raw, nil
 	}
 
-	return "", vmserrors.New(vmserrors.VAX_INTERNAL, fmt.Sprintf("unreachable addressing mode %X", mode))
+	return "", 0, vmserrors.New(vmserrors.VAX_INTERNAL, fmt.Sprintf("unreachable addressing mode %X", mode))
 }
 
 func formatDisplacement(prefix string, raw uint32, size int, rn string, deferred bool) string {

@@ -1264,8 +1264,8 @@ func (a *Assembler) pseudoP1Vector(c *cursor) error {
 
 	a.scopeSymbols()
 
-	min := uint32(0x7FFFFFFF)
-	max := uint32(0)
+	minValue := uint32(0x7FFFFFFF)
+	maxValue := uint32(0)
 
 	for _, e := range vmsdef.P1VectorTable {
 		flags := SymEntry
@@ -1311,22 +1311,22 @@ func (a *Assembler) pseudoP1Vector(c *cursor) error {
 			return err
 		}
 
-		if e.Addr > max {
-			max = e.Addr
+		if e.Addr > maxValue {
+			maxValue = e.Addr
 		}
 
-		if e.Addr < min {
-			min = e.Addr
+		if e.Addr < minValue {
+			minValue = e.Addr
 		}
 	}
 
-	if err := a.setSymbol("EXE$P1_VECTOR_BASE", min, SymNone, false); err != nil {
+	if err := a.setSymbol("EXE$P1_VECTOR_BASE", minValue, SymNone, false); err != nil {
 		return err
 	}
 
-	a.p1VectorBase, a.p1VectorEnd, a.p1VectorSet = min, max+5, true
+	a.p1VectorBase, a.p1VectorEnd, a.p1VectorSet = minValue, maxValue+5, true
 
-	return a.setSymbol("EXE$P1_VECTOR_END", max, SymNone, false)
+	return a.setSymbol("EXE$P1_VECTOR_END", maxValue, SymNone, false)
 }
 
 // pseudoRMSDEF assembles .RMSDEF — this port's combined equivalent of real
