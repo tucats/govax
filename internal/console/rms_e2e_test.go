@@ -29,6 +29,7 @@ func mountFreshRMSVolume(t *testing.T, c *Console) {
 
 	if err := volume.Initialize(container, volume.InitializeOptions{Label: "TESTVOL"}); err != nil {
 		_ = container.Close()
+		
 		t.Fatalf("volume.Initialize: %v", err)
 	}
 

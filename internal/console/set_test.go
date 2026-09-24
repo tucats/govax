@@ -563,6 +563,7 @@ func TestShowCPU(t *testing.T) {
 	c, buf := newTestConsole(t)
 	c.CPU.SetPR(vax.SBR, 0x11223344)
 	c.DepositAddr = 0x00000200
+	
 	buf.Reset()
 
 	if err := c.ShowCPU(); err != nil {

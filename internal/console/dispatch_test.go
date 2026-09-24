@@ -236,6 +236,7 @@ func TestDispatch_callStepQualifier(t *testing.T) {
 func TestDispatch_callStepStopsAfterOneInstruction(t *testing.T) {
 	c := newRunnableConsole(t)
 	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
+	
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g, nil)
 

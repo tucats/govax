@@ -38,6 +38,7 @@ func newTestContainer(t *testing.T, label string) string {
 
 	if err := volume.Initialize(c, volume.InitializeOptions{Label: label}); err != nil {
 		_ = c.Close()
+
 		t.Fatalf("volume.Initialize: %v", err)
 	}
 
@@ -257,6 +258,7 @@ func TestShowDevices_mountedVolumeLine(t *testing.T) {
 	if !strings.Contains(out, "Disk DUA0:, is online, mounted (READ/WRITE), file-oriented device.") {
 		t.Errorf("ShowDevices (writable mount) output = %q, want a mounted (READ/WRITE) header", out)
 	}
+
 	if !strings.Contains(out, `Volume label               "TESTVOL"`) {
 		t.Errorf("ShowDevices (writable mount) output = %q, want the live TESTVOL volume label", out)
 	}
@@ -279,6 +281,7 @@ func TestShowDevices_mountedVolumeLine(t *testing.T) {
 	if !strings.Contains(out, "Disk DUA0:, is online, mounted (READ ONLY), file-oriented device.") {
 		t.Errorf("ShowDevices (read-only mount) output = %q, want a mounted (READ ONLY) header", out)
 	}
+
 	if !strings.Contains(out, `Volume label               "TESTVOL"`) {
 		t.Errorf("ShowDevices (read-only mount) output = %q, want the live TESTVOL volume label", out)
 	}
@@ -373,6 +376,7 @@ func TestShowDevices_liveStatsReflectARealFile(t *testing.T) {
 	if filesAfter != filesBefore+1 {
 		t.Errorf("Number of files after creating one file = %d, want %d", filesAfter, filesBefore+1)
 	}
+	
 	if freeAfter >= freeBefore {
 		t.Errorf("Free blocks after creating a file = %d, want fewer than before (%d)", freeAfter, freeBefore)
 	}

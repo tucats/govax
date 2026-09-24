@@ -108,6 +108,7 @@ func (c *Console) showDiskDeviceFull(d *iodev.Device) {
 	}
 
 	mountClause := ""
+	
 	if mounted {
 		access := "READ ONLY"
 		if c.Mounts.Writable(d.Name) {
@@ -134,7 +135,7 @@ func (c *Console) showDiskDeviceFull(d *iodev.Device) {
 // field on genuine VMS output, e.g. the wider value field "Volume label"
 // needs for its quoted string).
 func (c *Console) statRow(label1 string, val1 any, label2 string, val2 any) {
-	c.Printf("    %-27s%5v    %-27s%12v\n", label1, val1, label2, val2)
+	c.Printf("    %-27s%12v    %-27s%12v\n", label1, val1, label2, val2)
 }
 
 // DefineLogical implements the DEFINE/LOGICAL console command
