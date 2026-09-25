@@ -12,6 +12,12 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
+const (
+	testData        = "abc"
+	twoLineTestData = "line one\nline two\n"
+	dub0TestDevice  = "DUB0"
+)
+
 // newCopyTestSession builds a fresh, writable, mounted test volume (device
 // DUA0, reusing newTestVolumeFile from mount_test.go, with the operator's
 // current default already pointed at it via SetDefault) pre-populated with
@@ -35,7 +41,7 @@ func newCopyTestSession(t *testing.T) (*Session, *volume.Volume) {
 		t.Fatal("Lookup(DUA0) after Mount = not found")
 	}
 
-	createTestFile(t, vol, "FOO.TXT", "line one\nline two\n")
+	createTestFile(t, vol, "FOO.TXT", twoLineTestData)
 	createTestFile(t, vol, "DUP.TXT", "version one")
 	createTestFile(t, vol, "DUP.TXT", "version two")
 
@@ -124,8 +130,8 @@ func TestSessionCopy_volumeToVolume(t *testing.T) {
 		t.Fatalf("Type(BAR.TXT): %v", err)
 	}
 
-	if text != "line one\nline two\n" {
-		t.Errorf("copied content = %q, want %q", text, "line one\nline two\n")
+	if text != twoLineTestData {
+		t.Errorf("copied content = %q, want %q", text, twoLineTestData)
 	}
 }
 
@@ -151,8 +157,8 @@ func TestSessionCopy_volumeToVolumeInheritsSourceName(t *testing.T) {
 		t.Fatalf("Type(FOO.TXT;2): %v", err)
 	}
 
-	if text != "line one\nline two\n" {
-		t.Errorf("copied content = %q, want %q", text, "line one\nline two\n")
+	if text != twoLineTestData {
+		t.Errorf("copied content = %q, want %q", text, twoLineTestData)
 	}
 }
 
@@ -303,8 +309,8 @@ func TestSessionCopy_toHost(t *testing.T) {
 		t.Fatalf("ReadFile: %v", err)
 	}
 
-	if string(got) != "line one\nline two\n" {
-		t.Errorf("copied content = %q, want %q", got, "line one\nline two\n")
+	if string(got) != twoLineTestData {
+		t.Errorf("copied content = %q, want %q", got, twoLineTestData)
 	}
 }
 
@@ -460,8 +466,8 @@ func TestSessionCopy_sourceNotMounted(t *testing.T) {
 		t.Fatalf("Copy error = %v, want *NotMountedError", err)
 	}
 
-	if notMounted.Device != "DUB0" {
-		t.Errorf("NotMountedError.Device = %q, want %q", notMounted.Device, "DUB0")
+	if notMounted.Device != dub0TestDevice {
+		t.Errorf("NotMountedError.Device = %q, want %q", notMounted.Device, dub0TestDevice)
 	}
 }
 
@@ -480,8 +486,8 @@ func TestSessionCopy_destNotMounted(t *testing.T) {
 		t.Fatalf("Copy error = %v, want *NotMountedError", err)
 	}
 
-	if notMounted.Device != "DUB0" {
-		t.Errorf("NotMountedError.Device = %q, want %q", notMounted.Device, "DUB0")
+	if notMounted.Device != dub0TestDevice {
+		t.Errorf("NotMountedError.Device = %q, want %q", notMounted.Device, dub0TestDevice)
 	}
 }
 
@@ -598,7 +604,7 @@ func readRawVolumeFile(t *testing.T, vol *volume.Volume, fullName string) []byte
 func TestSessionCopy_binaryVolumeToVolume(t *testing.T) {
 	s, vol := newCopyTestSession(t)
 
-	createTestFile(t, vol, "RAW.TXT", "abc")
+	createTestFile(t, vol, "RAW.TXT", testData)
 
 	if _, err := s.Copy("RAW.TXT", false, "RAWCOPY.TXT", false, CopyOptions{Binary: true}); err != nil {
 		t.Fatalf("Copy: %v", err)
@@ -606,8 +612,8 @@ func TestSessionCopy_binaryVolumeToVolume(t *testing.T) {
 
 	text := readRawVolumeFile(t, vol, "RAWCOPY.TXT")
 
-	if string(text) != "abc" {
-		t.Errorf("binary-copied content = %q, want exactly %q (no appended line ending)", text, "abc")
+	if string(text) != testData {
+		t.Errorf("binary-copied content = %q, want exactly %q (no appended line ending)", text, testData)
 	}
 }
 
@@ -617,7 +623,7 @@ func TestSessionCopy_binaryFromHost(t *testing.T) {
 	s, vol := newCopyTestSession(t)
 
 	hostPath := filepath.Join(t.TempDir(), "raw.dat")
-	if err := os.WriteFile(hostPath, []byte("abc"), 0o644); err != nil {
+	if err := os.WriteFile(hostPath, []byte(testData), 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
@@ -627,8 +633,8 @@ func TestSessionCopy_binaryFromHost(t *testing.T) {
 
 	text := readRawVolumeFile(t, vol, "RAWFROMHOST.DAT")
 
-	if string(text) != "abc" {
-		t.Errorf("binary-copied content = %q, want exactly %q", text, "abc")
+	if string(text) != testData {
+		t.Errorf("binary-copied content = %q, want exactly %q", text, testData)
 	}
 }
 
@@ -639,7 +645,7 @@ func TestSessionCopy_binaryFromHost(t *testing.T) {
 func TestSessionCopy_binaryToHost(t *testing.T) {
 	s, vol := newCopyTestSession(t)
 
-	createTestFile(t, vol, "RAW.TXT", "abc")
+	createTestFile(t, vol, "RAW.TXT", testData)
 
 	outPath := filepath.Join(t.TempDir(), "raw.out")
 
@@ -652,8 +658,8 @@ func TestSessionCopy_binaryToHost(t *testing.T) {
 		t.Fatalf("ReadFile: %v", err)
 	}
 
-	if string(got) != "abc" {
-		t.Errorf("binary-copied host content = %q, want exactly %q (no appended line ending)", got, "abc")
+	if string(got) != testData {
+		t.Errorf("binary-copied host content = %q, want exactly %q (no appended line ending)", got, testData)
 	}
 }
 
@@ -741,7 +747,7 @@ func TestSessionCopy_ignoreRecoversFromCorruptRecord(t *testing.T) {
 	s, vol := newCopyTestSession(t)
 
 	const corrupt = "line one\r\nbroken\r"
-	
+
 	createFormattedTestFile(t, vol, "CORRUPT.TXT", corrupt, ondisk.RecordFormatStreamCRLF)
 
 	outPath := filepath.Join(t.TempDir(), "ignored.out")
@@ -803,7 +809,7 @@ func TestSessionCopy_time(t *testing.T) {
 	// call); a generous one-minute tolerance avoids flakiness from VMS
 	// time's own coarser-than-Go encoding/rounding without weakening the
 	// check into a no-op.
-	if diff := info.ModTime().Sub(time.Now()); diff > time.Minute || diff < -time.Minute {
+	if diff := time.Until(info.ModTime()); diff > time.Minute || diff < -time.Minute {
 		t.Errorf("copied file's mtime = %v, want close to now (source's own revision date)", info.ModTime())
 	}
 }

@@ -31,7 +31,7 @@ func serviceSysSetast(env *Environment, argv []uint32) (uint32, error) {
 // currently invokes it — see Environment.exitHandler's doc comment.
 func serviceSysDclexh(env *Environment, argv []uint32) (uint32, error) {
 	env.exitHandler = argv[0]
-	
+
 	return ssNormal, nil
 }
 
@@ -79,22 +79,22 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 // equivalent operation for any n actually reachable through this argument's
 // one-byte encoding, replicated per-caller below to match each service's
 // own exact operator).
-func efSlotBit(n uint32) (slot, bit uint32) {
+func eventFlagSlotBit(n uint32) (slot, bit uint32) {
 	return n / 32, n & 0x1F
 }
 
 // serviceSysClref is SYS$CLREF: clears one local event flag.
 func serviceSysClref(env *Environment, argv []uint32) (uint32, error) {
-	slot, bit := efSlotBit(argv[0] % 0x00FF)
-	env.eventFlags[slot] &^= 1 << bit
+	slot, bit := eventFlagSlotBit(argv[0] % 0x00FF)
+	env.EventFlags[slot] &^= 1 << bit
 
 	return ssNormal, nil
 }
 
 // serviceSysSetef is SYS$SETEF: sets one local event flag.
 func serviceSysSetef(env *Environment, argv []uint32) (uint32, error) {
-	slot, bit := efSlotBit(argv[0] % 0x00FF)
-	env.eventFlags[slot] |= 1 << bit
+	slot, bit := eventFlagSlotBit(argv[0] % 0x00FF)
+	env.EventFlags[slot] |= 1 << bit
 
 	return ssNormal, nil
 }
@@ -102,15 +102,15 @@ func serviceSysSetef(env *Environment, argv []uint32) (uint32, error) {
 // serviceSysReadef is SYS$READEF: optionally returns the whole 32-flag word
 // containing flag argv[0], reporting whether that flag itself was set.
 func serviceSysReadef(env *Environment, argv []uint32) (uint32, error) {
-	slot, bit := efSlotBit(argv[0] & 0x00FF)
+	slot, bit := eventFlagSlotBit(argv[0] & 0x00FF)
 
 	if len(argv) == 2 {
-		if err := env.mem.StoreLongword(env.cpu, argv[1], env.eventFlags[slot]); err != nil {
+		if err := env.mem.StoreLongword(env.cpu, argv[1], env.EventFlags[slot]); err != nil {
 			return ssAccVio, nil
 		}
 	}
 
-	if env.eventFlags[slot]&(1<<bit) != 0 {
+	if env.EventFlags[slot]&(1<<bit) != 0 {
 		return ssWasSet, nil
 	}
 
@@ -166,7 +166,7 @@ func serviceSysGetjpiw(env *Environment, argv []uint32) (uint32, error) {
 	if status != 0 {
 		return status, nil
 	}
-	
+
 	return ssNormal, nil
 }
 

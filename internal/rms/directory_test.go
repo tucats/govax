@@ -250,7 +250,7 @@ func TestSession_directoryNotMounted(t *testing.T) {
 		t.Fatalf("Directory error = %v, want a *NotMountedError", err)
 	}
 
-	if notMounted.Device != "DUB0" {
+	if notMounted.Device != dub0TestDevice {
 		t.Errorf("NotMountedError.Device = %q, want DUB0", notMounted.Device)
 	}
 }

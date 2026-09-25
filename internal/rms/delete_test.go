@@ -297,8 +297,8 @@ func TestSession_deleteNotMounted(t *testing.T) {
 		t.Fatalf("Delete error = %v, want a *NotMountedError", err)
 	}
 
-	if notMounted.Device != "DUB0" {
-		t.Errorf("NotMountedError.Device = %q, want DUB0", notMounted.Device)
+	if notMounted.Device != dub0TestDevice {
+		t.Errorf("NotMountedError.Device = %q, want %s", notMounted.Device, dub0TestDevice)
 	}
 }
 

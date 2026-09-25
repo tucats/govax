@@ -60,9 +60,9 @@ type Environment struct {
 	// directly.
 	RegionSize [3]uint32
 
-	// eventFlags is local_ef: four longwords of 32 local event flags each,
+	// EventFlags is local_ef: four longwords of 32 local event flags each,
 	// set/cleared/read by SYS$SETEF/CLREF/READEF (service_clref.go).
-	eventFlags [4]uint32
+	EventFlags [4]uint32
 
 	// exitHandler is vms_exit_handler, recorded by SYS$DCLEXH. Nothing
 	// currently invokes it (no image-exit path exists until Phase 13).
@@ -272,7 +272,7 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 		for i, a := range argv {
 			args[i] = fmt.Sprintf("%08X", a)
 		}
-		
+
 		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(SERVICES): %s( %s ), returns %08X\n",
 			entry.Name, strings.Join(args, ", "), r0)
 	}

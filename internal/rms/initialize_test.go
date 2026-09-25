@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+const testVolumnName = "TESTVOL"
+
 // TestInitializeContainer_buildsAMountableVolume confirms the happy path
 // end to end: InitializeContainer builds a container file that a following
 // MountTable.Mount can actually open, with the label it was given intact —
@@ -14,7 +16,7 @@ import (
 func TestInitializeContainer_buildsAMountableVolume(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
-	if err := InitializeContainer(path, 400, "TESTVOL", 0, "RD54"); err != nil {
+	if err := InitializeContainer(path, 400, testVolumnName, 0, "RD54"); err != nil {
 		t.Fatalf("InitializeContainer: %v", err)
 	}
 
@@ -23,7 +25,7 @@ func TestInitializeContainer_buildsAMountableVolume(t *testing.T) {
 		t.Fatalf("Mount of a freshly initialized container: %v", err)
 	}
 
-	if label, ok := mt.VolumeLabel("DUA0"); !ok || label != "TESTVOL" {
+	if label, ok := mt.VolumeLabel("DUA0"); !ok || label != testVolumnName {
 		t.Errorf("VolumeLabel(DUA0) = %q, %v, want TESTVOL, true", label, ok)
 	}
 }
@@ -57,7 +59,7 @@ func TestInitializeContainer_defaultLabel(t *testing.T) {
 func TestInitializeContainer_clusterSize(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
-	if err := InitializeContainer(path, 400, "TESTVOL", 4, "RD54"); err != nil {
+	if err := InitializeContainer(path, 400, testVolumnName, 4, "RD54"); err != nil {
 		t.Fatalf("InitializeContainer: %v", err)
 	}
 
@@ -87,7 +89,7 @@ func TestInitializeContainer_clusterSize(t *testing.T) {
 func TestInitializeContainer_notMounted(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
-	if err := InitializeContainer(path, 400, "TESTVOL", 0, "RD54"); err != nil {
+	if err := InitializeContainer(path, 400, testVolumnName, 0, "RD54"); err != nil {
 		t.Fatalf("InitializeContainer: %v", err)
 	}
 
@@ -103,7 +105,7 @@ func TestInitializeContainer_notMounted(t *testing.T) {
 func TestInitializeContainer_zeroBlocks(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
-	if err := InitializeContainer(path, 0, "TESTVOL", 0, ""); err == nil {
+	if err := InitializeContainer(path, 0, testVolumnName, 0, ""); err == nil {
 		t.Error("InitializeContainer with blocks=0 = nil error, want an error")
 	}
 }
@@ -118,7 +120,7 @@ func TestInitializeContainer_zeroBlocks(t *testing.T) {
 func TestInitializeContainer_tooSmallForVolumeLayout(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tiny.dsk")
 
-	if err := InitializeContainer(path, 5, "TESTVOL", 0, "RD54"); err == nil {
+	if err := InitializeContainer(path, 5, testVolumnName, 0, "RD54"); err == nil {
 		t.Error("InitializeContainer with a 5-block volume = nil error, want an error")
 	}
 }
@@ -131,7 +133,7 @@ func TestInitializeContainer_tooSmallForVolumeLayout(t *testing.T) {
 func TestInitializeContainer_badPath(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "no-such-directory", "new.dsk")
 
-	if err := InitializeContainer(path, 400, "TESTVOL", 0, "RD54"); err == nil {
+	if err := InitializeContainer(path, 400, testVolumnName, 0, "RD54"); err == nil {
 		t.Error("InitializeContainer with a nonexistent parent directory = nil error, want an error")
 	}
 }
