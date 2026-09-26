@@ -4,9 +4,18 @@
 ;
 ;   By Andy Valencia, 1984
 ;
-;   Minor tweaks and changes to make this work with eVAX
-;   By Tom Cole, 1999
+; Modifications:
 ;
+;   05/15/99  Tom Cole
+;   Port to run under eVAX. This involves changing a few
+;   pseudo-insstructions to the assember, and storing the
+;   code resident in the microkernel space.
+;
+;   09/26/28  Tom Cole
+;   This was written to run within the microkernel, but
+;   that was never practical. Modified run run in P0 
+;   space as a regular program, not a resident feature of
+;   the microkernel.
 ;
 ; Registers with fixed uses:
 ;   PC - Since we're using direct threading, this operates as the actual
@@ -20,7 +29,8 @@
 
     .console set radix dec
     .console set verify
-    .region s0
+    .region p0
+    .base 200
     .align 512
 ;
 ; These are the constants which are compiled into the executable code
@@ -1605,4 +1615,4 @@ _msg:	.ascid ' ." Forth initialized..." cr'
     .console clear sym/temp
     .console set radix hex
 ;    .region p0
-    
+    .end exe$forth
