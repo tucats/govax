@@ -141,6 +141,35 @@ func serviceSysAdjstk(env *Environment, argv []uint32) (uint32, error) {
 	return ssNormal, nil
 }
 
+// serviceSysAdjwsl is SYS$ADJWSL: adds the signed pagcnt to the process's
+// working-set limit and returns the result through wsetlm. A limit pushed
+// past WSEXTENT or below MINWSCNT is quietly clamped there, as the manual
+// says ("no error condition is returned"). With pagcnt 0 (or omitted)
+// nothing changes and the current limit is returned. wsetlm is optional.
+//
+// The limit is recorded in env.Process but not enforced: govax's memory
+// model has no working set.
+func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
+	pagcnt, wsetlm := int32(optArg(argv, 0)), optArg(argv, 1)
+	p := env.Process
+
+	limit := min(max(int64(p.WSLimit)+int64(pagcnt), int64(p.MinWSCount)), int64(p.WSExtent))
+	if pagcnt == 0 {
+		limit = int64(p.WSLimit)
+	}
+
+	if wsetlm != 0 {
+		if err := env.mem.StoreLongword(env.cpu, wsetlm, uint32(limit)); err != nil {
+			return ssAccVio, nil
+		}
+	}
+
+	p.WSLimit = uint32(limit)
+
+	return ssNormal, nil
+}
+
 func registerProcessServices(t *ServiceTable) {
 	t.Register("SYS$ADJSTK", serviceSysAdjstk)
+	t.Register("SYS$ADJWSL", serviceSysAdjwsl)
 }

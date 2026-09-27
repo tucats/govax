@@ -135,7 +135,7 @@ func TestServiceSysAdjstkErrors(t *testing.T) {
 func TestPhase26ServicesRegistered(t *testing.T) {
 	env, _ := fixture()
 
-	for _, name := range []string{"SYS$ADJSTK"} {
+	for _, name := range []string{"SYS$ADJSTK", "SYS$ADJWSL"} {
 		addr, found := uint32(0), false
 
 		for _, e := range vmsdef.P1VectorTable {
@@ -153,5 +153,67 @@ func TestPhase26ServicesRegistered(t *testing.T) {
 		if _, handled, _ := env.SystemService(addr); !handled {
 			t.Errorf("%s at %#x not handled", name, addr)
 		}
+	}
+}
+
+func TestServiceSysAdjwsl(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	p := env.Process
+	start := p.WSLimit
+
+	// pagcnt 0 (or omitted) reports the current limit and changes nothing.
+	wsetlm := a.long(0xFFFFFFFF)
+	wantR0(t, callLNM(t, env, serviceSysAdjwsl, 0, wsetlm), ssNormal)
+
+	if got := a.readLong(wsetlm); got != start {
+		t.Errorf("wsetlm = %d, want the current limit %d", got, start)
+	}
+
+	wantR0(t, callLNM(t, env, serviceSysAdjwsl), ssNormal)
+
+	if p.WSLimit != start {
+		t.Errorf("WSLimit = %d after pagcnt 0, want %d", p.WSLimit, start)
+	}
+
+	// A positive pagcnt grows the limit; a negative one shrinks it.
+	wantR0(t, callLNM(t, env, serviceSysAdjwsl, 50, wsetlm), ssNormal)
+
+	if got := a.readLong(wsetlm); got != start+50 || p.WSLimit != start+50 {
+		t.Errorf("after +50: wsetlm = %d, WSLimit = %d, want %d", got, p.WSLimit, start+50)
+	}
+
+	minus30 := int32(-30)
+	wantR0(t, callLNM(t, env, serviceSysAdjwsl, uint32(minus30), wsetlm), ssNormal)
+
+	if got := a.readLong(wsetlm); got != start+20 {
+		t.Errorf("after -30: wsetlm = %d, want %d", got, start+20)
+	}
+
+	// Past either end, the limit is clamped without an error.
+	wantR0(t, callLNM(t, env, serviceSysAdjwsl, 1_000_000, wsetlm), ssNormal)
+
+	if got := a.readLong(wsetlm); got != p.WSExtent {
+		t.Errorf("after a huge increase: wsetlm = %d, want WSEXTENT %d", got, p.WSExtent)
+	}
+
+	minusHuge := int32(-1_000_000)
+	wantR0(t, callLNM(t, env, serviceSysAdjwsl, uint32(minusHuge)), ssNormal)
+
+	if p.WSLimit != p.MinWSCount {
+		t.Errorf("after a huge decrease: WSLimit = %d, want MINWSCNT %d", p.WSLimit, p.MinWSCount)
+	}
+}
+
+func TestServiceSysAdjwslAccvio(t *testing.T) {
+	env, _ := fixture()
+	start := env.Process.WSLimit
+
+	// wsetlm outside the fixture's 1MB of memory can't be written; the
+	// limit is left alone.
+	wantR0(t, callLNM(t, env, serviceSysAdjwsl, 10, 0x7FFF0000), ssAccVio)
+
+	if env.Process.WSLimit != start {
+		t.Errorf("WSLimit = %d after SS$_ACCVIO, want it unchanged at %d", env.Process.WSLimit, start)
 	}
 }

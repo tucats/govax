@@ -116,7 +116,7 @@ lists the ones the implementation can actually return.
 | --- | --- | --- | --- | --- |
 | (process record) | 1 | `process.go` | — | PID, username SYSTEM, UIC [1,4], working-set quotas. |
 | `$ADJSTK` | 2 | `process.go` | `NORMAL`, `ACCVIO`, `NOPRIV` | Sets a less privileged mode's saved SP (`KSP`/`ESP`/`SSP`/`USP`). |
-| `$ADJWSL` | 3 | | | |
+| `$ADJWSL` | 3 | `process.go` | `NORMAL`, `ACCVIO` | Adjusts `Process.WSLimit`, clamped to [`MINWSCNT`, `WSEXTENT`]; recorded, not enforced. |
 | `$ALLOC` | 4 | | | |
 | `$ASCEFC` | 5 | | | |
 
@@ -184,7 +184,23 @@ program can use `$ADJSTK` on any of the three outer modes.
 
 `SYS$ADJWSL [pagcnt] ,[wsetlm]`
 
-Planned (see subtask 3).
+Adjusts the process's working-set limit by `pagcnt` pages (a signed
+longword, by value) and returns the new limit through `wsetlm` (by
+reference, optional).
+
+- The limit is `Process.WSLimit`, which starts at `WSDefault`.
+- A result above `WSExtent` or below `MinWSCount` is clamped there with no
+  error, as the manual says.
+- `pagcnt` 0 (or omitted) changes nothing, and `wsetlm` receives the current,
+  unadjusted limit.
+- If `wsetlm` can't be written the call returns `SS$_ACCVIO` and the limit
+  is left unchanged: the store happens before the new limit is committed.
+
+**The limit is recorded but not enforced.** govax has no paging or working
+set, so the value only matters to code that adjusts or reads it back. That's
+the purpose the user gave for this service: completeness, and documenting
+what VAX code does. A later `$GETJPI` could report `JPI$_WSEXTENT` and
+friends from the same fields.
 
 ### `$ALLOC` — Allocate Device
 
@@ -205,7 +221,7 @@ Planned (see subtask 5).
    Adds `optArg` for omitted trailing arguments. This document.
 2. **Done.** **`$ADJSTK`.** `serviceSysAdjstk` in `process.go`, registered
    by the new `registerProcessServices`.
-3. **`$ADJWSL`.**
+3. **Done.** **`$ADJWSL`.** `serviceSysAdjwsl` in `process.go`.
 4. **`$ALLOC`.**
 5. **`$ASCEFC`.**
 
@@ -246,3 +262,11 @@ None yet.
   argument list, and a zero `newadr`. `TestPhase26ServicesRegistered`
   dispatches each of this phase's services through `SystemService` at its
   real P1-vector address; later subtasks add their services to its list.
+
+### 2026-09-27 — Subtask 3: `$ADJWSL`
+
+- `serviceSysAdjwsl` (`internal/rtl/process.go`), per the design above,
+  working on `Process.WSLimit`.
+- Tests: report-only (`pagcnt` 0 and an omitted argument list), grow,
+  shrink, clamping at both `WSEXTENT` and `MINWSCNT`, and an unwritable
+  `wsetlm` leaving the limit unchanged.
