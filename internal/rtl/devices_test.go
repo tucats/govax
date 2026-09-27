@@ -502,3 +502,82 @@ func TestServiceSysDallocAll(t *testing.T) {
 		t.Error("$DALLOC with no arguments didn't release exactly the process's kernel allocation")
 	}
 }
+
+// assignCall runs $ASSIGN on name with acmode, returning the channel.
+func assignCall(t *testing.T, env *Environment, a *arena, name string, acmode uint32) uint32 {
+	t.Helper()
+
+	chanAddr := a.alloc(2)
+	wantR0(t, callLNM(t, env, serviceSysAssign, a.desc(name), chanAddr, acmode), ssNormal)
+
+	n, err := env.mem.LoadWord(env.cpu, chanAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return uint32(n)
+}
+
+func TestServiceSysDassgn(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	dp := defineTestDevice(env, "TTA0", iodev.DeviceClassTT)
+
+	c1 := assignCall(t, env, a, "TTA0", 0)
+	c2 := assignCall(t, env, a, "TTA0", 0)
+
+	// Only the low word of chan counts.
+	wantR0(t, callLNM(t, env, serviceSysDassgn, 0xFFFF0000|c1), ssNormal)
+
+	if _, found := env.findChannel(c1); found || dp.RefCnt != 1 || dp.PID != env.Process.PID {
+		t.Errorf("after one $DASSGN: channel found=%v RefCnt=%d PID=%#x, want gone, 1, still owned", found, dp.RefCnt, dp.PID)
+	}
+
+	// Releasing the last channel frees the device's owner.
+	wantR0(t, callLNM(t, env, serviceSysDassgn, c2), ssNormal)
+
+	if dp.RefCnt != 0 || dp.PID != 0 {
+		t.Errorf("after the last $DASSGN: RefCnt=%d PID=%#x, want 0 and 0", dp.RefCnt, dp.PID)
+	}
+
+	wantR0(t, callLNM(t, env, serviceSysDassgn, c2), ssNoPriv) // no longer assigned
+	wantR0(t, callLNM(t, env, serviceSysDassgn, 0), ssIvChan)
+	wantR0(t, callLNM(t, env, serviceSysDassgn, 0x10000), ssIvChan)
+}
+
+func TestServiceSysDassgnModes(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	dp := defineTestDevice(env, "TTA0", iodev.DeviceClassTT)
+
+	kernel := assignCall(t, env, a, "TTA0", 0)
+	user := assignCall(t, env, a, "TTA0", 3)
+
+	// A kernel-mode channel can't be released from supervisor mode.
+	setCurMod(env, vax.Supervisor)
+	wantR0(t, callLNM(t, env, serviceSysDassgn, kernel), ssNoPriv)
+
+	// $ALLOC then $DALLOC: blocked by the channels until they're gone.
+	setCurMod(env, vax.Kernel)
+	dp.Allocate(env.Process.PID, uint32(vax.User))
+	wantR0(t, callLNM(t, env, serviceSysDalloc, a.desc("TTA0")), ssDevAssign)
+
+	// Image rundown deassigns the user-mode channel, but the kernel one
+	// still keeps the user-mode allocation in place.
+	env.ImageRundown()
+
+	if !dp.Allocated() {
+		t.Error("image rundown released an allocation a kernel channel still holds")
+	}
+
+	if _, found := env.findChannel(user); found {
+		t.Error("user-mode channel survived image rundown")
+	}
+
+	if _, found := env.findChannel(kernel); !found {
+		t.Error("kernel-mode channel was deassigned by image rundown")
+	}
+
+	wantR0(t, callLNM(t, env, serviceSysDassgn, kernel), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysDalloc, a.desc("TTA0")), ssNormal)
+}

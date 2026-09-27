@@ -24,7 +24,8 @@ The first batch, requested by the user on 2026-09-27, is `$ADJSTK`,
 `$ADJWSL`, `$ALLOC`, and `$ASCEFC`. The second adds `$DALLOC`,
 `$DACEFC`/`$DLCEFC`, `$GETJPI`, and the event-flag waits.
 
-**Status: two batches complete** (subtasks 1-9). Add later services as new
+**Status: third batch in progress** (subtasks 10-11); subtasks 1-9 are
+complete. Add later services as new
 subtasks.
 
 ## References
@@ -133,6 +134,7 @@ lists the ones the implementation can actually return.
 | `$DLCEFC` | 7 | `eventflags.go` | `NORMAL`, `ACCVIO`, `IVLOGNAM` | Marks a cluster for deletion; deleted when unassociated. |
 | `$GETJPI`, `$GETJPIW` | 8 | `getjpi.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLEFC`, `INSFARG`, `IVLOGNAM`, `NOMOREPROC`, `NONEXPR`, `UNASEFC` | 21 item codes from `rtl.Process`, in a registry keyed by the generated `$JPIDEF` codes. |
 | `$WAITFR`, `$WFLAND`, `$WFLOR` | 9 | `eventflags.go` | `NORMAL`, `ILLEFC`, `UNASEFC` | Wait by re-executing the service's `XFC` until satisfied; timer interrupts run in between. |
+| `$DASSGN` | 10 | `devices.go` | `NORMAL`, `IVCHAN`, `NOPRIV` | Releases a channel; image rundown releases user-mode channels. |
 
 ## Service designs
 
@@ -527,6 +529,33 @@ has no AST delivery); the process state (`LEF`/`CEF`) and `JPI$_EFWM` wait
 mask; and giving up the host CPU while waiting, since each retry costs an
 emulated instruction step.
 
+### `$DASSGN` — Deassign I/O Channel
+
+`SYS$DASSGN chan`
+
+Releases a channel `$ASSIGN` created (`internal/rtl/devices.go`).
+
+- `$ASSIGN` now records each channel's access mode (`channel.Mode`: its
+  `acmode` argument maximized with the caller's mode). Until now it
+  ignored `acmode`.
+- `chan` uses its low word. 0 is `SS$_IVCHAN`. A channel that isn't
+  assigned, or was assigned from a more privileged mode than the caller's,
+  is `SS$_NOPRIV`, as the manual lists.
+- Releasing a channel removes it and drops the device's `RefCnt`. Once
+  nothing references an unallocated device, its owner `PID` (which
+  `$ASSIGN` stamped) is cleared too. govax channels carry no I/O requests,
+  open files, mailboxes, or network links, so there's nothing else to
+  cancel or close.
+- **Image rundown** now deassigns user-mode channels first. Then it
+  deallocates user-mode allocations using exactly `$DALLOC`'s no-name rule
+  (`deallocateAll`), so a device the process still has a more privileged
+  channel to stays allocated. Before this subtask, rundown released
+  user-mode allocations unconditionally. That only differed when a kernel
+  channel was held, which the new tests exercise.
+
+With `$DASSGN` in place, `$DALLOC`'s `SS$_DEVASSIGN` is no longer
+permanent: deassign the channel, then deallocate.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -556,10 +585,13 @@ batch listed):
    `cpu.ErrServiceWait` re-executing the `XFC`. Acceptance fixture
    `testdata/asm/wait_timer.asm`.
 
-Candidates after that: `$DASSGN` (without it a channel is never released, so
-`$DALLOC` of an assigned device always returns `SS$_DEVASSIGN`), and
-`$SETIMR`/`$CANTIM` (the first real asynchronous event-flag setter, which the
-wait services are designed to accommodate).
+Third batch, requested by the user on 2026-09-27:
+
+10. **Done.** **`$DASSGN`.** In `devices.go`; image rundown deassigns
+    user-mode channels.
+11. **`$SETIMR` and `$CANTIM`,** with the timer design question the user
+    raised: whether they should use the microkernel's timer interrupt, or
+    an RTL timer of their own.
 
 ## Open questions
 
@@ -770,3 +802,20 @@ None yet.
 - `go test ./...` passes.
 - **Phase status.** Both batches are done. Next candidates: `$DASSGN`, and
   `$SETIMR`/`$CANTIM`.
+
+### 2026-09-27 — Third batch planned; subtask 10: `$DASSGN`
+
+- The user asked for the suggested next services, `$DASSGN` and then
+  `$SETIMR`/`$CANTIM`. For the timers, they asked for a judgment on
+  whether to build on the microkernel's timer interrupt or keep the RTL
+  timer independent (subtask 11).
+- `serviceSysDassgn`, `releaseChannel`, and `deassignUserChannels` in
+  `internal/rtl/devices.go`. `channel.Mode` is recorded by `$ASSIGN`.
+  `deallocateAll` is shared by `$DALLOC` (no name) and image rundown.
+- Found while testing: rundown's user-mode deallocation ignored channels,
+  unlike `$DALLOC`. It now uses the same rule.
+- Tests (`devices_test.go`): the low-word rule; the reference count and
+  owner PID across two channels; `SS$_NOPRIV` for an unassigned channel
+  and for a kernel channel from supervisor mode; `SS$_IVCHAN`; rundown
+  releasing only the user-mode channel, and keeping an allocation that a
+  kernel channel still holds; and `$DASSGN` then `$DALLOC` succeeding.

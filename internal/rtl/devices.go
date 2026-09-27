@@ -33,6 +33,7 @@ type channel struct {
 	Number  uint16
 	Class   iodev.DeviceClass
 	Flags   uint32
+	Mode    uint32 // access mode assigned from ($ASSIGN's acmode, maximized)
 	Mailbox string
 	Device  *iodev.Device
 }
@@ -101,6 +102,7 @@ func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 		Number: uint16(env.nextChannel),
 		Device: dp,
 		Class:  dp.DevClass,
+		Mode:   max(optArg(argv, 2)&3, uint32(env.cpu.PSL().CurMod())),
 	}
 
 	if err := env.mem.StoreWord(env.cpu, argv[1], c.Number); err != nil {
@@ -392,11 +394,7 @@ func serviceSysDalloc(env *Environment, argv []uint32) (uint32, error) {
 	mode := max(optArg(argv, 1)&3, uint32(env.cpu.PSL().CurMod()))
 
 	if devnam == 0 {
-		for _, d := range env.Devices.All() {
-			if d.Allocated() && d.PID == env.Process.PID && d.AllocMode >= mode && !env.hasChannel(d) {
-				d.Deallocate()
-			}
-		}
+		env.deallocateAll(mode)
 
 		return ssNormal, nil
 	}
@@ -436,6 +434,60 @@ func serviceSysDalloc(env *Environment, argv []uint32) (uint32, error) {
 	return ssNormal, nil
 }
 
+// serviceSysDassgn is SYS$DASSGN: releases a channel $ASSIGN created.
+// Only the low word of chan counts; 0 is SS$_IVCHAN. A channel that isn't
+// assigned, or was assigned from a more privileged access mode than the
+// caller's, is SS$_NOPRIV, as the manual says. govax channels carry no
+// I/O requests, open files, or network links, so releasing one only
+// drops the device's reference count (and, once nothing references an
+// unallocated device, its owner PID).
+func serviceSysDassgn(env *Environment, argv []uint32) (uint32, error) {
+	number := optArg(argv, 0) & 0xFFFF
+	if number == 0 {
+		return ssIvChan, nil
+	}
+
+	c, found := env.findChannel(number)
+	if !found || c.Mode < uint32(env.cpu.PSL().CurMod()) {
+		return ssNoPriv, nil
+	}
+
+	env.releaseChannel(c)
+
+	return ssNormal, nil
+}
+
+// releaseChannel removes c from the process's channels and drops its
+// device reference.
+func (env *Environment) releaseChannel(c *channel) {
+	for i, ch := range env.channels {
+		if ch == c {
+			env.channels = append(env.channels[:i], env.channels[i+1:]...)
+
+			break
+		}
+	}
+
+	d := c.Device
+	if d.RefCnt > 0 {
+		d.RefCnt--
+	}
+
+	if d.RefCnt == 0 && !d.Allocated() {
+		d.PID = 0
+	}
+}
+
+// deassignUserChannels is image rundown's channel step: VMS deassigns the
+// channels an image assigned from user mode when it exits.
+func (env *Environment) deassignUserChannels() {
+	for _, c := range append([]*channel(nil), env.channels...) {
+		if c.Mode == uint32(vax.User) {
+			env.releaseChannel(c)
+		}
+	}
+}
+
 // hasChannel reports whether the process has a channel assigned to d.
 func (env *Environment) hasChannel(d *iodev.Device) bool {
 	for _, c := range env.channels {
@@ -448,10 +500,18 @@ func (env *Environment) hasChannel(d *iodev.Device) bool {
 }
 
 // deallocateUserDevices is image rundown's device step: VMS deallocates
-// the devices an image allocated in user mode when the image exits.
+// the devices an image allocated in user mode when the image exits — the
+// same as $DALLOC with no device name at user mode, so a device the
+// process still has a (more privileged) channel to stays allocated.
 func (env *Environment) deallocateUserDevices() {
+	env.deallocateAll(uint32(vax.User))
+}
+
+// deallocateAll releases every device the process allocated in mode or a
+// less privileged one, except those it still has a channel to.
+func (env *Environment) deallocateAll(mode uint32) {
 	for _, d := range env.Devices.All() {
-		if d.Allocated() && d.PID == env.Process.PID && d.AllocMode == uint32(vax.User) {
+		if d.Allocated() && d.PID == env.Process.PID && d.AllocMode >= mode && !env.hasChannel(d) {
 			d.Deallocate()
 		}
 	}
@@ -462,6 +522,7 @@ func registerDeviceServices(t *ServiceTable) {
 	t.Register("SYS$GETDVIW", serviceSysGetdviw)
 	t.Register("SYS$ALLOC", serviceSysAlloc)
 	t.Register("SYS$DALLOC", serviceSysDalloc)
+	t.Register("SYS$DASSGN", serviceSysDassgn)
 }
 
 // deviceName translates a $ASSIGN/$GETDVI device name through its logical
