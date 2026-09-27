@@ -1,5 +1,10 @@
 package rtl
 
+import (
+	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmsdef"
+)
+
 // Process is the emulated VMS process an Environment runs images in: the
 // identity and quota state system services read and update on behalf of
 // "the calling process" (docs/PHASE-26.md). govax has exactly one process
@@ -25,8 +30,8 @@ type Process struct {
 	// common event flag cluster names.
 	UIC uint32
 
-	// Working-set state (kept in the process header on VMS). WSLimit is the
-	// current limit $ADJWSL adjusts, starting at WSDefault; $ADJWSL keeps
+	// Working-set state (kept in the process header on VMS). WSLimit is
+	// the current limit $ADJWSL adjusts, starting at WSDefault; $ADJWSL keeps
 	// it within [MinWSCount, WSExtent]. None of these are enforced by
 	// govax's memory model — they're kept so the services that report or
 	// adjust them behave as documented. All counts are in pages.
@@ -83,4 +88,59 @@ func optArg(argv []uint32, i int) uint32 {
 	}
 
 	return 0
+}
+
+// Status codes the process-control services return.
+var ssNoPriv = vmsdef.SSConstants["SS$_NOPRIV"]
+
+// serviceSysAdjstk is SYS$ADJSTK: sets the saved stack pointer of an
+// access mode less privileged than the caller's. The longword at newadr
+// supplies the new value (or, when it is 0, the mode's current stack
+// pointer does), the signed low word of adjust is added to it, and the
+// result is both written back to newadr and loaded as that mode's stack
+// pointer. acmode is maximized with the caller's mode, so asking for the
+// caller's own mode or a more privileged one — including the default,
+// kernel — is SS$_NOPRIV.
+//
+// The target mode is never the one executing, so its stack pointer is
+// the saved copy in the KSP/ESP/SSP/USP privileged register, which is
+// what gets loaded when the CPU next changes into that mode. The manual's
+// SS$_ACCVIO for "a portion of the new stack segment cannot be written"
+// isn't checked: govax doesn't probe the new stack, only newadr itself.
+func serviceSysAdjstk(env *Environment, argv []uint32) (uint32, error) {
+	acmode, adjust, newadr := optArg(argv, 0), int16(optArg(argv, 1)), optArg(argv, 2)
+
+	curMod := uint32(env.cpu.PSL().CurMod())
+	mode := max(acmode&3, curMod)
+
+	if mode == curMod {
+		return ssNoPriv, nil
+	}
+
+	if newadr == 0 { // page 0 is never accessible on VMS
+		return ssAccVio, nil
+	}
+
+	value, err := env.mem.LoadLongword(env.cpu, newadr)
+	if err != nil {
+		return ssAccVio, nil
+	}
+
+	if value == 0 {
+		value = env.cpu.PR(vax.PrivReg(mode)) // KSP/ESP/SSP/USP == mode 0/1/2/3
+	}
+
+	value += uint32(int32(adjust))
+
+	if err := env.mem.StoreLongword(env.cpu, newadr, value); err != nil {
+		return ssAccVio, nil
+	}
+
+	env.cpu.SetPR(vax.PrivReg(mode), value)
+
+	return ssNormal, nil
+}
+
+func registerProcessServices(t *ServiceTable) {
+	t.Register("SYS$ADJSTK", serviceSysAdjstk)
 }

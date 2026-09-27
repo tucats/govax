@@ -115,7 +115,7 @@ lists the ones the implementation can actually return.
 | Service | Subtask | File | Condition values | Notes |
 | --- | --- | --- | --- | --- |
 | (process record) | 1 | `process.go` | — | PID, username SYSTEM, UIC [1,4], working-set quotas. |
-| `$ADJSTK` | 2 | | | |
+| `$ADJSTK` | 2 | `process.go` | `NORMAL`, `ACCVIO`, `NOPRIV` | Sets a less privileged mode's saved SP (`KSP`/`ESP`/`SSP`/`USP`). |
 | `$ADJWSL` | 3 | | | |
 | `$ALLOC` | 4 | | | |
 | `$ASCEFC` | 5 | | | |
@@ -150,7 +150,35 @@ Environment exists.
 
 `SYS$ADJSTK [acmode] ,[adjust] ,newadr`
 
-Planned (see subtask 2).
+Modifies the stack pointer of an access mode **less privileged** than the
+caller's. VMS uses it to fix up an outer mode's stack after pushing arguments
+onto it.
+
+- `acmode` (by value, default kernel) is maximized with the caller's mode.
+  If the result is the caller's own mode, the call fails with `SS$_NOPRIV`
+  (the manual: "equal to or more privileged than the calling access mode").
+  So from user mode the service always fails, and from kernel mode the
+  default `acmode` does too.
+- `adjust` is by value, but only its low-order word is used, as a signed
+  value.
+- `newadr` (by reference, required) is read, adjusted, written back, and
+  loaded as the mode's stack pointer. When the longword it points to is 0,
+  the mode's current stack pointer is adjusted instead. That covers all four
+  rows of the manual's `adjust`/`newadr` table; in every case the result is
+  written back to `newadr`.
+- The target mode is never the one executing, so its stack pointer is the
+  saved copy in the `KSP`/`ESP`/`SSP`/`USP` privileged register
+  (`env.cpu.PR`), which the CPU loads the next time it enters that mode
+  (`Engine.setModeStack`). The live `SP` is never touched.
+- `newadr` of 0 is `SS$_ACCVIO` explicitly (page 0 is never accessible on
+  VMS, but tests run with virtual memory off, where it would be).
+
+Not implemented: the manual's `SS$_ACCVIO` for "a portion of the new stack
+segment cannot be written by the caller". govax doesn't probe the new stack,
+only `newadr` itself.
+
+govax runs RUN images in the console's own mode, kernel by default, so a
+program can use `$ADJSTK` on any of the three outer modes.
 
 ### `$ADJWSL` — Adjust Working Set Limit
 
@@ -175,7 +203,8 @@ Planned (see subtask 5).
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
    `Environment`'s `pid`/`uic` fields; `$ASSIGN` reads the PID/UIC from it.
    Adds `optArg` for omitted trailing arguments. This document.
-2. **`$ADJSTK`.**
+2. **Done.** **`$ADJSTK`.** `serviceSysAdjstk` in `process.go`, registered
+   by the new `registerProcessServices`.
 3. **`$ADJWSL`.**
 4. **`$ALLOC`.**
 5. **`$ASCEFC`.**
@@ -205,3 +234,15 @@ None yet.
   argument as 0.
 - Tests: `process_test.go` checks the default process (PID, SYSTEM, [1,4],
   quota ordering) and `optArg`. `go test ./...` passes.
+
+### 2026-09-27 — Subtask 2: `$ADJSTK`
+
+- `serviceSysAdjstk` (`internal/rtl/process.go`), per the design above.
+  `registerProcessServices` is new and is called from `registerServices`.
+- `SS$_NOPRIV` is read from `vmsdef.SSConstants` (`ssNoPriv`).
+- Tests (`process_test.go`): each `adjust`/`newadr` combination from the
+  manual's table, the low-word-only `adjust`, the caller's-own-mode and
+  maximized-mode `SS$_NOPRIV` cases from kernel and user mode, an omitted
+  argument list, and a zero `newadr`. `TestPhase26ServicesRegistered`
+  dispatches each of this phase's services through `SystemService` at its
+  real P1-vector address; later subtasks add their services to its list.
