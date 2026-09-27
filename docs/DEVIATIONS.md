@@ -160,6 +160,131 @@ guessed at.
   workflow, or a future phase's own acceptance criteria, actually needs the
   denser, real-VMS-style layout.
 
+## Phase 25 (logical names) findings
+
+Phase 25 (`PHASE-25.md`) replaced eVAX's logical-name support rather than
+porting it. That was the user's explicit direction: the existing behavior was
+treated as suspect, and VAX/VMS 7.3 is the target. The references are the VSI
+OpenVMS User's Manual (chapter 11), the VMS 5.0 System Services Reference
+Manual, and the CLRM §2.2. The first group of entries below records each eVAX
+behavior the phase deliberately changed, so the difference from
+`reference/eVAX` can be traced. The second group records the gaps that remain
+against real VMS.
+
+### [Phase 25] eVAX logical names: single-valued names in a flat table map, with `LNM$FILE_DEV` as a table
+
+- **Where**: `reference/eVAX/eVAX/Source/RTL/logical_names.c` (`set_logical`/
+  `get_logical`/`init_logicals`), ported in Phase 09 as `internal/io/logical.go`.
+- **What**: each table mapped a name to exactly one value. `LNM$FILE_DEV` was
+  a table holding `SYS$INPUT`/`OUTPUT`/`ERROR`/`COMMAND` = `TTA0:`, where in
+  VMS it is a logical name (a search list of tables). There were no
+  directories, search order, iterative translation, search lists, or access
+  modes. Attributes were matched by equality, not as bits, and a lookup with
+  no table fell back to a nonexistent `LNM$ROOT`.
+- **Status**: fixed in Phase 25. `internal/lnm` models the VMS structure:
+  directory tables, `LNM$FILE_DEV`/`LNM$DCL_LOGICAL` as logical names, per-mode
+  entries, search lists, and `CONCEALED`/`TERMINAL`/`NO_ALIAS`/`CONFINE`.
+  `internal/io/logical.go` is deleted. The process-permanent names are now
+  `_TTA0:` at executive mode with `TERMINAL`, and `TT` is `_TTA0:`.
+
+### [Phase 25] eVAX console `DEFINE/LOGICAL` wrote to a table nothing searched
+
+- **Where**: `reference/eVAX/eVAX/Source/Console/define_logical.c`,
+  `show_logical.c`; ported as `internal/console/device.go`'s
+  `DefineLogical`/`ShowLogicals`.
+- **What**: `DEFINE/LOGICAL name value` defaulted to the table `LNM_PROCESS`
+  (underscore, not `$`), which neither RMS nor `$TRNLNM` ever searched, so an
+  operator-defined name was invisible to programs. `DEFINE/LOGICAL` and `SHOW
+  LOGICAL_NAMES` aren't VMS syntax, and the SHOW output wasn't VMS's format.
+- **Status**: fixed in Phase 25. The VMS commands replace them: `DEFINE`,
+  `ASSIGN`, `DEASSIGN`, `CREATE/NAME_TABLE`, `SHOW LOGICAL` in VMS format,
+  and `SHOW TRANSLATION`. The eVAX forms were removed (open question 4).
+
+### [Phase 25] eVAX RMS translated only a file spec that was, in its entirety, a logical name
+
+- **Where**: `reference/eVAX/eVAX/Source/RTL/rms.c`'s spec lookup, carried
+  into `internal/rms/create.go`/`open.go`.
+- **What**: the whole spec string was looked up in the table `LNM$FILE_DEV`,
+  so `DISK:FILE.DAT` never translated, nothing iterated, and search lists and
+  `_` weren't handled. The console file commands did no translation at all.
+- **Status**: fixed in Phase 25. The leftmost component is translated
+  through `LNM$FILE_DEV`, iteratively, restarting the search order at each
+  level. Search lists fan out per the User's Manual. `SYS$DISK` supplies the
+  default device, the fields the user wrote take precedence over the
+  translation's, and a translation loop is `RMS$_LNE`.
+
+### [Phase 25] eVAX `SYS$TRNLNM` item codes, and no `SYS$CRELNM`/`DELLNM`/`CRELNT`
+
+- **Where**: `reference/eVAX/eVAX/Source/RTL/logical_names.c`'s
+  `sys_trnlnm`; `p1_vector.c`, where `SYS$CRELNM`/`SYS$DELLNM` have routine
+  pointer 0.
+- **What**: `LNM$_TABLE` wrote through a descriptor instead of a buffer, and
+  returned the table name the caller passed in rather than the table holding
+  the name. `LNM$_LENGTH`/`LNM$_MAX_INDEX` were stored as words (the manual
+  says longwords). `LNM$_MAX_INDEX` was always 1. `LNM$_INDEX`/`LNM$_CHAIN`
+  were ignored, and an unknown item code was silently skipped. More than 5
+  arguments returned a status that isn't in the VAX `$SSDEF`. The other
+  services didn't exist.
+- **Status**: fixed in Phase 25. `$TRNLNM` follows the manual, and
+  `$CRELNM`/`$DELLNM`/`$CRELNT` plus the pre-V4 `$CRELOG`/`$DELLOG`/`$TRNLOG`
+  are implemented. `$ASSIGN`/`$GETDVIW` translate device names.
+
+### [Phase 25] No privilege model: logical-name privileges aren't checked
+
+- **Where**: `internal/lnm` (`Define`/`Delete`/`CreateTable`) and
+  `internal/rtl/logicals.go`.
+- **What**: VMS requires SYSNAM for executive or kernel mode names, GRPNAM
+  for the group table, SYSNAM/SYSPRV for the system table, and SYSPRV for
+  shareable tables. govax has no privileges, so every caller is treated as
+  holding all of them. An explicit `acmode` to `$CRELNM`/`$DELLNM`/`$CRELNT` is
+  used as-is (the SYSNAM rule) rather than maximized with the caller's mode.
+  The old by-value services do maximize, since their 0 means "omitted".
+  Structural rules still hold: a name can't be more privileged than its
+  table, and the startup tables can't be deleted.
+- **Status**: open, deliberate. Every write goes through
+  `Database.Define`/`Delete`/`CreateTable`, so checks can be added there once
+  a privilege model exists.
+
+### [Phase 25] No job or cluster tables, no quotas or table protection
+
+- **Where**: `internal/lnm.NewDatabase`; `$CRELNT`'s `quota`/`promsk`.
+- **What**: VMS's `LNM$FILE_DEV` is process, job, group, system (and cluster).
+  govax has one process and no cluster, so it has no `LNM$JOB` table, and
+  MOUNT's `DISK$label` always goes in the system table (VMS uses the job
+  table without `/SYSTEM`). Table quotas and protection masks are accepted and
+  ignored.
+- **Status**: open, deliberate (open question 1). The directory-based
+  design makes adding `LNM$JOB` a few lines.
+
+### [Phase 25] Process-permanent names carry no ESC/IFI prefix
+
+- **Where**: `internal/lnm.Database.DefineProcessNames`.
+- **What**: VMS stores `SYS$INPUT`/`OUTPUT`/`ERROR`/`COMMAND` with a hidden
+  4-byte ESC/IFI header naming the process-permanent file. `$TRNLNM` returns
+  it and RMS uses it. govax stores the plain device name, and RMS reaches
+  the console through its `TTA0` device special case instead.
+- **Status**: open, deliberate. Out of scope until RMS models
+  process-permanent files.
+
+### [Phase 25] Smaller DCL/RMS simplifications
+
+- **Where**: `internal/console/logical.go`, `internal/rms/logicals.go`,
+  `internal/rms/copy.go`, `internal/rms/directory.go`, `internal/console/run.go`.
+- **What**:
+  - `/TRANSLATION_ATTRIBUTES` applies to every equivalence string. In VMS it
+    is positional.
+  - COPY takes a search list's first element for its source, not the first
+    element where the file exists.
+  - DIRECTORY over several directories prints one `Total of` line, with no
+    `Grand total` line.
+  - User-mode names are run down only when RUN's image returns from its main
+    routine. govax has no `SYS$EXIT`, so an image ending in HALT or a fatal
+    exception isn't run down.
+  - `$CRELOG`/`$DELLOG`/`$TRNLOG` follow the V4-era interface descriptions.
+    The 7.3 source archive doesn't contain them to check against.
+- **Status**: open, deferred. None affects an existing test or fixture.
+  Revisit case by case if a workload needs the exact VMS behavior.
+
 ## Open findings
 
 _None yet._

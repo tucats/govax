@@ -39,7 +39,7 @@ facility that the console, RMS, and the RTL/system-service layer all share:
 
   All of them work on the same shared data the console uses.
 
-**Status: in progress — subtasks 1-8 of 9 done.**
+**Status: complete — all 9 subtasks done.**
 
 ## Why this phase looks different
 
@@ -490,7 +490,7 @@ the process default directory. RMS then gets its default device by translating
    - Add a MACRO-32 fixture (`testdata/asm/lnm_roundtrip.asm`) that runs
      `$CRELNM` → `$TRNLNM` → `$DELLNM` and writes through `SYS$OUTPUT` via a
      program-defined logical name, as an acceptance test.
-9. **Legacy clean-up and docs.**
+9. **Done.** **Legacy clean-up and docs.**
    - Sweep for any remaining eVAX-only logical-name syntax in docs, help, and
      tests (open question 4).
    - Add `docs/DEVIATIONS.md` entries for each eVAX behavior this phase
@@ -1113,3 +1113,43 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
     `reportStopReason`, and rundown through a real `RUN simple.exe`.
 
   `go test ./...` passes except for the pre-existing `TestAssembleForth`.
+
+### 2026-09-27 — Subtask 9: clean-up and docs; phase complete
+
+- **Sweep.** No eVAX-only logical-name syntax is left outside history. The
+  only remaining mentions of `DEFINE/LOGICAL`, `SHOW LOGICAL_NAMES`,
+  `LNM_PROCESS`, and `InitLogicals` are:
+  - earlier phases' docs and this document's own history
+  - the upstream `testdata/dcl/{evax.dcl,vax.init}` import copies, which
+    are left untouched on purpose
+  - one DCL test that checks `DEFINE/LOGICAL` no longer parses
+
+  `vax.help` and `README.md` don't need further changes.
+- **`docs/DEVIATIONS.md`** has a new "Phase 25 (logical names) findings"
+  section:
+  - Four entries record the eVAX behaviors this phase replaced: the flat
+    single-valued table store, the unsearched `LNM_PROCESS` DEFINE, RMS's
+    whole-spec-only translation, and `$TRNLNM`'s item-code errors plus the
+    missing services.
+  - Four entries record the remaining gaps: no privilege model; no job or
+    cluster tables, quotas, or protection; no process-permanent ESC/IFI
+    prefix; and the smaller DCL/RMS simplifications (positional
+    `/TRANSLATION_ATTRIBUTES`, COPY's search-list source, DIRECTORY's grand
+    total, rundown only on RUN's RET, and the old services' V4-era
+    interfaces).
+- **`docs/PLAN.md`** has a Phase 25 narrative paragraph. **CLAUDE.md**'s
+  package list was updated in subtask 4.
+- **Phase summary.** Nine subtasks, each committed separately:
+  1. generated `$LNMDEF`/`$SSDEF`
+  2. the `internal/lnm` core
+  3. file-spec translation
+  4. consumers moved over
+  5. DCL grammar (lists, `ANY2`)
+  6. console commands
+  7. RMS translation and search lists
+  8. system services
+  9. clean-up
+
+  `go test ./...` passes except for `internal/asm`'s `TestAssembleForth`,
+  which fails independently of this phase (commit `a21799c`, noted under
+  subtask 1).

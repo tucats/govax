@@ -248,3 +248,30 @@ operator, `VAX_FWDOPERATOR`) rather than a new bug. See PHASE-24.md's own
 "Design decisions" section and progress log for the full detail, including the
 `.P1VECTOR`-idempotency lesson (`unique=false` from the start, not discovered
 as a bug afterward) this phase's own `.RMSDEF` applied up front.
+
+Phase 25, requested by the user 2026-09-27, replaces the eVAX-derived logical
+names with a VAX/VMS 7.3-faithful facility, shared by the console, RMS, and the
+RTL. The user asked for that goal, and for the existing govax/eVAX behavior to
+be treated as suspect rather than preserved.
+- A new leaf package, `internal/lnm`, models the VMS structure: the process and
+  system directories; the process, group, and system tables (`LNM$PROCESS`,
+  `LNM$GROUP`, `LNM$SYSTEM`) plus tables created at run time; `LNM$FILE_DEV` as
+  a real search list of tables; per-access-mode entries; search lists; and the
+  `CONCEALED`/`TERMINAL` attributes. It also does RMS file-spec translation:
+  leftmost-component, iterative, restarting the search order at each level,
+  with a 10-level limit and loop detection.
+- The DCL grammar engine gained list-valued parameters and qualifiers and
+  CDU-style `DISALLOW ANY2(...)`. The console has the VMS commands, with one
+  shared handler for `DEFINE`/`ASSIGN` across `/PROCESS`/`/GROUP`/`/SYSTEM`/
+  `/TABLE=`.
+- RMS and every console file command translate specs, fan search lists out
+  per the User's Manual, and take the default device from `SYS$DISK`. MOUNT
+  defines `DISK$label`.
+- `$TRNLNM` was rewritten to the System Services manual, and `$CRELNM`/
+  `$DELLNM`/`$CRELNT` and the pre-V4 `$CRELOG`/`$DELLOG`/`$TRNLOG` were added,
+  with an assembled acceptance fixture (`testdata/asm/lnm_roundtrip.asm`).
+
+The generated `$LNMDEF`/`$SSDEF` constants come from real VMS 7.3 source files
+in `reference/vms/`. Each eVAX behavior the phase changed, and each remaining
+gap (privileges, the job table, the process-permanent-file prefix), is in
+`DEVIATIONS.md`. See PHASE-25.md for the design and the per-subtask log.
