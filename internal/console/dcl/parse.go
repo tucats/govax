@@ -39,6 +39,7 @@ type matchedValue struct {
 	isKeyword bool
 	str       string
 	i         int64
+	list      []string // every element of a /list value; nil otherwise
 }
 
 func newResult() *Result {
@@ -95,6 +96,44 @@ func (r *Result) Keyword(name string) string {
 	}
 
 	return v.str
+}
+
+// List returns the elements of a /list parameter or qualifier, in the
+// order given: the string values, or for a keyword type the matched
+// keywords' names. For an item that isn't a list, or a list item filled
+// from its /default=, it returns its one string value as a one-element
+// list; nil if absent or not a string.
+func (r *Result) List(name string) []string {
+	v, ok := r.values[upcase(name)]
+	if !ok || !v.present {
+		return nil
+	}
+
+	if v.list != nil {
+		return append([]string(nil), v.list...)
+	}
+
+	if !v.isString {
+		return nil
+	}
+
+	return []string{v.str}
+}
+
+// setList records a /list value: its elements, plus the first element as
+// the item's plain String/Keyword value.
+func (r *Result) setList(name string, id int64, vals []Value) {
+	list := make([]string, len(vals))
+	for i, v := range vals {
+		list[i] = v.Str
+	}
+
+	first := vals[0]
+	r.values[upcase(name)] = &matchedValue{
+		id: id, present: true,
+		isString: first.IsString, isKeyword: first.IsKeyword, str: first.Str, i: first.Int,
+		list: list,
+	}
 }
 
 func (r *Result) set(name string, id int64, negated bool, val Value) {
@@ -291,6 +330,25 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 
 		p := active.Parameters[nextParam]
 
+		if p.List {
+			tokens, rem, err := readList(pos, false)
+			if err != nil {
+				return nil, vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
+			}
+
+			vals, err := g.resolveList(p.Type, p.TypeName, tokens)
+			if err != nil {
+				return nil, vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
+			}
+
+			pos = rem
+			r.setList(p.Name, p.ID, vals)
+			lastParam = p
+			nextParam++
+
+			continue
+		}
+
 		token, rem, err := readValueToken(pos)
 		if err != nil {
 			return nil, err
@@ -383,6 +441,27 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, lastPa
 	var token string
 
 	haveVal := false
+
+	if strings.HasPrefix(rest, "=") && q.List && q.hasValue() {
+		tokens, rem, err := readList(rest[1:], true)
+		if err != nil {
+			return nil, 0, nil, "", vmserrors.Wrap(vmserrors.CLI_BADQUALIFIER, err, q.Name)
+		}
+
+		vals, err := g.resolveList(q.Type, q.TypeName, tokens)
+		if err != nil {
+			return nil, 0, nil, "", vmserrors.Wrap(vmserrors.CLI_BADQUALIFIER, err, q.Name)
+		}
+
+		if scopeParam == nil {
+			r.setList(q.Name, q.ID, vals)
+			r.values[q.Name].negated = negated
+		} else {
+			r.setParam(scopeParam.Name, q.Name, q.ID, negated, vals[0])
+		}
+
+		return active, nextParam, lastParam, rem, nil
+	}
 
 	if strings.HasPrefix(rest, "=") {
 		token, rest, err = readValueToken(rest[1:])
@@ -487,6 +566,28 @@ func (g *Grammar) resolveValue(typ ValueType, typeName string, token string) (va
 	default: // TypeAny, TypeName, TypeString, TypeRestOfLine, TypeSwitch
 		return Value{IsString: true, Str: token}, "", false, nil
 	}
+}
+
+// resolveList type-checks each element of a list value, as resolveValue
+// does for a single one. A keyword element can't be negated, and can't
+// redirect parsing (a /syntax= keyword in a list would be meaningless).
+func (g *Grammar) resolveList(typ ValueType, typeName string, tokens []string) ([]Value, error) {
+	vals := make([]Value, 0, len(tokens))
+
+	for _, tok := range tokens {
+		val, _, negated, err := g.resolveValue(typ, typeName, tok)
+		if err != nil {
+			return nil, err
+		}
+
+		if negated {
+			return nil, vmserrors.New(vmserrors.CLI_NONEGATE, tok)
+		}
+
+		vals = append(vals, val)
+	}
+
+	return vals, nil
 }
 
 // checkRequirements matches DCLcheck_requirements: every required (has a
@@ -661,6 +762,92 @@ func readValueToken(s string) (token, rest string, err error) {
 		}
 
 		i++
+	}
+
+	return s, "", nil
+}
+
+// readList reads a comma-separated list value from s: elements separated
+// by commas, with optional whitespace on either side of each comma. Each
+// element is a double-quoted string (quotes stripped, so it may contain
+// commas, slashes, or spaces) or a bare token running up to the next
+// ',', '/', whitespace, or end of string.
+//
+// When paren is set (a qualifier value), s may instead start with "(",
+// in which case the list runs to the matching ")", ')' also ends a bare
+// element, and whitespace may follow "(" or precede ")". Without "(" a
+// qualifier's value is a single element, as in DCL, where "/X=A,B" means
+// /X=A followed by a second parameter-list element.
+func readList(s string, paren bool) (tokens []string, rest string, err error) {
+	orig := s
+	s = strings.TrimLeft(s, " \t")
+
+	if paren {
+		if !strings.HasPrefix(s, "(") {
+			tok, rem, err := readListElement(s, false)
+			if err != nil {
+				return nil, "", err
+			}
+
+			if tok == "" {
+				return nil, "", vmserrors.New(vmserrors.CLI_EMPTYELEMENT, orig)
+			}
+
+			return []string{tok}, rem, nil
+		}
+
+		s = s[1:]
+	}
+
+	for {
+		s = strings.TrimLeft(s, " \t")
+
+		tok, rem, err := readListElement(s, paren)
+		if err != nil {
+			return nil, "", err
+		}
+
+		if tok == "" && !strings.HasPrefix(s, `""`) {
+			return nil, "", vmserrors.New(vmserrors.CLI_EMPTYELEMENT, orig)
+		}
+
+		tokens = append(tokens, tok)
+
+		after := strings.TrimLeft(rem, " \t")
+		if strings.HasPrefix(after, ",") {
+			s = after[1:]
+
+			continue
+		}
+
+		if paren {
+			if !strings.HasPrefix(after, ")") {
+				return nil, "", vmserrors.New(vmserrors.CLI_NEEDPAREN)
+			}
+
+			return tokens, after[1:], nil
+		}
+
+		return tokens, rem, nil
+	}
+}
+
+// readListElement reads one element of a list for readList.
+func readListElement(s string, paren bool) (token, rest string, err error) {
+	if strings.HasPrefix(s, `"`) {
+		return readValueToken(s)
+	}
+
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case ',', '/', ' ', '\t':
+			return s[:i], s[i:], nil
+
+		case ')':
+			if paren {
+				return s[:i], s[i:], nil
+			}
+		}
 	}
 
 	return s, "", nil

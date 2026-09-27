@@ -92,12 +92,13 @@ func TestLoadConsoleGrammar(t *testing.T) {
 func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	g := loadEvaxGrammar(t)
 	// define, about, forth, exit, quit, test, call, clear, show, vminit,
-	// mount, dismount, initialize, directory, delete, purge, type, copy
-	// (the last eight are govax-native additions -- Phase 22 for mount/
-	// dismount, Phase 23 for initialize/directory/delete/purge/type/copy --
-	// with no testdata/dcl/evax.dcl counterpart).
-	if len(g.verbOrder) != 18 {
-		t.Errorf("got %d verbs, want 18: %v", len(g.verbOrder), verbNames(g))
+	// mount, dismount, initialize, directory, delete, purge, type, copy,
+	// create, assign, deassign (the last eleven are govax-native additions
+	// -- Phase 22 for mount/dismount, Phase 23 for initialize/directory/
+	// delete/purge/type/copy, Phase 25 for create/assign/deassign -- with
+	// no testdata/dcl/evax.dcl counterpart).
+	if len(g.verbOrder) != 21 {
+		t.Errorf("got %d verbs, want 21: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 

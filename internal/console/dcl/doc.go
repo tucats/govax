@@ -30,6 +30,17 @@
 // additive: a grammar that declares no parameter-scoped qualifiers (every
 // verb/syntax before Phase 23) behaves identically to before.
 //
+// Phase 25 adds two more (docs/PHASE-25.md, subtask 5):
+//
+//   - A "/list" switch on a parameter or qualifier statement makes it take
+//     a comma-separated list. A parameter list is written "A,B" or
+//     "A, B"; a qualifier list is "/X=(A,B)", or a single "/X=A". Quoted
+//     elements may contain commas. Result.List returns the elements (the
+//     keyword names, for a keyword type); String/Keyword still return the
+//     first.
+//   - "disallow any2(A,B,C)", CDU's "at most one of these" form, alongside
+//     the pairwise "disallow A and B" it expands into.
+//
 // This is a from-scratch,
 // behavior-preserving reimplementation appropriate to this project's "not a
 // cross-compile" goal (see docs/PLAN.md), not a fidelity deviation — the DCL

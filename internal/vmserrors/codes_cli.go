@@ -109,6 +109,9 @@ const (
 	// docs/PHASE-23.md subtask 7: PURGE's own invalid /LIMIT value -- see
 	// internal/rms.InvalidLimitError.
 	cliBadLimit
+
+	// docs/PHASE-25.md subtask 5: internal/console/dcl's list values.
+	cliEmptyElement
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -225,6 +228,11 @@ const (
 	// framing, since real VMS has no exact equivalent this project could
 	// reuse.
 	CLI_BADLIMIT = CLIFacility<<FacilityPosition | cliBadLimit<<MessagePosition | StatusError
+
+	// CLI_EMPTYELEMENT reports a comma-separated list value with an empty
+	// element ("A,,B", a trailing comma, or "()") -- docs/PHASE-25.md
+	// subtask 5's list-valued parameters and qualifiers.
+	CLI_EMPTYELEMENT = CLIFacility<<FacilityPosition | cliEmptyElement<<MessagePosition | StatusError
 )
 
 func init() {
@@ -298,7 +306,7 @@ func init() {
 	DefineMessage(CLI_EMPTYSTATEMENT, CLIFacility, "EMPTYSTATEMENT", "Empty statement")
 	DefineMessage(CLI_DISALLOWEXPR, CLIFacility, "DISALLOWEXPR", "DISALLOW requires an expression")
 	DefineMessage(CLI_UNTERMQUOTE, CLIFacility, "UNTERMQUOTE", "Unterminated quoted string in !Q")
-	DefineMessage(CLI_BADDISALLOW, CLIFacility, "BADDISALLOW", `Malformed DISALLOW expression !Q (want "Q1 and Q2")`)
+	DefineMessage(CLI_BADDISALLOW, CLIFacility, "BADDISALLOW", `Malformed DISALLOW expression !Q (want "Q1 and Q2" or "ANY2(Q1,Q2,...)")`)
 	DefineMessage(CLI_NOHANDLER, CLIFacility, "NOHANDLER", "No handler bound for !S")
 	DefineMessage(CLI_ALIASNOTFOUND, CLIFacility, "ALIASNOTFOUND", "Verb !Q: alias target !Q not found")
 	DefineMessage(CLI_QUALALIASNOTFOUND, CLIFacility, "QUALALIASNOTFOUND", "Qualifier !Q: alias target !Q not found")
@@ -321,5 +329,6 @@ func init() {
 	DefineMessage(CLI_PARAMNOTFOUND, CLIFacility, "PARAMNOTFOUND", "Qualifier !Q: /parameter= target !Q not found")
 	DefineMessage(CLI_BADFILESPEC, CLIFacility, "BADFILESPEC", "Invalid file specification !Q")
 	DefineMessage(CLI_NEEDVERSION, CLIFacility, "NEEDVERSION", "!Q requires a specific version, e.g. ;3 or ;* (DELETE never defaults to a version)")
+	DefineMessage(CLI_EMPTYELEMENT, CLIFacility, "EMPTYELEMENT", "Empty element in list !Q")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

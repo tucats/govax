@@ -82,6 +82,11 @@ type Parameter struct {
 	Default    *Value
 	Qualifiers []*Qualifier
 
+	// List marks a parameter declared with /list: it accepts a
+	// comma-separated list of values ("A,B", "A, B", or quoted elements
+	// that themselves contain commas), read back with Result.List.
+	List bool
+
 	typeRef *Type // resolved by validate()
 }
 
@@ -111,6 +116,11 @@ type Qualifier struct {
 	Alias    string    // name of another qualifier in the same Entry this stands in for
 	NoNegate bool
 	Default  *Value
+
+	// List marks a qualifier declared with /list: its value is either one
+	// value or a parenthesised, comma-separated list of them
+	// ("/X=(A,B)"), read back with Result.List.
+	List bool
 
 	typeRef  *Type      // resolved by validate()
 	aliasRef *Qualifier // resolved by validate()

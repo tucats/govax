@@ -39,7 +39,7 @@ facility that the console, RMS, and the RTL/system-service layer all share:
 
   All of them work on the same shared data the console uses.
 
-**Status: in progress — subtasks 1-4 of 9 done.**
+**Status: in progress — subtasks 1-5 of 9 done.**
 
 ## Why this phase looks different
 
@@ -440,7 +440,7 @@ the process default directory. RMS then gets its default device by translating
 
    The existing test suite has to pass, with any expectation tied to the old
    table names updated.
-5. **DCL grammar**, in scope as general-purpose `internal/console/dcl` work
+5. **Done.** **DCL grammar**, in scope as general-purpose `internal/console/dcl` work
    (see "Console commands (DCL grammar)").
    - Start with a short gap audit: compare what these commands need with what
      `dcl.Parse` supports, and record the result in this log.
@@ -808,3 +808,55 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
 - `internal/io/logical.go` and its tests are deleted. Tests that used the
   old API were updated. `go test ./...` passes except for the pre-existing
   `TestAssembleForth`.
+
+### 2026-09-27 — Subtask 5: DCL grammar
+
+- **Gap audit** of `internal/console/dcl` against what the new commands need:
+  - *Verb with its own parameters plus a syntax-redirect qualifier*: already
+    works. `Parse` fills the verb's parameters, a `/syntax=` qualifier
+    switches to the target entry, and only the entry that ends up active has
+    its required parameters checked. A test now pins this. The one limit is
+    that a redirect restarts parameter numbering, so `/DEVICE` must come
+    before the device name (`DEFINE/DEVICE DKA0`). That is how it has
+    always been used.
+  - *Mutually exclusive qualifiers*: the pairwise `disallow A and B`
+    already existed. Added CDU's `disallow any2(A,B,...)`, which expands
+    into the pairs.
+  - *Keyword-typed values*: already existed. *Parenthesised keyword lists*:
+    missing.
+  - *Comma lists*: missing. An unquoted `A,B` was one token, `A, B` was two
+    parameters, and a quoted element couldn't hold a comma.
+- **Added `/list`** on parameter and qualifier statements. A parameter list
+  is written `A,B`, `A, B`, or `A ,B`, and its elements can be quoted. A
+  qualifier list is `/X=(A,B)` or a single `/X=A`, with spaces allowed
+  inside the parentheses. Keyword-typed elements are checked against their
+  type one by one. `Result.List` returns the elements, and `String`/
+  `Keyword` still return the first one, so existing handlers keep working
+  on list-typed items. An empty element reports the new `CLI_EMPTYELEMENT`,
+  and a missing `)` reports `CLI_NEEDPAREN`. A negated keyword inside a
+  list is rejected with `CLI_NONEGATE`.
+- **Bug fixed along the way.** `matchKeyword` lost the negation of a
+  `NO`-prefixed keyword: its recursive call returned `negated=false`
+  unchanged, unlike `matchQualifier`. This is the DCL engine's own parsing,
+  not ISA behavior, so it was fixed outright. No existing command read
+  keyword negation, so nothing changes for them.
+- **Grammar entries** in `internal/bootdata/files/console.dcl`:
+  - The `lnm_attributes` type (`CONCEALED`, `TERMINAL`).
+  - `DEFINE` has its own `name`/`value` (list) parameters, the table,
+    access-mode, `/TRANSLATION_ATTRIBUTES` (list), and `/LOG` qualifiers,
+    two `any2` disallows, and keeps its `/DEVICE` redirect.
+  - New `ASSIGN` (value list first) and `DEASSIGN` (with `/ALL`) verbs.
+  - `CREATE` with a `/NAME_TABLE` redirect to `create_name_table`
+    (`/PARENT_TABLE`, the access modes, and `/LOG`).
+  - `show_logical` gained a list `name` and list `/TABLE`, plus `/PROCESS`/
+    `/GROUP`/`/SYSTEM`/`/FULL`/`/STRUCTURE`.
+  - A new `SHOW TRANSLATION` keyword. `SHOW TRANSLATION_BUFFER` still
+    resolves because an exact keyword match wins.
+
+  `DEFINE/LOGICAL` and the `logical_names` keyword are still present until
+  subtask 6 replaces their handlers. Until then the new verbs parse but
+  have no handler bound.
+- **Tests.** `list_test.go` exercises every feature against a small grammar
+  and every new command form against the real `console.dcl`. The verb-count
+  test now expects 21 verbs. `go test ./...` passes except for the
+  pre-existing `TestAssembleForth`.

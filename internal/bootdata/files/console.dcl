@@ -5,9 +5,67 @@
 
 grammar console
 
+    ! Logical names (docs/PHASE-25.md). DEFINE and ASSIGN share one
+    ! handler; /PROCESS, /GROUP, /SYSTEM and /TABLE= all select a table.
+
+    type lnm_attributes
+        keyword concealed/id=1
+        keyword terminal/id=2
+
     syntax show_logical
-        parameter name/id=301/type=$name
-        qualifier table/id=300/type=$name
+        parameter name/id=301/type=$any/list
+        qualifier table/id=300/type=$any/list
+        qualifier process/id=302
+        qualifier group/id=303
+        qualifier system/id=304
+        qualifier full/id=305
+        qualifier structure/id=306
+        disallow any2(process, group, system, table)
+
+    syntax show_translation
+        parameter name/id=311/type=$any/prompt="Log_Name"
+        qualifier table/id=310/type=$any
+
+    syntax create_name_table
+        parameter table/id=241/type=$any/prompt="Table"
+        qualifier parent_table/id=242/type=$any
+        qualifier user_mode/id=243
+        qualifier supervisor_mode/id=244
+        qualifier executive_mode/id=245
+        qualifier log/id=246
+        disallow any2(user_mode, supervisor_mode, executive_mode)
+
+    verb create
+        qualifier name_table/syntax=create_name_table
+
+    verb assign
+        parameter value/id=221/type=$any/list/prompt="Equ_Name"
+        parameter name/id=222/type=$any/prompt="Log_Name"
+        qualifier process/id=223
+        qualifier group/id=224
+        qualifier system/id=225
+        qualifier table/id=226/type=$any
+        qualifier user_mode/id=227
+        qualifier supervisor_mode/id=228
+        qualifier executive_mode/id=229
+        qualifier translation_attributes/id=230/type=lnm_attributes/list
+        qualifier log/id=231
+        disallow any2(process, group, system, table)
+        disallow any2(user_mode, supervisor_mode, executive_mode)
+
+    verb deassign
+        parameter name/id=251/type=$any
+        qualifier process/id=252
+        qualifier group/id=253
+        qualifier system/id=254
+        qualifier table/id=255/type=$any
+        qualifier user_mode/id=256
+        qualifier supervisor_mode/id=257
+        qualifier executive_mode/id=258
+        qualifier all/id=259
+        qualifier log/id=260
+        disallow any2(process, group, system, table)
+        disallow any2(user_mode, supervisor_mode, executive_mode)
     
     syntax show_device
         parameter name/id=100/type=$name
@@ -103,9 +161,21 @@ grammar console
         parameter value/id=202/type=$any/prompt="Value"
         
     verb define
-    
+        parameter name/id=211/type=$any/prompt="Log_Name"
+        parameter value/id=212/type=$any/list/prompt="Equ_Name"
         qualifier	logical/syntax=define_logical
         qualifier	device/syntax=define_device
+        qualifier process/id=213
+        qualifier group/id=214
+        qualifier system/id=215
+        qualifier table/id=216/type=$any
+        qualifier user_mode/id=217
+        qualifier supervisor_mode/id=218
+        qualifier executive_mode/id=219
+        qualifier translation_attributes/id=210/type=lnm_attributes/list
+        qualifier log/id=220
+        disallow any2(process, group, system, table)
+        disallow any2(user_mode, supervisor_mode, executive_mode)
         
     type debug_types
         keyword     debug/id=5003
@@ -213,6 +283,7 @@ grammar console
         keyword		clock		/syntax=show_clock
         keyword         watchpoints     /syntax=show_watchpoints
         keyword		logical_names	/syntax=show_logical
+        keyword		translation	/syntax=show_translation
         keyword		devices		/syntax=show_device
         keyword         version         /syntax=show_version
         keyword         xtest           /syntax=xtest

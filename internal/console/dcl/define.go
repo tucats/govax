@@ -135,6 +135,8 @@ func ParseGrammar(text string) (*Grammar, error) {
 				p.Prompt = prompt
 			}
 
+			_, p.List = switches["LIST"]
+
 			cur.Parameters = append(cur.Parameters, p)
 
 		case "QUALIFIER":
@@ -164,6 +166,8 @@ func ParseGrammar(text string) (*Grammar, error) {
 			if _, ok := switches["NONEGATABLE"]; ok {
 				q.NoNegate = true
 			}
+
+			_, q.List = switches["LIST"]
 
 			// /parameter=<name> is the opt-in marker for a Phase 23
 			// parameter-scoped qualifier: instead of this qualifier landing
@@ -201,7 +205,7 @@ func ParseGrammar(text string) (*Grammar, error) {
 				return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
 			}
 
-			cur.Disallows = append(cur.Disallows, d)
+			cur.Disallows = append(cur.Disallows, d...)
 
 		default:
 			return nil, vmserrors.New(vmserrors.CLI_BADDIRECTIVE, lineNo+1, directive)
@@ -415,7 +419,38 @@ func applyValueSwitches(switches map[string]string, typ *ValueType, typeName *st
 	return nil
 }
 
-func parseDisallow(expr string) (*Disallow, error) {
+// parseDisallow parses a DISALLOW expression: "Q1 AND Q2", or CDU's
+// "ANY2(Q1,Q2,...)" (at most one of the listed qualifiers may be present),
+// which expands to one pairwise Disallow per pair.
+func parseDisallow(expr string) ([]*Disallow, error) {
+	if u := upcase(strings.TrimSpace(expr)); strings.HasPrefix(u, "ANY2(") && strings.HasSuffix(u, ")") {
+		var names []string
+
+		for _, n := range strings.Split(u[len("ANY2("):len(u)-1], ",") {
+			if n = strings.TrimSpace(n); n == "" {
+				return nil, vmserrors.New(vmserrors.CLI_BADDISALLOW, expr)
+			}
+
+			names = append(names, n)
+		}
+
+		if len(names) < 2 {
+			return nil, vmserrors.New(vmserrors.CLI_BADDISALLOW, expr)
+		}
+
+		var out []*Disallow
+
+		for i := range names {
+			for j := i + 1; j < len(names); j++ {
+				q1, neg1 := splitNegated(names[i])
+				q2, neg2 := splitNegated(names[j])
+				out = append(out, &Disallow{Qual1: q1, Negated1: neg1, Qual2: q2, Negated2: neg2})
+			}
+		}
+
+		return out, nil
+	}
+
 	fields := strings.Fields(expr)
 	if len(fields) != 3 || upcase(fields[1]) != "AND" {
 		return nil, vmserrors.New(vmserrors.CLI_BADDISALLOW, expr)
@@ -424,7 +459,7 @@ func parseDisallow(expr string) (*Disallow, error) {
 	q1, neg1 := splitNegated(upcase(fields[0]))
 	q2, neg2 := splitNegated(upcase(fields[2]))
 
-	return &Disallow{Qual1: q1, Negated1: neg1, Qual2: q2, Negated2: neg2}, nil
+	return []*Disallow{{Qual1: q1, Negated1: neg1, Qual2: q2, Negated2: neg2}}, nil
 }
 
 func splitNegated(name string) (string, bool) {
