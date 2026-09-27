@@ -39,7 +39,7 @@ facility that the console, RMS, and the RTL/system-service layer all share:
 
   All of them work on the same shared data the console uses.
 
-**Status: in progress — subtasks 1-7 of 9 done.**
+**Status: in progress — subtasks 1-8 of 9 done.**
 
 ## Why this phase looks different
 
@@ -476,7 +476,7 @@ the process default directory. RMS then gets its default device by translating
    - `SYS$DISK`-driven default device.
    - Add end-to-end console tests against a real container, extending
      `internal/console/rms_e2e_test.go`'s pattern.
-8. **System services.**
+8. **Done.** **System services.**
    - Rewrite `SYS$TRNLNM`.
    - Add `SYS$CRELNM`, `SYS$DELLNM`, and `SYS$CRELNT`, with full item-list
      handling (`LNM$_STRING`/`ATTRIBUTES`/`INDEX`/`MAX_INDEX`/`TABLE`/
@@ -1007,5 +1007,109 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
     with two real containers (MOUNT's `DISK$label`, COPY, DIRECTORY, TYPE,
     SET/SHOW DEFAULT with a search list, DELETE, loops, DISMOUNT by
     logical name, and `_` suppression).
+
+  `go test ./...` passes except for the pre-existing `TestAssembleForth`.
+
+### 2026-09-27 — Subtask 8: system services
+
+- **`internal/rtl/logicals.go` rewritten.** It now holds seven services, all
+  registered through `ServiceTable.Register`: `SYS$TRNLNM`, `SYS$CRELNM`,
+  `SYS$DELLNM`, `SYS$CRELNT`, `SYS$CRELOG`, `SYS$DELLOG`, and `SYS$TRNLOG`.
+  They follow the VMS 5.0 System Services Reference Manual. Item codes and
+  statuses come from the generated `vmsdef.LNMConstants`/`SSConstants`, not
+  hand-typed values.
+- **`$TRNLNM`.**
+  - Supports `LNM$_INDEX` (0-127), `LNM$_STRING`, `LNM$_LENGTH`,
+    `LNM$_ATTRIBUTES`, `LNM$_MAX_INDEX` (-1 for a table-name entry),
+    `LNM$_ACMODE`, `LNM$_TABLE`, and `LNM$_CHAIN`.
+  - `LNM$_ATTRIBUTES` combines the name's own attributes with the current
+    equivalence's, plus `LNM$M_EXISTS`.
+  - A string or table name that's too long is cut short, with the success
+    status `SS$_BUFFEROVF`. An unknown item code is `SS$_BADPARAM`.
+  - Without `acmode` every name counts; with it, less privileged names are
+    ignored.
+  - **These fix the eVAX port, which didn't follow the manual:**
+    - `LNM$_TABLE` wrote through a descriptor; the manual says a plain
+      buffer plus return length.
+    - `LNM$_LENGTH`/`LNM$_MAX_INDEX` were words; the manual says
+      longwords.
+    - `LNM$_MAX_INDEX` was always 1.
+    - `LNM$_INDEX`/`LNM$_CHAIN` were ignored.
+    - `LNM$_TABLE` returned the table name the caller passed in, not the
+      table that holds the name.
+    - More than 5 arguments returned the non-VAX `ssTooManyArgs`. That
+      check is gone for these services, since a VAX CALLS with extra
+      arguments isn't an error. This settles subtask 1's finding for
+      `$TRNLNM`; `$ASSIGN` still has the check.
+- **`$CRELNM`**: `LNM$_ATTRIBUTES` sets the attributes of the
+  `LNM$_STRING`s that follow it, as the manual describes. It also supports
+  `LNM$_TABLE` (the table the name went into) and `LNM$_CHAIN`, returns
+  `SS$_SUPERSEDE`/`SS$_BUFFEROVF`, and accepts `CONFINE`/`NO_ALIAS` in
+  `attr`.
+- **`$DELLNM`** deletes by name or every name in the table.
+- **`$CRELNT`** takes all eight arguments. `quota` and `promsk` are
+  accepted and ignored. It returns the name through `resnam`/`reslen`
+  (`SS$_RESULTOVF` if the name doesn't fit), and returns
+  `SS$_LNMCREATED`/`SS$_NORMAL` (`CREATE_IF`, table already existed)/
+  `SS$_SUPERSEDE`.
+- **Item-list chaining.** New `walkItemListChain` in `itemlist.go` follows
+  `LNM$_CHAIN`, up to 64 lists, so a loop is `SS$_BADPARAM`.
+- **Access modes.** govax treats the caller as fully privileged, so an
+  explicit `acmode` is used as-is (the SYSNAM rule), and an omitted one
+  means the caller's mode. The old services take the mode by value, where
+  0 can't be told from "omitted", so they maximize it with the caller's
+  mode. `SS$_IVACMODE` (subtask 1's finding) isn't needed: a mode byte is
+  just masked to 2 bits.
+- **Old-style services** (open question 6). They use table numbers 0/1/2
+  for system/group/process.
+  - `$CRELOG` sets `LNM$M_CRELOG`, which `$TRNLNM` reports.
+  - `$TRNLOG` searches process, then group, then system, one level deep.
+    `dsbmsk` bits 0/1/2 disable system/group/process. It returns the table
+    number and the name's access mode.
+  - An untranslated name (not found, or starting with `_`, which is
+    removed) is returned unchanged with `SS$_NOTRAN`. A result that doesn't
+    fit is `SS$_RESULTOVF`.
+  - These argument layouts come from the V4-era descriptions. The 5.0
+    manual only lists the services as obsolete, and the 7.3 source archive
+    doesn't contain them.
+- **Devices.** `$ASSIGN`/`$GETDVIW` translate a device name through
+  `rms.PhysicalDevice` first (`SYS$OUTPUT` becomes `TTA0`, `_` suppresses
+  translation). A translation loop is `SS$_TOOMANYLNAM`, and a name with no
+  device is `SS$_IVDEVNAM`.
+- **Image rundown.** RUN sets `Console.imageActive`. When
+  `reportStopReason` sees the RET that ends that image
+  (`ErrConsoleCallReturned`), `imageRundown` deletes the user-mode names in
+  the process table (§11.3.5). A plain CALL doesn't trigger it. This also
+  covers an image stopped at a breakpoint and continued with GO. govax has
+  no `SYS$EXIT` service, so an image that ends with HALT or a fatal
+  exception isn't run down. That's noted for DEVIATIONS.
+- **Acceptance fixture.** `testdata/asm/lnm_roundtrip.asm` is real
+  assembled VAX code:
+  1. `$CRELNM` defines `MYOUT = SYS$OUTPUT`.
+  2. `$TRNLNM` reads the string back, and the program checks the text and
+     its length.
+  3. It writes a record to file spec `MYOUT`, which RMS translates
+     `MYOUT` -> `SYS$OUTPUT` -> `_TTA0:`, the console.
+  4. `$DELLNM` deletes the name.
+  5. A second `$TRNLNM` must return `SS$_NOLOGNAM`.
+
+  It leaves R0 = 1 only if every step worked.
+- **Found, not changed:** `testdata/asm/logname.asm` pushes `$TRNLNM`'s
+  `acmode` and `itmlst` arguments in swapped order. Its regression test only
+  checks that it runs to completion, which it still does. It's an upstream
+  eVAX fixture, so it was left alone.
+- **Tests.**
+  - `internal/rtl/logicals_test.go` (rewritten around a small memory
+    "arena" helper): every `$TRNLNM` item code, including index past the
+    end, overflow, bad item/index, case-blind, acmode, and a chained or
+    looping list. Also `$CRELNM` with positional attributes, `LNM$_TABLE`,
+    supersede, and the default mode; `$DELLNM` by name and whole table;
+    `$CRELNT` with `CREATE_IF`, supersede, a default name, and result
+    overflow; and the old services' tables, maximizing, `dsbmsk`,
+    `_`/`NOTRAN`, and overflow.
+  - `devices_test.go`: device-name translation for `$ASSIGN` and
+    `$GETDVIW`.
+  - Console tests: the assembled round trip, rundown through
+    `reportStopReason`, and rundown through a real `RUN simple.exe`.
 
   `go test ./...` passes except for the pre-existing `TestAssembleForth`.

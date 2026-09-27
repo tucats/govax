@@ -128,6 +128,8 @@ $DEF
         /USER_MODE, /SUPERVISOR_MODE, /EXECUTIVE_MODE
 
             The access mode of the name.  The default is supervisor mode.
+            A user-mode name in the process table is deleted when the
+            next program started with RUN exits.
 
         /TRANSLATION_ATTRIBUTES=(CONCEALED,TERMINAL)
 

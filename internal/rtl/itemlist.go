@@ -74,3 +74,43 @@ func (env *Environment) setRetLen(e itemListEntry, size uint16) uint32 {
 	
 	return 0
 }
+
+// maxItemListChain bounds how many item lists walkItemListChain follows,
+// so a chain that loops back on itself is SS$_BADPARAM instead of a hang.
+const maxItemListChain = 64
+
+// chainFollowed is walkItemListChain's private "stop this list, follow
+// the chain" signal from its visit wrapper. No VMS status is all ones.
+const chainFollowed = ^uint32(0)
+
+// walkItemListChain is walkItemList for the logical-name services, whose
+// item lists may end in an LNM$_CHAIN entry (item code chain) whose
+// buffer address is another item list to process next. A zero address
+// ends the walk.
+func (env *Environment) walkItemListChain(ptr uint32, chain uint16, visit func(itemListEntry) uint32) uint32 {
+	for lists := 0; lists < maxItemListChain; lists++ {
+		if ptr == 0 {
+			return 0
+		}
+
+		next := uint32(0)
+
+		status := env.walkItemList(ptr, func(e itemListEntry) uint32 {
+			if e.ItemCode == chain {
+				next = e.BuffAddr
+
+				return chainFollowed
+			}
+
+			return visit(e)
+		})
+
+		if status != chainFollowed {
+			return status
+		}
+
+		ptr = next
+	}
+
+	return ssBadParam
+}

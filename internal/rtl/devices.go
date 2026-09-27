@@ -1,9 +1,11 @@
 package rtl
 
 import (
+	"errors"
 	"fmt"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -76,7 +78,12 @@ func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 		return ssBadParam, nil
 	}
 
-	dp, found := env.Devices.Find(name)
+	device, st := env.deviceName(name)
+	if st != 0 {
+		return st, nil
+	}
+
+	dp, found := env.Devices.Find(device)
 	if !found {
 		return ssIvDevNam, nil
 	}
@@ -150,9 +157,14 @@ func serviceSysGetdviw(env *Environment, argv []uint32) (uint32, error) {
 			return ssBadParam, nil
 		}
 
+		device, st := env.deviceName(name)
+		if st != 0 {
+			return st, nil
+		}
+
 		found := false
 
-		dp, found = env.Devices.Find(name)
+		dp, found = env.Devices.Find(device)
 		if !found {
 			return ssNoSuchDev, nil
 		}
@@ -203,4 +215,26 @@ func serviceSysGetdviw(env *Environment, argv []uint32) (uint32, error) {
 func registerDeviceServices(t *ServiceTable) {
 	t.Register("SYS$ASSIGN", serviceSysAssign)
 	t.Register("SYS$GETDVIW", serviceSysGetdviw)
+}
+
+// deviceName translates a $ASSIGN/$GETDVI device name through its logical
+// names (SYS$OUTPUT becomes TTA0, as on VMS) into a physical device name
+// for Devices.Find; a leading "_" suppresses translation
+// (docs/PHASE-25.md). A name that can't be translated is reported as its
+// lnm status (SS$_TOOMANYLNAM), and one that names no device at all as
+// SS$_IVDEVNAM.
+func (env *Environment) deviceName(name string) (string, uint32) {
+	device, err := rms.PhysicalDevice(env.Logicals, name)
+	if err != nil {
+		var lne *rms.LogicalNameError
+		if errors.As(err, &lne) {
+			st, _ := lnmStatus(lne.Err)
+
+			return "", st
+		}
+
+		return "", ssIvDevNam
+	}
+
+	return device, 0
 }

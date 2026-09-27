@@ -205,6 +205,12 @@ type Console struct {
 	// behave exactly as a plain os.ReadFile/os.Open — see
 	// internal/respath's own doc comment.
 	Paths *respath.Resolver
+
+	// imageActive is set while an image started by RUN is running (or
+	// stopped at a breakpoint): the RET that ends its main routine is
+	// its image exit, when user-mode logical names are run down (see
+	// imageRundown).
+	imageActive bool
 }
 
 // New returns a Console with no machine allocated yet (vax_init == 0 in the

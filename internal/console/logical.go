@@ -501,6 +501,16 @@ func (c *Console) ShowTranslation(table, name string) error {
 	return nil
 }
 
+// imageRundown does what VMS does to logical names at image exit
+// (User's Manual §11.3.5, §11.4): it deletes the user-mode names in the
+// process table, such as those DEFINE/USER_MODE made for the image that
+// just ended.
+func (c *Console) imageRundown() {
+	if n, err := c.Logicals.Delete(lnm.ProcessTableName, "", lnm.User); err == nil && n > 0 {
+		c.traceLogicals("image rundown deleted %d user-mode name(s)", n)
+	}
+}
+
 // logicalNameFailure returns the status carried by err when a file
 // command failed because its spec's logical names couldn't be translated
 // (SS$_TOOMANYLNAM: a circular definition, or too many levels), so it is

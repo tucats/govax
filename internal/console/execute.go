@@ -238,6 +238,11 @@ func (c *Console) reportStopReason(err error) error {
 	// message is printed here, matching Call's own pre-existing silent
 	// return on this same condition.
 	case errors.Is(err, cpu.ErrConsoleCallReturned):
+		if c.imageActive {
+			c.imageActive = false
+			c.imageRundown()
+		}
+
 		return nil
 
 	case errors.Is(err, cpu.ErrHalted):

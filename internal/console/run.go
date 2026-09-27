@@ -77,6 +77,8 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 		return nil
 	}
 
+	c.imageActive = true
+
 	return c.Call(driverAddr, opts.Step)
 }
 

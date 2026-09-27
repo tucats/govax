@@ -6,7 +6,9 @@ import (
 	"testing"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 func defineTestDevice(env *Environment, name string, class iodev.DeviceClass) *iodev.Device {
@@ -199,5 +201,41 @@ func TestServiceSysGetdviwInvalidChannel(t *testing.T) {
 	
 	if r0 != ssIvChan {
 		t.Errorf("r0 = %d, want ssIvChan", r0)
+	}
+}
+
+// TestServiceSysAssignAndGetdviTranslateLogicalNames: $ASSIGN and
+// $GETDVIW translate a device name's logical names first, so SYS$OUTPUT
+// reaches the terminal, and "_" suppresses that (docs/PHASE-25.md).
+func TestServiceSysAssignAndGetdviTranslateLogicalNames(t *testing.T) {
+	env, _ := fixture()
+	defineTestDevice(env, "TTA0", iodev.DeviceClassTT)
+	a := newArena(t, env)
+
+	defineLogical(t, env, "LNM$PROCESS", "LOOP1", lnm.Supervisor, 0, "LOOP2:")
+	defineLogical(t, env, "LNM$PROCESS", "LOOP2", lnm.Supervisor, 0, "LOOP1:")
+
+	for _, tt := range []struct {
+		name string
+		want uint32
+	}{
+		{"SYS$OUTPUT", ssNormal},
+		{"TT:", ssNormal},
+		{"_TTA0:", ssNormal},
+		{"_SYS$OUTPUT", ssIvDevNam},
+		{"LOOP1:", vmserrors.SS_TOOMANYLNAM},
+	} {
+		wantR0(t, callLNM(t, env, serviceSysAssign, a.desc(tt.name), a.alloc(2)), tt.want)
+	}
+
+	buf := a.alloc(4)
+	argv := make([]uint32, 8)
+	argv[2] = a.desc("SYS$COMMAND")
+	argv[3] = a.items(item{code: dviDevBufSize, buflen: 4, buf: buf})
+
+	wantR0(t, callLNM(t, env, serviceSysGetdviw, argv...), ssNormal)
+
+	if a.readLong(buf) != 512 {
+		t.Errorf("$GETDVIW SYS$COMMAND devbufsiz = %d", a.readLong(buf))
 	}
 }
