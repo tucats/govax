@@ -426,14 +426,18 @@ the process default directory. RMS then gets its default device by translating
    define handler (table name as a parameter) for
    `DEFINE[/PROCESS|/GROUP|/SYSTEM|/TABLE]` and `ASSIGN`, plus `DEASSIGN`,
    `SHOW LOGICAL` (VMS output format, iterative levels, `/FULL`,
-   `/STRUCTURE`), `SHOW TRANSLATION`, and `CREATE/NAME_TABLE`. Update the
-   console help text in `internal/bootdata/files/vax.help`.
+   `/STRUCTURE`), `SHOW TRANSLATION`, and `CREATE/NAME_TABLE`.
+   - Remove the eVAX-only `DEFINE/LOGICAL` syntax and the `SHOW
+     LOGICAL_NAMES` keyword; `SHOW LOGICAL` is the VMS form (open question 4).
+   - Update `internal/bootdata/files/vax.help` to describe the VMS syntax only.
 7. **RMS file-spec translation.**
    - `$OPEN`/`$CREATE`, and the `Session` commands DIRECTORY/TYPE/COPY/
      DELETE/PURGE/SET DEFAULT/MOUNT, go through `TranslateFileSpec`.
    - Search lists work for `$OPEN` (first file found) and for wildcard
      commands (every element).
    - Map the error to `RMS$_LNE`.
+   - `MOUNT` defines `DISK$label` in the system table and `DISMOUNT` removes
+     it (open question 3).
    - `SYS$DISK`-driven default device.
    - Add end-to-end console tests against a real container, extending
      `internal/console/rms_e2e_test.go`'s pattern.
@@ -442,13 +446,18 @@ the process default directory. RMS then gets its default device by translating
    - Add `SYS$CRELNM`, `SYS$DELLNM`, and `SYS$CRELNT`, with full item-list
      handling (`LNM$_STRING`/`ATTRIBUTES`/`INDEX`/`MAX_INDEX`/`TABLE`/
      `LENGTH`/`ACMODE`, `LNM$_CHAIN`).
+   - Add the pre-V4 services `SYS$CRELOG`, `SYS$DELLOG`, and `SYS$TRNLOG` as
+     thin wrappers over the same database (open question 6). Their table
+     numbers 0/1/2 map to system/group/process, and `$TRNLOG` searches
+     process → group → system one level deep.
    - Add device-name translation for `SYS$ASSIGN`/`SYS$GETDVI`.
    - Rundown of user-mode names at image exit.
    - Add a MACRO-32 fixture (`testdata/asm/lnm_roundtrip.asm`) that runs
      `$CRELNM` → `$TRNLNM` → `$DELLNM` and writes through `SYS$OUTPUT` via a
      program-defined logical name, as an acceptance test.
 9. **Legacy clean-up and docs.**
-   - Resolve the eVAX-alias question (open question 4).
+   - Sweep for any remaining eVAX-only logical-name syntax in docs, help, and
+     tests (open question 4).
    - Add `docs/DEVIATIONS.md` entries for each eVAX behavior this phase
      changes, and for the deliberate gaps (privileges, the job table, the
      process-permanent-file prefix).
@@ -466,36 +475,43 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
    user asked for three default tables. Should `LNM$JOB` (and `DEFINE/JOB`) be
    added now as a fourth, since govax has one process and it would behave
    exactly like the process table? *Recommendation: leave it out for now. The
-   directory-based design makes it a few lines to add later.*
+   directory-based design makes it a few lines to add later.* **CONFIRMED: leave
+   it out for now.**
 2. **UIC group number.** `rtl.Environment` already has a nominal UIC
    (`nominalUIC`). The group table should be named from its group field
    (`LNM$GROUP_000001`, or whatever `nominalUIC` holds), which means the UIC has
    to move somewhere the console-owned `lnm.Database` can see it at
    construction. *Recommendation: pass the UIC into `lnm.NewDatabase`, and
-   have `rtl.NewEnvironment` take it from the same place.*
+   have `rtl.NewEnvironment` take it from the same place.* **CONFIRMED: passing
+   the uic into new database.**
 3. **Default system-table and mount-time names.** Should `MOUNT` define the
    volume label as a logical name (as VMS does, in the system table for
    `/SYSTEM` mounts and otherwise the job table), and should
    `SYS$SYSDEVICE`/`SYS$SYSTEM` be seeded? *Recommendation: MOUNT defines
    `DISK$label` in the system table. Don't seed `SYS$SYSTEM` etc. until
-   something needs them.*
+   something needs them.* **CONFIRMED: you can skip seeding SYS$SYSTEM for now.**
 4. **eVAX command aliases.** Should `DEFINE/LOGICAL name value /TABLE=` and
    `SHOW LOGICAL_NAMES` be dropped outright (not VMS syntax), or kept as
    undocumented aliases for existing scripts? *Recommendation: drop them.
    `SHOW LOGICAL` (a prefix of `LOGICAL_NAMES`) keeps working anyway because
-   of DCL keyword abbreviation.*
+   of DCL keyword abbreviation.* **CONFIRMED: goal is to support VAX/VMS CLI
+   syntax as much as possible; ignore eVAX-isms in favor of proper VMS emulation.
+   Update the bootdata/files/ .help file accordingly.**
 5. **Limits.** VMS 7.3 uses `LNM$C_NAMLENGTH` = 255 and `LNM$C_MAXDEPTH` = 10.
    The CLRM excerpt says 63 characters. *Recommendation: use the 7.3 values
    from the generated header.* The user should confirm that 7.3, not V4, is the
-   target.
+   target. **CONFIRMED: VMS 7.3 is the target version to emulate.**
 6. **Old-style services.** Should `SYS$CRELOG`/`SYS$DELLOG`/`SYS$TRNLOG` (the
    pre-V4 interfaces, still present in 7.3 and in the P1 vector) be written as
    thin wrappers over the same database now, or later? *Recommendation: later,
-   unless a target `.exe` in `testdata/exe` calls them. Subtask 8 checks.*
+   unless a target `.exe` in `testdata/exe` calls them. Subtask 8 checks.* 
+   **CONFIMRED: let's implement the pre-V4 interfaces as wrappers; we don't know where a
+   user of govax might get their .exe files they want to run.**
 7. **Temporary defaults in input lists** (CLRM §2.2.3.3, `TYPE ALPHA,MAL:BETA,
    HIG:GAMMA`). This needs the file commands to accept comma lists, which
    today they don't. *Recommendation: out of scope for this phase. The subtask
    5 list type is the prerequisite, and it can become a later RMS/DCL phase.*
+   **CONFIRMED: Agreed, we can defer updating TYPE for now.**
 
 ## Progress Log
 
@@ -531,3 +547,19 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
   syntax redirects, mutually exclusive qualifiers, keyword lists) instead of
   the smallest possible fix.
 - No code written. This document is the planning deliverable.
+
+### 2026-09-27 — Open questions answered
+
+- The user reviewed the plan and answered every open question (marked
+  **CONFIRMED** in place):
+  - Q1: no job table for now.
+  - Q2: the UIC is passed into `lnm.NewDatabase`.
+  - Q3: don't seed `SYS$SYSTEM` and the like. The user didn't object to MOUNT
+    defining `DISK$label` in the system table, so that is taken as accepted.
+  - Q4: drop the eVAX-isms and support only VMS syntax, and update the help
+    file to match.
+  - Q5: VMS 7.3 is the target.
+  - Q6: **implement** `$CRELOG`/`$DELLOG`/`$TRNLOG` as wrappers now, because a
+    govax user's `.exe` files could come from anywhere.
+  - Q7: temporary defaults in input lists are deferred.
+- Subtasks 6-9 were updated to match these answers.
