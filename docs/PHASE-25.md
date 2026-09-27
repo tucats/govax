@@ -39,7 +39,7 @@ facility that the console, RMS, and the RTL/system-service layer all share:
 
   All of them work on the same shared data the console uses.
 
-**Status: planning.** No code yet.
+**Status: in progress — subtask 1 of 9 done.**
 
 ## Why this phase looks different
 
@@ -60,10 +60,15 @@ correctness references are real VMS documentation:
   applying defaults after translation, and temporary defaults in input lists.
 - The *VMS System Services Reference* descriptions of `$CRELNM`/`$DELLNM`/
   `$TRNLNM`/`$CRELNT`, for argument lists, item codes, and status codes.
-  `reference/vms/` has no `lnmdef.h` yet. Add one (VMS 7.3 SDL-generated, like
-  the FAB/RAB/RMS headers) and feed it through `internal/vmsdef/gen` so the
-  `LNM$_*`/`LNM$M_*`/`LNM$C_*` values come from a generator instead of being
-  typed in by hand (see subtask 1).
+  The numeric values come from two real VMS 7.3 source files copied into
+  `reference/vms/` from the user's VMS 7.3 source archive
+  (`~/Documents/Technical Doc/VMS/vmssrc_archive/v73`), not typed in by hand:
+  - `lnmdef.sdl` (from `starlet_b64/lis/`) is the SDL source of `$LNMDEF`.
+    No SDL-generated `lnmdef.h` exists anywhere on disk.
+  - `ssdef.txt` (from `vest_dblrtl/lis/`) is a BLISS `LITERAL` listing of all
+    406 VAX `$SSDEF` codes.
+
+  `internal/vmsdef/gen` parses both (see subtask 1).
 
 Where the two manuals differ (the V4-era CLRM says names are at most 63
 characters and translation is 10 levels deep; the modern VSI manual says 255
@@ -371,12 +376,14 @@ the process default directory. RMS then gets its default device by translating
 
 ## Subtasks
 
-1. **`internal/vmsdef` LNM constants.** Add `reference/vms/lnmdef.h` (plus
-   `ssdef.h` entries for `SS$_NOLOGNAM`, `NOLOGTAB`, `TOOMANYLNAM`, `IVLOGNAM`,
-   `IVLOGTAB`, `SUPERSEDE`, `NORMAL`, `DUPLNAM`, `NOPRIV`, if they aren't
-   already available) and extend `internal/vmsdef/gen` to generate `LNM$_*`/
-   `LNM$M_*`/`LNM$C_*` (`NAMLENGTH`, `MAXDEPTH`, `TABNAMLEN`). Unit tests pin
-   the handful of values the design depends on.
+1. **Done.** **`internal/vmsdef` LNM and SS constants.**
+   - Added `reference/vms/lnmdef.sdl` and `reference/vms/ssdef.txt`.
+   - Extended `internal/vmsdef/gen` to generate two new maps alongside
+     `Constants`:
+     - `LNMConstants` (40 entries): `LNM$M_`/`LNM$V_` bits, `LNM$C_` limits,
+       and `LNM$_` item codes.
+     - `SSConstants` (406 entries).
+   - Unit tests pin the values the design depends on.
 2. **`internal/lnm` core.** `Database`, `Table`, `Entry`, and `Equivalence`, plus
    startup of the directory and default tables (the table in "Table names are
    themselves logical names"). Also:
@@ -563,3 +570,56 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
     govax user's `.exe` files could come from anywhere.
   - Q7: temporary defaults in input lists are deferred.
 - Subtasks 6-9 were updated to match these answers.
+
+### 2026-09-27 — Subtask 1: `$LNMDEF`/`$SSDEF` constants in `internal/vmsdef`
+
+- **Sources.** The plan assumed an SDL-generated `lnmdef.h` like the FAB/RAB/
+  RMS headers, but none exists on disk. A search found the real VMS 7.3 SDL
+  *source*, `vmssrc_archive/v73/starlet_b64/lis/lnmdef.sdl` (module `$LNMDEF`,
+  version X-3, 1997). For status codes it found
+  `vmssrc_archive/v73/vest_dblrtl/lis/ssdef.txt`, a BLISS `LITERAL` listing of
+  all 406 VAX `SS$_` codes. The `~/Projects/ods2/ssdef.h` that also turned up
+  was rejected: it's a 50-line, third-party subset (Paul Nankervis's ODS2
+  tool), not DEC's. Both archive files are copied verbatim into
+  `reference/vms/`.
+- **Generator.** `internal/vmsdef/gen` gained two parsers:
+  - `sdl.go` handles only the SDL subset `$LNMDEF` uses: `aggregate` with
+    `bitfield [length N] [mask] [fill]` members, and single or list
+    `constant ... equals ... [increment] prefix ... tag ...`. It follows SDL's
+    naming (`P$V_`/`P$M_`/`P$S_`, and `P$T_NAME` or `P$_NAME` for an empty
+    tag).
+  - `bliss.go` reads the `NAME, I, value` literal form.
+
+  Both return an error on any syntax they don't recognise instead of skipping
+  it, so a future source file with wider syntax can't silently produce a
+  partial table.
+- **Separate maps.** Output is two **new** maps, `LNMConstants` and
+  `SSConstants`, not additions to `Constants`, because `.RMSDEF` defines every
+  `Constants` entry as an assembler symbol. `TestConstants_onlyRMSFamilies`
+  guards that separation. The regenerated `Constants` block was checked
+  byte-for-byte identical to before.
+- **Cross-checks.** The generated `$LNMDEF` values independently match what
+  govax already hard-coded:
+  - `internal/rtl/logicals.go`: `LNM$M_CASE_BLIND` = `0x2000000`,
+    `LNM$_STRING` = 2 through `LNM$_MAX_INDEX` = 7.
+  - `internal/io/logical.go`: `LNM$M_TABLE` = `0x8`, `LNM$M_TERMINAL` =
+    `0x200`.
+  - `LNM$C_NAMLENGTH` = 255 and `LNM$C_MAXDEPTH` = 10, confirming open
+    question 5's 7.3 limits.
+
+  `LNM$_CHAIN` (-1) is stored as `0xFFFFFFFF`.
+- **Finding for subtask 8.** Three `SS$_` codes in `internal/rtl/status.go` are
+  **not in the VAX 7.3 `$SSDEF` at all**: `ssNoSuchFac` = 9276, `ssInvArg` =
+  4042, and `ssTooManyArgs` = 10060. No name in `ssdef.txt` has any of those
+  values either. They probably come from eVAX or from a later/Alpha VMS.
+  `SS$_TOOMANYARGS` matters here because `SYS$TRNLNM` returns it for more than
+  5 arguments, so subtask 8 will re-check that path against real 7.3
+  behavior. That path probably can't happen at all on VAX (a CALLS with extra
+  arguments isn't rejected). `ssdef.txt` also has no `SS$_IVACMODE`, so the
+  new services will need a different code for a bad access mode.
+- **Pre-existing failure, not from this subtask.** `go test ./...` fails
+  `internal/asm` `TestAssembleForth` ("expected non-empty S0 content"). It
+  fails the same way with this subtask's changes stashed. It comes from commit
+  `a21799c` ("Update forth.asm to run in user space"): the fixture no longer
+  deposits into S0, but the test still expects it to. Left for the user.
+  Everything else passes.
