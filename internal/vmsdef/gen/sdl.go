@@ -23,11 +23,17 @@ import (
 //     "MEMBER structure [fill];" ... "end MEMBER;" blocks of bitfields, as
 //     $DEVDEF uses for its DEVCHAR and DEVCHAR2 longwords. Union members
 //     overlay each other, so each nested structure numbers its bitfields
-//     from bit 0 again, all under the union's prefix.
+//     from bit 0 again, all under the union's prefix. A structure
+//     aggregate may nest one the same way ($JPIDEF's
+//     "JPICTLFLGS structure longword unsigned fill;"), continuing from the
+//     current bit position, since structure members follow each other.
 //   - "constant NAME equals V prefix P$ tag T;" and the list form
 //     "constant (A, B, ...) equals V increment I prefix P$ tag T;" — each
 //     name becomes P$T_NAME (P$_NAME when T is empty), successive list
-//     entries counting up from V by I.
+//     entries counting up from V by I. $JPIDEF writes the "$" in the tag
+//     instead ("prefix JPI tag $C"), which composes the same names. V is a
+//     decimal or %x hexadecimal literal, or "OTHER@N": an earlier constant
+//     shifted left N bits, as $JPIDEF numbers its item-code lists.
 //
 // Comments run from "{" or "/*" to the end of the line. SDL quotes a name
 // (e.g. "STRING") only when it collides with an SDL keyword; the quotes are
@@ -102,21 +108,35 @@ func parseSDL(src string) (map[string]uint32, error) {
 				return nil, fmt.Errorf("%q outside an aggregate", stmt)
 			}
 
-		case isUnion && inAggregate && !inMember:
-			// MEMBER structure [fill]
-			if len(toks) < 2 || len(toks) > 3 || !strings.EqualFold(toks[1], "structure") ||
-				(len(toks) == 3 && !strings.EqualFold(toks[2], "fill")) {
+		case inAggregate && !inMember && (isUnion || len(toks) >= 2 && strings.EqualFold(toks[1], "structure")):
+			// MEMBER structure [longword] [unsigned] [fill]
+			if len(toks) < 2 || !strings.EqualFold(toks[1], "structure") {
 				return nil, fmt.Errorf("unsupported union member %q", stmt)
 			}
 
-			inMember, bitPos = true, 0
+			for _, t := range toks[2:] {
+				switch strings.ToLower(t) {
+				case "fill", "longword", "unsigned":
+				default:
+					return nil, fmt.Errorf("unsupported nested structure keyword %q in %q", t, stmt)
+				}
+			}
+
+			inMember = true
+			if isUnion {
+				bitPos = 0
+			}
 
 		case kw == "constant":
 			if inAggregate {
 				return nil, fmt.Errorf("constant inside an aggregate is not supported: %q", stmt)
 			}
 
-			consts, err := sdlConstant(toks[1:])
+			consts, err := sdlConstant(toks[1:], func(name string) (uint32, bool) {
+				v, ok := out[name]
+
+				return v, ok
+			})
 			if err != nil {
 				return nil, fmt.Errorf("%q: %w", stmt, err)
 			}
@@ -235,7 +255,7 @@ type sdlConst struct {
 // sdlConstant handles the tokens following "constant": a single name or a
 // parenthesised name list, then "equals V", optionally "increment I", and
 // the required "prefix P$" and "tag T".
-func sdlConstant(toks []string) ([]sdlConst, error) {
+func sdlConstant(toks []string, lookup func(string) (uint32, bool)) ([]sdlConst, error) {
 	var names []string
 
 	i := 0
@@ -280,9 +300,9 @@ func sdlConstant(toks []string) ([]sdlConst, error) {
 
 		switch kw {
 		case "equals", "increment":
-			n, err := strconv.ParseInt(arg, 10, 64)
+			n, err := sdlValue(arg, lookup)
 			if err != nil {
-				return nil, fmt.Errorf("bad %s value %q", kw, arg)
+				return nil, fmt.Errorf("bad %s value %q: %w", kw, arg, err)
 			}
 
 			if kw == "equals" {
@@ -315,4 +335,29 @@ func sdlConstant(toks []string) ([]sdlConst, error) {
 	}
 
 	return out, nil
+}
+
+// sdlValue evaluates an SDL constant value: a decimal literal, a %x
+// hexadecimal literal, or NAME@N (the earlier constant NAME shifted left N
+// bits).
+func sdlValue(arg string, lookup func(string) (uint32, bool)) (int64, error) {
+	if name, shift, ok := strings.Cut(arg, "@"); ok {
+		v, found := lookup(name)
+		if !found {
+			return 0, fmt.Errorf("undefined constant %s", name)
+		}
+
+		n, err := strconv.ParseUint(shift, 10, 5)
+		if err != nil {
+			return 0, fmt.Errorf("bad shift %q", shift)
+		}
+
+		return int64(v) << n, nil
+	}
+
+	if hex, ok := strings.CutPrefix(strings.ToLower(arg), "%x"); ok {
+		return strconv.ParseInt(hex, 16, 64)
+	}
+
+	return strconv.ParseInt(arg, 10, 64)
 }

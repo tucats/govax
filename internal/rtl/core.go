@@ -1,24 +1,14 @@
 package rtl
 
 import (
-	"fmt"
-
 	"github.com/tucats/govax/internal/vax"
 )
 
 // Port of service.c's SYS$ services that don't need internal/io or the RMS
-// layer: the exit-handler/AST recording stubs, virtual address region
-// expansion, and SYS$GETJPIW. Its event-flag services moved to
-// eventflags.go when common event flag clusters arrived (docs/PHASE-26.md).
-
-// JPI item codes sys_getjpiw recognizes, matching service.c's own
-// JPI__ACCOUNT/JPI__CLINAME (their comments: "Always \"USER\""/"Always
-// \"EVAX\"", i.e. hardcoded stand-ins with no real process-attribute
-// storage behind them, replicated as-is).
-const (
-	jpiAccount = 515
-	jpiCliName = 522
-)
+// layer: the exit-handler/AST recording stubs and virtual address region
+// expansion. Its event-flag services moved to eventflags.go when common
+// event flag clusters arrived, and SYS$GETJPIW to getjpi.go when it grew
+// into a real $GETJPI (docs/PHASE-26.md).
 
 // serviceSysSetast is SYS$SETAST: records whether ASTs are enabled. Nothing
 // currently delivers an AST — see Environment.astEnabled's doc comment.
@@ -73,62 +63,8 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 	return ssNormal, nil
 }
 
-// serviceSysGetjpiw is SYS$GETJPIW: a minimal process-information lookup
-// returning only the two item codes service.c itself recognizes (ACCOUNT,
-// CLINAME), both hardcoded stand-ins with no real per-process attribute
-// storage — matching the C source, which has none either. argv[2] (an
-// optional process-name string descriptor) is read by service.c purely for
-// a debug printf and was previously not read here for lack of an
-// equivalent trace to feed; now read for DebugProcess's own trace (see
-// docs/PHASE-17.md sub-phase 4).
-func serviceSysGetjpiw(env *Environment, argv []uint32) (uint32, error) {
-	if len(argv) != 7 {
-		return ssInsfArg, nil
-	}
-
-	if env.cpu.DebugEnabled(vax.DebugProcess) {
-		prcnam := ""
-
-		if argv[2] != 0 {
-			if s, ok, err := strGet(env, argv[2], 63); err == nil && ok {
-				prcnam = s
-			}
-		}
-
-		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: SYS$GETJPIW EFN=%d PRCNAM=%q\n", argv[0], prcnam)
-	}
-
-	status := env.walkItemList(argv[3], func(e itemListEntry) uint32 {
-		switch e.ItemCode {
-		case jpiAccount:
-			if err := storeString(env, "USER    ", e.BuffAddr, 8); err != nil {
-				return ssAccVio
-			}
-
-			return env.setRetLen(e, 4)
-
-		case jpiCliName:
-			if err := storeString(env, "DCL\x00", e.BuffAddr, 4); err != nil {
-				return ssAccVio
-			}
-
-			return env.setRetLen(e, 3)
-
-		default:
-			return ssBadParam
-		}
-	})
-
-	if status != 0 {
-		return status, nil
-	}
-
-	return ssNormal, nil
-}
-
 func registerCoreServices(t *ServiceTable) {
 	t.Register("SYS$SETAST", serviceSysSetast)
 	t.Register("SYS$DCLEXH", serviceSysDclexh)
 	t.Register("SYS$EXPREG", serviceSysExpreg)
-	t.Register("SYS$GETJPIW", serviceSysGetjpiw)
 }

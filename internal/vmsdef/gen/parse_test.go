@@ -81,17 +81,61 @@ end_module $YDEF;
 	}
 }
 
+// TestParseSDL_jpidefForms covers the forms $JPIDEF adds: the "$" in the
+// tag, %x hex, NAME@N shifted values, and a bitfield structure nested in a
+// structure aggregate.
+func TestParseSDL_jpidefForms(t *testing.T) {
+	src := `
+module $ZDEF;
+constant ALL equals %x80000000 prefix Z tag $K;
+constant PCBTYPE equals 3 prefix Z tag $C;
+constant(
+      FIRST		/* comment between entries
+    , SECOND
+    ) equals Z$C_PCBTYPE@8 increment 1 prefix Z tag $;
+aggregate ZCTLDEF structure prefix Z$;
+    ZFLGS structure longword unsigned fill;
+	A bitfield mask;
+	FILL1 bitfield LENGTH 2 mask;
+	B bitfield mask;
+    end ZFLGS;
+end ZCTLDEF;
+end_module $ZDEF;
+`
+
+	got, err := parseSDL(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := map[string]uint32{
+		"Z$K_ALL":     0x80000000,
+		"Z$C_PCBTYPE": 3,
+		"Z$_FIRST":    0x300,
+		"Z$_SECOND":   0x301,
+		"Z$V_A":       0, "Z$M_A": 0x1,
+		"Z$V_FILL1": 1, "Z$S_FILL1": 2, "Z$M_FILL1": 0x6,
+		"Z$V_B": 3, "Z$M_B": 0x8,
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("parseSDL =\n%v\nwant\n%v", got, want)
+	}
+}
+
 func TestParseSDL_rejectsUnsupported(t *testing.T) {
 	cases := map[string]string{
-		"unknown statement":   "item FOO longword;",
-		"non-bitfield member": "aggregate X structure prefix X$; FOO longword; end X;",
-		"missing tag":         "constant FOO equals 1 prefix X$;",
-		"unknown keyword":     "constant FOO equals 1 prefix X$ tag C counter #n;",
-		"unterminated":        "aggregate X structure prefix X$; A bitfield mask;",
-		"over 32 bits":        "aggregate X structure prefix X$; A bitfield length 32 fill; B bitfield mask; end X;",
-		"conflicting value":   "constant FOO equals 1 prefix X$ tag C; constant FOO equals 2 prefix X$ tag C;",
-		"bitfield in union":   "aggregate X union prefix X$; A bitfield mask; end X;",
-		"unterminated member": "aggregate X union prefix X$; M structure fill; A bitfield mask; end M;",
+		"unknown statement":    "item FOO longword;",
+		"non-bitfield member":  "aggregate X structure prefix X$; FOO longword; end X;",
+		"missing tag":          "constant FOO equals 1 prefix X$;",
+		"unknown keyword":      "constant FOO equals 1 prefix X$ tag C counter #n;",
+		"unterminated":         "aggregate X structure prefix X$; A bitfield mask;",
+		"over 32 bits":         "aggregate X structure prefix X$; A bitfield length 32 fill; B bitfield mask; end X;",
+		"conflicting value":    "constant FOO equals 1 prefix X$ tag C; constant FOO equals 2 prefix X$ tag C;",
+		"bitfield in union":    "aggregate X union prefix X$; A bitfield mask; end X;",
+		"unterminated member":  "aggregate X union prefix X$; M structure fill; A bitfield mask; end M;",
+		"undefined shift base": "constant FOO equals X$C_NONE@8 prefix X$ tag C;",
+		"nested type keyword":  "aggregate X structure prefix X$; M structure quadword; end M; end X;",
 	}
 
 	for name, src := range cases {

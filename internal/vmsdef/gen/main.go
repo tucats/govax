@@ -4,11 +4,11 @@
 // further maps from other real VMS 7.3 sources: LNMConstants from
 // reference/vms/lnmdef.sdl (SDL source; see sdl.go) and SSConstants from
 // reference/vms/ssdef.txt (a BLISS LITERAL listing; see bliss.go), both
-// docs/PHASE-25.md, and DEVConstants from reference/vms/devdef.sdl
-// (docs/PHASE-26.md). They are kept as separate maps, not merged into
+// docs/PHASE-25.md, and DEVConstants and JPIConstants from
+// reference/vms/devdef.sdl and jpidef.sdl (docs/PHASE-26.md). They are kept as separate maps, not merged into
 // Constants, because .RMSDEF (internal/asm) defines every Constants entry
-// as an assembler symbol and must not start defining LNM$/SS$/DEV$ names
-// too. Run via `go
+// as an assembler symbol and must not start defining LNM$/SS$/DEV$/JPI$
+// names too. Run via `go
 // generate` from internal/vmsdef (see the go:generate directive in
 // constants.go) rather than hand-transcribing ~450 #define lines — see
 // docs/PHASE-24.md's design notes on why (the same reasoning
@@ -126,11 +126,12 @@ func main() {
 	lnmdef := flag.String("lnmdef", "", "path to lnmdef.sdl")
 	ssdef := flag.String("ssdef", "", "path to ssdef.txt")
 	devdef := flag.String("devdef", "", "path to devdef.sdl")
+	jpidef := flag.String("jpidef", "", "path to jpidef.sdl")
 	out := flag.String("out", "", "path to write the generated Go source")
 	flag.Parse()
 
-	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *out == "" {
-		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, and -out are all required")
+	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *out == "" {
+		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, and -out are all required")
 	}
 
 	constants := map[string]uint32{}
@@ -154,6 +155,11 @@ func main() {
 	dev, err := parseSDL(readSource(*devdef))
 	if err != nil {
 		log.Fatalf("gen: %s: %v", *devdef, err)
+	}
+
+	jpi, err := parseSDL(readSource(*jpidef))
+	if err != nil {
+		log.Fatalf("gen: %s: %v", *jpidef, err)
 	}
 
 	maps := []constantMap{
@@ -196,16 +202,25 @@ func main() {
 			},
 			entries: dev,
 		},
+		{
+			name: "JPIConstants",
+			doc: []string{
+				"JPIConstants is every real $JPIDEF symbol: the JPI$_ item codes",
+				"$GETJPI takes (JPI$_PID, JPI$_USERNAME, ...), JPI$K_ values such",
+				"as the JPI$_MODE codes, and JPI$C_/JPI$M_ definitions.",
+			},
+			entries: jpi,
+		},
 	}
 
-	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef}
+	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef}
 	code := generate(maps, sources)
 
 	if err := os.WriteFile(*out, code, 0o644); err != nil {
 		log.Fatalf("gen: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), *out)
+	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), *out)
 }
 
 func readSource(path string) string {

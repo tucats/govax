@@ -1,8 +1,6 @@
 package rtl
 
 import (
-	"bytes"
-	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/vax"
@@ -131,114 +129,6 @@ func TestServiceSysExpregInvalidRegion(t *testing.T) {
 
 	if r0 != ssInvArg {
 		t.Errorf("r0 = %d, want ssInvArg", r0)
-	}
-}
-
-func TestServiceSysGetjpiw(t *testing.T) {
-	env, _ := fixture()
-	itemList := uint32(0x2000)
-	accountBuf := uint32(0x3000)
-	clinameBuf := uint32(0x3100)
-
-	// Two item-list entries (ACCOUNT, CLINAME) then a zero terminator.
-	putWord(t, env, itemList, 8)
-	putWord(t, env, itemList+2, jpiAccount)
-	putLongword(t, env, itemList+4, accountBuf)
-	putLongword(t, env, itemList+8, 0)
-
-	putWord(t, env, itemList+12, 4)
-	putWord(t, env, itemList+14, jpiCliName)
-	putLongword(t, env, itemList+16, clinameBuf)
-	putLongword(t, env, itemList+20, 0)
-
-	putLongword(t, env, itemList+24, 0) // terminator (bufflen=0,itemcode=0)
-
-	argv := make([]uint32, 7)
-	argv[3] = itemList
-
-	r0, err := serviceSysGetjpiw(env, argv)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if r0 != ssNormal {
-		t.Fatalf("r0 = %d, want ssNormal", r0)
-	}
-
-	account, err := loadString(env, accountBuf, 8)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if account != "USER    " {
-		t.Errorf("account = %q, want \"USER    \" (8 bytes, space-padded, no NUL terminator)", account)
-	}
-
-	cliname, err := loadString(env, clinameBuf, 4)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if cliname != "DCL" {
-		t.Errorf("cliname = %q, want \"DCL\"", cliname)
-	}
-}
-
-func TestServiceSysGetjpiwDebugProcessTrace(t *testing.T) {
-	var buf bytes.Buffer
-
-	env, _ := fixture()
-	nameAddr, nameStr := uint32(0x1000), uint32(0x1100)
-	putDescriptor(t, env, nameAddr, nameStr, "MYPROC")
-
-	
-	env.cpu.SetDebugWriter(&buf)
-	env.cpu.SetDebug(vax.DebugProcess)
-
-	argv := make([]uint32, 7)
-	argv[0] = 5 // EFN
-	argv[2] = nameAddr
-
-	if _, err := serviceSysGetjpiw(env, argv); err != nil {
-		t.Fatal(err)
-	}
-
-	if !strings.Contains(buf.String(), `DEBUG: SYS$GETJPIW EFN=5 PRCNAM="MYPROC"`) {
-		t.Errorf("output = %q, want a SYS$GETJPIW trace naming EFN and PRCNAM", buf.String())
-	}
-}
-
-func TestServiceSysGetjpiwWrongArgCount(t *testing.T) {
-	env, _ := fixture()
-
-	r0, err := serviceSysGetjpiw(env, []uint32{1, 2})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if r0 != ssInsfArg {
-		t.Errorf("r0 = %d, want ssInsfArg", r0)
-	}
-}
-
-func TestServiceSysGetjpiwUnknownItemCode(t *testing.T) {
-	env, _ := fixture()
-	itemList := uint32(0x2000)
-	putWord(t, env, itemList, 4)
-	putWord(t, env, itemList+2, 9999)
-	putLongword(t, env, itemList+4, 0)
-	putLongword(t, env, itemList+8, 0)
-
-	argv := make([]uint32, 7)
-	argv[3] = itemList
-	
-	r0, err := serviceSysGetjpiw(env, argv)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if r0 != ssBadParam {
-		t.Errorf("r0 = %d, want ssBadParam", r0)
 	}
 }
 

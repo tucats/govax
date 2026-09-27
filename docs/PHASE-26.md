@@ -127,6 +127,7 @@ lists the ones the implementation can actually return.
 | `$DALLOC` | 6 | `devices.go` | `NORMAL`, `ACCVIO`, `DEVASSIGN`, `DEVNOTALLOC`, `IVLOGNAM`, `NOPRIV`, `NOSUCHDEV`, `TOOMANYLNAM` | Releases one allocation, or (no `devnam`) all at `acmode` or outer. |
 | `$DACEFC` | 7 | `eventflags.go` | `NORMAL`, `ILLEFC` | Drops an association; an unassociated number still succeeds. |
 | `$DLCEFC` | 7 | `eventflags.go` | `NORMAL`, `ACCVIO`, `IVLOGNAM` | Marks a cluster for deletion; deleted when unassociated. |
+| `$GETJPI`, `$GETJPIW` | 8 | `getjpi.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLEFC`, `INSFARG`, `IVLOGNAM`, `NOMOREPROC`, `NONEXPR`, `UNASEFC` | 21 item codes from `rtl.Process`, in a registry keyed by the generated `$JPIDEF` codes. |
 
 ## Service designs
 
@@ -140,6 +141,7 @@ replaced by `Environment.Process *Process` (`internal/rtl/process.go`):
 | --- | --- | --- |
 | `PID` | `PCB$L_EPID` | `0x00000301` (arbitrary, nonzero) |
 | `Username` | `JIB$T_USERNAME` | `SYSTEM` |
+| `Name`, `Account`, `Terminal`, `CLIName` | process name, UAF account, login terminal, CLI (added in subtask 8) | `SYSTEM`, `SYSTEM`, `TTA0:`, `DCL` |
 | `UIC` | `PCB$L_UIC` | `[1,4]` (`0x00010004`) |
 | `WSLimit` | the current working-set limit (kept in the process header) | `WSDefault` |
 | `WSDefault` / `WSQuota` / `WSExtent` | UAF `WSDEFAULT`/`WSQUOTA`/`WSEXTENT` | 150 / 256 / 1024 pages |
@@ -398,6 +400,86 @@ They complete the cluster lifecycle `$ASCEFC` started (`eventflags.go`).
 - A marked cluster can still be found and associated with by `$ASCEFC`
   until it is actually deleted. The manual doesn't say otherwise.
 
+### `$GETJPI` / `$GETJPIW` — Get Job/Process Information
+
+`SYS$GETJPI[W] [efn] ,[pidadr] ,[prcnam] ,itmlst ,[iosb] ,[astadr] ,[astprm]`
+
+Replaces the eVAX-derived `$GETJPIW`, which knew two hard-coded items
+(`ACCOUNT` = `"USER"`, `CLINAME` = `"DCL"`), with a real `$GETJPI` reading
+`rtl.Process` (`internal/rtl/getjpi.go`). Both names are registered to the
+same function.
+
+**`$JPIDEF`.** The item codes come from the real VMS 7.3 `jpidef.sdl`
+(`reference/vms/`), generated into `vmsdef.JPIConstants` (219 entries). The
+SDL parser learned three more forms for it:
+
+- `%x` hexadecimal values;
+- `NAME@N`, an earlier constant shifted left `N` bits (`$JPIDEF` numbers
+  each item list from `JPI$C_PCBTYPE@8` and so on);
+- a bitfield structure nested in a structure aggregate
+  (`JPICTLFLGS structure longword unsigned fill;`), continuing the bit
+  count.
+
+`prefix JPI tag $C` already composed `JPI$C_...` correctly. The generated
+`JPI$_ACCOUNT` (515) and `JPI$_CLINAME` (522) match the numbers eVAX
+hard-coded.
+
+**Items** are a registry (`jpiItemsByName`, keyed by `$JPIDEF` name and
+turned into a code-keyed map at startup), not a switch:
+
+| Item | Returns |
+| --- | --- |
+| `ACCOUNT` | `Process.Account`, 8 bytes blank-padded |
+| `USERNAME` | `Process.Username`, 12 bytes blank-padded |
+| `PRCNAM`, `TERMINAL`, `CLINAME` | `Process.Name`, `.Terminal`, `.CLIName` |
+| `PID`, `MASTER_PID` | `Process.PID` (the process is its own job's master) |
+| `OWNER` | 0 (not a subprocess) |
+| `UIC`, `GRP`, `MEM` | `Process.UIC` and its halves |
+| `MODE`, `JOBTYPE` | `JPI$K_INTERACTIVE`, `JPI$K_LOCAL` (a console login) |
+| `EFCS`, `EFCU` | local event flag clusters 0 and 1 |
+| `DFWSCNT`, `WSQUOTA`, `WSEXTENT` | `WSDefault`, `WSQuota`, `WSExtent` |
+| `WSAUTH`, `WSAUTHEXT` | `WSQuota`, `WSExtent` (authorized = current quotas) |
+| `WSSIZE` | `WSLimit`, the limit `$ADJWSL` adjusts |
+
+Any other item code is `SS$_BADPARAM`, which stops the list. Data is
+truncated to the buffer length (a longword is stored low byte first), and
+the length actually written goes to the return-length word. `JPI$_CHAIN`
+continues with another item list (the `walkItemListChain` Phase 25 added
+for `LNM$_CHAIN`).
+
+**Picking the process**, per the manual's Table SYS-5:
+
+- `pidadr` holding a nonzero PID uses that PID, and `prcnam` is ignored.
+  The process's own PID works; any other is `SS$_NONEXPR`.
+- Otherwise `prcnam`, when given, must match `Process.Name` exactly (no
+  abbreviation or case folding). A mismatch is `SS$_NONEXPR`; an empty name
+  or one over 15 characters is `SS$_IVLOGNAM`.
+- With neither, the caller is used.
+- When `pidadr` holds 0, the PID found is written back.
+- **Wildcard:** `-1` at `pidadr` returns this process and leaves govax's
+  "scan finished" context (`0xFFFFFFFE`) there. The next call with that
+  context returns `SS$_NOMOREPROC`. VMS keeps its own scan position in that
+  longword, and programs don't interpret it.
+
+**Completion.** The request completes immediately, so `$GETJPI` and
+`$GETJPIW` behave identically:
+
+1. `efn` (default 0) is cleared, and a bad or unassociated flag number is
+   returned at once (`SS$_ILLEFC`/`SS$_UNASEFC`).
+2. `iosb`, if given, is zeroed.
+3. The items are returned.
+4. The final status goes into the IOSB's first longword, the event flag is
+   set, and the status is returned in R0.
+
+An argument list shorter than 7 is `SS$_INSFARG`, as before. `astadr` is
+accepted but no AST is delivered: govax has no AST delivery.
+
+Not implemented: items for state govax doesn't model (`STATE`, `PRI`,
+`PRIB`, `IMAGNAME`, quotas other than working set, privileges, CPU and I/O
+counts, and so on), which are `SS$_BADPARAM`. There's also no
+`SS$_NOPRIV` or `SS$_SUSPENDED`, since no other process exists. These are
+in `docs/DEVIATIONS.md`.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -421,7 +503,8 @@ batch listed):
 
 6. **Done.** **`$DALLOC`.** `serviceSysDalloc` in `devices.go`.
 7. **Done.** **`$DACEFC` and `$DLCEFC`.** In `eventflags.go`.
-8. **`$GETJPI`/`$GETJPIW`** reading `rtl.Process`.
+8. **Done.** **`$GETJPI`/`$GETJPIW`** reading `rtl.Process`, in the new
+   `getjpi.go`; `$JPIDEF` generated from real VMS source.
 9. **`$WAITFR`, `$WFLAND`, `$WFLOR`.**
 
 Candidates after that: `$DASSGN` (without it a channel is never released, so
@@ -579,3 +662,35 @@ None yet.
   - `$DLCEFC` deleting an unused permanent cluster at once, marking an
     associated one that stays usable until image rundown deletes it, a
     nonexistent name, and the name errors.
+
+### 2026-09-27 — Subtask 8: `$GETJPI`/`$GETJPIW`
+
+- **`$JPIDEF`.** Copied `jpidef.sdl` from the VMS 7.3 archive to
+  `reference/vms/`. The SDL parser gained `%x` values, `NAME@N` shift
+  expressions (looking up constants defined earlier in the file), and
+  bitfield structures nested in a structure aggregate. `go generate`
+  produces `vmsdef.JPIConstants` (219 entries), and the `go:generate` line
+  gained `-jpidef`.
+- **`internal/rtl/getjpi.go`** (new): `serviceSysGetjpi` (registered as
+  both `SYS$GETJPI` and `SYS$GETJPIW`), the `jpiItemsByName` registry,
+  `storeJPIItem`, and `jpiTarget`. The old `serviceSysGetjpiw` and its
+  constants are gone from `core.go`, and its tests from `core_test.go`.
+- `rtl.Process` gained `Name`, `Account`, `Terminal`, and `CLIName`.
+- **Changed from eVAX:** `JPI$_ACCOUNT` returns the process's account
+  (`SYSTEM`) rather than eVAX's stand-in `USER`, with a return length of 8
+  (eVAX reported 4). `JPI$_CLINAME` writes only `DCL`, truncated to the
+  buffer (eVAX always wrote 4 bytes, `DCL` plus a NUL, whatever the buffer
+  length). An argument list of more than 7 longwords is now accepted.
+  Recorded in `docs/DEVIATIONS.md`.
+- Tests (`getjpi_test.go`):
+  - every supported item's value and length, and the IOSB status;
+  - truncation of a string and of a longword, and `JPI$_CHAIN`;
+  - process selection by PID 0, its own PID, another PID, PID winning over
+    `prcnam`, an exact name (with PID written back), abbreviated and
+    lower-case names, name length errors, and the wildcard sequence;
+  - completion (the event flag set, the default flag 0, `SS$_BADPARAM` in
+    R0 and the IOSB, an unassociated `efn`), too few arguments, and the
+    kept `DebugProcess` trace;
+  - the registry naming only real `$JPIDEF` codes;
+  - `vmsdef/gen` parser tests for the three new SDL forms and two new
+    rejected forms.

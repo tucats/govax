@@ -364,6 +364,33 @@ changed as a result.
   `SS$_NOPRIV`, since `PRMCEB` is always held.
 - **Status**: open, deliberate simplifications.
 
+### [Phase 26] eVAX `$GETJPIW`: two hard-coded items with the wrong lengths
+
+- **Where**: `reference/eVAX/eVAX/Source/RTL/service.c`'s `sys_getjpiw`,
+  ported into `internal/rtl/core.go`.
+- **What**: only `JPI$_ACCOUNT` and `JPI$_CLINAME` were recognized.
+  `ACCOUNT` returned the stand-in `"USER    "` with a return length of 4,
+  though the manual defines an 8-byte blank-padded field. `CLINAME` always
+  wrote 4 bytes (`DCL` and a NUL) whatever the buffer length. Any argument
+  count other than exactly 7 was `SS$_INSFARG`.
+- **Status**: fixed in Phase 26 subtask 8. `internal/rtl/getjpi.go`
+  implements `$GETJPI`/`$GETJPIW` from the manual over `rtl.Process`, with
+  21 items. `ACCOUNT` is the process's account, `SYSTEM`, with length 8.
+
+### [Phase 26] `$GETJPI` simplifications
+
+- **Where**: `internal/rtl/getjpi.go`.
+- **What**:
+  - Only 21 item codes are supported. The others, for state govax doesn't
+    model (`STATE`, priorities, `IMAGNAME`, non-working-set quotas,
+    privileges, CPU and I/O accounting), are `SS$_BADPARAM`.
+  - No AST is delivered for `astadr`.
+  - The wildcard context stored at `pidadr` is govax's own value.
+  - `SS$_NOPRIV`/`SS$_SUSPENDED` can't happen, since there is one process.
+  - `JPI$_WSSIZE` reports the working-set limit, since there is no real
+    working set.
+- **Status**: open, deliberate simplifications.
+
 ## Open findings
 
 _None yet._

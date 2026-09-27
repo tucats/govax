@@ -24,6 +24,16 @@ type Process struct {
 	// Username is the account name (JIB$T_USERNAME), SYSTEM by default.
 	Username string
 
+	// Name is the process name (PCB$T_LNAME), what $GETJPI's prcnam
+	// matches. Account is the UAF account field (JIB$T_ACCOUNT), and
+	// Terminal the login terminal (PCB$T_TERMINAL). CLIName is the
+	// command language interpreter's name. All describe a SYSTEM login on
+	// the console terminal.
+	Name     string
+	Account  string
+	Terminal string
+	CLIName  string
+
 	// UIC is the process's user identification code (PCB$L_UIC), group
 	// in the high word and member in the low word — [1,4] (SYSTEM) by
 	// default. Its group names the logical-name group table and scopes
@@ -58,6 +68,10 @@ const (
 	nominalPID      = 0x00000301
 	NominalUIC      = 0x00010004 // [1,4]
 	nominalUsername = "SYSTEM"
+	nominalName     = "SYSTEM"
+	nominalAccount  = "SYSTEM"
+	nominalTerminal = "TTA0:"
+	nominalCLIName  = "DCL"
 
 	nominalWSDefault  = 150
 	nominalWSQuota    = 256
@@ -66,11 +80,16 @@ const (
 )
 
 // NewProcess returns the default emulated process: PID nominalPID, user
-// SYSTEM, UIC [1,4], with its working-set limit at its default.
+// SYSTEM (process name SYSTEM, account SYSTEM, terminal TTA0:, CLI DCL),
+// UIC [1,4], with its working-set limit at its default.
 func NewProcess() *Process {
 	return &Process{
 		PID:        nominalPID,
 		Username:   nominalUsername,
+		Name:       nominalName,
+		Account:    nominalAccount,
+		Terminal:   nominalTerminal,
+		CLIName:    nominalCLIName,
 		UIC:        NominalUIC,
 		WSLimit:    nominalWSDefault,
 		WSDefault:  nominalWSDefault,
