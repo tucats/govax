@@ -199,13 +199,14 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 // for the state this package owns: it deassigns the channels the image
 // assigned from user mode, then deallocates the devices it allocated in
 // user mode, and disassociates its common event flag clusters (deleting
-// temporary ones nobody else uses). The console calls it when an image
-// started by RUN returns (and does its own logical-name rundown
-// alongside).
+// temporary ones nobody else uses), and cancels its outstanding
+// $SETIMR timers. The console calls it when an image started by RUN
+// returns (and does its own logical-name rundown alongside).
 func (env *Environment) ImageRundown() {
 	env.deassignUserChannels()
 	env.deallocateUserDevices()
 	env.disassociateClusters()
+	env.cancelTimers()
 }
 
 func registerProcessServices(t *ServiceTable) {

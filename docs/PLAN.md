@@ -303,3 +303,9 @@ A second batch added `$DALLOC`, `$DACEFC`/`$DLCEFC`, a real `$GETJPI`/`$GETJPIW`
 (`cpu.ErrServiceWait`), so the interval timer's interrupt, govax's only
 asynchronous source, can end it; `testdata/asm/wait_timer.asm` shows exactly
 that.
+
+A third batch added `$DASSGN` and `$SETIMR`/`$CANTIM`. The timers are the RTL's
+own queue: they don't depend on the guest's interval-timer interrupt, ICCS, or
+IPL, but run on a new `Engine.SystemTime` that shares the interval clock's time
+base (one tick = one millisecond; deterministic in quantum mode), so they fire
+in any program yet agree with the clock (`testdata/asm/timer_services.asm`).

@@ -404,6 +404,21 @@ changed as a result.
   - releasing the host CPU while waiting.
 - **Status**: open, by design.
 
+### [Phase 26] `$SETIMR`/`$CANTIM` simplifications
+
+- **Where**: `internal/rtl/timers.go`, `internal/cpu/systime.go`.
+- **What**:
+  - No AST is delivered for `$SETIMR`'s `astadr`.
+  - The CPU-time flag is treated as elapsed time.
+  - There is no `TQELM` quota.
+  - Timers expire when the process next uses an event-flag service, not
+    on the clock tick itself. That is indistinguishable without ASTs.
+  - In quantum mode, emulated time is one millisecond per quantum tick
+    (20 instructions by default), so a "second" is a fixed amount of
+    execution, not wall-clock time. Set `vax.hardware.clock` for real
+    time.
+- **Status**: open, by design.
+
 ## Open findings
 
 _None yet._

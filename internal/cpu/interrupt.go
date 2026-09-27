@@ -184,6 +184,7 @@ func (e *Engine) tickQuantum() {
 	}
 
 	e.quantumCurrent = e.quantumInitial
+	e.clockTicks++ // one emulated millisecond (systime.go)
 
 	e.tickIntervalClock()
 

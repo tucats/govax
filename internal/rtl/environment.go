@@ -112,6 +112,16 @@ type Environment struct {
 	openFiles map[uint32]*os.File
 	nextFID   uint32
 
+	// Clock returns the current system time in VMS format (100ns units
+	// since 17-Nov-1858), what $SETIMR's timers run on. NewEnvironment
+	// sets it to the host clock; the console replaces it with its
+	// Engine's SystemTime, the time base the interval clock also uses
+	// (timers.go).
+	Clock func() uint64
+
+	// timers is the process's $SETIMR timer queue (timers.go).
+	timers []*timerRequest
+
 	// waitingPC is the P1-vector address of a service currently waiting
 	// (ErrWait), so SystemService traces only its first attempt; 0 when
 	// no service is waiting.
@@ -139,6 +149,7 @@ func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, lo
 		Process:    NewProcess(),
 
 		EventFlagClusters: NewCommonEventFlags(),
+		Clock:             wallClock,
 		consoleIn:  consoleIn,
 		consoleOut: consoleOut,
 		openFiles:  map[uint32]*os.File{},

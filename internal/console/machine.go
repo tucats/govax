@@ -238,10 +238,17 @@ func New(out io.Writer) *Console {
 
 // newRTL returns a fresh RTL environment for the current CPU and memory,
 // sharing the console's devices, logical names, mounts, and session (so
-// a program's RMS calls see SET DEFAULT's default directory).
+// a program's RMS calls see SET DEFAULT's default directory), and the
+// engine's system clock.
 func (c *Console) newRTL() *rtl.Environment {
 	env := rtl.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.Mounts, c.In, c.Out)
 	env.Session = c.ContainerSession
+
+	// $SETIMR's timers run on the engine's system time, the same time
+	// base as the interval clock (docs/PHASE-26.md subtask 11).
+	if c.Engine != nil {
+		env.Clock = c.Engine.SystemTime
+	}
 
 	return env
 }

@@ -24,8 +24,8 @@ The first batch, requested by the user on 2026-09-27, is `$ADJSTK`,
 `$ADJWSL`, `$ALLOC`, and `$ASCEFC`. The second adds `$DALLOC`,
 `$DACEFC`/`$DLCEFC`, `$GETJPI`, and the event-flag waits.
 
-**Status: third batch in progress** (subtasks 10-11); subtasks 1-9 are
-complete. Add later services as new
+**Status: three batches complete** (subtasks 1-11). Add later services
+as new subtasks. Add later services as new
 subtasks.
 
 ## References
@@ -103,6 +103,10 @@ follow them too, and this list should grow when a new pattern is settled.
   re-executes the service's `XFC` on the next step (see the event-flag
   wait design). Any later waiting service ($HIBER, $SYNCH, ...) should use
   the same mechanism.
+- **Time.** Anything that needs "now" reads `env.Clock()` (VMS 64-bit
+  time), which the console binds to the engine's `SystemTime`. Don't call
+  `time.Now()` in a service: that would break determinism in quantum mode
+  and disagree with the interval clock.
 - **Image rundown.** Per-image cleanup (user-mode logical names, user-mode
   device allocations, common event flag associations) runs from
   `Environment.ImageRundown`, which the console calls when an image started
@@ -135,6 +139,7 @@ lists the ones the implementation can actually return.
 | `$GETJPI`, `$GETJPIW` | 8 | `getjpi.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLEFC`, `INSFARG`, `IVLOGNAM`, `NOMOREPROC`, `NONEXPR`, `UNASEFC` | 21 item codes from `rtl.Process`, in a registry keyed by the generated `$JPIDEF` codes. |
 | `$WAITFR`, `$WFLAND`, `$WFLOR` | 9 | `eventflags.go` | `NORMAL`, `ILLEFC`, `UNASEFC` | Wait by re-executing the service's `XFC` until satisfied; timer interrupts run in between. |
 | `$DASSGN` | 10 | `devices.go` | `NORMAL`, `IVCHAN`, `NOPRIV` | Releases a channel; image rundown releases user-mode channels. |
+| `$SETIMR`, `$CANTIM` | 11 | `timers.go` | `NORMAL`, `ACCVIO`, `ILLEFC`, `UNASEFC` | RTL timer queue on the engine's system time (1 ms per interval-clock tick); no guest interrupt needed. |
 
 ## Service designs
 
@@ -556,6 +561,99 @@ Releases a channel `$ASSIGN` created (`internal/rtl/devices.go`).
 With `$DASSGN` in place, `$DALLOC`'s `SS$_DEVASSIGN` is no longer
 permanent: deassign the channel, then deallocate.
 
+### `$SETIMR` and `$CANTIM` — Set and Cancel Timer
+
+`SYS$SETIMR [efn] ,daytim ,[astadr] ,[reqidt] ,[flags]` and
+`SYS$CANTIM [reqidt] ,[acmode]`
+
+#### The design question: the microkernel's timer interrupt, or the RTL's own?
+
+The user asked whether `$SETIMR` should use the timer interrupt the
+microkernel already runs, or whether the RTL timer should be independent.
+What already existed:
+
+- **The interval clock** (`ICR`/`NICR`/`ICCS`) is ticked by the engine
+  (`tickIntervalClock`). By default a tick is taken every quantum of
+  instructions (`tickQuantum`, 20 instructions), which is deterministic.
+  With `vax.hardware.clock` set, a tick is taken every wall-clock
+  millisecond.
+- **The microkernel's timer interrupt** is guest VAX code: kernel.asm's
+  `exe$interval`, installed with `.SCB exc$interval`. It runs only when
+  the guest has set ICCS's RUN and IE bits (kernel.asm's `exe$initialize`
+  does), and only at an IPL below 22.
+- **No emulated notion of "now" existed.** `DECC$TIME` reads the host
+  clock.
+
+**Decision: the RTL owns its timer queue, and shares the engine's clock
+but not the guest's interrupt path.**
+
+- **Why not the guest interrupt.** On VMS the timer queue belongs to the
+  executive. The hardware clock interrupt drives the executive's software
+  timer, and user processes never arrange for it. In govax the executive
+  is the Go RTL; kernel.asm is guest code with its own ideas about the
+  clock. If `$SETIMR` depended on the guest's interrupt, a timer would
+  silently never fire:
+  - in any program that didn't boot kernel.asm, or that left ICCS
+    interrupts off;
+  - in the default RUN setup, which runs in kernel mode at whatever IPL
+    the console has, where an IPL-22 clock interrupt may be masked.
+
+  It would also need a new guest-to-Go hook in `exe$interval`. The
+  services would then depend on how one particular guest kernel is
+  written.
+- **Why share the clock.** A timer must mean the same thing as the
+  interval clock, and it must stay deterministic in quantum mode so tests
+  and reruns behave identically. So the engine now has a **system time**
+  (`Engine.SystemTime`, `internal/cpu/systime.go`), in VMS 64-bit format,
+  driven by exactly what drives the interval clock: **one tick is one
+  millisecond** in both modes.
+  - In hardware-clock mode it is the wall-clock time.
+  - In quantum mode it is the engine's creation time plus one
+    millisecond per quantum tick. At the default quantum of 20, that's 20
+    instructions per emulated millisecond. `SET QUANTUM 0` makes every
+    step a tick.
+
+  The console binds `Environment.Clock` to it. Unit tests substitute a
+  hand-advanced clock. `vmsdef.Time`/`vmsdef.UnixEpoch` convert Go time
+  to VMS time for both packages.
+- **When timers fire.** Expired timers are processed at the one choke
+  point every event-flag service passes through (`eventFlagWord` →
+  `expireTimers`), not by a new engine-to-RTL tick hook. Event flags are
+  only observable through services, so this can't be told apart from
+  expiring on the tick itself. A waiting process retries its `$WAITFR`
+  every instruction step, so it sees its timer on the first check after
+  expiry. Two things would need an eager hook: AST delivery (not
+  implemented), and a console display of flags, which could simply call
+  the same function.
+
+The two mechanisms coexist. A guest that runs its own interval-timer
+interrupt still does (`wait_timer.asm`), and RTL timers work whether or
+not it does (`timer_services.asm`).
+
+#### The services (`internal/rtl/timers.go`)
+
+- **`$SETIMR`** checks `efn` (default 0; `SS$_ILLEFC`/`SS$_UNASEFC` as for
+  `$SETEF`), reads the `daytim` quadword (`SS$_ACCVIO` if unreadable or 0),
+  clears the flag, and queues a timer:
+  - A **negative** `daytim` is a delta from now.
+  - A **positive** one is an absolute time; if it has already passed,
+    the timer fires at the next check.
+  - `reqidt` and the caller's access mode are recorded for `$CANTIM`.
+- When a timer expires it sets its flag. If the flag is in a common
+  cluster the process has since disassociated, the timer is dropped with
+  no effect.
+- **`$CANTIM`** cancels the requests with ID `reqidt` (all of them when
+  it's 0) that were made from `acmode`, maximized with the caller's mode,
+  or from a less privileged mode. It always returns `SS$_NORMAL`.
+- **Image rundown** cancels all outstanding timers, as the manual says.
+
+Not implemented (see `docs/DEVIATIONS.md`):
+
+- `astadr`: accepted, but no AST runs.
+- The CPU-time flag: a govax process's CPU time is its elapsed time, so
+  the flag changes nothing.
+- The `TQELM` quota (`SS$_EXQUOTA`).
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -589,9 +687,15 @@ Third batch, requested by the user on 2026-09-27:
 
 10. **Done.** **`$DASSGN`.** In `devices.go`; image rundown deassigns
     user-mode channels.
-11. **`$SETIMR` and `$CANTIM`,** with the timer design question the user
-    raised: whether they should use the microkernel's timer interrupt, or
-    an RTL timer of their own.
+11. **Done.** **`$SETIMR` and `$CANTIM`.** In `timers.go`: the RTL's own
+    timer queue, running on the engine's new `SystemTime` (the interval
+    clock's time base) rather than on the guest's timer interrupt.
+
+Candidates next: `$GETTIM` (the current system time, from the same clock;
+cheap now), `$BINTIM`/`$ASCTIM`, `$SCHDWK`/`$HIBER`/`$WAKE` (the wait
+mechanism and timer queue both carry over), and AST delivery (which
+`$SETIMR`'s `astadr`, `$GETJPI`'s `astadr`, and waits all leave out).
+
 
 ## Open questions
 
@@ -819,3 +923,32 @@ None yet.
   and for a kernel channel from supervisor mode; `SS$_IVCHAN`; rundown
   releasing only the user-mode channel, and keeping an allocation that a
   kernel channel still holds; and `$DASSGN` then `$DALLOC` succeeding.
+
+### 2026-09-27 — Subtask 11: `$SETIMR` and `$CANTIM`; third batch complete
+
+- **Design:** the RTL timer queue is independent of the guest's timer
+  interrupt but shares the engine's clock. The reasoning is in the design
+  section above.
+- **`internal/cpu/systime.go`**: `Engine.SystemTime`, backed by the new
+  `bootTime`/`clockTicks` fields. `tickQuantum` counts `clockTicks`.
+- **`internal/vmsdef/time.go`**: `Time` and `UnixEpoch`
+  (1-Jan-1970 = `0x007C95674BEB4000`, as pinned by a test).
+- **`internal/rtl/timers.go`** (new): the timer queue, `serviceSysSetimr`,
+  `serviceSysCantim`, `expireTimers`, `cancelTimers`, and `PendingTimers`.
+  `Environment.Clock` defaults to the host clock; the console's `newRTL`
+  binds it to `Engine.SystemTime`. `eventFlagWord` now expires timers
+  first; the old lookup is `flagWord`. `ImageRundown` cancels timers.
+- **Acceptance fixture** `testdata/asm/timer_services.asm`: set a 20ms
+  timer and cancel it, set a 50ms one and `$WAITFR` on it, then check that
+  the cancelled timer's flag is still clear. It does no interrupt setup at
+  all. `TestTimerServices_assembledProgram` also checks that the engine's
+  system time advanced at least 50ms during the run.
+- **Tests:**
+  - `cpu`: quantum ticks advance `SystemTime` by exactly 1ms each.
+  - `vmsdef`: epoch conversions.
+  - `rtl/timers_test.go`: delta expiry exactly at the deadline, absolute
+    times (future and past), the default flag 0, `$WAITFR` on a timer,
+    error statuses with nothing queued, a common cluster (including a
+    disassociated one), `$CANTIM` by ID, all, and access mode (with
+    maximization), and rundown cancelling.
+- `go test ./...` passes.

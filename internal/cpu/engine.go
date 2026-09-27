@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/gopackages/app-cli/settings"
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -86,6 +87,12 @@ type Engine struct {
 	// is true, and supports using time.Now().UnixMilli() to capture the
 	// real hardware clock in real time.
 	hardwareClock bool
+
+	// bootTime is the VMS system time the Engine was created at, and
+	// clockTicks the interval-clock ticks since, in quantum mode: together
+	// they are SystemTime (systime.go).
+	bootTime   uint64
+	clockTicks uint64
 	lastClock     uint64
 
 	// Per-run instruction/time budget -- see limits.go. Both zero-valued
@@ -174,6 +181,7 @@ func NewEngine(cpu *vax.CPU, mem *vm.Memory) *Engine {
 		faultHistoryMax: defaultFaultHistory,
 		hardwareClock:   settings.GetBool("vax.hardware.clock"),
 		lastClock:       uint64(time.Now().UnixMilli()),
+		bootTime:        vmsdef.Time(time.Now()),
 	}
 }
 

@@ -122,8 +122,17 @@ func (t *CommonEventFlags) deleteIfUnused(c *EventFlagCluster) {
 
 // eventFlagWord finds the 32-flag longword holding event flag efn (only
 // its low byte counts) and efn's bit in it: SS$_ILLEFC past flag 127,
-// SS$_UNASEFC for a common cluster the process hasn't associated.
+// SS$_UNASEFC for a common cluster the process hasn't associated. It is
+// every event-flag service's way in, so it first lets any expired
+// $SETIMR timers set their flags (timers.go).
 func (env *Environment) eventFlagWord(efn uint32) (*uint32, uint32, uint32) {
+	env.expireTimers()
+
+	return env.flagWord(efn)
+}
+
+// flagWord is eventFlagWord without expiring timers first.
+func (env *Environment) flagWord(efn uint32) (*uint32, uint32, uint32) {
 	efn &= 0xFF
 	if efn > 127 {
 		return nil, 0, ssIllEfc

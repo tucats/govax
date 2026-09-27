@@ -160,3 +160,40 @@ func continueBounded(c *Console, maxSteps int) (err error, hitCap bool) {
 
 	return nil, true
 }
+
+// TestTimerServices_assembledProgram is docs/PHASE-26.md subtask 11's
+// acceptance test: testdata/asm/timer_services.asm sets, cancels, and
+// waits on $SETIMR timers without any guest interrupt setup. The wait
+// lasts until the engine's system time (one millisecond per interval-
+// clock tick, deterministic in quantum mode) has advanced 50ms.
+func TestTimerServices_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "timer_services.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(timer_services.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("timer_services.asm has no entry address")
+	}
+
+	start := c.Engine.SystemTime()
+
+	runErr, hitCap := callBounded(t, c, addr, 100_000)
+	if runErr != nil {
+		t.Fatalf("running timer_services.asm: %v", runErr)
+	}
+
+	if hitCap {
+		t.Fatal("timer_services.asm didn't finish within 100,000 steps (the timer never fired)")
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Errorf("R0 = %d, want 1 (the timer ended the wait; the cancelled one never fired)", got)
+	}
+
+	if elapsed := c.Engine.SystemTime() - start; elapsed < 50*10_000 {
+		t.Errorf("system time advanced %d, want at least 50ms (500000): the wait ended early", elapsed)
+	}
+}
