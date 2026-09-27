@@ -119,8 +119,8 @@ func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 
 	env.channels = append(env.channels, c)
 	dp.RefCnt++
-	dp.PID = env.pid
-	dp.OwnUIC = env.uic
+	dp.PID = env.Process.PID
+	dp.OwnUIC = env.Process.UIC
 
 	return ssNormal, nil
 }

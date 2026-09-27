@@ -19,8 +19,9 @@ import (
 // plumbing (SYS$/LIB$ registries) plus the state individual services and
 // shims need — event flags, an exit handler, region-size bookkeeping shared
 // with Phase 13's image loader and this phase's memory allocator, channels,
-// a nominal PID/UIC (the "minimal process stub" docs/PHASE-10.md's scope
-// note calls for), and the RMS file table. It is created per-Console (see
+// the emulated process record (process.go, which grew out of
+// docs/PHASE-10.md's "minimal process stub"), and the RMS file table. It
+// is created per-Console (see
 // internal/console), not a package-level singleton, matching this project's
 // state model (docs/PLAN.md).
 type Environment struct {
@@ -83,12 +84,10 @@ type Environment struct {
 	channels    []*channel
 	nextChannel uint32
 
-	// PID/UIC are this phase's minimal process stub: just enough identity
-	// for SYS$ASSIGN to stamp a device's owner, per docs/PHASE-10.md's
-	// scope note. Neither is exposed as a settable field — NewEnvironment
-	// picks nominal values, matching there being exactly one "process" per
-	// Environment.
-	pid, uic uint32
+	// Process is the emulated VMS process this Environment runs images in:
+	// its PID, username, UIC and quota state (process.go,
+	// docs/PHASE-26.md). Built fresh by NewEnvironment.
+	Process *Process
 
 	// consoleIn/consoleInBuf back DECC$GETS/EXE$INPUT/EXE$READ's console
 	// line reading (input.go). consoleOut is also where non-RMS console
@@ -112,16 +111,6 @@ type Environment struct {
 	nextFID   uint32
 }
 
-// nominalPID/NominalUIC are arbitrary but fixed nonzero values distinguishing
-// "a process exists" from the zero value, with no real process-management
-// concept behind them yet. NominalUIC is exported so the console can name
-// the logical-name database's group table (LNM$GROUP_gggggg) from the same
-// UIC this Environment reports.
-const (
-	nominalPID = 0x00000301
-	NominalUIC = 0x00010004
-)
-
 // NewEnvironment returns an Environment for one VAX process, driving mem/cpu
 // and sharing devices/logicals/mounts with whatever else (the console) also
 // uses them. consoleOut is where non-RMS console writes (print.go, file.go)
@@ -140,8 +129,7 @@ func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, lo
 		Logicals:   logicals,
 		Mounts:     mounts,
 		files:      rms.NewFileTable(consoleOut),
-		pid:        nominalPID,
-		uic:        NominalUIC,
+		Process:    NewProcess(),
 		consoleIn:  consoleIn,
 		consoleOut: consoleOut,
 		openFiles:  map[uint32]*os.File{},

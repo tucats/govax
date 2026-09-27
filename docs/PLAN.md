@@ -76,6 +76,7 @@ questions, and a progress log extended as that phase is worked.
 | 23 | [PHASE-23.md](PHASE-23.md) | Console commands to support using Files-11 containers |
 | 24 | [PHASE-24.md](PHASE-24.md) | `.RMSDEF`/`.FAB`/`.RAB` assembler pseudo-ops |
 | 25 | [PHASE-25.md](PHASE-25.md) | VMS-faithful logical names (tables, iterative translation, DEFINE/ASSIGN/SHOW LOGICAL, `$CRELNM`/`$TRNLNM`) |
+| 26 | [PHASE-26.md](PHASE-26.md) | Expanding system services (emulated process record; `$ADJSTK`, `$ADJWSL`, `$ALLOC`, `$ASCEFC`, ...) |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
