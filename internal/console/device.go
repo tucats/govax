@@ -4,36 +4,7 @@ import (
 	"fmt"
 
 	iodev "github.com/tucats/govax/internal/io"
-	"github.com/tucats/govax/internal/lnm"
-	"github.com/tucats/govax/internal/rtl"
-	"github.com/tucats/govax/internal/vax"
 )
-
-// consoleTerminal is the physical device name the console's own
-// terminal has: what SYS$INPUT, SYS$OUTPUT, SYS$ERROR, SYS$COMMAND, and
-// TT translate to.
-const consoleTerminal = "_TTA0:"
-
-// newLogicals returns the console's logical-name database: the standard
-// VMS directories and tables for rtl.NominalUIC (the same UIC the RTL
-// reports for this process), plus the process-permanent terminal names.
-func newLogicals() *lnm.Database {
-	db := lnm.NewDatabase(rtl.NominalUIC)
-	if err := db.DefineProcessNames(consoleTerminal); err != nil {
-		// Only reachable if the fixed names above were invalid.
-		panic(err)
-	}
-
-	return db
-}
-
-// traceLogicals is the logical-name database's Trace hook: it writes
-// each line to the CPU's debug writer while SET DEBUG LOGICALS is on.
-func (c *Console) traceLogicals(format string, args ...any) {
-	if c.CPU != nil && c.CPU.DebugEnabled(vax.DebugLogicals) {
-		fmt.Fprintf(c.CPU.DebugWriter(), "DEBUG: LNM: "+format+"\n", args...)
-	}
-}
 
 // DefineDevice implements the DEFINE/DEVICE console command
 // (define_device.c), registering a new device in c.Devices. Unlike most
@@ -166,61 +137,3 @@ func (c *Console) statRow(label1 string, val1 any, label2 string, val2 any) {
 	c.Printf("    %-27s%12v    %-27s%12v\n", label1, val1, label2, val2)
 }
 
-// DefineLogical implements the DEFINE/LOGICAL console command
-// (define_logical.c), defining name's value within table. Also doesn't
-// require INIT, matching define_logical.c.
-func (c *Console) DefineLogical(table, name, value string) error {
-	if c.CPU != nil && c.CPU.DebugEnabled(vax.DebugLogicals) {
-		fmt.Fprintf(c.CPU.DebugWriter(), "DEBUG: DEFINE/LOGICAL %s/TABLE=%s %q\n", name, table, value)
-	}
-
-	_, err := c.Logicals.Define(table, name, lnm.Supervisor, 0, []lnm.Equivalence{{Value: value}})
-
-	return err
-}
-
-// ShowLogicals implements the SHOW LOGICAL_NAMES console command
-// (show_logical.c), optionally filtered by table and/or name. With no
-// table it lists every table except the two directories; a table name
-// that designates nothing lists nothing. Each search-list element after
-// the first is shown on its own continuation line. (docs/PHASE-25.md's
-// subtask 6 replaces this with the VMS SHOW LOGICAL.)
-func (c *Console) ShowLogicals(table, name string) error {
-	var tables []*lnm.Table
-
-	if table == "" {
-		for _, t := range c.Logicals.Tables() {
-			if !t.Directory {
-				tables = append(tables, t)
-			}
-		}
-	} else {
-		tables, _ = c.Logicals.ResolveTables(table, lnm.User)
-	}
-
-	count := 0
-
-	for _, t := range tables {
-		for _, e := range t.Entries() {
-			if name != "" && e.Name != name || e.IsTable() {
-				continue
-			}
-
-			count++
-
-			for i, eqv := range e.Equivalences {
-				if i == 0 {
-					c.Printf("%s [%s] = %q\n", e.Name, t.Name, eqv.Value)
-				} else {
-					c.Printf("    = %q\n", eqv.Value)
-				}
-			}
-		}
-	}
-
-	if count == 0 {
-		c.Printf("No matching logical names.\n")
-	}
-	
-	return nil
-}

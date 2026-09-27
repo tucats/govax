@@ -114,16 +114,18 @@ func TestParse_clearSymbolAll(t *testing.T) {
 	}
 }
 
-func TestParse_defineLogical(t *testing.T) {
+// TestParse_define checks VMS DEFINE syntax, and that the eVAX-only
+// DEFINE/LOGICAL form is gone (docs/PHASE-25.md open question 4).
+func TestParse_define(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
-	r, err := g.Parse("DEFINE/LOGICAL TT TTA0")
+	r, err := g.Parse("DEFINE TT TTA0")
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
 
-	if r.Active != "DEFINE_LOGICAL" {
-		t.Errorf("Active=%s, want DEFINE_LOGICAL", r.Active)
+	if r.Active != "DEFINE" {
+		t.Errorf("Active=%s, want DEFINE", r.Active)
 	}
 
 	if got := r.String("NAME"); got != "TT" {
@@ -132,6 +134,10 @@ func TestParse_defineLogical(t *testing.T) {
 
 	if got := r.String("VALUE"); got != "TTA0" {
 		t.Errorf("VALUE=%q, want TTA0", got)
+	}
+
+	if _, err := g.Parse("DEFINE/LOGICAL TT TTA0"); err == nil {
+		t.Error("DEFINE/LOGICAL still parses")
 	}
 }
 
@@ -207,8 +213,8 @@ func TestParse_ambiguousVerb(t *testing.T) {
 func TestParse_missingRequiredParameter(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
-	if _, err := g.Parse("DEFINE/LOGICAL"); err == nil {
-		t.Error("expected error for missing required NAME/VALUE parameters")
+	if _, err := g.Parse("DEFINE X"); err == nil {
+		t.Error("expected error for missing required VALUE parameter")
 	}
 }
 

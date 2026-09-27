@@ -369,17 +369,9 @@ func (d *Dispatcher) bindGrammar() {
 		return nil
 	})
 
-	g.Bind("SHOW_LOGICAL", func(id int64, r *dcl.Result) error {
-		return d.Console.ShowLogicals(r.String("TABLE"), r.String("NAME"))
-	})
-	g.Bind("DEFINE_LOGICAL", func(id int64, r *dcl.Result) error {
-		table := r.String("TABLE")
-		if table == "" {
-			table = "LNM$PROCESS"
-		}
-
-		return d.Console.DefineLogical(table, r.String("NAME"), r.String("VALUE"))
-	})
+	// Phase 25: DEFINE, ASSIGN, DEASSIGN, CREATE/NAME_TABLE, SHOW LOGICAL
+	// and SHOW TRANSLATION (logical.go).
+	bindLogicalCommands(g, d.Console)
 
 	// Phase 22 (internal/rms): MOUNT/DISMOUNT attach/detach a disk-image
 	// container file to a device name via internal/rms.MountTable

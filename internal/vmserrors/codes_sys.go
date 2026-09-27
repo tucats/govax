@@ -48,20 +48,11 @@ const (
 	SS_STATUS = SYSFacility<<FacilityPosition | sysStatus<<MessagePosition | StatusSuccess
 	SS_ACCVIO = SYSFacility<<FacilityPosition | sysAccvio<<MessagePosition | StatusSevere
 
-	// SS_BADPARAM is real VMS's SS$_BADPARAM (20): docs/PHASE-23.md's
-	// INITIALIZE/CONTAINER (internal/console/initialize.go) reports this
-	// for any failure building the new container/volume -- a size of zero
-	// blocks, a container path that can't be created (bad directory,
-	// permissions, ...), a volume label too long for its fixed 12-byte
-	// on-disk field, or a size too small to hold even the minimal reserved
-	// file layout. Real VMS's own INITIALIZE reports failures through a
-	// dedicated INIT facility this project doesn't model; SS_BADPARAM is
-	// used instead, matching this phase's "operator-console-facing SS$_
-	// statuses, the same class MOUNT/DISMOUNT already use" design decision
-	// -- ss_def.h has no INIT-specific status to reuse, and every one of
-	// this command's own failure modes ultimately traces back to a bad
-	// argument value (path/size/label/cluster), the same story SS$_BADPARAM
-	// tells for any other system service.
+	// SS_BADPARAM is real VMS's SS$_BADPARAM (20), "bad parameter value":
+	// a service argument that is out of range or malformed (for example
+	// internal/lnm's attribute and equivalence-count checks). Until
+	// docs/PHASE-25.md subtask 6 it also carried INITIALIZE/CONTAINER's
+	// failure text; that now has its own code, CLI_INITFAIL.
 	SS_BADPARAM = SYSFacility<<FacilityPosition | sysBadParam<<MessagePosition | StatusSevere
 
 	// SS_DEVMOUNT is real VMS's SS$_DEVMOUNT (108, per
@@ -116,7 +107,7 @@ const (
 func init() {
 	DefineMessage(SS_STATUS, SYSFacility, "NORMAL", "Completed successfully")
 	DefineMessage(SS_ACCVIO, SYSFacility, "ACCVIO", "Access violation at !X")
-	DefineMessage(SS_BADPARAM, SYSFacility, "BADPARAM", "Unable to complete INITIALIZE operation on !S")
+	DefineMessage(SS_BADPARAM, SYSFacility, "BADPARAM", "bad parameter value")
 	DefineMessage(SS_DEVMOUNT, SYSFacility, "DEVMOUNT", "Device !S already mounted")
 	DefineMessage(SS_DEVNOTMOUNT, SYSFacility, "DEVNOTMOUNT", "Device !S not mounted")
 	DefineMessage(SS_NOMOUNT, SYSFacility, "NOMOUNT", "Unable to complete MOUNT/DISMOUNT operation on device !S")

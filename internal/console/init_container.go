@@ -39,15 +39,13 @@ import (
 // Any failure (a size of zero blocks, a container path that can't be
 // created, a volume too small for the minimal reserved-file layout, a
 // label too long for its fixed on-disk width, ...) is reported as the
-// real SS_BADPARAM console status rather than a bare Go error, per
-// docs/PHASE-23.md's "Status-code / error translation" design section —
-// ss_def.h has no INIT-specific status this project can reuse, and every
-// one of this command's own failure modes ultimately traces back to a bad
-// argument value, the same story SS$_BADPARAM tells for any other system
-// service (see SS_BADPARAM's own doc comment in internal/vmserrors).
+// CLI_INITFAIL console status rather than a bare Go error, per
+// docs/PHASE-23.md's "Status-code / error translation" design section.
+// (Phase 23 used SS_BADPARAM with an INITIALIZE-specific message; Phase 25
+// gave SS$_BADPARAM back its real text and this command its own code.)
 func (c *Console) InitializeContainer(path string, blocks uint32, label string, clusterSize uint16, devType string) error {
 	if err := rms.InitializeContainer(path, blocks, label, clusterSize, devType); err != nil {
-		return vmserrors.Wrap(vmserrors.SS_BADPARAM, err, path)
+		return vmserrors.Wrap(vmserrors.CLI_INITFAIL, err, path)
 	}
 
 	return nil

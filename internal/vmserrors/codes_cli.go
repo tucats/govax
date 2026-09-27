@@ -112,6 +112,10 @@ const (
 
 	// docs/PHASE-25.md subtask 5: internal/console/dcl's list values.
 	cliEmptyElement
+
+	// docs/PHASE-25.md subtask 6: INITIALIZE/CONTAINER's failure, which
+	// used to borrow SS_BADPARAM's message text.
+	cliInitFail
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -233,6 +237,13 @@ const (
 	// element ("A,,B", a trailing comma, or "()") -- docs/PHASE-25.md
 	// subtask 5's list-valued parameters and qualifiers.
 	CLI_EMPTYELEMENT = CLIFacility<<FacilityPosition | cliEmptyElement<<MessagePosition | StatusError
+
+	// CLI_INITFAIL reports an INITIALIZE/CONTAINER that couldn't build its
+	// container or volume: a size of zero blocks, a path that can't be
+	// created, a label too long for its on-disk field, or a size too
+	// small for the reserved files (docs/PHASE-23.md). Real VMS reports
+	// these through an INIT facility govax doesn't model.
+	CLI_INITFAIL = CLIFacility<<FacilityPosition | cliInitFail<<MessagePosition | StatusError
 )
 
 func init() {
@@ -329,6 +340,7 @@ func init() {
 	DefineMessage(CLI_PARAMNOTFOUND, CLIFacility, "PARAMNOTFOUND", "Qualifier !Q: /parameter= target !Q not found")
 	DefineMessage(CLI_BADFILESPEC, CLIFacility, "BADFILESPEC", "Invalid file specification !Q")
 	DefineMessage(CLI_NEEDVERSION, CLIFacility, "NEEDVERSION", "!Q requires a specific version, e.g. ;3 or ;* (DELETE never defaults to a version)")
+	DefineMessage(CLI_INITFAIL, CLIFacility, "INITFAIL", "Unable to complete INITIALIZE operation on !S")
 	DefineMessage(CLI_EMPTYELEMENT, CLIFacility, "EMPTYELEMENT", "Empty element in list !Q")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

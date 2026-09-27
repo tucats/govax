@@ -39,7 +39,7 @@ facility that the console, RMS, and the RTL/system-service layer all share:
 
   All of them work on the same shared data the console uses.
 
-**Status: in progress — subtasks 1-5 of 9 done.**
+**Status: in progress — subtasks 1-6 of 9 done.**
 
 ## Why this phase looks different
 
@@ -300,14 +300,16 @@ All of these use the existing `internal/console/dcl` grammar in
   - `/FULL` adds `[super]`/`[exec]` and `[concealed,terminal]`
 - **`SHOW TRANSLATION name`** does one level only (`$TRNLNM` semantics).
 - **`CREATE/NAME_TABLE table`** creates a table, covering "additional tables can
-  be added". Qualifiers: `/PARENT_TABLE=` (default `LNM$PROCESS_TABLE`, so the
-  new table is process-private. An earlier draft said `LNM$PROCESS_DIRECTORY`;
-  subtask 6 will confirm the default against the DCL documentation) and `/USER_MODE`/`/SUPERVISOR_MODE`/
-  `/EXECUTIVE_MODE`.
-- **`DEASSIGN/TABLE=`** (with no logical name) deletes a table, per §11.12.
+  be added". Qualifiers: `/PARENT_TABLE=` and `/USER_MODE`/`/SUPERVISOR_MODE`/
+  `/EXECUTIVE_MODE`. The default parent is `LNM$PROCESS_DIRECTORY`, which makes
+  the table process-private (User's Manual §11.10.1, confirmed in subtask 6).
+- **Deleting a table** is `DEASSIGN/TABLE=directory table-name`, which deletes
+  the table's name from its directory (§11.12:
+  `DEASSIGN/TABLE=LNM$PROCESS_DIRECTORY TAX`). An earlier draft said a bare
+  `DEASSIGN/TABLE=`; the manual doesn't describe that.
 - **`DEFINE/DEVICE`** stays exactly as it is.
-- **`DEFINE/LOGICAL`** and **`SHOW LOGICAL_NAMES`** are eVAX-isms. Open question
-  4 asks whether to keep them as hidden aliases or drop them.
+- **`DEFINE/LOGICAL`** and **`SHOW LOGICAL_NAMES`** are eVAX-isms, dropped per
+  open question 4.
 
 Grammar work these commands need. **Per the user's explicit direction during
 planning, extending `internal/console/dcl` is in scope for this phase.** Where
@@ -454,7 +456,7 @@ the process default directory. RMS then gets its default device by translating
      TRANSLATION/CREATE/NAME_TABLE.
    - Parser tests go in `internal/console/dcl`. Every existing grammar test has
      to keep passing.
-6. **Console commands.** Create `internal/console/logical.go`, with one shared
+6. **Done.** **Console commands.** Create `internal/console/logical.go`, with one shared
    define handler (table name as a parameter) for
    `DEFINE[/PROCESS|/GROUP|/SYSTEM|/TABLE]` and `ASSIGN`, plus `DEASSIGN`,
    `SHOW LOGICAL` (VMS output format, iterative levels, `/FULL`,
@@ -860,3 +862,68 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
   and every new command form against the real `console.dcl`. The verb-count
   test now expects 21 verbs. `go test ./...` passes except for the
   pre-existing `TestAssembleForth`.
+
+### 2026-09-27 — Subtask 6: console commands
+
+- **New `internal/console/logical.go`.** It contains `bindLogicalCommands`
+  plus one `Console` method per command:
+  - `DefineLogicalName`, shared by DEFINE and ASSIGN
+  - `DeassignLogicalName`, `CreateNameTable`
+  - `ShowLogical`, `ShowLogicalStructure`, `ShowTranslation`
+
+  `/PROCESS`/`/GROUP`/`/SYSTEM`/`/TABLE=` go through one helper,
+  `logicalTableQualifier`, as the user asked. The mode qualifiers go
+  through `logicalModeQualifier`.
+- **Behavior, from User's Manual chapter 11:**
+  - DEFINE keeps a trailing colon on the name. ASSIGN and DEASSIGN remove
+    one.
+  - `/TRANSLATION_ATTRIBUTES` applies to every equivalence string. Real DCL
+    treats it as a positional qualifier; that refinement is left out and
+    noted for subtask 9's DEVIATIONS entries.
+  - `/LOG` is the default for DEFINE, ASSIGN, and CREATE/NAME_TABLE, and
+    prints `%DCL-I-SUPERSEDE, previous value of X has been superseded`
+    when a definition or table is replaced.
+  - DEASSIGN deletes at the given mode (default supervisor) and at less
+    privileged modes. So `DEASSIGN SYS$OUTPUT` and `DEASSIGN/ALL` leave the
+    executive-mode process-permanent names alone, as §11.13 says.
+  - A name is required unless `/ALL` is given, and `/ALL` can't be given
+    with a name.
+  - SHOW LOGICAL follows the manual's formats:
+    - a single name: `  "N" = "V" (TABLE)`, then numbered iteration
+      levels `1 "WORK4" = ...`, following each non-`TERMINAL` equivalence
+      whose text (less one trailing colon) is itself a logical name, and
+      stopping on a circular definition or at `MaxDepth`
+    - search-list continuation lines: `        = "V2"`
+    - table listings under `(TABLE)` headers, listed alphabetically
+    - `[mode]` tags shown under `/FULL`, or when a name exists at more than
+      one mode (as in §11.6.1's listing)
+    - `/FULL` attribute tags `[concealed,terminal]`
+    - `/STRUCTURE` as an indented directory tree
+    - wildcard names listed under every searched table's header
+  - An unknown name prints `%SHOW-S-NOTRAN, no translation for logical name
+    X`.
+  - SHOW TRANSLATION prints `NAME = "V" (TABLE)`, one level only.
+- **Design corrections** (made in the design section above):
+  - `CREATE/NAME_TABLE`'s default parent is `LNM$PROCESS_DIRECTORY`, as the
+    first draft said. Subtask 2 had flagged `LNM$PROCESS_TABLE`, but
+    §11.10.1 says outright "create the table in LNM$PROCESS_DIRECTORY (the
+    default)".
+  - Deleting a table is `DEASSIGN/TABLE=directory name` (§11.12), not a bare
+    `DEASSIGN/TABLE=`. This needed no special code, because `lnm.Delete` of
+    a table-name entry already deletes the table.
+- **eVAX-isms removed** (open question 4): `DEFINE/LOGICAL` (the
+  `define_logical` syntax and its `logical` redirect), the `logical_names`
+  SHOW keyword (now `logical`), and `Console.DefineLogical`/`ShowLogicals`.
+  `vax.help` has new entries for DEFINE, ASSIGN, DEASSIGN, CREATE/NAME_TABLE,
+  SHOW LOGICAL, and SHOW TRANSLATION, and its SHOW summary lists SHOW
+  TRANSLATION. The package docs of `internal/io` and `internal/console` no
+  longer describe logical names as `internal/io`'s job.
+- **`SS$_BADPARAM`'s message** (the subtask 2 finding) is now VMS's own "bad
+  parameter value". INITIALIZE/CONTAINER got its own code, `CLI_INITFAIL`,
+  which keeps the old "Unable to complete INITIALIZE operation on !S" text.
+- **Tests.** `internal/console/logical_test.go` drives every command through
+  the real grammar. Output is compared byte-for-byte against the manual's
+  examples: SYS$INPUT, MYDISK/WORK4, GETTYSBURG, SYS$ERROR /FULL,
+  §11.10.1's TAX, §11.10.2's NEWTAB, and §11.12's table deletion. The DCL
+  tests that used `DEFINE/LOGICAL` were changed to the VMS form. `go test
+  ./...` passes except for the pre-existing `TestAssembleForth`.

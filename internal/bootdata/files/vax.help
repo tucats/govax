@@ -30,6 +30,9 @@
 //                          SET DEFAULT, SHOW DEFAULT (govax internal/rms +
 //                          internal/console, Phase 23 -- see
 //                          docs/PHASE-23.md)
+//              09/27/26    Added DEFINE, ASSIGN, DEASSIGN, CREATE/NAME_TABLE,
+//                          SHOW TRANSLATION; rewrote SHOW LOGICAL for VMS
+//                          logical names (docs/PHASE-25.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -48,26 +51,166 @@ $SHOW,LOGI
 $SH  ,LOGI
 $SHOW,LOG 
 $SH  ,LOG 
-    The SHOW LOGICALS command displays VMS logical names stored in the
-    console for use by VMS programs.
-    
-    Syntax:
-    
-         SHOW LOGICAL [/TABLE=<tablename>]  [logicalname]
+    The SHOW LOGICAL command displays logical names and their equivalence
+    strings, in the same format as VMS.
 
-    Parameters:
-    
-        /TABLE=<tablename>
-        
-            The name of the logical name table to display names from.  If
-            omitted, then all tables are searched/displayed.
-        
-        logicalname
-        
-            The name of the logical name to display the value of.  If
-            omitted, then all names in the specified table are shown.
-            If both the name and table name are omitted then all
-            logical names are displayed.
+    Syntax:
+
+         SHOW LOGICAL [logical-name[,...]]
+
+    Qualifiers:
+
+        /PROCESS, /GROUP, /SYSTEM, /TABLE=(table[,...])
+
+            Search only the named table(s).  By default the tables that
+            LNM$DCL_LOGICAL names are searched: the process, group, and
+            system tables.
+
+        /FULL
+
+            Also show each name's access mode, such as [super] or [exec],
+            and each equivalence string's translation attributes
+            ([concealed], [terminal]).
+
+        /STRUCTURE
+
+            Show the logical name directories and the tables in each.
+
+    With no logical name, every name in each table searched is listed
+    under the table's name.  A logical name containing the * or %
+    wildcards lists the matching names the same way.  Any other logical
+    name is shown from the first table that has it, followed by the
+    translation of each equivalence string that is itself a logical name,
+    numbered by level:
+
+         $ SHOW LOGICAL MYDISK
+           "MYDISK" = "WORK4" (LNM$PROCESS_TABLE)
+         1 "WORK4" = "$255$DUA17:" (LNM$SYSTEM_TABLE)
+
+$SHOW,TRAN
+$SH  ,TRAN
+    The SHOW TRANSLATION command displays one level of translation of a
+    logical name: the first match found, with no further translation.
+
+    Syntax:
+
+         SHOW TRANSLATION [/TABLE=table] logical-name
+
+    Qualifier:
+
+        /TABLE=table
+
+            The table to search, or a logical name that translates to a
+            list of tables.  The default is LNM$DCL_LOGICAL (the process,
+            group, and system tables).
+
+$DEFI
+$DEF 
+    The DEFINE command creates a logical name, or replaces an existing
+    one defined in the same table at the same access mode.
+
+    Syntax:
+
+         DEFINE logical-name equivalence-string[,...]
+
+    More than one equivalence string makes the name a search list.  Any
+    trailing colon is kept as part of the logical name.  Unquoted text is
+    converted to uppercase.
+
+    Qualifiers:
+
+        /PROCESS, /GROUP, /SYSTEM, /TABLE=table
+
+            The table to define the name in.  The default is the process
+            table, LNM$PROCESS.  /TABLE accepts a table name or a logical
+            name that translates to one, such as LNM$PROCESS.
+
+        /USER_MODE, /SUPERVISOR_MODE, /EXECUTIVE_MODE
+
+            The access mode of the name.  The default is supervisor mode.
+
+        /TRANSLATION_ATTRIBUTES=(CONCEALED,TERMINAL)
+
+            CONCEALED shows the logical name in place of the device it
+            stands for.  TERMINAL stops iterative translation at this
+            name.  The attributes apply to every equivalence string.
+
+        /LOG (default), /NOLOG
+
+            Report when an existing definition is superseded.
+
+    DEFINE/DEVICE, which defines a pseudodevice, is described separately.
+
+$ASSI
+    The ASSIGN command creates a logical name, like DEFINE, but with its
+    parameters in the opposite order.  One trailing colon is removed from
+    the logical name.
+
+    Syntax:
+
+         ASSIGN equivalence-string[,...] logical-name
+
+    ASSIGN takes the same qualifiers as DEFINE.
+
+$DEAS
+    The DEASSIGN command deletes a logical name.  One trailing colon is
+    removed from the logical name, so to delete a name that ends in a
+    colon, give two.
+
+    Syntax:
+
+         DEASSIGN logical-name
+         DEASSIGN/ALL
+
+    Qualifiers:
+
+        /PROCESS, /GROUP, /SYSTEM, /TABLE=table
+
+            The table to delete from.  The default is the process table.
+            Deleting a table's name from LNM$PROCESS_DIRECTORY or
+            LNM$SYSTEM_DIRECTORY deletes the table and all its descendants:
+
+                 DEASSIGN/TABLE=LNM$PROCESS_DIRECTORY TAX
+
+        /USER_MODE, /SUPERVISOR_MODE, /EXECUTIVE_MODE
+
+            Delete names at this access mode and any less privileged
+            mode.  The default is supervisor mode, so the executive-mode
+            names SYS$INPUT, SYS$OUTPUT, SYS$ERROR and SYS$COMMAND are not
+            deleted.
+
+        /ALL
+
+            Delete every such name in the table.
+
+$CREA,/NAM
+$CREA
+    The CREATE/NAME_TABLE command creates a logical name table.
+
+    Syntax:
+
+         CREATE/NAME_TABLE table-name
+
+    Qualifiers:
+
+        /PARENT_TABLE=table
+
+            The new table's parent.  The default, LNM$PROCESS_DIRECTORY,
+            makes a table private to the process.  A shareable parent
+            such as LNM$SYSTEM_DIRECTORY makes a shareable table.
+
+        /USER_MODE, /SUPERVISOR_MODE, /EXECUTIVE_MODE
+
+            The access mode of the table.  The default is supervisor mode.
+
+        /LOG (default), /NOLOG
+
+            Report when an existing table is superseded.
+
+    To have file lookups search the new table, add it to LNM$PROCESS:
+
+         $ DEFINE/TABLE=LNM$PROCESS_DIRECTORY LNM$PROCESS -
+                LNM$PROCESS_TABLE, TAX
 
 $SHOW,DEVI
 $SH  ,DEVI
@@ -1786,6 +1929,7 @@ $SH
         SHOW STRINGS
         SHOW SYMBOL
         SHOW TB
+        SHOW TRANSLATION
         
     The SHOW command is also used to display the contents of a virtual
     VAX machine register.  This includes the general purpose registers

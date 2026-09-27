@@ -35,7 +35,7 @@ func TestConsoleInitializeContainer_buildsAMountableVolume(t *testing.T) {
 
 // TestConsoleInitializeContainer_badPath confirms a failure from the
 // sibling internal/rms.InitializeContainer (here, a nonexistent parent
-// directory) is translated into the real SS_BADPARAM console status,
+// directory) is translated into the CLI_INITFAIL console status,
 // matching every other console command that reports a bad argument via a
 // real VMS-style status code rather than a bare Go error.
 func TestConsoleInitializeContainer_badPath(t *testing.T) {
@@ -44,17 +44,17 @@ func TestConsoleInitializeContainer_badPath(t *testing.T) {
 
 	err := c.InitializeContainer(path, 400, "TESTVOL", 0, "RD54")
 	if err == nil {
-		t.Fatal("InitializeContainer with a nonexistent parent directory = nil error, want SS_BADPARAM")
+		t.Fatal("InitializeContainer with a nonexistent parent directory = nil error, want CLI_INITFAIL")
 	}
 
-	if !errors.Is(err, vmserrors.New(vmserrors.SS_BADPARAM)) {
-		t.Errorf("InitializeContainer error = %v, want SS_BADPARAM", err)
+	if !errors.Is(err, vmserrors.New(vmserrors.CLI_INITFAIL)) {
+		t.Errorf("InitializeContainer error = %v, want CLI_INITFAIL", err)
 	}
 }
 
 // TestConsoleInitializeContainer_zeroBlocks confirms a size of zero blocks
 // -- rejected by the sibling internal/rms.InitializeContainer -- is also
-// reported as SS_BADPARAM here, the same translation TestConsoleInitialize
+// reported as CLI_INITFAIL here, the same translation TestConsoleInitialize
 // Container_badPath checks for a different underlying failure.
 func TestConsoleInitializeContainer_zeroBlocks(t *testing.T) {
 	c, _ := newTestConsole(t)
@@ -63,11 +63,11 @@ func TestConsoleInitializeContainer_zeroBlocks(t *testing.T) {
 	// IF no device is given, then no default size is allowed.
 	err := c.InitializeContainer(path, 0, "TESTVOL", 0, "")
 	if err == nil {
-		t.Fatal("InitializeContainer with blocks=0 = nil error, want SS_BADPARAM")
+		t.Fatal("InitializeContainer with blocks=0 = nil error, want CLI_INITFAIL")
 	}
 
-	if !errors.Is(err, vmserrors.New(vmserrors.SS_BADPARAM)) {
-		t.Errorf("InitializeContainer error = %v, want SS_BADPARAM", err)
+	if !errors.Is(err, vmserrors.New(vmserrors.CLI_INITFAIL)) {
+		t.Errorf("InitializeContainer error = %v, want CLI_INITFAIL", err)
 	}
 }
 

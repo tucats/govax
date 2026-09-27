@@ -6,9 +6,10 @@
 //
 // This mirrors reference/eVAX/eVAX/Source/Console/console_*.c/driver.c, with
 // the scope adjustments recorded in docs/PHASE-08.md's progress log:
-// device-dependent commands (SHOW DEVICE, DEFINE/DEVICE, SHOW LOGICAL,
-// DEFINE/LOGICAL) were stubbed pending Phase 09 (I/O) and are now wired up
-// in device.go against internal/io; the inline mini-assembler (ASM/DISASM,
+// device-dependent commands (SHOW DEVICE, DEFINE/DEVICE) were stubbed
+// pending Phase 09 (I/O) and are now wired up in device.go against
+// internal/io (the logical-name commands are Phase 25's logical.go, over
+// internal/lnm); the inline mini-assembler (ASM/DISASM,
 // and EXAMINE's address-expression syntax) is replaced by a small
 // standalone expression evaluator (expr.go) rather than waiting on Phase
 // 11's real assembler. Every DCL /entry= command (ABOUT, FORTH, XTEST, SHOW

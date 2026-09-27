@@ -155,15 +155,9 @@ grammar console
         qualifier rootdevname/id=423/type=$string
         
         
-    syntax define_logical
-        parameter name/id=201/type=$name/prompt="Name"
-        qualifier table/id=200/type=$name
-        parameter value/id=202/type=$any/prompt="Value"
-        
     verb define
         parameter name/id=211/type=$any/prompt="Log_Name"
         parameter value/id=212/type=$any/list/prompt="Equ_Name"
-        qualifier	logical/syntax=define_logical
         qualifier	device/syntax=define_device
         qualifier process/id=213
         qualifier group/id=214
@@ -282,7 +276,7 @@ grammar console
         keyword         default         /syntax=show_default
         keyword		clock		/syntax=show_clock
         keyword         watchpoints     /syntax=show_watchpoints
-        keyword		logical_names	/syntax=show_logical
+        keyword		logical		/syntax=show_logical
         keyword		translation	/syntax=show_translation
         keyword		devices		/syntax=show_device
         keyword         version         /syntax=show_version
