@@ -125,6 +125,8 @@ lists the ones the implementation can actually return.
 | `$ALLOC` | 4 | `devices.go` | `NORMAL`, `BUFFEROVF`, `DEVALRALLOC`, `ACCVIO`, `DEVALLOC`, `DEVMOUNT`, `IVDEVNAM`, `IVLOGNAM`, `IVSTSFLG`, `NODEVAVL`, `NOSUCHDEV`, `TOOMANYLNAM` | Marks a device `DEV$M_ALL` with the process's PID and access mode; generic allocation by device type. |
 | `$ASCEFC` | 5 | `eventflags.go` | `NORMAL`, `ACCVIO`, `ILLEFC`, `IVLOGNAM`, `NOPRIV` | Creates/associates a named common event flag cluster for flags 64-127; `$SETEF`/`$CLREF`/`$READEF` reach it. |
 | `$DALLOC` | 6 | `devices.go` | `NORMAL`, `ACCVIO`, `DEVASSIGN`, `DEVNOTALLOC`, `IVLOGNAM`, `NOPRIV`, `NOSUCHDEV`, `TOOMANYLNAM` | Releases one allocation, or (no `devnam`) all at `acmode` or outer. |
+| `$DACEFC` | 7 | `eventflags.go` | `NORMAL`, `ILLEFC` | Drops an association; an unassociated number still succeeds. |
+| `$DLCEFC` | 7 | `eventflags.go` | `NORMAL`, `ACCVIO`, `IVLOGNAM` | Marks a cluster for deletion; deleted when unassociated. |
 
 ## Service designs
 
@@ -318,7 +320,7 @@ memory, and a permanent cluster survives from one RUN to the next.
   recreate it empty).
 - Each association adds a reference. Dropping the last reference to a
   temporary cluster deletes it; permanent clusters stay until deleted
-  (`$DLCEFC`, not implemented yet).
+  (`$DLCEFC`, subtask 7).
 - **Image rundown** (`Environment.ImageRundown`) disassociates both cluster
   numbers: associations last "for the execution of the current image".
 
@@ -372,6 +374,30 @@ The inverse of `$ALLOC`, using the same `iodev.Device` allocation state.
 Image rundown's user-mode deallocation (subtask 4) is unchanged. It is the
 same operation as `$DALLOC` with no `devnam` and `acmode` user.
 
+### `$DACEFC` and `$DLCEFC` — Disassociate and Delete Common Event Flag Cluster
+
+`SYS$DACEFC efn` and `SYS$DLCEFC name`
+
+They complete the cluster lifecycle `$ASCEFC` started (`eventflags.go`).
+
+- **`$DACEFC`** drops the process's association with the cluster holding
+  `efn`. `efn` uses its low byte; outside 64-127 it is `SS$_ILLEFC`. A
+  cluster number with no association succeeds, as the manual says.
+- **`$DLCEFC`** marks the named cluster in the process's UIC group for
+  deletion (`EventFlagCluster.DeletePending`). It doesn't disassociate
+  anyone. The name is read like `$ASCEFC`'s (`clusterName`: 1-15
+  characters, else `SS$_IVLOGNAM`; `SS$_ACCVIO` for a missing
+  descriptor). A cluster that doesn't exist still succeeds.
+- **Deletion rule** (`CommonEventFlags.deleteIfUnused`): a cluster is
+  deleted when it has no associations and is either temporary or marked for
+  deletion. The check runs whenever an association is dropped (`$DACEFC`,
+  reassociation, image rundown) and when `$DLCEFC` marks a cluster, so an
+  unused permanent cluster goes at once.
+- The manual requires `PRMCEB` or the creator's UIC to delete. The emulated
+  process always holds `PRMCEB`, so `SS$_NOPRIV` never happens.
+- A marked cluster can still be found and associated with by `$ASCEFC`
+  until it is actually deleted. The manual doesn't say otherwise.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -394,7 +420,7 @@ Second batch, requested by the user on 2026-09-27 (the candidates the first
 batch listed):
 
 6. **Done.** **`$DALLOC`.** `serviceSysDalloc` in `devices.go`.
-7. **`$DACEFC` and `$DLCEFC`.**
+7. **Done.** **`$DACEFC` and `$DLCEFC`.** In `eventflags.go`.
 8. **`$GETJPI`/`$GETJPIW`** reading `rtl.Process`.
 9. **`$WAITFR`, `$WFLAND`, `$WFLOR`.**
 
@@ -539,3 +565,17 @@ None yet.
   both `SS$_IVLOGNAM` cases; `SS$_NOPRIV` for a more privileged allocation,
   with acmode maximized; and the no-`devnam` form releasing exactly the
   outer-mode allocations of this process.
+
+### 2026-09-27 — Subtask 7: `$DACEFC` and `$DLCEFC`
+
+- `serviceSysDacefc`, `serviceSysDlcefc`, and the shared `clusterName`
+  (factored out of `$ASCEFC`) in `internal/rtl/eventflags.go`.
+- `EventFlagCluster.DeletePending` is new. `CommonEventFlags.release` now
+  goes through `deleteIfUnused`, which also deletes a marked permanent
+  cluster.
+- Tests (`eventflags_test.go`):
+  - `$DACEFC` deleting a temporary cluster, keeping a permanent one, the
+    low-byte rule, an unassociated number, and `SS$_ILLEFC`.
+  - `$DLCEFC` deleting an unused permanent cluster at once, marking an
+    associated one that stays usable until image rundown deletes it, a
+    nonexistent name, and the name errors.

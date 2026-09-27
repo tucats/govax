@@ -37,8 +37,11 @@ type EventFlagCluster struct {
 	Protected  bool
 
 	// Permanent clusters outlive their last association; temporary ones
-	// are deleted when no process is associated any more.
-	Permanent bool
+	// are deleted when no process is associated any more. $DLCEFC marks a
+	// permanent cluster DeletePending, after which it too is deleted once
+	// its last association goes.
+	Permanent     bool
+	DeletePending bool
 
 	// Flags holds the cluster's 32 event flags, all clear when created.
 	Flags uint32
@@ -93,11 +96,17 @@ func (t *CommonEventFlags) All() []*EventFlagCluster {
 	return out
 }
 
-// release drops one association from c, deleting it when it is temporary
-// and that was the last one.
+// release drops one association from c, then deletes it if nothing
+// keeps it (see deleteIfUnused).
 func (t *CommonEventFlags) release(c *EventFlagCluster) {
 	c.refs--
-	if c.refs <= 0 && !c.Permanent {
+	t.deleteIfUnused(c)
+}
+
+// deleteIfUnused deletes c when it has no associations and is temporary
+// or marked for deletion.
+func (t *CommonEventFlags) deleteIfUnused(c *EventFlagCluster) {
+	if c.refs <= 0 && (!c.Permanent || c.DeletePending) {
 		delete(t.clusters, clusterKey{c.Group, c.Name})
 	}
 }
@@ -200,17 +209,9 @@ func serviceSysAscefc(env *Environment, argv []uint32) (uint32, error) {
 		return ssIllEfc, nil
 	}
 
-	if nameDesc == 0 { // page 0 is never accessible on VMS
-		return ssAccVio, nil
-	}
-
-	name, ok, err := strGet(env, nameDesc, maxClusterNameLength)
-	if err != nil {
-		return ssAccVio, nil
-	}
-
-	if !ok || name == "" {
-		return ssIvLogNam, nil
+	name, st := clusterName(env, nameDesc)
+	if st != 0 {
+		return st, nil
 	}
 
 	p, table := env.Process, env.EventFlagClusters
@@ -244,6 +245,63 @@ func serviceSysAscefc(env *Environment, argv []uint32) (uint32, error) {
 	return ssNormal, nil
 }
 
+// clusterName reads a common event flag cluster name argument: 1-15
+// characters (SS$_IVLOGNAM otherwise), and SS$_ACCVIO for a missing or
+// unreadable descriptor.
+func clusterName(env *Environment, desc uint32) (string, uint32) {
+	if desc == 0 { // page 0 is never accessible on VMS
+		return "", ssAccVio
+	}
+
+	name, ok, err := strGet(env, desc, maxClusterNameLength)
+	if err != nil {
+		return "", ssAccVio
+	}
+
+	if !ok || name == "" {
+		return "", ssIvLogNam
+	}
+
+	return name, 0
+}
+
+// serviceSysDacefc is SYS$DACEFC: drops the process's association with
+// the common cluster holding event flag efn (low byte, 64-127, else
+// SS$_ILLEFC). A cluster number with no association succeeds anyway, as
+// the manual says. A temporary or marked-for-deletion cluster left with
+// no associations is deleted.
+func serviceSysDacefc(env *Environment, argv []uint32) (uint32, error) {
+	efn := optArg(argv, 0) & 0xFF
+	if efn < 64 || efn > 127 {
+		return ssIllEfc, nil
+	}
+
+	env.disassociateCluster(efn/32 - 2)
+
+	return ssNormal, nil
+}
+
+// serviceSysDlcefc is SYS$DLCEFC: marks the common cluster named name (in
+// the process's UIC group) for deletion; it is deleted now if nothing is
+// associated with it, otherwise when the last association goes. It
+// doesn't disassociate anyone. A cluster that doesn't exist succeeds
+// anyway. Deleting needs PRMCEB or the creator's UIC; the emulated
+// process always has PRMCEB, so SS$_NOPRIV can't happen.
+func serviceSysDlcefc(env *Environment, argv []uint32) (uint32, error) {
+	name, st := clusterName(env, optArg(argv, 0))
+	if st != 0 {
+		return st, nil
+	}
+
+	table := env.EventFlagClusters
+	if c, found := table.Lookup(env.Process.UICGroup(), name); found {
+		c.DeletePending = true
+		table.deleteIfUnused(c)
+	}
+
+	return ssNormal, nil
+}
+
 // disassociateCluster drops the process's association for common cluster
 // number slot+2, if it has one.
 func (env *Environment) disassociateCluster(slot uint32) {
@@ -266,4 +324,6 @@ func registerEventFlagServices(t *ServiceTable) {
 	t.Register("SYS$SETEF", serviceSysSetef)
 	t.Register("SYS$READEF", serviceSysReadef)
 	t.Register("SYS$ASCEFC", serviceSysAscefc)
+	t.Register("SYS$DACEFC", serviceSysDacefc)
+	t.Register("SYS$DLCEFC", serviceSysDlcefc)
 }

@@ -149,3 +149,71 @@ func TestServiceSysAscefcErrors(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysAscefc, 64, 0), ssAccVio)
 	wantR0(t, callLNM(t, env, serviceSysAscefc, 64, a.desc(strings.Repeat("N", 15))), ssNormal)
 }
+
+func TestServiceSysDacefc(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	table := env.EventFlagClusters
+
+	wantR0(t, callLNM(t, env, serviceSysAscefc, 64, a.desc("TEMP")), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysAscefc, 96, a.desc("PERM"), 0, 1), ssNormal)
+
+	// Disassociating a temporary cluster's last user deletes it.
+	wantR0(t, callLNM(t, env, serviceSysDacefc, 90), ssNormal)
+
+	if _, found := table.Lookup(1, "TEMP"); found {
+		t.Error("TEMP survived its last $DACEFC")
+	}
+
+	wantR0(t, callLNM(t, env, serviceSysSetef, 64), ssUnasEfc)
+
+	// A permanent one stays; only the low byte of efn counts.
+	wantR0(t, callLNM(t, env, serviceSysDacefc, 0x160), ssNormal)
+
+	if c, found := table.Lookup(1, "PERM"); !found || c.References() != 0 {
+		t.Error("permanent cluster PERM not kept, unreferenced, after $DACEFC")
+	}
+
+	// An unassociated cluster number succeeds; outside 64-127 doesn't.
+	wantR0(t, callLNM(t, env, serviceSysDacefc, 100), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysDacefc, 63), ssIllEfc)
+	wantR0(t, callLNM(t, env, serviceSysDacefc, 128), ssIllEfc)
+}
+
+func TestServiceSysDlcefc(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	table := env.EventFlagClusters
+
+	// Unused permanent cluster: deleted at once.
+	wantR0(t, callLNM(t, env, serviceSysAscefc, 64, a.desc("IDLE"), 0, 1), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysDacefc, 64), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysDlcefc, a.desc("IDLE")), ssNormal)
+
+	if _, found := table.Lookup(1, "IDLE"); found {
+		t.Error("unassociated permanent cluster IDLE survived $DLCEFC")
+	}
+
+	// In use: marked, still associated and usable, deleted when the last
+	// association goes (here, at image rundown).
+	wantR0(t, callLNM(t, env, serviceSysAscefc, 64, a.desc("BUSY"), 0, 1), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysDlcefc, a.desc("BUSY")), ssNormal)
+
+	c, found := table.Lookup(1, "BUSY")
+	if !found || !c.DeletePending {
+		t.Fatal("associated cluster BUSY not kept and marked by $DLCEFC")
+	}
+
+	wantR0(t, callLNM(t, env, serviceSysSetef, 64), ssWasClr)
+	env.ImageRundown()
+
+	if _, found := table.Lookup(1, "BUSY"); found {
+		t.Error("marked cluster BUSY survived its last disassociation")
+	}
+
+	// A nonexistent cluster succeeds; a bad name doesn't.
+	wantR0(t, callLNM(t, env, serviceSysDlcefc, a.desc("NOSUCH")), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysDlcefc, a.desc("")), ssIvLogNam)
+	wantR0(t, callLNM(t, env, serviceSysDlcefc, a.desc(strings.Repeat("N", 16))), ssIvLogNam)
+	wantR0(t, callLNM(t, env, serviceSysDlcefc, 0), ssAccVio)
+}

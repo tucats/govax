@@ -360,10 +360,9 @@ changed as a result.
 - **What**: no `TQELM` quota (`SS$_EXQUOTA`), no multiport shared memory
   (`SS$_EXPORTQUOTA`, `SS$_INTERLOCK`, `SS$_NOSHMBLOCK`,
   `SS$_SHMNOTCNCT`), and `PRMCEB` is always held. Cluster names are
-  compared case-sensitively as given. `$DACEFC`/`$DLCEFC` don't exist yet,
-  so a permanent cluster can't be deleted except by INIT/VMINIT/ZERO.
-- **Status**: open, deliberate simplifications (the last until `$DLCEFC`
-  is added).
+  compared case-sensitively as given. `$DLCEFC` (subtask 7) never returns
+  `SS$_NOPRIV`, since `PRMCEB` is always held.
+- **Status**: open, deliberate simplifications.
 
 ## Open findings
 
