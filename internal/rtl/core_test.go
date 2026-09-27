@@ -31,16 +31,16 @@ func TestServiceSysSetastAndDclexh(t *testing.T) {
 func TestServiceSysClrefSetefReadef(t *testing.T) {
 	env, _ := fixture()
 
-	if r0, err := serviceSysSetef(env, []uint32{3}); err != nil || r0 != ssNormal {
-		t.Fatalf("SETEF: r0=%d err=%v", r0, err)
+	if r0, err := serviceSysSetef(env, []uint32{3}); err != nil || r0 != ssWasClr {
+		t.Fatalf("SETEF: r0=%d err=%v, want ssWasClr (the flag was clear)", r0, err)
 	}
 
 	if r0, err := serviceSysReadef(env, []uint32{3}); err != nil || r0 != ssWasSet {
 		t.Fatalf("READEF after SETEF: r0=%d err=%v, want ssWasSet", r0, err)
 	}
 
-	if r0, err := serviceSysClref(env, []uint32{3}); err != nil || r0 != ssNormal {
-		t.Fatalf("CLREF: r0=%d err=%v", r0, err)
+	if r0, err := serviceSysClref(env, []uint32{3}); err != nil || r0 != ssWasSet {
+		t.Fatalf("CLREF: r0=%d err=%v, want ssWasSet (the flag was set)", r0, err)
 	}
 
 	if r0, err := serviceSysReadef(env, []uint32{3}); err != nil || r0 != ssWasClr {

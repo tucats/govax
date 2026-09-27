@@ -23,7 +23,8 @@ Later service work should start from the
 The first batch, requested by the user on 2026-09-27, is `$ADJSTK`,
 `$ADJWSL`, `$ALLOC`, and `$ASCEFC`.
 
-**Status: in progress.**
+**Status: first batch complete** (`$ADJSTK`, `$ADJWSL`, `$ALLOC`,
+`$ASCEFC`; subtasks 1-5). Add later services as new subtasks.
 
 ## References
 
@@ -87,12 +88,14 @@ follow them too, and this list should grow when a new pattern is settled.
   from the older `ss*` constants in `status.go` for codes those already
   cover. A handler returns a Go `error` only for an emulator failure, never
   for a VMS condition: VMS conditions are the `uint32` R0 value.
-- **Process state.** Anything that belongs to "the calling process" goes in
-  `rtl.Process` (`env.Process`), with a comment naming the VMS field (PCB,
-  PHD, JIB, UAF) it stands in for. System-wide state that must outlive one
-  Environment (for example common event flag clusters) is owned by the
-  `Console` and injected into the Environment after it's built, like
-  `Session`.
+- **Process and system state.** Anything that belongs to "the calling
+  process" goes in `rtl.Process` (`env.Process`), with a comment naming the
+  VMS field (PCB, PHD, JIB, UAF) it stands in for. System-wide state that
+  VMS keeps in system memory (for example common event flag clusters,
+  `env.EventFlagClusters`) belongs to the Environment, which INIT/VMINIT/
+  ZERO rebuild, just as they wipe memory. Only state that must survive
+  those (devices, logical names, mounts) is owned by the `Console` and
+  injected into the Environment.
 - **Image rundown.** Per-image cleanup (user-mode logical names, user-mode
   device allocations, common event flag associations) runs from
   `Environment.ImageRundown`, which the console calls when an image started
@@ -118,7 +121,7 @@ lists the ones the implementation can actually return.
 | `$ADJSTK` | 2 | `process.go` | `NORMAL`, `ACCVIO`, `NOPRIV` | Sets a less privileged mode's saved SP (`KSP`/`ESP`/`SSP`/`USP`). |
 | `$ADJWSL` | 3 | `process.go` | `NORMAL`, `ACCVIO` | Adjusts `Process.WSLimit`, clamped to [`MINWSCNT`, `WSEXTENT`]; recorded, not enforced. |
 | `$ALLOC` | 4 | `devices.go` | `NORMAL`, `BUFFEROVF`, `DEVALRALLOC`, `ACCVIO`, `DEVALLOC`, `DEVMOUNT`, `IVDEVNAM`, `IVLOGNAM`, `IVSTSFLG`, `NODEVAVL`, `NOSUCHDEV`, `TOOMANYLNAM` | Marks a device `DEV$M_ALL` with the process's PID and access mode; generic allocation by device type. |
-| `$ASCEFC` | 5 | | | |
+| `$ASCEFC` | 5 | `eventflags.go` | `NORMAL`, `ACCVIO`, `ILLEFC`, `IVLOGNAM`, `NOPRIV` | Creates/associates a named common event flag cluster for flags 64-127; `$SETEF`/`$CLREF`/`$READEF` reach it. |
 
 ## Service designs
 
@@ -273,7 +276,72 @@ template devices, and so on) are listed in `docs/DEVIATIONS.md`.
 
 `SYS$ASCEFC efn ,name ,[prot] ,[perm]`
 
-Planned (see subtask 5).
+Associates a named common event flag cluster with cluster number 2 or 3,
+creating the cluster if it doesn't exist.
+
+**Event flag model.** A process has 128 event flags in four 32-flag
+clusters:
+
+| Cluster | Flags | Where govax keeps it |
+| --- | --- | --- |
+| 0, 1 (local) | 0-63 | `Process.LocalEventFlags[0..1]` |
+| 2, 3 (common) | 64-127 | `Process.CommonClusters[0..1]`: a pointer to the associated `EventFlagCluster`, or nil |
+
+`EventFlagCluster` (the VMS common event block) has a `Name`, the creator's
+UIC `Group` (names are unique per group), `CreatorUIC`, `Protected`,
+`Permanent`, its 32 `Flags`, and a reference count. The clusters themselves
+are in `CommonEventFlags`, a system-wide table keyed by (group, name), at
+`Environment.EventFlagClusters`. On VMS clusters live in system memory, so
+the table belongs to the Environment: INIT/VMINIT/ZERO wipe it along with
+memory, and a permanent cluster survives from one RUN to the next.
+
+**The service** (`internal/rtl/eventflags.go`):
+
+- `efn` (by value, low byte only) is any flag in the target cluster: 64-95
+  for cluster 2, 96-127 for cluster 3. Anything else is `SS$_ILLEFC`.
+- `name` (by descriptor, required) is 1-15 characters, else
+  `SS$_IVLOGNAM`. A missing descriptor is `SS$_ACCVIO`. Names are
+  compared exactly (case-sensitive), and implicitly qualified by the
+  process's UIC group.
+- If the cluster doesn't exist it is created with all flags clear. `prot`
+  (low bit) makes it usable only by the creator's UIC; `perm` (low bit)
+  makes it permanent. Both only matter at creation. Creating a permanent
+  cluster needs `PRMCEB`, which the emulated process always has.
+- An existing protected cluster refuses a process with a different UIC:
+  `SS$_NOPRIV`.
+- If the cluster number is already associated with another cluster, that
+  association is dropped first. Associating the cluster it already has is
+  a no-op (disassociating first could delete a temporary cluster and
+  recreate it empty).
+- Each association adds a reference. Dropping the last reference to a
+  temporary cluster deletes it; permanent clusters stay until deleted
+  (`$DLCEFC`, not implemented yet).
+- **Image rundown** (`Environment.ImageRundown`) disassociates both cluster
+  numbers: associations last "for the execution of the current image".
+
+**`$SETEF`, `$CLREF`, `$READEF`** moved from `core.go` to `eventflags.go`
+and now follow the manual, since common clusters would be unreachable
+otherwise:
+
+- Flags 64-127 go to the associated common cluster. If the cluster number
+  isn't associated, the result is `SS$_UNASEFC`. (eVAX kept flags 64-127 in
+  process-local storage.)
+- `efn` uses its low byte; above 127 is `SS$_ILLEFC`. (eVAX's `% 0xFF`
+  let flags 128-254 through and indexed past its four-longword array.)
+- `$SETEF` and `$CLREF` return `SS$_WASSET`/`SS$_WASCLR` for the flag's
+  previous state. (eVAX always returned `SS$_NORMAL`, which is numerically
+  `SS$_WASCLR`, so only the "was set" case changed.)
+- `$READEF` writes the cluster's 32 flags to `state` when given (the manual
+  requires it; eVAX allowed omitting it, which still works) and reports the
+  flag itself as `WASSET`/`WASCLR`.
+
+These changes are recorded in `docs/DEVIATIONS.md`.
+
+Not implemented: `SS$_EXQUOTA` (no `TQELM` quota), and the multiport
+shared-memory statuses (`SS$_EXPORTQUOTA`, `SS$_INTERLOCK`,
+`SS$_NOSHMBLOCK`, `SS$_SHMNOTCNCT`), since govax has no shared memory.
+`SS$_INSFMEM` can't happen. With a single process, the only way to see
+another UIC's view is to change `Process.UIC`, which the tests do.
 
 ## Subtasks
 
@@ -287,7 +355,11 @@ Planned (see subtask 5).
    real VMS source (`vmsdef.DEVConstants`); allocation state on
    `iodev.Device`; image rundown; `$ASSIGN` and SHOW DEVICE/FULL honor
    allocation.
-5. **`$ASCEFC`.**
+5. **Done.** **`$ASCEFC`.** `serviceSysAscefc` and the common event flag
+   cluster table in the new `eventflags.go`; `$SETEF`/`$CLREF`/`$READEF`
+   moved there and route flags 64-127 to associated clusters; image
+   rundown disassociates. Acceptance fixture
+   `testdata/asm/process_services.asm` covers subtasks 2-5.
 
 Candidates for later subtasks, since they complete the facilities this batch
 starts: `$DALLOC` (the inverse of `$ALLOC`), `$DACEFC`/`$DLCEFC` (disassociate
@@ -371,3 +443,42 @@ None yet.
   - `console/device_test.go`: SHOW DEVICE/FULL's `allocated` for a disk and
     a terminal, and the console's image rundown releasing only the
     user-mode allocation.
+
+### 2026-09-27 — Subtask 5: `$ASCEFC`; first batch complete
+
+- **`internal/rtl/eventflags.go`** (new): `EventFlagCluster`,
+  `CommonEventFlags` (with `Lookup` and `All` for a future SHOW command or
+  `$GETJPI`), `serviceSysAscefc`, and `registerEventFlagServices`.
+  `$SETEF`/`$CLREF`/`$READEF` moved here from `core.go` and share
+  `eventFlagWord`, which maps a flag number to its local longword or its
+  associated cluster.
+- `Environment.EventFlags [4]uint32` is gone, replaced by
+  `Process.LocalEventFlags` and `Process.CommonClusters`, plus
+  `Environment.EventFlagClusters`. `ImageRundown` also disassociates
+  clusters.
+- **Decision:** the cluster table belongs to the Environment, not the
+  console. It sits in system memory on VMS, and INIT/VMINIT/ZERO wipe
+  memory. (The conventions section had guessed the console; corrected.)
+- **Behavior change to existing services**, per the manual: `SS$_UNASEFC`,
+  `SS$_ILLEFC`, and `$SETEF`/`$CLREF`'s `WASSET`/`WASCLR`. The one existing
+  test that expected `SS$_NORMAL` from `$CLREF` of a set flag now expects
+  `SS$_WASSET`. No fixture in `testdata/asm` uses event flags.
+- **Acceptance fixture.** `testdata/asm/process_services.asm` calls
+  `$ADJSTK`, `$ADJWSL`, `$ALLOC`, and `$ASCEFC` (then `$SETEF`/`$READEF` on
+  the cluster) through their P1-vector addresses and checks each result
+  itself. `internal/console/process_services_test.go` assembles and runs it,
+  then checks the USP, working-set limit, TTA0's allocation, and the
+  cluster's flags.
+- **Docs.** `docs/DEVIATIONS.md` has two more Phase 26 entries (the
+  event-flag changes, and `$ASCEFC`'s simplifications). `docs/PLAN.md` has
+  a Phase 26 narrative.
+- **Tests** (`eventflags_test.go`): `WASSET`/`WASCLR` and the low-byte rule,
+  `ILLEFC`/`UNASEFC` for all three flag services, creating and using a
+  cluster, `$READEF`'s state longword, associating one cluster with both
+  numbers, the no-op reassociation, reassociation deleting a temporary
+  cluster, rundown keeping a permanent cluster and its flags for the next
+  image, protection by UIC, group-scoped names, and every `$ASCEFC` error
+  status.
+- `go test ./...` passes.
+- **Phase status.** The four requested services are done. Candidates for
+  the next batch are listed under Subtasks.

@@ -276,3 +276,23 @@ The generated `$LNMDEF`/`$SSDEF` constants come from real VMS 7.3 source files
 in `reference/vms/`. Each eVAX behavior the phase changed, and each remaining
 gap (privileges, the job table, the process-permanent-file prefix), is in
 `DEVIATIONS.md`. See PHASE-25.md for the design and the per-subtask log.
+
+Phase 26, requested by the user 2026-09-27, starts a running record of system
+services added beyond the eVAX set, one subtask per service; PHASE-26.md is
+meant to keep growing as more are added, and its "Conventions for implementing
+a service" section is the starting point for each new one. The first batch:
+- `rtl.Process`, the emulated process record (PID, username SYSTEM, UIC
+  [1,4], working-set quotas), replacing the Environment's loose PID/UIC.
+- `$ADJSTK` (a less privileged mode's saved stack pointer) and `$ADJWSL`
+  (working-set limit, recorded but not enforced).
+- `$ALLOC`, with allocation state on `iodev.Device` and `$DEVDEF` generated
+  from real VMS 7.3 SDL (the SDL parser learned `union` aggregates); `$ASSIGN`
+  and SHOW DEVICE/FULL honor allocation, and image rundown releases user-mode
+  allocations.
+- `$ASCEFC`, with a common event flag cluster table; `$SETEF`/`$CLREF`/
+  `$READEF` now follow the manual (`WASSET`/`WASCLR`, `ILLEFC`, `UNASEFC`).
+
+eVAX implements none of these, so the VMS 5.0 System Services Reference Manual
+is the reference. `testdata/asm/process_services.asm` exercises all four from
+assembled code. Simplifications and the event-flag behavior change are in
+`DEVIATIONS.md`.

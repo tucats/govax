@@ -339,6 +339,32 @@ changed as a result.
   device's PID.
 - **Status**: fixed in Phase 26 subtask 4.
 
+### [Phase 26] eVAX event flags: no common clusters, no range check, no previous-state status
+
+- **Where**: `reference/eVAX/eVAX/Source/RTL/service.c`'s `sys_clref`/
+  `sys_setef`/`sys_readef`, ported into `internal/rtl/core.go`.
+- **What**: flags 64-127 were stored in process-local longwords, so there
+  were no common event flag clusters and no `SS$_UNASEFC`. The flag number
+  was reduced `% 0xFF` (or `& 0xFF`), so flags 128-254 indexed past the
+  four-longword array instead of returning `SS$_ILLEFC`. `$SETEF`/`$CLREF`
+  always returned `SS$_NORMAL` rather than `SS$_WASSET`/`SS$_WASCLR`.
+- **Status**: fixed in Phase 26 subtask 5, per the VMS 5.0 System Services
+  Reference Manual. The services moved to `internal/rtl/eventflags.go`.
+  Flags 64-127 reach the common cluster `$ASCEFC` associated, or fail with
+  `SS$_UNASEFC`. A program relying on eVAX's local flags 64-127 now needs to
+  call `$ASCEFC` first, as it would on VMS.
+
+### [Phase 26] `$ASCEFC` simplifications
+
+- **Where**: `internal/rtl/eventflags.go`'s `serviceSysAscefc`.
+- **What**: no `TQELM` quota (`SS$_EXQUOTA`), no multiport shared memory
+  (`SS$_EXPORTQUOTA`, `SS$_INTERLOCK`, `SS$_NOSHMBLOCK`,
+  `SS$_SHMNOTCNCT`), and `PRMCEB` is always held. Cluster names are
+  compared case-sensitively as given. `$DACEFC`/`$DLCEFC` don't exist yet,
+  so a permanent cluster can't be deleted except by INIT/VMINIT/ZERO.
+- **Status**: open, deliberate simplifications (the last until `$DLCEFC`
+  is added).
+
 ## Open findings
 
 _None yet._

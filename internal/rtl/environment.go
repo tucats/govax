@@ -17,7 +17,7 @@ import (
 
 // Environment is one VAX "process" worth of RTL state: the calling-convention
 // plumbing (SYS$/LIB$ registries) plus the state individual services and
-// shims need — event flags, an exit handler, region-size bookkeeping shared
+// shims need — common event flag clusters, an exit handler, region-size bookkeeping shared
 // with Phase 13's image loader and this phase's memory allocator, channels,
 // the emulated process record (process.go, which grew out of
 // docs/PHASE-10.md's "minimal process stub"), and the RMS file table. It
@@ -68,9 +68,10 @@ type Environment struct {
 	// directly.
 	RegionSize [3]uint32
 
-	// EventFlags is local_ef: four longwords of 32 local event flags each,
-	// set/cleared/read by SYS$SETEF/CLREF/READEF (service_clref.go).
-	EventFlags [4]uint32
+	// EventFlagClusters is the system-wide table of common event flag
+	// clusters $ASCEFC creates and associates (eventflags.go). A process's
+	// own event flags and associations are in Process.
+	EventFlagClusters *CommonEventFlags
 
 	// exitHandler is vms_exit_handler, recorded by SYS$DCLEXH. Nothing
 	// currently invokes it (no image-exit path exists until Phase 13).
@@ -130,6 +131,8 @@ func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, lo
 		Mounts:     mounts,
 		files:      rms.NewFileTable(consoleOut),
 		Process:    NewProcess(),
+
+		EventFlagClusters: NewCommonEventFlags(),
 		consoleIn:  consoleIn,
 		consoleOut: consoleOut,
 		openFiles:  map[uint32]*os.File{},

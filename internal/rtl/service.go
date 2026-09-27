@@ -48,6 +48,7 @@ func (t *ServiceTable) Lookup(name string) (ServiceFunc, bool) {
 func registerServices(t *ServiceTable) {
 	registerCoreServices(t)
 	registerProcessServices(t)
+	registerEventFlagServices(t)
 	registerDeviceServices(t)
 	registerLogicalServices(t)
 	registerCLIService(t)

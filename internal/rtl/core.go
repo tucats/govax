@@ -7,8 +7,9 @@ import (
 )
 
 // Port of service.c's SYS$ services that don't need internal/io or the RMS
-// layer: event flags, the exit-handler/AST recording stubs, virtual address
-// region expansion, and SYS$GETJPIW.
+// layer: the exit-handler/AST recording stubs, virtual address region
+// expansion, and SYS$GETJPIW. Its event-flag services moved to
+// eventflags.go when common event flag clusters arrived (docs/PHASE-26.md).
 
 // JPI item codes sys_getjpiw recognizes, matching service.c's own
 // JPI__ACCOUNT/JPI__CLINAME (their comments: "Always \"USER\""/"Always
@@ -72,51 +73,6 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 	return ssNormal, nil
 }
 
-// efSlot/efBit split a 0-127 event-flag number into Environment.eventFlags'
-// slot index and bit position, matching sys_clref/setef/readef's own
-// "n % 0x00FF; slot = n/32; bit = n & 0x1F" arithmetic (SYS$CLREF/SETEF use
-// modulo, SYS$READEF uses a bitwise AND against the same 0xFF mask — an
-// equivalent operation for any n actually reachable through this argument's
-// one-byte encoding, replicated per-caller below to match each service's
-// own exact operator).
-func eventFlagSlotBit(n uint32) (slot, bit uint32) {
-	return n / 32, n & 0x1F
-}
-
-// serviceSysClref is SYS$CLREF: clears one local event flag.
-func serviceSysClref(env *Environment, argv []uint32) (uint32, error) {
-	slot, bit := eventFlagSlotBit(argv[0] % 0x00FF)
-	env.EventFlags[slot] &^= 1 << bit
-
-	return ssNormal, nil
-}
-
-// serviceSysSetef is SYS$SETEF: sets one local event flag.
-func serviceSysSetef(env *Environment, argv []uint32) (uint32, error) {
-	slot, bit := eventFlagSlotBit(argv[0] % 0x00FF)
-	env.EventFlags[slot] |= 1 << bit
-
-	return ssNormal, nil
-}
-
-// serviceSysReadef is SYS$READEF: optionally returns the whole 32-flag word
-// containing flag argv[0], reporting whether that flag itself was set.
-func serviceSysReadef(env *Environment, argv []uint32) (uint32, error) {
-	slot, bit := eventFlagSlotBit(argv[0] & 0x00FF)
-
-	if len(argv) == 2 {
-		if err := env.mem.StoreLongword(env.cpu, argv[1], env.EventFlags[slot]); err != nil {
-			return ssAccVio, nil
-		}
-	}
-
-	if env.EventFlags[slot]&(1<<bit) != 0 {
-		return ssWasSet, nil
-	}
-
-	return ssWasClr, nil
-}
-
 // serviceSysGetjpiw is SYS$GETJPIW: a minimal process-information lookup
 // returning only the two item codes service.c itself recognizes (ACCOUNT,
 // CLINAME), both hardcoded stand-ins with no real per-process attribute
@@ -174,8 +130,5 @@ func registerCoreServices(t *ServiceTable) {
 	t.Register("SYS$SETAST", serviceSysSetast)
 	t.Register("SYS$DCLEXH", serviceSysDclexh)
 	t.Register("SYS$EXPREG", serviceSysExpreg)
-	t.Register("SYS$CLREF", serviceSysClref)
-	t.Register("SYS$SETEF", serviceSysSetef)
-	t.Register("SYS$READEF", serviceSysReadef)
 	t.Register("SYS$GETJPIW", serviceSysGetjpiw)
 }

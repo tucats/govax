@@ -40,6 +40,13 @@ type Process struct {
 	WSQuota    uint32 // UAF WSQUOTA
 	WSExtent   uint32 // UAF WSEXTENT: the most $ADJWSL can grow WSLimit to
 	MinWSCount uint32 // SYSGEN MINWSCNT: the least $ADJWSL can shrink it to
+
+	// LocalEventFlags are event flag clusters 0 and 1 (flags 0-63), local
+	// to the process. CommonClusters are the common event flag clusters
+	// $ASCEFC associated with cluster numbers 2 and 3 (flags 64-127), nil
+	// when not associated (eventflags.go).
+	LocalEventFlags [2]uint32
+	CommonClusters  [2]*EventFlagCluster
 }
 
 // Default identity and quotas for the emulated process. The PID is
@@ -171,10 +178,13 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 
 // ImageRundown does the per-image cleanup VMS does when an image exits,
 // for the state this package owns: it deallocates the devices the image
-// allocated in user mode. The console calls it when an image started by
-// RUN returns (and does its own logical-name rundown alongside).
+// allocated in user mode, and disassociates its common event flag
+// clusters (deleting temporary ones nobody else uses). The console calls
+// it when an image started by RUN returns (and does its own logical-name
+// rundown alongside).
 func (env *Environment) ImageRundown() {
 	env.deallocateUserDevices()
+	env.disassociateClusters()
 }
 
 func registerProcessServices(t *ServiceTable) {
