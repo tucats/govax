@@ -39,7 +39,7 @@ facility that the console, RMS, and the RTL/system-service layer all share:
 
   All of them work on the same shared data the console uses.
 
-**Status: in progress — subtasks 1-2 of 9 done.**
+**Status: in progress — subtasks 1-3 of 9 done.**
 
 ## Why this phase looks different
 
@@ -230,8 +230,9 @@ separate:
    - the caller's access mode
 2. **`TranslateFileSpec(spec) → []string`**. This is the RMS/DCL file-spec
    operation from CLRM §2.2.3 and User's Manual §11.5:
-   - If the spec starts with `_`, strip the `_` and do no translation (the VMS
-     rule that marks a physical device name).
+   - If the spec starts with `_`, do no translation (the VMS rule that marks a
+     physical device name). The `_` is kept in the result, as in a VMS
+     resultant string; consumers strip it when they look up the device.
    - Otherwise, pick out the leftmost component. That is either the text before
      the first `:` (and not `::`, since govax has no DECnet), or, when there's
      no `:` at all, the whole spec as long as it's a valid logical-name token.
@@ -255,8 +256,10 @@ separate:
    - A `CONCEALED` equivalence is translated for access, but the caller also
      gets the concealed logical name so it can be *displayed* instead of the
      physical device (for example SHOW DEFAULT, DIRECTORY headers). This is why
-     the return value is a small struct, not a bare string. Its exact shape is
-     settled in subtask 3.
+     the return value is a small struct, not a bare string: `lnm.FileSpec`
+     has `Spec` (fully translated), `Concealed` (the outermost concealed name
+     in the chain), and `Display` (the text at the point that name was about
+     to be translated).
 
    The package only rewrites text. Parsing and applying defaults
    (`filespec.Parse` with the session default) stays in `internal/rms`, which
@@ -416,7 +419,7 @@ the process default directory. RMS then gets its default device by translating
    - wildcard `Match` for SHOW LOGICAL
 
    Table-driven tests follow the manual's examples. Nothing is wired in yet.
-3. **`internal/lnm` file-spec translation.** `TranslateFileSpec` covering:
+3. **Done.** **`internal/lnm` file-spec translation.** `TranslateFileSpec` covering:
    - the leftmost-component rule and `_` suppression
    - iterative translation that restarts at the top of the search order
    - `TERMINAL`
@@ -714,3 +717,51 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
   except for the pre-existing `TestAssembleForth` failure noted under subtask 1.
   Nothing outside `internal/lnm`/`internal/vmserrors` uses the package yet;
   subtask 4 wires it in.
+
+### 2026-09-27 — Subtask 3: `TranslateFileSpec`
+
+- **New `internal/lnm/filespec.go`.** `Database.TranslateFileSpec(spec, mode)`
+  returns `[]FileSpec` in search order. Each `FileSpec` has `Spec`,
+  `Concealed`, and `Display`. It follows User's Manual §11.5-11.7:
+  - Only the leftmost component is a candidate: the text before the first
+    `:`, or the whole spec when there's no `:`. It must consist of letters,
+    digits, `$`, `_`, and `-` (§11.3.3), so `[DRYSDALE]PUP` and `PUP.TXT` are
+    never translated. A `::` node name and a leading `_` turn translation
+    off.
+  - The candidate is upper-cased and looked up with `Translate` through
+    `LNM$FILE_DEV` (new constant `FileDevName`). Every level starts again at
+    the top of the search order.
+  - `TERMINAL` is checked per equivalence string, as the data model stores
+    it.
+  - Search lists fan out depth-first.
+  - More than `MaxDepth` (10) translations in one chain, or a name reached
+    twice in one chain, fails with `SS$_TOOMANYLNAM`. The same name in two
+    *sibling* search-list elements is not circular.
+  - An undefined name isn't an error. Any other `Translate` error is
+    returned, for example `SS$_NOLOGTAB` if `LNM$FILE_DEV` has been deleted.
+- **Two departures from the plan text**, both now reflected in the design
+  section above:
+  - A leading `_` is **kept** in the result, not stripped. A VMS resultant
+    string keeps it (`_TTA0:`). Keeping it also means an equivalence such
+    as `SYS$OUTPUT` = `_TTA0:` and an operator-typed `_DUA0:` look the
+    same to the consumer. Subtask 7 has to strip it before the device
+    lookup: `rms.normalizeDeviceName` doesn't do that today.
+  - `Concealed` records the **outermost** concealed name in a chain. This is
+    how VMS displays nested concealed names such as `SYS$SYSROOT`.
+- **Open point for subtask 7: field merging.** The equivalence string and the
+  rest of the spec are joined as text, so the manual's
+  `DEFINE PAY_FILE DISK1:[SALES_STAFF]PAYROLL` / `TYPE PAY_FILE:*.DAT` gives
+  `DISK1:[SALES_STAFF]PAYROLL*.DAT`. That happens to match the right file,
+  but real RMS treats the equivalence's fields as defaults for fields the
+  rest of the spec leaves out. That needs `filespec.Parse`, which belongs in
+  `internal/rms`. If subtask 7 wants it, the cleanest route is to add a
+  `Remainder` field to `FileSpec` so RMS can split the two parts. It was not
+  added now, because nothing needs it yet.
+- **Tests.** `filespec_test.go` covers every example the plan listed
+  (REPORT, GO → TEST, the four PAY forms, PUP/`DISK:PUP`/`[DRYSDALE]PUP`,
+  MEMO, GETTYSBURG, FIFI, NESTED). It also covers restarting the search
+  order, `_` and `::`, per-equivalence `TERMINAL`, concealed display
+  through iteration, the 10/11-level boundary, circular definitions,
+  access modes, and a deleted `LNM$FILE_DEV`. `filespec.go` is 100%
+  covered, and the package overall is 98.5%. `go test ./...` passes except
+  for the pre-existing `TestAssembleForth` failure.
