@@ -58,12 +58,15 @@ func TestAssembleForth(t *testing.T) {
 		t.Fatalf("assemble: %v", err)
 	}
 
-	// Like kernel.asm, forth.asm switches to S0 (.region s0) near the top
-	// and never switches back, so its content lives in the S0 range, not
-	// Bytes()'s P0 range.
-	s0 := a.BytesRange(a.S0Origin(), a.S0End())
-	if len(s0) == 0 {
-		t.Fatal("expected non-empty S0 content")
+	// Unlike kernel.asm, forth.asm selects P0 (.region p0) near the top and
+	// never switches away, so its content lives in Bytes()'s P0 range and
+	// nothing at all is deposited in S0.
+	if len(a.Bytes()) == 0 {
+		t.Fatal("expected non-empty P0 content")
+	}
+
+	if s0 := a.BytesRange(a.S0Origin(), a.S0End()); len(s0) != 0 {
+		t.Fatalf("expected no S0 content, got %d bytes", len(s0))
 	}
 }
 
