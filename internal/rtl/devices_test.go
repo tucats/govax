@@ -239,3 +239,177 @@ func TestServiceSysAssignAndGetdviTranslateLogicalNames(t *testing.T) {
 		t.Errorf("$GETDVIW SYS$COMMAND devbufsiz = %d", a.readLong(buf))
 	}
 }
+
+// allocCall runs $ALLOC on name with a 16-byte phybuf, returning R0 and
+// the physical name returned.
+func allocCall(t *testing.T, env *Environment, a *arena, name string, acmode, flags uint32) (uint32, string) {
+	t.Helper()
+
+	phylen := a.alloc(2)
+	phybuf, buf := a.outDesc(16)
+	r0 := callLNM(t, env, serviceSysAlloc, a.desc(name), phylen, phybuf, acmode, flags)
+
+	n, err := env.mem.LoadWord(env.cpu, phylen)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return r0, a.readString(buf, n)
+}
+
+func TestServiceSysAlloc(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	dp := defineTestDevice(env, "TTA0", iodev.DeviceClassTT)
+
+	r0, phy := allocCall(t, env, a, "TTA0", 0, 0)
+	wantR0(t, r0, ssNormal)
+
+	if phy != "_TTA0:" {
+		t.Errorf("physical name = %q, want _TTA0:", phy)
+	}
+
+	if !dp.Allocated() || dp.PID != env.Process.PID || dp.AllocMode != uint32(vax.Kernel) {
+		t.Errorf("device allocated=%v PID=%#x mode=%d, want allocated to %#x in kernel mode (the caller's)",
+			dp.Allocated(), dp.PID, dp.AllocMode, env.Process.PID)
+	}
+
+	// Allocating it again succeeds with SS$_DEVALRALLOC. A logical name
+	// (SYS$OUTPUT translates to _TTA0:) reaches the same device.
+	r0, phy = allocCall(t, env, a, "SYS$OUTPUT", 0, 0)
+	wantR0(t, r0, ssDevAlrAlloc)
+
+	if phy != "_TTA0:" {
+		t.Errorf("physical name via SYS$OUTPUT = %q, want _TTA0:", phy)
+	}
+
+	// Only devnam is required.
+	dp.Deallocate()
+	wantR0(t, callLNM(t, env, serviceSysAlloc, a.desc("TTA0:")), ssNormal)
+
+	if !dp.Allocated() {
+		t.Error("device not allocated by a devnam-only call")
+	}
+}
+
+func TestServiceSysAllocAccessMode(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	user := defineTestDevice(env, "TTA1", iodev.DeviceClassTT)
+	kernel := defineTestDevice(env, "TTA2", iodev.DeviceClassTT)
+
+	// acmode is maximized with the caller's mode.
+	setCurMod(env, vax.Supervisor)
+	r0, _ := allocCall(t, env, a, "TTA2", 0, 0)
+	wantR0(t, r0, ssNormal)
+
+	if kernel.AllocMode != uint32(vax.Supervisor) {
+		t.Errorf("AllocMode = %d, want supervisor (kernel maximized with the caller's mode)", kernel.AllocMode)
+	}
+
+	r0, _ = allocCall(t, env, a, "TTA1", 3, 0)
+	wantR0(t, r0, ssNormal)
+
+	// Image rundown deallocates the user-mode allocation only.
+	env.ImageRundown()
+
+	if user.Allocated() {
+		t.Error("user-mode allocation survived image rundown")
+	}
+
+	if !kernel.Allocated() {
+		t.Error("supervisor-mode allocation was deallocated by image rundown")
+	}
+}
+
+func TestServiceSysAllocErrors(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	other := defineTestDevice(env, "TTA1", iodev.DeviceClassTT)
+	other.Allocate(0x999, 0)
+	defineTestDevice(env, "DUA0", iodev.DeviceClassDisk).DevChar |= devMounted
+	defineTestDevice(env, "MBA1", iodev.DeviceClassNone).DevChar |= devMailbox
+
+	cases := []struct {
+		name  string
+		flags uint32
+		want  uint32
+	}{
+		{"TTA1", 0, ssDevAlloc},
+		{"DUA0", 0, ssDevMount},
+		{"MBA1", 0, ssDevMount},
+		{"NOSUCH0", 0, ssNoSuchDev},
+		{"", 0, ssIvLogNam},
+		{strings.Repeat("X", 64), 0, ssIvLogNam},
+		{"TTA0", 2, ssIvStsFlg},
+	}
+
+	for _, c := range cases {
+		r0, _ := allocCall(t, env, a, c.name, 0, c.flags)
+		if r0 != c.want {
+			t.Errorf("$ALLOC(%q, flags %d) = %#x (%v), want %#x (%v)",
+				c.name, c.flags, r0, vmserrors.New(r0), c.want, vmserrors.New(c.want))
+		}
+	}
+
+	wantR0(t, callLNM(t, env, serviceSysAlloc, 0), ssIvDevNam)
+
+	if other.PID != 0x999 {
+		t.Errorf("other process's device PID = %#x, want it untouched", other.PID)
+	}
+
+	// $ASSIGN also refuses a device allocated to another process.
+	wantR0(t, callLNM(t, env, serviceSysAssign, a.desc("TTA1"), a.alloc(2)), ssDevAlloc)
+}
+
+func TestServiceSysAllocBufferOverflow(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	dp := defineTestDevice(env, "TTA0", iodev.DeviceClassTT)
+
+	phylen := a.alloc(2)
+	phybuf, buf := a.outDesc(3)
+	wantR0(t, callLNM(t, env, serviceSysAlloc, a.desc("TTA0"), phylen, phybuf), ssBufferOvf)
+
+	if n, _ := env.mem.LoadWord(env.cpu, phylen); n != 3 || a.readString(buf, 3) != "_TT" {
+		t.Errorf("phylen = %d, phybuf = %q, want 3 and the truncated _TT", n, a.readString(buf, 3))
+	}
+
+	if !dp.Allocated() {
+		t.Error("device not allocated despite SS$_BUFFEROVF (a success status)")
+	}
+}
+
+func TestServiceSysAllocGeneric(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+
+	ra81 := func(name string) *iodev.Device {
+		return env.Devices.Define(name, iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk, DevType: 21})
+	}
+
+	dua2, dua0, dua1 := ra81("DUA2"), ra81("DUA0"), ra81("DUA1")
+	dua0.Allocate(0x999, 0)
+
+	// DUA0 belongs to another process, so DUA1 is the first available.
+	r0, phy := allocCall(t, env, a, "RA81", 0, allocGeneric)
+	wantR0(t, r0, ssNormal)
+
+	if phy != "_DUA1:" || !dua1.Allocated() {
+		t.Errorf("generic RA81 got %q, want _DUA1:", phy)
+	}
+
+	r0, phy = allocCall(t, env, a, "ra81", 0, allocGeneric)
+	wantR0(t, r0, ssNormal)
+
+	if phy != "_DUA2:" || !dua2.Allocated() {
+		t.Errorf("second generic RA81 got %q, want _DUA2:", phy)
+	}
+
+	// None left: those this process holds don't count as available.
+	r0, _ = allocCall(t, env, a, "RA81", 0, allocGeneric)
+	wantR0(t, r0, ssNoDevAvl)
+
+	r0, _ = allocCall(t, env, a, "TU58", 0, allocGeneric)
+	wantR0(t, r0, ssNoSuchDev)
+}

@@ -19,6 +19,11 @@ import (
 //     by N (default 1). A non-fill field defines P$V_FIELD (its bit
 //     position), P$S_FIELD when N > 1 (its width), and, with "mask",
 //     P$M_FIELD (its already-shifted mask) — SDL's own naming rules.
+//   - "aggregate NAME union prefix P$;" whose members are nested
+//     "MEMBER structure [fill];" ... "end MEMBER;" blocks of bitfields, as
+//     $DEVDEF uses for its DEVCHAR and DEVCHAR2 longwords. Union members
+//     overlay each other, so each nested structure numbers its bitfields
+//     from bit 0 again, all under the union's prefix.
 //   - "constant NAME equals V prefix P$ tag T;" and the list form
 //     "constant (A, B, ...) equals V increment I prefix P$ tag T;" — each
 //     name becomes P$T_NAME (P$_NAME when T is empty), successive list
@@ -54,6 +59,8 @@ func parseSDL(src string) (map[string]uint32, error) {
 
 	var (
 		inAggregate bool
+		isUnion     bool // the aggregate is a union of nested structures
+		inMember    bool // inside one of a union's nested structures
 		aggPrefix   string
 		bitPos      uint32
 	)
@@ -69,23 +76,40 @@ func parseSDL(src string) (map[string]uint32, error) {
 			continue
 
 		case kw == "aggregate":
-			// aggregate NAME structure prefix P$
+			// aggregate NAME {structure|union} prefix P$
 			if inAggregate {
 				return nil, fmt.Errorf("nested aggregate %q is not supported", stmt)
 			}
 
-			if len(toks) != 5 || !strings.EqualFold(toks[2], "structure") || !strings.EqualFold(toks[3], "prefix") {
+			kind := ""
+			if len(toks) == 5 {
+				kind = strings.ToLower(toks[2])
+			}
+
+			if (kind != "structure" && kind != "union") || !strings.EqualFold(toks[3], "prefix") {
 				return nil, fmt.Errorf("unsupported aggregate statement %q", stmt)
 			}
 
-			inAggregate, aggPrefix, bitPos = true, toks[4], 0
+			inAggregate, isUnion, inMember, aggPrefix, bitPos = true, kind == "union", false, toks[4], 0
 
 		case kw == "end":
-			if !inAggregate {
+			switch {
+			case inMember:
+				inMember = false
+			case inAggregate:
+				inAggregate = false
+			default:
 				return nil, fmt.Errorf("%q outside an aggregate", stmt)
 			}
 
-			inAggregate = false
+		case isUnion && inAggregate && !inMember:
+			// MEMBER structure [fill]
+			if len(toks) < 2 || len(toks) > 3 || !strings.EqualFold(toks[1], "structure") ||
+				(len(toks) == 3 && !strings.EqualFold(toks[2], "fill")) {
+				return nil, fmt.Errorf("unsupported union member %q", stmt)
+			}
+
+			inMember, bitPos = true, 0
 
 		case kw == "constant":
 			if inAggregate {

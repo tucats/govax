@@ -117,7 +117,7 @@ lists the ones the implementation can actually return.
 | (process record) | 1 | `process.go` | — | PID, username SYSTEM, UIC [1,4], working-set quotas. |
 | `$ADJSTK` | 2 | `process.go` | `NORMAL`, `ACCVIO`, `NOPRIV` | Sets a less privileged mode's saved SP (`KSP`/`ESP`/`SSP`/`USP`). |
 | `$ADJWSL` | 3 | `process.go` | `NORMAL`, `ACCVIO` | Adjusts `Process.WSLimit`, clamped to [`MINWSCNT`, `WSEXTENT`]; recorded, not enforced. |
-| `$ALLOC` | 4 | | | |
+| `$ALLOC` | 4 | `devices.go` | `NORMAL`, `BUFFEROVF`, `DEVALRALLOC`, `ACCVIO`, `DEVALLOC`, `DEVMOUNT`, `IVDEVNAM`, `IVLOGNAM`, `IVSTSFLG`, `NODEVAVL`, `NOSUCHDEV`, `TOOMANYLNAM` | Marks a device `DEV$M_ALL` with the process's PID and access mode; generic allocation by device type. |
 | `$ASCEFC` | 5 | | | |
 
 ## Service designs
@@ -206,7 +206,68 @@ friends from the same fields.
 
 `SYS$ALLOC devnam ,[phylen] ,[phybuf] ,[acmode] ,[flags]`
 
-Planned (see subtask 4).
+Allocates a device for the calling process's exclusive use.
+
+**Allocation state** lives on the device record (`iodev.Device`), where VMS
+keeps it in the UCB:
+
+- `DevChar`'s `DEV$M_ALL` bit marks the device allocated
+  (`Device.Allocated()`).
+- `Device.PID` is the owning process. `$ASSIGN` already stamped it (eVAX
+  behavior), so it's only an allocation owner while `DEV$M_ALL` is set.
+- `Device.AllocMode` (new, standing in for `UCB$B_AMOD`) is the allocation's
+  access mode.
+- `Device.Allocate(pid, mode)` / `Deallocate()` set and clear them, for
+  `$ALLOC` now and `$DALLOC` later.
+
+The `DEV$` bits come from a new generated map, `vmsdef.DEVConstants`, parsed
+from the real VMS 7.3 `$DEVDEF` SDL source (`reference/vms/devdef.sdl`). The
+SDL parser in `internal/vmsdef/gen` gained `aggregate ... union` support for
+it: `$DEVDEF` is a union of two bitfield structures (`DEVCHAR` and
+`DEVCHAR2`), each numbered from bit 0.
+
+**The service:**
+
+- `devnam` (by descriptor, required) is a physical device name or a logical
+  name. It's translated like `$ASSIGN`'s (`env.deviceName`: logical names,
+  a leading `_` to suppress translation). A missing descriptor is
+  `SS$_IVDEVNAM`; an empty name or one over 63 characters is
+  `SS$_IVLOGNAM`; an unknown device is `SS$_NOSUCHDEV`.
+- `acmode` (by value) is maximized with the caller's mode and recorded in
+  `AllocMode`. RUN images run in the console's mode (kernel by default), so
+  by default an allocation is kernel mode and lasts until the device is
+  explicitly deallocated.
+- `flags` bit 0 is generic allocation: `devnam` names a device type
+  (`RA81`, compared case-blind with `iodev.DeviceTypeName`), and the first
+  unallocated, unmounted device of that type, by name, is allocated. A
+  device the process already holds doesn't count as available. Types with
+  no available device are `SS$_NODEVAVL`; unknown types `SS$_NOSUCHDEV`. Any
+  other flag bit is `SS$_IVSTSFLG`.
+- A device already allocated to this process succeeds with
+  `SS$_DEVALRALLOC`. One allocated to another PID fails with
+  `SS$_DEVALLOC`. A mounted device (`DEV$M_MNT`, or a volume in the
+  `MountTable`) or a mailbox (`DEV$M_MBX`) fails with `SS$_DEVMOUNT`.
+- The physical name, `_` + device + `:` (`_TTA0:`), goes to `phybuf` (by
+  descriptor) and its length to `phylen` (by reference), both optional. A
+  name cut short by a small buffer returns `SS$_BUFFEROVF`, still a success:
+  the device is allocated.
+
+**Related changes:**
+
+- `$ASSIGN` now returns `SS$_DEVALLOC` for a device allocated to another
+  process, instead of assigning a channel and taking over its PID.
+- **Image rundown.** `Environment.ImageRundown` (new, in `process.go`)
+  deallocates this process's user-mode allocations. The console's
+  `imageRundown`, which already deleted user-mode logical names when a RUN
+  image returns, now calls it.
+- **SHOW DEVICE/FULL** reports an allocated device: the disk header reads
+  `Disk DKA0:, is online, allocated, ...` as on VMS, and other devices'
+  headers read `Device TTA1, allocated`.
+
+With a single process, "allocated to another process" can only come from
+state set directly (as the tests do). The check is in place for when there
+are more processes. Deliberate gaps (`SS$_DEVOFFLINE`, spooled devices,
+template devices, and so on) are listed in `docs/DEVIATIONS.md`.
 
 ### `$ASCEFC` — Associate Common Event Flag Cluster
 
@@ -222,7 +283,10 @@ Planned (see subtask 5).
 2. **Done.** **`$ADJSTK`.** `serviceSysAdjstk` in `process.go`, registered
    by the new `registerProcessServices`.
 3. **Done.** **`$ADJWSL`.** `serviceSysAdjwsl` in `process.go`.
-4. **`$ALLOC`.**
+4. **Done.** **`$ALLOC`.** `serviceSysAlloc` in `devices.go`; `$DEVDEF` from
+   real VMS source (`vmsdef.DEVConstants`); allocation state on
+   `iodev.Device`; image rundown; `$ASSIGN` and SHOW DEVICE/FULL honor
+   allocation.
 5. **`$ASCEFC`.**
 
 Candidates for later subtasks, since they complete the facilities this batch
@@ -270,3 +334,40 @@ None yet.
 - Tests: report-only (`pagcnt` 0 and an omitted argument list), grow,
   shrink, clamping at both `WSEXTENT` and `MINWSCNT`, and an unwritable
   `wsetlm` leaving the limit unchanged.
+
+### 2026-09-27 — Subtask 4: `$ALLOC`
+
+- **`$DEVDEF`.** Copied `devdef.sdl` from the VMS 7.3 archive
+  (`starlet_b64/lis/`; the `starlet/lis/` copy is identical) to
+  `reference/vms/`. `internal/vmsdef/gen`'s SDL parser now accepts
+  `aggregate NAME union prefix P$;` whose members are nested
+  `MEMBER structure [fill];` ... `end MEMBER;` bitfield blocks, each numbered
+  from bit 0. `go generate` produces `vmsdef.DEVConstants` (128 entries:
+  `DEV$V_`/`DEV$M_` for 32 `DEVCHAR` and 32 `DEVCHAR2` bits). The
+  `go:generate` line gained `-devdef`.
+- **`iodev.Device`** gained `AllocMode`, `Allocated()`, `Allocate()`, and
+  `Deallocate()`.
+- **`serviceSysAlloc`**, `allocatable`, and `genericDevice` in
+  `internal/rtl/devices.go`, per the design above. `$ASSIGN` checks
+  another process's allocation. `Environment.ImageRundown` deallocates
+  user-mode allocations, called from the console's `imageRundown`.
+  SHOW DEVICE/FULL shows `allocated`.
+- **Docs.** New "Phase 26 (system services) findings" section in
+  `docs/DEVIATIONS.md`, with entries for `$ADJSTK`'s unprobed stack,
+  the unenforced working-set limit, `$ALLOC`'s simplifications, and the
+  `$ASSIGN` change.
+- **Tests.**
+  - `vmsdef/gen`: a union aggregate (including a quoted `"2P"` name), and
+    two new rejected forms.
+  - `vmsdef`: pinned `DEV$` values, and the prefix guard extended to
+    `DEVConstants`.
+  - `rtl/devices_test.go`: allocate by name and via a logical name,
+    `SS$_DEVALRALLOC`, devnam-only calls, maximized access mode, image
+    rundown (user mode released, others kept), every error status the
+    service returns, `SS$_BUFFEROVF` with truncated output, generic
+    allocation (skipping another process's device and its own,
+    `SS$_NODEVAVL`, unknown type), and `$ASSIGN` refusing another
+    process's device.
+  - `console/device_test.go`: SHOW DEVICE/FULL's `allocated` for a disk and
+    a terminal, and the console's image rundown releasing only the
+    user-mode allocation.

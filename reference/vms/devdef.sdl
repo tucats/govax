@@ -1,0 +1,195 @@
+{
+{ Module:	$DEVDEF
+{
+{ Version:	'X-11'
+{
+{****************************************************************************
+{*									    *
+{*  COPYRIGHT (c) 1989, 1990, 1991, 1997 BY				    *
+{*  DIGITAL EQUIPMENT CORPORATION, MAYNARD, MASSACHUSETTS.		    *
+{*  ALL RIGHTS RESERVED.						    *
+{* 									    *
+{*  THIS SOFTWARE IS FURNISHED UNDER A LICENSE AND MAY BE USED AND COPIED   *
+{*  ONLY IN  ACCORDANCE WITH  THE  TERMS  OF  SUCH  LICENSE  AND WITH THE   *
+{*  INCLUSION OF THE ABOVE COPYRIGHT NOTICE. THIS SOFTWARE OR  ANY  OTHER   *
+{*  COPIES THEREOF MAY NOT BE PROVIDED OR OTHERWISE MADE AVAILABLE TO ANY   *
+{*  OTHER PERSON.  NO TITLE TO AND OWNERSHIP OF  THE  SOFTWARE IS  HEREBY   *
+{*  TRANSFERRED.							    *
+{* 									    *
+{*  THE INFORMATION IN THIS SOFTWARE IS  SUBJECT TO CHANGE WITHOUT NOTICE   *
+{*  AND  SHOULD  NOT  BE  CONSTRUED AS  A COMMITMENT BY DIGITAL EQUIPMENT   *
+{*  CORPORATION.							    *
+{* 									    *
+{*  DIGITAL ASSUMES NO RESPONSIBILITY FOR THE USE  OR  RELIABILITY OF ITS   *
+{*  SOFTWARE ON EQUIPMENT WHICH IS NOT SUPPLIED BY DIGITAL.		    *
+{* 									    *
+{*									    *
+{****************************************************************************
+
+{++
+{
+{ FACILITY:  VAX/VMS System Macro Libraries
+{
+{ ABSTRACT:
+{
+{	This file contains the SDL source for structure $DEVDEF.
+{
+{ AUTHOR:  The VMS Group	 CREATION DATE:  1-Aug-1976
+{
+{ MODIFIED BY:
+{
+{       X-11    GP              Genady Perchenko                27-Mar-1998
+{               Moved DEV$V_MPDEV_MEMBER to the DEVCHAR
+{
+{       X-10    GP              Genady Perchenko                09-Mar-1998
+{               Renamed DEV$V_MULTI_SECONDARY to DEV$V_MPDEV_SECONDARY
+{
+{       X-9     GP              Genady Perchenko                27-Feb-1998
+{               Renamed DEV$V_MULTI_ENABLED to DEV$V_MPDEV_MEMBER. 
+{
+{	X-8	JWC007		John W. Croll, Jr.		13-Jan-1998
+{		Add two flags for QIOserver:  QSVD, to indicate a QIOserver
+{		client device, and QSVBL, to indicate a QIOserver server device.
+{		See STAR:: DOCD$:[EVMS.PROJECT_DOCUMENTS]DS_QIOSERVER.PS, key
+{		DS2_IODB_UCB_CHANGES.
+{
+{	X-7	FAK002		Forrest A. Kenney		09-January-1998
+{		In order to improve performance for non-multipath devices, and 
+{		I/O on the primary path add a flag indicating that this is a
+{		secondary unit in a multipath set.  For request completion we 
+{		can now decide if we need to do anything special with a single 
+{		instruction.
+{
+{	X-6	FAK001		Forrest A. Kenney		19-December-1997
+{		Change DEV$V_SHADDEV to DEV$V_MULTI_ENABLED.  DEV$V_SHADDEV
+{		was never used and reclaiming it for multipath was suggested by
+{		Andy as a good use of the scarse DEVCHAR and DEVCHAR2 bits.
+{
+{	X-5	CW-SD		Chris Whitaker			 6-Feb-1997
+{		Add DEV$V_POOL_MBR to indicate that a device is a unit
+{		in a Snap-capable disk storage pool.
+{
+{	X-4	ACG0618		Andrew C. Goldstein,	26-Mar-1996  19:20
+{		Add DEV$V_SHADDEV to indicate a device eligible for shadow
+{		set membership. Also reset ID to match VDE generation.
+{
+{	X-3	RAB		Richard A. Bishop		20-Jul-1992
+{		Merge more Blade changes....
+{
+{		X-8	WJG0044		W. John Guineau		14-Nov-1991
+{		Add DTN to DEVDEF_BITS1 to indicate a DDR Device Type Name
+{		is available for this device.
+{
+{		X-7	MSM0001		Mark S. McKenzie	10-May-1991
+{		Add CRAMIO bit to DEVDEF_BITS1 to indicate system
+{		performs mailbox I/O for Laser/Neon support.
+{
+{	X-4	LPL0001		Lee Leahy		 5 Apr 1991
+{		Merged IOWA and SIGMA changes.
+{
+{	|	X-3U1	JTK		Jim Klumpp		10-Dec-1990
+{	|		Add several new device bits including: SCSI, write
+{	|		logging capable, and forced error not supported.
+{
+{	X-3	PRD		Paul R. DeStefano	20-Mar-1990
+{		Add DEV$V_NOCLU bit for devices that are not and
+{		will never be served cluster-wide.  Note that this
+{		is not the same as not setting the DEV$V_CLU bit.
+{
+{	X-2	RNG5002		Rod Gamache		15-Mar-1990
+{		Add VMEM bit for virtual member of a constituent set.
+{
+{	X-1	RAB0018		Richard Bishop		 2-SEP-1989
+{		STARDEFAE.SDL broken up into its constituent modules.
+{
+{ SPECIAL NOTE:
+{
+{	The prior audit trail can be found in the latest mainline
+{	CMS generation of module STARDEFAE.SDL in facility [VMSLIB].
+{
+{--
+
+
+module $DEVDEF;
+/*
+/*  THE FOLLOWING BITS DEFINE THE DEVICE CHARACTERISTICS FOR
+/*  BOTH THE UCBS AND RMS.
+/*
+
+aggregate DEVDEF  union prefix DEV$;
+    DEVDEF_BITS0 structure fill;
+        REC bitfield mask;				/* DEVICE RECORD ORIENTED 
+        CCL bitfield mask;				/* CARRIAGE CONTROL DEVICE 
+        TRM bitfield mask;				/* DEVICE IS A TERMINAL 
+        DIR bitfield mask;				/* DEVICE IS DIRECTORY STRUCTURED 
+        SDI bitfield mask;				/* DEVICE IS SINGLE DIRECTORY STRUCTURED 
+        SQD bitfield mask;				/* SEQUENTIAL BLOCK-ORIENTED DEVICE (I.E., MAGTAPE) 
+        SPL bitfield mask;				/* DEVICE BEING SPOOLED 
+        OPR bitfield mask;				/* DEVICE IS AN OPERATOR 
+        RCT bitfield mask;				/* DISK CONTAINS RCT (DEC STANDARD 166 DISK) 
+	QSVD bitfield mask;				/* Client device is served by QIOserver
+	QSVBL bitfield mask;				/* Server device is servable by QIOserver
+	MPDEV_SECONDARY bitfield mask;			/* Indicates secondary unit in a multipath set
+ 	MPDEV_MEMBER bitfield mask;			/* Device is part of a multipath set.
+        NET bitfield mask;				/* NETWORK DEVICE 
+        FOD bitfield mask;				/* FILES-ORIENTED DEVICE (I.E., DISK AND MT) 
+        DUA bitfield mask;				/* DEVICE IS DUAL PORTED 
+        SHR bitfield mask;				/* DEVICE SHAREABLE 
+        GEN bitfield mask;				/* DEVICE IS A GENERIC DEVICE 
+        AVL bitfield mask;				/* DEVICE AVAILABLE FOR USE 
+        MNT bitfield mask;				/* DEVICE IS MOUNTED 
+        MBX bitfield mask;				/* DEVICE IS A MAILBOX 
+        DMT bitfield mask;				/* DEVICE MARKED FOR DISMOUNT 
+        ELG bitfield mask;				/* DEVICE HAS ERROR LOGGING ENABLED 
+        ALL bitfield mask;				/* DEVICE IS ALLOCATED 
+        FOR bitfield mask;				/* DEVICE IS MOUNTED FOREIGN (I.E., NON-FILE STRUCTURED) 
+        SWL bitfield mask;				/* DEVICE IS SOFTWARE WRITE LOCKED 
+        IDV bitfield mask;				/* DEVICE CAPABLE OF PROVIDING INPUT 
+        ODV bitfield mask;				/* DEVICE CAPABLE OF PROVIDING OUTPUT 
+        RND bitfield mask;				/* DEVICE ALLOWS RANDOM ACCESS 
+        RTM bitfield mask;				/* DEVICE IS REALTIME IN NATURE 
+        RCK bitfield mask;				/* DEVICE HAS READ CHECKING ENABLED 
+        WCK bitfield mask;				/* DEVICE HAS WRITE CHECKING ENABLED 
+    end DEVDEF_BITS0;
+    DEVDEF_BITS1 structure fill;
+	CLU bitfield mask;				/* DEVICE IS AVAILABLE CLUSTER-WIDE
+	DET bitfield mask;				/* DEVICE IS DETACHED TERMINAL
+	RTT bitfield mask;				/* DEVICE HAS REMOTE TERMINAL UCB EXTENSION
+	CDP bitfield mask;				/* DUAL PATH DEVICE WITH 2 UCBs
+	"2P" bitfield mask;				/* TWO PATHS ARE KNOWN TO THIS DEVICE
+	MSCP bitfield mask;				/* DEVICE ACCESSED USING MSCP (disk or tape)
+							{  Before using this bit to diferentiate 
+							{  between types of disk and tape devices,
+							{  be sure that no other, more appropriate,
+							{  differentiation mechanism exists.
+	SSM bitfield mask;				/* DEVICE IS A SHADOW SET MEMBER
+	SRV bitfield mask;				/* DEVICE IS SERVED VIA THE MSCP SERVER
+	RED bitfield mask;				/* DEVICE IS redirected terminal
+	NNM bitfield mask;				/* DEVICE HAS "node$" PREFIX 
+	WBC bitfield mask;				/* DEVICE SUPPORTS WRITE-BACK CACHING
+	WTC bitfield mask;				/* DEVICE SUPPORTS WRITE-THROUGH CACHING
+	HOC bitfield mask;				/* DEVICE SUPPORTS HOST CACHING
+	LOC bitfield mask;				/* DEVICE ACCESSIBLE VIA LOCAL (NON-EMULATED) CONTROLLER
+	DFS bitfield mask;				/* DEVICE IS DFS-SERVED
+	DAP bitfield mask;				/* DEVICE IS DAP ACCESSED
+	NLT bitfield mask;				/* DEVICE IS NOT-LAST-TRACK (I.E. IT HAS NO BAD BLOCK
+							/* INFORMATION ON ITS LAST TRACK)
+	SEX bitfield mask;				/* DEVICE (tape) SUPPORTS SERIOUS EXCEPTION HANDLING
+	SHD bitfield mask;				/* DEVICE IS A MEMBER OF A HOST BASED SHADOW SET
+	VRT bitfield mask;				/* DEVICE IS A SHADOW SET VIRTUAL UNIT
+	LDR bitfield mask;				/* LOADER PRESENT (TAPES)
+	NOLB bitfield mask;				/* DEVICE IGNORES SERVER LOAD BALANCING REQUESTS
+	NOCLU bitfield mask;				/* DEVICE WILL NEVER BE AVAILABLE CLUSTER-WIDE
+	VMEM bitfield mask;				/* Virtual member of a constituent set
+	SCSI bitfield mask;				/* DEVICE IS A SCSI DEVICE
+	WLG bitfield mask;				/* DEVICE HAS WRITE LOGGING CAPABILITY
+	NOFE bitfield mask;				/* DEVICE DOESN'T SUPPORT FORCED ERROR
+	FILL_2 bitfield mask;				/* Reserved for: Allocation in progress (MME)
+	CRAMIO bitfield mask;				/* Performs Mailbox I/O
+	DTN bitfield mask;				/* Device has DDR Device Type Name available
+        FILLER bitfield mask;				/* SPARE FOR THE FUTURE. This bit used to be DEV$V_SHADDEV.
+	POOL_MBR bitfield mask;				/* Unit is bound to a storage pool
+    end DEVDEF_BITS1;
+end DEVDEF;
+
+end_module $DEVDEF;

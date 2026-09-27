@@ -72,3 +72,39 @@ func TestDispatch_defineAndShowDeviceViaDCL(t *testing.T) {
 	}
 }
 
+
+// TestShowDevices_allocated checks SHOW DEVICE/FULL reports a device
+// $ALLOC has allocated, and that image rundown releases a user-mode
+// allocation (docs/PHASE-26.md).
+func TestShowDevices_allocated(t *testing.T) {
+	c, buf := newTestConsole(t)
+
+	disk := c.DefineDevice("DKA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
+	term := c.DefineDevice("TTA1", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
+	disk.Allocate(c.RTL.Process.PID, 0)
+	term.Allocate(c.RTL.Process.PID, 3)
+
+	if err := c.ShowDevices("", true); err != nil {
+		t.Fatalf("ShowDevices: %v", err)
+	}
+
+	out := buf.String()
+
+	if !strings.Contains(out, "Disk DKA0:, is online, allocated, file-oriented device.") {
+		t.Errorf("SHOW DEVICE/FULL output missing the allocated disk header: %q", out)
+	}
+
+	if !strings.Contains(out, "Device TTA1, allocated") {
+		t.Errorf("SHOW DEVICE/FULL output missing the allocated terminal: %q", out)
+	}
+
+	c.imageRundown()
+
+	if term.Allocated() {
+		t.Error("user-mode allocation survived image rundown")
+	}
+
+	if !disk.Allocated() {
+		t.Error("kernel-mode allocation was released by image rundown")
+	}
+}

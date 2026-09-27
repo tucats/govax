@@ -1,12 +1,14 @@
 // Command gen parses reference/vms/{fabdef,rabdef,rmsdef}.h and emits
 // internal/vmsdef/constants_generated.go: a flat map of every real FAB$/
 // RAB$/RMS$_ symbolic-constant name to its numeric value (Constants), plus
-// two further maps from two other real VMS 7.3 sources (docs/PHASE-25.md):
-// LNMConstants from reference/vms/lnmdef.sdl (SDL source; see sdl.go) and
-// SSConstants from reference/vms/ssdef.txt (a BLISS LITERAL listing; see
-// bliss.go). They are kept as separate maps, not merged into Constants,
-// because .RMSDEF (internal/asm) defines every Constants entry as an
-// assembler symbol and must not start defining LNM$/SS$ names too. Run via `go
+// further maps from other real VMS 7.3 sources: LNMConstants from
+// reference/vms/lnmdef.sdl (SDL source; see sdl.go) and SSConstants from
+// reference/vms/ssdef.txt (a BLISS LITERAL listing; see bliss.go), both
+// docs/PHASE-25.md, and DEVConstants from reference/vms/devdef.sdl
+// (docs/PHASE-26.md). They are kept as separate maps, not merged into
+// Constants, because .RMSDEF (internal/asm) defines every Constants entry
+// as an assembler symbol and must not start defining LNM$/SS$/DEV$ names
+// too. Run via `go
 // generate` from internal/vmsdef (see the go:generate directive in
 // constants.go) rather than hand-transcribing ~450 #define lines — see
 // docs/PHASE-24.md's design notes on why (the same reasoning
@@ -123,11 +125,12 @@ func main() {
 	rmsdef := flag.String("rmsdef", "", "path to rmsdef.h")
 	lnmdef := flag.String("lnmdef", "", "path to lnmdef.sdl")
 	ssdef := flag.String("ssdef", "", "path to ssdef.txt")
+	devdef := flag.String("devdef", "", "path to devdef.sdl")
 	out := flag.String("out", "", "path to write the generated Go source")
 	flag.Parse()
 
-	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *out == "" {
-		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, and -out are all required")
+	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *out == "" {
+		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, and -out are all required")
 	}
 
 	constants := map[string]uint32{}
@@ -146,6 +149,11 @@ func main() {
 	ss, err := parseBlissLiterals(readSource(*ssdef), "SS$_")
 	if err != nil {
 		log.Fatalf("gen: %s: %v", *ssdef, err)
+	}
+
+	dev, err := parseSDL(readSource(*devdef))
+	if err != nil {
+		log.Fatalf("gen: %s: %v", *devdef, err)
 	}
 
 	maps := []constantMap{
@@ -178,16 +186,26 @@ func main() {
 			},
 			entries: ss,
 		},
+		{
+			name: "DEVConstants",
+			doc: []string{
+				"DEVConstants is every real $DEVDEF device-characteristics bit:",
+				"DEV$M_/DEV$V_ for the DEVCHAR longword (DEV$M_ALL, DEV$M_MNT, ...)",
+				"and for DEVCHAR2 (DEV$M_CLU, ...). The two longwords are separate",
+				"union members in the SDL source, so both number their bits from 0.",
+			},
+			entries: dev,
+		},
 	}
 
-	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef}
+	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef}
 	code := generate(maps, sources)
 
 	if err := os.WriteFile(*out, code, 0o644); err != nil {
 		log.Fatalf("gen: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), *out)
+	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), *out)
 }
 
 func readSource(path string) string {

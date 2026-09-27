@@ -285,6 +285,60 @@ against real VMS.
 - **Status**: open, deferred. None affects an existing test or fixture.
   Revisit case by case if a workload needs the exact VMS behavior.
 
+## Phase 26 (system services) findings
+
+Phase 26 (`PHASE-26.md`) adds VMS system services eVAX never implemented, so
+there is no C behavior to preserve; the reference is the VMS 5.0 System
+Services Reference Manual. These entries record where govax's version is
+knowingly simpler than real VMS, plus the one existing service whose behavior
+changed as a result.
+
+### [Phase 26] `$ADJSTK` doesn't probe the new stack segment
+
+- **Where**: `internal/rtl/process.go`'s `serviceSysAdjstk`.
+- **What**: the manual returns `SS$_ACCVIO` when "a portion of the new stack
+  segment cannot be written by the caller". govax checks only that `newadr`
+  can be read and written, not the memory the new stack pointer points at.
+- **Status**: open, deliberate simplification.
+
+### [Phase 26] Working-set limits are recorded, not enforced
+
+- **Where**: `internal/rtl/process.go` (`Process.WSLimit`/`WSDefault`/
+  `WSQuota`/`WSExtent`/`MinWSCount`, `serviceSysAdjwsl`).
+- **What**: `$ADJWSL` adjusts and clamps the limit as documented, but govax
+  has no paging or working set, so the limit has no effect on execution. The
+  quota values are nominal, not from a real UAF or SYSGEN.
+- **Status**: open, by design (the user asked for `$ADJWSL` for
+  completeness).
+
+### [Phase 26] `$ALLOC` simplifications
+
+- **Where**: `internal/rtl/devices.go`'s `serviceSysAlloc`.
+- **What**: condition values govax never returns, because it has nothing to
+  check them against:
+  - `SS$_DEVOFFLINE`: devices have no online/offline state.
+  - `SS$_NOPRIV`: no privileges or device protection; no spooled devices
+    (`ALLSPOOL`).
+  - `SS$_TEMPLATEDEV`, `SS$_NONLOCAL`, and the `$ENQ` statuses: no template
+    devices, cluster, or lock manager.
+  - `SS$_DEVALLOC` for "other processes had channels assigned" to a
+    shareable device: there is only one process.
+
+  Also, a generic allocation (`flags` bit 0) matches `devnam` only against
+  device-type names (`RA81`), not against a generic device name such as
+  `DU:`; and `$ASSIGN` doesn't implicitly allocate a nonshareable device, as
+  VMS does.
+- **Status**: open, deliberate simplifications.
+
+### [Phase 26] `$ASSIGN` now refuses a device allocated to another process
+
+- **Where**: `internal/rtl/devices.go`'s `serviceSysAssign`.
+- **What**: `$ASSIGN` returns `SS$_DEVALLOC` for a device allocated
+  (`DEV$M_ALL`) to a different PID, as on VMS. eVAX's `sys_assign` had no
+  allocation concept and always assigned the channel, overwriting the
+  device's PID.
+- **Status**: fixed in Phase 26 subtask 4.
+
 ## Open findings
 
 _None yet._

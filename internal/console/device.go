@@ -44,7 +44,12 @@ func (c *Console) ShowDevices(name string, full bool) error {
 			continue
 		}
 
-		c.Printf("Device %s\n", d.Name)
+		allocated := ""
+		if d.Allocated() {
+			allocated = ", allocated"
+		}
+
+		c.Printf("Device %s%s\n", d.Name, allocated)
 		c.Printf("    DEVCLASS=%d (%s)   DEVTYPE=%d\n", d.DevClass, iodev.DeviceClassName(d.DevClass), d.DevType)
 		c.Printf("    DEVBUFSIZE=%d\n", d.DevBufSize)
 		c.Printf("    RECSIZE=%d\n", d.RecSize)
@@ -84,7 +89,8 @@ func (c *Console) ShowDevices(name string, full bool) error {
 // similarly prefers the live c.Mounts.VolumeLabel over d.VolName.
 //
 // govax has no online/offline concept, so every disk device is reported
-// "is online" unconditionally; "device type X" is omitted whenever
+// "is online" unconditionally; "allocated" follows it, as on VMS, when
+// $ALLOC has allocated the device (docs/PHASE-26.md); "device type X" is omitted whenever
 // d.DevType doesn't map to a known name (iodev.DeviceTypeName) rather
 // than printing a placeholder — see that function's own doc comment.
 func (c *Console) showDiskDeviceFull(d *iodev.Device) {
@@ -117,7 +123,12 @@ func (c *Console) showDiskDeviceFull(d *iodev.Device) {
 		mountClause = fmt.Sprintf(", mounted (%s)", access)
 	}
 
-	c.Printf("Disk %s:%s, is online%s, file-oriented device.\n\n", d.Name, typeClause, mountClause)
+	allocClause := ""
+	if d.Allocated() {
+		allocClause = ", allocated"
+	}
+
+	c.Printf("Disk %s:%s, is online%s%s, file-oriented device.\n\n", d.Name, typeClause, allocClause, mountClause)
 	c.statRow("Error count", d.ErrCnt, "Operations completed", d.OpCnt)
 	c.statRow("Reference count", d.RefCnt, "Default buffer size", d.DevBufSize)
 	c.statRow("Total blocks", totalBlocks, "Free blocks", freeBlocks)

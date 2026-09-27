@@ -135,7 +135,7 @@ func TestServiceSysAdjstkErrors(t *testing.T) {
 func TestPhase26ServicesRegistered(t *testing.T) {
 	env, _ := fixture()
 
-	for _, name := range []string{"SYS$ADJSTK", "SYS$ADJWSL"} {
+	for _, name := range []string{"SYS$ADJSTK", "SYS$ADJWSL", "SYS$ALLOC"} {
 		addr, found := uint32(0), false
 
 		for _, e := range vmsdef.P1VectorTable {

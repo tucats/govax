@@ -146,4 +146,41 @@ func TestConstants_onlyRMSFamilies(t *testing.T) {
 			t.Errorf("unexpected %s in SSConstants", name)
 		}
 	}
+
+	for name := range DEVConstants {
+		if !strings.HasPrefix(name, "DEV$") {
+			t.Errorf("unexpected %s in DEVConstants", name)
+		}
+	}
+}
+
+// TestDEVConstants_values pins the $DEVDEF DEVCHAR bits $ALLOC
+// (docs/PHASE-26.md) depends on, plus one DEVCHAR2 bit to show the second
+// union member numbers its bits from 0 again.
+func TestDEVConstants_values(t *testing.T) {
+	want := map[string]uint32{
+		"DEV$M_TRM": 0x4,
+		"DEV$M_SPL": 0x40,
+		"DEV$M_SHR": 0x10000,
+		"DEV$M_AVL": 0x40000,
+		"DEV$M_MNT": 0x80000,
+		"DEV$M_MBX": 0x100000,
+		"DEV$V_ALL": 23,
+		"DEV$M_ALL": 0x800000,
+		"DEV$M_CLU": 0x1,
+		"DEV$M_2P":  0x10,
+	}
+
+	for name, v := range want {
+		got, ok := DEVConstants[name]
+		if !ok {
+			t.Errorf("%s missing from DEVConstants", name)
+
+			continue
+		}
+
+		if got != v {
+			t.Errorf("%s = %#x, want %#x", name, got, v)
+		}
+	}
 }

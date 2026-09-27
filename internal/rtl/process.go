@@ -169,6 +169,14 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 	return ssNormal, nil
 }
 
+// ImageRundown does the per-image cleanup VMS does when an image exits,
+// for the state this package owns: it deallocates the devices the image
+// allocated in user mode. The console calls it when an image started by
+// RUN returns (and does its own logical-name rundown alongside).
+func (env *Environment) ImageRundown() {
+	env.deallocateUserDevices()
+}
+
 func registerProcessServices(t *ServiceTable) {
 	t.Register("SYS$ADJSTK", serviceSysAdjstk)
 	t.Register("SYS$ADJWSL", serviceSysAdjwsl)

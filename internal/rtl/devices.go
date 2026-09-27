@@ -3,10 +3,13 @@ package rtl
 import (
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
 
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // Port of devices.c's sys_assign/sys_getdviw — the two SYS$ services built
@@ -86,6 +89,10 @@ func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 	dp, found := env.Devices.Find(device)
 	if !found {
 		return ssIvDevNam, nil
+	}
+
+	if dp.Allocated() && dp.PID != env.Process.PID {
+		return ssDevAlloc, nil
 	}
 
 	env.nextChannel += 8
@@ -212,9 +219,176 @@ func serviceSysGetdviw(env *Environment, argv []uint32) (uint32, error) {
 	return ssNormal, nil
 }
 
+// Status codes and $DEVDEF bits $ALLOC uses (docs/PHASE-26.md).
+var (
+	ssDevAlloc    = vmsdef.SSConstants["SS$_DEVALLOC"]
+	ssDevAlrAlloc = vmsdef.SSConstants["SS$_DEVALRALLOC"]
+	ssDevMount    = vmsdef.SSConstants["SS$_DEVMOUNT"]
+	ssIvStsFlg    = vmsdef.SSConstants["SS$_IVSTSFLG"]
+	ssNoDevAvl    = vmsdef.SSConstants["SS$_NODEVAVL"]
+
+	devMounted = vmsdef.DEVConstants["DEV$M_MNT"]
+	devMailbox = vmsdef.DEVConstants["DEV$M_MBX"]
+)
+
+// allocGeneric is $ALLOC's one flags bit: devnam names a device type
+// (RA81, TU58, ...) rather than a device, and the first available device
+// of that type is allocated.
+const allocGeneric = 1
+
+// maxDeviceNameLength is the longest devnam $ALLOC accepts (SS$_IVLOGNAM
+// beyond it).
+const maxDeviceNameLength = 63
+
+// serviceSysAlloc is SYS$ALLOC: allocates a device to the calling process
+// (env.Process) for its exclusive use, marking it DEV$M_ALL with the
+// process's PID and the allocation's access mode. devnam may be a logical
+// name. The physical name ("_DUA0:") is returned through phylen/phybuf
+// (both optional). acmode is maximized with the caller's mode. flags bit 0
+// asks for the first available device of the type devnam names.
+//
+// A device already allocated to this process succeeds with
+// SS$_DEVALRALLOC; one allocated to another PID fails with SS$_DEVALLOC.
+// A mounted device or a mailbox fails with SS$_DEVMOUNT.
+func serviceSysAlloc(env *Environment, argv []uint32) (uint32, error) {
+	devnam, phylen, phybuf := optArg(argv, 0), optArg(argv, 1), optArg(argv, 2)
+	acmode, flags := optArg(argv, 3), optArg(argv, 4)
+
+	if flags&^allocGeneric != 0 {
+		return ssIvStsFlg, nil
+	}
+
+	if devnam == 0 {
+		return ssIvDevNam, nil
+	}
+
+	name, ok, err := strGet(env, devnam, maxDeviceNameLength)
+	if err != nil {
+		return ssAccVio, nil
+	}
+
+	if !ok || name == "" {
+		return ssIvLogNam, nil
+	}
+
+	device, st := env.deviceName(name)
+	if st != 0 {
+		return st, nil
+	}
+
+	var dp *iodev.Device
+
+	if flags&allocGeneric != 0 {
+		if dp, st = env.genericDevice(device); st != 0 {
+			return st, nil
+		}
+	} else {
+		found := false
+		if dp, found = env.Devices.Find(device); !found {
+			return ssNoSuchDev, nil
+		}
+
+		if st := env.allocatable(dp); st != 0 && st != ssDevAlrAlloc {
+			return st, nil
+		}
+	}
+
+	status := uint32(ssNormal)
+	if dp.Allocated() {
+		status = ssDevAlrAlloc
+	} else {
+		dp.Allocate(env.Process.PID, max(acmode&3, uint32(env.cpu.PSL().CurMod())))
+	}
+
+	phyName := "_" + dp.Name + ":"
+
+	if phybuf != 0 {
+		n, truncated, err := storeDescriptor(env, phybuf, phyName)
+		if err != nil {
+			return ssAccVio, nil
+		}
+
+		if phylen != 0 {
+			if err := env.mem.StoreWord(env.cpu, phylen, n); err != nil {
+				return ssAccVio, nil
+			}
+		}
+
+		if truncated && status == ssNormal {
+			status = ssBufferOvf
+		}
+	}
+
+	return status, nil
+}
+
+// allocatable reports why the calling process can't allocate dp (0 if it
+// can): SS$_DEVALRALLOC if it already has, SS$_DEVALLOC if another
+// process has, SS$_DEVMOUNT if it's mounted or a mailbox.
+func (env *Environment) allocatable(dp *iodev.Device) uint32 {
+	if dp.Allocated() {
+		if dp.PID == env.Process.PID {
+			return ssDevAlrAlloc
+		}
+
+		return ssDevAlloc
+	}
+
+	if dp.DevChar&(devMounted|devMailbox) != 0 {
+		return ssDevMount
+	}
+
+	if env.Mounts != nil {
+		if _, mounted := env.Mounts.Lookup(dp.Name); mounted {
+			return ssDevMount
+		}
+	}
+
+	return 0
+}
+
+// genericDevice picks the device a generic $ALLOC of type typeName gets:
+// the first unallocated, unmounted one, by name. A device the process
+// already holds doesn't count as available. SS$_NODEVAVL if devices of
+// that type exist but none is available, SS$_NOSUCHDEV if there are none.
+func (env *Environment) genericDevice(typeName string) (*iodev.Device, uint32) {
+	var candidates []*iodev.Device
+
+	for _, d := range env.Devices.All() {
+		if t, ok := iodev.DeviceTypeName(d.DevType); ok && strings.EqualFold(t, typeName) {
+			candidates = append(candidates, d)
+		}
+	}
+
+	if len(candidates) == 0 {
+		return nil, ssNoSuchDev
+	}
+
+	sort.Slice(candidates, func(i, j int) bool { return candidates[i].Name < candidates[j].Name })
+
+	for _, d := range candidates {
+		if env.allocatable(d) == 0 {
+			return d, 0
+		}
+	}
+
+	return nil, ssNoDevAvl
+}
+
+// deallocateUserDevices is image rundown's device step: VMS deallocates
+// the devices an image allocated in user mode when the image exits.
+func (env *Environment) deallocateUserDevices() {
+	for _, d := range env.Devices.All() {
+		if d.Allocated() && d.PID == env.Process.PID && d.AllocMode == uint32(vax.User) {
+			d.Deallocate()
+		}
+	}
+}
+
 func registerDeviceServices(t *ServiceTable) {
 	t.Register("SYS$ASSIGN", serviceSysAssign)
 	t.Register("SYS$GETDVIW", serviceSysGetdviw)
+	t.Register("SYS$ALLOC", serviceSysAlloc)
 }
 
 // deviceName translates a $ASSIGN/$GETDVI device name through its logical

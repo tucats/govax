@@ -1,6 +1,10 @@
 package io
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/tucats/govax/internal/vmsdef"
+)
 
 // DeviceClass identifies a device's VMS device class (DVI$_DEVCLASS),
 // matching devices.c's dev_class_map and testdata/dcl/evax.dcl's dev_class
@@ -107,8 +111,8 @@ func DeviceTypeName(t uint32) (string, bool) {
 // own RTL bookkeeping data, not emulated VAX ISA state, so there's no
 // fidelity reason to keep the C spelling. PID/OwnUIC are left for a caller
 // to fill in (define_device.c reads OwnUIC from a qualifier and otherwise
-// leaves PID at 0 until SYS$ASSIGN sets it from the calling process — no
-// process/PID concept exists yet in this port; see doc.go's Phase 10 note).
+// leaves PID at 0 until SYS$ASSIGN or SYS$ALLOC sets it from the calling
+// process, internal/rtl's emulated Process — docs/PHASE-26.md).
 type Device struct {
 	Name string
 
@@ -142,6 +146,35 @@ type Device struct {
 	MediaName   string
 	MediaType   string
 	RootDevName string
+
+	// AllocMode is the access mode an explicit allocation ($ALLOC) was
+	// made in (UCB$B_AMOD): only that mode or a more privileged one may
+	// deallocate the device, and image rundown deallocates user-mode
+	// allocations. Meaningful only while Allocated().
+	AllocMode uint32
+}
+
+// devAllocated is DEV$M_ALL, the DEVCHAR bit VMS sets on an allocated
+// device.
+var devAllocated = vmsdef.DEVConstants["DEV$M_ALL"]
+
+// Allocated reports whether d is allocated to a process (DEV$M_ALL in
+// DevChar); d.PID then names the owner.
+func (d *Device) Allocated() bool { return d.DevChar&devAllocated != 0 }
+
+// Allocate marks d allocated to process pid in access mode mode, as
+// $ALLOC does.
+func (d *Device) Allocate(pid, mode uint32) {
+	d.DevChar |= devAllocated
+	d.PID = pid
+	d.AllocMode = mode
+}
+
+// Deallocate clears d's allocation. d.PID is left alone: SYS$ASSIGN also
+// stamps it, so it isn't only an allocation owner.
+func (d *Device) Deallocate() {
+	d.DevChar &^= devAllocated
+	d.AllocMode = 0
 }
 
 // DeviceOptions carries define_device's own settable fields — everything
