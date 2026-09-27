@@ -25,6 +25,21 @@ const (
 	sysDevNotMount uint32 = 15   // real SS$_DEVNOTMOUNT's message field: 124 >> 3
 	sysNoMount     uint32 = 1297 // real SS$_NOMOUNT's message field: 10380 >> 3
 	sysNoSuchFile  uint32 = 290  // real SS$_NOSUCHFILE's message field: 2320 >> 3
+
+	// Logical-name service codes (docs/PHASE-25.md). Values and message
+	// texts are from the real VMS 7.3 SYSMSG source listing
+	// (vmssrc_archive/v73/msgfil/lis/sysmsg.lis), and agree with
+	// reference/vms/ssdef.txt (see codes_sys_test.go).
+	sysNoPriv      uint32 = 4    // SS$_NOPRIV:       36 >> 3
+	sysDupLNam     uint32 = 18   // SS$_DUPLNAM:     148 >> 3
+	sysIvLogNam    uint32 = 42   // SS$_IVLOGNAM:    340 >> 3
+	sysIvLogTab    uint32 = 43   // SS$_IVLOGTAB:    348 >> 3
+	sysNoLogNam    uint32 = 55   // SS$_NOLOGNAM:    444 >> 3
+	sysTooManyLNam uint32 = 110  // SS$_TOOMANYLNAM: 884 >> 3
+	sysSupersede   uint32 = 198  // SS$_SUPERSEDE:  1585 >> 3
+	sysLNMCreated  uint32 = 214  // SS$_LNMCREATED: 1713 >> 3
+	sysParentDel   uint32 = 1098 // SS$_PARENT_DEL: 8788 >> 3
+	sysNoLogTab    uint32 = 1106 // SS$_NOLOGTAB:   8852 >> 3
 )
 
 // SYS facility status codes -- SS_ prefix, matching real VMS's own SS$_
@@ -82,6 +97,20 @@ const (
 	// cousin, RMS$_FNF, is likewise a W-severity message) is a normal,
 	// expected outcome rather than a hard failure.
 	SS_NOSUCHFILE = SYSFacility<<FacilityPosition | sysNoSuchFile<<MessagePosition | StatusWarning
+
+	// Logical-name service codes (internal/lnm, docs/PHASE-25.md). The two
+	// success codes are returned by $CRELNM/$CRELNT rather than as errors,
+	// but are defined here so their messages are registered too.
+	SS_NOPRIV      = SYSFacility<<FacilityPosition | sysNoPriv<<MessagePosition | StatusSevere
+	SS_DUPLNAM     = SYSFacility<<FacilityPosition | sysDupLNam<<MessagePosition | StatusSevere
+	SS_IVLOGNAM    = SYSFacility<<FacilityPosition | sysIvLogNam<<MessagePosition | StatusSevere
+	SS_IVLOGTAB    = SYSFacility<<FacilityPosition | sysIvLogTab<<MessagePosition | StatusSevere
+	SS_NOLOGNAM    = SYSFacility<<FacilityPosition | sysNoLogNam<<MessagePosition | StatusSevere
+	SS_TOOMANYLNAM = SYSFacility<<FacilityPosition | sysTooManyLNam<<MessagePosition | StatusSevere
+	SS_SUPERSEDE   = SYSFacility<<FacilityPosition | sysSupersede<<MessagePosition | StatusSuccess
+	SS_LNMCREATED  = SYSFacility<<FacilityPosition | sysLNMCreated<<MessagePosition | StatusSuccess
+	SS_PARENT_DEL  = SYSFacility<<FacilityPosition | sysParentDel<<MessagePosition | StatusSevere
+	SS_NOLOGTAB    = SYSFacility<<FacilityPosition | sysNoLogTab<<MessagePosition | StatusSevere
 )
 
 func init() {
@@ -92,4 +121,14 @@ func init() {
 	DefineMessage(SS_DEVNOTMOUNT, SYSFacility, "DEVNOTMOUNT", "Device !S not mounted")
 	DefineMessage(SS_NOMOUNT, SYSFacility, "NOMOUNT", "Unable to complete MOUNT/DISMOUNT operation on device !S")
 	DefineMessage(SS_NOSUCHFILE, SYSFacility, "NOSUCHFILE", "File !S not found")
+	DefineMessage(SS_NOPRIV, SYSFacility, "NOPRIV", "insufficient privilege or object protection violation")
+	DefineMessage(SS_DUPLNAM, SYSFacility, "DUPLNAM", "duplicate name")
+	DefineMessage(SS_IVLOGNAM, SYSFacility, "IVLOGNAM", "invalid logical name")
+	DefineMessage(SS_IVLOGTAB, SYSFacility, "IVLOGTAB", "invalid logical name table")
+	DefineMessage(SS_NOLOGNAM, SYSFacility, "NOLOGNAM", "no logical name match")
+	DefineMessage(SS_TOOMANYLNAM, SYSFacility, "TOOMANYLNAM", "logical name translation exceeded allowed depth")
+	DefineMessage(SS_SUPERSEDE, SYSFacility, "SUPERSEDE", "logical name superseded")
+	DefineMessage(SS_LNMCREATED, SYSFacility, "LNMCREATED", "logical name table did not exist; has been created")
+	DefineMessage(SS_PARENT_DEL, SYSFacility, "PARENT_DEL", "illegal attempt to delete parent logical name table")
+	DefineMessage(SS_NOLOGTAB, SYSFacility, "NOLOGTAB", "no logical name table name match")
 }

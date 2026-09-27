@@ -39,7 +39,7 @@ facility that the console, RMS, and the RTL/system-service layer all share:
 
   All of them work on the same shared data the console uses.
 
-**Status: in progress — subtask 1 of 9 done.**
+**Status: in progress — subtasks 1-2 of 9 done.**
 
 ## Why this phase looks different
 
@@ -116,43 +116,56 @@ The logical-name database moves out of `internal/io` into a new package,
   does.
 
 `internal/io/logical.go` and its tests are deleted once every caller has moved
-over. The `vax.DebugLogicals` debug flag stays and is used inside `internal/lnm`
-through a small injected `io.Writer`/enabled hook, not a `vax` import.
+over. The `vax.DebugLogicals` debug flag stays. `internal/lnm` reports through
+an injected `Database.Trace` function (nil means off) instead of importing
+`vax`.
 
 ### Data model
 
+As built in subtask 2 ([internal/lnm](../internal/lnm)):
+
 ```text
 Database
-  tables  map[string]*Table          // keyed by full table name (LNM$PROCESS_TABLE, ...)
-  uicGroup uint16                    // for LNM$GROUP_gggggg
+  ProcessDirectory, SystemDirectory *Table
+  GroupTableName string              // LNM$GROUP_gggggg, from the UIC's group
+  Trace func(format, args...)        // nil = off
+  tables []*Table                    // every live table, in creation order
 
 Table
-  Name        string                 // e.g. "LNM$PROCESS_TABLE"
-  Parent      *Table                 // VMS parent-table hierarchy (SHOW LOGICAL/STRUCTURE)
-  Directory   bool                   // LNM$PROCESS_DIRECTORY / LNM$SYSTEM_DIRECTORY
-  Shareable   bool                   // process-private vs. shareable (group/system)
-  AccessMode  Mode
-  Attrs       TableAttr              // (future: SUPERSEDE/CONFINE/NO_ALIAS)
-  entries     map[key]*Entry         // key = (name, access mode): one name may exist once per mode
+  Name       string                  // e.g. "LNM$PROCESS_TABLE"
+  Mode       Mode
+  Parent     *Table                  // nil only for a directory
+  Directory  bool                    // LNM$PROCESS_DIRECTORY / LNM$SYSTEM_DIRECTORY
+  Shareable  bool                    // cataloged in the system directory
+  Attrs      uint32                  // LNM$M_CONFINE
+  names      map[string][]*Entry     // case-sensitive name -> one entry per access mode
 
 Entry
-  Name         string                // case preserved; lookup is case-sensitive unless CASE_BLIND
-  AccessMode   Mode                  // user / supervisor / executive / kernel
-  Attrs        NameAttr              // CONFINE, NO_ALIAS (stored; enforcement deferred)
-  Equivalences []Equivalence         // ≥1; len>1 ⇒ search list, index 0..MAX_INDEX
+  Name         string
+  Mode         Mode                  // Kernel / Executive / Supervisor / User
+  Attrs        uint32                // NO_ALIAS, CONFINE, CRELOG; TABLE for a table name
+  Equivalences []Equivalence         // index 0..127; none for a table-name entry
+  Table        *Table                // the table containing the entry
+  Target       *Table                // for a table-name entry, the table it names
 
 Equivalence
   Value  string
-  Attrs  TransAttr                   // CONCEALED, TERMINAL (per equivalence, as in VMS)
+  Attrs  uint32                      // CONCEALED, TERMINAL (per equivalence, as in VMS)
 ```
 
-Mode and attribute bit values are the real `LNM$M_*`/`PSL$C_*` values from the
-generated `vmsdef` constants, so what `$TRNLNM`'s `LNM$_ATTRIBUTES` item returns
-is exactly what the database stores. No translation layer is needed.
+A table's name is an `Entry` with `AttrTable` in a directory, as in VMS.
+Removing that entry deletes the table and all its descendant tables.
 
-When one table holds the same name in several access modes, the outermost
-(least privileged) mode that the caller's access mode allows wins. This matches
-the manual's `SYS$OUTPUT [super]` / `SYS$OUTPUT [exec]` example.
+Attribute bits and limits come from the generated `vmsdef.LNMConstants`, so what
+`$TRNLNM`'s `LNM$_ATTRIBUTES` item returns is exactly what the database stores,
+with no translation layer. `Mode` uses the PSL numbering (kernel 0 through
+user 3). Status codes come back as `vmserrors.VMSError` values carrying the real
+`$SSDEF` numbers.
+
+When one table holds the same name in several access modes, a lookup takes the
+outermost (least privileged) one of those at or inside the requested mode. This
+matches `$TRNLNM` and the manual's `SYS$OUTPUT [super]` / `SYS$OUTPUT [exec]`
+example.
 
 ### Table names are themselves logical names (VMS directories)
 
@@ -162,25 +175,33 @@ directories*. The code never looks up the Go map directly. At startup,
 
 | Directory | Name | Translates to |
 | --- | --- | --- |
-| `LNM$PROCESS_DIRECTORY` | `LNM$PROCESS` | `LNM$PROCESS_TABLE` |
-| | `LNM$PROCESS_DIRECTORY` | (the directory itself) |
-| `LNM$SYSTEM_DIRECTORY` | `LNM$SYSTEM` | `LNM$SYSTEM_TABLE` |
+| `LNM$PROCESS_DIRECTORY` | `LNM$PROCESS_DIRECTORY` | (table name: the directory itself) |
+| | `LNM$PROCESS_TABLE` | (table name) |
+| | `LNM$PROCESS` | `LNM$PROCESS_TABLE` |
 | | `LNM$GROUP` | `LNM$GROUP_gggggg` |
+| `LNM$SYSTEM_DIRECTORY` | `LNM$SYSTEM_DIRECTORY` | (table name: the directory itself) |
+| | `LNM$SYSTEM_TABLE` | (table name) |
+| | `LNM$GROUP_gggggg` | (table name) |
+| | `LNM$SYSTEM` | `LNM$SYSTEM_TABLE` |
 | | `LNM$FILE_DEV` | `LNM$PROCESS`, `LNM$GROUP`, `LNM$SYSTEM` (search list) |
 | | `LNM$DCL_LOGICAL` | `LNM$FILE_DEV` |
 | | `LNM$DIRECTORIES` | `LNM$PROCESS_DIRECTORY`, `LNM$SYSTEM_DIRECTORY` |
-| | `LNM$SYSTEM_DIRECTORY` | (the directory itself) |
 
-VMS puts `LNM$GROUP` in the process directory; the table above lists it under
-the system directory, which is what govax will do. In practice this only
-changes what `SHOW LOGICAL/STRUCTURE` prints. Open question 2 covers the fact
-that govax has only one process.
+`LNM$GROUP` is in the process directory, as in the User's Manual's Table 11.2,
+because it depends on the process's UIC. The group table itself is shareable and
+is cataloged in the system directory. (An earlier draft of this table put
+`LNM$GROUP` under the system directory; that was corrected in subtask 2.) The
+tables are kernel mode. The directory logical names are executive mode, so every
+access mode can see them.
 
 A table-name argument (`/TABLE=`, `$TRNLNM`'s `tabnam`, `$CRELNM`'s `tabnam`) is
 resolved like this:
 
-1. Look the name up in `LNM$DIRECTORIES` (process directory first, then system)
-   and translate it iteratively, keeping only names that resolve to real tables.
+1. Look the name up in the process directory, then the system directory. That
+   is the order `LNM$DIRECTORIES` records, but it is fixed in code, because
+   resolving `LNM$DIRECTORIES` itself would need a directory to look in.
+   Translate the name iteratively, keeping only names that resolve to real
+   tables. An element of a search list that names nothing is skipped.
    Iteration is capped at `LNM$C_MAXDEPTH`.
 2. The result is an **ordered list of tables**. `$TRNLNM` and `SHOW LOGICAL`
    search the whole list. `$CRELNM`/`DEFINE` use the first table in the list,
@@ -276,8 +297,9 @@ All of these use the existing `internal/console/dcl` grammar in
   - `/FULL` adds `[super]`/`[exec]` and `[concealed,terminal]`
 - **`SHOW TRANSLATION name`** does one level only (`$TRNLNM` semantics).
 - **`CREATE/NAME_TABLE table`** creates a table, covering "additional tables can
-  be added". Qualifiers: `/PARENT_TABLE=` (default `LNM$PROCESS_DIRECTORY`,
-  so the new table is process-private) and `/USER_MODE`/`/SUPERVISOR_MODE`/
+  be added". Qualifiers: `/PARENT_TABLE=` (default `LNM$PROCESS_TABLE`, so the
+  new table is process-private. An earlier draft said `LNM$PROCESS_DIRECTORY`;
+  subtask 6 will confirm the default against the DCL documentation) and `/USER_MODE`/`/SUPERVISOR_MODE`/
   `/EXECUTIVE_MODE`.
 - **`DEASSIGN/TABLE=`** (with no logical name) deletes a table, per §11.12.
 - **`DEFINE/DEVICE`** stays exactly as it is.
@@ -384,7 +406,7 @@ the process default directory. RMS then gets its default device by translating
        and `LNM$_` item codes.
      - `SSConstants` (406 entries).
    - Unit tests pin the values the design depends on.
-2. **`internal/lnm` core.** `Database`, `Table`, `Entry`, and `Equivalence`, plus
+2. **Done.** **`internal/lnm` core.** `Database`, `Table`, `Entry`, and `Equivalence`, plus
    startup of the directory and default tables (the table in "Table names are
    themselves logical names"). Also:
    - `Define`/`Delete`/`CreateTable`/`DeleteTable`
@@ -623,3 +645,72 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
   `a21799c` ("Update forth.asm to run in user space"): the fixture no longer
   deposits into S0, but the test still expects it to. Left for the user.
   Everything else passes.
+
+### 2026-09-27 — Subtask 2: `internal/lnm` core
+
+- **Sources.** The implementation follows the *VMS 5.0 System Services Reference
+  Manual* (`AA-LA69A-TE`, in the user's VMS docs folder) for `$CRELNM`,
+  `$CRELNT`, `$DELLNM` and `$TRNLNM`: argument rules, access-mode handling,
+  and the full lists of returned status codes. Status message texts come from
+  DEC's own VMS 7.3 SYSMSG source listing
+  (`vmssrc_archive/v73/msgfil/lis/sysmsg.lis`).
+- **New package `internal/lnm`.** It provides `Database`, `Table`, `Entry`,
+  `Equivalence` and `Mode`, plus:
+  - `NewDatabase(uic)`, which lays out the startup directories and tables
+    shown in the design section
+  - `ResolveTables`, `Translate`, `Define`, `Delete`, `CreateTable`
+  - `Match` and `HasWildcards` for SHOW LOGICAL
+
+  Each service entry point is written to be a thin wrapper target for its
+  `SYS$` service in subtask 8. The caller passes the access mode actually used;
+  the "maximizing" against the caller's mode is left to the wrapper.
+- **Behavior implemented from the manual:**
+  - access-mode filtering of both names and table names (outermost visible
+    entry wins)
+  - `LNM$M_CASE_BLIND`
+  - `SS$_SUPERSEDE` for a same-mode redefinition
+  - `NO_ALIAS` (deletes outer-mode names; an inner-mode `NO_ALIAS` name blocks
+    a define with `SS$_DUPLNAM`)
+  - `CONFINE` inherited from the table or parent
+  - a name can't be more privileged than its table, nor a table than its
+    parent (`SS$_NOPRIV`)
+  - name syntax in directory tables (1-31 letters, digits, `$`, `_`)
+  - `$CRELNT`'s `CREATE_IF`, its supersede rule, and `SS$_PARENT_DEL`
+  - deleting a table name deletes all its descendant tables
+  - unique default `LNM$xxxx` table names
+- **Privileges.** govax has no privilege model, so the caller is treated as
+  holding every privilege. The tables created at startup are still protected:
+  deleting or superseding them returns `SS$_NOPRIV`, and a refused request
+  changes nothing. Either would break the database's structure, and real
+  VMS protects them too.
+- **One deliberate reading of the manual.** `$DELLNM` with no logical name
+  deletes from "the first table whose access mode is equal to or less
+  privileged than the caller's". Taken literally, no caller could ever empty
+  the kernel-mode process table (`DEASSIGN/ALL`). So the table's own mode isn't
+  checked; the per-name mode filter keeps inner-mode names safe. This is
+  documented in the `Delete` doc comment.
+- **`internal/vmserrors`.** Added `SS_NOPRIV`, `SS_DUPLNAM`, `SS_IVLOGNAM`,
+  `SS_IVLOGTAB`, `SS_NOLOGNAM`, `SS_TOOMANYLNAM`, `SS_SUPERSEDE`,
+  `SS_LNMCREATED`, `SS_PARENT_DEL` and `SS_NOLOGTAB`, using the real SYSMSG
+  texts. The new `codes_sys_test.go` checks every `SS_*` constant against the
+  generated `vmsdef.SSConstants`.
+- **Finding for later.** The existing `SS_BADPARAM` message text is
+  INITIALIZE-specific ("Unable to complete INITIALIZE operation on !S",
+  Phase 23). Real VMS says "bad parameter value". `internal/lnm` returns
+  `SS$_BADPARAM` for bad arguments, so once subtask 6 prints logical-name
+  errors at the console the INITIALIZE wording would show up there. It was not
+  changed in this subtask because INITIALIZE's output depends on it; subtask 6
+  should decide (probably by giving INITIALIZE its own message).
+- **Design corrections made while checking against the sources:**
+  - `LNM$GROUP` belongs in the process directory (User's Manual Table 11.2).
+    The plan's own table had put it under the system directory.
+  - The plan said the `CREATE/NAME_TABLE` default parent was
+    `LNM$PROCESS_DIRECTORY`. It is more likely `LNM$PROCESS_TABLE`; this is
+    flagged for subtask 6 to confirm.
+- **Tests.** `internal/lnm` has 96.4% statement coverage. The tests include
+  the manual's `ACCOUNTS` two-mode example and §11.9.2's
+  "add APPLICATION_NAMES to LNM$PROCESS" example, which shows that redefining
+  `LNM$PROCESS` changes `LNM$FILE_DEV`'s search order. `go test ./...` passes
+  except for the pre-existing `TestAssembleForth` failure noted under subtask 1.
+  Nothing outside `internal/lnm`/`internal/vmserrors` uses the package yet;
+  subtask 4 wires it in.
