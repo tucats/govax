@@ -48,6 +48,10 @@ import (
 func (c *Console) Delete(specText string) error {
 	deleted, err := c.ContainerSession.Delete(specText)
 	if err != nil {
+		if lnmErr := logicalNameFailure(err); lnmErr != nil {
+			return lnmErr
+		}
+
 		var notMounted *rms.NotMountedError
 		if errors.As(err, &notMounted) {
 			return vmserrors.Wrap(vmserrors.SS_DEVNOTMOUNT, err, notMounted.Device)

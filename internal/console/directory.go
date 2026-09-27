@@ -49,6 +49,10 @@ import (
 func (c *Console) Directory(specText string, opts rms.DirectoryOptions) error {
 	text, err := c.ContainerSession.Directory(specText, opts)
 	if err != nil {
+		if lnmErr := logicalNameFailure(err); lnmErr != nil {
+			return lnmErr
+		}
+
 		var notMounted *rms.NotMountedError
 		if errors.As(err, &notMounted) {
 			return vmserrors.Wrap(vmserrors.SS_DEVNOTMOUNT, err, notMounted.Device)

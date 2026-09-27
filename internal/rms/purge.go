@@ -58,58 +58,71 @@ func (s *Session) Purge(specText string, keep uint16) (purged []string, err erro
 		specText = "*.*"
 	}
 
-	vol, spec, err := s.resolveVolume(specText)
+	// A search list purges in each of its elements (User's Manual
+	// §11.7.1).
+	err = s.eachSpec(specText, func(vol *volume.Volume, r resolvedSpec) error {
+		names, err := purgeOnVolume(vol, r.Spec, keep)
+		purged = append(purged, names...)
+
+		return err
+	})
 	if err != nil {
-		return nil, fmt.Errorf("purge: %w", err)
+		return purged, fmt.Errorf("purge: %w", err)
 	}
 
+	return purged, nil
+}
+
+// purgeOnVolume is Purge for one resolved spec on one volume, returning
+// the names it purged (even when it fails partway).
+func purgeOnVolume(vol *volume.Volume, spec filespec.Spec, keep uint16) (purged []string, err error) {
 	spec.Version = "*"
 
 	if len(vol.Devices) != 1 {
-		return nil, fmt.Errorf("purge: %s is a %d-device volume set; PURGE only supports a single-device volume", spec.Device, len(vol.Devices))
+		return nil, fmt.Errorf("%s is a %d-device volume set; PURGE only supports a single-device volume", spec.Device, len(vol.Devices))
 	}
 
 	dev := vol.Devices[0]
 
 	matches, err := filespec.Glob(vol, spec)
 	if err != nil {
-		return nil, fmt.Errorf("purge: %w", err)
+		return nil, err
 	}
 
 	bm, err := dev.Bitmap()
 	if err != nil {
-		return nil, fmt.Errorf("purge: %w", err)
+		return nil, err
 	}
 
 	ib, err := dev.IndexBitmap()
 	if err != nil {
-		return nil, fmt.Errorf("purge: %w", err)
+		return nil, err
 	}
 
-	// Flushed once, however this function returns -- see Delete's own
+	// Flushed once, however this function returns -- see deleteOnVolume's
 	// identical pattern (delete.go) and doc comment for why a deferred
 	// flush (rather than one only on the success path) is correct here
 	// too: a PURGE that trims some names before failing on a later one
 	// still keeps whatever storage it already freed.
 	defer func() {
 		if flushErr := bm.Flush(); flushErr != nil && err == nil {
-			err = fmt.Errorf("purge: %w", flushErr)
+			err = flushErr
 		}
 
 		if flushErr := ib.Flush(); flushErr != nil && err == nil {
-			err = fmt.Errorf("purge: %w", flushErr)
+			err = flushErr
 		}
 	}()
 
 	for _, group := range groupMatchesByDir(matches) {
 		dir, dirErr := filespec.ResolveDirectory(vol, group.dirs)
 		if dirErr != nil {
-			return purged, fmt.Errorf("purge: %w", dirErr)
+			return purged, dirErr
 		}
 
 		for _, name := range distinctNames(group.matches) {
 			if purgeErr := volume.PurgeVersions(dir, name, keep, bm, ib); purgeErr != nil {
-				return purged, fmt.Errorf("purge: %w", purgeErr)
+				return purged, purgeErr
 			}
 
 			purged = append(purged, name)

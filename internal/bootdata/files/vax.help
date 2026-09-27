@@ -2852,7 +2852,9 @@ $MOUN
     Parameters:
 
         <device>        The device name to attach the container to, such
-                        as DUA0.  A trailing colon is optional.
+                        as DUA0.  A trailing colon is optional.  A logical
+                        name is translated to the device it names; a
+                        leading underscore (_DUA0:) prevents that.
 
         <file>          The path to the disk-image container file on the
                         native file system.  If the native file system is
@@ -2874,6 +2876,11 @@ $MOUN
 
         MOUNT/NOWRITE DUA1 "system disk.dsk"
 
+    As on VMS, MOUNT defines the logical name DISK$label (for example
+    DISK$USERDISK for a volume labeled USERDISK) in the system table, so
+    files on the volume can be named by label: DISK$USERDISK:[DIR]FILE.
+    DISMOUNT deletes it again.
+
     See also the help for DISMOUNT and SHOW DEVICE.
 
 $DISM
@@ -2893,7 +2900,9 @@ $DISM
     Parameter:
 
         <device>        The device name to detach, such as DUA0.  A
-                        trailing colon is optional.
+                        trailing colon is optional.  A logical name, such
+                        as the DISK$label name MOUNT defined, is
+                        translated first.
 
     Example:
 
@@ -3155,6 +3164,13 @@ $SE  ,DEFA
                         *current* default, the same way a real VMS
                         SET DEFAULT works.
 
+    Logical names in <spec> are translated.  The device goes into the
+    logical name SYS$DISK, which is how every file command (and a program's
+    SYS$OPEN and SYS$CREATE) finds the default device; a concealed logical
+    name is kept as the device rather than what it hides.  If <spec> starts
+    with a search list, SYS$DISK is set to the search list's name and each
+    element is searched in turn.
+
     Example:
 
         SET DEFAULT DUA0:[MYDIR]
@@ -3165,7 +3181,9 @@ $SHOW,DEFA
 $SH  ,DEFA
 
     The SHOW DEFAULT command displays the operator's current default
-    device and directory, as established by SET DEFAULT.
+    device and directory, as established by SET DEFAULT.  When the default
+    device is a search list, each place it stands for follows on a line
+    beginning with "=".
 
     Syntax:
 

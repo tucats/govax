@@ -26,6 +26,15 @@ type FileSpec struct {
 	// names the concealed logical rather than the physical device. It is
 	// the same as Spec when nothing was concealed.
 	Display string
+
+	// Remainder is the part of the caller's spec that followed the
+	// translated logical name ("SPEECH.TXT" in "GETTYSBURG:SPEECH.TXT"),
+	// always a suffix of Spec; the whole spec when nothing translated.
+	// Spec minus Remainder is the translation itself, so a caller can
+	// give the fields the caller wrote precedence over the equivalence
+	// string's, as RMS does (PAY_FILE:*.DAT with PAY_FILE =
+	// DISK1:[SALES_STAFF]PAYROLL means DISK1:[SALES_STAFF]*.DAT).
+	Remainder string
 }
 
 // TranslateFileSpec performs the logical-name translation RMS and DCL
@@ -48,8 +57,9 @@ type FileSpec struct {
 //     turn, depth-first, so a nested list's elements appear in place of
 //     the name that led to it (the User's Manual's NESTED example).
 //
-// The equivalence string and the rest of the spec are joined as text;
-// applying defaults and merging fields is the caller's job.
+// The equivalence string and the rest of the spec are joined as text in
+// Spec; applying defaults and merging fields is the caller's job, which
+// Remainder makes possible.
 //
 // Errors: SS$_TOOMANYLNAM when one chain needs more than MaxDepth
 // translations or reaches a name it has already translated (a circular
@@ -58,7 +68,7 @@ type FileSpec struct {
 func (db *Database) TranslateFileSpec(spec string, mode Mode) ([]FileSpec, error) {
 	var out []FileSpec
 
-	err := db.translateFileSpec(spec, mode, 0, nil, "", "", &out)
+	err := db.translateFileSpec(spec, mode, 0, nil, "", "", spec, &out)
 	if err != nil {
 		return nil, err
 	}
@@ -68,13 +78,18 @@ func (db *Database) TranslateFileSpec(spec string, mode Mode) ([]FileSpec, error
 
 // translateFileSpec translates spec, depth translations into a chain
 // whose names so far are in chain, appending its results to out.
-// concealed and display carry the chain's concealed name, if any.
-func (db *Database) translateFileSpec(spec string, mode Mode, depth int, chain []string, concealed, display string, out *[]FileSpec) error {
+// concealed and display carry the chain's concealed name, if any, and
+// remainder the caller's text after the first translated name.
+func (db *Database) translateFileSpec(spec string, mode Mode, depth int, chain []string, concealed, display, remainder string, out *[]FileSpec) error {
 	name, rest, ok := leftmostComponent(spec)
 	if ok {
 		e, err := db.Translate(FileDevName, name, mode, 0)
 		if err == nil {
-			return db.substitute(e, rest, spec, mode, depth, chain, concealed, display, out)
+			if depth == 0 {
+				remainder = rest
+			}
+
+			return db.substitute(e, rest, spec, mode, depth, chain, concealed, display, remainder, out)
 		}
 
 		var ve vmserrors.VMSError
@@ -87,7 +102,7 @@ func (db *Database) translateFileSpec(spec string, mode Mode, depth int, chain [
 		display = spec
 	}
 
-	*out = append(*out, FileSpec{Spec: spec, Concealed: concealed, Display: display})
+	*out = append(*out, FileSpec{Spec: spec, Concealed: concealed, Display: display, Remainder: remainder})
 
 	return nil
 }
@@ -95,7 +110,7 @@ func (db *Database) translateFileSpec(spec string, mode Mode, depth int, chain [
 // substitute replaces the leftmost component of spec, whose translation
 // is e and whose remaining text is rest, by each of e's equivalence
 // strings in turn, and translates each result further.
-func (db *Database) substitute(e *Entry, rest, spec string, mode Mode, depth int, chain []string, concealed, display string, out *[]FileSpec) error {
+func (db *Database) substitute(e *Entry, rest, spec string, mode Mode, depth int, chain []string, concealed, display, remainder string, out *[]FileSpec) error {
 	if depth >= MaxDepth {
 		return status(vmserrors.SS_TOOMANYLNAM)
 	}
@@ -123,12 +138,12 @@ func (db *Database) substitute(e *Entry, rest, spec string, mode Mode, depth int
 				d = next
 			}
 
-			*out = append(*out, FileSpec{Spec: next, Concealed: c, Display: d})
+			*out = append(*out, FileSpec{Spec: next, Concealed: c, Display: d, Remainder: remainder})
 
 			continue
 		}
 
-		if err := db.translateFileSpec(next, mode, depth+1, chain, c, d, out); err != nil {
+		if err := db.translateFileSpec(next, mode, depth+1, chain, c, d, remainder, out); err != nil {
 			return err
 		}
 	}

@@ -1,7 +1,11 @@
 package console
 
 import (
+	"strings"
+
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -63,7 +67,17 @@ import (
 // status code is, so this reads the same state MountTable.Mount would
 // have consulted internally, and reports the precise, correct status
 // itself instead of guessing from a string.
+//
+// device may be a logical name ("DISK:") and is translated first; a
+// leading "_" suppresses that (docs/PHASE-25.md). Once mounted, the
+// volume's label is defined as the logical name DISK$label in the system
+// table, as VMS's MOUNT does, so DISK$label:[DIR]FILE reaches it.
 func (c *Console) Mount(device, path string, write bool) error {
+	device, err := c.mountDevice(device)
+	if err != nil {
+		return err
+	}
+
 	if _, alreadyMounted := c.Mounts.Lookup(device); alreadyMounted {
 		return vmserrors.New(vmserrors.SS_DEVMOUNT, device)
 	}
@@ -76,7 +90,42 @@ func (c *Console) Mount(device, path string, write bool) error {
 		c.Devices.Define(device, iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
 	}
 
+	if name, ok := c.volumeLogicalName(device); ok {
+		// A label that isn't a usable name just goes without one; the
+		// mount itself has already succeeded.
+		eqv := []lnm.Equivalence{{Value: "_" + device + ":", Attrs: lnm.AttrConcealed | lnm.AttrTerminal}}
+		_, _ = c.Logicals.Define(lnm.SystemTableName, name, lnm.Executive, 0, eqv)
+	}
+
 	return nil
+}
+
+// mountDevice translates a MOUNT/DISMOUNT device argument into the
+// physical device it names.
+func (c *Console) mountDevice(text string) (string, error) {
+	device, err := rms.PhysicalDevice(c.Logicals, text)
+	if err != nil {
+		if lnmErr := logicalNameFailure(err); lnmErr != nil {
+			return "", lnmErr
+		}
+
+		return "", vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, text)
+	}
+
+	return device, nil
+}
+
+// volumeLogicalName returns DISK$label for the volume mounted on device,
+// or false when it has no label.
+func (c *Console) volumeLogicalName(device string) (string, bool) {
+	label, ok := c.Mounts.VolumeLabel(device)
+	label = strings.TrimSpace(label)
+
+	if !ok || label == "" {
+		return "", false
+	}
+
+	return "DISK$" + strings.ToUpper(label), true
 }
 
 // Dismount detaches whatever container is currently mounted on device,
@@ -93,14 +142,40 @@ func (c *Console) Mount(device, path string, write bool) error {
 // not undefined; the device name is still "known", just with nothing
 // attached to it, exactly the state it would be in before the first ever
 // MOUNT.
+//
+// Like Mount, it translates device first, and it deletes the DISK$label
+// logical name Mount defined for the volume.
 func (c *Console) Dismount(device string) error {
+	device, err := c.mountDevice(device)
+	if err != nil {
+		return err
+	}
+
 	if _, mounted := c.Mounts.Lookup(device); !mounted {
 		return vmserrors.New(vmserrors.SS_DEVNOTMOUNT, device)
 	}
+
+	name, labeled := c.volumeLogicalName(device)
 
 	if err := c.Mounts.Dismount(device); err != nil {
 		return vmserrors.Wrap(vmserrors.SS_NOMOUNT, err, device)
 	}
 
+	if labeled {
+		c.deleteVolumeLogicalName(name, device)
+	}
+
 	return nil
+}
+
+// deleteVolumeLogicalName deletes name from the system table if it still
+// names device (another volume with the same label may have replaced
+// it since).
+func (c *Console) deleteVolumeLogicalName(name, device string) {
+	e, err := c.Logicals.Translate(lnm.SystemTableName, name, lnm.Executive, 0)
+	if err != nil || e.Mode != lnm.Executive || e.Equivalences[0].Value != "_"+device+":" {
+		return
+	}
+
+	_, _ = c.Logicals.Delete(lnm.SystemTableName, name, lnm.Executive)
 }

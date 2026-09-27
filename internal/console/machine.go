@@ -225,8 +225,19 @@ func New(out io.Writer) *Console {
 	}
 
 	c.Logicals.Trace = c.traceLogicals
+	c.ContainerSession.Logicals = c.Logicals
 
 	return c
+}
+
+// newRTL returns a fresh RTL environment for the current CPU and memory,
+// sharing the console's devices, logical names, mounts, and session (so
+// a program's RMS calls see SET DEFAULT's default directory).
+func (c *Console) newRTL() *rtl.Environment {
+	env := rtl.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.Mounts, c.In, c.Out)
+	env.Session = c.ContainerSession
+
+	return env
 }
 
 // Initialized reports whether an INIT command has allocated a machine yet

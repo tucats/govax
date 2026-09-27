@@ -91,39 +91,53 @@ func (e *NotFoundError) Error() string {
 // Matching real VMS (and ods2's own DeleteFile/cmdDelete), this only
 // supports a single-device volume -- not expected to matter in practice,
 // since this project's MountTable never mounts a multi-device volume set.
+//
+// A search list deletes the matching files in each of its elements
+// (User's Manual §11.7.1); it's an error only if none of them has any.
 func (s *Session) Delete(specText string) (deleted []DeletedFile, err error) {
-	vol, spec, err := s.resolveVolume(specText)
+	err = s.eachSpec(specText, func(vol *volume.Volume, r resolvedSpec) error {
+		files, err := deleteOnVolume(vol, r.Spec, specText)
+		deleted = append(deleted, files...)
+
+		return err
+	})
 	if err != nil {
-		return nil, fmt.Errorf("delete: %w", err)
+		return deleted, fmt.Errorf("delete: %w", err)
 	}
 
+	return deleted, nil
+}
+
+// deleteOnVolume is Delete for one resolved spec on one volume, returning
+// the files it removed (even when it fails partway).
+func deleteOnVolume(vol *volume.Volume, spec filespec.Spec, specText string) (deleted []DeletedFile, err error) {
 	if spec.Version == "" {
-		return nil, fmt.Errorf("delete: %w", &VersionRequiredError{Spec: specText})
+		return nil, &VersionRequiredError{Spec: specText}
 	}
 
 	if len(vol.Devices) != 1 {
-		return nil, fmt.Errorf("delete: %s is a %d-device volume set; DELETE only supports a single-device volume", spec.Device, len(vol.Devices))
+		return nil, fmt.Errorf("%s is a %d-device volume set; DELETE only supports a single-device volume", spec.Device, len(vol.Devices))
 	}
 
 	matches, err := filespec.Glob(vol, spec)
 	if err != nil {
-		return nil, fmt.Errorf("delete: %w", err)
+		return nil, err
 	}
 
 	if len(matches) == 0 {
-		return nil, fmt.Errorf("delete: %w", &NotFoundError{Spec: specText})
+		return nil, &NotFoundError{Spec: specText}
 	}
 
 	dev := vol.Devices[0]
 
 	bm, err := dev.Bitmap()
 	if err != nil {
-		return nil, fmt.Errorf("delete: %w", err)
+		return nil, err
 	}
 
 	ib, err := dev.IndexBitmap()
 	if err != nil {
-		return nil, fmt.Errorf("delete: %w", err)
+		return nil, err
 	}
 
 	// Flushed once, however this function returns (success, or an error
@@ -136,25 +150,25 @@ func (s *Session) Delete(specText string) (deleted []DeletedFile, err error) {
 	// fail for its own reason.
 	defer func() {
 		if flushErr := bm.Flush(); flushErr != nil && err == nil {
-			err = fmt.Errorf("delete: %w", flushErr)
+			err = flushErr
 		}
 
 		if flushErr := ib.Flush(); flushErr != nil && err == nil {
-			err = fmt.Errorf("delete: %w", flushErr)
+			err = flushErr
 		}
 	}()
 
 	for _, group := range groupMatchesByDir(matches) {
 		dir, dirErr := filespec.ResolveDirectory(vol, group.dirs)
 		if dirErr != nil {
-			return deleted, fmt.Errorf("delete: %w", dirErr)
+			return deleted, dirErr
 		}
 
 		for _, m := range group.matches {
 			fullName := m.Name + "." + m.Type
 
 			if delErr := volume.DeleteFile(dir, fullName, m.Version, bm, ib); delErr != nil {
-				return deleted, fmt.Errorf("delete: %w", delErr)
+				return deleted, delErr
 			}
 
 			deleted = append(deleted, DeletedFile{Name: m.Name, Type: m.Type, Version: m.Version})

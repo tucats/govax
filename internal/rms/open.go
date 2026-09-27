@@ -56,30 +56,36 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
-	// See create.go's own SysCreate for why a file spec that is itself a
-	// defined logical name gets translated before being parsed.
-	fn = ctx.translateWholeSpec(fn)
-
-	spec, err := filespec.Parse(fn, filespec.Spec{})
-	if err != nil {
-		return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsFileNotFound)
+	// See SysCreate for how the spec is translated and defaulted. A
+	// search list opens the first element's file that exists; if none
+	// does, the status for the last element tried is returned (User's
+	// Manual §11.7).
+	specs, failStatus := ctx.resolveFileSpec(fn)
+	if failStatus != 0 {
+		return storeStatus(ctx, fabAddr, fabSTS, fabSTV, failStatus)
 	}
 
 	var ifi uint16
 
-	if normalizeDeviceName(spec.Device) == consoleDeviceName {
-		ifi = ctx.Files.Alloc(&FileHandle{Console: ctx.Console})
-	} else {
-		newIFI, failStatus, err := openOnVolume(ctx, fac, spec)
+	for _, r := range specs {
+		if normalizeDeviceName(r.Spec.Device) == consoleDeviceName {
+			ifi, failStatus = ctx.Files.Alloc(&FileHandle{Console: ctx.Console}), 0
+
+			break
+		}
+
+		ifi, failStatus, err = openOnVolume(ctx, fac, r.Spec)
 		if err != nil {
 			return 0, err
 		}
 
-		if failStatus != 0 {
-			return storeStatus(ctx, fabAddr, fabSTS, fabSTV, failStatus)
+		if failStatus != rmsFileNotFound && failStatus != rmsDeviceNotReady {
+			break
 		}
+	}
 
-		ifi = newIFI
+	if failStatus != 0 {
+		return storeStatus(ctx, fabAddr, fabSTS, fabSTV, failStatus)
 	}
 
 	if err := ctx.storeWord(fabAddr+fabIFI, ifi); err != nil {

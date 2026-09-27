@@ -2,7 +2,6 @@ package console
 
 import (
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/rtl"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -126,7 +125,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// page tables, matching console_vminit_dcl's own initial zero pass.
 	c.Mem = vm.NewMemory(c.Mem.Size())
 	c.Engine = cpu.NewEngine(c.CPU, c.Mem)
-	c.RTL = rtl.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.Mounts, c.In, c.Out)
+	c.RTL = c.newRTL()
 
 	c.Engine.SetSystemServices(c)
 	c.CPU.SetPR(vax.MAPEN, 0)

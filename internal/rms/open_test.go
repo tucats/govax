@@ -480,3 +480,96 @@ func TestSysOpen_logicalNameTranslation(t *testing.T) {
 		t.Fatal("logical-name-translated spec did not resolve to the console handle")
 	}
 }
+
+// TestSysOpen_translationAndSearchLists covers docs/PHASE-25.md subtask
+// 7's file-spec translation in SYS$OPEN: the leftmost component is
+// translated, SYS$DISK supplies a missing device, a search list opens the
+// first element that has the file (or reports the last element's
+// status), and an untranslatable name is RMS$_LNE.
+func TestSysOpen_translationAndSearchLists(t *testing.T) {
+	f := newCreateFixture(t, true)
+	createAndCloseTestFile(t, f.ctx, "HERE.DAT", []byte("hello"))
+
+	db := f.ctx.Logicals
+	defineTestLogical(t, db, "D", "DUA0:")
+	defineTestLogical(t, db, "LIST", "DUA0:[NOSUCHDIR]", "DUA0:")
+	defineTestLogical(t, db, "GAP", "DUA9:", "D:")
+	defineTestLogical(t, db, "NONE", "DUA0:[NOSUCHDIR]", "DUA9:")
+	defineTestLogical(t, db, "LOOP1", "LOOP2:")
+	defineTestLogical(t, db, "LOOP2", "LOOP1:")
+
+	tests := []struct {
+		spec string
+		want uint32
+	}{
+		{"D:HERE.DAT", rmsNormal},
+		{"LIST:HERE.DAT", rmsNormal},
+		{"GAP:HERE.DAT", rmsNormal},
+		{"LIST:NOSUCH.DAT", rmsFileNotFound},
+		{"NONE:HERE.DAT", rmsDeviceNotReady},
+		{"LOOP1:HERE.DAT", rmsLogicalNameError},
+		{"HERE.DAT", rmsDeviceNotReady}, // no SYS$DISK yet
+	}
+
+	check := func(spec string, want uint32) {
+		t.Helper()
+
+		newFAB(t, f.ctx, spec)
+		putByte(t, f.ctx, testFabAddr+fabFAC, facGet)
+
+		r0, err := SysOpen(f.ctx, []uint32{testFabAddr})
+		if err != nil {
+			t.Fatalf("SysOpen(%s): %v", spec, err)
+		}
+
+		if r0 != want {
+			t.Errorf("SysOpen(%s) = %#x, want %#x", spec, r0, want)
+		}
+
+		if r0 == rmsNormal {
+			if _, err := SysClose(f.ctx, []uint32{testFabAddr}); err != nil {
+				t.Fatalf("SysClose: %v", err)
+			}
+		}
+	}
+
+	for _, tt := range tests {
+		check(tt.spec, tt.want)
+	}
+
+	defineTestLogical(t, db, "SYS$DISK", "DUA0:")
+	check("HERE.DAT", rmsNormal)
+}
+
+// TestSysCreate_searchListUsesFirstElement: $CREATE puts the file in a
+// search list's first element, even when that fails.
+func TestSysCreate_searchListUsesFirstElement(t *testing.T) {
+	f := newCreateFixture(t, true)
+	defineTestLogical(t, f.ctx.Logicals, "GOOD", "DUA0:", "DUA9:")
+	defineTestLogical(t, f.ctx.Logicals, "BAD", "DUA9:", "DUA0:")
+
+	for _, tt := range []struct {
+		spec string
+		want uint32
+	}{
+		{"GOOD:NEW.DAT", rmsCreated},
+		{"BAD:NEW.DAT", rmsDeviceNotReady},
+	} {
+		newFAB(t, f.ctx, tt.spec)
+
+		r0, err := SysCreate(f.ctx, []uint32{testFabAddr})
+		if err != nil {
+			t.Fatalf("SysCreate(%s): %v", tt.spec, err)
+		}
+
+		if r0 != tt.want {
+			t.Errorf("SysCreate(%s) = %#x, want %#x", tt.spec, r0, tt.want)
+		}
+
+		if r0 == rmsCreated {
+			if _, err := SysClose(f.ctx, []uint32{testFabAddr}); err != nil {
+				t.Fatalf("SysClose: %v", err)
+			}
+		}
+	}
+}

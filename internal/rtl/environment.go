@@ -37,6 +37,11 @@ type Environment struct {
 	Devices  *iodev.DeviceTable
 	Logicals *lnm.Database
 
+	// Session is the console's rms.Session, whose default directory
+	// SYS$CREATE/SYS$OPEN resolve a spec in (docs/PHASE-25.md); nil means
+	// the master file directory.
+	Session *rms.Session
+
 	// Mounts is docs/PHASE-22.md's device-name -> mounted-ODS-2-volume
 	// table (internal/rms.MountTable), injected the same way Devices/
 	// Logicals are: it's owned by internal/console's Console (constructed
@@ -164,6 +169,7 @@ func (env *Environment) rmsContext() *rms.Context {
 		Mounts:   env.Mounts,
 		Files:    env.files,
 		Logicals: env.Logicals,
+		Session:  env.Session,
 		Console:  env.consoleOut,
 	}
 }

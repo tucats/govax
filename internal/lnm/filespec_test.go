@@ -197,7 +197,7 @@ func TestTranslateFileSpec_concealed(t *testing.T) {
 			t.Fatalf("TranslateFileSpec(%q) = %v, want one result", tt.spec, fs)
 		}
 
-		want := FileSpec{Spec: tt.wantSpec, Concealed: tt.wantConcealed, Display: tt.wantDisplay}
+		want := FileSpec{Spec: tt.wantSpec, Concealed: tt.wantConcealed, Display: tt.wantDisplay, Remainder: tt.spec[strings.IndexByte(tt.spec, ':')+1:]}
 		if fs[0] != want {
 			t.Errorf("TranslateFileSpec(%q) = %+v, want %+v", tt.spec, fs[0], want)
 		}
@@ -276,5 +276,38 @@ func TestTranslateFileSpec_fileDevGone(t *testing.T) {
 	// A spec with no candidate never looks anything up.
 	if got := specs(mustTranslateFileSpec(t, db, "[X]Y")); got != "[X]Y" {
 		t.Errorf("got %q", got)
+	}
+}
+
+func TestTranslateFileSpec_remainder(t *testing.T) {
+	db := NewDatabase(testUIC)
+	mustDefine(t, db, "LNM$PROCESS", "DISK", Supervisor, "DUA1:")
+	mustDefine(t, db, "LNM$PROCESS", "MEMO", Supervisor, "DISK:[JEFF.MEMOS]COMPLAINT.TXT")
+	mustDefine(t, db, "LNM$PROCESS", "PAY_FILE", Supervisor, "DISK1:[SALES_STAFF]PAYROLL")
+	mustDefine(t, db, "LNM$PROCESS", "LIST", Supervisor, "DISK:[A]", "[B]")
+
+	tests := []struct{ spec, want string }{
+		{"PAY_FILE:*.DAT", "*.DAT"},
+		{"MEMO", ""},
+		{"DISK:[X]Y.Z", "[X]Y.Z"},
+		{"LIST:F.DAT", "F.DAT|F.DAT"},
+		{"UNDEFINED:F.DAT", "UNDEFINED:F.DAT"},
+		{"[X]Y.Z", "[X]Y.Z"},
+	}
+
+	for _, tt := range tests {
+		var got []string
+
+		for _, f := range mustTranslateFileSpec(t, db, tt.spec) {
+			if !strings.HasSuffix(f.Spec, f.Remainder) {
+				t.Errorf("%q: Remainder %q isn't a suffix of Spec %q", tt.spec, f.Remainder, f.Spec)
+			}
+
+			got = append(got, f.Remainder)
+		}
+
+		if g := strings.Join(got, "|"); g != tt.want {
+			t.Errorf("TranslateFileSpec(%q) remainders = %q, want %q", tt.spec, g, tt.want)
+		}
 	}
 }

@@ -47,6 +47,10 @@ import (
 func (c *Console) Purge(specText string, keep uint16) error {
 	purged, err := c.ContainerSession.Purge(specText, keep)
 	if err != nil {
+		if lnmErr := logicalNameFailure(err); lnmErr != nil {
+			return lnmErr
+		}
+
 		var notMounted *rms.NotMountedError
 		if errors.As(err, &notMounted) {
 			return vmserrors.Wrap(vmserrors.SS_DEVNOTMOUNT, err, notMounted.Device)

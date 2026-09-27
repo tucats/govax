@@ -31,6 +31,10 @@ import "github.com/tucats/govax/internal/vmserrors"
 // CLI_BADRADIXVAL, SET MODE's CLI_BADMODE — see dispatch.go's cmdSet).
 func (c *Console) SetDefault(text string) error {
 	if err := c.ContainerSession.SetDefault(text); err != nil {
+		if lnmErr := logicalNameFailure(err); lnmErr != nil {
+			return lnmErr
+		}
+
 		return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, text)
 	}
 
@@ -38,7 +42,8 @@ func (c *Console) SetDefault(text string) error {
 }
 
 // ShowDefault prints the operator's current default device/directory,
-// matching real VMS's own SHOW DEFAULT. It never fails — see
+// matching real VMS's own SHOW DEFAULT (with a "=" line per element when
+// the default device is a search list). It never fails — see
 // internal/rms.Session.DefaultString's own doc comment on why there's
 // always something displayable, even before any SET DEFAULT has run.
 func (c *Console) ShowDefault() error {

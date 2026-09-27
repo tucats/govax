@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/tucats/ods2/filespec"
+	"github.com/tucats/ods2/volume"
 )
 
 // This file implements docs/PHASE-23.md subtask 8: TYPE, the operator-
@@ -51,33 +52,32 @@ func (e *AmbiguousError) Error() string {
 // fails with a *NotFoundError, the same failure Session.Delete already
 // reports this way.
 func (s *Session) Type(specText string) (string, error) {
-	vol, spec, err := s.resolveVolume(specText)
-	if err != nil {
-		return "", fmt.Errorf("type: %w", err)
-	}
-
-	matches, err := filespec.Glob(vol, spec)
-	if err != nil {
-		return "", fmt.Errorf("type: %w", err)
-	}
-
-	switch len(matches) {
-	case 0:
-		return "", fmt.Errorf("type: %w", &NotFoundError{Spec: specText})
-	case 1:
-		// Exactly one match -- proceed.
-	default:
-		return "", fmt.Errorf("type: %w", &AmbiguousError{Spec: specText, Count: len(matches)})
-	}
-
-	f, err := vol.OpenFID(matches[0].Fid)
-	if err != nil {
-		return "", fmt.Errorf("type: %w", err)
-	}
-
 	var buf bytes.Buffer
 
-	if err := writeRecords(&buf, f, lfLineEnding); err != nil {
+	// A search list types the first file found (User's Manual §11.7).
+	err := s.firstSpec(specText, func(vol *volume.Volume, r resolvedSpec) error {
+		matches, err := filespec.Glob(vol, r.Spec)
+		if err != nil {
+			return err
+		}
+
+		switch len(matches) {
+		case 0:
+			return &NotFoundError{Spec: specText}
+		case 1:
+			// Exactly one match -- proceed.
+		default:
+			return &AmbiguousError{Spec: specText, Count: len(matches)}
+		}
+
+		f, err := vol.OpenFID(matches[0].Fid)
+		if err != nil {
+			return err
+		}
+
+		return writeRecords(&buf, f, lfLineEnding)
+	})
+	if err != nil {
 		return "", fmt.Errorf("type: %w", err)
 	}
 

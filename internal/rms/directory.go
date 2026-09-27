@@ -66,16 +66,6 @@ func (s *Session) Directory(specText string, opts DirectoryOptions) (string, err
 		specText = "*.*;*"
 	}
 
-	vol, spec, err := s.resolveVolume(specText)
-	if err != nil {
-		return "", fmt.Errorf("directory: %w", err)
-	}
-
-	matches, err := filespec.Glob(vol, spec)
-	if err != nil {
-		return "", fmt.Errorf("directory: %w", err)
-	}
-
 	showFile := opts.Full || opts.File
 	showSize := opts.Full || opts.Size
 	showDate := opts.Full || opts.Date
@@ -86,20 +76,34 @@ func (s *Session) Directory(specText string, opts DirectoryOptions) (string, err
 
 	var totalBlocks uint32
 
-	for _, group := range groupMatchesByDir(matches) {
-		fmt.Fprintf(&b, "\nDirectory %s:[%s]\n\n", spec.Device, strings.Join(group.dirs, "."))
-
-		for _, m := range group.matches {
-			line, blocks, err := formatDirectoryEntry(vol, m, showFile, showSize, showDate, opts.Full)
-			if err != nil {
-				return "", fmt.Errorf("directory: %w", err)
-			}
-
-			fmt.Fprintln(&b, line)
-
-			totalFiles++
-			totalBlocks += blocks
+	// A search list lists each of its elements in turn (User's Manual
+	// §11.7.1), under that element's own "Directory" headers.
+	err := s.eachSpec(specText, func(vol *volume.Volume, r resolvedSpec) error {
+		matches, err := filespec.Glob(vol, r.Spec)
+		if err != nil {
+			return err
 		}
+
+		for _, group := range groupMatchesByDir(matches) {
+			fmt.Fprintf(&b, "\nDirectory %s:[%s]\n\n", r.Display, strings.Join(group.dirs, "."))
+
+			for _, m := range group.matches {
+				line, blocks, err := formatDirectoryEntry(vol, m, showFile, showSize, showDate, opts.Full)
+				if err != nil {
+					return err
+				}
+
+				fmt.Fprintln(&b, line)
+
+				totalFiles++
+				totalBlocks += blocks
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return "", fmt.Errorf("directory: %w", err)
 	}
 
 	fmt.Fprintf(&b, "\nTotal of %d file(s)", totalFiles)

@@ -145,6 +145,11 @@ var (
 	// fails for a reason this package's handlers can't map onto any
 	// more specific RMS$_ value above.
 	rmsSystemError = vmsConst("RMS$_SYS")
+
+	// rmsLogicalNameError is RMS$_LNE: the file specification's logical
+	// names couldn't be translated — a circular definition, or more than
+	// lnm.MaxDepth levels (docs/PHASE-25.md).
+	rmsLogicalNameError = vmsConst("RMS$_LNE")
 )
 
 // storeStatus writes sts into both of a control block's status fields —

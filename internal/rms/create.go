@@ -52,20 +52,15 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
-	// A file spec that is itself a defined logical name (for instance
-	// "SYS$OUTPUT") is translated to what it actually points at before
-	// being parsed as a device/file spec, matching real RMS's own
-	// logical-name translation.
-	fn = ctx.translateWholeSpec(fn)
-
-	spec, err := filespec.Parse(fn, filespec.Spec{})
-	if err != nil {
-		// A file specification RMS can't even parse (mismatched
-		// brackets, and so on) has no file to find, so it's reported
-		// the same way a well-formed spec naming a file that genuinely
-		// doesn't exist would be.
-		return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsFileNotFound)
+	// The spec's logical names are translated ("SYS$OUTPUT" becomes the
+	// console terminal) and the default device and directory applied.
+	// A search list creates the file in its first element, as RMS does.
+	specs, failStatus := ctx.resolveFileSpec(fn)
+	if failStatus != 0 {
+		return storeStatus(ctx, fabAddr, fabSTS, fabSTV, failStatus)
 	}
+
+	spec := specs[0].Spec
 
 	var (
 		ifi     uint16

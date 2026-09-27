@@ -84,6 +84,10 @@ import (
 func (c *Console) Copy(sourceText string, sourceHost bool, destText string, destHost bool, opts rms.CopyOptions) error {
 	results, err := c.ContainerSession.Copy(sourceText, sourceHost, destText, destHost, opts)
 	if err != nil {
+		if lnmErr := logicalNameFailure(err); lnmErr != nil {
+			return lnmErr
+		}
+
 		var notMounted *rms.NotMountedError
 		if errors.As(err, &notMounted) {
 			return vmserrors.Wrap(vmserrors.SS_DEVNOTMOUNT, err, notMounted.Device)

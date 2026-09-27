@@ -39,7 +39,7 @@ facility that the console, RMS, and the RTL/system-service layer all share:
 
   All of them work on the same shared data the console uses.
 
-**Status: in progress — subtasks 1-6 of 9 done.**
+**Status: in progress — subtasks 1-7 of 9 done.**
 
 ## Why this phase looks different
 
@@ -258,8 +258,9 @@ separate:
      physical device (for example SHOW DEFAULT, DIRECTORY headers). This is why
      the return value is a small struct, not a bare string: `lnm.FileSpec`
      has `Spec` (fully translated), `Concealed` (the outermost concealed name
-     in the chain), and `Display` (the text at the point that name was about
-     to be translated).
+     in the chain), `Display` (the text at the point that name was about
+     to be translated), and `Remainder` (the caller's text after the
+     translated name, added in subtask 7 for RMS's field precedence).
 
    The package only rewrites text. Parsing and applying defaults
    (`filespec.Parse` with the session default) stays in `internal/rms`, which
@@ -464,7 +465,7 @@ the process default directory. RMS then gets its default device by translating
    - Remove the eVAX-only `DEFINE/LOGICAL` syntax and the `SHOW
      LOGICAL_NAMES` keyword; `SHOW LOGICAL` is the VMS form (open question 4).
    - Update `internal/bootdata/files/vax.help` to describe the VMS syntax only.
-7. **RMS file-spec translation.**
+7. **Done.** **RMS file-spec translation.**
    - `$OPEN`/`$CREATE`, and the `Session` commands DIRECTORY/TYPE/COPY/
      DELETE/PURGE/SET DEFAULT/MOUNT, go through `TranslateFileSpec`.
    - Search lists work for `$OPEN` (first file found) and for wildcard
@@ -927,3 +928,84 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
   §11.10.1's TAX, §11.10.2's NEWTAB, and §11.12's table deletion. The DCL
   tests that used `DEFINE/LOGICAL` were changed to the VMS form. `go test
   ./...` passes except for the pre-existing `TestAssembleForth`.
+
+### 2026-09-27 — Subtask 7: RMS file-spec translation
+
+- **Field precedence** (the open point from subtask 3). `lnm.FileSpec`
+  gained `Remainder`. The new `internal/rms/logicals.go` resolves a spec in
+  three layers, as RMS does:
+  1. the fields written after the logical name
+  2. the translation's fields
+  3. the defaults: `SYS$DISK` and the default directory
+
+  So `PAY_FILE:*.DAT` is `DISK1:[SALES_STAFF]*.DAT`, and a `FIFI` element
+  `DISK1:[FRED]` beats the default directory while `DISK3:` takes it
+  (§11.7.2). A `...` recursion in the translation is kept, since
+  `filespec.Parse` doesn't carry that flag across a default.
+- **`expandSpec`** returns every resolved spec in search order. A search
+  list in the spec fans out. A spec with no device fans out over
+  `SYS$DISK`'s elements, which may themselves be a search list, and one
+  with a device keeps only the default directory. A leading `_` is removed
+  from the resolved device. A concealed name is kept for display.
+- **Session commands:**
+  - `eachSpec` is used by DIRECTORY, DELETE, and PURGE. It visits every
+    element and fails only if none succeeded, reporting the last "not
+    found"/"not mounted".
+  - `firstSpec` is used by TYPE: the first file found wins.
+  - `resolveVolume`, still used by COPY for both source and destination,
+    takes the first element.
+  - DELETE and PURGE were split into per-volume `deleteOnVolume`/
+    `purgeOnVolume` helpers for this. DIRECTORY headers show the concealed
+    name (`Directory DISK$WORKB:[]`).
+- **SET DEFAULT / SYS$DISK.**
+  - `Session.SetDefault` writes the device to `SYS$DISK` (process table,
+    supervisor mode) and keeps `Default.Device` empty. A plain device
+    logical is translated (`WORK:` becomes `DUA1:[TOM]`), and a concealed
+    one is kept.
+  - A search list stores its name untranslated and leaves the directory
+    unchanged. `DefaultString` then adds a `=   DEVICE:[DIR]` line per
+    element, which is §11.7.2's FIFI output.
+  - `Session` now has its own `Logicals`: a private database from
+    `NewSession`, replaced by the console's shared one.
+- **System services.**
+  - `$CREATE` uses the first element. `$OPEN` tries each element until
+    one opens, stopping on anything other than `RMS$_FNF`/`RMS$_DNR`, and
+    otherwise returns the last element's status.
+  - A logical-name failure is `RMS$_LNE` (new `rmsLogicalNameError`); an
+    unparseable spec is still `RMS$_FNF`.
+  - A spec with no device now gets `SYS$DISK`'s. Before, it always failed
+    with `RMS$_DNR`.
+  - `rms.Context.Session` (set through the new `rtl.Environment.Session`,
+    which the console's new `newRTL` helper fills in) supplies SET
+    DEFAULT's directory.
+- **MOUNT/DISMOUNT.**
+  - Both translate their device argument through `rms.PhysicalDevice`,
+    where `_` suppresses translation.
+  - MOUNT defines `DISK$label` in the system table (executive mode,
+    `[concealed,terminal]`, value `_DUAn:`), per open question 3.
+  - DISMOUNT deletes that name, but only if it still names that device.
+- **Console errors.** A logical-name failure in any file command, SET
+  DEFAULT, or MOUNT/DISMOUNT is reported as `%SYSTEM-F-TOOMANYLNAM`
+  (`logicalNameFailure`), not as a bad file spec.
+- **Help.** MOUNT, DISMOUNT, SET DEFAULT, and SHOW DEFAULT describe the new
+  behavior.
+- **Simplifications to record in subtask 9's DEVIATIONS entries:**
+  - COPY takes a search list's first element for its source, not the first
+    element where the file exists.
+  - DIRECTORY over several directories prints one `Total of` line, with no
+    VMS `Grand total of N directories` line.
+  - `DISK$label` always goes in the system table. VMS uses the job table
+    without `/SYSTEM`, and govax has no job table.
+- **Tests.**
+  - `internal/rms/logicals_test.go`: precedence (PAY_FILE, FIFI,
+    GETTYSBURG, SYS$DISK, `_`, concealed), `RMS$_LNE`, SET DEFAULT with
+    plain, concealed, and search-list logicals, every command over a
+    two-volume search list, a search-list `SYS$DISK`, and `PhysicalDevice`.
+  - `open_test.go`: `$OPEN` over search lists, unmounted elements,
+    `SYS$DISK`, and loops; `$CREATE`'s first-element rule.
+  - `internal/console/logical_rms_test.go`: an end-to-end test through DCL
+    with two real containers (MOUNT's `DISK$label`, COPY, DIRECTORY, TYPE,
+    SET/SHOW DEFAULT with a search list, DELETE, loops, DISMOUNT by
+    logical name, and `_` suppression).
+
+  `go test ./...` passes except for the pre-existing `TestAssembleForth`.

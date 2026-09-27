@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/console/dcl"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/rtl"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -496,6 +497,20 @@ func (c *Console) ShowTranslation(table, name string) error {
 	}
 
 	c.Printf("%s = %q (%s)\n", e.Name, value, e.Table.Name)
+
+	return nil
+}
+
+// logicalNameFailure returns the status carried by err when a file
+// command failed because its spec's logical names couldn't be translated
+// (SS$_TOOMANYLNAM: a circular definition, or too many levels), so it is
+// reported as that rather than as a bad file specification; nil
+// otherwise.
+func logicalNameFailure(err error) error {
+	var lne *rms.LogicalNameError
+	if errors.As(err, &lne) {
+		return lne.Err
+	}
 
 	return nil
 }

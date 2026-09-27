@@ -56,8 +56,15 @@ type Context struct {
 	// specification which is itself a defined logical name (for instance
 	// "SYS$OUTPUT", which the console points at "_TTA0:") is translated
 	// to what it actually names before being parsed as a device/file
-	// spec (see translateWholeSpec).
+	// spec, and so that a spec with no device gets SYS$DISK's (see
+	// logicals.go).
 	Logicals *lnm.Database
+
+	// Session, when set, is the console's Session, whose default
+	// directory a spec with no directory of its own is resolved in (the
+	// process default directory SET DEFAULT establishes). nil means the
+	// master file directory.
+	Session *Session
 
 	// Console is where a file resolved to the terminal pseudo-device
 	// (the TTA0: special case — see fab.go's package doc comment and
@@ -120,24 +127,4 @@ func (ctx *Context) loadFixedString(addr uint32, n int) (string, error) {
 	}
 
 	return string(buf), nil
-}
-
-// translateWholeSpec returns the first equivalence string of fn when fn
-// as a whole is a logical name visible through LNM$FILE_DEV, and fn
-// itself otherwise.
-//
-// This is the whole-string lookup this package has always done;
-// docs/PHASE-25.md's subtask 7 replaces it with lnm's full
-// leftmost-component translation (Database.TranslateFileSpec).
-func (ctx *Context) translateWholeSpec(fn string) string {
-	if ctx.Logicals == nil || fn == "" {
-		return fn
-	}
-
-	e, err := ctx.Logicals.Translate(lnm.FileDevName, fn, lnm.User, 0)
-	if err != nil {
-		return fn
-	}
-
-	return e.Equivalences[0].Value
 }

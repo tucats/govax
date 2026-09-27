@@ -50,6 +50,10 @@ import (
 func (c *Console) Type(specText string) error {
 	text, err := c.ContainerSession.Type(specText)
 	if err != nil {
+		if lnmErr := logicalNameFailure(err); lnmErr != nil {
+			return lnmErr
+		}
+
 		var notMounted *rms.NotMountedError
 		if errors.As(err, &notMounted) {
 			return vmserrors.Wrap(vmserrors.SS_DEVNOTMOUNT, err, notMounted.Device)
