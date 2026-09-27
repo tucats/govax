@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"testing"
 
-	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/ods2/ondisk"
@@ -26,8 +25,7 @@ func newCreateFixture(t *testing.T, writable bool) *createFixture {
 	cpu := vax.New()
 	mem := vm.NewMemory(1 << 20)
 
-	logicals := iodev.NewLogicalNameTable()
-	logicals.InitLogicals()
+	logicals := newTestLogicals(t)
 
 	mounts := NewMountTable()
 	if err := mounts.Mount("DUA0", newTestVolumeFile(t, "TESTVOL"), writable); err != nil {
@@ -371,7 +369,7 @@ func TestSysCreate_directoryNotFound(t *testing.T) {
 // console path TestSysCreate_console exercises directly.
 func TestSysCreate_logicalNameTranslation(t *testing.T) {
 	f := newCreateFixture(t, true)
-	f.ctx.Logicals.Set("LNM$FILE_DEV", "MYOUT", "TTA0:", 0)
+	defineTestLogical(t, f.ctx.Logicals, "MYOUT", "TTA0:")
 	newFAB(t, f.ctx, "MYOUT")
 
 	r0, err := SysCreate(f.ctx, []uint32{testFabAddr})

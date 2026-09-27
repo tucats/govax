@@ -51,9 +51,9 @@ func TestServiceSysAssign(t *testing.T) {
 		t.Errorf("device RefCnt = %d, want 1", c.Device.RefCnt)
 	}
 
-	if c.Device.PID != nominalPID || c.Device.OwnUIC != nominalUIC {
+	if c.Device.PID != nominalPID || c.Device.OwnUIC != NominalUIC {
 		t.Errorf("device PID/UIC = %#x/%#x, want the process stub's own %#x/%#x",
-			c.Device.PID, c.Device.OwnUIC, nominalPID, nominalUIC)
+			c.Device.PID, c.Device.OwnUIC, nominalPID, NominalUIC)
 	}
 }
 

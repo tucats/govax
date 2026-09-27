@@ -51,7 +51,7 @@ print " "
 
 define/device tta0/devclass=term/devtype=vt100/devbufsiz=80
 
-define/logical tt tta0
+; TT and SYS$INPUT/OUTPUT/ERROR/COMMAND are predefined as _TTA0:.
 
 ; If there was a command line argument, assume it is the full text of the
 ; command to run, and do it.  Alternatively, a command could be put on

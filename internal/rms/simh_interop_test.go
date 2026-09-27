@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/ods2/diskimage"
@@ -403,8 +402,7 @@ func TestSimhInterop_writeThenRereadEmptyDsk(t *testing.T) {
 		t.Fatalf("Mount (read/write): %v", err)
 	}
 
-	writeLogicals := iodev.NewLogicalNameTable()
-	writeLogicals.InitLogicals()
+	writeLogicals := newTestLogicals(t)
 
 	writeCtx := &Context{
 		Mem:      vm.NewMemory(1 << 20),
@@ -439,8 +437,7 @@ func TestSimhInterop_writeThenRereadEmptyDsk(t *testing.T) {
 		}
 	}()
 
-	readLogicals := iodev.NewLogicalNameTable()
-	readLogicals.InitLogicals()
+	readLogicals := newTestLogicals(t)
 
 	readCtx := &Context{
 		Mem:      vm.NewMemory(1 << 20),

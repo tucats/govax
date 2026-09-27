@@ -58,9 +58,7 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 
 	// See create.go's own SysCreate for why a file spec that is itself a
 	// defined logical name gets translated before being parsed.
-	if ln, found := ctx.Logicals.Get("LNM$FILE_DEV", fn, 0); found {
-		fn = ln.Value
-	}
+	fn = ctx.translateWholeSpec(fn)
 
 	spec, err := filespec.Parse(fn, filespec.Spec{})
 	if err != nil {

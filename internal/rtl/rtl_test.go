@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
@@ -20,8 +21,10 @@ func fixture() (*Environment, *bytes.Buffer) {
 	cpu := vax.New()
 	mem := vm.NewMemory(1 << 20)
 	devices := iodev.NewDeviceTable()
-	logicals := iodev.NewLogicalNameTable()
-	logicals.InitLogicals()
+	logicals := lnm.NewDatabase(NominalUIC)
+	if err := logicals.DefineProcessNames("_TTA0:"); err != nil {
+		panic(err)
+	}
 	mounts := rms.NewMountTable()
 
 	out := &bytes.Buffer{}

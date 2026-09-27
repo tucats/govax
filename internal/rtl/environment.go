@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
@@ -29,11 +30,12 @@ type Environment struct {
 	shims    *ShimTable
 	services *ServiceTable
 
-	// Devices/Logicals are Phase 09's data structures (internal/io),
+	// Devices is Phase 09's device table (internal/io) and Logicals the
+	// process's logical-name database (internal/lnm, Phase 25), both
 	// injected rather than owned here — the console and this Environment
 	// both need to see the same tables.
 	Devices  *iodev.DeviceTable
-	Logicals *iodev.LogicalNameTable
+	Logicals *lnm.Database
 
 	// Mounts is docs/PHASE-22.md's device-name -> mounted-ODS-2-volume
 	// table (internal/rms.MountTable), injected the same way Devices/
@@ -105,12 +107,14 @@ type Environment struct {
 	nextFID   uint32
 }
 
-// nominalPID/nominalUIC are arbitrary but fixed nonzero values distinguishing
+// nominalPID/NominalUIC are arbitrary but fixed nonzero values distinguishing
 // "a process exists" from the zero value, with no real process-management
-// concept behind them yet.
+// concept behind them yet. NominalUIC is exported so the console can name
+// the logical-name database's group table (LNM$GROUP_gggggg) from the same
+// UIC this Environment reports.
 const (
 	nominalPID = 0x00000301
-	nominalUIC = 0x00010004
+	NominalUIC = 0x00010004
 )
 
 // NewEnvironment returns an Environment for one VAX process, driving mem/cpu
@@ -121,7 +125,7 @@ const (
 // from — typically the console's own input stream. mounts is the shared
 // MountTable a MOUNT command populates (internal/console) — see the Mounts
 // field's own doc comment for why it's injected rather than owned here.
-func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, logicals *iodev.LogicalNameTable, mounts *rms.MountTable, consoleIn io.Reader, consoleOut io.Writer) *Environment {
+func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, logicals *lnm.Database, mounts *rms.MountTable, consoleIn io.Reader, consoleOut io.Writer) *Environment {
 	env := &Environment{
 		mem:        mem,
 		cpu:        cpu,
@@ -132,7 +136,7 @@ func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, lo
 		Mounts:     mounts,
 		files:      rms.NewFileTable(consoleOut),
 		pid:        nominalPID,
-		uic:        nominalUIC,
+		uic:        NominalUIC,
 		consoleIn:  consoleIn,
 		consoleOut: consoleOut,
 		openFiles:  map[uint32]*os.File{},

@@ -44,7 +44,7 @@ type mountedVolume struct {
 // doc comment on why Environment is one-per-process), so nothing here
 // needs to guard against two goroutines calling Mount/Dismount at the
 // same time. This matches every other shared table this project already
-// has (internal/io's DeviceTable and LogicalNameTable are likewise
+// has (internal/io's DeviceTable and internal/lnm's Database are likewise
 // unsynchronized plain Go maps).
 type MountTable struct {
 	// mounts is keyed by normalized device name (see normalizeDeviceName)
@@ -57,9 +57,10 @@ func NewMountTable() *MountTable {
 	return &MountTable{mounts: map[string]*mountedVolume{}}
 }
 
-// normalizeDeviceName upper-cases name and strips one trailing ':', so
-// that "DUA0", "DUA0:", and "dua0:" — all valid ways to write the same
-// VMS device name — produce the same map key.
+// normalizeDeviceName upper-cases name and strips one trailing ':' and
+// the leading '_' that marks a physical device name, so that "DUA0",
+// "DUA0:", "_DUA0:", and "dua0:" — all valid ways to write the same VMS
+// device name — produce the same map key.
 //
 // internal/io's own DeviceTable has an unexported helper doing exactly
 // this same two-line job; it isn't reused here because this package
@@ -70,7 +71,7 @@ func NewMountTable() *MountTable {
 // regardless. Duplicating two lines is simpler than restructuring package
 // boundaries just to share them.
 func normalizeDeviceName(name string) string {
-	return strings.ToUpper(strings.TrimSuffix(name, ":"))
+	return strings.ToUpper(strings.TrimPrefix(strings.TrimSuffix(name, ":"), "_"))
 }
 
 // Mount opens the container file at path and mounts it as an ODS-2 volume

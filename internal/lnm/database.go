@@ -281,3 +281,26 @@ func (db *Database) Translate(tabnam, lognam string, mode Mode, attr uint32) (*E
 
 	return nil, status(vmserrors.SS_NOLOGNAM)
 }
+
+// DefineProcessNames defines the process-permanent names VMS's LOGINOUT
+// gives an interactive process, all equated to its terminal, the
+// physical device name terminal (for example "_TTA0:"):
+//
+//	SYS$INPUT, SYS$OUTPUT, SYS$ERROR, SYS$COMMAND   executive mode, TERMINAL
+//	TT                                              supervisor mode
+//
+// All go in the process table. Real VMS prefixes the SYS$ names'
+// equivalence strings with a hidden 4-byte ESC/IFI header naming the
+// process-permanent file; govax doesn't.
+func (db *Database) DefineProcessNames(terminal string) error {
+	for _, name := range []string{"SYS$INPUT", "SYS$OUTPUT", "SYS$ERROR", "SYS$COMMAND"} {
+		eqv := []Equivalence{{Value: terminal, Attrs: AttrTerminal}}
+		if _, err := db.Define(ProcessTableName, name, Executive, 0, eqv); err != nil {
+			return err
+		}
+	}
+
+	_, err := db.Define(ProcessTableName, "TT", Supervisor, 0, []Equivalence{{Value: terminal}})
+
+	return err
+}

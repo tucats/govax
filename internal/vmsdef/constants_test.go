@@ -7,8 +7,8 @@ import (
 
 // TestLNMConstants_values pins the $LNMDEF values docs/PHASE-25.md's
 // logical-name design depends on. Besides lnmdef.sdl itself, the attribute
-// bits and item codes agree with what internal/rtl/logicals.go and
-// internal/io/logical.go already used before this table existed.
+// bits and item codes agree with what internal/rtl/logicals.go and the
+// since-deleted internal/io/logical.go used before this table existed.
 func TestLNMConstants_values(t *testing.T) {
 	want := map[string]uint32{
 		// Logical name attributes (byte 0).

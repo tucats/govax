@@ -711,3 +711,26 @@ func TestMode_String(t *testing.T) {
 		}
 	}
 }
+
+func TestDefineProcessNames(t *testing.T) {
+	db := NewDatabase(testUIC)
+	if err := db.DefineProcessNames("_TTA0:"); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, name := range []string{"SYS$INPUT", "SYS$OUTPUT", "SYS$ERROR", "SYS$COMMAND", "TT"} {
+		e := mustTranslate(t, db, "LNM$FILE_DEV", name)
+		if e.Table.Name != ProcessTableName || e.Equivalences[0].Value != "_TTA0:" {
+			t.Errorf("%s = %+v in %s", name, e.Equivalences, e.Table.Name)
+		}
+
+		wantMode, wantAttrs := Executive, AttrTerminal
+		if name == "TT" {
+			wantMode, wantAttrs = Supervisor, 0
+		}
+
+		if e.Mode != wantMode || e.Equivalences[0].Attrs != wantAttrs {
+			t.Errorf("%s: mode %s attrs %#x, want %s %#x", name, e.Mode, e.Equivalences[0].Attrs, wantMode, wantAttrs)
+		}
+	}
+}

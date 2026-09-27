@@ -7,6 +7,7 @@ import (
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/cpu"
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/rtl"
@@ -76,15 +77,15 @@ type Console struct {
 	// doc comment in show.go).
 	Regions [3]vmRegion
 
-	// Devices/Logicals are Phase 09's device-abstraction/logical-name-table
-	// state (internal/io) — separate from the vax_init-gated machine state
-	// above, matching the C source's own devices/tables globals, which
-	// exist independent of alloc_vax and are never reset by ZERO. Logicals
-	// is seeded with the default tables at construction (see New), matching
-	// init_symbols.c's init_system_symbols calling init_logicals once as
-	// part of one-time process startup rather than per-INIT.
+	// Devices is Phase 09's device table (internal/io) and Logicals the
+	// process's logical-name database (internal/lnm, Phase 25) — separate
+	// from the vax_init-gated machine state above, matching the C source's
+	// own devices/tables globals, which exist independent of alloc_vax and
+	// are never reset by ZERO. Logicals is built once, in New, with the
+	// standard VMS tables and the process-permanent terminal names, the
+	// way a VMS process gets them at login rather than per-INIT.
 	Devices  *iodev.DeviceTable
-	Logicals *iodev.LogicalNameTable
+	Logicals *lnm.Database
 
 	// Mounts is docs/PHASE-22.md's device-name -> mounted-ODS-2-volume
 	// table (internal/rms.MountTable): which VAX device names currently
@@ -210,21 +211,22 @@ type Console struct {
 // C source's terms) — an INIT command (see init.go) must run before most
 // other commands will accept.
 func New(out io.Writer) *Console {
-	logicals := iodev.NewLogicalNameTable()
-	logicals.InitLogicals()
-
 	mounts := rms.NewMountTable()
 
-	return &Console{
+	c := &Console{
 		Symbols:          NewSymbolTable(),
 		Radix:            16,   // alloc_vax's own default
 		Verbose:          true, // initialization.c's own vax.console.flags = CONSOLE_EXPAND | CONSOLE_VERBOSE default
 		Out:              out,
 		Devices:          iodev.NewDeviceTable(),
-		Logicals:         logicals,
+		Logicals:         newLogicals(),
 		Mounts:           mounts,
 		ContainerSession: rms.NewSession(mounts),
 	}
+
+	c.Logicals.Trace = c.traceLogicals
+
+	return c
 }
 
 // Initialized reports whether an INIT command has allocated a machine yet

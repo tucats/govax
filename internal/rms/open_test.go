@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"testing"
 
-	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/ods2/ondisk"
@@ -114,8 +113,7 @@ func newReadOnlyFixtureWithFile(t *testing.T, writable bool, name string, record
 		t.Fatalf("Mount: %v", err)
 	}
 
-	logicals := iodev.NewLogicalNameTable()
-	logicals.InitLogicals()
+	logicals := newTestLogicals(t)
 
 	console := &bytes.Buffer{}
 
@@ -462,7 +460,7 @@ func TestSysOpen_directoryNotFound(t *testing.T) {
 // TestSysCreate_logicalNameTranslation.
 func TestSysOpen_logicalNameTranslation(t *testing.T) {
 	f := newCreateFixture(t, true)
-	f.ctx.Logicals.Set("LNM$FILE_DEV", "MYIN", "TTA0:", 0)
+	defineTestLogical(t, f.ctx.Logicals, "MYIN", "TTA0:")
 	newFAB(t, f.ctx, "MYIN")
 	putByte(t, f.ctx, testFabAddr+fabFAC, facGet)
 

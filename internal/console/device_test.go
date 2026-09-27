@@ -5,8 +5,23 @@ import (
 	"testing"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vax"
 )
+
+// wantLogical fails t unless name translates, in table, to value.
+func wantLogical(t *testing.T, c *Console, table, name, value string) {
+	t.Helper()
+
+	e, err := c.Logicals.Translate(table, name, lnm.User, 0)
+	if err != nil {
+		t.Fatalf("Translate(%s, %s): %v", table, name, err)
+	}
+
+	if got := e.Equivalences[0].Value; got != value {
+		t.Errorf("%s in %s = %q, want %q", name, table, got, value)
+	}
+}
 
 func TestDefineLogicalDebugLogicalsTrace(t *testing.T) {
 	c, buf := newTestConsole(t)
@@ -88,15 +103,15 @@ func TestConsoleDefineAndShowDevices(t *testing.T) {
 func TestConsoleDefineAndShowLogicals(t *testing.T) {
 	c, buf := newTestConsole(t)
 
-	if err := c.DefineLogical("LNM_PROCESS", "MY_LOGICAL", "some value"); err != nil {
+	if err := c.DefineLogical("LNM$PROCESS", "MY_LOGICAL", "some value"); err != nil {
 		t.Fatalf("DefineLogical: %v", err)
 	}
 
-	if err := c.ShowLogicals("LNM_PROCESS", ""); err != nil {
+	if err := c.ShowLogicals("LNM$PROCESS", ""); err != nil {
 		t.Fatalf("ShowLogicals: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "MY_LOGICAL [LNM_PROCESS]") || !strings.Contains(buf.String(), "some value") {
+	if !strings.Contains(buf.String(), "MY_LOGICAL [LNM$PROCESS_TABLE]") || !strings.Contains(buf.String(), "some value") {
 		t.Errorf("ShowLogicals output = %q, missing the defined name/value", buf.String())
 	}
 
@@ -151,22 +166,56 @@ func TestDispatch_defineAndShowLogicalViaDCL(t *testing.T) {
 		t.Fatalf("DEFINE/LOGICAL: %v", err)
 	}
 
-	// define_logical.c's own default table when /TABLE isn't given.
-	ln, ok := c.Logicals.Get("LNM_PROCESS", "MYNAME", 0)
-	if !ok || ln.Value != "MYVALUE" {
-		t.Errorf("Get(LNM_PROCESS, MYNAME) = %v, %v, want MYVALUE, true", ln, ok)
+	// The process table is the default when /TABLE isn't given.
+	wantLogical(t, c, "LNM$PROCESS_TABLE", "MYNAME", "MYVALUE")
+
+	// /TABLE names an existing table; unlike eVAX, DEFINE doesn't create
+	// one.
+	if err := d.Dispatch(`DEFINE/LOGICAL/TABLE=MYTABLE OTHERNAME "OTHERVALUE"`); err == nil {
+		t.Errorf("DEFINE/LOGICAL/TABLE=MYTABLE with no such table succeeded")
+	}
+
+	if _, _, err := c.Logicals.CreateTable("MYTABLE", lnm.ProcessTableName, lnm.Supervisor, 0); err != nil {
+		t.Fatalf("CreateTable: %v", err)
 	}
 
 	if err := d.Dispatch(`DEFINE/LOGICAL/TABLE=MYTABLE OTHERNAME "OTHERVALUE"`); err != nil {
 		t.Fatalf("DEFINE/LOGICAL/TABLE: %v", err)
 	}
 
-	ln, ok = c.Logicals.Get("MYTABLE", "OTHERNAME", 0)
-	if !ok || ln.Value != "OTHERVALUE" {
-		t.Errorf("Get(MYTABLE, OTHERNAME) = %v, %v, want OTHERVALUE, true", ln, ok)
-	}
+	wantLogical(t, c, "MYTABLE", "OTHERNAME", "OTHERVALUE")
 
 	if err := d.Dispatch("SHOW LOGICAL_NAMES"); err != nil {
 		t.Fatalf("SHOW LOGICAL_NAMES: %v", err)
+	}
+}
+
+func TestConsoleLogicalsTrace(t *testing.T) {
+	c, buf := newTestConsole(t)
+	c.CPU.SetDebug(vax.DebugLogicals)
+
+	if err := c.DefineLogical("LNM$PROCESS", "FOO", "BAR"); err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(buf.String(), "DEBUG: LNM: define FOO [super] in LNM$PROCESS_TABLE") {
+		t.Errorf("output = %q, want the database's own define trace", buf.String())
+	}
+}
+
+func TestConsoleShowLogicalsSearchList(t *testing.T) {
+	c, buf := newTestConsole(t)
+
+	eqv := []lnm.Equivalence{{Value: "A:"}, {Value: "B:"}}
+	if _, err := c.Logicals.Define("LNM$PROCESS", "LIST", lnm.Supervisor, 0, eqv); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.ShowLogicals("", "LIST"); err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := buf.String(), "LIST [LNM$PROCESS_TABLE] = \"A:\"\n    = \"B:\"\n"; got != want {
+		t.Errorf("output = %q, want %q", got, want)
 	}
 }

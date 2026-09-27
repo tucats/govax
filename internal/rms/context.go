@@ -3,7 +3,7 @@ package rms
 import (
 	"io"
 
-	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 )
@@ -51,14 +51,13 @@ type Context struct {
 	// SYS$GET/SYS$CLOSE look an existing slot back up by IFI.
 	Files *FileTable
 
-	// Logicals is consulted so that a file specification which is itself
-	// a defined logical name (for instance "SYS$OUTPUT", which
-	// internal/io/logical.go's InitLogicals points at "TTA0:" by default)
-	// is translated to what it actually names before being parsed as a
-	// device/file spec — matching real RMS's own logical-name
-	// translation, and this package's now-deleted Phase 10 predecessor
-	// (internal/rtl/rms.go, see git history).
-	Logicals *iodev.LogicalNameTable
+	// Logicals is the process's logical-name database, shared with the
+	// console and internal/rtl. It is consulted so that a file
+	// specification which is itself a defined logical name (for instance
+	// "SYS$OUTPUT", which the console points at "_TTA0:") is translated
+	// to what it actually names before being parsed as a device/file
+	// spec (see translateWholeSpec).
+	Logicals *lnm.Database
 
 	// Console is where a file resolved to the terminal pseudo-device
 	// (the TTA0: special case — see fab.go's package doc comment and
@@ -121,4 +120,24 @@ func (ctx *Context) loadFixedString(addr uint32, n int) (string, error) {
 	}
 
 	return string(buf), nil
+}
+
+// translateWholeSpec returns the first equivalence string of fn when fn
+// as a whole is a logical name visible through LNM$FILE_DEV, and fn
+// itself otherwise.
+//
+// This is the whole-string lookup this package has always done;
+// docs/PHASE-25.md's subtask 7 replaces it with lnm's full
+// leftmost-component translation (Database.TranslateFileSpec).
+func (ctx *Context) translateWholeSpec(fn string) string {
+	if ctx.Logicals == nil || fn == "" {
+		return fn
+	}
+
+	e, err := ctx.Logicals.Translate(lnm.FileDevName, fn, lnm.User, 0)
+	if err != nil {
+		return fn
+	}
+
+	return e.Equivalences[0].Value
 }

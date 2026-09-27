@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -27,7 +28,7 @@ func TestServiceSysTrnlnmDebugLogicalsTrace(t *testing.T) {
 	}
 
 	out := buf.String()
-	if !strings.Contains(out, `DEBUG: $TRNLNM(LNM$FILE_DEV,SYS$OUTPUT), value="TTA0:"`) {
+	if !strings.Contains(out, `DEBUG: $TRNLNM(LNM$FILE_DEV,SYS$OUTPUT), value="_TTA0:"`) {
 		t.Errorf("output = %q, want a $TRNLNM value trace", out)
 	}
 }
@@ -85,8 +86,8 @@ func TestServiceSysTrnlnm(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got != "TTA0:" {
-		t.Errorf("value = %q, want \"TTA0:\" (InitLogicals' own default)", got)
+	if got != "_TTA0:" {
+		t.Errorf("value = %q, want \"_TTA0:\" (the console terminal)", got)
 	}
 }
 
@@ -147,13 +148,15 @@ func TestServiceSysTrnlnmNoSuchTable(t *testing.T) {
 
 func TestServiceSysTrnlnmCaseBlind(t *testing.T) {
 	env, _ := fixture()
-	env.Logicals.Set("MYTABLE", "MYNAME", "hello", 0)
+	if _, err := env.Logicals.Define("LNM$PROCESS", "MYNAME", lnm.Supervisor, 0, []lnm.Equivalence{{Value: "hello"}}); err != nil {
+		t.Fatal(err)
+	}
 
 	attrAddr := uint32(0x0900)
 	putLongword(t, env, attrAddr, lnmCaseBlind)
 
 	tabAddr, tabStr := uint32(0x1000), uint32(0x1100)
-	putDescriptor(t, env, tabAddr, tabStr, "MYTABLE")
+	putDescriptor(t, env, tabAddr, tabStr, "LNM$PROCESS_TABLE")
 
 	nameAddr, nameStr := uint32(0x1200), uint32(0x1300)
 	putDescriptor(t, env, nameAddr, nameStr, "myname")

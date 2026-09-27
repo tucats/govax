@@ -56,7 +56,10 @@ expect adjustment as phases land):
 - `internal/cpu` — instruction decode/execute engine and instruction-set emulation
   (Phases 03-07).
 - `internal/console` — interactive monitor + DCL grammar interpreter (Phase 08).
-- `internal/io` — device abstraction, logical names (Phase 09).
+- `internal/io` — device abstraction (Phase 09).
+- `internal/lnm` — VMS logical-name database: directories, tables, access modes,
+  search lists, `$TRNLNM`-style lookup and RMS file-spec translation (Phase 25).
+  A leaf package shared by the console, `internal/rms`, and `internal/rtl`.
 - `internal/rtl` — VMS RTL/system-service simulation (Phase 10).
 - `internal/asm` — assembler/disassembler (Phase 11).
 - `internal/rms` — RMS (`SYS$CREATE`/`CONNECT`/`OPEN`/`CLOSE`/`GET`/`PUT`) file

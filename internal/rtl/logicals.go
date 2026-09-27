@@ -1,15 +1,19 @@
 package rtl
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Port of logical_names.c's sys_trnlnm — the SYS$ service built on Phase
-// 09's internal/io.LogicalNameTable, deferred to this phase per
-// docs/PHASE-09.md's own open questions.
+// Port of logical_names.c's sys_trnlnm, now looking names up in the
+// shared internal/lnm database (docs/PHASE-25.md subtask 4). Subtask 8
+// rewrites this service against the full $TRNLNM definition (LNM$_INDEX,
+// a real LNM$_MAX_INDEX, the access-mode filter, and so on); until then
+// it keeps the C port's behavior apart from where names are stored.
 
 // LNM attribute/item-code constants, matching logicals.h.
 const (
@@ -73,35 +77,26 @@ func serviceSysTrnlnm(env *Environment, argv []uint32) (uint32, error) {
 		return ssIvLogNam, nil
 	}
 
-	if attr&lnmCaseBlind != 0 {
-		logname = strings.ToUpper(logname)
-	}
-
 	debug := env.cpu.DebugEnabled(vax.DebugLogicals)
 
-	if !env.Logicals.HasTable(tabnam) {
-		if debug {
-			fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: $TRNLNM(%s,%s), table not found.\n", tabnam, logname)
+	entry, err := env.Logicals.Translate(tabnam, logname, lnm.User, attr&lnmCaseBlind)
+	if err != nil {
+		var ve vmserrors.VMSError
+		if !errors.As(err, &ve) {
+			return 0, err
 		}
 
-		return ssNoLogTab, nil
-	}
-
-	ln, found := env.Logicals.Get(tabnam, logname, 0)
-	if !found {
 		if debug {
-			fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: $TRNLNM(%s,%s), logical name not found.\n", tabnam, logname)
+			fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: $TRNLNM(%s,%s), %v\n", tabnam, logname, err)
 		}
 
-		return ssNoLogNam, nil
+		return ve.Status, nil
 	}
+
+	value := entry.Equivalences[0].Value
+	attrs := entry.Attrs | entry.Equivalences[0].Attrs
 
 	if debug {
-		value := ln.Value
-		if value == "" {
-			value = "<undefined>"
-		}
-
 		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: $TRNLNM(%s,%s), value=%q\n", tabnam, logname, value)
 	}
 
@@ -130,14 +125,14 @@ func serviceSysTrnlnm(env *Environment, argv []uint32) (uint32, error) {
 			return env.setRetLen(e, 1)
 
 		case lnmAttributes:
-			if err := env.mem.StoreLongword(env.cpu, e.BuffAddr, ln.Attr); err != nil {
+			if err := env.mem.StoreLongword(env.cpu, e.BuffAddr, attrs); err != nil {
 				return ssAccVio
 			}
 
 			return env.setRetLen(e, 4)
 
 		case lnmLength:
-			size := uint16(len(ln.Value))
+			size := uint16(len(value))
 			if err := env.mem.StoreWord(env.cpu, e.BuffAddr, size); err != nil {
 				return ssAccVio
 			}
@@ -155,11 +150,11 @@ func serviceSysTrnlnm(env *Environment, argv []uint32) (uint32, error) {
 			return env.setRetLen(e, 4)
 
 		case lnmString:
-			if err := storeString(env, ln.Value, e.BuffAddr, len(ln.Value)); err != nil {
+			if err := storeString(env, value, e.BuffAddr, len(value)); err != nil {
 				return ssAccVio
 			}
 
-			return env.setRetLen(e, uint16(len(ln.Value)))
+			return env.setRetLen(e, uint16(len(value)))
 
 		case lnmTable:
 			if err := strPut(env, e.BuffAddr, tabnam); err != nil {

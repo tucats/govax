@@ -39,7 +39,7 @@ facility that the console, RMS, and the RTL/system-service layer all share:
 
   All of them work on the same shared data the console uses.
 
-**Status: in progress — subtasks 1-3 of 9 done.**
+**Status: in progress — subtasks 1-4 of 9 done.**
 
 ## Why this phase looks different
 
@@ -430,7 +430,7 @@ the process default directory. RMS then gets its default device by translating
    Tests use every example from CLRM §2.2 and User's Manual §11.3-11.7
    (REPORT → `DBA1:WEATHER.SUM`, GO → TEST → `DBA1:`, MEMO, GETTYSBURG, FIFI,
    NESTED, and so on).
-4. **Swap consumers over to `internal/lnm`** without changing behavior:
+4. **Done.** **Swap consumers over to `internal/lnm`** without changing behavior:
    - `Console` builds a `*lnm.Database`.
    - `rtl.Environment` and `rms.Context`/`Session` take it instead of
      `*iodev.LogicalNameTable`.
@@ -494,7 +494,8 @@ the process default directory. RMS then gets its default device by translating
      changes, and for the deliberate gaps (privileges, the job table, the
      process-permanent-file prefix).
    - Add a `docs/PLAN.md` narrative paragraph.
-   - Update CLAUDE.md's package list with `internal/lnm`.
+   - Update CLAUDE.md's package list with `internal/lnm`. (Done early, in
+     subtask 4, when `internal/io` stopped holding logical names.)
    - Close out this progress log.
 
 Subtasks 1-3 are pure library work with no user-visible change. Subtask 4 is the
@@ -765,3 +766,45 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
   access modes, and a deleted `LNM$FILE_DEV`. `filespec.go` is 100%
   covered, and the package overall is 98.5%. `go test ./...` passes except
   for the pre-existing `TestAssembleForth` failure.
+
+### 2026-09-27 — Subtask 4: consumers moved to `internal/lnm`
+
+- **Ownership.** `Console.New` builds the single `*lnm.Database`
+  (`newLogicals` in `internal/console/device.go`) from `rtl.NominalUIC`.
+  That constant was `nominalUIC`, exported so that the group table and the
+  RTL's reported UIC come from one place (open question 2). The database is
+  passed unchanged into `rtl.NewEnvironment` and on to `rms.Context`. The
+  `Logicals` field names stay the same; only their type changed.
+- **Process-permanent names.** New `lnm.Database.DefineProcessNames(terminal)`
+  defines `SYS$INPUT`/`OUTPUT`/`ERROR`/`COMMAND` (executive mode,
+  `TERMINAL`) and `TT` (supervisor mode) in `LNM$PROCESS_TABLE`, all set to
+  `_TTA0:`. This replaces `InitLogicals`' fake `LNM$FILE_DEV` *table*.
+  `internal/bootdata/files/vax.init` no longer runs `define/logical tt tta0`,
+  which had replaced the seeded `TT` with `TTA0`. The upstream copy in
+  `testdata/dcl/vax.init` is untouched.
+- **Trace.** `Database.Trace` is wired to `SET DEBUG LOGICALS`. Lines are
+  prefixed `DEBUG: LNM:`.
+- **RMS.** `$CREATE`/`$OPEN` go through `Context.translateWholeSpec`, which
+  is still the whole-string lookup (now `Translate` through `LNM$FILE_DEV`,
+  taking the first equivalence). Subtask 7 replaces it with
+  `TranslateFileSpec`. `normalizeDeviceName` now also strips a leading `_`,
+  so `_TTA0:` still reaches the console-device special case and a MOUNT of
+  `_DUA0:` keys the same as `DUA0:`.
+- **RTL.** `SYS$TRNLNM` looks names up with `Translate` (user mode, honoring
+  `LNM$M_CASE_BLIND` instead of upper-casing the name). It returns
+  `lnm`'s status codes directly; they are the same numbers as `ssNoLogTab`/
+  `ssNoLogNam`. Everything else, including the item-list handling, waits for
+  subtask 8's rewrite.
+- **Console.** `DEFINE/LOGICAL` now defaults to `LNM$PROCESS`, not
+  `LNM_PROCESS`, and defines in supervisor mode. `/TABLE=` must name an
+  existing table, because the database doesn't create tables implicitly as
+  eVAX did. `SHOW LOGICAL_NAMES` lists every non-directory table, or those
+  `/TABLE=` resolves to, and shows search-list elements on continuation
+  lines. Both are interim: subtask 6 replaces them with the VMS commands.
+- **Behavior changes, as intended by the plan:**
+  - `$TRNLNM` of `SYS$OUTPUT` returns `_TTA0:` instead of `TTA0:`.
+  - A name the operator defines with `DEFINE/LOGICAL` is now visible to RMS.
+    Before, it went into the table `LNM_PROCESS`, which RMS never searched.
+- `internal/io/logical.go` and its tests are deleted. Tests that used the
+  old API were updated. `go test ./...` passes except for the pre-existing
+  `TestAssembleForth`.

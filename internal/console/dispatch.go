@@ -375,7 +375,7 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("DEFINE_LOGICAL", func(id int64, r *dcl.Result) error {
 		table := r.String("TABLE")
 		if table == "" {
-			table = "LNM_PROCESS" // define_logical.c's own default
+			table = "LNM$PROCESS"
 		}
 
 		return d.Console.DefineLogical(table, r.String("NAME"), r.String("VALUE"))

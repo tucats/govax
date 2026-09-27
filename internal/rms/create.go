@@ -56,9 +56,7 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 	// "SYS$OUTPUT") is translated to what it actually points at before
 	// being parsed as a device/file spec, matching real RMS's own
 	// logical-name translation.
-	if ln, found := ctx.Logicals.Get("LNM$FILE_DEV", fn, 0); found {
-		fn = ln.Value
-	}
+	fn = ctx.translateWholeSpec(fn)
 
 	spec, err := filespec.Parse(fn, filespec.Spec{})
 	if err != nil {
