@@ -226,6 +226,8 @@ var (
 	ssDevMount    = vmsdef.SSConstants["SS$_DEVMOUNT"]
 	ssIvStsFlg    = vmsdef.SSConstants["SS$_IVSTSFLG"]
 	ssNoDevAvl    = vmsdef.SSConstants["SS$_NODEVAVL"]
+	ssDevAssign   = vmsdef.SSConstants["SS$_DEVASSIGN"]
+	ssDevNotAlloc = vmsdef.SSConstants["SS$_DEVNOTALLOC"]
 
 	devMounted = vmsdef.DEVConstants["DEV$M_MNT"]
 	devMailbox = vmsdef.DEVConstants["DEV$M_MBX"]
@@ -375,6 +377,76 @@ func (env *Environment) genericDevice(typeName string) (*iodev.Device, uint32) {
 	return nil, ssNoDevAvl
 }
 
+// serviceSysDalloc is SYS$DALLOC: deallocates a device the calling
+// process allocated. acmode is maximized with the caller's mode, and only
+// an allocation made in that mode or a less privileged one may be
+// released (SS$_NOPRIV otherwise). A device the process still has a
+// channel to stays allocated (SS$_DEVASSIGN); deallocating a mailbox
+// succeeds without doing anything.
+//
+// With devnam omitted, every device the process allocated in acmode or a
+// less privileged mode is deallocated, silently skipping any it can't
+// release, and the call succeeds.
+func serviceSysDalloc(env *Environment, argv []uint32) (uint32, error) {
+	devnam := optArg(argv, 0)
+	mode := max(optArg(argv, 1)&3, uint32(env.cpu.PSL().CurMod()))
+
+	if devnam == 0 {
+		for _, d := range env.Devices.All() {
+			if d.Allocated() && d.PID == env.Process.PID && d.AllocMode >= mode && !env.hasChannel(d) {
+				d.Deallocate()
+			}
+		}
+
+		return ssNormal, nil
+	}
+
+	name, ok, err := strGet(env, devnam, maxDeviceNameLength)
+	if err != nil {
+		return ssAccVio, nil
+	}
+
+	if !ok || name == "" {
+		return ssIvLogNam, nil
+	}
+
+	device, st := env.deviceName(name)
+	if st != 0 {
+		return st, nil
+	}
+
+	dp, found := env.Devices.Find(device)
+	if !found {
+		return ssNoSuchDev, nil
+	}
+
+	switch {
+	case dp.DevChar&devMailbox != 0:
+		return ssNormal, nil
+	case !dp.Allocated() || dp.PID != env.Process.PID:
+		return ssDevNotAlloc, nil
+	case dp.AllocMode < mode:
+		return ssNoPriv, nil
+	case env.hasChannel(dp):
+		return ssDevAssign, nil
+	}
+
+	dp.Deallocate()
+
+	return ssNormal, nil
+}
+
+// hasChannel reports whether the process has a channel assigned to d.
+func (env *Environment) hasChannel(d *iodev.Device) bool {
+	for _, c := range env.channels {
+		if c.Device == d {
+			return true
+		}
+	}
+
+	return false
+}
+
 // deallocateUserDevices is image rundown's device step: VMS deallocates
 // the devices an image allocated in user mode when the image exits.
 func (env *Environment) deallocateUserDevices() {
@@ -389,6 +461,7 @@ func registerDeviceServices(t *ServiceTable) {
 	t.Register("SYS$ASSIGN", serviceSysAssign)
 	t.Register("SYS$GETDVIW", serviceSysGetdviw)
 	t.Register("SYS$ALLOC", serviceSysAlloc)
+	t.Register("SYS$DALLOC", serviceSysDalloc)
 }
 
 // deviceName translates a $ASSIGN/$GETDVI device name through its logical

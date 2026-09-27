@@ -413,3 +413,92 @@ func TestServiceSysAllocGeneric(t *testing.T) {
 	r0, _ = allocCall(t, env, a, "TU58", 0, allocGeneric)
 	wantR0(t, r0, ssNoSuchDev)
 }
+
+func TestServiceSysDalloc(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	dp := defineTestDevice(env, "TTA0", iodev.DeviceClassTT)
+
+	r0, _ := allocCall(t, env, a, "TTA0", 0, 0)
+	wantR0(t, r0, ssNormal)
+
+	// A logical name reaches the device, as for $ALLOC.
+	wantR0(t, callLNM(t, env, serviceSysDalloc, a.desc("SYS$OUTPUT")), ssNormal)
+
+	if dp.Allocated() {
+		t.Fatal("TTA0 still allocated after $DALLOC")
+	}
+
+	wantR0(t, callLNM(t, env, serviceSysDalloc, a.desc("TTA0")), ssDevNotAlloc)
+}
+
+func TestServiceSysDallocErrors(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	kernel := defineTestDevice(env, "TTA1", iodev.DeviceClassTT)
+	other := defineTestDevice(env, "TTA2", iodev.DeviceClassTT)
+	assigned := defineTestDevice(env, "TTA3", iodev.DeviceClassTT)
+	mbx := defineTestDevice(env, "MBA1", iodev.DeviceClassNone)
+	mbx.DevChar |= devMailbox
+
+	kernel.Allocate(env.Process.PID, uint32(vax.Kernel))
+	other.Allocate(0x999, uint32(vax.User))
+	assigned.Allocate(env.Process.PID, uint32(vax.Kernel))
+	wantR0(t, callLNM(t, env, serviceSysAssign, a.desc("TTA3"), a.alloc(2)), ssNormal)
+
+	cases := []struct {
+		name string
+		want uint32
+	}{
+		{"TTA2", ssDevNotAlloc},
+		{"TTA3", ssDevAssign},
+		{"MBA1", ssNormal},
+		{"NOSUCH0", ssNoSuchDev},
+		{"", ssIvLogNam},
+		{strings.Repeat("X", 64), ssIvLogNam},
+	}
+
+	for _, c := range cases {
+		if r0 := callLNM(t, env, serviceSysDalloc, a.desc(c.name)); r0 != c.want {
+			t.Errorf("$DALLOC(%q) = %#x (%v), want %#x (%v)", c.name, r0, vmserrors.New(r0), c.want, vmserrors.New(c.want))
+		}
+	}
+
+	// A kernel-mode allocation can't be released from supervisor mode,
+	// even when acmode asks for kernel (it's maximized).
+	setCurMod(env, vax.Supervisor)
+	wantR0(t, callLNM(t, env, serviceSysDalloc, a.desc("TTA1"), 0), ssNoPriv)
+
+	if !kernel.Allocated() || !other.Allocated() || !assigned.Allocated() {
+		t.Error("a failed $DALLOC released a device")
+	}
+}
+
+func TestServiceSysDallocAll(t *testing.T) {
+	env, _ := fixture()
+	kernel := defineTestDevice(env, "TTA1", iodev.DeviceClassTT)
+	super := defineTestDevice(env, "TTA2", iodev.DeviceClassTT)
+	user := defineTestDevice(env, "TTA3", iodev.DeviceClassTT)
+	other := defineTestDevice(env, "TTA4", iodev.DeviceClassTT)
+
+	kernel.Allocate(env.Process.PID, uint32(vax.Kernel))
+	super.Allocate(env.Process.PID, uint32(vax.Supervisor))
+	user.Allocate(env.Process.PID, uint32(vax.User))
+	other.Allocate(0x999, uint32(vax.User))
+
+	// No devnam: release everything allocated in supervisor mode or a less
+	// privileged one; kernel's and another process's stay.
+	wantR0(t, callLNM(t, env, serviceSysDalloc, 0, uint32(vax.Supervisor)), ssNormal)
+
+	if !kernel.Allocated() || super.Allocated() || user.Allocated() || !other.Allocated() {
+		t.Errorf("after $DALLOC(acmode=super): kernel=%v super=%v user=%v other=%v, want true false false true",
+			kernel.Allocated(), super.Allocated(), user.Allocated(), other.Allocated())
+	}
+
+	// From kernel mode with the default acmode, the rest of ours goes too.
+	wantR0(t, callLNM(t, env, serviceSysDalloc), ssNormal)
+
+	if kernel.Allocated() || !other.Allocated() {
+		t.Error("$DALLOC with no arguments didn't release exactly the process's kernel allocation")
+	}
+}

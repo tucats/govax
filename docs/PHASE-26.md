@@ -21,10 +21,12 @@ Later service work should start from the
 [conventions](#conventions-for-implementing-a-service) below.
 
 The first batch, requested by the user on 2026-09-27, is `$ADJSTK`,
-`$ADJWSL`, `$ALLOC`, and `$ASCEFC`.
+`$ADJWSL`, `$ALLOC`, and `$ASCEFC`. The second adds `$DALLOC`,
+`$DACEFC`/`$DLCEFC`, `$GETJPI`, and the event-flag waits.
 
-**Status: first batch complete** (`$ADJSTK`, `$ADJWSL`, `$ALLOC`,
-`$ASCEFC`; subtasks 1-5). Add later services as new subtasks.
+**Status: second batch in progress** (subtasks 6-9). The first batch
+(`$ADJSTK`, `$ADJWSL`, `$ALLOC`, `$ASCEFC`; subtasks 1-5) is complete. Add
+later services as new subtasks.
 
 ## References
 
@@ -122,6 +124,7 @@ lists the ones the implementation can actually return.
 | `$ADJWSL` | 3 | `process.go` | `NORMAL`, `ACCVIO` | Adjusts `Process.WSLimit`, clamped to [`MINWSCNT`, `WSEXTENT`]; recorded, not enforced. |
 | `$ALLOC` | 4 | `devices.go` | `NORMAL`, `BUFFEROVF`, `DEVALRALLOC`, `ACCVIO`, `DEVALLOC`, `DEVMOUNT`, `IVDEVNAM`, `IVLOGNAM`, `IVSTSFLG`, `NODEVAVL`, `NOSUCHDEV`, `TOOMANYLNAM` | Marks a device `DEV$M_ALL` with the process's PID and access mode; generic allocation by device type. |
 | `$ASCEFC` | 5 | `eventflags.go` | `NORMAL`, `ACCVIO`, `ILLEFC`, `IVLOGNAM`, `NOPRIV` | Creates/associates a named common event flag cluster for flags 64-127; `$SETEF`/`$CLREF`/`$READEF` reach it. |
+| `$DALLOC` | 6 | `devices.go` | `NORMAL`, `ACCVIO`, `DEVASSIGN`, `DEVNOTALLOC`, `IVLOGNAM`, `NOPRIV`, `NOSUCHDEV`, `TOOMANYLNAM` | Releases one allocation, or (no `devnam`) all at `acmode` or outer. |
 
 ## Service designs
 
@@ -343,6 +346,32 @@ shared-memory statuses (`SS$_EXPORTQUOTA`, `SS$_INTERLOCK`,
 `SS$_INSFMEM` can't happen. With a single process, the only way to see
 another UIC's view is to change `Process.UIC`, which the tests do.
 
+### `$DALLOC` — Deallocate Device
+
+`SYS$DALLOC [devnam] ,[acmode]`
+
+The inverse of `$ALLOC`, using the same `iodev.Device` allocation state.
+
+- `acmode` (by value) is maximized with the caller's mode. An allocation
+  can be released only from its own mode or a more privileged one: if
+  `Device.AllocMode` is more privileged than the maximized mode, the call
+  fails with `SS$_NOPRIV`.
+- `devnam` (by descriptor) is translated like `$ALLOC`'s. An empty name, or
+  one over 63 characters, is `SS$_IVLOGNAM`.
+  - An unknown device is `SS$_NOSUCHDEV`. The manual doesn't list that
+    code for `$DALLOC`, but it's what `$ALLOC` returns for the same case.
+  - A mailbox succeeds without doing anything, as the manual says.
+  - A device that isn't allocated to this process is `SS$_DEVNOTALLOC`.
+  - A device the process still has a channel to stays allocated:
+    `SS$_DEVASSIGN`. govax has no `$DASSGN` yet, so this holds for any
+    device the process has `$ASSIGN`ed.
+- With `devnam` omitted, every device the process allocated in the
+  maximized mode or a less privileged one is released, skipping any with a
+  channel assigned, and the call succeeds.
+
+Image rundown's user-mode deallocation (subtask 4) is unchanged. It is the
+same operation as `$DALLOC` with no `devnam` and `acmode` user.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -361,10 +390,18 @@ another UIC's view is to change `Process.UIC`, which the tests do.
    rundown disassociates. Acceptance fixture
    `testdata/asm/process_services.asm` covers subtasks 2-5.
 
-Candidates for later subtasks, since they complete the facilities this batch
-starts: `$DALLOC` (the inverse of `$ALLOC`), `$DACEFC`/`$DLCEFC` (disassociate
-and delete common event flag clusters), `$WAITFR`/`$WFLOR`/`$WFLAND` (event
-flag waits), and a fuller `$GETJPI` reading `rtl.Process`.
+Second batch, requested by the user on 2026-09-27 (the candidates the first
+batch listed):
+
+6. **Done.** **`$DALLOC`.** `serviceSysDalloc` in `devices.go`.
+7. **`$DACEFC` and `$DLCEFC`.**
+8. **`$GETJPI`/`$GETJPIW`** reading `rtl.Process`.
+9. **`$WAITFR`, `$WFLAND`, `$WFLOR`.**
+
+Candidates after that: `$DASSGN` (without it a channel is never released, so
+`$DALLOC` of an assigned device always returns `SS$_DEVASSIGN`), and
+`$SETIMR`/`$CANTIM` (the first real asynchronous event-flag setter, which the
+wait services are designed to accommodate).
 
 ## Open questions
 
@@ -482,3 +519,23 @@ None yet.
 - `go test ./...` passes.
 - **Phase status.** The four requested services are done. Candidates for
   the next batch are listed under Subtasks.
+
+### 2026-09-27 — Second batch planned; subtask 6: `$DALLOC`
+
+- The user asked for the candidates listed after the first batch. They
+  became subtasks 6-9.
+- **Wait-state design (for subtask 9), settled before starting.** Nothing
+  in govax sets an event flag asynchronously: there are no ASTs, `$QIO`, or
+  `$SETIMR`. The user confirmed that the timer interrupt is the only truly
+  asynchronous operation. So an unsatisfied wait won't fail or return early:
+  it re-executes the service's `XFC` (see the subtask 9 design). The process
+  then waits in emulated time, with timer interrupts still delivered between
+  retries.
+- **`serviceSysDalloc`** and `hasChannel` in `internal/rtl/devices.go`, per
+  the design above.
+- Tests (`devices_test.go`): release by name and via a logical name;
+  `SS$_DEVNOTALLOC` for a device that is unallocated or allocated to
+  another process; `SS$_DEVASSIGN`; the mailbox no-op; `SS$_NOSUCHDEV`;
+  both `SS$_IVLOGNAM` cases; `SS$_NOPRIV` for a more privileged allocation,
+  with acmode maximized; and the no-`devnam` form releasing exactly the
+  outer-mode allocations of this process.
