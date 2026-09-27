@@ -1,5 +1,17 @@
 package cpu
 
+import "errors"
+
+// ErrServiceWait is what SystemService returns when the service has put
+// the process in a wait state that isn't satisfied yet ($WAITFR on a clear
+// event flag, docs/PHASE-26.md). The XFC handler then leaves R0 alone and
+// backs PC up to the XFC instruction, so the next Step calls the service
+// again: the process waits in emulated time, and interrupts (the interval
+// timer, the only asynchronous source today) are still delivered between
+// attempts, as they would be to a waiting VMS process. Console attention
+// and the instruction/time limits still stop it.
+var ErrServiceWait = errors.New("cpu: system service waiting")
+
 // SystemServices is the hook interface Engine's XFC handler (opcode 0xFC,
 // internal/cpu/xfc.go) delegates to for every selector that needs state
 // outside internal/cpu: console I/O, DCL parsing, and RTL SYS$/LIB$ dispatch.
@@ -37,7 +49,8 @@ type SystemServices interface {
 	// this call should leave. handled is false when pc doesn't correspond to
 	// any known service, matching call_service's own "non-existent P1
 	// vector" halt path — the caller (emulXfc) turns that into a fault
-	// rather than halting the machine outright.
+	// rather than halting the machine outright. ErrServiceWait means "not
+	// done yet, call again" (see its own doc comment).
 	SystemService(pc uint32) (r0 uint32, handled bool, err error)
 
 	// Shim implements XFC$SHIM: dispatch a LIB$/CRTL shim call by numeric

@@ -1,6 +1,8 @@
 package cpu
 
 import (
+	"errors"
+
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 )
@@ -196,7 +198,8 @@ func emulXfcDCL(e *Engine) error {
 // mask's own 2 bytes for every non-Jmp entry.
 //
 // A handled call always sets R0 before returning, even when it also reports
-// an error (e.g. a service that requests a halt) — matching call_service's
+// an error (e.g. a service that requests a halt) — except ErrServiceWait,
+// which re-executes the XFC instead of completing — matching call_service's
 // own "vax.R0 = rc" happening unconditionally after the native handler
 // returns, before the caller's fetch loop next checks vax.halted.
 func emulXfcP1Vector(e *Engine) error {
@@ -213,6 +216,12 @@ func emulXfcP1Vector(e *Engine) error {
 		}
 
 		return &Fault{Code: ExcReservedOp}
+	}
+
+	if errors.Is(err, ErrServiceWait) {
+		e.cpu.SetGPR(vax.PC, e.instructionPC) // run this XFC again next Step
+
+		return nil
 	}
 
 	e.cpu.SetGPR(vax.R0, r0)

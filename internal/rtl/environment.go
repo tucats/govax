@@ -2,6 +2,7 @@ package rtl
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -110,6 +111,11 @@ type Environment struct {
 	// file descriptors, since Go doesn't expose files as bare ints.
 	openFiles map[uint32]*os.File
 	nextFID   uint32
+
+	// waitingPC is the P1-vector address of a service currently waiting
+	// (ErrWait), so SystemService traces only its first attempt; 0 when
+	// no service is waiting.
+	waitingPC uint32
 }
 
 // NewEnvironment returns an Environment for one VAX process, driving mem/cpu
@@ -264,18 +270,34 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 
 	r0, err := callHandler(fn, env, argv)
 
+	// A waiting service is called again on every instruction step until
+	// its wait is satisfied (ErrWait); only its first attempt is traced.
+	waiting := errors.Is(err, ErrWait)
+	retry := waiting && env.waitingPC == pc
+
+	if waiting {
+		env.waitingPC = pc
+	} else {
+		env.waitingPC = 0
+	}
+
 	// DBG_SERVICES: matches p1_vector.c:433's own "Debug P1 system service
 	// calls?" trace -- this port's table-driven service dispatch (see
 	// docs/PHASE-17.md sub-phase 4) gives every SYS$ call a single choke
 	// point, unlike the C source's switch-based call_service.
-	if env.cpu.DebugEnabled(vax.DebugServices) {
+	if env.cpu.DebugEnabled(vax.DebugServices) && !retry {
 		args := make([]string, len(argv))
 		for i, a := range argv {
 			args[i] = fmt.Sprintf("%08X", a)
 		}
 
-		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(SERVICES): %s( %s ), returns %08X\n",
-			entry.Name, strings.Join(args, ", "), r0)
+		result := fmt.Sprintf("returns %08X", r0)
+		if waiting {
+			result = "waits"
+		}
+
+		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(SERVICES): %s( %s ), %s\n",
+			entry.Name, strings.Join(args, ", "), result)
 	}
 
 	return r0, true, err

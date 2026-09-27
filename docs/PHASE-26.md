@@ -24,9 +24,8 @@ The first batch, requested by the user on 2026-09-27, is `$ADJSTK`,
 `$ADJWSL`, `$ALLOC`, and `$ASCEFC`. The second adds `$DALLOC`,
 `$DACEFC`/`$DLCEFC`, `$GETJPI`, and the event-flag waits.
 
-**Status: second batch in progress** (subtasks 6-9). The first batch
-(`$ADJSTK`, `$ADJWSL`, `$ALLOC`, `$ASCEFC`; subtasks 1-5) is complete. Add
-later services as new subtasks.
+**Status: two batches complete** (subtasks 1-9). Add later services as new
+subtasks.
 
 ## References
 
@@ -98,6 +97,11 @@ follow them too, and this list should grow when a new pattern is settled.
   ZERO rebuild, just as they wipe memory. Only state that must survive
   those (devices, logical names, mounts) is owned by the `Console` and
   injected into the Environment.
+- **Waiting.** A service that must put the process in a wait state
+  returns `rtl.ErrWait` while its condition isn't met. The engine then
+  re-executes the service's `XFC` on the next step (see the event-flag
+  wait design). Any later waiting service ($HIBER, $SYNCH, ...) should use
+  the same mechanism.
 - **Image rundown.** Per-image cleanup (user-mode logical names, user-mode
   device allocations, common event flag associations) runs from
   `Environment.ImageRundown`, which the console calls when an image started
@@ -128,6 +132,7 @@ lists the ones the implementation can actually return.
 | `$DACEFC` | 7 | `eventflags.go` | `NORMAL`, `ILLEFC` | Drops an association; an unassociated number still succeeds. |
 | `$DLCEFC` | 7 | `eventflags.go` | `NORMAL`, `ACCVIO`, `IVLOGNAM` | Marks a cluster for deletion; deleted when unassociated. |
 | `$GETJPI`, `$GETJPIW` | 8 | `getjpi.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLEFC`, `INSFARG`, `IVLOGNAM`, `NOMOREPROC`, `NONEXPR`, `UNASEFC` | 21 item codes from `rtl.Process`, in a registry keyed by the generated `$JPIDEF` codes. |
+| `$WAITFR`, `$WFLAND`, `$WFLOR` | 9 | `eventflags.go` | `NORMAL`, `ILLEFC`, `UNASEFC` | Wait by re-executing the service's `XFC` until satisfied; timer interrupts run in between. |
 
 ## Service designs
 
@@ -480,6 +485,48 @@ counts, and so on), which are `SS$_BADPARAM`. There's also no
 `SS$_NOPRIV` or `SS$_SUSPENDED`, since no other process exists. These are
 in `docs/DEVIATIONS.md`.
 
+### `$WAITFR`, `$WFLAND`, `$WFLOR` — Wait for Event Flags
+
+`SYS$WAITFR efn`, `SYS$WFLAND efn ,mask`, `SYS$WFLOR efn ,mask`
+
+`$WAITFR` waits for one flag. `$WFLAND` waits for all the flags `mask`
+selects in `efn`'s cluster, and `$WFLOR` for any of them. `efn` uses its
+low byte and is checked like `$SETEF`'s: `SS$_ILLEFC`, or `SS$_UNASEFC`
+for an unassociated common cluster. When the condition already holds,
+each returns `SS$_NORMAL` at once. An empty `$WFLAND` mask is satisfied
+immediately; an empty `$WFLOR` mask never is, so that process waits for
+good, as on VMS.
+
+**Waiting.** A service runs to completion inside the `XFC` instruction of
+its P1-vector stub, so it has no way to block. Instead, when the condition
+isn't met:
+
+1. The service returns `rtl.ErrWait`, not a status.
+2. The console translates it to `cpu.ErrServiceWait` (as it does
+   `rtl.ErrHalt` → `cpu.ErrHalted`).
+3. `emulXfcP1Vector` sets PC back to the `XFC` (`e.instructionPC`) and
+   leaves R0 alone.
+4. The next `Step` executes the `XFC` again, calling the service again.
+
+So the process waits in emulated time, re-checking once per instruction
+step, with the `CALLS` frame and argument list untouched. Because each
+retry is an ordinary instruction boundary, **interrupts are delivered
+between retries**. The user confirmed the interval timer is govax's only
+truly asynchronous source. A timer interrupt handler that sets the flag
+ends the wait: the handler returns (`REI`) to the `XFC`, and the next
+retry succeeds. Console attention (^C) and the `instruction-limit`/
+`time-limit` options still stop a wait that can never end. A future
+`$SETIMR` would set flags from the same timer path.
+
+`DEBUG(SERVICES)` traces only a wait's first attempt (`..., waits`) and its
+completion (`..., returns 00000001`), not every retry
+(`Environment.waitingPC`).
+
+Not implemented: VMS's "wait interrupted by an AST, then resumed" (govax
+has no AST delivery); the process state (`LEF`/`CEF`) and `JPI$_EFWM` wait
+mask; and giving up the host CPU while waiting, since each retry costs an
+emulated instruction step.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -505,7 +552,9 @@ batch listed):
 7. **Done.** **`$DACEFC` and `$DLCEFC`.** In `eventflags.go`.
 8. **Done.** **`$GETJPI`/`$GETJPIW`** reading `rtl.Process`, in the new
    `getjpi.go`; `$JPIDEF` generated from real VMS source.
-9. **`$WAITFR`, `$WFLAND`, `$WFLOR`.**
+9. **Done.** **`$WAITFR`, `$WFLAND`, `$WFLOR`.** In `eventflags.go`, with
+   `cpu.ErrServiceWait` re-executing the `XFC`. Acceptance fixture
+   `testdata/asm/wait_timer.asm`.
 
 Candidates after that: `$DASSGN` (without it a channel is never released, so
 `$DALLOC` of an assigned device always returns `SS$_DEVASSIGN`), and
@@ -694,3 +743,30 @@ None yet.
   - the registry naming only real `$JPIDEF` codes;
   - `vmsdef/gen` parser tests for the three new SDL forms and two new
     rejected forms.
+
+### 2026-09-27 — Subtask 9: `$WAITFR`, `$WFLAND`, `$WFLOR`; second batch complete
+
+- **`cpu.ErrServiceWait`** (`internal/cpu/services.go`).
+  `emulXfcP1Vector` handles it by resetting PC to `e.instructionPC` and
+  leaving R0 alone. `TestEmulXfcP1VectorWait` shows three waiting steps
+  parked on the `XFC`, then completion continuing past it.
+- **`rtl.ErrWait`**, `waitFor`, and the three services in
+  `internal/rtl/eventflags.go`. The console's `translateHalt` maps
+  `ErrWait` to `cpu.ErrServiceWait`. `Environment.SystemService` traces a
+  wait once (`waitingPC`).
+- **Acceptance fixture** `testdata/asm/wait_timer.asm`: it installs an
+  interval-timer handler with `.SCB`, starts the clock, lowers IPL, and
+  waits in `$WAITFR` for flag 3, which only the handler's `$SETEF` sets.
+  Then it checks `$WFLAND`/`$WFLOR` on flags already set. The tests in
+  `internal/console/process_services_test.go`:
+  - `TestEventFlagWait_timerInterrupt` runs it to R0 = 1, so the timer
+    interrupt ended the wait.
+  - `TestEventFlagWait_blocksUntilSet` keeps ICCS clear so no tick can
+    happen, shows the program parked on the `$WAITFR` stub after 5,000
+    steps, then sets the flag from Go and lets the program finish.
+- **rtl tests**: each service's satisfied and waiting cases, the empty
+  masks, the low-byte rule, `SS$_ILLEFC`/`SS$_UNASEFC`, a wait on a common
+  cluster, and the once-per-wait trace.
+- `go test ./...` passes.
+- **Phase status.** Both batches are done. Next candidates: `$DASSGN`, and
+  `$SETIMR`/`$CANTIM`.

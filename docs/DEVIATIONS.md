@@ -391,6 +391,19 @@ changed as a result.
     working set.
 - **Status**: open, deliberate simplifications.
 
+### [Phase 26] Event-flag waits re-execute the service instead of blocking
+
+- **Where**: `internal/rtl/eventflags.go` (`$WAITFR`/`$WFLAND`/`$WFLOR`),
+  `internal/cpu/xfc.go` (`ErrServiceWait`).
+- **What**: an unsatisfied wait re-executes the service's `XFC` on every
+  instruction step, instead of descheduling the process. Interrupts are
+  still delivered between retries, so a timer interrupt handler can end
+  the wait. Not modeled:
+  - AST interruption and resumption of a wait (no AST delivery);
+  - the `LEF`/`CEF` process state and `JPI$_EFWM`;
+  - releasing the host CPU while waiting.
+- **Status**: open, by design.
+
 ## Open findings
 
 _None yet._

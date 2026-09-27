@@ -296,3 +296,10 @@ eVAX implements none of these, so the VMS 5.0 System Services Reference Manual
 is the reference. `testdata/asm/process_services.asm` exercises all four from
 assembled code. Simplifications and the event-flag behavior change are in
 `DEVIATIONS.md`.
+
+A second batch added `$DALLOC`, `$DACEFC`/`$DLCEFC`, a real `$GETJPI`/`$GETJPIW`
+(21 items over `rtl.Process`, with `$JPIDEF` generated from VMS 7.3 SDL), and
+`$WAITFR`/`$WFLAND`/`$WFLOR`. An unsatisfied wait re-executes the service's `XFC`
+(`cpu.ErrServiceWait`), so the interval timer's interrupt, govax's only
+asynchronous source, can end it; `testdata/asm/wait_timer.asm` shows exactly
+that.

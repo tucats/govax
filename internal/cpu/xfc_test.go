@@ -383,6 +383,44 @@ func TestEmulXfcP1VectorSetsR0EvenWhenHandledCallErrors(t *testing.T) {
 	}
 }
 
+// TestEmulXfcP1VectorWait: a service reporting ErrServiceWait leaves R0
+// alone and PC on the XFC, so the next Step calls it again; once it
+// completes, execution continues past the XFC.
+func TestEmulXfcP1VectorWait(t *testing.T) {
+	e, f := xfcEngine()
+	f.serviceHandled = true
+	f.serviceErr = ErrServiceWait
+	f.serviceRC = 0xBAD
+
+	e.cpu.SetGPR(vax.R0, 0x1234)
+	e.cpu.SetGPR(vax.PC, base)
+	putBytes(t, e.cpu, e.mem, base, 0xFC, xfcP1Vector, 0x01) // then NOP
+
+	for i := 0; i < 3; i++ {
+		if err := e.Step(); err != nil {
+			t.Fatalf("Step %d: %v", i, err)
+		}
+
+		if got := e.cpu.GPR(vax.PC); got != base {
+			t.Fatalf("PC = %#x after a waiting call, want the XFC's own %#x", got, base)
+		}
+
+		if got := e.cpu.GPR(vax.R0); got != 0x1234 {
+			t.Fatalf("R0 = %#x after a waiting call, want it untouched", got)
+		}
+	}
+
+	f.serviceErr, f.serviceRC = nil, 1
+
+	if err := e.Step(); err != nil {
+		t.Fatalf("Step: %v", err)
+	}
+
+	if got, r0 := e.cpu.GPR(vax.PC), e.cpu.GPR(vax.R0); got != base+2 || r0 != 1 {
+		t.Errorf("after completion PC = %#x, R0 = %#x, want %#x and 1", got, r0, base+2)
+	}
+}
+
 func TestEmulXfcShim(t *testing.T) {
 	e, f := xfcEngine()
 	f.shimHandled = true

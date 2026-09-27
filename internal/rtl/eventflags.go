@@ -1,6 +1,7 @@
 package rtl
 
 import (
+	"errors"
 	"sort"
 
 	"github.com/tucats/govax/internal/vmsdef"
@@ -18,6 +19,14 @@ var (
 	ssIllEfc  = vmsdef.SSConstants["SS$_ILLEFC"]
 	ssUnasEfc = vmsdef.SSConstants["SS$_UNASEFC"]
 )
+
+// ErrWait is what a service returns when the process must wait: its event
+// flag condition isn't met yet. The console translates it to
+// cpu.ErrServiceWait, which re-executes the service's XFC on the next
+// instruction step, so the service checks again while interrupts (the
+// interval timer) keep being delivered in between. It is never a VMS
+// status: R0 is left alone until the wait is satisfied.
+var ErrWait = errors.New("rtl: process waiting for an event flag")
 
 // maxClusterNameLength is the longest common event flag cluster name
 // $ASCEFC accepts (SS$_IVLOGNAM beyond it).
@@ -319,6 +328,46 @@ func (env *Environment) disassociateClusters() {
 	}
 }
 
+// waitFor is the shared body of the wait services: it finds efn's cluster
+// (SS$_ILLEFC/SS$_UNASEFC as for $SETEF) and completes with SS$_NORMAL
+// once done(cluster flags) holds, or reports ErrWait to be called again.
+func (env *Environment) waitFor(efn uint32, done func(flags uint32) bool) (uint32, error) {
+	word, _, st := env.eventFlagWord(efn)
+	if st != 0 {
+		return st, nil
+	}
+
+	if !done(*word) {
+		return 0, ErrWait
+	}
+
+	return ssNormal, nil
+}
+
+// serviceSysWaitfr is SYS$WAITFR: waits until event flag efn is set.
+func serviceSysWaitfr(env *Environment, argv []uint32) (uint32, error) {
+	_, bit, _ := env.eventFlagWord(argv[0])
+
+	return env.waitFor(argv[0], func(flags uint32) bool { return flags&(1<<bit) != 0 })
+}
+
+// serviceSysWfland is SYS$WFLAND: waits until every flag mask selects, in
+// the cluster holding efn, is set. An empty mask is satisfied at once.
+func serviceSysWfland(env *Environment, argv []uint32) (uint32, error) {
+	mask := argv[1]
+
+	return env.waitFor(argv[0], func(flags uint32) bool { return flags&mask == mask })
+}
+
+// serviceSysWflor is SYS$WFLOR: waits until any flag mask selects, in the
+// cluster holding efn, is set. An empty mask never is, so the process
+// waits indefinitely, as it would on VMS.
+func serviceSysWflor(env *Environment, argv []uint32) (uint32, error) {
+	mask := argv[1]
+
+	return env.waitFor(argv[0], func(flags uint32) bool { return flags&mask != 0 })
+}
+
 func registerEventFlagServices(t *ServiceTable) {
 	t.Register("SYS$CLREF", serviceSysClref)
 	t.Register("SYS$SETEF", serviceSysSetef)
@@ -326,4 +375,7 @@ func registerEventFlagServices(t *ServiceTable) {
 	t.Register("SYS$ASCEFC", serviceSysAscefc)
 	t.Register("SYS$DACEFC", serviceSysDacefc)
 	t.Register("SYS$DLCEFC", serviceSysDlcefc)
+	t.Register("SYS$WAITFR", serviceSysWaitfr)
+	t.Register("SYS$WFLAND", serviceSysWfland)
+	t.Register("SYS$WFLOR", serviceSysWflor)
 }

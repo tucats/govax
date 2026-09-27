@@ -119,13 +119,17 @@ func (c *Console) RequestQuit() {
 
 // translateHalt turns rtl.ErrHalt (a SYS$ service or shim requesting the
 // machine halt, e.g. an unrecognized SYS$CLI request) into cpu.ErrHalted,
-// the sentinel Engine.Step actually recognizes — kept as a translation at
-// the boundary rather than internal/rtl importing internal/cpu, so that
-// package has no dependency on this one.
+// and rtl.ErrWait (a service waiting for an event flag, docs/PHASE-26.md)
+// into cpu.ErrServiceWait — the sentinels Engine.Step actually recognizes,
+// kept as a translation at the boundary rather than internal/rtl
+// importing internal/cpu, so that package has no dependency on this one.
 func translateHalt(err error) error {
-	if errors.Is(err, rtl.ErrHalt) {
+	switch {
+	case errors.Is(err, rtl.ErrHalt):
 		return cpu.ErrHalted
+	case errors.Is(err, rtl.ErrWait):
+		return cpu.ErrServiceWait
 	}
-	
+
 	return err
 }

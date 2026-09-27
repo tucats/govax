@@ -1,8 +1,13 @@
 package rtl
 
 import (
+	"bytes"
+	"errors"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 func TestEventFlagStatuses(t *testing.T) {
@@ -216,4 +221,92 @@ func TestServiceSysDlcefc(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysDlcefc, a.desc("")), ssIvLogNam)
 	wantR0(t, callLNM(t, env, serviceSysDlcefc, a.desc(strings.Repeat("N", 16))), ssIvLogNam)
 	wantR0(t, callLNM(t, env, serviceSysDlcefc, 0), ssAccVio)
+}
+
+// wantWait checks a wait service call reports ErrWait (not done yet).
+func wantWait(t *testing.T, env *Environment, fn ServiceFunc, argv ...uint32) {
+	t.Helper()
+
+	if _, err := fn(env, argv); !errors.Is(err, ErrWait) {
+		t.Errorf("err = %v, want ErrWait", err)
+	}
+}
+
+func TestEventFlagWaits(t *testing.T) {
+	env, _ := fixture()
+	p := env.Process
+
+	// $WAITFR: waits while the flag is clear, completes once it's set;
+	// only the low byte of efn counts.
+	wantWait(t, env, serviceSysWaitfr, 0x103)
+	p.LocalEventFlags[0] |= 1 << 3
+	wantR0(t, callLNM(t, env, serviceSysWaitfr, 0x103), ssNormal)
+
+	// $WFLAND: all of the mask; an empty mask is satisfied at once.
+	wantWait(t, env, serviceSysWfland, 35, 0x6)
+	p.LocalEventFlags[1] |= 0x2
+	wantWait(t, env, serviceSysWfland, 35, 0x6)
+	p.LocalEventFlags[1] |= 0x4
+	wantR0(t, callLNM(t, env, serviceSysWfland, 35, 0x6), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysWfland, 0, 0), ssNormal)
+
+	// $WFLOR: any of the mask; an empty mask never is.
+	wantWait(t, env, serviceSysWflor, 0, 0x30)
+	p.LocalEventFlags[0] |= 0x20
+	wantR0(t, callLNM(t, env, serviceSysWflor, 0, 0x30), ssNormal)
+	wantWait(t, env, serviceSysWflor, 0, 0)
+
+	// Common clusters and bad flag numbers, as for $SETEF.
+	for _, fn := range []ServiceFunc{serviceSysWaitfr, serviceSysWfland, serviceSysWflor} {
+		wantR0(t, callLNM(t, env, fn, 128, 1), ssIllEfc)
+		wantR0(t, callLNM(t, env, fn, 64, 1), ssUnasEfc)
+	}
+
+	a := newArena(t, env)
+	wantR0(t, callLNM(t, env, serviceSysAscefc, 96, a.desc("C")), ssNormal)
+	wantWait(t, env, serviceSysWaitfr, 97)
+	wantR0(t, callLNM(t, env, serviceSysSetef, 97), ssWasClr)
+	wantR0(t, callLNM(t, env, serviceSysWaitfr, 97), ssNormal)
+}
+
+// TestEventFlagWaitTrace: a waiting service is called again every step;
+// DEBUG(SERVICES) traces its first attempt ("waits") and its completion,
+// not every retry.
+func TestEventFlagWaitTrace(t *testing.T) {
+	env, _ := fixture()
+
+	var buf bytes.Buffer
+
+	env.cpu.SetDebugWriter(&buf)
+	env.cpu.SetDebug(vax.DebugServices)
+
+	waitfr := uint32(0)
+	for _, e := range vmsdef.P1VectorTable {
+		if e.Name == "SYS$WAITFR" {
+			waitfr = e.Addr
+		}
+	}
+
+	putArgs(t, env, 0x2000, []uint32{3})
+
+	for i := 0; i < 3; i++ {
+		if _, handled, err := env.SystemService(waitfr); !handled || !errors.Is(err, ErrWait) {
+			t.Fatalf("attempt %d: handled=%v err=%v, want ErrWait", i, handled, err)
+		}
+	}
+
+	env.Process.LocalEventFlags[0] |= 1 << 3
+
+	if r0, _, err := env.SystemService(waitfr); err != nil || r0 != ssNormal {
+		t.Fatalf("after setting the flag: r0=%#x err=%v", r0, err)
+	}
+
+	out := buf.String()
+	if n := strings.Count(out, "SYS$WAITFR( 00000003 ), waits"); n != 1 {
+		t.Errorf("%d \"waits\" traces, want 1:\n%s", n, out)
+	}
+
+	if !strings.Contains(out, "SYS$WAITFR( 00000003 ), returns 00000001") {
+		t.Errorf("no completion trace:\n%s", out)
+	}
 }
