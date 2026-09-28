@@ -190,6 +190,7 @@ lists the ones the implementation can actually return.
 | `$EXIT` | 19 | `exit.go` | (none: doesn't return) | Calls the mode's handlers via `cpu.ServiceCall`, then unwinds to the console's call frame. RUN's driver calls it with `main`'s status. |
 | `$NUMTIM` | 20 | `vmstime.go` | `NORMAL`, `ACCVIO`, `IVTIME` | Seven numeric fields; a delta's year and month are 0. |
 | (`$GETJPI` items) | 21 | `getjpi.go` | — | `JPI$_ASTACT`, `ASTEN`, `ASTCNT`, `ASTLM`, `PRI`, `PRIB`, `STATE`; `Process` gains `ASTLimit` and priorities. |
+| (AST delivery) | 22 | `ast.go` | — | An inner-mode AST interrupts outer-mode code by switching mode and stack; `$CLRAST` switches back. |
 
 ## Service designs
 
@@ -886,7 +887,8 @@ import `internal/cpu`.
 #### When an AST is delivered
 
 `NextAST` delivers the oldest queued AST for the current mode when all of
-these hold, as on VMS:
+these hold, as on VMS (since subtask 22, also an AST of a more privileged
+mode, by switching into it: see "Mode-switching AST delivery"):
 
 - IPL is below 2 (`IPL$_ASTDEL`), and the CPU isn't on the interrupt stack.
   Interrupt handlers (IPL 20+) and kernel code that raised IPL are never
@@ -974,13 +976,9 @@ frame address, `PCB$B_ASTACT`).
 
 Not implemented (see `docs/DEVIATIONS.md`):
 
-- **No mode switch.** VMS delivers an inner-mode AST to a process running
-  in an outer mode by switching to that mode. govax delivers an AST only
-  while the CPU is in the AST's own mode. A kernel program queuing a
-  user-mode AST sees it only after it drops to user mode, as on VMS; but
-  a user-mode program with a kernel AST pending doesn't get it until it
-  enters kernel mode. So an inner-mode AST doesn't interrupt an
-  outer-mode wait.
+- (Mode switching: VMS delivers an inner-mode AST to a process running in
+  an outer mode by switching to that mode. Subtask 15 didn't; subtask 22
+  does.)
 - The `ASTLVL` register and `REI`'s AST check are not used.
 - No `ASTLM` quota (`SS$_EXQUOTA`) and no `SS$_INSFMEM`.
 - (`JPI$_ASTACT`, `ASTEN`, and `ASTCNT` are reported by `$GETJPI` since
@@ -1238,6 +1236,51 @@ mean something. They join the registry in `getjpi.go`:
 The quota is reported, not enforced: nothing fails with `SS$_EXQUOTA`
 when `ASTCNT` reaches 0.
 
+### Mode-switching AST delivery
+
+Subtask 15 delivered an AST only while the CPU was in the AST's own mode,
+so a kernel-mode AST (say, from a timer set in kernel mode) couldn't
+interrupt user-mode code, not even a user-mode `$HIBER` waiting for it.
+VMS does deliver it, by switching the process into the AST's mode. govax
+now does the same.
+
+#### Which AST goes next
+
+`NextAST` looks at modes from kernel out to the CPU's current mode and
+takes the first that has a queued AST, has ASTs enabled (in it and every
+more privileged mode), and has no AST already running. Within that mode
+the oldest AST goes. So the most privileged deliverable AST always goes
+first, and an AST of a *less* privileged mode than the CPU's still waits
+(a user AST never interrupts kernel code). IPL and the interrupt stack
+are checked first, as before.
+
+#### Switching in and out
+
+Each mode has its own stack, whose pointer is kept in a processor
+register (KSP, ESP, SSP, USP) while the mode isn't running. To deliver an
+AST of a more privileged mode, `enterASTMode`:
+
+1. saves SP in the current mode's register and loads the AST mode's
+   (`switchMode`), setting `PSL<CUR_MOD>` to the AST's mode and
+   `PSL<PRV_MOD>` to the interrupted one;
+2. pushes the usual six-longword frame on the AST mode's stack, holding
+   the interrupted R0, R1, PC, and (outer-mode) PSL.
+
+If the frame can't be pushed, the switch is undone and delivery fails.
+The engine side is unchanged: it builds the `CALLG` frame on whatever
+stack the RTL left current.
+
+`$CLRAST` restores from the frame as before, and if the saved PSL's mode
+is less privileged than the AST's, switches back (`switchMode` again),
+the equivalent of `REI`. A saved mode more privileged than the AST's is
+ignored, so a forged frame can't raise privilege. Both directions drop
+the memory system's cached access checks (`InvalidateProtection`), as the
+engine's own mode changes do.
+
+Since waits retry their `XFC` each step, an inner-mode AST now also
+interrupts an outer-mode wait: the classic "user program hibernates until
+a kernel timer AST wakes it" works.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -1320,7 +1363,7 @@ fourth batch listed):
 21. **Done.** **`$GETJPI` items for AST and scheduling state**: `JPI$_ASTACT`,
     `ASTEN`, `ASTCNT`, `ASTLM`, and `STATE`, with an `ASTLM` quota on
     `rtl.Process`.
-22. **Mode-switching AST delivery.** `NextAST` delivers a more
+22. **Done.** **Mode-switching AST delivery.** `NextAST` delivers a more
     privileged mode's AST by switching the CPU into that mode, as VMS
     does, and `$CLRAST` switches back, closing subtask 15's main
     deviation.
@@ -1818,4 +1861,28 @@ None yet.
 - Tests (`getjpi_test.go`): the new items' defaults in the item test; the
   AST items against a set-up queue, timers (only `$SETIMR` ones with an
   AST count), and per-mode flags; ASTCNT floored at 0.
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 22: mode-switching AST delivery
+
+- `ast.go`: `NextAST` picks the most privileged deliverable mode at or
+  inside the CPU's; `enterASTMode` (replacing `pushASTFrame`) switches
+  into it and pushes the frame, undoing the switch on failure;
+  `switchMode` saves and loads the per-mode stack pointers;
+  `serviceSysClrast` switches back to a less privileged saved mode, never
+  to a more privileged one. `internal/cpu/ast.go`'s comment notes the
+  stack may already be the inner mode's.
+- **Acceptance fixture** `testdata/asm/mode_switch_ast.asm`: a timer set
+  from kernel mode, an `REI` to user mode, and a user-mode `$HIBER` that
+  the kernel-mode AST's `$WAKE` ends. `TestModeSwitchAST_assembledProgram`
+  (memory management on, so the stacks' protection is real) checks the
+  AST ran in kernel mode with user as the previous mode, and the program
+  continued in user mode.
+- Tests (`ast_test.go`): the switch and return (mode, previous mode,
+  stacks, frame PSL, KSP restored); most privileged first, and no
+  outer-mode AST inside an inner-mode one; a failed push undoing the
+  switch; a forged frame lowering but never raising the mode.
+  `TestNextASTConditions` now checks only that a less privileged AST
+  waits.
+- `docs/DEVIATIONS.md`: the AST entry's first point is resolved.
 - `go test ./...` passes.

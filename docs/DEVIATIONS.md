@@ -469,10 +469,9 @@ changed as a result.
 
 - **Where**: `internal/rtl/ast.go`, `internal/cpu/ast.go`.
 - **What**:
-  - An AST is delivered only while the CPU is in the AST's own mode. VMS
-    also switches an outer-mode process into the AST's inner mode. So an
-    inner-mode AST neither interrupts outer-mode code nor ends an
-    outer-mode wait.
+  - (Resolved in subtask 22: an inner-mode AST is now delivered to
+    outer-mode code by switching into the AST's mode, as on VMS. Until
+    then it waited for the CPU to enter that mode.)
   - Delivery is done by the RTL at instruction boundaries, not through
     the `ASTLVL` register, `REI`, and an IPL 2 software interrupt. The
     conditions checked (IPL < 2, not on the interrupt stack, enabled,
