@@ -98,8 +98,7 @@ ctrl2:	.ascid	"!AC:!3(4UB)!/"
 ctrl3:	.ascid	"!QQ"
 
 ; A counted string (a length byte, then the text), for !AC.
-bytes:	.byte	5
-	.ascii	"BYTES"
+bytes:	.ascic	"BYTES"
 
 prmlst:	.long	bytes, 1, ^D22, ^D255
 

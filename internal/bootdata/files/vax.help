@@ -2578,8 +2578,8 @@ $ASM ,PSEU,ASCI
     Syntax:
 
         .ASCIC     "<string>"      Stores a counted ASCII string.  The
-                                   storage contains a 16-bit word that
-                                   describes the length of <string>,
+                                   storage contains a byte that holds
+                                   the length of <string> (at most 255),
                                    followed by the bytes of the string.
 
         .ASCID     "<string>"      Stores a string descriptor.  The first

@@ -34,7 +34,7 @@ var pseudoNames = map[string]bool{
 	"CLEAR":       true, // Clear vaiorus assembler or console flags
 	"ASCII":       true, // Declare a string of ASCII text
 	"ASCIZ":       true, // Declare a null-terminated string of ASCII text
-	"ASCIC":       true, // Declare a counted ASCII string of text (16-bit length)
+	"ASCIC":       true, // Declare a counted ASCII string of text (8-bit length)
 	"ASCID":       true, // Declare an ASCII string using a VAX string descriptor
 	"END":         true, // Terminate assembly
 	"PSL":         true, // Declare a Processor Status Longword
@@ -458,10 +458,13 @@ const (
 // pseudoAscii assembles .ASCII/.ASCIZ/.ASCIC/.ASCID: a comma-separated list
 // of quoted (', ", or /-delimited) or bare (blank-terminated) strings, with
 // \n/\r/\t escapes, concatenated into one run of character data framed per
-// asciiKind — a trailing NUL (.ASCIZ), a leading 16-bit count (.ASCIC), or
+// asciiKind — a trailing NUL (.ASCIZ), a leading one-byte count (.ASCIC), or
 // a leading VMS string descriptor whose address field points at the string
 // data immediately following it (.ASCID). Matches asm_pseudo.c's cases
-// 7-10.
+// 7-10, except that .ASCIC's count is a byte, as MACRO-32 defines it (and
+// as VMS's counted-string users, such as $FAO's !AC, read it), where
+// eVAX stored a 16-bit word; a string longer than 255 characters is
+// VAX_DATARANGE (docs/PHASE-26.md, docs/DEVIATIONS.md).
 func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 	var count uint16
 
@@ -469,11 +472,11 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 
 	switch kind {
 	case asciiCounted:
-		if err := a.image.storeWord(countPC, 0); err != nil {
+		if err := a.image.storeByte(countPC, 0); err != nil {
 			return err
 		}
 
-		a.deposit += 2
+		a.deposit++
 
 	case asciiDescriptor:
 		if err := a.image.storeWord(countPC, 0); err != nil { // length (patched below)
@@ -566,7 +569,16 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 
 		a.deposit++
 
-	case asciiCounted, asciiDescriptor:
+	case asciiCounted:
+		if count > 0xFF {
+			return vmserrors.New(vmserrors.VAX_DATARANGE, ".ASCIC", count)
+		}
+
+		if err := a.image.storeByte(countPC, byte(count)); err != nil {
+			return err
+		}
+
+	case asciiDescriptor:
 		if err := a.image.storeWord(countPC, count); err != nil {
 			return err
 		}

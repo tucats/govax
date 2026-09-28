@@ -675,6 +675,10 @@ changed as a result.
 
 ## Open findings
 
+_None yet._
+
+## Resolved findings
+
 ### [Phase 26] The assembler's `.ASCIC` has a 16-bit count
 
 - **Where**: `internal/asm/pseudo.go` (`pseudoAscii`, `asciiCounted`),
@@ -684,11 +688,12 @@ changed as a result.
   16-bit length. A program passing an `.ASCIC` string to `$FAO`'s `!AC`,
   which reads the one-byte count VMS defines, gets a leading NUL and
   loses the string's last character. Found while writing subtask 24's
-  fixture, which builds its counted string with `.BYTE` and `.ASCII`
-  instead. No fixture or boot file uses `.ASCIC`.
-- **Status**: deferred (assembler behavior, left as eVAX has it).
-
-## Resolved findings
+  fixture, which at first built its counted string with `.BYTE` and
+  `.ASCII` instead. No fixture or boot file used `.ASCIC`.
+- **Status**: fixed in Phase 26 (after subtask 30, at the user's
+  request). `.ASCIC` stores a one-byte count, and a string longer than
+  255 characters is `VAX_DATARANGE`; the HELP text says so, and
+  `testdata/asm/fao.asm` now uses `.ASCIC` for its `!AC` string.
 
 ### [Phase 08/16] `validate_page`'s free-page search (and `mapped_pages`'s count) run one slot past the last real physical page
 
