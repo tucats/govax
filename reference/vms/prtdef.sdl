@@ -1,0 +1,79 @@
+{
+{ Module:	$PRTDEF
+{
+{ Version:	'X-1K3'
+{
+{****************************************************************************
+{*									    *
+{*  COPYRIGHT (c) 1991 BY						    *
+{*  DIGITAL EQUIPMENT CORPORATION, MAYNARD, MASSACHUSETTS.		    *
+{*  ALL RIGHTS RESERVED.						    *
+{* 									    *
+{*  THIS SOFTWARE IS FURNISHED UNDER A LICENSE AND MAY BE USED AND COPIED   *
+{*  ONLY IN  ACCORDANCE WITH  THE  TERMS  OF  SUCH  LICENSE  AND WITH THE   *
+{*  INCLUSION OF THE ABOVE COPYRIGHT NOTICE. THIS SOFTWARE OR  ANY  OTHER   *
+{*  COPIES THEREOF MAY NOT BE PROVIDED OR OTHERWISE MADE AVAILABLE TO ANY   *
+{*  OTHER PERSON.  NO TITLE TO AND OWNERSHIP OF  THE  SOFTWARE IS  HEREBY   *
+{*  TRANSFERRED.							    *
+{* 									    *
+{*  THE INFORMATION IN THIS SOFTWARE IS  SUBJECT TO CHANGE WITHOUT NOTICE   *
+{*  AND  SHOULD  NOT  BE  CONSTRUED AS  A COMMITMENT BY DIGITAL EQUIPMENT   *
+{*  CORPORATION.							    *
+{* 									    *
+{*  DIGITAL ASSUMES NO RESPONSIBILITY FOR THE USE  OR  RELIABILITY OF ITS   *
+{*  SOFTWARE ON EQUIPMENT WHICH IS NOT SUPPLIED BY DIGITAL.		    *
+{* 									    *
+{*									    *
+{****************************************************************************
+
+{++
+{
+{ FACILITY:  Alpha/VMS System Macro Libraries
+{
+{ ABSTRACT:
+{
+{	This file contains the SDL source for structure $PRTDEF.
+{
+{	WARNING:  These definitions are suitable only for those
+{		  interfaces that remain compatible between VAX
+{		  and Alpha. The $SETPRT system service is an
+{		  example.
+{
+{		  When specifying protection internally, DO NOT
+{		  use these symbols. Use $HWPRTDEF instead.
+{
+{ AUTHOR:  Michael S. Harvey	 CREATION DATE:  23-Mar-1990
+{
+{ MODIFIED BY:
+{
+{	X-1K3	MSH1098		Michael S. Harvey	7-Feb-1991
+{		Restore these definitions such that they produce
+{		VAX-style page protection encodings.
+{
+{{--
+
+module $PRTDEF;
+/*+
+/* Protection field definitions
+/*-
+
+
+constant NA	  equals (%B0000) prefix PRT tag $C;	/* No Access
+constant KR	  equals (%B0011) prefix PRT tag $C;	/* Kernel Read only
+constant KW	  equals (%B0010) prefix PRT tag $C;	/* Kernel Write
+constant ER	  equals (%B0111) prefix PRT tag $C;	/* Exec Read only
+constant EW	  equals (%B0101) prefix PRT tag $C;	/* Exec Write
+constant SR	  equals (%B1011) prefix PRT tag $C;	/* Super Read only
+constant SW	  equals (%B1000) prefix PRT tag $C;	/* Super Write
+constant UR	  equals (%B1111) prefix PRT tag $C;	/* User Read only
+constant UW	  equals (%B0100) prefix PRT tag $C;	/* User Write
+
+constant ERKW	  equals (%B0110) prefix PRT tag $C;	/* Exec Read Kernel Write
+constant SRKW	  equals (%B1010) prefix PRT tag $C;	/* Super Read Kernel Write
+constant SREW	  equals (%B1001) prefix PRT tag $C;	/* Super Read Exec Write
+constant URKW	  equals (%B1110) prefix PRT tag $C;	/* User Read Kernel Write
+constant UREW	  equals (%B1101) prefix PRT tag $C;	/* User Read Exec Write
+constant URSW	  equals (%B1100) prefix PRT tag $C;	/* User Read Super Write
+constant RESERVED equals (%B0001) prefix PRT tag $C;	/* Reserved
+
+end_module $PRTDEF;

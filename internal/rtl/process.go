@@ -109,6 +109,12 @@ type Process struct {
 	// condition handlers searched before and after the call frames, 0
 	// when not set (CTL$AQ_EXCVEC on VMS; condition.go).
 	exceptionVectors [4][3]uint32
+
+	// memoryLocks and workingSetLocks are the pages locked in memory
+	// ($LCKPAG) and in the working set ($LKWSET), by address. Nothing
+	// pages in govax, so they only decide what the locking services
+	// report (pageprot.go).
+	memoryLocks, workingSetLocks pageLocks
 }
 
 // The exception vectors of each access mode, as $SETEXV numbers them.
@@ -285,6 +291,7 @@ func (env *Environment) ImageRundown() {
 	env.cancelPutmsgCalls()
 	env.cancelChangeModeCalls()
 	env.cancelConditions()
+	env.cancelPageLocks()
 	env.qiowWaits = nil
 }
 

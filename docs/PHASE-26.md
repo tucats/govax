@@ -79,7 +79,8 @@ follow them too, and this list should grow when a new pattern is settled.
   (`$CREMBX`, `$DELMBX`), `mbxdriver.go` (the mailbox driver),
   `condition.go` (the condition dispatcher, `SYS$SRCHANDLER`, `$SETEXV`),
   `signal.go` (the `LIB$` signaling shims), `unwind.go` (`$UNWIND`,
-  `LIB$SIG_TO_RET`), `vaspace.go` (`$CRETVA`, `$DELTVA`, `$CNTREG`). Each file has
+  `LIB$SIG_TO_RET`), `vaspace.go` (`$CRETVA`, `$DELTVA`, `$CNTREG`),
+  `pageprot.go` (`$SETPRT`, page locking). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -235,6 +236,8 @@ lists the ones the implementation can actually return.
 | `$CRETVA` | 35 | `vaspace.go` | `NORMAL`, `ACCVIO`, `NOPRIV`, `PAGOWNVIO`, `VASFULL` | Demand-zero pages owned by (and read/write for) the maximized mode; an existing page replaced empty. |
 | `$DELTVA` | 35 | `vaspace.go` | `NORMAL`, `ACCVIO`, `NOPRIV`, `PAGOWNVIO` | The all-zero PTE; the physical page freed. Missing pages pass. |
 | `$CNTREG` | 35 | `vaspace.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLPAGCNT`, `PAGOWNVIO` | Obsolete: deletes pages from P0's high-water mark down, or P1's lowest page up. |
+| `$SETPRT` | 36 | `pageprot.go` | `NORMAL`, `ACCVIO`, `IVPROTECT`, `LENVIO`, `NOPRIV`, `PAGOWNVIO` | Rewrites the PTEs' protection (0 means `KR`), keeping owner, validity, and contents; `$PRTDEF` generated. |
+| `$LCKPAG`, `$ULKPAG`, `$LKWSET`, `$ULWSET` | 36 | `pageprot.go` | `WASCLR`, `WASSET`, `ACCVIO`, `NOPRIV`, `PAGOWNVIO` | Checked, and the locked pages remembered for the status; nothing pages, so nothing else changes. |
 
 ## Service designs
 
@@ -2018,6 +2021,39 @@ Not implemented (see `docs/DEVIATIONS.md`): growing the page tables;
 the `PGFLQUOTA` and working-set checks; `$CNTREG` doesn't shorten
 `P0LR`/`P1LR`.
 
+### `$SETPRT`, `$LCKPAG`, `$ULKPAG`, `$LKWSET`, `$ULWSET`
+
+`SYS$SETPRT inadr ,[retadr] ,[acmode] ,prot ,[prvprt]`, and
+`SYS$LCKPAG`/`ULKPAG`/`LKWSET`/`ULWSET inadr ,[retadr] ,[acmode]`
+
+A page's protection names the least privileged mode allowed to read it
+and the least allowed to write it (`UW`: everyone reads and writes; `UR`:
+everyone reads, no one writes; `URKW`: everyone reads, kernel writes;
+`NA`: nothing). `$SETPRT` changes it for a range of pages, so a program
+can make its code read-only once loaded, or guard a buffer so a stray
+access becomes an access violation. The `PRT$C_` codes, in the PTE's own
+encoding, are generated from VMS 7.3's `prtdef.sdl` as
+`vmsdef.PRTConstants` (the SDL parser learned `%B` binary literals and
+parenthesized values).
+
+`$SETPRT` rewrites each page's PTE protection, keeping its owner,
+validity, and physical page, so the contents survive. `prot` is its low
+four bits; 0 means kernel read-only, as the manual says, and 1 (the
+reserved code) is `SS$_IVPROTECT`. The mode (maximized) must be at least
+as privileged as each page's owner (`SS$_PAGOWNVIO`); a page that
+doesn't exist is `SS$_ACCVIO`, one beyond the page table `SS$_LENVIO`, a
+system page `SS$_NOPRIV`. `prvprt` gets the last page's old protection
+(a byte); `retadr` the range changed.
+
+On VMS, `$LKWSET` keeps pages in the process's working set and
+`$LCKPAG` in physical memory, for code that mustn't page fault. govax
+doesn't page, so the four services change nothing about memory; they
+check their pages as `$SETPRT` does (a missing or out-of-table page is
+`SS$_ACCVIO`) and keep each kind of lock's pages
+(`Process.workingSetLocks`, `memoryLocks`) only to report `SS$_WASSET`
+(some page was locked before) or `SS$_WASCLR`. Deleting a page forgets
+its locks, and image rundown unlocks everything.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -2166,7 +2202,7 @@ sixth batch listed):
     (shim code 37), which is built on it.
 35. **Done.** **`$CRETVA`, `$DELTVA`, `$CNTREG`**: create and delete pages of the
     P0 and P1 regions through their page table entries.
-36. **`$SETPRT`** (with a generated `$PRTDEF`), and `$LCKPAG`/`$ULKPAG`/
+36. **Done.** **`$SETPRT`** (with a generated `$PRTDEF`), and `$LCKPAG`/`$ULKPAG`/
     `$LKWSET`/`$ULWSET` as checked no-ops.
 37. **Mailbox completions**: `$SETRWM` (resource wait mode: a full
     mailbox makes the writer wait), read and write attention ASTs
@@ -3065,4 +3101,26 @@ fixed.
   `ACCVIO`; `PAGOWNVIO` from user mode and a user page deleted; `$CNTREG`
   in P0 and P1 and its errors), `internal/rtl/vaspace_test.go` (the range
   arithmetic), and `TestFreePage`.
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 36: `$SETPRT` and page locking
+
+- **`internal/rtl/pageprot.go`** (new): `serviceSysSetprt`,
+  `pageForChange`, the four locking services through `lockPages`,
+  `forgetPageLocks` (called by `$DELTVA`), and `cancelPageLocks` (image
+  rundown); `Process.memoryLocks`/`workingSetLocks`.
+- **`$PRTDEF`**: `reference/vms/prtdef.sdl` (from VMS 7.3's
+  `starlet_b64/lis`), generated as `vmsdef.PRTConstants` through a new
+  `-prtdef` generator input. The SDL parser gained `%B` literals and
+  parenthesized `equals` values (`TestParseSDL_binaryParenthesized`).
+- **Acceptance fixture** `testdata/asm/pageprot.asm`: a page made
+  read-only, written (the program's handler catches the access
+  violation), made writable and written, then locked twice and
+  unlocked. `TestPageProt_assembledProgram` checks `prvprt`, the fault,
+  the value, and the three statuses.
+- Tests (`internal/console/pageprot_test.go`): the protection, retadr,
+  and prvprt; data kept; a read-only page refusing a write; 0 and 1;
+  `NOPRIV`, `LENVIO`, `ACCVIO`, `PAGOWNVIO` with -1 retadrs; the lock
+  statuses for both kinds, locks forgotten on deletion and at rundown,
+  and the errors.
 - `go test ./...` passes.

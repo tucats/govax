@@ -294,6 +294,8 @@ func (env *Environment) deletePages(pages []uint32, mode vax.AccessMode) (uint32
 			if !env.replacePTE(addr, old, 0) {
 				return ssAccVio, done
 			}
+
+			env.forgetPageLocks(addr)
 		}
 
 		done = append(done, addr)

@@ -329,6 +329,13 @@ func sdlConstant(toks []string, defaultPrefix, defaultTag string, lookup func(st
 		arg := toks[i+1]
 		i++
 
+		// A value may be parenthesized: "equals (%B0000)", as $PRTDEF
+		// writes its protection codes.
+		if arg == "(" && i+2 < len(toks) && toks[i+2] == ")" {
+			arg = toks[i+1]
+			i += 2
+		}
+
 		switch kw {
 		case "equals", "increment":
 			n, err := sdlValue(arg, lookup)
@@ -424,8 +431,9 @@ func sdlLength(arg string, locals map[string]int64) (int64, error) {
 }
 
 // sdlValue evaluates an SDL constant value: a decimal literal, a %x
-// hexadecimal literal, or NAME@N (the earlier constant NAME shifted left N
-// bits).
+// hexadecimal or %b binary literal (the page protection codes in
+// $PRTDEF are written in binary), or NAME@N (the earlier constant NAME
+// shifted left N bits).
 func sdlValue(arg string, lookup func(string) (uint32, bool)) (int64, error) {
 	if name, shift, ok := strings.Cut(arg, "@"); ok {
 		v, found := lookup(name)
@@ -443,6 +451,10 @@ func sdlValue(arg string, lookup func(string) (uint32, bool)) (int64, error) {
 
 	if hex, ok := strings.CutPrefix(strings.ToLower(arg), "%x"); ok {
 		return strconv.ParseInt(hex, 16, 64)
+	}
+
+	if bin, ok := strings.CutPrefix(strings.ToLower(arg), "%b"); ok {
+		return strconv.ParseInt(bin, 2, 64)
 	}
 
 	return strconv.ParseInt(arg, 10, 64)

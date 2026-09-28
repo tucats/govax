@@ -754,6 +754,13 @@ changed as a result.
     are gone either way. Its P1 end is the lowest page `P1LR` admits,
     which, because of eVAX's P1 length check (`page <= P1LR` is out of
     range), is the page after the one `P1LR` names.
+  - `$SETPRT` never charges the paging-file quota, and there are no
+    sections, so its global-section rules don't arise.
+  - The page-locking services (subtask 36) only remember which pages
+    are locked, for their `SS$_WASSET`/`WASCLR` status: nothing pages,
+    so there's no locked-page or working-set limit (`SS$_LCKPAGFUL`,
+    `SS$_LKWSETFUL`), and image rundown unlocks every page, not just the
+    image's user-mode locks.
 - **Status**: open, by design.
 
 ## Open findings

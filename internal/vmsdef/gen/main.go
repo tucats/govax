@@ -134,13 +134,14 @@ func main() {
 	syidef := flag.String("syidef", "", "path to syidef.txt")
 	dvidef := flag.String("dvidef", "", "path to dvidef.txt")
 	ttdef := flag.String("ttdef", "", "path to ttdef.txt")
+	prtdef := flag.String("prtdef", "", "path to prtdef.sdl")
 	sysmsg := flag.String("sysmsg", "", "path to sysmsg.txt (a message-file listing)")
 	out := flag.String("out", "", "path to write the generated Go source")
 	msgOut := flag.String("msgout", "", "path to write the generated message texts")
 	flag.Parse()
 
-	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *dvidef == "" || *ttdef == "" || *sysmsg == "" || *out == "" || *msgOut == "" {
-		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, -dvidef, -ttdef, -sysmsg, -out, and -msgout are all required")
+	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *dvidef == "" || *ttdef == "" || *prtdef == "" || *sysmsg == "" || *out == "" || *msgOut == "" {
+		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, -dvidef, -ttdef, -prtdef, -sysmsg, -out, and -msgout are all required")
 	}
 
 	constants := map[string]uint32{}
@@ -195,6 +196,11 @@ func main() {
 	tt, err := parseBlissLiterals(readSource(*ttdef), "TT")
 	if err != nil {
 		log.Fatalf("gen: %s: %v", *ttdef, err)
+	}
+
+	prt, err := parseSDL(readSource(*prtdef))
+	if err != nil {
+		log.Fatalf("gen: %s: %v", *prtdef, err)
 	}
 
 	maps := []constantMap{
@@ -292,16 +298,25 @@ func main() {
 			},
 			entries: tt,
 		},
+		{
+			name: "PRTConstants",
+			doc: []string{
+				"PRTConstants is every real $PRTDEF symbol: the PRT$C_ page",
+				"protection codes $SETPRT takes (PRT$C_NA, PRT$C_UW, ...), in the",
+				"VAX page table entry's encoding.",
+			},
+			entries: prt,
+		},
 	}
 
-	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef, *statedef, *syidef, *dvidef, *ttdef}
+	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef, *statedef, *syidef, *dvidef, *ttdef, *prtdef}
 	code := generate(maps, sources)
 
 	if err := os.WriteFile(*out, code, 0o644); err != nil {
 		log.Fatalf("gen: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), len(syi), len(dvi), len(tt), *out)
+	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), len(syi), len(dvi), len(tt), len(prt), *out)
 
 	// The message texts go in a file of their own (see msg.go).
 	msgs, facilities, err := parseMessages(readSource(*sysmsg))
