@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/rtl"
 
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/vax"
@@ -890,5 +891,95 @@ func TestCmkrnl_assembledProgram(t *testing.T) {
 
 	if got := word("UMODE"); got != uint32(vax.User) {
 		t.Errorf("mode afterwards = %d, want user (3)", got)
+	}
+}
+
+// TestCtrlCAST_assembledProgram is docs/PHASE-26.md subtask 27's
+// acceptance test: testdata/asm/ctrlc_ast.asm enables a CTRL/C AST and
+// spins until it runs, then a CTRL/Y AST. The test "types" CTRL/C
+// (Engine.Attention, as the host keyboard handler does) each time the
+// program reaches a spin loop; instead of stopping the machine, each
+// key is delivered as the program's AST.
+func TestCtrlCAST_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+	c.DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "ctrlc_ast.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(ctrlc_ast.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("ctrlc_ast.asm has no entry address")
+	}
+
+	symbol := func(name string) uint32 {
+		t.Helper()
+
+		a, ok := c.Symbols.Get(name)
+		if !ok {
+			t.Fatalf("no %s symbol", name)
+		}
+
+		return a
+	}
+
+	spins := []uint32{symbol("SPIN1"), symbol("SPIN2")}
+	typed := 0
+
+	if err := c.Engine.CallEntry(addr); err != nil {
+		t.Fatal(err)
+	}
+
+	done := false
+
+	for i := 0; i < 100_000 && !done; i++ {
+		// Type CTRL/C the first time the program reaches each spin loop.
+		if typed < len(spins) && c.CPU.GPR(vax.PC) == spins[typed] {
+			c.Engine.Attention()
+			typed++
+		}
+
+		switch err := c.Engine.Step(); {
+		case err == nil:
+		case errors.Is(err, cpu.ErrConsoleCallReturned):
+			done = true
+		default:
+			t.Fatalf("step %d: %v (CTRL/C stopped the program instead of running its AST?)", i, err)
+		}
+	}
+
+	if !done {
+		t.Fatal("ctrlc_ast.asm didn't finish within 100,000 steps")
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Errorf("R0 = %d, want 1", got)
+	}
+
+	for name, want := range map[string]uint32{"SEEN": 5, "YSEEN": 9} {
+		if got, _ := c.Mem.LoadLongword(c.CPU, symbol(name)); got != want {
+			t.Errorf("%s = %d, want %d", name, got, want)
+		}
+	}
+
+	if c.Engine.AttentionRequested() || c.RTL.AttentionASTs() != 0 {
+		t.Error("a key or an AST request was left over")
+	}
+}
+
+// TestAttentionKeys_matchRTL: the engine's attention keys are the RTL's.
+func TestAttentionKeys_matchRTL(t *testing.T) {
+	c := newBootableConsole(t)
+
+	var _ cpu.AttentionHandler = c
+
+	if cpu.AttentionCtrlC != rtl.AttentionCtrlC || cpu.AttentionCtrlY != rtl.AttentionCtrlY {
+		t.Errorf("engine keys %#x/%#x, RTL keys %#x/%#x", cpu.AttentionCtrlC, cpu.AttentionCtrlY, rtl.AttentionCtrlC, rtl.AttentionCtrlY)
+	}
+
+	// With nothing enabled, neither key is taken.
+	if c.HandleAttention(cpu.AttentionCtrlC) || c.HandleAttention(cpu.AttentionCtrlY) {
+		t.Error("a key was taken with no AST enabled")
 	}
 }

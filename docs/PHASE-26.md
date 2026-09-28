@@ -70,7 +70,8 @@ follow them too, and this list should grow when a new pattern is settled.
   handlers), `getsyi.go` (`$GETSYI`), `itemlist.go` (item-list walking
   and the item values the `$GETxxx` services return), `fao.go` (`$FAO`
   formatting, which later services reuse through `formatFAO`), `message.go`
-  (`$GETMSG`, `$PUTMSG`), `cmode.go` (`$CMKRNL`, `$CMEXEC`). Each file has
+  (`$GETMSG`, `$PUTMSG`), `cmode.go` (`$CMKRNL`, `$CMEXEC`), `ctrlast.go`
+  (CTRL/C and CTRL/Y ASTs). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -206,6 +207,7 @@ lists the ones the implementation can actually return.
 | `$GETMSG` | 25 | `message.go` | `NORMAL`, `BUFFEROVF`, `MSGNOTFND`, `ACCVIO`, `INSFARG` | Texts of 1,426 messages (CLI, LIB, MTH, OTS, RMS, SYSTEM) generated from the VMS 7.3 message file. |
 | `$PUTMSG` | 25 | `message.go` | `NORMAL`, `ACCVIO` | Formats a message vector with `formatFAO`; an action routine is called through a `CallRequest`. |
 | `$CMKRNL`, `$CMEXEC` | 26 | `cmode.go` | (the routine's R0) | Switch into the mode, call the routine through a `CallRequest`, switch back when it returns. |
+| (CTRL/C, CTRL/Y ASTs) | 27 | `ctrlast.go`, `ttdriver.go` | — | `IO$_SETMODE!IO$M_CTRLCAST`/`CTRLYAST` enable one-shot ASTs the host's Ctrl-C delivers instead of stopping the machine. |
 
 ## Service designs
 
@@ -1528,6 +1530,53 @@ mode its own.
 Not implemented (see `docs/DEVIATIONS.md`): R4 isn't loaded with a PCB
 address for `$CMKRNL` (govax has no PCB).
 
+### CTRL/C and CTRL/Y ASTs
+
+`$QIO[W] chan, IO$_SETMODE!IO$M_CTRLCAST (or IO$M_CTRLYAST), p1=astadr,
+p2=astprm, p3=acmode`
+
+On VMS, CTRL/Y interrupts the running program (the command interpreter
+takes over), and CTRL/C does the same unless a program asks for it. A
+program asks by enabling a CTRL/C (or CTRL/Y) AST on a terminal channel:
+the terminal driver then calls its AST routine when the key is typed,
+and the program keeps running. The AST is one-shot: it must be enabled
+again for the next key. `p1` of 0 cancels; `p3` is maximized with the
+caller's mode. When a key is typed:
+
+- CTRL/C: every enabled CTRL/C AST is delivered; with none, CTRL/C is
+  taken as CTRL/Y.
+- CTRL/Y: every enabled CTRL/Y AST is delivered; with none, the program
+  is interrupted.
+
+`$CANCEL` and `$DASSGN` cancel a channel's requests (so image rundown,
+deassigning user channels, does too).
+
+#### Design: the engine offers the key before stopping
+
+Before, the host's Ctrl-C (`cmd/govax/attention.go`: a 0x03 byte from the
+terminal in raw mode, or SIGINT in cooked mode) called `Engine.Attention`,
+and the next `Step` returned `ErrAttention`, stopping the machine.
+
+Now the engine remembers *which* key (`AttentionKey`: `AttentionCtrlC` or
+`AttentionCtrlY`), and `Step` first offers it to the services' optional
+`cpu.AttentionHandler` (found by `SetSystemServices`, as `ASTSource` is).
+The console forwards to `rtl.Environment.Attention`, which applies the
+rules above: if it queues an AST, the key is consumed and `Step` goes on
+(delivering the AST at that same boundary); if not, `ErrAttention`
+stops the machine as before.
+
+The requests are the Environment's (`attentionASTs`: key, channel,
+routine, parameter, mode), since every terminal is the console. The
+terminal driver's `ttSetMode` records them (`ttAttentionAST`).
+
+Host Ctrl-Y isn't intercepted: readline uses it at the `VAX>` prompt,
+and macOS treats it as DSUSP. So a program's CTRL/Y AST is reached
+through Ctrl-C with no CTRL/C AST enabled, as VMS itself does; the engine
+API accepts either key for tests and later use.
+
+Not implemented (see `docs/DEVIATIONS.md`): echoing `^C`; interrupting a
+terminal read blocked on host input.
+
 Not implemented (see `docs/DEVIATIONS.md`): other cluster nodes; SYSGEN
 parameters beyond `MINWSCNT`; the `ASTLM` quota (`SS$_EXASTLM`).
 
@@ -1636,9 +1685,11 @@ fifth batch listed):
     in, call the routine through subtask 19's `CallRequest` with the
     service's `XFC` as the return, and switch back when it returns, with
     its R0. Acceptance fixture `testdata/asm/cmkrnl.asm`.
-27. **CTRL/C and CTRL/Y ASTs.** `IO$_SETMODE` with `IO$M_CTRLCAST`/
-    `IO$M_CTRLYAST` arms a one-shot AST that the console's attention
-    handling queues instead of stopping the machine.
+27. **Done.** **CTRL/C and CTRL/Y ASTs.** `IO$_SETMODE` with
+    `IO$M_CTRLCAST`/`IO$M_CTRLYAST` arms a one-shot AST (the new
+    `ctrlast.go`) that the engine's attention check, through the new
+    `cpu.AttentionHandler`, queues instead of stopping the machine.
+    Acceptance fixture `testdata/asm/ctrlc_ast.asm`.
 28. **`$GETDVI`/`$GETDVIW` in full.** The `$GETJPI`/`$GETSYI` pattern
     over the device record, from a generated `$DVIDEF`, replacing eVAX's
     three-item `$GETDVIW`.
@@ -2273,5 +2324,36 @@ None yet.
   (mode, previous mode, stacks, the routine's R0); the target mode for
   each service from each caller mode, including `$CMEXEC` from kernel;
   a nested call; rundown.
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 27: CTRL/C and CTRL/Y ASTs
+
+- **`internal/cpu/attention.go`** (new): `AttentionCtrlC`/`AttentionCtrlY`,
+  the optional `AttentionHandler` interface, and `checkAttention`, which
+  `Step` now calls. `Engine.attentionRequested` became `attentionKey`
+  (which key); `Attention` is `AttentionKey(AttentionCtrlC)`;
+  `SetSystemServices` finds the handler.
+- **`internal/rtl/ctrlast.go`** (new): the requests (`attentionAST`,
+  `Environment.attentionASTs`), `armAttentionAST`, `disarmChannel`, and
+  `Attention`, which applies VMS's rules. `ttdriver.go`'s `ttSetMode`
+  sends `IO$M_CTRLCAST`/`CTRLYAST` to the new `ttAttentionAST`;
+  `$CANCEL` and `releaseChannel` (`$DASSGN`, rundown) disarm.
+- **`internal/console/services.go`**: `Console.HandleAttention` makes the
+  console a `cpu.AttentionHandler`.
+- **`cmd/govax/attention.go`**: a comment on why host Ctrl-Y isn't
+  intercepted.
+- **Acceptance fixture** `testdata/asm/ctrlc_ast.asm`: a CTRL/C AST, then a
+  CTRL/Y AST that a CTRL/C reaches. `TestCtrlCAST_assembledProgram`
+  "types" CTRL/C (`Engine.Attention`) as the program reaches each spin
+  loop, and checks each AST ran with its parameter and the program
+  finished rather than stopping.
+- Tests: `cpu/attention_test.go` (a taken key runs the instruction and
+  clears; a declined one stops until `BeginRun`; no handler stops);
+  `rtl/ctrlast_test.go` (delivery, mode maximized, one-shot, CTRL/C not
+  catching CTRL/Y, CTRL/C falling back to CTRL/Y, replacement per
+  channel, several channels, `p1` 0, `$CANCEL`, `$DASSGN`, rundown);
+  the console's handler and the two packages' keys agreeing.
+- `docs/DEVIATIONS.md`: the terminal `$QIO` entry no longer says CTRL/C
+  ASTs aren't delivered; a new CTRL/C entry.
 - `go test ./...` passes.
 

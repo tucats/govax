@@ -122,6 +122,10 @@ type Environment struct {
 	// timers is the process's $SETIMR timer queue (timers.go).
 	timers []*timerRequest
 
+	// attentionASTs are the CTRL/C and CTRL/Y AST requests enabled on
+	// the process's terminal channels (ctrlast.go).
+	attentionASTs []attentionAST
+
 	// waitingPC is the P1-vector address of a service currently waiting
 	// (ErrWait), so SystemService traces only its first attempt; 0 when
 	// no service is waiting.

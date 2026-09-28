@@ -458,8 +458,10 @@ func serviceSysDassgn(env *Environment, argv []uint32) (uint32, error) {
 }
 
 // releaseChannel removes c from the process's channels and drops its
-// device reference.
+// device reference. Its CTRL/C and CTRL/Y ASTs are cancelled.
 func (env *Environment) releaseChannel(c *channel) {
+	env.disarmChannel(c.Number)
+
 	for i, ch := range env.channels {
 		if ch == c {
 			env.channels = append(env.channels[:i], env.channels[i+1:]...)

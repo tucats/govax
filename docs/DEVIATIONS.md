@@ -499,10 +499,10 @@ changed as a result.
   - `IO$M_TIMED` with a zero time limit reads only characters already
     buffered; a nonzero limit is ignored (the read waits indefinitely).
   - `IO$M_NOFILTR`, `REFRESH`, `ESCAPE`, `DSABLMBX`, and the write
-    modifiers are accepted and have no effect. `IO$_SETMODE` with a
-    modifier (`IO$M_CTRLCAST`, `CTRLYAST`, `OUTBAND`, `HANGUP`, ...)
-    succeeds without doing anything, so CTRL/C and CTRL/Y ASTs are never
-    delivered.
+    modifiers are accepted and have no effect. `IO$_SETMODE` with
+    `IO$M_OUTBAND`, `HANGUP`, and the other modifiers succeeds without
+    doing anything. (`IO$M_CTRLCAST` and `CTRLYAST` work since subtask
+    27; see the CTRL/C entry below.)
   - `IO$_SENSEMODE`'s IOSB reports no line speeds, fill counts, or
     parity.
   - No `BIOLM`/`DIOLM`/`BYTLM`/`ASTLM` quotas (`SS$_EXQUOTA`),
@@ -597,6 +597,23 @@ changed as a result.
     pointer itself. VMS gives each mode a stack of its own in P1 space.
 - **Status**: open. The services are by design; VMINIT's stacks are
   left as they are.
+
+### [Phase 26] CTRL/C and CTRL/Y AST simplifications
+
+- **Where**: `internal/rtl/ctrlast.go`, `internal/cpu/attention.go`,
+  `cmd/govax/attention.go`.
+- **What**:
+  - Only the host's Ctrl-C reaches the program. Host Ctrl-Y isn't
+    intercepted (readline's yank; macOS's DSUSP), so a CTRL/Y AST runs
+    only when Ctrl-C is typed with no CTRL/C AST enabled, as VMS does.
+  - The terminal echoes nothing (VMS echoes `^C`, and `*INTERRUPT*` for
+    a CTRL/Y the command interpreter takes).
+  - A key typed while the program is blocked in a terminal read (waiting
+    for the host) is only seen after the read returns.
+  - The requests belong to the process's channels, not to a terminal
+    device: every terminal is the console.
+  - No `ASTLM` quota.
+- **Status**: open, by design.
 
 ## Open findings
 

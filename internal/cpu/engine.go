@@ -52,13 +52,19 @@ type Engine struct {
 	instructionPC uint32
 	halted        bool
 
-	// attentionRequested backs Attention/AttentionRequested — the Go
-	// equivalent of vax.halted's VAX_ATTENTION value, set by console.c's
-	// SIGINT handler attention(). Unlike every other Engine field, this one
-	// is written from outside the goroutine that calls Step (main.go's
-	// own process-wide Ctrl-C plumbing runs on a separate goroutine), hence
-	// atomic.Bool rather than a plain bool.
-	attentionRequested atomic.Bool
+	// attentionKey backs Attention/AttentionKey/AttentionRequested — the
+	// Go equivalent of vax.halted's VAX_ATTENTION value, set by console.c's
+	// SIGINT handler attention(). It holds the control character typed
+	// (AttentionCtrlC or AttentionCtrlY), or 0 when there's none pending.
+	// Unlike every other Engine field, this one is written from outside
+	// the goroutine that calls Step (main.go's own process-wide Ctrl-C
+	// plumbing runs on a separate goroutine), hence atomic.
+	attentionKey atomic.Uint32
+
+	// attentionHandler is services' attention half (attention.go), when
+	// it has one: it may turn a pending attention key into a CTRL/C or
+	// CTRL/Y AST instead of stopping the machine.
+	attentionHandler AttentionHandler
 
 	// services is the XFC opcode's hook into console/RTL state (see
 	// services.go and xfc.go). nil until SetSystemServices is called, in
@@ -194,6 +200,7 @@ func NewEngine(cpu *vax.CPU, mem *vm.Memory) *Engine {
 func (e *Engine) SetSystemServices(s SystemServices) {
 	e.services = s
 	e.astSource, _ = s.(ASTSource)
+	e.attentionHandler, _ = s.(AttentionHandler)
 }
 
 // CPU returns the engine's CPU.
@@ -228,11 +235,17 @@ func (e *Engine) ClearHalted() { e.halted = false }
 // matching execute_vax's own `vax.halted = 0` at the top of every run — a
 // Ctrl-C pressed while idle at the console prompt, with nothing running,
 // has no effect on the next command.
-func (e *Engine) Attention() { e.attentionRequested.Store(true) }
+func (e *Engine) Attention() { e.AttentionKey(AttentionCtrlC) }
+
+// AttentionKey is Attention for a particular control character: key is
+// AttentionCtrlC or AttentionCtrlY, the character the user typed. The
+// services' AttentionHandler, if any, sees which one (a VMS program can
+// ask for an AST on either). Safe to call from any goroutine.
+func (e *Engine) AttentionKey(key byte) { e.attentionKey.Store(uint32(key)) }
 
 // AttentionRequested reports whether Attention has been called since the
-// last BeginRun.
-func (e *Engine) AttentionRequested() bool { return e.attentionRequested.Load() }
+// last BeginRun (and not taken by an AttentionHandler).
+func (e *Engine) AttentionRequested() bool { return e.attentionKey.Load() != 0 }
 
 // LastDecoded returns whatever instruction the most recent Step call
 // decoded — the same value Step reuses across calls to avoid a fresh heap
@@ -305,8 +318,8 @@ func (e *Engine) Step() error {
 		return err
 	}
 
-	if e.attentionRequested.Load() {
-		return ErrAttention
+	if err := e.checkAttention(); err != nil {
+		return err
 	}
 
 	e.instrCount++

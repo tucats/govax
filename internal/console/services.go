@@ -109,6 +109,18 @@ func (c *Console) NextAST() (cpu.ASTCall, bool, error) {
 	return cpu.ASTCall{Routine: routine, ArgList: argList, ReturnPC: returnPC}, ok, err
 }
 
+// HandleAttention delegates to RTL, making Console a cpu.AttentionHandler:
+// when the user types CTRL/C (or CTRL/Y) while a program runs, the
+// engine asks whether the program has an AST enabled for it before
+// stopping the machine (docs/PHASE-26.md subtask 27).
+func (c *Console) HandleAttention(key byte) bool {
+	if c.RTL == nil {
+		return false
+	}
+
+	return c.RTL.Attention(key)
+}
+
 // Shim delegates to RTL (Phase 10's LIB$/CRTL shim dispatch).
 func (c *Console) Shim(code uint32) (uint32, bool, error) {
 	r0, handled, err := c.RTL.Shim(code)

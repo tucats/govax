@@ -81,15 +81,17 @@ import (
 //     writes IO$M_CANCTRLO, IO$M_NOFORMAT, IO$M_BREAKTHRU, and
 //     IO$M_ENABLMBX: no line editing, escape sequences, mailboxes,
 //     CTRL/O, or output formatting exist to change.
-//   - IO$_SETMODE with a modifier (IO$M_CTRLCAST, IO$M_CTRLYAST,
-//     IO$M_OUTBAND, IO$M_HANGUP, ...) succeeds without doing anything,
-//     so a CTRL/C AST is never delivered.
+//   - IO$_SETMODE with IO$M_CTRLCAST or IO$M_CTRLYAST enables a CTRL/C or
+//     CTRL/Y AST (ctrlast.go). Other modifiers (IO$M_OUTBAND,
+//     IO$M_HANGUP, ...) succeed without doing anything.
 //
 // The end of the host's input is reported as SS$_ENDOFFILE, with any
 // characters read before it as data.
 
 // Terminal function codes and modifiers, from $IODEF.
 var (
+	ioModCtrlCAST  = ioCode("IO$M_CTRLCAST")
+	ioModCtrlYAST  = ioCode("IO$M_CTRLYAST")
 	ioModTimed     = ioCode("IO$M_TIMED")
 	ioModCvtLow    = ioCode("IO$M_CVTLOW")
 	ioModPurge     = ioCode("IO$M_PURGE")
@@ -453,11 +455,18 @@ func ttSenseMode(env *Environment, req *ioRequest) (ioStatus, uint32) {
 // returns them (12 bytes if p2 is at least 12, else 8). The device class
 // in byte 0 can't be changed and is ignored. p1 of 0 changes nothing.
 //
-// With a modifier (IO$M_CTRLCAST, IO$M_CTRLYAST, IO$M_OUTBAND,
-// IO$M_HANGUP, ...), p1 means something else — an AST address, for the
-// AST modifiers — and the request succeeds without doing anything: see
-// this file's opening comment.
+// With a modifier, p1 means something else. IO$M_CTRLCAST and
+// IO$M_CTRLYAST enable a CTRL/C or CTRL/Y AST (ttAttentionAST); other
+// modifiers (IO$M_OUTBAND, IO$M_HANGUP, ...) succeed without doing
+// anything: see this file's opening comment.
 func ttSetMode(env *Environment, req *ioRequest) (ioStatus, uint32) {
+	switch {
+	case req.modified(ioModCtrlCAST):
+		return env.ttAttentionAST(req, AttentionCtrlC)
+	case req.modified(ioModCtrlYAST):
+		return env.ttAttentionAST(req, AttentionCtrlY)
+	}
+
 	buf := req.p[0]
 	if req.modifiers != 0 || buf == 0 {
 		return ioStatus{status: ssNormal}, 0
@@ -489,6 +498,21 @@ func ttSetMode(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	if size == 12 {
 		d.DevDepend2 = long(8)
 	}
+
+	return ioStatus{status: ssNormal}, 0
+}
+
+// ttAttentionAST is IO$_SETMODE with IO$M_CTRLCAST or IO$M_CTRLYAST:
+//
+//	p1  the AST routine's address (0 cancels the channel's request)
+//	p2  the AST parameter
+//	p3  the access mode to deliver it in (maximized with the caller's)
+//
+// It enables a one-shot AST for the next CTRL/C or CTRL/Y typed (key),
+// replacing any this channel enabled before (ctrlast.go).
+func (env *Environment) ttAttentionAST(req *ioRequest, key byte) (ioStatus, uint32) {
+	mode := max(req.p[2]&3, uint32(env.cpu.PSL().CurMod()))
+	env.armAttentionAST(key, req.channel.Number, req.p[0], req.p[1], mode)
 
 	return ioStatus{status: ssNormal}, 0
 }

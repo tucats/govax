@@ -22,6 +22,13 @@ import (
 // on, so Ctrl-C generates a real SIGINT instead; installSigintAttention
 // (below) is what catches that case, since Go's default SIGINT
 // disposition with no handler installed is to terminate the process.
+//
+// Only Ctrl-C is taken this way. Ctrl-Y, which a VMS program can also ask
+// to catch (docs/PHASE-26.md subtask 27), is left alone: readline uses it
+// to yank at the VAX> prompt, and in cooked mode macOS's terminal driver
+// treats it as DSUSP. A VMS program with only a CTRL/Y AST still gets it
+// on Ctrl-C, since VMS takes CTRL/C as CTRL/Y when no CTRL/C AST is
+// enabled.
 const charCtrlC = 0x03
 
 // attentionStdin wraps the real terminal, watching every byte read from it

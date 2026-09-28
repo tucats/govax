@@ -227,9 +227,10 @@ func serviceSysQio(env *Environment, argv []uint32) (uint32, error) {
 //	SYS$CANCEL chan
 //
 // It cancels the I/O requests outstanding on a channel. A govax request
-// completes before $QIO returns, so there are never any: $CANCEL only
+// completes before $QIO returns, so there are never any: $CANCEL
 // checks the channel, with $QIO's rules (SS$_IVCHAN for 0, SS$_NOPRIV if
-// it isn't assigned or was assigned from a more privileged mode).
+// it isn't assigned or was assigned from a more privileged mode), and
+// cancels the channel's CTRL/C and CTRL/Y ASTs (ctrlast.go).
 func serviceSysCancel(env *Environment, argv []uint32) (uint32, error) {
 	number := optArg(argv, 0) & 0xFFFF
 	if number == 0 {
@@ -240,6 +241,8 @@ func serviceSysCancel(env *Environment, argv []uint32) (uint32, error) {
 	if !found || c.Mode < uint32(env.cpu.PSL().CurMod()) {
 		return ssNoPriv, nil
 	}
+
+	env.disarmChannel(c.Number)
 
 	return ssNormal, nil
 }

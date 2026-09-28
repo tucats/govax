@@ -59,7 +59,7 @@ func (e *Engine) SetLimits(maxInstructions int, maxDuration time.Duration) {
 // has no such issue) when debugging govax's own Go code with a debugger.
 func (e *Engine) BeginRun() {
 	e.instrCount = 0
-	e.attentionRequested.Store(false)
+	e.attentionKey.Store(0)
 
 	if e.timeLimit > 0 {
 		e.runDeadline = time.Now().Add(e.timeLimit)
