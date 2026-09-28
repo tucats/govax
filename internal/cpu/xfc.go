@@ -199,7 +199,9 @@ func emulXfcDCL(e *Engine) error {
 //
 // A handled call always sets R0 before returning, even when it also reports
 // an error (e.g. a service that requests a halt) — except ErrServiceWait,
-// which re-executes the XFC instead of completing — matching call_service's
+// which re-executes the XFC instead of completing, and a *ServiceCall,
+// which calls a procedure that returns to the XFC (see exit.go); an
+// ErrImageExit sets R0 and then ends the image — matching call_service's
 // own "vax.R0 = rc" happening unconditionally after the native handler
 // returns, before the caller's fetch loop next checks vax.halted.
 func emulXfcP1Vector(e *Engine) error {
@@ -224,7 +226,19 @@ func emulXfcP1Vector(e *Engine) error {
 		return nil
 	}
 
+	// The service needs a procedure called first ($EXIT's exit handlers):
+	// call it, returning to this XFC. R0 is left alone.
+	var call *ServiceCall
+	if errors.As(err, &call) {
+		return e.callForService(call)
+	}
+
 	e.cpu.SetGPR(vax.R0, r0)
+
+	// The image has exited ($EXIT): r0 is its exit status.
+	if errors.Is(err, ErrImageExit) {
+		return e.exitImage()
+	}
 
 	return err
 }

@@ -429,3 +429,73 @@ func TestSynch_assembledProgram(t *testing.T) {
 		t.Errorf("%d ASTs and %d timers left, want none", n, m)
 	}
 }
+
+// TestExitHandlers_assembledProgram is docs/PHASE-26.md subtask 19's
+// acceptance test: testdata/asm/exit_handlers.asm, run in user mode,
+// declares exit handlers, cancels one, and calls $EXIT, which calls the
+// others newest first and then ends the image, returning to the console
+// with the exit status in R0.
+func TestExitHandlers_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "exit_handlers.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(exit_handlers.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("exit_handlers.asm has no entry address")
+	}
+
+	// Run it as a user-mode image, on the user stack VMInit set up.
+	c.Engine.SetModeStack(vax.User, false)
+
+	runErr, hitCap := callBounded(t, c, addr, 100_000)
+	if runErr != nil {
+		t.Fatalf("running exit_handlers.asm: %v", runErr)
+	}
+
+	if hitCap {
+		t.Fatal("exit_handlers.asm didn't finish within 100,000 steps")
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 0x2C {
+		t.Errorf("R0 = %#x, want the exit status 0x2C", got)
+	}
+
+	word := func(name string) uint32 {
+		t.Helper()
+
+		a, ok := c.Symbols.Get(name)
+		if !ok {
+			t.Fatalf("no %s symbol", name)
+		}
+
+		v, err := c.Mem.LoadLongword(c.CPU, a)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return v
+	}
+
+	if o1, o2 := word("ORDER1"), word("ORDER2"); o2 != 1 || o1 != 2 {
+		t.Errorf("handler order: HANDLER1 ran %d, HANDLER2 ran %d; want HANDLER2 first (1), then HANDLER1 (2)", o1, o2)
+	}
+
+	if s1, s2 := word("STATUS1"), word("STATUS2"); s1 != 0x2C || s2 != 0x2C {
+		t.Errorf("statuses the handlers saw: %#x, %#x; want 0x2C", s1, s2)
+	}
+
+	if word("RAN3") != 0 {
+		t.Error("the cancelled handler ran")
+	}
+
+	if word("RETURNED") != 0 {
+		t.Error("$EXIT returned to its caller")
+	}
+
+	if n := c.RTL.ExitHandlers(vax.User); n != 0 || c.RTL.Process.ExitStatus != 0x2C {
+		t.Errorf("%d user handlers left, ExitStatus %#x; want none and 0x2C", n, c.RTL.Process.ExitStatus)
+	}
+}

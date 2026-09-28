@@ -67,6 +67,15 @@ type Process struct {
 	// ast is the process's AST queue and per-mode AST state (the PCB's
 	// AST fields; ast.go).
 	ast astState
+
+	// exitHandlers holds each access mode's declared exit control blocks
+	// ($DCLEXH), by address, oldest first — the lists VMS heads at
+	// CTL$GL_THEXIT and friends (exit.go). Kernel mode's is always empty.
+	exitHandlers [4][]uint32
+
+	// ExitStatus is the completion status of the last $EXIT, which VMS
+	// saves in the process header.
+	ExitStatus uint32
 }
 
 // Default identity and quotas for the emulated process. The PID is
@@ -211,15 +220,17 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 // assigned from user mode, then deallocates the devices it allocated in
 // user mode, and disassociates its common event flag clusters (deleting
 // temporary ones nobody else uses), cancels its outstanding $SETIMR
-// timers and $SCHDWK wakeups, and discards its queued user-mode ASTs.
-// The console calls it when an image started by RUN
-// returns (and does its own logical-name rundown alongside).
+// timers and $SCHDWK wakeups, discards its queued user-mode ASTs, and
+// forgets its user-mode exit handlers. The console calls it when an
+// image started by RUN returns or exits (and does its own logical-name
+// rundown alongside).
 func (env *Environment) ImageRundown() {
 	env.deassignUserChannels()
 	env.deallocateUserDevices()
 	env.disassociateClusters()
 	env.cancelTimers()
 	env.flushUserASTs()
+	env.cancelUserExitHandlers()
 }
 
 func registerProcessServices(t *ServiceTable) {

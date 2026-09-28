@@ -18,7 +18,7 @@ import (
 
 // Environment is one VAX "process" worth of RTL state: the calling-convention
 // plumbing (SYS$/LIB$ registries) plus the state individual services and
-// shims need — common event flag clusters, an exit handler, region-size bookkeeping shared
+// shims need — common event flag clusters, region-size bookkeeping shared
 // with Phase 13's image loader and this phase's memory allocator, channels,
 // the emulated process record (process.go, which grew out of
 // docs/PHASE-10.md's "minimal process stub"), and the RMS file table. It
@@ -73,10 +73,6 @@ type Environment struct {
 	// clusters $ASCEFC creates and associates (eventflags.go). A process's
 	// own event flags and associations are in Process.
 	EventFlagClusters *CommonEventFlags
-
-	// exitHandler is vms_exit_handler, recorded by SYS$DCLEXH. Nothing
-	// currently invokes it (no image-exit path exists until Phase 13).
-	exitHandler uint32
 
 	channels    []*channel
 	nextChannel uint32
@@ -288,6 +284,7 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 	// A waiting service is called again on every instruction step until
 	// its wait is satisfied (ErrWait); only its first attempt is traced.
 	waiting := errors.Is(err, ErrWait)
+	var call *CallRequest
 	retry := waiting && env.waitingPC == pc
 
 	if waiting {
@@ -307,8 +304,14 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 		}
 
 		result := fmt.Sprintf("returns %08X", r0)
-		if waiting {
+
+		switch {
+		case waiting:
 			result = "waits"
+		case errors.As(err, &call):
+			result = fmt.Sprintf("calls %08X", call.Routine)
+		case errors.Is(err, ErrExit):
+			result = fmt.Sprintf("exits with status %08X", r0)
 		}
 
 		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(SERVICES): %s( %s ), %s\n",

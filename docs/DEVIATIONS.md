@@ -506,6 +506,22 @@ changed as a result.
     `SS$_INSFMEM`, `SS$_DEVOFFLINE`, or network functions.
 - **Status**: open, by design.
 
+### [Phase 26] Exit handler simplifications
+
+- **Where**: `internal/rtl/exit.go`, `internal/cpu/exit.go`.
+- **What**:
+  - `$EXIT` calls only the exit handlers of the mode it's called from.
+    VMS then runs the supervisor- and executive-mode handlers in their
+    own modes during rundown.
+  - An image that ends by an unhandled exception doesn't have its exit
+    handlers called; the console reports the exception and stops.
+  - `$EXIT` ends the image by returning from the console's call frame
+    (or halting, without one), not by transferring to a command
+    interpreter.
+  - eVAX's `$DCLEXH` recorded one handler address and nothing called it;
+    that stub is replaced.
+- **Status**: open, by design.
+
 ## Open findings
 
 _None yet._

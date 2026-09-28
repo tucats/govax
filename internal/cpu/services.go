@@ -1,6 +1,9 @@
 package cpu
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // ErrServiceWait is what SystemService returns when the service has put
 // the process in a wait state that isn't satisfied yet ($WAITFR on a clear
@@ -68,3 +71,25 @@ type SystemServices interface {
 	// (this opcode's halt reason) identically to a plain VAX_HALT.
 	RequestQuit()
 }
+
+// ServiceCall is what SystemService returns when the service needs a
+// guest procedure called on its behalf before it can go on: $EXIT calling
+// an exit handler (docs/PHASE-26.md subtask 19). The XFC handler calls
+// Routine as CALLG ArgList, Routine would, with the XFC itself as the
+// return address. So when the procedure executes RET, the XFC runs
+// again, calling the service again, which picks up where it left off
+// (the RTL keeps track of how far it got). R0 is left alone.
+type ServiceCall struct {
+	Routine uint32 // the procedure's entry mask address
+	ArgList uint32 // its argument list (a count longword, then arguments)
+}
+
+func (c *ServiceCall) Error() string {
+	return fmt.Sprintf("cpu: system service calls %08X", c.Routine)
+}
+
+// ErrImageExit is what SystemService returns when the running image has
+// finished exiting ($EXIT, after its exit handlers). The XFC handler sets
+// R0 to the exit status the service returned, and ends the image by
+// returning from the console's own call frame (see exitImage).
+var ErrImageExit = errors.New("cpu: image exit")

@@ -6,19 +6,8 @@ import (
 	"github.com/tucats/govax/internal/vax"
 )
 
-// $SETAST, once tested here alongside $DCLEXH, is in ast_test.go.
-func TestServiceSysDclexh(t *testing.T) {
-	env, _ := fixture()
-
-	if _, err := serviceSysDclexh(env, []uint32{0x1234}); err != nil {
-		t.Fatal(err)
-	}
-
-	if env.exitHandler != 0x1234 {
-		t.Errorf("exitHandler = %#x, want 0x1234", env.exitHandler)
-	}
-}
-
+// $SETAST, once tested here alongside $DCLEXH, is in ast_test.go, and
+// $DCLEXH in exit_test.go.
 func TestServiceSysClrefSetefReadef(t *testing.T) {
 	env, _ := fixture()
 

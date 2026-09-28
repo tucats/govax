@@ -64,7 +64,8 @@ follow them too, and this list should grow when a new pattern is settled.
   (the timer queue), `vmstime.go` (`$GETTIM` and time conversion),
   `hibernate.go` (`$HIBER`, `$WAKE`, scheduled wakeups), `ast.go` (AST
   delivery), `qio.go` (`$QIO` and the driver registry), `ttdriver.go`
-  (the terminal driver's functions). Each file has
+  (the terminal driver's functions), `exit.go` (`$EXIT` and exit
+  handlers). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -121,6 +122,12 @@ follow them too, and this list should grow when a new pattern is settled.
   function table, keyed by the `$IODEF` function code, and a driver is
   found by device class in `ioDrivers`. A new device class adds a table;
   a new function adds an entry.
+- **Calling guest code.** A service that needs a guest procedure called
+  and then to continue (`$EXIT` and its handlers) returns a
+  `*CallRequest`: the engine calls the routine with the service's `XFC`
+  as its return address, so the service runs again afterwards. Keep the
+  progress in RTL state the service can pick up from. (AST delivery,
+  which interrupts rather than continues, uses `NextAST` instead.)
 - **Picking a process.** Services that take the `[pidadr] ,[prcnam]` pair
   call `processTarget` (`getjpi.go`): it accepts only this process, writes
   its PID back to a `pidadr` holding 0, and returns `SS$_NONEXPR`,
@@ -131,7 +138,8 @@ follow them too, and this list should grow when a new pattern is settled.
   `time.Now()` in a service: that would break determinism in quantum mode
   and disagree with the interval clock.
 - **Image rundown.** Per-image cleanup (user-mode logical names, user-mode
-  device allocations, common event flag associations) runs from
+  device allocations, common event flag associations, user-mode exit
+  handlers, ...) runs from
   `Environment.ImageRundown`, which the console calls when an image started
   by RUN returns.
 - **Tests.** Each service gets unit tests in `internal/rtl/*_test.go` that
@@ -177,6 +185,9 @@ lists the ones the implementation can actually return.
 | `$QIO`, `$QIOW` | 17 | `qio.go`, `ttdriver.go` | `NORMAL`, `ACCVIO`, `ILLEFC`, `ILLIOFUNC`, `IVCHAN`, `NOPRIV`, `UNASEFC`; IOSB: `NORMAL`, `ENDOFFILE`, `TIMEOUT` | Terminal reads (plain and prompted), writes with carriage control, sense/set mode; completes during the call. |
 | `$CANCEL` | 17 | `qio.go` | `NORMAL`, `IVCHAN`, `NOPRIV` | Checks the channel; nothing is ever outstanding. |
 | `$SYNCH` | 18 | `eventflags.go` | `NORMAL`, `ACCVIO`, `ILLEFC`, `UNASEFC` | Waits for the flag and a nonzero IOSB status, clearing false alarms. |
+| `$DCLEXH` | 19 | `exit.go` | `NORMAL`, `ACCVIO`, `IVSSRQ`, `NOHANDLER` | Per-mode exit handler lists, linked in memory; replaces eVAX's recording stub. |
+| `$CANEXH` | 19 | `exit.go` | `NORMAL`, `ACCVIO`, `IVSSRQ`, `NOHANDLER` | Removes one block, or all of the mode's. |
+| `$EXIT` | 19 | `exit.go` | (none: doesn't return) | Calls the mode's handlers via `cpu.ServiceCall`, then unwinds to the console's call frame. RUN's driver calls it with `main`'s status. |
 
 ## Service designs
 
@@ -1110,6 +1121,80 @@ Condition values: `SS$_NORMAL`; `SS$_ILLEFC`/`SS$_UNASEFC` as for
 `$WAITFR`; `SS$_ACCVIO` for an unreadable IOSB (the manual lists only
 `SS$_NORMAL`, but VMS would fail with an access violation there).
 
+### `$EXIT`, `$DCLEXH`, `$CANEXH` — Exit Handlers
+
+`SYS$EXIT [code]`, `SYS$DCLEXH desblk`, and `SYS$CANEXH [desblk]`
+
+#### What exit handlers are
+
+A program can have VMS call procedures of its own when its image exits,
+however it exits, to tidy up. It describes each in an **exit control
+block** and declares it with `$DCLEXH`:
+
+```text
+desblk+0    forward link (written by VMS)
+desblk+4    exit handler address
+desblk+8    argument count (low byte; the other 3 bytes 0)
+desblk+12   address of a longword VMS fills with the exit status
+desblk+16   more arguments, optionally
+```
+
+From `desblk+8` on, the block is an argument list, so the handler is
+called as `CALLG desblk+8, handler`. VMS keeps one list per access mode,
+newest first; kernel mode has none (`SS$_IVSSRQ`). `$EXIT` calls the
+handlers, each once, then ends the image; it never returns.
+
+#### Design: the service asks the engine to make the call
+
+Calling a guest procedure from a service is the same problem AST delivery
+solved, with one difference: the service isn't done when the procedure
+returns. So a service may now return a **call request**
+(`rtl.CallRequest`, translated by the console to `cpu.ServiceCall`). The
+XFC handler (`Engine.callForService`) builds a `CALLG` frame for the
+routine whose return address is the **XFC itself**. When the handler
+executes `RET`, the XFC runs again, calling `$EXIT` again, which moves on
+to the next handler. Since `$EXIT` removes each handler from its list
+before asking for the call, the lists themselves are all the state it
+needs, and a handler that calls `$EXIT` just continues with the rest.
+
+When no handlers are left, `$EXIT` returns `rtl.ErrExit` (the console's
+`cpu.ErrImageExit`) with the status as R0. `Engine.exitImage` then ends
+the image: it follows the frame chain (each frame's saved FP, at FP+12)
+to the console's own call frame (`CallEntry`'s, with saved PC and FP both
+`SentinelReturn`) and executes `RET` from it. That discards every frame
+in between and reports `ErrConsoleCallReturned`, the normal end of RUN,
+so image rundown follows. Without such a frame (a program begun with
+`START`), the machine halts with R0 set.
+
+#### The services
+
+- **`$DCLEXH`** writes the current front block's address (0 if none) to
+  the new block's forward link (`SS$_ACCVIO` if it can't), and adds the
+  block to the caller's mode's list. `SS$_NOHANDLER` for 0.
+- **`$CANEXH`** removes a block, relinking the block declared after it
+  past it (`SS$_ACCVIO` if that fails). `SS$_NOHANDLER` if it isn't
+  declared; with no block, every block for the mode is removed.
+- **`$EXIT`** saves the status in `Process.ExitStatus` (SS$_NORMAL for a
+  call with no argument list, as the `$EXIT_S` macro passes), then calls
+  the caller's mode's handlers newest first, storing the status through
+  each one's first argument, then ends the image. A block whose handler
+  address can't be read is skipped.
+- **RUN's image driver** (`buildImageInitDriver`) now calls `$EXIT` with
+  the value `main` returns, as VMS's image activator does, when the
+  P1 vector's `SYS$EXIT` stub is in memory. So an image that returns
+  normally still has its handlers called.
+- **Image rundown** forgets user-mode exit handlers, which live in the
+  image's memory.
+
+State: `Process.exitHandlers` (per mode, oldest first: VMS's
+`CTL$GL_THEXIT` lists) and `Process.ExitStatus`. The old recorded
+`Environment.exitHandler` and `core.go`'s `$DCLEXH` stub are gone.
+
+Not implemented (see `docs/DEVIATIONS.md`): `$EXIT` calls only the
+caller's mode's handlers, not the supervisor- and executive-mode ones VMS
+calls afterwards; `$FORCEX`; handlers for an image that ends by a fatal
+exception (the console reports those and stops).
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -1182,7 +1267,7 @@ fourth batch listed):
 18. **Done.** **`$SYNCH`.** In `eventflags.go`: wait for the event flag, then
     check the IOSB, clearing the flag and waiting again while it's
     still 0.
-19. **`$EXIT`, `$DCLEXH`, `$CANEXH`: exit handlers.** Per-mode handler
+19. **Done.** **`$EXIT`, `$DCLEXH`, `$CANEXH`: exit handlers.** Per-mode handler
     lists (replacing the single recorded `exitHandler`). `$EXIT` calls
     each handler through a new "service asks the engine to make a call"
     path, then ends the image by unwinding to the console's call frame.
@@ -1632,4 +1717,34 @@ None yet.
 - Tests (`eventflags_test.go`): each step, including only the status word
   counting; no IOSB; the default flag; the errors; `$SYNCH` after a
   `$QIO`.
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 19: `$EXIT`, `$DCLEXH`, `$CANEXH`
+
+- **`internal/rtl/exit.go`** (new): `CallRequest`, `ErrExit`, the three
+  services, `ExitHandlers`, and `cancelUserExitHandlers` (called by
+  `ImageRundown`). `Process` gains `exitHandlers` and `ExitStatus`.
+  eVAX's `$DCLEXH` stub (`core.go`), `Environment.exitHandler`, and its
+  test are removed.
+- **`internal/cpu`**: `ServiceCall` and `ErrImageExit` (`services.go`);
+  `exit.go` (new) with `callForService` and `exitImage`;
+  `emulXfcP1Vector` handles both. The console's `translateHalt` maps the
+  RTL's signals to them, and `SystemService`'s trace shows "calls" and
+  "exits with status".
+- **RUN**: `buildImageInitDriver` appends `PUSHL R0`, `CALLS #1,
+  SYS$EXIT` after the call to `main` when `p1Stub` finds the stub. The
+  milestone `.exe` tests (`TestRun_everyMilestoneFixture`, with
+  `kernel.asm`'s P1 vector) now end through `$EXIT`, unchanged.
+- **Acceptance fixtures**: `testdata/asm/exit_handlers.asm`, run in user
+  mode: three handlers declared, one cancelled, `$EXIT(^X2C)` calling the
+  other two newest first with the status, and never returning.
+  `testdata/asm/exit_on_return.asm`, run through the RUN driver: `main`
+  returns 7 and its handler still runs and sees 7
+  (`TestRun_driverCallsExitHandlers`).
+- Tests: `cpu/exit_test.go` (the call's frame and return to the XFC with
+  R0 untouched; unwinding two frames to the console's; halting with no
+  console frame). `rtl/exit_test.go` (`$DCLEXH` links and errors;
+  `$CANEXH` relinking, all, and errors; `$EXIT`'s order, status
+  argument, argument-less blocks, default status, skipped unreadable
+  blocks, only the caller's mode; rundown).
 - `go test ./...` passes.

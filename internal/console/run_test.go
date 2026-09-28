@@ -242,3 +242,40 @@ func TestRun_everyMilestoneFixture(t *testing.T) {
 		})
 	}
 }
+
+// TestRun_driverCallsExitHandlers: RUN's image driver calls $EXIT with
+// the status main returns, as VMS's image activator does, so an image
+// that just returns still has its exit handlers called
+// (docs/PHASE-26.md subtask 19).
+func TestRun_driverCallsExitHandlers(t *testing.T) {
+	c := newBootableConsole(t)
+
+	addr, _, err := c.Assemble(asmFixturePath(t, "exit_on_return.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(exit_on_return.asm): %v", err)
+	}
+
+	driver, ok, err := c.buildImageInitDriver(&ICB{Name: "EXITRET", Transfer: [4]uint32{addr}}, false)
+	if err != nil || !ok {
+		t.Fatalf("buildImageInitDriver: ok=%v err=%v", ok, err)
+	}
+
+	c.Engine.SetModeStack(vax.User, false)
+
+	if runErr, hitCap := callBounded(t, c, driver, 100_000); runErr != nil || hitCap {
+		t.Fatalf("running the driver: err=%v hitCap=%v", runErr, hitCap)
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 7 {
+		t.Errorf("R0 = %d, want main's status 7", got)
+	}
+
+	seen, ok := c.Symbols.Get("SEEN")
+	if !ok {
+		t.Fatal("no SEEN symbol")
+	}
+
+	if got, err := c.Mem.LoadLongword(c.CPU, seen); err != nil || got != 7 {
+		t.Errorf("the exit handler saw status %d (%v), want 7: it wasn't called", got, err)
+	}
+}

@@ -5,19 +5,12 @@ import (
 )
 
 // Port of service.c's SYS$ services that don't need internal/io or the RMS
-// layer: the exit-handler recording stub and virtual address region
-// expansion. Its SYS$SETAST stub became a real per-mode $SETAST in ast.go
-// when AST delivery arrived, its event-flag services moved to
-// eventflags.go when common event flag clusters did, and SYS$GETJPIW to
-// getjpi.go when it grew into a real $GETJPI (docs/PHASE-26.md).
-
-// serviceSysDclexh is SYS$DCLEXH: records the exit-handler address. Nothing
-// currently invokes it — see Environment.exitHandler's doc comment.
-func serviceSysDclexh(env *Environment, argv []uint32) (uint32, error) {
-	env.exitHandler = argv[0]
-
-	return ssNormal, nil
-}
+// layer: virtual address region expansion. Its SYS$SETAST stub became a
+// real per-mode $SETAST in ast.go when AST delivery arrived, its
+// event-flag services moved to eventflags.go when common event flag
+// clusters did, SYS$GETJPIW to getjpi.go when it grew into a real
+// $GETJPI, and its SYS$DCLEXH recording stub to exit.go when exit
+// handlers began to be called (docs/PHASE-26.md).
 
 // serviceSysExpreg is SYS$EXPREG: expands one of the P0/P1/S0 virtual
 // address regions by pagcnt 512-byte pages, matching sys_expreg's own
@@ -57,6 +50,5 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 }
 
 func registerCoreServices(t *ServiceTable) {
-	t.Register("SYS$DCLEXH", serviceSysDclexh)
 	t.Register("SYS$EXPREG", serviceSysExpreg)
 }

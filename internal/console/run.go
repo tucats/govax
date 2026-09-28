@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -110,7 +111,8 @@ func mainTransferAddress(icb *ICB) (uint32, bool) {
 // buildImageInitDriver writes a small procedure at CONSOLE$SCRATCH+8 (an
 // empty entry mask, then one PUSHL/PUSHL/PUSHL/CALLS sequence per
 // dependency's LIB$INITIALIZE entry point if runInits, then a final CALLS
-// to main's own entry point and a RET) and returns its address -- the Go
+// to main's own entry point, a call to $EXIT with main's status when the
+// P1 vector is present, and a RET) and returns its address -- the Go
 // equivalent of console_run's own assemble_direct-built IMAGE$INIT
 // procedure. ok is false if main has no usable transfer address, matching
 // console_run's own "No transfer address!" case: no driver is written at
@@ -166,6 +168,17 @@ func (c *Console) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, 
 	}
 
 	code = append(code, encodeCalls(0, addr)...)
+
+	// VMS's image activator calls $EXIT with whatever main returned, so
+	// the image's exit handlers run (docs/PHASE-26.md subtask 19). $EXIT
+	// doesn't return: it ends the image by returning from this driver's
+	// own console call frame. It needs the P1 vector's SYS$EXIT stub in
+	// memory; without one, the driver just returns main's status.
+	if exit, ok := c.p1Stub("SYS$EXIT"); ok {
+		code = append(code, 0xDD, 0x50) // PUSHL R0
+		code = append(code, encodeCalls(1, exit)...)
+	}
+
 	code = append(code, 0x04) // RET
 
 	if err := c.storeBytes(driverAddr, code); err != nil {
@@ -173,6 +186,25 @@ func (c *Console) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, 
 	}
 	
 	return driverAddr, true, nil
+}
+
+// p1Stub returns the address of the P1-vector entry for service name,
+// if its stub is in memory: a procedure entry mask, then the XFC
+// instruction (opcode 0xFC, selector 0x7A, XFC$P1VECTOR) that calls the
+// service. The stubs are there once .P1VECTOR has been assembled, as
+// kernel.asm does.
+func (c *Console) p1Stub(name string) (uint32, bool) {
+	for _, e := range vmsdef.P1VectorTable {
+		if e.Name != name {
+			continue
+		}
+
+		w, err := c.Mem.LoadWord(c.CPU, e.Addr+2)
+
+		return e.Addr, err == nil && w == 0x7AFC
+	}
+
+	return 0, false
 }
 
 // encodePushl returns PUSHL #v's raw opcode bytes (0xDD, general-operand
