@@ -21,12 +21,13 @@ var (
 )
 
 // ErrWait is what a service returns when the process must wait: its event
-// flag condition isn't met yet. The console translates it to
+// flag condition isn't met yet ($WAITFR), or no wakeup has arrived
+// ($HIBER). The console translates it to
 // cpu.ErrServiceWait, which re-executes the service's XFC on the next
 // instruction step, so the service checks again while interrupts (the
 // interval timer) keep being delivered in between. It is never a VMS
 // status: R0 is left alone until the wait is satisfied.
-var ErrWait = errors.New("rtl: process waiting for an event flag")
+var ErrWait = errors.New("rtl: process waiting")
 
 // maxClusterNameLength is the longest common event flag cluster name
 // $ASCEFC accepts (SS$_IVLOGNAM beyond it).

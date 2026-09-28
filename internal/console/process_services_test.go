@@ -197,3 +197,44 @@ func TestTimerServices_assembledProgram(t *testing.T) {
 		t.Errorf("system time advanced %d, want at least 50ms (500000): the wait ended early", elapsed)
 	}
 }
+
+// TestHibernate_assembledProgram is docs/PHASE-26.md subtask 14's
+// acceptance test: testdata/asm/hibernate.asm hibernates on an
+// already-pending $WAKE, then three times on a repeating $SCHDWK wakeup,
+// and cancels it. Each $HIBER that must sleep re-executes its XFC until
+// the engine's system time reaches the next wakeup.
+func TestHibernate_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "hibernate.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(hibernate.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("hibernate.asm has no entry address")
+	}
+
+	start := c.Engine.SystemTime()
+
+	runErr, hitCap := callBounded(t, c, addr, 100_000)
+	if runErr != nil {
+		t.Fatalf("running hibernate.asm: %v", runErr)
+	}
+
+	if hitCap {
+		t.Fatal("hibernate.asm didn't finish within 100,000 steps (a $HIBER never woke)")
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Errorf("R0 = %d, want 1 (every service call worked)", got)
+	}
+
+	if elapsed := c.Engine.SystemTime() - start; elapsed < 50*10_000 {
+		t.Errorf("system time advanced %d, want at least 50ms (500000): a $HIBER returned early", elapsed)
+	}
+
+	if n := c.RTL.PendingTimers(); n != 0 {
+		t.Errorf("%d requests still queued, want 0 after $CANWAK", n)
+	}
+}

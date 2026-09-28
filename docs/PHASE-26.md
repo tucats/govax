@@ -59,7 +59,9 @@ follow them too, and this list should grow when a new pattern is settled.
   under `internal/rtl`: `core.go` (event flags, `$EXPREG`, `$GETJPIW`, ...),
   `devices.go` (`$ASSIGN`, `$GETDVIW`, `$ALLOC`), `logicals.go`, `cli.go`,
   `rms.go`, `process.go` (process record and process-control services),
-  `eventflags.go` (event flags and common event flag clusters). Each file has
+  `eventflags.go` (event flags and common event flag clusters), `timers.go`
+  (the timer queue), `vmstime.go` (`$GETTIM` and time conversion),
+  `hibernate.go` (`$HIBER`, `$WAKE`, scheduled wakeups). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -103,8 +105,13 @@ follow them too, and this list should grow when a new pattern is settled.
 - **Waiting.** A service that must put the process in a wait state
   returns `rtl.ErrWait` while its condition isn't met. The engine then
   re-executes the service's `XFC` on the next step (see the event-flag
-  wait design). Any later waiting service ($HIBER, $SYNCH, ...) should use
-  the same mechanism.
+  wait design). `$HIBER` uses it too, and any later waiting service
+  (`$SYNCH`, ...) should.
+- **Picking a process.** Services that take the `[pidadr] ,[prcnam]` pair
+  call `processTarget` (`getjpi.go`): it accepts only this process, writes
+  its PID back to a `pidadr` holding 0, and returns `SS$_NONEXPR`,
+  `SS$_IVLOGNAM`, or `SS$_ACCVIO` otherwise. Only `$GETJPI` passes
+  `wildcard`.
 - **Time.** Anything that needs "now" reads `env.Clock()` (VMS 64-bit
   time), which the console binds to the engine's `SystemTime`. Don't call
   `time.Now()` in a service: that would break determinism in quantum mode
@@ -145,6 +152,10 @@ lists the ones the implementation can actually return.
 | `$GETTIM` | 12 | `vmstime.go` | `NORMAL`, `ACCVIO` | The engine's system time, now local time as on VMS. |
 | `$ASCTIM` | 13 | `vmstime.go` | `NORMAL`, `ACCVIO`, `BUFFEROVF`, `IVTIME` | Binary time to `dd-mmm-yyyy hh:mm:ss.cc` / `dddd hh:mm:ss.cc`. |
 | `$BINTIM` | 13 | `vmstime.go` | `NORMAL`, `ACCVIO`, `IVTIME` | The reverse, with omitted fields defaulted as the manual describes. |
+| `$HIBER` | 14 | `hibernate.go` | `NORMAL` | Waits (re-executing its `XFC`) until a wakeup is pending, then consumes it. |
+| `$WAKE` | 14 | `hibernate.go` | `NORMAL`, `ACCVIO`, `IVLOGNAM`, `NONEXPR` | Sets `Process.WakePending`. |
+| `$SCHDWK` | 14 | `hibernate.go` | `NORMAL`, `ACCVIO`, `IVLOGNAM`, `IVTIME`, `NONEXPR` | A wakeup entry on the `$SETIMR` timer queue, optionally repeating (10ms minimum). |
+| `$CANWAK` | 14 | `hibernate.go` | `NORMAL`, `ACCVIO`, `IVLOGNAM`, `NONEXPR` | Removes queued wakeups only. |
 
 ## Service designs
 
@@ -736,6 +747,59 @@ One of the manual's examples, `--1989 0:0:0.0` giving `29-DEC-1989`, is
 taken as a typo. By its own rule the omitted day is today's, so govax gives
 `30-DEC-1989`.
 
+### `$HIBER`, `$WAKE`, `$SCHDWK`, `$CANWAK` — Hibernation and Wakeups
+
+`SYS$HIBER`, `SYS$WAKE [pidadr] ,[prcnam]`,
+`SYS$SCHDWK [pidadr] ,[prcnam] ,daytim ,[reptim]`,
+`SYS$CANWAK [pidadr] ,[prcnam]`
+
+Hibernation is one flag per process, **wake pending**
+(`Process.WakePending`, VMS's `PCB$V_WAKEPEN`), in
+`internal/rtl/hibernate.go`:
+
+- **`$WAKE`** sets it.
+- **`$SCHDWK`** sets it later, from the timer queue.
+- **`$HIBER`** waits until it's set, then clears it and returns
+  `SS$_NORMAL`. If it's already set, `$HIBER` returns at once.
+
+It's a flag, not a count: two wakeups before a `$HIBER` end only that one.
+
+**Waiting.** `$HIBER` returns `ErrWait` while nothing is pending, so it
+waits the way `$WAITFR` does: the engine re-executes its `XFC` every step,
+with interrupts delivered in between. Each retry expires due timers first,
+so a scheduled wakeup ends the wait on the first step at or after its
+time. Once ASTs exist (subtask 15), an AST routine that calls `$WAKE` ends
+a `$HIBER`, as on VMS.
+
+**The target process.** All but `$HIBER` take `[pidadr] ,[prcnam]`, read
+by `processTarget` (factored out of `$GETJPI`'s `jpiTarget`): only this
+process is accepted, by PID, by exact name, or by default. A `pidadr`
+holding 0 gets the PID written back. Any other PID or name is
+`SS$_NONEXPR`, including -1, which is only a wildcard to `$GETJPI`. The
+GROUP/WORLD privileges VMS checks always pass.
+
+**Scheduled wakeups share the `$SETIMR` timer queue**, as they do on VMS.
+`timerRequest` gained `wake` and `repeat`:
+
+- `daytim` is absolute or (negative) delta, like `$SETIMR`'s. An absolute
+  time already past wakes at the next check. 0 or unreadable is
+  `SS$_ACCVIO`.
+- `reptim`, when given and nonzero, must be a delta time (positive is
+  `SS$_IVTIME`); shorter than 10ms becomes 10ms. The entry then stays
+  queued and fires every `reptim`. Repetitions missed between checks
+  collapse into one wakeup (the flag can't count them), and the next
+  stays on the original grid.
+- An absolute `daytim` whose first repetition is already past is
+  `SS$_IVTIME`, as the manual says.
+- **`$CANWAK`** removes every queued wakeup. It doesn't clear a wakeup
+  that is already pending. **`$CANTIM`** now skips wakeup entries, since
+  they aren't timer requests.
+- **Image rundown** cancels scheduled wakeups along with timers
+  (`cancelTimers`), as the manual requires. A pending wakeup survives.
+
+Not implemented: the `ASTLM` quota (`SS$_EXQUOTA`) and `SS$_INSFMEM`;
+`SS$_NOPRIV` (no other processes); the `HIB` process state.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -781,6 +845,10 @@ third batch listed):
 
 13. **Done.** **`$ASCTIM` and `$BINTIM`.** In `vmstime.go`, as the pure
     functions `formatVMSTime`/`parseVMSTime` plus service wrappers.
+
+14. **Done.** **`$HIBER`, `$WAKE`, `$SCHDWK`, `$CANWAK`.** In the new
+    `hibernate.go`; wakeups on the timer queue. Acceptance fixture
+    `testdata/asm/hibernate.asm`.
 
 Candidates next: listed when the fourth batch is complete.
 
@@ -1082,3 +1150,23 @@ None yet.
   - `$BINTIM` storing a time, a `$BINTIM` delta driving `$SETIMR`, and its
     error statuses leaving `timadr` untouched.
 - `vmsdef`: a 9999 round-trip case.
+
+### 2026-09-28 — Subtask 14: `$HIBER`, `$WAKE`, `$SCHDWK`, `$CANWAK`
+
+- `internal/rtl/hibernate.go` (new): the four services and
+  `registerHibernateServices`. `Process.WakePending` is new.
+- `timers.go`: `timerRequest.wake`/`repeat`; `expireTimers` wakes the
+  process and reschedules repeating entries; `$CANTIM` skips wakeups.
+- `getjpi.go`: `jpiTarget` became the shared `processTarget`, with a
+  `wildcard` switch only `$GETJPI` sets. `ErrWait`'s message no longer
+  mentions event flags.
+- **Acceptance fixture** `testdata/asm/hibernate.asm`: `$WAKE` then an
+  immediate `$HIBER`; a `$SCHDWK` at 30ms repeating every 10ms and three
+  `$HIBER`s; `$CANWAK`. `TestHibernate_assembledProgram` checks R0, at
+  least 50ms of system time, and an empty queue.
+- Tests (`hibernate_test.go`): waiting until `$WAKE` and consuming it;
+  uncounted wakeups; process selection and its errors (-1 isn't a
+  wildcard); delta and absolute (future and past) `$SCHDWK`; repeats,
+  including collapsed missed repetitions staying on the grid; the 10ms
+  minimum; every `$SCHDWK` error leaving nothing queued; `$CANWAK` versus
+  `$CANTIM` and a pending `$WAKE`; rundown cancelling a repeating wakeup.

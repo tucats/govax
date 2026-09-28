@@ -57,6 +57,12 @@ type Process struct {
 	// when not associated (eventflags.go).
 	LocalEventFlags [2]uint32
 	CommonClusters  [2]*EventFlagCluster
+
+	// WakePending is the process's wakeup request flag (PCB$V_WAKEPEN):
+	// set by $WAKE or an expiring $SCHDWK, consumed by the next $HIBER
+	// (hibernate.go). It's a flag, not a count: several wakeups before a
+	// $HIBER end just that one.
+	WakePending bool
 }
 
 // Default identity and quotas for the emulated process. The PID is

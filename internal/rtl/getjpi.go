@@ -152,7 +152,7 @@ func serviceSysGetjpi(env *Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	if st := env.jpiTarget(pidadr, prcnam); st != 0 {
+	if st := env.processTarget(pidadr, prcnam, true); st != 0 {
 		return st, nil
 	}
 
@@ -179,11 +179,17 @@ func serviceSysGetjpi(env *Environment, argv []uint32) (uint32, error) {
 	return status, nil
 }
 
-// jpiTarget checks that pidadr/prcnam name this process (0 if so),
-// writing its PID back to pidadr when that holds 0, and stepping a
-// wildcard scan. SS$_NONEXPR for any other process, SS$_NOMOREPROC at the
-// end of a wildcard scan, SS$_IVLOGNAM for a bad process name.
-func (env *Environment) jpiTarget(pidadr, prcnam uint32) uint32 {
+// processTarget checks that pidadr/prcnam — the (PID by reference,
+// process name by descriptor) pair many services use to pick a process —
+// name this process, returning 0 if so. It writes the PID back to pidadr
+// when that holds 0. A PID wins over a name; with neither, the caller is
+// meant. SS$_NONEXPR for any other process, SS$_IVLOGNAM for a bad
+// process name, SS$_ACCVIO for an unreadable or unwritable argument.
+//
+// With wildcard ($GETJPI only), a PID of -1 starts a wildcard scan and
+// SS$_NOMOREPROC ends it (see jpiWildcard); other services treat -1 as
+// just another PID that doesn't exist.
+func (env *Environment) processTarget(pidadr, prcnam uint32, wildcard bool) uint32 {
 	p := env.Process
 	pid := uint32(0)
 
@@ -205,10 +211,10 @@ func (env *Environment) jpiTarget(pidadr, prcnam uint32) uint32 {
 	}
 
 	switch {
-	case pid == jpiWildcard:
+	case wildcard && pid == jpiWildcard:
 		return writeBack(jpiWildcardDone)
 
-	case pid == jpiWildcardDone:
+	case wildcard && pid == jpiWildcardDone:
 		return ssNoMoreProc
 
 	case pid != 0:

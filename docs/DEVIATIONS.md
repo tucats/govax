@@ -440,6 +440,17 @@ changed as a result.
     typo; govax uses today's day of the month, giving `30-DEC-1989`.
 - **Status**: open, by design; revisit if a real VMS disagrees.
 
+### [Phase 26] Hibernation simplifications
+
+- **Where**: `internal/rtl/hibernate.go`, `internal/rtl/timers.go`.
+- **What**:
+  - `$WAKE`, `$SCHDWK`, and `$CANWAK` can only name the calling process
+    (there are no others), so `SS$_NOPRIV` never happens.
+  - No `ASTLM` quota (`SS$_EXQUOTA`) or `SS$_INSFMEM`.
+  - `$HIBER` waits by re-executing its `XFC`, like the event-flag waits.
+    There's no `HIB` process state.
+- **Status**: open, by design.
+
 ## Open findings
 
 _None yet._
