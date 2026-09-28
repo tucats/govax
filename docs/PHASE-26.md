@@ -81,7 +81,7 @@ follow them too, and this list should grow when a new pattern is settled.
   `signal.go` (the `LIB$` signaling shims), `unwind.go` (`$UNWIND`,
   `LIB$SIG_TO_RET`), `vaspace.go` (`$CRETVA`, `$DELTVA`, `$CNTREG`),
   `pageprot.go` (`$SETPRT`, page locking), `privilege.go` (privilege
-  masks, `$SETPRV`). Each file has
+  masks, `$SETPRV`), `operator.go` (`$SNDOPR`, `$BRKTHRU`). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -247,6 +247,8 @@ lists the ones the implementation can actually return.
 | (mailbox attention ASTs) | 37 | `mbxdriver.go` | — | `IO$_SETMODE` with `IO$M_READATTN`, `WRTATTN`, `MB_ROOM_NOTIFY`: one-shot ASTs. |
 | `$SETPRV` | 38 | `privilege.go` | `NORMAL`, `NOTALLPRIV`, `ACCVIO` | The four privilege masks; temporary or permanent; `$PRVDEF` generated. Services now check `CURPRIV`. |
 | (`$GETJPI` privilege items) | 38 | `getjpi.go` | — | `JPI$_CURPRIV`, `PROCPRIV`, `AUTHPRIV`, `IMAGPRIV` (quadwords), `AUTHPRI`. |
+| `$SNDOPR` | 39 | `operator.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `DEVNOTMBX`, `NOPRIV` | OPCOM on the console: requests (numbered, with a reply mailbox), cancel, reply, enable, status, log file. |
+| `$BRKTHRU`, `$BRKTHRUW` | 39 | `operator.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `NOOPER`, `NOPRIV`, `NOSUCHDEV`, (event flag errors) | To the console, with carriage control; completes at once like a terminal `$QIO`; `$BRKDEF` generated. |
 
 ## Service designs
 
@@ -2162,6 +2164,61 @@ Not implemented (see `docs/DEVIATIONS.md`): UIC-based object protection
 SYSNAM), installed images, and privileges for services govax doesn't
 have.
 
+### `$SNDOPR`, `$BRKTHRU`, `$BRKTHRUW` — Operator and Broadcast Messages
+
+`SYS$SNDOPR msgbuf ,[chan]` and
+`SYS$BRKTHRU[W] [efn] ,msgbuf [,sendto] [,sndtyp] [,iosb] [,carcon] [,flags] [,reqid] [,timout] [,astadr] [,astprm]`
+
+A VMS system has *operators*, people at designated terminals, and
+OPCOM, the process that relays between them and programs. `$SNDOPR`
+hands OPCOM a message buffer whose first byte is a request code. And
+`$BRKTHRU` writes a message *through* to terminals, interrupting what
+they're doing: SHUTDOWN's warnings, MAIL's "new mail", REPLY/ALL.
+
+#### `$SNDOPR`: OPCOM on the console
+
+govax's one terminal, the console, is the operator terminal, enabled
+for every operator class at first (the `operatorState` on the
+Environment: system state, rebuilt by INIT/VMINIT/ZERO). OPCOM's
+messages there have the manual's form:
+
+    %%%%%%%%%%% OPCOM    28-SEP-2026 15:21:49.03
+    Request 1, from user SYSTEM on GOVAX
+    Please mount tape 17
+
+| Request | Effect |
+| --- | --- |
+| `OPC$_RQ_RQST` (3) | Shown if the console is enabled for any class in its 24-bit target: as a numbered, outstanding "Request n" when `chan` names a reply mailbox, as "Message from user ..." otherwise. No class enabled, with a mailbox: the reply is `OPC$_NOPERATOR`. |
+| `OPC$_RQ_CANCEL` (5) | Needs the mailbox: withdraws that mailbox's requests with the code, and says so. |
+| `OPC$_RQ_REPLY` (4) | OPER: answers request n, putting the reply (the manual's reply layout: code, status word, the requester's code, the operator terminal, the text) in its mailbox. |
+| `OPC$_RQ_TERME` (1) | OPER: enables or disables the console for classes. |
+| `OPC$_RQ_STATUS` (6) | OPER: lists the console's classes. |
+| `OPC$_RQ_LOGI` (2) | OPER: announces a new log file (there is none). |
+
+The request codes' values: only `OPC$_RQ_RQST` (3) is in the archive's
+listings, and OPCOM's dispatch lists the six in order in a `CASE` from 1,
+which gives the rest. Only one reply status is known (`OPC$_NOPERATOR`,
+`^X58061`); the others (`OPC$_RQSTCMPLTE`, ...) aren't in the reference
+set, which is why nothing but a program's own `OPC$_RQ_REPLY` and
+"no operator" answer a request, and a cancel sends no reply. There's no
+REPLY command.
+
+#### `$BRKTHRU`: to the console
+
+`sndtyp` (from a generated `$BRKDEF`; the SDL parser learned to use an
+earlier constant's name as a value) picks the terminals: 0 the caller's,
+`BRK$C_DEVICE` the terminal `sendto` names (`SS$_NOSUCHDEV` if it isn't
+a terminal), `BRK$C_USERNAME` a user's (needs WORLD; only SYSTEM is
+logged in), `BRK$C_ALLUSERS` and `BRK$C_ALLTERMS` (need OPER, else
+`SS$_NOOPER`). Every terminal is the console, so the message is written
+there once, framed by `carcon`'s carriage control (the terminal driver's
+`carriageControl`; default 32: new line, message, return). It completes
+at once as a terminal `$QIO` does: `efn` cleared then set, the IOSB
+(status, terminals reached, 0 timed out, 0 refusing broadcasts), and the
+AST. `$BRKTHRUW` is the same. The screen-formatting flags are accepted
+and ignored; `timout` 1-4, `reqid` over 63, or an unknown `sndtyp` is
+`SS$_BADPARAM`.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -2318,7 +2375,7 @@ sixth batch listed):
     against the I/O manual.
 38. **Done.** **Privileges**: a privilege mask on `rtl.Process`, `$SETPRV`, the
     `$GETJPI` privilege items, and the checks the services have skipped.
-39. **`$SNDOPR`, `$BRKTHRU`/`$BRKTHRUW`**: operator and broadcast
+39. **Done.** **`$SNDOPR`, `$BRKTHRU`/`$BRKTHRUW`**: operator and broadcast
     messages, written to the console terminal.
 40. **`$ASCTOID`, `$IDTOASC`**: a minimal rights database, which `$FAO`'s
     `!%I` then uses.
@@ -3294,4 +3351,32 @@ fixed.
   SETPRV allowing anything; the `$GETJPI` items (with a privilege above
   bit 31); each service's check; the logical-name tables, either-of-two
   privileges, the SYSNAM mode rule, and a shareable table.
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 39: `$SNDOPR`, `$BRKTHRU`, `$BRKTHRUW`
+
+- **`internal/rtl/operator.go`** (new): `operatorState`
+  (`Environment.Operator`), `serviceSysSndopr` with one function per
+  request code, `operatorReplyTo`, `postMailboxMessage` (a system
+  message into a mailbox, through the driver's `send`), and
+  `serviceSysBrkthru`/`serviceSysBrkthruw` through `breakthrough` and
+  `breakthroughTerminals`.
+- **`$BRKDEF`**: `reference/vms/brkdef.sdl` (VMS 7.3 `starlet/lis`),
+  generated as `vmsdef.BRKConstants` (`-brkdef`); the SDL parser now
+  takes an earlier constant's full name as a value.
+- **`$OPCDEF`/`$OPCMSG`**: not in the reference set as a whole; the
+  request codes and `OPC$_NOPERATOR` are constants in `operator.go`,
+  with where each value came from.
+- **Acceptance fixture** `testdata/asm/operator.asm`: a request with a
+  reply mailbox, the program replying as the operator and reading the
+  reply, and a `$BRKTHRUW` to all terminals.
+  `TestOperator_assembledProgram` checks the console output, the reply
+  record, and the IOSB. (The assembler can't subtract forward
+  references, so the fixture's descriptors follow their data, and it
+  checks statuses with a `JSB` routine because `BLBC` can't reach far.)
+- Tests (`operator_test.go`): messages and requests, cancel, the reply
+  record, `OPC$_NOPERATOR`, enable/disable, status, log file, OPER, and
+  the errors; `$BRKTHRU` to the caller's terminal (output, IOSB, flag,
+  AST), a named terminal with carriage control, users, all terminals,
+  and the errors and privileges.
 - `go test ./...` passes.

@@ -1,0 +1,116 @@
+{
+{ Module:	$BRKDEF
+{
+{ Version:	'X-1'
+{
+{****************************************************************************
+{*									    *
+{*  COPYRIGHT (c) 1989 BY						    *
+{*  DIGITAL EQUIPMENT CORPORATION, MAYNARD, MASSACHUSETTS.		    *
+{*  ALL RIGHTS RESERVED.						    *
+{* 									    *
+{*  THIS SOFTWARE IS FURNISHED UNDER A LICENSE AND MAY BE USED AND COPIED   *
+{*  ONLY IN  ACCORDANCE WITH  THE  TERMS  OF  SUCH  LICENSE  AND WITH THE   *
+{*  INCLUSION OF THE ABOVE COPYRIGHT NOTICE. THIS SOFTWARE OR  ANY  OTHER   *
+{*  COPIES THEREOF MAY NOT BE PROVIDED OR OTHERWISE MADE AVAILABLE TO ANY   *
+{*  OTHER PERSON.  NO TITLE TO AND OWNERSHIP OF  THE  SOFTWARE IS  HEREBY   *
+{*  TRANSFERRED.							    *
+{* 									    *
+{*  THE INFORMATION IN THIS SOFTWARE IS  SUBJECT TO CHANGE WITHOUT NOTICE   *
+{*  AND  SHOULD  NOT  BE  CONSTRUED AS  A COMMITMENT BY DIGITAL EQUIPMENT   *
+{*  CORPORATION.							    *
+{* 									    *
+{*  DIGITAL ASSUMES NO RESPONSIBILITY FOR THE USE  OR  RELIABILITY OF ITS   *
+{*  SOFTWARE ON EQUIPMENT WHICH IS NOT SUPPLIED BY DIGITAL.		    *
+{* 									    *
+{*									    *
+{****************************************************************************
+
+{++
+{
+{ FACILITY:  VAX/VMS System Macro Libraries
+{
+{ ABSTRACT:
+{
+{	This file contains the SDL source for structure $BRKDEF.
+{
+{ AUTHOR:  The VMS Group	 CREATION DATE:  1-Aug-1976
+{
+{ MODIFIED BY:
+{
+{	X-1	RAB0018		Richard Bishop		 2-SEP-1989
+{		STARDEFAE.SDL broken up into its constituent modules.
+{
+{ SPECIAL NOTE:
+{
+{	The prior audit trail can be found in the latest mainline
+{	CMS generation of module STARDEFAE.SDL in facility [VMSLIB].
+{
+{--
+
+
+module $BRKDEF;
+
+/*+
+/*
+/* Breakthru system service input definitions.
+/*
+/*-
+
+Constant (
+	    DEVICE,			/* device name
+	    USERNAME,			/* user name
+	    ALLUSERS,			/* all users
+	    ALLTERMS			/* all logged in users
+ 	 ) Equals 1 Increment 1 PREFIX BRK$ TAG "C";
+
+Constant MAXSENDTYPE Equals BRK$C_ALLTERMS PREFIX BRK$ TAG "C";
+
+/*
+/* Requestor ID's, DEC use only (0-31)
+/*
+
+Constant (
+	GENERAL,			/* GENERAL (OR UNSPECIFIED)
+	PHONE,				/* PHONE
+	MAIL,				/* MAIL
+	QUEUE,				/* QUEUE MANAGER
+	SHUTDOWN,			/* SYSTEM SHUTDOWN
+	URGENT,				/* URGENT MESSAGE
+	DCL,				/* DCL (control T)
+	OPCOM				/* OPERATOR MESSAGE
+ 	 ) Equals 0 Increment 1 PREFIX BRK$ TAG "C";
+
+/* Note that only first 16 are really stored by TTDRIVER now 
+
+Constant (
+	USER1,				/* reserved to customer
+	USER2,				/* reserved to customer
+	USER3,				/* reserved to customer
+	USER4,				/* reserved to customer
+	USER5,				/* reserved to customer
+	USER6,				/* reserved to customer
+	USER7,				/* reserved to customer
+	USER8,				/* reserved to customer
+	USER9,				/* reserved to customer
+	USER10,				/* reserved to customer
+	USER11,				/* reserved to customer
+	USER12,				/* reserved to customer
+	USER13,				/* reserved to customer
+	USER14,				/* reserved to customer
+	USER15,				/* reserved to customer
+	USER16				/* reserved to customer
+ 	 ) Equals 32 Increment 1 PREFIX BRK$ TAG "C";
+
+aggregate FLAGS_INPUT structure prefix BRK$;	/* mimics $BRDCSTDEF
+
+	ERASE_LINES	bitfield length	8;	/* number of lines to erase
+	SCREEN		bitfield mask;		/* Do screen formatted write
+	BOTTOM		bitfield mask;		/* "screen" message at bottom
+	NOREFRESH	bitfield mask;		/* Refresh an interrupted read
+	CLUSTER		bitfield mask;		/* broadcast to cluster
+
+end FLAGS_INPUT;
+
+end_module $BRKDEF;
+

@@ -432,8 +432,9 @@ func sdlLength(arg string, locals map[string]int64) (int64, error) {
 
 // sdlValue evaluates an SDL constant value: a decimal literal, a %x
 // hexadecimal or %b binary literal (the page protection codes in
-// $PRTDEF are written in binary), or NAME@N (the earlier constant NAME
-// shifted left N bits).
+// $PRTDEF are written in binary), NAME@N (the earlier constant NAME
+// shifted left N bits), or the full name of an earlier constant ($BRKDEF's
+// "MAXSENDTYPE Equals BRK$C_ALLTERMS").
 func sdlValue(arg string, lookup func(string) (uint32, bool)) (int64, error) {
 	if name, shift, ok := strings.Cut(arg, "@"); ok {
 		v, found := lookup(name)
@@ -455,6 +456,14 @@ func sdlValue(arg string, lookup func(string) (uint32, bool)) (int64, error) {
 
 	if bin, ok := strings.CutPrefix(strings.ToLower(arg), "%b"); ok {
 		return strconv.ParseInt(bin, 2, 64)
+	}
+
+	if lookup != nil && strings.ContainsRune(arg, '$') {
+		if v, found := lookup(strings.ToUpper(arg)); found {
+			return int64(v), nil
+		}
+
+		return 0, fmt.Errorf("undefined constant %s", arg)
 	}
 
 	return strconv.ParseInt(arg, 10, 64)

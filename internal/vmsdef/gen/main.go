@@ -136,13 +136,14 @@ func main() {
 	ttdef := flag.String("ttdef", "", "path to ttdef.txt")
 	prtdef := flag.String("prtdef", "", "path to prtdef.sdl")
 	prvdef := flag.String("prvdef", "", "path to prvdef.txt")
+	brkdef := flag.String("brkdef", "", "path to brkdef.sdl")
 	sysmsg := flag.String("sysmsg", "", "path to sysmsg.txt (a message-file listing)")
 	out := flag.String("out", "", "path to write the generated Go source")
 	msgOut := flag.String("msgout", "", "path to write the generated message texts")
 	flag.Parse()
 
-	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *dvidef == "" || *ttdef == "" || *prtdef == "" || *prvdef == "" || *sysmsg == "" || *out == "" || *msgOut == "" {
-		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, -dvidef, -ttdef, -prtdef, -prvdef, -sysmsg, -out, and -msgout are all required")
+	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *dvidef == "" || *ttdef == "" || *prtdef == "" || *prvdef == "" || *brkdef == "" || *sysmsg == "" || *out == "" || *msgOut == "" {
+		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, -dvidef, -ttdef, -prtdef, -prvdef, -brkdef, -sysmsg, -out, and -msgout are all required")
 	}
 
 	constants := map[string]uint32{}
@@ -207,6 +208,11 @@ func main() {
 	prv, err := parseBlissLiterals(readSource(*prvdef), "PRV$")
 	if err != nil {
 		log.Fatalf("gen: %s: %v", *prvdef, err)
+	}
+
+	brk, err := parseSDL(readSource(*brkdef))
+	if err != nil {
+		log.Fatalf("gen: %s: %v", *brkdef, err)
 	}
 
 	maps := []constantMap{
@@ -322,16 +328,25 @@ func main() {
 			},
 			entries: prv,
 		},
+		{
+			name: "BRKConstants",
+			doc: []string{
+				"BRKConstants is every real $BRKDEF symbol: $BRKTHRU's send types",
+				"(BRK$C_DEVICE, BRK$C_ALLUSERS, ...), its requestor classes",
+				"(BRK$C_GENERAL, BRK$C_USER1, ...), and its flags (BRK$M_SCREEN, ...).",
+			},
+			entries: brk,
+		},
 	}
 
-	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef, *statedef, *syidef, *dvidef, *ttdef, *prtdef, *prvdef}
+	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef, *statedef, *syidef, *dvidef, *ttdef, *prtdef, *prvdef, *brkdef}
 	code := generate(maps, sources)
 
 	if err := os.WriteFile(*out, code, 0o644); err != nil {
 		log.Fatalf("gen: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), len(syi), len(dvi), len(tt), len(prt), len(prv), *out)
+	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), len(syi), len(dvi), len(tt), len(prt), len(prv), len(brk), *out)
 
 	// The message texts go in a file of their own (see msg.go).
 	msgs, facilities, err := parseMessages(readSource(*sysmsg))

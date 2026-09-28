@@ -765,6 +765,27 @@ changed as a result.
     ...) and devices (LOG_IO, PHY_IO, SHARE) check nothing.
 - **Status**: open, by design.
 
+### [Phase 26] Operator and broadcast simplifications
+
+- **Where**: `internal/rtl/operator.go`.
+- **What**:
+  - One operator terminal, the console. `$SNDOPR`'s `OPC$T_MS_ONAME`
+    terminal names are ignored; there's no operator log file and no
+    REPLY command, so a request is only answered by a program's own
+    `OPC$_RQ_REPLY` or by `OPC$_NOPERATOR`.
+  - The `$OPCMSG` reply statuses other than `OPC$_NOPERATOR` aren't in
+    the reference set: a cancelled request gets no mailbox reply
+    (`OPC$_RQSTCAN` on VMS). The request codes other than
+    `OPC$_RQ_RQST` are inferred from OPCOM's dispatch order. OPCOM's
+    texts for cancel, enable, status, and log file follow the manual's
+    examples where it has them.
+  - The newer request formats (`OPC$_X_...`) and security requests
+    aren't handled (`SS$_BADPARAM`).
+  - `$BRKTHRU` writes once to the console for any number of terminals;
+    screen formatting (`BRK$M_SCREEN`, ...), `timout`, `reqid`
+    filtering (SET BROADCAST), and cluster broadcasts don't apply.
+- **Status**: open, by design.
+
 ### [Phase 26] Virtual address space simplifications
 
 - **Where**: `internal/rtl/vaspace.go`, `internal/console/vminit.go`.

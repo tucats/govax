@@ -131,6 +131,11 @@ type Environment struct {
 	pendingIO []*ioRequest
 	qiowWaits []qiowWait
 
+	// Operator is OPCOM's state: the console's operator classes and the
+	// outstanding operator requests (operator.go). System state, like
+	// Mailboxes.
+	Operator *operatorState
+
 	// Mailboxes are the mailboxes $CREMBX has created (mailbox.go). Like
 	// common event flag clusters they're system state, in system memory
 	// on VMS, so INIT/VMINIT/ZERO start with none.
@@ -164,6 +169,7 @@ func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, lo
 
 		EventFlagClusters: NewCommonEventFlags(),
 		Mailboxes:         NewMailboxTable(),
+		Operator:          newOperatorState(),
 		Clock:             wallClock,
 		consoleIn:         consoleIn,
 		consoleOut:        consoleOut,

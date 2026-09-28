@@ -161,14 +161,16 @@ end_module $QDEF;
 	}
 }
 
-// TestParseSDL_binaryParenthesized checks $PRTDEF's form: binary
-// literals, in parentheses.
+// TestParseSDL_binaryParenthesized checks $PRTDEF's form, binary
+// literals in parentheses, and $BRKDEF's reference to an earlier
+// constant by its full name.
 func TestParseSDL_binaryParenthesized(t *testing.T) {
 	src := `
 module $PDEF;
 constant NA	  equals (%B0000) prefix P tag $C;	/* No Access
 constant UR	  equals (%B1111) prefix P tag $C;
 constant KW	  equals %b0010 prefix P tag $C;
+constant MAXP	  equals P$C_UR prefix P tag $C;
 end_module $PDEF;
 `
 
@@ -177,7 +179,7 @@ end_module $PDEF;
 		t.Fatal(err)
 	}
 
-	want := map[string]uint32{"P$C_NA": 0, "P$C_UR": 15, "P$C_KW": 2}
+	want := map[string]uint32{"P$C_NA": 0, "P$C_UR": 15, "P$C_KW": 2, "P$C_MAXP": 15}
 
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("parseSDL = %v, want %v", got, want)
