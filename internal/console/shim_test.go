@@ -8,9 +8,21 @@ import (
 	"github.com/tucats/govax/internal/vax"
 )
 
+// TestEnsureShims_fitsReservedPage checks that the stubs ensureShims
+// synthesizes fit the one page VMInit reserves for them. Only entries
+// with a nonzero code get a stub; code-0 entries resolve to kernel.asm
+// routines. (42 stubs fill the page.)
 func TestEnsureShims_fitsReservedPage(t *testing.T) {
-	if got := len(shimTable) * shimStubSize; got > 512 {
-		t.Fatalf("shim table needs %d bytes, only 512 reserved", got)
+	stubs := 0
+
+	for _, e := range shimTable {
+		if e.code != 0 {
+			stubs++
+		}
+	}
+
+	if got := stubs * shimStubSize; got > 512 {
+		t.Fatalf("shim stubs need %d bytes, only 512 reserved", got)
 	}
 }
 

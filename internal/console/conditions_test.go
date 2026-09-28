@@ -143,3 +143,45 @@ func TestExceptionVectors_assembledProgram(t *testing.T) {
 		t.Errorf("PRVHND = %#x, want PRIM %#x", got, prim)
 	}
 }
+
+// TestSignals_assembledProgram runs testdata/asm/signals.asm
+// (docs/PHASE-26.md subtask 33): LIB$SIGNAL continued by a handler and
+// by the catch-all, LIB$ESTABLISH/LIB$REVERT, LIB$MATCH_COND, and a
+// LIB$STOP a handler can't continue.
+func TestSignals_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+	word := runFixture(t, c, "signals.asm")
+
+	handler, _ := c.Symbols.Get("HANDLER")
+
+	checks := []struct {
+		sym  string
+		want uint32
+	}{
+		{"OLDH", 0},
+		{"SIGCOUNT", 5}, // condition, FAO count, argument, PC, PSL
+		{"SIGARG", 42},
+		{"DEPTH", 1},
+		{"RET1", 0x77},
+		{"RET2", 0},
+		{"REVERTED", handler},
+		{"MATCHED", 2},
+		{"STOPCALLS", 1},
+		{"REACHED", 0},
+	}
+
+	for _, ck := range checks {
+		if got := word(ck.sym); got != ck.want {
+			t.Errorf("%s = %#x, want %#x", ck.sym, got, ck.want)
+		}
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 0x18018004 {
+		t.Errorf("R0 = %#x, want the exit status 0x18018004", got)
+	}
+
+	want := "%SYSTEM-W-ENDOFFILE, end of file\n%LIB-F-ATTCONSTO, attempt to continue from stop\n"
+	if got := c.Out.(*bytes.Buffer).String(); got != want {
+		t.Errorf("output %q\nwant   %q", got, want)
+	}
+}

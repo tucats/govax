@@ -55,4 +55,5 @@ func registerShims(t *ShimTable) {
 	registerPrintShims(t)
 	registerFileShims(t)
 	registerInputShims(t)
+	registerSignalShims(t)
 }

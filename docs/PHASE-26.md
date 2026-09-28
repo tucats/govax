@@ -77,7 +77,8 @@ follow them too, and this list should grow when a new pattern is settled.
   (`$GETMSG`, `$PUTMSG`), `cmode.go` (`$CMKRNL`, `$CMEXEC`), `ctrlast.go`
   (CTRL/C and CTRL/Y ASTs), `getdvi.go` (`$GETDVI`), `mailbox.go`
   (`$CREMBX`, `$DELMBX`), `mbxdriver.go` (the mailbox driver),
-  `condition.go` (the condition dispatcher, `SYS$SRCHANDLER`). Each file has
+  `condition.go` (the condition dispatcher, `SYS$SRCHANDLER`, `$SETEXV`),
+  `signal.go` (the `LIB$` signaling shims). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -226,6 +227,8 @@ lists the ones the implementation can actually return.
 | (CTRL/C, CTRL/Y ASTs) | 27 | `ctrlast.go`, `ttdriver.go` | — | `IO$_SETMODE!IO$M_CTRLCAST`/`CTRLYAST` enable one-shot ASTs the host's Ctrl-C delivers instead of stopping the machine. |
 | `$SRCHANDLER` (condition dispatch) | 31 | `condition.go` | (none: reached by a jump) | Hardware exceptions become `SS$` conditions signaled to call-frame handlers; the catch-all reports with the message text and exits if severe. |
 | `$SETEXV` | 32 | `condition.go` | `NORMAL`, `ACCVIO`, `BADPARAM` | Primary, secondary, and last-chance vectors per access mode; user mode's cleared at image rundown. |
+| `LIB$SIGNAL`, `LIB$STOP` | 33 | `signal.go` | (none: LIB$SIGNAL returns the mechanism array's R0) | Shims 33-34: the argument list plus PC and PSL as the signal array; the search starts at the caller's frame. |
+| `LIB$ESTABLISH`, `LIB$REVERT`, `LIB$MATCH_COND` | 33 | `signal.go` | (the old handler; a match's position) | Shims 35, 36, 38. |
 
 ## Service designs
 
@@ -1870,6 +1873,43 @@ reporting depths -2, -1, and -3 and the frame the condition happened in
 as the mechanism array's frame. Image rundown clears user mode's, as the
 manual says.
 
+### `LIB$SIGNAL`, `LIB$STOP`, `LIB$ESTABLISH`, `LIB$REVERT`, `LIB$MATCH_COND`
+
+These are Run-Time Library routines, not system services, so they're
+shims: kernel.asm's `.SHIM` table (and the console's `shimTable`, for
+images whose `LIBRTL` imports RUN resolves) gives each a stub,
+`MOVL #code, R0` / `XFC` / `RET`, and the Go function registered for
+the code runs at the `XFC`. Their codes are 33-36 and 38 (37 is
+`LIB$SIG_TO_RET`'s, in subtask 34), and their `LIBRTL` vector offsets
+come from the VMS 7.3 `libvector.lis`.
+
+- **`LIB$SIGNAL condition [,count] [,args...]`** turns its argument
+  list into a signal array, appending the call's return address (the
+  stub frame's saved PC) and the caller's PSL (the current PSL with the
+  PSW the call saved), and starts a dispatch as `DispatchException`
+  does. The search starts at the caller's frame with depth 0: the LIB
+  manual leaves the call to `LIB$SIGNAL` out of the depth so a software
+  condition looks like a hardware one in the caller. Continuing resumes
+  at the stub's `RET`, with the stub's FP and SP, so `LIB$SIGNAL`
+  returns with the mechanism array's R0 and R1. The catch-all continues
+  a condition that isn't severe, so an unhandled warning prints its
+  message and `LIB$SIGNAL` returns.
+- **`LIB$STOP`** forces the severity to SEVERE (bits 0-2 = 4). A handler
+  that continues it gets `%LIB-F-ATTCONSTO, attempt to continue from
+  stop`, and the image exits with the condition; so does the catch-all.
+- **`LIB$ESTABLISH new-handler`** and **`LIB$REVERT`** store a handler
+  in (or clear) the *caller's* frame, the stub frame's saved FP, and
+  return the previous one.
+- **`LIB$MATCH_COND cond, cond-1, ...`** (all by reference) returns the
+  position of the first `cond-n` whose `STS$V_COND_ID` (bits 3-27)
+  matches, or 0.
+
+The console's check that the stubs fit their reserved page now counts
+only the entries that get a stub (nonzero codes): 42 fit.
+
+Not implemented (see `docs/DEVIATIONS.md`): the mechanism array's R0
+for a `LIB$SIGNAL` is 0, not the caller's R0.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -2010,11 +2050,12 @@ sixth batch listed):
 32. **Done.** **`$SETEXV`**: primary, secondary, and last-chance exception vectors
     per access mode, searched before and after the call frames; user-mode
     vectors cleared at image rundown.
-33. **`LIB$SIGNAL`, `LIB$STOP`, `LIB$ESTABLISH`, `LIB$REVERT`,
-    `LIB$SIG_TO_RET`, `LIB$MATCH_COND`**: software conditions through the
-    same dispatcher, as shims.
+33. **Done.** **`LIB$SIGNAL`, `LIB$STOP`, `LIB$ESTABLISH`, `LIB$REVERT`,
+    `LIB$MATCH_COND`**: software conditions through the same
+    dispatcher, as shims (codes 33-36 and 38).
 34. **`$UNWIND`**: unwind the call stack from a handler, calling each
-    removed frame's handler with `SS$_UNWIND`.
+    removed frame's handler with `SS$_UNWIND`; and `LIB$SIG_TO_RET`
+    (shim code 37), which is built on it.
 35. **`$CRETVA`, `$DELTVA`, `$CNTREG`**: create and delete pages of the
     P0 and P1 regions through their page table entries.
 36. **`$SETPRT`** (with a generated `$PRTDEF`), and `$LCKPAG`/`$ULKPAG`/
@@ -2847,4 +2888,27 @@ fixed.
   errors changing nothing), `TestSrchandler_vectors` (the full search
   order, and another mode's vectors ignored),
   `TestImageRundown_exceptionVectors`.
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 33: `LIB$SIGNAL` and friends
+
+- **`internal/rtl/signal.go`** (new): `shimLibSignal`, `shimLibStop`
+  (both through `Environment.signal`), `shimLibEstablish`,
+  `shimLibRevert` (`setCallerHandler`), `shimLibMatchCond`, and
+  `registerSignalShims`. `LIB$SIG_TO_RET` moved to subtask 34, since it
+  calls `$UNWIND`.
+- **kernel.asm** and **`internal/console/shim.go`**: the five routines'
+  `.SHIM` entries. `TestEnsureShims_fitsReservedPage` counts only
+  stubbed entries.
+- **Acceptance fixture** `testdata/asm/signals.asm`: a condition with an
+  FAO argument continued by the caller's caller's handler with a new
+  R0; an unhandled warning through the catch-all; `LIB$REVERT`;
+  `LIB$MATCH_COND`; and a `LIB$STOP` whose handler tries to continue.
+  `TestSignals_assembledProgram` checks the recorded values, the exit
+  status, and both messages.
+- Tests (`signal_test.go`): the signal array and search start, continue
+  back to the stub's `RET`; the catch-all continuing a warning;
+  `LIB$STOP`'s forced severity, `ATTCONSTO`, and catch-all exit; the
+  errors; establish and revert on the caller's frame; `LIB$MATCH_COND`'s
+  matching rules.
 - `go test ./...` passes.

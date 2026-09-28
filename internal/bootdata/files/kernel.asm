@@ -1180,6 +1180,11 @@ _done:          ret
                 .shim   lib$free_vm,         ^d30, LIBRTL,      0548
                 .shim   lib$delete_vm_zone,  ^d31, LIBRTL,      0A48
                 .shim   decc$time,           ^d32, DECC$SHR,    0768
+                .shim   lib$signal,          ^d33, LIBRTL,      04F0
+                .shim   lib$stop,            ^d34, LIBRTL,      04F8
+                .shim   lib$establish,       ^d35, LIBRTL,      03C0
+                .shim   lib$revert,          ^d36, LIBRTL,      0490
+                .shim   lib$match_cond,      ^d38, LIBRTL,      0460
 ;                       ------------        -----  --------   ------
 ;                       Entry Name             ID  RTL        Offset
 ;                       ------------        -----  --------   ------

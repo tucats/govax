@@ -717,6 +717,10 @@ changed as a result.
   - On VMS the kernel dispatches an exception in the mode it happened
     in only after checking that mode's stack; govax pushes the arrays
     on whatever stack is current.
+  - `LIB$SIGNAL`/`LIB$STOP` (subtask 33) put 0 in the mechanism array's
+    R0, where VMS puts the caller's R0: the shim stub's
+    `MOVL #code, R0` has replaced it before the shim runs. So a handler
+    that continues without setting it makes `LIB$SIGNAL` return 0.
 - **Status**: open, by design.
 
 ## Open findings

@@ -83,6 +83,11 @@ var shimTable = []shimEntry{
 	{"LIB$FREE_VM", "LIBRTL", 0x0548, 30},
 	{"LIB$DELETE_VM_ZONE", "LIBRTL", 0x0A48, 31},
 	{"DECC$TIME", "DECC$SHR", 0x0768, 32},
+	{"LIB$SIGNAL", "LIBRTL", 0x04F0, 33},
+	{"LIB$STOP", "LIBRTL", 0x04F8, 34},
+	{"LIB$ESTABLISH", "LIBRTL", 0x03C0, 35},
+	{"LIB$REVERT", "LIBRTL", 0x0490, 36},
+	{"LIB$MATCH_COND", "LIBRTL", 0x0460, 38},
 
 	// code 0: resolved by symbol lookup against kernel.asm's own
 	// already-assembled native routines, not stub synthesis -- see this
