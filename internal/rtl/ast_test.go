@@ -217,11 +217,11 @@ func TestNextASTConditions(t *testing.T) {
 
 	wantNoAST(t, env, "nothing queued")
 
-	// Queued for another mode: kernel and user ASTs don't run in
-	// supervisor mode.
-	env.queueAST(0x1000, 0, uint32(vax.Kernel))
+	// Queued for a less privileged mode: a user AST doesn't run in
+	// supervisor mode. (A more privileged mode's does, by switching mode:
+	// TestNextASTSwitchesMode.)
 	env.queueAST(0x1000, 0, uint32(vax.User))
-	wantNoAST(t, env, "only other modes' ASTs queued")
+	wantNoAST(t, env, "only a less privileged mode's AST queued")
 
 	env.queueAST(0x2000, 0, uint32(vax.Supervisor))
 
@@ -256,8 +256,128 @@ func TestNextASTConditions(t *testing.T) {
 		t.Fatalf("NextAST = %#x, %v, %v; want the supervisor AST", routine, ok, err)
 	}
 
-	if env.PendingASTs() != 2 {
-		t.Errorf("%d ASTs left, want the kernel and user ones", env.PendingASTs())
+	if env.PendingASTs() != 1 {
+		t.Errorf("%d ASTs left, want the user one", env.PendingASTs())
+	}
+}
+
+// TestNextASTSwitchesMode: a kernel AST interrupts user-mode code by
+// switching the CPU into kernel mode, on the kernel stack, with the
+// user-mode PSL in the frame; the AST exit switches back.
+func TestNextASTSwitchesMode(t *testing.T) {
+	env := astFixture(t, vax.User) // SP 0x9000
+	c := env.cpu
+
+	const ksp = 0x7000
+
+	c.SetPR(vax.KSP, ksp)
+	c.SetGPR(vax.PC, 0x4321)
+
+	userPSL := c.PSL()
+	userPSL.SetN(true)
+	userPSL.SetPrvMod(vax.User)
+	c.SetPSL(userPSL)
+
+	env.queueAST(0x1000, 0x42, uint32(vax.Kernel))
+
+	routine, argList, _, ok, err := env.NextAST()
+	if !ok || err != nil || routine != 0x1000 {
+		t.Fatalf("NextAST = %#x, %v, %v; want the kernel AST", routine, ok, err)
+	}
+
+	psl := c.PSL()
+	if psl.CurMod() != vax.Kernel || psl.PrvMod() != vax.User {
+		t.Errorf("during the AST: mode %v, previous mode %v; want kernel, user", psl.CurMod(), psl.PrvMod())
+	}
+
+	if c.PR(vax.USP) != 0x9000 || argList != ksp-astFrameSize || c.GPR(vax.SP) != argList {
+		t.Errorf("USP=%#x, SP=%#x, frame at %#x; want USP 0x9000 and the frame on the kernel stack at %#x",
+			c.PR(vax.USP), c.GPR(vax.SP), argList, ksp-astFrameSize)
+	}
+
+	if got, _ := env.mem.LoadLongword(c, argList+20); vax.PSL(got) != userPSL {
+		t.Errorf("frame's PSL = %#x, want the interrupted user PSL %#x", got, uint32(userPSL))
+	}
+
+	// The routine runs in kernel mode, then returns through the AST exit.
+	c.SetGPR(vax.PC, astExitAddr+2)
+	c.SetGPR(vax.R1, 0)
+	callLNM(t, env, serviceSysClrast)
+
+	if c.PSL() != userPSL || c.GPR(vax.PC) != 0x4321 || c.GPR(vax.SP) != 0x9000 {
+		t.Errorf("after the AST: PSL=%#x PC=%#x SP=%#x; want %#x, 0x4321, 0x9000",
+			uint32(c.PSL()), c.GPR(vax.PC), c.GPR(vax.SP), uint32(userPSL))
+	}
+
+	if c.PR(vax.KSP) != ksp {
+		t.Errorf("KSP = %#x, want %#x: the kernel stack back where it was", c.PR(vax.KSP), ksp)
+	}
+
+	if env.Process.ast.active[vax.Kernel] {
+		t.Error("the kernel AST is still active")
+	}
+}
+
+// TestNextASTMostPrivilegedFirst: of the ASTs that can run, the most
+// privileged mode's goes first, even if it was queued later.
+func TestNextASTMostPrivilegedFirst(t *testing.T) {
+	env := astFixture(t, vax.User)
+	env.cpu.SetPR(vax.ESP, 0x7000)
+
+	env.queueAST(0x1000, 0, uint32(vax.User))
+	env.queueAST(0x2000, 0, uint32(vax.Executive))
+
+	if routine, _, _, ok, _ := env.NextAST(); !ok || routine != 0x2000 || env.cpu.PSL().CurMod() != vax.Executive {
+		t.Errorf("NextAST = %#x (ok=%v) in mode %v, want the executive AST first", routine, ok, env.cpu.PSL().CurMod())
+	}
+
+	// The user AST can't interrupt the executive-mode AST routine.
+	wantNoAST(t, env, "a user AST while an executive AST runs")
+}
+
+// TestNextASTModeSwitchFailure: if the frame can't be pushed on the
+// inner mode's stack, delivery fails and the CPU is left in its own mode
+// on its own stack.
+func TestNextASTModeSwitchFailure(t *testing.T) {
+	env := astFixture(t, vax.User)
+	c := env.cpu
+	c.SetPR(vax.KSP, badAddr)
+
+	before := c.PSL()
+
+	env.queueAST(0x1000, 0, uint32(vax.Kernel))
+
+	if _, _, _, ok, err := env.NextAST(); ok || err == nil {
+		t.Fatalf("NextAST: ok=%v err=%v, want an error", ok, err)
+	}
+
+	if c.PSL() != before || c.GPR(vax.SP) != 0x9000 || c.PR(vax.KSP) != badAddr {
+		t.Errorf("after the failure: PSL=%#x SP=%#x KSP=%#x; want %#x, 0x9000, KSP unchanged",
+			uint32(c.PSL()), c.GPR(vax.SP), c.PR(vax.KSP), uint32(before))
+	}
+
+	if env.PendingASTs() != 1 || env.Process.ast.active[vax.Kernel] {
+		t.Error("the undelivered AST should still be queued and not active")
+	}
+}
+
+// TestServiceSysClrastLowersButNeverRaises: a kernel AST's exit may go
+// back to a less privileged mode than the one saved (lowering privilege
+// is harmless, as with REI), but a forged frame asking for a mode more
+// privileged than the AST's is ignored.
+func TestServiceSysClrastLowersButNeverRaises(t *testing.T) {
+	env := astFixture(t, vax.Supervisor)
+	c := env.cpu
+	c.SetPR(vax.ESP, 0x7000)
+
+	env.queueAST(0x1000, 0, uint32(vax.Executive))
+	_, argList, _, _, _ := env.NextAST()
+
+	putLongword(t, env, argList+20, uint32(modePSL(vax.Kernel))) // forged
+	callLNM(t, env, serviceSysClrast)
+
+	if c.PSL().CurMod() != vax.Executive {
+		t.Errorf("mode after a forged kernel PSL = %v, want executive (the AST's)", c.PSL().CurMod())
 	}
 }
 

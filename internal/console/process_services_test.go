@@ -614,3 +614,72 @@ func TestJPIASTState_assembledProgram(t *testing.T) {
 		}
 	}
 }
+
+// TestModeSwitchAST_assembledProgram is docs/PHASE-26.md subtask 22's
+// acceptance test: testdata/asm/mode_switch_ast.asm sets a timer from
+// kernel mode, drops to user mode, and hibernates. The timer's kernel-mode
+// AST is delivered by switching into kernel mode (with memory protection
+// on, on the kernel stack), wakes the process, and returns to user mode.
+func TestModeSwitchAST_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "mode_switch_ast.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(mode_switch_ast.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("mode_switch_ast.asm has no entry address")
+	}
+
+	start := c.Engine.SystemTime()
+
+	runErr, hitCap := callBounded(t, c, addr, 100_000)
+	if runErr != nil {
+		t.Fatalf("running mode_switch_ast.asm: %v", runErr)
+	}
+
+	if hitCap {
+		t.Fatal("mode_switch_ast.asm didn't finish within 100,000 steps (the kernel AST never ended the user-mode $HIBER)")
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Errorf("R0 = %d, want 1", got)
+	}
+
+	word := func(name string) uint32 {
+		t.Helper()
+
+		a, ok := c.Symbols.Get(name)
+		if !ok {
+			t.Fatalf("no %s symbol", name)
+		}
+
+		v, err := c.Mem.LoadLongword(c.CPU, a)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return v
+	}
+
+	if m, p := word("KMODE"), word("KPRV"); m != uint32(vax.Kernel) || p != uint32(vax.User) {
+		t.Errorf("the AST ran in mode %d with previous mode %d; want kernel (0), user (3)", m, p)
+	}
+
+	if got := word("KPARAM"); got != 7 {
+		t.Errorf("AST parameter = %d, want 7", got)
+	}
+
+	if got := word("UMODE"); got != uint32(vax.User) {
+		t.Errorf("mode after the AST = %d, want user (3)", got)
+	}
+
+	if elapsed := c.Engine.SystemTime() - start; elapsed < 10*10_000 {
+		t.Errorf("system time advanced %d, want at least 10ms (100000)", elapsed)
+	}
+
+	if n := c.RTL.PendingASTs(); n != 0 {
+		t.Errorf("%d ASTs left, want none", n)
+	}
+}

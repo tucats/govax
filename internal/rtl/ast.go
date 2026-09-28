@@ -29,16 +29,21 @@ import (
 // # When an AST is delivered
 //
 // Between any two instructions, the engine asks NextAST whether an AST
-// can run now. The answer is yes only if all of these hold, as on VMS:
+// can run now. An AST for mode m can run only if all of these hold, as
+// on VMS:
 //
-//   - An AST is queued for the mode the CPU is running in. (VMS would also
-//     switch a less privileged process into a more privileged mode to run
-//     that mode's AST; govax doesn't — see "Not implemented" below.)
+//   - The CPU is running in mode m or a less privileged one. A user-mode
+//     AST never interrupts kernel code, but a kernel-mode AST does
+//     interrupt user code: the CPU is switched into kernel mode to run it
+//     (see "Changing mode" below).
 //   - IPL is below 2 (IPL$_ASTDEL) and the CPU isn't on the interrupt
 //     stack. So an interrupt handler, or kernel code that raised IPL to
 //     protect itself, is never interrupted by an AST.
-//   - ASTs are enabled for this mode and every more privileged one.
-//   - No AST of this mode is already running.
+//   - ASTs are enabled for mode m and every more privileged one.
+//   - No AST of mode m is already running.
+//
+// Of the ASTs that could run, the most privileged mode's goes first, and
+// within a mode the oldest.
 //
 // Because waiting services ($WAITFR, $HIBER) wait by re-executing their
 // XFC instruction every step (see ErrWait), each retry is an instruction
@@ -78,6 +83,20 @@ import (
 // This needs the P1 vector's stubs in memory (assembled by .P1VECTOR, as
 // any program calling system services has). NextAST checks the XFC is
 // there before delivering.
+//
+// # Changing mode
+//
+// Each access mode has its own stack. When the AST's mode is more
+// privileged than the CPU's (docs/PHASE-26.md subtask 22), NextAST first
+// switches the CPU into it, as VMS does: the current stack pointer is
+// saved in the current mode's stack-pointer register (USP, SSP, ESP),
+// PSL<CUR_MOD> becomes the AST's mode, PSL<PRV_MOD> the interrupted one,
+// and SP the AST mode's saved stack pointer (KSP, ...). The frame then goes
+// on that stack, holding the interrupted, less privileged PSL. The AST
+// exit sees that PSL's mode and switches back the same way, the
+// equivalent of REI. An AST exit never switches to a *more* privileged
+// mode than the AST's: a routine that forges its frame can't gain
+// privilege.
 
 // astDeliveryIPL is IPL$_ASTDEL: ASTs are delivered only below it.
 const astDeliveryIPL = 2
@@ -176,27 +195,27 @@ func (env *Environment) NextAST() (routine, argList, returnPC uint32, ok bool, e
 		return 0, 0, 0, false, nil
 	}
 
-	mode := uint32(psl.CurMod())
+	// Look for the most privileged mode, from kernel out to the CPU's
+	// current mode, with an AST that can run.
+	mode, i := uint32(0), -1
 
-	// Disabling ASTs in a mode also holds back every less privileged
-	// mode's ASTs.
-	for m := uint32(0); m <= mode; m++ {
+	for m := uint32(0); m <= uint32(psl.CurMod()) && i < 0; m++ {
+		// Disabling ASTs in a mode also holds back every less privileged
+		// mode's ASTs.
 		if !p.ast.enabled[m] {
-			return 0, 0, 0, false, nil
-		}
-	}
-
-	if p.ast.active[mode] {
-		return 0, 0, 0, false, nil
-	}
-
-	i := -1
-
-	for n, a := range p.ast.queue {
-		if a.mode == mode {
-			i = n
-
 			break
+		}
+
+		if p.ast.active[m] {
+			continue
+		}
+
+		for n, a := range p.ast.queue {
+			if a.mode == m {
+				mode, i = m, n
+
+				break
+			}
 		}
 	}
 
@@ -210,7 +229,7 @@ func (env *Environment) NextAST() (routine, argList, returnPC uint32, ok bool, e
 
 	a := p.ast.queue[i]
 
-	sp, err := env.pushASTFrame(a.param)
+	sp, err := env.enterASTMode(vax.AccessMode(mode), a.param)
 	if err != nil {
 		return 0, 0, 0, false, err
 	}
@@ -222,24 +241,67 @@ func (env *Environment) NextAST() (routine, argList, returnPC uint32, ok bool, e
 	return a.routine, sp, astExitAddr, true, nil
 }
 
-// pushASTFrame pushes the six-longword AST frame (count, astprm, R0, R1,
-// PC, PSL; see this file's opening comment) on the current stack and
-// returns its address, the new SP. If any push fails, SP is left as it
-// was.
-func (env *Environment) pushASTFrame(param uint32) (uint32, error) {
+// enterASTMode prepares the CPU to run an AST of mode (which is the
+// CPU's current mode or a more privileged one), with parameter param: it
+// switches into mode if it isn't already there (see "Changing mode"
+// above), then pushes the six-longword AST frame (count, astprm, R0, R1,
+// PC, PSL; see this file's opening comment) holding the interrupted
+// state, and returns the frame's address, the new SP.
+//
+// If the frame can't be pushed, everything is put back as it was and the
+// error is returned.
+func (env *Environment) enterASTMode(mode vax.AccessMode, param uint32) (uint32, error) {
 	c := env.cpu
-	frame := [6]uint32{astArgCount, param, c.GPR(vax.R0), c.GPR(vax.R1), c.GPR(vax.PC), uint32(c.PSL())}
+	old, oldSP := c.PSL(), c.GPR(vax.SP)
+	frame := [6]uint32{astArgCount, param, c.GPR(vax.R0), c.GPR(vax.R1), c.GPR(vax.PC), uint32(old)}
+
+	if mode != old.CurMod() {
+		env.switchMode(old.CurMod(), mode)
+
+		psl := c.PSL()
+		psl.SetPrvMod(old.CurMod())
+		c.SetPSL(psl)
+	}
+
 	sp := c.GPR(vax.SP) - astFrameSize
 
 	for i, v := range frame {
 		if err := env.mem.StoreLongword(c, sp+uint32(i)*4, v); err != nil {
-			return 0, fmt.Errorf("rtl: can't deliver an AST: its frame can't be pushed at SP=%08X: %w", c.GPR(vax.SP), err)
+			stackSP := c.GPR(vax.SP)
+
+			if mode != old.CurMod() {
+				env.switchMode(mode, old.CurMod())
+			}
+
+			c.SetPSL(old)
+			c.SetGPR(vax.SP, oldSP)
+
+			return 0, fmt.Errorf("rtl: can't deliver an AST: its frame can't be pushed at SP=%08X: %w", stackSP, err)
 		}
 	}
 
 	c.SetGPR(vax.SP, sp)
 
 	return sp, nil
+}
+
+// switchMode moves the CPU from access mode from to access mode to, the
+// way the VAX does when it changes mode: SP is saved in from's
+// stack-pointer register and loaded from to's (KSP, ESP, SSP, and USP are
+// processor registers 0-3, numbered like the modes), and PSL<CUR_MOD>
+// changes. The memory system's cached access checks are discarded, since
+// they were for the old mode. Nothing else in the PSL changes.
+func (env *Environment) switchMode(from, to vax.AccessMode) {
+	c := env.cpu
+
+	c.SetPR(vax.PrivReg(from), c.GPR(vax.SP))
+	c.SetGPR(vax.SP, c.PR(vax.PrivReg(to)))
+
+	psl := c.PSL()
+	psl.SetCurMod(to)
+	c.SetPSL(psl)
+
+	env.mem.InvalidateProtection()
 }
 
 // serviceSysClrast is SYS$CLRAST, the AST exit. An AST routine's RET
@@ -255,10 +317,11 @@ func (env *Environment) pushASTFrame(param uint32) (uint32, error) {
 // that left its stack unbalanced), SP isn't at the active AST's frame;
 // then nothing is restored and it returns SS$_NORMAL.
 //
-// The restored PSL keeps the current mode and interrupt-stack bits: an
-// AST runs in the mode it interrupted, so they already match unless the
-// routine overwrote its frame, and a PSL from the stack must never be
-// able to raise the program's privilege.
+// When the saved PSL's mode is less privileged than the AST's — the AST
+// interrupted an outer mode — the CPU switches back to it, stacks and all
+// (see "Changing mode" above). A saved mode *more* privileged than the
+// AST's is ignored, as is the saved interrupt-stack bit: a PSL from the
+// stack must never be able to raise the program's privilege.
 func serviceSysClrast(env *Environment, _ []uint32) (uint32, error) {
 	c := env.cpu
 	p := env.Process
@@ -286,13 +349,19 @@ func serviceSysClrast(env *Environment, _ []uint32) (uint32, error) {
 	}
 
 	psl := vax.PSL(frame[5])
-	psl.SetCurMod(cur.CurMod())
-	psl.SetIS(cur.IS())
+	back := max(psl.CurMod(), cur.CurMod()) // never more privileged than the AST
 
 	c.SetGPR(vax.R1, frame[3])
 	c.SetGPR(vax.PC, frame[4])
-	c.SetPSL(psl)
 	c.SetGPR(vax.SP, sp+astFrameSize)
+
+	if back != cur.CurMod() {
+		env.switchMode(cur.CurMod(), back)
+	}
+
+	psl.SetCurMod(back)
+	psl.SetIS(cur.IS())
+	c.SetPSL(psl)
 
 	p.ast.active[mode] = false
 

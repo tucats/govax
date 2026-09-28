@@ -35,7 +35,10 @@ import "github.com/tucats/govax/internal/vax"
 //  2. If one is, the RTL has already pushed the five-argument list above
 //     (plus its count, 5) on the current stack, and answers with the
 //     routine's address, the argument list's address, and a return
-//     address.
+//     address. If the AST belongs to a more privileged mode than the
+//     CPU's (a kernel AST interrupting user code), the RTL has also
+//     switched the CPU into that mode and onto its stack first, so the
+//     list is on that stack and the routine runs in that mode.
 //  3. deliverAST then does exactly what CALLG argList, routine would:
 //     builds the call frame (saving the registers the routine's entry
 //     mask names) and jumps to the routine, with the given return
