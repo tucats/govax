@@ -143,6 +143,8 @@ lists the ones the implementation can actually return.
 | `$DASSGN` | 10 | `devices.go` | `NORMAL`, `IVCHAN`, `NOPRIV` | Releases a channel; image rundown releases user-mode channels. |
 | `$SETIMR`, `$CANTIM` | 11 | `timers.go` | `NORMAL`, `ACCVIO`, `ILLEFC`, `UNASEFC` | RTL timer queue on the engine's system time (1 ms per interval-clock tick); no guest interrupt needed. |
 | `$GETTIM` | 12 | `vmstime.go` | `NORMAL`, `ACCVIO` | The engine's system time, now local time as on VMS. |
+| `$ASCTIM` | 13 | `vmstime.go` | `NORMAL`, `ACCVIO`, `BUFFEROVF`, `IVTIME` | Binary time to `dd-mmm-yyyy hh:mm:ss.cc` / `dddd hh:mm:ss.cc`. |
+| `$BINTIM` | 13 | `vmstime.go` | `NORMAL`, `ACCVIO`, `IVTIME` | The reverse, with omitted fields defaulted as the manual describes. |
 
 ## Service designs
 
@@ -677,6 +679,63 @@ formatting.
 Not implemented: VMS updates the clock every 10ms, so its times are
 multiples of 100,000 ticks. govax's clock has 1ms steps and isn't rounded.
 
+### `$ASCTIM` and `$BINTIM` — Convert Between Binary and ASCII Time
+
+`SYS$ASCTIM [timlen] ,timbuf ,[timadr] ,[cvtflg]` and
+`SYS$BINTIM timbuf ,timadr`
+
+A VMS time is a signed quadword of 100ns ticks. A positive value is an
+absolute time since 17-Nov-1858; a negative one is a delta (an interval).
+The two text forms are:
+
+| Kind | Form | Length | Example |
+| --- | --- | --- | --- |
+| Absolute | `dd-mmm-yyyy hh:mm:ss.cc` | 23 | ` 9-OCT-1988 07:05:03.45` |
+| Delta | `dddd hh:mm:ss.cc` | 16 | `   5 03:18:32.07` |
+
+The conversions are pure functions in `internal/rtl/vmstime.go`
+(`formatVMSTime`, `parseVMSTime`), so the manual's example table is tested
+directly. The services are thin wrappers.
+
+**`$ASCTIM`** formats the quadword at `timadr`, or the current time when
+`timadr` is 0.
+
+- The day of the month is padded to two characters, and a delta's day
+  count to four, with blanks. Month names are upper case. Hundredths are
+  truncated.
+- `cvtflg` bit 0 returns only `hh:mm:ss.cc`.
+- The text goes to the `timbuf` descriptor's buffer, and its length to the
+  word at `timlen`. A shorter buffer gets what fits, with the success
+  status `SS$_BUFFEROVF`. That's how the manual's table gets the date
+  alone: a 12-byte buffer.
+- A delta of 10,000 days or more is `SS$_IVTIME`. So is an absolute time
+  past the year 9999, which doesn't fit `yyyy` (the manual doesn't say).
+
+**`$BINTIM`** parses the `timbuf` string into the quadword at `timadr`:
+
+- Leading blanks, and any blanks between the two fields, are allowed.
+  There can be none inside a field.
+- A first field containing a hyphen makes the time absolute. Any omitted
+  date or time field takes the current value (`-- :50` is today at
+  `hh:50:ss.cc` of now). Leading fields need their punctuation; trailing
+  ones can be dropped.
+- Otherwise it's a delta. With two fields the first is the day count;
+  with one, it's the time (`05` is five hours, per the manual's example).
+  Omitted time fields are 0. The result is negated.
+- The fraction is a true fraction (`.1` is ten hundredths). A third digit
+  rounds, carrying into the seconds if need be; later digits are ignored.
+- Months must be upper case. Field ranges are checked (hours 0-23, a day
+  that exists in its month, years 1858-9999, days 0-9999, and not before
+  17-Nov-1858). Anything else is `SS$_IVTIME`.
+
+Both return `SS$_ACCVIO` for an argument they can't read or write. The
+manual says those raise an access violation instead; govax returns the
+status, as its other services do.
+
+One of the manual's examples, `--1989 0:0:0.0` giving `29-DEC-1989`, is
+taken as a typo. By its own rule the omitted day is today's, so govax gives
+`30-DEC-1989`.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -719,6 +778,9 @@ third batch listed):
 
 12. **Done.** **`$GETTIM`.** In the new `vmstime.go`; system time becomes
     local time (`vmsdef.Time`).
+
+13. **Done.** **`$ASCTIM` and `$BINTIM`.** In `vmstime.go`, as the pure
+    functions `formatVMSTime`/`parseVMSTime` plus service wrappers.
 
 Candidates next: listed when the fourth batch is complete.
 
@@ -999,3 +1061,24 @@ None yet.
 - Tests: `$GETTIM` against a hand-set clock, its `SS$_ACCVIO` cases; the
   local/UTC readings of one instant; `GoTime` round trips. The epoch test
   now converts a UTC time.
+
+### 2026-09-28 — Subtask 13: `$ASCTIM` and `$BINTIM`
+
+- `formatVMSTime`, `parseVMSTime` (with `parseAbsoluteTime`,
+  `parseTimeOfDay`, `parseTimeNumber`), `serviceSysAsctim`, and
+  `serviceSysBintim` in `internal/rtl/vmstime.go`, per the design above.
+- **Found while testing:** `vmsdef.Time` and `GoTime` went through
+  nanoseconds since 1970, which overflow an int64 outside 1678-2262. They
+  now work in seconds plus a remainder, so 31-DEC-9999 converts correctly.
+- Tests (`vmstime_test.go`):
+  - the manual's `$BINTIM` example table, run through both conversions;
+  - more accepted forms (blanks, truncated dates, a leap day, time zero,
+    the last representable time, rounding carry, the largest delta);
+  - 25 rejected strings, one or more for each rule;
+  - `formatVMSTime`'s padding, truncation, time-only form, and 10,000-day
+    limit;
+  - `$ASCTIM` for now, a given delta, and a 12-byte buffer
+    (`SS$_BUFFEROVF`), plus its error statuses;
+  - `$BINTIM` storing a time, a `$BINTIM` delta driving `$SETIMR`, and its
+    error statuses leaving `timadr` untouched.
+- `vmsdef`: a 9999 round-trip case.

@@ -427,6 +427,19 @@ changed as a result.
   interval-clock tick) and is returned as is.
 - **Status**: open, by design.
 
+### [Phase 26] `$ASCTIM`/`$BINTIM` details the manual leaves open
+
+- **Where**: `internal/rtl/vmstime.go`.
+- **What**:
+  - `$ASCTIM` truncates hundredths rather than rounding them.
+  - An absolute time past 31-DEC-9999 is `SS$_IVTIME` from `$ASCTIM`
+    (it doesn't fit `yyyy`).
+  - Bad addresses return `SS$_ACCVIO` instead of raising an access
+    violation.
+  - The manual's example `--1989 0:0:0.0` → `29-DEC-1989` is taken as a
+    typo; govax uses today's day of the month, giving `30-DEC-1989`.
+- **Status**: open, by design; revisit if a real VMS disagrees.
+
 ## Open findings
 
 _None yet._

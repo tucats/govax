@@ -19,10 +19,15 @@ const TicksPerSecond = 10_000_000
 // Time converts a Go time to VMS 64-bit system time, as the wall-clock
 // reading in t's own location. For time.Now() that is the host's local
 // time, as on VMS; a UTC time converts to the same reading in UTC.
+//
+// It works in whole seconds plus a nanosecond remainder, not
+// t.UnixNano(): nanoseconds since 1970 overflow an int64 outside the
+// years 1678-2262, and VMS times run from 1858 to 9999 and beyond.
 func Time(t time.Time) uint64 {
 	_, offset := t.Zone() // seconds east of UTC
+	secs := t.Unix() + int64(offset)
 
-	return uint64(t.UnixNano()/100) + uint64(int64(offset)*TicksPerSecond) + UnixEpoch
+	return uint64(secs*TicksPerSecond+int64(t.Nanosecond()/100)) + UnixEpoch
 }
 
 // GoTime is the inverse of Time for display: the wall-clock reading v
@@ -31,7 +36,8 @@ func Time(t time.Time) uint64 {
 // treated as an absolute time; a delta time (negative as a signed
 // quadword) has no calendar reading.
 func GoTime(v uint64) time.Time {
-	ticks := int64(v - UnixEpoch) // may go negative: before 1970
+	secs := int64(v/TicksPerSecond) - UnixEpoch/TicksPerSecond
+	nanos := int64(v%TicksPerSecond) * 100
 
-	return time.Unix(0, 0).UTC().Add(time.Duration(ticks) * 100)
+	return time.Unix(secs, nanos).UTC()
 }

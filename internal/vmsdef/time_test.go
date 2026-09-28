@@ -39,6 +39,7 @@ func TestGoTimeRoundTrip(t *testing.T) {
 		time.Date(1858, time.November, 17, 0, 0, 0, 0, time.UTC),
 		time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC),
 		time.Date(2026, time.September, 28, 13, 45, 1, 120_000_000, time.UTC),
+		time.Date(9999, time.December, 31, 23, 59, 59, 990_000_000, time.UTC), // past int64 nanoseconds
 	} {
 		if got := GoTime(Time(want)); !got.Equal(want) {
 			t.Errorf("GoTime(Time(%v)) = %v", want, got)
