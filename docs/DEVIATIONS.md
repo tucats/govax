@@ -419,6 +419,14 @@ changed as a result.
     time.
 - **Status**: open, by design.
 
+### [Phase 26] `$GETTIM`'s clock isn't rounded to 10ms
+
+- **Where**: `internal/rtl/vmstime.go`, `internal/cpu/systime.go`.
+- **What**: VMS updates its system time every 10ms, so `$GETTIM` returns
+  multiples of 100,000. govax's system time moves in 1ms steps (one per
+  interval-clock tick) and is returned as is.
+- **Status**: open, by design.
+
 ## Open findings
 
 _None yet._

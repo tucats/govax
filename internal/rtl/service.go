@@ -51,6 +51,7 @@ func registerServices(t *ServiceTable) {
 	registerEventFlagServices(t)
 	registerJPIServices(t)
 	registerTimerServices(t)
+	registerTimeServices(t)
 	registerDeviceServices(t)
 	registerLogicalServices(t)
 	registerCLIService(t)

@@ -93,19 +93,13 @@ func serviceSysSetimr(env *Environment, argv []uint32) (uint32, error) {
 		return ssAccVio, nil
 	}
 
-	lo, err := env.mem.LoadLongword(env.cpu, daytim)
-	if err != nil {
-		return ssAccVio, nil
-	}
-
-	hi, err := env.mem.LoadLongword(env.cpu, daytim+4)
-	if err != nil {
+	expiry, ok := env.loadQuad(daytim)
+	if !ok {
 		return ssAccVio, nil
 	}
 
 	*word &^= 1 << bit
 
-	expiry := uint64(hi)<<32 | uint64(lo)
 	if delta := int64(expiry); delta < 0 {
 		expiry = env.Clock() + uint64(-delta)
 	}

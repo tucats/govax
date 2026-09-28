@@ -22,11 +22,13 @@ Later service work should start from the
 
 The first batch, requested by the user on 2026-09-27, is `$ADJSTK`,
 `$ADJWSL`, `$ALLOC`, and `$ASCEFC`. The second adds `$DALLOC`,
-`$DACEFC`/`$DLCEFC`, `$GETJPI`, and the event-flag waits.
+`$DACEFC`/`$DLCEFC`, `$GETJPI`, and the event-flag waits. The third adds
+`$DASSGN` and the timers; the fourth, the time conversions, hibernation,
+and AST delivery.
 
-**Status: three batches complete** (subtasks 1-11). Add later services
-as new subtasks. Add later services as new
-subtasks.
+**Status: three batches complete** (subtasks 1-11); the fourth (time
+services, hibernation, and AST delivery) is in progress. Add later
+services as new subtasks.
 
 ## References
 
@@ -140,6 +142,7 @@ lists the ones the implementation can actually return.
 | `$WAITFR`, `$WFLAND`, `$WFLOR` | 9 | `eventflags.go` | `NORMAL`, `ILLEFC`, `UNASEFC` | Wait by re-executing the service's `XFC` until satisfied; timer interrupts run in between. |
 | `$DASSGN` | 10 | `devices.go` | `NORMAL`, `IVCHAN`, `NOPRIV` | Releases a channel; image rundown releases user-mode channels. |
 | `$SETIMR`, `$CANTIM` | 11 | `timers.go` | `NORMAL`, `ACCVIO`, `ILLEFC`, `UNASEFC` | RTL timer queue on the engine's system time (1 ms per interval-clock tick); no guest interrupt needed. |
+| `$GETTIM` | 12 | `vmstime.go` | `NORMAL`, `ACCVIO` | The engine's system time, now local time as on VMS. |
 
 ## Service designs
 
@@ -654,6 +657,26 @@ Not implemented (see `docs/DEVIATIONS.md`):
   the flag changes nothing.
 - The `TQELM` quota (`SS$_EXQUOTA`).
 
+### `$GETTIM` — Get Time
+
+`SYS$GETTIM timadr`
+
+Stores the current system time, `env.Clock()`, in the quadword at
+`timadr` (`internal/rtl/vmstime.go`). A zero or unwritable `timadr` is
+`SS$_ACCVIO`. The clock is the one `$SETIMR` uses: the engine's
+`SystemTime`, one millisecond per interval-clock tick.
+
+**System time is now local time.** VMS keeps its clock at local wall-clock
+time, with no time zone. `vmsdef.Time` used to convert Go times as UTC; it
+now adds the time's zone offset, so the engine's `SystemTime` (and the host
+clock fallback, `wallClock`) read local time. `$GETTIM` followed by
+`$ASCTIM` (subtask 13) then prints what a clock on the wall says. Delta
+times and timers are unaffected. `vmsdef.GoTime` is the inverse, for
+formatting.
+
+Not implemented: VMS updates the clock every 10ms, so its times are
+multiples of 100,000 ticks. govax's clock has 1ms steps and isn't rounded.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -691,10 +714,13 @@ Third batch, requested by the user on 2026-09-27:
     timer queue, running on the engine's new `SystemTime` (the interval
     clock's time base) rather than on the guest's timer interrupt.
 
-Candidates next: `$GETTIM` (the current system time, from the same clock;
-cheap now), `$BINTIM`/`$ASCTIM`, `$SCHDWK`/`$HIBER`/`$WAKE` (the wait
-mechanism and timer queue both carry over), and AST delivery (which
-`$SETIMR`'s `astadr`, `$GETJPI`'s `astadr`, and waits all leave out).
+Fourth batch, requested by the user on 2026-09-28 (the candidates the
+third batch listed):
+
+12. **Done.** **`$GETTIM`.** In the new `vmstime.go`; system time becomes
+    local time (`vmsdef.Time`).
+
+Candidates next: listed when the fourth batch is complete.
 
 
 ## Open questions
@@ -952,3 +978,24 @@ None yet.
     disassociated one), `$CANTIM` by ID, all, and access mode (with
     maximization), and rundown cancelling.
 - `go test ./...` passes.
+
+### 2026-09-28 — Fourth batch planned; subtask 12: `$GETTIM`
+
+- The user asked for the listed candidates: `$GETTIM`, `$BINTIM`/`$ASCTIM`,
+  `$SCHDWK`/`$HIBER`/`$WAKE`, and AST delivery. Planned as subtasks 12-16:
+  `$GETTIM`; `$ASCTIM`/`$BINTIM`; `$HIBER`/`$WAKE`/`$SCHDWK`/`$CANWAK`;
+  the AST delivery mechanism with `$DCLAST`/`$SETAST`; and ASTs for
+  `$SETIMR`/`$GETJPI`.
+- **Decisions (asked of the user):**
+  - System time is **local time**, as on VMS, not UTC.
+  - ASTs are delivered only at **IPL < 2**, as on VMS. Programs run after a
+    normal boot are in user mode at IPL 0 (kernel.asm's `exe$initialize`),
+    so this only matters to programs that skip it, like the Go fixture
+    tests, which lower IPL themselves.
+- `serviceSysGettim`, `loadQuad`, and `storeQuad` in the new
+  `internal/rtl/vmstime.go`. `$SETIMR` reads `daytim` with `loadQuad`.
+- `vmsdef.Time` adds the zone offset; `vmsdef.GoTime` and
+  `vmsdef.TicksPerSecond` are new.
+- Tests: `$GETTIM` against a hand-set clock, its `SS$_ACCVIO` cases; the
+  local/UTC readings of one instant; `GoTime` round trips. The epoch test
+  now converts a UTC time.
