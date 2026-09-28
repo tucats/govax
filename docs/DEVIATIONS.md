@@ -643,6 +643,19 @@ changed as a result.
   - INIT/VMINIT/ZERO delete every mailbox, permanent ones included.
 - **Status**: open, by design.
 
+### [Phase 26] Process-control simplifications
+
+- **Where**: `internal/rtl/process.go`.
+- **What**:
+  - There is one process, so `$SETPRI`, `$FORCEX`, and `$DELPRC` of any
+    other process are `SS$_NONEXPR`, and `$SETPRN` never finds a
+    duplicate name (`SS$_DUPLNAM`).
+  - `$SETPRI` sets the current priority to the new base priority; there
+    is no scheduler to boost it, and the priority changes nothing.
+  - `$DELPRC` of the caller ends the image without exit handlers, but
+    the process isn't deleted: the console runs the next image in it.
+- **Status**: open, by design.
+
 ### [Phase 26] CTRL/C and CTRL/Y AST simplifications
 
 - **Where**: `internal/rtl/ctrlast.go`, `internal/cpu/attention.go`,

@@ -30,8 +30,8 @@ and `$GETSYI`. The sixth adds `$FAO`/`$FAOL`, `$GETMSG`/`$PUTMSG`,
 `$CMKRNL`/`$CMEXEC`, CTRL/C and CTRL/Y ASTs, the full `$GETDVI`,
 mailboxes, and the small process-control services.
 
-**Status: sixth batch in progress** (subtasks 1-23 done; 24-30 planned).
-Add later services as new subtasks.
+**Status: six batches complete** (subtasks 1-30). Add later services as
+new subtasks.
 
 ## References
 
@@ -214,6 +214,10 @@ lists the ones the implementation can actually return.
 | `$CREMBX` | 29 | `mailbox.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `IVLOGNAM`, `IVSTSFLG`, `NOIOCHAN`, (logical-name define errors) | Creates `MBAn` (or finds it by logical name) and assigns a channel. |
 | `$DELMBX` | 29 | `mailbox.go` | `NORMAL`, `DEVNOTMBX`, `IVCHAN`, `NOPRIV` | Marks a permanent mailbox for deletion at its last deassign. |
 | (mailbox driver; pending `$QIO`) | 29 | `mbxdriver.go`, `qio.go` | IOSB: `NORMAL`, `BUFFEROVF`, `ENDOFFILE`, `MBFULL`, `CANCEL`; R0: `MBTOOSML` | Reads wait for writes; `$QIOW` waits, `$CANCEL`/`$DASSGN` cancel with `SS$_CANCEL`. |
+| `$SETPRN` | 30 | `process.go` | `NORMAL`, `ACCVIO`, `IVLOGNAM` | Sets `Process.Name`; omitted, no name. |
+| `$SETPRI` | 30 | `process.go` | `NORMAL`, `ACCVIO`, `IVLOGNAM`, `NONEXPR` | Sets the base (and current) priority, returning the old base. |
+| `$FORCEX` | 30 | `process.go` | `NORMAL`, `ACCVIO`, `IVLOGNAM`, `NONEXPR` | Queues a user-mode AST to the `SYS$EXIT` entry with the code: a normal exit, handlers and all. |
+| `$DELPRC` | 30 | `process.go` | (none: doesn't return); `ACCVIO`, `IVLOGNAM`, `NONEXPR` | Ends the image without exit handlers. |
 | (CTRL/C, CTRL/Y ASTs) | 27 | `ctrlast.go`, `ttdriver.go` | — | `IO$_SETMODE!IO$M_CTRLCAST`/`CTRLYAST` enable one-shot ASTs the host's Ctrl-C delivers instead of stopping the machine. |
 
 ## Service designs
@@ -1217,8 +1221,8 @@ State: `Process.exitHandlers` (per mode, oldest first: VMS's
 
 Not implemented (see `docs/DEVIATIONS.md`): `$EXIT` calls only the
 caller's mode's handlers, not the supervisor- and executive-mode ones VMS
-calls afterwards; `$FORCEX`; handlers for an image that ends by a fatal
-exception (the console reports those and stops).
+calls afterwards; handlers for an image that ends by a fatal exception
+(the console reports those and stops). (`$FORCEX` arrived in subtask 30.)
 
 ### `$NUMTIM` — Convert Binary Time to Numeric Time
 
@@ -1703,6 +1707,41 @@ Not implemented (see `docs/DEVIATIONS.md`): other processes; resource
 wait on a full mailbox; read/write attention ASTs; protection; the
 `BYTLM` quota; shared-memory mailboxes.
 
+### `$SETPRN`, `$SETPRI`, `$FORCEX`, `$DELPRC` — small process-control services
+
+`SYS$SETPRN [prcnam]`, `SYS$SETPRI [pidadr] ,[prcnam] ,pri [,prvpri]`,
+`SYS$FORCEX [pidadr] ,[prcnam] ,[code]`, and `SYS$DELPRC [pidadr] ,[prcnam]`
+
+All four act on a process; the last three name it the usual way
+(`processTarget`), and govax's only process is the caller, so any other
+is `SS$_NONEXPR`. They're in `process.go`.
+
+- **`$SETPRN`** sets `Process.Name` (1-15 characters, else
+  `SS$_IVLOGNAM`), which `$GETJPI` reports and every `prcnam` argument
+  now matches. Omitted, the process has no name. `SS$_DUPLNAM` can't
+  happen: no other process has a name.
+- **`$SETPRI`** stores the old base priority at `prvpri`, then sets the
+  base priority to `pri`'s low five bits (0-31; the process holds
+  ALTPRI, so raising is allowed). The current priority follows it: there
+  is no scheduler to boost it. `$GETJPI`'s `JPI$_PRI`/`PRIB` report both.
+- **`$FORCEX`** makes the process call `$EXIT` with `code`, the way VMS
+  does it: a user-mode AST whose routine is `$EXIT` itself (the `SYS$EXIT`
+  vector entry), with `code` as its parameter. An AST routine's first
+  argument is its parameter, so `$EXIT` reads it as the status. The
+  image exits normally, exit handlers and all, as soon as a user-mode AST
+  can be delivered: at once for a user-mode caller with ASTs enabled,
+  later if user ASTs are disabled or the CPU is in a more privileged
+  mode, as the manual warns. A second `$FORCEX` while one is queued adds
+  nothing.
+- **`$DELPRC`** on the caller doesn't return: it forgets every exit
+  handler (a deleted process runs none; that's the difference from
+  `$FORCEX`) and ends the image as `$EXIT` does (`ErrExit`, status
+  `SS$_NORMAL`). govax has no logging out, so the console carries on with
+  the same process afterwards.
+
+Not implemented (see `docs/DEVIATIONS.md`): other processes; process
+deletion itself.
+
 Not implemented (see `docs/DEVIATIONS.md`): other cluster nodes; SYSGEN
 parameters beyond `MINWSCNT`; the `ASTLM` quota (`SS$_EXASTLM`).
 
@@ -1825,8 +1864,39 @@ fifth batch listed):
     requests really wait (a read for a write), so `$QIO` gained pending
     requests, and `$QIOW` and `$CANCEL` real work. Acceptance fixture
     `testdata/asm/mailbox.asm`.
-30. **Small process-control services.** `$SETPRN`, `$SETPRI`, and
-    `$FORCEX`/`$DELPRC` on this process.
+30. **Done.** **Small process-control services.** `$SETPRN`, `$SETPRI`,
+    and `$FORCEX`/`$DELPRC` on this process, in `process.go`. Acceptance
+    fixture `testdata/asm/process_control.asm`.
+
+
+Candidates next, roughly in order of value now that messages, pending
+I/O, and change-mode calls exist:
+
+- **Signals and their messages**: `LIB$SIGNAL`/`LIB$STOP`, `$SETEXV`
+  (primary/secondary/last-chance vectors), and `$UNWIND`, on top of
+  Phase 20's handler search; the console's last-chance report of an
+  unhandled condition written through `$PUTMSG`'s texts
+  (`%SYSTEM-F-ACCVIO, access violation, ...`) instead of its own format.
+- **Virtual memory services**: `$CRETVA`, `$DELTVA`, `$CNTREG`,
+  `$SETPRT` (page protection, with `$PRTDEF` generated), and `$LCKPAG`/
+  `$ULKPAG`/`$LKWSET`/`$ULWSET` as documented no-ops, alongside the
+  existing `$EXPREG`.
+- **Mailbox completions**: resource wait mode (`$SETRWM`, so a full
+  mailbox makes the writer wait instead of `SS$_MBFULL`), read/write
+  attention ASTs (`IO$M_READATTN`/`WRTATTN`), and `$DASSGN`'s cancel
+  status checked against the I/O manual.
+- **Privileges**: a real privilege mask on `rtl.Process` (`$SETPRV`,
+  `JPI$_CURPRIV`/`PROCPRIV`/`AUTHPRIV`), consulted by the services that
+  currently assume every privilege is held (`$CMKRNL`'s CMKRNL, `$CREMBX`'s
+  TMPMBX/PRMMBX, `$SETPRI`'s ALTPRI, logical-name SYSNAM/GRPNAM).
+- **`$SNDOPR` and `$BRKTHRU`**: operator and broadcast messages, written
+  to the console terminal.
+- **Rights identifiers**: `$ASCTOID`/`$IDTOASC` over a minimal rights
+  database (the UIC identifiers, SYSTEM), which `$FAO`'s `!%I` would then
+  use.
+- **Disk `$QIO`**: `IO$_ACCESS`/`DEACCESS` and virtual-block
+  `IO$_READVBLK`/`WRITEVBLK` on files of a mounted ODS-2 volume, the
+  block I/O RMS itself is built on.
 
 ## Open questions
 
@@ -2548,4 +2618,25 @@ None yet.
   ASTs; `$CANCEL` and `$DASSGN` cancelling; `$QIOW` waiting without
   re-queuing, released by a write from another frame).
 - `go test ./...` passes.
+
+### 2026-09-28 — Subtask 30: `$SETPRN`, `$SETPRI`, `$FORCEX`, `$DELPRC`; sixth batch complete
+
+- `serviceSysSetprn`, `serviceSysSetpri`, `serviceSysForcex` (with
+  `exitEntryAddr`), and `serviceSysDelprc` in `internal/rtl/process.go`.
+  The exit-handler design's "not implemented" no longer lists `$FORCEX`.
+- **Acceptance fixture** `testdata/asm/process_control.asm`: `$SETPRN`,
+  `$SETPRI`, then in user mode an exit handler and `$FORCEX` of itself.
+  `TestProcessControl_assembledProgram` checks the name, the priorities,
+  the handler seeing the forced status, the code after `$FORCEX` never
+  running, and R0 the exit status.
+- Tests (`prcctl_test.go`): `$SETPRN` renaming (and `prcnam` matching the
+  new name), its errors, and no name; `$SETPRI` by default, PID, and
+  name, the low-five-bits rule, `prvpri`, and errors changing nothing;
+  `$FORCEX`'s AST, not queued twice, and `SS$_NONEXPR`; `$DELPRC` ending
+  the image with no handlers, and `SS$_NONEXPR`.
+- `docs/PLAN.md`'s Phase 26 narrative now covers the fifth and sixth
+  batches.
+- `go test ./...` passes.
+- **Phase status.** The sixth batch (subtasks 24-30) is done. Candidates
+  for the next batch are listed under Subtasks.
 

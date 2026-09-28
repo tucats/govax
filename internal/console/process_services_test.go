@@ -1109,3 +1109,63 @@ func TestMailbox_assembledProgram(t *testing.T) {
 		t.Errorf("%d I/O requests left pending", n)
 	}
 }
+
+// TestProcessControl_assembledProgram is docs/PHASE-26.md subtask 30's
+// acceptance test: testdata/asm/process_control.asm renames its process,
+// sets its priority, and forces its own exit, which runs its exit
+// handler and ends the image before the code after $FORCEX.
+func TestProcessControl_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "process_control.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(process_control.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("process_control.asm has no entry address")
+	}
+
+	start := c.RTL.Process.BasePriority
+
+	if runErr, hitCap := callBounded(t, c, addr, 100_000); runErr != nil || hitCap {
+		t.Fatalf("running process_control.asm: err=%v hitCap=%v", runErr, hitCap)
+	}
+
+	word := func(name string) uint32 {
+		t.Helper()
+
+		a, ok := c.Symbols.Get(name)
+		if !ok {
+			t.Fatalf("no %s symbol", name)
+		}
+
+		v, err := c.Mem.LoadLongword(c.CPU, a)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return v
+	}
+
+	p := c.RTL.Process
+	if p.Name != "WORKER" || p.BasePriority != 6 {
+		t.Errorf("process %q priority %d; want WORKER, 6", p.Name, p.BasePriority)
+	}
+
+	if got := word("OLDPRI"); got != start {
+		t.Errorf("OLDPRI = %d, want %d", got, start)
+	}
+
+	if got := word("SEEN"); got != 0x2C {
+		t.Errorf("the exit handler saw %#x, want 0x2C", got)
+	}
+
+	if word("REACHED") != 0 {
+		t.Error("the code after $FORCEX ran")
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 0x2C || p.ExitStatus != 0x2C {
+		t.Errorf("R0 = %#x, exit status %#x; want 0x2C", got, p.ExitStatus)
+	}
+}

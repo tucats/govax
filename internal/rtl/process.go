@@ -269,7 +269,145 @@ func (env *Environment) ImageRundown() {
 	env.qiowWaits = nil
 }
 
+// The small process-control services (docs/PHASE-26.md subtask 30):
+// $SETPRN, $SETPRI, $FORCEX, and $DELPRC. Each names its target process
+// the usual way ([pidadr] ,[prcnam], processTarget), and govax's only
+// process is the caller, so "another process" is always SS$_NONEXPR.
+
+// maxPriority is the highest scheduling priority: 0-15 are ordinary
+// ("normal") priorities, 16-31 real-time ones.
+const maxPriority = 31
+
+// serviceSysSetprn is SYS$SETPRN:
+//
+//	SYS$SETPRN [prcnam]
+//
+// It gives the calling process the name prcnam (1-15 characters), which
+// $GETJPI reports (JPI$_PRCNAM) and the services that take a prcnam
+// argument match. With prcnam omitted the process has no name. SS$_IVLOGNAM
+// for an empty or too-long name, SS$_ACCVIO if it can't be read. A name
+// can't duplicate another process's (SS$_DUPLNAM): there are none.
+func serviceSysSetprn(env *Environment, argv []uint32) (uint32, error) {
+	prcnam := optArg(argv, 0)
+	if prcnam == 0 {
+		env.Process.Name = ""
+
+		return ssNormal, nil
+	}
+
+	name, ok, err := strGet(env, prcnam, maxProcessNameLength)
+	if err != nil {
+		return ssAccVio, nil
+	}
+
+	if !ok || name == "" {
+		return ssIvLogNam, nil
+	}
+
+	env.Process.Name = name
+
+	return ssNormal, nil
+}
+
+// serviceSysSetpri is SYS$SETPRI:
+//
+//	SYS$SETPRI [pidadr] ,[prcnam] ,pri [,prvpri]
+//
+// It sets the target process's base priority to pri (its low five bits,
+// 0-31), storing the previous base priority at prvpri if that's given.
+// The process holds ALTPRI, so it may raise its priority. Its current
+// priority becomes the new base: govax has no scheduler to boost it.
+// The target is picked by processTarget (SS$_NONEXPR, SS$_IVLOGNAM,
+// SS$_ACCVIO); prvpri that can't be written is SS$_ACCVIO, with the
+// priority unchanged.
+func serviceSysSetpri(env *Environment, argv []uint32) (uint32, error) {
+	if st := env.processTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
+		return st, nil
+	}
+
+	p := env.Process
+	pri, prvpri := optArg(argv, 2)&maxPriority, optArg(argv, 3)
+
+	if prvpri != 0 {
+		if err := env.mem.StoreLongword(env.cpu, prvpri, p.BasePriority); err != nil {
+			return ssAccVio, nil
+		}
+	}
+
+	p.BasePriority, p.Priority = pri, pri
+
+	return ssNormal, nil
+}
+
+// exitEntryAddr is the SYS$EXIT P1-vector entry: a procedure whose XFC
+// calls $EXIT with its argument list's first argument as the status.
+var exitEntryAddr = func() uint32 {
+	for _, e := range vmsdef.P1VectorTable {
+		if e.Name == "SYS$EXIT" {
+			return e.Addr
+		}
+	}
+
+	panic("rtl: SYS$EXIT missing from the P1 vector table")
+}()
+
+// serviceSysForcex is SYS$FORCEX:
+//
+//	SYS$FORCEX [pidadr] ,[prcnam] ,[code]
+//
+// It makes the target process call $EXIT with status code (0 if
+// omitted), as VMS does: by queuing a user-mode AST whose routine is
+// $EXIT itself — the SYS$EXIT vector entry — with code as its parameter,
+// which is the first argument an AST routine gets, so $EXIT reads it as
+// its status. The image then exits normally, exit handlers and all, as
+// soon as a user-mode AST can be delivered: at once if the caller is in
+// user mode with ASTs enabled, and not while user-mode ASTs are disabled
+// or the CPU is in a more privileged mode. A forced exit already queued
+// isn't queued again. The target is picked by processTarget.
+func serviceSysForcex(env *Environment, argv []uint32) (uint32, error) {
+	if st := env.processTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
+		return st, nil
+	}
+
+	for _, a := range env.Process.ast.queue {
+		if a.routine == exitEntryAddr && a.mode == uint32(vax.User) {
+			return ssNormal, nil
+		}
+	}
+
+	env.queueAST(exitEntryAddr, optArg(argv, 2), uint32(vax.User))
+
+	return ssNormal, nil
+}
+
+// serviceSysDelprc is SYS$DELPRC:
+//
+//	SYS$DELPRC [pidadr] ,[prcnam]
+//
+// It deletes the target process, which can only be the caller: so it
+// doesn't return. Unlike $FORCEX, no exit handlers run: they're all
+// forgotten, and the image ends (ErrExit, as $EXIT ends it) with status
+// SS$_NORMAL. On VMS the process is then gone; govax has no logging out,
+// so the console carries on with the same process, as after any image.
+// The target is picked by processTarget (SS$_NONEXPR, SS$_IVLOGNAM,
+// SS$_ACCVIO).
+func serviceSysDelprc(env *Environment, argv []uint32) (uint32, error) {
+	if st := env.processTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
+		return st, nil
+	}
+
+	p := env.Process
+	p.exitHandlers = [4][]uint32{}
+	p.ExitStatus = ssNormal
+
+	return ssNormal, ErrExit
+}
+
 func registerProcessServices(t *ServiceTable) {
 	t.Register("SYS$ADJSTK", serviceSysAdjstk)
 	t.Register("SYS$ADJWSL", serviceSysAdjwsl)
+	t.Register("SYS$SETPRN", serviceSysSetprn)
+	t.Register("SYS$SETPRI", serviceSysSetpri)
+	t.Register("SYS$FORCEX", serviceSysForcex)
+	t.Register("SYS$DELPRC", serviceSysDelprc)
 }

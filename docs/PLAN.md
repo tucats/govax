@@ -321,3 +321,18 @@ vector entry, which restores the interrupted state. `$DCLAST`, a per-mode
 `$SETAST`, and the `astadr` arguments of `$SETIMR` and `$GETJPI` use it;
 waits are interrupted and resumed as on VMS (`testdata/asm/ast_delivery.asm`,
 `timer_ast.asm`).
+
+A fifth batch added terminal `$QIO`/`$QIOW` and `$CANCEL` (a per-device-class
+driver registry, `$IODEF` generated from VMS 7.3 SDL), `$SYNCH`, exit handlers
+(`$EXIT`, `$DCLEXH`, `$CANEXH`: a service may now ask the engine to call a
+guest routine and return to its `XFC`), `$NUMTIM`, more `$GETJPI` items,
+mode-switching AST delivery (a kernel AST interrupts user code), and
+`$GETSYI`.
+
+A sixth batch added `$FAO`/`$FAOL` (a directive registry), `$GETMSG`/`$PUTMSG`
+(1,426 message texts generated from the VMS 7.3 system message file's
+listing), `$CMKRNL`/`$CMEXEC`, CTRL/C and CTRL/Y ASTs (the engine offers an
+attention key to the services before stopping), the full `$GETDVI`, mailboxes
+(`$CREMBX`/`$DELMBX` and a driver whose reads wait for writes, which gave
+`$QIO` pending requests, a waiting `$QIOW`, and a real `$CANCEL`), and
+`$SETPRN`, `$SETPRI`, `$FORCEX`, `$DELPRC`.
