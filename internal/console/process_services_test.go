@@ -834,3 +834,61 @@ func TestPutmsg_assembledProgram(t *testing.T) {
 		t.Errorf("the action routine saw a first line of %d characters, want %d", n, len("%SYSTEM-F-ABORT, abort"))
 	}
 }
+
+// TestCmkrnl_assembledProgram is docs/PHASE-26.md subtask 26's acceptance
+// test: testdata/asm/cmkrnl.asm, running in user mode with memory
+// management on, calls routines of its own in kernel mode ($CMKRNL, one
+// executing a privileged MFPR) and executive mode ($CMEXEC), and gets
+// each routine's status back.
+func TestCmkrnl_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "cmkrnl.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(cmkrnl.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("cmkrnl.asm has no entry address")
+	}
+
+	if runErr, hitCap := callBounded(t, c, addr, 100_000); runErr != nil || hitCap {
+		t.Fatalf("running cmkrnl.asm: err=%v hitCap=%v", runErr, hitCap)
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Errorf("R0 = %d, want 1 (both services returned their routine's status)", got)
+	}
+
+	word := func(name string) uint32 {
+		t.Helper()
+
+		a, ok := c.Symbols.Get(name)
+		if !ok {
+			t.Fatalf("no %s symbol", name)
+		}
+
+		v, err := c.Mem.LoadLongword(c.CPU, a)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return v
+	}
+
+	if m, p := word("KMODE"), word("KPRV"); m != uint32(vax.Kernel) || p != uint32(vax.User) {
+		t.Errorf("KRNL ran in mode %d with previous mode %d; want kernel (0), user (3)", m, p)
+	}
+
+	if got := word("KIPL"); got != 0 {
+		t.Errorf("KRNL's MFPR read IPL %d, want 0", got)
+	}
+
+	if got := word("EMODE"); got != uint32(vax.Executive) {
+		t.Errorf("EXEC ran in mode %d, want executive (1)", got)
+	}
+
+	if got := word("UMODE"); got != uint32(vax.User) {
+		t.Errorf("mode afterwards = %d, want user (3)", got)
+	}
+}

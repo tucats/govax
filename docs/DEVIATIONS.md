@@ -582,6 +582,22 @@ changed as a result.
     kernel mode.
 - **Status**: open, by design.
 
+### [Phase 26] `$CMKRNL`/`$CMEXEC` simplifications, and VMINIT's shared stacks
+
+- **Where**: `internal/rtl/cmode.go`; VMINIT (`internal/console`).
+- **What**:
+  - The process holds every privilege, so neither service returns
+    `SS$_NOPRIV`.
+  - `$CMKRNL` doesn't load R4 with the address of a process control
+    block: govax has none.
+  - VMINIT sets ESP and SSP to the kernel stack's address. With memory
+    management on, only kernel mode can write those pages, so a routine
+    run by `$CMEXEC` (or anything else in executive or supervisor mode)
+    faults on its first push unless the program sets that mode's stack
+    pointer itself. VMS gives each mode a stack of its own in P1 space.
+- **Status**: open. The services are by design; VMINIT's stacks are
+  left as they are.
+
 ## Open findings
 
 ### [Phase 26] The assembler's `.ASCIC` has a 16-bit count

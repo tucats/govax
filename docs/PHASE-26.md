@@ -70,7 +70,7 @@ follow them too, and this list should grow when a new pattern is settled.
   handlers), `getsyi.go` (`$GETSYI`), `itemlist.go` (item-list walking
   and the item values the `$GETxxx` services return), `fao.go` (`$FAO`
   formatting, which later services reuse through `formatFAO`), `message.go`
-  (`$GETMSG`, `$PUTMSG`). Each file has
+  (`$GETMSG`, `$PUTMSG`), `cmode.go` (`$CMKRNL`, `$CMEXEC`). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -128,10 +128,15 @@ follow them too, and this list should grow when a new pattern is settled.
   found by device class in `ioDrivers`. A new device class adds a table;
   a new function adds an entry.
 - **Calling guest code.** A service that needs a guest procedure called
-  and then to continue (`$EXIT` and its handlers) returns a
+  and then to continue (`$EXIT` and its handlers, `$PUTMSG`'s action
+  routine, `$CMKRNL`'s routine) returns a
   `*CallRequest`: the engine calls the routine with the service's `XFC`
   as its return address, so the service runs again afterwards. Keep the
-  progress in RTL state the service can pick up from. (AST delivery,
+  progress in RTL state the service can pick up from. When the service
+  runs again, it can tell a returning call from a new one by the frame
+  pointer (the stub's, restored by the routine's `RET`) and the stack
+  pointer (back where the call frame was built); keep calls in progress
+  as a stack, so the routine can call the service again. (AST delivery,
   which interrupts rather than continues, uses `NextAST` instead.)
 - **Picking a process.** Services that take the `[pidadr] ,[prcnam]` pair
   call `processTarget` (`getjpi.go`): it accepts only this process, writes
@@ -200,6 +205,7 @@ lists the ones the implementation can actually return.
 | `$FAO`, `$FAOL` | 24 | `fao.go` | `NORMAL`, `BUFFEROVF`, `ACCVIO`, `BADPARAM` | The manual's directives plus VMS 7's `A`/`I`/`H`/`J`/`Q` sizes; a registry of directive functions. |
 | `$GETMSG` | 25 | `message.go` | `NORMAL`, `BUFFEROVF`, `MSGNOTFND`, `ACCVIO`, `INSFARG` | Texts of 1,426 messages (CLI, LIB, MTH, OTS, RMS, SYSTEM) generated from the VMS 7.3 message file. |
 | `$PUTMSG` | 25 | `message.go` | `NORMAL`, `ACCVIO` | Formats a message vector with `formatFAO`; an action routine is called through a `CallRequest`. |
+| `$CMKRNL`, `$CMEXEC` | 26 | `cmode.go` | (the routine's R0) | Switch into the mode, call the routine through a `CallRequest`, switch back when it returns. |
 
 ## Service designs
 
@@ -1479,6 +1485,49 @@ image, and SET MESSAGE's process message file and default flags; other
 facilities' messages; writing to `SYS$ERROR` and `SYS$OUTPUT`
 separately.
 
+### `$CMKRNL` / `$CMEXEC` — Change to Kernel / Executive Mode
+
+`SYS$CMKRNL routin ,[arglst]` and `SYS$CMEXEC routin ,[arglst]`
+
+A program whose user holds the CMKRNL (or CMEXEC) privilege can have a
+routine of its own run in kernel (or executive) mode, to do something
+user mode can't: execute a privileged instruction, change a system data
+structure. VMS switches the process into the mode, calls the routine
+with `CALLG arglst, routin`, switches back when it returns, and returns
+its R0.
+
+#### Design: a mode switch around a call request
+
+Each service runs twice, combining subtask 22's `switchMode` with
+subtask 19's `CallRequest`:
+
+1. Called by the program: the target mode is the more privileged of the
+   one asked for and the caller's (so `$CMEXEC` from kernel mode stays
+   in kernel mode, as the manual says). If it differs from the caller's,
+   `switchMode` saves SP in the caller's stack register and loads the
+   target's, and `PSL<PRV_MOD>` becomes the caller's mode. A
+   `cmodeCall` (the stub's FP, the target mode's SP, the caller's mode
+   and previous mode) goes on `Process.cmode`, and the service returns a
+   `CallRequest` for `routin` with `arglst` (AP is 0 if it's omitted).
+   The engine builds the call frame on the target mode's stack.
+2. The routine's `RET` returns to the service's `XFC`. The service
+   finds the top `cmodeCall` matching FP, SP, and the current mode,
+   switches back, restores `PSL<PRV_MOD>`, and returns the routine's R0,
+   which the `XFC` handler leaves in R0.
+
+The calls are a stack, so a routine may call `$CMKRNL` itself; image
+rundown forgets calls whose routine never returned. The process holds
+every privilege, so `SS$_NOPRIV` never happens.
+
+Each mode needs a stack its code can write. VMINIT sets ESP and SSP to
+the kernel stack, whose pages only kernel mode can write when memory
+management is on, so a program that uses `$CMEXEC` must give executive
+mode a stack first (as the acceptance fixture does); VMS gives every
+mode its own.
+
+Not implemented (see `docs/DEVIATIONS.md`): R4 isn't loaded with a PCB
+address for `$CMKRNL` (govax has no PCB).
+
 Not implemented (see `docs/DEVIATIONS.md`): other cluster nodes; SYSGEN
 parameters beyond `MINWSCNT`; the `ASTLM` quota (`SS$_EXASTLM`).
 
@@ -1583,10 +1632,10 @@ fifth batch listed):
     the VMS 7.3 message file's listing. `$PUTMSG` formats a message
     vector with `formatFAO`, calling an action routine through a
     `CallRequest`. Acceptance fixture `testdata/asm/putmsg.asm`.
-26. **`$CMKRNL`/`$CMEXEC`.** Call a routine in kernel or executive mode:
-    switch in, call it through subtask 19's `CallRequest` with the
-    service's `XFC` as the return, and switch back when it returns,
-    with its R0.
+26. **Done.** **`$CMKRNL`/`$CMEXEC`.** In the new `cmode.go`: switch
+    in, call the routine through subtask 19's `CallRequest` with the
+    service's `XFC` as the return, and switch back when it returns, with
+    its R0. Acceptance fixture `testdata/asm/cmkrnl.asm`.
 27. **CTRL/C and CTRL/Y ASTs.** `IO$_SETMODE` with `IO$M_CTRLCAST`/
     `IO$M_CTRLYAST` arms a one-shot AST that the console's attention
     handling queues instead of stopping the machine.
@@ -2200,5 +2249,29 @@ None yet.
   and new flags, `facnam`, unformattable texts, and errors; the action
   routine's stack layout, R0 deciding, SP restored, one argument without
   `actprm`, and rundown; pinned generated messages).
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 26: `$CMKRNL`/`$CMEXEC`
+
+- **`internal/rtl/cmode.go`** (new): `serviceSysCmkrnl`,
+  `serviceSysCmexec`, their shared `changeMode`, and `cmodeCall` (in the
+  new `Process.cmode`); `ImageRundown` calls `cancelChangeModeCalls`.
+  The conventions' "calling guest code" entry now describes telling a
+  returning call from a new one.
+- **Found while writing the fixture:** VMINIT sets ESP and SSP to the
+  kernel stack. With memory management on, executive mode can't write
+  it, so `$CMEXEC`'s call frame faulted (an access violation at the
+  stub). The fixture gives executive mode a stack of its own, as VMS
+  would; recorded in `docs/DEVIATIONS.md`.
+- **Acceptance fixture** `testdata/asm/cmkrnl.asm`: after an `REI` to user
+  mode, `$CMKRNL` runs a routine that records its mode and previous mode,
+  executes `MFPR`, and returns a status built from its argument;
+  `$CMEXEC` runs one in executive mode. `TestCmkrnl_assembledProgram`
+  (memory management on) checks the modes, the `MFPR`, both statuses, and
+  user mode afterwards.
+- Tests (`cmode_test.go`): the two runs of a `$CMKRNL` from user mode
+  (mode, previous mode, stacks, the routine's R0); the target mode for
+  each service from each caller mode, including `$CMEXEC` from kernel;
+  a nested call; rundown.
 - `go test ./...` passes.
 

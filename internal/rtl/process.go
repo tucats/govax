@@ -94,6 +94,10 @@ type Process struct {
 	// innermost last (an action routine may call $PUTMSG itself;
 	// message.go).
 	putmsg []*putmsgCall
+
+	// cmode holds the $CMKRNL/$CMEXEC calls whose routine is running,
+	// innermost last (cmode.go).
+	cmode []*cmodeCall
 }
 
 // Default identity and quotas for the emulated process. The PID is
@@ -249,8 +253,8 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 // user mode, and disassociates its common event flag clusters (deleting
 // temporary ones nobody else uses), cancels its outstanding $SETIMR
 // timers and $SCHDWK wakeups, discards its queued user-mode ASTs, and
-// forgets its user-mode exit handlers and any $PUTMSG left waiting for an
-// action routine. The console calls it when an
+// forgets its user-mode exit handlers and any $PUTMSG or $CMKRNL left
+// waiting for its routine. The console calls it when an
 // image started by RUN returns or exits (and does its own logical-name
 // rundown alongside).
 func (env *Environment) ImageRundown() {
@@ -261,6 +265,7 @@ func (env *Environment) ImageRundown() {
 	env.flushUserASTs()
 	env.cancelUserExitHandlers()
 	env.cancelPutmsgCalls()
+	env.cancelChangeModeCalls()
 }
 
 func registerProcessServices(t *ServiceTable) {
