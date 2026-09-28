@@ -384,7 +384,7 @@ changed as a result.
   - Only 21 item codes are supported. The others, for state govax doesn't
     model (`STATE`, priorities, `IMAGNAME`, non-working-set quotas,
     privileges, CPU and I/O accounting), are `SS$_BADPARAM`.
-  - No AST is delivered for `astadr`.
+  - (`astadr` is delivered as an AST since subtask 16.)
   - The wildcard context stored at `pidadr` is govax's own value.
   - `SS$_NOPRIV`/`SS$_SUSPENDED` can't happen, since there is one process.
   - `JPI$_WSSIZE` reports the working-set limit, since there is no real
@@ -398,8 +398,8 @@ changed as a result.
 - **What**: an unsatisfied wait re-executes the service's `XFC` on every
   instruction step, instead of descheduling the process. Interrupts are
   still delivered between retries, so a timer interrupt handler can end
-  the wait. Not modeled:
-  - AST interruption and resumption of a wait (no AST delivery);
+  the wait, and so are ASTs (since subtask 15), so an AST interrupts a
+  wait and the wait resumes afterwards, as on VMS. Not modeled:
   - the `LEF`/`CEF` process state and `JPI$_EFWM`;
   - releasing the host CPU while waiting.
 - **Status**: open, by design.
@@ -408,11 +408,11 @@ changed as a result.
 
 - **Where**: `internal/rtl/timers.go`, `internal/cpu/systime.go`.
 - **What**:
-  - No AST is delivered for `$SETIMR`'s `astadr`.
   - The CPU-time flag is treated as elapsed time.
   - There is no `TQELM` quota.
-  - Timers expire when the process next uses an event-flag service, not
-    on the clock tick itself. That is indistinguishable without ASTs.
+  - (Resolved in subtasks 15-16: `astadr` is now delivered as an AST, and
+    timers expire before every instruction rather than only at the next
+    event-flag service.)
   - In quantum mode, emulated time is one millisecond per quantum tick
     (20 instructions by default), so a "second" is a fixed amount of
     execution, not wall-clock time. Set `vax.hardware.clock` for real

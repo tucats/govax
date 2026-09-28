@@ -26,9 +26,8 @@ The first batch, requested by the user on 2026-09-27, is `$ADJSTK`,
 `$DASSGN` and the timers; the fourth, the time conversions, hibernation,
 and AST delivery.
 
-**Status: three batches complete** (subtasks 1-11); the fourth (time
-services, hibernation, and AST delivery) is in progress. Add later
-services as new subtasks.
+**Status: four batches complete** (subtasks 1-16). Add later services as
+new subtasks.
 
 ## References
 
@@ -159,6 +158,7 @@ lists the ones the implementation can actually return.
 | `$DCLAST` | 15 | `ast.go` | `NORMAL` | Queues an AST for the caller's mode or a less privileged one. |
 | `$SETAST` | 15 | `ast.go` | `WASSET`, `WASCLR` | Per-mode AST enable, replacing eVAX's single recorded flag. |
 | `$CLRAST` | 15 | `ast.go` | (restored R0) | The AST exit: an AST routine's `RET` returns through it. Not called directly. |
+| (`$SETIMR`, `$GETJPI` ASTs) | 16 | `timers.go`, `getjpi.go` | — | `astadr` now queues an AST: a timer's with `reqidt`, `$GETJPI`'s with `astprm`. |
 
 ## Service designs
 
@@ -502,8 +502,9 @@ for `LNM$_CHAIN`).
 4. The final status goes into the IOSB's first longword, the event flag is
    set, and the status is returned in R0.
 
-An argument list shorter than 7 is `SS$_INSFARG`, as before. `astadr` is
-accepted but no AST is delivered: govax has no AST delivery.
+An argument list shorter than 7 is `SS$_INSFARG`, as before. `astadr`
+was accepted but ignored until subtask 16; now the completed request
+queues an AST for it with `astprm` (see that subtask's design).
 
 Not implemented: items for state govax doesn't model (`STATE`, `PRI`,
 `PRIB`, `IMAGNAME`, quotas other than working set, privileges, CPU and I/O
@@ -548,10 +549,11 @@ retry succeeds. Console attention (^C) and the `instruction-limit`/
 completion (`..., returns 00000001`), not every retry
 (`Environment.waitingPC`).
 
-Not implemented: VMS's "wait interrupted by an AST, then resumed" (govax
-has no AST delivery); the process state (`LEF`/`CEF`) and `JPI$_EFWM` wait
+Not implemented: the process state (`LEF`/`CEF`) and `JPI$_EFWM` wait
 mask; and giving up the host CPU while waiting, since each retry costs an
-emulated instruction step.
+emulated instruction step. (VMS's "wait interrupted by an AST, then
+resumed" came with AST delivery in subtask 15: each retry is a point
+where an AST can be delivered.)
 
 ### `$DASSGN` — Deassign I/O Channel
 
@@ -641,9 +643,10 @@ but not the guest's interrupt path.**
   only observable through services, so this can't be told apart from
   expiring on the tick itself. A waiting process retries its `$WAITFR`
   every instruction step, so it sees its timer on the first check after
-  expiry. Two things would need an eager hook: AST delivery (not
-  implemented), and a console display of flags, which could simply call
-  the same function.
+  expiry. Two things would need an eager hook: AST delivery, and a
+  console display of flags, which could simply call the same function.
+  (AST delivery added that hook in subtask 15: `NextAST` expires timers
+  before every instruction.)
 
 The two mechanisms coexist. A guest that runs its own interval-timer
 interrupt still does (`wait_timer.asm`), and RTL timers work whether or
@@ -665,10 +668,10 @@ not it does (`timer_services.asm`).
   it's 0) that were made from `acmode`, maximized with the caller's mode,
   or from a less privileged mode. It always returns `SS$_NORMAL`.
 - **Image rundown** cancels all outstanding timers, as the manual says.
+- `astadr` was accepted but ignored until subtask 16, which delivers it.
 
 Not implemented (see `docs/DEVIATIONS.md`):
 
-- `astadr`: accepted, but no AST runs.
 - The CPU-time flag: a govax process's CPU time is its elapsed time, so
   the flag changes nothing.
 - The `TQELM` quota (`SS$_EXQUOTA`).
@@ -951,6 +954,34 @@ Not implemented (see `docs/DEVIATIONS.md`):
 - No `ASTLM` quota (`SS$_EXQUOTA`) and no `SS$_INSFMEM`.
 - `JPI$_ASTACT`, `ASTEN`, and `ASTCNT` aren't reported by `$GETJPI` yet.
 
+### ASTs from `$SETIMR` and `$GETJPI`
+
+With delivery in place (subtask 15), the two services that accepted an
+`astadr` and ignored it now deliver it, through `queueAST`:
+
+- **`$SETIMR`**: `timerRequest.astadr` is recorded. When the timer
+  expires, its event flag is set and an AST is queued in the mode the
+  timer was set from, with `reqidt` as the parameter, as the manual says.
+  A cancelled timer (`$CANTIM`, image rundown) queues nothing. A timer
+  whose flag is in a common cluster the process has since disassociated
+  sets no flag, but still queues its AST, which doesn't need the flag.
+- **`$GETJPI`/`$GETJPIW`**: the request completes at once, so the AST is
+  queued as it completes (with the event flag and IOSB), with `astprm`, in
+  the caller's mode. It then runs as soon as the service returns. A
+  request that fails in its items (`SS$_BADPARAM`) still completes, so its
+  AST runs. One rejected before it starts (`SS$_ILLEFC`, `SS$_NONEXPR`,
+  `SS$_INSFARG`, ...) completes nothing and queues no AST.
+
+Timers now expire before every instruction (`NextAST` calls
+`expireTimers`), so a timer's AST interrupts a program on the tick it's
+due, even in a loop that calls no services. The event-flag services still
+expire timers too, for code driven without an engine.
+
+**The classic pattern** is `$SETIMR` with an AST, then `$HIBER`. The
+timer's AST is delivered between `$HIBER`'s retries, and its routine
+calls `$WAKE`. When the routine returns, `$HIBER` runs again and returns.
+The acceptance fixture does exactly this.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -1006,7 +1037,32 @@ third batch listed):
     `buildCallFrame`; the AST exit is the `SYS$CLRAST` vector entry.
     Acceptance fixture `testdata/asm/ast_delivery.asm`.
 
-Candidates next: listed when the fourth batch is complete.
+16. **Done.** **ASTs from `$SETIMR` and `$GETJPI`.** `astadr` queued via
+    `queueAST`. Acceptance fixture `testdata/asm/timer_ast.asm`.
+
+Candidates next, roughly in order of value now that ASTs and waits
+exist:
+
+- **`$QIO`/`$QIOW` on terminal channels** (`IO$_READVBLK`/`WRITEVBLK`
+  and friends on `TTA0:`). This is how most real VMS programs do terminal
+  I/O. Channels (`$ASSIGN`/`$DASSGN`), event flags, IOSBs, waits, and ASTs
+  are all in place for its completion. `$CANCEL` would follow.
+- **`$SYNCH`**: waits for an event flag *and* a nonzero IOSB. It's a
+  small addition on the wait mechanism, and it's what `$QIOW`/`$GETJPIW`
+  style completion is defined in terms of.
+- **`$EXIT` and exit handlers.** `$DCLEXH` records a handler that nothing
+  calls. Image rundown is the natural place to call handlers, the way
+  `NextAST` calls AST routines, with `$CANEXH` to remove one.
+- **`$NUMTIM`**: the numeric breakdown of a time, next to
+  `$ASCTIM`/`$BINTIM`. Cheap.
+- **`$GETJPI` items for the new state**: `JPI$_ASTACT`, `ASTEN`,
+  `ASTCNT`, and `STATE` (`HIB`/`LEF` while waiting), which now mean
+  something.
+- **Mode-switching AST delivery.** Delivering an inner-mode AST by
+  switching the CPU into that mode, as VMS does, would close subtask 15's
+  main deviation. It pairs naturally with `$CMKRNL`/`$CMEXEC`.
+- **`$GETSYI`**: system information (`SYI$_VERSION`, `NODENAME`, ...).
+  It's the `$GETJPI` pattern again, with a new generated `$SYIDEF`.
 
 
 ## Open questions
@@ -1368,3 +1424,29 @@ None yet.
     unreadable AP; `$SETAST`'s statuses, low byte, and held-back AST;
     rundown.
 - `go test ./...` passes.
+
+### 2026-09-28 — Subtask 16: ASTs from `$SETIMR` and `$GETJPI`; fourth batch complete
+
+- `timers.go`: `timerRequest.astadr`; `$SETIMR` records it and
+  `expireTimers` queues the AST (parameter `reqidt`, the timer's mode).
+- `getjpi.go`: a completed request queues its AST (`astprm`, the caller's
+  mode).
+- Docs: the `$GETJPI`, wait, and `$SETIMR` sections and their
+  `DEVIATIONS.md` entries no longer say ASTs aren't delivered.
+- **Acceptance fixture** `testdata/asm/timer_ast.asm`:
+  - `$SETIMR` with an AST whose routine calls `$WAKE`, ending a `$HIBER`;
+  - a `$CANTIM`-cancelled timer's AST never running;
+  - a timer AST breaking a spin loop that calls no services;
+  - `$GETJPIW`'s AST having run by the time the call returns.
+
+  `TestTimerAST_assembledProgram` also checks the system time advanced at
+  least 70ms, `JPI$_PID` was returned, and nothing is left queued.
+- Tests (`rtl/ast_test.go`): a timer's AST (mode, parameter, and flag),
+  also expired by `NextAST` alone; no AST from a cancelled, rundown, or
+  AST-less timer; a timer on a disassociated cluster still queuing its
+  AST; `$HIBER` interrupted by a timer AST that wakes it, resuming on
+  `$HIBER`'s `XFC`; `$GETJPI`'s AST on success and on `SS$_BADPARAM`, and
+  none when rejected early or without `astadr`.
+- `go test ./...` passes.
+- **Phase status.** The fourth batch (subtasks 12-16) is done. Candidates
+  for the next batch are listed under Subtasks.

@@ -18,19 +18,20 @@ import (
 // deterministic in quantum mode, yet fires whether or not the guest has
 // enabled ICCS interrupts, installed a handler, or lowered its IPL.
 //
-// Expired timers are processed when the process next touches its event
-// flags (eventFlagWord runs expireTimers first). Event flags are only
-// visible through services, so that is indistinguishable from expiring
-// them on the tick itself — and a wait service ($WAITFR) re-executes every
-// instruction step, so a waiting process sees its timer on the first
-// check after it expires.
+// Expired timers are processed before every instruction, when the engine
+// asks for ASTs (NextAST, ast.go), and also whenever the process touches
+// its event flags (eventFlagWord runs expireTimers first). The second
+// path is what subtask 11 started with, when there were no ASTs and
+// event flags were only visible through services; it remains for code
+// driven without an engine.
 
 // timerRequest is one entry in the process's timer queue (a VMS timer
 // queue entry, TQE). Two services queue them, and VMS keeps both kinds in
 // the same queue:
 //
-//   - $SETIMR: when expiry comes, event flag efn is set. reqidt and mode
-//     identify it to $CANTIM.
+//   - $SETIMR: when expiry comes, event flag efn is set, and if astadr
+//     isn't 0 an AST is queued to call it in mode, with reqidt as its
+//     parameter. reqidt and mode also identify the request to $CANTIM.
 //   - $SCHDWK (wake set): when expiry comes, the process is woken
 //     (Process.WakePending, hibernate.go). If repeat is nonzero the entry
 //     stays queued and fires again every repeat ticks. Only $CANWAK
@@ -39,7 +40,8 @@ type timerRequest struct {
 	expiry uint64 // VMS system time
 	efn    uint32
 	reqidt uint32
-	mode   uint32 // caller's access mode, for $CANTIM
+	mode   uint32 // caller's access mode: the AST's mode, and for $CANTIM
+	astadr uint32 // $SETIMR's AST routine, or 0 for none
 
 	wake   bool   // a $SCHDWK wakeup rather than a $SETIMR timer
 	repeat uint64 // $SCHDWK reptim, in ticks; 0 for a one-shot
@@ -54,10 +56,15 @@ const timerCPUTime = 1
 func wallClock() uint64 { return vmsdef.Time(time.Now()) }
 
 // expireTimers acts on every queued request whose time has come: a
-// $SETIMR timer sets its event flag and leaves the queue; a $SCHDWK
-// wakeup wakes the process, and leaves the queue unless it repeats. A
-// timer whose flag is in a common cluster the process no longer
-// associates is dropped without effect.
+// $SETIMR timer sets its event flag, queues its AST if it has one, and
+// leaves the queue; a $SCHDWK wakeup wakes the process, and leaves the
+// queue unless it repeats. A timer whose flag is in a common cluster the
+// process no longer associates sets no flag, but its AST (which doesn't
+// depend on the flag) is still queued.
+//
+// The engine runs this before every instruction (via NextAST, ast.go),
+// so a timer fires on the tick it's due; the event-flag services also
+// run it, for code driven without an engine (the unit tests).
 func (env *Environment) expireTimers() {
 	if len(env.timers) == 0 {
 		return
@@ -90,6 +97,10 @@ func (env *Environment) expireTimers() {
 		if word, bit, st := env.flagWord(t.efn); st == 0 {
 			*word |= 1 << bit
 		}
+
+		if t.astadr != 0 {
+			env.queueAST(t.astadr, t.reqidt, t.mode)
+		}
 	}
 
 	env.timers = remaining
@@ -103,14 +114,14 @@ func (env *Environment) expireTimers() {
 // daytim: a negative quadword is a delta from now, a positive one an
 // absolute time (one already past expires at the next check). reqidt
 // identifies the request to $CANTIM, which also uses the caller's access
-// mode, recorded here.
+// mode, recorded here. When the timer expires, an astadr other than 0 is
+// called as an AST in that mode, with reqidt as its parameter.
 //
-// govax delivers no ASTs, so astadr is accepted but no AST runs; and a
-// process's CPU time is its elapsed time (it never waits for another
+// A process's CPU time is its elapsed time (it never waits for another
 // process), so flags' CPU-time bit changes nothing. There is no TQELM
 // quota (SS$_EXQUOTA).
 func serviceSysSetimr(env *Environment, argv []uint32) (uint32, error) {
-	efn, daytim, reqidt := optArg(argv, 0), optArg(argv, 1), optArg(argv, 3)
+	efn, daytim, astadr, reqidt := optArg(argv, 0), optArg(argv, 1), optArg(argv, 2), optArg(argv, 3)
 
 	word, bit, st := env.eventFlagWord(efn)
 	if st != 0 {
@@ -137,6 +148,7 @@ func serviceSysSetimr(env *Environment, argv []uint32) (uint32, error) {
 		efn:    efn,
 		reqidt: reqidt,
 		mode:   uint32(env.cpu.PSL().CurMod()),
+		astadr: astadr,
 	})
 
 	return ssNormal, nil

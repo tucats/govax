@@ -282,3 +282,53 @@ func TestASTDelivery_assembledProgram(t *testing.T) {
 		t.Errorf("%d ASTs still queued, want 0", n)
 	}
 }
+
+// TestTimerAST_assembledProgram is docs/PHASE-26.md subtask 16's
+// acceptance test: testdata/asm/timer_ast.asm uses ASTs from $SETIMR
+// (ending a $HIBER through the AST routine's $WAKE, cancelled by $CANTIM,
+// and interrupting a loop that calls no services) and from $GETJPIW.
+func TestTimerAST_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "timer_ast.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(timer_ast.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("timer_ast.asm has no entry address")
+	}
+
+	start := c.Engine.SystemTime()
+
+	runErr, hitCap := callBounded(t, c, addr, 100_000)
+	if runErr != nil {
+		t.Fatalf("running timer_ast.asm: %v", runErr)
+	}
+
+	if hitCap {
+		t.Fatal("timer_ast.asm didn't finish within 100,000 steps (an AST never arrived)")
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Errorf("R0 = %d, want 1 (every AST arrived as it should)", got)
+	}
+
+	// 30ms ($HIBER) + 30ms ($WAITFR) + 10ms (the loop).
+	if elapsed := c.Engine.SystemTime() - start; elapsed < 70*10_000 {
+		t.Errorf("system time advanced %d, want at least 70ms (700000)", elapsed)
+	}
+
+	pid, ok := c.Symbols.Get("PID")
+	if !ok {
+		t.Fatal("no PID symbol")
+	}
+
+	if got, err := c.Mem.LoadLongword(c.CPU, pid); err != nil || got != c.RTL.Process.PID {
+		t.Errorf("$GETJPIW's JPI$_PID = %#x (%v), want %#x", got, err, c.RTL.Process.PID)
+	}
+
+	if n, m := c.RTL.PendingASTs(), c.RTL.PendingTimers(); n != 0 || m != 0 {
+		t.Errorf("%d ASTs and %d timers left, want none", n, m)
+	}
+}

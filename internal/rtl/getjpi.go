@@ -117,15 +117,19 @@ func (env *Environment) storeJPIItem(e itemListEntry, v jpiValue) uint32 {
 // scan, which returns this process and then SS$_NOMOREPROC.
 //
 // The request completes at once, so $GETJPI and $GETJPIW behave the same:
-// the event flag (efn, default 0) is cleared and then set, and iosb gets
-// the final status. An AST (astadr) is not delivered — govax has no AST
-// delivery yet.
+// the event flag (efn, default 0) is cleared and then set, iosb gets the
+// final status, and, if astadr isn't 0, an AST is queued to call it with
+// astprm in the caller's access mode. The AST usually runs as soon as the
+// service returns (docs/PHASE-26.md subtask 16). A call rejected before
+// the request starts (bad efn, too few arguments, no such process)
+// completes nothing: no flag, IOSB status, or AST.
 func serviceSysGetjpi(env *Environment, argv []uint32) (uint32, error) {
 	if len(argv) < 7 {
 		return ssInsfArg, nil
 	}
 
 	efn, pidadr, prcnam, itmlst, iosb := argv[0], argv[1], argv[2], argv[3], argv[4]
+	astadr, astprm := argv[5], argv[6]
 
 	if env.cpu.DebugEnabled(vax.DebugProcess) {
 		name := ""
@@ -175,6 +179,10 @@ func serviceSysGetjpi(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	*flags |= 1 << bit
+
+	if astadr != 0 {
+		env.queueAST(astadr, astprm, uint32(env.cpu.PSL().CurMod()))
+	}
 
 	return status, nil
 }

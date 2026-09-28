@@ -309,3 +309,15 @@ own queue: they don't depend on the guest's interval-timer interrupt, ICCS, or
 IPL, but run on a new `Engine.SystemTime` that shares the interval clock's time
 base (one tick = one millisecond; deterministic in quantum mode), so they fire
 in any program yet agree with the clock (`testdata/asm/timer_services.asm`).
+
+A fourth batch added `$GETTIM` (system time is now local time, as on VMS),
+`$ASCTIM`/`$BINTIM`, hibernation (`$HIBER`/`$WAKE`, and `$SCHDWK`/`$CANWAK` on
+the timer queue), and **AST delivery**. The RTL, acting as the executive,
+decides at each instruction boundary whether an AST can run (VMS's conditions:
+IPL < 2, enabled, none active in the mode) and pushes its argument list. The
+engine calls the routine with its `CALLG` frame builder, through an optional
+`cpu.ASTSource` interface. The routine's `RET` returns through the `SYS$CLRAST`
+vector entry, which restores the interrupted state. `$DCLAST`, a per-mode
+`$SETAST`, and the `astadr` arguments of `$SETIMR` and `$GETJPI` use it;
+waits are interrupted and resumed as on VMS (`testdata/asm/ast_delivery.asm`,
+`timer_ast.asm`).

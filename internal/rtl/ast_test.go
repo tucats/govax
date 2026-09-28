@@ -348,3 +348,156 @@ func TestASTImageRundown(t *testing.T) {
 		t.Error("user mode not reset to ASTs enabled, none active")
 	}
 }
+
+// TestSetimrQueuesAST: an expiring $SETIMR timer with an astadr queues
+// an AST for it, in the caller's mode, with reqidt as the parameter —
+// as well as setting its event flag.
+func TestSetimrQueuesAST(t *testing.T) {
+	env := astFixture(t, vax.Supervisor)
+	a := newArena(t, env)
+	now := fakeClock(env)
+
+	wantR0(t, callLNM(t, env, serviceSysSetimr, 4, a.quad(-10*ms), 0x1000, 42), ssNormal)
+
+	*now += 9 * ms
+	env.expireTimers()
+
+	if env.PendingASTs() != 0 {
+		t.Fatal("AST queued before the timer expired")
+	}
+
+	*now += ms
+	env.expireTimers()
+
+	if env.PendingASTs() != 1 || env.Process.ast.queue[0] != (astRequest{0x1000, 42, uint32(vax.Supervisor)}) {
+		t.Fatalf("queue = %+v, want the timer's AST (0x1000, reqidt 42, supervisor)", env.Process.ast.queue)
+	}
+
+	if !flagSet(env, 4) {
+		t.Error("the timer's event flag isn't set")
+	}
+
+	// NextAST also expires timers, without an event-flag service.
+	wantR0(t, callLNM(t, env, serviceSysSetimr, 5, a.quad(-10*ms), 0x2000, 43), ssNormal)
+	*now += 10 * ms
+
+	env.Process.ast.queue = nil
+
+	if routine, _, _, ok, _ := env.NextAST(); !ok || routine != 0x2000 {
+		t.Errorf("NextAST after expiry = %#x (ok=%v), want the timer's AST 0x2000", routine, ok)
+	}
+}
+
+// TestNoASTForCancelledTimers: a timer cancelled by $CANTIM or by image
+// rundown never queues its AST; one without an astadr never does either.
+func TestNoASTForCancelledTimers(t *testing.T) {
+	env := astFixture(t, vax.User)
+	a := newArena(t, env)
+	now := fakeClock(env)
+
+	callLNM(t, env, serviceSysSetimr, 1, a.quad(-ms), 0x1000, 7)
+	callLNM(t, env, serviceSysCantim, 7)
+	callLNM(t, env, serviceSysSetimr, 2, a.quad(-ms), 0x1000, 8)
+	env.ImageRundown()
+	callLNM(t, env, serviceSysSetimr, 3, a.quad(-ms)) // no astadr
+
+	*now += 10 * ms
+	env.expireTimers()
+
+	if env.PendingASTs() != 0 {
+		t.Errorf("%d ASTs queued, want none", env.PendingASTs())
+	}
+}
+
+// TestSetimrASTWithoutCluster: a timer on a flag in a common cluster the
+// process has since disassociated sets no flag, but still queues its AST.
+func TestSetimrASTWithoutCluster(t *testing.T) {
+	env := astFixture(t, vax.User)
+	a := newArena(t, env)
+	now := fakeClock(env)
+
+	wantR0(t, callLNM(t, env, serviceSysAscefc, 64, a.desc("TIMERS"), 0, 0), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysSetimr, 64, a.quad(-ms), 0x1000, 9), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysDacefc, 64), ssNormal)
+
+	*now += ms
+	env.expireTimers()
+
+	if env.PendingASTs() != 1 {
+		t.Errorf("%d ASTs queued, want the timer's", env.PendingASTs())
+	}
+}
+
+// TestHiberInterruptedByTimerAST is the classic VMS pattern, driven by
+// hand: $SETIMR with an AST, then $HIBER. The AST is delivered between
+// $HIBER's retries, its routine calls $WAKE, and after the AST exit the
+// retried $HIBER returns.
+func TestHiberInterruptedByTimerAST(t *testing.T) {
+	env := astFixture(t, vax.User)
+	a := newArena(t, env)
+	now := fakeClock(env)
+	c := env.cpu
+
+	wantR0(t, callLNM(t, env, serviceSysSetimr, 0, a.quad(-5*ms), 0x1000, 1), ssNormal)
+
+	const hiberXFC = 0x6002
+	c.SetGPR(vax.PC, hiberXFC) // parked on $HIBER's XFC
+
+	if hiber(t, env) {
+		t.Fatal("$HIBER returned before the timer")
+	}
+
+	if _, _, _, ok, _ := env.NextAST(); ok {
+		t.Fatal("an AST was delivered before the timer expired")
+	}
+
+	*now += 5 * ms
+
+	routine, _, _, ok, err := env.NextAST()
+	if !ok || err != nil || routine != 0x1000 {
+		t.Fatalf("NextAST = %#x, %v, %v; want the timer's AST", routine, ok, err)
+	}
+
+	// The AST routine wakes the process, then returns.
+	callLNM(t, env, serviceSysWake)
+	c.SetGPR(vax.PC, astExitAddr+2)
+	callLNM(t, env, serviceSysClrast)
+
+	if c.GPR(vax.PC) != hiberXFC {
+		t.Fatalf("PC after the AST = %#x, want $HIBER's XFC %#x", c.GPR(vax.PC), hiberXFC)
+	}
+
+	if !hiber(t, env) {
+		t.Error("the retried $HIBER is still waiting after the AST's $WAKE")
+	}
+}
+
+func TestGetjpiQueuesAST(t *testing.T) {
+	env := astFixture(t, vax.Executive)
+	a := newArena(t, env)
+	buf := a.alloc(4)
+	itmlst := a.items(item{code: jpiCode(t, "JPI$_PID"), buflen: 4, buf: buf})
+
+	wantR0(t, callLNM(t, env, serviceSysGetjpi, 0, 0, 0, itmlst, 0, 0x1000, 0x55), ssNormal)
+
+	if env.PendingASTs() != 1 || env.Process.ast.queue[0] != (astRequest{0x1000, 0x55, uint32(vax.Executive)}) {
+		t.Fatalf("queue = %+v, want (0x1000, astprm 0x55, executive)", env.Process.ast.queue)
+	}
+
+	// A request that fails in its items still completes, with its AST.
+	bad := a.items(item{code: 0xFFFF, buflen: 4, buf: buf})
+	wantR0(t, callLNM(t, env, serviceSysGetjpi, 0, 0, 0, bad, 0, 0x1000, 0x56), ssBadParam)
+
+	if env.PendingASTs() != 2 {
+		t.Errorf("%d ASTs after a BADPARAM request, want 2", env.PendingASTs())
+	}
+
+	// One rejected before it starts doesn't; nor does one without astadr.
+	wantR0(t, callLNM(t, env, serviceSysGetjpi, 200, 0, 0, itmlst, 0, 0x1000, 0x57), ssIllEfc)
+	wantR0(t, callLNM(t, env, serviceSysGetjpi, 0, a.long(env.Process.PID+1), 0, itmlst, 0, 0x1000, 0x58), ssNonExpr)
+	wantR0(t, callLNM(t, env, serviceSysGetjpi, 0, 0, 0, itmlst, 0, 0, 0x59), ssNormal)
+
+	if env.PendingASTs() != 2 {
+		t.Errorf("%d ASTs, want still 2", env.PendingASTs())
+	}
+}
