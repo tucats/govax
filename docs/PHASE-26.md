@@ -26,10 +26,12 @@ The first batch, requested by the user on 2026-09-27, is `$ADJSTK`,
 `$DASSGN` and the timers; the fourth, the time conversions, hibernation,
 and AST delivery. The fifth adds terminal `$QIO`, `$SYNCH`, exit
 handlers, `$NUMTIM`, more `$GETJPI` items, mode-switching AST delivery,
-and `$GETSYI`.
+and `$GETSYI`. The sixth adds `$FAO`/`$FAOL`, `$GETMSG`/`$PUTMSG`,
+`$CMKRNL`/`$CMEXEC`, CTRL/C and CTRL/Y ASTs, the full `$GETDVI`,
+mailboxes, and the small process-control services.
 
-**Status: five batches complete** (subtasks 1-23). Add later services as
-new subtasks.
+**Status: sixth batch in progress** (subtasks 1-23 done; 24-30 planned).
+Add later services as new subtasks.
 
 ## References
 
@@ -66,7 +68,8 @@ follow them too, and this list should grow when a new pattern is settled.
   delivery), `qio.go` (`$QIO` and the driver registry), `ttdriver.go`
   (the terminal driver's functions), `exit.go` (`$EXIT` and exit
   handlers), `getsyi.go` (`$GETSYI`), `itemlist.go` (item-list walking
-  and the item values the `$GETxxx` services return). Each file has
+  and the item values the `$GETxxx` services return), `fao.go` (`$FAO`
+  formatting, which later services reuse through `formatFAO`). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -193,6 +196,7 @@ lists the ones the implementation can actually return.
 | (`$GETJPI` items) | 21 | `getjpi.go` | — | `JPI$_ASTACT`, `ASTEN`, `ASTCNT`, `ASTLM`, `PRI`, `PRIB`, `STATE`; `Process` gains `ASTLimit` and priorities. |
 | (AST delivery) | 22 | `ast.go` | — | An inner-mode AST interrupts outer-mode code by switching mode and stack; `$CLRAST` switches back. |
 | `$GETSYI`, `$GETSYIW` | 23 | `getsyi.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLEFC`, `INSFARG`, `IVLOGNAM`, `NOMORENODE`, `NOSUCHNODE`, `UNASEFC` | 10 items: version, node name, SID/CPU, boot time, cluster membership, `MINWSCNT`; this node only. |
+| `$FAO`, `$FAOL` | 24 | `fao.go` | `NORMAL`, `BUFFEROVF`, `ACCVIO`, `BADPARAM` | The manual's directives plus VMS 7's `A`/`I`/`H`/`J`/`Q` sizes; a registry of directive functions. |
 
 ## Service designs
 
@@ -1337,6 +1341,61 @@ helpers in `itemlist.go` (`itemString`, `itemPadded`, `itemByte`,
 `itemWord`, `itemLong`, `itemQuad`, `storeItem`), which replaced
 `getjpi.go`'s JPI-only ones.
 
+### `$FAO` / `$FAOL` — Formatted ASCII Output
+
+`SYS$FAO ctrstr ,[outlen] ,outbuf ,[p1]...[p20]` and
+`SYS$FAOL ctrstr ,[outlen] ,outbuf ,[prmlst]`
+
+A VMS program builds text to print with `$FAO`: a control string of
+ordinary text and `!` directives, and parameters the directives consume
+in order (`"Found !UL file!%S"` with 3 is `"Found 3 files"`). `$FAOL`
+takes the parameters from an array instead of the call. The system's
+message texts are `$FAO` control strings too, so `$GETMSG`/`$PUTMSG`
+(subtask 25) reuse the formatter.
+
+#### Design: a directive registry
+
+`formatFAO` walks the control string. For each directive it reads the
+optional repeat count (`!n(...)`) and width (`!mDD`), either of which may
+be `#` (take it from the next parameter), then the name, which it looks
+up in `faoDirectives`: directive name to the Go function performing it.
+The 40 numeric directives (radix `O`/`X`/`Z`/`U`/`S` times size) are
+generated into the registry at package load from two small tables, so
+each rule is written once.
+
+| Directives | Do |
+| --- | --- |
+| `!AC`, `!AD`, `!AF`, `!AS` | Counted, length-and-address, filtered (nonprintables as `.`), and descriptor strings. |
+| `!Ox`, `!Xx`, `!Zx`, `!Ux`, `!Sx` | Octal, hexadecimal, zero-filled decimal, unsigned, signed. Sizes `B`, `W`, `L`; VMS 7's `A`, `I`, `H`, `J` (longwords on a VAX); `Q` (a quadword, by reference). |
+| `!/`, `!_`, `!^`, `!!` | CR-LF, tab, form feed, `!`. |
+| `!%S` | `S` (or `s`, after a lower-case letter) unless the last number was 1. |
+| `!%D`, `!%T` | `$ASCTIM`'s date-and-time and time-only text, of the quadword a parameter points to (0 is now, from `env.Clock()`). |
+| `!%U`, `!%I` | A UIC (`[1,4]`, octal); an identifier (the process's UIC is `[SYSTEM]`). |
+| `!n<` ... `!>`, `!n*c` | A fixed-width field; `c` written `n` times. |
+| `!-`, `!+` | Reuse the previous parameter; skip one. |
+
+Field widths follow the manual's table: octal and hexadecimal are
+zero-filled to their size's width, then blank-padded or left-truncated
+to the given width; decimal is right-justified (zeros for `!Zx`) and all
+asterisks if it doesn't fit; strings are left-justified and
+right-truncated.
+
+#### Status
+
+- `SS$_BUFFEROVF` when the result doesn't fit `outbuf` (it's truncated,
+  and `outlen` is the truncated length).
+- `SS$_BADPARAM` for an unknown directive (lower-case letters included);
+  what came before it is still stored.
+- `SS$_ACCVIO` for an unreadable control string, parameter, or string,
+  an `outbuf` or `outlen` that can't be written, or `$FAOL` needing a
+  parameter with `prmlst` omitted. Nothing is stored.
+
+As the manual says, `$FAO` doesn't check its argument list's length: a
+parameter past the list reads as 0.
+
+Not implemented (see `docs/DEVIATIONS.md`): `!%C`, `!%E`, `!%F`; a rights
+database for `!%I`.
+
 Not implemented (see `docs/DEVIATIONS.md`): other cluster nodes; SYSGEN
 parameters beyond `MINWSCNT`; the `ASTLM` quota (`SS$_EXASTLM`).
 
@@ -1401,7 +1460,7 @@ third batch listed):
 Fifth batch, requested by the user on 2026-09-28 (the candidates the
 fourth batch listed):
 
-17. **`$QIO`/`$QIOW` on terminal channels, and `$CANCEL`.** In the new
+17. **Done.** **`$QIO`/`$QIOW` on terminal channels, and `$CANCEL`.** In the new
     `qio.go`: a request is validated, then handed to a per-device-class
     driver registry (only terminals have a driver), which completes it
     at once: IOSB, event flag, and AST, as `$GETJPI` does. Terminal
@@ -1430,32 +1489,31 @@ fourth batch listed):
     information, with `$SYIDEF` generated from real VMS source.
 
 
-Candidates next, roughly in order of value now that terminal I/O, exit
-handlers, and mode switching exist:
+Sixth batch, requested by the user on 2026-09-28 (the candidates the
+fifth batch listed):
 
-- **`$FAO`/`$FAOL`** (formatted ASCII output: `!AS`, `!UL`, `!XL`, `!%D`,
-  ...). Nearly every MACRO-32 program that prints builds its text with
-  it, and the `$QIO` terminal writes now give that text somewhere to go.
-- **`$GETMSG`/`$PUTMSG`**: a condition value's message text
-  (`%SYSTEM-F-ACCVIO, ...`). `internal/vmserrors` already knows many
-  texts; `$PUTMSG` would write through the terminal driver.
-- **`$CMKRNL`/`$CMEXEC`**: call a routine in kernel or executive mode.
-  Subtask 19's `CallRequest` plus subtask 22's `switchMode` are most of
-  it: switch in, call with the service's `XFC` as the return, switch back
-  on the way out with the routine's R0.
-- **CTRL/C and CTRL/Y ASTs**: `IO$_SETMODE` with `IO$M_CTRLCAST`/
-  `CTRLYAST` currently does nothing. The console's attention handling
-  could queue the enabled AST instead of stopping the machine.
-- **`$GETDVI`/`$GETDVIW` in full**: replace eVAX's three-item `$GETDVIW`
-  with the `$GETJPI`/`$GETSYI` pattern over the device record, from a
-  generated `$DVIDEF`, adding the asynchronous form, `efn`/`iosb`/AST,
-  and items like `DVI$_DEVNAM`, `DEVCHAR`, `OWNUIC`, `PID`, `REFCNT`.
-- **Mailboxes**: `$CREMBX`/`$DELMBX` and a mailbox driver in `ioDrivers`
-  (write, read, `IO$M_NOW`), the first device where `$QIO` completion
-  really is deferred: a read waits for a write.
-- **Small process-control services**: `$SETPRN` (process name), `$SETPRI`,
-  and `$FORCEX`/`$DELPRC` on this process (an exit through subtask 19's
-  path, from an AST).
+24. **Done.** **`$FAO`/`$FAOL`.** In the new `fao.go`: a directive
+    registry, with the numeric directives generated from radix and size
+    tables. Acceptance fixture `testdata/asm/fao.asm`.
+25. **`$GETMSG`/`$PUTMSG`.** Message texts for condition values: the
+    SYSTEM facility's generated from the VMS 7.3 message source, the
+    others from `internal/vmserrors`. `$PUTMSG` formats a message vector
+    with `formatFAO` and writes to the terminal.
+26. **`$CMKRNL`/`$CMEXEC`.** Call a routine in kernel or executive mode:
+    switch in, call it through subtask 19's `CallRequest` with the
+    service's `XFC` as the return, and switch back when it returns,
+    with its R0.
+27. **CTRL/C and CTRL/Y ASTs.** `IO$_SETMODE` with `IO$M_CTRLCAST`/
+    `IO$M_CTRLYAST` arms a one-shot AST that the console's attention
+    handling queues instead of stopping the machine.
+28. **`$GETDVI`/`$GETDVIW` in full.** The `$GETJPI`/`$GETSYI` pattern
+    over the device record, from a generated `$DVIDEF`, replacing eVAX's
+    three-item `$GETDVIW`.
+29. **Mailboxes.** `$CREMBX`/`$DELMBX` and a mailbox driver: the first
+    device whose `$QIO` requests really wait (a read for a write), so
+    `$QIOW` and `$CANCEL` gain real work.
+30. **Small process-control services.** `$SETPRN`, `$SETPRI`, and
+    `$FORCEX`/`$DELPRC` on this process.
 
 ## Open questions
 
@@ -1998,3 +2056,31 @@ None yet.
 - `go test ./...` passes.
 - **Phase status.** The fifth batch (subtasks 17-23) is done. Candidates
   for the next batch are listed under Subtasks.
+
+### 2026-09-28 — Sixth batch planned; subtask 24: `$FAO`/`$FAOL`
+
+- The user asked for the fifth batch's candidates, `$FAO` through the
+  small process-control services. They became subtasks 24-30. (Subtask
+  17 is also now marked done in the list; it was done, only unmarked.)
+- **`internal/rtl/fao.go`** (new): `formatFAO`, the `faoFormatter` that
+  parses directives, the `faoDirectives` registry (the numeric entries
+  generated by `init` from `faoRadixes` and `faoSizes`), and the
+  services `serviceSysFao`/`serviceSysFaol` sharing `faoOutput`.
+- The VMS 7.3 SYSTEM message texts (for subtask 25) use `!XH`, so the
+  VMS 7 size letters are included.
+- **Found while writing the fixture:** the assembler's `.ASCIC` stores a
+  16-bit count, where MACRO-32's is one byte, so `!AC` can't read it.
+  Recorded under "Open findings" in `docs/DEVIATIONS.md`; the fixture
+  uses `.BYTE` and `.ASCII`.
+- **Acceptance fixture** `testdata/asm/fao.asm`: `$FAO` with parameters
+  in the call and `$FAOL` with a list, each written by `$QIOW`, and
+  `SS$_BADPARAM` for an unknown directive. `TestFAO_assembledProgram`
+  checks the terminal output.
+- Tests (`fao_test.go`): the manual's examples 1-10; each directive
+  family, the field rules (octal and hexadecimal widths, asterisks,
+  string truncation and padding, `!n<` truncation), sign extension,
+  quadwords, `!%S`'s case, `!%U`/`!%I`, `!n*c` inside a repeat, `#` for
+  both counts; `SS$_BADPARAM` keeping the output before it,
+  `SS$_BUFFEROVF`, omitted `outlen`, the `SS$_ACCVIO` cases, and `$FAO`'s
+  parameters past p20.
+- `go test ./...` passes.

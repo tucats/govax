@@ -739,3 +739,46 @@ func TestGetsyi_assembledProgram(t *testing.T) {
 		t.Errorf("the wildcard scan visited %d nodes, want 1", nodes[0])
 	}
 }
+
+// TestFAO_assembledProgram is docs/PHASE-26.md subtask 24's acceptance
+// test: testdata/asm/fao.asm formats text with $FAO (parameters in the
+// call) and $FAOL (parameters in a list), and writes each result to the
+// terminal with $QIOW.
+func TestFAO_assembledProgram(t *testing.T) {
+	var out bytes.Buffer
+
+	c := New(&out)
+
+	if err := c.Init(8192 * 512); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+
+	if err := c.VMInit(2048, 8192, 2048, 20, 0, 0, 0, 0); err != nil {
+		t.Fatalf("VMInit: %v", err)
+	}
+
+	c.DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "fao.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(fao.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("fao.asm has no entry address")
+	}
+
+	out.Reset() // just the program's own output
+
+	if runErr, hitCap := callBounded(t, c, addr, 100_000); runErr != nil || hitCap {
+		t.Fatalf("running fao.asm: err=%v hitCap=%v", runErr, hitCap)
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Errorf("R0 = %d, want 1 (every call behaved)", got)
+	}
+
+	if want := "SYSTEM has 3 files at 000001F4\r\nBYTES:   1  22 255\r\n"; out.String() != want {
+		t.Errorf("output = %q, want %q", out.String(), want)
+	}
+}

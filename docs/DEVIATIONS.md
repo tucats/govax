@@ -540,9 +540,39 @@ changed as a result.
   - No `ASTLM` quota (`SS$_EXASTLM`).
 - **Status**: open, by design.
 
+### [Phase 26] `$FAO`/`$FAOL` simplifications
+
+- **Where**: `internal/rtl/fao.go`.
+- **What**:
+  - The directives are the VMS 5.0 manual's, plus the VMS 7 size letters
+    `A`, `I`, `H`, and `J` (all a longword on a VAX, which is how the VMS
+    7.3 message texts' `!XH` reads) and `Q` (a quadword, by reference).
+    VMS 7's `!%C`, `!%E`, and `!%F` (plural choices) are `SS$_BADPARAM`.
+  - `!%I` has no rights database: it names only the process's own UIC
+    (`[SYSTEM]`), writes other UICs as `!%U` does, and other identifiers
+    as `%X` and eight hexadecimal digits.
+  - `!%U` writes the group and member in octal without padding
+    (`[1,4]`).
+  - A `!n<` field whose text is longer than `n` is truncated to `n`.
+  - A decimal number too wide for an explicit field fills it with
+    asterisks for `!Zx` too (the manual's table gives the rule only for
+    signed and unsigned decimal).
+- **Status**: open, by design.
+
 ## Open findings
 
-_None yet._
+### [Phase 26] The assembler's `.ASCIC` has a 16-bit count
+
+- **Where**: `internal/asm/pseudo.go` (`pseudoAscii`, `asciiCounted`),
+  from `asm_pseudo.c`'s case 9.
+- **What**: MACRO-32's `.ASCIC` stores a counted string: one byte of
+  length, then the text. govax's assembler (like eVAX's) stores a
+  16-bit length. A program passing an `.ASCIC` string to `$FAO`'s `!AC`,
+  which reads the one-byte count VMS defines, gets a leading NUL and
+  loses the string's last character. Found while writing subtask 24's
+  fixture, which builds its counted string with `.BYTE` and `.ASCII`
+  instead. No fixture or boot file uses `.ASCIC`.
+- **Status**: deferred (assembler behavior, left as eVAX has it).
 
 ## Resolved findings
 

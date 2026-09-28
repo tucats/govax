@@ -72,6 +72,7 @@ func registerServices(t *ServiceTable) {
 	registerHibernateServices(t)
 	registerASTServices(t)
 	registerExitServices(t)
+	registerFAOServices(t)
 	registerDeviceServices(t)
 	registerQIOServices(t)
 	registerLogicalServices(t)
