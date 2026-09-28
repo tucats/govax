@@ -109,3 +109,37 @@ func TestConditionExit_assembledProgram(t *testing.T) {
 		t.Errorf("output %q, want the ACCVIO message", out)
 	}
 }
+
+// TestExceptionVectors_assembledProgram runs
+// testdata/asm/exception_vectors.asm (docs/PHASE-26.md subtask 32):
+// primary, secondary, and last-chance vectors set and cleared by
+// $SETEXV.
+func TestExceptionVectors_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+	word := runFixture(t, c, "exception_vectors.asm")
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Fatalf("R0 = %#x, want 1 (a $SETEXV failed?)", got)
+	}
+
+	checks := []struct {
+		sym  string
+		want uint32
+	}{
+		{"PRIMCALLS", 1},
+		{"PRIMDEPTH", 0xFFFFFFFE}, // -2
+		{"LASTDEPTH", 0xFFFFFFFD}, // -3
+		{"SECDEPTH", 0xFFFFFFFF},  // -1
+	}
+
+	for _, ck := range checks {
+		if got := word(ck.sym); got != ck.want {
+			t.Errorf("%s = %#x, want %#x", ck.sym, got, ck.want)
+		}
+	}
+
+	prim, _ := c.Symbols.Get("PRIM")
+	if got := word("PRVHND"); got != prim {
+		t.Errorf("PRVHND = %#x, want PRIM %#x", got, prim)
+	}
+}

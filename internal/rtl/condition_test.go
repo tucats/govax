@@ -430,3 +430,104 @@ func TestImageRundown_conditions(t *testing.T) {
 		t.Errorf("%d dispatches left", len(env.Process.conditions))
 	}
 }
+
+func TestSetexv(t *testing.T) {
+	env := conditionFixture(t)
+	setMode(env, vax.Supervisor, vax.Supervisor, condSP)
+
+	const prvhnd = 0x6000
+
+	putLongword(t, env, prvhnd, 0xFFFF)
+
+	// Set supervisor's secondary vector (acmode kernel is maximized to
+	// the caller's supervisor), then replace it.
+	wantR0(t, callLNM(t, env, serviceSysSetexv, 1, 0x5200, 0, prvhnd), ssNormal)
+
+	if got := env.Process.exceptionVectors[vax.Supervisor][vectorSecondary]; got != 0x5200 {
+		t.Fatalf("supervisor secondary = %#x, want 0x5200", got)
+	}
+
+	if longwordsAt(t, env, prvhnd, 1)[0] != 0 {
+		t.Error("prvhnd should hold the previous (empty) vector")
+	}
+
+	wantR0(t, callLNM(t, env, serviceSysSetexv, 1, 0x5300, 2, prvhnd), ssNormal)
+
+	if longwordsAt(t, env, prvhnd, 1)[0] != 0x5200 {
+		t.Error("prvhnd should hold the replaced handler 0x5200")
+	}
+
+	// Omitted address: clear the (default, primary) vector of user mode.
+	wantR0(t, callLNM(t, env, serviceSysSetexv, 0, 0x5400, 3), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysSetexv, 0, 0, 3, prvhnd), ssNormal)
+
+	if env.Process.exceptionVectors[vax.User][vectorPrimary] != 0 || longwordsAt(t, env, prvhnd, 1)[0] != 0x5400 {
+		t.Error("clearing user's primary vector")
+	}
+
+	// Errors change nothing.
+	wantR0(t, callLNM(t, env, serviceSysSetexv, 3, 0x5500), ssBadParam)
+	wantR0(t, callLNM(t, env, serviceSysSetexv, 1, 0x5500, 2, 0x7FFF0000), ssAccVio)
+
+	if got := env.Process.exceptionVectors[vax.Supervisor][vectorSecondary]; got != 0x5300 {
+		t.Errorf("supervisor secondary = %#x after errors, want 0x5300", got)
+	}
+}
+
+// TestSrchandler_vectors walks a search through all three vectors: the
+// primary and secondary before the frames, the last chance after.
+func TestSrchandler_vectors(t *testing.T) {
+	env := conditionFixture(t)
+	c := env.cpu
+	mode := c.PSL().CurMod()
+	v := &env.Process.exceptionVectors[mode]
+	v[vectorPrimary], v[vectorSecondary], v[vectorLastChance] = 0x5200, 0x5300, 0x5400
+
+	// Another mode's vectors are never searched.
+	env.Process.exceptionVectors[(mode+1)&3] = [3]uint32{0x6200, 0x6300, 0x6400}
+
+	if ok, _ := env.DispatchException(scbReservedOp, nil, 0x3000, c.PSL()); !ok {
+		t.Fatal("not dispatched")
+	}
+
+	steps := []struct {
+		handler, frame uint32
+		depth          int32
+	}{
+		{0x5200, condFrameA, depthPrimary},
+		{0x5300, condFrameA, depthSecondary},
+		{condH1, condFrameA, 0},
+		{condH2, condFrameB, 1},
+		{0x5400, condFrameA, depthLastChance},
+	}
+
+	for i, st := range steps {
+		if i > 0 {
+			c.SetGPR(vax.R0, ssResignal)
+		}
+
+		r0, err := serviceSysSrchandler(env, nil)
+		expectHandlerCall(t, env, r0, err, st.handler, st.frame, st.depth)
+	}
+
+	// The last-chance handler continues.
+	c.SetGPR(vax.R0, 1)
+
+	if _, err := serviceSysSrchandler(env, nil); err != nil || c.GPR(vax.PC) != 0x3000 {
+		t.Errorf("continue: %v, PC %#x", err, c.GPR(vax.PC))
+	}
+}
+
+// TestImageRundown_exceptionVectors checks that rundown clears only the
+// user-mode vectors.
+func TestImageRundown_exceptionVectors(t *testing.T) {
+	env, _ := fixture()
+	env.Process.exceptionVectors[vax.User] = [3]uint32{1, 2, 3}
+	env.Process.exceptionVectors[vax.Supervisor] = [3]uint32{4, 5, 6}
+
+	env.ImageRundown()
+
+	if env.Process.exceptionVectors[vax.User] != [3]uint32{} || env.Process.exceptionVectors[vax.Supervisor] != [3]uint32{4, 5, 6} {
+		t.Errorf("vectors after rundown: %v", env.Process.exceptionVectors)
+	}
+}

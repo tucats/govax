@@ -225,6 +225,7 @@ lists the ones the implementation can actually return.
 | `$DELPRC` | 30 | `process.go` | (none: doesn't return); `ACCVIO`, `IVLOGNAM`, `NONEXPR` | Ends the image without exit handlers. |
 | (CTRL/C, CTRL/Y ASTs) | 27 | `ctrlast.go`, `ttdriver.go` | — | `IO$_SETMODE!IO$M_CTRLCAST`/`CTRLYAST` enable one-shot ASTs the host's Ctrl-C delivers instead of stopping the machine. |
 | `$SRCHANDLER` (condition dispatch) | 31 | `condition.go` | (none: reached by a jump) | Hardware exceptions become `SS$` conditions signaled to call-frame handlers; the catch-all reports with the message text and exits if severe. |
+| `$SETEXV` | 32 | `condition.go` | `NORMAL`, `ACCVIO`, `BADPARAM` | Primary, secondary, and last-chance vectors per access mode; user mode's cleared at image rundown. |
 
 ## Service designs
 
@@ -1848,6 +1849,27 @@ search runs in the mode the condition happened in, which is right, but
 govax has no kernel-mode exception dispatch of its own before it); the
 architected trap PC for arithmetic traps.
 
+### `$SETEXV` — Set Exception Vector
+
+`SYS$SETEXV [vector] ,[addres] ,[acmode] ,[prvhnd]`
+
+Each access mode has three *exception vectors*: condition handlers that
+belong to no call frame. The primary vector is searched first and the
+secondary next, both before the call frames, and the last-chance vector
+after them, when every frame's handler has resignaled. They're meant for
+debuggers and performance monitors (the VMS debugger uses the primary
+and last-chance vectors), not for modular code.
+
+`$SETEXV` sets `vector` (0 primary, the default; 1 secondary; 2 last
+chance; anything else `SS$_BADPARAM`) of mode `acmode`, maximized with
+the caller's, to `addres`, or clears it when `addres` is 0 or omitted.
+The handler replaced goes to `prvhnd` if given (`SS$_ACCVIO`, changing
+nothing, if it can't be written). The vectors are
+`Process.exceptionVectors`; subtask 31's search already consulted them,
+reporting depths -2, -1, and -3 and the frame the condition happened in
+as the mechanism array's frame. Image rundown clears user mode's, as the
+manual says.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -1985,7 +2007,7 @@ sixth batch listed):
     with its message text (`%SYSTEM-F-ACCVIO, access violation, ...`) and,
     if severe, ends the image through `$EXIT`. Phase 20's console-side
     search stays as the fallback when the RTL can't dispatch.
-32. **`$SETEXV`**: primary, secondary, and last-chance exception vectors
+32. **Done.** **`$SETEXV`**: primary, secondary, and last-chance exception vectors
     per access mode, searched before and after the call frames; user-mode
     vectors cleared at image rundown.
 33. **`LIB$SIGNAL`, `LIB$STOP`, `LIB$ESTABLISH`, `LIB$REVERT`,
@@ -2809,4 +2831,20 @@ fixed.
   ignored; the catch-all's message and `$EXIT` call; an unreadable frame
   ending the walk; a nested dispatch; no dispatch; rundown), and
   `TestHandleFaultOffersConsoleHandlerFaultToDispatcher`.
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 32: `$SETEXV`
+
+- `serviceSysSetexv` in `internal/rtl/condition.go`; `cancelConditions`
+  also clears the user-mode vectors.
+- **Acceptance fixture** `testdata/asm/exception_vectors.asm`: primary
+  (resignaling) and last-chance vectors around an access violation with
+  no frame handlers, then the primary cleared (its handler returned in
+  `prvhnd`) and a secondary vector continuing a second one.
+  `TestExceptionVectors_assembledProgram` checks the call count, the
+  three depths, and `prvhnd`.
+- Tests: `TestSetexv` (maximized mode, `prvhnd`, clearing, the two
+  errors changing nothing), `TestSrchandler_vectors` (the full search
+  order, and another mode's vectors ignored),
+  `TestImageRundown_exceptionVectors`.
 - `go test ./...` passes.
