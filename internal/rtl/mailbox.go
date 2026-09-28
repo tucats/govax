@@ -197,8 +197,13 @@ func (env *Environment) removeStaleMailboxes() {
 // names a mailbox, no new one is made: the channel is assigned to that
 // one, so two parts of a program needn't agree which creates it.
 //
-// Status: SS$_IVSTSFLG for another prmflg; SS$_BADPARAM for a bufquo over
-// 65355; SS$_IVLOGNAM for a lognam that's empty or over 255 characters;
+// Creating a mailbox needs the TMPMBX privilege (a temporary one) or
+// PRMMBX (a permanent one), and a permanent one's logical name, which goes
+// in the system table, SYSNAM as well (privilege.go); finding an existing
+// one by name needs neither.
+//
+// Status: SS$_IVSTSFLG for another prmflg; SS$_NOPRIV for a missing
+// privilege; SS$_BADPARAM for a bufquo over 65355; SS$_IVLOGNAM for a lognam that's empty or over 255 characters;
 // SS$_ACCVIO for a chan that can't be written or a lognam that can't be
 // read; SS$_NOIOCHAN when all 9999 units are in use; an error of the
 // logical-name define (SS$_TOOMANYLNAM, ...).
@@ -255,6 +260,19 @@ func serviceSysCrembx(env *Environment, argv []uint32) (uint32, error) {
 
 			return ssNormal, nil
 		}
+	}
+
+	priv := privTMPMBX
+	if prmflg == 1 {
+		priv = privPRMMBX
+
+		if name != "" {
+			priv |= privSYSNAM
+		}
+	}
+
+	if !env.Process.hasPrivilege(priv) {
+		return ssNoPriv, nil
 	}
 
 	unit := env.Mailboxes.nextUnit(env.Devices)
@@ -323,8 +341,9 @@ func (env *Environment) storeNewChannel(chanAdr uint32, name string, d *iodev.De
 // deletion. The mailbox goes when its last channel is deassigned; the
 // caller's own channel isn't deassigned. (A temporary mailbox is deleted
 // that way anyway.) SS$_IVCHAN for 0, SS$_NOPRIV if the channel isn't
-// assigned or was assigned from a more privileged mode than the caller's,
-// SS$_DEVNOTMBX if its device isn't a mailbox.
+// assigned or was assigned from a more privileged mode than the caller's
+// or the caller lacks the PRMMBX privilege, SS$_DEVNOTMBX if its device
+// isn't a mailbox.
 func serviceSysDelmbx(env *Environment, argv []uint32) (uint32, error) {
 	number := optArg(argv, 0) & 0xFFFF
 	if number == 0 {
@@ -339,6 +358,10 @@ func serviceSysDelmbx(env *Environment, argv []uint32) (uint32, error) {
 	m, ok := env.Mailboxes.For(c.Device)
 	if !ok {
 		return ssDevNotMbx, nil
+	}
+
+	if !env.Process.hasPrivilege(privPRMMBX) {
+		return ssNoPriv, nil
 	}
 
 	m.DeletePending = true

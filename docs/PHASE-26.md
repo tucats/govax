@@ -80,7 +80,8 @@ follow them too, and this list should grow when a new pattern is settled.
   `condition.go` (the condition dispatcher, `SYS$SRCHANDLER`, `$SETEXV`),
   `signal.go` (the `LIB$` signaling shims), `unwind.go` (`$UNWIND`,
   `LIB$SIG_TO_RET`), `vaspace.go` (`$CRETVA`, `$DELTVA`, `$CNTREG`),
-  `pageprot.go` (`$SETPRT`, page locking). Each file has
+  `pageprot.go` (`$SETPRT`, page locking), `privilege.go` (privilege
+  masks, `$SETPRV`). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -103,11 +104,15 @@ follow them too, and this list should grow when a new pattern is settled.
   service takes an access-mode argument, it is "maximized": the less
   privileged of the argument and the caller's mode (the larger number) is
   used (`max(acmode&3, curMod)`).
-- **Privileges.** govax has no privilege model. The emulated process holds
-  every privilege, so privilege checks (`SYSNAM`, `PRMCEB`, `ALLSPOOL`, ...)
-  always pass. Checks that aren't about privileges, such as access-mode
-  ordering or a cluster's UIC protection, are still enforced. (Same rule as
-  Phase 25's logical-name services.)
+- **Privileges.** Since subtask 38 the process has privilege masks
+  (`privilege.go`). A service that needs a privilege checks the current
+  mask with `Process.hasPrivilege(privXXX)` (or `hasAnyPrivilege` for
+  "either of two") and returns `SS$_NOPRIV` without it, unless the manual
+  gives it another answer (`$SETPRI` quietly lowers the priority). The
+  emulated SYSTEM process is authorized for and starts with every
+  privilege, so a check only matters once a program disables one with
+  `$SETPRV`. Checks that aren't about privileges, such as access-mode
+  ordering or a cluster's UIC protection, were always enforced.
 - **Status codes.** Return values come from `vmsdef.SSConstants` (the real
   `$SSDEF` numbers), cached in a package-level `var` next to the service, or
   from the older `ss*` constants in `status.go` for codes those already
@@ -240,6 +245,8 @@ lists the ones the implementation can actually return.
 | `$LCKPAG`, `$ULKPAG`, `$LKWSET`, `$ULWSET` | 36 | `pageprot.go` | `WASCLR`, `WASSET`, `ACCVIO`, `NOPRIV`, `PAGOWNVIO` | Checked, and the locked pages remembered for the status; nothing pages, so nothing else changes. |
 | `$SETRWM` | 37 | `process.go` | `WASCLR`, `WASSET` | Resource wait mode, on by default: a write to a full mailbox waits for room unless it's off (or `IO$M_NORSWAIT`). |
 | (mailbox attention ASTs) | 37 | `mbxdriver.go` | — | `IO$_SETMODE` with `IO$M_READATTN`, `WRTATTN`, `MB_ROOM_NOTIFY`: one-shot ASTs. |
+| `$SETPRV` | 38 | `privilege.go` | `NORMAL`, `NOTALLPRIV`, `ACCVIO` | The four privilege masks; temporary or permanent; `$PRVDEF` generated. Services now check `CURPRIV`. |
+| (`$GETJPI` privilege items) | 38 | `getjpi.go` | — | `JPI$_CURPRIV`, `PROCPRIV`, `AUTHPRIV`, `IMAGPRIV` (quadwords), `AUTHPRI`. |
 
 ## Service designs
 
@@ -425,7 +432,7 @@ memory, and a permanent cluster survives from one RUN to the next.
 - If the cluster doesn't exist it is created with all flags clear. `prot`
   (low bit) makes it usable only by the creator's UIC; `perm` (low bit)
   makes it permanent. Both only matter at creation. Creating a permanent
-  cluster needs `PRMCEB`, which the emulated process always has.
+  cluster needs `PRMCEB` (enforced since subtask 38).
 - An existing protected cluster refuses a process with a different UIC:
   `SS$_NOPRIV`.
 - If the cluster number is already associated with another cluster, that
@@ -507,8 +514,8 @@ They complete the cluster lifecycle `$ASCEFC` started (`eventflags.go`).
   deletion. The check runs whenever an association is dropped (`$DACEFC`,
   reassociation, image rundown) and when `$DLCEFC` marks a cluster, so an
   unused permanent cluster goes at once.
-- The manual requires `PRMCEB` or the creator's UIC to delete. The emulated
-  process always holds `PRMCEB`, so `SS$_NOPRIV` never happens.
+- The manual requires `PRMCEB` or the creator's UIC to delete
+  (`SS$_NOPRIV` otherwise, enforced since subtask 38).
 - A marked cluster can still be found and associated with by `$ASCEFC`
   until it is actually deleted. The manual doesn't say otherwise.
 
@@ -1550,8 +1557,9 @@ subtask 19's `CallRequest`:
    which the `XFC` handler leaves in R0.
 
 The calls are a stack, so a routine may call `$CMKRNL` itself; image
-rundown forgets calls whose routine never returned. The process holds
-every privilege, so `SS$_NOPRIV` never happens.
+rundown forgets calls whose routine never returned. Since subtask 38, a
+caller in supervisor or user mode needs `CMKRNL` (or `CMEXEC`), or gets
+`SS$_NOPRIV`.
 
 Each mode needs a stack its code can write. When this subtask was done,
 VMINIT's ESP and SSP pointed into pages only kernel mode could write, so
@@ -1742,8 +1750,8 @@ is `SS$_NONEXPR`. They're in `process.go`.
   now matches. Omitted, the process has no name. `SS$_DUPLNAM` can't
   happen: no other process has a name.
 - **`$SETPRI`** stores the old base priority at `prvpri`, then sets the
-  base priority to `pri`'s low five bits (0-31; the process holds
-  ALTPRI, so raising is allowed). The current priority follows it: there
+  base priority to `pri`'s low five bits (0-31; since subtask 38, without
+  ALTPRI no higher than the authorized priority, `JPI$_AUTHPRI`). The current priority follows it: there
   is no scheduler to boost it. `$GETJPI`'s `JPI$_PRI`/`PRIB` report both.
 - **`$FORCEX`** makes the process call `$EXIT` with `code`, the way VMS
   does it: a user-mode AST whose routine is `$EXIT` itself (the `SYS$EXIT`
@@ -2103,6 +2111,57 @@ attention ASTs.
 The status of requests `$CANCEL` and `$DASSGN` end stays `SS$_CANCEL`:
 see Open questions.
 
+### Privileges: `$SETPRV` and the checks
+
+`SYS$SETPRV [enbflg] ,[prvadr] ,[prmflg] ,[prvprv]`
+
+VMS guards dangerous operations with *privileges*: CMKRNL to change to
+kernel mode, PRMMBX to create a permanent mailbox, SYSNAM to write the
+system logical name table, and so on, 39 of them, each a bit of a
+quadword mask. `$PRVDEF`'s bit numbers are generated as
+`vmsdef.PRVConstants` from `reference/vms/prvdef.txt`, extracted from
+VMS 7.3's `STARLET.REQ` listing (the SDL source uses features the
+generator doesn't parse, and the upper privileges' masks don't fit the
+generator's 32-bit values, so bit numbers are kept instead).
+
+#### The four masks
+
+`rtl.Process` gains VMS's four masks: `AuthorizedPrivileges` (AUTHPRIV,
+what the process may enable; never changes), `ProcessPrivileges`
+(PROCPRIV, the permanent ones), `CurrentPrivileges` (CURPRIV, the
+enabled ones, which services check), and `ImagePrivileges` (IMAGPRIV,
+an installed image's; always empty). The SYSTEM process starts with every
+privilege in the first three, so nothing changes for a program that
+doesn't use `$SETPRV`. `$GETJPI` reports all four (`JPI$_CURPRIV`, ...,
+quadwords) and `JPI$_AUTHPRI`, the new `AuthorizedPriority`.
+
+`$SETPRV` enables (`enbflg` 1) or disables (0) the privileges in the
+quadword at `prvadr`, in CURPRIV only (`prmflg` 0: until the image
+exits; image rundown copies PROCPRIV back) or in both (1). `prvprv` gets
+the previous CURPRIV (or PROCPRIV, for a permanent change). Enabling is
+limited to AUTHPRIV unless the process is authorized for SETPRV or the
+caller is in kernel or executive mode; what's refused leaves the status
+`SS$_NOTALLPRIV`. Omitting `prvadr` only reads the mask.
+
+#### The checks
+
+| Service | Needs | Without it |
+| --- | --- | --- |
+| `$CMKRNL`, `$CMEXEC` | `CMKRNL`, `CMEXEC` (unless the caller is in executive or kernel mode) | `SS$_NOPRIV` |
+| `$CREMBX` | `TMPMBX` (temporary), `PRMMBX` (permanent), plus `SYSNAM` for a permanent one's logical name | `SS$_NOPRIV` |
+| `$DELMBX` | `PRMMBX` | `SS$_NOPRIV` |
+| `$ASCEFC` (creating a permanent cluster), `$DLCEFC` (another UIC's cluster) | `PRMCEB` | `SS$_NOPRIV` |
+| `$LCKPAG` | `PSWAPM` | `SS$_NOPRIV` |
+| `$SETPRI` | `ALTPRI` to go above the authorized priority | lowered to it |
+| `$CRELNM`, `$DELLNM`, `$CRELOG`, `$DELLOG` | `SYSNAM` or `SYSPRV` for the system table, `GRPNAM` or `SYSPRV` for the group table, `SYSPRV` for the system directory | `SS$_NOPRIV` |
+| `$CRELNM`, `$DELLNM`, `$CRELNT` | `SYSNAM` to use an `acmode` more privileged than the caller's | maximized |
+| `$CRELNT` | `SYSPRV` for a shareable table (a shareable parent) | `SS$_NOPRIV` |
+
+Not implemented (see `docs/DEVIATIONS.md`): UIC-based object protection
+(VMS would also let a system-UIC process write the system table without
+SYSNAM), installed images, and privileges for services govax doesn't
+have.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -2257,7 +2316,7 @@ sixth batch listed):
     mailbox makes the writer wait), read and write attention ASTs
     (`IO$M_READATTN`/`WRTATTN`), and `$DASSGN`'s cancel status checked
     against the I/O manual.
-38. **Privileges**: a privilege mask on `rtl.Process`, `$SETPRV`, the
+38. **Done.** **Privileges**: a privilege mask on `rtl.Process`, `$SETPRV`, the
     `$GETJPI` privilege items, and the checks the services have skipped.
 39. **`$SNDOPR`, `$BRKTHRU`/`$BRKTHRUW`**: operator and broadcast
     messages, written to the console terminal.
@@ -3208,4 +3267,31 @@ fixed.
   `SS$_MBFULL` with it off); each attention AST, their one-shot rule,
   immediate delivery, disabling, `$CANCEL`, and the maximized mode. The
   old `SS$_MBFULL` check now uses `IO$M_NORSWAIT`.
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 38: privileges
+
+- **`internal/rtl/privilege.go`** (new): `privilegeBit`, the `priv...`
+  masks, `allPrivileges`, `Process.hasPrivilege`/`hasAnyPrivilege`,
+  `resetImagePrivileges` (image rundown), and `serviceSysSetprv`.
+  `Process` gains the four masks and `AuthorizedPriority`; `$GETJPI` the
+  five items.
+- **`$PRVDEF`**: `reference/vms/prvdef.txt`, the `PRV$V_` bit numbers
+  from `trace/lis/starlet.lis`, generated as `vmsdef.PRVConstants`
+  (`-prvdef`).
+- **Checks** in `cmode.go`, `mailbox.go`, `eventflags.go`, `pageprot.go`,
+  `process.go` (`$SETPRI`), and `logicals.go` (`lnmWriteMode`,
+  `lnmTablePrivilege`), per the design's table. The Phase 25 deviation
+  "No privilege model" is resolved.
+- **Acceptance fixture** `testdata/asm/privileges.asm`: `JPI$_CURPRIV`;
+  in user mode, `$CMKRNL` refused with CMKRNL disabled and working when
+  re-enabled; `$CREMBX` refused without TMPMBX.
+  `TestPrivileges_assembledProgram` checks the masks, the statuses, and
+  rundown restoring PROCPRIV.
+- Tests (`privilege_test.go`): the bit numbers and SYSTEM's masks;
+  `$SETPRV` temporary and permanent, rundown, `prvprv`, no `prvadr`,
+  extra bits, `ACCVIO`; `NOTALLPRIV` from user mode, executive mode and
+  SETPRV allowing anything; the `$GETJPI` items (with a privilege above
+  bit 31); each service's check; the logical-name tables, either-of-two
+  privileges, the SYSNAM mode rule, and a shareable table.
 - `go test ./...` passes.

@@ -64,6 +64,20 @@ type Process struct {
 	Priority     uint32
 	BasePriority uint32
 
+	// AuthorizedPriority is the highest base priority the process may
+	// set without the ALTPRI privilege (UAF PRIORITY, PCB$B_AUTHPRI):
+	// $SETPRI lowers a higher request to it, and $GETJPI reports it
+	// (JPI$_AUTHPRI).
+	AuthorizedPriority uint32
+
+	// The process's privilege masks (privilege.go), one bit per $PRVDEF
+	// privilege: AuthorizedPrivileges, what it may enable (the UAF's,
+	// PCB's AUTHPRIV); ProcessPrivileges, its permanent ones (PROCPRIV,
+	// in the process header); CurrentPrivileges, the ones enabled now,
+	// which services check (PCB$Q_PRIV); ImagePrivileges, the running
+	// image's installed ones (always empty: govax installs nothing).
+	AuthorizedPrivileges, ProcessPrivileges, CurrentPrivileges, ImagePrivileges uint64
+
 	// LocalEventFlags are event flag clusters 0 and 1 (flags 0-63), local
 	// to the process. CommonClusters are the common event flag clusters
 	// $ASCEFC associated with cluster numbers 2 and 3 (flags 64-127), nil
@@ -158,7 +172,8 @@ const (
 
 // NewProcess returns the default emulated process: PID nominalPID, user
 // SYSTEM (process name SYSTEM, account SYSTEM, terminal TTA0:, CLI DCL),
-// UIC [1,4], with its working-set limit at its default.
+// UIC [1,4], with its working-set limit at its default, authorized for
+// and holding every privilege, as the SYSTEM account is.
 func NewProcess() *Process {
 	return &Process{
 		PID:        nominalPID,
@@ -177,6 +192,11 @@ func NewProcess() *Process {
 		ASTLimit:     nominalASTLimit,
 		Priority:     nominalPriority,
 		BasePriority: nominalPriority,
+
+		AuthorizedPriority:   nominalPriority,
+		AuthorizedPrivileges: allPrivileges,
+		ProcessPrivileges:    allPrivileges,
+		CurrentPrivileges:    allPrivileges,
 
 		ast: newASTState(),
 	}
@@ -299,6 +319,7 @@ func (env *Environment) ImageRundown() {
 	env.cancelChangeModeCalls()
 	env.cancelConditions()
 	env.cancelPageLocks()
+	env.resetImagePrivileges()
 	env.qiowWaits = nil
 }
 
@@ -360,6 +381,11 @@ func serviceSysSetpri(env *Environment, argv []uint32) (uint32, error) {
 
 	p := env.Process
 	pri, prvpri := optArg(argv, 2)&maxPriority, optArg(argv, 3)
+
+	// Without ALTPRI, no higher than the authorized priority.
+	if !p.hasPrivilege(privALTPRI) {
+		pri = min(pri, p.AuthorizedPriority)
+	}
 
 	if prvpri != 0 {
 		if err := env.mem.StoreLongword(env.cpu, prvpri, p.BasePriority); err != nil {

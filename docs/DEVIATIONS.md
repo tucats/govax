@@ -258,9 +258,11 @@ against real VMS.
   The old by-value services do maximize, since their 0 means "omitted".
   Structural rules still hold: a name can't be more privileged than its
   table, and the startup tables can't be deleted.
-- **Status**: open, deliberate. Every write goes through
-  `Database.Define`/`Delete`/`CreateTable`, so checks can be added there once
-  a privilege model exists.
+- **Status**: fixed in Phase 26 subtask 38, in `internal/rtl/logicals.go`
+  (`lnmWriteMode`, `lnmTablePrivilege`) rather than `internal/lnm`: the
+  privileges are the process's, which `lnm` doesn't know. Table protection
+  (the UIC-based part) is still not modeled; see the privilege
+  simplifications under Phase 26.
 
 ### [Phase 25] No job or cluster tables, no quotas or table protection
 
@@ -376,9 +378,9 @@ changed as a result.
 - **Where**: `internal/rtl/eventflags.go`'s `serviceSysAscefc`.
 - **What**: no `TQELM` quota (`SS$_EXQUOTA`), no multiport shared memory
   (`SS$_EXPORTQUOTA`, `SS$_INTERLOCK`, `SS$_NOSHMBLOCK`,
-  `SS$_SHMNOTCNCT`), and `PRMCEB` is always held. Cluster names are
-  compared case-sensitively as given. `$DLCEFC` (subtask 7) never returns
-  `SS$_NOPRIV`, since `PRMCEB` is always held.
+  `SS$_SHMNOTCNCT`). Cluster names are compared case-sensitively as
+  given. (`PRMCEB` was always held until subtask 38 gave the process
+  privileges.)
 - **Status**: open, deliberate simplifications.
 
 ### [Phase 26] eVAX `$GETJPIW`: two hard-coded items with the wrong lengths
@@ -603,8 +605,8 @@ changed as a result.
 
 - **Where**: `internal/rtl/cmode.go`; VMINIT (`internal/console`).
 - **What**:
-  - The process holds every privilege, so neither service returns
-    `SS$_NOPRIV`.
+  - ~~The process holds every privilege~~: since subtask 38, a caller in
+    supervisor or user mode needs `CMKRNL`/`CMEXEC`.
   - `$CMKRNL` doesn't load R4 with the address of a process control
     block: govax has none.
   - VMINIT's executive and supervisor stacks had the kernel stack's
@@ -744,6 +746,23 @@ changed as a result.
     does nothing: the default depth is the establisher's plus one, and a
     vectored handler has no establisher frame. `newpc` is taken as the
     resume address itself.
+- **Status**: open, by design.
+
+### [Phase 26] Privilege simplifications
+
+- **Where**: `internal/rtl/privilege.go` and the services that check.
+- **What**:
+  - No UIC-based object protection: VMS lets a process write a logical
+    name table (or delete a cluster, a mailbox, ...) the object's
+    protection grants it, whatever its privileges, and a system-UIC
+    process such as SYSTEM gets system access to most objects. govax
+    checks only the privileges, so disabling SYSNAM stops SYSTEM writing
+    the system table where VMS wouldn't.
+  - `$DELLNM`'s table check looks at the first table `tabnam` resolves
+    to, not the table the name is eventually found in.
+  - No installed images: `IMAGPRIV` is always empty.
+  - Services govax doesn't have (`$CREPRC`'s DETACH, `$MOUNT`'s MOUNT,
+    ...) and devices (LOG_IO, PHY_IO, SHARE) check nothing.
 - **Status**: open, by design.
 
 ### [Phase 26] Virtual address space simplifications

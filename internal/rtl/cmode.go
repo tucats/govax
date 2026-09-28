@@ -49,8 +49,9 @@ import (
 // The calls in progress are a stack, so a kernel routine may call
 // $CMKRNL (or $CMEXEC) again.
 //
-// govax's process holds every privilege, so the services never fail
-// with SS$_NOPRIV.
+// The caller needs the CMKRNL (or CMEXEC) privilege, unless it's already
+// in executive or kernel mode; otherwise the service fails with
+// SS$_NOPRIV (privilege.go).
 
 // cmodeCall is one change-mode call in progress.
 type cmodeCall struct {
@@ -113,8 +114,19 @@ func (env *Environment) changeMode(mode vax.AccessMode, argv []uint32) (uint32, 
 		}
 	}
 
-	// A new call (step 1): the target is the more privileged (smaller)
-	// of the requested mode and the caller's.
+	// A new call (step 1). The caller needs the privilege, unless it's
+	// in executive or kernel mode already.
+	priv := privCMKRNL
+	if mode == vax.Executive {
+		priv = privCMEXEC
+	}
+
+	if psl.CurMod() > vax.Executive && !p.hasPrivilege(priv) {
+		return ssNoPriv, nil
+	}
+
+	// The target is the more privileged (smaller) of the requested mode
+	// and the caller's.
 	routin, arglst := optArg(argv, 0), optArg(argv, 1)
 	call := &cmodeCall{
 		fp:        c.GPR(vax.FP),

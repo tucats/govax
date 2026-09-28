@@ -150,7 +150,13 @@ type pageLocks map[uint32]bool
 // serviceSysLckpag is SYS$LCKPAG: lock pages in memory.
 //
 //	SYS$LCKPAG inadr ,[retadr] ,[acmode]
+//
+// Locking pages in memory needs the PSWAPM privilege (SS$_NOPRIV).
 func serviceSysLckpag(env *Environment, argv []uint32) (uint32, error) {
+	if !env.Process.hasPrivilege(privPSWAPM) {
+		return ssNoPriv, nil
+	}
+
 	return env.lockPages(argv, &env.Process.memoryLocks, true)
 }
 
@@ -184,7 +190,7 @@ func serviceSysUlwset(env *Environment, argv []uint32) (uint32, error) {
 // none was; SS$_NOPRIV for a system page; SS$_ACCVIO for a page that
 // doesn't exist or lies beyond the page table, or if inadr can't be read
 // or retadr written; or SS$_PAGOWNVIO for a page a more privileged mode
-// owns. The process holds PSWAPM, which $LCKPAG requires.
+// owns.
 func (env *Environment) lockPages(argv []uint32, locks *pageLocks, lock bool) (uint32, error) {
 	r, ok := env.readRange(optArg(argv, 0), true)
 	if !ok {

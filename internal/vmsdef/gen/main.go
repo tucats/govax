@@ -135,13 +135,14 @@ func main() {
 	dvidef := flag.String("dvidef", "", "path to dvidef.txt")
 	ttdef := flag.String("ttdef", "", "path to ttdef.txt")
 	prtdef := flag.String("prtdef", "", "path to prtdef.sdl")
+	prvdef := flag.String("prvdef", "", "path to prvdef.txt")
 	sysmsg := flag.String("sysmsg", "", "path to sysmsg.txt (a message-file listing)")
 	out := flag.String("out", "", "path to write the generated Go source")
 	msgOut := flag.String("msgout", "", "path to write the generated message texts")
 	flag.Parse()
 
-	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *dvidef == "" || *ttdef == "" || *prtdef == "" || *sysmsg == "" || *out == "" || *msgOut == "" {
-		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, -dvidef, -ttdef, -prtdef, -sysmsg, -out, and -msgout are all required")
+	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *dvidef == "" || *ttdef == "" || *prtdef == "" || *prvdef == "" || *sysmsg == "" || *out == "" || *msgOut == "" {
+		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, -dvidef, -ttdef, -prtdef, -prvdef, -sysmsg, -out, and -msgout are all required")
 	}
 
 	constants := map[string]uint32{}
@@ -201,6 +202,11 @@ func main() {
 	prt, err := parseSDL(readSource(*prtdef))
 	if err != nil {
 		log.Fatalf("gen: %s: %v", *prtdef, err)
+	}
+
+	prv, err := parseBlissLiterals(readSource(*prvdef), "PRV$")
+	if err != nil {
+		log.Fatalf("gen: %s: %v", *prvdef, err)
 	}
 
 	maps := []constantMap{
@@ -307,16 +313,25 @@ func main() {
 			},
 			entries: prt,
 		},
+		{
+			name: "PRVConstants",
+			doc: []string{
+				"PRVConstants is every real $PRVDEF privilege bit number (PRV$V_CMKRNL,",
+				"PRV$V_SYSNAM, ...): the privilege's bit in a quadword privilege mask,",
+				"which may be past bit 31. PRV$K_NUMBER_OF_PRIVS is the count.",
+			},
+			entries: prv,
+		},
 	}
 
-	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef, *statedef, *syidef, *dvidef, *ttdef, *prtdef}
+	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef, *statedef, *syidef, *dvidef, *ttdef, *prtdef, *prvdef}
 	code := generate(maps, sources)
 
 	if err := os.WriteFile(*out, code, 0o644); err != nil {
 		log.Fatalf("gen: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), len(syi), len(dvi), len(tt), len(prt), *out)
+	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), len(syi), len(dvi), len(tt), len(prt), len(prv), *out)
 
 	// The message texts go in a file of their own (see msg.go).
 	msgs, facilities, err := parseMessages(readSource(*sysmsg))

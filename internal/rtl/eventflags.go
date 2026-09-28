@@ -217,8 +217,8 @@ func serviceSysReadef(env *Environment, argv []uint32) (uint32, error) {
 // by the creator's UIC; perm makes it permanent. A cluster number already
 // associated with a different cluster is disassociated from it first.
 //
-// govax has no privilege model, so creating a permanent cluster (PRMCEB)
-// is always allowed, and there are no quotas, shared memory, or
+// Creating a permanent cluster needs the PRMCEB privilege (SS$_NOPRIV
+// otherwise; privilege.go). There are no quotas, shared memory, or
 // multiport clusters (docs/DEVIATIONS.md).
 func serviceSysAscefc(env *Environment, argv []uint32) (uint32, error) {
 	efn, nameDesc := optArg(argv, 0)&0xFF, optArg(argv, 1)
@@ -246,6 +246,10 @@ func serviceSysAscefc(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	if !found {
+		if perm && !p.hasPrivilege(privPRMCEB) {
+			return ssNoPriv, nil
+		}
+
 		c = &EventFlagCluster{
 			Name:       name,
 			Group:      p.UICGroup(),
@@ -314,6 +318,11 @@ func serviceSysDlcefc(env *Environment, argv []uint32) (uint32, error) {
 
 	table := env.EventFlagClusters
 	if c, found := table.Lookup(env.Process.UICGroup(), name); found {
+		// Deleting takes PRMCEB, or being the creator.
+		if c.CreatorUIC != env.Process.UIC && !env.Process.hasPrivilege(privPRMCEB) {
+			return ssNoPriv, nil
+		}
+
 		c.DeletePending = true
 		table.deleteIfUnused(c)
 	}
