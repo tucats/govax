@@ -69,6 +69,21 @@ Entries get resolved (fixed or deliberately kept, with rationale) during Phase 1
   so this has no test-visible effect today. Revisit if a future fixture ever
   needs a working `SYS$CLRAST_2`.
 
+### [Phase 11, found in Phase 26] MACRO-32 local labels (`n$`) aren't supported
+
+- **Where**: `internal/asm` (operand value parsing and the symbol table).
+- **What**: MACRO-32's local labels — `1$:`, `2$:`, ..., each valid only
+  within a *local label block*, the code between two ordinary labels —
+  aren't implemented. As a label definition, `2$:` defines an ordinary
+  global symbol named `2$`, so a second `2$:` anywhere in the file is
+  `VAX-E-DUPSYM`. In an operand, `2$` is read as the number 2, so
+  `BNEQ 2$` branches to address 2 rather than to the label: found when
+  a `docs/PHASE-26.md` subtask 34 fixture's handler branched into the
+  middle of the next procedure.
+- **Status**: open. The Phase 26 fixtures use ordinary labels. Fixing it
+  means parsing `digits$` as a symbol reference and scoping it to the
+  current local label block.
+
 ## Phase 22 (RMS / `ods2`) findings
 
 Phase 22 (`PHASE-22.md`) has no `reference/eVAX` counterpart at all — its own
@@ -721,6 +736,10 @@ changed as a result.
     R0, where VMS puts the caller's R0: the shim stub's
     `MOVL #code, R0` has replaced it before the shim runs. So a handler
     that continues without setting it makes `LIB$SIGNAL` return 0.
+  - `$UNWIND` (subtask 34) from a vectored handler with no `depadr`
+    does nothing: the default depth is the establisher's plus one, and a
+    vectored handler has no establisher frame. `newpc` is taken as the
+    resume address itself.
 - **Status**: open, by design.
 
 ## Open findings

@@ -55,7 +55,7 @@ import (
 //     the program continues where the condition happened, with R0 and R1
 //     taken from the mechanism array, which the handler may have changed.
 //
-// (A third answer, unwinding the stack, is $UNWIND's, in unwind.go.)
+// A third answer is to unwind the stack with $UNWIND (unwind.go).
 //
 // If every handler resignals, VMS's *catch-all* handler — established by
 // the system in the program's outermost frame — prints the condition's
@@ -178,6 +178,10 @@ type conditionDispatch struct {
 
 	// calling is true while a handler this dispatch called is running.
 	calling bool
+
+	// unwind is the $UNWIND a handler asked for, carried out when the
+	// handler returns (unwind.go); nil if none.
+	unwind *unwindRequest
 
 	// resumeSP, resumeFP, and resumePC are where execution resumes when
 	// a handler continues: for an exception, the stack as it was before
@@ -445,6 +449,12 @@ func serviceSysSrchandler(env *Environment, _ []uint32) (uint32, error) {
 	if d.calling {
 		d.calling = false
 
+		// A handler that called $UNWIND has its answer ignored: the
+		// unwind happens instead (unwind.go).
+		if d.unwind != nil {
+			return env.continueUnwind(d)
+		}
+
 		if env.cpu.GPR(vax.R0)&1 != 0 {
 			return env.continueCondition(d)
 		}
@@ -710,4 +720,5 @@ func (env *Environment) cancelConditions() {
 func registerConditionServices(t *ServiceTable) {
 	t.RegisterNoArgs("SYS$SRCHANDLER", serviceSysSrchandler)
 	t.Register("SYS$SETEXV", serviceSysSetexv)
+	t.Register("SYS$UNWIND", serviceSysUnwind)
 }

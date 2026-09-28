@@ -87,6 +87,7 @@ var shimTable = []shimEntry{
 	{"LIB$STOP", "LIBRTL", 0x04F8, 34},
 	{"LIB$ESTABLISH", "LIBRTL", 0x03C0, 35},
 	{"LIB$REVERT", "LIBRTL", 0x0490, 36},
+	{"LIB$SIG_TO_RET", "LIBRTL", 0x0500, 37},
 	{"LIB$MATCH_COND", "LIBRTL", 0x0460, 38},
 
 	// code 0: resolved by symbol lookup against kernel.asm's own

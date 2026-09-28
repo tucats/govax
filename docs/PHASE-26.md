@@ -78,7 +78,8 @@ follow them too, and this list should grow when a new pattern is settled.
   (CTRL/C and CTRL/Y ASTs), `getdvi.go` (`$GETDVI`), `mailbox.go`
   (`$CREMBX`, `$DELMBX`), `mbxdriver.go` (the mailbox driver),
   `condition.go` (the condition dispatcher, `SYS$SRCHANDLER`, `$SETEXV`),
-  `signal.go` (the `LIB$` signaling shims). Each file has
+  `signal.go` (the `LIB$` signaling shims), `unwind.go` (`$UNWIND`,
+  `LIB$SIG_TO_RET`). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -229,6 +230,8 @@ lists the ones the implementation can actually return.
 | `$SETEXV` | 32 | `condition.go` | `NORMAL`, `ACCVIO`, `BADPARAM` | Primary, secondary, and last-chance vectors per access mode; user mode's cleared at image rundown. |
 | `LIB$SIGNAL`, `LIB$STOP` | 33 | `signal.go` | (none: LIB$SIGNAL returns the mechanism array's R0) | Shims 33-34: the argument list plus PC and PSL as the signal array; the search starts at the caller's frame. |
 | `LIB$ESTABLISH`, `LIB$REVERT`, `LIB$MATCH_COND` | 33 | `signal.go` | (the old handler; a match's position) | Shims 35, 36, 38. |
+| `$UNWIND` | 34 | `unwind.go` | `NORMAL`, `ACCVIO`, `INSFRAME`, `NOSIGNAL`, `UNWINDING` | Recorded, then done when the handler returns: `SS$_UNWIND` to each removed frame's handler, then the frames' return addresses pointed at a `RET`. |
+| `LIB$SIG_TO_RET` | 34 | `unwind.go` | `NORMAL`, (`$UNWIND`'s) | Shim 37: the condition becomes the establisher's return value. |
 
 ## Service designs
 
@@ -1910,6 +1913,57 @@ only the entries that get a stub (nonzero codes): 42 fit.
 Not implemented (see `docs/DEVIATIONS.md`): the mechanism array's R0
 for a `LIB$SIGNAL` is 0, not the caller's R0.
 
+### `$UNWIND`, `LIB$SIG_TO_RET` — Unwind the Call Stack
+
+`SYS$UNWIND [depadr] ,[newpc]` and `LIB$SIG_TO_RET signal-args ,mechanism-args`
+
+A handler's third answer, besides resignal and continue, is to abandon
+the procedures the condition happened in: *unwind* the call stack so
+that some caller further up resumes, as though the procedures in between
+had all returned. By default that's the caller of the handler's
+establisher, just after its `CALL`, so the establisher appears to return
+the mechanism array's R0. It's the usual way to turn a condition into an
+error status, and the only way on after `LIB$STOP`.
+
+`depadr` (by reference) is how many frames to remove, counting from the
+frame the condition happened in: 0 removes none (and does nothing), 1
+that frame, and so on; omitted, it's the establisher's depth plus one.
+`newpc` is where the surviving caller resumes instead of its return
+address (the manual calls it "a longword value containing the address",
+so it's the address itself).
+
+#### Design: return addresses changed to a `RET`
+
+As on VMS, `$UNWIND` only records the request (`conditionDispatch.unwind`,
+with the frames to remove found and checked now: `SS$_INSFRAME` if the
+chain runs out, or the program's outermost frame would go) and returns
+`SS$_NORMAL`. When the handler returns, `SYS$SRCHANDLER` ignores its
+answer and:
+
+1. calls the handler of each frame being removed, innermost first
+   (the establisher's included), with the signal array changed to
+   `1, SS$_UNWIND`, so it can clean up; answers are ignored;
+2. removes the frames the way VMS describes it, by changing return
+   addresses: every removed frame's saved PC except the outermost's is
+   pointed at the `RET` right after `SYS$SRCHANDLER`'s `XFC`, and the
+   outermost's at `newpc` if given; then execution continues at that
+   `RET` with FP at the innermost frame and R0/R1 from the mechanism
+   array.
+
+Each `RET` is the program's own instruction semantics: registers the
+entry mask saved are restored and a `CALLS`'s arguments popped. For
+`LIB$SIGNAL`/`LIB$STOP`, the stub's frame is removed first, uncounted.
+Dispatches whose stacks the unwind discards (a condition inside a handler
+that unwinds past its own dispatch's frames) end too.
+
+`LIB$SIG_TO_RET` (shim 37), usually established directly with
+`LIB$ESTABLISH`, stores the condition value in the mechanism array's R0
+and asks for the default unwind; called again with `SS$_UNWIND`, as a
+removed frame's handler, it does nothing.
+
+Not implemented (see `docs/DEVIATIONS.md`): a vectored handler's
+default unwind does nothing (it has no establisher frame).
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -2053,7 +2107,7 @@ sixth batch listed):
 33. **Done.** **`LIB$SIGNAL`, `LIB$STOP`, `LIB$ESTABLISH`, `LIB$REVERT`,
     `LIB$MATCH_COND`**: software conditions through the same
     dispatcher, as shims (codes 33-36 and 38).
-34. **`$UNWIND`**: unwind the call stack from a handler, calling each
+34. **Done.** **`$UNWIND`**: unwind the call stack from a handler, calling each
     removed frame's handler with `SS$_UNWIND`; and `LIB$SIG_TO_RET`
     (shim code 37), which is built on it.
 35. **`$CRETVA`, `$DELTVA`, `$CNTREG`**: create and delete pages of the
@@ -2911,4 +2965,29 @@ fixed.
   `LIB$STOP`'s forced severity, `ATTCONSTO`, and catch-all exit; the
   errors; establish and revert on the caller's frame; `LIB$MATCH_COND`'s
   matching rules.
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 34: `$UNWIND`, `LIB$SIG_TO_RET`
+
+- **`internal/rtl/unwind.go`** (new): `serviceSysUnwind`,
+  `requestUnwind`, `continueUnwind`, `finishUnwind`, `handlingDispatch`,
+  and `shimLibSigToRet`; `conditionDispatch.unwind`, which
+  `serviceSysSrchandler` checks first when a handler returns.
+  `LIB$SIG_TO_RET` joins kernel.asm's `.SHIM` table and the console's
+  `shimTable`.
+- **Found while writing the fixture:** the assembler doesn't support
+  MACRO-32's local labels (`2$` in an operand is the number 2). Recorded
+  under the Phase 11 findings in `docs/DEVIATIONS.md`; the fixtures use
+  ordinary labels.
+- **Acceptance fixture** `testdata/asm/unwind.asm`: an access violation
+  turned into a return status by `LIB$SIG_TO_RET`, then a `LIB$STOP`
+  unwound two frames to a new PC, with both handlers called with
+  `SS$_UNWIND`. `TestUnwind_assembledProgram` checks the statuses, the
+  counts, a saved register restored by the removed frame's `RET`, and
+  SP back where it was before the `CALLS` pushed its argument.
+- Tests (`unwind_test.go`): the default unwind's `SS$_UNWIND` calls,
+  return addresses, and registers; a depth with a new PC; the errors
+  (`NOSIGNAL`, depth 0, `INSFRAME`, `ACCVIO`, `UNWINDING`); a vectored
+  handler's default; the `LIB$SIGNAL` stub's frame; `LIB$SIG_TO_RET`;
+  an outer dispatch discarded.
 - `go test ./...` passes.

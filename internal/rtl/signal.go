@@ -7,7 +7,8 @@ import (
 )
 
 // Software conditions (docs/PHASE-26.md subtask 33): LIB$SIGNAL,
-// LIB$STOP, LIB$ESTABLISH, LIB$REVERT, and LIB$MATCH_COND.
+// LIB$STOP, LIB$ESTABLISH, LIB$REVERT, and LIB$MATCH_COND. (LIB$SIG_TO_RET,
+// shim 37, is in unwind.go.)
 //
 // # Signaling from software
 //
@@ -51,12 +52,12 @@ import (
 // Shim codes for the routines in this file: the XFC$SHIM dispatch codes
 // kernel.asm's .SHIM table (and the console's shimTable) assign them.
 const (
-	shimCodeLibSignal     = 33
-	shimCodeLibStop       = 34
-	shimCodeLibEstablish  = 35
-	shimCodeLibRevert     = 36
-	shimCodeLibSigToRet   = 37
-	shimCodeLibMatchCond  = 38
+	shimCodeLibSignal    = 33
+	shimCodeLibStop      = 34
+	shimCodeLibEstablish = 35
+	shimCodeLibRevert    = 36
+	shimCodeLibSigToRet  = 37
+	shimCodeLibMatchCond = 38
 )
 
 // Offsets in a call frame (see buildCallFrame in internal/cpu): the
@@ -219,5 +220,6 @@ func registerSignalShims(t *ShimTable) {
 	t.Register(shimCodeLibStop, "LIB$STOP", shimLibStop)
 	t.Register(shimCodeLibEstablish, "LIB$ESTABLISH", shimLibEstablish)
 	t.Register(shimCodeLibRevert, "LIB$REVERT", shimLibRevert)
+	t.Register(shimCodeLibSigToRet, "LIB$SIG_TO_RET", shimLibSigToRet)
 	t.Register(shimCodeLibMatchCond, "LIB$MATCH_COND", shimLibMatchCond)
 }

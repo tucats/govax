@@ -185,3 +185,38 @@ func TestSignals_assembledProgram(t *testing.T) {
 		t.Errorf("output %q\nwant   %q", got, want)
 	}
 }
+
+// TestUnwind_assembledProgram runs testdata/asm/unwind.asm
+// (docs/PHASE-26.md subtask 34): LIB$SIG_TO_RET, and $UNWIND with a depth
+// and a new PC past a LIB$STOP.
+func TestUnwind_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+	word := runFixture(t, c, "unwind.asm")
+
+	checks := []struct {
+		sym  string
+		want uint32
+	}{
+		{"RET1", 0x0C}, // SS$_ACCVIO, returned by SUB1
+		{"RET3", 0x42},
+		{"SAVEDR2", 0x1234},
+		{"SPOK", 1},
+		{"UNW3", 1},
+		{"UNW4", 1},
+		{"REACHED", 0},
+	}
+
+	for _, ck := range checks {
+		if got := word(ck.sym); got != ck.want {
+			t.Errorf("%s = %#x, want %#x", ck.sym, got, ck.want)
+		}
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Errorf("R0 = %#x, want main's 1", got)
+	}
+
+	if out := c.Out.(*bytes.Buffer).String(); out != "" {
+		t.Errorf("unexpected output %q", out)
+	}
+}

@@ -1184,6 +1184,7 @@ _done:          ret
                 .shim   lib$stop,            ^d34, LIBRTL,      04F8
                 .shim   lib$establish,       ^d35, LIBRTL,      03C0
                 .shim   lib$revert,          ^d36, LIBRTL,      0490
+                .shim   lib$sig_to_ret,      ^d37, LIBRTL,      0500
                 .shim   lib$match_cond,      ^d38, LIBRTL,      0460
 ;                       ------------        -----  --------   ------
 ;                       Entry Name             ID  RTL        Offset
