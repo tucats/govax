@@ -1570,15 +1570,19 @@ exe$dclstring:  .blkb           100
 ;	Note that for many of these, we define "console$handler"
 ;       as the handler.  This equates to -1, and causes the emulator
 ;       to report on the exception using non-VAX native code, and
-;       halts the emulation.  Later, this handler will also be 
-;       able to chase user-mode stack frames looking for exception
-;       handlers.
+;       halts the emulation.  When a program is running, the
+;       exception is first signaled to its VMS condition handlers
+;       (call frames and $SETEXV vectors) by the RTL's condition
+;       dispatcher, SYS$SRCHANDLER, and only reported here if the
+;       dispatcher can't take it.
 
                 .scb            exc$chmk,      exe$chmk
                 .scb            exc$priv,      console$handler; exe$priv
                 .scb            exc$accvio,    console$handler; exe$accvio
                 .scb            exc$resop,     console$handler; exe$resop
                 .scb            exc$resaddr,   console$handler; exe$resaddr
+                .scb            exc$tnv,       console$handler
+                .scb            exc$arith,     console$handler
                 .scb            exc$interval,  exe$interval
                 .scb            exc$software2, exe$deliver_ast
                 .scb            exc$conwrite,  exe$tx

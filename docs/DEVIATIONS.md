@@ -675,6 +675,50 @@ changed as a result.
   - No `ASTLM` quota.
 - **Status**: open, by design.
 
+### [Phase 26] eVAX `chf()`: SCB offsets as condition values, depths from 1, reversed arguments
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/interrupt.c`'s `chf()`, ported
+  as `internal/console/chf.go` (Phase 20).
+- **What**: the C search puts the exception's SCB offset (`0x20` for an
+  access violation) where VMS puts a condition value (`SS$_ACCVIO`),
+  numbers the first frame's depth 1 where VMS numbers it 0, pushes an
+  access violation's parameters as virtual address then reason mask
+  (VMS's signal array has the mask first), searches no exception
+  vectors, and halts the machine when no handler continues, where VMS's
+  catch-all reports the condition and continues or exits the image by
+  severity. Its handlers also run through nested console `CALL`s, and a
+  continued exception ends the console's run loop.
+- **Status**: fixed in Phase 26 subtask 31 by a VMS-style dispatcher in
+  the RTL (`internal/rtl/condition.go`), which the engine offers every
+  `console$handler` exception first. `chf.go` is kept, unchanged, as the
+  fallback for exceptions the RTL declines (see the dispatcher's
+  simplifications below).
+
+### [Phase 26] Condition dispatch simplifications
+
+- **Where**: `internal/rtl/condition.go`, `internal/cpu/handlefault.go`.
+- **What**:
+  - Only exceptions kernel.asm's SCB sends to `console$handler` are
+    dispatched (access violation, translation not valid, privileged and
+    reserved instructions, reserved operand and addressing mode,
+    arithmetic). Breakpoint, trace, and compatibility-mode exceptions
+    aren't signaled.
+  - Every exception is still delivered as a fault: the signal array's PC
+    is the faulting instruction's, even for the arithmetic *traps*
+    (types 1-7), whose architected PC is the next instruction's. (The
+    engine's ordinary exception frames do the same.) A handler that
+    continues a trap must change the PC itself, or the instruction runs
+    again.
+  - An exception on the interrupt stack, or one whose stack can't be
+    written, goes to the console's report instead of VMS's fatal-error
+    handling.
+  - The catch-all prints no traceback, and writes its message to the
+    console terminal (VMS's goes to `SYS$ERROR` and `SYS$OUTPUT`).
+  - On VMS the kernel dispatches an exception in the mode it happened
+    in only after checking that mode's stack; govax pushes the arrays
+    on whatever stack is current.
+- **Status**: open, by design.
+
 ## Open findings
 
 _None yet._

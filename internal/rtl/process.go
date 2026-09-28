@@ -98,7 +98,25 @@ type Process struct {
 	// cmode holds the $CMKRNL/$CMEXEC calls whose routine is running,
 	// innermost last (cmode.go).
 	cmode []*cmodeCall
+
+	// conditions holds the conditions being dispatched to handlers,
+	// innermost last: a handler may cause a condition of its own
+	// (condition.go).
+	conditions []*conditionDispatch
+
+	// exceptionVectors are each access mode's primary, secondary, and
+	// last-chance exception vectors (indexed by vectorPrimary, ...): the
+	// condition handlers searched before and after the call frames, 0
+	// when not set (CTL$AQ_EXCVEC on VMS; condition.go).
+	exceptionVectors [4][3]uint32
 }
+
+// The exception vectors of each access mode, as $SETEXV numbers them.
+const (
+	vectorPrimary    = 0
+	vectorSecondary  = 1
+	vectorLastChance = 2
+)
 
 // Default identity and quotas for the emulated process. The PID is
 // arbitrary (nonzero, so "a process exists" can be told from a zero
@@ -266,6 +284,7 @@ func (env *Environment) ImageRundown() {
 	env.cancelUserExitHandlers()
 	env.cancelPutmsgCalls()
 	env.cancelChangeModeCalls()
+	env.cancelConditions()
 	env.qiowWaits = nil
 }
 
@@ -341,15 +360,7 @@ func serviceSysSetpri(env *Environment, argv []uint32) (uint32, error) {
 
 // exitEntryAddr is the SYS$EXIT P1-vector entry: a procedure whose XFC
 // calls $EXIT with its argument list's first argument as the status.
-var exitEntryAddr = func() uint32 {
-	for _, e := range vmsdef.P1VectorTable {
-		if e.Name == "SYS$EXIT" {
-			return e.Addr
-		}
-	}
-
-	panic("rtl: SYS$EXIT missing from the P1 vector table")
-}()
+var exitEntryAddr = p1VectorAddr("SYS$EXIT")
 
 // serviceSysForcex is SYS$FORCEX:
 //

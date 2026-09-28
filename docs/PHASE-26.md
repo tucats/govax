@@ -28,10 +28,14 @@ and AST delivery. The fifth adds terminal `$QIO`, `$SYNCH`, exit
 handlers, `$NUMTIM`, more `$GETJPI` items, mode-switching AST delivery,
 and `$GETSYI`. The sixth adds `$FAO`/`$FAOL`, `$GETMSG`/`$PUTMSG`,
 `$CMKRNL`/`$CMEXEC`, CTRL/C and CTRL/Y ASTs, the full `$GETDVI`,
-mailboxes, and the small process-control services.
+mailboxes, and the small process-control services. The seventh adds
+condition handling (the condition dispatcher, `$SETEXV`, `LIB$SIGNAL`
+and friends, `$UNWIND`), the virtual-memory services, the rest of the
+mailbox driver, privileges, operator and broadcast messages, rights
+identifiers, and disk `$QIO`.
 
-**Status: six batches complete** (subtasks 1-30). Add later services as
-new subtasks.
+**Status: seventh batch in progress** (subtasks 31-41). Add later
+services as new subtasks.
 
 ## References
 
@@ -72,7 +76,8 @@ follow them too, and this list should grow when a new pattern is settled.
   formatting, which later services reuse through `formatFAO`), `message.go`
   (`$GETMSG`, `$PUTMSG`), `cmode.go` (`$CMKRNL`, `$CMEXEC`), `ctrlast.go`
   (CTRL/C and CTRL/Y ASTs), `getdvi.go` (`$GETDVI`), `mailbox.go`
-  (`$CREMBX`, `$DELMBX`), `mbxdriver.go` (the mailbox driver). Each file has
+  (`$CREMBX`, `$DELMBX`), `mbxdriver.go` (the mailbox driver),
+  `condition.go` (the condition dispatcher, `SYS$SRCHANDLER`). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -219,6 +224,7 @@ lists the ones the implementation can actually return.
 | `$FORCEX` | 30 | `process.go` | `NORMAL`, `ACCVIO`, `IVLOGNAM`, `NONEXPR` | Queues a user-mode AST to the `SYS$EXIT` entry with the code: a normal exit, handlers and all. |
 | `$DELPRC` | 30 | `process.go` | (none: doesn't return); `ACCVIO`, `IVLOGNAM`, `NONEXPR` | Ends the image without exit handlers. |
 | (CTRL/C, CTRL/Y ASTs) | 27 | `ctrlast.go`, `ttdriver.go` | — | `IO$_SETMODE!IO$M_CTRLCAST`/`CTRLYAST` enable one-shot ASTs the host's Ctrl-C delivers instead of stopping the machine. |
+| `$SRCHANDLER` (condition dispatch) | 31 | `condition.go` | (none: reached by a jump) | Hardware exceptions become `SS$` conditions signaled to call-frame handlers; the catch-all reports with the message text and exits if severe. |
 
 ## Service designs
 
@@ -1745,6 +1751,103 @@ deletion itself.
 Not implemented (see `docs/DEVIATIONS.md`): other cluster nodes; SYSGEN
 parameters beyond `MINWSCNT`; the `ASTLM` quota (`SS$_EXASTLM`).
 
+### Condition dispatch: `SYS$SRCHANDLER`
+
+Until now, an exception a program didn't expect (an access violation, a
+reserved operand) went to kernel.asm's `console$handler` SCB sentinel,
+and the console ran Phase 20's port of eVAX's `chf()`: a Go-side frame
+search calling handlers through nested console `CALL`s, with the SCB
+offset (0x20) standing in for the condition value, then a
+`%VAX-E-CONHANDLER` report and a halt. Subtask 31 replaces that, for a
+running program, with VMS's own mechanism, which the rest of condition
+handling (`$SETEXV`, `LIB$SIGNAL`, `$UNWIND`) builds on.
+
+#### Conditions, handlers, and the search
+
+A *condition* is a condition value (`SS$_ACCVIO`, or a program's own)
+plus detail longwords. A *condition handler* is a procedure VMS calls to
+decide what to do about one. Most are attached to call frames: the first
+longword of every call frame (`0(FP)`), which `CALLS`/`CALLG` zero, holds
+the frame's handler, so a procedure establishes one with
+`MOVAB handler, (FP)`.
+
+VMS searches the frames from the one the condition happened in outwards
+(each frame's saved FP, `12(FP)`, is its caller's), calling each handler
+with a *signal array* and a *mechanism array*:
+
+    signal array:     n, condition, detail..., PC, PSL
+    mechanism array:  4, frame, depth, R0, R1
+
+`frame` is the establisher's frame and `depth` how many frames up it is
+(0 for the frame the condition happened in). A handler returning with
+R0's low bit clear (`SS$_RESIGNAL`) passes; with it set (`SS$_CONTINUE`),
+the program continues at the signal array's PC with R0/R1 from the
+mechanism array, either of which the handler may have changed. If every
+handler passes, the *catch-all* prints the condition's message and, for a
+SEVERE (F) condition, ends the image; otherwise the program continues.
+
+#### Design: a jump to `SYS$SRCHANDLER`
+
+On VMS, the kernel copies the arrays to the stack of the mode the
+condition happened in and returns to `SYS$SRCHANDLER`, a vector entry
+reached by a jump, which searches in that mode. govax does the same:
+
+1. The engine's `HandleFault`, finding the `console$handler` sentinel,
+   first offers the exception to a `cpu.ExceptionDispatcher`: the
+   console, delegating to `rtl.Environment.DispatchException`. That maps
+   the exception to a condition value (below), pushes the signal array,
+   the mechanism array, and the handlers' argument list (`2, sig, mech`)
+   on the current stack, records a `conditionDispatch`, and sets PC to
+   `SYS$SRCHANDLER`.
+2. `SYS$SRCHANDLER`'s `XFC` runs `serviceSysSrchandler` (registered with
+   `RegisterNoArgs`, like `$CLRAST`), which finds the next handler and
+   returns a `CallRequest` for it, the mechanism used for exit handlers
+   and `$CMKRNL`.
+3. The handler's `RET` lands on the `XFC` again. The service finds its
+   dispatch by SP (a handler returns with SP where the argument list
+   is), and acts on R0: resignal, next handler; continue, restore and
+   resume; nothing left, the catch-all.
+
+Continuing restores SP and FP to their values before the arrays were
+pushed, PC from the signal array, and the PSL's low byte (condition codes
+and trap enables) from the signal array's PSL, keeping the mode and IPL
+as REI would. The catch-all formats the signal array with `$PUTMSG`'s
+formatter, and ends the image by calling the `SYS$EXIT` entry with the
+condition value plus `STS$M_INHIB_MSG` (the message has been shown), so
+exit handlers run. A condition inside a handler starts a dispatch of its
+own on top of the first (`Process.conditions` is a stack).
+
+The dispatcher declines, leaving the exception to Phase 20's console
+search (now only a fallback), when it has no condition value for it, the
+CPU is on the interrupt stack, the program has no `SYS$SRCHANDLER` stub
+(no `.P1VECTOR`), or the stack can't be written.
+
+| Exception | Condition | Detail longwords |
+| --- | --- | --- |
+| Access violation, translation not valid | `SS$_ACCVIO` | reason mask, virtual address |
+| Privileged or reserved instruction | `SS$_OPCDEC` | — |
+| Customer-reserved instruction | `SS$_OPCCUS` | — |
+| Reserved operand | `SS$_ROPRAND` | — |
+| Reserved addressing mode | `SS$_RADRMOD` | — |
+| Arithmetic, types 1-10 | `SS$_INTOVF`, `INTDIV`, `FLTOVF`, `FLTDIV`, `FLTUND`, `DECOVF`, `SUBRNG`, `FLTOVF_F`, `FLTDIV_F`, `FLTUND_F` | — |
+| Arithmetic, other types | `SS$_ARTRES` | — |
+
+kernel.asm's SCB now also sends translation-not-valid and arithmetic
+exceptions to `console$handler` (both used to have no vector at all, so
+they stopped the machine).
+
+`$PUTMSG`'s formatting became `formatMessageVector`, which takes the
+longwords following the vector as well: the system exception messages'
+texts take the PC and PSL as their last `$FAO` parameters, which VMS's
+catch-all supplies by formatting the signal array without them and
+letting `$FAOL` read on.
+
+Not implemented (see `docs/DEVIATIONS.md`): tracebacks; a handler
+running on the stack of an inner mode for an outer-mode condition (the
+search runs in the mode the condition happened in, which is right, but
+govax has no kernel-mode exception dispatch of its own before it); the
+architected trap PC for arithmetic traps.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -1869,34 +1972,43 @@ fifth batch listed):
     fixture `testdata/asm/process_control.asm`.
 
 
-Candidates next, roughly in order of value now that messages, pending
-I/O, and change-mode calls exist:
+Seventh batch, requested by the user on 2026-09-28 (the candidates the
+sixth batch listed):
 
-- **Signals and their messages**: `LIB$SIGNAL`/`LIB$STOP`, `$SETEXV`
-  (primary/secondary/last-chance vectors), and `$UNWIND`, on top of
-  Phase 20's handler search; the console's last-chance report of an
-  unhandled condition written through `$PUTMSG`'s texts
-  (`%SYSTEM-F-ACCVIO, access violation, ...`) instead of its own format.
-- **Virtual memory services**: `$CRETVA`, `$DELTVA`, `$CNTREG`,
-  `$SETPRT` (page protection, with `$PRTDEF` generated), and `$LCKPAG`/
-  `$ULKPAG`/`$LKWSET`/`$ULWSET` as documented no-ops, alongside the
-  existing `$EXPREG`.
-- **Mailbox completions**: resource wait mode (`$SETRWM`, so a full
-  mailbox makes the writer wait instead of `SS$_MBFULL`), read/write
-  attention ASTs (`IO$M_READATTN`/`WRTATTN`), and `$DASSGN`'s cancel
-  status checked against the I/O manual.
-- **Privileges**: a real privilege mask on `rtl.Process` (`$SETPRV`,
-  `JPI$_CURPRIV`/`PROCPRIV`/`AUTHPRIV`), consulted by the services that
-  currently assume every privilege is held (`$CMKRNL`'s CMKRNL, `$CREMBX`'s
-  TMPMBX/PRMMBX, `$SETPRI`'s ALTPRI, logical-name SYSNAM/GRPNAM).
-- **`$SNDOPR` and `$BRKTHRU`**: operator and broadcast messages, written
-  to the console terminal.
-- **Rights identifiers**: `$ASCTOID`/`$IDTOASC` over a minimal rights
-  database (the UIC identifiers, SYSTEM), which `$FAO`'s `!%I` would then
-  use.
-- **Disk `$QIO`**: `IO$_ACCESS`/`DEACCESS` and virtual-block
-  `IO$_READVBLK`/`WRITEVBLK` on files of a mounted ODS-2 volume, the
-  block I/O RMS itself is built on.
+31. **Done.** **Condition dispatch in the RTL.** A hardware exception whose SCB
+    vector is kernel.asm's `console$handler` is dispatched the VMS way:
+    the RTL builds the signal and mechanism arrays on the current stack
+    and jumps to `SYS$SRCHANDLER`, whose `XFC` searches the call frames
+    for condition handlers, calling each through a `CallRequest`.
+    Exceptions become `SS$` condition values (`SS$_ACCVIO`,
+    `SS$_ROPRAND`, `SS$_INTDIV`, ...); an unhandled condition is reported
+    with its message text (`%SYSTEM-F-ACCVIO, access violation, ...`) and,
+    if severe, ends the image through `$EXIT`. Phase 20's console-side
+    search stays as the fallback when the RTL can't dispatch.
+32. **`$SETEXV`**: primary, secondary, and last-chance exception vectors
+    per access mode, searched before and after the call frames; user-mode
+    vectors cleared at image rundown.
+33. **`LIB$SIGNAL`, `LIB$STOP`, `LIB$ESTABLISH`, `LIB$REVERT`,
+    `LIB$SIG_TO_RET`, `LIB$MATCH_COND`**: software conditions through the
+    same dispatcher, as shims.
+34. **`$UNWIND`**: unwind the call stack from a handler, calling each
+    removed frame's handler with `SS$_UNWIND`.
+35. **`$CRETVA`, `$DELTVA`, `$CNTREG`**: create and delete pages of the
+    P0 and P1 regions through their page table entries.
+36. **`$SETPRT`** (with a generated `$PRTDEF`), and `$LCKPAG`/`$ULKPAG`/
+    `$LKWSET`/`$ULWSET` as checked no-ops.
+37. **Mailbox completions**: `$SETRWM` (resource wait mode: a full
+    mailbox makes the writer wait), read and write attention ASTs
+    (`IO$M_READATTN`/`WRTATTN`), and `$DASSGN`'s cancel status checked
+    against the I/O manual.
+38. **Privileges**: a privilege mask on `rtl.Process`, `$SETPRV`, the
+    `$GETJPI` privilege items, and the checks the services have skipped.
+39. **`$SNDOPR`, `$BRKTHRU`/`$BRKTHRUW`**: operator and broadcast
+    messages, written to the console terminal.
+40. **`$ASCTOID`, `$IDTOASC`**: a minimal rights database, which `$FAO`'s
+    `!%I` then uses.
+41. **Disk `$QIO`**: `IO$_ACCESS`/`DEACCESS` and virtual-block
+    `IO$_READVBLK`/`WRITEVBLK` on files of a mounted ODS-2 volume.
 
 ## Open questions
 
@@ -2662,3 +2774,39 @@ fixed.
   `TestVMInit_modeStackSizes`, and the grammar defaults.
 - `go test ./...` passes.
 
+### 2026-09-28 — Seventh batch planned; subtask 31: condition dispatch
+
+- The user asked for the sixth batch's candidates. They became subtasks
+  31-41; signals split into the dispatcher, `$SETEXV`, the `LIB$`
+  routines, and `$UNWIND`, and the virtual-memory services into two.
+- **`internal/rtl/condition.go`** (new): `DispatchException`,
+  `exceptionCondition`, `startDispatch`, `serviceSysSrchandler` with
+  `nextHandler`, `callConditionHandler`, `continueCondition`, `catchAll`,
+  and `exitForCondition`; `Process.conditions` and (for subtask 32)
+  `Process.exceptionVectors`, already searched; `p1VectorAddr`, which
+  `exitEntryAddr` now uses too. Image rundown forgets dispatches.
+- **`internal/rtl/message.go`**: `parseMessageVector`'s formatting half
+  is `formatMessageVector`, with the trailing longwords described in the
+  design.
+- **`internal/cpu`**: `ExceptionDispatcher`, offered the exception in
+  `HandleFault` before a `ConsoleHandlerFault`. **`internal/console`**:
+  `Console.DispatchException` delegates to the RTL.
+- **kernel.asm**: `exc$tnv` and `exc$arith` go to `console$handler`.
+- **Acceptance fixtures** `testdata/asm/conditions.asm` (an access
+  violation resignaled by the inner frame's handler and continued by the
+  outer's at a new PC with a new R0; a subscript-range trap) and
+  `testdata/asm/condition_exit.asm` (an unhandled access violation in
+  user mode: the message, then `$EXIT` with `^X1000000C` and the exit
+  handler). `TestConditions_assembledProgram` and
+  `TestConditionExit_assembledProgram` check them. The fixtures declare
+  their `.SCB` entries themselves, since the tests' consoles don't
+  assemble kernel.asm. (The assembler's default radix is hexadecimal:
+  `12(R2)` is `^X12(R2)`, which the first draft of the fixture tripped
+  over.)
+- Tests: `condition_test.go` (the exception table; the stack layout; the
+  four ways to decline, changing nothing; resignal then continue with a
+  new PC, R0, and condition codes and the old R1; a forged PSL's mode
+  ignored; the catch-all's message and `$EXIT` call; an unreadable frame
+  ending the walk; a nested dispatch; no dispatch; rundown), and
+  `TestHandleFaultOffersConsoleHandlerFaultToDispatcher`.
+- `go test ./...` passes.

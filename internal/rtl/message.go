@@ -369,6 +369,24 @@ func (env *Environment) parseMessageVector(msgvec, facnam uint32) ([]string, uin
 		}
 	}
 
+	return env.formatMessageVector(vec, nil, flags, facility), 0
+}
+
+// formatMessageVector formats the messages in vec, a message vector
+// without its leading count longword (see parseMessageVector for its
+// layout), with message flags flags. facility, if not empty, replaces
+// the first message's facility name.
+//
+// tail is what follows the vector in memory, for a caller that knows:
+// the last message's $FAO parameters may run on into it. VMS's $PUTMSG
+// hands $FAOL a pointer into the vector, so a text that wants more
+// parameters than the vector has left simply reads on. The one caller
+// that relies on this is the catch-all condition handler (condition.go):
+// it formats a signal array without its PC and PSL, as VMS's does, and
+// the system exception messages (SS$_ACCVIO, ...) pick the PC and PSL up
+// from here. $PUTMSG passes nil, so a missing parameter leaves the text
+// unformatted instead.
+func (env *Environment) formatMessageVector(vec, tail []uint32, flags uint32, facility string) []string {
 	var lines []string
 
 	// add formats one message and appends its line.
@@ -405,13 +423,24 @@ func (env *Environment) parseMessageVector(msgvec, facnam uint32) ([]string, uin
 		return out
 	}
 
+	// params is take for a message's $FAO parameters, which, at the end
+	// of the vector, run on into tail (see above).
+	params := func(n int) []uint32 {
+		out := take(n)
+		if short := n - len(out); short > 0 && i == len(vec) {
+			out = append(append([]uint32(nil), out...), tail[:min(short, len(tail))]...)
+		}
+
+		return out
+	}
+
 	for i < len(vec) {
 		code := take(1)[0]
 		m, _ := messageFor(code)
 
 		switch code >> 16 & 0xFFF {
 		case facilitySystem:
-			add(code, take(m.FAOCount))
+			add(code, params(m.FAOCount))
 
 		case facilityRMS:
 			stv := take(1)
@@ -437,11 +466,11 @@ func (env *Environment) parseMessageVector(msgvec, facnam uint32) ([]string, uin
 				flags = options
 			}
 
-			add(code, take(n))
+			add(code, params(n))
 		}
 	}
 
-	return lines, 0
+	return lines
 }
 
 // cancelPutmsgCalls is image rundown's $PUTMSG step: a $PUTMSG whose

@@ -5,6 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/rtl"
+	"github.com/tucats/govax/internal/vax"
 )
 
 // This file makes Console implement cpu.SystemServices (internal/cpu/
@@ -119,6 +120,18 @@ func (c *Console) HandleAttention(key byte) bool {
 	}
 
 	return c.RTL.Attention(key)
+}
+
+// DispatchException delegates to RTL, making Console a
+// cpu.ExceptionDispatcher: an exception kernel.asm's SCB sends to
+// console$handler is offered to the running program's condition
+// handlers before the console reports it (docs/PHASE-26.md subtask 31).
+func (c *Console) DispatchException(code uint32, params []uint32, pc uint32, psl vax.PSL) (bool, error) {
+	if c.RTL == nil {
+		return false, nil
+	}
+
+	return c.RTL.DispatchException(code, params, pc, psl)
 }
 
 // Shim delegates to RTL (Phase 10's LIB$/CRTL shim dispatch).

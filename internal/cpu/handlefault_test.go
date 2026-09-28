@@ -356,3 +356,50 @@ func TestSetModeStackRealModeChangeInvalidatesProtection(t *testing.T) {
 		t.Errorf("entries[0].ProtValid() = true after a real mode change, want false (forced recheck)")
 	}
 }
+
+// dispatchingServices is fakeServices that is also an ExceptionDispatcher,
+// recording what it was offered and answering with accept.
+type dispatchingServices struct {
+	fakeServices
+
+	accept   bool
+	offered  bool
+	code, pc uint32
+	params   []uint32
+	psl      vax.PSL
+}
+
+func (d *dispatchingServices) DispatchException(code uint32, params []uint32, pc uint32, psl vax.PSL) (bool, error) {
+	d.offered, d.code, d.params, d.pc, d.psl = true, code, params, pc, psl
+
+	return d.accept, nil
+}
+
+// TestHandleFaultOffersConsoleHandlerFaultToDispatcher checks that a
+// console-handler-sentinel exception goes to an ExceptionDispatcher first
+// (docs/PHASE-26.md subtask 31): accepted, HandleFault is done; declined,
+// the usual *ConsoleHandlerFault follows.
+func TestHandleFaultOffersConsoleHandlerFaultToDispatcher(t *testing.T) {
+	for _, accept := range []bool{true, false} {
+		e := newEngine()
+		d := &dispatchingServices{accept: accept}
+		e.services = d
+		e.instructionPC = 0x1234
+		putLongword(t, e.cpu, e.mem, scbb+uint32(ExcAccessViol), 0xFFFFFFFF)
+
+		err := e.HandleFault(&Fault{Code: ExcAccessViol, Args: []uint32{0x200, 1}})
+
+		if !d.offered || d.code != uint32(ExcAccessViol) || d.pc != 0x1234 || len(d.params) != 2 || d.psl != e.cpu.PSL() {
+			t.Errorf("accept=%v: offered %v code %#x pc %#x params %v", accept, d.offered, d.code, d.pc, d.params)
+		}
+
+		var chf *ConsoleHandlerFault
+
+		switch {
+		case accept && err != nil:
+			t.Errorf("accepted: err = %v, want nil", err)
+		case !accept && !errors.As(err, &chf):
+			t.Errorf("declined: err = %v, want *ConsoleHandlerFault", err)
+		}
+	}
+}

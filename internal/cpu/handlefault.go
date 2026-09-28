@@ -52,6 +52,22 @@ type ConsoleHandlerFault struct {
 // for the sentinel without knowing about this richer type.
 func (f *ConsoleHandlerFault) Unwrap() error { return ErrNoExceptionHandler }
 
+// ExceptionDispatcher is implemented by SystemServices that can hand an
+// exception to the running program's VMS condition handlers
+// (docs/PHASE-26.md subtask 31): the RTL, through the console. When the
+// SCB vector is the console-handler sentinel, HandleFault offers the
+// exception to DispatchException before falling back to a
+// *ConsoleHandlerFault. code is the exception's SCB offset, params its
+// parameters (Fault.Args), pc the PC the exception frame would hold (the
+// faulting instruction's), and psl the PSL at the time.
+//
+// A dispatcher that accepts the exception (dispatched true) has already
+// changed the machine state, stack and PC, to run the program's
+// condition-handler search; one that declines has changed nothing.
+type ExceptionDispatcher interface {
+	DispatchException(code uint32, params []uint32, pc uint32, psl vax.PSL) (dispatched bool, err error)
+}
+
 // ErrUnhandledVector is returned by Engine.HandleFault when the SCB vector
 // is zero. Unlike ErrNoExceptionHandler, the C source (and this port) still
 // builds and pushes the full exception stack frame and sets PC to the
@@ -84,6 +100,17 @@ func (e *Engine) HandleFault(f *Fault) error {
 	}
 
 	if rawVector == 0xFFFFFFFF {
+		// The program's own condition handlers get the first look, if
+		// the services behind this engine can dispatch conditions (see
+		// ExceptionDispatcher). The dispatcher sets up the stack and PC
+		// itself, so a dispatched exception is simply done here.
+		if d, ok := e.services.(ExceptionDispatcher); ok {
+			dispatched, err := d.DispatchException(uint32(f.Code), f.Args, e.instructionPC, e.cpu.PSL())
+			if err != nil || dispatched {
+				return err
+			}
+		}
+
 		return &ConsoleHandlerFault{
 			Fault: f,
 			PC:    e.instructionPC,
