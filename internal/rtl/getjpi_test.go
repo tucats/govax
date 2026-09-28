@@ -63,6 +63,13 @@ func TestServiceSysGetjpiItems(t *testing.T) {
 		{name: "JPI$_WSEXTENT", long: p.WSExtent},
 		{name: "JPI$_WSAUTHEXT", long: p.WSExtent},
 		{name: "JPI$_WSSIZE", long: p.WSLimit},
+		{name: "JPI$_ASTLM", long: 24},
+		{name: "JPI$_ASTCNT", long: 24},
+		{name: "JPI$_ASTEN", long: 0xF},
+		{name: "JPI$_ASTACT", long: 0},
+		{name: "JPI$_PRI", long: 4},
+		{name: "JPI$_PRIB", long: 4},
+		{name: "JPI$_STATE", long: 14}, // SCH$C_CUR
 	}
 
 	items := make([]item, len(wants))
@@ -221,6 +228,55 @@ func TestServiceSysGetjpiDebugProcessTrace(t *testing.T) {
 // TestJPIItemsRegistry checks every registry entry names a real $JPIDEF
 // item code (jpiItems panics at init otherwise, but this names the
 // culprit) and that the pre-existing ACCOUNT/CLINAME codes are unchanged.
+// TestServiceSysGetjpiASTItems: the AST items follow Process.ast and the
+// timer queue. ASTCNT is the quota less every queued AST and every
+// $SETIMR timer that will queue one; ASTEN and ASTACT are per-mode bit
+// vectors, bit 0 kernel through bit 3 user.
+func TestServiceSysGetjpiASTItems(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	p := env.Process
+
+	env.queueAST(0x4000, 1, uint32(vax.User))
+	env.queueAST(0x4000, 2, uint32(vax.User))
+	env.timers = append(env.timers,
+		&timerRequest{expiry: ^uint64(0), astadr: 0x5000}, // will queue an AST
+		&timerRequest{expiry: ^uint64(0)},                 // won't
+		&timerRequest{expiry: ^uint64(0), wake: true},     // a $SCHDWK wakeup
+	)
+
+	p.ast.enabled = [4]bool{true, false, true, false}
+	p.ast.active = [4]bool{false, true, false, true}
+
+	get := func(name string) uint32 {
+		t.Helper()
+
+		buf := a.alloc(4)
+		wantR0(t, getjpi(t, env, 0, 0, 0, a.items(item{code: jpiCode(t, name), buflen: 4, buf: buf}), 0), ssNormal)
+
+		return a.readLong(buf)
+	}
+
+	if got := get("JPI$_ASTCNT"); got != 21 {
+		t.Errorf("JPI$_ASTCNT = %d, want 21 (24 less two queued ASTs and one timer AST)", got)
+	}
+
+	if got := get("JPI$_ASTEN"); got != 0x5 {
+		t.Errorf("JPI$_ASTEN = %#x, want 0x5 (kernel and supervisor)", got)
+	}
+
+	if got := get("JPI$_ASTACT"); got != 0xA {
+		t.Errorf("JPI$_ASTACT = %#x, want 0xA (executive and user)", got)
+	}
+
+	// More outstanding than the quota (it isn't enforced) is 0, not a
+	// wrapped-around count.
+	p.ASTLimit = 1
+	if got := get("JPI$_ASTCNT"); got != 0 {
+		t.Errorf("JPI$_ASTCNT over quota = %d, want 0", got)
+	}
+}
+
 func TestJPIItemsRegistry(t *testing.T) {
 	for name := range jpiItemsByName {
 		if _, ok := vmsdef.JPIConstants[name]; !ok {

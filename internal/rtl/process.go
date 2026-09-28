@@ -51,6 +51,19 @@ type Process struct {
 	WSExtent   uint32 // UAF WSEXTENT: the most $ADJWSL can grow WSLimit to
 	MinWSCount uint32 // SYSGEN MINWSCNT: the least $ADJWSL can shrink it to
 
+	// ASTLimit is the AST quota (UAF ASTLM, PCB$W_ASTCNT's starting
+	// value): how many ASTs may be outstanding at once. It's reported by
+	// $GETJPI (JPI$_ASTLM, and JPI$_ASTCNT as what's left of it) but not
+	// enforced (docs/DEVIATIONS.md).
+	ASTLimit uint32
+
+	// Priority and BasePriority are the process's current and base
+	// scheduling priorities (PCB$B_PRI, PCB$B_PRIB, as the user sees
+	// them: 0-31, higher runs first). govax has one process and no
+	// scheduler, so they're only reported ($GETJPI's JPI$_PRI, PRIB).
+	Priority     uint32
+	BasePriority uint32
+
 	// LocalEventFlags are event flag clusters 0 and 1 (flags 0-63), local
 	// to the process. CommonClusters are the common event flag clusters
 	// $ASCEFC associated with cluster numbers 2 and 3 (flags 64-127), nil
@@ -96,6 +109,11 @@ const (
 	nominalWSQuota    = 256
 	nominalWSExtent   = 1024
 	nominalMinWSCount = 20
+
+	// The AST quota and priority are VMS's defaults for an interactive
+	// user: ASTLM 24, base priority 4 (SYSGEN DEFPRI).
+	nominalASTLimit = 24
+	nominalPriority = 4
 )
 
 // NewProcess returns the default emulated process: PID nominalPID, user
@@ -115,7 +133,12 @@ func NewProcess() *Process {
 		WSQuota:    nominalWSQuota,
 		WSExtent:   nominalWSExtent,
 		MinWSCount: nominalMinWSCount,
-		ast:        newASTState(),
+
+		ASTLimit:     nominalASTLimit,
+		Priority:     nominalPriority,
+		BasePriority: nominalPriority,
+
+		ast: newASTState(),
 	}
 }
 

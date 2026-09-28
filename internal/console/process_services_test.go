@@ -553,3 +553,64 @@ func TestNumtim_assembledProgram(t *testing.T) {
 		t.Errorf("delta time fields = %v, want %v", got, want)
 	}
 }
+
+// TestJPIASTState_assembledProgram is docs/PHASE-26.md subtask 21's
+// acceptance test: testdata/asm/jpi_ast_state.asm reads $GETJPI's AST
+// and state items normally, with ASTs disabled, from inside an AST
+// routine, and with a timer AST outstanding.
+func TestJPIASTState_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "jpi_ast_state.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(jpi_ast_state.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("jpi_ast_state.asm has no entry address")
+	}
+
+	if runErr, hitCap := callBounded(t, c, addr, 100_000); runErr != nil || hitCap {
+		t.Fatalf("running jpi_ast_state.asm: err=%v hitCap=%v", runErr, hitCap)
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Fatalf("R0 = %d, want 1 (every call succeeded)", got)
+	}
+
+	word := func(name string) uint32 {
+		t.Helper()
+
+		a, ok := c.Symbols.Get(name)
+		if !ok {
+			t.Fatalf("no %s symbol", name)
+		}
+
+		v, err := c.Mem.LoadLongword(c.CPU, a)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return v
+	}
+
+	checks := []struct {
+		name string
+		want uint32
+		why  string
+	}{
+		{"ASTEN", 0xF, "every mode enabled"},
+		{"ASTACT", 0, "no AST running"},
+		{"ASTCNT", 24, "the whole quota"},
+		{"STATE", 14, "SCH$C_CUR"},
+		{"ASTENOFF", 0xE, "kernel disabled by $SETAST(0)"},
+		{"ASTACTIN", 0x1, "a kernel AST running"},
+		{"ASTCNTTMR", 23, "one timer AST outstanding"},
+	}
+
+	for _, ch := range checks {
+		if got := word(ch.name); got != ch.want {
+			t.Errorf("%s = %#x, want %#x (%s)", ch.name, got, ch.want, ch.why)
+		}
+	}
+}

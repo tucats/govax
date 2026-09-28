@@ -381,9 +381,13 @@ changed as a result.
 
 - **Where**: `internal/rtl/getjpi.go`.
 - **What**:
-  - Only 21 item codes are supported. The others, for state govax doesn't
-    model (`STATE`, priorities, `IMAGNAME`, non-working-set quotas,
-    privileges, CPU and I/O accounting), are `SS$_BADPARAM`.
+  - Only 28 item codes are supported (21 until subtask 21 added the AST
+    items, the priorities, and `STATE`). The others, for state govax
+    doesn't model (`IMAGNAME`, most quotas, privileges, CPU and I/O
+    accounting), are `SS$_BADPARAM`.
+  - `JPI$_STATE` is always `SCH$C_CUR`, and the priorities are fixed
+    values: there's one process and no scheduler.
+  - The AST quota (`JPI$_ASTLM`/`ASTCNT`) is reported but not enforced.
   - (`astadr` is delivered as an AST since subtask 16.)
   - The wildcard context stored at `pidadr` is govax's own value.
   - `SS$_NOPRIV`/`SS$_SUSPENDED` can't happen, since there is one process.

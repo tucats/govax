@@ -128,11 +128,12 @@ func main() {
 	devdef := flag.String("devdef", "", "path to devdef.sdl")
 	jpidef := flag.String("jpidef", "", "path to jpidef.sdl")
 	iodef := flag.String("iodef", "", "path to iodef.sdl")
+	statedef := flag.String("statedef", "", "path to statedef.txt")
 	out := flag.String("out", "", "path to write the generated Go source")
 	flag.Parse()
 
-	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *out == "" {
-		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, and -out are all required")
+	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *out == "" {
+		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, and -out are all required")
 	}
 
 	constants := map[string]uint32{}
@@ -166,6 +167,11 @@ func main() {
 	io, err := parseSDL(readSource(*iodef))
 	if err != nil {
 		log.Fatalf("gen: %s: %v", *iodef, err)
+	}
+
+	state, err := parseBlissLiterals(readSource(*statedef), "SCH$C_")
+	if err != nil {
+		log.Fatalf("gen: %s: %v", *statedef, err)
 	}
 
 	maps := []constantMap{
@@ -228,16 +234,24 @@ func main() {
 			},
 			entries: io,
 		},
+		{
+			name: "STATEConstants",
+			doc: []string{
+				"STATEConstants is every real $STATEDEF scheduling-state code",
+				"(SCH$C_CUR, SCH$C_HIB, ...): what $GETJPI's JPI$_STATE returns.",
+			},
+			entries: state,
+		},
 	}
 
-	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef}
+	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef, *statedef}
 	code := generate(maps, sources)
 
 	if err := os.WriteFile(*out, code, 0o644); err != nil {
 		log.Fatalf("gen: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), *out)
+	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), *out)
 }
 
 func readSource(path string) string {

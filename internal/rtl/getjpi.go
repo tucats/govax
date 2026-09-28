@@ -50,8 +50,18 @@ func jpiPadded(s string, width int) jpiValue { return jpiString(padded(s, width)
 // each supported item returns. Items not here are SS$_BADPARAM. The
 // working-set items read rtl.Process's quota fields; JPI$_WSSIZE reports
 // the current limit $ADJWSL adjusts, since govax has no real working set.
+// The AST items describe Process.ast (see astModeMask and remainingASTs),
+// and JPI$_STATE is always SCH$C_CUR: the process asking is, by
+// definition, the one running.
 var jpiItemsByName = map[string]func(env *Environment) jpiValue{
 	"JPI$_ACCOUNT":    func(env *Environment) jpiValue { return jpiPadded(env.Process.Account, 8) },
+	"JPI$_ASTACT":     func(env *Environment) jpiValue { return jpiLong(astModeMask(env.Process.ast.active)) },
+	"JPI$_ASTCNT":     func(env *Environment) jpiValue { return jpiLong(env.remainingASTs()) },
+	"JPI$_ASTEN":      func(env *Environment) jpiValue { return jpiLong(astModeMask(env.Process.ast.enabled)) },
+	"JPI$_ASTLM":      func(env *Environment) jpiValue { return jpiLong(env.Process.ASTLimit) },
+	"JPI$_PRI":        func(env *Environment) jpiValue { return jpiLong(env.Process.Priority) },
+	"JPI$_PRIB":       func(env *Environment) jpiValue { return jpiLong(env.Process.BasePriority) },
+	"JPI$_STATE":      func(env *Environment) jpiValue { return jpiLong(schStateCurrent) },
 	"JPI$_CLINAME":    func(env *Environment) jpiValue { return jpiString(env.Process.CLIName) },
 	"JPI$_DFWSCNT":    func(env *Environment) jpiValue { return jpiLong(env.Process.WSDefault) },
 	"JPI$_EFCS":       func(env *Environment) jpiValue { return jpiLong(env.Process.LocalEventFlags[0]) },
@@ -72,6 +82,40 @@ var jpiItemsByName = map[string]func(env *Environment) jpiValue{
 	"JPI$_WSEXTENT":   func(env *Environment) jpiValue { return jpiLong(env.Process.WSExtent) },
 	"JPI$_WSQUOTA":    func(env *Environment) jpiValue { return jpiLong(env.Process.WSQuota) },
 	"JPI$_WSSIZE":     func(env *Environment) jpiValue { return jpiLong(env.Process.WSLimit) },
+}
+
+// schStateCurrent is SCH$C_CUR, the state of the running process.
+var schStateCurrent = vmsdef.STATEConstants["SCH$C_CUR"]
+
+// astModeMask turns a per-mode flag array (AST enabled, AST active) into
+// the bit vector $GETJPI reports: bit 0 for kernel mode, 1 executive, 2
+// supervisor, 3 user.
+func astModeMask(modes [4]bool) uint32 {
+	var mask uint32
+
+	for mode, set := range modes {
+		if set {
+			mask |= 1 << mode
+		}
+	}
+
+	return mask
+}
+
+// remainingASTs is JPI$_ASTCNT: what's left of the AST quota. VMS charges
+// an AST against the quota from the moment it's requested until it's
+// delivered, so both queued ASTs and $SETIMR timers that will queue one
+// count. (Nothing stops the count reaching 0: the quota isn't enforced.)
+func (env *Environment) remainingASTs() uint32 {
+	outstanding := uint32(len(env.Process.ast.queue))
+
+	for _, t := range env.timers {
+		if !t.wake && t.astadr != 0 {
+			outstanding++
+		}
+	}
+
+	return env.Process.ASTLimit - min(outstanding, env.Process.ASTLimit)
 }
 
 // jpiItems is jpiItemsByName keyed by item code.

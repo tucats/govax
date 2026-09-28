@@ -167,7 +167,7 @@ lists the ones the implementation can actually return.
 | `$DALLOC` | 6 | `devices.go` | `NORMAL`, `ACCVIO`, `DEVASSIGN`, `DEVNOTALLOC`, `IVLOGNAM`, `NOPRIV`, `NOSUCHDEV`, `TOOMANYLNAM` | Releases one allocation, or (no `devnam`) all at `acmode` or outer. |
 | `$DACEFC` | 7 | `eventflags.go` | `NORMAL`, `ILLEFC` | Drops an association; an unassociated number still succeeds. |
 | `$DLCEFC` | 7 | `eventflags.go` | `NORMAL`, `ACCVIO`, `IVLOGNAM` | Marks a cluster for deletion; deleted when unassociated. |
-| `$GETJPI`, `$GETJPIW` | 8 | `getjpi.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLEFC`, `INSFARG`, `IVLOGNAM`, `NOMOREPROC`, `NONEXPR`, `UNASEFC` | 21 item codes from `rtl.Process`, in a registry keyed by the generated `$JPIDEF` codes. |
+| `$GETJPI`, `$GETJPIW` | 8 | `getjpi.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLEFC`, `INSFARG`, `IVLOGNAM`, `NOMOREPROC`, `NONEXPR`, `UNASEFC` | 21 item codes from `rtl.Process`, in a registry keyed by the generated `$JPIDEF` codes (28 since subtask 21). |
 | `$WAITFR`, `$WFLAND`, `$WFLOR` | 9 | `eventflags.go` | `NORMAL`, `ILLEFC`, `UNASEFC` | Wait by re-executing the service's `XFC` until satisfied; timer interrupts run in between. |
 | `$DASSGN` | 10 | `devices.go` | `NORMAL`, `IVCHAN`, `NOPRIV` | Releases a channel; image rundown releases user-mode channels. |
 | `$SETIMR`, `$CANTIM` | 11 | `timers.go` | `NORMAL`, `ACCVIO`, `ILLEFC`, `UNASEFC` | RTL timer queue on the engine's system time (1 ms per interval-clock tick); no guest interrupt needed. |
@@ -189,6 +189,7 @@ lists the ones the implementation can actually return.
 | `$CANEXH` | 19 | `exit.go` | `NORMAL`, `ACCVIO`, `IVSSRQ`, `NOHANDLER` | Removes one block, or all of the mode's. |
 | `$EXIT` | 19 | `exit.go` | (none: doesn't return) | Calls the mode's handlers via `cpu.ServiceCall`, then unwinds to the console's call frame. RUN's driver calls it with `main`'s status. |
 | `$NUMTIM` | 20 | `vmstime.go` | `NORMAL`, `ACCVIO`, `IVTIME` | Seven numeric fields; a delta's year and month are 0. |
+| (`$GETJPI` items) | 21 | `getjpi.go` | — | `JPI$_ASTACT`, `ASTEN`, `ASTCNT`, `ASTLM`, `PRI`, `PRIB`, `STATE`; `Process` gains `ASTLimit` and priorities. |
 
 ## Service designs
 
@@ -982,7 +983,8 @@ Not implemented (see `docs/DEVIATIONS.md`):
   outer-mode wait.
 - The `ASTLVL` register and `REI`'s AST check are not used.
 - No `ASTLM` quota (`SS$_EXQUOTA`) and no `SS$_INSFMEM`.
-- `JPI$_ASTACT`, `ASTEN`, and `ASTCNT` aren't reported by `$GETJPI` yet.
+- (`JPI$_ASTACT`, `ASTEN`, and `ASTCNT` are reported by `$GETJPI` since
+  subtask 21.)
 
 ### ASTs from `$SETIMR` and `$GETJPI`
 
@@ -1213,6 +1215,29 @@ truncated.
 - An unreadable time, or a `timbuf` that is 0 or can't be written (all 14
   bytes are checked first, so nothing is half-written), is `SS$_ACCVIO`.
 
+### `$GETJPI` items for AST and scheduling state
+
+With ASTs delivered (subtask 15), the `$GETJPI` items describing them now
+mean something. They join the registry in `getjpi.go`:
+
+| Item | Returns |
+| --- | --- |
+| `JPI$_ASTEN` | Bit vector of modes with ASTs enabled (bit 0 kernel ... bit 3 user), from `Process.ast.enabled`. |
+| `JPI$_ASTACT` | Bit vector of modes with an AST running, from `Process.ast.active`. |
+| `JPI$_ASTLM` | The AST quota, `Process.ASTLimit` (24, the usual UAF default). |
+| `JPI$_ASTCNT` | What's left of it: the quota less every queued AST and every `$SETIMR` timer that will queue one, as VMS charges an AST from request to delivery. Never below 0. |
+| `JPI$_PRI`, `JPI$_PRIB` | Current and base priority, `Process.Priority`/`BasePriority` (4, SYSGEN `DEFPRI`). |
+| `JPI$_STATE` | Always `SCH$C_CUR` (14): the manual says a process that is executing is always in that state, and the only process that can ask is the one executing. |
+
+`$STATEDEF` has no source file of its own in the VMS 7.3 archive, so
+`reference/vms/statedef.txt` was extracted mechanically from the
+`literal SCH$C_...` declarations of the `LIB.REQ` listing
+(`trace/lis/lib.lis`) into `ssdef.txt`'s BLISS layout, and generated as
+`vmsdef.STATEConstants`.
+
+The quota is reported, not enforced: nothing fails with `SS$_EXQUOTA`
+when `ASTCNT` reaches 0.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -1292,7 +1317,7 @@ fourth batch listed):
     RUN's image driver calls `$EXIT` with `main`'s status, as VMS's
     image activator does.
 20. **Done.** **`$NUMTIM`.** In `vmstime.go`: a time's numeric breakdown.
-21. **`$GETJPI` items for AST and scheduling state**: `JPI$_ASTACT`,
+21. **Done.** **`$GETJPI` items for AST and scheduling state**: `JPI$_ASTACT`,
     `ASTEN`, `ASTCNT`, `ASTLM`, and `STATE`, with an `ASTLM` quota on
     `rtl.Process`.
 22. **Mode-switching AST delivery.** `NextAST` delivers a more
@@ -1776,4 +1801,21 @@ None yet.
 - Tests (`vmstime_test.go`): the base date, absolute and delta times,
   truncated hundredths, the longest delta, the current time, and each
   error.
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 21: `$GETJPI` AST and scheduling items
+
+- `getjpi.go`: seven new registry entries, with `astModeMask` and
+  `remainingASTs`. `process.go`: `ASTLimit`, `Priority`,
+  `BasePriority`.
+- **`$STATEDEF`**: `reference/vms/statedef.txt`, extracted by script from
+  `trace/lis/lib.lis` (the archive has no `$STATEDEF` source), generated
+  as `vmsdef.STATEConstants` through the existing BLISS-literal parser.
+- **Acceptance fixture** `testdata/asm/jpi_ast_state.asm`: the items read
+  normally, with ASTs disabled, from inside an AST routine (ASTACT's
+  kernel bit set), and with a timer AST outstanding (ASTCNT 23).
+  `TestJPIASTState_assembledProgram` checks all seven values.
+- Tests (`getjpi_test.go`): the new items' defaults in the item test; the
+  AST items against a set-up queue, timers (only `$SETIMR` ones with an
+  AST count), and per-mode flags; ASTCNT floored at 0.
 - `go test ./...` passes.
