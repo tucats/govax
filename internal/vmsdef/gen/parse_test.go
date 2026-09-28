@@ -123,6 +123,44 @@ end_module $ZDEF;
 	}
 }
 
+// TestParseSDL_localSymbols covers $IODEF's "#NAME = V" local symbols,
+// used as bitfield lengths alone and in "N-#NAME" expressions, and its
+// constants inside an aggregate, which take SDL's default prefix and tag.
+func TestParseSDL_localSymbols(t *testing.T) {
+	src := `
+module $QDEF;
+#fcode_size = 6;
+aggregate QDEF union prefix Q$;
+    FCODE_STRUCTURE structure fill;
+        FCODE bitfield mask length #fcode_size;
+        FMODIFIERS bitfield mask length 16-#fcode_size;
+    end FCODE_STRUCTURE;
+    READ_MODIFIERS structure fill;
+        fcode_fill bitfield length #fcode_size fill;
+        NOECHO bitfield mask;
+    end READ_MODIFIERS;
+    constant LOOPTEST equals 57344;
+end QDEF;
+end_module $QDEF;
+`
+
+	got, err := parseSDL(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := map[string]uint32{
+		"Q$V_FCODE": 0, "Q$S_FCODE": 6, "Q$M_FCODE": 0x3F,
+		"Q$V_FMODIFIERS": 6, "Q$S_FMODIFIERS": 10, "Q$M_FMODIFIERS": 0xFFC0,
+		"Q$V_NOECHO": 6, "Q$M_NOECHO": 0x40,
+		"Q$K_LOOPTEST": 57344,
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("parseSDL =\n%v\nwant\n%v", got, want)
+	}
+}
+
 func TestParseSDL_rejectsUnsupported(t *testing.T) {
 	cases := map[string]string{
 		"unknown statement":    "item FOO longword;",
@@ -136,6 +174,9 @@ func TestParseSDL_rejectsUnsupported(t *testing.T) {
 		"unterminated member":  "aggregate X union prefix X$; M structure fill; A bitfield mask; end M;",
 		"undefined shift base": "constant FOO equals X$C_NONE@8 prefix X$ tag C;",
 		"nested type keyword":  "aggregate X structure prefix X$; M structure quadword; end M; end X;",
+		"undefined local":      "aggregate X structure prefix X$; A bitfield length #n; end X;",
+		"bad local statement":  "#n == 6;",
+		"length expression":    "#n = 6; aggregate X structure prefix X$; A bitfield length 2*#n; end X;",
 	}
 
 	for name, src := range cases {

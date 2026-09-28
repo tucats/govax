@@ -34,6 +34,12 @@ import (
 //     instead ("prefix JPI tag $C"), which composes the same names. V is a
 //     decimal or %x hexadecimal literal, or "OTHER@N": an earlier constant
 //     shifted left N bits, as $JPIDEF numbers its item-code lists.
+//   - "#NAME = V;" — an SDL local symbol: a named number, used only
+//     inside the module and never emitted. $IODEF defines
+//     "#fcode_size = 6;" and then sizes bitfields with it
+//     ("length #fcode_size", "length 16-#fcode_size"). A bitfield length
+//     may be a decimal literal, a local symbol, or two of those joined by
+//     "+" or "-".
 //
 // Comments run from "{" or "/*" to the end of the line. SDL quotes a name
 // (e.g. "STRING") only when it collides with an SDL keyword; the quotes are
@@ -64,6 +70,10 @@ func parseSDL(src string) (map[string]uint32, error) {
 	}
 
 	var (
+		// locals holds the module's "#NAME = V" symbols, by name
+		// including the "#".
+		locals = map[string]int64{}
+
 		inAggregate bool
 		isUnion     bool // the aggregate is a union of nested structures
 		inMember    bool // inside one of a union's nested structures
@@ -80,6 +90,19 @@ func parseSDL(src string) (map[string]uint32, error) {
 		switch kw := strings.ToLower(toks[0]); {
 		case kw == "module" || kw == "end_module":
 			continue
+
+		case strings.HasPrefix(kw, "#"):
+			// #NAME = V
+			if len(toks) != 3 || toks[1] != "=" {
+				return nil, fmt.Errorf("unsupported local symbol statement %q", stmt)
+			}
+
+			v, err := sdlValue(toks[2], nil)
+			if err != nil {
+				return nil, fmt.Errorf("%q: %w", stmt, err)
+			}
+
+			locals[kw] = v
 
 		case kw == "aggregate":
 			// aggregate NAME {structure|union} prefix P$
@@ -108,7 +131,7 @@ func parseSDL(src string) (map[string]uint32, error) {
 				return nil, fmt.Errorf("%q outside an aggregate", stmt)
 			}
 
-		case inAggregate && !inMember && (isUnion || len(toks) >= 2 && strings.EqualFold(toks[1], "structure")):
+		case inAggregate && !inMember && kw != "constant" && (isUnion || len(toks) >= 2 && strings.EqualFold(toks[1], "structure")):
 			// MEMBER structure [longword] [unsigned] [fill]
 			if len(toks) < 2 || !strings.EqualFold(toks[1], "structure") {
 				return nil, fmt.Errorf("unsupported union member %q", stmt)
@@ -128,11 +151,16 @@ func parseSDL(src string) (map[string]uint32, error) {
 			}
 
 		case kw == "constant":
+			// Outside an aggregate, a constant must spell out its prefix
+			// and tag. Inside one ($IODEF's "constant LOOPTEST equals
+			// 57344;"), SDL's defaults apply: the aggregate's prefix and
+			// the tag K, so IO$K_LOOPTEST.
+			defaultPrefix, defaultTag := "", ""
 			if inAggregate {
-				return nil, fmt.Errorf("constant inside an aggregate is not supported: %q", stmt)
+				defaultPrefix, defaultTag = aggPrefix, "K"
 			}
 
-			consts, err := sdlConstant(toks[1:], func(name string) (uint32, bool) {
+			consts, err := sdlConstant(toks[1:], defaultPrefix, defaultTag, func(name string) (uint32, bool) {
 				v, ok := out[name]
 
 				return v, ok
@@ -148,7 +176,7 @@ func parseSDL(src string) (map[string]uint32, error) {
 			}
 
 		case inAggregate:
-			width, err := sdlBitfield(toks, aggPrefix, bitPos, define)
+			width, err := sdlBitfield(toks, aggPrefix, bitPos, locals, define)
 			if err != nil {
 				return nil, fmt.Errorf("%q: %w", stmt, err)
 			}
@@ -186,8 +214,9 @@ func sdlTokens(stmt string) []string {
 }
 
 // sdlBitfield handles one "FIELD bitfield [length N] [mask] [fill]" member,
-// defining its symbols at bit position pos and returning its width.
-func sdlBitfield(toks []string, prefix string, pos uint32, define func(string, uint32) error) (uint32, error) {
+// defining its symbols at bit position pos and returning its width. N may
+// use the module's local symbols (see sdlLength).
+func sdlBitfield(toks []string, prefix string, pos uint32, locals map[string]int64, define func(string, uint32) error) (uint32, error) {
 	if len(toks) < 2 || !strings.EqualFold(toks[1], "bitfield") {
 		return 0, fmt.Errorf("unsupported aggregate member")
 	}
@@ -204,8 +233,8 @@ func sdlBitfield(toks []string, prefix string, pos uint32, define func(string, u
 				return 0, fmt.Errorf("length without a value")
 			}
 
-			n, err := strconv.ParseUint(toks[i+1], 10, 6)
-			if err != nil || n == 0 || n > 32 {
+			n, err := sdlLength(toks[i+1], locals)
+			if err != nil || n <= 0 || n > 32 {
 				return 0, fmt.Errorf("bad bitfield length %q", toks[i+1])
 			}
 
@@ -254,8 +283,10 @@ type sdlConst struct {
 
 // sdlConstant handles the tokens following "constant": a single name or a
 // parenthesised name list, then "equals V", optionally "increment I", and
-// the required "prefix P$" and "tag T".
-func sdlConstant(toks []string, lookup func(string) (uint32, bool)) ([]sdlConst, error) {
+// "prefix P$" and "tag T". The prefix and tag are required unless
+// defaultPrefix is given (a constant inside an aggregate), when either
+// may be omitted and defaultPrefix/defaultTag are used.
+func sdlConstant(toks []string, defaultPrefix, defaultTag string, lookup func(string) (uint32, bool)) ([]sdlConst, error) {
 	var names []string
 
 	i := 0
@@ -322,8 +353,19 @@ func sdlConstant(toks []string, lookup func(string) (uint32, bool)) ([]sdlConst,
 		}
 	}
 
-	// SDL has default tags, but $LNMDEF always spells them out; requiring
-	// them keeps this parser from having to guess.
+	if defaultPrefix != "" {
+		if !havePrefix {
+			prefix, havePrefix = defaultPrefix, true
+		}
+
+		if !haveTag {
+			tag, haveTag = defaultTag, true
+		}
+	}
+
+	// SDL has default tags for top-level constants too, but $LNMDEF always
+	// spells them out; requiring them keeps this parser from having to
+	// guess.
 	if !haveValue || !havePrefix || !haveTag {
 		return nil, fmt.Errorf("constant needs explicit equals, prefix, and tag")
 	}
@@ -335,6 +377,50 @@ func sdlConstant(toks []string, lookup func(string) (uint32, bool)) ([]sdlConst,
 	}
 
 	return out, nil
+}
+
+// sdlLength evaluates a bitfield length: a decimal literal or a "#NAME"
+// local symbol, or two of those joined by "+" or "-" ("16-#fcode_size").
+// SDL allows fuller expressions; this is as much as the modules govax
+// reads use, and anything else is an error.
+func sdlLength(arg string, locals map[string]int64) (int64, error) {
+	operand := func(s string) (int64, error) {
+		if strings.HasPrefix(s, "#") {
+			v, ok := locals[strings.ToLower(s)]
+			if !ok {
+				return 0, fmt.Errorf("undefined local symbol %s", s)
+			}
+
+			return v, nil
+		}
+
+		return strconv.ParseInt(s, 10, 64)
+	}
+
+	// Split at the first "+" or "-" after the first character, so a
+	// leading sign (never used by SDL lengths) isn't taken for an
+	// operator.
+	if i := strings.IndexAny(arg[min(1, len(arg)):], "+-"); i >= 0 {
+		i++
+
+		a, err := operand(arg[:i])
+		if err != nil {
+			return 0, err
+		}
+
+		b, err := operand(arg[i+1:])
+		if err != nil {
+			return 0, err
+		}
+
+		if arg[i] == '+' {
+			return a + b, nil
+		}
+
+		return a - b, nil
+	}
+
+	return operand(arg)
 }
 
 // sdlValue evaluates an SDL constant value: a decimal literal, a %x

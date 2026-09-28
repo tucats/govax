@@ -24,10 +24,12 @@ The first batch, requested by the user on 2026-09-27, is `$ADJSTK`,
 `$ADJWSL`, `$ALLOC`, and `$ASCEFC`. The second adds `$DALLOC`,
 `$DACEFC`/`$DLCEFC`, `$GETJPI`, and the event-flag waits. The third adds
 `$DASSGN` and the timers; the fourth, the time conversions, hibernation,
-and AST delivery.
+and AST delivery. The fifth adds terminal , , exit
+handlers, , more  items, mode-switching AST delivery,
+and .
 
-**Status: four batches complete** (subtasks 1-16). Add later services as
-new subtasks.
+**Status: fifth batch in progress** (subtasks 17-23). Add later services
+as new subtasks.
 
 ## References
 
@@ -60,7 +62,9 @@ follow them too, and this list should grow when a new pattern is settled.
   `rms.go`, `process.go` (process record and process-control services),
   `eventflags.go` (event flags and common event flag clusters), `timers.go`
   (the timer queue), `vmstime.go` (`$GETTIM` and time conversion),
-  `hibernate.go` (`$HIBER`, `$WAKE`, scheduled wakeups). Each file has
+  `hibernate.go` (`$HIBER`, `$WAKE`, scheduled wakeups), `ast.go` (AST
+  delivery), `qio.go` (`$QIO` and the driver registry), `ttdriver.go`
+  (the terminal driver's functions). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -106,6 +110,17 @@ follow them too, and this list should grow when a new pattern is settled.
   re-executes the service's `XFC` on the next step (see the event-flag
   wait design). `$HIBER` uses it too, and any later waiting service
   (`$SYNCH`, ...) should.
+- **Completing requests.** A service with an `efn`/`iosb`/`astadr`
+  completion (`$GETJPI`, `$QIO`, ...) completes during the call: clear
+  the flag and IOSB as it starts, then write the IOSB, set the flag, and
+  `queueAST` in the caller's mode as it finishes. A request rejected
+  before it starts returns its error in R0 and completes nothing (`$QIO`
+  also sets the flag then, as its manual says). So the `...W` form is the
+  same service.
+- **I/O functions.** A `$QIO` function is an `ioFunc` in a driver's
+  function table, keyed by the `$IODEF` function code, and a driver is
+  found by device class in `ioDrivers`. A new device class adds a table;
+  a new function adds an entry.
 - **Picking a process.** Services that take the `[pidadr] ,[prcnam]` pair
   call `processTarget` (`getjpi.go`): it accepts only this process, writes
   its PID back to a `pidadr` holding 0, and returns `SS$_NONEXPR`,
@@ -159,6 +174,8 @@ lists the ones the implementation can actually return.
 | `$SETAST` | 15 | `ast.go` | `WASSET`, `WASCLR` | Per-mode AST enable, replacing eVAX's single recorded flag. |
 | `$CLRAST` | 15 | `ast.go` | (restored R0) | The AST exit: an AST routine's `RET` returns through it. Not called directly. |
 | (`$SETIMR`, `$GETJPI` ASTs) | 16 | `timers.go`, `getjpi.go` | — | `astadr` now queues an AST: a timer's with `reqidt`, `$GETJPI`'s with `astprm`. |
+| `$QIO`, `$QIOW` | 17 | `qio.go`, `ttdriver.go` | `NORMAL`, `ACCVIO`, `ILLEFC`, `ILLIOFUNC`, `IVCHAN`, `NOPRIV`, `UNASEFC`; IOSB: `NORMAL`, `ENDOFFILE`, `TIMEOUT` | Terminal reads (plain and prompted), writes with carriage control, sense/set mode; completes during the call. |
+| `$CANCEL` | 17 | `qio.go` | `NORMAL`, `IVCHAN`, `NOPRIV` | Checks the channel; nothing is ever outstanding. |
 
 ## Service designs
 
@@ -982,6 +999,90 @@ timer's AST is delivered between `$HIBER`'s retries, and its routine
 calls `$WAKE`. When the routine returns, `$HIBER` runs again and returns.
 The acceptance fixture does exactly this.
 
+### `$QIO`/`$QIOW` on terminals, and `$CANCEL`
+
+`SYS$QIO[W] [efn] ,chan ,func [,iosb] [,astadr] [,astprm] [,p1]...[,p6]`
+and `SYS$CANCEL chan`
+
+#### How VMS device I/O works
+
+A program gets a channel to a device from `$ASSIGN`, then queues requests
+on it with `$QIO`. `func`'s low 6 bits are the **function code**
+(`IO$_READVBLK`, `IO$_WRITEVBLK`, ...) and the bits above it **function
+modifiers** (`IO$M_NOECHO`, ...); each device class has its own. `p1`-`p6`
+are the function's parameters. When the request finishes, its outcome
+goes to the **I/O status block** (`iosb`: a status word, a transfer-count
+word, and a device-specific longword), the event flag is set, and the AST
+(if any) is queued. `$QIO`'s own R0 only says whether the request was
+accepted. `$QIOW` is `$QIO` plus the wait.
+
+#### Design: complete during the call, drivers in a registry
+
+Every request completes before `$QIO` returns, as `$GETJPI` already does.
+VMS allows this, and a correct program can't tell. So `$QIOW` is the same
+service, and `$CANCEL` never finds an outstanding request (it only checks
+the channel).
+
+`serviceSysQio` follows VMS's order: clear the event flag
+(`ILLEFC`/`UNASEFC`), check the channel (`IVCHAN` for 0, `NOPRIV` if
+unassigned or assigned from a more privileged mode), clear the IOSB
+(`ACCVIO`), find the function, perform it. From the channel check on, a
+failure sets the event flag and returns in R0, writing no IOSB status and
+queuing no AST.
+
+The function is found in two tables: `ioDrivers` maps a device class to
+its driver's function table, which maps an `$IODEF` function code to an
+`ioFunc`. An `ioFunc` returns the IOSB contents, or rejects the request
+(`SS$_ACCVIO` for a buffer it can't access, checked with `accessible`
+before any input is consumed). Only terminals have a driver; anything
+else is `SS$_ILLIOFUNC`.
+
+`$IODEF` is generated from `reference/vms/iodef.sdl` (from the VMS 7.3
+`starlet` sources) as `vmsdef.IOConstants`. The SDL parser learned the
+module's `#fcode_size = 6;` local symbol, bitfield lengths like
+`16-#fcode_size`, and constants inside an aggregate (SDL's default
+prefix and tag `K`).
+
+#### The terminal driver (`ttdriver.go`)
+
+Every terminal is the console: reads use the console input stream (the
+one `DECC$GETS` reads, sharing its buffer), writes the output stream.
+
+| Function | Parameters | Does |
+| --- | --- | --- |
+| `IO$_READVBLK` (also `READLBLK`, `READPBLK`, `TTYREADALL`) | `p1` buffer, `p2` size, `p3` time limit, `p4` terminators | Reads until a terminator or a full buffer. |
+| `IO$_READPROMPT` (also `TTYREADPALL`) | as above, `p5`/`p6` the prompt | Writes the prompt, then reads. |
+| `IO$_WRITEVBLK` (also `WRITELBLK`, `WRITEPBLK`) | `p1` buffer, `p2` size, `p4` carriage control | Writes the bytes. |
+| `IO$_SENSEMODE` (also `SENSECHAR`) | `p1` buffer, `p2` size (8 or 12) | Returns class, type, width, characteristics. |
+| `IO$_SETMODE` (also `SETCHAR`) | as above | Sets type, width, characteristics. |
+
+- **Reads.** The default terminators are the control characters except
+  BS, TAB, LF, VT, and FF. `p4` can give a short-form (32 control
+  characters) or long-form (a mask of up to 256 bits) set instead. A host
+  newline, or `"\r\n"`, is read as RETURN. The IOSB holds the status, the
+  data count (the terminator's offset), the terminator, and its size (0
+  when the buffer filled first). The terminator is also stored after the
+  data when there's room. `IO$M_CVTLOW` upcases letters; `IO$M_PURGE`
+  discards type-ahead; `IO$M_TIMED` with a zero limit reads only what's
+  already buffered, ending in `SS$_TIMEOUT`. The end of host input is
+  `SS$_ENDOFFILE`.
+- **Carriage control.** `p4` of 0 writes the data as is. A nonzero low
+  byte is a FORTRAN carriage-control character (`" "` new line before,
+  carriage return after; `"0"` two new lines; `"1"` form feed; `"+"` no
+  new line; `"$"` no carriage return). Otherwise bytes 2 and 3 are a
+  prefix and postfix in RMS print-file form: a new-line count, or a C0 or
+  C1 control character.
+- **Characteristics** live on the device record, where VMS keeps them:
+  `DevType`, `DevBufSize` (page width), `DevDepend` (characteristics and
+  page length), `DevDepend2` (extended). `IO$M_TYPEAHDCNT` returns the
+  count of buffered characters and the first one.
+
+Not implemented (see `docs/DEVIATIONS.md`): true asynchrony (a read
+blocks until the host delivers input); drivers for other device classes;
+echo control, line editing, nonzero time limits, and the other modifiers
+the host terminal can't honour; `IO$_SETMODE`'s CTRL/C, CTRL/Y, and
+out-of-band ASTs; the I/O quotas.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -1040,29 +1141,36 @@ third batch listed):
 16. **Done.** **ASTs from `$SETIMR` and `$GETJPI`.** `astadr` queued via
     `queueAST`. Acceptance fixture `testdata/asm/timer_ast.asm`.
 
-Candidates next, roughly in order of value now that ASTs and waits
-exist:
+Fifth batch, requested by the user on 2026-09-28 (the candidates the
+fourth batch listed):
 
-- **`$QIO`/`$QIOW` on terminal channels** (`IO$_READVBLK`/`WRITEVBLK`
-  and friends on `TTA0:`). This is how most real VMS programs do terminal
-  I/O. Channels (`$ASSIGN`/`$DASSGN`), event flags, IOSBs, waits, and ASTs
-  are all in place for its completion. `$CANCEL` would follow.
-- **`$SYNCH`**: waits for an event flag *and* a nonzero IOSB. It's a
-  small addition on the wait mechanism, and it's what `$QIOW`/`$GETJPIW`
-  style completion is defined in terms of.
-- **`$EXIT` and exit handlers.** `$DCLEXH` records a handler that nothing
-  calls. Image rundown is the natural place to call handlers, the way
-  `NextAST` calls AST routines, with `$CANEXH` to remove one.
-- **`$NUMTIM`**: the numeric breakdown of a time, next to
-  `$ASCTIM`/`$BINTIM`. Cheap.
-- **`$GETJPI` items for the new state**: `JPI$_ASTACT`, `ASTEN`,
-  `ASTCNT`, and `STATE` (`HIB`/`LEF` while waiting), which now mean
-  something.
-- **Mode-switching AST delivery.** Delivering an inner-mode AST by
-  switching the CPU into that mode, as VMS does, would close subtask 15's
-  main deviation. It pairs naturally with `$CMKRNL`/`$CMEXEC`.
-- **`$GETSYI`**: system information (`SYI$_VERSION`, `NODENAME`, ...).
-  It's the `$GETJPI` pattern again, with a new generated `$SYIDEF`.
+17. **`$QIO`/`$QIOW` on terminal channels, and `$CANCEL`.** In the new
+    `qio.go`: a request is validated, then handed to a per-device-class
+    driver registry (only terminals have a driver), which completes it
+    at once: IOSB, event flag, and AST, as `$GETJPI` does. Terminal
+    reads, prompted reads, and writes go to the console's input and
+    output streams; `IO$_SENSEMODE`/`SETMODE` read and write the
+    device's characteristics. `$IODEF` is generated from real VMS
+    source, which needs the SDL parser to learn `#local` symbols.
+18. **`$SYNCH`.** In `eventflags.go`: wait for the event flag, then
+    check the IOSB, clearing the flag and waiting again while it's
+    still 0.
+19. **`$EXIT`, `$DCLEXH`, `$CANEXH`: exit handlers.** Per-mode handler
+    lists (replacing the single recorded `exitHandler`). `$EXIT` calls
+    each handler through a new "service asks the engine to make a call"
+    path, then ends the image by unwinding to the console's call frame.
+    RUN's image driver calls `$EXIT` with `main`'s status, as VMS's
+    image activator does.
+20. **`$NUMTIM`.** In `vmstime.go`: a time's numeric breakdown.
+21. **`$GETJPI` items for AST and scheduling state**: `JPI$_ASTACT`,
+    `ASTEN`, `ASTCNT`, `ASTLM`, and `STATE`, with an `ASTLM` quota on
+    `rtl.Process`.
+22. **Mode-switching AST delivery.** `NextAST` delivers a more
+    privileged mode's AST by switching the CPU into that mode, as VMS
+    does, and `$CLRAST` switches back, closing subtask 15's main
+    deviation.
+23. **`$GETSYI`/`$GETSYIW`.** The `$GETJPI` pattern for system-wide
+    information, with `$SYIDEF` generated from real VMS source.
 
 
 ## Open questions
@@ -1450,3 +1558,35 @@ None yet.
 - `go test ./...` passes.
 - **Phase status.** The fourth batch (subtasks 12-16) is done. Candidates
   for the next batch are listed under Subtasks.
+
+### 2026-09-28 — Fifth batch planned; subtask 17: terminal `$QIO`/`$QIOW`, `$CANCEL`
+
+- Planned the fifth batch (subtasks 17-23) from the fourth batch's
+  candidate list.
+- **`$IODEF`**: `reference/vms/iodef.sdl`, imported from the VMS 7.3
+  `starlet_b64` sources, generated into `vmsdef.IOConstants` (544
+  symbols). `gen/sdl.go` now understands `#NAME = V` local symbols,
+  bitfield lengths that use them (`16-#fcode_size`), and constants inside
+  an aggregate (default prefix, tag `K`). `TestIOConstants_values` pins
+  the function codes and terminal modifiers.
+- **`internal/rtl/qio.go`** (new): `serviceSysQio` (registered as both
+  `SYS$QIO` and `SYS$QIOW`), `serviceSysCancel`, the `ioDrivers`
+  registry, and `accessible` (a buffer check through `ProbeTranslate`,
+  also bounded by memory size since it passes everything with MAPEN off).
+- **`internal/rtl/ttdriver.go`** (new): the terminal driver's function
+  table: reads, prompted reads, writes with FORTRAN and print-file
+  carriage control, sense/set mode, and the type-ahead count.
+- **Acceptance fixture** `testdata/asm/terminal_qio.asm`: a prompted
+  `$QIOW` read, an asynchronous `$QIO` write with an AST and
+  `$WAITFR`, a `$QIOW` write, an illegal function, `$CANCEL`, and
+  `$DASSGN`. `TestTerminalQIO_assembledProgram` feeds it `Tom` and
+  checks the output is `"Name? \nHello, \rTom"`. (The assembler's
+  default radix is hex: decimal numbers above 9 need `^D`.)
+- Tests (`rtl/qio_test.go`): writes, with the IOSB, flag, and AST; each
+  carriage-control form; reads ending by terminator, full buffer, and end
+  of input (with and without data); `"\r\n"`; `CVTLOW`, `PURGE`, and
+  zero-time `TIMED` reads; short- and long-form terminator sets; the
+  prompted read; sense/set mode in both sizes and with a modifier; the
+  type-ahead count; every rejection (flag set, IOSB untouched or cleared
+  as appropriate, no AST); low-word `chan`/`func`; `$CANCEL`.
+- `go test ./...` passes.

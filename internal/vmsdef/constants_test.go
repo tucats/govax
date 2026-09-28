@@ -184,3 +184,48 @@ func TestDEVConstants_values(t *testing.T) {
 		}
 	}
 }
+
+// TestIOConstants_values pins the $IODEF function codes and terminal
+// modifier bits terminal $QIO (docs/PHASE-26.md subtask 17) depends on.
+// The values are the VMS I/O User's Reference Manual's; the modifiers sit
+// above the 6-bit function code (IO$M_FCODE), and the read and write
+// modifiers are different union members that reuse the same bits
+// (IO$M_NOECHO and IO$M_CANCTRLO are both bit 6).
+func TestIOConstants_values(t *testing.T) {
+	want := map[string]uint32{
+		"IO$M_FCODE":      0x3F,
+		"IO$_WRITEPBLK":   11,
+		"IO$_READPBLK":    12,
+		"IO$_SETCHAR":     26,
+		"IO$_SENSECHAR":   27,
+		"IO$_WRITELBLK":   32,
+		"IO$_READLBLK":    33,
+		"IO$_SETMODE":     35,
+		"IO$_SENSEMODE":   39,
+		"IO$_WRITEVBLK":   48,
+		"IO$_READVBLK":    49,
+		"IO$_READPROMPT":  55,
+		"IO$_TTYREADALL":  58,
+		"IO$_TTYREADPALL": 59,
+		"IO$M_NOECHO":     0x40,
+		"IO$M_TIMED":      0x80,
+		"IO$M_CVTLOW":     0x100,
+		"IO$M_PURGE":      0x800,
+		"IO$M_CANCTRLO":   0x40,
+		"IO$M_NOFORMAT":   0x100,
+		"IO$K_LOOPTEST":   0xE000,
+	}
+
+	for name, v := range want {
+		got, ok := IOConstants[name]
+		if !ok {
+			t.Errorf("%s missing from IOConstants", name)
+
+			continue
+		}
+
+		if got != v {
+			t.Errorf("%s = %#x, want %#x", name, got, v)
+		}
+	}
+}

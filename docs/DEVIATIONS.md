@@ -478,6 +478,34 @@ changed as a result.
   - No `ASTLM` quota (`SS$_EXQUOTA`) or `SS$_INSFMEM`.
 - **Status**: open, by design.
 
+### [Phase 26] Terminal `$QIO` simplifications
+
+- **Where**: `internal/rtl/qio.go`, `internal/rtl/ttdriver.go`.
+- **What**:
+  - Every request completes before `$QIO` returns, so `$QIO` and `$QIOW`
+    behave the same and `$CANCEL` never has anything to cancel. A read
+    with no input typed yet blocks the whole emulator until the host
+    delivers a line.
+  - Only terminals have a driver. A `$QIO` to any other device (a disk,
+    say) is `SS$_ILLIOFUNC`, where VMS would perform the I/O.
+  - Every terminal is the console: reads come from the host's input,
+    which is line-buffered and already echoed by the host (or not echoed
+    at all, when redirected). So `IO$M_NOECHO`/`TRMNOECHO` change
+    nothing, there's no line editing, and a host newline stands for
+    RETURN. The end of the host's input is `SS$_ENDOFFILE`.
+  - `IO$M_TIMED` with a zero time limit reads only characters already
+    buffered; a nonzero limit is ignored (the read waits indefinitely).
+  - `IO$M_NOFILTR`, `REFRESH`, `ESCAPE`, `DSABLMBX`, and the write
+    modifiers are accepted and have no effect. `IO$_SETMODE` with a
+    modifier (`IO$M_CTRLCAST`, `CTRLYAST`, `OUTBAND`, `HANGUP`, ...)
+    succeeds without doing anything, so CTRL/C and CTRL/Y ASTs are never
+    delivered.
+  - `IO$_SENSEMODE`'s IOSB reports no line speeds, fill counts, or
+    parity.
+  - No `BIOLM`/`DIOLM`/`BYTLM`/`ASTLM` quotas (`SS$_EXQUOTA`),
+    `SS$_INSFMEM`, `SS$_DEVOFFLINE`, or network functions.
+- **Status**: open, by design.
+
 ## Open findings
 
 _None yet._

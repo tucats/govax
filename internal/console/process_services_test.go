@@ -1,7 +1,9 @@
 package console
 
 import (
+	"bytes"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/cpu"
@@ -330,5 +332,59 @@ func TestTimerAST_assembledProgram(t *testing.T) {
 
 	if n, m := c.RTL.PendingASTs(), c.RTL.PendingTimers(); n != 0 || m != 0 {
 		t.Errorf("%d ASTs and %d timers left, want none", n, m)
+	}
+}
+
+// TestTerminalQIO_assembledProgram is docs/PHASE-26.md subtask 17's
+// acceptance test: testdata/asm/terminal_qio.asm reads a prompted line
+// and writes to the terminal with $QIO/$QIOW. The console's input is the
+// typed line; its output must show the prompt, the carriage-controlled
+// greeting, and the name read back.
+func TestTerminalQIO_assembledProgram(t *testing.T) {
+	var out bytes.Buffer
+
+	c := New(&out)
+	c.In = strings.NewReader("Tom\n")
+
+	if err := c.Init(8192 * 512); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+
+	if err := c.VMInit(2048, 8192, 2048, 20, 0, 0, 0, 0); err != nil {
+		t.Fatalf("VMInit: %v", err)
+	}
+
+	c.DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "terminal_qio.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(terminal_qio.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("terminal_qio.asm has no entry address")
+	}
+
+	out.Reset() // just the program's own output
+
+	runErr, hitCap := callBounded(t, c, addr, 100_000)
+	if runErr != nil {
+		t.Fatalf("running terminal_qio.asm: %v", runErr)
+	}
+
+	if hitCap {
+		t.Fatal("terminal_qio.asm didn't finish within 100,000 steps")
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Errorf("R0 = %d, want 1 (every $QIO did what it should)", got)
+	}
+
+	if want := "Name? \nHello, \rTom"; out.String() != want {
+		t.Errorf("output = %q, want %q", out.String(), want)
+	}
+
+	if n := c.RTL.PendingASTs(); n != 0 {
+		t.Errorf("%d ASTs left, want none", n)
 	}
 }
