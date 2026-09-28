@@ -742,6 +742,20 @@ changed as a result.
     resume address itself.
 - **Status**: open, by design.
 
+### [Phase 26] Virtual address space simplifications
+
+- **Where**: `internal/rtl/vaspace.go`, `internal/console/vminit.go`.
+- **What**:
+  - The page tables are built once by VMINIT and never grow: `$CRETVA`
+    beyond them is `SS$_VASFULL`, where VMS would extend the region.
+  - No paging-file quota (`SS$_EXQUOTA`) or working-set limit
+    (`SS$_INSFWSL`) is checked.
+  - `$CNTREG` deletes the pages but leaves `P0LR`/`P1LR` alone; the pages
+    are gone either way. Its P1 end is the lowest page `P1LR` admits,
+    which, because of eVAX's P1 length check (`page <= P1LR` is out of
+    range), is the page after the one `P1LR` names.
+- **Status**: open, by design.
+
 ## Open findings
 
 _None yet._

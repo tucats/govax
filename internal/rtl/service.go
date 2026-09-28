@@ -63,6 +63,7 @@ func (t *ServiceTable) Lookup(name string) (ServiceFunc, bool) {
 // fallback (docs/PHASE-22.md).
 func registerServices(t *ServiceTable) {
 	registerCoreServices(t)
+	registerAddressSpaceServices(t)
 	registerProcessServices(t)
 	registerEventFlagServices(t)
 	registerJPIServices(t)

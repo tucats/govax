@@ -167,7 +167,11 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		pStart: 0, pEnd: size[2] << 9,
 	}
 
-	// P0 region: grows up from virtual address 0. PTEs start out invalid
+	// P0 region: grows up from virtual address 0. Its pages, like P1's,
+	// belong to user mode: a PTE's owner field (bits 23-24) names the
+	// access mode a page belongs to, which $CRETVA/$DELTVA check before
+	// replacing or deleting it (docs/PHASE-26.md subtask 35). The hardware
+	// ignores the field. PTEs start out invalid
 	// (no physical page assigned) and are demand-paged on first touch by
 	// internal/vm.Memory.Translate/AllocatePage — this port's only supported
 	// mode now, matching console_vminit.c's own #ifdef DYNVM branch (see
@@ -183,9 +187,11 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		var pte vm.PTE
 
 		pte.SetProtection(vm.ProtUW)
+		pte.SetOwner(uint8(vax.User)) // the process's own page (see below)
 
 		if i == 0 {
 			pte.SetProtection(vm.ProtNA) // guard the bottom-most page
+			pte.SetOwner(uint8(vax.Kernel))
 		}
 
 		page++
@@ -219,6 +225,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		var pte vm.PTE
 
 		pte.SetProtection(vm.ProtUW)
+		pte.SetOwner(uint8(vax.User))
 
 		page++
 

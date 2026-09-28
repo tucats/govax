@@ -79,7 +79,7 @@ follow them too, and this list should grow when a new pattern is settled.
   (`$CREMBX`, `$DELMBX`), `mbxdriver.go` (the mailbox driver),
   `condition.go` (the condition dispatcher, `SYS$SRCHANDLER`, `$SETEXV`),
   `signal.go` (the `LIB$` signaling shims), `unwind.go` (`$UNWIND`,
-  `LIB$SIG_TO_RET`). Each file has
+  `LIB$SIG_TO_RET`), `vaspace.go` (`$CRETVA`, `$DELTVA`, `$CNTREG`). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -232,6 +232,9 @@ lists the ones the implementation can actually return.
 | `LIB$ESTABLISH`, `LIB$REVERT`, `LIB$MATCH_COND` | 33 | `signal.go` | (the old handler; a match's position) | Shims 35, 36, 38. |
 | `$UNWIND` | 34 | `unwind.go` | `NORMAL`, `ACCVIO`, `INSFRAME`, `NOSIGNAL`, `UNWINDING` | Recorded, then done when the handler returns: `SS$_UNWIND` to each removed frame's handler, then the frames' return addresses pointed at a `RET`. |
 | `LIB$SIG_TO_RET` | 34 | `unwind.go` | `NORMAL`, (`$UNWIND`'s) | Shim 37: the condition becomes the establisher's return value. |
+| `$CRETVA` | 35 | `vaspace.go` | `NORMAL`, `ACCVIO`, `NOPRIV`, `PAGOWNVIO`, `VASFULL` | Demand-zero pages owned by (and read/write for) the maximized mode; an existing page replaced empty. |
+| `$DELTVA` | 35 | `vaspace.go` | `NORMAL`, `ACCVIO`, `NOPRIV`, `PAGOWNVIO` | The all-zero PTE; the physical page freed. Missing pages pass. |
+| `$CNTREG` | 35 | `vaspace.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLPAGCNT`, `PAGOWNVIO` | Obsolete: deletes pages from P0's high-water mark down, or P1's lowest page up. |
 
 ## Service designs
 
@@ -1964,6 +1967,57 @@ removed frame's handler, it does nothing.
 Not implemented (see `docs/DEVIATIONS.md`): a vectored handler's
 default unwind does nothing (it has no establisher frame).
 
+### `$CRETVA`, `$DELTVA`, `$CNTREG` — Create and Delete Virtual Address Space
+
+`SYS$CRETVA inadr ,[retadr] ,[acmode]`, `SYS$DELTVA inadr ,[retadr] ,[acmode]`,
+and the obsolete `SYS$CNTREG pagcnt ,[retadr] ,[acmode] ,[region]`
+
+A process's P0 (program) and P1 (control) regions are made of 512-byte
+pages, each described by a page table entry (PTE): whether it exists,
+its protection (which modes may read or write it), the physical page
+holding it if it's valid, and, in bits 23-24, the access mode that owns
+it, a field the hardware ignores and VMS checks before letting a mode
+replace or delete a page. `$CRETVA` adds *demand-zero* pages (they exist,
+but get a physical page of zeros only when first touched); `$DELTVA`
+removes pages, after which touching them is an access violation.
+
+#### Design: PTE writes on fixed page tables
+
+VMINIT builds P0's and P1's page tables once, full size, every page
+demand-zero, readable and writable by every mode, and now *owned by
+user mode* (the process's own pages; P0's no-access page 0 stays
+kernel's). internal/vm gives a page its physical page on first touch.
+So the services only write PTEs, through `vm.Memory.StorePTE` (which
+also flushes the page from the translation buffer):
+
+- creating writes a demand-zero PTE protected `KW`/`EW`/`SW`/`UW` for
+  the requested mode (maximized with the caller's) and owned by it;
+- deleting writes the all-zero PTE (no access, not valid, kernel);
+
+and either gives back the old PTE's physical page, if it had one,
+through the new `vm.Memory.FreePage`, which clears it so its next use is
+a real demand-zero page.
+
+`inadr` is two addresses; only their page numbers matter, either may be
+the higher, `$CRETVA` goes from the first to the second and `$DELTVA`
+from the second to the first. `retadr` gets the byte range done, in that
+order (`-1, -1` if nothing was). A system-region page is `SS$_NOPRIV`;
+a page a more privileged mode owns, `SS$_PAGOWNVIO` (for `$CRETVA`, only
+if it exists); for `$CRETVA`, a page beyond the region's page table,
+`SS$_VASFULL` (the tables can't grow). `$DELTVA` passes over pages that
+don't exist, as the manual says. Creating P0 pages above the high-water
+mark `$EXPREG` and `LIB$GET_VM` allocate from (`RegionSize[0]`) moves it.
+
+`$CNTREG` is listed in the VMS 5.0 manual only as replaced by `$DELTVA`,
+but it is in the P1 vector: it deletes `pagcnt` pages from the end a
+region grows at, P0's high-water mark (which moves down) or P1's lowest
+page (the one past `P1LR`). `SS$_ILLPAGCNT` for 0 or too many pages,
+`SS$_BADPARAM` for another region.
+
+Not implemented (see `docs/DEVIATIONS.md`): growing the page tables;
+the `PGFLQUOTA` and working-set checks; `$CNTREG` doesn't shorten
+`P0LR`/`P1LR`.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -2110,7 +2164,7 @@ sixth batch listed):
 34. **Done.** **`$UNWIND`**: unwind the call stack from a handler, calling each
     removed frame's handler with `SS$_UNWIND`; and `LIB$SIG_TO_RET`
     (shim code 37), which is built on it.
-35. **`$CRETVA`, `$DELTVA`, `$CNTREG`**: create and delete pages of the
+35. **Done.** **`$CRETVA`, `$DELTVA`, `$CNTREG`**: create and delete pages of the
     P0 and P1 regions through their page table entries.
 36. **`$SETPRT`** (with a generated `$PRTDEF`), and `$LCKPAG`/`$ULKPAG`/
     `$LKWSET`/`$ULWSET` as checked no-ops.
@@ -2990,4 +3044,25 @@ fixed.
   (`NOSIGNAL`, depth 0, `INSFRAME`, `ACCVIO`, `UNWINDING`); a vectored
   handler's default; the `LIB$SIGNAL` stub's frame; `LIB$SIG_TO_RET`;
   an outer dispatch discarded.
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 35: `$CRETVA`, `$DELTVA`, `$CNTREG`
+
+- **`internal/rtl/vaspace.go`** (new): the three services, with
+  `pageRange`, `readRange`, `storeRetadr`, `replacePTE`, `createPage`,
+  and `deletePages`.
+- **`internal/vm`**: `Memory.FreePage`, which clears the page it frees.
+- **`internal/console/vminit.go`**: P0 and P1 pages are user-owned
+  (page 0 stays kernel's), so a user-mode program may delete its own.
+- **Acceptance fixture** `testdata/asm/vaspace.asm`: two pages created,
+  written, deleted (a read then faults, and the program's handler
+  continues past it), and one created again, reading 0.
+  `TestVASpace_assembledProgram` checks both `retadr`s and the reads.
+- Tests: `internal/console/vaspace_test.go` (through a console `CALL`
+  of each service against VMINIT's page tables: creation's PTE, owner,
+  protection, retadr order, and high-water mark; a recreated page
+  cleared; deletion including a missing page; `NOPRIV`, `VASFULL`,
+  `ACCVIO`; `PAGOWNVIO` from user mode and a user page deleted; `$CNTREG`
+  in P0 and P1 and its errors), `internal/rtl/vaspace_test.go` (the range
+  arithmetic), and `TestFreePage`.
 - `go test ./...` passes.

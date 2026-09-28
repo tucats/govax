@@ -89,3 +89,35 @@ func TestMappedPages_countsReservedAndAllocatedButNotPageZero(t *testing.T) {
 		t.Errorf("MappedPages = %d, want 2 (page 1 reserved + one allocated, page 0 excluded)", got)
 	}
 }
+
+// TestFreePage checks that a freed page is cleared and handed out again.
+func TestFreePage(t *testing.T) {
+	m := NewMemory(8 * 512)
+
+	pfn, ok := m.AllocatePage()
+	if !ok || pfn != 1 {
+		t.Fatalf("AllocatePage = %d, %v; want page 1", pfn, ok)
+	}
+
+	if err := m.writePhysLongword(pfn<<9+8, 0xDEADBEEF); err != nil {
+		t.Fatal(err)
+	}
+
+	before := m.MappedPages()
+	m.FreePage(pfn)
+
+	if m.MappedPages() != before-1 {
+		t.Errorf("MappedPages %d after freeing, want %d", m.MappedPages(), before-1)
+	}
+
+	if v, _ := m.readPhysLongword(pfn<<9 + 8); v != 0 {
+		t.Errorf("freed page holds %#x, want 0", v)
+	}
+
+	if again, _ := m.AllocatePage(); again != pfn {
+		t.Errorf("AllocatePage after freeing = %d, want %d again", again, pfn)
+	}
+
+	m.FreePage(0)    // ignored
+	m.FreePage(9999) // ignored
+}

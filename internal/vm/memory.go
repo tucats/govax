@@ -150,6 +150,27 @@ func (m *Memory) AllocatePage() (pfn uint32, ok bool) {
 	return 0, false
 }
 
+// FreePage releases physical page pfn, claimed earlier by AllocatePage,
+// so a later AllocatePage can hand it out again: the system services that
+// delete or replace a process's pages ($DELTVA, $CRETVA; docs/PHASE-26.md
+// subtask 35) give their pages back this way. The page's contents are
+// cleared now, because a page handed out again is a "demand-zero" page:
+// the program expects it to read as zeros, and validatePage doesn't clear
+// what it allocates (until pages could be freed, every page it handed out
+// had never been used). Page 0 and a page number beyond physical memory
+// are ignored.
+func (m *Memory) FreePage(pfn uint32) {
+	if pfn == 0 || int(pfn) >= len(m.pageMap) {
+		return
+	}
+
+	m.pageMap[pfn] = false
+
+	if b, err := m.phys(pfn<<9, 512); err == nil {
+		clear(b)
+	}
+}
+
 // MappedPages returns the number of physical pages currently claimed
 // (reserved or demand-paged in), matching mapped_pages() — which, like
 // AllocatePage, never counts physical page 0.
