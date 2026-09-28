@@ -61,7 +61,7 @@ follow them too, and this list should grow when a new pattern is settled.
   `devices.go` (`$ASSIGN`, `$GETDVIW`, `$ALLOC`), `logicals.go`, `cli.go`,
   `rms.go`, `process.go` (process record and process-control services),
   `eventflags.go` (event flags and common event flag clusters), `timers.go`
-  (the timer queue), `vmstime.go` (`$GETTIM` and time conversion),
+  (the timer queue), `vmstime.go` (`$GETTIM`, `$NUMTIM`, and time conversion),
   `hibernate.go` (`$HIBER`, `$WAKE`, scheduled wakeups), `ast.go` (AST
   delivery), `qio.go` (`$QIO` and the driver registry), `ttdriver.go`
   (the terminal driver's functions), `exit.go` (`$EXIT` and exit
@@ -188,6 +188,7 @@ lists the ones the implementation can actually return.
 | `$DCLEXH` | 19 | `exit.go` | `NORMAL`, `ACCVIO`, `IVSSRQ`, `NOHANDLER` | Per-mode exit handler lists, linked in memory; replaces eVAX's recording stub. |
 | `$CANEXH` | 19 | `exit.go` | `NORMAL`, `ACCVIO`, `IVSSRQ`, `NOHANDLER` | Removes one block, or all of the mode's. |
 | `$EXIT` | 19 | `exit.go` | (none: doesn't return) | Calls the mode's handlers via `cpu.ServiceCall`, then unwinds to the console's call frame. RUN's driver calls it with `main`'s status. |
+| `$NUMTIM` | 20 | `vmstime.go` | `NORMAL`, `ACCVIO`, `IVTIME` | Seven numeric fields; a delta's year and month are 0. |
 
 ## Service designs
 
@@ -1195,6 +1196,23 @@ caller's mode's handlers, not the supervisor- and executive-mode ones VMS
 calls afterwards; `$FORCEX`; handlers for an image that ends by a fatal
 exception (the console reports those and stops).
 
+### `$NUMTIM` — Convert Binary Time to Numeric Time
+
+`SYS$NUMTIM timbuf ,[timadr]`
+
+`$NUMTIM` breaks the time at `timadr` (the current time, `env.Clock()`,
+if omitted) into seven words at `timbuf`: year, month, day, hour, minute,
+second, hundredths. It is `numericTime`, a pure function next to
+`formatVMSTime`, with the same arithmetic: the date from
+`vmsdef.GoTime`, the time of day from the ticks into the day, hundredths
+truncated.
+
+- A time of 0 is the base date, 17-NOV-1858 00:00:00.00.
+- A delta time gives year and month 0 and its whole days as the day.
+  10,000 days or more is `SS$_IVTIME`.
+- An unreadable time, or a `timbuf` that is 0 or can't be written (all 14
+  bytes are checked first, so nothing is half-written), is `SS$_ACCVIO`.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -1273,7 +1291,7 @@ fourth batch listed):
     path, then ends the image by unwinding to the console's call frame.
     RUN's image driver calls `$EXIT` with `main`'s status, as VMS's
     image activator does.
-20. **`$NUMTIM`.** In `vmstime.go`: a time's numeric breakdown.
+20. **Done.** **`$NUMTIM`.** In `vmstime.go`: a time's numeric breakdown.
 21. **`$GETJPI` items for AST and scheduling state**: `JPI$_ASTACT`,
     `ASTEN`, `ASTCNT`, `ASTLM`, and `STATE`, with an `ASTLM` quota on
     `rtl.Process`.
@@ -1747,4 +1765,15 @@ None yet.
   `$CANEXH` relinking, all, and errors; `$EXIT`'s order, status
   argument, argument-less blocks, default status, skipped unreadable
   blocks, only the caller's mode; rundown).
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 20: `$NUMTIM`
+
+- `numericTime` and `serviceSysNumtim` in `vmstime.go`.
+- **Acceptance fixture** `testdata/asm/numtim.asm`: `$BINTIM` then
+  `$NUMTIM` for an absolute time (a leap day, the last hundredth) and a
+  delta; `TestNumtim_assembledProgram` checks all fourteen fields.
+- Tests (`vmstime_test.go`): the base date, absolute and delta times,
+  truncated hundredths, the longest delta, the current time, and each
+  error.
 - `go test ./...` passes.

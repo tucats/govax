@@ -240,3 +240,72 @@ func TestServiceSysBintimErrors(t *testing.T) {
 		t.Errorf("failed $BINTIM calls stored %#x, want nothing", got)
 	}
 }
+
+// numtimWords reads the seven words $NUMTIM stored at timbuf.
+func numtimWords(t *testing.T, env *Environment, timbuf uint32) [7]uint16 {
+	t.Helper()
+
+	var out [7]uint16
+
+	for i := range out {
+		w, err := env.mem.LoadWord(env.cpu, timbuf+uint32(2*i))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		out[i] = w
+	}
+
+	return out
+}
+
+func TestServiceSysNumtim(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	timbuf := a.alloc(14)
+
+	parse := func(s string) int64 {
+		t.Helper()
+
+		v, ok := parseVMSTime(s, 0)
+		if !ok {
+			t.Fatalf("parseVMSTime(%q) failed", s)
+		}
+
+		return int64(v)
+	}
+
+	cases := []struct {
+		name string
+		time int64
+		want [7]uint16
+	}{
+		{"the base date", 0, [7]uint16{1858, 11, 17, 0, 0, 0, 0}},
+		{"an absolute time", parse("29-FEB-2000 23:59:59.99"), [7]uint16{2000, 2, 29, 23, 59, 59, 99}},
+		{"hundredths truncate", parse("1-JAN-1990 00:00:00.00") + 99_999, [7]uint16{1990, 1, 1, 0, 0, 0, 0}},
+		{"a delta time", parse("5 03:18:32.07"), [7]uint16{0, 0, 5, 3, 18, 32, 7}},
+		{"the longest delta", parse("9999 23:59:59.99"), [7]uint16{0, 0, 9999, 23, 59, 59, 99}},
+	}
+
+	for _, c := range cases {
+		wantR0(t, callLNM(t, env, serviceSysNumtim, timbuf, a.quad(c.time)), ssNormal)
+
+		if got := numtimWords(t, env, timbuf); got != c.want {
+			t.Errorf("%s: $NUMTIM = %v, want %v", c.name, got, c.want)
+		}
+	}
+
+	// With timadr omitted, the current time.
+	*fakeClock(env) = uint64(parse("4-JUL-1976 12:30:00.50"))
+	wantR0(t, callLNM(t, env, serviceSysNumtim, timbuf), ssNormal)
+
+	if got, want := numtimWords(t, env, timbuf), [7]uint16{1976, 7, 4, 12, 30, 0, 50}; got != want {
+		t.Errorf("$NUMTIM of the current time = %v, want %v", got, want)
+	}
+
+	// Errors.
+	wantR0(t, callLNM(t, env, serviceSysNumtim, timbuf, a.quad(-10_000*ticksPerDay)), ssIvTime)
+	wantR0(t, callLNM(t, env, serviceSysNumtim, timbuf, badAddr), ssAccVio)
+	wantR0(t, callLNM(t, env, serviceSysNumtim, 0, a.quad(0)), ssAccVio)
+	wantR0(t, callLNM(t, env, serviceSysNumtim, badAddr, a.quad(0)), ssAccVio)
+}

@@ -499,3 +499,57 @@ func TestExitHandlers_assembledProgram(t *testing.T) {
 		t.Errorf("%d user handlers left, ExitStatus %#x; want none and 0x2C", n, c.RTL.Process.ExitStatus)
 	}
 }
+
+// TestNumtim_assembledProgram is docs/PHASE-26.md subtask 20's
+// acceptance test: testdata/asm/numtim.asm converts an absolute and a
+// delta time with $BINTIM, then breaks each down with $NUMTIM.
+func TestNumtim_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "numtim.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(numtim.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("numtim.asm has no entry address")
+	}
+
+	if runErr, hitCap := callBounded(t, c, addr, 100_000); runErr != nil || hitCap {
+		t.Fatalf("running numtim.asm: err=%v hitCap=%v", runErr, hitCap)
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Fatalf("R0 = %d, want 1 (every conversion succeeded)", got)
+	}
+
+	fields := func(name string) [7]uint16 {
+		t.Helper()
+
+		a, ok := c.Symbols.Get(name)
+		if !ok {
+			t.Fatalf("no %s symbol", name)
+		}
+
+		var out [7]uint16
+
+		for i := range out {
+			w, err := c.Mem.LoadWord(c.CPU, a+uint32(2*i))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			out[i] = w
+		}
+
+		return out
+	}
+
+	if got, want := fields("ABSFLD"), [7]uint16{2000, 2, 29, 23, 59, 59, 99}; got != want {
+		t.Errorf("absolute time fields = %v, want %v", got, want)
+	}
+
+	if got, want := fields("DELFLD"), [7]uint16{0, 0, 5, 3, 18, 32, 7}; got != want {
+		t.Errorf("delta time fields = %v, want %v", got, want)
+	}
+}

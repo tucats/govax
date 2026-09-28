@@ -6,12 +6,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// The VMS time services (docs/PHASE-26.md subtasks 12-13): $GETTIM reads
-// the system clock, and $ASCTIM/$BINTIM convert between binary times and
-// the text forms VMS prints and accepts.
+// The VMS time services (docs/PHASE-26.md subtasks 12, 13, and 20):
+// $GETTIM reads the system clock, $ASCTIM/$BINTIM convert between binary
+// times and the text forms VMS prints and accepts, and $NUMTIM breaks a
+// binary time into numbers.
 //
 // A VMS time is a signed 64-bit count of 100-nanosecond "ticks":
 //
@@ -427,8 +429,93 @@ func serviceSysBintim(env *Environment, argv []uint32) (uint32, error) {
 	return ssNormal, nil
 }
 
+// numericTime is $NUMTIM's conversion: the seven numbers a VMS time
+// breaks down into, in the order $NUMTIM stores them — year, month, day
+// of the month, hour, minute, second, hundredths.
+//
+// For a delta time, the year and month are 0 and the "day" is the number
+// of whole days in the interval; ok is false for 10,000 days or more,
+// which $NUMTIM rejects (SS$_IVTIME). The hundredths are truncated, as
+// $ASCTIM's are.
+func numericTime(v uint64) (fields [7]uint16, ok bool) {
+	ticks := v
+
+	if int64(v) < 0 { // a delta time: stored negated
+		ticks = uint64(-int64(v))
+
+		days := ticks / ticksPerDay
+		if days >= maxDeltaDays {
+			return fields, false
+		}
+
+		fields[2] = uint16(days)
+	} else {
+		t := vmsdef.GoTime(v)
+		fields[0], fields[1], fields[2] = uint16(t.Year()), uint16(t.Month()), uint16(t.Day())
+	}
+
+	// The time of day: ticks into the current day.
+	ticks %= ticksPerDay
+	secs := ticks / vmsdef.TicksPerSecond
+
+	fields[3] = uint16(secs / 3600)
+	fields[4] = uint16(secs / 60 % 60)
+	fields[5] = uint16(secs % 60)
+	fields[6] = uint16(ticks % vmsdef.TicksPerSecond / ticksPerHundredth)
+
+	return fields, true
+}
+
+// serviceSysNumtim is SYS$NUMTIM:
+//
+//	SYS$NUMTIM timbuf ,[timadr]
+//
+// It breaks the time in the quadword at timadr (the current time if
+// timadr is omitted) into seven words, stored at timbuf: year, month,
+// day, hour, minute, second, and hundredths (see numericTime). A time
+// of 0 is the base date, 17-NOV-1858 00:00:00.00. A delta of 10,000 days
+// or more is SS$_IVTIME; an unreadable time or an unwritable timbuf
+// (including 0) is SS$_ACCVIO.
+func serviceSysNumtim(env *Environment, argv []uint32) (uint32, error) {
+	timbuf, timadr := optArg(argv, 0), optArg(argv, 1)
+
+	v := env.Clock()
+
+	if timadr != 0 {
+		q, ok := env.loadQuad(timadr)
+		if !ok {
+			return ssAccVio, nil
+		}
+
+		v = q
+	}
+
+	fields, ok := numericTime(v)
+	if !ok {
+		return ssIvTime, nil
+	}
+
+	const size = len(fields) * 2
+
+	if timbuf == 0 || !env.accessible(timbuf, uint32(size), vm.AccessWrite) {
+		return ssAccVio, nil
+	}
+
+	var data [size]byte
+	for i, f := range fields {
+		data[2*i], data[2*i+1] = byte(f), byte(f>>8)
+	}
+
+	if err := env.mem.Store(env.cpu, timbuf, data[:]); err != nil {
+		return ssAccVio, nil
+	}
+
+	return ssNormal, nil
+}
+
 func registerTimeServices(t *ServiceTable) {
 	t.Register("SYS$GETTIM", serviceSysGettim)
 	t.Register("SYS$ASCTIM", serviceSysAsctim)
 	t.Register("SYS$BINTIM", serviceSysBintim)
+	t.Register("SYS$NUMTIM", serviceSysNumtim)
 }
