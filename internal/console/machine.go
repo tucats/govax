@@ -248,6 +248,7 @@ func (c *Console) newRTL() *rtl.Environment {
 	// base as the interval clock (docs/PHASE-26.md subtask 11).
 	if c.Engine != nil {
 		env.Clock = c.Engine.SystemTime
+		env.BootTime = env.Clock() // $GETSYI's SYI$_BOOTTIME: now, on that clock
 	}
 
 	return env

@@ -683,3 +683,59 @@ func TestModeSwitchAST_assembledProgram(t *testing.T) {
 		t.Errorf("%d ASTs left, want none", n)
 	}
 }
+
+// TestGetsyi_assembledProgram is docs/PHASE-26.md subtask 23's
+// acceptance test: testdata/asm/getsyi.asm asks $GETSYIW for the VMS
+// version and node name, then walks the cluster with a wildcard scan,
+// finding one node.
+func TestGetsyi_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "getsyi.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(getsyi.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("getsyi.asm has no entry address")
+	}
+
+	if runErr, hitCap := callBounded(t, c, addr, 100_000); runErr != nil || hitCap {
+		t.Fatalf("running getsyi.asm: err=%v hitCap=%v", runErr, hitCap)
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Fatalf("R0 = %d, want 1 (every call behaved)", got)
+	}
+
+	read := func(name string, n int) string {
+		t.Helper()
+
+		a, ok := c.Symbols.Get(name)
+		if !ok {
+			t.Fatalf("no %s symbol", name)
+		}
+
+		buf := make([]byte, n)
+		if err := c.Mem.Load(c.CPU, a, buf); err != nil {
+			t.Fatal(err)
+		}
+
+		return string(buf)
+	}
+
+	if got := read("VERSION", 8); got != "V7.3    " {
+		t.Errorf("SYI$_VERSION = %q, want \"V7.3    \"", got)
+	}
+
+	namlen := read("NAMLEN", 2)
+	n := int(namlen[0]) | int(namlen[1])<<8
+
+	if got := read("NODE", n); got != c.RTL.NodeName {
+		t.Errorf("SYI$_NODENAME = %q (length %d), want %q", got, n, c.RTL.NodeName)
+	}
+
+	if nodes := read("NODES", 4); nodes[0] != 1 {
+		t.Errorf("the wildcard scan visited %d nodes, want 1", nodes[0])
+	}
+}

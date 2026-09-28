@@ -34,18 +34,6 @@ const (
 // accepts (SS$_IVLOGNAM beyond it).
 const maxProcessNameLength = 15
 
-// jpiValue is one item's data: a string, or a longword when str is false.
-type jpiValue struct {
-	str   bool
-	text  string
-	value uint32
-}
-
-func jpiString(s string) jpiValue            { return jpiValue{str: true, text: s} }
-func jpiLong(v uint32) jpiValue              { return jpiValue{value: v} }
-func padded(s string, width int) string      { return fmt.Sprintf("%-*s", width, s) }
-func jpiPadded(s string, width int) jpiValue { return jpiString(padded(s, width)) }
-
 // jpiItemsByName is the item-code registry, keyed by $JPIDEF name: what
 // each supported item returns. Items not here are SS$_BADPARAM. The
 // working-set items read rtl.Process's quota fields; JPI$_WSSIZE reports
@@ -53,35 +41,35 @@ func jpiPadded(s string, width int) jpiValue { return jpiString(padded(s, width)
 // The AST items describe Process.ast (see astModeMask and remainingASTs),
 // and JPI$_STATE is always SCH$C_CUR: the process asking is, by
 // definition, the one running.
-var jpiItemsByName = map[string]func(env *Environment) jpiValue{
-	"JPI$_ACCOUNT":    func(env *Environment) jpiValue { return jpiPadded(env.Process.Account, 8) },
-	"JPI$_ASTACT":     func(env *Environment) jpiValue { return jpiLong(astModeMask(env.Process.ast.active)) },
-	"JPI$_ASTCNT":     func(env *Environment) jpiValue { return jpiLong(env.remainingASTs()) },
-	"JPI$_ASTEN":      func(env *Environment) jpiValue { return jpiLong(astModeMask(env.Process.ast.enabled)) },
-	"JPI$_ASTLM":      func(env *Environment) jpiValue { return jpiLong(env.Process.ASTLimit) },
-	"JPI$_PRI":        func(env *Environment) jpiValue { return jpiLong(env.Process.Priority) },
-	"JPI$_PRIB":       func(env *Environment) jpiValue { return jpiLong(env.Process.BasePriority) },
-	"JPI$_STATE":      func(env *Environment) jpiValue { return jpiLong(schStateCurrent) },
-	"JPI$_CLINAME":    func(env *Environment) jpiValue { return jpiString(env.Process.CLIName) },
-	"JPI$_DFWSCNT":    func(env *Environment) jpiValue { return jpiLong(env.Process.WSDefault) },
-	"JPI$_EFCS":       func(env *Environment) jpiValue { return jpiLong(env.Process.LocalEventFlags[0]) },
-	"JPI$_EFCU":       func(env *Environment) jpiValue { return jpiLong(env.Process.LocalEventFlags[1]) },
-	"JPI$_GRP":        func(env *Environment) jpiValue { return jpiLong(env.Process.UICGroup()) },
-	"JPI$_JOBTYPE":    func(env *Environment) jpiValue { return jpiLong(jpiLocal) },
-	"JPI$_MASTER_PID": func(env *Environment) jpiValue { return jpiLong(env.Process.PID) },
-	"JPI$_MEM":        func(env *Environment) jpiValue { return jpiLong(env.Process.UICMember()) },
-	"JPI$_MODE":       func(env *Environment) jpiValue { return jpiLong(jpiInteractive) },
-	"JPI$_OWNER":      func(env *Environment) jpiValue { return jpiLong(0) },
-	"JPI$_PID":        func(env *Environment) jpiValue { return jpiLong(env.Process.PID) },
-	"JPI$_PRCNAM":     func(env *Environment) jpiValue { return jpiString(env.Process.Name) },
-	"JPI$_TERMINAL":   func(env *Environment) jpiValue { return jpiString(env.Process.Terminal) },
-	"JPI$_UIC":        func(env *Environment) jpiValue { return jpiLong(env.Process.UIC) },
-	"JPI$_USERNAME":   func(env *Environment) jpiValue { return jpiPadded(env.Process.Username, 12) },
-	"JPI$_WSAUTH":     func(env *Environment) jpiValue { return jpiLong(env.Process.WSQuota) },
-	"JPI$_WSAUTHEXT":  func(env *Environment) jpiValue { return jpiLong(env.Process.WSExtent) },
-	"JPI$_WSEXTENT":   func(env *Environment) jpiValue { return jpiLong(env.Process.WSExtent) },
-	"JPI$_WSQUOTA":    func(env *Environment) jpiValue { return jpiLong(env.Process.WSQuota) },
-	"JPI$_WSSIZE":     func(env *Environment) jpiValue { return jpiLong(env.Process.WSLimit) },
+var jpiItemsByName = map[string]func(env *Environment) itemValue{
+	"JPI$_ACCOUNT":    func(env *Environment) itemValue { return itemPadded(env.Process.Account, 8) },
+	"JPI$_ASTACT":     func(env *Environment) itemValue { return itemLong(astModeMask(env.Process.ast.active)) },
+	"JPI$_ASTCNT":     func(env *Environment) itemValue { return itemLong(env.remainingASTs()) },
+	"JPI$_ASTEN":      func(env *Environment) itemValue { return itemLong(astModeMask(env.Process.ast.enabled)) },
+	"JPI$_ASTLM":      func(env *Environment) itemValue { return itemLong(env.Process.ASTLimit) },
+	"JPI$_PRI":        func(env *Environment) itemValue { return itemLong(env.Process.Priority) },
+	"JPI$_PRIB":       func(env *Environment) itemValue { return itemLong(env.Process.BasePriority) },
+	"JPI$_STATE":      func(env *Environment) itemValue { return itemLong(schStateCurrent) },
+	"JPI$_CLINAME":    func(env *Environment) itemValue { return itemString(env.Process.CLIName) },
+	"JPI$_DFWSCNT":    func(env *Environment) itemValue { return itemLong(env.Process.WSDefault) },
+	"JPI$_EFCS":       func(env *Environment) itemValue { return itemLong(env.Process.LocalEventFlags[0]) },
+	"JPI$_EFCU":       func(env *Environment) itemValue { return itemLong(env.Process.LocalEventFlags[1]) },
+	"JPI$_GRP":        func(env *Environment) itemValue { return itemLong(env.Process.UICGroup()) },
+	"JPI$_JOBTYPE":    func(env *Environment) itemValue { return itemLong(jpiLocal) },
+	"JPI$_MASTER_PID": func(env *Environment) itemValue { return itemLong(env.Process.PID) },
+	"JPI$_MEM":        func(env *Environment) itemValue { return itemLong(env.Process.UICMember()) },
+	"JPI$_MODE":       func(env *Environment) itemValue { return itemLong(jpiInteractive) },
+	"JPI$_OWNER":      func(env *Environment) itemValue { return itemLong(0) },
+	"JPI$_PID":        func(env *Environment) itemValue { return itemLong(env.Process.PID) },
+	"JPI$_PRCNAM":     func(env *Environment) itemValue { return itemString(env.Process.Name) },
+	"JPI$_TERMINAL":   func(env *Environment) itemValue { return itemString(env.Process.Terminal) },
+	"JPI$_UIC":        func(env *Environment) itemValue { return itemLong(env.Process.UIC) },
+	"JPI$_USERNAME":   func(env *Environment) itemValue { return itemPadded(env.Process.Username, 12) },
+	"JPI$_WSAUTH":     func(env *Environment) itemValue { return itemLong(env.Process.WSQuota) },
+	"JPI$_WSAUTHEXT":  func(env *Environment) itemValue { return itemLong(env.Process.WSExtent) },
+	"JPI$_WSEXTENT":   func(env *Environment) itemValue { return itemLong(env.Process.WSExtent) },
+	"JPI$_WSQUOTA":    func(env *Environment) itemValue { return itemLong(env.Process.WSQuota) },
+	"JPI$_WSSIZE":     func(env *Environment) itemValue { return itemLong(env.Process.WSLimit) },
 }
 
 // schStateCurrent is SCH$C_CUR, the state of the running process.
@@ -119,8 +107,8 @@ func (env *Environment) remainingASTs() uint32 {
 }
 
 // jpiItems is jpiItemsByName keyed by item code.
-var jpiItems = func() map[uint16]func(*Environment) jpiValue {
-	out := map[uint16]func(*Environment) jpiValue{}
+var jpiItems = func() map[uint16]func(*Environment) itemValue {
+	out := map[uint16]func(*Environment) itemValue{}
 
 	for name, fn := range jpiItemsByName {
 		code, ok := vmsdef.JPIConstants[name]
@@ -133,23 +121,6 @@ var jpiItems = func() map[uint16]func(*Environment) jpiValue {
 
 	return out
 }()
-
-// storeJPIItem writes v into e's buffer, truncated to the buffer's length
-// (a longword is stored low byte first), and its length to e's return
-// length address.
-func (env *Environment) storeJPIItem(e itemListEntry, v jpiValue) uint32 {
-	data := v.text
-	if !v.str {
-		data = string([]byte{byte(v.value), byte(v.value >> 8), byte(v.value >> 16), byte(v.value >> 24)})
-	}
-
-	n, _, err := storeBuffer(env, e.BuffAddr, e.BuffLen, data)
-	if err != nil {
-		return ssAccVio
-	}
-
-	return env.setRetLen(e, n)
-}
 
 // serviceSysGetjpi is SYS$GETJPI and SYS$GETJPIW:
 //
@@ -210,7 +181,7 @@ func serviceSysGetjpi(env *Environment, argv []uint32) (uint32, error) {
 			return ssBadParam
 		}
 
-		return env.storeJPIItem(e, item(env))
+		return env.storeItem(e, item(env))
 	})
 	if status == 0 {
 		status = ssNormal

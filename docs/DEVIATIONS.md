@@ -525,6 +525,21 @@ changed as a result.
     that stub is replaced.
 - **Status**: open, by design.
 
+### [Phase 26] `$GETSYI` simplifications
+
+- **Where**: `internal/rtl/getsyi.go`.
+- **What**:
+  - The system is one node outside any cluster: only this node can be
+    named, a wildcard scan finds only it, and the cluster items report
+    no membership and CSID 0.
+  - Only 10 item codes are supported, of the system's identity, boot
+    time, and `MINWSCNT`. Other SYSGEN parameters, the `*_EMULATED`
+    flags, and hardware model names are `SS$_BADPARAM`.
+  - `SYI$_VERSION` reports `V7.3`, the release of the VMS definitions
+    govax is built from, though the services follow the VMS 5.0 manual.
+  - No `ASTLM` quota (`SS$_EXASTLM`).
+- **Status**: open, by design.
+
 ## Open findings
 
 _None yet._

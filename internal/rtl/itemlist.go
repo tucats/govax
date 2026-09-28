@@ -1,5 +1,7 @@
 package rtl
 
+import "fmt"
+
 // itemListEntry is one VMS $GETxxx-style item-list entry: a 12-byte record
 // of (buffer length, item code, buffer address, return-length address),
 // matching the identical loop structure repeated in sys_getjpiw, sys_getdviw
@@ -71,7 +73,7 @@ func (env *Environment) setRetLen(e itemListEntry, size uint16) uint32 {
 	if err := env.mem.StoreWord(env.cpu, e.RetAddr, size); err != nil {
 		return ssAccVio
 	}
-	
+
 	return 0
 }
 
@@ -113,4 +115,53 @@ func (env *Environment) walkItemListChain(ptr uint32, chain uint16, visit func(i
 	}
 
 	return ssBadParam
+}
+
+// itemValue is the data one information item returns ($GETJPI's
+// JPI$_PID, $GETSYI's SYI$_VERSION, ...), as the bytes to store in the
+// item's buffer. Numbers are stored low byte first, as the VAX stores
+// them. The constructors below make the common kinds.
+type itemValue struct {
+	data string
+}
+
+// itemString is a character-string item, returned as it is.
+func itemString(s string) itemValue { return itemValue{data: s} }
+
+// itemPadded is a fixed-width string item, blank-padded to width (VMS
+// pads names like JPI$_USERNAME and SYI$_VERSION with blanks).
+func itemPadded(s string, width int) itemValue { return itemString(padded(s, width)) }
+
+// itemByte, itemWord, itemLong, and itemQuad are 1-, 2-, 4-, and 8-byte
+// numeric items.
+func itemByte(v uint8) itemValue  { return itemValue{data: string([]byte{v})} }
+func itemWord(v uint16) itemValue { return itemValue{data: string([]byte{byte(v), byte(v >> 8)})} }
+func itemLong(v uint32) itemValue { return itemValue{data: littleEndian(uint64(v), 4)} }
+func itemQuad(v uint64) itemValue { return itemValue{data: littleEndian(v, 8)} }
+
+// padded returns s blank-padded on the right to width characters.
+func padded(s string, width int) string { return fmt.Sprintf("%-*s", width, s) }
+
+// littleEndian returns the low n bytes of v, low byte first.
+func littleEndian(v uint64, n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = byte(v >> (8 * i))
+	}
+
+	return string(b)
+}
+
+// storeItem writes v into e's buffer, truncated to the buffer's length
+// (so a longword into a 2-byte buffer keeps its low word), and the length
+// stored to e's return-length address. Returns walkItemList's status
+// convention: 0, or SS$_ACCVIO for a buffer or return length that can't
+// be written.
+func (env *Environment) storeItem(e itemListEntry, v itemValue) uint32 {
+	n, _, err := storeBuffer(env, e.BuffAddr, e.BuffLen, v.data)
+	if err != nil {
+		return ssAccVio
+	}
+
+	return env.setRetLen(e, n)
 }

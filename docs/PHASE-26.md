@@ -24,12 +24,12 @@ The first batch, requested by the user on 2026-09-27, is `$ADJSTK`,
 `$ADJWSL`, `$ALLOC`, and `$ASCEFC`. The second adds `$DALLOC`,
 `$DACEFC`/`$DLCEFC`, `$GETJPI`, and the event-flag waits. The third adds
 `$DASSGN` and the timers; the fourth, the time conversions, hibernation,
-and AST delivery. The fifth adds terminal , , exit
-handlers, , more  items, mode-switching AST delivery,
-and .
+and AST delivery. The fifth adds terminal `$QIO`, `$SYNCH`, exit
+handlers, `$NUMTIM`, more `$GETJPI` items, mode-switching AST delivery,
+and `$GETSYI`.
 
-**Status: fifth batch in progress** (subtasks 17-23). Add later services
-as new subtasks.
+**Status: five batches complete** (subtasks 1-23). Add later services as
+new subtasks.
 
 ## References
 
@@ -65,7 +65,8 @@ follow them too, and this list should grow when a new pattern is settled.
   `hibernate.go` (`$HIBER`, `$WAKE`, scheduled wakeups), `ast.go` (AST
   delivery), `qio.go` (`$QIO` and the driver registry), `ttdriver.go`
   (the terminal driver's functions), `exit.go` (`$EXIT` and exit
-  handlers). Each file has
+  handlers), `getsyi.go` (`$GETSYI`), `itemlist.go` (item-list walking
+  and the item values the `$GETxxx` services return). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -191,6 +192,7 @@ lists the ones the implementation can actually return.
 | `$NUMTIM` | 20 | `vmstime.go` | `NORMAL`, `ACCVIO`, `IVTIME` | Seven numeric fields; a delta's year and month are 0. |
 | (`$GETJPI` items) | 21 | `getjpi.go` | — | `JPI$_ASTACT`, `ASTEN`, `ASTCNT`, `ASTLM`, `PRI`, `PRIB`, `STATE`; `Process` gains `ASTLimit` and priorities. |
 | (AST delivery) | 22 | `ast.go` | — | An inner-mode AST interrupts outer-mode code by switching mode and stack; `$CLRAST` switches back. |
+| `$GETSYI`, `$GETSYIW` | 23 | `getsyi.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLEFC`, `INSFARG`, `IVLOGNAM`, `NOMORENODE`, `NOSUCHNODE`, `UNASEFC` | 10 items: version, node name, SID/CPU, boot time, cluster membership, `MINWSCNT`; this node only. |
 
 ## Service designs
 
@@ -1281,6 +1283,63 @@ Since waits retry their `XFC` each step, an inner-mode AST now also
 interrupts an outer-mode wait: the classic "user program hibernates until
 a kernel timer AST wakes it" works.
 
+### `$GETSYI` / `$GETSYIW` — Get Systemwide Information
+
+`SYS$GETSYI[W] [efn] ,[csidadr] ,[nodename] ,itmlst [,iosb] [,astadr] [,astprm]`
+
+The `$GETJPI` pattern, for the system rather than a process: an item list
+says what to return, and the request completes during the call (flag
+cleared then set, IOSB, AST with `astprm` in the caller's mode), so both
+forms are the same service. A request rejected before it starts
+(`SS$_INSFARG` for fewer than four arguments, a bad event flag, an
+unwritable IOSB, a node that isn't this one) completes nothing; an
+unsupported item still completes, with `SS$_BADPARAM`.
+
+#### The node
+
+VMS can report on any node of a VAXcluster. govax is one node outside any
+cluster (`nodeTarget`):
+
+- `csidadr` holding 0, this node's cluster system ID (a node outside a
+  cluster has none), or omitted: this node. -1 starts a wildcard scan that
+  returns this node, then `SS$_NOMORENODE`, as `$GETJPI`'s process
+  wildcard does. Any other CSID is `SS$_NOSUCHNODE`.
+- `nodename` must be exactly this node's name, `Environment.NodeName`
+  (`GOVAX`), or it's `SS$_NOSUCHNODE`; empty or over 15 characters is
+  `SS$_IVLOGNAM`. With both arguments, both must name this node.
+
+#### Items
+
+| Item | Returns |
+| --- | --- |
+| `SYI$_VERSION` | `"V7.3    "` (8 characters, blank-padded) |
+| `SYI$_NODE_SWVERS`, `SYI$_NODE_SWTYPE` | `"V7.3"`, `"VMS "` (4 characters) |
+| `SYI$_NODENAME` | `Environment.NodeName` |
+| `SYI$_SID`, `SYI$_CPU` | The CPU's SID register, and its processor-type byte (bits 31:24) |
+| `SYI$_BOOTTIME` | `Environment.BootTime`: when the INIT/VMINIT/ZERO that built the Environment ran, on the engine's clock |
+| `SYI$_CLUSTER_MEMBER`, `SYI$_NODE_CSID` | 0: not a cluster member, no CSID |
+| `SYI$_MINWSCNT` | The SYSGEN parameter `$ADJWSL` clamps to (`Process.MinWSCount`) |
+
+The version is that of the VMS sources govax's definitions come from:
+the `$SYIDEF`, `$IODEF`, `$JPIDEF`, ... codes are VMS 7.3's, so a program
+that tests the version finds the release those definitions describe.
+The `*_EMULATED` items are left out: decimal-string instructions aren't
+implemented, so any answer would mislead.
+
+`$SYIDEF` is generated from `reference/vms/syidef.txt`, the VMS 7.3 VEST
+listing (`vest_dblrtl/lis/syidef.txt`), whose `NAME, I4, value` layout the
+BLISS-literal parser now accepts (the `SYI$_...` item codes and
+`SYI$C_` values, 309 symbols). The archive's `syidef.sdl` has lost its
+line breaks, so its comments can't be parsed.
+
+The item values `$GETJPI` and `$GETSYI` return are built with shared
+helpers in `itemlist.go` (`itemString`, `itemPadded`, `itemByte`,
+`itemWord`, `itemLong`, `itemQuad`, `storeItem`), which replaced
+`getjpi.go`'s JPI-only ones.
+
+Not implemented (see `docs/DEVIATIONS.md`): other cluster nodes; SYSGEN
+parameters beyond `MINWSCNT`; the `ASTLM` quota (`SS$_EXASTLM`).
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -1367,9 +1426,36 @@ fourth batch listed):
     privileged mode's AST by switching the CPU into that mode, as VMS
     does, and `$CLRAST` switches back, closing subtask 15's main
     deviation.
-23. **`$GETSYI`/`$GETSYIW`.** The `$GETJPI` pattern for system-wide
+23. **Done.** **`$GETSYI`/`$GETSYIW`.** The `$GETJPI` pattern for system-wide
     information, with `$SYIDEF` generated from real VMS source.
 
+
+Candidates next, roughly in order of value now that terminal I/O, exit
+handlers, and mode switching exist:
+
+- **`$FAO`/`$FAOL`** (formatted ASCII output: `!AS`, `!UL`, `!XL`, `!%D`,
+  ...). Nearly every MACRO-32 program that prints builds its text with
+  it, and the `$QIO` terminal writes now give that text somewhere to go.
+- **`$GETMSG`/`$PUTMSG`**: a condition value's message text
+  (`%SYSTEM-F-ACCVIO, ...`). `internal/vmserrors` already knows many
+  texts; `$PUTMSG` would write through the terminal driver.
+- **`$CMKRNL`/`$CMEXEC`**: call a routine in kernel or executive mode.
+  Subtask 19's `CallRequest` plus subtask 22's `switchMode` are most of
+  it: switch in, call with the service's `XFC` as the return, switch back
+  on the way out with the routine's R0.
+- **CTRL/C and CTRL/Y ASTs**: `IO$_SETMODE` with `IO$M_CTRLCAST`/
+  `CTRLYAST` currently does nothing. The console's attention handling
+  could queue the enabled AST instead of stopping the machine.
+- **`$GETDVI`/`$GETDVIW` in full**: replace eVAX's three-item `$GETDVIW`
+  with the `$GETJPI`/`$GETSYI` pattern over the device record, from a
+  generated `$DVIDEF`, adding the asynchronous form, `efn`/`iosb`/AST,
+  and items like `DVI$_DEVNAM`, `DEVCHAR`, `OWNUIC`, `PID`, `REFCNT`.
+- **Mailboxes**: `$CREMBX`/`$DELMBX` and a mailbox driver in `ioDrivers`
+  (write, read, `IO$M_NOW`), the first device where `$QIO` completion
+  really is deferred: a read waits for a write.
+- **Small process-control services**: `$SETPRN` (process name), `$SETPRI`,
+  and `$FORCEX`/`$DELPRC` on this process (an exit through subtask 19's
+  path, from an AST).
 
 ## Open questions
 
@@ -1886,3 +1972,29 @@ None yet.
   waits.
 - `docs/DEVIATIONS.md`: the AST entry's first point is resolved.
 - `go test ./...` passes.
+
+### 2026-09-28 — Subtask 23: `$GETSYI`/`$GETSYIW`; fifth batch complete
+
+- **`$SYIDEF`**: `reference/vms/syidef.txt`, the VMS 7.3 VEST listing,
+  generated as `vmsdef.SYIConstants` (309 symbols). `gen/bliss.go`'s
+  literal pattern now accepts the VEST `I4` type
+  (`TestParseBlissLiterals_vestListing`).
+- **`internal/rtl/getsyi.go`** (new): `serviceSysGetsyi` (both entry
+  points), `nodeTarget`, and the item registry. `Environment` gains
+  `NodeName` and `BootTime`; the console resets `BootTime` after binding
+  the engine's clock.
+- **`itemlist.go`**: the item-value helpers shared by `$GETJPI` and
+  `$GETSYI` (`itemValue`, `itemString`, `itemPadded`, `itemByte`,
+  `itemWord`, `itemLong`, `itemQuad`, `storeItem`), replacing
+  `getjpi.go`'s `jpiValue` family.
+- **Acceptance fixture** `testdata/asm/getsyi.asm`: the manual's example
+  (version and node name) and a wildcard scan counting nodes.
+  `TestGetsyi_assembledProgram` checks both strings and one node.
+- Tests (`getsyi_test.go`): every item's bytes (including the quadword
+  boot time and the byte cluster flag), a truncated item, node selection
+  by CSID, name, both, and wildcard, with each error, completion with
+  flag, IOSB, and AST, `SS$_BADPARAM` still completing, rejection
+  completing nothing, omitted optional arguments, and the registry.
+- `go test ./...` passes.
+- **Phase status.** The fifth batch (subtasks 17-23) is done. Candidates
+  for the next batch are listed under Subtasks.

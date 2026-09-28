@@ -110,6 +110,15 @@ type Environment struct {
 	// (timers.go).
 	Clock func() uint64
 
+	// BootTime is when the system "booted", in VMS time: $GETSYI's
+	// SYI$_BOOTTIME. NewEnvironment sets it to Clock's time; the console
+	// resets it after rebinding Clock, so it's the time of the INIT,
+	// VMINIT, or ZERO that built this Environment.
+	BootTime uint64
+
+	// NodeName is the system's node name ($GETSYI's SYI$_NODENAME).
+	NodeName string
+
 	// timers is the process's $SETIMR timer queue (timers.go).
 	timers []*timerRequest
 
@@ -146,6 +155,9 @@ func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, lo
 		openFiles:  map[uint32]*os.File{},
 		nextFID:    3,
 	}
+	env.BootTime = env.Clock()
+	env.NodeName = nominalNodeName
+
 	registerShims(env.shims)
 	registerServices(env.services)
 

@@ -9,8 +9,9 @@ import (
 
 // blissLiteralRE matches one entry of a BLISS "LITERAL" declaration as
 // laid out in reference/vms/ssdef.txt: "NAME, I, value" with an optional
-// trailing separator.
-var blissLiteralRE = regexp.MustCompile(`^\s*([A-Z0-9_$]+),\s*I,\s*(-?[0-9]+)\s*[,;]?\s*$`)
+// trailing separator. The VEST listings (reference/vms/syidef.txt) write
+// the type as I4, a four-byte integer, which is accepted too.
+var blissLiteralRE = regexp.MustCompile(`^\s*([A-Z0-9_$]+),\s*I4?,\s*(-?[0-9]+)\s*[,;]?\s*$`)
 
 // parseBlissLiterals extracts every "NAME, I, value" literal whose name
 // starts with prefix from a BLISS LITERAL listing such as
