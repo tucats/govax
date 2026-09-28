@@ -63,6 +63,10 @@ type Process struct {
 	// (hibernate.go). It's a flag, not a count: several wakeups before a
 	// $HIBER end just that one.
 	WakePending bool
+
+	// ast is the process's AST queue and per-mode AST state (the PCB's
+	// AST fields; ast.go).
+	ast astState
 }
 
 // Default identity and quotas for the emulated process. The PID is
@@ -102,6 +106,7 @@ func NewProcess() *Process {
 		WSQuota:    nominalWSQuota,
 		WSExtent:   nominalWSExtent,
 		MinWSCount: nominalMinWSCount,
+		ast:        newASTState(),
 	}
 }
 
@@ -205,14 +210,16 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 // for the state this package owns: it deassigns the channels the image
 // assigned from user mode, then deallocates the devices it allocated in
 // user mode, and disassociates its common event flag clusters (deleting
-// temporary ones nobody else uses), and cancels its outstanding
-// $SETIMR timers. The console calls it when an image started by RUN
+// temporary ones nobody else uses), cancels its outstanding $SETIMR
+// timers and $SCHDWK wakeups, and discards its queued user-mode ASTs.
+// The console calls it when an image started by RUN
 // returns (and does its own logical-name rundown alongside).
 func (env *Environment) ImageRundown() {
 	env.deassignUserChannels()
 	env.deallocateUserDevices()
 	env.disassociateClusters()
 	env.cancelTimers()
+	env.flushUserASTs()
 }
 
 func registerProcessServices(t *ServiceTable) {

@@ -13,11 +13,14 @@ type ServiceFunc func(env *Environment, argv []uint32) (uint32, error)
 // lookupP1Vector resolves a calling address to a name first.
 type ServiceTable struct {
 	entries map[string]ServiceFunc
+
+	// noArgs names the services registered with RegisterNoArgs.
+	noArgs map[string]bool
 }
 
 // NewServiceTable returns an empty ServiceTable.
 func NewServiceTable() *ServiceTable {
-	return &ServiceTable{entries: map[string]ServiceFunc{}}
+	return &ServiceTable{entries: map[string]ServiceFunc{}, noArgs: map[string]bool{}}
 }
 
 // Register adds fn under name, matching declare_service(name, handler). A
@@ -28,6 +31,19 @@ func NewServiceTable() *ServiceTable {
 func (t *ServiceTable) Register(name string, fn ServiceFunc) {
 	t.entries[name] = fn
 }
+
+// RegisterNoArgs adds fn under name, like Register, for a service that
+// isn't called with an argument list: SystemService passes it a nil argv
+// instead of reading one from AP. The AST exit, SYS$CLRAST, is one: it's
+// reached by an AST routine's RET, not by CALLS (ast.go).
+func (t *ServiceTable) RegisterNoArgs(name string, fn ServiceFunc) {
+	t.Register(name, fn)
+	t.noArgs[name] = true
+}
+
+// ReadsArgs reports whether the service registered under name takes an
+// argument list — true unless it was registered with RegisterNoArgs.
+func (t *ServiceTable) ReadsArgs(name string) bool { return !t.noArgs[name] }
 
 // Lookup returns the ServiceFunc registered under name.
 func (t *ServiceTable) Lookup(name string) (ServiceFunc, bool) {
@@ -53,6 +69,7 @@ func registerServices(t *ServiceTable) {
 	registerTimerServices(t)
 	registerTimeServices(t)
 	registerHibernateServices(t)
+	registerASTServices(t)
 	registerDeviceServices(t)
 	registerLogicalServices(t)
 	registerCLIService(t)

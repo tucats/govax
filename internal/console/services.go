@@ -98,6 +98,17 @@ func (c *Console) SystemService(pc uint32) (uint32, bool, error) {
 	return r0, handled, translateHalt(err)
 }
 
+// NextAST delegates to RTL, making Console a cpu.ASTSource as well: the
+// engine asks at every instruction boundary whether an AST is due, and
+// the RTL, which owns the AST queues, answers (docs/PHASE-26.md subtask
+// 15). This only converts between the two packages' types, keeping
+// internal/rtl free of an internal/cpu import.
+func (c *Console) NextAST() (cpu.ASTCall, bool, error) {
+	routine, argList, returnPC, ok, err := c.RTL.NextAST()
+
+	return cpu.ASTCall{Routine: routine, ArgList: argList, ReturnPC: returnPC}, ok, err
+}
+
 // Shim delegates to RTL (Phase 10's LIB$/CRTL shim dispatch).
 func (c *Console) Shim(code uint32) (uint32, bool, error) {
 	r0, handled, err := c.RTL.Shim(code)

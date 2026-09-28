@@ -5,18 +5,11 @@ import (
 )
 
 // Port of service.c's SYS$ services that don't need internal/io or the RMS
-// layer: the exit-handler/AST recording stubs and virtual address region
-// expansion. Its event-flag services moved to eventflags.go when common
-// event flag clusters arrived, and SYS$GETJPIW to getjpi.go when it grew
-// into a real $GETJPI (docs/PHASE-26.md).
-
-// serviceSysSetast is SYS$SETAST: records whether ASTs are enabled. Nothing
-// currently delivers an AST — see Environment.astEnabled's doc comment.
-func serviceSysSetast(env *Environment, argv []uint32) (uint32, error) {
-	env.astEnabled = byte(argv[0]) != 0
-
-	return ssNormal, nil
-}
+// layer: the exit-handler recording stub and virtual address region
+// expansion. Its SYS$SETAST stub became a real per-mode $SETAST in ast.go
+// when AST delivery arrived, its event-flag services moved to
+// eventflags.go when common event flag clusters did, and SYS$GETJPIW to
+// getjpi.go when it grew into a real $GETJPI (docs/PHASE-26.md).
 
 // serviceSysDclexh is SYS$DCLEXH: records the exit-handler address. Nothing
 // currently invokes it — see Environment.exitHandler's doc comment.
@@ -64,7 +57,6 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 }
 
 func registerCoreServices(t *ServiceTable) {
-	t.Register("SYS$SETAST", serviceSysSetast)
 	t.Register("SYS$DCLEXH", serviceSysDclexh)
 	t.Register("SYS$EXPREG", serviceSysExpreg)
 }

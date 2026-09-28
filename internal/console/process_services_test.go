@@ -238,3 +238,47 @@ func TestHibernate_assembledProgram(t *testing.T) {
 		t.Errorf("%d requests still queued, want 0 after $CANWAK", n)
 	}
 }
+
+// TestASTDelivery_assembledProgram is docs/PHASE-26.md subtask 15's
+// acceptance test: testdata/asm/ast_delivery.asm declares ASTs with
+// $DCLAST, holds one back with $SETAST, and checks each ran when it
+// should and left R0, R1, and R2 as they were. This test also checks the
+// routine saw five arguments and that no AST is left queued or active.
+func TestASTDelivery_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "ast_delivery.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(ast_delivery.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("ast_delivery.asm has no entry address")
+	}
+
+	runErr, hitCap := callBounded(t, c, addr, 100_000)
+	if runErr != nil {
+		t.Fatalf("running ast_delivery.asm: %v", runErr)
+	}
+
+	if hitCap {
+		t.Fatal("ast_delivery.asm didn't finish within 100,000 steps")
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Errorf("R0 = %d, want 1 (every AST ran when it should, registers intact)", got)
+	}
+
+	argcount, ok := c.Symbols.Get("ARGCOUNT")
+	if !ok {
+		t.Fatal("no ARGCOUNT symbol")
+	}
+
+	if n, err := c.Mem.LoadLongword(c.CPU, argcount); err != nil || n != 5 {
+		t.Errorf("the AST routine's argument count = %d (%v), want 5", n, err)
+	}
+
+	if n := c.RTL.PendingASTs(); n != 0 {
+		t.Errorf("%d ASTs still queued, want 0", n)
+	}
+}

@@ -67,6 +67,10 @@ type Engine struct {
 	// environment it depends on exists.
 	services SystemServices
 
+	// astSource is services' AST half (ast.go), when it has one; nil
+	// otherwise, and then Step never checks for ASTs.
+	astSource ASTSource
+
 	// decoded is Step's own reusable Decoded buffer -- see Step's doc
 	// comment on why this exists (a Phase 12 performance-pass finding, not
 	// part of the original Phase 03 design).
@@ -187,7 +191,10 @@ func NewEngine(cpu *vax.CPU, mem *vm.Memory) *Engine {
 
 // SetSystemServices installs s as the XFC opcode's hook into console/RTL
 // state — see services.go.
-func (e *Engine) SetSystemServices(s SystemServices) { e.services = s }
+func (e *Engine) SetSystemServices(s SystemServices) {
+	e.services = s
+	e.astSource, _ = s.(ASTSource)
+}
 
 // CPU returns the engine's CPU.
 func (e *Engine) CPU() *vax.CPU { return e.cpu }
@@ -346,6 +353,15 @@ func (e *Engine) Step() error {
 	if e.interruptPending {
 		if err := e.deliverPendingInterrupt(); err != nil {
 			return err
+		}
+	}
+
+	// An AST, like an interrupt, is taken between instructions. The RTL
+	// declines while an interrupt handler just started above runs (its
+	// IPL is too high), so the two never nest the wrong way round.
+	if e.astSource != nil {
+		if err := e.deliverAST(); err != nil {
+			return e.raise(err)
 		}
 	}
 

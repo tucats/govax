@@ -156,6 +156,9 @@ lists the ones the implementation can actually return.
 | `$WAKE` | 14 | `hibernate.go` | `NORMAL`, `ACCVIO`, `IVLOGNAM`, `NONEXPR` | Sets `Process.WakePending`. |
 | `$SCHDWK` | 14 | `hibernate.go` | `NORMAL`, `ACCVIO`, `IVLOGNAM`, `IVTIME`, `NONEXPR` | A wakeup entry on the `$SETIMR` timer queue, optionally repeating (10ms minimum). |
 | `$CANWAK` | 14 | `hibernate.go` | `NORMAL`, `ACCVIO`, `IVLOGNAM`, `NONEXPR` | Removes queued wakeups only. |
+| `$DCLAST` | 15 | `ast.go` | `NORMAL` | Queues an AST for the caller's mode or a less privileged one. |
+| `$SETAST` | 15 | `ast.go` | `WASSET`, `WASCLR` | Per-mode AST enable, replacing eVAX's single recorded flag. |
+| `$CLRAST` | 15 | `ast.go` | (restored R0) | The AST exit: an AST routine's `RET` returns through it. Not called directly. |
 
 ## Service designs
 
@@ -800,6 +803,154 @@ GROUP/WORLD privileges VMS checks always pass.
 Not implemented: the `ASTLM` quota (`SS$_EXQUOTA`) and `SS$_INSFMEM`;
 `SS$_NOPRIV` (no other processes); the `HIB` process state.
 
+### AST delivery, `$DCLAST`, `$SETAST`
+
+`SYS$DCLAST astadr ,[astprm] ,[acmode]` and `SYS$SETAST enbflg`
+
+#### What an AST is
+
+An **AST** (asynchronous system trap) is a procedure call VMS makes on a
+program's behalf, interrupting it, when something the program asked about
+happens: a timer expires (`$SETIMR`'s `astadr`), a request completes
+(`$GETJPI`'s), or the program asks for one (`$DCLAST`). The program then
+continues as if nothing had happened. VMS programs use ASTs where others
+would use threads or callbacks: start an operation, do something else (or
+`$HIBER`), and let the AST routine handle the completion.
+
+Each AST belongs to an **access mode** and runs in it. Each mode has its
+own queue, its own enable switch (`$SETAST`), and at most one AST running:
+an AST routine is never interrupted by another AST of its own mode.
+
+The routine is called with five arguments: `astprm`, then the interrupted
+program's R0, R1, PC, and PSL.
+
+#### Design: the RTL delivers ASTs, the engine calls them
+
+On a real VAX, AST delivery is split between hardware (the `ASTLVL`
+register, checked by `REI`, requesting an IPL 2 software interrupt) and
+the executive (whose IPL 2 handler builds the call). As with the timer
+queue (subtask 11), govax's executive is the Go RTL, and the guest's
+interrupt path isn't used: an AST must not depend on a particular guest
+kernel's software-interrupt handler. The work is split along the existing
+package lines, with neither package learning the other's data:
+
+| Step | Who | Where |
+| --- | --- | --- |
+| 1. Before every instruction, ask whether an AST can run | engine | `Engine.Step` → `deliverAST` (`internal/cpu/ast.go`) |
+| 2. Decide, pick the AST, push its argument list, mark it active | RTL | `Environment.NextAST` (`internal/rtl/ast.go`) |
+| 3. Call the routine exactly as `CALLG` would | engine | `buildCallFrame`, shared with `CALLS`/`CALLG` |
+| 4. On the routine's `RET`, restore the interrupted state | RTL | `serviceSysClrast` |
+
+The engine reaches the RTL through a new **optional** interface,
+`cpu.ASTSource` (`NextAST() (ASTCall, bool, error)`).
+`SetSystemServices` checks for it with a type assertion, so the test
+doubles that implement only `SystemServices` are unaffected. The console
+implements it by delegating to its `rtl.Environment` and converting types,
+the same way it translates `rtl.ErrWait`, so `internal/rtl` still doesn't
+import `internal/cpu`.
+
+#### When an AST is delivered
+
+`NextAST` delivers the oldest queued AST for the current mode when all of
+these hold, as on VMS:
+
+- IPL is below 2 (`IPL$_ASTDEL`), and the CPU isn't on the interrupt stack.
+  Interrupt handlers (IPL 20+) and kernel code that raised IPL are never
+  interrupted. It also means an interrupt taken in the same step (IPL now
+  high) is never itself interrupted by an AST.
+- ASTs are enabled for this mode and every more privileged mode.
+- No AST of this mode is already active.
+
+Before checking, `NextAST` expires due timers, whatever the IPL. So
+timers now fire on the tick they're due, not only at the next event-flag
+service (subtask 11's lazy expiry remains for code without an engine).
+
+#### The frame and the return path
+
+`NextAST` pushes six longwords on the current stack. They are the
+routine's argument list and the state to restore:
+
+```text
+SP+0   5        argument count
+SP+4   astprm
+SP+8   R0       ─┐
+SP+12  R1        │ the interrupted program's state
+SP+16  PC        │
+SP+20  PSL      ─┘
+```
+
+The engine then builds a `CALLG (SP), routine` frame, whose saved return
+PC is **`SYS$CLRAST` + 2**: the `XFC` in that P1-vector entry, past its
+entry mask. On VMS, `$CLRAST` is the (undocumented) service AST delivery
+returns through; govax uses its vector entry the same way. The routine's
+`RET` unwinds its frame. `CALLG` frames don't pop their argument list, so
+SP is left at the six longwords. Execution continues at the `XFC`, which
+calls `serviceSysClrast`. That service restores R1, PC, and PSL, pops the
+frame, clears the mode's active flag, and returns the saved R0. The `XFC`
+handler stores it in R0 as it does any service status.
+
+Details:
+
+- **No argument list.** `$CLRAST` is reached by `RET`, not `CALLS`, so
+  AP is the interrupted code's. It is registered with the new
+  `ServiceTable.RegisterNoArgs`, and `SystemService` doesn't read an
+  argument list for it.
+- **Misuse is harmless.** If no AST is active in the mode, or SP isn't at
+  the active AST's frame (a direct call, or an unbalanced routine),
+  `$CLRAST` changes nothing and returns `SS$_NORMAL`.
+- **No privilege from the stack.** The restored PSL keeps the current
+  mode and interrupt-stack bits, so a routine that overwrote its frame
+  can't raise its privilege.
+- **The stub must exist.** `NextAST` checks that the `XFC` is at
+  `SYS$CLRAST` + 2 (the P1 vector's stubs are only in memory once
+  `.P1VECTOR` has been assembled, as they are for any program that calls
+  services). If it isn't, or the frame can't be pushed, `NextAST` returns
+  an error and the engine stops (VMS would delete the process).
+- **A bad routine address** (unreadable entry mask) faults as the routine
+  is given control, with the routine's address as the faulting PC, as the
+  manual describes.
+
+#### ASTs and waits
+
+`$WAITFR` and `$HIBER` wait by re-executing their `XFC` (subtask 9), so
+every retry is an instruction boundary where an AST can be delivered. The
+AST's saved PC is the `XFC`, so after the routine returns the wait runs
+again. This is VMS's "the wait is interrupted by the AST, then
+re-executed". If the routine set the flag or called `$WAKE`, the retry
+succeeds.
+
+#### The services
+
+- **`$DCLAST`** queues an AST for `astadr` with `astprm`, in `acmode`
+  maximized with the caller's mode. It always returns `SS$_NORMAL`. As the
+  manual says, `astadr` isn't validated. An AST for the caller's own mode
+  typically runs as soon as the call returns: `NextAST` delivers it
+  before the stub's `RET`.
+- **`$SETAST`** enables (low byte of `enbflg` nonzero) or disables ASTs
+  for the caller's mode, returning `SS$_WASSET` or `SS$_WASCLR` for the
+  previous state. ASTs queued while disabled are delivered once enabled.
+  eVAX recorded one process-wide flag and always returned `SS$_NORMAL`;
+  the old `Environment.astEnabled` is gone.
+- **Image rundown** discards queued user-mode ASTs, and resets user mode
+  to ASTs enabled with none active (`flushUserASTs`).
+
+State lives in `Process.ast` (`astState`: the queue, standing in for
+`PCB$L_ASTQFL`; per-mode `enabled`, `PCB$B_ASTEN`; per-mode `active` and
+frame address, `PCB$B_ASTACT`).
+
+Not implemented (see `docs/DEVIATIONS.md`):
+
+- **No mode switch.** VMS delivers an inner-mode AST to a process running
+  in an outer mode by switching to that mode. govax delivers an AST only
+  while the CPU is in the AST's own mode. A kernel program queuing a
+  user-mode AST sees it only after it drops to user mode, as on VMS; but
+  a user-mode program with a kernel AST pending doesn't get it until it
+  enters kernel mode. So an inner-mode AST doesn't interrupt an
+  outer-mode wait.
+- The `ASTLVL` register and `REI`'s AST check are not used.
+- No `ASTLM` quota (`SS$_EXQUOTA`) and no `SS$_INSFMEM`.
+- `JPI$_ASTACT`, `ASTEN`, and `ASTCNT` aren't reported by `$GETJPI` yet.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -849,6 +1000,11 @@ third batch listed):
 14. **Done.** **`$HIBER`, `$WAKE`, `$SCHDWK`, `$CANWAK`.** In the new
     `hibernate.go`; wakeups on the timer queue. Acceptance fixture
     `testdata/asm/hibernate.asm`.
+
+15. **Done.** **AST delivery, `$DCLAST`, `$SETAST`.** The RTL's `ast.go`
+    decides and restores; the engine's `ast.go` calls the routine through
+    `buildCallFrame`; the AST exit is the `SYS$CLRAST` vector entry.
+    Acceptance fixture `testdata/asm/ast_delivery.asm`.
 
 Candidates next: listed when the fourth batch is complete.
 
@@ -1119,9 +1275,10 @@ None yet.
 - **Decisions (asked of the user):**
   - System time is **local time**, as on VMS, not UTC.
   - ASTs are delivered only at **IPL < 2**, as on VMS. Programs run after a
-    normal boot are in user mode at IPL 0 (kernel.asm's `exe$initialize`),
-    so this only matters to programs that skip it, like the Go fixture
-    tests, which lower IPL themselves.
+    normal boot are in user mode at IPL 0 (kernel.asm's `exe$initialize`).
+    (The question assumed the Go fixture tests start at IPL 31. Subtask 15
+    found the console is at kernel mode, IPL 0 after VMINIT, so they
+    don't need to lower it.)
 - `serviceSysGettim`, `loadQuad`, and `storeQuad` in the new
   `internal/rtl/vmstime.go`. `$SETIMR` reads `daytim` with `loadQuad`.
 - `vmsdef.Time` adds the zone offset; `vmsdef.GoTime` and
@@ -1170,3 +1327,44 @@ None yet.
   including collapsed missed repetitions staying on the grid; the 10ms
   minimum; every `$SCHDWK` error leaving nothing queued; `$CANWAK` versus
   `$CANTIM` and a pending `$WAKE`; rundown cancelling a repeating wakeup.
+
+### 2026-09-28 — Subtask 15: AST delivery, `$DCLAST`, `$SETAST`
+
+- **`internal/cpu/ast.go`** (new): `ASTCall`, the optional `ASTSource`
+  interface, and `Engine.deliverAST`. `SetSystemServices` records
+  `astSource`, and `Step` calls `deliverAST` after interrupt delivery. A
+  frame fault is raised with the routine's address as the PC.
+- **`internal/rtl/ast.go`** (new): `astState` (in `Process.ast`),
+  `queueAST`, `PendingASTs`, `NextAST`, `pushASTFrame`, and the services
+  `$DCLAST`, `$SETAST`, and `$CLRAST` (the AST exit, via the new
+  `ServiceTable.RegisterNoArgs`/`ReadsArgs`). `ImageRundown` calls
+  `flushUserASTs`.
+- `$SETAST` moved from `core.go` and became per mode, returning
+  `WASSET`/`WASCLR`. `Environment.astEnabled` is gone.
+- `internal/console/services.go`: `Console.NextAST` bridges the two
+  packages. Stale "no AST delivery" comments in `console/set.go` and
+  `cpu/call.go` were updated.
+- **Correction:** the IPL question (subtask 12) assumed the fixture tests
+  start at IPL 31. The console is at kernel mode, IPL 0 after VMINIT. The
+  fixture sets IPL 0 anyway; changing that to IPL 2 was checked to make it
+  fail with the AST still queued.
+- **Acceptance fixture** `testdata/asm/ast_delivery.asm`: a `$DCLAST`
+  delivered immediately (R0, R1, and R2 intact afterwards, though the
+  routine clobbers them); `$SETAST(0)` holding a second AST back;
+  `$SETAST(1)` releasing it. `TestASTDelivery_assembledProgram` also checks
+  the routine saw five arguments and nothing is left queued.
+- **Tests:**
+  - `cpu/ast_test.go`: a delivered AST's `CALLG` frame (saved PC is the
+    return address, entry-mask registers saved, AP at the argument list);
+    `RET` leaving SP at the argument list; `Step` asking at each boundary
+    and running the routine's first instruction; the bad-routine fault;
+    no `astSource` for services without it.
+  - `rtl/ast_test.go`: `$DCLAST` queuing with maximized modes; the frame
+    `NextAST` pushes; one active AST per mode; FIFO order; each
+    delivery condition (other modes, IPL 2, interrupt stack, disabled
+    here or in a more privileged mode); the missing-stub and bad-stack
+    errors; `$CLRAST` restoring everything, ignoring non-AST calls and
+    unbalanced stacks, refusing a forged mode, and reached with an
+    unreadable AP; `$SETAST`'s statuses, low byte, and held-back AST;
+    rundown.
+- `go test ./...` passes.

@@ -86,8 +86,9 @@ func (c *Console) SetSymbolQualified(name string, value uint32, permanent, entry
 // — see this file's own top-of-package convention). CUR_MOD (handled
 // separately in SetPSLField, below) also accepts the bare "MODE" spelling
 // as a convenience alias; unlike the C source, setting CUR_MOD here does
-// not check for/deliver a pending AST (this port has no AST-delivery
-// mechanism at all yet, in any code path).
+// not check for/deliver a pending AST itself. govax delivers ASTs from the
+// RTL, which checks the current mode at every instruction boundary
+// (docs/PHASE-26.md subtask 15), so the next step sees the new mode.
 var pslFieldNames = map[string]func(p *vax.PSL, v uint32) error{
 	"CM":  func(p *vax.PSL, v uint32) error { return setPSLBit(p.SetCM, v) },
 	"TP":  func(p *vax.PSL, v uint32) error { return setPSLBit(p.SetTP, v) },
@@ -246,8 +247,8 @@ var setModeNames = map[string]vax.AccessMode{
 // SetMode implements SET MODE <KERNEL|EXEC|SUPER|USER|INTERRUPT>, matching
 // console_set.c:393-421's set_mode_stack calls. Like SetPSLField's CUR_MOD
 // case, this does not check for/deliver a pending AST (vax.pslw.cur_mod >=
-// vax.ASTLVL) — this port has no AST-delivery mechanism at all yet (see
-// SetPSLField's own doc comment).
+// vax.ASTLVL) itself: the RTL's AST delivery sees the new mode at the next
+// instruction boundary (see pslFieldNames' doc comment).
 func (c *Console) SetMode(name string) error {
 	if err := c.requireInit(); err != nil {
 		return err

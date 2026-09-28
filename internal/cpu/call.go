@@ -340,7 +340,9 @@ func (e *Engine) CallEntry(entry uint32, args ...uint32) error {
 // interrupt (SISR) tail: both call interrupt(), the device-interrupt-queue
 // admission routine that Phase 03 already deferred to Phase 09 (see
 // docs/PHASE-03.md's design notes) -- REI's own PC/PSL/stack restore has no
-// dependency on that machinery and is fully ported here.
+// dependency on that machinery and is fully ported here. (ASTs are now
+// delivered by the RTL at instruction boundaries instead, not through
+// REI and ASTLVL: see ast.go.)
 //
 // emul_rei.c restores SP from vax.preg[vax.pslw.cur_mod] unconditionally
 // after installing the new PSL, never consulting the new PSL's IS bit the

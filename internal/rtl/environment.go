@@ -78,11 +78,6 @@ type Environment struct {
 	// currently invokes it (no image-exit path exists until Phase 13).
 	exitHandler uint32
 
-	// astEnabled is vms_ast_flag, recorded by SYS$SETAST. Nothing currently
-	// delivers an AST (Phase 09's device-interrupt-queue admission routine,
-	// still deferred — see docs/PHASE-07.md's REI notes).
-	astEnabled bool
-
 	channels    []*channel
 	nextChannel uint32
 
@@ -274,9 +269,18 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 		return 0, false, nil
 	}
 
-	argv, err := readArgs(env.cpu, env.mem, env.cpu.GPR(vax.AP))
-	if err != nil {
-		return 0, true, err
+	// A service reached by something other than CALLS/CALLG (the AST exit,
+	// SYS$CLRAST) has no argument list: AP is whatever the interrupted
+	// code had.
+	var (
+		argv []uint32
+		err  error
+	)
+
+	if env.services.ReadsArgs(entry.Name) {
+		if argv, err = readArgs(env.cpu, env.mem, env.cpu.GPR(vax.AP)); err != nil {
+			return 0, true, err
+		}
 	}
 
 	r0, err := callHandler(fn, env, argv)

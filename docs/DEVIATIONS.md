@@ -451,6 +451,33 @@ changed as a result.
     There's no `HIB` process state.
 - **Status**: open, by design.
 
+### [Phase 26] eVAX `$SETAST`: one flag, always `SS$_NORMAL`
+
+- **Where**: `reference/eVAX` `service.c` (`vms_ast_flag`), now
+  `internal/rtl/ast.go`.
+- **What**: eVAX recorded a single process-wide flag and returned
+  `SS$_NORMAL`. The manual has one switch per access mode (the caller's),
+  and returns `SS$_WASSET`/`SS$_WASCLR` for its previous state.
+- **Status**: fixed in Phase 26 subtask 15, when ASTs began to be
+  delivered.
+
+### [Phase 26] AST delivery simplifications
+
+- **Where**: `internal/rtl/ast.go`, `internal/cpu/ast.go`.
+- **What**:
+  - An AST is delivered only while the CPU is in the AST's own mode. VMS
+    also switches an outer-mode process into the AST's inner mode. So an
+    inner-mode AST neither interrupts outer-mode code nor ends an
+    outer-mode wait.
+  - Delivery is done by the RTL at instruction boundaries, not through
+    the `ASTLVL` register, `REI`, and an IPL 2 software interrupt. The
+    conditions checked (IPL < 2, not on the interrupt stack, enabled,
+    none active) are VMS's.
+  - The AST exit is the `SYS$CLRAST` vector entry, reached by the
+    routine's `RET` rather than by VMS's own dispatcher code.
+  - No `ASTLM` quota (`SS$_EXQUOTA`) or `SS$_INSFMEM`.
+- **Status**: open, by design.
+
 ## Open findings
 
 _None yet._

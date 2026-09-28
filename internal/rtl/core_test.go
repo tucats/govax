@@ -6,16 +6,9 @@ import (
 	"github.com/tucats/govax/internal/vax"
 )
 
-func TestServiceSysSetastAndDclexh(t *testing.T) {
+// $SETAST, once tested here alongside $DCLEXH, is in ast_test.go.
+func TestServiceSysDclexh(t *testing.T) {
 	env, _ := fixture()
-
-	if _, err := serviceSysSetast(env, []uint32{1}); err != nil {
-		t.Fatal(err)
-	}
-
-	if !env.astEnabled {
-		t.Error("astEnabled = false, want true")
-	}
 
 	if _, err := serviceSysDclexh(env, []uint32{0x1234}); err != nil {
 		t.Fatal(err)
