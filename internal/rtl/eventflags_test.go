@@ -310,3 +310,62 @@ func TestEventFlagWaitTrace(t *testing.T) {
 		t.Errorf("no completion trace:\n%s", out)
 	}
 }
+
+func TestServiceSysSynch(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	iosb := a.alloc(8)
+	p := env.Process
+
+	// Step 1: the flag isn't set, so it waits.
+	p.LocalEventFlags[0] = 0
+	putLongword(t, env, iosb, 0)
+	wantWait(t, env, serviceSysSynch, 5, iosb)
+
+	// Step 3: the flag is set but the IOSB is still 0 — another event set
+	// the flag. $SYNCH clears it and keeps waiting.
+	p.LocalEventFlags[0] = 1 << 5
+	wantWait(t, env, serviceSysSynch, 5, iosb)
+
+	if flagSet(env, 5) {
+		t.Error("a false alarm left the flag set")
+	}
+
+	// Step 2: the request completed (a nonzero status word). $SYNCH
+	// returns, leaving the flag set. Only the status word counts.
+	p.LocalEventFlags[0] = 1 << 5
+	putLongword(t, env, iosb, 0xFFFF0000)
+	wantWait(t, env, serviceSysSynch, 5, iosb)
+
+	p.LocalEventFlags[0] = 1 << 5
+	putLongword(t, env, iosb, ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysSynch, 5, iosb), ssNormal)
+
+	if !flagSet(env, 5) {
+		t.Error("$SYNCH cleared the flag of a completed request")
+	}
+
+	// Without an IOSB, only the flag counts; efn defaults to 0.
+	p.LocalEventFlags[0] = 1
+	wantR0(t, callLNM(t, env, serviceSysSynch), ssNormal)
+
+	p.LocalEventFlags[0] = 0
+	wantWait(t, env, serviceSysSynch)
+
+	// Errors.
+	p.LocalEventFlags[0] = 1 << 5
+	wantR0(t, callLNM(t, env, serviceSysSynch, 5, badAddr), ssAccVio)
+	wantR0(t, callLNM(t, env, serviceSysSynch, 200, iosb), ssIllEfc)
+	wantR0(t, callLNM(t, env, serviceSysSynch, 64, iosb), ssUnasEfc)
+}
+
+// TestServiceSysSynch_afterQIO checks the pattern $SYNCH exists for: a
+// $QIO with an event flag and IOSB, some other work, then $SYNCH. The
+// request completed during $QIO, so $SYNCH returns at once.
+func TestServiceSysSynch_afterQIO(t *testing.T) {
+	env, _, a, ch := qioFixture(t, "")
+	iosb := a.alloc(8)
+
+	wantR0(t, callQIO(t, env, qioArgs{efn: 7, channel: ch, function: fnWriteVBlk, iosb: iosb, p: [6]uint32{a.str("x"), 1}}), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysSynch, 7, iosb), ssNormal)
+}

@@ -21,7 +21,7 @@ var (
 )
 
 // ErrWait is what a service returns when the process must wait: its event
-// flag condition isn't met yet ($WAITFR), or no wakeup has arrived
+// flag condition isn't met yet ($WAITFR, $SYNCH), or no wakeup has arrived
 // ($HIBER). The console translates it to
 // cpu.ErrServiceWait, which re-executes the service's XFC on the next
 // instruction step, so the service checks again while interrupts (the
@@ -378,6 +378,61 @@ func serviceSysWflor(env *Environment, argv []uint32) (uint32, error) {
 	return env.waitFor(argv[0], func(flags uint32) bool { return flags&mask != 0 })
 }
 
+// serviceSysSynch is SYS$SYNCH:
+//
+//	SYS$SYNCH [efn] ,[iosb]
+//
+// It waits for a request made with event flag efn and I/O status block
+// iosb — a $QIO, $GETJPI, $GETSYI, ... — to complete. An event flag alone
+// can't say that: flags are shared, and another request, a timer, or a
+// $SETEF may set the same one. The IOSB can: the request writes a nonzero
+// condition value to its first word when it completes, and nothing else
+// writes it. So, as the manual describes:
+//
+//  1. Wait (as $WAITFR does) until the event flag is set.
+//  2. If the IOSB's condition value is nonzero, the request is complete:
+//     return SS$_NORMAL, with the flag still set.
+//  3. Otherwise something else set the flag. Clear it and go back to 1.
+//
+// With iosb omitted, only step 1 is done. The flag is left set on return,
+// so a second $SYNCH for the other request sharing the flag also sees it
+// ("the flag set by $GETSYI is not lost"). A request whose ...W form
+// completes during the call (every govax one) is already complete, so
+// $SYNCH returns at once.
+//
+// SS$_ILLEFC and SS$_UNASEFC are as for $WAITFR. An unreadable iosb is
+// SS$_ACCVIO; the manual lists only SS$_NORMAL, but VMS would stop the
+// program with an access violation there.
+func serviceSysSynch(env *Environment, argv []uint32) (uint32, error) {
+	efn, iosb := optArg(argv, 0), optArg(argv, 1)
+
+	word, bit, st := env.eventFlagWord(efn)
+	if st != 0 {
+		return st, nil
+	}
+
+	if *word&(1<<bit) == 0 {
+		return 0, ErrWait // step 1: not set yet
+	}
+
+	if iosb == 0 {
+		return ssNormal, nil
+	}
+
+	status, err := env.mem.LoadWord(env.cpu, iosb)
+	if err != nil {
+		return ssAccVio, nil
+	}
+
+	if status != 0 {
+		return ssNormal, nil // step 2: the request completed
+	}
+
+	*word &^= 1 << bit // step 3: a false alarm
+
+	return 0, ErrWait
+}
+
 func registerEventFlagServices(t *ServiceTable) {
 	t.Register("SYS$CLREF", serviceSysClref)
 	t.Register("SYS$SETEF", serviceSysSetef)
@@ -388,4 +443,5 @@ func registerEventFlagServices(t *ServiceTable) {
 	t.Register("SYS$WAITFR", serviceSysWaitfr)
 	t.Register("SYS$WFLAND", serviceSysWfland)
 	t.Register("SYS$WFLOR", serviceSysWflor)
+	t.Register("SYS$SYNCH", serviceSysSynch)
 }

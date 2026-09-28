@@ -108,8 +108,8 @@ follow them too, and this list should grow when a new pattern is settled.
 - **Waiting.** A service that must put the process in a wait state
   returns `rtl.ErrWait` while its condition isn't met. The engine then
   re-executes the service's `XFC` on the next step (see the event-flag
-  wait design). `$HIBER` uses it too, and any later waiting service
-  (`$SYNCH`, ...) should.
+  wait design). `$HIBER` and `$SYNCH` use it too, and any later
+  waiting service should.
 - **Completing requests.** A service with an `efn`/`iosb`/`astadr`
   completion (`$GETJPI`, `$QIO`, ...) completes during the call: clear
   the flag and IOSB as it starts, then write the IOSB, set the flag, and
@@ -176,6 +176,7 @@ lists the ones the implementation can actually return.
 | (`$SETIMR`, `$GETJPI` ASTs) | 16 | `timers.go`, `getjpi.go` | — | `astadr` now queues an AST: a timer's with `reqidt`, `$GETJPI`'s with `astprm`. |
 | `$QIO`, `$QIOW` | 17 | `qio.go`, `ttdriver.go` | `NORMAL`, `ACCVIO`, `ILLEFC`, `ILLIOFUNC`, `IVCHAN`, `NOPRIV`, `UNASEFC`; IOSB: `NORMAL`, `ENDOFFILE`, `TIMEOUT` | Terminal reads (plain and prompted), writes with carriage control, sense/set mode; completes during the call. |
 | `$CANCEL` | 17 | `qio.go` | `NORMAL`, `IVCHAN`, `NOPRIV` | Checks the channel; nothing is ever outstanding. |
+| `$SYNCH` | 18 | `eventflags.go` | `NORMAL`, `ACCVIO`, `ILLEFC`, `UNASEFC` | Waits for the flag and a nonzero IOSB status, clearing false alarms. |
 
 ## Service designs
 
@@ -1083,6 +1084,32 @@ echo control, line editing, nonzero time limits, and the other modifiers
 the host terminal can't honour; `IO$_SETMODE`'s CTRL/C, CTRL/Y, and
 out-of-band ASTs; the I/O quotas.
 
+### `$SYNCH` — Synchronize
+
+`SYS$SYNCH [efn] ,[iosb]`
+
+An event flag alone can't say a request finished: flags are shared, and a
+timer, `$SETEF`, or another request may set the same one. The IOSB can,
+since only the request writes its status word, and always nonzero.
+`$SYNCH` combines the two, as the manual describes:
+
+1. Wait until the event flag is set (the `$WAITFR` mechanism: `ErrWait`,
+   re-executing the `XFC`).
+2. If the IOSB's status word is nonzero, return `SS$_NORMAL`. The flag is
+   left set, so another `$SYNCH` for a second request sharing it still
+   sees it.
+3. Otherwise it was a false alarm: clear the flag and go back to 1.
+
+With `iosb` omitted, only step 1 is done. Only the IOSB's first word (the
+condition value) is tested: a `$QIO` IOSB's transfer count shares its
+first longword. Every govax request completes during its call, so a
+`$SYNCH` after `$QIO`/`$GETJPI` returns at once; the false-alarm path
+matters for requests a program completes itself, from an AST.
+
+Condition values: `SS$_NORMAL`; `SS$_ILLEFC`/`SS$_UNASEFC` as for
+`$WAITFR`; `SS$_ACCVIO` for an unreadable IOSB (the manual lists only
+`SS$_NORMAL`, but VMS would fail with an access violation there).
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -1152,7 +1179,7 @@ fourth batch listed):
     output streams; `IO$_SENSEMODE`/`SETMODE` read and write the
     device's characteristics. `$IODEF` is generated from real VMS
     source, which needs the SDL parser to learn `#local` symbols.
-18. **`$SYNCH`.** In `eventflags.go`: wait for the event flag, then
+18. **Done.** **`$SYNCH`.** In `eventflags.go`: wait for the event flag, then
     check the IOSB, clearing the flag and waiting again while it's
     still 0.
 19. **`$EXIT`, `$DCLEXH`, `$CANEXH`: exit handlers.** Per-mode handler
@@ -1589,4 +1616,20 @@ None yet.
   prompted read; sense/set mode in both sizes and with a modifier; the
   type-ahead count; every rejection (flag set, IOSB untouched or cleared
   as appropriate, no AST); low-word `chan`/`func`; `$CANCEL`.
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 18: `$SYNCH`
+
+- `serviceSysSynch` in `eventflags.go`: waits for the flag, then tests the
+  IOSB's status word, clearing the flag and waiting again on a false
+  alarm.
+- **Acceptance fixture** `testdata/asm/synch.asm`: `$SYNCH` after a
+  `$GETJPI` returns at once; then two timers share event flag 4, the
+  first a false alarm at 10ms and the second at 30ms with an AST that
+  writes the IOSB, and `$SYNCH` returns only after the second.
+  `TestSynch_assembledProgram` checks at least 30ms passed. A mutant
+  `$SYNCH` that returns on the false alarm fails it.
+- Tests (`eventflags_test.go`): each step, including only the status word
+  counting; no IOSB; the default flag; the errors; `$SYNCH` after a
+  `$QIO`.
 - `go test ./...` passes.

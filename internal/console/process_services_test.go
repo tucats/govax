@@ -388,3 +388,44 @@ func TestTerminalQIO_assembledProgram(t *testing.T) {
 		t.Errorf("%d ASTs left, want none", n)
 	}
 }
+
+// TestSynch_assembledProgram is docs/PHASE-26.md subtask 18's acceptance
+// test: testdata/asm/synch.asm's $SYNCH ignores a timer's "false alarm"
+// on a shared event flag (its IOSB is still 0 at 10ms) and returns only
+// when the stand-in request's AST writes the IOSB, at 30ms.
+func TestSynch_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "synch.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(synch.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("synch.asm has no entry address")
+	}
+
+	start := c.Engine.SystemTime()
+
+	runErr, hitCap := callBounded(t, c, addr, 100_000)
+	if runErr != nil {
+		t.Fatalf("running synch.asm: %v", runErr)
+	}
+
+	if hitCap {
+		t.Fatal("synch.asm didn't finish within 100,000 steps")
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Errorf("R0 = %d, want 1 (every $SYNCH returned when it should)", got)
+	}
+
+	// $SYNCH must not have returned at the 10ms false alarm.
+	if elapsed := c.Engine.SystemTime() - start; elapsed < 30*10_000 {
+		t.Errorf("system time advanced %d, want at least 30ms (300000)", elapsed)
+	}
+
+	if n, m := c.RTL.PendingASTs(), c.RTL.PendingTimers(); n != 0 || m != 0 {
+		t.Errorf("%d ASTs and %d timers left, want none", n, m)
+	}
+}
