@@ -132,13 +132,15 @@ func main() {
 	iodef := flag.String("iodef", "", "path to iodef.sdl")
 	statedef := flag.String("statedef", "", "path to statedef.txt")
 	syidef := flag.String("syidef", "", "path to syidef.txt")
+	dvidef := flag.String("dvidef", "", "path to dvidef.txt")
+	ttdef := flag.String("ttdef", "", "path to ttdef.txt")
 	sysmsg := flag.String("sysmsg", "", "path to sysmsg.txt (a message-file listing)")
 	out := flag.String("out", "", "path to write the generated Go source")
 	msgOut := flag.String("msgout", "", "path to write the generated message texts")
 	flag.Parse()
 
-	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *sysmsg == "" || *out == "" || *msgOut == "" {
-		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, -sysmsg, -out, and -msgout are all required")
+	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *dvidef == "" || *ttdef == "" || *sysmsg == "" || *out == "" || *msgOut == "" {
+		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, -dvidef, -ttdef, -sysmsg, -out, and -msgout are all required")
 	}
 
 	constants := map[string]uint32{}
@@ -182,6 +184,17 @@ func main() {
 	syi, err := parseBlissLiterals(readSource(*syidef), "SYI$")
 	if err != nil {
 		log.Fatalf("gen: %s: %v", *syidef, err)
+	}
+
+	dvi, err := parseBlissLiterals(readSource(*dvidef), "DVI$")
+	if err != nil {
+		log.Fatalf("gen: %s: %v", *dvidef, err)
+	}
+
+	// "TT" takes both $TTDEF's TT$ names and its TT2$ names.
+	tt, err := parseBlissLiterals(readSource(*ttdef), "TT")
+	if err != nil {
+		log.Fatalf("gen: %s: %v", *ttdef, err)
 	}
 
 	maps := []constantMap{
@@ -260,16 +273,35 @@ func main() {
 			},
 			entries: syi,
 		},
+		{
+			name: "DVIConstants",
+			doc: []string{
+				"DVIConstants is every real $DVIDEF symbol: the DVI$_ item codes",
+				"$GETDVI takes (DVI$_DEVNAM, DVI$_DEVCLASS, ...), the DVI$M_/DVI$V_",
+				"item-code flags (DVI$M_SECONDARY), and DVI$C_ values.",
+			},
+			entries: dvi,
+		},
+		{
+			name: "TTConstants",
+			doc: []string{
+				"TTConstants is every real $TTDEF symbol: the TT$M_/TT$V_ terminal",
+				"characteristics in a terminal's DEVDEPEND longword (TT$M_NOECHO,",
+				"...), the TT2$M_/TT2$V_ ones in DEVDEPEND2 (TT2$M_ANSICRT, ...),",
+				"and TT$C_ values such as the line speeds.",
+			},
+			entries: tt,
+		},
 	}
 
-	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef, *statedef, *syidef}
+	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef, *statedef, *syidef, *dvidef, *ttdef}
 	code := generate(maps, sources)
 
 	if err := os.WriteFile(*out, code, 0o644); err != nil {
 		log.Fatalf("gen: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), len(syi), *out)
+	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), len(syi), len(dvi), len(tt), *out)
 
 	// The message texts go in a file of their own (see msg.go).
 	msgs, facilities, err := parseMessages(readSource(*sysmsg))

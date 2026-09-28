@@ -60,7 +60,7 @@ follow them too, and this list should grow when a new pattern is settled.
 
 - **Where the code lives.** Services are grouped by VMS facility into files
   under `internal/rtl`: `core.go` (event flags, `$EXPREG`, `$GETJPIW`, ...),
-  `devices.go` (`$ASSIGN`, `$GETDVIW`, `$ALLOC`), `logicals.go`, `cli.go`,
+  `devices.go` (`$ASSIGN`, `$ALLOC`, `$DALLOC`, `$DASSGN`), `logicals.go`, `cli.go`,
   `rms.go`, `process.go` (process record and process-control services),
   `eventflags.go` (event flags and common event flag clusters), `timers.go`
   (the timer queue), `vmstime.go` (`$GETTIM`, `$NUMTIM`, and time conversion),
@@ -71,7 +71,7 @@ follow them too, and this list should grow when a new pattern is settled.
   and the item values the `$GETxxx` services return), `fao.go` (`$FAO`
   formatting, which later services reuse through `formatFAO`), `message.go`
   (`$GETMSG`, `$PUTMSG`), `cmode.go` (`$CMKRNL`, `$CMEXEC`), `ctrlast.go`
-  (CTRL/C and CTRL/Y ASTs). Each file has
+  (CTRL/C and CTRL/Y ASTs), `getdvi.go` (`$GETDVI`). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -207,6 +207,7 @@ lists the ones the implementation can actually return.
 | `$GETMSG` | 25 | `message.go` | `NORMAL`, `BUFFEROVF`, `MSGNOTFND`, `ACCVIO`, `INSFARG` | Texts of 1,426 messages (CLI, LIB, MTH, OTS, RMS, SYSTEM) generated from the VMS 7.3 message file. |
 | `$PUTMSG` | 25 | `message.go` | `NORMAL`, `ACCVIO` | Formats a message vector with `formatFAO`; an action routine is called through a `CallRequest`. |
 | `$CMKRNL`, `$CMEXEC` | 26 | `cmode.go` | (the routine's R0) | Switch into the mode, call the routine through a `CallRequest`, switch back when it returns. |
+| `$GETDVI`, `$GETDVIW` | 28 | `getdvi.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLEFC`, `INSFARG`, `IVDEVNAM`, `IVLOGNAM`, `NOPRIV`, `NOSUCHDEV`, `UNASEFC` | 51 named items plus 28 `DEVCHAR` and 49 terminal-characteristic Booleans, from a generated `$DVIDEF`; replaces eVAX's three-item `$GETDVIW`. |
 | (CTRL/C, CTRL/Y ASTs) | 27 | `ctrlast.go`, `ttdriver.go` | — | `IO$_SETMODE!IO$M_CTRLCAST`/`CTRLYAST` enable one-shot ASTs the host's Ctrl-C delivers instead of stopping the machine. |
 
 ## Service designs
@@ -1577,6 +1578,57 @@ API accepts either key for tests and later use.
 Not implemented (see `docs/DEVIATIONS.md`): echoing `^C`; interrupting a
 terminal read blocked on host input.
 
+### `$GETDVI` / `$GETDVIW` — Get Device/Volume Information
+
+`SYS$GETDVI[W] [efn] ,[chan] ,[devnam] ,itmlst [,iosb] [,astadr] [,astprm] [,nullarg]`
+
+The `$GETJPI`/`$GETSYI` pattern over a device: the request completes
+during the call (flag cleared then set, IOSB, AST with `astprm` in the
+caller's mode), so both forms are the same service, and an unsupported
+item still completes, with `SS$_BADPARAM`. It replaces eVAX's
+`$GETDVIW`, which knew only `DEVCLASS`, `DEVTYPE`, and `DEVBUFSIZ` (and
+wrote the first two as bytes) and required exactly eight arguments.
+
+#### The device
+
+`dviTarget` picks it: a nonzero `chan` (low word) is the device the
+channel is assigned to (`SS$_NOPRIV` if it isn't assigned, or was
+assigned from a more privileged mode — the manual's rule, where eVAX
+returned `SS$_IVCHAN`); otherwise `devnam`, translated through logical
+names like `$ASSIGN`'s (`SS$_IVLOGNAM` if empty or over 63 characters,
+`SS$_NOSUCHDEV`); neither is `SS$_IVDEVNAM`.
+
+#### Items
+
+`$DVIDEF` (159 symbols) and `$TTDEF` (200, both `TT$` and `TT2$`) are
+generated from the VMS 7.3 VEST listings `reference/vms/dvidef.txt` and
+`ttdef.txt`, like `$SYIDEF`; the BLISS-literal parser now accepts the
+mixed-case names a few of them have. The registry, `dviItemsByName`,
+holds:
+
+| Items | Return |
+| --- | --- |
+| `DEVCLASS`, `DEVTYPE`, `DEVBUFSIZ`, `DEVCHAR`, `DEVCHAR2`, `DEVDEPEND`, `DEVDEPEND2`, `DEVSTS`, `STS` | The device record's fields, as longwords. `DEVCHAR` includes `DEV$M_MNT` (and `DEV$M_SWL` for a read-only mount) while a volume is mounted. |
+| `UNIT` | The digits the device name ends with. |
+| `PID`, `OWNUIC`, `REFCNT`, `ERRCNT`, `OPCNT`, `ACPPID`, `LOCKID`, `RECSIZ`, `SERIALNUM` | Fields of the record. |
+| `DEVNAM`, `TT_PHYDEVNAM` | `_TTA0:` (`TT_PHYDEVNAM` is empty for a non-terminal). |
+| `FULLDEVNAM`, `ALLDEVNAM` | `_GOVAX$TTA0:`, with the node name. |
+| `ROOTDEVNAM`, `MEDIA_NAME`, `MEDIA_TYPE` | Strings from the record. |
+| `VOLNAM`, `MAXBLOCK`, `FREEBLOCKS`, `CLUSTER`, `MAXFILES` | From the mounted ODS-2 volume, as SHOW DEVICE/FULL reports them; else the record's fields. |
+| `CYLINDERS`, `SECTORS`, `MOUNTCNT` | The record's fields. |
+| `ALLOCLASS`, `REMOTE_DEVICE`, `SERVED_DEVICE`, `VOLSETMEM` | 0: one node, no volume sets. |
+| `REC`, `CCL`, `TRM`, ... `WCK` (28) | 1 if the device has `DEV$M_x`, else 0. |
+| `TT_x` (49) | 1 if the terminal's `DEVDEPEND` has `TT$M_x` (or `DEVDEPEND2` has `TT2$M_x`). `TT_PAGE` is the page length, `DEVDEPEND`'s high byte. |
+
+The Boolean items are added by `init` from the two lists, so every
+`DVI$_TT_` code in `$DVIDEF` is supported (a test checks). An item
+code's `DVI$M_SECONDARY` and `DVI$M_NOREDIRECT` bits are ignored: a govax
+device has no separate secondary device.
+
+Not implemented (see `docs/DEVIATIONS.md`): other nodes' devices
+(`SS$_NONLOCAL`); host, shadow-set, and lock-name items; the `ASTLM`
+quota.
+
 Not implemented (see `docs/DEVIATIONS.md`): other cluster nodes; SYSGEN
 parameters beyond `MINWSCNT`; the `ASTLM` quota (`SS$_EXASTLM`).
 
@@ -1690,9 +1742,10 @@ fifth batch listed):
     `ctrlast.go`) that the engine's attention check, through the new
     `cpu.AttentionHandler`, queues instead of stopping the machine.
     Acceptance fixture `testdata/asm/ctrlc_ast.asm`.
-28. **`$GETDVI`/`$GETDVIW` in full.** The `$GETJPI`/`$GETSYI` pattern
-    over the device record, from a generated `$DVIDEF`, replacing eVAX's
-    three-item `$GETDVIW`.
+28. **Done.** **`$GETDVI`/`$GETDVIW` in full.** In the new `getdvi.go`:
+    the `$GETJPI`/`$GETSYI` pattern over the device record, from a
+    generated `$DVIDEF` and `$TTDEF`, replacing eVAX's three-item
+    `$GETDVIW`. Acceptance fixture `testdata/asm/getdvi.asm`.
 29. **Mailboxes.** `$CREMBX`/`$DELMBX` and a mailbox driver: the first
     device whose `$QIO` requests really wait (a read for a write), so
     `$QIOW` and `$CANCEL` gain real work.
@@ -2355,5 +2408,33 @@ None yet.
   the console's handler and the two packages' keys agreeing.
 - `docs/DEVIATIONS.md`: the terminal `$QIO` entry no longer says CTRL/C
   ASTs aren't delivered; a new CTRL/C entry.
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 28: `$GETDVI`/`$GETDVIW`
+
+- **`$DVIDEF` and `$TTDEF`**: `reference/vms/dvidef.txt` and `ttdef.txt`,
+  the VMS 7.3 VEST listings (`vest_dblrtl/lis/`), generated as
+  `vmsdef.DVIConstants` and `TTConstants` (flags `-dvidef`, `-ttdef`).
+  `gen/bliss.go` accepts mixed-case names (`DVI$_SHDW_spare_bit_1`).
+- **`internal/rtl/getdvi.go`** (new): `serviceSysGetdvi` (both entry
+  points), `dviTarget`, the item registry with its generated Booleans,
+  `devChar` and `volumeInfo` (live mount state). eVAX's
+  `serviceSysGetdviw` and its `dvi*` constants are gone from `devices.go`,
+  and its tests from `devices_test.go`.
+- **Changed from eVAX:** items are the sizes VMS returns (a longword for
+  `DEVCLASS`, truncated to a shorter buffer); the argument list needs at
+  least four arguments, not exactly eight; an unassigned channel is
+  `SS$_NOPRIV`. Recorded in `docs/DEVIATIONS.md`.
+- **Acceptance fixture** `testdata/asm/getdvi.asm`: `$GETDVIW` by channel
+  (`DEVNAM`, `DEVCLASS`, `UNIT`, `REFCNT`), then `$GETDVI` by `SYS$OUTPUT`
+  for `FULLDEVNAM` with `$SYNCH`. `TestGetdvi_assembledProgram` checks the
+  values.
+- Tests: `vmsdef` pins `DVI$`/`TT$`/`TT2$` values and the prefix guard;
+  `gen` a mixed-case literal; `rtl/getdvi_test.go` (the items of a
+  terminal, a disk's unit, the secondary flag, a one-byte buffer, the
+  registry covering every `DVI$_TT_` code, completion, `SS$_BADPARAM`
+  completing, each rejection completing nothing, `SS$_INSFARG`, an
+  unwritable IOSB, the debug trace). The logical-name test now uses
+  `$GETDVI`.
 - `go test ./...` passes.
 

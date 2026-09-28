@@ -2,7 +2,6 @@ package rtl
 
 import (
 	"errors"
-	"fmt"
 	"sort"
 	"strings"
 
@@ -12,18 +11,12 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Port of devices.c's sys_assign/sys_getdviw — the two SYS$ services built
-// on Phase 09's internal/io.DeviceTable, deferred to this phase per
-// docs/PHASE-09.md's own open questions (they need the RTL calling
-// convention and a process/PID/UIC concept, neither of which existed yet).
-
-// DVI item codes sys_getdviw recognizes, matching devices.c's own
-// DVI__DEVCLASS/DEVTYPE/DEVBUFSIZE.
-const (
-	dviDevClass   = 4
-	dviDevType    = 6
-	dviDevBufSize = 8
-)
+// Port of devices.c's sys_assign — built on Phase 09's
+// internal/io.DeviceTable, deferred to this phase per docs/PHASE-09.md's
+// own open questions (it needs the RTL calling convention and a
+// process/PID/UIC concept, neither of which existed yet) — and the
+// allocation and channel services docs/PHASE-26.md adds. devices.c's
+// other service, sys_getdviw, became the full $GETDVI in getdvi.go.
 
 // channel is one SYS$ASSIGN-created channel, the Go equivalent of devices.c's
 // struct CHAN. Channel numbers count up by 8 starting at 8 (nextChannel += 8
@@ -131,93 +124,6 @@ func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 	dp.PID = env.Process.PID
 	dp.OwnUIC = env.Process.UIC
 
-	return ssNormal, nil
-}
-
-// serviceSysGetdviw is SYS$GETDVIW: looks up a device (by channel number or
-// by name) and returns the item-list-requested attributes this phase
-// implements (DEVCLASS/DEVTYPE/DEVBUFSIZE, matching devices.c's own
-// sys_getdviw — every other real DVI$ item code is unimplemented there too).
-func serviceSysGetdviw(env *Environment, argv []uint32) (uint32, error) {
-	if len(argv) != 8 {
-		return ssInsfArg, nil
-	}
-
-	chanNum := argv[1]
-	
-	var dp *iodev.Device
-
-	switch {
-	case chanNum != 0:
-		c, found := env.findChannel(chanNum)
-		if !found {
-			return ssIvChan, nil
-		}
-
-		dp = c.Device
-
-	case argv[2] != 0:
-		name, ok, err := strGet(env, argv[2], 64)
-		if err != nil {
-			return ssAccVio, nil
-		}
-
-		if !ok {
-			return ssBadParam, nil
-		}
-
-		device, st := env.deviceName(name)
-		if st != 0 {
-			return st, nil
-		}
-
-		found := false
-
-		dp, found = env.Devices.Find(device)
-		if !found {
-			return ssNoSuchDev, nil
-		}
-
-	default:
-		return ssIvDevNam, nil
-	}
-
-	if env.cpu.DebugEnabled(vax.DebugDevices) {
-		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: SYS$GETDVIW looks up device %s\n", dp.Name)
-	}
-
-	status := env.walkItemList(argv[3], func(e itemListEntry) uint32 {
-		switch e.ItemCode {
-		case dviDevClass:
-			if err := env.mem.StoreByte(env.cpu, e.BuffAddr, byte(dp.DevClass)); err != nil {
-				return ssAccVio
-			}
-
-			return env.setRetLen(e, 1)
-
-		case dviDevType:
-			if err := env.mem.StoreByte(env.cpu, e.BuffAddr, byte(dp.DevType)); err != nil {
-				return ssAccVio
-			}
-
-			return env.setRetLen(e, 1)
-
-		case dviDevBufSize:
-			if err := env.mem.StoreLongword(env.cpu, e.BuffAddr, dp.DevBufSize); err != nil {
-				return ssAccVio
-			}
-
-			return env.setRetLen(e, 4)
-
-		default:
-			return ssBadParam
-		}
-	})
-
-	if status != 0 {
-		return status, nil
-	}
-	
 	return ssNormal, nil
 }
 
@@ -521,7 +427,6 @@ func (env *Environment) deallocateAll(mode uint32) {
 
 func registerDeviceServices(t *ServiceTable) {
 	t.Register("SYS$ASSIGN", serviceSysAssign)
-	t.Register("SYS$GETDVIW", serviceSysGetdviw)
 	t.Register("SYS$ALLOC", serviceSysAlloc)
 	t.Register("SYS$DALLOC", serviceSysDalloc)
 	t.Register("SYS$DASSGN", serviceSysDassgn)

@@ -598,6 +598,29 @@ changed as a result.
 - **Status**: open. The services are by design; VMINIT's stacks are
   left as they are.
 
+### [Phase 26] eVAX `$GETDVIW`: three items, wrong sizes
+
+- **Where**: `devices.c`'s `sys_getdviw`, ported to
+  `internal/rtl/devices.go`.
+- **What**: it knew `DVI$_DEVCLASS`, `DEVTYPE`, and `DEVBUFSIZ`, wrote
+  the first two as single bytes (VMS returns longwords), required exactly
+  eight arguments, and returned `SS$_IVCHAN` for an unassigned channel
+  (the manual: `SS$_NOPRIV`). There was no `$GETDVI`.
+- **Status**: fixed in Phase 26 subtask 28 (`internal/rtl/getdvi.go`).
+
+### [Phase 26] `$GETDVI` simplifications
+
+- **Where**: `internal/rtl/getdvi.go`.
+- **What**:
+  - One node: `FULLDEVNAM` and `ALLDEVNAM` carry its name, the allocation
+    class is 0, and no device is remote or served (`SS$_NONLOCAL` can't
+    happen).
+  - No host, shadow-set, lock-name (`DEVLOCKNAM`), `LOGVOLNAM`,
+    `NEXTDEVNAM`, `TRACKS`, `VPROT`, or `ACPTYPE` items (`SS$_BADPARAM`).
+  - No secondary devices: `DVI$M_SECONDARY` is ignored.
+  - No `ASTLM` quota (`SS$_EXASTLM`).
+- **Status**: open, by design.
+
 ### [Phase 26] CTRL/C and CTRL/Y AST simplifications
 
 - **Where**: `internal/rtl/ctrlast.go`, `internal/cpu/attention.go`,

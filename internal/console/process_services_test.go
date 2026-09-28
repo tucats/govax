@@ -983,3 +983,66 @@ func TestAttentionKeys_matchRTL(t *testing.T) {
 		t.Error("a key was taken with no AST enabled")
 	}
 }
+
+// TestGetdvi_assembledProgram is docs/PHASE-26.md subtask 28's acceptance
+// test: testdata/asm/getdvi.asm asks $GETDVIW about its terminal channel
+// and $GETDVI (then $SYNCH) about SYS$OUTPUT.
+func TestGetdvi_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+	c.DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "getdvi.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(getdvi.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("getdvi.asm has no entry address")
+	}
+
+	if runErr, hitCap := callBounded(t, c, addr, 100_000); runErr != nil || hitCap {
+		t.Fatalf("running getdvi.asm: err=%v hitCap=%v", runErr, hitCap)
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Fatalf("R0 = %d, want 1 (every call behaved)", got)
+	}
+
+	read := func(name string, n int) []byte {
+		t.Helper()
+
+		a, ok := c.Symbols.Get(name)
+		if !ok {
+			t.Fatalf("no %s symbol", name)
+		}
+
+		buf := make([]byte, n)
+		if err := c.Mem.Load(c.CPU, a, buf); err != nil {
+			t.Fatal(err)
+		}
+
+		return buf
+	}
+
+	word := func(name string) int { b := read(name, 2); return int(b[0]) | int(b[1])<<8 }
+
+	if got := string(read("NAME", word("NAMLEN"))); got != "_TTA0:" {
+		t.Errorf("DVI$_DEVNAM = %q, want \"_TTA0:\"", got)
+	}
+
+	if got := string(read("FULL", word("FULLEN"))); got != "_"+c.RTL.NodeName+"$TTA0:" {
+		t.Errorf("DVI$_FULLDEVNAM of SYS$OUTPUT = %q", got)
+	}
+
+	if got := read("CLASS", 1)[0]; got != byte(iodev.DeviceClassTT) {
+		t.Errorf("DVI$_DEVCLASS = %d, want %d", got, iodev.DeviceClassTT)
+	}
+
+	if got := read("UNIT", 1)[0]; got != 0 {
+		t.Errorf("DVI$_UNIT = %d, want 0", got)
+	}
+
+	if got := read("REFCNT", 1)[0]; got != 1 {
+		t.Errorf("DVI$_REFCNT = %d, want 1 (the program's channel)", got)
+	}
+}

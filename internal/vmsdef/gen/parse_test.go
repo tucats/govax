@@ -213,14 +213,15 @@ func TestParseBlissLiterals(t *testing.T) {
 // TestParseBlissLiterals_vestListing: the VEST listings' "I4" type, as in
 // reference/vms/syidef.txt.
 func TestParseBlissLiterals_vestListing(t *testing.T) {
-	src := ";+\n;\t$SYIDEF\n;-\n\tSYI$C_EXETYPE,\t\t\tI4, 1\n\tSYI$_VERSION,\t\t\tI4, 4096\n"
+	src := ";+\n;\t$SYIDEF\n;-\n\tSYI$C_EXETYPE,\t\t\tI4, 1\n\tSYI$_VERSION,\t\t\tI4, 4096\n" +
+		"\tSYI$_spare_bit_1,\t\tI4, 284\n" // a mixed-case name, as in dvidef.txt
 
 	got, err := parseBlissLiterals(src, "SYI$")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if want := map[string]uint32{"SYI$C_EXETYPE": 1, "SYI$_VERSION": 4096}; !reflect.DeepEqual(got, want) {
+	if want := map[string]uint32{"SYI$C_EXETYPE": 1, "SYI$_VERSION": 4096, "SYI$_spare_bit_1": 284}; !reflect.DeepEqual(got, want) {
 		t.Errorf("parseBlissLiterals = %v, want %v", got, want)
 	}
 }

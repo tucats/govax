@@ -152,6 +152,52 @@ func TestConstants_onlyRMSFamilies(t *testing.T) {
 			t.Errorf("unexpected %s in DEVConstants", name)
 		}
 	}
+
+	for name := range DVIConstants {
+		if !strings.HasPrefix(name, "DVI$") {
+			t.Errorf("unexpected %s in DVIConstants", name)
+		}
+	}
+
+	for name := range TTConstants {
+		if !strings.HasPrefix(name, "TT$") && !strings.HasPrefix(name, "TT2$") {
+			t.Errorf("unexpected %s in TTConstants", name)
+		}
+	}
+}
+
+// TestDVIAndTTConstants_values pins $DVIDEF item codes and $TTDEF bits
+// $GETDVI (docs/PHASE-26.md subtask 28) depends on, from the VMS I/O
+// User's Reference Manual and the System Services Reference Manual.
+func TestDVIAndTTConstants_values(t *testing.T) {
+	want := map[string]uint32{
+		"DVI$_DEVCHAR":     2,
+		"DVI$_DEVCLASS":    4,
+		"DVI$_DEVNAM":      32,
+		"DVI$_TT_NOECHO":   128,
+		"DVI$_FULLDEVNAM":  232,
+		"DVI$M_SECONDARY":  1,
+		"DVI$M_NOREDIRECT": 0x8000,
+	}
+
+	for name, v := range want {
+		if got, ok := DVIConstants[name]; !ok || got != v {
+			t.Errorf("DVIConstants[%s] = %#x, %v; want %#x", name, got, ok, v)
+		}
+	}
+
+	want = map[string]uint32{
+		"TT$M_NOECHO":   0x2,
+		"TT$M_LOWER":    0x80,
+		"TT2$M_ANSICRT": 0x1000000,
+		"TT2$M_DECCRT":  0x20000000,
+	}
+
+	for name, v := range want {
+		if got, ok := TTConstants[name]; !ok || got != v {
+			t.Errorf("TTConstants[%s] = %#x, %v; want %#x", name, got, ok, v)
+		}
+	}
 }
 
 // TestDEVConstants_values pins the $DEVDEF DEVCHAR bits $ALLOC

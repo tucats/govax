@@ -1,7 +1,6 @@
 package rtl
 
 import (
-	"bytes"
 	"strings"
 	"testing"
 
@@ -85,125 +84,6 @@ func TestServiceSysAssignArgCounts(t *testing.T) {
 	}
 }
 
-func TestServiceSysGetdviwByChannel(t *testing.T) {
-	env, _ := fixture()
-	dp := defineTestDevice(env, "DKA0", iodev.DeviceClassDisk)
-	c := &channel{Name: "DKA0", Number: 8, Device: dp}
-	env.channels = append(env.channels, c)
-
-	itemList, buf := uint32(0x2000), uint32(0x3000)
-	putWord(t, env, itemList, 1)
-	putWord(t, env, itemList+2, dviDevClass)
-	putLongword(t, env, itemList+4, buf)
-	putLongword(t, env, itemList+8, 0)
-	putLongword(t, env, itemList+12, 0)
-
-	argv := make([]uint32, 8)
-	argv[1] = 8 // channel number
-	argv[3] = itemList
-
-	r0, err := serviceSysGetdviw(env, argv)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if r0 != ssNormal {
-		t.Fatalf("r0 = %d, want ssNormal", r0)
-	}
-
-	class, err := env.mem.LoadByte(env.cpu, buf)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if iodev.DeviceClass(class) != iodev.DeviceClassDisk {
-		t.Errorf("class = %d, want DeviceClassDisk", class)
-	}
-}
-
-func TestServiceSysGetdviwDebugDevicesTrace(t *testing.T) {
-	env, _ := fixture()
-	dp := defineTestDevice(env, "DKA0", iodev.DeviceClassDisk)
-	c := &channel{Name: "DKA0", Number: 8, Device: dp}
-	env.channels = append(env.channels, c)
-
-	itemList, buf := uint32(0x2000), uint32(0x3000)
-	putWord(t, env, itemList, 1)
-	putWord(t, env, itemList+2, dviDevClass)
-	putLongword(t, env, itemList+4, buf)
-	putLongword(t, env, itemList+8, 0)
-	putLongword(t, env, itemList+12, 0)
-
-	argv := make([]uint32, 8)
-	argv[1] = 8
-	argv[3] = itemList
-
-	var traceBuf bytes.Buffer
-
-	env.cpu.SetDebugWriter(&traceBuf)
-	env.cpu.SetDebug(vax.DebugDevices)
-
-	if _, err := serviceSysGetdviw(env, argv); err != nil {
-		t.Fatal(err)
-	}
-
-	if !strings.Contains(traceBuf.String(), "DEBUG: SYS$GETDVIW looks up device DKA0") {
-		t.Errorf("output = %q, want a SYS$GETDVIW lookup trace", traceBuf.String())
-	}
-}
-
-func TestServiceSysGetdviwByName(t *testing.T) {
-	env, _ := fixture()
-	defineTestDevice(env, "MUA0", iodev.DeviceClassDisk)
-
-	nameAddr, descAddr := uint32(0x1000), uint32(0x1100)
-	putDescriptor(t, env, descAddr, nameAddr, "MUA0")
-
-	itemList, buf := uint32(0x2000), uint32(0x3000)
-	putWord(t, env, itemList, 4)
-	putWord(t, env, itemList+2, dviDevBufSize)
-	putLongword(t, env, itemList+4, buf)
-	putLongword(t, env, itemList+8, 0)
-	putLongword(t, env, itemList+12, 0)
-
-	argv := make([]uint32, 8)
-	argv[2] = descAddr
-	argv[3] = itemList
-
-	r0, err := serviceSysGetdviw(env, argv)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if r0 != ssNormal {
-		t.Fatalf("r0 = %d, want ssNormal", r0)
-	}
-
-	bufSize, err := env.mem.LoadLongword(env.cpu, buf)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if bufSize != 512 {
-		t.Errorf("devbufsiz = %d, want 512", bufSize)
-	}
-}
-
-func TestServiceSysGetdviwInvalidChannel(t *testing.T) {
-	env, _ := fixture()
-	argv := make([]uint32, 8)
-	argv[1] = 42
-
-	r0, err := serviceSysGetdviw(env, argv)
-	if err != nil {
-		t.Fatal(err)
-	}
-	
-	if r0 != ssIvChan {
-		t.Errorf("r0 = %d, want ssIvChan", r0)
-	}
-}
-
 // TestServiceSysAssignAndGetdviTranslateLogicalNames: $ASSIGN and
 // $GETDVIW translate a device name's logical names first, so SYS$OUTPUT
 // reaches the terminal, and "_" suppresses that (docs/PHASE-25.md).
@@ -231,9 +111,9 @@ func TestServiceSysAssignAndGetdviTranslateLogicalNames(t *testing.T) {
 	buf := a.alloc(4)
 	argv := make([]uint32, 8)
 	argv[2] = a.desc("SYS$COMMAND")
-	argv[3] = a.items(item{code: dviDevBufSize, buflen: 4, buf: buf})
+	argv[3] = a.items(item{code: dviCode(t, "DVI$_DEVBUFSIZ"), buflen: 4, buf: buf})
 
-	wantR0(t, callLNM(t, env, serviceSysGetdviw, argv...), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysGetdvi, argv...), ssNormal)
 
 	if a.readLong(buf) != 512 {
 		t.Errorf("$GETDVIW SYS$COMMAND devbufsiz = %d", a.readLong(buf))
