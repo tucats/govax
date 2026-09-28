@@ -275,14 +275,16 @@ func TestMailboxDriver_queuedMessages(t *testing.T) {
 		t.Errorf("empty read NOW: %#x; want SS$_ENDOFFILE", st)
 	}
 
-	// Too long for the mailbox: rejected. Past its buffer space: MBFULL.
+	// Too long for the mailbox: rejected. Past its buffer space, with
+	// IO$M_NORSWAIT: MBFULL (without it, the writer would wait: see
+	// TestMailboxDriver_resourceWait).
 	wantR0(t, mbxQIO(t, env, 0, ch, fnWriteNow, iosb, 0, a.str("0123456789ABCDEFG"), 17), ssMbTooSml)
 
 	for i := 0; i < 2; i++ {
 		wantR0(t, mbxQIO(t, env, 0, ch, fnWriteNow, iosb, 0, a.str("0123456789ABCDEF"), 16), ssNormal)
 	}
 
-	wantR0(t, mbxQIO(t, env, 0, ch, fnWriteNow, iosb, 0, a.str("0123456789"), 10), ssNormal)
+	wantR0(t, mbxQIO(t, env, 0, ch, fnWriteNow|ioModNoRSWait, iosb, 0, a.str("0123456789"), 10), ssNormal)
 
 	if st, _, _ := readIOSB(a, iosb); st != uint16(ssMbFull) || m.Messages() != 2 {
 		t.Errorf("third write: %#x with %d messages; want SS$_MBFULL, 2", st, m.Messages())
@@ -409,5 +411,157 @@ func TestQiow_waits(t *testing.T) {
 	r0, err := serviceSysQiow(env, argv)
 	if err != nil || r0 != ssNormal || a.readString(buf, 2) != "hi" || len(env.qiowWaits) != 0 {
 		t.Errorf("after the write: %#x, %v, %q, %d waits", r0, err, a.readString(buf, 2), len(env.qiowWaits))
+	}
+}
+
+func TestSetrwm(t *testing.T) {
+	env, _ := fixture()
+
+	wantR0(t, callLNM(t, env, serviceSysSetrwm, 1), ssWasClr) // enabled before
+	wantR0(t, callLNM(t, env, serviceSysSetrwm, 1), ssWasSet)
+	wantR0(t, callLNM(t, env, serviceSysSetrwm), ssWasSet) // omitted: enable
+
+	if env.Process.ResourceWaitDisabled {
+		t.Error("resource wait mode should be enabled again")
+	}
+}
+
+// TestMailboxDriver_resourceWait: a write to a full mailbox waits (the
+// service returns ErrWait, queuing nothing) until a read makes room;
+// with resource wait mode disabled it fails with SS$_MBFULL.
+func TestMailboxDriver_resourceWait(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	_, ch := crembx(t, env, a, 0, 16, 16, "")
+	m := mailboxOn(t, env, ch)
+	iosb, buf := a.alloc(8), a.alloc(16)
+
+	wantR0(t, mbxQIO(t, env, 0, ch, fnWriteNow, iosb, 0, a.str("0123456789ABCDEF"), 16), ssNormal)
+
+	argv := []uint32{0, ch, fnWriteNow, iosb, 0, 0, a.str("x"), 1}
+
+	for _, fn := range []ServiceFunc{serviceSysQio, serviceSysQiow} {
+		if _, err := fn(env, argv); !errors.Is(err, ErrWait) {
+			t.Fatalf("write to a full mailbox: err = %v, want ErrWait", err)
+		}
+	}
+
+	if m.Messages() != 1 || env.PendingIO() != 0 {
+		t.Fatalf("%d messages, %d pending; the waiting write mustn't be queued", m.Messages(), env.PendingIO())
+	}
+
+	// A read makes room; the write, made again, goes in.
+	wantR0(t, mbxQIO(t, env, 0, ch, fnReadVBlk, 0, 0, buf, 16), ssNormal)
+
+	if r0, err := serviceSysQio(env, argv); err != nil || r0 != ssNormal || m.Messages() != 1 {
+		t.Errorf("after the read: %#x, %v, %d messages", r0, err, m.Messages())
+	}
+
+	// Disabled: MBFULL at once.
+	wantR0(t, mbxQIO(t, env, 0, ch, fnWriteNow, 0, 0, a.str("0123456789ABCDE"), 15), ssNormal)
+	env.Process.ResourceWaitDisabled = true
+	wantR0(t, mbxQIO(t, env, 0, ch, fnWriteNow, iosb, 0, a.str("yz"), 2), ssNormal)
+
+	if st, _, _ := readIOSB(a, iosb); st != uint16(ssMbFull) {
+		t.Errorf("disabled: %#x, want SS$_MBFULL", st)
+	}
+}
+
+// setAttention enables (ast != 0) or disables a mailbox attention AST of
+// the kinds in modifiers, in mode.
+func setAttention(t *testing.T, env *Environment, ch, modifiers, ast, param, mode uint32) {
+	t.Helper()
+
+	wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnSetMode | modifiers, p: [6]uint32{ast, param, mode}}), ssNormal)
+}
+
+// takeASTs returns the queued ASTs, and empties the queue.
+func takeASTs(env *Environment) []astRequest {
+	q := env.Process.ast.queue
+	env.Process.ast.queue = nil
+
+	return q
+}
+
+func TestMailboxDriver_attention(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	_, ch := crembx(t, env, a, 0, 0, 0, "")
+	buf := a.alloc(16)
+	user := uint32(vax.User)
+
+	// Read attention: the next unsolicited message, once.
+	setAttention(t, env, ch, ioModReadAttn, 0x5000, 7, user)
+
+	if q := takeASTs(env); len(q) != 0 {
+		t.Fatalf("%d ASTs before any message", len(q))
+	}
+
+	wantR0(t, mbxQIO(t, env, 0, ch, fnWriteNow, 0, 0, a.str("a"), 1), ssNormal)
+
+	if q := takeASTs(env); len(q) != 1 || q[0] != (astRequest{0x5000, 7, user}) {
+		t.Errorf("read attention: %v", q)
+	}
+
+	wantR0(t, mbxQIO(t, env, 0, ch, fnWriteNow, 0, 0, a.str("b"), 1), ssNormal)
+
+	if q := takeASTs(env); len(q) != 0 {
+		t.Errorf("a second message delivered %v; attention ASTs are one-shot", q)
+	}
+
+	// Enabled with messages already waiting: at once.
+	setAttention(t, env, ch, ioModReadAttn, 0x5000, 8, user)
+
+	if q := takeASTs(env); len(q) != 1 || q[0].param != 8 {
+		t.Errorf("read attention with messages waiting: %v", q)
+	}
+
+	// Room: a read that takes a message.
+	setAttention(t, env, ch, ioModRoomNotify, 0x5100, 9, user)
+	wantR0(t, mbxQIO(t, env, 0, ch, fnReadVBlk, 0, 0, buf, 16), ssNormal)
+
+	if q := takeASTs(env); len(q) != 1 || q[0].routine != 0x5100 {
+		t.Errorf("room: %v", q)
+	}
+
+	wantR0(t, mbxQIO(t, env, 0, ch, fnReadVBlk, 0, 0, buf, 16), ssNormal) // empties it
+
+	// Write attention: a read waiting on an empty mailbox.
+	setAttention(t, env, ch, ioModWrtAttn, 0x5200, 10, user)
+	wantR0(t, mbxQIO(t, env, 0, ch, fnReadVBlk, 0, 0, buf, 16), ssNormal)
+
+	if q := takeASTs(env); len(q) != 1 || q[0].routine != 0x5200 {
+		t.Errorf("write attention: %v", q)
+	}
+
+	// ... enabled with that read still waiting: at once.
+	setAttention(t, env, ch, ioModWrtAttn, 0x5200, 11, user)
+
+	if q := takeASTs(env); len(q) != 1 || q[0].param != 11 {
+		t.Errorf("write attention with a read waiting: %v", q)
+	}
+
+	// Disabling, and $CANCEL, forget them.
+	wantR0(t, callLNM(t, env, serviceSysCancel, ch), ssNormal)
+	setAttention(t, env, ch, ioModReadAttn, 0x5000, 1, user)
+	setAttention(t, env, ch, ioModReadAttn, 0, 0, 0)
+	setAttention(t, env, ch, ioModRoomNotify, 0x5100, 2, user)
+	wantR0(t, callLNM(t, env, serviceSysCancel, ch), ssNormal)
+	takeASTs(env) // the cancelled read's completion has no AST, but be sure
+
+	wantR0(t, mbxQIO(t, env, 0, ch, fnWriteNow, 0, 0, a.str("c"), 1), ssNormal)
+	wantR0(t, mbxQIO(t, env, 0, ch, fnReadVBlk, 0, 0, buf, 16), ssNormal)
+
+	if q := takeASTs(env); len(q) != 0 {
+		t.Errorf("disabled or cancelled attention ASTs delivered: %v", q)
+	}
+
+	// The access mode is maximized with the caller's (kernel here, so a
+	// user request stays user; the fixture's caller is kernel).
+	setAttention(t, env, ch, ioModReadAttn, 0x5000, 3, 0)
+	wantR0(t, mbxQIO(t, env, 0, ch, fnWriteNow, 0, 0, a.str("d"), 1), ssNormal)
+
+	if q := takeASTs(env); len(q) != 1 || q[0].mode != uint32(env.cpu.PSL().CurMod()) {
+		t.Errorf("mode: %v", q)
 	}
 }

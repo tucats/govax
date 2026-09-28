@@ -238,6 +238,8 @@ lists the ones the implementation can actually return.
 | `$CNTREG` | 35 | `vaspace.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLPAGCNT`, `PAGOWNVIO` | Obsolete: deletes pages from P0's high-water mark down, or P1's lowest page up. |
 | `$SETPRT` | 36 | `pageprot.go` | `NORMAL`, `ACCVIO`, `IVPROTECT`, `LENVIO`, `NOPRIV`, `PAGOWNVIO` | Rewrites the PTEs' protection (0 means `KR`), keeping owner, validity, and contents; `$PRTDEF` generated. |
 | `$LCKPAG`, `$ULKPAG`, `$LKWSET`, `$ULWSET` | 36 | `pageprot.go` | `WASCLR`, `WASSET`, `ACCVIO`, `NOPRIV`, `PAGOWNVIO` | Checked, and the locked pages remembered for the status; nothing pages, so nothing else changes. |
+| `$SETRWM` | 37 | `process.go` | `WASCLR`, `WASSET` | Resource wait mode, on by default: a write to a full mailbox waits for room unless it's off (or `IO$M_NORSWAIT`). |
+| (mailbox attention ASTs) | 37 | `mbxdriver.go` | — | `IO$_SETMODE` with `IO$M_READATTN`, `WRTATTN`, `MB_ROOM_NOTIFY`: one-shot ASTs. |
 
 ## Service designs
 
@@ -2054,6 +2056,53 @@ check their pages as `$SETPRT` does (a missing or out-of-table page is
 (some page was locked before) or `SS$_WASCLR`. Deleting a page forgets
 its locks, and image rundown unlocks everything.
 
+### Mailbox completions: resource wait, `$SETRWM`, attention ASTs
+
+`SYS$SETRWM [watflg]`, and the mailbox driver's `IO$_SETMODE` modifiers
+
+Subtask 29's driver had two gaps VMS programs notice: a write to a full
+mailbox failed with `SS$_MBFULL` where VMS normally makes it wait, and
+the attention ASTs (a program's way to hear about mailbox traffic
+without sitting in a read) did nothing.
+
+#### Resource wait mode
+
+When a service needs a resource that isn't available (system memory, a
+quota, room in a mailbox), a VMS process in *resource wait mode* waits
+for it; otherwise the service fails. VMS turns resource wait mode on for
+every process; `$SETRWM` turns it off (`watflg` 1) or on again (0,
+the default), returning `SS$_WASCLR` if it was on and `SS$_WASSET` if it
+was off (`Process.ResourceWaitDisabled`).
+
+In govax the only such resource is mailbox buffer space. A driver
+function can now return `ioResourceWait` besides a status or
+`ioPending`: nothing has been queued, and `$QIO`/`$QIOW` return
+`ErrWait`, so the service's `XFC` runs again (the process in the RWMBX
+state, as for `$HIBER`), with ASTs delivered meanwhile, until the write
+fits. A write with `IO$M_NORSWAIT`, or with resource wait mode off,
+still completes at once with `SS$_MBFULL`.
+
+#### Attention ASTs
+
+`IO$_SETMODE` with one or more of these modifiers enables (p1 the AST
+routine, p2 its parameter, p3 its access mode, maximized) or disables
+(p1 0) an AST for the channel:
+
+| Modifier | Delivered when |
+| --- | --- |
+| `IO$M_READATTN` | a message arrives with no read waiting for it (so read it) |
+| `IO$M_WRTATTN` | a read starts waiting on an empty mailbox (so write) |
+| `IO$M_MB_ROOM_NOTIFY` | a read takes a message, making room |
+
+Each is delivered once and forgotten (`Mailbox.readAttention`, ...); the
+program enables it again for the next event. One whose event has already
+happened (a message already there, a read already waiting) is delivered
+as soon as it's enabled. `$CANCEL` and `$DASSGN` forget the channel's
+attention ASTs.
+
+The status of requests `$CANCEL` and `$DASSGN` end stays `SS$_CANCEL`:
+see Open questions.
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -2204,7 +2253,7 @@ sixth batch listed):
     P0 and P1 regions through their page table entries.
 36. **Done.** **`$SETPRT`** (with a generated `$PRTDEF`), and `$LCKPAG`/`$ULKPAG`/
     `$LKWSET`/`$ULWSET` as checked no-ops.
-37. **Mailbox completions**: `$SETRWM` (resource wait mode: a full
+37. **Done.** **Mailbox completions**: `$SETRWM` (resource wait mode: a full
     mailbox makes the writer wait), read and write attention ASTs
     (`IO$M_READATTN`/`WRTATTN`), and `$DASSGN`'s cancel status checked
     against the I/O manual.
@@ -2219,7 +2268,15 @@ sixth batch listed):
 
 ## Open questions
 
-None yet.
+- **`SS$_CANCEL` or `SS$_ABORT` for cancelled mailbox requests?**
+  (subtask 37) The System Services manual's `$CANCEL` says a request's
+  IOSB gets `SS$_CANCEL` "if the I/O request is queued, or ... SS$_ABORT
+  if the I/O is in progress". A mailbox read or write waiting in the
+  driver is arguably in progress (VMS's mailbox driver holds it in its
+  own wait queue, not the device queue), which would make it
+  `SS$_ABORT`; govax's driver reports `SS$_CANCEL`. The VMS I/O User's
+  Reference, which would settle it, isn't in the reference set, so the
+  status was left as it was.
 
 ## Progress Log
 
@@ -3123,4 +3180,32 @@ fixed.
   `NOPRIV`, `LENVIO`, `ACCVIO`, `PAGOWNVIO` with -1 retadrs; the lock
   statuses for both kinds, locks forgotten on deletion and at rundown,
   and the errors.
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 37: resource wait, `$SETRWM`, mailbox attention ASTs
+
+- **`internal/rtl/qio.go`**: `ioResourceWait`, a driver's "wait and ask
+  again", which `$QIO`/`$QIOW` turn into `ErrWait`; `cancelIO` also
+  forgets the channel's attention ASTs.
+- **`internal/rtl/mbxdriver.go`**: a full mailbox makes the writer wait
+  unless resource wait mode is off or the write has `IO$M_NORSWAIT`;
+  `mbxSetMode` enables and disables the three attention ASTs
+  (`deliverAttention`, `cancelAttention`); reads and writes deliver them.
+  **`mailbox.go`**: `Mailbox`'s attention lists. **`process.go`**:
+  `Process.ResourceWaitDisabled` and `serviceSysSetrwm`.
+- `$DASSGN`'s and `$CANCEL`'s `SS$_CANCEL` wasn't changed: the manual
+  leaves it open for a request the driver holds, and the I/O manual
+  isn't available (Open questions).
+- **Acceptance fixture** `testdata/asm/mailbox_wait.asm`: a read
+  attention AST that reads the message; a `$QIOW` write to a full
+  mailbox waiting until a timer AST reads; `$SETRWM` off, `SS$_MBFULL`,
+  and on again. `TestMailboxWait_assembledProgram` checks the three
+  messages, the AST parameter, and the statuses. (The assembler has no
+  `.QUAD`; the IOSB is two `.LONG`s. Recorded with the local-label
+  finding.)
+- Tests (`mailbox_test.go`): `$SETRWM`'s statuses; the resource wait
+  (nothing queued while waiting, the write going in after a read,
+  `SS$_MBFULL` with it off); each attention AST, their one-shot rule,
+  immediate delivery, disabling, `$CANCEL`, and the maximized mode. The
+  old `SS$_MBFULL` check now uses `IO$M_NORSWAIT`.
 - `go test ./...` passes.

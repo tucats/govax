@@ -90,6 +90,18 @@ type Mailbox struct {
 	// and readers the read requests waiting for one (mbxdriver.go).
 	messages []*mailboxMessage
 	readers  []*ioRequest
+
+	// readAttention, writeAttention, and roomAttention are the attention
+	// ASTs channels have enabled with IO$_SETMODE (mbxdriver.go): each is
+	// delivered once, then forgotten.
+	readAttention, writeAttention, roomAttention []attentionRequest
+}
+
+// attentionRequest is one attention AST a channel has enabled on a
+// mailbox: the routine, its parameter, and the access mode it runs in.
+type attentionRequest struct {
+	channel          *channel
+	ast, param, mode uint32
 }
 
 // mailboxMessage is one message in a mailbox.

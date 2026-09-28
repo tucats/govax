@@ -71,6 +71,13 @@ type Process struct {
 	LocalEventFlags [2]uint32
 	CommonClusters  [2]*EventFlagCluster
 
+	// ResourceWaitDisabled is set when the process has turned resource
+	// wait mode off with $SETRWM (PCB$V_SSRWAIT): a service that runs out
+	// of a resource, such as a write to a full mailbox, then fails at
+	// once instead of waiting for it. VMS starts every process with
+	// resource wait mode enabled.
+	ResourceWaitDisabled bool
+
 	// WakePending is the process's wakeup request flag (PCB$V_WAKEPEN):
 	// set by $WAKE or an expiring $SCHDWK, consumed by the next $HIBER
 	// (hibernate.go). It's a flag, not a count: several wakeups before a
@@ -398,6 +405,26 @@ func serviceSysForcex(env *Environment, argv []uint32) (uint32, error) {
 	return ssNormal, nil
 }
 
+// serviceSysSetrwm is SYS$SETRWM (docs/PHASE-26.md subtask 37):
+//
+//	SYS$SETRWM [watflg]
+//
+// It sets the process's resource wait mode: watflg 0 (the default)
+// enables it, so services wait for a resource they need (room in a full
+// mailbox) to become available; 1 disables it, so they fail at once. It
+// returns SS$_WASCLR if resource wait mode was enabled before, SS$_WASSET
+// if it was disabled.
+func serviceSysSetrwm(env *Environment, argv []uint32) (uint32, error) {
+	status := uint32(ssWasClr)
+	if env.Process.ResourceWaitDisabled {
+		status = ssWasSet
+	}
+
+	env.Process.ResourceWaitDisabled = optArg(argv, 0)&1 != 0
+
+	return status, nil
+}
+
 // serviceSysDelprc is SYS$DELPRC:
 //
 //	SYS$DELPRC [pidadr] ,[prcnam]
@@ -428,4 +455,5 @@ func registerProcessServices(t *ServiceTable) {
 	t.Register("SYS$SETPRI", serviceSysSetpri)
 	t.Register("SYS$FORCEX", serviceSysForcex)
 	t.Register("SYS$DELPRC", serviceSysDelprc)
+	t.Register("SYS$SETRWM", serviceSysSetrwm)
 }

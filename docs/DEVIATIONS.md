@@ -83,6 +83,8 @@ Entries get resolved (fixed or deliberately kept, with rationale) during Phase 1
 - **Status**: open. The Phase 26 fixtures use ordinary labels. Fixing it
   means parsing `digits$` as a symbol reference and scoping it to the
   current local label block.
+- **Also**: `.QUAD` isn't implemented either (`VAX-E-BADOPCODE`), found
+  in subtask 37; fixtures use two `.LONG`s.
 
 ## Phase 22 (RMS / `ods2`) findings
 
@@ -647,16 +649,18 @@ changed as a result.
     routines, its parts). The IOSB's process IDs are always its own.
   - `LNM$TEMPORARY_MAILBOX` is `LNM$PROCESS`, not `LNM$JOB`: govax has
     no job table.
-  - A write that doesn't fit in the mailbox's buffer space completes
-    with `SS$_MBFULL`; VMS normally makes the writer wait (resource wait
-    mode, `$SETRWM`).
-  - `IO$_SETMODE` does nothing: no read or write attention ASTs
-    (`IO$M_READATTN`, `WRTATTN`), no protection changes. `promsk` is
-    recorded, not enforced.
+  - ~~A write that doesn't fit completes with `SS$_MBFULL`~~ and
+    ~~`IO$_SETMODE` has no attention ASTs~~: both fixed in subtask 37
+    (resource wait mode, `$SETRWM`, and `IO$M_READATTN`/`WRTATTN`/
+    `MB_ROOM_NOTIFY`). `IO$_SETMODE` still makes no protection changes;
+    `promsk` is recorded, not enforced.
+  - A waiting writer doesn't show the RWMBX state in `$GETJPI`'s
+    `JPI$_STATE`.
   - No `BYTLM` quota (`SS$_EXBYTLM`), shared-memory mailboxes, or
     termination mailboxes.
-  - `$DASSGN` cancels pending requests with `SS$_CANCEL`, as `$CANCEL`
-    does.
+  - `$DASSGN` and `$CANCEL` end pending requests with `SS$_CANCEL`;
+    whether VMS's mailbox driver says `SS$_ABORT` for requests it holds
+    is an open question (`docs/PHASE-26.md`).
   - INIT/VMINIT/ZERO delete every mailbox, permanent ones included.
 - **Status**: open, by design.
 

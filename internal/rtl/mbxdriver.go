@@ -37,16 +37,51 @@ import (
 //
 // An end-of-file message (IO$_WRITEOF) is read as SS$_ENDOFFILE with no
 // data. A write longer than the mailbox's largest message is rejected
-// with SS$_MBTOOSML; one that doesn't fit in its buffer space completes
-// with SS$_MBFULL (VMS would usually make the writer wait instead:
-// resource wait mode).
+// with SS$_MBTOOSML.
+//
+// # A full mailbox
+//
+// A write that doesn't fit in the mailbox's buffer space (its BUFQUO)
+// depends on the process's *resource wait mode* ($SETRWM). VMS enables
+// it for every process, and then the writer waits, in the RWMBX state,
+// until reads have made room: govax's $QIO/$QIOW service returns ErrWait
+// and runs again (as $HIBER does), so ASTs are delivered while it waits
+// and one of them can read. With resource wait mode disabled, or the
+// IO$M_NORSWAIT modifier on the write, it completes at once with
+// SS$_MBFULL instead. Nothing has happened to the mailbox while the
+// writer waits: the request is made afresh each time.
+//
+// # Attention ASTs
+//
+// A program can ask to be told, by an AST, when something happens to a
+// mailbox, instead of waiting in a read or a write. IO$_SETMODE with one
+// of these modifiers enables an attention AST for the channel:
+//
+//	IO$M_READATTN        a message arrives that no read is waiting for
+//	                     (so the program should read it)
+//	IO$M_WRTATTN         a read starts waiting on an empty mailbox (so
+//	                     the program should write)
+//	IO$M_MB_ROOM_NOTIFY  a message is read, making room (so a writer
+//	                     that found the mailbox full can try again)
+//
+// with p1 the AST routine (0 to disable the channel's), p2 its
+// parameter, and p3 the access mode it runs in (maximized with the
+// caller's). Each is delivered once and then forgotten: the program
+// enables it again to hear about the next event. One whose event has
+// already happened when it's enabled (a message already waiting, a read
+// already waiting) is delivered at once. $CANCEL and $DASSGN on the
+// channel forget its attention ASTs.
 //
 // Pending requests are dropped lazily: a cancelled read, or a message
 // whose write was cancelled, is skipped the next time the mailbox is
 // used (prune).
 
 var (
-	ioModNow = ioCode("IO$M_NOW")
+	ioModNow        = ioCode("IO$M_NOW")
+	ioModNoRSWait   = ioCode("IO$M_NORSWAIT")
+	ioModReadAttn   = ioCode("IO$M_READATTN")
+	ioModWrtAttn    = ioCode("IO$M_WRTATTN")
+	ioModRoomNotify = ioCode("IO$M_MB_ROOM_NOTIFY")
 )
 
 // mailboxFunctions is the mailbox driver's function table: the read and
@@ -125,8 +160,11 @@ func mbxRead(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	if len(m.messages) > 0 {
 		msg := m.messages[0]
 		m.messages = m.messages[1:]
+		status := env.receive(req, msg)
 
-		return env.receive(req, msg), 0
+		env.deliverAttention(&m.roomAttention)
+
+		return status, 0
 	}
 
 	if req.modified(ioModNow) {
@@ -134,6 +172,8 @@ func mbxRead(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	}
 
 	m.readers = append(m.readers, req)
+
+	env.deliverAttention(&m.writeAttention)
 
 	return ioStatus{}, ioPending
 }
@@ -212,10 +252,16 @@ func (env *Environment) send(m *Mailbox, req *ioRequest, msg *mailboxMessage) (i
 	}
 
 	if m.queuedBytes()+uint32(len(msg.data)) > m.BufQuo {
-		return ioStatus{status: ssMbFull}, 0
+		if env.Process.ResourceWaitDisabled || req.modified(ioModNoRSWait) {
+			return ioStatus{status: ssMbFull}, 0
+		}
+
+		return ioStatus{}, ioResourceWait
 	}
 
 	m.messages = append(m.messages, msg)
+
+	env.deliverAttention(&m.readAttention)
 
 	if req.modified(ioModNow) {
 		return ioStatus{status: ssNormal, count: count}, 0
@@ -236,9 +282,88 @@ func mbxSense(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	return ioStatus{status: ssNormal, count: uint16(len(m.messages)), info: m.queuedBytes()}, 0
 }
 
-// mbxSetMode is IO$_SETMODE (and IO$_SETCHAR). Its modifiers ask for
-// read and write attention ASTs (IO$M_READATTN, IO$M_WRTATTN) or change
-// the protection, which govax doesn't do: it succeeds without effect.
-func mbxSetMode(*Environment, *ioRequest) (ioStatus, uint32) {
+// mbxSetMode is IO$_SETMODE (and IO$_SETCHAR):
+//
+//	p1  AST routine (0: disable)   p2  AST parameter   p3  access mode
+//
+// With IO$M_READATTN, IO$M_WRTATTN, or IO$M_MB_ROOM_NOTIFY (any of them
+// together), it enables or disables the channel's attention AST of that
+// kind (see this file's opening comment), replacing one the channel
+// already had. Without them (VMS uses it to change the mailbox's
+// protection, which govax doesn't enforce), it does nothing.
+func mbxSetMode(env *Environment, req *ioRequest) (ioStatus, uint32) {
+	m := env.mailboxFor(req)
+	m.prune()
+
+	mode := max(req.p[2]&3, req.mode)
+
+	kinds := []struct {
+		modifier uint32
+		list     *[]attentionRequest
+		due      bool // its event has already happened
+	}{
+		{ioModReadAttn, &m.readAttention, len(m.messages) > 0},
+		{ioModWrtAttn, &m.writeAttention, len(m.readers) > 0},
+		{ioModRoomNotify, &m.roomAttention, false},
+	}
+
+	for _, k := range kinds {
+		if !req.modified(k.modifier) {
+			continue
+		}
+
+		*k.list = withoutChannel(*k.list, req.channel)
+
+		if req.p[0] == 0 {
+			continue
+		}
+
+		*k.list = append(*k.list, attentionRequest{channel: req.channel, ast: req.p[0], param: req.p[1], mode: mode})
+
+		if k.due {
+			env.deliverAttention(k.list)
+		}
+	}
+
 	return ioStatus{status: ssNormal}, 0
+}
+
+// withoutChannel returns list without c's entries.
+func withoutChannel(list []attentionRequest, c *channel) []attentionRequest {
+	out := list[:0]
+
+	for _, a := range list {
+		if a.channel != c {
+			out = append(out, a)
+		}
+	}
+
+	return out
+}
+
+// deliverAttention queues every attention AST in list, which is then
+// empty: each is delivered once.
+func (env *Environment) deliverAttention(list *[]attentionRequest) {
+	for _, a := range *list {
+		env.queueAST(a.ast, a.param, a.mode)
+	}
+
+	*list = nil
+}
+
+// cancelAttention forgets channel c's attention ASTs, on whatever
+// mailbox it's assigned to ($CANCEL, $DASSGN).
+func (env *Environment) cancelAttention(c *channel) {
+	if env.Mailboxes == nil {
+		return
+	}
+
+	m, ok := env.Mailboxes.For(c.Device)
+	if !ok {
+		return
+	}
+
+	m.readAttention = withoutChannel(m.readAttention, c)
+	m.writeAttention = withoutChannel(m.writeAttention, c)
+	m.roomAttention = withoutChannel(m.roomAttention, c)
 }

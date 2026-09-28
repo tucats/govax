@@ -128,7 +128,14 @@ type ioStatus struct {
 type ioFunc func(env *Environment, req *ioRequest) (done ioStatus, reject uint32)
 
 // ioPending is an ioFunc's "not done yet" (no VMS status is all ones).
-const ioPending = ^uint32(0)
+// ioResourceWait is its "can't start yet": the caller must wait for a
+// resource (room in a full mailbox) and then make the request again. The
+// request hasn't been queued; $QIO and $QIOW return ErrWait, so their
+// XFC runs again, the process in a resource wait meanwhile.
+const (
+	ioPending      = ^uint32(0)
+	ioResourceWait = ^uint32(1)
+)
 
 // ioDrivers is the driver registry: for each device class, the function
 // codes its driver implements. A device of a class that isn't here, or a
@@ -147,6 +154,9 @@ var ioDrivers = map[iodev.DeviceClass]map[uint32]ioFunc{
 // rejected), whether or not it has completed.
 func serviceSysQio(env *Environment, argv []uint32) (uint32, error) {
 	status, _ := env.queueIO(argv)
+	if status == ioResourceWait {
+		return 0, ErrWait
+	}
 
 	return status, nil
 }
@@ -182,7 +192,11 @@ func serviceSysQiow(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	status, pending := env.queueIO(argv)
-	if pending == nil {
+
+	switch {
+	case status == ioResourceWait:
+		return 0, ErrWait
+	case pending == nil:
 		return status, nil
 	}
 
@@ -288,6 +302,9 @@ func (env *Environment) queueIO(argv []uint32) (uint32, *ioRequest) {
 		env.pendingIO = append(env.pendingIO, req)
 
 		return ssNormal, req
+
+	case ioResourceWait:
+		return ioResourceWait, nil
 	}
 
 	return reject(rejected)
@@ -333,6 +350,8 @@ func (env *Environment) completeIO(req *ioRequest, done ioStatus) {
 // SS$_CANCEL, marking them cancelled so their driver drops them: what
 // $CANCEL and $DASSGN do.
 func (env *Environment) cancelIO(c *channel) {
+	env.cancelAttention(c)
+
 	for _, r := range append([]*ioRequest(nil), env.pendingIO...) {
 		if r.channel == c {
 			r.cancelled = true
