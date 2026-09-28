@@ -69,7 +69,8 @@ follow them too, and this list should grow when a new pattern is settled.
   (the terminal driver's functions), `exit.go` (`$EXIT` and exit
   handlers), `getsyi.go` (`$GETSYI`), `itemlist.go` (item-list walking
   and the item values the `$GETxxx` services return), `fao.go` (`$FAO`
-  formatting, which later services reuse through `formatFAO`). Each file has
+  formatting, which later services reuse through `formatFAO`), `message.go`
+  (`$GETMSG`, `$PUTMSG`). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -197,6 +198,8 @@ lists the ones the implementation can actually return.
 | (AST delivery) | 22 | `ast.go` | — | An inner-mode AST interrupts outer-mode code by switching mode and stack; `$CLRAST` switches back. |
 | `$GETSYI`, `$GETSYIW` | 23 | `getsyi.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLEFC`, `INSFARG`, `IVLOGNAM`, `NOMORENODE`, `NOSUCHNODE`, `UNASEFC` | 10 items: version, node name, SID/CPU, boot time, cluster membership, `MINWSCNT`; this node only. |
 | `$FAO`, `$FAOL` | 24 | `fao.go` | `NORMAL`, `BUFFEROVF`, `ACCVIO`, `BADPARAM` | The manual's directives plus VMS 7's `A`/`I`/`H`/`J`/`Q` sizes; a registry of directive functions. |
+| `$GETMSG` | 25 | `message.go` | `NORMAL`, `BUFFEROVF`, `MSGNOTFND`, `ACCVIO`, `INSFARG` | Texts of 1,426 messages (CLI, LIB, MTH, OTS, RMS, SYSTEM) generated from the VMS 7.3 message file. |
+| `$PUTMSG` | 25 | `message.go` | `NORMAL`, `ACCVIO` | Formats a message vector with `formatFAO`; an action routine is called through a `CallRequest`. |
 
 ## Service designs
 
@@ -1396,6 +1399,86 @@ parameter past the list reads as 0.
 Not implemented (see `docs/DEVIATIONS.md`): `!%C`, `!%E`, `!%F`; a rights
 database for `!%I`.
 
+### `$GETMSG` / `$PUTMSG` — Get Message, Put Message
+
+`SYS$GETMSG msgid ,msglen ,bufadr ,[flags] ,[outadr]` and
+`SYS$PUTMSG msgvec ,[actrtn] ,[facnam] ,[actprm]`
+
+Every condition value has a message, written
+`%FACILITY-S-IDENT, text`: the facility (bits 16-27 of the value), a
+severity letter (bits 0-2: W, S, E, I, F), a short identifier, and a
+text that is a `$FAO` control string (`SS$_ACCVIO`'s is "access
+violation, reason mask=!XB, virtual address=!XH, PC=!XH, PS=!XL").
+Message *flags* pick the parts: 1 text, 2 identifier, 4 severity, 8
+facility; 0 means all of them, the process default.
+
+#### The message texts
+
+`reference/vms/sysmsg.txt` is the CLI, LIB, MTH, OTS, RMS, and SYSTEM
+facility blocks, verbatim, of the VMS 7.3 system message file's listing
+(`msgfil/lis/sysmsg.lis`). Each message line there carries the value
+the MESSAGE compiler assigned, so no `.SEVERITY`/`.BASE` arithmetic is
+needed. `internal/vmsdef/gen/msg.go` parses it into
+`vmsdef.Messages` (1,426 messages, in a second generated file,
+`messages_generated.go`), keyed by the value without its severity and
+control bits, with each message's `/FAO=` parameter count and `/ID=`
+identifier. The listing cut nine of these lines at 132 columns; their
+texts are kept as far as they go, and a lost `/FAO=` count is worked out
+from the directives left.
+
+A value with no message gets VMS 7.3's stand-in, `%SYSTEM-W-NOMSG,
+Message number 00007FF8` (`NONAME` for a facility the file doesn't
+have).
+
+#### `$GETMSG`
+
+Stores the message line, unformatted, in `bufadr` and its length at
+`msglen`, with `flags`' parts (0 or omitted: all). The severity letter is
+the one in `msgid`. `outadr`, if given, gets four bytes: 0, the text's
+`$FAO` parameter count, 0 (no message here has a user value), 0.
+`SS$_MSGNOTFND` (a success) for the stand-in, `SS$_BUFFEROVF` for a
+truncated line, `SS$_INSFARG` for fewer than three arguments.
+
+#### `$PUTMSG`
+
+The message vector is a longword (the count of longwords after it, and
+default flags in bits 16-19) and then messages. What follows each
+condition value depends on its facility:
+
+- SYSTEM (0): as many `$FAO` parameters as its text takes (usually
+  none, so the next longword is the next message).
+- RMS (1): the status value (STV). It is the text's parameter if the
+  text takes one; otherwise a nonzero STV is a SYSTEM condition value,
+  written as a message of its own.
+- Any other: a longword with the parameter count (low word) and, if
+  nonzero, new flags for this and later messages (high word), then the
+  parameters.
+
+Each text is formatted with `formatFAO`; if that fails (a parameter
+missing from the vector), the text is written unformatted, as the manual
+says. The first line starts with `%`, the rest `-`; `facnam` replaces the
+first line's facility. Lines go to the terminal (`consoleOut`), ending in
+a new line as an RMS record written there does.
+
+#### The action routine
+
+With `actrtn`, each line goes to the routine before it is written, and
+is written only if the routine returns an odd R0. This uses subtask 19's
+call path: `$PUTMSG` lowers SP and stores the routine's argument list (a
+descriptor of the line, and `actprm` if the call had one), the
+descriptor, and the text there, then returns a `CallRequest` whose
+argument list is that SP. The routine's `RET` returns to `$PUTMSG`'s
+`XFC`, so the service runs again. It finds its call in
+`Process.putmsg` (matched by the stub's frame pointer and the lowered
+SP), checks R0, restores SP, and goes on to the next line. The calls are
+a stack, so an action routine may call `$PUTMSG` itself. Image rundown
+forgets any left pending.
+
+Not implemented (see `docs/DEVIATIONS.md`): message sections in an
+image, and SET MESSAGE's process message file and default flags; other
+facilities' messages; writing to `SYS$ERROR` and `SYS$OUTPUT`
+separately.
+
 Not implemented (see `docs/DEVIATIONS.md`): other cluster nodes; SYSGEN
 parameters beyond `MINWSCNT`; the `ASTLM` quota (`SS$_EXASTLM`).
 
@@ -1495,10 +1578,11 @@ fifth batch listed):
 24. **Done.** **`$FAO`/`$FAOL`.** In the new `fao.go`: a directive
     registry, with the numeric directives generated from radix and size
     tables. Acceptance fixture `testdata/asm/fao.asm`.
-25. **`$GETMSG`/`$PUTMSG`.** Message texts for condition values: the
-    SYSTEM facility's generated from the VMS 7.3 message source, the
-    others from `internal/vmserrors`. `$PUTMSG` formats a message vector
-    with `formatFAO` and writes to the terminal.
+25. **Done.** **`$GETMSG`/`$PUTMSG`.** In the new `message.go`, with
+    the CLI, LIB, MTH, OTS, RMS, and SYSTEM message texts generated from
+    the VMS 7.3 message file's listing. `$PUTMSG` formats a message
+    vector with `formatFAO`, calling an action routine through a
+    `CallRequest`. Acceptance fixture `testdata/asm/putmsg.asm`.
 26. **`$CMKRNL`/`$CMEXEC`.** Call a routine in kernel or executive mode:
     switch in, call it through subtask 19's `CallRequest` with the
     service's `XFC` as the return, and switch back when it returns,
@@ -2084,3 +2168,37 @@ None yet.
   `SS$_BUFFEROVF`, omitted `outlen`, the `SS$_ACCVIO` cases, and `$FAO`'s
   parameters past p20.
 - `go test ./...` passes.
+
+### 2026-09-28 — Subtask 25: `$GETMSG`/`$PUTMSG`
+
+- **Message texts.** `reference/vms/sysmsg.txt` is the six facilities'
+  blocks, each `.FACILITY` line through its `.END`, copied verbatim by
+  script from the VMS 7.3 `msgfil/lis/sysmsg.lis` (the whole listing has
+  40-odd facilities and 4,010 messages; these six are the ones a govax
+  program meets). `internal/vmsdef/gen/msg.go` (new) parses it; `go
+  generate` gained `-sysmsg` and `-msgout` and now also writes
+  `internal/vmsdef/messages_generated.go`. `vmsdef.Message` and
+  `LookupMessage` are in the new `messages.go`.
+- **Changed from the plan:** the plan said other facilities' texts would
+  come from `internal/vmserrors`. They don't: its RMS and CLI codes
+  aren't VMS's real values (its CLI facility is 2, VMS's is 3), and its
+  VAX facility (15) is VMS's RUF, so it would show wrong texts for real
+  condition values. The VMS message file covers the facilities instead.
+- **`internal/rtl/message.go`** (new): `messageFor`, `messageLine`,
+  `serviceSysGetmsg`, `serviceSysPutmsg`, `parseMessageVector`, and
+  `putmsgCall` (in the new `Process.putmsg`); `ImageRundown` calls
+  `cancelPutmsgCalls`.
+- **Acceptance fixture** `testdata/asm/putmsg.asm`: `$GETMSG` for the text
+  alone; the manual's `$PUTMSG` example through an action routine that
+  lets only the first line through; `SS$_ACCVIO` with its parameters.
+  `TestPutmsg_assembledProgram` checks the output and the line length the
+  routine saw.
+- Tests: `vmsdef/gen` (each listing-line form, the two errors, the
+  parameter count); `rtl/message_test.go` (`$GETMSG`'s flag combinations,
+  severity from `msgid`, unformatted text, `outadr`, other facilities,
+  the stand-in, truncation, and errors; `$PUTMSG`'s vector forms, default
+  and new flags, `facnam`, unformattable texts, and errors; the action
+  routine's stack layout, R0 deciding, SP restored, one argument without
+  `actprm`, and rundown; pinned generated messages).
+- `go test ./...` passes.
+

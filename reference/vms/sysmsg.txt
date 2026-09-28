@@ -1,0 +1,2148 @@
+! reference/vms/sysmsg.txt: the CLI, LIB, MTH, OTS, RMS, and SYSTEM facility
+! blocks (each .FACILITY line through its .END), verbatim, of the VMS 7.3
+! system message file's listing, vmssrc_archive/v73/msgfil/lis/sysmsg.lis.
+! Lines are as the listing printed them, cut at 132 columns. See
+! internal/vmsdef/gen/msg.go and docs/PHASE-26.md subtask 25.
+!
+                         00000003  2377 	.FACILITY	CLI,3 /SYSTEM /MACRO=$CLIMSGDEF
+                                   2378 	.SEVERITY	WARNING
+                                   2379 
+                         00038008  2380 	ABVERB		<ambiguous command verb - supply more characters>
+                         00038010  2381 	ABKEYW		<ambiguous qualifier or keyword - supply more characters>
+                         00038018  2382 	BUFOVF		<command buffer overflow - shorten expression or command line>
+                         00038020  2383 	COMPLX		<expression too complex - simplify>
+                         00038028  2384 	DEFOVF		<too many command procedure parameters - limit to eight>
+                         00038030  2385 	DIRECT		<invalid directory syntax - check brackets and other delimiters>
+                         00038038  2386 	EXPSYN		<invalid expression syntax - check operators and operands>
+                         00038040  2387 	IMCHNG		<two images requested in one command>					! Not used by DCL nor by MCR
+                         00038048  2388 	INSFPRM		<missing command parameters - supply all required parameters>
+                         00038050  2389 	IVCHAR		<invalid numeric value - check for invalid digits>
+                                   2390 	.LITERAL	CLI$_SPARE=229464
+                                   2391 
+                                   2392 	.BASE		12
+                                   2393 
+                         00038060  2394 	IVKEYW		<unrecognized keyword - check validity and spelling>
+                         00038068  2395 	IVOPER		<unrecognized operator in expression - check spelling and syntax>
+                         00038070  2396 	IVPROT		<invalid protection code>
+                         00038078  2397 	IVQLOC		<invalid qualifier location - place after a parameter>
+                         00038080  2398 	IVSYMB		<invalid symbol name - start name with an alphabetic character>
+                         00038088  2399 	IVVALU		<invalid value syntax - see command documentation>
+                         00038090  2400 	IVVERB		<unrecognized command verb - check validity and spelling>
+                         00038098  2401 	MAXPARM		<too many parameters - reenter command with fewer parameters>
+                         000380A0  2402 	NOATFIL		<no file name for command procedure>					! Not used by DCL nor by MCR
+                         000380A8  2403 	NOCCAT		<parameter concatenation not allowed - check use of plus (+)>
+                         000380B0  2404 	NOCOMD		<no command on line - reenter with alphabetic first character>
+                         000380B8  2405 	NOKEYW		<qualifier name is missing - append the name to the slash>
+                         000380C0  2406 	NOLIST		<list of parameter values not allowed - check use of comma (,)>
+                         000380C8  2407 	NOQUAL		<qualifiers not allowed - supply only verb and parameters>
+                         000380D0  2408 	NOVALU		<value not allowed - remove value specification>
+                         000380D8  2409 	NOTNEG		<qualifier or keyword not negatable - remove "NO" or omit>
+                         000380E0  2410 	NULFIL		<missing or invalid file specification - respecify>
+                         000380E8  2411 	NUMBER		<invalid numeric value - supply an integer>
+                         000380F0  2412 	ONCOMD		<ON command too large - decrease the length of the THEN clause>
+                         000380F8  2413 	ONERR		<invalid ON condition - use WARNING, SEVERE, ERROR, or CONTROL_Y>
+                         00038100  2414 	ONLEVL		<invalid ON context - use only within command procedures>
+                         00038108  2415 	ONOVF		<no room for ON command - symbol overflow, delete some symbols>
+                         00038110  2416 	PARMDEL		<invalid parameter delimiter - check use of special characters>
+                         00038118  2417 	RSLOVF		<buffer overflow - specify fewer command elements>
+                         00038120  2418 	SKPDAT		<image data (records not beginning with "$") ignored>
+                         00038128  2419 	STKOVF		<command procedures too deeply nested - limit to 32 levels>
+                         00038130  2420 	SYMDEL		<invalid symbol or value delimiter - check command syntax>
+                         00038138  2421 	SYMOVF		<no room for symbol definitions - delete some symbols>
+                         00038140  2422 	UNDSYM		<undefined symbol - check validity and spelling>
+                         00038148  2423 	USGOTO		<target of GOTO not found - check spelling and presence of label>
+                         00038150  2424 	VALREQ		<missing qualifier or keyword value - supply all required values>
+                         00038158  2425 	ONEVAL		<list of values not allowed - check use of comma (,)>
+                         00038160  2426 	OVRFLW		<too much data - modify size of field or size of data>
+BAS$MSGDEF                      DEC$BASIC Facility messages  17-MAR-2001 03:15:28  Message A02-09                   Page  45
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         00038168  2427 	UNPROQUAL	<unprocessed qualifiers>						! Old CLI interface status
+                         00038170  2428 	UNPROPARM	<unprocessed parameters>						! Old CLI interface status
+                         00038178  2429 	INVKEY		<invalid keyword>							! Old MCR status going away soon
+                         00038180  2430 	INVRSP		<invalid response>							! Not used by DCL nor by MCR
+                         00038188  2431 	UNDFIL		<file has not been opened by DCL - check logical name>
+                         00038190  2432 	FILOPN		<file is already open>							! Not used by DCL nor by MCR
+                         00038198  2433 	BADRET		<RETURN was issued without a subroutine>				! Not used by DCL nor by MCR
+                         000381A0  2434 	ABSYMD		<abbreviated symbol definition conflict - rename symbol>
+                         000381A8  2435 	INVUIC		<invalid UIC - must be of the form [group,member]>
+                         000381B0  2436 	BADTEXT		<  \!AS\!AS> /FAO=2							! Not used by DCL nor by MCR
+                         000381B8  2437 	ABFNAM		<ambiguous lexical function name - supply more characters>
+                         000381C0  2438 	IVFNAM		<invalid lexical function name - check validity and spelling>
+                         000381C8  2439 	BLKOVRFLOW	<block overflow>							! Not used by DCL nor by MCR
+                         000381D0  2440 	BLKUNDFLOW	<block underflow>							! Not used by DCL nor by MCR
+                         000381D8  2441 	BADBLK		<END issued without corresponding BEGIN>				! Not used by DCL nor by MCR
+                         000381E0  2442 	NOLBLS		<label ignored - use only within command procedures>
+                         000381E8  2443 	NOCHANGE	<neither directory nor UIC could be changed - see documentation>	! MCR-only status
+                         000381F0  2444  	ABSENT		<entity or value absent from command string>				! New CLI interface status
+                         000381F8  2445 	NEGATED		<entity explicitly negated in command string>				! New CLI interface status
+                         00038200  2446 	INVFILSPE	<input or output file specification too long - shorten>
+                         00038208  2447 	INVLOGFIL	<invalid log file specification>					! Not used by DCL nor by MCR
+                         00038210  2448 	NOTHEN		<IF or ON statement syntax error - check placement of THEN keyword>
+                         00038218  2449 	SYMTOOLNG	<symbol !AS is too long to copy to subprocess> /FAO=1
+                         00038220  2450 	ASTDCL		<out-of-band or ctrl/c AST's will also be delivered to parent>		! Goes away in V4
+                         00038228  2451 	INVRANGE	<field specification is out of bounds - check sign and size>
+                         00038230  2452 	LOCNEG		<entity explicitly and locally negated in command string>		! New CLI interface statu
+                         00038238  2453 	CMDNOTFND	<command not found - use RECALL/ALL to display saved commands>
+                         00038240  2454 	IVQUAL		<unrecognized qualifier - check validity, spelling, and placement>
+                         00038248  2455 	CMDSEG		< \!AS\> /FAO=1
+                         00038250  2456 	NOTIFY		</NOTIFY not allowed - do not use with /WAIT or in batch jobs>
+                         00038258  2457 	CONFLICT	<illegal combination of command elements - check documentation>
+                         00038260  2458 	UNDKEY		<!AC key !AS is undefined> /FAO=2
+                         00038268  2459 	ARGREQ		<missing argument - supply all required arguments>
+                         00038270  2460 	SYMLNG		<symbol name is too long - shorten the name>
+                         00038278  2461 	SYMABR		<abbreviated symbols not allowed - remove "*" from symbol name>
+                         00038280  2462 	IVKEYNAM	<unrecognized key name - check validity and spelling>
+                         00038288  2463 	NOPAREN		<value improperly delimited - supply parenthesis>
+                         00038290  2464 	IVATIME		<invalid absolute time - use DD-MMM-YYYY:HH:MM:SS.CC format>
+                         00038298  2465 	IVDTIME		<invalid delta time - use DDDD-HH:MM:SS.CC format>
+                         000382A0  2466 	TKNOVF		<command element is too long - shorten>
+                         000382A8  2467 	CMDFILERR	<login command file initialization error>				! MCR-only status
+                         000382B0  2468 	INVOUTSPE	<invalid output file assignment>
+                         000382B8  2469 	PERMSYM		<deletion of permanent symbols not allowed>
+                         000382C0  2470 	GBLNDF		<cannot define symbol - symbol scope set to NOGLOBAL>
+                         000382C8  2471 	INVGOSUB	<invalid use of the GOSUB command>
+                         000382D0  2472 	GOSUBMAX	<GOSUB procedures too deeply nested - limit to 16 levels>
+                         000382D8  2473 	USCALL		<CALL target !AC either missing, misspelled, or inaccessible>
+                         000382E0  2474 	USGOSUB		<target of GOSUB not found - check spelling and presence of label>
+                         000382E8  2475 	FRZNCTX		<context is frozen - either cancel this context or use alternate>
+                         000382F0  2476 	NOTCTX		<symbol specified is not a valid context symbol>
+                         000382F8  2477 	INVCTXTYP	<symbol specified is defined for a different context type>
+                         00038300  2478 	CMDSEG2		< \!AD\> /FAO=1
+                         00038308  2479 	INVNOD		<invalid node name specification; respecify>					     
+                         00038310  2480 	NULLPIPE	<null pipe segment found; please specify the missing pipe segment>		     
+                         00038318  2481 	INVNULLCMD	<null command sequence found; please specify the missing command sequence>	     
+                         00038320  2482 	WRGSUBSHSYN	<empty subshell or subshell is not separated from other command sequences by pro
+                         00038328  2483 	UNTERMSUBSH	<subshell syntax not delimited with matching parentheses; add missing parenthesi
+BAS$MSGDEF                      DEC$BASIC Facility messages  17-MAR-2001 03:15:28  Message A02-09                   Page  46
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         00038330  2484 	DUPREDSYN	<cannot specify the same type of redirection syntax more than once in a command se
+                         00038338  2485 	INCREDSYN	<incomplete redirection syntax; supply missing file parameter>
+                         00038340  2486 	INVREDSYN	<invalid redirection type specified in a pipe segment>				     
+                         00038348  2487 	INVCONCHAR	<invalid continuation character; a command sequence cannot be terminated by a con
+                         00038350  2488 	CMDNOTALLINPIP	<the specified command sequence is not allowed in a PIPE command>		     
+                         00038358  2489 	LBLNOTALLINPIP  <labels are not allowed in a PIPE command>					     
+                         00038360  2490 	TOOMANYPIPCMD	<too many pipe segment commands specified>					     
+                         00038368  2491 	UNSUPITEM	<item not supported by lexical function>
+                                   2492 !
+                                   2493 ! DEFINE CLI RELATED "ERROR" LEVEL ERROR CODES
+                                   2494 !	BEGIN ERROR CODE 2048 FROM WARNING TO
+                                   2495 !	LEAVE ROOM FOR 256 WARNINGS.
+                                   2496 !
+                                   2497 	.SEVERITY	ERROR
+                                   2498 	.BASE		256
+                                   2499 
+                         00038802  2500 	CONFQUAL	<conflicting qualifiers>						! Old CLI interface status
+                         0003880A  2501 	INVQUAL		<invalid qualifier>							! Old CLI interface status
+                         00038812  2502 	REQPRMABS	<required parameter is absent>						! Old CLI interface status
+                         0003881A  2503 	INVQUALNUM	<invalid qualifier number>						! Old CLI interface status
+                         00038822  2504 	INVREQTYP	<invalid request type>							! Used by call backs
+                         0003882A  2505 	NOVALUE		<value not present>							! Old CLI interface status
+                         00038832  2506 	VALCNVERR	<error converting value>						! Old CLI interface status
+                         0003883A  2507 	ILLVAL		<illegal value is present>						! Used by call backs
+                         00038842  2508 	NOOPTPRS	<no option present on command>						! Old CLI interface status
+                         0003884A  2509 	CREQUEJOB	<error creating job on queue !AS> /FAO=1				! Not used by DCL nor by MCR
+                         00038852  2510 	SUBMITERR	<error submitting file to queue !AS> /FAO=1				! Not used by DCL nor by MCR
+                         0003885A  2511 	DEVALSPL	<device already spooled>						! Not used by DCL nor by MCR
+                         00038862  2512 	DEVNOTSPL	<device not spooled>							! Not used by DCL nor by MCR
+                         0003886A  2513 	IVDEVTYPE	<invalid device type - specify a mailbox device>			! MCR-only status
+                         00038872  2514 	IMGFNF		<image file not found>							! MCR-only status
+                         0003887A  2515 	DEVNOTFOR	<device not mounted foreign>						! Not used by DCL nor by MCR
+                         00038882  2516 	PWDNOTVAL	<old password validation error - password unchanged>			! Set password status
+                         0003888A  2517 	PWDNOTVER	<new password verification error - password unchanged>			! Set password status
+                         00038892  2518 	PWDLOCKED	<password was locked to prevent change>					! Set password status
+                         0003889A  2519 	NOTFR		<no transfer address>							! Image activation error - part 2
+                         000388A2  2520 	PWDSYNTAX	<illegal password syntax>						! Set password status
+                         000388AA  2521 	IMGNAME		<image file !AS> /FAO=1							! Image activation error - part 2
+                         000388B2  2522 	IMAGEFNF	<image file not found !AS> /FAO=1					! Image activation error - part 2
+                         000388BA  2523 	BADSTRLVL	<unrecognized structure level for command tables>			! Not used by DCL nor by MCR
+                         000388C2  2524 	REFUSED		<you cannot attach to that process>
+                         000388CA  2525 	BADCTLMSK	<bad control character enable/disable mask>				! Used by call backs
+                         000388D2  2526 	INVRFM		<invalid record format for record I/O - file not opened>
+                         000388DA  2527 	NOCLINT		<image requested CLI interface routine that does not exist>		! MCR-only status
+                         000388E2  2528 	NOSPAWN		<DCL cannot spawn an MCR subprocess - subprocess aborted>		! MCR-only status
+                         000388EA  2529 	SPWNIO		<shared input or output files are not allowed - respecify>
+                         000388F2  2530 	TRMMBX		<terminal has associated mailbox - terminate image and then SPAWN>
+                         000388FA  2531 	STRTOOLNG	<string argument is too long - shorten>
+                         00038902  2532 	CMDGONE		<this is no longer a valid command - see documentation>			! MCR-only status
+                         0003890A  2533 	NOCMDPROC	<error opening captive command procedure - access denied>
+                         00038912  2534 	INVROUT		<invalid routine specified in command tables - check .CLD file>
+                         0003891A  2535 	OLDTAB		<command tables have obsolete format - use SET COMMAND to recreate>
+                         00038922  2536 	INVTAB		<command tables have invalid format - see documentation>
+                         0003892A  2537 	NOTDISCON	<terminal is not disconnectable - explicitly specify LOGOUT>
+                         00038932  2538 	ENTNF		<specified entity not found in command tables>
+                         0003893A  2539 	ATTRMBX		<cannot attach to that process - terminal has associated mailbox>
+                         00038942  2540 	INVCALL		<invalid CALL nesting structure or data inconsistency detected>
+BAS$MSGDEF                      DEC$BASIC Facility messages  17-MAR-2001 03:15:28  Message A02-09                   Page  47
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         0003894A  2541 	INVIFNEST	<invalid IF-THEN-ELSE nesting structure or data inconsistency>
+                         00038952  2542 	CAPTINT		<captive account - interactive access denied>
+                         0003895A  2543 	CAPTINQ		<captive account - INQUIRE command not allowed>
+                         00038962  2544 	NOFORCMD	<account restricted - foreign commands not valid>
+                         0003896A  2545 	NORUNMCR	<account restricted - RUN and MCR commands not valid>
+                         00038972  2546 	NOREADCP	<No read access to interrupted command procedure>
+                         0003897A  2547 	INVPREFIX	<invalid prefix format string - check FAO directives>
+                         00038982  2548 	CAPTSPAWN	<captive account - SPAWN command not allowed>
+                                   2549 !
+                                   2550 ! DEFINE INFORMATIONAL MESSAGES.
+                                   2551 !
+                                   2552 	.SEVERITY	INFORMATION
+                                   2553 	.BASE		3000
+                                   2554 
+                         0003DDC3  2555 	DEFKEY		<!AC key !AS has been defined> /FAO=2
+                         0003DDCB  2556 	DELKEY		<!AC key !AC has been deleted> /FAO=2
+                         0003DDD3  2557 	SETKEY		<keypad state has been set to !AC> /FAO=1
+                         0003DDDB  2558 	SPARE1		<spare - for future use>						! Not currently used
+                         0003DDE3  2559 	ALLOC		<!AS allocated> /FAO=1
+                         0003DDEB  2560 	SUPERSEDE	<previous value of !AS has been superseded> /FAO=1
+                         0003DDF3  2561 	INSPRIV		<insufficient privilege to change UIC - you need CMKRNL privilege>	! MCR-only statu
+                         0003DDFB  2562 	NODIRCHG	<directory cannot be changed to match UIC greater than [377,377]>	! MCR-only status
+                         0003DE03  2563 	IGNQUAL		<qualifiers appearing before this item were ignored>
+                         0003DE0B  2564 	TABEXIST	<!AS already exists - not superseded> /FAO=1
+                         0003DE13  2565 	TABSUPER	<previous table !AS has been superseded> /FAO=1
+                         0003DE1B  2566 	TABNOTFND	<previous table !AS was not found - new table created> /FAO=1
+                         0003DE23  2567 	DELSYM		<!AC symbol !AC has been deleted> /FAO=2
+                         0003DE2B  2568 	SYMTRUNC	<preceding symbol value has been truncated>
+                         0003DE33  2569 	KEYCNV		<synonym key !AS has been converted to !AS> /FAO=2
+                         0003DE3B  2570 	INVDEF		<!AD does not exist>/FAO=1
+                         0003DE43  2571 	MISSPELL	<!AC !AD is misspelled, using !AC !AC!AC>/FAO=5
+                         0003DE4B  2572 	MSNGENDS	<missing or misspelled ENDSUBROUTINE statement detected while scanning for label>
+                                   2573 !
+                                   2574 ! DEFINE SUCCESSFUL MESSAGES
+                                   2575 !
+                                   2576 	.SEVERITY	SUCCESS
+                                   2577 	.BASE		4000
+                                   2578 
+                         0003FD01  2579 	SPAWNED		<process !AS spawned> /FAO=1
+                         0003FD09  2580 	ATTACHED	<terminal now attached to process !AS> /FAO=1
+                         0003FD11  2581 	RETURNED	<control returned to process !AS> /FAO=1
+                         0003FD19  2582 	PRESENT		<entity value is present in command string>				! New CLI interface status
+                         0003FD21  2583 	DEFAULTED	<entity defaulted present in command string>				! New CLI interface status
+                         0003FD29  2584 	CONCAT		<requested value is terminated by a plus sign>				! New CLI interface status
+                         0003FD31  2585 	LOCPRES		<entity value is locally present in command string>			! New CLI interface status
+                         0003FD39  2586 	COMMA		<requested value is terminated by a comma>				! New CLI interface status
+                         0003FD41  2587 	OKTAB		<command tables are already in latest format>				! CDU conversion routine status
+                         0003FD49  2588 	UPGTAB		<command tables have been upgraded to latest format>			! CDU conversion routine stat
+                                   2589 
+                                   2590 	.BASE		4094
+                                   2591 
+                         0003FFF1  2592 	PROC_ID		<identification of created process is !XL> /FAO=1			! Not used by DCL nor by MCR
+                         0003FFF9  2593 	QUEJOBCRE	<  Job !UW entered on queue !AC> /FAO=2					! Not used by DCL nor by MCR
+                                   2594 
+                                   2595 	.LITERAL	CLI$_NORMAL=196609
+                                   2596  
+                                   2597 	.END
+                         00000015  5004 	.FACILITY	LIB,21 /SYSTEM
+                                   5005 	.SEVERITY	SUCCESS
+                                   5006 	.BASE		0
+                                   5007 
+                         00158001  5008 	NORMAL		<normal successful completion>
+                                   5009 
+                                   5010 	.BASE		2
+LIB$MSGDEF                      LIB$ facility messages       17-MAR-2001 03:15:32  Message A02-09                   Page  95
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                                   5011 
+                         00158011  5012 	STRTRU		<string truncated>
+                                   5013 
+                         00158019  5014 	ONEENTQUE	<one entry in queue>
+                                   5015 !			;  LIB$INSQHI, LIB$INSQTI, LIB$REMQHI, LIB$REMQTI
+                         00158021  5016 	KEYALRINS	<key already inserted in tree>
+                                   5017 !			; LIB$INSERT_TREE
+                         00158029  5018 	ERRROUCAL	<error routine called>
+                                   5019 !			; LIB$DELETE_FILE, LIB$RENAME_FILE
+                         00158031  5020 	RESTART		<restart current instruction>
+                                   5021 !			; LIB$DECODE_FAULT
+                                   5022 
+                                   5023 
+                                   5024 !			; Note: Error codes must not overlap sucess codes!!!
+                                   5025 !			; Set sub-system specific bit for now.
+                                   5026 !			; Set LH to 21 (decimal).
+                                   5027 !			; so that each code will be an WARNING code.
+                                   5028 !			; Set sub-system specific bit for now.
+                                   5029 
+                                   5030 
+                                   5031 	.SEVERITY	FATAL
+                                   5032 	.BASE		64
+                                   5033 
+                         00158204  5034 	BADSTA		<bad stack>
+                                   5035 !			;    LIB$FIXUP_FLT
+                         0015820C  5036 	FATERRLIB	<fatal error in library>
+                                   5037 !			;    LIB$VM_GET
+                                   5038 
+                         00158214  5039 	INSVIRMEM	<insufficient virtual memory>
+                                   5040 !			;    LIB$VM_GET, LIB$LOOKUP_KEY
+                         0015821C  5041 	INPSTRTRU	<input string truncated>
+                                   5042 !			;    LIB$GET_INPUT
+                                   5043 
+                         00158224  5044 	INVSTRDES	<invalid string descriptor>
+                                   5045 !			;    LIB$SCOPY_xxxx
+                         0015822C  5046 	INTLOGERR	<internal logic error>
+                                   5047 
+                         00158234  5048 	INVARG		<invalid argument(s)>
+                                   5049 !			;    LIB$LOOKUP_KEY
+                                   5050 
+                         0015823C  5051 	AMBKEY		<"!AS" is an ambiguous keyword> /FAO=1
+                                   5052 !			;    LIB$LOOKUP_KEY
+                                   5053 
+                         00158244  5054 	UNRKEY		<"!AS" is an unrecognized keyword> /FAO=1
+                         0015824C  5055 	PUSSTAOVE	<pushdown stack overflow>
+                                   5056 !			;    LIB$FIXUP_FLT
+                         00158254  5057 	USEFLORES	<use of floating reserved operand>
+                                   5058 !			;    LIB$LOOKUP_KEY
+                         0015825C  5059 	SIGNO_ARG	<signal with no arguments>
+                                   5060 !			;    LIB$SIGNAL, LIB$STOP
+                         00158264  5061 	BADBLOADR	<bad block address>
+                                   5062 !			; LIB$FREE_VM, LIB$VM_FREE[_P]
+                         0015826C  5063 	BADBLOSIZ	<bad block size>
+                                   5064 !			; LIB$GET_VM
+                         00158274  5065 	NOTFOU		<not found>
+                                   5066 !			; LIB$FFS, LIB$FFC
+                         0015827C  5067 	ATTCONSTO	<attempt to continue from stop>
+LIB$MSGDEF                      LIB$ facility messages       17-MAR-2001 03:15:32  Message A02-09                   Page  96
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                                   5068 !			; LIB$SIGNAL, LIB$STOP
+                         00158284  5069 	SYNTAXERR	<string syntax error detected by LIB$TPARSE>
+                         0015828C  5070 	INVTYPE		<invalid LIB$TPARSE state table entry>
+                                   5071 !			; LIB$TPARSE
+                         00158294  5072 	INSEF		<insufficient event flags>
+                                   5073 !			; LIB$GET_EF
+                         0015829C  5074 	EF_ALRFRE	<event flag already free>
+                                   5075 !			; LIB$FREE_EF
+                         001582A4  5076 	EF_ALRRES	<event flag already reserved>
+                                   5077 !			; LIB$RESERVE_EF
+                         001582AC  5078 	EF_RESSYS	<event flag reserved to system>
+                                   5079 !			; LIB$FREE_EF, LIB$RESERVE_EF
+                         001582B4  5080 	INSLUN		<insufficient logical unit numbers>
+                                   5081 !			; LIB$GET_LUN
+                         001582BC  5082 	LUNALRFRE	<logical unit number already free>
+                                   5083 !			; LIB$FREE_LUN
+                         001582C4  5084 	LUNRESSYS	<logical unit number reserved to system>
+                                   5085 !			; LIB$FREE_LUN, LIB$RESERVE_LUN
+                         001582CC  5086 	SCRBUFOVF	<screen buffer overflow>
+                                   5087 !			; SCR package
+                         001582D4  5088 	INVSCRPOS	<invalid screen position>
+                                   5089 !			; SCR package
+                         001582DC  5090 	SECINTFAI	<secondary interlock failure in queue>
+                                   5091 !			; LIB$INSQHI, LIB$INSQTI, LIB$REMQHI, LIB$REMQTI
+                         001582E4  5092 	INVCHA		<invalid character>
+                                   5093 !			; LIB$TRA_ASC_EBC, LIB$TRA_EBC_ASC
+                         001582EC  5094 	QUEWASEMP	<queue was empty>
+                                   5095 !			; LIB$REMQHI, LIB$REMQTI
+                         001582F4  5096 	STRIS_INT	<string is interlocked>
+                                   5097 !			; LIB$SCOPY, etc.
+                         001582FC  5098 	KEYNOTFOU	<key not found in tree>
+                                   5099 !			; LIB$LOOKUP_TREE
+                         00158304  5100 	INVCVT		<invalid conversion>
+                                   5101 !			; LIB$CVTDXDX
+                         0015830C  5102 	INVDTYDSC	<invalid data type in descriptor>
+                                   5103 !			; LIB$CVTDXDX
+                         00158314  5104 	INVCLADSC	<invalid class in descriptor>
+                                   5105 !			; LIB$CVTDXDX
+                         0015831C  5106 	INVCLADTY	<invalid class data type combination in descriptor>
+                                   5107 !			; LIB$CVTDXDX
+                         00158324  5108 	INVNBDS		<invalid numeric byte data string>
+                                   5109 !			; LIB$CVTDXDX
+                         0015832C  5110 	DESSTROVF	<destination string overflow>
+                                   5111 !			; LIB$CVTDXDX
+                         00158334  5112 	INTOVF		<integer overflow>
+                                   5113 !			; LIB$CVTDXDX
+                         0015833C  5114 	DECOVF		<decimal overflow>
+                                   5115 !			; LIB$CVTDXDX
+                         00158344  5116 	FLTOVF		<floating overflow>
+                                   5117 !			; LIB$CVTDXDX
+                         0015834C  5118 	FLTUND		<floating underflow>
+                                   5119 !			; LIB$CVTDXDX
+                         00158354  5120 	ROPRAND		<reserved operand>
+                                   5121 !			; LIB$CVTDXDX
+                         0015835C  5122 	WRONUMARG	<wrong number of arguments>
+                                   5123 !			; LIB$ANALYZE_SDESC
+                         00158364  5124 	NOSUCHSYM 	<no such symbol>
+LIB$MSGDEF                      LIB$ facility messages       17-MAR-2001 03:15:33  Message A02-09                   Page  97
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                                   5125 !			; LIB$CLI_CALLBACK
+                         0015836C  5126 	INSCLIMEM 	<insufficient CLI memory>
+                                   5127 !			; LIB$CLI_CALLBACK
+                         00158374  5128 	AMBSYMDEF 	<ambiguous symbol definition>
+                                   5129 !			; LIB$CLI_CALLBACK
+                         0015837C  5130 	NOCLI     	<no CLI present to perform function>
+                                   5131 !			; LIB$CLI_CALLBACK
+                         00158384  5132 	UNECLIERR 	<unexpected CLI error>
+                                   5133 !			; LIB$CLI_CALLBACK
+                         0015838C  5134 	INVSYMNAM	<invalid symbol name>
+                                   5135 !			; LIB$CLI_CALLBACK
+                         00158394  5136 	ATTREQREF	<attach request refused>
+                                   5137 !			; LIB$ATTACH
+                         0015839C  5138 	INVFILSPE	<invalid file specification>
+                                   5139 !			; LIB$FID_TO_NAME, LIB$EXTRACT_CONCEALED,
+                                   5140 !			; LIB$SET_FILE_PROT, LIB$UNLOCK_FILE, LIB$CREATE_DIR
+                         001583A4  5141 	INVXAB		<invalid XAB chain>
+                                   5142 !			; LIB$QUAL_FILE_PARSE
+                         001583AC  5143 	NO_STRACT	<no stream active>
+                                   5144 !			; SCR package
+                         001583B4  5145 	BADTAGVAL	<bad boundary tag value>
+                                   5146 !			; LIB$VM
+                         001583BC  5147 	INVOPEZON	<invalid operation for zone>
+                                   5148 !			; LIB$VM
+                         001583C4  5149 	PAGLIMEXC	<page limit exceeded for zone>
+                                   5150 !			; LIB$VM
+                         001583CC  5151 	NOTIMP		<not implemented>
+                                   5152 !			; LIB$NOT_IMPLEMENTED
+                         001583D4  5153 	BADZONE		<bad zone>
+                                   5154 !			; LIB$VERIFY_VM_ZONE, LIB$SHOW_VM_ZONE, LIB$STAT_VM_ZONE
+                                   5155 !			; LIB$FIND_VM_ZONE
+                         001583DC  5156 	IVTIME		<invalid time passed in, or computed>
+                                   5157 !			; LIB$ADD_TIMES, LIB$SUB_TIMES, LIB$MULIPLY_DELTA_TIME
+                                   5158 !			; LIB$MULTIPLY_DELTA_TIME_F, LIB$CVT_TO_INTERNAL_TIME
+                                   5159 !			; LIB$CVT_FROM_INTERNAL_TIME, LIB$CONVERT_DATE_STRING
+                         001583E4  5160 	ONEDELTIM	<at least one delta time is required>
+                                   5161 !			; LIB$ADD_TIMES
+                         001583EC  5162 	NEGTIM		<a negative time was computed>
+                                   5163 !			; LIB$SUB_TIMES
+                         001583F4  5164 	INVARGORD	<invalid argument order>
+                                   5165 !			; LIB$SUB_TIMES
+                         001583FC  5166 	ABSTIMREQ	<absolute time required, delta time supplied>
+                                   5167 !			; LIB$CVT_FROM_INTERNAL_TIME
+                         00158404  5168 	DELTIMREQ	<delta time required, absolute time supplied>
+                                   5169 !			; LIB$CVT_FROM_INTERNAL_TIME
+                         0015840C  5170 	INVOPER		<invalid operation specified>
+                                   5171 !			; LIB$CVT_XXX_INTERNAL_TIME
+                         00158414  5172 	REENTRANCY	<reentrancy detected>
+                                   5173 !			;LIB$FORMAT_DATE_TIME, LIB$INIT_DATE_TIME_CONTEXT,
+                                   5174 !			;LIB$CONVERT_DATE_STRING, LIB$GET_DATE_FORMAT
+                         0015841C  5175 	UNRFORCOD	<unrecognized format code>
+                                   5176 !			;LIB$FORMAT_DATE_TIME, LIB$CONVERT_DATE_STRING,
+                                   5177 !			;LIB$GET_DATE_FORMAT
+                         00158424  5178 	ILLINISTR	<illegal initialization string>
+                                   5179 !			;LIB$INIT_DATE_TIME_CONTEXT
+                         0015842C  5180 	NUMELEMENTS	<number of elements incorrect for component>
+                                   5181 !			;LIB$INIT_DATE_TIME_CONTEXT
+LIB$MSGDEF                      LIB$ facility messages       17-MAR-2001 03:15:33  Message A02-09                   Page  98
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         00158434  5182 	ELETOOLON	<element too long, maximum 255 characters>
+                                   5183 !			;LIB$INIT_DATE_TIME_CONTEXT
+                         0015843C  5184 	ILLCOMPONENT	<illegal initialization component>
+                                   5185 !			;LIB$INIT_DATE_TIME_CONTEXT
+                         00158444  5186 	AMBDATTIM	<ambiguous date-time>
+                                   5187 !			;LIB$CONVERT_DATE_STRING
+                         0015844C  5188 	INCDATTIM	<incomplete date-time, missing fields with no defaults>
+                                   5189 !			;LIB$CONVERT_DATE_STRING
+                         00158454  5190 	ILLFORMAT	<illegal format, too many or not enough fields>
+                                   5191 !			;LIB$CONVERT_DATE_STRING, LIB$GET_DATE_FORMAT
+                         0015845C  5192 	UNSUPVER	<unsupported version>
+                                   5193 !			; LIB$ASCII_TO_UID, LIB$COMPARE_UID, LIB$UID_TO_ASCII
+                         00158464  5194 	BADFORMAT	<too many or incorrectly formatted fields>
+                                   5195 !			; LIB$ASCII_TO_UID
+                         0015846C  5196 	NODTOOLNG	<primary node name too long after being quoted>
+                                   5197 !			; LIB$BUILD_NODESPEC
+                         00158474  5198 	NOHOSNAM	<no host node name found>
+                                   5199 !			; LIB$GET_HOSTNAME
+                                   5200 
+                                   5201 	.SEVERITY	WARNING
+                                   5202 	.BASE		512
+                                   5203 
+                         00159000  5204 	OUTSTRTRU	<output string truncated>
+                                   5205 !			; LIB$CVTDXDX
+                         00159008  5206 	FILFAIMAT	<file failed to match selection criteria>
+                                   5207 !			; LIB$QUAL_FILE_MATCH
+                         00159010  5208 	NEGANS		<negative answer in response to /CONFIRM prompt>
+                                   5209 !			; LIB$CONFIRM_ACT
+                         00159018  5210 	QUIPRO		<quit processing requested>
+                                   5211 !			; LIB$CONFIRM_ACT, LIB$QUAL_FILE_MATCH
+                         00159020  5212 	QUICONACT	<quit /CONFIRM prompting>
+                                   5213 !			; LIB$CONFIRM_ACT, LIB$QUAL_FILE_MATCH
+                         00159028  5214 	ENGLUSED	<English used, could not determine user's language>
+                                   5215 !			;LIB$FORMAT_DATE_TIME, LIB$CONVERT_DATE_STRING,
+                                   5216 !			;LIB$GET_DATE_FORMAT
+                         00159030  5217 	DEFFORUSE	<default format used, could not determine user's preference>
+                                   5218 !			;LIB$FORMAT_DATE_TIME, LIB$CONVERT_DATE_STRING,
+                                   5219 !			;LIB$GET_DATE_FORMAT
+                         00159038  5220 	MEMALRFRE	<memory already free>
+                                   5221 !			;LIB$VM_FREE
+                                   5222 
+                                   5223 	.BASE 2048
+                                   5224 
+                         0015C000  5225 BADCCC		<illegal compilation code (!UL.) in module !AC>/FAO=2
+                                   5226 !			; LIB$$READ_OBJECT
+                         0015C008  5227 EOMERROR	<compilation errors in module !AC>/FAO=1
+                                   5228 !			; LIB$$READ_OBJECT
+                         0015C010  5229 EOMFATAL	<fatal compilation errors in module !AC>/FAO=1
+                                   5230 !			; LIB$$READ_OBJECT
+                         0015C018  5231 EOMWARN		<compilation warnings in module !AC>/FAO=1
+                                   5232 !			; LIB$$READ_OBJECT
+                         0015C020  5233 GSDTYP		<illegal GSD record type (!UL.) in module !AC>/FAO=2
+                                   5234 !			; LIB$$READ_OBJECT
+                         0015C028  5235 ILLFMLCNT	<minimum argument count exceeds maximum for procedure !AC in module !AC>/FAO=2
+                                   5236 !			; LIB$$READ_OBJECT
+                         0015C030  5237 ILLMODNAM	<illegal module name length (!UL.) for module !AC>/FAO=2
+                                   5238 !			; LIB$$READ_OBJECT
+LIB$MSGDEF                      LIB$ facility messages       17-MAR-2001 03:15:33  Message A02-09                   Page  99
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         0015C038  5239 ILLPSCLEN	<psect !AC has illegal length (!UL.) in module !AC>/FAO=3
+                                   5240 !			; LIB$$READ_OBJECT
+                         0015C040  5241 ILLRECLEN	<illegal record length (!UL.) in module !AC>/FAO=2
+                                   5242 !			; LIB$$READ_OBJECT
+                         0015C048  5243 ILLRECLN2	<illegal record length (!UL)>/FAO=1/ID=ILLRECLEN
+                                   5244 !			; LIB$$READ_OBJECT
+                         0015C050  5245 ILLRECTYP	<illegal record type (!UL.) in module !AC>/FAO=2
+                                   5246 !			; LIB$$READ_OBJECT
+                         0015C058  5247 ILLRECTY2	<illegal record type (!UL)>/FAO=1/ID=ILLRECTYP
+                                   5248 !			; LIB$$READ_OBJECT
+                         0015C060  5249 ILLSYMLEN	<symbol !AC has illegal length (!UL.) in module !AC>/FAO=3
+                                   5250 !			; LIB$$READ_OBJECT
+                         0015C068  5251 NOEOM		<module !AC does not contain end of module record>/FAO=1
+                                   5252 !			; LIB$$READ_OBJECT
+                         0015C070  5253 RECTOOSML	<data overflows object record in module !AC>/FAO=1
+                                   5254 !			; LIB$$READ_OBJECT
+                         0015C078  5255 SEQUENCE	<illegal record sequence in module !AC>/FAO=1
+                                   5256 !			; LIB$$READ_OBJECT
+                         0015C080  5257 SEQUENCE2	<illegal record sequence>/ID=SEQUENCE
+                                   5258 !			; LIB$$READ_OBJECT
+                         0015C088  5259 STRLVL		<illegal object language structure level in module !AC>/FAO=1
+                                   5260 !			; LIB$$READ_OBJECT
+                                   5261 
+                                   5262 .literal LIB$_NOWILD = ^X0015112A
+                                   5263 .literal LIB$_ACTIMAGE = ^X001512BA
+                                   5264 .literal LIB$_OPENIN = ^X0015109A
+                                   5265 .literal LIB$_CLOSEIN = ^X00151050
+                                   5266 .literal LIB$_READERR = ^X001510B2
+                                   5267 
+                                   5268 	.END
+                         00000016  6404 	.FACILITY	MTH,22 /SYSTEM
+                                   6405 	.SEVERITY	FATAL
+                                   6406 	.BASE		80
+                                   6407 
+                         00168284  6408 	WRONUMARG	<wrong number of arguments!/  user PC !XL> /FAO=1
+                         0016828C  6409 	INVARGMAT	<invalid argument to math library!/  user PC !XL> /FAO=1
+                         00168294  6410 	UNDEXP		<undefined exponentiation!/  user PC !XL> /FAO=1
+                         0016829C  6411 	LOGZERNEG	<logarithm of zero or negative value!/  user PC !XL> /FAO=1
+                         001682A4  6412 	SQUROONEG	<square root of negative value!/  user PC !XL> /FAO=1
+                                   6413 
+                                   6414 !			; Set sub-system specific bit and make SEVERE
+                                   6415 !			; Set LH to 22 (decimal) MTH$ prefix
+                                   6416 
+                                   6417 
+                                   6418 	.BASE		87
+                                   6419 
+MTH$MSGDEF                      MTH$ facility messages       17-MAR-2001 03:15:34  Message A02-09                   Page 121
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         001682BC  6420 	SIGLOSMAT	<significance lost in math library!/  user PC !XL> /FAO=1
+                         001682C4  6421 	FLOOVEMAT	<floating overflow in math library!/  user PC !XL> /FAO=1
+                         001682CC  6422 	FLOUNDMAT	<floating underflow in math library!/  user PC !XL> /FAO=1
+                                   6423 
+                         001682D4  6424 	NOTIMP		<not implemented> /fao=0
+                                   6425 			! MTH$NOT_IMPLEMENTED
+                                   6426 
+                                   6427 	.BASE		91
+                                   6428 
+                         001682DC  6429 	VEC_INVARGMAT	<invalid argument to math library!/  user PC !XL> /FAO=1
+                         001682E4  6430 	VEC_UNDEXP	<undefined exponentiation!/  user PC !XL> /FAO=1
+                         001682EC  6431 	VEC_LOGZERNEG	<logarithm of zero or negative value!/  user PC !XL> /FAO=1
+                         001682F4  6432 	VEC_SQUROONEG	<square root of negative value!/  user PC !XL> /FAO=1
+                         001682FC  6433 	VEC_FLOOVEMAT	<floating overflow in math library!/  user PC !XL> /FAO=1
+                         00168304  6434 	VEC_FLOUNDMAT	<floating underflow in math library!/  user PC !XL> /FAO=1
+                                   6435 
+                                   6436 	.LITERAL	MTH$_SINCOSSIG=1475260
+                                   6437 
+                                   6438 	.END
+                         00000017  7785 	.FACILITY	OTS,23 /SYSTEM
+                                   7786 	.SEVERITY	FATAL
+                                   7787 
+                         0017800C  7788 	INVSTRDES	<invalid string descriptor>
+                         00178014  7789 	FATINTERR	<fatal internal error in Run-Time Library>
+                         0017801C  7790 	INTDATCOR	<internal data corrupted in Run-Time Library>
+                         00178024  7791 	IO_CONCLO	<I/O continued to closed file>
+                         0017802C  7792 	INPCONERR	<input conversion error>
+                         00178034  7793 	OUTCONERR	<output conversion error>
+                         0017803C  7794 	STRIS_INT	<string is interlocked>
+                         00178044  7795 	INSVIRMEM	<insufficient virtual memory>
+                         0017804C  7796 	WRONUMARG	<wrong number of arguments>
+                                   7797 !			; OTS$SCOPY
+                                   7798 
+                                   7799 
+                                   7800 !+
+                                   7801 ! Define OTS$ WARNING messages:
+                                   7802 !-
+                                   7803 
+                                   7804 !			; Do not have concept of error number (see FOR$ MTH$)
+                                   7805 !			; Set sub-system specific bit and make WARNING
+                                   7806 !			; Set LH to 23 (decimal) OTS$ prefix
+                                   7807 
+                                   7808 
+                                   7809 	.SEVERITY	WARNING
+                                   7810 	.BASE		128
+                                   7811 
+                         00178400  7812 	USEFLORES	<use of floating reserved operand>
+                                   7813 
+                                   7814 
+                                   7815 	.END
+                         00000001  9155 	.FACILITY	RMS,1 /SYSTEM
+                                   9156 
+                                   9157 	.LITERAL	RMS$V_STVSTATUS = 14	! Move to bit 14 of the
+                                   9158 						! status code it indicates
+                                   9159 						! that STV contains a secondary
+                                   9160 						! status code.
+                                   9161 
+                                   9162 	.LITERAL	RMS$_SUC = ^X10001
+                                   9163 	.LITERAL	RMS$_NORMAL = ^X10001
+                                   9164 				
+                                   9165 !+
+                                   9166 !
+                                   9167 !	SUCCESS CODES
+                                   9168 !
+                                   9169 !-
+                                   9170 
+                                   9171 	.SEVERITY	SUCCESS			! Bit 16 = Bit 15 = 1
+                                   9172 	.BASE		0
+                                   9173 
+                         00018001  9174 	STALL		<synchronize with operation completion>
+                                   9175 			! (NOTE: USER NEVER RECEIVES THIS CODE)
+                         00018009  9176 	PENDING		<asynchronous operation not yet completed>
+                         00018011  9177 	OK_DUP		<record had duplicate key>
+                         00018019  9178 	OK_IDX		<index update error occurred>
+                                   9179 			!  (Record has been inserted, but index structure is no longer
+                                   9180 			!  optimal.)
+                         00018021  9181 	OK_RLK		<record locked but read anyway>
+                                   9182 			! (Because locker set RLK in ROP field when record was locked.)
+                         00018029  9183 	OK_RRL		<record locked against read but read anyway>
+                                   9184 			! (Because reader set RRL in ROP field when accessing record.)
+                                   9185 			! (This code used to be OK_RRV)
+                                   9186 			!OK_RRV	;MSG <record was inserted successfully in primary>
+                                   9187 			!  (But it may not be accessible via one-or-more secondary keys,
+                                   9188 			!  and not by RFA addressing. File re-organization recommended!)
+                         00018031  9189 	KFF		<known file found>
+                         00018039  9190 	OK_ALK		<record is already locked>
+                         00018041  9191 	OK_DEL		<deleted record successfully accessed>
+                         00018049  9192 	OK_RNF		<nonexistent record successfully accessed>
+                         00018051  9193 	OK_LIM		<retrieved record exceeds specified key value>
+                         00018059  9194 	OK_NOP		<XAB not filled in for block I/O>
+                         00018061  9195 	OK_WAT		<record locked after wait>
+                                   9196 			! (Because WAT bit in ROP was set and record was already
+                                   9197 			! locked.)
+                         00018069  9198 	CRE_STM		<file was created in stream format>
+                         00018071  9199 	OK_RULK		<record relocked in recovery unit>
+                         00018079  9200 	SYNCH		<synchronous completion>
+                         00018081  9201 	OK_ACT		<operation successfully completed on active file or stream>
+                         00018089  9202         OK_NOCURTID     <no default TID is defined>
+                                   9203 
+                                   9204 !+
+                                   9205 !
+                                   9206 !	SUCCESS CODES PASSED THRU FROM DRIVERS AND ACP -	BIT 15 = 0
+                                   9207 !
+                                   9208 !-
+FAL                             Status Codes                 17-MAR-2001 03:15:44  Message A02-09                   Page 172
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                                   9209 
+                                   9210 	.LITERAL	RMS$_CONTROLC  = ^X10651	
+                                   9211 					! terminal I/O aborted due to CTRL/C
+                                   9212 	.LITERAL	RMS$_CONTROLO  = ^X10609
+                                   9213 					! terminal I/O aborted due to CTRL/O
+                                   9214 	.LITERAL	RMS$_CONTROLY  = ^X10611
+                                   9215 					! terminal I/O aborted due to CTRL/Y
+                                   9216 	.LITERAL	RMS$_CREATED   = ^X10619
+                                   9217 					! file was created, not opened
+                                   9218 	.LITERAL	RMS$_SUPERSEDE = ^X10631
+                                   9219 					! created file superseded existing version
+                                   9220 	.LITERAL	RMS$_OVRDSKQUOTA = ^X10669
+                                   9221 					! disk usage exceeds disk quota
+                                   9222 	.LITERAL	RMS$_FILEPURGED = ^X10679
+                                   9223 					! create file caused oldest file
+                                   9224 					! version to be purged
+                                   9225 
+FAL                             Status Codes                 17-MAR-2001 03:15:44  Message A02-09                   Page 173
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                                   9226 
+                                   9227 !+
+                                   9228 !
+                                   9229 !	WARNING CODES
+                                   9230 !
+                                   9231 !-
+                                   9232 
+                                   9233 	.SEVERITY	WARNING		! Bit 16 = Bit 15 = 1, Bit 14 = 0
+                                   9234 	.BASE		51
+                                   9235 
+                         00018198  9236 	BOF		<beginning of file detected>
+                         000181A0  9237 	RNL		<record not locked>
+                         000181A8  9238 	RTB		<!UL byte record too large for user's buffer> /FAO=1
+                         000181B0  9239 	TMO		<timeout period expired>
+                         000181B8  9240 	TNS		<terminator not seen>
+                         000181C0  9241 	BES		<bad escape sequence>
+                         000181C8  9242 	PES		<partial escape sequence>
+                                   9243 
+                                   9244 
+FAL                             Status Codes                 17-MAR-2001 03:15:44  Message A02-09                   Page 174
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                                   9245 
+                                   9246 !+
+                                   9247 !
+                                   9248 !	ERROR CODES - Without STV (that is, STV may be used but no associated
+                                   9249 !		      condition code is in STV)
+                                   9250 !
+                                   9251 !-
+                                   9252 
+                                   9253 	.SEVERITY	ERROR		! Bit 16 = Bit 15 = 1, Bit 14 = 0
+                                   9254 	.BASE		75
+                                   9255 
+                         0001825A  9256 	ACT		<file activity precludes operation>
+                         00018262  9257 	DEL		<RFA-accessed record was deleted>
+                         0001826A  9258 	INCOMPSHR	<incompatible file sharing requested>
+                         00018272  9259 	DNR		<device not ready, not mounted, or unavailable>
+                         0001827A  9260 	EOF		<end of file detected>
+                         00018282  9261 	FEX		<file already exists, not superseded>
+                         0001828A  9262 	FLK		<file currently locked by another user>
+                         00018292  9263 	FNF		<file not found>
+                         0001829A  9264 	PRV		<insufficient privilege or file protection violation>
+                         000182A2  9265 	REX		<record already exists>
+                         000182AA  9266 	RLK		<target record currently locked by another stream>
+                         000182B2  9267 	RNF		<record not found>
+                                   9268 			!  (Record never was in file, or has been deleted.)
+                         000182BA  9269 	WLK		<device currently write locked>
+                         000182C2  9270 	EXP		<file expiration date not yet reached>
+                         000182CA  9271 	NMF		<no more files found>
+                         000182D2  9272 	SUP		<network operation not supported; DAP code = !XL> /FAO=1
+                                   9273 			! (Note that SUPPORT has replaced SUP except when RMS cannot
+                                   9274 			! map the DAP status code into a FAL status code.)
+                                   9275 			! (Note also that SUP should have been defined as a severe
+                                   9276 			! error code. However, SUPPORT is a severe error code.)
+                         000182DA  9277 	RSA		<record stream currently active>
+                         000182E2  9278 	CRC		<network DAP level CRC check failed>
+                         000182EA  9279 	WCC		<invalid wild card context (WCC) value>
+                         000182F2  9280 	IDR		<invalid directory rename operation>
+                         000182FA  9281 	LWC		<lock wait canceled>
+                         00018302  9282 	UNUSED1		<unused error message 1>
+                         0001830A  9283 	NOVALPRS	<$SEARCH operation not preceded by valid $PARSE>
+                         00018312  9284 	KEY_MISMATCH	<record found, but key doesn't match>
+                         0001831A  9285 	RUH		<error encountered by RMS transaction event handler, PID = !XL> /FAO=1
+                         00018322  9286 	JND		<journaling disabled on this file>
+                         0001832A  9287 	BADPHASE	<recovery unit phase invalid for this operation>
+                         00018332  9288 	TOWDR		<timed out waiting for detached RU recovery to complete>
+                         0001833A  9289 	NEXDR		<non-existent detached RU recovery process>
+                         00018342  9290 	INVDRMSG	<invalid detached RU recovery mailbox message>
+                         0001834A  9291 	RU_ACTIVE	<operation prohibited while recovery unit active>
+                         00018352  9292 	UNKRUFAC	<file has active/incomplete non-RMS recovery units>
+                         0001835A  9293 	LIMBO		<recovery unit is in limbo>
+                         00018362  9294 	IVATRACE	<invalid RMS attributes ACE encountered>
+                         0001836A  9295 	OPNOTSUP	<operation not supported by RMS Extension>
+                         00018372  9296 	EXTNOTFOU	<RMS Extension not found>
+                         0001837A  9297 	EXT_ERR		<error in RMS Extension; reason code %X!XL> /FAO=1
+                         00018382  9298 	SEMANTICS	<inconsistent usage of RMS Semantics>
+                         0001838A  9299 	LSCAN		<internal KLT/KLE status - do left scan to replenish data level VBN downpointers>
+                         00018392  9300         ROOTSRCH	<internal KLT/KLE status - restart search at root>
+FAL                             Status Codes                 17-MAR-2001 03:15:44  Message A02-09                   Page 175
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         0001839A  9301 	IDXSEARCH	<key search encountered index structure inconsistency - convert file>
+                         000183A2  9302 	NETBTS		<network buffer too small for !UL byte record>/FAO=1
+                         000183AA  9303 	NXR		<nonexistent record>
+                                   9304 			! If exact key match on secondary key and secondary key
+                                   9305 			! entry points to nonexistent primary data record in
+                                   9306 			! disk file.
+                         000183B2  9307 	EOFASY_SYNCH	<internal status - EOF on ASY $READ that completed synchronously>
+FAL                             Status Codes                 17-MAR-2001 03:15:44  Message A02-09                   Page 176
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                                   9308 
+                                   9309 !+
+                                   9310 !
+                                   9311 !	ERROR CODES - With STV error code (that is, STV contains an associated condition code)
+                                   9312 !
+                                   9313 !-
+                                   9314 
+                                   9315 	.BASE		2048			! Bit 16 = Bit 15 = Bit 14 = 1
+                                   9316 
+                         0001C002  9317 	ACC		<ACP file access failed>
+                         0001C00A  9318 	CRE		<ACP file create failed>
+                         0001C012  9319 	DAC		<ACP file deaccess failed during $CLOSE>
+                         0001C01A  9320 	ENT		<ACP enter function failed>
+                         0001C022  9321 	EXT		<ACP file extend failed>
+                         0001C02A  9322 	FND		<ACP file or directory lookup failed>
+                         0001C032  9323 	MKD		<ACP could not mark file for deletion>
+                         0001C03A  9324 	DPE		<device positioning error>
+                         0001C042  9325 	SPL		<spool or submit of command file failed on $CLOSE>
+                         0001C04A  9326 	DNF		<directory not found>
+                         0001C052  9327 	RUF		<recovery unit facility request failed>
+                         0001C05A  9328 	WRTJNL_AIJ	<error writing to after image journal file>
+                         0001C062  9329 	WRTJNL_BIJ	<error writing to before image journal file>
+                         0001C06A  9330 	WRTJNL_ATJ	<error writing to audit trail journal file>
+                         0001C072  9331 	WRTJNL_RUJ	<error writing to recovery unit journal file>
+                         0001C07A  9332 	RRF		<recovery unit recovery failed>
+                         0001C082  9333 	DDTM_ERR	<error returned by DECdtm transaction manager >
+                                   9334 
+FAL                             Status Codes                 17-MAR-2001 03:15:44  Message A02-09                   Page 177
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                                   9335 
+                                   9336 !+
+                                   9337 !
+                                   9338 !	SEVERE ERROR CODES - Without STV (that is, STV may be used but no associated
+                                   9339 !			     condition code is in STV)
+                                   9340 !
+                                   9341 !-
+                                   9342 
+                                   9343 	.SEVERITY	FATAL		! Bit 16 = Bit 15 = 1, Bit 14 = 0
+                                   9344 	.BASE		125
+                                   9345 
+                         000183EC  9346 	DTFCDDREC	<error accessing CDD record; reason code %X!XL> /FAO=1
+                         000183F4  9347 	AID		<invalid area ID = !UL> /FAO=1
+                         000183FC  9348 	ALN		<alignment options error for area id = !UL> /FAO=1
+                         00018404  9349 	ALQ		<invalid allocation quantity (negative, or 0 on $EXTEND)>
+                         0001840C  9350 	ANI		<not ANSI "D" format>
+                         00018414  9351 	AOP		<allocation options error for area id = !UL> /FAO=1
+                         0001841C  9352 	BKS		<bucket size too large (FAB)>
+                         00018424  9353 	BKZ		<inconsistent bucket size for area id = !UL> /FAO=1
+                         0001842C  9354 	BLN		<invalid block length for control block (RAB/FAB)>
+                         00018434  9355 	BUG		<fatal RMS condition (!XL), process deleted>
+                         0001843C  9356 	BUG_DDI		<invalid default directory>
+                         00018444  9357 	BUG_DAP		<Data Access Protocol error detected; DAP code = !XL> /FAO=1
+                         0001844C  9358 	BUG_RU_ACTIVE	<active recovery units on $CLOSE during RMS rundown>
+                         00018454  9359 	BUG_RURECERR	<error during detached RU recovery>
+                         0001845C  9360 	BUG_FLUSH_JNL_FAILED	<flush of journal failed>
+                         00018464  9361 	BUG_RU_ABORT_FAIL	<recovery unit abort failed>
+                         0001846C  9362 	BUG_RU_COMMIT_FAIL	<recovery unit commit failed>
+                         00018474  9363 	BUG_XX6		<reserved bug code>
+                         0001847C  9364 	BUG_XX7		<reserved bug code>
+                         00018484  9365 	BUG_XX8		<reserved bug code>
+                         0001848C  9366 	BUSY		<user structure (FAB/RAB) still in use>
+                         00018494  9367 	CCR		<cannot connect RAB>
+                         0001849C  9368 	CHG		<invalid key change in $UPDATE (CHG not set)>
+                         000184A4  9369 	CHK		<bucket format check failed for VBN = !UL> /FAO=1
+                         000184AC  9370 	COD		<invalid or unsupported type field in XAB at !XL> /FAO=1
+                         000184B4  9371 	CUR		<no current record (operation not preceded by $GET/$FIND)>
+                         000184BC  9372 	DAN		<invalid data area number for key = !UL> /FAO=1
+                         000184C4  9373 	DEV		<error in device name or inappropriate device type for operation>
+                         000184CC  9374 	DIR		<error in directory name>
+                         000184D4  9375 	DME		<dynamic memory exhausted>
+                         000184DC  9376 	DNA		<invalid default file name string address>
+                         000184E4  9377 	DTP		<invalid key data type for key = !UL> /FAO=1
+                         000184EC  9378 	DUP		<duplicate key detected (DUP not set)>
+                         000184F4  9379 	DVI		<invalid device ID value in NAM block>
+                         000184FC  9380 	ESA		<invalid expanded string address>
+                         00018504  9381 	ESS		<expanded string area too small>
+                         0001850C  9382 	FAB		<invalid FAB or FAB not accessible>
+                         00018514  9383 	FAC		<record operation not permitted by specified file access (FAC)>
+                         0001851C  9384 	FLG		<invalid key definition flags for key = !UL> /FAO=1
+                         00018524  9385 	FNA		<invalid file name string address>
+                         0001852C  9386 	FNM		<error in file name>
+                         00018534  9387 	FSZ		<invalid fixed control header size>
+                         0001853C  9388 	FOP		<invalid file options>
+                         00018544  9389 	FUL		<device full (insufficient space for allocation)>
+                         0001854C  9390 	IAL		<invalid argument list>
+FAL                             Status Codes                 17-MAR-2001 03:15:44  Message A02-09                   Page 178
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         00018554  9391 	IAN		<invalid index area number for key = !UL> /FAO=1
+                         0001855C  9392 	IDX		<index not initialized>
+                         00018564  9393 	IFI		<invalid internal file identifier (IFI) value>
+                         0001856C  9394 	IMX		<invalid duplicate XAB or non-dense XAB at !XL> /FAO=1
+                         00018574  9395 	IOP		<operation invalid for file organization or device>
+                         0001857C  9396 	IRC		<illegal record encountered; VBN or record number = !UL> /FAO=1
+                         00018584  9397 	ISI		<invalid internal stream identifier (ISI) value>
+                         0001858C  9398 	KBF		<invalid key buffer>
+                         00018594  9399 	KEY		<invalid record number key or key value>
+                         0001859C  9400 	KRF		<invalid key-of-reference>
+                         000185A4  9401 	KSZ		<invalid key size for $GET/$FIND>
+                         000185AC  9402 	LAN		<invalid lowest-level-index area number for key = !UL> /FAO=1
+                         000185B4  9403 	RUNDOWN		<operation invalid during RMS rundown>
+                         000185BC  9404 	LNE		<logical name translation error>
+                         000185C4  9405 	DTFCVT		<error converting data in record; reason code %X!XL> /FAO=1
+                         000185CC  9406 	MRN		<invalid maximum record number or record number exceeds MRN>
+                         000185D4  9407 	MRS		<invalid maximum record size>
+                         000185DC  9408 	NAM		<invalid NAM block or NAM block not accessible>
+                         000185E4  9409 	NEF		<not positioned to EOF on $PUT (sequential organization only)>
+                         000185EC  9410 	DTFQUASYN	<syntax error in foreign file specification; reason code %X!XL> /FAO=1
+                         000185F4  9411 	NOD		<error in node name>
+                         000185FC  9412 	NPK		<no primary key defined for indexed file>
+                         00018604  9413 	ORD		<XABs not in correct order at !XL> /FAO=1		!! NOT USED AS OF V4
+                         0001860C  9414 	ORG		<invalid file organization value>
+                         00018614  9415 	PBF		<invalid prompt buffer>
+                         0001861C  9416 	PLG		<error detected in file's prolog (reconstruct file)>
+                         00018624  9417 	POS		<invalid key position (greater than MRS) for key = !UL> /FAO=1
+                         0001862C  9418 	DTFQUAVAL	<invalid file name qualifier value specified; reason code %X!XL> /FAO=1
+                         00018634  9419 	QUO		<error in quoted string>
+                         0001863C  9420 	RAB		<invalid RAB or RAB not accessible>
+                         00018644  9421 	RAC		<invalid record access mode>
+                         0001864C  9422 	RAT		<invalid record attributes>
+                         00018654  9423 	RBF		<invalid record buffer>
+                         0001865C  9424 	RFA		<invalid record's file address (RFA)>
+                         00018664  9425 	RFM		<invalid record format>
+                         0001866C  9426 	RHB		<invalid record header buffer>
+                         00018674  9427 	RLF		<invalid related NAM block>
+                         0001867C  9428 	ROP		<invalid record options>
+                         00018684  9429 	RRV		<invalid RRV record encountered>
+                         0001868C  9430 	RVU		<error updating RRV's, some paths to data may be lost>
+                         00018694  9431 	RSS		<invalid resultant string size>
+                         0001869C  9432 	RST		<invalid resultant string address>
+                         000186A4  9433 	RSZ		<invalid record size>
+                         000186AC  9434 	SEQ		<primary key out of sequence (SEQ access)>
+                         000186B4  9435 	SHR		<invalid file sharing (SHR) options>
+                         000186BC  9436 	SIZ		<invalid key size for key = !UL> /FAO=1
+                         000186C4  9437 	SQO		<operation not sequential (SQO set)>
+                         000186CC  9438 	DTFSESEST	<error establishing SNA session; reason code %X!XL> /FAO=1
+                         000186D4  9439 	SYN		<file specification syntax error>
+                         000186DC  9440 	TRE		<error in index tree>
+                         000186E4  9441 	TYP		<error in file type>
+                         000186EC  9442 	UBF		<invalid user buffer>
+                         000186F4  9443 	USZ		<invalid user buffer size>
+                         000186FC  9444 	VER		<error in version number>
+                         00018704  9445 	XNF		<required XAB not found>
+                         0001870C  9446 	XAB		<invalid XAB or XAB not accessible at !XL> /FAO=1
+                         00018714  9447 	ESL		<invalid expanded string length>
+FAL                             Status Codes                 17-MAR-2001 03:15:45  Message A02-09                   Page 179
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         0001871C  9448 	DTFSESTER	<SNA session terminated unexpectedly; reason code %X!XL> /FAO=1 
+                         00018724  9449 	ENV		<support for RMS service call or feature not present>
+                         0001872C  9450 	PLV		<unsupported prolog version>
+                         00018734  9451 	MBC		<invalid multi-block count>
+                         0001873C  9452 	RSL		<invalid resultant string length>
+                         00018744  9453 	WLD		<invalid wildcard operation>
+                         0001874C  9454 	NET		<network operation failed at remote node; DAP code = !XL> /FAO=1
+                                   9455 			! (Note that NETFAIL has replaced NET except when RMS cannot
+                                   9456 			! map the DAP status code into a FAL status code.)
+                         00018754  9457 	IBF		<illegal bucket format in VBN = !UL> /FAO=1
+                         0001875C  9458 	REF		<invalid key-of-reference = !UL> /FAO=1
+                         00018764  9459 	IFL		<index bucket fill size larger than bucket size for key = !UL> /FAO=1
+                         0001876C  9460 	DFL		<data bucket fill size larger than bucket size for key = !UL> /FAO=1
+                         00018774  9461 	KNM		<key name buffer not accessible for key = !UL> /FAO=1
+                         0001877C  9462 	IBK		<LAN bucket size not equal to IAN bucket size for key = !UL> /FAO=1
+                         00018784  9463 	KSI		<index bucket will not hold two keys for key-of-reference = !UL> /FAO=1
+                         0001878C  9464 	LEX		<invalid $EXTEND for area !UL containing an unused extent> /FAO=1
+                         00018794  9465 	SEG		<overlapping segments or segmented key must be string for key = !UL> /FAO=1
+                         0001879C  9466 	SNE		<file sharing not enabled>				!! NOT USED AS OF V4
+                         000187A4  9467 	SPE		<file sharing pagecount exceeded>			!! NOT USED AS OF V4
+                         000187AC  9468 	UPI		<UPI not set when sharing and BIO or BRO set>
+                         000187B4  9469 	ACS		<error in access control string>
+                         000187BC  9470 	STR		<user structure (FAB/RAB) became invalid during operation>
+                         000187C4  9471 	FTM		<network file transfer mode precludes operation (SQO set)>
+                         000187CC  9472 	GBC		<invalid global buffer count>
+                         000187D4  9473 	DEADLOCK	<deadlock detected>
+                         000187DC  9474 	EXENQLM		<exceeded enqueue quota>
+                         000187E4  9475 	JOP		<journaling options not supported on device>
+                         000187EC  9476 	RUM		<recovery-unit handler called from incorrect access mode>
+                         000187F4  9477 	JNS		<operation not supported by RMS journaling>
+                         000187FC  9478 	NRU		<operation prohibited outside recovery-unit>
+                         00018804  9479 	IFF		<invalid file attributes for requested file access>
+                         0001880C  9480 	DTFTRATBL	<error loading translation table; reason code %X!XL> /FAO=1
+                         00018814  9481 	DTFUNSTYP	<unsupported data type in record; reason code %X!XL> /FAO=1
+                         0001881C  9482 	DTFVERMIS	<incompatible version of control file; reason code %X!XL> /FAO=1
+                                   9483 
+                                   9484 !+
+                                   9485 !
+                                   9486 !	ERROR CODES - Without STV
+                                   9487 !
+                                   9488 !	  DTFACC and DTFCRE were originally included in this FATAL severity 
+                                   9489 !	  (no STV) grouping.  In order to change their severity to ERROR 
+                                   9490 !	  (no STV) and retain the same message code value, the following 
+                                   9491 !	  shifts in severity from fatal to error and then back again are
+                                   9492 !	  done, while retaining the same original base associated with each.
+                                   9493 !
+                                   9494 !-
+                                   9495 
+                                   9496 	.SEVERITY	ERROR		! Bit 16 = Bit 15 = 1, Bit 14 = 0
+                                   9497 	.BASE		260
+                                   9498 
+                         00018822  9499 	DTFACC		<error accessing file; reason code %X!XL> /FAO=1
+                                   9500 
+                                   9501 !+
+                                   9502 !
+                                   9503 !	SEVERE ERROR CODES - Without STV
+                                   9504 !
+FAL                             Status Codes                 17-MAR-2001 03:15:45  Message A02-09                   Page 180
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                                   9505 !-
+                                   9506 
+                                   9507 	.SEVERITY	FATAL		! Bit 16 = Bit 15 = 1, Bit 14 = 0
+                                   9508 	.BASE		261
+                                   9509 
+                         0001882C  9510 	BOGUSCOL	<invalid or inaccessible collate table>
+                         00018834  9511 	ERRREADCOL	<error encountered while reading collate table>
+                         0001883C  9512 	ERRWRITECOL	<error encountered while writing collate table>
+                         00018844  9513 	SNS		<statistics monitoring not supported for non-disk devices>	
+                         0001884C  9514 	NOEXTEND	<previous $EXTEND operation failed - further $EXTENDs prohibited>
+                                   9515 
+                                   9516 !+
+                                   9517 !
+                                   9518 !	ERROR CODES - Without STV
+                                   9519 !
+                                   9520 !-
+                                   9521 
+                                   9522 	.SEVERITY	ERROR		! Bit 16 = Bit 15 = 1, Bit 14 = 0
+                                   9523 	.BASE		266
+                                   9524 
+                         00018852  9525 	DTFCRE		<error creating file; reason code %X!XL> /FAO=1
+                                   9526 
+                                   9527 !+
+                                   9528 !
+                                   9529 !	SEVERE ERROR CODES - Without STV
+                                   9530 !
+                                   9531 !-
+                                   9532 
+                                   9533 	.SEVERITY	FATAL		! Bit 16 = Bit 15 = 1, Bit 14 = 0
+                                   9534 	.BASE		267
+                                   9535 
+                         0001885C  9536 	DELJNS		<deleting a file marked for journaling not yet supported (unmark file for journaling
+                         00018864  9537 	NOTSAMEJNL	<files in a recovery unit must use same RMS journal>
+                         0001886C  9538 	SNPPF		<statistics monitoring not supported for process permanent files>
+                         00018874  9539 	NAML		<invalid NAML block or NAML block not accessible>
+                         0001887C  9540 	NAMLESS		<NAML expanded string area too small>
+                         00018884  9541 	NAMLRSS		<NAML resultant string area too small>
+                         0001888C  9542 	NAMLFSSIZ	<NAML file system string area too small>
+                         00018894  9543 	NAMLFSINV	<NAML file system string address invalid>
+                         0001889C  9544 	BADGBH		<Bad GBH>
+                         000188A4  9545 	BADGBD		<Bad GBD>
+FAL                             Status Codes                 17-MAR-2001 03:15:45  Message A02-09                   Page 181
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                                   9546 
+                                   9547 !+
+                                   9548 !
+                                   9549 !	SEVERE ERRORS - With STV error code (that is, STV contains an associated condition code)
+                                   9550 !
+                                   9551 !-
+                                   9552 
+                                   9553 	.BASE		2073		! Bit 16 = Bit 15 = Bit 14 = 1
+                                   9554 
+                         0001C0CC  9555 	ATR		<file attributes read error>
+                         0001C0D4  9556 	ATW		<file attributes write error>
+                         0001C0DC  9557 	CCF		<cannot close file>
+                         0001C0E4  9558 	CDA		<cannot deliver AST>
+                         0001C0EC  9559 	CHN		<assign channel system service request failed>
+                         0001C0F4  9560 	RER		<file read error>
+                         0001C0FC  9561 	RMV		<ACP remove function failed>
+                         0001C104  9562 	RPL		<error detected while reading prolog>
+                         0001C10C  9563 	SYS		<QIO system service request failed>
+                         0001C114  9564 	WER		<file write error>
+                         0001C11C  9565 	WPL		<error detected while writing prolog>
+                         0001C124  9566 	IFA		<illegal file attributes detected (file header corrupted)>
+                         0001C12C  9567 	WBE		<error on write behind>
+                         0001C134  9568 	ENQ		<ENQ system service request failed>
+                         0001C13C  9569 	NETFAIL		<network operation failed at remote node>
+                         0001C144  9570 	SUPPORT		<network operation not supported>
+                         0001C14C  9571 	CRMP		<CRMPSC system service failed to map global buffers>
+                         0001C154  9572 	DTFCFGFIL	<error accessing configuration file>
+                         0001C15C  9573         REENT		<file could not be renamed and recovery failed; file has been lost>
+                         0001C164  9574 	ACC_RUJ		<recovery unit journal can not be accessed>
+                         0001C16C  9575 	TMR		<SETIMR system service request failed>
+                         0001C174  9576 	ACC_AIJ		<after image journal can not be accessed>
+                         0001C17C  9577 	ACC_BIJ		<before image journal can not be accessed>
+                         0001C184  9578 	ACC_ATJ		<audit trail journal can not be accessed>
+                         0001C18C  9579 	DTFDEFFIL	<error accessing file definition file>
+                         0001C194  9580 	DTFREGFIL	<error accessing registration file>
+                         0001C19C  9581 	JNLNOTAUTH	<RMS Journaling not authorized; operation not performed>
+                         0001C1A4  9582 	CRBUFOBJ	<CREATE_BUFOBJ system service failed to create buffer object>
+                                   9583 
+                                   9584 	.END
+                         00000000  **** 	.FACILITY	SYSTEM,0 /SHARED /SYSTEM /PREFIX=SS$_ /MACRO=$SSDEF
+                                   **** 	.SEVERITY	SUCCESS
+                                   **** 	.BASE		0
+                                   **** 
+                         00000001  **** 	NORMAL		<normal successful completion>
+                                   **** !
+                                   **** ! NOTE THAT CONTINUE,WASCLR,WASSET,REMEMBER DO NOT HAVE ANY MESSAGE TEXT
+                                   **** ! SINCE THESE CODES USE THE SAME MESSAGE NUMBER AS NORMAL AND ACCVIO,
+                                   **** ! THEY CAN NEVER BE MADE TO HAVE MESSAGES ASSOCIATED WITH THEM.
+                                   **** !
+                                   **** 	.LITERAL	SS$_CONTINUE=1
+                                   **** 	.LITERAL	SS$_WASCLR=1
+                                   **** 	.LITERAL	SS$_WASSET=9
+                                   **** 	.LITERAL	SS$_REMEMBER=1
+                                   **** 
+                                   **** !
+                                   **** !	MSG #s	   RANGE      # MSGS	    DESCRIPTION
+                                   **** !
+                                   **** !	0-127       0-3FF	128	FATAL ERRORS
+                                   **** !   1024-1279	2000-27FF	256	FATAL ERRORS (CONTINUED FROM 3FF)
+                                   **** !
+                                   ****  
+                                   **** 
+                                   **** 	.SEVERITY	FATAL
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:47  Message A02-09                   Page 214
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                                   **** 
+                         0000000C  **** 	ACCVIO		<access violation, reason mask=!XB, virtual address=!XH, PC=!XH, PS=!XL> /FAO=4
+                         00000014  **** 	BADPARAM	<bad parameter value>
+                         0000001C  **** 	EXQUOTA		<process quota exceeded>
+                         00000024  **** 	NOPRIV		<insufficient privilege or object protection violation>
+                                   **** ! MAKE THE ABOVE ERRORS FALL INTO SHORT LITERALS
+                         0000002C  **** 	ABORT		<abort>
+                         00000034  **** 	BADATTRIB	<bad attribute control list>
+                         0000003C  **** 	BADESCAPE	<syntax error in escape sequence>
+                         00000044  **** 	BADIMGHDR	<bad image header>
+                         0000004C  **** 	CHANINTLK	<channel usage interlocked>
+                         00000054  **** 	CTRLERR		<fatal controller error>
+                         0000005C  **** 	DATACHECK	<write check error>
+                         00000064  **** 	DEVFOREIGN	<device is mounted foreign>
+                         0000006C  **** 	DEVMOUNT	<device is already mounted>
+                         00000074  **** 	DEVNOTMBX	<device is not a mailbox>
+                         0000007C  **** 	DEVNOTMOUNT	<device is not mounted>
+                         00000084  **** 	DEVOFFLINE	<device is not in configuration or not available>
+                         0000008C  **** 	DRVERR		<fatal drive error>
+                         00000094  **** 	DUPLNAM		<duplicate name>
+                         0000009C  **** 	FILACCERR	<magnetic tape file access is nonblank>
+                         000000A4  **** 	FILALRACC	<file already accessed on channel>
+                         000000AC  **** 	FILNOTACC	<file not accessed on channel>
+                         000000B4  **** 	FILNOTEXP	<file is not expired>
+                         000000BC  **** 	FORMAT		<invalid media format>
+                         000000C4  **** 	GPTFULL		<global page table is full>
+                         000000CC  **** 	GSDFULL		<global section descriptor table is full>
+                         000000D4  **** 	LCKPAGFUL	<no more pages may be locked in memory>
+                         000000DC  **** 	ILLBLKNUM	<illegal logical block number>
+                         000000E4  **** 	ILLCNTRFUNC	<illegal ACP control function>
+                         000000EC  **** 	ILLEFC		<illegal event flag cluster>
+                         000000F4  **** 	ILLIOFUNC	<illegal I/O function code>
+                         000000FC  **** 	ILLPAGCNT	<illegal page count parameter>
+                         00000104  **** 	ILLSER		<illegal service call number>
+                         0000010C  **** 	INCVOLLABEL	<incorrect volume label>
+                         00000114  **** 	INSFARG		<insufficient call arguments>
+                         0000011C  **** 	INSFWSL		<insufficient working set limit>
+                         00000124  **** 	INSFMEM		<insufficient dynamic memory>
+                         0000012C  **** 	INSFRAME	<insufficient call frames to unwind>
+                         00000134  **** 	IVADDR		<invalid media address>
+                         0000013C  **** 	IVCHAN		<invalid I/O channel>
+                         00000144  **** 	IVDEVNAM	<invalid device name>
+                         0000014C  **** 	IVGSDNAM	<invalid global section name>
+                         00000154  **** 	IVLOGNAM	<invalid logical name>
+                         0000015C  **** 	IVLOGTAB	<invalid logical name table>
+                         00000164  **** 	IVQUOTAL	<invalid quota list>
+                         0000016C  **** 	IVSECFLG	<invalid process or global section flags>
+                         00000174  **** 	IVSSRQ		<invalid system service request>
+                         0000017C  **** 	IVSTSFLG	<invalid status flag>
+                         00000184  **** 	IVTIME		<invalid time>
+                         0000018C  **** 	LENVIO		<address space length violation>
+                         00000194  **** 	LKWSETFUL	<locked portion of working set is full>
+                         0000019C  **** 	MBTOOSML	<mailbox is too small for request>
+                         000001A4  **** 	MEDOFL		<medium is offline>
+                         000001AC  **** 	NODATA		<mailbox is empty>
+                         000001B4  **** 	NOIOCHAN	<no I/O channel available>
+                         000001BC  **** 	NOLOGNAM	<no logical name match>
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:47  Message A02-09                   Page 215
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         000001C4  **** 	NONEXDRV	<nonexistent drive>
+                         000001CC  **** 	NOTFILEDEV	<device is not file structured>
+                         000001D4  **** 	NOTINTBLSZ	<block size is greater than 2048>
+                         000001DC  **** 	NOTLABELMT	<tape is not labeled>
+                         000001E4  **** 	NOTSQDEV	<not a sequential device>
+                         000001EC  **** 	PAGOWNVIO	<page owner violation>
+                         000001F4  **** 	PARITY		<parity error>
+                         000001FC  **** 	PARTESCAPE	<partial escape>
+                         00000204  **** 	PFMBSY		<page fault monitor is in use>
+                         0000020C  **** 	PSTFULL		<process section table is full>
+                         00000214  **** 	RESULTOVF	<resultant string overflow>
+                         0000021C  **** 	SECTBLFUL	<process or global section table is full>
+                         00000224  **** 	TAPEPOSLOST	<magnetic tape position lost>
+                         0000022C  **** 	TIMEOUT		<device timeout>
+                         00000234  **** 	UNASEFC		<unassociated event flag cluster>
+                         0000023C  **** 	UNSAFE		<drive unsafe>
+                         00000244  **** 	VASFULL		<virtual address space is full>
+                         0000024C  **** 	VECINUSE	<AST vector already enabled>
+                         00000254  **** 	VOLINV		<volume is not software enabled>
+                         0000025C  **** 	WRITLCK		<write lock error>
+                         00000264  **** 	NOTAPEOP	<no tape operator>
+                         0000026C  **** 	IVCHNLSEC	<invalid channel for create and map section>
+                         00000274  **** 	NOMBX		<no associated mailbox for inbound connects>
+                         0000027C  **** 	NOLINKS		<maximum network logical links exceeded>
+                         00000284  **** 	NOSOLICIT	<interrupt message not solicited>
+                         0000028C  **** 	NOSUCHNODE	<remote node is unknown>
+                         00000294  **** 	REJECT		<connect to network object rejected>
+                         0000029C  **** 	TOOMUCHDATA	<too much optional or interrupt data specified>
+                         000002A4  **** 	BUGCHECK	<internal consistency failure>
+                         000002AC  **** 	FILNOTCNTG	<file is not contiguous as required>
+                         000002B4  **** 	BADSTACK	<bad stack encountered during exception dispatch>
+                         000002BC  **** 	MCHECK		<detected hardware error, PC=!XH, PS=!XL> /FAO=2
+                         000002C4  **** 	DEVACTIVE	<device is active>
+                         000002CC  **** 	HANGUP		<data set hang-up>
+                         000002D4  **** 	OPINCOMPL	<operation is incomplete>
+                         000002DC  **** 	ILLSEQOP	<illegal sequential operation>
+                         000002E4  **** 	IVSECIDCTL	<invalid section identification match control>
+                         000002EC  **** 	NOTNETDEV	<not a network communication device>
+                         000002F4  **** 	IVPROTECT	<invalid page or global section protection specified code>
+                         000002FC  **** 	ACPVAFUL	<MTAACP's virtual address space is full>
+                         00000304  **** 	MTLBLLONG	<magnetic tape volume label can be no more than six characters>
+                         0000030C  **** 	BUFBYTALI	<device does not support byte-aligned transfers>
+                         00000314  **** 	NOAQB		<ACP queue header not found>
+                         0000031C  **** 	WRONGACP	<wrong ACP for device>
+                         00000324  **** 	BUFNOTALIGN	<buffer incorrectly aligned>
+                         0000032C  **** 	DEVCMDERR	<device command error>
+                         00000334  **** 	DEVREQERR	<device request error>
+                         0000033C  **** 	INSFBUFDP	<unable to allocate a buffered datapath>
+                         00000344  **** 	INSFMAPREG	<insufficient map registers>
+                         0000034C  **** 	IVBUFLEN	<invalid buffer length>
+                         00000354  **** 	IVMODE		<invalid mode for requested function>
+                         0000035C  **** 	MCNOTVALID	<device microcode is not valid>
+                         00000364  **** 	POWERFAIL	<power failure occurred>
+                         0000036C  **** 	SHMGSNOTMAP	<shared memory global section not mapped during creation>
+                         00000374  **** 	TOOMANYLNAM	<logical name translation exceeded allowed depth>
+                         0000037C  **** 	SHMNOTCNCT	<shared memory not connected>
+                         00000384  **** 	NOTCREATOR	<request denied; user is not on creator port>
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:47  Message A02-09                   Page 216
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         0000038C  **** 	INTERLOCK	<unable to acquire system data structure interlock>
+                         00000394  **** 	BADQUEUEHDR	<interlocked queue corrupted>
+                         0000039C  **** 	NOSLOT		<no PCB available>
+                         000003A4  **** 	SUSPENDED	<process is suspended>
+                         000003AC  **** 	EXPORTQUOTA	<port's quota exceeded>
+                         000003B4  **** 	NOSHMBLOCK	<no free shared memory block available for creation>
+                         000003BC  **** 	BADQFILE	<invalid disk quota file format>
+                         000003C4  **** 	NOQFILE		<no disk quota file available>
+                         000003CC  **** 	QFACTIVE	<disk quota file is already active>
+                         000003D4  **** 	QFNOTACT	<disk quotas not enabled on this volume>
+                         000003DC  **** 	DUPDSKQUOTA	<duplicate disk quota file entry>
+                         000003E4  **** 	NODISKQUOTA	<no disk quota entry for this UIC>
+                         000003EC  **** 	EXDISKQUOTA	<disk quota exceeded>
+                         000003F4  **** 	IDMISMATCH	<ident mismatch with existing global section>
+                         000003FC  **** 	NOWRT		<cannot create writable section to read-only file>
+                                   **** ! **************
+                                   **** ! NOTE:  THE ABOVE SET OF SEVERE ERROR MESSAGES IS FULL!!!!
+                                   **** !	 ANY ADDITIONAL SEVERE ERROR MESSAGES MUST BE ADDED
+                                   **** !	 BELOW, IN THE RANGE HEX 2000-2800.
+                                   **** ! **************
+                                   **** 
+                                   **** 
+                                   **** 	.BASE		1024
+                                   **** 
+                         00002004  **** 	BADISD		<illegal image section descriptor>
+                         0000200C  **** 	RELINK		<obsolete executable image; please relink>
+                         00002014  **** 	NOTINSTALL	<writable shareable images must be installed>
+                         0000201C  **** 	SHARTOOBIG	<new version of shareable image too big; relink all images>
+                         00002024  **** 	NOP1VA		<P1 space not supported in shareable images>
+                         0000202C  **** 	MULTRMS		<multiple RMS vectors specified>
+                         00002034  **** 	VECFULL		<privileged vector limit exceeded>
+                         0000203C  **** 	IVLVEC		<section not installed with privilege>
+                         00002044  **** 	INSFSPTS	<insufficient SPTEs available>
+                         0000204C  **** 	DISCONNECT	<process is disconnected from requested interrupt vector>
+                         00002054  **** 	PRIVINSTALL	<shareable images must be installed to run privileged image>
+                         0000205C  **** 	PROTINSTALL	<protected images must be installed>
+                         00002064  **** 	BADVEC		<invalid change mode or message vector>
+                         0000206C  **** 	REMRSRC		<insufficient system resources at remote node>
+                         00002074  **** 	PROTOCOL	<network protocol error>
+                         0000207C  **** 	THIRDPARTY	<network logical link disconnected by a third party>
+                         00002084  **** 	NOSUCHUSER	<login information not recognized at remote node>
+                         0000208C  **** 	SHUT		<remote node no longer accepting connects>
+                         00002094  **** 	UNREACHABLE	<remote node is not currently reachable>
+                         0000209C  **** 	INVLOGIN	<login information invalid at remote node>
+                         000020A4  **** 	NOSUCHOBJ	<network object is unknown at remote node>
+                         000020AC  **** 	EXCPUTIM	<CPU time limit expired>
+                         000020B4  **** 	OPRABORT	<aborted by operator>
+                         000020BC  **** 	SHRIDMISMAT	<ident mismatch with shareable image>
+                         000020C4  **** 	COMMHARD	<communications hardware error detected>
+                         000020CC  **** 	IVCHAR		<invalid character>
+                         000020D4  **** 	DEVINACT	<device inactive>
+                         000020DC  **** 	CONNECFAIL	<connect to network object timed-out or failed>
+                         000020E4  **** 	LINKABORT	<network partner aborted logical link>
+                         000020EC  **** 	LINKDISCON	<network partner disconnected logical link>
+                         000020F4  **** 	LINKEXIT	<network partner exited>
+                         000020FC  **** 	PATHLOST	<path to network partner node lost>
+                         00002104  **** 	CLEARED		<virtual call was cleared>
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:47  Message A02-09                   Page 217
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         0000210C  **** 	RESET		<circuit was reset>
+                         00002114  **** 	UNSOLICIT	<response not solicited>
+                         0000211C  **** 	TOOMANYREDS	<too many redirects>
+                         00002124  **** 	IVLOCKID	<invalid lock ID>
+                         0000212C  **** 	SUBLOCKS	<cannot dequeue a lock with sublocks>
+                         00002134  **** 	PARNOTGRANT	<parent lock must be granted>
+                         0000213C  **** 	CVTUNGRANT	<cannot convert an ungranted lock>
+                         00002144  **** 	FORCEDERROR	<forced error flagged in last sector read>
+                         0000214C  **** 	ILLSELF		<illegal self reference>
+                         00002154  **** 	ILLCDTST	<illegal connection descriptor table state>
+                         0000215C  **** 	NOLISTENER	<specified remote system process not listening>
+                         00002164  **** 	EXGBLPAGFIL	<exceeded global page file limit>
+                         0000216C  **** 	BADRCT		<replacement and caching table unrecoverable I/O error>
+                         00002174  **** 	DIRNOTEMPTY	<directory file is not empty>
+                         0000217C  **** 	FORCEDEXIT	<forced exit of image or process by job controller>
+                         00002184  **** 	NOTPRINTED	<failed to queue spool file for print>
+                         0000218C  **** 	JBCERROR	<error communicating with job controller>
+                         00002194  **** 	NOLICENSE	<operation requires software license>
+                         0000219C  **** 	VCBROKEN	<virtual circuit broken>
+                         000021A4  **** 	VCCLOSED	<virtual circuit closed>
+                         000021AC  **** 	INSFCDT		<insufficient CDT entries>
+                         000021B4  **** 	DEVNOTDISM	<device not dismounted>
+                         000021BC  **** 	NOSHRIMG	<privileged shareable image cannot have outbound calls>
+                         000021C4  **** 	DUPUNIT		<duplicate unit number detected by MSCP controller>
+                         000021CC  **** 	BADACLCTX	<ACL context has been corrupted>
+                         000021D4  **** 	SERIOUSEXCP	<serious exception detected by TMSCP controller>
+                         000021DC  **** 	TEMPLATEDEV	<template device cannot be allocated>
+                         000021E4  **** 	IVACL		<invalid access control list entry syntax>
+                         000021EC  **** 	NOSUCHID	<unknown rights identifier>
+                         000021F4  **** 	NOLCLMEDA	<no local program storage media available>
+                         000021FC  **** 	NOREGAVIL	<no region available to execute program>
+                         00002204  **** 	NOREGSUIT	<no region suited to executing program>
+                         0000220C  **** 	NOSUCHPGM	<no such program found>
+                         00002214  **** 	PGMLDFAIL	<program load failure>
+                         0000221C  **** 	PGMSTDALN	<program must be run standalone>
+                         00002224  **** 	IVIDENT		<invalid identifier format>
+                         0000222C  **** 	DUPIDENT	<duplicate identifier>
+                         00002234  **** 	INCSEGTRA	<incomplete segmented transfer request posted>
+                         0000223C  **** 	NODELEAVE	<node leaving the cluster>
+                         00002244  **** 	KERNELINV	<kernel mode execution invalid>
+                         0000224C  **** 	EXLNMQUOTA	<logical name table is full>
+                         00002254  **** 	PARENT_DEL	<illegal attempt to delete parent logical name table>
+                         0000225C  **** 	PARNOTSYS	<parent not system owned lock>
+                         00002264  **** 	INSSWAPSPACE	<insufficient swap file space available>
+                         0000226C  **** 	VOLOERR		<must override owner identifier field in VOL1 label>
+                         00002274  **** 	DATALATE	<data late error detected by mass storage subsystem>
+                         0000227C  **** 	OVRMAXARG	<maximum parameter count exceeded>
+                         00002284  **** 	SHACHASTA	<shadow set has changed state>
+                         0000228C  **** 	TERMNETDEV	<terminal is a network communications device>
+                         00002294  **** 	NOLOGTAB	<no logical name table name match>
+                         0000229C  **** 	WRONGNAME	<local node name must match SCSNODE>
+                         000022A4  **** 	NOVOLACC	<user has no access to magnetic tape volume>
+                         000022AC  **** 	NOFILACC	<user has no access to magnetic tape file>
+                         000022B4  **** 	INVEXHLIST	<termination handler control block list is corrupted>
+                         000022BC  **** 	NOACLSUPPORT	<ACLs not supported on selected object>
+                         000022C4  **** 	INVSECLASS	<invalid security classification block>
+                         000022CC  **** 	INCSHAMEM	<incompatible shadow set member>
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:47  Message A02-09                   Page 218
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         000022D4  **** 	DEVNOTSHR	<device not currently shareable>
+                         000022DC  **** 	RUCONFLICT	<another facility has active recovery units on file>
+                         000022E4  **** 	DATALOST	<data lost>
+                         000022EC  **** 	REMOTE_PROC	<operation not allowed; process is on remote node>
+                         000022F4  **** 	CPUNOTACT	<requested CPU not active>
+                         000022FC  **** 	SRVMMAT		<cryptographic service mismatch>
+                         00002304  **** 	EXLICENSE	<licensed product has exceeded current license limits>
+                         0000230C  **** 	INVLICENSE	<licensed product is not authorized for this operating mode>
+                         00002314  **** 	LICENSE_LEVEL	<license level does not match product version>
+                         0000231C  **** 	INV_HW_ID	<invalid hardware identifier (reserved for future use)>
+                         00002324  **** 	BADCONTEXT	<invalid or corrupted context encountered>
+                         0000232C  **** 	TOOMUCHCTX	<too many concurrent context streams requested>
+                         00002334  **** 	VA_IN_USE	<virtual address already in use>
+                         0000233C  **** 	NODELETE	<object cannot be deleted>
+                         00002344  **** 	NOSUCHCPU	<CPU does not exist, system is not a multiprocessor, or multiprocessing disabled>
+                         0000234C  **** 	IMGVEXC		<image exiting with pending vector exceptions>
+                         00002354  **** 	NOSAVPEXC	<no saved vector exception for the exception-id>
+                         0000235C  **** 	NOSUCHTID	<specified transaction not found>
+                         00002364  **** 	NOSUCHRM	<specified resource manager not found>
+                         0000236C  **** 	NOCURTID	<no process default transaction currently defined>
+                         00002374  **** 	WRONGSTATE	<invalid transaction state for requested event>
+                         0000237C  **** 	VETO		<resource manager refuses request to commit>
+                         00002384  **** 	PWDSYNTAX	<illegal password syntax>
+                         0000238C  **** 	PWDNOTDIF	<new password must be different from current password>
+                         00002394  **** 	INVPWDLEN	<password length must be between !UB and 32 characters> /FAO=1
+                         0000239C  **** 	SYSVERDIF	<system version mismatch; please relink>
+                         000023A4  **** 	HWM_STALL	<internal I/O stalled by highwater mark activity>
+                         000023AC  **** 	NOSUSPEND	<process cannot be suspended>
+                         000023B4  **** 	NOSUCHPART	<specified participant not found>
+                         000023BC  **** 	RMALRDCL	<resource manager name has already been declared>
+                         000023C4  **** 	ALRCURTID	<a default transaction is currently defined>
+                         000023CC  **** 	INVLOG		<transaction log file format is invalid>
+                         000023D4  **** 	BADLOGVER	<transaction log file format version is unsupported>
+                         000023DC  **** 	OPINPROG	<previously requested operation is incomplete>
+                         000023E4  **** 	WRONGACMODE	<operation attempted from insufficiently privileged access mode>
+                         000023EC  **** 	SUBTRACED	<protected subsystem image cannot be linked /TRACE or /DEBUG>
+                         000023F4  **** 	ARCHIVING       <archive in progress>
+                         000023FC  **** 	ARCHIVED	<file contents archived>
+                         00002404  **** 	SITEPWDFAIL	<failure to load site-specific password policy>
+                         0000240C  **** 	NOSUCHCPB	<capability does not exist>
+                         00002414  **** 	CPUCAP		<requested CPU unable to run process due to lack of capabilities>
+                         0000241C  **** 	LOADER		<loader cycle error>
+                         00002424  **** 	HSTBUFACC	<host buffer access error>
+                         0000242C  **** 	INCONOLCK	<inconsistent ORB lock database>
+                         00002434  **** 	INVEVENT	<invalid event notification request>
+                         0000243C  **** 	NOSUCHFAC	<event facility object does not exist>
+                         00002444  **** 	NOCALLPRIV	<third-party lacks privilege for attempted operation>
+                         0000244C  **** 	INSFLPGS	<insufficient Fluid Pages available>
+                         00002454  **** 	INSFRPGS	<insufficient Free Pages available>
+                         0000245C  **** 	BADREASON	<invalid abort reason code>
+                         00002464  **** 	NOSUCHBID	<specified transaction branch not found>
+                         0000246C  **** 	NOTORIGIN	<the origin transaction branch is not in this process>
+                         00002474  **** 	NOLOG		<transaction log not found>
+                         0000247C  **** 	TPDISABLED	<the TP_SERVER process is not running on this node>
+                         00002484  **** 	BRANCHENDED	<specified transaction branch has already been ended>
+                         0000248C  **** 	BRANCHSTARTED	<specified transaction branch has already been started>
+                         00002494  **** 	NOSUCHREPORT	<specified transaction event report not found>
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:47  Message A02-09                   Page 219
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         0000249C  **** 	BADTIME		<invalid timestamp range>
+                         000024A4  **** 	PARTJOINED	<participant of the same name already joined to this transaction>
+                         000024AC  **** 	NOPRESUME	<not all transaction event reports have been given>
+                         000024B4  **** 	RECOVERCANCEL	<transaction recovery canceled by explicit request>
+                         000024BC  **** 	CURTIDCHANGE	<already a change to the process default transaction in progress>
+                         000024C4  **** 	NOREADER	<no read channel is assigned to the device>
+                         000024CC  **** 	NOWRITER	<no write channel is assigned to the device>
+                         000024D4  **** 	DEVNOTWS	<device is not a workstation device>
+                         000024DC  **** 	NOCLASS		<no matching object class was located>
+                         000024E4  **** 	CONTEXTSKEW	<context skew detected in security object services>
+                         000024EC  **** 	BADFORGEDB	<failure to load password generator database>
+                         000024F4  **** 	NODOMAIN	<resource domain not found>
+                         000024FC  **** 	OVRMAXAUD	<maximum security audit message size exceeded>
+                         00002504  **** 	BADCHAIN	<chained item list is inaccessible or else chain is circular>
+                         0000250C  **** 	BADBUFLEN	<specified buffer length is invalid or out-of-range>
+                         00002514  **** 	BADITMCOD	<specified item code is invalid or out-of-range>
+                         0000251C  **** 	BADBUFADR	<buffer address is invalid or inaccessible>
+                         00002524  **** 	BADRETLEN	<return length buffer address is invalid or inaccessible>
+                         0000252C  **** 	SSINOTHELD	<protected subsystem identifier not held; ACL not modified>
+                         00002534  **** 	SSAMISSING	<protected subsystem identifier missing subsystem attribute; ACL not modified>
+                         0000253C  **** 	SSANOTAUTH	<protected subsystem identifier attribute(s) not authorized; ACL not modified>
+                         00002544  **** 	BADOWNER	<owner UIC is invalid; object ownership not changed>
+                         0000254C  **** 	NAMESERVCOMMERR	<name service communications error>
+                         00002554  **** 	IVNODNAM	<invalid node name>
+                         0000255C  **** 	CONFIG_SYNTAX	<foreign device configuration description invalid>
+                         00002564  **** 	SHELVED		<file contents shelved>
+                         0000256C  **** 	DRVNOTVALID	<device driver failed DPT consistency checks>
+                         00002574  **** 	SLICING_DISABLED <image slicing is disabled>
+                         0000257C  **** 	NOCALLTRANS	 <code at !XL cannot call translated code>/FAO=1
+                         00002584  **** 	TRANSCALLER	 <routine at !XL cannot be called by translated code>/FAO=1
+                         0000258C  **** 	ILLPRIPOL	<illegal combination of scheduling priority and policy>
+                         00002594  **** 	ILLPOLICY	<illegal scheduling policy>
+                         0000259C  **** 	INSFRSPID	<insufficient response IDs>
+                         000025A4  **** 	INSFCREDITL	<insufficient connection message buffer credits, low priority request>
+                         000025AC  **** 	INSFCREDITH	<insufficient connection message buffer credits, high priority request>
+                         000025B4  **** 	INSFMAP		<insufficient data mapping resources>
+                         000025BC  **** 	SIG_INVARGTYPE	<signature block specifies an invalid argument type; PC/PDA: !XL>/FAO=1
+                         000025C4  **** 	SIG_INVFLTARG	<signature block specifies an invalid floating argument type; PC/PDA: !XL>/FAO
+                         000025CC  **** 	SIG_INVARGLIST	<signature block will generate more than 255 OpenVMS arguments; PC/PDA: !XL>/
+                         000025D4  **** 	SIG_INVFUNCTYPE	<signature block specifies an invalid function value type; PC/PDA: !XL>/FAO=
+                         000025DC  **** 	SIG_ARGMISMATCH	<signature block & OpenVMS arglist have mismatched argument datatypes; PDA: 
+                         000025E4  **** 	NOTRANQUIL	<classification not changed; object currently accessed>
+                         000025EC  **** 	NOCALLTRANS_SUP	<code at !XL called translated code in supervisor mode>/FAO=1
+                         000025F4  **** 	DEVLISTFULL	<device unit limit reached; no unit added>
+                         000025FC  **** 	INSFP1POOL	<insufficient process dynamic memory>
+                         00002604  **** 	SIGNAL64	<64-bit signal array received>
+                         0000260C  **** 	ZEROALLOCLS	<unit has a zero allocation class>
+                         00002614  **** 	QUEUE_FULL	<SCSI tagged command queue is full>
+                         0000261C  **** 	DEVICE_RESET	<SCSI bus or device was reset>
+                         00002624  **** 	ACA_ACTIVE	<SCSI ACA operations are active>
+                         0000262C  **** 	BUS_PHASE_ERROR	<SCSI bus phase error>
+                         00002634  **** 	NOMULTITHREAD	<multithread is either disabled or not initialized>
+                         0000263C  **** 	MTHREADACTIVE	<multithread is already active>
+                         00002644  **** 	MAXKTHREADS	<maximum kernel thread count exceeded>
+                         0000264C  **** 	NOSUCHTHREAD	<specified kernel thread does not exist>
+                         00002654  **** 	NOTHREADMAN	<no thread manager is registered>
+                         0000265C  **** 	NOSUCHUPCALL	<specified upcall does not exist>
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:47  Message A02-09                   Page 220
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         00002664  **** 	BADFANDLE	<invalid fandle>
+                         0000266C  **** 	FANDLEBUSY	<fandle is already in use>
+                         00002674  **** 	UNALIGNED	<IOSA or data buffer not aligned>
+                         0000267C  **** 	BADIOSADR	<IOSA is not within buffer object>
+                         00002684  **** 	ILLBUFOBJ	<buffer object handle is not valid>
+                         0000268C  **** 	ILLMODIFIER	<I/O function modifier is not permitted>
+                         00002694  **** 	NOCCBBUFFOBJ	<unable to lock down CCB into buffer object>
+                         0000269C  **** 	NORDACC		<read access denied>
+                         000026A4  **** 	NOWRTACC	<write access denied>
+                         000026AC  **** 	NOTNOCNVRT	<device does not do LBN addressing>
+                         000026B4  **** 	UNSUPVOLSET	<volume sets not supported for Fast-IO>
+                         000026BC  **** 	ARG_GTR_32_BITS	<argument is not 32-bit sign-extended value>
+                         000026C4  **** 	NOT64DEVFUNC	<64-bit address not supported by device for this function>
+                                   **** 
+                         000026CC  **** 	CHANVIO		<the specified channel was assigned from a more privileged access mode>
+                         000026D4  **** 	GBLSEC_MISMATCH <global section type does not match service called>
+                         000026DC  **** 	ILLRELPAG	<invalid relative page argument specified>
+                         000026E4  ****         IVACMODE	<invalid access mode specified>
+                         000026EC  **** 	IVREGFLG	<invalid region flag specified>
+                         000026F4  **** 	IVREGID		<invalid region id specified>
+                         000026FC  **** 	IVREGPROT	<invalid region protection specified>
+                         00002704  **** 	IVVAFLG		<invalid virtual address flag specified>
+                         0000270C  **** 	LEN_NOTBLKMULT  <specified length is not a multiple of virtual disk blocks>
+                         00002714  **** 	LEN_NOTPAGMULT  <specified length is not a multiple of CPU-specific pages>
+                         0000271C  **** 	NOT_PROCESS_VA  <specified virtual address is not a process space address>
+                         00002724  **** 	OFF_NOTBLKALGN  <specified offset is not virtual disk block aligned>
+                         0000272C  **** 	OFF_NOTPAGALGN  <specified offset is not CPU-specific page aligned>
+                         00002734  **** 	OFFSET_TOO_BIG  <specified offset is too large for global section being mapped>
+                         0000273C  **** 	REGOWNVIO	<region is owned by a more privileged access mode>
+                         00002744  **** 	PROTVIO		<file protection prohibits the type of access requested>
+                         0000274C  **** 	TOO_MANY_ARGS   <routine called with too many arguments>
+                         00002754  **** 	VA_NOTPAGALGN   <specified virtual address is not CPU-specific page aligned>
+                         0000275C  **** 	NOEXTAUTH	<external authentication is not available>
+                         00002764  **** 	AUTHFAIL	<authorization failure>
+                         0000276C  **** 	INVUSER		<no such user>
+                         00002774  **** 	ERRMAPAUTH	<error mapping or authenticating user>
+                         0000277C  **** 	NORAD50		<radix 50 name not supported>
+                         00002784  **** 	BADMEDIA	<disk or tape media is not useable>
+                         0000278C  **** 	UNRECOVRDER	<unable to read data from media>
+                         00002794  **** 	IVFORMAT	<invalid media format for this device>
+                         0000279C  **** 	IVUNITFLAG	<invalid unit flag encountered>
+                         000027A4  **** 	IVPARAM		<invalid parameter specified>
+                         000027AC  **** 	NOSUCHENTRY	<specified entry not located>
+                         000027B4  **** 	ALLOCFAILED	<unsuccessful attempt to allocate device>
+                         000027BC  **** 	SHMEM_INCON	<inconsistent shared memory state encountered>
+                         000027C4  **** 	IVLOCKOP	<invalid lock operation>
+                         000027CC  **** 	IVLOCKTBL	<invalid lock table>
+                         000027D4  **** 	LOCKINUSE	<invalid operation; lock is in use>
+                         000027DC  **** 	LOCK_TIMEOUT	<failed to acquire lock; request has timed out>
+                         000027E4  **** 	BADLCKTBL	<galaxy lock table is corrupt>
+                         000027EC  ****         NOBREAK 	<failed to acquire lock; lock ownership is broken>
+                         000027F4  **** 	IVPROTOCOL	<MSCP command protocol violation>	
+                         000027FC  **** 	NOWAIT		<failed to acquire lock; NOWAIT was specified>
+                                   **** !
+                                   **** ! ***** Note: No room for more messages in this section *****
+                                   **** !
+                                   **** 
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:47  Message A02-09                   Page 221
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                                   **** !
+                                   **** !	MSG #s	   RANGE      # MSGS	    DESCRIPTION
+                                   **** !
+                                   **** !     128-191	  400-5FF	 64	HARDWARE DEFINED FATAL ERRORS
+                                   **** !
+                                   **** 
+                                   **** 
+                                   **** 	.BASE		128
+                                   **** 
+                         00000404  **** 	PLHLDR		<reserved for future use>
+                         0000040C  **** 	ASTFLT		<AST fault, SP=!XL, param=!XL, PC=!XH, PS=!XL, target PC=!XH, PS=!XL> /FAO=6
+                         00000414  **** 	BREAK		<breakpoint fault at PC=!XH, PS=!XL> /FAO=2
+                         0000041C  **** 	CMODSUPR	<change mode to supervisor trap, code=!XL, PC=!XH, PS=!XL> /FAO=3
+                         00000424  **** 	CMODUSER	<change mode to user trap, code=!XL, PC=!XH, PS=!XL> /FAO=3
+                         0000042C  **** 	COMPAT		<compatibility mode fault (code !UB) at PC=!XH, PS=!XL> /FAO=3
+                         00000434  **** 	OPCCUS		<opcode reserved to customer fault at PC=!XH, PS=!XL> /FAO=2
+                         0000043C  **** 	OPCDEC		<opcode reserved to Digital fault at PC=!XH, PS=!XL> /FAO=2
+                         00000444  **** 	PAGRDERR	<page read error, I/O status=!XL, virtual address=!XH, PC=!XH, PS=!XL> /FAO=4
+                         0000044C  **** 	RADRMOD		<reserved addressing fault at PC=!XH, PS=!XL> /FAO=2
+                         00000454  **** 	ROPRAND		<reserved operand fault at PC=!XH, PS=!XL> /FAO=2
+                         0000045C  **** 	SSFAIL		<system service failure exception, status=!XL, PC=!XH, PS=!XL> /FAO=3
+                         00000464  **** 	TBIT		<T-bit pending trap at PC=!XH, PS=!XL> /FAO=2
+                         0000046C  **** 	DEBUG		<command interpreter debugger signal at PC=!XH, PS=!XL> /FAO=2
+                                   **** ! THE FOLLOWING CODES MUST BE IN ORDER SINCE THEY ARE CALCULATED
+                         00000474  **** 	ARTRES		<reserved arithmetic trap at PC=!XH, PS=!XL> /FAO=2
+                         0000047C  **** 	INTOVF		<arithmetic trap, integer overflow at PC=!XH, PS=!XL> /FAO=2
+                         00000484  **** 	INTDIV		<arithmetic trap, integer divide by zero at PC=!XH, PS=!XL> /FAO=2
+                         0000048C  **** 	FLTOVF		<arithmetic trap, floating overflow at PC=!XH, PS=!XL> /FAO=2
+                         00000494  **** 	FLTDIV		<arithmetic trap, floating/decimal divide by zero at PC=!XH, PS=!XL> /FAO=2
+                         0000049C  **** 	FLTUND		<arithmetic trap, floating underflow at PC=!XH, PS=!XL> /FAO=2
+                         000004A4  **** 	DECOVF		<arithmetic trap, decimal overflow at PC=!XH, PS=!XL> /FAO=2
+                         000004AC  **** 	SUBRNG		<arithmetic trap, subscript out of range at PC=!XH, PS=!XL> /FAO=2
+                         000004B4  **** 	FLTOVF_F	<arithmetic fault, floating overflow at PC=!XH, PS=!XL> /FAO=2
+                         000004BC  **** 	FLTDIV_F	<arithmetic fault, floating divide by zero at PC=!XH, PS=!XL> /FAO=2
+                         000004C4  **** 	FLTUND_F	<arithmetic fault, floating underflow at PC=!XH, PS=!XL> /FAO=2
+                                   **** ! THE ABOVE CODES MUST BE IN ORDER SINCE THEY ARE CALCULATED
+                         000004CC  **** 	INHCHMK		<inhibited CHMKernel trap, code=!XL, PC=!XH, PS=!XL> /FAO=3
+                         000004D4  **** 	INHCHME		<inhibited CHMExecutive trap, code=!XL, PC=!XH, PS=!XL> /FAO=3
+                         000004DC  **** 	VECDIS		<vector disabled fault, code=!XL ,PC=!XH, PS=!XL> /FAO=3
+                         000004E4  **** 	VARITH		<vector arithmetic fault, summary=!XL, mask=!XL, PC=!XH, PS=!XL> /FAO=4
+                         000004EC  **** 	ILLVECOP	<illegal vector opcode fault, opcode=!XW, PC=!XH, PS=!XL> /FAO=3
+                         000004F4  **** 	VECALIGN	<vector alignment exception, reason mask=!XB, virtual address=!XH, PC=!XH, PS=!XL> 
+                         000004FC  **** 	IMGDMP		<dynamic image dump signal at PC=!XH, PS=!XL> /FAO=2
+                         00000504  **** 	HPARITH		<high performance arithmetic trap, Imask=!XL, Fmask=!XL, summary=!XB, PC=!XH, PS=!X
+                         0000050C  **** 	ALIGN		<data alignment trap, virtual address=!XH, function=!XL, PC=!XH, PS=!XL> /FAO=4
+                         00000514  **** 	UNALIGN_SP_LOAD	<unaligned load of SP, virtual address=!XH, PC=!XH, PS=!XL> /FAO=3
+                                   **** 
+                         0000051C  **** 	GENTRAP		<software trap, code=!XL, PC=!XH, PS=!XL> /FAO=3
+                         00000524  **** 	FLTINV		<floating invalid operation, PC=!XH, PS=!XL> /FAO=2
+                         0000052C  **** 	FLTINE		<floating inexact result, PC=!XH, PS=!XL> /FAO=2
+                         00000534  **** 	DECDIV		<decimal divide by zero, PC=!XH, PS=!XL> /FAO=2
+                         0000053C  **** 	DECINV		<decimal invalid operand, PC=!XH, PS=!XL> /FAO=2
+                         00000544  **** 	ASSERTERR	<assertion error, PC=!XH, PS=!XL> /FAO=2
+                         0000054C  **** 	NULPTRERR	<null pointer error, PC=!XH, PS=!XL> /FAO=2
+                         00000554  **** 	STKOVF		<stack overflow, PC=!XH, PS=!XL> /FAO=2
+                         0000055C  **** 	STRLENERR	<string length error, PC=!XH, PS=!XL> /FAO=2
+                         00000564  **** 	SUBSTRERR	<substring error, PC=!XH, PS=!XL> /FAO=2
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:48  Message A02-09                   Page 222
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         0000056C  **** 	RANGEERR	<range error, PC=!XH, PS=!XL> /FAO=2
+                         00000574  **** 	SUBRNG1		<subscript 1 range error, PC=!XH, PS=!XL> /FAO=2
+                         0000057C  **** 	SUBRNG2		<subscript 2 range error, PC=!XH, PS=!XL> /FAO=2
+                         00000584  **** 	SUBRNG3		<subscript 3 range error, PC=!XH, PS=!XL> /FAO=2
+                         0000058C  **** 	SUBRNG4		<subscript 4 range error, PC=!XH, PS=!XL> /FAO=2
+                         00000594  **** 	SUBRNG5		<subscript 5 range error, PC=!XH, PS=!XL> /FAO=2
+                         0000059C  **** 	SUBRNG6		<subscript 6 range error, PC=!XH, PS=!XL> /FAO=2
+                         000005A4  **** 	SUBRNG7		<subscript 7 range error, PC=!XH, PS=!XL> /FAO=2
+                         000005AC  **** 	PAGRDERRXM	<page read error across access modes, I/O status=!XL, virtual address=!XH, PC=!XH
+                         000005B4  **** 	ILLEGAL_SHADOW	<illegal formed trap shadow, Imask=!XL, Fmask=!XL, summary=!XB, PC=!XH, PS=!X
+                         000005BC  **** 	FLTINV_F	<floating invalid fault, PC=!XH, PS=!XL> /FAO=2
+                         000005C4  **** 	FLTINE_F	<floating inexact fault, PC=!XH, PS=!XL> /FAO=2
+                         000005CC  **** 	INTOVF_F	<integer overflow fault, PC=!XH, PS=!XL> /FAO=2
+                                   **** 
+                                   **** !
+                                   **** ! New symbols should be added immediately before this comment
+                                   **** ! ***** Note: room for 6 more messages in this section *****
+                                   **** !
+                                   **** 
+                                   **** !
+                                   **** !	MSG #s	   RANGE      # MSGS	    DESCRIPTION
+                                   **** !
+                                   **** !     192-255	  600-7FF	 64	SUCCESS CODES
+                                   **** !
+                                   ****  
+                                   **** 
+                                   **** 	.SEVERITY	SUCCESS
+                                   **** 	.BASE		192
+                                   **** 
+                         00000601  **** 	BUFFEROVF	<output buffer overflow>
+                         00000609  **** 	CONTROLO	<output completed under CTRL/O>
+                         00000611  **** 	CONTROLY	<operation completed under CTRL/Y>
+                         00000619  **** 	CREATED		<file or section did not exist; has been created>
+                         00000621  **** 	MSGNOTFND	<message not in system message file>
+                         00000629  **** 	NOTRAN		<no string translation performed>
+                         00000631  **** 	SUPERSEDE	<logical name superseded>
+                         00000639  **** 	WASECC		<successful transfer; no data check>
+                         00000641  **** 	DEVALRALLOC	<device already allocated to this job>
+                         00000649  **** 	REMOTE		<assignment completed on remote node>
+                         00000651  **** 	CONTROLC	<operation completed under CTRL/C>
+                         00000659  **** 	NOTMODIFIED	<no pages in the section were modified>
+                         00000661  **** 	RDDELDATA	<read deleted data address mark>
+                         00000669  **** 	OVRDSKQUOTA	<disk usage exceeds disk quota>
+                         00000671  **** 	OBSOLETE_1	<system version mismatch - privilege removed - please relink>
+                         00000679  **** 	FILEPURGED	<oldest file version purged>
+                         00000681  **** 	NOTALLPRIV	<not all requested privileges authorized>
+                         00000689  **** 	SYNCH		<synchronous successful completion>
+                         00000691  **** 	CONCEALED	<logical device name concealed physical device name>
+                         00000699  **** 	INCOMPAT	<feature incompatible with previous system version>
+                         000006A1  **** 	DBGOPCREQ	<debugger opcode request for PC !XL !+>/FAO=2
+                         000006A9  **** 	ALRDYCLOSED	<connection already closed>
+                         000006B1  **** 	LNMCREATED	<logical name table did not exist; has been created>
+                         000006B9  **** 	ACEIDMATCH	<ACE identifier match>
+                         000006C1  **** 	DBGEVENT	<debugger event>
+                         000006C9  **** 	REMOVED		<directory entry removed>
+                         000006D1  **** 	QUEUED		<OOB AST has been queued, but will not be delivered>
+                         000006D9  **** 	SUBDISABLED	<protected subsystems disabled on volume>
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:48  Message A02-09                   Page 223
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         000006E1  **** 	FORGET		<participant has no further need for this transaction state>
+                         000006E9  **** 	PREPARED	<only phase one commit processing completed>
+                         000006F1  **** 	NOMOREITEMS	<no more items to be returned>
+                         000006F9  **** 	VOLATILE	<participant has no recoverable transaction state>
+                         00000701  **** 	CLASSUPER	<object class support routines superseded>
+                         00000709  **** 	CONTINUE_64	<continue from exception>
+                         00000711  **** 	THREAD_UPCALL	<Upcall routine should be called>
+                         00000719  **** 	CREATED_SHPT	<section did not exist; has been created with shared page tables>
+                         00000721  **** 	PERSONADELPEND	<persona marked for delete; references still outstanding>
+                         00000729  **** 	DEVAVAIL	<device is available; not allocated or mounted>
+                         00000731  **** 	LONGGAP		<a long tape gap was encountered>
+                         00000739  ****         BROKEN		<lock acquired after lock ownership was broken>
+                         00000741  **** 	QPOOL_DEL_INIT	<a QIOServer pool block delete has been initiated>
+                                   **** !
+                                   **** ! New symbols should be added immediately before this comment
+                                   **** ! ***** Note: room for 20 more messages in this section *****
+                                   **** !
+                                   **** 
+                                   **** !
+                                   **** !	MSG #s	   RANGE      # MSGS	    DESCRIPTION
+                                   **** !
+                                   **** !     256-383	  800-BFF	128	WARNING CODES
+                                   **** !
+                                   **** 
+                                   **** 
+                                   **** 	.SEVERITY	WARNING
+                                   **** 	.BASE		256
+                                   **** 
+                         00000800  **** 	ACCONFLICT	<file access conflict>
+                         00000808  **** 	BADCHKSUM	<bad file header checksum>
+                         00000810  **** 	BADFILEHDR	<bad file header>
+                         00000818  **** 	BADFILENAME	<bad file name syntax>
+                         00000820  **** 	BADFILEVER	<bad file version number>
+                         00000828  **** 	BADIRECTORY	<bad directory file format>
+                         00000830  **** 	CANCEL		<operation canceled>
+                         00000838  **** 	DATAOVERUN	<data overrun>
+                         00000840  **** 	DEVALLOC	<device already allocated to another user>
+                         00000848  **** 	DEVASSIGN	<device has channels assigned>
+                         00000850  **** 	DEVICEFULL	<device full; allocation failure>
+                         00000858  **** 	DEVNOTALLOC	<device not allocated>
+                         00000860  **** 	DIRFULL		<directory is full>
+                         00000868  **** 	DUPFILENAME	<duplicate file name>
+                         00000870  **** 	ENDOFFILE	<end of file>
+                         00000878  **** 	ENDOFTAPE	<end of tape>
+                         00000880  **** 	TMACTIVE	<thread manager context is active>
+                         00000888  **** 	FCPREADERR	<file processor read error>
+                         00000890  **** 	FCPREWNDERR	<file processor rewind error>
+                         00000898  **** 	FCPSPACERR	<file processor space error>
+                         000008A0  **** 	FCPWRITERR	<file processor write error>
+                         000008A8  **** 	FILELOCKED	<file is deaccess locked>
+                         000008B0  **** 	FILENUMCHK	<file identification number check>
+                         000008B8  **** 	FILESEQCHK	<file identification sequence number check>
+                         000008C0  **** 	FILESTRUCT	<unsupported file structure level>
+                         000008C8  **** 	HEADERFULL	<file header is full>
+                         000008D0  **** 	IDXFILEFULL	<index file is full>
+                         000008D8  **** 	MBFULL		<mailbox is full>
+                         000008E0  **** 	NOHOMEBLK	<Files-11 home block not found on volume>
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:48  Message A02-09                   Page 224
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         000008E8  **** 	NONEXPR		<nonexistent process>
+                         000008F0  **** 	NONLOCAL	<device is not a local device>
+                         000008F8  **** 	NOHANDLER	<no condition handler found>
+                         00000900  **** 	NOSIGNAL	<no signal currently active>
+                         00000908  **** 	NOSUCHDEV	<no such device available>
+                         00000910  **** 	NOSUCHFILE	<no such file>
+                         00000918  **** 	RESIGNAL	<resignal condition to next handler>
+                         00000920  **** 	UNWIND		<unwind currently in progress>
+                         00000928  **** 	UNWINDING	<unwind already in progress>
+                         00000930  **** 	NOMOREFILES	<no more files>
+                         00000938  **** 	BEGOFFILE	<beginning of file>
+                         00000940  **** 	BLOCKCNTERR	<block count error>
+                         00000948  **** 	MUSTCLOSEFL	<must close file>
+                         00000950  **** 	WAITUSRLBL	<waiting for user labels>
+                         00000958  **** 	ILLUSRLBLRD	<illegal read of user labels>
+                         00000960  **** 	ILLUSRLBLWT	<illegal write of user labels>
+                         00000968  **** 	ILLLBLAST	<illegal user label AST control block address>
+                         00000970  **** 	ENDOFUSRLBL	<end of user labels>
+                         00000978  **** 	NOSUCHSEC	<no such (global) section>
+                         00000980  **** 	CLIFRCEXT	<CLI forced exit>
+                         00000988  **** 	FCPREPSTN	<file processor reposition error>
+                         00000990  **** 	TOOMANYVER	<too many higher file versions>
+                         00000998  **** 	NOTVOLSET	<volume is not part of a volume set>
+                         000009A0  **** 	ENDOFVOLUME	<end of volume>
+                         000009A8  **** 	NOMOREPROC	<no more processes>
+                         000009B0  **** 	NODEVAVL	<no device available>
+                         000009B8  **** 	NOTQUEUED	<request not queued>
+                         000009C0  **** 	DGQINCOMP	<datagram queue operation incomplete>
+                         000009C8  **** 	DIRALLOC	<allocation failure on directory file>
+                         000009D0  **** 	ACLEMPTY	<access control list is empty>
+                         000009D8  **** 	NOENTRY		<access control entry not found>
+                         000009E0  **** 	NOMOREACE	<access control list is exhausted>
+                         000009E8  **** 	RIGHTSFULL	<rights list is full>
+                         000009F0  **** 	VALNOTVALID	<value block is not valid>
+                         000009F8  **** 	ACLFULL		<ACL is full>
+                         00000A00  **** 	NOMORENODE	<no more nodes>
+                         00000A08  **** 	NOMORELOCK	<no more locks>
+                         00000A10  **** 	BEGOFTAPE	<beginning of tape encountered>
+                         00000A18  **** 	OBJLOCKHELD	<object's lock already held>
+                         00000A20  **** 	CPUSTARTIP	<CPU !UL startup in progress; cannot stop>/FAO=1
+                         00000A28  **** 	ALLSTARTED	<all configured processors are already started>
+                         00000A30  **** 	ALRDYSTRT       <CPU !UL is already started, or startup in progress>/FAO=1
+                         00000A38  **** 	ALRDYSTPPD      <CPU !UL is already stopped>/FAO=1
+                         00000A40  **** 	NSTPPD		<CPU !UL is not stopped>/FAO=1
+                         00000A48  **** 	UNKRESULT	<transaction result is unknown>
+                         00000A50  **** 	ITEMNOTFOUND	<requested item cannot be returned>
+                         00000A58  **** 	NOMOREDEV	<no more devices>
+                         00000A60  ****   	EFNOTSET	<specified EFN is common; not set>
+                         00000A68  **** 	PRIMNOSTP	<PRIMARY CPU cannot be stopped>
+                         00000A70  **** 	BOOTREJECT	<CPU !UL is in the BOOT_REJECTED state and cannot be started>/FAO=1
+                         00000A78  **** 	RMTPATH		<description of path between two remote nodes>
+                         00000A80  **** 	OBJECT_EXISTS	<object already exists>
+                         00000A88  **** 	NOSUCHOBJECT	<specified object does not exist>
+                         00000A90  **** 	NOVOLDESC	<no CD-ROM volume descriptor found>
+                         00000A98  **** 	NOPTBLDIR	<no path table or directory records found>
+                         00000AA0  **** 	DRVEXISTS	<device driver already loaded; not superseded>
+                         00000AA8  **** 	DEVEXISTS	<device unit already exists>
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:48  Message A02-09                   Page 225
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         00000AB0  **** 	GOTO_UNWIND	<goto unwind currently in progress>
+                         00000AB8  **** 	EXIT_UNWIND	<exit unwind currently in progress>
+                         00000AC0  **** 	SMALLHEADER	<classification not changed; insufficient space in file header>
+                         00000AC8  **** 	FDT_COMPL	<FDT processing complete>	
+                         00000AD0  **** 	TARGET_UNWIND	<target invocation for $UNWIND>
+                         00000AD8  **** 	TARGET_GOTO_UNWIND <target invocation for $GOTO_UNWIND> 
+                         00000AE0  **** 	RESIGNAL_64	<resignal condition to next handler>
+                                   **** 
+                         00000AE8  **** 	NOMOREREG	<no more regions found>
+                         00000AF0  **** 	PAGNOTINREG	<page in the specified range is not within the specified region>
+                         00000AF8  **** 	REGISFULL	<specified region is full>
+                         00000B00  **** 	PAGTYPVIO	<operation not supported on specified page type>
+                         00000B08  **** 	NOSUCHPAG	<specified page does not exist>
+                         00000B10  **** 	PAGNOTWRITE	<specified page cannot be written>
+                         00000B18  **** 	NOMORETHREAD	<no more threads in this process>
+                         00000B20  **** 	NOTF11ODS5	<this operation is allowed only on Files-11 ODS-5 volumes>
+                         00000B28  **** 	NOCONVJNL	<journaling enabled; cannot extend file header>
+                         00000B30  ****         MPDEVBUSY       <this path to multipath device is busy>
+                         00000B38  ****         MPDEVUSERDISABLE <this path to a multipath device is user disabled>
+                         00000B40  **** 	NOCPUMATCH	<no CPU met the requirements of the requested operation>
+                         00000B48  **** 	NOMORECLIENTS	<no more QIOServer clients exist in the cluster>
+                         00000B50  **** 	NOMOREDEVICES	<no more QIOServer devices exist for specified path>
+                         00000B58  **** 	NOMOREFILTERS	<no more QIOServer logging filters exist for message events>
+                         00000B60  **** 	NOMOREPATHS	<no more QIOServer paths exist for this device>
+                         00000B68  **** 	NOMORESERVERS	<no more QIOServer servers exist in the cluster>
+                         00000B70  **** 	FISH		<my hovercraft is full of eels>
+                                   **** !
+                                   **** ! New symbols should be added immediately before this comment
+                                   **** ! ***** Note: room for 18 more messages in this section *****
+                                   **** !
+                                   **** 
+                                   **** !
+                                   **** !	MSG #s	   RANGE      # MSGS	    DESCRIPTION
+                                   **** !
+                                   **** !     384-447	  C00-DFF	 64	INFORMATIONAL CODES
+                                   **** !
+                                   **** 
+                                   **** 
+                                   **** 	.SEVERITY	INFORMATIONAL
+                                   **** 	.BASE		384
+                                   **** 
+                         00000C03  **** 	EOTIN		<EOT response to text>
+                         00000C0B  **** 	CHAINW		<chained write received>
+                         00000C13  **** 	NOTINSEC	<virtual address not in global section>
+                         00000C1B  **** 	NONXPAG		<non-existent page>
+                         00000C23  **** 	LOGNAME		<transaction log name is !AD> /FAO=1
+                         00000C2B  **** 	CPUSTARTD	<CPU !UL started>/FAO=1
+                         00000C33  **** 	CPUSTOPPING	<trying to stop CPU !UL after it reaches quiescent state>/FAO=1
+                         00000C3B  **** 	NOTALLCANCELED	<at least one of the requested operation(s) cannot be canceled>
+                         00000C43  **** 	NOTHINGDONE	<all the operations are not queued and not in progress>
+                         00000C4B  **** 	EVTNOTENAB	<security auditing event not enabled>
+                         00000C53  **** 	NOPATHTBL	<invalid or nonexistent path table; built from directories>
+                         00000C5B  **** 	RESELECTION	<SCSI target reselected initiator>
+                         00000C63  **** 	EMULATED	<an instruction not implemented on this processor was emulated at PC=!XH, PS=!XL>/F
+                         00000C6B  **** 	REMDONE		<removal of node from sharing set already done>
+                         00000C73  **** 	REMINPROG	<removal of node from sharing set already in progress>
+                         00000C7B  ****         DEVCON          <device is connected on path>
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:48  Message A02-09                   Page 226
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         00000C83  ****         DEVNOTCON       <device is not connected on path>
+                         00000C8B  **** 	CPUSELECTED	<a selected CPU is attempting the requested transition>
+                         00000C93  **** 	QPOOL_DEL_INPRG	<a QIOServer pool block deletion request is still in progress>
+                                   **** !
+                                   **** ! New symbols should be added immediately before this comment
+                                   **** ! ***** Note: room for 44 more messages in this section *****
+                                   **** !
+                                   **** 
+                                   **** !
+                                   **** !	MSG #s	   RANGE      # MSGS	    DESCRIPTION
+                                   **** !
+                                   **** !     448-511	  E00-FFF	 64	NONFATAL ERROR CODES
+                                   **** !   1408-1663	2C00-33FF	256	NONFATAL ERROR CODES (CONTINUED FROM FFF)
+                                   **** !
+                                   **** 
+                                   **** 
+                                   **** 	.SEVERITY	ERROR
+                                   **** 	.BASE		448
+                                   **** 
+                         00000E02  **** 	LINEABRT	<host aborted transmission or failed to respond>
+                         00000E0A  **** 	DEADLOCK	<deadlock detected>
+                         00000E12  **** 	NOLOCKID	<no lock ID available>
+                         00000E1A  **** 	EXDEPTH		<exceeded allowed depth>
+                         00000E22  **** 	PARTMAPPED	<some file map pointers not permanently resident>
+                         00000E2A  **** 	CANCELGRANT	<cannot cancel a granted lock>
+                         00000E32  **** 	RETRY		<retry operation>
+                         00000E3A  **** 	BADACL		<ACL is corrupt>
+                         00000E42  **** 	ACEEXISTS	<ACE already exists in ACL>	
+                         00000E4A  **** 	UNSUPPORTED	<unsupported operation or function>
+                         00000E52  **** 	NORIGHTSDB	<rights database file not found>
+                         00000E5A  **** 	LOGSTALL	<transaction logging activity is stalled>
+                         00000E62  **** 	LOGFULL		<transaction log file is full>
+                         00000E6A  **** 	PWDINDIC	<password found in system dictionary; please choose another string>
+                         00000E72  **** 	PWDINHIS	<password found in history list; please choose a new password>
+                         00000E7A  **** 	PWDWEAK		<password is too easy to guess; please choose another string>
+                         00000E82  **** 	USEGENPWD	<password history list is full; please use generated passwords>
+                         00000E8A  **** 	INVBUSNAM	<invalid local area VMScluster BUS name>
+                         00000E92  **** 	INVCOMPTYPE	<invalid component type>
+                         00000E9A  **** 	INVCOMPID	<invalid component ID>
+                         00000EA2  **** 	INVCOMPLIST	<invalid component list>
+                         00000EAA  **** 	NOCOMPLSTS	<no component lists are defined>
+                         00000EB2  **** 	INVSECDOMAIN	<request originated outside of local security domain>
+                         00000EBA  **** 	BADCHECKSUM	<message checksum failure>
+                         00000EC2  **** 	ARBTOOBIG	<access rights block too big>
+                         00000ECA  **** 	ORBTOOBIG	<object rights block too big>
+                         00000ED2  **** 	INVAJLNAM	<invalid security audit journal name>
+                         00000EDA  **** 	TOOMANYAJL	<too many security audit journals encountered>
+                         00000EE2  **** 	RSDMINUSE	<resource domain in use>
+                         00000EEA  **** 	RSDMNOTFOU	<resource domain not found>
+                         00000EF2  **** 	INVUICGRP	<invalid UIC group>
+                         00000EFA  **** 	RSDM_ACTIVE	<resource domain active>
+                         00000F02  **** 	OBJLOCKED	<security object is locked by another user>
+                         00000F0A  **** 	NOTMPNAM	<template profile not found>
+                         00000F12  **** 	INVCLSITM	<invalid item code for selected class>
+                         00000F1A  **** 	NOTSHRTBL	<selected logical name table is not shared>
+                         00000F22  **** 	MMATORB		<selected security object mismatch>
+                         00000F2A  **** 	NOSUCHVOL	<no such volume>
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:48  Message A02-09                   Page 227
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         00000F32  **** 	OBJNOTLOCKED	<security object context is not write-locked>
+                         00000F3A  **** 	ILLRSDM		<operation not allowed on resource domain>
+                         00000F42  **** 	NOCLASSSUPPORT	<classification not supported on the selected object>
+                         00000F4A  **** 	INVSECOPER	<invalid security classification for this operation>
+                         00000F52  **** 	NODELJNLACT	<cannot delete file while journaling active>
+                         00000F5A  **** 	INVFILFOROP	<invalid file specification for operation>
+                         00000F62  **** 	NOOBJSRV	<object server not available>
+                         00000F6A  **** 	NOFILEACCESS	<unable to obtain file access lock>
+                         00000F72  **** 	BADFILESIZE	<file size mismatch>
+                         00000F7A  **** 	NOTFULLYMAPPED	<file is no longer fully mapped>
+                         00000F82  **** 	BADWINCNT	<bad window pointer count>
+                         00000F8A  **** 	BADWINLBN	<bad window pointer logical block number>
+                         00000F92  **** 	BADWINRVN	<bad window pointer relative volume number>
+                         00000F9A  **** 	EXTRAWINDOW	<window pointer exists without a file header pointer>
+                         00000FA2  **** 	REVISED		<file was revised>
+                         00000FAA  **** 	TIMENOTSET	<time service enabled; enter a time service command to update the time>
+                         00000FB2  **** 	WAIT_CALLERS_MODE <system service dispatcher will wait in callers mode>
+                         00000FBA  **** 	NOT_LOADED	<system service or exec routine is not loaded>
+                         00000FC2  **** 	DRV_NOUNLOAD	<device driver is not unloadable>
+                         00000FCA  **** 	INVARG		<invalid argument>
+                         00000FD2  **** 	QIO_CROCK	<system service dispatcher will fault address @R1>
+                         00000FDA  **** 	ALTER		<alter stack frames>
+                         00000FE2  **** 	AFR_ENABLED	<alignment fault reporting already enabled>
+                         00000FEA  **** 	AFR_NOT_ENABLED	<alignment fault reporting not yet enabled>
+                         00000FF2  **** 	SHELFERROR	<access to shelved file failed>
+                         00000FFA  **** 	PERSONANONGRATA	<invalid persona argument>
+                                   **** ! **************
+                                   **** ! NOTE:  THE ABOVE SET OF NONFATAL ERROR MESSAGES IS FULL!!!!
+                                   **** !	 ANY ADDITIONAL NONFATAL ERROR MESSAGES MUST BE ADDED
+                                   **** !	 BELOW, IN THE RANGE HEX 2C00-33FF.
+                                   **** ! **************
+                                   **** 
+                                   **** 	.BASE		1408
+                                   **** 
+                         00002C02  **** 	NOTASSUMING	<no persona to discard>
+                         00002C0A  **** 	ALREADYASSUMING	<current persona must be discarded before assuming another>
+                         00002C12  **** 	INUSE		<persona cannot be deleted as it is currently in use>
+                         00002C1A  **** 	USERDISABLED	<account is disabled>
+                         00002C22  **** 	NOCHJIB		<more than one process in job; JIB not changed>
+                         00002C2A  **** 	NOTSUPFS	<operation not supported by current file system>
+                         00002C32  **** 	INSFTHREADS	<insufficient threads available>
+                         00002C3A  **** 	NOBUFOBJID	<requires rights identifier VMS$BUFFER_OBJECT_USER>
+                         00002C42  **** 	NODELPERMANENT	<permanent persona cannot be deleted>
+                         00002C4A  **** 	NOMEMRESID	<requires rights identifier VMS$MEM_RESIDENT_USER>
+                         00002C52  **** 	MRES_PFNSMALL	<specified length is larger than reserved pre-allocated memory>
+                         00002C5A  **** 	MRES_INCON	<inconsistent data for memory resident section creation>
+                         00002C62  **** 	NORESERVEDMEM   <specified memory is not reserved>
+                         00002C6A  **** 	RESERVEDMEMUSED <specified reserved memory is in use>	
+                         00002C72  **** 	RES_MEM_INCON	<inconsistent reserved memory data>
+                         00002C7A  **** 	NOSHPTS		<service cannot accept a shared page table region>
+                         00002C82  **** 	FLUSHFAIL	<flush could not be completed; some updates lost>
+                         00002C8A  **** 	NOTINSTALLED	<required product is not installed>
+                         00002C92  **** 	POOLDEVEXISTS	<the specified DW device already exists on this node>
+                         00002C9A  **** 	NOUNITS		<you cannot remove all the storage units from the pool>
+                         00002CA2  **** 	NOTAPOOL	<the storage units are not part of the same pool>
+                         00002CAA  **** 	MISSINGUNITS	<you did not list all of the storage units in the pool>
+                         00002CB2  **** 	DISKDEVEXISTS	<the specified DW device already exists on this node>
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:48  Message A02-09                   Page 228
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         00002CBA  **** 	TOOMANYUNITS	<too many storage units for a pool>
+                         00002CC2  **** 	NOTINPOOL	<storage unit is not in pool>
+                         00002CCA  **** 	WRONGPOOL	<the pool does not contain the specified parent disk>
+                         00002CD2  **** 	ALRBOUND	<the disk is already bound>
+                         00002CDA  **** 	NOTPOOLMOUNTED	<storage unit is not pool mounted>
+                         00002CE2  **** 	POOLINUSE	<a disk in the pool is bound to a DW device>
+                         00002CEA  **** 	DISKINUSE	<the disk is mounted or has an open I/O channel>
+                         00002CF2  **** 	SDDISABLED	<Snapshot Services are disabled on this node>
+                         00002CFA  **** 	UNITINPOOL	<storage unit is already in bound pool>
+                         00002D02  **** 	FAMILYTOOBIG	<too many snapshots in the parent disk's family>
+                         00002D0A  **** 	NODISKNAME	<the pool does not contain a disk with the specified name>
+                         00002D12  **** 	DISKNAMEEXISTS	<the pool already contains a disk with the specified name>
+                         00002D1A  **** 	INSUFFREESEGS	<not enough free segments in the pool>
+                         00002D22  **** 	NOTBOUND	<the DW device is not bound to a disk or pool>
+                         00002D2A  **** 	TOOMANYFRAGS	<free segments not sufficiently contiguous>
+                         00002D32  **** 	TOOMANYFAMILIES	<too many disks in the pool>
+                         00002D3A  **** 	DISKISBOUND	<the disk is bound to a DW device>
+                         00002D42  **** 	SNAPINFAM	<the disk you are trying to delete has a snapshot in its family>
+                         00002D4A  **** 	CHKSNAPVER      <Snapshot Services is checking version compatibility>
+                         00002D52  **** 	BADSNAPVER      <cluster is running incompatible versions of Snapshot Services>
+                         00002D5A  **** 	SD_RESERVED4	<reserved for Snapshot Services>
+                         00002D62  **** 	SD_RESERVED5	<reserved for Snapshot Services>
+                         00002D6A  **** 	SECREFOVF	<too many section references>
+                         00002D72  **** 	DATAERR		<unreliable data; CRC or parity error encountered>
+                         00002D7A  **** 	INVPFN		<invalid PFN specified>
+                         00002D82  **** 	INV_SHMEM	<shared memory is not valid>
+                         00002D8A  **** 	INV_SHM_CPP	<shared memory CPP is not valid>
+                         00002D92  **** 	INV_SHM_REG	<shared memory region is not valid>
+                         00002D9A  **** 	ONEMAPPER	<only one mapper allowed>
+                         00002DA2  ****         NOSUCHEXT       <no such extension found>
+                         00002DAA  **** 	CBKEXISTS	<membership callback is already registered>
+                         00002DB2  **** 	NOSUCHCBK	<no such membership callback is registered>
+                         00002DBA  **** 	NOTAMEMBER	<this node is not a Galaxy member>
+                         00002DC2  **** 	GLXSPIUNAVAIL	<the Galaxy SPI is currently unavailable>
+                         00002DCA  ****         MPDEVILLCURPATH <operation is illegal for current path for multipath set>
+                         00002DD2  ****         MPDEVINCOMPAT   <paths are incompatible for multipath set formation>
+                         00002DDA  ****         MPDEVNOT        <not a multipath device or path> 
+                         00002DE2  ****         MPDEVNOTCONF    <multipath is not configured for this operation>
+                         00002DEA  **** 	PERSONARESERVED	<persona index is marked RESERVE>
+                         00002DF2  ****         WRONGDRV        <different device driver already loaded for this device type name>
+                         00002DFA  **** 	BADRAD		<bad RAD specified>
+                         00002E02  **** 	INVQSRFNC	<invalid SYS$QIOSERVER function code>
+                         00002E0A  **** 	NOQIOSERVER	<the QIO$CONFIGURE process is unavailable to handle SYS$QIOSERVER requests>
+                         00002E12  **** 	INCLASS		<cannot add process to scheduling class; it is in a permanent one>
+                         00002E1A  **** 	INVBOOTDEV		<SET function invalid for a boot device>
+                         00002E22  **** 	CLIENT_UNAVAILABLE	<specified client is known but unavailable>
+                         00002E2A  **** 	CONFIGFILE_ERROR	<an error occurred while accessing the permanent configuration file>
+                         00002E32  **** 	INVDEVALLOC		<SET function invalid for an allocated device>
+                         00002E3A  **** 	DEVICE_UNAVAILABLE	<specified device is known but unavailable>
+                         00002E42  **** 	INVDEVMOUNT		<SET function invalid for a mounted device>
+                         00002E4A  **** 	LOGGING_DISABLED	<logging functions are disabled>
+                         00002E52  **** 	NOSUCHCLIENT		<specified client does not exist>
+                         00002E5A  **** 	NOSUCHDEVICE		<specified device does not exist>
+                         00002E62  **** 	NOSUCHFILTER		<specified logging filter does not exist>
+                         00002E6A  **** 	NOSUCHPATH		<specified path does not exist>
+                         00002E72  **** 	NOSUCHSERVER		<specified server does not exist>
+                         00002E7A  **** 	RQSTIMOUT		<the execution node response timed out>
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:48  Message A02-09                   Page 229
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         00002E82  **** 	SERVER_UNAVAILABLE	<specified server is known but unavailable>
+                         00002E8A  **** 	QSRVINTERR		<QIOServer internal error>
+                         00002E92  **** 	NOADD		<cannot add to scheduling class; process scheduled by $SCHED service>
+                         00002E9A  **** 	SYSTEMUIC	<users with system UICs cannot be class scheduled>
+                         00002EA2  **** 	NOSUCHQPOOLID		<specified pool block id does not exist>
+                         00002EAA  **** 	PATHAMBIG		<path is ambiguous>
+                         00002EB2  **** 	INVMVIP			<path switch invalid while device is in mount verification>
+                         00002EBA  **** 	NOPATHAVAIL		<no selectable path for device>
+                         00002EC2  **** 	NOENACURINV		<not permitted to enable/disable current path>
+                                   **** 
+                                   **** !
+                                   **** ! New symbols should be added immediately before this comment
+                                   **** ! ***** Note: room for 175 more messages in this section *****
+                                   **** !
+                                   **** 
+                                   **** !
+                                   **** !	MSG #s	   RANGE      # MSGS	    DESCRIPTION
+                                   **** !
+                                   **** !   1280-1343	2800-29FF	 64	NO PRIVILEGE ERRORS
+                                   **** !
+                                   **** 
+                                   **** !
+                                   **** ! NB: These messages must be kept in the same order as the privilege bit
+                                   **** ! definitions ($PRVDEF) as the privilege bit position is used as an index into
+                                   **** ! these message codes by the $CHECK_PRIVILEGE system service.
+                                   **** !
+                                   **** 
+                                   **** 	.SEVERITY	FATAL
+                                   **** 	.BASE		1280
+                                   **** 
+                                   **** 	.LITERAL	SS$_NOPRIVSTRT = 1280 @ 3
+                                   **** 	.LITERAL	SS$_NODETACH = 10284
+                                   **** 
+                         00002804  **** 	NOCMKRNL	<operation requires CMKRNL privilege>
+                         0000280C  **** 	NOCMEXEC	<operation requires CMEXEC privilege>
+                         00002814  **** 	NOSYSNAM	<operation requires SYSNAM privilege>
+                         0000281C  **** 	NOGRPNAM	<operation requires GRPNAM privilege>
+                         00002824  **** 	NOALLSPOOL	<operation requires ALLSPOOL privilege>
+                         0000282C  **** 	NOIMPERSONATE	<operation requires IMPERSONATE privilege>
+                         00002834  **** 	NODIAGNOSE	<operation requires DIAGNOSE privilege>
+                         0000283C  **** 	NOLOG_IO	<operation requires LOG_IO privilege>
+                         00002844  **** 	NOGROUP		<operation requires GROUP privilege>
+                         0000284C  **** 	NOACNT		<operation requires ACNT privilege>
+                         00002854  **** 	NOPRMCEB	<operation requires PRMCEB privilege>
+                         0000285C  **** 	NOPRMMBX	<operation requires PRMMBX privilege>
+                         00002864  **** 	NOPSWAPM	<operation requires PSWAPM privilege>
+                         0000286C  **** 	NOALTPRI	<operation requires ALTPRI privilege>
+                         00002874  **** 	NOSETPRV	<operation requires SETPRV privilege>
+                         0000287C  **** 	NOTMPMBX	<operation requires TMPMBX privilege>
+                         00002884  **** 	NOWORLD		<operation requires WORLD privilege>
+                         0000288C  **** 	NOMOUNT		<operation requires MOUNT privilege>
+                         00002894  **** 	NOOPER		<operation requires OPER privilege>
+                         0000289C  **** 	NOEXQUOTA	<operation requires EXQUOTA privilege>
+                         000028A4  **** 	NONETMBX	<operation requires NETMBX privilege>
+                         000028AC  **** 	NOVOLPRO	<operation requires VOLPRO privilege>
+                         000028B4  **** 	NOPHY_IO	<operation requires PHY_IO privilege>
+                         000028BC  **** 	NOBUGCHK	<operation requires BUGCHK privilege>
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:49  Message A02-09                   Page 230
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                         000028C4  **** 	NOPRMGBL	<operation requires PRMGBL privilege>
+                         000028CC  **** 	NOSYSGBL	<operation requires SYSGBL privilege>
+                         000028D4  **** 	NOPFNMAP	<operation requires PFNMAP privilege>
+                         000028DC  **** 	NOSHMEM		<operation requires SHMEM privilege>
+                         000028E4  **** 	NOSYSPRV	<operation requires SYSPRV privilege>
+                         000028EC  **** 	NOBYPASS	<operation requires BYPASS privilege>
+                         000028F4  **** 	NOSYSLCK	<operation requires SYSLCK privilege>
+                         000028FC  **** 	NOSHARE		<operation requires SHARE privilege>
+                         00002904  **** 	NOUPGRADE	<operation requires UPGRADE privilege>
+                         0000290C  **** 	NODOWNGRADE	<operation requires DOWNGRADE privilege>
+                         00002914  **** 	NOGRPPRV	<operation requires GRPPRV privilege>
+                         0000291C  **** 	NOREADALL	<operation requires READALL privilege>
+                         00002924  **** 	NOIMPORT	<operation requires IMPORT privilege>
+                         0000292C  **** 	NOAUDIT		<operation requires AUDIT privilege>
+                         00002934  **** 	NOSECURITY	<operation requires SECURITY privilege>
+                                   **** 
+                                   **** 	.LITERAL	SS$_NOPRIVEND = (1344 @ 3) - 1
+                                   **** !
+                                   **** !	MSG #s	   RANGE      # MSGS	    DESCRIPTION
+                                   **** !
+                                   **** !   1344-1375	2A00-2AFF	 32	EXCEEDED QUOTA ERRORS
+                                   **** ! 
+                                   **** 
+                                   **** 	.SEVERITY	FATAL
+                                   **** 	.BASE		1344
+                                   **** 
+                                   **** 	.LITERAL	SS$_EXQUOTASTRT = 1344 @ 3
+                                   **** 
+                         00002A04  **** 	EXASTLM		<exceeded AST quota>
+                         00002A0C  **** 	EXBIOLM		<exceeded buffered I/O quota>
+                         00002A14  **** 	EXBYTLM		<exceeded byte count quota>
+                         00002A1C  **** 	EXDIOLM		<exceeded direct I/O quota>
+                         00002A24  **** 	EXFILLM		<exceeded open file quota>
+                         00002A2C  **** 	EXPGFLQUOTA	<exceeded pagefile quota>
+                         00002A34  **** 	EXPRCLM		<exceeded process limit>
+                         00002A3C  **** 	EXTQELM		<exceeded timer queue entry quota>
+                         00002A44  **** 	EXENQLM		<exceeded enqueue quota>
+                                   **** 
+                                   **** 	.BASE		1375	! Systemwide quota -- work from end of region
+                         00002AFC  **** 	EXBUFOBJLM	<exceeded systemwide buffer object page limit (MAXBOBMEM)>
+                                   **** 	.LITERAL	SS$_EXQUOTAEND = (1376 @ 3) - 1
+                                   **** 
+                                   **** !
+                                   **** !	MSG #s	   RANGE      # MSGS	    DESCRIPTION
+                                   **** !
+                                   **** !   1376-1407	2B00-2BFF	 32	RESERVED FOR MEDIA MGMT EXTENSIONS
+                                   **** !
+                                   **** 
+                                   **** 	.BASE		1376
+                                   **** 	.SEVERITY	FATAL
+                         00002B04  **** 	MMSFAILED	<media management process failed; operation disallowed>
+                         00002B0C  **** 	QPOOL_DEL_BUSY	<a QIOServer pool block deletion request failed, delete thread busy>
+                                   **** 
+                                   **** ! New symbols should be added immediately before this comment
+                                   **** ! ***** Note: room for 1 more message in this section *****
+                                   **** 	
+                                   **** 	.BASE		1379
+RUF$MSGDEF                      ! Recovery Unit Services Mes 17-MAR-2001 03:15:51  Message A02-09                   Page 231
+                                                             17-MAR-2001 03:13:05  $64$DKC203:[MSGFIL.OBJ]SYSMSG.MSG;1         
+ 
+                                   **** 	.SEVERITY	WARNING
+                         00002B18  **** 	TOOFEWDEV	<too few devices specified by media management system>
+                         00002B20  **** 	AVRWAIT		<cannot perform AVR with /NOASSIST; specify /ASSIST or device name>
+                                   **** 
+                                   **** ! New symbols should be added immediately before this comment
+                                   **** ! ***** Note: room for 3 more messages in this section *****
+                                   **** 
+                                   **** 	.BASE		1384
+                                   **** 	.SEVERITY	INFORMATIONAL
+                         00002B43  **** 	NO_MMS		<no media management system is running>
+                         00002B4B  **** 	MMSREADY	<the media management system is ready to continue>
+                         00002B53  **** 	MMSNOTREADY	<the media management system is not ready to continue>
+                         00002B5B  **** 	SKIP_CHECKS	<protection checks should be skipped by the OpenVMS utility>
+                         00002B63  **** 	NO_NOTIFY	<the operator should not be notified>
+                         00002B6B  **** 	SKIP_EXPIRATION	<expiration checks should be skipped by the OpenVMS utility>
+                         00002B73  ****         NOTATBOT        <tape is not at BOT>
+                         00002B7B  ****         PREVDENS        <tape is set to previous density>
+                                   **** 
+                                   **** ! A new base should be created for informationals
+                                   **** ! ***** Note: room for 0 more messages in above section *****
+                                   **** 
+                                   **** 	.BASE		1392
+                                   **** 	.SEVERITY	FATAL
+                         00002B84  **** 	RDBERR      <unexpected DEC/Rdb error; see SMFS log file for more information>
+                         00002B8C  **** 	MDMSERR     <unexpected MDMS error; see SMFS log file for more information>
+                         00002B94  **** 	IVMEDTYP    <invalid media type>
+                         00002B9C  **** 	IVDENS      <invalid density>
+                         00002BA4  **** 	IVPOOL      <invalid scratch pool name>
+                         00002BAC  **** 	IVEXPDAT    <invalid file expiration date>
+                         00002BB4  **** 	NOCONFMEDIA <no free volumes conform to the requested attributes>
+                         00002BBC  ****         PTE_NOT_EMPTY   <attempt to release a non-zero system PTE>
+                         00002BC4  **** 	CPUNOTAVAIL     <cpu is not active or not enabled as a preferred CPU>
+                         00002BCC  **** 	NOFASTPATH	<fastpath is disabled>
+                                   **** 
+                                   **** ! New symbols should be added immediately before this comment
+                                   **** ! ***** Note: room for 8 more messages in this section *****
+                                   **** 
+                                   **** !
+                                   **** !	MSG #s	   RANGE      # MSGS	    DESCRIPTION
+                                   **** !
+                                   **** !   4032-4095	7E00-7FFF	 64	RESERVED FOR SCS SYSAPS
+                                   **** !
+                                   **** !	MESSAGE CODES IN THIS BLOCK ARE GUARANTEED NOT TO
+                                   **** !	BE TRANSLATED BY VMS WHEN THEY ARE SEND OUT BY VMSSCS
+                                   **** !	OR WHEN THEY ARE RECEIVED BY VMSSCS.  SCA SYSAPS ARE
+                                   **** !	FREE TO USE THESE CODES IN ANY SYSAP-DEPENDENT MANNER
+                                   **** !	IN WHICH THEY CHOOSE.
+                                   **** !
+                                   **** !	THIS ADDRESS OF THIS BLOCK OF CODES MUST BE IN CONFORMANCE
+                                   **** !	WITH THE SCA ARCHITECTURE, I.E., MUST NOT BE MOVED.
+                                   **** !
+                                   **** 
+                                   **** 	.LITERAL	SS$_SYSAPMIN = (4032 @ 3)
+                                   **** 	.LITERAL	SS$_SYSAPMAX = (4096 @ 3) - 1
+                                   **** 
+                                   **** 	.END

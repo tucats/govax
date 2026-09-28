@@ -782,3 +782,55 @@ func TestFAO_assembledProgram(t *testing.T) {
 		t.Errorf("output = %q, want %q", out.String(), want)
 	}
 }
+
+// TestPutmsg_assembledProgram is docs/PHASE-26.md subtask 25's
+// acceptance test: testdata/asm/putmsg.asm reads a message with $GETMSG
+// and writes message vectors with $PUTMSG, one through an action routine
+// that lets only the first line be written.
+func TestPutmsg_assembledProgram(t *testing.T) {
+	var out bytes.Buffer
+
+	c := New(&out)
+
+	if err := c.Init(8192 * 512); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+
+	if err := c.VMInit(2048, 8192, 2048, 20, 0, 0, 0, 0); err != nil {
+		t.Fatalf("VMInit: %v", err)
+	}
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "putmsg.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(putmsg.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("putmsg.asm has no entry address")
+	}
+
+	out.Reset()
+
+	if runErr, hitCap := callBounded(t, c, addr, 100_000); runErr != nil || hitCap {
+		t.Fatalf("running putmsg.asm: err=%v hitCap=%v", runErr, hitCap)
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Errorf("R0 = %d, want 1 (every call behaved)", got)
+	}
+
+	want := "%SYSTEM-F-ABORT, abort\n" +
+		"%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000200, PC=00000300, PS=0000001B\n"
+	if out.String() != want {
+		t.Errorf("output = %q, want %q", out.String(), want)
+	}
+
+	a, ok := c.Symbols.Get("LINLEN")
+	if !ok {
+		t.Fatal("no LINLEN symbol")
+	}
+
+	if n, _ := c.Mem.LoadLongword(c.CPU, a); n != uint32(len("%SYSTEM-F-ABORT, abort")) {
+		t.Errorf("the action routine saw a first line of %d characters, want %d", n, len("%SYSTEM-F-ABORT, abort"))
+	}
+}

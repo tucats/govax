@@ -89,6 +89,11 @@ type Process struct {
 	// ExitStatus is the completion status of the last $EXIT, which VMS
 	// saves in the process header.
 	ExitStatus uint32
+
+	// putmsg holds the $PUTMSG calls whose action routine is running,
+	// innermost last (an action routine may call $PUTMSG itself;
+	// message.go).
+	putmsg []*putmsgCall
 }
 
 // Default identity and quotas for the emulated process. The PID is
@@ -244,7 +249,8 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 // user mode, and disassociates its common event flag clusters (deleting
 // temporary ones nobody else uses), cancels its outstanding $SETIMR
 // timers and $SCHDWK wakeups, discards its queued user-mode ASTs, and
-// forgets its user-mode exit handlers. The console calls it when an
+// forgets its user-mode exit handlers and any $PUTMSG left waiting for an
+// action routine. The console calls it when an
 // image started by RUN returns or exits (and does its own logical-name
 // rundown alongside).
 func (env *Environment) ImageRundown() {
@@ -254,6 +260,7 @@ func (env *Environment) ImageRundown() {
 	env.cancelTimers()
 	env.flushUserASTs()
 	env.cancelUserExitHandlers()
+	env.cancelPutmsgCalls()
 }
 
 func registerProcessServices(t *ServiceTable) {

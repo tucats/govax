@@ -5,7 +5,9 @@
 // reference/vms/lnmdef.sdl (SDL source; see sdl.go) and SSConstants from
 // reference/vms/ssdef.txt (a BLISS LITERAL listing; see bliss.go), both
 // docs/PHASE-25.md, and DEVConstants and JPIConstants from
-// reference/vms/devdef.sdl and jpidef.sdl (docs/PHASE-26.md). They are kept as separate maps, not merged into
+// reference/vms/devdef.sdl and jpidef.sdl (docs/PHASE-26.md). The
+// message texts of reference/vms/sysmsg.txt go to a second file,
+// messages_generated.go (msg.go). They are kept as separate maps, not merged into
 // Constants, because .RMSDEF (internal/asm) defines every Constants entry
 // as an assembler symbol and must not start defining LNM$/SS$/DEV$/JPI$
 // names too. Run via `go
@@ -130,11 +132,13 @@ func main() {
 	iodef := flag.String("iodef", "", "path to iodef.sdl")
 	statedef := flag.String("statedef", "", "path to statedef.txt")
 	syidef := flag.String("syidef", "", "path to syidef.txt")
+	sysmsg := flag.String("sysmsg", "", "path to sysmsg.txt (a message-file listing)")
 	out := flag.String("out", "", "path to write the generated Go source")
+	msgOut := flag.String("msgout", "", "path to write the generated message texts")
 	flag.Parse()
 
-	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *out == "" {
-		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, and -out are all required")
+	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *sysmsg == "" || *out == "" || *msgOut == "" {
+		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, -sysmsg, -out, and -msgout are all required")
 	}
 
 	constants := map[string]uint32{}
@@ -266,6 +270,18 @@ func main() {
 	}
 
 	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), len(syi), *out)
+
+	// The message texts go in a file of their own (see msg.go).
+	msgs, facilities, err := parseMessages(readSource(*sysmsg))
+	if err != nil {
+		log.Fatalf("gen: %s: %v", *sysmsg, err)
+	}
+
+	if err := os.WriteFile(*msgOut, generateMessages(msgs, facilities, *sysmsg), 0o644); err != nil {
+		log.Fatalf("gen: %v", err)
+	}
+
+	fmt.Fprintf(os.Stderr, "gen: wrote %d messages in %d facilities to %s\n", len(msgs), len(facilities), *msgOut)
 }
 
 func readSource(path string) string {

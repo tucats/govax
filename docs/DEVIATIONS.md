@@ -559,6 +559,29 @@ changed as a result.
     signed and unsigned decimal).
 - **Status**: open, by design.
 
+### [Phase 26] `$GETMSG`/`$PUTMSG` simplifications
+
+- **Where**: `internal/rtl/message.go`, `internal/vmsdef/gen/msg.go`.
+- **What**:
+  - Only the CLI, LIB, MTH, OTS, RMS, and SYSTEM facilities of the VMS
+    7.3 system message file are known. Images can't carry message
+    sections, and there's no process message file or SET MESSAGE: the
+    default flags are always all four parts.
+  - The texts are VMS 7.3's, which differ in places from the VMS 5.0
+    manual's (`SS$_DUPLNAM` is "duplicate name", not "duplicate process
+    name").
+  - Nine texts were cut at 132 columns in the listing they come from
+    (CLI `WRGSUBSHSYN`, `UNTERMSUBSH`, `DUPREDSYN`, `INVCONCHAR`; RMS
+    `DELJNS`; SYSTEM `SIG_ARGMISMATCH`, `HPARITH`, `PAGRDERRXM`,
+    `ILLEGAL_SHADOW`) and are shown as far as they go.
+  - A value without a message gets VMS 7.3's stand-in, `%FAC-S-NOMSG,
+    Message number XXXXXXXX`, rather than the VMS 5.0 manual's
+    `NONAME` form.
+  - `$PUTMSG` writes to the console once; VMS writes to `SYS$ERROR` and
+    also `SYS$OUTPUT` when they differ. It doesn't refuse a call from
+    kernel mode.
+- **Status**: open, by design.
+
 ## Open findings
 
 ### [Phase 26] The assembler's `.ASCIC` has a 16-bit count
