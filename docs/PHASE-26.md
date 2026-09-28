@@ -207,7 +207,7 @@ lists the ones the implementation can actually return.
 | `$GETMSG` | 25 | `message.go` | `NORMAL`, `BUFFEROVF`, `MSGNOTFND`, `ACCVIO`, `INSFARG` | Texts of 1,426 messages (CLI, LIB, MTH, OTS, RMS, SYSTEM) generated from the VMS 7.3 message file. |
 | `$PUTMSG` | 25 | `message.go` | `NORMAL`, `ACCVIO` | Formats a message vector with `formatFAO`; an action routine is called through a `CallRequest`. |
 | `$CMKRNL`, `$CMEXEC` | 26 | `cmode.go` | (the routine's R0) | Switch into the mode, call the routine through a `CallRequest`, switch back when it returns. |
-| `$GETDVI`, `$GETDVIW` | 28 | `getdvi.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLEFC`, `INSFARG`, `IVDEVNAM`, `IVLOGNAM`, `NOPRIV`, `NOSUCHDEV`, `UNASEFC` | 51 named items plus 28 `DEVCHAR` and 49 terminal-characteristic Booleans, from a generated `$DVIDEF`; replaces eVAX's three-item `$GETDVIW`. |
+| `$GETDVI`, `$GETDVIW` | 28 | `getdvi.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLEFC`, `INSFARG`, `IVDEVNAM`, `IVLOGNAM`, `NOPRIV`, `NOSUCHDEV`, `UNASEFC` | 39 named items plus 28 `DEVCHAR` and 50 terminal-characteristic Booleans, from a generated `$DVIDEF`; replaces eVAX's three-item `$GETDVIW`. |
 | (CTRL/C, CTRL/Y ASTs) | 27 | `ctrlast.go`, `ttdriver.go` | — | `IO$_SETMODE!IO$M_CTRLCAST`/`CTRLYAST` enable one-shot ASTs the host's Ctrl-C delivers instead of stopping the machine. |
 
 ## Service designs
@@ -1618,7 +1618,7 @@ holds:
 | `CYLINDERS`, `SECTORS`, `MOUNTCNT` | The record's fields. |
 | `ALLOCLASS`, `REMOTE_DEVICE`, `SERVED_DEVICE`, `VOLSETMEM` | 0: one node, no volume sets. |
 | `REC`, `CCL`, `TRM`, ... `WCK` (28) | 1 if the device has `DEV$M_x`, else 0. |
-| `TT_x` (49) | 1 if the terminal's `DEVDEPEND` has `TT$M_x` (or `DEVDEPEND2` has `TT2$M_x`). `TT_PAGE` is the page length, `DEVDEPEND`'s high byte. |
+| `TT_x` (50) | 1 if the terminal's `DEVDEPEND` has `TT$M_x` (or `DEVDEPEND2` has `TT2$M_x`). `TT_PAGE` is the page length, `DEVDEPEND`'s high byte. |
 
 The Boolean items are added by `init` from the two lists, so every
 `DVI$_TT_` code in `$DVIDEF` is supported (a test checks). An item
