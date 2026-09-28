@@ -582,7 +582,7 @@ changed as a result.
     kernel mode.
 - **Status**: open, by design.
 
-### [Phase 26] `$CMKRNL`/`$CMEXEC` simplifications, and VMINIT's shared stacks
+### [Phase 26] `$CMKRNL`/`$CMEXEC` simplifications, and VMINIT's stacks
 
 - **Where**: `internal/rtl/cmode.go`; VMINIT (`internal/console`).
 - **What**:
@@ -590,13 +590,15 @@ changed as a result.
     `SS$_NOPRIV`.
   - `$CMKRNL` doesn't load R4 with the address of a process control
     block: govax has none.
-  - VMINIT sets ESP and SSP to the kernel stack's address. With memory
-    management on, only kernel mode can write those pages, so a routine
-    run by `$CMEXEC` (or anything else in executive or supervisor mode)
-    faults on its first push unless the program sets that mode's stack
-    pointer itself. VMS gives each mode a stack of its own in P1 space.
-- **Status**: open. The services are by design; VMINIT's stacks are
-  left as they are.
+  - VMINIT's executive and supervisor stacks had the kernel stack's
+    protection (only kernel mode could write them), and a caller passing
+    0 pages put them at the kernel stack's own address, so a routine run
+    by `$CMEXEC` faulted on its first push. Fixed at the user's request:
+    each now has its own pages (8 by default), protected `EW`/`SW`, with a
+    guard page below; see `docs/MODE-STACKS.md`. They're in S0, not P1
+    as on VMS.
+- **Status**: the services' simplifications are open, by design; the
+  stacks are fixed.
 
 ### [Phase 26] eVAX `$GETDVIW`: three items, wrong sizes
 

@@ -3,9 +3,8 @@
 ; fixture: a user-mode program running routines of its own in kernel and
 ; executive mode with $CMKRNL and $CMEXEC.
 ;
-;   1. Give executive mode a stack of its own (VMINIT points ESP at the
-;      kernel stack, whose page executive mode can't write; VMS gives each
-;      mode its own stack), then REI down to user mode.
+;   1. REI down to user mode. (Executive mode's stack is the one VMINIT
+;      sets up: see docs/MODE-STACKS.md.)
 ;   2. $CMKRNL(KRNL, ARGS): KRNL runs in kernel mode. It records its mode
 ;      and previous mode (from the PSL), executes MFPR -- a privileged
 ;      instruction that would fault in user mode -- to read IPL, adds its
@@ -23,9 +22,7 @@
 	.entry	main, ^m<>
 
 	mtpr	#^X1F, #^X12		; IPL 31 while in kernel mode
-; ---- 1. an executive-mode stack, then drop to user mode (IPL 0) ----
-	moval	@#estack, r0
-	mtpr	r0, #1			; ESP
+; ---- 1. drop to user mode (IPL 0) ----
 	pushl	#^X03C00000		; PSL: current and previous mode user, IPL 0
 	pushal	@#usercode		; PC
 	rei
@@ -81,9 +78,5 @@ kprv:	.long	^XFF
 kipl:	.long	^XFF
 emode:	.long	^XFF
 umode:	.long	^XFF
-
-; The executive-mode stack, growing down from ESTACK.
-	.blkb	^D512
-estack:	.long	0
 
 	.end	main

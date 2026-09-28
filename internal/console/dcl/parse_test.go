@@ -168,9 +168,13 @@ func TestParse_vminitQualifiers(t *testing.T) {
 	if got := r.Int("KSP"); got != 20 {
 		t.Errorf("KSP=%d, want 20", got)
 	}
-	// ESP/SSP/ISP weren't given, so their /default=4 should apply.
-	if got := r.Int("ESP"); got != 4 {
-		t.Errorf("ESP=%d, want default 4", got)
+	// ESP/SSP/ISP weren't given, so their defaults apply: 8 pages for
+	// the executive and supervisor stacks (docs/MODE-STACKS.md), 4 for
+	// the interrupt stack.
+	for name, want := range map[string]int64{"ESP": 8, "SSP": 8, "ISP": 4} {
+		if got := r.Int(name); got != want {
+			t.Errorf("%s=%d, want default %d", name, got, want)
+		}
 	}
 }
 

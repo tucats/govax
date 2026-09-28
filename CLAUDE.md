@@ -16,6 +16,8 @@ never had.
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
+- `docs/MODE-STACKS.md` — where VMINIT puts each access mode's stack, their sizes and
+  page protections, and what was deliberately left unchanged.
 
 ## Reference material
 

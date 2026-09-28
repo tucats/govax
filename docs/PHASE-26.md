@@ -1532,11 +1532,11 @@ The calls are a stack, so a routine may call `$CMKRNL` itself; image
 rundown forgets calls whose routine never returned. The process holds
 every privilege, so `SS$_NOPRIV` never happens.
 
-Each mode needs a stack its code can write. VMINIT sets ESP and SSP to
-the kernel stack, whose pages only kernel mode can write when memory
-management is on, so a program that uses `$CMEXEC` must give executive
-mode a stack first (as the acceptance fixture does); VMS gives every
-mode its own.
+Each mode needs a stack its code can write. When this subtask was done,
+VMINIT's ESP and SSP pointed into pages only kernel mode could write, so
+the acceptance fixture set up its own executive stack. VMINIT now gives
+the executive and supervisor stacks their own protected pages
+(`docs/MODE-STACKS.md`), and the fixture uses them.
 
 Not implemented (see `docs/DEVIATIONS.md`): R4 isn't loaded with a PCB
 address for `$CMKRNL` (govax has no PCB).
@@ -2639,4 +2639,26 @@ None yet.
 - `go test ./...` passes.
 - **Phase status.** The sixth batch (subtasks 24-30) is done. Candidates
   for the next batch are listed under Subtasks.
+
+### 2026-09-28 — Follow-up: `.ASCIC` and VMINIT's executive and supervisor stacks
+
+The user asked for the two problems subtasks 24 and 26 recorded to be
+fixed.
+
+- **`.ASCIC`** (`internal/asm/pseudo.go`) now stores a one-byte count, as
+  MACRO-32 defines it; a string over 255 characters is `VAX_DATARANGE`.
+  HELP says so, `testdata/asm/fao.asm` now uses `.ASCIC` for `!AC`, and
+  the `DEVIATIONS.md` finding moved to "Resolved". Tests:
+  `internal/asm/ascii_test.go` (all four string directives' layouts, the
+  255-character limit).
+- **Mode stacks** (`internal/console/vminit.go`): the executive and
+  supervisor stacks are each a run of S0 pages (8 by default: the
+  `/ESP` and `/SSP` grammar defaults, and `defaultModeStackPages` for a
+  Go caller passing 0) protected `EW` and `SW`, with a no-access guard
+  page below each (`modeStack`, `setS0Protection`). The kernel stack
+  keeps `URKW`; `docs/MODE-STACKS.md` (new) explains the layout and what
+  was deliberately left. `testdata/asm/cmkrnl.asm` no longer sets up its
+  own executive stack. Tests: `TestVMInit_modeStacks`,
+  `TestVMInit_modeStackSizes`, and the grammar defaults.
+- `go test ./...` passes.
 

@@ -396,11 +396,11 @@ grammar console
 
             qualifier       esp /id=1805 -
                                 /type=$integer -
-                                /default=4
+                                /default=8
 
             qualifier       ssp /id=1806 -
                                 /type=$integer -
-                                /default=4
+                                /default=8
 
             qualifier       isp /id=1807 -
                                 /type=$integer -

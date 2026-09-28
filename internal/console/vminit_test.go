@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vm"
 )
 
 func TestVMInit_enablesTranslation(t *testing.T) {
@@ -192,5 +193,115 @@ func TestVMInit_rejectsOversizedRequest(t *testing.T) {
 	
 	if err := c.VMInit(1000, 1000, 0, 1, 1, 1, 1, 8); err == nil {
 		t.Error("expected error for a VM request exceeding physical memory")
+	}
+}
+
+// TestVMInit_modeStacks checks the executive and supervisor stacks
+// (docs/MODE-STACKS.md): separate runs of pages, 8 by default, each
+// protected for its mode, with a no-access guard page below.
+func TestVMInit_modeStacks(t *testing.T) {
+	c := New(&bytes.Buffer{})
+	if err := c.Init(8192 * 512); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+
+	// 0 pages asks for the default.
+	if err := c.VMInit(2048, 8192, 2048, 20, 0, 0, 0, 0); err != nil {
+		t.Fatalf("VMInit: %v", err)
+	}
+
+	ksp, esp, ssp := c.CPU.PR(vax.KSP), c.CPU.PR(vax.ESP), c.CPU.PR(vax.SSP)
+
+	// Each stack's pages, lowest first: from its pointer's page down
+	// eight pages, and the guard page below them.
+	stackPages := func(sp uint32) (bottom, guard uint32) {
+		top := sp &^ 511
+		bottom = top - (defaultModeStackPages-1)*512
+
+		return bottom, bottom - 512
+	}
+
+	eBottom, eGuard := stackPages(esp)
+	sBottom, sGuard := stackPages(ssp)
+
+	if eGuard <= ksp || sGuard <= esp {
+		t.Fatalf("stacks overlap: KSP %#x, ESP %#x (guard %#x), SSP %#x (guard %#x)", ksp, esp, eGuard, ssp, sGuard)
+	}
+
+	protection := func(addr uint32) vm.Protection {
+		t.Helper()
+
+		_, _, pte, err := c.Mem.LookupPTE(c.CPU, addr)
+		if err != nil {
+			t.Fatalf("LookupPTE(%#x): %v", addr, err)
+		}
+
+		return pte.Protection()
+	}
+
+	for _, tc := range []struct {
+		name       string
+		from, to   uint32
+		protection vm.Protection
+	}{
+		{"executive stack", eBottom, esp, vm.ProtEW},
+		{"its guard page", eGuard, eGuard, vm.ProtNA},
+		{"supervisor stack", sBottom, ssp, vm.ProtSW},
+		{"its guard page", sGuard, sGuard, vm.ProtNA},
+	} {
+		for addr := tc.from &^ 511; addr <= tc.to; addr += 512 {
+			if got := protection(addr); got != tc.protection {
+				t.Errorf("%s: page %#x protection %d, want %d", tc.name, addr, got, tc.protection)
+			}
+		}
+	}
+
+	// Each mode can push on its own stack but not on a more privileged
+	// one's; user mode can't touch either.
+	write := func(mode vax.AccessMode, addr uint32) error {
+		psl := c.CPU.PSL()
+		psl.SetCurMod(mode)
+		c.CPU.SetPSL(psl)
+		c.Mem.InvalidateProtection()
+
+		return c.Mem.StoreLongword(c.CPU, addr, 1)
+	}
+
+	for _, tc := range []struct {
+		mode vax.AccessMode
+		addr uint32
+		ok   bool
+	}{
+		{vax.Executive, esp, true},
+		{vax.Kernel, esp, true},
+		{vax.Supervisor, esp, false},
+		{vax.Supervisor, ssp, true},
+		{vax.Executive, ssp, true},
+		{vax.User, ssp, false},
+		{vax.Executive, eGuard, false},
+		{vax.Kernel, sGuard, false},
+	} {
+		if err := write(tc.mode, tc.addr); (err == nil) != tc.ok {
+			t.Errorf("mode %d writing %#x: err %v, want ok=%v", tc.mode, tc.addr, err, tc.ok)
+		}
+	}
+}
+
+// TestVMInit_modeStackSizes: explicit sizes are used as given.
+func TestVMInit_modeStackSizes(t *testing.T) {
+	c := New(&bytes.Buffer{})
+	if err := c.Init(128 * 512); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+
+	if err := c.VMInit(20, 20, 0, 2, 3, 5, 2, 8); err != nil {
+		t.Fatalf("VMInit: %v", err)
+	}
+
+	// Past KSP's page: a guard page, then 3 executive pages.
+	ksp, esp, ssp := c.CPU.PR(vax.KSP), c.CPU.PR(vax.ESP), c.CPU.PR(vax.SSP)
+
+	if esp-ksp != (1+3)*512 || ssp-esp != (1+5)*512 {
+		t.Errorf("KSP %#x, ESP %#x, SSP %#x: want ESP 4 pages above KSP, SSP 6 above ESP", ksp, esp, ssp)
 	}
 }

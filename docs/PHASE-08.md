@@ -366,7 +366,9 @@ SHOW, and friends — plus the DCL grammar-driven command parser, and stand up
   `CONSOLE$STRINGPOOL*` area (both serve the inline mini-assembler, Phase
   11's scope) and the `PTE$K_NONE` guard page one page below each
   privileged stack (installed via the C source's own `setpte` mini-parser,
-  also assembler-adjacent) — the bottom-most *P0* page is still guarded
+  also assembler-adjacent; since 2026-09-28 the executive and supervisor
+  stacks do get guard pages and their own protection — see
+  `docs/MODE-STACKS.md`) — the bottom-most *P0* page is still guarded
   (`PTE_K_NA`), since that part of the algorithm needs no assembler, just a
   `PTE.SetProtection` call already in scope.
 - Confirmed PTEs can be written directly through the normal

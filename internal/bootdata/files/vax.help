@@ -2250,6 +2250,18 @@ $VM
                     stacks.  If you do not specify a large enough S0 space
                     (or there is not enough physical memory left to allocate
                     to it) then an error message is displayed.
+
+    Qualifiers:
+
+        /KSP=<pages>    The size of the kernel stack.  Default 4.
+        /ESP=<pages>    The size of the executive stack.  Default 8.  Its
+                        pages are writable only from executive or kernel
+                        mode, with a no-access guard page below them.
+        /SSP=<pages>    The size of the supervisor stack.  Default 8.  Its
+                        pages are writable only from supervisor mode or a
+                        more privileged mode, with a guard page below them.
+        /ISP=<pages>    The size of the interrupt stack.  Default 4.
+
                     
 $TEST
 

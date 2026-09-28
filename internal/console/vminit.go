@@ -48,9 +48,13 @@ const (
 // of its own; only P0 and P1 pages start invalid and get demand-paged in on
 // first touch.
 //
-// Also not ported, as a pure convenience with no other consumer yet: the
-// PTE$K_NONE guard page installed one page below each privileged stack
-// (done via the C source's own `setpte` mini-parser, assembler-adjacent).
+// The executive and supervisor stacks are laid out differently from the
+// C source's: each is its own run of S0 pages (8 by default) protected for
+// its mode (EW, SW), with a PTE$K_NONE guard page below it, so executive
+// and supervisor code has a stack it can write and an overflow faults
+// rather than running into the neighbouring stack. See
+// docs/MODE-STACKS.md. The C source's guard pages below the kernel and
+// interrupt stacks are still not ported.
 // CONSOLE$SCRATCH itself *is* reserved below, now that Phase 13's image
 // loader and SHIM$ stub synthesis are real consumers, and CONSOLE$STRINGPOOL*
 // is reserved below too, now that expr.go's quoted-string literal support
@@ -231,17 +235,48 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		pStart: p1PStart << 9, pEnd: (p1PStart + size[1]) << 9,
 	}
 
-	// Privileged-mode stacks, allocated in S0 space after the page tables.
+	// Privileged-mode stacks, allocated in S0 space after the page tables
+	// (docs/MODE-STACKS.md). Each stack pointer starts at its region's
+	// last longword; stacks grow down.
+	//
+	//	kernel stack       kspPages, URKW (as S0's other pages)
+	//	guard page         NA
+	//	executive stack    espPages (default 8), EW
+	//	guard page         NA
+	//	supervisor stack   sspPages (default 8), SW
+	//	interrupt stack    ispPages, addressed physically
+	//
+	// The kernel stack keeps S0's URKW: the frame the console builds to
+	// CALL a program lives there, and a user-mode program's final RET
+	// reads it. Only the executive and supervisor stacks are new: before,
+	// they shared the kernel stack's protection (only kernel mode could
+	// write them), and a caller passing 0 pages put them at the kernel
+	// stack's own address.
 	paddr = roundUpPage(paddr)
-	
+
+	if espPages == 0 {
+		espPages = defaultModeStackPages
+	}
+
+	if sspPages == 0 {
+		sspPages = defaultModeStackPages
+	}
+
 	c.CPU.SetGPR(vax.SP, spP1) // USP, set below via SetPR too
 
 	ksp := 0x80000000 + paddr + kspPages*512 - 4
 	paddr += kspPages * 512
-	esp := 0x80000000 + paddr + espPages*512 - 4
-	paddr += espPages * 512
-	ssp := 0x80000000 + paddr + sspPages*512 - 4
-	paddr += sspPages * 512
+
+	esp, err := c.modeStack(&paddr, espPages, vm.ProtEW)
+	if err != nil {
+		return err
+	}
+
+	ssp, err := c.modeStack(&paddr, sspPages, vm.ProtSW)
+	if err != nil {
+		return err
+	}
+
 	isp := paddr + ispPages*512 - 4 // physical: no translation at interrupt time
 	paddr += ispPages * 512
 
@@ -375,6 +410,55 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	c.Mem.ResetTBCounters()
 	c.asmSession = nil     // a fresh address space invalidates any prior ASM session's state
 	c.assemblerMode = false
+
+	return nil
+}
+
+// defaultModeStackPages is the size of the executive and supervisor
+// stacks when VMINIT isn't given one (docs/MODE-STACKS.md).
+const defaultModeStackPages = 8
+
+// modeStack lays out one mode's stack at the physical S0 address *paddr:
+// a no-access guard page, then pages pages with protection prot. It
+// advances *paddr past them and returns the stack's initial pointer (the
+// virtual address of its last longword). A push past the stack's bottom
+// lands on the guard page and faults.
+func (c *Console) modeStack(paddr *uint32, pages uint32, prot vm.Protection) (uint32, error) {
+	if err := c.setS0Protection(*paddr, 1, vm.ProtNA); err != nil {
+		return 0, err
+	}
+
+	*paddr += 512
+
+	if err := c.setS0Protection(*paddr, pages, prot); err != nil {
+		return 0, err
+	}
+
+	*paddr += pages * 512
+
+	return 0x80000000 + *paddr - 4, nil
+}
+
+// setS0Protection sets the protection of the pages S0 pages starting at
+// physical (and S0-offset) address paddr. It edits the PTEs through their
+// physical addresses (SBR is 0, so S0 page N's PTE is at N*4), since
+// VMINIT runs this before turning MAPEN on.
+func (c *Console) setS0Protection(paddr, pages uint32, prot vm.Protection) error {
+	for i := uint32(0); i < pages; i++ {
+		pteAddr := (paddr>>9 + i) * 4
+
+		raw, err := c.Mem.LoadLongword(c.CPU, pteAddr)
+		if err != nil {
+			return err
+		}
+
+		pte := vm.PTE(raw)
+		pte.SetProtection(prot)
+
+		if err := c.Mem.StoreLongword(c.CPU, pteAddr, uint32(pte)); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
