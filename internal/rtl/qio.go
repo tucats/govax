@@ -48,23 +48,30 @@ import (
 //
 // # How govax does it
 //
-// Every request completes *during* the $QIO call: the IOSB is written,
+// Most requests complete *during* the $QIO call: the IOSB is written,
 // the event flag set, and the AST queued before $QIO returns — the same
 // shortcut $GETJPI takes. VMS allows this (a request may finish before
 // $QIO returns), and a correctly written program can't tell the
-// difference. So $QIO and $QIOW are the same service here, and $CANCEL
-// never finds anything outstanding.
+// difference. Every terminal request does.
+//
+// A request can also stay *pending*: a mailbox read with no message to
+// read waits for a write (mbxdriver.go, docs/PHASE-26.md subtask 29). The
+// driver keeps the request and completes it later with completeIO, which
+// does what completion always does: IOSB, event flag, AST. $QIOW then
+// waits for that, $CANCEL completes a channel's pending requests with
+// SS$_CANCEL, and so does $DASSGN.
 //
 // Which functions a device has is table-driven: ioDrivers maps a device
 // class to its driver's function table, which maps a function code to
-// the Go function that performs it. Only terminals (ttdriver.go) have a
-// driver so far.
+// the Go function that performs it. Terminals (ttdriver.go) and
+// mailboxes (mbxdriver.go) have drivers.
 
 // Status codes the I/O services return.
 var (
 	ssIllIoFunc = vmsdef.SSConstants["SS$_ILLIOFUNC"]
 	ssTimeout   = vmsdef.SSConstants["SS$_TIMEOUT"]
 	ssEndOfFile = vmsdef.SSConstants["SS$_ENDOFFILE"]
+	ssCancel    = vmsdef.SSConstants["SS$_CANCEL"]
 )
 
 // ioFunctionCodeMask selects a func argument's function code (IO$M_FCODE,
@@ -89,6 +96,16 @@ type ioRequest struct {
 	function  uint32    // the function code (IO$_...), without modifiers
 	modifiers uint32    // the IO$M_ modifier bits (func's bits 6-15)
 	p         [6]uint32 // p1-p6
+
+	// How the request completes: the event flag to set, the IOSB to
+	// write (0 for none), the AST to queue (astadr 0 for none) and the
+	// access mode it runs in (the caller's).
+	efn, iosb, astadr, astprm, mode uint32
+
+	// done is set once the request has completed (or been cancelled);
+	// cancelled says it was cancelled. A driver holding a pending
+	// request drops it once it's done.
+	done, cancelled bool
 }
 
 // modified reports whether the request has every modifier bit in m.
@@ -106,22 +123,77 @@ type ioStatus struct {
 // ioFunc performs one I/O function. It returns the request's completion
 // status, or, if reject isn't 0, rejects the request instead: reject is
 // then $QIO's R0 (typically SS$_ACCVIO for a buffer the caller can't
-// access), and the request doesn't complete.
+// access), and the request doesn't complete. reject ioPending means the
+// driver has kept the request, to complete later with completeIO.
 type ioFunc func(env *Environment, req *ioRequest) (done ioStatus, reject uint32)
+
+// ioPending is an ioFunc's "not done yet" (no VMS status is all ones).
+const ioPending = ^uint32(0)
 
 // ioDrivers is the driver registry: for each device class, the function
 // codes its driver implements. A device of a class that isn't here, or a
 // function its driver doesn't list, is SS$_ILLIOFUNC.
 var ioDrivers = map[iodev.DeviceClass]map[uint32]ioFunc{
-	iodev.DeviceClassTT: terminalFunctions,
+	iodev.DeviceClassTT:      terminalFunctions,
+	iodev.DeviceClassMailbox: mailboxFunctions,
 }
 
-// serviceSysQio is SYS$QIO and SYS$QIOW:
+// serviceSysQio is SYS$QIO:
 //
-//	SYS$QIO[W] [efn] ,chan ,func [,iosb] [,astadr] [,astprm]
-//	           [,p1] [,p2] [,p3] [,p4] [,p5] [,p6]
+//	SYS$QIO [efn] ,chan ,func [,iosb] [,astadr] [,astprm]
+//	        [,p1] [,p2] [,p3] [,p4] [,p5] [,p6]
 //
-// The steps are the ones VMS's $QIO takes:
+// See queueIO; $QIO returns as soon as the request is queued (or
+// rejected), whether or not it has completed.
+func serviceSysQio(env *Environment, argv []uint32) (uint32, error) {
+	status, _ := env.queueIO(argv)
+
+	return status, nil
+}
+
+// qiowWait is a $QIOW waiting for its request: fp is the SYS$QIOW stub's
+// frame pointer, which is the same each time its XFC runs again.
+type qiowWait struct {
+	fp  uint32
+	req *ioRequest
+}
+
+// serviceSysQiow is SYS$QIOW, $QIO and wait: the same arguments, but it
+// returns only when the request has completed. A request that completes
+// during the call (every terminal request) returns at once. One left
+// pending waits, re-executing the service's XFC (ErrWait) until the
+// driver completes it; ASTs and interrupts are delivered meanwhile. The
+// waits are a stack (Environment.qiowWaits), since an AST routine may
+// issue a $QIOW of its own while one is waiting.
+//
+// Like $QIO, it returns SS$_NORMAL once the request is queued, whatever
+// the I/O's own status (which is in the IOSB).
+func serviceSysQiow(env *Environment, argv []uint32) (uint32, error) {
+	fp := env.cpu.GPR(vax.FP)
+
+	if n := len(env.qiowWaits); n > 0 && env.qiowWaits[n-1].fp == fp {
+		if !env.qiowWaits[n-1].req.done {
+			return 0, ErrWait
+		}
+
+		env.qiowWaits = env.qiowWaits[:n-1]
+
+		return ssNormal, nil
+	}
+
+	status, pending := env.queueIO(argv)
+	if pending == nil {
+		return status, nil
+	}
+
+	env.qiowWaits = append(env.qiowWaits, qiowWait{fp: fp, req: pending})
+
+	return 0, ErrWait
+}
+
+// queueIO is the body of $QIO and $QIOW. It returns $QIO's status, and
+// the request if it's pending (nil otherwise). The steps are the ones
+// VMS's $QIO takes:
 //
 //  1. Clear event flag efn (default 0): SS$_ILLEFC or SS$_UNASEFC if it
 //     isn't one the process can use.
@@ -132,18 +204,17 @@ var ioDrivers = map[iodev.DeviceClass]map[uint32]ioFunc{
 //  4. Find the function (func's low 6 bits) in the device's driver:
 //     SS$_ILLIOFUNC if it has none.
 //  5. Perform it. The driver may still reject the request (SS$_ACCVIO
-//     for a buffer the caller can't access).
+//     for a buffer the caller can't access), or keep it pending.
 //
 // A failure at steps 2-5 sets the event flag, as the manual says ("the
 // specified event flag is set if the service terminates without queuing
-// an I/O request"). Otherwise the request completes: its status goes to
-// the IOSB, the event flag is set, and if astadr isn't 0 an AST is queued
-// to call it with astprm in the caller's mode. R0 is then SS$_NORMAL,
-// whatever the I/O's own status.
+// an I/O request"). Otherwise the status is SS$_NORMAL, whatever the
+// I/O's own, and the request completes (completeIO) now or, if pending,
+// when the driver says.
 //
 // Not implemented: the BIOLM, DIOLM, BYTLM, and ASTLM quotas
 // (SS$_EXQUOTA); SS$_INSFMEM; network links; SS$_DEVOFFLINE.
-func serviceSysQio(env *Environment, argv []uint32) (uint32, error) {
+func (env *Environment) queueIO(argv []uint32) (uint32, *ioRequest) {
 	efn, number, function := optArg(argv, 0), optArg(argv, 1)&0xFFFF, optArg(argv, 2)&0xFFFF
 	iosb, astadr, astprm := optArg(argv, 3), optArg(argv, 4), optArg(argv, 5)
 
@@ -157,7 +228,7 @@ func serviceSysQio(env *Environment, argv []uint32) (uint32, error) {
 
 	// reject ends a request that won't complete: the flag is set, and st
 	// is the service's status.
-	reject := func(st uint32) (uint32, error) {
+	reject := func(st uint32) (uint32, *ioRequest) {
 		*flags |= 1 << bit
 
 		return st, nil
@@ -183,6 +254,11 @@ func serviceSysQio(env *Environment, argv []uint32) (uint32, error) {
 		channel:   c,
 		function:  function & ioFunctionCodeMask,
 		modifiers: function &^ ioFunctionCodeMask,
+		efn:       efn,
+		iosb:      iosb,
+		astadr:    astadr,
+		astprm:    astprm,
+		mode:      uint32(env.cpu.PSL().CurMod()),
 	}
 
 	for i := range req.p {
@@ -201,36 +277,83 @@ func serviceSysQio(env *Environment, argv []uint32) (uint32, error) {
 
 	// Step 5: perform it.
 	done, rejected := perform(env, req)
-	if rejected != 0 {
-		return reject(rejected)
+
+	switch rejected {
+	case 0:
+		env.completeIO(req, done)
+
+		return ssNormal, nil
+
+	case ioPending:
+		env.pendingIO = append(env.pendingIO, req)
+
+		return ssNormal, req
 	}
 
-	// Completion. The IOSB was writable a moment ago, so a failure here
-	// can only be a program that unmapped it meanwhile; VMS would lose
-	// the status too.
-	if iosb != 0 {
-		_ = env.mem.StoreLongword(env.cpu, iosb, done.status&0xFFFF|uint32(done.count)<<16)
-		_ = env.mem.StoreLongword(env.cpu, iosb+4, done.info)
-	}
-
-	*flags |= 1 << bit
-
-	if astadr != 0 {
-		env.queueAST(astadr, astprm, uint32(env.cpu.PSL().CurMod()))
-	}
-
-	return ssNormal, nil
+	return reject(rejected)
 }
+
+// completeIO completes req with status done: its IOSB is written, its
+// event flag set, and its AST queued, in the mode it was requested from.
+// A request already completed is left alone. The IOSB was writable when
+// the request was queued, so a failure here can only be a program that
+// unmapped it meanwhile, and VMS would lose the status too. An event
+// flag in a common cluster the process has since disassociated isn't
+// set.
+func (env *Environment) completeIO(req *ioRequest, done ioStatus) {
+	if req.done {
+		return
+	}
+
+	req.done = true
+
+	for i, r := range env.pendingIO {
+		if r == req {
+			env.pendingIO = append(env.pendingIO[:i], env.pendingIO[i+1:]...)
+
+			break
+		}
+	}
+
+	if req.iosb != 0 {
+		_ = env.mem.StoreLongword(env.cpu, req.iosb, done.status&0xFFFF|uint32(done.count)<<16)
+		_ = env.mem.StoreLongword(env.cpu, req.iosb+4, done.info)
+	}
+
+	if flags, bit, st := env.flagWord(req.efn); st == 0 {
+		*flags |= 1 << bit
+	}
+
+	if req.astadr != 0 {
+		env.queueAST(req.astadr, req.astprm, req.mode)
+	}
+}
+
+// cancelIO completes every request pending on channel c with
+// SS$_CANCEL, marking them cancelled so their driver drops them: what
+// $CANCEL and $DASSGN do.
+func (env *Environment) cancelIO(c *channel) {
+	for _, r := range append([]*ioRequest(nil), env.pendingIO...) {
+		if r.channel == c {
+			r.cancelled = true
+			env.completeIO(r, ioStatus{status: ssCancel})
+		}
+	}
+}
+
+// PendingIO reports how many $QIO requests are waiting to complete.
+func (env *Environment) PendingIO() int { return len(env.pendingIO) }
 
 // serviceSysCancel is SYS$CANCEL:
 //
 //	SYS$CANCEL chan
 //
-// It cancels the I/O requests outstanding on a channel. A govax request
-// completes before $QIO returns, so there are never any: $CANCEL
-// checks the channel, with $QIO's rules (SS$_IVCHAN for 0, SS$_NOPRIV if
-// it isn't assigned or was assigned from a more privileged mode), and
-// cancels the channel's CTRL/C and CTRL/Y ASTs (ctrlast.go).
+// It cancels the I/O requests outstanding on a channel: each completes
+// with SS$_CANCEL in its IOSB, its event flag set and its AST queued
+// (cancelIO). It checks the channel with $QIO's rules (SS$_IVCHAN for 0,
+// SS$_NOPRIV if it isn't assigned or was assigned from a more privileged
+// mode), and also cancels the channel's CTRL/C and CTRL/Y ASTs
+// (ctrlast.go).
 func serviceSysCancel(env *Environment, argv []uint32) (uint32, error) {
 	number := optArg(argv, 0) & 0xFFFF
 	if number == 0 {
@@ -242,6 +365,7 @@ func serviceSysCancel(env *Environment, argv []uint32) (uint32, error) {
 		return ssNoPriv, nil
 	}
 
+	env.cancelIO(c)
 	env.disarmChannel(c.Number)
 
 	return ssNormal, nil
@@ -281,6 +405,6 @@ func (env *Environment) accessible(addr, n uint32, access vm.AccessType) bool {
 
 func registerQIOServices(t *ServiceTable) {
 	t.Register("SYS$QIO", serviceSysQio)
-	t.Register("SYS$QIOW", serviceSysQio)
+	t.Register("SYS$QIOW", serviceSysQiow)
 	t.Register("SYS$CANCEL", serviceSysCancel)
 }

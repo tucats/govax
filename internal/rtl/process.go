@@ -266,6 +266,7 @@ func (env *Environment) ImageRundown() {
 	env.cancelUserExitHandlers()
 	env.cancelPutmsgCalls()
 	env.cancelChangeModeCalls()
+	env.qiowWaits = nil
 }
 
 func registerProcessServices(t *ServiceTable) {

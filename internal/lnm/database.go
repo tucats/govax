@@ -56,6 +56,8 @@ type Database struct {
 //	    LNM$FILE_DEV           = "LNM$PROCESS", "LNM$GROUP", "LNM$SYSTEM"
 //	    LNM$DCL_LOGICAL        = "LNM$FILE_DEV"
 //	    LNM$DIRECTORIES        = "LNM$PROCESS_DIRECTORY", "LNM$SYSTEM_DIRECTORY"
+//	    LNM$TEMPORARY_MAILBOX  = "LNM$PROCESS" (VMS: "LNM$JOB")
+//	    LNM$PERMANENT_MAILBOX  = "LNM$SYSTEM"
 //
 // This follows the User's Manual's tables 11.1, 11.2 and 11.4, minus the
 // job and cluster tables govax doesn't have (so LNM$FILE_DEV has no
@@ -83,6 +85,11 @@ func NewDatabase(uic uint32) *Database {
 		{db.SystemDirectory, "LNM$FILE_DEV", []string{"LNM$PROCESS", "LNM$GROUP", "LNM$SYSTEM"}},
 		{db.SystemDirectory, "LNM$DCL_LOGICAL", []string{"LNM$FILE_DEV"}},
 		{db.SystemDirectory, "LNM$DIRECTORIES", []string{ProcessDirectoryName, SystemDirectoryName}},
+		// Where $CREMBX puts mailbox logical names (docs/PHASE-26.md
+		// subtask 29). VMS's temporary-mailbox table is LNM$JOB; govax
+		// has no job table, and its one process is the whole job.
+		{db.SystemDirectory, "LNM$TEMPORARY_MAILBOX", []string{"LNM$PROCESS"}},
+		{db.SystemDirectory, "LNM$PERMANENT_MAILBOX", []string{"LNM$SYSTEM"}},
 	}
 
 	for _, n := range names {

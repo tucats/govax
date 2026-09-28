@@ -1046,3 +1046,66 @@ func TestGetdvi_assembledProgram(t *testing.T) {
 		t.Errorf("DVI$_REFCNT = %d, want 1 (the program's channel)", got)
 	}
 }
+
+// TestMailbox_assembledProgram is docs/PHASE-26.md subtask 29's
+// acceptance test: testdata/asm/mailbox.asm passes two messages through
+// a mailbox, the second read waiting in $QIOW until a timer AST writes
+// its message, then deletes the mailbox by deassigning its channels.
+func TestMailbox_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "mailbox.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(mailbox.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("mailbox.asm has no entry address")
+	}
+
+	start := c.Engine.SystemTime()
+
+	if runErr, hitCap := callBounded(t, c, addr, 100_000); runErr != nil || hitCap {
+		t.Fatalf("running mailbox.asm: err=%v hitCap=%v", runErr, hitCap)
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Fatalf("R0 = %d, want 1 (every call behaved)", got)
+	}
+
+	read := func(name string, n int) string {
+		t.Helper()
+
+		a, ok := c.Symbols.Get(name)
+		if !ok {
+			t.Fatalf("no %s symbol", name)
+		}
+
+		buf := make([]byte, n)
+		if err := c.Mem.Load(c.CPU, a, buf); err != nil {
+			t.Fatal(err)
+		}
+
+		return string(buf)
+	}
+
+	if got := read("MSG1", 5); got != "first" {
+		t.Errorf("first message = %q", got)
+	}
+
+	if got := read("MSG2", 6); got != "second" {
+		t.Errorf("second message = %q", got)
+	}
+
+	if elapsed := c.Engine.SystemTime() - start; elapsed < 10*10_000 {
+		t.Errorf("system time advanced %d, want at least 10ms: the read didn't wait for the timer", elapsed)
+	}
+
+	if _, found := c.Devices.Find("MBA1"); found || len(c.RTL.Mailboxes.All()) != 0 {
+		t.Error("the temporary mailbox outlived its channels")
+	}
+
+	if n := c.RTL.PendingIO(); n != 0 {
+		t.Errorf("%d I/O requests left pending", n)
+	}
+}

@@ -485,12 +485,12 @@ changed as a result.
 
 - **Where**: `internal/rtl/qio.go`, `internal/rtl/ttdriver.go`.
 - **What**:
-  - Every request completes before `$QIO` returns, so `$QIO` and `$QIOW`
-    behave the same and `$CANCEL` never has anything to cancel. A read
-    with no input typed yet blocks the whole emulator until the host
-    delivers a line.
-  - Only terminals have a driver. A `$QIO` to any other device (a disk,
-    say) is `SS$_ILLIOFUNC`, where VMS would perform the I/O.
+  - Every terminal request completes before `$QIO` returns. A read with
+    no input typed yet blocks the whole emulator until the host delivers
+    a line. (Mailbox requests can wait, since subtask 29.)
+  - Only terminals and mailboxes have drivers. A `$QIO` to any other
+    device (a disk, say) is `SS$_ILLIOFUNC`, where VMS would perform the
+    I/O.
   - Every terminal is the console: reads come from the host's input,
     which is line-buffered and already echoed by the host (or not echoed
     at all, when redirected). So `IO$M_NOECHO`/`TRMNOECHO` change
@@ -619,6 +619,28 @@ changed as a result.
     `NEXTDEVNAM`, `TRACKS`, `VPROT`, or `ACPTYPE` items (`SS$_BADPARAM`).
   - No secondary devices: `DVI$M_SECONDARY` is ignored.
   - No `ASTLM` quota (`SS$_EXASTLM`).
+- **Status**: open, by design.
+
+### [Phase 26] Mailbox simplifications
+
+- **Where**: `internal/rtl/mailbox.go`, `internal/rtl/mbxdriver.go`,
+  `internal/lnm/database.go`.
+- **What**:
+  - One process: a mailbox connects the process with itself (its AST
+    routines, its parts). The IOSB's process IDs are always its own.
+  - `LNM$TEMPORARY_MAILBOX` is `LNM$PROCESS`, not `LNM$JOB`: govax has
+    no job table.
+  - A write that doesn't fit in the mailbox's buffer space completes
+    with `SS$_MBFULL`; VMS normally makes the writer wait (resource wait
+    mode, `$SETRWM`).
+  - `IO$_SETMODE` does nothing: no read or write attention ASTs
+    (`IO$M_READATTN`, `WRTATTN`), no protection changes. `promsk` is
+    recorded, not enforced.
+  - No `BYTLM` quota (`SS$_EXBYTLM`), shared-memory mailboxes, or
+    termination mailboxes.
+  - `$DASSGN` cancels pending requests with `SS$_CANCEL`, as `$CANCEL`
+    does.
+  - INIT/VMINIT/ZERO delete every mailbox, permanent ones included.
 - **Status**: open, by design.
 
 ### [Phase 26] CTRL/C and CTRL/Y AST simplifications

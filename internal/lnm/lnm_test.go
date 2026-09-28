@@ -89,6 +89,9 @@ func TestNewDatabase_standardTables(t *testing.T) {
 		"LNM$DIRECTORIES":    ProcessDirectoryName + "," + SystemDirectoryName,
 		ProcessDirectoryName: ProcessDirectoryName,
 		SystemDirectoryName:  SystemDirectoryName,
+
+		"LNM$TEMPORARY_MAILBOX": ProcessTableName,
+		"LNM$PERMANENT_MAILBOX": SystemTableName,
 	}
 
 	for tabnam, want := range cases {

@@ -126,6 +126,16 @@ type Environment struct {
 	// the process's terminal channels (ctrlast.go).
 	attentionASTs []attentionAST
 
+	// pendingIO are the $QIO requests a driver has kept to complete
+	// later, and qiowWaits the $QIOWs waiting for theirs (qio.go).
+	pendingIO []*ioRequest
+	qiowWaits []qiowWait
+
+	// Mailboxes are the mailboxes $CREMBX has created (mailbox.go). Like
+	// common event flag clusters they're system state, in system memory
+	// on VMS, so INIT/VMINIT/ZERO start with none.
+	Mailboxes *MailboxTable
+
 	// waitingPC is the P1-vector address of a service currently waiting
 	// (ErrWait), so SystemService traces only its first attempt; 0 when
 	// no service is waiting.
@@ -142,24 +152,26 @@ type Environment struct {
 // field's own doc comment for why it's injected rather than owned here.
 func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, logicals *lnm.Database, mounts *rms.MountTable, consoleIn io.Reader, consoleOut io.Writer) *Environment {
 	env := &Environment{
-		mem:        mem,
-		cpu:        cpu,
-		shims:      NewShimTable(),
-		services:   NewServiceTable(),
-		Devices:    devices,
-		Logicals:   logicals,
-		Mounts:     mounts,
-		files:      rms.NewFileTable(consoleOut),
-		Process:    NewProcess(),
+		mem:      mem,
+		cpu:      cpu,
+		shims:    NewShimTable(),
+		services: NewServiceTable(),
+		Devices:  devices,
+		Logicals: logicals,
+		Mounts:   mounts,
+		files:    rms.NewFileTable(consoleOut),
+		Process:  NewProcess(),
 
 		EventFlagClusters: NewCommonEventFlags(),
+		Mailboxes:         NewMailboxTable(),
 		Clock:             wallClock,
-		consoleIn:  consoleIn,
-		consoleOut: consoleOut,
-		openFiles:  map[uint32]*os.File{},
-		nextFID:    3,
+		consoleIn:         consoleIn,
+		consoleOut:        consoleOut,
+		openFiles:         map[uint32]*os.File{},
+		nextFID:           3,
 	}
 	env.BootTime = env.Clock()
+	env.removeStaleMailboxes()
 	env.NodeName = nominalNodeName
 
 	registerShims(env.shims)

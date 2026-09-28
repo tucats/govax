@@ -86,3 +86,25 @@ func names(ds []*Device) []string {
 	
 	return out
 }
+
+func TestDeviceTableRemove(t *testing.T) {
+	tab := NewDeviceTable()
+	a := tab.Define("MBA1", DeviceOptions{DevClass: DeviceClassMailbox})
+	b := tab.Define("MBA2", DeviceOptions{DevClass: DeviceClassMailbox})
+
+	if !tab.Remove(a) || tab.Remove(a) {
+		t.Fatal("Remove: want true once, then false")
+	}
+
+	if _, found := tab.Find("MBA1"); found {
+		t.Error("MBA1 still found")
+	}
+
+	if d, found := tab.Find("MBA2"); !found || d != b {
+		t.Error("MBA2 lost")
+	}
+
+	if got := DeviceClassName(DeviceClassMailbox); got != "mailbox" {
+		t.Errorf("DeviceClassName(mailbox) = %q", got)
+	}
+}

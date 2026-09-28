@@ -71,7 +71,8 @@ follow them too, and this list should grow when a new pattern is settled.
   and the item values the `$GETxxx` services return), `fao.go` (`$FAO`
   formatting, which later services reuse through `formatFAO`), `message.go`
   (`$GETMSG`, `$PUTMSG`), `cmode.go` (`$CMKRNL`, `$CMEXEC`), `ctrlast.go`
-  (CTRL/C and CTRL/Y ASTs), `getdvi.go` (`$GETDVI`). Each file has
+  (CTRL/C and CTRL/Y ASTs), `getdvi.go` (`$GETDVI`), `mailbox.go`
+  (`$CREMBX`, `$DELMBX`), `mbxdriver.go` (the mailbox driver). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -123,7 +124,9 @@ follow them too, and this list should grow when a new pattern is settled.
   `queueAST` in the caller's mode as it finishes. A request rejected
   before it starts returns its error in R0 and completes nothing (`$QIO`
   also sets the flag then, as its manual says). So the `...W` form is the
-  same service.
+  same service. The exception is a `$QIO` a driver leaves pending (a
+  mailbox read waiting for a write): the driver completes it later with
+  `completeIO`, and `$QIOW` waits for that (subtask 29).
 - **I/O functions.** A `$QIO` function is an `ioFunc` in a driver's
   function table, keyed by the `$IODEF` function code, and a driver is
   found by device class in `ioDrivers`. A new device class adds a table;
@@ -208,6 +211,9 @@ lists the ones the implementation can actually return.
 | `$PUTMSG` | 25 | `message.go` | `NORMAL`, `ACCVIO` | Formats a message vector with `formatFAO`; an action routine is called through a `CallRequest`. |
 | `$CMKRNL`, `$CMEXEC` | 26 | `cmode.go` | (the routine's R0) | Switch into the mode, call the routine through a `CallRequest`, switch back when it returns. |
 | `$GETDVI`, `$GETDVIW` | 28 | `getdvi.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLEFC`, `INSFARG`, `IVDEVNAM`, `IVLOGNAM`, `NOPRIV`, `NOSUCHDEV`, `UNASEFC` | 39 named items plus 28 `DEVCHAR` and 50 terminal-characteristic Booleans, from a generated `$DVIDEF`; replaces eVAX's three-item `$GETDVIW`. |
+| `$CREMBX` | 29 | `mailbox.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `IVLOGNAM`, `IVSTSFLG`, `NOIOCHAN`, (logical-name define errors) | Creates `MBAn` (or finds it by logical name) and assigns a channel. |
+| `$DELMBX` | 29 | `mailbox.go` | `NORMAL`, `DEVNOTMBX`, `IVCHAN`, `NOPRIV` | Marks a permanent mailbox for deletion at its last deassign. |
+| (mailbox driver; pending `$QIO`) | 29 | `mbxdriver.go`, `qio.go` | IOSB: `NORMAL`, `BUFFEROVF`, `ENDOFFILE`, `MBFULL`, `CANCEL`; R0: `MBTOOSML` | Reads wait for writes; `$QIOW` waits, `$CANCEL`/`$DASSGN` cancel with `SS$_CANCEL`. |
 | (CTRL/C, CTRL/Y ASTs) | 27 | `ctrlast.go`, `ttdriver.go` | — | `IO$_SETMODE!IO$M_CTRLCAST`/`CTRLYAST` enable one-shot ASTs the host's Ctrl-C delivers instead of stopping the machine. |
 
 ## Service designs
@@ -1629,6 +1635,74 @@ Not implemented (see `docs/DEVIATIONS.md`): other nodes' devices
 (`SS$_NONLOCAL`); host, shadow-set, and lock-name items; the `ASTLM`
 quota.
 
+### Mailboxes: `$CREMBX`, `$DELMBX`, and the mailbox driver
+
+`SYS$CREMBX [prmflg] ,chan ,[maxmsg] ,[bufquo] ,[promsk] ,[acmode] ,[lognam]`
+and `SYS$DELMBX chan`
+
+A mailbox is a software device for passing messages: one side writes
+with `$QIO IO$_WRITEVBLK`, the other reads with `IO$_READVBLK`, and the
+mailbox holds whole messages, in order, in between. `$CREMBX` creates one
+(`MBAn`, the next unit number from 1 to 9999) and assigns a channel;
+others are assigned with `$ASSIGN`, by name or by the logical name
+`$CREMBX` defines. A temporary mailbox is deleted when its last channel
+is deassigned; a permanent one only after `$DELMBX` marks it.
+
+#### Mailboxes as devices
+
+A mailbox is a device record in the shared device table (new class
+`DC$_MAILBOX` 160, `DT$_MBX` type, `DEVCHAR` REC/AVL/SHR/MBX/IDV/ODV,
+`DEVBUFSIZ` its largest message), so `$ASSIGN`, `$GETDVI`, and SHOW DEVICE
+see it, plus a `Mailbox` in the Environment's `MailboxTable` holding its
+messages and waiting reads. Mailboxes are system state like common event
+flag clusters: an Environment starts with none, and `NewEnvironment`
+removes mailbox devices an earlier one left in the device table (the new
+`DeviceTable.Remove`).
+
+`$CREMBX`'s logical name goes in `LNM$TEMPORARY_MAILBOX` or
+`LNM$PERMANENT_MAILBOX`, which the logical-name database now defines:
+`LNM$PROCESS` (VMS: `LNM$JOB`; govax has no job table, and its one
+process is the whole job) and `LNM$SYSTEM`. It equates the name to
+`MBAn:` with the terminal attribute. If the name already names a
+mailbox, `$CREMBX` assigns a channel to that one instead. `maxmsg` and
+`bufquo` default to 256 and 1056 (SYSGEN `DEFMBXMXMSG`,
+`DEFMBXBUFQUO`); `promsk` is recorded, not enforced. Deleting a mailbox
+removes its device record and logical name.
+
+#### Pending requests
+
+Until now every `$QIO` completed during the call. A mailbox read with no
+message waits for a write, so `qio.go` gained pending requests:
+
+- An `ioFunc` may return `ioPending`: the driver keeps the request, and
+  `$QIO` returns `SS$_NORMAL` with it outstanding (`Environment.pendingIO`).
+  The request carries its completion (event flag, IOSB, AST and mode),
+  and `completeIO` does it when the driver says.
+- `$QIOW` is now its own service: a pending request makes it wait,
+  re-executing its `XFC` (`ErrWait`) until the request is done. The
+  waits are a stack keyed by the stub's frame pointer, so an AST routine
+  can do a `$QIOW` of its own meanwhile.
+- `$CANCEL` completes the channel's pending requests with `SS$_CANCEL`;
+  `$DASSGN` (so image rundown too) does the same before releasing the
+  channel.
+
+#### The driver (`mbxdriver.go`)
+
+| Function | Does |
+| --- | --- |
+| `IO$_READVBLK` (`READLBLK`, `READPBLK`) | Takes the oldest message: IOSB status, length, writer's PID; `SS$_BUFFEROVF` if truncated; `SS$_ENDOFFILE` for an end-of-file message. With none: pending, or with `IO$M_NOW` `SS$_ENDOFFILE` at once. |
+| `IO$_WRITEVBLK` (`WRITELBLK`, `WRITEPBLK`) | Gives the message to a waiting read (both complete), or queues it: pending until read, or with `IO$M_NOW` complete at once. `SS$_MBTOOSML` (R0) if longer than `maxmsg`; `SS$_MBFULL` (IOSB) if past `bufquo`. |
+| `IO$_WRITEOF` | An end-of-file message. |
+| `IO$_SENSEMODE` (`SENSECHAR`) | IOSB count: messages waiting; second longword: their bytes. |
+| `IO$_SETMODE` (`SETCHAR`) | Succeeds without effect (no attention ASTs). |
+
+A cancelled read, or a message whose waiting write was cancelled, is
+dropped the next time the mailbox is used.
+
+Not implemented (see `docs/DEVIATIONS.md`): other processes; resource
+wait on a full mailbox; read/write attention ASTs; protection; the
+`BYTLM` quota; shared-memory mailboxes.
+
 Not implemented (see `docs/DEVIATIONS.md`): other cluster nodes; SYSGEN
 parameters beyond `MINWSCNT`; the `ASTLM` quota (`SS$_EXASTLM`).
 
@@ -1746,9 +1820,11 @@ fifth batch listed):
     the `$GETJPI`/`$GETSYI` pattern over the device record, from a
     generated `$DVIDEF` and `$TTDEF`, replacing eVAX's three-item
     `$GETDVIW`. Acceptance fixture `testdata/asm/getdvi.asm`.
-29. **Mailboxes.** `$CREMBX`/`$DELMBX` and a mailbox driver: the first
-    device whose `$QIO` requests really wait (a read for a write), so
-    `$QIOW` and `$CANCEL` gain real work.
+29. **Done.** **Mailboxes.** `$CREMBX`/`$DELMBX` (the new `mailbox.go`)
+    and a mailbox driver (`mbxdriver.go`): the first device whose `$QIO`
+    requests really wait (a read for a write), so `$QIO` gained pending
+    requests, and `$QIOW` and `$CANCEL` real work. Acceptance fixture
+    `testdata/asm/mailbox.asm`.
 30. **Small process-control services.** `$SETPRN`, `$SETPRI`, and
     `$FORCEX`/`$DELPRC` on this process.
 
@@ -2436,5 +2512,40 @@ None yet.
   completing, each rejection completing nothing, `SS$_INSFARG`, an
   unwritable IOSB, the debug trace). The logical-name test now uses
   `$GETDVI`.
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 29: mailboxes
+
+- **`internal/io`**: `DeviceClassMailbox` (160, shown as "mailbox") and
+  `DeviceTable.Remove`.
+- **`internal/lnm`**: `LNM$TEMPORARY_MAILBOX` (= `LNM$PROCESS`) and
+  `LNM$PERMANENT_MAILBOX` (= `LNM$SYSTEM`) in the system directory.
+- **`internal/rtl/qio.go`**: `ioRequest` carries its completion;
+  `ioPending`; `queueIO` (the old `$QIO` body), `completeIO`,
+  `cancelIO`, `PendingIO`; `serviceSysQiow` with `qiowWait`. `$CANCEL`
+  and `releaseChannel` cancel pending I/O.
+- **`internal/rtl/mailbox.go`** (new): `Mailbox`, `MailboxTable`
+  (`Environment.Mailboxes`), `serviceSysCrembx`, `serviceSysDelmbx`,
+  `releaseMailbox`, `removeStaleMailboxes`. **`mbxdriver.go`** (new): the
+  driver.
+- **`devices.go`**: `newChannel`, shared by `$ASSIGN` and `$CREMBX`.
+  `$ASSIGN` now checks the channel word is writable before creating the
+  channel, so a bad `mbxnam` no longer leaves a channel number stored for
+  a channel that was never kept.
+- **Acceptance fixture** `testdata/asm/mailbox.asm`: a mailbox with a
+  logical name and two channels; a queued message read by `$QIOW`; a
+  `$QIOW` read that waits until a timer AST writes; an `IO$M_NOW` read of
+  the empty mailbox; deassigning both channels. `TestMailbox_assembledProgram`
+  checks both messages, at least 10ms of system time (the wait was real),
+  the mailbox deleted, and nothing pending.
+- Tests: `io` (`Remove`); `lnm` (the two tables); `rtl/mailbox_test.go`
+  (`$CREMBX` creating, finding by name, `$ASSIGN` by name, unit numbers,
+  sizes; its errors creating nothing; temporary and permanent deletion,
+  logical names removed, `$DELMBX`'s errors, rundown; a new Environment
+  clearing old mailboxes; queued messages, truncation, end of file,
+  `IO$M_NOW` on empty, `MBTOOSML`, `MBFULL`, a rejected read taking
+  nothing; waiting reads and writes completing each other with flags and
+  ASTs; `$CANCEL` and `$DASSGN` cancelling; `$QIOW` waiting without
+  re-queuing, released by a write from another frame).
 - `go test ./...` passes.
 

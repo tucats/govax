@@ -14,16 +14,21 @@ type DeviceClass int32
 // Device classes dev_class_map actually names; every other class number
 // (testdata/dcl/evax.dcl's dev_class type defines many more, e.g. tape=2,
 // workstation=70) is legal to set but has no display name of its own.
+//
+// DeviceClassMailbox (DC$_MAILBOX) was added for the mailboxes $CREMBX
+// creates (docs/PHASE-26.md subtask 29).
 const (
-	DeviceClassNone DeviceClass = 0
-	DeviceClassDisk DeviceClass = 1
-	DeviceClassTT   DeviceClass = 66
+	DeviceClassNone    DeviceClass = 0
+	DeviceClassDisk    DeviceClass = 1
+	DeviceClassTT      DeviceClass = 66
+	DeviceClassMailbox DeviceClass = 160
 )
 
 var deviceClassNames = map[DeviceClass]string{
-	DeviceClassTT:   "terminal",
-	DeviceClassDisk: "disk",
-	DeviceClassNone: "none",
+	DeviceClassTT:      "terminal",
+	DeviceClassDisk:    "disk",
+	DeviceClassMailbox: "mailbox",
+	DeviceClassNone:    "none",
 }
 
 // DeviceClassName returns class's display name, or "<unknown>" for any
@@ -404,6 +409,21 @@ func (t *DeviceTable) Find(name string) (*Device, bool) {
 	}
 
 	return nil, false
+}
+
+// Remove takes d out of the table, reporting whether it was there. It is
+// how a deleted mailbox (docs/PHASE-26.md subtask 29) stops being a
+// device; nothing removes the devices DEFINE/DEVICE creates.
+func (t *DeviceTable) Remove(d *Device) bool {
+	for i, e := range t.devices {
+		if e == d {
+			t.devices = append(t.devices[:i], t.devices[i+1:]...)
+
+			return true
+		}
+	}
+
+	return false
 }
 
 // All returns every defined device, most-recently-Defined first (matching

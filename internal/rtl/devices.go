@@ -89,21 +89,16 @@ func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 		return ssDevAlloc, nil
 	}
 
-	env.nextChannel += 8
-	c := &channel{
-		Name:   name,
-		Number: uint16(env.nextChannel),
-		Device: dp,
-		Class:  dp.DevClass,
-		Mode:   max(optArg(argv, 2)&3, uint32(env.cpu.PSL().CurMod())),
-	}
-
-	if err := env.mem.StoreWord(env.cpu, argv[1], c.Number); err != nil {
+	// The channel number goes to argv[1]: check it can be written before
+	// assigning anything.
+	if err := env.mem.StoreWord(env.cpu, argv[1], 0); err != nil {
 		return ssAccVio, nil
 	}
 
+	mbx, flags := "", uint32(0)
+
 	if len(argv) > 3 && argv[3] != 0 {
-		mbx, ok, err := strGet(env, argv[3], 255)
+		s, ok, err := strGet(env, argv[3], 255)
 		if err != nil {
 			return ssAccVio, nil
 		}
@@ -112,11 +107,32 @@ func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 			return ssBadParam, nil
 		}
 
-		c.Mailbox = mbx
+		mbx = s
 	}
 
 	if len(argv) > 4 {
-		c.Flags = argv[4]
+		flags = argv[4]
+	}
+
+	c := env.newChannel(name, dp, max(optArg(argv, 2)&3, uint32(env.cpu.PSL().CurMod())))
+	c.Mailbox, c.Flags = mbx, flags
+	_ = env.mem.StoreWord(env.cpu, argv[1], c.Number)
+
+	return ssNormal, nil
+}
+
+// newChannel assigns a new channel to dp from access mode mode: $ASSIGN's
+// work, shared with $CREMBX. Channel numbers count up by 8 from 8, as
+// eVAX's find_device numbered them. The device's reference count goes up,
+// and its owner becomes this process.
+func (env *Environment) newChannel(name string, dp *iodev.Device, mode uint32) *channel {
+	env.nextChannel += 8
+	c := &channel{
+		Name:   name,
+		Number: uint16(env.nextChannel),
+		Device: dp,
+		Class:  dp.DevClass,
+		Mode:   mode,
 	}
 
 	env.channels = append(env.channels, c)
@@ -124,7 +140,7 @@ func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 	dp.PID = env.Process.PID
 	dp.OwnUIC = env.Process.UIC
 
-	return ssNormal, nil
+	return c
 }
 
 // Status codes and $DEVDEF bits $ALLOC uses (docs/PHASE-26.md).
@@ -364,8 +380,11 @@ func serviceSysDassgn(env *Environment, argv []uint32) (uint32, error) {
 }
 
 // releaseChannel removes c from the process's channels and drops its
-// device reference. Its CTRL/C and CTRL/Y ASTs are cancelled.
+// device reference. Its pending I/O requests are cancelled (SS$_CANCEL),
+// as are its CTRL/C and CTRL/Y ASTs, and a mailbox whose last channel
+// this was may be deleted (releaseMailbox).
 func (env *Environment) releaseChannel(c *channel) {
+	env.cancelIO(c)
 	env.disarmChannel(c.Number)
 
 	for i, ch := range env.channels {
@@ -384,6 +403,8 @@ func (env *Environment) releaseChannel(c *channel) {
 	if d.RefCnt == 0 && !d.Allocated() {
 		d.PID = 0
 	}
+
+	env.releaseMailbox(d)
 }
 
 // deassignUserChannels is image rundown's channel step: VMS deassigns the
