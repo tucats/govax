@@ -77,6 +77,7 @@ questions, and a progress log extended as that phase is worked.
 | 24 | [PHASE-24.md](PHASE-24.md) | `.RMSDEF`/`.FAB`/`.RAB` assembler pseudo-ops |
 | 25 | [PHASE-25.md](PHASE-25.md) | VMS-faithful logical names (tables, iterative translation, DEFINE/ASSIGN/SHOW LOGICAL, `$CRELNM`/`$TRNLNM`) |
 | 26 | [PHASE-26.md](PHASE-26.md) | Expanding system services (emulated process record; `$ADJSTK`, `$ADJWSL`, `$ALLOC`, `$ASCEFC`, ...) |
+| 27 | [PHASE-27.md](PHASE-27.md) | MACRO-32 object modules: `MACRO` command producing VAX `.OBJ` files from `.MAR` source |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -346,3 +347,13 @@ page locking), resource wait mode and mailbox attention ASTs, privilege
 masks with `$SETPRV` and the checks services had skipped, `$SNDOPR` and
 `$BRKTHRU`, rights identifiers, and disk `$QIO` (the ACP's file functions),
 wired into the ods2 module through `internal/rms`.
+
+Phase 27, requested by the user 2026-09-29, adds a `MACRO` command that
+assembles `.MAR` source into a VAX object module (`.OBJ`) that a real VMS
+linker accepts. It shares `internal/asm` with the console's `ASM` command:
+a dialect setting and a psect-based location model let one core do both
+absolute (console) and relocatable (object) assembly. A new
+`internal/obj` package reads, writes, dumps, and checks the VAX object
+language, which is specified in the VMS 5.0 Linker manual's chapter 7 and
+the VMS 7.3 `objfmt.sdl`. Objects from the user's real VAX are the
+comparison fixtures. See PHASE-27.md.
