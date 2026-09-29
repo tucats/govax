@@ -5,7 +5,8 @@
 // reference/vms/lnmdef.sdl (SDL source; see sdl.go) and SSConstants from
 // reference/vms/ssdef.txt (a BLISS LITERAL listing; see bliss.go), both
 // docs/PHASE-25.md, and DEVConstants and JPIConstants from
-// reference/vms/devdef.sdl and jpidef.sdl (docs/PHASE-26.md). The
+// reference/vms/devdef.sdl and jpidef.sdl (docs/PHASE-26.md), and
+// OBJConstants from reference/vms/objfmt.sdl (docs/PHASE-27.md). The
 // message texts of reference/vms/sysmsg.txt go to a second file,
 // messages_generated.go (msg.go). They are kept as separate maps, not merged into
 // Constants, because .RMSDEF (internal/asm) defines every Constants entry
@@ -139,13 +140,14 @@ func main() {
 	brkdef := flag.String("brkdef", "", "path to brkdef.sdl")
 	fibdef := flag.String("fibdef", "", "path to fibdef.txt")
 	atrdef := flag.String("atrdef", "", "path to atrdef.txt")
+	objfmt := flag.String("objfmt", "", "path to objfmt.sdl")
 	sysmsg := flag.String("sysmsg", "", "path to sysmsg.txt (a message-file listing)")
 	out := flag.String("out", "", "path to write the generated Go source")
 	msgOut := flag.String("msgout", "", "path to write the generated message texts")
 	flag.Parse()
 
-	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *dvidef == "" || *ttdef == "" || *prtdef == "" || *prvdef == "" || *brkdef == "" || *fibdef == "" || *atrdef == "" || *sysmsg == "" || *out == "" || *msgOut == "" {
-		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, -dvidef, -ttdef, -prtdef, -prvdef, -brkdef, -fibdef, -atrdef, -sysmsg, -out, and -msgout are all required")
+	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *dvidef == "" || *ttdef == "" || *prtdef == "" || *prvdef == "" || *brkdef == "" || *fibdef == "" || *atrdef == "" || *objfmt == "" || *sysmsg == "" || *out == "" || *msgOut == "" {
+		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, -dvidef, -ttdef, -prtdef, -prvdef, -brkdef, -fibdef, -atrdef, -objfmt, -sysmsg, -out, and -msgout are all required")
 	}
 
 	constants := map[string]uint32{}
@@ -225,6 +227,20 @@ func main() {
 	atr, err := parseBlissLiterals(readSource(*atrdef), "ATR$")
 	if err != nil {
 		log.Fatalf("gen: %s: %v", *atrdef, err)
+	}
+
+	// objfmt.sdl defines both the VAX object language and, from
+	// $EOBJRECDEF on, the Alpha one (EOBJ$, EGSD$, ETIR$, ...). govax only
+	// reads and writes VAX objects (docs/PHASE-27.md), so only the modules
+	// before that point are parsed.
+	vaxObj, _, found := strings.Cut(readSource(*objfmt), "module $EOBJRECDEF;")
+	if !found {
+		log.Fatalf("gen: %s: no \"module $EOBJRECDEF;\" separating the VAX and Alpha definitions", *objfmt)
+	}
+
+	obj, err := parseSDL(vaxObj)
+	if err != nil {
+		log.Fatalf("gen: %s: %v", *objfmt, err)
 	}
 
 	maps := []constantMap{
@@ -367,16 +383,31 @@ func main() {
 			},
 			entries: atr,
 		},
+		{
+			name: "OBJConstants",
+			doc: []string{
+				"OBJConstants is every real VAX object language symbol, from the VAX",
+				"modules of objfmt.sdl ($OBJRECDEF through $TIRDEF): record types",
+				"(OBJ$C_GSD, ...), header types (MHD$C_LNM, ...), GSD subrecord types",
+				"(GSD$C_PSC, ...), TIR commands (TIR$C_STA_PL, ...), psect and symbol",
+				"flag bits (GPS$M_REL, GSY$M_DEF, ...), and each record's field offsets",
+				"(GPS$B_ALIGN, SDF$L_VALUE, ...). $OBJRECDEF's SDA-only aggregate puts",
+				"its flag bitfields directly in a union, so SDL places every OBJ$V_PSC_",
+				"and OBJ$V_SYM_ bit at 0: use the GPS$ and GSY$ bits instead. See",
+				"docs/PHASE-27.md.",
+			},
+			entries: obj,
+		},
 	}
 
-	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef, *statedef, *syidef, *dvidef, *ttdef, *prtdef, *prvdef, *brkdef, *fibdef, *atrdef}
+	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef, *statedef, *syidef, *dvidef, *ttdef, *prtdef, *prvdef, *brkdef, *fibdef, *atrdef, *objfmt}
 	code := generate(maps, sources)
 
 	if err := os.WriteFile(*out, code, 0o644); err != nil {
 		log.Fatalf("gen: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), len(syi), len(dvi), len(tt), len(prt), len(prv), len(brk), len(fib), len(atr), *out)
+	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), len(syi), len(dvi), len(tt), len(prt), len(prv), len(brk), len(fib), len(atr), len(obj), *out)
 
 	// The message texts go in a file of their own (see msg.go).
 	msgs, facilities, err := parseMessages(readSource(*sysmsg))

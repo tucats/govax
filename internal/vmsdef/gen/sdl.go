@@ -7,33 +7,56 @@ import (
 )
 
 // parseSDL extracts symbolic constants from a VMS SDL (Structure Definition
-// Language) source module, such as reference/vms/lnmdef.sdl. Only the small
-// subset of SDL that $LNMDEF actually uses is understood; anything else is
-// reported as an error rather than skipped, so a future module using wider
-// SDL syntax can't silently produce a partial or wrong table:
+// Language) source module, such as reference/vms/lnmdef.sdl. Only the
+// subset of SDL that the modules govax reads actually use is understood;
+// anything else is reported as an error rather than skipped, so a future
+// module using wider SDL syntax can't silently produce a partial or wrong
+// table:
 //
-//   - "module $NAME;" / "end_module ...;" — ignored.
-//   - "aggregate NAME structure prefix P$;" ... "end NAME;" — a block of
-//     consecutive bitfields, numbered from bit 0. Each
-//     "FIELD bitfield [length N] [mask] [fill];" advances the bit position
-//     by N (default 1). A non-fill field defines P$V_FIELD (its bit
-//     position), P$S_FIELD when N > 1 (its width), and, with "mask",
-//     P$M_FIELD (its already-shifted mask) — SDL's own naming rules.
-//   - "aggregate NAME union prefix P$;" whose members are nested
-//     "MEMBER structure [fill];" ... "end MEMBER;" blocks of bitfields, as
-//     $DEVDEF uses for its DEVCHAR and DEVCHAR2 longwords. Union members
-//     overlay each other, so each nested structure numbers its bitfields
-//     from bit 0 again, all under the union's prefix. A structure
-//     aggregate may nest one the same way ($JPIDEF's
-//     "JPICTLFLGS structure longword unsigned fill;"), continuing from the
-//     current bit position, since structure members follow each other.
+//   - "module $NAME;" / "end_module ...;" — ignored. So are "ifsymbol
+//     NAME;" / "end_ifsymbol;": their contents are always taken, as the
+//     MACRO and BLISS versions of a module see them ($OBJRECDEF wraps its
+//     zero-length name fields in "ifsymbol not_h_files", which only the C
+//     header generator leaves out).
+//   - "aggregate NAME {structure|union} prefix P$ [origin FIELD];" ...
+//     "end NAME;" — a record layout, whose members are described by the
+//     next four items. "origin FIELD" makes every byte offset in the
+//     aggregate relative to FIELD's instead of the aggregate's start.
+//   - A bitfield member, "FIELD bitfield [length N] [mask] [fill];": N
+//     bits (default 1) at the current bit position, which counts from the
+//     byte where the current run of bitfields started. A non-fill field
+//     defines P$V_FIELD (its bit position), P$S_FIELD when N > 1 (its
+//     width), and, with "mask", P$M_FIELD (its already-shifted mask) —
+//     SDL's own naming rules.
+//   - A byte-aligned member, "FIELD {byte|word|longword|quadword|character}
+//     [length N] [dimension N] [signed|unsigned] [fill] [prefix P$]
+//     [tag T];": a field of that many bytes (a character field is N bytes,
+//     default 1) at the current byte offset, which it then advances. A
+//     non-fill field defines P$T_FIELD, its byte offset, where T is B, W,
+//     L, Q or T for the five types unless "tag" names another; a character
+//     field with N > 0 also defines P$S_FIELD, its length.
+//   - A nested aggregate, "MEMBER {structure|union} [TYPE]
+//     [signed|unsigned] [fill];" ... "end MEMBER;". A structure's members
+//     follow each other; a union's overlay each other, so each starts where
+//     the union starts, and bitfields in each union member number from the
+//     union's own starting bit position again ($DEVDEF's DEVCHAR and
+//     DEVCHAR2 longwords, or a flags word and its bits in $GPSDEF). With a
+//     TYPE ("PSC_FLAG union word unsigned") the aggregate occupies exactly
+//     that many bytes. A non-fill nested aggregate defines P$T_MEMBER (T is
+//     the TYPE's letter, or R when it has none). A nested structure holding
+//     only bitfields continues its parent's bit run ($JPIDEF's
+//     "JPICTLFLGS structure longword unsigned fill").
+//   - "constant NAME equals . ...;" inside an aggregate: "." is the
+//     current byte offset.
 //   - "constant NAME equals V prefix P$ tag T;" and the list form
 //     "constant (A, B, ...) equals V increment I prefix P$ tag T;" — each
 //     name becomes P$T_NAME (P$_NAME when T is empty), successive list
 //     entries counting up from V by I. $JPIDEF writes the "$" in the tag
 //     instead ("prefix JPI tag $C"), which composes the same names. V is a
 //     decimal or %x hexadecimal literal, or "OTHER@N": an earlier constant
-//     shifted left N bits, as $JPIDEF numbers its item-code lists.
+//     shifted left N bits, as $JPIDEF numbers its item-code lists. Inside
+//     an aggregate, the prefix and tag default to the aggregate's prefix
+//     and K.
 //   - "#NAME = V;" — an SDL local symbol: a named number, used only
 //     inside the module and never emitted. $IODEF defines
 //     "#fcode_size = 6;" and then sizes bitfields with it
@@ -74,11 +97,8 @@ func parseSDL(src string) (map[string]uint32, error) {
 		// including the "#".
 		locals = map[string]int64{}
 
-		inAggregate bool
-		isUnion     bool // the aggregate is a union of nested structures
-		inMember    bool // inside one of a union's nested structures
-		aggPrefix   string
-		bitPos      uint32
+		// agg is the aggregate being read, or nil outside one.
+		agg *sdlAggregate
 	)
 
 	for _, stmt := range strings.Split(strings.Join(lines, " "), ";") {
@@ -88,7 +108,7 @@ func parseSDL(src string) (map[string]uint32, error) {
 		}
 
 		switch kw := strings.ToLower(toks[0]); {
-		case kw == "module" || kw == "end_module":
+		case kw == "module" || kw == "end_module" || kw == "ifsymbol" || kw == "end_ifsymbol":
 			continue
 
 		case strings.HasPrefix(kw, "#"):
@@ -105,49 +125,33 @@ func parseSDL(src string) (map[string]uint32, error) {
 			locals[kw] = v
 
 		case kw == "aggregate":
-			// aggregate NAME {structure|union} prefix P$
-			if inAggregate {
-				return nil, fmt.Errorf("nested aggregate %q is not supported", stmt)
+			if agg != nil {
+				return nil, fmt.Errorf("nested aggregate statement %q", stmt)
 			}
 
-			kind := ""
-			if len(toks) == 5 {
-				kind = strings.ToLower(toks[2])
+			a, err := newSDLAggregate(toks)
+			if err != nil {
+				return nil, fmt.Errorf("%q: %w", stmt, err)
 			}
 
-			if (kind != "structure" && kind != "union") || !strings.EqualFold(toks[3], "prefix") {
-				return nil, fmt.Errorf("unsupported aggregate statement %q", stmt)
-			}
-
-			inAggregate, isUnion, inMember, aggPrefix, bitPos = true, kind == "union", false, toks[4], 0
+			agg = a
 
 		case kw == "end":
-			switch {
-			case inMember:
-				inMember = false
-			case inAggregate:
-				inAggregate = false
-			default:
+			if agg == nil {
 				return nil, fmt.Errorf("%q outside an aggregate", stmt)
 			}
 
-		case inAggregate && !inMember && kw != "constant" && (isUnion || len(toks) >= 2 && strings.EqualFold(toks[1], "structure")):
-			// MEMBER structure [longword] [unsigned] [fill]
-			if len(toks) < 2 || !strings.EqualFold(toks[1], "structure") {
-				return nil, fmt.Errorf("unsupported union member %q", stmt)
+			done, err := agg.end()
+			if err != nil {
+				return nil, fmt.Errorf("%q: %w", stmt, err)
 			}
 
-			for _, t := range toks[2:] {
-				switch strings.ToLower(t) {
-				case "fill", "longword", "unsigned":
-				default:
-					return nil, fmt.Errorf("unsupported nested structure keyword %q in %q", t, stmt)
+			if done {
+				if err := agg.flush(define); err != nil {
+					return nil, err
 				}
-			}
 
-			inMember = true
-			if isUnion {
-				bitPos = 0
+				agg = nil
 			}
 
 		case kw == "constant":
@@ -156,11 +160,29 @@ func parseSDL(src string) (map[string]uint32, error) {
 			// 57344;"), SDL's defaults apply: the aggregate's prefix and
 			// the tag K, so IO$K_LOOPTEST.
 			defaultPrefix, defaultTag := "", ""
-			if inAggregate {
-				defaultPrefix, defaultTag = aggPrefix, "K"
+			if agg != nil {
+				defaultPrefix, defaultTag = agg.prefix, "K"
 			}
 
-			consts, err := sdlConstant(toks[1:], defaultPrefix, defaultTag, func(name string) (uint32, bool) {
+			args := toks[1:]
+
+			// "equals ." is the current byte offset, which (like every
+			// offset in an aggregate with an origin) is only final once
+			// the aggregate ends.
+			isOffset := false
+
+			for i := 0; i+1 < len(args); i++ {
+				if strings.EqualFold(args[i], "equals") && args[i+1] == "." {
+					if agg == nil {
+						return nil, fmt.Errorf("%q: \".\" outside an aggregate", stmt)
+					}
+
+					args = append(append([]string{}, args[:i+1]...), append([]string{strconv.FormatInt(agg.offset(), 10)}, args[i+2:]...)...)
+					isOffset = true
+				}
+			}
+
+			consts, err := sdlConstant(args, defaultPrefix, defaultTag, func(name string) (uint32, bool) {
 				v, ok := out[name]
 
 				return v, ok
@@ -170,20 +192,20 @@ func parseSDL(src string) (map[string]uint32, error) {
 			}
 
 			for _, c := range consts {
+				if isOffset {
+					agg.offsets = append(agg.offsets, sdlOffset{name: c.name, offset: int64(c.value)})
+
+					continue
+				}
+
 				if err := define(c.name, c.value); err != nil {
 					return nil, err
 				}
 			}
 
-		case inAggregate:
-			width, err := sdlBitfield(toks, aggPrefix, bitPos, locals, define)
-			if err != nil {
+		case agg != nil:
+			if err := agg.member(toks, locals, define); err != nil {
 				return nil, fmt.Errorf("%q: %w", stmt, err)
-			}
-
-			bitPos += width
-			if bitPos > 32 {
-				return nil, fmt.Errorf("aggregate bitfields exceed 32 bits at %q", stmt)
 			}
 
 		default:
@@ -191,13 +213,338 @@ func parseSDL(src string) (map[string]uint32, error) {
 		}
 	}
 
-	if inAggregate {
-		return nil, fmt.Errorf("unterminated aggregate (prefix %s)", aggPrefix)
+	if agg != nil {
+		return nil, fmt.Errorf("unterminated aggregate (prefix %s)", agg.prefix)
 	}
 
 	return out, nil
 }
 
+// sdlFrame is one open aggregate in an SDL record layout: the aggregate
+// statement itself, or a nested structure or union member of it.
+type sdlFrame struct {
+	union bool
+
+	// start is the byte offset where the aggregate starts, and startBits
+	// the bit position (within the bitfield run open at start) where it
+	// starts.
+	start     int64
+	startBits uint32
+
+	// A structure's next free byte offset, and the bits already used in
+	// the bitfield run starting at cur.
+	cur  int64
+	bits uint32
+
+	// A union's furthest member end, as a byte offset, and whether every
+	// member so far held only bitfields; if so, endBits is the most bits
+	// any member used.
+	end      int64
+	endBits  uint32
+	bitsOnly bool
+
+	// size is the byte size a typed aggregate ("union word unsigned")
+	// declares, or 0.
+	size int64
+}
+
+// sdlOffset is a byte-offset symbol waiting for its aggregate to end, so an
+// "origin" can be applied to it.
+type sdlOffset struct {
+	name   string
+	offset int64
+}
+
+// sdlAggregate is the state of one top-level aggregate while its members
+// are read.
+type sdlAggregate struct {
+	prefix string
+
+	// origin is the field every offset is relative to (see parseSDL), and
+	// originOffset its offset once that field is seen.
+	origin       string
+	originOffset int64
+	originSeen   bool
+
+	stack   []*sdlFrame
+	offsets []sdlOffset
+}
+
+// newSDLAggregate starts an aggregate from its statement's tokens:
+// "aggregate NAME {structure|union} prefix P$ [origin FIELD]".
+func newSDLAggregate(toks []string) (*sdlAggregate, error) {
+	if len(toks) != 5 && len(toks) != 7 {
+		return nil, fmt.Errorf("unsupported aggregate statement")
+	}
+
+	kind := strings.ToLower(toks[2])
+	if (kind != "structure" && kind != "union") || !strings.EqualFold(toks[3], "prefix") {
+		return nil, fmt.Errorf("unsupported aggregate statement")
+	}
+
+	a := &sdlAggregate{prefix: toks[4]}
+
+	if len(toks) == 7 {
+		if !strings.EqualFold(toks[5], "origin") {
+			return nil, fmt.Errorf("unsupported aggregate keyword %q", toks[5])
+		}
+
+		a.origin = toks[6]
+	}
+
+	a.stack = []*sdlFrame{{union: kind == "union", bitsOnly: true}}
+
+	return a, nil
+}
+
+func (a *sdlAggregate) top() *sdlFrame { return a.stack[len(a.stack)-1] }
+
+// position returns where the next member of the innermost aggregate
+// starts: its byte offset and the bit position within the bitfield run
+// open there.
+func (a *sdlAggregate) position() (int64, uint32) {
+	f := a.top()
+	if f.union {
+		return f.start, f.startBits
+	}
+
+	return f.cur, f.bits
+}
+
+// offset returns the byte offset of the next byte-aligned member: past
+// any bitfields in the run open at the current position.
+func (a *sdlAggregate) offset() int64 {
+	off, bits := a.position()
+
+	return off + int64(bits+7)/8
+}
+
+// advance records that a member of the innermost aggregate ended at byte
+// offset end, followed by bits more bits.
+func (a *sdlAggregate) advance(end int64, bits uint32, bitsOnly bool) {
+	f := a.top()
+	if !f.union {
+		f.cur, f.bits = end, bits
+
+		return
+	}
+
+	if !bitsOnly {
+		f.bitsOnly = false
+	}
+
+	if full := end + int64(bits+7)/8; full > f.end {
+		f.end = full
+	}
+
+	if bits > f.endBits {
+		f.endBits = bits
+	}
+}
+
+// member reads one member statement of the aggregate.
+func (a *sdlAggregate) member(toks []string, locals map[string]int64, define func(string, uint32) error) error {
+	if len(toks) < 2 {
+		return fmt.Errorf("unsupported aggregate member")
+	}
+
+	name, kind := toks[0], strings.ToLower(toks[1])
+
+	switch kind {
+	case "bitfield":
+		off, pos := a.position()
+
+		width, err := sdlBitfield(toks, a.prefix, pos, locals, define)
+		if err != nil {
+			return err
+		}
+
+		if pos+width > 32 {
+			return fmt.Errorf("bitfields exceed 32 bits")
+		}
+
+		a.advance(off, pos+width, true)
+
+		return nil
+
+	case "structure", "union":
+		return a.push(name, kind == "union", toks[2:])
+
+	case "byte", "word", "longword", "quadword", "character":
+	default:
+		return fmt.Errorf("unsupported aggregate member type %q", toks[1])
+	}
+
+	size := sdlTypeSizes[kind]
+	count := int64(1)
+	prefix, tag := a.prefix, sdlTypeTags[kind]
+
+	var fill bool
+
+	for i := 2; i < len(toks); i++ {
+		switch kw := strings.ToLower(toks[i]); kw {
+		case "signed", "unsigned":
+		case "fill":
+			fill = true
+		case "length", "dimension", "prefix", "tag":
+			if i+1 >= len(toks) {
+				return fmt.Errorf("%q without a value", toks[i])
+			}
+
+			arg := toks[i+1]
+			i++
+
+			switch kw {
+			case "length", "dimension":
+				n, err := strconv.ParseInt(arg, 10, 64)
+				if err != nil || n < 0 || kw == "length" && kind != "character" {
+					return fmt.Errorf("bad %s %q", kw, arg)
+				}
+
+				if kw == "length" {
+					size = n
+				} else {
+					count = n
+				}
+			case "prefix":
+				prefix = arg
+			default:
+				tag = arg
+			}
+		default:
+			return fmt.Errorf("unsupported field keyword %q", toks[i])
+		}
+	}
+
+	off := a.offset()
+
+	if strings.EqualFold(name, a.origin) {
+		a.originOffset, a.originSeen = off, true
+	}
+
+	if !fill {
+		a.offsets = append(a.offsets, sdlOffset{name: prefix + tag + "_" + name, offset: off})
+
+		if kind == "character" && size > 0 {
+			if err := define(prefix+"S_"+name, uint32(size*count)); err != nil {
+				return err
+			}
+		}
+	}
+
+	a.advance(off+size*count, 0, false)
+
+	return nil
+}
+
+// push opens a nested structure or union member: "MEMBER {structure|union}
+// [TYPE] [signed|unsigned] [fill]", whose keywords after the kind are
+// rest.
+func (a *sdlAggregate) push(name string, union bool, rest []string) error {
+	var (
+		size int64
+		tag  = "R"
+		fill bool
+	)
+
+	for _, t := range rest {
+		switch kw := strings.ToLower(t); kw {
+		case "signed", "unsigned":
+		case "fill":
+			fill = true
+		default:
+			n, ok := sdlTypeSizes[kw]
+			if !ok || kw == "character" {
+				return fmt.Errorf("unsupported nested aggregate keyword %q", t)
+			}
+
+			size, tag = n, sdlTypeTags[kw]
+		}
+	}
+
+	off, bits := a.position()
+
+	if !fill {
+		a.offsets = append(a.offsets, sdlOffset{name: a.prefix + tag + "_" + name, offset: off + int64(bits+7)/8})
+	}
+
+	a.stack = append(a.stack, &sdlFrame{
+		union: union, start: off, startBits: bits, cur: off, bits: bits,
+		end: off, bitsOnly: true, size: size,
+	})
+
+	return nil
+}
+
+// end closes the innermost open aggregate, reporting whether that was the
+// top-level one.
+func (a *sdlAggregate) end() (bool, error) {
+	f := a.top()
+	a.stack = a.stack[:len(a.stack)-1]
+
+	if len(a.stack) == 0 {
+		return true, nil
+	}
+
+	// Where the closed aggregate ends: a typed one is exactly its type's
+	// size; a union at its furthest member; a structure at its location
+	// counter. One holding only bitfields leaves its bit run open for the
+	// parent to continue.
+	var (
+		end      int64
+		bits     uint32
+		bitsOnly bool
+	)
+
+	switch {
+	case f.size > 0:
+		end = f.start + int64(f.startBits+7)/8 + f.size
+	case f.union && f.bitsOnly:
+		end, bits, bitsOnly = f.start, f.endBits, true
+	case f.union:
+		end = f.end
+	case f.cur == f.start:
+		end, bits, bitsOnly = f.start, f.bits, true
+	default:
+		end = f.cur + int64(f.bits+7)/8
+	}
+
+	a.advance(end, bits, bitsOnly)
+
+	return false, nil
+}
+
+// flush defines the aggregate's byte-offset symbols, relative to its
+// origin field if it has one.
+func (a *sdlAggregate) flush(define func(string, uint32) error) error {
+	base := int64(0)
+
+	if a.origin != "" {
+		if !a.originSeen {
+			return fmt.Errorf("origin field %s is not in aggregate (prefix %s)", a.origin, a.prefix)
+		}
+
+		base = a.originOffset
+	}
+
+	for _, o := range a.offsets {
+		if err := define(o.name, uint32(o.offset-base)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// sdlTypeSizes and sdlTypeTags give each SDL field type's size in bytes
+// (a character field's default length) and the letter SDL puts in its
+// field names (GPS$B_ALIGN, GPS$W_FLAGS, GPS$L_ALLOC, GPS$T_NAME).
+var (
+	sdlTypeSizes = map[string]int64{"byte": 1, "word": 2, "longword": 4, "quadword": 8, "character": 1}
+	sdlTypeTags  = map[string]string{"byte": "B", "word": "W", "longword": "L", "quadword": "Q", "character": "T"}
+)
+
+// sdlTokens splits one SDL statement into tokens, treating "(", ")" and ","
 // sdlTokens splits one SDL statement into tokens, treating "(", ")" and ","
 // as tokens of their own and stripping the quotes from a quoted name.
 func sdlTokens(stmt string) []string {

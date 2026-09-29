@@ -186,19 +186,109 @@ end_module $PDEF;
 	}
 }
 
+// TestParseSDL_recordLayout covers the record-layout forms objfmt.sdl
+// uses (docs/PHASE-27.md): typed fields and their offsets, a flags word
+// overlaid by its bits, "equals .", character lengths and a fill
+// dimension, a tag override, ifsymbol blocks, and an origin field.
+func TestParseSDL_recordLayout(t *testing.T) {
+	src := `
+module $RDEF;
+aggregate RDEF structure prefix R$ origin FILL_1;
+    TYP_OVERLAY union fill;
+        TYP byte unsigned;
+        TYP_FIELDS structure fill;
+ifsymbol not_h_files;
+            START character length 0 tag T;
+end_ifsymbol;
+            FILL_1 byte fill prefix RDEF tag $$;
+        end TYP_FIELDS;
+    end TYP_OVERLAY;
+    "ALIGN" byte unsigned;
+    FLAGS_OVERLAY union fill;
+        FLAGS word unsigned;
+        FLAGS_BITS structure fill;
+            PIC bitfield mask;
+            WID bitfield length 3;
+            REL bitfield mask;
+        end FLAGS_BITS;
+    end FLAGS_OVERLAY;
+    ALLOC longword unsigned;
+    PAD byte dimension 2 fill;
+    constant NAME equals . prefix R$ tag K;
+    NAME character length 31;
+    WORDS union word unsigned;
+        A bitfield mask;
+    end WORDS;
+    Q quadword tag X;
+end RDEF;
+end_module $RDEF;
+`
+
+	got, err := parseSDL(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// With "origin FILL_1" (at offset 0) the offsets are unchanged.
+	want := map[string]uint32{
+		"R$B_TYP": 0, "R$T_START": 0, "R$B_ALIGN": 1, "R$W_FLAGS": 2,
+		"R$V_PIC": 0, "R$M_PIC": 1, "R$V_WID": 1, "R$S_WID": 3,
+		"R$V_REL": 4, "R$M_REL": 0x10,
+		"R$L_ALLOC": 4, "R$K_NAME": 10, "R$T_NAME": 10, "R$S_NAME": 31,
+		"R$W_WORDS": 41, "R$V_A": 0, "R$M_A": 1, "R$X_Q": 43,
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("parseSDL =\n%v\nwant\n%v", got, want)
+	}
+}
+
+// TestParseSDL_origin checks that "origin FIELD" makes every byte offset
+// (fields and "equals ." constants alike) relative to FIELD, even one
+// defined after the field, while bit positions are unaffected.
+func TestParseSDL_origin(t *testing.T) {
+	src := `
+aggregate O structure prefix O$ origin BASE;
+    HDR word unsigned;
+    BASE byte unsigned;
+    constant AT equals . prefix O$ tag K;
+    VAL longword unsigned;
+    BITS structure fill;
+        B bitfield mask;
+    end BITS;
+end O;
+`
+
+	got, err := parseSDL(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := map[string]uint32{
+		"O$W_HDR": 0xFFFFFFFE, "O$B_BASE": 0, "O$K_AT": 1, "O$L_VAL": 1,
+		"O$V_B": 0, "O$M_B": 1,
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("parseSDL = %v, want %v", got, want)
+	}
+}
+
 func TestParseSDL_rejectsUnsupported(t *testing.T) {
 	cases := map[string]string{
 		"unknown statement":    "item FOO longword;",
-		"non-bitfield member":  "aggregate X structure prefix X$; FOO longword; end X;",
+		"unknown field type":   "aggregate X structure prefix X$; FOO address; end X;",
+		"length on a word":     "aggregate X structure prefix X$; FOO word length 2; end X;",
+		"character nested":     "aggregate X structure prefix X$; M structure character; end M; end X;",
+		"missing origin field": "aggregate X structure prefix X$ origin NOPE; A byte; end X;",
+		"dot outside":          "constant FOO equals . prefix X$ tag K;",
 		"missing tag":          "constant FOO equals 1 prefix X$;",
 		"unknown keyword":      "constant FOO equals 1 prefix X$ tag C counter #n;",
 		"unterminated":         "aggregate X structure prefix X$; A bitfield mask;",
 		"over 32 bits":         "aggregate X structure prefix X$; A bitfield length 32 fill; B bitfield mask; end X;",
 		"conflicting value":    "constant FOO equals 1 prefix X$ tag C; constant FOO equals 2 prefix X$ tag C;",
-		"bitfield in union":    "aggregate X union prefix X$; A bitfield mask; end X;",
 		"unterminated member":  "aggregate X union prefix X$; M structure fill; A bitfield mask; end M;",
 		"undefined shift base": "constant FOO equals X$C_NONE@8 prefix X$ tag C;",
-		"nested type keyword":  "aggregate X structure prefix X$; M structure quadword; end M; end X;",
 		"undefined local":      "aggregate X structure prefix X$; A bitfield length #n; end X;",
 		"bad local statement":  "#n == 6;",
 		"length expression":    "#n = 6; aggregate X structure prefix X$; A bitfield length 2*#n; end X;",

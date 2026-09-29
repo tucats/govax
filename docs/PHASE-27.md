@@ -26,7 +26,7 @@ becomes the record of the implementation: each subtask adds a
 [progress log](#progress-log) entry, and the open questions get their answers
 recorded here.
 
-**Status: planning complete. Subtasks 1 and 2 are ready to start.**
+**Status: subtask 1 done; subtask 2 next.**
 
 ## Why this phase looks different
 
@@ -500,7 +500,7 @@ them under `testdata/mar/vax/`). Each step adds one feature:
 
 ## Subtasks
 
-1. **Object-language constants.** Teach `internal/vmsdef/gen` the VAX
+1. **Done.** **Object-language constants.** Teach `internal/vmsdef/gen` the VAX
    object modules in `objfmt.sdl` and generate them. Tests check the
    generated values against Chapter 7's tables.
 2. **`internal/obj`: record model, writer, reader, dumper, and checker**,
@@ -657,3 +657,32 @@ above record the answers:
   govax reads its disk container read-only while simh is paused.
 - (These edits were written on 2026-09-29, but a sandbox failure in the
   editor held them up until after a restart.)
+
+### 2026-09-30 — Subtask 1: object-language constants
+
+- Copied `objfmt.sdl` from the VMS 7.3 source archive to
+  `reference/vms/objfmt.sdl`. `internal/vmsdef/gen` now takes it as
+  `-objfmt`, parses only the VAX modules (everything before
+  `module $EOBJRECDEF;`, where the Alpha definitions start), and emits
+  `vmsdef.OBJConstants`: 635 names covering record types, header and GSD
+  subrecord types, TIR commands, psect and symbol flags, and every record's
+  field offsets.
+- The SDL parser (`gen/sdl.go`) only understood bitfield aggregates, so it
+  now models real record layouts: a stack of nested structures and unions
+  tracking byte offsets and bit runs; byte, word, longword, quadword, and
+  character fields with `length`, `dimension`, `prefix`, and `tag`; typed
+  aggregates such as `FLAGS union word unsigned`; `constant X equals .`;
+  `origin FIELD`; and `ifsymbol` blocks. Output for every existing module is
+  byte-identical, checked by regenerating and diffing
+  `constants_generated.go` before adding the new map.
+- Three old "rejects unsupported" test cases (a byte field, a typed nested
+  aggregate, a bitfield directly in a union) are now supported forms and
+  were replaced by positive layout and `origin` tests, plus new rejections
+  (an unknown field type, `length` on a word, a missing origin field, `.`
+  outside an aggregate).
+- `TestOBJConstants_values` checks the generated values against chapter 7's
+  tables and record diagrams.
+- Faithful oddity, noted in the map's doc comment: `$OBJRECDEF`'s SDA-only
+  `SDADEFS` aggregate puts its flag bitfields directly in a union, so SDL
+  places every `OBJ$V_PSC_*`/`OBJ$V_SYM_*` at bit 0. Use the `GPS$` and
+  `GSY$` flags, which are laid out correctly.

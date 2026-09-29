@@ -315,3 +315,78 @@ func TestATRConstants_values(t *testing.T) {
 		}
 	}
 }
+
+// TestOBJConstants_values pins the VAX object language values against the
+// VMS 5.0 Linker Utility Manual's chapter 7 (docs/PHASE-27.md): its tables
+// of record, header, and GSD subrecord types, its TIR command numbers, and
+// the field layouts of its record diagrams.
+func TestOBJConstants_values(t *testing.T) {
+	want := map[string]uint32{
+		// Record types (table 7-1).
+		"OBJ$C_HDR": 0, "OBJ$C_GSD": 1, "OBJ$C_TIR": 2, "OBJ$C_EOM": 3,
+		"OBJ$C_DBG": 4, "OBJ$C_TBT": 5, "OBJ$C_LNK": 6, "OBJ$C_EOMW": 7,
+
+		// Limits.
+		"OBJ$C_MAXRECSIZ": 2048, "OBJ$C_SYMSIZ": 31, "OBJ$C_STRLVL": 0,
+		"OBJ$C_PSCALILIM": 9,
+
+		// Header record types (table 7-2).
+		"MHD$C_MHD": 0, "MHD$C_LNM": 1, "MHD$C_SRC": 2, "MHD$C_TTL": 3,
+		"MHD$C_CPR": 4, "MHD$C_MTC": 5, "MHD$C_GTX": 6,
+
+		// GSD subrecord types (table 7-3).
+		"GSD$C_PSC": 0, "GSD$C_SYM": 1, "GSD$C_EPM": 2, "GSD$C_PRO": 3,
+		"GSD$C_SYMW": 4, "GSD$C_EPMW": 5, "GSD$C_PROW": 6, "GSD$C_IDC": 7,
+		"GSD$C_ENV": 8, "GSD$C_LSY": 9, "GSD$C_LEPM": 10, "GSD$C_LPRO": 11,
+		"GSD$C_SPSC": 12,
+
+		// TIR commands (section 7.4).
+		"TIR$C_STA_GBL": 0, "TIR$C_STA_LW": 3, "TIR$C_STA_PB": 4,
+		"TIR$C_STA_PW": 5, "TIR$C_STA_PL": 6, "TIR$C_STA_EPM": 12,
+		"TIR$C_STO_B": 37, "TIR$C_STO_W": 38, "TIR$C_STO_L": 22,
+		"TIR$C_STO_BD": 23, "TIR$C_STO_WD": 24, "TIR$C_STO_LD": 25,
+		"TIR$C_STO_PIDR": 27, "TIR$C_STO_PICR": 28, "TIR$C_STO_RB": 39,
+		"TIR$C_OPR_ADD": 51, "TIR$C_OPR_SUB": 52, "TIR$C_OPR_NEG": 58,
+		"TIR$C_CTL_SETRB": 80, "TIR$C_CTL_AUGRB": 81,
+
+		// Main module header record (section 7.2.1).
+		"MHD$B_RECTYP": 0, "MHD$B_HDRTYP": 1, "MHD$B_STRLVL": 2,
+		"MHD$W_RECSIZ": 3, "MHD$B_NAMLNG": 5, "MHD$T_NAME": 6,
+
+		// Psect definition subrecord (section 7.3.1) and its flags.
+		"GPS$B_GSDTYP": 0, "GPS$B_ALIGN": 1, "GPS$W_FLAGS": 2,
+		"GPS$L_ALLOC": 4, "GPS$B_NAMLNG": 8, "GPS$T_NAME": 9,
+		"GPS$M_PIC": 0x1, "GPS$M_LIB": 0x2, "GPS$M_OVR": 0x4,
+		"GPS$M_REL": 0x8, "GPS$M_GBL": 0x10, "GPS$M_SHR": 0x20,
+		"GPS$M_EXE": 0x40, "GPS$M_RD": 0x80, "GPS$M_WRT": 0x100,
+		"GPS$M_VEC": 0x200,
+
+		// Symbol definition and reference subrecords (section 7.3.2).
+		"GSY$M_WEAK": 0x1, "GSY$M_DEF": 0x2, "GSY$M_UNI": 0x4, "GSY$M_REL": 0x8,
+		"SDF$B_DATYP": 1, "SDF$W_FLAGS": 2, "SDF$B_PSINDX": 4,
+		"SDF$L_VALUE": 5, "SDF$B_NAMLNG": 9, "SDF$T_NAME": 10,
+		"SRF$W_FLAGS": 2, "SRF$B_NAMLNG": 4, "SRF$T_NAME": 5,
+
+		// Entry point subrecord (section 7.3.3).
+		"EPM$B_PSINDX": 4, "EPM$L_ADDRS": 5, "EPM$W_MASK": 9,
+		"EPM$B_NAMLNG": 11, "EPM$T_NAME": 12,
+
+		// End of module record (section 7.5).
+		"EOM$B_COMCOD": 1, "EOM$B_PSINDX": 2, "EOM$L_TFRADR": 3,
+		"EOM$C_SUCCESS": 0, "EOM$C_WARNING": 1, "EOM$C_ERROR": 2,
+		"EOM$C_ABORT": 3, "EOM$C_EOMMIN": 2, "EOM$C_EOMMX1": 7,
+	}
+
+	for name, v := range want {
+		if got, ok := OBJConstants[name]; !ok || got != v {
+			t.Errorf("OBJConstants[%s] = %#x, %v; want %#x", name, got, ok, v)
+		}
+	}
+
+	// Only the VAX modules are generated, not objfmt.sdl's Alpha ones.
+	for name := range OBJConstants {
+		if strings.HasPrefix(name, "E") && !strings.HasPrefix(name, "EOM") && !strings.HasPrefix(name, "ENV$") && !strings.HasPrefix(name, "EPM") {
+			t.Errorf("OBJConstants has %s, an Alpha object language name", name)
+		}
+	}
+}
