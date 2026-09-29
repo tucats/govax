@@ -26,7 +26,7 @@ becomes the record of the implementation: each subtask adds a
 [progress log](#progress-log) entry, and the open questions get their answers
 recorded here.
 
-**Status: subtasks 1-3 done (all nine fixtures assembled on the VAX). Subtask 4 is next. The `ods2` `Initialize` rewrite is still to do.**
+**Status: subtasks 1-3 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 4 is next, when the user is ready.**
 
 ## Why this phase looks different
 
@@ -969,3 +969,13 @@ above record the answers:
 - Built `testdata/disks/ods2-init-rd51.dsk` with govax's own
   `INITIALIZE/CONTAINER` and two files copied on, for the user to mount on
   VMS and check with `ANALYZE/DISK_STRUCTURE`.
+- **Confirmed on VMS** (2026-09-30). simh recognized `ods2-init-rd51.dsk`
+  as an ODS-2 volume (label ODS2INIT, 21600 sectors), and VMS 7.3 mounted
+  it. `ANALYZE/DISK_STRUCTURE` reported nothing but the missing
+  `QUOTA.SYS`, and `DIRECTORY` listed the ten reserved files and the two
+  files govax copied. VMS then assembled, linked, and ran `HELLO` on it
+  ("Hello, world!"). So an `ods2`-initialized volume, and files `ods2`
+  wrote to it, are fully usable by VMS. The `ods2` interop work in this
+  phase is complete.
+- Paused before subtask 4 (the assembler refactor) at the user's request,
+  so they can push.
