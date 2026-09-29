@@ -754,3 +754,50 @@ above record the answers:
     VMS shows "[000000]".
 - Waiting on the user to attach the container to simh, run `@ASSEMBLE`,
   and pause simh so govax can copy the results into `testdata/mar/vax/`.
+
+### 2026-09-30 — `ods2` interop bugs found while exchanging fixtures
+
+- VMS 7.3 refused to mount the govax-built exchange container
+  (`%MOUNT-F-NOHOMEBLK`). Phase 22's interop tests only ever had govax
+  read disks VMS made; this was the first time VMS read a volume `ods2`
+  initialized. MOUNT's home block test (`CHECK_HOMEBLK2`, in
+  `vmssrc_archive/v73/mount96/lis/chkhm2.lis`) requires `HOMELBN` to equal
+  the LBN the block was read from, and these to be nonzero: `ALTIDXLBN`,
+  `CLUSTER`, `HOMEVBN`, `ALHOMEVBN`, `ALTIDXVBN`, `IBMAPVBN`, `IBMAPLBN`,
+  `MAXFILES`, `IBMAPSIZE`, and `RESFILES`. It also requires both checksums
+  to be correct.
+- `ods2`'s `volume.Initialize` fails five of those checks: `ALTIDXLBN`,
+  `HOMEVBN`, `ALHOMEVBN`, and `ALTIDXVBN` are 0, and
+  `ondisk.EncodeHomeBlock` never computes `CHECKSUM1`. Behind the zero VBNs
+  is a nonstandard `INDEXF.SYS` layout. VMS `INIT`'s `INIT_INDEX`
+  (`init/lis/inindx.lis`) lays it out as a boot block cluster, two home
+  block clusters (every block a home block copy, with the secondary home
+  block at a geometry-derived LBN), a backup index file header cluster,
+  then the index bitmap (`(MAXFILES+4095)/4096` blocks), then the headers.
+  That gives `HOMEVBN` 2, `ALHOMEVBN` 3c (for the usual placement),
+  `ALTIDXVBN` 3c+1, and `IBMAPVBN` 4c+1. VMS 7.3 also has 10 reserved
+  files (file 10 is `SECURITY.SYS`); `ods2` makes 9. Rewriting `Initialize`
+  to follow `INIT_INDEX` is its own task, tracked below as `ods2` work.
+- Workaround, and a reference: the user ran `INITIALIZE DUA1: MARXCHG` on
+  simh with RQ1 set to an RD51 (21,600 blocks). An RD54-sized device
+  didn't match a small container, and simh couldn't autosize it. The
+  pristine volume is kept as `testdata/disks/vms-init-rd51.dsk`
+  (gitignored) as the byte-level reference for the `Initialize` rewrite.
+  simh 4 appends a 512-byte metadata footer, which makes the file 21,601
+  blocks.
+- Copying the fixtures onto that volume found a second `ods2` bug: VMS
+  `INIT` preallocates only 16 header slots in `INDEXF.SYS`, and `ods2`
+  never extended the index file, so the 7th new file failed ("virtual block
+  23 is beyond the end of the file"). Fixed in `ods2` (`39bfb8e`):
+  `CreateHeader` and new extension segments grow `INDEXF.SYS` (by at least
+  16 blocks, zeroed, with its end of file and high-water mark moved past
+  them) when their slot lies beyond its mapped blocks. There's also a new
+  `InitializeOptions.Headers` (`INITIALIZE/HEADERS`). The exchange volume
+  now holds all nine fixtures and `ASSEMBLE.COM`, and its `INDEXF.SYS` grew
+  from 22 to 38 blocks.
+- **`ods2` work still to do** (in scope for this phase, per the user):
+  rewrite `volume.Initialize` to match VMS `INIT_INDEX`. That means the
+  home block fields and `CHECKSUM1`, home block copies, secondary home
+  block and backup index header, the `INDEXF.SYS` layout and preallocation,
+  and the tenth reserved file. Check it structure by structure against
+  `vms-init-rd51.dsk`, and confirm VMS mounts the result.
