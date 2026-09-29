@@ -29,7 +29,23 @@ Entries get resolved (fixed or deliberately kept, with rationale) during Phase 1
 
 ## Phase 11 (assembler) findings
 
-_None open._
+### [Phase 11, found in Phase 26] A forward reference can't take an operator in an instruction operand
+
+- **Where**: `internal/asm/value.go`'s `exprValue` (the C source's
+  `asm_value()`).
+- **What**: an instruction operand whose expression combines a symbol
+  not yet defined with an operator, such as `MOVL #1, @#FAT1+8` before
+  `FAT1:`, is `VAX-E-FWDOPERATOR`. A fixup records only the symbol, so it
+  can't be completed with the offset. MACRO-32 has no such restriction:
+  its object records carry the whole expression for the linker. (`.LONG
+  a-b` with forward references was fixed with the other assembler gaps;
+  see "Resolved findings".)
+- **Workaround**: address the data through a register (`MOVAB FAT1, R2`,
+  then `8(R2)`), as `testdata/asm/disk_attributes.asm` does
+  (docs/PHASE-26.md subtask 42), or define the data before the code.
+- **Status**: open. The fix is a fixup carrying an addend (the offset
+  the operators applied to the symbol); left for a future assembler
+  round.
 
 ## Phase 22 (RMS / `ods2`) findings
 

@@ -37,7 +37,8 @@ import (
 //	p1  the FIB's descriptor          p2  the file name's descriptor
 //	p3  a word for the result name's length
 //	p4  the result name's descriptor ("NAME.TYP;VER")
-//	p5  an attribute list (not supported: ignored)
+//	p5  an attribute list: read by IO$_ACCESS, written by the others
+//	    (diskattr.go)
 //
 // Errors in the request itself (a buffer or FIB the program can't
 // access) are $QIO's R0 (SS$_ACCVIO); the rest are the I/O status block's.
@@ -204,8 +205,9 @@ func diskDevice(req *ioRequest) string {
 // the file ID stored in the FIB, and the full name returned through
 // p3/p4. With IO$M_ACCESS the file (by the FIB's file ID, looked up or
 // given) is then opened on the channel, for writing if FIB$L_ACCTL has
-// FIB$M_WRITE. Creating or deleting (IO$M_CREATE, IO$M_DELETE) isn't
-// supported (SS$_ILLIOFUNC).
+// FIB$M_WRITE. Last, the attributes p5's list asks for are read from the
+// file (accessed or not) into the program's buffers. Creating or deleting
+// (IO$M_CREATE, IO$M_DELETE) isn't supported (SS$_ILLIOFUNC).
 func diskAccess(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	if req.modifiers&(ioModCreate|ioModDelete) != 0 {
 		return ioStatus{}, ssIllIoFunc
@@ -218,6 +220,15 @@ func diskAccess(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	f, ok := env.readFIB(req.p[0])
 	if !ok {
 		return ioStatus{}, ssAccVio
+	}
+
+	attrs, st := env.readAttributeList(req.p[4], false)
+
+	switch st {
+	case ssAccVio:
+		return ioStatus{}, ssAccVio
+	case ssBadAttrib:
+		return ioStatus{status: ssBadAttrib}, 0
 	}
 
 	c := req.channel
@@ -268,21 +279,76 @@ func diskAccess(env *Environment, req *ioRequest) (ioStatus, uint32) {
 		c.acp = a
 	}
 
+	if len(attrs) > 0 {
+		var (
+			values rms.ACPAttributes
+			err    error
+		)
+
+		if open {
+			values = c.acp.Attributes()
+		} else {
+			values, err = env.Mounts.ACPReadAttributes(diskDevice(req), fid)
+		}
+
+		if err != nil {
+			return ioStatus{status: acpStatus(err)}, 0
+		}
+
+		env.storeAttributes(attrs, &values)
+	}
+
 	return ioStatus{status: ssNormal}, 0
 }
 
-// diskDeaccess is IO$_DEACCESS: the channel's file is closed.
+// writeAttributeList decodes p5's attribute list for writing, returning
+// the change it makes (nil for none) and, if it can't be done, the
+// request's result: SS$_ACCVIO in R0 or SS$_BADATTRIB in the IOSB.
+func (env *Environment) writeAttributeList(req *ioRequest) (func(*rms.ACPAttributes), *ioResult) {
+	attrs, st := env.readAttributeList(req.p[4], true)
+
+	switch st {
+	case ssAccVio:
+		return nil, &ioResult{r0: ssAccVio}
+	case ssBadAttrib:
+		return nil, &ioResult{iosb: ioStatus{status: ssBadAttrib}}
+	}
+
+	change, ok := env.attributeChange(attrs)
+	if !ok {
+		return nil, &ioResult{r0: ssAccVio}
+	}
+
+	return change, nil
+}
+
+// ioResult is a driver function's two results, for helpers that can end a
+// request early.
+type ioResult struct {
+	iosb ioStatus
+	r0   uint32
+}
+
+// diskDeaccess is IO$_DEACCESS: the channel's file is closed, after
+// which the attributes in p5's list are written to it (how RMS records
+// the end of file). Writing attributes needs write access (SS$_NOPRIV);
+// the file is closed even then.
 func diskDeaccess(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	c := req.channel
 	if c.acp == nil {
 		return ioStatus{status: ssFilNotAcc}, 0
 	}
 
-	err := c.acp.Deaccess()
+	change, fail := env.writeAttributeList(req)
+	if fail != nil {
+		return fail.iosb, fail.r0
+	}
+
+	err := c.acp.DeaccessWithAttributes(change)
 	c.acp = nil
 
 	if err != nil {
-		return ioStatus{status: ssDrvErr}, 0
+		return ioStatus{status: acpStatus(err)}, 0
 	}
 
 	return ioStatus{status: ssNormal}, 0
@@ -291,30 +357,67 @@ func diskDeaccess(env *Environment, req *ioRequest) (ioStatus, uint32) {
 // diskModify is IO$_MODIFY. With FIB$M_EXTEND in the FIB's FIB$W_EXCTL,
 // it adds FIB$L_EXSZ blocks to the channel's file (accessed for writing),
 // storing the number added in FIB$L_EXSZ and the first new virtual block
-// in FIB$L_EXVBN. Anything else it would modify (attributes, truncation)
+// in FIB$L_EXVBN. Then the attributes in p5's list are written: to the
+// channel's file if one is accessed (for writing: SS$_NOPRIV otherwise),
+// or else to the file the FIB's file ID names. The FIB (p1) may be left
+// out when a file is accessed. Anything else it could modify (truncating)
 // isn't supported and does nothing.
 func diskModify(env *Environment, req *ioRequest) (ioStatus, uint32) {
-	f, ok := env.readFIB(req.p[0])
-	if !ok {
-		return ioStatus{}, ssAccVio
-	}
-
 	c := req.channel
-	if c.acp == nil {
-		return ioStatus{status: ssFilNotAcc}, 0
+
+	var f *fib
+
+	if req.p[0] != 0 || c.acp == nil {
+		var ok bool
+		if f, ok = env.readFIB(req.p[0]); !ok {
+			return ioStatus{}, ssAccVio
+		}
 	}
 
-	if f.exctl&fibMExtend == 0 {
+	change, fail := env.writeAttributeList(req)
+	if fail != nil {
+		return fail.iosb, fail.r0
+	}
+
+	if f != nil && f.exctl&fibMExtend != 0 {
+		if c.acp == nil {
+			return ioStatus{status: ssFilNotAcc}, 0
+		}
+
+		first, err := c.acp.Extend(f.exsz)
+		if err != nil {
+			return ioStatus{status: acpStatus(err)}, 0
+		}
+
+		env.storeFIBLong(f, fibEXSZ, f.exsz)
+		env.storeFIBLong(f, fibEXVBN, first)
+	}
+
+	if change == nil {
+		// No attributes: IO$_MODIFY is about the accessed file.
+		if c.acp == nil {
+			return ioStatus{status: ssFilNotAcc}, 0
+		}
+
 		return ioStatus{status: ssNormal}, 0
 	}
 
-	first, err := c.acp.Extend(f.exsz)
+	var err error
+
+	switch {
+	case c.acp != nil:
+		err = c.acp.WriteAttributes(change)
+	case env.Mounts == nil:
+		return ioStatus{status: ssDevNotMnt}, 0
+	case f.fid == (rms.FileID{}):
+		return ioStatus{status: ssBadParam}, 0
+	default:
+		err = env.Mounts.ACPWriteAttributes(diskDevice(req), f.fid, change)
+	}
+
 	if err != nil {
 		return ioStatus{status: acpStatus(err)}, 0
 	}
-
-	env.storeFIBLong(f, fibEXSZ, f.exsz)
-	env.storeFIBLong(f, fibEXVBN, first)
 
 	return ioStatus{status: ssNormal}, 0
 }

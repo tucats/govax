@@ -138,13 +138,14 @@ func main() {
 	prvdef := flag.String("prvdef", "", "path to prvdef.txt")
 	brkdef := flag.String("brkdef", "", "path to brkdef.sdl")
 	fibdef := flag.String("fibdef", "", "path to fibdef.txt")
+	atrdef := flag.String("atrdef", "", "path to atrdef.txt")
 	sysmsg := flag.String("sysmsg", "", "path to sysmsg.txt (a message-file listing)")
 	out := flag.String("out", "", "path to write the generated Go source")
 	msgOut := flag.String("msgout", "", "path to write the generated message texts")
 	flag.Parse()
 
-	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *dvidef == "" || *ttdef == "" || *prtdef == "" || *prvdef == "" || *brkdef == "" || *fibdef == "" || *sysmsg == "" || *out == "" || *msgOut == "" {
-		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, -dvidef, -ttdef, -prtdef, -prvdef, -brkdef, -fibdef, -sysmsg, -out, and -msgout are all required")
+	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *dvidef == "" || *ttdef == "" || *prtdef == "" || *prvdef == "" || *brkdef == "" || *fibdef == "" || *atrdef == "" || *sysmsg == "" || *out == "" || *msgOut == "" {
+		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, -dvidef, -ttdef, -prtdef, -prvdef, -brkdef, -fibdef, -atrdef, -sysmsg, -out, and -msgout are all required")
 	}
 
 	constants := map[string]uint32{}
@@ -219,6 +220,11 @@ func main() {
 	fib, err := parseBlissLiterals(readSource(*fibdef), "FIB$")
 	if err != nil {
 		log.Fatalf("gen: %s: %v", *fibdef, err)
+	}
+
+	atr, err := parseBlissLiterals(readSource(*atrdef), "ATR$")
+	if err != nil {
+		log.Fatalf("gen: %s: %v", *atrdef, err)
 	}
 
 	maps := []constantMap{
@@ -352,16 +358,25 @@ func main() {
 			},
 			entries: fib,
 		},
+		{
+			name: "ATRConstants",
+			doc: []string{
+				"ATRConstants is every real $ATRDEF symbol: the disk ACP's attribute",
+				"codes (ATR$C_RECATTR, ATR$C_UCHAR, ...), their sizes (ATR$S_), and the",
+				"layout of an attribute list's entries (ATR$W_SIZE, ATR$W_TYPE, ATR$L_ADDR).",
+			},
+			entries: atr,
+		},
 	}
 
-	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef, *statedef, *syidef, *dvidef, *ttdef, *prtdef, *prvdef, *brkdef, *fibdef}
+	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef, *statedef, *syidef, *dvidef, *ttdef, *prtdef, *prvdef, *brkdef, *fibdef, *atrdef}
 	code := generate(maps, sources)
 
 	if err := os.WriteFile(*out, code, 0o644); err != nil {
 		log.Fatalf("gen: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), len(syi), len(dvi), len(tt), len(prt), len(prv), len(brk), len(fib), *out)
+	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), len(syi), len(dvi), len(tt), len(prt), len(prv), len(brk), len(fib), len(atr), *out)
 
 	// The message texts go in a file of their own (see msg.go).
 	msgs, facilities, err := parseMessages(readSource(*sysmsg))

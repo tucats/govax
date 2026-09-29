@@ -2307,6 +2307,48 @@ VMS 7.3 listings' symbol tables (the archive has no `$FIBDEF` source).
 The device must be mounted with the console's MOUNT; writing needs a
 writable mount (`SS$_WRITLCK` otherwise).
 
+### Disk `$QIO`: creating and deleting files, attributes, logical blocks
+
+The rest of the disk ACP's interface (subtasks 42-45), on the same
+design: the file work is ods2's, reached through `internal/rms/acp.go`;
+`internal/rtl/diskdriver.go` decodes the `$QIO` and maps the errors.
+
+| Function | Arguments | Effect |
+| --- | --- | --- |
+| `IO$_CREATE` | p1 FIB, p2 name, p3/p4 result name, p5 attributes | With `IO$M_CREATE`, creates a file header (the new file ID in the FIB), allocating `FIB$L_EXSZ` blocks if `FIB$M_EXTEND` is in `FIB$W_EXCTL`; with a directory ID and a name, enters it in that directory. Without `IO$M_CREATE`, enters the existing file named by `FIB$W_FID`. `IO$M_ACCESS` then accesses it on the channel; `IO$M_DELETE` marks it for deletion (a temporary file). The attributes are written to the new header. |
+| `IO$_ACCESS!IO$M_CREATE` | as `IO$_ACCESS` | Creates the file if the lookup doesn't find it (`SS$_CREATED`). |
+| `IO$_DELETE` | p1 FIB, p2 name, p3/p4 result name | With a directory ID and a name, removes the directory entry; with `IO$M_DELETE`, deletes the file too (by `FIB$W_FID` when there is no name). A file accessed on a channel is marked for deletion and deleted when deaccessed. |
+| `IO$_ACCESS`, `IO$_DEACCESS`, `IO$_MODIFY`, `IO$_CREATE` | p5 attribute list | `IO$_ACCESS` reads the attributes the list asks for; the others write them. |
+| `IO$_READLBLK`, `IO$_WRITELBLK` | p1 buffer, p2 bytes, p3 LBN | Reads or writes the volume's logical blocks (numbered from 0), with LOG_IO. |
+| `IO$_READPBLK`, `IO$_WRITEPBLK` | as above | The same with PHY_IO: on these disks a physical block is a logical block. |
+
+#### Attribute lists
+
+An *attribute list* (`$ATRDEF`) is an array of 8-byte entries, each a
+word size (`ATR$W_SIZE`), a word attribute code (`ATR$W_TYPE`), and the
+address of a buffer (`ATR$L_ADDR`), ended by a zero longword. It's how a
+program reads or sets what the file header records about the file,
+beyond its data: `ATR$C_RECATTR` is the 32-byte record attribute area
+(record format and size, and the end of file: RMS writes it on every
+close), `ATR$C_UCHAR` the file characteristics longword, `ATR$C_FPRO`
+the protection, `ATR$C_UIC` the owner, the dates, and so on. The codes
+are generated as `vmsdef.ATRConstants` from `reference/vms/atrdef.txt`,
+extracted, like `$FIBDEF`, from the VMS 7.3 listings' symbol tables.
+
+Writing needs the file accessed for writing (or, with no file accessed,
+the file named by the FIB's file ID). Some fields stay the ACP's:
+`FAT$L_HIBLK` (the allocation) in a written record attribute area, and
+the directory and marked-for-deletion bits of the characteristics.
+
+#### What ods2 gained
+
+`volume.UpdateHeader`, which rewrites a file's primary header after a
+caller's change to its fixed fields and identification area;
+`Volume.CreateFileVersion`, `CreateFile` with an explicit version;
+`Directory.Insert` refusing a name and version already there
+(`volume.ErrExists`); and `volume.DeleteHeader`, which frees a file by
+its file ID alone (the directory entry, if any, being the caller's).
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -2470,14 +2512,25 @@ sixth batch listed):
 41. **Done.** **Disk `$QIO`**: `IO$_ACCESS`/`DEACCESS` and virtual-block
     `IO$_READVBLK`/`WRITEVBLK` on files of a mounted ODS-2 volume.
 
+Eighth batch, requested by the user on 2026-09-29 (the rest of disk
+`$QIO` from the seventh batch's candidates):
+
+42. **Done.** **Attribute lists**: a generated `$ATRDEF`; `IO$_ACCESS` reads the
+    attributes in its p5 list, `IO$_MODIFY` and `IO$_DEACCESS` write them
+    (so a program can set the end of file); ods2's `UpdateHeader`.
+43. **Creating files**: `IO$_CREATE` with `IO$M_CREATE` and `IO$M_ACCESS`,
+    entering an existing file in a directory, explicit versions and the
+    FIB's name control (`FIB$M_NEWVER`, `FIB$M_SUPERSEDE`), initial
+    allocation, attributes at creation, and `IO$_ACCESS!IO$M_CREATE`.
+44. **Deleting files**: `IO$_DELETE`, removing directory entries and,
+    with `IO$M_DELETE`, the files; marking an accessed file for deletion
+    at deaccess, and `IO$_CREATE!IO$M_DELETE` temporary files.
+45. **Logical block I/O**: `IO$_READLBLK`/`WRITELBLK` (LOG_IO) and
+    `IO$_READPBLK`/`WRITEPBLK` (PHY_IO) on the mounted volume.
+
 Candidates next, roughly in order of value now that conditions, page
 tables, privileges, and disk files are all within reach of a program:
 
-- **Disk `$QIO`, the rest**: `IO$M_CREATE` and `IO$M_DELETE` (creating
-  and deleting files, entering and removing directory entries), attribute
-  lists (`ATR$C_RECATTR` to read and set the end of file, `ATR$C_UCHAR`,
-  ...), and logical block I/O on the volume (`IO$_READLBLK`/`WRITELBLK`,
-  with LOG_IO).
 - **Traceback**: the catch-all's `-TRACE-F-TRACEBACK` listing of the
   call frames (module, routine, PC), and trap PCs for the arithmetic
   traps, so a continued trap resumes after its instruction.
@@ -3544,3 +3597,59 @@ fixed.
 - `go test ./...` passes.
 - **Phase status.** The seventh batch (subtasks 31-41) is done.
   Candidates for the next batch are listed under Subtasks.
+
+### 2026-09-29 — Eighth batch planned; subtask 42: attribute lists
+
+- The user asked for the rest of disk `$QIO` (the seventh batch's first
+  candidate), with the Files-11 work in the ods2 module, which may be
+  extended as needed. Planned as subtasks 42-45 (attribute lists,
+  creating files, deleting files, logical block I/O); the design is under
+  "Disk `$QIO`: creating and deleting files, attributes, logical
+  blocks".
+- **`$ATRDEF`**: `reference/vms/atrdef.txt`, extracted from the VMS 7.3
+  listings like `fibdef.txt` (hex in the MACRO listings, decimal in the
+  BLISS ones, all agreeing except two sizes, left out), generated as
+  `vmsdef.ATRConstants` (`-atrdef`). Test: `TestATRConstants_values`.
+- **ods2** (commit `91f8942`): `volume.UpdateHeader`, which rewrites a
+  file's primary header after a caller's change, putting back the fields
+  tied to the map and the index file; and `ondisk.FileHeader.Raw`, the
+  header block as the disk holds it. Tests in `volume/updateheader_test.go`.
+- **`internal/rms/acpattr.go`** (new): `ACPAttributes`, `attributesOf`,
+  `updateAttributes`, `MountTable.ACPReadAttributes`/
+  `ACPWriteAttributes`, and `ACPFile.Attributes`/`WriteAttributes`. A
+  written record attribute area keeps the header's allocation, and a
+  written characteristics longword the directory and marked-for-deletion
+  bits. **`acp.go`**: `ACPFile.DeaccessWithAttributes` (closes, then
+  writes the attributes, so they have the last word on the end of file).
+- **Fixed while there:** deaccessing a file accessed for writing rounded
+  its end of file up to a whole block even when nothing was written past
+  it (ods2's `Close` records whole blocks), so accessing a 1540-byte file
+  for writing and just overwriting block 1 made it 2048 bytes. `ACPFile`
+  now remembers the highest block written and lets `Close` move the end
+  of file only past the old one.
+- **`internal/rtl/diskattr.go`** (new): `diskAttributes`, a registry of
+  the attribute codes govax handles (`UCHAR`, `RECATTR`, `FPRO`, `UIC`,
+  the four dates, and, read only, `ASCNAME`, `HEADER`, `BACKLINK`,
+  `HIGHWATER`), `readAttributeList`, `storeAttributes`,
+  `attributeChange`. **`diskdriver.go`**: `IO$_ACCESS` reads the list's
+  attributes (accessed or by file ID); `IO$_MODIFY` writes them to the
+  accessed file or, with none, the FIB's file ID (its FIB is now optional
+  with a file accessed); `IO$_DEACCESS` writes them after closing.
+- **Acceptance fixture** `testdata/asm/disk_attributes.asm`: access
+  `DATA.TXT` for writing reading its record attributes, overwrite block 1
+  with 10 bytes, set the end of file to block 1 byte 10 in the area and
+  write it on `IO$_DEACCESS`, then read the attributes and name again by
+  file ID. `TestDiskAttributes_assembledProgram` checks the area and the
+  name, and copies the file out: exactly the 10 bytes.
+- **Found while writing the fixture:** `@#FAT1+8`, a forward reference
+  with an operator in an instruction operand, is `VAX-E-FWDOPERATOR` (the
+  C assembler's `asm_value` rule). Recorded as an open Phase 11 finding
+  in `docs/DEVIATIONS.md`; the fixture uses a register base instead.
+- Tests: `internal/rms/acpattr_test.go` (reading, by FID and its
+  errors; writing, the kept allocation and bits, read-only mounts; the
+  end of file on deaccess, read access refused; the partial end of file
+  kept), `internal/rtl/diskattr_test.go` (reading on access and by FID,
+  short and long sizes; writing on deaccess, partly; `IO$_MODIFY` by FID
+  and on the accessed file; `BADATTRIB`, `ACCVIO`, `NOPRIV`,
+  `FILNOTACC`).
+- `go test ./...` passes.

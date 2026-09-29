@@ -275,3 +275,43 @@ func TestIOConstants_values(t *testing.T) {
 		}
 	}
 }
+
+// TestATRConstants_values pins the $ATRDEF codes and sizes the disk
+// driver's attribute lists (docs/PHASE-26.md subtask 42) depend on, as
+// the VMS I/O User's Reference lists them, and checks that the two sizes
+// the listings disagree on were left out.
+func TestATRConstants_values(t *testing.T) {
+	want := map[string]uint32{
+		"ATR$C_UCHAR":     3,
+		"ATR$C_RECATTR":   4,
+		"ATR$C_HEADER":    10,
+		"ATR$C_ASCNAME":   16,
+		"ATR$C_CREDATE":   17,
+		"ATR$C_REVDATE":   18,
+		"ATR$C_EXPDATE":   19,
+		"ATR$C_BAKDATE":   20,
+		"ATR$C_UIC":       21,
+		"ATR$C_FPRO":      22,
+		"ATR$C_BACKLINK":  28,
+		"ATR$C_HIGHWATER": 41,
+		"ATR$S_RECATTR":   32,
+		"ATR$S_UCHAR":     4,
+		"ATR$S_HEADER":    512,
+		"ATR$W_SIZE":      0,
+		"ATR$W_TYPE":      2,
+		"ATR$L_ADDR":      4,
+		"ATR$S_ATRDEF":    8,
+	}
+
+	for name, v := range want {
+		if got, ok := ATRConstants[name]; !ok || got != v {
+			t.Errorf("ATRConstants[%s] = %#x, %v; want %#x", name, got, ok, v)
+		}
+	}
+
+	for _, name := range []string{"ATR$S_ASCDATES", "ATR$S_FILE_SPEC"} {
+		if _, ok := ATRConstants[name]; ok {
+			t.Errorf("ATRConstants has %s, which the listings disagree on", name)
+		}
+	}
+}

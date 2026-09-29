@@ -145,6 +145,11 @@ type ACPFile struct {
 	file     *volume.File
 	fid      FileID
 	writable bool
+
+	// usedAtAccess is how many blocks held data when the file was
+	// accessed, and maxWritten the highest block WriteVirtual has written
+	// since: Deaccess moves the end of file only if a write went past it.
+	usedAtAccess, maxWritten uint32
 }
 
 // ACPAccess opens the file with ID fid on the volume mounted on device,
@@ -181,7 +186,7 @@ func (t *MountTable) ACPAccess(device string, fid FileID, write bool) (*ACPFile,
 		}
 	}
 
-	return &ACPFile{file: f, fid: fid, writable: write}, nil
+	return &ACPFile{file: f, fid: fid, writable: write, usedAtAccess: f.UsedBlocks()}, nil
 }
 
 // FileID is the accessed file's ID.
@@ -256,6 +261,8 @@ func (a *ACPFile) WriteVirtual(vbn uint32, data []byte) error {
 		if err := a.file.WriteBlock(vbn+i, block); err != nil {
 			return err
 		}
+
+		a.maxWritten = max(a.maxWritten, vbn+i)
 	}
 
 	return nil
@@ -291,16 +298,36 @@ func (a *ACPFile) Extend(blocks uint32) (uint32, error) {
 	return first, nil
 }
 
-// Deaccess closes the file. For one accessed for writing, ods2 records
-// the end of file just past the highest block written (if that's beyond
-// the old end) and writes the storage bitmap back.
+// Deaccess closes the file. For one accessed for writing, if a write went
+// past the old end of file, ods2 records the end of file just past the
+// highest block written; either way the storage bitmap is written back.
 func (a *ACPFile) Deaccess() error {
+	return a.DeaccessWithAttributes(nil)
+}
+
+// DeaccessWithAttributes closes the file, as Deaccess does, and then, if
+// change isn't nil, writes the attributes it sets (IO$_DEACCESS with an
+// attribute list: how RMS records a file's exact end of file when it
+// closes it). Writing attributes needs write access (ErrACPReadOnly); the
+// file is closed even then.
+//
+// The end of file is left alone when no write went past it. (ods2's own
+// Close always records the end of file as a whole number of blocks, which
+// would round up a file whose last block is partly used, even one only
+// read, or overwritten in place.)
+func (a *ACPFile) DeaccessWithAttributes(change func(*ACPAttributes)) error {
 	if !a.writable {
+		if change != nil {
+			return ErrACPReadOnly
+		}
+
 		return nil
 	}
 
-	if err := a.file.Close(); err != nil {
-		return err
+	if a.maxWritten > a.usedAtAccess {
+		if err := a.file.Close(); err != nil {
+			return err
+		}
 	}
 
 	bm, err := a.file.Device.Bitmap()
@@ -308,5 +335,13 @@ func (a *ACPFile) Deaccess() error {
 		return err
 	}
 
-	return bm.Flush()
+	if err := bm.Flush(); err != nil {
+		return err
+	}
+
+	if change != nil {
+		return updateAttributes(a.file, change)
+	}
+
+	return nil
 }
