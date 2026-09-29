@@ -185,6 +185,7 @@ func TestDiskLookupOnly(t *testing.T) {
 
 	// $DASSGN deaccesses.
 	a2 := c.acp
+	
 	wantR0(t, callLNM(t, env, serviceSysDassgn, ch), ssNormal)
 
 	if c.acp != nil || a2 == nil {

@@ -68,6 +68,7 @@ func ReadRecords(r io.Reader) ([][]byte, error) {
 		}
 
 		offset += int64(n)
+		
 		out = append(out, rec)
 
 		if n%2 != 0 {

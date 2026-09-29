@@ -260,6 +260,7 @@ func TestPutmsg_actionRoutine(t *testing.T) {
 
 	// It returns 0: that line isn't written, and $PUTMSG finishes.
 	c.SetGPR(vax.R0, 0)
+	
 	r0, err = serviceSysPutmsg(env, argv)
 
 	if err != nil || r0 != ssNormal {

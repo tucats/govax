@@ -29,6 +29,7 @@ func conditionFixture(t *testing.T) *Environment {
 
 	saved := srchandlerAddr
 	srchandlerAddr = condStub
+	
 	t.Cleanup(func() { srchandlerAddr = saved })
 
 	if err := env.mem.StoreWord(env.cpu, condStub, xfcP1VectorWord); err != nil {

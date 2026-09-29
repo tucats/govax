@@ -285,7 +285,7 @@ func TestStackedValue_signExtension(t *testing.T) {
 
 // TestSubrecords_roundTrip encodes and decodes every GSD subrecord type.
 func TestSubrecords_roundTrip(t *testing.T) {
-	var subs []Subrecord
+	subs := make([]Subrecord, len(symbolLayouts)+4)
 
 	subs = append(subs,
 		&Psect{Align: 9, Flags: PsectOVR | PsectGBL, Alloc: 512, Name: "COMMON"},
@@ -583,7 +583,7 @@ func TestDump(t *testing.T) {
 // or never has: link options, debugger and traceback records, word-psect
 // ends of module, and a record type this package doesn't know.
 func TestOtherRecords(t *testing.T) {
-	var cmds []Command
+	cmds := make([]Command, 0, len(ops))
 
 	for op := range ops {
 		c := Command{Op: op}

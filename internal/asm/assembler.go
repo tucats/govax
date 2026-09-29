@@ -764,6 +764,7 @@ func (a *Assembler) assembleAssignment(c *cursor) (handled bool, err error) {
 	// A relocatable value: a label plus or minus a constant (the MACRO
 	// manual, §3.5). "." can only move within its own section.
 	sect, offset, ok := x.x.simpleRelocatable()
+	
 	switch {
 	case !ok, name == "." && sect != a.cur:
 		return true, vmserrors.New(vmserrors.VAX_RELEXPR)

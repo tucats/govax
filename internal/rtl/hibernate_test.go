@@ -100,11 +100,13 @@ func TestServiceSysSchdwkDelta(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysSchdwk, 0, 0, a.quad(-30*ms)), ssNormal)
 
 	*now += 29 * ms
+
 	if hiber(t, env) {
 		t.Fatal("$HIBER returned before the scheduled wakeup")
 	}
 
 	*now += ms
+
 	if !hiber(t, env) {
 		t.Fatal("$HIBER still waiting at the scheduled wakeup")
 	}
@@ -123,11 +125,13 @@ func TestServiceSysSchdwkAbsolute(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysSchdwk, 0, 0, a.quad(int64(*now+5*ms))), ssNormal)
 
 	*now += 4 * ms
+
 	if hiber(t, env) {
 		t.Fatal("$HIBER returned before the absolute wakeup time")
 	}
 
 	*now += ms
+
 	if !hiber(t, env) {
 		t.Fatal("$HIBER still waiting at the absolute wakeup time")
 	}
@@ -150,11 +154,13 @@ func TestServiceSysSchdwkRepeat(t *testing.T) {
 
 	for i, at := range []uint64{10, 30, 50} {
 		*now = 1_000_000_000 + (at-1)*ms
+
 		if hiber(t, env) {
 			t.Fatalf("wakeup %d came before %dms", i, at)
 		}
 
 		*now += ms
+
 		if !hiber(t, env) {
 			t.Fatalf("wakeup %d didn't come at %dms", i, at)
 		}
@@ -163,6 +169,7 @@ func TestServiceSysSchdwkRepeat(t *testing.T) {
 	// Missed repetitions collapse into one wakeup, and the next is
 	// still on the 20ms grid: 50 + 20k.
 	*now = 1_000_000_000 + 125*ms
+
 	if !hiber(t, env) {
 		t.Fatal("no wakeup after missing several repetitions")
 	}
@@ -243,6 +250,7 @@ func TestServiceSysCanwak(t *testing.T) {
 	}
 
 	*now += 30 * ms
+	
 	if hiber(t, env) {
 		t.Fatal("a cancelled wakeup still woke the process")
 	}
@@ -262,6 +270,7 @@ func TestScheduledWakeupsImageRundown(t *testing.T) {
 	env.ImageRundown()
 
 	*now += 50 * ms
+
 	if hiber(t, env) {
 		t.Fatal("a wakeup scheduled by the previous image still woke the process")
 	}

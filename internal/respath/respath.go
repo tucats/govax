@@ -111,7 +111,7 @@ func (r *Resolver) ReadFile(name string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	defer f.Close()
 
 	return io.ReadAll(f)

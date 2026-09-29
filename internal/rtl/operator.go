@@ -302,6 +302,7 @@ func (env *Environment) operatorReply(b []byte) uint32 {
 
 	// The text follows the counted terminal name.
 	text := ""
+
 	if len(b) > 10 {
 		if end := 11 + int(b[10]); end <= len(b) {
 			text = string(b[end:])
@@ -313,6 +314,7 @@ func (env *Environment) operatorReply(b []byte) uint32 {
 	for i, r := range opr.requests {
 		if r.number == number {
 			opr.requests = append(opr.requests[:i], opr.requests[i+1:]...)
+			
 			env.operatorReplyTo(r.channel, status, r.rqstid, text)
 
 			break

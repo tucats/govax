@@ -207,6 +207,7 @@ func TestServiceSysAllocErrors(t *testing.T) {
 	a := newArena(t, env)
 	other := defineTestDevice(env, "TTA1", iodev.DeviceClassTT)
 	other.Allocate(0x999, 0)
+	
 	defineTestDevice(env, "DUA0", iodev.DeviceClassDisk).DevChar |= devMounted
 	defineTestDevice(env, "MBA1", iodev.DeviceClassNone).DevChar |= devMailbox
 

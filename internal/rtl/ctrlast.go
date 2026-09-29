@@ -106,6 +106,7 @@ func (env *Environment) deliverAttentionASTs(key byte) bool {
 	for _, a := range env.attentionASTs {
 		if a.key == key {
 			env.queueAST(a.routine, a.param, a.mode)
+			
 			found = true
 		}
 	}

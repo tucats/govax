@@ -97,6 +97,7 @@ func TestSetprv(t *testing.T) {
 
 	// No prvadr: nothing changes, prvprv still reported.
 	before := p.CurrentPrivileges
+
 	wantR0(t, callLNM(t, env, serviceSysSetprv, 0, 0, 0, prvprv), ssNormal)
 
 	if p.CurrentPrivileges != before || quadAt(t, env, prvprv) != before {
@@ -122,6 +123,7 @@ func TestSetprv_authorization(t *testing.T) {
 	p := env.Process
 	p.AuthorizedPrivileges = privTMPMBX | privOPER
 	p.CurrentPrivileges, p.ProcessPrivileges = 0, 0
+
 	setMode(env, vax.User, vax.User, 0x9000)
 
 	wantR0(t, callLNM(t, env, serviceSysSetprv, 1, quadArg(a, privTMPMBX|privCMKRNL)), ssNotAllPriv)
@@ -136,7 +138,9 @@ func TestSetprv_authorization(t *testing.T) {
 
 	// So may a process authorized for SETPRV.
 	setMode(env, vax.User, vax.User, 0x9000)
+
 	p.AuthorizedPrivileges |= privSETPRV
+
 	wantR0(t, callLNM(t, env, serviceSysSetprv, 1, quadArg(a, privSYSNAM)), ssNormal)
 
 	if !p.hasPrivilege(privCMKRNL | privSYSNAM | privTMPMBX) {
@@ -152,7 +156,8 @@ func TestGetjpi_privileges(t *testing.T) {
 	p.AuthorizedPriority = 6
 
 	bufs := map[string]uint32{}
-	var list []item
+
+	list := make([]item, 5)
 
 	for _, name := range []string{"JPI$_CURPRIV", "JPI$_PROCPRIV", "JPI$_AUTHPRIV", "JPI$_IMAGPRIV", "JPI$_AUTHPRI"} {
 		bufs[name] = a.alloc(8)
@@ -207,15 +212,20 @@ func TestPrivilegeChecks(t *testing.T) {
 
 	// Mailboxes.
 	without(privTMPMBX)
+
 	r0, _ := crembx(t, env, a, 0, 0, 0, "")
 	wantR0(t, r0, ssNoPriv)
 
 	without(privPRMMBX)
+
 	r0, _ = crembx(t, env, a, 1, 0, 0, "")
+
 	wantR0(t, r0, ssNoPriv)
 
 	without(privSYSNAM)
+
 	r0, _ = crembx(t, env, a, 1, 0, 0, "PERMBOX")
+
 	wantR0(t, r0, ssNoPriv)
 
 	r0, ch := crembx(t, env, a, 1, 0, 0, "") // permanent, no name: fine
@@ -272,9 +282,12 @@ func TestPrivilegeChecks_logicalNames(t *testing.T) {
 
 	// Either of two privileges will do.
 	p.CurrentPrivileges |= privSYSPRV
+
 	wantR0(t, crelnm("LNM$SYSTEM", 0), ssNormal)
+
 	p.CurrentPrivileges = allPrivileges &^ (privSYSNAM | privSYSPRV)
 	p.CurrentPrivileges |= privGRPNAM
+	
 	wantR0(t, crelnm("LNM$GROUP", 0), ssNormal)
 
 	// Without SYSNAM, a user-mode caller's kernel-mode name is user mode.
@@ -288,7 +301,9 @@ func TestPrivilegeChecks_logicalNames(t *testing.T) {
 
 	// With it, as given.
 	setMode(env, vax.Kernel, vax.Kernel, 0x9000)
+
 	p.CurrentPrivileges = allPrivileges
+
 	setMode(env, vax.User, vax.User, 0x9000)
 	wantR0(t, crelnm("LNM$PROCESS", 1), ssNormal) // alongside the user-mode one
 

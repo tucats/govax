@@ -91,6 +91,7 @@ func TestServiceSysAscefcReassociate(t *testing.T) {
 	}
 
 	keep, _ := table.Lookup(1, "KEEP")
+
 	wantR0(t, callLNM(t, env, serviceSysSetef, 64), ssWasClr)
 
 	// Image rundown disassociates; the permanent cluster and its flags
@@ -121,6 +122,7 @@ func TestServiceSysAscefcProtection(t *testing.T) {
 
 	// Another UIC in the same group finds it but may not associate.
 	p.UIC = 0x00010005
+
 	wantR0(t, callLNM(t, env, serviceSysAscefc, 96, a.desc("PRIVATE")), ssNoPriv)
 
 	if p.CommonClusters[1] != nil {
@@ -129,6 +131,7 @@ func TestServiceSysAscefcProtection(t *testing.T) {
 
 	// Names are per group: in group 2, PRIVATE is a different cluster.
 	p.UIC = 0x00020004
+	
 	wantR0(t, callLNM(t, env, serviceSysAscefc, 96, a.desc("PRIVATE")), ssNormal)
 
 	g1, _ := env.EventFlagClusters.Lookup(1, "PRIVATE")
@@ -239,20 +242,28 @@ func TestEventFlagWaits(t *testing.T) {
 	// $WAITFR: waits while the flag is clear, completes once it's set;
 	// only the low byte of efn counts.
 	wantWait(t, env, serviceSysWaitfr, 0x103)
+
 	p.LocalEventFlags[0] |= 1 << 3
+
 	wantR0(t, callLNM(t, env, serviceSysWaitfr, 0x103), ssNormal)
 
 	// $WFLAND: all of the mask; an empty mask is satisfied at once.
 	wantWait(t, env, serviceSysWfland, 35, 0x6)
+
 	p.LocalEventFlags[1] |= 0x2
+
 	wantWait(t, env, serviceSysWfland, 35, 0x6)
+
 	p.LocalEventFlags[1] |= 0x4
+
 	wantR0(t, callLNM(t, env, serviceSysWfland, 35, 0x6), ssNormal)
 	wantR0(t, callLNM(t, env, serviceSysWfland, 0, 0), ssNormal)
 
 	// $WFLOR: any of the mask; an empty mask never is.
 	wantWait(t, env, serviceSysWflor, 0, 0x30)
+
 	p.LocalEventFlags[0] |= 0x20
+
 	wantR0(t, callLNM(t, env, serviceSysWflor, 0, 0x30), ssNormal)
 	wantWait(t, env, serviceSysWflor, 0, 0)
 
@@ -281,6 +292,7 @@ func TestEventFlagWaitTrace(t *testing.T) {
 	env.cpu.SetDebug(vax.DebugServices)
 
 	waitfr := uint32(0)
+
 	for _, e := range vmsdef.P1VectorTable {
 		if e.Name == "SYS$WAITFR" {
 			waitfr = e.Addr
@@ -319,12 +331,14 @@ func TestServiceSysSynch(t *testing.T) {
 
 	// Step 1: the flag isn't set, so it waits.
 	p.LocalEventFlags[0] = 0
+
 	putLongword(t, env, iosb, 0)
 	wantWait(t, env, serviceSysSynch, 5, iosb)
 
 	// Step 3: the flag is set but the IOSB is still 0 — another event set
 	// the flag. $SYNCH clears it and keeps waiting.
 	p.LocalEventFlags[0] = 1 << 5
+
 	wantWait(t, env, serviceSysSynch, 5, iosb)
 
 	if flagSet(env, 5) {
@@ -334,10 +348,12 @@ func TestServiceSysSynch(t *testing.T) {
 	// Step 2: the request completed (a nonzero status word). $SYNCH
 	// returns, leaving the flag set. Only the status word counts.
 	p.LocalEventFlags[0] = 1 << 5
+
 	putLongword(t, env, iosb, 0xFFFF0000)
 	wantWait(t, env, serviceSysSynch, 5, iosb)
 
 	p.LocalEventFlags[0] = 1 << 5
+
 	putLongword(t, env, iosb, ssNormal)
 	wantR0(t, callLNM(t, env, serviceSysSynch, 5, iosb), ssNormal)
 
@@ -347,13 +363,16 @@ func TestServiceSysSynch(t *testing.T) {
 
 	// Without an IOSB, only the flag counts; efn defaults to 0.
 	p.LocalEventFlags[0] = 1
+
 	wantR0(t, callLNM(t, env, serviceSysSynch), ssNormal)
 
 	p.LocalEventFlags[0] = 0
+
 	wantWait(t, env, serviceSysSynch)
 
 	// Errors.
 	p.LocalEventFlags[0] = 1 << 5
+
 	wantR0(t, callLNM(t, env, serviceSysSynch, 5, badAddr), ssAccVio)
 	wantR0(t, callLNM(t, env, serviceSysSynch, 200, iosb), ssIllEfc)
 	wantR0(t, callLNM(t, env, serviceSysSynch, 64, iosb), ssUnasEfc)

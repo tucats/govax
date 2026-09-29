@@ -115,6 +115,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			if err := a.emitByte(indexMode); err != nil {
 				return err
 			}
+
 			if err := a.assembleOperandRec(c, inst, opIndex, true); err != nil {
 				return err
 			}
@@ -470,6 +471,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		if err := a.emitByte(mode); err != nil {
 			return err
 		}
+
 		if err := a.emitByte(0); err != nil {
 			return err
 		}

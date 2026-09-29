@@ -275,6 +275,7 @@ func condArgument(c *cursor) (string, error) {
 
 	if c.peek() != '<' {
 		start := c.pos
+		
 		for !c.atEnd() && c.peek() != ',' && !isBlank(c.peek()) {
 			c.next()
 		}

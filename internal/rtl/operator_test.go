@@ -98,6 +98,7 @@ func TestSndopr_replyAndNoOperator(t *testing.T) {
 
 	// No class enabled: OPC$_NOPERATOR in the mailbox, nothing shown.
 	env.Operator.enabled = 0
+
 	out.Reset()
 	wantR0(t, callLNM(t, env, serviceSysSndopr, a.desc(opcBuf(opcRqRqst, 1, 43, "Hello?")), mch), ssNormal)
 
@@ -211,7 +212,7 @@ func TestBrkthru(t *testing.T) {
 }
 
 func TestBrkthru_errors(t *testing.T) {
-	env, _, a, _, _ := operatorFixture(t)
+	env, _, a, _, _ := operatorFixture(t) //nolint:dogsled
 	msg := a.desc("x")
 	p := env.Process
 
@@ -219,13 +220,14 @@ func TestBrkthru_errors(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, msg, a.desc("MBA1:"), brkDevice), ssNoSuchDev) // not a terminal
 	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, msg, 0, brkDevice), ssAccVio)
 	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, msg, 0, 9), ssBadParam)
-	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, msg, 0, 0, 0, 0, 0, 64), ssBadParam)    // reqid
-	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, msg, 0, 0, 0, 0, 0, 0, 3), ssBadParam)  // timout
+	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, msg, 0, 0, 0, 0, 0, 64), ssBadParam)   // reqid
+	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, msg, 0, 0, 0, 0, 0, 0, 3), ssBadParam) // timout
 	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, a.desc(strings.Repeat("x", 16351))), ssBadParam)
 	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, badAddr), ssAccVio)
 	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, msg, 0, 0, badAddr), ssAccVio)
 
 	p.CurrentPrivileges &^= privOPER | privWORLD
+	
 	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, msg, 0, brkAllUsers), ssNoOper)
 	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, msg, 0, brkAllTerms), ssNoOper)
 	wantR0(t, callLNM(t, env, serviceSysBrkthru, 0, msg, a.desc("SYSTEM"), brkUsername), ssNoPriv)

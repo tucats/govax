@@ -860,7 +860,6 @@ above record the answers:
   `ANALYZE/DISK_STRUCTURE` on VMS. It names exactly which structure is
   wrong, which was far quicker than inferring from failures.
 
-
 ### 2026-09-30 — Subtask 3: real VAX objects in hand
 
 - With the `ods2` fixes, the user's `@ASSEMBLE` ran cleanly:

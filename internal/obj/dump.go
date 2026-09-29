@@ -91,11 +91,13 @@ func (d *dumper) subrecord(s Subrecord) {
 	case *Psect:
 		text := fmt.Sprintf("%s %d: %q, alignment %s, %s, %d bytes", s.GSDType(), d.psects, s.Name,
 			alignmentName(s.Align), PsectFlagNames(s.Flags), s.Alloc)
-		if s.Shared {
+		
+			if s.Shared {
 			text += fmt.Sprintf(", base %#x", s.Base)
 		}
 
 		d.line(1, "%s", text)
+
 		d.psects++
 
 	case *Symbol:

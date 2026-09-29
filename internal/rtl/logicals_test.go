@@ -202,6 +202,7 @@ func TestSysTrnlnm_itemCodes(t *testing.T) {
 		item{code: lnmString, buflen: 8, buf: missing, ret: missingRet},
 		item{code: lnmAttributes, buflen: 4, buf: attr},
 	)
+	
 	putWord(t, env, missingRet, 99)
 
 	wantR0(t, callLNM(t, env, serviceSysTrnlnm, 0, a.desc("LNM$FILE_DEV"), a.desc("FIFI"), 0, list), ssNormal)

@@ -388,6 +388,7 @@ func TestQiow_waits(t *testing.T) {
 	a := newArena(t, env)
 	_, ch := crembx(t, env, a, 0, 0, 0, "")
 	iosb, buf := a.alloc(8), a.alloc(8)
+	
 	env.cpu.SetGPR(vax.FP, 0x7000)
 
 	argv := []uint32{0, ch, fnReadVBlk, iosb, 0, 0, buf, 8}

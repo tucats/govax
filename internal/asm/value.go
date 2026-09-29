@@ -248,6 +248,7 @@ func (a *Assembler) exprAtom(c *cursor, st *exprState) (exprVal, error) {
 	switch c.peek() {
 	case '-':
 		c.next()
+		
 		x, err := a.exprAtom(c, st)
 		if err != nil {
 			return exprVal{}, err

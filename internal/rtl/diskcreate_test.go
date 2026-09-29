@@ -105,6 +105,7 @@ func TestDiskCreate_versions(t *testing.T) {
 	reslen := a.alloc(2)
 
 	putWord(t, env, fib+fibNMCTL, uint16(fibMNewVer))
+
 	if _, st, _ := diskQIO(t, env, a, ch, fnCreateNew, fibd, name, reslen, resd); st != ssNormal {
 		t.Errorf("FIB$M_NEWVER: %#x", st)
 	}
@@ -116,6 +117,7 @@ func TestDiskCreate_versions(t *testing.T) {
 	old := dataBinFIDVersion(t, env, "DATA.BIN;1")
 
 	putWord(t, env, fib+fibNMCTL, uint16(fibMSupersede))
+	
 	if _, st, _ := diskQIO(t, env, a, ch, fnCreateNew, fibd, name); uint32(st) != ssSupersede {
 		t.Errorf("FIB$M_SUPERSEDE: %#x", st)
 	}

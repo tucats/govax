@@ -318,7 +318,9 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 	// A waiting service is called again on every instruction step until
 	// its wait is satisfied (ErrWait); only its first attempt is traced.
 	waiting := errors.Is(err, ErrWait)
+
 	var call *CallRequest
+	
 	retry := waiting && env.waitingPC == pc
 
 	if waiting {

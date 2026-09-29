@@ -58,6 +58,7 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 	if err := a.emitByte(inst.Opcode.Function); err != nil {
 		return err
 	}
+	
 	a.caseBase = 0
 
 	for n := 0; n < inst.OperandCount; n++ {

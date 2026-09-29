@@ -415,7 +415,6 @@ func TestQIO_rejected(t *testing.T) {
 
 	// The user-mode channel is fine from user mode.
 	wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnWriteVBlk, p: [6]uint32{data, 1}}), ssNormal)
-
 }
 
 func TestQIO_readOnlyChannelWord(t *testing.T) {

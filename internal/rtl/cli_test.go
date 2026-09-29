@@ -45,7 +45,7 @@ func TestServiceSysCliUnknownRequestHalts(t *testing.T) {
 	if !errors.Is(err, ErrHalt) {
 		t.Errorf("err = %v, want ErrHalt", err)
 	}
-	
+
 	if r0 != ssInvArg {
 		t.Errorf("r0 = %d, want ssInvArg", r0)
 	}

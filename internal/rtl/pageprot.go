@@ -104,6 +104,7 @@ func serviceSysSetprt(env *Environment, argv []uint32) (uint32, error) {
 		}
 
 		previous = old.Protection()
+		
 		done = append(done, addr)
 	}
 

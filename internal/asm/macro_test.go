@@ -235,7 +235,7 @@ func TestContinuationLines(t *testing.T) {
 // checked once its value is known, not before.
 func TestForwardDataRange(t *testing.T) {
 	requireBytes(t, assembleBytes(t, ".BYTE A-300\nA = 301"), 1)
-	requireBytes(t, assembleBytes(t, ".BYTE A\nA = 255"), 0xFF)
-	requireCode(t, assembleErr(t, ".BYTE A\nA = 256"), vmserrors.VAX_FWDBYTE)
-	requireCode(t, assembleErr(t, ".WORD A\nA = 65536"), vmserrors.VAX_FWDWORD)
+	requireBytes(t, assembleBytes(t, ".BYTE A\nA = 255"), 0xFF)                 //nolint:dupword
+	requireCode(t, assembleErr(t, ".BYTE A\nA = 256"), vmserrors.VAX_FWDBYTE)   //nolint:dupword
+	requireCode(t, assembleErr(t, ".WORD A\nA = 65536"), vmserrors.VAX_FWDWORD) //nolint:dupword
 }

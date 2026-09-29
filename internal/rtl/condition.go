@@ -671,7 +671,7 @@ func (env *Environment) exitForCondition(d *conditionDispatch, cond uint32) (uin
 
 // serviceSysSetexv is SYS$SETEXV (docs/PHASE-26.md subtask 32):
 //
-//	SYS$SETEXV [vector] ,[addres] ,[acmode] ,[prvhnd]
+//	SYS$SETEXV [vector] ,[address] ,[acmode] ,[prvhnd]
 //
 // Each access mode has three *exception vectors*, condition handlers
 // that don't belong to any call frame: the primary vector, searched
@@ -681,15 +681,15 @@ func (env *Environment) exitForCondition(d *conditionDispatch, cond uint32) (uin
 // program's own handlers do.
 //
 // $SETEXV sets vector (0 primary, 1 secondary, 2 last chance; 0 by
-// default) of access mode acmode to the handler at addres, or clears it
-// if addres is 0 or omitted, storing the handler it replaces at prvhnd
+// default) of access mode acmode to the handler at address, or clears it
+// if address is 0 or omitted, storing the handler it replaces at prvhnd
 // if prvhnd isn't 0. acmode is maximized with the caller's mode: a
 // program can't change a more privileged mode's vectors.
 //
 // It returns SS$_NORMAL, SS$_ACCVIO if prvhnd can't be written (nothing
 // is changed), or SS$_BADPARAM for a vector number other than 0-2.
 func serviceSysSetexv(env *Environment, argv []uint32) (uint32, error) {
-	vector, addres, prvhnd := optArg(argv, 0), optArg(argv, 1), optArg(argv, 3)
+	vector, address, prvhnd := optArg(argv, 0), optArg(argv, 1), optArg(argv, 3)
 	mode := max(vax.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
 
 	if vector > vectorLastChance {
@@ -704,7 +704,7 @@ func serviceSysSetexv(env *Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	*slot = addres
+	*slot = address
 
 	return ssNormal, nil
 }

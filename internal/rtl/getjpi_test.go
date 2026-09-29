@@ -272,6 +272,7 @@ func TestServiceSysGetjpiASTItems(t *testing.T) {
 	// More outstanding than the quota (it isn't enforced) is 0, not a
 	// wrapped-around count.
 	p.ASTLimit = 1
+	
 	if got := get("JPI$_ASTCNT"); got != 0 {
 		t.Errorf("JPI$_ASTCNT over quota = %d, want 0", got)
 	}

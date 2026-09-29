@@ -246,6 +246,7 @@ func serviceSysPutmsg(env *Environment, argv []uint32) (uint32, error) {
 			}
 
 			c.SetGPR(vax.SP, call.savedSP)
+			
 			call.next++
 		}
 	}

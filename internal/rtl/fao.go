@@ -144,6 +144,7 @@ func (f *faoFormatter) directive() {
 	// isn't "(", the number was the width instead: back up (including
 	// over the parameter a "#" used) and read it again as that.
 	start, startParam := f.pos, f.next
+
 	if n, ok := f.number(); ok && f.peek() == '(' {
 		f.pos++
 		repeat = n
@@ -220,6 +221,7 @@ func (f *faoFormatter) number() (n int, ok bool) {
 	}
 
 	start := f.pos
+	
 	for f.pos < len(f.ctrl) && f.ctrl[f.pos] >= '0' && f.ctrl[f.pos] <= '9' {
 		f.pos++
 	}

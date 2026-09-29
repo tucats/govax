@@ -416,6 +416,7 @@ func ttSenseMode(env *Environment, req *ioRequest) (ioStatus, uint32) {
 		n := min(r.Buffered(), 0xFFFF)
 
 		first := byte(0)
+		
 		if n > 0 {
 			if peek, err := r.Peek(1); err == nil {
 				first = peek[0]

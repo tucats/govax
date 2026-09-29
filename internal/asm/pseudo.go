@@ -488,6 +488,7 @@ func (a *Assembler) asciiItem(c *cursor) (int, error) {
 		if err := a.emitByte(ch); err != nil {
 			return 0, err
 		}
+		
 		count++
 	}
 

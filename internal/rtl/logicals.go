@@ -243,6 +243,7 @@ func serviceSysTrnlnm(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	mode := lnm.User
+	
 	if argv[3] != 0 {
 		if mode, st = env.lnmMode(argv[3]); st != 0 {
 			return st, nil
@@ -524,6 +525,7 @@ func serviceSysDellnm(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	lognam := ""
+
 	if argv[1] != 0 {
 		if lognam, st = lnmName(env, argv[1]); st != 0 {
 			return st, nil
@@ -564,6 +566,7 @@ func serviceSysCrelnt(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	tabnam := ""
+
 	if argv[5] != 0 {
 		if tabnam, st = lnmName(env, argv[5]); st != 0 {
 			return st, nil

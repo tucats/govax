@@ -19,6 +19,7 @@ func astFixture(t *testing.T, mode vax.AccessMode) *Environment {
 
 	saved := astExitAddr
 	astExitAddr = 0x8000
+
 	t.Cleanup(func() { astExitAddr = saved })
 
 	if err := env.mem.StoreWord(env.cpu, astExitAddr, xfcP1VectorWord); err != nil {
@@ -34,6 +35,7 @@ func astFixture(t *testing.T, mode vax.AccessMode) *Environment {
 // modePSL is a PSL of all zeros but its current mode.
 func modePSL(mode vax.AccessMode) vax.PSL {
 	var psl vax.PSL
+
 	psl.SetCurMod(mode)
 
 	return psl
@@ -126,6 +128,7 @@ func TestServiceSysClrastRestores(t *testing.T) {
 	c.SetPSL(psl)
 
 	env.queueAST(0x1000, 0, uint32(vax.User))
+
 	if _, _, _, ok, _ := env.NextAST(); !ok {
 		t.Fatal("NextAST delivered nothing")
 	}
@@ -179,7 +182,8 @@ func TestServiceSysClrastKeepsMode(t *testing.T) {
 	c := env.cpu
 
 	env.queueAST(0x1000, 0, uint32(vax.User))
-	_, argList, _, _, _ := env.NextAST()
+
+	_, argList, _, _, _ := env.NextAST() //nolint:dogsled
 
 	putLongword(t, env, argList+20, uint32(modePSL(vax.Kernel))) // forged: kernel
 	callLNM(t, env, serviceSysClrast)
@@ -242,10 +246,12 @@ func TestNextASTConditions(t *testing.T) {
 
 	// Disabled in this mode, or a more privileged one.
 	p.ast.enabled[vax.Supervisor] = false
+
 	wantNoAST(t, env, "ASTs disabled in supervisor mode")
 
 	p.ast.enabled[vax.Supervisor] = true
 	p.ast.enabled[vax.Executive] = false
+
 	wantNoAST(t, env, "ASTs disabled in executive mode")
 
 	p.ast.enabled[vax.Executive] = true
@@ -371,7 +377,8 @@ func TestServiceSysClrastLowersButNeverRaises(t *testing.T) {
 	c.SetPR(vax.ESP, 0x7000)
 
 	env.queueAST(0x1000, 0, uint32(vax.Executive))
-	_, argList, _, _, _ := env.NextAST()
+
+	_, argList, _, _, _ := env.NextAST() //nolint:dogsled
 
 	putLongword(t, env, argList+20, uint32(modePSL(vax.Kernel))) // forged
 	callLNM(t, env, serviceSysClrast)
@@ -455,6 +462,7 @@ func TestASTImageRundown(t *testing.T) {
 
 	env.queueAST(0x1000, 0, uint32(vax.User))
 	env.queueAST(0x2000, 0, uint32(vax.Kernel))
+	
 	p.ast.enabled[vax.User] = false
 	p.ast.active[vax.User] = true
 
@@ -480,6 +488,7 @@ func TestSetimrQueuesAST(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysSetimr, 4, a.quad(-10*ms), 0x1000, 42), ssNormal)
 
 	*now += 9 * ms
+
 	env.expireTimers()
 
 	if env.PendingASTs() != 0 {
@@ -487,6 +496,7 @@ func TestSetimrQueuesAST(t *testing.T) {
 	}
 
 	*now += ms
+
 	env.expireTimers()
 
 	if env.PendingASTs() != 1 || env.Process.ast.queue[0] != (astRequest{0x1000, 42, uint32(vax.Supervisor)}) {
@@ -522,6 +532,7 @@ func TestNoASTForCancelledTimers(t *testing.T) {
 	callLNM(t, env, serviceSysSetimr, 3, a.quad(-ms)) // no astadr
 
 	*now += 10 * ms
+
 	env.expireTimers()
 
 	if env.PendingASTs() != 0 {
@@ -541,6 +552,7 @@ func TestSetimrASTWithoutCluster(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysDacefc, 64), ssNormal)
 
 	*now += ms
+
 	env.expireTimers()
 
 	if env.PendingASTs() != 1 {
@@ -561,6 +573,7 @@ func TestHiberInterruptedByTimerAST(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysSetimr, 0, a.quad(-5*ms), 0x1000, 1), ssNormal)
 
 	const hiberXFC = 0x6002
+
 	c.SetGPR(vax.PC, hiberXFC) // parked on $HIBER's XFC
 
 	if hiber(t, env) {
