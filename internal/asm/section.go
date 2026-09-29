@@ -1,5 +1,7 @@
 package asm
 
+import "github.com/tucats/govax/internal/vmserrors"
+
 // section is one of the assembler's location counters: a named region of
 // output with its own current location. Every byte the assembler emits goes
 // to the current section, at its location, which then advances past it.
@@ -37,6 +39,11 @@ type section struct {
 	loc uint32
 	// hi is the highest location reached: a psect's allocation.
 	hi uint32
+	// flags are a MACRO psect's attributes, as the object language's
+	// GPS$M_ bits (see psectAttributes), and align its alignment, as a
+	// power of two.
+	flags uint32
+	align uint32
 }
 
 // addr returns the section's current location as an absolute address.
@@ -87,22 +94,49 @@ func (a *Assembler) findSection(name string) *section {
 
 // Default psect names (the MACRO manual, .PSECT): symbols defined before
 // any code or data go in the absolute one, and code or data before the
-// first named .PSECT goes in the blank one.
+// first named .PSECT goes in the blank one. Each is nine characters: the
+// manual prints ". ABS .", but real MACRO's objects and listings have two
+// blanks on each side of ABS, and one on each side of BLANK.
 const (
-	absPsect   = ". ABS ."
+	absPsect   = ".  ABS  ."
 	blankPsect = ". BLANK ."
 )
 
 // macroSections replaces the console dialect's P0 and S0 sections with
-// MACRO-32's default psects, and starts in . BLANK .
+// MACRO-32's default absolute psect, . ABS ., where assembly starts.
+// . BLANK . is only defined once something uses it (see useBlankPsect),
+// as real MACRO does: it's missing from the object of a module that
+// never uses it, and the psect numbers after it move down one.
 func (a *Assembler) macroSections() {
 	a.sections = nil
-	a.newSection(absPsect, false, newImage(), 0)
-	a.cur = a.newSection(blankPsect, true, newImage(), 0)
+	a.cur = a.newSection(absPsect, false, newImage(), 0)
+	a.implicitAbs = true
+}
+
+// output prepares the current section for code or data to be stored at
+// its location: before any .PSECT, it moves from . ABS . to . BLANK .,
+// and in the MACRO dialect it's an error to store anything in an
+// absolute psect, which only defines symbols.
+func (a *Assembler) output() error {
+	if a.dialect != DialectMACRO {
+		return nil
+	}
+
+	a.useBlankPsect()
+
+	if !a.cur.relocatable {
+		return vmserrors.New(vmserrors.VAX_ABSDATA, a.cur.name)
+	}
+
+	return nil
 }
 
 // emitByte stores b at the current location and advances past it.
 func (a *Assembler) emitByte(b byte) error {
+	if err := a.output(); err != nil {
+		return err
+	}
+
 	if err := a.cur.img.storeByte(a.pc(), b); err != nil {
 		return err
 	}
@@ -125,6 +159,10 @@ func (a *Assembler) emitBytes(bs ...byte) error {
 
 // emitWord stores w at the current location and advances past it.
 func (a *Assembler) emitWord(w uint16) error {
+	if err := a.output(); err != nil {
+		return err
+	}
+
 	if err := a.cur.img.storeWord(a.pc(), w); err != nil {
 		return err
 	}
@@ -136,6 +174,10 @@ func (a *Assembler) emitWord(w uint16) error {
 
 // emitLongword stores l at the current location and advances past it.
 func (a *Assembler) emitLongword(l uint32) error {
+	if err := a.output(); err != nil {
+		return err
+	}
+
 	if err := a.cur.img.storeLongword(a.pc(), l); err != nil {
 		return err
 	}
@@ -148,6 +190,10 @@ func (a *Assembler) emitLongword(l uint32) error {
 // emitScaled stores value at the current location in scale bytes (1, 2, or
 // 4) and advances past it.
 func (a *Assembler) emitScaled(value uint32, scale int) error {
+	if err := a.output(); err != nil {
+		return err
+	}
+
 	if err := a.storeScaled(a.pc(), value, scale); err != nil {
 		return err
 	}

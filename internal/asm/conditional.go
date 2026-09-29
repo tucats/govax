@@ -247,7 +247,7 @@ func (a *Assembler) definedTest(c *cursor) (bool, error) {
 
 		resolved, _ := a.resolvedName(name)
 		sym, found := a.symbols.find(resolved)
-		defined := found && len(sym.forward) == 0
+		defined := found && sym.defined()
 
 		switch op {
 		case '&':

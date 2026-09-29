@@ -367,6 +367,10 @@ const (
 // tool also took an undelimited word as a string (.ASCII TEXT), which
 // MACRO-32 doesn't; that is now VAX_BADSTRING.
 func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
+	if err := a.output(); err != nil {
+		return err
+	}
+
 	count := 0
 
 	countPC := a.pc()
@@ -641,6 +645,10 @@ func (a *Assembler) pseudoFloat(c *cursor, size int) error {
 
 		first = false
 
+		if err := a.output(); err != nil {
+			return err
+		}
+
 		f, err := a.parseFloat(c)
 		if err != nil {
 			return err
@@ -667,6 +675,12 @@ func (a *Assembler) pseudoBlock(c *cursor, size int) error {
 		return err
 	}
 
+	// Storage before any .PSECT goes in . BLANK .; in an absolute psect,
+	// .BLKx only moves the location, defining offsets.
+	if a.dialect == DialectMACRO {
+		a.useBlankPsect()
+	}
+
 	a.advance(n * uint32(size))
 
 	return nil
@@ -676,8 +690,11 @@ func (a *Assembler) pseudoBlock(c *cursor, size int) error {
 // address (SYM_ENTRY, must be a fresh definition), starts a new local-
 // symbol scope under it, and stores the optional register-set mask (0 if
 // omitted) as a 16-bit word — matching case 22.
+//
+// In the MACRO dialect the name is global, and the mask is any absolute
+// expression (usually ^M<...>) that doesn't use R0, R1, AP, or FP.
 func (a *Assembler) pseudoEntry(c *cursor) error {
-	if err := a.closeLocalBlock(); err != nil {
+	if err := a.endLocalBlock(); err != nil {
 		return err
 	}
 
@@ -686,7 +703,12 @@ func (a *Assembler) pseudoEntry(c *cursor) error {
 	c.skipBlanks()
 	name := scanName(c)
 
-	if err := a.defineHere(name, SymEntry, true); err != nil {
+	flags := SymEntry
+	if a.dialect == DialectMACRO {
+		flags |= SymGlobal
+	}
+
+	if err := a.defineHere(name, flags, true); err != nil {
 		return err
 	}
 
@@ -703,19 +725,24 @@ func (a *Assembler) pseudoEntry(c *cursor) error {
 	c.skipBlanks()
 
 	if !c.atEnd() {
-		m, err := a.maskLiteral(c)
+		var err error
+
+		if a.dialect == DialectMACRO {
+			mask, err = a.entryMaskMACRO(c)
+		} else {
+			mask, err = a.maskLiteral(c)
+		}
+
 		if err != nil {
 			return err
 		}
-
-		mask = m
 	}
 
-	if err := a.emitWord(uint16(mask)); err != nil {
-		return err
+	if sym, found := a.symbols.find(name); found {
+		sym.mask = uint16(mask)
 	}
 
-	return nil
+	return a.emitWord(uint16(mask))
 }
 
 // pseudoScope assembles .SCOPE name: like .ENTRY, but only starts a new

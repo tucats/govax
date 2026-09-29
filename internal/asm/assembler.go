@@ -47,6 +47,31 @@ type Assembler struct {
 	cur *section
 	// sections is every section, in the order they were defined.
 	sections []*section
+	// implicitAbs says a MACRO-dialect assembly is still in . ABS .
+	// because nothing has chosen a psect yet (see useBlankPsect).
+	implicitAbs bool
+	// psectStack is .SAVE_PSECT's context stack.
+	psectStack []psectContext
+
+	// The MACRO dialect's module identification: .TITLE's module name
+	// and comment, and .IDENT's string.
+	title     string
+	titleText string
+	ident     string
+
+	// enabled holds the .ENABLE/.DISABLE functions in effect (see
+	// enableArgs), and defaultDisp the .DEFAULT DISPLACEMENT size in
+	// bytes.
+	enabled     enableFlags
+	defaultDisp int
+	// localBlockHeld says .ENABLE LOCAL_BLOCK is holding the local label
+	// block open across labels and .PSECTs (see endLocalBlock).
+	localBlockHeld bool
+
+	// warnings holds the warnings assembly produced, each an *Error
+	// naming its line, and line the line being assembled.
+	warnings []error
+	line     int
 
 	// relocs holds the values left for the linker (MACRO dialect only),
 	// and ready the fixups waiting for the end of their statement to
@@ -357,10 +382,15 @@ func (a *Assembler) assembleLines(source string) error {
 		return vmserrors.New(vmserrors.VAX_INCLUDEDEPTH)
 	}
 
+	outerLine := a.line
+	defer func() { a.line = outerLine }()
+
 	for i, raw := range strings.Split(source, "\n") {
 		if a.stop {
 			return nil
 		}
+
+		a.line = i + 1
 
 		line, ok := a.statement(raw)
 		if !ok || line == "" {
@@ -464,6 +494,12 @@ func preprocessLine(line string) string {
 				break
 			}
 
+			if n := titleDirectiveAt(b, i); n > 0 {
+				out = append(out, preprocessTitle(b[i:], n)...)
+
+				break
+			}
+
 			if n := asciiOperatorAt(b, i); n > 0 {
 				out = append(out, '^', 'A')
 				out = append(out, b[i+2:i+n]...)
@@ -485,8 +521,9 @@ func preprocessLine(line string) string {
 
 // stringDirectiveAt returns the length of a string directive's name
 // (".ASCIC", ".ASCID", ".ASCII", or ".ASCIZ", in any case, the "." being
-// optional as for every directive here; see assemblePseudo) starting at
-// b[i] as a whole word, or 0 if there isn't one.
+// optional as for every directive here; see assemblePseudo), or of
+// ".IDENT", whose operand is a delimited string too, starting at b[i] as
+// a whole word, or 0 if there isn't one.
 func stringDirectiveAt(b []byte, i int) int {
 	if i > 0 && !isBlank(b[i-1]) && b[i-1] != ':' {
 		return 0
@@ -497,17 +534,49 @@ func stringDirectiveAt(b []byte, i int) int {
 		n = 1
 	}
 
-	if i+n+5 > len(b) || !strings.EqualFold(string(b[i+n:i+n+4]), "ASCI") || !strings.ContainsRune("CDIZcdiz", rune(b[i+n+4])) {
+	switch {
+	case n == 1 && i+6 <= len(b) && strings.EqualFold(string(b[i+1:i+6]), "IDENT"):
+		n += 5
+	case i+n+5 > len(b) || !strings.EqualFold(string(b[i+n:i+n+4]), "ASCI") || !strings.ContainsRune("CDIZcdiz", rune(b[i+n+4])):
 		return 0
+	default:
+		n += 5
 	}
-
-	n += 5
 
 	if i+n < len(b) && !isBlank(b[i+n]) {
 		return 0
 	}
 
 	return n
+}
+
+// preprocessTitle preprocesses a .TITLE, .SUBTITLE, or .SBTTL statement,
+// b, whose name is n bytes long: the name, and .TITLE's module name, are
+// uppercased, and the text after them is kept as written, up to a ";"
+// comment.
+func preprocessTitle(b []byte, n int) []byte {
+	out := bytes.ToUpper(b[:n])
+	rest := b[n:]
+
+	if bytes.EqualFold(out, []byte(".TITLE")) {
+		i := 0
+		for i < len(rest) && isBlank(rest[i]) {
+			i++
+		}
+
+		for i < len(rest) && !isBlank(rest[i]) && rest[i] != ';' {
+			i++
+		}
+
+		out = append(out, bytes.ToUpper(rest[:i])...)
+		rest = rest[i:]
+	}
+
+	if semi := bytes.IndexByte(rest, ';'); semi >= 0 {
+		rest = rest[:semi]
+	}
+
+	return append(out, rest...)
 }
 
 // preprocessStrings appends a string directive's operands to out: each
@@ -700,24 +769,25 @@ func (a *Assembler) parseLabel(c *cursor) error {
 	end := i + 1
 	if end < len(c.s) && c.s[end] == ':' {
 		end++
-		flags |= SymPermanent
+		flags |= SymPermanent | SymGlobal
 	}
 
 	c.pos = end
 
 	if !isLocalLabel(name) {
-		if err := a.closeLocalBlock(); err != nil {
+		if err := a.endLocalBlock(); err != nil {
 			return err
 		}
+	} else if flags&SymGlobal != 0 && a.dialect == DialectMACRO {
+		return vmserrors.New(vmserrors.VAX_NOTGLOBAL, name)
 	}
 
 	return a.defineHere(name, flags, true)
 }
 
 // assembleAssignment handles a MACRO-32 direct assignment statement:
-// "NAME = expression" or "NAME == expression" (MACRO-32's global form,
-// which this assembler, having no object module or linker, treats the
-// same), or ". = expression" to move the location counter. Reports
+// "NAME = expression" or "NAME == expression" (MACRO-32's global form),
+// or ". = expression" to move the location counter. Reports
 // handled=false, leaving c untouched, if the statement isn't one.
 func (a *Assembler) assembleAssignment(c *cursor) (handled bool, err error) {
 	save := c.pos
@@ -742,8 +812,12 @@ func (a *Assembler) assembleAssignment(c *cursor) (handled bool, err error) {
 
 	c.next()
 
+	flags := SymNone
+
 	if c.peek() == '=' {
 		c.next()
+
+		flags = SymGlobal
 	}
 
 	x, err := a.exprKnown(c)
@@ -758,7 +832,7 @@ func (a *Assembler) assembleAssignment(c *cursor) (handled bool, err error) {
 			return true, nil
 		}
 
-		return true, a.setSymbol(name, x.v, SymNone, false)
+		return true, a.setSymbol(name, x.v, flags, false)
 	}
 
 	// A relocatable value: a label plus or minus a constant (the MACRO
@@ -775,5 +849,5 @@ func (a *Assembler) assembleAssignment(c *cursor) (handled bool, err error) {
 		return true, nil
 	}
 
-	return true, a.setSymbolIn(name, sect, offset, SymNone, false)
+	return true, a.setSymbolIn(name, sect, offset, flags, false)
 }

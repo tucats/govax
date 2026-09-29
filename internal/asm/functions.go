@@ -72,7 +72,7 @@ func (a *Assembler) callDefined(c *cursor) (uint32, bool, error) {
 	}
 
 	sym, ok := a.symbols.find(name)
-	defined := ok && len(sym.forward) == 0
+	defined := ok && sym.defined()
 
 	return boolToU32(defined), true, nil
 }

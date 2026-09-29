@@ -84,6 +84,17 @@ const (
 	vaxNotMACRO
 	vaxRelExpr
 	vaxMACROOnly
+	vaxPsectAttr
+	vaxPsectConflict
+	vaxAbsData
+	vaxAlignPsect
+	vaxPsectStack
+	vaxTooManyPsects
+	vaxBadKeyword
+	vaxEntryMask
+	vaxNotEntry
+	vaxIgnored
+	vaxNotGlobal
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -184,6 +195,20 @@ const (
 	VAX_NOTMACRO  = VAXFacility<<FacilityPosition | vaxNotMACRO<<MessagePosition | StatusError
 	VAX_RELEXPR   = VAXFacility<<FacilityPosition | vaxRelExpr<<MessagePosition | StatusError
 	VAX_MACROONLY = VAXFacility<<FacilityPosition | vaxMACROOnly<<MessagePosition | StatusError
+
+	// MACRO-32 program sections and directives (docs/PHASE-27.md, subtask 6).
+	VAX_PSECTATTR     = VAXFacility<<FacilityPosition | vaxPsectAttr<<MessagePosition | StatusError
+	VAX_PSECTCONFLICT = VAXFacility<<FacilityPosition | vaxPsectConflict<<MessagePosition | StatusError
+	VAX_ABSDATA       = VAXFacility<<FacilityPosition | vaxAbsData<<MessagePosition | StatusError
+	VAX_ALIGNPSECT    = VAXFacility<<FacilityPosition | vaxAlignPsect<<MessagePosition | StatusError
+	VAX_PSECTSTACK    = VAXFacility<<FacilityPosition | vaxPsectStack<<MessagePosition | StatusError
+	VAX_TOOMANYPSECTS = VAXFacility<<FacilityPosition | vaxTooManyPsects<<MessagePosition | StatusError
+	VAX_BADKEYWORD    = VAXFacility<<FacilityPosition | vaxBadKeyword<<MessagePosition | StatusError
+	VAX_ENTRYMASK     = VAXFacility<<FacilityPosition | vaxEntryMask<<MessagePosition | StatusError
+	VAX_NOTENTRY      = VAXFacility<<FacilityPosition | vaxNotEntry<<MessagePosition | StatusError
+	VAX_NOTGLOBAL     = VAXFacility<<FacilityPosition | vaxNotGlobal<<MessagePosition | StatusError
+	// VAX_IGNORED is a warning: assembly goes on without the feature.
+	VAX_IGNORED = VAXFacility<<FacilityPosition | vaxIgnored<<MessagePosition | StatusWarning
 )
 
 func init() {
@@ -248,6 +273,17 @@ func init() {
 	DefineMessage(VAX_NOTMACRO, VAXFacility, "NOTMACRO", "!S is not a MACRO-32 directive")
 	DefineMessage(VAX_RELEXPR, VAXFacility, "RELEXPR", "Relocatable or external value not allowed here")
 	DefineMessage(VAX_MACROONLY, VAXFacility, "MACROONLY", "!S is only valid in MACRO-32 source")
+	DefineMessage(VAX_PSECTATTR, VAXFacility, "PSECTATTR", "Invalid program section attribute !Q")
+	DefineMessage(VAX_PSECTCONFLICT, VAXFacility, "PSECTCONFLICT", "Attribute !S conflicts with program section !S's definition")
+	DefineMessage(VAX_ABSDATA, VAXFacility, "ABSDATA", "Code or data can't be stored in absolute program section !S")
+	DefineMessage(VAX_ALIGNPSECT, VAXFacility, "ALIGNPSECT", "Alignment 2^!D exceeds program section !S's alignment")
+	DefineMessage(VAX_PSECTSTACK, VAXFacility, "PSECTSTACK", "Program section context stack is !S")
+	DefineMessage(VAX_TOOMANYPSECTS, VAXFacility, "TOOMANYPSECTS", "More than !D program sections")
+	DefineMessage(VAX_BADKEYWORD, VAXFacility, "BADKEYWORD", "!S: unknown keyword !Q")
+	DefineMessage(VAX_ENTRYMASK, VAXFacility, "ENTRYMASK", "Entry mask !XW uses a reserved register (R0, R1, AP, or FP)")
+	DefineMessage(VAX_NOTENTRY, VAXFacility, "NOTENTRY", "!S is not an entry point")
+	DefineMessage(VAX_NOTGLOBAL, VAXFacility, "NOTGLOBAL", "A local label can't be global: !S")
+	DefineMessage(VAX_IGNORED, VAXFacility, "IGNORED", "!S is not supported and was ignored")
 	DefineMessage(VAX_EXTRATEXT, VAXFacility, "EXTRATEXT", "Unexpected text !Q at end of statement")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")

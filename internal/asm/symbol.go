@@ -44,6 +44,15 @@ const (
 	// SymExternal marks a symbol a MACRO-dialect assembly referred to but
 	// never defined, which the linker must supply (see finish).
 	SymExternal
+	// SymGlobal marks a symbol known outside the module: defined by
+	// "::", "==", or .ENTRY, or named by .GLOBAL, .EXTERNAL, or .WEAK.
+	SymGlobal
+	// SymWeak marks a symbol named by .WEAK.
+	SymWeak
+	// SymUndefined marks a symbol .GLOBAL, .EXTERNAL, .WEAK, or .MASK
+	// named before (or without) defining it: it has attributes, but no
+	// value yet.
+	SymUndefined
 )
 
 // fixupKind says how a pending forward reference's value should be written
@@ -112,6 +121,14 @@ type symbol struct {
 	sect    *section
 	flags   SymFlag
 	forward []*fixup // pending fixups using this symbol, most-recent first; nil once defined
+	// mask is an .ENTRY symbol's register save mask.
+	mask uint16
+}
+
+// defined reports whether s has a value: it isn't waiting on a forward
+// reference's definition, and isn't only declared or external.
+func (s *symbol) defined() bool {
+	return len(s.forward) == 0 && s.flags&(SymUndefined|SymExternal) == 0
 }
 
 // symbolTable holds every symbol defined during an assembly. Unlike the C
@@ -209,20 +226,44 @@ func (a *Assembler) localLabelName(name string) string {
 // never defined there is an error now, since no later definition can
 // resolve it.
 func (a *Assembler) closeLocalBlock() error {
-	if a.localUsed {
-		suffix := fmt.Sprintf("@%d", a.localBlock)
-
-		for key, s := range a.symbols.byName {
-			if len(s.forward) != 0 && strings.HasSuffix(key, suffix) {
-				return vmserrors.New(vmserrors.VAX_UNDEFSYM, strings.TrimSuffix(key, suffix))
-			}
-		}
+	if err := a.checkLocalBlock(); err != nil {
+		return err
 	}
 
 	a.localBlock++
 	a.localUsed = false
 
 	return nil
+}
+
+// checkLocalBlock reports a local label referenced in the current block
+// but never defined there. A block .SAVE_PSECT LOCAL_BLOCK saved isn't
+// checked, since .RESTORE_PSECT returns to it.
+func (a *Assembler) checkLocalBlock() error {
+	if !a.localUsed || a.blockSaved(a.localBlock) {
+		return nil
+	}
+
+	suffix := fmt.Sprintf("@%d", a.localBlock)
+
+	for key, s := range a.symbols.byName {
+		if len(s.forward) != 0 && strings.HasSuffix(key, suffix) {
+			return vmserrors.New(vmserrors.VAX_UNDEFSYM, strings.TrimSuffix(key, suffix))
+		}
+	}
+
+	return nil
+}
+
+// endLocalBlock ends the local label block at a user-defined label or a
+// .PSECT, unless .ENABLE LOCAL_BLOCK is holding it open (the MACRO
+// manual, §3.4).
+func (a *Assembler) endLocalBlock() error {
+	if a.localBlockHeld {
+		return nil
+	}
+
+	return a.closeLocalBlock()
 }
 
 // resolvedName applies scopeName using the assembler's current entry scope,
@@ -260,10 +301,10 @@ func (a *Assembler) getSymbol(name string, allowForward bool, location uint32, f
 	}
 
 	switch {
-	case found && len(sym.forward) == 0:
+	case found && sym.defined():
 		return sym.value, false, nil
 
-	case !found && !allowForward:
+	case (!found || a.dialect == DialectMACRO) && !allowForward:
 		return 0, false, vmserrors.New(vmserrors.VAX_UNDEFSYM, name)
 
 	case found && !allowForward:
@@ -319,7 +360,12 @@ func (a *Assembler) setSymbol(name string, value uint32, flags SymFlag, unique b
 
 // defineHere defines name as the current location, as a label does: an
 // address in an absolute section, or an offset in a relocatable one.
+// Before any .PSECT, a label goes in . BLANK . (see useBlankPsect).
 func (a *Assembler) defineHere(name string, flags SymFlag, unique bool) error {
+	if a.dialect == DialectMACRO {
+		a.useBlankPsect()
+	}
+
 	var sect *section
 	if a.cur.relocatable {
 		sect = a.cur
@@ -337,7 +383,7 @@ func (a *Assembler) setSymbolIn(name string, sect *section, value uint32, flags 
 	}
 
 	sym, found := a.symbols.find(resolved)
-	if unique && found && len(sym.forward) == 0 {
+	if unique && found && sym.defined() {
 		return vmserrors.New(vmserrors.VAX_DUPSYM, name)
 	}
 
@@ -347,7 +393,7 @@ func (a *Assembler) setSymbolIn(name string, sect *section, value uint32, flags 
 
 	sym.value = value
 	sym.sect = sect
-	sym.flags |= flags
+	sym.flags = sym.flags&^SymUndefined | flags
 
 	waiting := sym.forward
 	sym.forward = nil
@@ -461,7 +507,7 @@ func (a *Assembler) Symbols() map[string]SymbolInfo {
 	out := make(map[string]SymbolInfo)
 
 	for name, s := range a.symbols.byName {
-		if s.flags&(SymBuiltin|SymLocalLabel|SymExternal) != 0 || len(s.forward) != 0 {
+		if s.flags&(SymBuiltin|SymLocalLabel) != 0 || !s.defined() {
 			continue
 		}
 

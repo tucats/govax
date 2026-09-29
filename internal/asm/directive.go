@@ -30,6 +30,8 @@ func (a *Assembler) SetDialect(d Dialect) {
 
 	if d == DialectMACRO {
 		a.macroSections()
+		a.enabled = enableGlobal | enableTraceback
+		a.defaultDisp = 4
 	}
 }
 
@@ -62,10 +64,11 @@ type directive struct {
 //
 // A directive allowed in the MACRO dialect has MACRO-32's own syntax and
 // meaning. The rest are eVAX's: some can't be expressed in an object
-// module at all (.REGION, .SCB, .SHIM, .P1VECTOR, .CONSOLE), and some share
-// a name with a MACRO-32 directive that means something else (.MASK,
-// .PRINT, and .ALIGN, whose MACRO-32 operand is a power of two), so they
-// stay console-only until the MACRO dialect has its own.
+// module at all (.REGION, .SCB, .SHIM, .P1VECTOR, .CONSOLE). .ALIGN and
+// .MASK mean something else in MACRO-32 (.ALIGN's operand is a power of
+// two, and .MASK reserves a transfer vector's mask word), so each dialect
+// has its own form (see byDialect). .PRINT stays console-only until the
+// MACRO dialect has its own.
 //
 // Not implemented: the privileged-register pseudo-ops (".KSP value", etc.)
 // and .MODE/.PTE — none are used by any testdata/asm fixture, and each
@@ -100,8 +103,44 @@ func init() {
 		"BLKD": {both, func(a *Assembler, c *cursor) error { return a.pseudoBlock(c, 8) }},
 		"END":  {both, (*Assembler).pseudoEnd},
 
+		// MACRO-32 forms of names the console dialect uses for eVAX's own
+		// directives.
+		"ALIGN": {both, byDialect((*Assembler).pseudoAlign, (*Assembler).pseudoAlignMACRO)},
+		"MASK":  {both, byDialect((*Assembler).pseudoMask, (*Assembler).pseudoMaskMACRO)},
+
+		// More data storage.
+		"ADDRESS":    {both, (*Assembler).pseudoAddress},
+		"F_FLOATING": {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, 4) }},
+		"FLOAT":      {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, 4) }},
+		"D_FLOATING": {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, 8) }},
+		"DOUBLE":     {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, 8) }},
+
+		// Module identification. Listings will use .SUBTITLE's text.
+		"TITLE":    {both, (*Assembler).pseudoTitle},
+		"IDENT":    {both, (*Assembler).pseudoIdent},
+		"SUBTITLE": {both, ignoreRest},
+		"SBTTL":    {both, ignoreRest},
+
 		// Program sections.
-		"PSECT": {macro, (*Assembler).pseudoPsect},
+		"PSECT":         {macro, (*Assembler).pseudoPsect},
+		"SAVE_PSECT":    {macro, (*Assembler).pseudoSavePsect},
+		"SAVE":          {macro, (*Assembler).pseudoSavePsect},
+		"RESTORE_PSECT": {macro, (*Assembler).pseudoRestorePsect},
+		"RESTORE":       {macro, (*Assembler).pseudoRestorePsect},
+
+		// Global and external symbols.
+		"GLOBAL":   {macro, func(a *Assembler, c *cursor) error { return a.declareSymbols(c, SymGlobal) }},
+		"GLOBL":    {macro, func(a *Assembler, c *cursor) error { return a.declareSymbols(c, SymGlobal) }},
+		"EXTERNAL": {macro, func(a *Assembler, c *cursor) error { return a.declareSymbols(c, SymGlobal) }},
+		"EXTRN":    {macro, func(a *Assembler, c *cursor) error { return a.declareSymbols(c, SymGlobal) }},
+		"WEAK":     {macro, func(a *Assembler, c *cursor) error { return a.declareSymbols(c, SymGlobal|SymWeak) }},
+
+		// Assembler functions.
+		"ENABLE":  {macro, func(a *Assembler, c *cursor) error { return a.pseudoEnable(c, true) }},
+		"ENABL":   {macro, func(a *Assembler, c *cursor) error { return a.pseudoEnable(c, true) }},
+		"DISABLE": {macro, func(a *Assembler, c *cursor) error { return a.pseudoEnable(c, false) }},
+		"DSABL":   {macro, func(a *Assembler, c *cursor) error { return a.pseudoEnable(c, false) }},
+		"DEFAULT": {macro, (*Assembler).pseudoDefault},
 
 		// Routine entry points.
 		"ENTRY": {both, (*Assembler).pseudoEntry},
@@ -123,8 +162,6 @@ func init() {
 		"INCLUDE": {both, (*Assembler).pseudoInclude},
 
 		// eVAX console directives, and eVAX forms of MACRO-32 names.
-		"ALIGN":   {console, (*Assembler).pseudoAlign},
-		"MASK":    {console, (*Assembler).pseudoMask},
 		"PRINT":   {console, (*Assembler).pseudoPrint},
 		"F_FLOAT": {console, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, 4) }},
 		"D_FLOAT": {console, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, 8) }},
@@ -166,6 +203,27 @@ func init() {
 // implementation told apart by name.
 func subconditional(name string) func(a *Assembler, c *cursor) error {
 	return func(a *Assembler, _ *cursor) error { return a.subconditional(name) }
+}
+
+// byDialect returns a directive function that assembles the console
+// dialect's form of a directive with consoleForm, and MACRO-32's with
+// macroForm, for a name the two languages use differently.
+func byDialect(consoleForm, macroForm func(*Assembler, *cursor) error) func(*Assembler, *cursor) error {
+	return func(a *Assembler, c *cursor) error {
+		if a.dialect == DialectMACRO {
+			return macroForm(a, c)
+		}
+
+		return consoleForm(a, c)
+	}
+}
+
+// ignoreRest assembles a directive whose operand only matters to a
+// listing: .SUBTITLE and .SBTTL.
+func ignoreRest(_ *Assembler, c *cursor) error {
+	c.pos = len(c.s)
+
+	return nil
 }
 
 // ignoreExpression assembles a directive that evaluates its operand and
@@ -223,34 +281,4 @@ func (a *Assembler) assemblePseudo(c *cursor) (handled bool, err error) {
 	}
 
 	return true, d.assemble(a, c)
-}
-
-// pseudoPsect assembles .PSECT [name]: continues the program section name,
-// defining it (relocatable) the first time; with no name, . BLANK .
-// Attributes, the absolute default psect's rules, and .SAVE_PSECT/
-// .RESTORE_PSECT come with the rest of MACRO-32's directives
-// (docs/PHASE-27.md, subtask 6); until then anything after the name is
-// ignored.
-func (a *Assembler) pseudoPsect(c *cursor) error {
-	c.skipBlanks()
-
-	name := scanName(c)
-	if name == "" {
-		name = blankPsect
-	}
-
-	c.pos = len(c.s)
-
-	if err := a.closeLocalBlock(); err != nil {
-		return err
-	}
-
-	s := a.findSection(name)
-	if s == nil {
-		s = a.newSection(name, true, newImage(), 0)
-	}
-
-	a.cur = s
-
-	return nil
 }

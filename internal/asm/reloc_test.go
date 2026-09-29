@@ -53,16 +53,7 @@ func TestRelocationsMatchRealMACRO(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// .TITLE and .IDENT come with subtask 6's directives.
-	var lines []string
-
-	for _, line := range strings.Split(string(src), "\n") {
-		if !strings.HasPrefix(strings.TrimSpace(line), ".TITLE") && !strings.HasPrefix(strings.TrimSpace(line), ".IDENT") {
-			lines = append(lines, line)
-		}
-	}
-
-	a := macroAssemble(t, strings.Join(lines, "\n"))
+	a := macroAssemble(t, string(src))
 
 	requireRelocations(t, a,
 		"DATA+0 L EXT1 4 +",

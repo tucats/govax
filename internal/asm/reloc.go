@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // rop is the kind of an rexpr node.
@@ -27,6 +29,9 @@ const (
 	// rBinary is l op r, op being one of MACRO-32's binary operators
 	// (see exprTop).
 	rBinary
+	// rMask is the register save mask of the entry point key, which the
+	// linker supplies (.MASK; the object language's STA_EPM).
+	rMask
 )
 
 // rexpr is a value the assembler can't finish when it reads it: one that
@@ -105,7 +110,7 @@ func (t *rexpr) placeholder() uint32 {
 func (t *rexpr) resolved() *rexpr {
 	switch t.op {
 	case rSym:
-		if t.sym == nil || len(t.sym.forward) != 0 || t.sym.flags&SymExternal != 0 {
+		if t.sym == nil || !t.sym.defined() {
 			return t
 		}
 
@@ -178,6 +183,8 @@ func (t *rexpr) String() string {
 		return t.l.String() + " NEG"
 	case rCom:
 		return t.l.String() + " COM"
+	case rMask:
+		return "MASK(" + t.key + ")"
 	}
 
 	return t.l.String() + " " + t.r.String() + " " + string(t.bin)
@@ -325,8 +332,11 @@ func (a *Assembler) flushReady() error {
 }
 
 // finish ends a MACRO-dialect assembly. Every symbol still undefined is
-// external (MACRO-32's .ENABLE GLOBAL, the default), so every fixup
-// waiting on one becomes a relocation for the linker to finish.
+// external, so every fixup waiting on one becomes a relocation for the
+// linker to finish. That's any symbol .GLOBAL, .EXTERNAL, .WEAK, or .MASK
+// named, and, while .ENABLE GLOBAL is in effect (the default), any other
+// symbol too. With GLOBAL disabled, an undefined symbol not declared
+// external is an error.
 func (a *Assembler) finish() error {
 	if err := a.flushReady(); err != nil {
 		return err
@@ -340,8 +350,16 @@ func (a *Assembler) finish() error {
 
 	waiting := map[*fixup]bool{}
 
-	for _, s := range a.symbols.byName {
-		if len(s.forward) == 0 {
+	var undeclared []string
+
+	for name, s := range a.symbols.byName {
+		if len(s.forward) == 0 && s.flags&SymUndefined == 0 {
+			continue
+		}
+
+		if s.flags&SymGlobal == 0 && a.enabled&enableGlobal == 0 {
+			undeclared = append(undeclared, name)
+
 			continue
 		}
 
@@ -350,7 +368,13 @@ func (a *Assembler) finish() error {
 		}
 
 		s.forward = nil
-		s.flags |= SymExternal
+		s.flags = s.flags&^SymUndefined | SymExternal
+	}
+
+	if len(undeclared) > 0 {
+		sort.Strings(undeclared)
+
+		return vmserrors.New(vmserrors.VAX_UNDEFSYM, undeclared[0])
 	}
 
 	fixups := make([]*fixup, 0, len(waiting))

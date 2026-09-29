@@ -365,11 +365,16 @@ func (a *Assembler) lookupSymbolValue(name string, st *exprState) (exprVal, erro
 		sym.flags |= SymLocal
 	}
 
+	// The console dialect, like the reference tool, takes a symbol still
+	// waiting on its definition as its placeholder value where forward
+	// references aren't allowed.
+	usable := found && (sym.defined() || (!st.allowForward && a.dialect == DialectConsole))
+
 	switch {
-	case found && sym.sect != nil && (len(sym.forward) == 0 || !st.allowForward):
+	case usable && sym.sect != nil:
 		return exprVal{x: baseNode(sym.sect, sym.value)}, nil
 
-	case found && (len(sym.forward) == 0 || !st.allowForward):
+	case usable:
 		return constVal(sym.value), nil
 
 	case !st.allowForward:

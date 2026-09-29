@@ -26,7 +26,7 @@ becomes the record of the implementation: each subtask adds a
 [progress log](#progress-log) entry, and the open questions get their answers
 recorded here.
 
-**Status: subtasks 1-5 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 6 is next.**
+**Status: subtasks 1-6 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 7 is next.**
 
 ## Why this phase looks different
 
@@ -525,7 +525,7 @@ them under `testdata/mar/vax/`). Each step adds one feature:
    and external terms. Unresolved relocatable and external references become
    relocation records in MACRO dialect. Expression-rule tests (absolute vs.
    relocatable vs. complex).
-6. **MACRO-dialect directives:** the first-milestone list above.
+6. **Done.** **MACRO-dialect directives:** the first-milestone list above.
 7. **Operand encoding for relocatable and external operands.** Implement
    the manual's displacement-size rule: the smallest size for a target
    already defined in the same psect, otherwise the `.DEFAULT DISPLACEMENT`
@@ -1130,3 +1130,94 @@ above record the answers:
   psect, the `.ASCID` pointer, the transfer address, operators, the
   places a value must be absolute, and `.PSECT`. The console golden
   snapshots are unchanged, and `go test ./...` passes.
+
+### 2026-09-29 — Subtask 6: MACRO-dialect directives
+
+- **The first-milestone directives** are in the directive table:
+  - `.TITLE`, `.IDENT`, and `.SUBTITLE`/`.SBTTL`, which is ignored until
+    listings exist. `preprocessLine` keeps the case of `.TITLE`'s comment
+    and of `.IDENT`'s string. The module name is uppercased and cut to 31
+    characters, and the comment is cut to 40. Without a `.TITLE`, the
+    module is `.MAIN.`.
+  - `.PSECT` with its attributes and alignment (new `psect.go`). A
+    psect's attributes are kept as the object language's `GPS$M_` bits,
+    ready for the PSC record. A continuation may repeat attributes but
+    not change them. An `ABS` psect defines offsets: its labels are
+    absolute, `.BLKx` moves its location, and code or data in it is the
+    new `VAX_ABSDATA`. There's a limit of 254 named psects.
+  - `.SAVE_PSECT [LOCAL_BLOCK]`/`.RESTORE_PSECT` (and `.SAVE`/`.RESTORE`),
+    with a 31-entry stack. A saved local label block isn't checked when a
+    `.PSECT` ends it, since `.RESTORE_PSECT` returns to it.
+  - Global symbols. `::`, `==`, and `.ENTRY` define globals, and
+    `.GLOBAL`/`.GLOBL`, `.EXTERNAL`/`.EXTRN`, and `.WEAK` declare them.
+    The manual gives `.GLOBAL` and `.EXTERNAL` the same meaning for a
+    symbol the module doesn't define, so they share one implementation.
+    A declared symbol that's never defined is external. A local label
+    can't be global (the new `VAX_NOTGLOBAL`).
+  - `.ENABLE`/`.DISABLE` (and `.ENABL`/`.DSABL`), in long and short
+    forms. `GLOBAL` is implemented: with it disabled, an undefined symbol
+    not declared external is `VAX_UNDEFSYM`. `LOCAL_BLOCK` holds a local
+    label block open across labels and `.PSECT`s, as §3.4 describes.
+    `ABSOLUTE`, `DEBUG`, `SUPPRESSION`, and `TRACEBACK` are recorded.
+    `TRUNCATION` and `VECTOR` aren't supported, so enabling one is the
+    new warning `VAX_IGNORED`. Warnings are collected (`Warnings()`),
+    each naming its line, and assembly goes on.
+  - `.DEFAULT DISPLACEMENT,BYTE|WORD|LONG` is recorded (longword by
+    default).
+  - MACRO-32's own `.ALIGN` (a keyword, or a power of two from 0 to 9,
+    with an optional fill; more than the psect's alignment is
+    `VAX_ALIGNPSECT`) and `.MASK symbol[,expression]`. `.MASK` is a word
+    relocation holding a new `rMask` leaf, the entry point's mask for the
+    linker to supply (`STA_EPM`), ORed with the expression. `.ALIGN` and
+    `.MASK` now have one table entry each that picks the console or
+    MACRO form (`byDialect`), so the console dialect's forms don't
+    change.
+  - `.ADDRESS` (a `fixAddress` longword, `STO_PIDR`), and the
+    floating-point names `.F_FLOATING`/`.FLOAT` and `.D_FLOATING`/
+    `.DOUBLE`.
+  - `.ENTRY` in the MACRO dialect is global, and its mask is any absolute
+    expression that doesn't use R0, R1, AP, or FP (the new
+    `VAX_ENTRYMASK`). The mask is kept with the symbol for the EPM
+    record.
+- **The default psects, as real MACRO names and numbers them.** Its
+  objects and listings name the absolute psect `.  ABS  .`, with two
+  blanks on each side of ABS, although the manual prints `. ABS .`.
+  Listings in the VMS source archive show `. BLANK .` with one blank on
+  each side, so both names are nine characters. Assembly now starts in
+  `.  ABS  .`, and `. BLANK .` is defined only when a label, code, or
+  data comes before any `.PSECT` (`useBlankPsect`). So an unused
+  `. BLANK .` doesn't take a psect number, which matches the fixtures:
+  DATA is psect 1 in `data.obj`. One choice here isn't confirmed by a
+  fixture: the manual puts "symbol definitions" before any code in
+  `. ABS .`, and govax reads that as direct assignments only. A label
+  there names the location that follows it, so it moves to `. BLANK .`.
+- **Declared but undefined symbols.** A symbol `.GLOBAL` names before
+  defining it exists in the table without a value. The new `SymUndefined`
+  flag and `symbol.defined()` replace the "no pending fixups" tests that
+  used to mean defined. One console quirk is kept, but only in the
+  console dialect: where forward references aren't allowed, a symbol
+  still waiting on its definition reads as its placeholder value. In the
+  MACRO dialect it's `VAX_UNDEFSYM`.
+- **Checked against real MACRO.** `TestFixtureLadderDeclarations`
+  assembles each `testdata/mar` fixture and compares it with the real
+  object's MHD and GSD. It checks the module name and version, each
+  psect's index, attributes, alignment, and allocation, and each global
+  symbol: defined or referred to, weak, psect, value, and entry mask.
+  Six of the nine match exactly. The other three wait on subtask 7:
+  `extern` and `hello` use `G^`, and `branch`'s CODE allocation is 49
+  where MACRO's is 44, because of the displacement-size rule. They're
+  skipped by name (`awaitingOperandEncoding`), and subtask 7 removes them
+  from that list. `TestRelocationsMatchRealMACRO` now assembles
+  `exprs.mar` as it is, `.TITLE` and `.IDENT` included.
+- **Left for subtask 7:** `.DEFAULT DISPLACEMENT` and `.ENABLE ABSOLUTE`
+  are recorded but don't change operands yet, and there's no `G^`.
+- **Two test fixes, outside this phase.** The recent lint-hygiene commit
+  (`a8b9eee`) changed two tests' `var x []T` to `make([]T, n)` where
+  `make([]T, 0, n)` was meant, so each started with empty elements.
+  `TestSubrecords_roundTrip` (`internal/obj`) panicked on nil subrecords,
+  and `TestGetjpi_privileges` (`internal/rtl`) failed. Each is fixed in
+  its own commit. `golangci-lint` still reports `dispFixup` as unused, as
+  it did before this subtask. Subtask 7's displacement work is the
+  likely place to use it or remove it.
+- Tests: `macrodir_test.go` covers each directive and its errors, and
+  `go test ./...` passes.
