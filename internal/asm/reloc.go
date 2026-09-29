@@ -1,0 +1,396 @@
+package asm
+
+import (
+	"fmt"
+	"sort"
+	"strings"
+)
+
+// rop is the kind of an rexpr node.
+type rop byte
+
+const (
+	// rConst is the constant v.
+	rConst rop = iota
+	// rBase is the base address of the relocatable section sect, plus v.
+	// A label in a relocatable section has this value.
+	rBase
+	// rSym is the value of a symbol that wasn't defined when the
+	// expression was read: key names it in the symbol table, and sym is
+	// the symbol once queueFixup has created it. A symbol still undefined
+	// when assembly finishes is external, and the linker supplies it.
+	rSym
+	// rNeg is -l.
+	rNeg
+	// rCom is ^C l, the one's complement.
+	rCom
+	// rBinary is l op r, op being one of MACRO-32's binary operators
+	// (see exprTop).
+	rBinary
+)
+
+// rexpr is a value the assembler can't finish when it reads it: one that
+// uses a symbol not yet defined (forward or external), or the base of a
+// relocatable section, whose address only the linker knows. Its shape is
+// the source expression's, because real MACRO-32 hands such expressions to
+// the linker as written: EXT+4 is STA_GBL EXT, STA_UB 4, OPR_ADD, and
+// <C-A>*2 is a subtraction and then a multiplication, even though C and A
+// are in the same psect (docs/PHASE-27.md, subtask 3's log). The one
+// simplification is the manual's (§3.5): the difference of two symbols
+// already defined in the same psect is absolute (see binaryVal).
+type rexpr struct {
+	op   rop
+	bin  byte // rBinary's operator
+	v    uint32
+	sect *section
+	key  string
+	sym  *symbol
+	l, r *rexpr
+}
+
+func constNode(v uint32) *rexpr { return &rexpr{op: rConst, v: v} }
+
+func baseNode(s *section, offset uint32) *rexpr {
+	return &rexpr{op: rBase, sect: s, v: offset}
+}
+
+// hasSymbols reports whether t uses a symbol that wasn't yet defined.
+func (t *rexpr) hasSymbols() bool {
+	switch t.op {
+	case rSym:
+		return true
+	case rNeg, rCom:
+		return t.l.hasSymbols()
+	case rBinary:
+		return t.l.hasSymbols() || t.r.hasSymbols()
+	}
+
+	return false
+}
+
+// leaves calls fn for every rSym leaf in t.
+func (t *rexpr) leaves(fn func(*rexpr)) {
+	switch t.op {
+	case rSym:
+		fn(t)
+	case rNeg, rCom:
+		t.l.leaves(fn)
+	case rBinary:
+		t.l.leaves(fn)
+		t.r.leaves(fn)
+	}
+}
+
+// placeholder evaluates t with every undefined symbol, and every section
+// base, taken as zero. It's what's stored where t's value goes until the
+// value is known. For a sum of symbols and a constant it's the constant.
+func (t *rexpr) placeholder() uint32 {
+	switch t.op {
+	case rConst, rBase:
+		return t.v
+	case rNeg:
+		return -t.l.placeholder()
+	case rCom:
+		return ^t.l.placeholder()
+	case rBinary:
+		return applyOp(t.bin, t.l.placeholder(), t.r.placeholder())
+	}
+
+	return 0
+}
+
+// resolved returns t with every symbol defined since it was read replaced
+// by its value, and every operation whose operands are then constants
+// done. Symbols still undefined stay rSym leaves.
+func (t *rexpr) resolved() *rexpr {
+	switch t.op {
+	case rSym:
+		if t.sym == nil || len(t.sym.forward) != 0 || t.sym.flags&SymExternal != 0 {
+			return t
+		}
+
+		if t.sym.sect != nil {
+			return baseNode(t.sym.sect, t.sym.value)
+		}
+
+		return constNode(t.sym.value)
+
+	case rNeg, rCom:
+		l := t.l.resolved()
+		if l.op == rConst {
+			if t.op == rNeg {
+				return constNode(-l.v)
+			}
+
+			return constNode(^l.v)
+		}
+
+		return &rexpr{op: t.op, l: l}
+
+	case rBinary:
+		l, r := t.l.resolved(), t.r.resolved()
+		if l.op == rConst && r.op == rConst && !(t.bin == '/' && r.v == 0) {
+			return constNode(applyOp(t.bin, l.v, r.v))
+		}
+
+		return &rexpr{op: rBinary, bin: t.bin, l: l, r: r}
+	}
+
+	return t
+}
+
+// simpleRelocatable reports whether t is a section base plus a constant
+// (A, A+4, A-4, or 4+A), the form a symbol's own value can take, and if
+// so which section and offset.
+func (t *rexpr) simpleRelocatable() (*section, uint32, bool) {
+	switch {
+	case t.op == rBase:
+		return t.sect, t.v, true
+
+	case t.op != rBinary:
+		return nil, 0, false
+
+	case t.bin == '+' && t.l.op == rBase && t.r.op == rConst:
+		return t.l.sect, t.l.v + t.r.v, true
+
+	case t.bin == '+' && t.l.op == rConst && t.r.op == rBase:
+		return t.r.sect, t.l.v + t.r.v, true
+
+	case t.bin == '-' && t.l.op == rBase && t.r.op == rConst:
+		return t.l.sect, t.l.v - t.r.v, true
+	}
+
+	return nil, 0, false
+}
+
+// String writes t in postfix order, the order the linker's stack machine
+// evaluates it in: "EXT1 4 +", "DATA:0 OTHER:0 -". A section base is
+// section:offset (hexadecimal), and a constant is decimal.
+func (t *rexpr) String() string {
+	switch t.op {
+	case rConst:
+		return fmt.Sprintf("%d", int32(t.v))
+	case rBase:
+		return fmt.Sprintf("%s:%X", t.sect.name, t.v)
+	case rSym:
+		return t.key
+	case rNeg:
+		return t.l.String() + " NEG"
+	case rCom:
+		return t.l.String() + " COM"
+	}
+
+	return t.l.String() + " " + t.r.String() + " " + string(t.bin)
+}
+
+// applyOp applies a binary operator to two known values. Division is
+// unsigned, as the reference tool's was. A shift count is signed:
+// positive shifts left, negative shifts right arithmetically.
+func applyOp(op byte, v1, v2 uint32) uint32 {
+	switch op {
+	case '+':
+		return v1 + v2
+
+	case '-':
+		return v1 - v2
+
+	case '*':
+		return v1 * v2
+
+	case '/':
+		if v2 == 0 {
+			return 0
+		}
+
+		return v1 / v2
+
+	case '@':
+		n := int32(v2)
+
+		switch {
+		case n >= 32:
+			return 0
+		case n >= 0:
+			return v1 << uint(n)
+		case n <= -32:
+			return uint32(int32(v1) >> 31)
+		default:
+			return uint32(int32(v1) >> uint(-n))
+		}
+
+	case '&':
+		return v1 & v2
+
+	case '!':
+		return v1 | v2
+	}
+
+	return v1 ^ v2
+}
+
+// relocation is a value the assembler left for the linker: at offset in
+// sect, store expr, which uses a relocatable section's base or an external
+// symbol, in the way kind says (a byte, word, or longword; a displacement
+// from the end of the field; or a position-independent address). The
+// object emitter turns each one into TIR stack commands.
+type relocation struct {
+	sect   *section
+	offset uint32
+	kind   fixupKind
+	expr   *rexpr
+}
+
+func (r relocation) String() string {
+	return fmt.Sprintf("%s+%X %s %s", r.sect.name, r.offset, fixupKindNames[r.kind], r.expr)
+}
+
+var fixupKindNames = map[fixupKind]string{
+	fixAddrB:   "B",
+	fixAddrW:   "W",
+	fixAddrL:   "L",
+	fixDispB:   "BD",
+	fixDispW:   "WD",
+	fixDispL:   "LD",
+	fixBranchB: "BD",
+	fixBranchW: "WD",
+	fixBranchL: "LD",
+	fixCaseW:   "CASE",
+	fixAddress: "PIDR",
+}
+
+// Relocations returns the relocations assembled so far, one per line, for
+// tests and diagnostics: "DATA+4 L EXT1 4 +".
+func (a *Assembler) Relocations() []string {
+	out := make([]string, len(a.relocs))
+	for i, r := range a.relocs {
+		out[i] = r.String()
+	}
+
+	return out
+}
+
+// isDisplacement reports whether kind stores a displacement from the end
+// of its field rather than a value.
+func isDisplacement(kind fixupKind) bool {
+	switch kind {
+	case fixDispB, fixDispW, fixDispL, fixBranchB, fixBranchW, fixBranchL:
+		return true
+	}
+
+	return false
+}
+
+// completeFixup finishes f once none of its symbols is still pending:
+// its value, if that's now a constant, is stored as it always was;
+// otherwise it becomes a relocation. A displacement to a location in f's
+// own section is a constant too, whatever the section's base.
+func (a *Assembler) completeFixup(f *fixup) error {
+	t := f.expr.resolved()
+
+	switch {
+	case t.op == rConst:
+		return a.applyFixup(f, t.v)
+
+	case t.op == rBase && t.sect == f.sect && isDisplacement(f.kind):
+		return a.applyFixup(f, t.v)
+	}
+
+	a.relocs = append(a.relocs, relocation{sect: f.sect, offset: f.location, kind: f.kind, expr: t})
+
+	// The linker writes the field, so it holds zeros, not the placeholder.
+	for i := uint32(0); i < uint32(fixupSize(f.kind)); i++ {
+		if err := f.sect.img.storeByte(f.location+i, 0); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// flushReady completes the fixups queued with nothing pending (a value
+// using a section base, but no undefined symbol). They wait until the end
+// of their statement, since an operand parser may still move or change a
+// fixup it just queued (see lastFixup).
+func (a *Assembler) flushReady() error {
+	ready := a.ready
+	a.ready = nil
+
+	for _, f := range ready {
+		if err := a.completeFixup(f); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// finish ends a MACRO-dialect assembly. Every symbol still undefined is
+// external (MACRO-32's .ENABLE GLOBAL, the default), so every fixup
+// waiting on one becomes a relocation for the linker to finish.
+func (a *Assembler) finish() error {
+	if err := a.flushReady(); err != nil {
+		return err
+	}
+
+	// A local label can't be external (.END checks this too, but a source
+	// may have no .END).
+	if err := a.closeLocalBlock(); err != nil {
+		return err
+	}
+
+	waiting := map[*fixup]bool{}
+
+	for _, s := range a.symbols.byName {
+		if len(s.forward) == 0 {
+			continue
+		}
+
+		for _, f := range s.forward {
+			waiting[f] = true
+		}
+
+		s.forward = nil
+		s.flags |= SymExternal
+	}
+
+	fixups := make([]*fixup, 0, len(waiting))
+	for f := range waiting {
+		fixups = append(fixups, f)
+	}
+
+	for _, f := range fixups {
+		if err := a.completeFixup(f); err != nil {
+			return err
+		}
+	}
+
+	sort.SliceStable(a.relocs, func(i, j int) bool {
+		ri, rj := a.relocs[i], a.relocs[j]
+		if ri.sect.index != rj.sect.index {
+			return ri.sect.index < rj.sect.index
+		}
+
+		return ri.offset < rj.offset
+	})
+
+	return nil
+}
+
+// externals returns the names of the symbols finish found undefined.
+func (a *Assembler) externals() []string {
+	var out []string
+
+	for name, s := range a.symbols.byName {
+		if s.flags&SymExternal != 0 {
+			out = append(out, name)
+		}
+	}
+
+	sort.Strings(out)
+
+	return out
+}
+
+// Externals reports the symbols a MACRO-dialect assembly left for the
+// linker, for tests and diagnostics, as one comma-separated list.
+func (a *Assembler) Externals() string { return strings.Join(a.externals(), ",") }

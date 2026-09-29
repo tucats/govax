@@ -41,6 +41,9 @@ const (
 	// stored under a block-qualified name (see localLabelName). Symbols
 	// leaves these out: they mean nothing outside their own block.
 	SymLocalLabel
+	// SymExternal marks a symbol a MACRO-dialect assembly referred to but
+	// never defined, which the linker must supply (see finish).
+	SymExternal
 )
 
 // fixupKind says how a pending forward reference's value should be written
@@ -62,6 +65,9 @@ const (
 	fixBranchW
 	fixBranchL
 	fixCaseW
+	// fixAddress is a longword address, position independent: the object
+	// language's STO_PIDR, which .ADDRESS and .ASCID's pointer use.
+	fixAddress
 )
 
 // fixupSize returns the byte width a fixup kind writes; branch fixups use
@@ -73,50 +79,37 @@ func fixupSize(k fixupKind) int64 {
 		return 1
 	case fixAddrW, fixDispW, fixBranchW, fixCaseW:
 		return 2
-	case fixAddrL, fixDispL, fixBranchL:
+	case fixAddrL, fixDispL, fixBranchL, fixAddress:
 		return 4
 	}
 
 	return 0
 }
 
-// fixup is one pending forward-referenced expression: a location in the
-// output image to patch once every symbol the expression uses is defined.
-// The expression's value is addend plus the sum of each term's
-// coefficient times its symbol's value, which covers what an operand or
-// data item can say about symbols not yet defined: "SYM", "SYM+8",
-// "B-A", "2*SYM", "SYM-.". MACRO-32's object records carry such
-// expressions to the linker; here setSymbol completes them.
+// fixup is one value the assembler couldn't finish when it read it: a
+// location in section sect to store expr's value in, once every symbol
+// expr uses is defined (see rexpr). expr is whatever an operand or data
+// item can say: "SYM", "SYM+8", "B-A", "2*SYM", "SYM-.". In the console
+// dialect the last symbol's definition completes it; in the MACRO
+// dialect one using a relocatable section's base or an external symbol
+// becomes a relocation for the linker instead.
 type fixup struct {
+	sect     *section
 	location uint32
 	kind     fixupKind
-	addend   uint32
-	terms    []fixupTerm
-	pending  int    // how many terms' symbols are still undefined
+	expr     *rexpr
+	pending  int    // how many of expr's symbols are still undefined
 	base     uint32 // fixCaseW: the .CASE block's base address
-}
-
-// fixupTerm is one symbol in a fixup's expression, with its coefficient
-// (modulo 2^32, so -1 is 0xFFFFFFFF).
-type fixupTerm struct {
-	sym   *symbol
-	coeff uint32
-}
-
-// value computes the fixup's expression once its symbols are all defined.
-func (f *fixup) value() uint32 {
-	v := f.addend
-	for _, t := range f.terms {
-		v += t.coeff * t.sym.value
-	}
-
-	return v
 }
 
 // symbol is one entry in the assembler's symbol table.
 type symbol struct {
-	name    string
-	value   uint32
+	name  string
+	value uint32
+	// sect is the relocatable section a label is in, whose base value is
+	// relative to, or nil for an absolute value (every value, in the
+	// console dialect).
+	sect    *section
 	flags   SymFlag
 	forward []*fixup // pending fixups using this symbol, most-recent first; nil once defined
 }
@@ -160,7 +153,7 @@ func (t *symbolTable) clear(name string) bool {
 	}
 
 	delete(t.byName, name)
-	
+
 	return true
 }
 
@@ -277,40 +270,42 @@ func (a *Assembler) getSymbol(name string, allowForward bool, location uint32, f
 		return sym.value, false, nil
 	}
 
-	a.queueFixup(location, fx, 0, []pendingTerm{{key: resolved, coeff: 1}})
+	a.queueFixup(location, fx, &rexpr{op: rSym, key: resolved})
 
 	return 0, true, nil
 }
 
-// pendingTerm is a fixupTerm before its symbol has been created: the
-// expression evaluator records the symbol-table key, and queueFixup
-// creates the (still undefined) symbol only once the whole expression has
-// been accepted, so an expression rejected partway through leaves no
-// undefined symbol behind that would look defined with value 0.
-type pendingTerm struct {
-	key   string
-	coeff uint32
-}
+// queueFixup records a fixup of kind fx at location in the current
+// section for the value t, attaching it to each symbol t uses that isn't
+// defined yet (creating the symbol, which the expression evaluator
+// doesn't do, so an expression rejected partway through leaves no
+// undefined symbol behind that would look defined with value 0). It
+// becomes a.lastFixup, for the operand parsers that adjust a fixup after
+// deciding the operand's final layout. A fixup waiting on no symbol (one
+// using only a relocatable section's base) completes at the end of the
+// statement (see flushReady).
+func (a *Assembler) queueFixup(location uint32, fx fixupKind, t *rexpr) {
+	f := &fixup{sect: a.cur, location: location, kind: fx, expr: t, base: a.caseBase}
 
-// queueFixup records a fixup of kind fx at location for the expression
-// addend + Σ terms, attaching it to each term's symbol (creating any that
-// don't exist yet). It becomes a.lastFixup, for the operand parsers that
-// adjust a fixup after deciding the operand's final layout.
-func (a *Assembler) queueFixup(location uint32, fx fixupKind, addend uint32, terms []pendingTerm) {
-	f := &fixup{location: location, kind: fx, addend: addend, base: a.caseBase}
-
-	for _, t := range terms {
-		sym, found := a.symbols.find(t.key)
+	t.leaves(func(leaf *rexpr) {
+		sym, found := a.symbols.find(leaf.key)
 		if !found {
-			sym = a.symbols.create(t.key)
+			sym = a.symbols.create(leaf.key)
 		}
 
-		f.terms = append(f.terms, fixupTerm{sym: sym, coeff: t.coeff})
-		sym.forward = append([]*fixup{f}, sym.forward...)
-	}
+		leaf.sym = sym
 
-	f.pending = len(f.terms)
+		if len(sym.forward) == 0 || sym.forward[0] != f {
+			sym.forward = append([]*fixup{f}, sym.forward...)
+			f.pending++
+		}
+	})
+
 	a.lastFixup = f
+
+	if f.pending == 0 {
+		a.ready = append(a.ready, f)
+	}
 }
 
 // setSymbol defines (or redefines) name's value, applying flags and
@@ -319,6 +314,23 @@ func (a *Assembler) queueFixup(location uint32, fx fixupKind, addend uint32, ter
 // resolved definition, that's a duplicate-definition error (used by
 // labels/.ENTRY/.SCOPE/.SHIM, which each require a fresh name).
 func (a *Assembler) setSymbol(name string, value uint32, flags SymFlag, unique bool) error {
+	return a.setSymbolIn(name, nil, value, flags, unique)
+}
+
+// defineHere defines name as the current location, as a label does: an
+// address in an absolute section, or an offset in a relocatable one.
+func (a *Assembler) defineHere(name string, flags SymFlag, unique bool) error {
+	var sect *section
+	if a.cur.relocatable {
+		sect = a.cur
+	}
+
+	return a.setSymbolIn(name, sect, a.pc(), flags, unique)
+}
+
+// setSymbolIn is setSymbol for a value relative to the base of the
+// relocatable section sect (nil for an absolute value).
+func (a *Assembler) setSymbolIn(name string, sect *section, value uint32, flags SymFlag, unique bool) error {
 	resolved, local := a.resolvedName(name)
 	if local {
 		flags |= SymLocal
@@ -334,6 +346,7 @@ func (a *Assembler) setSymbol(name string, value uint32, flags SymFlag, unique b
 	}
 
 	sym.value = value
+	sym.sect = sect
 	sym.flags |= flags
 
 	waiting := sym.forward
@@ -345,7 +358,7 @@ func (a *Assembler) setSymbol(name string, value uint32, flags SymFlag, unique b
 			continue
 		}
 
-		if err := a.applyFixup(f); err != nil {
+		if err := a.completeFixup(f); err != nil {
 			return err
 		}
 	}
@@ -353,12 +366,11 @@ func (a *Assembler) setSymbol(name string, value uint32, flags SymFlag, unique b
 	return nil
 }
 
-// applyFixup patches one pending fixup now that every symbol its
-// expression uses is defined, matching set_symbol()'s fixup switch.
-// fixCaseW measures the offset from the .CASE block's base rather than
-// from the fixup's own location.
-func (a *Assembler) applyFixup(fp *fixup) error {
-	value := fp.value()
+// applyFixup stores one fixup's value, now that it's known, matching
+// set_symbol()'s fixup switch. fixCaseW measures the offset from the
+// .CASE block's base rather than from the fixup's own location.
+func (a *Assembler) applyFixup(fp *fixup, value uint32) error {
+	img := fp.sect.img
 	disp := int64(value) - int64(fp.location)
 
 	switch fp.kind {
@@ -373,7 +385,7 @@ func (a *Assembler) applyFixup(fp *fixup) error {
 			return vmserrors.New(vmserrors.VAX_FWDWORD, d)
 		}
 
-		return a.image.storeWord(fp.location, uint16(int16(d)))
+		return img.storeWord(fp.location, uint16(int16(d)))
 
 	case fixAddrB:
 		// A value, signed or unsigned, as .BYTE takes it.
@@ -381,36 +393,36 @@ func (a *Assembler) applyFixup(fp *fixup) error {
 			return vmserrors.New(vmserrors.VAX_FWDBYTE, v)
 		}
 
-		return a.image.storeByte(fp.location, byte(value))
+		return img.storeByte(fp.location, byte(value))
 
 	case fixDispB, fixBranchB:
 		if disp < -128 || disp > 127 {
 			return vmserrors.New(vmserrors.VAX_FWDBYTE, disp)
 		}
 
-		return a.image.storeByte(fp.location, byte(int8(disp)))
+		return img.storeByte(fp.location, byte(int8(disp)))
 
 	case fixAddrW:
 		if v := int64(int32(value)); v < -32768 || v > 0xFFFF {
 			return vmserrors.New(vmserrors.VAX_FWDWORD, v)
 		}
 
-		return a.image.storeWord(fp.location, uint16(value))
+		return img.storeWord(fp.location, uint16(value))
 
 	case fixDispW, fixBranchW:
 		if disp < -32768 || disp > 32767 {
 			return vmserrors.New(vmserrors.VAX_FWDWORD, disp)
 		}
-		
-		return a.image.storeWord(fp.location, uint16(int16(disp)))
 
-	case fixAddrL:
+		return img.storeWord(fp.location, uint16(int16(disp)))
+
+	case fixAddrL, fixAddress:
 		disp = int64(int32(value))
 
 		fallthrough
 
 	case fixDispL, fixBranchL:
-		return a.image.storeLongword(fp.location, uint32(int32(disp)))
+		return img.storeLongword(fp.location, uint32(int32(disp)))
 	}
 
 	return vmserrors.New(vmserrors.VAX_INTERNAL, fmt.Sprintf("unhandled fixup kind %d", fp.kind))
@@ -449,7 +461,7 @@ func (a *Assembler) Symbols() map[string]SymbolInfo {
 	out := make(map[string]SymbolInfo)
 
 	for name, s := range a.symbols.byName {
-		if s.flags&(SymBuiltin|SymLocalLabel) != 0 || len(s.forward) != 0 {
+		if s.flags&(SymBuiltin|SymLocalLabel|SymExternal) != 0 || len(s.forward) != 0 {
 			continue
 		}
 

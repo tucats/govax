@@ -26,7 +26,7 @@ becomes the record of the implementation: each subtask adds a
 [progress log](#progress-log) entry, and the open questions get their answers
 recorded here.
 
-**Status: subtasks 1-4 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 5 is next.**
+**Status: subtasks 1-5 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 6 is next.**
 
 ## Why this phase looks different
 
@@ -521,7 +521,7 @@ them under `testdata/mar/vax/`). Each step adds one feature:
    existing `internal/asm` and `internal/console` test passes, and every
    `testdata/asm` fixture assembles to the same image and symbols as
    before.
-5. **Relocatable values.** `exprVal`, `fixup`, and `symbol` carry psect
+5. **Done.** **Relocatable values.** `exprVal`, `fixup`, and `symbol` carry psect
    and external terms. Unresolved relocatable and external references become
    relocation records in MACRO dialect. Expression-rule tests (absolute vs.
    relocatable vs. complex).
@@ -1038,3 +1038,96 @@ above record the answers:
   `VAX_NOTMACRO` in the MACRO dialect, that the shared directives
   assemble there, that the dot is required, and that `.REGION`/`.BASE`
   still work with the new sections. `go test ./...` passes.
+
+### 2026-09-29 — Subtask 5: relocatable values
+
+- **A tree, not a linear combination.** The plan proposed extending the
+  forward-reference form (`constant + Σ coeff·symbol`) with psect and
+  external terms. Real MACRO's objects (subtask 3) rule that out:
+  - `EXT2&^XFF` is a mask, which no linear form can hold.
+  - MACRO keeps each expression's shape as written. `EXT1*2` is
+    `STA_GBL`, `STA_UB 2`, `OPR_MUL`, and `ITEM+4` is `STA_PB 1,0`,
+    `STA_UB 4`, `OPR_ADD`, not `STA_PB 1,4`.
+
+  So a value the assembler can't finish is now an expression tree
+  (`rexpr`, in the new `internal/asm/reloc.go`). Its leaves are
+  constants, a psect base plus an offset, and symbols not yet defined,
+  and its operators are the source's. `exprVal` is a constant or such a
+  tree, and a `fixup` holds a tree and its section. The `addend`/`terms`
+  form and `pendingTerm`/`fixupTerm` are gone.
+- **What folds.** Operations on constants are done at once. The one
+  other simplification is the manual's §3.5 rule: the difference of two
+  labels already defined in the same psect is absolute. A label defined
+  later becomes its psect base when it's defined, and nothing else
+  folds. So `<C-A>*2`, with C a forward reference, stays a
+  subtraction and a multiplication, as real MACRO wrote it. A bare
+  `SYM-SYM` is still 0.
+- **When a fixup completes.** When its last symbol is defined, its tree
+  is resolved:
+  - A constant is stored exactly as before.
+  - So is a displacement to a location in the fixup's own psect, whatever
+    the psect's base.
+  - Anything else becomes a **relocation** (psect, offset, kind, tree),
+    and its field is left zero.
+
+  A value that uses only a psect base (a label already defined in a
+  relocatable psect) waits on no symbol. Its fixup completes at the end
+  of its statement (`flushReady`), because operand parsers adjust the
+  fixup they just queued. At the end of a MACRO-dialect assembly
+  (`finish`), every symbol still undefined is marked `SymExternal`
+  (GLOBAL is on by default), and the fixups waiting on it become
+  relocations, sorted by psect and offset. A local label can't be
+  external, so an undefined one is still `VAX_UNDEFSYM`.
+- **Sections.** Each section now has an index (its psect number), a
+  `relocatable` flag, its own image (the console's P0 and S0 share the
+  one absolute image), and `hi`, the highest location reached (the
+  psect's allocation). `SetDialect(DialectMACRO)` replaces P0 and S0 with
+  `. ABS .` (absolute) and `. BLANK .` (relocatable, where assembly
+  starts). A label in a relocatable psect is defined as (psect, offset)
+  (`symbol.sect`), and `.` there is the psect base plus the location.
+  In the MACRO dialect, `Bytes` returns the current psect's contents.
+- **A minimal `.PSECT name`** (MACRO dialect only). The tests need more
+  than one psect before subtask 6. It switches to the psect, creating it
+  the first time, ends the local label block, and ignores anything after
+  the name. Subtask 6 adds the attributes, the rules for the default
+  psects, and `.SAVE_PSECT`/`.RESTORE_PSECT`. In the console dialect,
+  `.PSECT` is the new `VAX_MACROONLY` ("!S is only valid in MACRO-32
+  source").
+- **Where a value must be absolute.** `exprNoForward` (`.BLKx`, `.ALIGN`,
+  `.IF`, and so on) now requires an absolute value, and a relocatable one
+  is the new `VAX_RELEXPR`. A direct assignment (`X = A+4`) may be
+  relocatable if it's a label plus or minus a constant (the manual's
+  rule). The symbol then gets that psect and offset. `. =` must stay in
+  its own psect. `.END MAIN` records a relocatable transfer address
+  (`entrySect`) for the EOM record. The console's `__ENTRY` symbol isn't
+  defined in the MACRO dialect.
+- **Operators.** The MACRO dialect gives any operator on an unfinished
+  value to the linker: `/`, `@`, `&`, `!`, `\`, unary minus (`NEG`), and
+  `^C` (`COM`). The console dialect keeps `VAX_FWDOPERATOR` for anything
+  but adding, subtracting, or multiplying a forward reference by a
+  constant. One corner of it changed: a forward reference cancelled
+  only in `SYM-SYM`, where the old linear form also cancelled
+  `B+1-B`. That now waits for B. The stored bytes are the same, and no
+  fixture depends on it (the golden snapshots are unchanged).
+- **`.ASCID`** in the MACRO dialect relocates its address field as
+  `.+4` with a new `fixAddress` kind, which is `STO_PIDR`. That's what
+  real MACRO wrote for hello.mar, and `.ADDRESS` will use it too.
+- **Left for subtask 7.** Every value that uses a psect base is
+  currently deferred like a forward reference, so a relative operand to
+  one gets a longword displacement:
+  - For a label in another psect, or an external, that's already what
+    MACRO does.
+  - For a label already defined in the same psect, MACRO uses the
+    smallest displacement.
+  - For a forward reference in the same psect, MACRO leaves the
+    displacement to the linker (`STO_LD`), where govax finishes it
+    itself. Branches to the same psect are finished by both.
+- **Tests** (`reloc_test.go`). `TestRelocationsMatchRealMACRO` assembles
+  `testdata/mar/exprs.mar` (without `.TITLE`/`.IDENT`, which subtask 6
+  adds). Each of its eight relocations has the shape of the TIR program
+  real MACRO wrote for that line, the externals are EXT1 and EXT2, and
+  DATA's allocation is 23, as in the real PSC record. Other tests cover
+  the absolute rules, relocatable operands and data, branches within a
+  psect, the `.ASCID` pointer, the transfer address, operators, the
+  places a value must be absolute, and `.PSECT`. The console golden
+  snapshots are unchanged, and `go test ./...` passes.

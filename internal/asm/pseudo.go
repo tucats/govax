@@ -373,25 +373,29 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 
 	switch kind {
 	case asciiCounted:
-		if err := a.image.storeByte(countPC, 0); err != nil {
+		if err := a.cur.img.storeByte(countPC, 0); err != nil {
 			return err
 		}
 
 		a.advance(1)
 
 	case asciiDescriptor:
-		if err := a.image.storeWord(countPC, 0); err != nil { // length (patched below)
+		if err := a.cur.img.storeWord(countPC, 0); err != nil { // length (patched below)
 			return err
 		}
 
-		if err := a.image.storeWord(countPC+2, 0x010E); err != nil { // class S, dtype T
+		if err := a.cur.img.storeWord(countPC+2, 0x010E); err != nil { // class S, dtype T
 			return err
 		}
 
 		a.advance(4)
-		stringPC := a.pc() + 4
 
-		if err := a.emitLongword(stringPC); err != nil {
+		// The address of the string, just past this longword: ".+4".
+		if here := a.dot(); !here.known() {
+			a.queueFixup(a.pc(), fixAddress, &rexpr{op: rBinary, bin: '+', l: here.x, r: constNode(4)})
+		}
+
+		if err := a.emitLongword(a.pc() + 4); err != nil {
 			return err
 		}
 	}
@@ -422,7 +426,7 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 			return vmserrors.New(vmserrors.VAX_DATARANGE, ".ASCIC", count)
 		}
 
-		if err := a.image.storeByte(countPC, byte(count)); err != nil {
+		if err := a.cur.img.storeByte(countPC, byte(count)); err != nil {
 			return err
 		}
 
@@ -431,7 +435,7 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 			return vmserrors.New(vmserrors.VAX_DATARANGE, ".ASCID", count)
 		}
 
-		if err := a.image.storeWord(countPC, uint16(count)); err != nil {
+		if err := a.cur.img.storeWord(countPC, uint16(count)); err != nil {
 			return err
 		}
 	}
@@ -504,7 +508,31 @@ func (a *Assembler) pseudoEnd(c *cursor) error {
 
 	c.skipBlanks()
 
-	if !c.atEnd() {
+	switch {
+	case c.atEnd():
+
+	case a.dialect == DialectMACRO:
+		// The transfer address, for the end of module record.
+		x, err := a.exprKnown(c)
+		if err != nil {
+			return err
+		}
+
+		addr := x.v
+
+		if !x.known() {
+			sect, offset, ok := x.x.simpleRelocatable()
+			if !ok {
+				return vmserrors.New(vmserrors.VAX_RELEXPR)
+			}
+
+			a.entrySect, addr = sect, offset
+		}
+
+		a.entrySeen = true
+		a.entryAddr = addr
+
+	default:
 		v, err := a.exprNoForward(c)
 		if err != nil {
 			return err
@@ -657,7 +685,7 @@ func (a *Assembler) pseudoEntry(c *cursor) error {
 	c.skipBlanks()
 	name := scanName(c)
 
-	if err := a.setSymbol(name, a.pc(), SymEntry, true); err != nil {
+	if err := a.defineHere(name, SymEntry, true); err != nil {
 		return err
 	}
 

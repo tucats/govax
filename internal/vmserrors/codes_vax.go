@@ -82,6 +82,8 @@ const (
 	vaxNoEndc
 	vaxCondDepth
 	vaxNotMACRO
+	vaxRelExpr
+	vaxMACROOnly
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -180,6 +182,8 @@ const (
 	VAX_NOENDC    = VAXFacility<<FacilityPosition | vaxNoEndc<<MessagePosition | StatusError
 	VAX_CONDDEPTH = VAXFacility<<FacilityPosition | vaxCondDepth<<MessagePosition | StatusError
 	VAX_NOTMACRO  = VAXFacility<<FacilityPosition | vaxNotMACRO<<MessagePosition | StatusError
+	VAX_RELEXPR   = VAXFacility<<FacilityPosition | vaxRelExpr<<MessagePosition | StatusError
+	VAX_MACROONLY = VAXFacility<<FacilityPosition | vaxMACROOnly<<MessagePosition | StatusError
 )
 
 func init() {
@@ -242,6 +246,8 @@ func init() {
 	DefineMessage(VAX_NOENDC, VAXFacility, "NOENDC", "Missing .ENDC: !D conditional assembly block(s) still open")
 	DefineMessage(VAX_CONDDEPTH, VAXFacility, "CONDDEPTH", "Conditional assembly blocks nested more than !D deep")
 	DefineMessage(VAX_NOTMACRO, VAXFacility, "NOTMACRO", "!S is not a MACRO-32 directive")
+	DefineMessage(VAX_RELEXPR, VAXFacility, "RELEXPR", "Relocatable or external value not allowed here")
+	DefineMessage(VAX_MACROONLY, VAXFacility, "MACROONLY", "!S is only valid in MACRO-32 source")
 	DefineMessage(VAX_EXTRATEXT, VAXFacility, "EXTRATEXT", "Unexpected text !Q at end of statement")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")

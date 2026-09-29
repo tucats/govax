@@ -46,100 +46,149 @@ type exprState struct {
 	allowForward bool
 }
 
-// exprVal is an expression's value while it is being evaluated: a
-// constant plus, when forward references are allowed, a coefficient for
-// each symbol not yet defined. Addition, subtraction, negation, and
-// multiplication by a constant keep that form, so exprValue can queue one
-// fixup that completes the whole expression later (see fixup). Anything
-// else applied to an undefined symbol (division, comparison, one
-// undefined symbol times another) has no such form and is
-// VAX-E-FWDOPERATOR.
+// exprVal is an expression's value while it is being evaluated: the
+// constant v, or, when x is non-nil, a value the assembler can't finish
+// yet (see rexpr): one using a symbol not yet defined, where forward
+// references are allowed, or a relocatable section's base, in the MACRO
+// dialect. exprValue queues one fixup for the whole of such a value.
+//
+// The console dialect has no relocatable sections, and keeps the
+// reference tool's rule for forward references: a symbol not yet defined
+// can only be added, subtracted, or multiplied by a constant, and anything
+// else applied to it (division, one undefined symbol times another) is
+// VAX-E-FWDOPERATOR. MACRO-32 hands any expression to the linker.
 type exprVal struct {
-	v     uint32
-	terms []pendingTerm
+	v uint32
+	x *rexpr
 }
 
 func constVal(v uint32) exprVal { return exprVal{v: v} }
 
-func (x exprVal) forward() bool { return len(x.terms) > 0 }
+// known reports whether x's value is a constant now.
+func (x exprVal) known() bool { return x.x == nil }
 
-// scaled returns x multiplied by k.
-func (x exprVal) scaled(k uint32) exprVal {
-	out := exprVal{v: x.v * k}
-	for _, t := range x.terms {
-		out.terms = addTerm(out.terms, t.key, t.coeff*k)
+// forward reports whether x uses a symbol not yet defined.
+func (x exprVal) forward() bool { return x.x != nil && x.x.hasSymbols() }
+
+// tree returns x as an rexpr.
+func (x exprVal) tree() *rexpr {
+	if x.x != nil {
+		return x.x
 	}
 
-	return out
+	return constNode(x.v)
 }
 
-// plus returns x + y.
-func (x exprVal) plus(y exprVal) exprVal {
-	out := exprVal{v: x.v + y.v, terms: append([]pendingTerm(nil), x.terms...)}
-	for _, t := range y.terms {
-		out.terms = addTerm(out.terms, t.key, t.coeff)
+// binaryVal applies a binary operator to two values (see exprTop).
+func (a *Assembler) binaryVal(op byte, x1, x2 exprVal) (exprVal, error) {
+	if op == '/' && x2.known() && x2.v == 0 {
+		return exprVal{}, vmserrors.New(vmserrors.VAX_DIVZERO)
 	}
 
-	return out
-}
+	if x1.known() && x2.known() {
+		return constVal(applyOp(op, x1.v, x2.v)), nil
+	}
 
-// addTerm adds coeff×key to terms, merging with an existing term for the
-// same symbol and dropping one whose coefficient cancels to zero (so
-// "B-B" is just 0).
-func addTerm(terms []pendingTerm, key string, coeff uint32) []pendingTerm {
-	for i := range terms {
-		if terms[i].key == key {
-			terms[i].coeff += coeff
-			if terms[i].coeff == 0 {
-				terms = append(terms[:i], terms[i+1:]...)
-			}
+	if op == '-' && !x1.known() && !x2.known() {
+		l, r := x1.x, x2.x
 
-			return terms
+		// The difference of two labels already defined in the same
+		// section is absolute (the MACRO manual, §3.5).
+		if l.op == rBase && r.op == rBase && l.sect == r.sect {
+			return constVal(l.v - r.v), nil
+		}
+
+		// SYM-SYM is 0 even while SYM is undefined.
+		if l.op == rSym && r.op == rSym && l.key == r.key {
+			return constVal(0), nil
 		}
 	}
 
-	if coeff == 0 {
-		return terms
+	if a.dialect == DialectConsole && (x1.forward() || x2.forward()) {
+		linear := op == '+' || op == '-' || (op == '*' && (x1.known() || x2.known()))
+		if !linear {
+			return exprVal{}, vmserrors.New(vmserrors.VAX_FWDOPERATOR)
+		}
 	}
 
-	return append(terms, pendingTerm{key: key, coeff: coeff})
+	return exprVal{x: &rexpr{op: rBinary, bin: op, l: x1.tree(), r: x2.tree()}}, nil
+}
+
+// unaryVal applies unary minus (rNeg) or ^C (rCom) to x.
+func (a *Assembler) unaryVal(op rop, x exprVal) (exprVal, error) {
+	switch {
+	case x.known() && op == rNeg:
+		return constVal(-x.v), nil
+
+	case x.known():
+		return constVal(^x.v), nil
+
+	case op == rCom && a.dialect == DialectConsole && x.forward():
+		return exprVal{}, vmserrors.New(vmserrors.VAX_FWDOPERATOR)
+	}
+
+	return exprVal{x: &rexpr{op: op, l: x.x}}, nil
+}
+
+// dot returns the value of ".", the current location: a constant in an
+// absolute section, and the section's base plus an offset in a
+// relocatable one.
+func (a *Assembler) dot() exprVal {
+	if a.cur.relocatable {
+		return exprVal{x: baseNode(a.cur, a.cur.loc)}
+	}
+
+	return constVal(a.pc())
 }
 
 // exprNoForward evaluates an expression with forward references disabled,
 // matching a direct asm_expr() call outside of asm_value() (used by .BASE,
 // .ALIGN, .SET's value, .SCB/.VECTOR's vector code, .IF, and friends — none
-// of which route through asm_value's fixup machinery).
+// of which route through asm_value's fixup machinery). The value must be
+// absolute: in the MACRO dialect, a relocatable one is VAX_RELEXPR.
 func (a *Assembler) exprNoForward(c *cursor) (uint32, error) {
-	x, err := a.exprTop(c, &exprState{})
+	x, err := a.exprKnown(c)
+	if err == nil && !x.known() {
+		err = vmserrors.New(vmserrors.VAX_RELEXPR)
+	}
 
 	return x.v, err
 }
 
+// exprKnown evaluates an expression using only symbols already defined,
+// whose value may be relocatable (a direct assignment, or .END's transfer
+// address).
+func (a *Assembler) exprKnown(c *cursor) (exprVal, error) {
+	return a.exprTop(c, &exprState{})
+}
+
 // exprValue evaluates an expression allowing forward references, matching
-// asm_value(). If the expression uses a symbol not yet defined, a fixup of
-// kind fx at location loc is queued for the whole expression (it becomes
-// a.lastFixup), and the value returned is only its constant part, a
-// placeholder. The reference tool could only complete a bare symbol, and
-// rejected "SYM+8" or "B-A" with a forward reference as FWDOPERATOR.
-func (a *Assembler) exprValue(c *cursor, loc uint32, fx fixupKind) (value uint32, wasForward bool, err error) {
+// asm_value(). If the value can't be finished now (it uses a symbol not
+// yet defined, or a relocatable section's base), a fixup of kind fx at
+// location loc is queued for the whole expression (it becomes
+// a.lastFixup), deferred is true, and the value returned is only a
+// placeholder (see rexpr.placeholder). The reference tool could only
+// complete a bare symbol, and rejected "SYM+8" or "B-A" with a forward
+// reference as FWDOPERATOR.
+func (a *Assembler) exprValue(c *cursor, loc uint32, fx fixupKind) (value uint32, deferred bool, err error) {
 	return a.exprValueOf(c, loc, fx, a.exprTop)
 }
 
 // exprValueOf is exprValue for the grammar level parse, so a caller can
 // read a single term (a.exprAtom) rather than a whole expression.
-func (a *Assembler) exprValueOf(c *cursor, loc uint32, fx fixupKind, parse func(*cursor, *exprState) (exprVal, error)) (value uint32, wasForward bool, err error) {
+func (a *Assembler) exprValueOf(c *cursor, loc uint32, fx fixupKind, parse func(*cursor, *exprState) (exprVal, error)) (value uint32, deferred bool, err error) {
 	x, err := parse(c, &exprState{allowForward: true})
 	if err != nil {
 		return 0, false, err
 	}
 
-	if !x.forward() {
+	if x.known() {
 		return x.v, false, nil
 	}
 
-	a.queueFixup(loc, fx, x.v, x.terms)
+	a.queueFixup(loc, fx, x.x)
 
-	return x.v, true, nil
+	return x.x.placeholder(), true, nil
 }
 
 // exprTop parses an expression: terms joined by binary operators, which
@@ -175,63 +224,13 @@ func (a *Assembler) exprTop(c *cursor, st *exprState) (exprVal, error) {
 			return exprVal{}, err
 		}
 
-		switch {
-		case ch == '+':
-			x1 = x1.plus(x2)
-
-		case ch == '-':
-			x1 = x1.plus(x2.scaled(0xFFFFFFFF))
-
-		case ch == '*' && !x2.forward():
-			x1 = x1.scaled(x2.v)
-
-		case ch == '*' && !x1.forward():
-			x1 = x2.scaled(x1.v)
-
-		case x1.forward() || x2.forward():
-			return exprVal{}, vmserrors.New(vmserrors.VAX_FWDOPERATOR)
-
-		case ch == '/' && x2.v == 0:
-			return exprVal{}, vmserrors.New(vmserrors.VAX_DIVZERO)
-
-		default:
-			x1 = constVal(binaryOp(ch, x1.v, x2.v))
+		x1, err = a.binaryVal(ch, x1, x2)
+		if err != nil {
+			return exprVal{}, err
 		}
 	}
 
 	return x1, nil
-}
-
-// binaryOp applies a binary operator to two known values. Division is
-// unsigned, as the reference tool's was. A shift count is signed:
-// positive shifts left, negative shifts right arithmetically.
-func binaryOp(op byte, v1, v2 uint32) uint32 {
-	switch op {
-	case '/':
-		return v1 / v2
-
-	case '@':
-		n := int32(v2)
-
-		switch {
-		case n >= 32:
-			return 0
-		case n >= 0:
-			return v1 << uint(n)
-		case n <= -32:
-			return uint32(int32(v1) >> 31)
-		default:
-			return uint32(int32(v1) >> uint(-n))
-		}
-
-	case '&':
-		return v1 & v2
-
-	case '!':
-		return v1 | v2
-	}
-
-	return v1 ^ v2
 }
 
 // exprAtom parses one expression atom: a parenthesized sub-expression, "."
@@ -250,8 +249,11 @@ func (a *Assembler) exprAtom(c *cursor, st *exprState) (exprVal, error) {
 	case '-':
 		c.next()
 		x, err := a.exprAtom(c, st)
+		if err != nil {
+			return exprVal{}, err
+		}
 
-		return x.scaled(0xFFFFFFFF), err
+		return a.unaryVal(rNeg, x)
 	case '+':
 		c.next()
 
@@ -260,7 +262,7 @@ func (a *Assembler) exprAtom(c *cursor, st *exprState) (exprVal, error) {
 		if !isSymbolChar(c.peekAt(1)) {
 			c.next()
 
-			return constVal(a.pc()), nil
+			return a.dot(), nil
 		}
 	case '(':
 		c.next()
@@ -363,6 +365,9 @@ func (a *Assembler) lookupSymbolValue(name string, st *exprState) (exprVal, erro
 	}
 
 	switch {
+	case found && sym.sect != nil && (len(sym.forward) == 0 || !st.allowForward):
+		return exprVal{x: baseNode(sym.sect, sym.value)}, nil
+
 	case found && (len(sym.forward) == 0 || !st.allowForward):
 		return constVal(sym.value), nil
 
@@ -370,7 +375,7 @@ func (a *Assembler) lookupSymbolValue(name string, st *exprState) (exprVal, erro
 		return exprVal{}, vmserrors.New(vmserrors.VAX_UNDEFSYM, name)
 	}
 
-	return exprVal{terms: []pendingTerm{{key: resolved, coeff: 1}}}, nil
+	return exprVal{x: &rexpr{op: rSym, key: resolved}}, nil
 }
 
 // numericLiteral parses a numeric constant, matching asm_hex()/asm_dec()'s
@@ -455,11 +460,13 @@ func (a *Assembler) unaryOperator(c *cursor, st *exprState) (exprVal, bool, erro
 		c.skip(2)
 
 		x, err := a.exprAtom(c, st)
-		if err == nil && x.forward() {
-			err = vmserrors.New(vmserrors.VAX_FWDOPERATOR)
+		if err != nil {
+			return exprVal{}, true, err
 		}
 
-		return constVal(^x.v), true, err
+		x, err = a.unaryVal(rCom, x)
+
+		return x, true, err
 
 	case base != 0 && c.peekAt(2) == '<':
 		c.skip(2)

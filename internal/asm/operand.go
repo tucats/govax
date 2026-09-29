@@ -46,13 +46,13 @@ func branchFixup(scale int) fixupKind {
 func (a *Assembler) storeScaled(addr uint32, value uint32, scale int) error {
 	switch scale {
 	case 1:
-		return a.image.storeByte(addr, byte(value))
+		return a.cur.img.storeByte(addr, byte(value))
 
 	case 2:
-		return a.image.storeWord(addr, uint16(value))
+		return a.cur.img.storeWord(addr, uint16(value))
 
 	case 4:
-		return a.image.storeLongword(addr, value)
+		return a.cur.img.storeLongword(addr, value)
 	}
 
 	return vmserrors.New(vmserrors.VAX_BADSCALE, scale)
@@ -543,12 +543,12 @@ func (a *Assembler) storeImmediateFloat(scale int, f float64) error {
 		return vmserrors.New(vmserrors.VAX_FLOATRANGE)
 	}
 
-	if err := a.image.storeLongword(a.pc(), uint32(bits)); err != nil {
+	if err := a.cur.img.storeLongword(a.pc(), uint32(bits)); err != nil {
 		return err
 	}
 
 	if scale == 8 {
-		if err := a.image.storeLongword(a.pc()+4, uint32(bits>>32)); err != nil {
+		if err := a.cur.img.storeLongword(a.pc()+4, uint32(bits>>32)); err != nil {
 			return err
 		}
 	}
@@ -699,7 +699,7 @@ func (a *Assembler) assembleBareOperand(c *cursor, deferred byte) error {
 		}
 	}
 
-	if err := a.image.storeByte(modeAddr, sizeModeBase(size)|deferred|reg); err != nil {
+	if err := a.cur.img.storeByte(modeAddr, sizeModeBase(size)|deferred|reg); err != nil {
 		return err
 	}
 

@@ -23,8 +23,15 @@ const (
 )
 
 // SetDialect selects the source language. Only meaningful before Assemble
-// is called.
-func (a *Assembler) SetDialect(d Dialect) { a.dialect = d }
+// is called. The MACRO dialect assembles into MACRO-32's default psects
+// (see macroSections) instead of the console's P0 and S0.
+func (a *Assembler) SetDialect(d Dialect) {
+	a.dialect = d
+
+	if d == DialectMACRO {
+		a.macroSections()
+	}
+}
 
 // Dialect reports the source language being assembled.
 func (a *Assembler) Dialect() Dialect { return a.dialect }
@@ -92,6 +99,9 @@ func init() {
 		"BLKF": {both, func(a *Assembler, c *cursor) error { return a.pseudoBlock(c, 4) }},
 		"BLKD": {both, func(a *Assembler, c *cursor) error { return a.pseudoBlock(c, 8) }},
 		"END":  {both, (*Assembler).pseudoEnd},
+
+		// Program sections.
+		"PSECT": {macro, (*Assembler).pseudoPsect},
 
 		// Routine entry points.
 		"ENTRY": {both, (*Assembler).pseudoEntry},
@@ -199,7 +209,11 @@ func (a *Assembler) assemblePseudo(c *cursor) (handled bool, err error) {
 	}
 
 	if !d.dialects.has(a.dialect) {
-		return true, vmserrors.New(vmserrors.VAX_NOTMACRO, "."+name)
+		if a.dialect == DialectMACRO {
+			return true, vmserrors.New(vmserrors.VAX_NOTMACRO, "."+name)
+		}
+
+		return true, vmserrors.New(vmserrors.VAX_MACROONLY, "."+name)
 	}
 
 	// Any directive other than .CASE empties the running .CASE block base,
@@ -209,4 +223,34 @@ func (a *Assembler) assemblePseudo(c *cursor) (handled bool, err error) {
 	}
 
 	return true, d.assemble(a, c)
+}
+
+// pseudoPsect assembles .PSECT [name]: continues the program section name,
+// defining it (relocatable) the first time; with no name, . BLANK .
+// Attributes, the absolute default psect's rules, and .SAVE_PSECT/
+// .RESTORE_PSECT come with the rest of MACRO-32's directives
+// (docs/PHASE-27.md, subtask 6); until then anything after the name is
+// ignored.
+func (a *Assembler) pseudoPsect(c *cursor) error {
+	c.skipBlanks()
+
+	name := scanName(c)
+	if name == "" {
+		name = blankPsect
+	}
+
+	c.pos = len(c.s)
+
+	if err := a.closeLocalBlock(); err != nil {
+		return err
+	}
+
+	s := a.findSection(name)
+	if s == nil {
+		s = a.newSection(name, true, newImage(), 0)
+	}
+
+	a.cur = s
+
+	return nil
 }

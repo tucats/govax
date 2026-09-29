@@ -45,6 +45,14 @@ type Assembler struct {
 	p0  *section
 	s0  *section
 	cur *section
+	// sections is every section, in the order they were defined.
+	sections []*section
+
+	// relocs holds the values left for the linker (MACRO dialect only),
+	// and ready the fixups waiting for the end of their statement to
+	// become relocations (see flushReady).
+	relocs []relocation
+	ready  []*fixup
 
 	// curEntry is the active local-symbol scope name (vax.assembler.cur_entry).
 	curEntry string
@@ -70,6 +78,9 @@ type Assembler struct {
 	// assembled image and want to know where to start execution.
 	entrySeen bool
 	entryAddr uint32
+	// entrySect is the relocatable psect entryAddr is an offset in, for
+	// a MACRO-dialect transfer address in one.
+	entrySect *section
 
 	// radix is the radix of a number with no radix operator: decimal,
 	// as in MACRO-32, except inside a ^X<...>, ^O<...>, or ^B<...> group
@@ -121,11 +132,11 @@ func New(verbose bool) *Assembler {
 		table:   cpu.Instructions(),
 		symbols: newSymbolTable(),
 		image:   newImage(),
-		p0:      &section{name: "P0", base: defaultOrigin},
-		s0:      &section{name: "S0", base: defaultS0Base},
 		radix:   10,
 		verbose: verbose,
 	}
+	a.p0 = a.newSection("P0", false, a.image, defaultOrigin)
+	a.s0 = a.newSection("S0", false, a.image, defaultS0Base)
 	a.cur = a.p0
 	a.seedBuiltinSymbols()
 
@@ -246,7 +257,14 @@ func (a *Assembler) AssembleLine(line string) (done bool, err error) {
 // .REGION) — kernel.asm, for instance — may leave the P0 region almost
 // empty; use S0Origin/S0End with BytesRange to read that data instead, or
 // ByteAt for a single address anywhere in the sparse image.
+//
+// In the MACRO dialect it returns the current psect's contents instead,
+// with zeros where a relocation's value goes.
 func (a *Assembler) Bytes() []byte {
+	if a.dialect == DialectMACRO {
+		return a.cur.img.Bytes(0, a.cur.hi)
+	}
+
 	return a.image.Bytes(a.p0.base, a.p0End())
 }
 
@@ -318,6 +336,12 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 
 	if len(a.cond) > 0 {
 		return nil, vmserrors.New(vmserrors.VAX_NOENDC, len(a.cond))
+	}
+
+	if a.dialect == DialectMACRO {
+		if err := a.finish(); err != nil {
+			return nil, err
+		}
 	}
 
 	return a.Bytes(), nil
@@ -586,6 +610,16 @@ func isStringDelimiter(ch byte) bool {
 // END-command special cases, which Phase 11's batch Assemble doesn't need:
 // a bare "END" always just ends the current assembleLines call).
 func (a *Assembler) assembleStatement(line string) error {
+	if err := a.assembleStatementBody(line); err != nil {
+		return err
+	}
+
+	return a.flushReady()
+}
+
+// assembleStatementBody is assembleStatement before its fixups are
+// flushed.
+func (a *Assembler) assembleStatementBody(line string) error {
 	if a.skipping() {
 		return a.skippedStatement(line)
 	}
@@ -677,7 +711,7 @@ func (a *Assembler) parseLabel(c *cursor) error {
 		}
 	}
 
-	return a.setSymbol(name, a.pc(), flags, true)
+	return a.defineHere(name, flags, true)
 }
 
 // assembleAssignment handles a MACRO-32 direct assignment statement:
@@ -712,16 +746,33 @@ func (a *Assembler) assembleAssignment(c *cursor) (handled bool, err error) {
 		c.next()
 	}
 
-	v, err := a.exprNoForward(c)
+	x, err := a.exprKnown(c)
 	if err != nil {
 		return true, err
 	}
 
-	if name == "." {
-		a.setPC(v)
+	if x.known() {
+		if name == "." {
+			a.setPC(x.v)
+
+			return true, nil
+		}
+
+		return true, a.setSymbol(name, x.v, SymNone, false)
+	}
+
+	// A relocatable value: a label plus or minus a constant (the MACRO
+	// manual, §3.5). "." can only move within its own section.
+	sect, offset, ok := x.x.simpleRelocatable()
+	switch {
+	case !ok, name == "." && sect != a.cur:
+		return true, vmserrors.New(vmserrors.VAX_RELEXPR)
+
+	case name == ".":
+		a.setPC(offset)
 
 		return true, nil
 	}
 
-	return true, a.setSymbol(name, v, SymNone, false)
+	return true, a.setSymbolIn(name, sect, offset, SymNone, false)
 }
