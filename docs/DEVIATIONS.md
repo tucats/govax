@@ -786,6 +786,19 @@ changed as a result.
     filtering (SET BROADCAST), and cluster broadcasts don't apply.
 - **Status**: open, by design.
 
+### [Phase 26] Rights database simplifications
+
+- **Where**: `internal/rtl/rights.go`.
+- **What**: no RIGHTSLIST.DAT: the database is the process's own UIC
+  identifier and the six environmental identifiers, built in memory, so
+  there are no other users' identifiers, no group identifiers, no
+  attributes, no holder records (`$FIND_HELD`, `$ADD_IDENT`, ... aren't
+  implemented), and no wildcard names in `$ASCTOID`. The environmental
+  identifiers' values are the ones AUTHORIZE assigns, not read from a
+  database. The process's rights list isn't kept (no access control
+  lists use it).
+- **Status**: open, by design.
+
 ### [Phase 26] Virtual address space simplifications
 
 - **Where**: `internal/rtl/vaspace.go`, `internal/console/vminit.go`.

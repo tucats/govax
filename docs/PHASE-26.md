@@ -81,7 +81,8 @@ follow them too, and this list should grow when a new pattern is settled.
   `signal.go` (the `LIB$` signaling shims), `unwind.go` (`$UNWIND`,
   `LIB$SIG_TO_RET`), `vaspace.go` (`$CRETVA`, `$DELTVA`, `$CNTREG`),
   `pageprot.go` (`$SETPRT`, page locking), `privilege.go` (privilege
-  masks, `$SETPRV`), `operator.go` (`$SNDOPR`, `$BRKTHRU`). Each file has
+  masks, `$SETPRV`), `operator.go` (`$SNDOPR`, `$BRKTHRU`), `rights.go`
+  (rights identifiers). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -249,6 +250,8 @@ lists the ones the implementation can actually return.
 | (`$GETJPI` privilege items) | 38 | `getjpi.go` | — | `JPI$_CURPRIV`, `PROCPRIV`, `AUTHPRIV`, `IMAGPRIV` (quadwords), `AUTHPRI`. |
 | `$SNDOPR` | 39 | `operator.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `DEVNOTMBX`, `NOPRIV` | OPCOM on the console: requests (numbered, with a reply mailbox), cancel, reply, enable, status, log file. |
 | `$BRKTHRU`, `$BRKTHRUW` | 39 | `operator.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `NOOPER`, `NOPRIV`, `NOSUCHDEV`, (event flag errors) | To the console, with carriage control; completes at once like a terminal `$QIO`; `$BRKDEF` generated. |
+| `$ASCTOID` | 40 | `rights.go` | `NORMAL`, `ACCVIO`, `IVIDENT`, `NOSUCHID` | Name to value in an in-memory rights database: the process's UIC identifier and the six environmental identifiers. |
+| `$IDTOASC`, `$FINISH_RDB` | 40 | `rights.go` | `NORMAL`, `ACCVIO`, `BUFFEROVF`, `NOSUCHID` | Value to name, or (id -1) a listing in name order with a context. `$FAO`'s `!%I` uses the database. |
 
 ## Service designs
 
@@ -2219,6 +2222,36 @@ AST. `$BRKTHRUW` is the same. The screen-formatting flags are accepted
 and ignored; `timout` 1-4, `reqid` over 63, or an unknown `sndtyp` is
 `SS$_BADPARAM`.
 
+### `$ASCTOID`, `$IDTOASC`, `$FINISH_RDB` — Rights Identifiers
+
+`SYS$ASCTOID name ,[id] ,[attrib]`,
+`SYS$IDTOASC id ,[namlen] ,[nambuf] ,[resid] ,[attrib] ,[contxt]`,
+`SYS$FINISH_RDB contxt`
+
+Besides its UIC, a VMS process can hold *identifiers*, named 32-bit
+values that access control lists grant access to, kept in the rights
+database (RIGHTSLIST.DAT). A *UIC identifier* is a user's UIC (bit 31
+clear) named after the user; a *general identifier* has bit 31 set,
+including the *environmental* ones VMS creates to say how a process
+logged in: BATCH, NETWORK, INTERACTIVE, LOCAL, DIALUP, REMOTE
+(`%X80000001`-`%X80000006`, the values AUTHORIZE gives them).
+
+govax has no rights database file. `rightsDatabase` builds one from
+what the process knows: its own UIC identifier (SYSTEM, `[1,4]`) and
+the six environmental identifiers, none with attribute bits.
+
+- `$ASCTOID` looks a name up (case doesn't matter): `SS$_IVIDENT` for a
+  name that can't be an identifier (1-31 letters, digits, `$`, `_`, not
+  all digits), `SS$_NOSUCHID` for one that isn't there.
+- `$IDTOASC` translates a value, returning the name through a
+  descriptor (`SS$_BUFFEROVF` if truncated). With `id` -1 it lists the
+  database in name order, one identifier per call, `contxt` keeping the
+  place; the call after the last returns `SS$_NOSUCHID` and clears
+  `contxt`. `$FINISH_RDB` clears it early.
+- `$FAO`'s `!%I` now takes names from the database: `[SYSTEM]` for a
+  UIC identifier, `INTERACTIVE` for a general one; unknown values as
+  before (`[g,m]`, or `%X` and hexadecimal).
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -2377,7 +2410,7 @@ sixth batch listed):
     `$GETJPI` privilege items, and the checks the services have skipped.
 39. **Done.** **`$SNDOPR`, `$BRKTHRU`/`$BRKTHRUW`**: operator and broadcast
     messages, written to the console terminal.
-40. **`$ASCTOID`, `$IDTOASC`**: a minimal rights database, which `$FAO`'s
+40. **Done.** **`$ASCTOID`, `$IDTOASC`**: a minimal rights database, which `$FAO`'s
     `!%I` then uses.
 41. **Disk `$QIO`**: `IO$_ACCESS`/`DEACCESS` and virtual-block
     `IO$_READVBLK`/`WRITEVBLK` on files of a mounted ODS-2 volume.
@@ -3379,4 +3412,22 @@ fixed.
   the errors; `$BRKTHRU` to the caller's terminal (output, IOSB, flag,
   AST), a named terminal with carriage control, users, all terminals,
   and the errors and privileges.
+- `go test ./...` passes.
+
+### 2026-09-28 — Subtask 40: `$ASCTOID`, `$IDTOASC`, `$FINISH_RDB`
+
+- The user asked, during this subtask, that disk `$QIO` (subtask 41) be
+  wired into the sibling `ods2` package, adding exported functions to it
+  as needed.
+- **`internal/rtl/rights.go`** (new): `rightsDatabase`,
+  `environmentalIdentifiers`, `identifierByValue`,
+  `validIdentifierName`, and the three services. **`fao.go`**:
+  `faoIdentifier` uses the database.
+- **Acceptance fixture** `testdata/asm/rights.asm`: a name translated,
+  formatted with `!%I` beside SYSTEM's UIC, translated back, and the
+  whole database listed. `TestRights_assembledProgram` checks the value,
+  the text, the count, and the last name.
+- Tests (`rights_test.go`): names, case, blanks, and the malformed ones;
+  optional outputs and `ACCVIO`; value to name, truncation, the listing
+  in order and its end, `$FINISH_RDB`; a `!%I` case in `fao_test.go`.
 - `go test ./...` passes.

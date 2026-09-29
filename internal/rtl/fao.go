@@ -504,21 +504,25 @@ func formatUIC(uic uint32) string {
 	return fmt.Sprintf("[%o,%o]", uic>>16, uic&0xFFFF)
 }
 
-// faoIdentifier is !%I: the name of a rights identifier. VMS looks the
-// longword up in the rights database; govax has none, but knows one
-// identifier: the process's own UIC, whose name is its username
-// ("[SYSTEM]"). Any other UIC is written as !%U would, and a longword
-// that isn't a UIC (bit 31 set: a general identifier) as "%X" and eight
-// hexadecimal digits, as VMS does for an identifier with no name.
+// faoIdentifier is !%I: the name of a rights identifier, looked up in
+// the rights database (rights.go). A UIC identifier is written in
+// brackets ("[SYSTEM]"), a general one as its name ("INTERACTIVE"). An
+// identifier the database doesn't have is written as !%U would for a UIC,
+// and as "%X" and eight hexadecimal digits for a general identifier (bit
+// 31 set), as VMS does for an identifier with no name.
 func faoIdentifier(f *faoFormatter, width int) {
 	v, ok := f.nextParam()
 	if !ok {
 		return
 	}
 
+	r, found := f.env.identifierByValue(v)
+
 	switch {
-	case v == f.env.Process.UIC:
-		f.emit("["+f.env.Process.Username+"]", width)
+	case found && v&0x80000000 == 0:
+		f.emit("["+r.name+"]", width)
+	case found:
+		f.emit(r.name, width)
 	case v&0x80000000 == 0:
 		f.emit(formatUIC(v), width)
 	default:

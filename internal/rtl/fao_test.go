@@ -188,6 +188,7 @@ func TestFAO_directives(t *testing.T) {
 		// UICs, in octal, and identifiers.
 		{"!%U", []uint32{0x00080010}, "[10,20]"},
 		{"!%I !%I !%I", []uint32{NominalUIC, 0x00080010, 0x80010002}, "[SYSTEM] [10,20] %X80010002"},
+		{"!%I", []uint32{0x80000003}, "INTERACTIVE"},
 		// A field narrower than its text truncates it.
 		{"!3<ABCDEF!>|", nil, "ABC|"},
 		// A repeated !n*c.
