@@ -34,7 +34,7 @@ and friends, `$UNWIND`), the virtual-memory services, the rest of the
 mailbox driver, privileges, operator and broadcast messages, rights
 identifiers, and disk `$QIO`.
 
-**Status: seventh batch in progress** (subtasks 31-41). Add later
+**Status: seven batches complete** (subtasks 1-41). Add later
 services as new subtasks.
 
 ## References
@@ -82,7 +82,8 @@ follow them too, and this list should grow when a new pattern is settled.
   `LIB$SIG_TO_RET`), `vaspace.go` (`$CRETVA`, `$DELTVA`, `$CNTREG`),
   `pageprot.go` (`$SETPRT`, page locking), `privilege.go` (privilege
   masks, `$SETPRV`), `operator.go` (`$SNDOPR`, `$BRKTHRU`), `rights.go`
-  (rights identifiers). Each file has
+  (rights identifiers), `diskdriver.go` (the disk driver; the file work is
+  `internal/rms/acp.go`'s). Each file has
   a `register*Services(t *ServiceTable)` function called from
   `registerServices` in `service.go`.
 - **Registration.** Every service is a `ServiceFunc` registered by its
@@ -252,6 +253,7 @@ lists the ones the implementation can actually return.
 | `$BRKTHRU`, `$BRKTHRUW` | 39 | `operator.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `NOOPER`, `NOPRIV`, `NOSUCHDEV`, (event flag errors) | To the console, with carriage control; completes at once like a terminal `$QIO`; `$BRKDEF` generated. |
 | `$ASCTOID` | 40 | `rights.go` | `NORMAL`, `ACCVIO`, `IVIDENT`, `NOSUCHID` | Name to value in an in-memory rights database: the process's UIC identifier and the six environmental identifiers. |
 | `$IDTOASC`, `$FINISH_RDB` | 40 | `rights.go` | `NORMAL`, `ACCVIO`, `BUFFEROVF`, `NOSUCHID` | Value to name, or (id -1) a listing in name order with a context. `$FAO`'s `!%I` uses the database. |
+| (disk driver: `$QIO` on disks) | 41 | `diskdriver.go`, `internal/rms/acp.go` | IOSB: `NORMAL`, `ENDOFFILE`, `NOSUCHFILE`, `BADIRECTORY`, `BADFILENAME`, `BADFILEVER`, `WRITLCK`, `NOPRIV`, `FILALRACC`, `FILNOTACC`, `DEVNOTMOUNT`, `DEVICEFULL`, `BADPARAM`, `DRVERR`; R0: `ACCVIO`, `ILLIOFUNC` | `IO$_ACCESS`/`DEACCESS`/`MODIFY`, virtual block reads and writes, on files of a volume the console mounted, through the ods2 module; `$FIBDEF` generated. |
 
 ## Service designs
 
@@ -2252,6 +2254,59 @@ the six environmental identifiers, none with attribute bits.
   UIC identifier, `INTERACTIVE` for a general one; unknown values as
   before (`[g,m]`, or `%X` and hexadecimal).
 
+### Disk `$QIO`: the ACP's file functions
+
+`$QIO` on a disk channel: `IO$_ACCESS`, `IO$_DEACCESS`, `IO$_MODIFY`,
+`IO$_READVBLK`, `IO$_WRITEVBLK`
+
+Under RMS, every VMS file operation is a `$QIO` to the disk, handled by
+its ancillary control process (ACP): `IO$_ACCESS` looks a file up in a
+directory and opens it on the channel, `IO$_READVBLK`/`WRITEVBLK` move its
+*virtual blocks* (512 bytes each, numbered from 1 within the file,
+wherever they are on the disk), `IO$_MODIFY` extends it, `IO$_DEACCESS`
+closes it. Programs that want raw block I/O call these directly.
+
+At this level files are named by *file IDs*: the file's number in the
+volume's index file, a sequence number (bumped when the slot is reused,
+so a stale ID is caught), and a relative volume number. The program
+passes a *file information block* (FIB, `$FIBDEF`) holding the file ID,
+or a directory's file ID plus a name (in `p2`) to look up in it; the
+master file directory, `[000000]`, is always (4,4,0). The FIB's access
+control word asks for write access with `FIB$M_WRITE`.
+
+| Function | Arguments | Effect |
+| --- | --- | --- |
+| `IO$_ACCESS` | p1 FIB descriptor, p2 name, p3/p4 result name | Looks `p2` up in the FIB's directory, storing the file ID in the FIB and "NAME.TYP;VER" at p4; with `IO$M_ACCESS`, opens the file (by that ID) on the channel. |
+| `IO$_DEACCESS` | — | Closes it (`$DASSGN` does too). |
+| `IO$_MODIFY` | p1 FIB descriptor | With `FIB$M_EXTEND` in `FIB$W_EXCTL`: adds `FIB$L_EXSZ` blocks, returning the first new block in `FIB$L_EXVBN`. |
+| `IO$_READVBLK` | p1 buffer, p2 bytes, p3 VBN | Reads consecutive blocks; stops at the end of file with `SS$_ENDOFFILE` and the count read. |
+| `IO$_WRITEVBLK` | p1 buffer, p2 bytes, p3 VBN | Writes whole blocks (a short last one zero-padded), within the allocation (`SS$_ENDOFFILE` past it); needs write access. |
+
+#### Design: rms does the files, rtl the `$QIO`
+
+As the user asked, the file work is wired into the sibling ods2 module:
+`internal/rms/acp.go` (rms being govax's only package allowed to import
+ods2) exports `MountTable.ACPLookup`, `ACPAccess`, and an `ACPFile` with
+`ReadVirtual`, `WriteVirtual`, `Extend`, and `Deaccess`, built on ods2's
+`volume` package (`Directory.Lookup`, `Volume.OpenFID`, `File.ReadBlock`,
+`WriteBlock`, `Extend`, `Close`). It reports sentinel errors
+(`ErrACPNoSuchFile`, ...) rather than `$SSDEF` values, keeping rms free of
+system-service status codes. One addition to ods2 was needed:
+`volume.ErrNotFound`, which `Directory.Lookup` now wraps, so a name that
+isn't there (`SS$_NOSUCHFILE`) can be told from a directory that can't be
+read (a device error). It's committed in the ods2 repository.
+
+`internal/rtl/diskdriver.go` is the driver in `ioDrivers` for the disk
+class: it reads the FIB (which may be shorter than the full structure;
+missing fields read as 0), keeps the accessed file on the channel
+(`channel.acp`), maps rms's errors to statuses, and completes each request
+at once. The FIB's offsets and bits are generated as
+`vmsdef.FIBConstants` from `reference/vms/fibdef.txt`, extracted from the
+VMS 7.3 listings' symbol tables (the archive has no `$FIBDEF` source).
+
+The device must be mounted with the console's MOUNT; writing needs a
+writable mount (`SS$_WRITLCK` otherwise).
+
 ## Subtasks
 
 1. **Done.** **Emulated process record.** `rtl.Process` replaces
@@ -2412,8 +2467,35 @@ sixth batch listed):
     messages, written to the console terminal.
 40. **Done.** **`$ASCTOID`, `$IDTOASC`**: a minimal rights database, which `$FAO`'s
     `!%I` then uses.
-41. **Disk `$QIO`**: `IO$_ACCESS`/`DEACCESS` and virtual-block
+41. **Done.** **Disk `$QIO`**: `IO$_ACCESS`/`DEACCESS` and virtual-block
     `IO$_READVBLK`/`WRITEVBLK` on files of a mounted ODS-2 volume.
+
+Candidates next, roughly in order of value now that conditions, page
+tables, privileges, and disk files are all within reach of a program:
+
+- **The assembler gaps these subtasks found**: MACRO-32 local labels
+  (`n$`), `.QUAD`, relative deferred `@label`, and subtracting forward
+  references in `.LONG`. Every Phase 26 fixture works around them;
+  fixing them makes real MACRO-32 sources assemble unchanged.
+- **Disk `$QIO`, the rest**: `IO$M_CREATE` and `IO$M_DELETE` (creating
+  and deleting files, entering and removing directory entries), attribute
+  lists (`ATR$C_RECATTR` to read and set the end of file, `ATR$C_UCHAR`,
+  ...), and logical block I/O on the volume (`IO$_READLBLK`/`WRITELBLK`,
+  with LOG_IO).
+- **Traceback**: the catch-all's `-TRACE-F-TRACEBACK` listing of the
+  call frames (module, routine, PC), and trap PCs for the arithmetic
+  traps, so a continued trap resumes after its instruction.
+- **`$SETSFM` and system service failure exceptions**: signal
+  `SS$_...` failures as conditions when a program asks, now that
+  condition handling exists.
+- **Process creation's easy half**: `$GETJPI` on subprocess-free
+  wildcards (`$PROCESS_SCAN`), `$SUSPND`/`$RESUME` of the process
+  itself, and `$SETSWM` (swap mode, with PSWAPM).
+- **Access control**: UIC-based protection on logical name tables,
+  mailboxes, and event flag clusters, and the process rights list
+  (INTERACTIVE, LOCAL, ...), so `$CHKPRO`/`$CHECK_ACCESS` can answer.
+- **An operator REPLY command** at the console, so `$SNDOPR` requests
+  can be answered and cancelled requests get `OPC$_RQSTCAN`.
 
 ## Open questions
 
@@ -3431,3 +3513,38 @@ fixed.
   optional outputs and `ACCVIO`; value to name, truncation, the listing
   in order and its end, `$FINISH_RDB`; a `!%I` case in `fao_test.go`.
 - `go test ./...` passes.
+
+### 2026-09-28 — Subtask 41: disk `$QIO`; seventh batch complete
+
+- As the user asked mid-batch, the disk functions are wired into the
+  sibling ods2 module. **ods2** (its own repository, commit `202063c`):
+  `volume.ErrNotFound`, wrapped by `Directory.Lookup`, with its tests.
+- **`internal/rms/acp.go`** (new): `FileID`, the `ErrACP...` errors,
+  `MountTable.ACPLookup`/`ACPAccess`, `splitACPName`, and `ACPFile`'s
+  `ReadVirtual`, `WriteVirtual`, `Extend`, `Deaccess`.
+- **`internal/rtl/diskdriver.go`** (new): `diskFunctions` (now in
+  `ioDrivers`), `readFIB`, `acpStatus`, and the five functions;
+  `channel.acp`, closed by `releaseChannel`.
+- **`$FIBDEF`**: `reference/vms/fibdef.txt`, generated as
+  `vmsdef.FIBConstants` (`-fibdef`).
+- **Acceptance fixture** `testdata/asm/disk_qio.asm`: `$ASSIGN` DUA0:,
+  look up and access `DATA.TXT` in `[000000]` for writing, read block 1,
+  overwrite it, read it again, deaccess. `TestDiskQIO_assembledProgram`
+  mounts a fresh volume, copies a host file onto it, runs the program,
+  checks both reads and the result name, and copies the file back out to
+  see the change on the volume.
+- **Found while writing the fixture:** the assembler encodes `@label` as
+  absolute mode rather than relative deferred. Recorded with the other
+  assembler findings in `docs/DEVIATIONS.md`.
+- Tests: `internal/rms/acp_test.go` (name splitting; lookup and its
+  errors; reading, end of file, VBN 0, read-only refusals; writing,
+  zero padding, the allocation limit, extending, the end of file after
+  deaccess; access errors), `internal/rtl/diskdriver_test.go` (access by
+  name with the result name and FID; multi-block and end-of-file reads;
+  `FILALRACC`, `NOPRIV`, `FILNOTACC`; lookup without access, access by
+  FID, `$DASSGN`; write, `IO$_MODIFY`, read back; the errors). The `$QIO`
+  test that expected disks to have no driver now uses a function the
+  disk driver lacks.
+- `go test ./...` passes.
+- **Phase status.** The seventh batch (subtasks 31-41) is done.
+  Candidates for the next batch are listed under Subtasks.

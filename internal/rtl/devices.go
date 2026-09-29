@@ -29,6 +29,10 @@ type channel struct {
 	Mode    uint32 // access mode assigned from ($ASSIGN's acmode, maximized)
 	Mailbox string
 	Device  *iodev.Device
+
+	// acp is the file accessed on the channel by a disk IO$_ACCESS
+	// (diskdriver.go), nil if none.
+	acp *rms.ACPFile
 }
 
 // findChannel looks up a channel by number, matching sys_getdviw's own
@@ -385,6 +389,7 @@ func serviceSysDassgn(env *Environment, argv []uint32) (uint32, error) {
 // this was may be deleted (releaseMailbox).
 func (env *Environment) releaseChannel(c *channel) {
 	env.cancelIO(c)
+	env.deaccessChannel(c)
 	env.disarmChannel(c.Number)
 
 	for i, ch := range env.channels {

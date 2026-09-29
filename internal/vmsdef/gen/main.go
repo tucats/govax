@@ -137,13 +137,14 @@ func main() {
 	prtdef := flag.String("prtdef", "", "path to prtdef.sdl")
 	prvdef := flag.String("prvdef", "", "path to prvdef.txt")
 	brkdef := flag.String("brkdef", "", "path to brkdef.sdl")
+	fibdef := flag.String("fibdef", "", "path to fibdef.txt")
 	sysmsg := flag.String("sysmsg", "", "path to sysmsg.txt (a message-file listing)")
 	out := flag.String("out", "", "path to write the generated Go source")
 	msgOut := flag.String("msgout", "", "path to write the generated message texts")
 	flag.Parse()
 
-	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *dvidef == "" || *ttdef == "" || *prtdef == "" || *prvdef == "" || *brkdef == "" || *sysmsg == "" || *out == "" || *msgOut == "" {
-		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, -dvidef, -ttdef, -prtdef, -prvdef, -brkdef, -sysmsg, -out, and -msgout are all required")
+	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *dvidef == "" || *ttdef == "" || *prtdef == "" || *prvdef == "" || *brkdef == "" || *fibdef == "" || *sysmsg == "" || *out == "" || *msgOut == "" {
+		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, -dvidef, -ttdef, -prtdef, -prvdef, -brkdef, -fibdef, -sysmsg, -out, and -msgout are all required")
 	}
 
 	constants := map[string]uint32{}
@@ -213,6 +214,11 @@ func main() {
 	brk, err := parseSDL(readSource(*brkdef))
 	if err != nil {
 		log.Fatalf("gen: %s: %v", *brkdef, err)
+	}
+
+	fib, err := parseBlissLiterals(readSource(*fibdef), "FIB$")
+	if err != nil {
+		log.Fatalf("gen: %s: %v", *fibdef, err)
 	}
 
 	maps := []constantMap{
@@ -337,16 +343,25 @@ func main() {
 			},
 			entries: brk,
 		},
+		{
+			name: "FIBConstants",
+			doc: []string{
+				"FIBConstants is every real $FIBDEF symbol: the file information",
+				"block's field offsets (FIB$L_ACCTL, FIB$W_FID, FIB$W_DID, ...), its",
+				"FIB$M_/FIB$V_ bits, and FIB$C_ codes: the disk ACP's $QIO argument.",
+			},
+			entries: fib,
+		},
 	}
 
-	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef, *statedef, *syidef, *dvidef, *ttdef, *prtdef, *prvdef, *brkdef}
+	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef, *statedef, *syidef, *dvidef, *ttdef, *prtdef, *prvdef, *brkdef, *fibdef}
 	code := generate(maps, sources)
 
 	if err := os.WriteFile(*out, code, 0o644); err != nil {
 		log.Fatalf("gen: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), len(syi), len(dvi), len(tt), len(prt), len(prv), len(brk), *out)
+	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), len(syi), len(dvi), len(tt), len(prt), len(prv), len(brk), len(fib), *out)
 
 	// The message texts go in a file of their own (see msg.go).
 	msgs, facilities, err := parseMessages(readSource(*sysmsg))

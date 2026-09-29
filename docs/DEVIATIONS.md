@@ -69,7 +69,7 @@ Entries get resolved (fixed or deliberately kept, with rationale) during Phase 1
   so this has no test-visible effect today. Revisit if a future fixture ever
   needs a working `SYS$CLRAST_2`.
 
-### [Phase 11, found in Phase 26] MACRO-32 local labels (`n$`) aren't supported
+### [Phase 11, found in Phase 26] MACRO-32 local labels (`n$`), `.QUAD`, and relative deferred mode
 
 - **Where**: `internal/asm` (operand value parsing and the symbol table).
 - **What**: MACRO-32's local labels — `1$:`, `2$:`, ..., each valid only
@@ -84,7 +84,12 @@ Entries get resolved (fixed or deliberately kept, with rationale) during Phase 1
   means parsing `digits$` as a symbol reference and scoping it to the
   current local label block.
 - **Also**: `.QUAD` isn't implemented either (`VAX-E-BADOPCODE`), found
-  in subtask 37; fixtures use two `.LONG`s.
+  in subtask 37; fixtures use two `.LONG`s. And (found in subtask 41)
+  `@label` is assembled as absolute mode, `@#label` (specifier `9F`),
+  where MACRO-32 means relative deferred (`FF`: the operand's address is
+  the longword at `label`), so `JMP @RETPC` jumps to `RETPC` itself
+  rather than to the address stored there. Fixtures load the address
+  into a register and use `(Rn)`.
 
 ## Phase 22 (RMS / `ods2`) findings
 
@@ -797,6 +802,26 @@ changed as a result.
   identifiers' values are the ones AUTHORIZE assigns, not read from a
   database. The process's rights list isn't kept (no access control
   lists use it).
+- **Status**: open, by design.
+
+### [Phase 26] Disk `$QIO` simplifications
+
+- **Where**: `internal/rtl/diskdriver.go`, `internal/rms/acp.go`.
+- **What**:
+  - Only the file-level (ACP) functions: `IO$_ACCESS` (lookup, and
+    access with `IO$M_ACCESS`), `IO$_DEACCESS`, `IO$_MODIFY` (extension
+    only), `IO$_READVBLK`, `IO$_WRITEVBLK`. No creating or deleting files
+    through the ACP (`IO$M_CREATE`, `IO$M_DELETE`: `SS$_ILLIOFUNC`), no
+    attribute lists (`p5` is ignored), no wildcard lookups, no logical or
+    physical block I/O (`IO$_READLBLK`, ...), no directory-entry
+    changes.
+  - At deaccess, the end of file moves to just past the highest block
+    written, if that's beyond it (ods2's `File.Close`); VMS's ACP leaves
+    the end of file to the attributes a program (RMS) writes.
+  - No file sharing or interlocks between channels (`FIB$M_NOWRITE`,
+    ...); every access is granted if the mount allows it.
+  - Every request completes during the call; disk errors are
+    `SS$_DRVERR`.
 - **Status**: open, by design.
 
 ### [Phase 26] Virtual address space simplifications

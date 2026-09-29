@@ -63,8 +63,8 @@ import (
 //
 // Which functions a device has is table-driven: ioDrivers maps a device
 // class to its driver's function table, which maps a function code to
-// the Go function that performs it. Terminals (ttdriver.go) and
-// mailboxes (mbxdriver.go) have drivers.
+// the Go function that performs it. Terminals (ttdriver.go), mailboxes
+// (mbxdriver.go), and disks (diskdriver.go) have drivers.
 
 // Status codes the I/O services return.
 var (
@@ -143,6 +143,7 @@ const (
 var ioDrivers = map[iodev.DeviceClass]map[uint32]ioFunc{
 	iodev.DeviceClassTT:      terminalFunctions,
 	iodev.DeviceClassMailbox: mailboxFunctions,
+	iodev.DeviceClassDisk:    diskFunctions,
 }
 
 // serviceSysQio is SYS$QIO:

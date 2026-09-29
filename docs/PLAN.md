@@ -336,3 +336,13 @@ attention key to the services before stopping), the full `$GETDVI`, mailboxes
 (`$CREMBX`/`$DELMBX` and a driver whose reads wait for writes, which gave
 `$QIO` pending requests, a waiting `$QIOW`, and a real `$CANCEL`), and
 `$SETPRN`, `$SETPRI`, `$FORCEX`, `$DELPRC`.
+
+A seventh batch added VMS condition handling (exceptions dispatched to the
+program's condition handlers through `SYS$SRCHANDLER` in the RTL, with Phase
+20's console search kept as a fallback; `$SETEXV`; `LIB$SIGNAL`, `LIB$STOP`,
+and friends; `$UNWIND` by rewriting return addresses to a `RET`), the
+virtual address space services (`$CRETVA`, `$DELTVA`, `$CNTREG`, `$SETPRT`,
+page locking), resource wait mode and mailbox attention ASTs, privilege
+masks with `$SETPRV` and the checks services had skipped, `$SNDOPR` and
+`$BRKTHRU`, rights identifiers, and disk `$QIO` (the ACP's file functions),
+wired into the ods2 module through `internal/rms`.
