@@ -31,8 +31,9 @@ var createdRE = regexp.MustCompile(`^[ 0-9][0-9]-[A-Z]{3}-[0-9]{4} [0-9]{2}:[0-9
 // language (chapter 7 of the VMS 5.0 Linker Utility Manual) and the checks
 // ANALYZE/OBJECT makes, returning every problem it finds. It checks:
 //
-//   - record order: MHD first, LNM second, the other headers next, no GSD
-//     after text, and exactly one EOM or EOMW, last;
+//   - record order: MHD first, LNM second, the other headers next, and
+//     exactly one EOM or EOMW, last (GSD and TIR records may interleave,
+//     as real MACRO writes them);
 //   - record sizes against the MHD maximum and OBJ$C_MAXRECSIZ;
 //   - the MHD's structure level, name, version, and creation time;
 //   - names (1 to 31 characters) and psect alignments;
@@ -138,11 +139,10 @@ func (c *checker) run() {
 			}
 
 		case *GSD:
+			// GSD and TIR records may interleave: real MACRO defines each
+			// psect just before its first text, and each symbol near its
+			// definition (see docs/PHASE-27.md).
 			seenGSD = true
-			if c.seenText {
-				c.report("global symbol directory record after text records")
-			}
-
 			c.gsd(rec)
 
 		case *TIR:

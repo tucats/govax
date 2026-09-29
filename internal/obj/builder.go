@@ -19,7 +19,7 @@ type Builder struct {
 	// Title, when not empty, becomes a TTL header record.
 	Title string
 	// RecordLimit is the longest record Build writes, and the MHD maximum
-	// record size; 0 means MaxRecordSize.
+	// record size; 0 means DefaultRecordLimit.
 	RecordLimit int
 	// Severity is the EOM completion code.
 	Severity byte
@@ -34,6 +34,12 @@ type Builder struct {
 	transferWeak     bool
 	pendingImmediate []byte
 }
+
+// DefaultRecordLimit is the record size Build uses when RecordLimit is 0:
+// 512 bytes, the maximum record size VAX MACRO V5.4-3 writes in its
+// objects' main headers (docs/PHASE-27.md), rather than the object
+// language's own 2048-byte limit.
+const DefaultRecordLimit = 512
 
 // AddPsect adds a psect definition, returning its index: the order it was
 // added in, which is how the linker numbers psects.
@@ -90,7 +96,7 @@ func (b *Builder) Build() (*Module, error) {
 
 	limit := b.RecordLimit
 	if limit == 0 {
-		limit = MaxRecordSize
+		limit = DefaultRecordLimit
 	}
 
 	if limit > MaxRecordSize {
@@ -116,9 +122,9 @@ func (b *Builder) Build() (*Module, error) {
 			Name:           name,
 			Version:        version,
 			Created:        FormatTime(b.Created),
-			// The linker ignores the patch time; the manual says to
-			// pad it "with 17 zeros".
-			Patched: strings.Repeat("\x00", 17),
+			// The linker ignores the patch time. The manual says to pad
+			// it "with 17 zeros", but real MACRO writes 17 spaces.
+			Patched: strings.Repeat(" ", 17),
 		},
 		&TextHeader{Type: HdrLNM, Text: b.Language},
 	)

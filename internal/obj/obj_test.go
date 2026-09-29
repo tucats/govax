@@ -411,7 +411,7 @@ func TestBuilder_defaults(t *testing.T) {
 	}
 
 	h := m.Records[0].(*MainHeader)
-	if h.Name != ".MAIN." || h.Created != "02-JAN-2026 03:04" || h.MaxRecordSize != uint16(MaxRecordSize) {
+	if h.Name != ".MAIN." || h.Created != "02-JAN-2026 03:04" || h.MaxRecordSize != DefaultRecordLimit || h.Patched != "                 " {
 		t.Errorf("main header %+v", h)
 	}
 
@@ -525,10 +525,10 @@ func TestCheck_problems(t *testing.T) {
 		}, "NOWHERE"},
 		{"reserved severity", func(m *Module) { m.Records[len(m.Records)-1].(*EOM).Severity = 5 }, "reserved"},
 		{"record too long", func(m *Module) { m.Records[0].(*MainHeader).MaxRecordSize = 10 }, "more than the maximum of 10"},
-		{"GSD after text", func(m *Module) {
+		{"header after text", func(m *Module) {
 			n := len(m.Records)
-			m.Records = append(m.Records[:n-1], &GSD{Subrecords: []Subrecord{&Symbol{Type: GSDSymbol, Name: "LATE"}}}, m.Records[n-1])
-		}, "after text records"},
+			m.Records = append(m.Records[:n-1], &TextHeader{Type: HdrTTL, Text: "late"}, m.Records[n-1])
+		}, "header record after"},
 	}
 
 	for _, c := range cases {
@@ -559,7 +559,7 @@ func TestDump(t *testing.T) {
 
 	for _, want := range []string{
 		`1. HDR MHD: module "HELLO", version "V1.0"`,
-		`created "30-SEP-2026 09:05"`,
+		`created "30-SEP-2026 09:05", structure level 0, maximum record size 512`,
 		`2. HDR LNM: "govax MACRO V1.0"`,
 		`3. HDR TTL: "Say hello"`,
 		`PSC 0: "$CODE", alignment LONG, PIC,CON,REL,LCL,SHR,EXE,RD,NOWRT,NOVEC, 12 bytes`,

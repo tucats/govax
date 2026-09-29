@@ -1,0 +1,79 @@
+GLOBALS                         Fixture 6: global symbols                29-SEP-2026 13:13:51  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     29-SEP-2026 13:10:48  DUA2:[000000]GLOBALS.MAR;1        (1)
+
+                                     0000     1 	.TITLE	GLOBALS	Fixture 6: global symbols
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; Checks global definitions (::, ==, .ENTRY), declared and weak
+                                     0000     5 ; references, and an absolute global. Assemble only: OTHER is defined
+                                     0000     6 ; nowhere.
+                                     0000     7 
+                                     0000     8 	.GLOBL	OTHER
+                                     0000     9 	.WEAK	MAYBE
+                           00000064  0000    10 LIMIT	== 100
+                                     0000    11 
+                                 00000000    12 	.PSECT	DATA, WRT, NOEXE, LONG
+         00000000'00000000'00000064  0000    13 TABLE::	.LONG	LIMIT, OTHER, MAYBE
+                           00000000  000C    14 COUNT:	.LONG	0
+                                     0010    15 
+                                 00000000    16 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0000  0000    17 	.ENTRY	GET_COUNT, ^M<>
+              50   0000000C'EF   D0  0002    18 	MOVL	COUNT, R0
+                                 04  0009    19 	RET
+                                     000A    20 
+                                     000A    21 	.END
+GLOBALS                         Fixture 6: global symbols                29-SEP-2026 13:13:51  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             29-SEP-2026 13:10:48  DUA2:[000000]GLOBALS.MAR;1        (1)
+
+COUNT            0000000C R     01      
+GET_COUNT        00000000 RG    02      
+LIMIT          = 00000064  G            
+MAYBE            ********W GX   00      
+OTHER            ********  GX   00      
+TABLE            00000000 RG    01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000010  (   16.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE                            0000000A  (   10.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  431     00:00:00.00    00:00:00.00
+Command processing              917     00:00:00.01    00:00:00.01
+Pass 1                          184     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           34     00:00:00.00    00:00:00.00
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1593     00:00:00.01    00:00:00.01
+
+The working set limit was 662 pages.
+298 bytes (1 page) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 6 non-local and 0 local symbols.
+21 source lines were read in Pass 1, producing 17 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST GLOBALS

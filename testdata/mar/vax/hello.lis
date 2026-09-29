@@ -1,0 +1,71 @@
+HELLO                           Fixture 9: hello, world                  29-SEP-2026 13:13:51  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     29-SEP-2026 13:10:48  DUA2:[000000]HELLO.MAR;1          (1)
+
+                                     0000     1 	.TITLE	HELLO	Fixture 9: hello, world
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; A complete program: links and runs, printing "Hello, world!".
+                                     0000     5 
+                                 00000000     6 	.PSECT	DATA, WRT, NOEXE, LONG
+2C 6F 6C 6C 65 48 00000008'010E0000' 0000     7 MSG:	.ASCID	/Hello, world!/
+               21 64 6C 72 6F 77 20  000E       
+                                     0015     8 
+                                 00000000     9 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0000  0000    10 	.ENTRY	HELLO, ^M<>
+                   00000000'EF   7F  0002    11 	PUSHAQ	MSG
+              00000000'GF   01   FB  0008    12 	CALLS	#1, G^LIB$PUT_OUTPUT
+                                 04  000F    13 	RET
+                                     0010    14 
+                                     0010    15 	.END	HELLO
+HELLO                           Fixture 9: hello, world                  29-SEP-2026 13:13:51  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             29-SEP-2026 13:10:48  DUA2:[000000]HELLO.MAR;1          (1)
+
+HELLO            00000000 RG    02      
+LIB$PUT_OUTPUT   ********   X   02      
+MSG              00000000 R     01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000015  (   21.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE                            00000010  (   16.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  427     00:00:00.01    00:00:00.01
+Command processing              904     00:00:00.00    00:00:00.00
+Pass 1                          176     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           35     00:00:00.00    00:00:00.00
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1569     00:00:00.01    00:00:00.01
+
+The working set limit was 662 pages.
+318 bytes (1 page) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 3 non-local and 0 local symbols.
+15 source lines were read in Pass 1, producing 17 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST HELLO

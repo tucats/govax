@@ -1,0 +1,75 @@
+RELOC                           Fixture 4: references between psects     29-SEP-2026 13:13:51  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     29-SEP-2026 13:10:48  DUA2:[000000]RELOC.MAR;1          (1)
+
+                                     0000     1 	.TITLE	RELOC	Fixture 4: references between psects
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; Checks relocation: code referring to data in another psect (a known
+                                     0000     5 ; target, but in another psect, so MACRO uses its default displacement),
+                                     0000     6 ; and data holding the address of code.
+                                     0000     7 
+                                 00000000     8 	.PSECT	DATA, WRT, NOEXE, LONG
+                           0000002A  0000     9 ITEM:	.LONG	42
+                           00000000' 0004    10 PTR:	.ADDRESS START
+                                     0008    11 
+                                 00000000    12 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0000  0000    13 	.ENTRY	START, ^M<>
+              50   00000000'EF   DE  0002    14 	MOVAL	ITEM, R0
+              51   00000004'EF   D0  0009    15 	MOVL	PTR, R1
+              52   00000004'EF   D0  0010    16 	MOVL	ITEM+4, R2
+                       50   01   D0  0017    17 	MOVL	#1, R0
+                                 04  001A    18 	RET
+                                     001B    19 
+                                     001B    20 	.END	START
+RELOC                           Fixture 4: references between psects     29-SEP-2026 13:13:51  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             29-SEP-2026 13:10:48  DUA2:[000000]RELOC.MAR;1          (1)
+
+ITEM             00000000 R     01      
+PTR              00000004 R     01      
+START            00000000 RG    02      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000008  (    8.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE                            0000001B  (   27.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  414     00:00:00.01    00:00:00.01
+Command processing              895     00:00:00.00    00:00:00.00
+Pass 1                          182     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           34     00:00:00.00    00:00:00.00
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1552     00:00:00.01    00:00:00.01
+
+The working set limit was 662 pages.
+354 bytes (1 page) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 3 non-local and 0 local symbols.
+20 source lines were read in Pass 1, producing 16 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST RELOC

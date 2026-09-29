@@ -1,0 +1,73 @@
+EXTERN                          Fixture 5: external references           29-SEP-2026 13:13:51  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     29-SEP-2026 13:10:48  DUA2:[000000]EXTERN.MAR;1         (1)
+
+                                     0000     1 	.TITLE	EXTERN	Fixture 5: external references
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; Checks references to symbols defined elsewhere: general mode (G^),
+                                     0000     5 ; explicit longword relative (L^), and no mode given, for both code and
+                                     0000     6 ; data. Assemble only: SUB_ONE and EXTDATA are defined nowhere.
+                                     0000     7 
+                                 00000000     8 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0000  0000     9 	.ENTRY	START, ^M<>
+              00000000'EF   00   FB  0002    10 	CALLS	#0, SUB_ONE
+              00000000'EF   00   FB  0009    11 	CALLS	#0, L^SUB_ONE
+              50   00000000'EF   D0  0010    12 	MOVL	EXTDATA, R0
+              51   00000008'EF   DE  0017    13 	MOVAL	EXTDATA+8, R1
+              52   00000000'GF   D0  001E    14 	MOVL	G^EXTDATA, R2
+                            01   DD  0025    15 	PUSHL	#1
+              00000000'GF   01   FB  0027    16 	CALLS	#1, G^SYS$EXIT
+                                     002E    17 
+                                     002E    18 	.END	START
+EXTERN                          Fixture 5: external references           29-SEP-2026 13:13:51  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             29-SEP-2026 13:10:48  DUA2:[000000]EXTERN.MAR;1         (1)
+
+EXTDATA          ********   X   01      
+START            00000000 RG    01      
+SUB_ONE          ********   X   01      
+SYS$EXIT         ********   X   01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+CODE                            0000002E  (   46.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  424     00:00:00.00    00:00:00.00
+Command processing              940     00:00:00.00    00:00:00.00
+Pass 1                          183     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           24     00:00:00.00    00:00:00.00
+Symbol table output               0     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1598     00:00:00.00    00:00:00.00
+
+The working set limit was 512 pages.
+376 bytes (1 page) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 4 non-local and 0 local symbols.
+18 source lines were read in Pass 1, producing 15 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST EXTERN

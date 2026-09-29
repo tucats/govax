@@ -26,7 +26,7 @@ becomes the record of the implementation: each subtask adds a
 [progress log](#progress-log) entry, and the open questions get their answers
 recorded here.
 
-**Status: subtasks 1 and 2 done. Subtask 3 (the first real-VAX fixtures) is next and needs the user; subtask 4 can proceed meanwhile.**
+**Status: subtasks 1-3 done (all nine fixtures assembled on the VAX). Subtask 4 is next. The `ods2` `Initialize` rewrite is still to do.**
 
 ## Why this phase looks different
 
@@ -506,7 +506,7 @@ them under `testdata/mar/vax/`). Each step adds one feature:
 2. **Done.** **`internal/obj`: record model, writer, reader, dumper, and checker**,
    with unit tests on hand-built modules. There's no assembler involvement
    yet.
-3. **First real-VAX fixtures** (needs the user). Fixtures 1 to 3 from the
+3. **Done.** **First real-VAX fixtures** (needs the user). Fixtures 1 to 3 from the
    ladder, assembled on the VAX. Decode them with the subtask 2 reader and
    record what we learn here: the MHD field values real MACRO uses, the LNM
    text, the psect attributes it writes for defaults, how it splits records,
@@ -856,3 +856,69 @@ above record the answers:
 - Lesson recorded for the `Initialize` rewrite: run the result through
   `ANALYZE/DISK_STRUCTURE` on VMS. It names exactly which structure is
   wrong, which was far quicker than inferring from failures.
+
+
+### 2026-09-30 — Subtask 3: real VAX objects in hand
+
+- With the `ods2` fixes, the user's `@ASSEMBLE` ran cleanly:
+  `ANALYZE/DISK_STRUCTURE` reported nothing but the missing `QUOTA.SYS`,
+  all nine objects passed `ANALYZE/OBJECT` with 0 errors, and `HELLO`
+  linked and ran ("Hello, world!").
+- Copied the results out with govax, with the volume mounted read-only.
+  The objects were copied with `COPY/BINARY`, which gives their raw
+  on-disk bytes, the variable-length layout `obj.ReadRecords` reads. The
+  listings (`.lis`), analyses (`.anl`), and link maps (`.map`, for `entry`
+  and `hello`) were copied as text. All are in `testdata/mar/vax/`.
+  (`OBJECTS.DIR` didn't come across; the record attributes it would show
+  can be read from the container directly.)
+- `TestRealObjects` passes for all nine: each decodes, re-encodes byte for
+  byte, and passes `Check`. That needed one checker fix. Real MACRO
+  **interleaves GSD and TIR records**, so the "no GSD after text" rule was
+  wrong and is gone. The rule that every `STA_GBL` name is in the GSD holds
+  for all nine.
+- What real MACRO (`VAX MACRO V5.4-3`) writes. These are the conventions
+  subtasks 7 and 8 should follow, since the format shouldn't differ
+  without a reason:
+  - **Headers:**
+    - MHD maximum record size **512** (so `obj.DefaultRecordLimit` is now
+      512), and actual records are small, at most 50 bytes here;
+    - patch time is **17 spaces**, not zeros (the builder now writes
+      spaces);
+    - LNM `VAX MACRO V5.4-3`;
+    - a **SRC** header holding the command line (`MACRO/LIST ENTRY`);
+    - a TTL header with the `.TITLE` comment, cut to 40 characters.
+  - **Traceback records** (TBT) come right after the headers and just
+    before the EOM, as TRACEBACK's default implies.
+  - **Record order:** records are emitted as assembly proceeds. External
+    references come first, as one GSD of `SYM` references, each flagged
+    `REL`. Then psect 0, `. ABS .` (always defined, even when empty), then
+    each psect's `PSC` just before its first text, and each entry point's
+    `EPM` next to its code. `. BLANK .` isn't defined when nothing uses it.
+  - **Setting the location:** `STA_PB psect offset` + `CTL_SETRB`. Psect
+    offsets use the shortest stack command (`STA_PB`, falling back to
+    `STA_PL`).
+  - **Entry mask:** `STA_UB mask`, then the `EPM` GSD record, then
+    `STO_W`.
+  - **Data and code bytes:** STORE IMMEDIATE, in runs broken wherever a
+    relocation intervenes.
+  - **Gaps** (`.ALIGN`, `.BLKB`): `CTL_AUGRB n`, never stored zeros.
+  - **`.ADDRESS label`:** `STA_PB` + `STO_PIDR`.
+  - **Relative operands, per the manual's displacement rule:**
+    - a backward reference in the same psect is finished by MACRO in the
+      smallest form (`AF FD`);
+    - a forward reference, a label in another psect, or an external gets
+      the default: the mode byte as immediate data (`EF`), then
+      `STA_PB`/`STA_GBL` + `STO_LD`;
+    - after `.DEFAULT DISPLACEMENT,WORD`, it's `CF` + `STO_WD`.
+
+    Even a same-psect forward reference is left for the linker to
+    finish.
+  - **`G^` (general mode):** `STA_GBL` + `STO_PICR`, and the linker writes
+    the mode byte.
+  - **Expressions:** `EXT+4` is `STA_GBL`, `STA_UB 4`, `OPR_ADD`.
+    Differences, products, and masks are all TIR arithmetic, including
+    `B-A` across psects and even `<C-A>*2` within one psect. MACRO leaves
+    them all to the linker.
+  - **The EOM** has a transfer address only when `.END` names one.
+- The fixtures are a regression suite for the reader and checker now, and
+  the reference for the assembler's object output later.

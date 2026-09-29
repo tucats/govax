@@ -1,0 +1,85 @@
+BRANCH                          Fixture 7: branches, displacements, and  29-SEP-2026 13:13:51  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     29-SEP-2026 13:10:48  DUA2:[000000]BRANCH.MAR;1         (1)
+
+                                     0000     1 	.TITLE	BRANCH	Fixture 7: branches, displacements, and gaps
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; Checks branch displacements, the displacement MACRO picks for a
+                                     0000     5 ; backward reference in the same psect (smallest) versus a forward one
+                                     0000     6 ; (the default, longword), .DEFAULT DISPLACEMENT, and gaps left by
+                                     0000     7 ; .ALIGN and .BLKB.
+                                     0000     8 
+                                 00000000     9 	.PSECT	CODE, NOWRT, EXE, QUAD
+                               0004  0000    10 	.ENTRY	LOOP, ^M<R2>
+                       52   0A   D0  0002    11 	MOVL	#10, R2
+                            52   D7  0005    12 10$:	DECL	R2
+                            FC   12  0007    13 	BNEQ	10$
+                            06   11  0009    14 	BRB	20$
+                                     000B    15 	.ALIGN	LONG
+                           00000011  000C    16 	.BLKB	5
+              50   00000000'EF   9E  0011    17 20$:	MOVAB	BUFFER, R0
+              51   0000001F'EF   9E  0018    18 	MOVAB	HERE, R1
+                    51   FD AF   9E  001F    19 HERE:	MOVAB	HERE, R1
+                                     0023    20 	.DEFAULT DISPLACEMENT, WORD
+                  51   0028'CF   9E  0023    21 	MOVAB	THERE, R1
+                       50   01   D0  0028    22 THERE:	MOVL	#1, R0
+                                 04  002B    23 	RET
+                                     002C    24 
+                                 00000000    25 	.PSECT	DATA, WRT, NOEXE, PAGE
+                           00000064  0000    26 BUFFER:	.BLKB	100
+                           00000007  0064    27 	.LONG	7
+                                     0068    28 
+                                     0068    29 	.END	LOOP
+BRANCH                          Fixture 7: branches, displacements, and  29-SEP-2026 13:13:51  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             29-SEP-2026 13:10:48  DUA2:[000000]BRANCH.MAR;1         (1)
+
+BUFFER           00000000 R     02      
+HERE             0000001F R     01      
+LOOP             00000000 RG    01      
+THERE            00000028 R     01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+CODE                            0000002C  (   44.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC QUAD  
+DATA                            00000068  (  104.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC PAGE  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  421     00:00:00.00    00:00:00.00
+Command processing              937     00:00:00.00    00:00:00.00
+Pass 1                          188     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           24     00:00:00.00    00:00:00.00
+Symbol table output               0     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1597     00:00:00.00    00:00:00.00
+
+The working set limit was 512 pages.
+546 bytes (2 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 4 non-local and 2 local symbols.
+29 source lines were read in Pass 1, producing 16 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST BRANCH
