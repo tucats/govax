@@ -2473,10 +2473,6 @@ sixth batch listed):
 Candidates next, roughly in order of value now that conditions, page
 tables, privileges, and disk files are all within reach of a program:
 
-- **The assembler gaps these subtasks found**: MACRO-32 local labels
-  (`n$`), `.QUAD`, relative deferred `@label`, and subtracting forward
-  references in `.LONG`. Every Phase 26 fixture works around them;
-  fixing them makes real MACRO-32 sources assemble unchanged.
 - **Disk `$QIO`, the rest**: `IO$M_CREATE` and `IO$M_DELETE` (creating
   and deleting files, entering and removing directory entries), attribute
   lists (`ATR$C_RECATTR` to read and set the end of file, `ATR$C_UCHAR`,
