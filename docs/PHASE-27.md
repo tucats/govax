@@ -801,3 +801,25 @@ above record the answers:
   block and backup index header, the `INDEXF.SYS` layout and preallocation,
   and the tenth reserved file. Check it structure by structure against
   `vms-init-rd51.dsk`, and confirm VMS mounts the result.
+
+### 2026-09-30 — Third `ods2` bug: HEADERFULL; exchange volume rebuilt
+
+- The user's first `@ASSEMBLE` on the exchange volume produced EMPTY,
+  DATA, ENTRY, and RELOC (ANALYZE/OBJECT: 0 errors each). Every file
+  created after that failed with `SYSTEM-W-HEADERFULL`. By then the 32
+  header slots of the grown `INDEXF.SYS` were used up (10 reserved, 10
+  fixtures, 12 new VMS files), and VMS couldn't extend the index file.
+- Cause: `ods2`'s `ondisk.EncodeFileHeader` put the ACL area right after
+  the retrieval pointers in use. VMS counts a header's free map room as
+  `ACOFFSET - MPOFFSET - MAP_INUSE`, so every header `ods2` wrote looked
+  full, and VMS could not extend any file `ods2` had written. That
+  included `INDEXF.SYS`, whose header `ods2` had re-encoded when it grew
+  the file.
+- Fixed in `ods2` (`f1e6758`): the ACL goes at the end of the header, and
+  with no ACL both `AclOffset` and `EndOffset` are 255, as VMS writes them.
+  Nothing else in `ods2` relied on the old packing: map reads use
+  `MapWordsInUse`, and `existingAreas` rebuilds the map from the decoded
+  retrieval pointers.
+- Rebuilt `mar-exchange-vms.dsk` from the pristine `vms-init-rd51.dsk`
+  with all ten files. Its `INDEXF.SYS` header now has 131 free map words.
+- The `ods2` `Initialize` rewrite (VMS-mountable volumes) is still to do.
