@@ -57,6 +57,10 @@ var diskFunctions = map[uint32]ioFunc{
 	ioCode("IO$_ACCESS"):    diskAccess,
 	ioCode("IO$_CREATE"):    diskCreate,
 	ioCode("IO$_DELETE"):    diskDelete,
+	ioCode("IO$_READLBLK"):  diskReadLogical,
+	ioCode("IO$_WRITELBLK"): diskWriteLogical,
+	ioCode("IO$_READPBLK"):  diskReadPhysical,
+	ioCode("IO$_WRITEPBLK"): diskWritePhysical,
 	ioCode("IO$_DEACCESS"):  diskDeaccess,
 	ioCode("IO$_MODIFY"):    diskModify,
 	ioCode("IO$_READVBLK"):  diskReadVirtual,
@@ -106,6 +110,7 @@ var acpStatuses = []struct {
 	{rms.ErrACPDuplicate, vmsdef.SSConstants["SS$_DUPFILENAME"]},
 	{rms.ErrACPDirNotEmpty, vmsdef.SSConstants["SS$_DIRNOTEMPTY"]},
 	{rms.ErrACPProtected, vmsdef.SSConstants["SS$_NOPRIV"]},
+	{rms.ErrACPIllegalBlock, vmsdef.SSConstants["SS$_ILLBLKNUM"]},
 }
 
 // Other statuses the disk driver reports.

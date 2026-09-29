@@ -369,7 +369,7 @@ func TestQIO_rejected(t *testing.T) {
 		{"unassigned channel", qioArgs{efn: 2, channel: 999, function: fnWriteVBlk}, ssNoPriv, false},
 		{"unwritable IOSB", qioArgs{efn: 2, channel: ch, function: fnWriteVBlk, iosb: badAddr}, ssAccVio, false},
 		{"no such function", qioArgs{efn: 2, channel: ch, function: 63}, ssIllIoFunc, true},
-		{"a function the disk driver lacks", qioArgs{efn: 2, channel: diskChan, function: vmsdef.IOConstants["IO$_READLBLK"]}, ssIllIoFunc, true},
+		{"a function the disk driver lacks", qioArgs{efn: 2, channel: diskChan, function: vmsdef.IOConstants["IO$_READPROMPT"]}, ssIllIoFunc, true},
 		{"unreadable write buffer", qioArgs{efn: 2, channel: ch, function: fnWriteVBlk, p: [6]uint32{badAddr, 10}}, ssAccVio, true},
 		{"unwritable read buffer", qioArgs{efn: 2, channel: ch, function: fnReadVBlk, p: [6]uint32{badAddr, 10}}, ssAccVio, true},
 	}

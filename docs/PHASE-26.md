@@ -2530,7 +2530,7 @@ Eighth batch, requested by the user on 2026-09-29 (the rest of disk
 44. **Done.** **Deleting files**: `IO$_DELETE`, removing directory entries and,
     with `IO$M_DELETE`, the files; marking an accessed file for deletion
     at deaccess, and `IO$_CREATE!IO$M_DELETE` temporary files.
-45. **Logical block I/O**: `IO$_READLBLK`/`WRITELBLK` (LOG_IO) and
+45. **Done.** **Logical block I/O**: `IO$_READLBLK`/`WRITELBLK` (LOG_IO) and
     `IO$_READPBLK`/`WRITEPBLK` (PHY_IO) on the mounted volume.
 
 Candidates next, roughly in order of value now that conditions, page
@@ -3764,3 +3764,40 @@ fixed.
   `acp_test.go`. The create error test's `IO$M_DELETE` case is now the
   enter-with-delete one.
 - `go test ./...` passes.
+
+### 2026-09-29 — Subtask 45: logical block I/O; eighth batch complete
+
+- **`internal/rms/acplogical.go`** (new): `MountTable.ReadLogical` and
+  `WriteLogical` on the mounted image (whole blocks, a write's short last
+  block zero-padded; the whole transfer on the volume or nothing moved,
+  `ErrACPIllegalBlock`; writes need a writable mount). ods2 needed
+  nothing new: the mounted `Device`'s container does it.
+- **`internal/rtl/disklogical.go`** (new): `IO$_READLBLK`/`WRITELBLK`
+  (LOG_IO or PHY_IO) and `IO$_READPBLK`/`WRITEPBLK` (PHY_IO), in
+  `diskFunctions`; the privilege is checked before anything else, as
+  `$QIO`'s R0 (`SS$_NOPRIV`). `SS$_ILLBLKNUM` from rms. A physical block
+  is a logical block on the MSCP disks govax emulates.
+- A logical write goes under ods2's in-memory bitmaps and open files'
+  headers, which are written back later over it: writing a mounted
+  volume's structure blocks this way is as unwise as on VMS (noted in
+  `acplogical.go`).
+- **Acceptance fixture** `testdata/asm/disk_logical.asm`: read the home
+  block (LBN 1), write the boot block (LBN 0) and read it back
+  physically, then `$SETPRV` away LOG_IO and PHY_IO for a read that gets
+  `SS$_NOPRIV`, and a read past the end that gets `SS$_ILLBLKNUM`.
+  `TestDiskLogical_assembledProgram` checks the home block's format and
+  volume name, the read-back, both statuses, and the boot block on the
+  image after a DISMOUNT and MOUNT.
+- Tests: `internal/rms/acplogical_test.go` (the home block, a transfer
+  across two blocks, the last block and past it, unmounted; a short
+  write padded, past the end, read-only), `internal/rtl/
+  disklogical_test.go` (logical and physical reads of the home block,
+  writes read back; the four privilege combinations; `ILLBLKNUM`,
+  `WRITLCK`, `ACCVIO`, `DEVNOTMOUNT`). `TestQIO_rejected`'s example of a
+  function disks lack is now `IO$_READPROMPT`.
+- `go test ./...` passes.
+- **Phase status.** The eighth batch (subtasks 42-45) is done: the disk
+  ACP's file functions are complete enough for a program to create,
+  size, write, set the end of file of, rename, and delete files, and to
+  read and write the volume's blocks directly. The other candidates
+  listed under Subtasks remain.
