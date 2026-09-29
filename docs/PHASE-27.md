@@ -5,12 +5,13 @@
 Produce a valid VAX/VMS object module (`.OBJ`) from MACRO-32 source (`.MAR`),
 using a new command:
 
-```
-MACRO source [/OUTPUT=object]
+```text
+MACRO source[/HOST] [/[NO]OBJECT[=object]]
 ```
 
-If `/OUTPUT` is not given, the object file is the source file name with its
-extension replaced by `.OBJ`. The object must be one a real VAX/VMS linker
+If `/OBJECT` doesn't name a file, the object file is the source file name
+with its extension replaced by `.OBJ`. The request asked for `/OUTPUT=`; the
+user then chose VMS's own `/[NO]OBJECT` (2026-09-29). The object must be one a real VAX/VMS linker
 accepts: `LINK` on a real VAX must build a working image from it, and
 `ANALYZE/OBJECT` must report no errors.
 
@@ -25,7 +26,7 @@ becomes the record of the implementation: each subtask adds a
 [progress log](#progress-log) entry, and the open questions get their answers
 recorded here.
 
-**Status: planning.**
+**Status: planning complete. Subtasks 1 and 2 are ready to start.**
 
 ## Why this phase looks different
 
@@ -42,7 +43,7 @@ though: they show which of the format's legal choices real MACRO-32 makes
 (see [Validation strategy](#validation-strategy)).
 
 | Source | What it gives us |
-|---|---|
+| --- | --- |
 | *VMS 5.0 Linker Utility Manual*, Chapter 7 "VAX Object Language" (`~/Documents/Technical Doc/VMS/AA-LA62A-TE_VMS_5.0_Linker_Utility_Manual_198804.pdf`) | The full specification: every record type, every GSD subrecord, all 85 TIR commands plus STORE IMMEDIATE, EOM/EOMW, debugger and traceback records. It is written for "programmers writing compilers or assemblers". `pdftotext -layout` extracts it cleanly. **This is the primary reference.** |
 | *VAX-11 Linker Reference Manual*, v2.0, Appendix C "VAX-11 Object Language" (`AA-D019B-TE_…_198003.pdf`) | An older version of the same specification. Useful for cross-checking, and as a simpler baseline (fewer GSD subrecord types). |
 | `vmssrc_archive/v73/starlet_b64/lis/objfmt.sdl` | The real SDL definitions: `$OBJRECDEF` (record types, `GSD$C_*`/`TIR$C_*` codes, `OBJ$C_MAXRECSIZ` = 2048, `OBJ$C_SYMSIZ` = 31, `OBJ$C_STRLVL` = 0), `$MHDEF`, `$EOMDEF`, `$GPSDEF` (psect flags), `$GSYDEF`, `$EPMDEF`, `$SRFDEF`, and the other subrecord layouts. It is the same kind of input `internal/vmsdef/gen` already generates constants from. The file also has the Alpha `EOBJ`/`EGSD`/`ETIR` definitions, which we ignore. |
@@ -54,7 +55,7 @@ For the MACRO-32 language itself, the user added (2026-09-29) the *VAX MACRO
 and Instruction Set Reference Manual* for OpenVMS VAX 7.3, in two printings:
 
 | Source | What it gives us |
-|---|---|
+| --- | --- |
 | Compaq printing, AA-PS6GD-TE, April 2001 (`~/Documents/Technical Doc/VMS/138206246-VAX-MACRO-and-Instruction-Set-Reference-Manual.pdf`) | **The language reference.** Chapter 3 covers expressions and the absolute/relocatable/external rules. Chapter 5 covers addressing modes, including how MACRO picks displacement sizes. Chapter 6 covers every directive (`.PSECT` and its defaults, `.ENABLE`/`.DISABLE`, `.DEFAULT`, `.TITLE`, the macro facility, and more). `pdftotext -layout` extracts it cleanly. Section numbers in this document refer to this printing. |
 | VSI reissue of the same manual (`vsi-openvms-vax-macro-and-instruction-set-reference-manual.pdf`) | The same content, re-typeset. Use it to cross-check any passage the Compaq text extracts badly. |
 
@@ -289,40 +290,110 @@ round-trip tests are cheap.
 
 ### Command surface
 
+```text
+MACRO source[/HOST] [/[NO]OBJECT[=object]]
+```
+
 - **Console DCL verb** `MACRO`, added to `internal/bootdata/files/console.dcl`
-  with one required parameter (the source file) and `/OUTPUT=file`. Real
-  VMS MACRO names this qualifier `/OBJECT=`; see the open questions. `/LIST`
-  is kept for later.
+  in its govax-native block. The one required parameter is the source file,
+  which can carry a parameter-scoped `/HOST` qualifier, the same one COPY
+  uses (Phase 23). The object qualifier is VMS's own `/[NO]OBJECT[=file]`
+  (decided 2026-09-29). `/OBJECT` with no value, or no qualifier at all,
+  means the default name. `/NOOBJECT` assembles and reports errors but
+  writes nothing. `/LIST` is kept for later.
 - **`govax` CLI subcommand** `macro`, passed through to the console command
   the same way `asm` and `run` are (`doCmd` in `cmd/govax/grammar.go`). It
-  needs to accept the optional output name as well as the source file.
-- **Default output name:** the source name with its extension (if any)
-  replaced by `.OBJ`, in the source's directory. When the source name is
-  lowercase (`hello.mar`), the extension is lowercased too (`hello.obj`) so
-  the host file doesn't have mixed case; see the open questions.
-- **Errors:** as on VMS, an assembly with errors still reports them all and
-  sets the EOM severity. Whether an object file is written at all when there
-  are errors is an open question. Real MACRO does write one.
+  needs to pass the source file and an optional object name through.
+- **Default object name:** the source's own location (the same host
+  directory, or the same device and directory), with the extension replaced
+  by `OBJ`, **in the same case as the source's extension**: `hello.mar` gives
+  `hello.obj` and `HELLO.MAR` gives `HELLO.OBJ` (decided 2026-09-29). The case
+  is copied letter by letter, so `Hello.Mar` gives `Hello.Obj`. With no
+  extension, `OBJ` is lowercase if the name has no uppercase letters, and
+  uppercase otherwise. On an ODS-2 volume names are uppercase anyway. The
+  version number on an ODS-2 source is dropped, so the object gets the next
+  version of its own name.
+- **Errors:** every error is reported, and then **no object file is
+  written** (decided 2026-09-29). The object is built in memory and only
+  written once assembly succeeds, so a failed assembly never leaves a
+  partial file or replaces a good one.
 
-### Object file storage
+### File specifications: host files and ODS-2 volumes
 
-On VMS, a `.OBJ` file is an RMS **variable-length record** file, and the
-record boundaries matter. A host file needs some way to represent them. The
-options are:
+`MACRO`, and the future `LINK`, must work equally well with host files and
+with files on a mounted ODS-2 volume, and let the two be mixed: a host
+source to an ODS-2 object, or the reverse. The rules for deciding which kind
+of file a name means live in one shared helper, so every command that
+accepts file names agrees:
 
-- **(a)** Write to a host file using ODS-2's on-disk variable-record layout:
-  for each record, a 2-byte little-endian length, then the data, padded to an
-  even length. This is also what a raw copy of the file's blocks off a VMS
-  disk looks like.
-- **(b)** Write into a mounted ODS-2 container through `internal/rms`
-  (Phase 22) as a real `RFM=VAR` file. A container govax writes is mountable
-  by simh (Phase 22's interop check), so this is also the most faithful way to
-  move objects to and from a real or simh VAX.
+1. **An explicit `/HOST`** on the parameter means a host path, whatever the
+   name looks like. This is COPY's parameter-scoped qualifier. It handles
+   the rare host path that happens to look like VMS syntax.
+2. **A name that is obviously VMS syntax** means a file on a mounted volume.
+   That's a name with a directory in brackets (`[DIR.SUB]` or `<DIR>`), or a
+   `name:` prefix where `name` is at least two characters long, followed by
+   no `/` or `\`. The two-character minimum keeps a Windows drive letter
+   (`C:\x`) on the host side. A logical name prefix (`SRC:HELLO.MAR`) goes
+   through Phase 25's `TranslateFileSpec` and must end on a mounted device.
+   If it doesn't, that's an error, not a silent fall back to the host.
+3. **A name that is obviously a host path**, one containing `/` or `\`,
+   means a host file.
+4. **Anything else** (a bare `HELLO.MAR`):
+   - for the **source**, a file in the default directory of a mounted volume
+     if a `SET DEFAULT` onto one is in effect, and a host file otherwise
+     (decided 2026-09-29). This keeps MACRO consistent with COPY, TYPE, and
+     DIRECTORY whenever an ODS-2 default is set, and keeps
+     `govax macro hello.mar` working with nothing mounted;
+   - for the **object** named in `/OBJECT=`, the same side as the source,
+     so `MACRO DUA0:[X]HELLO.MAR/OBJECT=OTHER.OBJ` writes
+     `DUA0:[X]OTHER.OBJ`. To send an ODS-2 source's object to the host,
+     give a host path (`/OBJECT=./hello.obj`).
 
-Proposal: do both, chosen by the output file spec. A VMS device spec
-(`DUA0:[X]HELLO.OBJ`, or a logical name that translates to one) goes through
-RMS. A host path uses layout (a). The `obj` reader accepts both layouts, plus
-a "records only" stream if the user's transfer tool produces one.
+`.INCLUDE` names are resolved the same way, relative to the file being
+assembled, whichever side it's on.
+
+ODS-2 access goes through `internal/rms`, the only package allowed to import
+`ods2`. It reuses Phase 23's `rms.Session`, which holds the default directory
+and `resolveVolume`, and adds a small host-side record API: open a file and
+read its records, or create a file with given record attributes and write
+records. Host access uses `os` directly. The shared helper that picks between
+them probably lives in `internal/rms` too, since only it can parse an ODS-2
+spec. Subtask 9 decides exactly where it goes.
+
+**How the records are stored.** On VMS, a `.OBJ` file is an RMS
+variable-length record (`RFM=VAR`) file, and the record boundaries are part
+of the format.
+
+- **On an ODS-2 volume**, the object is a real `RFM=VAR` file, written
+  through `ods2`'s `rms.Writer`. Phase 22's `SYS$PUT` already writes VAR
+  records through it, so no new `ods2` support is expected. The exact file
+  attributes (the `RAT` flags and the maximum record size) are copied from a
+  real VAX `.OBJ` once one is available.
+- **On the host**, there are no record boundaries, so the file uses ODS-2's
+  own on-disk VAR layout: for each record, a 2-byte little-endian length,
+  then the data, padded to an even length. That's the same bytes a raw
+  copy of the file's blocks would have. Subtask 9 must confirm the layout
+  survives a COPY in both directions:
+  - a real `.OBJ` copied from a container to the host (COPY `/BINARY`, if
+    that copies blocks as they are) must be readable by `internal/obj`;
+  - a host `.OBJ` copied into a container must come back as a real VAR
+    file.
+
+  If COPY can't do either of those today, the fix is in scope, in govax's
+  COPY or in `ods2` itself.
+
+**Changes to `ods2`** are in scope for this phase whenever they're needed
+(the user decided this 2026-09-29), for example if its record-format support
+turns out to be missing something `.OBJ` files need. `ods2` is a separate
+repository with its own conventions (`ods2/CLAUDE.md`):
+
+- detailed comments for readers new to VMS;
+- tests in the same commit as the code;
+- one commit per task;
+- **no AI attribution lines in commit messages**;
+- no pushing.
+
+govax's `go.work` picks up local `ods2` changes right away.
 
 ## Language scope
 
@@ -395,9 +466,14 @@ We check our output in three ways, from cheapest to most authoritative:
    the same bytes after relocation, and, where practical, the same TIR
    command choices. Differences go in this document. Where they're behavior
    differences rather than encoding choices, they go in `DEVIATIONS.md`.
-3. **Acceptance on the real VAX.** A govax-built `.OBJ` passes
-   `ANALYZE/OBJECT` with no errors, and `LINK` plus `RUN` behaves like the
-   same program built by real MACRO.
+3. **Readability both ways** (the acceptance criterion, decided
+   2026-09-29). `internal/obj` reads, dumps, and checks every govax object
+   and every real VAX object in the fixture set without errors. That's what
+   the future govax `LINK` needs: to read its own objects and real ones.
+   Nobody is expected to take a govax object to a real VAX's `LINK`, so that
+   isn't required. But the format shouldn't differ from real MACRO's without
+   a reason. When it's cheap, a govax object is also checked with the real
+   `ANALYZE/OBJECT` and `LINK` as extra evidence.
 
 **Fixture ladder** (`testdata/mar/`, with the real-VAX outputs stored next to
 them under `testdata/mar/vax/`). Each step adds one feature:
@@ -418,8 +494,9 @@ them under `testdata/mar/vax/`). Each step adds one feature:
    `CTL_SETRB` and repeated stores.
 8. Complex expressions: `EXT+4`, `A-B` across psects, and `.LONG EXT1-EXT2`.
    This checks OPR commands.
-9. A "real" program: a hello-world that uses `SYS$QIOW` or `LIB$PUT_OUTPUT`,
-   built by govax and linked and run on the VAX.
+9. A "real" program: a hello-world that uses `SYS$QIOW` or `LIB$PUT_OUTPUT`.
+   Real MACRO's object for it goes into the reader corpus for the future
+   `LINK`. Linking govax's object on the VAX is optional.
 
 ## Subtasks
 
@@ -456,14 +533,25 @@ them under `testdata/mar/vax/`). Each step adds one feature:
    `internal/obj` records: PSC and SYM/EPM GSD subrecords, TIR (STORE
    IMMEDIATE runs, `CTL_SETRB`, relocation stack programs), and EOM with the
    severity and transfer address.
-9. **Command surface.** The console `MACRO` verb and qualifiers, the
-   `govax macro` subcommand, default output naming, and host and ODS-2
-   output (see [Object file storage](#object-file-storage)). Update the
-   help text in `vax.help`.
-10. **Fixture ladder 4 to 9, and real-VAX acceptance** (needs the user).
-    Compare each fixture with the VAX's output. Log the differences. Link
-    and run on the VAX.
-11. **Clean-up and docs.** Update `PLAN.md`, `DEVIATIONS.md`, and
+9. **Shared host/ODS-2 file access.** The helper that classifies a file
+   name (see
+   [File specifications](#file-specifications-host-files-and-ods-2-volumes)),
+   the `internal/rms` record API for reading and creating record files on a
+   mounted volume, and the host VAR layout reader and writer. Confirm that
+   `.OBJ` files survive COPY both ways, and fix COPY or `ods2` if they
+   don't. Unit tests cover each classification rule, including Windows drive
+   letters, logical names, `/HOST`, and the `SET DEFAULT` rule for bare
+   names.
+10. **Command surface.** The console `MACRO` verb with the source's `/HOST`
+    and `/[NO]OBJECT[=file]`, the `govax macro` subcommand, a repeatable
+    `--mount DEVICE=container` CLI option that mounts volumes before a
+    one-shot command runs, default object naming with case copied from the
+    source's extension, `.INCLUDE` across host and ODS-2, and writing only
+    on success. Update the help text in `vax.help`.
+11. **Fixture ladder 4 to 9** (needs the user). Compare each fixture with the
+    VAX's output and add each real object to the reader corpus. Log the
+    differences.
+12. **Clean-up and docs.** Update `PLAN.md`, `DEVIATIONS.md`, and
     `CLAUDE.md` (for the new `internal/obj` package). Mark the phase
     complete, and move the macro facility, listings, and `LINK` into new
     phase entries.
@@ -474,33 +562,29 @@ subtask 7, since real output decides the encoding questions.
 
 ## Open questions
 
-1. **Qualifier name.** Real VMS MACRO uses `/OBJECT[=file]` (and
-   `/NOOBJECT`), not `/OUTPUT`. Proposal: accept both, with `/OBJECT` as the
-   VMS-faithful name and `/OUTPUT` as an alias. Is that OK, or should it
-   be `/OUTPUT` only, as in the request?
-2. **Moving files to and from the real VAX.** How will real `.OBJ` files
-   get here, and govax's get back? A binary FTP or Kermit copy of a `VAR`
-   file usually loses record boundaries (or produces a stream that depends on
-   the tool). The cleanest route is an ODS-2 disk container that both sides
-   can mount (simh can, and govax can since Phase 22). Is the real VAX
-   simh-based, real hardware, or something else, and which transfer path is
-   practical?
-3. **Fidelity target.** Must govax's `.OBJ` be **byte-identical** to real
-   MACRO's, or is "links and behaves identically, with the same psects,
-   symbols, and relocated bytes" enough? Byte identity needs matching MHD
-   dates, LNM text, record splitting, and TIR command choices, and probably
-   a two-pass sizing model. Proposal: semantic equivalence is required, and
-   byte identity is pursued only where it's cheap.
-4. **Default output name and case.** Should `hello.mar` become `hello.obj`
-   or `hello.OBJ`? And does the object go next to the source (as proposed) or
-   in the current default directory (what VMS does)?
-5. **Output on errors.** Should an assembly with errors still write an
-   object file, as real MACRO does (with the EOM severity set), or write
-   nothing?
-6. **Language processor name.** Should the LNM record identify govax (for
-   example `govax MACRO V1.0`), or copy what real MACRO writes (for example
-   `VAX MACRO V5.x`)? The linker doesn't check it, but the difference shows
-   in a byte-level comparison.
+None are open. All were answered on 2026-09-29, and the design sections
+above record the answers:
+
+- **Qualifier name:** VMS's `/[NO]OBJECT[=file]`, not `/OUTPUT`.
+- **Fidelity:** `internal/obj` (and the future `LINK`) must read both govax
+  objects and real VAX objects. Linking govax objects with a real VAX
+  `LINK` isn't required, but the format shouldn't differ from real MACRO's
+  without a reason.
+- **Default object name:** the source's own location, with an `OBJ`
+  extension in the same case as the source's extension.
+- **Errors:** no object file is written.
+- **LNM record:** it names govax's own MACRO, `govax MACRO V<build>`.
+- **ODS-2 output:** in scope, including any `ods2` changes it needs.
+- **Host vs. ODS-2:** the source takes COPY's parameter-scoped `/HOST`;
+  obvious VMS syntax means a volume. A bare name means the mounted volume
+  when a `SET DEFAULT` onto one is in effect, and the host otherwise.
+- **One-shot CLI:** a repeatable `--mount DEVICE=container` option.
+- **Where the real objects come from:** the user's simh VAX 8600 running
+  VMS 7.3. Its disk is a container that `ods2` can read. The user pauses
+  simh before govax reads it, and govax mounts it **read-only**. Each
+  fixture's `.OBJ` (with its file attributes) and `.LIS` listing are copied
+  into `testdata/mar/vax/`. The `.MAR` sources go to the VAX on a small
+  separate exchange container that govax creates.
 
 ## Progress Log
 
@@ -548,3 +632,28 @@ subtask 7, since real output decides the encoding questions.
   out.
 - Still open: the manual doesn't cover the DCL `MACRO` qualifiers
   (`/OBJECT` vs. `/OUTPUT`), so open question 1 stands.
+
+### 2026-09-29 — User decisions; host and ODS-2 file access
+
+- The user answered every open question (see
+  [Open questions](#open-questions)): `/[NO]OBJECT`, no object on errors,
+  the object's extension case follows the source's, the LNM record names
+  govax, and "reads both govax and real objects" replaces real-VAX `LINK`
+  as the acceptance test.
+- The user asked for MACRO, and later LINK, to work equally with host files
+  and files on mounted ODS-2 volumes, with `ods2` changes in scope. Added
+  [File specifications](#file-specifications-host-files-and-ods-2-volumes).
+  It covers the classification rules (COPY's `/HOST`, obvious VMS syntax,
+  obvious host paths, and bare names following `SET DEFAULT`), the object
+  following the source's side, an `internal/rms` record API built on
+  Phase 23's `rms.Session`, the host VAR layout, and COPY round trips.
+  Added subtask 9 for this, and renumbered the rest to 12.
+- Checked: Phase 22 already writes VAR records through `ods2`'s
+  `rms.Writer`, so `.OBJ` output itself shouldn't need `ods2` changes.
+  `ods2` commits must not carry AI attribution lines (`ods2/CLAUDE.md`).
+- A repeatable `--mount DEVICE=container` CLI option mounts volumes for
+  one-shot commands (subtask 10).
+- Real objects will come from the user's simh VAX 8600 running VMS 7.3.
+  govax reads its disk container read-only while simh is paused.
+- (These edits were written on 2026-09-29, but a sandbox failure in the
+  editor held them up until after a restart.)
