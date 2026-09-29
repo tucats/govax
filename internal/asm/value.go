@@ -260,7 +260,7 @@ func (a *Assembler) exprAtom(c *cursor, st *exprState) (exprVal, error) {
 		if !isSymbolChar(c.peekAt(1)) {
 			c.next()
 
-			return constVal(a.deposit), nil
+			return constVal(a.pc()), nil
 		}
 	case '(':
 		c.next()

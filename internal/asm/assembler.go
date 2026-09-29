@@ -34,20 +34,17 @@ type Assembler struct {
 	symbols *symbolTable
 	image   *image
 
-	// deposit is the current location counter (vax.console.deposit).
-	deposit uint32
-	// origin is the configured P0 base, used by Bytes() to know where the
-	// assembled program's bytes start.
-	origin uint32
-	// regionIsS0 says which of p0Deposit/s0Deposit is "the other one" —
-	// .REGION swaps the active deposit counter with its saved
-	// counterpart, matching asm_pseudo.c's case 27.
-	regionIsS0 bool
-	p0Deposit  uint32
-	s0Deposit  uint32
-	// s0Origin is the configured S0 base, the S0 counterpart of origin —
-	// see SetS0Origin.
-	s0Origin uint32
+	// dialect is the source language being assembled (see Dialect).
+	dialect Dialect
+
+	// p0 and s0 are the console dialect's two absolute sections, based at
+	// the configured P0 origin (SetOrigin) and S0 origin (SetS0Origin).
+	// cur is the one output goes to; .REGION switches it, matching
+	// asm_pseudo.c's case 27, which swapped the active deposit counter
+	// (vax.console.deposit) with its saved counterpart.
+	p0  *section
+	s0  *section
+	cur *section
 
 	// curEntry is the active local-symbol scope name (vax.assembler.cur_entry).
 	curEntry string
@@ -121,17 +118,15 @@ type Assembler struct {
 // instruction table.
 func New(verbose bool) *Assembler {
 	a := &Assembler{
-		table:     cpu.Instructions(),
-		symbols:   newSymbolTable(),
-		image:     newImage(),
-		deposit:   defaultOrigin,
-		origin:    defaultOrigin,
-		p0Deposit: defaultOrigin,
-		s0Deposit: defaultS0Base,
-		s0Origin:  defaultS0Base,
-		radix:     10,
-		verbose:   verbose,
+		table:   cpu.Instructions(),
+		symbols: newSymbolTable(),
+		image:   newImage(),
+		p0:      &section{name: "P0", base: defaultOrigin},
+		s0:      &section{name: "S0", base: defaultS0Base},
+		radix:   10,
+		verbose: verbose,
 	}
+	a.cur = a.p0
 	a.seedBuiltinSymbols()
 
 	return a
@@ -145,9 +140,8 @@ func (a *Assembler) Prints() []string { return a.prints }
 // SetOrigin sets the initial P0 deposit location (default 0x200, matching
 // the reference tool). Only meaningful before Assemble is called.
 func (a *Assembler) SetOrigin(addr uint32) {
-	a.origin = addr
-	a.deposit = addr
-	a.p0Deposit = addr
+	a.p0.base = addr
+	a.p0.loc = 0
 }
 
 // SetSCBB sets the SCB base register value .SCB/.VECTOR compute their
@@ -195,14 +189,14 @@ func (a *Assembler) TakeEntry() (uint32, bool) {
 
 // Origin returns the configured P0 base address (see SetOrigin), the
 // address Bytes()'s returned span starts at.
-func (a *Assembler) Origin() uint32 { return a.origin }
+func (a *Assembler) Origin() uint32 { return a.p0.base }
 
 // Deposit returns the current active location counter (vax.console.deposit)
 // — whichever of the P0/S0 counters .REGION has made active. A live
 // console session (internal/console/asm.go) mirrors this into its own
 // shared "current address" register (Console.DepositAddr) after every
 // statement, matching the reference tool's own single shared field.
-func (a *Assembler) Deposit() uint32 { return a.deposit }
+func (a *Assembler) Deposit() uint32 { return a.pc() }
 
 // HasUnresolvedSymbols reports whether any symbol assembled so far still has
 // pending forward references, matching check_unresolved_symbols(0) — the
@@ -253,7 +247,7 @@ func (a *Assembler) AssembleLine(line string) (done bool, err error) {
 // empty; use S0Origin/S0End with BytesRange to read that data instead, or
 // ByteAt for a single address anywhere in the sparse image.
 func (a *Assembler) Bytes() []byte {
-	return a.image.Bytes(a.origin, a.p0End())
+	return a.image.Bytes(a.p0.base, a.p0End())
 }
 
 // BytesRange returns the contiguous span [from, to) from the assembled
@@ -267,7 +261,7 @@ func (a *Assembler) BytesRange(from, to uint32) []byte {
 // S0Origin returns the configured S0 base address: 0x80000000 by default,
 // matching initialization.c's vax.console.s0_deposit, or whatever
 // SetS0Origin last configured.
-func (a *Assembler) S0Origin() uint32 { return a.s0Origin }
+func (a *Assembler) S0Origin() uint32 { return a.s0.base }
 
 // SetS0Origin sets the initial S0 deposit location (default 0x80000000).
 // Only meaningful before Assemble is called. A standalone assembly with no
@@ -277,23 +271,13 @@ func (a *Assembler) S0Origin() uint32 { return a.s0Origin }
 // occupy low S0 addresses starting at the literal default, so depositing a
 // program there would corrupt the running page table it's mapped through.
 func (a *Assembler) SetS0Origin(addr uint32) {
-	a.s0Origin = addr
-	a.s0Deposit = addr
-
-	if a.regionIsS0 {
-		a.deposit = addr
-	}
+	a.s0.base = addr
+	a.s0.loc = 0
 }
 
 // S0End returns the final S0 deposit location — the S0 counterpart to
 // Bytes' implicit P0 range end.
-func (a *Assembler) S0End() uint32 {
-	if a.regionIsS0 {
-		return a.deposit
-	}
-
-	return a.s0Deposit
-}
+func (a *Assembler) S0End() uint32 { return a.s0.addr() }
 
 // ByteAt returns the single byte at addr in the assembled image (0 if
 // nothing was ever deposited there).
@@ -306,16 +290,9 @@ func (a *Assembler) P1VectorRange() (base, end uint32, ok bool) {
 	return a.p1VectorBase, a.p1VectorEnd, a.p1VectorSet
 }
 
-// p0End returns the final P0 deposit location, whichever counter — the
-// active one, or the saved one from the last .REGION switch — currently
-// holds it.
-func (a *Assembler) p0End() uint32 {
-	if a.regionIsS0 {
-		return a.p0Deposit
-	}
-
-	return a.deposit
-}
+// p0End returns the final P0 deposit location, whether or not P0 is the
+// section .REGION has made active.
+func (a *Assembler) p0End() uint32 { return a.p0.addr() }
 
 // Assemble assembles source (a full program, or one .INCLUDE-able
 // fragment) statement by statement, in one pass, matching the reference
@@ -700,7 +677,7 @@ func (a *Assembler) parseLabel(c *cursor) error {
 		}
 	}
 
-	return a.setSymbol(name, a.deposit, flags, true)
+	return a.setSymbol(name, a.pc(), flags, true)
 }
 
 // assembleAssignment handles a MACRO-32 direct assignment statement:
@@ -741,7 +718,7 @@ func (a *Assembler) assembleAssignment(c *cursor) (handled bool, err error) {
 	}
 
 	if name == "." {
-		a.deposit = v
+		a.setPC(v)
 
 		return true, nil
 	}

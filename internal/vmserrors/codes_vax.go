@@ -81,6 +81,7 @@ const (
 	vaxNoCond
 	vaxNoEndc
 	vaxCondDepth
+	vaxNotMACRO
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -178,6 +179,7 @@ const (
 	VAX_NOCOND    = VAXFacility<<FacilityPosition | vaxNoCond<<MessagePosition | StatusError
 	VAX_NOENDC    = VAXFacility<<FacilityPosition | vaxNoEndc<<MessagePosition | StatusError
 	VAX_CONDDEPTH = VAXFacility<<FacilityPosition | vaxCondDepth<<MessagePosition | StatusError
+	VAX_NOTMACRO  = VAXFacility<<FacilityPosition | vaxNotMACRO<<MessagePosition | StatusError
 )
 
 func init() {
@@ -239,6 +241,7 @@ func init() {
 	DefineMessage(VAX_NOCOND, VAXFacility, "NOCOND", "!S is not inside a conditional assembly block")
 	DefineMessage(VAX_NOENDC, VAXFacility, "NOENDC", "Missing .ENDC: !D conditional assembly block(s) still open")
 	DefineMessage(VAX_CONDDEPTH, VAXFacility, "CONDDEPTH", "Conditional assembly blocks nested more than !D deep")
+	DefineMessage(VAX_NOTMACRO, VAXFacility, "NOTMACRO", "!S is not a MACRO-32 directive")
 	DefineMessage(VAX_EXTRATEXT, VAXFacility, "EXTRATEXT", "Unexpected text !Q at end of statement")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")

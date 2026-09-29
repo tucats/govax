@@ -11,262 +11,6 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// pseudoNames is every recognized ".xxx" pseudo-op name, plus the bare
-// (no-dot) mnemonic aliases JEQL/JEQLU/JNEQ/JNEQU — matching asm_pseudo.c's
-// pseudos[] table. asm_pseudo() is tried on every statement before
-// asm_opcode(), so a name has to be excluded here to ever reach the real
-// instruction table.
-//
-// Not implemented: the privileged-register pseudo-ops (".KSP value", etc.)
-// and .MODE/.PTE/.VECTOR/.CONSOLE — none are used by any testdata/asm
-// fixture, and each needs live VAX/console state (a mode stack, real page
-// tables, a running console dispatcher) this batch assembler has no model
-// of. .SYM is recognized (so it doesn't fall through to the opcode table)
-// but is a no-op, matching asm_pseudo.c's own switch, which has a
-// pseudos[] entry for "SYM" (code 23) with no corresponding case — a
-// pre-existing dead pseudo-op in the reference tool, replicated as-is
-// since it's harmless either way.
-var pseudoNames = map[string]bool{
-	"BYTE":          true, // Declare a 8-bit integer constant value
-	"WORD":          true, // Declare a 16-bit integer constant values
-	"LONG":          true, // Declare a 32-bit integer constant values
-	"QUAD":          true, // Declare a 64-bit integer constant values
-	"BASE":          true, // Set the address of the next instruction to be assembled
-	"SET":           true, // Set various assembler or console flags
-	"CLEAR":         true, // Clear vaiorus assembler or console flags
-	"ASCII":         true, // Declare a string of ASCII text
-	"ASCIZ":         true, // Declare a null-terminated string of ASCII text
-	"ASCIC":         true, // Declare a counted ASCII string of text (8-bit length)
-	"ASCID":         true, // Declare an ASCII string using a VAX string descriptor
-	"END":           true, // Terminate assembly
-	"PSL":           true, // Declare a Processor Status Longword
-	"PRINT":         true, // Print an arbitrary message to the console
-	"MASK":          true, // Define a 16-bit entry mast value
-	"F_FLOAT":       true, // Declare a 32-bit F_FLOAT value
-	"D_FLOAT":       true, // Declare a 64-bit D_FLOAT value
-	"BLKB":          true, // Declare a block of bytes (8-bit zeroes) of a given size
-	"BLKW":          true, // Declare a block of words (16-bit zeroes) of a given size
-	"BLKL":          true, // Declare a block of longwords (32-bit zeroes) of a given size
-	"BLKF":          true, // Declare a block of F_FLOATs (32-bit zeroes) of a given size
-	"BLKD":          true, // Declare a block of D_FLOATs (65-bit zeroes) of a given size
-	"ENTRY":         true, // Declare an entry point symbol and register mask
-	"SYM":           true, // Define a symbol table value
-	"CASE":          true, // Define a case label
-	"SCB":           true, // Define a System Control Block (SCB) entry
-	"ALIGN":         true, // Ensure the next storage is aligend on a given boundary (1/2/4/8)
-	"REGION":        true, // Indicate that following code is stored in a specific retion (P0/P1/S0)
-	"VECTOR":        true, // Define an exception vector entry
-	"CONSOLE":       true, // Send a command to the console
-	"INCLUDE":       true, // Include an external file
-	"IF":            true, // Start a conditional assembly block
-	"IF_FALSE":      true, // Subconditional: assemble if the block's test failed
-	"IFF":           true,
-	"IF_TRUE":       true, // Subconditional: assemble if the block's test passed
-	"IFT":           true,
-	"IF_TRUE_FALSE": true, // Subconditional: assemble either way
-	"IFTF":          true,
-	"ENDC":          true, // End a conditional assembly block
-	"IIF":           true, // Assemble one statement if a condition is met
-	"SHIM":          true, // Define a runtime library (RTL) shim entry
-	"MICROKERNEL":   true, // Declare that the microkernel is active
-	"SPACE":         true,
-	"DATA":          true, // Define an area of store that is writable
-	"TEXT":          true, // Define an area of storage that is read-only
-	"JEQL":          true, // Posix/UNIX VAX instruction set alias for BEQL
-	"JEQLU":         true, // Posix/UNIX VAX instruction set alias for BEQLU
-	"JNEQ":          true, // Posix/UNIX VAX instruction set alias for BNEQ
-	"JNEQU":         true, // Posix/UNIX VAX instruction set alias for BEQLU
-	"P1VECTOR":      true, // Declare a P1Vector page table entry
-	"SCOPE":         true,
-	"VERSION":       true, // Declare the microkernel version string
-	"RMSDEF":        true, // Declare every FAB$/RAB$/RMS$ RMS symbol (docs/PHASE-24.md)
-	"FAB":           true, // Build a FAB (File Access Block) instance (docs/PHASE-24.md)
-	"RAB":           true, // Build a RAB (Record Access Block) instance (docs/PHASE-24.md)
-}
-
-// assemblePseudo tries to assemble the statement at c as a pseudo-op,
-// matching asm_pseudo(): a leading "." is optional (so JEQL/JNEQ work both
-// with and without one), and the name is matched case-sensitively against
-// pseudoNames (the line is already uppercased by this point). Reports
-// handled=false, leaving c untouched, if name isn't a recognized pseudo-op
-// — the caller falls back to asm_opcode's real-instruction table.
-func (a *Assembler) assemblePseudo(c *cursor) (handled bool, err error) {
-	save := c.pos
-	c.skipBlanks()
-
-	if c.peek() == '.' {
-		c.next()
-	}
-
-	start := c.pos
-
-	for !c.atEnd() && !isBlank(c.peek()) && c.peek() != '/' {
-		c.pos++
-	}
-
-	name := c.s[start:c.pos]
-	if !pseudoNames[name] {
-		c.pos = save
-
-		return false, nil
-	}
-
-	// Any pseudo-op other than .CASE empties the running .CASE block base,
-	// matching asm_pseudo.c's own reset ahead of its switch.
-	if name != "CASE" {
-		a.caseBase = 0
-	}
-
-	return true, a.dispatchPseudo(name, c)
-}
-
-func (a *Assembler) dispatchPseudo(name string, c *cursor) error {
-	switch name {
-	case "BYTE":
-		return a.pseudoData(c, 1)
-
-	case "WORD":
-		return a.pseudoData(c, 2)
-
-	case "LONG":
-		return a.pseudoData(c, 4)
-
-	case "QUAD":
-		return a.pseudoQuad(c)
-
-	case "BASE":
-		return a.pseudoBase(c)
-
-	case "SET":
-		return a.pseudoSet(c)
-
-	case "CLEAR":
-		return a.pseudoClear(c)
-
-	case "ASCII":
-		return a.pseudoAscii(c, asciiPlain)
-
-	case "ASCIZ":
-		return a.pseudoAscii(c, asciiZ)
-
-	case "ASCIC":
-		return a.pseudoAscii(c, asciiCounted)
-
-	case "ASCID":
-		return a.pseudoAscii(c, asciiDescriptor)
-
-	case "END":
-		return a.pseudoEnd(c)
-
-	case "PSL":
-		_, err := a.exprNoForward(c)
-
-		return err
-
-	case "PRINT":
-		return a.pseudoPrint(c)
-
-	case "MASK":
-		return a.pseudoMask(c)
-
-	case "F_FLOAT":
-		return a.pseudoFloat(c, 4)
-
-	case "D_FLOAT":
-		return a.pseudoFloat(c, 8)
-
-	case "BLKB":
-		return a.pseudoBlock(c, 1)
-
-	case "BLKW":
-		return a.pseudoBlock(c, 2)
-
-	case "BLKL", "BLKF":
-		return a.pseudoBlock(c, 4)
-
-	case "BLKD":
-		return a.pseudoBlock(c, 8)
-
-	case "ENTRY":
-		return a.pseudoEntry(c)
-
-	case "SYM":
-		return nil // recognized but a no-op; see pseudoNames' doc comment.
-
-	case "CASE":
-		return a.pseudoCase(c)
-
-	case "SCB":
-		return a.pseudoSCB(c)
-
-	case "ALIGN":
-		return a.pseudoAlign(c)
-
-	case "REGION":
-		return a.pseudoRegion(c)
-
-	case "VECTOR":
-		return vmserrors.New(vmserrors.VAX_NOTLIVE, "."+name)
-
-	case "CONSOLE":
-		return a.pseudoConsole(c)
-
-	case "INCLUDE":
-		return a.pseudoInclude(c)
-
-	case "IF":
-		return a.pseudoIf(c)
-
-	case "IF_FALSE", "IFF", "IF_TRUE", "IFT", "IF_TRUE_FALSE", "IFTF", "ENDC":
-		return a.subconditional(name)
-
-	case "IIF":
-		return a.pseudoIif(c)
-
-	case "SHIM":
-		return a.pseudoShim(c)
-
-	case "MICROKERNEL":
-		a.microkernel = true
-
-		return nil
-
-	case "SPACE":
-		return a.pseudoSpace(c)
-
-	case "DATA", "TEXT":
-		_, err := a.exprNoForward(c)
-
-		return err
-
-	case "JEQL", "JEQLU":
-		return a.pseudoJcc(c, 0x12) // BNEQ, inverted around a JMP.
-
-	case "JNEQ", "JNEQU":
-		return a.pseudoJcc(c, 0x13) // BEQL, inverted around a JMP.
-
-	case "P1VECTOR":
-		return a.pseudoP1Vector(c)
-
-	case "RMSDEF":
-		return a.pseudoRMSDEF(c)
-
-	case "FAB":
-		return a.pseudoFAB(c)
-
-	case "RAB":
-		return a.pseudoRAB(c)
-
-	case "SCOPE":
-		return a.pseudoScope(c)
-
-	case "VERSION":
-		return a.pseudoVersion(c)
-	}
-
-	panic("asm: pseudoNames/dispatchPseudo out of sync for " + name)
-}
-
 // readToken reads a blank-delimited token (a qualifier like "/PERM", or a
 // bareword like a .REGION/.SCB stack specifier), matching read_verb()'s
 // role in the reference tool (minus its 4-character CHAR4 truncation,
@@ -323,7 +67,7 @@ func (a *Assembler) pseudoData(c *cursor, scale int) error {
 
 		first = false
 
-		loc := a.deposit
+		loc := a.pc()
 
 		v, wasForward, err := a.exprValue(c, loc, addrFixup(scale))
 		if err != nil {
@@ -345,11 +89,9 @@ func (a *Assembler) pseudoData(c *cursor, scale int) error {
 			return vmserrors.New(vmserrors.VAX_DATARANGE, ".WORD", int32(v))
 		}
 
-		if err := a.storeScaled(a.deposit, v, scale); err != nil {
+		if err := a.emitScaled(v, scale); err != nil {
 			return err
 		}
-
-		a.deposit += uint32(scale)
 	}
 }
 
@@ -394,7 +136,7 @@ func (a *Assembler) pseudoQuad(c *cursor) error {
 
 		v, ok := a.quadLiteral(c)
 		if !ok {
-			lo, wasForward, err := a.exprValue(c, a.deposit, fixAddrL)
+			lo, wasForward, err := a.exprValue(c, a.pc(), fixAddrL)
 			if err != nil {
 				return err
 			}
@@ -405,15 +147,13 @@ func (a *Assembler) pseudoQuad(c *cursor) error {
 			}
 		}
 
-		if err := a.image.storeLongword(a.deposit, uint32(v)); err != nil {
+		if err := a.emitLongword(uint32(v)); err != nil {
 			return err
 		}
 
-		if err := a.image.storeLongword(a.deposit+4, uint32(v>>32)); err != nil {
+		if err := a.emitLongword(uint32(v >> 32)); err != nil {
 			return err
 		}
-
-		a.deposit += 8
 	}
 }
 
@@ -496,7 +236,7 @@ func (a *Assembler) pseudoBase(c *cursor) error {
 		return err
 	}
 
-	a.deposit = v
+	a.setPC(v)
 
 	return nil
 }
@@ -629,7 +369,7 @@ const (
 func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 	count := 0
 
-	countPC := a.deposit
+	countPC := a.pc()
 
 	switch kind {
 	case asciiCounted:
@@ -637,7 +377,7 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 			return err
 		}
 
-		a.deposit++
+		a.advance(1)
 
 	case asciiDescriptor:
 		if err := a.image.storeWord(countPC, 0); err != nil { // length (patched below)
@@ -648,14 +388,12 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 			return err
 		}
 
-		a.deposit += 4
-		stringPC := a.deposit + 4
+		a.advance(4)
+		stringPC := a.pc() + 4
 
-		if err := a.image.storeLongword(a.deposit, stringPC); err != nil {
+		if err := a.emitLongword(stringPC); err != nil {
 			return err
 		}
-
-		a.deposit += 4
 	}
 
 	for {
@@ -675,11 +413,9 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 
 	switch kind {
 	case asciiZ:
-		if err := a.image.storeByte(a.deposit, 0); err != nil {
+		if err := a.emitByte(0); err != nil {
 			return err
 		}
-
-		a.deposit++
 
 	case asciiCounted:
 		if count > 0xFF {
@@ -715,7 +451,7 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 func (a *Assembler) asciiItem(c *cursor) (int, error) {
 	if c.peek() == '<' {
 		// Just the one <...> term: "<CR><LF>" is two bytes.
-		v, _, err := a.exprValueOf(c, a.deposit, fixAddrB, a.exprAtom)
+		v, _, err := a.exprValueOf(c, a.pc(), fixAddrB, a.exprAtom)
 		if err != nil {
 			return 0, err
 		}
@@ -724,11 +460,9 @@ func (a *Assembler) asciiItem(c *cursor) (int, error) {
 			return 0, vmserrors.New(vmserrors.VAX_DATARANGE, "String byte", int32(v))
 		}
 
-		if err := a.image.storeByte(a.deposit, byte(v)); err != nil {
+		if err := a.emitByte(byte(v)); err != nil {
 			return 0, err
 		}
-
-		a.deposit++
 
 		return 1, nil
 	}
@@ -747,11 +481,9 @@ func (a *Assembler) asciiItem(c *cursor) (int, error) {
 
 		ch := c.next()
 
-		if err := a.image.storeByte(a.deposit, ch); err != nil {
+		if err := a.emitByte(ch); err != nil {
 			return 0, err
 		}
-
-		a.deposit++
 		count++
 	}
 
@@ -856,11 +588,9 @@ func (a *Assembler) pseudoMask(c *cursor) error {
 		return err
 	}
 
-	if err := a.image.storeWord(a.deposit, uint16(m)); err != nil {
+	if err := a.emitWord(uint16(m)); err != nil {
 		return err
 	}
-
-	a.deposit += 2
 
 	return nil
 }
@@ -908,7 +638,7 @@ func (a *Assembler) pseudoBlock(c *cursor, size int) error {
 		return err
 	}
 
-	a.deposit += n * uint32(size)
+	a.advance(n * uint32(size))
 
 	return nil
 }
@@ -927,7 +657,7 @@ func (a *Assembler) pseudoEntry(c *cursor) error {
 	c.skipBlanks()
 	name := scanName(c)
 
-	if err := a.setSymbol(name, a.deposit, SymEntry, true); err != nil {
+	if err := a.setSymbol(name, a.pc(), SymEntry, true); err != nil {
 		return err
 	}
 
@@ -952,11 +682,9 @@ func (a *Assembler) pseudoEntry(c *cursor) error {
 		mask = m
 	}
 
-	if err := a.image.storeWord(a.deposit, uint16(mask)); err != nil {
+	if err := a.emitWord(uint16(mask)); err != nil {
 		return err
 	}
-
-	a.deposit += 2
 
 	return nil
 }
@@ -974,7 +702,7 @@ func (a *Assembler) pseudoScope(c *cursor) error {
 	c.skipBlanks()
 
 	name := scanName(c)
-	if err := a.setSymbol(name, a.deposit, SymLabel, true); err != nil {
+	if err := a.setSymbol(name, a.pc(), SymLabel, true); err != nil {
 		return err
 	}
 
@@ -990,7 +718,7 @@ func (a *Assembler) pseudoScope(c *cursor) error {
 // label.
 func (a *Assembler) pseudoCase(c *cursor) error {
 	if a.caseBase == 0 {
-		a.caseBase = a.deposit
+		a.caseBase = a.pc()
 	}
 
 	first := true
@@ -1004,7 +732,7 @@ func (a *Assembler) pseudoCase(c *cursor) error {
 
 		first = false
 
-		loc := a.deposit
+		loc := a.pc()
 
 		v, wasForward, err := a.exprValue(c, loc, fixCaseW)
 		if err != nil {
@@ -1023,11 +751,9 @@ func (a *Assembler) pseudoCase(c *cursor) error {
 			return vmserrors.New(vmserrors.VAX_DATARANGE, ".CASE", d)
 		}
 
-		if err := a.image.storeWord(a.deposit, uint16(int16(d))); err != nil {
+		if err := a.emitWord(uint16(int16(d))); err != nil {
 			return err
 		}
-
-		a.deposit += 2
 	}
 }
 
@@ -1050,8 +776,8 @@ func (a *Assembler) pseudoSCB(c *cursor) error {
 		return vmserrors.New(vmserrors.VAX_SCBCODE, code)
 	}
 
-	saved := a.deposit
-	a.deposit = 0x80000000 + a.scbb + code
+	saved := a.pc()
+	a.setPC(0x80000000 + a.scbb + code)
 
 	c.skipBlanks()
 
@@ -1059,17 +785,17 @@ func (a *Assembler) pseudoSCB(c *cursor) error {
 		c.next()
 	}
 
-	loc := a.deposit
+	loc := a.pc()
 
 	value, _, err := a.exprValue(c, loc, addrFixup(4))
 	if err != nil {
-		a.deposit = saved
+		a.setPC(saved)
 
 		return err
 	}
 
 	if value != 0xFFFFFFFF && value&0x3 != 0 {
-		a.deposit = saved
+		a.setPC(saved)
 
 		return vmserrors.New(vmserrors.VAX_SCBALIGN, value)
 	}
@@ -1089,19 +815,19 @@ func (a *Assembler) pseudoSCB(c *cursor) error {
 			// +0, but named for clarity at the call site.
 
 		default:
-			a.deposit = saved
+			a.setPC(saved)
 
 			return vmserrors.New(vmserrors.VAX_SCBSTACK)
 		}
 	}
 
-	if err := a.image.storeLongword(a.deposit, value); err != nil {
-		a.deposit = saved
+	if err := a.image.storeLongword(a.pc(), value); err != nil {
+		a.setPC(saved)
 
 		return err
 	}
 
-	a.deposit = saved
+	a.setPC(saved)
 
 	return nil
 }
@@ -1118,9 +844,9 @@ func (a *Assembler) pseudoAlign(c *cursor) error {
 		return vmserrors.New(vmserrors.VAX_ALIGNZERO)
 	}
 
-	n := (a.deposit / size) * size
-	if n < a.deposit {
-		a.deposit = n + size
+	n := (a.pc() / size) * size
+	if n < a.pc() {
+		a.setPC(n + size)
 	}
 
 	return nil
@@ -1151,19 +877,11 @@ func (a *Assembler) pseudoRegion(c *cursor) error {
 		return vmserrors.New(vmserrors.VAX_REGIONSPEC)
 	}
 
-	if toS0 == a.regionIsS0 {
-		return nil
-	}
-
-	if a.regionIsS0 {
-		a.s0Deposit = a.deposit
-		a.deposit = a.p0Deposit
+	if toS0 {
+		a.cur = a.s0
 	} else {
-		a.p0Deposit = a.deposit
-		a.deposit = a.s0Deposit
+		a.cur = a.p0
 	}
-
-	a.regionIsS0 = toS0
 
 	return nil
 }
@@ -1212,17 +930,15 @@ func (a *Assembler) pseudoShim(c *cursor) error {
 	var shimAddr uint32
 
 	if code != 0 {
-		if err := a.setSymbol(name, a.deposit, SymEntry, true); err != nil {
+		if err := a.setSymbol(name, a.pc(), SymEntry, true); err != nil {
 			return err
 		}
 
-		shimAddr = a.deposit
+		shimAddr = a.pc()
 
-		if err := a.image.storeWord(a.deposit, 0); err != nil { // empty entry mask word
+		if err := a.emitWord(0); err != nil { // empty entry mask word
 			return err
 		}
-
-		a.deposit += 2
 
 		if err := a.storeShimStub(code); err != nil {
 			return err
@@ -1265,31 +981,15 @@ func (a *Assembler) pseudoShim(c *cursor) error {
 // storeShimStub writes a .SHIM stub's body: MOVL I^#code,R0 ; XFC
 // #XFC$SHIM ; RET.
 func (a *Assembler) storeShimStub(code uint32) error {
-	bytes := []byte{0xD0, 0x8F} // MOVL I^#
-	for _, b := range bytes {
-		if err := a.image.storeByte(a.deposit, b); err != nil {
-			return err
-		}
-
-		a.deposit++
-	}
-
-	if err := a.image.storeLongword(a.deposit, code); err != nil {
+	if err := a.emitBytes(0xD0, 0x8F); err != nil { // MOVL I^#
 		return err
 	}
 
-	a.deposit += 4
-
-	tail := []byte{0x50, 0xFC, 0x7D, 0x04} // R0 ; XFC #XFC$SHIM ; RET
-	for _, b := range tail {
-		if err := a.image.storeByte(a.deposit, b); err != nil {
-			return err
-		}
-
-		a.deposit++
+	if err := a.emitLongword(code); err != nil {
+		return err
 	}
 
-	return nil
+	return a.emitBytes(0x50, 0xFC, 0x7D, 0x04) // R0 ; XFC #XFC$SHIM ; RET
 }
 
 // pseudoSpace assembles .SPACE bytes[,fill]: reserves bytes bytes, each set
@@ -1316,17 +1016,15 @@ func (a *Assembler) pseudoSpace(c *cursor) error {
 	}
 
 	if fill == 0 {
-		a.deposit += n
+		a.advance(n)
 
 		return nil
 	}
 
 	for i := uint32(0); i < n; i++ {
-		if err := a.image.storeByte(a.deposit, fill); err != nil {
+		if err := a.emitByte(fill); err != nil {
 			return err
 		}
-
-		a.deposit++
 	}
 
 	return nil
@@ -1337,33 +1035,21 @@ func (a *Assembler) pseudoSpace(c *cursor) error {
 // absolute JMP — matching cases 38-39. invByte is the inverted branch
 // opcode (0x12 BNEQ for .JEQL, 0x13 BEQL for .JNEQ).
 func (a *Assembler) pseudoJcc(c *cursor, invByte byte) error {
-	for _, b := range []byte{
+	if err := a.emitBytes(
 		invByte, // BNEQ/BEQL
 		0x06,    // branch-around displacement (past the 4-byte JMP operand)
 		0x17,    // JMP
 		0x9F,    // @# addressing mode
-	} {
-		if err := a.image.storeByte(a.deposit, b); err != nil {
-			return err
-		}
-
-		a.deposit++
+	); err != nil {
+		return err
 	}
 
-	loc := a.deposit
-
-	v, _, err := a.exprValue(c, loc, fixAddrL)
+	v, _, err := a.exprValue(c, a.pc(), fixAddrL)
 	if err != nil {
 		return err
 	}
 
-	if err := a.image.storeLongword(a.deposit, v); err != nil {
-		return err
-	}
-
-	a.deposit += 4
-
-	return nil
+	return a.emitLongword(v)
 }
 
 // pseudoConsole assembles .CONSOLE <command>: the reference tool dispatches
@@ -1608,7 +1294,7 @@ func (a *Assembler) pseudoRAB(c *cursor) error {
 func (a *Assembler) buildControlBlock(c *cursor, name string, fields []vmsdef.Field, blockSize uint32, bidConst, blnConst string) error {
 	a.scopeSymbols()
 
-	base := a.deposit
+	base := a.pc()
 
 	bid, ok := lookupField(fields, "BID")
 	if !ok {
@@ -1667,7 +1353,7 @@ func (a *Assembler) buildControlBlock(c *cursor, name string, fields []vmsdef.Fi
 		c.skipBlanks()
 	}
 
-	a.deposit = base + blockSize
+	a.setPC(base + blockSize)
 
 	return nil
 }

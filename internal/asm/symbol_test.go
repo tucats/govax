@@ -200,8 +200,8 @@ func TestSymbols(t *testing.T) {
 		t.Error("expected a builtin symbol (OPC$_HALT) to be excluded from Symbols()")
 	}
 
-	if v, ok := syms["FOO"]; !ok || v.Value != a.origin {
-		t.Errorf("FOO = (%#x, %v), want (%#x, true)", v.Value, ok, a.origin)
+	if v, ok := syms["FOO"]; !ok || v.Value != a.Origin() {
+		t.Errorf("FOO = (%#x, %v), want (%#x, true)", v.Value, ok, a.Origin())
 	}
 
 	if v, ok := syms["FOO"]; !ok || v.Entry {
@@ -246,8 +246,8 @@ func TestTakeEntry(t *testing.T) {
 	}
 
 	addr, ok := a.TakeEntry()
-	if !ok || addr != a.origin {
-		t.Fatalf("TakeEntry = (%#x, %v), want (%#x, true)", addr, ok, a.origin)
+	if !ok || addr != a.Origin() {
+		t.Fatalf("TakeEntry = (%#x, %v), want (%#x, true)", addr, ok, a.Origin())
 	}
 
 	if _, ok := a.TakeEntry(); ok {

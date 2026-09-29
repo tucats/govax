@@ -26,7 +26,7 @@ becomes the record of the implementation: each subtask adds a
 [progress log](#progress-log) entry, and the open questions get their answers
 recorded here.
 
-**Status: subtasks 1-3 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 4 is next, when the user is ready.**
+**Status: subtasks 1-4 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 5 is next.**
 
 ## Why this phase looks different
 
@@ -416,8 +416,11 @@ program:
 - `.DEFAULT DISPLACEMENT,BYTE|WORD|LONG` (longword by default), which the
   displacement-size rule needs
 - the existing data and storage directives (`.BYTE` through `.QUAD`,
-  `.BLKx`, `.ASCII*`, `.ALIGN`, the floats, `.MASK`), which now allow
-  relocatable operands
+  `.BLKx`, `.ASCII*`), which now allow relocatable operands, plus
+  MACRO-32's own forms of the directives whose eVAX versions differ
+  (see the subtask 4 log): `.ALIGN BYTE|WORD|LONG|QUAD|PAGE|n` (n is a
+  power of two), `.F_FLOATING`/`.FLOAT` and `.D_FLOATING`/`.DOUBLE`, and
+  `.MASK symbol[,expression]`
 - `.END [transfer]`, which sets the EOM transfer address
 
 **Later sub-phases.** Each gets its own subtask entry when it starts:
@@ -511,7 +514,7 @@ them under `testdata/mar/vax/`). Each step adds one feature:
    record what we learn here: the MHD field values real MACRO uses, the LNM
    text, the psect attributes it writes for defaults, how it splits records,
    and its TIR idioms. Fix the reader wherever real objects show it's wrong.
-4. **Refactor `internal/asm` for a shared core** (no behavior change).
+4. **Done.** **Refactor `internal/asm` for a shared core** (no behavior change).
    Introduce the dialect setting and per-directive dialect flags, and the
    section model with absolute sections for the console dialect. Move
    eVAX-only directives behind the console dialect. Pass criterion: every
@@ -979,3 +982,59 @@ above record the answers:
   phase is complete.
 - Paused before subtask 4 (the assembler refactor) at the user's request,
   so they can push.
+
+### 2026-09-29 — Subtask 4: a shared assembler core
+
+- **Proof of no behavior change first.** `TestGoldenFixtures`
+  (`internal/asm/golden_test.go`, committed before any refactoring)
+  snapshots every `testdata/asm` fixture's assembly into
+  `internal/asm/testdata/golden/`: every byte written, every symbol with
+  its value and flags, the final P0 and S0 locations, the `.END` entry,
+  and `.PRINT` output. Each fixture is assembled on its own and again
+  after `kernel.asm` in the same `Assembler`, the way a console session
+  that booted the microkernel assembles it. All 58 fixtures assemble
+  cleanly both ways. The snapshots are unchanged after the refactor, and
+  `go test -run TestGoldenFixtures -update` rewrites them after a
+  deliberate change.
+- **Sections** (`section.go`). The single `deposit` counter and its
+  `.REGION` bookkeeping (`origin`, `p0Deposit`, `s0Deposit`, `s0Origin`,
+  `regionIsS0`) are now two absolute sections, P0 and S0, each a base
+  address plus a location offset, and `cur`, the one output goes to.
+  `.REGION` just switches `cur`. Everything that emitted bytes now goes
+  through `pc`/`setPC`/`advance` and `emitByte`/`emitBytes`/`emitWord`/
+  `emitLongword`/`emitScaled`, so subtask 5 can change what a location
+  is in one place. The public API (`Origin`, `Deposit`, `S0Origin`,
+  `S0End`, `Bytes`, and the setters) is unchanged. One edge moved:
+  `SetOrigin` after a `.REGION S0` used to move the S0 counter to the P0
+  address; now it only resets P0. Nothing calls it that way.
+- **Dialects and the directive table** (`directive.go`). `Dialect` has
+  `DialectConsole`, the default, and `DialectMACRO`, set with
+  `SetDialect`. `pseudoNames` and the `dispatchPseudo` switch are
+  replaced by one `directives` table, where each entry has its dialects
+  and its function. In the MACRO dialect, a console-only directive is
+  the new `VAX_NOTMACRO` ("!S is not a MACRO-32 directive"), and a
+  directive needs its leading ".", so bare `JEQL` or `BYTE` reaches the
+  instruction table as it would in MACRO-32. The console dialect accepts
+  everything it did before.
+- **Which directives are shared.** A directive is in both dialects only
+  if MACRO-32 (Table 6-1 of the manual) has it with the same syntax and
+  meaning: `.BYTE`, `.WORD`, `.LONG`, `.QUAD`, `.ASCII`/`Z`/`C`/`D`, the
+  `.BLKx` forms, `.END`, `.ENTRY`, and the `.IF` family and `.IIF`. So is
+  `.INCLUDE`. MACRO-32 has no `.INCLUDE`, but subtask 10 resolves it
+  across host and ODS-2 files for the MACRO command. Besides the
+  eVAX-only directives this plan already listed, three more turned out
+  to be console-only, because MACRO-32 has the name with a different
+  meaning:
+  - `.ALIGN n`: MACRO-32 aligns to 2^n bytes, or takes a keyword.
+  - `.MASK`: MACRO-32's reserves a transfer vector's mask word for a
+    symbol.
+  - `.PRINT`: MACRO-32's prints its comment.
+
+  eVAX's `.F_FLOAT`/`.D_FLOAT` aren't MACRO-32 names, and neither are
+  `.SPACE`, `.CASE`, `.SCOPE`, `.DATA`, or `.TEXT`. So the
+  first-milestone list above now names MACRO-32's own forms, which
+  subtask 6 adds.
+- Tests: `dialect_test.go` checks that every console-only table entry is
+  `VAX_NOTMACRO` in the MACRO dialect, that the shared directives
+  assemble there, that the dot is required, and that `.REGION`/`.BASE`
+  still work with the new sections. `go test ./...` passes.

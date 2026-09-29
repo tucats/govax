@@ -50,18 +50,14 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 	}
 
 	if inst.Opcode.Extended != 0 {
-		if err := a.image.storeByte(a.deposit, inst.Opcode.Extended); err != nil {
+		if err := a.emitByte(inst.Opcode.Extended); err != nil {
 			return err
 		}
-
-		a.deposit++
 	}
 
-	if err := a.image.storeByte(a.deposit, inst.Opcode.Function); err != nil {
+	if err := a.emitByte(inst.Opcode.Function); err != nil {
 		return err
 	}
-
-	a.deposit++
 	a.caseBase = 0
 
 	for n := 0; n < inst.OperandCount; n++ {

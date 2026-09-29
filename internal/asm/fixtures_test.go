@@ -147,7 +147,7 @@ func TestRoundTripFixtures(t *testing.T) {
 				t.Fatalf("assemble: %v", err)
 			}
 
-			stop := a.origin + uint32(len(out))
+			stop := a.Origin() + uint32(len(out))
 
 			if tc.dataLabel != "" {
 				sym, ok := a.symbols.find(tc.dataLabel)
@@ -158,7 +158,7 @@ func TestRoundTripFixtures(t *testing.T) {
 				stop = sym.value
 			}
 
-			for pc := a.origin; pc < stop; {
+			for pc := a.Origin(); pc < stop; {
 				dec, err := Disassemble(a, pc)
 				if err != nil {
 					t.Fatalf("Disassemble at %08X: %v", pc, err)

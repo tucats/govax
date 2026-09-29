@@ -112,11 +112,9 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		c.pos = save
 
 		if foundIndex {
-			if err := a.image.storeByte(a.deposit, indexMode); err != nil {
+			if err := a.emitByte(indexMode); err != nil {
 				return err
 			}
-
-			a.deposit++
 			if err := a.assembleOperandRec(c, inst, opIndex, true); err != nil {
 				return err
 			}
@@ -203,7 +201,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	)
 
 	if ch == '#' {
-		loc := a.deposit
+		loc := a.pc()
 		fx := addrFixup(scale)
 
 		if dtype == cpu.ShortLiteralInt {
@@ -281,11 +279,9 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			}
 		}
 
-		if err := a.image.storeByte(a.deposit, byte(litValue)); err != nil {
+		if err := a.emitByte(byte(litValue)); err != nil {
 			return err
 		}
-
-		a.deposit++
 
 		return nil
 	}
@@ -296,11 +292,9 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 		if reg, err := parseRegister(c, ch); err == nil {
 			mode := byte(0x50) | byte(reg)
-			if err := a.image.storeByte(a.deposit, mode); err != nil {
+			if err := a.emitByte(mode); err != nil {
 				return err
 			}
-
-			a.deposit++
 
 			return nil
 		}
@@ -319,11 +313,9 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			return err
 		}
 
-		if err := a.image.storeByte(a.deposit, byte(0x70)|byte(reg)); err != nil {
+		if err := a.emitByte(byte(0x70) | byte(reg)); err != nil {
 			return err
 		}
-
-		a.deposit++
 
 		c.skipBlanks()
 
@@ -361,18 +353,14 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 		mode |= byte(reg)
 
-		if err := a.image.storeByte(a.deposit, mode); err != nil {
+		if err := a.emitByte(mode); err != nil {
 			return err
 		}
 
-		a.deposit++
-
 		if mode >= 0xB0 {
-			if err := a.image.storeByte(a.deposit, 0); err != nil {
+			if err := a.emitByte(0); err != nil {
 				return err
 			}
-
-			a.deposit++
 		}
 
 		return nil
@@ -399,11 +387,9 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			c.next()
 		}
 
-		if err := a.image.storeByte(a.deposit, mode|byte(reg)); err != nil {
+		if err := a.emitByte(mode | byte(reg)); err != nil {
 			return err
 		}
-
-		a.deposit++
 
 		return nil
 	}
@@ -419,11 +405,9 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			}
 		}
 
-		if err := a.image.storeByte(a.deposit, 0x8F); err != nil {
+		if err := a.emitByte(0x8F); err != nil {
 			return err
 		}
-
-		a.deposit++
 
 		if dtype == cpu.ShortLiteralFloat {
 			if constant != litImmediate {
@@ -439,7 +423,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		}
 
 		if constant != litImmediate {
-			loc := a.deposit
+			loc := a.pc()
 
 			v, _, err := a.exprValue(c, loc, addrFixup(scale))
 			if err != nil {
@@ -455,12 +439,10 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	// @#address: absolute.
 	if ch == '@' && c.peek() == '#' {
 		c.next()
-		
-		if err := a.image.storeByte(a.deposit, 0x9F); err != nil {
+
+		if err := a.emitByte(0x9F); err != nil {
 			return err
 		}
-
-		a.deposit++
 
 		return a.storeAddrValue(c)
 	}
@@ -485,16 +467,12 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			return vmserrors.New(vmserrors.VAX_BADMODE)
 		}
 
-		if err := a.image.storeByte(a.deposit, mode); err != nil {
+		if err := a.emitByte(mode); err != nil {
 			return err
 		}
-
-		a.deposit++
-		if err := a.image.storeByte(a.deposit, 0); err != nil {
+		if err := a.emitByte(0); err != nil {
 			return err
 		}
-
-		a.deposit++
 
 		return nil
 	}
@@ -541,11 +519,9 @@ const (
 // storeImmediateInt writes an I^# immediate literal's integer data (1, 2,
 // or 4 bytes), matching asm_operand.c's size-based store.
 func (a *Assembler) storeImmediateInt(scale int, value uint32) error {
-	if err := a.storeScaled(a.deposit, value, scale); err != nil {
+	if err := a.emitScaled(value, scale); err != nil {
 		return err
 	}
-
-	a.deposit += uint32(scale)
 
 	return nil
 }
@@ -567,17 +543,17 @@ func (a *Assembler) storeImmediateFloat(scale int, f float64) error {
 		return vmserrors.New(vmserrors.VAX_FLOATRANGE)
 	}
 
-	if err := a.image.storeLongword(a.deposit, uint32(bits)); err != nil {
+	if err := a.image.storeLongword(a.pc(), uint32(bits)); err != nil {
 		return err
 	}
 
 	if scale == 8 {
-		if err := a.image.storeLongword(a.deposit+4, uint32(bits>>32)); err != nil {
+		if err := a.image.storeLongword(a.pc()+4, uint32(bits>>32)); err != nil {
 			return err
 		}
 	}
 
-	a.deposit += uint32(scale)
+	a.advance(uint32(scale))
 
 	return nil
 }
@@ -585,18 +561,16 @@ func (a *Assembler) storeImmediateFloat(scale int, f float64) error {
 // storeAddrValue parses an absolute address's 4-byte value and writes it,
 // used by the "@#address" case.
 func (a *Assembler) storeAddrValue(c *cursor) error {
-	loc := a.deposit
+	loc := a.pc()
 
 	value, _, err := a.exprValue(c, loc, fixAddrL)
 	if err != nil {
 		return err
 	}
 
-	if err := a.image.storeLongword(a.deposit, value); err != nil {
+	if err := a.emitLongword(value); err != nil {
 		return err
 	}
-
-	a.deposit += 4
 
 	return nil
 }
@@ -614,22 +588,20 @@ func (a *Assembler) assembleBranchOrImplicit(c *cursor, access cpu.AccessKind, s
 		fx = fixAddrL
 	}
 
-	loc := a.deposit
-	
+	loc := a.pc()
+
 	value, _, err := a.exprValue(c, loc, fx)
 	if err != nil {
 		return err
 	}
 
 	if access == cpu.AccessBranch {
-		value = value - a.deposit - uint32(scale)
+		value = value - a.pc() - uint32(scale)
 	}
 
-	if err := a.storeScaled(a.deposit, value, scale); err != nil {
+	if err := a.emitScaled(value, scale); err != nil {
 		return err
 	}
-
-	a.deposit += uint32(scale)
 
 	return nil
 }
@@ -667,7 +639,7 @@ func sizeModeBase(size int) byte {
 // the size it needs) isn't known until later and there's no linker pass to
 // shrink it; MACRO-32 itself defaults these to a word.
 func (a *Assembler) assembleBareOperand(c *cursor, deferred byte) error {
-	modeAddr := a.deposit
+	modeAddr := a.pc()
 	loc := modeAddr + 1 // the displacement follows the mode byte.
 
 	value, wasForward, err := a.exprValue(c, loc, fixBranchL)
@@ -735,7 +707,7 @@ func (a *Assembler) assembleBareOperand(c *cursor, deferred byte) error {
 		return err
 	}
 
-	a.deposit = loc + uint32(size)
+	a.setPC(loc + uint32(size))
 
 	return nil
 }
@@ -752,7 +724,7 @@ func (a *Assembler) assembleBareOperand(c *cursor, deferred byte) error {
 // rather than a displacement to it, and a forward reference's fixup was
 // off by the displacement's own size; both are fixed here.
 func (a *Assembler) assembleDisplacement(c *cursor, deferred byte, size int, relMode, dispMode byte) error {
-	loc := a.deposit + 1 // the mode byte comes first; the displacement follows it.
+	loc := a.pc() + 1 // the mode byte comes first; the displacement follows it.
 
 	value, wasForward, err := a.exprValue(c, loc, branchFixup(size))
 	if err != nil {
@@ -805,17 +777,13 @@ func (a *Assembler) assembleDisplacement(c *cursor, deferred byte, size int, rel
 		}
 	}
 
-	if err := a.image.storeByte(a.deposit, mode); err != nil {
+	if err := a.emitByte(mode); err != nil {
 		return err
 	}
 
-	a.deposit++
-
-	if err := a.storeScaled(a.deposit, disp, size); err != nil {
+	if err := a.emitScaled(disp, size); err != nil {
 		return err
 	}
-
-	a.deposit += uint32(size)
 
 	return nil
 }

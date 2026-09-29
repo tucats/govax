@@ -49,7 +49,7 @@ func TestExpressionArithmetic(t *testing.T) {
 
 func TestExpressionHere(t *testing.T) {
 	a := New(true)
-	a.deposit = 0x1234
+	a.setPC(0x1234)
 
 	if got := evalNoForward(t, a, "."); got != 0x1234 {
 		t.Errorf(". = %#x, want 0x1234", got)
