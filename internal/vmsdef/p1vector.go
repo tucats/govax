@@ -42,6 +42,17 @@ type P1VectorEntry struct {
 	Jmp bool
 }
 
+// DataCell reports whether e is a "global location" longword (SYS$GL_...)
+// rather than a callable service. Real VMS documents these as data cells
+// that share the vector table only to get a symbol at their address, and
+// two of them (SYS$GL_ASTRET, SYS$GL_COMMON) sit inside other entries'
+// 5-byte trampolines: .P1VECTOR defines their symbols but writes no
+// trampoline for them, and service dispatch never matches them, so they
+// don't clobber or shadow SYS$CLRAST_2 and SYS$SRCHANDLER.
+func (e P1VectorEntry) DataCell() bool {
+	return len(e.Name) > 7 && e.Name[:7] == "SYS$GL_"
+}
+
 // P1VectorTable is copied verbatim from p1_vector.c's p1_vector[]
 // initializer (the commented-out SYS$CALL_HANDL entry excluded, matching
 // what actually compiles into the C source's array).

@@ -67,19 +67,6 @@ func TestPseudoP1VectorDefinesSymbolsAndTrampolines(t *testing.T) {
 		t.Fatalf("assemble: %v", err)
 	}
 
-	// docs/DEVIATIONS.md's "[Phase 11] Three P1-vector table entries land
-	// close enough together..." entry: SYS$CLRAST_2/SYS$GL_ASTRET (both at
-	// 0x7FFEE110) and SYS$GL_COMMON (0x7FFEE114) end up with their own
-	// trailing RET byte clobbered by a later table entry's mask/XFC write —
-	// a quirk inherited faithfully from the C reference's own p1_init(),
-	// not a porting bug, so this test asserts the exact clobbered byte
-	// rather than assuming every entry's trampoline is untouched.
-	clobberedRET := map[string]byte{
-		"SYS$CLRAST_2":  0x00, // SYS$GL_COMMON's mask word overwrites it
-		"SYS$GL_ASTRET": 0x00, // ditto (shares SYS$CLRAST_2's address)
-		"SYS$GL_COMMON": 0xFC, // SYS$SRCHANDLER's XFC opcode overwrites it
-	}
-
 	for _, e := range vmsdef.P1VectorTable {
 		v, _, err := a.getSymbol(e.Name, false, 0, fixNone)
 		if err != nil {
@@ -88,6 +75,14 @@ func TestPseudoP1VectorDefinesSymbolsAndTrampolines(t *testing.T) {
 
 		if v != e.Addr {
 			t.Fatalf("%s = %#x, want %#x", e.Name, v, e.Addr)
+		}
+
+		// SYS$GL_ASTRET/SYS$GL_COMMON are data cells with no trampoline of
+		// their own (vmsdef.P1VectorEntry.DataCell); every callable entry's
+		// trampoline is intact, including SYS$CLRAST_2's RET, which the
+		// reference tool's p1_init() overwrote with SYS$GL_COMMON's mask.
+		if e.DataCell() {
+			continue
 		}
 
 		addr := e.Addr
@@ -100,9 +95,6 @@ func TestPseudoP1VectorDefinesSymbolsAndTrampolines(t *testing.T) {
 		}
 
 		want := []byte{0xFC, 0x7A, 0x04}
-		if b, clobbered := clobberedRET[e.Name]; clobbered {
-			want[2] = b
-		}
 
 		got := a.BytesRange(addr+2, addr+5)
 		if got[0] != want[0] || got[1] != want[1] || got[2] != want[2] {

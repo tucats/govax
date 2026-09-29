@@ -68,6 +68,17 @@ func isSymbolChar(ch byte) bool {
 	return isUpperAlpha(ch) || isDigit(ch) || ch == '_' || ch == '$'
 }
 
+// blankRun returns how many blanks start at the cursor, without consuming
+// them.
+func blankRun(c *cursor) int {
+	n := 0
+	for isBlank(c.peekAt(n)) {
+		n++
+	}
+
+	return n
+}
+
 func (c *cursor) skipBlanks() {
 	for isBlank(c.peek()) {
 		c.pos++

@@ -52,6 +52,12 @@ type Assembler struct {
 	curEntry string
 	tempSeq  int
 
+	// localBlock numbers the current MACRO-32 local label block (see
+	// closeLocalBlock); localUsed says whether any "n$" label has been
+	// defined or referenced in it.
+	localBlock int
+	localUsed  bool
+
 	// caseBase is the running .CASE block's base address, or 0 when no
 	// .CASE block is active (vax.assembler.case_base).
 	caseBase uint32
@@ -435,6 +441,10 @@ func (a *Assembler) assembleStatement(line string) error {
 		return nil
 	}
 
+	if handled, err := a.assembleAssignment(c); handled || err != nil {
+		return err
+	}
+
 	handled, err := a.assemblePseudo(c)
 	if err != nil {
 		return err
@@ -483,5 +493,57 @@ func (a *Assembler) parseLabel(c *cursor) error {
 
 	c.pos = end
 
+	if !isLocalLabel(name) {
+		if err := a.closeLocalBlock(); err != nil {
+			return err
+		}
+	}
+
 	return a.setSymbol(name, a.deposit, flags, true)
+}
+
+// assembleAssignment handles a MACRO-32 direct assignment statement:
+// "NAME = expression" or "NAME == expression" (MACRO-32's global form,
+// which this assembler, having no object module or linker, treats the
+// same), or ". = expression" to move the location counter. Reports
+// handled=false, leaving c untouched, if the statement isn't one.
+func (a *Assembler) assembleAssignment(c *cursor) (handled bool, err error) {
+	save := c.pos
+
+	var name string
+
+	if c.peek() == '.' && !isSymbolChar(c.peekAt(1)) {
+		c.next()
+
+		name = "."
+	} else {
+		name = scanName(c)
+	}
+
+	c.skipBlanks()
+
+	if name == "" || c.peek() != '=' {
+		c.pos = save
+
+		return false, nil
+	}
+
+	c.next()
+
+	if c.peek() == '=' {
+		c.next()
+	}
+
+	v, err := a.exprNoForward(c)
+	if err != nil {
+		return true, err
+	}
+
+	if name == "." {
+		a.deposit = v
+
+		return true, nil
+	}
+
+	return true, a.setSymbol(name, v, SymNone, false)
 }

@@ -308,13 +308,11 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		c.pos = save
 	}
 
-	// -(Rn): autodecrement.
-	if ch == '-' {
+	// -(Rn): autodecrement. Any other leading '-' starts a negative
+	// value, e.g. the displacement in "-4(FP)".
+	if ch == '-' && c.peekAt(blankRun(c)) == '(' {
 		c.skipBlanks()
-
-		if c.next() != '(' {
-			return vmserrors.New(vmserrors.VAX_BADMODE)
-		}
+		c.next()
 
 		reg, err := parseRegister(c, 0)
 		if err != nil {
@@ -520,58 +518,15 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		return a.assembleDisplacement(c, deferred, 4, 0xEF, 0xE0)
 	}
 
-	// Fallback: a bare value or symbol, treated as an absolute address —
-	// unless followed by "(Rn)", in which case it's rewritten (mode byte
-	// and, if the value was forward-referenced, the fixup kind) into a
-	// long-displacement operand: Rn + <value>, where <value> is used as a
-	// raw additive displacement rather than an address of its own.
+	// Fallback: a bare value or symbol, with no size prefix. As in
+	// MACRO-32, "address" is relative mode (PC + displacement), "@address"
+	// is relative deferred, and "value(Rn)"/"@value(Rn)" is displacement
+	// [deferred] mode. The reference tool assembled a bare address as
+	// absolute (@#) and ignored a leading "@" entirely; see
+	// docs/DEVIATIONS.md.
 	c.pos-- // put back `ch`; the value parser needs the whole token.
 
-	modeAddr := a.deposit
-
-	if err := a.image.storeByte(a.deposit, 0x9F); err != nil {
-		return err
-	}
-
-	a.deposit++
-	loc := a.deposit
-
-	value, wasForward, err := a.exprValue(c, loc, fixAddrL)
-	if err != nil {
-		return err
-	}
-
-	if c.peek() == '(' {
-		c.next()
-
-		reg, err := parseRegister(c, 0)
-		if err != nil {
-			return err
-		}
-
-		mode := byte(0xE0) | deferred | byte(reg)
-		if err := a.image.storeByte(modeAddr, mode); err != nil {
-			return err
-		}
-
-		c.skipBlanks()
-
-		if c.next() != ')' {
-			return vmserrors.New(vmserrors.VAX_BADMODE)
-		}
-
-		if wasForward && a.lastSymbol != nil && len(a.lastSymbol.forward) > 0 {
-			a.lastSymbol.forward[0].kind = fixDispL
-		}
-	}
-
-	if err := a.image.storeLongword(a.deposit, value); err != nil {
-		return err
-	}
-
-	a.deposit += 4
-
-	return nil
+	return a.assembleBareOperand(c, deferred)
 }
 
 // litKind mirrors asm_operand.c's ASM_LIT_NONE/SHORT/IMMEDIATE local flag.
@@ -679,25 +634,138 @@ func (a *Assembler) assembleBranchOrImplicit(c *cursor, access cpu.AccessKind, s
 	return nil
 }
 
-// assembleDisplacement handles the B^/W^/L^ relative-or-displacement
-// operand forms: "X^address" (relative — the mode byte's low nibble is
-// 0xF, meaning "use PC") or "X^displacement(Rn)" (displacement from Rn),
-// each optionally "@"-deferred. size is the displacement field's byte
-// width; relMode/dispMode are the mode bytes' high nibble|0xF and
-// high-nibble-only forms (e.g. 0xAF/0xA0 for byte).
+// fitsSigned reports whether v fits in a size-byte signed field.
+func fitsSigned(v int64, size int) bool {
+	switch size {
+	case 1:
+		return v >= -128 && v <= 127
+	case 2:
+		return v >= -32768 && v <= 32767
+	}
+
+	return v >= -2147483648 && v <= 2147483647
+}
+
+// sizeModeBase maps a displacement size (1, 2, 4) to the high nibble of its
+// addressing-mode byte: byte (A), word (C) or longword (E) displacement.
+func sizeModeBase(size int) byte {
+	switch size {
+	case 1:
+		return 0xA0
+	case 2:
+		return 0xC0
+	}
+
+	return 0xE0
+}
+
+// assembleBareOperand assembles an operand given as a bare expression,
+// optionally "@"-deferred and optionally followed by "(Rn)", choosing the
+// displacement size the way MACRO-32 does for a value it already knows:
+// the smallest of byte, word, or longword that holds it. A forward
+// reference always gets a longword displacement, since its value (and so
+// the size it needs) isn't known until later and there's no linker pass to
+// shrink it; MACRO-32 itself defaults these to a word.
+func (a *Assembler) assembleBareOperand(c *cursor, deferred byte) error {
+	modeAddr := a.deposit
+	loc := modeAddr + 1 // the displacement follows the mode byte.
+
+	value, wasForward, err := a.exprValue(c, loc, fixBranchL)
+	if err != nil {
+		return err
+	}
+
+	reg := byte(0x0F) // PC: relative mode
+	haveReg := false
+
+	c.skipBlanks()
+
+	if c.peek() == '(' {
+		c.next()
+
+		r, err := parseRegister(c, 0)
+		if err != nil {
+			return err
+		}
+
+		c.skipBlanks()
+
+		if c.next() != ')' {
+			return vmserrors.New(vmserrors.VAX_BADMODE)
+		}
+
+		reg = byte(r)
+		haveReg = true
+	}
+
+	size := 4
+	disp := value
+
+	switch {
+	case wasForward && haveReg:
+		// A displacement from Rn is the symbol's own value, not a
+		// distance from here.
+		if a.lastSymbol != nil && len(a.lastSymbol.forward) > 0 {
+			a.lastSymbol.forward[0].kind = fixAddrL
+		}
+
+	case wasForward:
+		// Relative: the fixBranchL fixup queued above already measures
+		// from the end of a longword displacement.
+
+	case haveReg:
+		for _, size = range []int{1, 2, 4} {
+			if fitsSigned(int64(int32(value)), size) {
+				break
+			}
+		}
+
+	default:
+		for _, size = range []int{1, 2, 4} {
+			disp = value - (loc + uint32(size))
+			if fitsSigned(int64(int32(disp)), size) {
+				break
+			}
+		}
+	}
+
+	if err := a.image.storeByte(modeAddr, sizeModeBase(size)|deferred|reg); err != nil {
+		return err
+	}
+
+	if err := a.storeScaled(loc, disp, size); err != nil {
+		return err
+	}
+
+	a.deposit = loc + uint32(size)
+
+	return nil
+}
+
+// assembleDisplacement handles the B^/W^/L^ operand forms: "X^address"
+// (relative: the mode byte's register field is PC, and the stored value is
+// the distance from the end of the displacement to address) or
+// "X^displacement(Rn)" (the value itself, added to Rn), each optionally
+// "@"-deferred. size is the displacement field's byte width; relMode/
+// dispMode are the mode bytes' high nibble|0xF and high-nibble-only forms
+// (e.g. 0xAF/0xA0 for byte).
+//
+// The reference tool stored the target address itself for "X^address",
+// rather than a displacement to it, and a forward reference's fixup was
+// off by the displacement's own size; both are fixed here.
 func (a *Assembler) assembleDisplacement(c *cursor, deferred byte, size int, relMode, dispMode byte) error {
 	loc := a.deposit + 1 // the mode byte comes first; the displacement follows it.
 
-	value, _, err := a.exprValue(c, loc, dispFixup(size))
+	value, wasForward, err := a.exprValue(c, loc, branchFixup(size))
 	if err != nil {
 		return err
 	}
 
 	mode := relMode | deferred
+
+	c.skipBlanks()
+
 	haveReg := c.peek() == '('
-
-	var reg byte
-
 	if haveReg {
 		c.next()
 
@@ -706,13 +774,38 @@ func (a *Assembler) assembleDisplacement(c *cursor, deferred byte, size int, rel
 			return err
 		}
 
-		reg = byte(r)
-		mode = dispMode | deferred | reg
+		mode = dispMode | deferred | byte(r)
 
 		c.skipBlanks()
 
 		if c.next() != ')' {
 			return vmserrors.New(vmserrors.VAX_BADMODE)
+		}
+	}
+
+	disp := value
+
+	switch {
+	case wasForward && haveReg:
+		if a.lastSymbol != nil && len(a.lastSymbol.forward) > 0 {
+			a.lastSymbol.forward[0].kind = addrFixup(size)
+		}
+
+	case wasForward:
+		// The branch-style fixup already measures from the end of the
+		// displacement field.
+
+	case haveReg:
+		// A displacement may be written signed or as its unsigned bit
+		// pattern (e.g. B^0FF(R1)).
+		if !fitsSigned(int64(int32(value)), size) && (size == 4 || value>>(8*uint(size)) != 0) {
+			return vmserrors.New(vmserrors.VAX_DATARANGE, "displacement", int32(value))
+		}
+
+	default:
+		disp = value - (loc + uint32(size))
+		if !fitsSigned(int64(int32(disp)), size) {
+			return vmserrors.New(vmserrors.VAX_DATARANGE, "displacement", int32(disp))
 		}
 	}
 
@@ -722,7 +815,7 @@ func (a *Assembler) assembleDisplacement(c *cursor, deferred byte, size int, rel
 
 	a.deposit++
 
-	if err := a.storeScaled(a.deposit, value, size); err != nil {
+	if err := a.storeScaled(a.deposit, disp, size); err != nil {
 		return err
 	}
 

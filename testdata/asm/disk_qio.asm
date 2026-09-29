@@ -88,7 +88,7 @@
 ; QIO (by BSBW, with the function and p1-p6 pushed, function last):
 ; $QIOW on CHAN with IOSB; returns with R0 the IOSB's status if $QIOW
 ; itself succeeded. The arguments are popped.
-qio:	movl	(sp)+, @#retpc		; the return address
+qio:	movl	(sp)+, retpc		; the return address
 	movl	(sp)+, r1		; the function
 	pushl	#0			; astprm
 	pushl	#0			; astadr
@@ -97,16 +97,15 @@ qio:	movl	(sp)+, @#retpc		; the return address
 	movzwl	@#chan, -(sp)
 	pushl	#0			; efn
 	calls	#^D12, @#sys$qiow	; takes efn..p6 off the stack
-	blbc	r0, qiodone
-	movzwl	@#iosb, r0
-qiodone: movl	@#retpc, r1
-	jmp	(r1)
+	blbc	r0, 10$
+	movzwl	iosb, r0
+10$:	jmp	@retpc			; relative deferred
 
 ; CHECK (by JSB): return from MAIN with R0 0 unless R0 is a success.
-check:	blbs	r0, checkok
+check:	blbs	r0, 10$
 	clrl	r0
 	ret
-checkok: rsb
+10$:	rsb
 
 devnam:	.ascid	"DUA0:"
 name:	.ascii	"DATA.TXT"

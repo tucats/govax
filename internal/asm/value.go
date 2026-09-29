@@ -301,6 +301,10 @@ func (a *Assembler) exprAtom(c *cursor, st *exprState) (uint32, error) {
 		return v, nil
 	}
 
+	if name, ok := scanLocalLabel(c); ok {
+		return a.lookupSymbolValue(name, st)
+	}
+
 	if isUpperAlpha(c.peek()) || c.peek() == '_' || c.peek() == '$' {
 		name := scanName(c)
 
@@ -312,6 +316,26 @@ func (a *Assembler) exprAtom(c *cursor, st *exprState) (uint32, error) {
 	}
 
 	return a.numericLiteral(c, st)
+}
+
+// scanLocalLabel reads a MACRO-32 local label reference ("1$", "20$", ...)
+// if one starts at the cursor: decimal digits, then "$", then a character
+// that can't continue a name. Otherwise it consumes nothing. Without this
+// the digits would be read as a number and the "$" left behind.
+func scanLocalLabel(c *cursor) (string, bool) {
+	n := 0
+	for isDigit(c.peekAt(n)) {
+		n++
+	}
+
+	if n == 0 || c.peekAt(n) != '$' || isSymbolChar(c.peekAt(n+1)) {
+		return "", false
+	}
+
+	name := c.s[c.pos : c.pos+n+1]
+	c.skip(n + 1)
+
+	return name, true
 }
 
 // scanName reads a symbol/register/mnemonic-style name: letters, digits,

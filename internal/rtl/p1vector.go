@@ -9,6 +9,10 @@ import "github.com/tucats/govax/internal/vmsdef"
 var p1VectorByMatchAddr = func() map[uint32]vmsdef.P1VectorEntry {
 	m := make(map[uint32]vmsdef.P1VectorEntry, len(vmsdef.P1VectorTable))
 	for _, e := range vmsdef.P1VectorTable {
+		if e.DataCell() {
+			continue
+		}
+
 		addr := e.Addr
 		if e.Jmp {
 			addr -= 2

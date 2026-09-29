@@ -89,6 +89,10 @@ func TestLoadHelpFile_phase23Topics(t *testing.T) {
 		{[]string{"SE", "DEFAULT"}, "SET DEFAULT command establishes"},
 		{[]string{"SHOW", "DEFAULT"}, "SHOW DEFAULT command displays"},
 		{[]string{"SH", "DEFAULT"}, "SHOW DEFAULT command displays"},
+		{[]string{"ASM", "LABELS"}, "local label block"},
+		{[]string{"ASM", "ADDRESSING"}, "Relative [deferred]"},
+		{[]string{"ASM", "PSEUDO", "QUAD"}, "sign-extended"},
+		{[]string{"ASM", "PSEUDO", "BYTE"}, "signed (-1)"},
 	}
 
 	c, buf := newTestConsole(t)

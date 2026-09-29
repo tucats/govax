@@ -29,67 +29,7 @@ Entries get resolved (fixed or deliberately kept, with rationale) during Phase 1
 
 ## Phase 11 (assembler) findings
 
-### [Phase 11] Three P1-vector table entries land close enough together that `p1_init()`'s own trampoline writes clobber each other's trailing `RET`/`XFC` bytes
-
-- **Where**: `reference/eVAX/eVAX/Source/RTL/p1_vector.c`'s `p1_vector[]`
-  initializer and its own `p1_init()` (ported as `internal/asm/pseudo.go`'s
-  `pseudoP1Vector`, backed by `internal/p1vector.Table`, a verbatim copy of
-  the same array). `SYS$CLRAST_2` (`0x7FFEE110`) and `SYS$GL_ASTRET` (also
-  `0x7FFEE110` — the same address) both deposit their 5-byte mask+XFC+RET
-  trampoline ending at `0x7FFEE114`; `SYS$GL_COMMON` (`0x7FFEE114`), later in
-  the array, then writes its own 2-byte zero mask word starting at that exact
-  address, clobbering the `RET` opcode (`0x04`) both earlier entries just
-  wrote there with `0x00`. `SYS$GL_COMMON`'s own trailing `RET` (at
-  `0x7FFEE118`) is in turn clobbered the same way by `SYS$SRCHANDLER`
-  (`0x7FFEE118`, the array's one JMP-reached entry, processed right after
-  it), whose XFC opcode byte (`0xFC`) lands on exactly that address.
-- **What**: `p1_init()` (and this port's faithful line-for-line translation
-  of it) writes every array entry's trampoline unconditionally, in array
-  order, with no check for a following entry's address falling inside the
-  5-byte span it just wrote. `SYS$GL_ASTRET`/`SYS$GL_COMMON` aren't really
-  independent callable service entry points at all — real VMS documents them
-  as plain longword "global location" data cells that happen to share this
-  table purely to get a symbol defined at their address — so clobbering their
-  own trailing bytes is likely harmless in practice (nothing legitimately
-  `CALLS`/`JMP`s into a `GL_` cell), but `SYS$CLRAST_2` is a real,
-  `CALL`-shaped entry whose `RET` this corrupts: a program that actually
-  reached it via `CALLS` would fall through into whatever garbage follows
-  once `XFC$P1VECTOR`'s handler returns, instead of unwinding cleanly.
-  Confirmed present in the C source itself (not a porting slip): the same
-  three addresses collide in `p1_vector.c` in the same order, so the real
-  reference tool's own `p1_init()` would produce byte-for-byte the same
-  corrupted output.
-- **Status**: open, deferred, per this project's default policy for a
-  finding rooted in the C source's own data/logic rather than a Go porting
-  mistake — `pseudoP1Vector` replicates `p1_init()`'s unconditional,
-  no-overlap-check write order exactly rather than special-casing these
-  three names. No fixture in this project calls `SYS$CLRAST_2`,
-  `SYS$GL_ASTRET`, or `SYS$GL_COMMON` (confirmed by inspection of every
-  `testdata/asm/*.asm`/`testdata/exe/*` fixture's actual `SYS$` call sites),
-  so this has no test-visible effect today. Revisit if a future fixture ever
-  needs a working `SYS$CLRAST_2`.
-
-### [Phase 11, found in Phase 26] MACRO-32 local labels (`n$`), `.QUAD`, and relative deferred mode
-
-- **Where**: `internal/asm` (operand value parsing and the symbol table).
-- **What**: MACRO-32's local labels — `1$:`, `2$:`, ..., each valid only
-  within a *local label block*, the code between two ordinary labels —
-  aren't implemented. As a label definition, `2$:` defines an ordinary
-  global symbol named `2$`, so a second `2$:` anywhere in the file is
-  `VAX-E-DUPSYM`. In an operand, `2$` is read as the number 2, so
-  `BNEQ 2$` branches to address 2 rather than to the label: found when
-  a `docs/PHASE-26.md` subtask 34 fixture's handler branched into the
-  middle of the next procedure.
-- **Status**: open. The Phase 26 fixtures use ordinary labels. Fixing it
-  means parsing `digits$` as a symbol reference and scoping it to the
-  current local label block.
-- **Also**: `.QUAD` isn't implemented either (`VAX-E-BADOPCODE`), found
-  in subtask 37; fixtures use two `.LONG`s. And (found in subtask 41)
-  `@label` is assembled as absolute mode, `@#label` (specifier `9F`),
-  where MACRO-32 means relative deferred (`FF`: the operand's address is
-  the longword at `label`), so `JMP @RETPC` jumps to `RETPC` itself
-  rather than to the address stored there. Fixtures load the address
-  into a register and use `(Rn)`.
+_None open._
 
 ## Phase 22 (RMS / `ods2`) findings
 
@@ -850,6 +790,85 @@ changed as a result.
 _None yet._
 
 ## Resolved findings
+
+### [Phase 11, found in Phase 26, resolved] MACRO-32 local labels (`n$`), `.QUAD`, and relative [deferred] mode
+
+- **Where**: `internal/asm` (`value.go`'s `exprAtom`/`scanLocalLabel`,
+  `symbol.go`'s `resolvedName`/`closeLocalBlock`, `operand.go`'s
+  `assembleBareOperand`/`assembleDisplacement`, `pseudo.go`'s
+  `pseudoQuad`).
+- **What was wrong**: local labels (`1$:`) were ordinary global symbols,
+  so a second `1$:` was `VAX-E-DUPSYM`, and in an operand `1$` read as the
+  number 1. `.QUAD` didn't exist. `@label` assembled as absolute (`9F`),
+  ignoring the `@`, so `JMP @RETPC` jumped to `RETPC` itself. Checking
+  the C reference while fixing these turned up more in the same code: a
+  bare `label` assembled as absolute rather than relative; `B^`/`W^`/
+  `L^label` stored the address itself rather than a PC-relative
+  displacement; a forward reference in either relative form was off by the
+  displacement's size; a forward reference in `sym(Rn)` stored `sym`
+  minus its own location rather than `sym`; `.BYTE -1`/`.WORD -1` were
+  `VAX-E-DATARANGE`; and `-4(FP)` was misread as autodecrement.
+- **Status**: fixed 2026-09-29, following MACRO-32 (at the user's
+  direction):
+  - A local label belongs to its local label block, the code between two
+    ordinary labels (`.ENTRY`, `.SCOPE`, `.SHIM`, `.REGION`, and `.END`
+    also end one). It's stored as `n$@block` and left out of `Symbols()`.
+    A local label still undefined when its block ends is
+    `VAX-E-UNDEFSYM`.
+  - `address` is relative mode and `@address` relative deferred. `disp(Rn)`
+    is displacement mode. With no `B^`/`W^`/`L^`, a value already known
+    gets the smallest displacement that holds it. A forward reference gets
+    a longword. MACRO-32 defaults these to a word and lets the linker
+    report overflow, but there's no linker here, so a longword can't
+    overflow. `@#address` is still absolute.
+  - `.QUAD` stores 64 bits. A single numeric literal is read at full width;
+    any other expression is a sign-extended longword.
+  - Also added: direct assignment (`NAME = expr`, `NAME == expr`,
+    `. = expr`).
+  - The Phase 26 fixtures now use these instead of their workarounds:
+    `disk_qio.asm` (`JMP @RETPC`, local labels) and the timer fixtures'
+    delta times (`.QUAD -^D100000`). Tests: `internal/asm/macro_test.go`,
+    `TestAddressingModes`.
+
+### [Phase 11, resolved] Three P1-vector table entries land close enough together that `p1_init()`'s own trampoline writes clobber each other's trailing `RET`/`XFC` bytes
+
+- **Where**: `reference/eVAX/eVAX/Source/RTL/p1_vector.c`'s `p1_vector[]`
+  initializer and its own `p1_init()` (ported as `internal/asm/pseudo.go`'s
+  `pseudoP1Vector`, backed by `internal/p1vector.Table`, a verbatim copy of
+  the same array). `SYS$CLRAST_2` (`0x7FFEE110`) and `SYS$GL_ASTRET` (also
+  `0x7FFEE110` — the same address) both deposit their 5-byte mask+XFC+RET
+  trampoline ending at `0x7FFEE114`; `SYS$GL_COMMON` (`0x7FFEE114`), later in
+  the array, then writes its own 2-byte zero mask word starting at that exact
+  address, clobbering the `RET` opcode (`0x04`) both earlier entries just
+  wrote there with `0x00`. `SYS$GL_COMMON`'s own trailing `RET` (at
+  `0x7FFEE118`) is in turn clobbered the same way by `SYS$SRCHANDLER`
+  (`0x7FFEE118`, the array's one JMP-reached entry, processed right after
+  it), whose XFC opcode byte (`0xFC`) lands on exactly that address.
+- **What**: `p1_init()` (and this port's faithful line-for-line translation
+  of it) writes every array entry's trampoline unconditionally, in array
+  order, with no check for a following entry's address falling inside the
+  5-byte span it just wrote. `SYS$GL_ASTRET`/`SYS$GL_COMMON` aren't really
+  independent callable service entry points at all — real VMS documents them
+  as plain longword "global location" data cells that happen to share this
+  table purely to get a symbol defined at their address — so clobbering their
+  own trailing bytes is likely harmless in practice (nothing legitimately
+  `CALLS`/`JMP`s into a `GL_` cell), but `SYS$CLRAST_2` is a real,
+  `CALL`-shaped entry whose `RET` this corrupts: a program that actually
+  reached it via `CALLS` would fall through into whatever garbage follows
+  once `XFC$P1VECTOR`'s handler returns, instead of unwinding cleanly.
+  Confirmed present in the C source itself (not a porting slip): the same
+  three addresses collide in `p1_vector.c` in the same order, so the real
+  reference tool's own `p1_init()` would produce byte-for-byte the same
+  corrupted output.
+- **Also**: `internal/rtl`'s address-to-service map was built last-entry-
+  wins, so a `CALLS` to `SYS$CLRAST_2` dispatched as `SYS$GL_ASTRET`.
+- **Status**: fixed 2026-09-29 (the assembler gaps pass). The new
+  `vmsdef.P1VectorEntry.DataCell` marks the `SYS$GL_` entries as data.
+  `.P1VECTOR` defines their symbols but writes no trampoline for them, and
+  `internal/rtl` leaves them out of service dispatch. Every callable
+  entry's trampoline is now intact (`TestPseudoP1VectorDefinesSymbolsAndTrampolines`),
+  and address `0x7FFEE110` dispatches as `SYS$CLRAST_2`
+  (`TestLookupP1VectorSkipsDataCells`).
 
 ### [Phase 26] The assembler's `.ASCIC` has a 16-bit count
 

@@ -2288,7 +2288,9 @@ $ASSE
 
     The assembly continues until the end of the input file is read or a
     .END pseudo opcode is found.  See the help on ASM PSEUDO for more
-    information on supported pseudo-opcodes.
+    information on supported pseudo-opcodes, ASM LABELS for labels,
+    local labels, and direct assignment, and ASM ADDRESSING for how
+    operands are encoded.
     
     Syntax:
 
@@ -2300,6 +2302,54 @@ $ASSE
                      be read in and assembled.  If you do not specify a 
                      file then the console prompt changes to ASM> and the
                      assembler statements are entered from the keyboard.
+
+$ASM ,LABE
+
+    A statement may start with a label, which defines a symbol whose
+    value is the current location:
+
+        NAME:       An ordinary label.
+        NAME::      A label that survives .CLEAR.
+        10$:        A local label: decimal digits followed by "$".
+
+    A local label is only known within its local label block, the code
+    between two ordinary labels (.ENTRY, .SCOPE, .SHIM, .REGION, and
+    .END also end a block).  The same local label, such as 10$, can be
+    used again in each block.  Referring to a local label that isn't
+    defined in the block before the block ends is an error.  Local
+    labels are not kept in the console's symbol table.
+
+    A symbol can also be given a value with a direct assignment:
+
+        NAME = <expression>
+        NAME == <expression>
+        . = <expression>        Sets the current location.
+
+    The expression may not contain forward references.
+
+$ASM ,ADDR
+
+    Operands use the VAX MACRO addressing mode syntax:
+
+        Rn                  Register
+        (Rn)                Register deferred
+        (Rn)+  -(Rn)        Autoincrement, autodecrement
+        @(Rn)+              Autoincrement deferred
+        #value              Short literal, or immediate if it won't fit
+        S^#value  I^#value  Short literal, immediate
+        disp(Rn)  @disp(Rn) Displacement [deferred]
+        B^ W^ L^disp(Rn)    Displacement of a given size
+        address   @address  Relative [deferred]: PC plus a displacement
+        B^ W^ L^address     Relative, with a displacement of a given size
+        @#address           Absolute
+        operand[Rx]         Indexed
+
+    With no B^, W^, or L^ prefix, a displacement or relative address
+    whose value is already known uses the smallest displacement that
+    holds it.  A forward reference uses a longword displacement.  A
+    relative operand is stored as the distance from the end of the
+    operand to the address, so code that uses it must run at the
+    address it was assembled for, or be moved as a whole.
 
 $ASM ,PSEU
 
@@ -2336,6 +2386,7 @@ $ASM ,PSEU
         MODE
         PRINT
         PTE
+        QUAD
         REGION
         SCB
         SET
@@ -2496,10 +2547,13 @@ $ASM ,PSEU,BASE
                          the location where the next instruction or
                          data will be written.
 
+$ASM ,PSEU,BYTE
+$ASM ,PSEU,WORD
 $ASM ,PSEU,LONG
+$ASM ,PSEU,QUAD
 
-    The BYTE, WORD, and LONG pseudo-opcodes store specific given values
-    of the indicated size in memory.
+    The BYTE, WORD, LONG, and QUAD pseudo-opcodes store specific given
+    values of the indicated size in memory.
 
     Syntax:
 
@@ -2509,12 +2563,19 @@ $ASM ,PSEU,LONG
 
         .LONG    <data> [, <data> ]
 
+        .QUAD    <data> [, <data> ]
+
 
      Parameter:
 
         <data>     The data value(s) to be stored.  If more than one
                    is given, they must be separated by commas.  The
-                   data is stored in memory in the order given.
+                   data is stored in memory in the order given.  A
+                   BYTE or WORD value may be given signed (-1) or
+                   unsigned (0FF).  A QUAD value that is a single
+                   number, such as -^D100000 or ^X0123456789ABCDEF,
+                   is stored in full; any other expression is
+                   computed as a longword and sign-extended.
 
 $ASM ,PSEU,ENTR
 

@@ -314,3 +314,23 @@ into `internal/vmsdef` (`P1VectorEntry`/`P1VectorTable`, same content) once
 FAB/RAB field data turned out to need the identical asm/RTL-shared-data
 treatment — see `PHASE-24.md`'s own design section. Every `internal/p1vector`
 path/name in this entry's text above is now historical, not current.
+
+**2026-09-29 — MACRO-32 gaps (local labels, `.QUAD`, relative mode):**
+fixed the assembler gaps `docs/DEVIATIONS.md` listed, plus the related
+bugs found alongside them. The user asked for MACRO-32 semantics wherever
+the reference tool differed, keeping in mind that there's no linker here.
+The details are in DEVIATIONS.md's resolved entries. In brief:
+- Local labels (`10$:`), scoped to a local label block.
+- A bare `address` is now relative mode (it was absolute), `@address` is
+  relative deferred, and `B^`/`W^`/`L^address` store a real PC-relative
+  displacement. Known values get the smallest displacement that holds
+  them. Forward references get a longword.
+- `.QUAD`; signed `.BYTE`/`.WORD` values; direct assignment
+  (`NAME = expr`, `. = expr`); `-4(FP)`.
+- `.P1VECTOR` no longer writes trampolines for the `SYS$GL_` data cells,
+  which used to overwrite `SYS$CLRAST_2`'s and `SYS$GL_COMMON`'s `RET`.
+  RTL dispatch skips them too.
+- HELP: new `ASM LABELS` and `ASM ADDRESSING` topics; `.QUAD` added.
+- Every existing fixture (kernel.asm included) assembled and ran unchanged
+  under the new relative-mode encoding. `disk_qio.asm` and the timer
+  fixtures now use `JMP @RETPC`, local labels, and `.QUAD`.

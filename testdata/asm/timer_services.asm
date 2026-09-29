@@ -70,7 +70,7 @@ ok5:
 fail:	movl	#0, r0
 	ret
 
-delta20: .long	^XFFFCF2C0, ^XFFFFFFFF	; -200000: 20ms
-delta50: .long	^XFFF85EE0, ^XFFFFFFFF	; -500000: 50ms
+delta20: .quad	-^D200000		; 20ms
+delta50: .quad	-^D500000		; 50ms
 
 	.end	main

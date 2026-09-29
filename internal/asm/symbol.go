@@ -37,6 +37,10 @@ const (
 	// PERMANENT. Symbols (below) uses this to return only a program's own
 	// symbols.
 	SymBuiltin
+	// SymLocalLabel marks a MACRO-32 local label ("1$", "20$", ...),
+	// stored under a block-qualified name (see localLabelName). Symbols
+	// leaves these out: they mean nothing outside their own block.
+	SymLocalLabel
 )
 
 // fixupKind says how a pending forward reference's value should be written
@@ -112,7 +116,9 @@ func (t *symbolTable) find(name string) (*symbol, bool) {
 
 func (t *symbolTable) create(name string) *symbol {
 	s := &symbol{name: name}
-	if strings.ContainsRune(name, '$') {
+	if strings.ContainsRune(name, '@') {
+		s.flags |= SymLocalLabel
+	} else if strings.ContainsRune(name, '$') {
 		s.flags |= SymSystem
 	}
 
@@ -153,9 +159,63 @@ func (a *Assembler) entryScope() string {
 // the next "_name" reference starts a fresh scope.
 func (a *Assembler) scopeSymbols() { a.curEntry = "" }
 
+// isLocalLabel reports whether name is a MACRO-32 local label: one or
+// more decimal digits followed by a single "$" (e.g. "1$", "30$").
+func isLocalLabel(name string) bool {
+	n := len(name)
+	if n < 2 || name[n-1] != '$' {
+		return false
+	}
+
+	for i := 0; i < n-1; i++ {
+		if !isDigit(name[i]) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// localLabelName returns the symbol-table name a local label is stored
+// under in the current local label block. The "@" can't appear in a
+// source symbol, so these never collide with an ordinary name.
+func (a *Assembler) localLabelName(name string) string {
+	return fmt.Sprintf("%s@%d", name, a.localBlock)
+}
+
+// closeLocalBlock ends the current local label block, matching MACRO-32:
+// a block runs from one ordinary label to the next, so every ordinary
+// label definition (and .ENTRY/.SCOPE/.SHIM/.REGION/.END) calls this
+// before defining its own name. A local label referenced in the block but
+// never defined there is an error now, since no later definition can
+// resolve it.
+func (a *Assembler) closeLocalBlock() error {
+	if a.localUsed {
+		suffix := fmt.Sprintf("@%d", a.localBlock)
+
+		for key, s := range a.symbols.byName {
+			if len(s.forward) != 0 && strings.HasSuffix(key, suffix) {
+				return vmserrors.New(vmserrors.VAX_UNDEFSYM, strings.TrimSuffix(key, suffix))
+			}
+		}
+	}
+
+	a.localBlock++
+	a.localUsed = false
+
+	return nil
+}
+
 // resolvedName applies scopeName using the assembler's current entry scope,
-// generating one on demand if needed.
+// generating one on demand if needed. A local label ("n$") is qualified
+// by the current local label block instead.
 func (a *Assembler) resolvedName(name string) (resolved string, wasLocal bool) {
+	if isLocalLabel(name) {
+		a.localUsed = true
+
+		return a.localLabelName(name), false
+	}
+
 	if len(name) < 2 || name[0] != '_' || name[1] == '_' {
 		return name, false
 	}
@@ -339,7 +399,7 @@ func (a *Assembler) Symbols() map[string]SymbolInfo {
 	out := make(map[string]SymbolInfo)
 
 	for name, s := range a.symbols.byName {
-		if s.flags&SymBuiltin != 0 || len(s.forward) != 0 {
+		if s.flags&(SymBuiltin|SymLocalLabel) != 0 || len(s.forward) != 0 {
 			continue
 		}
 

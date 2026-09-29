@@ -62,7 +62,7 @@ ok5:
 fail:	movl	#0, r0
 	ret
 
-delta10: .long	^XFFFE7960, ^XFFFFFFFF	; -100000: 10ms
-delta30: .long	^XFFFB6C20, ^XFFFFFFFF	; -300000: 30ms
+delta10: .quad	-^D100000		; 10ms
+delta30: .quad	-^D300000		; 30ms
 
 	.end	main

@@ -29,6 +29,7 @@ var pseudoNames = map[string]bool{
 	"BYTE":        true, // Declare a 8-bit integer constant value
 	"WORD":        true, // Declare a 16-bit integer constant values
 	"LONG":        true, // Declare a 32-bit integer constant values
+	"QUAD":        true, // Declare a 64-bit integer constant values
 	"BASE":        true, // Set the address of the next instruction to be assembled
 	"SET":         true, // Set various assembler or console flags
 	"CLEAR":       true, // Clear vaiorus assembler or console flags
@@ -120,6 +121,9 @@ func (a *Assembler) dispatchPseudo(name string, c *cursor) error {
 
 	case "LONG":
 		return a.pseudoData(c, 4)
+
+	case "QUAD":
+		return a.pseudoQuad(c)
 
 	case "BASE":
 		return a.pseudoBase(c)
@@ -311,12 +315,14 @@ func (a *Assembler) pseudoData(c *cursor, scale int) error {
 			return err
 		}
 
-		if scale == 1 && v > 0xFF {
-			return vmserrors.New(vmserrors.VAX_DATARANGE, ".BYTE", v)
+		// A value may be written signed (.BYTE -1) or as its unsigned bit
+		// pattern (.BYTE 0FF); the reference tool rejected the former.
+		if scale == 1 && (int32(v) < -128 || int32(v) > 0xFF) {
+			return vmserrors.New(vmserrors.VAX_DATARANGE, ".BYTE", int32(v))
 		}
 
-		if scale == 2 && v > 0xFFFF {
-			return vmserrors.New(vmserrors.VAX_DATARANGE, ".WORD", v)
+		if scale == 2 && (int32(v) < -32768 || int32(v) > 0xFFFF) {
+			return vmserrors.New(vmserrors.VAX_DATARANGE, ".WORD", int32(v))
 		}
 
 		if err := a.storeScaled(a.deposit, v, scale); err != nil {
@@ -325,6 +331,119 @@ func (a *Assembler) pseudoData(c *cursor, scale int) error {
 
 		a.deposit += uint32(scale)
 	}
+}
+
+// pseudoQuad assembles .QUAD: a comma-separated list of 64-bit values.
+// The expression evaluator works in 32 bits, so an item that is a single
+// numeric literal (an optional sign, then digits in the current radix or
+// after a ^X/^D/0X prefix) is read at full 64-bit width; any other
+// expression is evaluated as a longword and sign-extended, as MACRO-32
+// does. A forward reference patches only the low longword, whose high
+// longword stays zero. The reference tool had no .QUAD at all.
+func (a *Assembler) pseudoQuad(c *cursor) error {
+	for {
+		c.skipBlanks()
+
+		if c.atEnd() {
+			return nil
+		}
+
+		if c.peek() == ',' {
+			c.next()
+		}
+
+		v, ok := a.quadLiteral(c)
+		if !ok {
+			lo, wasForward, err := a.exprValue(c, a.deposit, fixAddrL)
+			if err != nil {
+				return err
+			}
+
+			v = uint64(int64(int32(lo)))
+			if wasForward {
+				v = 0
+			}
+		}
+
+		if err := a.image.storeLongword(a.deposit, uint32(v)); err != nil {
+			return err
+		}
+
+		if err := a.image.storeLongword(a.deposit+4, uint32(v>>32)); err != nil {
+			return err
+		}
+
+		a.deposit += 8
+	}
+}
+
+// quadLiteral reads a .QUAD item that is exactly one numeric literal,
+// followed by a ',' or the end of the line; otherwise it leaves c where
+// it was and reports false.
+func (a *Assembler) quadLiteral(c *cursor) (uint64, bool) {
+	save := c.pos
+	c.skipBlanks()
+
+	neg := false
+	if c.peek() == '-' || c.peek() == '+' {
+		neg = c.next() == '-'
+	}
+
+	base := uint64(a.radix)
+
+	switch {
+	case c.peek() == '^' && c.peekAt(1) == 'X', c.peek() == '0' && c.peekAt(1) == 'X':
+		base = 16
+
+		c.skip(2)
+
+	case c.peek() == '^' && c.peekAt(1) == 'D':
+		base = 10
+
+		c.skip(2)
+	}
+
+	var v uint64
+
+	digits := 0
+
+	for {
+		ch := c.peek()
+
+		var d uint64
+
+		switch {
+		case isDigit(ch):
+			d = uint64(ch - '0')
+		case base == 16 && ch >= 'A' && ch <= 'F':
+			d = uint64(ch-'A') + 10
+		default:
+			d = base
+		}
+
+		if d >= base {
+			break
+		}
+
+		v = v*base + d
+		digits++
+
+		c.next()
+	}
+
+	c.skipBlanks()
+
+	if digits == 0 || (!c.atEnd() && c.peek() != ',') {
+		c.pos = save
+
+		return 0, false
+	}
+
+	if neg {
+		v = -v
+	}
+
+	return v, true
 }
 
 // pseudoBase assembles .BASE value: sets the current deposit location,
@@ -591,6 +710,10 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 // the program's start address (recorded as the __ENTRY symbol, and via
 // Entry()), then assembly of the current source stops — matching case 11.
 func (a *Assembler) pseudoEnd(c *cursor) error {
+	if err := a.closeLocalBlock(); err != nil {
+		return err
+	}
+
 	a.scopeSymbols()
 
 	c.skipBlanks()
@@ -744,6 +867,10 @@ func (a *Assembler) pseudoBlock(c *cursor, size int) error {
 // symbol scope under it, and stores the optional register-set mask (0 if
 // omitted) as a 16-bit word — matching case 22.
 func (a *Assembler) pseudoEntry(c *cursor) error {
+	if err := a.closeLocalBlock(); err != nil {
+		return err
+	}
+
 	a.scopeSymbols()
 
 	c.skipBlanks()
@@ -787,6 +914,10 @@ func (a *Assembler) pseudoEntry(c *cursor) error {
 // local-symbol scope (SYM_LABEL, must be fresh) — no mask, no code of its
 // own. Matches case 41.
 func (a *Assembler) pseudoScope(c *cursor) error {
+	if err := a.closeLocalBlock(); err != nil {
+		return err
+	}
+
 	a.scopeSymbols()
 
 	c.skipBlanks()
@@ -944,6 +1075,10 @@ func (a *Assembler) pseudoRegion(c *cursor) error {
 		return vmserrors.New(vmserrors.VAX_NEEDMICRO, ".REGION")
 	}
 
+	if err := a.closeLocalBlock(); err != nil {
+		return err
+	}
+
 	var toS0 bool
 
 	switch readToken(c) {
@@ -985,6 +1120,10 @@ func (a *Assembler) pseudoRegion(c *cursor) error {
 func (a *Assembler) pseudoShim(c *cursor) error {
 	if !a.microkernel {
 		return vmserrors.New(vmserrors.VAX_NEEDMICRO, ".SHIM")
+	}
+
+	if err := a.closeLocalBlock(); err != nil {
+		return err
 	}
 
 	a.scopeSymbols()
@@ -1301,6 +1440,22 @@ func (a *Assembler) pseudoP1Vector(c *cursor) error {
 			return err
 		}
 
+		if e.Addr > maxValue {
+			maxValue = e.Addr
+		}
+
+		if e.Addr < minValue {
+			minValue = e.Addr
+		}
+
+		// The reference tool's p1_init() wrote a trampoline for every
+		// entry, so SYS$GL_ASTRET/SYS$GL_COMMON's overwrote SYS$CLRAST_2's
+		// RET and SYS$GL_COMMON's RET was in turn overwritten by
+		// SYS$SRCHANDLER's XFC. See vmsdef.P1VectorEntry.DataCell.
+		if e.DataCell() {
+			continue
+		}
+
 		addr := e.Addr
 
 		if !e.Jmp {
@@ -1321,14 +1476,6 @@ func (a *Assembler) pseudoP1Vector(c *cursor) error {
 
 		if err := a.image.storeByte(addr+4, 0x04); err != nil { // RET
 			return err
-		}
-
-		if e.Addr > maxValue {
-			maxValue = e.Addr
-		}
-
-		if e.Addr < minValue {
-			minValue = e.Addr
 		}
 	}
 
