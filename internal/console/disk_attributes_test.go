@@ -65,7 +65,7 @@ func TestDiskAttributes_assembledProgram(t *testing.T) {
 		t.Errorf("FAT2's end of file %d/%d, want 1/10", blk, ffb)
 	}
 
-	if got := string(symbolBytes(t, c, "NAME2", 20)); got != "DATA.TXT            " {
+	if got := string(symbolBytes(t, c, "NAME2", 20)); got != "DATA.TXT;1          " {
 		t.Errorf("NAME2 = %q", got)
 	}
 

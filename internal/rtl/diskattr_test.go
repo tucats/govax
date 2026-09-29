@@ -75,7 +75,7 @@ func TestDiskAttributes_readOnAccess(t *testing.T) {
 		t.Errorf("end of file %d/%d, want 4/4", blk, ffb)
 	}
 
-	if got := a.readString(name, 20); got != "DATA.BIN            " {
+	if got := a.readString(name, 20); got != "DATA.BIN;1          " {
 		t.Errorf("ASCNAME %q", got)
 	}
 
@@ -122,7 +122,7 @@ func TestDiskAttributes_readByFID(t *testing.T) {
 		t.Errorf("RECATTR's first bytes % x, want % x", got, want.RecordAttributes[:2])
 	}
 
-	if got := a.readString(long, 40); got != "DATA.BIN"+strings.Repeat(" ", 32) {
+	if got := a.readString(long, 40); got != "DATA.BIN;1"+strings.Repeat(" ", 30) {
 		t.Errorf("ASCNAME %q", got)
 	}
 

@@ -33,7 +33,7 @@ func TestACPReadAttributes(t *testing.T) {
 		t.Errorf("record attributes %+v", ra)
 	}
 
-	if a.Name != "DATA.TXT" || a.Backlink != mfd || a.Created == 0 {
+	if a.Name != "DATA.TXT;1" || a.Backlink != mfd || a.Created == 0 {
 		t.Errorf("name %q, back link %v, created %#x", a.Name, a.Backlink, a.Created)
 	}
 
@@ -93,7 +93,7 @@ func TestACPWriteAttributes(t *testing.T) {
 		t.Errorf("protection %#x, owner %#x, expires %#x", after.Protection, after.Owner, after.Expires)
 	}
 
-	if after.Name != "DATA.TXT" || after.Created != before.Created {
+	if after.Name != "DATA.TXT;1" || after.Created != before.Created {
 		t.Errorf("name %q, created %#x: a read-only or untouched attribute changed", after.Name, after.Created)
 	}
 
