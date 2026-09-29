@@ -157,7 +157,7 @@ func TestGetjpi_privileges(t *testing.T) {
 
 	bufs := map[string]uint32{}
 
-	list := make([]item, 5)
+	list := make([]item, 0, 5)
 
 	for _, name := range []string{"JPI$_CURPRIV", "JPI$_PROCPRIV", "JPI$_AUTHPRIV", "JPI$_IMAGPRIV", "JPI$_AUTHPRI"} {
 		bufs[name] = a.alloc(8)
