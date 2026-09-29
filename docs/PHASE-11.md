@@ -334,3 +334,25 @@ The details are in DEVIATIONS.md's resolved entries. In brief:
 - Every existing fixture (kernel.asm included) assembled and ran unchanged
   under the new relative-mode encoding. `disk_qio.asm` and the timer
   fixtures now use `JMP @RETPC`, local labels, and `.QUAD`.
+
+**2026-09-29 — MACRO-32 gaps, second pass (forward expressions, strings,
+operators):** fixed the two assembler gaps `docs/DEVIATIONS.md` still
+listed, and the other assembler bugs found alongside them. The user asked
+that MACRO-32 be treated as canonical where it and this assembler differ,
+editing `.asm` fixtures as needed. The details are in DEVIATIONS.md's
+resolved entry. In brief:
+- Forward references can now be used in expressions that add, subtract,
+  or multiply by a constant (`@#FAT1+8`, `.LONG B-A`). A fixup holds the
+  whole expression and is applied when its last symbol is defined.
+- MACRO-32 strings: any delimiter, `<expr>` bytes, no escapes, no comma
+  separators, and `.ASCID`'s `010E` information word. Five fixtures had
+  their `\n` escapes rewritten as `<^X0A>`.
+- MACRO-32 expression syntax: `<...>` grouping; `^A`, `^B`, `^O`, `^C`;
+  `^D<...>`-style radix operators; binary `@ & ! \`; continuation lines.
+- Bugs: text after an instruction's operands is now an error; `.CASE`
+  stores a backward label's offset rather than its address; a forward
+  `.BYTE`/`.WORD` value that doesn't fit is an error, not truncated; an apostrophe
+  inside a double-quoted string no longer disables comment stripping.
+- Left open for the user (DEVIATIONS.md): MACRO-32's decimal default
+  radix, its equal-priority operators, and its `.IF`/`.ENDC`
+  conditionals.

@@ -14,7 +14,7 @@
 	ret
 
 s1:	.asciz	"1234"
-s2: .asciz	"The answer is %d\n"
+s2: .asciz	"The answer is %d"<^X0A>
 
 	end
 	

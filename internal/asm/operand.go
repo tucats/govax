@@ -237,9 +237,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				// out to need a leading 0x8F mode byte first, shift it
 				// forward by one byte — matching asm_operand.c's own late
 				// correction of vax.console.last_symbol->forward->location.
-				if a.lastSymbol != nil && len(a.lastSymbol.forward) > 0 {
-					a.lastSymbol.forward[0].location++
-				}
+				a.lastFixup.location++
 			}
 		} else {
 			constant = litShort
@@ -705,9 +703,7 @@ func (a *Assembler) assembleBareOperand(c *cursor, deferred byte) error {
 	case wasForward && haveReg:
 		// A displacement from Rn is the symbol's own value, not a
 		// distance from here.
-		if a.lastSymbol != nil && len(a.lastSymbol.forward) > 0 {
-			a.lastSymbol.forward[0].kind = fixAddrL
-		}
+		a.lastFixup.kind = fixAddrL
 
 	case wasForward:
 		// Relative: the fixBranchL fixup queued above already measures
@@ -787,9 +783,7 @@ func (a *Assembler) assembleDisplacement(c *cursor, deferred byte, size int, rel
 
 	switch {
 	case wasForward && haveReg:
-		if a.lastSymbol != nil && len(a.lastSymbol.forward) > 0 {
-			a.lastSymbol.forward[0].kind = addrFixup(size)
-		}
+		a.lastFixup.kind = addrFixup(size)
 
 	case wasForward:
 		// The branch-style fixup already measures from the end of the

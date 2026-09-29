@@ -80,11 +80,37 @@ func fixupSize(k fixupKind) int64 {
 	return 0
 }
 
-// forwardRef is one pending fixup: a location in the output image that
-// needs to be patched once its symbol's value becomes known.
-type forwardRef struct {
+// fixup is one pending forward-referenced expression: a location in the
+// output image to patch once every symbol the expression uses is defined.
+// The expression's value is addend plus the sum of each term's
+// coefficient times its symbol's value, which covers what an operand or
+// data item can say about symbols not yet defined: "SYM", "SYM+8",
+// "B-A", "2*SYM", "SYM-.". MACRO-32's object records carry such
+// expressions to the linker; here setSymbol completes them.
+type fixup struct {
 	location uint32
 	kind     fixupKind
+	addend   uint32
+	terms    []fixupTerm
+	pending  int    // how many terms' symbols are still undefined
+	base     uint32 // fixCaseW: the .CASE block's base address
+}
+
+// fixupTerm is one symbol in a fixup's expression, with its coefficient
+// (modulo 2^32, so -1 is 0xFFFFFFFF).
+type fixupTerm struct {
+	sym   *symbol
+	coeff uint32
+}
+
+// value computes the fixup's expression once its symbols are all defined.
+func (f *fixup) value() uint32 {
+	v := f.addend
+	for _, t := range f.terms {
+		v += t.coeff * t.sym.value
+	}
+
+	return v
 }
 
 // symbol is one entry in the assembler's symbol table.
@@ -92,7 +118,7 @@ type symbol struct {
 	name    string
 	value   uint32
 	flags   SymFlag
-	forward []forwardRef // pending fixups, most-recent first; nil once resolved
+	forward []*fixup // pending fixups using this symbol, most-recent first; nil once defined
 }
 
 // symbolTable holds every symbol defined during an assembly. Unlike the C
@@ -228,14 +254,10 @@ func (a *Assembler) resolvedName(name string) (resolved string, wasLocal bool) {
 // If the symbol is already fully resolved (defined, with no pending forward
 // references) its value is returned directly. Otherwise: if allowForward is
 // false, an undefined symbol is an error (K_NOFORWARD); if true, a
-// placeholder value of 0 is used (creating the symbol if necessary) and a
-// fixup of kind fx is queued at location, to be patched in when the symbol
-// is later defined via setSymbol.
-//
-// Forward references are always prepended to the symbol's fixup list — some
-// callers (asm_operand.c's late DISP(Rn) mode rewrite) rely on being able to
-// find "the fixup just created for the last symbol referenced" at the head
-// of that list, tracked here as a.lastSymbol.
+// placeholder value of 0 is returned and a fixup of kind fx for the bare
+// symbol is queued at location, to be patched in when the symbol is later
+// defined via setSymbol. (Expressions go through exprValue instead, which
+// queues one fixup for the whole expression.)
 func (a *Assembler) getSymbol(name string, allowForward bool, location uint32, fx fixupKind) (value uint32, wasForward bool, err error) {
 	resolved, local := a.resolvedName(name)
 
@@ -246,30 +268,49 @@ func (a *Assembler) getSymbol(name string, allowForward bool, location uint32, f
 
 	switch {
 	case found && len(sym.forward) == 0:
-		a.lastSymbol = sym
-
 		return sym.value, false, nil
 
 	case !found && !allowForward:
 		return 0, false, vmserrors.New(vmserrors.VAX_UNDEFSYM, name)
 
 	case found && !allowForward:
-		a.lastSymbol = sym
-
 		return sym.value, false, nil
 	}
 
-	if !found {
-		sym = a.symbols.create(resolved)
-		if fx == fixCaseW {
-			sym.value = a.caseBase
+	a.queueFixup(location, fx, 0, []pendingTerm{{key: resolved, coeff: 1}})
+
+	return 0, true, nil
+}
+
+// pendingTerm is a fixupTerm before its symbol has been created: the
+// expression evaluator records the symbol-table key, and queueFixup
+// creates the (still undefined) symbol only once the whole expression has
+// been accepted, so an expression rejected partway through leaves no
+// undefined symbol behind that would look defined with value 0.
+type pendingTerm struct {
+	key   string
+	coeff uint32
+}
+
+// queueFixup records a fixup of kind fx at location for the expression
+// addend + Σ terms, attaching it to each term's symbol (creating any that
+// don't exist yet). It becomes a.lastFixup, for the operand parsers that
+// adjust a fixup after deciding the operand's final layout.
+func (a *Assembler) queueFixup(location uint32, fx fixupKind, addend uint32, terms []pendingTerm) {
+	f := &fixup{location: location, kind: fx, addend: addend, base: a.caseBase}
+
+	for _, t := range terms {
+		sym, found := a.symbols.find(t.key)
+		if !found {
+			sym = a.symbols.create(t.key)
 		}
+
+		f.terms = append(f.terms, fixupTerm{sym: sym, coeff: t.coeff})
+		sym.forward = append([]*fixup{f}, sym.forward...)
 	}
 
-	sym.forward = append([]forwardRef{{location: location, kind: fx}}, sym.forward...)
-	a.lastSymbol = sym
-
-	return sym.value, true, nil
+	f.pending = len(f.terms)
+	a.lastFixup = f
 }
 
 // setSymbol defines (or redefines) name's value, applying flags and
@@ -292,28 +333,32 @@ func (a *Assembler) setSymbol(name string, value uint32, flags SymFlag, unique b
 		sym = a.symbols.create(resolved)
 	}
 
-	a.lastSymbol = sym
-	ivalue := sym.value
 	sym.value = value
 	sym.flags |= flags
 
-	for _, fp := range sym.forward {
-		if err := a.applyFixup(fp, value, ivalue); err != nil {
+	waiting := sym.forward
+	sym.forward = nil
+
+	for _, f := range waiting {
+		f.pending--
+		if f.pending > 0 {
+			continue
+		}
+
+		if err := a.applyFixup(f); err != nil {
 			return err
 		}
 	}
-	
-	sym.forward = nil
 
 	return nil
 }
 
-// applyFixup patches one pending forward reference now that its symbol's
-// value is known, matching set_symbol()'s fixup switch. ivalue is the
-// symbol's value immediately before this definition (used only by
-// fixCaseW, which measures the offset from the .CASE block's base rather
-// than from the fixup's own location).
-func (a *Assembler) applyFixup(fp forwardRef, value, ivalue uint32) error {
+// applyFixup patches one pending fixup now that every symbol its
+// expression uses is defined, matching set_symbol()'s fixup switch.
+// fixCaseW measures the offset from the .CASE block's base rather than
+// from the fixup's own location.
+func (a *Assembler) applyFixup(fp *fixup) error {
+	value := fp.value()
 	disp := int64(value) - int64(fp.location)
 
 	switch fp.kind {
@@ -323,7 +368,7 @@ func (a *Assembler) applyFixup(fp forwardRef, value, ivalue uint32) error {
 
 	switch fp.kind {
 	case fixCaseW:
-		d := int64(value) - int64(ivalue)
+		d := int64(int32(value - fp.base))
 		if d < math.MinInt16 || d > math.MaxInt16 {
 			return vmserrors.New(vmserrors.VAX_FWDWORD, d)
 		}
@@ -331,9 +376,12 @@ func (a *Assembler) applyFixup(fp forwardRef, value, ivalue uint32) error {
 		return a.image.storeWord(fp.location, uint16(int16(d)))
 
 	case fixAddrB:
-		disp = int64(int8(value))
+		// A value, signed or unsigned, as .BYTE takes it.
+		if v := int64(int32(value)); v < -128 || v > 0xFF {
+			return vmserrors.New(vmserrors.VAX_FWDBYTE, v)
+		}
 
-		fallthrough
+		return a.image.storeByte(fp.location, byte(value))
 
 	case fixDispB, fixBranchB:
 		if disp < -128 || disp > 127 {
@@ -343,9 +391,11 @@ func (a *Assembler) applyFixup(fp forwardRef, value, ivalue uint32) error {
 		return a.image.storeByte(fp.location, byte(int8(disp)))
 
 	case fixAddrW:
-		disp = int64(int32(value))
+		if v := int64(int32(value)); v < -32768 || v > 0xFFFF {
+			return vmserrors.New(vmserrors.VAX_FWDWORD, v)
+		}
 
-		fallthrough
+		return a.image.storeWord(fp.location, uint16(value))
 
 	case fixDispW, fixBranchW:
 		if disp < -32768 || disp > 32767 {

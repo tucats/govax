@@ -3,6 +3,7 @@
 package asm
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -62,10 +63,10 @@ type Assembler struct {
 	// .CASE block is active (vax.assembler.case_base).
 	caseBase uint32
 
-	// lastSymbol is the most recently looked-up-or-defined symbol
-	// (vax.console.last_symbol) — asm_operand.c's DISP(Rn) rewrite needs
-	// to mutate the forward-reference fixup it just created.
-	lastSymbol *symbol
+	// lastFixup is the fixup most recently queued (vax.console.last_symbol's
+	// head fixup in the reference tool): the operand parsers adjust it once
+	// they've decided the operand's final layout (see queueFixup).
+	lastFixup *fixup
 
 	// entrySeen/entryAddr record whether .END named an explicit start
 	// address (vax.assembler.flags & ASM_ENTRY), for callers that load the
@@ -102,6 +103,10 @@ type Assembler struct {
 	// stop is set by .END to unwind out of the (possibly nested, via
 	// .INCLUDE/.IF) line-processing loop.
 	stop bool
+
+	// continued holds a statement continued onto the next line (see
+	// statement), already preprocessed, without its trailing "-".
+	continued string
 }
 
 // New returns an Assembler ready to assemble source, using the built-in VAX
@@ -214,7 +219,10 @@ func (a *Assembler) HasUnresolvedSymbols() bool { return a.hasUnresolvedSymbols(
 // for the same reason — a persistent session (internal/console/asm.go's
 // asmSession) is reused across multiple ASM invocations, batch or
 // interactive, in a row.
-func (a *Assembler) BeginInteractive() { a.stop = false }
+func (a *Assembler) BeginInteractive() {
+	a.stop = false
+	a.continued = ""
+}
 
 // AssembleLine assembles one interactively-typed statement — the console's
 // bare "ASM" REPL mode (docs/PHASE-19.md) — depositing directly into this
@@ -224,8 +232,8 @@ func (a *Assembler) BeginInteractive() { a.stop = false }
 // the reference tool, which the interactive console prompt calls once per
 // line read instead of pre-splitting a whole file).
 func (a *Assembler) AssembleLine(line string) (done bool, err error) {
-	line = preprocessLine(line)
-	if line == "" {
+	line, ok := a.statement(line)
+	if !ok || line == "" {
 		return a.stop, nil
 	}
 
@@ -325,6 +333,8 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 	// .INCLUDE calls it directly mid-assembly and relies on a still-set
 	// a.stop (an .END inside an included file) unwinding the includer too.
 	a.stop = false
+	a.continued = ""
+
 	if err := a.assembleLines(source); err != nil {
 		return nil, err
 	}
@@ -347,8 +357,8 @@ func (a *Assembler) assembleLines(source string) error {
 			return nil
 		}
 
-		line := preprocessLine(raw)
-		if line == "" {
+		line, ok := a.statement(raw)
+		if !ok || line == "" {
 			continue
 		}
 
@@ -357,7 +367,33 @@ func (a *Assembler) assembleLines(source string) error {
 		}
 	}
 
+	// A continuation with no line to continue it.
+	if a.continued != "" {
+		line := a.continued
+		a.continued = ""
+
+		return a.assembleStatement(line)
+	}
+
 	return nil
+}
+
+// statement preprocesses one source line, joining MACRO-32 continuation
+// lines: a statement whose last character before any comment is "-"
+// continues on the next line. It reports false while a statement is
+// still being continued. The reference tool had no continuation lines.
+func (a *Assembler) statement(raw string) (string, bool) {
+	// Already-preprocessed text is unchanged by preprocessing it again.
+	line := preprocessLine(a.continued + raw)
+	a.continued = ""
+
+	if strings.HasSuffix(line, "-") {
+		a.continued = strings.TrimSuffix(line, "-")
+
+		return "", false
+	}
+
+	return line, true
 }
 
 // Error identifies the 1-based source line a statement-level failure
@@ -384,10 +420,17 @@ func (e *Error) Unwrap() error {
 // parser downstream of it can assume mnemonics/pseudo-ops/labels already
 // arrived in uppercase while quoted string contents kept their original
 // case.
+//
+// A string directive's operands (.ASCIC/.ASCID/.ASCII/.ASCIZ) are
+// scanned by preprocessStrings instead, since MACRO-32 lets any printing
+// character delimit their strings (.ASCII /text/). The reference tool
+// also opened a single-quoted region at an apostrophe inside a
+// double-quoted string ("don't"), so the rest of the line, comment
+// included, was neither uppercased nor stripped.
 func preprocessLine(line string) string {
 	b := []byte(line)
 	inDouble, inSingle := false, false
-	out := b[:0]
+	out := make([]byte, 0, len(b))
 
 	for i := 0; i < len(b); i++ {
 		ch := b[i]
@@ -398,24 +441,162 @@ func preprocessLine(line string) string {
 			continue
 		}
 
-		if ch == '\'' {
+		if ch == '\'' && !inDouble {
 			inSingle = !inSingle
 		} else if ch == '"' && !inSingle {
 			inDouble = !inDouble
 		}
 
-		if !inSingle && !inDouble && ch == ';' {
-			break
-		}
+		if !inSingle && !inDouble {
+			if ch == ';' {
+				break
+			}
 
-		if !inSingle && !inDouble && ch >= 'a' && ch <= 'z' {
-			ch -= 32
+			if n := stringDirectiveAt(b, i); n > 0 {
+				out = append(out, bytes.ToUpper(b[i:i+n])...)
+				out = preprocessStrings(out, b[i+n:])
+
+				break
+			}
+
+			if n := asciiOperatorAt(b, i); n > 0 {
+				out = append(out, '^', 'A')
+				out = append(out, b[i+2:i+n]...)
+				i += n - 1
+
+				continue
+			}
+
+			if ch >= 'a' && ch <= 'z' {
+				ch -= 32
+			}
 		}
 
 		out = append(out, ch)
 	}
 
 	return strings.TrimRight(string(out), " \t\r")
+}
+
+// stringDirectiveAt returns the length of a string directive's name
+// (".ASCIC", ".ASCID", ".ASCII", or ".ASCIZ", in any case, the "." being
+// optional as for every directive here; see assemblePseudo) starting at
+// b[i] as a whole word, or 0 if there isn't one.
+func stringDirectiveAt(b []byte, i int) int {
+	if i > 0 && !isBlank(b[i-1]) && b[i-1] != ':' {
+		return 0
+	}
+
+	n := 0
+	if b[i] == '.' {
+		n = 1
+	}
+
+	if i+n+5 > len(b) || !strings.EqualFold(string(b[i+n:i+n+4]), "ASCI") || !strings.ContainsRune("CDIZcdiz", rune(b[i+n+4])) {
+		return 0
+	}
+
+	n += 5
+
+	if i+n < len(b) && !isBlank(b[i+n]) {
+		return 0
+	}
+
+	return n
+}
+
+// preprocessStrings appends a string directive's operands to out: each
+// delimited string is copied as written, each <expression> is processed
+// as a line of its own, and a ";" between them starts the comment.
+func preprocessStrings(out, b []byte) []byte {
+	for i := 0; i < len(b); i++ {
+		ch := b[i]
+
+		switch {
+		case ch == ';':
+			return out
+
+		case isBlank(ch):
+			out = append(out, ch)
+
+		case ch == '<':
+			// An expression, up to its matching '>', processed like the
+			// rest of a line (a character literal or ^A keeps its case).
+			depth, j := 0, i
+
+			for ; j < len(b); j++ {
+				if b[j] == '<' {
+					depth++
+				} else if b[j] == '>' {
+					depth--
+					if depth == 0 {
+						break
+					}
+				}
+			}
+
+			if j < len(b) {
+				j++
+			}
+
+			out = append(out, preprocessLine(string(b[i:j]))...)
+			i = j - 1
+
+		case isStringDelimiter(ch):
+			out = append(out, ch)
+
+			for i++; i < len(b) && b[i] != ch; i++ {
+				if b[i] == '\\' && i+1 < len(b) {
+					out = append(out, b[i])
+					i++
+				}
+
+				out = append(out, b[i])
+			}
+
+			if i < len(b) {
+				out = append(out, ch)
+			}
+
+		default:
+			out = append(out, bytes.ToUpper(b[i:i+1])...)
+		}
+	}
+
+	return out
+}
+
+// asciiOperatorAt returns the length of a MACRO-32 ^A/text/ operator
+// starting at b[i], through its closing delimiter, or 0 if there isn't
+// one there.
+func asciiOperatorAt(b []byte, i int) int {
+	if i+3 >= len(b) || b[i] != '^' || (b[i+1] != 'A' && b[i+1] != 'a') {
+		return 0
+	}
+
+	q := b[i+2]
+	if isBlank(q) || q == ';' {
+		return 0
+	}
+
+	for j := i + 3; j < len(b); j++ {
+		if b[j] == q {
+			return j - i + 1
+		}
+	}
+
+	return 0
+}
+
+// isStringDelimiter reports whether ch can delimit a string directive's
+// string: MACRO-32 accepts any printing character but blank, '=', ';', or
+// '<' (letters and digits too, though its manual advises against them).
+func isStringDelimiter(ch byte) bool {
+	if ch <= ' ' || ch > '~' {
+		return false
+	}
+
+	return !strings.ContainsRune("<;=", rune(ch))
 }
 
 // assembleStatement assembles one preprocessed line: an optional label,
@@ -454,7 +635,19 @@ func (a *Assembler) assembleStatement(line string) error {
 		return nil
 	}
 
-	return a.assembleOpcode(c)
+	if err := a.assembleOpcode(c); err != nil {
+		return err
+	}
+
+	// The reference tool ignored anything after the last operand it
+	// expected, so "MOVL R0, R1 R2" assembled as "MOVL R0, R1".
+	c.skipBlanks()
+
+	if !c.atEnd() {
+		return vmserrors.New(vmserrors.VAX_EXTRATEXT, c.s[c.pos:])
+	}
+
+	return nil
 }
 
 // parseLabel consumes a leading "NAME:" or "NAME::" label, if present, and

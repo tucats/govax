@@ -129,3 +129,107 @@ func TestDisplacementRange(t *testing.T) {
 	requireCode(t, assembleErr(t, "CLRL B^100(R0)"), vmserrors.VAX_DATARANGE)
 	requireCode(t, assembleErr(t, "FOO: .BLKB 100\nCLRL B^FOO"), vmserrors.VAX_DATARANGE)
 }
+
+// TestForwardExpressions: an expression using symbols not yet defined is
+// completed when they are, wherever it appears.
+func TestForwardExpressions(t *testing.T) {
+	tests := []struct {
+		src  string
+		want []byte
+	}{
+		// B-A: A at 0x204, B at 0x208.
+		{".LONG B-A\nA: .LONG 0\nB: .LONG 0", []byte{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{".LONG A+4\nA: .LONG 0", []byte{0x08, 0x02, 0, 0, 0, 0, 0, 0}},
+		{".LONG 2*A-1\nA: .LONG 0", []byte{0x07, 0x04, 0, 0, 0, 0, 0, 0}},
+		{".LONG <A+B>-B\nA=3\nB=5", []byte{3, 0, 0, 0}},
+		// .WORD A-. : "." is 0x200, A 0x202.
+		{".WORD A-.\nA: .WORD 0", []byte{2, 0, 0, 0}},
+		// Absolute: A at 0x207; A+8 = 0x20F.
+		{"MOVL #1, @#A+8\nA: .LONG 0", []byte{0xD0, 0x01, 0x9F, 0x0F, 0x02, 0, 0, 0, 0, 0, 0}},
+		// Relative: A+8 = 0x20F, measured from 0x206.
+		{"MOVL A+8, R0\nA: .LONG 0", []byte{0xD0, 0xEF, 0x09, 0, 0, 0, 0x50, 0, 0, 0, 0}},
+		// Immediate: the fixup follows the 8F mode byte.
+		{"MOVL #A+1, R0\nA: .LONG 0", []byte{0xD0, 0x8F, 0x08, 0x02, 0, 0, 0x50, 0, 0, 0, 0}},
+		// Displacement: A+4 = 0x20B, from R1.
+		{"MOVL A+4(R1), R0\nA: .LONG 0", []byte{0xD0, 0xE1, 0x0B, 0x02, 0, 0, 0x50, 0, 0, 0, 0}},
+		{"MOVAL 1$+4, R0\n1$: .LONG 0", []byte{0xDE, 0xEF, 0x05, 0, 0, 0, 0x50, 0, 0, 0, 0}},
+	}
+
+	for _, tc := range tests {
+		requireBytes(t, assembleBytes(t, tc.src), tc.want...)
+	}
+
+	requireCode(t, assembleErr(t, ".LONG A/2\nA: .LONG 0"), vmserrors.VAX_FWDOPERATOR)
+	requireCode(t, assembleErr(t, ".LONG A*B\nA: .LONG 0\nB: .LONG 0"), vmserrors.VAX_FWDOPERATOR)
+	requireCode(t, assembleErr(t, ".LONG A&1\nA: .LONG 0"), vmserrors.VAX_FWDOPERATOR)
+}
+
+// TestCaseTable: every .CASE entry is its label's offset from the table,
+// whether the label is defined before or after it.
+func TestCaseTable(t *testing.T) {
+	got := assembleBytes(t, "X: .CASE X, Y\nY: NOP")
+	requireBytes(t, got, 0, 0, 4, 0, 0x01)
+}
+
+// TestMacro32Operators covers MACRO-32's <> grouping and its unary and
+// binary operators.
+func TestMacro32Operators(t *testing.T) {
+	tests := []struct {
+		src  string
+		want uint32
+	}{
+		{"<1+2>*3", 9},
+		{"^D<10+10>", 20},
+		{"^X<10+10>", 0x20},
+		{"^B101", 5},
+		{"^B<101+1>", 6},
+		{"^O17", 15},
+		{"^C0", 0xFFFFFFFF},
+		{"^C<0F>&0FF", 0xF0},
+		{"^A/ab/", 0x6261},
+		{"^A\"A\"", 0x41},
+		{"1@4", 0x10},
+		{"^X100@-4", 0x10},
+		{"-8@-1", 0xFFFFFFFC},
+		{"0C&0A", 8},
+		{"0C!3", 0xF},
+		{"0C\\0A", 6},
+		{"1<2", 1}, // the eVAX comparisons still work outside <>
+		{"<2>>1", 1},
+	}
+
+	for _, tc := range tests {
+		got := assembleBytes(t, ".LONG "+tc.src)
+		v := uint32(got[0]) | uint32(got[1])<<8 | uint32(got[2])<<16 | uint32(got[3])<<24
+
+		if v != tc.want {
+			t.Errorf(".LONG %s = %#x, want %#x", tc.src, v, tc.want)
+		}
+	}
+
+	requireCode(t, assembleErr(t, ".LONG ^B102"), vmserrors.VAX_BADDIGIT)
+	requireCode(t, assembleErr(t, ".LONG ^A/abcde/"), vmserrors.VAX_CHARTOOLONG)
+	requireCode(t, assembleErr(t, ".LONG <1+2"), vmserrors.VAX_NOCLOSE)
+}
+
+func TestExtraText(t *testing.T) {
+	requireCode(t, assembleErr(t, "MOVL R0, R1 R2"), vmserrors.VAX_EXTRATEXT)
+	requireCode(t, assembleErr(t, "NOP X"), vmserrors.VAX_EXTRATEXT)
+}
+
+// TestContinuationLines: a statement ending in "-" continues on the next
+// line, before any comment.
+func TestContinuationLines(t *testing.T) {
+	requireBytes(t, assembleBytes(t, ".LONG 1,-  ; first\n 2"), 1, 0, 0, 0, 2, 0, 0, 0)
+	requireBytes(t, assembleBytes(t, ".ascii /ab/-\n /cd/"), 'a', 'b', 'c', 'd')
+	requireBytes(t, assembleBytes(t, "MOVL R0,-\n-(SP)"), 0xD0, 0x50, 0x7E)
+}
+
+// TestForwardDataRange: a forward reference in .BYTE/.WORD is range
+// checked once its value is known, not before.
+func TestForwardDataRange(t *testing.T) {
+	requireBytes(t, assembleBytes(t, ".BYTE A-300\nA = 301"), 1)
+	requireBytes(t, assembleBytes(t, ".BYTE A\nA = 0FF"), 0xFF)
+	requireCode(t, assembleErr(t, ".BYTE A\nA = 100"), vmserrors.VAX_FWDBYTE)
+	requireCode(t, assembleErr(t, ".WORD A\nA = 10000"), vmserrors.VAX_FWDWORD)
+}

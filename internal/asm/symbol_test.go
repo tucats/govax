@@ -15,8 +15,8 @@ func TestForwardReferenceFixups(t *testing.T) {
 		verify func(t *testing.T, a *Assembler)
 	}{
 		{
-			name: "addr byte truncates the value itself",
-			kind: fixAddrB, loc: 0x300, value: 0x1FF, // truncates to 0xFF
+			name: "addr byte stores the value itself",
+			kind: fixAddrB, loc: 0x300, value: 0xFF,
 			verify: func(t *testing.T, a *Assembler) {
 				if got := a.ByteAt(0x300); got != 0xFF {
 					t.Errorf("byte = %#x, want 0xFF", got)
@@ -89,6 +89,21 @@ func TestForwardReferenceOutOfRange(t *testing.T) {
 
 	if err := a.setSymbol("FWD", 0x1000, SymNone, false); err == nil {
 		t.Fatal("expected an out-of-range byte displacement error")
+	}
+}
+
+// TestForwardAddrByteOutOfRange: a byte value that doesn't fit is an
+// error, as it is when the value is already known (the reference tool
+// truncated it).
+func TestForwardAddrByteOutOfRange(t *testing.T) {
+	a := New(true)
+
+	if _, _, err := a.getSymbol("FWD", true, 0x300, fixAddrB); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := a.setSymbol("FWD", 0x1FF, SymNone, false); err == nil {
+		t.Fatal("expected an out-of-range byte error")
 	}
 }
 

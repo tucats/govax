@@ -8,6 +8,6 @@
 		calls #3, @#decc$printf
 		ret
 
-fmt_str:	asciz "Test %d %08lX\n"
+fmt_str:	asciz "Test %d %08lX"<^X0A>
 		end test
 

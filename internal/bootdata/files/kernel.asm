@@ -262,7 +262,7 @@ exe$halt:       pushal          _haltmsg
 exe$silenthalt: xfc             #xfc$halt_silent    ; no fault halt
                 halt            ; if you push it, it blows
 
-_haltmsg:       .asciz          "\n%%MKHALT-I-HALT, microkernel halted\n"
+_haltmsg:       .asciz          <^X0A>"%%MKHALT-I-HALT, microkernel halted"<^X0A>
 
 ;--------------------------------------------------------------------
 ;   INTERVAL TIMER HANDLER
@@ -325,9 +325,9 @@ _sigloop:       tstl            r2
                 
 _done:          ret
 
-_sigmsg:        .asciz          "%%MKTRAP-E-TRAP, the microkernel has trapped an error\n-MKTRAP-I-MSG, "
-_sigfmt:        .asciz          "  %d   %08X\n"
-_sigmsg2:       .asciz          " \n Signal vector:\n"
+_sigmsg:        .asciz          "%%MKTRAP-E-TRAP, the microkernel has trapped an error"<^X0A>"-MKTRAP-I-MSG, "
+_sigfmt:        .asciz          "  %d   %08X"<^X0A>
+_sigmsg2:       .asciz          " "<^X0A>" Signal vector:"<^X0A>
 
 
 ;--------------------------------------------------------------------
@@ -371,7 +371,7 @@ _done:          pushal          _msgcr
                 ret
 
 _msgfmt:        .asciz          "Unrecognized error %08X"
-_msgcr:         .asciz          "\n"
+_msgcr:         .asciz          <^X0A>
 
 
 
@@ -797,12 +797,12 @@ _noname:       pushal           @#_msg6
                calls            #2, @#decc$printf
                ret
 
-_msg1:         .asciz           "DEBUG not present\n"
-_msg2:         .asciz           "DEBUG set\n"
-_msg3:         .asciz           "DEBUG negated\n"
-_msg4:         .asciz           "CODE value is %d\n"
-_msg5:         .asciz           "Name is %s\n"
-_msg6:         .asciz           "No name given\n"
+_msg1:         .asciz           "DEBUG not present"<^X0A>
+_msg2:         .asciz           "DEBUG set"<^X0A>
+_msg3:         .asciz           "DEBUG negated"<^X0A>
+_msg4:         .asciz           "CODE value is %d"<^X0A>
+_msg5:         .asciz           "Name is %s"<^X0A>
+_msg6:         .asciz           "No name given"<^X0A>
 
 ;--------------------------------------------------------------------
 ;   "FORTH" console command

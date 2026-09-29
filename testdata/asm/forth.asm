@@ -183,7 +183,7 @@ outopen:
 outop1: movl    #outop2,r0  ; Couldn't open--complain
     jsb prstr
     jbr abort
-outop2: .asciz  " Could not open output file\n"
+outop2: .asciz  " Could not open output file"<^X0A>
 
 ;
 ; Open the given file for input; add it to the pushdown stack. Error
@@ -221,7 +221,7 @@ inop3:  movl    (r1)+,(r3)+ ; Move the bytes
 inop1:  movl    #inop2,r0   ; Bad open, complain & abort
     jsb prstr
     jbr abort
-inop2:  .asciz  " Could not open input file.\n"
+inop2:  .asciz  " Could not open input file."<^X0A>
 
 ;
 ; ----Start of FORTH dictionary
@@ -663,7 +663,7 @@ else1:  cmpl    #Mrkif,(r11)+       ; Check for matching 'if'
 else3:  movl    #else4,r0       ; Complain
     jsb prstr
     jbr abort
-else4:  .asciz  " 'else' does not match an 'if'\n"
+else4:  .asciz  " 'else' does not match an 'if'"<^X0A>
 
 ;
 ; endif--finish off the conditional
@@ -678,7 +678,7 @@ endif1: cmpl    (r11)+,#Mrkif       ; Check match
 endif3: movl    #endif4,r0      ; Complain on no match
     jsb prstr
     jbr abort
-endif4: .asciz  " 'endif' does not match 'else'/'if'\n"
+endif4: .asciz  " 'endif' does not match 'else'/'if'"<^X0A>
 
 ;
 ; begin--start of all looping conditionals
@@ -693,7 +693,7 @@ beg1:   movl    r10,-(r11)      ; Save current address
 ;
 ; "while".."repeat" looping construct
 ;
-while4: .asciz  "'while' does not match a 'begin'\n"
+while4: .asciz  "'while' does not match a 'begin'"<^X0A>
 while2: .long   beg2,while1
     .word   0,Priority
     .asciz  "while"
@@ -709,7 +709,7 @@ while3: movl    #while4,r0      ; Bad match, complain
     jsb prstr
     jbr abort
 
-rep4:   .asciz  "'repeat' does not match a 'while'\n"
+rep4:   .asciz  "'repeat' does not match a 'while'"<^X0A>
 rep2:   .long   while2,rep1
     .word   0,Priority
     .asciz  "repeat"
@@ -727,7 +727,7 @@ rep3:   movl    #rep4,r0        ; Complain
 ;
 ; again--unconditional back branch
 ;
-again4: .asciz  "'again' does not match with a 'begin'\n"
+again4: .asciz  "'again' does not match with a 'begin'"<^X0A>
 again2: .long   rep2,again1
     .word   0,Priority
     .asciz  "again"
@@ -743,7 +743,7 @@ again3: movl    #again4,r0      ; Complain
 ;
 ; until--loop until condition becomes true
 ;
-until4: .asciz  "'until' doesn not match a 'begin'\n"
+until4: .asciz  "'until' doesn not match a 'begin'"<^X0A>
 until2: .long   again2,until1
     .word   0,Priority
     .asciz  "until"
@@ -830,7 +830,7 @@ do1:    movl    #XDo1,(r10)+
 ;
     .set    XLoop1,0x1704AED6   ; incl 4(sp); jmp @#<back>
     .set    XLoop2,0x9F
-loop3:  .asciz  "'loop' does not match a 'do'\n"
+loop3:  .asciz  "'loop' does not match a 'do'"<^X0A>
 loop2:  .long   do2,loop1
     .word   0,Priority
     .asciz  "loop"
@@ -851,7 +851,7 @@ loop4:  movl    #loop3,r0   ; Bad match--complain
 ;
     .set    XLoop1,0x4AE8BC0        ; incl 4(sp); jmp @#<back>
     .set    XLoop2,0x9F17
-poop3:  .asciz  "'+loop' does not match a 'do'\n"
+poop3:  .asciz  "'+loop' does not match a 'do'"<^X0A>
 poop2:  .long   loop2,poop1
     .word   0,Priority
     .asciz  "+loop"
@@ -963,7 +963,7 @@ colon3: movb    (r1)+,(r10)
 ;
 ; ";"--end compile mode
 ;
-semi4:  .asciz  "; not matched to ':'\n"
+semi4:  .asciz  "; not matched to ':'"<^X0A>
 semi2:  .long   colon2,semi1
     .word   0,Priority
     .asciz  ";"
@@ -1098,7 +1098,7 @@ emit1:  cvtlb   (r11)+,emit5        ; Put the desired char into the buffer
 ;
 ; cr--print newline
 ;
-cr5:    .asciz  "\n"
+cr5:    .asciz  <^X0A>
 cr3:    .long   3
 cr4:    .space  4
     .long   cr5,1
@@ -1358,7 +1358,7 @@ isdig2: clrb    r3          ; Likewise for Z
     tstb    r3
     rsb
 
-interp6: .asciz " ?Stack empty\n"
+interp6: .asciz " ?Stack empty"<^X0A>
 interp1:
     .long   state2,interp,0
     .asciz  "interp"
@@ -1455,7 +1455,7 @@ ckn3:   movw    #lit_header,(r10)+  ; pushl #...
 ; badwrd--print the offending word, then call abort to restart the
 ;   interpreter.
 ;
-dunno:  .asciz  ": not found\n"
+dunno:  .asciz  ": not found"<^X0A>
 badwrd: movl    #wrd,r0         ; First print the offending word
     jsb prstr
     movl    #dunno,r0       ; then, ": not found"

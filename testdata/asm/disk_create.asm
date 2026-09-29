@@ -139,8 +139,7 @@ atrlst:	.word	^D32, 4
 ; FAT$B_RATT 2 (FAT$M_IMPLIEDCC); the end of file is set before deaccess.
 fat:	.byte	5, 2
 	.blkb	^D30
-text:	.ascii	"Created by $QIO."
-	.byte	^D10			; a line feed
+text:	.ascii	"Created by $QIO."<^D10>	; ending in a line feed
 texte:
 textlen: .word	texte-text
 res1d:	.long	^D20, result1

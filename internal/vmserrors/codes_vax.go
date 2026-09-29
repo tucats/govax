@@ -70,6 +70,13 @@ const (
 
 	// Clean exit from emulation.
 	vaxQuit
+
+	// More internal/asm diagnostics, added after the codes above so
+	// their values stay put.
+	vaxNoClose
+	vaxBadString
+	vaxExtraText
+	vaxBadDigit
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -158,6 +165,11 @@ const (
 
 	// Return code to exit the emulation engine entirely.
 	VAX_QUIT = VAXFacility<<FacilityPosition | vaxQuit<<MessagePosition | StatusSuccess
+
+	VAX_NOCLOSE   = VAXFacility<<FacilityPosition | vaxNoClose<<MessagePosition | StatusError
+	VAX_BADSTRING = VAXFacility<<FacilityPosition | vaxBadString<<MessagePosition | StatusError
+	VAX_EXTRATEXT = VAXFacility<<FacilityPosition | vaxExtraText<<MessagePosition | StatusError
+	VAX_BADDIGIT  = VAXFacility<<FacilityPosition | vaxBadDigit<<MessagePosition | StatusError
 )
 
 func init() {
@@ -212,6 +224,10 @@ func init() {
 	DefineMessage(VAX_CHARTOOLONG, VAXFacility, "CHARTOOLONG", "Character literal too long")
 	DefineMessage(VAX_BADMASK, VAXFacility, "BADMASK", "Invalid register mask")
 	DefineMessage(VAX_BADMASKENTRY, VAXFacility, "BADMASKENTRY", "Invalid register mask entry !Q")
+	DefineMessage(VAX_NOCLOSE, VAXFacility, "NOCLOSE", "Missing closing delimiter !Q")
+	DefineMessage(VAX_BADSTRING, VAXFacility, "BADSTRING", "Invalid string delimiter !Q")
+	DefineMessage(VAX_BADDIGIT, VAXFacility, "BADDIGIT", "Invalid digit for radix !D")
+	DefineMessage(VAX_EXTRATEXT, VAXFacility, "EXTRATEXT", "Unexpected text !Q at end of statement")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")

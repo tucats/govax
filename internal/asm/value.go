@@ -2,6 +2,7 @@ package asm
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -42,19 +43,72 @@ func (a *Assembler) parseFloat(c *cursor) (float64, error) {
 // expression-grammar levels (exprTop/exprMath/exprTerm/exprAtom, matching
 // asm_expr/asm_expr_math/asm_expr2/asm_expr3) without needing package-level
 // globals the way the C source threads it through vax.assembler fields.
-//
-// usedOperator/wasForward together replicate asm_value()'s safety check:
-// the assembler's forward-reference fixups can only patch in "this location
-// equals a symbol's value", not an arbitrary expression, so an expression
-// that both combines an operator *and* touches a forward-referenced symbol
-// can't be resolved correctly later and is rejected up front instead of
-// silently assembling the wrong bytes (see exprValue).
 type exprState struct {
 	allowForward bool
-	loc          uint32
-	fx           fixupKind
-	usedOperator bool
-	wasForward   bool
+
+	// angle counts the enclosing <...> groups. Inside one, '>' closes
+	// the group, so the comparison operators (an eVAX extension MACRO-32
+	// doesn't have) are only recognized outside any.
+	angle int
+}
+
+// exprVal is an expression's value while it is being evaluated: a
+// constant plus, when forward references are allowed, a coefficient for
+// each symbol not yet defined. Addition, subtraction, negation, and
+// multiplication by a constant keep that form, so exprValue can queue one
+// fixup that completes the whole expression later (see fixup). Anything
+// else applied to an undefined symbol (division, comparison, one
+// undefined symbol times another) has no such form and is
+// VAX-E-FWDOPERATOR.
+type exprVal struct {
+	v     uint32
+	terms []pendingTerm
+}
+
+func constVal(v uint32) exprVal { return exprVal{v: v} }
+
+func (x exprVal) forward() bool { return len(x.terms) > 0 }
+
+// scaled returns x multiplied by k.
+func (x exprVal) scaled(k uint32) exprVal {
+	out := exprVal{v: x.v * k}
+	for _, t := range x.terms {
+		out.terms = addTerm(out.terms, t.key, t.coeff*k)
+	}
+
+	return out
+}
+
+// plus returns x + y.
+func (x exprVal) plus(y exprVal) exprVal {
+	out := exprVal{v: x.v + y.v, terms: append([]pendingTerm(nil), x.terms...)}
+	for _, t := range y.terms {
+		out.terms = addTerm(out.terms, t.key, t.coeff)
+	}
+
+	return out
+}
+
+// addTerm adds coeff×key to terms, merging with an existing term for the
+// same symbol and dropping one whose coefficient cancels to zero (so
+// "B-B" is just 0).
+func addTerm(terms []pendingTerm, key string, coeff uint32) []pendingTerm {
+	for i := range terms {
+		if terms[i].key == key {
+			terms[i].coeff += coeff
+			if terms[i].coeff == 0 {
+				terms = append(terms[:i], terms[i+1:]...)
+			}
+
+			return terms
+		}
+	}
+
+	if coeff == 0 {
+		return terms
+	}
+
+	return append(terms, pendingTerm{key: key, coeff: coeff})
 }
 
 // exprNoForward evaluates an expression with forward references disabled,
@@ -62,29 +116,36 @@ type exprState struct {
 // .ALIGN, .SET's value, .SCB/.VECTOR's vector code, .IF, and friends — none
 // of which route through asm_value's fixup machinery).
 func (a *Assembler) exprNoForward(c *cursor) (uint32, error) {
-	st := &exprState{}
+	x, err := a.exprTop(c, &exprState{})
 
-	return a.exprTop(c, st)
+	return x.v, err
 }
 
-// exprValue evaluates an expression allowing one forward-referenced symbol,
-// matching asm_value(): a bare forward reference queues a fixup of kind fx
-// at location loc, but an expression that combines a forward reference with
-// any operator is rejected (see exprState's doc comment) rather than
-// producing a value that can never be corrected later.
+// exprValue evaluates an expression allowing forward references, matching
+// asm_value(). If the expression uses a symbol not yet defined, a fixup of
+// kind fx at location loc is queued for the whole expression (it becomes
+// a.lastFixup), and the value returned is only its constant part, a
+// placeholder. The reference tool could only complete a bare symbol, and
+// rejected "SYM+8" or "B-A" with a forward reference as FWDOPERATOR.
 func (a *Assembler) exprValue(c *cursor, loc uint32, fx fixupKind) (value uint32, wasForward bool, err error) {
-	st := &exprState{allowForward: true, loc: loc, fx: fx}
+	return a.exprValueOf(c, loc, fx, a.exprTop)
+}
 
-	v, err := a.exprTop(c, st)
+// exprValueOf is exprValue for the grammar level parse, so a caller can
+// read a single term (a.exprAtom) rather than a whole expression.
+func (a *Assembler) exprValueOf(c *cursor, loc uint32, fx fixupKind, parse func(*cursor, *exprState) (exprVal, error)) (value uint32, wasForward bool, err error) {
+	x, err := parse(c, &exprState{allowForward: true})
 	if err != nil {
 		return 0, false, err
 	}
 
-	if st.usedOperator && st.wasForward {
-		return 0, false, vmserrors.New(vmserrors.VAX_FWDOPERATOR)
+	if !x.forward() {
+		return x.v, false, nil
 	}
 
-	return v, st.wasForward, nil
+	a.queueFixup(loc, fx, x.v, x.terms)
+
+	return x.v, true, nil
 }
 
 func boolToU32(b bool) uint32 {
@@ -97,10 +158,10 @@ func boolToU32(b bool) uint32 {
 
 // exprTop parses conditional/comparison operators: = <> <= < >= >. Matches
 // asm_expr().
-func (a *Assembler) exprTop(c *cursor, st *exprState) (uint32, error) {
-	v1, err := a.exprMath(c, st)
+func (a *Assembler) exprTop(c *cursor, st *exprState) (exprVal, error) {
+	x1, err := a.exprMath(c, st)
 	if err != nil {
-		return 0, err
+		return exprVal{}, err
 	}
 
 	for {
@@ -110,6 +171,9 @@ func (a *Assembler) exprTop(c *cursor, st *exprState) (uint32, error) {
 		op := 0
 
 		switch {
+		case st.angle > 0:
+			// No comparisons inside <...>; see exprState.
+
 		case c.peek() == '=':
 			op = 1
 
@@ -147,12 +211,16 @@ func (a *Assembler) exprTop(c *cursor, st *exprState) (uint32, error) {
 			break
 		}
 
-		v2, err := a.exprMath(c, st)
+		x2, err := a.exprMath(c, st)
 		if err != nil {
-			return 0, err
+			return exprVal{}, err
 		}
 
-		st.usedOperator = true
+		if x1.forward() || x2.forward() {
+			return exprVal{}, vmserrors.New(vmserrors.VAX_FWDOPERATOR)
+		}
+
+		v1, v2 := x1.v, x2.v
 
 		switch op {
 		case 1:
@@ -173,16 +241,23 @@ func (a *Assembler) exprTop(c *cursor, st *exprState) (uint32, error) {
 		case 6:
 			v1 = boolToU32(int32(v1) > int32(v2))
 		}
+
+		x1 = constVal(v1)
 	}
 
-	return v1, nil
+	return x1, nil
 }
 
-// exprMath parses +/-. Matches asm_expr_math().
-func (a *Assembler) exprMath(c *cursor, st *exprState) (uint32, error) {
-	v1, err := a.exprTerm(c, st)
+// exprMath parses +/-, and MACRO-32's arithmetic shift (@), logical AND
+// (&), inclusive OR (!), and exclusive OR (\\), which the reference tool
+// lacked. MACRO-32 gives every binary operator the same priority; here
+// * and / bind tighter, as in asm_expr_math(), and the MACRO-32 operators
+// sit with + and -. A symbol not yet defined can only be added or
+// subtracted (see exprVal).
+func (a *Assembler) exprMath(c *cursor, st *exprState) (exprVal, error) {
+	x1, err := a.exprTerm(c, st)
 	if err != nil {
-		return 0, err
+		return exprVal{}, err
 	}
 
 	for {
@@ -190,7 +265,7 @@ func (a *Assembler) exprMath(c *cursor, st *exprState) (uint32, error) {
 		c.skipBlanks()
 
 		ch := c.peek()
-		if ch != '+' && ch != '-' {
+		if !strings.ContainsRune("+-@&!\\", rune(ch)) || ch == 0 {
 			c.pos = save
 
 			break
@@ -198,28 +273,64 @@ func (a *Assembler) exprMath(c *cursor, st *exprState) (uint32, error) {
 
 		c.next()
 
-		v2, err := a.exprTerm(c, st)
+		x2, err := a.exprTerm(c, st)
 		if err != nil {
-			return 0, err
+			return exprVal{}, err
 		}
 
-		st.usedOperator = true
+		switch ch {
+		case '+':
+			x1 = x1.plus(x2)
 
-		if ch == '+' {
-			v1 += v2
-		} else {
-			v1 -= v2
+		case '-':
+			x1 = x1.plus(x2.scaled(0xFFFFFFFF))
+
+		default:
+			if x1.forward() || x2.forward() {
+				return exprVal{}, vmserrors.New(vmserrors.VAX_FWDOPERATOR)
+			}
+
+			x1 = constVal(binaryOp(ch, x1.v, x2.v))
 		}
 	}
 
-	return v1, nil
+	return x1, nil
+}
+
+// binaryOp applies one of MACRO-32's shift and logical operators. A shift
+// count is signed: positive shifts left, negative shifts right
+// arithmetically.
+func binaryOp(op byte, v1, v2 uint32) uint32 {
+	switch op {
+	case '@':
+		n := int32(v2)
+
+		switch {
+		case n >= 32:
+			return 0
+		case n >= 0:
+			return v1 << uint(n)
+		case n <= -32:
+			return uint32(int32(v1) >> 31)
+		default:
+			return uint32(int32(v1) >> uint(-n))
+		}
+
+	case '&':
+		return v1 & v2
+
+	case '!':
+		return v1 | v2
+	}
+
+	return v1 ^ v2
 }
 
 // exprTerm parses */. Matches asm_expr2().
-func (a *Assembler) exprTerm(c *cursor, st *exprState) (uint32, error) {
-	v1, err := a.exprAtom(c, st)
+func (a *Assembler) exprTerm(c *cursor, st *exprState) (exprVal, error) {
+	x1, err := a.exprAtom(c, st)
 	if err != nil {
-		return 0, err
+		return exprVal{}, err
 	}
 
 	for {
@@ -235,25 +346,30 @@ func (a *Assembler) exprTerm(c *cursor, st *exprState) (uint32, error) {
 
 		c.next()
 
-		v2, err := a.exprAtom(c, st)
+		x2, err := a.exprAtom(c, st)
 		if err != nil {
-			return 0, err
+			return exprVal{}, err
 		}
 
-		st.usedOperator = true
-		
-		if ch == '*' {
-			v1 *= v2
-		} else {
-			if v2 == 0 {
-				return 0, vmserrors.New(vmserrors.VAX_DIVZERO)
-			}
+		switch {
+		case ch == '*' && !x2.forward():
+			x1 = x1.scaled(x2.v)
 
-			v1 /= v2
+		case ch == '*' && !x1.forward():
+			x1 = x2.scaled(x1.v)
+
+		case x1.forward() || x2.forward():
+			return exprVal{}, vmserrors.New(vmserrors.VAX_FWDOPERATOR)
+
+		case x2.v == 0:
+			return exprVal{}, vmserrors.New(vmserrors.VAX_DIVZERO)
+
+		default:
+			x1 = constVal(x1.v / x2.v)
 		}
 	}
 
-	return v1, nil
+	return x1, nil
 }
 
 // exprAtom parses one expression atom: a parenthesized sub-expression, "."
@@ -265,15 +381,15 @@ func (a *Assembler) exprTerm(c *cursor, st *exprState) (uint32, error) {
 // plain gap rather than an ISA-fidelity concern, and testdata/asm/forth.asm
 // uses "#-1" — so this port adds it rather than leaving those fixtures
 // unassemblable.
-func (a *Assembler) exprAtom(c *cursor, st *exprState) (uint32, error) {
+func (a *Assembler) exprAtom(c *cursor, st *exprState) (exprVal, error) {
 	c.skipBlanks()
 
 	switch c.peek() {
 	case '-':
 		c.next()
-		v, err := a.exprAtom(c, st)
+		x, err := a.exprAtom(c, st)
 
-		return uint32(-int32(v)), err
+		return x.scaled(0xFFFFFFFF), err
 	case '+':
 		c.next()
 
@@ -282,14 +398,14 @@ func (a *Assembler) exprAtom(c *cursor, st *exprState) (uint32, error) {
 		if !isSymbolChar(c.peekAt(1)) {
 			c.next()
 
-			return a.deposit, nil
+			return constVal(a.deposit), nil
 		}
 	case '(':
 		c.next()
 
-		v, err := a.exprTop(c, st)
+		x, err := a.exprTop(c, st)
 		if err != nil {
-			return 0, err
+			return exprVal{}, err
 		}
 
 		c.skipBlanks()
@@ -298,7 +414,10 @@ func (a *Assembler) exprAtom(c *cursor, st *exprState) (uint32, error) {
 			c.next()
 		}
 
-		return v, nil
+		return x, nil
+
+	case '<':
+		return a.angleGroup(c, st)
 	}
 
 	if name, ok := scanLocalLabel(c); ok {
@@ -309,13 +428,35 @@ func (a *Assembler) exprAtom(c *cursor, st *exprState) (uint32, error) {
 		name := scanName(c)
 
 		if v, matched, err := a.callFunction(name, c); matched {
-			return v, err
+			return constVal(v), err
 		}
 
 		return a.lookupSymbolValue(name, st)
 	}
 
 	return a.numericLiteral(c, st)
+}
+
+// angleGroup parses a MACRO-32 "<expression>" group, the cursor at its
+// '<'. The reference tool had only parentheses for grouping.
+func (a *Assembler) angleGroup(c *cursor, st *exprState) (exprVal, error) {
+	c.next()
+
+	st.angle++
+	x, err := a.exprTop(c, st)
+	st.angle--
+
+	if err != nil {
+		return exprVal{}, err
+	}
+
+	c.skipBlanks()
+
+	if c.next() != '>' {
+		return exprVal{}, vmserrors.New(vmserrors.VAX_NOCLOSE, ">")
+	}
+
+	return x, nil
 }
 
 // scanLocalLabel reads a MACRO-32 local label reference ("1$", "20$", ...)
@@ -351,13 +492,26 @@ func scanName(c *cursor) string {
 	return c.s[start:c.pos]
 }
 
-func (a *Assembler) lookupSymbolValue(name string, st *exprState) (uint32, error) {
-	v, wasForward, err := a.getSymbol(name, st.allowForward, st.loc, st.fx)
-	if wasForward {
-		st.wasForward = true
+// lookupSymbolValue reads a symbol in an expression. A symbol not yet
+// defined, where forward references are allowed, becomes a term of the
+// expression's value (see exprVal) instead of an error.
+func (a *Assembler) lookupSymbolValue(name string, st *exprState) (exprVal, error) {
+	resolved, local := a.resolvedName(name)
+
+	sym, found := a.symbols.find(resolved)
+	if found && local {
+		sym.flags |= SymLocal
 	}
 
-	return v, err
+	switch {
+	case found && (len(sym.forward) == 0 || !st.allowForward):
+		return constVal(sym.value), nil
+
+	case !st.allowForward:
+		return exprVal{}, vmserrors.New(vmserrors.VAX_UNDEFSYM, name)
+	}
+
+	return exprVal{terms: []pendingTerm{{key: resolved, coeff: 1}}}, nil
 }
 
 // numericLiteral parses a numeric constant, matching asm_hex()/asm_dec()'s
@@ -366,11 +520,17 @@ func (a *Assembler) lookupSymbolValue(name string, st *exprState) (uint32, error
 // matching the reference console's own default — see initialization.c), or
 // a character literal / symbol reference if the value doesn't start with a
 // digit.
-func (a *Assembler) numericLiteral(c *cursor, st *exprState) (uint32, error) {
+func (a *Assembler) numericLiteral(c *cursor, st *exprState) (exprVal, error) {
 	c.skipBlanks()
 
 	if c.atEnd() {
-		return 0, vmserrors.New(vmserrors.VAX_INCOMPLETENUM)
+		return exprVal{}, vmserrors.New(vmserrors.VAX_INCOMPLETENUM)
+	}
+
+	if c.peek() == '^' {
+		if x, handled, err := a.unaryOperator(c, st); handled {
+			return x, err
+		}
 	}
 
 	if c.peek() == '^' && c.peekAt(1) == 'D' {
@@ -382,21 +542,25 @@ func (a *Assembler) numericLiteral(c *cursor, st *exprState) (uint32, error) {
 	if c.peek() == '^' && c.peekAt(1) == 'M' {
 		c.skip(2)
 
-		return a.maskLiteral(c)
+		return constResult(a.maskLiteral(c))
 	}
 
 	if (c.peek() == '^' && c.peekAt(1) == 'X') || (c.peek() == '0' && c.peekAt(1) == 'X') {
 		c.skip(2)
 
-		return a.hexDigits(c)
+		return constResult(a.hexDigits(c))
 	}
 
 	if c.peek() == '^' && c.peekAt(1) == 'F' {
-		return 0, vmserrors.New(vmserrors.VAX_FLOATHERE)
+		return exprVal{}, vmserrors.New(vmserrors.VAX_FLOATHERE)
 	}
 
 	if a.radix == 10 {
 		return a.decimalLiteral(c, st)
+	}
+
+	if a.radix != 16 && isDigit(c.peek()) {
+		return constResult(radixDigits(c, a.radix))
 	}
 
 	if isUpperAlpha(c.peek()) || c.peek() == '_' || c.peek() == '$' {
@@ -406,21 +570,113 @@ func (a *Assembler) numericLiteral(c *cursor, st *exprState) (uint32, error) {
 	}
 
 	if c.peek() == '\'' {
-		return a.charLiteral(c)
+		return constResult(a.charLiteral(c))
 	}
 
-	return a.hexDigits(c)
+	return constResult(a.hexDigits(c))
+}
+
+// unaryOperator handles the MACRO-32 unary operators the reference tool
+// lacked, the cursor at their '^': ^A/text/ (ASCII), ^B (binary), ^O
+// (octal), ^C (one's complement), and a radix operator (^B, ^O, ^D, ^X)
+// applied to a whole <expression>. It reports false for the rest (^D and
+// ^X on a number, ^M, ^F), which numericLiteral handles itself.
+func (a *Assembler) unaryOperator(c *cursor, st *exprState) (exprVal, bool, error) {
+	op := c.peekAt(1)
+
+	base := map[byte]int{'B': 2, 'O': 8, 'D': 10, 'X': 16}[op]
+
+	switch {
+	case op == 'A':
+		c.skip(2)
+		v, err := a.asciiOperator(c)
+
+		return constVal(v), true, err
+
+	case op == 'C':
+		c.skip(2)
+
+		x, err := a.exprAtom(c, st)
+		if err == nil && x.forward() {
+			err = vmserrors.New(vmserrors.VAX_FWDOPERATOR)
+		}
+
+		return constVal(^x.v), true, err
+
+	case base != 0 && c.peekAt(2) == '<':
+		c.skip(2)
+
+		saved := a.radix
+		a.radix = base
+		x, err := a.angleGroup(c, st)
+		a.radix = saved
+
+		return x, true, err
+
+	case base == 2 || base == 8:
+		c.skip(2)
+		v, err := radixDigits(c, base)
+
+		return constVal(v), true, err
+	}
+
+	return exprVal{}, false, nil
+}
+
+// asciiOperator reads the text of ^A/text/ (the cursor after the "^A"):
+// up to four characters between two of the same delimiter, packed like a
+// character literal, the first character in the low-order byte.
+func (a *Assembler) asciiOperator(c *cursor) (uint32, error) {
+	q := c.next()
+	if q == 0 || isBlank(q) || q == ';' {
+		return 0, vmserrors.New(vmserrors.VAX_BADSTRING, string(q))
+	}
+
+	var value uint32
+
+	for size := 0; c.peek() != q; size++ {
+		if c.atEnd() {
+			return 0, vmserrors.New(vmserrors.VAX_NOCLOSE, string(q))
+		}
+
+		if size > 3 {
+			return 0, vmserrors.New(vmserrors.VAX_CHARTOOLONG)
+		}
+
+		value |= uint32(c.next()) << (8 * uint(size))
+	}
+
+	c.next()
+
+	return value, nil
+}
+
+// radixDigits reads unsigned digits in base 2 or 8.
+func radixDigits(c *cursor, base int) (uint32, error) {
+	value := uint32(0)
+	digits := 0
+
+	for isDigit(c.peek()) && int(c.peek()-'0') < base {
+		value = value*uint32(base) + uint32(c.next()-'0')
+		digits++
+	}
+
+	if digits == 0 || isDigit(c.peek()) {
+		return 0, vmserrors.New(vmserrors.VAX_BADDIGIT, base)
+	}
+
+	return value, nil
 }
 
 // decimalLiteral parses an optionally-signed decimal integer, or falls back
 // to a radix prefix/symbol/character literal — matching asm_dec().
-func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (uint32, error) {
+func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (exprVal, error) {
 	c.skipBlanks()
 
 	if (c.peek() == '^' && c.peekAt(1) == 'X') || (c.peek() == '0' && c.peekAt(1) == 'X') {
 		c.skip(2)
 
-		return a.hexDigits(c)
+		return constResult(a.hexDigits(c))
 	}
 
 	if c.peek() == '^' && c.peekAt(1) == 'D' {
@@ -428,7 +684,7 @@ func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (uint32, error) {
 	}
 
 	if c.peek() == '^' && c.peekAt(1) == 'F' {
-		return 0, vmserrors.New(vmserrors.VAX_FLOATHERE)
+		return exprVal{}, vmserrors.New(vmserrors.VAX_FLOATHERE)
 	}
 
 	if isUpperAlpha(c.peek()) || c.peek() == '_' || c.peek() == '$' {
@@ -438,7 +694,7 @@ func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (uint32, error) {
 	}
 
 	if c.peek() == '\'' {
-		return a.charLiteral(c)
+		return constResult(a.charLiteral(c))
 	}
 
 	sign := int32(1)
@@ -474,12 +730,17 @@ func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (uint32, error) {
 
 		default:
 			if digits == 0 {
-				return 0, vmserrors.New(vmserrors.VAX_BADDECIMAL)
+				return exprVal{}, vmserrors.New(vmserrors.VAX_BADDECIMAL)
 			}
 
-			return uint32(value * sign), nil
+			return constVal(uint32(value * sign)), nil
 		}
 	}
+}
+
+// constResult wraps a constant-only parser's result as an exprVal.
+func constResult(v uint32, err error) (exprVal, error) {
+	return constVal(v), err
 }
 
 // hexDigits parses unsigned hex digits with no sign or prefix handling —
@@ -570,7 +831,7 @@ func (a *Assembler) charLiteral(c *cursor) (uint32, error) {
 // trap) is bit 14 — the two non-register bits an entry mask can carry.
 func (a *Assembler) maskLiteral(c *cursor) (uint32, error) {
 	c.skipBlanks()
-	
+
 	if c.peek() == '^' && c.peekAt(1) == 'M' {
 		c.skip(2)
 		c.skipBlanks()

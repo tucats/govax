@@ -55,10 +55,8 @@
 	jsb	@#check
 
 ; ---- 4-5. the end of file is block 1, byte 10: write it on deaccess ----
-	movab	fat1, r2		; (FAT1+8 would be a forward reference
-					; with an operator: see DEVIATIONS.md)
-	movl	#^X10000, 8(r2)		; FAT$L_EFBLK = 1, high word first
-	movw	#^D10, ^D12(r2)		; FAT$W_FFBYTE = 10
+	movl	#^X10000, @#fat1+8	; FAT$L_EFBLK = 1, high word first
+	movw	#^D10, @#fat1+^D12	; FAT$W_FFBYTE = 10
 	pushl	#0
 	pushal	@#wrfat1		; p5: the attribute list
 	pushl	#0

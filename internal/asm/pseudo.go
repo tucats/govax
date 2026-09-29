@@ -2,6 +2,7 @@ package asm
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -310,13 +311,18 @@ func (a *Assembler) pseudoData(c *cursor, scale int) error {
 
 		loc := a.deposit
 
-		v, _, err := a.exprValue(c, loc, addrFixup(scale))
+		v, wasForward, err := a.exprValue(c, loc, addrFixup(scale))
 		if err != nil {
 			return err
 		}
 
 		// A value may be written signed (.BYTE -1) or as its unsigned bit
-		// pattern (.BYTE 0FF); the reference tool rejected the former.
+		// pattern (.BYTE 0FF); the reference tool rejected the former. A
+		// forward reference's fixup checks its own value.
+		if wasForward {
+			v = 0
+		}
+
 		if scale == 1 && (int32(v) < -128 || int32(v) > 0xFF) {
 			return vmserrors.New(vmserrors.VAX_DATARANGE, ".BYTE", int32(v))
 		}
@@ -574,18 +580,20 @@ const (
 	asciiDescriptor
 )
 
-// pseudoAscii assembles .ASCII/.ASCIZ/.ASCIC/.ASCID: a comma-separated list
-// of quoted (', ", or /-delimited) or bare (blank-terminated) strings, with
-// \n/\r/\t escapes, concatenated into one run of character data framed per
+// pseudoAscii assembles .ASCII/.ASCIZ/.ASCIC/.ASCID: a list of delimited
+// strings and <expression> bytes (see asciiItem), concatenated into one
+// run of character data framed per
 // asciiKind — a trailing NUL (.ASCIZ), a leading one-byte count (.ASCIC), or
 // a leading VMS string descriptor whose address field points at the string
 // data immediately following it (.ASCID). Matches asm_pseudo.c's cases
 // 7-10, except that .ASCIC's count is a byte, as MACRO-32 defines it (and
 // as VMS's counted-string users, such as $FAO's !AC, read it), where
 // eVAX stored a 16-bit word; a string longer than 255 characters is
-// VAX_DATARANGE (docs/PHASE-26.md, docs/DEVIATIONS.md).
+// VAX_DATARANGE (docs/PHASE-26.md, docs/DEVIATIONS.md). The reference
+// tool also took an undelimited word as a string (.ASCII TEXT), which
+// MACRO-32 doesn't; that is now VAX_BADSTRING.
 func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
-	var count uint16
+	count := 0
 
 	countPC := a.deposit
 
@@ -602,7 +610,7 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 			return err
 		}
 
-		if err := a.image.storeWord(countPC+2, 0); err != nil { // dtype/class: string
+		if err := a.image.storeWord(countPC+2, 0x010E); err != nil { // class S, dtype T
 			return err
 		}
 
@@ -623,61 +631,12 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 			break
 		}
 
-		var q byte
-
-		switch c.peek() {
-		case '/', '\'', '"':
-			q = c.peek()
-			c.next()
+		n, err := a.asciiItem(c)
+		if err != nil {
+			return err
 		}
 
-		for !c.atEnd() {
-			if q != 0 && c.peek() == q {
-				break
-			}
-
-			if q == 0 && isBlank(c.peek()) {
-				break
-			}
-
-			ch := c.next()
-			if ch == '\\' {
-				switch c.peek() {
-				case 'n':
-					ch = '\n'
-
-				case 'r':
-					ch = '\r'
-
-				case 't':
-					ch = '\t'
-
-				default:
-					ch = c.peek()
-				}
-
-				c.next()
-			}
-
-			if err := a.image.storeByte(a.deposit, ch); err != nil {
-				return err
-			}
-
-			a.deposit++
-			count++
-		}
-
-		if q != 0 && c.peek() == q {
-			c.next()
-		}
-
-		c.skipBlanks()
-
-		if c.peek() != ',' {
-			break
-		}
-
-		c.next()
+		count += n
 	}
 
 	switch kind {
@@ -698,12 +657,73 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 		}
 
 	case asciiDescriptor:
-		if err := a.image.storeWord(countPC, count); err != nil {
+		if count > 0xFFFF {
+			return vmserrors.New(vmserrors.VAX_DATARANGE, ".ASCID", count)
+		}
+
+		if err := a.image.storeWord(countPC, uint16(count)); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// asciiItem stores one item of a string directive and returns how many
+// bytes it stored. An item is a string between two of the same delimiter
+// character (any that isStringDelimiter accepts), or "<expression>" for a
+// single byte, as in MACRO-32's .ASCII /text/<13><10>. Items may be
+// separated by blanks. As in MACRO-32, a backslash is an ordinary
+// character, and a comma is a delimiter like any other. The reference
+// tool separated strings with commas, had C-style escapes (\n, \r, \t)
+// for control characters, and stopped at anything else without an error,
+// silently dropping the rest of the line.
+func (a *Assembler) asciiItem(c *cursor) (int, error) {
+	if c.peek() == '<' {
+		// Just the one <...> term: "<CR><LF>" is two bytes.
+		v, _, err := a.exprValueOf(c, a.deposit, fixAddrB, a.exprAtom)
+		if err != nil {
+			return 0, err
+		}
+
+		if int32(v) < -128 || int32(v) > 0xFF {
+			return 0, vmserrors.New(vmserrors.VAX_DATARANGE, "String byte", int32(v))
+		}
+
+		if err := a.image.storeByte(a.deposit, byte(v)); err != nil {
+			return 0, err
+		}
+
+		a.deposit++
+
+		return 1, nil
+	}
+
+	q := c.next()
+	if !isStringDelimiter(q) {
+		return 0, vmserrors.New(vmserrors.VAX_BADSTRING, string(q))
+	}
+
+	count := 0
+
+	for c.peek() != q {
+		if c.atEnd() {
+			return 0, vmserrors.New(vmserrors.VAX_NOCLOSE, string(q))
+		}
+
+		ch := c.next()
+
+		if err := a.image.storeByte(a.deposit, ch); err != nil {
+			return 0, err
+		}
+
+		a.deposit++
+		count++
+	}
+
+	c.next() // closing delimiter
+
+	return count, nil
 }
 
 // pseudoEnd assembles .END [entry-expression]: an optional expression names
@@ -955,16 +975,24 @@ func (a *Assembler) pseudoCase(c *cursor) error {
 
 		loc := a.deposit
 
-		v, _, err := a.exprValue(c, loc, fixCaseW)
+		v, wasForward, err := a.exprValue(c, loc, fixCaseW)
 		if err != nil {
 			return err
 		}
 
-		if v > 0xFFFF {
-			return vmserrors.New(vmserrors.VAX_DATARANGE, ".CASE", v)
+		// A forward reference's fixup stores its offset later. The
+		// reference tool stored a label already defined as its address
+		// rather than its offset from the table.
+		d := int32(0)
+		if !wasForward {
+			d = int32(v - a.caseBase)
 		}
 
-		if err := a.image.storeWord(a.deposit, uint16(v)); err != nil {
+		if d < math.MinInt16 || d > math.MaxInt16 {
+			return vmserrors.New(vmserrors.VAX_DATARANGE, ".CASE", d)
+		}
+
+		if err := a.image.storeWord(a.deposit, uint16(int16(d))); err != nil {
 			return err
 		}
 
@@ -1188,7 +1216,7 @@ func (a *Assembler) pseudoShim(c *cursor) error {
 	rtlName := scanName(c)
 
 	c.skipBlanks()
-	
+
 	if c.peek() == ',' {
 		c.next()
 	}

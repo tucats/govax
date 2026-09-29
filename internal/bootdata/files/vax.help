@@ -2289,8 +2289,11 @@ $ASSE
     The assembly continues until the end of the input file is read or a
     .END pseudo opcode is found.  See the help on ASM PSEUDO for more
     information on supported pseudo-opcodes, ASM LABELS for labels,
-    local labels, and direct assignment, and ASM ADDRESSING for how
-    operands are encoded.
+    local labels, and direct assignment, ASM ADDRESSING for how
+    operands are encoded, and ASM EXPRESSIONS for expressions.
+
+    A statement whose last character before any comment is a hyphen
+    ("-") continues on the next line.
     
     Syntax:
 
@@ -2350,6 +2353,34 @@ $ASM ,ADDR
     relative operand is stored as the distance from the end of the
     operand to the address, so code that uses it must run at the
     address it was assembled for, or be moved as a whole.
+
+$ASM ,EXPR
+
+    Expressions follow VAX MACRO, except that the default radix is
+    hexadecimal and * and / are done before the other operators (in
+    VAX MACRO all operators have the same priority).
+
+        <expression>        Grouping; ( ) also works
+        + - * /             Arithmetic
+        A@B                 Shift A left B bits (right if B is negative)
+        A&B  A!B  A\B       Logical AND, inclusive OR, exclusive OR
+        -A  +A              Negation
+        ^C A                One's complement
+        ^D ^X ^O ^B         Decimal, hexadecimal, octal, binary: ^D10,
+                            or ^D<10+20> for a whole expression
+        ^A/text/            ASCII: up to four characters, any delimiter
+        'text'              ASCII, as above
+        ^M<R2,R3>           Register mask
+        .                   The current location
+
+    Outside angle brackets, = <> < <= > >= compare two values and give
+    1 or 0.
+
+    An expression may use a symbol that is defined later in the program
+    (a forward reference) where it adds or subtracts that symbol, or
+    multiplies it by a constant: SYM+8, B-A, 2*SYM, SYM-.  The value is
+    completed when the symbol is defined.  Anything else done to a
+    forward reference is an error.
 
 $ASM ,PSEU
 
@@ -2669,6 +2700,21 @@ $ASM ,PSEU,ASCI
                                    bytes of <string> are written, followed
                                    by an additional byte containing a zero.
 
+    As in VAX MACRO, the string can be delimited by any printing
+    character except blank, "=", ";", or "<", as long as it does not
+    appear in the string, and lowercase letters are kept.  Between or
+    after delimited strings, an expression in angle brackets stores one
+    byte, for characters such as a line feed:
+
+        CR = ^D13
+        LF = ^D10
+        .ASCII    /Line one/<CR><LF>
+        .ASCIZ    "It's done."<LF>
+
+    A backslash is an ordinary character; there are no escapes like \n.
+    The descriptor .ASCID stores has class S and type T (information
+    word 010E).
+
 $ASM ,PSEU,PTE 
 
     The .PTE pseudo operator creates a page table entry longword at the current
@@ -2810,9 +2856,8 @@ $COMM,PARA
     Note that in the case of both <value> and <address> you can construct
     an integer expression to represent the value.  You can use +, -, *, and
     / operators, and parenthesis.  Note that an expression that contains a
-    symbol can only use symbols that are already defined.  For example, you
-    cannot use a forward reference symbol in an expression in an assembler
-    program.
+    symbol can only use symbols that are already defined.  (An assembler
+    program can use forward references; see ASM EXPRESSIONS.)
 
 $FUNCTIONS
 

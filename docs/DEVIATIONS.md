@@ -29,38 +29,26 @@ Entries get resolved (fixed or deliberately kept, with rationale) during Phase 1
 
 ## Phase 11 (assembler) findings
 
-### [Phase 11, found in Phase 26] A forward reference can't take an operator in an instruction operand
+### [Phase 11] MACRO-32 conflicts left for a decision
 
-- **Where**: `internal/asm/value.go`'s `exprValue` (the C source's
-  `asm_value()`).
-- **What**: an instruction operand whose expression combines a symbol
-  not yet defined with an operator, such as `MOVL #1, @#FAT1+8` before
-  `FAT1:`, is `VAX-E-FWDOPERATOR`. A fixup records only the symbol, so it
-  can't be completed with the offset. MACRO-32 has no such restriction:
-  its object records carry the whole expression for the linker. (`.LONG
-  a-b` with forward references was fixed with the other assembler gaps;
-  see "Resolved findings".)
-- **Workaround**: address the data through a register (`MOVAB FAT1, R2`,
-  then `8(R2)`), as `testdata/asm/disk_attributes.asm` does
-  (docs/PHASE-26.md subtask 42), or define the data before the code.
-- **Status**: open. The fix is a fixup carrying an addend (the offset
-  the operators applied to the symbol); left for a future assembler
-  round.
-
-### [Phase 11, found in Phase 26] `.ASCII "text"<10>` silently drops the `<10>`
-
-- **Where**: `internal/asm/pseudo.go`'s `pseudoAscii` (the C source's
-  `.ASCII` handling).
-- **What**: MACRO-32 lets a string directive's text be followed by
-  bytes given as expressions in angle brackets, `.ASCII /text/<13><10>`.
-  eVAX's `.ASCII` has instead C-style escapes (`"text\n"`) and
-  comma-separated strings, and stops reading at anything else after the
-  closing quote, with no error: the `<10>` is simply not assembled, and
-  the next label lands where it would have been.
-- **Workaround**: `\n`, or a separate `.BYTE ^D10` (as
-  `testdata/asm/disk_create.asm` does, docs/PHASE-26.md subtask 43).
-- **Status**: open. At least an error for unread text after the string,
-  or the `<expr>` form itself.
+- **Where**: `internal/asm` (`value.go`, `pseudo.go`'s `pseudoIf`).
+- **What**: the assembler follows MACRO-32 wherever the two differ (at
+  the user's direction), except for these, which would change the
+  meaning of most existing source and so need a decision first:
+  - **Default radix.** MACRO-32's is decimal; this assembler's (like
+    eVAX's, and like the console's) is hexadecimal. Changing it would
+    mean revisiting every bare number in every fixture and in
+    `kernel.asm`.
+  - **Operator priority.** MACRO-32 gives every binary operator the
+    same priority, left to right (`1+2*3` is 9). Here `*` and `/` bind
+    tighter (7). The new `@ & ! \` operators sit with `+`/`-`, so they
+    already go left to right among themselves.
+  - **Conditional assembly.** MACRO-32's `.IF condition, argument` ...
+    `.ENDC` (with `EQ`, `NE`, `DF`, `NDF`, ..., `.IF_FALSE`, `.IIF`)
+    doesn't exist. eVAX's `.IF expression statement`, and its
+    comparison operators (`= <> < <= > >=`, which MACRO-32 doesn't
+    have), are kept; inside `<...>` the comparisons aren't recognized.
+- **Status**: open, pending the user's decision.
 
 ## Phase 22 (RMS / `ods2`) findings
 
@@ -821,6 +809,63 @@ changed as a result.
 _None yet._
 
 ## Resolved findings
+
+### [Phase 11, found in Phase 26, resolved] Forward references in expressions, MACRO-32 strings and operators
+
+- **Where**: `internal/asm` (`value.go`'s `exprVal`/`exprValue`/
+  `unaryOperator`/`angleGroup`, `symbol.go`'s `fixup`/`queueFixup`,
+  `pseudo.go`'s `pseudoAscii`/`asciiItem`/`pseudoCase`, `assembler.go`'s
+  `preprocessLine`/`statement`/`assembleStatement`).
+- **What was wrong**:
+  - An expression combining a symbol not yet defined with any operator
+    (`MOVL #1, @#FAT1+8`, `.LONG B-A`) was `VAX-E-FWDOPERATOR`: a fixup
+    recorded only the symbol. (The previous pass's entry said `.LONG a-b`
+    had been fixed; it hadn't.)
+  - `.ASCII "text"<10>` silently dropped the `<10>`, and anything else
+    after a string. MACRO-32's delimiter rule (any printing character but
+    blank, `=`, `;`, `<`) wasn't followed: `/text/` was uppercased, and
+    `;` inside it started a comment.
+  - `.ASCID` stored `0000` as the descriptor's information word; MACRO-32
+    stores `010E` (class S, type T).
+  - An apostrophe inside a double-quoted string (`"don't"`) opened a
+    single-quoted region, so the rest of the line, comment included, was
+    neither uppercased nor stripped.
+  - Text after an instruction's last operand was ignored:
+    `MOVL R0, R1 R2` assembled as `MOVL R0, R1`.
+  - `.CASE` stored a label defined before the table as its address, not
+    its offset from the table (a forward reference got the offset).
+  - A forward reference in `.BYTE`/`.WORD` (or a byte/word immediate)
+    whose value didn't fit was silently truncated, where the same value
+    already known was `VAX-E-DATARANGE`; now it is `VAX-E-FWDBYTE`/
+    `FWDWORD`.
+  - Missing MACRO-32 syntax: `<...>` grouping, `^A`, `^B`, `^O`, `^C`,
+    radix operators on a bracketed expression (`^D<10+20>`), the binary
+    `@` (shift), `&`, `!`, `\` operators, and continuation lines
+    (a trailing `-`).
+- **Status**: fixed 2026-09-29, following MACRO-32 (at the user's
+  direction; see the open entry above for what's left):
+  - A fixup now holds an expression: a constant plus a coefficient for
+    each undefined symbol, which covers adding, subtracting, and
+    multiplying by a constant (`SYM+8`, `B-A`, `2*SYM`, `SYM-.`). It is
+    applied when the last of its symbols is defined. Division,
+    comparison, and the logical operators on an undefined symbol are
+    still `VAX-E-FWDOPERATOR`.
+  - String directives take MACRO-32 strings: any delimiter, case kept,
+    `<expression>` bytes between them. As in MACRO-32, there are no
+    escapes (a backslash is an ordinary character), and strings aren't
+    separated by commas (a comma is a delimiter); eVAX had both. An
+    undelimited or unterminated string is an error.
+  - Fixtures changed to match: `\n` became `<^X0A>` in `kernel.asm`
+    (both copies), `forth.asm`, `fmt.asm`, and `atoi.asm`;
+    `disk_attributes.asm` now writes `@#fat1+8` directly and
+    `disk_create.asm` uses `"..."<^D10>`, dropping their workarounds.
+  - New codes: `VAX_NOCLOSE`, `VAX_BADSTRING`, `VAX_EXTRATEXT`,
+    `VAX_BADDIGIT`. HELP: new `ASM EXPRESSIONS` topic; string syntax,
+    continuation lines.
+  - Tests: `internal/asm/macro_test.go` (`TestForwardExpressions`,
+    `TestCaseTable`, `TestMacro32Operators`, `TestExtraText`,
+    `TestContinuationLines`), `internal/asm/ascii_test.go`
+    (`TestAsciiMacro32Strings`, `TestAsciiErrors`).
 
 ### [Phase 11, found in Phase 26, resolved] MACRO-32 local labels (`n$`), `.QUAD`, and relative [deferred] mode
 
