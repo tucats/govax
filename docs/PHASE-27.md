@@ -26,7 +26,7 @@ becomes the record of the implementation: each subtask adds a
 [progress log](#progress-log) entry, and the open questions get their answers
 recorded here.
 
-**Status: subtask 1 done; subtask 2 next.**
+**Status: subtasks 1 and 2 done. Subtask 3 (the first real-VAX fixtures) is next and needs the user; subtask 4 can proceed meanwhile.**
 
 ## Why this phase looks different
 
@@ -503,7 +503,7 @@ them under `testdata/mar/vax/`). Each step adds one feature:
 1. **Done.** **Object-language constants.** Teach `internal/vmsdef/gen` the VAX
    object modules in `objfmt.sdl` and generate them. Tests check the
    generated values against Chapter 7's tables.
-2. **`internal/obj`: record model, writer, reader, dumper, and checker**,
+2. **Done.** **`internal/obj`: record model, writer, reader, dumper, and checker**,
    with unit tests on hand-built modules. There's no assembler involvement
    yet.
 3. **First real-VAX fixtures** (needs the user). Fixtures 1 to 3 from the
@@ -686,3 +686,48 @@ above record the answers:
   `SDADEFS` aggregate puts its flag bitfields directly in a union, so SDL
   places every `OBJ$V_PSC_*`/`OBJ$V_SYM_*` at bit 0. Use the `GPS$` and
   `GSY$` flags, which are laid out correctly.
+
+### 2026-09-30 — Subtask 2: `internal/obj`
+
+- New package `internal/obj`, with every code and layout taken from
+  `vmsdef.OBJConstants`:
+  - **Record model** (`module.go`). `Module` keeps every record in order:
+    `MainHeader`, `TextHeader`, `GSD` with its subrecords, `TIR` (also used
+    for DBG and TBT, which carry the same commands), `EOM` (and EOMW), `LNK`,
+    and `Unknown`. That makes `Encode(Decode(records))` reproduce a real
+    object byte for byte. All 19 GSD subrecord types are decoded, since a
+    subrecord has no length field and the reader must know every layout to
+    step past one. The symbol forms share one `Symbol` type driven by a
+    per-type layout table: plain, word-psect, vectored, version-mask, and
+    module-local, each as a symbol, entry point, or procedure.
+  - **TIR commands** (`tir.go`). All 65 commands (codes 0-19, 20-42,
+    50-66, 80-84) plus STORE IMMEDIATE, with each command's operand format
+    and stack effect.
+  - **Host record layout** (`varfile.go`). `ReadRecords`/`WriteRecords`
+    use ODS-2's on-disk variable-length layout: a 2-byte length, the data,
+    and a pad byte to an even offset. The reader honors the 0xFFFF
+    end-of-block marker, so a raw block copy of a VMS file also reads.
+  - **Checker** (`check.go`). Record order, record sizes, MHD fields, name
+    lengths, psect indexes (in symbols, TIR commands, and the transfer
+    address), the linker's stack (no underflow, at most 25 longwords, empty
+    at the end), TIR globals that the GSD doesn't declare, and reserved
+    severities and flags.
+  - **Dumper** (`dump.go`). One line per record, subrecord, and command,
+    in the spirit of ANALYZE/OBJECT.
+  - **Builder** (`builder.go`). Takes psects, symbols, commands
+    (`SetLocation`, `Store`, which merges bytes into STORE IMMEDIATE runs of
+    at most 128, and `Emit`), and a transfer address, and packs them into
+    records under a limit without splitting a subrecord or command.
+- Details confirmed from ANALYZE/OBJECT's source
+  (`analyz/lis/objgsd.lis`): a procedure has one formal argument
+  descriptor per its *maximum* argument count, and an IDC ident is always a
+  counted string (4 bytes when binary).
+- Decisions to confirm against real objects in subtask 3:
+  - the MHD patch-time field is written as 17 zero bytes, taking the
+    manual's "padded with 17 zeros" literally;
+  - the builder's default record limit is `OBJ$C_MAXRECSIZ` (2048);
+  - the checker's rule that every `STA_GBL` name must also be in the GSD.
+- `TestRealObjects` will read every real VAX object placed in
+  `testdata/mar/vax/`. It checks the byte-for-byte round trip and a clean
+  `Check`, and skips while there are none.
+- Test coverage is 87% (the rest is mostly error paths).
