@@ -55,6 +55,7 @@ import (
 // The disk driver's function table.
 var diskFunctions = map[uint32]ioFunc{
 	ioCode("IO$_ACCESS"):    diskAccess,
+	ioCode("IO$_CREATE"):    diskCreate,
 	ioCode("IO$_DEACCESS"):  diskDeaccess,
 	ioCode("IO$_MODIFY"):    diskModify,
 	ioCode("IO$_READVBLK"):  diskReadVirtual,
@@ -75,9 +76,15 @@ var (
 	fibEXCTL    = vmsdef.FIBConstants["FIB$W_EXCTL"]
 	fibEXSZ     = vmsdef.FIBConstants["FIB$L_EXSZ"]
 	fibEXVBN    = vmsdef.FIBConstants["FIB$L_EXVBN"]
+	fibNMCTL    = vmsdef.FIBConstants["FIB$W_NMCTL"]
+	fibVERLIMIT = vmsdef.FIBConstants["FIB$W_VERLIMIT"]
 	fibMWrite   = vmsdef.FIBConstants["FIB$M_WRITE"]
 	fibMExtend  = vmsdef.FIBConstants["FIB$M_EXTEND"]
-	fibMaxBytes = vmsdef.FIBConstants["FIB$C_LENGTH"]
+	// $FIBDEF's listings give no FIB$M_ masks for the name control bits,
+	// only their bit numbers.
+	fibMNewVer    = uint32(1) << vmsdef.FIBConstants["FIB$V_NEWVER"]
+	fibMSupersede = uint32(1) << vmsdef.FIBConstants["FIB$V_SUPERSEDE"]
+	fibMaxBytes   = vmsdef.FIBConstants["FIB$C_LENGTH"]
 )
 
 // acpStatuses maps internal/rms's ACP errors to $SSDEF statuses.
@@ -95,6 +102,7 @@ var acpStatuses = []struct {
 	{rms.ErrACPEndOfFile, vmsdef.SSConstants["SS$_ENDOFFILE"]},
 	{rms.ErrACPBadBlock, vmsdef.SSConstants["SS$_BADPARAM"]},
 	{rms.ErrACPDeviceFull, vmsdef.SSConstants["SS$_DEVICEFULL"]},
+	{rms.ErrACPDuplicate, vmsdef.SSConstants["SS$_DUPFILENAME"]},
 }
 
 // Other statuses the disk driver reports.
@@ -103,6 +111,7 @@ var (
 	ssFilNotAcc = vmsdef.SSConstants["SS$_FILNOTACC"]
 	ssDrvErr    = vmsdef.SSConstants["SS$_DRVERR"]
 	ssDevNotMnt = vmsdef.SSConstants["SS$_DEVNOTMOUNT"]
+	ssCreated   = vmsdef.SSConstants["SS$_CREATED"]
 )
 
 // acpStatus is err's $SSDEF status: one of acpStatuses, or SS$_DRVERR
@@ -126,6 +135,8 @@ type fib struct {
 	fid, did   rms.FileID
 	exctl      uint32
 	exsz       uint32
+	nmctl      uint32
+	verlimit   uint16
 }
 
 // readFIB reads the FIB whose descriptor is at desc. A FIB may be shorter
@@ -168,11 +179,13 @@ func (env *Environment) readFIB(desc uint32) (*fib, bool) {
 
 	return &fib{
 		addr: addr, size: n,
-		acctl: long(fibACCTL),
-		fid:   id(fibFID),
-		did:   id(fibDID),
-		exctl: uint32(word(fibEXCTL)),
-		exsz:  long(fibEXSZ),
+		acctl:    long(fibACCTL),
+		fid:      id(fibFID),
+		did:      id(fibDID),
+		exctl:    uint32(word(fibEXCTL)),
+		exsz:     long(fibEXSZ),
+		nmctl:    uint32(word(fibNMCTL)),
+		verlimit: word(fibVERLIMIT),
 	}, true
 }
 
@@ -203,13 +216,15 @@ func diskDevice(req *ioRequest) string {
 // diskAccess is IO$_ACCESS (see this file's opening comment). With a
 // name (p2) and a directory ID in the FIB, the name is looked up there,
 // the file ID stored in the FIB, and the full name returned through
-// p3/p4. With IO$M_ACCESS the file (by the FIB's file ID, looked up or
-// given) is then opened on the channel, for writing if FIB$L_ACCTL has
-// FIB$M_WRITE. Last, the attributes p5's list asks for are read from the
-// file (accessed or not) into the program's buffers. Creating or deleting
-// (IO$M_CREATE, IO$M_DELETE) isn't supported (SS$_ILLIOFUNC).
+// p3/p4. With IO$M_CREATE, a name the lookup doesn't find is created
+// instead, as IO$_CREATE!IO$M_CREATE would (diskcreate.go), and the
+// status is SS$_CREATED. With IO$M_ACCESS the file (by the FIB's file ID,
+// looked up or given) is then opened on the channel, for writing if
+// FIB$L_ACCTL has FIB$M_WRITE. Last, the attributes p5's list asks for
+// are read from the file (accessed or not) into the program's buffers.
+// Deleting (IO$M_DELETE) isn't an IO$_ACCESS modifier (SS$_ILLIOFUNC).
 func diskAccess(env *Environment, req *ioRequest) (ioStatus, uint32) {
-	if req.modifiers&(ioModCreate|ioModDelete) != 0 {
+	if req.modified(ioModDelete) {
 		return ioStatus{}, ssIllIoFunc
 	}
 
@@ -239,14 +254,26 @@ func diskAccess(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	}
 
 	fid := f.fid
+	status := uint32(ssNormal)
 
-	if req.p[1] != 0 && f.did != (rms.FileID{}) {
-		name, ok, err := strGet(env, req.p[1], maxFAOOutput)
-		if err != nil || !ok {
-			return ioStatus{}, ssAccVio
+	name, ok := env.diskFileName(req)
+	if !ok {
+		return ioStatus{}, ssAccVio
+	}
+
+	if name != "" && f.did != (rms.FileID{}) {
+		found, full, err := env.Mounts.ACPLookup(diskDevice(req), f.did, name)
+
+		if errors.Is(err, rms.ErrACPNoSuchFile) && req.modified(ioModCreate) {
+			// Create it: accessed below, like a file found.
+			created, st := env.createFile(req, f, name, nil, false)
+			if st != ssNormal && st != ssSupersede {
+				return ioStatus{status: st}, 0
+			}
+
+			found, full, err, status = created.FID, created.Name, nil, ssCreated
 		}
 
-		found, full, err := env.Mounts.ACPLookup(diskDevice(req), f.did, name)
 		if err != nil {
 			return ioStatus{status: acpStatus(err)}, 0
 		}
@@ -254,15 +281,8 @@ func diskAccess(env *Environment, req *ioRequest) (ioStatus, uint32) {
 		fid = found
 		env.storeFID(f, fibFID, fid)
 
-		if req.p[3] != 0 {
-			n, _, err := storeDescriptor(env, req.p[3], full)
-			if err != nil {
-				return ioStatus{}, ssAccVio
-			}
-
-			if req.p[2] != 0 {
-				_ = env.mem.StoreWord(env.cpu, req.p[2], n)
-			}
+		if !env.storeResultName(req, full) {
+			return ioStatus{}, ssAccVio
 		}
 	}
 
@@ -298,7 +318,7 @@ func diskAccess(env *Environment, req *ioRequest) (ioStatus, uint32) {
 		env.storeAttributes(attrs, &values)
 	}
 
-	return ioStatus{status: ssNormal}, 0
+	return ioStatus{status: status}, 0
 }
 
 // writeAttributeList decodes p5's attribute list for writing, returning

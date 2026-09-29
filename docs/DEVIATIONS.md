@@ -47,6 +47,21 @@ Entries get resolved (fixed or deliberately kept, with rationale) during Phase 1
   the operators applied to the symbol); left for a future assembler
   round.
 
+### [Phase 11, found in Phase 26] `.ASCII "text"<10>` silently drops the `<10>`
+
+- **Where**: `internal/asm/pseudo.go`'s `pseudoAscii` (the C source's
+  `.ASCII` handling).
+- **What**: MACRO-32 lets a string directive's text be followed by
+  bytes given as expressions in angle brackets, `.ASCII /text/<13><10>`.
+  eVAX's `.ASCII` has instead C-style escapes (`"text\n"`) and
+  comma-separated strings, and stops reading at anything else after the
+  closing quote, with no error: the `<10>` is simply not assembled, and
+  the next label lands where it would have been.
+- **Workaround**: `\n`, or a separate `.BYTE ^D10` (as
+  `testdata/asm/disk_create.asm` does, docs/PHASE-26.md subtask 43).
+- **Status**: open. At least an error for unread text after the string,
+  or the `<expr>` form itself.
+
 ## Phase 22 (RMS / `ods2`) findings
 
 Phase 22 (`PHASE-22.md`) has no `reference/eVAX` counterpart at all — its own

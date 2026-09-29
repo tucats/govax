@@ -261,7 +261,7 @@ func TestDisk_errors(t *testing.T) {
 		{"bad name", fnAccessOp, []uint32{fibd, a.desc("[X]Y.Z")}, ssNormal, vmsdef.SSConstants["SS$_BADFILENAME"]},
 		{"write access to a read-only volume", fnAccessOp, []uint32{fibd, a.desc("DATA.BIN")}, ssNormal, vmsdef.SSConstants["SS$_WRITLCK"]},
 		{"no FIB", fnAccessOp, []uint32{0}, ssAccVio, 0},
-		{"create", fnAccessOp | vmsdef.IOConstants["IO$M_CREATE"], []uint32{fibd}, ssIllIoFunc, 0},
+		{"IO$M_DELETE on IO$_ACCESS", fnAccessOp | vmsdef.IOConstants["IO$M_DELETE"], []uint32{fibd}, ssIllIoFunc, 0},
 	}
 
 	for _, ck := range checks {

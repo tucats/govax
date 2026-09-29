@@ -2348,6 +2348,10 @@ caller's change to its fixed fields and identification area;
 `Directory.Insert` refusing a name and version already there
 (`volume.ErrExists`); and `volume.DeleteHeader`, which frees a file by
 its file ID alone (the directory entry, if any, being the caller's).
+Two ods2 bugs found on the way were fixed there: a deleted file's header
+slot lost its sequence number, so the slot's next file got the deleted
+file's very file ID; and extending a file by more than the volume had
+free took effectively forever to fail.
 
 ## Subtasks
 
@@ -2518,7 +2522,7 @@ Eighth batch, requested by the user on 2026-09-29 (the rest of disk
 42. **Done.** **Attribute lists**: a generated `$ATRDEF`; `IO$_ACCESS` reads the
     attributes in its p5 list, `IO$_MODIFY` and `IO$_DEACCESS` write them
     (so a program can set the end of file); ods2's `UpdateHeader`.
-43. **Creating files**: `IO$_CREATE` with `IO$M_CREATE` and `IO$M_ACCESS`,
+43. **Done.** **Creating files**: `IO$_CREATE` with `IO$M_CREATE` and `IO$M_ACCESS`,
     entering an existing file in a directory, explicit versions and the
     FIB's name control (`FIB$M_NEWVER`, `FIB$M_SUPERSEDE`), initial
     allocation, attributes at creation, and `IO$_ACCESS!IO$M_CREATE`.
@@ -3652,4 +3656,60 @@ fixed.
   short and long sizes; writing on deaccess, partly; `IO$_MODIFY` by FID
   and on the accessed file; `BADATTRIB`, `ACCVIO`, `NOPRIV`,
   `FILNOTACC`).
+- `go test ./...` passes.
+
+### 2026-09-29 — Subtask 43: creating files
+
+- **ods2** (commits `ec0850a`, `b67803a`, `ee742ae`):
+  `Volume.CreateFileVersion` (`CreateFile` with an explicit version,
+  refusing one already there with the new `volume.ErrExists`, checked
+  before anything is allocated), and `Directory.Insert` refusing a
+  duplicate name and version. `resolveVersionLimit` now inherits from the
+  name's highest existing version (the same as before for the next
+  version). Two fixes, found by this subtask's tests:
+  - **A deleted file's header slot kept no sequence number.**
+    `freeFileStorage` zeroed the whole slot, so the next file created
+    there got sequence 1 again, the very file ID of the file deleted: a
+    stale file ID silently opened the new file. The slot now keeps
+    `FH2$W_FID_SEQ` (still free to `FindFreeSlot`: its checksum field and
+    file number are zero), as `CreateHeader`'s own comment intended.
+  - **Extending past the free space hung.** `allocateExtents` tried
+    `FindFree(n)`, `FindFree(n-1)`, ..., a bitmap scan per step. It now
+    checks the free total first (`Bitmap.FreeClusters`) and sizes each
+    extent with `Bitmap.LargestFreeRun`: the same extents, one scan each.
+- **`internal/rms/acpcreate.go`** (new): `ACPCreateRequest`,
+  `ACPCreated`, `MountTable.ACPCreate` (a header, entered in a directory
+  or not; the version rules with `NewVersion`/`Supersede`; the first
+  allocation; the version limit; the owner and attributes; accessed if
+  asked), `ACPEnter` (a new entry for an existing file),
+  `ErrACPDuplicate`, and `flushBitmaps`, which writes the bitmaps back
+  after a create rather than leaving it to DISMOUNT.
+- **`internal/rtl/diskcreate.go`** (new): `diskCreate` (`IO$_CREATE`,
+  now in `diskFunctions`), `createFile`, `enterFile`, `diskFileName`,
+  `storeResultName`. **`diskdriver.go`**: `IO$_ACCESS!IO$M_CREATE`
+  creates a name its lookup doesn't find (`SS$_CREATED`); the FIB's
+  name control word and version limit are read; `SS$_DUPFILENAME`.
+  The new file's owner is the process's UIC unless the attribute list
+  sets one. `IO$M_DELETE` (temporary files) is still `SS$_ILLIOFUNC`,
+  for subtask 44.
+- **Acceptance fixture** `testdata/asm/disk_create.asm`: create
+  `NOTES.TXT` with one block, accessed for writing, as a STREAM_LF file
+  (an attribute list); write a line; set the end of file on
+  `IO$_DEACCESS`; enter the same file as `ALIAS.TXT`.
+  `TestDiskCreate_assembledProgram` checks both result names and the
+  allocation, and copies both names out: each exactly the line written.
+- **Found while writing the fixture:** `.ASCII "text"<10>` silently
+  drops the `<10>` (MACRO-32's angle-bracket bytes; eVAX's `.ASCII` has
+  `\n` escapes instead, and stops reading at anything else). Recorded
+  as an open Phase 11 finding in `docs/DEVIATIONS.md`.
+- Tests: `internal/rms/acpcreate_test.go` (a create with allocation,
+  owner, attributes, and access, written and read back; the next
+  version, explicit versions, duplicates, `NewVersion`, `Supersede` and
+  the superseded file gone, 32767; no directory; the errors; `ACPEnter`
+  and its errors), `internal/rtl/diskcreate_test.go` (the FIB's file ID
+  and allocation, the result name, the attribute list, the owner, the end
+  of file; `DUPFILENAME`, `FIB$M_NEWVER`, `FIB$M_SUPERSEDE`; no
+  directory then entering; `IO$_ACCESS!IO$M_CREATE`; `WRITLCK`,
+  `BADPARAM`, `ILLIOFUNC`, `ACCVIO`, `FILALRACC`). The disk error test's
+  `IO$M_CREATE` case became `IO$M_DELETE`.
 - `go test ./...` passes.
