@@ -150,15 +150,29 @@ type ACPFile struct {
 	// accessed, and maxWritten the highest block WriteVirtual has written
 	// since: Deaccess moves the end of file only if a write went past it.
 	usedAtAccess, maxWritten uint32
+
+	// mount is the volume's record, where this access is counted (see
+	// acpdelete.go), and released reports that Deaccess has ended it.
+	mount    *mountedVolume
+	released bool
 }
 
 // ACPAccess opens the file with ID fid on the volume mounted on device,
 // for reading, or for writing too if write. A read-only mount refuses
 // write access.
+//
+// A file marked for deletion (see acpdelete.go) can't be accessed
+// (ErrACPNoSuchFile).
 func (t *MountTable) ACPAccess(device string, fid FileID, write bool) (*ACPFile, error) {
-	vol, ok := t.Lookup(device)
+	m, ok := t.mounts[normalizeDeviceName(device)]
 	if !ok {
 		return nil, ErrACPNotMounted
+	}
+
+	vol := m.Volume
+
+	if _, doomed := m.doomed[fid]; doomed {
+		return nil, ErrACPNoSuchFile
 	}
 
 	if write && !t.Writable(device) {
@@ -186,7 +200,9 @@ func (t *MountTable) ACPAccess(device string, fid FileID, write bool) (*ACPFile,
 		}
 	}
 
-	return &ACPFile{file: f, fid: fid, writable: write, usedAtAccess: f.UsedBlocks()}, nil
+	m.access(fid)
+
+	return &ACPFile{file: f, fid: fid, writable: write, usedAtAccess: f.UsedBlocks(), mount: m}, nil
 }
 
 // FileID is the accessed file's ID.
@@ -207,12 +223,16 @@ func (a *ACPFile) EndOfFileBlock() uint32 { return a.file.UsedBlocks() }
 // bytes before it are returned with ErrACPEndOfFile, which is also the
 // error for a vbn past the end. The last block is returned whole, as the
 // disk holds it.
+//
+// Blocks this access has written count as data even past the recorded end
+// of file, which only moves when the file is deaccessed (see Deaccess):
+// a program can read back what it just wrote.
 func (a *ACPFile) ReadVirtual(vbn, n uint32) ([]byte, error) {
 	if vbn == 0 {
 		return nil, ErrACPBadBlock
 	}
 
-	eof := a.EndOfFileBlock()
+	eof := max(a.EndOfFileBlock(), a.maxWritten)
 	blocks := (n + ondisk.BlockSize - 1) / ondisk.BlockSize
 
 	var out []byte
@@ -315,7 +335,28 @@ func (a *ACPFile) Deaccess() error {
 // Close always records the end of file as a whole number of blocks, which
 // would round up a file whose last block is partly used, even one only
 // read, or overwritten in place.)
+//
+// If this was the file's last access and it's marked for deletion, it's
+// deleted now (see acpdelete.go). Deaccessing again does nothing.
 func (a *ACPFile) DeaccessWithAttributes(change func(*ACPAttributes)) error {
+	if a.released {
+		return nil
+	}
+
+	err := a.close(change)
+	a.released = true
+
+	if a.mount != nil {
+		if rerr := a.mount.release(a.fid); err == nil {
+			err = rerr
+		}
+	}
+
+	return err
+}
+
+// close is DeaccessWithAttributes's work on the file itself.
+func (a *ACPFile) close(change func(*ACPAttributes)) error {
 	if !a.writable {
 		if change != nil {
 			return ErrACPReadOnly

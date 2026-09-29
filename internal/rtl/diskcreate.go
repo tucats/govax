@@ -38,18 +38,16 @@ import (
 // unless the attribute list sets ATR$C_UIC. With IO$M_ACCESS the new file
 // is then accessed on the channel, as IO$_ACCESS!IO$M_ACCESS would (for
 // writing if FIB$L_ACCTL has FIB$M_WRITE); a file created with no blocks
-// must be extended (IO$_MODIFY) before it can be written.
+// must be extended (IO$_MODIFY) before it can be written. With IO$M_DELETE
+// the new file is temporary: marked for deletion, so it goes (with its
+// directory entry, if it has one) when the channel deaccesses it, or at
+// once if it isn't accessed (diskdelete.go).
 //
 // IO$_ACCESS!IO$M_CREATE uses the same code, through createFile, for a
 // name its lookup doesn't find.
 
-// diskCreate is IO$_CREATE (see above). IO$M_DELETE (a temporary file)
-// isn't supported (SS$_ILLIOFUNC).
+// diskCreate is IO$_CREATE (see above).
 func diskCreate(env *Environment, req *ioRequest) (ioStatus, uint32) {
-	if req.modified(ioModDelete) {
-		return ioStatus{}, ssIllIoFunc
-	}
-
 	if env.Mounts == nil {
 		return ioStatus{status: ssDevNotMnt}, 0
 	}
@@ -77,6 +75,11 @@ func diskCreate(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	}
 
 	if !req.modified(ioModCreate) {
+		if req.modified(ioModDelete) {
+			// Only a new file can be made temporary.
+			return ioStatus{}, ssIllIoFunc
+		}
+
 		return env.enterFile(req, f, name, change, access)
 	}
 
@@ -121,6 +124,7 @@ func (env *Environment) createFile(req *ioRequest, f *fib, name string, change f
 		Attributes:   change,
 		Access:       access,
 		Write:        f.acctl&fibMWrite != 0,
+		Temporary:    req.modified(ioModDelete),
 	})
 	if err != nil {
 		return rms.ACPCreated{}, acpStatus(err)

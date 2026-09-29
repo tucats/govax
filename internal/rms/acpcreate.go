@@ -81,6 +81,11 @@ type ACPCreateRequest struct {
 	// Access asks for the new file to be accessed (IO$M_ACCESS), for
 	// writing too if Write.
 	Access, Write bool
+
+	// Temporary is IO$M_DELETE: the new file is marked for deletion
+	// (acpdelete.go), so it goes, with its directory entry if it has one,
+	// when it's deaccessed; at once if it isn't accessed.
+	Temporary bool
 }
 
 // ACPCreated is ACPCreate's result.
@@ -105,14 +110,16 @@ type ACPCreated struct {
 // ACPCreate creates a file on the volume mounted on device (see this
 // file's opening comment). The volume must be mounted writable.
 func (t *MountTable) ACPCreate(device string, req ACPCreateRequest) (ACPCreated, error) {
-	vol, ok := t.Lookup(device)
+	m, ok := t.mounts[normalizeDeviceName(device)]
 	if !ok {
 		return ACPCreated{}, ErrACPNotMounted
 	}
 
-	if !t.Writable(device) {
+	if !m.Writable {
 		return ACPCreated{}, ErrACPWriteLocked
 	}
+
+	vol := m.Volume
 
 	dev := vol.Devices[0]
 
@@ -153,8 +160,25 @@ func (t *MountTable) ACPCreate(device string, req ACPCreateRequest) (ACPCreated,
 
 	result.Blocks = f.Blocks()
 
-	if req.Access {
-		result.File = &ACPFile{file: f, fid: result.FID, writable: req.Write}
+	var entry *acpEntry
+	if result.Name != "" {
+		base, version, _ := splitACPName(result.Name)
+		entry = &acpEntry{dir: req.Directory, name: base, version: version}
+	}
+
+	switch {
+	case req.Access:
+		m.access(result.FID)
+		result.File = &ACPFile{file: f, fid: result.FID, writable: req.Write, mount: m}
+
+		if req.Temporary {
+			m.markDoomed(result.FID, entry)
+		}
+	case req.Temporary:
+		// Marked for deletion and not accessed: gone already.
+		if err := m.deleteNow(result.FID, entry); err != nil {
+			return ACPCreated{}, err
+		}
 	}
 
 	return result, nil

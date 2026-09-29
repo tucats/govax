@@ -160,6 +160,11 @@ func TestACPWriteVirtual(t *testing.T) {
 		t.Fatalf("writing the new block: %v", err)
 	}
 
+	// Past the recorded end of file, but written: it reads back.
+	if b, err := a.ReadVirtual(first, 4); err != nil || string(b) != "more" {
+		t.Errorf("reading back the new block before deaccess: %q, %v", b, err)
+	}
+
 	if err := a.Deaccess(); err != nil {
 		t.Fatal(err)
 	}

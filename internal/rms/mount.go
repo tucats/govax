@@ -19,6 +19,14 @@ type mountedVolume struct {
 	// Writable's own doc comment) instead of failing confusingly partway
 	// through, deep inside an ods2 call.
 	Writable bool
+
+	// accessed counts, by file ID, the files accessed through the ACP
+	// ($QIO IO$_ACCESS, acp.go) on this volume, and doomed holds the ones
+	// marked for deletion while accessed: deleted when the last access
+	// ends (acpdelete.go). Both start nil, and go with the volume at
+	// DISMOUNT.
+	accessed map[FileID]int
+	doomed   map[FileID]*acpEntry
 }
 
 // MountTable tracks which VAX device names currently have an ODS-2 volume

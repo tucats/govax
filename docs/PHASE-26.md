@@ -2350,8 +2350,9 @@ caller's change to its fixed fields and identification area;
 its file ID alone (the directory entry, if any, being the caller's).
 Two ods2 bugs found on the way were fixed there: a deleted file's header
 slot lost its sequence number, so the slot's next file got the deleted
-file's very file ID; and extending a file by more than the volume had
-free took effectively forever to fail.
+file's very file ID; extending a file by more than the volume had free
+took effectively forever to fail; and a block written through a file
+read back as zeros until the file was closed.
 
 ## Subtasks
 
@@ -2526,7 +2527,7 @@ Eighth batch, requested by the user on 2026-09-29 (the rest of disk
     entering an existing file in a directory, explicit versions and the
     FIB's name control (`FIB$M_NEWVER`, `FIB$M_SUPERSEDE`), initial
     allocation, attributes at creation, and `IO$_ACCESS!IO$M_CREATE`.
-44. **Deleting files**: `IO$_DELETE`, removing directory entries and,
+44. **Done.** **Deleting files**: `IO$_DELETE`, removing directory entries and,
     with `IO$M_DELETE`, the files; marking an accessed file for deletion
     at deaccess, and `IO$_CREATE!IO$M_DELETE` temporary files.
 45. **Logical block I/O**: `IO$_READLBLK`/`WRITELBLK` (LOG_IO) and
@@ -3712,4 +3713,54 @@ fixed.
   directory then entering; `IO$_ACCESS!IO$M_CREATE`; `WRITLCK`,
   `BADPARAM`, `ILLIOFUNC`, `ACCVIO`, `FILALRACC`). The disk error test's
   `IO$M_CREATE` case became `IO$M_DELETE`.
+- `go test ./...` passes.
+
+### 2026-09-29 — Subtask 44: deleting files
+
+- **ods2** (commits `8c5edd3`, `6445056`): `volume.DeleteHeader`, which
+  frees a file by its file ID alone, with `DeleteFile`'s refusals as the
+  new sentinel errors `ErrReservedFile` and `ErrDirectoryNotEmpty`
+  (`DeleteFile` wraps them too; a stale ID wraps `ErrNotFound`). And a
+  fix: `WriteBlock` left the in-memory high-water mark alone until
+  `Close`, so `ReadBlock` on the same file returned zeros for a block
+  just written past it (found by this subtask's fixture, a temporary file
+  written and read back).
+- **`internal/rms/acpdelete.go`** (new): `ACPDeleteRequest`,
+  `ACPDeleted`, `MountTable.ACPDelete` (remove an entry, highest version
+  if none is given; with `DeleteFile`, the file too, by entry or by file
+  ID), `ErrACPDirNotEmpty`, `ErrACPProtected` (the volume's reserved
+  files, up to the home block's count), and the bookkeeping for files
+  still accessed: each mount now counts accesses by file ID
+  (`mountedVolume.accessed`) and holds the files marked for deletion
+  (`doomed`); `ACPFile.Deaccess` deletes a marked file at its last
+  access, and a marked file can't be accessed again. `ACPCreate` gained
+  `Temporary` (`IO$M_DELETE`): the file is marked from the start, and
+  goes with its directory entry at deaccess, or at once if not accessed.
+  A doomed file's entry is removed with it; on VMS a temporary file
+  normally has none (RMS makes none for one), so this only tidies up.
+- **Fixed while there:** a channel couldn't read back blocks it had just
+  written past the recorded end of file (which moves only at deaccess):
+  `ReadVirtual` now counts the blocks this access wrote as data.
+- **`internal/rtl/diskdelete.go`** (new): `diskDelete` (`IO$_DELETE`,
+  now in `diskFunctions`). **`diskcreate.go`**: `IO$_CREATE!IO$M_CREATE
+  !IO$M_DELETE` makes a temporary file (entering an existing file with
+  `IO$M_DELETE` is `SS$_ILLIOFUNC`). **`diskdriver.go`**:
+  `SS$_DIRNOTEMPTY` and `SS$_NOPRIV` from rms.
+- **Acceptance fixture** `testdata/asm/disk_delete.asm`: a temporary
+  `SCRATCH.TMP` written and read back, then gone at `IO$_DEACCESS`;
+  `KEEP.TXT` renamed the ACP's way (look it up, enter its file ID as
+  `RENAMED.TXT`, remove the `KEEP.TXT` entry); `OLD.TXT` deleted.
+  `TestDiskDelete_assembledProgram` checks the read-back, both result
+  names, `RENAMED.TXT`'s contents, and that the other three names are
+  gone.
+- Tests: `internal/rms/acpdelete_test.go` (entry only, then by file ID,
+  twice; by name with the file, and the slot's next file getting a new
+  ID; deleting while accessed on two channels; temporary files, accessed
+  and not; the errors, including a directory with an entry and the
+  entry left in place), `internal/rtl/diskdelete_test.go` (entry then
+  file with the FIB and result name; from a second channel while
+  accessed, gone at `$DASSGN`; a temporary file; `NOSUCHFILE`,
+  `BADPARAM`, `NOPRIV`, `ACCVIO`, `DEVNOTMOUNT`), and a read-back case in
+  `acp_test.go`. The create error test's `IO$M_DELETE` case is now the
+  enter-with-delete one.
 - `go test ./...` passes.

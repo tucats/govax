@@ -211,7 +211,7 @@ func TestDiskCreate_errors(t *testing.T) {
 		{"read-only volume", fnCreateNew, []uint32{fibd, a.desc("X.DAT")}, ssNormal, vmsdef.SSConstants["SS$_WRITLCK"]},
 		{"directory, no name", fnCreateNew, []uint32{fibd}, ssNormal, ssBadParam},
 		{"enter, no file ID", fnCreate, []uint32{fibd, a.desc("X.DAT")}, ssNormal, ssBadParam},
-		{"temporary file", fnCreateNew | vmsdef.IOConstants["IO$M_DELETE"], []uint32{fibd}, ssIllIoFunc, 0},
+		{"entering, temporary", fnCreate | vmsdef.IOConstants["IO$M_DELETE"], []uint32{fibd}, ssIllIoFunc, 0},
 		{"no FIB", fnCreateNew, []uint32{0}, ssAccVio, 0},
 	}
 
