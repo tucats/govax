@@ -27,53 +27,61 @@ import (
 // pre-existing dead pseudo-op in the reference tool, replicated as-is
 // since it's harmless either way.
 var pseudoNames = map[string]bool{
-	"BYTE":        true, // Declare a 8-bit integer constant value
-	"WORD":        true, // Declare a 16-bit integer constant values
-	"LONG":        true, // Declare a 32-bit integer constant values
-	"QUAD":        true, // Declare a 64-bit integer constant values
-	"BASE":        true, // Set the address of the next instruction to be assembled
-	"SET":         true, // Set various assembler or console flags
-	"CLEAR":       true, // Clear vaiorus assembler or console flags
-	"ASCII":       true, // Declare a string of ASCII text
-	"ASCIZ":       true, // Declare a null-terminated string of ASCII text
-	"ASCIC":       true, // Declare a counted ASCII string of text (8-bit length)
-	"ASCID":       true, // Declare an ASCII string using a VAX string descriptor
-	"END":         true, // Terminate assembly
-	"PSL":         true, // Declare a Processor Status Longword
-	"PRINT":       true, // Print an arbitrary message to the console
-	"MASK":        true, // Define a 16-bit entry mast value
-	"F_FLOAT":     true, // Declare a 32-bit F_FLOAT value
-	"D_FLOAT":     true, // Declare a 64-bit D_FLOAT value
-	"BLKB":        true, // Declare a block of bytes (8-bit zeroes) of a given size
-	"BLKW":        true, // Declare a block of words (16-bit zeroes) of a given size
-	"BLKL":        true, // Declare a block of longwords (32-bit zeroes) of a given size
-	"BLKF":        true, // Declare a block of F_FLOATs (32-bit zeroes) of a given size
-	"BLKD":        true, // Declare a block of D_FLOATs (65-bit zeroes) of a given size
-	"ENTRY":       true, // Declare an entry point symbol and register mask
-	"SYM":         true, // Define a symbol table value
-	"CASE":        true, // Define a case label
-	"SCB":         true, // Define a System Control Block (SCB) entry
-	"ALIGN":       true, // Ensure the next storage is aligend on a given boundary (1/2/4/8)
-	"REGION":      true, // Indicate that following code is stored in a specific retion (P0/P1/S0)
-	"VECTOR":      true, // Define an exception vector entry
-	"CONSOLE":     true, // Send a command to the console
-	"INCLUDE":     true, // Include an external file
-	"IF":          true, // Conditionally assemble or execute a directive
-	"SHIM":        true, // Define a runtime library (RTL) shim entry
-	"MICROKERNEL": true, // Declare that the microkernel is active
-	"SPACE":       true,
-	"DATA":        true, // Define an area of store that is writable
-	"TEXT":        true, // Define an area of storage that is read-only
-	"JEQL":        true, // Posix/UNIX VAX instruction set alias for BEQL
-	"JEQLU":       true, // Posix/UNIX VAX instruction set alias for BEQLU
-	"JNEQ":        true, // Posix/UNIX VAX instruction set alias for BNEQ
-	"JNEQU":       true, // Posix/UNIX VAX instruction set alias for BEQLU
-	"P1VECTOR":    true, // Declare a P1Vector page table entry
-	"SCOPE":       true,
-	"VERSION":     true, // Declare the microkernel version string
-	"RMSDEF":      true, // Declare every FAB$/RAB$/RMS$ RMS symbol (docs/PHASE-24.md)
-	"FAB":         true, // Build a FAB (File Access Block) instance (docs/PHASE-24.md)
-	"RAB":         true, // Build a RAB (Record Access Block) instance (docs/PHASE-24.md)
+	"BYTE":          true, // Declare a 8-bit integer constant value
+	"WORD":          true, // Declare a 16-bit integer constant values
+	"LONG":          true, // Declare a 32-bit integer constant values
+	"QUAD":          true, // Declare a 64-bit integer constant values
+	"BASE":          true, // Set the address of the next instruction to be assembled
+	"SET":           true, // Set various assembler or console flags
+	"CLEAR":         true, // Clear vaiorus assembler or console flags
+	"ASCII":         true, // Declare a string of ASCII text
+	"ASCIZ":         true, // Declare a null-terminated string of ASCII text
+	"ASCIC":         true, // Declare a counted ASCII string of text (8-bit length)
+	"ASCID":         true, // Declare an ASCII string using a VAX string descriptor
+	"END":           true, // Terminate assembly
+	"PSL":           true, // Declare a Processor Status Longword
+	"PRINT":         true, // Print an arbitrary message to the console
+	"MASK":          true, // Define a 16-bit entry mast value
+	"F_FLOAT":       true, // Declare a 32-bit F_FLOAT value
+	"D_FLOAT":       true, // Declare a 64-bit D_FLOAT value
+	"BLKB":          true, // Declare a block of bytes (8-bit zeroes) of a given size
+	"BLKW":          true, // Declare a block of words (16-bit zeroes) of a given size
+	"BLKL":          true, // Declare a block of longwords (32-bit zeroes) of a given size
+	"BLKF":          true, // Declare a block of F_FLOATs (32-bit zeroes) of a given size
+	"BLKD":          true, // Declare a block of D_FLOATs (65-bit zeroes) of a given size
+	"ENTRY":         true, // Declare an entry point symbol and register mask
+	"SYM":           true, // Define a symbol table value
+	"CASE":          true, // Define a case label
+	"SCB":           true, // Define a System Control Block (SCB) entry
+	"ALIGN":         true, // Ensure the next storage is aligend on a given boundary (1/2/4/8)
+	"REGION":        true, // Indicate that following code is stored in a specific retion (P0/P1/S0)
+	"VECTOR":        true, // Define an exception vector entry
+	"CONSOLE":       true, // Send a command to the console
+	"INCLUDE":       true, // Include an external file
+	"IF":            true, // Start a conditional assembly block
+	"IF_FALSE":      true, // Subconditional: assemble if the block's test failed
+	"IFF":           true,
+	"IF_TRUE":       true, // Subconditional: assemble if the block's test passed
+	"IFT":           true,
+	"IF_TRUE_FALSE": true, // Subconditional: assemble either way
+	"IFTF":          true,
+	"ENDC":          true, // End a conditional assembly block
+	"IIF":           true, // Assemble one statement if a condition is met
+	"SHIM":          true, // Define a runtime library (RTL) shim entry
+	"MICROKERNEL":   true, // Declare that the microkernel is active
+	"SPACE":         true,
+	"DATA":          true, // Define an area of store that is writable
+	"TEXT":          true, // Define an area of storage that is read-only
+	"JEQL":          true, // Posix/UNIX VAX instruction set alias for BEQL
+	"JEQLU":         true, // Posix/UNIX VAX instruction set alias for BEQLU
+	"JNEQ":          true, // Posix/UNIX VAX instruction set alias for BNEQ
+	"JNEQU":         true, // Posix/UNIX VAX instruction set alias for BEQLU
+	"P1VECTOR":      true, // Declare a P1Vector page table entry
+	"SCOPE":         true,
+	"VERSION":       true, // Declare the microkernel version string
+	"RMSDEF":        true, // Declare every FAB$/RAB$/RMS$ RMS symbol (docs/PHASE-24.md)
+	"FAB":           true, // Build a FAB (File Access Block) instance (docs/PHASE-24.md)
+	"RAB":           true, // Build a RAB (Record Access Block) instance (docs/PHASE-24.md)
 }
 
 // assemblePseudo tries to assemble the statement at c as a pseudo-op,
@@ -209,6 +217,12 @@ func (a *Assembler) dispatchPseudo(name string, c *cursor) error {
 	case "IF":
 		return a.pseudoIf(c)
 
+	case "IF_FALSE", "IFF", "IF_TRUE", "IFT", "IF_TRUE_FALSE", "IFTF", "ENDC":
+		return a.subconditional(name)
+
+	case "IIF":
+		return a.pseudoIif(c)
+
 	case "SHIM":
 		return a.pseudoShim(c)
 
@@ -298,16 +312,16 @@ func readFileArg(c *cursor) string {
 // expressions, each stored at scale bytes and forward-reference-capable
 // (K_ADDR_B/W/L), matching asm_pseudo.c's cases 1-3.
 func (a *Assembler) pseudoData(c *cursor, scale int) error {
+	first := true
+
 	for {
 		c.skipBlanks()
 
-		if c.atEnd() {
-			return nil
+		if err := a.listSeparator(c, first); err != nil || c.atEnd() {
+			return err
 		}
 
-		if c.peek() == ',' {
-			c.next()
-		}
+		first = false
 
 		loc := a.deposit
 
@@ -339,6 +353,26 @@ func (a *Assembler) pseudoData(c *cursor, scale int) error {
 	}
 }
 
+// listSeparator is called before each item of a data directive's list
+// (.BYTE, .QUAD, .FLOAT, .CASE, ...), with blanks already skipped: items
+// after the first must follow a comma, as in MACRO-32. The reference tool
+// made the comma optional, so ".BYTE 0FF" in decimal would silently be
+// two items, 0 and the symbol FF.
+func (a *Assembler) listSeparator(c *cursor, first bool) error {
+	if first || c.atEnd() {
+		return nil
+	}
+
+	if c.peek() != ',' {
+		return vmserrors.New(vmserrors.VAX_EXTRATEXT, c.rest())
+	}
+
+	c.next()
+	c.skipBlanks()
+
+	return nil
+}
+
 // pseudoQuad assembles .QUAD: a comma-separated list of 64-bit values.
 // The expression evaluator works in 32 bits, so an item that is a single
 // numeric literal (an optional sign, then digits in the current radix or
@@ -347,16 +381,16 @@ func (a *Assembler) pseudoData(c *cursor, scale int) error {
 // does. A forward reference patches only the low longword, whose high
 // longword stays zero. The reference tool had no .QUAD at all.
 func (a *Assembler) pseudoQuad(c *cursor) error {
+	first := true
+
 	for {
 		c.skipBlanks()
 
-		if c.atEnd() {
-			return nil
+		if err := a.listSeparator(c, first); err != nil || c.atEnd() {
+			return err
 		}
 
-		if c.peek() == ',' {
-			c.next()
-		}
+		first = false
 
 		v, ok := a.quadLiteral(c)
 		if !ok {
@@ -758,8 +792,9 @@ func (a *Assembler) pseudoEnd(c *cursor) error {
 }
 
 // pseudoPrint assembles .PRINT: a comma-separated list of quoted strings
-// and/or expressions (printed in hex, or decimal under .SET RADIX DECIMAL),
-// matching console_print() — except output is captured (see Prints())
+// and/or expressions (printed in decimal, the assembler's radix; the
+// reference tool printed them in the console's radix, hexadecimal by
+// default), matching console_print() — except output is captured (see Prints())
 // rather than written to stdout, since this package has no notion of "the
 // console" a library caller might not want written to. A silent no-op when
 // SetVerbose(false) has been called, matching CONSOLE_VERBOSE being clear.
@@ -805,11 +840,7 @@ func (a *Assembler) pseudoPrint(c *cursor) error {
 			return err
 		}
 
-		if a.radix == 10 {
-			fmt.Fprintf(&sb, "%d", int32(v))
-		} else {
-			fmt.Fprintf(&sb, "%08X", v)
-		}
+		fmt.Fprintf(&sb, "%d", int32(v))
 	}
 
 	a.prints = append(a.prints, sb.String())
@@ -840,16 +871,16 @@ func (a *Assembler) pseudoMask(c *cursor) error {
 // comment for the one deliberate deviation, an over-advance bug in the
 // D_FLOAT case that isn't replicated).
 func (a *Assembler) pseudoFloat(c *cursor, size int) error {
+	first := true
+
 	for {
 		c.skipBlanks()
 
-		if c.atEnd() {
-			return nil
+		if err := a.listSeparator(c, first); err != nil || c.atEnd() {
+			return err
 		}
 
-		if c.peek() == ',' {
-			c.next()
-		}
+		first = false
 
 		f, err := a.parseFloat(c)
 		if err != nil {
@@ -962,16 +993,16 @@ func (a *Assembler) pseudoCase(c *cursor) error {
 		a.caseBase = a.deposit
 	}
 
+	first := true
+
 	for {
 		c.skipBlanks()
 
-		if c.atEnd() {
-			return nil
+		if err := a.listSeparator(c, first); err != nil || c.atEnd() {
+			return err
 		}
 
-		if c.peek() == ',' {
-			c.next()
-		}
+		first = false
 
 		loc := a.deposit
 
@@ -1339,27 +1370,14 @@ func (a *Assembler) pseudoJcc(c *cursor, invByte byte) error {
 // the rest of the line to the interactive console's own DCL-style command
 // dispatcher (Phase 08's internal/console), which this package can't call
 // into without an inverted, assembler-depends-on-console package
-// dependency. The only console commands any testdata/asm fixture actually
-// issues this way are "SET RADIX DEC/HEX" (forth.asm, which relies on
-// decimal literals for the rest of the file) and "SET VERIFY" (a pure
-// echo-to-listing toggle with no effect on assembled bytes) — so those two
-// forms are recognized directly here, and anything else is accepted as a
-// no-op rather than an error, matching a console command whose only
-// observable effect would be on a live interactive session Phase 11's
-// batch assembler doesn't have.
+// dependency, so the command is accepted as a no-op, like a console
+// command whose only observable effect would be on a live interactive
+// session this batch assembler doesn't have. In the reference tool,
+// ".CONSOLE SET RADIX" also changed the assembler's own radix, which the
+// console shared; here the assembler's radix is always MACRO-32's decimal
+// (see Assembler.radix).
 func (a *Assembler) pseudoConsole(c *cursor) error {
-	if readToken(c) == "SET" {
-		switch readToken(c) {
-		case "RADIX":
-			switch readToken(c) {
-			case "DEC", "DECIMAL":
-				a.radix = 10
-
-			case "HEX", "HEXADECIMAL":
-				a.radix = 16
-			}
-		}
-	}
+	c.pos = len(c.s)
 
 	return nil
 }
@@ -1379,31 +1397,6 @@ func (a *Assembler) pseudoInclude(c *cursor) error {
 	}
 
 	return a.assembleLines(src)
-}
-
-// pseudoIf assembles .IF expression [THEN] statement: if expression is
-// nonzero, the rest of the line is assembled as one statement (recursively,
-// so it can itself be another pseudo-op — kernel.asm uses ".IF
-// DEFINED(...)=0 .INCLUDE ..."); otherwise the rest of the line is simply
-// not assembled. Matches case 32.
-func (a *Assembler) pseudoIf(c *cursor) error {
-	v, err := a.exprNoForward(c)
-	if err != nil {
-		return err
-	}
-
-	c.skipBlanks()
-	save := c.pos
-
-	if readToken(c) != "THEN" {
-		c.pos = save
-	}
-
-	if v == 0 {
-		return nil
-	}
-
-	return a.assembleStatement(c.rest())
 }
 
 // pseudoP1Vector assembles .P1VECTOR, matching asm_pseudo.c's case 40

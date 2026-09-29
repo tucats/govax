@@ -27,7 +27,6 @@
 ;   R8  - Points to last entry in the dictionary chain
 ;
 
-    .console set radix dec
     .console set verify
     .region p0
     .base 200
@@ -1613,6 +1612,5 @@ exe$forth_dict:
 _msg:	.ascid ' ." Forth initialized..." cr'
 
     .console clear sym/temp
-    .console set radix hex
 ;    .region p0
     .end exe$forth

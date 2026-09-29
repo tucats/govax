@@ -15,8 +15,7 @@
 ;   5. back in the main program, $WAITFR completes. $WFLAND and $WFLOR on
 ;      flags that are already set complete at once.
 ;
-; R0 is 1 at the end if every step did what it should, 0 otherwise. The
-; default radix is hex, hence the ^D on decimal values.
+; R0 is 1 at the end if every step did what it should, 0 otherwise.
 
 	.microkernel
 	.p1vector

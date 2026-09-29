@@ -59,10 +59,9 @@ func TestPseudoFAB_keywordsPlaceValues(t *testing.T) {
 	a := New(true)
 	a.SetOrigin(0x1000)
 
-	// FNS uses "^D13" (decimal), not a bare "13" -- this assembler's
-	// default radix is hex (docs/PHASE-11.md), so a plain "13" here would
-	// mean 0x13 (19), matching testdata/asm/rms_roundtrip.asm's own
-	// identical convention for the same field.
+	// FNS uses "^D13", matching testdata/asm/rms_roundtrip.asm's own
+	// convention for the same field (written when the assembler's default
+	// radix was hex).
 	src := ".RMSDEF\n" +
 		"FAB:\t.FAB FAC=FAB$M_PUT, ORG=FAB$C_SEQ, RFM=FAB$C_FIX, MRS=4, FNS=^D13\n"
 

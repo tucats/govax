@@ -180,9 +180,9 @@ func TestRun_interactiveAsmRepl(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 
-	// #42 is hex (this port's -- and the reference tool's -- default
-	// numeric radix; see docs/PHASE-11.md's own progress log on this).
-	if !strings.Contains(buf.String(), "00000042") {
-		t.Errorf("output = %q, want R0 = 00000042 from the auto-CALLed routine", buf.String())
+	// #42 is decimal, the assembler's default radix as in MACRO-32; the
+	// console's EXAMINE shows it in hex.
+	if !strings.Contains(buf.String(), "0000002A") {
+		t.Errorf("output = %q, want R0 = 0000002A from the auto-CALLed routine", buf.String())
 	}
 }

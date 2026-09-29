@@ -74,7 +74,11 @@ type Assembler struct {
 	entrySeen bool
 	entryAddr uint32
 
-	radix       int // 16 (default) or 10; see numericLiteral.
+	// radix is the radix of a number with no radix operator: decimal,
+	// as in MACRO-32, except inside a ^X<...>, ^O<...>, or ^B<...> group
+	// (see unaryOperator). The reference tool's was hexadecimal, and
+	// followed the console's SET RADIX.
+	radix       int
 	microkernel bool
 	scbb        uint32
 	verbose     bool
@@ -107,6 +111,10 @@ type Assembler struct {
 	// continued holds a statement continued onto the next line (see
 	// statement), already preprocessed, without its trailing "-".
 	continued string
+
+	// cond holds the open conditional assembly blocks (see
+	// conditional.go), innermost last.
+	cond []condFrame
 }
 
 // New returns an Assembler ready to assemble source, using the built-in VAX
@@ -121,7 +129,7 @@ func New(verbose bool) *Assembler {
 		p0Deposit: defaultOrigin,
 		s0Deposit: defaultS0Base,
 		s0Origin:  defaultS0Base,
-		radix:     16,
+		radix:     10,
 		verbose:   verbose,
 	}
 	a.seedBuiltinSymbols()
@@ -158,16 +166,6 @@ func (a *Assembler) SetVerbose(v bool) { a.verbose = v }
 
 // SetMemSize sets the value the PMEMSIZE() expression function reports.
 func (a *Assembler) SetMemSize(size uint32) { a.memSize = size }
-
-// SetRadix sets the default numeric-literal radix (16 or 10); panics on any
-// other value, matching this being a programming error, not a runtime one.
-func (a *Assembler) SetRadix(radix int) {
-	if radix != 10 && radix != 16 {
-		panic("asm: radix must be 10 or 16")
-	}
-
-	a.radix = radix
-}
 
 // SetIncludeResolver installs the function .INCLUDE uses to resolve a file
 // name to source text. Without one, .INCLUDE reports an error.
@@ -222,6 +220,7 @@ func (a *Assembler) HasUnresolvedSymbols() bool { return a.hasUnresolvedSymbols(
 func (a *Assembler) BeginInteractive() {
 	a.stop = false
 	a.continued = ""
+	a.cond = nil
 }
 
 // AssembleLine assembles one interactively-typed statement — the console's
@@ -334,9 +333,14 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 	// a.stop (an .END inside an included file) unwinding the includer too.
 	a.stop = false
 	a.continued = ""
+	a.cond = nil
 
 	if err := a.assembleLines(source); err != nil {
 		return nil, err
+	}
+
+	if len(a.cond) > 0 {
+		return nil, vmserrors.New(vmserrors.VAX_NOENDC, len(a.cond))
 	}
 
 	return a.Bytes(), nil
@@ -605,6 +609,10 @@ func isStringDelimiter(ch byte) bool {
 // END-command special cases, which Phase 11's batch Assemble doesn't need:
 // a bare "END" always just ends the current assembleLines call).
 func (a *Assembler) assembleStatement(line string) error {
+	if a.skipping() {
+		return a.skippedStatement(line)
+	}
+
 	c := newCursor(line)
 	c.skipBlanks()
 

@@ -12,7 +12,7 @@
 	ret
 
 src:	.ascii  "This is a string of text to be moved around."
-dst:	.blkb	100
+dst:	.blkb	^X100
 
 	.end	main
 

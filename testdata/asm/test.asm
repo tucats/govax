@@ -1,7 +1,7 @@
 
 	.entry test,^m<>
 
-	movl	#0ff,@#rbuff
+	movl	#^X0ff,@#rbuff
 	pushal	@#rbuff
 	pushal	@#pbuff
 	pushal	@#rbuff
@@ -9,7 +9,7 @@
 	ret
 
 rbuff:	.ascid  ""
-	.blkb	255
+	.blkb	^X255
 
 pbuff:	.ascid	"Prompt> "
 

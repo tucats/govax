@@ -254,7 +254,9 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			}
 
 			if dtype == cpu.ShortLiteralInt {
-				v, err := a.hexDigits(c)
+				// An expression like any other literal; the reference
+				// tool read only hex digits here, whatever the radix.
+				v, err := a.exprNoForward(c)
 				if err != nil {
 					return err
 				}

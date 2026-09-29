@@ -356,3 +356,16 @@ resolved entry. In brief:
 - Left open for the user (DEVIATIONS.md): MACRO-32's decimal default
   radix, its equal-priority operators, and its `.IF`/`.ENDC`
   conditionals.
+
+**2026-09-29 — MACRO-32 radix, operator priority, and conditionals:** the
+user chose to follow MACRO-32 on the three differences the previous pass
+left open, aiming for the assembler to accept real VAX/VMS `.MAR` files.
+Numbers are now decimal by default, binary operators are equal priority
+left to right (no comparisons), and conditional assembly is MACRO-32's
+`.IF`/`.ENDC`/`.IFF`/`.IFT`/`.IFTF`/`.IIF`. The fixtures were converted
+mechanically by the old assembler itself (recording each hex literal it
+read), and the converted fixtures assemble to exactly the same images and
+symbols under the new rules. The disassembler now prints `^X` on hex
+numbers so its output reassembles. Also: `S^#` takes an expression, list
+items need commas, and `0FF` is a bad decimal number. Details in
+DEVIATIONS.md's resolved entry.

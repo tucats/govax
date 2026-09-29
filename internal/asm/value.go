@@ -39,17 +39,11 @@ func (a *Assembler) parseFloat(c *cursor) (float64, error) {
 	return v, nil
 }
 
-// exprState carries the context that flows down through the four
-// expression-grammar levels (exprTop/exprMath/exprTerm/exprAtom, matching
-// asm_expr/asm_expr_math/asm_expr2/asm_expr3) without needing package-level
-// globals the way the C source threads it through vax.assembler fields.
+// exprState carries the context that flows down through the expression
+// grammar (exprTop/exprAtom) without needing package-level globals the
+// way the C source threads it through vax.assembler fields.
 type exprState struct {
 	allowForward bool
-
-	// angle counts the enclosing <...> groups. Inside one, '>' closes
-	// the group, so the comparison operators (an eVAX extension MACRO-32
-	// doesn't have) are only recognized outside any.
-	angle int
 }
 
 // exprVal is an expression's value while it is being evaluated: a
@@ -148,114 +142,17 @@ func (a *Assembler) exprValueOf(c *cursor, loc uint32, fx fixupKind, parse func(
 	return x.v, true, nil
 }
 
-func boolToU32(b bool) uint32 {
-	if b {
-		return 1
-	}
-
-	return 0
-}
-
-// exprTop parses conditional/comparison operators: = <> <= < >= >. Matches
-// asm_expr().
+// exprTop parses an expression: terms joined by binary operators, which
+// in MACRO-32 all have the same priority and apply left to right, so
+// 1+2*3 is 9 (<...> groups). The operators are + - * / and MACRO-32's
+// arithmetic shift (@), logical AND (&), inclusive OR (!), and exclusive
+// OR (\\). The reference tool (asm_expr/asm_expr_math/asm_expr2) gave *
+// and / priority over + and -, had comparison operators (= <> < <= > >=)
+// MACRO-32 doesn't, and lacked the other four. A symbol not yet defined
+// can only be added, subtracted, or multiplied by a constant (see
+// exprVal).
 func (a *Assembler) exprTop(c *cursor, st *exprState) (exprVal, error) {
-	x1, err := a.exprMath(c, st)
-	if err != nil {
-		return exprVal{}, err
-	}
-
-	for {
-		save := c.pos
-		c.skipBlanks()
-
-		op := 0
-
-		switch {
-		case st.angle > 0:
-			// No comparisons inside <...>; see exprState.
-
-		case c.peek() == '=':
-			op = 1
-
-			c.next()
-
-		case c.peek() == '<' && c.peekAt(1) == '>':
-			op = 2
-
-			c.skip(2)
-
-		case c.peek() == '<' && c.peekAt(1) == '=':
-			op = 3
-
-			c.skip(2)
-
-		case c.peek() == '<':
-			op = 4
-
-			c.next()
-
-		case c.peek() == '>' && c.peekAt(1) == '=':
-			op = 5
-
-			c.skip(2)
-
-		case c.peek() == '>':
-			op = 6
-
-			c.next()
-		}
-
-		if op == 0 {
-			c.pos = save
-
-			break
-		}
-
-		x2, err := a.exprMath(c, st)
-		if err != nil {
-			return exprVal{}, err
-		}
-
-		if x1.forward() || x2.forward() {
-			return exprVal{}, vmserrors.New(vmserrors.VAX_FWDOPERATOR)
-		}
-
-		v1, v2 := x1.v, x2.v
-
-		switch op {
-		case 1:
-			v1 = boolToU32(v1 == v2)
-
-		case 2:
-			v1 = boolToU32(v1 != v2)
-
-		case 3:
-			v1 = boolToU32(int32(v1) <= int32(v2))
-
-		case 4:
-			v1 = boolToU32(int32(v1) < int32(v2))
-
-		case 5:
-			v1 = boolToU32(int32(v1) >= int32(v2))
-
-		case 6:
-			v1 = boolToU32(int32(v1) > int32(v2))
-		}
-
-		x1 = constVal(v1)
-	}
-
-	return x1, nil
-}
-
-// exprMath parses +/-, and MACRO-32's arithmetic shift (@), logical AND
-// (&), inclusive OR (!), and exclusive OR (\\), which the reference tool
-// lacked. MACRO-32 gives every binary operator the same priority; here
-// * and / bind tighter, as in asm_expr_math(), and the MACRO-32 operators
-// sit with + and -. A symbol not yet defined can only be added or
-// subtracted (see exprVal).
-func (a *Assembler) exprMath(c *cursor, st *exprState) (exprVal, error) {
-	x1, err := a.exprTerm(c, st)
+	x1, err := a.exprAtom(c, st)
 	if err != nil {
 		return exprVal{}, err
 	}
@@ -265,7 +162,7 @@ func (a *Assembler) exprMath(c *cursor, st *exprState) (exprVal, error) {
 		c.skipBlanks()
 
 		ch := c.peek()
-		if !strings.ContainsRune("+-@&!\\", rune(ch)) || ch == 0 {
+		if ch == 0 || !strings.ContainsRune("+-*/@&!\\", rune(ch)) {
 			c.pos = save
 
 			break
@@ -273,23 +170,31 @@ func (a *Assembler) exprMath(c *cursor, st *exprState) (exprVal, error) {
 
 		c.next()
 
-		x2, err := a.exprTerm(c, st)
+		x2, err := a.exprAtom(c, st)
 		if err != nil {
 			return exprVal{}, err
 		}
 
-		switch ch {
-		case '+':
+		switch {
+		case ch == '+':
 			x1 = x1.plus(x2)
 
-		case '-':
+		case ch == '-':
 			x1 = x1.plus(x2.scaled(0xFFFFFFFF))
 
-		default:
-			if x1.forward() || x2.forward() {
-				return exprVal{}, vmserrors.New(vmserrors.VAX_FWDOPERATOR)
-			}
+		case ch == '*' && !x2.forward():
+			x1 = x1.scaled(x2.v)
 
+		case ch == '*' && !x1.forward():
+			x1 = x2.scaled(x1.v)
+
+		case x1.forward() || x2.forward():
+			return exprVal{}, vmserrors.New(vmserrors.VAX_FWDOPERATOR)
+
+		case ch == '/' && x2.v == 0:
+			return exprVal{}, vmserrors.New(vmserrors.VAX_DIVZERO)
+
+		default:
 			x1 = constVal(binaryOp(ch, x1.v, x2.v))
 		}
 	}
@@ -297,11 +202,14 @@ func (a *Assembler) exprMath(c *cursor, st *exprState) (exprVal, error) {
 	return x1, nil
 }
 
-// binaryOp applies one of MACRO-32's shift and logical operators. A shift
-// count is signed: positive shifts left, negative shifts right
-// arithmetically.
+// binaryOp applies a binary operator to two known values. Division is
+// unsigned, as the reference tool's was. A shift count is signed:
+// positive shifts left, negative shifts right arithmetically.
 func binaryOp(op byte, v1, v2 uint32) uint32 {
 	switch op {
+	case '/':
+		return v1 / v2
+
 	case '@':
 		n := int32(v2)
 
@@ -324,52 +232,6 @@ func binaryOp(op byte, v1, v2 uint32) uint32 {
 	}
 
 	return v1 ^ v2
-}
-
-// exprTerm parses */. Matches asm_expr2().
-func (a *Assembler) exprTerm(c *cursor, st *exprState) (exprVal, error) {
-	x1, err := a.exprAtom(c, st)
-	if err != nil {
-		return exprVal{}, err
-	}
-
-	for {
-		save := c.pos
-		c.skipBlanks()
-
-		ch := c.peek()
-		if ch != '*' && ch != '/' {
-			c.pos = save
-
-			break
-		}
-
-		c.next()
-
-		x2, err := a.exprAtom(c, st)
-		if err != nil {
-			return exprVal{}, err
-		}
-
-		switch {
-		case ch == '*' && !x2.forward():
-			x1 = x1.scaled(x2.v)
-
-		case ch == '*' && !x1.forward():
-			x1 = x2.scaled(x1.v)
-
-		case x1.forward() || x2.forward():
-			return exprVal{}, vmserrors.New(vmserrors.VAX_FWDOPERATOR)
-
-		case x2.v == 0:
-			return exprVal{}, vmserrors.New(vmserrors.VAX_DIVZERO)
-
-		default:
-			x1 = constVal(x1.v / x2.v)
-		}
-	}
-
-	return x1, nil
 }
 
 // exprAtom parses one expression atom: a parenthesized sub-expression, "."
@@ -442,10 +304,7 @@ func (a *Assembler) exprAtom(c *cursor, st *exprState) (exprVal, error) {
 func (a *Assembler) angleGroup(c *cursor, st *exprState) (exprVal, error) {
 	c.next()
 
-	st.angle++
 	x, err := a.exprTop(c, st)
-	st.angle--
-
 	if err != nil {
 		return exprVal{}, err
 	}
@@ -516,10 +375,9 @@ func (a *Assembler) lookupSymbolValue(name string, st *exprState) (exprVal, erro
 
 // numericLiteral parses a numeric constant, matching asm_hex()/asm_dec()'s
 // combined behavior: a radix prefix (^D decimal, ^X/0X hex, ^M register
-// mask), else digits in the assembler's current radix (hex by default,
-// matching the reference console's own default — see initialization.c), or
-// a character literal / symbol reference if the value doesn't start with a
-// digit.
+// mask), else digits in the current radix (decimal, as in MACRO-32; see
+// Assembler.radix), or a character literal / symbol reference if the
+// value doesn't start with a digit.
 func (a *Assembler) numericLiteral(c *cursor, st *exprState) (exprVal, error) {
 	c.skipBlanks()
 
@@ -661,7 +519,7 @@ func radixDigits(c *cursor, base int) (uint32, error) {
 		digits++
 	}
 
-	if digits == 0 || isDigit(c.peek()) {
+	if digits == 0 || isDigit(c.peek()) || isUpperAlpha(c.peek()) || c.peek() == '_' {
 		return 0, vmserrors.New(vmserrors.VAX_BADDIGIT, base)
 	}
 
@@ -721,7 +579,7 @@ func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (exprVal, error) {
 			// Matches asm_dec()'s own double-duty use of its sign flag:
 			// reading a digit also closes off the leading-sign position,
 			// so a '+'/'-' seen after this is a binary operator for the
-			// caller (exprMath) to handle, not part of this number.
+			// caller (exprTop) to handle, not part of this number.
 			haveSign = true
 			value = value*10 + int32(ch-'0')
 			digits++
@@ -731,6 +589,11 @@ func (a *Assembler) decimalLiteral(c *cursor, st *exprState) (exprVal, error) {
 		default:
 			if digits == 0 {
 				return exprVal{}, vmserrors.New(vmserrors.VAX_BADDECIMAL)
+			}
+
+			// "0FF" is a bad decimal number, not 0 followed by FF.
+			if isUpperAlpha(ch) || ch == '_' {
+				return exprVal{}, vmserrors.New(vmserrors.VAX_BADDIGIT, 10)
 			}
 
 			return constVal(uint32(value * sign)), nil
@@ -763,6 +626,10 @@ func (a *Assembler) hexDigits(c *cursor) (uint32, error) {
 		default:
 			if digits == 0 {
 				return 0, vmserrors.New(vmserrors.VAX_BADHEX)
+			}
+
+			if isUpperAlpha(ch) || ch == '_' {
+				return 0, vmserrors.New(vmserrors.VAX_BADDIGIT, 16)
 			}
 
 			return value, nil

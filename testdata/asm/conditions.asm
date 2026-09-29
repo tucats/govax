@@ -16,8 +16,7 @@
 ;      range: an arithmetic exception, signaled as SS$_SUBRNG. MAINH
 ;      continues it at RESUME2, and SUB2 returns 3.
 ;
-; The Go test checks every value recorded below. (The assembler's default
-; radix is hexadecimal, so decimal offsets are written ^X.)
+; The Go test checks every value recorded below.
 
 	.microkernel
 	.p1vector
@@ -39,7 +38,7 @@
 	.entry	sub1, ^m<>
 	movab	subh, (fp)
 	movl	@#0, r1			; access violation
-	movl	#99, r0			; skipped: MAINH resumes at RESUME1
+	movl	#^X99, r0			; skipped: MAINH resumes at RESUME1
 	ret
 resume1:
 	movl	r0, @#r0seen		; the mechanism array's R0
@@ -48,7 +47,7 @@ resume1:
 
 	.entry	sub2, ^m<>
 	index	#^X0A, #0, #5, #1, #0, r0	; subscript 10 isn't in 0..5
-	movl	#99, r0			; skipped
+	movl	#^X99, r0			; skipped
 	ret
 resume2:
 	movl	#3, r0

@@ -103,7 +103,7 @@
 ;
 ;       We must have the system return codes defined for us
 
-                .if defined( "SS$_NORMAL") = 0  .include       "ssdef.asm"
+                .iif not_defined SS$_NORMAL, .include "ssdef.asm"
                 
 ;       Note that this can only be built if we are in kernel mode.  The
 ;       system initializes in kernel mode at IPL 31 to prevent interrupts,
@@ -173,7 +173,7 @@ exe$chmk:       movl            r0, @#exe$chmk_r0
 exe$accvio:     pushl           #SS$_ACCVIO
                 pushl           #5
                 callg           sp, @#exe$signal
-                moval           b^10(sp), sp
+                moval           b^^X10(sp), sp
                 moval           @#exe$halt, (sp)
                 rei
 
@@ -189,7 +189,7 @@ exe$accvio:     pushl           #SS$_ACCVIO
 exe$resop:      pushl           #SS$_ROPRAND
                 pushl           #3
                 callg           sp, @#exe$signal
-                moval           b^0C(sp), sp
+                moval           b^^X0C(sp), sp
                 moval           @#exe$halt, (sp)
                 rei
 
@@ -205,7 +205,7 @@ exe$resop:      pushl           #SS$_ROPRAND
 exe$priv:       pushl           #SS$_NOPRIV
                 pushl           #3
                 callg           sp, @#exe$signal
-                moval           b^0C(sp), sp
+                moval           b^^X0C(sp), sp
                 moval           @#exe$halt, (sp)
                 rei
 
@@ -248,7 +248,7 @@ _done:          rei
 exe$resaddr:    pushl           #SS$_RADRMOD
                 pushl           #3
                 callg           sp, @#exe$signal
-                moval           b^0C(sp), sp
+                moval           b^^X0C(sp), sp
                 moval           @#exe$halt, (sp)
                 rei
 
@@ -278,7 +278,7 @@ exe$interval:   incl            @#exe$int_count
                 incl		r0
                 mtpr		r0, #VAX$PR_TODR
                 
-_noinc:         mtpr            #0FF, #VAX$PR_ICCS
+_noinc:         mtpr            #^X0FF, #VAX$PR_ICCS
                 movl            (sp)+,r0          ; restore R0
                 rei
 
@@ -475,19 +475,19 @@ _wait:          tstl            @#exe$tx_ready
                 .set            EXE$GET_FILE 3
                 .entry          exe$$get_file, ^m<r2>
 
-                moval           b^0f0(sp),sp        ; Make automatic storage
+                moval           b^^X0f0(sp),sp        ; Make automatic storage
                 
-                movl            b^08(ap),b^0FC(fp)  ; addr part of descriptor   
-                movl            b^0c(ap),b^0F8(fp)  ; len  part of descriptor
-                clrl            B^0f4(fp)           ; space to write length
+                movl            b^08(ap),b^^X0FC(fp)  ; addr part of descriptor   
+                movl            b^^X0c(ap),b^^X0F8(fp)  ; len  part of descriptor
+                clrl            B^^X0f4(fp)           ; space to write length
 
-                pushal          b^0f4(fp)           ; addr of length 
+                pushal          b^^X0f4(fp)           ; addr of length 
                 pushl           #0                  ; no prompt
-                pushal          b^0f8(fp)           ; addr of descriptor
+                pushal          b^^X0f8(fp)           ; addr of descriptor
                 
                 calls           #3, @#LIB$GET_INPUT
                 
-                movl            b^0f4(fp), r0       ; Get length
+                movl            b^^X0f4(fp), r0       ; Get length
                 movl            b^08(ap), r2        ; Get buffer addr
                 clrb            (r2)[r0]            ; Null terminate it
                 
@@ -508,7 +508,7 @@ _wait:          tstl            @#exe$tx_ready
                 .entry          exe$$put_file
             
                 pushl           b^08(ap)        ; addr part of descriptor   
-                pushl           b^0c(AP)        ; len  part of descriptor
+                pushl           b^^X0c(AP)        ; len  part of descriptor
             
                 pushl           sp              ; Make addr of descriptor on stack
                 calls           #1, @#lib$put_one
@@ -575,7 +575,7 @@ exe$table_len:  .long         ( . - exe$table ) / 4
 
                 .entry          exe$rx_get
                 
-                cmpl            #100,@#exe$rxlen
+                cmpl            #^X100,@#exe$rxlen
                 beql            _done
     
                 incl            @#exe$rxlen
@@ -606,12 +606,12 @@ exe$initialize: tstl            @#exe$init_done ; If we've already done
 ;       the EXE$TX interrupt handler to be hit again, which resets 
 ;       our internal ready flag at exe$tx_ready.
 
-                mtpr            #40,#VAX$PR_TXCS
+                mtpr            #^X40,#VAX$PR_TXCS
 
 ;       Similarly, let's indicate that we accept interrupts for the
 ;       console input.
 
-                mtpr            #40,#VAX$PR_RXCS
+                mtpr            #^X40,#VAX$PR_RXCS
                 
 
 ;       We want an interval timer interrupt every 10 10ms intervals
@@ -627,7 +627,7 @@ exe$initialize: tstl            @#exe$init_done ; If we've already done
 ;       Now that NICR is set up, turn on interrupts, and reload the
 ;       ICR from the NICR.
 
-                mtpr            #0ff,#VAX$PR_ICCS
+                mtpr            #^X0ff,#VAX$PR_ICCS
                 
 ;       Mark the flag that says we're done
 
@@ -639,7 +639,7 @@ exe$initialize: tstl            @#exe$init_done ; If we've already done
 ;       point, in user mode with IPL of zero (so interrupts will
 ;       start happening).
 
-                pushl           #03000000       ; desired PSL
+                pushl           #^X03000000       ; desired PSL
                 pushal          @#exe$init_exit ; desired PC
                 rei                             ; do it
 
@@ -665,7 +665,7 @@ exe$printinitmsg:
  
 ;       Because of that, we need to be sure to start on a new boundary.
 
-                .align          0200
+                .align          ^X0200
                 .set            exe$ubase .
 
 ;--------------------------------------------------------------------
@@ -693,7 +693,7 @@ exe$printinitmsg:
 
                movl             b^4(ap), r1
                movl             b^8(ap), r2
-               movl             b^0C(ap), r3
+               movl             b^^X0C(ap), r3
                movl             #2, r0
                xfc              #xfc$dcl
                ret
@@ -857,10 +857,10 @@ _loop:          pushl           (r4)+                   ; push the parameter
                 calls           #1, @#lib$put_one       ; call output
                 sobgtr          r3, _loop               ; loop if more
                 
-                pushl           #0a                     ; else end with LF
+                pushl           #^X0a                     ; else end with LF
                 calls           #1, @#lib$put_one
                 
-                pushl           #0d                     ; and CR
+                pushl           #^X0d                     ; and CR
                 calls           #1, @#lib$put_one
                 
                 movl            #1, r0                  ; now done
@@ -875,7 +875,7 @@ _exit:          movl            #1, r0
 
                 movl            b^4(ap), r5          ; Get descriptor address
 
-                cmpl            r5, #0ff             ; see if it's one char.
+                cmpl            r5, #^X0ff             ; see if it's one char.
                 blequ           _byte                ; if so, print it
 
                 clrl            r6                   ; Empty counter register
@@ -919,7 +919,7 @@ _get:           cvtwl           (r2),r4             ; Get length
                 pushl           r4                  ; push length of buffer
                 pushl           b^4(r2)             ; push address of buffer
                 calls           #2,exe$input        ; Get input from user
-                movl            b^0c(ap),   r3      ; Get address of length
+                movl            b^^X0c(ap),   r3      ; Get address of length
                 tstl            r3
                 beql            _done
                 cvtlw           r0, (r3)            ; Write length to caller
@@ -938,7 +938,7 @@ _done:          movl            #SS$_NORMAL, r0
 
                 subl2   #4,sp
 
-                movl    b^0C(ap), r9            ; Get length pointer
+                movl    b^^X0C(ap), r9            ; Get length pointer
 
                 movl    b^4(ap), r2             ; Get the value to format
                 tstl    r2                      ; Is it zero?
@@ -960,7 +960,7 @@ _done:          movl            #SS$_NORMAL, r0
 _loop:          divl3   #^d10, r2, r3           ; Shift off digit
                 mull3   r3, #^d10, r4           ; And back again
                 subl3   r4, r2, r5              ; Difference is digit
-                addl2   #30, r5                 ; Make ASCII
+                addl2   #^X30, r5                 ; Make ASCII
 
                 movb    r5, -(r6)               ; copy to buffer, decrement
                 incl    r7                      ; and increment counter
@@ -977,12 +977,12 @@ _oflow:         movl   #SS$_BUFFEROVF, r0       ; Return overflow
                 ret
 
 _zero:          movl   sp, r6                   ; Get address of stack buffer
-                movb   #30, (r6)                ; Write "0" to buffer
+                movb   #^X30, (r6)                ; Write "0" to buffer
                 movl   #1, r7                   ; return length of 1
 
 _exit:          movl   b^8(ap), r8              ; Get address of buffer
                 movc3  r7, (r6), (r8)           ; Copy to user's buffer
-                movl   b^0c(ap),r8
+                movl   b^^X0c(ap),r8
                 movl   r7, (r8)                 ; and return the length
                 movl   #SS$_NORMAL, r0          ; signal success
                 ret                             ; Go home.
@@ -999,7 +999,7 @@ _exit:          movl   b^8(ap), r8              ; Get address of buffer
                 subl2   #4,sp
                 moval   @#lib$hex_table, r8     ; get address of table
                 
-                movl    b^0C(ap), r9            ; Get length pointer
+                movl    b^^X0C(ap), r9            ; Get length pointer
 
                 movl    b^4(ap), r2             ; Get the value to format
                 tstl    r2                      ; Is it zero?
@@ -1039,12 +1039,12 @@ _oflow:         movl   #SS$_BUFFEROVF, r0       ; Return overflow
                 ret
 
 _zero:          movl   sp, r6                   ; Get address of stack buffer
-                movb   #30, (r6)                ; Write "0" to buffer
+                movb   #^X30, (r6)                ; Write "0" to buffer
                 movl   #1, r7                   ; return length of 1
 
 _exit:          movl   b^8(ap), r8              ; Get address of buffer
                 movc3  r7, (r6), (r8)           ; Copy to user's buffer
-                movl   b^0c(ap),r8
+                movl   b^^X0c(ap),r8
                 movl   r7, (r8)                 ; and return the length
                 movl   #SS$_NORMAL, r0          ; signal success
                 ret                             ; Go home.
@@ -1143,38 +1143,38 @@ _done:          ret
 ;                       ------------        -----  --------   ------
 ;                       Entry Name             ID  RTL        Offset
 ;                       ------------        -----  --------   ------
-                .shim   lib$adawi,            ^d1, LIBRTL,      0778
-                .shim   str$upcase,           ^d2, LIBRTL,      0A70
+                .shim   lib$adawi,            ^d1, LIBRTL,      ^X0778
+                .shim   str$upcase,           ^d2, LIBRTL,      ^X0A70
                 .shim   exe$input,            ^d3, EVAX,        0004
-                .shim   decc$open,            ^d4, DECC$SHR,    04E8
-                .shim   decc$close,           ^d5, DECC$SHR,    0490
-                .shim   decc$read,            ^d6, DECC$SHR,    04F0
-                .shim   decc$write,           ^d7, DECC$SHR,    0508
-                .shim   decc$printf,          ^d8, DECC$SHR,    0380
-                .shim   decc$sprintf,         ^d9, DECC$SHR,    03E0
-                .shim   decc$strcmp,         ^d10, DECC$SHR,    06C0
-                .shim   decc$strncmp,        ^d11, DECC$SHR,    06F8
-                .shim   decc$strncpy,        ^d12, DECC$SHR,    0700
-                .shim   decc$atoi,           ^d13, DECC$SHR,    0568
-                .shim   decc$gets,           ^d14, DECC$SHR,    0370
-                .shim   decc$malloc,         ^d15, DECC$SHR,    0548
-                .shim   decc$free,           ^d16, DECC$SHR,    0538
-                .shim   decc$isalnum,        ^d17, DECC$SHR,    0018
-                .shim   decc$isalpha,        ^d18, DECC$SHR,    0020
-                .shim   decc$iscntrl,        ^d19, DECC$SHR,    0030
-                .shim   decc$isdigit,        ^d20, DECC$SHR,    0038
-                .shim   decc$isgraph,        ^d21, DECC$SHR,    0040
-                .shim   decc$islower,        ^d22, DECC$SHR,    0048
-                .shim   decc$isprint,        ^d23, DECC$SHR,    0050
-                .shim   decc$ispunct,        ^d24, DECC$SHR,    0058
-                .shim   decc$isspace,        ^d25, DECC$SHR,    0060
-                .shim   decc$isupper,        ^d26, DECC$SHR,    0068
-                .shim   decc$isxdigit,       ^d27, DECC$SHR,    0070
-                .shim   decc$isascii,        ^d28, DECC$SHR,    0028
-                .shim   lib$get_vm,          ^d29, LIBRTL,      0550
-                .shim   lib$free_vm,         ^d30, LIBRTL,      0548
-                .shim   lib$delete_vm_zone,  ^d31, LIBRTL,      0A48
-                .shim   decc$time,           ^d32, DECC$SHR,    0768
+                .shim   decc$open,            ^d4, DECC$SHR,    ^X04E8
+                .shim   decc$close,           ^d5, DECC$SHR,    ^X0490
+                .shim   decc$read,            ^d6, DECC$SHR,    ^X04F0
+                .shim   decc$write,           ^d7, DECC$SHR,    ^X0508
+                .shim   decc$printf,          ^d8, DECC$SHR,    ^X0380
+                .shim   decc$sprintf,         ^d9, DECC$SHR,    ^X03E0
+                .shim   decc$strcmp,         ^d10, DECC$SHR,    ^X06C0
+                .shim   decc$strncmp,        ^d11, DECC$SHR,    ^X06F8
+                .shim   decc$strncpy,        ^d12, DECC$SHR,    ^X0700
+                .shim   decc$atoi,           ^d13, DECC$SHR,    ^X0568
+                .shim   decc$gets,           ^d14, DECC$SHR,    ^X0370
+                .shim   decc$malloc,         ^d15, DECC$SHR,    ^X0548
+                .shim   decc$free,           ^d16, DECC$SHR,    ^X0538
+                .shim   decc$isalnum,        ^d17, DECC$SHR,    ^X0018
+                .shim   decc$isalpha,        ^d18, DECC$SHR,    ^X0020
+                .shim   decc$iscntrl,        ^d19, DECC$SHR,    ^X0030
+                .shim   decc$isdigit,        ^d20, DECC$SHR,    ^X0038
+                .shim   decc$isgraph,        ^d21, DECC$SHR,    ^X0040
+                .shim   decc$islower,        ^d22, DECC$SHR,    ^X0048
+                .shim   decc$isprint,        ^d23, DECC$SHR,    ^X0050
+                .shim   decc$ispunct,        ^d24, DECC$SHR,    ^X0058
+                .shim   decc$isspace,        ^d25, DECC$SHR,    ^X0060
+                .shim   decc$isupper,        ^d26, DECC$SHR,    ^X0068
+                .shim   decc$isxdigit,       ^d27, DECC$SHR,    ^X0070
+                .shim   decc$isascii,        ^d28, DECC$SHR,    ^X0028
+                .shim   lib$get_vm,          ^d29, LIBRTL,      ^X0550
+                .shim   lib$free_vm,         ^d30, LIBRTL,      ^X0548
+                .shim   lib$delete_vm_zone,  ^d31, LIBRTL,      ^X0A48
+                .shim   decc$time,           ^d32, DECC$SHR,    ^X0768
 ;                       ------------        -----  --------   ------
 ;                       Entry Name             ID  RTL        Offset
 ;                       ------------        -----  --------   ------
@@ -1189,7 +1189,7 @@ _done:          ret
 ;       This is the kernel writable data area.  It has different page
 ;       attributes so it must be aligned on a new page boundary.
 
-                .align          0200
+                .align          ^X0200
                 .set            exe$wbase .
                 
 exe$tx_ready:   .long           1               ; Is TXCS available?
@@ -1216,7 +1216,7 @@ exe$s0_rgn:     .long           0
 
 exe$verbose:    .long		verbose()   ; function value set by console
 
-exe$rxdata:     .blkb           100
+exe$rxdata:     .blkb           ^X100
 exe$rxdesc:
 exe$rxlen:      .long           0
 exe$rxbuffer:   .long           exe$rxdata
@@ -1230,7 +1230,7 @@ exe$init_msgb:  .ascii          "Kernel initialized..."
 exe$init_msg:   .long           . - exe$init_msgb
                 .long           exe$init_msgb   
 
-exe$sig_buff:   .blkb           10
+exe$sig_buff:   .blkb           ^X10
 exe$sig_desc:
 exe$sig_buff_len:.long          8
                 .long           exe$sig_buff
@@ -1503,7 +1503,7 @@ lib$hex_table:
 
                 .set            exe$wend .
 
-                .align          200
+                .align          ^X200
                 .set            exe$fbase .
 ;
 ;   I've been playing around with a forth interpreter written back in 1984
@@ -1516,9 +1516,9 @@ lib$hex_table:
 
 ;   DCL string storage
 
-                .align          200
+                .align          ^X200
 
-exe$dclstring:  .blkb           100
+exe$dclstring:  .blkb           ^X100
 
                 .set            exe$fend .
 
@@ -1543,16 +1543,16 @@ exe$dclstring:  .blkb           100
 ;
 ;--------------------------------------------------------------------
 
-                .shim   lib$put_output,         0, LIBRTL,      0478
+                .shim   lib$put_output,         0, LIBRTL,      ^X0478
                 .shim   decc$main,              0, DECC$SHR,    0000
-                .shim   decc$exit,              0, DECC$SHR,    0528
-                .shim   decc$strlen,            0, DECC$SHR,    06E8
-                .shim   decc$strcpy,            0, DECC$SHR,    06D0
-                .shim   decc$strcat,            0, DECC$SHR,    06B0
-                .shim   cma$tis_errno_get_addr, 0, CMA$TIS_SHR, 0038
-                .shim   decc$calloc,            0, DECC$SHR,    0520
-		.shim   decc$$gl___ctypea       0, DECC$SHR,    03098
-		.shim   decc$$ga___ctypet       0, DECC$SHR,    0309C
+                .shim   decc$exit,              0, DECC$SHR,    ^X0528
+                .shim   decc$strlen,            0, DECC$SHR,    ^X06E8
+                .shim   decc$strcpy,            0, DECC$SHR,    ^X06D0
+                .shim   decc$strcat,            0, DECC$SHR,    ^X06B0
+                .shim   cma$tis_errno_get_addr, 0, CMA$TIS_SHR, ^X0038
+                .shim   decc$calloc,            0, DECC$SHR,    ^X0520
+		.shim   decc$$gl___ctypea       0, DECC$SHR,    ^X03098
+		.shim   decc$$ga___ctypet       0, DECC$SHR,    ^X0309C
 
 ;--------------------------------------------------------------------
 ;   RESET STATE FOR CONSOLE ASSEMBLER

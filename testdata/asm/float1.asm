@@ -3,12 +3,12 @@
 ;   First floating test
 ;
 
-        .base       200
+        .base       ^X200
 
 data:   .long       0
         .long       0
         
-        .base       400
+        .base       ^X400
 
 main:   movl        #^d100, r0
         cvtlf       r0, r0

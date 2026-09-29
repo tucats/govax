@@ -24,23 +24,18 @@ func TestExpressionArithmetic(t *testing.T) {
 		{"^D5", 5},
 		{"^X10", 0x10},
 		{"0X10", 0x10},
-		{"10", 0x10}, // default radix is hex
+		{"10", 10}, // the default radix is decimal, as in MACRO-32
 		{"^D10", 10},
 		{"2+3", 5},
-		{"10-3", 0xD}, // default radix is hex: 0x10-0x3
+		{"10-3", 7},
 		{"2*3", 6},
 		{"^D10/^D3", 3},
 		{"(^D2+^D3)*^D4", 20},
+		{"<2+3>*4", 20},
+		{"2+3*4", 20}, // every operator has the same priority, left to right
+		{"2+<3*4>", 14},
 		{"-^D5", 0xFFFFFFFB},
 		{"-^D5+^D10", 5}, // unary minus binds tighter than the following '+'
-		{"^D5=^D5", 1},
-		{"^D5=^D6", 0},
-		{"^D5<>^D6", 1},
-		{"^D5<^D6", 1},
-		{"^D6<^D5", 0},
-		{"^D5<=^D5", 1},
-		{"^D6>=^D5", 1},
-		{"^D6>^D5", 1},
 	}
 	for _, tc := range cases {
 		t.Run(tc.src, func(t *testing.T) {

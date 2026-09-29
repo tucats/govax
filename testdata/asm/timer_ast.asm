@@ -28,7 +28,7 @@
 
 ; ---- 1. $SETIMR(efn=4, 30ms, TMRAST, reqidt=77); $HIBER ----
 	pushl	#0			; flags
-	pushl	#77			; reqidt: the AST's parameter
+	pushl	#^X77			; reqidt: the AST's parameter
 	pushal	@#tmrast		; astadr
 	pushal	@#delta30
 	pushl	#4
@@ -36,7 +36,7 @@
 	blbs	r0, ok1
 	brw	fail
 ok1:	calls	#0, @#sys$hiber		; woken by TMRAST's $WAKE
-	cmpl	@#astparam, #77
+	cmpl	@#astparam, #^X77
 	beql	ok2
 	brw	fail
 ok2:	pushl	#0
@@ -49,13 +49,13 @@ ok3:
 
 ; ---- 2. a cancelled timer's AST never runs ----
 	pushl	#0
-	pushl	#88
+	pushl	#^X88
 	pushal	@#tmrast
 	pushal	@#delta10
 	pushl	#5
 	calls	#5, @#sys$setimr	; would record 88
 	pushl	#0
-	pushl	#88
+	pushl	#^X88
 	calls	#2, @#sys$cantim
 	pushl	#0
 	pushl	#0
@@ -65,7 +65,7 @@ ok3:
 	calls	#5, @#sys$setimr	; no AST: just a flag to wait on
 	pushl	#6
 	calls	#1, @#sys$waitfr	; 30ms: well past the cancelled 10ms
-	cmpl	@#astparam, #77
+	cmpl	@#astparam, #^X77
 	beql	ok4
 	brw	fail
 ok4:

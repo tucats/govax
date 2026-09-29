@@ -17,14 +17,14 @@ func TestDisassembleAddressingModes(t *testing.T) {
 		{"autodecrement", []byte{0xD4, 0x73}, "CLRL -(R3)"},
 		{"autoincrement", []byte{0xD4, 0x83}, "CLRL (R3)+"},
 		{"autoincrement deferred", []byte{0xD4, 0x93}, "CLRL @(R3)+"},
-		{"byte displacement", []byte{0xD4, 0xA3, 0x7F}, "CLRL B^7F(R3)"},
-		{"byte displacement deferred", []byte{0xD4, 0xB3, 0x7F}, "CLRL @B^7F(R3)"},
-		{"word displacement", []byte{0xD4, 0xC3, 0x34, 0x12}, "CLRL W^1234(R3)"},
-		{"long displacement", []byte{0xD4, 0xE3, 0xEF, 0xCD, 0xAB, 0x89}, "CLRL L^89ABCDEF(R3)"},
-		{"immediate", []byte{0xD4, 0x8F, 0x78, 0x56, 0x34, 0x12}, "CLRL I^#12345678"},
-		{"absolute", []byte{0xD4, 0x9F, 0x78, 0x56, 0x34, 0x12}, "CLRL @#12345678"},
-		{"short literal", []byte{0xD0, 0x05, 0x50}, "MOVL S^#05,R0"},
-		{"indexed", []byte{0xD4, 0x43, 0xE2, 0x04, 0x00, 0x00, 0x00}, "CLRL L^00000004(R2)[R3]"},
+		{"byte displacement", []byte{0xD4, 0xA3, 0x7F}, "CLRL B^^X7F(R3)"},
+		{"byte displacement deferred", []byte{0xD4, 0xB3, 0x7F}, "CLRL @B^^X7F(R3)"},
+		{"word displacement", []byte{0xD4, 0xC3, 0x34, 0x12}, "CLRL W^^X1234(R3)"},
+		{"long displacement", []byte{0xD4, 0xE3, 0xEF, 0xCD, 0xAB, 0x89}, "CLRL L^^X89ABCDEF(R3)"},
+		{"immediate", []byte{0xD4, 0x8F, 0x78, 0x56, 0x34, 0x12}, "CLRL I^#^X12345678"},
+		{"absolute", []byte{0xD4, 0x9F, 0x78, 0x56, 0x34, 0x12}, "CLRL @#^X12345678"},
+		{"short literal", []byte{0xD0, 0x05, 0x50}, "MOVL S^#5,R0"},
+		{"indexed", []byte{0xD4, 0x43, 0xE2, 0x04, 0x00, 0x00, 0x00}, "CLRL L^^X00000004(R2)[R3]"},
 	}
 
 	for _, tc := range cases {
@@ -58,7 +58,7 @@ func TestDisassembleBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 	
-	if got, want := dec.String(), "BEQL 00000007"; got != want {
+	if got, want := dec.String(), "BEQL ^X00000007"; got != want {
 		t.Errorf("Disassemble = %q, want %q", got, want)
 	}
 }

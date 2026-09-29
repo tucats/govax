@@ -29,26 +29,7 @@ Entries get resolved (fixed or deliberately kept, with rationale) during Phase 1
 
 ## Phase 11 (assembler) findings
 
-### [Phase 11] MACRO-32 conflicts left for a decision
-
-- **Where**: `internal/asm` (`value.go`, `pseudo.go`'s `pseudoIf`).
-- **What**: the assembler follows MACRO-32 wherever the two differ (at
-  the user's direction), except for these, which would change the
-  meaning of most existing source and so need a decision first:
-  - **Default radix.** MACRO-32's is decimal; this assembler's (like
-    eVAX's, and like the console's) is hexadecimal. Changing it would
-    mean revisiting every bare number in every fixture and in
-    `kernel.asm`.
-  - **Operator priority.** MACRO-32 gives every binary operator the
-    same priority, left to right (`1+2*3` is 9). Here `*` and `/` bind
-    tighter (7). The new `@ & ! \` operators sit with `+`/`-`, so they
-    already go left to right among themselves.
-  - **Conditional assembly.** MACRO-32's `.IF condition, argument` ...
-    `.ENDC` (with `EQ`, `NE`, `DF`, `NDF`, ..., `.IF_FALSE`, `.IIF`)
-    doesn't exist. eVAX's `.IF expression statement`, and its
-    comparison operators (`= <> < <= > >=`, which MACRO-32 doesn't
-    have), are kept; inside `<...>` the comparisons aren't recognized.
-- **Status**: open, pending the user's decision.
+_None open._
 
 ## Phase 22 (RMS / `ods2`) findings
 
@@ -809,6 +790,54 @@ changed as a result.
 _None yet._
 
 ## Resolved findings
+
+### [Phase 11, resolved] MACRO-32 default radix, operator priority, and conditional assembly
+
+- **Where**: `internal/asm` (`value.go`'s `exprTop`/`numericLiteral`,
+  `conditional.go`, `pseudo.go`'s `listSeparator`/`pseudoConsole`,
+  `operand.go`'s `S^#`, `disasm.go`'s number formats).
+- **What was wrong**: three differences from MACRO-32 left open by the
+  previous pass, each changing the meaning of existing source:
+  - The default radix was hexadecimal (the console's, which eVAX's
+    assembler shared, including through `.CONSOLE SET RADIX`); MACRO-32's
+    is decimal.
+  - `*` and `/` had priority over `+` and `-`; in MACRO-32 all binary
+    operators have the same priority, left to right. eVAX also had
+    comparison operators (`= <> < <= > >=`), which MACRO-32 doesn't.
+  - Conditional assembly was eVAX's `.IF expression statement`; MACRO-32
+    has `.IF condition argument` ... `.ENDC`, the subconditionals, and
+    `.IIF`.
+  - Found on the way: `S^#n` read `n` as hex digits whatever the radix;
+    data directives took items without a comma between them, so in
+    decimal `.BYTE 0FF` would have been two items; and a number running
+    into letters (`0FF`) stopped quietly at the letters.
+- **Status**: fixed 2026-09-29, at the user's direction (the goal is to
+  accept real VAX/VMS `.MAR` sources):
+  - Numbers are decimal unless a radix operator says otherwise, and
+    `.CONSOLE SET RADIX` no longer affects the assembler. Every fixture was
+    converted mechanically: the old assembler recorded each literal it read
+    as hex, and each one that isn't the same in decimal (205 of 1714, in 18
+    files) got `^X`. Assembling every fixture with the old assembler and
+    old sources, and with the new assembler and converted sources, gave
+    identical images, symbols, and `.PRINT` output. No expression depended
+    on the old operator priority. `forth.asm` lost its `.CONSOLE SET
+    RADIX` lines.
+  - Binary operators are equal priority, left to right; the comparisons
+    are gone. `S^#` takes an expression. List items need commas, and a
+    number followed by letters is `VAX_BADDIGIT`.
+  - `.IF`/`.ENDC`, `.IF_FALSE`/`.IF_TRUE`/`.IF_TRUE_FALSE` (`.IFF`/
+    `.IFT`/`.IFTF`), and `.IIF`, with every condition test (EQ, NE, GT,
+    LE, LT, GE, DF, NDF, B, NB, IDN, DIF, long forms too), nesting to 31.
+    `kernel.asm` now uses `.IIF NOT_DEFINED SS$_NORMAL, .INCLUDE
+    "ssdef.asm"`.
+  - The disassembler writes hexadecimal numbers with `^X` (and short
+    literals in decimal), so its output can be assembled again; the
+    round-trip tests now do exactly that without translation.
+  - New codes: `VAX_BADCOND`, `VAX_NOCOND`, `VAX_NOENDC`,
+    `VAX_CONDDEPTH`. HELP: `ASM EXPRESSIONS` rewritten; new
+    `ASM PSEUDO IF` topic.
+  - Tests: `internal/asm/conditional_test.go`; `value_test.go`,
+    `macro_test.go`, `disasm_test.go`, `operand_test.go` updated.
 
 ### [Phase 11, found in Phase 26, resolved] Forward references in expressions, MACRO-32 strings and operators
 

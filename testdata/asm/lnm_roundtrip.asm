@@ -15,8 +15,7 @@
 ; conditional branch can't reach "fail" from this far away.
 ;
 ; Item codes and status values are written as numbers (this assembler
-; has no .LNMDEF): LNM$_STRING is 2, SS$_NOLOGNAM is ^X1BC. The default
-; radix is hex, hence the ^D on decimal lengths.
+; has no .LNMDEF): LNM$_STRING is 2, SS$_NOLOGNAM is ^X1BC.
 
 	.microkernel
 	.p1vector

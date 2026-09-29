@@ -3,6 +3,6 @@
         ffs     #1, #^x3, @#data, r0
         ret
 
-data:   .long   0505050
+data:   .long   ^X0505050
 
         .end    main

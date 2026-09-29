@@ -30,7 +30,7 @@ func TestAsciiMacro32Strings(t *testing.T) {
 		want []byte
 	}{
 		{"\t.ascii /eof/<^X0D><^X0A>", []byte{'e', 'o', 'f', 0x0D, 0x0A}},
-		{"\t.asciz /A/<0C>/B/", []byte{'A', 0x0C, 'B', 0}},
+		{"\t.asciz /A/<12>/B/", []byte{'A', 0x0C, 'B', 0}},
 		{"\t.ascic #hi#<^D13>", []byte{3, 'h', 'i', 13}},
 		{"\t.ascii @a;b@ ; a comment", []byte{'a', ';', 'b'}},
 		{"\t.ascii ,a b,", []byte{'a', ' ', 'b'}},
@@ -38,7 +38,7 @@ func TestAsciiMacro32Strings(t *testing.T) {
 		{"\t.ascii \"a\\nb\"", []byte{'a', '\\', 'n', 'b'}},
 		{"\t.ascii <^X41+<1>>", []byte{'B'}},
 		{"\t.ascii <'a'>", []byte{'a'}},
-		{"LF = 0A\n\t.ascii \"x\"<LF>", []byte{'x', 0x0A}},
+		{"LF = 10\n\t.ascii \"x\"<LF>", []byte{'x', 0x0A}},
 		{"\t.ascii <X>/y/\nX = 7", []byte{7, 'y'}},
 		{"\tascii \"ab\"", []byte{'a', 'b'}},
 	}
@@ -52,7 +52,7 @@ func TestAsciiErrors(t *testing.T) {
 	requireCode(t, assembleErr(t, "\t.ascii \"abc"), vmserrors.VAX_NOCLOSE)
 	requireCode(t, assembleErr(t, "\t.ascii =abc="), vmserrors.VAX_BADSTRING)
 	requireCode(t, assembleErr(t, "\t.ascii <1"), vmserrors.VAX_NOCLOSE)
-	requireCode(t, assembleErr(t, "\t.ascii <100>"), vmserrors.VAX_DATARANGE)
+	requireCode(t, assembleErr(t, "\t.ascii <256>"), vmserrors.VAX_DATARANGE)
 }
 
 // TestAscicTooLong: a counted string can't be longer than its count byte

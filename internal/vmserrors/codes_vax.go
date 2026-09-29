@@ -77,6 +77,10 @@ const (
 	vaxBadString
 	vaxExtraText
 	vaxBadDigit
+	vaxBadCond
+	vaxNoCond
+	vaxNoEndc
+	vaxCondDepth
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -170,6 +174,10 @@ const (
 	VAX_BADSTRING = VAXFacility<<FacilityPosition | vaxBadString<<MessagePosition | StatusError
 	VAX_EXTRATEXT = VAXFacility<<FacilityPosition | vaxExtraText<<MessagePosition | StatusError
 	VAX_BADDIGIT  = VAXFacility<<FacilityPosition | vaxBadDigit<<MessagePosition | StatusError
+	VAX_BADCOND   = VAXFacility<<FacilityPosition | vaxBadCond<<MessagePosition | StatusError
+	VAX_NOCOND    = VAXFacility<<FacilityPosition | vaxNoCond<<MessagePosition | StatusError
+	VAX_NOENDC    = VAXFacility<<FacilityPosition | vaxNoEndc<<MessagePosition | StatusError
+	VAX_CONDDEPTH = VAXFacility<<FacilityPosition | vaxCondDepth<<MessagePosition | StatusError
 )
 
 func init() {
@@ -227,6 +235,10 @@ func init() {
 	DefineMessage(VAX_NOCLOSE, VAXFacility, "NOCLOSE", "Missing closing delimiter !Q")
 	DefineMessage(VAX_BADSTRING, VAXFacility, "BADSTRING", "Invalid string delimiter !Q")
 	DefineMessage(VAX_BADDIGIT, VAXFacility, "BADDIGIT", "Invalid digit for radix !D")
+	DefineMessage(VAX_BADCOND, VAXFacility, "BADCOND", "Invalid conditional assembly: !S")
+	DefineMessage(VAX_NOCOND, VAXFacility, "NOCOND", "!S is not inside a conditional assembly block")
+	DefineMessage(VAX_NOENDC, VAXFacility, "NOENDC", "Missing .ENDC: !D conditional assembly block(s) still open")
+	DefineMessage(VAX_CONDDEPTH, VAXFacility, "CONDDEPTH", "Conditional assembly blocks nested more than !D deep")
 	DefineMessage(VAX_EXTRATEXT, VAXFacility, "EXTRATEXT", "Unexpected text !Q at end of statement")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")

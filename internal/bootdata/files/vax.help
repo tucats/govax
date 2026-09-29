@@ -869,19 +869,19 @@ $ASSE,PSEU,SHIM
     
     Example:
     
-        .SHIM   LIB$PUT_OUTPUT, 0, LIBRTL, 0478
+        .SHIM   LIB$PUT_OUTPUT, 0, LIBRTL, ^X0478
         
         This indicates that when an image is loaded that includes a sharable
-        image reference to LIBRTL+0478, then those references will be remapped
+        image reference to LIBRTL+^X0478, then those references will be remapped
         to the LIB$PUT_OUTPUT routine.  Because the runtime library dispatch 
         code is zero, the routine must be a VAX routine, already assembled in 
         memory.
         
         
-        .SHIM   STR$UPCASE, 2, LIBRTL, 0A70
+        .SHIM   STR$UPCASE, 2, LIBRTL, ^X0A70
         
         This indicates that when an image is loaded with a reference to 
-        LIBRTL+0A70, it will call a shim stub named STR$UPCASE.  The shim stub 
+        LIBRTL+^X0A70, it will call a shim stub named STR$UPCASE.  The shim stub 
         is created as part of the assembly of the .SHIM instruction.  This stub
         will use the special XFC instruction to transfer control to the RTL 
         support routine for code 2.  See shim.c and rtl.c for more information.
@@ -1774,7 +1774,8 @@ $SH  ,RAD
 
     The SHOW RADIX command displays the default radix being used by the
     console for input.  Valid values are DECIMAL or HEXADECIMAL, and can
-    be set by the SET RADIX command or the .RADIX assember directive.
+    be set by the SET RADIX command.  (The assembler always uses decimal;
+    see HELP ASM EXPRESSIONS.)
     
     Syntax:
     
@@ -2356,9 +2357,9 @@ $ASM ,ADDR
 
 $ASM ,EXPR
 
-    Expressions follow VAX MACRO, except that the default radix is
-    hexadecimal and * and / are done before the other operators (in
-    VAX MACRO all operators have the same priority).
+    Expressions follow VAX MACRO.  A number is decimal unless a radix
+    operator says otherwise, and all binary operators have the same
+    priority, applied left to right: 1+2*3 is 9, and 1+<2*3> is 7.
 
         <expression>        Grouping; ( ) also works
         + - * /             Arithmetic
@@ -2366,15 +2367,17 @@ $ASM ,EXPR
         A&B  A!B  A\B       Logical AND, inclusive OR, exclusive OR
         -A  +A              Negation
         ^C A                One's complement
-        ^D ^X ^O ^B         Decimal, hexadecimal, octal, binary: ^D10,
-                            or ^D<10+20> for a whole expression
+        ^D ^X ^O ^B         Decimal, hexadecimal, octal, binary: ^X1F,
+                            or ^X<10+20> for a whole expression
         ^A/text/            ASCII: up to four characters, any delimiter
         'text'              ASCII, as above
         ^M<R2,R3>           Register mask
         .                   The current location
 
-    Outside angle brackets, = <> < <= > >= compare two values and give
-    1 or 0.
+    A number must be all digits of its radix: 0FF is an error, where
+    ^X0FF is 255.  The console's SET RADIX does not affect the
+    assembler, and disassembly shows hexadecimal values with ^X so
+    that it can be assembled again.
 
     An expression may use a symbol that is defined later in the program
     (a forward reference) where it adds or subtracts that symbol, or
@@ -2412,6 +2415,7 @@ $ASM ,PSEU
         ENTRY
         F_FLOAT
         IF
+        IIF
         INCLUDE
         LONG
         MODE
@@ -2603,7 +2607,7 @@ $ASM ,PSEU,QUAD
                    is given, they must be separated by commas.  The
                    data is stored in memory in the order given.  A
                    BYTE or WORD value may be given signed (-1) or
-                   unsigned (0FF).  A QUAD value that is a single
+                   unsigned (255).  A QUAD value that is a single
                    number, such as -^D100000 or ^X0123456789ABCDEF,
                    is stored in full; any other expression is
                    computed as a longword and sign-extended.
@@ -2714,6 +2718,58 @@ $ASM ,PSEU,ASCI
     A backslash is an ordinary character; there are no escapes like \n.
     The descriptor .ASCID stores has class S and type T (information
     word 010E).
+
+$ASM ,PSEU,IF  
+$ASM ,PSEU,IIF 
+$ASM ,PSEU,ENDC
+$ASM ,PSEU,IFF 
+$ASM ,PSEU,IFT 
+$ASM ,PSEU,IFTF
+$ASM ,PSEU,IF_F
+$ASM ,PSEU,IF_T
+
+    Conditional assembly, as in VAX MACRO.  The statements between .IF
+    and its .ENDC are assembled only if the condition is met.  Blocks
+    can be nested up to 31 deep.  Statements left out, including any
+    labels on them, are not assembled at all.
+
+    Syntax:
+
+        .IF      <condition> <argument>
+        ...
+        .ENDC
+
+        .IIF     <condition> <argument>, <statement>
+
+    Within an .IF block, these switch the rest of the block on or off:
+
+        .IF_FALSE  (.IFF)       Assemble if the condition was not met
+        .IF_TRUE   (.IFT)       Assemble if the condition was met
+        .IF_TRUE_FALSE (.IFTF)  Assemble either way
+
+    Conditions (long and short forms), which may be followed by a comma:
+
+        EQUAL  EQ     NOT_EQUAL      NE     <expression> is 0 / not 0
+        GREATER  GT   LESS_EQUAL     LE     <expression> is > 0 / <= 0
+        LESS_THAN LT  GREATER_EQUAL  GE     <expression> is < 0 / >= 0
+        DEFINED  DF   NOT_DEFINED    NDF    <symbol> is defined / not;
+                                            A&B needs both, A!B either
+        BLANK  B      NOT_BLANK      NB     <text> is blank / not
+        IDENTICAL IDN DIFFERENT      DIF    <text>,<text> are the same /
+                                            differ
+
+    An expression argument may not use a symbol defined later in the
+    program.
+
+    Example:
+
+        .IIF     NOT_DEFINED SS$_NORMAL, .INCLUDE "ssdef.asm"
+
+        .IF      DF DEBUG
+        MOVL     #1, R0
+        .IF_FALSE
+        CLRL     R0
+        .ENDC
 
 $ASM ,PSEU,PTE 
 

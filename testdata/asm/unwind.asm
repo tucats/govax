@@ -22,9 +22,9 @@
 	.microkernel
 	.p1vector
 	.scb	exc$accvio, console$handler
-	.shim	lib$stop,	^d34, LIBRTL, 04F8
-	.shim	lib$establish,	^d35, LIBRTL, 03C0
-	.shim	lib$sig_to_ret,	^d37, LIBRTL, 0500
+	.shim	lib$stop,	^d34, LIBRTL, ^X04F8
+	.shim	lib$establish,	^d35, LIBRTL, ^X03C0
+	.shim	lib$sig_to_ret,	^d37, LIBRTL, ^X0500
 
 	.entry	main, ^m<r2>
 	calls	#0, @#sub1

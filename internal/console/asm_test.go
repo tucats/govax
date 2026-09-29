@@ -178,12 +178,9 @@ func TestAssemble_kernelThenHelloRunsBounded(t *testing.T) {
 	// isn't run here.
 	c.CPU.SetPR(vax.TXCS, 0x40)
 
-	// hello.asm's own delay loop ("movl #1000000,r5") costs far more than
-	// its literal decimal reading suggests: this assembler's default radix
-	// is hex (no "^d"/"^o" prefix on the literal), so r5 actually starts at
-	// 0x1000000 (16,777,216) -- a ~33.5M-step ADDF2/SOBGTR loop, not 2M. The
-	// print and kernel-dispatch overhead around it (a few hundred steps per
-	// character) is negligible by comparison.
+	// The step cap is generous: hello.asm once had a long delay loop, and
+	// the print and kernel-dispatch work alone takes a few hundred steps
+	// per character.
 	err, hitCap := callBounded(t, c, entryAddr, 40_000_000)
 	if err != nil {
 		t.Fatalf("hello.asm: %v", err)

@@ -17,8 +17,7 @@
 ;      in R0 with SS$_ILLIOFUNC (244).
 ;   6. $CANCEL finds nothing outstanding; $DASSGN releases the channel.
 ;
-; The assembler's default radix is hex, so decimal numbers above 9 are
-; written ^D. R0 is 1 at the end if every step did what it should, 0
+; R0 is 1 at the end if every step did what it should, 0
 ; otherwise. The Go test supplies "Tom" as the typed line and checks the
 ; output.
 

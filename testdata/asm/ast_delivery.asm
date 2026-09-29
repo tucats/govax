@@ -56,7 +56,7 @@ ok3:
 	beql	ok4
 	brw	fail
 ok4:	pushl	#0
-	pushl	#10
+	pushl	#^X10
 	pushal	@#bump
 	calls	#3, @#sys$dclast
 	cmpl	@#counter, #5		; not delivered yet
@@ -70,7 +70,7 @@ ok5:
 	cmpl	r0, #1			; SS$_WASCLR: they were disabled
 	beql	ok6
 	brw	fail
-ok6:	cmpl	@#counter, #15
+ok6:	cmpl	@#counter, #^X15
 	beql	ok7
 	brw	fail
 ok7:

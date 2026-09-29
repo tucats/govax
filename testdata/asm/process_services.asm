@@ -15,8 +15,7 @@
 ;
 ; R0 is 1 at the end if every step did what it should, 0 otherwise. Each
 ; check is "Bcc okN / BRW fail", since a plain conditional branch can't
-; reach "fail" from this far away. The default radix is hex, hence the ^D
-; on decimal values. SS$_WASCLR is 1, SS$_WASSET is 9.
+; reach "fail" from this far away. SS$_WASCLR is 1, SS$_WASSET is 9.
 
 	.microkernel
 	.p1vector

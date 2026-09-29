@@ -98,9 +98,10 @@ func TestQuad(t *testing.T) {
 		src  string
 		want []byte
 	}{
-		{"64-bit hex literal", ".QUAD 0123456789ABCDEF", []byte{0xEF, 0xCD, 0xAB, 0x89, 0x67, 0x45, 0x23, 0x01}},
+		{"64-bit hex literal", ".QUAD ^X0123456789ABCDEF", []byte{0xEF, 0xCD, 0xAB, 0x89, 0x67, 0x45, 0x23, 0x01}},
 		{"^X prefix", ".QUAD ^X1", []byte{1, 0, 0, 0, 0, 0, 0, 0}},
 		{"decimal", ".QUAD ^D10", []byte{10, 0, 0, 0, 0, 0, 0, 0}},
+		{"default radix", ".QUAD 18446744073709551615", []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
 		{"negative literal", ".QUAD -1", []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
 		{"list", ".QUAD 1, 2", []byte{1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0}},
 		{"expression sign-extends", "X=5\n.QUAD X-6", []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}},
@@ -114,9 +115,9 @@ func TestQuad(t *testing.T) {
 }
 
 func TestSignedData(t *testing.T) {
-	requireBytes(t, assembleBytes(t, ".BYTE -1, 0FF\n.WORD -2"), 0xFF, 0xFF, 0xFE, 0xFF)
-	requireCode(t, assembleErr(t, ".BYTE 100"), vmserrors.VAX_DATARANGE)
-	requireCode(t, assembleErr(t, ".WORD -8001"), vmserrors.VAX_DATARANGE)
+	requireBytes(t, assembleBytes(t, ".BYTE -1, 255\n.WORD -2"), 0xFF, 0xFF, 0xFE, 0xFF)
+	requireCode(t, assembleErr(t, ".BYTE 256"), vmserrors.VAX_DATARANGE)
+	requireCode(t, assembleErr(t, ".WORD -32769"), vmserrors.VAX_DATARANGE)
 }
 
 func TestDirectAssignment(t *testing.T) {
@@ -126,8 +127,8 @@ func TestDirectAssignment(t *testing.T) {
 }
 
 func TestDisplacementRange(t *testing.T) {
-	requireCode(t, assembleErr(t, "CLRL B^100(R0)"), vmserrors.VAX_DATARANGE)
-	requireCode(t, assembleErr(t, "FOO: .BLKB 100\nCLRL B^FOO"), vmserrors.VAX_DATARANGE)
+	requireCode(t, assembleErr(t, "CLRL B^256(R0)"), vmserrors.VAX_DATARANGE)
+	requireCode(t, assembleErr(t, "FOO: .BLKB 256\nCLRL B^FOO"), vmserrors.VAX_DATARANGE)
 }
 
 // TestForwardExpressions: an expression using symbols not yet defined is
@@ -179,23 +180,24 @@ func TestMacro32Operators(t *testing.T) {
 		want uint32
 	}{
 		{"<1+2>*3", 9},
+		{"1+2*3", 9}, // equal priority, left to right
 		{"^D<10+10>", 20},
 		{"^X<10+10>", 0x20},
 		{"^B101", 5},
 		{"^B<101+1>", 6},
 		{"^O17", 15},
 		{"^C0", 0xFFFFFFFF},
-		{"^C<0F>&0FF", 0xF0},
+		{"^C<^X0F>&^X0FF", 0xF0},
+		{"^C<15>&255", 0xF0},
 		{"^A/ab/", 0x6261},
 		{"^A\"A\"", 0x41},
 		{"1@4", 0x10},
 		{"^X100@-4", 0x10},
 		{"-8@-1", 0xFFFFFFFC},
-		{"0C&0A", 8},
-		{"0C!3", 0xF},
-		{"0C\\0A", 6},
-		{"1<2", 1}, // the eVAX comparisons still work outside <>
-		{"<2>>1", 1},
+		{"12&10", 8},
+		{"12!3", 15},
+		{"12\\10", 6},
+		{"^B1100&^B1010", 8},
 	}
 
 	for _, tc := range tests {
@@ -208,6 +210,10 @@ func TestMacro32Operators(t *testing.T) {
 	}
 
 	requireCode(t, assembleErr(t, ".LONG ^B102"), vmserrors.VAX_BADDIGIT)
+	requireCode(t, assembleErr(t, ".LONG 0FF"), vmserrors.VAX_BADDIGIT)
+	requireCode(t, assembleErr(t, ".LONG ^X0FG"), vmserrors.VAX_BADDIGIT)
+	requireCode(t, assembleErr(t, ".LONG 1 2"), vmserrors.VAX_EXTRATEXT)
+	requireCode(t, assembleErr(t, ".LONG 1<2"), vmserrors.VAX_EXTRATEXT) // no comparisons
 	requireCode(t, assembleErr(t, ".LONG ^A/abcde/"), vmserrors.VAX_CHARTOOLONG)
 	requireCode(t, assembleErr(t, ".LONG <1+2"), vmserrors.VAX_NOCLOSE)
 }
@@ -229,7 +235,7 @@ func TestContinuationLines(t *testing.T) {
 // checked once its value is known, not before.
 func TestForwardDataRange(t *testing.T) {
 	requireBytes(t, assembleBytes(t, ".BYTE A-300\nA = 301"), 1)
-	requireBytes(t, assembleBytes(t, ".BYTE A\nA = 0FF"), 0xFF)
-	requireCode(t, assembleErr(t, ".BYTE A\nA = 100"), vmserrors.VAX_FWDBYTE)
-	requireCode(t, assembleErr(t, ".WORD A\nA = 10000"), vmserrors.VAX_FWDWORD)
+	requireBytes(t, assembleBytes(t, ".BYTE A\nA = 255"), 0xFF)
+	requireCode(t, assembleErr(t, ".BYTE A\nA = 256"), vmserrors.VAX_FWDBYTE)
+	requireCode(t, assembleErr(t, ".WORD A\nA = 65536"), vmserrors.VAX_FWDWORD)
 }

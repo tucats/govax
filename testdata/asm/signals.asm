@@ -25,11 +25,11 @@
 
 	.microkernel
 	.p1vector
-	.shim	lib$signal,	^d33, LIBRTL, 04F0
-	.shim	lib$stop,	^d34, LIBRTL, 04F8
-	.shim	lib$establish,	^d35, LIBRTL, 03C0
-	.shim	lib$revert,	^d36, LIBRTL, 0490
-	.shim	lib$match_cond,	^d38, LIBRTL, 0460
+	.shim	lib$signal,	^d33, LIBRTL, ^X04F0
+	.shim	lib$stop,	^d34, LIBRTL, ^X04F8
+	.shim	lib$establish,	^d35, LIBRTL, ^X03C0
+	.shim	lib$revert,	^d36, LIBRTL, ^X0490
+	.shim	lib$match_cond,	^d38, LIBRTL, ^X0460
 
 	.entry	main, ^m<>
 	pushal	@#handler

@@ -4,15 +4,15 @@
 
 
 prompt:		.ascid	"What is your name? "
-data:		.blkb 40
-buff:		.long 40
+data:		.blkb ^X40
+buff:		.long ^X40
 			.long data
 len:		.word 0
 reply:		.ascid	"Your name is "
 
 			.entry	input_test
 
-			movl	#40, @#buff				;	Initialize the data desc length
+			movl	#^X40, @#buff				;	Initialize the data desc length
 			
 			pushaw	@#len					;	We want the length written back here
 			pushal	@#prompt				;	Here's the prompt string

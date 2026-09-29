@@ -172,16 +172,19 @@ func signExtend(raw uint32, size int) int32 {
 	}
 }
 
+// formatIntHex formats v in hexadecimal, zero-padded to size bytes, with
+// the ^X radix operator the assembler needs to read it back (its default
+// radix is decimal, as in MACRO-32), so disassembly can be reassembled.
 func formatIntHex(v uint32, size int) string {
 	switch size {
 	case 1:
-		return fmt.Sprintf("%02X", v)
+		return fmt.Sprintf("^X%02X", v)
 
 	case 2:
-		return fmt.Sprintf("%04X", v)
+		return fmt.Sprintf("^X%04X", v)
 
 	default:
-		return fmt.Sprintf("%08X", v)
+		return fmt.Sprintf("^X%08X", v)
 	}
 }
 
@@ -212,7 +215,7 @@ func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, li
 		*pc += uint32(size)
 		dest := uint32(int32(*pc) + disp)
 
-		return fmt.Sprintf("%08X", dest), dest, nil
+		return formatIntHex(dest, 4), dest, nil
 	}
 
 	optype := r.ByteAt(*pc)
@@ -226,7 +229,8 @@ func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, li
 			return "S^#" + formatFloatValue(cpu.ShortFloat(int(optype))), uint32(optype), nil
 		}
 
-		return fmt.Sprintf("S^#%02X", optype), uint32(optype), nil
+		// A short literal (0-63) is shown in decimal, as MACRO-32 writes it.
+		return fmt.Sprintf("S^#%d", optype), uint32(optype), nil
 
 	case mode == 5:
 		return regNames[reg], uint32(reg), nil
@@ -283,7 +287,7 @@ func formatPCRelative(r ByteReader, pc *uint32, mode byte, size int, litType cpu
 		v := loadSized(r, *pc, 4)
 		*pc += 4
 
-		return fmt.Sprintf("@#%08X", v), v, nil
+		return "@#" + formatIntHex(v, 4), v, nil
 
 	case 0x0A, 0x0B: // Byte relative [deferred]
 		raw := loadSized(r, *pc, 1)
@@ -314,7 +318,7 @@ func formatPCRelTarget(pc uint32, disp int32, prefix string, deferred bool) stri
 		prefix = "@" + prefix
 	}
 
-	return fmt.Sprintf("%s%08X", prefix, dest)
+	return prefix + formatIntHex(dest, 4)
 }
 
 // formatGeneral formats the general-register addressing modes: Indexed,

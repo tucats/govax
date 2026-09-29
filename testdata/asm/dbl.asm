@@ -29,7 +29,7 @@ three:  .long   0,0
 four:   .long   0,0
 twelve: .long   0,0
 
-loc1:	.blkb	16
-loc2:	.blkb   16
+loc1:	.blkb	^X16
+loc2:	.blkb   ^X16
 	.end	main
 

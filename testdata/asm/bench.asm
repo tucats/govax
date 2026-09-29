@@ -55,14 +55,14 @@
 ;
 
         movl    sp,r6                           ; Point to end of space
-        subl2   #20,sp                          ; and move end of stack down
+        subl2   #^X20,sp                          ; and move end of stack down
 
         clrl    r7                              ; init the counter
 
 _loop:  divl3   #^d10, r2, r3                   ; Shift off digit
         mull3   r3, #^d10, r4                   ; And back again
         subl3   r4, r2, r5                      ; Difference is digit
-        addl2   #30, r5                         ; Make ASCII
+        addl2   #^X30, r5                         ; Make ASCII
 
         movb    r5, -(r6)                       ; copy to buffer, decrement
         incl    r7                              ; and increment counter
@@ -74,7 +74,7 @@ _loop:  divl3   #^d10, r2, r3                   ; Shift off digit
         brb    _loop                            ; And loop again
 
 _zero:  movl   sp, r6                           ; Get address of stack buffer
-        movb   #30, (r6)                        ; Write "0" to buffer
+        movb   #^X30, (r6)                        ; Write "0" to buffer
         movl   #1, r7                           ; return length of 1
 
 _exit:  movl   b^8(ap), r8                      ; Get address of buffer
@@ -113,7 +113,7 @@ _exit:   movl    #1, r0
 
          movl    b^4(ap), r0                     ; Get descriptor address
 
-         cmpl    r0, #7f                         ; see if it's one char.
+         cmpl    r0, #^X7f                         ; see if it's one char.
          blss    _byte                           ; if so, print it
 
          clrl    r1                              ; Empty counter register
@@ -161,8 +161,8 @@ _exit:  ret
         callg   ap, @#calcsum
         movl    r0, r2
 
-        pushl   #0d                       ; last parts of message are the
-        pushl   #0a                       ; carriage control
+        pushl   #^X0d                       ; last parts of message are the
+        pushl   #^X0a                       ; carriage control
 
         pushal  @#msgb                    ; Format the number into buffer
         pushl   r2
@@ -220,8 +220,8 @@ table:  .long   3
 
 _10:    movl    b^4(ap),r2
 
-_20:    pushl   #0d                       ; last parts of message are the
-        pushl   #0a                       ; carriage control
+_20:    pushl   #^X0d                       ; last parts of message are the
+        pushl   #^X0a                       ; carriage control
 
         pushal  @#_msgb                    ; Format the number into buffer
 
