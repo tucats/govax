@@ -1,0 +1,22 @@
+== alone
+bytes: 35
+deposit: 00000223  p0 end: 00000223  s0 end: 80000000
+entry: 00000200
+00000200: 00 00 DF 9F 10 02 00 00 FB 01 9F 00 00 00 00 04
+00000210: 0B 00 0E 01 18 02 00 00 48 65 6C 6C 6F 20 77 6F
+00000220: 72 6C 64
+sym LIB$PUT_OUTPUT 00000000 flags=20 forward=1
+sym MAIN 00000200 flags=4 forward=0
+sym MSG 00000210 flags=2 forward=0
+sym __ENTRY 00000200 flags=0 forward=0
+== after kernel.asm
+bytes: 35
+deposit: 00000223  p0 end: 00000223  s0 end: 80001500
+entry: 00000200
+p1vector: 7FFEDE00-7FFEE91D
+00000200: 00 00 DF 9F 10 02 00 00 FB 01 9F BD 07 00 80 04
+00000210: 0B 00 0E 01 18 02 00 00 48 65 6C 6C 6F 20 77 6F
+00000220: 72 6C 64
+sym MAIN 00000200 flags=4 forward=0
+sym MSG 00000210 flags=2 forward=0
+sym __ENTRY 00000200 flags=0 forward=0

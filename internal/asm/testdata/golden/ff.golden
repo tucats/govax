@@ -1,0 +1,17 @@
+== alone
+bytes: 16
+deposit: 00000210  p0 end: 00000210  s0 end: 80000000
+entry: 00000200
+00000200: 00 00 EA 01 03 9F 0C 02 00 00 50 04 50 50 50 00
+sym DATA 0000020C flags=2 forward=0
+sym MAIN 00000200 flags=4 forward=0
+sym __ENTRY 00000200 flags=0 forward=0
+== after kernel.asm
+bytes: 16
+deposit: 00000210  p0 end: 00000210  s0 end: 80001500
+entry: 00000200
+p1vector: 7FFEDE00-7FFEE91D
+00000200: 00 00 EA 01 03 9F 0C 02 00 00 50 04 50 50 50 00
+sym DATA 0000020C flags=2 forward=0
+sym MAIN 00000200 flags=4 forward=0
+sym __ENTRY 00000200 flags=0 forward=0

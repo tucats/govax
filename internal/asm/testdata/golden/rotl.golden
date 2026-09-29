@@ -1,0 +1,11 @@
+== alone
+bytes: 14
+deposit: 0000020E  p0 end: 0000020E  s0 end: 80000000
+00000200: 00 00 D0 8F 58 00 00 00 50 9C 04 50 51 04
+sym TEST 00000200 flags=4 forward=0
+== after kernel.asm
+bytes: 14
+deposit: 0000020E  p0 end: 0000020E  s0 end: 80001500
+p1vector: 7FFEDE00-7FFEE91D
+00000200: 00 00 D0 8F 58 00 00 00 50 9C 04 50 51 04
+sym TEST 00000200 flags=4 forward=0
