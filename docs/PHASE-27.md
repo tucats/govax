@@ -922,3 +922,50 @@ above record the answers:
   - **The EOM** has a transfer address only when `.END` names one.
 - The fixtures are a regression suite for the reader and checker now, and
   the reference for the assembler's object output later.
+
+### 2026-09-30 — `ods2` `Initialize` rewritten to match VMS INITIALIZE
+
+- The user asked to fix `ods2` volume initialization now ("we'll need this
+  again soon") and made more reference volumes on simh with a plain
+  `INITIALIZE`: an RX33 (`rq1-rx33.dsk`, 2400 blocks, a "small" disk) and
+  an RD54 (`rq3-rd54.dsk`, 311200 blocks, cluster factor 3). These join
+  the RD51. All three were mounted once on VMS, which leaves a lock name
+  and mount time in the storage control block.
+- The algorithm comes from VMS 7.3 INIT's own source (`init/lis/`):
+  - `inidsk.lis`: the defaults. The cluster factor is 1 up to 50000
+    blocks, and otherwise max(3, whatever keeps `BITMAP.SYS` within 255
+    blocks). Maximum files is `MAXBLOCK/((c+1)*2)`. There are 16 headers
+    and room for 16 MFD entries. The index file goes at `MAXBLOCK/2`, or
+    at 0 on a disk of 4096 blocks or fewer.
+  - `iniall.lis`: the allocation table, where each structure goes in the
+    first free position, rounded to clusters. The secondary home block is
+    the first free LBN on the sequence 1, 1+delta, and so on.
+  - `get_delta.lis`: delta is `HM2$C_GEOM_INDEPEND_DELTA`, 1033, or 1 when
+    that exceeds a tenth of the volume.
+  - `inindx.lis`: the home block copies and every reserved header.
+- One more piece of knowledge came from the references: the first
+  longword of `SECURITY.SYS`'s security profile is the XOR of the whole
+  longwords after it. The kernel routine that builds it isn't in the
+  archive.
+- `ods2` commits (no attribution, per its rules):
+  - `ccd3e7b`: headers laid out as VMS lays them out. The IDENT area is at
+    word 40 with the map at 100. `RECPROT` is decoded and encoded. Names
+    are recorded as `NAME.TYP;VER`, padded with spaces
+    (`ondisk.IdentName`, `NewFileHeader.Version`).
+  - `8429d65`: `Initialize` rewritten to follow INIT. It computes
+    `CHECKSUM1`, writes home block copies, and adds a tenth reserved file,
+    `SECURITY.SYS` (`ondisk.SecurityFileFid`, `ReservedFileCount` 10;
+    older volumes' own `ReservedFiles` still governs). It records disk
+    geometry (known DEC disk sizes, or `InitializeOptions.Geometry`), puts
+    a partial last cluster in `BADBLK.SYS`, and exposes INIT's qualifiers
+    as options.
+- govax `52bb2b8` updates the attribute tests for the new names.
+  `01bd971` adds `TestVMSInitializeFidelity`, an opt-in test that
+  initializes a scratch volume the size and label of each reference and
+  compares block by block. Only timestamps, the boot block (which INIT
+  fills with a PDP-11 "not a system disk" stub that `ods2` leaves zeroed),
+  and checksums over them are masked. **All three references match.** A
+  deliberately wrong label makes the test fail, confirming it can.
+- Built `testdata/disks/ods2-init-rd51.dsk` with govax's own
+  `INITIALIZE/CONTAINER` and two files copied on, for the user to mount on
+  VMS and check with `ANALYZE/DISK_STRUCTURE`.
