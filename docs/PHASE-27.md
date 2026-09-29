@@ -50,13 +50,62 @@ though: they show which of the format's legal choices real MACRO-32 makes
 | `vmssrc_archive/v73/linker/lis/lnkobjps1_v.lis` (and `lnkobjps2`) | Source listings of the VAX linker's object-reading passes. Use them when the manual is ambiguous. |
 | `OVMS_83_LINKER.pdf`, around line 7740 of its text | An annotated `ANALYZE/OBJECT` dump example, showing what the analyzer's output looks like. |
 
-What the archive does **not** have is a VAX MACRO language reference manual
-(`.PSECT` attribute defaults, the default psects, `.ENABLE`/`.DISABLE`
-options, the macro facility, and how MACRO picks addressing modes for
-relocatable and external operands). For those, use VSI's *VAX MACRO and
-Instruction Set Reference Manual*, which is available online. Where the manual
-and a real VAX disagree, the real VAX wins, following the existing "real
-MACRO-32 behavior wins over eVAX" rule for `internal/asm`.
+For the MACRO-32 language itself, the user added (2026-09-29) the *VAX MACRO
+and Instruction Set Reference Manual* for OpenVMS VAX 7.3, in two printings:
+
+| Source | What it gives us |
+|---|---|
+| Compaq printing, AA-PS6GD-TE, April 2001 (`~/Documents/Technical Doc/VMS/138206246-VAX-MACRO-and-Instruction-Set-Reference-Manual.pdf`) | **The language reference.** Chapter 3 covers expressions and the absolute/relocatable/external rules. Chapter 5 covers addressing modes, including how MACRO picks displacement sizes. Chapter 6 covers every directive (`.PSECT` and its defaults, `.ENABLE`/`.DISABLE`, `.DEFAULT`, `.TITLE`, the macro facility, and more). `pdftotext -layout` extracts it cleanly. Section numbers in this document refer to this printing. |
+| VSI reissue of the same manual (`vsi-openvms-vax-macro-and-instruction-set-reference-manual.pdf`) | The same content, re-typeset. Use it to cross-check any passage the Compaq text extracts badly. |
+
+The manuals don't describe the DCL `MACRO` command's qualifiers
+(`/OBJECT`, `/LIST`, `/DEBUG`); those are in the DCL dictionary. Where the
+manual and a real VAX disagree, the real VAX wins, following the existing
+"real MACRO-32 behavior wins over eVAX" rule for `internal/asm`.
+
+### What the MACRO manual settles
+
+- **Displacement sizes (§5.2.1, §5.2.2, `.DEFAULT` in ch. 6).** For relative
+  and relative-deferred operands with no `B^`/`W^`/`L^`, MACRO uses the
+  smallest displacement only when the target's value is *known*: already
+  defined, and in the same psect. Otherwise (a forward reference, another
+  psect, or an external) it uses the default displacement, which is a
+  **longword** unless `.DEFAULT DISPLACEMENT,BYTE|WORD|LONG` changes it.
+  This is a rule a single pass can follow, so MACRO's operand sizes can be
+  matched without a sizing pass (see [Pass structure](#pass-structure)).
+- **General mode (`G^`, §5.2.5)** is always 5 bytes. The linker turns it
+  into relative mode for a relocatable address or absolute mode for an
+  absolute one. That is what the object language's `STO_PICR` and
+  `STO_PIDR` store commands are for.
+- **Default psects (`.PSECT`, ch. 6, note 2 and Table 6-7).** There are two:
+  - `. ABS .`: NOPIC, USR, CON, ABS, LCL, NOSHR, NOEXE, NORD, NOWRT, NOVEC,
+    BYTE. Symbol definitions that come before any code, data, or `.PSECT`
+    go here.
+  - `. BLANK .`: NOPIC, USR, CON, REL, LCL, NOSHR, EXE, RD, WRT, NOVEC,
+    BYTE. Code and data that come before the first named `.PSECT` go here,
+    and so does a `.PSECT` with no name.
+
+  A named `.PSECT` defaults to CON, EXE, LCL, NOPIC, NOSHR, RD, REL, WRT,
+  NOVEC. Continuing a psect may repeat its attributes, but must not change
+  them. There can be at most 254 user-defined psects, so the word-psect
+  GSD forms are never needed.
+- **Module name (`.TITLE`).** The name is the first 1 to 31 non-blank
+  characters. Without a `.TITLE`, the module is named `.MAIN.`. If there are
+  several, the last one wins.
+- **`.ENABLE`/`.DISABLE` defaults (Table 6-3).** GLOBAL is on: undefined
+  symbols are external. **TRACEBACK is on**: psect names and lengths, module
+  names, and routine names go into the object for the debugger. So real
+  MACRO objects include traceback records by default, which affects fixture
+  comparison (see [Validation strategy](#validation-strategy)). ABSOLUTE,
+  DEBUG, LOCAL_BLOCK, SUPPRESSION, and TRUNCATION are off.
+- **Expression restrictions (§3.5).** The operands of `.ALIGN`, `.BLKx`,
+  `.IF`/`.IIF`, `.REPEAT`, `.OPDEF`, `.ENTRY`, data repetition factors, and
+  direct assignment (`=`) may only use symbols already defined in the
+  module, never external or forward ones. Most must be absolute; a direct
+  assignment may be relocatable. This is stricter than today's assembler,
+  which accepts forward references in some of these places. The MACRO
+  dialect enforces the manual's rule, and the console dialect keeps its
+  current behavior.
 
 ## Object format summary
 
@@ -175,13 +224,18 @@ buffers are the MACRO dialect's.
 ### Relocatable values
 
 Extend `exprVal` (and `fixup` and `symbol`) so a value is
-`constant + Σ coeff·base(psect) + Σ coeff·external`. The rules follow the
-MACRO-32 manual:
+`constant + Σ coeff·base(psect) + Σ coeff·external`. The manual's three
+kinds of expression (§3.5) fall out of that form:
 
-- label − label in the same psect is absolute;
-- relocatable ± absolute stays relocatable;
-- anything else becomes a "complex" expression, emitted as TIR stack
-  arithmetic.
+- **absolute**: no psect or external terms. That includes label − label in
+  the same psect, since the psect base cancels out.
+- **relocatable**: exactly one psect base with coefficient 1, and no
+  externals.
+- **external**: any external term.
+
+An expression that is relocatable or external is emitted as TIR stack
+arithmetic unless it matches one of the simple store forms (psect base +
+offset, or a global + offset).
 
 Values that are still unresolved at the end of assembly become relocations
 instead of errors, as long as the symbol is external. That's the case when
@@ -190,20 +244,24 @@ which is MACRO's default.
 
 ### Pass structure
 
-MACRO-32 is a two-pass assembler, so it can size an operand after it knows
-whether a symbol is absolute, relocatable, external, near, or far. To produce
-code a real linker accepts, one pass with fixups is enough. But matching
-MACRO's **operand sizes**, for example the displacement width it picks for a
-forward reference, may need a sizing pass. Plan:
+**Decision: one pass with fixups, in both dialects.** The MACRO manual
+settles this (see [What the MACRO manual settles](#what-the-macro-manual-settles)).
+MACRO only picks the smallest displacement for a target that is already
+defined in the same psect. For anything else it uses the default
+displacement (longword, or whatever `.DEFAULT DISPLACEMENT` set). Both cases
+are decided when the operand is read, which is exactly what a single pass
+does. So the current fixup design can match MACRO's operand sizes, and no
+sizing pass is needed.
 
-- Keep one pass plus fixups for the console dialect. This is unchanged.
-- For the MACRO dialect, first adopt MACRO's documented defaults for
-  forward, relocatable, and external references (which probably means
-  longword or `L^` forms for anything not yet known). Check that against the
-  real-VAX fixtures.
-- Add a second (sizing) pass only if the fixtures show real MACRO choosing
-  shorter forms we can't otherwise predict. That decision is recorded when
-  subtask 7 reaches it.
+The only changes are in the MACRO dialect:
+
+- A known target in another psect counts as unknown, so it gets the default
+  displacement.
+- `.DEFAULT DISPLACEMENT` is supported.
+
+The real-VAX fixtures (ladder steps 4, 5, and 7) confirm this. If they show
+MACRO choosing sizes this rule doesn't predict, the decision is reopened
+here.
 
 ### A new `internal/obj` package
 
@@ -271,17 +329,21 @@ a "records only" stream if the user's transfer tool produces one.
 **First milestone.** This is enough to link and run a realistic hand-written
 program:
 
-- `.TITLE`, `.IDENT`, `.SUBTITLE`/`.SBTTL` (accepted, ignored until listings
-  exist)
+- `.TITLE` (the module name, `.MAIN.` by default), `.IDENT`, and
+  `.SUBTITLE`/`.SBTTL` (accepted, and ignored until listings exist)
 - `.PSECT name[,attributes…]`, `.SAVE_PSECT`/`.RESTORE_PSECT`, the default
-  psects (`$ABS$`, and the blank psect used before any `.PSECT`), psect
-  alignment
+  psects `. ABS .` and `. BLANK .` with the manual's attributes, the
+  named-psect attribute defaults, the attribute-consistency check on
+  continuation, and psect alignment
 - `.ENTRY name, mask` (a global EPM definition)
 - `label::` and `sym==value` (global definitions), `.GLOBAL`/`.GLOBL`,
   `.EXTERNAL`/`.EXTRN`, `.WEAK`
-- `.ENABLE`/`.DISABLE`, at least `GLOBAL`; other options are accepted and
-  ignored, with a warning
-- `.DEFAULT DISPLACEMENT` (if the fixtures show it matters)
+- `.ENABLE`/`.DISABLE`: `GLOBAL` (on by default) and `ABSOLUTE` are
+  implemented. `TRACEBACK` and `DEBUG` are recorded for when traceback and
+  debugger records exist. `LOCAL_BLOCK` uses the existing local-label
+  blocks. The rest are accepted and ignored, with a warning.
+- `.DEFAULT DISPLACEMENT,BYTE|WORD|LONG` (longword by default), which the
+  displacement-size rule needs
 - the existing data and storage directives (`.BYTE` through `.QUAD`,
   `.BLKx`, `.ASCII*`, `.ALIGN`, the floats, `.MASK`), which now allow
   relocatable operands
@@ -298,7 +360,10 @@ program:
   directly, as the existing govax fixtures do.
 - **Listing file** (`/LIST`).
 - **Debugger and traceback records** (`DBG`, `TBT`), for `/DEBUG` and
-  traceback.
+  traceback. `.ENABLE TRACEBACK` is on by default, so real MACRO objects
+  have TBT records and the first milestone's objects won't. The linker
+  doesn't need them to build a working image; they're only used for the
+  traceback shown when a program fails.
 - A govax **`LINK`**, so a govax-built `.OBJ` can `RUN` inside govax without
   a real VAX. This is probably its own phase, and `internal/obj`'s reader is
   its foundation.
@@ -318,6 +383,12 @@ We check our output in three ways, from cheapest to most authoritative:
      the psect synopsis, and the symbol table, which makes it the easiest
      thing to diff against;
    - optionally, `ANALYZE/OBJECT/OUTPUT=x.ANL` output and a `LINK/MAP` map.
+
+   Real MACRO objects include traceback (TBT) records by default (see
+   [What the MACRO manual settles](#what-the-macro-manual-settles)). Our
+   reader parses DBG and TBT records, and the first milestone's comparisons
+   leave them out. That way the fixtures don't need special assembly
+   options, and the same files serve the later traceback sub-phase.
 
    We decode the real `.OBJ` with our dumper and compare it with ours at
    three levels: the same GSD content (psects, attributes, sizes, symbols),
@@ -375,10 +446,12 @@ them under `testdata/mar/vax/`). Each step adds one feature:
    relocation records in MACRO dialect. Expression-rule tests (absolute vs.
    relocatable vs. complex).
 6. **MACRO-dialect directives:** the first-milestone list above.
-7. **Operand encoding for relocatable and external operands.** Choose
-   addressing modes and displacement widths the way MACRO does, checked
-   against fixtures 4 and 5. Decide here whether a sizing pass is needed
-   (see [Pass structure](#pass-structure)).
+7. **Operand encoding for relocatable and external operands.** Implement
+   the manual's displacement-size rule: the smallest size for a target
+   already defined in the same psect, otherwise the `.DEFAULT DISPLACEMENT`
+   size. Add `.DEFAULT` and `G^` general mode (`STO_PICR`/`STO_PIDR`).
+   Check against fixtures 4, 5, and 7. If they disagree with the rule,
+   reopen [Pass structure](#pass-structure).
 8. **Object emitter.** Turn sections, symbols, and relocations into
    `internal/obj` records: PSC and SYM/EPM GSD subrecords, TIR (STORE
    IMMEDIATE runs, `CTL_SETRB`, relocation stack programs), and EOM with the
@@ -446,8 +519,32 @@ subtask 7, since real output decides the encoding questions.
   (1 to 128 bytes); records are at most 2048 bytes; the TIR stack must be
   empty at EOM.
 - Noted the gap: there's no VAX MACRO language manual in the archive. Use
-  the VSI online manual plus real-VAX output.
+  the VSI online manual plus real-VAX output. (The user filled this gap the
+  same day; see the next entry.)
 - Reviewed `internal/asm`. It is one-pass and absolute, and its forward
   fixups are already linear symbol expressions, which is the natural base
   for relocations. The eVAX console directives need to move behind a
   dialect setting.
+
+### 2026-09-29 — VAX MACRO manual added
+
+- The user added the *VAX MACRO and Instruction Set Reference Manual*
+  (OpenVMS VAX 7.3), in the Compaq AA-PS6GD-TE and VSI printings. It's now
+  listed under [References](#can-we-build-a-valid-object-file-yes).
+- The manual settles several things the plan had left open. They're recorded
+  in [What the MACRO manual settles](#what-the-macro-manual-settles):
+  - Displacement sizes: the smallest size only for a target already
+    defined in the same psect; otherwise the `.DEFAULT DISPLACEMENT` size,
+    which is a longword by default.
+  - The `. ABS .` and `. BLANK .` psects and the attribute defaults.
+  - `.MAIN.` as the module name when there's no `.TITLE`.
+  - The `.ENABLE` defaults (GLOBAL and TRACEBACK are on).
+  - Which directives can't use forward or external symbols.
+- **Pass structure decided:** one pass with fixups. The displacement rule is
+  decided when the operand is read, so a sizing pass isn't needed to match
+  MACRO. The fixtures will confirm it.
+- The fixture plan now handles TBT records: real objects will have them, so
+  the reader parses them and the first milestone's comparisons leave them
+  out.
+- Still open: the manual doesn't cover the DCL `MACRO` qualifiers
+  (`/OBJECT` vs. `/OUTPUT`), so open question 1 stands.
