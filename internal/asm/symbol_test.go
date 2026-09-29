@@ -24,8 +24,8 @@ func TestForwardReferenceFixups(t *testing.T) {
 			},
 		},
 		{
-			name: "disp byte is relative to the fixup location",
-			kind: fixDispB, loc: 0x300, value: 0x305,
+			name: "disp byte, like a branch, is relative to the end of the field",
+			kind: fixDispB, loc: 0x300, value: 0x306,
 			verify: func(t *testing.T, a *Assembler) {
 				if got := int8(a.ByteAt(0x300)); got != 5 {
 					t.Errorf("disp = %d, want 5", got)

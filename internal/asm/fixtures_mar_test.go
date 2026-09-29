@@ -127,11 +127,6 @@ func summarizeAssembly(a *Assembler) objectSummary {
 	return s
 }
 
-// awaitingOperandEncoding are the fixtures whose operands need subtask 7
-// of docs/PHASE-27.md: G^ general mode (extern, hello), and MACRO's
-// displacement sizes, which change CODE's allocation (branch).
-var awaitingOperandEncoding = map[string]bool{"branch": true, "extern": true, "hello": true}
-
 // TestFixtureLadderDeclarations assembles each testdata/mar fixture and
 // checks that it declares what real MACRO's object for it does: the
 // module name and version, each psect's index, attributes, and
@@ -146,10 +141,6 @@ func TestFixtureLadderDeclarations(t *testing.T) {
 		name := strings.TrimSuffix(filepath.Base(path), ".mar")
 
 		t.Run(name, func(t *testing.T) {
-			if awaitingOperandEncoding[name] {
-				t.Skip("needs subtask 7's operand encoding")
-			}
-
 			src, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatal(err)
@@ -174,5 +165,198 @@ func compareLines(t *testing.T, what string, got, want []string) {
 
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("%s:\n%s\nwant:\n%s", what, strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// objectText is what an object module's TIR records put in each psect:
+// its bytes, and the values left for the linker, one line each in
+// Relocations' form ("CODE+2 LD DATA:0"), in psect and offset order.
+type objectText struct {
+	bytes  map[string][]byte
+	relocs []string
+}
+
+// replayText runs an object module's TIR records the way the linker
+// would, without choosing psect bases: STORE IMMEDIATE and CTL_AUGRB fill
+// and move through the psect CTL_SETRB chose, and each other store
+// records its stack program as a relocation. A stored value that is a
+// constant (like an .ENTRY mask's STA_UB, STO_W) is data. Only the
+// commands real MACRO's objects use are handled.
+func replayText(t *testing.T, m *obj.Module) objectText {
+	t.Helper()
+
+	var (
+		names  []string
+		allocs []uint32
+	)
+
+	for _, rec := range m.Records {
+		if g, ok := rec.(*obj.GSD); ok {
+			for _, sub := range g.Subrecords {
+				if p, ok := sub.(*obj.Psect); ok {
+					names = append(names, p.Name)
+					allocs = append(allocs, p.Alloc)
+				}
+			}
+		}
+	}
+
+	out := objectText{bytes: map[string][]byte{}}
+	for i, name := range names {
+		out.bytes[name] = make([]byte, allocs[i])
+	}
+
+	type entry struct {
+		text     string
+		constant bool
+		value    uint32
+		psect    int
+		offset   uint32
+	}
+
+	type reloc struct {
+		psect  int
+		offset uint32
+		line   string
+	}
+
+	var (
+		stack  []entry
+		relocs []reloc
+		psect  int
+		offset uint32
+	)
+
+	pop := func() entry {
+		e := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+
+		return e
+	}
+
+	put := func(v uint32, n int) {
+		for i := 0; i < n; i++ {
+			out.bytes[names[psect]][offset+uint32(i)] = byte(v >> (8 * i))
+		}
+	}
+
+	binary := map[string]string{"OPR_ADD": "+", "OPR_SUB": "-", "OPR_MUL": "*", "OPR_DIV": "/", "OPR_AND": "&", "OPR_IOR": "!", "OPR_EOR": "\\", "OPR_ASH": "@"}
+	stores := map[string]struct {
+		kind string
+		size int
+	}{
+		"STO_B": {"B", 1}, "STO_W": {"W", 2}, "STO_L": {"L", 4},
+		"STO_BD": {"BD", 1}, "STO_WD": {"WD", 2}, "STO_LD": {"LD", 4},
+		"STO_PIDR": {"PIDR", 4}, "STO_PICR": {"PICR", 5},
+	}
+
+	for _, rec := range m.Records {
+		tir, ok := rec.(*obj.TIR)
+		if !ok || tir.Type != obj.RecTIR {
+			continue
+		}
+
+		for _, c := range tir.Commands {
+			name := c.Op.String()
+
+			switch {
+			case name == "STO_IMM":
+				copy(out.bytes[names[psect]][offset:], c.Data)
+				offset += uint32(len(c.Data))
+
+			case name == "STA_PB" || name == "STA_PW" || name == "STA_PL":
+				v := c.StackedValue()
+				stack = append(stack, entry{text: fmt.Sprintf("%s:%X", names[c.Psect], v), psect: int(c.Psect), offset: v})
+
+			case name == "STA_GBL":
+				stack = append(stack, entry{text: c.Name})
+
+			case strings.HasPrefix(name, "STA_") && (strings.HasSuffix(name, "B") || strings.HasSuffix(name, "W")) || name == "STA_LW":
+				v := c.StackedValue()
+				stack = append(stack, entry{text: fmt.Sprintf("%d", int32(v)), constant: true, value: v})
+
+			case binary[name] != "":
+				r, l := pop(), pop()
+				stack = append(stack, entry{text: l.text + " " + r.text + " " + binary[name]})
+
+			case name == "OPR_NEG" || name == "OPR_COM":
+				l := pop()
+				stack = append(stack, entry{text: l.text + " " + strings.TrimPrefix(name, "OPR_")})
+
+			case name == "CTL_SETRB":
+				e := pop()
+				psect, offset = e.psect, e.offset
+
+			case name == "CTL_AUGRB":
+				offset += c.StackedValue()
+
+			case stores[name].kind != "":
+				st := stores[name]
+				e := pop()
+
+				if e.constant {
+					put(e.value, st.size)
+				} else {
+					relocs = append(relocs, reloc{psect, offset, fmt.Sprintf("%s+%X %s %s", names[psect], offset, st.kind, e.text)})
+				}
+
+				offset += uint32(st.size)
+
+			default:
+				t.Fatalf("replay: unhandled TIR command %s", name)
+			}
+		}
+	}
+
+	if len(stack) != 0 {
+		t.Fatalf("replay: %d values left on the stack", len(stack))
+	}
+
+	sort.SliceStable(relocs, func(i, j int) bool {
+		if relocs[i].psect != relocs[j].psect {
+			return relocs[i].psect < relocs[j].psect
+		}
+
+		return relocs[i].offset < relocs[j].offset
+	})
+
+	for _, r := range relocs {
+		out.relocs = append(out.relocs, r.line)
+	}
+
+	return out
+}
+
+// TestFixtureLadderText assembles each testdata/mar fixture and checks
+// that every psect holds the bytes real MACRO's object puts there, and
+// that it leaves the linker the same values to finish, as the same stack
+// programs.
+func TestFixtureLadderText(t *testing.T) {
+	paths, err := filepath.Glob(filepath.Join("..", "..", "testdata", "mar", "*.mar"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, path := range paths {
+		name := strings.TrimSuffix(filepath.Base(path), ".mar")
+
+		t.Run(name, func(t *testing.T) {
+			src, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			a := macroAssemble(t, string(src))
+			want := replayText(t, realObject(t, name))
+
+			for _, s := range a.sections {
+				got := s.img.Bytes(0, s.hi)
+				if fmt.Sprintf("% X", got) != fmt.Sprintf("% X", want.bytes[s.name]) {
+					t.Errorf("psect %s:\n% X\nwant:\n% X", s.name, got, want.bytes[s.name])
+				}
+			}
+
+			compareLines(t, "relocations", a.Relocations(), want.relocs)
+		})
 	}
 }

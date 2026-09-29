@@ -26,7 +26,7 @@ becomes the record of the implementation: each subtask adds a
 [progress log](#progress-log) entry, and the open questions get their answers
 recorded here.
 
-**Status: subtasks 1-6 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 7 is next.**
+**Status: subtasks 1-7 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 8 is next.**
 
 ## Why this phase looks different
 
@@ -260,9 +260,8 @@ The only changes are in the MACRO dialect:
   displacement.
 - `.DEFAULT DISPLACEMENT` is supported.
 
-The real-VAX fixtures (ladder steps 4, 5, and 7) confirm this. If they show
-MACRO choosing sizes this rule doesn't predict, the decision is reopened
-here.
+The real-VAX fixtures (ladder steps 4, 5, and 7) confirm this (subtask 7):
+govax's operands match real MACRO's byte for byte in all nine fixtures.
 
 ### A new `internal/obj` package
 
@@ -526,7 +525,7 @@ them under `testdata/mar/vax/`). Each step adds one feature:
    relocation records in MACRO dialect. Expression-rule tests (absolute vs.
    relocatable vs. complex).
 6. **Done.** **MACRO-dialect directives:** the first-milestone list above.
-7. **Operand encoding for relocatable and external operands.** Implement
+7. **Done.** **Operand encoding for relocatable and external operands.** Implement
    the manual's displacement-size rule: the smallest size for a target
    already defined in the same psect, otherwise the `.DEFAULT DISPLACEMENT`
    size. Add `.DEFAULT` and `G^` general mode (`STO_PICR`/`STO_PIDR`).
@@ -1221,3 +1220,62 @@ above record the answers:
   likely place to use it or remove it.
 - Tests: `macrodir_test.go` covers each directive and its errors, and
   `go test ./...` passes.
+
+### 2026-09-29 — Subtask 7: operand encoding
+
+- **The displacement-size rule.** Relative and relative deferred operands
+  with no `B^`/`W^`/`L^` now follow the manual (§5.2.1, §5.2.2). A target
+  already defined in the same psect gets the smallest displacement, and
+  govax finishes it. Any other target gets the `.DEFAULT DISPLACEMENT`
+  size, and the linker finishes it: a forward reference (even one in the
+  same psect), a label in another psect, an external, or an absolute
+  address, whose distance depends on where the psect goes. The console
+  dialect keeps its own sizes: the smallest size for any known address,
+  and a longword for a forward reference.
+- **Displacement mode.** `value(Rn)` with an unknown value (relocatable,
+  external, or defined later) gets a word in the MACRO dialect (§5.1.6),
+  and a longword in the console dialect, as before.
+- **One path for every displacement operand.** Bare operands, `B^`/`W^`/
+  `L^`, and `.ENABLE ABSOLUTE` all go through `displacementOperand`,
+  which decides the size before anything is stored. So the old trick of
+  queueing a longword fixup and then changing it through `lastFixup` is
+  gone from these paths (the `#` literal path still uses it).
+- **Operand displacements aren't branches.** `fixDispB/W/L` had no users.
+  They're now an operand's PC-relative displacement, measured from the
+  end of the field like a branch's, which fixed `dispFixup`'s
+  "unused" lint report. The two kinds differ in one way. A branch to a
+  label defined later in its own psect is finished by govax, and so is
+  one by real MACRO (`BRB 20$` in `branch.obj`). An operand's
+  displacement to such a label is left to the linker (`STO_LD`), as real
+  MACRO leaves `MOVAB HERE,R1`. A branch or displacement from a
+  relocatable psect to an absolute address is left to the linker too.
+- **`G^`, general mode** (§5.2.5). In the MACRO dialect, a relocatable or
+  external address takes five zero bytes, starting at the mode byte,
+  and a new `fixPICR` relocation (`STO_PICR`), which the linker writes as
+  relative or absolute mode. An address already known to be absolute is
+  assembled as absolute mode (`9F` and the address), which is what the
+  linker would make of it. A forward reference later defined as absolute
+  gets the same. No fixture shows which of these real MACRO emits for a
+  known absolute address, so this is a choice. In the console dialect,
+  where every address is absolute, `G^` is absolute mode. `@G^` is
+  `VAX_BADMODE`.
+- **`.ENABLE ABSOLUTE`** makes relative operands absolute mode (`9F`), with
+  a longword address (`STO_L`, as `@#` uses). Relative deferred operands
+  are unchanged, since there's no absolute deferred mode. No fixture uses
+  it, so the choice of `STO_L` over `STO_PIDR` isn't confirmed.
+- **Checked against real MACRO.** The new `TestFixtureLadderText` replays
+  each real object's TIR records the way a linker would, without choosing
+  psect bases. STORE IMMEDIATE and `CTL_AUGRB` fill and move through each
+  psect, and each other store records its stack program in
+  `Relocations()`'s form (a stored constant, like the `.ENTRY` mask's
+  `STA_UB` + `STO_W`, counts as data). **All nine fixtures match
+  exactly:** every psect's bytes, and every relocation's location, kind,
+  and stack program. That includes `branch`'s `AF FD` and `CF` +
+  `STO_WD`, `extern`'s `L^` and `G^` forms, and `hello`. The skip list in
+  `TestFixtureLadderDeclarations` is gone, so all nine match there too.
+- Tests: `encoding_test.go` covers the cases no fixture does: deferred
+  and explicit-size relative operands, `.DEFAULT DISPLACEMENT,BYTE`,
+  displacement mode with unknown values, absolute targets, `G^` with
+  absolute, forward, and indexed addresses, `.ENABLE ABSOLUTE`, and the
+  console dialect's sizes. The console golden snapshots are unchanged,
+  and `go test ./...` passes.

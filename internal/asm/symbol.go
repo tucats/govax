@@ -67,6 +67,12 @@ const (
 	fixAddrB
 	fixAddrW
 	fixAddrL
+	// fixDispB/W/L are an operand's PC-relative displacement (relative
+	// or relative deferred mode), measured, like a branch's, from the end
+	// of the field. They differ from the branch kinds only in the MACRO
+	// dialect, where a displacement to a label defined later in the same
+	// psect is left to the linker, as real MACRO leaves it (see
+	// completeFixup).
 	fixDispB
 	fixDispW
 	fixDispL
@@ -77,6 +83,10 @@ const (
 	// fixAddress is a longword address, position independent: the object
 	// language's STO_PIDR, which .ADDRESS and .ASCID's pointer use.
 	fixAddress
+	// fixPICR is a G^ general mode operand, five bytes starting at the
+	// mode byte, which the linker writes as relative or absolute mode:
+	// the object language's STO_PICR.
+	fixPICR
 )
 
 // fixupSize returns the byte width a fixup kind writes; branch fixups use
@@ -90,6 +100,8 @@ func fixupSize(k fixupKind) int64 {
 		return 2
 	case fixAddrL, fixDispL, fixBranchL, fixAddress:
 		return 4
+	case fixPICR:
+		return 5
 	}
 
 	return 0
@@ -419,8 +431,7 @@ func (a *Assembler) applyFixup(fp *fixup, value uint32) error {
 	img := fp.sect.img
 	disp := int64(value) - int64(fp.location)
 
-	switch fp.kind {
-	case fixBranchB, fixBranchW, fixBranchL:
+	if isDisplacement(fp.kind) {
 		disp -= fixupSize(fp.kind)
 	}
 
@@ -461,6 +472,14 @@ func (a *Assembler) applyFixup(fp *fixup, value uint32) error {
 		}
 
 		return img.storeWord(fp.location, uint16(int16(disp)))
+
+	case fixPICR:
+		// An absolute value: the linker would make it absolute mode.
+		if err := img.storeByte(fp.location, 0x9F); err != nil {
+			return err
+		}
+
+		return img.storeLongword(fp.location+1, value)
 
 	case fixAddrL, fixAddress:
 		disp = int64(int32(value))

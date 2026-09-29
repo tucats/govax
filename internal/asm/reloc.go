@@ -263,6 +263,7 @@ var fixupKindNames = map[fixupKind]string{
 	fixBranchL: "LD",
 	fixCaseW:   "CASE",
 	fixAddress: "PIDR",
+	fixPICR:    "PICR",
 }
 
 // Relocations returns the relocations assembled so far, one per line, for
@@ -287,18 +288,28 @@ func isDisplacement(kind fixupKind) bool {
 	return false
 }
 
+// isBranch reports whether kind is a branch instruction's displacement.
+func isBranch(kind fixupKind) bool {
+	return kind == fixBranchB || kind == fixBranchW || kind == fixBranchL
+}
+
 // completeFixup finishes f once none of its symbols is still pending:
 // its value, if that's now a constant, is stored as it always was;
-// otherwise it becomes a relocation. A displacement to a location in f's
-// own section is a constant too, whatever the section's base.
+// otherwise it becomes a relocation. Two cases follow real MACRO's
+// objects (docs/PHASE-27.md, subtask 3's log):
+//   - A branch to a location in its own psect is finished here, whatever
+//     the psect's base, but an operand's displacement to a label defined
+//     after it is left to the linker (STO_LD).
+//   - A displacement from a relocatable psect to an absolute address
+//     depends on where the psect goes, so the linker finishes it too.
 func (a *Assembler) completeFixup(f *fixup) error {
 	t := f.expr.resolved()
 
 	switch {
-	case t.op == rConst:
+	case t.op == rConst && !(isDisplacement(f.kind) && f.sect.relocatable):
 		return a.applyFixup(f, t.v)
 
-	case t.op == rBase && t.sect == f.sect && isDisplacement(f.kind):
+	case t.op == rBase && t.sect == f.sect && isBranch(f.kind):
 		return a.applyFixup(f, t.v)
 	}
 

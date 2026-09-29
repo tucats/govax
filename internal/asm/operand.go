@@ -483,19 +483,25 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	if ch == 'B' && c.peek() == '^' {
 		c.next()
 
-		return a.assembleDisplacement(c, deferred, 1, 0xAF, 0xA0)
+		return a.assembleDisplacement(c, deferred, 1)
 	}
 	// W^address / W^displacement(Rn): word relative [deferred].
 	if ch == 'W' && c.peek() == '^' {
 		c.next()
 
-		return a.assembleDisplacement(c, deferred, 2, 0xCF, 0xC0)
+		return a.assembleDisplacement(c, deferred, 2)
 	}
 	// L^address / L^displacement(Rn): long relative [deferred].
 	if ch == 'L' && c.peek() == '^' {
 		c.next()
 
-		return a.assembleDisplacement(c, deferred, 4, 0xEF, 0xE0)
+		return a.assembleDisplacement(c, deferred, 4)
+	}
+	// G^address: general mode.
+	if ch == 'G' && c.peek() == '^' {
+		c.next()
+
+		return a.generalOperand(c, deferred)
 	}
 
 	// Fallback: a bare value or symbol, with no size prefix. As in
@@ -592,12 +598,24 @@ func (a *Assembler) assembleBranchOrImplicit(c *cursor, access cpu.AccessKind, s
 
 	loc := a.pc()
 
-	value, _, err := a.exprValue(c, loc, fx)
+	value, deferred, err := a.exprValue(c, loc, fx)
 	if err != nil {
 		return err
 	}
 
-	if access == cpu.AccessBranch {
+	switch {
+	case access != cpu.AccessBranch:
+
+	case !deferred && a.dialect == DialectMACRO && a.cur.relocatable:
+		// A branch to an absolute address from a relocatable psect: only
+		// the linker knows the distance.
+		a.queueFixup(loc, fx, constNode(value))
+
+		value = 0
+
+	default:
+		// For a forward reference, value is the placeholder, and its
+		// fixup overwrites the result.
 		value = value - a.pc() - uint32(scale)
 	}
 
@@ -634,23 +652,36 @@ func sizeModeBase(size int) byte {
 }
 
 // assembleBareOperand assembles an operand given as a bare expression,
-// optionally "@"-deferred and optionally followed by "(Rn)", choosing the
-// displacement size the way MACRO-32 does for a value it already knows:
-// the smallest of byte, word, or longword that holds it. A forward
-// reference always gets a longword displacement, since its value (and so
-// the size it needs) isn't known until later and there's no linker pass to
-// shrink it; MACRO-32 itself defaults these to a word.
+// optionally "@"-deferred and optionally followed by "(Rn)": relative
+// [deferred] mode, or displacement [deferred] mode from Rn. Its
+// displacement size is chosen as MACRO-32 chooses it (see
+// relativeOperand and registerDisplacement).
 func (a *Assembler) assembleBareOperand(c *cursor, deferred byte) error {
-	modeAddr := a.pc()
-	loc := modeAddr + 1 // the displacement follows the mode byte.
+	return a.displacementOperand(c, deferred, 0)
+}
 
-	value, wasForward, err := a.exprValue(c, loc, fixBranchL)
+// assembleDisplacement handles the B^/W^/L^ operand forms: "X^address"
+// (relative: the mode byte's register field is PC, and the stored value is
+// the distance from the end of the displacement to address) or
+// "X^displacement(Rn)" (the value itself, added to Rn), each optionally
+// "@"-deferred. size is the displacement field's byte width.
+//
+// The reference tool stored the target address itself for "X^address",
+// rather than a displacement to it, and a forward reference's fixup was
+// off by the displacement's own size; both are fixed here.
+func (a *Assembler) assembleDisplacement(c *cursor, deferred byte, size int) error {
+	return a.displacementOperand(c, deferred, size)
+}
+
+// displacementOperand reads a relative or displacement mode operand's
+// expression and optional "(Rn)", and assembles it with a displacement
+// of size bytes, or, when size is 0, the size MACRO-32 would choose. In
+// the MACRO dialect, .ENABLE ABSOLUTE makes relative mode absolute mode.
+func (a *Assembler) displacementOperand(c *cursor, deferred byte, size int) error {
+	x, err := a.exprTop(c, &exprState{allowForward: true})
 	if err != nil {
 		return err
 	}
-
-	reg := byte(0x0F) // PC: relative mode
-	haveReg := false
 
 	c.skipBlanks()
 
@@ -668,124 +699,187 @@ func (a *Assembler) assembleBareOperand(c *cursor, deferred byte) error {
 			return vmserrors.New(vmserrors.VAX_BADMODE)
 		}
 
-		reg = byte(r)
-		haveReg = true
+		return a.registerDisplacement(x, deferred, byte(r), size)
 	}
 
-	size := 4
-	disp := value
+	if deferred == 0 && a.dialect == DialectMACRO && a.enabled&enableAbsolute != 0 {
+		return a.absoluteOperand(x)
+	}
 
-	switch {
-	case wasForward && haveReg:
-		// A displacement from Rn is the symbol's own value, not a
-		// distance from here.
-		a.lastFixup.kind = fixAddrL
+	return a.relativeOperand(x, deferred, size)
+}
 
-	case wasForward:
-		// Relative: the fixBranchL fixup queued above already measures
-		// from the end of a longword displacement.
+// knownTarget reports whether x, a relative operand's target, is known
+// now, and if so its location in the current section. In the console
+// dialect that's any constant. In the MACRO dialect it's only a label
+// already defined in the same psect (the MACRO manual, §5.2.1): anything
+// else, even an absolute address, depends on where the linker puts the
+// psect.
+func (a *Assembler) knownTarget(x exprVal) (uint32, bool) {
+	if a.dialect == DialectConsole {
+		return x.v, x.known()
+	}
 
-	case haveReg:
-		for _, size = range []int{1, 2, 4} {
-			if fitsSigned(int64(int32(value)), size) {
-				break
+	if !x.known() && x.x.op == rBase && x.x.sect == a.cur {
+		return x.x.v, true
+	}
+
+	return 0, false
+}
+
+// relativeOperand assembles relative [deferred] mode: the displacement
+// from the end of the field to x. A known target (see knownTarget) gets
+// the smallest displacement that holds it, and is finished here. Any
+// other gets the default size: a longword in the console dialect, and
+// .DEFAULT DISPLACEMENT's size in the MACRO dialect, where the linker
+// finishes it.
+func (a *Assembler) relativeOperand(x exprVal, deferred byte, size int) error {
+	loc := a.pc() + 1 // the mode byte comes first; the displacement follows it.
+
+	target, known := a.knownTarget(x)
+	if !known {
+		if size == 0 {
+			size = 4
+			if a.dialect == DialectMACRO {
+				size = a.defaultDisp
 			}
 		}
 
-	default:
+		if err := a.emitByte(sizeModeBase(size) | deferred | 0x0F); err != nil {
+			return err
+		}
+
+		if err := a.emitScaled(0, size); err != nil {
+			return err
+		}
+
+		a.queueFixup(loc, dispFixup(size), x.tree())
+
+		return nil
+	}
+
+	var disp uint32
+
+	if size == 0 {
 		for _, size = range []int{1, 2, 4} {
-			disp = value - (loc + uint32(size))
+			disp = target - (loc + uint32(size))
 			if fitsSigned(int64(int32(disp)), size) {
 				break
 			}
 		}
-	}
-
-	if err := a.cur.img.storeByte(modeAddr, sizeModeBase(size)|deferred|reg); err != nil {
-		return err
-	}
-
-	if err := a.storeScaled(loc, disp, size); err != nil {
-		return err
-	}
-
-	a.setPC(loc + uint32(size))
-
-	return nil
-}
-
-// assembleDisplacement handles the B^/W^/L^ operand forms: "X^address"
-// (relative: the mode byte's register field is PC, and the stored value is
-// the distance from the end of the displacement to address) or
-// "X^displacement(Rn)" (the value itself, added to Rn), each optionally
-// "@"-deferred. size is the displacement field's byte width; relMode/
-// dispMode are the mode bytes' high nibble|0xF and high-nibble-only forms
-// (e.g. 0xAF/0xA0 for byte).
-//
-// The reference tool stored the target address itself for "X^address",
-// rather than a displacement to it, and a forward reference's fixup was
-// off by the displacement's own size; both are fixed here.
-func (a *Assembler) assembleDisplacement(c *cursor, deferred byte, size int, relMode, dispMode byte) error {
-	loc := a.pc() + 1 // the mode byte comes first; the displacement follows it.
-
-	value, wasForward, err := a.exprValue(c, loc, branchFixup(size))
-	if err != nil {
-		return err
-	}
-
-	mode := relMode | deferred
-
-	c.skipBlanks()
-
-	haveReg := c.peek() == '('
-	if haveReg {
-		c.next()
-
-		r, err := parseRegister(c, 0)
-		if err != nil {
-			return err
-		}
-
-		mode = dispMode | deferred | byte(r)
-
-		c.skipBlanks()
-
-		if c.next() != ')' {
-			return vmserrors.New(vmserrors.VAX_BADMODE)
-		}
-	}
-
-	disp := value
-
-	switch {
-	case wasForward && haveReg:
-		a.lastFixup.kind = addrFixup(size)
-
-	case wasForward:
-		// The branch-style fixup already measures from the end of the
-		// displacement field.
-
-	case haveReg:
-		// A displacement may be written signed or as its unsigned bit
-		// pattern (e.g. B^0FF(R1)).
-		if !fitsSigned(int64(int32(value)), size) && (size == 4 || value>>(8*uint(size)) != 0) {
-			return vmserrors.New(vmserrors.VAX_DATARANGE, "displacement", int32(value))
-		}
-
-	default:
-		disp = value - (loc + uint32(size))
+	} else {
+		disp = target - (loc + uint32(size))
 		if !fitsSigned(int64(int32(disp)), size) {
 			return vmserrors.New(vmserrors.VAX_DATARANGE, "displacement", int32(disp))
 		}
 	}
 
-	if err := a.emitByte(mode); err != nil {
+	if err := a.emitByte(sizeModeBase(size) | deferred | 0x0F); err != nil {
 		return err
 	}
 
-	if err := a.emitScaled(disp, size); err != nil {
+	return a.emitScaled(disp, size)
+}
+
+// registerDisplacement assembles displacement [deferred] mode from
+// register reg. A known value gets the smallest displacement that holds
+// it. An unknown one (a forward reference, or in the MACRO dialect a
+// relocatable or external value) gets a longword in the console dialect
+// and a word in the MACRO dialect (the MACRO manual, §5.1.6), finished
+// once it's known or by the linker.
+func (a *Assembler) registerDisplacement(x exprVal, deferred, reg byte, size int) error {
+	loc := a.pc() + 1
+
+	if !x.known() {
+		if size == 0 {
+			size = 4
+			if a.dialect == DialectMACRO {
+				size = 2
+			}
+		}
+
+		if err := a.emitByte(sizeModeBase(size) | deferred | reg); err != nil {
+			return err
+		}
+
+		if err := a.emitScaled(0, size); err != nil {
+			return err
+		}
+
+		a.queueFixup(loc, addrFixup(size), x.x)
+
+		return nil
+	}
+
+	value := x.v
+
+	if size == 0 {
+		for _, size = range []int{1, 2, 4} {
+			if fitsSigned(int64(int32(value)), size) {
+				break
+			}
+		}
+	} else if !fitsSigned(int64(int32(value)), size) && (size == 4 || value>>(8*uint(size)) != 0) {
+		// A displacement may be written signed or as its unsigned bit
+		// pattern (e.g. B^0FF(R1)).
+		return vmserrors.New(vmserrors.VAX_DATARANGE, "displacement", int32(value))
+	}
+
+	if err := a.emitByte(sizeModeBase(size) | deferred | reg); err != nil {
 		return err
 	}
+
+	return a.emitScaled(value, size)
+}
+
+// absoluteOperand assembles absolute mode (@#address) for the address x.
+func (a *Assembler) absoluteOperand(x exprVal) error {
+	if err := a.emitByte(0x9F); err != nil {
+		return err
+	}
+
+	if x.known() {
+		return a.emitLongword(x.v)
+	}
+
+	loc := a.pc()
+
+	if err := a.emitLongword(0); err != nil {
+		return err
+	}
+
+	a.queueFixup(loc, fixAddrL, x.x)
+
+	return nil
+}
+
+// generalOperand assembles G^address, general mode (the MACRO manual,
+// §5.2.5): five bytes, which the linker makes relative mode for a
+// relocatable address and absolute mode for an absolute one (STO_PICR).
+// An address already known to be absolute is assembled as absolute mode
+// here, which is what the linker would make of it, and so is every
+// address in the console dialect, where every address is absolute.
+func (a *Assembler) generalOperand(c *cursor, deferred byte) error {
+	if deferred != 0 {
+		return vmserrors.New(vmserrors.VAX_BADMODE)
+	}
+
+	x, err := a.exprTop(c, &exprState{allowForward: true})
+	if err != nil {
+		return err
+	}
+
+	if x.known() || a.dialect == DialectConsole {
+		return a.absoluteOperand(x)
+	}
+
+	loc := a.pc()
+
+	if err := a.emitBytes(0, 0, 0, 0, 0); err != nil {
+		return err
+	}
+
+	a.queueFixup(loc, fixPICR, x.x)
 
 	return nil
 }
