@@ -823,3 +823,36 @@ above record the answers:
 - Rebuilt `mar-exchange-vms.dsk` from the pristine `vms-init-rd51.dsk`
   with all ten files. Its `INDEXF.SYS` header now has 131 free map words.
 - The `ods2` `Initialize` rewrite (VMS-mountable volumes) is still to do.
+
+### 2026-09-30 — ANALYZE/DISK_STRUCTURE findings; three more `ods2` fixes
+
+- The HEADERFULL fix wasn't enough: the second `@ASSEMBLE` failed on the
+  first new file. VMS created each file's header, then failed to enter it
+  in `000000.DIR`. The user ran `ANALYZE/DISK_STRUCTURE`, `DUMP/HEADER`,
+  and a single `CREATE` on a freshly rebuilt volume. ANALYZE reported
+  three kinds of problem, each traced to an `ods2` bug and fixed:
+  - **`BADDIR` / `BAD_DIRTYPE`**, which rejected the whole MFD and made
+    every file "not found in a directory". ANALYZE's rule
+    (`verify/lis/verify_dir.lis`) rejects a directory record whose version
+    limit is 0 or has its high bit set. `ods2` dropped version limits on
+    decode and wrote 0 on encode, so any directory it rewrote became
+    invalid; VMS's own entries lost their limit of 1. Fixed (`d616929`):
+    `DirEntry.VersionLimit` survives decode and encode, a name with none
+    gets 32767 (`NoVersionLimit`), a new name takes its directory's
+    default, and `Initialize` gives reserved files 1.
+  - **`FUTCREDAT` / `FUTREVDAT`** (dates in the future). `vmstime` treated
+    tick counts as UTC, but VMS keeps local wall-clock time. Fixed
+    (`5ebb6d7`): conversions and `ParseVMSTime` use `vmstime.Location`,
+    which is the host's local zone by default. The tests pin UTC, and a new
+    test checks the zone behavior; the suite passes under
+    `TZ=America/New_York` too.
+  - **`ALTIHDBAD`**. The copy of `INDEXF.SYS`'s header at `ALTIDXLBN`
+    (identical to the primary on a VMS volume) went stale when `ods2`
+    rewrote the primary. Fixed (`84a3805`): writing `INDEXF.SYS`'s header
+    writes the copy too.
+- Rebuilt `mar-exchange-vms.dsk` from `vms-init-rd51.dsk` and checked it.
+  The MFD's version limits are 1 and 32767, the alternate index header
+  matches the primary, and file dates match the host's local clock.
+- Lesson recorded for the `Initialize` rewrite: run the result through
+  `ANALYZE/DISK_STRUCTURE` on VMS. It names exactly which structure is
+  wrong, which was far quicker than inferring from failures.
