@@ -1,0 +1,18 @@
+	.TITLE	EXTERN	Fixture 5: external references
+	.IDENT	/V1.0/
+
+; Checks references to symbols defined elsewhere: general mode (G^),
+; explicit longword relative (L^), and no mode given, for both code and
+; data. Assemble only: SUB_ONE and EXTDATA are defined nowhere.
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	START, ^M<>
+	CALLS	#0, SUB_ONE
+	CALLS	#0, L^SUB_ONE
+	MOVL	EXTDATA, R0
+	MOVAL	EXTDATA+8, R1
+	MOVL	G^EXTDATA, R2
+	PUSHL	#1
+	CALLS	#1, G^SYS$EXIT
+
+	.END	START

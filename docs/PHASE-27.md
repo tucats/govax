@@ -731,3 +731,26 @@ above record the answers:
   `testdata/mar/vax/`. It checks the byte-for-byte round trip and a clean
   `Check`, and skips while there are none.
 - Test coverage is 87% (the rest is mostly error paths).
+
+### 2026-09-30 — Subtask 3 prepared: fixtures and exchange container
+
+- Wrote the whole fixture ladder at once (`testdata/mar/*.mar`, steps 1 to
+  9), so one simh session covers everything. Also wrote
+  `testdata/mar/assemble.com`, which does the VMS side: `MACRO/LIST` and
+  `ANALYZE/OBJECT` for each fixture, `LINK/MAP` and `RUN` for `entry` and
+  `hello`, and `DIRECTORY/FULL` of the objects for their record attributes.
+  `testdata/mar/README.md` describes the round trip.
+- Built the exchange container with govax's own commands, which also
+  exercises the host-to-ODS-2 path: `INITIALIZE/CONTAINER`, `MOUNT /WRITE`,
+  and `COPY .../HOST` for each file. The result is
+  `testdata/disks/mar-exchange.dsk` (4000 blocks, volume label MARXCHG,
+  gitignored like the other containers).
+- Found along the way, outside this phase:
+  - `COPY` doesn't expand a wildcard in a host source (`*.mar/HOST`), so
+    each file was copied by name;
+  - `COPY .../HOST` creates STREAM_LF files, which VMS RMS and MACRO read
+    fine;
+  - `DIRECTORY DKA1:[000000]` heads its listing "Directory DKA1:[]", where
+    VMS shows "[000000]".
+- Waiting on the user to attach the container to simh, run `@ASSEMBLE`,
+  and pause simh so govax can copy the results into `testdata/mar/vax/`.

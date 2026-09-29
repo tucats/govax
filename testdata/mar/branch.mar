@@ -1,0 +1,29 @@
+	.TITLE	BRANCH	Fixture 7: branches, displacements, and gaps
+	.IDENT	/V1.0/
+
+; Checks branch displacements, the displacement MACRO picks for a
+; backward reference in the same psect (smallest) versus a forward one
+; (the default, longword), .DEFAULT DISPLACEMENT, and gaps left by
+; .ALIGN and .BLKB.
+
+	.PSECT	CODE, NOWRT, EXE, QUAD
+	.ENTRY	LOOP, ^M<R2>
+	MOVL	#10, R2
+10$:	DECL	R2
+	BNEQ	10$
+	BRB	20$
+	.ALIGN	LONG
+	.BLKB	5
+20$:	MOVAB	BUFFER, R0
+	MOVAB	HERE, R1
+HERE:	MOVAB	HERE, R1
+	.DEFAULT DISPLACEMENT, WORD
+	MOVAB	THERE, R1
+THERE:	MOVL	#1, R0
+	RET
+
+	.PSECT	DATA, WRT, NOEXE, PAGE
+BUFFER:	.BLKB	100
+	.LONG	7
+
+	.END	LOOP

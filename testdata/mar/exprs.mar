@@ -1,0 +1,21 @@
+	.TITLE	EXPRS	Fixture 8: expressions the linker finishes
+	.IDENT	/V1.0/
+
+; Checks the TIR arithmetic MACRO emits for expressions it cannot finish
+; itself: an external plus a constant, the difference of two externals,
+; a difference across psects, and external products and masks. Assemble
+; only: EXT1 and EXT2 are defined nowhere.
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+A:	.LONG	EXT1+4
+	.LONG	EXT1-EXT2
+	.LONG	B-A
+	.LONG	<C-A>*2
+	.LONG	EXT1*2
+C:	.WORD	EXT2
+	.BYTE	EXT2&^XFF
+
+	.PSECT	OTHER, WRT, NOEXE, LONG
+B:	.LONG	A
+
+	.END

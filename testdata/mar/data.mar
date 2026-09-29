@@ -1,0 +1,12 @@
+	.TITLE	DATA	Fixture 2: one data psect
+	.IDENT	/V1.0/
+
+; Checks a psect definition and STORE IMMEDIATE text.
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+LIST:	.LONG	1, 2, 3
+TEXT:	.ASCII	/Hello/
+	.BYTE	0
+	.WORD	^X1234
+
+	.END

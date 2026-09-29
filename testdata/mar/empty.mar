@@ -1,0 +1,7 @@
+	.TITLE	EMPTY	Fixture 1: an empty module
+	.IDENT	/V1.0/
+
+; Checks the main header, language header, and end of module records,
+; and which psects MACRO declares for a module with no code or data.
+
+	.END

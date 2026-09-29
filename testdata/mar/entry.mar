@@ -1,0 +1,12 @@
+	.TITLE	ENTRY	Fixture 3: an entry point and transfer address
+	.IDENT	/V1.0/
+
+; Checks an entry point subrecord, its register mask, and the end of
+; module transfer address. Links and runs (it exits with status 1).
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	MAIN, ^M<R2,R3>
+	MOVL	#1, R0
+	RET
+
+	.END	MAIN

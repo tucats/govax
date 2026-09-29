@@ -1,0 +1,20 @@
+	.TITLE	RELOC	Fixture 4: references between psects
+	.IDENT	/V1.0/
+
+; Checks relocation: code referring to data in another psect (a known
+; target, but in another psect, so MACRO uses its default displacement),
+; and data holding the address of code.
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+ITEM:	.LONG	42
+PTR:	.ADDRESS START
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	START, ^M<>
+	MOVAL	ITEM, R0
+	MOVL	PTR, R1
+	MOVL	ITEM+4, R2
+	MOVL	#1, R0
+	RET
+
+	.END	START

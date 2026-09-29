@@ -1,0 +1,21 @@
+	.TITLE	GLOBALS	Fixture 6: global symbols
+	.IDENT	/V1.0/
+
+; Checks global definitions (::, ==, .ENTRY), declared and weak
+; references, and an absolute global. Assemble only: OTHER is defined
+; nowhere.
+
+	.GLOBL	OTHER
+	.WEAK	MAYBE
+LIMIT	== 100
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+TABLE::	.LONG	LIMIT, OTHER, MAYBE
+COUNT:	.LONG	0
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	GET_COUNT, ^M<>
+	MOVL	COUNT, R0
+	RET
+
+	.END

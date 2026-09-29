@@ -1,0 +1,15 @@
+	.TITLE	HELLO	Fixture 9: hello, world
+	.IDENT	/V1.0/
+
+; A complete program: links and runs, printing "Hello, world!".
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+MSG:	.ASCID	/Hello, world!/
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	HELLO, ^M<>
+	PUSHAQ	MSG
+	CALLS	#1, G^LIB$PUT_OUTPUT
+	RET
+
+	.END	HELLO
