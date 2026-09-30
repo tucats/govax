@@ -42,9 +42,9 @@ func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 		t.Fatalf("ensureShims: %v", err)
 	}
 
-	addr, ok := c.Symbols.Get("SHIM$LIBRTL_00000778") // lib$adawi, code 1
+	addr, ok := c.Symbols.Get("SHIM$LIBRTL_00000A70") // lib$adawi, code 1
 	if !ok {
-		t.Fatal("expected SHIM$LIBRTL_00000778 to be defined")
+		t.Fatal("expected SHIM$LIBRTL_00000A70 to be defined")
 	}
 
 	if addr != c.shimBase {
@@ -83,7 +83,7 @@ func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 		t.Fatalf("ensureShims (again): %v", err)
 	}
 
-	addrAgain, _ := c.Symbols.Get("SHIM$LIBRTL_00000778")
+	addrAgain, _ := c.Symbols.Get("SHIM$LIBRTL_00000A70")
 	if addrAgain != addr {
 		t.Errorf("second ensureShims moved the stub: %#x -> %#x", addr, addrAgain)
 	}

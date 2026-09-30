@@ -2056,6 +2056,23 @@ itself, not something a closer reading resolves. Staying deliberately kept, as t
 C source's own (equally legitimate, per Note 2) reading of "signed integers,
 widened."
 
+### [Phase 30] LIB$ADAWI's and STR$UPCASE's shim offsets were swapped
+
+- **Where**: `reference/eVAX/kernel.asm`'s `.shim` table (lines 1146-1147),
+  copied to `internal/bootdata/files/kernel.asm` and `testdata/asm/kernel.asm`,
+  and transcribed into `internal/console/shim.go`'s `shimTable`.
+- **What**: the table put `LIB$ADAWI` at `LIBRTL+^X0778` and `STR$UPCASE` at
+  `LIBRTL+^X0A70`. VMS 7.3's `LIBRTL.EXE` global symbol table (read by
+  `link.ReadShareableImage`, docs/PHASE-30.md subtask 3) has them the other way
+  round: `LIB$ADAWI` at `^X0A70` and `STR$UPCASE` at `^X0778`. So a real image's
+  call to either routine reached the other's shim under RUN. The other ten
+  LIBRTL shims match.
+- **Status**: fixed in Go (all three govax copies, plus `vax.help`'s `.SHIM`
+  example, `shim_test.go`, and the assembler's `kernel.golden`). The shims keep
+  their codes (1 and 2); only the offsets moved. `TestShimOffsetsMatchLIBRTL`
+  checks every LIBRTL shim against `LIBRTL.EXE` when that file is present.
+  `reference/eVAX` still has the old offsets.
+
 <!--
 Entry template:
 

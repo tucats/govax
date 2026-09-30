@@ -1148,8 +1148,8 @@ _done:          ret
 ;                       ------------        -----  --------   ------
 ;                       Entry Name             ID  RTL        Offset
 ;                       ------------        -----  --------   ------
-                .shim   lib$adawi,            ^d1, LIBRTL,      ^X0778
-                .shim   str$upcase,           ^d2, LIBRTL,      ^X0A70
+                .shim   lib$adawi,            ^d1, LIBRTL,      ^X0A70
+                .shim   str$upcase,           ^d2, LIBRTL,      ^X0778
                 .shim   exe$input,            ^d3, EVAX,        0004
                 .shim   decc$open,            ^d4, DECC$SHR,    ^X04E8
                 .shim   decc$close,           ^d5, DECC$SHR,    ^X0490

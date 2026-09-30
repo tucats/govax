@@ -51,8 +51,8 @@ type shimEntry struct {
 }
 
 var shimTable = []shimEntry{
-	{"LIB$ADAWI", "LIBRTL", 0x0778, 1},
-	{"STR$UPCASE", "LIBRTL", 0x0A70, 2},
+	{"LIB$ADAWI", "LIBRTL", 0x0A70, 1},
+	{"STR$UPCASE", "LIBRTL", 0x0778, 2},
 	{"EXE$INPUT", "EVAX", 0x0004, 3},
 	{"DECC$OPEN", "DECC$SHR", 0x04E8, 4},
 	{"DECC$CLOSE", "DECC$SHR", 0x0490, 5},

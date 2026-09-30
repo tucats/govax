@@ -880,10 +880,10 @@ $ASSE,PSEU,SHIM
         memory.
         
         
-        .SHIM   STR$UPCASE, 2, LIBRTL, ^X0A70
+        .SHIM   STR$UPCASE, 2, LIBRTL, ^X0778
         
         This indicates that when an image is loaded with a reference to 
-        LIBRTL+^X0A70, it will call a shim stub named STR$UPCASE.  The shim stub 
+        LIBRTL+^X0778, it will call a shim stub named STR$UPCASE.  The shim stub 
         is created as part of the assembly of the .SHIM instruction.  This stub
         will use the special XFC instruction to transfer control to the RTL 
         support routine for code 2.  See shim.c and rtl.c for more information.
