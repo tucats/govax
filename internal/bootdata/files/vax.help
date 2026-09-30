@@ -2175,26 +2175,47 @@ $HELP
 
     For additional information, see the help on the following command topics:
 
+    ASM             Assemble VAX source into memory
+    ASSIGN          Create a logical name (equivalence first)
     CALL            Execute instructions by calling into a procedure
     CLEAR           Clear memory, symbols, etc.
+    COPY            Copy a file between the host and a mounted volume
+    CREATE          Create a logical name table
+    DEASSIGN        Delete a logical name
+    DEFINE          Create a logical name
+    DELETE          Delete a file on a mounted volume
+    DIRECTORY       List the files on a mounted volume
     DISASSEMBLE     Disassemble memory as VAX instructions
     DISMOUNT        Detach a device's mounted disk-image container
     DO              Assemble and execute a single instruction
     EXAMINE         Examine the contents of memory
     GO              Execute VAX instructions
     INCLUDE         Execute a text file of console commands
-    INITIALIZE      Initialize the virtual VAX
+    INITIALIZE      Initialize the virtual VAX, or a disk-image container
+    LIBRARY         Create, change, or list a macro or object library
     LINK            Link object modules into an executable image
     LOAD            Load a saved memory image
     MACRO           Assemble a MACRO-32 source file into an object module
     MOUNT           Attach a disk-image container file to a device
+    PRINT           Print messages or expressions
+    PURGE           Delete old versions of files on a mounted volume
     QUIT            Quit the virtual VAX
-    SAVE            Save the machine state
+    RENAME          Rename or move files on a mounted volume
     RUN             Load and run a VAX/VMS image
-    STEP            Singlestep VAX instructions
+    SAVE            Save the machine state
     SET             Set the state of the console or VAX
     SHOW            Display the state of the console or VAX
+    STEP            Singlestep VAX instructions
+    TEST            Run the emulator's debugging sequences
+    TYPE            Display a file on a mounted volume
     VMINIT          Initialize a VM map
+    ZERO            Clear the virtual VAX's memory
+
+    Other topics:
+
+    ABOUT           About govax
+    PSL             The processor status longword and its fields
+    XFC             govax's extended function codes
     
 
 $DO  
@@ -3734,6 +3755,109 @@ $LINK
         LINK MAIN,MYLIB/LIBRARY,PROG/OPTIONS
 
     See also the help for MACRO and RUN.
+
+$LIBR
+
+    The LIBRARY command creates, changes, lists, and extracts from VAX/VMS
+    libraries, in the style of VMS's LIBRARIAN: macro libraries (.MLB),
+    which MACRO searches for macros, and object libraries (.OLB), which
+    LINK searches for modules.  govax writes libraries as LIBRARIAN lays
+    them out, so a library made here works on VMS, and VMS's work here.
+
+    Syntax:
+
+        LIBRARY <library>[/HOST] [<input>[,...][/HOST]] [qualifiers...]
+
+    Parameters:
+
+        <library>       The library file.  Without a file type it is .OLB,
+                        or .MLB with /MACRO.  It can be a host file or a
+                        file on a mounted volume, by the rules MACRO uses
+                        for its source (see HELP MACRO).
+
+        <input>         Files whose modules go into the library: macro
+                        source (.MAR, the default type for a macro
+                        library), one module for each macro, or object
+                        files (.OBJ, the default for an object library),
+                        one module for each object module.  A bare name
+                        is found beside the input before it.  With input
+                        files and no operation named, their modules
+                        replace any of the same names, as LIBRARIAN's
+                        default /REPLACE does.
+
+    Qualifiers:
+
+        /CREATE         Creates a new library (a new version on a volume),
+                        then inserts any input files' modules.
+
+        /INSERT         Inserts the input files' modules.  A module
+                        already in the library is a warning, and is left
+                        as it is.
+
+        /REPLACE        Replaces modules with the input files' ones of the
+                        same names, inserting the rest.  The default.
+
+        /DELETE=(<module>,...)
+                        Deletes modules.  Names may hold the wildcards *
+                        and %.  Deletions are done before any insertions.
+
+        /EXTRACT=(<module>,...)
+                        Copies modules out of the library, to the file
+                        /OUTPUT= names (by default, the library's name
+                        with the type .MAR or .OBJ).  Names may hold * and
+                        %.
+
+        /LIST[=<file>]  Lists the library: its header, then its modules.
+                        Without a file name, the listing goes to the
+                        console; a file's default type is .LIS.
+
+        /FULL           With /LIST, adds each module's ident, insertion
+                        time, and number of global symbols.
+
+        /NAMES          With /LIST, adds each object module's global
+                        symbols.
+
+        /WIDTH=<n>      The width of a /NAMES listing (80 on the console,
+                        132 in a file).
+
+        /MACRO          A macro library.  /OBJECT (the default) is an
+                        object library.  These choose a new library's
+                        type; an existing library keeps its own.
+
+        /NOSQUEEZE      Keeps macros' comments and trailing blanks.  By
+                        default they're removed, as LIBRARIAN's /SQUEEZE
+                        does, except on .MACRO, .ERROR, .WARN, .PRINT,
+                        and .IIF lines.
+
+        /SELECTIVE_SEARCH
+                        Marks inserted object modules for selective
+                        search: LINK takes from them only symbols already
+                        referred to.
+
+        /LOG            Reports each module inserted, replaced, or
+                        deleted.
+
+    LIBRARIAN changes a library in place; LIBRARY builds the whole library
+    and writes it only when every step has succeeded, so an error leaves
+    the library as it was.  A changed library keeps its name and version.
+
+    From the host shell, "govax library <library> [<input>...]" runs this
+    command, with --create, --insert, --replace, --delete, --extract,
+    --output, --list, --list-file, --full, --names, --macro, --object,
+    --no-squeeze, --selective-search, and --log.
+
+    Examples:
+
+        LIBRARY/CREATE/MACRO "mymacros" "mymacros.mar"
+        MACRO "prog.mar"/LIBRARY=("mymacros")
+
+        LIBRARY/CREATE DUA0:[LIB]SUBS SUB1,SUB2
+        LINK MAIN,DUA0:[LIB]SUBS/LIBRARY
+
+        LIBRARY/LIST/FULL/NAMES DUA0:[LIB]SUBS
+        LIBRARY/EXTRACT=(ADD*)/OUTPUT="adds.mar" "mymacros.mlb"
+
+    See also the help for MACRO and LINK.
 
 $SET ,DEFA
 $SE  ,DEFA
