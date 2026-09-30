@@ -197,3 +197,30 @@ golangci-lint clean, then a commit (and `build -i` where it changes behavior).
   `TestSymbolNames_rmsFamilies` pins the 393-name set, and the `.RMSDEF`
   test checks that SS$/LNM$/IO$ names stay out. For now gen still
   rebuilds everything from `reference/vms`; subtask 2 changes that.
+- 2026-09-30: Subtask 2 done. `internal/vmsdef/gen` now merges into the
+  existing table instead of rebuilding it. It imports `vmsdef` to read
+  `Symbols` and a new generated `SymbolSources` list (the file names merged
+  so far, with no paths), takes repeatable `-h`/`-sdl`/`-bliss` inputs in
+  command-line order, and rewrites `symbols_generated.go`. `-prefix` and
+  `-sdl-stop` apply to the inputs after them, so objfmt.sdl's `$EOBJRECDEF`
+  cut is no longer a special case. The C header parser (`header.go`) takes
+  any upper-case `XXX$` name, filtered by `-prefix`, rather than only
+  FAB$/RAB$/RMS$. The merge rules:
+  - a name already present with the same value is left alone;
+  - a different value is a conflict, and all conflicts are reported
+    together;
+  - `-replace` overwrites conflicting values;
+  - `-n` is a dry run that lists what would be added or changed.
+
+  The `//go:generate` directive and `constants.go` are gone.
+  *Verified:*
+  - gen with no inputs rewrites the file byte for byte (and
+    `TestGenerateSymbols_roundTrip` checks this).
+  - Re-merging all 18 original `reference/vms` files with their old prefix
+    filters reports 0 added and 0 changed for each. Without the prefixes,
+    only `SYSTEM$_FACILITY` would be new.
+  - With `reference/vms` moved aside, `go generate ./... && go build ./...`
+    succeeds.
+
+  The message texts aren't regenerated any more either; subtask 3 gives
+  them the same merge mode.

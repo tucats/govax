@@ -1,0 +1,141 @@
+package main
+
+import (
+	"bytes"
+	"flag"
+	"os"
+	"path/filepath"
+	"reflect"
+	"testing"
+
+	"github.com/tucats/govax/internal/vmsdef"
+)
+
+func TestMergeSymbols(t *testing.T) {
+	symbols := map[string]uint32{"SS$_NORMAL": 1, "SS$_ACCVIO": 12}
+	defs := map[string]uint32{"SS$_NORMAL": 1, "SS$_BADPARAM": 20, "SS$_ACCVIO": 13}
+
+	r := mergeSymbols(symbols, defs, false)
+
+	if !reflect.DeepEqual(r.added, []string{"SS$_BADPARAM"}) || r.same != 1 || len(r.changed) != 0 {
+		t.Errorf("mergeSymbols = %+v", r)
+	}
+
+	if !reflect.DeepEqual(r.conflicts, []string{"SS$_ACCVIO: 0xc, not 0xd"}) {
+		t.Errorf("conflicts = %q", r.conflicts)
+	}
+
+	if want := map[string]uint32{"SS$_NORMAL": 1, "SS$_ACCVIO": 12, "SS$_BADPARAM": 20}; !reflect.DeepEqual(symbols, want) {
+		t.Errorf("symbols = %v, want %v (a conflict mustn't change the table)", symbols, want)
+	}
+}
+
+func TestMergeSymbols_replace(t *testing.T) {
+	symbols := map[string]uint32{"SS$_ACCVIO": 12}
+
+	r := mergeSymbols(symbols, map[string]uint32{"SS$_ACCVIO": 13}, true)
+
+	if len(r.conflicts) != 0 || !reflect.DeepEqual(r.changed, []string{"SS$_ACCVIO: 0xc -> 0xd"}) {
+		t.Errorf("mergeSymbols = %+v", r)
+	}
+
+	if symbols["SS$_ACCVIO"] != 13 {
+		t.Errorf("SS$_ACCVIO = %d, want 13", symbols["SS$_ACCVIO"])
+	}
+}
+
+func TestAddSource(t *testing.T) {
+	got := addSource(addSource([]string{"ssdef.txt"}, "iodef.sdl"), "ssdef.txt")
+
+	if want := []string{"ssdef.txt", "iodef.sdl"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("addSource = %q, want %q", got, want)
+	}
+}
+
+// TestGenerateSymbols_roundTrip: with nothing merged, gen writes the
+// committed file back unchanged, so the file is exactly what gen makes of
+// the table it holds.
+func TestGenerateSymbols_roundTrip(t *testing.T) {
+	want, err := os.ReadFile(filepath.Join("..", symbolsFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got := generateSymbols(vmsdef.Symbols, vmsdef.SymbolSources); !bytes.Equal(got, want) {
+		t.Errorf("generateSymbols doesn't reproduce %s", symbolsFile)
+	}
+}
+
+func TestParseDefines_prefix(t *testing.T) {
+	src := "#define FAB$C_BID 3\n#define RAB$C_BID 0x1\n#define fab$w_ifi fab$r_ifi_overlay.fab$w_ifi\n#define NAM$C_BID 2\n"
+
+	if got, want := parseDefines(src, ""), map[string]uint32{"FAB$C_BID": 3, "RAB$C_BID": 1, "NAM$C_BID": 2}; !reflect.DeepEqual(got, want) {
+		t.Errorf("parseDefines = %v, want %v", got, want)
+	}
+
+	if got, want := parseDefines(src, "RAB$"), map[string]uint32{"RAB$C_BID": 1}; !reflect.DeepEqual(got, want) {
+		t.Errorf("parseDefines(RAB$) = %v, want %v", got, want)
+	}
+}
+
+// TestInputFlags: -prefix and -sdl-stop apply to the inputs after them,
+// in command-line order.
+func TestInputFlags(t *testing.T) {
+	var list inputList
+
+	fs := flag.NewFlagSet("gen", flag.ContinueOnError)
+	fs.Var(inputFlag{&list, "h"}, "h", "")
+	fs.Var(inputFlag{&list, "sdl"}, "sdl", "")
+	fs.Var(inputFlag{&list, "bliss"}, "bliss", "")
+	fs.Var(settingFlag{&list.prefix}, "prefix", "")
+	fs.Var(settingFlag{&list.stop}, "sdl-stop", "")
+
+	if err := fs.Parse([]string{"-h", "a.h", "-prefix", "SS$_", "-bliss", "b.txt", "-sdl-stop", "$X", "-prefix", "", "-sdl", "c.sdl"}); err != nil {
+		t.Fatal(err)
+	}
+
+	want := []input{
+		{kind: "h", path: "a.h"},
+		{kind: "bliss", path: "b.txt", prefix: "SS$_"},
+		{kind: "sdl", path: "c.sdl", stop: "$X"},
+	}
+
+	if !reflect.DeepEqual(list.inputs, want) {
+		t.Errorf("inputs = %+v, want %+v", list.inputs, want)
+	}
+}
+
+// TestInputRead_sdlStop: an SDL source is read only as far as the
+// -sdl-stop module, and -prefix filters what's left.
+func TestInputRead_sdlStop(t *testing.T) {
+	src := `module $AAADEF;
+constant "ONE" equals 1 prefix AAA$ tag C;
+constant "TWO" equals 2 prefix BBB$ tag C;
+end_module $AAADEF;
+module $ZZZDEF;
+constant "THREE" equals 3 prefix ZZZ$ tag C;
+end_module $ZZZDEF;
+`
+	path := filepath.Join(t.TempDir(), "test.sdl")
+	if err := os.WriteFile(path, []byte(src), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := input{kind: "sdl", path: path, stop: "$ZZZDEF"}.read()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := map[string]uint32{"AAA$C_ONE": 1, "BBB$C_TWO": 2}; !reflect.DeepEqual(got, want) {
+		t.Errorf("read = %v, want %v", got, want)
+	}
+
+	got, err = input{kind: "sdl", path: path, prefix: "BBB$"}.read()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := map[string]uint32{"BBB$C_TWO": 2}; !reflect.DeepEqual(got, want) {
+		t.Errorf("read with a prefix = %v, want %v", got, want)
+	}
+}

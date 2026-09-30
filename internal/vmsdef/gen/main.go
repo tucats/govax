@@ -1,298 +1,201 @@
-// Command gen parses VMS 7.3's definition files and emits
-// internal/vmsdef/symbols_generated.go: one map, Symbols, of every
-// symbolic-constant name to its numeric value. It reads $FABDEF, $RABDEF,
-// and $RMSDEF from C headers, $LNMDEF, $DEVDEF, $JPIDEF, $IODEF, $PRTDEF,
-// $BRKDEF, and the VAX object language from SDL source (sdl.go), and
-// $SSDEF, $STATEDEF, $SYIDEF, $DVIDEF, $TTDEF, $PRVDEF, $FIBDEF, and
-// $ATRDEF from BLISS LITERAL listings (bliss.go). Each file's names have
-// their own prefix, so they share one table; internal/vmsdef/symbols.go
-// says what each prefix holds. The message texts of the system message
-// file go to a second file, messages_generated.go (msg.go). Run via `go
-// generate` from internal/vmsdef (see the go:generate directive in
-// constants.go) rather than hand-transcribing ~450 #define lines — see
-// docs/PHASE-24.md's design notes on why (the same reasoning
-// internal/cpu/gen/main.go already established for instruction_table.h's
-// own ~284-entry table).
+// Command gen adds VMS definitions to govax's own tables in
+// internal/vmsdef: the symbolic constants in Symbols
+// (symbols_generated.go). It reads definition files of the kinds VMS
+// ships, merges what they define into the table govax already has, and
+// rewrites the generated file, sorted, so that a merge reads as a diff.
 //
-// The three headers only ever define a value constant as a plain, bare
-// integer literal (decimal or 0x-prefixed hex) — never an expression
-// combining other macros — so a single-line regex per #define is
-// sufficient; no C preprocessor/expression evaluation is needed. Each
-// header also ends with a block of C-only field-access aliasing macros
-// (e.g. "#define fab$w_ifi fab$r_ifi_overlay.fab$w_ifi") that this parser
-// must not mistake for value constants — conveniently, every real value
-// constant is spelled in upper case (FAB$C_BID, RMS$_NORMAL, ...) while
-// every aliasing macro is spelled in lower case, so filtering by case alone
-// (not by trying to detect a non-numeric value, which would still match
-// some of these) cleanly separates the two without false positives.
+// govax's tables are committed, and building govax doesn't run gen: the
+// VMS files it reads are licensed, and they aren't part of this
+// repository (docs/PHASE-31.md). Run it when govax needs definitions it
+// doesn't have yet, from the repository root:
+//
+//	go run ./internal/vmsdef/gen -bliss ~/vms/ssdef.txt -sdl ~/vms/iodef.sdl
+//
+// Each input is a flag naming a file, and they're read in the order
+// given:
+//
+//	-h FILE      a C header's "#define NAME value" lines (fabdef.h; see header.go)
+//	-sdl FILE    an SDL source's modules (lnmdef.sdl; see sdl.go)
+//	-bliss FILE  a BLISS LITERAL listing (ssdef.txt; see bliss.go)
+//
+// Two further flags change how the inputs after them are read: -prefix P
+// keeps only the names that begin with P (and -prefix "" keeps all of
+// them again), and -sdl-stop MODULE reads an SDL source only as far as
+// "module MODULE;" (objfmt.sdl's Alpha definitions begin at $EOBJRECDEF).
+//
+// A name the table has already, with the same value, is left alone. One
+// with a different value is an error, which names every such conflict,
+// unless -replace is given. -n reports what would be added or changed
+// and writes nothing. Each input's file name is added to SymbolSources, a
+// record of what the table was built from.
+//
+// With no inputs, gen rewrites the table as it is; a test checks that the
+// result is the committed file, byte for byte.
 package main
 
 import (
 	"flag"
 	"fmt"
-	"go/format"
 	"log"
 	"os"
-	"regexp"
-	"sort"
-	"strconv"
+	"path/filepath"
 	"strings"
+
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// defineRE matches one "#define NAME value" line, capturing the name and
-// the bare integer literal — deliberately anchored to upper-case names
-// only (see the package doc comment above for why that's the correct, not
-// merely convenient, filter).
-var defineRE = regexp.MustCompile(`^#define\s+((?:FAB|RAB|RMS)\$[A-Z0-9_]+)\s+(0[Xx][0-9A-Fa-f]+|[0-9]+)\b`)
-
-func parseDefines(src string) map[string]uint32 {
-	out := map[string]uint32{}
-
-	for _, line := range strings.Split(src, "\n") {
-		m := defineRE.FindStringSubmatch(line)
-		if m == nil {
-			continue
-		}
-
-		v, err := strconv.ParseUint(m[2], 0, 32)
-		if err != nil {
-			log.Fatalf("gen: bad integer in %q: %v", line, err)
-		}
-
-		name := m[1]
-		if prev, ok := out[name]; ok && prev != uint32(v) {
-			log.Fatalf("gen: %s redefined with a different value (%d, then %d)", name, prev, v)
-		}
-
-		out[name] = uint32(v)
-	}
-
-	return out
+// input is one definition file to merge, as the command line gives it.
+type input struct {
+	kind   string // "h", "sdl", or "bliss"
+	path   string
+	prefix string // keep only names with this prefix; "" keeps all
+	stop   string // for "sdl", the module to stop reading at, if any
 }
 
-// constantMap is one generated Go map: its variable name, the doc comment
-// lines placed above it, and its entries.
-type constantMap struct {
-	name    string
-	doc     []string
-	entries map[string]uint32
+// inputList collects the inputs in command-line order, with the -prefix
+// and -sdl-stop settings in effect at each.
+type inputList struct {
+	inputs []input
+	prefix string
+	stop   string
 }
 
-func writeMap(b *strings.Builder, m constantMap) {
-	names := make([]string, 0, len(m.entries))
-	for name := range m.entries {
-		names = append(names, name)
-	}
-
-	sort.Strings(names)
-
-	for _, line := range m.doc {
-		fmt.Fprintf(b, "// %s\n", line)
-	}
-
-	fmt.Fprintf(b, "var %s = map[string]uint32{\n", m.name)
-
-	for _, name := range names {
-		fmt.Fprintf(b, "\t%q: %#x,\n", name, m.entries[name])
-	}
-
-	fmt.Fprintf(b, "}\n\n")
+// inputFlag is one of the flags that names an input of kind.
+type inputFlag struct {
+	list *inputList
+	kind string
 }
 
-func generate(maps []constantMap, sources []string) []byte {
-	var b strings.Builder
+func (f inputFlag) String() string { return "" }
 
-	fmt.Fprintf(&b, "// Code generated by internal/vmsdef/gen from %s. DO NOT EDIT.\n",
-		strings.Join(sources, ", "))
-	fmt.Fprintf(&b, "package vmsdef\n\n")
+func (f inputFlag) Set(path string) error {
+	f.list.inputs = append(f.list.inputs, input{kind: f.kind, path: path, prefix: f.list.prefix, stop: f.list.stop})
 
-	for _, m := range maps {
-		writeMap(&b, m)
-	}
+	return nil
+}
 
-	out, err := format.Source([]byte(b.String()))
-	if err != nil {
-		log.Fatalf("gen: generated source doesn't compile: %v", err)
-	}
+// settingFlag is -prefix or -sdl-stop: it changes a setting for the
+// inputs after it.
+type settingFlag struct{ value *string }
 
-	return out
+func (f settingFlag) String() string { return "" }
+
+func (f settingFlag) Set(v string) error {
+	*f.value = v
+
+	return nil
 }
 
 func main() {
-	fabdef := flag.String("fabdef", "", "path to fabdef.h")
-	rabdef := flag.String("rabdef", "", "path to rabdef.h")
-	rmsdef := flag.String("rmsdef", "", "path to rmsdef.h")
-	lnmdef := flag.String("lnmdef", "", "path to lnmdef.sdl")
-	ssdef := flag.String("ssdef", "", "path to ssdef.txt")
-	devdef := flag.String("devdef", "", "path to devdef.sdl")
-	jpidef := flag.String("jpidef", "", "path to jpidef.sdl")
-	iodef := flag.String("iodef", "", "path to iodef.sdl")
-	statedef := flag.String("statedef", "", "path to statedef.txt")
-	syidef := flag.String("syidef", "", "path to syidef.txt")
-	dvidef := flag.String("dvidef", "", "path to dvidef.txt")
-	ttdef := flag.String("ttdef", "", "path to ttdef.txt")
-	prtdef := flag.String("prtdef", "", "path to prtdef.sdl")
-	prvdef := flag.String("prvdef", "", "path to prvdef.txt")
-	brkdef := flag.String("brkdef", "", "path to brkdef.sdl")
-	fibdef := flag.String("fibdef", "", "path to fibdef.txt")
-	atrdef := flag.String("atrdef", "", "path to atrdef.txt")
-	objfmt := flag.String("objfmt", "", "path to objfmt.sdl")
-	sysmsg := flag.String("sysmsg", "", "path to sysmsg.txt (a message-file listing)")
-	out := flag.String("out", "", "path to write the generated Go source")
-	msgOut := flag.String("msgout", "", "path to write the generated message texts")
+	var list inputList
+
+	flag.Var(inputFlag{&list, "h"}, "h", "merge a C header's #define constants")
+	flag.Var(inputFlag{&list, "sdl"}, "sdl", "merge an SDL source's definitions")
+	flag.Var(inputFlag{&list, "bliss"}, "bliss", "merge a BLISS LITERAL listing's literals")
+	flag.Var(settingFlag{&list.prefix}, "prefix", "keep only names with this prefix, in the inputs after it")
+	flag.Var(settingFlag{&list.stop}, "sdl-stop", "read the SDL sources after it only as far as this module")
+
+	replace := flag.Bool("replace", false, "let an input change a value the table already has")
+	dryRun := flag.Bool("n", false, "report what would change, and write nothing")
+	dir := flag.String("dir", filepath.Join("internal", "vmsdef"), "the directory of internal/vmsdef's generated files")
 	flag.Parse()
 
-	if *fabdef == "" || *rabdef == "" || *rmsdef == "" || *lnmdef == "" || *ssdef == "" || *devdef == "" || *jpidef == "" || *iodef == "" || *statedef == "" || *syidef == "" || *dvidef == "" || *ttdef == "" || *prtdef == "" || *prvdef == "" || *brkdef == "" || *fibdef == "" || *atrdef == "" || *objfmt == "" || *sysmsg == "" || *out == "" || *msgOut == "" {
-		log.Fatal("gen: -fabdef, -rabdef, -rmsdef, -lnmdef, -ssdef, -devdef, -jpidef, -iodef, -statedef, -syidef, -dvidef, -ttdef, -prtdef, -prvdef, -brkdef, -fibdef, -atrdef, -objfmt, -sysmsg, -out, and -msgout are all required")
+	if flag.NArg() > 0 {
+		log.Fatalf("gen: unexpected argument %q: each input is given by -h, -sdl, or -bliss", flag.Arg(0))
 	}
 
-	constants := map[string]uint32{}
+	path := filepath.Join(*dir, symbolsFile)
+	if _, err := os.Stat(path); err != nil {
+		log.Fatalf("gen: %v (run gen from the repository root, or give -dir)", err)
+	}
 
-	for _, path := range []string{*fabdef, *rabdef, *rmsdef} {
-		for name, v := range parseDefines(readSource(path)) {
-			constants[name] = v
+	symbols := copySymbols(vmsdef.Symbols)
+	sources := append([]string(nil), vmsdef.SymbolSources...)
+
+	var conflicts []string
+
+	for _, in := range list.inputs {
+		defs, err := in.read()
+		if err != nil {
+			log.Fatalf("gen: %s: %v", in.path, err)
 		}
-	}
 
-	lnm, err := parseSDL(readSource(*lnmdef))
-	if err != nil {
-		log.Fatalf("gen: %s: %v", *lnmdef, err)
-	}
+		r := mergeSymbols(symbols, defs, *replace)
+		conflicts = append(conflicts, r.conflicts...)
+		sources = addSource(sources, filepath.Base(in.path))
 
-	ss, err := parseBlissLiterals(readSource(*ssdef), "SS$_")
-	if err != nil {
-		log.Fatalf("gen: %s: %v", *ssdef, err)
-	}
+		fmt.Fprintf(os.Stderr, "gen: %s: %d added, %d changed, %d already present\n", in.path, len(r.added), len(r.changed), r.same)
 
-	dev, err := parseSDL(readSource(*devdef))
-	if err != nil {
-		log.Fatalf("gen: %s: %v", *devdef, err)
-	}
-
-	jpi, err := parseSDL(readSource(*jpidef))
-	if err != nil {
-		log.Fatalf("gen: %s: %v", *jpidef, err)
-	}
-
-	io, err := parseSDL(readSource(*iodef))
-	if err != nil {
-		log.Fatalf("gen: %s: %v", *iodef, err)
-	}
-
-	state, err := parseBlissLiterals(readSource(*statedef), "SCH$C_")
-	if err != nil {
-		log.Fatalf("gen: %s: %v", *statedef, err)
-	}
-
-	syi, err := parseBlissLiterals(readSource(*syidef), "SYI$")
-	if err != nil {
-		log.Fatalf("gen: %s: %v", *syidef, err)
-	}
-
-	dvi, err := parseBlissLiterals(readSource(*dvidef), "DVI$")
-	if err != nil {
-		log.Fatalf("gen: %s: %v", *dvidef, err)
-	}
-
-	// "TT" takes both $TTDEF's TT$ names and its TT2$ names.
-	tt, err := parseBlissLiterals(readSource(*ttdef), "TT")
-	if err != nil {
-		log.Fatalf("gen: %s: %v", *ttdef, err)
-	}
-
-	prt, err := parseSDL(readSource(*prtdef))
-	if err != nil {
-		log.Fatalf("gen: %s: %v", *prtdef, err)
-	}
-
-	prv, err := parseBlissLiterals(readSource(*prvdef), "PRV$")
-	if err != nil {
-		log.Fatalf("gen: %s: %v", *prvdef, err)
-	}
-
-	brk, err := parseSDL(readSource(*brkdef))
-	if err != nil {
-		log.Fatalf("gen: %s: %v", *brkdef, err)
-	}
-
-	fib, err := parseBlissLiterals(readSource(*fibdef), "FIB$")
-	if err != nil {
-		log.Fatalf("gen: %s: %v", *fibdef, err)
-	}
-
-	atr, err := parseBlissLiterals(readSource(*atrdef), "ATR$")
-	if err != nil {
-		log.Fatalf("gen: %s: %v", *atrdef, err)
-	}
-
-	// objfmt.sdl defines both the VAX object language and, from
-	// $EOBJRECDEF on, the Alpha one (EOBJ$, EGSD$, ETIR$, ...). govax only
-	// reads and writes VAX objects (docs/PHASE-27.md), so only the modules
-	// before that point are parsed.
-	vaxObj, _, found := strings.Cut(readSource(*objfmt), "module $EOBJRECDEF;")
-	if !found {
-		log.Fatalf("gen: %s: no \"module $EOBJRECDEF;\" separating the VAX and Alpha definitions", *objfmt)
-	}
-
-	obj, err := parseSDL(vaxObj)
-	if err != nil {
-		log.Fatalf("gen: %s: %v", *objfmt, err)
-	}
-
-	// Every map goes into one table, Symbols. Each definition file's names
-	// have their own prefix (FAB$, SS$_, LNM$, ...), so no two can collide;
-	// a name defined twice with different values is an error.
-	symbols := map[string]uint32{}
-
-	for _, m := range []map[string]uint32{constants, lnm, ss, dev, jpi, io, state, syi, dvi, tt, prt, prv, brk, fib, atr, obj} {
-		for name, v := range m {
-			if prev, ok := symbols[name]; ok && prev != v {
-				log.Fatalf("gen: %s defined twice with different values (%#x, then %#x)", name, prev, v)
+		if *dryRun {
+			for _, name := range r.added {
+				fmt.Printf("add %s = %#x\n", name, symbols[name])
 			}
 
-			symbols[name] = v
+			for _, c := range r.changed {
+				fmt.Printf("change %s\n", c)
+			}
 		}
 	}
 
-	maps := []constantMap{
-		{
-			name: "Symbols",
-			doc: []string{
-				"Symbols is every VMS symbolic constant govax knows, by name: the",
-				"values of $SSDEF, $FABDEF, $IODEF, and the other definition files.",
-				"See symbols.go for what each prefix holds.",
-			},
-			entries: symbols,
-		},
+	if len(conflicts) > 0 {
+		log.Fatalf("gen: %d names already have other values (use -replace to change them):\n\t%s", len(conflicts), strings.Join(conflicts, "\n\t"))
 	}
 
-	sources := []string{*fabdef, *rabdef, *rmsdef, *lnmdef, *ssdef, *devdef, *jpidef, *iodef, *statedef, *syidef, *dvidef, *ttdef, *prtdef, *prvdef, *brkdef, *fibdef, *atrdef, *objfmt}
-	code := generate(maps, sources)
+	if *dryRun {
+		return
+	}
 
-	if err := os.WriteFile(*out, code, 0o644); err != nil {
+	if err := os.WriteFile(path, generateSymbols(symbols, sources), 0o644); err != nil {
 		log.Fatalf("gen: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "gen: wrote %d symbols to %s\n", len(symbols), *out)
-
-	// The message texts go in a file of their own (see msg.go).
-	msgs, facilities, err := parseMessages(readSource(*sysmsg))
-	if err != nil {
-		log.Fatalf("gen: %s: %v", *sysmsg, err)
-	}
-
-	if err := os.WriteFile(*msgOut, generateMessages(msgs, facilities, *sysmsg), 0o644); err != nil {
-		log.Fatalf("gen: %v", err)
-	}
-
-	fmt.Fprintf(os.Stderr, "gen: wrote %d messages in %d facilities to %s\n", len(msgs), len(facilities), *msgOut)
+	fmt.Fprintf(os.Stderr, "gen: wrote %d symbols to %s\n", len(symbols), path)
 }
 
-func readSource(path string) string {
-	src, err := os.ReadFile(path)
+// read parses the input's file.
+func (in input) read() (map[string]uint32, error) {
+	data, err := os.ReadFile(in.path)
 	if err != nil {
-		log.Fatalf("gen: %v", err)
+		return nil, err
 	}
 
-	return string(src)
+	src := string(data)
+
+	switch in.kind {
+	case "h":
+		return parseDefines(src, in.prefix), nil
+
+	case "bliss":
+		return parseBlissLiterals(src, in.prefix)
+
+	default:
+		if in.stop != "" {
+			src, _, _ = strings.Cut(src, "module "+in.stop+";")
+		}
+
+		defs, err := parseSDL(src)
+		if err != nil {
+			return nil, err
+		}
+
+		return withPrefix(defs, in.prefix), nil
+	}
+}
+
+// withPrefix returns the definitions in defs whose names begin with
+// prefix.
+func withPrefix(defs map[string]uint32, prefix string) map[string]uint32 {
+	if prefix == "" {
+		return defs
+	}
+
+	out := map[string]uint32{}
+
+	for name, v := range defs {
+		if strings.HasPrefix(name, prefix) {
+			out[name] = v
+		}
+	}
+
+	return out
 }
