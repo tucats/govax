@@ -26,7 +26,7 @@ becomes the record of the implementation: each subtask adds a
 [progress log](#progress-log) entry, and the open questions get their answers
 recorded here.
 
-**Status: subtasks 1-10 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 11 (fixture ladder 4 to 9, which needs the user) is next.**
+**Status: subtasks 1-10 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 11 is prepared and waiting on a VAX run by the user.**
 
 ## Why this phase looks different
 
@@ -1531,3 +1531,44 @@ above record the answers:
   - Two `dcl` grammar tests now expect the MACRO verb.
 
   `go test ./...` passes.
+
+### 2026-09-30 — Subtask 11 prepared: a second round of fixtures
+
+- **What was left.** Subtask 3 already brought back real objects for all
+  nine ladder fixtures, and subtasks 7 and 8 match govax's output to them
+  record for record. So subtask 11's own list was already done. What
+  remained was two things:
+  - the choices those subtasks logged as not confirmed by a fixture;
+  - checking govax's own objects with the real `ANALYZE/OBJECT`, `LINK`,
+    and `RUN`, which the plan called extra evidence "when it's cheap".
+    It is cheap now: govax writes objects straight onto a volume VMS
+    mounts.
+- **Three new fixtures**, each aimed at unconfirmed choices:
+  - `modes.mar` (10): displacement (with no size, and `L^`),
+    displacement deferred, immediate, absolute, and relative indexed
+    operands whose values the linker finishes; and negative constants in
+    linker expressions (`STA_SB`/`STA_SW`/`STA_LW`).
+  - `psects.mar` (11): data before any `.PSECT`; an `ABS` psect of
+    offsets with global symbols, one used nowhere; going back to a
+    psect; `. = . + 8` and `. = ONE + 64`; `.SAVE_PSECT` and
+    `.RESTORE_PSECT`. It links and runs, returning 1.
+  - `general.mar` (12): `G^` to an address known to be absolute, to a
+    relocatable one, to one defined later as absolute, and indexed to an
+    external; relative mode to an absolute address; `.ENABLE ABSOLUTE`;
+    and a forward reference after `.DEFAULT DISPLACEMENT, BYTE`.
+
+  govax assembles all three, and its objects pass `Check`. The ladder
+  tests skip a fixture whose real object isn't in `testdata/mar/vax/`
+  yet.
+- **`assemble.com`** now takes all twelve. It checks every `GV_NAME.OBJ`
+  (govax's object) with `ANALYZE/OBJECT`, and links and runs `ENTRY`,
+  `HELLO`, and `PSECTS` from both real MACRO's objects and govax's,
+  showing `$STATUS`. It runs with `SET VERIFY` into a log, and writes
+  `OBJECTS.LST` rather than `OBJECTS.DIR`, which COPY skipped as a
+  directory last time.
+- **The exchange volume** `testdata/disks/mar-exchange2.dsk` (label
+  MARXCHG2, RD51 size, gitignored) was built entirely with govax:
+  `INITIALIZE/CONTAINER/DEVICE=RD51`, `COPY .../HOST` of the sources
+  and the script, then `MACRO .../HOST/OBJECT=DUA1:[000000]GV_NAME.OBJ`
+  for each fixture. That exercises subtask 10's ODS-2 object output for
+  real.

@@ -1,0 +1,30 @@
+	.TITLE	MODES	Fixture 10: operand modes the linker finishes
+	.IDENT	/V1.0/
+
+; Checks the stack program and the mode byte MACRO writes for operand
+; modes other than relative when the linker must finish the value:
+; displacement (with no size, and L^), displacement deferred, immediate,
+; absolute, and relative indexed, with relocatable and external values.
+; The data checks negative constants in expressions left to the linker.
+; Assemble only: EXTOFF and EXTVAL are defined nowhere.
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+TABLE:	.LONG	1, 2, 3, 4
+	.LONG	EXTVAL+<-4>
+	.LONG	EXTVAL*<-300>
+	.LONG	EXTVAL+<-100000>
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	START, ^M<R2,R3>
+	MOVL	TABLE(R2), R0
+	MOVL	EXTOFF(R2), R0
+	MOVL	L^TABLE(R2), R0
+	MOVL	@TABLE(R2), R0
+	MOVL	#TABLE, R0
+	MOVL	#EXTVAL, R1
+	MOVL	@#TABLE, R2
+	MOVL	@#EXTVAL, R3
+	MOVL	TABLE[R2], R0
+	RET
+
+	.END	START

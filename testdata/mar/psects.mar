@@ -1,0 +1,39 @@
+	.TITLE	PSECTS	Fixture 11: psect bookkeeping
+	.IDENT	/V1.0/
+
+; Checks what MACRO writes for data that comes before any .PSECT, for an
+; absolute psect of offsets and the global symbols defined in it (one of
+; them used nowhere), for going back to a psect after another, for
+; setting the location counter with ". =", and for .SAVE_PSECT and
+; .RESTORE_PSECT. START returns 1, so the image can be linked and run.
+
+FIRST::	.LONG	0
+
+	.PSECT	OFFSETS, ABS
+OFF_A::	.BLKL	1
+OFF_B::	.BLKW	1
+OFF_C:	.BLKB	1
+OFF_D::	.BLKB	1
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+ONE:	.LONG	1
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	START, ^M<>
+	MOVL	ONE, R0
+	RET
+
+	.PSECT	DATA
+TWO:	.LONG	2
+	. = . + 8
+THREE:	.LONG	3
+	. = ONE + 64
+FOUR:	.LONG	4
+	.SAVE_PSECT
+	.PSECT	CODE
+	MOVL	#OFF_B, R1
+	RSB
+	.RESTORE_PSECT
+	.LONG	OFF_A, OFF_C
+
+	.END	START

@@ -6,11 +6,22 @@ to a complete program (`hello`). They're assembled by real VAX MACRO on the
 user's simh VAX 8600 running VMS 7.3, and those results are what govax's
 object reader and MACRO command are checked against.
 
-`assemble.com` does the VMS side in one step (`@ASSEMBLE`). For each
-fixture it runs `MACRO/LIST` (giving `.OBJ` and `.LIS` files) and
-`ANALYZE/OBJECT` (giving `.ANL`). It links and runs `entry` and `hello`,
-the two complete programs, with maps, and writes `DIRECTORY/FULL` output
-for the objects (their record attributes) to `OBJECTS.DIR`.
+`assemble.com` does the VMS side in one step
+(`@ASSEMBLE/OUTPUT=ASSEMBLE.LOG`). For each fixture it runs `MACRO/LIST`
+(giving `.OBJ` and `.LIS` files) and `ANALYZE/OBJECT` (giving `.ANL`). It
+links and runs `entry`, `hello`, and `psects`, the complete programs, with
+maps, and writes `DIRECTORY/FULL` output for the objects (their record
+attributes) to `OBJECTS.LST`.
+
+Fixtures 1 to 9 are the ladder. Fixtures 10 to 12 (`modes`, `psects`,
+`general`) were added in subtask 11 for the encoding choices the ladder
+didn't settle.
+
+When the volume also holds `GV_NAME.OBJ`, govax's own object for
+`NAME.MAR` written straight onto the volume by govax's MACRO command, the
+script checks each one with `ANALYZE/OBJECT` (`GV_NAME.ANL`) and links
+and runs the complete programs, as extra evidence that real VMS accepts
+govax's objects.
 
 The real VAX results go in `vax/`, with the objects in the host
 variable-length record layout that `internal/obj.ReadRecords` reads.

@@ -1,7 +1,9 @@
 package asm
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -13,11 +15,17 @@ import (
 )
 
 // realObject reads testdata/mar/vax/name.obj, the object real MACRO made
-// from testdata/mar/name.mar.
+// from testdata/mar/name.mar. It skips the test when that object hasn't
+// come back from the VAX yet.
 func realObject(t *testing.T, name string) *obj.Module {
 	t.Helper()
 
 	f, err := os.Open(filepath.Join("..", "..", "testdata", "mar", "vax", name+".obj"))
+	if errors.Is(err, fs.ErrNotExist) {
+		// A fixture waiting for its trip to the VAX.
+		t.Skipf("no real MACRO object for %s.mar yet", name)
+	}
+
 	if err != nil {
 		t.Fatal(err)
 	}

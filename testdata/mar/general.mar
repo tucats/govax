@@ -1,0 +1,33 @@
+	.TITLE	GENERAL	Fixture 12: general mode and .ENABLE ABSOLUTE
+	.IDENT	/V1.0/
+
+; Checks general mode (G^) with an address already known to be absolute,
+; a relocatable one, one defined later as absolute, and an indexed
+; external; relative mode to an absolute address; .ENABLE ABSOLUTE,
+; which makes relative operands absolute; and a forward reference after
+; .DEFAULT DISPLACEMENT, BYTE. Assemble only: EXTV is defined nowhere.
+
+IOBASE = ^X20000000
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+WORD1:	.LONG	0
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	START, ^M<>
+	MOVL	G^IOBASE, R0
+	MOVL	G^WORD1, R0
+	MOVL	G^LATER, R0
+	MOVL	G^EXTV[R1], R0
+	MOVL	IOBASE, R0
+	.ENABLE	ABSOLUTE
+	MOVL	WORD1, R1
+	MOVL	EXTV, R2
+	MOVL	@WORD1, R3
+	.DISABLE ABSOLUTE
+	.DEFAULT DISPLACEMENT, BYTE
+	MOVAB	NEAR, R0
+NEAR:	RET
+
+LATER = ^X300
+
+	.END	START
