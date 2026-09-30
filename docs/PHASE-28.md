@@ -47,7 +47,8 @@ Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
   library's module is the macro's source text, one record per line.
 - LINK's `readLinkFile` (`internal/console/linksource.go`) already finds a
   VMS library file through its logical name on a mounted volume, then in
-  the host directory the `vax.link.library` setting names.
+  the host directory the `vax.link.library` setting names (to become
+  `vax.library`, shared with MACRO; subtask 6).
 
 ## What the real STARLET.MLB shows
 
@@ -97,7 +98,7 @@ MACRO's `/LIBRARY` qualifier and `.LIBRARY` both take only `.MLB` files.
 
 ## Design decisions
 
-### Where the system macros come from (proposed; the user's question)
+### Where the system macros come from (decided)
 
 The user proposed: use `STARLET.MLB` if it's found, else a `STARLET.MAR`
 holding the macro definitions. That's how this phase will work, with one
@@ -108,19 +109,18 @@ macro NAME". An `.MLB` answers from its index, and a `.MAR` answers from
 the definitions it holds.
 
 The lookup is LINK's: `SYS$LIBRARY:STARLET.MLB` on a mounted volume, then
-`STARLET.MLB` in the host library directory (`vax.link.library`), then
-`STARLET.MAR` in the same two places. A missing library isn't an error
+`STARLET.MLB` in the host library directory (`vax.library`), then
+`STARLET.MAR` in the same two places, then govax's built-in `STARLET.MAR`. A missing library isn't an error
 until a macro is needed and nobody defines it (then it's MACRO's own
 "unknown opcode" error, with a note that no system library was found).
 
-**A suggestion on top of that (open question 1):** a fresh clone has no
-STARLET.MLB, since it's licensed. govax could embed a small `STARLET.MAR`
-of its own as the last fallback, with govax-written definitions of the
-common macros (`$EXIT_S`, `$QIOW_S`, `$ASSIGN_S`, `$DASSGN_S`, `$SSDEF`,
-`$IODEF`, and perhaps `$FAB`/`$RAB`/`$OPEN`/`$GET`/`$PUT`). They would be
-written from the *System Services* and *RMS* reference manuals' argument
-lists, not copied from STARLET, and checked against the real ones by
-expanding both. That's subtask 9, and it's optional.
+**A built-in fallback** (decided 2026-09-30): a fresh clone has no
+STARLET.MLB, since it's licensed, so govax embeds a small `STARLET.MAR` of
+its own as the last fallback. It starts with `$EXIT_S`, the macro nearly
+every program calls, and grows over time. Its definitions are written
+from the *System Services* and *RMS* reference manuals' argument lists,
+not copied from STARLET, and checked against the real ones by expanding
+both (subtask 9).
 
 ### Macro libraries in `internal/asm`
 
@@ -205,8 +205,11 @@ inside it. Repeat blocks collect their lines to `.ENDR` the same way.
    `$SSDEF`, `$IODEF`) expand and assemble.
 6. **The MACRO command:** find STARLET (`.MLB`, then `.MAR`, as above),
    resolve `.LIBRARY` names relative to the source like `.INCLUDE`, and
-   take command-line libraries in VMS's form, `MACRO PROG+MYLIB/LIBRARY`
-   (open question 2). The `cmd/govax macro` subcommand follows.
+   take command-line libraries with a govax-style
+   `/LIBRARY=(file[,...])` qualifier. Rename the host library setting
+   `vax.link.library` to `vax.library`, shared by MACRO and LINK (as
+   VMS's `SYS$LIBRARY` is), still reading the old name when the new one
+   isn't set. The `cmd/govax macro` subcommand follows.
 7. **Fixtures** (needs the user). New `testdata/mar` fixtures: one of
    user-defined macros (every argument form, created labels, repeat
    blocks, string operators, `.NARG`/`.NCHR`/`.NTYPE`) and programs that
@@ -215,23 +218,22 @@ inside it. Repeat blocks collect their lines to `.ENDR` the same way.
    match, and the programs must link and run under govax's `LINK`/`RUN`.
 8. **Clean-up and docs:** `PLAN.md`, `CLAUDE.md`, `DEVIATIONS.md`, the
    MACRO help topic, and this document's closing entry.
-9. **(Optional) govax's own STARLET.MAR** for clones without the licensed
-   library (open question 1).
+9. **govax's own STARLET.MAR**, embedded, for clones without the
+   licensed library. It starts with `$EXIT_S` and grows as programs need
+   more.
 
 ## Open questions
 
-1. **A built-in fallback STARLET.MAR** (subtask 9): worth doing, and if so,
-   which macros? Without it, a MACRO program that calls a system macro
-   needs the user's own STARLET.MLB.
-2. **Command-line libraries.** VMS writes them as `MACRO PROG+LIB/LIBRARY`.
-   Is that form wanted, or a govax-style `/LIBRARY=(file,...)` qualifier,
-   or both? (govax's DCL grammar takes the source as one string, so the
-   `+` form would be split by the MACRO command itself.)
-3. **The host library setting.** LINK's host directory setting is
-   `vax.link.library`. MACRO looking there too is simplest; the name then
-   reads oddly. Keep it, or add a general `vax.library` that both use?
-4. **Should the console dialect get macros too?** Settled: the definition
-   side yes (it's free), library search only if it's free.
+All settled (2026-09-30):
+
+1. **A built-in fallback STARLET.MAR:** yes, starting with `$EXIT_S`,
+   added to over time (subtask 9).
+2. **Command-line libraries:** a govax-style `/LIBRARY=(file,...)`
+   qualifier, not VMS's `PROG+LIB/LIBRARY`.
+3. **The host library setting:** generalized to `vax.library`, shared by
+   MACRO and LINK.
+4. **Should the console dialect get macros too?** The definition side yes
+   (it's free), library search only if it's free.
 
 ## Progress Log
 
@@ -303,3 +305,10 @@ inside it. Repeat blocks collect their lines to `.ENDR` the same way.
 - Known gap for later subtasks: `preprocessLine` treats `'` as a quote,
   so a call argument such as `<P'S AND Q'S>` isn't uppercased between
   the apostrophes, and a `;` inside `<...>` still starts a comment.
+
+### 2026-09-30 — User decisions
+
+- The built-in fallback STARLET.MAR is wanted, starting with `$EXIT_S`.
+- Command-line libraries take a govax-style `/LIBRARY=` qualifier.
+- `vax.link.library` becomes `vax.library`, shared by MACRO and LINK.
+- Subtasks 6 and 9 and the open questions are updated to match.
