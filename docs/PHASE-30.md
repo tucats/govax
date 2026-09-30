@@ -419,3 +419,36 @@ them.
 
   The LINK help topic describes the symbol lookup, and `go test ./...`
   passes.
+
+### 2026-09-30 — Where subtask 3 starts
+
+- The user copied `IMAGELIB.OLB`, `STARLET.OLB`, and `LIBRTL.EXE` from
+  VMS 7.3 onto `mar-exchange2.dsk` (`[LIB]`). They're now in
+  `testdata/vmslib/` (`imagelib.olb`, `starlet.olb`, `librtl.exe`, raw
+  blocks, gitignored). Tests that use them must skip when they're
+  absent.
+- They were deleted from the container, and all its free blocks
+  zeroed, so no licensed copy travels with it.
+- **What subtask 3 needs:**
+  1. A reader for the librarian's file format (`.OLB`, and later
+     `.MLB` for Phase 28). The references are
+     `vmssrc_archive/v73/lbr/lis/` (`lbr.sdl`, `index.lis`, `data.lis`,
+     `openclose.lis`) and `librar/lis/`. The file starts with a header
+     naming "Librarian T09-20". It belongs in a new leaf package
+     (probably `internal/lbr`), with no dependency on `ods2`.
+  2. A GST source: a shareable image's global symbol table is
+     object-language records (`internal/obj` reads them). It comes
+     from `IMAGELIB.OLB`'s module for the image, or from the image
+     itself (`IHS$L_GSTVBN`/`GSTRECS` in `librtl.exe`'s header). It
+     answers `Lookup` with image plus offset, and `Image` with pages,
+     ident, and match control. Check its answers against
+     `sharedImages` in `internal/console/linksource.go` (`LIBRTL`: 264
+     pages, ident 1/0x0E, `MATLEQ`) and against the shim table's
+     offsets.
+  3. An object library source: a `STARLET.OLB` module that defines a
+     still-undefined symbol is added to the link (pass 1 on it, then
+     look again, as real LINK does).
+  4. Decide the default source order (real LINK searches `IMAGELIB`,
+     then `STARLET`; govax's tables are the fallback), and how the
+     console finds the library files (a setting, or a logical name
+     like `SYS$LIBRARY`).
