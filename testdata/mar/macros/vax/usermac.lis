@@ -1,0 +1,279 @@
+USERMAC                         Phase 28 fixture: user-defined macros    30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     30-SEP-2026 16:08:00  DUA1:[000000]USERMAC.MAR;1        (1)
+
+                                     0000     1 	.TITLE	USERMAC	Phase 28 fixture: user-defined macros
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; Every feature of MACRO's macro facility that a program can use without
+                                     0000     5 ; a library: arguments of each form, created local labels, repeat blocks,
+                                     0000     6 ; string operators, .NARG, .NCHR, and .NTYPE. Each result lands in the
+                                     0000     7 ; object as data or code, so comparing objects compares expansions.
+                                     0000     8 
+                                 00000000     9 	.PSECT	DATA, WRT, NOEXE, LONG
+                                     0000    10 
+                                     0000    11 ; Positional and keyword arguments, and defaults.
+                                     0000    12 
+                                     0000    13 	.MACRO	TRIPLE	A, B=2, C=3
+                                     0000    14 	.BYTE	A, B, C
+                                     0000    15 	.ENDM	TRIPLE
+                                     0000    16 
+                                     0000    17 POSN:	TRIPLE	1			; 1, 2, 3
+                                     0003    18 	TRIPLE	4, 5, 6			; 4, 5, 6
+                                     0006    19 	TRIPLE	7, , 9			; a null argument takes its default
+                                     0009    20 	TRIPLE	C=12, A=10		; keywords, in any order
+                                     000C    21 	TRIPLE	13, C=15		; mixed
+                                     000F    22 
+                                     000F    23 ; Delimited arguments: <...> (nesting), and ^x...x.
+                                     000F    24 
+                                     000F    25 	.MACRO	BYTES	LIST
+                                     000F    26 	.BYTE	LIST
+                                     000F    27 	.ENDM	BYTES
+                                     000F    28 
+                                     000F    29 DELIM:	BYTES	<1, 2, 3>
+                                     0012    30 	BYTES	<<4>+1>			; the outer brackets only
+                                     0013    31 	BYTES	^%6, 7%
+                                     0015    32 
+                                     0015    33 ; Concatenation with the apostrophe.
+                                     0015    34 
+                                     0015    35 	.MACRO	LABELS	PREFIX, N
+                                     0015    36 PREFIX'_'N:	.LONG	N
+                                     0015    37 	.ENDM	LABELS
+                                     0015    38 
+                                     0015    39 	LABELS	TBL, 1
+                                     0019    40 	LABELS	TBL, 2
+                  00000019'00000015' 001D    41 	.LONG	TBL_1, TBL_2
+                                     0025    42 
+                                     0025    43 ; A macro that defines a macro, with the apostrophe the inner one keeps.
+                                     0025    44 
+                                     0025    45 	.MACRO	MAKER	NAME, PREFIX
+                                     0025    46 	.MACRO	NAME	SYM
+                                     0025    47 PREFIX''SYM:	.WORD	^XAA
+                                     0025    48 	.ENDM	NAME
+                                     0025    49 	.ENDM	MAKER
+                                     0025    50 
+                                     0025    51 	MAKER	MADE, MK_
+                                     0025    52 	MADE	ONE
+                                     0027    53 	MADE	TWO
+                  00000027'00000025' 0029    54 	.LONG	MK_ONE, MK_TWO
+                                     0031    55 
+                                     0031    56 ; Redefinition and .MDELETE.
+                                     0031    57 
+USERMAC                         Phase 28 fixture: user-defined macros    30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   2
+V1.0                                                                     30-SEP-2026 16:08:00  DUA1:[000000]USERMAC.MAR;1        (1)
+
+                                     0031    58 	.MACRO	WHICH
+                                     0031    59 	.BYTE	1
+                                     0031    60 	.ENDM	WHICH
+                                     0031    61 	.MACRO	WHICH
+                                     0031    62 	.BYTE	2
+                                     0031    63 	.ENDM	WHICH
+                                     0031    64 REDEF:	WHICH				; the second definition
+                           00000001  0032    65 	.MDELETE WHICH
+                                     0032    66 
+                                     0032    67 ; \symbol passes a symbol's value.
+                                     0032    68 
+                           0000002A  0032    69 VALUE = 42
+                                     0032    70 	.MACRO	ASCVAL	N
+                                     0032    71 	.ASCII	/N/
+                                     0032    72 	.ENDM	ASCVAL
+                                     0032    73 
+                                     0032    74 VALS:	ASCVAL	\VALUE			; "42"
+                                     0034    75 	ASCVAL	VALUE			; "VALUE"
+                                     0039    76 
+                                     0039    77 ; .NARG and .NCHR, and a macro that stops early with .MEXIT.
+                                     0039    78 
+                                     0039    79 	.MACRO	COUNT	P1, P2, P3, P4
+                                     0039    80 	.NARG	...N
+                                     0039    81 	.NCHR	...C, <P1>
+                                     0039    82 	.BYTE	...N, ...C
+                                     0039    83 	.IIF	BLANK <P4>, .MEXIT
+                                     0039    84 	.BYTE	^XFF
+                                     0039    85 	.ENDM	COUNT
+                                     0039    86 
+                                     0039    87 COUNTS:	COUNT
+                                     003B    88 	COUNT	X
+                                     003D    89 	COUNT	ABCDE, 2, 3
+                                     003F    90 	COUNT	, , , LAST
+                                     0042    91 
+                                     0042    92 ; Conditionals on arguments.
+                                     0042    93 
+                                     0042    94 	.MACRO	TEST	A, B
+                                     0042    95 	.IF	BLANK <A>
+                                     0042    96 	.BYTE	0
+                                     0042    97 	.IFF
+                                     0042    98 	.IF	IDENTICAL <A>, <B>
+                                     0042    99 	.BYTE	1
+                                     0042   100 	.IFF
+                                     0042   101 	.BYTE	2
+                                     0042   102 	.ENDC
+                                     0042   103 	.ENDC
+                                     0042   104 	.ENDM	TEST
+                                     0042   105 
+                                     0042   106 CONDS:	TEST
+                                     0043   107 	TEST	FOO, FOO
+                                     0044   108 	TEST	FOO, BAR
+                                     0045   109 
+                                     0045   110 ; The string operators.
+                                     0045   111 
+                                     0045   112 	.MACRO	STRINGS	S
+                                     0045   113 	.BYTE	%LENGTH(S)
+                                     0045   114 	.BYTE	%LOCATE(<C>, S)
+USERMAC                         Phase 28 fixture: user-defined macros    30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   3
+V1.0                                                                     30-SEP-2026 16:08:00  DUA1:[000000]USERMAC.MAR;1        (1)
+
+                                     0045   115 	.BYTE	%LOCATE(<Z>, S)
+                                     0045   116 	.ASCII	/%EXTRACT(1, 3, S)/
+                                     0045   117 	.ENDM	STRINGS
+                                     0045   118 
+                                     0045   119 STRS:	STRINGS	<ABCDEF>
+                                     004B   120 
+                                     004B   121 ; Repeat blocks: .REPEAT, .IRP, .IRPC, and .MEXIT in one.
+                                     004B   122 
+                                     004B   123 REPS:	.REPEAT	3
+                                     004B   124 	.BYTE	^X11
+                                 11  004B   125 	.ENDR
+                                     004E   126 
+                                     004E   127 	.IRP	X, <1, 2, <3+4>, >
+                                     004E   128 	.BYTE	X+0
+                                 01  004E   129 	.ENDR
+                                     0051   130 
+                                     0051   131 	.IRPC	CH, <ABC>
+                                     0051   132 	.ASCII	/CH/
+                                 41  0051   133 	.ENDR
+                                     0054   134 
+                                     0054   135 	.IRP	X, <5, 6, 7, 8>
+                                     0054   136 	.IIF	EQ X-7, .MEXIT
+                                     0054   137 	.BYTE	X
+                                     0054   138 	.ENDR
+                                     0056   139 
+                                     0056   140 ; .NTYPE of every operand form, one byte (two for an indexed operand).
+                                     0056   141 
+                                     0056   142 	.MACRO	NT	OPND
+                                     0056   143 	.NTYPE	...T, OPND
+                                     0056   144 	.WORD	...T
+                                     0056   145 	.ENDM	NT
+                                     0056   146 
+                                 00000000   147 	.PSECT	CODE, NOWRT, EXE, LONG
+                           00000004  0000   148 BACK:	.BLKB	4
+                                     0004   149 
+                                 00000056   150 	.PSECT	DATA
+                                     0056   151 NTYPES:	NT	R3
+                                     0058   152 	NT	(R3)
+                                     005A   153 	NT	-(R3)
+                                     005C   154 	NT	(R3)+
+                                     005E   155 	NT	@(R3)+
+                                     0060   156 	NT	#1
+                                     0062   157 	NT	#64
+                                     0064   158 	NT	S^#1
+                                     0066   159 	NT	I^#1
+                                     0068   160 	NT	@#^X200
+                                     006A   161 	NT	G^SYS$EXIT
+                                     006C   162 	NT	B^4(R3)
+                                     006E   163 	NT	W^4(R3)
+                                     0070   164 	NT	L^4(R3)
+                                     0072   165 	NT	4(R3)
+                                     0074   166 	NT	1000(R3)
+                                     0076   167 	NT	@4(R3)
+                                     0078   168 	NT	BACK
+                                     007A   169 	NT	@BACK
+                                     007C   170 	NT	FWD
+                                     007E   171 	NT	(R1)[R4]
+USERMAC                         Phase 28 fixture: user-defined macros    30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   4
+V1.0                                                                     30-SEP-2026 16:08:00  DUA1:[000000]USERMAC.MAR;1        (1)
+
+                                     0080   172 	NT	BACK[R2]
+                                     0082   173 
+                                     0082   174 ; Code: created local labels, so each expansion has its own.
+                                     0082   175 
+                                     0082   176 	.MACRO	MAX	A, B, DEST, ?SKIP
+                                     0082   177 	MOVL	A, DEST
+                                     0082   178 	CMPL	B, DEST
+                                     0082   179 	BLEQ	SKIP
+                                     0082   180 	MOVL	B, DEST
+                                     0082   181 SKIP:
+                                     0082   182 	.ENDM	MAX
+                                     0082   183 
+                                 00000004   184 	.PSECT	CODE
+                               0004  0004   185 	.ENTRY	USERMAC, ^M<R2>
+                                     0006   186 	MAX	#1, #2, R0
+                                     0011   187 	MAX	R0, #5, R2
+                                     001C   188 	MAX	#9, R2, R0, SKIP=10$	; a created label given explicitly
+                                 04  0027   189 	RET
+                           0000002C  0028   190 FWD:	.BLKB	4
+                                     002C   191 
+                                     002C   192 	.PRINT	; USERMAC: informational message from .PRINT
+
+                                     002C   193 
+                                     002C   194 	.END	USERMAC
+USERMAC                         Phase 28 fixture: user-defined macros    30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   5
+Symbol table                                                             30-SEP-2026 16:08:00  DUA1:[000000]USERMAC.MAR;1        (1)
+
+...C           = 00000000               
+...N           = 00000004               
+...T           = 0000CF42               
+BACK             00000000 R     02      
+CONDS            00000042 R     01      
+COUNTS           00000039 R     01      
+DELIM            0000000F R     01      
+FWD              00000028 R     02      
+MK_ONE           00000025 R     01      
+MK_TWO           00000027 R     01      
+NTYPES           00000056 R     01      
+POSN             00000000 R     01      
+REDEF            00000031 R     01      
+REPS             0000004B R     01      
+STRS             00000045 R     01      
+TBL_1            00000015 R     01      
+TBL_2            00000019 R     01      
+USERMAC          00000004 RG    02      
+VALS             00000032 R     01      
+VALUE          = 0000002A               
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000082  (  130.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE                            0000002C  (   44.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  427     00:00:00.00    00:00:00.00
+Command processing              928     00:00:00.00    00:00:00.01
+Pass 1                          243     00:00:00.00    00:00:00.01
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                          106     00:00:00.01    00:00:00.01
+Symbol table output               2     00:00:00.00    00:00:00.00
+Psect synopsis output             3     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1733     00:00:00.01    00:00:00.03
+
+The working set limit was 662 pages.
+4502 bytes (9 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 20 non-local and 3 local symbols.
+194 source lines were read in Pass 1, producing 16 object records in Pass 2.
+11 pages of virtual memory were used to define 11 macros.
+USERMAC                         Phase 28 fixture: user-defined macros    30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   6
+VAX-11 Macro Run Statistics                                              30-SEP-2026 16:08:00  DUA1:[000000]USERMAC.MAR;1        (1)
+
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST USERMAC

@@ -387,8 +387,12 @@ LATER:`)
 		"DATA+4 PIDR DATA:0",
 		"DATA+8 PIDR DATA:14",
 		"DATA+C PIDR EXT 4 +",
+		// Real MACRO stores an absolute address through the linker's
+		// stack too (testdata/mar/macros/vax/fabalign.obj, whose $FAB
+		// has .ADDRESS 0), so the field holds zero here.
+		"DATA+10 PIDR 16",
 	)
-	requireBytes(t, psectBytes(t, a, "DATA")[16:], 16, 0, 0, 0)
+	requireBytes(t, psectBytes(t, a, "DATA")[16:], 0, 0, 0, 0)
 }
 
 // TestMaskMACRO checks MACRO-32's .MASK: a word the linker fills from an

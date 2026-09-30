@@ -1,0 +1,286 @@
+
+Analyze Object File                          30-SEP-2026 16:09:09.74   Page 1
+DUA1:[000000]GV_USERMAC.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 52 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "USERMAC"
+	module version: "V1.0"
+	creation   date/time: 30-SEP-2026 16:08
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 20 bytes
+
+	Textual information:
+	"govax MACRO V0.0-0"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 33 bytes
+
+	Textual information:
+	"MACRO USERMAC/OBJECT=GV_USERMAC"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 39 bytes
+
+	Textual information:
+	"Phase 28 fixture: user-defined macros"
+
+
+5.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+6.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+Analyze Object File                          30-SEP-2026 16:09:09.74   Page 2
+DUA1:[000000]GV_USERMAC.OBJ;1
+ANALYZ V07-04
+
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 130 (%X'00000082')
+		symbol: "DATA"
+
+
+8.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 94 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 29 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 02 07 06 05 04 03 02 01|  0000  |........|
+		 01 0F 02 0D 0C 02 0A 09|  0008  |........|
+		 00 00 01 07 06 05 03 02|  0010  |........|
+		          00 00 00 02 00|  0018  |.....   |
+
+	4)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 21 (%X'00000015')
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 25 (%X'00000019')
+
+	7)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	8)  Store Immediate, 4 bytes:
+
+Analyze Object File                          30-SEP-2026 16:09:09.74   Page 3
+DUA1:[000000]GV_USERMAC.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 AA 00 AA|  0000  |ª.ª.    |
+
+	9)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 37 (%X'00000025')
+
+	10)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	11)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 39 (%X'00000027')
+
+	12)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	13)  Store Immediate, 37 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 45 55 4C 41 56 32 34 02|  0000  |.42VALUE|
+		 00 04 05 03 01 01 00 00|  0008  |........|
+		 42 06 02 06 02 01 00 FF|  0010  |.......B|
+		 07 02 01 11 11 11 44 43|  0018  |CD......|
+		          06 05 43 42 41|  0020  |ABC..   |
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 44 (%X'0000002C')
+		symbol: "CODE"
+
+
+10.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 65 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                          30-SEP-2026 16:09:09.74   Page 4
+DUA1:[000000]GV_USERMAC.OBJ;1
+ANALYZ V07-04
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 4 (%X'00000004')
+
+	4)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 86 (%X'00000056')
+
+	5)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	6)  Store Immediate, 44 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 83 00 73 00 63 00 53|  0000  |S.c.s...|
+		 00 00 00 1F 00 00 00 93|  0008  |........|
+		 00 A3 00 3F 00 2F 00 1F|  0010  |../.?.£.|
+		 00 C3 00 A3 00 E3 00 C3|  0018  |Ã.ã.£.Ã.|
+		 00 EF 00 FF 00 EF 00 B3|  0020  |³.ï...ï.|
+		             EF 42 61 44|  0028  |DaBï    |
+
+	7)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 4 (%X'00000004')
+
+	8)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	9)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 20 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 2
+		value: 4 (%X'00000004')
+		entry mask: <R2>
+		symbol: "USERMAC"
+
+
+12.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+
+Analyze Object File                          30-SEP-2026 16:09:09.74   Page 5
+DUA1:[000000]GV_USERMAC.OBJ;1
+ANALYZ V07-04
+
+13.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 41 bytes
+
+	1)  Store Immediate, 34 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 03 15 50 02 D1 50 01 D0|  0000  |Ð.PÑ.P..|
+		 05 D1 52 50 D0 50 02 D0|  0008  |Ð.PÐPRÑ.|
+		 09 D0 52 05 D0 03 15 52|  0010  |R..Ð.RÐ.|
+		 52 D0 03 15 50 52 D1 50|  0018  |PÑRP..ÐR|
+		                   04 50|  0020  |P.      |
+
+	2)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 4 (%X'00000004')
+
+
+14.  END OF MODULE (OBJ$C_EOM), 7 bytes
+
+	severity: successful (0)
+	psect: 2
+	value: 4 (%X'00000004')
+
+
+
+Analyze Object File                          30-SEP-2026 16:09:09.74   Page 6
+DUA1:[000000]GV_USERMAC.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   144
+OBJ$C_GSD	    4	    67
+OBJ$C_TIR	    5	   207
+OBJ$C_EOM	    1	     7
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    0	     0
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   14	   425
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=GV_USERMAC.ANL GV_USERMAC.OBJ                             

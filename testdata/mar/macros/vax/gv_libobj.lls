@@ -1,0 +1,14 @@
+Directory of OBJECT library DUA1:[000000]GV_LIBOBJ.OLB;1 on 30-SEP-2026 16:09:10
+Creation date:  30-SEP-2026 16:08:00      Creator:  govax Librarian
+Revision date:  30-SEP-2026 16:08:00      Library format:   3.0
+Number of modules:      2                 Max. key length:  31
+Other entries:          4                 Preallocated index blocks:     49
+Recoverable deleted blocks:      0        Total index blocks used:        2
+Max. Number history records:      20      Library history records:        0
+
+Module LIBSUB1          Ident V1.1             Inserted 30-SEP-2026 16:08:00 2 symbols
+LIBSUB1_LEVEL                    TWICE
+
+Module LIBSUB2          Ident V2.0             Inserted 30-SEP-2026 16:08:00 2 symbols
+SQUARE                           SQUARE_COUNT
+

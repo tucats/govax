@@ -555,11 +555,16 @@ func (b *Builder) Bytes() []byte {
 		}
 	}
 
+	// Index 2's tree takes the first index blocks, then index 1's: real
+	// LIBRARIAN enters an object module's global symbols as it reads
+	// them, before the module's name, so a new object library's symbol
+	// index root is VBN 2 and its module index root VBN 3
+	// (testdata/mar/macros/vax/libobj.olb).
 	next = 2
 	trees := make([]*indexTree, len(keys))
 
-	for i, k := range keys {
-		trees[i] = buildTree(k, &next)
+	for i := len(keys) - 1; i >= 0; i-- {
+		trees[i] = buildTree(keys[i], &next)
 	}
 
 	nblocks := 1 + prealloc + len(w.blocks)

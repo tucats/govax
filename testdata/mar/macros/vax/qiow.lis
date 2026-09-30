@@ -1,0 +1,105 @@
+QIOW                            Phase 28 fixture: hello through $QIOW_S  30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     30-SEP-2026 16:08:00  DUA1:[000000]QIOW.MAR;1           (1)
+
+                                     0000     1 	.TITLE	QIOW	Phase 28 fixture: hello through $QIOW_S
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; A complete program that calls system service macros: assign a channel
+                                     0000     5 ; to the terminal, write "Hello, world!" with $QIOW_S, deassign, and exit
+                                     0000     6 ; with the I/O status. Every macro it calls is also in govax's own
+                                     0000     7 ; STARLET.MLB, so it assembles the same with either library.
+                                     0000     8 ;
+                                     0000     9 ; IO$_WRITEVBLK is defined here rather than by $IODEF, which govax's
+                                     0000    10 ; STARLET.MLB doesn't have. Its value is $IODEF's.
+                                     0000    11 
+                           00000030  0000    12 IO$_WRITEVBLK = ^X30
+                                     0000    13 
+                                 00000000    14 	.PSECT	DATA, WRT, NOEXE, QUAD
+55 4F 24 53 59 53 00000008'010E0000' 0000    15 TTNAME:	.ASCID	/SYS$OUTPUT/
+                        54 55 50 54  000E       
+64 6C 72 6F 77 20 2C 6F 6C 6C 65 48  0012    16 MSG:	.ASCII	/Hello, world!/<13><10>
+                           0A 0D 21  001E       
+                           0000000F  0021    17 MSGLEN = .-MSG
+                                     0021    18 	.ALIGN	LONG
+                           00000026  0024    19 CHAN:	.BLKW	1
+                                     0026    20 	.ALIGN	QUAD
+                           00000030  0028    21 IOSB:	.BLKQ	1
+                                     0030    22 
+                                 00000000    23 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0000  0000    24 	.ENTRY	QIOW, ^M<>
+                                     0002    25 	$ASSIGN_S DEVNAM=TTNAME, CHAN=CHAN
+                         42 50   E9  0019    26 	BLBC	R0, 10$
+                                     001C    27 	$QIOW_S	CHAN=CHAN, FUNC=#IO$_WRITEVBLK, IOSB=IOSB, -
+                                     001C    28 		P1=MSG, P2=#MSGLEN
+                         18 50   E9  0043    29 	BLBC	R0, 10$
+              50   00000028'EF   3C  0046    30 	MOVZWL	IOSB, R0		; the I/O status
+                         0E 50   E9  004D    31 	BLBC	R0, 10$
+                                     0050    32 	$DASSGN_S CHAN=CHAN
+                                     005E    33 10$:	$EXIT_S	R0
+                                     0067    34 
+                                     0067    35 	.END	QIOW
+QIOW                            Phase 28 fixture: hello through $QIOW_S  30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             30-SEP-2026 16:08:00  DUA1:[000000]QIOW.MAR;1           (1)
+
+$$$ADR         = 000000A0               
+$$T1           = 00000001               
+CHAN             00000024 R     01      
+IO$_WRITEVBLK  = 00000030               
+IOSB             00000028 R     01      
+MSG              00000012 R     01      
+MSGLEN         = 0000000F               
+QIOW             00000000 RG    02      
+SYS$ASSIGN       ********  GX   02      
+SYS$DASSGN       ********  GX   02      
+SYS$EXIT         ********  GX   02      
+SYS$QIOW         ********  GX   02      
+TTNAME           00000000 R     01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000030  (   48.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC QUAD  
+CODE                            00000067  (  103.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  424     00:00:00.00    00:00:00.00
+Command processing              921     00:00:00.01    00:00:00.01
+Pass 1                          397     00:00:00.01    00:00:00.01
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           35     00:00:00.00    00:00:00.00
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1804     00:00:00.02    00:00:00.02
+
+The working set limit was 812 pages.
+2859 bytes (6 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 13 non-local and 1 local symbols.
+35 source lines were read in Pass 1, producing 17 object records in Pass 2.
+8 pages of virtual memory were used to define 8 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        8        
+
+106 GETS were required to define 8 macros.
+
+There were no errors, warnings or information messages.
+QIOW                            Phase 28 fixture: hello through $QIOW_S  30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   3
+VAX-11 Macro Run Statistics                                              30-SEP-2026 16:08:00  DUA1:[000000]QIOW.MAR;1           (1)
+
+
+MACRO/LIST QIOW

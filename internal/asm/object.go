@@ -67,7 +67,7 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 
 	e := emitter{a: a, b: b, relocs: map[relocKey]relocation{}, defined: map[*section]bool{}}
 	for _, r := range a.relocs {
-		e.relocs[relocKey{r.sect, r.offset}] = r
+		e.relocs[relocKey{r.sect, r.offset, r.sect.storedBy(r.offset, r.stmt)}] = r
 	}
 
 	for i, ev := range a.events {
@@ -136,10 +136,12 @@ func (a *Assembler) globalSymbols(b *obj.Builder) {
 	}
 }
 
-// relocKey locates a relocation: its psect, and its field's offset.
+// relocKey locates a relocation: its psect, its field's offset, and the
+// output event that stored the field (see overwrite.go).
 type relocKey struct {
 	sect   *section
 	offset uint32
+	event  int
 }
 
 // emitter replays a MACRO-dialect assembly's output events into an
@@ -162,7 +164,7 @@ type emitter struct {
 }
 
 // flushAbsStart sets the location in .  ABS  . for the start of assembly,
-// if that's still to do, unless skip. Real MACRO sets it except when code
+// or a return there, if that's still to do, unless skip. Real MACRO sets it except when code
 // or data before any .PSECT moves assembly into . BLANK . first
 // (docs/PHASE-27.md, subtask 11's log).
 func (e *emitter) flushAbsStart(skip bool) {
@@ -178,8 +180,9 @@ func (e *emitter) flushAbsStart(skip bool) {
 }
 
 // Real MACRO writes no TIR commands for an absolute psect, other than
-// setting the location in .  ABS  . at the start: its offsets are only
-// symbol values (docs/PHASE-27.md, subtask 11's log).
+// setting the location in .  ABS  . at the start, and on a return there:
+// its offsets are only symbol values (docs/PHASE-27.md, subtask 11's
+// log).
 func (e *emitter) event(ev outEvent) error {
 	if ev.kind != evSwitch || e.sect != nil {
 		e.flushAbsStart(ev.kind == evSwitch && ev.implicit)
@@ -194,8 +197,12 @@ func (e *emitter) event(ev outEvent) error {
 		}
 
 		switch {
-		case e.sect == nil && ev.sect.index == 0:
-			// The start of assembly (see flushAbsStart).
+		case ev.sect.index == 0:
+			// The start of assembly, or a return to .  ABS . (a
+			// .RESTORE after $DEFINI and $DEFEND, say): real MACRO
+			// sets the location there as at the start
+			// (testdata/mar/macros/vax/rmscopy.obj, after $RMSDEF).
+			// See flushAbsStart.
 			e.absStart = true
 			e.sect, e.loc = ev.sect, ev.offset
 
@@ -300,11 +307,10 @@ func (e *emitter) entryPoint(ev outEvent) {
 
 // data writes the size bytes at offset in s: STORE IMMEDIATE runs for the
 // bytes the assembler finished, and each relocation's stack program and
-// store command in place of its field. A relocation whose field a later
-// event stored over is left to that event (see overwrite.go).
+// store command in place of its field. Each relocation is written by the
+// event that stored its field, even one a later event stores over (see
+// overwrite.go).
 func (e *emitter) data(s *section, offset, size uint32) error {
-	img := s.img
-
 	for p := offset; p < offset+size; {
 		// An operand's index and mode bytes, then the field they
 		// introduce: real MACRO stacks the value first, then stores
@@ -322,13 +328,13 @@ func (e *emitter) data(s *section, offset, size uint32) error {
 			}
 
 			for range prefix {
-				e.b.Store([]byte{img.loadByte(p)})
+				e.b.Store([]byte{e.byteAt(s, p)})
 
 				p++
 			}
 
 		case !ok:
-			e.b.Store([]byte{img.loadByte(p)})
+			e.b.Store([]byte{e.byteAt(s, p)})
 
 			p++
 
@@ -340,7 +346,7 @@ func (e *emitter) data(s *section, offset, size uint32) error {
 			}
 		}
 
-		delete(e.relocs, relocKey{s, p})
+		delete(e.relocs, relocKey{s, p, e.index})
 
 		store, ok := relocStores[r.kind]
 		if !ok {
@@ -370,19 +376,30 @@ func (e *emitter) prefixedAt(s *section, p, end uint32) (relocation, int) {
 	return relocation{}, 0
 }
 
+// byteAt returns the byte at offset p in s as the event being written
+// stored it (see overwrite.go).
+func (e *emitter) byteAt(s *section, p uint32) byte {
+	history := s.owners[p]
+
+	for i := len(history) - 1; i >= 0; i-- {
+		if history[i].event == e.index {
+			if i == len(history)-1 {
+				break
+			}
+
+			return history[i].value
+		}
+	}
+
+	return s.img.loadByte(p)
+}
+
 // relocAt returns the relocation whose field starts at p in s, if the
-// event being written is the one that last stored it.
+// event being written is the one that stored it.
 func (e *emitter) relocAt(s *section, p uint32) (relocation, bool) {
-	r, ok := e.relocs[relocKey{s, p}]
-	if !ok {
-		return r, false
-	}
+	r, ok := e.relocs[relocKey{s, p, e.index}]
 
-	if o, owned := s.owners[p]; owned && o.event != e.index {
-		return r, false
-	}
-
-	return r, true
+	return r, ok
 }
 
 // stackProgram emits the TIR commands that leave t's value on the

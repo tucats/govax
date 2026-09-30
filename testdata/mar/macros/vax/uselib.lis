@@ -1,0 +1,91 @@
+USELIB                          Phase 28 fixture: a program using a macr 30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     30-SEP-2026 16:08:00  DUA1:[000000]USELIB.MAR;1         (1)
+
+                                     0000     1 	.TITLE	USELIB	Phase 28 fixture: a program using a macro library
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; Calls LIBMAC's macros, found in the library given on the command line:
+                                     0000     5 ;	MACRO USELIB+LIBMAC/LIBRARY		(VMS)
+                                     0000     6 ;	MACRO USELIB/LIBRARY=LIBMAC		(govax)
+                                     0000     7 ; It prints two lines and exits with success.
+                                     0000     8 
+                                     0000     9 	BITS	OPT, <READ, WRITE, EXEC>
+                                     0000    10 
+                                 00000000    11 	.PSECT	DATA, WRT, NOEXE, LONG
+                           00000005  0000    12 FLAGS:	.LONG	OPT_READ ! OPT_EXEC
+                                     0004    13 	DEFINER	WORDS
+                                     0004    14 	WORDS	1
+                                     0006    15 	WORDS	OPT_WRITE
+                                     0008    16 
+                                 00000000    17 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0004  0000    18 	.ENTRY	USELIB, ^M<R2>
+                                     0002    19 	PUTMSG	<Hello from a macro library>
+                                     0030    20 	ADDUP	#2, #3, C=#4, DEST=R2	; R2 = 9
+                       09   52   D1  0037    21 	CMPL	R2, #9
+                            28   12  003A    22 	BNEQ	10$
+                                     003C    23 	PUTMSG	<ADDUP gave 9>
+                       50   01   D0  005C    24 	MOVL	#1, R0
+                                     005F    25 	CHECK
+                                 04  0063    26 	RET
+                            50   D4  0064    27 10$:	CLRL	R0
+                                 04  0066    28 	RET
+                                     0067    29 
+                                     0067    30 	.END	USELIB
+USELIB                          Phase 28 fixture: a program using a macr 30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             30-SEP-2026 16:08:00  DUA1:[000000]USELIB.MAR;1         (1)
+
+...BIT         = 00000008               
+FLAGS            00000000 R     01      
+LIB$PUT_OUTPUT   ********   X   02      
+OPT_EXEC       = 00000004               
+OPT_READ       = 00000001               
+OPT_WRITE      = 00000002               
+USELIB           00000000 RG    02      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000008  (    8.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE                            00000067  (  103.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  430     00:00:00.00    00:00:00.00
+Command processing              954     00:00:00.01    00:00:00.01
+Pass 1                          248     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           34     00:00:00.00    00:00:00.00
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1691     00:00:00.01    00:00:00.01
+
+The working set limit was 662 pages.
+1534 bytes (3 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 7 non-local and 6 local symbols.
+30 source lines were read in Pass 1, producing 17 object records in Pass 2.
+6 pages of virtual memory were used to define 6 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+DUA1:[000000]LIBMAC.MLB;1                               5        
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+TOTALS (all libraries)                                  5        
+
+29 GETS were required to define 5 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST USELIB+LIBMAC/LIBRARY

@@ -315,11 +315,14 @@ func (a *Assembler) pseudoAddress(c *cursor) error {
 			return err
 		}
 
-		if deferred {
-			v = 0
+		// Real MACRO stores even an absolute address through the
+		// linker's stack (STA_UB 0, STO_PIDR for .ADDRESS 0, as in every
+		// $FAB), so the field holds zero until the linker stores it.
+		if !deferred {
+			a.relocs = append(a.relocs, relocation{sect: a.cur, offset: a.cur.loc, kind: fixAddress, expr: constNode(v), stmt: a.stmt})
 		}
 
-		if err := a.emitLongword(v); err != nil {
+		if err := a.emitLongword(0); err != nil {
 			return err
 		}
 	}

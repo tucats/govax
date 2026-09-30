@@ -279,8 +279,10 @@ type relocation struct {
 	// field (see fixup), which real MACRO stores after the value's stack
 	// program.
 	prefix int
-	// stmt is the statement that stored the field.
-	stmt int
+	// stmt is the statement that stored the field, and superseded says a
+	// later statement stored over it (see overwrite.go).
+	stmt       int
+	superseded bool
 }
 
 func (r relocation) String() string {
@@ -307,9 +309,12 @@ var fixupKindNames = map[fixupKind]string{
 // Relocations returns the relocations assembled so far, one per line, for
 // tests and diagnostics: "DATA+4 L EXT1 4 +".
 func (a *Assembler) Relocations() []string {
-	out := make([]string, len(a.relocs))
-	for i, r := range a.relocs {
-		out[i] = r.String()
+	out := make([]string, 0, len(a.relocs))
+
+	for _, r := range a.relocs {
+		if !r.superseded {
+			out = append(out, r.String())
+		}
 	}
 
 	return out
@@ -324,6 +329,15 @@ func isDisplacement(kind fixupKind) bool {
 	}
 
 	return false
+}
+
+// isAddrFixup reports whether kind stores a value in a byte, word, or
+// longword. In the MACRO dialect, one that waited for a symbol defined
+// later is left to the linker even when its value turns out absolute, as
+// real MACRO leaves $RAB's USZ=BUFSIZ, BUFSIZ assigned after it
+// (testdata/mar/macros/vax/rmscopy.obj: STA_UW 0x200, STO_W).
+func isAddrFixup(kind fixupKind) bool {
+	return kind == fixAddrB || kind == fixAddrW || kind == fixAddrL
 }
 
 // isBranch reports whether kind is a branch instruction's displacement.
@@ -341,14 +355,22 @@ func isBranch(kind fixupKind) bool {
 //   - A displacement from a relocatable psect to an absolute address
 //     depends on where the psect goes, so the linker finishes it too.
 func (a *Assembler) completeFixup(f *fixup) error {
-	if f.dead {
-		return nil
-	}
-
 	t := f.expr.resolved()
 
 	switch {
-	case t.op == rConst && f.kind != fixPICR && !(isDisplacement(f.kind) && f.sect.relocatable):
+	case f.dead && t.op == rConst && f.kind != fixPICR && f.kind != fixAddress:
+		// A later statement stored over the field (see overwrite.go).
+		return nil
+
+	case f.dead:
+		// Its relocation is still written where the field was stored,
+		// as real MACRO writes it; the later store wins.
+		a.relocs = append(a.relocs, relocation{sect: f.sect, offset: f.location, kind: f.kind, expr: t, prefix: f.prefix, stmt: f.stmt, superseded: true})
+
+		return nil
+
+	case t.op == rConst && f.kind != fixPICR && f.kind != fixAddress && !(isDisplacement(f.kind) && f.sect.relocatable) &&
+		!(a.dialect == DialectMACRO && isAddrFixup(f.kind)):
 		return a.applyFixup(f, t.v)
 
 	case t.op == rBase && t.sect == f.sect && isBranch(f.kind):

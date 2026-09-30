@@ -1,0 +1,100 @@
+
+GV_LIBMAINL.EXE                                                 30-SEP-2026 16:09        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+LIBMAIN         V1.0                   48 DUA1:[000000]LIBMAIN.OBJ;1           30-SEP-2026 16:09  VAX MACRO V5.4-3
+LIBSUB2         V2.0                   19 DUA1:[000000]GV_LIBOBJ.OLB;1         30-SEP-2026 16:08  govax MACRO V0.0-0
+LIBSUB1         V1.1                    8 DUA1:[000000]GV_LIBOBJ.OLB;1         30-SEP-2026 16:08  govax MACRO V0.0-0
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+DATA                            00000200 00000203 00000004 (          4.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                LIBSUB2         00000200 00000203 00000004 (          4.) LONG  2
+CODE                            00000400 00000447 00000048 (         72.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                LIBMAIN         00000400 0000042F 00000030 (         48.) LONG  2
+                LIBSUB2         00000430 0000043E 0000000F (         15.) LONG  2
+                LIBSUB1         00000440 00000447 00000008 (          8.) LONG  2
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+LIBMAIN         00000400-R        
+LIBSUB1_LEVEL   00000001          
+SQUARE          00000430-R        
+SQUARE_COUNT    00000200-R        
+TWICE           00000440-R        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]GV_LIBMAINL.EXE;1                                  30-SEP-2026 16:09        Linker V11-39                    Page    2
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000007FF 00000600 (1536. bytes, 3. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        3. (    2. blocks)
+Image name and identification:                    GV_LIBMAINL V1.0
+Number of files:                                         4.
+Number of modules:                                       4.
+Number of program sections:                              4.
+Number of global symbols:                                6.
+Number of image sections:                                4.
+User transfer address:                            00000400
+Debugger transfer address:                        7FFEDF68
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[000000]GV_LIBMAINL.MAP;1
+Estimated map length:                             12. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                   118	00:00:00.00	00:00:00.00
+    Pass 1:                                              1002	00:00:00.01	00:00:00.01
+    Allocation/Relocation:                                 75	00:00:00.01	00:00:00.01
+    Pass 2:                                               588	00:00:00.01	00:00:00.01
+    Map data after object module synopsis:                 44	00:00:00.00	00:00:00.00
+    Symbol table output:                                   11	00:00:00.00	00:00:00.00
+Total run values:                                        1838	00:00:00.03	00:00:00.03
+
+Using a working set limited to 812 pages and 52 pages of data storage (excluding image)
+
+Total number object records read (both passes):   140
+    of which 54 were in libraries and 3 were DEBUG data records containing 59 bytes
+48 bytes of DEBUG data were written,starting at VBN 4 with 1 blocks allocated
+
+Number of modules extracted explicitly             = 0
+    with 3 extracted to resolve undefined symbols
+
+1 library searches were for symbols not in the library searched
+
+A total of 0 global symbol table records was written
+
+LINK/MAP=GV_LIBMAINL.MAP/EXECUTABLE=GV_LIBMAINL.EXE LIBMAIN,GV_LIBOBJ/LIBRARY

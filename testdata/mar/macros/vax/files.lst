@@ -1,0 +1,418 @@
+
+Directory DUA1:[000000]
+
+FABALIGN.OBJ;1                File ID:  (42,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:09:09.35
+Revised:   30-SEP-2026 16:09:09.40 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 148 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_FABALIGN.OBJ;1             File ID:  (25,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:08:00.04
+Revised:   30-SEP-2026 16:08:00.04 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 152 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_LIBMAIN.OBJ;1              File ID:  (28,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:08:00.04
+Revised:   30-SEP-2026 16:08:00.04 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 68 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_LIBSUB1.OBJ;1              File ID:  (26,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:08:00.04
+Revised:   30-SEP-2026 16:08:00.04 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 52 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_LIBSUB2.OBJ;1              File ID:  (27,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:08:00.04
+Revised:   30-SEP-2026 16:08:00.04 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 52 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_QIOW.OBJ;1                 File ID:  (22,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:08:00.03
+Revised:   30-SEP-2026 16:08:00.03 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 148 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_RMSCOPY.OBJ;1              File ID:  (24,1,0)              
+Size:            3/3          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:08:00.04
+Revised:   30-SEP-2026 16:08:00.04 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 333 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_USELIB.OBJ;1               File ID:  (30,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:08:00.04
+Revised:   30-SEP-2026 16:08:00.04 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 175 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_USELIBM.OBJ;1              File ID:  (88,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:09:09.95
+Revised:   30-SEP-2026 16:09:09.97 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 175 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_USERMAC.OBJ;1              File ID:  (23,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:08:00.03
+Revised:   30-SEP-2026 16:08:00.03 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 94 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+LIBMAIN.OBJ;1                 File ID:  (62,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:09:09.64
+Revised:   30-SEP-2026 16:09:09.65 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 68 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+LIBSUB1.OBJ;1                 File ID:  (58,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:09:09.59
+Revised:   30-SEP-2026 16:09:09.61 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 52 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+LIBSUB2.OBJ;1                 File ID:  (60,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:09:09.62
+Revised:   30-SEP-2026 16:09:09.63 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 52 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+QIOW.OBJ;1                    File ID:  (36,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:09:09.17
+Revised:   30-SEP-2026 16:09:09.19 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 148 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+RMSCOPY.OBJ;1                 File ID:  (39,1,0)              
+Size:            3/3          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:09:09.22
+Revised:   30-SEP-2026 16:09:09.32 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 312 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+USELIB.OBJ;1                  File ID:  (53,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:09:09.52
+Revised:   30-SEP-2026 16:09:09.53 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 175 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+USERMAC.OBJ;1                 File ID:  (33,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:09:09.13
+Revised:   30-SEP-2026 16:09:09.15 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 94 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_LIBMAC.MLB;1               File ID:  (29,1,0)              
+Size:           12/12         Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:08:00.04
+Revised:   30-SEP-2026 16:08:00.04 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_LIBMAC2.MLB;1              File ID:  (93,1,0)              
+Size:           14/14         Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:09:10.02
+Revised:   30-SEP-2026 16:09:10.04 (3)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 14, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+LIBMAC.MLB;1                  File ID:  (50,1,0)              
+Size:           12/100        Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:09:09.50
+Revised:   30-SEP-2026 16:09:09.50 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 100, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_LIBOBJ.OLB;1               File ID:  (31,1,0)              
+Size:           52/52         Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:08:00.04
+Revised:   30-SEP-2026 16:08:00.04 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 52, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_LIBOBJ2.OLB;1              File ID:  (101,1,0)             
+Size:           54/54         Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:09:10.13
+Revised:   30-SEP-2026 16:09:10.15 (3)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 54, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+LIBOBJ.OLB;1                  File ID:  (67,1,0)              
+Size:           52/100        Owner:    [SYSTEM]
+Created:   30-SEP-2026 16:09:09.69
+Revised:   30-SEP-2026 16:09:09.69 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 100, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Total of 23 files, 223/359 blocks.

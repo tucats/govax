@@ -44,16 +44,31 @@ type section struct {
 	// power of two.
 	flags uint32
 	align uint32
-	// owners says which statement, and which output event, last stored
-	// each byte (see claim).
-	owners map[uint32]byteOwner
+	// owners says which statements, and which output events, stored each
+	// byte, in order (see claim).
+	owners map[uint32][]byteOwner
 }
 
-// byteOwner is the statement that last stored a byte, and the output
-// event (an index in Assembler.events, or -1 in the console dialect)
-// that stored it.
+// byteOwner is a statement that stored a byte, the output event (an
+// index in Assembler.events, or -1 in the console dialect) that stored
+// it, and the value it stored.
 type byteOwner struct {
 	stmt, event int
+	value       byte
+}
+
+// storedBy returns the output event in which statement stmt stored the
+// byte at offset, or -1.
+func (s *section) storedBy(offset uint32, stmt int) int {
+	history := s.owners[offset]
+
+	for i := len(history) - 1; i >= 0; i-- {
+		if history[i].stmt == stmt {
+			return history[i].event
+		}
+	}
+
+	return -1
 }
 
 // addr returns the section's current location as an absolute address.

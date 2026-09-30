@@ -286,7 +286,19 @@ func (a *Assembler) displacementSize(text string, relative bool) int {
 
 	if relative {
 		if err == nil {
-			if target, ok := a.knownTarget(x); ok {
+			target, ok := a.knownTarget(x)
+
+			// A label in another psect is measured by its offset, as
+			// if it were in this one: real MACRO's .NTYPE gives byte
+			// relative mode for a label at offset 0 of another psect,
+			// seen from offset 0x78 (testdata/mar/macros/usermac.mar),
+			// though an instruction's displacement to it is the
+			// linker's, at the default size.
+			if !ok && !x.known() && x.x.op == rBase && x.x.sect != nil && x.x.sect.relocatable {
+				target, ok = x.x.v, true
+			}
+
+			if ok {
 				// The displacement is measured from the end of the
 				// field, after a one-byte mode byte; try each size.
 				for _, size := range []int{1, 2} {

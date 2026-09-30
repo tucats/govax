@@ -44,3 +44,34 @@ directory holding VMS's).
 The user attaches the volume to simh, mounts it on VMS, sets it as the
 default directory, and runs `@MACROS/OUTPUT=MACROS.LOG`. The results come
 back into `vax/`, as the Phase 27 ones did.
+
+## What came back (`vax/`)
+
+The user's run of `@MACROS/OUTPUT=MACROS.LOG` on 30-SEP-2026. Everything
+in `vax/` was copied off `mac-exchange.dsk` by govax: text files as text,
+objects in the host variable-length record layout, and libraries and
+images as raw blocks (`COPY/BINARY`); names are lowercased.
+
+- Real MACRO's objects, listings, and analyses (`NAME.OBJ`, `.LIS`,
+  `.ANL`), link maps and images of the programs, and `MACROS.LOG`.
+- Real LIBRARIAN's `LIBMAC.MLB` and `LIBOBJ.OLB`, with their listings
+  (`.LLS`) and `LIBMAC.EXT`, `LIBRARY/EXTRACT=*` of the macro library.
+- For govax's: its objects (`GV_NAME.OBJ`) and their analyses (0 errors
+  each), maps and images of the programs linked from them, its libraries
+  as they went out (`GV_LIBMAC.MLB`, `GV_LIBOBJ.OLB`), real LIBRARIAN's
+  listings and extraction of them, `GV_USELIBM.*` (real MACRO assembling
+  `USELIB` with govax's macro library), `GV_LIBMAINL.*` (real LINK with
+  govax's object library), and `GV_LIBMAC2.MLB` and `GV_LIBOBJ2.OLB`,
+  copies real LIBRARIAN changed, with their listings.
+- `FILES.LST`: `DIRECTORY/FULL` of the objects and libraries.
+
+`QIOW` and `GV_QIOW` fail with `SYSTEM-F-FILNOTACC` in the log: under
+`@MACROS/OUTPUT=`, `SYS$OUTPUT` is the log file, and `$QIOW_S` of
+`IO$_WRITEVBLK` to a file channel isn't a terminal write. They run at a
+terminal, and under govax.
+
+Tests that use these: `internal/asm`'s `TestMacroFixtureObjects` (every
+object, record for record), `internal/lbr`'s `TestFixtureMacroLibrary`
+and `TestFixtureObjectLibrary` (the libraries, byte for byte) and
+`TestFixtureListings`, and `internal/console`'s
+`TestLibrary_fixtureExtracts`.

@@ -11,7 +11,7 @@ Phase 27 fixtures do.
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress (subtasks 1-9 done; next, subtask 10, which needs the user).**
+**Status: in progress (subtasks 1-10 done; next, subtask 11).**
 
 ## Scope
 
@@ -237,7 +237,7 @@ inside it. Repeat blocks collect their lines to `.ENDR` the same way.
    becomes `vax.library`, shared by MACRO and LINK (as VMS's `SYS$LIBRARY`
    is), still reading the old name when the new one isn't set. The
    `cmd/govax macro` subcommand follows.
-10. **Fixtures** (needs the user). New `testdata/mar` fixtures: one of
+10. **Done.** **Fixtures** (needs the user). New `testdata/mar` fixtures: one of
     user-defined macros (every argument form, created labels, repeat
     blocks, string operators, `.NARG`/`.NCHR`/`.NTYPE`) and programs that
     call system macros (`$QIOW_S` "hello", and an RMS `$FAB`/`$RAB` file
@@ -899,3 +899,65 @@ All settled (2026-09-30):
   name.
 - Waiting on the user: attach `mac-exchange.dsk` to simh, run `@MACROS`,
   and let govax copy the results back into `testdata/mar/macros/vax/`.
+
+### 2026-09-30 — Subtask 10: the VAX run, and what it settled
+
+- **The run.** The user attached `mac-exchange.dsk` to simh, mounted it
+  on VMS 7.3, and ran `@MACROS/OUTPUT=MACROS.LOG`. govax copied the
+  results into `testdata/mar/macros/vax/` (see its README).
+  - ANALYZE/OBJECT: 0 errors for every object, real MACRO's and govax's.
+  - govax's objects link and run on VMS: `GV_RMSCOPY` copies its source
+    (DIFFERENCES finds none), `GV_USELIB` prints its two lines, and
+    `GV_LIBMAIN` exits with success.
+  - govax's libraries work on VMS: real MACRO assembled `USELIB` from
+    `GV_LIBMAC.MLB` and the program ran; real LINK linked `LIBMAIN`
+    against `GV_LIBOBJ.OLB` and it ran; LIBRARIAN listed and extracted
+    from them, and replaced, inserted, and deleted modules in copies.
+  - `QIOW` fails with `FILNOTACC` from both objects alike: under
+    `/OUTPUT=`, `SYS$OUTPUT` is the log file. A fixture limitation.
+- **Now matching real MACRO, record for record** (`TestMacroFixtureObjects`):
+  all nine objects, with the libraries MACRO had (VMS's STARLET.MLB, and
+  govax's for `qiow`, which gives the same object). What it took:
+  - **`.NTYPE` numbering confirmed** as govax had it (literal `^X00`,
+    immediate `^X1F`, absolute `^X2F`, general `^X3F`, so subtask 8's
+    `$PUSHADR` is right either way), with one fix: a label in another
+    psect is sized by its offset, as if in the same psect (byte relative
+    at `0x78` to offset 0, word when indexed at `0x80`), where govax used
+    the default size.
+  - **`.ADDRESS` always goes through the linker's stack**, absolute
+    values too (`STA_UB 0`, `STO_PIDR` for `$FAB`'s `.ADDRESS XAB`).
+  - **A forward-referenced data value** (`.BYTE`/`.WORD`/`.LONG`) is left
+    to the linker even when it turns out absolute (`$RAB USZ=BUFSIZ`,
+    `BUFSIZ` assigned later: `STA_UW 0x200`, `STO_W`).
+  - **An empty `.BYTE`/`.WORD`/`.LONG`** stores one zero (`$FAB`'s spare
+    `.WORD`). govax stored nothing, which shifted every later `$FAB` field.
+  - **Overwritten fields** are written as real MACRO writes them: each
+    store in its own place, with what it stored then, the later one
+    winning at link time. An overwritten relocation is kept, superseded
+    (written, but not one of `Relocations()`), instead of dropped, and an
+    event's bytes come from the byte's history (`byteOwner.value`).
+  - **A return to `. ABS .`** (the `.RESTORE` in `$DEFEND`) sets the
+    location there, as the start of assembly does.
+- **Messages.** Real MACRO prints `.PRINT`'s comment as written: the
+  leading blank (" USERMAC: ...") and a library comment's closing `;`
+  ("... NOT LONGWORD ALIGNED;"). govax now does, for `.ERROR` and `.WARN`
+  too; after a value, one blank separates the two, as in the manual. The
+  misaligned `$FAB` prints its message once, as subtask 4 expected.
+- **Libraries, byte for byte** (`internal/lbr/fixtures_test.go`): govax's
+  `Builder`, given LIBMAC.MAR and real MACRO's LIBSUB objects with the
+  real libraries' times, writes LIBRARIAN's LIBMAC.MLB and LIBOBJ.OLB
+  exactly, after one fix: index 2's tree takes the first index blocks
+  (LIBRARIAN enters a module's symbols before its name).
+- **Listings** (`TestFixtureListings`): govax's `LIBRARY/LIST` matches
+  LIBRARIAN's for all six libraries (its own, govax's, and the copies it
+  changed), after one fix: 6 blanks after the creation and revision
+  dates, not 7, which lines their second column up with the others'.
+  **Extraction** (`TestLibrary_fixtureExtracts`) matches for all three
+  macro libraries, the squeeze quirk (`ADDL2 C, DEST ;`) included.
+- **File attributes** (`FILES.LST`) match: fixed 512-byte records for
+  libraries, variable-length for objects. LIBRARIAN allocates a new
+  library 100 blocks, contiguous best try, where govax allocates what's
+  used; LIBRARIAN changed govax's libraries without complaint, so this is
+  left as it is.
+- None of these were C-source issues (eVAX has no MACRO dialect, object
+  output, or librarian), so none goes in `DEVIATIONS.md`.

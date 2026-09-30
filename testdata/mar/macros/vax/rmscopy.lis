@@ -1,0 +1,147 @@
+RMSCOPY                         Phase 28 fixture: copy a file with RMS   30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     30-SEP-2026 16:08:00  DUA1:[000000]RMSCOPY.MAR;1        (1)
+
+                                     0000     1 	.TITLE	RMSCOPY	Phase 28 fixture: copy a file with RMS
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; A complete program built on the RMS control block macros: $FAB and $RAB
+                                     0000     5 ; initialize the blocks at assembly time, and $OPEN, $CREATE, $CONNECT,
+                                     0000     6 ; $GET, $PUT, and $CLOSE call RMS. It copies RMSCOPY.MAR, its own source,
+                                     0000     7 ; to RMSCOPY.OUT, a record at a time, and exits with the status of the
+                                     0000     8 ; first failure, or success at end of file.
+                                     0000     9 
+                                     0000    10 	$RMSDEF				; RMS$_EOF
+                                     0000    11 
+                                 00000000    12 	.PSECT	DATA, WRT, NOEXE, LONG
+                                     0000    13 INFAB:	$FAB	FNM=<RMSCOPY.MAR>, FAC=GET
+                                     0050    14 INRAB:	$RAB	FAB=INFAB, UBF=BUFFER, USZ=BUFSIZ
+                                     0094    15 OUTFAB:	$FAB	FNM=<RMSCOPY.OUT>, FAC=PUT, -
+                                     0094    16 		RAT=CR, RFM=VAR, ORG=SEQ
+                                     00E4    17 OUTRAB:	$RAB	FAB=OUTFAB, RBF=BUFFER
+                           00000328  0128    18 BUFFER:	.BLKB	512
+                           00000200  0328    19 BUFSIZ = .-BUFFER
+                                     0328    20 
+                                 00000000    21 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0000  0000    22 	.ENTRY	RMSCOPY, ^M<>
+                                     0002    23 	$OPEN	FAB=INFAB
+                         30 50   E9  000F    24 	BLBC	R0, 90$
+                                     0012    25 	$CONNECT RAB=INRAB
+                         20 50   E9  001F    26 	BLBC	R0, 90$
+                                     0022    27 	$CREATE	FAB=OUTFAB
+                         10 50   E9  002F    28 	BLBC	R0, 90$
+                                     0032    29 	$CONNECT RAB=OUTRAB
+                         01 50   E8  003F    30 	BLBS	R0, 10$
+                                 04  0042    31 90$:	RET
+                                     0043    32 
+                                     0043    33 10$:	$GET	RAB=INRAB
+                         1C 50   E9  0050    34 	BLBC	R0, 20$
+     00000106'EF   00000072'EF   B0  0053    35 	MOVW	INRAB+RAB$W_RSZ, OUTRAB+RAB$W_RSZ
+                                     005E    36 	$PUT	RAB=OUTRAB
+                         D5 50   E8  006B    37 	BLBS	R0, 10$
+                                 04  006E    38 	RET
+                                     006F    39 
+              0001827A 8F   50   D1  006F    40 20$:	CMPL	R0, #RMS$_EOF		; the end of the input is success
+                            1D   12  0076    41 	BNEQ	99$
+                                     0078    42 	$CLOSE	FAB=OUTFAB
+                         0D 50   E9  0085    43 	BLBC	R0, 99$
+                                     0088    44 	$CLOSE	FAB=INFAB
+                                 04  0095    45 99$:	RET
+                                     0096    46 
+                                     0096    47 	.END	RMSCOPY
+RMSCOPY                         Phase 28 fixture: copy a file with RMS   30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             30-SEP-2026 16:08:00  DUA1:[000000]RMSCOPY.MAR;1        (1)
+
+$$.TAB                         = 000000E4 R     02        
+$$.TABEND                      = 00000128 R     02        
+$$.TMP                         = 00000000                 
+$$.TMP1                        = 00000001                 
+$$.TMP2                        = 000000CF                 
+$$.TMPX                        = 0000000B R     03        
+$$.TMPX1                       = 0000000B                 
+BUFFER                           00000128 R     02        
+BUFSIZ                         = 00000200                 
+FAB$B_FNS                      = 00000034                 
+FAB$C_BID                      = 00000003                 
+FAB$C_BLN                      = 00000050                 
+FAB$C_SEQ                      = 00000000                 
+FAB$C_VAR                      = 00000002                 
+FAB$L_ALQ                      = 00000010                 
+FAB$L_FNA                      = 0000002C                 
+FAB$L_FOP                      = 00000004                 
+FAB$V_CHAN_MODE                = 00000002                 
+FAB$V_CR                       = 00000001                 
+FAB$V_FILE_MODE                = 00000004                 
+FAB$V_GET                      = 00000001                 
+FAB$V_LNM_MODE                 = 00000000                 
+FAB$V_PUT                      = 00000000                 
+FAB$W_GBC                      = 00000048                 
+INFAB                            00000000 R     02        
+INRAB                            00000050 R     02        
+OUTFAB                           00000094 R     02        
+OUTRAB                           000000E4 R     02        
+RAB$B_RAC                      = 0000001E                 
+RAB$C_BID                      = 00000001                 
+RAB$C_BLN                      = 00000044                 
+RAB$C_SEQ                      = 00000000                 
+RAB$L_CTX                      = 00000018                 
+RAB$L_ROP                      = 00000004                 
+RAB$W_RSZ                      = 00000022                 
+RMS$_EOF                       = 0001827A                 
+RMSCOPY                          00000000 RG    04        
+SYS$CLOSE                        ********  GX   04        
+SYS$CONNECT                      ********  GX   04        
+SYS$CREATE                       ********  GX   04        
+SYS$GET                          ********  GX   04        
+SYS$OPEN                         ********  GX   04        
+SYS$PUT                          ********  GX   04        
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+$ABS$                           00000000  (    0.)  01 (  1.)  NOPIC   USR   CON   ABS   LCL NOSHR   EXE   RD    WRT NOVEC BYTE  
+DATA                            00000328  (  808.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+$RMSNAM                         00000016  (   22.)  03 (  3.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD    WRT NOVEC BYTE  
+CODE                            00000096  (  150.)  04 (  4.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+RMSCOPY                         Phase 28 fixture: copy a file with RMS   30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   3
+VAX-11 Macro Run Statistics                                              30-SEP-2026 16:08:00  DUA1:[000000]RMSCOPY.MAR;1        (1)
+
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  426     00:00:00.01    00:00:00.01
+Command processing              901     00:00:00.00    00:00:00.00
+Pass 1                          591     00:00:00.08    00:00:00.08
+Symbol table sort                 2     00:00:00.01    00:00:00.01
+Pass 2                           42     00:00:00.01    00:00:00.01
+Symbol table output               6     00:00:00.00    00:00:00.00
+Psect synopsis output             4     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1997     00:00:00.11    00:00:00.11
+
+The working set limit was 1112 pages.
+34648 bytes (68 pages) of virtual memory were used to buffer the intermediate code.
+There were 40 pages of symbol table space allocated to hold 625 non-local and 4 local symbols.
+47 source lines were read in Pass 1, producing 21 object records in Pass 2.
+26 pages of virtual memory were used to define 20 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                       17        
+
+880 GETS were required to define 17 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST RMSCOPY

@@ -50,8 +50,8 @@ func (l *Library) List(opts ListOptions) ([]string, error) {
 
 	out := []string{
 		fmt.Sprintf("Directory of %s library %s on %s", typeName, opts.Name, listDate(opts.Now)),
-		"Creation date:  " + listDate(l.Created) + spaces(7) + field("Creator:  ", 10) + l.Librarian,
-		"Revision date:  " + listDate(l.Updated) + spaces(7) + field("Library format:  ", 18) + fmt.Sprintf("%d.%d", l.MajorID, l.MinorID),
+		"Creation date:  " + listDate(l.Created) + spaces(6) + field("Creator:  ", 10) + l.Librarian,
+		"Revision date:  " + listDate(l.Updated) + spaces(6) + field("Library format:  ", 18) + fmt.Sprintf("%d.%d", l.MajorID, l.MinorID),
 		field("Number of modules:  ", 20) + number(l.Modules, 5) + spaces(17) + field("Max. key length:  ", 18) + strconv.Itoa(l.KeySize()),
 		field("Other entries:  ", 20) + number(l.IndexEntries-l.Modules, 5) + spaces(17) + field("Preallocated index blocks:  ", 28) + number(l.Preallocated, 5),
 		field("Recoverable deleted blocks:  ", 29) + number(l.DeletedBlocks, 5) + spaces(8) + field("Total index blocks used:  ", 28) + number(l.IndexBlocks, 5),

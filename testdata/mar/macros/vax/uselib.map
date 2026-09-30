@@ -1,0 +1,93 @@
+
+                                                                30-SEP-2026 16:09        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+USELIB          V1.0                  111 DUA1:[000000]USELIB.OBJ;1            30-SEP-2026 16:09  VAX MACRO V5.4-3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+DATA                            00000200 00000207 00000008 (          8.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                USELIB          00000200 00000207 00000008 (          8.) LONG  2
+CODE                            00000400 00000466 00000067 (        103.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                USELIB          00000400 00000466 00000067 (        103.) LONG  2
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+USELIB          00000400-R        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]USELIB.EXE;1                                       30-SEP-2026 16:09        Linker V11-39                    Page    2
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000007FF 00000600 (1536. bytes, 3. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        4. (    3. blocks)
+Image name and identification:                    USELIB V1.0
+Number of files:                                         4.
+Number of modules:                                       3.
+Number of program sections:                              5.
+Number of global symbols:                              307.
+Number of image sections:                                6.
+User transfer address:                            00000400
+Debugger transfer address:                        7FFEDF68
+Number of code references to shareable images:           1.
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[000000]USELIB.MAP;1
+Estimated map length:                             31. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                    74	00:00:00.00	00:00:00.00
+    Pass 1:                                              1194	00:00:00.02	00:00:00.02
+    Allocation/Relocation:                                 77	00:00:00.00	00:00:00.00
+    Pass 2:                                               740	00:00:00.01	00:00:00.01
+    Map data after object module synopsis:                 32	00:00:00.00	00:00:00.00
+    Symbol table output:                                   10	00:00:00.00	00:00:00.00
+Total run values:                                        2127	00:00:00.03	00:00:00.03
+
+Using a working set limited to 812 pages and 109 pages of data storage (excluding image)
+
+Total number object records read (both passes):   110
+    of which 26 were in libraries and 3 were DEBUG data records containing 74 bytes
+62 bytes of DEBUG data were written,starting at VBN 5 with 1 blocks allocated
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 0 global symbol table records was written
+
+LINK/MAP USELIB

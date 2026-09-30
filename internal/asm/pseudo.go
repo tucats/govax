@@ -58,6 +58,13 @@ func readFileArg(c *cursor) string {
 func (a *Assembler) pseudoData(c *cursor, scale int) error {
 	first := true
 
+	// In MACRO-32, one with no value stores a zero: $FAB's ".WORD" (a
+	// spare word) is two zero bytes in real MACRO's object
+	// (testdata/mar/macros/vax/fabalign.obj).
+	if c.skipBlanks(); c.atEnd() && a.dialect == DialectMACRO {
+		return a.emitScaled(0, scale)
+	}
+
 	for {
 		c.skipBlanks()
 

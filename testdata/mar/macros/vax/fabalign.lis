@@ -1,0 +1,90 @@
+FABALIGN                        Phase 28 fixture: a misaligned $FAB      30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     30-SEP-2026 16:08:00  DUA1:[000000]FABALIGN.MAR;1       (1)
+
+                                     0000     1 	.TITLE	FABALIGN	Phase 28 fixture: a misaligned $FAB
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; $FAB's $$R_TABINIT checks that the block is longword aligned with
+                                     0000     5 ;	.IIF NE .&3, .PRINT ;%MACRO-I-GENINFO, ...;
+                                     0000     6 ; which tests a relocatable location. Real MACRO assembles this and
+                                     0000     7 ; prints the message only for the second block, which the .BYTE before it
+                                     0000     8 ; misaligns.
+                                     0000     9 
+                                 00000000    10 	.PSECT	DATA, WRT, NOEXE, LONG
+                                     0000    11 GOOD:	$FAB	FNM=<A.DAT>
+                                 01  0050    12 	.BYTE	1
+                                     0051    13 BAD:	$FAB	FNM=<B.DAT>
+                                     00A1    14 
+                                     00A1    15 	.END
+FABALIGN                        Phase 28 fixture: a misaligned $FAB      30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             30-SEP-2026 16:08:00  DUA1:[000000]FABALIGN.MAR;1       (1)
+
+$$.TAB                         = 00000051 R     01        
+$$.TABEND                      = 000000A1 R     01        
+$$.TMP                         = 00000000                 
+$$.TMPX                        = 00000005 R     03        
+$$.TMPX1                       = 00000005                 
+BAD                              00000051 R     01        
+FAB$B_FNS                      = 00000034                 
+FAB$C_BID                      = 00000003                 
+FAB$C_BLN                      = 00000050                 
+FAB$C_SEQ                      = 00000000                 
+FAB$C_VAR                      = 00000002                 
+FAB$L_ALQ                      = 00000010                 
+FAB$L_FNA                      = 0000002C                 
+FAB$L_FOP                      = 00000004                 
+FAB$V_CHAN_MODE                = 00000002                 
+FAB$V_FILE_MODE                = 00000004                 
+FAB$V_LNM_MODE                 = 00000000                 
+FAB$W_GBC                      = 00000048                 
+GOOD                             00000000 R     01        
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            000000A1  (  161.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+$ABS$                           00000000  (    0.)  02 (  2.)  NOPIC   USR   CON   ABS   LCL NOSHR   EXE   RD    WRT NOVEC BYTE  
+$RMSNAM                         0000000A  (   10.)  03 (  3.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD    WRT NOVEC BYTE  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  424     00:00:00.00    00:00:00.00
+Command processing              919     00:00:00.01    00:00:00.01
+Pass 1                          456     00:00:00.03    00:00:00.03
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                          101     00:00:00.01    00:00:00.01
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1927     00:00:00.05    00:00:00.05
+
+The working set limit was 962 pages.
+11696 bytes (23 pages) of virtual memory were used to buffer the intermediate code.
+There were 20 pages of symbol table space allocated to hold 213 non-local and 0 local symbols.
+15 source lines were read in Pass 1, producing 14 object records in Pass 2.
+14 pages of virtual memory were used to define 10 macros.
+FABALIGN                        Phase 28 fixture: a misaligned $FAB      30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   3
+VAX-11 Macro Run Statistics                                              30-SEP-2026 16:08:00  DUA1:[000000]FABALIGN.MAR;1       (1)
+
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        7        
+
+364 GETS were required to define 7 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST FABALIGN

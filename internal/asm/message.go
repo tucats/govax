@@ -17,8 +17,11 @@ import (
 // ("%MACRO-I-GENINFO, Generated INFO: RMS BLOCK NOT LONGWORD ALIGNED"). The
 // comment is the statement's own (see statement), with any argument
 // already substituted into it, since a macro's arguments are substituted
-// everywhere. A comment in a macro library ends with a second ";" so the
-// librarian won't strip it; that one isn't part of the message.
+// everywhere. It's displayed as written, from just after the ";": real
+// MACRO keeps a leading blank, and the second ";" a comment in a macro
+// library ends with so that the librarian won't strip it
+// (testdata/mar/macros/vax/macros.log: " USERMAC: ..." and "... NOT
+// LONGWORD ALIGNED;").
 //
 // The console dialect has .ERROR and .WARN too; its .PRINT is eVAX's (see
 // pseudoPrint).
@@ -59,7 +62,7 @@ func (a *Assembler) pseudoPrintMACRO(c *cursor) error {
 
 // messageText reads a message directive's optional expression and returns
 // the message: the expression's value in decimal, if it isn't zero, then
-// the comment, trimmed of blanks and a library comment's closing ";".
+// the comment, as written but for trailing blanks.
 func (a *Assembler) messageText(c *cursor) (string, error) {
 	var parts []string
 
@@ -82,8 +85,13 @@ func (a *Assembler) messageText(c *cursor) (string, error) {
 		}
 	}
 
-	comment := strings.TrimSpace(a.comment)
-	comment = strings.TrimSpace(strings.TrimSuffix(comment, ";"))
+	comment := strings.TrimRight(a.comment, " \t")
+
+	// After a value, one blank separates it from the comment, as in the
+	// manual's examples ("25 Need larger WORK_AREA").
+	if len(parts) > 0 {
+		comment = strings.TrimLeft(comment, " \t")
+	}
 
 	if comment != "" {
 		parts = append(parts, comment)

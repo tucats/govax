@@ -85,8 +85,8 @@ func TestList(t *testing.T) {
 
 	want := []string{
 		"Directory of OBJECT library WORK:[X]T.OLB;1 on  3-SEP-2026 14:05:06",
-		"Creation date:   3-SEP-2026 14:05:06       Creator:  govax Librarian",
-		"Revision date:   3-SEP-2026 14:05:06       Library format:   3.0",
+		"Creation date:   3-SEP-2026 14:05:06      Creator:  govax Librarian",
+		"Revision date:   3-SEP-2026 14:05:06      Library format:   3.0",
 		"Number of modules:      2                 Max. key length:  31",
 		"Other entries:          4                 Preallocated index blocks:     49",
 		"Recoverable deleted blocks:      0        Total index blocks used:        2",

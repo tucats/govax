@@ -1,0 +1,81 @@
+LIBMAIN                         Phase 28 fixture: a program linked with  30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     30-SEP-2026 16:08:00  DUA1:[000000]LIBMAIN.MAR;1        (1)
+
+                                     0000     1 	.TITLE	LIBMAIN	Phase 28 fixture: a program linked with an object library
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; Calls TWICE and SQUARE, which LINK finds in the object library:
+                                     0000     5 ;	LINK LIBMAIN,LIBOBJ/LIBRARY
+                                     0000     6 ; It exits with success when TWICE(21) is 42 and SQUARE(7) is 49, and
+                                     0000     7 ; SQUARE counted one call; with 0 otherwise.
+                                     0000     8 
+                                 00000000     9 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0000  0000    10 	.ENTRY	LIBMAIN, ^M<>
+                            7E   D4  0002    11 	CLRL	-(SP)
+                            15   DD  0004    12 	PUSHL	#21
+              00000000'GF   01   FB  0006    13 	CALLS	#1, G^TWICE
+                       2A   50   D1  000D    14 	CMPL	R0, #42
+                            1A   12  0010    15 	BNEQ	10$
+                            07   DD  0012    16 	PUSHL	#7
+              00000000'GF   01   FB  0014    17 	CALLS	#1, G^SQUARE
+                       31   50   D1  001B    18 	CMPL	R0, #49
+                            0C   12  001E    19 	BNEQ	10$
+              01   00000000'GF   D1  0020    20 	CMPL	G^SQUARE_COUNT, #1
+                            03   12  0027    21 	BNEQ	10$
+                       6E   01   D0  0029    22 	MOVL	#1, (SP)
+                       50   8E   D0  002C    23 10$:	MOVL	(SP)+, R0
+                                 04  002F    24 	RET
+                                     0030    25 
+                                     0030    26 	.END	LIBMAIN
+LIBMAIN                         Phase 28 fixture: a program linked with  30-SEP-2026 16:09:09  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             30-SEP-2026 16:08:00  DUA1:[000000]LIBMAIN.MAR;1        (1)
+
+LIBMAIN          00000000 RG    01      
+SQUARE           ********   X   01      
+SQUARE_COUNT     ********   X   01      
+TWICE            ********   X   01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+CODE                            00000030  (   48.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  433     00:00:00.00    00:00:00.00
+Command processing              926     00:00:00.00    00:00:00.00
+Pass 1                          186     00:00:00.01    00:00:00.01
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           24     00:00:00.00    00:00:00.00
+Symbol table output               0     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1596     00:00:00.01    00:00:00.01
+
+The working set limit was 662 pages.
+539 bytes (2 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 4 non-local and 1 local symbols.
+26 source lines were read in Pass 1, producing 15 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST LIBMAIN

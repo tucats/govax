@@ -24,7 +24,8 @@ func requireMessage(t *testing.T, err error, code uint32, want string) {
 }
 
 // TestErrorDirective is the manual's .ERROR example: the value, then the
-// comment, without a library comment's closing ";".
+// comment as written, a library comment's closing ";" included (real
+// MACRO keeps it; testdata/mar/macros/vax/macros.log).
 func TestErrorDirective(t *testing.T) {
 	src := `
 LONG_MESS = 1
@@ -36,7 +37,7 @@ WORK_AREA = 900
 	.ENDC`
 
 	err := macroErr(t, src)
-	requireMessage(t, err, vmserrors.VAX_GENERR, "Generated ERROR: 25 Need larger WORK_AREA")
+	requireMessage(t, err, vmserrors.VAX_GENERR, "Generated ERROR: 25 Need larger WORK_AREA;")
 
 	var located *Error
 	if !errors.As(err, &located) || located.Line != 6 {
@@ -54,7 +55,7 @@ func TestErrorInMacro(t *testing.T) {
 	CHECK	ABC
 	CHECK	WXYZ`
 
-	requireMessage(t, macroErr(t, src), vmserrors.VAX_GENERR, "Generated ERROR: Argument WXYZ is not 3 characters")
+	requireMessage(t, macroErr(t, src), vmserrors.VAX_GENERR, "Generated ERROR:  Argument WXYZ is not 3 characters;")
 }
 
 // TestErrorSkipped: a message directive in a conditional's false branch,
@@ -109,7 +110,7 @@ DOUBLE_PREC = 1
 		t.Fatalf("warnings = %v, want one", a.Warnings())
 	}
 
-	requireMessage(t, a.Warnings()[0], vmserrors.VAX_GENWRN, "Generated WARNING: This combination not tested")
+	requireMessage(t, a.Warnings()[0], vmserrors.VAX_GENWRN, "Generated WARNING:  This combination not tested")
 }
 
 // TestPrintDirective is the manual's .PRINT example: an informational
@@ -163,7 +164,7 @@ func TestAlignmentCheck(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := "%MACRO-I-GENINFO, Generated INFO: RMS BLOCK NOT LONGWORD ALIGNED"
+	want := "%MACRO-I-GENINFO, Generated INFO: RMS BLOCK NOT LONGWORD ALIGNED;"
 	if msgs := a.Messages(); len(msgs) != 1 || msgs[0] != want {
 		t.Errorf("messages = %q, want [%q]", msgs, want)
 	}

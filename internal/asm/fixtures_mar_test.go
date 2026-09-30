@@ -439,49 +439,61 @@ func TestFixtureLadderObjects(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			realModule := realObject(t, name)
-
-			var opts ObjectOptions
-
-			for _, rec := range realModule.Records {
-				switch h := rec.(type) {
-				case *obj.MainHeader:
-					if opts.Created, err = time.Parse("02-Jan-2006 15:04", h.Created); err != nil {
-						t.Fatal(err)
-					}
-
-				case *obj.TextHeader:
-					switch h.Type {
-					case obj.HdrLNM:
-						opts.Language = h.Text
-					case obj.HdrSRC:
-						opts.Source = h.Text
-					}
-				}
-			}
-
-			m, err := macroAssemble(t, string(src)).Object(opts)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			raw, err := obj.Encode(m)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			back, err := obj.Decode(raw)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if problems := obj.Check(back); len(problems) > 0 {
-				t.Errorf("Check: %v", problems)
-			}
-
-			if got, want := dumpText(t, back), dumpText(t, withoutTraceback(realModule)); got != want {
-				t.Errorf("object:\n%s\nwant:\n%s", got, want)
-			}
+			requireSameObject(t, macroAssemble(t, string(src)), realObject(t, name))
 		})
+	}
+}
+
+// requireSameObject checks a's object module against real MACRO's,
+// record for record, as TestFixtureLadderObjects describes: the
+// traceback records left out, and the headers naming the language
+// processor, its command line, and the time given real MACRO's values.
+// The object must also encode and decode unchanged, and pass Check.
+func requireSameObject(t *testing.T, a *Assembler, realModule *obj.Module) {
+	t.Helper()
+
+	var (
+		opts ObjectOptions
+		err  error
+	)
+
+	for _, rec := range realModule.Records {
+		switch h := rec.(type) {
+		case *obj.MainHeader:
+			if opts.Created, err = time.Parse("02-Jan-2006 15:04", h.Created); err != nil {
+				t.Fatal(err)
+			}
+
+		case *obj.TextHeader:
+			switch h.Type {
+			case obj.HdrLNM:
+				opts.Language = h.Text
+			case obj.HdrSRC:
+				opts.Source = h.Text
+			}
+		}
+	}
+
+	m, err := a.Object(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	raw, err := obj.Encode(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	back, err := obj.Decode(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if problems := obj.Check(back); len(problems) > 0 {
+		t.Errorf("Check: %v", problems)
+	}
+
+	if got, want := dumpText(t, back), dumpText(t, withoutTraceback(realModule)); got != want {
+		t.Errorf("object:\n%s\nwant:\n%s", got, want)
 	}
 }

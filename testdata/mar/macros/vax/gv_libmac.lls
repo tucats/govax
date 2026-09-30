@@ -1,0 +1,13 @@
+Directory of MACRO library DUA1:[000000]GV_LIBMAC.MLB;1 on 30-SEP-2026 16:09:09
+Creation date:  30-SEP-2026 16:08:00      Creator:  govax Librarian
+Revision date:  30-SEP-2026 16:08:00      Library format:   3.0
+Number of modules:      5                 Max. key length:  31
+Other entries:          0                 Preallocated index blocks:      9
+Recoverable deleted blocks:      0        Total index blocks used:        1
+Max. Number history records:      20      Library history records:        0
+
+ADDUP            inserted 30-SEP-2026 16:08:00
+BITS             inserted 30-SEP-2026 16:08:00
+CHECK            inserted 30-SEP-2026 16:08:00
+DEFINER          inserted 30-SEP-2026 16:08:00
+PUTMSG           inserted 30-SEP-2026 16:08:00

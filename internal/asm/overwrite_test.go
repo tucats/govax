@@ -53,7 +53,9 @@ LATER:	.LONG	7`)
 }
 
 // TestOverwriteRelocationWithConstant stores a relocatable value, then a
-// constant over it: the relocation is dropped.
+// constant over it: the relocation is superseded. It's still written
+// where it was stored, as real MACRO writes it, and the constant after
+// it, but it's no longer the field's value.
 func TestOverwriteRelocationWithConstant(t *testing.T) {
 	a := macroAssemble(t, `	.PSECT	DATA, LONG
 TAB:	.ADDRESS TAB
@@ -63,8 +65,26 @@ TAB:	.ADDRESS TAB
 	requireRelocations(t, a)
 	requireBytes(t, psectBytes(t, a, "DATA"), 9, 0, 0, 0)
 
-	if text := assemblyDump(t, a); strings.Contains(text, "STO_PIDR") {
-		t.Errorf("the dropped relocation is in the object:\n%s", text)
+	text := assemblyDump(t, a)
+	if pidr, nine := strings.Index(text, "STO_PIDR"), strings.Index(text, "STO_IMM 4 bytes: 09 00 00 00"); pidr < 0 || nine < pidr {
+		t.Errorf("want STO_PIDR, then the constant stored over it:\n%s", text)
+	}
+}
+
+// TestOverwriteConstantWithConstant: each store writes the bytes it
+// stored, the earlier one too, as real MACRO does ($FAB's FAB$B_FNS is
+// stored as 0, then as the name's length).
+func TestOverwriteConstantWithConstant(t *testing.T) {
+	a := macroAssemble(t, `	.PSECT	DATA, LONG
+TAB:	.LONG	1
+	.=TAB
+	.LONG	2`)
+
+	requireBytes(t, psectBytes(t, a, "DATA"), 2, 0, 0, 0)
+
+	text := assemblyDump(t, a)
+	if one, two := strings.Index(text, "01 00 00 00"), strings.Index(text, "02 00 00 00"); one < 0 || two < one {
+		t.Errorf("want 1 stored, then 2:\n%s", text)
 	}
 }
 
