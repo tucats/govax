@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -131,6 +132,62 @@ func TestLink_runsRelocatedCode(t *testing.T) {
 	}
 }
 
+// TestLink_hello assembles, links, and runs hello: its general mode call
+// to LIB$PUT_OUTPUT resolves, through govax's own symbol source, to
+// LIBRTL's routine, which RUN reaches through the shim for its offset.
+func TestLink_hello(t *testing.T) {
+	c := newBootableConsole(t)
+	out := &bytes.Buffer{}
+	c.Out = out
+	dir := t.TempDir()
+	assembleFixture(t, c, "hello", dir)
+
+	if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, "hello")}}); err != nil {
+		t.Fatalf("LINK: %v", err)
+	}
+
+	if got := runImage(t, c, filepath.Join(dir, "hello.exe")); got != 1 {
+		t.Errorf("R0 = %d, want 1", got)
+	}
+
+	if !strings.Contains(out.String(), "Hello, world!") {
+		t.Errorf("output = %q, want Hello, world!", out.String())
+	}
+}
+
+// TestLink_systemService links a general mode call to a system service,
+// which resolves to its address in the P1 vector: absolute mode.
+func TestLink_systemService(t *testing.T) {
+	c := newBootableConsole(t)
+	dir := t.TempDir()
+
+	writeHostFile(t, filepath.Join(dir, "svc.mar"), "\t.PSECT\tC,NOWRT,EXE\n\t.ENTRY\tGO,^M<>\n"+
+		"\tPUSHL\t#9\n\tCALLS\t#1,G^SYS$EXIT\n\tRET\n\t.END\tGO\n")
+
+	if err := c.Macro(MacroOptions{Source: filepath.Join(dir, "svc.mar")}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, "svc")}}); err != nil {
+		t.Fatalf("LINK: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, "svc.exe"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	exit, _ := vmsdefP1Address("SYS$EXIT")
+
+	// The code: entry mask, PUSHL S^#9, CALLS S^#1, then absolute mode.
+	code := data[512:]
+	want := []byte{0, 0, 0xDD, 0x09, 0xFB, 0x01, 0x9F, byte(exit), byte(exit >> 8), byte(exit >> 16), byte(exit >> 24)}
+
+	if !bytes.Equal(code[:len(want)], want) {
+		t.Errorf("code = % x, want % x", code[:len(want)], want)
+	}
+}
+
 // TestLink_imageHeaderNames checks the name and linker ID in the header.
 func TestLink_imageHeaderNames(t *testing.T) {
 	c, _ := newTestConsole(t)
@@ -188,15 +245,20 @@ func TestLink_errors(t *testing.T) {
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 
-	// hello refers to LIB$PUT_OUTPUT, which nothing defines yet.
-	hello := assembleFixture(t, c, "hello", dir)
+	// A routine no object or symbol source defines.
+	writeHostFile(t, filepath.Join(dir, "undef.mar"), "\t.PSECT\tC,NOWRT,EXE\n\t.ENTRY\tGO,^M<>\n"+
+		"\tCALLS\t#0,G^NO$SUCH_ROUTINE\n\tRET\n\t.END\tGO\n")
 
-	err := c.Link(LinkOptions{Objects: []string{hello}})
-	if !errors.Is(err, vmserrors.New(vmserrors.CLI_LINKING)) || !strings.Contains(err.Error(), "LIB$PUT_OUTPUT") {
+	if err := c.Macro(MacroOptions{Source: filepath.Join(dir, "undef.mar")}); err != nil {
+		t.Fatal(err)
+	}
+
+	err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, "undef")}})
+	if !errors.Is(err, vmserrors.New(vmserrors.CLI_LINKING)) || !strings.Contains(err.Error(), "NO$SUCH_ROUTINE") {
 		t.Errorf("undefined symbol: error = %v", err)
 	}
 
-	if _, statErr := os.Stat(filepath.Join(dir, "hello.exe")); statErr == nil {
+	if _, statErr := os.Stat(filepath.Join(dir, "undef.exe")); statErr == nil {
 		t.Error("an image was written despite the error")
 	}
 
@@ -309,4 +371,15 @@ func TestDispatch_linkViaDCL(t *testing.T) {
 	if err := d.Dispatch(`LINK "` + entry + `"/NOEXECUTABLE`); err != nil {
 		t.Fatalf("LINK/NOEXECUTABLE: %v", err)
 	}
+}
+
+// vmsdefP1Address is a P1 vector entry's address.
+func vmsdefP1Address(name string) (uint32, bool) {
+	for _, e := range vmsdef.P1VectorTable {
+		if e.Name == name {
+			return e.Addr, true
+		}
+	}
+
+	return 0, false
 }

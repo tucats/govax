@@ -153,10 +153,12 @@ func (l *linker) allocate() {
 }
 
 // value is a value on the linker's stack, and whether it's an address in
-// the image (which moves with the image) or an absolute value.
+// the image (which moves with the image), an offset in a shareable image
+// (img names it), or an absolute value.
 type value struct {
 	v   uint32
 	rel bool
+	img string
 }
 
 // store is how a store command writes the value it pops.
@@ -287,7 +289,7 @@ func (x *machine) command(c obj.Command) error {
 			return fmt.Errorf("%s is undefined", c.Name)
 		}
 
-		x.push(value{v: g.value, rel: g.contrib != nil})
+		x.push(value{v: g.value, rel: g.contrib != nil, img: g.image})
 
 	case "STA_EPM":
 		g := x.l.symbols[c.Name]
@@ -353,12 +355,20 @@ func (x *machine) binary(name string, op func(a, b uint32) uint32) error {
 		return err
 	}
 
+	// An offset in a shareable image can only be moved by a constant.
+	img := a.img
+	if a.img != "" || b.img != "" {
+		if b.img != "" || b.rel || a.rel || (name != "OPR_ADD" && name != "OPR_SUB") {
+			return fmt.Errorf("arithmetic on an address in a shareable image isn't supported")
+		}
+	}
+
 	rel := a.rel || b.rel
 	if name == "OPR_SUB" && a.rel && b.rel {
 		rel = false
 	}
 
-	x.push(value{v: op(a.v, b.v), rel: rel})
+	x.push(value{v: op(a.v, b.v), rel: rel, img: img})
 
 	return nil
 }
@@ -368,6 +378,10 @@ func (x *machine) store(st store) error {
 	a, err := x.pop()
 	if err != nil {
 		return err
+	}
+
+	if a.img != "" {
+		return fmt.Errorf("a reference to shareable image %s must be general mode (G^)", a.img)
 	}
 
 	v := int64(int32(a.v))
@@ -403,7 +417,11 @@ func (x *machine) store(st store) error {
 // storePICR stores a general mode (G^) operand: five bytes, starting at
 // the addressing mode byte. An address in the image becomes relative mode
 // (EF and a longword displacement), and an absolute one absolute mode (9F
-// and the address).
+// and the address). An address in a shareable image becomes longword
+// relative deferred mode (FF) through a cell in the fixup section, which
+// the image activator fills in with the address (the Linker manual,
+// §6.3.6.2); its displacement is stored once the fixup section is laid
+// out (see patchGRefs).
 func (x *machine) storePICR() error {
 	a, err := x.pop()
 	if err != nil {
@@ -412,10 +430,15 @@ func (x *machine) storePICR() error {
 
 	b := make([]byte, 5)
 
-	if a.rel {
+	switch {
+	case a.img != "":
+		b[0] = 0xFF
+		x.l.referShared(a.img, a.v, x.loc+1)
+
+	case a.rel:
 		b[0] = 0xEF
 		binary.LittleEndian.PutUint32(b[1:], a.v-(x.loc+5))
-	} else {
+	default:
 		b[0] = 0x9F
 		binary.LittleEndian.PutUint32(b[1:], a.v)
 	}
@@ -474,9 +497,27 @@ func (l *linker) image() (*Image, error) {
 
 	vbn := uint32(2)
 
+	// The fixup section follows the last section. Laying it out gives
+	// each general mode operand's cell, whose displacement goes into the
+	// code before the sections' pages are written out.
 	for _, s := range l.sections {
 		end = s.base + s.pages*blockSize
+	}
 
+	if end == 0 {
+		end = imageBase
+	}
+
+	fixupVA := pageUp(end)
+	layout := l.layoutFixups()
+
+	if err := l.patchGRefs(layout, fixupVA); err != nil {
+		return nil, fmt.Errorf("link: %w", err)
+	}
+
+	fixup := l.fixupSection(layout, fixupVA)
+
+	for _, s := range l.sections {
 		for _, run := range s.runs() {
 			vpn := (s.base >> 9) + run.first
 
@@ -497,22 +538,28 @@ func (l *linker) image() (*Image, error) {
 		}
 	}
 
-	if end == 0 {
-		end = imageBase
-	}
-
-	fixupVA := pageUp(end)
 	isds = append(isds,
-		isd{pages: 1, vpn: fixupVA >> 9, flags: isdFIXUPVEC | isdWRT | isdCRF, vbn: vbn},
+		isd{pages: uint32(len(fixup)) / blockSize, vpn: fixupVA >> 9, flags: isdFIXUPVEC | isdWRT | isdCRF, vbn: vbn},
 		isd{pages: uint32(l.opts.StackPages), vpn: 1<<22 - uint32(l.opts.StackPages), flags: isdTypeUserStack | isdLASTCLU | isdDZRO | isdWRT},
 	)
-	pages = append(pages, fixupSection(fixupVA))
+	pages = append(pages, fixup)
+
+	global := make([][]byte, 0, len(l.shared))
+
+	for _, r := range l.shared {
+		g, err := globalSectionISD(r.image)
+		if err != nil {
+			return nil, fmt.Errorf("link: %w", err)
+		}
+
+		global = append(global, g)
+	}
 
 	if l.opts.ImageName == "" {
 		l.opts.ImageName = l.modules[0].name
 	}
 
-	header, err := l.header(isds, fixupVA)
+	header, err := l.header(isds, global, fixupVA)
 	if err != nil {
 		return nil, fmt.Errorf("link: %w", err)
 	}

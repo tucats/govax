@@ -229,7 +229,7 @@ them.
    `govax link` subcommand. Pass criterion: linking `psects.obj` writes
    `GV_PSECTS.EXE`'s bytes (the link time, image name, and linker ID
    aside), and govax `RUN`s the image with status 1.
-2. **External references through govax's own tables:** the symbol-source
+2. **Done.** **External references through govax's own tables:** the symbol-source
    interface, the shim and P1 vector sources, G^ fixups into the fixup
    section, and the SHL and global-section ISDs, so `hello` links and
    runs in govax. Compare with `GV_HELLO.EXE`.
@@ -357,3 +357,65 @@ them.
   `TestLinkNoTracebackMatchesRealLINK` links the fixture from govax's
   and real MACRO's objects, and both equal the real image byte for
   byte.
+
+### 2026-09-30 — Subtask 2: hello links and runs
+
+- **Symbol sources** (`internal/link/source.go`). `SymbolSource` has two
+  questions:
+  - `Lookup(name)`: an absolute value, or a shareable image plus the
+    offset in it;
+  - `Image(name)`: the image's page count, global section ident, and
+    match control, which the image's global section ISD records.
+
+  `TableSource` answers both from maps. `Options.Sources` are searched
+  in order for each symbol the modules refer to but don't define, and a
+  symbol none of them defines is still an error.
+- **govax's own source** (`internal/console/linksource.go`), built from:
+  - `vmsdef.P1VectorTable`: system services, absolute;
+  - the console's `shimTable`: each routine's image and real offset, so
+    `LIB$PUT_OUTPUT` is `LIBRTL` + `^X478`;
+  - `sharedImages`: only `LIBRTL`'s facts are known (264 pages, ident
+    1/0x0E, `MATLEQ`, from the user's `ANALYZE/IMAGE`). The others are
+    recorded by name, with a match control that accepts any ident.
+
+  The console's LINK uses it. A GST or object library source goes ahead
+  of it in subtask 3.
+- **Shareable image references.**
+  - A general mode operand whose value is in a shareable image becomes
+    longword relative deferred mode (`FF`), through a cell in the fixup
+    section that holds the target's offset. The image activator adds
+    the image's base to it (the Linker manual, §6.3.6.2).
+  - Each target gets one cell, however many operands reach it. The
+    fixup section lists the shareable images in the order they were
+    first referred to: one G^ fixup list per image, the change-protection
+    entry, and a shareable image list naming each after the image
+    itself.
+  - Each image gets a 31-byte-and-up global section ISD after the user
+    stack's: `GBL`, the match control in bits 4-6, type `SHRPIC`, the
+    page count, the ident, and the section name `<image>_001`.
+  - The displacements are stored after pass 2, once the fixup section is
+    laid out (`patchGRefs`). A fixup section bigger than a page is
+    allowed for.
+  - Any other reference to a shareable image address (a store, a
+    displacement, arithmetic beyond adding or subtracting a constant) is
+    an error that asks for general mode. `.ADDRESS` fixups aren't
+    written yet.
+- **Matches real LINK byte for byte.** `TestLinkSharedImageMatchesRealLINK`
+  links `hello` from govax's and real MACRO's objects, and both images
+  equal `GV_HELLO.EXE`. That covers the `@L^` operand, the fixup
+  section's G^ list and shareable image list, and `LIBRTL`'s global
+  section ISD.
+- **It runs.** `govax macro hello.mar`, `govax link hello`, and
+  `govax run hello.exe` print "Hello, world!": RUN finds no
+  `LIBRTL.EXE`, so it connects the cell to the shim for
+  `SHIM$LIBRTL_00000478`, which is govax's own `LIB$PUT_OUTPUT`.
+- Tests:
+  - `internal/link`: the real-image comparison; several targets across
+    two images (one cell per target, list order, counts, displacements,
+    and global section ISDs); and the general mode error.
+  - `internal/console`: hello's output under RUN; a G^ system service
+    call (absolute mode at `SYS$EXIT`'s P1 address); and the undefined
+    symbol error, now with a name nothing defines.
+
+  The LINK help topic describes the symbol lookup, and `go test ./...`
+  passes.

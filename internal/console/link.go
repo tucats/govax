@@ -105,6 +105,7 @@ func (c *Console) Link(opts LinkOptions) error {
 		ImageName: imageName(exe),
 		LinkerID:  linkerID(),
 		Traceback: !opts.NoTraceback,
+		Sources:   []link.SymbolSource{govaxSymbols()},
 	})
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.CLI_LINKING, err, exe.Name)

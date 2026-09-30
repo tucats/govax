@@ -53,6 +53,7 @@ const (
 // ISD flags (ISD$V_xxx, from eVAX's imgdef.h), and the section type in the
 // flags' top byte.
 const (
+	isdGBL      = 1 << 0  // a global section
 	isdCRF      = 1 << 1  // copy on reference
 	isdDZRO     = 1 << 2  // demand zero
 	isdWRT      = 1 << 3  // writable
@@ -60,6 +61,16 @@ const (
 	isdFIXUPVEC = 1 << 10 // the fixup section
 
 	isdTypeUserStack = 253 << 24
+	isdTypeSharedPIC = 3 << 24 // ISD$K_SHRPIC
+
+	// isdMatchShift is where a global section ISD's match control is in
+	// its flags (ISD$V_MATCHCTL).
+	isdMatchShift = 4
+
+	// isdGlobalFixedSize is a global section ISD's size before its
+	// counted section name: a private section's, then the global
+	// section ident.
+	isdGlobalFixedSize = 20
 
 	// isdPrivateSize and isdDemandZeroSize are an ISD's size: a private
 	// section's has a VBN, and a demand-zero section's doesn't.
@@ -123,8 +134,9 @@ func (d isd) encode() []byte {
 	return b
 }
 
-// header returns the image header block.
-func (l *linker) header(isds []isd, fixupVA uint32) ([]byte, error) {
+// header returns the image header block. The global section ISDs, which
+// map shareable images, follow the others.
+func (l *linker) header(isds []isd, global [][]byte, fixupVA uint32) ([]byte, error) {
 	b := make([]byte, blockSize)
 
 	le := binary.LittleEndian
@@ -185,10 +197,16 @@ func (l *linker) header(isds []isd, fixupVA uint32) ([]byte, error) {
 	// block.
 	p := isdOffset
 
+	encoded := make([][]byte, 0, len(isds)+len(global))
 	for _, d := range isds {
-		e := d.encode()
+		encoded = append(encoded, d.encode())
+	}
+
+	encoded = append(encoded, global...)
+
+	for _, e := range encoded {
 		if p+len(e)+2 > blockSize {
-			return nil, fmt.Errorf("%d image sections don't fit in one header block", len(isds))
+			return nil, fmt.Errorf("%d image sections don't fit in one header block", len(encoded))
 		}
 
 		p += copy(b[p:], e)
@@ -213,35 +231,4 @@ func putCounted(field []byte, s string) error {
 	copy(field[1:], s)
 
 	return nil
-}
-
-// fixupSection returns the fixup section's contents for an image at
-// fixupVA with no shareable image references: an empty G^ fixup list, one
-// change-protection entry, and a shareable image list holding only the
-// image itself, as real LINK writes them.
-func fixupSection(fixupVA uint32) []byte {
-	b := make([]byte, blockSize)
-	le := binary.LittleEndian
-
-	gfix := uint32(iafFixedLength)  // the empty G^ list's zero longword
-	icp := gfix + 4                 // the change-protection list
-	shl := icp + 4 + icpEntryLength // the shareable image list
-	le.PutUint32(b[0x08:], iafFixedLength)
-	le.PutUint32(b[0x14:], icp)
-	le.PutUint32(b[0x18:], shl)
-	le.PutUint32(b[0x1C:], 1) // one shareable image list entry: the image
-
-	// The change-protection entry: the fixup section itself, one page,
-	// which the image activator makes user read, executive write once
-	// it has done the fixups. Its address is relative to the image's
-	// base (ANALYZE/IMAGE: "relative to %X'00000200'").
-	le.PutUint32(b[icp:], 1)
-	le.PutUint32(b[icp+4:], fixupVA-imageBase)
-	le.PutUint16(b[icp+8:], 1)
-	le.PutUint16(b[icp+10:], prtUREW)
-
-	// The image's own shareable image list entry.
-	b[shl+0x10] = shlEntryLength
-
-	return b
 }

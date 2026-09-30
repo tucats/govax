@@ -3441,19 +3441,23 @@ $LINK
     image sections by their attributes, from address 200 (hexadecimal).
     Writable pages nothing is stored in become demand-zero.
 
-    For now, every global symbol must be defined in the objects being
-    linked: references to shareable images (LIB$ routines) and system
-    services aren't resolved yet.  Traceback records in objects are
-    skipped, so an image has no debug symbol table.
+    A global symbol the objects don't define is looked up in govax's own
+    tables: the system services (SYS$...), at their addresses in the P1
+    vector, and the run-time library routines govax provides (LIB$...,
+    DECC$..., and others), in their shareable images.  A routine in a
+    shareable image must be called with a general mode operand
+    (CALLS #1,G^LIB$PUT_OUTPUT); the image reaches it through its fixup
+    section, and RUN connects it to govax's own routine.  Traceback
+    records in objects are skipped, so an image has no debug symbol table.
 
     From the host shell, "govax link <object>..." runs this command, with
     --executable <file>, --no-executable, or --no-traceback.
 
     Examples:
 
-        MACRO "prog.mar"
-        LINK "prog"
-        RUN "prog.exe"
+        MACRO "hello.mar"
+        LINK "hello"
+        RUN "hello.exe"
 
         LINK DUA0:[OBJ]MAIN,SUB /EXECUTABLE=DUA0:[EXE]PROG.EXE
 

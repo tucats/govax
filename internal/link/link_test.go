@@ -136,6 +136,42 @@ func diffBlocks(got, want []byte) string {
 	return sb.String()
 }
 
+// librtl is what VMS 7.3's LIBRTL looks like to an image linked against
+// it: LIB$PUT_OUTPUT's offset, and the global section ISD's size, ident,
+// and match control (ANALYZE/IMAGE of HELLO.EXE, docs/PHASE-30.md).
+var librtl = &TableSource{
+	Symbols: map[string]Definition{"LIB$PUT_OUTPUT": {Image: "LIBRTL", Value: 0x478}},
+	Images:  map[string]SharedImage{"LIBRTL": {Pages: 264, MajorID: 1, MinorID: 0x0E, Match: MatchLEQ}},
+}
+
+// TestLinkSharedImageMatchesRealLINK links hello, which calls
+// LIB$PUT_OUTPUT with a general mode operand, and checks the image is
+// byte for byte GV_HELLO.EXE: the code reaches the routine through a cell
+// in the fixup section, which lists LIBRTL, and a global section ISD maps
+// LIBRTL.
+func TestLinkSharedImageMatchesRealLINK(t *testing.T) {
+	want, opts := realImage(t, filepath.Join(fixtureDir, "vax", "govax", "gv_hello.exe"))
+	opts.Sources = []SymbolSource{librtl}
+
+	for _, from := range []string{"govax", "real"} {
+		t.Run(from, func(t *testing.T) {
+			m := realObject(t, "hello")
+			if from == "govax" {
+				m = govaxObject(t, "hello")
+			}
+
+			img, err := Link([]Input{{File: "hello.obj", Module: m}}, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !bytes.Equal(img.Bytes, want) {
+				t.Errorf("image differs from real LINK's:\n%s", diffBlocks(img.Bytes, want))
+			}
+		})
+	}
+}
+
 // TestLinkNoTracebackMatchesRealLINK compares LINK/NOTRACEBACK with the
 // image real LINK/NOTRACEBACK made from real MACRO's psects.obj
 // (testdata/mar/vax/psects-notraceback.exe): the user transfer address
@@ -329,5 +365,109 @@ func TestLinkPsectContributions(t *testing.T) {
 	data := img.Bytes[512:]
 	if data[0] != 1 || data[4] != 2 {
 		t.Errorf("CAT's bytes = % x", data[:8])
+	}
+}
+
+// TestLinkSharedReferences checks the fixup section for several targets:
+// one cell per target, even when it's called twice, a G^ fixup list per
+// shareable image in the order first referred to, and a global section
+// ISD for each, after the user stack's.
+func TestLinkSharedReferences(t *testing.T) {
+	src := &TableSource{
+		Symbols: map[string]Definition{
+			"A$ONE": {Image: "AIMG", Value: 0x10},
+			"A$TWO": {Image: "AIMG", Value: 0x20},
+			"B$ONE": {Image: "BIMG", Value: 0x30},
+		},
+		Images: map[string]SharedImage{"BIMG": {Pages: 3, MajorID: 2, MinorID: 5, Match: MatchEqual}},
+	}
+
+	m := macroModule(t, `.PSECT C,NOWRT,EXE
+	.ENTRY GO,^M<>
+	CALLS #0,G^B$ONE
+	CALLS #0,G^A$ONE
+	CALLS #0,G^A$TWO
+	CALLS #0,G^A$ONE
+	RET
+	.END GO`)
+
+	img, err := Link([]Input{{File: "m.obj", Module: m}}, Options{ImageName: "T", Sources: []SymbolSource{src}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	le := binary.LittleEndian
+	fix := img.Bytes[2*blockSize:] // header, C, then the fixup section at 0x400
+
+	// B's list (1 cell), then A's (2 cells), then the zero count.
+	wantLists := []uint32{1, 1, 0x30, 2, 2, 0x10, 0x20, 0}
+	for i, w := range wantLists {
+		if got := le.Uint32(fix[iafFixedLength+4*i:]); got != w {
+			t.Errorf("G^ lists longword %d = %X, want %X", i, got, w)
+		}
+	}
+
+	if got := le.Uint32(fix[0x1C:]); got != 3 {
+		t.Errorf("shareable image count = %d, want 3", got)
+	}
+
+	// Each CALLS's operand is FF and a displacement to its cell: the 1st
+	// call reaches B$ONE's cell, and the 2nd and 4th share A$ONE's.
+	code := img.Bytes[blockSize:]
+	cell := func(call int) uint32 {
+		field := uint32(0x200 + 2 + 7*call + 3) // the displacement, after FB 00 FF
+		if code[2+7*call+2] != 0xFF {
+			t.Fatalf("call %d's operand mode is %02X, want FF", call, code[2+7*call+2])
+		}
+
+		return field + 4 + le.Uint32(code[2+7*call+3:])
+	}
+
+	cells := []uint32{0x400 + iafFixedLength + 8, 0x400 + iafFixedLength + 20, 0x400 + iafFixedLength + 24, 0x400 + iafFixedLength + 20}
+	for i, w := range cells {
+		if got := cell(i); got != w {
+			t.Errorf("call %d reaches %X, want %X", i, got, w)
+		}
+	}
+
+	// The global section ISDs follow the stack's, B first.
+	p := isdOffset
+	for n := 0; n < 3; n++ { // C, fixup, stack
+		p += int(le.Uint16(img.Bytes[p:]))
+	}
+
+	for _, want := range []struct {
+		name  string
+		pages uint16
+		flags uint32
+		ident uint32
+	}{
+		{"BIMG_001", 3, isdGBL | uint32(MatchEqual)<<isdMatchShift | isdTypeSharedPIC, 2<<24 | 5},
+		{"AIMG_001", 0, isdGBL | uint32(MatchAlways)<<isdMatchShift | isdTypeSharedPIC, 0},
+	} {
+		isd := img.Bytes[p:]
+		size := int(le.Uint16(isd))
+		name := string(isd[21 : 21+isd[20]])
+
+		if name != want.name || le.Uint16(isd[2:]) != want.pages || le.Uint32(isd[8:]) != want.flags || le.Uint32(isd[16:]) != want.ident {
+			t.Errorf("global section ISD = %s, %d pages, flags %X, ident %X; want %+v", name, le.Uint16(isd[2:]), le.Uint32(isd[8:]), le.Uint32(isd[16:]), want)
+		}
+
+		p += size
+	}
+
+	if p >= blockSize-1 || le.Uint16(img.Bytes[p:]) != 0 {
+		t.Error("the ISD list doesn't end after the global section ISDs")
+	}
+}
+
+// TestLinkSharedNeedsGeneralMode checks that a reference to a shareable
+// image routine other than a general mode operand is an error.
+func TestLinkSharedNeedsGeneralMode(t *testing.T) {
+	m := macroModule(t, ".PSECT C,NOWRT,EXE\n.ENTRY GO,^M<>\nCALLS #0,L^LIB$PUT_OUTPUT\nRET\n.END GO")
+
+	_, err := Link([]Input{{File: "m.obj", Module: m}}, Options{ImageName: "T", Sources: []SymbolSource{librtl}})
+	if err == nil || !strings.Contains(err.Error(), "general mode") {
+		t.Errorf("error = %v, want one asking for general mode", err)
 	}
 }

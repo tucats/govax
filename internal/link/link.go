@@ -18,7 +18,10 @@
 //     fixup section is added, and the image header is written.
 //
 // Traceback and debugger records are read and skipped: the image has no
-// debug symbol table. Nothing outside the modules can define a symbol yet.
+// debug symbol table. A symbol the modules refer to but don't define comes
+// from the symbol sources (source.go): an absolute value, or a routine in
+// a shareable image, which a general mode (G^) operand reaches through a
+// cell in the fixup section that the image activator fills in.
 package link
 
 import (
@@ -55,6 +58,9 @@ type Options struct {
 	// StackPages is the user stack's size; 0 means 20 pages, LINK's
 	// default.
 	StackPages int
+	// Sources define the symbols the modules refer to but don't, searched
+	// in order.
+	Sources []SymbolSource
 }
 
 // Image is a linked executable image.
@@ -149,6 +155,11 @@ type linker struct {
 	// sections are the image sections, by address.
 	sections []*section
 
+	// shared are the shareable images the image refers to, in the order
+	// first referred to, and gRefs the general mode references to them.
+	shared []*sharedRef
+	gRefs  []gRef
+
 	transfer        uint32
 	transferSet     bool
 	transferWk      bool
@@ -200,6 +211,9 @@ type global struct {
 	offset  uint32
 	mask    uint16 // an entry point's register save mask
 	entry   bool
+	// image is the shareable image a symbol from a source is in; its
+	// value is its offset there.
+	image string
 	refs    []string // modules that refer to it
 
 	// module and psectIndex are where a relocatable definition is, until
@@ -343,15 +357,23 @@ func (l *linker) noteTransfer(m *module, eom *obj.EOM) error {
 	return nil
 }
 
-// checkUndefined reports the symbols that are referred to and defined
-// nowhere.
+// checkUndefined looks each symbol the modules refer to but don't define
+// up in the symbol sources, and reports the ones none of them defines.
 func (l *linker) checkUndefined() error {
 	var undefined []string
 
 	for name, g := range l.symbols {
-		if !g.defined {
-			undefined = append(undefined, name)
+		if g.defined {
+			continue
 		}
+
+		if d, ok := l.lookup(name); ok {
+			g.defined, g.image, g.offset = true, d.Image, d.Value
+
+			continue
+		}
+
+		undefined = append(undefined, name)
 	}
 
 	if len(undefined) == 0 {
@@ -361,4 +383,30 @@ func (l *linker) checkUndefined() error {
 	sort.Strings(undefined)
 
 	return fmt.Errorf("link: undefined symbols: %s", strings.Join(undefined, ", "))
+}
+
+// lookup finds a symbol in the first source that defines it.
+func (l *linker) lookup(name string) (Definition, bool) {
+	for _, src := range l.opts.Sources {
+		if d, ok := src.Lookup(name); ok {
+			return d, true
+		}
+	}
+
+	return Definition{}, false
+}
+
+// sharedImage returns what the first source that knows the shareable
+// image name says about it. An image no source describes is recorded by
+// name only, with a match control that accepts any ident.
+func (l *linker) sharedImage(name string) SharedImage {
+	for _, src := range l.opts.Sources {
+		if i, ok := src.Image(name); ok {
+			i.Name = name
+
+			return i
+		}
+	}
+
+	return SharedImage{Name: name, Match: MatchAlways}
 }
