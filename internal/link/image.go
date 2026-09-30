@@ -40,9 +40,14 @@ const (
 	ihdTypeExecutable = 1
 
 	// ihdLinkFlags is IHD$L_LNKFLAGS as real LINK wrote it in every
-	// fixture image. Its bits aren't all understood yet (see
-	// docs/PHASE-30.md); ANALYZE/IMAGE would name them.
-	ihdLinkFlags = 0x010000A8
+	// fixture image. ANALYZE/IMAGE names the bits: IHD$V_PICIMG,
+	// IHD$V_DBGDMT, and IHD$V_IHSLONG. The top byte, 1, is
+	// IHD$V_MATCHCTL, which ANALYZE doesn't show.
+	ihdPICIMG    = 1 << 3
+	ihdDBGDMT    = 1 << 5
+	ihdIHSLONG   = 1 << 7
+	ihdMatchCtl  = 1 << 24
+	ihdLinkFlags = ihdPICIMG | ihdDBGDMT | ihdIHSLONG | ihdMatchCtl
 )
 
 // ISD flags (ISD$V_xxx, from eVAX's imgdef.h), and the section type in the
@@ -71,9 +76,9 @@ const (
 	shlEntryLength = 0x40
 	icpEntryLength = 8
 
-	// prtUR is PRT$C_UR, user read: the protection the change-protection
-	// entry sets.
-	prtUR = 0x0D
+	// prtUREW is PRT$C_UREW, user read and executive write: the
+	// protection the change-protection entry gives the fixup section.
+	prtUREW = 0x0D
 )
 
 // defaultStackPages is the user stack real LINK allocates without a
@@ -226,13 +231,14 @@ func fixupSection(fixupVA uint32) []byte {
 	le.PutUint32(b[0x18:], shl)
 	le.PutUint32(b[0x1C:], 1) // one shareable image list entry: the image
 
-	// The change-protection entry: one page, user read. It names the page
-	// below the fixup section in every image real LINK wrote; what that
-	// means isn't understood yet (docs/PHASE-30.md).
+	// The change-protection entry: the fixup section itself, one page,
+	// which the image activator makes user read, executive write once
+	// it has done the fixups. Its address is relative to the image's
+	// base (ANALYZE/IMAGE: "relative to %X'00000200'").
 	le.PutUint32(b[icp:], 1)
-	le.PutUint32(b[icp+4:], fixupVA-blockSize)
+	le.PutUint32(b[icp+4:], fixupVA-imageBase)
 	le.PutUint16(b[icp+8:], 1)
-	le.PutUint16(b[icp+10:], prtUR)
+	le.PutUint16(b[icp+10:], prtUREW)
 
 	// The image's own shareable image list entry.
 	b[shl+0x10] = shlEntryLength

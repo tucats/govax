@@ -121,9 +121,11 @@ them.
   - **`IHD`** (0x30 bytes). `IHD$W_SIZE` 0xB0 is where the ISDs start,
     after the sub-blocks. The sub-block offsets are `ACTIVOFF` 0x30,
     `SYMDBGOFF` 0x44, and `IMGIDOFF` 0x60. The IDs are `"02"`/`"05"`,
-    and the type is 1 (executable). `PRIVREQS` is all ones, and
-    `LNKFLAGS` is 0x010000A8 in every image. `IDENT` is bytes 2 to 5 of
-    the link time, and `IAFVA` is the fixup section's address.
+    and the type is 1 (executable). `PRIVREQS` is all ones.
+    `LNKFLAGS` is 0x010000A8 in every image: `PICIMG`, `DBGDMT`, and
+    `IHSLONG` (bits 3, 5, and 7, as `ANALYZE/IMAGE` names them), and
+    `MATCHCTL` 1 in the top byte. `IDENT` is bytes 2 to 5 of the link
+    time, and `IAFVA` is the fixup section's address.
   - **`IHA`** (0x14 bytes): four transfer addresses and `INISHR`. With
     traceback these are `SYS$IMGSTA` (0x7FFEDF68), then the user
     transfer address.
@@ -154,10 +156,26 @@ them.
 
   Then come the G^ list (`{count, SHL index, count cells}` groups, ended
   by a zero count), the ICP list, and the SHL. The SHL has 0x40-byte
-  entries, the first being the image itself, and names at +0x18. One
-  ICP entry names the page 0x200 below the fixup section, with 1 page
-  and protection 0x0D (UR). That's observed in two images but not
-  understood yet.
+  entries, the first being the image itself, and names at +0x18.
+
+  The one ICP entry is the fixup section itself: 1 page, whose
+  protection becomes `PRT$C_UREW` (0x0D, user read and executive
+  write) once the fixups are done. Its address is relative to the
+  image's base, 0x200 (`ANALYZE/IMAGE`: "relative to %X'00000200'").
+  The IAF's shareable image count includes the image itself, and its
+  "extra image count" is 0.
+- **A shareable image reference** (from `ANALYZE/IMAGE` of `HELLO.EXE`)
+  adds a 31-byte global section ISD after the user stack's. For
+  `LIBRTL` it has:
+  - the flags `GBL` and type `ISD$K_SHRPIC`, VPN 0 and VBN 0;
+  - the shareable image's page count (264);
+  - its global section ident (major 1, minor 0x0E) and match control
+    (`ISD$K_MATLEQ`);
+  - the section name `LIBRTL_001`.
+
+  So a symbol source must supply, for each shareable image, its page
+  count, ident, and match control as well as its symbols' offsets.
+  govax's `RUN` skips global section ISDs, but real VMS needs them.
 - **The user stack** is the last ISD: 20 pages of demand-zero, type 253,
   VPN 0x3FFFEC.
 - **`GV_PSECTS.EXE`** (govax's object) is byte for byte `PSECTS.EXE`
@@ -314,3 +332,16 @@ them.
   - Two `dcl` grammar tests expect the LINK verb.
 
   `go test ./...` passes.
+
+### 2026-09-30 — ANALYZE/IMAGE of HELLO.EXE
+
+- The user ran `ANALYZE/IMAGE` on `HELLO.EXE` (from
+  `mar-exchange2.dsk`). It names `LNKFLAGS`' bits, and shows that the
+  change-protection entry covers the fixup section, relative to the
+  image base, with protection UREW. It also shows the global section
+  ISD a shareable image reference needs. See
+  [What real LINK writes](#what-real-link-writes-from-the-fixture-images).
+- `internal/link/image.go` now names the flags, and computes the entry's
+  address from the image base rather than as "the page below the fixup
+  section". The bytes are the same, and the real-image comparison still
+  passes.
