@@ -363,6 +363,18 @@ func scanLocalLabel(c *cursor) (string, bool) {
 	return name, true
 }
 
+// scanCasedName is scanName for text whose letters may be in either case
+// (see preprocessCase).
+func scanCasedName(c *cursor) string {
+	start := c.pos
+
+	for ch := c.peek(); isSymbolChar(ch) || ch >= 'a' && ch <= 'z'; ch = c.peek() {
+		c.pos++
+	}
+
+	return c.s[start:c.pos]
+}
+
 // scanName reads a symbol/register/mnemonic-style name: letters, digits,
 // '_' and '$'. The line has already been uppercased outside quoted regions
 // by the time any parser sees it (see Assembler.preprocessLine).

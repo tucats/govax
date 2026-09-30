@@ -86,6 +86,13 @@ type Assembler struct {
 	// events is the MACRO dialect's output, in source order (see
 	// outEvent).
 	events []outEvent
+	// cased is the statement statement last returned, with its case as
+	// written (see preprocessCase).
+	cased string
+	// stmt numbers statements as they're assembled, so a store can tell
+	// the fixups and relocations of an earlier statement it overwrites
+	// (see claim).
+	stmt int
 
 	// curEntry is the active local-symbol scope name (vax.assembler.cur_entry).
 	curEntry string
@@ -450,18 +457,32 @@ func (e *Errors) Unwrap() []error { return e.List }
 // still being continued. The reference tool had no continuation lines.
 // The statement's comment (its last line's) is kept in a.comment.
 func (a *Assembler) statement(raw string) (string, bool) {
-	// Already-preprocessed text is unchanged by preprocessing it again.
-	line, comment := preprocessComment(a.continued + raw)
+	// Already-preprocessed text is unchanged by preprocessing it again,
+	// and a.continued is kept with its case (see preprocessCase).
+	line, cased, comment := preprocessCase(a.continued + raw)
 	a.continued = ""
 	a.comment = comment
 
 	if strings.HasSuffix(line, "-") {
-		a.continued = strings.TrimSuffix(line, "-")
+		a.continued = strings.TrimSuffix(cased, "-")
 
 		return "", false
 	}
 
+	a.cased = cased
+
 	return line, true
+}
+
+// caseCursor returns a cursor at c's position in the statement as
+// written (see preprocessCase), or c itself if c isn't reading the
+// statement statement last returned.
+func (a *Assembler) caseCursor(c *cursor) *cursor {
+	if len(a.cased) != len(c.s) || !strings.EqualFold(a.cased, c.s) {
+		return c
+	}
+
+	return &cursor{s: a.cased, pos: c.pos}
 }
 
 // Error identifies the 1-based source line a statement-level failure
@@ -506,10 +527,25 @@ func preprocessLine(line string) string {
 // .WARN, and .PRINT; see message.go). A string directive's or .TITLE's
 // comment isn't returned, since neither statement has a use for it.
 func preprocessComment(line string) (string, string) {
+	out, _, comment := preprocessCase(line)
+
+	return out, comment
+}
+
+// preprocessCase is preprocessComment, also returning the preprocessed
+// text with its case as written: the same text, character for character,
+// except that the letters preprocessing uppercases keep their case. A
+// macro call's arguments are read from it (see caseCursor), since real
+// MACRO passes them as written, and one may land in a string.
+func preprocessCase(line string) (string, string, string) {
 	b := []byte(line)
 	inDouble, inSingle := false, false
 	out := make([]byte, 0, len(b))
+	raw := make([]byte, 0, len(b))
 	comment := ""
+
+	// same appends what out gained since n to raw too.
+	same := func(n int) { raw = append(raw, out[n:]...) }
 
 	for i := 0; i < len(b); i++ {
 		ch := b[i]
@@ -534,35 +570,48 @@ func preprocessComment(line string) (string, string) {
 			}
 
 			if n := stringDirectiveAt(b, i); n > 0 {
+				start := len(out)
 				out = append(out, bytes.ToUpper(b[i:i+n])...)
 				out = preprocessStrings(out, b[i+n:])
+				same(start)
 
 				break
 			}
 
 			if n := titleDirectiveAt(b, i); n > 0 {
+				start := len(out)
 				out = append(out, preprocessTitle(b[i:], n)...)
+				same(start)
 
 				break
 			}
 
 			if n := asciiOperatorAt(b, i); n > 0 {
+				start := len(out)
 				out = append(out, '^', 'A')
 				out = append(out, b[i+2:i+n]...)
+				same(start)
 				i += n - 1
 
 				continue
 			}
 
+			raw = append(raw, ch)
+
 			if ch >= 'a' && ch <= 'z' {
 				ch -= 32
 			}
+
+			out = append(out, ch)
+
+			continue
 		}
 
+		raw = append(raw, ch)
 		out = append(out, ch)
 	}
 
-	return strings.TrimRight(string(out), " \t\r"), comment
+	return strings.TrimRight(string(out), " \t\r"), strings.TrimRight(string(raw), " \t\r"), comment
 }
 
 // stringDirectiveAt returns the length of a string directive's name
@@ -737,6 +786,8 @@ func (a *Assembler) assembleStatement(line string) error {
 // assembleStatementBody is assembleStatement before its fixups are
 // flushed.
 func (a *Assembler) assembleStatementBody(line string) error {
+	a.stmt++
+
 	if a.skipping() {
 		return a.skippedStatement(line)
 	}

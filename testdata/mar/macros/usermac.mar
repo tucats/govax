@@ -1,0 +1,194 @@
+	.TITLE	USERMAC	Phase 28 fixture: user-defined macros
+	.IDENT	/V1.0/
+
+; Every feature of MACRO's macro facility that a program can use without
+; a library: arguments of each form, created local labels, repeat blocks,
+; string operators, .NARG, .NCHR, and .NTYPE. Each result lands in the
+; object as data or code, so comparing objects compares expansions.
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+
+; Positional and keyword arguments, and defaults.
+
+	.MACRO	TRIPLE	A, B=2, C=3
+	.BYTE	A, B, C
+	.ENDM	TRIPLE
+
+POSN:	TRIPLE	1			; 1, 2, 3
+	TRIPLE	4, 5, 6			; 4, 5, 6
+	TRIPLE	7, , 9			; a null argument takes its default
+	TRIPLE	C=12, A=10		; keywords, in any order
+	TRIPLE	13, C=15		; mixed
+
+; Delimited arguments: <...> (nesting), and ^x...x.
+
+	.MACRO	BYTES	LIST
+	.BYTE	LIST
+	.ENDM	BYTES
+
+DELIM:	BYTES	<1, 2, 3>
+	BYTES	<<4>+1>			; the outer brackets only
+	BYTES	^%6, 7%
+
+; Concatenation with the apostrophe.
+
+	.MACRO	LABELS	PREFIX, N
+PREFIX'_'N:	.LONG	N
+	.ENDM	LABELS
+
+	LABELS	TBL, 1
+	LABELS	TBL, 2
+	.LONG	TBL_1, TBL_2
+
+; A macro that defines a macro, with the apostrophe the inner one keeps.
+
+	.MACRO	MAKER	NAME, PREFIX
+	.MACRO	NAME	SYM
+PREFIX''SYM:	.WORD	^XAA
+	.ENDM	NAME
+	.ENDM	MAKER
+
+	MAKER	MADE, MK_
+	MADE	ONE
+	MADE	TWO
+	.LONG	MK_ONE, MK_TWO
+
+; Redefinition and .MDELETE.
+
+	.MACRO	WHICH
+	.BYTE	1
+	.ENDM	WHICH
+	.MACRO	WHICH
+	.BYTE	2
+	.ENDM	WHICH
+REDEF:	WHICH				; the second definition
+	.MDELETE WHICH
+
+; \symbol passes a symbol's value.
+
+VALUE = 42
+	.MACRO	ASCVAL	N
+	.ASCII	/N/
+	.ENDM	ASCVAL
+
+VALS:	ASCVAL	\VALUE			; "42"
+	ASCVAL	VALUE			; "VALUE"
+
+; .NARG and .NCHR, and a macro that stops early with .MEXIT.
+
+	.MACRO	COUNT	P1, P2, P3, P4
+	.NARG	...N
+	.NCHR	...C, <P1>
+	.BYTE	...N, ...C
+	.IIF	BLANK <P4>, .MEXIT
+	.BYTE	^XFF
+	.ENDM	COUNT
+
+COUNTS:	COUNT
+	COUNT	X
+	COUNT	ABCDE, 2, 3
+	COUNT	, , , LAST
+
+; Conditionals on arguments.
+
+	.MACRO	TEST	A, B
+	.IF	BLANK <A>
+	.BYTE	0
+	.IFF
+	.IF	IDENTICAL <A>, <B>
+	.BYTE	1
+	.IFF
+	.BYTE	2
+	.ENDC
+	.ENDC
+	.ENDM	TEST
+
+CONDS:	TEST
+	TEST	FOO, FOO
+	TEST	FOO, BAR
+
+; The string operators.
+
+	.MACRO	STRINGS	S
+	.BYTE	%LENGTH(S)
+	.BYTE	%LOCATE(<C>, S)
+	.BYTE	%LOCATE(<Z>, S)
+	.ASCII	/%EXTRACT(1, 3, S)/
+	.ENDM	STRINGS
+
+STRS:	STRINGS	<ABCDEF>
+
+; Repeat blocks: .REPEAT, .IRP, .IRPC, and .MEXIT in one.
+
+REPS:	.REPEAT	3
+	.BYTE	^X11
+	.ENDR
+
+	.IRP	X, <1, 2, <3+4>, >
+	.BYTE	X+0
+	.ENDR
+
+	.IRPC	CH, <ABC>
+	.ASCII	/CH/
+	.ENDR
+
+	.IRP	X, <5, 6, 7, 8>
+	.IIF	EQ X-7, .MEXIT
+	.BYTE	X
+	.ENDR
+
+; .NTYPE of every operand form, one byte (two for an indexed operand).
+
+	.MACRO	NT	OPND
+	.NTYPE	...T, OPND
+	.WORD	...T
+	.ENDM	NT
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+BACK:	.BLKB	4
+
+	.PSECT	DATA
+NTYPES:	NT	R3
+	NT	(R3)
+	NT	-(R3)
+	NT	(R3)+
+	NT	@(R3)+
+	NT	#1
+	NT	#64
+	NT	S^#1
+	NT	I^#1
+	NT	@#^X200
+	NT	G^SYS$EXIT
+	NT	B^4(R3)
+	NT	W^4(R3)
+	NT	L^4(R3)
+	NT	4(R3)
+	NT	1000(R3)
+	NT	@4(R3)
+	NT	BACK
+	NT	@BACK
+	NT	FWD
+	NT	(R1)[R4]
+	NT	BACK[R2]
+
+; Code: created local labels, so each expansion has its own.
+
+	.MACRO	MAX	A, B, DEST, ?SKIP
+	MOVL	A, DEST
+	CMPL	B, DEST
+	BLEQ	SKIP
+	MOVL	B, DEST
+SKIP:
+	.ENDM	MAX
+
+	.PSECT	CODE
+	.ENTRY	USERMAC, ^M<R2>
+	MAX	#1, #2, R0
+	MAX	R0, #5, R2
+	MAX	#9, R2, R0, SKIP=10$	; a created label given explicitly
+	RET
+FWD:	.BLKB	4
+
+	.PRINT	; USERMAC: informational message from .PRINT
+
+	.END	USERMAC

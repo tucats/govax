@@ -44,6 +44,16 @@ type section struct {
 	// power of two.
 	flags uint32
 	align uint32
+	// owners says which statement, and which output event, last stored
+	// each byte (see claim).
+	owners map[uint32]byteOwner
+}
+
+// byteOwner is the statement that last stored a byte, and the output
+// event (an index in Assembler.events, or -1 in the console dialect)
+// that stored it.
+type byteOwner struct {
+	stmt, event int
 }
 
 // addr returns the section's current location as an absolute address.
@@ -74,6 +84,7 @@ func (a *Assembler) advance(n uint32) {
 // just stored there.
 func (a *Assembler) advanceData(n uint32) {
 	a.logEvent(outEvent{kind: evData, sect: a.cur, offset: a.cur.loc, size: n})
+	a.claim(a.cur, a.cur.loc, n)
 	a.move(n)
 }
 

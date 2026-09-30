@@ -1,0 +1,16 @@
+	.TITLE	LIBSUB2	Phase 28 fixture: another object library module
+	.IDENT	/V2.0/
+
+; SQUARE(n) returns n*n, and counts its calls in SQUARE_COUNT.
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+SQUARE_COUNT::
+	.LONG	0
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	SQUARE, ^M<>
+	MULL3	4(AP), 4(AP), R0
+	INCL	SQUARE_COUNT
+	RET
+
+	.END

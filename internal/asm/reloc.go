@@ -279,6 +279,8 @@ type relocation struct {
 	// field (see fixup), which real MACRO stores after the value's stack
 	// program.
 	prefix int
+	// stmt is the statement that stored the field.
+	stmt int
 }
 
 func (r relocation) String() string {
@@ -339,6 +341,10 @@ func isBranch(kind fixupKind) bool {
 //   - A displacement from a relocatable psect to an absolute address
 //     depends on where the psect goes, so the linker finishes it too.
 func (a *Assembler) completeFixup(f *fixup) error {
+	if f.dead {
+		return nil
+	}
+
 	t := f.expr.resolved()
 
 	switch {
@@ -349,7 +355,7 @@ func (a *Assembler) completeFixup(f *fixup) error {
 		return a.applyFixup(f, t.v)
 	}
 
-	a.relocs = append(a.relocs, relocation{sect: f.sect, offset: f.location, kind: f.kind, expr: t, prefix: f.prefix})
+	a.relocs = append(a.relocs, relocation{sect: f.sect, offset: f.location, kind: f.kind, expr: t, prefix: f.prefix, stmt: f.stmt})
 
 	// The linker writes the field, so it holds zeros, not the placeholder.
 	for i := uint32(0); i < uint32(fixupSize(f.kind)); i++ {

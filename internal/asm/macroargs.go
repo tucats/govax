@@ -140,10 +140,10 @@ func (a *Assembler) parseActuals(c *cursor, m *macroDef) ([]actual, error) {
 		// example passes LOCATION=12 that way).
 		save := c.pos
 		
-		if name := scanName(c); name != "" && c.peek() == '=' && c.peekAt(1) != '=' && m.formalIndex(name) >= 0 {
+		if name := scanCasedName(c); name != "" && c.peek() == '=' && c.peekAt(1) != '=' && m.formalIndex(name) >= 0 {
 			c.next()
 
-			act.keyword = name
+			act.keyword = strings.ToUpper(name)
 		} else {
 			c.pos = save
 		}
@@ -180,7 +180,7 @@ func (a *Assembler) scanActual(c *cursor) (string, error) {
 		return "", err
 	}
 
-	v, err := a.exprNoForward(newCursor(text))
+	v, err := a.exprNoForward(newCursor(preprocessLine(text)))
 	if err != nil {
 		return "", err
 	}

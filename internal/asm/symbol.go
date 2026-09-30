@@ -129,6 +129,10 @@ type fixup struct {
 	// field: its addressing mode byte, and an index byte before that.
 	// Real MACRO stores them after the value's stack program.
 	prefix int
+	// stmt is the statement that queued the fixup, and dead says a later
+	// statement stored over its field, so it's never applied (see claim).
+	stmt int
+	dead bool
 }
 
 // symbol is one entry in the assembler's symbol table.
@@ -350,7 +354,7 @@ func (a *Assembler) getSymbol(name string, allowForward bool, location uint32, f
 // using only a relocatable section's base) completes at the end of the
 // statement (see flushReady).
 func (a *Assembler) queueFixup(location uint32, fx fixupKind, t *rexpr) {
-	f := &fixup{sect: a.cur, location: location, kind: fx, expr: t, base: a.caseBase}
+	f := &fixup{sect: a.cur, location: location, kind: fx, expr: t, base: a.caseBase, stmt: a.stmt}
 
 	t.leaves(func(leaf *rexpr) {
 		sym, found := a.symbols.find(leaf.key)

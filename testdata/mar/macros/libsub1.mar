@@ -1,0 +1,14 @@
+	.TITLE	LIBSUB1	Phase 28 fixture: an object library module
+	.IDENT	/V1.1/
+
+; TWICE(n) returns 2*n. One of the two modules of the object library
+; LIBOBJ.OLB (real LIBRARIAN's) and GV_LIBOBJ.OLB (govax's).
+
+LIBSUB1_LEVEL == 1
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	TWICE, ^M<>
+	MULL3	#2, 4(AP), R0
+	RET
+
+	.END

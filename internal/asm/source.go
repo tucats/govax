@@ -295,8 +295,7 @@ func (a *Assembler) runSource(f *sourceFrame, lines []string) error {
 
 	// A continuation with no line to continue it.
 	if a.continued != "" && !a.stop && !f.exit {
-		line := a.continued
-		a.continued = ""
+		line, _ := a.statement("")
 
 		if err := a.assembleStatement(line); err != nil {
 			return err

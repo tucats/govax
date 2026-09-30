@@ -1,0 +1,54 @@
+	.TITLE	LIBMAC	Phase 28 fixture: a macro library's source
+
+; The source of a macro library, made with LIBRARY/CREATE/MACRO: by real
+; LIBRARIAN as LIBMAC.MLB, and by govax's LIBRARY as GV_LIBMAC.MLB. Lines
+; outside the macros, like these, aren't in the library. The macros'
+; comments and trailing blanks are, until /SQUEEZE (the default) takes
+; them out; the .MACRO lines, and .PRINT, .WARN, .ERROR, and .IIF lines,
+; are kept as they are.
+
+; PUTMSG writes a line to SYS$OUTPUT: the text's descriptor sits in the
+; code, under a created label, and the code branches around it.
+
+	.MACRO	PUTMSG	TEXT, ?STR, ?SKIP	; the .MACRO line keeps its comment
+	BRB	SKIP
+STR:	.ASCID	/TEXT/			; the text, as a descriptor
+SKIP:	PUSHAQ	STR
+	CALLS	#1, G^LIB$PUT_OUTPUT
+	.ENDM	PUTMSG
+
+; ADDUP's .MACRO line is continued.
+
+	.MACRO	ADDUP	A, B, -
+		C=#0, DEST=R0
+	ADDL3	A, B, DEST   
+	ADDL2	C, DEST		;; a comment of its own
+	.ENDM	ADDUP
+
+; CHECK returns from the calling routine with R0 when R0 is a failure.
+
+	.MACRO	CHECK	?OK
+	BLBS	R0, OK
+	RET
+OK:
+	.ENDM	CHECK
+
+; BITS defines PREFIX_name as one bit each, in order, with a repeat
+; block inside the macro, and warns when given no names.
+
+	.MACRO	BITS	PREFIX, NAMES
+	.IIF	BLANK <NAMES>, .WARN ; BITS: no names for PREFIX;
+...BIT = 1
+	.IRP	NAME, <NAMES>
+PREFIX'_'NAME = ...BIT
+...BIT = ...BIT * 2
+	.ENDR
+	.ENDM	BITS
+
+; DEFINER defines the macro NAME, which stores its argument as a word.
+
+	.MACRO	DEFINER	NAME
+	.MACRO	NAME	VALUE
+	.WORD	VALUE
+	.ENDM	NAME
+	.ENDM	DEFINER

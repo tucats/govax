@@ -48,7 +48,7 @@ func withDefaultType(loc rms.FileLocation, typ string) rms.FileLocation {
 // /OBJECT=, LINK's /EXECUTABLE=), or by default the input's name with the
 // type typ, next to the input. A name that is only a directory (an
 // existing host directory, or a VMS specification with no name or type)
-// gets the default name in it.
+// gets the default name in it, and a VMS name with no type gets typ.
 func outputLocation(s *rms.Session, name string, input rms.FileLocation, typ string) (rms.FileLocation, error) {
 	if name == "" {
 		return defaultOutputLocation(s, input, typ)
@@ -77,7 +77,9 @@ func outputLocation(s *rms.Session, name string, input rms.FileLocation, typ str
 		return loc, err
 	}
 
-	return loc, nil
+	// A VMS name without a type gets typ, as VMS gives /OBJECT=NAME the
+	// type OBJ.
+	return withDefaultType(loc, typ), nil
 }
 
 // defaultOutputLocation is the input's name with the type typ, next to

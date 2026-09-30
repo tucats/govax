@@ -83,7 +83,7 @@ type formal struct {
 // formalIndex returns the index of the formal argument named name, or -1.
 func (m *macroDef) formalIndex(name string) int {
 	for i, f := range m.formals {
-		if f.name == name {
+		if strings.EqualFold(f.name, name) {
 			return i
 		}
 	}
@@ -345,7 +345,8 @@ func (a *Assembler) expandMacro(m *macroDef, c *cursor) error {
 		return vmserrors.New(vmserrors.VAX_MACRODEPTH, maxExpansionDepth)
 	}
 
-	actuals, err := a.parseActuals(c, m)
+	// The arguments are passed as written, case and all.
+	actuals, err := a.parseActuals(a.caseCursor(c), m)
 	if err != nil {
 		return err
 	}

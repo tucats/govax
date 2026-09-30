@@ -1,6 +1,8 @@
 package asm
 
 import (
+	"strings"
+
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -119,9 +121,12 @@ func (a *Assembler) pseudoIrpc(c *cursor) error {
 // a comma or blanks, and one argument, read as a macro call's actual
 // argument is (so its delimiters are removed).
 func (a *Assembler) repeatHead(c *cursor) (name string, arg string, err error) {
+	// The argument is read as written, case and all, as a macro call's
+	// are.
+	c = a.caseCursor(c)
 	c.skipBlanks()
 
-	name = scanName(c)
+	name = strings.ToUpper(scanCasedName(c))
 	if name == "" {
 		return "", "", vmserrors.New(vmserrors.VAX_BADFORMAL, c.rest())
 	}

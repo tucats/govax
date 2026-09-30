@@ -1,0 +1,35 @@
+	.TITLE	QIOW	Phase 28 fixture: hello through $QIOW_S
+	.IDENT	/V1.0/
+
+; A complete program that calls system service macros: assign a channel
+; to the terminal, write "Hello, world!" with $QIOW_S, deassign, and exit
+; with the I/O status. Every macro it calls is also in govax's own
+; STARLET.MLB, so it assembles the same with either library.
+;
+; IO$_WRITEVBLK is defined here rather than by $IODEF, which govax's
+; STARLET.MLB doesn't have. Its value is $IODEF's.
+
+IO$_WRITEVBLK = ^X30
+
+	.PSECT	DATA, WRT, NOEXE, QUAD
+TTNAME:	.ASCID	/SYS$OUTPUT/
+MSG:	.ASCII	/Hello, world!/<13><10>
+MSGLEN = .-MSG
+	.ALIGN	LONG
+CHAN:	.BLKW	1
+	.ALIGN	QUAD
+IOSB:	.BLKQ	1
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	QIOW, ^M<>
+	$ASSIGN_S DEVNAM=TTNAME, CHAN=CHAN
+	BLBC	R0, 10$
+	$QIOW_S	CHAN=CHAN, FUNC=#IO$_WRITEVBLK, IOSB=IOSB, -
+		P1=MSG, P2=#MSGLEN
+	BLBC	R0, 10$
+	MOVZWL	IOSB, R0		; the I/O status
+	BLBC	R0, 10$
+	$DASSGN_S CHAN=CHAN
+10$:	$EXIT_S	R0
+
+	.END	QIOW

@@ -114,13 +114,14 @@ func (a *Assembler) loadLibraryMacro(name string) (*macroDef, error) {
 	// .MACRO line (continuation lines and all) and .ENDM go through the
 	// same path as a definition in the program. They are assembled in
 	// the middle of the statement that needs the macro, so that
-	// statement's comment and continuation state are kept.
-	comment, continued := a.comment, a.continued
+	// statement's comment, continuation state, and text as written are
+	// kept.
+	comment, continued, cased := a.comment, a.continued, a.cased
 	a.continued = ""
 
 	err = a.runSource(&sourceFrame{kind: sourceLibrary, name: name}, lines)
 
-	a.comment, a.continued = comment, continued
+	a.comment, a.continued, a.cased = comment, continued, cased
 
 	if err != nil {
 		return nil, err

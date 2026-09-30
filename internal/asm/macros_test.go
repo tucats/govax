@@ -422,3 +422,47 @@ func TestMacroBodyBlocks(t *testing.T) {
 		t.Fatalf("M = %+v, want a 5-line body", m)
 	}
 }
+
+// TestArgumentCase checks that a call's arguments are passed as written,
+// as real MACRO passes them: in a string their case shows, and elsewhere
+// the expansion is uppercased like any source line. Keyword names, and
+// .IRP's and .IRPC's formal names, match in either case.
+func TestArgumentCase(t *testing.T) {
+	requireBytes(t, macroBytes(t, `	.MACRO	TEXT	S, N=1
+	.ASCII	/S/
+	.BYTE	N
+	.ENDM	TEXT
+	.PSECT	DATA
+val = 7
+	text	<Hi there>, n=val
+	TEXT	aBc, -
+		N=2
+	.IRP	x, <a, B>
+	.ASCII	/x/
+	.ENDR
+	.IRPC	ch, <yZ>
+	.ASCII	/CH/
+	.ENDR
+	TEXT	\val`),
+		'H', 'i', ' ', 't', 'h', 'e', 'r', 'e', 7,
+		'a', 'B', 'c', 2,
+		'a', 'B',
+		'y', 'Z',
+		'7', 1)
+}
+
+// TestArgumentCaseLibraryMacro: a call that loads its macro from a
+// library passes its arguments as written too.
+func TestArgumentCaseLibraryMacro(t *testing.T) {
+	a := macroAssembler()
+	a.SetMacroLibraries(newMapLibrary(map[string]string{
+		"SAY": "\t.MACRO\tSAY\tS\n\t.ASCII\t/S/\n\t.ENDM\tSAY",
+	}))
+
+	out, err := a.Assemble("\t.PSECT\tDATA\n\tSAY\t<Mixed Case>")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	requireBytes(t, out, 'M', 'i', 'x', 'e', 'd', ' ', 'C', 'a', 's', 'e')
+}

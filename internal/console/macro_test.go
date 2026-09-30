@@ -342,6 +342,13 @@ func TestMacro_volume(t *testing.T) {
 
 	readObject(t, c, rms.FileLocation{Name: "DUA0:[000000]SMALL.OBJ;3"})
 
+	// A name without a type gets OBJ, as on VMS.
+	if err := c.Macro(MacroOptions{Source: "SMALL.MAR", Object: "OTHER"}); err != nil {
+		t.Fatalf("Macro: %v", err)
+	}
+
+	readObject(t, c, rms.FileLocation{Name: "DUA0:[000000]OTHER.OBJ;1"})
+
 	// To the host.
 	hostObj := filepath.Join(t.TempDir(), "small.obj")
 	if err := c.Macro(MacroOptions{Source: "SMALL.MAR", Object: hostObj}); err != nil {

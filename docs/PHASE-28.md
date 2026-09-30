@@ -842,3 +842,60 @@ All settled (2026-09-30):
   `.RESTORE` case; `cmd/govax` `TestMacroCommand` and
   `TestRun_macroLibrariesOneShot` (LIBRARY/CREATE, MACRO with `--library`
   and `$EXIT_S`, LINK, and RUN, as one-shot commands).
+
+### 2026-09-30 — Subtask 10 prepared: fixtures and exchange volume
+
+- **Fixtures** (`testdata/mar/macros/`, with a README): `usermac` (the
+  user-defined macro features, each result stored as data, and `.NTYPE`
+  of every operand form, to settle the numbering questions from subtasks
+  2 and 8), `qiow` (hello through `$QIOW_S`), `rmscopy` (`$FAB`/`$RAB`
+  file copy), `fabalign` (a misaligned `$FAB`), `libmac` (a macro library
+  source), `uselib` (a program using it), `libsub1`/`libsub2`/`libmain` (an
+  object library and a program linked against it), and `extra` (macros
+  LIBRARIAN puts into a copy of govax's library). `macros.com` is the VMS
+  side. They sit in a subdirectory so the Phase 27 ladder tests, which
+  assemble every `testdata/mar/*.mar` without libraries, don't take them.
+- **The exchange volume** `testdata/disks/mac-exchange.dsk` (RD51, label
+  MACXCHG, gitignored) is built with govax by `exchange.cmd`: the
+  fixtures copied on, and govax's objects and libraries written there
+  (`GV_*.OBJ`, `GV_LIBMAC.MLB`, `GV_LIBOBJ.OLB`), with VMS's STARLET.MLB
+  from the system disk through `SYS$LIBRARY`, except `GV_QIOW`, which uses
+  govax's own. `GV_QIOW`'s object is the same from either library, apart
+  from its command line.
+- Under govax, `qiow`, `rmscopy` (with its input on a volume), `uselib`,
+  and `libmain` link and run.
+- **Found on the way, and fixed** (govax's own code, so not in
+  `DEVIATIONS.md`):
+  - **A store over an earlier statement's bytes** (`internal/asm/
+    overwrite.go`). `$FAB FNM=` stores `FAB$L_FNA` as `.LONG 0`, then goes
+    back with `. =` and stores `.ADDRESS` of the name there. The object
+    replayed each data event from the psect's final bytes and matched
+    relocations by offset alone, so the `.LONG`'s event wrote the
+    relocation and the `.ADDRESS`'s wrote zeros after it: the linked FAB
+    had no file name, and `SYS$OPEN` failed with an access violation.
+    Now each byte records the statement and output event that last stored
+    it (`claim`); a later statement's store cancels an earlier one's
+    fixups and relocations over those bytes (a pending forward reference
+    would otherwise overwrite the later value when resolved); and a
+    relocation is written only by the event that last stored its field.
+    An earlier event writes the final bytes where real MACRO's writes what
+    was stored at the time, so the objects differ only for a constant
+    stored over with another constant, and link the same.
+  - **Macro arguments keep their case.** Preprocessing uppercased the
+    whole statement, so `PUTMSG <Hello>` passed `HELLO`. Real MACRO passes
+    arguments as written. `preprocessCase` also returns the statement
+    with its case, character for character, and macro calls and
+    `.IRP`/`.IRPC` read their arguments from it (`caseCursor`). Keyword
+    and formal names match in either case, and a `\expression` is
+    uppercased before it's evaluated. A call that loads its macro from a
+    library keeps the text across the load.
+  - **An output name without a type** on a volume (`MACRO X/OBJECT=Y`)
+    made `Y.`, where VMS makes `Y.OBJ`; `outputLocation` now gives it the
+    default type, as it already did a bare directory.
+- Tests: `overwrite_test.go` (an address over a zero, a constant over a
+  forward reference and over a relocation, and an instruction's own
+  fixups untouched); `TestArgumentCase` and
+  `TestArgumentCaseLibraryMacro`; `TestMacro_volume`'s typeless object
+  name.
+- Waiting on the user: attach `mac-exchange.dsk` to simh, run `@MACROS`,
+  and let govax copy the results back into `testdata/mar/macros/vax/`.

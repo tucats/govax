@@ -1,0 +1,26 @@
+	.TITLE	LIBMAIN	Phase 28 fixture: a program linked with an object library
+	.IDENT	/V1.0/
+
+; Calls TWICE and SQUARE, which LINK finds in the object library:
+;	LINK LIBMAIN,LIBOBJ/LIBRARY
+; It exits with success when TWICE(21) is 42 and SQUARE(7) is 49, and
+; SQUARE counted one call; with 0 otherwise.
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	LIBMAIN, ^M<>
+	CLRL	-(SP)
+	PUSHL	#21
+	CALLS	#1, G^TWICE
+	CMPL	R0, #42
+	BNEQ	10$
+	PUSHL	#7
+	CALLS	#1, G^SQUARE
+	CMPL	R0, #49
+	BNEQ	10$
+	CMPL	G^SQUARE_COUNT, #1
+	BNEQ	10$
+	MOVL	#1, (SP)
+10$:	MOVL	(SP)+, R0
+	RET
+
+	.END	LIBMAIN

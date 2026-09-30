@@ -70,7 +70,9 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 		e.relocs[relocKey{r.sect, r.offset}] = r
 	}
 
-	for _, ev := range a.events {
+	for i, ev := range a.events {
+		e.index = i
+
 		if err := e.event(ev); err != nil {
 			return nil, err
 		}
@@ -146,6 +148,8 @@ type emitter struct {
 	a      *Assembler
 	b      *obj.Builder
 	relocs map[relocKey]relocation
+	// index is the event being written, an index in Assembler.events.
+	index int
 	// defined holds the psects the object has defined so far.
 	defined map[*section]bool
 	// sect and loc are the linker's location as the TIR commands so far
@@ -296,7 +300,8 @@ func (e *emitter) entryPoint(ev outEvent) {
 
 // data writes the size bytes at offset in s: STORE IMMEDIATE runs for the
 // bytes the assembler finished, and each relocation's stack program and
-// store command in place of its field.
+// store command in place of its field. A relocation whose field a later
+// event stored over is left to that event (see overwrite.go).
 func (e *emitter) data(s *section, offset, size uint32) error {
 	img := s.img
 
@@ -306,7 +311,7 @@ func (e *emitter) data(s *section, offset, size uint32) error {
 		// those bytes, then the value.
 		next, prefix := e.prefixedAt(s, p, offset+size)
 
-		r, ok := e.relocs[relocKey{s, p}]
+		r, ok := e.relocAt(s, p)
 
 		switch {
 		case prefix > 0:
@@ -357,12 +362,27 @@ func (e *emitter) data(s *section, offset, size uint32) error {
 // its field, and how many.
 func (e *emitter) prefixedAt(s *section, p, end uint32) (relocation, int) {
 	for n := uint32(1); n <= 2 && p+n < end; n++ {
-		if r, ok := e.relocs[relocKey{s, p + n}]; ok && r.prefix == int(n) {
+		if r, ok := e.relocAt(s, p+n); ok && r.prefix == int(n) {
 			return r, int(n)
 		}
 	}
 
 	return relocation{}, 0
+}
+
+// relocAt returns the relocation whose field starts at p in s, if the
+// event being written is the one that last stored it.
+func (e *emitter) relocAt(s *section, p uint32) (relocation, bool) {
+	r, ok := e.relocs[relocKey{s, p}]
+	if !ok {
+		return r, false
+	}
+
+	if o, owned := s.owners[p]; owned && o.event != e.index {
+		return r, false
+	}
+
+	return r, true
 }
 
 // stackProgram emits the TIR commands that leave t's value on the

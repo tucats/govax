@@ -1,0 +1,11 @@
+; EXTRA.MAR - macros real LIBRARIAN puts into a copy of govax's macro
+; library (MACROS.COM, GV_LIBMAC2.MLB): ADDUP replaces LIBMAC's, and
+; NEGATE is new.
+
+	.MACRO	ADDUP	A, B, DEST=R0
+	ADDL3	A, B, DEST	; the replacement has no third addend
+	.ENDM	ADDUP
+
+	.MACRO	NEGATE	SRC, DEST=R0
+	MNEGL	SRC, DEST
+	.ENDM	NEGATE

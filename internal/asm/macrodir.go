@@ -365,7 +365,7 @@ func (a *Assembler) pseudoMaskMACRO(c *cursor) error {
 		return err
 	}
 
-	a.relocs = append(a.relocs, relocation{sect: a.cur, offset: a.cur.loc, kind: fixAddrW, expr: t})
+	a.relocs = append(a.relocs, relocation{sect: a.cur, offset: a.cur.loc, kind: fixAddrW, expr: t, stmt: a.stmt})
 
 	return a.emitWord(0)
 }

@@ -1,0 +1,47 @@
+	.TITLE	RMSCOPY	Phase 28 fixture: copy a file with RMS
+	.IDENT	/V1.0/
+
+; A complete program built on the RMS control block macros: $FAB and $RAB
+; initialize the blocks at assembly time, and $OPEN, $CREATE, $CONNECT,
+; $GET, $PUT, and $CLOSE call RMS. It copies RMSCOPY.MAR, its own source,
+; to RMSCOPY.OUT, a record at a time, and exits with the status of the
+; first failure, or success at end of file.
+
+	$RMSDEF				; RMS$_EOF
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+INFAB:	$FAB	FNM=<RMSCOPY.MAR>, FAC=GET
+INRAB:	$RAB	FAB=INFAB, UBF=BUFFER, USZ=BUFSIZ
+OUTFAB:	$FAB	FNM=<RMSCOPY.OUT>, FAC=PUT, -
+		RAT=CR, RFM=VAR, ORG=SEQ
+OUTRAB:	$RAB	FAB=OUTFAB, RBF=BUFFER
+BUFFER:	.BLKB	512
+BUFSIZ = .-BUFFER
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	RMSCOPY, ^M<>
+	$OPEN	FAB=INFAB
+	BLBC	R0, 90$
+	$CONNECT RAB=INRAB
+	BLBC	R0, 90$
+	$CREATE	FAB=OUTFAB
+	BLBC	R0, 90$
+	$CONNECT RAB=OUTRAB
+	BLBS	R0, 10$
+90$:	RET
+
+10$:	$GET	RAB=INRAB
+	BLBC	R0, 20$
+	MOVW	INRAB+RAB$W_RSZ, OUTRAB+RAB$W_RSZ
+	$PUT	RAB=OUTRAB
+	BLBS	R0, 10$
+	RET
+
+20$:	CMPL	R0, #RMS$_EOF		; the end of the input is success
+	BNEQ	99$
+	$CLOSE	FAB=OUTFAB
+	BLBC	R0, 99$
+	$CLOSE	FAB=INFAB
+99$:	RET
+
+	.END	RMSCOPY

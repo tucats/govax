@@ -1,0 +1,30 @@
+	.TITLE	USELIB	Phase 28 fixture: a program using a macro library
+	.IDENT	/V1.0/
+
+; Calls LIBMAC's macros, found in the library given on the command line:
+;	MACRO USELIB+LIBMAC/LIBRARY		(VMS)
+;	MACRO USELIB/LIBRARY=LIBMAC		(govax)
+; It prints two lines and exits with success.
+
+	BITS	OPT, <READ, WRITE, EXEC>
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+FLAGS:	.LONG	OPT_READ ! OPT_EXEC
+	DEFINER	WORDS
+	WORDS	1
+	WORDS	OPT_WRITE
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	USELIB, ^M<R2>
+	PUTMSG	<Hello from a macro library>
+	ADDUP	#2, #3, C=#4, DEST=R2	; R2 = 9
+	CMPL	R2, #9
+	BNEQ	10$
+	PUTMSG	<ADDUP gave 9>
+	MOVL	#1, R0
+	CHECK
+	RET
+10$:	CLRL	R0
+	RET
+
+	.END	USELIB
