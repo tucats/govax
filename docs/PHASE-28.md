@@ -11,7 +11,7 @@ Phase 27 fixtures do.
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress (subtasks 1-5 done; next, subtask 6).**
+**Status: in progress (subtasks 1-6 done; next, subtask 7).**
 
 ## Scope
 
@@ -215,7 +215,7 @@ inside it. Repeat blocks collect their lines to `.ENDR` the same way.
    Acceptance: every one of STARLET.MLB's 1529 macros loads, and a set of
    calls (`$EXIT_S`, `$QIOW_S`, `$FAB`, `$RAB`, `$SSDEF`, `$IODEF`) expand
    and assemble.
-6. **The `internal/lbr` writer:** create a library, insert, replace, and
+6. **Done.** **The `internal/lbr` writer:** create a library, insert, replace, and
    delete modules, and write the V3 format with its B-tree indexes: macro
    libraries (one module per `.MACRO`, keyed by name) and object libraries
    (module-name index, plus the global symbols from each object's GSD).
@@ -522,3 +522,80 @@ All settled (2026-09-30):
   what real MACRO generates for these calls: `$QIOW_S`'s argument list
   pushed in reverse and `CALLS #12,G^SYS$QIOW`, then `PUSHL #1` and
   `CALLS #1,G^SYS$EXIT`. The FNM string lands in `$RMSNAM`.
+
+### 2026-09-30 — Subtask 6: the `internal/lbr` writer
+
+- **`Builder`** (`write.go`): `Create(type)` starts an empty library with
+  LIBRARY/CREATE's defaults for the type (key size, module header user
+  data size, index case options, from `librar/lis/database.lis`), and
+  `Edit(*Library)` loads an existing one, its modules in data order. Then
+  `Insert`, `Replace` (the new data goes last, as LIBRARIAN writes it at the
+  end), and `Delete`, with index 2's symbols kept per module: a symbol
+  another module defines, a duplicate module, an over-long key, or a
+  record over 2048 bytes is an error, and a failed replacement leaves the
+  old module. `VMSTime` converts a `time.Time`; callers set the creation,
+  update, and insertion times, so output is reproducible (subtask 8's
+  generated STARLET.MLB needs that).
+- **`Bytes` lays the file out as the librarian would** by creating the
+  library and inserting the modules in order (`lbr/lis/openclose.lis`'s
+  `prealloc_index`, `getput.lis`'s `write_record`, `index.lis`,
+  `subs.lis`): the header, then the preallocated index blocks (the
+  default's 128 modules, plus 512 globals for an object library, at
+  `500 / (keysize + 6)` keys a block, or more if the index needs them),
+  with the unused ones on the free list through each block's first
+  longword; then one chain of data blocks holding every module's header
+  record, records, and end-of-text record. Index blocks are full B-tree
+  blocks built bottom-up, each upper entry naming its child and the
+  child's highest key, and each block's parent VBN set. A data block's
+  `DATA$B_RECS` counts the records with any part in it, following
+  `write_record` exactly, down to a record ending at a block's end
+  (the next block is started, with no records yet) and a length word
+  filling a block. The header's counts (`IDXBLKS`, `IDXCNT`, `MODCNT`,
+  `MODHDRS`, `IDXOVH`, `NEXTRFA`, `NEXTVBN`, `FREIDXBLK`, `FREEIDX`,
+  `HIPREAL`, `HIPRUSD`) are set to match. No DCX data reduction and no
+  update history records; `LHD$W_MAXLUHREC` is 20, LIBRARIAN's default.
+- **The reader** now reads an index with no keys (VBN 0 in its
+  descriptor, as in a new library) and the header's history limit.
+- **Input rules** (`input.go`), from `librar/lis/inputmac.lis` and
+  `inputobj.lis`:
+  - `MacroModules`: a module is an outermost `.MACRO` line through its
+    matching `.ENDM` (nested `.MACRO`s counted, an unnamed `.ENDM` inside a
+    repeat block ending the block, as STARLET.MLB's `$$POS` needs); lines
+    outside macros are skipped; the name is upper-cased unless the index is
+    case-sensitive. The line scan is `scan_line`'s, quirks included (a
+    label is skipped; `.ENDM;X` names `X`). `/SQUEEZE` (LIBRARIAN's
+    default) leaves the `.MACRO` line and `.ERROR`/`.WARN`/`.PRINT`/`.IIF`
+    lines alone, keeps empty lines as empty records, and otherwise cuts
+    each line at its *last* semicolon and drops trailing blanks, dropping a
+    line that ends up empty. So `.ASCII /a;b/` with no comment becomes
+    `.ASCII /a`, as on VMS; govax's STARLET.MAR (subtask 8) must keep `;`
+    out of its strings. Mismatched `.ENDM` names and `.ENDR`s are
+    warnings; no `.MACRO` at all, an unfinished macro, or an over-long name
+    ends the file, keeping the modules before it.
+  - `ObjectModules`: one module per main header through end of module
+    (EOM or EOMW); the key is the module name; index 2 gets the non-weak
+    symbol definitions and every entry point and procedure, never
+    module-local ones. The header's user data is the `MHD$B_OBJSTAT` byte
+    (`OBJTIR` if the module has TIR records, `SELSRC` for
+    `/SELECTIVE_SEARCH`) and the counted ident, zero-filled to 33 bytes, as
+    in the real STARLET.OLB. Checked against it: each module's reference
+    count is one more than its symbols. govax doesn't insist on an LNM
+    header record, which LIBRARIAN's sequence check does.
+- `internal/lbr` now imports `internal/obj` (for `ObjectModules`); it is
+  otherwise still a leaf.
+- Tests (`write_test.go`): a layout checker that re-derives what `Open`
+  doesn't check (each index block's parent, the free list, the data
+  chain, and every block's record count, by reading every record in
+  order); new libraries of each type against `prealloc_index`'s numbers;
+  macro source splitting and squeezing; `scan_line` cases; 400 macro
+  modules whose record lengths hit every word offset of a block; a
+  three-level index of 6000 long keys (more blocks than are
+  preallocated); an object library from `obj.Builder` modules;
+  insert/replace/delete rules; and a rewritten library rewriting to the
+  same bytes.
+- **Acceptance** (skips without `testdata/vmslib`): the real STARLET.MLB
+  (data-reduced), STARLET.OLB (data-reduced), and IMAGELIB.OLB, loaded by
+  `Edit` and written by `Bytes`, read back with the same header settings,
+  the same keys in both indexes naming the same modules, and every
+  module's header and records unchanged; rewriting the result gives the
+  same bytes.

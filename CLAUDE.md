@@ -97,7 +97,11 @@ expect adjustment as phases land):
   (`internal/console/linksource.go`).
 - `internal/lbr` — the librarian file format (Phase 30): reads `.OLB`/`.MLB`/etc.
   libraries, their B-tree indexes and module records, including DCX data-reduced
-  libraries (`dcx.go`) such as STARLET.OLB. A leaf package.
+  libraries (`dcx.go`) such as STARLET.OLB. Writes them too (Phase 28): `Builder`
+  (`Create`/`Edit`, `Insert`/`Replace`/`Delete`, `Bytes`) lays a library out as
+  VMS's librarian does, and `MacroModules`/`ObjectModules` (`input.go`) apply
+  LIBRARIAN's rules for turning macro source and object files into modules.
+  Imports only `internal/obj`.
 - `cmd/govax` — `main.go` (CLI entry point) plus `grammar.go` (the `tucats/gopackages`
   `app-cli/cli` option/subcommand grammar — `stats`/`path`/`instruction-limit`/
   `time-limit` options, repeatable `mount`/`mount-write DEVICE=container`,

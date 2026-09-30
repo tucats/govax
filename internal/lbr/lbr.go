@@ -1,8 +1,11 @@
-// Package lbr reads VMS librarian files: object libraries (.OLB),
-// shareable image symbol table libraries (IMAGELIB.OLB), macro libraries
-// (.MLB), help libraries (.HLB), and text libraries (.TLB) all share one
-// format (docs/PHASE-30.md, subtask 3). It is a leaf package: it reads a
-// library from its bytes, and callers find and read the file.
+// Package lbr reads and writes VMS librarian files: object libraries
+// (.OLB), shareable image symbol table libraries (IMAGELIB.OLB), macro
+// libraries (.MLB), help libraries (.HLB), and text libraries (.TLB) all
+// share one format (docs/PHASE-30.md, subtask 3; the writer is
+// docs/PHASE-28.md's subtask 6, write.go and input.go). It reads a library
+// from its bytes and writes one as bytes; callers find, read, and write
+// the file. It imports only internal/obj, to read object modules' names
+// and symbols.
 //
 // The format comes from VMS 7.3's librarian sources
 // (vmssrc_archive/v73/lbr/lis/lbr.sdl, getput.lis, openclose.lis, subs.lis,
@@ -81,7 +84,18 @@ const (
 	lhdCreDat    = 0x2C
 	lhdUpdTim    = 0x34
 	lhdMhdUsz    = 0x3C
+	lhdNextRFA   = 0x4C
+	lhdNextVBN   = 0x52
+	lhdFreIdxBlk = 0x56
+	lhdFreeIdx   = 0x5A
+	lhdHiPreAl   = 0x5E
+	lhdHiPrUsd   = 0x62
+	lhdIdxBlks   = 0x66
+	lhdIdxCnt    = 0x6A
 	lhdModCnt    = 0x6E
+	lhdModHdrs   = 0x74
+	lhdIdxOvh    = 0x78
+	lhdMaxLUHRec = 0x7C
 	lhdDcxMapVBN = 0x8C
 	lhdIdxDesc   = 0xC4
 
@@ -93,6 +107,7 @@ const (
 	saneIDC = 319232342
 
 	indexEntries = 12     // INDEX$C_ENTRIES: after the used word, parent VBN, and 6 reserved bytes
+	indexParent  = 2      // INDEX$L_PARENT
 	rfaIndex     = 0xFFFF // RFA$C_INDEX: an upper-level entry's offset
 
 	dataLink = 2 // DATA$L_LINK
@@ -161,6 +176,9 @@ type Library struct {
 	Updated uint64
 	// Modules is how many modules the library's first index holds.
 	Modules uint32
+	// History is how many update history records the library keeps
+	// (LHD$W_MAXLUHREC).
+	History uint16
 	// Indexes are the library's indexes. Index 1 (Indexes[0]) names the
 	// modules; an object library's index 2 holds its global symbols.
 	Indexes []*Index
@@ -196,9 +214,12 @@ func (h ModuleHeader) SelectiveSearch() bool {
 	return len(h.UserData) > 0 && h.UserData[0]&mhdSelectiveSearch != 0
 }
 
-// mhdSelectiveSearch is MHD$M_SELSRC, in an object library module
-// header's MHD$B_OBJSTAT (its user data's first byte).
-const mhdSelectiveSearch = 1
+// An object library module header's MHD$B_OBJSTAT (its user data's first
+// byte).
+const (
+	mhdSelectiveSearch = 1 // MHD$M_SELSRC
+	mhdObjectTIR       = 2 // MHD$M_OBJTIR: the module has TIR records
+)
 
 // ObjectIdent is an object or shareable image library module's ident
 // (MHD$B_OBJIDLNG and MHD$T_OBJIDENT), from its header's user data.
@@ -234,6 +255,7 @@ func Open(data []byte) (*Library, error) {
 		Created:     binary.LittleEndian.Uint64(h[lhdCreDat:]),
 		Updated:     binary.LittleEndian.Uint64(h[lhdUpdTim:]),
 		Modules:     le32(h, lhdModCnt),
+		History:     le16(h, lhdMaxLUHRec),
 		data:        data,
 		mhdUserSize: int(h[lhdMhdUsz]),
 	}
@@ -275,13 +297,17 @@ func (l *Library) block(vbn uint32) ([]byte, error) {
 	return l.data[(vbn-1)*blockSize : vbn*blockSize], nil
 }
 
-// readIndex reads an index's B-tree, from its root block.
+// readIndex reads an index's B-tree, from its root block. An index with
+// no keys has no blocks (root 0).
 func (l *Library) readIndex(flags, keyLen uint16, root uint32) (*Index, error) {
 	if flags&IndexASCII == 0 {
 		return nil, fmt.Errorf("binary keys aren't supported")
 	}
 
 	x := &Index{Flags: flags, KeyLen: keyLen, byKey: map[string]RFA{}}
+	if root == 0 {
+		return x, nil
+	}
 	seen := map[uint32]bool{}
 
 	var walk func(vbn uint32) error
