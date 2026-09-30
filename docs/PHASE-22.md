@@ -404,6 +404,8 @@ This local convenience doesn't feed the committed test suite.
 17. **Done (2026-09-30).** `SYS$RENAME`, with the `ods2` side it needed
     (`volume.Volume.Rename`, which `ods2` didn't have) — see "Addendum:
     `SYS$RENAME`" below and the Progress Log.
+18. **Done (2026-09-30).** The console `RENAME` command, VMS DCL's RENAME,
+    built on subtask 17 — see "Addendum: the `RENAME` command" below.
 
 ## Addendum: `SYS$RENAME`
 
@@ -463,6 +465,47 @@ drives (`f11x/lis/enter.lis`, `delete.lis`, `create.lis`).
   from that copy, which puts the old name and back link back into the
   header (the directory entries stay renamed). Rare, and harmless to the
   directory structure; not addressed here.
+
+## Addendum: the `RENAME` command
+
+`RENAME [/LOG] [/[NO]NEW_VERSION] input[,...] output`, following VMS's own
+RENAME utility (`vmssrc_archive/v73/cliutl/lis/rename.lis`) and the
+`LIB$RENAME_FILE` routine it calls for each input
+(`librtl/lis/librename.lis`), which searches for the files and calls
+`$RENAME` for each one. govax's version does the same:
+`internal/rms.Session.Rename` (`renamecmd.go`) searches and works out the
+new names, then calls `renameText`, the part of `SysRename` that takes
+two file specifications, so the console and a VAX program share every
+check and status. `internal/console/rename.go` prints the results.
+
+- **New names** — `LIB$RENAME_FILE` parses the output with the old file
+  as its related file: whatever the output leaves out (device, directory,
+  name, type) is the old file's, and `*` in the name, type, or version is
+  too. Any other output wildcard is `RMS$_WLD`.
+- **Versions** — an output version is used as given. With none, a file
+  keeps its version if the input named one (`;3`, `;-1`) or all of them
+  (`;*`), or with `/NONEW_VERSION`; otherwise it gets the next version of
+  its new name (`LIB$RENAME_FILE`'s own comment on copying DCL's rules).
+- **Lists** — each input's device and directory are the next one's
+  defaults, the User's Manual's "temporary defaults" (§4.3.3: node,
+  device, and directory only). A wildcard input renames every match in
+  every search-list element; a plain one, the first element's file.
+- **Messages** — `RENAME.B32`'s `LOG_ROUTINE` and `ERROR_ROUTINE`:
+  `%RENAME-I-RENAMED` under `/LOG`; `SEARCHFAIL` for a file that can't be
+  found, `OPENOUT` for a new name that can't be parsed or entered,
+  `NOTRENAMED`/`NOTSAMEDEV` for another device, and `OPENIN` otherwise,
+  each followed by the RMS status and, when it adds something, the STV
+  (`-SYSTEM-W-DUPFILENAME`). RENAME carries on after a failure and fails
+  as a whole if any file did.
+- **Not showing a failure twice** — RENAME has shown its messages by the
+  time it returns, so it returns its failure through the new
+  `vmserrors.InhibitMessage`, VMS's `STS$M_INHIBIT_MSG` for a Go error;
+  the console loop and `INCLUDE` don't display an inhibited error.
+- **Not implemented** — `/CONFIRM`, `/INHERIT_SECURITY`, and the file-
+  selection qualifiers (`/BEFORE`, `/SINCE`, `/EXCLUDE`, `/BY_OWNER`, ...);
+  wildcards in the output's directory; a relative output directory
+  (`[.SUB]`) is taken relative to the old file's directory, where RMS
+  would use the process default.
 
 ## Open questions
 
@@ -1604,3 +1647,31 @@ now-removed `showMountedVolume`), not a new RMS capability.
   `$RENAME` at all.
 - `go build ./...`, `go vet ./...`, `go test ./...` clean in both this repo
   and `ods2`; `golangci-lint` clean for the new files.
+
+### 2026-09-30 — Subtask 18: the `RENAME` command
+
+- `internal/rms/renamecmd.go`: `Session.Rename(inputs, output,
+  RenameOptions)` returning one `RenamedFile` per file (old and new
+  names, RMS status and STV, and the stage a failure happened at, as
+  `LIB$RENAME_FILE`'s error source). `rename.go`'s `SysRename` core split
+  out as `renameText`, now also returning the `volume.Renamed`, so the
+  command can report the version a file actually got. New status
+  `RMS$_SYN` in `status.go`.
+- `internal/console/rename.go`: `Console.Rename`, the messages. Grammar:
+  `verb rename` in `console.dcl` (`inputs` a list, `output`, `/LOG`,
+  `/NEW_VERSION`, negatable); `dispatch.go` binds it. `HELP RENAME`.
+- `internal/vmserrors/inhibit.go`: `InhibitMessage`/`MessageInhibited`;
+  `cmd/govax/main.go`'s console loop and `Console.Include` skip inhibited
+  errors.
+- Tests: `internal/rms/renamecmd_test.go` (output defaults, every version
+  rule, wildcards, lists' temporary defaults, a directory move, each
+  failure's stage and status, a failure not stopping the list);
+  `internal/console/rename_test.go` (exact message lines for `/LOG` and
+  each failure kind, through the real grammar);
+  `internal/vmserrors/inhibit_test.go`; the grammar's verb count.
+- Checked by hand in `govax`: copying host files onto a fresh volume,
+  then renaming within the MFD, with lists, `*.OLD`, `/NONEW_VERSION`,
+  onto another mounted volume, onto an existing version, and into a
+  missing directory — each gave the message above.
+- `go build ./...`, `go vet ./...`, `go test ./...` clean;
+  `golangci-lint` clean for the new and changed files.

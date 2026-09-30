@@ -128,21 +128,33 @@ func renameFile(ctx *Context, oldFAB, newFAB uint32) (sts, stv uint32, err error
 		return 0, 0, err
 	}
 
+	_, sts, stv = renameText(ctx, oldText, newText)
+
+	return sts, stv, nil
+}
+
+// renameText is $RENAME on two file specifications, steps 2 through 7 of
+// SysRename's list: the part that doesn't touch a FAB. It returns what
+// was renamed (the new version, in particular, when the new name gave
+// none) and the RMS status and STV, RMS$_NORMAL on success. The console's RENAME command
+// (Session.Rename) calls it too, once per file, as DCL's RENAME calls
+// $RENAME through LIB$RENAME_FILE.
+func renameText(ctx *Context, oldText, newText string) (r volume.Renamed, sts, stv uint32) {
 	// Steps 2 and 3: the old name, and the old file.
 	oldSide, oldDir, oldVersion, sts := findRenameSource(ctx, oldText)
 	if sts != 0 {
-		return sts, sts, nil
+		return r, sts, sts
 	}
 
 	// Step 4: the new name.
 	newSide, sts := parseRenameTarget(ctx, newText)
 	if sts != 0 {
-		return sts, sts, nil
+		return r, sts, sts
 	}
 
 	newVersion, sts := parseRenameVersion(newSide.spec.Version)
 	if sts != 0 {
-		return sts, sts, nil
+		return r, sts, sts
 	}
 
 	// Step 5: the same device. Two device names mounted to one volume
@@ -150,26 +162,26 @@ func renameFile(ctx *Context, oldFAB, newFAB uint32) (sts, stv uint32, err error
 	// isn't mounted at all -- isn't.
 	newSide.vol, _ = ctx.Mounts.Lookup(newSide.spec.Device)
 	if newSide.vol != oldSide.vol {
-		return rmsDeviceError, rmsDeviceError, nil
+		return r, rmsDeviceError, rmsDeviceError
 	}
 
 	// Step 6: the new directory. (The loop check is volume.Rename's.)
 	newDir, err := filespec.ResolveDirectory(newSide.vol, newSide.spec.Dirs)
 	if err != nil {
-		return rmsDirNotFound, rmsDirNotFound, nil
+		return r, rmsDirNotFound, rmsDirNotFound
 	}
 
 	// Step 7.
 	if !ctx.Mounts.Writable(oldSide.spec.Device) {
-		return rmsRemoveFailed, ssWriteLocked, nil
+		return r, rmsRemoveFailed, ssWriteLocked
 	}
 
 	bm, ib, err := deviceBitmaps(newDir.Device)
 	if err != nil {
-		return rmsSystemError, rmsSystemError, nil
+		return r, rmsSystemError, rmsSystemError
 	}
 
-	_, renameErr := oldSide.vol.Rename(oldDir, specFileName(oldSide.spec), oldVersion,
+	r, renameErr := oldSide.vol.Rename(oldDir, specFileName(oldSide.spec), oldVersion,
 		newDir, specFileName(newSide.spec), newVersion, bm, ib)
 
 	// Whatever happened, what changed is on the disk once the bitmaps
@@ -179,14 +191,14 @@ func renameFile(ctx *Context, oldFAB, newFAB uint32) (sts, stv uint32, err error
 	if renameErr != nil {
 		sts, stv := renameStatus(renameErr)
 
-		return sts, stv, nil
+		return r, sts, stv
 	}
 
 	if flushErr != nil {
-		return rmsSystemError, rmsSystemError, nil
+		return r, rmsSystemError, rmsSystemError
 	}
 
-	return rmsNormal, 0, nil
+	return r, rmsNormal, 0
 }
 
 // findRenameSource resolves $RENAME's old name (steps 2 and 3 of

@@ -169,7 +169,9 @@ func (c *Console) Include(path string, dispatch func(string) error) error {
 				}
 			}
 
-			c.Printf("%s: %v\n", path, err)
+			if !vmserrors.MessageInhibited(err) {
+				c.Printf("%s: %v\n", path, err)
+			}
 		}
 	}
 

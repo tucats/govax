@@ -174,6 +174,10 @@ var (
 	// names doesn't exist.
 	rmsDirNotFound = vmsConst("RMS$_DNF")
 
+	// rmsSyntaxError is RMS$_SYN: a file specification that can't be
+	// parsed.
+	rmsSyntaxError = vmsConst("RMS$_SYN")
+
 	// rmsFileNameError is RMS$_FNM: a file specification with no file
 	// name where one is required.
 	rmsFileNameError = vmsConst("RMS$_FNM")

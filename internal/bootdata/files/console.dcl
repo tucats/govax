@@ -856,4 +856,26 @@ grammar console
         disallow    macro and object
         disallow    insert and replace
 
+    !
+    ! govax-native extension (docs/PHASE-22.md subtask 18, internal/rms +
+    ! internal/console): RENAME is VMS DCL's RENAME -- renames or moves
+    ! files on a mounted volume, never across volumes. INPUTS is a comma-
+    ! separated list whose device and directory carry over from one item
+    ! to the next; OUTPUT's missing fields come from each input file's own
+    ! name, and "*" in its name, type, or version means the input's. /LOG
+    ! reports each file renamed. NEW_VERSION is on unless /NONEW_VERSION:
+    ! without it, a file keeps its version even when the input named none.
+    !
+    verb rename/id=1450
+
+        parameter   inputs/id=1451              -
+                    /type=$string/list          -
+                    /prompt="From"
+        parameter   output/id=1452              -
+                    /type=$string               -
+                    /prompt="To"
+
+        qualifier   log/id=1453
+        qualifier   new_version/id=1454
+
 end

@@ -239,7 +239,9 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 				break
 			}
 
-			if err := d.Dispatch(line); err != nil {
+			// A command that has shown its own messages (RENAME)
+			// returns its failure with the message inhibited.
+			if err := d.Dispatch(line); err != nil && !vmserrors.MessageInhibited(err) {
 				fmt.Fprintln(out, "%"+err.Error())
 			}
 		}

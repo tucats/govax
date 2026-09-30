@@ -485,6 +485,15 @@ func (d *Dispatcher) bindGrammar() {
 	// rather than in internal/rms.Session.Purge itself, since r.Int's own
 	// zero value can't be told apart from an explicit, invalid /LIMIT=0
 	// (which Session.Purge does reject, as *rms.InvalidLimitError).
+	// docs/PHASE-22.md subtask 18: RENAME renames or moves files on a
+	// mounted volume (Console.Rename, internal/console/rename.go). A
+	// negated /NONEW_VERSION is the only way to turn NEW_VERSION off.
+	g.Bind("RENAME", func(id int64, r *dcl.Result) error {
+		newVersion := !(r.Present("NEW_VERSION") && r.Negated("NEW_VERSION"))
+
+		return d.Console.Rename(r.List("INPUTS"), r.String("OUTPUT"), r.Present("LOG"), newVersion)
+	})
+
 	g.Bind("PURGE", func(id int64, r *dcl.Result) error {
 		limit := uint16(1)
 		if r.Present("LIMIT") {

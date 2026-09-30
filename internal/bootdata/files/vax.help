@@ -35,6 +35,7 @@
 //                          logical names (docs/PHASE-25.md)
 //              09/30/26    Added MACRO (docs/PHASE-27.md)
 //              09/30/26    Added LINK (docs/PHASE-30.md)
+//              09/30/26    Added RENAME (docs/PHASE-22.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -3207,6 +3208,64 @@ $PURG
         PURGE/LIMIT=2
 
     See also the help for DELETE, DIRECTORY, and SET DEFAULT.
+
+$RENA
+$REN 
+
+    The RENAME command changes the name of one or more files on a mounted
+    ODS-2 volume, or moves them to another directory, as VMS DCL's RENAME
+    does.  The files' contents are not copied.  A file can't be renamed
+    to another device: the old and new names must be on the same volume.
+
+    Syntax:
+
+        RENAME [/LOG] [/[NO]NEW_VERSION] <input>[,<input>...] <output>
+
+    Parameters:
+
+        <input>         The file or files to rename.  Wildcards are
+                        allowed.  With no version, each name's highest
+                        version is renamed.  The device and directory of
+                        one input carry over to the next as its defaults,
+                        and any part left out of the first is filled in
+                        from the current default device/directory (see
+                        SET DEFAULT).
+
+        <output>        The new name.  Any part left out -- device,
+                        directory, name, or type -- is the input file's
+                        own, and a name, type, or version written as "*"
+                        is the input file's too, so one output serves
+                        several files (RENAME *.TXT *.OLD).  No other
+                        wildcards are allowed.  With no output version, a
+                        file keeps its version if the input named one (or
+                        ;*); otherwise it gets the next version of its new
+                        name.  An existing name and version is never
+                        replaced.
+
+    Qualifiers:
+
+        /LOG            Reports each file renamed.
+
+        /NEW_VERSION    With no versions given, gives each file the next
+        /NONEW_VERSION  version of its new name (the default).  With
+                        /NONEW_VERSION, each file keeps its version.
+
+    A directory file (NAME.DIR;1) can be renamed or moved like any other
+    file, taking everything in it along, but not into itself or one of
+    its own subdirectories.  A file that can't be renamed is reported and
+    the rest are still renamed.
+
+    Examples:
+
+        RENAME FEES.DAT;4 [SAVETEXT]RECORDS.DAT
+
+        RENAME/LOG *.TXT *.OLD
+
+        RENAME [A]X.TXT,Y.TXT [B]
+
+        REN/NONEW_VERSION REPORT.LIS SUMMARY
+
+    See also the help for COPY, DELETE, DIRECTORY, and SET DEFAULT.
 
 $TYPE
 $TYP
