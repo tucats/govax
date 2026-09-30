@@ -1,5 +1,7 @@
 package rms
 
+import "github.com/tucats/govax/internal/vmsdef"
+
 // This file defines the real, literal RMS$_ completion-status values that
 // this package's service handlers write into a FAB's or RAB's status
 // fields (fabSTS/fabSTV, rabSTS/rabSTV — see fab.go/rab.go) after every
@@ -150,7 +152,68 @@ var (
 	// names couldn't be translated — a circular definition, or more than
 	// lnm.MaxDepth levels (docs/PHASE-25.md).
 	rmsLogicalNameError = vmsConst("RMS$_LNE")
+
+	// The statuses SYS$RENAME (rename.go) adds, in the order its doc
+	// comment lists the checks that return them.
+
+	// rmsInvalidFAB is RMS$_FAB: the block passed as a FAB isn't one
+	// (FAB$B_BID is wrong); rmsInvalidBLN is RMS$_BLN: it's too short
+	// (FAB$B_BLN).
+	rmsInvalidFAB = vmsConst("RMS$_FAB")
+	rmsInvalidBLN = vmsConst("RMS$_BLN")
+
+	// rmsWildcardError is RMS$_WLD: a wildcard in a file specification
+	// for a service that works on exactly one file.
+	rmsWildcardError = vmsConst("RMS$_WLD")
+
+	// rmsInvalidOperation is RMS$_IOP: an operation the device can't do,
+	// such as renaming the terminal.
+	rmsInvalidOperation = vmsConst("RMS$_IOP")
+
+	// rmsDirNotFound is RMS$_DNF: the directory a file specification
+	// names doesn't exist.
+	rmsDirNotFound = vmsConst("RMS$_DNF")
+
+	// rmsFileNameError is RMS$_FNM: a file specification with no file
+	// name where one is required.
+	rmsFileNameError = vmsConst("RMS$_FNM")
+
+	// rmsInvalidDirRename is RMS$_IDR: renaming a directory into itself
+	// or one of its own subdirectories.
+	rmsInvalidDirRename = vmsConst("RMS$_IDR")
+
+	// rmsRemoveFailed, rmsEnterFailed, and rmsReenterFailed are RMS$_RMV,
+	// RMS$_ENT, and RMS$_REENT: the file system (the ACP) failed to remove
+	// the old directory entry, failed to enter the new one (the old one
+	// was put back), or failed both to enter the new one and to put the
+	// old one back -- the file has no name. The first two carry the file
+	// system's own SS$_ reason in STV.
+	rmsRemoveFailed  = vmsConst("RMS$_RMV")
+	rmsEnterFailed   = vmsConst("RMS$_ENT")
+	rmsReenterFailed = vmsConst("RMS$_REENT")
+
+	// SS$_ values the file system reports, which an RMS$_RMV/RMS$_ENT
+	// carries in STV: the volume is write-locked (mounted read-only), the
+	// name and version are already in the directory, the version is out
+	// of range. ssInsufficientArgs is SS$_INSFARG, a service called with
+	// too few arguments, returned in R0 alone.
+	ssWriteLocked       = ssConst("SS$_WRITLCK")
+	ssDuplicateFileName = ssConst("SS$_DUPFILENAME")
+	ssBadFileVersion    = ssConst("SS$_BADFILEVER")
+	ssInsufficientArgs  = ssConst("SS$_INSFARG")
 )
+
+// ssConst looks up name in internal/vmsdef.SSConstants, VMS's $SSDEF
+// system-service statuses, panicking if it's missing -- vmsConst's
+// programming-error guard for the other table.
+func ssConst(name string) uint32 {
+	v, ok := vmsdef.SSConstants[name]
+	if !ok {
+		panic("rms: no SS$ status named " + name)
+	}
+
+	return v
+}
 
 // storeStatus writes sts into both of a control block's status fields —
 // fabSTS/fabSTV for a FAB, rabSTS/rabSTV for a RAB (fab.go/rab.go); base

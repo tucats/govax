@@ -3,10 +3,11 @@ package rtl
 import "github.com/tucats/govax/internal/rms"
 
 // This file is internal/rtl's half of docs/PHASE-22.md's subtask 11: it
-// wires internal/rms's six already-implemented, already-tested RMS service
-// handlers (SysCreate/SysConnect/SysOpen/SysClose/SysGet/SysPut) into this
-// package's own ServiceTable, so a running VAX program's SYS$CREATE/
-// SYS$CONNECT/SYS$OPEN/SYS$CLOSE/SYS$GET/SYS$PUT calls actually reach them.
+// wires internal/rms's already-implemented, already-tested RMS service
+// handlers (SysCreate/SysConnect/SysOpen/SysClose/SysGet/SysPut, and
+// SysRename, subtask 17) into this package's own ServiceTable, so a
+// running VAX program's SYS$CREATE/SYS$CONNECT/SYS$OPEN/SYS$CLOSE/SYS$GET/
+// SYS$PUT/SYS$RENAME calls actually reach them.
 //
 // # Why a wrapper closure per service, instead of registering the functions
 // # directly
@@ -39,5 +40,8 @@ func registerRMSServices(t *ServiceTable) {
 	})
 	t.Register("SYS$PUT", func(env *Environment, argv []uint32) (uint32, error) {
 		return rms.SysPut(env.rmsContext(), argv)
+	})
+	t.Register("SYS$RENAME", func(env *Environment, argv []uint32) (uint32, error) {
+		return rms.SysRename(env.rmsContext(), argv)
 	})
 }

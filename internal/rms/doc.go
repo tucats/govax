@@ -1,8 +1,8 @@
 // Package rms is govax's implementation of VMS RMS (Record Management
 // Services) — the part of the VMS runtime that a VAX program calls into
-// (via SYS$CREATE, SYS$OPEN, SYS$CLOSE, SYS$GET, SYS$PUT, and SYS$CONNECT)
-// to create, open, read, and write files. See docs/PHASE-22.md for the
-// full design.
+// (via SYS$CREATE, SYS$OPEN, SYS$CLOSE, SYS$GET, SYS$PUT, SYS$CONNECT, and
+// SYS$RENAME) to create, open, read, write, and rename files. See
+// docs/PHASE-22.md for the full design.
 //
 // # Why this package exists, for a reader new to the project
 //

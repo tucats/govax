@@ -77,7 +77,7 @@ expect adjustment as phases land):
   commands into records. Codes and layouts come from `vmsdef.OBJConstants`
   (generated from VMS 7.3's `objfmt.sdl`). Host files hold records in ODS-2's
   on-disk variable-length layout (`ReadRecords`/`WriteRecords`).
-- `internal/rms` — RMS (`SYS$CREATE`/`CONNECT`/`OPEN`/`CLOSE`/`GET`/`PUT`) file
+- `internal/rms` — RMS (`SYS$CREATE`/`CONNECT`/`OPEN`/`CLOSE`/`GET`/`PUT`/`RENAME`) file
   I/O backed by the sibling Go module `github.com/tucats/ods2`'s real ODS-2
   volume/file implementation, plus the `MOUNT`/`DISMOUNT`-facing `MountTable`
   (Phase 22). Also decides whether a typed file name means a host file or a

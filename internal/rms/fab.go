@@ -137,6 +137,20 @@ var (
 	// size in bytes. SYS$CREATE reads this for fixed- and VFC-format
 	// files, where every record must fit within a single declared size.
 	fabMRS = fabOffset("MRS")
+
+	// fabBID and fabBLN are FAB$B_BID and FAB$B_BLN, the two bytes that
+	// identify a block as a FAB: its block type (fabBIDValue, FAB$C_BID)
+	// and its length in bytes (at least fabBLNValue, FAB$C_BLN). The
+	// $FAB macro (and this project's .FAB pseudo-op) fill them in. RMS
+	// checks them before trusting a block's other fields; so far only
+	// SYS$RENAME (rename.go) does here.
+	fabBID = fabOffset("BID")
+	fabBLN = fabOffset("BLN")
+)
+
+var (
+	fabBIDValue = byte(vmsConst("FAB$C_BID"))
+	fabBLNValue = byte(vmsConst("FAB$C_BLN"))
 )
 
 // FAB$B_FAC values (file-access-request flags) this package recognizes,

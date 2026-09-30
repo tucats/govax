@@ -164,7 +164,8 @@ to carry over the C source's wide/narrow `PSL` duality.
 
 Phase 22, requested by the user 2026-09-22, is the first phase with no direct
 `reference/eVAX` counterpart to port: it introduces real, functional VMS RMS
-system-service support (`SYS$CREATE`/`CONNECT`/`OPEN`/`CLOSE`/`GET`/`PUT`) backed
+system-service support (`SYS$CREATE`/`CONNECT`/`OPEN`/`CLOSE`/`GET`/`PUT`, and
+later `SYS$RENAME`) backed
 by genuine ODS-2 volume/file access via the sibling Go module
 `github.com/tucats/ods2`, plus a new console `MOUNT` command attaching a
 disk-image container to a device. Phase 10's existing `rms.c` port

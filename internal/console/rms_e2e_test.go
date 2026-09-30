@@ -130,3 +130,36 @@ func TestRMSRoundTrip_afterKernelAlreadyP1VectoredIsIdempotent(t *testing.T) {
 		t.Errorf("R0 = %d, want 1 (all three records round-tripped correctly)", got)
 	}
 }
+
+// TestRMSRename_assembledProgram runs testdata/asm/rms_rename.asm, which
+// creates a file, renames it with a real CALLS to SYS$RENAME through the
+// P1 vector, and checks the result from the VAX side: the new name opens,
+// the old one is gone (RMS$_FNF), and renaming another file onto the new
+// name is refused (RMS$_ENT). R0 = 1 means every check passed.
+func TestRMSRename_assembledProgram(t *testing.T) {
+	c := newBootableConsole(t)
+
+	mountFreshRMSVolume(t, c)
+
+	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "rms_rename.asm"))
+	if err != nil {
+		t.Fatalf("Assemble(rms_rename.asm): %v", err)
+	}
+
+	if !hasEntry {
+		t.Fatal("expected rms_rename.asm's \".end main\" to report an entry address")
+	}
+
+	runErr, hitCap := callBounded(t, c, addr, 100_000)
+	if runErr != nil {
+		t.Fatalf("running rms_rename.asm: %v", runErr)
+	}
+
+	if hitCap {
+		t.Fatal("rms_rename.asm did not reach a HALT/return within 100,000 steps")
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 1 {
+		t.Errorf("R0 = %d, want 1 (every rename check passed)", got)
+	}
+}

@@ -401,6 +401,68 @@ This local convenience doesn't feed the committed test suite.
     `docs/DEVIATIONS.md` entries for anything ambiguous found comparing
     `rms_manual.pdf` against `ods2`'s actual record-format behavior along the
     way.
+17. **Done (2026-09-30).** `SYS$RENAME`, with the `ods2` side it needed
+    (`volume.Volume.Rename`, which `ods2` didn't have) — see "Addendum:
+    `SYS$RENAME`" below and the Progress Log.
+
+## Addendum: `SYS$RENAME`
+
+Added after the first slice, on request: `SYS$RENAME` as a real system
+service, following VMS's own rules for renames — both what it allows
+(renaming to another directory, moving a whole directory) and what it
+refuses (renaming across volumes). The behavioral reference is VMS itself:
+RMS's `RMS$RENAME` (`vmssrc_archive/v73/rms/lis/rms0renam.lis`, plus the
+`RM$SETDID` directory check in `rm0setdid.lis`) and the F11BXQP routines it
+drives (`f11x/lis/enter.lis`, `delete.lis`, `create.lis`).
+
+### Split between `ods2` and `govax`
+
+- **`ods2`** (`volume/rename.go`, `Volume.Rename`): the on-disk operation,
+  what the XQP does. Remove the old directory entry, enter the new one for
+  the same FID, and put the old one back if the enter fails
+  (`ErrRenameLost` if even that fails — RMS's "file has been lost"). For the
+  file's *primary* entry, update the header the way `CREATE.B32` does on an
+  enter: back link to the new directory, the identification area's name
+  becomes `NAME.TYP;VER`, revision count +1, revision date now, backup date
+  cleared. A secondary ("alias") entry — back link pointing elsewhere —
+  leaves the header alone (`DELETE.B32`'s `ALIAS_ENTRY` test). Refuses a
+  directory moving into itself or below itself (`ErrDirectoryLoop`, checked
+  by walking back links to the MFD), two directories on different volumes
+  (`ErrCrossVolume`), and an existing new name;version (`ErrExists`) —
+  those last two before anything is touched. A new version of 0 is "the
+  next", computed after the old entry is removed (`MAKE_ENTRY`), so a
+  name's only version renamed to the same name with no version becomes
+  `;1`. A name already at its version limit loses its oldest *other*
+  version (`ENTER.B32` removes the lowest existing version, never the one
+  being entered).
+- **`govax`** (`internal/rms/rename.go`, `SysRename`): the RMS layer —
+  parsing both FABs' names, the checks and their statuses, in
+  `RMS0RENAM`'s order: `RMS$_FAB`/`RMS$_BLN` (either FAB not a FAB),
+  `RMS$_WLD` (a wildcard in either name — DCL's `RENAME`, not RMS, handles
+  wildcards), `RMS$_IOP` (not a disk), `RMS$_DNR`/`RMS$_DNF`/`RMS$_FNF`
+  (the old file), `RMS$_DEV` (the new name on a different device — judged
+  after logical-name translation, by whether both names reach the same
+  mounted volume), `RMS$_DNF` (the new directory), `RMS$_IDR` (directory
+  loop), then `RMS$_RMV`/`RMS$_ENT`/`RMS$_REENT` with the XQP's `SS$_`
+  reason in STV (`SS$_WRITLCK` for a read-only mount, `SS$_DUPFILENAME` for
+  an existing new version). Status goes in the old FAB; the new FAB's
+  STS/STV are cleared.
+
+### Deliberate limits
+
+- No new version on the new name means "the next version", as RMS does. The
+  DCL `RENAME` command's own default — the new name inherits the old
+  version — is DCL's, and belongs to a future `RENAME` console command.
+- NAM blocks and default names (`FAB$L_NAM`, `FAB$L_DNA`) aren't read or
+  filled — no service in `internal/rms` supports them yet.
+- A search list in the old name is searched for the file (as `SYS$OPEN`
+  does); in the new name, its first element is used (as `SYS$CREATE` does).
+- Renaming a file that's currently open through `SYS$OPEN`/`SYS$CREATE`
+  works, as on VMS, but that open handle's in-memory copy of the header is
+  the pre-rename one; closing a file open for write rewrites its header
+  from that copy, which puts the old name and back link back into the
+  header (the directory entries stay renamed). Rare, and harmless to the
+  directory structure; not addressed here.
 
 ## Open questions
 
@@ -1511,3 +1573,34 @@ now-removed `showMountedVolume`), not a new RMS capability.
   live free-block/file-count numbers.
 - `go build ./...`, `go vet ./...`, `go test ./...` clean in both this
   repo and the sibling `ods2` module.
+
+### 2026-09-30 — Subtask 17: `SYS$RENAME`
+
+- **`ods2`** (sibling module, commits `d937a57` + build bump): new
+  `volume/rename.go` — `Volume.Rename(oldDir, oldName, oldVersion, newDir,
+  newName, newVersion, bm, ib) (Renamed, error)` and its errors
+  (`ErrCrossVolume`, `ErrDirectoryLoop`, `ErrBadVersion`, `ErrRenameLost`),
+  implementing the XQP side described in "Addendum: `SYS$RENAME`". One
+  subtlety worth knowing: the same directory opened as two `*Directory`
+  values would go stale after the removal rewrote it, so `Rename` uses one
+  value when both name the same directory. `volume/rename_test.go` (12
+  tests, against freshly `Initialize`d volumes): same-directory rename,
+  move, version rules, same-name-starts-over, rename-to-itself, refusals
+  change nothing, cross-volume, directory move carrying its contents,
+  directory loops (including the MFD), version-limit purge, alias entries,
+  and a dismount/remount round trip that also passes `AnalyzeDisk`.
+- **`govax`**: `internal/rms/rename.go` (`SysRename`), registered as
+  `SYS$RENAME` in `internal/rtl/rms.go`. New FAB fields `fabBID`/`fabBLN`
+  (`fab.go`) and statuses (`status.go`, including a small `ssConst` for
+  `SS$_` values from `vmsdef.SSConstants`). `internal/rms/rename_test.go`
+  covers every status in the addendum's list, the logical-name same-device
+  case, and a read-only remount. `testdata/asm/rms_rename.asm` plus
+  `internal/console/rms_e2e_test.go`'s `TestRMSRename_assembledProgram`
+  run it end to end from real VAX code: `$CREATE`, `$RENAME` via `CALLS #4`
+  through the P1 vector, `$OPEN` of the new name, `RMS$_FNF` for the old,
+  and `RMS$_ENT` for a rename onto an existing version (checked that the
+  fixture fails when an expectation is wrong).
+- No ISA/behavior fidelity issues for `docs/DEVIATIONS.md`: eVAX has no
+  `$RENAME` at all.
+- `go build ./...`, `go vet ./...`, `go test ./...` clean in both this repo
+  and `ods2`; `golangci-lint` clean for the new files.
