@@ -28,13 +28,21 @@ import (
 // (CLI_AMBIGUOUS, the same status internal/console/dcl's own verb/qualifier
 // ambiguity already uses) rather than lumping it in with an ordinary
 // malformed file specification.
+//
+// Verb names the command refusing, for the message; without one, the
+// message just says wildcards aren't allowed (ReadRecordFile's case).
 type AmbiguousError struct {
 	Spec  string
 	Count int
+	Verb  string
 }
 
 func (e *AmbiguousError) Error() string {
-	return fmt.Sprintf("rms: %s is ambiguous (%d files match); TYPE does not support wildcards", e.Spec, e.Count)
+	if e.Verb == "" {
+		return fmt.Sprintf("rms: %s is ambiguous (%d files match); wildcards aren't allowed here", e.Spec, e.Count)
+	}
+
+	return fmt.Sprintf("rms: %s is ambiguous (%d files match); %s does not support wildcards", e.Spec, e.Count, e.Verb)
 }
 
 // Type renders one file's entire content as text (see records.go's
@@ -67,7 +75,7 @@ func (s *Session) Type(specText string) (string, error) {
 		case 1:
 			// Exactly one match -- proceed.
 		default:
-			return &AmbiguousError{Spec: specText, Count: len(matches)}
+			return &AmbiguousError{Spec: specText, Count: len(matches), Verb: "TYPE"}
 		}
 
 		f, err := vol.OpenFID(matches[0].Fid)

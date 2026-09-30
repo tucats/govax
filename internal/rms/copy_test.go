@@ -554,7 +554,7 @@ func TestSessionCopy_testToHost(t *testing.T) {
 // on the final short record even though the bytes themselves are exactly
 // right -- the same "no un-framed reading of an Undefined file" limitation
 // ods2's own rms.Reader has, not a govax-specific defect). Mirrors
-// copyRawToVolume/copyRawToHost's own block-by-block reading, using the
+// copyRawToVolume/copyRawTo's own block-by-block reading, using the
 // exported odsrms.FileByteLength to know where the real data ends.
 func readRawVolumeFile(t *testing.T, vol *volume.Volume, fullName string) []byte {
 	t.Helper()

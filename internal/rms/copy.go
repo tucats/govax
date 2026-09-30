@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/tucats/govax/internal/obj"
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 	odsrms "github.com/tucats/ods2/rms"
@@ -409,7 +410,7 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 		}
 
 		var version uint16
-		if opts.Binary {
+		if opts.Binary || isHostRecordType(m.Type) {
 			version, err = createBinaryFile(destVol, destDir, destBm, destIb, name, typ, src)
 		} else {
 			version, err = createTextFile(destVol, destDir, destBm, destIb, name, typ, func(w *odsrms.Writer) error {
@@ -469,9 +470,13 @@ func (s *Session) copyFromHost(hostPath, destText string, opts CopyOptions) ([]C
 	defer f.Close()
 
 	var version uint16
-	if opts.Binary {
+
+	switch kind, ok := hostRecordTypes[hostType]; {
+	case ok:
+		version, err = createRecordFileFromHost(destVol, destDir, destBm, destIb, name, typ, hostPath, kind)
+	case opts.Binary:
 		version, err = createBinaryFileFromHost(destVol, destDir, destBm, destIb, name, typ, f, info.Size())
-	} else {
+	default:
 		version, err = createTextFile(destVol, destDir, destBm, destIb, name, typ, func(w *odsrms.Writer) error {
 			return copyHostLinesAsRecords(w, f)
 		})
@@ -546,7 +551,7 @@ func (s *Session) copyToHost(sourceText, destPath string, opts CopyOptions) ([]C
 			return results, fmt.Errorf("copy: %w", err)
 		}
 
-		result, err := copyOneFileToHost(src, outPath, sourceDisplay, opts, lineEnding)
+		result, err := copyOneFileToHost(src, m.Type, outPath, sourceDisplay, opts, lineEnding)
 		if err != nil {
 			return results, fmt.Errorf("copy: %w", err)
 		}
@@ -585,7 +590,7 @@ func (s *Session) copyDirEntryToHost(destPath string, m filespec.Match, sourceDi
 // a nested outPath) according to opts, and applies /TIME afterward as a
 // non-fatal warning on failure -- see CopyOptions.Time's own doc comment
 // for why a /TIME failure doesn't fail the whole copy.
-func copyOneFileToHost(src *volume.File, outPath, sourceDisplay string, opts CopyOptions, lineEnding []byte) (CopyResult, error) {
+func copyOneFileToHost(src *volume.File, typ, outPath, sourceDisplay string, opts CopyOptions, lineEnding []byte) (CopyResult, error) {
 	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 		return CopyResult{}, err
 	}
@@ -595,7 +600,7 @@ func copyOneFileToHost(src *volume.File, outPath, sourceDisplay string, opts Cop
 		return CopyResult{}, err
 	}
 
-	copyErr := copyToHostFile(out, src, opts, lineEnding)
+	copyErr := copyToHostFile(out, src, typ, opts, lineEnding)
 
 	var warning string
 
@@ -623,13 +628,22 @@ func copyOneFileToHost(src *volume.File, outPath, sourceDisplay string, opts Cop
 // recovers from a corrupt record hit while text-reframing by restarting
 // out from scratch as a raw-byte copy instead, matching ods2's own
 // cmdCopy/copyOneFile.
-func copyToHostFile(out *os.File, src *volume.File, opts CopyOptions, lineEnding []byte) error {
-	if opts.Binary {
-		return copyRawToHost(out, src)
+func copyToHostFile(out *os.File, src *volume.File, typ string, opts CopyOptions, lineEnding []byte) error {
+	if kind, ok := hostRecordTypes[strings.ToUpper(typ)]; ok && !opts.Binary && src.Header.RecordAttributes.Format == ondisk.RecordFormatVariable {
+		records, err := readVolumeRecords(src, kind)
+		if err != nil {
+			return err
+		}
+
+		return obj.WriteRecords(out, records)
+	}
+
+	if opts.Binary || isHostRecordType(typ) {
+		return copyRawTo(out, src)
 	}
 
 	if opts.Stream && isStreamFormat(src.Header.RecordAttributes.Format) {
-		return copyRawToHost(out, src)
+		return copyRawTo(out, src)
 	}
 
 	err := writeRecords(out, src, lineEnding)
@@ -642,7 +656,7 @@ func copyToHostFile(out *os.File, src *volume.File, opts CopyOptions, lineEnding
 			return truncErr
 		}
 
-		return copyRawToHost(out, src)
+		return copyRawTo(out, src)
 	}
 
 	return err
@@ -661,12 +675,13 @@ func isStreamFormat(format ondisk.RecordFormat) bool {
 	}
 }
 
-// copyRawToHost copies f's exact valid on-disk bytes (see odsrms.
+// copyRawTo copies f's exact valid on-disk bytes (see odsrms.
 // FileByteLength) to out with no record interpretation at all, block by
 // block -- the shared implementation behind both /BINARY and /STREAM (on
-// a Stream-format source) for a host destination. Functionally matches
-// ods2's own copyBinary.
-func copyRawToHost(out *os.File, f *volume.File) error {
+// a Stream-format source) for a host destination, and behind reading a
+// raw-copied object module (recordfile.go). Functionally matches ods2's
+// own copyBinary.
+func copyRawTo(out io.Writer, f *volume.File) error {
 	remaining := odsrms.FileByteLength(f.Header.RecordAttributes)
 
 	buf := make([]byte, ondisk.BlockSize)
@@ -853,21 +868,69 @@ func createTextFile(destVol *volume.Volume, destDir *volume.Directory, destBm *v
 	return lookUpVersion(destDir, fullName)
 }
 
-// createBinaryFile creates a brand-new Undefined-format file name.typ in
-// destDir and copies src's exact on-disk bytes into it verbatim (/BINARY,
-// container source) -- the volume-destination counterpart of
+// createBinaryFile creates a brand-new file name.typ in destDir with
+// src's record attributes and copies src's exact on-disk bytes into it
+// verbatim (/BINARY, container source, and any file of a hostRecordTypes
+// type) -- the volume-destination counterpart of
 // createTextFile, sharing its same "look the assigned version back up
 // via Directory.Lookup" convention. Functionally matches ods2's own
 // copyOneFileToVolume(binary: true).
 func createBinaryFile(destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ string, src *volume.File) (uint16, error) {
 	fullName := name + "." + typ
 
-	dst, err := destVol.CreateFile(destDir, fullName, ondisk.RecAttr{Format: ondisk.RecordFormatUndefined, MaxRecordSize: ondisk.BlockSize}, destBm, destIb)
+	dst, err := destVol.CreateFile(destDir, fullName, copiedAttributes(src.Header.RecordAttributes), destBm, destIb)
 	if err != nil {
 		return 0, fmt.Errorf("creating %s: %w", fullName, err)
 	}
 
 	if err := copyRawToVolume(dst, src); err != nil {
+		return 0, fmt.Errorf("writing %s: %w", fullName, err)
+	}
+
+	return lookUpVersion(destDir, fullName)
+}
+
+// copiedAttributes is the record attributes a copy of a file with attr
+// starts with: the record format and sizes, but none of the size and
+// end-of-file fields writing the copy sets.
+func copiedAttributes(attr ondisk.RecAttr) ondisk.RecAttr {
+	return ondisk.RecAttr{
+		Format:            attr.Format,
+		Attributes:        attr.Attributes,
+		RecordSize:        attr.RecordSize,
+		BucketSize:        attr.BucketSize,
+		VfcSize:           attr.VfcSize,
+		MaxRecordSize:     attr.MaxRecordSize,
+		DefaultExtend:     attr.DefaultExtend,
+		GlobalBufferCount: attr.GlobalBufferCount,
+	}
+}
+
+// isHostRecordType reports whether typ is one of hostRecordTypes.
+func isHostRecordType(typ string) bool {
+	_, ok := hostRecordTypes[strings.ToUpper(typ)]
+
+	return ok
+}
+
+// createRecordFileFromHost creates name.typ in destDir from a host file
+// of a hostRecordTypes type, reading the host file in kind's layout and
+// writing its records with kind's attributes (recordfile.go), so a host
+// object module comes back as a real variable-length record file.
+func createRecordFileFromHost(destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ, hostPath string, kind RecordKind) (uint16, error) {
+	fullName := name + "." + typ
+
+	records, err := readHostRecords(hostPath, kind)
+	if err != nil {
+		return 0, err
+	}
+
+	dst, err := destVol.CreateFile(destDir, fullName, newRecordAttributes(kind, records), destBm, destIb)
+	if err != nil {
+		return 0, fmt.Errorf("creating %s: %w", fullName, err)
+	}
+
+	if err := putRecords(dst, records); err != nil {
 		return 0, fmt.Errorf("writing %s: %w", fullName, err)
 	}
 

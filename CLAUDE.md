@@ -73,7 +73,10 @@ expect adjustment as phases land):
 - `internal/rms` — RMS (`SYS$CREATE`/`CONNECT`/`OPEN`/`CLOSE`/`GET`/`PUT`) file
   I/O backed by the sibling Go module `github.com/tucats/ods2`'s real ODS-2
   volume/file implementation, plus the `MOUNT`/`DISMOUNT`-facing `MountTable`
-  (Phase 22). The sole place in this project allowed to import `ods2`; owns its
+  (Phase 22). Also decides whether a typed file name means a host file or a
+  volume file (`Session.Locate`, `location.go`) and reads/creates record files
+  on either side (`ReadRecordFile`/`CreateRecordFile`, `recordfile.go`; Phase
+  27). The sole place in this project allowed to import `ods2`; owns its
   own IFI (open-file) table separately from `internal/rtl`'s state, since it
   tracks real `ods2` handles Phase 10's RTL layer never needed. Requires a
   `go.work` file at the repo root (`use .` / `use ../ods2`, gitignored — see

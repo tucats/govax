@@ -3257,11 +3257,21 @@ $COPY
                         inherits each copied source file's own name and
                         type.
 
+    Object modules (.OBJ files) are always copied as records, whatever
+    the qualifiers.  On the host, an object module is kept in the same
+    layout ODS-2 uses on disk for variable-length records (each record
+    a 2-byte length, then its bytes, padded to an even length), so its
+    record boundaries survive a copy to the host and back.  A host .OBJ
+    copied onto a volume becomes a variable-length record file with the
+    attributes VAX MACRO gives an object module.
+
     Qualifiers:
 
         /BINARY         Copies exact bytes rather than rendering the file
                         as text -- no record-format interpretation, no
-                        line-ending translation.
+                        line-ending translation.  A copy between two
+                        volume locations keeps the source's record
+                        format and attributes.
 
         /QUIET          Suppresses the normal %COPY-S-COPIED confirmation
                         line.

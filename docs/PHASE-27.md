@@ -26,7 +26,7 @@ becomes the record of the implementation: each subtask adds a
 [progress log](#progress-log) entry, and the open questions get their answers
 recorded here.
 
-**Status: subtasks 1-8 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 9 is next.**
+**Status: subtasks 1-9 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 10 is next.**
 
 ## Why this phase looks different
 
@@ -356,30 +356,25 @@ ODS-2 access goes through `internal/rms`, the only package allowed to import
 and `resolveVolume`, and adds a small host-side record API: open a file and
 read its records, or create a file with given record attributes and write
 records. Host access uses `os` directly. The shared helper that picks between
-them probably lives in `internal/rms` too, since only it can parse an ODS-2
-spec. Subtask 9 decides exactly where it goes.
+them lives in `internal/rms` too (`location.go` and `recordfile.go`), since
+only it can parse an ODS-2 spec (subtask 9).
 
 **How the records are stored.** On VMS, a `.OBJ` file is an RMS
 variable-length record (`RFM=VAR`) file, and the record boundaries are part
 of the format.
 
 - **On an ODS-2 volume**, the object is a real `RFM=VAR` file, written
-  through `ods2`'s `rms.Writer`. Phase 22's `SYS$PUT` already writes VAR
-  records through it, so no new `ods2` support is expected. The exact file
-  attributes (the `RAT` flags and the maximum record size) are copied from a
-  real VAX `.OBJ` once one is available.
+  through `ods2`'s `rms.Writer`, with real MACRO's attributes: no `RAT`
+  flags, a maximum record size of 0, a default extension of 20 blocks,
+  and the longest record in `RSIZE` (subtask 9). No `ods2` change was
+  needed.
 - **On the host**, there are no record boundaries, so the file uses ODS-2's
   own on-disk VAR layout: for each record, a 2-byte little-endian length,
   then the data, padded to an even length. That's the same bytes a raw
-  copy of the file's blocks would have. Subtask 9 must confirm the layout
-  survives a COPY in both directions:
-  - a real `.OBJ` copied from a container to the host (COPY `/BINARY`, if
-    that copies blocks as they are) must be readable by `internal/obj`;
-  - a host `.OBJ` copied into a container must come back as a real VAR
-    file.
-
-  If COPY can't do either of those today, the fix is in scope, in govax's
-  COPY or in `ods2` itself.
+  copy of the file's blocks would have. Subtask 9 confirmed the layout
+  survives a COPY in both directions, after one COPY change: a `.OBJ` is
+  now always copied as records, so a host `.OBJ` comes back into a
+  container as a real VAR file (see the subtask 9 log).
 
 **Changes to `ods2`** are in scope for this phase whenever they're needed
 (the user decided this 2026-09-29), for example if its record-format support
@@ -535,7 +530,7 @@ them under `testdata/mar/vax/`). Each step adds one feature:
    `internal/obj` records: PSC and SYM/EPM GSD subrecords, TIR (STORE
    IMMEDIATE runs, `CTL_SETRB`, relocation stack programs), and EOM with the
    severity and transfer address.
-9. **Shared host/ODS-2 file access.** The helper that classifies a file
+9. **Done.** **Shared host/ODS-2 file access.** The helper that classifies a file
    name (see
    [File specifications](#file-specifications-host-files-and-ods-2-volumes)),
    the `internal/rms` record API for reading and creating record files on a
@@ -1370,3 +1365,74 @@ above record the answers:
   data (STORE IMMEDIATE runs of 128 bytes, records of 512), a warning's
   severity, absolute psects, and the console dialect's refusal.
   `go test ./...` passes.
+
+### 2026-09-30 — Subtask 9: shared host and ODS-2 file access
+
+- **Classifying a name** (`internal/rms/location.go`). `Session.Locate`
+  applies the four rules of
+  [File specifications](#file-specifications-host-files-and-ods-2-volumes)
+  and returns a `FileLocation` (host or volume, and the name). Two
+  details the plan left open:
+  - A name with `/` or `\` is a host path even when it also looks like
+    VMS syntax (`DUA0:/x`), since no VMS specification has either.
+  - A one-letter prefix (`C:x.mar`, with no slash) is a Windows drive,
+    so it's a host path, not a bare name.
+
+  VMS syntax must end on a mounted device, through logical names and
+  search lists; otherwise it's a `*NotMountedError`, and a directory with
+  no device and no default device is an error too. A bare name goes to
+  the volume only while `DefaultOnVolume` is true: `SYS$DISK` is defined
+  and one of its elements is mounted. `Session.LocateRelated` is the
+  object's form of rule 4: a bare name takes the source's side, and on a
+  volume its device and directory, so `DUA0:[X]HELLO.MAR` with
+  `OTHER.OBJ` gives `DUA0:[X]OTHER.OBJ`, and a host source's directory is
+  used on the host.
+- **Records on either side** (`internal/rms/recordfile.go`).
+  `ReadRecordFile` and `CreateRecordFile` take a `FileLocation` and a
+  `RecordKind`, which decides the host layout:
+  - `TextRecords`: host lines (a CR before the LF is dropped); a new
+    volume file is VAR with carriage-return carriage control, as VMS
+    makes text files.
+  - `VariableRecords`: the ODS-2 VAR layout on the host
+    (`obj.ReadRecords`/`WriteRecords`, which `internal/rms` now imports
+    instead of duplicating); a new volume file has real MACRO's `.OBJ`
+    attributes, read from `mar-exchange-vms.dsk`: `RFM=VAR`, no `RAT`,
+    `MRS` 0, `DEQ` 20, and `RSIZE` set to the longest record, as RMS
+    does.
+
+  A volume name must match one file, the highest version when none is
+  given (`*AmbiguousError`, whose message no longer names TYPE unless
+  TYPE is the caller). The location returned is the file actually read or
+  created, with its version, which is what `LocateRelated` and the SRC
+  header want. A read-only volume and wildcards in a new name are
+  refused. A host file is written to a temporary file and then renamed,
+  so a failure never leaves a partial object or replaces a good one. An
+  `.OBJ` that an older `COPY/BINARY` left as an Undefined-format file
+  still reads, from its raw bytes.
+- **COPY round trips.** Real objects already came out with
+  `COPY/BINARY` in subtask 3. The other direction didn't work: a host
+  `.OBJ` became Undefined-format with `/BINARY` and Stream_LF without
+  it, and a plain COPY between volumes also made it Stream_LF. Now a
+  table of file types (`hostRecordTypes`, only `OBJ` so far) makes COPY
+  copy those files as records, with or without `/BINARY`: host to
+  volume reads the VAR layout and writes a real VAR file (a host file
+  that isn't in that layout is an error); volume to host writes the VAR
+  layout; volume to volume copies the blocks and the attributes.
+- **A COPY bug fixed on the way.** `COPY/BINARY` between volumes made
+  every copy Undefined-format, losing the source's record format. It
+  now keeps the source's record attributes. `vax.help`'s COPY entry
+  describes both changes.
+- No `ods2` change was needed: its `rms.Writer` writes VAR records, and
+  `obj.ReadRecords` handles the 0xFFFF end-of-block marker that `ods2`'s
+  reader doesn't (real MACRO objects don't use it, since their `RAT`
+  lacks the no-span bit).
+- Tests: `location_test.go` covers every classification rule (Windows
+  paths and drive letters, logical names onto mounted and unmounted
+  devices, `/HOST`, and `SET DEFAULT` for bare names, including a search
+  list `SYS$DISK`) and `LocateRelated`. `recordfile_test.go` covers both
+  kinds on both sides, versions, attributes, errors, and the host write's
+  all-or-nothing rule. `copyobj_test.go` copies real VAX objects both
+  ways, with and without `/BINARY`, between volumes, and, when
+  `mar-exchange-vms.dsk` is present, reads all nine objects in place on
+  the real VAX volume and copies them out with a plain COPY, matching the
+  subtask 3 fixtures record for record. `go test ./...` passes.
