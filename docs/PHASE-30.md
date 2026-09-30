@@ -345,3 +345,15 @@ them.
   address from the image base rather than as "the page below the fixup
   section". The bytes are the same, and the real-image comparison still
   passes.
+
+### 2026-09-30 — LINK/NOTRACEBACK confirmed
+
+- The user linked `PSECTS` with `LINK/NOTRACEBACK` on the VAX
+  (`PSECTS.EXE;2` on `mar-exchange2.dsk`, now
+  `testdata/mar/vax/psects-notraceback.exe`). Its transfer addresses
+  are the user transfer address and then zeros, with no `SYS$IMGSTA`.
+  It has no debug symbol table, and the same link flags.
+- govax's `/NOTRACEBACK` already wrote exactly that:
+  `TestLinkNoTracebackMatchesRealLINK` links the fixture from govax's
+  and real MACRO's objects, and both equal the real image byte for
+  byte.

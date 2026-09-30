@@ -136,6 +136,33 @@ func diffBlocks(got, want []byte) string {
 	return sb.String()
 }
 
+// TestLinkNoTracebackMatchesRealLINK compares LINK/NOTRACEBACK with the
+// image real LINK/NOTRACEBACK made from real MACRO's psects.obj
+// (testdata/mar/vax/psects-notraceback.exe): the user transfer address
+// comes first, and there's no debug symbol table.
+func TestLinkNoTracebackMatchesRealLINK(t *testing.T) {
+	want, opts := realImage(t, filepath.Join(fixtureDir, "vax", "psects-notraceback.exe"))
+	opts.Traceback = false
+
+	for _, from := range []string{"govax", "real"} {
+		t.Run(from, func(t *testing.T) {
+			m := realObject(t, "psects")
+			if from == "govax" {
+				m = govaxObject(t, "psects")
+			}
+
+			img, err := Link([]Input{{File: "psects.obj", Module: m}}, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !bytes.Equal(img.Bytes, want) {
+				t.Errorf("image differs from real LINK/NOTRACEBACK's:\n%s", diffBlocks(img.Bytes, want))
+			}
+		})
+	}
+}
+
 func TestLinkPsectLayout(t *testing.T) {
 	img, err := Link([]Input{{File: "psects.obj", Module: govaxObject(t, "psects")}}, Options{Traceback: true})
 	if err != nil {
