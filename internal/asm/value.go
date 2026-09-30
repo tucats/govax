@@ -311,7 +311,7 @@ func (a *Assembler) exprAtom(c *cursor, st *exprState) (exprVal, error) {
 		return a.lookupSymbolValue(name, st)
 	}
 
-	if isUpperAlpha(c.peek()) || c.peek() == '_' || c.peek() == '$' {
+	if isSymbolStart(c) {
 		name := scanName(c)
 
 		if v, matched, err := a.callFunction(name, c); matched {

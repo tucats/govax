@@ -156,6 +156,13 @@ func init() {
 		"ENDC":          {both, subconditional("ENDC")},
 		"IIF":           {both, (*Assembler).pseudoIif},
 
+		// Macros (macros.go). Both dialects: the console's ASM gets
+		// macros too, since the two share the assembler core.
+		"MACRO":   {both, (*Assembler).pseudoMacro},
+		"ENDM":    {both, (*Assembler).pseudoEndm},
+		"MEXIT":   {both, (*Assembler).pseudoMexit},
+		"MDELETE": {both, (*Assembler).pseudoMdelete},
+
 		// Not a MACRO-32 directive (it has .LIBRARY and .MCALL instead),
 		// but the MACRO command resolves .INCLUDE across host and ODS-2
 		// files (docs/PHASE-27.md, subtask 10).

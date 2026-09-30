@@ -95,6 +95,16 @@ const (
 	vaxNotEntry
 	vaxIgnored
 	vaxNotGlobal
+
+	// MACRO-32 macros (docs/PHASE-28.md).
+	vaxNoEndm
+	vaxEndmName
+	vaxNotInDef
+	vaxNotInMacro
+	vaxMacroName
+	vaxMacroDepth
+	vaxTooManyArgs
+	vaxBadFormal
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -209,6 +219,16 @@ const (
 	VAX_NOTGLOBAL     = VAXFacility<<FacilityPosition | vaxNotGlobal<<MessagePosition | StatusError
 	// VAX_IGNORED is a warning: assembly goes on without the feature.
 	VAX_IGNORED = VAXFacility<<FacilityPosition | vaxIgnored<<MessagePosition | StatusWarning
+
+	// MACRO-32 macros (docs/PHASE-28.md).
+	VAX_NOENDM      = VAXFacility<<FacilityPosition | vaxNoEndm<<MessagePosition | StatusError
+	VAX_ENDMNAME    = VAXFacility<<FacilityPosition | vaxEndmName<<MessagePosition | StatusError
+	VAX_NOTINDEF    = VAXFacility<<FacilityPosition | vaxNotInDef<<MessagePosition | StatusError
+	VAX_NOTINMACRO  = VAXFacility<<FacilityPosition | vaxNotInMacro<<MessagePosition | StatusError
+	VAX_MACRONAME   = VAXFacility<<FacilityPosition | vaxMacroName<<MessagePosition | StatusError
+	VAX_MACRODEPTH  = VAXFacility<<FacilityPosition | vaxMacroDepth<<MessagePosition | StatusError
+	VAX_TOOMNYARGS  = VAXFacility<<FacilityPosition | vaxTooManyArgs<<MessagePosition | StatusError
+	VAX_BADFORMAL   = VAXFacility<<FacilityPosition | vaxBadFormal<<MessagePosition | StatusError
 )
 
 func init() {
@@ -285,6 +305,14 @@ func init() {
 	DefineMessage(VAX_NOTGLOBAL, VAXFacility, "NOTGLOBAL", "A local label can't be global: !S")
 	DefineMessage(VAX_IGNORED, VAXFacility, "IGNORED", "!S is not supported and was ignored")
 	DefineMessage(VAX_EXTRATEXT, VAXFacility, "EXTRATEXT", "Unexpected text !Q at end of statement")
+	DefineMessage(VAX_NOENDM, VAXFacility, "NOENDM", "Missing .ENDM for macro !S")
+	DefineMessage(VAX_ENDMNAME, VAXFacility, "ENDMNAME", ".ENDM !S does not match macro !S")
+	DefineMessage(VAX_NOTINDEF, VAXFacility, "NOTINDEF", "!S is not inside a macro definition")
+	DefineMessage(VAX_NOTINMACRO, VAXFacility, "NOTINMACRO", "!S is not inside a macro expansion")
+	DefineMessage(VAX_MACRONAME, VAXFacility, "MACRONAME", "Missing or invalid macro name !Q")
+	DefineMessage(VAX_MACRODEPTH, VAXFacility, "MACRODEPTH", "Macro expansions nested more than !D deep")
+	DefineMessage(VAX_TOOMNYARGS, VAXFacility, "TOOMNYARGS", "Too many arguments in call of macro !S")
+	DefineMessage(VAX_BADFORMAL, VAXFacility, "BADFORMAL", "Invalid formal argument !Q")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")

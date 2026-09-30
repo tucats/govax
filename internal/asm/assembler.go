@@ -138,13 +138,16 @@ type Assembler struct {
 	// includeResolver, when non-nil, resolves a .INCLUDE file name to its
 	// source text. .INCLUDE reports an error if this is nil.
 	includeResolver func(name string) (string, error)
-	includeDepth    int
 
-	// includeLines holds, for each level of .INCLUDE, the line of the
-	// .INCLUDE statement in the file that included it (the first entry,
-	// for the top-level source, is unused). inIncludes uses it to name
-	// where an error inside an included file came from.
-	includeLines []int
+	// sources is the source stack (see source.go): the program's text,
+	// then each .INCLUDE file and macro expansion being assembled,
+	// innermost last.
+	sources []*sourceFrame
+
+	// macros is the macro table, keyed by macro name (see macros.go), and
+	// defining the definition whose lines are being collected, or nil.
+	macros   map[string]*macroDef
+	defining *definition
 
 	// errs collects the statement errors of a MACRO-dialect assembly,
 	// which goes on after an error so that one assembly reports them all
@@ -266,6 +269,7 @@ func (a *Assembler) BeginInteractive() {
 	a.stop = false
 	a.continued = ""
 	a.cond = nil
+	a.defining = nil
 }
 
 // AssembleLine assembles one interactively-typed statement — the console's
@@ -276,6 +280,12 @@ func (a *Assembler) BeginInteractive() {
 // the reference tool, which the interactive console prompt calls once per
 // line read instead of pre-splitting a whole file).
 func (a *Assembler) AssembleLine(line string) (done bool, err error) {
+	// A macro definition typed at the prompt collects the lines that
+	// follow it, up to its .ENDM.
+	if a.defining != nil {
+		return false, a.collectDefinition(line)
+	}
+
 	line, ok := a.statement(line)
 	if !ok || line == "" {
 		return a.stop, nil
@@ -370,6 +380,7 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 	a.continued = ""
 	a.cond = nil
 	a.errs = nil
+	a.defining = nil
 
 	err := a.assembleLines(source)
 
@@ -414,65 +425,6 @@ func (e *Errors) Error() string {
 
 // Unwrap returns the errors, for errors.Is and errors.As.
 func (e *Errors) Unwrap() []error { return e.List }
-
-// inIncludes wraps err, an error at a line of the file being assembled,
-// in an *Error for each .INCLUDE that led to that file, outermost last,
-// the same nesting a failed .INCLUDE statement gets.
-func (a *Assembler) inIncludes(err error) error {
-	for k := len(a.includeLines) - 1; k >= 1; k-- {
-		err = &Error{Line: a.includeLines[k], Err: err}
-	}
-
-	return err
-}
-
-// assembleLines is Assemble's error-returning core, shared with .INCLUDE
-// (which needs to report a failure without re-wrapping Bytes()).
-func (a *Assembler) assembleLines(source string) error {
-	a.includeDepth++
-	defer func() { a.includeDepth-- }()
-
-	if a.includeDepth > 64 {
-		return vmserrors.New(vmserrors.VAX_INCLUDEDEPTH)
-	}
-
-	outerLine := a.line
-	defer func() { a.line = outerLine }()
-
-	a.includeLines = append(a.includeLines, outerLine)
-	defer func() { a.includeLines = a.includeLines[:len(a.includeLines)-1] }()
-
-	for i, raw := range strings.Split(source, "\n") {
-		if a.stop {
-			return nil
-		}
-
-		a.line = i + 1
-
-		line, ok := a.statement(raw)
-		if !ok || line == "" {
-			continue
-		}
-
-		if err := a.assembleStatement(line); err != nil {
-			if a.dialect != DialectMACRO {
-				return &Error{Line: i + 1, Err: err}
-			}
-
-			a.errs = append(a.errs, a.inIncludes(&Error{Line: i + 1, Err: err}))
-		}
-	}
-
-	// A continuation with no line to continue it.
-	if a.continued != "" {
-		line := a.continued
-		a.continued = ""
-
-		return a.assembleStatement(line)
-	}
-
-	return nil
-}
 
 // statement preprocesses one source line, joining MACRO-32 continuation
 // lines: a statement whose last character before any comment is "-"
@@ -784,6 +736,12 @@ func (a *Assembler) assembleStatementBody(line string) error {
 		return nil
 	}
 
+	// A macro call; macros come before instructions, so a macro may
+	// replace an instruction of the same name.
+	if handled, err := a.assembleMacroCall(c); handled || err != nil {
+		return err
+	}
+
 	if err := a.assembleOpcode(c); err != nil {
 		return err
 	}
@@ -865,7 +823,12 @@ func (a *Assembler) assembleAssignment(c *cursor) (handled bool, err error) {
 
 	c.skipBlanks()
 
-	if name == "" || c.peek() != '=' {
+	// A symbol may start with "." (".LEN = 1"), but a directive's name
+	// is never a symbol: ".ASCII =abc=" is the directive, with "=" as its
+	// string's delimiter.
+	_, directive := directives[strings.TrimPrefix(name, ".")]
+
+	if name == "" || c.peek() != '=' || (name != "." && strings.HasPrefix(name, ".") && directive) {
 		c.pos = save
 
 		return false, nil

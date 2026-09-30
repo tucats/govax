@@ -61,11 +61,28 @@ func isDigit(ch byte) bool { return ch >= '0' && ch <= '9' }
 
 func isUpperAlpha(ch byte) bool { return ch >= 'A' && ch <= 'Z' }
 
-// isSymbolChar matches the character set the C source accepts in the middle
-// of a symbol/name token (letters, digits, '_', '$'), used by symbol names,
-// register names, mnemonics and pseudo-op names alike.
+// isSymbolChar matches the characters of a symbol/name token, used by
+// symbol names, register names, mnemonics and pseudo-op names alike:
+// letters, digits, '_', '$', and '.'. The C source had no '.'; MACRO-32
+// allows it anywhere in a symbol, and VMS's system macros use symbols
+// such as BIT... and $$.TAB (docs/PHASE-28.md). A "." standing alone is
+// the location counter, not a symbol (see exprAtom).
 func isSymbolChar(ch byte) bool {
-	return isUpperAlpha(ch) || isDigit(ch) || ch == '_' || ch == '$'
+	return isUpperAlpha(ch) || isDigit(ch) || ch == '_' || ch == '$' || ch == '.'
+}
+
+// isSymbolStart reports whether a symbol can start at c: a letter, '_',
+// '$', or a '.' followed by another symbol character that isn't a digit
+// (".5" is a number, and "." alone the location counter).
+func isSymbolStart(c *cursor) bool {
+	ch := c.peek()
+	if ch == '.' {
+		next := c.peekAt(1)
+
+		return isSymbolChar(next) && !isDigit(next)
+	}
+
+	return isUpperAlpha(ch) || ch == '_' || ch == '$'
 }
 
 // blankRun returns how many blanks start at the cursor, without consuming

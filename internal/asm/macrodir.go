@@ -360,7 +360,7 @@ func (a *Assembler) pseudoMaskMACRO(c *cursor) error {
 
 // warn records a warning for the statement being assembled.
 func (a *Assembler) warn(err error) {
-	a.warnings = append(a.warnings, a.inIncludes(&Error{Line: a.line, Err: err}))
+	a.warnings = append(a.warnings, a.located(err))
 }
 
 // Warnings returns the warnings assembly produced, each an *Error naming
