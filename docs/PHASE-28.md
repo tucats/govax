@@ -435,18 +435,16 @@ All settled (2026-09-30):
   trimmed of blanks and of the closing `;` a macro library's comments end
   with. `.ERROR` is an assembly error (`VAX_GENERR`, "Generated ERROR:"),
   `.WARN` a warning (`VAX_GENWRN`, "Generated WARNING:"), and `.PRINT` an
-  informational message (`VAX_GENPRINT`), kept apart from the warnings in
+  informational message, kept apart from the warnings in
   `Assembler.Messages()` so it doesn't make the object's severity a
-  warning. The MACRO command displays them (`CLI_ASMMESSAGE`).
+  warning. The MACRO command displays each as it is, with no prefix (see
+  the next entry).
 - **The comment reaches the directive** through preprocessing:
   `preprocessComment` is `preprocessLine` returning the comment too, and
   `statement` keeps it (a continued statement's is its last line's) in
   `a.comment`. Arguments are already substituted into it, since
   substitution happens on the raw lines, so `.ERROR ; ... : ORG;` names the
   argument. `.IIF cond, .ERROR ;comment` works as in STARLET.MLB.
-- The manual doesn't show `.PRINT`'s message prefix; govax uses
-  "Generated MESSAGE:", to confirm against real MACRO in the fixtures
-  (subtask 10).
 - **Listing control** (`.LIST`, `.NLIST`, `.SHOW`, `.NOSHOW`, `.CROSS`,
   `.NOCROSS`, `.PAGE`) is accepted, arguments and all, and ignored.
 - Both dialects get `.ERROR`, `.WARN`, and the listing directives; the
@@ -458,5 +456,27 @@ All settled (2026-09-30):
 - A scratch check against the real STARLET.MLB: `$SSDEF`, `$IODEF`, and
   `$FABDEF` twice (the second expanding to nothing through `$DEFEND`) now
   assemble, and `$FAB FAC=<GET,BOGUS>` reports `$$R_VBFSET`'s
-  "Generated ERROR: UNDEFINED BIT VALUE CODE: BOGUS". `$$R_TABINIT`'s
-  relocatable `.IIF NE .&3` (subtask 3's note) is still open for subtask 5.
+  "Generated ERROR: UNDEFINED BIT VALUE CODE: BOGUS".
+
+### 2026-09-30 — Real MACRO's behavior decides (user decision)
+
+- The user settled subtask 3's open question for every case like it:
+  where real VMS MACRO and the manual (or govax) differ, govax does what
+  real MACRO does.
+- **Conditionals on relocatable values.** The manual says an `.IF`/`.IIF`
+  expression must be absolute, but `$$R_TABINIT`, in every `$FAB` and
+  `$RAB`, checks alignment with
+  `.IIF NE .&3, .print ;%MACRO-I-GENINFO, Generated INFO: RMS BLOCK NOT
+  LONGWORD ALIGNED;`. Real MACRO assembles every `$FAB`, and prints this
+  only for a misaligned block, so it evidently tests a relocatable value
+  by its offset in its psect. `condition` now does the same (an undefined
+  or external symbol is still an error).
+- **`.PRINT` has no prefix of its own.** That same comment carries its own
+  `%MACRO-I-GENINFO` prefix, so real MACRO must display `.PRINT`'s message
+  bare. `Messages()` now returns plain strings, and `VAX_GENPRINT` and
+  `CLI_ASMMESSAGE` are gone.
+- The fixtures (subtask 10) should include a misaligned `$FAB` to confirm
+  both.
+- A scratch check against the real STARLET.MLB: `$FAB FNM=<X.DAT>,
+  FAC=<GET,PUT>` then `$RAB FAB=FAB1` assembles to 148 bytes (80 + 68),
+  and a `$FAB` after a `.BYTE` gets the alignment message.

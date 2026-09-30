@@ -135,8 +135,38 @@ func TestPrintDirective(t *testing.T) {
 		t.Fatalf("messages = %v, want two", msgs)
 	}
 
-	requireMessage(t, msgs[0], vmserrors.VAX_GENPRINT, "Generated MESSAGE: 2 The sine routine has been changed")
-	requireMessage(t, msgs[1], vmserrors.VAX_GENPRINT, "Generated MESSAGE: 3 Continued")
+	// Displayed bare: MACRO adds no prefix of its own.
+	if msgs[0] != "2 The sine routine has been changed" || msgs[1] != "3 Continued" {
+		t.Errorf("messages = %q", msgs)
+	}
+}
+
+// TestAlignmentCheck is STARLET.MLB's $$R_TABINIT alignment check: a
+// conditional tests a relocatable value by its offset in its psect, and
+// the .PRINT comment carries its own message prefix.
+func TestAlignmentCheck(t *testing.T) {
+	src := `
+	.MACRO	TABINIT
+	.IIF NE .&3, .print ;%MACRO-I-GENINFO, Generated INFO: RMS BLOCK NOT LONGWORD ALIGNED;
+	.LONG	0
+	.ENDM	TABINIT
+	.PSECT	DATA,LONG
+	TABINIT
+	.BYTE	1
+	TABINIT
+	.ALIGN	LONG
+	TABINIT`
+
+	a := macroAssembler()
+
+	if _, err := a.Assemble(src); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "%MACRO-I-GENINFO, Generated INFO: RMS BLOCK NOT LONGWORD ALIGNED"
+	if msgs := a.Messages(); len(msgs) != 1 || msgs[0] != want {
+		t.Errorf("messages = %q, want [%q]", msgs, want)
+	}
 }
 
 // TestMessageErrors: the expression must be absolute and defined, with

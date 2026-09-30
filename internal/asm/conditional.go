@@ -203,12 +203,19 @@ func (a *Assembler) condition(c *cursor) (bool, error) {
 		return (first == second) == (test == "IDN"), err
 	}
 
-	v, err := a.exprNoForward(c)
+	x, err := a.exprKnown(c)
 	if err != nil {
 		return false, err
 	}
 
-	n := int32(v)
+	// The manual says the expression must be absolute, but real MACRO
+	// tests a relocatable one by its offset in its psect: STARLET.MLB's
+	// $$R_TABINIT (in every $FAB and $RAB) checks alignment with
+	// ".IIF NE .&3, .PRINT ...", and only prints for a misaligned block.
+	n := int32(x.v)
+	if !x.known() {
+		n = int32(x.x.placeholder())
+	}
 
 	switch test {
 	case "EQ":

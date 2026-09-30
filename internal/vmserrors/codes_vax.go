@@ -110,7 +110,6 @@ const (
 	vaxNotInRepeat
 	vaxGenErr
 	vaxGenWrn
-	vaxGenPrint
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -239,11 +238,10 @@ const (
 	VAX_NOENDR      = VAXFacility<<FacilityPosition | vaxNoEndr<<MessagePosition | StatusError
 	VAX_NOTINREPEAT = VAXFacility<<FacilityPosition | vaxNotInRepeat<<MessagePosition | StatusError
 
-	// The message directives .ERROR, .WARN, and .PRINT, each with its
-	// own severity (MACRO's GENERR, GENWRN, and an informational one).
-	VAX_GENERR   = VAXFacility<<FacilityPosition | vaxGenErr<<MessagePosition | StatusError
-	VAX_GENWRN   = VAXFacility<<FacilityPosition | vaxGenWrn<<MessagePosition | StatusWarning
-	VAX_GENPRINT = VAXFacility<<FacilityPosition | vaxGenPrint<<MessagePosition | StatusInfo
+	// The message directives .ERROR and .WARN (MACRO's GENERR and
+	// GENWRN).
+	VAX_GENERR = VAXFacility<<FacilityPosition | vaxGenErr<<MessagePosition | StatusError
+	VAX_GENWRN = VAXFacility<<FacilityPosition | vaxGenWrn<<MessagePosition | StatusWarning
 )
 
 func init() {
@@ -333,7 +331,6 @@ func init() {
 	DefineMessage(VAX_NOTINREPEAT, VAXFacility, "NOTINREPEAT", "!S is not inside a repeat block")
 	DefineMessage(VAX_GENERR, VAXFacility, "GENERR", "Generated ERROR: !S")
 	DefineMessage(VAX_GENWRN, VAXFacility, "GENWRN", "Generated WARNING: !S")
-	DefineMessage(VAX_GENPRINT, VAXFacility, "GENPRINT", "Generated MESSAGE: !S")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")

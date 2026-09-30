@@ -75,7 +75,7 @@ type Assembler struct {
 	// messages holds the MACRO dialect's .PRINT messages, and comment
 	// the ";" comment of the statement being assembled (see
 	// message.go).
-	messages []error
+	messages []string
 	comment  string
 
 	// relocs holds the values left for the linker (MACRO dialect only),

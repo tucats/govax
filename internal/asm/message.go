@@ -11,7 +11,10 @@ import (
 // (the MACRO manual, chapter 6). Each displays the expression's value,
 // unless it's zero, and the comment: .ERROR as an assembly error, .WARN as
 // a warning, and .PRINT as an informational message, which the MACRO
-// command displays and which doesn't change the assembly's severity. The
+// command displays and which doesn't change the assembly's severity.
+// .PRINT's message is displayed bare, with no prefix of MACRO's own:
+// STARLET.MLB's $$R_TABINIT writes one into its comment
+// ("%MACRO-I-GENINFO, Generated INFO: RMS BLOCK NOT LONGWORD ALIGNED"). The
 // comment is the statement's own (see statement), with any argument
 // already substituted into it, since a macro's arguments are substituted
 // everywhere. A comment in a macro library ends with a second ";" so the
@@ -49,7 +52,7 @@ func (a *Assembler) pseudoPrintMACRO(c *cursor) error {
 		return err
 	}
 
-	a.messages = append(a.messages, a.located(vmserrors.New(vmserrors.VAX_GENPRINT, text)))
+	a.messages = append(a.messages, text)
 
 	return nil
 }
@@ -89,6 +92,6 @@ func (a *Assembler) messageText(c *cursor) (string, error) {
 	return strings.Join(parts, " "), nil
 }
 
-// Messages returns the MACRO dialect's .PRINT messages, each an *Error
-// naming its line.
-func (a *Assembler) Messages() []error { return a.messages }
+// Messages returns the MACRO dialect's .PRINT messages, in the order
+// assembly displayed them.
+func (a *Assembler) Messages() []string { return a.messages }
