@@ -29,6 +29,10 @@ type Result struct {
 	// and also kept apart from any qualifier that happens to share the same
 	// name at the plain entry level.
 	paramValues map[string]map[string]*matchedValue
+
+	// items holds, for a list parameter with positional qualifiers, each
+	// element's own qualifiers, by the parameter's name.
+	items map[string][]*Result
 }
 
 type matchedValue struct {
@@ -40,10 +44,31 @@ type matchedValue struct {
 	str       string
 	i         int64
 	list      []string // every element of a /list value; nil otherwise
+	// defaulted marks a qualifier the command line left out, which is
+	// present only because its grammar gives a default.
+	defaulted bool
 }
 
 func newResult() *Result {
-	return &Result{values: map[string]*matchedValue{}, paramValues: map[string]map[string]*matchedValue{}}
+	return &Result{values: map[string]*matchedValue{}, paramValues: map[string]map[string]*matchedValue{}, items: map[string][]*Result{}}
+}
+
+// Items returns the positional qualifiers of each element of the list
+// parameter name, in the list's order: element i's are read with
+// Items(name)[i].Present, String, List, and so on. It's nil for a
+// parameter with no positional qualifiers.
+func (r *Result) Items(name string) []*Result {
+	return r.items[upcase(name)]
+}
+
+// Defaulted reports whether the named qualifier is present only because
+// its grammar gives it a default, the command line having left it out
+// (DCL's CLI$_DEFAULTED, where CLI$PRESENT returns CLI$_PRESENT for one
+// given explicitly).
+func (r *Result) Defaulted(name string) bool {
+	v, ok := r.values[upcase(name)]
+
+	return ok && v.defaulted
 }
 
 // Present reports whether the named parameter or qualifier was supplied
@@ -330,6 +355,25 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 
 		p := active.Parameters[nextParam]
 
+		if p.List && len(p.positional()) > 0 {
+			var (
+				vals  []Value
+				items []*Result
+			)
+
+			vals, items, pos, err = g.readItems(r, active, nextParam, p, pos)
+			if err != nil {
+				return nil, err
+			}
+
+			r.setList(p.Name, p.ID, vals)
+			r.items[p.Name] = items
+			lastParam = p
+			nextParam++
+
+			continue
+		}
+
 		if p.List {
 			tokens, rem, err := readList(pos, false)
 			if err != nil {
@@ -610,6 +654,7 @@ func (g *Grammar) checkRequirements(active *Entry, r *Result) error {
 
 		if !r.Present(q.Name) && q.Default != nil {
 			r.set(q.Name, q.ID, false, *q.Default)
+			r.values[q.Name].defaulted = true
 		}
 	}
 
@@ -729,7 +774,7 @@ func readBareToken(s string) (token, rest string) {
 	i := 0
 	for i < len(s) {
 		switch s[i] {
-		case '=', '/', ' ', '\t':
+		case '=', '/', ',', ' ', '\t':
 			return s[:i], s[i:]
 		}
 
@@ -851,4 +896,134 @@ func readListElement(s string, paren bool) (token, rest string, err error) {
 	}
 
 	return s, "", nil
+}
+
+// readItems reads a list parameter whose elements can each carry
+// positional qualifiers ("MAIN,MYLIB/LIBRARY,OPTS/OPTIONS"). Each
+// element's positional qualifiers go into its own Result. Any other
+// qualifier between elements is parsed as parseQualifier would parse it
+// after the parameter, so "A/MAP,B" works as DCL allows; one that switches
+// to another syntax there is an error.
+func (g *Grammar) readItems(r *Result, active *Entry, nextParam int, p *Parameter, s string) ([]Value, []*Result, string, error) {
+	var (
+		tokens []string
+		items  []*Result
+	)
+
+	orig := s
+	positional := p.positional()
+
+	for {
+		s = strings.TrimLeft(s, " \t")
+
+		tok, rem, err := readListElement(s, false)
+		if err != nil {
+			return nil, nil, "", err
+		}
+
+		if tok == "" && !strings.HasPrefix(s, `""`) {
+			return nil, nil, "", vmserrors.New(vmserrors.CLI_EMPTYELEMENT, orig)
+		}
+
+		item := newResult()
+
+		for {
+			after := strings.TrimLeft(rem, " \t")
+			if !strings.HasPrefix(after, "/") {
+				break
+			}
+
+			name, _ := readBareToken(after[1:])
+
+			if q, negated, err := matchQualifier(positional, name); err == nil {
+				if rem, err = g.itemQualifier(item, q, negated, after[1+len(name):]); err != nil {
+					return nil, nil, "", err
+				}
+
+				continue
+			}
+
+			next, _, _, rest, err := g.parseQualifier(r, active, nextParam, p, after[1:])
+			if err != nil {
+				return nil, nil, "", err
+			}
+
+			if next != active {
+				return nil, nil, "", vmserrors.New(vmserrors.CLI_BADQUALIFIER, name)
+			}
+
+			rem = rest
+		}
+
+		tokens = append(tokens, tok)
+		items = append(items, item)
+
+		after := strings.TrimLeft(rem, " \t")
+		if !strings.HasPrefix(after, ",") {
+			vals, err := g.resolveList(p.Type, p.TypeName, tokens)
+			if err != nil {
+				return nil, nil, "", vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
+			}
+
+			return vals, items, rem, nil
+		}
+
+		s = after[1:]
+	}
+}
+
+// itemQualifier records a positional qualifier (rest is what follows its
+// name) in its element's Result, and returns what follows it.
+func (g *Grammar) itemQualifier(item *Result, q *Qualifier, negated bool, rest string) (string, error) {
+	if negated && q.NoNegate {
+		return "", vmserrors.New(vmserrors.CLI_NONEGATE, q.Name)
+	}
+
+	if !strings.HasPrefix(rest, "=") {
+		switch {
+		case !q.hasValue():
+			item.markPresent(q.Name, q.ID, negated)
+		case q.Default != nil:
+			item.set(q.Name, q.ID, negated, *q.Default)
+		default:
+			return "", vmserrors.New(vmserrors.CLI_NEEDQUALIFIERVALUE, q.Name)
+		}
+
+		return rest, nil
+	}
+
+	if !q.hasValue() {
+		return "", vmserrors.New(vmserrors.CLI_NOQUALIFIERVALUE, q.Name)
+	}
+
+	if q.List {
+		tokens, rem, err := readList(rest[1:], true)
+		if err != nil {
+			return "", vmserrors.Wrap(vmserrors.CLI_BADQUALIFIER, err, q.Name)
+		}
+
+		vals, err := g.resolveList(q.Type, q.TypeName, tokens)
+		if err != nil {
+			return "", vmserrors.Wrap(vmserrors.CLI_BADQUALIFIER, err, q.Name)
+		}
+
+		item.setList(q.Name, q.ID, vals)
+		item.values[q.Name].negated = negated
+
+		return rem, nil
+	}
+
+	token, rem, err := readValueToken(rest[1:])
+	if err != nil {
+		return "", err
+	}
+
+	val, _, _, err := g.resolveValue(q.Type, q.TypeName, token)
+	if err != nil {
+		return "", vmserrors.Wrap(vmserrors.CLI_BADQUALIFIER, err, q.Name)
+	}
+
+	item.set(q.Name, q.ID, negated, val)
+
+	return rem, nil
 }

@@ -105,6 +105,20 @@ func (p *Parameter) qualifier(name string) (q *Qualifier, negated bool, err erro
 	return matchQualifier(p.Qualifiers, name)
 }
 
+// positional returns the parameter's positional qualifiers, which each
+// element of its list can carry.
+func (p *Parameter) positional() []*Qualifier {
+	var out []*Qualifier
+
+	for _, q := range p.Qualifiers {
+		if q.Positional {
+			out = append(out, q)
+		}
+	}
+
+	return out
+}
+
 // Qualifier is one /-prefixed switch of an Entry, matching a grammar
 // "qualifier" statement.
 type Qualifier struct {
@@ -121,6 +135,12 @@ type Qualifier struct {
 	// value or a parenthesised, comma-separated list of them
 	// ("/X=(A,B)"), read back with Result.List.
 	List bool
+
+	// Positional marks a qualifier declared with /placement=positional
+	// on a list parameter (/parameter=): it belongs to the one element it
+	// follows, as LINK's /LIBRARY does in "LINK MAIN,MYLIB/LIBRARY", and
+	// is read back through Result.Items.
+	Positional bool
 
 	typeRef  *Type      // resolved by validate()
 	aliasRef *Qualifier // resolved by validate()

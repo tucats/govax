@@ -2,6 +2,7 @@ package dcl
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -169,6 +170,16 @@ func ParseGrammar(text string) (*Grammar, error) {
 
 			_, q.List = switches["LIST"]
 
+			if placement, ok := switches["PLACEMENT"]; ok {
+				if upcase(placement) != "POSITIONAL" {
+					err := fmt.Errorf("qualifier %s: placement %q isn't supported", q.Name, placement)
+
+					return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
+				}
+
+				q.Positional = true
+			}
+
 			// /parameter=<name> is the opt-in marker for a Phase 23
 			// parameter-scoped qualifier: instead of this qualifier landing
 			// on the enclosing verb/syntax's own Qualifiers list (today's
@@ -190,8 +201,20 @@ func ParseGrammar(text string) (*Grammar, error) {
 					return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
 				}
 
+				if q.Positional && !target.List {
+					err := fmt.Errorf("positional qualifier %s needs a list parameter", q.Name)
+
+					return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
+				}
+
 				target.Qualifiers = append(target.Qualifiers, q)
 			} else {
+				if q.Positional {
+					err := fmt.Errorf("positional qualifier %s needs /parameter=", q.Name)
+
+					return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
+				}
+
 				cur.Qualifiers = append(cur.Qualifiers, q)
 			}
 

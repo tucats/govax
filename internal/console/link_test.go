@@ -388,6 +388,20 @@ func TestDispatch_linkViaDCL(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "entry.map")); err != nil {
 		t.Errorf("no default map: %v", err)
 	}
+
+	// Without /MAP there's no map, though the grammar gives /MAP a
+	// default value.
+	if err := os.Remove(filepath.Join(dir, "entry.map")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := d.Dispatch(`LINK "` + entry + `"`); err != nil {
+		t.Fatalf("LINK: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, "entry.map")); err == nil {
+		t.Error("LINK without /MAP wrote a map")
+	}
 }
 
 // TestLink_map writes link maps: by default beside the first object with
