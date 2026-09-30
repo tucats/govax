@@ -35,6 +35,11 @@ go.work.sum
 /testdata/disks/*
 !/testdata/disks/README.md
 
+# Licensed VMS 7.3 library files copied from the user's VAX (docs/PHASE-30.md):
+# IMAGELIB.OLB, STARLET.OLB, LIBRTL.EXE. Tests that use them skip without them.
+/testdata/vmslib/*
+!/testdata/vmslib/README.md
+
 # Real VMS 7.3 STARLET.REQ (BLISS symbol definitions) and rmsdef.h (C header),
 # both extracted from a live VMS system, used as a one-time reference for
 # exact $FABDEF/$RABDEF/$RMSDEF values while implementing Phase 22
