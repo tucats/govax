@@ -3413,6 +3413,7 @@ $LINK
 
         LINK <object>[,<object>...][/HOST] [/EXECUTABLE[=<image>] |
              /NOEXECUTABLE] [/[NO]TRACEBACK] [/[NO]SYSLIB]
+             [/MAP[=<map>] [/BRIEF] | /NOMAP]
 
     Parameter:
 
@@ -3440,6 +3441,17 @@ $LINK
         /SYSLIB         Searches IMAGELIB.OLB and STARLET.OLB for symbols
                         the objects don't define, as VMS LINK does by
                         default.  /NOSYSLIB uses only govax's own tables.
+
+        /MAP[=<map>]    Writes a link map, laid out as VMS LINK lays out
+                        its default map: the object modules, the program
+                        sections and each module's part of them, the
+                        global symbols the objects define, and the image
+                        synopsis.  Without a file name, the map has the
+                        first object's name and location, with the type
+                        MAP.  /NOMAP, the default, writes none.
+
+        /BRIEF          Makes the map brief: only the object modules and
+                        the image synopsis.
 
     Program sections are laid out as VMS LINK lays them out: grouped into
     image sections by their attributes, from address 200 (hexadecimal).
@@ -3471,7 +3483,8 @@ $LINK
     skipped, so an image has no debug symbol table.
 
     From the host shell, "govax link <object>..." runs this command, with
-    --executable <file>, --no-executable, --no-traceback, or --no-syslib.
+    --executable <file>, --no-executable, --no-traceback, --no-syslib,
+    --map, --map-file <file>, or --brief.
 
     Examples:
 
@@ -3480,6 +3493,7 @@ $LINK
         RUN "hello.exe"
 
         LINK DUA0:[OBJ]MAIN,SUB /EXECUTABLE=DUA0:[EXE]PROG.EXE
+        LINK "hello"/MAP
 
     See also the help for MACRO and RUN.
 

@@ -55,6 +55,9 @@ func vmsSources(t *testing.T) []SymbolSource {
 				}
 
 				src, _, err := ReadShareableImage(librtlExe)
+				if src != nil {
+					src.File = "LIBRTL.EXE"
+				}
 
 				return src, err
 			},
@@ -87,7 +90,9 @@ func TestReadShareableImage(t *testing.T) {
 		t.Errorf("%d symbols, want 305", len(src.Symbols))
 	}
 
-	want := SharedImage{Name: "LIBRTL", Pages: 264, MajorID: 1, MinorID: 0x0E, Match: MatchLEQ}
+	// Its symbol table defines one psect, and it has two image sections:
+	// the shareable one and a demand-zero one.
+	want := SharedImage{Name: "LIBRTL", Pages: 264, MajorID: 1, MinorID: 0x0E, Match: MatchLEQ, Symbols: 305, Psects: 1, Sections: 2}
 	if i, ok := src.Image("LIBRTL"); !ok || i != want {
 		t.Errorf("image %+v, want %+v", i, want)
 	}
@@ -227,5 +232,36 @@ func TestLinkLibraryModulesChain(t *testing.T) {
 	_, err = Link([]Input{{File: "t.obj", Module: m}}, Options{ImageName: "T", Sources: []SymbolSource{lib, values}})
 	if err == nil || !strings.Contains(err.Error(), "doesn't define THIRD") {
 		t.Errorf("err = %v", err)
+	}
+}
+
+// TestLinkSelectiveSearch adds modules from a selectively searched
+// library, as STARLET.OLB's are: the link takes only the definitions of
+// symbols something refers to. ONE's module also defines TWO, which
+// nothing refers to until THREE's module, added later, does; the link
+// then takes TWO from the module it already has. (ONE is 10 bytes: a
+// mask, CALLS, #0, a 5-byte G^ operand, and RET.)
+func TestLinkSelectiveSearch(t *testing.T) {
+	one := macroModule(t, ".PSECT CODE,NOWRT,EXE\n.ENTRY ONE,^M<>\nCALLS #0,G^THREE\nRET\n.ENTRY TWO,^M<>\nRET\nUNUSED == 7\n.END")
+	three := macroModule(t, ".PSECT CODE,NOWRT,EXE\n.ENTRY THREE,^M<>\nCALLS #0,G^TWO\nRET\n.END")
+	main := macroModule(t, ".PSECT CODE,NOWRT,EXE\n.ENTRY START,^M<>\nCALLS #0,G^ONE\nRET\n.END START")
+
+	for _, selective := range []bool{true, false} {
+		first := &Input{File: "LIB(ONE)", Module: one, Selective: selective}
+		lib := moduleSource{"ONE": first, "TWO": first, "UNUSED": first, "THREE": {File: "LIB(THREE)", Module: three, Selective: selective}}
+
+		img, err := Link([]Input{{File: "t.obj", Module: main}}, Options{ImageName: "T", Sources: []SymbolSource{lib}})
+		if err != nil {
+			t.Fatalf("selective %v: %v", selective, err)
+		}
+
+		two := img.l.symbols["TWO"]
+		if two == nil || !two.defined || two.value != img.l.symbols["ONE"].value+10 {
+			t.Errorf("selective %v: TWO is %+v", selective, two)
+		}
+
+		if _, ok := img.l.symbols["UNUSED"]; ok == selective {
+			t.Errorf("selective %v: UNUSED in the symbol table: %v", selective, ok)
+		}
 	}
 }

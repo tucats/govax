@@ -14,14 +14,16 @@ import (
 // This file implements docs/PHASE-30.md's LINK command:
 //
 //	LINK object[,object...][/HOST] [/EXECUTABLE[=image] | /NOEXECUTABLE] [/[NO]TRACEBACK] [/[NO]SYSLIB]
+//	     [/MAP[=map] [/BRIEF] | /NOMAP]
 //
 // It reads each object module, links them with internal/link, and writes
-// the executable image. The objects and the image can each be a host file
-// or a file on a mounted ODS-2 volume, by the same rules as MACRO's source
-// and object (rms.Session.Locate). An object named without a type is
-// .OBJ, and a later object's bare name is found beside the one before it.
-// The image is named after the first object, with the type EXE, unless
-// /EXECUTABLE names it.
+// the executable image, and a link map if asked. The objects, the image,
+// and the map can each be a host file or a file on a mounted ODS-2 volume,
+// by the same rules as MACRO's source and object (rms.Session.Locate). An
+// object named without a type is .OBJ, and a later object's bare name is
+// found beside the one before it. The image and map are named after the
+// first object, with the types EXE and MAP, unless /EXECUTABLE or /MAP
+// names them.
 
 // LinkOptions is one LINK command.
 type LinkOptions struct {
@@ -43,6 +45,13 @@ type LinkOptions struct {
 	// NoSysLib is /NOSYSLIB: don't search IMAGELIB.OLB and STARLET.OLB
 	// (linksource.go).
 	NoSysLib bool
+
+	// Map is /MAP: write a link map, to MapFile, or by default to a file
+	// named after the first object with the type MAP. Brief is /BRIEF:
+	// only the object modules and the image synopsis.
+	Map     bool
+	MapFile string
+	Brief   bool
 }
 
 // Link links object modules into an executable image.
@@ -120,17 +129,47 @@ func (c *Console) Link(opts LinkOptions) error {
 		return vmserrors.Wrap(vmserrors.CLI_LINKING, err, exe.Name)
 	}
 
-	if opts.NoExecutable {
+	var imageFile string
+
+	if !opts.NoExecutable {
+		blocks := make([][]byte, 0, len(img.Bytes)/512)
+		for i := 0; i < len(img.Bytes); i += 512 {
+			blocks = append(blocks, img.Bytes[i:i+512])
+		}
+
+		created, err := s.CreateRecordFile(exe, rms.ImageBlocks, blocks)
+		if err != nil {
+			return vmserrors.Wrap(vmserrors.CLI_LINKING, err, exe.Name)
+		}
+
+		imageFile = created.Name
+	}
+
+	if !opts.Map {
 		return nil
 	}
 
-	blocks := make([][]byte, 0, len(img.Bytes)/512)
-	for i := 0; i < len(img.Bytes); i += 512 {
-		blocks = append(blocks, img.Bytes[i:i+512])
+	mapLoc, err := outputLocation(s, opts.MapFile, first, "MAP")
+	if err != nil {
+		return fileFailure(err, opts.MapFile)
 	}
 
-	if _, err := s.CreateRecordFile(exe, rms.ImageBlocks, blocks); err != nil {
-		return vmserrors.Wrap(vmserrors.CLI_LINKING, err, exe.Name)
+	// The map records its own name as it's about to be created: on a
+	// volume, without the version it gets.
+	lines := img.Map(link.MapOptions{
+		ImageFile: imageFile,
+		ImageText: opts.Executable,
+		MapFile:   mapLoc.Name,
+		Brief:     opts.Brief,
+	})
+
+	records := make([][]byte, len(lines))
+	for i, line := range lines {
+		records[i] = []byte(line)
+	}
+
+	if _, err := s.CreateRecordFile(mapLoc, rms.TextRecords, records); err != nil {
+		return vmserrors.Wrap(vmserrors.CLI_LINKING, err, mapLoc.Name)
 	}
 
 	return nil

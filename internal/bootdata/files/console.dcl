@@ -771,7 +771,9 @@ grammar console
     ! each, as MACRO's does to its source. EXECUTABLE is VMS LINK's own
     ! /[NO]EXECUTABLE[=file] (empty default: the first object's name with
     ! type EXE), and TRACEBACK is on unless /NOTRACEBACK. /NOSYSLIB
-    ! skips IMAGELIB.OLB and STARLET.OLB, as VMS LINK's does.
+    ! skips IMAGELIB.OLB and STARLET.OLB, as VMS LINK's does. MAP is
+    ! /[NO]MAP[=file] (empty default: the first object's name with type
+    ! MAP), and /BRIEF makes the map brief.
     !
     verb link/id=1350
 
@@ -786,5 +788,9 @@ grammar console
                     /default=""
         qualifier   traceback/id=1354
         qualifier   syslib/id=1355
+        qualifier   map/id=1356                 -
+                    /type=$string               -
+                    /default=""
+        qualifier   brief/id=1357
 
 end

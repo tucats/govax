@@ -564,12 +564,17 @@ func (l *linker) image() (*Image, error) {
 		return nil, fmt.Errorf("link: %w", err)
 	}
 
-	img := &Image{Transfer: l.transfer, HasTransfer: l.transferSet}
+	l.isdCount = len(isds)
+	l.fixupVA, l.fixupLength = fixupVA, uint32(len(fixup))
+
+	img := &Image{Transfer: l.transfer, HasTransfer: l.transferSet, l: l}
 	img.Bytes = header
 
 	for _, p := range pages {
 		img.Bytes = append(img.Bytes, p...)
 	}
+
+	l.imageBlocks = uint32(len(img.Bytes)/blockSize) - 1
 
 	for _, p := range l.order {
 		if p.flags&obj.PsectREL != 0 {

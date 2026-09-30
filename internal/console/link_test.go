@@ -371,6 +371,94 @@ func TestDispatch_linkViaDCL(t *testing.T) {
 	if err := d.Dispatch(`LINK "` + entry + `"/NOEXECUTABLE`); err != nil {
 		t.Fatalf("LINK/NOEXECUTABLE: %v", err)
 	}
+
+	mapFile := filepath.Join(dir, "both.lis")
+	if err := d.Dispatch(`LINK "` + entry + `"/NOEXECUTABLE/MAP="` + mapFile + `"/BRIEF`); err != nil {
+		t.Fatalf("LINK/MAP=: %v", err)
+	}
+
+	if data, err := os.ReadFile(mapFile); err != nil || !strings.Contains(string(data), "BRIEF in file") {
+		t.Errorf("map: %v\n%s", err, data)
+	}
+
+	if err := d.Dispatch(`LINK "` + entry + `"/NOEXECUTABLE/MAP`); err != nil {
+		t.Fatalf("LINK/MAP: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(dir, "entry.map")); err != nil {
+		t.Errorf("no default map: %v", err)
+	}
+}
+
+// TestLink_map writes link maps: by default beside the first object with
+// the type MAP, naming the image's file; to a file /MAP= names; brief; and
+// on a mounted volume, as a text file naming itself and the image with
+// its version.
+func TestLink_map(t *testing.T) {
+	c, _ := newTestConsole(t)
+	dir := t.TempDir()
+	obj := assembleFixture(t, c, "psects", dir)
+
+	if err := c.Link(LinkOptions{Objects: []string{obj}, Map: true}); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, "psects.map"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A page heading's image name is cut to its 64-character field.
+	exe := filepath.Join(dir, "psects.exe")
+	text := string(data)
+
+	for _, want := range []string{
+		"\f\n" + exe[:min(len(exe), 64)],
+		"! Program Section Synopsis !",
+		"FIRST           00000600-R",
+		"Map format:                                       DEFAULT in file " + filepath.Join(dir, "psects.map") + "\n",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("no %q in the map:\n%s", want, text)
+		}
+	}
+
+	brief := filepath.Join(dir, "brief.lis")
+	if err := c.Link(LinkOptions{Objects: []string{obj}, NoExecutable: true, Map: true, MapFile: brief, Brief: true}); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err = os.ReadFile(brief)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if text := string(data); strings.Contains(text, "Symbols By Name") || !strings.Contains(text, "No image file created") {
+		t.Errorf("brief map, no image:\n%s", text)
+	}
+
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.Macro(MacroOptions{Source: marFixture("psects"), Object: "DUA0:[000000]PSECTS.OBJ"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.Link(LinkOptions{Objects: []string{"DUA0:[000000]PSECTS"}, Map: true}); err != nil {
+		t.Fatalf("LINK: %v", err)
+	}
+
+	records, found, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA0:[000000]PSECTS.MAP"}, rms.TextRecords)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	text = string(bytes.Join(records, []byte("\n")))
+	if found.Name != "DUA0:[000000]PSECTS.MAP;1" ||
+		!strings.Contains(text, "\nDUA0:[000000]PSECTS.EXE;1 ") ||
+		!strings.Contains(text, "PSECTS          V1.0                   94 DUA0:[000000]PSECTS.OBJ;1") ||
+		!strings.Contains(text, "in file DUA0:[000000]PSECTS.MAP\n") {
+		t.Errorf("volume map %s:\n%s", found.Name, text)
+	}
 }
 
 // vmsdefP1Address is a P1 vector entry's address.

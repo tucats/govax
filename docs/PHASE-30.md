@@ -240,7 +240,16 @@ them.
    (`IMAGELIB.OLB`, `STARLET.OLB`, a real image's GST), tested against
    files from the VAX when present.
 4. **More than one object,** `CON`/`OVR` psects across modules, `/MAP`,
-   options files, and whatever the fixtures show next.
+   options files, and whatever the fixtures show next. In parts:
+   - **4a. Done.** `/MAP` and `/BRIEF`, matching real LINK's maps.
+   - **4b.** Input file qualifiers (`/LIBRARY`, `/INCLUDE`, `/SELECTIVE_SEARCH`,
+     `/SHAREABLE`) and options files (`/OPTIONS`: `STACK=`,
+     `IDENTIFICATION=`, `SYMBOL=`, and the file lines).
+   - **4c.** Multi-module fixtures for the VAX (needs the user): the
+     Phase 27 fixtures that refer to symbols defined nowhere, linked with
+     modules that define them; `CON`/`OVR` psects across modules; and
+     `.ADDRESS` of a shareable image routine, whose fixup list govax
+     doesn't write yet.
 5. **Real VMS checks** (needs the user): `ANALYZE/IMAGE` of the real and
    govax images, `/NOTRACEBACK` links, and running govax-linked images
    on the VAX.
@@ -546,3 +555,74 @@ them.
 
   Tests that need the VMS files skip without them. `go test ./...`
   passes.
+
+### 2026-09-30 — Subtask 4a: link maps
+
+- **`/MAP[=file]` and `/BRIEF`** (`internal/link/mapfile.go`,
+  `Image.Map`) write the map real LINK writes by default, ported from
+  the linker's own map routines (`linker/lis/lnkmaprtn.lis`) and the
+  cross reference facility that lays out its symbol table
+  (`crf/lis/cref.lis`):
+  - pages of 58 lines, each a form feed, a heading (the image file, the
+    link time, the linker ID, the page), and a blank line; a table's
+    column headings, and the psect being listed, repeat on a new page;
+  - the object module synopsis: each module the command named, its size
+    (its contributions' total), file, creation date, and language
+    processor, with a name or ident over 15 characters on a line of its
+    own;
+  - the program section synopsis: each nonempty relocatable psect by
+    address, with its attributes, and each nonzero contribution from the
+    command's modules;
+  - the global symbols the command's modules define, by name, in the cross
+    reference facility's columns: 28 characters and 6 blanks apart, four
+    to a line, filled down the rest of each page (44 characters, two to a
+    line, when a name is over 15 characters), then the key to their flags;
+  - on a new page, the image synopsis: the memory allocated (through the
+    fixup section), the stack, the header and binary blocks, the image
+    name and ident, the counts, the transfer addresses, the code
+    references to shareable images, and the map's estimated length
+    (`7 + modules/4 + psects + symbols/16`, less the last two for
+    `/BRIEF`).
+- **The counts, as real LINK counts them** (from `lnkobjps1_v.lis` and
+  `lnkproshr.lis`), which needed three changes to the linker:
+  - **Selective search.** STARLET's modules are searched selectively
+    (`MHD$V_SELSRC` in the librarian's module header, now
+    `lbr.ModuleHeader.SelectiveSearch`, and `link.Input.Selective`): the
+    link takes only their definitions of symbols already referred to. So
+    `SYS$P1_VECTOR` adds `SYS$IMGSTA` alone, not its 339 symbols. A
+    definition passed over is kept, and taken if a later module refers to
+    it.
+  - **`SYS$IMGSTA`** is now looked up through the symbol sources, as real
+    LINK looks it up in STARLET, with the P1 vector's address as the
+    fallback. That adds `SYS$P1_VECTOR` as a module, and its psects, to
+    every traceback link that has STARLET; the images are unchanged.
+  - **Shareable images.** A link that uses one takes in its whole global
+    symbol table: its symbols and psects count, and so do its own image
+    sections (LIBRTL has two, its shareable code and a demand-zero one)
+    rather than the global section ISD. `SharedImage` carries these
+    counts (`ReadShareableImage` reads them), and sources that read files
+    say how many (`FileCounter`).
+- **Matches real LINK.** `TestMapMatchesRealLINK` links `entry`, `hello`,
+  and `psects` from real MACRO's objects with real LINK's libraries, and
+  each map equals real LINK's line for line (`testdata/mar/vax/*.map`), up
+  to its run statistics. Those aren't written: page faults and CPU times
+  say nothing about the image.
+- **Not the same as real LINK:**
+  - The map records its own name as it's about to be created, so on a
+    volume without the version it gets.
+  - Without the VMS libraries, the counts are govax's tables': no
+    library files, and a shareable image counted as one image section.
+  - `/FULL` and `/CROSS_REFERENCE` aren't written.
+- **Commands:** `LINK ... /MAP[=file] [/BRIEF]` and `govax link --map`,
+  `--map-file <file>`, `--brief`. The link subcommand's options are now
+  one `linkFlags` struct.
+- Tests:
+  - `internal/link`: the real maps; the symbol table's columns across
+    pages (300 symbols); long module, psect, and symbol names; a brief
+    map with no image; selective search, including a definition taken
+    after its module was added; LIBRTL's counts.
+  - `internal/console`: default and named maps, brief, and on a volume;
+    `/MAP` and `/BRIEF` through DCL.
+  - `cmd/govax`: the map options' LINK command.
+
+  `go test ./...` passes.

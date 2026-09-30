@@ -39,6 +39,11 @@ import (
 type Input struct {
 	File   string
 	Module *obj.Module
+	// Selective marks a module from an object library that is searched
+	// selectively (LIBRARY/INSERT/SELECTIVE_SEARCH): the link takes only
+	// its definitions of symbols already referred to, as STARLET.OLB's
+	// modules are taken.
+	Selective bool
 }
 
 // Options are the parts of an image that don't come from its modules.
@@ -72,6 +77,9 @@ type Image struct {
 	// Transfer is the user transfer address, if the image has one.
 	Transfer    uint32
 	HasTransfer bool
+
+	// l is the link that made the image, for its map (mapfile.go).
+	l *linker
 }
 
 // PsectInfo describes one program section of the image, for a map.
@@ -83,11 +91,13 @@ type PsectInfo struct {
 	Flags  uint16
 }
 
-// sysImgsta is SYS$IMGSTA's address in the P1 vector: the image activator
-// calls it first in an image linked with traceback.
+// imgstaName is the routine the image activator calls first in an image
+// linked with traceback, and sysImgsta its address in the P1 vector.
+const imgstaName = "SYS$IMGSTA"
+
 var sysImgsta = func() uint32 {
 	for _, e := range vmsdef.P1VectorTable {
-		if e.Name == "SYS$IMGSTA" {
+		if e.Name == imgstaName {
 			return e.Addr
 		}
 	}
@@ -119,9 +129,15 @@ func Link(inputs []Input, opts Options) (*Image, error) {
 	l := &linker{opts: opts, psects: map[string]*psect{}, symbols: map[string]*global{}}
 
 	for i := range inputs {
-		if err := l.pass1(&inputs[i]); err != nil {
+		if _, err := l.pass1(&inputs[i], false); err != nil {
 			return nil, err
 		}
+	}
+
+	// With traceback, the image refers to SYS$IMGSTA, which real LINK
+	// finds in STARLET.OLB like any other symbol.
+	if opts.Traceback {
+		l.refer(imgstaName, "")
 	}
 
 	if err := l.checkUndefined(); err != nil {
@@ -165,6 +181,13 @@ type linker struct {
 	transferWk      bool
 	pendingTransfer pendingTransfer
 	imageID         string
+
+	// What image() laid out, for the map: the image sections, and the
+	// fixup section's address and size.
+	isdCount    int
+	fixupVA     uint32
+	fixupLength uint32
+	imageBlocks uint32
 }
 
 // module is one input module during the link.
@@ -172,6 +195,16 @@ type module struct {
 	input *Input
 	name  string
 	ident string
+	// library says an object library supplied the module, rather than
+	// the command; a default map lists only the command's modules.
+	library bool
+	// created and language are its creation time and language processor
+	// (MHD and LNM), for the map.
+	created  string
+	language string
+	// deferred are a selectively searched module's definitions of symbols
+	// nothing referred to when it was read, in case something does later.
+	deferred map[string]*obj.Symbol
 	// contribs are the module's psect contributions, by its own psect
 	// index.
 	contribs []*contribution
@@ -229,46 +262,61 @@ type global struct {
 }
 
 // pass1 reads a module's global symbol directory and end of module
-// record.
-func (l *linker) pass1(in *Input) error {
-	m := &module{input: in}
+// record. library says an object library supplied it.
+func (l *linker) pass1(in *Input, library bool) (*module, error) {
+	m := &module{input: in, library: library}
 	l.modules = append(l.modules, m)
 
 	for _, rec := range in.Module.Records {
 		switch r := rec.(type) {
 		case *obj.MainHeader:
-			m.name, m.ident = r.Name, r.Version
+			m.name, m.ident, m.created = r.Name, r.Version, r.Created
+
+		case *obj.TextHeader:
+			if r.Type == obj.HdrLNM {
+				m.language = r.Text
+			}
 
 		case *obj.GSD:
 			for _, sub := range r.Subrecords {
 				if err := l.gsdEntry(m, sub); err != nil {
-					return fmt.Errorf("link: %s: %w", in.File, err)
+					return nil, fmt.Errorf("link: %s: %w", in.File, err)
 				}
 			}
 
 		case *obj.EOM:
 			if r.HasTransfer {
 				if err := l.noteTransfer(m, r); err != nil {
-					return err
+					return nil, err
 				}
 			}
 		}
 	}
 
-	for _, g := range l.symbols {
-		if g.module != m || !g.rel {
-			continue
-		}
-
-		if g.psectIndex >= len(m.contribs) {
-			return fmt.Errorf("link: %s: %s is in psect %d, which the module doesn't define", in.File, g.name, g.psectIndex)
-		}
-
-		g.contrib = m.contribs[g.psectIndex]
+	if err := l.resolvePsects(m); err != nil {
+		return nil, err
 	}
 
 	if l.imageID == "" && !l.transferSet {
 		l.imageID = m.ident
+	}
+
+	return m, nil
+}
+
+// resolvePsects gives each relocatable symbol the module defines its
+// psect contribution, once the module's psects are all known.
+func (l *linker) resolvePsects(m *module) error {
+	for _, g := range l.symbols {
+		if g.module != m || !g.rel || g.contrib != nil {
+			continue
+		}
+
+		if g.psectIndex >= len(m.contribs) {
+			return fmt.Errorf("link: %s: %s is in psect %d, which the module doesn't define", m.input.File, g.name, g.psectIndex)
+		}
+
+		g.contrib = m.contribs[g.psectIndex]
 	}
 
 	return nil
@@ -304,19 +352,41 @@ func (l *linker) gsdEntry(m *module, sub obj.Subrecord) error {
 	return nil
 }
 
-// symbol records a symbol definition or reference.
-func (l *linker) symbol(m *module, s *obj.Symbol) error {
-	g, ok := l.symbols[s.Name]
+// refer records a reference to the global symbol name from the module
+// named by, and returns the symbol.
+func (l *linker) refer(name, by string) *global {
+	g, ok := l.symbols[name]
 	if !ok {
-		g = &global{name: s.Name, seq: len(l.symbols)}
-		l.symbols[s.Name] = g
+		g = &global{name: name, seq: len(l.symbols)}
+		l.symbols[name] = g
 	}
 
+	if by != "" {
+		g.refs = append(g.refs, by)
+	}
+
+	return g
+}
+
+// symbol records a symbol definition or reference.
+func (l *linker) symbol(m *module, s *obj.Symbol) error {
 	if !s.Defined() {
-		g.refs = append(g.refs, m.name)
+		l.refer(s.Name, m.name)
 
 		return nil
 	}
+
+	if m.input.Selective && l.symbols[s.Name] == nil {
+		if m.deferred == nil {
+			m.deferred = map[string]*obj.Symbol{}
+		}
+
+		m.deferred[s.Name] = s
+
+		return nil
+	}
+
+	g := l.refer(s.Name, "")
 
 	weak := s.Flags&obj.SymWEAK != 0
 
@@ -372,6 +442,7 @@ func (l *linker) noteTransfer(m *module, eom *obj.EOM) error {
 // first referred to, so library modules are added in a fixed order.
 func (l *linker) checkUndefined() error {
 	added := map[*Input]string{}
+	modules := map[*Input]*module{}
 
 	for {
 		progress := false
@@ -397,21 +468,51 @@ func (l *linker) checkUndefined() error {
 			}
 
 			if first, ok := added[d.Module]; ok {
-				return fmt.Errorf("link: %s was added for %s, but doesn't define %s", d.Module.File, first, g.name)
+				// A selectively searched module already added may have
+				// passed over the definition, as nothing referred to it
+				// then.
+				m := modules[d.Module]
+
+				s := m.deferred[g.name]
+				if s == nil {
+					return fmt.Errorf("link: %s was added for %s, but doesn't define %s", d.Module.File, first, g.name)
+				}
+
+				delete(m.deferred, g.name)
+
+				if err := l.symbol(m, s); err != nil {
+					return fmt.Errorf("link: %s: %w", d.Module.File, err)
+				}
+
+				if err := l.resolvePsects(m); err != nil {
+					return err
+				}
+
+				progress = true
+
+				continue
 			}
 
 			added[d.Module] = g.name
 
-			if err := l.pass1(d.Module); err != nil {
+			m, err := l.pass1(d.Module, true)
+			if err != nil {
 				return err
 			}
 
+			modules[d.Module] = m
 			progress = true
 		}
 
 		if !progress {
 			break
 		}
+	}
+
+	// With no STARLET.OLB, and no other source, SYS$IMGSTA is where the
+	// P1 vector has it.
+	if g := l.symbols[imgstaName]; g != nil && !g.defined && l.opts.Traceback {
+		g.defined, g.fromSource, g.offset = true, true, sysImgsta
 	}
 
 	var undefined []string

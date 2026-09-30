@@ -559,6 +559,9 @@ func (d *Dispatcher) bindGrammar() {
 			NoExecutable: r.Present("EXECUTABLE") && r.Negated("EXECUTABLE"),
 			NoTraceback:  r.Present("TRACEBACK") && r.Negated("TRACEBACK"),
 			NoSysLib:     r.Present("SYSLIB") && r.Negated("SYSLIB"),
+			Map:          r.Present("MAP") && !r.Negated("MAP"),
+			MapFile:      r.String("MAP"),
+			Brief:        r.Present("BRIEF"),
 		})
 	})
 

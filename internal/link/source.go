@@ -47,6 +47,12 @@ type SharedImage struct {
 	MajorID uint8
 	MinorID uint32 // 24 bits
 	Match   Match
+	// Symbols and Psects are how many symbols and psects the image's
+	// global symbol table defines, all of which a link that uses the image
+	// takes in, and Sections how many image sections of its own it has
+	// (global ones and its stack aside), which the link counts as its own:
+	// a map reports these counts. They're 0 if unknown.
+	Symbols, Psects, Sections int
 }
 
 // SymbolSource finds global symbols the object modules don't define.
@@ -60,10 +66,27 @@ type SymbolSource interface {
 	Image(name string) (SharedImage, bool)
 }
 
+// FileCounter is a SymbolSource that reads files: Files counts those it
+// has read, for a map's count of the link's files.
+type FileCounter interface {
+	Files() int
+}
+
 // TableSource is a SymbolSource made from tables.
 type TableSource struct {
 	Symbols map[string]Definition
 	Images  map[string]SharedImage
+	// File names the file the tables were read from, if any.
+	File string
+}
+
+// Files implements FileCounter.
+func (t *TableSource) Files() int {
+	if t.File == "" {
+		return 0
+	}
+
+	return 1
 }
 
 // Lookup implements SymbolSource.

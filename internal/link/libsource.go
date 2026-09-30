@@ -73,6 +73,10 @@ func ReadShareableImage(data []byte) (*TableSource, string, error) {
 		src.Symbols[s.Name] = d
 	}
 
+	img := src.Images[name]
+	img.Symbols, img.Psects, img.Sections = len(src.Symbols), len(m.Psects()), h.sections
+	src.Images[name] = img
+
 	return src, name, nil
 }
 
@@ -82,6 +86,7 @@ type imageHeader struct {
 	ident       uint32 // IHD$L_IDENT: the global section ident
 	matchCtl    uint32 // IHD$V_MATCHCTL
 	sharedPages uint32 // the first shareable section's pages
+	sections    int    // its image sections, other than global ones and the stack
 	gstVBN      uint32
 	gstRecords  int
 }
@@ -139,8 +144,13 @@ func readImageHeader(data []byte) (imageHeader, error) {
 			return h, fmt.Errorf("link: the image header's section descriptors are damaged")
 		}
 
-		if h.sharedPages == 0 && le.Uint32(b[p+8:])&0xFF000000 == isdTypeSharedPIC {
+		flags := le.Uint32(b[p+8:])
+		if h.sharedPages == 0 && flags&0xFF000000 == isdTypeSharedPIC {
 			h.sharedPages = uint32(le.Uint16(b[p+2:]))
+		}
+
+		if flags&isdGBL == 0 && flags&0xFF000000 != isdTypeUserStack {
+			h.sections++
 		}
 
 		p += size
@@ -237,6 +247,20 @@ func (s *ImageLibrarySource) Image(name string) (SharedImage, bool) {
 	return SharedImage{}, false
 }
 
+// Files implements FileCounter: the library, and the files of the images
+// it has opened.
+func (s *ImageLibrarySource) Files() int {
+	n := 1
+
+	for _, src := range s.opened {
+		if fc, ok := src.(FileCounter); ok {
+			n += fc.Files()
+		}
+	}
+
+	return n
+}
+
 // imageOf returns the shareable image the library says defines name.
 func (s *ImageLibrarySource) imageOf(name string) (string, bool) {
 	if len(s.Library.Indexes) < 2 {
@@ -312,7 +336,7 @@ func (s *ObjectLibrarySource) Lookup(name string) (Definition, bool, error) {
 		return Definition{}, false, fmt.Errorf("%s, module %s: %w", s.File, module, err)
 	}
 
-	in := &Input{File: fmt.Sprintf("%s(%s)", s.File, module), Module: m}
+	in := &Input{File: fmt.Sprintf("%s(%s)", s.File, module), Module: m, Selective: lm.Header.SelectiveSearch()}
 
 	if s.modules == nil {
 		s.modules = map[lbr.RFA]*Input{}
@@ -322,6 +346,9 @@ func (s *ObjectLibrarySource) Lookup(name string) (Definition, bool, error) {
 
 	return Definition{Module: in}, true, nil
 }
+
+// Files implements FileCounter.
+func (*ObjectLibrarySource) Files() int { return 1 }
 
 // Image implements SymbolSource: an object library describes no
 // shareable images.

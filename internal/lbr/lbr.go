@@ -188,6 +188,18 @@ type ModuleHeader struct {
 	UserData []byte
 }
 
+// SelectiveSearch reports whether an object library module is searched
+// selectively (MHD$V_SELSRC, from LIBRARY/INSERT/SELECTIVE_SEARCH): the
+// linker takes from it only the definitions of symbols already referred
+// to.
+func (h ModuleHeader) SelectiveSearch() bool {
+	return len(h.UserData) > 0 && h.UserData[0]&mhdSelectiveSearch != 0
+}
+
+// mhdSelectiveSearch is MHD$M_SELSRC, in an object library module
+// header's MHD$B_OBJSTAT (its user data's first byte).
+const mhdSelectiveSearch = 1
+
 // ObjectIdent is an object or shareable image library module's ident
 // (MHD$B_OBJIDLNG and MHD$T_OBJIDENT), from its header's user data.
 func (h ModuleHeader) ObjectIdent() string {

@@ -140,6 +140,8 @@ func (c *Console) openSharedImage(image string, govax *link.TableSource) (link.S
 		return nil, fmt.Errorf("%s is shareable image %s, not %s", name, got, image)
 	}
 
+	src.File = name
+
 	return src, nil
 }
 

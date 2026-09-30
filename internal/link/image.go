@@ -164,7 +164,7 @@ func (l *linker) header(isds []isd, global [][]byte, fixupVA uint32) ([]byte, er
 	// program.
 	transfers := make([]uint32, 0, 2)
 	if l.opts.Traceback {
-		transfers = append(transfers, sysImgsta)
+		transfers = append(transfers, l.symbols[imgstaName].value)
 	}
 
 	if l.transferSet {

@@ -26,13 +26,21 @@ var (
 	macroObject   string
 	macroNoObject bool
 
-	// linkExecutable, linkNoExecutable, linkNoTraceback, and linkNoSysLib
-	// are the link subcommand's options.
-	linkExecutable   string
-	linkNoExecutable bool
-	linkNoTraceback  bool
-	linkNoSysLib     bool
+	// link holds the link subcommand's options.
+	link linkFlags
 )
+
+// linkFlags are the link subcommand's options, which become the LINK
+// command's qualifiers.
+type linkFlags struct {
+	executable   string // --executable
+	noExecutable bool   // --no-executable
+	noTraceback  bool   // --no-traceback
+	noSysLib     bool   // --no-syslib
+	mapWanted    bool   // --map, or --map-file
+	mapFile      string // --map-file
+	brief        bool   // --brief
+}
 
 // mountRequest is one --mount DEVICE=container option.
 type mountRequest struct {
@@ -163,7 +171,7 @@ var linkGrammar = []cli.Option{
 		Description: "Image file name (default: the first object's, with type .exe)",
 		OptionType:  cli.StringType,
 		Action: func(c *cli.Context) error {
-			linkExecutable, _ = c.String("executable")
+			link.executable, _ = c.String("executable")
 
 			return nil
 		},
@@ -173,7 +181,7 @@ var linkGrammar = []cli.Option{
 		Description: "Link and report errors without writing an image",
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
-			linkNoExecutable = true
+			link.noExecutable = true
 
 			return nil
 		},
@@ -183,7 +191,7 @@ var linkGrammar = []cli.Option{
 		Description: "Don't start the image through SYS$IMGSTA",
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
-			linkNoTraceback = true
+			link.noTraceback = true
 
 			return nil
 		},
@@ -193,7 +201,38 @@ var linkGrammar = []cli.Option{
 		Description: "Don't search IMAGELIB.OLB and STARLET.OLB",
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
-			linkNoSysLib = true
+			link.noSysLib = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "map",
+		Description: "Write a link map (default: the first object's name, with type .map)",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			link.mapWanted = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "map-file",
+		Description: "Write a link map to this file",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			link.mapWanted = true
+			link.mapFile, _ = c.String("map-file")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "brief",
+		Description: "Write a brief map: the object modules and the image synopsis",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			link.mapWanted, link.brief = true, true
 
 			return nil
 		},
@@ -299,12 +338,12 @@ func linkCmd(c *cli.Context) error {
 
 	paths = loadConfigPaths(paths)
 
-	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{linkCommand(objects, linkExecutable, linkNoExecutable, linkNoTraceback, linkNoSysLib)})
+	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{linkCommand(objects, link)})
 }
 
 // linkCommand is the console LINK command for the link subcommand's
 // objects and options, each file name quoted as macroCommand quotes them.
-func linkCommand(objects []string, executable string, noExecutable, noTraceback, noSysLib bool) string {
+func linkCommand(objects []string, f linkFlags) string {
 	quoted := make([]string, len(objects))
 	for i, o := range objects {
 		quoted[i] = dclQuote(o)
@@ -313,18 +352,29 @@ func linkCommand(objects []string, executable string, noExecutable, noTraceback,
 	command := "LINK " + strings.Join(quoted, ",")
 
 	switch {
-	case noExecutable:
+	case f.noExecutable:
 		command += "/NOEXECUTABLE"
-	case executable != "":
-		command += "/EXECUTABLE=" + dclQuote(executable)
+	case f.executable != "":
+		command += "/EXECUTABLE=" + dclQuote(f.executable)
 	}
 
-	if noTraceback {
+	if f.noTraceback {
 		command += "/NOTRACEBACK"
 	}
 
-	if noSysLib {
+	if f.noSysLib {
 		command += "/NOSYSLIB"
+	}
+
+	switch {
+	case f.mapFile != "":
+		command += "/MAP=" + dclQuote(f.mapFile)
+	case f.mapWanted:
+		command += "/MAP"
+	}
+
+	if f.brief {
+		command += "/BRIEF"
 	}
 
 	return command
