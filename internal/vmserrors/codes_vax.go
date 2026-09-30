@@ -110,6 +110,10 @@ const (
 	vaxNotInRepeat
 	vaxGenErr
 	vaxGenWrn
+	vaxUndefMacro
+	vaxLibRead
+	vaxNoLibResolver
+	vaxLibrary
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -242,6 +246,14 @@ const (
 	// GENWRN).
 	VAX_GENERR = VAXFacility<<FacilityPosition | vaxGenErr<<MessagePosition | StatusError
 	VAX_GENWRN = VAXFacility<<FacilityPosition | vaxGenWrn<<MessagePosition | StatusWarning
+
+	// Macro libraries: .MCALL of a macro no library has, a library that
+	// can't be read, and .LIBRARY with no way to open, or failing to
+	// open, its file.
+	VAX_UNDEFMACRO    = VAXFacility<<FacilityPosition | vaxUndefMacro<<MessagePosition | StatusError
+	VAX_LIBREAD       = VAXFacility<<FacilityPosition | vaxLibRead<<MessagePosition | StatusError
+	VAX_NOLIBRESOLVER = VAXFacility<<FacilityPosition | vaxNoLibResolver<<MessagePosition | StatusError
+	VAX_LIBRARY       = VAXFacility<<FacilityPosition | vaxLibrary<<MessagePosition | StatusError
 )
 
 func init() {
@@ -331,6 +343,10 @@ func init() {
 	DefineMessage(VAX_NOTINREPEAT, VAXFacility, "NOTINREPEAT", "!S is not inside a repeat block")
 	DefineMessage(VAX_GENERR, VAXFacility, "GENERR", "Generated ERROR: !S")
 	DefineMessage(VAX_GENWRN, VAXFacility, "GENWRN", "Generated WARNING: !S")
+	DefineMessage(VAX_UNDEFMACRO, VAXFacility, "UNDEFMACRO", "Macro !S is not in any macro library")
+	DefineMessage(VAX_LIBREAD, VAXFacility, "LIBREAD", "Reading macro !S from its library")
+	DefineMessage(VAX_NOLIBRESOLVER, VAXFacility, "NOLIBRESOLVER", ".LIBRARY !Q: no library resolver configured")
+	DefineMessage(VAX_LIBRARY, VAXFacility, "LIBRARY", ".LIBRARY !Q")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")

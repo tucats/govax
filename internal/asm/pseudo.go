@@ -666,8 +666,9 @@ func (a *Assembler) pseudoFloat(c *cursor, size int) error {
 	}
 }
 
-// pseudoBlock assembles .BLKB/.BLKW/.BLKL/.BLKF/.BLKD count: reserves
-// count*size zero bytes. The reference tool (case 18-21) zero-fills by
+// pseudoBlock assembles .BLKx [count] (.BLKB, .BLKW, .BLKL, .BLKQ,
+// .BLKO, and the address and floating forms .BLKA, .BLKF, .BLKD, .BLKG,
+// .BLKH): reserves count*size zero bytes. The reference tool (case 18-21) zero-fills by
 // storing a literal zero byte count*size times; this just advances the
 // deposit counter without writing anything, since an address this package
 // never wrote to already reads back as zero (see image's doc comment) —
@@ -676,9 +677,15 @@ func (a *Assembler) pseudoFloat(c *cursor, size int) error {
 func (a *Assembler) pseudoBlock(c *cursor, size int) error {
 	c.skipBlanks()
 
-	n, err := a.exprNoForward(c)
-	if err != nil {
-		return err
+	// The count defaults to 1 (the MACRO manual, .BLKx).
+	n := uint32(1)
+
+	if !c.atEnd() {
+		var err error
+
+		if n, err = a.exprNoForward(c); err != nil {
+			return err
+		}
 	}
 
 	// Storage before any .PSECT goes in . BLANK .; in an absolute psect,

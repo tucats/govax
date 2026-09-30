@@ -152,6 +152,12 @@ type Assembler struct {
 	// macros is the macro table, keyed by macro name (see macros.go), and
 	// defining the definition whose lines are being collected, or nil.
 	macros   map[string]*macroDef
+	// libraries are the macro libraries searched after the ones
+	// .LIBRARY names (dotLibraries, in the order named), and
+	// libraryResolver opens those (see maclib.go).
+	libraries       []MacroLibrary
+	dotLibraries    []MacroLibrary
+	libraryResolver func(name string) (MacroLibrary, error)
 	defining *definition
 	// createdLabel is the number of the next created local label a
 	// macro call makes up (see bind).
@@ -392,6 +398,7 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 	a.errs = nil
 	a.defining = nil
 	a.createdLabel = firstCreatedLabel
+	a.dotLibraries = nil
 
 	err := a.assembleLines(source)
 
@@ -561,8 +568,8 @@ func preprocessComment(line string) (string, string) {
 // stringDirectiveAt returns the length of a string directive's name
 // (".ASCIC", ".ASCID", ".ASCII", or ".ASCIZ", in any case, the "." being
 // optional as for every directive here; see assemblePseudo), or of
-// ".IDENT", whose operand is a delimited string too, starting at b[i] as
-// a whole word, or 0 if there isn't one.
+// ".IDENT" or ".LIBRARY", whose operands are delimited strings too,
+// starting at b[i] as a whole word, or 0 if there isn't one.
 func stringDirectiveAt(b []byte, i int) int {
 	if i > 0 && !isBlank(b[i-1]) && b[i-1] != ':' {
 		return 0
@@ -576,6 +583,8 @@ func stringDirectiveAt(b []byte, i int) int {
 	switch {
 	case n == 1 && i+6 <= len(b) && strings.EqualFold(string(b[i+1:i+6]), "IDENT"):
 		n += 5
+	case n == 1 && i+8 <= len(b) && strings.EqualFold(string(b[i+1:i+8]), "LIBRARY"):
+		n += 7
 	case i+n+5 > len(b) || !strings.EqualFold(string(b[i+n:i+n+4]), "ASCI") || !strings.ContainsRune("CDIZcdiz", rune(b[i+n+4])):
 		return 0
 	default:
@@ -765,6 +774,11 @@ func (a *Assembler) assembleStatementBody(line string) error {
 	// A macro call; macros come before instructions, so a macro may
 	// replace an instruction of the same name.
 	if handled, err := a.assembleMacroCall(c); handled || err != nil {
+		return err
+	}
+
+	// A name that's none of the above may be a library's macro.
+	if handled, err := a.assembleLibraryCall(c); handled || err != nil {
 		return err
 	}
 

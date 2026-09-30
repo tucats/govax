@@ -11,7 +11,7 @@ Phase 27 fixtures do.
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress (subtasks 1-4 done; next, subtask 5).**
+**Status: in progress (subtasks 1-5 done; next, subtask 6).**
 
 ## Scope
 
@@ -209,7 +209,7 @@ inside it. Repeat blocks collect their lines to `.ENDR` the same way.
    `.WARN` a warning, `.PRINT` an informational message), and the
    listing-control directives (`.LIST`, `.NLIST`, `.SHOW`, `.NOSHOW`,
    `.CROSS`, `.NOCROSS`, `.PAGE`) accepted and ignored.
-5. **Macro libraries in `internal/asm`:** the `MacroLibrary` interface
+5. **Done.** **Macro libraries in `internal/asm`:** the `MacroLibrary` interface
    over `*lbr.Library`, `.MCALL`, `.LIBRARY` (through a resolver, default
    type `.MLB`), and the automatic search for an undefined opcode.
    Acceptance: every one of STARLET.MLB's 1529 macros loads, and a set of
@@ -480,3 +480,45 @@ All settled (2026-09-30):
 - A scratch check against the real STARLET.MLB: `$FAB FNM=<X.DAT>,
   FAC=<GET,PUT>` then `$RAB FAB=FAB1` assembles to 148 bytes (80 + 68),
   and a `$FAB` after a `.BYTE` gets the alignment message.
+
+### 2026-09-30 — Subtask 5: macro libraries in `internal/asm`
+
+- **`MacroLibrary`** (`maclib.go`): look up a macro by name and get its
+  module's lines. `NewMacroLibrary` adapts an `*lbr.Library` (a macro
+  library only). Tests use a map-backed one, so the mechanics are tested
+  without the licensed STARLET.MLB.
+- **Loading a library macro** runs its module's lines as a source of their
+  own (`sourceLibrary`), so the `.MACRO` line (continued, as `$FAB`'s is)
+  and `.ENDM` take the same path as a definition in the program. It
+  happens in the middle of the statement that needs the macro, so that
+  statement's comment and continuation state are saved around it. An
+  error in a module reads `in library definition of macro NAME, line n:`.
+- **Search order** is MACRO's: `.LIBRARY`'s libraries, the last named
+  first, then the caller's (`SetMacroLibraries`, searched in the order
+  given; subtask 9 passes `/LIBRARY=`'s files, reversed, then
+  STARLET.MLB).
+- **Automatic search** (`assembleLibraryCall`): a statement's first word
+  that isn't a directive, a defined macro, or an opcode is looked up, and
+  if a library has it, the macro is defined and called. Later calls use
+  the definition without searching again.
+- **`.MCALL`** loads each named macro whether or not it's defined, so it
+  can replace a source definition or an opcode (the manual's `.MCALL
+  INSQUE`). A name no library has is `VAX_UNDEFMACRO`.
+- **`.LIBRARY /file-spec/`** hands the name, as written (preprocessing
+  keeps its case, as for `.IDENT`), to the resolver
+  (`SetLibraryResolver`), which applies the `.MLB` default type. No
+  resolver is `VAX_NOLIBRESOLVER`; its failure is `VAX_LIBRARY`.
+  `readDelimited` now reads both `.IDENT`'s string and this one.
+- Both dialects search libraries when they're given any; the console
+  isn't given any yet (the "only if free" of the scope).
+- **Found on the way:** `.BLKA`, `.BLKG`, `.BLKH`, `.BLKO`, and `.BLKQ`
+  were missing (a program reserving an IOSB with `.BLKQ` failed), and
+  `.BLKx` with no count now reserves one unit, as the manual says.
+- **Acceptance** (tests that skip without `testdata/vmslib/starlet.mlb`):
+  all 1529 of STARLET.MLB's macros load through `.MCALL`, each defining
+  the macro its module is named for (about 30 ms). A program calling
+  `$SSDEF`, `$IODEF`, `$FAB`, `$RAB`, `$QIOW_S`, and `$EXIT_S` through the
+  automatic search assembles into an object with no warnings. Its code is
+  what real MACRO generates for these calls: `$QIOW_S`'s argument list
+  pushed in reverse and `CALLS #12,G^SYS$QIOW`, then `PUSHL #1` and
+  `CALLS #1,G^SYS$EXIT`. The FNM string lands in `$RMSNAM`.

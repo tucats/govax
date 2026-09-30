@@ -189,25 +189,10 @@ func (a *Assembler) pseudoTitle(c *cursor) error {
 // delimited string of 1 to 31 characters, kept as written. The last
 // .IDENT wins.
 func (a *Assembler) pseudoIdent(c *cursor) error {
-	c.skipBlanks()
-
-	q := c.next()
-	if !isStringDelimiter(q) {
-		return vmserrors.New(vmserrors.VAX_BADSTRING, string(q))
+	ident, err := readDelimited(c)
+	if err != nil {
+		return err
 	}
-
-	start := c.pos
-
-	for c.peek() != q {
-		if c.atEnd() {
-			return vmserrors.New(vmserrors.VAX_NOCLOSE, string(q))
-		}
-
-		c.next()
-	}
-
-	ident := c.s[start:c.pos]
-	c.next()
 
 	if len(ident) == 0 || len(ident) > maxModuleName {
 		return vmserrors.New(vmserrors.VAX_DATARANGE, ".IDENT length", len(ident))
@@ -216,6 +201,33 @@ func (a *Assembler) pseudoIdent(c *cursor) error {
 	a.ident = ident
 
 	return nil
+}
+
+// readDelimited reads a delimited string (/text/, "text", ...), the
+// operand of .IDENT and .LIBRARY, and returns the text between the
+// delimiters.
+func readDelimited(c *cursor) (string, error) {
+	c.skipBlanks()
+
+	q := c.next()
+	if !isStringDelimiter(q) {
+		return "", vmserrors.New(vmserrors.VAX_BADSTRING, string(q))
+	}
+
+	start := c.pos
+
+	for c.peek() != q {
+		if c.atEnd() {
+			return "", vmserrors.New(vmserrors.VAX_NOCLOSE, string(q))
+		}
+
+		c.next()
+	}
+
+	text := c.s[start:c.pos]
+	c.next()
+
+	return text, nil
 }
 
 // Title returns the module's name (.TITLE's, or .MAIN. without one) and

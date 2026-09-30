@@ -101,6 +101,11 @@ func init() {
 		"BLKL": {both, func(a *Assembler, c *cursor) error { return a.pseudoBlock(c, 4) }},
 		"BLKF": {both, func(a *Assembler, c *cursor) error { return a.pseudoBlock(c, 4) }},
 		"BLKD": {both, func(a *Assembler, c *cursor) error { return a.pseudoBlock(c, 8) }},
+		"BLKA": {both, func(a *Assembler, c *cursor) error { return a.pseudoBlock(c, 4) }},
+		"BLKG": {both, func(a *Assembler, c *cursor) error { return a.pseudoBlock(c, 8) }},
+		"BLKQ": {both, func(a *Assembler, c *cursor) error { return a.pseudoBlock(c, 8) }},
+		"BLKH": {both, func(a *Assembler, c *cursor) error { return a.pseudoBlock(c, 16) }},
+		"BLKO": {both, func(a *Assembler, c *cursor) error { return a.pseudoBlock(c, 16) }},
 		"END":  {both, (*Assembler).pseudoEnd},
 
 		// MACRO-32 forms of names the console dialect uses for eVAX's own
@@ -165,6 +170,10 @@ func init() {
 		"NARG":    {both, (*Assembler).pseudoNarg},
 		"NCHR":    {both, (*Assembler).pseudoNchr},
 		"NTYPE":   {both, (*Assembler).pseudoNtype},
+
+		// Macro libraries (maclib.go).
+		"MCALL":   {both, (*Assembler).pseudoMcall},
+		"LIBRARY": {both, (*Assembler).pseudoLibrary},
 
 		// Repeat blocks (repeat.go).
 		"REPEAT": {both, (*Assembler).pseudoRepeat},

@@ -48,6 +48,9 @@ const (
 	sourceMacro
 	// sourceRepeat is one repetition of a repeat block.
 	sourceRepeat
+	// sourceLibrary is a macro library's module, the definition of a
+	// macro being loaded from it (see maclib.go).
+	sourceLibrary
 )
 
 // maxIncludeDepth is how deeply .INCLUDE files may nest. A deeper nest is
@@ -64,8 +67,8 @@ const maxExpansionDepth = 1000
 // sourceFrame is one source on the source stack.
 type sourceFrame struct {
 	kind sourceKind
-	// name is the macro's name, for a sourceMacro frame, or the
-	// directive (".IRP", ...), for a sourceRepeat frame.
+	// name is the macro's name, for a sourceMacro or sourceLibrary
+	// frame, or the directive (".IRP", ...), for a sourceRepeat frame.
 	name string
 	// repetition counts a repeat block's repetitions from 1, for a
 	// sourceRepeat frame.
@@ -96,16 +99,19 @@ func (f *sourceFrame) wrap(line int, err error) error {
 		return &ExpansionError{Macro: f.name, Line: line, Err: err}
 	case sourceRepeat:
 		return &ExpansionError{Block: f.name, Repetition: f.repetition, Line: line, Err: err}
+	case sourceLibrary:
+		return &ExpansionError{Library: f.name, Line: line, Err: err}
 	}
 
 	return &Error{Line: line, Err: err}
 }
 
 // ExpansionError is an error on one line of a macro's expansion, or of
-// one repetition of a repeat block. The line number counts the
-// expansion's lines from 1 (the first line of the macro's body or the
-// block's range). It is always wrapped in an *Error, or another
-// *ExpansionError, naming the call or the block's directive.
+// one repetition of a repeat block, or in a library macro's definition.
+// The line number counts the expansion's lines from 1 (the first line of
+// the macro's body or the block's range, or of the library's module). It
+// is always wrapped in an *Error, or another *ExpansionError, naming the
+// call or the block's directive.
 type ExpansionError struct {
 	// Macro is the macro's name, for a macro's expansion.
 	Macro string
@@ -114,13 +120,19 @@ type ExpansionError struct {
 	// a repeat block.
 	Block      string
 	Repetition int
-	Line       int
+	// Library is the macro's name, for its definition in a library.
+	Library string
+	Line    int
 	Err        error
 }
 
 func (e *ExpansionError) Error() string {
 	if e.Block != "" {
 		return fmt.Sprintf("in repetition %d of %s, line %d: %v", e.Repetition, e.Block, e.Line, e.Err)
+	}
+
+	if e.Library != "" {
+		return fmt.Sprintf("in library definition of macro %s, line %d: %v", e.Library, e.Line, e.Err)
 	}
 
 	return fmt.Sprintf("in expansion of macro %s, line %d: %v", e.Macro, e.Line, e.Err)
@@ -304,7 +316,15 @@ func (a *Assembler) runSource(f *sourceFrame, lines []string) error {
 			return vmserrors.New(vmserrors.VAX_NOENDR, d.repeat.directive)
 		}
 
-		return vmserrors.New(vmserrors.VAX_NOENDM, d.def.name)
+		err := vmserrors.New(vmserrors.VAX_NOENDM, d.def.name)
+
+		// A library's module is named, since its lines aren't the
+		// program's.
+		if f.kind == sourceLibrary {
+			return f.wrap(len(lines), err)
+		}
+
+		return err
 	}
 
 	return nil
