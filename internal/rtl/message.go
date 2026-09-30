@@ -59,7 +59,7 @@ const (
 )
 
 // Status codes the message services return.
-var ssMsgNotFnd = vmsdef.SSConstants["SS$_MSGNOTFND"]
+var ssMsgNotFnd = vmsdef.Symbols["SS$_MSGNOTFND"]
 
 // severityLetters are the letters for a condition value's severity (bits
 // 0-2). Values 5-7 are reserved; VMS shows them as "?".

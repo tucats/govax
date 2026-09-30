@@ -1,15 +1,16 @@
 package vmsdef
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
 
-// TestLNMConstants_values pins the $LNMDEF values docs/PHASE-25.md's
+// TestSymbols_LNM_values pins the $LNMDEF values docs/PHASE-25.md's
 // logical-name design depends on. Besides lnmdef.sdl itself, the attribute
 // bits and item codes agree with what internal/rtl/logicals.go and the
 // since-deleted internal/io/logical.go used before this table existed.
-func TestLNMConstants_values(t *testing.T) {
+func TestSymbols_LNM_values(t *testing.T) {
 	want := map[string]uint32{
 		// Logical name attributes (byte 0).
 		"LNM$M_NO_ALIAS": 0x1,
@@ -47,7 +48,7 @@ func TestLNMConstants_values(t *testing.T) {
 	}
 
 	for name, v := range want {
-		got, ok := LNMConstants[name]
+		got, ok := Symbols[name]
 		if !ok {
 			t.Errorf("%s missing", name)
 
@@ -60,16 +61,16 @@ func TestLNMConstants_values(t *testing.T) {
 	}
 }
 
-// TestLNMConstants_maskMatchesBit confirms every LNM$M_ mask is exactly
+// TestSymbols_LNM_maskMatchesBit confirms every LNM$M_ mask is exactly
 // 1 << its LNM$V_ bit position ($LNMDEF has only single-bit fields).
-func TestLNMConstants_maskMatchesBit(t *testing.T) {
-	for name, mask := range LNMConstants {
+func TestSymbols_LNM_maskMatchesBit(t *testing.T) {
+	for name, mask := range Symbols {
 		field, ok := strings.CutPrefix(name, "LNM$M_")
 		if !ok {
 			continue
 		}
 
-		bit, ok := LNMConstants["LNM$V_"+field]
+		bit, ok := Symbols["LNM$V_"+field]
 		if !ok {
 			t.Errorf("%s has no LNM$V_%s", name, field)
 
@@ -82,10 +83,10 @@ func TestLNMConstants_maskMatchesBit(t *testing.T) {
 	}
 }
 
-// TestSSConstants_values pins the $SSDEF completion codes the logical-name
+// TestSymbols_SS_values pins the $SSDEF completion codes the logical-name
 // services return, plus the codes internal/rtl/status.go already carried
 // as literals, which ssdef.txt independently confirms.
-func TestSSConstants_values(t *testing.T) {
+func TestSymbols_SS_values(t *testing.T) {
 	want := map[string]uint32{
 		"SS$_NORMAL":      1,
 		"SS$_ACCVIO":      12,
@@ -111,7 +112,7 @@ func TestSSConstants_values(t *testing.T) {
 	}
 
 	for name, v := range want {
-		got, ok := SSConstants[name]
+		got, ok := Symbols[name]
 		if !ok {
 			t.Errorf("%s missing", name)
 
@@ -124,52 +125,32 @@ func TestSSConstants_values(t *testing.T) {
 	}
 }
 
-// TestConstants_onlyRMSFamilies guards the reason LNMConstants and
-// SSConstants are separate maps: .RMSDEF (internal/asm) defines every
-// Constants entry as an assembler symbol, so nothing but FAB$/RAB$/RMS$
-// names may appear there.
-func TestConstants_onlyRMSFamilies(t *testing.T) {
-	for name := range Constants {
-		if !strings.HasPrefix(name, "FAB$") && !strings.HasPrefix(name, "RAB$") && !strings.HasPrefix(name, "RMS$") {
-			t.Errorf("unexpected %s in Constants", name)
+// TestSymbolNames_rmsFamilies pins the set .RMSDEF (internal/asm) defines:
+// the 393 FAB$/RAB$/RMS$ names of $FABDEF, $RABDEF, and $RMSDEF, which
+// were a map of their own before the tables were merged into Symbols.
+func TestSymbolNames_rmsFamilies(t *testing.T) {
+	names := SymbolNames("FAB$", "RAB$", "RMS$")
+	if len(names) != 393 {
+		t.Errorf("%d FAB$/RAB$/RMS$ symbols, want 393", len(names))
+	}
+
+	for i := 1; i < len(names); i++ {
+		if names[i-1] >= names[i] {
+			t.Fatalf("SymbolNames isn't sorted: %s before %s", names[i-1], names[i])
 		}
 	}
 
-	for name := range LNMConstants {
-		if !strings.HasPrefix(name, "LNM$") {
-			t.Errorf("unexpected %s in LNMConstants", name)
-		}
-	}
-
-	for name := range SSConstants {
-		if !strings.HasPrefix(name, "SS$_") {
-			t.Errorf("unexpected %s in SSConstants", name)
-		}
-	}
-
-	for name := range DEVConstants {
-		if !strings.HasPrefix(name, "DEV$") {
-			t.Errorf("unexpected %s in DEVConstants", name)
-		}
-	}
-
-	for name := range DVIConstants {
-		if !strings.HasPrefix(name, "DVI$") {
-			t.Errorf("unexpected %s in DVIConstants", name)
-		}
-	}
-
-	for name := range TTConstants {
-		if !strings.HasPrefix(name, "TT$") && !strings.HasPrefix(name, "TT2$") {
-			t.Errorf("unexpected %s in TTConstants", name)
+	for _, name := range []string{"FAB$C_BID", "FAB$M_GET", "RAB$C_BID", "RMS$_NORMAL"} {
+		if !slices.Contains(names, name) {
+			t.Errorf("%s missing", name)
 		}
 	}
 }
 
-// TestDVIAndTTConstants_values pins $DVIDEF item codes and $TTDEF bits
+// TestSymbols_DVIAndTT_values pins $DVIDEF item codes and $TTDEF bits
 // $GETDVI (docs/PHASE-26.md subtask 28) depends on, from the VMS I/O
 // User's Reference Manual and the System Services Reference Manual.
-func TestDVIAndTTConstants_values(t *testing.T) {
+func TestSymbols_DVIAndTT_values(t *testing.T) {
 	want := map[string]uint32{
 		"DVI$_DEVCHAR":     2,
 		"DVI$_DEVCLASS":    4,
@@ -181,8 +162,8 @@ func TestDVIAndTTConstants_values(t *testing.T) {
 	}
 
 	for name, v := range want {
-		if got, ok := DVIConstants[name]; !ok || got != v {
-			t.Errorf("DVIConstants[%s] = %#x, %v; want %#x", name, got, ok, v)
+		if got, ok := Symbols[name]; !ok || got != v {
+			t.Errorf("Symbols[%s] = %#x, %v; want %#x", name, got, ok, v)
 		}
 	}
 
@@ -194,16 +175,16 @@ func TestDVIAndTTConstants_values(t *testing.T) {
 	}
 
 	for name, v := range want {
-		if got, ok := TTConstants[name]; !ok || got != v {
-			t.Errorf("TTConstants[%s] = %#x, %v; want %#x", name, got, ok, v)
+		if got, ok := Symbols[name]; !ok || got != v {
+			t.Errorf("Symbols[%s] = %#x, %v; want %#x", name, got, ok, v)
 		}
 	}
 }
 
-// TestDEVConstants_values pins the $DEVDEF DEVCHAR bits $ALLOC
+// TestSymbols_DEV_values pins the $DEVDEF DEVCHAR bits $ALLOC
 // (docs/PHASE-26.md) depends on, plus one DEVCHAR2 bit to show the second
 // union member numbers its bits from 0 again.
-func TestDEVConstants_values(t *testing.T) {
+func TestSymbols_DEV_values(t *testing.T) {
 	want := map[string]uint32{
 		"DEV$M_TRM": 0x4,
 		"DEV$M_SPL": 0x40,
@@ -218,9 +199,9 @@ func TestDEVConstants_values(t *testing.T) {
 	}
 
 	for name, v := range want {
-		got, ok := DEVConstants[name]
+		got, ok := Symbols[name]
 		if !ok {
-			t.Errorf("%s missing from DEVConstants", name)
+			t.Errorf("%s missing", name)
 
 			continue
 		}
@@ -231,13 +212,13 @@ func TestDEVConstants_values(t *testing.T) {
 	}
 }
 
-// TestIOConstants_values pins the $IODEF function codes and terminal
+// TestSymbols_IO_values pins the $IODEF function codes and terminal
 // modifier bits terminal $QIO (docs/PHASE-26.md subtask 17) depends on.
 // The values are the VMS I/O User's Reference Manual's; the modifiers sit
 // above the 6-bit function code (IO$M_FCODE), and the read and write
 // modifiers are different union members that reuse the same bits
 // (IO$M_NOECHO and IO$M_CANCTRLO are both bit 6).
-func TestIOConstants_values(t *testing.T) {
+func TestSymbols_IO_values(t *testing.T) {
 	want := map[string]uint32{
 		"IO$M_FCODE":      0x3F,
 		"IO$_WRITEPBLK":   11,
@@ -263,9 +244,9 @@ func TestIOConstants_values(t *testing.T) {
 	}
 
 	for name, v := range want {
-		got, ok := IOConstants[name]
+		got, ok := Symbols[name]
 		if !ok {
-			t.Errorf("%s missing from IOConstants", name)
+			t.Errorf("%s missing", name)
 
 			continue
 		}
@@ -276,11 +257,11 @@ func TestIOConstants_values(t *testing.T) {
 	}
 }
 
-// TestATRConstants_values pins the $ATRDEF codes and sizes the disk
+// TestSymbols_ATR_values pins the $ATRDEF codes and sizes the disk
 // driver's attribute lists (docs/PHASE-26.md subtask 42) depend on, as
 // the VMS I/O User's Reference lists them, and checks that the two sizes
 // the listings disagree on were left out.
-func TestATRConstants_values(t *testing.T) {
+func TestSymbols_ATR_values(t *testing.T) {
 	want := map[string]uint32{
 		"ATR$C_UCHAR":     3,
 		"ATR$C_RECATTR":   4,
@@ -304,23 +285,23 @@ func TestATRConstants_values(t *testing.T) {
 	}
 
 	for name, v := range want {
-		if got, ok := ATRConstants[name]; !ok || got != v {
-			t.Errorf("ATRConstants[%s] = %#x, %v; want %#x", name, got, ok, v)
+		if got, ok := Symbols[name]; !ok || got != v {
+			t.Errorf("Symbols[%s] = %#x, %v; want %#x", name, got, ok, v)
 		}
 	}
 
 	for _, name := range []string{"ATR$S_ASCDATES", "ATR$S_FILE_SPEC"} {
-		if _, ok := ATRConstants[name]; ok {
-			t.Errorf("ATRConstants has %s, which the listings disagree on", name)
+		if _, ok := Symbols[name]; ok {
+			t.Errorf("Symbols has %s, which the listings disagree on", name)
 		}
 	}
 }
 
-// TestOBJConstants_values pins the VAX object language values against the
+// TestSymbols_OBJ_values pins the VAX object language values against the
 // VMS 5.0 Linker Utility Manual's chapter 7 (docs/PHASE-27.md): its tables
 // of record, header, and GSD subrecord types, its TIR command numbers, and
 // the field layouts of its record diagrams.
-func TestOBJConstants_values(t *testing.T) {
+func TestSymbols_OBJ_values(t *testing.T) {
 	want := map[string]uint32{
 		// Record types (table 7-1).
 		"OBJ$C_HDR": 0, "OBJ$C_GSD": 1, "OBJ$C_TIR": 2, "OBJ$C_EOM": 3,
@@ -378,15 +359,15 @@ func TestOBJConstants_values(t *testing.T) {
 	}
 
 	for name, v := range want {
-		if got, ok := OBJConstants[name]; !ok || got != v {
-			t.Errorf("OBJConstants[%s] = %#x, %v; want %#x", name, got, ok, v)
+		if got, ok := Symbols[name]; !ok || got != v {
+			t.Errorf("Symbols[%s] = %#x, %v; want %#x", name, got, ok, v)
 		}
 	}
 
 	// Only the VAX modules are generated, not objfmt.sdl's Alpha ones.
-	for name := range OBJConstants {
+	for name := range Symbols {
 		if strings.HasPrefix(name, "E") && !strings.HasPrefix(name, "EOM") && !strings.HasPrefix(name, "ENV$") && !strings.HasPrefix(name, "EPM") {
-			t.Errorf("OBJConstants has %s, an Alpha object language name", name)
+			t.Errorf("Symbols has %s, an Alpha object language name", name)
 		}
 	}
 }

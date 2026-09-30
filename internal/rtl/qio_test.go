@@ -12,11 +12,11 @@ import (
 
 // Terminal function codes, spelled out for the tests.
 var (
-	fnReadVBlk   = vmsdef.IOConstants["IO$_READVBLK"]
-	fnReadPrompt = vmsdef.IOConstants["IO$_READPROMPT"]
-	fnWriteVBlk  = vmsdef.IOConstants["IO$_WRITEVBLK"]
-	fnSenseMode  = vmsdef.IOConstants["IO$_SENSEMODE"]
-	fnSetMode    = vmsdef.IOConstants["IO$_SETMODE"]
+	fnReadVBlk   = vmsdef.Symbols["IO$_READVBLK"]
+	fnReadPrompt = vmsdef.Symbols["IO$_READPROMPT"]
+	fnWriteVBlk  = vmsdef.Symbols["IO$_WRITEVBLK"]
+	fnSenseMode  = vmsdef.Symbols["IO$_SENSEMODE"]
+	fnSetMode    = vmsdef.Symbols["IO$_SETMODE"]
 )
 
 // badAddr is past the end of the fixture's 1MB of memory (virtual memory
@@ -323,7 +323,7 @@ func TestQIO_senseAndSetMode(t *testing.T) {
 
 	// A SETMODE modifier (IO$M_CTRLCAST: p1 is an AST address) changes
 	// nothing.
-	wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnSetMode | vmsdef.IOConstants["IO$M_CTRLCAST"], p: [6]uint32{0x4000}}), ssNormal)
+	wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnSetMode | vmsdef.Symbols["IO$M_CTRLCAST"], p: [6]uint32{0x4000}}), ssNormal)
 
 	if dp.DevType != 110 {
 		t.Errorf("SETMODE with IO$M_CTRLCAST changed the terminal type to %d", dp.DevType)
@@ -369,7 +369,7 @@ func TestQIO_rejected(t *testing.T) {
 		{"unassigned channel", qioArgs{efn: 2, channel: 999, function: fnWriteVBlk}, ssNoPriv, false},
 		{"unwritable IOSB", qioArgs{efn: 2, channel: ch, function: fnWriteVBlk, iosb: badAddr}, ssAccVio, false},
 		{"no such function", qioArgs{efn: 2, channel: ch, function: 63}, ssIllIoFunc, true},
-		{"a function the disk driver lacks", qioArgs{efn: 2, channel: diskChan, function: vmsdef.IOConstants["IO$_READPROMPT"]}, ssIllIoFunc, true},
+		{"a function the disk driver lacks", qioArgs{efn: 2, channel: diskChan, function: vmsdef.Symbols["IO$_READPROMPT"]}, ssIllIoFunc, true},
 		{"unreadable write buffer", qioArgs{efn: 2, channel: ch, function: fnWriteVBlk, p: [6]uint32{badAddr, 10}}, ssAccVio, true},
 		{"unwritable read buffer", qioArgs{efn: 2, channel: ch, function: fnReadVBlk, p: [6]uint32{badAddr, 10}}, ssAccVio, true},
 	}

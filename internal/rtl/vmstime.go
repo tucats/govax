@@ -80,7 +80,7 @@ func serviceSysGettim(env *Environment, argv []uint32) (uint32, error) {
 
 // ssIvTime is SS$_IVTIME: a time string that doesn't parse, a field out
 // of range, or a delta time of 10,000 days or more.
-var ssIvTime = vmsdef.SSConstants["SS$_IVTIME"]
+var ssIvTime = vmsdef.Symbols["SS$_IVTIME"]
 
 // Time-unit sizes in VMS ticks (100ns).
 const (

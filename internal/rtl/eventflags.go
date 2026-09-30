@@ -16,8 +16,8 @@ import (
 
 // Status codes the event-flag services return.
 var (
-	ssIllEfc  = vmsdef.SSConstants["SS$_ILLEFC"]
-	ssUnasEfc = vmsdef.SSConstants["SS$_UNASEFC"]
+	ssIllEfc  = vmsdef.Symbols["SS$_ILLEFC"]
+	ssUnasEfc = vmsdef.Symbols["SS$_UNASEFC"]
 )
 
 // ErrWait is what a service returns when the process must wait: its event

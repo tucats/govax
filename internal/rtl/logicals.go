@@ -34,23 +34,23 @@ import (
 // Status codes these services return themselves (lnm's own failures come
 // back as VMSErrors carrying their $SSDEF status).
 var (
-	ssBufferOvf  = vmsdef.SSConstants["SS$_BUFFEROVF"]
-	ssResultOvf  = vmsdef.SSConstants["SS$_RESULTOVF"]
-	ssNoTran     = vmsdef.SSConstants["SS$_NOTRAN"]
-	ssSupersede  = vmsdef.SSConstants["SS$_SUPERSEDE"]
-	ssLnmCreated = vmsdef.SSConstants["SS$_LNMCREATED"]
+	ssBufferOvf  = vmsdef.Symbols["SS$_BUFFEROVF"]
+	ssResultOvf  = vmsdef.Symbols["SS$_RESULTOVF"]
+	ssNoTran     = vmsdef.Symbols["SS$_NOTRAN"]
+	ssSupersede  = vmsdef.Symbols["SS$_SUPERSEDE"]
+	ssLnmCreated = vmsdef.Symbols["SS$_LNMCREATED"]
 )
 
 // $LNMDEF item codes.
 var (
-	lnmIndex      = uint16(vmsdef.LNMConstants["LNM$_INDEX"])
-	lnmString     = uint16(vmsdef.LNMConstants["LNM$_STRING"])
-	lnmAttributes = uint16(vmsdef.LNMConstants["LNM$_ATTRIBUTES"])
-	lnmTable      = uint16(vmsdef.LNMConstants["LNM$_TABLE"])
-	lnmLength     = uint16(vmsdef.LNMConstants["LNM$_LENGTH"])
-	lnmACMode     = uint16(vmsdef.LNMConstants["LNM$_ACMODE"])
-	lnmMaxIndex   = uint16(vmsdef.LNMConstants["LNM$_MAX_INDEX"])
-	lnmChain      = uint16(vmsdef.LNMConstants["LNM$_CHAIN"])
+	lnmIndex      = uint16(vmsdef.Symbols["LNM$_INDEX"])
+	lnmString     = uint16(vmsdef.Symbols["LNM$_STRING"])
+	lnmAttributes = uint16(vmsdef.Symbols["LNM$_ATTRIBUTES"])
+	lnmTable      = uint16(vmsdef.Symbols["LNM$_TABLE"])
+	lnmLength     = uint16(vmsdef.Symbols["LNM$_LENGTH"])
+	lnmACMode     = uint16(vmsdef.Symbols["LNM$_ACMODE"])
+	lnmMaxIndex   = uint16(vmsdef.Symbols["LNM$_MAX_INDEX"])
+	lnmChain      = uint16(vmsdef.Symbols["LNM$_CHAIN"])
 )
 
 // oldTable maps $CRELOG/$DELLOG's table number to a table name.

@@ -18,7 +18,7 @@ import (
 // privileged mode allowed each kind of access: UW (user write) lets every
 // mode read and write, UR (user read) lets every mode read and none write,
 // URKW lets every mode read but only kernel write, NA allows nothing, and
-// so on ($PRTDEF, generated as vmsdef.PRTConstants, uses the same
+// so on ($PRTDEF, generated as vmsdef.Symbols, uses the same
 // encoding as the PTE). $SETPRT changes the protection of a range of
 // pages: a program can make its code read-only once it's loaded, or guard
 // a buffer, catching stray accesses as access violations.
@@ -37,16 +37,16 @@ import (
 
 // Status values the protection services return.
 var (
-	ssIvProtect = vmsdef.SSConstants["SS$_IVPROTECT"]
-	ssLenVio    = vmsdef.SSConstants["SS$_LENVIO"]
+	ssIvProtect = vmsdef.Symbols["SS$_IVPROTECT"]
+	ssLenVio    = vmsdef.Symbols["SS$_LENVIO"]
 )
 
 // prtReserved is PRT$C_RESERVED, the one 4-bit protection code that
 // isn't a protection, and prtKR the kernel-read-only code $SETPRT uses
 // for a protection of 0.
 var (
-	prtReserved = vmsdef.PRTConstants["PRT$C_RESERVED"]
-	prtKR       = vmsdef.PRTConstants["PRT$C_KR"]
+	prtReserved = vmsdef.Symbols["PRT$C_RESERVED"]
+	prtKR       = vmsdef.Symbols["PRT$C_KR"]
 )
 
 // serviceSysSetprt is SYS$SETPRT:

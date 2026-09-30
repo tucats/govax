@@ -30,31 +30,31 @@ func (m Mode) String() string {
 // Attribute bits, from the real $LNMDEF ($CRELNM/$CRELNT/$TRNLNM attr
 // arguments, and the LNM$_ATTRIBUTES item).
 var (
-	AttrNoAlias   = vmsdef.LNMConstants["LNM$M_NO_ALIAS"]
-	AttrConfine   = vmsdef.LNMConstants["LNM$M_CONFINE"]
-	AttrCrelog    = vmsdef.LNMConstants["LNM$M_CRELOG"]
-	AttrTable     = vmsdef.LNMConstants["LNM$M_TABLE"]
-	AttrConcealed = vmsdef.LNMConstants["LNM$M_CONCEALED"]
-	AttrTerminal  = vmsdef.LNMConstants["LNM$M_TERMINAL"]
-	AttrExists    = vmsdef.LNMConstants["LNM$M_EXISTS"]
-	AttrShareable = vmsdef.LNMConstants["LNM$M_SHAREABLE"]
-	AttrCreateIf  = vmsdef.LNMConstants["LNM$M_CREATE_IF"]
-	AttrCaseBlind = vmsdef.LNMConstants["LNM$M_CASE_BLIND"]
+	AttrNoAlias   = vmsdef.Symbols["LNM$M_NO_ALIAS"]
+	AttrConfine   = vmsdef.Symbols["LNM$M_CONFINE"]
+	AttrCrelog    = vmsdef.Symbols["LNM$M_CRELOG"]
+	AttrTable     = vmsdef.Symbols["LNM$M_TABLE"]
+	AttrConcealed = vmsdef.Symbols["LNM$M_CONCEALED"]
+	AttrTerminal  = vmsdef.Symbols["LNM$M_TERMINAL"]
+	AttrExists    = vmsdef.Symbols["LNM$M_EXISTS"]
+	AttrShareable = vmsdef.Symbols["LNM$M_SHAREABLE"]
+	AttrCreateIf  = vmsdef.Symbols["LNM$M_CREATE_IF"]
+	AttrCaseBlind = vmsdef.Symbols["LNM$M_CASE_BLIND"]
 )
 
 // Limits, from $LNMDEF and the $CRELNM description.
 var (
 	// MaxNameLength is the longest logical name or equivalence string
 	// (LNM$C_NAMLENGTH).
-	MaxNameLength = int(vmsdef.LNMConstants["LNM$C_NAMLENGTH"])
+	MaxNameLength = int(vmsdef.Symbols["LNM$C_NAMLENGTH"])
 
 	// MaxTableNameLength is the longest name a directory table may hold
 	// (LNM$C_TABNAMLEN), which bounds every table name.
-	MaxTableNameLength = int(vmsdef.LNMConstants["LNM$C_TABNAMLEN"])
+	MaxTableNameLength = int(vmsdef.Symbols["LNM$C_TABNAMLEN"])
 
 	// MaxDepth is how many levels of iterative translation are allowed
 	// before SS$_TOOMANYLNAM (LNM$C_MAXDEPTH).
-	MaxDepth = int(vmsdef.LNMConstants["LNM$C_MAXDEPTH"])
+	MaxDepth = int(vmsdef.Symbols["LNM$C_MAXDEPTH"])
 )
 
 // MaxEquivalences is how many equivalence strings one logical name may

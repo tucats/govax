@@ -3,7 +3,6 @@ package asm
 import (
 	"fmt"
 	"math"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -1293,7 +1292,7 @@ func (a *Assembler) pseudoP1Vector(c *cursor) error {
 // defines every real FAB$/RAB$/RMS$ symbol as a permanent assembler
 // symbol — each field's own offset symbol (internal/vmsdef.FABFields/
 // RABFields' Symbol, e.g. "FAB$B_FAC") plus every bitmask flag, named code
-// value, and RMS$_ completion-status code (internal/vmsdef.Constants,
+// value, and RMS$_ completion-status code (internal/vmsdef.Symbols,
 // machine-generated from reference/vms/{fabdef,rabdef,rmsdef}.h) — so a
 // program can address a FAB/RAB field the real-MACRO-32 way
 // (<label>+FAB$L_STS) and use symbolic names (FAB$C_SEQ, RMS$_NORMAL, ...)
@@ -1318,15 +1317,8 @@ func (a *Assembler) pseudoRMSDEF(c *cursor) error {
 
 	a.scopeSymbols()
 
-	names := make([]string, 0, len(vmsdef.Constants))
-	for name := range vmsdef.Constants {
-		names = append(names, name)
-	}
-
-	sort.Strings(names)
-
-	for _, name := range names {
-		if err := a.setSymbol(name, vmsdef.Constants[name], SymPermanent, false); err != nil {
+	for _, name := range vmsdef.SymbolNames("FAB$", "RAB$", "RMS$") {
+		if err := a.setSymbol(name, vmsdef.Symbols[name], SymPermanent, false); err != nil {
 			return err
 		}
 	}
@@ -1363,7 +1355,7 @@ func (a *Assembler) pseudoRAB(c *cursor) error {
 
 // buildControlBlock is .FAB/.RAB's shared implementation. Matches real
 // $FAB/$RAB's own expansion: writes the block's BID/BLN identification
-// bytes unconditionally first (from vmsdef.Constants directly, not through
+// bytes unconditionally first (from vmsdef.Symbols directly, not through
 // the assembler's own symbol table — so .FAB/.RAB need no preceding
 // .RMSDEF to produce a correctly self-identifying block; see .RMSDEF's own
 // doc comment on why *it* only matters once a value is written
@@ -1399,11 +1391,11 @@ func (a *Assembler) buildControlBlock(c *cursor, name string, fields []vmsdef.Fi
 		panic(name + ": no BLN field in its own field table")
 	}
 
-	if err := a.storeScaled(base+bid.Offset, vmsdef.Constants[bidConst], int(bid.Size)); err != nil {
+	if err := a.storeScaled(base+bid.Offset, vmsdef.Symbols[bidConst], int(bid.Size)); err != nil {
 		return err
 	}
 
-	if err := a.storeScaled(base+bln.Offset, vmsdef.Constants[blnConst], int(bln.Size)); err != nil {
+	if err := a.storeScaled(base+bln.Offset, vmsdef.Symbols[blnConst], int(bln.Size)); err != nil {
 		return err
 	}
 

@@ -17,12 +17,12 @@ func TestPseudoFAB_autoBIDBLN(t *testing.T) {
 		t.Fatalf("assemble: %v", err)
 	}
 
-	if got := a.ByteAt(0x1000); got != byte(vmsdef.Constants["FAB$C_BID"]) {
-		t.Errorf("BID = %#x, want %#x", got, vmsdef.Constants["FAB$C_BID"])
+	if got := a.ByteAt(0x1000); got != byte(vmsdef.Symbols["FAB$C_BID"]) {
+		t.Errorf("BID = %#x, want %#x", got, vmsdef.Symbols["FAB$C_BID"])
 	}
 
-	if got := a.ByteAt(0x1001); got != byte(vmsdef.Constants["FAB$K_BLN"]) {
-		t.Errorf("BLN = %#x, want %#x", got, vmsdef.Constants["FAB$K_BLN"])
+	if got := a.ByteAt(0x1001); got != byte(vmsdef.Symbols["FAB$K_BLN"]) {
+		t.Errorf("BLN = %#x, want %#x", got, vmsdef.Symbols["FAB$K_BLN"])
 	}
 
 	if a.Deposit() != 0x1000+80 {
@@ -39,12 +39,12 @@ func TestPseudoRAB_autoBIDBLN(t *testing.T) {
 		t.Fatalf("assemble: %v", err)
 	}
 
-	if got := a.ByteAt(0x2000); got != byte(vmsdef.Constants["RAB$C_BID"]) {
-		t.Errorf("BID = %#x, want %#x", got, vmsdef.Constants["RAB$C_BID"])
+	if got := a.ByteAt(0x2000); got != byte(vmsdef.Symbols["RAB$C_BID"]) {
+		t.Errorf("BID = %#x, want %#x", got, vmsdef.Symbols["RAB$C_BID"])
 	}
 
-	if got := a.ByteAt(0x2001); got != byte(vmsdef.Constants["RAB$K_BLN"]) {
-		t.Errorf("BLN = %#x, want %#x", got, vmsdef.Constants["RAB$K_BLN"])
+	if got := a.ByteAt(0x2001); got != byte(vmsdef.Symbols["RAB$K_BLN"]) {
+		t.Errorf("BLN = %#x, want %#x", got, vmsdef.Symbols["RAB$K_BLN"])
 	}
 
 	if a.Deposit() != 0x2000+68 {

@@ -14,11 +14,11 @@ import (
 
 // Disk function codes and FIB values for the tests.
 var (
-	fnAccess   = vmsdef.IOConstants["IO$_ACCESS"]
-	fnAccessOp = vmsdef.IOConstants["IO$_ACCESS"] | vmsdef.IOConstants["IO$M_ACCESS"]
-	fnDeaccess = vmsdef.IOConstants["IO$_DEACCESS"]
-	fnModify   = vmsdef.IOConstants["IO$_MODIFY"]
-	fnWriteV   = vmsdef.IOConstants["IO$_WRITEVBLK"]
+	fnAccess   = vmsdef.Symbols["IO$_ACCESS"]
+	fnAccessOp = vmsdef.Symbols["IO$_ACCESS"] | vmsdef.Symbols["IO$M_ACCESS"]
+	fnDeaccess = vmsdef.Symbols["IO$_DEACCESS"]
+	fnModify   = vmsdef.Symbols["IO$_MODIFY"]
+	fnWriteV   = vmsdef.Symbols["IO$_WRITEVBLK"]
 )
 
 // diskContent is DATA.BIN's contents: three blocks, each filled with its
@@ -195,7 +195,7 @@ func TestDiskLookupOnly(t *testing.T) {
 
 func TestDiskWriteAndExtend(t *testing.T) {
 	env, a, ch := diskFixture(t, true)
-	fibd, fib := newFIB(a, 64, vmsdef.FIBConstants["FIB$M_WRITE"])
+	fibd, fib := newFIB(a, 64, vmsdef.Symbols["FIB$M_WRITE"])
 
 	if _, st, _ := diskQIO(t, env, a, ch, fnAccessOp, fibd, a.desc("DATA.BIN")); st != ssNormal {
 		t.Fatalf("access for write: %#x", st)
@@ -214,7 +214,7 @@ func TestDiskWriteAndExtend(t *testing.T) {
 		t.Errorf("write past the allocation: %#x", st)
 	}
 
-	putWord(t, env, fib+0x16, uint16(vmsdef.FIBConstants["FIB$M_EXTEND"]))
+	putWord(t, env, fib+0x16, uint16(vmsdef.Symbols["FIB$M_EXTEND"]))
 	putLongword(t, env, fib+0x18, 3)
 
 	if _, st, _ := diskQIO(t, env, a, ch, fnModify, fibd); st != ssNormal {
@@ -249,7 +249,7 @@ func TestDiskWriteAndExtend(t *testing.T) {
 
 func TestDisk_errors(t *testing.T) {
 	env, a, ch := diskFixture(t, false)
-	fibd, fib := newFIB(a, 64, vmsdef.FIBConstants["FIB$M_WRITE"])
+	fibd, fib := newFIB(a, 64, vmsdef.Symbols["FIB$M_WRITE"])
 
 	checks := []struct {
 		name string
@@ -258,11 +258,11 @@ func TestDisk_errors(t *testing.T) {
 		r0   uint32
 		st   uint32
 	}{
-		{"no such file", fnAccessOp, []uint32{fibd, a.desc("NOSUCH.DAT")}, ssNormal, vmsdef.SSConstants["SS$_NOSUCHFILE"]},
-		{"bad name", fnAccessOp, []uint32{fibd, a.desc("[X]Y.Z")}, ssNormal, vmsdef.SSConstants["SS$_BADFILENAME"]},
-		{"write access to a read-only volume", fnAccessOp, []uint32{fibd, a.desc("DATA.BIN")}, ssNormal, vmsdef.SSConstants["SS$_WRITLCK"]},
+		{"no such file", fnAccessOp, []uint32{fibd, a.desc("NOSUCH.DAT")}, ssNormal, vmsdef.Symbols["SS$_NOSUCHFILE"]},
+		{"bad name", fnAccessOp, []uint32{fibd, a.desc("[X]Y.Z")}, ssNormal, vmsdef.Symbols["SS$_BADFILENAME"]},
+		{"write access to a read-only volume", fnAccessOp, []uint32{fibd, a.desc("DATA.BIN")}, ssNormal, vmsdef.Symbols["SS$_WRITLCK"]},
 		{"no FIB", fnAccessOp, []uint32{0}, ssAccVio, 0},
-		{"IO$M_DELETE on IO$_ACCESS", fnAccessOp | vmsdef.IOConstants["IO$M_DELETE"], []uint32{fibd}, ssIllIoFunc, 0},
+		{"IO$M_DELETE on IO$_ACCESS", fnAccessOp | vmsdef.Symbols["IO$M_DELETE"], []uint32{fibd}, ssIllIoFunc, 0},
 	}
 
 	for _, ck := range checks {
@@ -292,7 +292,7 @@ func TestDisk_errors(t *testing.T) {
 	}
 
 	fib2, _ := newFIB(a, 64, 0)
-	if _, st, _ := diskQIO(t, env, a, ch, fnAccessOp, fib2, a.desc("DATA.BIN")); uint32(st) != vmsdef.SSConstants["SS$_DEVNOTMOUNT"] {
+	if _, st, _ := diskQIO(t, env, a, ch, fnAccessOp, fib2, a.desc("DATA.BIN")); uint32(st) != vmsdef.Symbols["SS$_DEVNOTMOUNT"] {
 		t.Errorf("not mounted: %#x", st)
 	}
 }

@@ -75,21 +75,21 @@ var (
 
 // FIB field offsets and bits ($FIBDEF, generated).
 var (
-	fibACCTL    = vmsdef.FIBConstants["FIB$L_ACCTL"]
-	fibFID      = vmsdef.FIBConstants["FIB$W_FID"]
-	fibDID      = vmsdef.FIBConstants["FIB$W_DID"]
-	fibEXCTL    = vmsdef.FIBConstants["FIB$W_EXCTL"]
-	fibEXSZ     = vmsdef.FIBConstants["FIB$L_EXSZ"]
-	fibEXVBN    = vmsdef.FIBConstants["FIB$L_EXVBN"]
-	fibNMCTL    = vmsdef.FIBConstants["FIB$W_NMCTL"]
-	fibVERLIMIT = vmsdef.FIBConstants["FIB$W_VERLIMIT"]
-	fibMWrite   = vmsdef.FIBConstants["FIB$M_WRITE"]
-	fibMExtend  = vmsdef.FIBConstants["FIB$M_EXTEND"]
+	fibACCTL    = vmsdef.Symbols["FIB$L_ACCTL"]
+	fibFID      = vmsdef.Symbols["FIB$W_FID"]
+	fibDID      = vmsdef.Symbols["FIB$W_DID"]
+	fibEXCTL    = vmsdef.Symbols["FIB$W_EXCTL"]
+	fibEXSZ     = vmsdef.Symbols["FIB$L_EXSZ"]
+	fibEXVBN    = vmsdef.Symbols["FIB$L_EXVBN"]
+	fibNMCTL    = vmsdef.Symbols["FIB$W_NMCTL"]
+	fibVERLIMIT = vmsdef.Symbols["FIB$W_VERLIMIT"]
+	fibMWrite   = vmsdef.Symbols["FIB$M_WRITE"]
+	fibMExtend  = vmsdef.Symbols["FIB$M_EXTEND"]
 	// $FIBDEF's listings give no FIB$M_ masks for the name control bits,
 	// only their bit numbers.
-	fibMNewVer    = uint32(1) << vmsdef.FIBConstants["FIB$V_NEWVER"]
-	fibMSupersede = uint32(1) << vmsdef.FIBConstants["FIB$V_SUPERSEDE"]
-	fibMaxBytes   = vmsdef.FIBConstants["FIB$C_LENGTH"]
+	fibMNewVer    = uint32(1) << vmsdef.Symbols["FIB$V_NEWVER"]
+	fibMSupersede = uint32(1) << vmsdef.Symbols["FIB$V_SUPERSEDE"]
+	fibMaxBytes   = vmsdef.Symbols["FIB$C_LENGTH"]
 )
 
 // acpStatuses maps internal/rms's ACP errors to $SSDEF statuses.
@@ -97,29 +97,29 @@ var acpStatuses = []struct {
 	err    error
 	status uint32
 }{
-	{rms.ErrACPNotMounted, vmsdef.SSConstants["SS$_DEVNOTMOUNT"]},
-	{rms.ErrACPNoSuchFile, vmsdef.SSConstants["SS$_NOSUCHFILE"]},
-	{rms.ErrACPBadDirectory, vmsdef.SSConstants["SS$_BADIRECTORY"]},
-	{rms.ErrACPBadName, vmsdef.SSConstants["SS$_BADFILENAME"]},
-	{rms.ErrACPBadVersion, vmsdef.SSConstants["SS$_BADFILEVER"]},
-	{rms.ErrACPWriteLocked, vmsdef.SSConstants["SS$_WRITLCK"]},
-	{rms.ErrACPReadOnly, vmsdef.SSConstants["SS$_NOPRIV"]},
-	{rms.ErrACPEndOfFile, vmsdef.SSConstants["SS$_ENDOFFILE"]},
-	{rms.ErrACPBadBlock, vmsdef.SSConstants["SS$_BADPARAM"]},
-	{rms.ErrACPDeviceFull, vmsdef.SSConstants["SS$_DEVICEFULL"]},
-	{rms.ErrACPDuplicate, vmsdef.SSConstants["SS$_DUPFILENAME"]},
-	{rms.ErrACPDirNotEmpty, vmsdef.SSConstants["SS$_DIRNOTEMPTY"]},
-	{rms.ErrACPProtected, vmsdef.SSConstants["SS$_NOPRIV"]},
-	{rms.ErrACPIllegalBlock, vmsdef.SSConstants["SS$_ILLBLKNUM"]},
+	{rms.ErrACPNotMounted, vmsdef.Symbols["SS$_DEVNOTMOUNT"]},
+	{rms.ErrACPNoSuchFile, vmsdef.Symbols["SS$_NOSUCHFILE"]},
+	{rms.ErrACPBadDirectory, vmsdef.Symbols["SS$_BADIRECTORY"]},
+	{rms.ErrACPBadName, vmsdef.Symbols["SS$_BADFILENAME"]},
+	{rms.ErrACPBadVersion, vmsdef.Symbols["SS$_BADFILEVER"]},
+	{rms.ErrACPWriteLocked, vmsdef.Symbols["SS$_WRITLCK"]},
+	{rms.ErrACPReadOnly, vmsdef.Symbols["SS$_NOPRIV"]},
+	{rms.ErrACPEndOfFile, vmsdef.Symbols["SS$_ENDOFFILE"]},
+	{rms.ErrACPBadBlock, vmsdef.Symbols["SS$_BADPARAM"]},
+	{rms.ErrACPDeviceFull, vmsdef.Symbols["SS$_DEVICEFULL"]},
+	{rms.ErrACPDuplicate, vmsdef.Symbols["SS$_DUPFILENAME"]},
+	{rms.ErrACPDirNotEmpty, vmsdef.Symbols["SS$_DIRNOTEMPTY"]},
+	{rms.ErrACPProtected, vmsdef.Symbols["SS$_NOPRIV"]},
+	{rms.ErrACPIllegalBlock, vmsdef.Symbols["SS$_ILLBLKNUM"]},
 }
 
 // Other statuses the disk driver reports.
 var (
-	ssFilAlrAcc = vmsdef.SSConstants["SS$_FILALRACC"]
-	ssFilNotAcc = vmsdef.SSConstants["SS$_FILNOTACC"]
-	ssDrvErr    = vmsdef.SSConstants["SS$_DRVERR"]
-	ssDevNotMnt = vmsdef.SSConstants["SS$_DEVNOTMOUNT"]
-	ssCreated   = vmsdef.SSConstants["SS$_CREATED"]
+	ssFilAlrAcc = vmsdef.Symbols["SS$_FILALRACC"]
+	ssFilNotAcc = vmsdef.Symbols["SS$_FILNOTACC"]
+	ssDrvErr    = vmsdef.Symbols["SS$_DRVERR"]
+	ssDevNotMnt = vmsdef.Symbols["SS$_DEVNOTMOUNT"]
+	ssCreated   = vmsdef.Symbols["SS$_CREATED"]
 )
 
 // acpStatus is err's $SSDEF status: one of acpStatuses, or SS$_DRVERR

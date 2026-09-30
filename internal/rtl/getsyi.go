@@ -17,8 +17,8 @@ import (
 
 // Status codes $GETSYI returns.
 var (
-	ssNoMoreNode = vmsdef.SSConstants["SS$_NOMORENODE"]
-	ssNoSuchNode = vmsdef.SSConstants["SS$_NOSUCHNODE"]
+	ssNoMoreNode = vmsdef.Symbols["SS$_NOMORENODE"]
+	ssNoSuchNode = vmsdef.Symbols["SS$_NOSUCHNODE"]
 )
 
 // The system's identity. The node name is govax's own. The version is
@@ -80,7 +80,7 @@ var syiItems = func() map[uint16]func(*Environment) itemValue {
 	out := map[uint16]func(*Environment) itemValue{}
 
 	for name, fn := range syiItemsByName {
-		code, ok := vmsdef.SYIConstants[name]
+		code, ok := vmsdef.Symbols[name]
 		if !ok {
 			panic("rtl: no $SYIDEF item code " + name)
 		}

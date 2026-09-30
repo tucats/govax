@@ -21,8 +21,8 @@ func TestPseudoRMSDEFNoMicrokernelRequired(t *testing.T) {
 // TestPseudoRMSDEFDefinesEveryConstantAndOffsetSymbol spot-checks a
 // representative sample of .RMSDEF's own symbol table — every real name
 // this phase's planning research confirmed — plus a full sweep confirming
-// every internal/vmsdef.Constants entry and every FABFields/RABFields
-// offset symbol resolved to its real value.
+// every FAB$/RAB$/RMS$ name in internal/vmsdef.Symbols and every
+// FABFields/RABFields offset symbol resolved to its real value.
 func TestPseudoRMSDEFDefinesEveryConstantAndOffsetSymbol(t *testing.T) {
 	a := New(true)
 
@@ -60,14 +60,22 @@ func TestPseudoRMSDEFDefinesEveryConstantAndOffsetSymbol(t *testing.T) {
 		}
 	}
 
-	for name, wantVal := range vmsdef.Constants {
+	for _, name := range vmsdef.SymbolNames("FAB$", "RAB$", "RMS$") {
 		v, _, err := a.getSymbol(name, false, 0, fixNone)
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
 
-		if v != wantVal {
+		if wantVal := vmsdef.Symbols[name]; v != wantVal {
 			t.Fatalf("%s = %d, want %d", name, v, wantVal)
+		}
+	}
+
+	// Only $FABDEF, $RABDEF, and $RMSDEF's names: Symbols' others belong
+	// to other definition files.
+	for _, name := range []string{"SS$_NORMAL", "LNM$_STRING", "IO$_READVBLK"} {
+		if _, ok := a.symbols.find(name); ok {
+			t.Errorf(".RMSDEF defined %s", name)
 		}
 	}
 

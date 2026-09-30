@@ -194,9 +194,9 @@ type conditionDispatch struct {
 
 // Status values the condition dispatcher uses.
 var (
-	ssAccVioCond = vmsdef.SSConstants["SS$_ACCVIO"]
-	ssResignal   = vmsdef.SSConstants["SS$_RESIGNAL"]
-	ssNoSignal   = vmsdef.SSConstants["SS$_NOSIGNAL"]
+	ssAccVioCond = vmsdef.Symbols["SS$_ACCVIO"]
+	ssResignal   = vmsdef.Symbols["SS$_RESIGNAL"]
+	ssNoSignal   = vmsdef.Symbols["SS$_NOSIGNAL"]
 )
 
 // stsInhibitMsg is STS$M_INHIB_MSG, bit 28 of a condition value: "the
@@ -234,10 +234,10 @@ const (
 // simpleExceptions are the exceptions whose condition value depends on
 // nothing else, and which have no detail longwords.
 var simpleExceptions = map[uint32]uint32{
-	scbPrivileged:   vmsdef.SSConstants["SS$_OPCDEC"],
-	scbCustomer:     vmsdef.SSConstants["SS$_OPCCUS"],
-	scbReservedOp:   vmsdef.SSConstants["SS$_ROPRAND"],
-	scbReservedAddr: vmsdef.SSConstants["SS$_RADRMOD"],
+	scbPrivileged:   vmsdef.Symbols["SS$_OPCDEC"],
+	scbCustomer:     vmsdef.Symbols["SS$_OPCCUS"],
+	scbReservedOp:   vmsdef.Symbols["SS$_ROPRAND"],
+	scbReservedAddr: vmsdef.Symbols["SS$_RADRMOD"],
 }
 
 // arithmeticConditions maps an arithmetic exception's type code (its one
@@ -245,21 +245,21 @@ var simpleExceptions = map[uint32]uint32{
 // condition value. Types 1-7 are traps, 8-10 the faults of the same
 // names.
 var arithmeticConditions = map[uint32]uint32{
-	1:  vmsdef.SSConstants["SS$_INTOVF"],
-	2:  vmsdef.SSConstants["SS$_INTDIV"],
-	3:  vmsdef.SSConstants["SS$_FLTOVF"],
-	4:  vmsdef.SSConstants["SS$_FLTDIV"],
-	5:  vmsdef.SSConstants["SS$_FLTUND"],
-	6:  vmsdef.SSConstants["SS$_DECOVF"],
-	7:  vmsdef.SSConstants["SS$_SUBRNG"],
-	8:  vmsdef.SSConstants["SS$_FLTOVF_F"],
-	9:  vmsdef.SSConstants["SS$_FLTDIV_F"],
-	10: vmsdef.SSConstants["SS$_FLTUND_F"],
+	1:  vmsdef.Symbols["SS$_INTOVF"],
+	2:  vmsdef.Symbols["SS$_INTDIV"],
+	3:  vmsdef.Symbols["SS$_FLTOVF"],
+	4:  vmsdef.Symbols["SS$_FLTDIV"],
+	5:  vmsdef.Symbols["SS$_FLTUND"],
+	6:  vmsdef.Symbols["SS$_DECOVF"],
+	7:  vmsdef.Symbols["SS$_SUBRNG"],
+	8:  vmsdef.Symbols["SS$_FLTOVF_F"],
+	9:  vmsdef.Symbols["SS$_FLTDIV_F"],
+	10: vmsdef.Symbols["SS$_FLTUND_F"],
 }
 
 // ssArtRes is SS$_ARTRES, "reserved arithmetic trap": an arithmetic
 // exception with a type code the table doesn't have.
-var ssArtRes = vmsdef.SSConstants["SS$_ARTRES"]
+var ssArtRes = vmsdef.Symbols["SS$_ARTRES"]
 
 // exceptionCondition returns the condition value and signal-array detail
 // longwords for the hardware exception with SCB offset code and

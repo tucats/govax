@@ -186,3 +186,14 @@ golangci-lint clean, then a commit (and `build -i` where it changes behavior).
 - 2026-09-30: Plan drafted for review. Open questions settled (see
   Decisions): keep the message texts, leave history alone, and capture only
   LIBRTL and the shimmed images.
+- 2026-09-30: Subtask 1 done. The 16 generated maps are one table,
+  `vmsdef.Symbols` (`symbols_generated.go`, 3,464 names). Before the merge,
+  a check confirmed that no name appears in two maps, and that the old
+  `Constants` map was exactly the 393 FAB$/RAB$/RMS$ names, which no other
+  map uses. `vmsdef.SymbolNames(prefixes...)` returns a family's names,
+  sorted, and `.RMSDEF` uses it for FAB$/RAB$/RMS$. `symbols.go` documents
+  each prefix, taking over the old per-map doc comments. The consumers
+  (about 250 references in 48 files) were renamed mechanically. New tests:
+  `TestSymbolNames_rmsFamilies` pins the 393-name set, and the `.RMSDEF`
+  test checks that SS$/LNM$/IO$ names stay out. For now gen still
+  rebuilds everything from `reference/vms`; subtask 2 changes that.

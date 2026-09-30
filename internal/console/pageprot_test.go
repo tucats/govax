@@ -10,10 +10,10 @@ import (
 
 // More status values the page services return.
 var (
-	ssIvProtect = vmsdef.SSConstants["SS$_IVPROTECT"]
-	ssLenVio    = vmsdef.SSConstants["SS$_LENVIO"]
-	ssWasClr    = vmsdef.SSConstants["SS$_WASCLR"]
-	ssWasSet    = vmsdef.SSConstants["SS$_WASSET"]
+	ssIvProtect = vmsdef.Symbols["SS$_IVPROTECT"]
+	ssLenVio    = vmsdef.Symbols["SS$_LENVIO"]
+	ssWasClr    = vmsdef.Symbols["SS$_WASCLR"]
+	ssWasSet    = vmsdef.Symbols["SS$_WASSET"]
 )
 
 const vaPrvprt = 0x8020

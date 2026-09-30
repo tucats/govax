@@ -398,11 +398,11 @@ func (env *Environment) postMailboxMessage(m *Mailbox, data string) {
 
 // $BRKDEF values.
 var (
-	brkDevice    = vmsdef.BRKConstants["BRK$C_DEVICE"]
-	brkUsername  = vmsdef.BRKConstants["BRK$C_USERNAME"]
-	brkAllUsers  = vmsdef.BRKConstants["BRK$C_ALLUSERS"]
-	brkAllTerms  = vmsdef.BRKConstants["BRK$C_ALLTERMS"]
-	brkMaxSendTy = vmsdef.BRKConstants["BRK$C_MAXSENDTYPE"]
+	brkDevice    = vmsdef.Symbols["BRK$C_DEVICE"]
+	brkUsername  = vmsdef.Symbols["BRK$C_USERNAME"]
+	brkAllUsers  = vmsdef.Symbols["BRK$C_ALLUSERS"]
+	brkAllTerms  = vmsdef.Symbols["BRK$C_ALLTERMS"]
+	brkMaxSendTy = vmsdef.Symbols["BRK$C_MAXSENDTYPE"]
 )
 
 // Limits $BRKTHRU checks.
@@ -413,7 +413,7 @@ const (
 )
 
 // ssNoOper is SS$_NOOPER, a broadcast to several terminals without OPER.
-var ssNoOper = vmsdef.SSConstants["SS$_NOOPER"]
+var ssNoOper = vmsdef.Symbols["SS$_NOOPER"]
 
 // serviceSysBrkthru is SYS$BRKTHRU:
 //

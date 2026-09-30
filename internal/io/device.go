@@ -161,7 +161,7 @@ type Device struct {
 
 // devAllocated is DEV$M_ALL, the DEVCHAR bit VMS sets on an allocated
 // device.
-var devAllocated = vmsdef.DEVConstants["DEV$M_ALL"]
+var devAllocated = vmsdef.Symbols["DEV$M_ALL"]
 
 // Allocated reports whether d is allocated to a process (DEV$M_ALL in
 // DevChar); d.PID then names the owner.

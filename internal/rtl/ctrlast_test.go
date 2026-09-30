@@ -9,8 +9,8 @@ import (
 
 // The IO$_SETMODE functions that enable CTRL/C and CTRL/Y ASTs.
 var (
-	fnCtrlCAST = vmsdef.IOConstants["IO$_SETMODE"] | vmsdef.IOConstants["IO$M_CTRLCAST"]
-	fnCtrlYAST = vmsdef.IOConstants["IO$_SETMODE"] | vmsdef.IOConstants["IO$M_CTRLYAST"]
+	fnCtrlCAST = vmsdef.Symbols["IO$_SETMODE"] | vmsdef.Symbols["IO$M_CTRLCAST"]
+	fnCtrlYAST = vmsdef.Symbols["IO$_SETMODE"] | vmsdef.Symbols["IO$M_CTRLYAST"]
 )
 
 // enableAST calls $QIO function fn (a CTRL/C or CTRL/Y AST request) on

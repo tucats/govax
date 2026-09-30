@@ -42,9 +42,9 @@ import (
 
 // Status codes the mailbox services and driver return.
 var (
-	ssDevNotMbx = vmsdef.SSConstants["SS$_DEVNOTMBX"]
-	ssMbFull    = vmsdef.SSConstants["SS$_MBFULL"]
-	ssMbTooSml  = vmsdef.SSConstants["SS$_MBTOOSML"]
+	ssDevNotMbx = vmsdef.Symbols["SS$_DEVNOTMBX"]
+	ssMbFull    = vmsdef.Symbols["SS$_MBFULL"]
+	ssMbTooSml  = vmsdef.Symbols["SS$_MBTOOSML"]
 )
 
 // Mailbox defaults and limits. The defaults are the SYSGEN parameters
@@ -64,9 +64,9 @@ const (
 
 // mailboxDevChar is a mailbox's DEVCHAR: record oriented, available,
 // shareable, a mailbox, capable of input and output.
-var mailboxDevChar = vmsdef.DEVConstants["DEV$M_REC"] | vmsdef.DEVConstants["DEV$M_AVL"] |
-	vmsdef.DEVConstants["DEV$M_SHR"] | vmsdef.DEVConstants["DEV$M_MBX"] |
-	vmsdef.DEVConstants["DEV$M_IDV"] | vmsdef.DEVConstants["DEV$M_ODV"]
+var mailboxDevChar = vmsdef.Symbols["DEV$M_REC"] | vmsdef.Symbols["DEV$M_AVL"] |
+	vmsdef.Symbols["DEV$M_SHR"] | vmsdef.Symbols["DEV$M_MBX"] |
+	vmsdef.Symbols["DEV$M_IDV"] | vmsdef.Symbols["DEV$M_ODV"]
 
 // Mailbox is one mailbox: its device record and its state.
 type Mailbox struct {
@@ -277,7 +277,7 @@ func serviceSysCrembx(env *Environment, argv []uint32) (uint32, error) {
 
 	unit := env.Mailboxes.nextUnit(env.Devices)
 	if unit == 0 {
-		return vmsdef.SSConstants["SS$_NOIOCHAN"], nil
+		return vmsdef.Symbols["SS$_NOIOCHAN"], nil
 	}
 
 	device := fmt.Sprintf("MBA%d", unit)

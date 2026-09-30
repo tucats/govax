@@ -68,21 +68,21 @@ import (
 
 // Status codes the I/O services return.
 var (
-	ssIllIoFunc = vmsdef.SSConstants["SS$_ILLIOFUNC"]
-	ssTimeout   = vmsdef.SSConstants["SS$_TIMEOUT"]
-	ssEndOfFile = vmsdef.SSConstants["SS$_ENDOFFILE"]
-	ssCancel    = vmsdef.SSConstants["SS$_CANCEL"]
+	ssIllIoFunc = vmsdef.Symbols["SS$_ILLIOFUNC"]
+	ssTimeout   = vmsdef.Symbols["SS$_TIMEOUT"]
+	ssEndOfFile = vmsdef.Symbols["SS$_ENDOFFILE"]
+	ssCancel    = vmsdef.Symbols["SS$_CANCEL"]
 )
 
 // ioFunctionCodeMask selects a func argument's function code (IO$M_FCODE,
 // its low 6 bits). Everything above it, in the low word, is modifiers.
-var ioFunctionCodeMask = vmsdef.IOConstants["IO$M_FCODE"]
+var ioFunctionCodeMask = vmsdef.Symbols["IO$M_FCODE"]
 
 // ioCode returns the $IODEF value called name, panicking if there isn't
 // one: the function tables are built from names when the package loads,
 // so a misspelling is caught by any test.
 func ioCode(name string) uint32 {
-	v, ok := vmsdef.IOConstants[name]
+	v, ok := vmsdef.Symbols[name]
 	if !ok {
 		panic("rtl: no $IODEF symbol " + name)
 	}

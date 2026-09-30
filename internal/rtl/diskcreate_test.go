@@ -10,12 +10,12 @@ import (
 
 // IO$_CREATE's function codes and the FIB fields the tests set.
 var (
-	fnCreate       = vmsdef.IOConstants["IO$_CREATE"]
-	fnCreateNew    = fnCreate | vmsdef.IOConstants["IO$M_CREATE"]
-	fnCreateAccess = fnCreateNew | vmsdef.IOConstants["IO$M_ACCESS"]
-	fnAccessCreate = fnAccessOp | vmsdef.IOConstants["IO$M_CREATE"]
-	ssCreatedTest  = vmsdef.SSConstants["SS$_CREATED"]
-	ssDupFileName  = vmsdef.SSConstants["SS$_DUPFILENAME"]
+	fnCreate       = vmsdef.Symbols["IO$_CREATE"]
+	fnCreateNew    = fnCreate | vmsdef.Symbols["IO$M_CREATE"]
+	fnCreateAccess = fnCreateNew | vmsdef.Symbols["IO$M_ACCESS"]
+	fnAccessCreate = fnAccessOp | vmsdef.Symbols["IO$M_CREATE"]
+	ssCreatedTest  = vmsdef.Symbols["SS$_CREATED"]
+	ssDupFileName  = vmsdef.Symbols["SS$_DUPFILENAME"]
 )
 
 // fibFileID reads the file ID stored in the FIB at fib.
@@ -163,7 +163,7 @@ func TestDiskCreate_noDirectoryAndEnter(t *testing.T) {
 	putWord(t, env, fib+fibDID, 4)
 	putWord(t, env, fib+fibDID+2, 4)
 
-	if _, st, _ := diskQIO(t, env, a, ch, fnCreate|vmsdef.IOConstants["IO$M_ACCESS"], fibd, a.desc("KEPT.DAT")); st != ssNormal {
+	if _, st, _ := diskQIO(t, env, a, ch, fnCreate|vmsdef.Symbols["IO$M_ACCESS"], fibd, a.desc("KEPT.DAT")); st != ssNormal {
 		t.Fatalf("IO$_CREATE (enter): %#x", st)
 	}
 
@@ -210,10 +210,10 @@ func TestDiskCreate_errors(t *testing.T) {
 		r0   uint32
 		st   uint32
 	}{
-		{"read-only volume", fnCreateNew, []uint32{fibd, a.desc("X.DAT")}, ssNormal, vmsdef.SSConstants["SS$_WRITLCK"]},
+		{"read-only volume", fnCreateNew, []uint32{fibd, a.desc("X.DAT")}, ssNormal, vmsdef.Symbols["SS$_WRITLCK"]},
 		{"directory, no name", fnCreateNew, []uint32{fibd}, ssNormal, ssBadParam},
 		{"enter, no file ID", fnCreate, []uint32{fibd, a.desc("X.DAT")}, ssNormal, ssBadParam},
-		{"entering, temporary", fnCreate | vmsdef.IOConstants["IO$M_DELETE"], []uint32{fibd}, ssIllIoFunc, 0},
+		{"entering, temporary", fnCreate | vmsdef.Symbols["IO$M_DELETE"], []uint32{fibd}, ssIllIoFunc, 0},
 		{"no FIB", fnCreateNew, []uint32{0}, ssAccVio, 0},
 	}
 

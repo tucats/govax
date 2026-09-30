@@ -12,9 +12,9 @@ import (
 
 // Mailbox function codes, spelled out for the tests.
 var (
-	fnWriteNow = vmsdef.IOConstants["IO$_WRITEVBLK"] | vmsdef.IOConstants["IO$M_NOW"]
-	fnReadNow  = vmsdef.IOConstants["IO$_READVBLK"] | vmsdef.IOConstants["IO$M_NOW"]
-	fnWriteEOF = vmsdef.IOConstants["IO$_WRITEOF"]
+	fnWriteNow = vmsdef.Symbols["IO$_WRITEVBLK"] | vmsdef.Symbols["IO$M_NOW"]
+	fnReadNow  = vmsdef.Symbols["IO$_READVBLK"] | vmsdef.Symbols["IO$M_NOW"]
+	fnWriteEOF = vmsdef.Symbols["IO$_WRITEOF"]
 )
 
 // crembx calls $CREMBX and returns R0 and the channel.
@@ -239,7 +239,7 @@ func TestMailboxDriver_queuedMessages(t *testing.T) {
 	}
 
 	wantR0(t, mbxQIO(t, env, 0, ch, fnWriteNow, 0, 0, a.str("a longer one"), 12), ssNormal)
-	wantR0(t, mbxQIO(t, env, 0, ch, fnWriteEOF|vmsdef.IOConstants["IO$M_NOW"], 0, 0, 0, 0), ssNormal)
+	wantR0(t, mbxQIO(t, env, 0, ch, fnWriteEOF|vmsdef.Symbols["IO$M_NOW"], 0, 0, 0, 0), ssNormal)
 
 	// Sense mode counts them.
 	wantR0(t, mbxQIO(t, env, 0, ch, fnSenseMode, iosb, 0, 0, 0), ssNormal)

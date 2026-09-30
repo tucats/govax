@@ -91,13 +91,13 @@ func pteAt(t *testing.T, c *Console, addr uint32) vm.PTE {
 
 // Status values the address space services return.
 var (
-	ssNormal    = vmsdef.SSConstants["SS$_NORMAL"]
-	ssAccVio    = vmsdef.SSConstants["SS$_ACCVIO"]
-	ssNoPriv    = vmsdef.SSConstants["SS$_NOPRIV"]
-	ssPagOwnVio = vmsdef.SSConstants["SS$_PAGOWNVIO"]
-	ssVasFull   = vmsdef.SSConstants["SS$_VASFULL"]
-	ssIllPagCnt = vmsdef.SSConstants["SS$_ILLPAGCNT"]
-	ssBadParam  = vmsdef.SSConstants["SS$_BADPARAM"]
+	ssNormal    = vmsdef.Symbols["SS$_NORMAL"]
+	ssAccVio    = vmsdef.Symbols["SS$_ACCVIO"]
+	ssNoPriv    = vmsdef.Symbols["SS$_NOPRIV"]
+	ssPagOwnVio = vmsdef.Symbols["SS$_PAGOWNVIO"]
+	ssVasFull   = vmsdef.Symbols["SS$_VASFULL"]
+	ssIllPagCnt = vmsdef.Symbols["SS$_ILLPAGCNT"]
+	ssBadParam  = vmsdef.Symbols["SS$_BADPARAM"]
 )
 
 func TestCretvaDeltva(t *testing.T) {

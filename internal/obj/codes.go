@@ -10,7 +10,7 @@ import (
 // name is a programming error in this package, so it panics at package
 // initialization rather than quietly using zero.
 func objConst(name string) uint32 {
-	v, ok := vmsdef.OBJConstants[name]
+	v, ok := vmsdef.Symbols[name]
 	if !ok {
 		panic("obj: no object language constant " + name)
 	}

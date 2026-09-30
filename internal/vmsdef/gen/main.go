@@ -1,17 +1,13 @@
-// Command gen parses reference/vms/{fabdef,rabdef,rmsdef}.h and emits
-// internal/vmsdef/constants_generated.go: a flat map of every real FAB$/
-// RAB$/RMS$_ symbolic-constant name to its numeric value (Constants), plus
-// further maps from other real VMS 7.3 sources: LNMConstants from
-// reference/vms/lnmdef.sdl (SDL source; see sdl.go) and SSConstants from
-// reference/vms/ssdef.txt (a BLISS LITERAL listing; see bliss.go), both
-// docs/PHASE-25.md, and DEVConstants and JPIConstants from
-// reference/vms/devdef.sdl and jpidef.sdl (docs/PHASE-26.md), and
-// OBJConstants from reference/vms/objfmt.sdl (docs/PHASE-27.md). The
-// message texts of reference/vms/sysmsg.txt go to a second file,
-// messages_generated.go (msg.go). They are kept as separate maps, not merged into
-// Constants, because .RMSDEF (internal/asm) defines every Constants entry
-// as an assembler symbol and must not start defining LNM$/SS$/DEV$/JPI$
-// names too. Run via `go
+// Command gen parses VMS 7.3's definition files and emits
+// internal/vmsdef/symbols_generated.go: one map, Symbols, of every
+// symbolic-constant name to its numeric value. It reads $FABDEF, $RABDEF,
+// and $RMSDEF from C headers, $LNMDEF, $DEVDEF, $JPIDEF, $IODEF, $PRTDEF,
+// $BRKDEF, and the VAX object language from SDL source (sdl.go), and
+// $SSDEF, $STATEDEF, $SYIDEF, $DVIDEF, $TTDEF, $PRVDEF, $FIBDEF, and
+// $ATRDEF from BLISS LITERAL listings (bliss.go). Each file's names have
+// their own prefix, so they share one table; internal/vmsdef/symbols.go
+// says what each prefix holds. The message texts of the system message
+// file go to a second file, messages_generated.go (msg.go). Run via `go
 // generate` from internal/vmsdef (see the go:generate directive in
 // constants.go) rather than hand-transcribing ~450 #define lines — see
 // docs/PHASE-24.md's design notes on why (the same reasoning
@@ -243,160 +239,30 @@ func main() {
 		log.Fatalf("gen: %s: %v", *objfmt, err)
 	}
 
+	// Every map goes into one table, Symbols. Each definition file's names
+	// have their own prefix (FAB$, SS$_, LNM$, ...), so no two can collide;
+	// a name defined twice with different values is an error.
+	symbols := map[string]uint32{}
+
+	for _, m := range []map[string]uint32{constants, lnm, ss, dev, jpi, io, state, syi, dvi, tt, prt, prv, brk, fib, atr, obj} {
+		for name, v := range m {
+			if prev, ok := symbols[name]; ok && prev != v {
+				log.Fatalf("gen: %s defined twice with different values (%#x, then %#x)", name, prev, v)
+			}
+
+			symbols[name] = v
+		}
+	}
+
 	maps := []constantMap{
 		{
-			name: "Constants",
+			name: "Symbols",
 			doc: []string{
-				"Constants is every real FAB$/RAB$/RMS$_ symbolic-constant name",
-				"(bitmask flag, named code value, or RMS$_ completion-status code)",
-				"mapped to its real numeric value — what .RMSDEF (internal/asm) defines",
-				"as an assembler symbol. Does not include field-offset symbols",
-				"(FAB$L_STS and friends) — those come from FABFields/RABFields instead,",
-				"since an offset isn't a #define-style bare header constant.",
+				"Symbols is every VMS symbolic constant govax knows, by name: the",
+				"values of $SSDEF, $FABDEF, $IODEF, and the other definition files.",
+				"See symbols.go for what each prefix holds.",
 			},
-			entries: constants,
-		},
-		{
-			name: "LNMConstants",
-			doc: []string{
-				"LNMConstants is every real $LNMDEF symbol: LNM$M_/LNM$V_ attribute",
-				"bits, LNM$C_ limits, and LNM$_ item codes (LNM$_CHAIN is -1, stored",
-				"as its 32-bit two's-complement value).",
-			},
-			entries: lnm,
-		},
-		{
-			name: "SSConstants",
-			doc: []string{
-				"SSConstants is every real VAX/VMS $SSDEF system-service completion",
-				"code (SS$_NORMAL, SS$_NOLOGNAM, ...).",
-			},
-			entries: ss,
-		},
-		{
-			name: "DEVConstants",
-			doc: []string{
-				"DEVConstants is every real $DEVDEF device-characteristics bit:",
-				"DEV$M_/DEV$V_ for the DEVCHAR longword (DEV$M_ALL, DEV$M_MNT, ...)",
-				"and for DEVCHAR2 (DEV$M_CLU, ...). The two longwords are separate",
-				"union members in the SDL source, so both number their bits from 0.",
-			},
-			entries: dev,
-		},
-		{
-			name: "JPIConstants",
-			doc: []string{
-				"JPIConstants is every real $JPIDEF symbol: the JPI$_ item codes",
-				"$GETJPI takes (JPI$_PID, JPI$_USERNAME, ...), JPI$K_ values such",
-				"as the JPI$_MODE codes, and JPI$C_/JPI$M_ definitions.",
-			},
-			entries: jpi,
-		},
-		{
-			name: "IOConstants",
-			doc: []string{
-				"IOConstants is every real $IODEF symbol: the IO$_ function codes",
-				"$QIO takes (IO$_READVBLK, IO$_WRITEVBLK, ...) and the IO$M_/IO$V_",
-				"function-modifier bits (IO$M_NOECHO, ...). The modifiers of",
-				"different device classes are separate union members in the SDL",
-				"source, so the same bit can have several names.",
-			},
-			entries: io,
-		},
-		{
-			name: "STATEConstants",
-			doc: []string{
-				"STATEConstants is every real $STATEDEF scheduling-state code",
-				"(SCH$C_CUR, SCH$C_HIB, ...): what $GETJPI's JPI$_STATE returns.",
-			},
-			entries: state,
-		},
-		{
-			name: "SYIConstants",
-			doc: []string{
-				"SYIConstants is every real $SYIDEF symbol: the SYI$_ item codes",
-				"$GETSYI takes (SYI$_VERSION, SYI$_NODENAME, ...) and SYI$C_ values.",
-			},
-			entries: syi,
-		},
-		{
-			name: "DVIConstants",
-			doc: []string{
-				"DVIConstants is every real $DVIDEF symbol: the DVI$_ item codes",
-				"$GETDVI takes (DVI$_DEVNAM, DVI$_DEVCLASS, ...), the DVI$M_/DVI$V_",
-				"item-code flags (DVI$M_SECONDARY), and DVI$C_ values.",
-			},
-			entries: dvi,
-		},
-		{
-			name: "TTConstants",
-			doc: []string{
-				"TTConstants is every real $TTDEF symbol: the TT$M_/TT$V_ terminal",
-				"characteristics in a terminal's DEVDEPEND longword (TT$M_NOECHO,",
-				"...), the TT2$M_/TT2$V_ ones in DEVDEPEND2 (TT2$M_ANSICRT, ...),",
-				"and TT$C_ values such as the line speeds.",
-			},
-			entries: tt,
-		},
-		{
-			name: "PRTConstants",
-			doc: []string{
-				"PRTConstants is every real $PRTDEF symbol: the PRT$C_ page",
-				"protection codes $SETPRT takes (PRT$C_NA, PRT$C_UW, ...), in the",
-				"VAX page table entry's encoding.",
-			},
-			entries: prt,
-		},
-		{
-			name: "PRVConstants",
-			doc: []string{
-				"PRVConstants is every real $PRVDEF privilege bit number (PRV$V_CMKRNL,",
-				"PRV$V_SYSNAM, ...): the privilege's bit in a quadword privilege mask,",
-				"which may be past bit 31. PRV$K_NUMBER_OF_PRIVS is the count.",
-			},
-			entries: prv,
-		},
-		{
-			name: "BRKConstants",
-			doc: []string{
-				"BRKConstants is every real $BRKDEF symbol: $BRKTHRU's send types",
-				"(BRK$C_DEVICE, BRK$C_ALLUSERS, ...), its requestor classes",
-				"(BRK$C_GENERAL, BRK$C_USER1, ...), and its flags (BRK$M_SCREEN, ...).",
-			},
-			entries: brk,
-		},
-		{
-			name: "FIBConstants",
-			doc: []string{
-				"FIBConstants is every real $FIBDEF symbol: the file information",
-				"block's field offsets (FIB$L_ACCTL, FIB$W_FID, FIB$W_DID, ...), its",
-				"FIB$M_/FIB$V_ bits, and FIB$C_ codes: the disk ACP's $QIO argument.",
-			},
-			entries: fib,
-		},
-		{
-			name: "ATRConstants",
-			doc: []string{
-				"ATRConstants is every real $ATRDEF symbol: the disk ACP's attribute",
-				"codes (ATR$C_RECATTR, ATR$C_UCHAR, ...), their sizes (ATR$S_), and the",
-				"layout of an attribute list's entries (ATR$W_SIZE, ATR$W_TYPE, ATR$L_ADDR).",
-			},
-			entries: atr,
-		},
-		{
-			name: "OBJConstants",
-			doc: []string{
-				"OBJConstants is every real VAX object language symbol, from the VAX",
-				"modules of objfmt.sdl ($OBJRECDEF through $TIRDEF): record types",
-				"(OBJ$C_GSD, ...), header types (MHD$C_LNM, ...), GSD subrecord types",
-				"(GSD$C_PSC, ...), TIR commands (TIR$C_STA_PL, ...), psect and symbol",
-				"flag bits (GPS$M_REL, GSY$M_DEF, ...), and each record's field offsets",
-				"(GPS$B_ALIGN, SDF$L_VALUE, ...). $OBJRECDEF's SDA-only aggregate puts",
-				"its flag bitfields directly in a union, so SDL places every OBJ$V_PSC_",
-				"and OBJ$V_SYM_ bit at 0: use the GPS$ and GSY$ bits instead. See",
-				"docs/PHASE-27.md.",
-			},
-			entries: obj,
+			entries: symbols,
 		},
 	}
 
@@ -407,7 +273,7 @@ func main() {
 		log.Fatalf("gen: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "gen: wrote %d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d/%d constants to %s\n", len(constants), len(lnm), len(ss), len(dev), len(jpi), len(io), len(state), len(syi), len(dvi), len(tt), len(prt), len(prv), len(brk), len(fib), len(atr), len(obj), *out)
+	fmt.Fprintf(os.Stderr, "gen: wrote %d symbols to %s\n", len(symbols), *out)
 
 	// The message texts go in a file of their own (see msg.go).
 	msgs, facilities, err := parseMessages(readSource(*sysmsg))

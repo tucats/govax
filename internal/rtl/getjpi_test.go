@@ -12,7 +12,7 @@ import (
 func jpiCode(t *testing.T, name string) uint16 {
 	t.Helper()
 
-	code, ok := vmsdef.JPIConstants[name]
+	code, ok := vmsdef.Symbols[name]
 	if !ok {
 		t.Fatalf("no $JPIDEF code %s", name)
 	}
@@ -53,8 +53,8 @@ func TestServiceSysGetjpiItems(t *testing.T) {
 		{name: "JPI$_UIC", long: 0x00010004},
 		{name: "JPI$_GRP", long: 1},
 		{name: "JPI$_MEM", long: 4},
-		{name: "JPI$_MODE", long: vmsdef.JPIConstants["JPI$K_INTERACTIVE"]},
-		{name: "JPI$_JOBTYPE", long: vmsdef.JPIConstants["JPI$K_LOCAL"]},
+		{name: "JPI$_MODE", long: vmsdef.Symbols["JPI$K_INTERACTIVE"]},
+		{name: "JPI$_JOBTYPE", long: vmsdef.Symbols["JPI$K_LOCAL"]},
 		{name: "JPI$_EFCS", long: 0x10},
 		{name: "JPI$_EFCU", long: 0x22},
 		{name: "JPI$_DFWSCNT", long: p.WSDefault},
@@ -280,7 +280,7 @@ func TestServiceSysGetjpiASTItems(t *testing.T) {
 
 func TestJPIItemsRegistry(t *testing.T) {
 	for name := range jpiItemsByName {
-		if _, ok := vmsdef.JPIConstants[name]; !ok {
+		if _, ok := vmsdef.Symbols[name]; !ok {
 			t.Errorf("%s is not a $JPIDEF item code", name)
 		}
 	}

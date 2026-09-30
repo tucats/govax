@@ -74,9 +74,9 @@ type unwindRequest struct {
 
 // Status values the unwind services use.
 var (
-	ssUnwind    = vmsdef.SSConstants["SS$_UNWIND"]
-	ssUnwinding = vmsdef.SSConstants["SS$_UNWINDING"]
-	ssInsFrame  = vmsdef.SSConstants["SS$_INSFRAME"]
+	ssUnwind    = vmsdef.Symbols["SS$_UNWIND"]
+	ssUnwinding = vmsdef.Symbols["SS$_UNWINDING"]
+	ssInsFrame  = vmsdef.Symbols["SS$_INSFRAME"]
 )
 
 // unwindRETAddr returns the address of the RET instruction the unwind's

@@ -52,9 +52,9 @@ import (
 
 // Status values the address space services return.
 var (
-	ssPagOwnVio = vmsdef.SSConstants["SS$_PAGOWNVIO"]
-	ssVasFull   = vmsdef.SSConstants["SS$_VASFULL"]
-	ssIllPagCnt = vmsdef.SSConstants["SS$_ILLPAGCNT"]
+	ssPagOwnVio = vmsdef.Symbols["SS$_PAGOWNVIO"]
+	ssVasFull   = vmsdef.Symbols["SS$_VASFULL"]
+	ssIllPagCnt = vmsdef.Symbols["SS$_ILLPAGCNT"]
 )
 
 // pageSize is the VAX page size, and pageMask the bits of an address

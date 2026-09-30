@@ -16,7 +16,7 @@ import (
 // guarded by a *privilege* (CMKRNL, PRMMBX, SYSNAM, ALTPRI, ...), and a
 // process may use it only while the privilege is enabled. There are 39;
 // each is a bit in a quadword (64-bit) mask, numbered by $PRVDEF
-// (PRV$V_CMKRNL is bit 0, ...), generated as vmsdef.PRVConstants.
+// (PRV$V_CMKRNL is bit 0, ...), generated as vmsdef.Symbols.
 //
 // A process has four such masks:
 //
@@ -44,7 +44,7 @@ import (
 // part after PRV$V_), panicking for a name $PRVDEF doesn't have: they
 // are package-level constants below, so a misspelling fails at once.
 func privilegeBit(name string) uint64 {
-	n, ok := vmsdef.PRVConstants["PRV$V_"+name]
+	n, ok := vmsdef.Symbols["PRV$V_"+name]
 	if !ok {
 		panic("rtl: no $PRVDEF privilege " + name)
 	}
@@ -71,11 +71,11 @@ var (
 
 // allPrivileges is every privilege's bit: the first PRV$K_NUMBER_OF_PRIVS
 // bits of the mask.
-var allPrivileges = uint64(1)<<vmsdef.PRVConstants["PRV$K_NUMBER_OF_PRIVS"] - 1
+var allPrivileges = uint64(1)<<vmsdef.Symbols["PRV$K_NUMBER_OF_PRIVS"] - 1
 
 // ssNotAllPriv is SS$_NOTALLPRIV, $SETPRV's "done, but not every
 // privilege you asked for" (a success status).
-var ssNotAllPriv = vmsdef.SSConstants["SS$_NOTALLPRIV"]
+var ssNotAllPriv = vmsdef.Symbols["SS$_NOTALLPRIV"]
 
 // hasPrivilege reports whether every privilege in mask is enabled
 // (CURPRIV).

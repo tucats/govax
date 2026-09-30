@@ -64,7 +64,7 @@ type diskAttribute struct {
 // atrCode returns the $ATRDEF value called name, panicking for a name
 // $ATRDEF doesn't have, like ioCode.
 func atrCode(name string) uint32 {
-	v, ok := vmsdef.ATRConstants[name]
+	v, ok := vmsdef.Symbols[name]
 	if !ok {
 		panic("rtl: no $ATRDEF symbol " + name)
 	}
@@ -138,7 +138,7 @@ var diskAttributes = map[uint32]diskAttribute{
 }
 
 // ssBadAttrib is SS$_BADATTRIB: an attribute list entry govax can't do.
-var ssBadAttrib = vmsdef.SSConstants["SS$_BADATTRIB"]
+var ssBadAttrib = vmsdef.Symbols["SS$_BADATTRIB"]
 
 // maxAttributeEntries bounds how many entries a list is read for, so a
 // list missing its terminating zero can't run through all of memory.

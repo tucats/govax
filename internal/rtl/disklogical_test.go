@@ -9,11 +9,11 @@ import (
 
 // The block I/O function codes.
 var (
-	fnReadLBlk  = vmsdef.IOConstants["IO$_READLBLK"]
-	fnWriteLBlk = vmsdef.IOConstants["IO$_WRITELBLK"]
-	fnReadPBlk  = vmsdef.IOConstants["IO$_READPBLK"]
-	fnWritePBlk = vmsdef.IOConstants["IO$_WRITEPBLK"]
-	ssIllBlkNum = vmsdef.SSConstants["SS$_ILLBLKNUM"]
+	fnReadLBlk  = vmsdef.Symbols["IO$_READLBLK"]
+	fnWriteLBlk = vmsdef.Symbols["IO$_WRITELBLK"]
+	fnReadPBlk  = vmsdef.Symbols["IO$_READPBLK"]
+	fnWritePBlk = vmsdef.Symbols["IO$_WRITEPBLK"]
+	ssIllBlkNum = vmsdef.Symbols["SS$_ILLBLKNUM"]
 )
 
 // TestDiskLogical_readAndWrite reads the home block (LBN 1) logically and
@@ -99,7 +99,7 @@ func TestDiskLogical_errors(t *testing.T) {
 		st   uint32
 	}{
 		{"past the end", fnReadLBlk, []uint32{buf, 1024, end - 1}, ssNormal, ssIllBlkNum},
-		{"a read-only volume", fnWriteLBlk, []uint32{buf, 512, 0}, ssNormal, vmsdef.SSConstants["SS$_WRITLCK"]},
+		{"a read-only volume", fnWriteLBlk, []uint32{buf, 512, 0}, ssNormal, vmsdef.Symbols["SS$_WRITLCK"]},
 		{"an unwritable buffer", fnReadLBlk, []uint32{badAddr, 512, 0}, ssAccVio, 0},
 		{"an unreadable buffer", fnWriteLBlk, []uint32{badAddr, 512, 0}, ssAccVio, 0},
 	}

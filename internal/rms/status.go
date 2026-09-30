@@ -36,7 +36,7 @@ import "github.com/tucats/govax/internal/vmsdef"
 // # Where these numbers come from
 //
 // The values below are the real, literal $RMSDEF completion codes. Read
-// from internal/vmsdef.Constants (Phase 24, docs/PHASE-24.md — the complete
+// from internal/vmsdef.Symbols (Phase 24, docs/PHASE-24.md — the complete
 // 267-entry RMS$_ table, machine-generated from reference/vms/rmsdef.h)
 // rather than their own literal copies; cross-checked one-for-one against
 // the values this file carried before that migration, which were
@@ -48,7 +48,7 @@ import "github.com/tucats/govax/internal/vmsdef"
 // SYS$CLOSE/SYS$GET/SYS$PUT handlers actually need is named here; like
 // internal/rtl/status.go's own SS$_ table, more can be named later as
 // later handlers need them — the full set is already in
-// internal/vmsdef.Constants regardless, this is just this package's own
+// internal/vmsdef.Symbols regardless, this is just this package's own
 // "the subset I actually use" convenience list.
 var (
 	// rmsNormal is RMS$_NORMAL (== RMS$_SUC): ordinary success. This is
@@ -207,11 +207,11 @@ var (
 	ssInsufficientArgs  = ssConst("SS$_INSFARG")
 )
 
-// ssConst looks up name in internal/vmsdef.SSConstants, VMS's $SSDEF
+// ssConst looks up name in internal/vmsdef.Symbols, VMS's $SSDEF
 // system-service statuses, panicking if it's missing -- vmsConst's
 // programming-error guard for the other table.
 func ssConst(name string) uint32 {
-	v, ok := vmsdef.SSConstants[name]
+	v, ok := vmsdef.Symbols[name]
 	if !ok {
 		panic("rms: no SS$ status named " + name)
 	}

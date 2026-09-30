@@ -13,7 +13,7 @@ import (
 func dviCode(t *testing.T, name string) uint16 {
 	t.Helper()
 
-	code, ok := vmsdef.DVIConstants[name]
+	code, ok := vmsdef.Symbols[name]
 	if !ok {
 		t.Fatalf("no $DVIDEF code %s", name)
 	}
@@ -63,9 +63,9 @@ func TestGetdvi_items(t *testing.T) {
 	tt := defineTestDevice(env, "TTA0", iodev.DeviceClassTT)
 	tt.DevType = 96
 	tt.DevBufSize = 80
-	tt.DevDepend = 24<<24 | vmsdef.TTConstants["TT$M_LOWER"]
-	tt.DevDepend2 = vmsdef.TTConstants["TT2$M_ANSICRT"]
-	tt.DevChar = vmsdef.DEVConstants["DEV$M_TRM"] | vmsdef.DEVConstants["DEV$M_REC"]
+	tt.DevDepend = 24<<24 | vmsdef.Symbols["TT$M_LOWER"]
+	tt.DevDepend2 = vmsdef.Symbols["TT2$M_ANSICRT"]
+	tt.DevChar = vmsdef.Symbols["DEV$M_TRM"] | vmsdef.Symbols["DEV$M_REC"]
 
 	ch := assignCall(t, env, a, "TTA0", uint32(vax.User))
 
@@ -121,7 +121,7 @@ func TestGetdvi_items(t *testing.T) {
 
 	// The secondary-device flag in an item code is ignored.
 	buf := a.alloc(4)
-	secondary := dviCode(t, "DVI$_DEVCLASS") | uint16(vmsdef.DVIConstants["DVI$M_SECONDARY"])
+	secondary := dviCode(t, "DVI$_DEVCLASS") | uint16(vmsdef.Symbols["DVI$M_SECONDARY"])
 	wantR0(t, getdvi(t, env, 0, ch, 0, a.items(item{code: secondary, buflen: 4, buf: buf}), 0), ssNormal)
 
 	if a.readLong(buf) != uint32(iodev.DeviceClassTT) {
@@ -140,14 +140,14 @@ func TestGetdvi_items(t *testing.T) {
 // TestGetdvi_registry: every DVI$_TT_ item and DEVCHAR bit is supported,
 // and every registered name is a real $DVIDEF code.
 func TestGetdvi_registry(t *testing.T) {
-	for name := range vmsdef.DVIConstants {
+	for name := range vmsdef.Symbols {
 		if strings.HasPrefix(name, "DVI$_TT_") && dviItemsByName[name] == nil {
 			t.Errorf("%s has no $TTDEF bit", name)
 		}
 	}
 
 	for name := range dviItemsByName {
-		if _, ok := vmsdef.DVIConstants[name]; !ok {
+		if _, ok := vmsdef.Symbols[name]; !ok {
 			t.Errorf("%s isn't a $DVIDEF code", name)
 		}
 	}

@@ -48,7 +48,7 @@ func TestMailboxWait_assembledProgram(t *testing.T) {
 		{"RPARAM", 0x11},
 		{"WSTAT", ssNormal},
 		{"RWM1", ssWasClr},
-		{"FULLST", vmsdef.SSConstants["SS$_MBFULL"] & 0xFFFF},
+		{"FULLST", vmsdef.Symbols["SS$_MBFULL"] & 0xFFFF},
 		{"RWM2", ssWasSet},
 	}
 

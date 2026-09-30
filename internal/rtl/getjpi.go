@@ -14,11 +14,11 @@ import (
 
 // Status codes $GETJPI returns.
 var (
-	ssNonExpr      = vmsdef.SSConstants["SS$_NONEXPR"]
-	ssNoMoreProc   = vmsdef.SSConstants["SS$_NOMOREPROC"]
-	jpiChain       = uint16(vmsdef.JPIConstants["JPI$_CHAIN"])
-	jpiInteractive = vmsdef.JPIConstants["JPI$K_INTERACTIVE"]
-	jpiLocal       = vmsdef.JPIConstants["JPI$K_LOCAL"]
+	ssNonExpr      = vmsdef.Symbols["SS$_NONEXPR"]
+	ssNoMoreProc   = vmsdef.Symbols["SS$_NOMOREPROC"]
+	jpiChain       = uint16(vmsdef.Symbols["JPI$_CHAIN"])
+	jpiInteractive = vmsdef.Symbols["JPI$K_INTERACTIVE"]
+	jpiLocal       = vmsdef.Symbols["JPI$K_LOCAL"]
 )
 
 // Wildcard $GETJPI contexts, the longword at pidadr. VMS starts a
@@ -78,7 +78,7 @@ var jpiItemsByName = map[string]func(env *Environment) itemValue{
 }
 
 // schStateCurrent is SCH$C_CUR, the state of the running process.
-var schStateCurrent = vmsdef.STATEConstants["SCH$C_CUR"]
+var schStateCurrent = vmsdef.Symbols["SCH$C_CUR"]
 
 // astModeMask turns a per-mode flag array (AST enabled, AST active) into
 // the bit vector $GETJPI reports: bit 0 for kernel mode, 1 executive, 2
@@ -116,7 +116,7 @@ var jpiItems = func() map[uint16]func(*Environment) itemValue {
 	out := map[uint16]func(*Environment) itemValue{}
 
 	for name, fn := range jpiItemsByName {
-		code, ok := vmsdef.JPIConstants[name]
+		code, ok := vmsdef.Symbols[name]
 		if !ok {
 			panic("rtl: no $JPIDEF item code " + name)
 		}

@@ -149,16 +149,16 @@ func (env *Environment) newChannel(name string, dp *iodev.Device, mode uint32) *
 
 // Status codes and $DEVDEF bits $ALLOC uses (docs/PHASE-26.md).
 var (
-	ssDevAlloc    = vmsdef.SSConstants["SS$_DEVALLOC"]
-	ssDevAlrAlloc = vmsdef.SSConstants["SS$_DEVALRALLOC"]
-	ssDevMount    = vmsdef.SSConstants["SS$_DEVMOUNT"]
-	ssIvStsFlg    = vmsdef.SSConstants["SS$_IVSTSFLG"]
-	ssNoDevAvl    = vmsdef.SSConstants["SS$_NODEVAVL"]
-	ssDevAssign   = vmsdef.SSConstants["SS$_DEVASSIGN"]
-	ssDevNotAlloc = vmsdef.SSConstants["SS$_DEVNOTALLOC"]
+	ssDevAlloc    = vmsdef.Symbols["SS$_DEVALLOC"]
+	ssDevAlrAlloc = vmsdef.Symbols["SS$_DEVALRALLOC"]
+	ssDevMount    = vmsdef.Symbols["SS$_DEVMOUNT"]
+	ssIvStsFlg    = vmsdef.Symbols["SS$_IVSTSFLG"]
+	ssNoDevAvl    = vmsdef.Symbols["SS$_NODEVAVL"]
+	ssDevAssign   = vmsdef.Symbols["SS$_DEVASSIGN"]
+	ssDevNotAlloc = vmsdef.Symbols["SS$_DEVNOTALLOC"]
 
-	devMounted = vmsdef.DEVConstants["DEV$M_MNT"]
-	devMailbox = vmsdef.DEVConstants["DEV$M_MBX"]
+	devMounted = vmsdef.Symbols["DEV$M_MNT"]
+	devMailbox = vmsdef.Symbols["DEV$M_MBX"]
 )
 
 // allocGeneric is $ALLOC's one flags bit: devnam names a device type

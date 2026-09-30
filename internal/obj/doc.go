@@ -26,5 +26,5 @@
 // callers that don't care how it's split.
 //
 // The numeric codes and record layouts come from the VAX modules of VMS
-// 7.3's objfmt.sdl, generated into vmsdef.OBJConstants.
+// 7.3's objfmt.sdl, generated into vmsdef.Symbols.
 package obj

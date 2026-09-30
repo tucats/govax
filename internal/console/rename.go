@@ -38,8 +38,8 @@ import (
 
 // The RMS statuses RENAME's messages depend on.
 var (
-	rmsDEV = vmsdef.Constants["RMS$_DEV"]
-	rmsENT = vmsdef.Constants["RMS$_ENT"]
+	rmsDEV = vmsdef.Symbols["RMS$_DEV"]
+	rmsENT = vmsdef.Symbols["RMS$_ENT"]
 )
 
 // Rename renames the files inputs name to output (see this file's opening

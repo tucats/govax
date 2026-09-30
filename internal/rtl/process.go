@@ -220,7 +220,7 @@ func optArg(argv []uint32, i int) uint32 {
 }
 
 // Status codes the process-control services return.
-var ssNoPriv = vmsdef.SSConstants["SS$_NOPRIV"]
+var ssNoPriv = vmsdef.Symbols["SS$_NOPRIV"]
 
 // serviceSysAdjstk is SYS$ADJSTK: sets the saved stack pointer of an
 // access mode less privileged than the caller's. The longword at newadr

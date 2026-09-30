@@ -60,8 +60,8 @@ const maxIdentifierName = 31
 
 // Status values the identifier services return.
 var (
-	ssNoSuchID = vmsdef.SSConstants["SS$_NOSUCHID"]
-	ssIvIdent  = vmsdef.SSConstants["SS$_IVIDENT"]
+	ssNoSuchID = vmsdef.Symbols["SS$_NOSUCHID"]
+	ssIvIdent  = vmsdef.Symbols["SS$_IVIDENT"]
 )
 
 // rightsDatabase returns the rights database, sorted by name (the order

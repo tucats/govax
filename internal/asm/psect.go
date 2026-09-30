@@ -9,16 +9,16 @@ import (
 // (a PSC record's flags word). USR is LIB's absence, and each NO form is
 // the flag's absence.
 var (
-	gpsPIC = vmsdef.OBJConstants["GPS$M_PIC"]
-	gpsLIB = vmsdef.OBJConstants["GPS$M_LIB"]
-	gpsOVR = vmsdef.OBJConstants["GPS$M_OVR"]
-	gpsREL = vmsdef.OBJConstants["GPS$M_REL"]
-	gpsGBL = vmsdef.OBJConstants["GPS$M_GBL"]
-	gpsSHR = vmsdef.OBJConstants["GPS$M_SHR"]
-	gpsEXE = vmsdef.OBJConstants["GPS$M_EXE"]
-	gpsRD  = vmsdef.OBJConstants["GPS$M_RD"]
-	gpsWRT = vmsdef.OBJConstants["GPS$M_WRT"]
-	gpsVEC = vmsdef.OBJConstants["GPS$M_VEC"]
+	gpsPIC = vmsdef.Symbols["GPS$M_PIC"]
+	gpsLIB = vmsdef.Symbols["GPS$M_LIB"]
+	gpsOVR = vmsdef.Symbols["GPS$M_OVR"]
+	gpsREL = vmsdef.Symbols["GPS$M_REL"]
+	gpsGBL = vmsdef.Symbols["GPS$M_GBL"]
+	gpsSHR = vmsdef.Symbols["GPS$M_SHR"]
+	gpsEXE = vmsdef.Symbols["GPS$M_EXE"]
+	gpsRD  = vmsdef.Symbols["GPS$M_RD"]
+	gpsWRT = vmsdef.Symbols["GPS$M_WRT"]
+	gpsVEC = vmsdef.Symbols["GPS$M_VEC"]
 )
 
 // psectAttribute is one .PSECT attribute keyword: the flag it sets or

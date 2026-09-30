@@ -10,8 +10,8 @@ import (
 
 // IO$_DELETE's function codes.
 var (
-	fnDelete     = vmsdef.IOConstants["IO$_DELETE"]
-	fnDeleteFile = fnDelete | vmsdef.IOConstants["IO$M_DELETE"]
+	fnDelete     = vmsdef.Symbols["IO$_DELETE"]
+	fnDeleteFile = fnDelete | vmsdef.Symbols["IO$M_DELETE"]
 )
 
 // fileGone reports whether the file with ID fid no longer exists.
@@ -88,7 +88,7 @@ func TestDiskDelete_whileAccessed(t *testing.T) {
 
 	putWord(t, env, fib2+fibDID, 0)
 
-	if _, st, _ := diskQIO(t, env, a, ch2, fnAccessOp, fib2d); uint32(st) != vmsdef.SSConstants["SS$_NOSUCHFILE"] {
+	if _, st, _ := diskQIO(t, env, a, ch2, fnAccessOp, fib2d); uint32(st) != vmsdef.Symbols["SS$_NOSUCHFILE"] {
 		t.Errorf("accessing the marked file: %#x", st)
 	}
 
@@ -109,7 +109,7 @@ func TestDiskCreate_temporary(t *testing.T) {
 	env, a, ch := diskFixture(t, true)
 	fibd, fib := newFIB(a, 64, fibMWrite)
 
-	if _, st, _ := diskQIO(t, env, a, ch, fnCreateAccess|vmsdef.IOConstants["IO$M_DELETE"], fibd, a.desc("SCRATCH.TMP")); st != ssNormal {
+	if _, st, _ := diskQIO(t, env, a, ch, fnCreateAccess|vmsdef.Symbols["IO$M_DELETE"], fibd, a.desc("SCRATCH.TMP")); st != ssNormal {
 		t.Fatalf("IO$_CREATE (temporary): %#x", st)
 	}
 
@@ -149,7 +149,7 @@ func TestDiskDelete_errors(t *testing.T) {
 		r0   uint32
 		st   uint32
 	}{
-		{"no such file", fnDelete, []uint32{fibd, a.desc("NOSUCH.DAT")}, ssNormal, vmsdef.SSConstants["SS$_NOSUCHFILE"]},
+		{"no such file", fnDelete, []uint32{fibd, a.desc("NOSUCH.DAT")}, ssNormal, vmsdef.Symbols["SS$_NOSUCHFILE"]},
 		{"no entry, no IO$M_DELETE", fnDelete, []uint32{fibd}, ssNormal, ssBadParam},
 		{"no entry, no file ID", fnDeleteFile, []uint32{noDir}, ssNormal, ssBadParam},
 		{"the MFD", fnDeleteFile, []uint32{mfdFIBd}, ssNormal, ssNoPriv},

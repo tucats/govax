@@ -73,8 +73,8 @@ var ErrExit = errors.New("rtl: image exit")
 
 // Status codes the exit services return.
 var (
-	ssIvSsRq    = vmsdef.SSConstants["SS$_IVSSRQ"]
-	ssNoHandler = vmsdef.SSConstants["SS$_NOHANDLER"]
+	ssIvSsRq    = vmsdef.Symbols["SS$_IVSSRQ"]
+	ssNoHandler = vmsdef.Symbols["SS$_NOHANDLER"]
 )
 
 // Offsets in an exit control block (see this file's opening comment).

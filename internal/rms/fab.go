@@ -154,7 +154,7 @@ var (
 )
 
 // FAB$B_FAC values (file-access-request flags) this package recognizes,
-// read from internal/vmsdef.Constants (see fabOffset's own doc comment)
+// read from internal/vmsdef.Symbols (see fabOffset's own doc comment)
 // instead of their own literal copies. Real VMS defines FAB$B_FAC as a
 // bitmask — a program can ask for PUT and GET access together, for
 // instance — but this package's SYS$CREATE/SYS$OPEN only ever need to tell
@@ -208,10 +208,10 @@ func fabOffset(keyword string) uint32 {
 	panic("rms: no FAB field named " + keyword)
 }
 
-// vmsConst looks up name in internal/vmsdef.Constants, panicking if it's
+// vmsConst looks up name in internal/vmsdef.Symbols, panicking if it's
 // missing — same programming-error-guard reasoning as fabOffset.
 func vmsConst(name string) uint32 {
-	v, ok := vmsdef.Constants[name]
+	v, ok := vmsdef.Symbols[name]
 	if !ok {
 		panic("rms: no VMS constant named " + name)
 	}

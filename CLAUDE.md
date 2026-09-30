@@ -80,8 +80,8 @@ expect adjustment as phases land):
 - `internal/obj` — the VAX object language (Phase 27): reads, writes, dumps, and
   checks `.OBJ` object modules, keeping every record so a real VAX object
   round-trips byte for byte; `Builder` packs a module's psects, symbols, and TIR
-  commands into records. Codes and layouts come from `vmsdef.OBJConstants`
-  (generated from VMS 7.3's `objfmt.sdl`). Host files hold records in ODS-2's
+  commands into records. Codes and layouts come from `vmsdef.Symbols`
+  (the VAX object language names of VMS 7.3's `objfmt.sdl`). Host files hold records in ODS-2's
   on-disk variable-length layout (`ReadRecords`/`WriteRecords`).
 - `internal/rms` — RMS (`SYS$CREATE`/`CONNECT`/`OPEN`/`CLOSE`/`GET`/`PUT`/`RENAME`) file
   I/O backed by the sibling Go module `github.com/tucats/ods2`'s real ODS-2

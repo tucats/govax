@@ -47,11 +47,11 @@ func TestDiskLogical_assembledProgram(t *testing.T) {
 
 	le := func(sym string) uint32 { return binary.LittleEndian.Uint32(symbolBytes(t, c, sym, 4)) }
 
-	if got := le("NOPRV"); got != vmsdef.SSConstants["SS$_NOPRIV"] {
+	if got := le("NOPRV"); got != vmsdef.Symbols["SS$_NOPRIV"] {
 		t.Errorf("NOPRV = %#x, want SS$_NOPRIV", got)
 	}
 
-	if got := le("ILLBLK"); got != vmsdef.SSConstants["SS$_ILLBLKNUM"] {
+	if got := le("ILLBLK"); got != vmsdef.Symbols["SS$_ILLBLKNUM"] {
 		t.Errorf("ILLBLK = %#x, want SS$_ILLBLKNUM", got)
 	}
 

@@ -7,7 +7,7 @@ import (
 )
 
 // TestSysCodes_matchSSDEF confirms each composite SS_* constant equals the
-// real VMS 7.3 $SSDEF value (internal/vmsdef.SSConstants, generated from
+// real VMS 7.3 $SSDEF value (internal/vmsdef.Symbols, generated from
 // reference/vms/ssdef.txt), since a VAX program compares a service's
 // return value against those exact numbers.
 func TestSysCodes_matchSSDEF(t *testing.T) {
@@ -30,9 +30,9 @@ func TestSysCodes_matchSSDEF(t *testing.T) {
 	}
 
 	for name, got := range codes {
-		want, ok := vmsdef.SSConstants[name]
+		want, ok := vmsdef.Symbols[name]
 		if !ok {
-			t.Errorf("%s not in vmsdef.SSConstants", name)
+			t.Errorf("%s not in vmsdef.Symbols", name)
 
 			continue
 		}

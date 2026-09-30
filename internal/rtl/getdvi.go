@@ -123,7 +123,7 @@ var dviDevCharItems = []string{
 //     in the registry already.)
 func init() {
 	for _, name := range dviDevCharItems {
-		mask, ok := vmsdef.DEVConstants["DEV$M_"+name]
+		mask, ok := vmsdef.Symbols["DEV$M_"+name]
 		if !ok {
 			panic("rtl: no $DEVDEF bit DEV$M_" + name)
 		}
@@ -133,21 +133,21 @@ func init() {
 		}
 	}
 
-	for name := range vmsdef.DVIConstants {
+	for name := range vmsdef.Symbols {
 		bit, ok := strings.CutPrefix(name, "DVI$_TT_")
 		if !ok || dviItemsByName[name] != nil {
 			continue
 		}
 
-		if mask, ok := vmsdef.TTConstants["TT$M_"+bit]; ok {
+		if mask, ok := vmsdef.Symbols["TT$M_"+bit]; ok {
 			dviItemsByName[name] = dviLong(func(d *iodev.Device) uint32 { return b01(d.DevDepend&mask != 0) })
-		} else if mask, ok := vmsdef.TTConstants["TT2$M_"+bit]; ok {
+		} else if mask, ok := vmsdef.Symbols["TT2$M_"+bit]; ok {
 			dviItemsByName[name] = dviLong(func(d *iodev.Device) uint32 { return b01(d.DevDepend2&mask != 0) })
 		}
 	}
 
 	for name, fn := range dviItemsByName {
-		code, ok := vmsdef.DVIConstants[name]
+		code, ok := vmsdef.Symbols[name]
 		if !ok {
 			panic("rtl: no $DVIDEF item code " + name)
 		}
@@ -171,7 +171,7 @@ var dviItems = map[uint16]dviItemFunc{}
 // dviItemFlags are the item-code bits that aren't part of the code:
 // DVI$M_SECONDARY (bit 0, "the secondary device") and DVI$M_NOREDIRECT
 // (bit 15).
-var dviItemFlags = uint16(vmsdef.DVIConstants["DVI$M_SECONDARY"] | vmsdef.DVIConstants["DVI$M_NOREDIRECT"])
+var dviItemFlags = uint16(vmsdef.Symbols["DVI$M_SECONDARY"] | vmsdef.Symbols["DVI$M_NOREDIRECT"])
 
 // dviItem returns the item for code, ignoring dviItemFlags: a govax
 // device has no separate secondary device (VMS's is for spooled
@@ -215,7 +215,7 @@ func (env *Environment) devChar(d *iodev.Device) uint32 {
 			c |= devMounted
 
 			if !env.Mounts.Writable(d.Name) {
-				c |= vmsdef.DEVConstants["DEV$M_SWL"]
+				c |= vmsdef.Symbols["DEV$M_SWL"]
 			}
 		}
 	}

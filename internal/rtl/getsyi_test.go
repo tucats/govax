@@ -10,7 +10,7 @@ import (
 func syiCode(t *testing.T, name string) uint16 {
 	t.Helper()
 
-	code, ok := vmsdef.SYIConstants[name]
+	code, ok := vmsdef.Symbols[name]
 	if !ok {
 		t.Fatalf("no $SYIDEF code %s", name)
 	}
@@ -160,7 +160,7 @@ func TestServiceSysGetsyiCompletion(t *testing.T) {
 
 func TestSYIItemsRegistry(t *testing.T) {
 	for name := range syiItemsByName {
-		if _, ok := vmsdef.SYIConstants[name]; !ok {
+		if _, ok := vmsdef.Symbols[name]; !ok {
 			t.Errorf("%s is not a $SYIDEF item code", name)
 		}
 	}
