@@ -1,8 +1,10 @@
 // Command gen adds VMS definitions to govax's own tables in
 // internal/vmsdef: the symbolic constants in Symbols
-// (symbols_generated.go). It reads definition files of the kinds VMS
-// ships, merges what they define into the table govax already has, and
-// rewrites the generated file, sorted, so that a merge reads as a diff.
+// (symbols_generated.go), and the message texts in Messages and
+// MessageFacilities (messages_generated.go). It reads definition files of
+// the kinds VMS ships, merges what they define into the tables govax
+// already has, and rewrites the generated files, sorted, so that a merge
+// reads as a diff.
 //
 // govax's tables are committed, and building govax doesn't run gen: the
 // VMS files it reads are licensed, and they aren't part of this
@@ -17,26 +19,30 @@
 //	-h FILE      a C header's "#define NAME value" lines (fabdef.h; see header.go)
 //	-sdl FILE    an SDL source's modules (lnmdef.sdl; see sdl.go)
 //	-bliss FILE  a BLISS LITERAL listing (ssdef.txt; see bliss.go)
+//	-msg FILE    a message file's listing (sysmsg.txt; see msg.go)
 //
-// Two further flags change how the inputs after them are read: -prefix P
-// keeps only the names that begin with P (and -prefix "" keeps all of
+// Two further flags change how the symbol inputs after them are read:
+// -prefix P keeps only the names that begin with P (and -prefix "" keeps all of
 // them again), and -sdl-stop MODULE reads an SDL source only as far as
 // "module MODULE;" (objfmt.sdl's Alpha definitions begin at $EOBJRECDEF).
 //
 // A name the table has already, with the same value, is left alone. One
 // with a different value is an error, which names every such conflict,
-// unless -replace is given. -n reports what would be added or changed
-// and writes nothing. Each input's file name is added to SymbolSources, a
-// record of what the table was built from.
+// unless -replace is given. Messages merge the same way, by condition
+// value, and facilities by number. -n reports what would be added or
+// changed and writes nothing. Each input's file name is added to
+// SymbolSources or MessageSources, a record of what each table was built
+// from.
 //
-// With no inputs, gen rewrites the table as it is; a test checks that the
-// result is the committed file, byte for byte.
+// With no inputs, gen rewrites the tables as they are; tests check that
+// the results are the committed files, byte for byte.
 package main
 
 import (
 	"flag"
 	"fmt"
 	"log"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,7 +52,7 @@ import (
 
 // input is one definition file to merge, as the command line gives it.
 type input struct {
-	kind   string // "h", "sdl", or "bliss"
+	kind   string // "h", "sdl", "bliss", or "msg"
 	path   string
 	prefix string // keep only names with this prefix; "" keeps all
 	stop   string // for "sdl", the module to stop reading at, if any
@@ -92,6 +98,7 @@ func main() {
 	flag.Var(inputFlag{&list, "h"}, "h", "merge a C header's #define constants")
 	flag.Var(inputFlag{&list, "sdl"}, "sdl", "merge an SDL source's definitions")
 	flag.Var(inputFlag{&list, "bliss"}, "bliss", "merge a BLISS LITERAL listing's literals")
+	flag.Var(inputFlag{&list, "msg"}, "msg", "merge a message listing's facilities and messages")
 	flag.Var(settingFlag{&list.prefix}, "prefix", "keep only names with this prefix, in the inputs after it")
 	flag.Var(settingFlag{&list.stop}, "sdl-stop", "read the SDL sources after it only as far as this module")
 
@@ -101,34 +108,58 @@ func main() {
 	flag.Parse()
 
 	if flag.NArg() > 0 {
-		log.Fatalf("gen: unexpected argument %q: each input is given by -h, -sdl, or -bliss", flag.Arg(0))
+		log.Fatalf("gen: unexpected argument %q: each input is given by -h, -sdl, -bliss, or -msg", flag.Arg(0))
 	}
 
-	path := filepath.Join(*dir, symbolsFile)
-	if _, err := os.Stat(path); err != nil {
-		log.Fatalf("gen: %v (run gen from the repository root, or give -dir)", err)
+	symbolsPath := filepath.Join(*dir, symbolsFile)
+	messagesPath := filepath.Join(*dir, messagesFile)
+
+	for _, path := range []string{symbolsPath, messagesPath} {
+		if _, err := os.Stat(path); err != nil {
+			log.Fatalf("gen: %v (run gen from the repository root, or give -dir)", err)
+		}
 	}
 
-	symbols := copySymbols(vmsdef.Symbols)
-	sources := append([]string(nil), vmsdef.SymbolSources...)
+	symbols := maps.Clone(vmsdef.Symbols)
+	symbolSources := append([]string(nil), vmsdef.SymbolSources...)
+	messages := maps.Clone(vmsdef.Messages)
+	facilities := maps.Clone(vmsdef.MessageFacilities)
+	messageSources := append([]string(nil), vmsdef.MessageSources...)
 
 	var conflicts []string
 
 	for _, in := range list.inputs {
-		defs, err := in.read()
-		if err != nil {
-			log.Fatalf("gen: %s: %v", in.path, err)
+		var r mergeResult
+
+		if in.kind == "msg" {
+			msgs, facs, err := parseMessages(readSource(in.path))
+			if err != nil {
+				log.Fatalf("gen: %s: %v", in.path, err)
+			}
+
+			r = mergeMessages(messages, facilities, msgs, facs, *replace)
+			messageSources = addSource(messageSources, filepath.Base(in.path))
+		} else {
+			defs, err := in.read()
+			if err != nil {
+				log.Fatalf("gen: %s: %v", in.path, err)
+			}
+
+			r = mergeSymbols(symbols, defs, *replace)
+			symbolSources = addSource(symbolSources, filepath.Base(in.path))
 		}
 
-		r := mergeSymbols(symbols, defs, *replace)
 		conflicts = append(conflicts, r.conflicts...)
-		sources = addSource(sources, filepath.Base(in.path))
 
 		fmt.Fprintf(os.Stderr, "gen: %s: %d added, %d changed, %d already present\n", in.path, len(r.added), len(r.changed), r.same)
 
 		if *dryRun {
-			for _, name := range r.added {
-				fmt.Printf("add %s = %#x\n", name, symbols[name])
+			for _, a := range r.added {
+				if v, ok := symbols[a]; ok && in.kind != "msg" {
+					fmt.Printf("add %s = %#x\n", a, v)
+				} else {
+					fmt.Printf("add %s\n", a)
+				}
 			}
 
 			for _, c := range r.changed {
@@ -138,18 +169,32 @@ func main() {
 	}
 
 	if len(conflicts) > 0 {
-		log.Fatalf("gen: %d names already have other values (use -replace to change them):\n\t%s", len(conflicts), strings.Join(conflicts, "\n\t"))
+		log.Fatalf("gen: %d definitions already have other values (use -replace to change them):\n\t%s", len(conflicts), strings.Join(conflicts, "\n\t"))
 	}
 
 	if *dryRun {
 		return
 	}
 
-	if err := os.WriteFile(path, generateSymbols(symbols, sources), 0o644); err != nil {
+	if err := os.WriteFile(symbolsPath, generateSymbols(symbols, symbolSources), 0o644); err != nil {
 		log.Fatalf("gen: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "gen: wrote %d symbols to %s\n", len(symbols), path)
+	if err := os.WriteFile(messagesPath, generateMessages(messages, facilities, messageSources), 0o644); err != nil {
+		log.Fatalf("gen: %v", err)
+	}
+
+	fmt.Fprintf(os.Stderr, "gen: wrote %d symbols to %s, and %d messages in %d facilities to %s\n",
+		len(symbols), symbolsPath, len(messages), len(facilities), messagesPath)
+}
+
+func readSource(path string) string {
+	src, err := os.ReadFile(path)
+	if err != nil {
+		log.Fatalf("gen: %v", err)
+	}
+
+	return string(src)
 }
 
 // read parses the input's file.

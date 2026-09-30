@@ -58,16 +58,6 @@ func mergeSymbols(symbols, defs map[string]uint32, replace bool) mergeResult {
 	return r
 }
 
-// copySymbols returns a copy of symbols that merging can change.
-func copySymbols(symbols map[string]uint32) map[string]uint32 {
-	out := make(map[string]uint32, len(symbols))
-	for name, v := range symbols {
-		out[name] = v
-	}
-
-	return out
-}
-
 // addSource adds name to sources, unless it's there already.
 func addSource(sources []string, name string) []string {
 	if slices.Contains(sources, name) {

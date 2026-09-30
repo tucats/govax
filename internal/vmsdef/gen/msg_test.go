@@ -1,8 +1,13 @@
 package main
 
 import (
+	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // TestParseMessages covers each form of message-listing line parseMessages
@@ -77,5 +82,61 @@ func TestFAOParamCount(t *testing.T) {
 		if got := faoParamCount(text); got != want {
 			t.Errorf("faoParamCount(%q) = %d, want %d", text, got, want)
 		}
+	}
+}
+
+func TestMergeMessages(t *testing.T) {
+	messages := map[uint32]vmsdef.Message{
+		0x8: {Facility: "SYSTEM", Ident: "ACCVIO", Text: "access violation", FAOCount: 0},
+	}
+	facilities := map[uint32]string{0: "SYSTEM"}
+
+	msgs := []message{
+		{code: 0xC, facility: "SYSTEM", ident: "ACCVIO", text: "access violation"},
+		{code: 0x14, facility: "SYSTEM", ident: "BADPARAM", text: "bad parameter value"},
+		{code: 0x15C04A, facility: "LIB", ident: "ILLRECLEN", text: "illegal record length (!UL)", faoCount: 1},
+	}
+	facs := map[uint32]string{0: "SYSTEM", 21: "LIB"}
+
+	r := mergeMessages(messages, facilities, msgs, facs, false)
+	if len(r.added) != 3 || r.same != 2 || len(r.conflicts) != 0 {
+		t.Errorf("mergeMessages = %+v, want 3 added (LIB and two messages) and 2 the same", r)
+	}
+
+	// The condition value's severity doesn't matter: 0x15C04A is keyed
+	// as 0x15C048.
+	if m := messages[0x15C048]; m.Ident != "ILLRECLEN" || m.FAOCount != 1 {
+		t.Errorf("messages[0x15C048] = %+v", m)
+	}
+
+	if facilities[21] != "LIB" {
+		t.Errorf("facilities[21] = %q, want LIB", facilities[21])
+	}
+
+	// A different text for a known message, or a different name for a
+	// known facility, is a conflict, and changes nothing without replace.
+	other := []message{{code: 0xC, facility: "SYSTEM", ident: "ACCVIO", text: "access violation, reason mask=!XB", faoCount: 1}}
+
+	r = mergeMessages(messages, facilities, other, map[uint32]string{21: "LIBRARY"}, false)
+	if len(r.conflicts) != 2 || messages[0x8].FAOCount != 0 || facilities[21] != "LIB" {
+		t.Errorf("mergeMessages = %+v; messages[0x8] = %+v, facilities[21] = %q", r, messages[0x8], facilities[21])
+	}
+
+	r = mergeMessages(messages, facilities, other, nil, true)
+	if len(r.changed) != 1 || messages[0x8].FAOCount != 1 {
+		t.Errorf("mergeMessages with replace = %+v; messages[0x8] = %+v", r, messages[0x8])
+	}
+}
+
+// TestGenerateMessages_roundTrip: with nothing merged, gen writes the
+// committed messages file back unchanged.
+func TestGenerateMessages_roundTrip(t *testing.T) {
+	want, err := os.ReadFile(filepath.Join("..", messagesFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got := generateMessages(vmsdef.Messages, vmsdef.MessageFacilities, vmsdef.MessageSources); !bytes.Equal(got, want) {
+		t.Errorf("generateMessages doesn't reproduce %s", messagesFile)
 	}
 }

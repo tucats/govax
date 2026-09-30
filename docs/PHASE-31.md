@@ -224,3 +224,15 @@ golangci-lint clean, then a commit (and `build -i` where it changes behavior).
 
   The message texts aren't regenerated any more either; subtask 3 gives
   them the same merge mode.
+- 2026-09-30: Subtask 3 done. `gen -msg FILE` merges a message listing's
+  facilities (by number) and messages (by masked condition value) into
+  `Messages` and `MessageFacilities`, under the same rules as symbols: the
+  same entry is left alone, a different one is a conflict unless
+  `-replace`, and `-n` is a dry run. A message counts as the same only if
+  its facility, ident, text, and $FAO count all match.
+  `messages_generated.go` has a `MessageSources` list, and gen rewrites
+  both generated files on every run. *Verified:* the first rewrite changed
+  only the file's header comments, not one message; gen with no inputs
+  reproduces both files (`TestGenerateMessages_roundTrip`); re-merging
+  `sysmsg.txt` finds all 1,426 messages and 6 facilities already present;
+  the full suite, `$GETMSG`/`$PUTMSG` goldens included, passes.
