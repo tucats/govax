@@ -82,7 +82,8 @@ expect adjustment as phases land):
   volume/file implementation, plus the `MOUNT`/`DISMOUNT`-facing `MountTable`
   (Phase 22). Also decides whether a typed file name means a host file or a
   volume file (`Session.Locate`, `location.go`) and reads/creates record files
-  on either side (`ReadRecordFile`/`CreateRecordFile`, `recordfile.go`; Phase
+  on either side (`ReadRecordFile`/`CreateRecordFile`, and `RewriteRecordFile`,
+  which keeps a volume file's version; `recordfile.go`; Phase
   27). The sole place in this project allowed to import `ods2`; owns its
   own IFI (open-file) table separately from `internal/rtl`'s state, since it
   tracks real `ods2` handles Phase 10's RTL layer never needed. Requires a

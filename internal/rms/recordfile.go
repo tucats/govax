@@ -302,6 +302,139 @@ func (s *Session) CreateRecordFile(loc FileLocation, kind RecordKind, records []
 	return created, nil
 }
 
+// rewriteTempName is the file RewriteRecordFile keeps its safe copy in,
+// beside the file it rewrites.
+const rewriteTempName, rewriteTempType = "GOVAX$REWRITE", "TMP"
+
+// RewriteRecordFile replaces the contents of the existing file at loc with
+// records, keeping its name and version, as a program that updates a file
+// in place leaves it (VMS's LIBRARIAN updating a library). A host file is
+// replaced as CreateRecordFile replaces one. A volume file's location
+// must name its version (as ReadRecordFile's result does).
+//
+// ods2 can't rewrite a file's blocks in place to a new length, so a volume
+// file is replaced in four steps, each leaving a complete copy of either
+// the old or the new contents: the records are written to a temporary
+// file (GOVAX$REWRITE.TMP) beside it; the old version is deleted; the
+// records are written again at the old version; and the temporary file is
+// deleted. A failure writing the temporary file changes nothing. If the
+// file can't be written again after the old version is deleted, the error
+// names the temporary file, which holds the new contents. Going through a
+// different name keeps the file's version limit from purging the new
+// version: its count of versions is the same afterwards as before. The
+// file keeps its version limit too. It gets a new file ID and creation
+// date, where an update in place would keep them.
+func (s *Session) RewriteRecordFile(loc FileLocation, kind RecordKind, records [][]byte) (FileLocation, error) {
+	if loc.Host {
+		return loc, writeHostRecords(loc.Name, kind, records)
+	}
+
+	failed := func(err error) (FileLocation, error) {
+		return FileLocation{}, fmt.Errorf("rms: rewriting %s: %w", loc.Name, err)
+	}
+
+	_, spec, err := s.resolveVolume(loc.Name)
+	if err != nil {
+		return failed(err)
+	}
+
+	version, ok := parseOpenVersion(spec.Version)
+	if !ok || version == 0 {
+		return failed(fmt.Errorf("the file's version must be given"))
+	}
+
+	// The file's version limit, which the new file would otherwise take
+	// from its directory, there being no other version of it.
+	limit, err := s.versionLimit(spec.String(), 0, false)
+	if err != nil {
+		return failed(err)
+	}
+
+	temp := spec
+	temp.Name, temp.Type, temp.Version = rewriteTempName, rewriteTempType, ""
+
+	tempLoc, err := s.createVolumeRecords(temp.String(), kind, records)
+	if err != nil {
+		return failed(err)
+	}
+
+	if err := s.deleteVersion(spec.String()); err != nil {
+		_ = s.deleteVersion(tempLoc.Name)
+
+		return failed(err)
+	}
+
+	created, err := s.createVolumeRecords(spec.String(), kind, records)
+	if err != nil {
+		return failed(fmt.Errorf("%w (the new contents are in %s)", err, tempLoc.Name))
+	}
+
+	if _, err := s.versionLimit(created.Name, limit, true); err != nil {
+		return created, fmt.Errorf("rms: rewriting %s: %w", loc.Name, err)
+	}
+
+	if err := s.deleteVersion(tempLoc.Name); err != nil {
+		return created, fmt.Errorf("rms: rewriting %s: removing %s: %w", loc.Name, tempLoc.Name, err)
+	}
+
+	return created, nil
+}
+
+// versionLimit returns the version limit of the volume file named by its
+// full specification, and with set, first sets it to limit.
+func (s *Session) versionLimit(text string, limit uint16, set bool) (uint16, error) {
+	vol, spec, err := s.resolveVolume(text)
+	if err != nil {
+		return 0, err
+	}
+
+	version, _ := parseOpenVersion(spec.Version)
+
+	dir, _, _, err := resolveVolumeDest(vol, spec)
+	if err != nil {
+		return 0, err
+	}
+
+	entry, err := dir.Lookup(spec.Name+"."+spec.Type, version)
+	if err != nil {
+		return 0, err
+	}
+
+	f, err := vol.OpenFID(entry.Fid)
+	if err != nil {
+		return 0, err
+	}
+
+	if set && f.Header.RecordAttributes.VersionLimit != limit {
+		if err := volume.SetVersionLimit(f, limit); err != nil {
+			return 0, err
+		}
+	}
+
+	return f.Header.RecordAttributes.VersionLimit, nil
+}
+
+// deleteVersion deletes one version of a volume file, named by its full
+// specification.
+func (s *Session) deleteVersion(text string) error {
+	vol, spec, err := s.resolveVolume(text)
+	if err != nil {
+		return err
+	}
+
+	version, ok := parseOpenVersion(spec.Version)
+	if !ok || version == 0 {
+		return fmt.Errorf("%s: no version to delete", text)
+	}
+
+	dir, bm, ib, err := resolveVolumeDest(vol, spec)
+	if err != nil {
+		return err
+	}
+
+	return volume.DeleteFile(dir, spec.Name+"."+spec.Type, version, bm, ib)
+}
+
 // writeHostRecords writes a host file in kind's layout, through a
 // temporary file in the same directory.
 func writeHostRecords(path string, kind RecordKind, records [][]byte) error {

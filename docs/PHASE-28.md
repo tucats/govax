@@ -631,9 +631,8 @@ All settled (2026-09-30):
     library in place. govax builds the whole library in memory and writes
     it only when every step has succeeded, so a failure (an unfinished
     macro, a missing input, a symbol another module defines) leaves the
-    library as it was. A host library is replaced; a volume library gets
-    a new version, as MACRO's objects and LINK's images do, rather than
-    keeping its version as LIBRARIAN's in-place update would.
+    library as it was. (As first written, a changed volume library got a
+    new version; see the next entry.)
   - New status codes: `CLI_LIBRARY` (error), `CLI_LIBWARNING` (warning),
     and `/LOG`'s `CLI_LIBINSERTED`, `CLI_LIBREPLACED`, and
     `CLI_LIBDELETED`, worded as LIBRARIAN's `INSERTED`, `REPLACED`, and
@@ -677,3 +676,36 @@ All settled (2026-09-30):
   listing file; failures leaving the library unchanged; and the DCL
   grammar); `cmd/govax/library_test.go` (the command line, and a
   one-shot create and list).
+
+### 2026-09-30 — A changed library keeps its version (user decision)
+
+- The user wants govax's libraries usable on a real VAX, where a library
+  that changes version with every update would surprise VMS (LIBRARIAN
+  updates in place, so the version never changes). A changed library now
+  keeps its name and version; `/CREATE` still makes a new version, as
+  VMS's does.
+- **`rms.Session.RewriteRecordFile`** (`recordfile.go`) replaces an
+  existing file's contents at its own version. A host file is replaced
+  through a temporary file and a rename, as before. ods2 can't rewrite a
+  file's blocks in place to a new length, so a volume file takes four
+  steps, each leaving a complete copy of the old or the new contents on
+  the volume: write the new contents to `GOVAX$REWRITE.TMP` beside it
+  (a failure here changes nothing), delete the old version, write the
+  contents again at that version, and delete the temporary file. If the
+  second write fails, the error names the temporary file, which holds
+  the new library.
+  - The safe copy goes under another name, not as version N+1, because
+    of version limits: with a limit of one, writing N+1 purges N (fine),
+    but then re-creating N while N+1 exists makes N the oldest, and the
+    limit purges it. Through another name, the file's version count is
+    the same afterwards as before.
+  - The file keeps its version limit. With no other version left to
+    inherit it from, the new file would otherwise take its directory's
+    default, so the limit is read before the delete and set again after.
+  - Unlike an in-place update, the file gets a new file ID and creation
+    date.
+- Tests: `TestRewriteRecordFile` (a shorter file rewritten at version 1
+  with version 2 untouched, no temporary file left, a version limit of
+  one kept and not purging the file, and a location without a version
+  refused); `TestLibrary_volume` now checks that a change keeps version
+  1, and `/CREATE` makes version 2.

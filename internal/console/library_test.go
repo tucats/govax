@@ -240,8 +240,9 @@ func TestLibrary_objectLink(t *testing.T) {
 	}
 }
 
-// TestLibrary_volume keeps a library on a mounted volume: a change writes
-// a new version, and the listing can go to a file there.
+// TestLibrary_volume keeps a library on a mounted volume: a change
+// rewrites it at its own version, /CREATE makes a new version, and the
+// listing can go to a file there.
 func TestLibrary_volume(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
@@ -257,18 +258,31 @@ func TestLibrary_volume(t *testing.T) {
 		t.Fatalf("LIBRARY/DELETE: %v", err)
 	}
 
-	l := openLibrary(t, c, rms.FileLocation{Name: "DUA0:[000000]MINE.MLB;2"})
+	l := openLibrary(t, c, rms.FileLocation{Name: "DUA0:[000000]MINE.MLB"})
 	if strings.Join(moduleNames(l), ",") != "STORE" {
-		t.Errorf("version 2 holds %v", moduleNames(l))
+		t.Errorf("the library holds %v", moduleNames(l))
 	}
 
-	if l1 := openLibrary(t, c, rms.FileLocation{Name: "DUA0:[000000]MINE.MLB;1"}); len(moduleNames(l1)) != 2 {
-		t.Errorf("version 1 holds %v", moduleNames(l1))
+	if _, _, err := c.ContainerSession.ReadRawFile(rms.FileLocation{Name: "DUA0:[000000]MINE.MLB;2"}); err == nil {
+		t.Error("the change made a new version")
 	}
 
 	lines, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA0:[000000]MINE.LIS"}, rms.TextRecords)
-	if err != nil || !strings.HasPrefix(string(lines[0]), "Directory of MACRO library DUA0:[000000]MINE.MLB;2 on ") {
+	if err != nil || !strings.HasPrefix(string(lines[0]), "Directory of MACRO library DUA0:[000000]MINE.MLB;1 on ") {
 		t.Errorf("listing file: %v, %q", err, lines)
+	}
+
+	// /CREATE makes a new version, as on VMS.
+	if err := c.Library(LibraryOptions{Library: "DUA0:[000000]MINE", Create: true, Macro: true}); err != nil {
+		t.Fatal(err)
+	}
+
+	if l2 := openLibrary(t, c, rms.FileLocation{Name: "DUA0:[000000]MINE.MLB;2"}); len(l2.Indexes[0].Keys) != 0 {
+		t.Errorf("the new version holds %v", moduleNames(l2))
+	}
+
+	if l1 := openLibrary(t, c, rms.FileLocation{Name: "DUA0:[000000]MINE.MLB;1"}); strings.Join(moduleNames(l1), ",") != "STORE" {
+		t.Errorf("version 1 holds %v", moduleNames(l1))
 	}
 }
 

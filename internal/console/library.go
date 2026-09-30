@@ -42,8 +42,12 @@ import (
 //
 // Unlike LIBRARIAN, which updates a library in place, LIBRARY builds the
 // whole library in memory and writes it only when every step has
-// succeeded: an error leaves the library as it was. A host library is
-// replaced; a library on a volume gets a new version.
+// succeeded: an error leaves the library as it was. A changed library
+// keeps its name and version, as LIBRARIAN's does, so that a library
+// copied back to VMS is where VMS expects it: a host library is replaced,
+// and a volume library is rewritten at its version
+// (rms.Session.RewriteRecordFile). /CREATE makes a new file, a new version
+// on a volume, as on VMS.
 
 // LibraryOptions is one LIBRARY command.
 type LibraryOptions struct {
@@ -339,8 +343,8 @@ func (l *library) readInput(loc rms.FileLocation) ([]*lbr.Entry, rms.FileLocatio
 	return nil, loc, l.failed(fmt.Errorf("LIBRARY can't insert modules in a %s library", l.b.Type), l.found.Name)
 }
 
-// write writes the library: over a host file, or as a new version of a
-// volume file.
+// write writes the library: a new one as a new file (a new version, on a
+// volume), and a changed one over the old, keeping its version.
 func (l *library) write() error {
 	data := l.b.Bytes()
 
@@ -349,14 +353,15 @@ func (l *library) write() error {
 		blocks = append(blocks, data[i:i+512])
 	}
 
-	out := l.found
-	if !out.Host && !l.opts.Create {
-		out.Name, _ = splitVersion(out.Name)
+	s := l.c.ContainerSession
+	write := s.RewriteRecordFile
+	if l.opts.Create {
+		write = s.CreateRecordFile
 	}
 
-	created, err := l.c.ContainerSession.CreateRecordFile(out, rms.ImageBlocks, blocks)
+	created, err := write(l.found, rms.ImageBlocks, blocks)
 	if err != nil {
-		return objectFailureAs(vmserrors.CLI_LIBRARY, err, out.Name)
+		return objectFailureAs(vmserrors.CLI_LIBRARY, err, l.found.Name)
 	}
 
 	l.found = created

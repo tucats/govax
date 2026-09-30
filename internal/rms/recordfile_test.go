@@ -337,3 +337,86 @@ func TestRecordFile_imageBlocks(t *testing.T) {
 		t.Error("a short image record was written")
 	}
 }
+
+// blocksOf is n 512-byte blocks, each filled with its number plus fill.
+func blocksOf(n int, fill byte) [][]byte {
+	out := make([][]byte, n)
+	for i := range out {
+		out[i] = bytes.Repeat([]byte{fill + byte(i)}, 512)
+	}
+
+	return out
+}
+
+// TestRewriteRecordFile rewrites a volume file at its own version: other
+// versions are untouched, no temporary file is left, and a version limit
+// of one doesn't purge the rewritten file.
+func TestRewriteRecordFile(t *testing.T) {
+	s, vol := newCopyTestSession(t)
+
+	for _, n := range []int{3, 4} {
+		if _, err := s.CreateRecordFile(FileLocation{Name: "T.MLB"}, ImageBlocks, blocksOf(n, byte(n)*16)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Shorter than before, so a stale tail would show.
+	loc, err := s.RewriteRecordFile(FileLocation{Name: "DUA0:[000000]T.MLB;1"}, ImageBlocks, blocksOf(2, 0x80))
+	if err != nil {
+		t.Fatalf("RewriteRecordFile: %v", err)
+	}
+
+	if loc.Name != "DUA0:[000000]T.MLB;1" {
+		t.Errorf("rewritten as %s", loc.Name)
+	}
+
+	for version, want := range map[string][][]byte{"1": blocksOf(2, 0x80), "2": blocksOf(4, 64)} {
+		got, _, err := s.ReadRecordFile(FileLocation{Name: "T.MLB;" + version}, ImageBlocks)
+		if err != nil || !reflect.DeepEqual(got, want) {
+			t.Errorf("T.MLB;%s: %d blocks, %v", version, len(got), err)
+		}
+	}
+
+	dir, err := vol.OpenDirectory(ondisk.MasterFileDirectoryFid)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := dir.Lookup("GOVAX$REWRITE.TMP", 0); !errors.Is(err, volume.ErrNotFound) {
+		t.Errorf("the temporary file is still there: %v", err)
+	}
+
+	// A version limit of one.
+	if _, err := s.CreateRecordFile(FileLocation{Name: "ONE.MLB"}, ImageBlocks, blocksOf(1, 1)); err != nil {
+		t.Fatal(err)
+	}
+
+	entry, _ := dir.Lookup("ONE.MLB", 1)
+
+	f, err := vol.OpenFID(entry.Fid)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := volume.SetVersionLimit(f, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := s.RewriteRecordFile(FileLocation{Name: "ONE.MLB;1"}, ImageBlocks, blocksOf(2, 9)); err != nil {
+		t.Fatalf("RewriteRecordFile with a version limit: %v", err)
+	}
+
+	got, found, err := s.ReadRecordFile(FileLocation{Name: "ONE.MLB"}, ImageBlocks)
+	if err != nil || found.Name != "DUA0:[000000]ONE.MLB;1" || !reflect.DeepEqual(got, blocksOf(2, 9)) {
+		t.Errorf("ONE.MLB after the rewrite: %s, %d blocks, %v", found.Name, len(got), err)
+	}
+
+	if attr := fileAttributes(t, vol, "ONE.MLB", 1); attr.VersionLimit != 1 {
+		t.Errorf("version limit %d after the rewrite", attr.VersionLimit)
+	}
+
+	// A version is needed.
+	if _, err := s.RewriteRecordFile(FileLocation{Name: "ONE.MLB"}, ImageBlocks, blocksOf(1, 1)); err == nil {
+		t.Error("rewrote a file named without its version")
+	}
+}
