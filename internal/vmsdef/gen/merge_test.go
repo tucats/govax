@@ -17,7 +17,7 @@ func TestMergeSymbols(t *testing.T) {
 
 	r := mergeSymbols(symbols, defs, false)
 
-	if !reflect.DeepEqual(r.added, []string{"SS$_BADPARAM"}) || r.same != 1 || len(r.changed) != 0 {
+	if !reflect.DeepEqual(r.added, []string{"SS$_BADPARAM = 0x14"}) || r.same != 1 || len(r.changed) != 0 {
 		t.Errorf("mergeSymbols = %+v", r)
 	}
 
@@ -137,5 +137,46 @@ end_module $ZZZDEF;
 
 	if want := map[string]uint32{"BBB$C_TWO": 2}; !reflect.DeepEqual(got, want) {
 		t.Errorf("read with a prefix = %v, want %v", got, want)
+	}
+}
+
+func TestMergeImage(t *testing.T) {
+	images := map[string]vmsdef.SharedImage{}
+	symbols := map[string]vmsdef.ImageSymbol{}
+	librtl := vmsdef.SharedImage{Pages: 264, MajorID: 1, MinorID: 0xE, Match: 2}
+	defs := map[string]vmsdef.ImageSymbol{"LIB$GET_INPUT": {Image: "LIBRTL", Value: 0x410}, "LIB$_X": {Value: 7}}
+
+	if r := mergeImage(images, symbols, "LIBRTL", librtl, defs, false); len(r.added) != 3 || len(r.conflicts) != 0 {
+		t.Errorf("mergeImage = %+v, want 3 added", r)
+	}
+
+	if r := mergeImage(images, symbols, "LIBRTL", librtl, defs, false); r.same != 3 {
+		t.Errorf("merging again = %+v, want 3 the same", r)
+	}
+
+	newer := librtl
+	newer.MinorID = 0xF
+
+	r := mergeImage(images, symbols, "LIBRTL", newer, map[string]vmsdef.ImageSymbol{"LIB$GET_INPUT": {Image: "LIBRTL", Value: 0x418}}, false)
+	if len(r.conflicts) != 2 || images["LIBRTL"] != librtl || symbols["LIB$GET_INPUT"].Value != 0x410 {
+		t.Errorf("mergeImage = %+v, and changed the tables without -replace", r)
+	}
+}
+
+// TestGenerateImagesAndLibrary_roundTrip: with nothing merged, gen writes
+// the committed image and library files back unchanged.
+func TestGenerateImagesAndLibrary_roundTrip(t *testing.T) {
+	for file, got := range map[string][]byte{
+		imagesFile:  generateImages(vmsdef.SharedImages, vmsdef.ImageSymbols, vmsdef.ImageSources),
+		libraryFile: generateLibrary(vmsdef.LibrarySymbols, vmsdef.LibrarySources),
+	} {
+		want, err := os.ReadFile(filepath.Join("..", file))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !bytes.Equal(got, want) {
+			t.Errorf("gen doesn't reproduce %s", file)
+		}
 	}
 }

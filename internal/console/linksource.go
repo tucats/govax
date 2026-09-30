@@ -15,13 +15,15 @@ import (
 //  1. IMAGELIB.OLB, which says which shareable image defines a routine.
 //     Its offset comes from the image's own global symbol table
 //     (SYS$SHARE:LIBRTL.EXE, say), or, with no such file, from govax's
-//     shim table.
+//     own tables.
 //  2. STARLET.OLB, whose module that defines a symbol is added to the
 //     link: the system services' and status codes' definitions, say.
-//  3. govax's own tables, which need no VMS files: the routines its shims
-//     stand for (shimTable), in their shareable images at their real
-//     offsets, and the system services at their addresses in the P1
-//     vector.
+//  3. govax's own tables, which need no VMS files: the shareable images'
+//     global symbol tables captured in vmsdef.SharedImages and
+//     vmsdef.ImageSymbols, and STARLET.OLB's definition modules' symbols
+//     captured in vmsdef.LibrarySymbols (docs/PHASE-31.md); the routines
+//     the shims stand for (shimTable) in images not captured; and the
+//     system services at their addresses in the P1 vector.
 //
 // Each VMS file is looked for through its logical name (SYS$LIBRARY or
 // SYS$SHARE) on a mounted volume first, then in the host library
@@ -34,26 +36,47 @@ import (
 // resolves that against the real image if it's there, and against the
 // shim registered for that offset otherwise.
 
-// sharedImages is what is known of the shareable images the shims stand
-// for: what an image's global section ISD records about each (docs/
-// PHASE-30.md). LIBRTL's comes from ANALYZE/IMAGE of an image real LINK
-// linked against VMS 7.3's LIBRTL, and LIBRTL.EXE's header agrees. The
-// other images' aren't known, so an image records them by name only, with
-// a match control that accepts any ident; govax's RUN doesn't check them.
-var sharedImages = map[string]link.SharedImage{
-	"LIBRTL": {Pages: 264, MajorID: 1, MinorID: 0x0E, Match: link.MatchLEQ},
-}
-
-// govaxSymbols returns govax's own symbol source.
+// govaxSymbols returns govax's own symbol source. The shareable images
+// captured in vmsdef.SharedImages are described as their headers describe
+// them. An image the shims stand for that isn't captured (DECC$SHR, say)
+// isn't known, so an image records it by name only, with a match control
+// that accepts any ident; govax's RUN doesn't check them. A shim for a
+// captured image adds nothing, since the image's own symbols include the
+// routine; TestShimOffsetsMatchCapturedImages checks that the two agree.
+//
+// A shareable image's symbol comes before a library's of the same name,
+// as IMAGELIB.OLB is searched before STARLET.OLB. The P1 vector's
+// addresses come last and take precedence: they are where govax's RUN
+// puts the system services, and they match STARLET's SYS$P1_VECTOR for
+// every service it has (TestLibrarySymbolsMatchP1Vector).
 func govaxSymbols() *link.TableSource {
-	src := &link.TableSource{Symbols: map[string]link.Definition{}, Images: sharedImages}
+	src := &link.TableSource{Symbols: map[string]link.Definition{}, Images: map[string]link.SharedImage{}}
+
+	for name, i := range vmsdef.SharedImages {
+		src.Images[name] = link.SharedImage{
+			Name: name, Pages: i.Pages, MajorID: i.MajorID, MinorID: i.MinorID, Match: link.Match(i.Match),
+			Symbols: i.Symbols, Psects: i.Psects, Sections: i.Sections,
+		}
+	}
+
+	for name, s := range vmsdef.ImageSymbols {
+		src.Symbols[name] = link.Definition{Image: s.Image, Value: s.Value}
+	}
+
+	for name, v := range vmsdef.LibrarySymbols {
+		if _, ok := src.Symbols[name]; !ok {
+			src.Symbols[name] = link.Definition{Value: v}
+		}
+	}
 
 	for _, e := range vmsdef.P1VectorTable {
 		src.Symbols[e.Name] = link.Definition{Value: e.Addr}
 	}
 
 	for _, e := range shimTable {
-		src.Symbols[e.name] = link.Definition{Image: e.library, Value: e.offset}
+		if _, ok := src.Symbols[e.name]; !ok {
+			src.Symbols[e.name] = link.Definition{Image: e.library, Value: e.offset}
+		}
 	}
 
 	return src
@@ -107,7 +130,7 @@ func (c *Console) linkSources(sysLib bool) ([]link.SymbolSource, error) {
 
 // openSharedImage returns the symbols of the shareable image IMAGELIB
 // names: its global symbol table, from SYS$SHARE:<image>.EXE or the host
-// library directory, or else govax's shims for it.
+// library directory, or else govax's own tables for it.
 func (c *Console) openSharedImage(image string, govax *link.TableSource) (link.SymbolSource, error) {
 	file := image + ".EXE"
 
@@ -134,9 +157,9 @@ func (c *Console) openSharedImage(image string, govax *link.TableSource) (link.S
 	return src, nil
 }
 
-// shimImage is a shareable image whose file LINK can't find: govax's shims
-// give the offsets of the routines they stand for, and any other routine
-// in it is an error.
+// shimImage is a shareable image whose file LINK can't find: govax's own
+// tables give the offsets of its routines, captured from the image or
+// those the shims stand for, and any other routine in it is an error.
 type shimImage struct {
 	image, file string
 	govax       *link.TableSource
@@ -148,7 +171,7 @@ func (s *shimImage) Lookup(name string) (link.Definition, bool, error) {
 		return d, true, nil
 	}
 
-	return link.Definition{}, false, fmt.Errorf("it's in shareable image %s, but there's no %s to read, and govax has no shim for it", s.image, s.file)
+	return link.Definition{}, false, fmt.Errorf("it's in shareable image %s, but there's no %s to read, and govax has no record of it", s.image, s.file)
 }
 
 // Image implements link.SymbolSource.

@@ -236,3 +236,46 @@ golangci-lint clean, then a commit (and `build -i` where it changes behavior).
   reproduces both files (`TestGenerateMessages_roundTrip`); re-merging
   `sysmsg.txt` finds all 1,426 messages and 6 facilities already present;
   the full suite, `$GETMSG`/`$PUTMSG` goldens included, passes.
+- 2026-09-30: Subtask 4 done, with two changes to the plan:
+  - **No `-imagelib`.** IMAGELIB.OLB only says which image defines a
+    symbol; the offsets come from the image itself, as real LINK reads
+    them. So the capture is `gen -image FILE.EXE`, and only LIBRTL.EXE is
+    on hand locally. Its 305 symbols and header facts (264 pages, ident
+    1.14, match LEQ) went into `vmsdef.SharedImages`/`ImageSymbols`
+    (`images_generated.go`). The header facts agree with the old
+    hand-entered `sharedImages`, which is gone, and the capture adds the
+    symbol, psect, and section counts a map reports. DECC$SHR and
+    CMA$TIS_SHR aren't captured (no .EXE here), so their shims still give
+    their offsets.
+  - **`-olb` was worth doing.** With no STARLET.OLB, a program that leaves
+    `SS$_NORMAL` for LINK to resolve got it undefined. `gen -olb FILE`
+    captures the absolute symbols of an object library's definition
+    modules into `vmsdef.LibrarySymbols` (`library_generated.go`). A
+    definition module is one that adds nothing to an image: only header,
+    GSD, and EOM records, plus text records that only set the relocation
+    base; empty psects; absolute definitions; no references. STARLET has
+    23 such modules and 7,292 symbols (SS$, IO$, SYI$, RMS$, SYS$, SMG$
+    and BAS$ codes, ...). Each value comes from the module the library's
+    global symbol index names, as LINK would add it: SYS$P1_VECTOR and
+    SYS$VECTOR both define SYS$CONNECT, at different addresses.
+
+  `govaxSymbols()` now builds LINK's own source in this order: captured
+  image symbols, then library symbols where no image defines the name,
+  then the P1 vector (overriding), then shims for images not captured.
+  *Verified:*
+  - `TestLink_capturedRoutineWithoutLibraries` links LIB$GET_INPUT (no
+    shim) and SS$_NORMAL with an empty `vax.library` and no undefined
+    symbols, and the image equals the one linked with the real IMAGELIB,
+    STARLET, and LIBRTL. With empty tables, the same test fails
+    (LIB$GET_INPUT undefined).
+  - `TestShimOffsetsMatchCapturedImages` (no VMS files needed) and
+    `TestCapturedLIBRTLMatchesImage` (with librtl.exe) pass.
+  - `TestLibrarySymbolsMatchP1Vector`: 311 of 312 services match; the
+    spare slot differs.
+  - Re-merging librtl.exe and starlet.olb adds nothing.
+
+  Finding: STARLET's values expose five wrong SS$_ codes in `Symbols`
+  (ssdef.txt's; `sysmsg.txt`, eVAX's `ssdef.asm`, and STARLET all agree
+  on others), plus build-dependent JPI$/SYI$ "last" markers; logged in
+  docs/DEVIATIONS.md and pinned by `TestSymbols_matchLibrarySymbols`.
+  Deferred for the author's decision on how to correct `Symbols`.

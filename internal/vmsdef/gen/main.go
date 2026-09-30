@@ -1,7 +1,11 @@
 // Command gen adds VMS definitions to govax's own tables in
 // internal/vmsdef: the symbolic constants in Symbols
-// (symbols_generated.go), and the message texts in Messages and
-// MessageFacilities (messages_generated.go). It reads definition files of
+// (symbols_generated.go), the message texts in Messages and
+// MessageFacilities (messages_generated.go), and shareable images'
+// global symbol tables in SharedImages and ImageSymbols
+// (images_generated.go), and the absolute symbols of object libraries'
+// definition modules in LibrarySymbols (library_generated.go). It reads
+// definition files of
 // the kinds VMS ships, merges what they define into the tables govax
 // already has, and rewrites the generated files, sorted, so that a merge
 // reads as a diff.
@@ -20,8 +24,11 @@
 //	-sdl FILE    an SDL source's modules (lnmdef.sdl; see sdl.go)
 //	-bliss FILE  a BLISS LITERAL listing (ssdef.txt; see bliss.go)
 //	-msg FILE    a message file's listing (sysmsg.txt; see msg.go)
+//	-image FILE  a shareable image's global symbol table (librtl.exe; see images.go)
+//	-olb FILE    an object library's definition modules (starlet.olb; see library.go)
 //
-// Two further flags change how the symbol inputs after them are read:
+// Two further flags change how the symbol and library inputs after them
+// are read:
 // -prefix P keeps only the names that begin with P (and -prefix "" keeps all of
 // them again), and -sdl-stop MODULE reads an SDL source only as far as
 // "module MODULE;" (objfmt.sdl's Alpha definitions begin at $EOBJRECDEF).
@@ -29,10 +36,11 @@
 // A name the table has already, with the same value, is left alone. One
 // with a different value is an error, which names every such conflict,
 // unless -replace is given. Messages merge the same way, by condition
-// value, and facilities by number. -n reports what would be added or
-// changed and writes nothing. Each input's file name is added to
-// SymbolSources or MessageSources, a record of what each table was built
-// from.
+// value, and facilities by number, and so do images, by name, and their
+// symbols, and libraries' symbols by name. -n reports what would be added
+// or changed and writes nothing. Each input's file name is added to
+// SymbolSources, MessageSources, ImageSources, or LibrarySources, a record
+// of what each table was built from.
 //
 // With no inputs, gen rewrites the tables as they are; tests check that
 // the results are the committed files, byte for byte.
@@ -52,7 +60,7 @@ import (
 
 // input is one definition file to merge, as the command line gives it.
 type input struct {
-	kind   string // "h", "sdl", "bliss", or "msg"
+	kind   string // "h", "sdl", "bliss", "msg", "image", or "olb"
 	path   string
 	prefix string // keep only names with this prefix; "" keeps all
 	stop   string // for "sdl", the module to stop reading at, if any
@@ -99,6 +107,8 @@ func main() {
 	flag.Var(inputFlag{&list, "sdl"}, "sdl", "merge an SDL source's definitions")
 	flag.Var(inputFlag{&list, "bliss"}, "bliss", "merge a BLISS LITERAL listing's literals")
 	flag.Var(inputFlag{&list, "msg"}, "msg", "merge a message listing's facilities and messages")
+	flag.Var(inputFlag{&list, "image"}, "image", "merge a shareable image's global symbol table")
+	flag.Var(inputFlag{&list, "olb"}, "olb", "merge an object library's definition modules' symbols")
 	flag.Var(settingFlag{&list.prefix}, "prefix", "keep only names with this prefix, in the inputs after it")
 	flag.Var(settingFlag{&list.stop}, "sdl-stop", "read the SDL sources after it only as far as this module")
 
@@ -108,13 +118,15 @@ func main() {
 	flag.Parse()
 
 	if flag.NArg() > 0 {
-		log.Fatalf("gen: unexpected argument %q: each input is given by -h, -sdl, -bliss, or -msg", flag.Arg(0))
+		log.Fatalf("gen: unexpected argument %q: each input is given by -h, -sdl, -bliss, -msg, -image, or -olb", flag.Arg(0))
 	}
 
 	symbolsPath := filepath.Join(*dir, symbolsFile)
 	messagesPath := filepath.Join(*dir, messagesFile)
+	imagesPath := filepath.Join(*dir, imagesFile)
+	libraryPath := filepath.Join(*dir, libraryFile)
 
-	for _, path := range []string{symbolsPath, messagesPath} {
+	for _, path := range []string{symbolsPath, messagesPath, imagesPath, libraryPath} {
 		if _, err := os.Stat(path); err != nil {
 			log.Fatalf("gen: %v (run gen from the repository root, or give -dir)", err)
 		}
@@ -125,28 +137,57 @@ func main() {
 	messages := maps.Clone(vmsdef.Messages)
 	facilities := maps.Clone(vmsdef.MessageFacilities)
 	messageSources := append([]string(nil), vmsdef.MessageSources...)
+	images := maps.Clone(vmsdef.SharedImages)
+	imageSymbols := maps.Clone(vmsdef.ImageSymbols)
+	imageSources := append([]string(nil), vmsdef.ImageSources...)
+	librarySymbols := maps.Clone(vmsdef.LibrarySymbols)
+	librarySources := append([]string(nil), vmsdef.LibrarySources...)
 
 	var conflicts []string
 
 	for _, in := range list.inputs {
 		var r mergeResult
 
-		if in.kind == "msg" {
+		file := filepath.Base(in.path)
+
+		switch in.kind {
+		case "msg":
 			msgs, facs, err := parseMessages(readSource(in.path))
 			if err != nil {
 				log.Fatalf("gen: %s: %v", in.path, err)
 			}
 
 			r = mergeMessages(messages, facilities, msgs, facs, *replace)
-			messageSources = addSource(messageSources, filepath.Base(in.path))
-		} else {
+			messageSources = addSource(messageSources, file)
+
+		case "image":
+			name, image, defs, err := readImage([]byte(readSource(in.path)))
+			if err != nil {
+				log.Fatalf("gen: %s: %v", in.path, err)
+			}
+
+			r = mergeImage(images, imageSymbols, name, image, defs, *replace)
+			imageSources = addSource(imageSources, file)
+
+		case "olb":
+			defs, modules, err := readLibrary([]byte(readSource(in.path)), in.prefix)
+			if err != nil {
+				log.Fatalf("gen: %s: %v", in.path, err)
+			}
+
+			fmt.Fprintf(os.Stderr, "gen: %s: %d definition modules\n", in.path, modules)
+
+			r = mergeSymbols(librarySymbols, defs, *replace)
+			librarySources = addSource(librarySources, file)
+
+		default:
 			defs, err := in.read()
 			if err != nil {
 				log.Fatalf("gen: %s: %v", in.path, err)
 			}
 
 			r = mergeSymbols(symbols, defs, *replace)
-			symbolSources = addSource(symbolSources, filepath.Base(in.path))
+			symbolSources = addSource(symbolSources, file)
 		}
 
 		conflicts = append(conflicts, r.conflicts...)
@@ -155,11 +196,7 @@ func main() {
 
 		if *dryRun {
 			for _, a := range r.added {
-				if v, ok := symbols[a]; ok && in.kind != "msg" {
-					fmt.Printf("add %s = %#x\n", a, v)
-				} else {
-					fmt.Printf("add %s\n", a)
-				}
+				fmt.Printf("add %s\n", a)
 			}
 
 			for _, c := range r.changed {
@@ -184,8 +221,16 @@ func main() {
 		log.Fatalf("gen: %v", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "gen: wrote %d symbols to %s, and %d messages in %d facilities to %s\n",
-		len(symbols), symbolsPath, len(messages), len(facilities), messagesPath)
+	if err := os.WriteFile(imagesPath, generateImages(images, imageSymbols, imageSources), 0o644); err != nil {
+		log.Fatalf("gen: %v", err)
+	}
+
+	if err := os.WriteFile(libraryPath, generateLibrary(librarySymbols, librarySources), 0o644); err != nil {
+		log.Fatalf("gen: %v", err)
+	}
+
+	fmt.Fprintf(os.Stderr, "gen: wrote %d symbols, %d messages in %d facilities, %d images' %d symbols, and %d library symbols to %s\n",
+		len(symbols), len(messages), len(facilities), len(images), len(imageSymbols), len(librarySymbols), *dir)
 }
 
 func readSource(path string) string {

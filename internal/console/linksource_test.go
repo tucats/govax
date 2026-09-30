@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/link"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
 )
@@ -28,24 +29,128 @@ func vmsLibFile(t *testing.T, name string) []byte {
 	return data
 }
 
-// TestShimOffsetsMatchLIBRTL checks each shim for a LIBRTL routine against
-// LIBRTL.EXE's global symbol table: a real image calls the routine at that
+// TestShimOffsetsMatchCapturedImages checks each shim for a routine in a
+// captured shareable image (vmsdef.SharedImages: LIBRTL, say) against the
+// image's global symbol table: a real image calls the routine at that
 // offset, and RUN connects the call to the shim registered for it.
-func TestShimOffsetsMatchLIBRTL(t *testing.T) {
-	src, _, err := link.ReadShareableImage(vmsLibFile(t, "librtl.exe"))
+func TestShimOffsetsMatchCapturedImages(t *testing.T) {
+	checked := 0
+
+	for _, e := range shimTable {
+		if _, ok := vmsdef.SharedImages[e.library]; !ok {
+			continue
+		}
+
+		checked++
+
+		if s, ok := vmsdef.ImageSymbols[e.name]; !ok || s.Image != e.library || s.Value != e.offset {
+			t.Errorf("%s's shim is at %s+^X%X; the captured table has %+v, %v", e.name, e.library, e.offset, s, ok)
+		}
+	}
+
+	if checked == 0 {
+		t.Error("no shim is for a captured image")
+	}
+}
+
+// TestCapturedLIBRTLMatchesImage checks the captured LIBRTL against
+// LIBRTL.EXE itself: govax's own tables describe the image, and define
+// each of its symbols, as the image's header and global symbol table do.
+func TestCapturedLIBRTLMatchesImage(t *testing.T) {
+	src, name, err := link.ReadShareableImage(vmsLibFile(t, "librtl.exe"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	for _, e := range shimTable {
-		if e.library != "LIBRTL" {
+	govax := govaxSymbols()
+
+	want, _ := src.Image(name)
+	if got, ok := govax.Image(name); !ok || got != want {
+		t.Errorf("govax's %s is %+v, %v; the image's header says %+v", name, got, ok, want)
+	}
+
+	for sym, d := range src.Symbols {
+		if got, ok, _ := govax.Lookup(sym); !ok || got != d {
+			t.Errorf("govax's %s is %+v, %v; the image has %+v", sym, got, ok, d)
+		}
+	}
+}
+
+// TestLibrarySymbolsMatchP1Vector checks the system services' addresses
+// STARLET's SYS$P1_VECTOR gives (vmsdef.LibrarySymbols) against govax's
+// own P1 vector, which LINK's own tables use and RUN implements. One
+// spare slot differs (docs/DEVIATIONS.md).
+func TestLibrarySymbolsMatchP1Vector(t *testing.T) {
+	checked := 0
+
+	for _, e := range vmsdef.P1VectorTable {
+		v, ok := vmsdef.LibrarySymbols[e.Name]
+		if !ok {
 			continue
 		}
 
-		d, ok, _ := src.Lookup(e.name)
-		if !ok || d.Value != e.offset {
-			t.Errorf("%s's shim is at LIBRTL+^X%X; LIBRTL.EXE has %+v, %v", e.name, e.offset, d, ok)
+		checked++
+
+		if v != e.Addr && e.Name != "SYS$SS_VECTOR_SPARE" {
+			t.Errorf("%s is %#x in govax's P1 vector, %#x in STARLET", e.Name, e.Addr, v)
 		}
+	}
+
+	if checked < 300 {
+		t.Errorf("only %d services are in both", checked)
+	}
+}
+
+// TestLink_capturedRoutineWithoutLibraries links a call to LIB$GET_INPUT,
+// a LIBRTL routine govax has no shim for, and a use of SS$_NORMAL, which
+// STARLET.OLB's SYS$SSDEF defines, with no VMS files at all: the captured
+// tables define both, so neither is undefined. With the VMS libraries
+// present, the image is the one they give.
+func TestLink_capturedRoutineWithoutLibraries(t *testing.T) {
+	c := newBootableConsole(t)
+	out := &bytes.Buffer{}
+	c.Out = out
+	c.HostLibrary = t.TempDir()
+
+	dir := t.TempDir()
+	writeHostFile(t, filepath.Join(dir, "getin.mar"), "\t.PSECT\tC,NOWRT,EXE\n\t.ENTRY\tGO,^M<>\n"+
+		"\tCALLS\t#0,G^LIB$GET_INPUT\n\tMOVL\t#SS$_NORMAL,R0\n\tRET\n\t.END\tGO\n")
+
+	if err := c.Macro(MacroOptions{Source: filepath.Join(dir, "getin.mar")}); err != nil {
+		t.Fatal(err)
+	}
+
+	linkGetin := func() []byte {
+		t.Helper()
+
+		out.Reset()
+
+		if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, "getin")}}); err != nil {
+			t.Fatalf("LINK: %v", err)
+		}
+
+		if strings.Contains(out.String(), "UDFSYM") {
+			t.Errorf("LINK reported an undefined symbol:\n%s", out.String())
+		}
+
+		data, err := os.ReadFile(filepath.Join(dir, "getin.exe"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return data
+	}
+
+	without := linkGetin()
+
+	vmsLibFile(t, "imagelib.olb")
+	vmsLibFile(t, "starlet.olb")
+	vmsLibFile(t, "librtl.exe")
+
+	c.HostLibrary = vmsLibDir
+
+	if !sameImage(linkGetin(), without) {
+		t.Error("the image linked from the VMS libraries differs from the one govax's own tables give")
 	}
 }
 

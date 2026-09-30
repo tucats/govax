@@ -2220,6 +2220,37 @@ widened."
   zero bits), so no instruction's own result starts faulting.
   `TestFpuLoadNegativeZeroIsReserved`, `TestFpuLoadDirtyZeroIsZero`.
 
+### [Phase 31] Five SS$_ codes in `vmsdef.Symbols` differ from VMS's
+
+- **Where**: `internal/vmsdef/symbols_generated.go`, whose SS$_ codes came
+  from VMS 7.3's `ssdef.txt` (a BLISS LITERAL listing), and govax's P1
+  vector (`internal/vmsdef/p1vector.go`).
+- **What**: capturing STARLET.OLB's definition modules
+  (`vmsdef.LibrarySymbols`) gave a second, independent source for about
+  2,200 of `Symbols`' values. They agree except for these:
+  - SS$_NOUPGRADE, SS$_NOGRPPRV, SS$_NOREADALL, SS$_NOSHARE, and
+    SS$_SYSVERDIF. `ssdef.txt` has 0x2914, 0x291C, 0x2924, 0x292C, and
+    0x671. STARLET has 0x2904, 0x2914, 0x291C, 0x28FC, and 0x239C, and so
+    does the system message file (`sysmsg.txt`, the MESSAGE compiler's
+    values), which is what `Messages` holds, and so does eVAX's own
+    `ssdef.asm` (bootdata), which the console's assembler uses. So
+    `Symbols` gives these five names wrong values: its SS$_NOGRPPRV is
+    STARLET's SS$_NOREADALL, say, and $GETMSG of govax's SS$_NOSHARE finds
+    NOAUDIT's text. No Go code uses the five names yet.
+  - JPI$_LASTCTL, JPI$_LASTPCB, JPI$_LASTPHD, SYI$_LASTEXE, and
+    SYI$_LASTFLD. These are "last item code" markers, which differ between
+    VMS builds; STARLET's are this system's.
+  - SYS$SS_VECTOR_SPARE, a spare P1 vector slot, is at 0x7FFEE918 in
+    govax's P1 vector and 0x7FFEE9C8 in STARLET. Every real service's
+    address matches.
+- **Status**: deferred; STARLET's values are the right ones. LINK's own
+  tables use `LibrarySymbols`, so a linked image gets STARLET's values,
+  but the assembler and the RTL use `Symbols`. The fix is to correct
+  `Symbols` from STARLET (gen would need a way to merge an object
+  library's symbols into `Symbols` with `-replace`), after checking what
+  in govax uses these names. `TestSymbols_matchLibrarySymbols` pins this
+  list, so a new difference, or one that goes away, fails the test.
+
 <!--
 Entry template:
 

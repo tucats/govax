@@ -14,7 +14,7 @@ const symbolsFile = "symbols_generated.go"
 
 // mergeResult says what merging one input's definitions did.
 type mergeResult struct {
-	added     []string // names new to the table, sorted
+	added     []string // what's new to the table ("NAME = value"), sorted
 	changed   []string // "NAME: old -> new", for each value -replace changed
 	conflicts []string // the same, for each value that wasn't replaced
 	same      int      // names already in the table with the same value
@@ -41,7 +41,7 @@ func mergeSymbols(symbols, defs map[string]uint32, replace bool) mergeResult {
 		switch {
 		case !ok:
 			symbols[name] = v
-			r.added = append(r.added, name)
+			r.added = append(r.added, fmt.Sprintf("%s = %#x", name, v))
 
 		case old == v:
 			r.same++
