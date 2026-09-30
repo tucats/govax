@@ -779,6 +779,13 @@ func parseRunQualifier(rest string, defaultRunInits bool) (RunOptions, string) {
 func cmdRun(d *Dispatcher, rest string) error {
 	opts, rest := parseRunQualifier(rest, d.Console.DefaultRunInits())
 
+	// A /HOST after the file name makes it a host file, as MACRO's and
+	// LINK's do (readImage).
+	rest = strings.TrimSpace(rest)
+	if n := len(rest) - len("/HOST"); n > 0 && strings.EqualFold(rest[n:], "/HOST") {
+		rest, opts.Host = rest[:n], true
+	}
+
 	fn := strings.Trim(strings.TrimSpace(rest), `"`)
 	if fn == "" {
 		return vmserrors.New(vmserrors.CLI_NOFILE)

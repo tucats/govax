@@ -17,6 +17,9 @@ type RunOptions struct {
 	RunInits  bool // /INIT (run each dependency's LIB$INITIALIZE); /NOINIT is the same as the zero value
 	Step      bool // /BREAK, /DEBUG, /STEP: single-step the main call
 	NoExecute bool // /NOEXECUTE: load and fix up, but don't transfer control
+	// Host is an explicit /HOST after the file name: the image is a host
+	// file whatever its name looks like (see readMainImage).
+	Host bool
 }
 
 // Run implements the RUN <filename> command: loads fn and its sharable-
@@ -42,6 +45,8 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 	if err := c.ensureShims(); err != nil {
 		return err
 	}
+
+	c.runHost = opts.Host
 
 	main, err := c.imageLoad(fn, icbMain)
 	if err != nil {

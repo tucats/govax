@@ -1,10 +1,12 @@
 package console
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -329,12 +331,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 		}
 	}
 
-	path, ok := c.findImage(fn)
-	if !ok {
-		return nil, vmserrors.New(vmserrors.RMS_IMAGENOTFOUND, fn)
-	}
-
-	data, err := c.Paths.ReadFile(path)
+	data, err := c.readImage(fn, flag == icbMain)
 	if err != nil {
 		return nil, err
 	}
@@ -724,6 +721,41 @@ func (c *Console) imageFixup(icb *ICB) error {
 	icb.Flags |= icbFixed
 
 	return nil
+}
+
+// readImage reads the image file fn. The main image (main) is found by the
+// file name rules MACRO and LINK follow (rms.Session.Locate): a VMS
+// specification, or a bare name while the default directory is on a
+// volume, is a file on a mounted volume, with the type EXE if it has none;
+// anything else, or any name with /HOST, is a host file, found as
+// findImage finds it. A shareable image the main image needs is always
+// looked for on the host (findImage), and govax's shims stand in for one
+// that isn't there.
+func (c *Console) readImage(fn string, main bool) ([]byte, error) {
+	if main && c.ContainerSession != nil {
+		loc, err := c.ContainerSession.Locate(fn, c.runHost)
+		if err != nil {
+			return nil, err
+		}
+
+		if !loc.Host {
+			data, _, err := c.ContainerSession.ReadRawFile(withDefaultType(loc, "EXE"))
+
+			var notFound *rms.NotFoundError
+			if errors.As(err, &notFound) {
+				return nil, vmserrors.New(vmserrors.RMS_IMAGENOTFOUND, fn)
+			}
+
+			return data, err
+		}
+	}
+
+	path, ok := c.findImage(fn)
+	if !ok {
+		return nil, vmserrors.New(vmserrors.RMS_IMAGENOTFOUND, fn)
+	}
+
+	return c.Paths.ReadFile(path)
 }
 
 // imageLow is an image's base for its fixup lists: the address of its

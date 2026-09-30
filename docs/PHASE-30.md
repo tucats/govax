@@ -805,6 +805,24 @@ them.
     such as `PSECT_ATTR=`, `CLUSTER=`, and `GSMATCH=`.
   - LINK's warnings leave its status successful; real LINK's is a
     warning (`%X10648268`).
-  - govax's RUN loads images from host files only, not from a mounted
-    volume (a limitation older than this phase).
+  - ~~govax's RUN loads images from host files only~~: done since, below.
+
+### 2026-09-30 — RUN reads images from mounted volumes
+
+- The last item above, done at the user's request: RUN's main image now
+  follows the file name rules MACRO and LINK follow
+  (`rms.Session.Locate`). A VMS specification, or a bare name while SET
+  DEFAULT is on a volume, reads the image from the mounted volume
+  (`ReadRawFile`), with the type EXE if it has none; anything else, or a
+  name followed by `/HOST`, is a host file, found as before (search path,
+  SharePrefix, lowercase). `internal/console/image.go`'s `readImage`.
+- Shareable images an image uses are still looked for on the host, and
+  shims stand in for missing ones, so a real `LIBRTL.EXE` on a volume isn't
+  run in place of the shims.
+- `govax --mount DUA1=link-check.dsk run DUA1:[000000]GV_HELLO.EXE` prints
+  "Hello, world!", and the console runs `GV_ADDR` and, after SET DEFAULT,
+  `GV_HELLO` from the volume. Tests: `TestRun_imageOnVolume` (a full
+  specification, no type, and a bare name after SET DEFAULT, and a missing
+  image) and `TestDispatch_runHost` (`/HOST` while the default is on a
+  volume). The RUN help describes the rules.
 

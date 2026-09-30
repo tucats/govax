@@ -222,6 +222,9 @@ type Console struct {
 	// its image exit, when user-mode logical names are run down (see
 	// imageRundown).
 	imageActive bool
+
+	// runHost is RUN's /HOST: the main image is a host file (readImage).
+	runHost bool
 }
 
 // New returns a Console with no machine allocated yet (vax_init == 0 in the

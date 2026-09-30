@@ -911,20 +911,27 @@ $RUN ,/DEB
     
     Syntax:
     
-        RUN [/DEBUG] <image-name>
+        RUN [/DEBUG] <image-name>[/HOST]
     
     Parameter:
     
-        <image-name>    This is the name of an image file on the native system.
-                        This can be created on a VAX/VMS system, and then copied
-                        to the native system where the emulator runs via FTP or
-                        other process.  Note that the file must be transfered in
-                        binary mode.  
+        <image-name>    An image file, on the native system or on a mounted
+                        ODS-2 volume, by the same rules as MACRO's and LINK's
+                        files (see HELP MACRO): a VMS file specification
+                        (DUA0:[PROGS]HELLO.EXE), or a bare name while SET
+                        DEFAULT is on a volume, is a file on the volume, with
+                        the type EXE if it has none.  Anything else, or any
+                        name followed by /HOST, is a native file.  An image
+                        made on a VAX can be copied to the native system in
+                        binary mode, or read in place from its disk.
                         
                         If the native file system is case sensitive, the name may 
                         need to be enclosed in quotes to preserve case.
                         
-                        The image is mapped into memory and executed.
+                        The image is mapped into memory and executed.  The
+                        shareable images it uses are always looked for on
+                        the native system; govax's shims stand in for any
+                        that aren't there.
 
 $CALL
     The CALL command is used to invoke the emulator and begin execution of a
