@@ -1,0 +1,5 @@
+! Link fixture: PROG.OPT for govax's own objects
+GV_SHARE1, GV_SHARE2	! the program
+STACK=30
+IDENTIFICATION="V9"
+SYMBOL=LIMIT,41

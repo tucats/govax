@@ -2073,6 +2073,24 @@ widened."
   checks every LIBRTL shim against `LIBRTL.EXE` when that file is present.
   `reference/eVAX` still has the old offsets.
 
+### [Phase 30] .ADDRESS fixups to a shareable image failed under RUN
+
+- **Where**: `reference/eVAX/eVAX/Source/Console/console_run.c`'s
+  `image_fixup` (the `.ADDRESS` loop, around line 1280), ported to
+  `internal/console/image.go`'s `imageFixup`.
+- **What**: each `.ADDRESS` fixup names a longword by its address relative to
+  the image's base, which is `^X200` for an executable (`ANALYZE/IMAGE`:
+  "relative to %X'00000200'"). The C code added it to the load base alone, so
+  it read and wrote address 0 (an access violation for a main image). It then
+  rebased the longword by the shareable image's base, which is no help when a
+  shim stands in for an image that isn't loaded. Real LINK's `ADDR.EXE`
+  (`testdata/link/vax/addr.exe`), which calls `LIB$PUT_OUTPUT` through a
+  `.ADDRESS`, failed to activate.
+- **Status**: fixed in Go. The address is relative to the image's lowest
+  section (`imageLow`), and the target resolves as a G^ cell's does
+  (`resolveFixupTarget`: the loaded image, or else its shim).
+  `TestRun_addressFixup` runs `ADDR.EXE`.
+
 <!--
 Entry template:
 

@@ -1,6 +1,7 @@
 package console
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -235,5 +236,21 @@ func TestLink_warnings(t *testing.T) {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("%s: output %q, want %q", name, out.String(), want)
 		}
+	}
+}
+
+// TestRun_addressFixup runs the image real LINK made of addr.mar
+// (testdata/link/vax/addr.exe), which calls LIB$PUT_OUTPUT through a
+// longword a .ADDRESS fixup fills in. With no LIBRTL.EXE, the fixup
+// reaches govax's shim, and the message is printed.
+func TestRun_addressFixup(t *testing.T) {
+	c := newBootableConsole(t)
+	out := &bytes.Buffer{}
+	c.Out = out
+
+	exe := filepath.Join("..", "..", "testdata", "link", "vax", "addr.exe")
+
+	if got := runImage(t, c, exe); got != 1 || !strings.Contains(out.String(), "Called through .ADDRESS") {
+		t.Errorf("R0 = %d, output %q", got, out.String())
 	}
 }

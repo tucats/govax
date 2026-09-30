@@ -688,14 +688,27 @@ func (c *Console) imageFixup(icb *ICB) error {
 						return err
 					}
 
-					vaddr := icb.Base + offset
+					// The longword's address is relative to the image's
+					// base, its lowest section: ^X200 in an executable
+					// (ANALYZE/IMAGE: "relative to %X'00000200'"). Its
+					// offset in the shareable image resolves as a G^
+					// cell's does, to the loaded image or else its shim.
+					// eVAX added the offset to the load base alone and
+					// rebased by the image's base, so a real image's
+					// .ADDRESS failed (docs/DEVIATIONS.md).
+					vaddr := imageLow(icb) + offset
 
 					target, err := c.loadLong(vaddr)
 					if err != nil {
 						return err
 					}
 
-					if err := c.storeLong(vaddr, target+shr.Base); err != nil {
+					value, err := c.resolveFixupTarget(shr, target)
+					if err != nil {
+						return err
+					}
+
+					if err := c.storeLong(vaddr, value); err != nil {
 						return err
 					}
 				}
@@ -711,6 +724,25 @@ func (c *Console) imageFixup(icb *ICB) error {
 	icb.Flags |= icbFixed
 
 	return nil
+}
+
+// imageLow is an image's base for its fixup lists: the address of its
+// lowest section (the user stack and global sections aside), which is
+// ^X200 for an executable and the load base for a shareable image.
+func imageLow(icb *ICB) uint32 {
+	low, found := uint32(0), false
+
+	for _, isd := range icb.ISDList {
+		if isdType(isd.Flags) == isdUsrStack || isd.Flags&isdGBL != 0 {
+			continue
+		}
+
+		if vpn := uint32(isd.VPN); !found || vpn < low {
+			low, found = vpn, true
+		}
+	}
+
+	return icb.Base + low<<9
 }
 
 // findImage locates fn on the native filesystem, matching find_image: try
