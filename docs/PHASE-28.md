@@ -11,7 +11,7 @@ Phase 27 fixtures do.
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress (subtasks 1-3 done; next, subtask 4).**
+**Status: in progress (subtasks 1-4 done; next, subtask 5).**
 
 ## Scope
 
@@ -204,7 +204,7 @@ inside it. Repeat blocks collect their lines to `.ENDR` the same way.
    string operators `%LENGTH`, `%LOCATE`, and `%EXTRACT`.
 3. **Done.** **Repeat blocks:** `.REPEAT`/`.REPT`, `.IRP`, `.IRPC`, `.ENDR`, and
    `.MEXIT` inside a repeat block.
-4. **Message and listing directives:** `.ERROR`, `.WARN`, and `.PRINT` in
+4. **Done.** **Message and listing directives:** `.ERROR`, `.WARN`, and `.PRINT` in
    MACRO's form (message from the comment; `.ERROR` is an assembly error,
    `.WARN` a warning, `.PRINT` an informational message), and the
    listing-control directives (`.LIST`, `.NLIST`, `.SHOW`, `.NOSHOW`,
@@ -426,3 +426,37 @@ All settled (2026-09-30):
   `$$R_TABINIT`'s `.IIF NE .&3, ...` (an alignment check on a relocatable
   `.`) is rejected as `VAX_RELEXPR`; real MACRO evidently accepts it, so
   that has to be settled for subtask 5's `$FAB`/`$RAB` acceptance.
+
+### 2026-09-30 — Subtask 4: message and listing directives
+
+- **`.ERROR`, `.WARN`, `.PRINT`** (`message.go`), in MACRO's form
+  `[expression] ;comment`. The message is the expression's value in
+  decimal (left out when zero, as the manual says) and then the comment,
+  trimmed of blanks and of the closing `;` a macro library's comments end
+  with. `.ERROR` is an assembly error (`VAX_GENERR`, "Generated ERROR:"),
+  `.WARN` a warning (`VAX_GENWRN`, "Generated WARNING:"), and `.PRINT` an
+  informational message (`VAX_GENPRINT`), kept apart from the warnings in
+  `Assembler.Messages()` so it doesn't make the object's severity a
+  warning. The MACRO command displays them (`CLI_ASMMESSAGE`).
+- **The comment reaches the directive** through preprocessing:
+  `preprocessComment` is `preprocessLine` returning the comment too, and
+  `statement` keeps it (a continued statement's is its last line's) in
+  `a.comment`. Arguments are already substituted into it, since
+  substitution happens on the raw lines, so `.ERROR ; ... : ORG;` names the
+  argument. `.IIF cond, .ERROR ;comment` works as in STARLET.MLB.
+- The manual doesn't show `.PRINT`'s message prefix; govax uses
+  "Generated MESSAGE:", to confirm against real MACRO in the fixtures
+  (subtask 10).
+- **Listing control** (`.LIST`, `.NLIST`, `.SHOW`, `.NOSHOW`, `.CROSS`,
+  `.NOCROSS`, `.PAGE`) is accepted, arguments and all, and ignored.
+- Both dialects get `.ERROR`, `.WARN`, and the listing directives; the
+  console's `.PRINT` stays eVAX's (`byDialect`).
+- Tests (`message_test.go`) are the manual's `.ERROR`, `.WARN`, and
+  `.PRINT` examples, a macro whose argument is substituted into the
+  message, skipped branches, continuation, errors, the listing directives,
+  and the console dialect.
+- A scratch check against the real STARLET.MLB: `$SSDEF`, `$IODEF`, and
+  `$FABDEF` twice (the second expanding to nothing through `$DEFEND`) now
+  assemble, and `$FAB FAC=<GET,BOGUS>` reports `$$R_VBFSET`'s
+  "Generated ERROR: UNDEFINED BIT VALUE CODE: BOGUS". `$$R_TABINIT`'s
+  relocatable `.IIF NE .&3` (subtask 3's note) is still open for subtask 5.

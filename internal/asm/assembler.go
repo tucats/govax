@@ -72,6 +72,11 @@ type Assembler struct {
 	// naming its line, and line the line being assembled.
 	warnings []error
 	line     int
+	// messages holds the MACRO dialect's .PRINT messages, and comment
+	// the ";" comment of the statement being assembled (see
+	// message.go).
+	messages []error
+	comment  string
 
 	// relocs holds the values left for the linker (MACRO dialect only),
 	// and ready the fixups waiting for the end of their statement to
@@ -436,10 +441,12 @@ func (e *Errors) Unwrap() []error { return e.List }
 // lines: a statement whose last character before any comment is "-"
 // continues on the next line. It reports false while a statement is
 // still being continued. The reference tool had no continuation lines.
+// The statement's comment (its last line's) is kept in a.comment.
 func (a *Assembler) statement(raw string) (string, bool) {
 	// Already-preprocessed text is unchanged by preprocessing it again.
-	line := preprocessLine(a.continued + raw)
+	line, comment := preprocessComment(a.continued + raw)
 	a.continued = ""
+	a.comment = comment
 
 	if strings.HasSuffix(line, "-") {
 		a.continued = strings.TrimSuffix(line, "-")
@@ -482,9 +489,20 @@ func (e *Error) Unwrap() error {
 // double-quoted string ("don't"), so the rest of the line, comment
 // included, was neither uppercased nor stripped.
 func preprocessLine(line string) string {
+	out, _ := preprocessComment(line)
+
+	return out
+}
+
+// preprocessComment is preprocessLine, also returning the text of the
+// line's ";" comment as written, without the ";" (the message of .ERROR,
+// .WARN, and .PRINT; see message.go). A string directive's or .TITLE's
+// comment isn't returned, since neither statement has a use for it.
+func preprocessComment(line string) (string, string) {
 	b := []byte(line)
 	inDouble, inSingle := false, false
 	out := make([]byte, 0, len(b))
+	comment := ""
 
 	for i := 0; i < len(b); i++ {
 		ch := b[i]
@@ -503,6 +521,8 @@ func preprocessLine(line string) string {
 
 		if !inSingle && !inDouble {
 			if ch == ';' {
+				comment = string(b[i+1:])
+
 				break
 			}
 
@@ -535,7 +555,7 @@ func preprocessLine(line string) string {
 		out = append(out, ch)
 	}
 
-	return strings.TrimRight(string(out), " \t\r")
+	return strings.TrimRight(string(out), " \t\r"), comment
 }
 
 // stringDirectiveAt returns the length of a string directive's name

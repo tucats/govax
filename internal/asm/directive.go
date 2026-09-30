@@ -67,8 +67,8 @@ type directive struct {
 // module at all (.REGION, .SCB, .SHIM, .P1VECTOR, .CONSOLE). .ALIGN and
 // .MASK mean something else in MACRO-32 (.ALIGN's operand is a power of
 // two, and .MASK reserves a transfer vector's mask word), so each dialect
-// has its own form (see byDialect). .PRINT stays console-only until the
-// MACRO dialect has its own.
+// has its own form (see byDialect), as has .PRINT (eVAX's prints quoted
+// strings and values; MACRO-32's is a message directive, message.go).
 //
 // Not implemented: the privileged-register pseudo-ops (".KSP value", etc.)
 // and .MODE/.PTE — none are used by any testdata/asm fixture, and each
@@ -173,13 +173,27 @@ func init() {
 		"IRPC":   {both, (*Assembler).pseudoIrpc},
 		"ENDR":   {both, (*Assembler).pseudoEndr},
 
+		// Message directives (message.go).
+		"ERROR": {both, (*Assembler).pseudoError},
+		"WARN":  {both, (*Assembler).pseudoWarn},
+		"PRINT": {both, byDialect((*Assembler).pseudoPrint, (*Assembler).pseudoPrintMACRO)},
+
+		// Listing control. govax makes no listing, so these are accepted
+		// and ignored, arguments and all.
+		"LIST":    {both, ignoreRest},
+		"NLIST":   {both, ignoreRest},
+		"SHOW":    {both, ignoreRest},
+		"NOSHOW":  {both, ignoreRest},
+		"CROSS":   {both, ignoreRest},
+		"NOCROSS": {both, ignoreRest},
+		"PAGE":    {both, ignoreRest},
+
 		// Not a MACRO-32 directive (it has .LIBRARY and .MCALL instead),
 		// but the MACRO command resolves .INCLUDE across host and ODS-2
 		// files (docs/PHASE-27.md, subtask 10).
 		"INCLUDE": {both, (*Assembler).pseudoInclude},
 
 		// eVAX console directives, and eVAX forms of MACRO-32 names.
-		"PRINT":   {console, (*Assembler).pseudoPrint},
 		"F_FLOAT": {console, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, 4) }},
 		"D_FLOAT": {console, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, 8) }},
 		"SPACE":   {console, (*Assembler).pseudoSpace},
@@ -239,8 +253,8 @@ func byDialect(consoleForm, macroForm func(*Assembler, *cursor) error) func(*Ass
 	}
 }
 
-// ignoreRest assembles a directive whose operand only matters to a
-// listing: .SUBTITLE and .SBTTL.
+// ignoreRest assembles a directive that only matters to a listing:
+// .SUBTITLE, .SBTTL, and the listing-control directives.
 func ignoreRest(_ *Assembler, c *cursor) error {
 	c.pos = len(c.s)
 

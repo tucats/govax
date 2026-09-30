@@ -88,6 +88,10 @@ func (c *Console) Macro(opts MacroOptions) error {
 
 	_, asmErr := a.Assemble(joinLines(lines))
 
+	for _, m := range a.Messages() {
+		c.Printf("%%%s\n", vmserrors.Wrap(vmserrors.CLI_ASMMESSAGE, m, found.Name))
+	}
+
 	for _, w := range a.Warnings() {
 		c.Printf("%%%s\n", vmserrors.Wrap(vmserrors.CLI_ASMWARNING, w, found.Name))
 	}
