@@ -78,6 +78,9 @@ questions, and a progress log extended as that phase is worked.
 | 25 | [PHASE-25.md](PHASE-25.md) | VMS-faithful logical names (tables, iterative translation, DEFINE/ASSIGN/SHOW LOGICAL, `$CRELNM`/`$TRNLNM`) |
 | 26 | [PHASE-26.md](PHASE-26.md) | Expanding system services (emulated process record; `$ADJSTK`, `$ADJWSL`, `$ALLOC`, `$ASCEFC`, ...) |
 | 27 | [PHASE-27.md](PHASE-27.md) | MACRO-32 object modules: `MACRO` command producing VAX `.OBJ` files from `.MAR` source |
+| 28 | [PHASE-28.md](PHASE-28.md) | The MACRO-32 macro facility (`.MACRO`, `.MCALL`, `STARLET.MLB`) — planned |
+| 29 | [PHASE-29.md](PHASE-29.md) | MACRO listings (`/LIST`), traceback and debugger records — planned |
+| 30 | [PHASE-30.md](PHASE-30.md) | A govax `LINK`: `.OBJ` modules to a runnable `.EXE` — planned |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -357,3 +360,27 @@ absolute (console) and relocatable (object) assembly. A new
 language, which is specified in the VMS 5.0 Linker manual's chapter 7 and
 the VMS 7.3 `objfmt.sdl`. Objects from the user's real VAX are the
 comparison fixtures. See PHASE-27.md.
+
+Phase 27 is complete. `MACRO source[/HOST] [/[NO]OBJECT[=file]]` (and
+`govax macro`, with repeatable `--mount`/`--mount-write`) reads and writes
+host files or files on mounted ODS-2 volumes, by one set of file-name
+rules in `internal/rms`. The MACRO dialect reports every error before
+declining to write an object.
+
+- **Matching real MACRO.** Twelve fixtures, assembled by real VAX MACRO
+  V5.4-3 on VMS 7.3, match govax's objects record for record, apart from
+  traceback records, which govax doesn't write yet.
+- **Accepted by real VMS.** `ANALYZE/OBJECT` finds no errors in govax's
+  objects, and VMS links and runs the complete programs.
+- **Work along the way.** The phase also:
+  - made `ods2`'s `INITIALIZE` build volumes VMS mounts, and fixed four
+    `ods2` bugs VMS found in volumes `ods2` had written;
+  - made COPY keep an object's records in both directions;
+  - made govax dismount volumes at the end of a session, so cached
+    bitmaps aren't lost.
+
+What MACRO-32 still lacks is planned as three phases. Phase 28 is the
+macro facility, which ordinary VMS programs need for the system macros.
+Phase 29 is listings and traceback/debugger records. Phase 30 is a govax
+`LINK`, so a govax-assembled program can run inside govax without a real
+VAX. Their known gaps are in `DEVIATIONS.md` under Phase 27.

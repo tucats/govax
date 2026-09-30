@@ -785,6 +785,80 @@ changed as a result.
     image's user-mode locks.
 - **Status**: open, by design.
 
+## Phase 27 (MACRO-32 object modules) findings
+
+Phase 27 (`PHASE-27.md`) adds a `MACRO` command that writes VAX object
+modules. eVAX had no object output, so there is no C behavior to
+preserve. The references are the VAX MACRO manual, the VMS 5.0 Linker
+manual's object language chapter, and objects real VAX MACRO V5.4-3
+wrote from the fixtures in `testdata/mar/`. All twelve fixtures match
+real MACRO record for record, apart from traceback records, and VMS 7.3
+accepts govax's objects (`ANALYZE/OBJECT`, `LINK`, `RUN`). These entries
+record what govax knowingly leaves out, and the encoding choices no
+fixture has confirmed yet.
+
+### [Phase 27] No macro facility, listings, or traceback and debugger records
+
+- **Where**: `internal/asm` (MACRO dialect), `internal/console/macro.go`.
+- **What**:
+  - There is no `.MACRO`/`.ENDM`, `.IRP`/`.IRPC`/`.REPT`, `.NARG`,
+    `.MEXIT`, `.MCALL`, or `.LIBRARY`, so a program can't call the
+    system macros (`$EXIT_S`, `$FAB`, ...) in `STARLET.MLB`. Fixtures
+    call `SYS$...` entry points directly instead.
+  - There are no listing files (`/LIST`); `.SUBTITLE`/`.SBTTL` are
+    accepted and ignored.
+  - There are no traceback (TBT) or debugger (DBG) records. Real MACRO
+    writes traceback records by default (`.ENABLE TRACEBACK`), so a
+    govax-built image can't give a symbolic traceback when it fails.
+    `.ENABLE TRACEBACK`/`DEBUG` are recorded and have no effect.
+- **Status**: open. Planned as Phases 28 (macro facility) and 29
+  (listings, traceback, and debugger records).
+
+### [Phase 27] Smaller MACRO simplifications and extensions
+
+- **Where**: `internal/asm/macrodir.go`, `internal/console/macro.go`,
+  `internal/rms/copy.go`.
+- **What**:
+  - `.ENABLE TRUNCATION` and `VECTOR` aren't supported: enabling one is
+    the warning `VAX_IGNORED`, and assembly goes on.
+  - The `MACRO` command takes only `/OBJECT` and `/NOOBJECT`: no
+    `/LIST`, `/DEBUG`, `/ENABLE`, `/DISABLE`, or `/LIBRARY`, and no
+    `A+B` concatenation of several sources into one module.
+  - Error messages are govax's (`%CLI-E-ASSEMBLING, ... line N:
+    VAX-E-...`), not MACRO's. After an error, assembly goes on to the
+    next statement, so a later message can follow from an earlier
+    error, as in real MACRO. At the end, only the first undefined
+    symbol is reported.
+  - `.INCLUDE` isn't MACRO-32. It's kept as an extension, and resolves
+    names across host and ODS-2 files.
+  - The object's language processor header is `govax MACRO V<build>`,
+    and its SRC header is the command line as typed, as real MACRO
+    records its own.
+  - A host `.OBJ` is kept in ODS-2's on-disk variable-length record
+    layout, and COPY always copies `.OBJ` files as records. Host files
+    have no record attributes, so that's govax's convention, not VMS
+    behavior.
+- **Status**: open, by design.
+
+### [Phase 27] Object encoding choices no fixture confirms
+
+- **Where**: `internal/asm/object.go`, `operand.go`, `value.go`.
+- **What**: each follows the confirmed cases by analogy:
+  - A byte displacement-mode field left to the linker is `STO_SB`. The
+    word form, `STO_SW`, is confirmed.
+  - A binary operation on constants within an expression left to the
+    linker isn't folded (`EXT+<2*3>` stacks 2, 3, `OPR_MUL`). Only unary
+    minus is confirmed (`EXT+<-4>`).
+  - A constant whose value is negative (`EXT+^XFFFFFFFC`) is stacked
+    with the signed short forms `STA_SB`/`STA_SW`.
+  - `. =` backward is a negative `CTL_AUGRB`. Forward is confirmed.
+  - The location in `.  ABS  .` is set at the start of assembly unless
+    code, data, or a label before any `.PSECT` moves assembly into
+    `. BLANK .` first. An unnamed `.PSECT` first, or an absolute psect
+    first, isn't covered by a fixture.
+- **Status**: open. Settle each with a fixture when a program needs it;
+  VMS links either form to the same image.
+
 ## Open findings
 
 _None yet._

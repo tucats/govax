@@ -11,8 +11,9 @@ never had.
 
 - `docs/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
   index.
-- `docs/PHASE-00.md` … `PHASE-12.md` — one doc per phase: goal, C-source file mapping,
-  deliverables, open questions, and a dated progress log. Read the relevant phase doc
+- `docs/PHASE-00.md` … `PHASE-30.md` — one doc per phase: goal, C-source file
+  mapping, deliverables, open questions, and a dated progress log (28-30 are
+  planned, not started). Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
@@ -37,6 +38,9 @@ never had.
   a second copy here too; it was consolidated down to the single, live copy
   at `internal/bootdata/files/vax.help` (Phase 22) since, unlike `evax.dcl`,
   it had no ongoing reason to track a separate upstream-import lineage.
+- `testdata/mar/` — Phase 27's MACRO-32 fixtures, with real VAX MACRO's objects,
+  listings, and analyses in `vax/` (see its README for the simh round trip).
+  `testdata/disks/` holds local-only ODS-2 containers (gitignored).
 - `~/Documents/Technical Doc/VMS/vax_instr_set.pdf` — the VAX architecture/
   instruction-set reference manual.
 
@@ -63,7 +67,10 @@ expect adjustment as phases land):
   search lists, `$TRNLNM`-style lookup and RMS file-spec translation (Phase 25).
   A leaf package shared by the console, `internal/rms`, and `internal/rtl`.
 - `internal/rtl` — VMS RTL/system-service simulation (Phase 10).
-- `internal/asm` — assembler/disassembler (Phase 11).
+- `internal/asm` — assembler/disassembler (Phase 11). Two dialects share one core
+  (Phase 27): the console's `ASM` (absolute, into emulated memory, eVAX
+  directives) and MACRO-32 (`SetDialect(DialectMACRO)`: psects, relocation
+  trees, every error reported, and `Object()` for a `.OBJ` module).
 - `internal/obj` — the VAX object language (Phase 27): reads, writes, dumps, and
   checks `.OBJ` object modules, keeping every record so a real VAX object
   round-trips byte for byte; `Builder` packs a module's psects, symbols, and TIR

@@ -26,7 +26,7 @@ becomes the record of the implementation: each subtask adds a
 [progress log](#progress-log) entry, and the open questions get their answers
 recorded here.
 
-**Status: subtasks 1-11 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 12 (clean-up and docs) is next.**
+**Status: complete (2026-09-30).** All twelve subtasks are done, and so are the `ods2` interop fixes (including a VMS-faithful `Initialize`), confirmed on VMS. The later sub-phases below moved to Phases 28 (macro facility), 29 (listings, traceback, and debugger records), and 30 (a govax `LINK`).
 
 ## Why this phase looks different
 
@@ -417,7 +417,8 @@ program:
   `.MASK symbol[,expression]`
 - `.END [transfer]`, which sets the EOM transfer address
 
-**Later sub-phases.** Each gets its own subtask entry when it starts:
+**Later sub-phases.** These became Phases 28, 29, and 30 when this phase
+closed (see [PLAN.md](PLAN.md)):
 
 - **The macro facility:** `.MACRO`/`.ENDM`, arguments and defaults,
   `.NARG`, `.IRP`/`.IRPC`/`.REPT`, `.MEXIT`, `.MCALL`, and `.LIBRARY`.
@@ -548,7 +549,7 @@ them under `testdata/mar/vax/`). Each step adds one feature:
 11. **Done.** **Fixture ladder 4 to 9** (needs the user). Compare each fixture with the
     VAX's output and add each real object to the reader corpus. Log the
     differences.
-12. **Clean-up and docs.** Update `PLAN.md`, `DEVIATIONS.md`, and
+12. **Done.** **Clean-up and docs.** Update `PLAN.md`, `DEVIATIONS.md`, and
     `CLAUDE.md` (for the new `internal/obj` package). Mark the phase
     complete, and move the macro facility, listings, and `LINK` into new
     phase entries.
@@ -1661,3 +1662,36 @@ above record the answers:
 - Nothing here is a behavior difference: each was a choice of object
   encoding, and VMS linked the old forms to the same effect. So nothing
   goes in `DEVIATIONS.md`.
+
+### 2026-09-30 — Subtask 12: phase complete
+
+- **Docs.**
+  - `PLAN.md`: rows for Phases 28-30, and a summary of this phase.
+  - `CLAUDE.md`: `internal/asm`'s two dialects, `testdata/mar/` and
+    `testdata/disks/`, and the phase-doc range. It already described
+    `internal/obj`, `internal/rms`'s file-name and record API, and the CLI.
+  - `README.md`: the `MACRO` command in the current status, and the next
+    steps.
+- **`DEVIATIONS.md`** has a Phase 27 section with three entries:
+  - the missing macro facility, listings, and traceback/debugger records;
+  - smaller simplifications and govax extensions: `TRUNCATION`/`VECTOR`,
+    the command's qualifiers, error reporting, `.INCLUDE`, the header
+    texts, and the host `.OBJ` layout;
+  - the encoding choices no fixture has confirmed: `STO_SB`, binary
+    constant operations left unfolded, signed constant forms, a backward
+    `. =`, and the start of `.  ABS  .` in cases not covered.
+
+  None of them is a behavior difference: VMS links each form to the
+  same image.
+- **The later sub-phases** are now planned phases, each with its own
+  document, scope, references, and open questions:
+  - `PHASE-28.md`: the macro facility. Its main question is whether to
+    read the real `STARLET.MLB`, which needs a reader for the
+    librarian's file format, since the system-service macros aren't in
+    the source archive.
+  - `PHASE-29.md`: listings, traceback, and debugger records. Real
+    MACRO's `.lis` files and full objects are already in
+    `testdata/mar/vax/`.
+  - `PHASE-30.md`: a govax `LINK`, built on `internal/obj`, the
+    `internal/rms` file access, and Phase 13's image activation.
+- `go test ./...` passes.

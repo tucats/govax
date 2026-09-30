@@ -62,7 +62,9 @@ the artifacts from once having run on a MacOS 7 in the 1990's...
 The port covers the full stack the original objectives called for: CPU
 instruction set (including both VAX floating-point formats), virtual
 memory, an interactive console with a DCL-style command language, RTL/
-system-service simulation, a MACRO-32-style assembler/disassembler, and
+system-service simulation, a MACRO-32-style assembler/disassembler, a
+`MACRO` command that writes VAX object modules (`.OBJ`) a real VMS linker
+accepts, and
 real VMS image activation (`RUN` loads and executes the project's own
 `.exe` test fixtures end to end, resolving sharable-image dependencies and
 applying load-time fixups). Every phase in [PLAN](docs/PLAN.md)'s table is
@@ -78,8 +80,10 @@ natural next steps are:
 
 - flesh out the skeletal RTL support so more actual images could be
   loaded and run.
-- Work on a version of the assembler that generates .OBJ files
-- Work on a linker that can assemble .OBJ files into an .EXE
+- Add the MACRO-32 macro facility, so programs can use the system
+  macros in `STARLET.MLB` (Phase 28), and listings and traceback
+  records (Phase 29).
+- Work on a linker that can link .OBJ files into an .EXE (Phase 30)
 
 Beyond that, this project was never aiming to emulate real hardware
 (disk controllers, network controllers, etc.) or boot an unmodified
