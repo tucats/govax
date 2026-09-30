@@ -21,10 +21,8 @@ var (
 	// which run mounts before anything else.
 	mountRequests []mountRequest
 
-	// macroObject and macroNoObject are the macro subcommand's --object
-	// and --no-object options.
-	macroObject   string
-	macroNoObject bool
+	// macro holds the macro subcommand's options.
+	macro macroFlags
 
 	// link holds the link subcommand's options.
 	link linkFlags
@@ -46,6 +44,14 @@ type libraryFlags struct {
 	noSqueeze               bool     // --no-squeeze
 	selective               bool     // --selective-search
 	log                     bool     // --log
+}
+
+// macroFlags are the macro subcommand's options, which become the MACRO
+// command's qualifiers.
+type macroFlags struct {
+	object    string   // --object
+	noObject  bool     // --no-object
+	libraries []string // --library, repeatable: MACRO's /LIBRARY=
 }
 
 // linkFlags are the link subcommand's options, which become the LINK
@@ -176,7 +182,7 @@ var macroGrammar = []cli.Option{
 		Description: "Object file name (default: the source's, with type .obj)",
 		OptionType:  cli.StringType,
 		Action: func(c *cli.Context) error {
-			macroObject, _ = c.String("object")
+			macro.object, _ = c.String("object")
 
 			return nil
 		},
@@ -186,7 +192,18 @@ var macroGrammar = []cli.Option{
 		Description: "Assemble and report errors without writing an object file",
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
-			macroNoObject = true
+			macro.noObject = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "library",
+		Description: "A macro library to search ahead of STARLET.MLB (repeatable)",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			name, _ := c.String("library")
+			macro.libraries = append(macro.libraries, name)
 
 			return nil
 		},
@@ -426,19 +443,28 @@ func macroCmd(c *cli.Context) error {
 
 	paths = loadConfigPaths(paths)
 
-	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{macroCommand(params[0], macroObject, macroNoObject)})
+	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{macroCommand(params[0], macro)})
 }
 
 // macroCommand is the console MACRO command for the macro subcommand's
 // source file and options.
-func macroCommand(source, object string, noObject bool) string {
+func macroCommand(source string, f macroFlags) string {
 	command := "MACRO " + dclQuote(source)
 
 	switch {
-	case noObject:
+	case f.noObject:
 		command += "/NOOBJECT"
-	case object != "":
-		command += "/OBJECT=" + dclQuote(object)
+	case f.object != "":
+		command += "/OBJECT=" + dclQuote(f.object)
+	}
+
+	if len(f.libraries) > 0 {
+		quoted := make([]string, len(f.libraries))
+		for i, name := range f.libraries {
+			quoted[i] = dclQuote(name)
+		}
+
+		command += "/LIBRARY=(" + strings.Join(quoted, ",") + ")"
 	}
 
 	return command

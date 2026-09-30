@@ -15,20 +15,21 @@ const smallSource = "\t.TITLE\tSMALL\n\t.PSECT\tDATA\n\t.LONG\t1,2,3\n\t.END\n"
 
 func TestMacroCommand(t *testing.T) {
 	cases := []struct {
-		source, object string
-		noObject       bool
-		want           string
+		source string
+		flags  macroFlags
+		want   string
 	}{
-		{"hello.mar", "", false, `MACRO "hello.mar"`},
-		{"/abs/Hello.mar", "", false, `MACRO "/abs/Hello.mar"`},
-		{"hello.mar", "out/x.obj", false, `MACRO "hello.mar"/OBJECT="out/x.obj"`},
-		{"hello.mar", "", true, `MACRO "hello.mar"/NOOBJECT`},
-		{"DUA0:[X]HELLO.MAR", "", false, `MACRO "DUA0:[X]HELLO.MAR"`},
+		{"hello.mar", macroFlags{}, `MACRO "hello.mar"`},
+		{"/abs/Hello.mar", macroFlags{}, `MACRO "/abs/Hello.mar"`},
+		{"hello.mar", macroFlags{object: "out/x.obj"}, `MACRO "hello.mar"/OBJECT="out/x.obj"`},
+		{"hello.mar", macroFlags{noObject: true}, `MACRO "hello.mar"/NOOBJECT`},
+		{"DUA0:[X]HELLO.MAR", macroFlags{}, `MACRO "DUA0:[X]HELLO.MAR"`},
+		{"p", macroFlags{libraries: []string{"a.mlb", "/x/B"}}, `MACRO "p"/LIBRARY=("a.mlb","/x/B")`},
 	}
 
 	for _, c := range cases {
-		if got := macroCommand(c.source, c.object, c.noObject); got != c.want {
-			t.Errorf("macroCommand(%q, %q, %v) = %q, want %q", c.source, c.object, c.noObject, got, c.want)
+		if got := macroCommand(c.source, c.flags); got != c.want {
+			t.Errorf("macroCommand(%q, %+v) = %q, want %q", c.source, c.flags, got, c.want)
 		}
 	}
 }
@@ -66,7 +67,41 @@ func TestRun_macroLinkRunOneShot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, command := range []string{macroCommand(src, "", false), linkCommand([]string{filepath.Join(dir, "prog")}, linkFlags{}), "RUN " + dclQuote(filepath.Join(dir, "prog.exe"))} {
+	for _, command := range []string{macroCommand(src, macroFlags{}), linkCommand([]string{filepath.Join(dir, "prog")}, linkFlags{}), "RUN " + dclQuote(filepath.Join(dir, "prog.exe"))} {
+		var buf bytes.Buffer
+		if err := run(nil, 0, 0, &buf, emptyStdin(), []string{command}); err != nil {
+			t.Fatalf("%s: %v\n%s", command, err, buf.String())
+		}
+	}
+}
+
+// TestRun_macroLibrariesOneShot makes a macro library, assembles a
+// program that calls its macro and STARLET.MLB's $EXIT_S, then links and
+// runs it, all as one-shot commands.
+func TestRun_macroLibrariesOneShot(t *testing.T) {
+	dir := t.TempDir()
+	macros := filepath.Join(dir, "mine.mar")
+	src := filepath.Join(dir, "prog.mar")
+
+	files := map[string]string{
+		macros: "\t.MACRO\tSETR0\tVALUE\n\tMOVL\t#VALUE,R0\n\t.ENDM\tSETR0\n",
+		src:    "\t.PSECT\tC,NOWRT,EXE\n\t.ENTRY\tGO,^M<>\n\tSETR0\t1\n\t$EXIT_S\tR0\n\t.END\tGO\n",
+	}
+
+	for name, text := range files {
+		if err := os.WriteFile(name, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	lib := filepath.Join(dir, "mine.mlb")
+
+	for _, command := range []string{
+		libraryCommand(lib, []string{macros}, libraryFlags{create: true, macro: true}),
+		macroCommand(src, macroFlags{libraries: []string{lib}}),
+		linkCommand([]string{filepath.Join(dir, "prog")}, linkFlags{}),
+		"RUN " + dclQuote(filepath.Join(dir, "prog.exe")),
+	} {
 		var buf bytes.Buffer
 		if err := run(nil, 0, 0, &buf, emptyStdin(), []string{command}); err != nil {
 			t.Fatalf("%s: %v\n%s", command, err, buf.String())
@@ -85,7 +120,7 @@ func TestRun_macroOneShot(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := run(nil, 0, 0, &buf, emptyStdin(), []string{macroCommand(src, "", false)}); err != nil {
+	if err := run(nil, 0, 0, &buf, emptyStdin(), []string{macroCommand(src, macroFlags{})}); err != nil {
 		t.Fatalf("run: %v\n%s", err, buf.String())
 	}
 
@@ -109,7 +144,7 @@ func TestRun_failedOneShotEndsWithItsError(t *testing.T) {
 	// Input that would run if the session went on to the prompt.
 	in := strings.NewReader("SHOW VERSION\n")
 
-	err := run(nil, 0, 0, &buf, readCloser{in}, []string{macroCommand(src, "", false)})
+	err := run(nil, 0, 0, &buf, readCloser{in}, []string{macroCommand(src, macroFlags{})})
 	if err == nil || !strings.Contains(err.Error(), "ASMERRORS") {
 		t.Fatalf("run error = %v, want the MACRO failure", err)
 	}
@@ -155,7 +190,7 @@ func TestRun_mountWrite(t *testing.T) {
 		mountRequests = []mountRequest{{device: "DUA0", path: disk, write: true}}
 
 		var buf bytes.Buffer
-		if err := run(nil, 0, 0, &buf, emptyStdin(), []string{macroCommand("DUA0:[000000]SMALL", "", false)}); err != nil {
+		if err := run(nil, 0, 0, &buf, emptyStdin(), []string{macroCommand("DUA0:[000000]SMALL", macroFlags{})}); err != nil {
 			t.Fatalf("run %d: %v\n%s", i, err, buf.String())
 		}
 	}

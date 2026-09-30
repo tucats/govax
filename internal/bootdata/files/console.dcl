@@ -751,6 +751,8 @@ grammar console
     ! file or a file on a mounted volume. OBJECT is VMS MACRO's own
     ! /[NO]OBJECT[=file]: with no value (the empty default), or no
     ! qualifier at all, the object is the source's name with type OBJ.
+    ! LIBRARY (docs/PHASE-28.md subtask 9) names macro libraries to search
+    ! ahead of STARLET.MLB: govax's form of VMS's "PROG+LIB/LIBRARY".
     !
     verb macro/id=1300
 
@@ -763,6 +765,8 @@ grammar console
         qualifier   object/id=1303              -
                     /type=$string               -
                     /default=""
+        qualifier   library/id=1304             -
+                    /type=$string/list
 
     !
     ! govax-native extension (docs/PHASE-30.md, internal/console +

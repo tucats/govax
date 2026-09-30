@@ -126,6 +126,13 @@ func TestDefaultPsects(t *testing.T) {
 		requirePsect(t, a, blankPsect, 1, defaultPsectFlags, 0)
 		requirePsect(t, a, "DATA", 2, defaultPsectFlags, 0)
 	}
+
+	// .RESTORE returns to . ABS . as it was, so code afterwards still
+	// goes to . BLANK .: STARLET's $xxxDEF macros (through $DEFINI and
+	// $DEFEND) save, switch to $ABS$, and restore this way.
+	a = macroAssemble(t, ".SAVE LOCAL_BLOCK\n.PSECT $ABS$,ABS\nX = 1\n.RESTORE\nNOP")
+	requirePsect(t, a, blankPsect, 2, defaultPsectFlags, 0)
+	requireBytes(t, psectBytes(t, a, blankPsect), 1)
 }
 
 // TestAbsolutePsect checks a psect with the ABS attribute: it defines

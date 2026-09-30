@@ -120,9 +120,11 @@ expect adjustment as phases land):
   mechanism (see `tickQuantum`/`tickIntervalClock` in `internal/cpu/interrupt.go`); when
   false/unset, the old quantum-driven path is used. `vax.quantum` (int) — default
   quantum-tick interval instead of the hard-coded `defaultQuantum` (20); only takes
-  effect if `> 0`. `vax.link.library` (string) — the host directory LINK looks in
-  for IMAGELIB.OLB, STARLET.OLB, and shareable images when `SYS$LIBRARY`/`SYS$SHARE`
-  don't lead to them (read by the console, not `NewEngine`).
+  effect if `> 0`. `vax.library` (string) — the host directory LINK and MACRO look
+  in for IMAGELIB.OLB, STARLET.OLB, shareable images, and STARLET.MLB when
+  `SYS$LIBRARY`/`SYS$SHARE` don't lead to them (read by the console, not `NewEngine`;
+  `internal/console/syslib.go`); the older `vax.link.library` is still read when
+  it isn't set. With no STARLET.MLB found, MACRO uses govax's own from bootdata.
 
 ## Bug-fixing policy while porting
 

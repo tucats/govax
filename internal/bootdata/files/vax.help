@@ -3408,6 +3408,7 @@ $MACR
     Syntax:
 
         MACRO <source>[/HOST] [/OBJECT[=<object>] | /NOOBJECT]
+              [/LIBRARY=(<library>[,...])]
 
     Parameter:
 
@@ -3446,15 +3447,32 @@ $MACR
         /NOOBJECT       Assembles the source and reports any errors, but
                         writes no object module.
 
+        /LIBRARY=(<library>[,...])
+                        Macro libraries (.MLB, the default type) to
+                        search for macros the source calls but doesn't
+                        define, ahead of STARLET.MLB.  A bare name is found
+                        beside the source.  This takes the place of VMS's
+                        "MACRO PROG+LIB/LIBRARY".
+
     Every error in the source is reported, and then no object module is
     written, so a failed assembly never replaces a good object.  Warnings
     are reported, and the object is still written.
 
     .INCLUDE file names follow the same rules as the source's, and a bare
-    name is found beside the source.
+    name is found beside the source.  So do .LIBRARY names.
+
+    A macro the source calls but doesn't define (a system macro such as
+    $EXIT_S or $QIOW_S, say) is looked for in the macro libraries, in VMS
+    MACRO's order: those .LIBRARY names, the last named first; then those
+    /LIBRARY names, the last named first; then STARLET.MLB.  STARLET.MLB is
+    SYS$LIBRARY:STARLET.MLB on a mounted volume, or else STARLET.MLB in the
+    host directory the vax.library setting names, or else govax's own,
+    which has a few system service macros ($EXIT_S, $ASSIGN_S, $DASSGN_S,
+    $QIO_S, and $QIOW_S).  Macro libraries are made with LIBRARY/MACRO.
 
     From the host shell, "govax macro <source>" runs this command, with
-    --object <file> or --no-object.  --mount DEVICE=container (or
+    --object <file> or --no-object, and --library <library> (which may be
+    repeated).  --mount DEVICE=container (or
     --mount-write, to allow writing) mounts a container first, and may be
     repeated.  govax exits with a nonzero status if the command fails.
 
@@ -3466,9 +3484,11 @@ $MACR
 
         MACRO "hello.mar"/HOST /OBJECT=DUA0:[000000]HELLO.OBJ
 
+        MACRO "prog.mar"/LIBRARY=("mymacros","common.mlb")
+
         $ govax --mount-write DUA0=work.dsk macro DUA0:[000000]HELLO.MAR
 
-    See also the help for COPY, MOUNT, and SET DEFAULT.
+    See also the help for COPY, LIBRARY, MOUNT, and SET DEFAULT.
 
 $LINK
 
@@ -3569,8 +3589,9 @@ $LINK
     The two libraries and the shareable images are VMS files, which govax
     doesn't include.  LINK looks for them as SYS$LIBRARY:IMAGELIB.OLB,
     SYS$LIBRARY:STARLET.OLB, and SYS$SHARE:<image>.EXE on a mounted
-    volume, then in the host directory the vax.link.library setting
-    names.  Without them, govax's own tables define what govax can run.
+    volume, then in the host directory the vax.library setting names
+    (or, if that isn't set, the older vax.link.library).  Without them,
+    govax's own tables define what govax can run.
 
     A routine in a shareable image is reached with a general mode operand
     (CALLS #1,G^LIB$PUT_OUTPUT) or a .ADDRESS of it; the image reaches it

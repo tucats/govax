@@ -623,6 +623,7 @@ func (d *Dispatcher) bindGrammar() {
 			SourceHost:  r.ParamPresent("SOURCE", "HOST"),
 			Object:      r.String("OBJECT"),
 			NoObject:    r.Present("OBJECT") && r.Negated("OBJECT"),
+			Libraries:   r.List("LIBRARY"),
 			CommandLine: d.line,
 		})
 	})

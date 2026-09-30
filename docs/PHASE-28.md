@@ -11,7 +11,7 @@ Phase 27 fixtures do.
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress (subtasks 1-8 done; next, subtask 9).**
+**Status: in progress (subtasks 1-9 done; next, subtask 10, which needs the user).**
 
 ## Scope
 
@@ -230,7 +230,7 @@ inside it. Repeat blocks collect their lines to `.ENDR` the same way.
 8. **Done.** **govax's own STARLET.MLB** in bootdata: a govax-written
    `STARLET.MAR` (starting with `$EXIT_S`) and the `.MLB` generated from
    it, with a test that they match.
-9. **The MACRO command:** STARLET.MLB found as above (volume, then
+9. **Done.** **The MACRO command:** STARLET.MLB found as above (volume, then
    `vax.library`, then bootdata), `.LIBRARY` names resolved relative to the
    source like `.INCLUDE`, and command-line libraries with a govax-style
    `/LIBRARY=(file[,...])`. The host library setting `vax.link.library`
@@ -754,7 +754,6 @@ All settled (2026-09-30):
   operand, a reserved addressing mode fault on a VAX. Both are fixed in the
   next entry.
 
-
 ### 2026-09-30 — Core defects found in subtask 8, fixed (user direction)
 
 - The user ruled that defects found in core code along the way are in
@@ -795,3 +794,51 @@ All settled (2026-09-30):
   (an unused `strPut` in `internal/rtl/utils.go`, an ineffective assignment
   in `internal/rtl/core.go`, a gosimple hint in `cmd/govax/grammar.go`).
   G/H floating, octawords, and packed decimal belong to a later phase.
+
+### 2026-09-30 — Subtask 9: the MACRO command's macro libraries
+
+- **Where libraries come from** (`internal/console/macro.go`). MACRO
+  hands the assembler, in search order, the `/LIBRARY=` files (the last
+  named first) and then STARLET.MLB, plus a `.LIBRARY` resolver; the
+  assembler already searches `.LIBRARY`'s libraries ahead of these.
+  `/LIBRARY=` and `.LIBRARY` names are found relative to the source, as
+  `.INCLUDE`'s are, with the default type `MLB`. A `/LIBRARY=` file is read
+  when the command starts, so a missing one is `SS_NOSUCHFILE` before
+  anything is assembled; one that isn't a macro library is `CLI_LIBRARY`.
+- **STARLET.MLB** is `SYS$LIBRARY:STARLET.MLB` on a mounted volume, then
+  `STARLET.MLB` (or `starlet.mlb`) in the host library directory, then
+  govax's own from bootdata. It's found and read the first time a macro
+  is looked for (`starletMacros`), so a program with no library macros
+  never reads it, and a bad one is reported as the lookup's error
+  (`VAX_LIBREAD`, naming the file).
+- **`vax.library`** (`internal/console/syslib.go`): LINK's file lookup
+  (`readLinkFile`) became `readLibraryFile`, shared by LINK and MACRO. The
+  host directory is `Console.HostLibrary` (was `LinkLibrary`), else the
+  `vax.library` setting, else the old `vax.link.library`. `cmd/govax`'s
+  config audit accepts both names.
+- **DCL**: `MACRO ... /LIBRARY=(file[,...])` (a list-valued qualifier,
+  id 1304). **`govax macro --library FILE`**, repeatable, becomes that
+  qualifier (`macroFlags` replaces the separate `macroObject`/
+  `macroNoObject` variables).
+- **Found on the way, and fixed** (govax's own Phase 27 code, so not a
+  `DEVIATIONS.md` entry): `.RESTORE` always left the implicit `. ABS .`
+  state, so a program calling `$IODEF` (whose `$DEFINI`/`$DEFEND` do
+  `.SAVE LOCAL_BLOCK`, `.PSECT $ABS$,ABS`, `.RESTORE`) before its first
+  `.PSECT` had its code rejected as `VAX_ABSDATA` in `. ABS .`, where real
+  MACRO puts it in `. BLANK .`. `.SAVE` now saves that state and `.RESTORE`
+  brings it back (`psectContext.implicitAbs`).
+- The console dialect (`ASM`) still searches no libraries: it was "only if
+  free", and govax's STARLET macros are written for the MACRO dialect.
+- Help: the MACRO topic describes `/LIBRARY=`, `.LIBRARY`, the search
+  order, and where STARLET.MLB comes from; LINK's names `vax.library`.
+  `CLAUDE.md`'s settings paragraph too.
+- Tests: `internal/console/maclib_test.go` (govax's STARLET with no VMS
+  library; the full search order with four libraries and a library
+  `$EXIT_S` replacing STARLET's; missing and wrong-type libraries; a bad
+  STARLET.MLB read only when needed; STARLET.MLB from the host directory
+  and then from `SYS$LIBRARY` on a volume, which wins; `$IODEF`, `$QIOW_S`,
+  and `$EXIT_S` from the real STARLET.MLB, skipping without it; the setting
+  precedence; `/LIBRARY=` through DCL); `TestDefaultPsects`'s `.SAVE`/
+  `.RESTORE` case; `cmd/govax` `TestMacroCommand` and
+  `TestRun_macroLibrariesOneShot` (LIBRARY/CREATE, MACRO with `--library`
+  and `$EXIT_S`, LINK, and RUN, as one-shot commands).

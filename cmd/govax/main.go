@@ -392,6 +392,7 @@ var validConfigs = map[string]bool{
 	"vax.debug.rms":        true,
 	"vax.debug.userstep":   true,
 	"vax.hardware.clock":   true,
+	"vax.library":          true,
 	"vax.link.library":     true,
 	"vax.path":             true,
 	"vax.quantum":          true,

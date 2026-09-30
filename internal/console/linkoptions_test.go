@@ -161,9 +161,9 @@ func TestLink_userLibraries(t *testing.T) {
 
 	hello := linkHello(t, c, LinkOptions{NoSysLib: true})
 
-	c.LinkLibrary = vmsLibDir
+	c.HostLibrary = vmsLibDir
 	withImagelib := linkHello(t, c, LinkOptions{Files: []link.InputFile{{Name: imagelib, Library: true}}, NoSysLib: true})
-	c.LinkLibrary = ""
+	c.HostLibrary = ""
 
 	if !sameImage(hello, withImagelib) {
 		t.Error("the image linked with IMAGELIB/LIBRARY differs from govax's tables'")

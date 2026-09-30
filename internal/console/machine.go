@@ -201,11 +201,12 @@ type Console struct {
 	// alongside the loading image with no prefix.
 	SharePrefix string
 
-	// LinkLibrary is the host directory LINK looks in for IMAGELIB.OLB,
-	// STARLET.OLB, and shareable images when SYS$LIBRARY and SYS$SHARE
-	// don't lead to them (internal/console/linksource.go). Empty means the
-	// vax.link.library setting's.
-	LinkLibrary string
+	// HostLibrary is the host directory LINK and MACRO look in for
+	// IMAGELIB.OLB, STARLET.OLB, shareable images, and STARLET.MLB when
+	// SYS$LIBRARY and SYS$SHARE don't lead to them (internal/console/
+	// syslib.go). Empty means the vax.library setting's (or the older
+	// vax.link.library's).
+	HostLibrary string
 
 	// Paths is the search-path policy (docs/PHASE-15.md) every file-reading
 	// method on Console (Include, Assemble, imageLoad, LoadROM, LoadNVRAM)

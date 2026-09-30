@@ -2,17 +2,22 @@ package console
 
 import (
 	"errors"
+	"fmt"
+	"io/fs"
 	"strings"
 
 	"github.com/tucats/govax/internal/asm"
+	"github.com/tucats/govax/internal/bootdata"
+	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/obj"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file implements docs/PHASE-27.md subtask 10's MACRO command:
+// This file implements docs/PHASE-27.md subtask 10's MACRO command, with
+// docs/PHASE-28.md subtask 9's macro libraries:
 //
-//	MACRO source[/HOST] [/[NO]OBJECT[=object]]
+//	MACRO source[/HOST] [/[NO]OBJECT[=object]] [/LIBRARY=(library[,...])]
 //
 // It assembles a MACRO-32 source file with internal/asm's MACRO dialect
 // and writes the object module. The source and object can each be a host
@@ -22,6 +27,15 @@ import (
 // following the source (same side, and on a volume the same device and
 // directory). .INCLUDE names are resolved the same way, relative to the
 // source.
+//
+// Macros the source doesn't define come from macro libraries, searched as
+// VMS MACRO searches them: the libraries .LIBRARY names, the last named
+// first; then /LIBRARY='s, also the last named first; then STARLET.MLB.
+// .LIBRARY and /LIBRARY= names are resolved relative to the source, with
+// the default type MLB. STARLET.MLB is SYS$LIBRARY:STARLET.MLB on a mounted
+// volume, or STARLET.MLB in the host library directory (syslib.go), or
+// else govax's own, from bootdata; it's read only when a macro is looked
+// for.
 //
 // Every assembly error is reported, and then no object file is written:
 // the object is built in memory and written only once assembly succeeds,
@@ -46,6 +60,10 @@ type MacroOptions struct {
 	// errors, but write nothing.
 	Object   string
 	NoObject bool
+
+	// Libraries are the macro libraries /LIBRARY= names, in the order
+	// given.
+	Libraries []string
 
 	// CommandLine is the command as typed, for the object's SRC header,
 	// where real MACRO records its command line.
@@ -85,6 +103,22 @@ func (c *Console) Macro(opts MacroOptions) error {
 
 		return joinLines(text), err
 	})
+	a.SetLibraryResolver(func(name string) (asm.MacroLibrary, error) {
+		return c.openMacroLibrary(name, found)
+	})
+
+	libs := make([]asm.MacroLibrary, 0, len(opts.Libraries)+1)
+
+	for k := len(opts.Libraries) - 1; k >= 0; k-- {
+		lib, err := c.openMacroLibrary(opts.Libraries[k], found)
+		if err != nil {
+			return err
+		}
+
+		libs = append(libs, lib)
+	}
+
+	a.SetMacroLibraries(append(libs, &starletMacros{c: c})...)
 
 	_, asmErr := a.Assemble(joinLines(lines))
 
@@ -138,6 +172,80 @@ func (c *Console) Macro(opts MacroOptions) error {
 	}
 
 	return nil
+}
+
+// openMacroLibrary reads the macro library name, a /LIBRARY= or .LIBRARY
+// file, found relative to the source file.
+func (c *Console) openMacroLibrary(name string, source rms.FileLocation) (asm.MacroLibrary, error) {
+	s := c.ContainerSession
+
+	loc, err := s.LocateRelated(name, false, source)
+	if err != nil {
+		return nil, fileFailure(err, name)
+	}
+
+	loc = withDefaultType(loc, "MLB")
+
+	data, found, err := s.ReadRawFile(loc)
+	if err != nil {
+		return nil, fileFailure(err, loc.Name)
+	}
+
+	return macroLibrary(data, found.Name)
+}
+
+// macroLibrary reads data, the library file name, as a macro library.
+func macroLibrary(data []byte, name string) (asm.MacroLibrary, error) {
+	l, err := lbr.Open(data)
+	if err == nil {
+		var lib asm.MacroLibrary
+		if lib, err = asm.NewMacroLibrary(l); err == nil {
+			return lib, nil
+		}
+	}
+
+	return nil, vmserrors.Wrap(vmserrors.CLI_LIBRARY, err, name)
+}
+
+// starletMacros is STARLET.MLB, the last library MACRO searches. It's
+// found and read the first time a macro is looked for in it, so a program
+// that needs no library macros never reads it.
+type starletMacros struct {
+	c   *Console
+	lib asm.MacroLibrary
+	err error
+}
+
+// Macro implements asm.MacroLibrary.
+func (s *starletMacros) Macro(name string) ([]string, bool, error) {
+	if s.lib == nil && s.err == nil {
+		s.lib, s.err = s.c.openStarlet()
+	}
+
+	if s.err != nil {
+		return nil, false, s.err
+	}
+
+	return s.lib.Macro(name)
+}
+
+// openStarlet reads STARLET.MLB: SYS$LIBRARY's, the host library
+// directory's, or govax's own.
+func (c *Console) openStarlet() (asm.MacroLibrary, error) {
+	data, name, err := c.readLibraryFile("SYS$LIBRARY", "STARLET.MLB")
+	if err != nil {
+		return nil, objectFailureAs(vmserrors.CLI_LIBRARY, err, name)
+	}
+
+	if data == nil {
+		name = "govax STARLET.MLB"
+
+		if data, err = fs.ReadFile(bootdata.FS, bootdata.StarletLibrary); err != nil {
+			return nil, fmt.Errorf("%s: %w", name, err)
+		}
+	}
+
+	return macroLibrary(data, name)
 }
 
 // joinLines turns records read from a text file back into source text.

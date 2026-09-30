@@ -98,7 +98,7 @@ func TestLink_libraryDirectory(t *testing.T) {
 	c := newBootableConsole(t)
 	out := &bytes.Buffer{}
 	c.Out = out
-	c.LinkLibrary = vmsLibDir
+	c.HostLibrary = vmsLibDir
 
 	withLibs := linkHello(t, c, LinkOptions{})
 	without := linkHello(t, c, LinkOptions{NoSysLib: true})
@@ -129,7 +129,7 @@ func TestLink_libraryMissingImage(t *testing.T) {
 	}
 
 	c := newBootableConsole(t)
-	c.LinkLibrary = dir
+	c.HostLibrary = dir
 
 	withLib := linkHello(t, c, LinkOptions{})
 	if !sameImage(withLib, linkHello(t, c, LinkOptions{NoSysLib: true})) {
@@ -183,7 +183,7 @@ func TestLink_libraryLogicalNames(t *testing.T) {
 
 	// With the logical names undefined, and no host directory, IMAGELIB
 	// isn't found: SMG$ routines are undefined.
-	c.LinkLibrary = t.TempDir()
+	c.HostLibrary = t.TempDir()
 
 	src, err := c.linkSources(true)
 	if err != nil || len(src) != 1 {

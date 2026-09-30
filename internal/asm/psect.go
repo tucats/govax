@@ -61,14 +61,16 @@ const maxAlign = 9
 // in the byte the object language's short forms have for it.
 const maxUserPsects = 254
 
-// psectContext is one .SAVE_PSECT entry: the psect and its location, and,
-// with LOCAL_BLOCK, the local label block.
+// psectContext is one .SAVE_PSECT entry: the psect and its location,
+// whether that was the implicit . ABS . that code moves out of, and, with
+// LOCAL_BLOCK, the local label block.
 type psectContext struct {
-	sect      *section
-	loc       uint32
-	withBlock bool
-	block     int
-	used      bool
+	sect        *section
+	loc         uint32
+	implicitAbs bool
+	withBlock   bool
+	block       int
+	used        bool
 }
 
 // maxPsectStack is how many contexts .SAVE_PSECT can hold.
@@ -239,7 +241,7 @@ func alignmentValue(word string) (uint32, bool) {
 func (a *Assembler) pseudoSavePsect(c *cursor) error {
 	c.skipBlanks()
 
-	ctx := psectContext{sect: a.cur, loc: a.cur.loc}
+	ctx := psectContext{sect: a.cur, loc: a.cur.loc, implicitAbs: a.implicitAbs}
 
 	if !c.atEnd() {
 		if word := scanName(c); word != "LOCAL_BLOCK" {
@@ -270,9 +272,9 @@ func (a *Assembler) pseudoRestorePsect(*cursor) error {
 	ctx := a.psectStack[n-1]
 	a.psectStack = a.psectStack[:n-1]
 
-	a.implicitAbs = false
 	ctx.sect.loc = ctx.loc
 	a.enterSection(ctx.sect)
+	a.implicitAbs = ctx.implicitAbs
 
 	if ctx.withBlock {
 		if err := a.checkLocalBlock(); err != nil {
