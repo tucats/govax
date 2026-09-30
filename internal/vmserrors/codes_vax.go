@@ -114,6 +114,7 @@ const (
 	vaxLibRead
 	vaxNoLibResolver
 	vaxLibrary
+	vaxModeAccess
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -254,6 +255,11 @@ const (
 	VAX_LIBREAD       = VAXFacility<<FacilityPosition | vaxLibRead<<MessagePosition | StatusError
 	VAX_NOLIBRESOLVER = VAXFacility<<FacilityPosition | vaxNoLibResolver<<MessagePosition | StatusError
 	VAX_LIBRARY       = VAXFacility<<FacilityPosition | vaxLibrary<<MessagePosition | StatusError
+
+	// An addressing mode that faults (or is UNPREDICTABLE) for the
+	// operand's access type, or as an indexed operand's base (the
+	// architecture manual's tables 8-5 and 8-6).
+	VAX_MODEACCESS   = VAXFacility<<FacilityPosition | vaxModeAccess<<MessagePosition | StatusError
 )
 
 func init() {
@@ -347,6 +353,7 @@ func init() {
 	DefineMessage(VAX_LIBREAD, VAXFacility, "LIBREAD", "Reading macro !S from its library")
 	DefineMessage(VAX_NOLIBRESOLVER, VAXFacility, "NOLIBRESOLVER", ".LIBRARY !Q: no library resolver configured")
 	DefineMessage(VAX_LIBRARY, VAXFacility, "LIBRARY", ".LIBRARY !Q")
+	DefineMessage(VAX_MODEACCESS, VAXFacility, "MODEACCESS", "!S mode isn't allowed for !S operand")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")

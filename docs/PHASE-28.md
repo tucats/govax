@@ -748,12 +748,50 @@ All settled (2026-09-30):
   skips without `testdata/vmslib/starlet.mlb`) checks that each call
   gives the same object module, record for record, from govax's library
   as from VMS's.
-- **Found, not changed:** the assembler can't assemble a quadword
-  immediate operand (`MOVQ #1000,R0`, or `PUSHAQ I^#5`, which
-  `$ASSIGN_S DEVNAM=I^#5` expands to from either library): it fails with
-  `VAX_BADSCALE`, because `storeScaled` (from eVAX) writes only 1, 2, or
-  4 bytes. Octaword and D/G/H-float immediates are presumably the same.
-  Also, `PUSHAW S^#6` assembles a short literal in an address operand
-  (`3F 06`), which is a reserved addressing mode fault on a real VAX.
-  Real MACRO presumably reports it as an error, and the fixtures could
-  show what it does (subtask 10).
+- Found on the way: the assembler couldn't assemble a quadword immediate
+  (`PUSHAQ I^#5`, which `$ASSIGN_S DEVNAM=I^#5` expands to from either
+  library), and it assembled `PUSHAW S^#6` as a short literal in an address
+  operand, a reserved addressing mode fault on a VAX. Both are fixed in the
+  next entry.
+
+
+### 2026-09-30 — Core defects found in subtask 8, fixed (user direction)
+
+- The user ruled that defects found in core code along the way are in
+  scope and get fixed, not just logged. Each fix below has an entry in
+  `docs/DEVIATIONS.md`.
+- **Quadword immediates** (`internal/asm/operand.go`): eight bytes, a
+  single number read at full width, any other expression sign-extended,
+  and a forward reference's high longword zero, all as `.QUAD` does.
+- **Addressing modes checked against operand access** (the architecture
+  manual's tables 8-5 and 8-6, `modeAllowed`): `#n` in an address or
+  field operand is immediate mode (`PUSHAL #5` no longer chooses a short
+  literal), and a literal anywhere but a read operand, an immediate in a
+  modified or written one, a register as an address, and an indexed
+  literal, immediate, or register are errors (`VAX_MODEACCESS`).
+  `CALLG`'s register argument list stays allowed, the eVAX idiom
+  `kernel.asm` uses. `TestRoundTripFixtures` now starts after each
+  fixture's `.ENTRY` mask, which it used to decode as an instruction
+  (`movq.asm`'s `F0 00` is an `INSV` with a literal base), and the
+  immediate round-trip case is `PUSHL`, since `CLRL` can't write one.
+- **Bit-field bases are field operands** (`OP_VA`): the table generator
+  (`internal/cpu/gen`, run by hand since its `go:generate` line is
+  disabled) now marks the base of the 15 bit-field instructions as
+  such. `SHOW INSTRUCTIONS` names them `field`.
+- **The CPU's immediate decode** (`decodeImmediate`): an 8-byte immediate
+  panicked the emulator, a float immediate loaded as 0, and an address
+  operand in immediate mode had no address (`PUSHAL I^#5` pushed 0). All
+  three were the port's own regressions from `decode_operand.c`.
+- **`fpuLoad`'s zero rule:** -0 is a reserved operand, and a zero exponent
+  with a sign of 0 is zero whatever the fraction. It had these backwards,
+  as `fpu_load` does.
+- **`CALL`'s trailing text:** the console's `CALL` ignored anything after
+  the address or argument list (`CALL X(1) junk` called X). Now it's
+  `CLI_EXTRAPARAMETER`. Found by the linter.
+- Tests: `internal/asm/immediate_test.go`, `internal/cpu/immediate_test.go`,
+  the fpu and bit-field tests, and a `CALL` case in `dispatch_test.go`.
+  `$ASSIGN_S DEVNAM=I^#5,CHAN=#6` joins the STARLET comparison.
+- Still open, not part of this: other packages have older lint findings
+  (an unused `strPut` in `internal/rtl/utils.go`, an ineffective assignment
+  in `internal/rtl/core.go`, a gosimple hint in `cmd/govax/grammar.go`).
+  G/H floating, octawords, and packed decimal belong to a later phase.

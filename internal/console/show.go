@@ -1463,9 +1463,9 @@ func ratioPercent(tries, hits int64) int64 {
 }
 
 // accessAbbrev matches show_instructions()'s own operand-kind abbreviation
-// (console_show.c): "src"/"dst"/"mod"/"addr"/"br", "x" for anything else
-// (AccessNone, or OP_VA/"var" — this port's AccessKind has no variable-
-// operand-count kind since no ported instruction uses one).
+// (console_show.c): "src"/"dst"/"mod"/"addr"/"br", "field" for a bit
+// field's base (OP_VA, which the generated table now uses; see
+// internal/cpu/gen's fieldBases), and "x" for anything else.
 func accessAbbrev(a cpu.AccessKind) string {
 	switch a {
 	case cpu.AccessRead:
@@ -1482,6 +1482,9 @@ func accessAbbrev(a cpu.AccessKind) string {
 
 	case cpu.AccessBranch:
 		return "br"
+
+	case cpu.AccessVarField:
+		return "field"
 
 	default:
 		return "x"

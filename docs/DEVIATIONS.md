@@ -2091,6 +2091,95 @@ widened."
   (`resolveFixupTarget`: the loaded image, or else its shim).
   `TestRun_addressFixup` runs `ADDR.EXE`.
 
+### [Phase 28] The assembler couldn't assemble a quadword immediate
+
+- **Where**: `reference/eVAX/eVAX/Source/Assembler/asm_operand.c`'s
+  size-based store of an immediate literal, ported to
+  `internal/asm/operand.go`'s `storeScaled`/`storeImmediateInt`.
+- **What**: the store knew 1, 2, and 4 bytes only, so any quadword operand's
+  immediate (`MOVQ #1000,R0`, `EDIV #10,#1000,R0,R1`, `PUSHAQ I^#5`) failed
+  with `VAX_BADSCALE`. Found through `$ASSIGN_S DEVNAM=I^#5`, which STARLET's
+  `$PUSHADR` expands to `PUSHAQ I^#5`.
+- **Status**: fixed in Go. A quadword immediate is eight bytes: a single
+  number is read at full width (as `.QUAD` reads one), any other expression
+  is evaluated in 32 bits and sign-extended (MACRO-32's rule for a 32-bit
+  value in a quadword), and a forward reference gets a zero high longword,
+  its fixup patching the low one (as for `.QUAD`). Octawords would extend
+  the same way, though no implemented instruction has one yet (they come
+  with G/H floating, a later phase). `TestQuadwordImmediates`.
+
+### [Phase 28] The assembler didn't check addressing modes against operand access
+
+- **Where**: `reference/eVAX/eVAX/Source/Assembler/asm_operand.c`, ported to
+  `internal/asm/operand.go`'s `assembleOperandRec`.
+- **What**: a literal, an immediate, or a register was assembled in any
+  operand. The architecture manual's tables 8-5 and 8-6 allow a short
+  literal only in a read operand; an immediate in a read, address, or field
+  operand (it's UNPREDICTABLE in a modified or written one); a register
+  anywhere but an address operand; and none of the three as an indexed
+  operand's base. So `PUSHAW S^#6` assembled `3F 06`, a reserved addressing
+  mode fault on a VAX, and `PUSHAL #5` chose the short literal, which faults
+  the same way, where MACRO-32 would use immediate mode.
+- **Status**: fixed in Go. `#n` in an address or field operand is always
+  immediate mode, and the disallowed forms are errors (`VAX_MODEACCESS`,
+  `modeAllowed`). One exception is kept: `CALLG`'s argument list may be a
+  register (`CALLG AP,...`, `CALLG SP,...`), the eVAX idiom govax's
+  `kernel.asm` uses and the CPU implements (see "Register mode used where
+  `OP_AD`/`OP_VA` access is required"). `TestLiteralInAddressOperand`,
+  `TestModeAccessErrors`.
+
+### [Phase 28] Bit-field bases were not field (`OP_VA`) operands
+
+- **Where**: `reference/eVAX/eVAX/Headers/instruction_table.h`, the rows for
+  `BBS`, `BBC`, `BBSS`, `BBCS`, `BBSC`, `BBCC`, `BBSSI`, `BBCCI`, `EXTV`,
+  `EXTZV`, `CMPV`, `CMPZV`, `FFS`, `FFC`, and `INSV`.
+- **What**: each gives the field's base (`base.vb` in the manual's format
+  lines) the access of the field itself: `OP_RD` for `EXTV`, `OP_MD` for
+  `BBSS`, `OP_WR` for `INSV`. `OP_VA` was defined but used nowhere. So an
+  immediate base (a field in the instruction stream, which the architecture
+  allows) had no address, and a literal base in `EXTV` was a reserved
+  operand fault from the handler rather than the reserved addressing mode
+  fault of table 8-5.
+- **Status**: fixed in Go, in the table generator (`internal/cpu/gen`'s
+  `fieldBases`), like `knownTableFixes`: each base operand is `OP_VA`. No
+  handler depends on the base's access kind; the decoder uses it only for
+  the literal, immediate, and register checks. `TestEmulExtvLiteralBaseFaults`,
+  `TestEmulBbLiteralBaseFaults` (a literal base is now a reserved
+  addressing mode fault), `TestImmediateFieldBase`.
+
+### [Phase 28] The Go port's immediate-mode decode (a port regression)
+
+- **Where**: `internal/cpu/operand.go`'s `decodePCRelative` (mode 8); the C
+  original is `decode_operand.c`'s `case 0x08`.
+- **What**: `decode_operand.c` loads an immediate's data, of any size, into
+  scratch registers and sets `VAXaddr` to the data's address. The port lost
+  three things: `loadSized` knew only 1, 2, and 4 bytes, so a quadword or
+  D_floating immediate (`MOVQ I^#...`, `MOVD I^#...`) panicked the emulator;
+  it put an F_floating or D_floating immediate's raw VAX bits where
+  `loadFloat` expects IEEE bits (a short literal's convention), so every
+  float immediate loaded as 0; and it gave an address operand no address, so
+  `PUSHAL I^#5` pushed 0.
+- **Status**: fixed (`decodeImmediate`). Eight-byte immediates are read
+  whole; a float instruction's float immediate is converted as a short
+  literal is (a reserved one faults); and an address or field operand in
+  immediate mode is a memory operand at its data, as immediate mode is
+  `(PC)+`. `internal/cpu/immediate_test.go`.
+
+### [Phase 28] `fpu_load` had the exponent-zero rule backwards
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/fpu.c`'s `fpu_load`, ported to
+  `internal/cpu/fpu.go`'s `fpuLoad`.
+- **What**: the manual's F_floating and D_floating definitions: a biased
+  exponent of zero with a sign of 0 is the value zero, whatever the
+  fraction; with a sign of 1 it's reserved, and loading it is a reserved
+  operand fault. `fpu_load` returned zero only when every bit but the sign
+  was clear, so it loaded -0 (`^X8000`) as zero and faulted on a "dirty"
+  zero with fraction bits set. The port replicated this, with a test that
+  confirmed it against a C harness.
+- **Status**: fixed in Go. `fpuStore` never writes -0 (a zero result is all
+  zero bits), so no instruction's own result starts faulting.
+  `TestFpuLoadNegativeZeroIsReserved`, `TestFpuLoadDirtyZeroIsZero`.
+
 <!--
 Entry template:
 

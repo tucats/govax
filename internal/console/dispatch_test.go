@@ -1,6 +1,7 @@
 package console
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/console/dcl"
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // evaxGrammarPathForConsole locates internal/bootdata/files/evax.dcl, the
@@ -206,6 +208,19 @@ func TestDispatch_callWithArgumentList(t *testing.T) {
 
 	if got := c.CPU.GPR(vax.R0); got != 42 {
 		t.Errorf("R0 = %d, want 42", got)
+	}
+
+	// Text after the argument list, or after an address with no list, is
+	// an error, and nothing is called.
+	for _, cmd := range []string{"CALL DBLTEST(^D5) JUNK", "CALL DBLTEST JUNK"} {
+		err := d.Dispatch(cmd)
+		if !errors.Is(err, vmserrors.New(vmserrors.CLI_EXTRAPARAMETER)) {
+			t.Errorf("Dispatch(%s) = %v, want EXTRAPARAMETER", cmd, err)
+		}
+
+		if got := c.CPU.GPR(vax.R0); got != 42 {
+			t.Errorf("after %s, R0 = %d, want 42 (not called)", cmd, got)
+		}
 	}
 }
 

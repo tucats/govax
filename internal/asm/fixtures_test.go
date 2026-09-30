@@ -158,7 +158,11 @@ func TestRoundTripFixtures(t *testing.T) {
 				stop = sym.value
 			}
 
-			for pc := a.Origin(); pc < stop; {
+			// Each fixture starts with .ENTRY, whose register mask word
+			// isn't an instruction: F0 00, movq.asm's mask, "decodes" as
+			// an INSV with a literal base, which the assembler rightly
+			// refuses to assemble. The code starts after it.
+			for pc := a.Origin() + 2; pc < stop; {
 				dec, err := Disassemble(a, pc)
 				if err != nil {
 					t.Fatalf("Disassemble at %08X: %v", pc, err)

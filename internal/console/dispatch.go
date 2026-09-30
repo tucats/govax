@@ -914,6 +914,12 @@ func cmdCall(d *Dispatcher, rest string) error {
 		}
 	}
 
+	// Nothing may follow the address or the argument list; the text used
+	// to be ignored, so "CALL X(1) junk" called X.
+	if extra := strings.TrimSpace(remainder); extra != "" {
+		return vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, extra)
+	}
+
 	return d.Console.Call(addr, step, args...)
 }
 

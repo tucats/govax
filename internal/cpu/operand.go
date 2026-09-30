@@ -182,28 +182,85 @@ func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, 
 		return op, nil
 
 	case mode >= 8 && reg == vax.PC:
-		return decodePCRelative(cpu, mem, pc, access, size, mode, op)
+		return decodePCRelative(cpu, mem, pc, access, size, litType, mode, op)
 
 	default:
 		return decodeGeneral(cpu, mem, pc, size, litType, mode, reg, indexed, op)
 	}
 }
 
+// decodeImmediate reads an immediate mode (I^#) operand's size bytes of
+// data from the instruction stream into op. A quadword's (MOVQ, EDIV's
+// dividend, a D_floating operand) are read whole; decode_operand.c's
+// loadSized only knew 1, 2, and 4 bytes, and the port panicked on 8. A
+// float instruction's F_floating or D_floating operand is converted to the
+// IEEE bits loadFloat expects of an immediate, as a short literal's is;
+// the raw VAX bits were read as IEEE bits before, so an immediate float
+// always loaded as zero. A reserved float's reserved operand fault happens
+// here, as it would when the instruction loaded it.
+//
+// Immediate mode is autoincrement on the PC, (PC)+, so for an address or
+// field operand (PUSHAL I^#5, a field base) the operand is the data's own
+// address in the instruction stream: a memory operand there. This port
+// used to give it no address at all (PUSHAL I^#5 pushed zero).
+func decodeImmediate(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, litType ShortLiteralType, op *Operand) error {
+	if op.Access == AccessAddress || op.Access == AccessVarField {
+		op.Kind = OperandMemory
+		op.Addr = *pc
+		*pc += uint32(size)
+
+		return nil
+	}
+
+	var raw uint64
+
+	if size == 8 {
+		lo, err := mem.LoadLongword(cpu, *pc)
+		if err != nil {
+			return err
+		}
+
+		hi, err := mem.LoadLongword(cpu, *pc+4)
+		if err != nil {
+			return err
+		}
+
+		raw = uint64(lo) | uint64(hi)<<32
+	} else {
+		v, err := loadSized(cpu, mem, *pc, size)
+		if err != nil {
+			return err
+		}
+
+		raw = uint64(uint32(signExtend32(v, size)))
+	}
+
+	*pc += uint32(size)
+	op.Kind = OperandImmediate
+	op.Value = raw
+
+	if litType == ShortLiteralFloat && (size == 4 || size == 8) && op.Access != AccessModify && op.Access != AccessWrite {
+		f, err := fpuLoad(raw, size)
+		if err != nil {
+			return err
+		}
+
+		op.Value = math.Float64bits(f)
+	}
+
+	return nil
+}
+
 // decodePCRelative handles the PC-relative addressing modes: Immediate,
 // Absolute, and Byte/Word/Long Relative (direct and deferred) — the mode
 // 0x08-0x0F forms selected by using the PC as the addressing-mode byte's
 // register field.
-func decodePCRelative(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, size int, mode byte, op Operand) (Operand, error) {
+func decodePCRelative(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, size int, litType ShortLiteralType, mode byte, op Operand) (Operand, error) {
 	switch mode {
 	case 0x08: // Immediate: I^#n
-		raw, err := loadSized(cpu, mem, *pc, size)
-		if err != nil {
+		if err := decodeImmediate(cpu, mem, pc, size, litType, &op); err != nil {
 			return op, err
 		}
-
-		op.Kind = OperandImmediate
-		op.Value = uint64(uint32(signExtend32(raw, size)))
-		*pc += uint32(size)
 
 		if access == AccessModify || access == AccessWrite {
 			return op, &Fault{Code: ExcReservedAddr}

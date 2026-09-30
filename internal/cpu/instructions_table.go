@@ -1801,7 +1801,7 @@ var instructionTable = newTable([]*Instruction{
 		Opcode:       Opcode{Extended: 0x00, Function: 0xE0},
 		OperandCount: 3,
 		Scale:        [6]int{4, 1, 1, 0, 0, 0},
-		Access:       [6]AccessKind{AccessRead, AccessRead, AccessBranch, AccessNone, AccessNone, AccessNone},
+		Access:       [6]AccessKind{AccessRead, AccessVarField, AccessBranch, AccessNone, AccessNone, AccessNone},
 		Type:         ShortLiteralInt,
 	},
 	{
@@ -1809,7 +1809,7 @@ var instructionTable = newTable([]*Instruction{
 		Opcode:       Opcode{Extended: 0x00, Function: 0xE1},
 		OperandCount: 3,
 		Scale:        [6]int{4, 1, 1, 0, 0, 0},
-		Access:       [6]AccessKind{AccessRead, AccessRead, AccessBranch, AccessNone, AccessNone, AccessNone},
+		Access:       [6]AccessKind{AccessRead, AccessVarField, AccessBranch, AccessNone, AccessNone, AccessNone},
 		Type:         ShortLiteralInt,
 	},
 	{
@@ -1817,7 +1817,7 @@ var instructionTable = newTable([]*Instruction{
 		Opcode:       Opcode{Extended: 0x00, Function: 0xE2},
 		OperandCount: 3,
 		Scale:        [6]int{4, 1, 1, 0, 0, 0},
-		Access:       [6]AccessKind{AccessRead, AccessModify, AccessBranch, AccessNone, AccessNone, AccessNone},
+		Access:       [6]AccessKind{AccessRead, AccessVarField, AccessBranch, AccessNone, AccessNone, AccessNone},
 		Type:         ShortLiteralInt,
 	},
 	{
@@ -1825,7 +1825,7 @@ var instructionTable = newTable([]*Instruction{
 		Opcode:       Opcode{Extended: 0x00, Function: 0xE3},
 		OperandCount: 3,
 		Scale:        [6]int{4, 1, 1, 0, 0, 0},
-		Access:       [6]AccessKind{AccessRead, AccessModify, AccessBranch, AccessNone, AccessNone, AccessNone},
+		Access:       [6]AccessKind{AccessRead, AccessVarField, AccessBranch, AccessNone, AccessNone, AccessNone},
 		Type:         ShortLiteralInt,
 	},
 	{
@@ -1833,7 +1833,7 @@ var instructionTable = newTable([]*Instruction{
 		Opcode:       Opcode{Extended: 0x00, Function: 0xE4},
 		OperandCount: 3,
 		Scale:        [6]int{4, 1, 1, 0, 0, 0},
-		Access:       [6]AccessKind{AccessRead, AccessModify, AccessBranch, AccessNone, AccessNone, AccessNone},
+		Access:       [6]AccessKind{AccessRead, AccessVarField, AccessBranch, AccessNone, AccessNone, AccessNone},
 		Type:         ShortLiteralInt,
 	},
 	{
@@ -1841,7 +1841,7 @@ var instructionTable = newTable([]*Instruction{
 		Opcode:       Opcode{Extended: 0x00, Function: 0xE5},
 		OperandCount: 3,
 		Scale:        [6]int{4, 1, 1, 0, 0, 0},
-		Access:       [6]AccessKind{AccessRead, AccessModify, AccessBranch, AccessNone, AccessNone, AccessNone},
+		Access:       [6]AccessKind{AccessRead, AccessVarField, AccessBranch, AccessNone, AccessNone, AccessNone},
 		Type:         ShortLiteralInt,
 	},
 	{
@@ -1849,7 +1849,7 @@ var instructionTable = newTable([]*Instruction{
 		Opcode:       Opcode{Extended: 0x00, Function: 0xE6},
 		OperandCount: 3,
 		Scale:        [6]int{4, 1, 1, 0, 0, 0},
-		Access:       [6]AccessKind{AccessRead, AccessModify, AccessBranch, AccessNone, AccessNone, AccessNone},
+		Access:       [6]AccessKind{AccessRead, AccessVarField, AccessBranch, AccessNone, AccessNone, AccessNone},
 		Type:         ShortLiteralInt,
 	},
 	{
@@ -1857,7 +1857,7 @@ var instructionTable = newTable([]*Instruction{
 		Opcode:       Opcode{Extended: 0x00, Function: 0xE7},
 		OperandCount: 3,
 		Scale:        [6]int{4, 1, 1, 0, 0, 0},
-		Access:       [6]AccessKind{AccessRead, AccessModify, AccessBranch, AccessNone, AccessNone, AccessNone},
+		Access:       [6]AccessKind{AccessRead, AccessVarField, AccessBranch, AccessNone, AccessNone, AccessNone},
 		Type:         ShortLiteralInt,
 	},
 	{
@@ -1881,7 +1881,7 @@ var instructionTable = newTable([]*Instruction{
 		Opcode:       Opcode{Extended: 0x00, Function: 0xEA},
 		OperandCount: 4,
 		Scale:        [6]int{4, 1, 1, 4, 0, 0},
-		Access:       [6]AccessKind{AccessRead, AccessRead, AccessRead, AccessWrite, AccessNone, AccessNone},
+		Access:       [6]AccessKind{AccessRead, AccessRead, AccessVarField, AccessWrite, AccessNone, AccessNone},
 		Type:         ShortLiteralInt,
 	},
 	{
@@ -1889,7 +1889,7 @@ var instructionTable = newTable([]*Instruction{
 		Opcode:       Opcode{Extended: 0x00, Function: 0xEB},
 		OperandCount: 4,
 		Scale:        [6]int{4, 1, 1, 4, 0, 0},
-		Access:       [6]AccessKind{AccessRead, AccessRead, AccessRead, AccessWrite, AccessNone, AccessNone},
+		Access:       [6]AccessKind{AccessRead, AccessRead, AccessVarField, AccessWrite, AccessNone, AccessNone},
 		Type:         ShortLiteralInt,
 	},
 	{
@@ -1897,7 +1897,7 @@ var instructionTable = newTable([]*Instruction{
 		Opcode:       Opcode{Extended: 0x00, Function: 0xEC},
 		OperandCount: 4,
 		Scale:        [6]int{4, 1, 1, 4, 0, 0},
-		Access:       [6]AccessKind{AccessRead, AccessRead, AccessRead, AccessRead, AccessNone, AccessNone},
+		Access:       [6]AccessKind{AccessRead, AccessRead, AccessVarField, AccessRead, AccessNone, AccessNone},
 		Type:         ShortLiteralInt,
 	},
 	{
@@ -1905,7 +1905,7 @@ var instructionTable = newTable([]*Instruction{
 		Opcode:       Opcode{Extended: 0x00, Function: 0xED},
 		OperandCount: 4,
 		Scale:        [6]int{4, 1, 1, 4, 0, 0},
-		Access:       [6]AccessKind{AccessRead, AccessRead, AccessRead, AccessRead, AccessNone, AccessNone},
+		Access:       [6]AccessKind{AccessRead, AccessRead, AccessVarField, AccessRead, AccessNone, AccessNone},
 		Type:         ShortLiteralInt,
 	},
 	{
@@ -1913,7 +1913,7 @@ var instructionTable = newTable([]*Instruction{
 		Opcode:       Opcode{Extended: 0x00, Function: 0xEE},
 		OperandCount: 4,
 		Scale:        [6]int{4, 1, 1, 4, 0, 0},
-		Access:       [6]AccessKind{AccessRead, AccessRead, AccessRead, AccessWrite, AccessNone, AccessNone},
+		Access:       [6]AccessKind{AccessRead, AccessRead, AccessVarField, AccessWrite, AccessNone, AccessNone},
 		Type:         ShortLiteralInt,
 	},
 	{
@@ -1921,7 +1921,7 @@ var instructionTable = newTable([]*Instruction{
 		Opcode:       Opcode{Extended: 0x00, Function: 0xEF},
 		OperandCount: 4,
 		Scale:        [6]int{4, 1, 1, 4, 0, 0},
-		Access:       [6]AccessKind{AccessRead, AccessRead, AccessRead, AccessWrite, AccessNone, AccessNone},
+		Access:       [6]AccessKind{AccessRead, AccessRead, AccessVarField, AccessWrite, AccessNone, AccessNone},
 		Type:         ShortLiteralInt,
 	},
 	{
@@ -1929,7 +1929,7 @@ var instructionTable = newTable([]*Instruction{
 		Opcode:       Opcode{Extended: 0x00, Function: 0xF0},
 		OperandCount: 4,
 		Scale:        [6]int{4, 4, 1, 1, 0, 0},
-		Access:       [6]AccessKind{AccessRead, AccessRead, AccessRead, AccessWrite, AccessNone, AccessNone},
+		Access:       [6]AccessKind{AccessRead, AccessRead, AccessRead, AccessVarField, AccessNone, AccessNone},
 		Type:         ShortLiteralInt,
 	},
 	{

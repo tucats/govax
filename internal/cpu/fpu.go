@@ -161,10 +161,12 @@ func encodeFloatCore(size int, value float64) (bits uint64, underflow, overflow 
 // fpuLoad converts VAX F_floating (size 4) or D_floating (size 8) bits (in
 // the same low/high-longword layout fpuStore produces) to a float64.
 //
-// Matches fpu_load's algorithm: a stored exponent field of zero means either
-// 0.0 (every other bit clear) or, if the sign bit is set, a reserved-operand
-// fault -- the VAX architecture's "negative zero is a reserved encoding
-// unless every other bit is also zero" rule.
+// A stored exponent of zero is the architecture's (vax_instr_set.pdf's
+// F_floating and D_floating definitions): with a sign of zero the value
+// is 0.0, whatever the fraction holds, and with a sign of one it's a
+// reserved operand, which faults. fpu_load had these backwards, faulting
+// on a zero with fraction bits set and loading -0 as 0.0; see
+// docs/DEVIATIONS.md.
 func fpuLoad(raw uint64, size int) (float64, error) {
 	lowLong := wordSwap(uint32(raw))
 
@@ -173,11 +175,11 @@ func fpuLoad(raw uint64, size int) (float64, error) {
 	frac23 := lowLong & 0x7FFFFF
 
 	if biasedExp == 0 {
-		if lowLong&0x7FFFFFFF == 0 {
-			return 0, nil
+		if sign != 0 {
+			return 0, &Fault{Code: ExcReservedOp}
 		}
 
-		return 0, &Fault{Code: ExcReservedOp}
+		return 0, nil
 	}
 
 	ieeeExp := uint32(int(biasedExp) - 129 + 1023)

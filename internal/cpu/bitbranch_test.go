@@ -74,14 +74,17 @@ func TestEmulBbMemoryBase(t *testing.T) {
 	}
 }
 
-func TestEmulBbImmediateBaseFaults(t *testing.T) {
+// TestEmulBbLiteralBaseFaults: a short literal can't be a field's base (base.vb): the
+// architecture manual's table 8-5 makes it a reserved addressing mode
+// fault, raised when the operand is decoded.
+func TestEmulBbLiteralBaseFaults(t *testing.T) {
 	e := newEngine()
 	cpu := e.cpu
 	cpu.SetGPR(vax.PC, base)
 	putBytes(t, cpu, e.mem, base, 0xE0, 4, 0x00, 0x10) // base = short literal 0
 	cpu.SetGPR(vax.SP, 0x7000)
 	cpu.SetPR(vax.KSP, 0x7000)
-	putVector(t, e, ExcReservedOp, 0x300, 0)
+	putVector(t, e, ExcReservedAddr, 0x300, 0)
 
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v (fault should be handled, not propagated)", err)

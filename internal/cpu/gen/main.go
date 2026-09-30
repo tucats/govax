@@ -200,6 +200,46 @@ var knownTableFixes = map[string]field{
 	},
 }
 
+// fieldBases names the operand (by index) of each bit-field instruction
+// that is its field's base: `base.vb` in vax_instr_set.pdf's format
+// lines. instruction_table.h gives it the access of the field (OP_RD for
+// EXTV, OP_WR for INSV, OP_MD for BBSS, ...), never OP_VA, so a literal or
+// immediate base was treated as a value to read or a location to write,
+// not as the field's address: an immediate base (the field in the
+// instruction stream) faulted or had no address, and a literal base
+// didn't fault as the architecture says (table 8-5). Every one becomes
+// OP_VA here; no handler depends on the base's access kind.
+var fieldBases = map[string]int{
+	"BBS": 1, "BBC": 1, "BBSS": 1, "BBCS": 1, "BBSC": 1, "BBCC": 1, "BBSSI": 1, "BBCCI": 1,
+	"EXTV": 2, "EXTZV": 2, "CMPV": 2, "CMPZV": 2, "FFS": 2, "FFC": 2,
+	"INSV": 3,
+}
+
+// applyFieldBases makes each fieldBases operand OP_VA, failing loudly if
+// an instruction is missing or its operand isn't a field-sized (byte)
+// operand, which would mean the list is stale.
+func applyFieldBases(fields []field) {
+	found := 0
+
+	for i, f := range fields {
+		n, ok := fieldBases[f.name]
+		if !ok {
+			continue
+		}
+
+		if f.scale[n] != 1 || f.access[n] == "OP_NL" {
+			log.Fatalf("gen: %s operand %d isn't a field base (scale %d, %s)", f.name, n, f.scale[n], f.access[n])
+		}
+
+		fields[i].access[n] = "OP_VA"
+		found++
+	}
+
+	if found != len(fieldBases) {
+		log.Fatalf("gen: found %d of fieldBases' %d instructions", found, len(fieldBases))
+	}
+}
+
 // applyKnownFixes patches fields in place per knownTableFixes, preserving
 // each entry's parsed name/ext/opcode (identity), and fails loudly if an
 // expected name isn't found — the fix list is stale, which is a bug in the
@@ -306,6 +346,7 @@ func main() {
 
 	fields := parse(string(src))
 	applyKnownFixes(fields)
+	applyFieldBases(fields)
 	code := generate(fields, *in)
 
 	if err := os.WriteFile(*out, code, 0o644); err != nil {

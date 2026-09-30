@@ -220,6 +220,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 	var (
 		litValue      uint32  // the short-literal value/table-index (int or float)
+		litQuad       uint64  // an integer literal's value at full width
 		litFloat      float64 // the parsed float, valid when dtype is float
 		litWasForward bool
 	)
@@ -229,12 +230,17 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		fx := addrFixup(scale)
 
 		if dtype == cpu.ShortLiteralInt {
-			v, wasForward, err := a.exprValue(c, loc, fx)
+			v, wasForward, err := a.immediateValue(c, loc, fx, scale)
 			if err != nil {
 				return err
 			}
 
-			litValue, litWasForward = v, wasForward
+			litQuad, litWasForward = v, wasForward
+			litValue = uint32(v)
+
+			if v >= 64 {
+				litValue = 64 // doesn't fit, whatever its low longword
+			}
 		} else {
 			f, err := a.parseFloat(c)
 			if err != nil {
@@ -250,7 +256,10 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			}
 		}
 
-		if litWasForward || litValue >= 64 {
+		// Only a read operand can be a literal (the architecture
+		// manual's table 8-5): an address or field operand takes the
+		// immediate form, and a written one neither.
+		if litWasForward || litValue >= 64 || access != cpu.AccessRead {
 			constant = litImmediate
 
 			if litWasForward {
@@ -269,6 +278,10 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 	// S^#literal: either just decided above, or spelled out explicitly.
 	if constant == litShort || (ch == 'S' && c.peek() == '^') {
+		if err := modeAllowed("Literal", inst, opIndex, parsingIndex); err != nil {
+			return err
+		}
+
 		if constant != litShort {
 			c.next() // '^'
 
@@ -316,6 +329,10 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		save := c.pos
 
 		if reg, err := parseRegister(c, ch); err == nil {
+			if err := modeAllowed("Register", inst, opIndex, parsingIndex); err != nil {
+				return err
+			}
+
 			mode := byte(0x50) | byte(reg)
 			if err := a.emitByte(mode); err != nil {
 				return err
@@ -422,6 +439,10 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	// I^#constant: immediate literal, either just decided above via "#",
 	// or spelled out explicitly.
 	if constant == litImmediate || (ch == 'I' && c.peek() == '^') {
+		if err := modeAllowed("Immediate", inst, opIndex, parsingIndex); err != nil {
+			return err
+		}
+
 		if constant != litImmediate {
 			c.next() // '^'
 
@@ -450,7 +471,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		if constant != litImmediate {
 			loc := a.pc()
 
-			v, deferred, err := a.exprValue(c, loc, addrFixup(scale))
+			v, deferred, err := a.immediateValue(c, loc, addrFixup(scale), scale)
 			if err != nil {
 				return err
 			}
@@ -459,10 +480,10 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				a.lastFixup.prefix = 1
 			}
 
-			litValue = v
+			litQuad, litWasForward = v, deferred
 		}
 
-		return a.storeImmediateInt(scale, litValue)
+		return a.storeImmediateInt(scale, litQuad, litWasForward)
 	}
 
 	// @#address: absolute.
@@ -552,11 +573,94 @@ const (
 	litImmediate
 )
 
-// storeImmediateInt writes an I^# immediate literal's integer data (1, 2,
-// or 4 bytes), matching asm_operand.c's size-based store.
-func (a *Assembler) storeImmediateInt(scale int, value uint32) error {
-	if err := a.emitScaled(value, scale); err != nil {
-		return err
+// modeAllowed reports whether an operand may use literal, immediate, or
+// register mode, by the architecture manual's tables 8-5 and 8-6: a
+// literal can only be read; an immediate operand can be read, or be an
+// address or a field's base (writing one is UNPREDICTABLE); a register
+// can't be an address; and none of the three can be indexed. A VAX would
+// take a reserved addressing mode fault (or worse) on any of these, so
+// they're errors. mode names the mode for the message.
+//
+// One exception: CALLG's argument list may be a register, whose value is
+// the list's address. That's eVAX's, not the VAX's, but govax's own
+// kernel.asm depends on it (docs/DEVIATIONS.md, "Register mode used where
+// OP_AD/OP_VA access is required"), and govax's CPU implements it.
+func modeAllowed(mode string, inst *cpu.Instruction, opIndex int, indexed bool) error {
+	var allowed bool
+
+	access := inst.Access[opIndex]
+
+	switch mode {
+	case "Literal":
+		allowed = access == cpu.AccessRead
+	case "Immediate":
+		allowed = access == cpu.AccessRead || access == cpu.AccessAddress || access == cpu.AccessVarField
+	default:
+		allowed = access != cpu.AccessAddress || (inst.Name == "CALLG" && opIndex == 0)
+	}
+
+	switch {
+	case indexed:
+		return vmserrors.New(vmserrors.VAX_MODEACCESS, mode, "an indexed")
+	case allowed:
+		return nil
+	}
+
+	what := map[cpu.AccessKind]string{
+		cpu.AccessRead:     "a read",
+		cpu.AccessWrite:    "a written",
+		cpu.AccessModify:   "a modified",
+		cpu.AccessAddress:  "an address",
+		cpu.AccessVarField: "a field",
+	}[access]
+
+	return vmserrors.New(vmserrors.VAX_MODEACCESS, mode, what)
+}
+
+// immediateValue reads a literal's integer value for an operand of scale
+// bytes. A quadword's literal is read at full width when it's a single
+// number, as .QUAD reads one, and otherwise evaluated in 32 bits and
+// sign-extended, as MACRO-32 does. A forward reference is reported as
+// deferred; its fixup patches the low longword, and its high bits are
+// zero.
+func (a *Assembler) immediateValue(c *cursor, loc uint32, fx fixupKind, scale int) (uint64, bool, error) {
+	if scale >= 8 {
+		if v, ok := a.quadLiteral(c); ok {
+			return v, false, nil
+		}
+	}
+
+	v, deferred, err := a.exprValue(c, loc, fx)
+	if err != nil || deferred || scale < 8 {
+		return uint64(v), deferred, err
+	}
+
+	return uint64(int64(int32(v))), false, nil
+}
+
+// storeImmediateInt writes an I^# immediate literal's integer data: 1, 2,
+// or 4 bytes as asm_operand.c stored them, or a quadword or octaword, which
+// eVAX couldn't assemble. The wider forms extend the value's sign, except
+// for a value not known yet (deferred), whose high bits are zero.
+func (a *Assembler) storeImmediateInt(scale int, value uint64, deferred bool) error {
+	if scale < 8 {
+		return a.emitScaled(uint32(value), scale)
+	}
+
+	fill := uint32(0)
+	if !deferred && int64(value) < 0 {
+		fill = 0xFFFFFFFF
+	}
+
+	longwords := []uint32{uint32(value), uint32(value >> 32)}
+	for len(longwords) < scale/4 {
+		longwords = append(longwords, fill)
+	}
+
+	for _, l := range longwords {
+		if err := a.emitLongword(l); err != nil {
+			return err
+		}
 	}
 
 	return nil

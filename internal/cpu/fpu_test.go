@@ -218,17 +218,32 @@ func TestFpuLoadReservedOperandFault(t *testing.T) {
 	}
 }
 
-func TestFpuLoadNegativeZeroIsZeroNotReserved(t *testing.T) {
-	// sign=1, exponent=0, fraction=0 -- confirmed against the harness as a
-	// valid (non-faulting) zero, not a reserved-operand encoding: the
-	// reserved check masks off the sign bit before comparing to zero.
-	got, err := fpuLoad(0x00008000, 4)
-	if err != nil {
-		t.Fatalf("fpuLoad(negative zero): unexpected error %v", err)
-	}
+func TestFpuLoadNegativeZeroIsReserved(t *testing.T) {
+	// sign=1, exponent=0, fraction=0: reserved, like any sign=1,
+	// exponent=0 datum (vax_instr_set.pdf's F_floating definition). The C
+	// reference's fpu_load loaded it as 0.0; see docs/DEVIATIONS.md.
+	_, err := fpuLoad(0x00008000, 4)
 
-	if got != 0 {
-		t.Errorf("fpuLoad(negative zero) = %v, want 0", got)
+	var f *Fault
+
+	if !errors.As(err, &f) || f.Code != ExcReservedOp {
+		t.Fatalf("fpuLoad(negative zero) err = %v, want a reserved operand fault", err)
+	}
+}
+
+func TestFpuLoadDirtyZeroIsZero(t *testing.T) {
+	// sign=0, exponent=0, fraction nonzero: zero, whatever the fraction
+	// holds. The C reference faulted on it.
+	for _, raw := range []uint64{0x34560012, 0x0000007F, 0xFFFF0000_FFFF007F} {
+		size := 4
+		if raw>>32 != 0 {
+			size = 8
+		}
+
+		got, err := fpuLoad(raw, size)
+		if err != nil || got != 0 {
+			t.Errorf("fpuLoad(%#x, %d) = %v, %v, want 0", raw, size, got, err)
+		}
 	}
 }
 
