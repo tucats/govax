@@ -76,6 +76,8 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 		}
 	}
 
+	e.flushAbsStart(false)
+
 	if len(e.relocs) > 0 {
 		return nil, vmserrors.New(vmserrors.VAX_INTERNAL, fmt.Sprintf("%d relocations outside any stored data", len(e.relocs)))
 	}
@@ -118,9 +120,13 @@ func (a *Assembler) globalSymbols(b *obj.Builder) {
 
 		case s.flags&SymGlobal != 0 && s.flags&SymEntry == 0 && s.defined():
 			sym := obj.Symbol{Type: obj.GSDSymbol, Flags: flags | obj.SymDEF, Value: s.value, Name: name}
-			if s.sect != nil {
+
+			switch {
+			case s.sect != nil:
 				sym.Flags |= obj.SymREL
 				sym.Psect = uint16(s.sect.index)
+			case s.absSect != nil:
+				sym.Psect = uint16(s.absSect.index)
 			}
 
 			b.AddSymbol(sym)
@@ -146,26 +152,70 @@ type emitter struct {
 	// leave it.
 	sect *section
 	loc  uint32
+	// absStart is set while the location in .  ABS  ., where assembly
+	// starts, is still to be set (see flushAbsStart).
+	absStart bool
 }
 
+// flushAbsStart sets the location in .  ABS  . for the start of assembly,
+// if that's still to do, unless skip. Real MACRO sets it except when code
+// or data before any .PSECT moves assembly into . BLANK . first
+// (docs/PHASE-27.md, subtask 11's log).
+func (e *emitter) flushAbsStart(skip bool) {
+	if !e.absStart {
+		return
+	}
+
+	e.absStart = false
+
+	if !skip {
+		e.b.Emit(stackPsect(0, 0, false), obj.Command{Op: opSetRelocBase})
+	}
+}
+
+// Real MACRO writes no TIR commands for an absolute psect, other than
+// setting the location in .  ABS  . at the start: its offsets are only
+// symbol values (docs/PHASE-27.md, subtask 11's log).
 func (e *emitter) event(ev outEvent) error {
+	if ev.kind != evSwitch || e.sect != nil {
+		e.flushAbsStart(ev.kind == evSwitch && ev.implicit)
+	}
+
 	switch ev.kind {
 	case evSwitch:
 		if !e.defined[ev.sect] {
 			if err := e.definePsect(ev.sect); err != nil {
 				return err
 			}
-		} else {
-			e.b.Break()
 		}
 
-		e.setLocation(ev.sect, ev.offset)
+		switch {
+		case e.sect == nil && ev.sect.index == 0:
+			// The start of assembly (see flushAbsStart).
+			e.absStart = true
+			e.sect, e.loc = ev.sect, ev.offset
+
+		case ev.sect.relocatable:
+			e.setLocation(ev.sect, ev.offset)
+
+		default:
+			e.sect, e.loc = ev.sect, ev.offset
+		}
 
 	case evSet:
-		e.setLocation(ev.sect, ev.offset)
+		// ". =" moves the location by the difference, as real MACRO
+		// writes it (CTL_AUGRB).
+		if ev.sect.relocatable {
+			e.b.Emit(obj.Command{Op: opAugmentRelocBase, Value: ev.offset - e.loc})
+		}
+
+		e.loc = ev.offset
 
 	case evGap:
-		e.b.Emit(obj.Command{Op: opAugmentRelocBase, Value: ev.size})
+		if ev.sect.relocatable {
+			e.b.Emit(obj.Command{Op: opAugmentRelocBase, Value: ev.size})
+		}
+
 		e.loc += ev.size
 
 	case evData:
@@ -205,7 +255,12 @@ func (e *emitter) definePsect(s *section) error {
 		alloc = 0
 	}
 
+	// Each psect definition is a GSD record of its own, as real MACRO
+	// writes them (psects.obj, in docs/PHASE-27.md subtask 11's log).
+	e.b.Break()
 	index := e.b.AddPsect(obj.Psect{Align: byte(s.align), Flags: uint16(s.flags), Alloc: alloc, Name: s.name})
+	e.b.Break()
+
 	if int(index) != s.index {
 		return vmserrors.New(vmserrors.VAX_INTERNAL, fmt.Sprintf("psect %s is index %d in the object, %d in the assembly", s.name, index, s.index))
 	}
@@ -246,24 +301,25 @@ func (e *emitter) data(s *section, offset, size uint32) error {
 	img := s.img
 
 	for p := offset; p < offset+size; {
-		// An operand's mode byte, then the field it introduces: real
-		// MACRO stacks the value first, then stores the mode byte, then
-		// the value.
-		next, modeFirst := e.relocs[relocKey{s, p + 1}]
-		modeFirst = modeFirst && next.mode && p+1 < offset+size
+		// An operand's index and mode bytes, then the field they
+		// introduce: real MACRO stacks the value first, then stores
+		// those bytes, then the value.
+		next, prefix := e.prefixedAt(s, p, offset+size)
 
 		r, ok := e.relocs[relocKey{s, p}]
 
 		switch {
-		case modeFirst:
+		case prefix > 0:
 			r = next
 
 			if err := e.stackProgram(r.expr); err != nil {
 				return err
 			}
 
-			e.b.Store([]byte{img.loadByte(p)})
-			p++
+			for range prefix {
+				e.b.Store([]byte{img.loadByte(p)})
+				p++
+			}
 
 		case !ok:
 			e.b.Store([]byte{img.loadByte(p)})
@@ -291,6 +347,19 @@ func (e *emitter) data(s *section, offset, size uint32) error {
 	e.loc = offset + size
 
 	return nil
+}
+
+// prefixedAt returns the relocation whose operand specifier starts at p,
+// before end, when bytes of it (an index byte, a mode byte) come before
+// its field, and how many.
+func (e *emitter) prefixedAt(s *section, p, end uint32) (relocation, int) {
+	for n := uint32(1); n <= 2 && p+n < end; n++ {
+		if r, ok := e.relocs[relocKey{s, p + n}]; ok && r.prefix == int(n) {
+			return r, int(n)
+		}
+	}
+
+	return relocation{}, 0
 }
 
 // stackProgram emits the TIR commands that leave t's value on the
@@ -371,6 +440,7 @@ var (
 		fixDispB: tirOp("STO_BD"), fixDispW: tirOp("STO_WD"), fixDispL: tirOp("STO_LD"),
 		fixBranchB: tirOp("STO_BD"), fixBranchW: tirOp("STO_WD"), fixBranchL: tirOp("STO_LD"),
 		fixAddress: tirOp("STO_PIDR"), fixPICR: tirOp("STO_PICR"),
+		fixSignedB: tirOp("STO_SB"), fixSignedW: tirOp("STO_SW"),
 	}
 )
 

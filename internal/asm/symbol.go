@@ -85,8 +85,12 @@ const (
 	fixAddress
 	// fixPICR is a G^ general mode operand, five bytes starting at the
 	// mode byte, which the linker writes as relative or absolute mode:
-	// the object language's STO_PICR.
+	// the object language's STO_PICR. It's always left to the linker.
 	fixPICR
+	// fixSignedB/W are a MACRO-dialect displacement mode field, a signed
+	// byte or word: the object language's STO_SB/STO_SW.
+	fixSignedB
+	fixSignedW
 )
 
 // fixupSize returns the byte width a fixup kind writes; branch fixups use
@@ -94,9 +98,9 @@ const (
 // displacements are relative to the byte following the displacement field).
 func fixupSize(k fixupKind) int64 {
 	switch k {
-	case fixAddrB, fixDispB, fixBranchB:
+	case fixAddrB, fixDispB, fixBranchB, fixSignedB:
 		return 1
-	case fixAddrW, fixDispW, fixBranchW, fixCaseW:
+	case fixAddrW, fixDispW, fixBranchW, fixCaseW, fixSignedW:
 		return 2
 	case fixAddrL, fixDispL, fixBranchL, fixAddress:
 		return 4
@@ -121,8 +125,10 @@ type fixup struct {
 	expr     *rexpr
 	pending  int    // how many of expr's symbols are still undefined
 	base     uint32 // fixCaseW: the .CASE block's base address
-	// mode says the field follows an operand's addressing mode byte.
-	mode bool
+	// prefix is how many bytes of the operand specifier come before the
+	// field: its addressing mode byte, and an index byte before that.
+	// Real MACRO stores them after the value's stack program.
+	prefix int
 }
 
 // symbol is one entry in the assembler's symbol table.
@@ -137,6 +143,10 @@ type symbol struct {
 	forward []*fixup // pending fixups using this symbol, most-recent first; nil once defined
 	// mask is an .ENTRY symbol's register save mask.
 	mask uint16
+	// absSect is the named absolute psect a MACRO-dialect label was
+	// defined in, whose index its GSD record carries, as real MACRO's
+	// does (docs/PHASE-27.md, subtask 11's log). It's nil otherwise.
+	absSect *section
 }
 
 // defined reports whether s has a value: it isn't waiting on a forward
@@ -385,7 +395,19 @@ func (a *Assembler) defineHere(name string, flags SymFlag, unique bool) error {
 		sect = a.cur
 	}
 
-	return a.setSymbolIn(name, sect, a.pc(), flags, unique)
+	if err := a.setSymbolIn(name, sect, a.pc(), flags, unique); err != nil {
+		return err
+	}
+
+	if a.dialect == DialectMACRO && sect == nil && a.cur.index != 0 {
+		if resolved, _ := a.resolvedName(name); resolved != "" {
+			if sym, ok := a.symbols.find(resolved); ok {
+				sym.absSect = a.cur
+			}
+		}
+	}
+
+	return nil
 }
 
 // setSymbolIn is setSymbol for a value relative to the base of the
@@ -407,6 +429,7 @@ func (a *Assembler) setSymbolIn(name string, sect *section, value uint32, flags 
 
 	sym.value = value
 	sym.sect = sect
+	sym.absSect = nil
 	sym.flags = sym.flags&^SymUndefined | flags
 
 	waiting := sym.forward
@@ -446,7 +469,7 @@ func (a *Assembler) applyFixup(fp *fixup, value uint32) error {
 
 		return img.storeWord(fp.location, uint16(int16(d)))
 
-	case fixAddrB:
+	case fixAddrB, fixSignedB:
 		// A value, signed or unsigned, as .BYTE takes it.
 		if v := int64(int32(value)); v < -128 || v > 0xFF {
 			return vmserrors.New(vmserrors.VAX_FWDBYTE, v)
@@ -461,7 +484,7 @@ func (a *Assembler) applyFixup(fp *fixup, value uint32) error {
 
 		return img.storeByte(fp.location, byte(int8(disp)))
 
-	case fixAddrW:
+	case fixAddrW, fixSignedW:
 		if v := int64(int32(value)); v < -32768 || v > 0xFFFF {
 			return vmserrors.New(vmserrors.VAX_FWDWORD, v)
 		}
@@ -474,14 +497,6 @@ func (a *Assembler) applyFixup(fp *fixup, value uint32) error {
 		}
 
 		return img.storeWord(fp.location, uint16(int16(disp)))
-
-	case fixPICR:
-		// An absolute value: the linker would make it absolute mode.
-		if err := img.storeByte(fp.location, 0x9F); err != nil {
-			return err
-		}
-
-		return img.storeLongword(fp.location+1, value)
 
 	case fixAddrL, fixAddress:
 		disp = int64(int32(value))

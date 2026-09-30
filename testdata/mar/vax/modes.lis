@@ -1,0 +1,86 @@
+MODES                           Fixture 10: operand modes the linker fin 30-SEP-2026 04:12:35  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     30-SEP-2026 04:11:39  DUA1:[000000]MODES.MAR;1          (1)
+
+                                     0000     1 	.TITLE	MODES	Fixture 10: operand modes the linker finishes
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; Checks the stack program and the mode byte MACRO writes for operand
+                                     0000     5 ; modes other than relative when the linker must finish the value:
+                                     0000     6 ; displacement (with no size, and L^), displacement deferred, immediate,
+                                     0000     7 ; absolute, and relative indexed, with relocatable and external values.
+                                     0000     8 ; The data checks negative constants in expressions left to the linker.
+                                     0000     9 ; Assemble only: EXTOFF and EXTVAL are defined nowhere.
+                                     0000    10 
+                                 00000000    11 	.PSECT	DATA, WRT, NOEXE, LONG
+00000004 00000003 00000002 00000001  0000    12 TABLE:	.LONG	1, 2, 3, 4
+                           FFFFFFFC' 0010    13 	.LONG	EXTVAL+<-4>
+                           00000000' 0014    14 	.LONG	EXTVAL*<-300>
+                           FFFE7960' 0018    15 	.LONG	EXTVAL+<-100000>
+                                     001C    16 
+                                 00000000    17 	.PSECT	CODE, NOWRT, EXE, LONG
+                               000C  0000    18 	.ENTRY	START, ^M<R2,R3>
+                  50   0000'C2   D0  0002    19 	MOVL	TABLE(R2), R0
+                  50   0000'C2   D0  0007    20 	MOVL	EXTOFF(R2), R0
+              50   00000000'E2   D0  000C    21 	MOVL	L^TABLE(R2), R0
+                  50   0000'D2   D0  0013    22 	MOVL	@TABLE(R2), R0
+              50   00000000'8F   D0  0018    23 	MOVL	#TABLE, R0
+              51   00000000'8F   D0  001F    24 	MOVL	#EXTVAL, R1
+              52   00000000'9F   D0  0026    25 	MOVL	@#TABLE, R2
+              53   00000000'9F   D0  002D    26 	MOVL	@#EXTVAL, R3
+            50   00000000'EF42   D0  0034    27 	MOVL	TABLE[R2], R0
+                                 04  003C    28 	RET
+                                     003D    29 
+                                     003D    30 	.END	START
+MODES                           Fixture 10: operand modes the linker fin 30-SEP-2026 04:12:35  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             30-SEP-2026 04:11:39  DUA1:[000000]MODES.MAR;1          (1)
+
+EXTOFF           ********   X   02      
+EXTVAL           ********   X   01      
+START            00000000 RG    02      
+TABLE            00000000 R     01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            0000001C  (   28.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE                            0000003D  (   61.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  414     00:00:00.01    00:00:00.01
+Command processing              887     00:00:00.00    00:00:00.00
+Pass 1                          174     00:00:00.01    00:00:00.01
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           25     00:00:00.00    00:00:00.00
+Symbol table output               0     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1526     00:00:00.02    00:00:00.02
+
+The working set limit was 812 pages.
+622 bytes (2 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 4 non-local and 0 local symbols.
+30 source lines were read in Pass 1, producing 17 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST MODES

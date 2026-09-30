@@ -1,0 +1,100 @@
+
+Analyze Object File                          30-SEP-2026 04:12:34.73   Page 1
+DUA1:[000000]GV_EMPTY.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 50 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "EMPTY"
+	module version: "V1.0"
+	creation   date/time: 30-SEP-2026 04:11
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 20 bytes
+
+	Textual information:
+	"govax MACRO V0.0-0"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 70 bytes
+
+	Textual information:
+	"macro "testdata/mar/empty.mar"/host/object=DUA1:[000000]GV_EMPTY."
+	"OBJ"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 28 bytes
+
+	Textual information:
+	"Fixture 1: an empty module"
+
+
+5.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+
+Analyze Object File                          30-SEP-2026 04:12:34.73   Page 2
+DUA1:[000000]GV_EMPTY.OBJ;1
+ANALYZ V07-04
+
+6.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+7.  END OF MODULE (OBJ$C_EOM), 2 bytes
+
+	severity: successful (0)
+
+
+
+Analyze Object File                          30-SEP-2026 04:12:34.73   Page 3
+DUA1:[000000]GV_EMPTY.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   168
+OBJ$C_GSD	    1	    19
+OBJ$C_TIR	    1	     5
+OBJ$C_EOM	    1	     2
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    0	     0
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		    7	   194
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=GV_EMPTY.ANL GV_EMPTY.OBJ                                 

@@ -26,7 +26,7 @@ becomes the record of the implementation: each subtask adds a
 [progress log](#progress-log) entry, and the open questions get their answers
 recorded here.
 
-**Status: subtasks 1-10 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 11 is prepared and waiting on a VAX run by the user.**
+**Status: subtasks 1-11 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 12 (clean-up and docs) is next.**
 
 ## Why this phase looks different
 
@@ -545,7 +545,7 @@ them under `testdata/mar/vax/`). Each step adds one feature:
     one-shot command runs, default object naming with case copied from the
     source's extension, `.INCLUDE` across host and ODS-2, and writing only
     on success. Update the help text in `vax.help`.
-11. **Fixture ladder 4 to 9** (needs the user). Compare each fixture with the
+11. **Done.** **Fixture ladder 4 to 9** (needs the user). Compare each fixture with the
     VAX's output and add each real object to the reader corpus. Log the
     differences.
 12. **Clean-up and docs.** Update `PLAN.md`, `DEVIATIONS.md`, and
@@ -1572,3 +1572,92 @@ above record the answers:
   and the script, then `MACRO .../HOST/OBJECT=DUA1:[000000]GV_NAME.OBJ`
   for each fixture. That exercises subtask 10's ODS-2 object output for
   real.
+
+### 2026-09-30 — Subtask 11: real VMS accepts govax's objects
+
+- **The VAX run.** The user attached `mar-exchange2.dsk` to simh,
+  mounted it on VMS 7.3, and ran `@ASSEMBLE/OUTPUT=ASSEMBLE.LOG`.
+  `ANALYZE/DISK_STRUCTURE` of the govax-built volume reported only the
+  usual missing `QUOTA.SYS`.
+  - **Every govax object passed.** `ANALYZE/OBJECT` reported 0 errors
+    for all twelve of govax's objects (written straight onto the volume
+    by govax's MACRO), as for all twelve of real MACRO's.
+  - **They link and run.** `GV_ENTRY`, `GV_HELLO`, and `GV_PSECTS`
+    linked with no messages and ran: `GV_HELLO` printed "Hello, world!",
+    and each exited with `$STATUS` `%X00000001`, the same as the real
+    objects' images.
+
+  That was with the encoding before the fixes below, so VMS accepts
+  both forms. The run's log, the new fixtures' objects, listings, and
+  analyses, and the `ANALYZE/OBJECT` output and maps for govax's objects
+  (`vax/govax/`) are in `testdata/mar/vax/`. The nine older fixtures
+  were assembled again and match the corpus apart from their dates.
+- **What the new fixtures settled.** These choices were confirmed:
+  - an operand's stack program comes before its mode byte for
+    displacement, displacement deferred, immediate (`#TABLE` is
+    `8F` + `STO_L`), and absolute (`9F` + `STO_L`) modes;
+  - `L^` displacement is `STO_L`;
+  - `.ENABLE ABSOLUTE` is `9F` + `STO_L`, not `STO_PIDR`;
+  - relative mode to an absolute address is `STA_LW` + `STO_LD`;
+  - `.DEFAULT DISPLACEMENT, BYTE` gives a forward reference `AF` +
+    `STO_BD`;
+  - a label before any `.PSECT` goes in `. BLANK .`;
+  - MACRO writes every global defined in an absolute psect, even one
+    used nowhere.
+
+  Six were wrong, and govax now follows real MACRO:
+  1. **Displacement mode** with a value the linker finishes stores a
+     signed word: `STO_SW`, not `STO_W`. There are new fixup kinds
+     `fixSignedB`/`fixSignedW` for MACRO-dialect displacement fields,
+     so a byte one is `STO_SB` by analogy.
+  2. **Indexed operands** stack the value before the index byte too:
+     `TABLE[R2]` is `STA_PB`, then `42 EF`, then `STO_LD`, and
+     `G^EXTV[R1]` is `STA_GBL`, then `41`, then `STO_PICR`. A fixup's
+     `mode` flag became `prefix`, the count of operand-specifier bytes
+     before its field. The operand parser adds one for an index byte,
+     and `@#`'s mode byte now counts too.
+  3. **`G^` is always left to the linker**, even for an address
+     already known to be absolute: `G^IOBASE` is `STA_LW ^X20000000` +
+     `STO_PICR`, and `G^LATER`, defined later as `^X300`, is
+     `STA_UW ^X300` + `STO_PICR`.
+  4. **Real MACRO folds nothing in a linker expression.**
+     `EXTVAL+<-4>` is `STA_GBL`, `STA_UB 4`, `OPR_NEG`, `OPR_ADD`, and
+     `EXTVAL*<-300>` is `STA_UW ^X12C`, `OPR_NEG`, `OPR_MUL`. In the
+     MACRO dialect a constant computed by an operation now keeps its
+     shape (`exprVal.shape`), which goes into the tree when it joins
+     such a value. `rexpr.resolved` now folds only a whole tree that
+     turns out constant, and `simpleRelocatable` accepts constant
+     subtrees. Only unary minus is confirmed; binary operations on
+     constants are treated the same way, since MACRO evidently doesn't
+     fold within these expressions.
+  5. **`. =` is `CTL_AUGRB`** by the distance moved (`. = . + 8` is
+     `CTL_AUGRB 8`, `. = ONE + 64` is `CTL_AUGRB ^X2C`), not
+     `STA_Px` + `CTL_SETRB`. Going back to a psect sets the location in
+     the same record; it doesn't start a new one.
+  6. **Absolute psects.**
+     - An absolute psect gets its PSC record (allocation 0) and no TIR
+       commands at all.
+     - A global label in one carries the psect's index, not 0, and no
+       `REL` flag.
+     - Each psect definition is a GSD record of its own. The first
+       ladder never showed this, since TIR always came between two
+       definitions.
+     - `.  ABS  .`'s location is set at the start (`STA_PB 0` +
+       `CTL_SETRB`) except when code or data before any `.PSECT`
+       moves assembly into `. BLANK .` first. The emitter holds that
+       command back until it sees what comes next (`flushAbsStart`,
+       and `outEvent.implicit`).
+- **All twelve fixtures now match real MACRO** in
+  `TestFixtureLadderDeclarations`, `TestFixtureLadderText`, and
+  `TestFixtureLadderObjects`. The text replay knows `STO_SB`/`STO_SW`,
+  treats a constant stored by a displaced or position-independent
+  store as a relocation (it isn't stored as it is), and skips
+  absolute psects.
+- Unit tests that pinned the old guesses now expect real MACRO's
+  forms: `TestDisplacementModeUnknown`, `TestGeneralMode`,
+  `TestObjectOperands`, `TestObjectPsectReentry`, `TestObjectLocation`
+  (now also a backward `. =`), and `TestObjectAbsolutePsect`. The console
+  golden snapshots are unchanged, and `go test ./...` passes.
+- Nothing here is a behavior difference: each was a choice of object
+  encoding, and VMS linked the old forms to the same effect. So nothing
+  goes in `DEVIATIONS.md`.

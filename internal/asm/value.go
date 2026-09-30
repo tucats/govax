@@ -57,9 +57,17 @@ type exprState struct {
 // can only be added, subtracted, or multiplied by a constant, and anything
 // else applied to it (division, one undefined symbol times another) is
 // VAX-E-FWDOPERATOR. MACRO-32 hands any expression to the linker.
+//
+// In the MACRO dialect a constant computed by an operation also keeps its
+// shape, the tree of how it was computed. Real MACRO doesn't fold
+// anything in an expression it hands to the linker: EXT+<-4> is
+// STA_GBL EXT, STA_UB 4, OPR_NEG, OPR_ADD (docs/PHASE-27.md, subtask 11's
+// log). So when such a constant joins a value the assembler can't
+// finish, its shape goes into the tree, not its value.
 type exprVal struct {
-	v uint32
-	x *rexpr
+	v     uint32
+	x     *rexpr
+	shape *rexpr
 }
 
 func constVal(v uint32) exprVal { return exprVal{v: v} }
@@ -70,13 +78,27 @@ func (x exprVal) known() bool { return x.x == nil }
 // forward reports whether x uses a symbol not yet defined.
 func (x exprVal) forward() bool { return x.x != nil && x.x.hasSymbols() }
 
-// tree returns x as an rexpr.
+// tree returns x as an rexpr: for a constant, its shape if it has one.
 func (x exprVal) tree() *rexpr {
 	if x.x != nil {
 		return x.x
 	}
 
+	if x.shape != nil {
+		return x.shape
+	}
+
 	return constNode(x.v)
+}
+
+// shaped returns the constant v computed as shape, keeping the shape in
+// the MACRO dialect (see exprVal).
+func (a *Assembler) shaped(v uint32, shape *rexpr) exprVal {
+	if a.dialect != DialectMACRO {
+		return constVal(v)
+	}
+
+	return exprVal{v: v, shape: shape}
 }
 
 // binaryVal applies a binary operator to two values (see exprTop).
@@ -86,7 +108,7 @@ func (a *Assembler) binaryVal(op byte, x1, x2 exprVal) (exprVal, error) {
 	}
 
 	if x1.known() && x2.known() {
-		return constVal(applyOp(op, x1.v, x2.v)), nil
+		return a.shaped(applyOp(op, x1.v, x2.v), &rexpr{op: rBinary, bin: op, l: x1.tree(), r: x2.tree()}), nil
 	}
 
 	if op == '-' && !x1.known() && !x2.known() {
@@ -118,10 +140,10 @@ func (a *Assembler) binaryVal(op byte, x1, x2 exprVal) (exprVal, error) {
 func (a *Assembler) unaryVal(op rop, x exprVal) (exprVal, error) {
 	switch {
 	case x.known() && op == rNeg:
-		return constVal(-x.v), nil
+		return a.shaped(-x.v, &rexpr{op: rNeg, l: x.tree()}), nil
 
 	case x.known():
-		return constVal(^x.v), nil
+		return a.shaped(^x.v, &rexpr{op: rCom, l: x.tree()}), nil
 
 	case op == rCom && a.dialect == DialectConsole && x.forward():
 		return exprVal{}, vmserrors.New(vmserrors.VAX_FWDOPERATOR)

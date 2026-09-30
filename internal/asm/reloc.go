@@ -108,9 +108,22 @@ func (t *rexpr) placeholder() uint32 {
 }
 
 // resolved returns t with every symbol defined since it was read replaced
-// by its value, and every operation whose operands are then constants
-// done. Symbols still undefined stay rSym leaves.
+// by its value. If that leaves no symbol or section base, it's the
+// constant t's value; otherwise its shape is kept as written, operations
+// on constants included, as real MACRO hands it to the linker (see
+// exprVal).
 func (t *rexpr) resolved() *rexpr {
+	s := t.substituted()
+	if s.isConstant() && !s.dividesByZero() {
+		return constNode(s.placeholder())
+	}
+
+	return s
+}
+
+// substituted returns t with every symbol defined since it was read
+// replaced by its value, and nothing folded.
+func (t *rexpr) substituted() *rexpr {
 	switch t.op {
 	case rSym:
 		if t.sym == nil || !t.sym.defined() {
@@ -124,27 +137,41 @@ func (t *rexpr) resolved() *rexpr {
 		return constNode(t.sym.value)
 
 	case rNeg, rCom:
-		l := t.l.resolved()
-		if l.op == rConst {
-			if t.op == rNeg {
-				return constNode(-l.v)
-			}
-
-			return constNode(^l.v)
-		}
-
-		return &rexpr{op: t.op, l: l}
+		return &rexpr{op: t.op, l: t.l.substituted()}
 
 	case rBinary:
-		l, r := t.l.resolved(), t.r.resolved()
-		if l.op == rConst && r.op == rConst && !(t.bin == '/' && r.v == 0) {
-			return constNode(applyOp(t.bin, l.v, r.v))
-		}
-
-		return &rexpr{op: rBinary, bin: t.bin, l: l, r: r}
+		return &rexpr{op: rBinary, bin: t.bin, l: t.l.substituted(), r: t.r.substituted()}
 	}
 
 	return t
+}
+
+// isConstant reports whether t uses no symbol, section base, or entry
+// mask: whether the assembler can compute it.
+func (t *rexpr) isConstant() bool {
+	switch t.op {
+	case rConst:
+		return true
+	case rNeg, rCom:
+		return t.l.isConstant()
+	case rBinary:
+		return t.l.isConstant() && t.r.isConstant()
+	}
+
+	return false
+}
+
+// dividesByZero reports whether t, a constant tree, divides by zero
+// anywhere, which is left for the linker to report.
+func (t *rexpr) dividesByZero() bool {
+	switch t.op {
+	case rNeg, rCom:
+		return t.l.dividesByZero()
+	case rBinary:
+		return (t.bin == '/' && t.r.placeholder() == 0) || t.l.dividesByZero() || t.r.dividesByZero()
+	}
+
+	return false
 }
 
 // simpleRelocatable reports whether t is a section base plus a constant
@@ -158,14 +185,14 @@ func (t *rexpr) simpleRelocatable() (*section, uint32, bool) {
 	case t.op != rBinary:
 		return nil, 0, false
 
-	case t.bin == '+' && t.l.op == rBase && t.r.op == rConst:
-		return t.l.sect, t.l.v + t.r.v, true
+	case t.bin == '+' && t.l.op == rBase && t.r.isConstant():
+		return t.l.sect, t.l.v + t.r.placeholder(), true
 
-	case t.bin == '+' && t.l.op == rConst && t.r.op == rBase:
-		return t.r.sect, t.l.v + t.r.v, true
+	case t.bin == '+' && t.l.isConstant() && t.r.op == rBase:
+		return t.r.sect, t.l.placeholder() + t.r.v, true
 
-	case t.bin == '-' && t.l.op == rBase && t.r.op == rConst:
-		return t.l.sect, t.l.v - t.r.v, true
+	case t.bin == '-' && t.l.op == rBase && t.r.isConstant():
+		return t.l.sect, t.l.v - t.r.placeholder(), true
 	}
 
 	return nil, 0, false
@@ -248,9 +275,10 @@ type relocation struct {
 	offset uint32
 	kind   fixupKind
 	expr   *rexpr
-	// mode says the field follows an operand's addressing mode byte,
-	// which real MACRO stores after the value's stack program.
-	mode bool
+	// prefix is how many bytes of the operand specifier come before the
+	// field (see fixup), which real MACRO stores after the value's stack
+	// program.
+	prefix int
 }
 
 func (r relocation) String() string {
@@ -270,6 +298,8 @@ var fixupKindNames = map[fixupKind]string{
 	fixCaseW:   "CASE",
 	fixAddress: "PIDR",
 	fixPICR:    "PICR",
+	fixSignedB: "SB",
+	fixSignedW: "SW",
 }
 
 // Relocations returns the relocations assembled so far, one per line, for
@@ -312,14 +342,14 @@ func (a *Assembler) completeFixup(f *fixup) error {
 	t := f.expr.resolved()
 
 	switch {
-	case t.op == rConst && !(isDisplacement(f.kind) && f.sect.relocatable):
+	case t.op == rConst && f.kind != fixPICR && !(isDisplacement(f.kind) && f.sect.relocatable):
 		return a.applyFixup(f, t.v)
 
 	case t.op == rBase && t.sect == f.sect && isBranch(f.kind):
 		return a.applyFixup(f, t.v)
 	}
 
-	a.relocs = append(a.relocs, relocation{sect: f.sect, offset: f.location, kind: f.kind, expr: t, mode: f.mode})
+	a.relocs = append(a.relocs, relocation{sect: f.sect, offset: f.location, kind: f.kind, expr: t, prefix: f.prefix})
 
 	// The linker writes the field, so it holds zeros, not the placeholder.
 	for i := uint32(0); i < uint32(fixupSize(f.kind)); i++ {

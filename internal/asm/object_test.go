@@ -112,8 +112,9 @@ RET`),
 		"EOM: severity SUCCESS")
 }
 
-// TestObjectPsectReentry checks going back to a psect already defined: a
-// new record sets the location to where it left off.
+// TestObjectPsectReentry checks going back to a psect already defined:
+// the location is set to where it left off, in the same record, as real
+// MACRO writes it (psects.obj).
 func TestObjectPsectReentry(t *testing.T) {
 	requireDump(t, objectDump(t, `.PSECT A
 .BYTE 1
@@ -125,22 +126,32 @@ func TestObjectPsectReentry(t *testing.T) {
 		"STA_PB psect 1 offset 0x0", "CTL_SETRB", "STO_IMM 1 bytes: 01",
 		`PSC 2: "B", alignment BYTE, NOPIC,CON,REL,LCL,NOSHR,EXE,RD,WRT,NOVEC, 1 bytes`,
 		"STA_PB psect 2 offset 0x0", "CTL_SETRB", "STO_IMM 1 bytes: 02",
-		"TIR", "STA_PB psect 1 offset 0x1", "CTL_SETRB", "STO_IMM 1 bytes: 03")
+		"STA_PB psect 1 offset 0x1", "CTL_SETRB", "STO_IMM 1 bytes: 03",
+		"EOM: severity SUCCESS")
+
+	if strings.Count(objectDump(t, ".PSECT A\n.BYTE 1\n.PSECT B\n.BYTE 2\n.PSECT A\n.BYTE 3"), "TIR") != 3 {
+		t.Error("going back to a psect started a new TIR record")
+	}
 }
 
-// TestObjectLocation checks ". =", the stack forms of a psect offset past
-// a byte and a word, and a gap.
+// TestObjectLocation checks ". =", which moves the location by the
+// difference (CTL_AUGRB), as real MACRO writes it (psects.obj); the stack
+// forms of a psect offset past a byte and a word; and a gap.
 func TestObjectLocation(t *testing.T) {
 	requireDump(t, objectDump(t, `.PSECT A
 . = ^X100
-.LONG LATER
+HERE:	.LONG HERE, LATER
 .BLKB ^X10000
-LATER:	.BYTE 7`),
+LATER:	.BYTE 7
+. = HERE + 4`),
 		"STA_PB psect 1 offset 0x0", "CTL_SETRB",
-		"STA_PW psect 1 offset 0x100", "CTL_SETRB",
-		"STA_PL psect 1 offset 0x10104", "STO_L",
+		"CTL_AUGRB 0x100",
+		"STA_PW psect 1 offset 0x100", "STO_L",
+		"STA_PL psect 1 offset 0x10108", "STO_L",
 		"CTL_AUGRB 0x10000",
-		"STO_IMM 1 bytes: 07")
+		"STO_IMM 1 bytes: 07",
+		// Backward: the difference is negative.
+		"CTL_AUGRB 0xfffefffb")
 }
 
 // TestObjectMask checks that .MASK stacks the entry point's mask with
@@ -162,7 +173,7 @@ func TestObjectOperands(t *testing.T) {
 	CLRL G^EXT
 	.LONG EXT+^X1234, EXT-1, EXT+^X12345678`),
 		"STO_IMM 1 bytes: d0", `STA_GBL "EXT"`, "STO_IMM 1 bytes: 8f", "STO_L",
-		"STO_IMM 2 bytes: 50 95", `STA_GBL "EXT"`, "STO_IMM 1 bytes: c3", "STO_W",
+		"STO_IMM 2 bytes: 50 95", `STA_GBL "EXT"`, "STO_IMM 1 bytes: c3", "STO_SW",
 		"STO_IMM 1 bytes: d4", `STA_GBL "EXT"`, "STO_PICR",
 		"STA_UW 0x1234", "OPR_ADD", "STO_L",
 		"STA_UB 0x1", "OPR_SUB", "STO_L",
@@ -209,11 +220,36 @@ func TestObjectSeverity(t *testing.T) {
 	requireDump(t, objectDump(t, ".ENABLE TRUNCATION"), "EOM: severity WARNING")
 }
 
-// TestObjectAbsolutePsect checks that an absolute psect allocates nothing.
+// TestObjectAbsolutePsect checks an absolute psect as real MACRO writes
+// it (psects.obj): it allocates nothing, has no TIR commands, and a
+// global label in it is absolute, with the psect's index.
 func TestObjectAbsolutePsect(t *testing.T) {
-	requireDump(t, objectDump(t, ".PSECT OFFSETS, ABS\nA: .BLKL 4"),
+	a := macroAssemble(t, ".PSECT OFFSETS, ABS\nA:: .BLKL 4\nB:: .BLKB 1")
+
+	m, err := a.Object(ObjectOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dump := dumpText(t, m)
+	requireDump(t, dump,
+		`SYM "A" = 0x0, DEF`, `SYM "B" = 0x10, DEF`,
 		`PSC 1: "OFFSETS", alignment BYTE, NOPIC,CON,ABS,LCL,NOSHR,EXE,RD,WRT,NOVEC, 0 bytes`,
-		"CTL_AUGRB 0x10")
+		"EOM: severity SUCCESS")
+
+	if strings.Contains(dump, "AUGRB") || strings.Contains(dump, "psect 1 offset") {
+		t.Errorf("TIR commands for an absolute psect:\n%s", dump)
+	}
+
+	for _, rec := range m.Records {
+		if g, ok := rec.(*obj.GSD); ok {
+			for _, sub := range g.Subrecords {
+				if s, ok := sub.(*obj.Symbol); ok && s.Psect != 1 {
+					t.Errorf("symbol %s is in psect %d, want 1", s.Name, s.Psect)
+				}
+			}
+		}
+	}
 }
 
 func TestObjectNeedsMACRODialect(t *testing.T) {

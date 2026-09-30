@@ -53,7 +53,8 @@ HERE:	.DEFAULT DISPLACEMENT, BYTE
 
 // TestDisplacementModeUnknown checks displacement mode from a register
 // (§5.1.6): an unknown displacement (relocatable, external, or defined
-// later) gets a word, and a known one the smallest size.
+// later) gets a word, which the linker stores signed (STO_SW), and a
+// known one the smallest size.
 func TestDisplacementModeUnknown(t *testing.T) {
 	a := macroAssemble(t, `.PSECT DATA
 ITEM:	.LONG 0
@@ -69,7 +70,7 @@ LATER = 8`)
 		0x95, 0xC3, 0, 0,
 		0x95, 0xD3, 8, 0,
 		0x95, 0xC3, 0x2C, 0x01)
-	requireRelocations(t, a, "CODE+2 W DATA:0", "CODE+6 W EXT")
+	requireRelocations(t, a, "CODE+2 SW DATA:0", "CODE+6 SW EXT")
 }
 
 // TestRelativeToAbsoluteAddress checks that a relative operand or a branch
@@ -84,9 +85,9 @@ func TestRelativeToAbsoluteAddress(t *testing.T) {
 	requireRelocations(t, a, "CODE+2 LD 512", "CODE+7 WD 512")
 }
 
-// TestGeneralMode checks G^: five bytes the linker writes (STO_PICR) for a
-// relocatable or external address, and absolute mode for an address
-// already known to be absolute, as the linker would make it.
+// TestGeneralMode checks G^: five bytes the linker writes (STO_PICR),
+// whatever the address, even one known to be absolute, as real MACRO
+// leaves it.
 func TestGeneralMode(t *testing.T) {
 	a := macroAssemble(t, `.PSECT CODE
 	CALLS #0, G^SUB
@@ -99,11 +100,11 @@ LATER = ^X2000`)
 
 	requireBytes(t, psectBytes(t, a, "CODE"),
 		0xFB, 0x00, 0, 0, 0, 0, 0,
-		0xD4, 0x9F, 0x00, 0x10, 0, 0,
-		0xD4, 0x9F, 0x00, 0x20, 0, 0,
+		0xD4, 0, 0, 0, 0, 0,
+		0xD4, 0, 0, 0, 0, 0,
 		0xD4, 0x42, 0, 0, 0, 0, 0,
 		0x01)
-	requireRelocations(t, a, "CODE+2 PICR SUB", "CODE+15 PICR CODE:1A")
+	requireRelocations(t, a, "CODE+2 PICR SUB", "CODE+8 PICR 4096", "CODE+E PICR 8192", "CODE+15 PICR CODE:1A")
 
 	requireMACROError(t, ".PSECT CODE\nCLRL @G^SUB", vmserrors.VAX_BADMODE)
 }

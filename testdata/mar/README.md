@@ -39,3 +39,9 @@ mounts:
    there.
 3. With simh paused (or the disk detached), govax mounts the container
    read-only and copies the results out into `vax/`.
+
+`vax/assemble.log` is the log of the second run (subtask 11), and
+`vax/objects.lst` the objects' `DIRECTORY/FULL`. `vax/govax/` holds what
+VMS made of govax's own objects in that run: `ANALYZE/OBJECT` output
+(`gv_*.anl`, 0 errors each) and the link maps of the three programs,
+which linked and ran.

@@ -113,7 +113,12 @@ func summarizeAssembly(a *Assembler) objectSummary {
 	s.module = name + " " + a.Ident()
 
 	for _, sect := range a.sections {
-		s.psects = append(s.psects, fmt.Sprintf("%d %s align=%d flags=%03X alloc=%d", sect.index, sect.name, sect.align, sect.flags, sect.hi))
+		alloc := sect.hi
+		if !sect.relocatable {
+			alloc = 0 // an absolute psect allocates nothing
+		}
+
+		s.psects = append(s.psects, fmt.Sprintf("%d %s align=%d flags=%03X alloc=%d", sect.index, sect.name, sect.align, sect.flags, alloc))
 	}
 
 	for name, sym := range a.symbols.byName {
@@ -123,8 +128,12 @@ func summarizeAssembly(a *Assembler) objectSummary {
 
 		case sym.flags&SymGlobal != 0:
 			psect := 0
-			if sym.sect != nil {
+
+			switch {
+			case sym.sect != nil:
 				psect = sym.sect.index
+			case sym.absSect != nil:
+				psect = sym.absSect.index
 			}
 
 			s.symbols = append(s.symbols, globalLine(name, true, sym.flags&SymWeak != 0, psect, sym.value, sym.flags&SymEntry != 0, sym.mask))
@@ -250,13 +259,18 @@ func replayText(t *testing.T, m *obj.Module) objectText {
 	}
 
 	binary := map[string]string{"OPR_ADD": "+", "OPR_SUB": "-", "OPR_MUL": "*", "OPR_DIV": "/", "OPR_AND": "&", "OPR_IOR": "!", "OPR_EOR": "\\", "OPR_ASH": "@"}
+	// data marks the stores whose constant value is stored as it is:
+	// the others store it relative to the location (a displacement) or
+	// as the linker chooses (PIC), so the linker finishes them.
 	stores := map[string]struct {
 		kind string
 		size int
+		data bool
 	}{
-		"STO_B": {"B", 1}, "STO_W": {"W", 2}, "STO_L": {"L", 4},
-		"STO_BD": {"BD", 1}, "STO_WD": {"WD", 2}, "STO_LD": {"LD", 4},
-		"STO_PIDR": {"PIDR", 4}, "STO_PICR": {"PICR", 5},
+		"STO_B": {"B", 1, true}, "STO_W": {"W", 2, true}, "STO_L": {"L", 4, true},
+		"STO_SB": {"SB", 1, true}, "STO_SW": {"SW", 2, true},
+		"STO_BD": {"BD", 1, false}, "STO_WD": {"WD", 2, false}, "STO_LD": {"LD", 4, false},
+		"STO_PIDR": {"PIDR", 4, false}, "STO_PICR": {"PICR", 5, false},
 	}
 
 	for _, rec := range m.Records {
@@ -303,7 +317,7 @@ func replayText(t *testing.T, m *obj.Module) objectText {
 				st := stores[name]
 				e := pop()
 
-				if e.constant {
+				if e.constant && st.data {
 					put(e.value, st.size)
 				} else {
 					relocs = append(relocs, reloc{psect, offset, fmt.Sprintf("%s+%X %s %s", names[psect], offset, st.kind, e.text)})
@@ -359,6 +373,12 @@ func TestFixtureLadderText(t *testing.T) {
 			want := replayText(t, realObject(t, name))
 
 			for _, s := range a.sections {
+				// An absolute psect's offsets are only symbol values;
+				// it holds nothing (see TestFixtureLadderDeclarations).
+				if !s.relocatable {
+					continue
+				}
+
 				got := s.img.Bytes(0, s.hi)
 				if fmt.Sprintf("% X", got) != fmt.Sprintf("% X", want.bytes[s.name]) {
 					t.Errorf("psect %s:\n% X\nwant:\n% X", s.name, got, want.bytes[s.name])

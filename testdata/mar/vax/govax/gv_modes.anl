@@ -1,0 +1,409 @@
+
+Analyze Object File                          30-SEP-2026 04:12:35.12   Page 1
+DUA1:[000000]GV_MODES.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 50 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "MODES"
+	module version: "V1.0"
+	creation   date/time: 30-SEP-2026 04:11
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 20 bytes
+
+	Textual information:
+	"govax MACRO V0.0-0"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 70 bytes
+
+	Textual information:
+	"macro "testdata/mar/modes.mar"/host/object=DUA1:[000000]GV_MODES."
+	"OBJ"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 42 bytes
+
+	Textual information:
+	"Fixture 10: operand modes the linker fin"
+
+
+5.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 23 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "EXTOFF"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "EXTVAL"
+
+
+
+Analyze Object File                          30-SEP-2026 04:12:35.12   Page 2
+DUA1:[000000]GV_MODES.OBJ;1
+ANALYZ V07-04
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+7.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+8.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 28 (%X'0000001C')
+		symbol: "DATA"
+
+
+
+Analyze Object File                          30-SEP-2026 04:12:35.13   Page 3
+DUA1:[000000]GV_MODES.OBJ;1
+ANALYZ V07-04
+
+9.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 62 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 16 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 02 00 00 00 01|  0000  |........|
+		 00 00 00 04 00 00 00 03|  0008  |........|
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "EXTVAL"
+
+	5)  TIR$C_STA_SB (1, %X'01')                            stack depth: 2
+		value: -4 (%X'FFFFFFFC')
+
+	6)  TIR$C_OPR_ADD (51, %X'33')                          stack depth: 1
+
+	7)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	8)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "EXTVAL"
+
+	9)  TIR$C_STA_SW (2, %X'02')                            stack depth: 2
+		value: -300 (%X'FFFFFED4')
+
+	10)  TIR$C_OPR_MUL (53, %X'35')                         stack depth: 1
+
+	11)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	12)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "EXTVAL"
+
+	13)  TIR$C_STA_LW (3, %X'03')                           stack depth: 2
+		value: -100000 (%X'FFFE7960')
+
+	14)  TIR$C_OPR_ADD (51, %X'33')                         stack depth: 1
+
+	15)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+
+10.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+
+Analyze Object File                          30-SEP-2026 04:12:35.13   Page 4
+DUA1:[000000]GV_MODES.OBJ;1
+ANALYZ V07-04
+
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 61 (%X'0000003D')
+		symbol: "CODE"
+
+
+11.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 7 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 12 (%X'0000000C')
+
+
+12.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 18 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 2
+		value: 0 (%X'00000000')
+		entry mask: <R2,R3>
+		symbol: "START"
+
+
+13.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+14.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 98 bytes
+
+	1)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      D0|  0000  |Ð       |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                          30-SEP-2026 04:12:35.13   Page 5
+DUA1:[000000]GV_MODES.OBJ;1
+ANALYZ V07-04
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      C2|  0000  |Â       |
+
+	4)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+	5)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   D0 50|  0000  |PÐ      |
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "EXTOFF"
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      C2|  0000  |Â       |
+
+	8)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+	9)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   D0 50|  0000  |PÐ      |
+
+	10)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	11)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      E2|  0000  |â       |
+
+	12)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	13)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   D0 50|  0000  |PÐ      |
+
+	14)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	15)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      D2|  0000  |Ò       |
+
+	16)  TIR$C_STO_W (38, %X'26')                           stack depth: 0
+
+
+Analyze Object File                          30-SEP-2026 04:12:35.13   Page 6
+DUA1:[000000]GV_MODES.OBJ;1
+ANALYZ V07-04
+
+	17)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   D0 50|  0000  |PÐ      |
+
+	18)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	19)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      8F|  0000  |.       |
+
+	20)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	21)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   D0 50|  0000  |PÐ      |
+
+	22)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "EXTVAL"
+
+	23)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      8F|  0000  |.       |
+
+	24)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	25)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F D0 51|  0000  |QÐ.     |
+
+	26)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	27)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	28)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F D0 52|  0000  |RÐ.     |
+
+	29)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "EXTVAL"
+
+	30)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	31)  Store Immediate, 3 bytes:
+
+Analyze Object File                          30-SEP-2026 04:12:35.13   Page 7
+DUA1:[000000]GV_MODES.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                42 D0 53|  0000  |SÐB     |
+
+	32)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	33)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	34)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	35)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 50|  0000  |P.      |
+
+
+15.  END OF MODULE (OBJ$C_EOM), 7 bytes
+
+	severity: successful (0)
+	psect: 2
+	value: 0 (%X'00000000')
+
+
+
+Analyze Object File                          30-SEP-2026 04:12:35.13   Page 8
+DUA1:[000000]GV_MODES.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   182
+OBJ$C_GSD	    5	    88
+OBJ$C_TIR	    5	   174
+OBJ$C_EOM	    1	     7
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    0	     0
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   15	   451
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=GV_MODES.ANL GV_MODES.OBJ                                 

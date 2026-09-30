@@ -38,6 +38,9 @@ type outEvent struct {
 	size   uint32
 	value  uint32
 	sym    *symbol
+	// implicit marks the switch into . BLANK . that code or data before
+	// any .PSECT makes (see useBlankPsect).
+	implicit bool
 }
 
 // logEvent records an output event, in the MACRO dialect only. A data

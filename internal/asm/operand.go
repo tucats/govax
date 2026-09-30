@@ -18,6 +18,19 @@ func addrFixup(scale int) fixupKind {
 	}
 }
 
+// signedFixup is addrFixup for a MACRO-dialect displacement mode field:
+// a signed byte or word, or a longword.
+func signedFixup(scale int) fixupKind {
+	switch scale {
+	case 1:
+		return fixSignedB
+	case 2:
+		return fixSignedW
+	default:
+		return fixAddrL
+	}
+}
+
 func dispFixup(scale int) fixupKind {
 	switch scale {
 	case 1:
@@ -116,8 +129,18 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				return err
 			}
 
+			before := a.lastFixup
+
 			if err := a.assembleOperandRec(c, inst, opIndex, true); err != nil {
 				return err
+			}
+
+			// Real MACRO stacks an operand's value before its index
+			// byte too (TABLE[R2] is STA_PB, then 42 EF, then STO_LD),
+			// so the index byte joins the bytes stored after the stack
+			// program.
+			if f := a.lastFixup; f != before && f != nil && (f.prefix > 0 || f.kind == fixPICR) {
+				f.prefix++
 			}
 			// The recursive call above parses the base ("(Rn)", "@#addr",
 			// a displacement mode, ...); most of its own code paths
@@ -237,7 +260,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				// forward by one byte — matching asm_operand.c's own late
 				// correction of vax.console.last_symbol->forward->location.
 				a.lastFixup.location++
-				a.lastFixup.mode = true
+				a.lastFixup.prefix = 1
 			}
 		} else {
 			constant = litShort
@@ -433,7 +456,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			}
 
 			if deferred {
-				a.lastFixup.mode = true
+				a.lastFixup.prefix = 1
 			}
 
 			litValue = v
@@ -576,16 +599,18 @@ func (a *Assembler) storeImmediateFloat(scale int, f float64) error {
 func (a *Assembler) storeAddrValue(c *cursor) error {
 	loc := a.pc()
 
-	value, _, err := a.exprValue(c, loc, fixAddrL)
+	value, deferred, err := a.exprValue(c, loc, fixAddrL)
 	if err != nil {
 		return err
 	}
 
-	if err := a.emitLongword(value); err != nil {
-		return err
+	// The 0x9F mode byte comes before the address, and real MACRO stores
+	// it after the address's stack program.
+	if deferred {
+		a.lastFixup.prefix = 1
 	}
 
-	return nil
+	return a.emitLongword(value)
 }
 
 // assembleBranchOrImplicit handles an OP_BR (branch displacement) or OP_IM
@@ -759,7 +784,7 @@ func (a *Assembler) relativeOperand(x exprVal, deferred byte, size int) error {
 		}
 
 		a.queueFixup(loc, dispFixup(size), x.tree())
-		a.lastFixup.mode = true
+		a.lastFixup.prefix = 1
 
 		return nil
 	}
@@ -792,7 +817,9 @@ func (a *Assembler) relativeOperand(x exprVal, deferred byte, size int) error {
 // it. An unknown one (a forward reference, or in the MACRO dialect a
 // relocatable or external value) gets a longword in the console dialect
 // and a word in the MACRO dialect (the MACRO manual, §5.1.6), finished
-// once it's known or by the linker.
+// once it's known or by the linker. In the MACRO dialect a byte or word
+// displacement is signed, as real MACRO stores it (STO_SW, in
+// docs/PHASE-27.md subtask 11's log); a longword is STO_L.
 func (a *Assembler) registerDisplacement(x exprVal, deferred, reg byte, size int) error {
 	loc := a.pc() + 1
 
@@ -812,8 +839,13 @@ func (a *Assembler) registerDisplacement(x exprVal, deferred, reg byte, size int
 			return err
 		}
 
-		a.queueFixup(loc, addrFixup(size), x.x)
-		a.lastFixup.mode = true
+		kind := addrFixup(size)
+		if a.dialect == DialectMACRO {
+			kind = signedFixup(size)
+		}
+
+		a.queueFixup(loc, kind, x.x)
+		a.lastFixup.prefix = 1
 
 		return nil
 	}
@@ -856,7 +888,7 @@ func (a *Assembler) absoluteOperand(x exprVal) error {
 	}
 
 	a.queueFixup(loc, fixAddrL, x.x)
-	a.lastFixup.mode = true
+	a.lastFixup.prefix = 1
 
 	return nil
 }
@@ -864,9 +896,10 @@ func (a *Assembler) absoluteOperand(x exprVal) error {
 // generalOperand assembles G^address, general mode (the MACRO manual,
 // §5.2.5): five bytes, which the linker makes relative mode for a
 // relocatable address and absolute mode for an absolute one (STO_PICR).
-// An address already known to be absolute is assembled as absolute mode
-// here, which is what the linker would make of it, and so is every
-// address in the console dialect, where every address is absolute.
+// In the MACRO dialect the linker decides even for an address already
+// known to be absolute, as real MACRO leaves it (STA_LW + STO_PICR, in
+// docs/PHASE-27.md subtask 11's log). In the console dialect, where every
+// address is absolute, it's absolute mode.
 func (a *Assembler) generalOperand(c *cursor, deferred byte) error {
 	if deferred != 0 {
 		return vmserrors.New(vmserrors.VAX_BADMODE)
@@ -877,7 +910,7 @@ func (a *Assembler) generalOperand(c *cursor, deferred byte) error {
 		return err
 	}
 
-	if x.known() || a.dialect == DialectConsole {
+	if a.dialect == DialectConsole {
 		return a.absoluteOperand(x)
 	}
 
@@ -887,7 +920,7 @@ func (a *Assembler) generalOperand(c *cursor, deferred byte) error {
 		return err
 	}
 
-	a.queueFixup(loc, fixPICR, x.x)
+	a.queueFixup(loc, fixPICR, x.tree())
 
 	return nil
 }

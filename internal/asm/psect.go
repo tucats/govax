@@ -85,6 +85,10 @@ func (a *Assembler) useBlankPsect() {
 
 	a.implicitAbs = false
 	a.enterSection(a.psect(blankPsect, defaultPsectFlags, 0))
+
+	if n := len(a.events); n > 0 {
+		a.events[n-1].implicit = true
+	}
 }
 
 // psect returns the psect named name, defining it with flags and align
