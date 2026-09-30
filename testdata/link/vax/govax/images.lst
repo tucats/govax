@@ -1,0 +1,274 @@
+
+Directory DUA1:[000000]
+
+GV_ADDR.EXE;1                 File ID:  (51,1,0)              
+Size:            4/4          Owner:    [SYSTEM]
+Created:   30-SEP-2026 07:55:03.02
+Revised:   30-SEP-2026 07:55:03.02 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 4, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_ENTRY.EXE;1                File ID:  (41,1,0)              
+Size:            3/3          Owner:    [SYSTEM]
+Created:   30-SEP-2026 07:55:03.01
+Revised:   30-SEP-2026 07:55:03.01 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_EXPRS.EXE;1                File ID:  (59,1,0)              
+Size:            4/4          Owner:    [SYSTEM]
+Created:   30-SEP-2026 07:55:03.02
+Revised:   30-SEP-2026 07:55:03.02 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 4, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_EXTERN.EXE;1               File ID:  (55,1,0)              
+Size:            4/4          Owner:    [SYSTEM]
+Created:   30-SEP-2026 07:55:03.02
+Revised:   30-SEP-2026 07:55:03.02 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 4, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_EXTERNU.EXE;1              File ID:  (57,1,0)              
+Size:            3/3          Owner:    [SYSTEM]
+Created:   30-SEP-2026 07:55:03.02
+Revised:   30-SEP-2026 07:55:03.02 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_GENERAL.EXE;1              File ID:  (65,1,0)              
+Size:            4/4          Owner:    [SYSTEM]
+Created:   30-SEP-2026 07:55:03.02
+Revised:   30-SEP-2026 07:55:03.02 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 4, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_GLOBALS.EXE;1              File ID:  (61,1,0)              
+Size:            4/4          Owner:    [SYSTEM]
+Created:   30-SEP-2026 07:55:03.02
+Revised:   30-SEP-2026 07:55:03.02 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 4, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_HELLO.EXE;1                File ID:  (37,1,0)              
+Size:            4/4          Owner:    [SYSTEM]
+Created:   30-SEP-2026 07:55:03.01
+Revised:   30-SEP-2026 07:55:03.01 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 4, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_HELLONT.EXE;1              File ID:  (39,1,0)              
+Size:            4/4          Owner:    [SYSTEM]
+Created:   30-SEP-2026 07:55:03.01
+Revised:   30-SEP-2026 07:55:03.01 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 4, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_MODES.EXE;1                File ID:  (63,1,0)              
+Size:            4/4          Owner:    [SYSTEM]
+Created:   30-SEP-2026 07:55:03.02
+Revised:   30-SEP-2026 07:55:03.02 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 4, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_PROG.EXE;1                 File ID:  (53,1,0)              
+Size:            4/4          Owner:    [SYSTEM]
+Created:   30-SEP-2026 07:55:03.02
+Revised:   30-SEP-2026 07:55:03.02 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 4, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_PSECTS.EXE;1               File ID:  (43,1,0)              
+Size:            4/4          Owner:    [SYSTEM]
+Created:   30-SEP-2026 07:55:03.01
+Revised:   30-SEP-2026 07:55:03.01 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 4, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_SHARE.EXE;1                File ID:  (45,1,0)              
+Size:            4/4          Owner:    [SYSTEM]
+Created:   30-SEP-2026 07:55:03.01
+Revised:   30-SEP-2026 07:55:03.01 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 4, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_SHARENT.EXE;1              File ID:  (49,1,0)              
+Size:            4/4          Owner:    [SYSTEM]
+Created:   30-SEP-2026 07:55:03.02
+Revised:   30-SEP-2026 07:55:03.02 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 4, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GV_SHARER.EXE;1               File ID:  (47,1,0)              
+Size:            4/4          Owner:    [SYSTEM]
+Created:   30-SEP-2026 07:55:03.02
+Revised:   30-SEP-2026 07:55:03.02 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 4, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Total of 15 files, 58/58 blocks.

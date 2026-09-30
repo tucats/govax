@@ -80,7 +80,7 @@ questions, and a progress log extended as that phase is worked.
 | 27 | [PHASE-27.md](PHASE-27.md) | MACRO-32 object modules: `MACRO` command producing VAX `.OBJ` files from `.MAR` source |
 | 28 | [PHASE-28.md](PHASE-28.md) | The MACRO-32 macro facility (`.MACRO`, `.MCALL`, `STARLET.MLB`) — planned |
 | 29 | [PHASE-29.md](PHASE-29.md) | MACRO listings (`/LIST`), traceback and debugger records — planned |
-| 30 | [PHASE-30.md](PHASE-30.md) | A govax `LINK`: `.OBJ` modules to a runnable `.EXE` — planned |
+| 30 | [PHASE-30.md](PHASE-30.md) | A govax `LINK`: `.OBJ` modules to a runnable `.EXE` — done; its images match real LINK's and run on VMS |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -381,6 +381,7 @@ declining to write an object.
 
 What MACRO-32 still lacks is planned as three phases. Phase 28 is the
 macro facility, which ordinary VMS programs need for the system macros.
-Phase 29 is listings and traceback/debugger records. Phase 30 is a govax
-`LINK`, so a govax-assembled program can run inside govax without a real
-VAX. Their known gaps are in `DEVIATIONS.md` under Phase 27.
+Phase 29 is listings and traceback/debugger records. Phase 30, a govax
+`LINK`, was done first (2026-09-30): a govax-assembled program now links
+and runs inside govax without a real VAX, and real VMS runs govax's
+images. Their known gaps are in `DEVIATIONS.md` under Phase 27.

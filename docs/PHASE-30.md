@@ -9,7 +9,12 @@ VAX objects alike.
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress (started 2026-09-30).** The user chose to do this phase
+**Status: done (2026-09-30).** govax's LINK writes the images real
+LINK V11-39 writes, byte for byte apart from the debug symbol table, and
+its maps line for line; real VMS 7.3 analyzes govax-linked images with no
+errors and runs them.
+
+**Started 2026-09-30.** The user chose to do this phase
 before Phases 28 and 29, so that simple programs get a full MACRO, LINK, and RUN
 cycle first (see [Phase order](#phase-order)).
 
@@ -250,7 +255,7 @@ them.
      modules that define them; `CON`/`OVR` psects across modules; and
      `.ADDRESS` of a shareable image routine, whose fixup list govax
      doesn't write yet.
-5. **Real VMS checks** (needs the user): `ANALYZE/IMAGE` of the real and
+5. **Done.** **Real VMS checks** (needs the user): `ANALYZE/IMAGE` of the real and
    govax images, `/NOTRACEBACK` links, and running govax-linked images
    on the VAX.
 
@@ -744,3 +749,62 @@ them.
 - The LINK help says how undefined symbols, weak references, and a
   missing transfer address are handled, and that `.ADDRESS` reaches a
   shareable image. `go test ./...` passes.
+
+### 2026-09-30 — Subtask 5: real VMS runs govax's images; phase done
+
+- **The round.** `testdata/link/check.com` and `gv_prog.opt`, on a volume
+  (`testdata/disks/link-check.dsk`, label LINKCHK) where govax did
+  everything: govax's MACRO assembled 12 fixtures into `GV_*.OBJ`, and
+  govax's LINK wrote 15 images (and maps) straight onto the volume,
+  including `/NOTRACEBACK` links of `hello` and `share`.
+- **A bug found first, in `ods2`.** VMS wouldn't mount the first build:
+  `MOUNT-F-BADSECSYS` / `SYSTEM-W-BADIRECTORY`, "bad directory file
+  format". About 60 files had grown the MFD to 4 blocks, and `ods2` had
+  grown it with `Extend`, into three extents. VMS keeps a directory in one
+  contiguous run (its header has `FCH$V_CONTIG`) and maps it as one range.
+  Fixed in `ods2` (`e18e0ce`): a directory that must grow moves to one new
+  contiguous run, and its old one is freed. The earlier exchange volumes
+  never had more files from govax than one directory block holds.
+- **Another, in govax's RUN.** Before the round, govax's own RUN failed on
+  real LINK's `ADDR.EXE` (an access violation at 0): eVAX's `image_fixup`
+  took a `.ADDRESS` fixup's address as relative to the load base rather
+  than the image's lowest section (`^X200`), and didn't resolve the
+  target through a shim. Fixed and logged in `docs/DEVIATIONS.md`;
+  `TestRun_addressFixup` runs `ADDR.EXE`.
+- **The VAX run.** The rebuilt volume mounted, and
+  `ANALYZE/DISK_STRUCTURE` of it, before anything else touched it, was
+  clean. So last round's `FREESPADRIFT` was VMS's own free count on a
+  volume in use, not `ods2`. Then `@CHECK`:
+  - `ANALYZE/IMAGE` found 0 errors in all 15 images;
+  - all 10 programs run gave what they give when real LINK links them:
+    `GV_HELLO` and `GV_HELLONT` printed "Hello, world!", `GV_ADDR`
+    printed "Called through .ADDRESS", `GV_ENTRY`, `GV_PSECTS`, and
+    `GV_EXTERN` exited with `%X00000001`, and `GV_SHARE`, `GV_SHARER`,
+    `GV_SHARENT`, and `GV_PROG` with `%X00000034`;
+  - `/NOTRACEBACK` images start at their own transfer address, with
+    none after it; traceback images at `SYS$IMGSTA`, then theirs;
+  - every image file is sequential, fixed-length 512-byte records, as real
+    LINK writes them.
+
+  The log, `IMAGES.LST`, and each `.ANI` are in
+  `testdata/link/vax/govax/`.
+- **The open questions, answered.**
+  - *Image fidelity*: both ways. govax runs real LINK's images, and real
+    VMS runs govax's, from govax's objects and real MACRO's alike.
+  - *Shareable image symbols*: either source. govax's tables need no VAX
+    files, and IMAGELIB, STARLET, and the images' own symbol tables are
+    used when present; the image is the same either way.
+  - *Qualifiers and options files*: `/EXECUTABLE`, `/[NO]TRACEBACK`,
+    `/[NO]SYSLIB`, `/MAP`, `/BRIEF`, and per file `/LIBRARY`, `/INCLUDE`,
+    `/SELECTIVE_SEARCH`, `/OPTIONS`; options files with `/SHAREABLE`,
+    `STACK=`, `IDENTIFICATION=`, `NAME=`, and `SYMBOL=`.
+- **Left for later.**
+  - No debug symbol table (Phase 29 brings traceback records).
+  - `/FULL` and `/CROSS_REFERENCE` maps, and the run statistics.
+  - Shareable images as output (`LINK/SHAREABLE`), clusters, and options
+    such as `PSECT_ATTR=`, `CLUSTER=`, and `GSMATCH=`.
+  - LINK's warnings leave its status successful; real LINK's is a
+    warning (`%X10648268`).
+  - govax's RUN loads images from host files only, not from a mounted
+    volume (a limitation older than this phase).
+
