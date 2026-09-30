@@ -78,7 +78,7 @@ func TestParseDefines_prefix(t *testing.T) {
 	}
 }
 
-// TestInputFlags: -prefix and -sdl-stop apply to the inputs after them,
+// TestInputFlags: -prefix, -sdl-stop, and -into apply to the inputs after them,
 // in command-line order.
 func TestInputFlags(t *testing.T) {
 	var list inputList
@@ -89,8 +89,11 @@ func TestInputFlags(t *testing.T) {
 	fs.Var(inputFlag{&list, "bliss"}, "bliss", "")
 	fs.Var(settingFlag{&list.prefix}, "prefix", "")
 	fs.Var(settingFlag{&list.stop}, "sdl-stop", "")
+	fs.Var(settingFlag{&list.into}, "into", "")
+	fs.Var(inputFlag{&list, "olb"}, "olb", "")
 
-	if err := fs.Parse([]string{"-h", "a.h", "-prefix", "SS$_", "-bliss", "b.txt", "-sdl-stop", "$X", "-prefix", "", "-sdl", "c.sdl"}); err != nil {
+	if err := fs.Parse([]string{"-h", "a.h", "-prefix", "SS$_", "-bliss", "b.txt", "-sdl-stop", "$X", "-prefix", "", "-sdl", "c.sdl",
+		"-olb", "d.olb", "-into", "symbols", "-olb", "e.olb"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -98,6 +101,8 @@ func TestInputFlags(t *testing.T) {
 		{kind: "h", path: "a.h"},
 		{kind: "bliss", path: "b.txt", prefix: "SS$_"},
 		{kind: "sdl", path: "c.sdl", stop: "$X"},
+		{kind: "olb", path: "d.olb", stop: "$X"},
+		{kind: "olb", path: "e.olb", stop: "$X", into: "symbols"},
 	}
 
 	if !reflect.DeepEqual(list.inputs, want) {

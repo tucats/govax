@@ -78,7 +78,8 @@ expect adjustment as phases land):
   The `*_generated.go` tables are committed data, and building doesn't
   regenerate them: `go run ./internal/vmsdef/gen` merges new definitions
   (`-h`/`-sdl`/`-bliss`/`-msg`/`-image`/`-olb FILE`) into them, add-only
-  unless `-replace`, `-n` for a dry run (Phase 31).
+  unless `-replace`; `-drop NAME` removes a stale name, `-n` is a dry run
+  (Phase 31).
 - `internal/lnm` — VMS logical-name database: directories, tables, access modes,
   search lists, `$TRNLNM`-style lookup and RMS file-spec translation (Phase 25).
   A leaf package shared by the console, `internal/rms`, and `internal/rtl`.

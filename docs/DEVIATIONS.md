@@ -2220,7 +2220,7 @@ widened."
   zero bits), so no instruction's own result starts faulting.
   `TestFpuLoadNegativeZeroIsReserved`, `TestFpuLoadDirtyZeroIsZero`.
 
-### [Phase 31] Five SS$_ codes in `vmsdef.Symbols` differ from VMS's
+### [Phase 31] Five SS$_ codes in `vmsdef.Symbols` differed from VMS's
 
 - **Where**: `internal/vmsdef/symbols_generated.go`, whose SS$_ codes came
   from VMS 7.3's `ssdef.txt` (a BLISS LITERAL listing), and govax's P1
@@ -2243,13 +2243,16 @@ widened."
   - SYS$SS_VECTOR_SPARE, a spare P1 vector slot, is at 0x7FFEE918 in
     govax's P1 vector and 0x7FFEE9C8 in STARLET. Every real service's
     address matches.
-- **Status**: deferred; STARLET's values are the right ones. LINK's own
-  tables use `LibrarySymbols`, so a linked image gets STARLET's values,
-  but the assembler and the RTL use `Symbols`. The fix is to correct
-  `Symbols` from STARLET (gen would need a way to merge an object
-  library's symbols into `Symbols` with `-replace`), after checking what
-  in govax uses these names. `TestSymbols_matchLibrarySymbols` pins this
-  list, so a new difference, or one that goes away, fails the test.
+- **Status**: SS$_ codes fixed in Go, at the author's direction:
+  `gen -replace -into symbols -prefix 'SS$_' -olb starlet.olb` merged
+  STARLET's SS$_ codes into `Symbols`. That corrected the five, and added
+  the 328 codes `ssdef.txt` lacked. `gen -drop` removed three names
+  `ssdef.txt` has but VMS 7.3 doesn't: SS$_NOTMPJNL (0x28FC, 7.3's
+  NOSHARE), SS$_NOPRMJNL (0x2904, NOUPGRADE), and SS$_EXTIDXFILE (0x880,
+  TMACTIVE). `ssdef.txt` is evidently an older listing. `Symbols`' SS$_
+  codes are now exactly STARLET's 731. The JPI$/SYI$ markers and the P1
+  spare slot are deliberately left as they are. `TestSymbols_matchLibrarySymbols`
+  pins the remaining differences and checks that the SS$_ sets are the same.
 
 <!--
 Entry template:

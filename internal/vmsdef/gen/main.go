@@ -27,11 +27,18 @@
 //	-image FILE  a shareable image's global symbol table (librtl.exe; see images.go)
 //	-olb FILE    an object library's definition modules (starlet.olb; see library.go)
 //
-// Two further flags change how the symbol and library inputs after them
-// are read:
-// -prefix P keeps only the names that begin with P (and -prefix "" keeps all of
-// them again), and -sdl-stop MODULE reads an SDL source only as far as
-// "module MODULE;" (objfmt.sdl's Alpha definitions begin at $EOBJRECDEF).
+// Three further flags change how the symbol and library inputs after them
+// are read: -prefix P keeps only the names that begin with P (and
+// -prefix "" keeps all of them again); -sdl-stop MODULE reads an SDL
+// source only as far as "module MODULE;" (objfmt.sdl's Alpha definitions
+// begin at $EOBJRECDEF); and -into symbols merges an object library's
+// symbols into Symbols rather than LibrarySymbols (-into library, the
+// default). That's how STARLET's values correct or extend govax's own:
+//
+//	go run ./internal/vmsdef/gen -replace -into symbols -prefix 'SS$_' -olb starlet.olb
+//
+// -drop NAME removes a name from Symbols: one VMS no longer defines, such
+// as an obsolete code whose value a newer one took. It may be repeated.
 //
 // A name the table has already, with the same value, is left alone. One
 // with a different value is an error, which names every such conflict,
@@ -64,14 +71,16 @@ type input struct {
 	path   string
 	prefix string // keep only names with this prefix; "" keeps all
 	stop   string // for "sdl", the module to stop reading at, if any
+	into   string // for "olb", the table to merge into: "symbols", or "library" ("")
 }
 
-// inputList collects the inputs in command-line order, with the -prefix
-// and -sdl-stop settings in effect at each.
+// inputList collects the inputs in command-line order, with the -prefix,
+// -sdl-stop, and -into settings in effect at each.
 type inputList struct {
 	inputs []input
 	prefix string
 	stop   string
+	into   string
 }
 
 // inputFlag is one of the flags that names an input of kind.
@@ -83,13 +92,24 @@ type inputFlag struct {
 func (f inputFlag) String() string { return "" }
 
 func (f inputFlag) Set(path string) error {
-	f.list.inputs = append(f.list.inputs, input{kind: f.kind, path: path, prefix: f.list.prefix, stop: f.list.stop})
+	f.list.inputs = append(f.list.inputs, input{kind: f.kind, path: path, prefix: f.list.prefix, stop: f.list.stop, into: f.list.into})
 
 	return nil
 }
 
-// settingFlag is -prefix or -sdl-stop: it changes a setting for the
-// inputs after it.
+// dropList is the names -drop gives.
+type dropList []string
+
+func (d *dropList) String() string { return strings.Join(*d, ",") }
+
+func (d *dropList) Set(name string) error {
+	*d = append(*d, name)
+
+	return nil
+}
+
+// settingFlag is -prefix, -sdl-stop, or -into: it changes a setting for
+// the inputs after it.
 type settingFlag struct{ value *string }
 
 func (f settingFlag) String() string { return "" }
@@ -111,6 +131,11 @@ func main() {
 	flag.Var(inputFlag{&list, "olb"}, "olb", "merge an object library's definition modules' symbols")
 	flag.Var(settingFlag{&list.prefix}, "prefix", "keep only names with this prefix, in the inputs after it")
 	flag.Var(settingFlag{&list.stop}, "sdl-stop", "read the SDL sources after it only as far as this module")
+	flag.Var(settingFlag{&list.into}, "into", "merge the object libraries after it into \"symbols\" (Symbols) or \"library\" (LibrarySymbols)")
+
+	var drops dropList
+
+	flag.Var(&drops, "drop", "remove this name from Symbols (repeatable)")
 
 	replace := flag.Bool("replace", false, "let an input change a value the table already has")
 	dryRun := flag.Bool("n", false, "report what would change, and write nothing")
@@ -177,8 +202,18 @@ func main() {
 
 			fmt.Fprintf(os.Stderr, "gen: %s: %d definition modules\n", in.path, modules)
 
-			r = mergeSymbols(librarySymbols, defs, *replace)
-			librarySources = addSource(librarySources, file)
+			switch in.into {
+			case "", "library":
+				r = mergeSymbols(librarySymbols, defs, *replace)
+				librarySources = addSource(librarySources, file)
+
+			case "symbols":
+				r = mergeSymbols(symbols, defs, *replace)
+				symbolSources = addSource(symbolSources, file)
+
+			default:
+				log.Fatalf("gen: -into %q: the table is \"symbols\" or \"library\"", in.into)
+			}
 
 		default:
 			defs, err := in.read()
@@ -203,6 +238,16 @@ func main() {
 				fmt.Printf("change %s\n", c)
 			}
 		}
+	}
+
+	for _, name := range drops {
+		v, ok := symbols[name]
+		if !ok {
+			log.Fatalf("gen: -drop %s: Symbols has no such name", name)
+		}
+
+		delete(symbols, name)
+		fmt.Fprintf(os.Stderr, "gen: dropped %s (%#x)\n", name, v)
 	}
 
 	if len(conflicts) > 0 {

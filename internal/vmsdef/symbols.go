@@ -14,7 +14,8 @@ import (
 //     named code values, and RMS$_ completion codes; what .RMSDEF
 //     (internal/asm) defines as assembler symbols. The field offsets
 //     (FAB$L_STS, ...) come from FABFields and RABFields instead.
-//   - SS$_: $SSDEF's system-service completion codes.
+//   - SS$_: $SSDEF's system-service completion codes, exactly as
+//     STARLET.OLB's SYS$SSDEF defines them (docs/PHASE-31.md).
 //   - LNM$: $LNMDEF's attribute bits, limits, and item codes. LNM$_CHAIN
 //     is -1, stored as its 32-bit two's complement.
 //   - DEV$: $DEVDEF's device-characteristics bits, for both the DEVCHAR

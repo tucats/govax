@@ -327,3 +327,18 @@ golangci-lint clean, then a commit (and `build -i` where it changes behavior).
     using `$FAB`/`$RAB` need the real library.
   - DECC$SHR and CMA$TIS_SHR aren't captured (no image files on hand);
     `gen -image` adds them when they are.
+- 2026-09-30: Follow-up, at the author's direction: `Symbols`' SS$_ codes
+  corrected from STARLET. gen gained two flags:
+  - `-into symbols|library`, a setting that says which table the `-olb`
+    inputs after it merge into;
+  - `-drop NAME`, which removes a stale name.
+
+  Running `gen -replace -into symbols -prefix 'SS$_' -olb starlet.olb`
+  changed the five wrong codes and added 328 codes govax lacked. Then
+  `-drop` removed SS$_NOTMPJNL, SS$_NOPRMJNL, and SS$_EXTIDXFILE: they
+  aren't in VMS 7.3's STARLET or system message file, and their values
+  are 7.3's NOSHARE, NOUPGRADE, and TMACTIVE (`ssdef.txt` is an older
+  listing). `Symbols` has 3,789 names, and its 731 SS$_ codes are exactly
+  STARLET's (`TestSymbols_matchLibrarySymbols`). docs/DEVIATIONS.md's
+  entry is marked fixed; the build-dependent JPI$/SYI$ "last" markers and
+  the P1 spare slot are left as they are.

@@ -375,14 +375,12 @@ func TestSymbols_OBJ_values(t *testing.T) {
 // TestSymbols_matchLibrarySymbols checks the values govax's own table
 // (Symbols, from VMS's definition files) shares with the values STARLET.OLB
 // defines (LibrarySymbols): two independent sources. They agree except for
-// the names docs/DEVIATIONS.md lists: five SS$_ codes that ssdef.txt gives
-// wrongly (the system message file agrees with STARLET), and JPI$ and
-// SYI$ "last item" markers, which differ between VMS builds. A new
-// difference fails here.
+// the JPI$ and SYI$ "last item" markers docs/DEVIATIONS.md lists, which
+// differ between VMS builds. A new difference fails here. Every SS$_ code
+// is STARLET's, all of them merged from it (docs/PHASE-31.md), which
+// corrected five that ssdef.txt gave wrongly.
 func TestSymbols_matchLibrarySymbols(t *testing.T) {
 	known := map[string]bool{
-		"SS$_NOGRPPRV": true, "SS$_NOREADALL": true, "SS$_NOSHARE": true,
-		"SS$_NOUPGRADE": true, "SS$_SYSVERDIF": true,
 		"JPI$_LASTCTL": true, "JPI$_LASTPCB": true, "JPI$_LASTPHD": true,
 		"SYI$_LASTEXE": true, "SYI$_LASTFLD": true,
 	}
@@ -408,5 +406,17 @@ func TestSymbols_matchLibrarySymbols(t *testing.T) {
 
 	if both < 2000 {
 		t.Errorf("only %d names are in both tables", both)
+	}
+
+	for _, name := range SymbolNames("SS$_") {
+		if _, ok := LibrarySymbols[name]; !ok {
+			t.Errorf("%s isn't one of STARLET's SS$_ codes", name)
+		}
+	}
+
+	for name := range LibrarySymbols {
+		if _, ok := Symbols[name]; strings.HasPrefix(name, "SS$_") && !ok {
+			t.Errorf("STARLET's %s is missing from Symbols", name)
+		}
 	}
 }
