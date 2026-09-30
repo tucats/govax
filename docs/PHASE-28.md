@@ -11,7 +11,7 @@ Phase 27 fixtures do.
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress (subtasks 1-7 done; next, subtask 8).**
+**Status: in progress (subtasks 1-8 done; next, subtask 9).**
 
 ## Scope
 
@@ -227,7 +227,7 @@ inside it. Repeat blocks collect their lines to `.ENDR` the same way.
    default file type (`.MLB` or `.OLB`). Host files and volume files, by
    the rules MACRO and LINK use. The `cmd/govax library` subcommand
    follows.
-8. **govax's own STARLET.MLB** in bootdata: a govax-written
+8. **Done.** **govax's own STARLET.MLB** in bootdata: a govax-written
    `STARLET.MAR` (starting with `$EXIT_S`) and the `.MLB` generated from
    it, with a test that they match.
 9. **The MACRO command:** STARLET.MLB found as above (volume, then
@@ -709,3 +709,51 @@ All settled (2026-09-30):
   one kept and not purging the file, and a location without a version
   refused); `TestLibrary_volume` now checks that a change keeps version
   1, and `/CREATE` makes version 2.
+
+### 2026-09-30 — Subtask 8: govax's own STARLET.MLB
+
+- **`internal/bootdata/files/starlet.mar`** holds govax's system macros:
+  `$EXIT_S`, and the services a "hello" program needs, `$ASSIGN_S`,
+  `$DASSGN_S`, `$QIO_S`, and `$QIOW_S`. They're written from the *System
+  Services Reference Manual*'s argument lists (each service's list is in a
+  comment above its macro), with the same keyword names and defaults as
+  VMS's so that calls written for VMS work unchanged. Four helpers push
+  arguments: `$PUSHADR` (by reference, or zero for an omitted one),
+  `$PUSHVALS` (two by value), and `$PUSHVALADR`/`$PUSHADRVAL` (one each).
+  Each pair helper clears a quadword (`CLRQ -(SP)`) when both of its
+  arguments are omitted, as VMS's macros do.
+- **`$PUSHADR` and `.NTYPE`.** An address is pushed with `PUSHAB` unless the
+  addressing mode makes it depend on the operand's size: a literal,
+  autoincrement, autodecrement, or an index. A literal is recognized by
+  its `#` (but not absolute mode's `@#`) rather than by `.NTYPE`. The first
+  version used `.NTYPE` for literals too, and caught absolute and general
+  mode, which govax's `.NTYPE` numbers `^X2F` and `^X3F` (the manual's PC
+  modes 2 and 3). Checking the text works whichever numbering real
+  MACRO uses (still to be confirmed, subtask 10).
+- **`BuildStarlet`** (`internal/bootdata/starlet.go`) builds the library
+  as `LIBRARY/CREATE/MACRO` does, through `lbr.Create`, `MacroModules`
+  (squeezed), and `Insert`, with a fixed creation and insertion time
+  (30-SEP-2026 00:00, UTC) so the output changes only when the source
+  does. A librarian warning is an error. `go generate ./internal/bootdata`
+  runs `internal/bootdata/mkstarlet` to write `files/starlet.mlb` (9
+  modules, 15 blocks), which is committed. `bootdata.StarletLibrary` and
+  `StarletSource` name the two files for subtask 9.
+- Tests: `internal/bootdata/starlet_test.go` checks that the committed
+  library is what the source builds (the drift check), what its modules
+  hold, and that a source with errors is refused.
+  `internal/asm/govaxstarlet_test.go` assembles calls of every macro,
+  with arguments omitted, zero, by value, and by reference in every
+  addressing mode `$PUSHADR` distinguishes. `TestGovaxStarletAssembles`
+  runs without the licensed library. `TestGovaxStarletMatchesReal` (which
+  skips without `testdata/vmslib/starlet.mlb`) checks that each call
+  gives the same object module, record for record, from govax's library
+  as from VMS's.
+- **Found, not changed:** the assembler can't assemble a quadword
+  immediate operand (`MOVQ #1000,R0`, or `PUSHAQ I^#5`, which
+  `$ASSIGN_S DEVNAM=I^#5` expands to from either library): it fails with
+  `VAX_BADSCALE`, because `storeScaled` (from eVAX) writes only 1, 2, or
+  4 bytes. Octaword and D/G/H-float immediates are presumably the same.
+  Also, `PUSHAW S^#6` assembles a short literal in an address operand
+  (`3F 06`), which is a reserved addressing mode fault on a real VAX.
+  Real MACRO presumably reports it as an error, and the fixtures could
+  show what it does (subtask 10).

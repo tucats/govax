@@ -7,6 +7,10 @@
 // this package's own directory, which is why a copy exists here rather than
 // embedding testdata/ in place.
 //
+// It also holds govax's own STARLET.MLB, the system macro library MACRO
+// falls back on, and STARLET.MAR, the source it's generated from
+// (starlet.go; docs/PHASE-28.md).
+//
 // FS is the last, implicit entry in every internal/respath.Resolver's
 // search order: a "govax" invocation with no "-path" flags at all still
 // boots correctly, purely off these embedded copies.
@@ -29,6 +33,6 @@ func mustSub(f embed.FS, dir string) fs.FS {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	return sub
 }

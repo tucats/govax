@@ -1,0 +1,159 @@
+; STARLET.MAR: govax's own system macros.
+;
+; This is the source of govax's STARLET.MLB, the macro library MACRO uses
+; when neither SYS$LIBRARY:STARLET.MLB on a mounted volume nor STARLET.MLB
+; in the host library directory exists. The macros are written from the
+; argument lists in the OpenVMS System Services Reference Manual, not
+; copied from VMS's STARLET, and a test (internal/asm) checks that each
+; call expands to the same code as the real library's.
+;
+; After changing this file, run "go generate ./internal/bootdata" to
+; rebuild starlet.mlb; a test fails if the two don't match. The library is
+; built as LIBRARY/CREATE/MACRO builds one, which squeezes out comments
+; (from each line's last semicolon), so keep semicolons out of strings.
+;
+; Helper macros:
+;
+;   $PUSHADR ADDR,CONTEXT=L
+;	Push the address of an argument passed by reference, or zero for an
+;	omitted one (0). CONTEXT is the operand's size (B, W, L, Q), which
+;	matters only for an addressing mode whose address depends on it:
+;	a literal (short or immediate), autoincrement, autodecrement, or an
+;	indexed operand. Everything else is pushed with PUSHAB. A literal
+;	is recognized by its "#" (absolute mode's "@#" isn't one), not by
+;	.NTYPE, so it doesn't matter how .NTYPE numbers the PC modes.
+;
+;   $PUSHVALS A,B
+;	Push two longwords passed by value, A first, or clear a quadword
+;	when both are #0.
+;
+;   $PUSHVALADR VAL,ADDR,CONTEXT=L
+;	Push VAL by value, then ADDR by reference, or clear a quadword when
+;	VAL is #0 and ADDR is 0.
+;
+;   $PUSHADRVAL ADDR,VAL,CONTEXT=L
+;	Push ADDR by reference, then VAL by value, or clear a quadword when
+;	ADDR is 0 and VAL is #0.
+;
+; An argument list is pushed last argument first, so each service macro
+; pushes its arguments in the reverse of their order in the call.
+
+	.MACRO	$PUSHADR ADDR,CONTEXT=L
+	.IF	IDN,<0>,<ADDR>
+	PUSHL	#0
+	.MEXIT
+	.ENDC
+	$$SIZED = 0
+	.IIF	LT,%LOCATE(<#>,ADDR)-%LENGTH(ADDR),	$$SIZED = 1	; literal
+	.IIF	LT,%LOCATE(<@#>,ADDR)-%LENGTH(ADDR),	$$SIZED = 0	; absolute
+	.NTYPE	$$MODE,ADDR
+	.IIF	NE,<$$MODE&^XFF00>,	$$SIZED = 1	; indexed
+	.IIF	EQ,<$$MODE&^XF0>-^X70,	$$SIZED = 1	; autodecrement
+	.IIF	EQ,<$$MODE&^XF0>-^X80,	$$SIZED = 1	; autoincrement
+	.IF	NE,$$SIZED
+	PUSHA'CONTEXT	ADDR
+	.IFF
+	PUSHAB	ADDR
+	.ENDC
+	.ENDM	$PUSHADR
+
+	.MACRO	$PUSHVALS A,B
+	.IF	IDN,<#0>,<A>
+	.IF	IDN,<#0>,<B>
+	CLRQ	-(SP)
+	.MEXIT
+	.ENDC
+	.ENDC
+	PUSHL	A
+	PUSHL	B
+	.ENDM	$PUSHVALS
+
+	.MACRO	$PUSHVALADR VAL,ADDR,CONTEXT=L
+	.IF	IDN,<#0>,<VAL>
+	.IF	IDN,<0>,<ADDR>
+	CLRQ	-(SP)
+	.MEXIT
+	.ENDC
+	.ENDC
+	PUSHL	VAL
+	$PUSHADR ADDR,CONTEXT=CONTEXT
+	.ENDM	$PUSHVALADR
+
+	.MACRO	$PUSHADRVAL ADDR,VAL,CONTEXT=L
+	.IF	IDN,<0>,<ADDR>
+	.IF	IDN,<#0>,<VAL>
+	CLRQ	-(SP)
+	.MEXIT
+	.ENDC
+	.ENDC
+	$PUSHADR ADDR,CONTEXT=CONTEXT
+	PUSHL	VAL
+	.ENDM	$PUSHADRVAL
+
+; $ASSIGN devnam, chan, [acmode], [mbxnam], [flags]
+;	devnam and mbxnam are descriptors, by reference. chan is a word
+;	written by the service, by reference. acmode and flags are by value.
+
+	.MACRO	$ASSIGN_S DEVNAM,CHAN,ACMODE=#0,MBXNAM=0,FLAGS=#0
+	.GLOBL	SYS$ASSIGN
+	PUSHL	FLAGS
+	$PUSHADRVAL MBXNAM,ACMODE,CONTEXT=Q
+	$PUSHADR CHAN,CONTEXT=W
+	$PUSHADR DEVNAM,CONTEXT=Q
+	CALLS	#5,G^SYS$ASSIGN
+	.ENDM	$ASSIGN_S
+
+; $DASSGN chan
+;	chan is a word, by value.
+
+	.MACRO	$DASSGN_S CHAN
+	.GLOBL	SYS$DASSGN
+	MOVZWL	CHAN,-(SP)
+	CALLS	#1,G^SYS$DASSGN
+	.ENDM	$DASSGN_S
+
+; $EXIT [code]
+;	code is a longword, by value.
+
+	.MACRO	$EXIT_S	CODE=#1
+	.GLOBL	SYS$EXIT
+	PUSHL	CODE
+	CALLS	#1,G^SYS$EXIT
+	.ENDM	$EXIT_S
+
+; $QIO [efn], chan, func, [iosb], [astadr], [astprm], [p1]...[p6]
+; $QIOW takes the same arguments.
+;	efn and astprm are longwords, by value. chan and func are words, by
+;	value. iosb is a quadword, by reference, and astadr a procedure, by
+;	reference. p1 is by reference (a buffer's address), and p2 through
+;	p6 by value.
+
+	.MACRO	$QIO_S	EFN=#0,CHAN,FUNC,IOSB=0,ASTADR=0,ASTPRM=#0,-
+			P1=0,P2=#0,P3=#0,P4=#0,P5=#0,P6=#0
+	.GLOBL	SYS$QIO
+	$PUSHVALS P6,P5
+	$PUSHVALS P4,P3
+	PUSHL	P2
+	$PUSHADR P1
+	$PUSHVALADR ASTPRM,ASTADR
+	$PUSHADR IOSB,CONTEXT=Q
+	MOVZWL	FUNC,-(SP)
+	MOVZWL	CHAN,-(SP)
+	PUSHL	EFN
+	CALLS	#12,G^SYS$QIO
+	.ENDM	$QIO_S
+
+	.MACRO	$QIOW_S	EFN=#0,CHAN,FUNC,IOSB=0,ASTADR=0,ASTPRM=#0,-
+			P1=0,P2=#0,P3=#0,P4=#0,P5=#0,P6=#0
+	.GLOBL	SYS$QIOW
+	$PUSHVALS P6,P5
+	$PUSHVALS P4,P3
+	PUSHL	P2
+	$PUSHADR P1
+	$PUSHVALADR ASTPRM,ASTADR
+	$PUSHADR IOSB,CONTEXT=Q
+	MOVZWL	FUNC,-(SP)
+	MOVZWL	CHAN,-(SP)
+	PUSHL	EFN
+	CALLS	#12,G^SYS$QIOW
+	.ENDM	$QIOW_S
