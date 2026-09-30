@@ -73,6 +73,14 @@ regression suite that assembles and runs every `testdata/asm/*.asm`
 program and every real `testdata/exe/*.exe` binary the project ships,
 alongside the ROM/NVRAM save-and-load round trip.
 
+Recent updates include a MACRO console command that assembles .MAR
+files (either from the host system or a Files-11 disk container) and
+creates .OBJ object files, and a LINK console command that links
+.OBJ files into an .EXE file. This can be used to create a simple
+hello world program that assembles, links, and runs identically on
+a real VAX as it does on govax.
+
+
 ## What's next?
 
 With the assembler, skelatal RTL, and image loader all in place, the
@@ -83,7 +91,6 @@ natural next steps are:
 - Add the MACRO-32 macro facility, so programs can use the system
   macros in `STARLET.MLB` (Phase 28), and listings and traceback
   records (Phase 29).
-- Work on a linker that can link .OBJ files into an .EXE (Phase 30)
 
 Beyond that, this project was never aiming to emulate real hardware
 (disk controllers, network controllers, etc.) or boot an unmodified
