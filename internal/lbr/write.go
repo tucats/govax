@@ -6,7 +6,6 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"time"
 )
 
 // This file writes libraries: a Builder holds a library's modules in
@@ -183,13 +182,6 @@ func Edit(l *Library) (*Builder, error) {
 
 func rfaLess(a, b RFA) bool {
 	return a.VBN < b.VBN || a.VBN == b.VBN && a.Offset < b.Offset
-}
-
-// VMSTime converts t to a VMS time: 100 ns units since 17-Nov-1858.
-func VMSTime(t time.Time) uint64 {
-	const unixEpoch = 0x007C95674BEB4000 // 1-Jan-1970, in VMS time
-
-	return uint64(t.UnixNano()/100) + unixEpoch
 }
 
 // Module returns the module named name.

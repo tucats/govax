@@ -808,4 +808,52 @@ grammar console
                     /default=""
         qualifier   brief/id=1357
 
+    !
+    ! govax-native extension (docs/PHASE-28.md subtask 7, internal/console
+    ! + internal/lbr): LIBRARY creates, changes, extracts from, and lists
+    ! macro (.MLB) and object (.OLB) libraries, in the style of VMS's
+    ! LIBRARIAN. LIBRARY and INPUTS each carry their own HOST qualifier,
+    ! as COPY's parameters do. With input files and no operation named,
+    ! they replace modules of the same names (LIBRARIAN's default
+    ! /REPLACE). DELETE and EXTRACT take module names, which may hold * and
+    ! %. LIST is /LIST[=file] (empty default: the console). MACRO or OBJECT
+    ! picks a new library's type; SQUEEZE is on unless /NOSQUEEZE.
+    !
+    verb library/id=1400
+
+        parameter   library/id=1401             -
+                    /type=$string               -
+                    /prompt="Library"
+        qualifier   host/id=1402                -
+                    /parameter=library
+
+        parameter   inputs/id=1403              -
+                    /type=$string/list
+        qualifier   host/id=1404                -
+                    /parameter=inputs
+
+        qualifier   create/id=1405
+        qualifier   insert/id=1406
+        qualifier   replace/id=1407
+        qualifier   delete/id=1408              -
+                    /type=$string/list
+        qualifier   extract/id=1409             -
+                    /type=$string/list
+        qualifier   output/id=1410              -
+                    /type=$string
+        qualifier   list/id=1411                -
+                    /type=$string               -
+                    /default=""
+        qualifier   full/id=1412
+        qualifier   names/id=1413
+        qualifier   width/id=1414               -
+                    /type=$integer
+        qualifier   macro/id=1415
+        qualifier   object/id=1416
+        qualifier   squeeze/id=1417
+        qualifier   selective_search/id=1418
+        qualifier   log/id=1419
+        disallow    macro and object
+        disallow    insert and replace
+
 end

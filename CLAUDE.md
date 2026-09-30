@@ -100,12 +100,14 @@ expect adjustment as phases land):
   libraries (`dcx.go`) such as STARLET.OLB. Writes them too (Phase 28): `Builder`
   (`Create`/`Edit`, `Insert`/`Replace`/`Delete`, `Bytes`) lays a library out as
   VMS's librarian does, and `MacroModules`/`ObjectModules` (`input.go`) apply
-  LIBRARIAN's rules for turning macro source and object files into modules.
-  Imports only `internal/obj`.
+  LIBRARIAN's rules for turning macro source and object files into modules;
+  `List` is LIBRARY/LIST's listing, in LIBRARIAN's own formats. The console's
+  `LIBRARY` command (`internal/console/library.go`) drives it. Imports only
+  `internal/obj` and `internal/vmsdef`.
 - `cmd/govax` — `main.go` (CLI entry point) plus `grammar.go` (the `tucats/gopackages`
   `app-cli/cli` option/subcommand grammar — `stats`/`path`/`instruction-limit`/
   `time-limit` options, repeatable `mount`/`mount-write DEVICE=container`,
-  `console`/`asm`/`run`/`macro`/`link` subcommands). A one-shot subcommand that fails
+  `console`/`asm`/`run`/`macro`/`link`/`library` subcommands). A one-shot subcommand that fails
   makes govax exit nonzero, and volumes still mounted are dismounted (flushed)
   when a session ends. Briefly moved to the repo
   root (2026-09-17); moved back into `cmd/govax` as the more standard layout

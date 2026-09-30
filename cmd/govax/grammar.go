@@ -28,7 +28,25 @@ var (
 
 	// link holds the link subcommand's options.
 	link linkFlags
+
+	// library holds the library subcommand's options.
+	library libraryFlags
 )
+
+// libraryFlags are the library subcommand's options, which become the
+// LIBRARY command's qualifiers.
+type libraryFlags struct {
+	create, insert, replace bool     // --create, --insert, --replace
+	delete, extract         []string // --delete, --extract: module names
+	output                  string   // --output
+	list                    bool     // --list, or --list-file
+	listFile                string   // --list-file
+	full, names             bool     // --full, --names
+	macro, object           bool     // --macro, --object
+	noSqueeze               bool     // --no-squeeze
+	selective               bool     // --selective-search
+	log                     bool     // --log
+}
 
 // linkFlags are the link subcommand's options, which become the LINK
 // command's qualifiers.
@@ -130,6 +148,15 @@ var grammar = []cli.Option{
 		ParametersExpected:   -99,
 		ParameterDescription: "object...",
 		Value:                linkGrammar,
+	},
+	{
+		LongName:             "library",
+		Description:          "Create, change, extract from, or list a macro or object library",
+		OptionType:           cli.Subcommand,
+		Action:               libraryCmd,
+		ParametersExpected:   -99,
+		ParameterDescription: "library [input...]",
+		Value:                libraryGrammar,
 	},
 	{
 		LongName:             "run",
@@ -262,6 +289,74 @@ var linkGrammar = []cli.Option{
 			return nil
 		},
 	},
+}
+
+// libraryGrammar is the library subcommand's own options.
+var libraryGrammar = []cli.Option{
+	libraryBool("create", "Create a new library", &library.create),
+	libraryBool("insert", "Insert the input files' modules; a module already there is a warning", &library.insert),
+	libraryBool("replace", "Replace modules with the input files' (the default with input files)", &library.replace),
+	libraryList("delete", "Delete these modules (comma-separated; * and % wildcards)", &library.delete),
+	libraryList("extract", "Extract these modules (comma-separated; * and % wildcards)", &library.extract),
+	{
+		LongName:    "output",
+		Description: "The file for extracted modules (default: the library's name, with type .obj or .mar)",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			library.output, _ = c.String("output")
+
+			return nil
+		},
+	},
+	libraryBool("list", "List the library", &library.list),
+	{
+		LongName:    "list-file",
+		Description: "List the library to this file",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			library.list = true
+			library.listFile, _ = c.String("list-file")
+
+			return nil
+		},
+	},
+	libraryBool("full", "List each module's ident, insertion time, and symbol count", &library.full),
+	libraryBool("names", "List each object module's global symbols", &library.names),
+	libraryBool("macro", "A macro library (.mlb)", &library.macro),
+	libraryBool("object", "An object library (.olb, the default)", &library.object),
+	libraryBool("no-squeeze", "Keep macros' comments and trailing blanks", &library.noSqueeze),
+	libraryBool("selective-search", "Mark inserted object modules for selective search", &library.selective),
+	libraryBool("log", "Report each module inserted, replaced, or deleted", &library.log),
+}
+
+// libraryBool is a library subcommand option that sets a flag.
+func libraryBool(name, description string, flag *bool) cli.Option {
+	return cli.Option{
+		LongName:    name,
+		Description: description,
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			*flag = true
+
+			return nil
+		},
+	}
+}
+
+// libraryList is a library subcommand option holding comma-separated
+// module names; it can also be repeated.
+func libraryList(name, description string, list *[]string) cli.Option {
+	return cli.Option{
+		LongName:    name,
+		Description: description,
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			text, _ := c.String(name)
+			*list = append(*list, strings.Split(text, ",")...)
+
+			return nil
+		},
+	}
 }
 
 // addMount records one --mount or --mount-write option. Each use of the
@@ -408,6 +503,86 @@ func linkCommand(objects []string, f linkFlags) string {
 
 	if f.brief {
 		command += "/BRIEF"
+	}
+
+	return command
+}
+
+// libraryCmd runs the console's LIBRARY command for the library and input
+// files given.
+func libraryCmd(c *cli.Context) error {
+	params := c.FindGlobal().Parameters
+	if len(params) == 0 {
+		return fmt.Errorf("library: expected a library file")
+	}
+
+	paths = loadConfigPaths(paths)
+
+	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{libraryCommand(params[0], params[1:], library)})
+}
+
+// libraryCommand is the console LIBRARY command for the library
+// subcommand's files and options. File and module names are quoted, so
+// DCL keeps their case.
+func libraryCommand(lib string, inputs []string, f libraryFlags) string {
+	command := "LIBRARY " + dclQuote(lib)
+
+	if len(inputs) > 0 {
+		quoted := make([]string, len(inputs))
+		for i, name := range inputs {
+			quoted[i] = dclQuote(name)
+		}
+
+		command += " " + strings.Join(quoted, ",")
+	}
+
+	for _, q := range []struct {
+		set  bool
+		name string
+	}{
+		{f.create, "/CREATE"}, {f.insert, "/INSERT"}, {f.replace, "/REPLACE"},
+		{f.macro, "/MACRO"}, {f.object, "/OBJECT"}, {f.noSqueeze, "/NOSQUEEZE"},
+		{f.selective, "/SELECTIVE_SEARCH"}, {f.log, "/LOG"},
+	} {
+		if q.set {
+			command += q.name
+		}
+	}
+
+	modules := func(names []string) string {
+		quoted := make([]string, len(names))
+		for i, n := range names {
+			quoted[i] = dclQuote(n)
+		}
+
+		return "(" + strings.Join(quoted, ",") + ")"
+	}
+
+	if len(f.delete) > 0 {
+		command += "/DELETE=" + modules(f.delete)
+	}
+
+	if len(f.extract) > 0 {
+		command += "/EXTRACT=" + modules(f.extract)
+	}
+
+	if f.output != "" {
+		command += "/OUTPUT=" + dclQuote(f.output)
+	}
+
+	switch {
+	case f.listFile != "":
+		command += "/LIST=" + dclQuote(f.listFile)
+	case f.list:
+		command += "/LIST"
+	}
+
+	if f.full {
+		command += "/FULL"
+	}
+
+	if f.names {
+		command += "/NAMES"
 	}
 
 	return command

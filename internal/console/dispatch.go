@@ -580,6 +580,34 @@ func (d *Dispatcher) bindGrammar() {
 		})
 	})
 
+	// docs/PHASE-28.md subtask 7: LIBRARY creates, changes, extracts
+	// from, and lists libraries (Console.Library, internal/console/
+	// library.go).
+	g.Bind("LIBRARY", func(id int64, r *dcl.Result) error {
+		return d.Console.Library(LibraryOptions{
+			Library:     r.String("LIBRARY"),
+			LibraryHost: r.ParamPresent("LIBRARY", "HOST"),
+			Inputs:      r.List("INPUTS"),
+			InputHost:   r.ParamPresent("INPUTS", "HOST"),
+			Create:      r.Present("CREATE"),
+			Insert:      r.Present("INSERT"),
+			Replace:     r.Present("REPLACE"),
+			Delete:      r.List("DELETE"),
+			Extract:     r.List("EXTRACT"),
+			Output:      r.String("OUTPUT"),
+			List:        r.Present("LIST") && !r.Negated("LIST") && !r.Defaulted("LIST"),
+			ListFile:    r.String("LIST"),
+			Full:        r.Present("FULL"),
+			Names:       r.Present("NAMES"),
+			Width:       int(r.Int("WIDTH")),
+			Macro:       r.Present("MACRO"),
+			Object:      r.Present("OBJECT"),
+			NoSqueeze:   r.Present("SQUEEZE") && r.Negated("SQUEEZE"),
+			Selective:   r.Present("SELECTIVE_SEARCH"),
+			Log:         r.Present("LOG"),
+		})
+	})
+
 	g.Bind("MACRO", func(id int64, r *dcl.Result) error {
 		return d.Console.Macro(MacroOptions{
 			Source:      r.String("SOURCE"),

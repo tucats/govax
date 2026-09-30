@@ -11,7 +11,7 @@ Phase 27 fixtures do.
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress (subtasks 1-6 done; next, subtask 7).**
+**Status: in progress (subtasks 1-7 done; next, subtask 8).**
 
 ## Scope
 
@@ -221,7 +221,7 @@ inside it. Repeat blocks collect their lines to `.ENDR` the same way.
    (module-name index, plus the global symbols from each object's GSD).
    Round-trip tests through `lbr.Open`; the real STARLET.MLB's modules
    rewritten into a new library must read back unchanged.
-7. **The `LIBRARY` command,** in VMS's style: `/CREATE`, `/INSERT`,
+7. **Done.** **The `LIBRARY` command,** in VMS's style: `/CREATE`, `/INSERT`,
    `/REPLACE`, `/DELETE=`, `/EXTRACT=` with `/OUTPUT=`, `/LIST`, and
    `/MACRO` or `/OBJECT` (the default, as on VMS) choosing the type and the
    default file type (`.MLB` or `.OLB`). Host files and volume files, by
@@ -533,8 +533,8 @@ All settled (2026-09-30):
   end), and `Delete`, with index 2's symbols kept per module: a symbol
   another module defines, a duplicate module, an over-long key, or a
   record over 2048 bytes is an error, and a failed replacement leaves the
-  old module. `VMSTime` converts a `time.Time`; callers set the creation,
-  update, and insertion times, so output is reproducible (subtask 8's
+  old module. Callers set the creation, update, and insertion times
+  (`vmsdef.Time` converts a `time.Time`), so output is reproducible (subtask 8's
   generated STARLET.MLB needs that).
 - **`Bytes` lays the file out as the librarian would** by creating the
   library and inserting the modules in order (`lbr/lis/openclose.lis`'s
@@ -599,3 +599,81 @@ All settled (2026-09-30):
   the same keys in both indexes naming the same modules, and every
   module's header and records unchanged; rewriting the result gives the
   same bytes.
+
+### 2026-09-30 — Subtask 7: the `LIBRARY` command
+
+- **`LIBRARY library [input,...]`** (`internal/console/library.go`, the
+  `library` verb in `console.dcl`), in LIBRARIAN's style: `/CREATE`,
+  `/INSERT`, `/REPLACE`, `/DELETE=(...)`, `/EXTRACT=(...)` with `/OUTPUT=`,
+  `/LIST[=file]` with `/FULL`, `/NAMES`, and `/WIDTH=`, `/MACRO` or
+  `/OBJECT` (the default), `/[NO]SQUEEZE`, `/SELECTIVE_SEARCH`, and `/LOG`.
+  The library and the inputs each take COPY's parameter-scoped `/HOST`.
+  - With input files and no operation named, the inputs replace modules
+    of the same names, LIBRARIAN's default `/REPLACE`; with `/INSERT` or
+    `/CREATE`, a module already in the library is a warning and is left
+    alone. Macro sources (`.MAR`) go into a macro library, object files
+    (`.OBJ`) into an object library, through subtask 6's `MacroModules`
+    and `ObjectModules`.
+  - `/DELETE=` runs first, then the inserts; `/EXTRACT=` and `/LIST` see
+    the library as changed. Module names in `/DELETE=` and `/EXTRACT=` may
+    hold `*` and `%` (`lbr.Library.Match`, `lbr.Builder.Match`), upper-cased
+    unless the index compares case as it is (an object library's does).
+    A name matching nothing is a warning.
+  - An existing library keeps its own type; `/MACRO` on an object library
+    (or the reverse) is an error. `/MACRO` and `/OBJECT` together, and
+    `/INSERT` with `/REPLACE`, are refused by the grammar.
+  - Files are found as MACRO and LINK find theirs (`rms.Session.Locate`):
+    each input beside the one before it, default type `MAR` or `OBJ`;
+    `/OUTPUT=` and a `/LIST=` file beside the library, default types `OBJ`
+    or `MAR` (by the library's type) and `LIS`. The library's default
+    type is `OLB`, or `MLB` with `/MACRO`.
+  - **One difference from LIBRARIAN, on purpose:** LIBRARIAN updates a
+    library in place. govax builds the whole library in memory and writes
+    it only when every step has succeeded, so a failure (an unfinished
+    macro, a missing input, a symbol another module defines) leaves the
+    library as it was. A host library is replaced; a volume library gets
+    a new version, as MACRO's objects and LINK's images do, rather than
+    keeping its version as LIBRARIAN's in-place update would.
+  - New status codes: `CLI_LIBRARY` (error), `CLI_LIBWARNING` (warning),
+    and `/LOG`'s `CLI_LIBINSERTED`, `CLI_LIBREPLACED`, and
+    `CLI_LIBDELETED`, worded as LIBRARIAN's `INSERTED`, `REPLACED`, and
+    `DELETED` messages. `/LOG` prints once the library is written, so the
+    messages can name the version written.
+- **The listing** (`lbr.Library.List`, `internal/lbr/list.go`) is
+  LIBRARIAN's `listlib.lis`, format string for format string: the
+  "Directory of ... library ... on ..." line and the six header lines
+  (creation and revision dates, format level, module count, key length,
+  other entries, preallocated and used index blocks, deleted blocks, and
+  history records), "Library is in DCX data reduced format" when it is,
+  then a line per module. `/FULL` adds an object module's ident,
+  insertion time, and symbol count (the unpadded form when the name or
+  ident is over 15 characters, "Selectively searched" under a selective
+  module, and a shareable image library module's GSMATCH as `!2XL,!6XL`),
+  or a macro's insertion time. `/NAMES` prefixes "Module " and lists each
+  object module's global symbols in columns a key and two blanks wide,
+  as many as fit in the line width (80 on the console, 132 in a file, or
+  `/WIDTH=`), then a blank line. Dates are `$ASCTIM`'s cut to 20
+  characters, and numbers overflowing their FAO field become asterisks.
+  Real `LIBRARY/LIST` output isn't in the fixtures yet; subtask 10
+  compares the two.
+- `internal/lbr` gained the header counts the listing reports
+  (`HistoryRecords`, `IndexEntries`, `IndexBlocks`, `Preallocated`,
+  `DeletedBlocks`), `KeySize`, `DataReduced`, and `Header` (a module's
+  header without its records). Subtask 6's `lbr.VMSTime` is gone:
+  `vmsdef.Time` already converts with VMS's wall-clock convention, which
+  `VMSTime` got wrong (it ignored the local zone offset).
+- **`govax library LIB [INPUT...]`** (`cmd/govax`): `--create`,
+  `--insert`, `--replace`, `--delete` and `--extract` (comma-separated,
+  repeatable), `--output`, `--list`, `--list-file`, `--full`, `--names`,
+  `--macro`, `--object`, `--no-squeeze`, `--selective-search`, `--log`,
+  run as a one-shot LIBRARY command with every name quoted.
+- Tests: `internal/lbr/list_test.go` (wildcards, case rules, and a full
+  `/NAMES` listing line for line); `internal/console/library_test.go` (a
+  host macro library through create, insert, replace, `/NOSQUEEZE`,
+  extract, delete, and list, then used by the assembler through
+  `asm.NewMacroLibrary`; an object library listed with `/FULL/NAMES` and
+  searched by LINK for a subroutine, the program run to check the
+  subroutine's result; a volume library getting a new version and a
+  listing file; failures leaving the library unchanged; and the DCL
+  grammar); `cmd/govax/library_test.go` (the command line, and a
+  one-shot create and list).

@@ -604,17 +604,6 @@ func TestInsertReplaceDelete(t *testing.T) {
 	}
 }
 
-func TestVMSTime(t *testing.T) {
-	// VMS time 0 is 17-Nov-1858.
-	if got := VMSTime(time.Date(1858, 11, 17, 0, 0, 0, 0, time.UTC)); got != 0 {
-		t.Errorf("17-Nov-1858 is %d", got)
-	}
-
-	if got := VMSTime(time.Unix(1, 0)); got != 0x007C95674BEB4000+10_000_000 {
-		t.Errorf("1 second past 1970 is %#x", got)
-	}
-}
-
 // TestRewriteVMSLibraries rewrites real libraries through Edit: every
 // module reads back unchanged, with the same header, keys, and symbols,
 // and rewriting the result changes nothing.

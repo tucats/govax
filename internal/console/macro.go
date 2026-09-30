@@ -159,10 +159,16 @@ func joinLines(lines [][]byte) string {
 // console's status for it: an unmounted device or a bad logical name as
 // fileFailure reports them, and anything else as CLI_OBJWRITE.
 func objectFailure(err error, spec string) error {
+	return objectFailureAs(vmserrors.CLI_OBJWRITE, err, spec)
+}
+
+// objectFailureAs is objectFailure for any command's output file, with
+// status for what fileFailure doesn't report.
+func objectFailureAs(status uint32, err error, spec string) error {
 	var notMounted *rms.NotMountedError
 	if logicalNameFailure(err) != nil || errors.As(err, &notMounted) {
 		return fileFailure(err, spec)
 	}
 
-	return vmserrors.Wrap(vmserrors.CLI_OBJWRITE, err, spec)
+	return vmserrors.Wrap(status, err, spec)
 }

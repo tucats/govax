@@ -124,6 +124,13 @@ const (
 
 	// docs/PHASE-30.md: the LINK command.
 	cliLinking
+
+	// docs/PHASE-28.md subtask 7: the LIBRARY command.
+	cliLibrary
+	cliLibWarning
+	cliLibInserted
+	cliLibReplaced
+	cliLibDeleted
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -268,6 +275,24 @@ const (
 	// CLI_LINKING reports a LINK that couldn't read an object module,
 	// link the image, or write it.
 	CLI_LINKING = CLIFacility<<FacilityPosition | cliLinking<<MessagePosition | StatusError
+
+	// CLI_LIBRARY reports a LIBRARY command that couldn't read or write
+	// its library, or an input or output file; the library is left as it
+	// was.
+	CLI_LIBRARY = CLIFacility<<FacilityPosition | cliLibrary<<MessagePosition | StatusError
+
+	// CLI_LIBWARNING reports a LIBRARY problem that doesn't stop the
+	// command, as LIBRARIAN's warnings don't: a module already in the
+	// library with /INSERT, a module name that matches nothing, or a
+	// macro whose .ENDM names another.
+	CLI_LIBWARNING = CLIFacility<<FacilityPosition | cliLibWarning<<MessagePosition | StatusWarning
+
+	// CLI_LIBINSERTED, CLI_LIBREPLACED, and CLI_LIBDELETED are LIBRARY
+	// /LOG's messages, in the words of LIBRARIAN's LIBRAR$_INSERTED,
+	// _REPLACED, and _DELETED.
+	CLI_LIBINSERTED = CLIFacility<<FacilityPosition | cliLibInserted<<MessagePosition | StatusSuccess
+	CLI_LIBREPLACED = CLIFacility<<FacilityPosition | cliLibReplaced<<MessagePosition | StatusSuccess
+	CLI_LIBDELETED  = CLIFacility<<FacilityPosition | cliLibDeleted<<MessagePosition | StatusSuccess
 )
 
 func init() {
@@ -370,5 +395,10 @@ func init() {
 	DefineMessage(CLI_ASMWARNING, CLIFacility, "ASMWARNING", "Assembling !S")
 	DefineMessage(CLI_OBJWRITE, CLIFacility, "OBJWRITE", "Writing object file !S")
 	DefineMessage(CLI_LINKING, CLIFacility, "LINKING", "Linking !S")
+	DefineMessage(CLI_LIBRARY, CLIFacility, "LIBRARY", "Library !S")
+	DefineMessage(CLI_LIBWARNING, CLIFacility, "LIBWARNING", "Library !S")
+	DefineMessage(CLI_LIBINSERTED, CLIFacility, "INSERTED", "module !S inserted in !S")
+	DefineMessage(CLI_LIBREPLACED, CLIFacility, "REPLACED", "module !S replaced in !S")
+	DefineMessage(CLI_LIBDELETED, CLIFacility, "DELETED", "module !S deleted from !S")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

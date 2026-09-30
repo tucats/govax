@@ -5,7 +5,7 @@
 // docs/PHASE-28.md's subtask 6, write.go and input.go). It reads a library
 // from its bytes and writes one as bytes; callers find, read, and write
 // the file. It imports only internal/obj, to read object modules' names
-// and symbols.
+// and symbols, and internal/vmsdef, for times.
 //
 // The format comes from VMS 7.3's librarian sources
 // (vmssrc_archive/v73/lbr/lis/lbr.sdl, getput.lis, openclose.lis, subs.lis,
@@ -84,6 +84,7 @@ const (
 	lhdCreDat    = 0x2C
 	lhdUpdTim    = 0x34
 	lhdMhdUsz    = 0x3C
+	lhdFreeBlk   = 0x48
 	lhdNextRFA   = 0x4C
 	lhdNextVBN   = 0x52
 	lhdFreIdxBlk = 0x56
@@ -96,6 +97,7 @@ const (
 	lhdModHdrs   = 0x74
 	lhdIdxOvh    = 0x78
 	lhdMaxLUHRec = 0x7C
+	lhdNumLUHRec = 0x7E
 	lhdDcxMapVBN = 0x8C
 	lhdIdxDesc   = 0xC4
 
@@ -177,8 +179,20 @@ type Library struct {
 	// Modules is how many modules the library's first index holds.
 	Modules uint32
 	// History is how many update history records the library keeps
-	// (LHD$W_MAXLUHREC).
-	History uint16
+	// (LHD$W_MAXLUHREC), and HistoryRecords how many it has
+	// (LHD$W_NUMLUHREC).
+	History        uint16
+	HistoryRecords uint16
+	// IndexEntries is how many keys the indexes hold in all
+	// (LHD$L_IDXCNT), IndexBlocks how many index blocks they use
+	// (LHD$L_IDXBLKS), Preallocated how many index blocks were
+	// preallocated (LHD$L_HIPREAL less the header), and DeletedBlocks how
+	// many deleted blocks can be reused (LHD$L_FREEBLK): the counts
+	// LIBRARY/LIST reports.
+	IndexEntries  uint32
+	IndexBlocks   uint32
+	Preallocated  uint32
+	DeletedBlocks uint32
 	// Indexes are the library's indexes. Index 1 (Indexes[0]) names the
 	// modules; an object library's index 2 holds its global symbols.
 	Indexes []*Index
@@ -248,16 +262,22 @@ func Open(data []byte) (*Library, error) {
 	}
 
 	l := &Library{
-		Type:        Type(h[lhdType]),
-		MajorID:     le16(h, lhdMajorID),
-		MinorID:     le16(h, lhdMinorID),
-		Librarian:   counted(h[lhdLbrVer : lhdLbrVer+32]),
-		Created:     binary.LittleEndian.Uint64(h[lhdCreDat:]),
-		Updated:     binary.LittleEndian.Uint64(h[lhdUpdTim:]),
-		Modules:     le32(h, lhdModCnt),
-		History:     le16(h, lhdMaxLUHRec),
-		data:        data,
-		mhdUserSize: int(h[lhdMhdUsz]),
+		Type:      Type(h[lhdType]),
+		MajorID:   le16(h, lhdMajorID),
+		MinorID:   le16(h, lhdMinorID),
+		Librarian: counted(h[lhdLbrVer : lhdLbrVer+32]),
+		Created:   binary.LittleEndian.Uint64(h[lhdCreDat:]),
+		Updated:   binary.LittleEndian.Uint64(h[lhdUpdTim:]),
+		Modules:   le32(h, lhdModCnt),
+		History:   le16(h, lhdMaxLUHRec),
+
+		HistoryRecords: le16(h, lhdNumLUHRec),
+		IndexEntries:   le32(h, lhdIdxCnt),
+		IndexBlocks:    le32(h, lhdIdxBlks),
+		Preallocated:   max(le32(h, lhdHiPreAl), 1) - 1,
+		DeletedBlocks:  le32(h, lhdFreeBlk),
+		data:           data,
+		mhdUserSize:    int(h[lhdMhdUsz]),
 	}
 
 	n := int(h[lhdNIndex])
@@ -373,6 +393,18 @@ func (l *Library) readIndex(flags, keyLen uint16, root uint32) (*Index, error) {
 	return x, nil
 }
 
+// KeySize is the longest key the library allows.
+func (l *Library) KeySize() int {
+	if len(l.Indexes) == 0 {
+		return 0
+	}
+
+	return int(l.Indexes[0].KeyLen) - 1
+}
+
+// DataReduced reports whether the library's records are DCX data-reduced.
+func (l *Library) DataReduced() bool { return l.dcx != nil }
+
 // Lookup finds a module by name, through index 1.
 func (l *Library) Lookup(name string) (RFA, bool) {
 	if len(l.Indexes) == 0 {
@@ -403,23 +435,41 @@ func (l *Library) ModuleName(rfa RFA) (string, bool) {
 	return name, ok
 }
 
-// Module reads the module that starts at rfa.
-func (l *Library) Module(rfa RFA) (*Module, error) {
+// Header reads the header of the module that starts at rfa.
+func (l *Library) Header(rfa RFA) (ModuleHeader, error) {
+	h, _, err := l.header(rfa)
+
+	return h, err
+}
+
+// header reads a module header, and returns where the module's own
+// records start.
+func (l *Library) header(rfa RFA) (ModuleHeader, RFA, error) {
 	b, next, err := l.readRecord(rfa)
 	if err != nil {
-		return nil, fmt.Errorf("lbr: module at %d.%d: %w", rfa.VBN, rfa.Offset, err)
+		return ModuleHeader{}, next, fmt.Errorf("lbr: module at %d.%d: %w", rfa.VBN, rfa.Offset, err)
 	}
 
 	if len(b) != mhdLen+l.mhdUserSize || b[1] != mhdID {
-		return nil, fmt.Errorf("lbr: no module header at %d.%d", rfa.VBN, rfa.Offset)
+		return ModuleHeader{}, next, fmt.Errorf("lbr: no module header at %d.%d", rfa.VBN, rfa.Offset)
 	}
 
-	m := &Module{Header: ModuleHeader{
+	return ModuleHeader{
 		Flags:    b[0],
 		RefCount: le32(b, 4),
 		Inserted: binary.LittleEndian.Uint64(b[8:]),
 		UserData: append([]byte(nil), b[mhdLen:]...),
-	}}
+	}, next, nil
+}
+
+// Module reads the module that starts at rfa.
+func (l *Library) Module(rfa RFA) (*Module, error) {
+	h, next, err := l.header(rfa)
+	if err != nil {
+		return nil, err
+	}
+
+	m := &Module{Header: h}
 
 	for {
 		rec, after, err := l.readRecord(next)
