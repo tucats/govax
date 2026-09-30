@@ -40,6 +40,14 @@ go.work.sum
 /testdata/vmslib/*
 !/testdata/vmslib/README.md
 
+# Licensed VMS 7.3 definition files (SDL sources, C headers, BLISS and
+# message listings) and DEC's VAX architecture manual, kept on the
+# development machine as a reference (docs/PHASE-31.md). Nothing in the
+# build or the tests reads them: govax's tables are committed in
+# internal/vmsdef, and internal/vmsdef/gen merges new definitions into them.
+/reference/vms/
+/reference/vax_instr_set.pdf
+
 # Real VMS 7.3 STARLET.REQ (BLISS symbol definitions) and rmsdef.h (C header),
 # both extracted from a live VMS system, used as a one-time reference for
 # exact $FABDEF/$RABDEF/$RMSDEF values while implementing Phase 22

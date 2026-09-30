@@ -42,7 +42,14 @@ never had.
   listings, and analyses in `vax/` (see its README for the simh round trip).
   `testdata/disks/` holds local-only ODS-2 containers (gitignored).
 - `~/Documents/Technical Doc/VMS/vax_instr_set.pdf` — the VAX architecture/
-  instruction-set reference manual.
+  instruction-set reference manual (a copy may also be at
+  `reference/vax_instr_set.pdf`, local-only).
+- `reference/vms/` — local-only (gitignored, Phase 31): licensed VMS 7.3
+  definition files (SDL sources, C headers, BLISS and message listings) that
+  `internal/vmsdef`'s tables were first generated from. Nothing in the build
+  or tests reads them; use them with `internal/vmsdef/gen` to add
+  definitions. Never commit DIGITAL/HP/VSI-copyright material (see also
+  `testdata/vmslib/` and `testdata/disks/`).
 
 ## Build & test
 
