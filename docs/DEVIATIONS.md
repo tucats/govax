@@ -797,22 +797,20 @@ accepts govax's objects (`ANALYZE/OBJECT`, `LINK`, `RUN`). These entries
 record what govax knowingly leaves out, and the encoding choices no
 fixture has confirmed yet.
 
-### [Phase 27] No macro facility, listings, or traceback and debugger records
+### [Phase 27] No listings, or traceback and debugger records
 
 - **Where**: `internal/asm` (MACRO dialect), `internal/console/macro.go`.
 - **What**:
-  - There is no `.MACRO`/`.ENDM`, `.IRP`/`.IRPC`/`.REPT`, `.NARG`,
-    `.MEXIT`, `.MCALL`, or `.LIBRARY`, so a program can't call the
-    system macros (`$EXIT_S`, `$FAB`, ...) in `STARLET.MLB`. Fixtures
-    call `SYS$...` entry points directly instead.
+  - (The macro facility this entry also listed came with Phase 28: see
+    that phase's entries below.)
   - There are no listing files (`/LIST`); `.SUBTITLE`/`.SBTTL` are
     accepted and ignored.
   - There are no traceback (TBT) or debugger (DBG) records. Real MACRO
     writes traceback records by default (`.ENABLE TRACEBACK`), so a
     govax-built image can't give a symbolic traceback when it fails.
     `.ENABLE TRACEBACK`/`DEBUG` are recorded and have no effect.
-- **Status**: open. Planned as Phases 28 (macro facility) and 29
-  (listings, traceback, and debugger records).
+- **Status**: open. Planned as Phase 29 (listings, traceback, and
+  debugger records).
 
 ### [Phase 27] Smaller MACRO simplifications and extensions
 
@@ -821,9 +819,10 @@ fixture has confirmed yet.
 - **What**:
   - `.ENABLE TRUNCATION` and `VECTOR` aren't supported: enabling one is
     the warning `VAX_IGNORED`, and assembly goes on.
-  - The `MACRO` command takes only `/OBJECT` and `/NOOBJECT`: no
-    `/LIST`, `/DEBUG`, `/ENABLE`, `/DISABLE`, or `/LIBRARY`, and no
-    `A+B` concatenation of several sources into one module.
+  - The `MACRO` command takes only `/OBJECT`, `/NOOBJECT`, and (Phase
+    28) a govax-style `/LIBRARY=(file,...)`: no `/LIST`, `/DEBUG`,
+    `/ENABLE`, or `/DISABLE`, and no `A+B` concatenation of several
+    sources into one module, nor VMS's `PROG+LIB/LIBRARY`.
   - Error messages are govax's (`%CLI-E-ASSEMBLING, ... line N:
     VAX-E-...`), not MACRO's. After an error, assembly goes on to the
     next statement, so a later message can follow from an earlier
@@ -854,10 +853,51 @@ fixture has confirmed yet.
   - `. =` backward is a negative `CTL_AUGRB`. Forward is confirmed.
   - The location in `.  ABS  .` is set at the start of assembly unless
     code, data, or a label before any `.PSECT` moves assembly into
-    `. BLANK .` first. An unnamed `.PSECT` first, or an absolute psect
-    first, isn't covered by a fixture.
+    `. BLANK .` first, and again on a return there (confirmed in Phase
+    28: `$RMSDEF`'s `.RESTORE`). An unnamed `.PSECT` first, or an
+    absolute psect first, isn't covered by a fixture.
 - **Status**: open. Settle each with a fixture when a program needs it;
   VMS links either form to the same image.
+
+### [Phase 28] Macro facility and librarian: what govax leaves out or does differently
+
+- **Where**: `internal/asm` (macros, `maclib.go`, `message.go`),
+  `internal/lbr` (`write.go`, `input.go`), `internal/console` (`macro.go`,
+  `library.go`), `internal/bootdata/files/starlet.mar`.
+- **What**:
+  - **govax's STARLET.MLB is small**: `$EXIT_S`, `$ASSIGN_S`,
+    `$DASSGN_S`, `$QIO_S`, `$QIOW_S`, and the helpers they use. A program
+    needing any other system macro (`$FAB`, `$IODEF`, ...) needs VMS's
+    STARLET.MLB, through `SYS$LIBRARY` or the `vax.library` setting.
+  - **A `;` inside `<...>`** in a macro call's arguments still ends the
+    statement (preprocessing sees it as a comment), so `<A;B>` is
+    `VAX_NOCLOSE`. Whether real MACRO takes the `;` as part of the
+    argument isn't confirmed by a fixture.
+  - **`.ERROR` and `.WARN` messages** show the comment as written (a
+    leading blank, a closing `;`), by analogy with `.PRINT`, whose text
+    real MACRO's log confirms. Real MACRO's own `.ERROR`/`.WARN` output
+    isn't in a fixture yet; govax's prefix is its own (`VAX-E-GENERR,
+    Generated ERROR:`).
+  - **An overwritten constant in an object** (a field stored twice, as
+    `$FAB` stores FNA and FNS) is written as each store left it, from the
+    byte's history; a byte a fixup finishes after being stored over is
+    written from the image, which holds the later store's value. No
+    fixture has that case, and the image links the same either way.
+  - **The console dialect (`ASM`)** defines and calls macros and repeat
+    blocks, but searches no macro libraries (the scope's "only if free").
+  - **LIBRARY builds the whole library in memory** and writes it once
+    every step has succeeded; a changed volume library is rewritten at
+    its own version but gets a new file ID and creation date (LIBRARIAN
+    updates in place). A new library is allocated only the blocks it
+    uses, where LIBRARIAN allocates 100, contiguous best try. No DCX data
+    reduction on writing, and no update history records.
+  - **Index trees are built bottom-up** from the sorted keys, so a
+    library is laid out as LIBRARIAN lays out one created in a single
+    command (byte for byte on the fixtures). A library LIBRARIAN grew by
+    many separate inserts may have its index blocks split differently;
+    govax reads either.
+- **Status**: open, by design, except the `;` and `.ERROR`/`.WARN`
+  items, which a fixture should settle when a program needs them.
 
 ## Open findings
 

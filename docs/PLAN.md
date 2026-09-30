@@ -78,7 +78,7 @@ questions, and a progress log extended as that phase is worked.
 | 25 | [PHASE-25.md](PHASE-25.md) | VMS-faithful logical names (tables, iterative translation, DEFINE/ASSIGN/SHOW LOGICAL, `$CRELNM`/`$TRNLNM`) |
 | 26 | [PHASE-26.md](PHASE-26.md) | Expanding system services (emulated process record; `$ADJSTK`, `$ADJWSL`, `$ALLOC`, `$ASCEFC`, ...) |
 | 27 | [PHASE-27.md](PHASE-27.md) | MACRO-32 object modules: `MACRO` command producing VAX `.OBJ` files from `.MAR` source |
-| 28 | [PHASE-28.md](PHASE-28.md) | The MACRO-32 macro facility (`.MACRO`, `.MCALL`, `STARLET.MLB`) — planned |
+| 28 | [PHASE-28.md](PHASE-28.md) | The MACRO-32 macro facility (`.MACRO`, `.MCALL`, `STARLET.MLB`) and a librarian (`LIBRARY`) |
 | 29 | [PHASE-29.md](PHASE-29.md) | MACRO listings (`/LIST`), traceback and debugger records — planned |
 | 30 | [PHASE-30.md](PHASE-30.md) | A govax `LINK`: `.OBJ` modules to a runnable `.EXE` — done; its images match real LINK's and run on VMS |
 
@@ -380,9 +380,31 @@ declining to write an object.
   - made govax dismount volumes at the end of a session, so cached
     bitmaps aren't lost.
 
-What MACRO-32 still lacks is planned as three phases. Phase 28 is the
-macro facility, which ordinary VMS programs need for the system macros.
-Phase 29 is listings and traceback/debugger records. Phase 30, a govax
+What MACRO-32 still lacked was planned as three phases. Phase 30, a govax
 `LINK`, was done first (2026-09-30): a govax-assembled program now links
 and runs inside govax without a real VAX, and real VMS runs govax's
-images. Their known gaps are in `DEVIATIONS.md` under Phase 27.
+images. Phase 28, the macro facility, is done (below). Phase 29,
+listings and traceback/debugger records, is still to come. Known gaps
+are in `DEVIATIONS.md` under Phases 27 and 28.
+
+Phase 28 (2026-09-30) gave MACRO-32 its macro facility, so ordinary VMS
+programs that call system macros assemble. It also added a librarian.
+
+- **Macros.** `.MACRO`/`.ENDM` with every argument form, created local
+  labels, `\symbol`, `.NARG`/`.NCHR`/`.NTYPE`, the string operators,
+  repeat blocks (`.REPEAT`, `.IRP`, `.IRPC`), `.MEXIT`, `.MDELETE`, and
+  `.ERROR`/`.WARN`/`.PRINT`. Every one of the real STARLET.MLB's 1529
+  macros loads. The console's `ASM` gets the definition side too.
+- **Macro libraries.** `.MCALL`, `.LIBRARY`, `MACRO /LIBRARY=(file,...)`,
+  and MACRO's automatic search, in VMS MACRO's order. STARLET.MLB is
+  `SYS$LIBRARY`'s on a mounted volume, or the host directory the
+  `vax.library` setting names (shared with LINK), or govax's own small
+  one, built from `internal/bootdata/files/starlet.mar`.
+- **A librarian.** `internal/lbr` writes libraries as LIBRARIAN lays them
+  out, and the `LIBRARY` command (and `govax library`) creates, changes,
+  lists, and extracts from `.MLB` and `.OLB` libraries.
+- **Matching real VMS.** Nine new fixtures, assembled on the user's VAX,
+  match govax's objects record for record. govax builds the fixture
+  libraries byte for byte as LIBRARIAN did, and its listings and
+  extractions match LIBRARIAN's. VMS assembles and links with govax's
+  libraries, and LIBRARIAN changes them. See PHASE-28.md.

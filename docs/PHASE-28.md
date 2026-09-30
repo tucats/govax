@@ -11,7 +11,7 @@ Phase 27 fixtures do.
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress (subtasks 1-10 done; next, subtask 11).**
+**Status: done (2026-09-30).**
 
 ## Scope
 
@@ -245,7 +245,7 @@ inside it. Repeat blocks collect their lines to `.ENDR` the same way.
     match, and the programs must link and run under govax's `LINK`/`RUN`.
     Also govax-made `.MLB` and `.OLB` libraries, checked with real
     `LIBRARY/LIST` and used by real MACRO and LINK.
-11. **Clean-up and docs:** `PLAN.md`, `CLAUDE.md`, `DEVIATIONS.md`, the
+11. **Done.** **Clean-up and docs:** `PLAN.md`, `CLAUDE.md`, `DEVIATIONS.md`, the
     MACRO and LIBRARY help topics, and this document's closing entry.
 
 ## Open questions
@@ -961,3 +961,51 @@ All settled (2026-09-30):
   left as it is.
 - None of these were C-source issues (eVAX has no MACRO dialect, object
   output, or librarian), so none goes in `DEVIATIONS.md`.
+
+### 2026-09-30 — Subtask 11: docs; the phase is done
+
+- **Docs.** `PLAN.md`'s phase index and MACRO-32 section describe what
+  Phase 28 delivered; `CLAUDE.md` lists the macro facility's files and
+  the phase as done; `PHASE-29.md` notes what this phase leaves for
+  listings (the source stack's expansion frames, the listing directives
+  accepted and ignored, and nine more real listings).
+- **`DEVIATIONS.md`.** The Phase 27 entries this phase settled are
+  updated (no macro facility; `MACRO`'s qualifiers; setting the location
+  in `.  ABS  .`), and a new Phase 28 entry lists what govax leaves out or
+  does differently: govax's STARLET.MLB is small; a `;` inside `<...>` in
+  a call still ends the statement, unconfirmed either way; `.ERROR` and
+  `.WARN` text follows `.PRINT`'s by analogy; the console dialect
+  searches no libraries; LIBRARY's whole-library writes, allocation, and
+  lack of data reduction and history; and bottom-up index trees.
+- **Help.** The MACRO topic (subtask 9) covers `/LIBRARY=`, `.LIBRARY`,
+  and the search order. New `ASM PSEUDO` topics cover the macro
+  directives (`.MACRO`, `.ENDM`, `.MEXIT`, `.MDELETE`, `.NARG`, `.NCHR`,
+  `.NTYPE`, the string operators), repeat blocks, and `.ERROR`/`.WARN`,
+  and the pseudo-op list names them.
+
+## Summary
+
+Phase 28 gave govax's MACRO-32 the macro facility that ordinary VMS
+programs rely on, and a librarian to go with it.
+
+- **Macros**: definitions and calls with every argument form, created
+  local labels, `\symbol`, `.NARG`/`.NCHR`/`.NTYPE`, the string
+  operators, repeat blocks, `.MEXIT`, `.MDELETE`, and the message and
+  listing directives, in both dialects. All 1529 of the real
+  STARLET.MLB's macros load.
+- **Macro libraries**: `.MCALL`, `.LIBRARY`, `/LIBRARY=`, and the
+  automatic search, in MACRO's order; STARLET.MLB from `SYS$LIBRARY`, the
+  `vax.library` directory (shared with LINK), or govax's own.
+- **A librarian**: `internal/lbr` writes V3 libraries as LIBRARIAN does,
+  and `LIBRARY` creates, changes, lists, and extracts from macro and
+  object libraries, on the host or a volume.
+- **Checked against real VMS**: nine fixtures match real MACRO's objects
+  record for record; govax builds LIBRARIAN's libraries byte for byte and
+  matches its listings and extractions; VMS runs govax's objects, and
+  assembles, links, and edits with govax's libraries.
+- **Core fixes along the way**: quadword immediates, addressing-mode
+  checks, the CPU's immediate decode, `fpuLoad`'s zero rule (all in
+  `DEVIATIONS.md`), and in govax's own MACRO code: fields stored twice,
+  argument case, `.SAVE`/`.RESTORE` of the implicit `.  ABS  .`, typeless
+  output names on a volume, and seven object-encoding rules real MACRO's
+  objects showed.

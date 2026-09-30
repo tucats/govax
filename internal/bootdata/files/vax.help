@@ -2424,20 +2424,33 @@ $ASM ,PSEU
         CONSOLE
         D_FLOAT
         END
+        ENDM
+        ENDR
         ENTRY
+        ERROR
         F_FLOAT
         IF
         IIF
         INCLUDE
+        IRP
+        IRPC
         LONG
+        MACRO
+        MDELETE
+        MEXIT
         MODE
+        NARG
+        NCHR
+        NTYPE
         PRINT
         PTE
         QUAD
         REGION
+        REPEAT
         SCB
         SET
         SHIM
+        WARN
         WORD
         VECTOR
         
@@ -2782,6 +2795,107 @@ $ASM ,PSEU,IF_T
         .IF_FALSE
         CLRL     R0
         .ENDC
+
+$ASM ,PSEU,MACR
+$ASM ,PSEU,ENDM
+$ASM ,PSEU,MDEL
+$ASM ,PSEU,MEXI
+$ASM ,PSEU,NARG
+$ASM ,PSEU,NCHR
+$ASM ,PSEU,NTYP
+
+    Macros, as in VAX MACRO.  A macro definition is a named block of
+    source; a statement naming the macro (a macro call) assembles the
+    block with the call's arguments put in place of the formal ones.
+    Macros are tried before instructions, so a macro can replace one.
+
+    Syntax:
+
+        .MACRO   <name> [<formal>[=<default>],...]
+        ...
+        .ENDM    [<name>]
+
+        <name>   [<argument>,...]
+
+    A formal argument named ?<name> gets a created local label (30000$,
+    30001$, ...) when the call gives no argument for it.  A call's
+    arguments are positional, or <formal>=<value> in any order; <...>
+    or ^x...x encloses one holding commas or blanks, and \<symbol>
+    passes a symbol's value in decimal.  An argument is put in place
+    everywhere in the block, strings and comments included; an
+    apostrophe next to a formal argument's name joins it to the text
+    around it (PREFIX'_'N).  Arguments keep their case.
+
+        .MEXIT                  Ends the macro's expansion early
+        .MDELETE <name>,...     Deletes macro definitions
+        .NARG    <symbol>       The number of positional arguments given
+        .NCHR    <symbol>,<text>  The number of characters in <text>
+        .NTYPE   <symbol>,<operand>  The addressing mode of <operand>
+
+    In a macro's lines, %LENGTH(<text>), %LOCATE(<text1>,<text2>[,<start>]),
+    and %EXTRACT(<start>,<length>,<text>) are replaced by their results.
+
+    The MACRO command also finds macros in macro libraries (see HELP
+    MACRO); ASM uses only the macros the source defines.
+
+    Example:
+
+        .MACRO   MAX A, B, DEST, ?SKIP
+        MOVL     A, DEST
+        CMPL     B, DEST
+        BLEQ     SKIP
+        MOVL     B, DEST
+SKIP:
+        .ENDM    MAX
+
+        MAX      R1, R2, R0
+
+$ASM ,PSEU,REPE
+$ASM ,PSEU,REPT
+$ASM ,PSEU,IRP 
+$ASM ,PSEU,IRPC
+$ASM ,PSEU,ENDR
+
+    Repeat blocks, as in VAX MACRO: the statements up to .ENDR are
+    assembled several times.
+
+    Syntax:
+
+        .REPEAT  <count>        (or .REPT)  <count> times
+        .IRP     <symbol>,<<argument>,...>  once for each argument, with
+                                            <symbol> replaced by it
+        .IRPC    <symbol>,<<text>>          once for each character
+        ...
+        .ENDR
+
+    .MEXIT in a repeat block ends it, skipping the repetitions left.
+
+    Example:
+
+        .IRP     REG, <R2, R3, R4>
+        CLRL     REG
+        .ENDR
+
+$ASM ,PSEU,ERRO
+$ASM ,PSEU,WARN
+
+    .ERROR and .WARN report a message of the program's own: .ERROR as an
+    assembly error, and .WARN as a warning.  The message is the value of
+    the expression, if one is given and it isn't zero, then the
+    statement's comment.  They're most useful in a macro, in a
+    conditional block, to check its arguments.
+
+    Syntax:
+
+        .ERROR   [<expression>] ;<comment>
+        .WARN    [<expression>] ;<comment>
+
+    Example:
+
+        .IIF     BLANK <ARG>, .ERROR ; ARG is required
+
+    In the MACRO command, .PRINT displays its comment the same way; the
+    ASM command's .PRINT is its own (see HELP ASM PSEUDO PRINT).
 
 $ASM ,PSEU,PTE 
 

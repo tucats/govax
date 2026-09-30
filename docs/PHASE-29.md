@@ -27,6 +27,20 @@ Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 - `.SUBTITLE`/`.SBTTL` are accepted and ignored.
 - `.ENABLE TRACEBACK`/`DEBUG` are recorded and have no effect.
 
+## What Phase 28 leaves in place
+
+- Macros and repeat blocks expand through a stack of sources
+  (`internal/asm/source.go`), each frame knowing its macro or block and
+  line, which a listing needs to show expansions (`.SHOW
+  EXPANSIONS`/`BINARY`, real MACRO's `.NOSHOW` default for macro
+  expansions).
+- `.LIST`/`.NLIST`, `.SHOW`/`.NOSHOW`, `.CROSS`/`.NOCROSS`, and `.PAGE` are
+  accepted and ignored (`internal/asm/directive.go`).
+- `testdata/mar/macros/vax/` adds nine more real listings and full
+  objects, with macro calls in them. `TestMacroFixtureObjects` compares
+  through the same `requireSameObject`, which leaves traceback records
+  out.
+
 ## Scope
 
 - `/LIST[=file]` on the `MACRO` command, written through

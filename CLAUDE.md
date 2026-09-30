@@ -12,8 +12,8 @@ never had.
 - `docs/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
   index.
 - `docs/PHASE-00.md` … `PHASE-30.md` — one doc per phase: goal, C-source file
-  mapping, deliverables, open questions, and a dated progress log (28 and 29 are
-  planned, not started; 30 is done). Read the relevant phase doc
+  mapping, deliverables, open questions, and a dated progress log (29 is
+  planned, not started; 28 and 30 are done). Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
@@ -70,7 +70,13 @@ expect adjustment as phases land):
 - `internal/asm` — assembler/disassembler (Phase 11). Two dialects share one core
   (Phase 27): the console's `ASM` (absolute, into emulated memory, eVAX
   directives) and MACRO-32 (`SetDialect(DialectMACRO)`: psects, relocation
-  trees, every error reported, and `Object()` for a `.OBJ` module).
+  trees, every error reported, and `Object()` for a `.OBJ` module). Phase 28's
+  macro facility is in both: macro definitions and calls (`macros.go`,
+  `macroargs.go`), repeat blocks (`repeat.go`), and a stack of sources
+  (`source.go`); the MACRO dialect also searches macro libraries
+  (`MacroLibrary`, `maclib.go`) handed in by the console's MACRO command.
+  `overwrite.go` keeps a field stored twice (as `$FAB` does) as real MACRO
+  writes it.
 - `internal/obj` — the VAX object language (Phase 27): reads, writes, dumps, and
   checks `.OBJ` object modules, keeping every record so a real VAX object
   round-trips byte for byte; `Builder` packs a module's psects, symbols, and TIR
