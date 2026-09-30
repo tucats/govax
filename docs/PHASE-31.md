@@ -1,6 +1,6 @@
 # Phase 31 — Build without licensed VMS material
 
-**Status:** in progress (2026-09-30).
+**Status:** done (2026-09-30).
 
 ## Goal
 
@@ -308,3 +308,22 @@ golangci-lint clean, then a commit (and `build -i` where it changes behavior).
   One gap without the real files remains: rmscopy and fabalign assemble
   only with the real STARLET.MLB, since govax's own `starlet.mar` has no
   `$FAB`/`$RAB` macros.
+- 2026-09-30: Subtask 7 done, and the phase with it. README.md has an
+  "Optional VMS files" section. It covers:
+  - what goes in the `vax.library` directory (`govax config set
+    vax.library=...`), or on a volume through SYS$LIBRARY/SYS$SHARE;
+  - a table of STARLET.MLB, IMAGELIB.OLB, LIBRTL.EXE, and STARLET.OLB:
+    what each is used for and what govax does without it;
+  - how to extend govax's tables with `internal/vmsdef/gen`;
+  - a request not to commit VMS files.
+
+  The console's LINK help topic now describes the captured tables rather
+  than only the shims.
+
+  Left open:
+  - The five wrong SS$_ codes in `vmsdef.Symbols` (docs/DEVIATIONS.md),
+    awaiting the author's decision on how to correct them.
+  - govax's own STARLET.MLB has only five service macros, so programs
+    using `$FAB`/`$RAB` need the real library.
+  - DECC$SHR and CMA$TIS_SHR aren't captured (no image files on hand);
+    `gen -image` adds them when they are.

@@ -81,7 +81,7 @@ questions, and a progress log extended as that phase is worked.
 | 28 | [PHASE-28.md](PHASE-28.md) | The MACRO-32 macro facility (`.MACRO`, `.MCALL`, `STARLET.MLB`) and a librarian (`LIBRARY`) |
 | 29 | [PHASE-29.md](PHASE-29.md) | MACRO listings (`/LIST`), traceback and debugger records — planned |
 | 30 | [PHASE-30.md](PHASE-30.md) | A govax `LINK`: `.OBJ` modules to a runnable `.EXE` — done; its images match real LINK's and run on VMS |
-| 31 | [PHASE-31.md](PHASE-31.md) | Build without licensed VMS material: one symbol table, an augmenting gen, captured GSTs — in progress |
+| 31 | [PHASE-31.md](PHASE-31.md) | Build without licensed VMS material: one symbol table, an augmenting gen, captured GSTs — done |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct

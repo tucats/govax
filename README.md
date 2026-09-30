@@ -80,6 +80,50 @@ creates .OBJ object files, and a LINK console command that links
 hello world program that assembles, links, and runs identically on
 a real VAX as it does on govax.
 
+## Optional VMS files
+
+govax builds and runs from this repository alone. It contains no files
+that DIGITAL, Compaq, HP, or VSI hold copyright on. Where govax needs VMS
+definitions, such as status codes, message texts, and the entry points of
+the run-time library, it uses its own tables of those values. These are in
+`internal/vmsdef`.
+
+If you have a VAX/VMS system or distribution, a few of its files make
+`MACRO` and `LINK` behave exactly as they do on VMS. Copy them (with
+`COPY/BINARY`, or from a Files-11 container) into a directory, and point
+govax at it:
+
+```sh
+govax config set vax.library=/path/to/vms/files
+```
+
+Names may be upper or lower case. On a mounted volume, govax also finds
+these files through the `SYS$LIBRARY` and `SYS$SHARE` logical names, as VMS
+does.
+
+| File | Used by | Without it |
+| ---- | ------- | ---------- |
+| `STARLET.MLB` | `MACRO`: the system macros (`$FAB`, `$RAB`, `$QIOW_S`, ...) | govax's own small STARLET: `$ASSIGN_S`, `$DASSGN_S`, `$EXIT_S`, `$QIO_S`, and `$QIOW_S`. Programs that use the RMS macros need the real one. |
+| `IMAGELIB.OLB` | `LINK`: which shareable image defines each routine | govax's tables of LIBRTL's routines, and the routines govax's shims stand for |
+| `LIBRTL.EXE` (and other shareable images) | `LINK`: routine offsets. `RUN`: the routines themselves | Linking works for every LIBRTL routine. Running one needs the image, or a govax shim. |
+| `STARLET.OLB` | `LINK`: the system library's modules | govax's tables of STARLET's status codes and other definitions (SS$_, RMS$_, IO$_, ...), and its system-service vector. Routines STARLET holds as code (BAS$, MTH$, ...) need the real library. |
+
+govax's tables were captured from VMS 7.3's own files. To add
+definitions they lack, run `internal/vmsdef/gen` against your copies of
+VMS's definition files. It merges what they define into the tables and
+never overwrites an existing value without `-replace`. `-n` shows what
+would change without writing anything:
+
+```sh
+go run ./internal/vmsdef/gen -n -sdl /path/to/iodef.sdl
+go run ./internal/vmsdef/gen -bliss /path/to/ssdef.txt -msg /path/to/sysmsg.txt
+go run ./internal/vmsdef/gen -image /path/to/SMGSHR.EXE -olb /path/to/STARLET.OLB
+```
+
+The tables are Go source, so rebuild govax afterward. Please don't commit
+VMS's files themselves: `reference/vms/`, `testdata/vmslib/`, and
+`testdata/disks/` are gitignored for that purpose.
+
 ## What's next?
 
 With the assembler, skelatal RTL, and image loader all in place, the

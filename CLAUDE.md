@@ -13,7 +13,7 @@ never had.
   index.
 - `docs/PHASE-00.md` … `PHASE-31.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (29 is
-  planned, not started; 28 and 30 are done). Read the relevant phase doc
+  planned, not started; 28, 30, and 31 are done). Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).

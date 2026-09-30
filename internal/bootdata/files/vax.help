@@ -3713,20 +3713,25 @@ $LINK
         IMAGELIB.OLB    Which shareable image defines the routine.  Its
                         offset there comes from the image itself
                         (SYS$SHARE:LIBRTL.EXE, say) or, with no such
-                        file, from govax's own routine for it.
+                        file, from govax's own tables.
         STARLET.OLB     The module that defines the symbol is added to
                         the image, as VMS LINK does.
-        govax's tables  The system services (SYS$...), at their addresses
-                        in the P1 vector, and the run-time library
-                        routines govax provides (LIB$..., DECC$..., and
-                        others), in their shareable images.
+        govax's tables  Every LIBRTL routine, and the other run-time
+                        library routines govax provides (DECC$..., and
+                        others), in their shareable images; STARLET's
+                        status codes and other definitions (SS$_...,
+                        RMS$_..., IO$_..., and more); and the system
+                        services (SYS$...), at their addresses in the P1
+                        vector.
 
     The two libraries and the shareable images are VMS files, which govax
     doesn't include.  LINK looks for them as SYS$LIBRARY:IMAGELIB.OLB,
     SYS$LIBRARY:STARLET.OLB, and SYS$SHARE:<image>.EXE on a mounted
     volume, then in the host directory the vax.library setting names
     (or, if that isn't set, the older vax.link.library).  Without them,
-    govax's own tables define what govax can run.
+    govax's own tables, which were captured from those files, give the
+    same image for everything they define.  Running a routine still
+    needs its image, or govax's own routine for it.
 
     A routine in a shareable image is reached with a general mode operand
     (CALLS #1,G^LIB$PUT_OUTPUT) or a .ADDRESS of it; the image reaches it
