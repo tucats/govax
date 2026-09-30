@@ -18,8 +18,8 @@ import (
 //   - A macro call pushes the macro's expansion: its definition's lines
 //     with the call's arguments substituted in (sourceMacro, see
 //     macros.go).
-//   - A repeat block pushes its repeated lines (docs/PHASE-28.md,
-//     subtask 3).
+//   - A repeat block (.REPEAT, .IRP, .IRPC) pushes each repetition of
+//     its lines in turn (sourceRepeat, see repeat.go).
 //
 // Each source is a sourceFrame on Assembler.sources, innermost last, and
 // runSource is the loop that assembles one source's lines. The frames are
@@ -46,13 +46,16 @@ const (
 	sourceInclude
 	// sourceMacro is a macro's expansion.
 	sourceMacro
+	// sourceRepeat is one repetition of a repeat block.
+	sourceRepeat
 )
 
 // maxIncludeDepth is how deeply .INCLUDE files may nest. A deeper nest is
 // almost certainly a file that includes itself.
 const maxIncludeDepth = 64
 
-// maxExpansionDepth is how deeply macro expansions may nest. A macro may
+// maxExpansionDepth is how deeply macro expansions (and repeat blocks)
+// may nest. A macro may
 // call itself (with a conditional that ends the recursion), so the limit
 // is generous; it stops a macro that never stops calling itself before
 // the Go stack overflows.
@@ -61,16 +64,22 @@ const maxExpansionDepth = 1000
 // sourceFrame is one source on the source stack.
 type sourceFrame struct {
 	kind sourceKind
-	// name is the macro's name, for a sourceMacro frame.
+	// name is the macro's name, for a sourceMacro frame, or the
+	// directive (".IRP", ...), for a sourceRepeat frame.
 	name string
+	// repetition counts a repeat block's repetitions from 1, for a
+	// sourceRepeat frame.
+	repetition int
 	// callLine is the line, in the source below this one, that pushed
-	// this one: the .INCLUDE statement or the macro call.
+	// this one: the .INCLUDE statement, the macro call, or the repeat
+	// block's directive.
 	callLine int
 	// condBase is how many conditional blocks were open when the source
 	// was pushed. A macro's expansion that ends early (.MEXIT) closes
 	// the blocks it opened, and only those.
 	condBase int
-	// exit is set by .MEXIT: the rest of the expansion is skipped.
+	// exit is set by .MEXIT: the rest of the expansion is skipped (and,
+	// for a repeat block, the repetitions still to come).
 	exit bool
 	// expansion is the macro's expansion state (arguments, for .NARG),
 	// for a sourceMacro frame.
@@ -79,26 +88,41 @@ type sourceFrame struct {
 
 // wrap puts a frame's location on err, an error at line of the frame's
 // own lines. A file's location is just the line (*Error); an expansion's
-// names the macro too (*ExpansionError).
+// names the macro, or the repeat block and repetition, too
+// (*ExpansionError).
 func (f *sourceFrame) wrap(line int, err error) error {
-	if f.kind == sourceMacro {
+	switch f.kind {
+	case sourceMacro:
 		return &ExpansionError{Macro: f.name, Line: line, Err: err}
+	case sourceRepeat:
+		return &ExpansionError{Block: f.name, Repetition: f.repetition, Line: line, Err: err}
 	}
 
 	return &Error{Line: line, Err: err}
 }
 
-// ExpansionError is an error on one line of a macro's expansion. The line
-// number counts the expansion's lines from 1 (the first line of the
-// macro's body). It is always wrapped in an *Error, or another
-// *ExpansionError, naming the call.
+// ExpansionError is an error on one line of a macro's expansion, or of
+// one repetition of a repeat block. The line number counts the
+// expansion's lines from 1 (the first line of the macro's body or the
+// block's range). It is always wrapped in an *Error, or another
+// *ExpansionError, naming the call or the block's directive.
 type ExpansionError struct {
+	// Macro is the macro's name, for a macro's expansion.
 	Macro string
-	Line  int
-	Err   error
+	// Block is the repeat block's directive (".IRP", ".IRPC", or
+	// ".REPEAT"), and Repetition which repetition, counting from 1, for
+	// a repeat block.
+	Block      string
+	Repetition int
+	Line       int
+	Err        error
 }
 
 func (e *ExpansionError) Error() string {
+	if e.Block != "" {
+		return fmt.Sprintf("in repetition %d of %s, line %d: %v", e.Repetition, e.Block, e.Line, e.Err)
+	}
+
 	return fmt.Sprintf("in expansion of macro %s, line %d: %v", e.Macro, e.Line, e.Err)
 }
 
@@ -136,15 +160,24 @@ func (a *Assembler) count(kind sourceKind) int {
 	return n
 }
 
-// innermost returns the innermost frame of kind, or nil if there's none.
-func (a *Assembler) innermost(kind sourceKind) *sourceFrame {
+// innermost returns the innermost frame of any of kinds, or nil if
+// there's none.
+func (a *Assembler) innermost(kinds ...sourceKind) *sourceFrame {
 	for k := len(a.sources) - 1; k >= 0; k-- {
-		if a.sources[k].kind == kind {
-			return a.sources[k]
+		for _, kind := range kinds {
+			if a.sources[k].kind == kind {
+				return a.sources[k]
+			}
 		}
 	}
 
 	return nil
+}
+
+// expansions returns how many macro expansions and repeat blocks are on
+// the source stack, for the nesting limit (maxExpansionDepth).
+func (a *Assembler) expansions() int {
+	return a.count(sourceMacro) + a.count(sourceRepeat)
 }
 
 // assembleLines assembles source as the text of a new file-level source:
@@ -166,8 +199,10 @@ func (a *Assembler) assembleLines(source string) error {
 //
 // Each line goes, in order, to:
 //
-//  1. a macro definition being collected (collectDefinition), which
-//     takes every line up to its .ENDM without assembling any of it;
+//  1. a macro definition or repeat block being collected
+//     (collectDefinition), which takes every line up to its .ENDM or
+//     .ENDR without assembling any of it (a repeat block is then
+//     assembled, once for each repetition);
 //  2. statement, which joins continuation lines and preprocesses the
 //     line (uppercasing, comment stripping);
 //  3. assembleStatement.
@@ -199,9 +234,12 @@ func (a *Assembler) runSource(f *sourceFrame, lines []string) error {
 		a.line = i + 1
 
 		if a.defining != nil {
+			// A repeat block's end assembles the block, as a new
+			// source named by the block's first line: a.line is that
+			// line when an error comes back from it.
 			if err := a.collectDefinition(raw); err != nil {
 				if a.dialect != DialectMACRO {
-					return f.wrap(i+1, err)
+					return f.wrap(a.line, err)
 				}
 
 				a.errs = append(a.errs, a.located(err))
@@ -210,10 +248,11 @@ func (a *Assembler) runSource(f *sourceFrame, lines []string) error {
 			continue
 		}
 
-		// A macro's expansion evaluates its string operators (%LENGTH
-		// and so on) as each line is reached (see stringOperators), except
-		// in lines a conditional is leaving out.
-		if f.kind == sourceMacro && !a.skipping() {
+		// A macro's expansion, or a repeat block's, evaluates its string
+		// operators (%LENGTH and so on) as each line is reached (see
+		// stringOperators), except in lines a conditional is leaving
+		// out.
+		if (f.kind == sourceMacro || f.kind == sourceRepeat) && !a.skipping() {
 			expanded, err := a.stringOperators(raw)
 			if err != nil {
 				if a.dialect != DialectMACRO {
@@ -252,17 +291,20 @@ func (a *Assembler) runSource(f *sourceFrame, lines []string) error {
 		}
 	}
 
-	// .MEXIT leaves the expansion from inside any conditional blocks it
-	// opened; they end with it.
+	// .MEXIT leaves the expansion (or repetition) from inside any
+	// conditional blocks it opened; they end with it.
 	if f.exit && len(a.cond) > f.condBase {
 		a.cond = a.cond[:f.condBase]
 	}
 
-	// A macro definition still being collected when its source runs out.
-	if a.defining != nil {
-		name := a.defining.def.name
+	// A macro definition or repeat block still being collected when its
+	// source runs out.
+	if d := a.defining; d != nil {
+		if d.repeat != nil {
+			return vmserrors.New(vmserrors.VAX_NOENDR, d.repeat.directive)
+		}
 
-		return vmserrors.New(vmserrors.VAX_NOENDM, name)
+		return vmserrors.New(vmserrors.VAX_NOENDM, d.def.name)
 	}
 
 	return nil

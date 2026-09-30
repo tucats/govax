@@ -106,6 +106,8 @@ const (
 	vaxTooManyArgs
 	vaxBadFormal
 	vaxBadOperator
+	vaxNoEndr
+	vaxNotInRepeat
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -231,6 +233,8 @@ const (
 	VAX_TOOMNYARGS  = VAXFacility<<FacilityPosition | vaxTooManyArgs<<MessagePosition | StatusError
 	VAX_BADFORMAL   = VAXFacility<<FacilityPosition | vaxBadFormal<<MessagePosition | StatusError
 	VAX_BADOPERATOR = VAXFacility<<FacilityPosition | vaxBadOperator<<MessagePosition | StatusError
+	VAX_NOENDR      = VAXFacility<<FacilityPosition | vaxNoEndr<<MessagePosition | StatusError
+	VAX_NOTINREPEAT = VAXFacility<<FacilityPosition | vaxNotInRepeat<<MessagePosition | StatusError
 )
 
 func init() {
@@ -310,12 +314,14 @@ func init() {
 	DefineMessage(VAX_NOENDM, VAXFacility, "NOENDM", "Missing .ENDM for macro !S")
 	DefineMessage(VAX_ENDMNAME, VAXFacility, "ENDMNAME", ".ENDM !S does not match macro !S")
 	DefineMessage(VAX_NOTINDEF, VAXFacility, "NOTINDEF", "!S is not inside a macro definition")
-	DefineMessage(VAX_NOTINMACRO, VAXFacility, "NOTINMACRO", "!S is not inside a macro expansion")
+	DefineMessage(VAX_NOTINMACRO, VAXFacility, "NOTINMACRO", "!S is not inside a macro expansion or repeat block")
 	DefineMessage(VAX_MACRONAME, VAXFacility, "MACRONAME", "Missing or invalid macro name !Q")
 	DefineMessage(VAX_MACRODEPTH, VAXFacility, "MACRODEPTH", "Macro expansions nested more than !D deep")
 	DefineMessage(VAX_TOOMNYARGS, VAXFacility, "TOOMNYARGS", "Too many arguments in call of macro !S")
 	DefineMessage(VAX_BADFORMAL, VAXFacility, "BADFORMAL", "Invalid formal argument !Q")
 	DefineMessage(VAX_BADOPERATOR, VAXFacility, "BADOPERATOR", "Wrong number of arguments to string operator !S")
+	DefineMessage(VAX_NOENDR, VAXFacility, "NOENDR", "Missing .ENDR for !S repeat block")
+	DefineMessage(VAX_NOTINREPEAT, VAXFacility, "NOTINREPEAT", "!S is not inside a repeat block")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")

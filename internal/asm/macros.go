@@ -91,9 +91,14 @@ func (m *macroDef) formalIndex(name string) int {
 	return -1
 }
 
-// definition is a macro definition whose lines are being collected.
+// definition is a macro definition, or a repeat block, whose lines are
+// being collected.
 type definition struct {
+	// def is the macro, or for a repeat block, the block's range and its
+	// formal argument (see repeat.go).
 	def *macroDef
+	// repeat is the repeat block, or nil for a macro definition.
+	repeat *repeatBlock
 	// depth counts the blocks inside the definition not yet ended: a
 	// macro's body can define a macro, or hold a repeat block, and the
 	// inner block's end mustn't end the definition.
@@ -206,12 +211,16 @@ func (a *Assembler) blockDirective(raw string) (kind int, name string, labelText
 	return blockNone, name, labelText, c
 }
 
-// collectDefinition takes one raw source line while a macro definition is
-// being collected: it's added to the macro's body, unless it's the .ENDM
-// that ends the definition. A .MACRO inside the body starts a nested
-// definition, which is collected as part of the body (it's defined only
-// when the outer macro is called), and its .ENDM is part of the body too;
-// likewise a repeat block and its .ENDR.
+// collectDefinition takes one raw source line while a macro definition or
+// a repeat block is being collected: it's added to the macro's body (or
+// the block's range), unless it's the .ENDM (or .ENDR) that ends it. A
+// .MACRO inside the body starts a nested definition, which is collected as
+// part of the body (it's defined only when the outer macro is called),
+// and its .ENDM is part of the body too; likewise a repeat block and its
+// .ENDR.
+//
+// A repeat block ends with .ENDR, or with .ENDM as some STARLET.MLB
+// macros' blocks do, and is then assembled (assembleRepeat).
 func (a *Assembler) collectDefinition(raw string) error {
 	d := a.defining
 
@@ -223,6 +232,17 @@ func (a *Assembler) collectDefinition(raw string) error {
 
 	case kind == blockEnd && d.depth > 0:
 		d.depth--
+
+	case kind == blockEnd && d.repeat != nil:
+		// The end of a repeat block. A label on the .ENDR line is
+		// part of the range, as .ENDM's is part of a macro's body.
+		if label != "" {
+			d.def.body = append(d.def.body, label)
+		}
+
+		a.defining = nil
+
+		return a.assembleRepeat(d)
 
 	case word == "ENDM":
 		// The end of the definition. A label on the .ENDM line is
@@ -284,10 +304,12 @@ func (a *Assembler) pseudoMdelete(c *cursor) error {
 }
 
 // pseudoMexit assembles .MEXIT: the rest of the innermost macro expansion
-// is skipped, as if its .ENDM had been reached. (runSource closes the
-// conditional blocks the expansion opened.)
+// is skipped, as if its .ENDM had been reached. When the innermost
+// expansion is a repeat block's, the rest of the repetition and the
+// repetitions still to come are skipped (the manual, .MEXIT's notes 1
+// and 2). (runSource closes the conditional blocks the expansion opened.)
 func (a *Assembler) pseudoMexit(*cursor) error {
-	f := a.innermost(sourceMacro)
+	f := a.innermost(sourceMacro, sourceRepeat)
 	if f == nil {
 		return vmserrors.New(vmserrors.VAX_NOTINMACRO, ".MEXIT")
 	}
@@ -319,7 +341,7 @@ func (a *Assembler) assembleMacroCall(c *cursor) (handled bool, err error) {
 // expandMacro expands a call of m whose arguments are at c, and assembles
 // the expansion.
 func (a *Assembler) expandMacro(m *macroDef, c *cursor) error {
-	if a.count(sourceMacro) >= maxExpansionDepth {
+	if a.expansions() >= maxExpansionDepth {
 		return vmserrors.New(vmserrors.VAX_MACRODEPTH, maxExpansionDepth)
 	}
 

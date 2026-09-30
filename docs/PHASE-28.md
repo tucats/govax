@@ -11,7 +11,7 @@ Phase 27 fixtures do.
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress (subtasks 1 and 2 done; next, subtask 3).**
+**Status: in progress (subtasks 1-3 done; next, subtask 4).**
 
 ## Scope
 
@@ -202,7 +202,7 @@ inside it. Repeat blocks collect their lines to `.ENDR` the same way.
 2. **Done.** **Argument features and attribute directives:** created local
    labels (`?L1`), `\symbol` values, `.NARG`, `.NCHR`, `.NTYPE`, and the
    string operators `%LENGTH`, `%LOCATE`, and `%EXTRACT`.
-3. **Repeat blocks:** `.REPEAT`/`.REPT`, `.IRP`, `.IRPC`, `.ENDR`, and
+3. **Done.** **Repeat blocks:** `.REPEAT`/`.REPT`, `.IRP`, `.IRPC`, `.ENDR`, and
    `.MEXIT` inside a repeat block.
 4. **Message and listing directives:** `.ERROR`, `.WARN`, and `.PRINT` in
    MACRO's form (message from the comment; `.ERROR` is an assembly error,
@@ -390,3 +390,39 @@ All settled (2026-09-30):
   `$EXIT_S` and `$QIOW_S`. Both expanded to what real MACRO generates
   (`$QIOW_S`'s `$PUSHADR` chose `PUSHAQ (R3)+` for `IOSB=(R3)+` through
   `.NTYPE`, and `PUSHAB` for a label).
+
+### 2026-09-30 — Subtask 3: repeat blocks
+
+- **`.REPEAT`/`.REPT`, `.IRP`, `.IRPC`** (`repeat.go`). The directive
+  starts collecting the block's range, as `.MACRO` starts a body: a
+  `definition` now holds either a macro or a `repeatBlock`, and
+  `collectDefinition` counts nested blocks the same way. At the matching
+  `.ENDR` (or `.ENDM`, as in STARLET.MLB's `$$POS`, now outside a macro
+  too) each repetition is assembled as a `sourceRepeat` frame, with the
+  formal argument substituted by `substitute`, apostrophes and all.
+  `.REPEAT`'s count must be absolute and defined, and zero or less
+  assembles nothing. `.IRP`'s list is read by `parseActuals` (commas make
+  null arguments, `<...>` and `^x...x` delimit, `\symbol` passes a value);
+  an empty list assembles nothing. `.IRPC` repeats once per character.
+- **`.MEXIT`** ends the innermost expansion, macro or repetition; in a
+  repetition it ends that repetition and the ones after it (the manual's
+  `.MEXIT` notes 1 and 2).
+- **Error locations** name the block's directive line and the
+  repetition: `line 2: in repetition 1 of .IRP, line 2: ...`
+  (`ExpansionError` gained `Block` and `Repetition`). String operators are
+  evaluated in a repetition's lines as in a macro's. The nesting limit
+  counts repeat blocks along with macro expansions.
+- New status codes `VAX_NOENDR` and `VAX_NOTINREPEAT` (a stray `.ENDR`);
+  `VAX_NOTINMACRO`'s text now says "macro expansion or repeat block".
+- Both dialects, and at the console's interactive prompt.
+- Tests (`repeat_test.go`) are the manual's `COPIES`, `CALL_SUB`, and
+  `HASH_SYM`, plus argument forms, concatenation, nesting (and a block that
+  defines macros), `.MEXIT`, `.ENDM` endings, errors, and error locations
+  in both dialects.
+- A scratch check against the real STARLET.MLB: `$$R_VBFSET FAB,<GET,PUT,DEL>`
+  (the `.IRP` behind `$FAB`'s and `$RAB`'s bit-set arguments) gives 7, and an
+  unknown bit reaches its `.ERROR` branch. Found for later subtasks:
+  `$DEFINI`/`$DEFEND` need `.NOCROSS`/`.CROSS` (subtask 4), and
+  `$$R_TABINIT`'s `.IIF NE .&3, ...` (an alignment check on a relocatable
+  `.`) is rejected as `VAX_RELEXPR`; real MACRO evidently accepts it, so
+  that has to be settled for subtask 5's `$FAB`/`$RAB` acceptance.

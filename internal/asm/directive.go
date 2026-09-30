@@ -166,6 +166,13 @@ func init() {
 		"NCHR":    {both, (*Assembler).pseudoNchr},
 		"NTYPE":   {both, (*Assembler).pseudoNtype},
 
+		// Repeat blocks (repeat.go).
+		"REPEAT": {both, (*Assembler).pseudoRepeat},
+		"REPT":   {both, (*Assembler).pseudoRepeat},
+		"IRP":    {both, (*Assembler).pseudoIrp},
+		"IRPC":   {both, (*Assembler).pseudoIrpc},
+		"ENDR":   {both, (*Assembler).pseudoEndr},
+
 		// Not a MACRO-32 directive (it has .LIBRARY and .MCALL instead),
 		// but the MACRO command resolves .INCLUDE across host and ODS-2
 		// files (docs/PHASE-27.md, subtask 10).
