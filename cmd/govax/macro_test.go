@@ -35,20 +35,21 @@ func TestMacroCommand(t *testing.T) {
 
 func TestLinkCommand(t *testing.T) {
 	cases := []struct {
-		objects     []string
-		executable  string
-		noExe, noTB bool
-		want        string
+		objects            []string
+		executable         string
+		noExe, noTB, noLib bool
+		want               string
 	}{
-		{[]string{"a.obj"}, "", false, false, `LINK "a.obj"`},
-		{[]string{"a.obj", "/x/b"}, "", false, false, `LINK "a.obj","/x/b"`},
-		{[]string{"a"}, "out.exe", false, true, `LINK "a"/EXECUTABLE="out.exe"/NOTRACEBACK`},
-		{[]string{"a"}, "", true, false, `LINK "a"/NOEXECUTABLE`},
+		{[]string{"a.obj"}, "", false, false, false, `LINK "a.obj"`},
+		{[]string{"a.obj", "/x/b"}, "", false, false, false, `LINK "a.obj","/x/b"`},
+		{[]string{"a"}, "out.exe", false, true, false, `LINK "a"/EXECUTABLE="out.exe"/NOTRACEBACK`},
+		{[]string{"a"}, "", true, false, false, `LINK "a"/NOEXECUTABLE`},
+		{[]string{"a"}, "", false, false, true, `LINK "a"/NOSYSLIB`},
 	}
 
 	for _, c := range cases {
-		if got := linkCommand(c.objects, c.executable, c.noExe, c.noTB); got != c.want {
-			t.Errorf("linkCommand(%v, %q, %v, %v) = %q, want %q", c.objects, c.executable, c.noExe, c.noTB, got, c.want)
+		if got := linkCommand(c.objects, c.executable, c.noExe, c.noTB, c.noLib); got != c.want {
+			t.Errorf("linkCommand(%v, %q, %v, %v, %v) = %q, want %q", c.objects, c.executable, c.noExe, c.noTB, c.noLib, got, c.want)
 		}
 	}
 }
@@ -63,7 +64,7 @@ func TestRun_macroLinkRunOneShot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, command := range []string{macroCommand(src, "", false), linkCommand([]string{filepath.Join(dir, "prog")}, "", false, false), "RUN " + dclQuote(filepath.Join(dir, "prog.exe"))} {
+	for _, command := range []string{macroCommand(src, "", false), linkCommand([]string{filepath.Join(dir, "prog")}, "", false, false, false), "RUN " + dclQuote(filepath.Join(dir, "prog.exe"))} {
 		var buf bytes.Buffer
 		if err := run(nil, 0, 0, &buf, emptyStdin(), []string{command}); err != nil {
 			t.Fatalf("%s: %v\n%s", command, err, buf.String())

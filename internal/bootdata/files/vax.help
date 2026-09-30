@@ -3412,7 +3412,7 @@ $LINK
     Syntax:
 
         LINK <object>[,<object>...][/HOST] [/EXECUTABLE[=<image>] |
-             /NOEXECUTABLE] [/[NO]TRACEBACK]
+             /NOEXECUTABLE] [/[NO]TRACEBACK] [/[NO]SYSLIB]
 
     Parameter:
 
@@ -3437,21 +3437,41 @@ $LINK
                         does by default.  /NOTRACEBACK starts it at its
                         own transfer address.
 
+        /SYSLIB         Searches IMAGELIB.OLB and STARLET.OLB for symbols
+                        the objects don't define, as VMS LINK does by
+                        default.  /NOSYSLIB uses only govax's own tables.
+
     Program sections are laid out as VMS LINK lays them out: grouped into
     image sections by their attributes, from address 200 (hexadecimal).
     Writable pages nothing is stored in become demand-zero.
 
-    A global symbol the objects don't define is looked up in govax's own
-    tables: the system services (SYS$...), at their addresses in the P1
-    vector, and the run-time library routines govax provides (LIB$...,
-    DECC$..., and others), in their shareable images.  A routine in a
-    shareable image must be called with a general mode operand
-    (CALLS #1,G^LIB$PUT_OUTPUT); the image reaches it through its fixup
-    section, and RUN connects it to govax's own routine.  Traceback
-    records in objects are skipped, so an image has no debug symbol table.
+    A global symbol the objects don't define is looked up, in order, in:
+
+        IMAGELIB.OLB    Which shareable image defines the routine.  Its
+                        offset there comes from the image itself
+                        (SYS$SHARE:LIBRTL.EXE, say) or, with no such
+                        file, from govax's own routine for it.
+        STARLET.OLB     The module that defines the symbol is added to
+                        the image, as VMS LINK does.
+        govax's tables  The system services (SYS$...), at their addresses
+                        in the P1 vector, and the run-time library
+                        routines govax provides (LIB$..., DECC$..., and
+                        others), in their shareable images.
+
+    The two libraries and the shareable images are VMS files, which govax
+    doesn't include.  LINK looks for them as SYS$LIBRARY:IMAGELIB.OLB,
+    SYS$LIBRARY:STARLET.OLB, and SYS$SHARE:<image>.EXE on a mounted
+    volume, then in the host directory the vax.link.library setting
+    names.  Without them, govax's own tables define what govax can run.
+
+    A routine in a shareable image must be called with a general mode
+    operand (CALLS #1,G^LIB$PUT_OUTPUT); the image reaches it through its
+    fixup section, and RUN connects it to the real image if it is there,
+    or else to govax's own routine.  Traceback records in objects are
+    skipped, so an image has no debug symbol table.
 
     From the host shell, "govax link <object>..." runs this command, with
-    --executable <file>, --no-executable, or --no-traceback.
+    --executable <file>, --no-executable, --no-traceback, or --no-syslib.
 
     Examples:
 

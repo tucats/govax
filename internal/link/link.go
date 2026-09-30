@@ -201,9 +201,13 @@ func (c *contribution) base() uint32 { return c.psect.base + c.offset }
 
 // global is a global symbol.
 type global struct {
-	name    string
-	defined bool
-	weak    bool
+	name string
+	seq  int // the order it was first seen in
+	// defined and weak say whether and how it's defined; fromSource, that
+	// a symbol source defined it.
+	defined    bool
+	weak       bool
+	fromSource bool
 	// value is the symbol's address or absolute value, once allocation
 	// has placed its psect.
 	value   uint32
@@ -214,7 +218,7 @@ type global struct {
 	// image is the shareable image a symbol from a source is in; its
 	// value is its offset there.
 	image string
-	refs    []string // modules that refer to it
+	refs  []string // modules that refer to it
 
 	// module and psectIndex are where a relocatable definition is, until
 	// the module's psects are all known: real MACRO writes its global
@@ -304,7 +308,7 @@ func (l *linker) gsdEntry(m *module, sub obj.Subrecord) error {
 func (l *linker) symbol(m *module, s *obj.Symbol) error {
 	g, ok := l.symbols[s.Name]
 	if !ok {
-		g = &global{name: s.Name}
+		g = &global{name: s.Name, seq: len(l.symbols)}
 		l.symbols[s.Name] = g
 	}
 
@@ -317,13 +321,16 @@ func (l *linker) symbol(m *module, s *obj.Symbol) error {
 	weak := s.Flags&obj.SymWEAK != 0
 
 	switch {
+	case g.fromSource:
+		// A module added from a library defines what a later source
+		// defined first; the module's definition is the one to use.
 	case g.defined && weak:
 		return nil // a weak definition never replaces one
 	case g.defined && !g.weak:
 		return fmt.Errorf("%s is defined more than once", s.Name)
 	}
 
-	g.defined, g.weak = true, weak
+	g.defined, g.fromSource, g.image, g.weak = true, false, "", weak
 	g.offset, g.contrib = s.Value, nil
 	g.entry = s.GSDType() == obj.GSDEntry
 	g.mask = s.Mask
@@ -358,22 +365,61 @@ func (l *linker) noteTransfer(m *module, eom *obj.EOM) error {
 }
 
 // checkUndefined looks each symbol the modules refer to but don't define
-// up in the symbol sources, and reports the ones none of them defines.
+// up in the symbol sources, and reports the ones none of them defines. A
+// module from an object library is added to the link (pass 1 reads it),
+// which defines the symbol and may refer to more, so the search goes on
+// until nothing new is added. Symbols are looked up in the order they were
+// first referred to, so library modules are added in a fixed order.
 func (l *linker) checkUndefined() error {
+	added := map[*Input]string{}
+
+	for {
+		progress := false
+
+		for _, g := range l.bySequence() {
+			if g.defined {
+				continue
+			}
+
+			d, ok, err := l.lookup(g.name)
+			if err != nil {
+				return fmt.Errorf("link: %s: %w", g.name, err)
+			}
+
+			if !ok {
+				continue
+			}
+
+			if d.Module == nil {
+				g.defined, g.fromSource, g.image, g.offset = true, true, d.Image, d.Value
+
+				continue
+			}
+
+			if first, ok := added[d.Module]; ok {
+				return fmt.Errorf("link: %s was added for %s, but doesn't define %s", d.Module.File, first, g.name)
+			}
+
+			added[d.Module] = g.name
+
+			if err := l.pass1(d.Module); err != nil {
+				return err
+			}
+
+			progress = true
+		}
+
+		if !progress {
+			break
+		}
+	}
+
 	var undefined []string
 
 	for name, g := range l.symbols {
-		if g.defined {
-			continue
+		if !g.defined {
+			undefined = append(undefined, name)
 		}
-
-		if d, ok := l.lookup(name); ok {
-			g.defined, g.image, g.offset = true, d.Image, d.Value
-
-			continue
-		}
-
-		undefined = append(undefined, name)
 	}
 
 	if len(undefined) == 0 {
@@ -385,15 +431,28 @@ func (l *linker) checkUndefined() error {
 	return fmt.Errorf("link: undefined symbols: %s", strings.Join(undefined, ", "))
 }
 
+// bySequence returns the global symbols in the order they were first seen.
+func (l *linker) bySequence() []*global {
+	all := make([]*global, 0, len(l.symbols))
+	for _, g := range l.symbols {
+		all = append(all, g)
+	}
+
+	sort.Slice(all, func(i, j int) bool { return all[i].seq < all[j].seq })
+
+	return all
+}
+
 // lookup finds a symbol in the first source that defines it.
-func (l *linker) lookup(name string) (Definition, bool) {
+func (l *linker) lookup(name string) (Definition, bool, error) {
 	for _, src := range l.opts.Sources {
-		if d, ok := src.Lookup(name); ok {
-			return d, true
+		d, ok, err := src.Lookup(name)
+		if err != nil || ok {
+			return d, ok, err
 		}
 	}
 
-	return Definition{}, false
+	return Definition{}, false, nil
 }
 
 // sharedImage returns what the first source that knows the shareable

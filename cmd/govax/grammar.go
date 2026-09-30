@@ -26,11 +26,12 @@ var (
 	macroObject   string
 	macroNoObject bool
 
-	// linkExecutable, linkNoExecutable, and linkNoTraceback are the link
-	// subcommand's options.
+	// linkExecutable, linkNoExecutable, linkNoTraceback, and linkNoSysLib
+	// are the link subcommand's options.
 	linkExecutable   string
 	linkNoExecutable bool
 	linkNoTraceback  bool
+	linkNoSysLib     bool
 )
 
 // mountRequest is one --mount DEVICE=container option.
@@ -187,6 +188,16 @@ var linkGrammar = []cli.Option{
 			return nil
 		},
 	},
+	{
+		LongName:    "no-syslib",
+		Description: "Don't search IMAGELIB.OLB and STARLET.OLB",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			linkNoSysLib = true
+
+			return nil
+		},
+	},
 }
 
 // addMount records one --mount or --mount-write option. Each use of the
@@ -288,12 +299,12 @@ func linkCmd(c *cli.Context) error {
 
 	paths = loadConfigPaths(paths)
 
-	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{linkCommand(objects, linkExecutable, linkNoExecutable, linkNoTraceback)})
+	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{linkCommand(objects, linkExecutable, linkNoExecutable, linkNoTraceback, linkNoSysLib)})
 }
 
 // linkCommand is the console LINK command for the link subcommand's
 // objects and options, each file name quoted as macroCommand quotes them.
-func linkCommand(objects []string, executable string, noExecutable, noTraceback bool) string {
+func linkCommand(objects []string, executable string, noExecutable, noTraceback, noSysLib bool) string {
 	quoted := make([]string, len(objects))
 	for i, o := range objects {
 		quoted[i] = dclQuote(o)
@@ -310,6 +321,10 @@ func linkCommand(objects []string, executable string, noExecutable, noTraceback 
 
 	if noTraceback {
 		command += "/NOTRACEBACK"
+	}
+
+	if noSysLib {
+		command += "/NOSYSLIB"
 	}
 
 	return command

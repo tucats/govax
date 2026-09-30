@@ -92,6 +92,12 @@ expect adjustment as phases land):
 - `internal/link` — the VAX linker (Phase 30): builds a VMS executable image from
   `internal/obj` modules, laid out as real LINK lays images out (byte for byte on
   the fixtures). The console's `LINK` command (`internal/console/link.go`) drives it.
+  Undefined symbols come from symbol sources (`source.go`, `libsource.go`):
+  IMAGELIB.OLB plus shareable images' GSTs, STARLET.OLB, then govax's own tables
+  (`internal/console/linksource.go`).
+- `internal/lbr` — the librarian file format (Phase 30): reads `.OLB`/`.MLB`/etc.
+  libraries, their B-tree indexes and module records, including DCX data-reduced
+  libraries (`dcx.go`) such as STARLET.OLB. A leaf package.
 - `cmd/govax` — `main.go` (CLI entry point) plus `grammar.go` (the `tucats/gopackages`
   `app-cli/cli` option/subcommand grammar — `stats`/`path`/`instruction-limit`/
   `time-limit` options, repeatable `mount`/`mount-write DEVICE=container`,
@@ -107,7 +113,9 @@ expect adjustment as phases land):
   mechanism (see `tickQuantum`/`tickIntervalClock` in `internal/cpu/interrupt.go`); when
   false/unset, the old quantum-driven path is used. `vax.quantum` (int) — default
   quantum-tick interval instead of the hard-coded `defaultQuantum` (20); only takes
-  effect if `> 0`.
+  effect if `> 0`. `vax.link.library` (string) — the host directory LINK looks in
+  for IMAGELIB.OLB, STARLET.OLB, and shareable images when `SYS$LIBRARY`/`SYS$SHARE`
+  don't lead to them (read by the console, not `NewEngine`).
 
 ## Bug-fixing policy while porting
 

@@ -770,7 +770,8 @@ grammar console
     ! image. OBJECTS is a comma-separated list, and its /HOST applies to
     ! each, as MACRO's does to its source. EXECUTABLE is VMS LINK's own
     ! /[NO]EXECUTABLE[=file] (empty default: the first object's name with
-    ! type EXE), and TRACEBACK is on unless /NOTRACEBACK.
+    ! type EXE), and TRACEBACK is on unless /NOTRACEBACK. /NOSYSLIB
+    ! skips IMAGELIB.OLB and STARLET.OLB, as VMS LINK's does.
     !
     verb link/id=1350
 
@@ -784,5 +785,6 @@ grammar console
                     /type=$string               -
                     /default=""
         qualifier   traceback/id=1354
+        qualifier   syslib/id=1355
 
 end

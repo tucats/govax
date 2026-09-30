@@ -101,10 +101,13 @@ to add to the link.
    librarian reader: a module that defines a still-undefined symbol is
    pulled into the link, as real LINK does.
 
-Sources are searched in order, as real LINK searches its libraries. The
-default list is still to be decided. Real VMS searches `IMAGELIB.OLB`,
-then `STARLET.OLB`; govax's tables are a fallback, or the only source
-when there are no VAX files.
+Sources are searched in order, as real LINK searches its libraries.
+The default order, decided 2026-09-30, is real LINK's: `IMAGELIB.OLB`,
+then `STARLET.OLB`, then govax's tables as the fallback (or the only
+source when there are no VAX files). `/NOSYSLIB` leaves out the two
+libraries. The console finds each VMS file through its logical name
+(`SYS$LIBRARY`, `SYS$SHARE`) on a mounted volume first, then in the host
+directory the `vax.link.library` setting names.
 
 ## What real LINK writes (from the fixture images)
 
@@ -233,7 +236,7 @@ them.
    interface, the shim and P1 vector sources, G^ fixups into the fixup
    section, and the SHL and global-section ISDs, so `hello` links and
    runs in govax. Compare with `GV_HELLO.EXE`.
-3. **The librarian reader,** and GST and object-library sources
+3. **Done.** **The librarian reader,** and GST and object-library sources
    (`IMAGELIB.OLB`, `STARLET.OLB`, a real image's GST), tested against
    files from the VAX when present.
 4. **More than one object,** `CON`/`OVR` psects across modules, `/MAP`,
@@ -452,3 +455,94 @@ them.
      then `STARLET`; govax's tables are the fallback), and how the
      console finds the library files (a setting, or a logical name
      like `SYS$LIBRARY`).
+
+### 2026-09-30 — Subtask 3: libraries and shareable image symbol tables
+
+- **`internal/lbr`** (new, a leaf package) reads librarian files from
+  their bytes, from VMS 7.3's `lbr.sdl`, `getput.lis`, `openclose.lis`,
+  `subs.lis`, and `vest_lbr/lis/lbrusr.sdl`:
+  - the header and its index descriptors;
+  - each index's B-tree, walked whole (an upper-level entry's RFA offset
+    is `^XFFFF`, and its VBN is the child block);
+  - a module's records: the librarian's module header, then records in a
+    chain of data blocks, each a length word and its bytes, word-aligned,
+    until the three-byte end-of-text record (`77 00 77`).
+- **DCX.** `STARLET.OLB` turned out to be data-reduced (sanity
+  `LHD$C_SANEIDC`): every record after the module header is compressed.
+  `lbr/dcx.go` ports DCX's type 0 expansion (`dcx/lis/expand.lis`,
+  `dcxdef.sdl`): a set of sub-map trees, each chosen by the byte before.
+  The map is a length longword, then the map, in consecutive blocks from
+  `LHD$L_DCXMAPVBN`.
+- **All real modules read.** Every module of `IMAGELIB.OLB` (61) and
+  `STARLET.OLB` (1524) reads and decodes as an object module, and each
+  library's keys add up to its header's `LHD$L_IDXCNT`.
+- **What the files hold.**
+  - `IMAGELIB.OLB`'s modules are stubs (MHD and EOM). Its symbol index
+    says which image defines a symbol, and a module header's user data
+    has the image's binary ident (LIBRTL: `0x0100000E`), but there are
+    no offsets. Real LINK reads those from the image's own GST, as
+    HELLO's map shows (4 files: the object, IMAGELIB, LIBRTL.EXE, and
+    one more).
+  - `LIBRTL.EXE`'s header has the rest: `IHD$L_IDENT` 0x0100000E, match
+    control `MATLEQ` in `LNKFLAGS`' top byte, 264 pages in its first
+    (`SHRPIC`) ISD, and its GST (`IHS`: VBN 266, 20 records, in ODS-2's
+    variable-length layout). The GST has 305 symbols, all relocatable,
+    as offsets from the image's base.
+  - `STARLET.OLB` defines the system services in module `SYS$P1_VECTOR`
+    and the status codes in `SYS$SSDEF`: absolute symbols and empty
+    absolute psects. It also has object copies of the RTL routines
+    (`LIB$PUT_OUTPUT`), which `IMAGELIB` shadows.
+- **Sources** (`internal/link/libsource.go`):
+  - `ReadShareableImage` reads an image's GST into a `TableSource`, and
+    describes the image (pages, ident, match control).
+  - `ImageLibrarySource` asks the library which image defines a symbol,
+    then asks that image's source, through an `Open` callback.
+  - `ObjectLibrarySource` returns the module that defines a symbol.
+  - `Definition.Module` is new: the linker runs pass 1 on the module and
+    looks again, in the order symbols were first seen, until nothing
+    more is added. A module that doesn't define what it was added for
+    is an error. A module's definition replaces one a later source gave.
+  - `SymbolSource.Lookup` now returns an error too: a source that knows
+    where a symbol is but can't read it stops the link, rather than
+    letting `STARLET` add a private copy of an RTL routine.
+- **Matches real LINK byte for byte.** `TestLinkFromVMSLibraries` links
+  `hello` with only `IMAGELIB`, `LIBRTL.EXE`, and `STARLET`, and gets
+  `GV_HELLO.EXE`. A `SYS$EXIT` call linked through `STARLET` gives the
+  same image as govax's tables.
+- **The console** (`internal/console/linksource.go`) searches `IMAGELIB`,
+  `STARLET`, then govax's tables. Each file is
+  `SYS$LIBRARY:IMAGELIB.OLB`, `SYS$LIBRARY:STARLET.OLB`, or
+  `SYS$SHARE:<image>.EXE` on a mounted volume, or else in the host
+  directory `vax.link.library` names (`Console.LinkLibrary` in tests).
+  A missing file is skipped; one that won't read is an error. An image
+  `IMAGELIB` names but LINK can't find falls back to govax's shims for
+  it, and a routine with no shim is an error naming the missing file.
+  `LINK/NOSYSLIB` and `govax link --no-syslib` skip the libraries.
+  `rms.Session.ReadRawFile` reads a file's bytes, host or volume.
+- **A shim bug found.** Checking the shim table against `LIBRTL.EXE`
+  showed `LIB$ADAWI`'s and `STR$UPCASE`'s offsets swapped, back to the C
+  source's `kernel.asm`. Fixed in govax's copies and logged in
+  `docs/DEVIATIONS.md`. The other ten LIBRTL shims match.
+- **Not yet:** a user's own libraries (`/LIBRARY`, options files), and
+  shareable images named directly (`/SHAREABLE` in an options file) are
+  subtask 4's. A shareable image with more than one shareable section
+  would need a global section ISD for each; only the first is described.
+  Real LINK's rules for searching an earlier library again for a symbol
+  a later library's module refers to aren't known; govax searches every
+  source again each time.
+- Tests:
+  - `internal/lbr`: a hand-built library (an upper-level index entry, a
+    record run on into a chained block, the end-of-text record), damaged
+    headers and a looping index, a hand-built two-sub-map DCX map, and,
+    when present, every module of the real libraries.
+  - `internal/link`: `LIBRTL.EXE`'s GST, the real-image comparison, the
+    `STARLET` system service link, a missing image, and (with no VMS
+    files) chained library modules.
+  - `internal/console`: every LIBRTL shim against `LIBRTL.EXE`, LINK
+    through the host directory (the image equals `/NOSYSLIB`'s and
+    runs), the shim fallback and its error, and `SYS$LIBRARY`/`SYS$SHARE`
+    on a mounted volume.
+  - `cmd/govax`: `--no-syslib`.
+
+  Tests that need the VMS files skip without them. `go test ./...`
+  passes.

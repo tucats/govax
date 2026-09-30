@@ -17,6 +17,11 @@ type Definition struct {
 	// as a system service's address in the P1 vector is.
 	Image string
 	Value uint32
+	// Module, from an object library, is a module that defines the
+	// symbol. The link adds it, as real LINK does, and then the symbols
+	// it refers to need defining too. A source returns the same *Input
+	// every time for one module.
+	Module *Input
 }
 
 // Match controls how the image activator checks a shareable image's
@@ -46,8 +51,10 @@ type SharedImage struct {
 
 // SymbolSource finds global symbols the object modules don't define.
 type SymbolSource interface {
-	// Lookup returns the definition of the global symbol name.
-	Lookup(name string) (Definition, bool)
+	// Lookup returns the definition of the global symbol name. An error
+	// means the source knows where name is but can't read it, and ends
+	// the link rather than letting a later source define it.
+	Lookup(name string) (Definition, bool, error)
 	// Image returns what the source knows about the shareable image
 	// name.
 	Image(name string) (SharedImage, bool)
@@ -60,10 +67,10 @@ type TableSource struct {
 }
 
 // Lookup implements SymbolSource.
-func (t *TableSource) Lookup(name string) (Definition, bool) {
+func (t *TableSource) Lookup(name string) (Definition, bool, error) {
 	d, ok := t.Symbols[name]
 
-	return d, ok
+	return d, ok, nil
 }
 
 // Image implements SymbolSource.

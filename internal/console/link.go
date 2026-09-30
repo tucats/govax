@@ -13,7 +13,7 @@ import (
 
 // This file implements docs/PHASE-30.md's LINK command:
 //
-//	LINK object[,object...][/HOST] [/EXECUTABLE[=image] | /NOEXECUTABLE] [/[NO]TRACEBACK]
+//	LINK object[,object...][/HOST] [/EXECUTABLE[=image] | /NOEXECUTABLE] [/[NO]TRACEBACK] [/[NO]SYSLIB]
 //
 // It reads each object module, links them with internal/link, and writes
 // the executable image. The objects and the image can each be a host file
@@ -39,6 +39,10 @@ type LinkOptions struct {
 	// NoTraceback is /NOTRACEBACK: the image doesn't start through
 	// SYS$IMGSTA.
 	NoTraceback bool
+
+	// NoSysLib is /NOSYSLIB: don't search IMAGELIB.OLB and STARLET.OLB
+	// (linksource.go).
+	NoSysLib bool
 }
 
 // Link links object modules into an executable image.
@@ -101,11 +105,16 @@ func (c *Console) Link(opts LinkOptions) error {
 		return fileFailure(err, opts.Executable)
 	}
 
+	sources, err := c.linkSources(!opts.NoSysLib)
+	if err != nil {
+		return vmserrors.Wrap(vmserrors.CLI_LINKING, err, exe.Name)
+	}
+
 	img, err := link.Link(inputs, link.Options{
 		ImageName: imageName(exe),
 		LinkerID:  linkerID(),
 		Traceback: !opts.NoTraceback,
-		Sources:   []link.SymbolSource{govaxSymbols()},
+		Sources:   sources,
 	})
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.CLI_LINKING, err, exe.Name)

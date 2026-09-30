@@ -558,6 +558,7 @@ func (d *Dispatcher) bindGrammar() {
 			Executable:   r.String("EXECUTABLE"),
 			NoExecutable: r.Present("EXECUTABLE") && r.Negated("EXECUTABLE"),
 			NoTraceback:  r.Present("TRACEBACK") && r.Negated("TRACEBACK"),
+			NoSysLib:     r.Present("SYSLIB") && r.Negated("SYSLIB"),
 		})
 	})
 

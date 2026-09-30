@@ -201,6 +201,12 @@ type Console struct {
 	// alongside the loading image with no prefix.
 	SharePrefix string
 
+	// LinkLibrary is the host directory LINK looks in for IMAGELIB.OLB,
+	// STARLET.OLB, and shareable images when SYS$LIBRARY and SYS$SHARE
+	// don't lead to them (internal/console/linksource.go). Empty means the
+	// vax.link.library setting's.
+	LinkLibrary string
+
 	// Paths is the search-path policy (docs/PHASE-15.md) every file-reading
 	// method on Console (Include, Assemble, imageLoad, LoadROM, LoadNVRAM)
 	// resolves an unqualified name through: the name as given, then each of

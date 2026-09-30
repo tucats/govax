@@ -138,6 +138,57 @@ func (s *Session) ReadRecordFile(loc FileLocation, kind RecordKind) ([][]byte, F
 	return records, found, nil
 }
 
+// ReadRawFile reads the bytes of the file at loc, whatever its records: a
+// host file whole, or a volume file's blocks up to its end-of-file byte,
+// as COPY/BINARY copies it. LINK reads libraries and shareable images this
+// way. It returns the location of the file actually read, as
+// ReadRecordFile does.
+func (s *Session) ReadRawFile(loc FileLocation) ([]byte, FileLocation, error) {
+	if loc.Host {
+		data, err := os.ReadFile(loc.Name)
+
+		return data, loc, err
+	}
+
+	var (
+		buf   bytes.Buffer
+		found FileLocation
+	)
+
+	err := s.firstSpec(loc.Name, func(vol *volume.Volume, r resolvedSpec) error {
+		matches, err := filespec.Glob(vol, r.Spec)
+		if err != nil {
+			return err
+		}
+
+		switch len(matches) {
+		case 0:
+			return &NotFoundError{Spec: loc.Name}
+		case 1:
+		default:
+			return &AmbiguousError{Spec: loc.Name, Count: len(matches)}
+		}
+
+		f, err := vol.OpenFID(matches[0].Fid)
+		if err != nil {
+			return err
+		}
+
+		if err := copyRawTo(&buf, f); err != nil {
+			return err
+		}
+
+		found = FileLocation{Name: fullSpec(r.Display, matches[0])}
+
+		return nil
+	})
+	if err != nil {
+		return nil, FileLocation{}, fmt.Errorf("rms: reading %s: %w", loc.Name, err)
+	}
+
+	return buf.Bytes(), found, nil
+}
+
 // fullSpec is a matched file's complete specification.
 func fullSpec(device string, m filespec.Match) string {
 	return filespec.Spec{Device: device, Dirs: m.Dirs, Name: m.Name, Type: m.Type, Version: fmt.Sprint(m.Version)}.String()
