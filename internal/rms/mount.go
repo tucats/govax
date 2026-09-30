@@ -1,7 +1,9 @@
 package rms
 
 import (
+	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/tucats/ods2/diskimage"
@@ -159,6 +161,31 @@ func (t *MountTable) Dismount(device string) error {
 	delete(t.mounts, key)
 
 	return nil
+}
+
+// DismountAll dismounts every mounted volume, in device-name order, so
+// that each one's pending writes (its cached allocation bitmaps above
+// all) reach its container. govax calls it as a session ends: a volume
+// left mounted would otherwise lose them, leaving files whose headers
+// its bitmaps don't account for. It goes on past a failure and returns
+// every failure.
+func (t *MountTable) DismountAll() error {
+	devices := make([]string, 0, len(t.mounts))
+	for key := range t.mounts {
+		devices = append(devices, key)
+	}
+
+	sort.Strings(devices)
+
+	var errs []error
+
+	for _, device := range devices {
+		if err := t.Dismount(device); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return errors.Join(errs...)
 }
 
 // Lookup returns the *volume.Volume currently mounted on device, and

@@ -26,7 +26,7 @@ becomes the record of the implementation: each subtask adds a
 [progress log](#progress-log) entry, and the open questions get their answers
 recorded here.
 
-**Status: subtasks 1-9 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 10 is next.**
+**Status: subtasks 1-10 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 11 (fixture ladder 4 to 9, which needs the user) is next.**
 
 ## Why this phase looks different
 
@@ -539,7 +539,7 @@ them under `testdata/mar/vax/`). Each step adds one feature:
    don't. Unit tests cover each classification rule, including Windows drive
    letters, logical names, `/HOST`, and the `SET DEFAULT` rule for bare
    names.
-10. **Command surface.** The console `MACRO` verb with the source's `/HOST`
+10. **Done.** **Command surface.** The console `MACRO` verb with the source's `/HOST`
     and `/[NO]OBJECT[=file]`, the `govax macro` subcommand, a repeatable
     `--mount DEVICE=container` CLI option that mounts volumes before a
     one-shot command runs, default object naming with case copied from the
@@ -1436,3 +1436,98 @@ above record the answers:
   `mar-exchange-vms.dsk` is present, reads all nine objects in place on
   the real VAX volume and copies them out with a plain COPY, matching the
   subtask 3 fixtures record for record. `go test ./...` passes.
+
+### 2026-09-30 — Subtask 10: the MACRO command
+
+- **The console verb** (`console.dcl`, `internal/console/macro.go`):
+  `MACRO source[/HOST] [/OBJECT[=object] | /NOOBJECT]`. SOURCE takes
+  COPY's parameter-scoped `/HOST`. `/OBJECT` is a `$string` qualifier
+  whose default is empty, so `/OBJECT` alone, like no qualifier, means
+  the default name. `Console.Macro`:
+  - finds the source with `rms.Session.Locate` and reads it with
+    `ReadRecordFile` (subtask 9). A source with no file type gets `.MAR`,
+    as on VMS (on the host, only when no file of that exact name exists;
+    the extension is lowercase unless the name has an uppercase letter);
+  - resolves `.INCLUDE` names with `LocateRelated` against the source
+    actually read, so a bare name is found beside it, on either side;
+  - assembles in the MACRO dialect, reports each warning
+    (`CLI_ASMWARNING`) and each error (`CLI_ASSEMBLING`, naming its
+    line), and after errors returns `CLI_ASMERRORS` without writing
+    anything;
+  - builds the object in memory (`Assembler.Object`, `obj.Encode`), with
+    LNM `govax MACRO V<build>` (the new `console.BuildVersion`, set by
+    `cmd/govax`) and SRC the command line as typed, as real MACRO
+    records its own;
+  - writes it with `CreateRecordFile`, which on the host writes a
+    temporary file and renames it, so an existing object is replaced
+    only by a complete one.
+- **Object names.** The default is the source's name and place with the
+  type OBJ, its case copied letter by letter from the source's type
+  (`hello.mar`, `HELLO.MAR`, `Hello.Mar` give `hello.obj`, `HELLO.OBJ`,
+  `Hello.Obj`; with no type, lowercase unless the name has an uppercase
+  letter). On a volume the version is dropped, so each assembly makes
+  the next version. `/OBJECT=` takes subtask 9's rules: a bare name goes
+  beside the source, a host path or VMS specification where it says, and
+  one that names only a directory (an existing host directory, or
+  `DUA0:[OBJ]`) gets the default name in it, as VMS fills an output
+  specification's missing fields from the input's.
+- **Every error is reported.** The assembler used to stop at its first
+  error. In the MACRO dialect it now goes on to the next statement,
+  collecting each error, and `Assemble` returns them all as the new
+  `asm.Errors` (a single error still comes back alone, so no existing
+  caller or test changed). Errors found at the end, like an undefined
+  local label, come last. An error or warning in an included file is
+  wrapped in an `*Error` for each `.INCLUDE` that led to it
+  (`includeLines`), the same nesting a failed `.INCLUDE` statement
+  already had. The console dialect still stops at the first error.
+- **The CLI** (`cmd/govax/grammar.go`): `govax macro <source>` with
+  `--object <file>` or `--no-object`, passed to the console as a MACRO
+  command with each file name quoted. Quoting keeps a host path's case
+  (DCL uppercases anything unquoted) and stops its `/` from being read
+  as a qualifier. `--mount DEVICE=container` (read-only, like MOUNT) and
+  `--mount-write DEVICE=container` can each be repeated. They mount
+  before `vax.init` runs, and a mount that fails ends govax with its
+  error.
+- **Two fixes to one-shot commands, found along the way:**
+  - **A failed one-shot command dropped into the REPL.** `vax.init`'s
+    comment says a command-line command exits the emulator when it's
+    done, but on failure `Include` returned the error, `vax.init`
+    printed it as `vax.init: ...`, and the prompt came up with exit
+    status 0. Now the command always ends the session. `run` returns
+    its failure (`Console.CommandLineErr`), and `govax` prints it and
+    exits 1. This applies to `asm` and `run` too.
+  - **Volumes left mounted at exit lost data.** Nothing dismounted a
+    volume when a session ended, so the allocation bitmaps `ods2` caches
+    never reached the container. The next session to create a file found
+    the index-file bitmap inconsistent with the headers. A one-shot
+    `--mount-write` MACRO hit this every time, and an interactive
+    session that exited without DISMOUNT had the same problem. `run` now
+    calls the new `MountTable.DismountAll` as the session ends.
+    `TestRun_mountWrite` fails without it.
+- **Help.** A new `MACRO` topic in `vax.help` covers the syntax, the
+  file-name rules, object naming, error behavior, and the CLI form.
+  MACRO is also in the topic list.
+- **Checked by hand** with a govax-initialized container: host source to
+  a volume object, a volume source (no type given) to its default object
+  through `govax --mount-write`, then to a host object, and a later
+  session listing all of them and creating more files without error.
+- Tests:
+  - `internal/asm/errors_test.go`: every error reported, a single error
+    alone, errors and warnings inside nested includes, and the console
+    dialect stopping at the first error.
+  - `internal/console/macro_test.go`: case copying; default names for
+    each case and with no type; headers; errors writing nothing and
+    leaving the old object; warnings; `/NOOBJECT`; `/OBJECT` as a bare
+    name, a path, a directory, and a missing directory; missing sources;
+    volume sources with next versions and a directory-only `/OBJECT`;
+    host source to a volume object and a read-only volume; `.INCLUDE`
+    across host and volume; every `testdata/mar` fixture; and the verb
+    through the DCL grammar.
+  - `cmd/govax/macro_test.go`: the command the subcommand builds, a
+    one-shot MACRO, a failed one ending `run` with its error, a
+    `--mount-write` MACRO run twice on one volume, and a `--mount`
+    failure.
+  - `rms`: `DismountAll`.
+  - Two `dcl` grammar tests now expect the MACRO verb.
+
+  `go test ./...` passes.

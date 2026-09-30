@@ -116,6 +116,11 @@ const (
 	// docs/PHASE-25.md subtask 6: INITIALIZE/CONTAINER's failure, which
 	// used to borrow SS_BADPARAM's message text.
 	cliInitFail
+
+	// docs/PHASE-27.md subtask 10: the MACRO command.
+	cliAsmErrors
+	cliAsmWarning
+	cliObjWrite
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -244,6 +249,18 @@ const (
 	// small for the reserved files (docs/PHASE-23.md). Real VMS reports
 	// these through an INIT facility govax doesn't model.
 	CLI_INITFAIL = CLIFacility<<FacilityPosition | cliInitFail<<MessagePosition | StatusError
+
+	// CLI_ASMERRORS ends a MACRO whose assembly found errors, after each
+	// has been reported (as CLI_ASSEMBLING): no object file is written.
+	CLI_ASMERRORS = CLIFacility<<FacilityPosition | cliAsmErrors<<MessagePosition | StatusError
+
+	// CLI_ASMWARNING reports one warning from a MACRO assembly; the
+	// object is still written.
+	CLI_ASMWARNING = CLIFacility<<FacilityPosition | cliAsmWarning<<MessagePosition | StatusWarning
+
+	// CLI_OBJWRITE reports a MACRO whose object file couldn't be built or
+	// written.
+	CLI_OBJWRITE = CLIFacility<<FacilityPosition | cliObjWrite<<MessagePosition | StatusError
 )
 
 func init() {
@@ -342,5 +359,8 @@ func init() {
 	DefineMessage(CLI_NEEDVERSION, CLIFacility, "NEEDVERSION", "!Q requires a specific version, e.g. ;3 or ;* (DELETE never defaults to a version)")
 	DefineMessage(CLI_INITFAIL, CLIFacility, "INITFAIL", "Unable to complete INITIALIZE operation on !S")
 	DefineMessage(CLI_EMPTYELEMENT, CLIFacility, "EMPTYELEMENT", "Empty element in list !Q")
+	DefineMessage(CLI_ASMERRORS, CLIFacility, "ASMERRORS", "!D error(s) assembling !S; no object file written")
+	DefineMessage(CLI_ASMWARNING, CLIFacility, "ASMWARNING", "Assembling !S")
+	DefineMessage(CLI_OBJWRITE, CLIFacility, "OBJWRITE", "Writing object file !S")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

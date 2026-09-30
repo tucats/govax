@@ -115,6 +115,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	}
 
 	console.CommandLineString = argText.String()
+	console.BuildVersion = BuildVersion
 
 	// Set up the fall-back path resolver for including files that might need to be found in the
 	// default bootdata embedded file system.
@@ -170,11 +171,25 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		return vmserrors.Wrap(vmserrors.VAX_ALLOCVAX, err)
 	}
 
+	// Volumes still mounted when the session ends are dismounted, so
+	// their pending writes reach their containers.
+	defer func() {
+		if err := c.Mounts.DismountAll(); err != nil {
+			fmt.Fprintln(out, "%"+err.Error())
+		}
+	}()
+
 	d := console.NewDispatcher(c, grammar, help)
 	c.Dispatcher = d
 
 	if len(args) == 0 {
 		fmt.Fprintf(out, "govax %s\n", BuildVersion)
+	}
+
+	for _, m := range mountRequests {
+		if err := c.Mount(m.device, m.path, m.write); err != nil {
+			return err
+		}
 	}
 
 	if err := c.Include("vax.init", d.Dispatch); err != nil {
@@ -233,7 +248,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	// See if we have trailing stats to print out here.
 	printStats(c, out, stats)
 
-	return nil
+	return c.CommandLineErr()
 }
 
 // printStatus dumps out stats if they are enabled to the console when the emulation finishes.

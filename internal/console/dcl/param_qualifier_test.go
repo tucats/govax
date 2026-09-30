@@ -272,19 +272,20 @@ func TestParse_paramScopedQualifier_quotedValueThenQualifier(t *testing.T) {
 // misattributed to whatever parameter happened to precede it in the file.
 // COPY (subtask 9, docs/PHASE-23.md's "COPY direction and the /HOST
 // qualifier" design section) is excluded from this walk -- it's this
-// feature's first and, so far, only real consumer, with its own dedicated
-// structural check (TestLoadEvaxGrammar_copy, define_test.go).
+// feature's first real consumer, with its own dedicated structural check
+// (TestLoadEvaxGrammar_copy, define_test.go). So is MACRO
+// (docs/PHASE-27.md subtask 10), whose SOURCE takes COPY's /HOST.
 func TestLoadEvaxGrammar_unaffectedByParamQualifierFeature(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
 	for _, e := range g.entries {
-		if e.Name == "COPY" {
+		if e.Name == "COPY" || e.Name == "MACRO" {
 			continue
 		}
 
 		for _, p := range e.Parameters {
 			if len(p.Qualifiers) != 0 {
-				t.Errorf("%s parameter %s unexpectedly has parameter-scoped qualifiers %+v (only COPY declares any)",
+				t.Errorf("%s parameter %s unexpectedly has parameter-scoped qualifiers %+v (only COPY and MACRO declare any)",
 					e.Name, p.Name, p.Qualifiers)
 			}
 		}

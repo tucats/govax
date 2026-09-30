@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -241,6 +242,12 @@ func writeHostRecords(path string, kind RecordKind, records [][]byte) error {
 
 	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".*")
 	if err != nil {
+		// Name the file being written, not the temporary one.
+		var pe *fs.PathError
+		if errors.As(err, &pe) {
+			err = &fs.PathError{Op: "create", Path: path, Err: pe.Err}
+		}
+
 		return err
 	}
 

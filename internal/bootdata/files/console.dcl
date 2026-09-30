@@ -742,4 +742,26 @@ grammar console
         qualifier   lf/id=1265
         disallow    crlf and lf
 
+    !
+    ! govax-native extension (docs/PHASE-27.md subtask 10, internal/console
+    ! + internal/asm + internal/rms): MACRO assembles a MACRO-32 source
+    ! file into a VAX object module. SOURCE carries its own HOST qualifier,
+    ! the same parameter-scoped one COPY uses; without it, the file-name
+    ! rules in internal/rms/location.go decide whether SOURCE is a host
+    ! file or a file on a mounted volume. OBJECT is VMS MACRO's own
+    ! /[NO]OBJECT[=file]: with no value (the empty default), or no
+    ! qualifier at all, the object is the source's name with type OBJ.
+    !
+    verb macro/id=1300
+
+        parameter   source/id=1301              -
+                    /type=$string               -
+                    /prompt="Source"
+        qualifier   host/id=1302                -
+                    /parameter=source
+
+        qualifier   object/id=1303              -
+                    /type=$string               -
+                    /default=""
+
 end

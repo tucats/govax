@@ -140,6 +140,18 @@ type Assembler struct {
 	includeResolver func(name string) (string, error)
 	includeDepth    int
 
+	// includeLines holds, for each level of .INCLUDE, the line of the
+	// .INCLUDE statement in the file that included it (the first entry,
+	// for the top-level source, is unused). inIncludes uses it to name
+	// where an error inside an included file came from.
+	includeLines []int
+
+	// errs collects the statement errors of a MACRO-dialect assembly,
+	// which goes on after an error so that one assembly reports them all
+	// (docs/PHASE-27.md, subtask 10). The console dialect stops at the
+	// first error, as eVAX's assembler does.
+	errs []error
+
 	// stop is set by .END to unwind out of the (possibly nested, via
 	// .INCLUDE/.IF) line-processing loop.
 	stop bool
@@ -357,22 +369,61 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 	a.stop = false
 	a.continued = ""
 	a.cond = nil
+	a.errs = nil
 
-	if err := a.assembleLines(source); err != nil {
-		return nil, err
+	err := a.assembleLines(source)
+
+	if err == nil && len(a.cond) > 0 {
+		err = vmserrors.New(vmserrors.VAX_NOENDC, len(a.cond))
 	}
 
-	if len(a.cond) > 0 {
-		return nil, vmserrors.New(vmserrors.VAX_NOENDC, len(a.cond))
+	if err == nil && a.dialect == DialectMACRO {
+		err = a.finish()
 	}
 
-	if a.dialect == DialectMACRO {
-		if err := a.finish(); err != nil {
-			return nil, err
-		}
+	if err != nil {
+		a.errs = append(a.errs, err)
 	}
 
-	return a.Bytes(), nil
+	switch len(a.errs) {
+	case 0:
+		return a.Bytes(), nil
+	case 1:
+		return nil, a.errs[0]
+	default:
+		return nil, &Errors{List: a.errs}
+	}
+}
+
+// Errors is every error a MACRO-dialect assembly found, in source order
+// (the errors found when assembly ends, such as undefined symbols,
+// last). An assembly with one error returns that error alone.
+type Errors struct {
+	List []error
+}
+
+// Error lists the errors, one per line.
+func (e *Errors) Error() string {
+	lines := make([]string, len(e.List))
+	for i, err := range e.List {
+		lines[i] = err.Error()
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+// Unwrap returns the errors, for errors.Is and errors.As.
+func (e *Errors) Unwrap() []error { return e.List }
+
+// inIncludes wraps err, an error at a line of the file being assembled,
+// in an *Error for each .INCLUDE that led to that file, outermost last,
+// the same nesting a failed .INCLUDE statement gets.
+func (a *Assembler) inIncludes(err error) error {
+	for k := len(a.includeLines) - 1; k >= 1; k-- {
+		err = &Error{Line: a.includeLines[k], Err: err}
+	}
+
+	return err
 }
 
 // assembleLines is Assemble's error-returning core, shared with .INCLUDE
@@ -388,6 +439,9 @@ func (a *Assembler) assembleLines(source string) error {
 	outerLine := a.line
 	defer func() { a.line = outerLine }()
 
+	a.includeLines = append(a.includeLines, outerLine)
+	defer func() { a.includeLines = a.includeLines[:len(a.includeLines)-1] }()
+
 	for i, raw := range strings.Split(source, "\n") {
 		if a.stop {
 			return nil
@@ -401,7 +455,11 @@ func (a *Assembler) assembleLines(source string) error {
 		}
 
 		if err := a.assembleStatement(line); err != nil {
-			return &Error{Line: i + 1, Err: err}
+			if a.dialect != DialectMACRO {
+				return &Error{Line: i + 1, Err: err}
+			}
+
+			a.errs = append(a.errs, a.inIncludes(&Error{Line: i + 1, Err: err}))
 		}
 	}
 

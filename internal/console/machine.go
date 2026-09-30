@@ -134,6 +134,11 @@ type Console struct {
 
 	quit bool // set by Quit (misc.go); read via Running
 
+	// commandLineErr is the failure of the one-shot command given on
+	// govax's command line (Include's "/command_line"), which ends the
+	// session; read via CommandLineErr.
+	commandLineErr error
+
 	// In/Out are the console's byte-level terminal streams: In backs
 	// XFC$CONSOLE_READ and (shared with RTL) DECC$GETS/EXE$INPUT/EXE$READ's
 	// fid-0 case; Out backs XFC$CONSOLE_WRITE and every other console

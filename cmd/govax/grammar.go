@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -15,7 +16,22 @@ var (
 	timeLimit        time.Duration
 	paths            []string
 	stats            bool
+
+	// mountRequests are the --mount and --mount-write options, in order,
+	// which run mounts before anything else.
+	mountRequests []mountRequest
+
+	// macroObject and macroNoObject are the macro subcommand's --object
+	// and --no-object options.
+	macroObject   string
+	macroNoObject bool
 )
+
+// mountRequest is one --mount DEVICE=container option.
+type mountRequest struct {
+	device, path string
+	write        bool
+}
 
 var grammar = []cli.Option{
 	{
@@ -49,6 +65,21 @@ var grammar = []cli.Option{
 		Action:      setTimeLimit,
 	},
 	{
+		LongName:             "mount",
+		ShortName:            "m",
+		Description:          "Mount a container read-only before running (DEVICE=container; repeatable)",
+		ParameterDescription: "device=container",
+		OptionType:           cli.StringType,
+		Action:               func(c *cli.Context) error { return addMount(c, "mount", false) },
+	},
+	{
+		LongName:             "mount-write",
+		Description:          "Mount a container for writing before running (DEVICE=container; repeatable)",
+		ParameterDescription: "device=container",
+		OptionType:           cli.StringType,
+		Action:               func(c *cli.Context) error { return addMount(c, "mount-write", true) },
+	},
+	{
 		LongName:    "console",
 		Description: "Execute VAX console commands",
 		OptionType:  cli.Subcommand,
@@ -65,6 +96,15 @@ var grammar = []cli.Option{
 		ParameterDescription: "filename",
 	},
 	{
+		LongName:             "macro",
+		Description:          "Assemble a MACRO-32 source file into an object module",
+		OptionType:           cli.Subcommand,
+		Action:               macroCmd,
+		ParametersExpected:   1,
+		ParameterDescription: "source",
+		Value:                macroGrammar,
+	},
+	{
 		LongName:             "run",
 		Description:          "Run a VAX/VMS executable",
 		OptionType:           cli.Subcommand,
@@ -72,6 +112,46 @@ var grammar = []cli.Option{
 		ParametersExpected:   1,
 		ParameterDescription: "filename",
 	},
+}
+
+// macroGrammar is the macro subcommand's own options.
+var macroGrammar = []cli.Option{
+	{
+		LongName:    "object",
+		ShortName:   "o",
+		Description: "Object file name (default: the source's, with type .obj)",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			macroObject, _ = c.String("object")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "no-object",
+		Description: "Assemble and report errors without writing an object file",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			macroNoObject = true
+
+			return nil
+		},
+	},
+}
+
+// addMount records one --mount or --mount-write option. Each use of the
+// option calls its action, so the options can be repeated.
+func addMount(c *cli.Context, name string, write bool) error {
+	text, _ := c.String(name)
+
+	device, path, ok := strings.Cut(text, "=")
+	if !ok || device == "" || path == "" {
+		return fmt.Errorf("--%s %q: expected DEVICE=container", name, text)
+	}
+
+	mountRequests = append(mountRequests, mountRequest{device: device, path: path, write: write})
+
+	return nil
 }
 
 func setStats(c *cli.Context) error {
@@ -113,6 +193,40 @@ func consoleCmd(c *cli.Context) error {
 
 func asmCmd(c *cli.Context) error {
 	return doCmd(c, "asm")
+}
+
+// macroCmd runs the console's MACRO command. The file names are quoted,
+// so DCL keeps their case and a host path's "/" isn't read as a
+// qualifier.
+func macroCmd(c *cli.Context) error {
+	params := c.FindGlobal().Parameters
+	if len(params) != 1 {
+		return fmt.Errorf("macro: expected one source file")
+	}
+
+	paths = loadConfigPaths(paths)
+
+	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{macroCommand(params[0], macroObject, macroNoObject)})
+}
+
+// macroCommand is the console MACRO command for the macro subcommand's
+// source file and options.
+func macroCommand(source, object string, noObject bool) string {
+	command := "MACRO " + dclQuote(source)
+
+	switch {
+	case noObject:
+		command += "/NOOBJECT"
+	case object != "":
+		command += "/OBJECT=" + dclQuote(object)
+	}
+
+	return command
+}
+
+// dclQuote quotes a file name for a DCL command line.
+func dclQuote(s string) string {
+	return `"` + s + `"`
 }
 
 func runCmd(c *cli.Context) error {

@@ -245,3 +245,29 @@ func TestMountTable_volumeStats(t *testing.T) {
 		t.Errorf("VolumeStats = %+v, want nonzero MaxFiles/TotalBlocks", stats)
 	}
 }
+
+// TestMountTable_dismountAll dismounts every volume, and does nothing
+// with none mounted.
+func TestMountTable_dismountAll(t *testing.T) {
+	m := NewMountTable()
+
+	if err := m.DismountAll(); err != nil {
+		t.Errorf("DismountAll with nothing mounted = %v", err)
+	}
+
+	for _, dev := range []string{"DUA1", "DUA0"} {
+		if err := m.Mount(dev, newTestVolumeFile(t, "V"+dev), true); err != nil {
+			t.Fatalf("Mount(%s): %v", dev, err)
+		}
+	}
+
+	if err := m.DismountAll(); err != nil {
+		t.Fatalf("DismountAll: %v", err)
+	}
+
+	for _, dev := range []string{"DUA0", "DUA1"} {
+		if _, ok := m.Lookup(dev); ok {
+			t.Errorf("%s still mounted after DismountAll", dev)
+		}
+	}
+}

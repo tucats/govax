@@ -33,6 +33,7 @@
 //              09/27/26    Added DEFINE, ASSIGN, DEASSIGN, CREATE/NAME_TABLE,
 //                          SHOW TRANSLATION; rewrote SHOW LOGICAL for VMS
 //                          logical names (docs/PHASE-25.md)
+//              09/30/26    Added MACRO (docs/PHASE-27.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2175,6 +2176,7 @@ $HELP
     INCLUDE         Execute a text file of console commands
     INITIALIZE      Initialize the virtual VAX
     LOAD            Load a saved memory image
+    MACRO           Assemble a MACRO-32 source file into an object module
     MOUNT           Attach a disk-image container file to a device
     QUIT            Quit the virtual VAX
     SAVE            Save the machine state
@@ -3328,6 +3330,77 @@ $COPY
         COPY "/Users/tom/foo.txt" /HOST BAR.TXT
 
     See also the help for TYPE, DIRECTORY, MOUNT, and SET DEFAULT.
+
+$MACR
+
+    The MACRO command assembles a VAX MACRO-32 source file and writes a
+    VAX/VMS object module (.OBJ), the same kind of file VMS's own MACRO
+    writes for its linker.
+
+    Syntax:
+
+        MACRO <source>[/HOST] [/OBJECT[=<object>] | /NOOBJECT]
+
+    Parameter:
+
+        <source>        The source file.  Without a file type it is .MAR.
+                        The source can be a host file or a file on a
+                        mounted volume:
+
+                          - with /HOST attached, it is a host path;
+                          - a name with a directory in brackets
+                            ([DIR]HELLO.MAR) or a device or logical name
+                            of two or more characters (DUA0:HELLO.MAR,
+                            SRC:HELLO.MAR) is on a mounted volume;
+                          - a name with "/" or "\" (or a Windows drive
+                            letter) is a host path;
+                          - any other name (HELLO.MAR) is in the current
+                            default directory when SET DEFAULT names a
+                            mounted volume, and a host file otherwise.
+
+                        Quote a host path to keep its case; unquoted
+                        names are uppercased, as all DCL input is.
+
+    Qualifiers:
+
+        /OBJECT[=<object>]
+                        Writes the object module.  This is the default.
+                        Without a file name, the object has the source's
+                        name and location, with the type OBJ in the same
+                        case as the source's type: hello.mar gives
+                        hello.obj, HELLO.MAR gives HELLO.OBJ.  A bare file
+                        name also goes beside the source (on a volume,
+                        in the same device and directory); a host path or
+                        a VMS file specification goes where it says.  On
+                        a volume, the object is the next version of its
+                        name, and the volume must be mounted /WRITE.
+
+        /NOOBJECT       Assembles the source and reports any errors, but
+                        writes no object module.
+
+    Every error in the source is reported, and then no object module is
+    written, so a failed assembly never replaces a good object.  Warnings
+    are reported, and the object is still written.
+
+    .INCLUDE file names follow the same rules as the source's, and a bare
+    name is found beside the source.
+
+    From the host shell, "govax macro <source>" runs this command, with
+    --object <file> or --no-object.  --mount DEVICE=container (or
+    --mount-write, to allow writing) mounts a container first, and may be
+    repeated.  govax exits with a nonzero status if the command fails.
+
+    Examples:
+
+        MACRO "hello.mar"
+
+        MACRO DUA0:[SRC]HELLO /OBJECT=DUA0:[OBJ]
+
+        MACRO "hello.mar"/HOST /OBJECT=DUA0:[000000]HELLO.OBJ
+
+        $ govax --mount-write DUA0=work.dsk macro DUA0:[000000]HELLO.MAR
+
+    See also the help for COPY, MOUNT, and SET DEFAULT.
 
 $SET ,DEFA
 $SE  ,DEFA

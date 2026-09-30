@@ -84,7 +84,10 @@ expect adjustment as phases land):
   build at all, since `ods2` isn't a `go.mod` dependency.
 - `cmd/govax` — `main.go` (CLI entry point) plus `grammar.go` (the `tucats/gopackages`
   `app-cli/cli` option/subcommand grammar — `stats`/`path`/`instruction-limit`/
-  `time-limit` options, `console`/`asm`/`run` subcommands). Briefly moved to the repo
+  `time-limit` options, repeatable `mount`/`mount-write DEVICE=container`,
+  `console`/`asm`/`run`/`macro` subcommands). A one-shot subcommand that fails
+  makes govax exit nonzero, and volumes still mounted are dismounted (flushed)
+  when a session ends. Briefly moved to the repo
   root (2026-09-17); moved back into `cmd/govax` as the more standard layout
   (`go build ./...`/`go run ./cmd/govax`).
 - `tucats/gopackages` also brings config-settings support (`app-cli/settings`), read at

@@ -77,6 +77,10 @@ func (c *Console) Print(text string) error {
 // console_quit.c's console_exit_dcl).
 func (c *Console) Running() bool { return !c.quit }
 
+// CommandLineErr returns the failure of the one-shot command given on
+// govax's command line, or nil.
+func (c *Console) CommandLineErr() error { return c.commandLineErr }
+
 // Quit implements QUIT/EXIT: stops the command loop.
 func (c *Console) Quit() error {
 	if err := c.requireInit(); err != nil {
@@ -131,12 +135,14 @@ func (c *Console) Include(path string, dispatch func(string) error) error {
 			text := CommandLineString
 			CommandLineString = ""
 
-			status := dispatch(text)
-			if status == nil {
-				return vmserrors.Wrap(vmserrors.VAX_QUIT, nil)
+			// The command ends the session either way: a failed
+			// one-shot command shouldn't leave the user at a prompt.
+			// run (cmd/govax) reports its failure and exits nonzero.
+			if status := dispatch(text); status != nil {
+				c.commandLineErr = status
 			}
 
-			return status
+			return vmserrors.Wrap(vmserrors.VAX_QUIT, nil)
 		}
 
 		return nil

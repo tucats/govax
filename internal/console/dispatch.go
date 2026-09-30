@@ -35,6 +35,10 @@ type Dispatcher struct {
 	Console *Console
 	Grammar *dcl.Grammar
 	Help    *Help
+
+	// line is the command line being dispatched, for a handler that
+	// records it (MACRO's SRC header).
+	line string
 }
 
 // NewDispatcher returns a Dispatcher wired to c and g, with every DCL
@@ -90,6 +94,8 @@ func (d *Dispatcher) Dispatch(line string) error {
 	if err != nil {
 		return err
 	}
+
+	d.line = line
 
 	// A DCL /entry= redirect (ABOUT, FORTH, XTEST, SHOW VERSION -- the C
 	// source's exe$about/exe$forth_dcl/exe$xtest, all real VAX routines
@@ -537,6 +543,20 @@ func (d *Dispatcher) bindGrammar() {
 			r.String("DESTINATION"), r.ParamPresent("DESTINATION", "HOST"),
 			opts,
 		)
+	})
+
+	// docs/PHASE-27.md subtask 10: MACRO assembles a MACRO-32 source into
+	// an object module (Console.Macro, internal/console/macro.go). The
+	// command as typed goes into the object's SRC header, as real MACRO
+	// records its command line.
+	g.Bind("MACRO", func(id int64, r *dcl.Result) error {
+		return d.Console.Macro(MacroOptions{
+			Source:      r.String("SOURCE"),
+			SourceHost:  r.ParamPresent("SOURCE", "HOST"),
+			Object:      r.String("OBJECT"),
+			NoObject:    r.Present("OBJECT") && r.Negated("OBJECT"),
+			CommandLine: d.line,
+		})
 	})
 }
 
