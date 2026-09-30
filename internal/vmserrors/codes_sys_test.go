@@ -8,7 +8,7 @@ import (
 
 // TestSysCodes_matchSSDEF confirms each composite SS_* constant equals the
 // real VMS 7.3 $SSDEF value (internal/vmsdef.Symbols, generated from
-// reference/vms/ssdef.txt), since a VAX program compares a service's
+// VMS 7.3's ssdef.txt), since a VAX program compares a service's
 // return value against those exact numbers.
 func TestSysCodes_matchSSDEF(t *testing.T) {
 	codes := map[string]uint32{

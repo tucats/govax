@@ -9,7 +9,7 @@ import (
 // This file writes a VAX/VMS executable image: the image header block,
 // then each image section's pages, then the fixup section. Only the first
 // header record ($IHDDEF) is in the VMS source archive as SDL
-// (reference/vms/ihddef.sdl); the other layouts come from the images real
+// (ihddef.sdl); the other layouts come from the images real
 // LINK V11-39 wrote for the Phase 27 fixtures (testdata/mar/vax/*.exe and
 // govax/gv_*.exe) and from eVAX's imgdef.h, as docs/PHASE-30.md's "What
 // real LINK writes" records.

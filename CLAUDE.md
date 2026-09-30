@@ -63,6 +63,15 @@ expect adjustment as phases land):
   (Phases 03-07).
 - `internal/console` — interactive monitor + DCL grammar interpreter (Phase 08).
 - `internal/io` — device abstraction (Phase 09).
+- `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,
+  and LINK: `Symbols` (every symbolic constant, one table; `symbols.go` says
+  what each prefix holds), `Messages`, the FAB/RAB layouts, the P1 vector, and
+  the symbols LINK would read from VMS files (`SharedImages`/`ImageSymbols`
+  from LIBRTL.EXE, `LibrarySymbols` from STARLET.OLB's definition modules).
+  The `*_generated.go` tables are committed data, and building doesn't
+  regenerate them: `go run ./internal/vmsdef/gen` merges new definitions
+  (`-h`/`-sdl`/`-bliss`/`-msg`/`-image`/`-olb FILE`) into them, add-only
+  unless `-replace`, `-n` for a dry run (Phase 31).
 - `internal/lnm` — VMS logical-name database: directories, tables, access modes,
   search lists, `$TRNLNM`-style lookup and RMS file-spec translation (Phase 25).
   A leaf package shared by the console, `internal/rms`, and `internal/rtl`.

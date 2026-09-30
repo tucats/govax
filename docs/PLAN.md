@@ -237,8 +237,8 @@ library macros, letting a fixture build a FAB/RAB by keyword
 `.BLKB`/`.BYTE`/`.WORD`/`.LONG` blocks at byte offsets only a `;` comment
 documented. Like Phase 22/23, has no `reference/eVAX` counterpart (confirmed by
 grepping `asm_pseudo.c`'s own pseudo-op table); its correctness reference is
-`reference/vms/{fabdef,rabdef,rmsdef}.h`, real VAX/VMS 7.3 SDL-generated
-headers. Introduced `internal/vmsdef`, a shared data package (consolidated
+VMS 7.3's `fabdef.h`, `rabdef.h`, and `rmsdef.h`, real SDL-generated headers
+(kept outside the repository since Phase 31). Introduced `internal/vmsdef`, a shared data package (consolidated
 mid-planning from the narrower `internal/p1vector` this phase started from,
 once it was clear the asm/RTL-shared-static-VMS-data need — P1-vector
 addresses, now FAB/RAB field layouts — was going to keep recurring as more of
@@ -279,7 +279,7 @@ be treated as suspect rather than preserved.
   with an assembled acceptance fixture (`testdata/asm/lnm_roundtrip.asm`).
 
 The generated `$LNMDEF`/`$SSDEF` constants come from real VMS 7.3 source files
-in `reference/vms/`. Each eVAX behavior the phase changed, and each remaining
+(kept outside the repository since Phase 31). Each eVAX behavior the phase changed, and each remaining
 gap (privileges, the job table, the process-permanent-file prefix), is in
 `DEVIATIONS.md`. See PHASE-25.md for the design and the per-subtask log.
 

@@ -16,10 +16,10 @@ import (
 //
 // VMS keeps the text of every condition value ("%SYSTEM-F-ACCVIO, access
 // violation, ...") in message files, compiled from sources written for
-// the MESSAGE utility. reference/vms/sysmsg.txt holds part of the VMS 7.3
-// system message file's *listing*: the source lines, each prefixed by
-// the value the MESSAGE compiler assigned. The two kinds of line this
-// parser reads look like this (tabs and spaces vary):
+// the MESSAGE utility. govax's Messages came from sysmsg.txt, part of
+// the VMS 7.3 system message file's *listing*: the source lines, each
+// prefixed by the value the MESSAGE compiler assigned. The two kinds of
+// line this parser reads look like this (tabs and spaces vary):
 //
 //	00000000  ****   .FACILITY  SYSTEM,0 /SHARED /SYSTEM /PREFIX=SS$_
 //	0000000C  ****   ACCVIO  <access violation, reason mask=!XB, ...> /FAO=4

@@ -29,7 +29,7 @@ const (
 	// Logical-name service codes (docs/PHASE-25.md). Values and message
 	// texts are from the real VMS 7.3 SYSMSG source listing
 	// (vmssrc_archive/v73/msgfil/lis/sysmsg.lis), and agree with
-	// reference/vms/ssdef.txt (see codes_sys_test.go).
+	// VMS 7.3's $SSDEF (see codes_sys_test.go).
 	sysNoPriv      uint32 = 4    // SS$_NOPRIV:       36 >> 3
 	sysDupLNam     uint32 = 18   // SS$_DUPLNAM:     148 >> 3
 	sysIvLogNam    uint32 = 42   // SS$_IVLOGNAM:    340 >> 3

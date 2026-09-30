@@ -8,15 +8,15 @@ import (
 )
 
 // blissLiteralRE matches one entry of a BLISS "LITERAL" declaration as
-// laid out in reference/vms/ssdef.txt: "NAME, I, value" with an optional
-// trailing separator. The VEST listings (reference/vms/syidef.txt) write
+// laid out in VMS 7.3's ssdef.txt: "NAME, I, value" with an optional
+// trailing separator. The VEST listings (syidef.txt, say) write
 // the type as I4, a four-byte integer, which is accepted too, and a few
 // of their names are in mixed case (dvidef.txt's DVI$_SHDW_spare_bit_1).
 var blissLiteralRE = regexp.MustCompile(`^\s*([A-Za-z0-9_$]+),\s*I4?,\s*(-?[0-9]+)\s*[,;]?\s*$`)
 
 // parseBlissLiterals extracts every "NAME, I, value" literal whose name
 // starts with prefix from a BLISS LITERAL listing such as
-// reference/vms/ssdef.txt (the VAX/VMS 7.3 $SSDEF definitions). Blank
+// ssdef.txt (the VAX/VMS 7.3 $SSDEF definitions). Blank
 // lines, ";" comment lines, and the "LITERAL" keyword are skipped; any
 // other line is an error, so an unexpected format can't be silently
 // half-parsed. Literals with other prefixes (ssdef.txt also defines

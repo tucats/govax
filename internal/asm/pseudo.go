@@ -1292,9 +1292,9 @@ func (a *Assembler) pseudoP1Vector(c *cursor) error {
 // defines every real FAB$/RAB$/RMS$ symbol as a permanent assembler
 // symbol — each field's own offset symbol (internal/vmsdef.FABFields/
 // RABFields' Symbol, e.g. "FAB$B_FAC") plus every bitmask flag, named code
-// value, and RMS$_ completion-status code (internal/vmsdef.Symbols,
-// machine-generated from reference/vms/{fabdef,rabdef,rmsdef}.h) — so a
-// program can address a FAB/RAB field the real-MACRO-32 way
+// value, and RMS$_ completion-status code (internal/vmsdef.Symbols' FAB$,
+// RAB$, and RMS$ names, from VMS 7.3's fabdef.h, rabdef.h, and rmsdef.h)
+// — so a program can address a FAB/RAB field the real-MACRO-32 way
 // (<label>+FAB$L_STS) and use symbolic names (FAB$C_SEQ, RMS$_NORMAL, ...)
 // anywhere an expression is expected, including as a .FAB/.RAB keyword's
 // own value.

@@ -326,7 +326,7 @@ func TestParseBlissLiterals(t *testing.T) {
 }
 
 // TestParseBlissLiterals_vestListing: the VEST listings' "I4" type, as in
-// reference/vms/syidef.txt.
+// VMS 7.3's syidef.txt.
 func TestParseBlissLiterals_vestListing(t *testing.T) {
 	src := ";+\n;\t$SYIDEF\n;-\n\tSYI$C_EXETYPE,\t\t\tI4, 1\n\tSYI$_VERSION,\t\t\tI4, 4096\n" +
 		"\tSYI$_spare_bit_1,\t\tI4, 284\n" // a mixed-case name, as in dvidef.txt

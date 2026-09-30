@@ -37,7 +37,7 @@ import "github.com/tucats/govax/internal/vmsdef"
 //
 // The values below are the real, literal $RMSDEF completion codes. Read
 // from internal/vmsdef.Symbols (Phase 24, docs/PHASE-24.md — the complete
-// 267-entry RMS$_ table, machine-generated from reference/vms/rmsdef.h)
+// 267-entry RMS$_ table, machine-generated from VMS 7.3's rmsdef.h)
 // rather than their own literal copies; cross-checked one-for-one against
 // the values this file carried before that migration, which were
 // themselves cross-checked directly against a real VAX/VMS 7.3 system's

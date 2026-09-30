@@ -25,7 +25,7 @@ const (
 )
 
 // parseSDL extracts symbolic constants from a VMS SDL (Structure Definition
-// Language) source module, such as reference/vms/lnmdef.sdl. Only the
+// Language) source module, such as VMS 7.3's lnmdef.sdl. Only the
 // subset of SDL that the modules govax reads actually use is understood;
 // anything else is reported as an error rather than skipped, so a future
 // module using wider SDL syntax can't silently produce a partial or wrong

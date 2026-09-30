@@ -29,7 +29,7 @@ type Field struct {
 }
 
 // FABFields is every named field of the real, 80-byte FAB ($FABDEF$K_BLN),
-// derived by hand-walking reference/vms/fabdef.h's `struct fabdef`
+// derived by hand-walking VMS 7.3's fabdef.h's `struct fabdef`
 // declaration field by field under VAX C's natural alignment rules (1-byte
 // types need no alignment, a 2-byte type aligns to an even offset, a
 // 4-byte type or a union containing one aligns to a multiple of 4) —

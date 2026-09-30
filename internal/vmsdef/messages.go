@@ -1,7 +1,7 @@
 package vmsdef
 
 // Message is one VMS message's definition, from the system message file
-// (reference/vms/sysmsg.txt, generated into Messages): what $GETMSG and
+// (VMS 7.3's, merged into Messages by internal/vmsdef/gen): what $GETMSG and
 // $PUTMSG show for a condition value.
 //
 // A message is written "%FACILITY-S-IDENT, text": for SS$_ACCVIO that's

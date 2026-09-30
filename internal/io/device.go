@@ -211,7 +211,7 @@ type DeviceTable struct {
 // KnownDeviceOptions is the default-geometry dictionary Define falls back to for
 // well-known disk device types when a DEFINE/DEVICE qualifier didn't
 // specify Cylinders/Sectors/MaxBlock explicitly. Values come from
-// reference/vms/disk-devices.md (sec/cyl/LBNs columns -> Sectors/Cylinders/
+// docs/DISK-DEVICES.md (sec/cyl/LBNs columns -> Sectors/Cylinders/
 // MaxBlock); that chart's "surf" column has no equivalent field here.
 var KnownDeviceOptions = map[string]DeviceOptions{
 	"RX50": {

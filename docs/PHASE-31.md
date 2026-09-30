@@ -279,3 +279,13 @@ golangci-lint clean, then a commit (and `build -i` where it changes behavior).
   on others), plus build-dependent JPI$/SYI$ "last" markers; logged in
   docs/DEVIATIONS.md and pinned by `TestSymbols_matchLibrarySymbols`.
   Deferred for the author's decision on how to correct `Symbols`.
+- 2026-09-30: Subtask 5 done. Every Go comment that cited a
+  `reference/vms/...` path now names the VMS 7.3 definition file instead
+  (12 files). `disk-devices.md`, the author's own chart, moved to
+  `docs/DISK-DEVICES.md`. PLAN.md's two historical mentions say the files
+  are kept outside the repository. CLAUDE.md gained an `internal/vmsdef`
+  entry saying the generated tables are committed data that
+  `internal/vmsdef/gen` merges into. Citations of `vax_instr_set.pdf` name
+  the manual, not a repository path, so they stay. *Verified:*
+  `git grep reference/vms -- ':!docs/PHASE-*.md'` finds nothing but this
+  phase's own plan.
