@@ -58,11 +58,13 @@ type message struct {
 // defined twice is an error.
 func parseMessages(src string) ([]message, map[uint32]string, error) {
 	var (
-		out        []message
 		facilities = map[uint32]string{}
 		facility   string
 		seen       = map[uint32]string{}
 	)
+
+	splits := strings.Split(src, "\n")
+	out := make([]message, 0, len(splits))
 
 	for n, line := range strings.Split(src, "\n") {
 		line = strings.TrimRight(line, "\r")

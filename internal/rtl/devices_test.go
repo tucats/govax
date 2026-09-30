@@ -10,6 +10,8 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
+const testTerminalDevice = "_TTA0:"
+
 func defineTestDevice(env *Environment, name string, class iodev.DeviceClass) *iodev.Device {
 	return env.Devices.Define(name, iodev.DeviceOptions{DevClass: class, DevBufSize: 512})
 }
@@ -78,7 +80,7 @@ func TestServiceSysAssignArgCounts(t *testing.T) {
 	if r0, err := serviceSysAssign(env, []uint32{1}); err != nil || r0 != ssInsfArg {
 		t.Errorf("1 arg: r0=%d err=%v, want ssInsfArg", r0, err)
 	}
-	
+
 	if r0, err := serviceSysAssign(env, []uint32{1, 2, 3, 4, 5, 6}); err != nil || r0 != ssTooManyArgs {
 		t.Errorf("6 args: r0=%d err=%v, want ssTooManyArgs", r0, err)
 	}
@@ -101,7 +103,7 @@ func TestServiceSysAssignAndGetdviTranslateLogicalNames(t *testing.T) {
 	}{
 		{"SYS$OUTPUT", ssNormal},
 		{"TT:", ssNormal},
-		{"_TTA0:", ssNormal},
+		{testTerminalDevice, ssNormal},
 		{"_SYS$OUTPUT", ssIvDevNam},
 		{"LOOP1:", vmserrors.SS_TOOMANYLNAM},
 	} {
@@ -145,7 +147,7 @@ func TestServiceSysAlloc(t *testing.T) {
 	r0, phy := allocCall(t, env, a, "TTA0", 0, 0)
 	wantR0(t, r0, ssNormal)
 
-	if phy != "_TTA0:" {
+	if phy != testTerminalDevice {
 		t.Errorf("physical name = %q, want _TTA0:", phy)
 	}
 
@@ -159,7 +161,7 @@ func TestServiceSysAlloc(t *testing.T) {
 	r0, phy = allocCall(t, env, a, "SYS$OUTPUT", 0, 0)
 	wantR0(t, r0, ssDevAlrAlloc)
 
-	if phy != "_TTA0:" {
+	if phy != testTerminalDevice {
 		t.Errorf("physical name via SYS$OUTPUT = %q, want _TTA0:", phy)
 	}
 
@@ -207,7 +209,7 @@ func TestServiceSysAllocErrors(t *testing.T) {
 	a := newArena(t, env)
 	other := defineTestDevice(env, "TTA1", iodev.DeviceClassTT)
 	other.Allocate(0x999, 0)
-	
+
 	defineTestDevice(env, "DUA0", iodev.DeviceClassDisk).DevChar |= devMounted
 	defineTestDevice(env, "MBA1", iodev.DeviceClassNone).DevChar |= devMailbox
 
@@ -372,7 +374,7 @@ func TestServiceSysDallocAll(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysDalloc, 0, uint32(vax.Supervisor)), ssNormal)
 
 	if !kernel.Allocated() || super.Allocated() || user.Allocated() || !other.Allocated() {
-		t.Errorf("after $DALLOC(acmode=super): kernel=%v super=%v user=%v other=%v, want true false false true",
+		t.Errorf("after $DALLOC(acmode=super): kernel=%v super=%v user=%v other=%v, want true false false true", //nolint:dupword
 			kernel.Allocated(), super.Allocated(), user.Allocated(), other.Allocated())
 	}
 

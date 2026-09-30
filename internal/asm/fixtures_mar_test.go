@@ -29,6 +29,7 @@ func realObject(t *testing.T, name string) *obj.Module {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	defer f.Close()
 
 	raw, err := obj.ReadRecords(f)
@@ -438,11 +439,11 @@ func TestFixtureLadderObjects(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			real := realObject(t, name)
+			realModule := realObject(t, name)
 
 			var opts ObjectOptions
 
-			for _, rec := range real.Records {
+			for _, rec := range realModule.Records {
 				switch h := rec.(type) {
 				case *obj.MainHeader:
 					if opts.Created, err = time.Parse("02-Jan-2006 15:04", h.Created); err != nil {
@@ -478,7 +479,7 @@ func TestFixtureLadderObjects(t *testing.T) {
 				t.Errorf("Check: %v", problems)
 			}
 
-			if got, want := dumpText(t, back), dumpText(t, withoutTraceback(real)); got != want {
+			if got, want := dumpText(t, back), dumpText(t, withoutTraceback(realModule)); got != want {
 				t.Errorf("object:\n%s\nwant:\n%s", got, want)
 			}
 		})

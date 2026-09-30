@@ -341,9 +341,8 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 			val := strings.TrimSpace(pos)
 
 			r.set(p.Name, p.ID, false, Value{IsString: true, Str: val})
-			lastParam = p
-
-			nextParam++ //nolint:ineffassign
+			lastParam = p //nolint:ineffassign
+			nextParam++   //nolint:ineffassign
 			pos = ""
 
 			break
@@ -386,6 +385,7 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 			}
 
 			pos = rem
+
 			r.setList(p.Name, p.ID, vals)
 			lastParam = p
 			nextParam++

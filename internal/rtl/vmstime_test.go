@@ -23,6 +23,7 @@ func TestServiceSysGettim(t *testing.T) {
 
 	// The clock moves on; a second call sees it.
 	*now += 5 * ms
+
 	wantR0(t, callLNM(t, env, serviceSysGettim, timadr), ssNormal)
 
 	if got, _ := env.loadQuad(timadr); got != *now {
@@ -219,9 +220,11 @@ func TestServiceSysBintim(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysSetimr, 3, timadr), ssNormal)
 
 	*now += 10*vmsdef.TicksPerSecond - 1
+	
 	wantR0(t, callLNM(t, env, serviceSysReadef, 3), ssWasClr)
 
 	*now++
+
 	wantR0(t, callLNM(t, env, serviceSysReadef, 3), ssWasSet)
 }
 

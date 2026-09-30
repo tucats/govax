@@ -276,7 +276,7 @@ func TestDeclaredSymbolIsNotDefined(t *testing.T) {
 	requireMACROError(t, ".GLOBL X\nY = X", vmserrors.VAX_UNDEFSYM)
 
 	// Once defined, it is.
-	a := macroAssemble(t, ".GLOBL X\nX = 3\n.PSECT DATA\n.BLKB X")
+	a := macroAssemble(t, ".GLOBL X\nX = 3\n.PSECT DATA\n.BLKB X") //nolint:dupword
 	if got := a.findSection("DATA").hi; got != 3 {
 		t.Errorf("allocation = %d, want 3", got)
 	}
@@ -366,7 +366,7 @@ func TestEntryMACRO(t *testing.T) {
 
 	requireMACROError(t, ".PSECT CODE\n.ENTRY A, ^M<R0>", vmserrors.VAX_ENTRYMASK)
 	requireMACROError(t, ".PSECT CODE\n.ENTRY A, ^X1000", vmserrors.VAX_ENTRYMASK)
-	requireMACROError(t, ".PSECT CODE\n.ENTRY A, MASK\nMASK = 4", vmserrors.VAX_UNDEFSYM)
+	requireMACROError(t, ".PSECT CODE\n.ENTRY A, MASK\nMASK = 4", vmserrors.VAX_UNDEFSYM) //nolint:dupword
 }
 
 // TestAddress checks .ADDRESS: position-independent longword addresses.

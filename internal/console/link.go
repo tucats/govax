@@ -368,6 +368,7 @@ func (c *Console) linkLibrary(in *linkInputs, loc rms.FileLocation, f link.Input
 		}
 
 		govax := govaxSymbols()
+		
 		in.libraries = append(in.libraries, &link.ImageLibrarySource{
 			File:    found.Name,
 			Library: lib,

@@ -44,7 +44,7 @@ func TestDeliverASTCallsLikeCALLG(t *testing.T) {
 		returnPC = 0x3000
 	)
 
-	putBytes(t, c, e.mem, mainPC, 0x01)             // NOP, never reached this step
+	putBytes(t, c, e.mem, mainPC, 0x01)              // NOP, never reached this step
 	putBytes(t, c, e.mem, routine, 0x04, 0x00, 0x04) // entry mask ^M<R2>, then RET
 
 	c.SetGPR(vax.PC, mainPC)

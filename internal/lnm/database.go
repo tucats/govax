@@ -127,10 +127,11 @@ func (db *Database) catalog(t, dir *Table, mode Mode, attrs uint32) {
 	e := &Entry{Name: t.Name, Mode: mode, Attrs: attrs | AttrTable, Target: t}
 	t.catalog = e
 	dir.add(e)
+
 	db.tables = append(db.tables, t)
 }
 
-// directoryFor returns the directory a table with parent parent is
+// directoryFor returns the directory a table with `parent` parent is
 // cataloged in: the system directory for a shareable table, the process
 // directory otherwise ($CRELNT's partab description).
 func (db *Database) directoryFor(parent *Table) *Table {
@@ -234,6 +235,7 @@ func (db *Database) resolveTableName(name string, mode Mode, depth int, out *[]*
 	if e.IsTable() {
 		if e.Target.Mode <= mode && !seen[e.Target] {
 			seen[e.Target] = true
+			
 			*out = append(*out, e.Target)
 		}
 

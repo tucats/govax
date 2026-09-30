@@ -79,6 +79,7 @@ func TestIdtoasc(t *testing.T) {
 		}
 
 		wantR0(t, r0, ssNormal)
+		
 		names = append(names, a.readString(buf, uint16(a.readLong(namlen))))
 
 		if len(names) > 20 {

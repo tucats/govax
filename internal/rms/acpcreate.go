@@ -161,6 +161,7 @@ func (t *MountTable) ACPCreate(device string, req ACPCreateRequest) (ACPCreated,
 	result.Blocks = f.Blocks()
 
 	var entry *acpEntry
+	
 	if result.Name != "" {
 		base, version, _ := splitACPName(result.Name)
 		entry = &acpEntry{dir: req.Directory, name: base, version: version}

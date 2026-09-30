@@ -77,6 +77,7 @@ func TestDispatch_runHost(t *testing.T) {
 	assembleFixture(t, c, "entry", dir)
 
 	exe := filepath.Join(dir, "entry.exe")
+	
 	if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, "entry")}}); err != nil {
 		t.Fatal(err)
 	}

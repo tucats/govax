@@ -13,6 +13,7 @@ func aliasGroups(fields []Field) map[uint32]bool {
 	}
 
 	aliased := map[uint32]bool{}
+
 	for off, n := range counts {
 		if n > 1 {
 			aliased[off] = true
@@ -55,30 +56,31 @@ func TestFABFields_tileEightyBytes(t *testing.T) {
 	// have no real name), so the last *named* field ends short of 80, not
 	// exactly at it — RCF at offset 75 + size 1 = 76, then 4 reserved bytes
 	// to reach FAB$K_BLN.
-	max := uint32(0)
+	maxPos := uint32(0)
+	
 	for _, f := range FABFields {
-		if end := f.Offset + f.Size; end > max {
-			max = end
+		if end := f.Offset + f.Size; end > maxPos {
+			maxPos = end
 		}
 	}
 
-	if max != 76 {
-		t.Errorf("FABFields' highest field ends at %d, want 76 (RCF+1; 4 reserved bytes make up the rest of FAB$K_BLN=80)", max)
+	if maxPos != 76 {
+		t.Errorf("FABFields' highest field ends at %d, want 76 (RCF+1; 4 reserved bytes make up the rest of FAB$K_BLN=80)", maxPos)
 	}
 }
 
 func TestRABFields_tileSixtyEightBytes(t *testing.T) {
 	checkFields(t, "RAB", RABFields, 68)
 
-	max := uint32(0)
+	maxPos := uint32(0)
 	for _, f := range RABFields {
-		if end := f.Offset + f.Size; end > max {
-			max = end
+		if end := f.Offset + f.Size; end > maxPos {
+			maxPos = end
 		}
 	}
 
-	if max != 68 {
-		t.Errorf("RABFields' highest field ends at %d, want 68 (RAB$K_BLN)", max)
+	if maxPos != 68 {
+		t.Errorf("RABFields' highest field ends at %d, want 68 (RAB$K_BLN)", maxPos)
 	}
 }
 

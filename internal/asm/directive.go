@@ -192,12 +192,16 @@ func init() {
 		"CONSOLE": {console, (*Assembler).pseudoConsole},
 
 		// eVAX microkernel directives.
-		"MICROKERNEL": {console, func(a *Assembler, _ *cursor) error { a.microkernel = true; return nil }},
-		"SCB":         {console, (*Assembler).pseudoSCB},
-		"VECTOR":      {console, func(*Assembler, *cursor) error { return vmserrors.New(vmserrors.VAX_NOTLIVE, ".VECTOR") }},
-		"REGION":      {console, (*Assembler).pseudoRegion},
-		"SHIM":        {console, (*Assembler).pseudoShim},
-		"P1VECTOR":    {console, (*Assembler).pseudoP1Vector},
+		"MICROKERNEL": {console, func(a *Assembler, _ *cursor) error {
+			a.microkernel = true
+
+			return nil
+		}},
+		"SCB":      {console, (*Assembler).pseudoSCB},
+		"VECTOR":   {console, func(*Assembler, *cursor) error { return vmserrors.New(vmserrors.VAX_NOTLIVE, ".VECTOR") }},
+		"REGION":   {console, (*Assembler).pseudoRegion},
+		"SHIM":     {console, (*Assembler).pseudoShim},
+		"P1VECTOR": {console, (*Assembler).pseudoP1Vector},
 
 		// The Posix/UNIX VAX instruction set's long conditional jumps,
 		// each an inverted short branch around a JMP.

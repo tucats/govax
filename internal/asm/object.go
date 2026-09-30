@@ -318,11 +318,13 @@ func (e *emitter) data(s *section, offset, size uint32) error {
 
 			for range prefix {
 				e.b.Store([]byte{img.loadByte(p)})
+
 				p++
 			}
 
 		case !ok:
 			e.b.Store([]byte{img.loadByte(p)})
+
 			p++
 
 			continue
@@ -341,6 +343,7 @@ func (e *emitter) data(s *section, offset, size uint32) error {
 		}
 
 		e.b.Emit(obj.Command{Op: store})
+		
 		p += uint32(fixupSize(r.kind))
 	}
 

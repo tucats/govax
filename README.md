@@ -80,7 +80,6 @@ creates .OBJ object files, and a LINK console command that links
 hello world program that assembles, links, and runs identically on
 a real VAX as it does on govax.
 
-
 ## What's next?
 
 With the assembler, skelatal RTL, and image loader all in place, the

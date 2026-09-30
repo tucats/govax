@@ -9,6 +9,8 @@ import (
 	"github.com/tucats/ods2/ondisk"
 )
 
+const file11FileName = "DATA.TXT;1"
+
 // mfd is the master file directory's file ID, (4,4,0).
 var mfd = fileIDFrom(ondisk.MasterFileDirectoryFid)
 
@@ -57,7 +59,7 @@ func TestACPLookup(t *testing.T) {
 	m := newACPFixture(t)
 
 	fid, name, err := m.ACPLookup("DUA0:", mfd, "data.txt")
-	if err != nil || fid.Num == 0 || name != "DATA.TXT;1" {
+	if err != nil || fid.Num == 0 || name != file11FileName {
 		t.Fatalf("ACPLookup = %v, %q, %v", fid, name, err)
 	}
 

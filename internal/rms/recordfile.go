@@ -374,6 +374,7 @@ func (s *Session) createVolumeRecords(text string, kind RecordKind, records [][]
 	}
 
 	var version uint16
+	
 	if spec.Version != "" {
 		v, ok := parseOpenVersion(spec.Version)
 		if !ok || v > 32767 {

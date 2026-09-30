@@ -76,12 +76,15 @@ func syntheticLibrary(t *testing.T) ([]byte, []byte) {
 	// word-aligned), a 600-byte record, then the end-of-text record.
 	d := b.block(4)
 	binary.LittleEndian.PutUint32(d[dataLink:], 6)
+
 	p := dataData
 	binary.LittleEndian.PutUint16(d[p:], mhdLen+5)
+
 	mhd := d[p+2:]
 	mhd[1] = mhdID
 	binary.LittleEndian.PutUint32(mhd[4:], 2)
 	copy(mhd[mhdLen:], []byte{0, 3, 'X', '-', '1'})
+
 	p += 2 + mhdLen + 5 + 1
 
 	binary.LittleEndian.PutUint16(d[p:], uint16(len(long)))

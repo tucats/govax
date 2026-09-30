@@ -84,10 +84,10 @@ func TestACPCreate_versions(t *testing.T) {
 		t.Errorf("FIB$M_NEWVER: %+v, %v", got, err)
 	}
 
-	old, _, _ := m.ACPLookup("DUA0", mfd, "DATA.TXT;1")
+	old, _, _ := m.ACPLookup("DUA0", mfd, file11FileName)
 
-	got, err := create("DATA.TXT;1", false, true)
-	if err != nil || got.Name != "DATA.TXT;1" || !got.Superseded || got.FID == old {
+	got, err := create(file11FileName, false, true)
+	if err != nil || got.Name != file11FileName || !got.Superseded || got.FID == old {
 		t.Fatalf("FIB$M_SUPERSEDE: %+v, %v", got, err)
 	}
 

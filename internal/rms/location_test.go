@@ -173,6 +173,7 @@ func TestLocate_bareNameFollowsSetDefault(t *testing.T) {
 
 	// A search list default counts when any element is mounted.
 	defineLogical(t, s, "SYS$DISK", "DUB0:")
+	
 	if s.DefaultOnVolume() {
 		t.Error("DefaultOnVolume() = true with SYS$DISK on an unmounted device")
 	}

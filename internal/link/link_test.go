@@ -129,6 +129,7 @@ func diffBlocks(got, want []byte) string {
 		g, w := got[i:min(i+16, len(got))], want[i:min(i+16, len(want))]
 		if !bytes.Equal(g, w) {
 			fmt.Fprintf(&sb, "%04X: % x\n want % x\n", i, g, w)
+
 			shown++
 		}
 	}
@@ -418,6 +419,7 @@ func TestLinkSharedReferences(t *testing.T) {
 	code := img.Bytes[blockSize:]
 	cell := func(call int) uint32 {
 		field := uint32(0x200 + 2 + 7*call + 3) // the displacement, after FB 00 FF
+		
 		if code[2+7*call+2] != 0xFF {
 			t.Fatalf("call %d's operand mode is %02X, want FF", call, code[2+7*call+2])
 		}

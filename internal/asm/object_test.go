@@ -46,9 +46,10 @@ func objectDump(t *testing.T, src string) string {
 func requireDump(t *testing.T, dump string, want ...string) {
 	t.Helper()
 
-	var lines []string
+	splits := strings.Split(dump, "\n")
+	lines := make([]string, len(splits))
 
-	for _, line := range strings.Split(dump, "\n") {
+	for _, line := range splits {
 		line = strings.TrimSpace(line)
 		if i := strings.Index(line, ". "); i > 0 && strings.Trim(line[:i], "0123456789") == "" {
 			line = line[i+2:]

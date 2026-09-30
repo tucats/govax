@@ -175,7 +175,7 @@ func TestMapMultiModuleMatchesRealLINK(t *testing.T) {
 func TestLinkUndefinedMessages(t *testing.T) {
 	img, _ := linkReal(t, "externu", []string{"extern"}, []SymbolSource{p1Source(t)})
 
-	var got []string
+	got := make([]string, 0, len(img.Messages))
 	for _, m := range img.Messages {
 		got = append(got, m.String())
 	}

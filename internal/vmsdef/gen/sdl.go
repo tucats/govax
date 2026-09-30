@@ -6,6 +6,24 @@ import (
 	"strings"
 )
 
+const (
+	tokenByte      = "byte"
+	tokenCharacter = "character"
+	tokenConstant  = "constant"
+	tokenDimension = "dimension"
+	tokenFill      = "fill"
+	tokenLength    = "length"
+	tokenLongword  = "longword"
+	tokenPrefix    = "prefix"
+	tokenQuadword  = "quadword"
+	tokenSigned    = "signed"
+	tokenStructure = "structure"
+	tokenTag       = "tag"
+	tokenUnion     = "union"
+	tokenUnsigned  = "unsigned"
+	tokenWord      = "word"
+)
+
 // parseSDL extracts symbolic constants from a VMS SDL (Structure Definition
 // Language) source module, such as reference/vms/lnmdef.sdl. Only the
 // subset of SDL that the modules govax reads actually use is understood;
@@ -68,9 +86,10 @@ import (
 // (e.g. "STRING") only when it collides with an SDL keyword; the quotes are
 // not part of the symbol.
 func parseSDL(src string) (map[string]uint32, error) {
-	var lines []string
+	splits := strings.Split(src, "\n")
+	lines := make([]string, 0, len(splits))
 
-	for _, line := range strings.Split(src, "\n") {
+	for _, line := range splits {
 		for _, marker := range []string{"{", "/*"} {
 			if i := strings.Index(line, marker); i >= 0 {
 				line = line[:i]
@@ -154,7 +173,7 @@ func parseSDL(src string) (map[string]uint32, error) {
 				agg = nil
 			}
 
-		case kw == "constant":
+		case kw == tokenConstant:
 			// Outside an aggregate, a constant must spell out its prefix
 			// and tag. Inside one ($IODEF's "constant LOOPTEST equals
 			// 57344;"), SDL's defaults apply: the aggregate's prefix and
@@ -278,7 +297,7 @@ func newSDLAggregate(toks []string) (*sdlAggregate, error) {
 	}
 
 	kind := strings.ToLower(toks[2])
-	if (kind != "structure" && kind != "union") || !strings.EqualFold(toks[3], "prefix") {
+	if (kind != tokenStructure && kind != tokenUnion) || !strings.EqualFold(toks[3], tokenPrefix) {
 		return nil, fmt.Errorf("unsupported aggregate statement")
 	}
 
@@ -292,7 +311,7 @@ func newSDLAggregate(toks []string) (*sdlAggregate, error) {
 		a.origin = toks[6]
 	}
 
-	a.stack = []*sdlFrame{{union: kind == "union", bitsOnly: true}}
+	a.stack = []*sdlFrame{{union: kind == tokenUnion, bitsOnly: true}}
 
 	return a, nil
 }
@@ -367,10 +386,10 @@ func (a *sdlAggregate) member(toks []string, locals map[string]int64, define fun
 
 		return nil
 
-	case "structure", "union":
-		return a.push(name, kind == "union", toks[2:])
+	case tokenStructure, tokenUnion:
+		return a.push(name, kind == tokenUnion, toks[2:])
 
-	case "byte", "word", "longword", "quadword", "character":
+	case tokenByte, tokenWord, tokenLongword, tokenQuadword, tokenCharacter:
 	default:
 		return fmt.Errorf("unsupported aggregate member type %q", toks[1])
 	}
@@ -383,10 +402,10 @@ func (a *sdlAggregate) member(toks []string, locals map[string]int64, define fun
 
 	for i := 2; i < len(toks); i++ {
 		switch kw := strings.ToLower(toks[i]); kw {
-		case "signed", "unsigned":
-		case "fill":
+		case tokenSigned, "unsigned":
+		case tokenFill:
 			fill = true
-		case "length", "dimension", "prefix", "tag":
+		case tokenLength, tokenDimension, tokenPrefix, tokenTag:
 			if i+1 >= len(toks) {
 				return fmt.Errorf("%q without a value", toks[i])
 			}
@@ -395,18 +414,18 @@ func (a *sdlAggregate) member(toks []string, locals map[string]int64, define fun
 			i++
 
 			switch kw {
-			case "length", "dimension":
+			case tokenLength, tokenDimension:
 				n, err := strconv.ParseInt(arg, 10, 64)
-				if err != nil || n < 0 || kw == "length" && kind != "character" {
+				if err != nil || n < 0 || kw == tokenLength && kind != tokenCharacter {
 					return fmt.Errorf("bad %s %q", kw, arg)
 				}
 
-				if kw == "length" {
+				if kw == tokenLength {
 					size = n
 				} else {
 					count = n
 				}
-			case "prefix":
+			case tokenPrefix:
 				prefix = arg
 			default:
 				tag = arg
@@ -425,7 +444,7 @@ func (a *sdlAggregate) member(toks []string, locals map[string]int64, define fun
 	if !fill {
 		a.offsets = append(a.offsets, sdlOffset{name: prefix + tag + "_" + name, offset: off})
 
-		if kind == "character" && size > 0 {
+		if kind == tokenCharacter && size > 0 {
 			if err := define(prefix+"S_"+name, uint32(size*count)); err != nil {
 				return err
 			}
@@ -449,12 +468,12 @@ func (a *sdlAggregate) push(name string, union bool, rest []string) error {
 
 	for _, t := range rest {
 		switch kw := strings.ToLower(t); kw {
-		case "signed", "unsigned":
-		case "fill":
+		case tokenSigned, tokenUnsigned:
+		case tokenFill:
 			fill = true
 		default:
 			n, ok := sdlTypeSizes[kw]
-			if !ok || kw == "character" {
+			if !ok || kw == tokenCharacter {
 				return fmt.Errorf("unsupported nested aggregate keyword %q", t)
 			}
 
@@ -540,8 +559,8 @@ func (a *sdlAggregate) flush(define func(string, uint32) error) error {
 // (a character field's default length) and the letter SDL puts in its
 // field names (GPS$B_ALIGN, GPS$W_FLAGS, GPS$L_ALLOC, GPS$T_NAME).
 var (
-	sdlTypeSizes = map[string]int64{"byte": 1, "word": 2, "longword": 4, "quadword": 8, "character": 1}
-	sdlTypeTags  = map[string]string{"byte": "B", "word": "W", "longword": "L", "quadword": "Q", "character": "T"}
+	sdlTypeSizes = map[string]int64{tokenByte: 1, tokenWord: 2, tokenLongword: 4, tokenQuadword: 8, tokenCharacter: 1}
+	sdlTypeTags  = map[string]string{tokenByte: "B", tokenWord: "W", tokenLongword: "L", tokenQuadword: "Q", tokenCharacter: "T"}
 )
 
 // sdlTokens splits one SDL statement into tokens, treating "(", ")" and ","
@@ -575,7 +594,7 @@ func sdlBitfield(toks []string, prefix string, pos uint32, locals map[string]int
 
 	for i := 2; i < len(toks); i++ {
 		switch strings.ToLower(toks[i]) {
-		case "length":
+		case tokenLength:
 			if i+1 >= len(toks) {
 				return 0, fmt.Errorf("length without a value")
 			}
@@ -591,7 +610,7 @@ func sdlBitfield(toks []string, prefix string, pos uint32, locals map[string]int
 		case "mask":
 			mask = true
 
-		case "fill":
+		case tokenFill:
 			fill = true
 
 		default:
@@ -669,6 +688,7 @@ func sdlConstant(toks []string, defaultPrefix, defaultTag string, lookup func(st
 
 	for ; i < len(toks); i++ {
 		kw := strings.ToLower(toks[i])
+
 		if i+1 >= len(toks) {
 			return nil, fmt.Errorf("%q without a value", toks[i])
 		}
@@ -696,10 +716,10 @@ func sdlConstant(toks []string, defaultPrefix, defaultTag string, lookup func(st
 				increment = n
 			}
 
-		case "prefix":
+		case tokenPrefix:
 			prefix, havePrefix = arg, true
 
-		case "tag":
+		case tokenTag:
 			tag, haveTag = arg, true
 
 		default:
@@ -725,6 +745,7 @@ func sdlConstant(toks []string, defaultPrefix, defaultTag string, lookup func(st
 	}
 
 	out := make([]sdlConst, 0, len(names))
+
 	for n, name := range names {
 		sym := prefix + tag + "_" + name
 		out = append(out, sdlConst{name: sym, value: uint32(value + int64(n)*increment)})

@@ -114,6 +114,7 @@ func TestUnwind_depthAndNewPC(t *testing.T) {
 	}
 
 	c.SetGPR(vax.R0, 1)
+	
 	_, _ = serviceSysSrchandler(env, nil) // A's handler, SS$_UNWIND
 
 	if _, err := serviceSysSrchandler(env, nil); err != nil {

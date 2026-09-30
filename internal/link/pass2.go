@@ -460,6 +460,7 @@ func (x *machine) storePICR() error {
 	switch {
 	case a.img != "":
 		b[0] = 0xFF
+
 		x.l.referShared(a.img, a.v, x.loc+1)
 
 	case a.rel:
@@ -569,8 +570,8 @@ func (l *linker) image() (*Image, error) {
 		isd{pages: uint32(len(fixup)) / blockSize, vpn: fixupVA >> 9, flags: isdFIXUPVEC | isdWRT | isdCRF, vbn: vbn},
 		isd{pages: uint32(l.opts.StackPages), vpn: 1<<22 - uint32(l.opts.StackPages), flags: isdTypeUserStack | isdLASTCLU | isdDZRO | isdWRT},
 	)
-	pages = append(pages, fixup)
 
+	pages = append(pages, fixup)
 	global := make([][]byte, 0, len(l.shared))
 
 	for _, r := range l.shared {
@@ -604,6 +605,7 @@ func (l *linker) image() (*Image, error) {
 	for _, m := range l.modules {
 		img.Messages = append(img.Messages, m.messages...)
 	}
+	
 	img.Bytes = header
 
 	for _, p := range pages {

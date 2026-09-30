@@ -176,6 +176,7 @@ func (a *Assembler) blockDirective(raw string) (kind int, name string, labelText
 
 		if c.peek() == ':' {
 			labelText += ":"
+			
 			c.next()
 		}
 

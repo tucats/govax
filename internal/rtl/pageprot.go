@@ -84,7 +84,7 @@ func serviceSysSetprt(env *Environment, argv []uint32) (uint32, error) {
 	status := uint32(ssNormal)
 	previous := vm.Protection(0)
 
-	var done []uint32
+	done := make([]uint32, 0, len(r.pages()))
 
 	for _, addr := range r.pages() {
 		old, st := env.pageForChange(addr, mode, ssLenVio)
@@ -104,7 +104,7 @@ func serviceSysSetprt(env *Environment, argv []uint32) (uint32, error) {
 		}
 
 		previous = old.Protection()
-		
+
 		done = append(done, addr)
 	}
 
@@ -205,7 +205,7 @@ func (env *Environment) lockPages(argv []uint32, locks *pageLocks, lock bool) (u
 	mode := max(vax.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
 	status := uint32(ssWasClr)
 
-	var done []uint32
+	done := make([]uint32, 0, len(r.pages()))
 
 	for _, addr := range r.pages() {
 		if _, st := env.pageForChange(addr, mode, ssAccVio); st != ssNormal {

@@ -192,6 +192,7 @@ func (a *Assembler) operandType(operand string) (uint32, error) {
 	}
 
 	deferred := uint32(0)
+
 	if c.peek() == '@' {
 		c.next()
 
@@ -348,6 +349,7 @@ func (a *Assembler) stringOperators(line string) (string, error) {
 
 		if ch != '%' {
 			out.WriteByte(ch)
+
 			i++
 
 			continue
@@ -360,6 +362,7 @@ func (a *Assembler) stringOperators(line string) (string, error) {
 
 		if !ok {
 			out.WriteByte(ch)
+
 			i++
 
 			continue
@@ -371,6 +374,7 @@ func (a *Assembler) stringOperators(line string) (string, error) {
 		}
 
 		out.WriteString(result)
+		
 		i = end
 	}
 

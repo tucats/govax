@@ -127,6 +127,7 @@ func readImageHeader(data []byte) (imageHeader, error) {
 
 	for blk, p := 0, isdOff; blk < hdrBlocks; {
 		b := data[blk*blockSize : (blk+1)*blockSize]
+		
 		if p+2 > blockSize {
 			return h, fmt.Errorf("link: the image header's section descriptors are damaged")
 		}

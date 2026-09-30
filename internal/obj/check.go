@@ -143,7 +143,7 @@ func (c *checker) run() {
 			// psect just before its first text, and each symbol near its
 			// definition (see docs/PHASE-27.md).
 			seenGSD = true
-			
+
 			c.gsd(rec)
 
 		case *TIR:

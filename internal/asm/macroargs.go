@@ -139,6 +139,7 @@ func (a *Assembler) parseActuals(c *cursor, m *macroDef) ([]actual, error) {
 		// argument that happens to hold "=" (the manual's RESERVE
 		// example passes LOCATION=12 that way).
 		save := c.pos
+		
 		if name := scanName(c); name != "" && c.peek() == '=' && c.peekAt(1) != '=' && m.formalIndex(name) >= 0 {
 			c.next()
 

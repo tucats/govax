@@ -10,7 +10,7 @@ import (
 
 // specs joins the Spec of each result with "|".
 func specs(fs []FileSpec) string {
-	var s []string
+	s := make([]string, 0, len(fs))
 	for _, f := range fs {
 		s = append(s, f.Spec)
 	}

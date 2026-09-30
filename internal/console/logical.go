@@ -165,7 +165,7 @@ func logicalModeQualifier(r *dcl.Result) lnm.Mode {
 }
 
 // DefineLogicalName implements DEFINE and ASSIGN: it defines name in the
-// first table table designates, at mode, with one equivalence string per
+// first table designated, at mode, with one equivalence string per
 // element of values, each carrying attrs (AttrConcealed, AttrTerminal).
 // When log is set and an existing definition was replaced, it prints
 // DCL's %DCL-I-SUPERSEDE message. Removing ASSIGN's trailing colon is the
@@ -189,7 +189,7 @@ func (c *Console) DefineLogicalName(table, name string, values []string, mode ln
 }
 
 // DeassignLogicalName implements DEASSIGN: it deletes name from the
-// first table table designates, at mode and any less privileged mode, or
+// first table designated, at mode and any less privileged mode, or
 // with all set every such name in that table. Process-permanent names
 // are executive mode, so a default (supervisor-mode) DEASSIGN leaves
 // them alone, as on VMS. A table name in a directory table deletes that
@@ -243,6 +243,7 @@ func (c *Console) logicalTables(specs []string) ([]*lnm.Table, error) {
 		for _, t := range tables {
 			if !seen[t] {
 				seen[t] = true
+				
 				out = append(out, t)
 			}
 		}
@@ -258,8 +259,10 @@ func (c *Console) logicalTables(specs []string) ([]*lnm.Table, error) {
 //
 //   - With no names, every searched table is listed: a "(TABLE)" header,
 //     then each name in it, alphabetically.
+//
 //   - A name with "*" or "%" wildcards lists the matching names the same
 //     way, under the header of every table searched.
+//
 //   - Any other name is looked up in the tables in order and shown for
 //     the first table that has it, followed by the iterative translation
 //     of each equivalence string that is itself a logical name, one

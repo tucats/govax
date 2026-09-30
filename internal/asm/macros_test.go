@@ -110,6 +110,7 @@ func TestMacroStringArguments(t *testing.T) {
 	.ENDM	REPEAT
 	.PSECT	DATA
 `
+
 	requireBytes(t, macroBytes(t, repeat+"\tREPEAT <A B>"), 'A', ' ', 'B', 'A', ' ', 'B')
 	requireBytes(t, macroBytes(t, repeat+"\tREPEAT ^%<X>%"), '<', 'X', '>', '<', 'X', '>')
 	requireCode(t, macroErr(t, repeat+"\tREPEAT A B"), vmserrors.VAX_TOOMNYARGS)
@@ -314,12 +315,12 @@ func TestMacroDefinitionErrors(t *testing.T) {
 	requireCode(t, macroErr(t, "\t.ENDM"), vmserrors.VAX_NOTINDEF)
 	requireCode(t, macroErr(t, "\t.MACRO"), vmserrors.VAX_MACRONAME)
 	requireCode(t, macroErr(t, "\t.MACRO M ?"), vmserrors.VAX_BADFORMAL)
-	requireCode(t, macroErr(t, "\t.MACRO M\n\tM\n\t.ENDM\n\tM"), vmserrors.VAX_MACRODEPTH)
+	requireCode(t, macroErr(t, "\t.MACRO M\n\tM\n\t.ENDM\n\tM"), vmserrors.VAX_MACRODEPTH) //nolint:dupword
 
 	// A definition started in a macro's expansion has to end there. (A
 	// .MACRO behind .IIF isn't counted while M is collected, so M's
 	// body starts N's definition without ending it.)
-	err := macroErr(t, "\t.MACRO M\n\t.IIF EQ 0, .MACRO N\n\t.ENDM M\n\tM\n\t.ENDM N")
+	err := macroErr(t, "\t.MACRO M\n\t.IIF EQ 0, .MACRO N\n\t.ENDM M\n\tM\n\t.ENDM N") //nolint:dupword
 	requireCode(t, err, vmserrors.VAX_NOENDM)
 }
 

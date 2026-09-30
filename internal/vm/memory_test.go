@@ -24,7 +24,7 @@ func TestAllocatePage_firstFitInOrder(t *testing.T) {
 	m := NewMemory(4 * pageSize)
 
 	var got []uint32
-	
+
 	for i := 0; i < 3; i++ {
 		pfn, ok := m.AllocatePage()
 		if !ok {

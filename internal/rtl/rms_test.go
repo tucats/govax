@@ -195,6 +195,7 @@ func newMountedVolumeFixture(t *testing.T, env *Environment) {
 
 	if err := volume.Initialize(c, volume.InitializeOptions{Label: "TESTVOL"}); err != nil {
 		_ = c.Close()
+		
 		t.Fatalf("volume.Initialize: %v", err)
 	}
 

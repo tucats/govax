@@ -20,7 +20,7 @@ func TestACPDelete_entryAndFile(t *testing.T) {
 
 	// The entry only: the file stays.
 	got, err := m.ACPDelete("DUA0", ACPDeleteRequest{Directory: mfd, Name: "data.txt"})
-	if err != nil || got.FID != fid || got.Name != "DATA.TXT;1" || got.Deferred {
+	if err != nil || got.FID != fid || got.Name != file11FileName || got.Deferred {
 		t.Fatalf("ACPDelete (entry) = %+v, %v", got, err)
 	}
 
@@ -50,7 +50,7 @@ func TestACPDelete_byNameWithFile(t *testing.T) {
 	m := newACPFixture(t)
 	fid, _, _ := m.ACPLookup("DUA0", mfd, "DATA.TXT")
 
-	if _, err := m.ACPDelete("DUA0", ACPDeleteRequest{Directory: mfd, Name: "DATA.TXT;1", DeleteFile: true}); err != nil {
+	if _, err := m.ACPDelete("DUA0", ACPDeleteRequest{Directory: mfd, Name: file11FileName, DeleteFile: true}); err != nil {
 		t.Fatal(err)
 	}
 

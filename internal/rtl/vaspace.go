@@ -193,7 +193,7 @@ func serviceSysCretva(env *Environment, argv []uint32) (uint32, error) {
 	retadr := optArg(argv, 1)
 	mode := max(vax.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
 
-	var done []uint32
+	done := make([]uint32, 0, len(r.pages()))
 
 	status := uint32(ssNormal)
 
@@ -278,7 +278,7 @@ func serviceSysDeltva(env *Environment, argv []uint32) (uint32, error) {
 // deletePages deletes pages, in order, on behalf of mode, stopping at the
 // first that can't be. It returns the status and the pages it did.
 func (env *Environment) deletePages(pages []uint32, mode vax.AccessMode) (uint32, []uint32) {
-	var done []uint32
+	done := make([]uint32, 0, len(pages))
 
 	for _, addr := range pages {
 		if addr >= s0Base {

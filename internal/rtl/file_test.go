@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+const testGreeting = "hello"
+
 func TestShimExeOpenWriteReadClose(t *testing.T) {
 	env, _ := fixture()
 	dir := t.TempDir()
@@ -23,7 +25,7 @@ func TestShimExeOpenWriteReadClose(t *testing.T) {
 	}
 
 	dataAddr := uint32(0x2000)
-	putString(t, env, dataAddr, "hello")
+	putString(t, env, dataAddr, testGreeting)
 
 	n, err := shimExeWrite(env, []uint32{fid, dataAddr, 5})
 	if err != nil {
@@ -43,7 +45,7 @@ func TestShimExeOpenWriteReadClose(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if string(got) != "hello" {
+	if string(got) != testGreeting {
 		t.Errorf("file contents = %q, want \"hello\"", got)
 	}
 
@@ -69,7 +71,7 @@ func TestShimExeOpenWriteReadClose(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if readBack != "hello" {
+	if readBack != testGreeting {
 		t.Errorf("read back = %q, want \"hello\"", readBack)
 	}
 }

@@ -21,10 +21,12 @@ func fixture() (*Environment, *bytes.Buffer) {
 	cpu := vax.New()
 	mem := vm.NewMemory(1 << 20)
 	devices := iodev.NewDeviceTable()
+
 	logicals := lnm.NewDatabase(NominalUIC)
 	if err := logicals.DefineProcessNames("_TTA0:"); err != nil {
 		panic(err)
 	}
+	
 	mounts := rms.NewMountTable()
 
 	out := &bytes.Buffer{}

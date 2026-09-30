@@ -54,7 +54,7 @@ func newTwoVolumeSession(t *testing.T) (*Session, *volume.Volume, *volume.Volume
 
 	mounts := NewMountTable()
 
-	var vols []*volume.Volume
+	vols := make([]*volume.Volume, 0, 2)
 
 	for _, dev := range []string{"DUA0", "DUA1"} {
 		if err := mounts.Mount(dev, newTestVolumeFile(t, dev+"VOL"), true); err != nil {

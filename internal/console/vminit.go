@@ -310,7 +310,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// doc comment on why it wasn't ported at Phase 08).
 	scratch := 0x80000000 + paddr
 	c.Symbols.Set("CONSOLE$SCRATCH", scratch, SymbolSystem)
-	
+
 	paddr += 512
 
 	// A second, dedicated page for Phase 13's synthesized SHIM$ stubs
@@ -415,7 +415,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// alone, same asymmetry as CLEAR TB — see docs/PHASE-21.md).
 	c.Mem.InvalidateTB()
 	c.Mem.ResetTBCounters()
-	c.asmSession = nil     // a fresh address space invalidates any prior ASM session's state
+	c.asmSession = nil // a fresh address space invalidates any prior ASM session's state
 	c.assemblerMode = false
 
 	return nil
@@ -426,7 +426,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 const defaultModeStackPages = 8
 
 // modeStack lays out one mode's stack at the physical S0 address *paddr:
-// a no-access guard page, then pages pages with protection prot. It
+// a no-access guard page, then `pages` pages with protection prot. It
 // advances *paddr past them and returns the stack's initial pointer (the
 // virtual address of its last longword). A push past the stack's bottom
 // lands on the guard page and faults.

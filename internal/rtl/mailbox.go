@@ -308,8 +308,8 @@ func serviceSysCrembx(env *Environment, argv []uint32) (uint32, error) {
 	return ssNormal, nil
 }
 
-// namedMailbox returns the mailbox device the logical name name
-// translates to in table, if it's one.
+// namedMailbox returns the mailbox device the logical name
+// translates to in table, if it is one.
 func (env *Environment) namedMailbox(table, name string) (*iodev.Device, bool) {
 	e, err := env.Logicals.Translate(table, name, lnm.User, 0)
 	if err != nil || len(e.Equivalences) == 0 {

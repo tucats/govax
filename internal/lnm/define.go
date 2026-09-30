@@ -2,7 +2,7 @@ package lnm
 
 import "github.com/tucats/govax/internal/vmserrors"
 
-// Define creates logical name lognam at access mode mode in the first
+// Define creates logical name lognam at access mode `mode` in the first
 // table tabnam designates, with equivalence strings eqv (indexes 0 to
 // len(eqv)-1) — $CRELNM. attr may contain AttrNoAlias and AttrConfine
 // (and AttrCrelog, for the $CRELOG wrapper). mode is the mode actually

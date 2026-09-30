@@ -402,8 +402,8 @@ func TestMacro_include(t *testing.T) {
 	}
 
 	m := readObject(t, c, rms.FileLocation{Host: true, Name: filepath.Join(dir, "main.obj")})
+	names := make([]string, 0, len(m.Symbols()))
 
-	var names []string
 	for _, sym := range m.Symbols() {
 		names = append(names, sym.Name)
 	}
@@ -414,6 +414,7 @@ func TestMacro_include(t *testing.T) {
 
 	// A missing include is an error, and nothing is written.
 	writeHostFile(t, src, "\t.INCLUDE \"none.inc\"\n")
+
 	_ = os.Remove(filepath.Join(dir, "main.obj"))
 
 	if err := c.Macro(MacroOptions{Source: src}); err == nil {
@@ -490,9 +491,10 @@ func TestDispatch_macroViaDCL(t *testing.T) {
 
 // splitSource splits source text into lines.
 func splitSource(text string) [][]byte {
-	var out [][]byte
+	splits := strings.Split(strings.TrimSuffix(text, "\n"), "\n")
+	out := make([][]byte, 0, len(splits))
 
-	for _, l := range strings.Split(strings.TrimSuffix(text, "\n"), "\n") {
+	for _, l := range splits {
 		out = append(out, []byte(l))
 	}
 

@@ -937,6 +937,7 @@ func TestCtrlCAST_assembledProgram(t *testing.T) {
 		// Type CTRL/C the first time the program reaches each spin loop.
 		if typed < len(spins) && c.CPU.GPR(vax.PC) == spins[typed] {
 			c.Engine.Attention()
+
 			typed++
 		}
 
@@ -1024,7 +1025,11 @@ func TestGetdvi_assembledProgram(t *testing.T) {
 		return buf
 	}
 
-	word := func(name string) int { b := read(name, 2); return int(b[0]) | int(b[1])<<8 }
+	word := func(name string) int {
+		b := read(name, 2)
+
+		return int(b[0]) | int(b[1])<<8
+	}
 
 	if got := string(read("NAME", word("NAMLEN"))); got != "_TTA0:" {
 		t.Errorf("DVI$_DEVNAM = %q, want \"_TTA0:\"", got)

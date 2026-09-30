@@ -60,7 +60,9 @@ func TestServiceSysAdjstk(t *testing.T) {
 	// From kernel mode, load user mode's stack pointer from newadr, then
 	// adjust it by a negative word.
 	env.cpu.SetPR(vax.USP, 0x7000)
+
 	newadr := a.long(0x5000)
+
 	wantR0(t, callLNM(t, env, serviceSysAdjstk, 3, uint32(0xFFF8), newadr), ssNormal)
 
 	if got := env.cpu.PR(vax.USP); got != 0x4FF8 {
@@ -74,7 +76,9 @@ func TestServiceSysAdjstk(t *testing.T) {
 	// newadr holding 0 adjusts the mode's current stack pointer. Only the
 	// low word of adjust counts, so 0x10010 adds 0x10.
 	env.cpu.SetPR(vax.SSP, 0x9000)
+
 	newadr = a.long(0)
+
 	wantR0(t, callLNM(t, env, serviceSysAdjstk, 2, 0x10010, newadr), ssNormal)
 
 	if got := env.cpu.PR(vax.SSP); got != 0x9010 {
@@ -88,7 +92,9 @@ func TestServiceSysAdjstk(t *testing.T) {
 	// adjust 0 and newadr holding 0 leave the stack pointer alone, but
 	// still report it through newadr.
 	env.cpu.SetPR(vax.ESP, 0x8000)
+
 	newadr = a.long(0)
+	
 	wantR0(t, callLNM(t, env, serviceSysAdjstk, 1, 0, newadr), ssNormal)
 
 	if got, gotAdr := env.cpu.PR(vax.ESP), a.readLong(newadr); got != 0x8000 || gotAdr != 0x8000 {

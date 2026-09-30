@@ -169,7 +169,9 @@ func (w *mapWriter) newPage() {
 	w.count = 0
 	w.out("\f")
 	w.out(fmt.Sprintf("%-64.64s%-25s%-33sPage%5d", w.heading, w.date, w.linker, w.page))
+
 	w.page++
+
 	w.out("")
 
 	if w.subhead != nil {
@@ -345,12 +347,12 @@ func alignName(align byte) string {
 
 // psectAttributes lists a psect's attributes, each in a fixed width.
 func psectAttributes(flags uint16) string {
-	pick := func(bit uint16, set, clear string) string {
+	pick := func(bit uint16, setValue, clearValue string) string {
 		if flags&bit != 0 {
-			return set
+			return setValue
 		}
 
-		return clear
+		return clearValue
 	}
 
 	return pick(obj.PsectPIC, "  PIC,", "NOPIC,") +
@@ -549,6 +551,7 @@ func (w *mapWriter) synopsis(l *linker, opts MapOptions) {
 	if !opts.Brief && counts.options > 0 {
 		line("Number of cross references:", "%8d.", counts.options)
 	}
+	
 	line("Number of image sections:", "%8d.", counts.sections)
 
 	if l.transferSet {

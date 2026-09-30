@@ -188,6 +188,7 @@ func (l *linker) fixupSection(f fixupLayout, fixupVA uint32) []byte {
 		le.PutUint32(b[0x10:], f.addr)
 
 		p := f.addr
+		
 		for i, r := range l.shared {
 			if len(r.addresses) == 0 {
 				continue

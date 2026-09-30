@@ -83,7 +83,6 @@ func outputLocation(s *rms.Session, name string, input rms.FileLocation, typ str
 // defaultOutputLocation is the input's name with the type typ, next to
 // the input, with the type in the case of the input's type.
 func defaultOutputLocation(s *rms.Session, source rms.FileLocation, typ string) (rms.FileLocation, error) {
-
 	if source.Host {
 		base := filepath.Base(source.Name)
 		ext := filepath.Ext(base)

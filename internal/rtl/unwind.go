@@ -152,7 +152,8 @@ func (env *Environment) requestUnwind(d *conditionDispatch, depth int32, newPC u
 		return ssNormal, nil
 	}
 
-	var frames []uint32
+	// ten is an estimate...
+	frames := make([]uint32, 0, 10)
 
 	if d.kind != kindException {
 		frames = append(frames, d.resumeFP) // the LIB$SIGNAL stub's frame

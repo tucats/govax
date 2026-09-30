@@ -121,6 +121,7 @@ func TestLibStop(t *testing.T) {
 	}
 
 	_, _ = serviceSysSrchandler(env, nil) // calls condH1
+	
 	c.SetGPR(vax.R0, 1)                   // which tries to continue
 
 	_, err := serviceSysSrchandler(env, nil)

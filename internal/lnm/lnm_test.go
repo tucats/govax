@@ -30,7 +30,7 @@ func wantStatus(t *testing.T, err error, code uint32) {
 func mustDefine(t *testing.T, db *Database, tabnam, lognam string, mode Mode, values ...string) {
 	t.Helper()
 
-	var eqv []Equivalence
+	eqv := make([]Equivalence, 0, len(values))
 	for _, v := range values {
 		eqv = append(eqv, Equivalence{Value: v})
 	}
@@ -41,7 +41,7 @@ func mustDefine(t *testing.T, db *Database, tabnam, lognam string, mode Mode, va
 }
 
 func tableNames(tables []*Table) string {
-	var names []string
+	names := make([]string, 0, len(tables))
 	for _, t := range tables {
 		names = append(names, t.Name)
 	}
@@ -152,6 +152,7 @@ func TestResolveTables_depthLimit(t *testing.T) {
 	// indirection above the table name resolve; one more doesn't.
 	chain := func(n int) string {
 		prev := ProcessTableName
+
 		for i := n; i >= 1; i-- {
 			name := "T" + strings.Repeat("X", n) + "_" + string(rune('A'+i))
 			mustDefine(t, db, ProcessDirectoryName, name, Supervisor, prev)
@@ -662,9 +663,10 @@ func TestCreateTable_validation(t *testing.T) {
 }
 
 func TestTrace(t *testing.T) {
+	var lines []string
+
 	db := NewDatabase(testUIC)
 
-	var lines []string
 	db.Trace = func(format string, args ...any) { lines = append(lines, format) }
 
 	mustDefine(t, db, "LNM$PROCESS", "N", Supervisor, "X")

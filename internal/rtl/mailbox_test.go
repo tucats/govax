@@ -324,7 +324,7 @@ func TestMailboxDriver_waitingRequests(t *testing.T) {
 	}
 
 	if !flagSet(env, 5) || !flagSet(env, 6) || env.PendingASTs() != 2 || env.PendingIO() != 0 {
-		t.Errorf("flags %v %v, %d ASTs, %d pending; want set, set, 2, 0", flagSet(env, 5), flagSet(env, 6), env.PendingASTs(), env.PendingIO())
+		t.Errorf("flags %v %v, %d ASTs, %d pending; want set, set, 2, 0", flagSet(env, 5), flagSet(env, 6), env.PendingASTs(), env.PendingIO()) //nolint:dupword
 	}
 
 	// A plain write with no reader waits until it's read.

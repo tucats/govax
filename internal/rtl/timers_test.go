@@ -45,9 +45,11 @@ func TestServiceSysSetimrDelta(t *testing.T) {
 	}
 
 	*now += 49 * ms
+
 	wantR0(t, callLNM(t, env, serviceSysReadef, 4), ssWasClr)
 
 	*now += 1 * ms
+
 	wantR0(t, callLNM(t, env, serviceSysReadef, 4), ssWasSet)
 
 	if env.PendingTimers() != 0 {
@@ -62,7 +64,9 @@ func TestServiceSysSetimrAbsoluteAndDefaults(t *testing.T) {
 
 	// An absolute time: fires once reached. efn omitted means flag 0.
 	wantR0(t, callLNM(t, env, serviceSysSetimr, 0, a.quad(int64(*now+10*ms))), ssNormal)
+
 	*now += 10 * ms
+
 	wantR0(t, callLNM(t, env, serviceSysReadef, 0), ssWasSet)
 
 	// An absolute time already past fires at the next check.
@@ -77,12 +81,14 @@ func TestServiceSysSetimrAbsoluteAndDefaults(t *testing.T) {
 	}
 
 	*now += 5 * ms
+
 	wantR0(t, callLNM(t, env, serviceSysWaitfr, 9), ssNormal)
 }
 
 func TestServiceSysSetimrErrors(t *testing.T) {
 	env, _ := fixture()
 	a := newArena(t, env)
+
 	fakeClock(env)
 
 	wantR0(t, callLNM(t, env, serviceSysSetimr, 128, a.quad(-ms)), ssIllEfc)
@@ -107,10 +113,12 @@ func TestServiceSysSetimrCommonCluster(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysSetimr, 66, a.quad(-2*ms)), ssNormal)
 
 	*now += ms
-	wantR0(t, callLNM(t, env, serviceSysReadef, 65), ssWasSet)
 
+	wantR0(t, callLNM(t, env, serviceSysReadef, 65), ssWasSet)
 	wantR0(t, callLNM(t, env, serviceSysDacefc, 64), ssNormal)
+
 	*now += ms
+
 	wantR0(t, callLNM(t, env, serviceSysReadef, 1), ssWasClr) // runs the expiry
 
 	if c, _ := env.EventFlagClusters.Lookup(1, "T"); c.Flags&(1<<2) != 0 {
@@ -135,6 +143,7 @@ func TestServiceSysCantim(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysCantim, 7), ssNormal)
 
 	*now += ms
+
 	wantR0(t, callLNM(t, env, serviceSysReadef, 3), ssWasSet)
 
 	if flagSet(env, 1) || flagSet(env, 2) {
@@ -177,5 +186,6 @@ func TestTimersImageRundown(t *testing.T) {
 	env.ImageRundown()
 
 	*now += ms
+	
 	wantR0(t, callLNM(t, env, serviceSysReadef, 5), ssWasClr)
 }
