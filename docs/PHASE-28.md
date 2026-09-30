@@ -11,7 +11,7 @@ Phase 27 fixtures do.
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress (subtask 1 done; next, subtask 2).**
+**Status: in progress (subtasks 1 and 2 done; next, subtask 3).**
 
 ## Scope
 
@@ -48,7 +48,7 @@ Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 - LINK's `readLinkFile` (`internal/console/linksource.go`) already finds a
   VMS library file through its logical name on a mounted volume, then in
   the host directory the `vax.link.library` setting names (to become
-  `vax.library`, shared with MACRO; subtask 6).
+  `vax.library`, shared with MACRO; subtask 9).
 
 ## What the real STARLET.MLB shows
 
@@ -100,44 +100,56 @@ MACRO's `/LIBRARY` qualifier and `.LIBRARY` both take only `.MLB` files.
 
 ### Where the system macros come from (decided)
 
-The user proposed: use `STARLET.MLB` if it's found, else a `STARLET.MAR`
-holding the macro definitions. That's how this phase will work, with one
-difference from VMS to note: a `.MAR` library is a govax extension (VMS
-has neither the file nor a way to search one). It costs almost nothing,
-because a macro library in `internal/asm` is just "give me the text of
-macro NAME". An `.MLB` answers from its index, and a `.MAR` answers from
-the definitions it holds.
+Macros always come from `.MLB` macro libraries, as on VMS. `STARLET.MLB` is
+looked for as LINK looks for its libraries: `SYS$LIBRARY:STARLET.MLB` on a
+mounted volume, then `STARLET.MLB` in the host library directory (the
+`vax.library` setting). When neither exists (a fresh clone has no licensed
+STARLET.MLB), govax uses its own `STARLET.MLB`, kept in the bootdata file
+system (`internal/bootdata/files`).
 
-The lookup is LINK's: `SYS$LIBRARY:STARLET.MLB` on a mounted volume, then
-`STARLET.MLB` in the host library directory (`vax.library`), then
-`STARLET.MAR` in the same two places, then govax's built-in `STARLET.MAR`. A missing library isn't an error
-until a macro is needed and nobody defines it (then it's MACRO's own
-"unknown opcode" error, with a note that no system library was found).
+govax's STARLET.MLB is made from whole cloth (decided 2026-09-30, revising
+the earlier plan of a `STARLET.MAR` read as text). Its source is a
+govax-written `STARLET.MAR` of macro definitions, starting with `$EXIT_S`
+and growing over time. The definitions are written from the *System
+Services* and *RMS* reference manuals' argument lists, not copied from
+STARLET, and checked against the real ones by expanding both. The source
+is made into the library by govax's own librarian (the `internal/lbr`
+writer and the `LIBRARY` command), so there is only one kind of macro
+library to search, and the tool that builds govax's library is the one
+users build theirs with.
 
-**A built-in fallback** (decided 2026-09-30): a fresh clone has no
-STARLET.MLB, since it's licensed, so govax embeds a small `STARLET.MAR` of
-its own as the last fallback. It starts with `$EXIT_S`, the macro nearly
-every program calls, and grows over time. Its definitions are written
-from the *System Services* and *RMS* reference manuals' argument lists,
-not copied from STARLET, and checked against the real ones by expanding
-both (subtask 9).
+The `.MLB` is generated from the source (`go generate`) and committed next
+to it in bootdata, and a test rebuilds it and checks that the two match,
+so the source and the library can't drift apart.
+
+### A librarian (decided 2026-09-30)
+
+`internal/lbr` gains a writer: create a library, insert, replace, and
+delete modules, and write the file, with its B-tree indexes. It writes the
+V3 format real LIBRARIAN writes (without DCX data reduction, which is
+optional in the format), for macro libraries (one module per macro, the
+index keyed by macro name) and object libraries (a module per object
+module, with a second index of the global symbols each defines). A console
+`LIBRARY` command, in the style of VMS's, drives it, so users can make
+their own `.MLB` and `.OLB` files, for MACRO's `/LIBRARY=` and for LINK.
+Real VMS's `LIBRARY/LIST` and MACRO/LINK reading govax's libraries are
+part of the fixtures (subtask 10).
 
 ### Macro libraries in `internal/asm`
 
 `internal/asm` gets a small `MacroLibrary` interface (look up a macro
-name, get its definition's lines), with two implementations: one over an
-`*lbr.Library` (a `.MLB`) and one over source text holding `.MACRO`
-definitions (a `.MAR`). `internal/lbr` is a leaf package, so `asm`
-importing it is fine. The console decides which files to open and hands
-the assembler libraries plus a resolver for `.LIBRARY` names, as it
-already hands it an `.INCLUDE` resolver.
+name, get its definition's lines), implemented over an `*lbr.Library`.
+`internal/lbr` is a leaf package, so `asm` importing it is fine. The
+console decides which files to open and hands the assembler its libraries
+plus a resolver for `.LIBRARY` names, as it already hands it an `.INCLUDE`
+resolver.
 
 The search order is MACRO's: the `.LIBRARY` libraries in the reverse of
-the order they were named, then the command line's `/LIBRARY` files (also
-reversed), then `STARLET.MLB`. A name is looked up in the libraries only
-when it isn't a directive, a macro already defined, or an opcode, except
-that `.MCALL` looks it up regardless (which is how a library macro can
-replace an opcode).
+the order they were named, then the `/LIBRARY=` files (also reversed),
+then `STARLET.MLB`. A name is looked up in the libraries only when it
+isn't a directive, a macro already defined, or an opcode, except that
+`.MCALL` looks it up regardless (which is how a library macro can replace
+an opcode).
 
 ### Expansion: substitute text, then assemble it as ordinary lines
 
@@ -180,16 +192,16 @@ inside it. Repeat blocks collect their lines to `.ENDR` the same way.
 
 ## Subtasks
 
-1. **Macro definitions and calls.** `.MACRO`/`.ENDM` definitions (nested
-   definitions, a labeled `.ENDM`, a continued `.MACRO` line), the macro
-   table (redefinition, `.MDELETE`), call recognition ahead of opcodes,
-   actual-argument parsing (positional, keyword, defaults, `<...>` and
-   `^x...x` delimiters, nesting), substitution with `'` concatenation, the
-   source stack with `.MEXIT`, and error locations that name the call.
-   Symbols may contain `.`. Both dialects.
-2. **Argument features and attribute directives:** created local labels
-   (`?L1`), `\symbol` values, `.NARG`, `.NCHR`, `.NTYPE`, and the string
-   operators `%LENGTH`, `%LOCATE`, and `%EXTRACT`.
+1. **Done.** **Macro definitions and calls.** `.MACRO`/`.ENDM` definitions
+   (nested definitions, a labeled `.ENDM`, a continued `.MACRO` line), the
+   macro table (redefinition, `.MDELETE`), call recognition ahead of
+   opcodes, actual-argument parsing (positional, keyword, defaults, `<...>`
+   and `^x...x` delimiters, nesting), substitution with `'`
+   concatenation, the source stack with `.MEXIT`, and error locations that
+   name the call. Symbols may contain `.`. Both dialects.
+2. **Done.** **Argument features and attribute directives:** created local
+   labels (`?L1`), `\symbol` values, `.NARG`, `.NCHR`, `.NTYPE`, and the
+   string operators `%LENGTH`, `%LOCATE`, and `%EXTRACT`.
 3. **Repeat blocks:** `.REPEAT`/`.REPT`, `.IRP`, `.IRPC`, `.ENDR`, and
    `.MEXIT` inside a repeat block.
 4. **Message and listing directives:** `.ERROR`, `.WARN`, and `.PRINT` in
@@ -197,37 +209,54 @@ inside it. Repeat blocks collect their lines to `.ENDR` the same way.
    `.WARN` a warning, `.PRINT` an informational message), and the
    listing-control directives (`.LIST`, `.NLIST`, `.SHOW`, `.NOSHOW`,
    `.CROSS`, `.NOCROSS`, `.PAGE`) accepted and ignored.
-5. **Macro libraries in `internal/asm`:** the `MacroLibrary` interface,
-   the `.MLB` and `.MAR` implementations, `.MCALL`, `.LIBRARY` (through a
-   resolver, default type `.MLB`), and the automatic search for an
-   undefined opcode. Acceptance: every one of STARLET.MLB's 1529 macros
-   loads, and a set of calls (`$EXIT_S`, `$QIOW_S`, `$FAB`, `$RAB`,
-   `$SSDEF`, `$IODEF`) expand and assemble.
-6. **The MACRO command:** find STARLET (`.MLB`, then `.MAR`, as above),
-   resolve `.LIBRARY` names relative to the source like `.INCLUDE`, and
-   take command-line libraries with a govax-style
-   `/LIBRARY=(file[,...])` qualifier. Rename the host library setting
-   `vax.link.library` to `vax.library`, shared by MACRO and LINK (as
-   VMS's `SYS$LIBRARY` is), still reading the old name when the new one
-   isn't set. The `cmd/govax macro` subcommand follows.
-7. **Fixtures** (needs the user). New `testdata/mar` fixtures: one of
-   user-defined macros (every argument form, created labels, repeat
-   blocks, string operators, `.NARG`/`.NCHR`/`.NTYPE`) and programs that
-   call system macros (`$QIOW_S` "hello", and an RMS `$FAB`/`$RAB` file
-   copy). The user assembles them with real MACRO; govax's objects must
-   match, and the programs must link and run under govax's `LINK`/`RUN`.
-8. **Clean-up and docs:** `PLAN.md`, `CLAUDE.md`, `DEVIATIONS.md`, the
-   MACRO help topic, and this document's closing entry.
-9. **govax's own STARLET.MAR**, embedded, for clones without the
-   licensed library. It starts with `$EXIT_S` and grows as programs need
-   more.
+5. **Macro libraries in `internal/asm`:** the `MacroLibrary` interface
+   over `*lbr.Library`, `.MCALL`, `.LIBRARY` (through a resolver, default
+   type `.MLB`), and the automatic search for an undefined opcode.
+   Acceptance: every one of STARLET.MLB's 1529 macros loads, and a set of
+   calls (`$EXIT_S`, `$QIOW_S`, `$FAB`, `$RAB`, `$SSDEF`, `$IODEF`) expand
+   and assemble.
+6. **The `internal/lbr` writer:** create a library, insert, replace, and
+   delete modules, and write the V3 format with its B-tree indexes: macro
+   libraries (one module per `.MACRO`, keyed by name) and object libraries
+   (module-name index, plus the global symbols from each object's GSD).
+   Round-trip tests through `lbr.Open`; the real STARLET.MLB's modules
+   rewritten into a new library must read back unchanged.
+7. **The `LIBRARY` command,** in VMS's style: `/CREATE`, `/INSERT`,
+   `/REPLACE`, `/DELETE=`, `/EXTRACT=` with `/OUTPUT=`, `/LIST`, and
+   `/MACRO` or `/OBJECT` (the default, as on VMS) choosing the type and the
+   default file type (`.MLB` or `.OLB`). Host files and volume files, by
+   the rules MACRO and LINK use. The `cmd/govax library` subcommand
+   follows.
+8. **govax's own STARLET.MLB** in bootdata: a govax-written
+   `STARLET.MAR` (starting with `$EXIT_S`) and the `.MLB` generated from
+   it, with a test that they match.
+9. **The MACRO command:** STARLET.MLB found as above (volume, then
+   `vax.library`, then bootdata), `.LIBRARY` names resolved relative to the
+   source like `.INCLUDE`, and command-line libraries with a govax-style
+   `/LIBRARY=(file[,...])`. The host library setting `vax.link.library`
+   becomes `vax.library`, shared by MACRO and LINK (as VMS's `SYS$LIBRARY`
+   is), still reading the old name when the new one isn't set. The
+   `cmd/govax macro` subcommand follows.
+10. **Fixtures** (needs the user). New `testdata/mar` fixtures: one of
+    user-defined macros (every argument form, created labels, repeat
+    blocks, string operators, `.NARG`/`.NCHR`/`.NTYPE`) and programs that
+    call system macros (`$QIOW_S` "hello", and an RMS `$FAB`/`$RAB` file
+    copy). The user assembles them with real MACRO; govax's objects must
+    match, and the programs must link and run under govax's `LINK`/`RUN`.
+    Also govax-made `.MLB` and `.OLB` libraries, checked with real
+    `LIBRARY/LIST` and used by real MACRO and LINK.
+11. **Clean-up and docs:** `PLAN.md`, `CLAUDE.md`, `DEVIATIONS.md`, the
+    MACRO and LIBRARY help topics, and this document's closing entry.
 
 ## Open questions
 
 All settled (2026-09-30):
 
-1. **A built-in fallback STARLET.MAR:** yes, starting with `$EXIT_S`,
-   added to over time (subtask 9).
+1. **A built-in fallback:** yes, as a govax-made STARLET.MLB in bootdata,
+   built from a govax-written source starting with `$EXIT_S` and added to
+   over time (subtask 8). That needs a librarian: an `internal/lbr` writer
+   and a `LIBRARY` command (subtasks 6 and 7), which users can use for
+   their own `.MLB` and `.OLB` libraries too.
 2. **Command-line libraries:** a govax-style `/LIBRARY=(file,...)`
    qualifier, not VMS's `PROG+LIB/LIBRARY`.
 3. **The host library setting:** generalized to `vax.library`, shared by
@@ -312,3 +341,52 @@ All settled (2026-09-30):
 - Command-line libraries take a govax-style `/LIBRARY=` qualifier.
 - `vax.link.library` becomes `vax.library`, shared by MACRO and LINK.
 - Subtasks 6 and 9 and the open questions are updated to match.
+
+### 2026-09-30 — Revised: the fallback is a govax-made STARLET.MLB
+
+- The user revised the fallback: rather than reading a `STARLET.MAR` as
+  text, govax keeps its own `STARLET.MLB` in bootdata, so macros always
+  come from a macro library. Building it needs a librarian, so an
+  `internal/lbr` writer and a VMS-style `LIBRARY` command join the phase;
+  users get them for their own `.MLB` and `.OLB` libraries too.
+- The subtasks are renumbered: 6 is the `lbr` writer, 7 the `LIBRARY`
+  command, 8 govax's STARLET.MLB, 9 the MACRO command, 10 the fixtures,
+  11 the docs. The design sections above are rewritten to match.
+
+### 2026-09-30 — Subtask 2: argument features and attribute directives
+
+- **Created local labels.** A blank `?NAME` formal argument gets the next
+  created label, `30000$` onward (`Assembler.createdLabel`, reset by each
+  `Assemble`). A given one is used as written.
+- **`\expression`** passes the expression's value, in decimal
+  (`scanActual`); it must be absolute and already defined.
+- **`.NARG`** (positional arguments of the innermost call, null ones
+  counted, keyword ones not), **`.NCHR`** (a string's length, read like a
+  macro argument), and **`.NTYPE`** (`macroattr.go`).
+- **`.NTYPE` doesn't assemble anything.** Operand assembly writes bytes
+  as it parses, so `operandType` classifies the operand's syntax itself,
+  choosing the short-literal/immediate form and the displacement size by
+  the same rules operand assembly uses (a value known now, else the
+  default size). The manual gives the PC-based forms their own modes (0
+  literal, 1 immediate, 2 absolute, 3 general); govax returns those in
+  bits 4-7 with register 15 (`^X1F` and so on). The register field of the
+  literal (0), and relative mode's chosen size, are the parts to confirm
+  against real MACRO in the fixtures (subtask 10). An indexed operand
+  gives the base's mode in the high byte and `^X4x` in the low byte.
+- **String operators** are evaluated as each line of an expansion is
+  reached (`stringOperators`, called by `runSource` for a macro's frame),
+  not when arguments are substituted: the manual's `RESERVE` sets a
+  symbol with `%LOCATE` on one line and uses it in `%EXTRACT` on the
+  next. Lines a conditional leaves out aren't evaluated, and neither is a
+  comment. `%LOCATE`'s start and `%EXTRACT`'s position and length take a
+  decimal number or a defined absolute symbol.
+- New status code `VAX_BADOPERATOR` (wrong argument count).
+- Tests (`macroattr_test.go`) are the manual's `POSITIVE`, `TESTDEF`,
+  `CNT_ARG`, `CHAR`, `PUSHADR`, `BIT_NAME`, and `RESERVE`, a table of
+  `.NTYPE` values for every operand form, and the operators' error cases.
+  The manual says `.NCHR` of `<14, 75.39 4>` is 12, but the string as
+  printed has 11 characters; the test uses 11.
+- A scratch check defined all of the real STARLET.MLB's macros and called
+  `$EXIT_S` and `$QIOW_S`. Both expanded to what real MACRO generates
+  (`$QIOW_S`'s `$PUSHADR` chose `PUSHAQ (R3)+` for `IOSB=(R3)+` through
+  `.NTYPE`, and `PUSHAB` for a label).

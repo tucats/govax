@@ -1,6 +1,7 @@
 package asm
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/tucats/govax/internal/vmserrors"
@@ -29,6 +30,14 @@ import (
 // itself holds a separator is put in angle brackets, which are removed:
 // <A B C> is the one argument "A B C". A "^" followed by any character
 // uses that character as the brackets instead: ^/A <B> C/ is "A <B> C".
+//
+// Two more forms come from chapter 4 too. "\SYMBOL" passes the symbol's
+// value, as decimal digits, instead of its name (§4.6): with COUNT = 2,
+// "TESTDEF \COUNT" passes "2". And a formal argument written "?NAME" is
+// a created local label (§4.7): when a call leaves it blank, the
+// assembler makes up a local label that no other code uses (30000$,
+// 30001$, ...), so a macro can have labels of its own without clashing
+// with the labels around its calls.
 //
 // In the body, a formal argument's name is replaced wherever it appears
 // as a whole name, even in strings and comments. An apostrophe next to
@@ -97,11 +106,15 @@ func parseFormals(c *cursor) ([]formal, error) {
 	}
 }
 
+// firstCreatedLabel is the first created local label's number, 30000$
+// (the manual, §4.7). User code shouldn't use 30000$ to 65535$.
+const firstCreatedLabel = 30000
+
 // parseActuals reads a macro call's actual arguments, for macro m. Each
 // comma ends an argument, so ",A,," is three arguments: a null (empty)
 // one, A, and another null one. Blanks separate arguments too, but
 // don't make null ones.
-func parseActuals(c *cursor, m *macroDef) ([]actual, error) {
+func (a *Assembler) parseActuals(c *cursor, m *macroDef) ([]actual, error) {
 	var actuals []actual
 
 	for {
@@ -119,7 +132,7 @@ func parseActuals(c *cursor, m *macroDef) ([]actual, error) {
 			continue
 		}
 
-		var a actual
+		var act actual
 
 		// NAME=value is a keyword argument when NAME is one of the
 		// macro's formal arguments. Otherwise it's a positional
@@ -129,18 +142,18 @@ func parseActuals(c *cursor, m *macroDef) ([]actual, error) {
 		if name := scanName(c); name != "" && c.peek() == '=' && c.peekAt(1) != '=' && m.formalIndex(name) >= 0 {
 			c.next()
 
-			a.keyword = name
+			act.keyword = name
 		} else {
 			c.pos = save
 		}
 
-		text, err := scanArgument(c)
+		text, err := a.scanActual(c)
 		if err != nil {
 			return nil, err
 		}
 
-		a.text = text
-		actuals = append(actuals, a)
+		act.text = text
+		actuals = append(actuals, act)
 
 		c.skipBlanks()
 
@@ -148,6 +161,30 @@ func parseActuals(c *cursor, m *macroDef) ([]actual, error) {
 			c.next()
 		}
 	}
+}
+
+// scanActual reads one actual argument's text at c: "\expression" is the
+// expression's value as decimal digits (§4.6), and anything else is read
+// by scanArgument. The expression has to be absolute and use only
+// symbols already defined, since its value is needed now.
+func (a *Assembler) scanActual(c *cursor) (string, error) {
+	if c.peek() != '\\' {
+		return scanArgument(c)
+	}
+
+	c.next()
+
+	text, err := scanArgument(c)
+	if err != nil {
+		return "", err
+	}
+
+	v, err := a.exprNoForward(newCursor(text))
+	if err != nil {
+		return "", err
+	}
+
+	return strconv.FormatInt(int64(int32(v)), 10), nil
 }
 
 // scanArgument reads one argument's text at c (for a call's actual
@@ -243,8 +280,9 @@ func matchBracket(s string, i int) (int, bool) {
 // Positional arguments are matched in order. A keyword argument sets its
 // own formal argument. When a formal argument gets both, the one later in
 // the call wins. A formal argument left blank gets its default value, if
-// the definition gives one.
-func bind(m *macroDef, actuals []actual) ([]string, int, error) {
+// the definition gives one, or, if it's a created local label, the next
+// created label.
+func (a *Assembler) bind(m *macroDef, actuals []actual) ([]string, int, error) {
 	values := make([]string, len(m.formals))
 	positional := 0
 
@@ -264,8 +302,13 @@ func bind(m *macroDef, actuals []actual) ([]string, int, error) {
 	}
 
 	for i, f := range m.formals {
-		if values[i] == "" {
+		switch {
+		case values[i] != "":
+		case f.def != "":
 			values[i] = f.def
+		case f.created:
+			values[i] = strconv.Itoa(a.createdLabel) + "$"
+			a.createdLabel++
 		}
 	}
 

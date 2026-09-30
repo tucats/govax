@@ -322,12 +322,12 @@ func (a *Assembler) expandMacro(m *macroDef, c *cursor) error {
 		return vmserrors.New(vmserrors.VAX_MACRODEPTH, maxExpansionDepth)
 	}
 
-	actuals, err := parseActuals(c, m)
+	actuals, err := a.parseActuals(c, m)
 	if err != nil {
 		return err
 	}
 
-	values, positional, err := bind(m, actuals)
+	values, positional, err := a.bind(m, actuals)
 	if err != nil {
 		return err
 	}

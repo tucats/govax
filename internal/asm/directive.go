@@ -162,6 +162,9 @@ func init() {
 		"ENDM":    {both, (*Assembler).pseudoEndm},
 		"MEXIT":   {both, (*Assembler).pseudoMexit},
 		"MDELETE": {both, (*Assembler).pseudoMdelete},
+		"NARG":    {both, (*Assembler).pseudoNarg},
+		"NCHR":    {both, (*Assembler).pseudoNchr},
+		"NTYPE":   {both, (*Assembler).pseudoNtype},
 
 		// Not a MACRO-32 directive (it has .LIBRARY and .MCALL instead),
 		// but the MACRO command resolves .INCLUDE across host and ODS-2

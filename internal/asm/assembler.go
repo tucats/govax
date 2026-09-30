@@ -148,6 +148,9 @@ type Assembler struct {
 	// defining the definition whose lines are being collected, or nil.
 	macros   map[string]*macroDef
 	defining *definition
+	// createdLabel is the number of the next created local label a
+	// macro call makes up (see bind).
+	createdLabel int
 
 	// errs collects the statement errors of a MACRO-dialect assembly,
 	// which goes on after an error so that one assembly reports them all
@@ -177,6 +180,8 @@ func New(verbose bool) *Assembler {
 		image:   newImage(),
 		radix:   10,
 		verbose: verbose,
+
+		createdLabel: firstCreatedLabel,
 	}
 	a.p0 = a.newSection("P0", false, a.image, defaultOrigin)
 	a.s0 = a.newSection("S0", false, a.image, defaultS0Base)
@@ -381,6 +386,7 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 	a.cond = nil
 	a.errs = nil
 	a.defining = nil
+	a.createdLabel = firstCreatedLabel
 
 	err := a.assembleLines(source)
 

@@ -105,6 +105,7 @@ const (
 	vaxMacroDepth
 	vaxTooManyArgs
 	vaxBadFormal
+	vaxBadOperator
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -229,6 +230,7 @@ const (
 	VAX_MACRODEPTH  = VAXFacility<<FacilityPosition | vaxMacroDepth<<MessagePosition | StatusError
 	VAX_TOOMNYARGS  = VAXFacility<<FacilityPosition | vaxTooManyArgs<<MessagePosition | StatusError
 	VAX_BADFORMAL   = VAXFacility<<FacilityPosition | vaxBadFormal<<MessagePosition | StatusError
+	VAX_BADOPERATOR = VAXFacility<<FacilityPosition | vaxBadOperator<<MessagePosition | StatusError
 )
 
 func init() {
@@ -313,6 +315,7 @@ func init() {
 	DefineMessage(VAX_MACRODEPTH, VAXFacility, "MACRODEPTH", "Macro expansions nested more than !D deep")
 	DefineMessage(VAX_TOOMNYARGS, VAXFacility, "TOOMNYARGS", "Too many arguments in call of macro !S")
 	DefineMessage(VAX_BADFORMAL, VAXFacility, "BADFORMAL", "Invalid formal argument !Q")
+	DefineMessage(VAX_BADOPERATOR, VAXFacility, "BADOPERATOR", "Wrong number of arguments to string operator !S")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")

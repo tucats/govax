@@ -210,6 +210,24 @@ func (a *Assembler) runSource(f *sourceFrame, lines []string) error {
 			continue
 		}
 
+		// A macro's expansion evaluates its string operators (%LENGTH
+		// and so on) as each line is reached (see stringOperators), except
+		// in lines a conditional is leaving out.
+		if f.kind == sourceMacro && !a.skipping() {
+			expanded, err := a.stringOperators(raw)
+			if err != nil {
+				if a.dialect != DialectMACRO {
+					return f.wrap(i+1, err)
+				}
+
+				a.errs = append(a.errs, a.located(err))
+
+				continue
+			}
+
+			raw = expanded
+		}
+
 		line, ok := a.statement(raw)
 		if !ok || line == "" {
 			continue
