@@ -289,3 +289,22 @@ golangci-lint clean, then a commit (and `build -i` where it changes behavior).
   the manual, not a repository path, so they stay. *Verified:*
   `git grep reference/vms -- ':!docs/PHASE-*.md'` finds nothing but this
   phase's own plan.
+- 2026-09-30: Subtask 6 done. `git rm --cached` took `reference/vms/`
+  (20 files) and `reference/vax_instr_set.pdf` out of the repository; both
+  stay on this machine and are now gitignored, and CLAUDE.md lists them as
+  local-only. *Verified* in a fresh clone of the repository with only a
+  `go.work` added (pointing at `ods2`), which has no `reference/vms`, no
+  `testdata/vmslib` files, and no `testdata/disks` containers:
+  - `go generate ./...`, `go build ./...`, `go vet ./...`, and the `build`
+    script all succeed and leave the tree unchanged;
+  - `go test ./...` passes: 1,785 tests pass and none fail. All 45 skips
+    are for a missing local file: librtl.exe (19), imagelib.olb (8),
+    starlet.olb (3), starlet.mlb (7, counting the three
+    `TestMacroFixtureObjects` cases that need the real library), and the
+    disk containers (8).
+  The skips are mostly checks against the real files (byte-for-byte maps
+  against real LINK's, the real STARLET.MLB's expansions).
+
+  One gap without the real files remains: rmscopy and fabalign assemble
+  only with the real STARLET.MLB, since govax's own `starlet.mar` has no
+  `$FAB`/`$RAB` macros.
