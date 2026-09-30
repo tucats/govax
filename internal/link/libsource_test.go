@@ -62,7 +62,7 @@ func vmsSources(t *testing.T) []SymbolSource {
 				return src, err
 			},
 		},
-		&ObjectLibrarySource{File: "STARLET.OLB", Library: vmsLibrary(t, "starlet.olb")},
+		&ObjectLibrarySource{File: "STARLET.OLB", Library: vmsLibrary(t, "starlet.olb"), System: true},
 	}
 }
 

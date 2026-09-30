@@ -245,22 +245,8 @@ func TestLink_errors(t *testing.T) {
 	c, _ := newTestConsole(t)
 	dir := t.TempDir()
 
-	// A routine no object or symbol source defines.
-	writeHostFile(t, filepath.Join(dir, "undef.mar"), "\t.PSECT\tC,NOWRT,EXE\n\t.ENTRY\tGO,^M<>\n"+
-		"\tCALLS\t#0,G^NO$SUCH_ROUTINE\n\tRET\n\t.END\tGO\n")
-
-	if err := c.Macro(MacroOptions{Source: filepath.Join(dir, "undef.mar")}); err != nil {
-		t.Fatal(err)
-	}
-
-	err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, "undef")}})
-	if !errors.Is(err, vmserrors.New(vmserrors.CLI_LINKING)) || !strings.Contains(err.Error(), "NO$SUCH_ROUTINE") {
-		t.Errorf("undefined symbol: error = %v", err)
-	}
-
-	if _, statErr := os.Stat(filepath.Join(dir, "undef.exe")); statErr == nil {
-		t.Error("an image was written despite the error")
-	}
+	// A symbol nothing defines is a warning, not an error, as in real LINK
+	// (TestLink_warnings).
 
 	if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, "none.obj")}}); !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
 		t.Errorf("missing object: error = %v", err)

@@ -1,0 +1,106 @@
+
+GLOBALS.EXE                                                     30-SEP-2026 06:01        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+GLOBALS         V1.0                   26 DUA1:[000000]GLOBALS.OBJ;1           30-SEP-2026 06:01  VAX MACRO V5.4-3
+DEFS            V1.0                   30 DUA1:[000000]DEFS.OBJ;1              30-SEP-2026 06:01  VAX MACRO V5.4-3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+DATA                            00000200 00000227 00000028 (         40.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                GLOBALS         00000200 0000020F 00000010 (         16.) LONG  2
+                DEFS            00000210 00000227 00000018 (         24.) LONG  2
+CODE                            00000400 00000411 00000012 (         18.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                GLOBALS         00000400 00000409 0000000A (         10.) LONG  2
+                DEFS            0000040C 00000411 00000006 (          6.) LONG  2
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+EXT1            00000100          
+EXT2            00000040          
+EXTDATA         00000210-R        
+EXTOFF          00000008          
+EXTV            00000220-R        
+EXTVAL          00001234          
+GET_COUNT       00000400-R        
+LIMIT           00000064          
+MAYBE           00000000          
+OTHER           00000224-R        
+SUB_ONE         0000040C-R        
+TABLE           00000200-R        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+%LINK-W-USRTFR, image DUA1:[000000]GLOBALS.EXE;1 has no user transfer address
+
+DUA1:[000000]GLOBALS.EXE;1                                      30-SEP-2026 06:01        Linker V11-39                    Page    2
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000007FF 00000600 (1536. bytes, 3. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        4. (    3. blocks)
+Image name and identification:                    GLOBALS V1.0
+Number of files:                                         4.
+Number of modules:                                       3.
+Number of program sections:                              4.
+Number of global symbols:                               13.
+Number of image sections:                                4.
+Debugger transfer address:                        7FFEDF68
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[000000]GLOBALS.MAP;1
+Estimated map length:                             11. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                    80	00:00:00.00	00:00:00.00
+    Pass 1:                                              1141	00:00:00.01	00:00:00.01
+    Allocation/Relocation:                                 73	00:00:00.00	00:00:00.00
+    Pass 2:                                               668	00:00:00.01	00:00:00.01
+    Map data after object module synopsis:                 37	00:00:00.00	00:00:00.00
+    Symbol table output:                                   76	00:00:00.01	00:00:00.01
+Total run values:                                        2075	00:00:00.03	00:00:00.03
+
+Using a working set limited to 812 pages and 52 pages of data storage (excluding image)
+
+Total number object records read (both passes):   124
+    of which 26 were in libraries and 6 were DEBUG data records containing 151 bytes
+127 bytes of DEBUG data were written,starting at VBN 5 with 1 blocks allocated
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 0 global symbol table records was written
+
+LINK/MAP=GLOBALS.MAP/EXECUTABLE=GLOBALS.EXE GLOBALS,DEFS

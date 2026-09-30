@@ -27,7 +27,6 @@ package link
 import (
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/tucats/govax/internal/obj"
@@ -44,6 +43,10 @@ type Input struct {
 	// its definitions of symbols already referred to, as STARLET.OLB's
 	// modules are taken.
 	Selective bool
+	// System marks a module from a system library (STARLET.OLB), which a
+	// default map leaves out; a module from the user's own library is
+	// listed.
+	System bool
 }
 
 // Options are the parts of an image that don't come from its modules.
@@ -84,6 +87,11 @@ type Image struct {
 	Transfer    uint32
 	HasTransfer bool
 
+	// Messages are the warnings and information the link reported, as
+	// real LINK reports them: undefined symbols, and each reference to
+	// one. A link with warnings still makes an image, as real LINK does.
+	Messages []Message
+
 	// l is the link that made the image, for its map (mapfile.go).
 	l *linker
 }
@@ -95,6 +103,21 @@ type PsectInfo struct {
 	Length uint32
 	Align  byte
 	Flags  uint16
+}
+
+// Message is a message a link reports, in real LINK's words
+// (linker/lis/linkmsg.msg).
+type Message struct {
+	Severity byte // 'W' for a warning, 'I' for information
+	Ident    string
+	// Text is the message's text, which may run to more lines, each
+	// after a newline.
+	Text string
+}
+
+// String formats the message as VMS does: %LINK-W-IDENT, text.
+func (m Message) String() string {
+	return fmt.Sprintf("%%LINK-%c-%s, %s", m.Severity, m.Ident, m.Text)
 }
 
 // imgstaName is the routine the image activator calls first in an image
@@ -148,7 +171,7 @@ func Link(inputs []Input, opts Options) (*Image, error) {
 	// With traceback, the image refers to SYS$IMGSTA, which real LINK
 	// finds in STARLET.OLB like any other symbol.
 	if opts.Traceback {
-		l.refer(imgstaName, "")
+		l.refer(imgstaName, "").strongRef = true
 	}
 
 	if err := l.checkUndefined(); err != nil {
@@ -186,12 +209,21 @@ type linker struct {
 	// first referred to, and gRefs the general mode references to them.
 	shared []*sharedRef
 	gRefs  []gRef
+	// addressFixups counts the .ADDRESS longwords that hold offsets in
+	// shareable images.
+	addressFixups int
 
 	transfer        uint32
 	transferSet     bool
 	transferWk      bool
 	pendingTransfer pendingTransfer
 	imageID         string
+
+	// undefined are the symbols referred to (not only weakly) that
+	// nothing defines, and messages the link's messages that belong to no
+	// module.
+	undefined []string
+	messages  []Message
 
 	// What image() laid out, for the map: the image sections, and the
 	// fixup section's address and size.
@@ -213,6 +245,9 @@ type module struct {
 	// (MHD and LNM), for the map.
 	created  string
 	language string
+	// messages are the messages about the module, such as each
+	// reference it makes to an undefined symbol.
+	messages []Message
 	// deferred are a selectively searched module's definitions of symbols
 	// nothing referred to when it was read, in case something does later.
 	deferred map[string]*obj.Symbol
@@ -266,6 +301,10 @@ type global struct {
 	// value is its offset there.
 	image string
 	refs  []string // modules that refer to it
+	// strongRef says something refers to it other than weakly. A symbol
+	// only referred to weakly is 0, silently, if nothing defines it, and
+	// isn't looked for in the symbol sources.
+	strongRef bool
 
 	// module and psectIndex are where a relocatable definition is, until
 	// the module's psects are all known: real MACRO writes its global
@@ -385,7 +424,9 @@ func (l *linker) refer(name, by string) *global {
 // symbol records a symbol definition or reference.
 func (l *linker) symbol(m *module, s *obj.Symbol) error {
 	if !s.Defined() {
-		l.refer(s.Name, m.name)
+		if g := l.refer(s.Name, m.name); s.Flags&obj.SymWEAK == 0 {
+			g.strongRef = true
+		}
 
 		return nil
 	}
@@ -465,7 +506,7 @@ func (l *linker) checkUndefined() error {
 		progress := false
 
 		for _, g := range l.bySequence() {
-			if g.defined {
+			if g.defined || !g.strongRef {
 				continue
 			}
 
@@ -532,21 +573,32 @@ func (l *linker) checkUndefined() error {
 		g.defined, g.fromSource, g.offset = true, true, sysImgsta
 	}
 
-	var undefined []string
-
+	// A symbol still undefined is 0, and each reference to it is a
+	// warning (pass 2), but the link goes on, as real LINK's does.
 	for name, g := range l.symbols {
-		if !g.defined {
-			undefined = append(undefined, name)
+		if !g.defined && g.strongRef {
+			l.undefined = append(l.undefined, name)
 		}
 	}
 
-	if len(undefined) == 0 {
+	if len(l.undefined) == 0 {
 		return nil
 	}
 
-	sort.Strings(undefined)
+	sort.Strings(l.undefined)
 
-	return fmt.Errorf("link: undefined symbols: %s", strings.Join(undefined, ", "))
+	plural := "s"
+	if len(l.undefined) == 1 {
+		plural = ""
+	}
+
+	l.messages = append(l.messages, Message{'W', "NUDFSYMS", fmt.Sprintf("%d undefined symbol%s:", len(l.undefined), plural)})
+
+	for _, name := range l.undefined {
+		l.messages = append(l.messages, Message{'I', "UDFSYM", "\t" + name + " "})
+	}
+
+	return nil
 }
 
 // bySequence returns the global symbols in the order they were first seen.

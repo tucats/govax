@@ -3506,10 +3506,15 @@ $LINK
     volume, then in the host directory the vax.link.library setting
     names.  Without them, govax's own tables define what govax can run.
 
-    A routine in a shareable image must be called with a general mode
-    operand (CALLS #1,G^LIB$PUT_OUTPUT); the image reaches it through its
-    fixup section, and RUN connects it to the real image if it is there,
-    or else to govax's own routine.  Traceback records in objects are
+    A routine in a shareable image is reached with a general mode operand
+    (CALLS #1,G^LIB$PUT_OUTPUT) or a .ADDRESS of it; the image reaches it
+    through its fixup section, and RUN connects it to the real image if
+    it is there, or else to govax's own routine.
+
+    A symbol nothing defines is a warning, as in VMS LINK: it is 0, each
+    reference to it is reported, and the image is still written.  A
+    symbol referred to only weakly (.WEAK) is 0 without a warning.  An
+    image with no transfer address is written with a warning too.  Traceback records in objects are
     skipped, so an image has no debug symbol table.
 
     From the host shell, "govax link <object>..." runs this command, with

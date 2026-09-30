@@ -1,0 +1,117 @@
+
+EXTERNU.EXE                                                     30-SEP-2026 06:01        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+%LINK-W-NUDFSYMS, 2 undefined symbols:
+%LINK-I-UDFSYM, 	EXTDATA 
+%LINK-I-UDFSYM, 	SUB_ONE 
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+EXTERN          V1.0                   46 DUA1:[000000]EXTERN.OBJ;1            30-SEP-2026 06:01  VAX MACRO V5.4-3
+%LINK-W-USEUNDEF, undefined symbol SUB_ONE referenced
+	in psect CODE offset %X00000004
+	in module EXTERN file DUA1:[000000]EXTERN.OBJ;1
+%LINK-W-USEUNDEF, undefined symbol SUB_ONE referenced
+	in psect CODE offset %X0000000B
+	in module EXTERN file DUA1:[000000]EXTERN.OBJ;1
+%LINK-W-USEUNDEF, undefined symbol EXTDATA referenced
+	in psect CODE offset %X00000011
+	in module EXTERN file DUA1:[000000]EXTERN.OBJ;1
+%LINK-W-USEUNDEF, undefined symbol EXTDATA referenced
+	in psect CODE offset %X00000018
+	in module EXTERN file DUA1:[000000]EXTERN.OBJ;1
+%LINK-W-USEUNDEF, undefined symbol EXTDATA referenced
+	in psect CODE offset %X0000001F
+	in module EXTERN file DUA1:[000000]EXTERN.OBJ;1
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+CODE                            00000200 0000022D 0000002E (         46.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                EXTERN          00000200 0000022D 0000002E (         46.) LONG  2
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+EXTDATA         00000000-*        
+START           00000200-R        
+SUB_ONE         00000000-*        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+
+DUA1:[000000]EXTERNU.EXE;1                                      30-SEP-2026 06:01        Linker V11-39                    Page    2
+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]EXTERNU.EXE;1                                      30-SEP-2026 06:01        Linker V11-39                    Page    3
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000005FF 00000400 (1024. bytes, 2. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        3. (    2. blocks)
+Image name and identification:                    EXTERNU V1.0
+Number of files:                                         3.
+Number of modules:                                       2.
+Number of program sections:                              3.
+Number of global symbols:                                5.
+Including undefined count of:                            2.
+Number of image sections:                                3.
+User transfer address:                            00000200
+Debugger transfer address:                        7FFEDF68
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[000000]EXTERNU.MAP;1
+Estimated map length:                             10. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                    72	00:00:00.01	00:00:00.01
+    Pass 1:                                              1320	00:00:00.01	00:00:00.01
+    Allocation/Relocation:                                 57	00:00:00.00	00:00:00.00
+    Pass 2:                                               494	00:00:00.01	00:00:00.01
+    Map data after object module synopsis:                 30	00:00:00.00	00:00:00.00
+    Symbol table output:                                    6	00:00:00.00	00:00:00.00
+Total run values:                                        1979	00:00:00.03	00:00:00.03
+
+Using a working set limited to 962 pages and 50 pages of data storage (excluding image)
+
+Total number object records read (both passes):   84
+    of which 26 were in libraries and 3 were DEBUG data records containing 56 bytes
+45 bytes of DEBUG data were written,starting at VBN 4 with 1 blocks allocated
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+2 library searches were for symbols not in the library searched
+
+A total of 0 global symbol table records was written
+
+LINK/MAP=EXTERNU.MAP/EXECUTABLE=EXTERNU.EXE EXTERN

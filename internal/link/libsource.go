@@ -305,6 +305,9 @@ type ObjectLibrarySource struct {
 	// File names the library, for messages and each module's Input.
 	File    string
 	Library *lbr.Library
+	// System marks a system library, such as STARLET.OLB, whose modules a
+	// default map leaves out.
+	System bool
 
 	modules map[lbr.RFA]*Input
 }
@@ -365,7 +368,9 @@ func (s *ObjectLibrarySource) module(rfa lbr.RFA) (*Input, error) {
 		return nil, fmt.Errorf("%s, module %s: %w", s.File, module, err)
 	}
 
-	in := &Input{File: fmt.Sprintf("%s(%s)", s.File, module), Module: m, Selective: lm.Header.SelectiveSearch()}
+	// The module's file is the library's, as real LINK's map and messages
+	// name it.
+	in := &Input{File: s.File, Module: m, Selective: lm.Header.SelectiveSearch(), System: s.System}
 
 	if s.modules == nil {
 		s.modules = map[lbr.RFA]*Input{}

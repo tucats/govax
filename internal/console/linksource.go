@@ -110,7 +110,7 @@ func (c *Console) linkSources(sysLib bool) ([]link.SymbolSource, error) {
 			return nil, fmt.Errorf("%s: %w", name, err)
 		}
 
-		sources = append(sources, &link.ObjectLibrarySource{File: name, Library: lib})
+		sources = append(sources, &link.ObjectLibrarySource{File: name, Library: lib, System: true})
 	}
 
 	return append(sources, govax), nil

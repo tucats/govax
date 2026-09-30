@@ -28,7 +28,9 @@ func realMap(t *testing.T, path string) (lines []string, object, image, mapFile 
 			return lines[:len(lines)-1], object, image, mapFile
 		case strings.HasPrefix(line, "Map format:"):
 			mapFile = line[strings.Index(line, " in file ")+len(" in file "):]
-		case i > 0 && all[i-1] == "\f" && image == "":
+		case i > 0 && all[i-1] == "\f":
+			// The image synopsis page's heading has the image's full
+			// name.
 			image = strings.TrimSpace(line[:64])
 		case object == "" && len(line) > 79 && strings.HasSuffix(strings.TrimSpace(line[:41]), strings.TrimSpace(line[31:41])) && strings.Contains(line, ".OBJ"):
 			object = strings.TrimSpace(line[42:79])

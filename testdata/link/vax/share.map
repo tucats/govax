@@ -1,0 +1,102 @@
+
+SHARE.EXE                                                       30-SEP-2026 06:01        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+SHARE1          V1.0                   36 DUA1:[000000]SHARE1.OBJ;1            30-SEP-2026 06:01  VAX MACRO V5.4-3
+SHARE2          V2.0                   33 DUA1:[000000]SHARE2.OBJ;1            30-SEP-2026 06:01  VAX MACRO V5.4-3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+COMMON                          00000200 0000020B 0000000C (         12.) LONG  2 NOPIC,USR,OVR,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                SHARE1          00000200 00000203 00000004 (          4.) LONG  2
+                SHARE2          00000200 0000020B 0000000C (         12.) LONG  2
+LIST                            00000210 0000021B 0000000C (         12.) QUAD  3 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                SHARE1          00000210 00000214 00000005 (          5.) BYTE  0
+                SHARE2          00000218 0000021B 00000004 (          4.) QUAD  3
+CODE                            00000400 00000430 00000031 (         49.) QUAD  3 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                SHARE1          00000400 0000041A 0000001B (         27.) LONG  2
+                SHARE2          00000420 00000430 00000011 (         17.) QUAD  3
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+COMMON          00000200-R        
+FIRST           00000210-R        
+SECOND          00000218-R        
+START           00000400-R        
+TWO             00000420-R        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]SHARE.EXE;1                                        30-SEP-2026 06:01        Linker V11-39                    Page    2
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000007FF 00000600 (1536. bytes, 3. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        4. (    3. blocks)
+Image name and identification:                    SHARE V1.0
+Number of files:                                         4.
+Number of modules:                                       3.
+Number of program sections:                              5.
+Number of global symbols:                                6.
+Number of image sections:                                4.
+User transfer address:                            00000400
+Debugger transfer address:                        7FFEDF68
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[000000]SHARE.MAP;1
+Estimated map length:                             12. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                    83	00:00:00.00	00:00:00.00
+    Pass 1:                                              1257	00:00:00.01	00:00:00.01
+    Allocation/Relocation:                                 76	00:00:00.00	00:00:00.00
+    Pass 2:                                               845	00:00:00.01	00:00:00.01
+    Map data after object module synopsis:                 48	00:00:00.01	00:00:00.01
+    Symbol table output:                                   10	00:00:00.00	00:00:00.00
+Total run values:                                        2319	00:00:00.03	00:00:00.03
+
+Using a working set limited to 662 pages and 53 pages of data storage (excluding image)
+
+Total number object records read (both passes):   132
+    of which 26 were in libraries and 6 were DEBUG data records containing 182 bytes
+156 bytes of DEBUG data were written,starting at VBN 5 with 1 blocks allocated
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 0 global symbol table records was written
+
+LINK/MAP=SHARE.MAP/EXECUTABLE=SHARE.EXE SHARE1,SHARE2

@@ -6,11 +6,14 @@ import (
 )
 
 // sharedRef is a shareable image the image refers to, and the offsets of
-// the targets its general mode operands reach in it, each of which gets
-// a cell in the fixup section.
+// the targets its references reach in it, each of which gets a cell in
+// the fixup section. addresses are the image addresses of the .ADDRESS
+// longwords that hold an offset in it, which the image activator adds its
+// base to.
 type sharedRef struct {
-	image   SharedImage
-	offsets []uint32
+	image     SharedImage
+	offsets   []uint32
+	addresses []uint32
 }
 
 // gRef is a general mode operand that reaches a shareable image: the
@@ -24,6 +27,22 @@ type gRef struct {
 // referShared records a general mode operand at field (its displacement)
 // that reaches offset in the shareable image name.
 func (l *linker) referShared(name string, offset, field uint32) {
+	ref := l.sharedTarget(name, offset)
+	l.gRefs = append(l.gRefs, gRef{field: field, shared: ref, offset: offset})
+}
+
+// referAddress records a .ADDRESS longword at addr that holds offset in the
+// shareable image name. Real LINK gives the target a cell too, as it does a
+// general mode operand's (ADDR.EXE, testdata/link/vax).
+func (l *linker) referAddress(name string, offset, addr uint32) {
+	ref := l.sharedTarget(name, offset)
+	ref.addresses = append(ref.addresses, addr)
+	l.addressFixups++
+}
+
+// sharedTarget records a reference to offset in the shareable image name,
+// giving it a cell, and returns the image's record.
+func (l *linker) sharedTarget(name string, offset uint32) *sharedRef {
 	var ref *sharedRef
 
 	for _, r := range l.shared {
@@ -48,7 +67,7 @@ func (l *linker) referShared(name string, offset, field uint32) {
 		ref.offsets = append(ref.offsets, offset)
 	}
 
-	l.gRefs = append(l.gRefs, gRef{field: field, shared: ref, offset: offset})
+	return ref
 }
 
 // fixupLayout is where each part of the fixup section goes, as offsets
@@ -57,6 +76,7 @@ type fixupLayout struct {
 	gfix  uint32 // the G^ fixup lists
 	icp   uint32 // the change-protection list
 	shl   uint32 // the shareable image list
+	addr  uint32 // the .ADDRESS fixup lists, 0 if there are none
 	size  uint32
 	cells map[*sharedRef][]uint32 // each target's cell, by its offset's position
 }
@@ -65,7 +85,10 @@ type fixupLayout struct {
 // G^ fixup list for each shareable image (its count, its index in the
 // shareable image list, and a cell for each target), ended by a zero
 // count, then the change-protection list, then the shareable image list,
-// whose first entry is the image itself.
+// whose first entry is the image itself, then, if any .ADDRESS longwords
+// hold offsets in shareable images, a .ADDRESS fixup list for each such
+// image (its count, its index, and each longword's address relative to the
+// image's base), ended by a zero count.
 func (l *linker) layoutFixups() fixupLayout {
 	f := fixupLayout{gfix: iafFixedLength, cells: map[*sharedRef][]uint32{}}
 
@@ -84,6 +107,17 @@ func (l *linker) layoutFixups() fixupLayout {
 	f.icp = p
 	f.shl = f.icp + 4 + icpEntryLength
 	f.size = f.shl + uint32(1+len(l.shared))*shlEntryLength
+
+	if l.addressFixups > 0 {
+		f.addr = f.size
+		f.size += 4 // the zero count that ends the lists
+
+		for _, r := range l.shared {
+			if len(r.addresses) > 0 {
+				f.size += 8 + 4*uint32(len(r.addresses))
+			}
+		}
+	}
 
 	return f
 }
@@ -147,6 +181,28 @@ func (l *linker) fixupSection(f fixupLayout, fixupVA uint32) []byte {
 	le.PutUint32(b[f.icp+4:], fixupVA-imageBase)
 	le.PutUint16(b[f.icp+8:], uint16(len(b)/blockSize))
 	le.PutUint16(b[f.icp+10:], prtUREW)
+
+	// The .ADDRESS fixup lists, each longword's address relative to the
+	// image's base.
+	if f.addr != 0 {
+		le.PutUint32(b[0x10:], f.addr)
+
+		p := f.addr
+		for i, r := range l.shared {
+			if len(r.addresses) == 0 {
+				continue
+			}
+
+			le.PutUint32(b[p:], uint32(len(r.addresses)))
+			le.PutUint32(b[p+4:], uint32(i+1))
+			p += 8
+
+			for _, a := range r.addresses {
+				le.PutUint32(b[p:], a-imageBase)
+				p += 4
+			}
+		}
+	}
 
 	// The shareable image list: the image itself, then each shareable
 	// image's name.

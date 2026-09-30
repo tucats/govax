@@ -1,0 +1,50 @@
+Analyze/Disk_Structure for _SIMVAX$DUA1: started on 30-SEP-2026 06:02:31.43
+
+%ANALDISK-I-OPENQUOTA, error opening QUOTA.SYS
+-SYSTEM-W-NOSUCHFILE, no such file
+%ANALDISK-W-FUTCREDAT, file (11,1,1) [000000]DEFS.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (11,1,1) [000000]DEFS.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (12,1,1) [000000]SHARE1.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (12,1,1) [000000]SHARE1.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (13,1,1) [000000]SHARE2.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (13,1,1) [000000]SHARE2.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (14,1,1) [000000]ADDR.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (14,1,1) [000000]ADDR.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (15,1,1) [000000]PROG.OPT;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (15,1,1) [000000]PROG.OPT;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (16,1,1) [000000]LINK.COM;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (16,1,1) [000000]LINK.COM;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (17,1,1) [000000]EXTERN.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (17,1,1) [000000]EXTERN.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (18,1,1) [000000]EXPRS.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (18,1,1) [000000]EXPRS.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (19,1,1) [000000]MODES.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (19,1,1) [000000]MODES.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (20,1,1) [000000]GENERAL.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (20,1,1) [000000]GENERAL.MAR;1
+	revision date is in the future
+%ANALDISK-W-FUTCREDAT, file (21,1,1) [000000]GLOBALS.MAR;1
+	creation date is in the future
+%ANALDISK-W-FUTREVDAT, file (21,1,1) [000000]GLOBALS.MAR;1
+	revision date is in the future
+%ANALDISK-W-FREESPADRIFT, free block count of 20166 is incorrect (RVN 1);
+	the correct value is 20134

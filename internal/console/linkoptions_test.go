@@ -200,3 +200,40 @@ func TestDispatch_linkPositionalQualifiers(t *testing.T) {
 		t.Errorf("map:\n%s", text)
 	}
 }
+
+// TestLink_warnings links an object whose symbols nothing defines, and
+// one with no transfer address: real LINK's warnings are printed, and the
+// images are written.
+func TestLink_warnings(t *testing.T) {
+	c, out := newTestConsole(t)
+	dir := t.TempDir()
+
+	writeHostFile(t, filepath.Join(dir, "undef.mar"), "\t.PSECT\tCODE,NOWRT,EXE\n"+
+		"\t.ENTRY\tSTART,^M<>\n\tCALLS\t#0,NOWHERE\n\tRET\n\t.END\tSTART\n")
+	writeHostFile(t, filepath.Join(dir, "notfr.mar"), "\t.PSECT\tDATA,NOEXE\n\t.LONG\t1\n\t.END\n")
+
+	for _, name := range []string{"undef", "notfr"} {
+		if err := c.Macro(MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
+			t.Fatal(err)
+		}
+
+		out.Reset()
+
+		if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, name)}}); err != nil {
+			t.Fatalf("LINK %s: %v", name, err)
+		}
+
+		if _, err := os.Stat(filepath.Join(dir, name+".exe")); err != nil {
+			t.Errorf("no image: %v", err)
+		}
+
+		want := "%LINK-W-NUDFSYMS, 1 undefined symbol:\n%LINK-I-UDFSYM, \tNOWHERE \n%LINK-W-USEUNDEF, undefined symbol NOWHERE referenced\n\tin psect CODE offset %X00000004\n"
+		if name == "notfr" {
+			want = "%LINK-W-USRTFR, image " + filepath.Join(dir, "notfr.exe") + " has no user transfer address\n"
+		}
+
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("%s: output %q, want %q", name, out.String(), want)
+		}
+	}
+}

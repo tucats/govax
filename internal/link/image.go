@@ -46,6 +46,7 @@ const (
 	ihdPICIMG    = 1 << 3
 	ihdDBGDMT    = 1 << 5
 	ihdIHSLONG   = 1 << 7
+	ihdLNKNOTFR  = 1 << 1 // no user transfer address
 	ihdMatchCtl  = 1 << 24
 	ihdLinkFlags = ihdPICIMG | ihdDBGDMT | ihdIHSLONG | ihdMatchCtl
 )
@@ -155,7 +156,12 @@ func (l *linker) header(isds []isd, global [][]byte, fixupVA uint32) ([]byte, er
 
 	linkTime := vmsTime(l.opts.Time)
 
-	le.PutUint32(b[0x20:], ihdLinkFlags)
+	flags := uint32(ihdLinkFlags)
+	if !l.transferSet {
+		flags |= ihdLNKNOTFR
+	}
+
+	le.PutUint32(b[0x20:], flags)
 	le.PutUint32(b[0x24:], uint32(linkTime>>16)) // IHD$L_IDENT
 	le.PutUint32(b[0x2C:], fixupVA)              // IHD$L_IAFVA
 

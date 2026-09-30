@@ -168,6 +168,9 @@ type store struct {
 	disp bool
 	// signed limits the value to the signed range.
 	signed bool
+	// address marks a .ADDRESS longword (STO_PIDR), which may hold an
+	// address in a shareable image, fixed up by the image activator.
+	address bool
 }
 
 var stores = map[string]store{
@@ -176,7 +179,7 @@ var stores = map[string]store{
 	"STO_BD": {size: 1, disp: true}, "STO_WD": {size: 2, disp: true}, "STO_LD": {size: 4, disp: true},
 	// In an executable image, a position-independent data reference is
 	// the address itself.
-	"STO_PIDR": {size: 4},
+	"STO_PIDR": {size: 4, address: true},
 }
 
 // binaryOps are the arithmetic commands.
@@ -285,8 +288,12 @@ func (x *machine) command(c obj.Command) error {
 
 	case "STA_GBL":
 		g := x.l.symbols[c.Name]
-		if g == nil || !g.defined {
-			return fmt.Errorf("%s is undefined", c.Name)
+		if g == nil {
+			return fmt.Errorf("%s isn't in the module's symbol directory", c.Name)
+		}
+
+		if !g.defined && g.strongRef {
+			x.undefinedReference(g)
 		}
 
 		x.push(value{v: g.value, rel: g.contrib != nil, img: g.image})
@@ -342,6 +349,23 @@ func (x *machine) command(c obj.Command) error {
 	return nil
 }
 
+// undefinedReference reports a reference to an undefined symbol, whose
+// value is 0, at the operand being stored (real LINK's USEUNDEF).
+func (x *machine) undefinedReference(g *global) {
+	where := fmt.Sprintf("address %%X%08X", x.loc)
+
+	for _, p := range x.l.order {
+		if p.flags&obj.PsectREL != 0 && x.loc >= p.base && x.loc < p.base+p.length {
+			where = fmt.Sprintf("psect %s offset %%X%08X", p.name, x.loc-p.base)
+
+			break
+		}
+	}
+
+	x.m.messages = append(x.m.messages, Message{'W', "USEUNDEF", fmt.Sprintf(
+		"undefined symbol %s referenced\n\tin %s\n\tin module %s file %s", g.name, where, x.m.name, x.m.input.File)})
+}
+
 // binary runs an arithmetic command. The difference of two addresses in
 // the image is absolute; anything else involving one is an address.
 func (x *machine) binary(name string, op func(a, b uint32) uint32) error {
@@ -380,8 +404,11 @@ func (x *machine) store(st store) error {
 		return err
 	}
 
-	if a.img != "" {
-		return fmt.Errorf("a reference to shareable image %s must be general mode (G^)", a.img)
+	switch {
+	case a.img != "" && st.address:
+		x.l.referAddress(a.img, a.v, x.loc)
+	case a.img != "":
+		return fmt.Errorf("a reference to shareable image %s must be general mode (G^) or .ADDRESS", a.img)
 	}
 
 	v := int64(int32(a.v))
@@ -572,6 +599,11 @@ func (l *linker) image() (*Image, error) {
 	l.fixupVA, l.fixupLength = fixupVA, uint32(len(fixup))
 
 	img := &Image{Transfer: l.transfer, HasTransfer: l.transferSet, l: l}
+	img.Messages = append(img.Messages, l.messages...)
+
+	for _, m := range l.modules {
+		img.Messages = append(img.Messages, m.messages...)
+	}
 	img.Bytes = header
 
 	for _, p := range pages {

@@ -1,0 +1,75 @@
+ADDR                            Link fixture: .ADDRESS of a shareable im 30-SEP-2026 06:01:55  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     30-SEP-2026 06:02:34  DUA1:[000000]ADDR.MAR;1           (1)
+
+                                     0000     1 	.TITLE	ADDR	Link fixture: .ADDRESS of a shareable image routine
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; PUTOUT holds LIB$PUT_OUTPUT's address, which the image activator must
+                                     0000     5 ; fix up (a .ADDRESS fixup, not a G^ one). The program calls through it.
+                                     0000     6 
+                                 00000000     7 	.PSECT	DATA, WRT, NOEXE, LONG
+                           00000000' 0000     8 PUTOUT:	.ADDRESS LIB$PUT_OUTPUT
+64 65 6C 6C 61 43 0000000C'010E0000' 0004     9 MSG:	.ASCID	/Called through .ADDRESS/
+44 41 2E 20 68 67 75 6F 72 68 74 20  0012       
+                     53 53 45 52 44  001E       
+                                     0023    10 
+                                 00000000    11 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0000  0000    12 	.ENTRY	ADDR, ^M<>
+                   00000004'EF   7F  0002    13 	PUSHAQ	MSG
+              00000000'FF   01   FB  0008    14 	CALLS	#1, @PUTOUT
+                                 04  000F    15 	RET
+                                     0010    16 
+                                     0010    17 	.END	ADDR
+ADDR                            Link fixture: .ADDRESS of a shareable im 30-SEP-2026 06:01:55  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             30-SEP-2026 06:02:34  DUA1:[000000]ADDR.MAR;1           (1)
+
+ADDR             00000000 RG    02      
+LIB$PUT_OUTPUT   ********   X   01      
+MSG              00000004 R     01      
+PUTOUT           00000000 R     01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000023  (   35.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE                            00000010  (   16.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  429     00:00:00.00    00:00:00.00
+Command processing              921     00:00:00.01    00:00:00.01
+Pass 1                          184     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           25     00:00:00.00    00:00:00.00
+Symbol table output               0     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1586     00:00:00.01    00:00:00.01
+
+The working set limit was 662 pages.
+376 bytes (1 page) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 4 non-local and 0 local symbols.
+17 source lines were read in Pass 1, producing 17 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST ADDR

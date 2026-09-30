@@ -1,0 +1,76 @@
+SHARE2                          Link fixture: psects shared across modul 30-SEP-2026 06:01:55  VAX MACRO V5.4-3            Page   1
+V2.0                                                                     30-SEP-2026 06:02:34  DUA1:[000000]SHARE2.MAR;1         (1)
+
+                                     0000     1 	.TITLE	SHARE2	Link fixture: psects shared across modules
+                                     0000     2 	.IDENT	/V2.0/
+                                     0000     3 
+                                     0000     4 ; With SHARE1. SHARE2's contribution to LIST is quadword aligned, and its
+                                     0000     5 ; COMMON is 12 bytes, of which it stores only the last longword.
+                                     0000     6 
+                                 00000000     7 	.PSECT	LIST, WRT, NOEXE, CON, QUAD
+                           00000010  0000     8 SECOND:: .LONG	^X10
+                                     0004     9 
+                                 00000000    10 	.PSECT	COMMON, WRT, NOEXE, OVR, LONG
+                           00000008  0000    11 	.BLKL	2
+                           00000020  0008    12 	.LONG	^X20
+                                     000C    13 
+                                 00000000    14 	.PSECT	CODE, NOWRT, EXE, CON, QUAD
+                               0000  0000    15 	.ENTRY	TWO, ^M<>
+              50   00000000'EF   D0  0002    16 	MOVL	SECOND, R0
+              50   00000008'GF   C0  0009    17 	ADDL2	G^COMMON+8, R0
+                                 04  0010    18 	RET
+                                     0011    19 
+                                     0011    20 	.END
+SHARE2                          Link fixture: psects shared across modul 30-SEP-2026 06:01:55  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             30-SEP-2026 06:02:34  DUA1:[000000]SHARE2.MAR;1         (1)
+
+COMMON           ********   X   03      
+SECOND           00000000 RG    01      
+TWO              00000000 RG    03      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+LIST                            00000004  (    4.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC QUAD  
+COMMON                          0000000C  (   12.)  02 (  2.)  NOPIC   USR   OVR   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE                            00000011  (   17.)  03 (  3.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC QUAD  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  428     00:00:00.00    00:00:00.00
+Command processing              922     00:00:00.00    00:00:00.00
+Pass 1                          187     00:00:00.01    00:00:00.01
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           24     00:00:00.00    00:00:00.00
+Symbol table output               0     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1588     00:00:00.01    00:00:00.01
+
+The working set limit was 662 pages.
+312 bytes (1 page) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 3 non-local and 0 local symbols.
+20 source lines were read in Pass 1, producing 19 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST SHARE2

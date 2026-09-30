@@ -239,13 +239,13 @@ them.
 3. **Done.** **The librarian reader,** and GST and object-library sources
    (`IMAGELIB.OLB`, `STARLET.OLB`, a real image's GST), tested against
    files from the VAX when present.
-4. **More than one object,** `CON`/`OVR` psects across modules, `/MAP`,
+4. **Done.** **More than one object,** `CON`/`OVR` psects across modules, `/MAP`,
    options files, and whatever the fixtures show next. In parts:
    - **4a. Done.** `/MAP` and `/BRIEF`, matching real LINK's maps.
    - **4b. Done.** Input file qualifiers (`/LIBRARY`, `/INCLUDE`, `/SELECTIVE_SEARCH`,
      `/SHAREABLE`) and options files (`/OPTIONS`: `STACK=`,
      `IDENTIFICATION=`, `SYMBOL=`, and the file lines).
-   - **4c.** Multi-module fixtures for the VAX (needs the user): the
+   - **4c. Done.** Multi-module fixtures for the VAX (needs the user): the
      Phase 27 fixtures that refer to symbols defined nowhere, linked with
      modules that define them; `CON`/`OVR` psects across modules; and
      `.ADDRESS` of a shareable image routine, whose fixup list govax
@@ -676,3 +676,71 @@ them.
   - `cmd/govax`: `--library` and `--options`.
 
   `go test ./...` passes.
+
+### 2026-09-30 — Subtask 4c: multi-module links checked on the VAX
+
+- **The fixtures** (`testdata/link/`, with a README): `defs.mar` defines
+  what the Phase 27 fixtures `extern`, `exprs`, `modes`, `general`, and
+  `globals` leave undefined; `share1`/`share2` share concatenated psects
+  aligned differently and an overlaid psect of different sizes; `addr`
+  holds `LIB$PUT_OUTPUT`'s address with `.ADDRESS`; `prog.opt` is an
+  options file. `link.com` assembles them and makes 11 links with maps
+  and `ANALYZE/IMAGE`, including `EXTERN` alone and against a user
+  library (`MYLIB.OLB`), and runs the programs.
+- **The VAX run.** The exchange volume `testdata/disks/link-exchange.dsk`
+  (label LINKXCHG, RD51, built by govax with `INITIALIZE/CONTAINER` and
+  `COPY/HOST`) went to simh, and the user ran `@LINK/OUTPUT=LINK.LOG`.
+  Every link succeeded, `ANALYZE/IMAGE` found no errors in any image,
+  `SHARE`, `SHARER`, and `PROG` exited with `^X34` as designed, and
+  `ADDR` printed "Called through .ADDRESS". The results are in
+  `testdata/link/vax/`.
+- **The volume.** `ANALYZE/DISK_STRUCTURE` reported, besides the usual
+  missing `QUOTA.SYS`:
+  - future creation and revision dates on the 11 files govax copied on:
+    the VAX's clock had drifted a few minutes behind the host's (the user
+    confirmed), so these aren't an `ods2` problem;
+  - `FREESPADRIFT`: the free block count, 20166, should be 20134. A lead
+    for `ods2` to check; VMS can also report this for a volume still
+    mounted.
+- **What the fixtures showed, now in govax:**
+  - **Undefined symbols are warnings.** Real LINK writes the image: an
+    undefined symbol is absolute 0, the link reports `NUDFSYMS` and a
+    `UDFSYM` for each, and a `USEUNDEF` for each reference, at the
+    operand's offset in its psect. The map has the same messages (after
+    the object module box, and after the module's line), lists the symbol
+    with `-*`, and counts it ("Including undefined count of"). govax's
+    link now does all this (`Image.Messages`), and LINK prints them.
+  - **Weak references** that nothing defines are 0 with no warning, and
+    aren't looked for in the libraries. The map lists them with no flag,
+    and they aren't counted as undefined.
+  - **No transfer address** sets `IHD$V_LNKNOTFR` in the header, and real
+    LINK warns (`USRTFR`, naming the image file), on the terminal and in
+    the map before the image synopsis.
+  - **`.ADDRESS` of a shareable image routine.** The longword holds the
+    routine's offset in the image, and a `.ADDRESS` fixup list after the
+    shareable image list (`IAF` + `^X10` points to it) gives, for each
+    image, a count, its index, and each longword's address relative to
+    `^X200`, ended by a zero count. Real LINK also gives the routine a
+    G^ cell, though no code uses one. The map counts "Number of address
+    fixups", and its "code references to shareable images" counts cells.
+  - **Modules from a user library** are listed in the map, under the
+    library's file name; STARLET's aren't (`Input.System`,
+    `ObjectLibrarySource.System`). A library module's `Input.File` is now
+    the library's name, as real LINK's messages name it.
+  - **`SYMBOL=`** isn't counted as a global symbol but as a cross
+    reference ("Number of cross references"), in a map that isn't brief
+    (`lnkoption.lis`).
+  - **Page headings** name the image file in full from the page after the
+    object module synopsis, once real LINK has created the file.
+- **Matches real LINK.** `TestLinkMultiModuleMatchesRealLINK` links all 11
+  from real MACRO's objects, with only LIBRTL's offsets and `SYS$EXIT`
+  as sources, and each image is real LINK's byte for byte apart from the
+  debug symbol table, which real LINK builds from real MACRO's traceback
+  records. That covers the concatenated and overlaid psects in both
+  orders, the user library, the options file, the undefined and weak
+  symbols, and the `.ADDRESS` fixup. `TestMapMultiModuleMatchesRealLINK`
+  checks all 11 maps line for line with real LINK's libraries, and
+  `TestLinkUndefinedMessages` the messages.
+- The LINK help says how undefined symbols, weak references, and a
+  missing transfer address are handled, and that `.ADDRESS` reaches a
+  shareable image. `go test ./...` passes.

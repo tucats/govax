@@ -326,7 +326,9 @@ func TestLinkSymbolsAndTransfer(t *testing.T) {
 		t.Errorf("two transfer addresses: error = %v", err)
 	}
 
-	if _, err := linkSources(t, ".PSECT C,NOWRT,EXE\nCALLS #0,MISSING\n.END"); err == nil || !strings.Contains(err.Error(), "MISSING") {
+	// An undefined symbol is a warning, as in real LINK, and the image is
+	// still made (TestLinkUndefinedMessages has the messages).
+	if img, err := linkSources(t, ".PSECT C,NOWRT,EXE\nCALLS #0,MISSING\n.END"); err != nil || len(img.Messages) == 0 || img.Messages[1].String() != "%LINK-I-UDFSYM, \tMISSING " {
 		t.Errorf("undefined symbol: error = %v", err)
 	}
 

@@ -1,0 +1,82 @@
+SHARE1                          Link fixture: psects shared across modul 30-SEP-2026 06:01:55  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     30-SEP-2026 06:02:34  DUA1:[000000]SHARE1.MAR;1         (1)
+
+                                     0000     1 	.TITLE	SHARE1	Link fixture: psects shared across modules
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; With SHARE2: CON psects LIST (aligned differently in each module) and
+                                     0000     5 ; CODE, and an OVR psect COMMON, bigger in SHARE2, that both store into.
+                                     0000     6 ; START returns FIRST, plus COMMON's first longword, plus what SHARE2's
+                                     0000     7 ; TWO returns: 1 + 3 + (^X10 + ^X20) = ^X34, the image's exit status.
+                                     0000     8 
+                                 00000000     9 	.PSECT	LIST, WRT, NOEXE, CON, BYTE
+                                 01  0000    10 FIRST::	.BYTE	1
+                           00000002  0001    11 	.LONG	2			; unaligned: LIST is byte aligned here
+                                     0005    12 
+                                 00000000    13 	.PSECT	COMMON, WRT, NOEXE, OVR, LONG
+                                     0000    14 COMMON::
+                           00000003  0000    15 	.LONG	3
+                                     0004    16 
+                                 00000000    17 	.PSECT	CODE, NOWRT, EXE, CON, LONG
+                               0004  0000    18 	.ENTRY	START, ^M<R2>
+              00000000'EF   00   FB  0002    19 	CALLS	#0, TWO
+              50   00000000'EF   C0  0009    20 	ADDL2	COMMON, R0
+              52   00000000'EF   9A  0010    21 	MOVZBL	FIRST, R2
+                       50   52   C0  0017    22 	ADDL2	R2, R0
+                                 04  001A    23 	RET
+                                     001B    24 
+                                     001B    25 	.END	START
+SHARE1                          Link fixture: psects shared across modul 30-SEP-2026 06:01:55  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             30-SEP-2026 06:02:34  DUA1:[000000]SHARE1.MAR;1         (1)
+
+COMMON           00000000 RG    02      
+FIRST            00000000 RG    01      
+START            00000000 RG    03      
+TWO              ********   X   03      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+LIST                            00000005  (    5.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC BYTE  
+COMMON                          00000004  (    4.)  02 (  2.)  NOPIC   USR   OVR   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE                            0000001B  (   27.)  03 (  3.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  377     00:00:00.01    00:00:00.01
+Command processing              883     00:00:00.00    00:00:00.00
+Pass 1                          176     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           33     00:00:00.01    00:00:00.01
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1496     00:00:00.02    00:00:00.02
+
+The working set limit was 812 pages.
+396 bytes (1 page) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 4 non-local and 0 local symbols.
+25 source lines were read in Pass 1, producing 19 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST SHARE1

@@ -1,0 +1,78 @@
+EXPRS                           Fixture 8: expressions the linker finish 30-SEP-2026 06:01:55  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     30-SEP-2026 06:02:34  DUA1:[000000]EXPRS.MAR;1          (1)
+
+                                     0000     1 	.TITLE	EXPRS	Fixture 8: expressions the linker finishes
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; Checks the TIR arithmetic MACRO emits for expressions it cannot finish
+                                     0000     5 ; itself: an external plus a constant, the difference of two externals,
+                                     0000     6 ; a difference across psects, and external products and masks. Assemble
+                                     0000     7 ; only: EXT1 and EXT2 are defined nowhere.
+                                     0000     8 
+                                 00000000     9 	.PSECT	DATA, WRT, NOEXE, LONG
+                           00000004' 0000    10 A:	.LONG	EXT1+4
+                           00000000' 0004    11 	.LONG	EXT1-EXT2
+                           00000000' 0008    12 	.LONG	B-A
+                           00000028' 000C    13 	.LONG	<C-A>*2
+                           00000000' 0010    14 	.LONG	EXT1*2
+                               0000' 0014    15 C:	.WORD	EXT2
+                                 00' 0016    16 	.BYTE	EXT2&^XFF
+                                     0017    17 
+                                 00000000    18 	.PSECT	OTHER, WRT, NOEXE, LONG
+                           00000000' 0000    19 B:	.LONG	A
+                                     0004    20 
+                                     0004    21 	.END
+EXPRS                           Fixture 8: expressions the linker finish 30-SEP-2026 06:01:55  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             30-SEP-2026 06:02:34  DUA1:[000000]EXPRS.MAR;1          (1)
+
+A                00000000 R     01      
+B                00000000 R     02      
+C                00000014 R     01      
+EXT1             ********   X   01      
+EXT2             ********   X   01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000017  (   23.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+OTHER                           00000004  (    4.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  426     00:00:00.01    00:00:00.01
+Command processing              898     00:00:00.00    00:00:00.00
+Pass 1                          173     00:00:00.01    00:00:00.01
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           32     00:00:00.00    00:00:00.00
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1556     00:00:00.02    00:00:00.02
+
+The working set limit was 812 pages.
+322 bytes (1 page) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 5 non-local and 0 local symbols.
+21 source lines were read in Pass 1, producing 13 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST EXPRS

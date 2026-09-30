@@ -160,6 +160,16 @@ func (c *Console) Link(opts LinkOptions) error {
 		imageFile = created.Name
 	}
 
+	// Real LINK's warnings, which don't stop the image: undefined symbols
+	// and each reference to one, and a missing transfer address.
+	for _, m := range img.Messages {
+		c.Printf("%s\n", m)
+	}
+
+	if imageFile != "" && !img.HasTransfer {
+		c.Printf("%s\n", link.NoTransferMessage(imageFile))
+	}
+
 	if !opts.Map {
 		return nil
 	}

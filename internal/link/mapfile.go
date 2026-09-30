@@ -38,8 +38,9 @@ type MapOptions struct {
 	// written (/NOEXECUTABLE).
 	ImageFile string
 	// ImageText is the image file name as the command gave it
-	// (/EXECUTABLE=), which the first page's heading shows; real LINK
-	// knows the image's full name only after the first page.
+	// (/EXECUTABLE=), which the object module synopsis's headings show;
+	// real LINK creates the image file, and knows its full name, only
+	// after reading the modules.
 	ImageText string
 	// MapFile is the map file's name, which the image synopsis records.
 	MapFile string
@@ -74,14 +75,31 @@ func (img *Image) Map(opts MapOptions) []string {
 
 	w.newPage()
 	w.box("Object Module Synopsis")
+
+	// Messages that belong to no module come first, as real LINK lists
+	// them there; each module's follow its line.
+	for _, m := range l.messages {
+		w.message(m)
+	}
+
 	w.subheading(
 		"Module Name     Ident              Bytes      File                                Creation Date      Creator",
 		"-----------     -----              -----      -----                               -------------      -------")
 
 	for _, m := range l.modules {
-		if !m.library {
+		if !m.input.System {
 			w.module(m)
+
+			for _, msg := range m.messages {
+				w.message(msg)
+			}
 		}
+	}
+
+	// Real LINK creates the image file after reading the modules, and
+	// the pages after that name it in full (EXTERNU.MAP's page 2).
+	if opts.ImageFile != "" {
+		w.heading = opts.ImageFile
 	}
 
 	if !opts.Brief {
@@ -89,13 +107,28 @@ func (img *Image) Map(opts MapOptions) []string {
 		w.symbols(l)
 	}
 
-	if opts.ImageFile != "" {
-		w.heading = opts.ImageFile
+	// Writing the image, real LINK notes in the map that it has no
+	// transfer address.
+	if opts.ImageFile != "" && !l.transferSet {
+		w.message(NoTransferMessage(opts.ImageFile))
 	}
 
 	w.synopsis(l, opts)
 
 	return w.lines
+}
+
+// NoTransferMessage is real LINK's warning that the image in file has no
+// user transfer address (USRTFR).
+func NoTransferMessage(file string) Message {
+	return Message{'W', "USRTFR", fmt.Sprintf("image %s has no user transfer address", file)}
+}
+
+// message writes a message, a line for each of its lines.
+func (w *mapWriter) message(m Message) {
+	for _, line := range strings.Split(m.String(), "\n") {
+		w.out(line)
+	}
 }
 
 // mapDate is a time as the map shows it, "dd-MMM-yyyy hh:mm", with a
@@ -257,7 +290,7 @@ func (w *mapWriter) psects(l *linker) {
 
 		for _, c := range p.contribs {
 			m := owners[c]
-			if c.size == 0 || m == nil || m.library {
+			if c.size == 0 || m == nil || m.input.System {
 				continue
 			}
 
@@ -346,11 +379,14 @@ func (w *mapWriter) symbols(l *linker) {
 
 	for _, g := range l.symbols {
 		switch {
-		case !g.defined:
+		case !g.defined && g.strongRef:
 			list = append(list, entry{g.name, 0, "-*"})
+		case !g.defined:
+			// Only referred to weakly: 0, with no flag.
+			list = append(list, entry{g.name, 0, ""})
 		case g.option:
 			list = append(list, entry{g.name, g.value, ""})
-		case g.fromSource || g.module == nil || g.module.library:
+		case g.fromSource || g.module == nil || g.module.input.System:
 			continue
 		case g.rel:
 			list = append(list, entry{g.name, g.value, "-R"})
@@ -503,6 +539,16 @@ func (w *mapWriter) synopsis(l *linker, opts MapOptions) {
 	line("Number of modules:", "%8d.", counts.modules)
 	line("Number of program sections:", "%8d.", counts.psects)
 	line("Number of global symbols:", "%8d.", counts.symbols)
+
+	if len(l.undefined) > 0 {
+		line("Including undefined count of:", "%8d.", len(l.undefined))
+	}
+
+	// Each SYMBOL= option is a cross reference in a map that lists
+	// symbols (lnkoption.lis), and not a global symbol.
+	if !opts.Brief && counts.options > 0 {
+		line("Number of cross references:", "%8d.", counts.options)
+	}
 	line("Number of image sections:", "%8d.", counts.sections)
 
 	if l.transferSet {
@@ -513,8 +559,20 @@ func (w *mapWriter) synopsis(l *linker, opts MapOptions) {
 		line("Debugger transfer address:", "%08X", l.symbols[imgstaName].value)
 	}
 
-	if len(l.gRefs) > 0 {
-		line("Number of code references to shareable images:", "%8d.", len(l.gRefs))
+	if l.addressFixups > 0 {
+		line("Number of address fixups:", "%8d.", l.addressFixups)
+	}
+
+	// Each target in a shareable image has a cell, whether general mode
+	// operands or .ADDRESS longwords reach it: ADDR's map counts one code
+	// reference, though only a .ADDRESS reaches LIB$PUT_OUTPUT.
+	cells := 0
+	for _, r := range l.shared {
+		cells += len(r.offsets)
+	}
+
+	if cells > 0 {
+		line("Number of code references to shareable images:", "%8d.", cells)
 	}
 
 	line("Image type:", "EXECUTABLE.")
@@ -534,6 +592,8 @@ func (w *mapWriter) synopsis(l *linker, opts MapOptions) {
 // image sections, as the image synopsis counts them.
 type mapCounts struct {
 	files, modules, psects, symbols, sections int
+	// options are the symbols SYMBOL= options define.
+	options int
 }
 
 // mapCounts counts what the link read and made: the files (each object
@@ -578,6 +638,13 @@ func (l *linker) mapCounts() mapCounts {
 
 	c.modules = len(l.modules) + len(used)
 	c.psects, c.symbols, c.sections = len(l.order), len(l.symbols), l.isdCount
+
+	for _, g := range l.symbols {
+		if g.option {
+			c.options++
+			c.symbols--
+		}
+	}
 
 	for name, n := range used {
 		img := l.sharedImage(name)

@@ -1,0 +1,91 @@
+GENERAL                         Fixture 12: general mode and .ENABLE ABS 30-SEP-2026 06:01:55  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     30-SEP-2026 06:02:34  DUA1:[000000]GENERAL.MAR;1        (1)
+
+                                     0000     1 	.TITLE	GENERAL	Fixture 12: general mode and .ENABLE ABSOLUTE
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; Checks general mode (G^) with an address already known to be absolute,
+                                     0000     5 ; a relocatable one, one defined later as absolute, and an indexed
+                                     0000     6 ; external; relative mode to an absolute address; .ENABLE ABSOLUTE,
+                                     0000     7 ; which makes relative operands absolute; and a forward reference after
+                                     0000     8 ; .DEFAULT DISPLACEMENT, BYTE. Assemble only: EXTV is defined nowhere.
+                                     0000     9 
+                           20000000  0000    10 IOBASE = ^X20000000
+                                     0000    11 
+                                 00000000    12 	.PSECT	DATA, WRT, NOEXE, LONG
+                           00000000  0000    13 WORD1:	.LONG	0
+                                     0004    14 
+                                 00000000    15 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0000  0000    16 	.ENTRY	START, ^M<>
+              50   20000000'GF   D0  0002    17 	MOVL	G^IOBASE, R0
+              50   00000000'GF   D0  0009    18 	MOVL	G^WORD1, R0
+              50   00000300'GF   D0  0010    19 	MOVL	G^LATER, R0
+            50   00000000'GF41   D0  0017    20 	MOVL	G^EXTV[R1], R0
+              50   20000000'EF   D0  001F    21 	MOVL	IOBASE, R0
+                                     0026    22 	.ENABLE	ABSOLUTE
+              51   00000000'9F   D0  0026    23 	MOVL	WORD1, R1
+              52   00000000'9F   D0  002D    24 	MOVL	EXTV, R2
+              53   00000000'FF   D0  0034    25 	MOVL	@WORD1, R3
+                                     003B    26 	.DISABLE ABSOLUTE
+                                     003B    27 	.DEFAULT DISPLACEMENT, BYTE
+                    50   3F'AF   9E  003B    28 	MOVAB	NEAR, R0
+                                 04  003F    29 NEAR:	RET
+                                     0040    30 
+                           00000300  0040    31 LATER = ^X300
+                                     0040    32 
+                                     0040    33 	.END	START
+GENERAL                         Fixture 12: general mode and .ENABLE ABS 30-SEP-2026 06:01:55  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             30-SEP-2026 06:02:34  DUA1:[000000]GENERAL.MAR;1        (1)
+
+EXTV             ********   X   02      
+IOBASE         = 20000000               
+LATER          = 00000300               
+NEAR             0000003F R     02      
+START            00000000 RG    02      
+WORD1            00000000 R     01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000004  (    4.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE                            00000040  (   64.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  430     00:00:00.00    00:00:00.00
+Command processing              919     00:00:00.01    00:00:00.01
+Pass 1                          184     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           32     00:00:00.00    00:00:00.00
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1592     00:00:00.01    00:00:00.01
+
+The working set limit was 662 pages.
+632 bytes (2 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 6 non-local and 0 local symbols.
+33 source lines were read in Pass 1, producing 17 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST GENERAL
