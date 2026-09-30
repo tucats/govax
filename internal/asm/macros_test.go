@@ -196,8 +196,8 @@ func TestMacroSubstitutionRules(t *testing.T) {
 }
 
 // TestMacroDefinesMacro checks a macro that defines another macro when
-// it's called, as VMS's $GBLINI does, including an apostrophe meant for
-// the inner macro (PREFIX”SYM, from $EQULST).
+// it's called, as some of VMS's system macros do, including an apostrophe
+// meant for the inner macro (PREFIX''SYM).
 func TestMacroDefinesMacro(t *testing.T) {
 	src := `
 	.MACRO	DEFSYM	PREFIX
@@ -370,15 +370,15 @@ func TestMacroErrorLocation(t *testing.T) {
 }
 
 // TestSymbolsWithDots: MACRO-32 symbols may contain ".", even first, as
-// VMS's system macros' BIT..., $$.TAB, and .LEN do.
+// VMS's system macros' own symbols do.
 func TestSymbolsWithDots(t *testing.T) {
 	src := `
 	.PSECT	DATA
-BIT... = 3
-$$.TAB = .
-.LEN = BIT...+1
-	.BYTE	BIT..., .LEN
-	.LONG	. - $$.TAB`
+X... = 3
+$$.T = .
+.N = X...+1
+	.BYTE	X..., .N
+	.LONG	. - $$.T`
 
 	requireBytes(t, macroBytes(t, src), 3, 4, 2, 0, 0, 0)
 }

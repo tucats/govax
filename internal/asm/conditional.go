@@ -209,9 +209,10 @@ func (a *Assembler) condition(c *cursor) (bool, error) {
 	}
 
 	// The manual says the expression must be absolute, but real MACRO
-	// tests a relocatable one by its offset in its psect: STARLET.MLB's
-	// $$R_TABINIT (in every $FAB and $RAB) checks alignment with
-	// ".IIF NE .&3, .PRINT ...", and only prints for a misaligned block.
+	// tests a relocatable one by its offset in its psect: every $FAB and
+	// $RAB checks its own alignment on ".", and real MACRO prints the
+	// message only for a misaligned block (testdata/mar/macros/
+	// fabalign.mar).
 	n := int32(x.v)
 	if !x.known() {
 		n = int32(x.x.placeholder())

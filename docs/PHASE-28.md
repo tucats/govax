@@ -74,23 +74,25 @@ of it, not just the directives the manual's chapter 4 lists):
 
 Things the macros rely on that the plan had not listed:
 
-- **Macros defined by macros.** `$GBLINI` defines `$DEF`, `$EQU`, and
-  `$VIELD1` when it's called, and `$DEFEND` redefines `$xxxDEF` to an
-  empty macro so that a second `$FABDEF` expands to nothing. A `.MACRO`
-  inside an expansion is an ordinary definition.
+(Phase 32 redacted this list's descriptions of how STARLET's macros are
+built, keeping the assembler features they call for; see
+docs/PHASE-32.md, "Earlier exposure, recorded honestly".)
+
+- **Macros defined by macros.** A `.MACRO` inside an expansion is an
+  ordinary definition, and a macro may redefine itself, so that a second
+  `$FABDEF` expands to nothing.
 - **Arguments are substituted everywhere**, inside `.ASCII /.../` strings
-  and comments included: `.ERROR ; UNDEFINED VALUE FOR FIELD : ORG;`
-  names its argument in the comment, and the comment is the message.
-- **Apostrophes.** `FAB$C_'ORG` (concatenation), and `PREFIX''SYM` in a
-  macro that defines a macro. The outer expansion drops the apostrophe
-  next to its own argument `PREFIX` and leaves the other one for the inner
-  macro's `SYM`.
-- **Symbols containing `.`**: `BIT...`, `SIZ...`, `$$.TAB`, `$$.TMP`.
-  `internal/asm` doesn't yet allow a `.` in a symbol name.
+  and comments included, so a `.ERROR` comment, which is the message, can
+  name an argument.
+- **Apostrophes:** concatenation (`PFX'ARG`), and a macro that defines a
+  macro, where the outer expansion drops the apostrophe next to its own
+  argument and leaves the other one for the inner macro's.
+- **Symbols containing `.`**, which `internal/asm` didn't yet allow.
 - **`.NTYPE`** (in `$PUSHADR`, which every `_S` service macro uses):
   the addressing mode of an operand, as a number.
-- **`.SAVE LOCAL_BLOCK`** and `.PSECT $ABS$,ABS` in `$DEFINI`, which
-  every `$xxxDEF` symbol-definition macro calls. These already work.
+- **`.SAVE LOCAL_BLOCK`**, `.PSECT $ABS$,ABS`, and `.RESTORE`, for
+  definitions made in `$ABS$` (which real MACRO's objects show). These
+  already work.
 
 VMS has no `STARLET.MAR`: the system macros exist only in the library. A
 macro source file is made into a library with `LIBRARY/CREATE/MACRO`, and
@@ -419,13 +421,13 @@ All settled (2026-09-30):
   `HASH_SYM`, plus argument forms, concatenation, nesting (and a block that
   defines macros), `.MEXIT`, `.ENDM` endings, errors, and error locations
   in both dialects.
-- A scratch check against the real STARLET.MLB: `$$R_VBFSET FAB,<GET,PUT,DEL>`
-  (the `.IRP` behind `$FAB`'s and `$RAB`'s bit-set arguments) gives 7, and an
-  unknown bit reaches its `.ERROR` branch. Found for later subtasks:
-  `$DEFINI`/`$DEFEND` need `.NOCROSS`/`.CROSS` (subtask 4), and
-  `$$R_TABINIT`'s `.IIF NE .&3, ...` (an alignment check on a relocatable
-  `.`) is rejected as `VAX_RELEXPR`; real MACRO evidently accepts it, so
-  that has to be settled for subtask 5's `$FAB`/`$RAB` acceptance.
+- A scratch check against the real system macro library (details
+  redacted in Phase 32): `$FAB`'s and `$RAB`'s bit-set arguments assemble,
+  and an unknown bit is an error. Found for later subtasks:
+  `.NOCROSS`/`.CROSS` (subtask 4), and a conditional on a relocatable `.`
+  (an alignment check), which is rejected as `VAX_RELEXPR`; real MACRO
+  evidently accepts it, so that has to be settled for subtask 5's
+  `$FAB`/`$RAB` acceptance.
 
 ### 2026-09-30 — Subtask 4: message and listing directives
 
@@ -454,9 +456,9 @@ All settled (2026-09-30):
   message, skipped branches, continuation, errors, the listing directives,
   and the console dialect.
 - A scratch check against the real STARLET.MLB: `$SSDEF`, `$IODEF`, and
-  `$FABDEF` twice (the second expanding to nothing through `$DEFEND`) now
-  assemble, and `$FAB FAC=<GET,BOGUS>` reports `$$R_VBFSET`'s
-  "Generated ERROR: UNDEFINED BIT VALUE CODE: BOGUS".
+  `$FABDEF` twice (the second expanding to nothing) now assemble, and
+  `$FAB FAC=<GET,BOGUS>` reports "Generated ERROR: UNDEFINED BIT VALUE
+  CODE: BOGUS".
 
 ### 2026-09-30 — Real MACRO's behavior decides (user decision)
 
@@ -464,12 +466,12 @@ All settled (2026-09-30):
   where real VMS MACRO and the manual (or govax) differ, govax does what
   real MACRO does.
 - **Conditionals on relocatable values.** The manual says an `.IF`/`.IIF`
-  expression must be absolute, but `$$R_TABINIT`, in every `$FAB` and
-  `$RAB`, checks alignment with
-  `.IIF NE .&3, .print ;%MACRO-I-GENINFO, Generated INFO: RMS BLOCK NOT
-  LONGWORD ALIGNED;`. Real MACRO assembles every `$FAB`, and prints this
-  only for a misaligned block, so it evidently tests a relocatable value
-  by its offset in its psect. `condition` now does the same (an undefined
+  expression must be absolute, but every `$FAB` and `$RAB` checks its own
+  alignment on `.`, a relocatable value: real MACRO assembles every
+  `$FAB`, and prints `%MACRO-I-GENINFO, Generated INFO: RMS BLOCK NOT
+  LONGWORD ALIGNED;` only for a misaligned block, so it evidently tests a
+  relocatable value by its offset in its psect. (Phase 32 redacted the
+  quoted macro line here.) `condition` now does the same (an undefined
   or external symbol is still an error).
 - **`.PRINT` has no prefix of its own.** That same comment carries its own
   `%MACRO-I-GENINFO` prefix, so real MACRO must display `.PRINT`'s message
@@ -822,8 +824,8 @@ All settled (2026-09-30):
   `macroNoObject` variables).
 - **Found on the way, and fixed** (govax's own Phase 27 code, so not a
   `DEVIATIONS.md` entry): `.RESTORE` always left the implicit `. ABS .`
-  state, so a program calling `$IODEF` (whose `$DEFINI`/`$DEFEND` do
-  `.SAVE LOCAL_BLOCK`, `.PSECT $ABS$,ABS`, `.RESTORE`) before its first
+  state, so a program calling `$IODEF` (which defines its symbols in
+  `$ABS$` and then returns to the psect it started in) before its first
   `.PSECT` had its code rejected as `VAX_ABSDATA` in `. ABS .`, where real
   MACRO puts it in `. BLANK .`. `.SAVE` now saves that state and `.RESTORE`
   brings it back (`psectContext.implicitAbs`).
@@ -936,7 +938,8 @@ All settled (2026-09-30):
     winning at link time. An overwritten relocation is kept, superseded
     (written, but not one of `Relocations()`), instead of dropped, and an
     event's bytes come from the byte's history (`byteOwner.value`).
-  - **A return to `. ABS .`** (the `.RESTORE` in `$DEFEND`) sets the
+  - **A return to `. ABS .`** (a `.RESTORE` at the end of a definition
+    macro) sets the
     location there, as the start of assembly does.
 - **Messages.** Real MACRO prints `.PRINT`'s comment as written: the
   leading blank (" USERMAC: ...") and a library comment's closing `;`

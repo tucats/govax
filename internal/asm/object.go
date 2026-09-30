@@ -199,7 +199,7 @@ func (e *emitter) event(ev outEvent) error {
 		switch {
 		case ev.sect.index == 0:
 			// The start of assembly, or a return to .  ABS . (a
-			// .RESTORE after $DEFINI and $DEFEND, say): real MACRO
+			// .RESTORE at the end of $RMSDEF, say): real MACRO
 			// sets the location there as at the start
 			// (testdata/mar/macros/vax/rmscopy.obj, after $RMSDEF).
 			// See flushAbsStart.

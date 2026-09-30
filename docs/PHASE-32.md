@@ -77,7 +77,8 @@ failure messages to make sure of that.
 Phase 28 compared govax's macro facility against the real STARLET.MLB,
 and some of what it learned is in the tree:
 
-- names of STARLET's internal macros (`$$R_TABINIT`, `$$R_VBFSET`);
+- names of STARLET's internal helper macros, and descriptions of how
+  its definition and block macros are built;
 - their alignment check and keyword-error behavior;
 - one quoted source line in `fabalign.mar`'s comment.
 
@@ -199,3 +200,44 @@ clean, and a commit. `build -i` follows each one that changes behavior.
 - 2026-09-30: Plan drafted for review. Decided: objects match byte
   for byte, NAM/XAB at run time is the next phase, the cheap `$xxxDEF`
   families are in, and the hook is committed.
+- 2026-09-30: Subtask 0, the parts Claude can do:
+  - **The barrier.** `.claude/hooks/cleanroom.sh` is a PreToolUse hook on
+    Read, Grep, Glob, and Bash, installed by `.claude/settings.json`. It
+    refuses any call whose input names:
+    - the real macro library, or an extract or listing made from it;
+    - `vmslib` as a directory name (so the tests' `vmsLibFile` helper
+      passes), apart from the three files `gen` reads for their values;
+    - `reference/vms/`;
+    - the three unaudited real-MACRO listings, or their directory as a
+      whole.
+
+    `.claude/hooks/cleanroom_test.sh` has 16 cases, which all pass. The
+    hook took effect in this session and refused a Bash call and an edit
+    script that merely mentioned the library's file name. So docs that
+    name it are edited with the Edit/Write tools, which the hook doesn't
+    watch, and commit messages that name it go through `git commit -F`.
+  - **Provenance.** This session read Phase 28's log, which described how
+    STARLET's definition and block macros are built internally: helper
+    macro names, internal symbols, the psect save and restore, and one
+    quoted line. Those descriptions are redacted:
+    - PHASE-28.md;
+    - `conditional.go`, `message.go`, `cursor.go`, and `macros.go`;
+    - `message_test.go`, `macros_test.go`, and `macrodir_test.go`, whose
+      test macros and symbols are renamed generically;
+    - `object.go`;
+    - `fabalign.mar`'s comment.
+
+    What remains is behavior real MACRO's output shows: the GENINFO
+    message, the error text, and `$ABS$` in objects. Because this session
+    has seen those descriptions, **subtasks 4–7 (writing the macros) should
+    run in a fresh session** that starts with the hook active and reads
+    only this document, `docs/RMS-MACROS.md`, the manuals, and the oracle's
+    output.
+  - **Test audit.** `TestGovaxStarletMatchesReal` reports object dumps.
+    `TestStarletLoads` names macros. An assembly error inside an
+    expansion names the offending token (an opcode, say), never the line.
+    None prints macro text.
+  - **For the author:** audit `rmscopy.lis`, `fabalign.lis`, and
+    `qiow.lis` in `testdata/mar/macros/vax/` for STARLET expansion lines.
+    Regenerate them with `.NOSHOW ME,MEB`, or delete them (no test reads
+    them). Then remove them from the hook's list.

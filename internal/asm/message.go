@@ -12,8 +12,8 @@ import (
 // unless it's zero, and the comment: .ERROR as an assembly error, .WARN as
 // a warning, and .PRINT as an informational message, which the MACRO
 // command displays and which doesn't change the assembly's severity.
-// .PRINT's message is displayed bare, with no prefix of MACRO's own:
-// STARLET.MLB's $$R_TABINIT writes one into its comment
+// .PRINT's message is displayed bare, with no prefix of MACRO's own: the
+// RMS block macros' alignment message carries its own
 // ("%MACRO-I-GENINFO, Generated INFO: RMS BLOCK NOT LONGWORD ALIGNED"). The
 // comment is the statement's own (see statement), with any argument
 // already substituted into it, since a macro's arguments are substituted

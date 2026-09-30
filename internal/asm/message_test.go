@@ -142,21 +142,22 @@ func TestPrintDirective(t *testing.T) {
 	}
 }
 
-// TestAlignmentCheck is STARLET.MLB's $$R_TABINIT alignment check: a
-// conditional tests a relocatable value by its offset in its psect, and
-// the .PRINT comment carries its own message prefix.
+// TestAlignmentCheck is a macro that checks its block is longword
+// aligned, as the RMS block macros do: a conditional tests a relocatable
+// value by its offset in its psect, and the .PRINT comment carries its own
+// message prefix (the message real MACRO prints for a misaligned $FAB).
 func TestAlignmentCheck(t *testing.T) {
 	src := `
-	.MACRO	TABINIT
+	.MACRO	CHKALIGN
 	.IIF NE .&3, .print ;%MACRO-I-GENINFO, Generated INFO: RMS BLOCK NOT LONGWORD ALIGNED;
 	.LONG	0
-	.ENDM	TABINIT
+	.ENDM	CHKALIGN
 	.PSECT	DATA,LONG
-	TABINIT
+	CHKALIGN
 	.BYTE	1
-	TABINIT
+	CHKALIGN
 	.ALIGN	LONG
-	TABINIT`
+	CHKALIGN`
 
 	a := macroAssembler()
 

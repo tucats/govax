@@ -44,6 +44,15 @@ never had.
 - `~/Documents/Technical Doc/VMS/vax_instr_set.pdf` — the VAX architecture/
   instruction-set reference manual (a copy may also be at
   `reference/vax_instr_set.pdf`, local-only).
+- **Clean-room barrier (Phase 32).** govax's own system macros
+  (`internal/bootdata/files/starlet.mar`) are written from DIGITAL's manuals
+  and from real MACRO's *output*, never from VMS's STARLET macro library's text.
+  `.claude/hooks/cleanroom.sh`, a PreToolUse hook, refuses tool calls that
+  name that library, `testdata/vmslib`, `reference/vms`, or unaudited
+  real-MACRO listings. It matches on text, so a command or search that merely
+  mentions the library's file name is refused too. Use the Edit/Write tools
+  for docs that name it, and `git commit -F` for such commit messages. Don't
+  work around the hook; its test cases are in `cleanroom_test.sh`.
 - `reference/vms/` — local-only (gitignored, Phase 31): licensed VMS 7.3
   definition files (SDL sources, C headers, BLISS and message listings) that
   `internal/vmsdef`'s tables were first generated from. Nothing in the build

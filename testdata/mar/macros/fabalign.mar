@@ -1,11 +1,10 @@
 	.TITLE	FABALIGN	Phase 28 fixture: a misaligned $FAB
 	.IDENT	/V1.0/
 
-; $FAB's $$R_TABINIT checks that the block is longword aligned with
-;	.IIF NE .&3, .PRINT ;%MACRO-I-GENINFO, ...;
-; which tests a relocatable location. Real MACRO assembles this and
-; prints the message only for the second block, which the .BYTE before it
-; misaligns.
+; $FAB checks that its block is longword aligned, a test of a
+; relocatable location. Real MACRO assembles this and prints its
+; informational message only for the second block, which the .BYTE
+; before it misaligns.
 
 	.PSECT	DATA, WRT, NOEXE, LONG
 GOOD:	$FAB	FNM=<A.DAT>

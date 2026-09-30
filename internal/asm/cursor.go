@@ -64,8 +64,8 @@ func isUpperAlpha(ch byte) bool { return ch >= 'A' && ch <= 'Z' }
 // isSymbolChar matches the characters of a symbol/name token, used by
 // symbol names, register names, mnemonics and pseudo-op names alike:
 // letters, digits, '_', '$', and '.'. The C source had no '.'; MACRO-32
-// allows it anywhere in a symbol, and VMS's system macros use symbols
-// such as BIT... and $$.TAB (docs/PHASE-28.md). A "." standing alone is
+// allows it anywhere in a symbol, even first (the MACRO manual, chapter
+// 3), as VMS's system macros' own symbols do. A "." standing alone is
 // the location counter, not a symbol (see exprAtom).
 func isSymbolChar(ch byte) bool {
 	return isUpperAlpha(ch) || isDigit(ch) || ch == '_' || ch == '$' || ch == '.'

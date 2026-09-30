@@ -128,8 +128,8 @@ func TestDefaultPsects(t *testing.T) {
 	}
 
 	// .RESTORE returns to . ABS . as it was, so code afterwards still
-	// goes to . BLANK .: STARLET's $xxxDEF macros (through $DEFINI and
-	// $DEFEND) save, switch to $ABS$, and restore this way.
+	// goes to . BLANK .: a $xxxDEF macro that defines its symbols in
+	// $ABS$ saves, switches, and restores this way.
 	a = macroAssemble(t, ".SAVE LOCAL_BLOCK\n.PSECT $ABS$,ABS\nX = 1\n.RESTORE\nNOP")
 	requirePsect(t, a, blankPsect, 2, defaultPsectFlags, 0)
 	requireBytes(t, psectBytes(t, a, blankPsect), 1)

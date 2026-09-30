@@ -51,8 +51,8 @@ import (
 //
 // Because an expansion is assembled like any other source, a macro's body
 // can do anything source can: call other macros (or itself), use
-// conditional assembly, and even define macros of its own. VMS's
-// $GBLINI, for one, defines $EQU and $DEF each time it's called.
+// conditional assembly, and even define macros of its own, as some of
+// VMS's system macros do.
 
 // macroDef is one macro definition.
 type macroDef struct {
