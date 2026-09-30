@@ -46,6 +46,7 @@ func TestLinkCommand(t *testing.T) {
 		{[]string{"a"}, linkFlags{noSysLib: true}, `LINK "a"/NOSYSLIB`},
 		{[]string{"a"}, linkFlags{mapWanted: true}, `LINK "a"/MAP`},
 		{[]string{"a"}, linkFlags{mapWanted: true, mapFile: "a.lst", brief: true}, `LINK "a"/MAP="a.lst"/BRIEF`},
+		{[]string{"a"}, linkFlags{libraries: []string{"x.olb", "y"}, options: []string{"p.opt"}}, `LINK "a","x.olb"/LIBRARY,"y"/LIBRARY,"p.opt"/OPTIONS`},
 	}
 
 	for _, c := range cases {

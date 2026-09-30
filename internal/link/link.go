@@ -66,6 +66,12 @@ type Options struct {
 	// Sources define the symbols the modules refer to but don't, searched
 	// in order.
 	Sources []SymbolSource
+	// Ident is the image's identification (IDENTIFICATION=); "" means the
+	// ident of the module with the transfer address, or of the first.
+	Ident string
+	// Symbols are absolute global symbols an options file defines
+	// (SYMBOL=), which take precedence over the modules' definitions.
+	Symbols []Symbol
 }
 
 // Image is a linked executable image.
@@ -127,6 +133,11 @@ func Link(inputs []Input, opts Options) (*Image, error) {
 	}
 
 	l := &linker{opts: opts, psects: map[string]*psect{}, symbols: map[string]*global{}}
+
+	for _, s := range opts.Symbols {
+		g := l.refer(s.Name, "")
+		g.defined, g.option, g.offset = true, true, s.Value
+	}
 
 	for i := range inputs {
 		if _, err := l.pass1(&inputs[i], false); err != nil {
@@ -241,6 +252,9 @@ type global struct {
 	defined    bool
 	weak       bool
 	fromSource bool
+	// option says an options file defined it (SYMBOL=), which the
+	// modules' definitions don't replace.
+	option bool
 	// value is the symbol's address or absolute value, once allocation
 	// has placed its psect.
 	value   uint32
@@ -387,6 +401,9 @@ func (l *linker) symbol(m *module, s *obj.Symbol) error {
 	}
 
 	g := l.refer(s.Name, "")
+	if g.option {
+		return nil
+	}
 
 	weak := s.Flags&obj.SymWEAK != 0
 

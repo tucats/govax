@@ -3411,17 +3411,32 @@ $LINK
 
     Syntax:
 
-        LINK <object>[,<object>...][/HOST] [/EXECUTABLE[=<image>] |
+        LINK <file>[,<file>...][/HOST] [/EXECUTABLE[=<image>] |
              /NOEXECUTABLE] [/[NO]TRACEBACK] [/[NO]SYSLIB]
              [/MAP[=<map>] [/BRIEF] | /NOMAP]
 
     Parameter:
 
-        <object>        An object file.  Without a file type it is .OBJ.
-                        Objects follow MACRO's rules for host files and
+        <file>          An object file (.OBJ), or a file with its own
+                        qualifier, which follows it:
+
+            <library>/LIBRARY
+                        An object library (.OLB) searched for symbols the
+                        objects don't define, before the system libraries,
+                        or a shareable image library such as IMAGELIB.
+            <library>/INCLUDE=(<module>[,...])
+                        Adds those modules of the library to the image.
+                        With /LIBRARY too, the library is also searched.
+            <object>/SELECTIVE_SEARCH
+                        Takes only the object's definitions of symbols
+                        something else refers to.
+            <options>/OPTIONS
+                        An options file (.OPT); see below.
+
+                        Files follow MACRO's rules for host files and
                         files on mounted volumes (see HELP MACRO), and a
-                        later object's bare name is found beside the one
-                        before it.  /HOST applies to every object.
+                        later file's bare name is found beside the one
+                        before it.  /HOST applies to every file.
 
     Qualifiers:
 
@@ -3452,6 +3467,21 @@ $LINK
 
         /BRIEF          Makes the map brief: only the object modules and
                         the image synopsis.
+
+    An options file has a line for each option or list of input files. An
+    exclamation point starts a comment, and a hyphen at a line's end
+    continues it.  Its files may have /LIBRARY, /INCLUDE, and
+    /SELECTIVE_SEARCH, and also /SHAREABLE, a shareable image (.EXE) whose
+    symbols the image uses.  A host path is written in quotes, for its
+    slashes.  The options are:
+
+        STACK=<pages>           The user stack's size (default 20).
+        IDENTIFICATION=<id>     The image's identification.
+        NAME=<name>             The image's name in its header.
+        SYMBOL=<name>,<value>   Defines a global symbol, whatever the
+                                objects say.
+
+    Numbers are decimal, or hexadecimal or octal after %X or %O.
 
     Program sections are laid out as VMS LINK lays them out: grouped into
     image sections by their attributes, from address 200 (hexadecimal).
@@ -3484,7 +3514,8 @@ $LINK
 
     From the host shell, "govax link <object>..." runs this command, with
     --executable <file>, --no-executable, --no-traceback, --no-syslib,
-    --map, --map-file <file>, or --brief.
+    --map, --map-file <file>, --brief, --library <file>, or
+    --options <file>.
 
     Examples:
 
@@ -3494,6 +3525,7 @@ $LINK
 
         LINK DUA0:[OBJ]MAIN,SUB /EXECUTABLE=DUA0:[EXE]PROG.EXE
         LINK "hello"/MAP
+        LINK MAIN,MYLIB/LIBRARY,PROG/OPTIONS
 
     See also the help for MACRO and RUN.
 

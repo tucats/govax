@@ -773,7 +773,9 @@ grammar console
     ! type EXE), and TRACEBACK is on unless /NOTRACEBACK. /NOSYSLIB
     ! skips IMAGELIB.OLB and STARLET.OLB, as VMS LINK's does. MAP is
     ! /[NO]MAP[=file] (empty default: the first object's name with type
-    ! MAP), and /BRIEF makes the map brief.
+    ! MAP), and /BRIEF makes the map brief. LIBRARY, INCLUDE,
+    ! SELECTIVE_SEARCH, and OPTIONS are positional: each belongs to the
+    ! file it follows ("LINK MAIN,MYLIB/LIBRARY,PROG/OPTIONS").
     !
     verb link/id=1350
 
@@ -782,6 +784,19 @@ grammar console
                     /prompt="Object"
         qualifier   host/id=1352                -
                     /parameter=objects
+        qualifier   library/id=1358             -
+                    /parameter=objects          -
+                    /placement=positional
+        qualifier   include/id=1359             -
+                    /parameter=objects          -
+                    /placement=positional       -
+                    /type=$string/list
+        qualifier   selective_search/id=1360    -
+                    /parameter=objects          -
+                    /placement=positional
+        qualifier   options/id=1361             -
+                    /parameter=objects          -
+                    /placement=positional
 
         qualifier   executable/id=1353          -
                     /type=$string               -

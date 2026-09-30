@@ -40,6 +40,9 @@ type linkFlags struct {
 	mapWanted    bool   // --map, or --map-file
 	mapFile      string // --map-file
 	brief        bool   // --brief
+	// libraries and options are --library and --options, each of which
+	// can be repeated: files LINK gets with /LIBRARY and /OPTIONS.
+	libraries, options []string
 }
 
 // mountRequest is one --mount DEVICE=container option.
@@ -228,6 +231,28 @@ var linkGrammar = []cli.Option{
 		},
 	},
 	{
+		LongName:    "library",
+		Description: "An object or shareable image library to search (repeatable)",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			name, _ := c.String("library")
+			link.libraries = append(link.libraries, name)
+
+			return nil
+		},
+	},
+	{
+		LongName:    "options",
+		Description: "A LINK options file (repeatable)",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			name, _ := c.String("options")
+			link.options = append(link.options, name)
+
+			return nil
+		},
+	},
+	{
 		LongName:    "brief",
 		Description: "Write a brief map: the object modules and the image synopsis",
 		OptionType:  cli.BooleanType,
@@ -347,6 +372,14 @@ func linkCommand(objects []string, f linkFlags) string {
 	quoted := make([]string, len(objects))
 	for i, o := range objects {
 		quoted[i] = dclQuote(o)
+	}
+
+	for _, name := range f.libraries {
+		quoted = append(quoted, dclQuote(name)+"/LIBRARY")
+	}
+
+	for _, name := range f.options {
+		quoted = append(quoted, dclQuote(name)+"/OPTIONS")
 	}
 
 	command := "LINK " + strings.Join(quoted, ",")

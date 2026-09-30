@@ -348,6 +348,8 @@ func (w *mapWriter) symbols(l *linker) {
 		switch {
 		case !g.defined:
 			list = append(list, entry{g.name, 0, "-*"})
+		case g.option:
+			list = append(list, entry{g.name, g.value, ""})
 		case g.fromSource || g.module == nil || g.module.library:
 			continue
 		case g.rel:

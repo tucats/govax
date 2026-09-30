@@ -242,7 +242,7 @@ them.
 4. **More than one object,** `CON`/`OVR` psects across modules, `/MAP`,
    options files, and whatever the fixtures show next. In parts:
    - **4a. Done.** `/MAP` and `/BRIEF`, matching real LINK's maps.
-   - **4b.** Input file qualifiers (`/LIBRARY`, `/INCLUDE`, `/SELECTIVE_SEARCH`,
+   - **4b. Done.** Input file qualifiers (`/LIBRARY`, `/INCLUDE`, `/SELECTIVE_SEARCH`,
      `/SHAREABLE`) and options files (`/OPTIONS`: `STACK=`,
      `IDENTIFICATION=`, `SYMBOL=`, and the file lines).
    - **4c.** Multi-module fixtures for the VAX (needs the user): the
@@ -624,5 +624,55 @@ them.
   - `internal/console`: default and named maps, brief, and on a volume;
     `/MAP` and `/BRIEF` through DCL.
   - `cmd/govax`: the map options' LINK command.
+
+  `go test ./...` passes.
+
+### 2026-09-30 — Subtask 4b: input file qualifiers and options files
+
+- **Positional qualifiers in DCL.** A parameter-scoped qualifier declared
+  `/placement=positional` on a list parameter belongs to the element it
+  follows (`LINK MAIN,MYLIB/LIBRARY,PROG/OPTIONS`), read back through
+  `Result.Items`. Other qualifiers may sit between elements, as DCL
+  allows, and qualifier names now end at a comma.
+- **A 4a bug found.** A qualifier with a grammar default is filled in when
+  the command leaves it out, so LINK through DCL wrote a map every time.
+  `Result.Defaulted` (DCL's `CLI$_DEFAULTED`) now tells the two apart,
+  and a DCL test checks that `LINK` alone writes no map.
+- **LINK's input files** (`internal/console/link.go`), each with its own
+  qualifiers (`link.InputFile`):
+  - `file/LIBRARY`: an object library, or a shareable image library like
+    IMAGELIB, searched for undefined symbols after the shareable images
+    and before the system libraries, in the order named;
+  - `file/INCLUDE=(module,...)`: those modules of an object library are
+    added (`ObjectLibrarySource.Include`), whole;
+  - `file/SELECTIVE_SEARCH`: an object searched selectively;
+  - `file/OPTIONS`: an options file.
+
+  A file without a type gets its kind's (`OBJ`, `OLB`, `OPT`, `EXE`). The
+  first file of any kind names the image and map.
+- **Options files** (`internal/link/options.go`, `ParseOptions`): lines
+  of input files, which may also be shareable images (`/SHAREABLE`, whose
+  global symbol table becomes the first symbol source), and options,
+  table-driven: `STACK=`, `IDENTIFICATION=`, `NAME=`, and `SYMBOL=`. A
+  `SYMBOL=` definition takes precedence over the modules' (link
+  `Options.Symbols`), and the map lists it. Comments, continuation lines,
+  abbreviated keywords and qualifiers, and `%X`/`%O`/`%D` numbers are
+  read; any other option is an error naming it. A host path in an options
+  file is quoted, for its slashes. `/SHAREABLE=COPY` isn't supported.
+- **Commands:** `govax link --library <file>` and `--options <file>`, each
+  repeatable. The LINK help describes files, qualifiers, and options.
+- Tests:
+  - `internal/console/dcl`: positional qualifiers, with list values and
+    command qualifiers between elements, and bad definitions.
+  - `internal/link`: the options file parser and its errors; `SYMBOL=`
+    over a module's definition, and `IDENTIFICATION=`.
+  - `internal/console`: an options file naming a module, with `STACK=`,
+    `IDENTIFICATION=`, `NAME=`, and `SYMBOL=`, whose program runs;
+    an options file first names the image; input errors; and, with the
+    VMS files, STARLET searched with `/LIBRARY` and a module added with
+    `/INCLUDE`, IMAGELIB with `/LIBRARY`, and LIBRTL.EXE with
+    `/SHAREABLE`, each giving govax's tables' image; LINK through DCL
+    with a positional `/OPTIONS`.
+  - `cmd/govax`: `--library` and `--options`.
 
   `go test ./...` passes.

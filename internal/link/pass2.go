@@ -559,6 +559,10 @@ func (l *linker) image() (*Image, error) {
 		l.opts.ImageName = l.modules[0].name
 	}
 
+	if l.opts.Ident != "" {
+		l.imageID = l.opts.Ident
+	}
+
 	header, err := l.header(isds, global, fixupVA)
 	if err != nil {
 		return nil, fmt.Errorf("link: %w", err)

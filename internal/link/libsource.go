@@ -320,20 +320,49 @@ func (s *ObjectLibrarySource) Lookup(name string) (Definition, bool, error) {
 		return Definition{}, false, nil
 	}
 
+	in, err := s.module(rfa)
+	if err != nil {
+		return Definition{}, false, err
+	}
+
+	return Definition{Module: in}, true, nil
+}
+
+// Include returns the library's module name, for /INCLUDE=: the link adds
+// all of it, whether or not anything refers to its symbols. A later lookup
+// of one of its symbols returns the same Input.
+func (s *ObjectLibrarySource) Include(name string) (*Input, error) {
+	rfa, ok := s.Library.Lookup(name)
+	if !ok {
+		return nil, fmt.Errorf("%s has no module %s", s.File, name)
+	}
+
+	in, err := s.module(rfa)
+	if err != nil {
+		return nil, err
+	}
+
+	in.Selective = false
+
+	return in, nil
+}
+
+// module reads the module at rfa, once.
+func (s *ObjectLibrarySource) module(rfa lbr.RFA) (*Input, error) {
 	if in, ok := s.modules[rfa]; ok {
-		return Definition{Module: in}, true, nil
+		return in, nil
 	}
 
 	module, _ := s.Library.ModuleName(rfa)
 
 	lm, err := s.Library.Module(rfa)
 	if err != nil {
-		return Definition{}, false, fmt.Errorf("%s, module %s: %w", s.File, module, err)
+		return nil, fmt.Errorf("%s, module %s: %w", s.File, module, err)
 	}
 
 	m, err := obj.Decode(lm.Records)
 	if err != nil {
-		return Definition{}, false, fmt.Errorf("%s, module %s: %w", s.File, module, err)
+		return nil, fmt.Errorf("%s, module %s: %w", s.File, module, err)
 	}
 
 	in := &Input{File: fmt.Sprintf("%s(%s)", s.File, module), Module: m, Selective: lm.Header.SelectiveSearch()}
@@ -344,7 +373,7 @@ func (s *ObjectLibrarySource) Lookup(name string) (Definition, bool, error) {
 
 	s.modules[rfa] = in
 
-	return Definition{Module: in}, true, nil
+	return in, nil
 }
 
 // Files implements FileCounter.

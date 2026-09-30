@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/console/dcl"
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/link"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -552,8 +553,22 @@ func (d *Dispatcher) bindGrammar() {
 	// docs/PHASE-30.md: LINK links object modules into an executable
 	// image (Console.Link, internal/console/link.go).
 	g.Bind("LINK", func(id int64, r *dcl.Result) error {
+		files := r.List("OBJECTS")
+		items := r.Items("OBJECTS")
+		inputs := make([]link.InputFile, len(files))
+
+		for i, name := range files {
+			inputs[i] = link.InputFile{
+				Name:      name,
+				Library:   items[i].Present("LIBRARY"),
+				Include:   items[i].List("INCLUDE"),
+				Selective: items[i].Present("SELECTIVE_SEARCH"),
+				Options:   items[i].Present("OPTIONS"),
+			}
+		}
+
 		return d.Console.Link(LinkOptions{
-			Objects:      r.List("OBJECTS"),
+			Files:        inputs,
 			Host:         r.ParamPresent("OBJECTS", "HOST"),
 			Executable:   r.String("EXECUTABLE"),
 			NoExecutable: r.Present("EXECUTABLE") && r.Negated("EXECUTABLE"),
