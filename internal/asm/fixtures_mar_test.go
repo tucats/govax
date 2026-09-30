@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tucats/govax/internal/obj"
 )
@@ -357,6 +358,101 @@ func TestFixtureLadderText(t *testing.T) {
 			}
 
 			compareLines(t, "relocations", a.Relocations(), want.relocs)
+		})
+	}
+}
+
+// withoutTraceback returns m without its traceback records, which govax
+// doesn't write yet.
+func withoutTraceback(m *obj.Module) *obj.Module {
+	out := &obj.Module{}
+
+	for _, rec := range m.Records {
+		if rec.RecordType() != obj.RecTBT {
+			out.Records = append(out.Records, rec)
+		}
+	}
+
+	return out
+}
+
+func dumpText(t *testing.T, m *obj.Module) string {
+	t.Helper()
+
+	var sb strings.Builder
+	if err := obj.Dump(&sb, m); err != nil {
+		t.Fatal(err)
+	}
+
+	return sb.String()
+}
+
+// TestFixtureLadderObjects assembles each testdata/mar fixture into an
+// object module and checks it against real MACRO's, record for record:
+// the same headers, GSD and TIR records, in the same order, holding the
+// same subrecords and commands, and the same end of module record. Only
+// what govax doesn't write yet, the traceback records, is left out of the
+// comparison, and the headers that name the language processor, its
+// command line, and the time are given real MACRO's values. The object
+// must also encode and decode unchanged, and pass Check.
+func TestFixtureLadderObjects(t *testing.T) {
+	paths, err := filepath.Glob(filepath.Join("..", "..", "testdata", "mar", "*.mar"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, path := range paths {
+		name := strings.TrimSuffix(filepath.Base(path), ".mar")
+
+		t.Run(name, func(t *testing.T) {
+			src, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			real := realObject(t, name)
+
+			var opts ObjectOptions
+
+			for _, rec := range real.Records {
+				switch h := rec.(type) {
+				case *obj.MainHeader:
+					if opts.Created, err = time.Parse("02-Jan-2006 15:04", h.Created); err != nil {
+						t.Fatal(err)
+					}
+
+				case *obj.TextHeader:
+					switch h.Type {
+					case obj.HdrLNM:
+						opts.Language = h.Text
+					case obj.HdrSRC:
+						opts.Source = h.Text
+					}
+				}
+			}
+
+			m, err := macroAssemble(t, string(src)).Object(opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			raw, err := obj.Encode(m)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			back, err := obj.Decode(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if problems := obj.Check(back); len(problems) > 0 {
+				t.Errorf("Check: %v", problems)
+			}
+
+			if got, want := dumpText(t, back), dumpText(t, withoutTraceback(real)); got != want {
+				t.Errorf("object:\n%s\nwant:\n%s", got, want)
+			}
 		})
 	}
 }

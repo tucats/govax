@@ -57,11 +57,29 @@ func (a *Assembler) pc() uint32 { return a.cur.addr() }
 func (a *Assembler) setPC(addr uint32) {
 	a.cur.loc = addr - a.cur.base
 	a.cur.mark()
+	a.logEvent(outEvent{kind: evSet, sect: a.cur, offset: a.cur.loc})
 }
 
 // advance moves the current location counter forward n bytes without
-// writing anything; bytes never written read back as zero.
+// writing anything, leaving a gap; bytes never written read back as zero.
 func (a *Assembler) advance(n uint32) {
+	if n > 0 {
+		a.logEvent(outEvent{kind: evGap, sect: a.cur, offset: a.cur.loc, size: n})
+	}
+
+	a.move(n)
+}
+
+// advanceData moves the current location counter forward past n bytes
+// just stored there.
+func (a *Assembler) advanceData(n uint32) {
+	a.logEvent(outEvent{kind: evData, sect: a.cur, offset: a.cur.loc, size: n})
+	a.move(n)
+}
+
+// move moves the current location counter forward n bytes, for a caller
+// that logs what it stored itself.
+func (a *Assembler) move(n uint32) {
 	a.cur.loc += n
 	a.cur.mark()
 }
@@ -109,7 +127,7 @@ const (
 // never uses it, and the psect numbers after it move down one.
 func (a *Assembler) macroSections() {
 	a.sections = nil
-	a.cur = a.newSection(absPsect, false, newImage(), 0)
+	a.enterSection(a.newSection(absPsect, false, newImage(), 0))
 	a.implicitAbs = true
 }
 
@@ -141,7 +159,7 @@ func (a *Assembler) emitByte(b byte) error {
 		return err
 	}
 
-	a.advance(1)
+	a.advanceData(1)
 
 	return nil
 }
@@ -167,7 +185,7 @@ func (a *Assembler) emitWord(w uint16) error {
 		return err
 	}
 
-	a.advance(2)
+	a.advanceData(2)
 
 	return nil
 }
@@ -182,7 +200,7 @@ func (a *Assembler) emitLongword(l uint32) error {
 		return err
 	}
 
-	a.advance(4)
+	a.advanceData(4)
 
 	return nil
 }
@@ -198,7 +216,7 @@ func (a *Assembler) emitScaled(value uint32, scale int) error {
 		return err
 	}
 
-	a.advance(uint32(scale))
+	a.advanceData(uint32(scale))
 
 	return nil
 }

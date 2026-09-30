@@ -78,6 +78,9 @@ type Assembler struct {
 	// become relocations (see flushReady).
 	relocs []relocation
 	ready  []*fixup
+	// events is the MACRO dialect's output, in source order (see
+	// outEvent).
+	events []outEvent
 
 	// curEntry is the active local-symbol scope name (vax.assembler.cur_entry).
 	curEntry string

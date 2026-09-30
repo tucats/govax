@@ -26,7 +26,7 @@ becomes the record of the implementation: each subtask adds a
 [progress log](#progress-log) entry, and the open questions get their answers
 recorded here.
 
-**Status: subtasks 1-7 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 8 is next.**
+**Status: subtasks 1-8 done, and the `ods2` interop fixes (including a VMS-faithful `Initialize`) are done and confirmed on VMS. Subtask 9 is next.**
 
 ## Why this phase looks different
 
@@ -531,7 +531,7 @@ them under `testdata/mar/vax/`). Each step adds one feature:
    size. Add `.DEFAULT` and `G^` general mode (`STO_PICR`/`STO_PIDR`).
    Check against fixtures 4, 5, and 7. If they disagree with the rule,
    reopen [Pass structure](#pass-structure).
-8. **Object emitter.** Turn sections, symbols, and relocations into
+8. **Done.** **Object emitter.** Turn sections, symbols, and relocations into
    `internal/obj` records: PSC and SYM/EPM GSD subrecords, TIR (STORE
    IMMEDIATE runs, `CTL_SETRB`, relocation stack programs), and EOM with the
    severity and transfer address.
@@ -1279,3 +1279,94 @@ above record the answers:
   absolute, forward, and indexed addresses, `.ENABLE ABSOLUTE`, and the
   console dialect's sizes. The console golden snapshots are unchanged,
   and `go test ./...` passes.
+
+### 2026-09-29 — Subtask 8: the object emitter
+
+- **Records in source order.** Real MACRO writes its object as its second
+  pass reads the source, so the order of its GSD and TIR records follows
+  the source, not the psects. A MACRO-dialect assembly now keeps an
+  output log (`outEvent`, in the new `output.go`), and the emitter
+  replays it. The log records:
+  - each psect switch, including the start in `.  ABS  .`;
+  - `. =`;
+  - each run of stored bytes;
+  - each gap (`.BLKx`, or `.ALIGN` with no fill);
+  - `.ENTRY`;
+  - the two constants real MACRO stores through the linker's stack
+    rather than as data.
+
+  A run of stored bytes names only its psect, offset, and length.
+  Emitting reads its bytes from the finished psect, and its relocations
+  from the relocation list, so fixups finished after the bytes were
+  stored are included.
+- **`Assembler.Object(ObjectOptions)`** (new `object.go`) builds the
+  module:
+  - **Headers:** MHD, then LNM (`govax MACRO` unless the options name
+    another; subtask 10 adds the build number), then SRC (the command
+    line, when given), then TTL (`.TITLE`'s comment).
+  - **Global symbols:** one GSD of every global symbol but the entry
+    points, sorted by name, as real MACRO writes it before anything
+    else. Every reference is flagged REL, as real MACRO's are.
+  - **Psects:** each psect's PSC, then `STA_Px` + `CTL_SETRB`, at its
+    first `.PSECT`. `.  ABS  .` is always defined, even in an empty
+    module. Going back to a psect starts a new TIR record and sets the
+    location again.
+  - **Data:** STORE IMMEDIATE runs, each broken where a relocation's
+    field starts. A relocation becomes its tree's stack program in
+    postfix order, then its store command: `STO_B/W/L`, `STO_BD/WD/LD`
+    (displacements and branches), `STO_PIDR`, or `STO_PICR`. `.MASK`'s
+    entry point mask is `STA_EPM`.
+  - **Gaps:** each is one `CTL_AUGRB`, so `.ALIGN LONG` then `.BLKB 5` is
+    two, as in `branch.obj`.
+  - **Entry points:** `.ENTRY` is `STA_UB mask`, then an EPM GSD record,
+    then `STO_W` in a TIR record of its own.
+  - **`.ASCID`:** the descriptor's first longword is `STA_LW` (length
+    still 0) + `STO_L`. After the text, the length is stored back with
+    `CTL_AUGRB -n`, `STA_UB len`, `STO_W`, `CTL_AUGRB`.
+  - **The EOM record:** severity SUCCESS, or WARNING when there were
+    warnings, and the transfer address only when `.END` names one.
+- **Operand order.** For an operand whose value the linker finishes,
+  real MACRO stacks the value, then stores the addressing mode byte,
+  then stores the value (`STA_GBL`, STORE IMMEDIATE `EF`, `STO_LD`).
+  Fixups that follow a mode byte are marked (`fixup.mode`, and
+  `relocation.mode`), and the emitter stores them in that order.
+- **Stack forms.** A constant uses the shortest form, as real MACRO's do:
+  `STA_UB`, then `STA_UW`, then `STA_LW`. A psect offset uses `STA_PB`,
+  `STA_PW`, or `STA_PL`; the byte and word forms sign-extend, so
+  `STA_PB` reaches only 0x7F. `.` is always `STA_PL`, as in
+  `hello.obj`'s `.ASCID`, so `rexpr` marks a base that came from `.`.
+- **`obj.Builder`** now keeps content in the order it's added. A run of
+  `AddPsect`/`AddSymbol` calls fills GSD records, and a run of
+  `Emit`/`Store`/`SetLocation` calls fills TIR records. The new `Break`
+  ends a record early, and `Source` adds a SRC header. Its existing
+  callers add everything to the GSD before the TIR, so their output
+  doesn't change.
+- **Checked against real MACRO.** `TestFixtureLadderObjects` builds each
+  fixture's object, with real MACRO's creation time, LNM, and SRC text.
+  It encodes and decodes the object, runs `Check`, and compares its dump
+  with the real object's dump, traceback records left out. **All nine
+  fixtures match record for record:** the same headers, the same GSD
+  and TIR records in the same order, the same subrecords and commands,
+  and the same EOM.
+- **Not confirmed by a fixture.** These follow the confirmed cases, and
+  more fixtures would settle them:
+  - The value-first order is applied to every operand with a mode byte.
+    Only relative mode is confirmed; displacement, immediate, and
+    absolute mode aren't.
+  - The signed constant forms (`STA_SB`/`STA_SW`) are used for negative
+    values.
+  - Going back to a psect starts a new record.
+  - `. =` is `CTL_SETRB`.
+  - An absolute psect's PSC allocates 0 bytes, as the manual says.
+  - The manual says MACRO leaves out global symbols defined in an
+    absolute psect that no relocatable psect refers to. govax writes
+    them all, since leaving out a global definition could break a link,
+    and no fixture shows the behavior.
+- **Not written yet:** traceback records (the later traceback
+  sub-phase).
+- Tests: `object_test.go` covers the headers, the global symbol GSD,
+  weak symbols, going back to a psect, `. =`, the psect offset forms,
+  gaps, `.MASK`, each operand mode's order, the constant forms, long
+  data (STORE IMMEDIATE runs of 128 bytes, records of 512), a warning's
+  severity, absolute psects, and the console dialect's refusal.
+  `go test ./...` passes.

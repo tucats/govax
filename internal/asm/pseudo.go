@@ -381,7 +381,7 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 			return err
 		}
 
-		a.advance(1)
+		a.advanceData(1)
 
 	case asciiDescriptor:
 		if err := a.cur.img.storeWord(countPC, 0); err != nil { // length (patched below)
@@ -392,7 +392,11 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 			return err
 		}
 
-		a.advance(4)
+		// Real MACRO stores this longword through the linker's stack, the
+		// length still zero, and stores the length once it's counted the
+		// string (see the evPatch below).
+		a.logEvent(outEvent{kind: evConst, sect: a.cur, offset: a.cur.loc, size: 4, value: 0x010E << 16})
+		a.move(4)
 
 		// The address of the string, just past this longword: ".+4".
 		if here := a.dot(); !here.known() {
@@ -442,6 +446,8 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 		if err := a.cur.img.storeWord(countPC, uint16(count)); err != nil {
 			return err
 		}
+
+		a.logEvent(outEvent{kind: evPatch, sect: a.cur, offset: countPC - a.cur.base, size: 2, value: uint32(count)})
 	}
 
 	return nil
@@ -738,11 +744,28 @@ func (a *Assembler) pseudoEntry(c *cursor) error {
 		}
 	}
 
-	if sym, found := a.symbols.find(name); found {
+	sym, found := a.symbols.find(name)
+	if found {
 		sym.mask = uint16(mask)
 	}
 
-	return a.emitWord(uint16(mask))
+	if a.dialect != DialectMACRO || !found {
+		return a.emitWord(uint16(mask))
+	}
+
+	// The object defines the entry point where its mask is stored.
+	if err := a.output(); err != nil {
+		return err
+	}
+
+	if err := a.cur.img.storeWord(a.pc(), uint16(mask)); err != nil {
+		return err
+	}
+
+	a.logEvent(outEvent{kind: evEntry, sect: a.cur, offset: a.cur.loc, size: 2, value: mask, sym: sym})
+	a.move(2)
+
+	return nil
 }
 
 // pseudoScope assembles .SCOPE name: like .ENTRY, but only starts a new

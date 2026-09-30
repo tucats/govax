@@ -11,22 +11,30 @@ import (
 // code and data, and its transfer address. Build packs that content into
 // records no longer than RecordLimit, never splitting a GSD subrecord or
 // TIR command across records.
+//
+// GSD and TIR content goes into the module in the order it's added, as
+// real MACRO writes it: a run of AddPsect and AddSymbol calls fills GSD
+// records, and a run of Emit, SetLocation, and Store calls fills TIR
+// records. Break ends the current record early, so the next content
+// starts a new one.
 type Builder struct {
 	Name     string
 	Version  string
 	Language string    // the LNM record's text
 	Created  time.Time // the MHD creation time
-	// Title, when not empty, becomes a TTL header record.
-	Title string
+	// Source and Title, when not empty, become SRC and TTL header
+	// records. Real MACRO puts its command line in the SRC record, and
+	// .TITLE's comment in the TTL record.
+	Source string
+	Title  string
 	// RecordLimit is the longest record Build writes, and the MHD maximum
 	// record size; 0 means DefaultRecordLimit.
 	RecordLimit int
 	// Severity is the EOM completion code.
 	Severity byte
 
-	gsd      []Subrecord
-	psects   int
-	commands []Command
+	chunks []chunk
+	psects int
 
 	transfer         bool
 	transferPsect    uint16
@@ -41,10 +49,33 @@ type Builder struct {
 // language's own 2048-byte limit.
 const DefaultRecordLimit = 512
 
+// chunk is a run of GSD subrecords or TIR commands that Build packs into
+// records of one type, starting a new record at the chunk's start.
+type chunk struct {
+	gsd      bool
+	subs     []Subrecord
+	commands []Command
+}
+
+// current returns the chunk content of the given type goes into, starting
+// a new one if the last is of the other type or Break ended it.
+func (b *Builder) current(gsd bool) *chunk {
+	if n := len(b.chunks); n > 0 && b.chunks[n-1].gsd == gsd {
+		return &b.chunks[n-1]
+	}
+
+	b.chunks = append(b.chunks, chunk{gsd: gsd})
+
+	return &b.chunks[len(b.chunks)-1]
+}
+
 // AddPsect adds a psect definition, returning its index: the order it was
 // added in, which is how the linker numbers psects.
 func (b *Builder) AddPsect(p Psect) uint16 {
-	b.gsd = append(b.gsd, &p)
+	b.flushImmediate()
+
+	c := b.current(true)
+	c.subs = append(c.subs, &p)
 	b.psects++
 
 	return uint16(b.psects - 1)
@@ -53,13 +84,27 @@ func (b *Builder) AddPsect(p Psect) uint16 {
 // AddSymbol adds a symbol subrecord (a definition, reference, or entry
 // point).
 func (b *Builder) AddSymbol(s Symbol) {
-	b.gsd = append(b.gsd, &s)
+	b.flushImmediate()
+
+	c := b.current(true)
+	c.subs = append(c.subs, &s)
 }
 
 // Emit appends TIR commands.
 func (b *Builder) Emit(cmds ...Command) {
 	b.flushImmediate()
-	b.commands = append(b.commands, cmds...)
+
+	c := b.current(false)
+	c.commands = append(c.commands, cmds...)
+}
+
+// Break ends the current record: the next content added starts a new one.
+func (b *Builder) Break() {
+	b.flushImmediate()
+
+	if len(b.chunks) > 0 {
+		b.chunks = append(b.chunks, chunk{gsd: !b.chunks[len(b.chunks)-1].gsd})
+	}
 }
 
 // SetLocation points the linker's location counter at an offset in a
@@ -76,9 +121,15 @@ func (b *Builder) Store(data []byte) {
 }
 
 func (b *Builder) flushImmediate() {
+	if len(b.pendingImmediate) == 0 {
+		return
+	}
+
+	c := b.current(false)
+
 	for data := b.pendingImmediate; len(data) > 0; {
 		n := min(len(data), MaxImmediate)
-		b.commands = append(b.commands, Command{Op: OpStoreImmediate, Data: append([]byte(nil), data[:n]...)})
+		c.commands = append(c.commands, Command{Op: OpStoreImmediate, Data: append([]byte(nil), data[:n]...)})
 		data = data[n:]
 	}
 
@@ -129,64 +180,29 @@ func (b *Builder) Build() (*Module, error) {
 		&TextHeader{Type: HdrLNM, Text: b.Language},
 	)
 
+	if b.Source != "" {
+		m.Records = append(m.Records, &TextHeader{Type: HdrSRC, Text: b.Source})
+	}
+
 	if b.Title != "" {
 		m.Records = append(m.Records, &TextHeader{Type: HdrTTL, Text: b.Title})
 	}
 
-	if len(b.gsd) == 0 {
+	hasGSD := false
+
+	for _, c := range b.chunks {
+		hasGSD = hasGSD || len(c.subs) > 0
+
+		records, err := packChunk(c, limit)
+		if err != nil {
+			return nil, err
+		}
+
+		m.Records = append(m.Records, records...)
+	}
+
+	if !hasGSD {
 		return nil, fmt.Errorf("module %s has no psects or symbols", name)
-	}
-
-	// Pack GSD subrecords, then TIR commands, into as few records as
-	// fit.
-	gsd := &GSD{}
-	size := 1
-
-	for _, s := range b.gsd {
-		enc, err := encodeGSDEntry(nil, s)
-		if err != nil {
-			return nil, err
-		}
-
-		if 1+len(enc) > limit {
-			return nil, fmt.Errorf("%s subrecord is too long for a %d-byte record", s.GSDType(), limit)
-		}
-
-		if size+len(enc) > limit {
-			m.Records = append(m.Records, gsd)
-			gsd, size = &GSD{}, 1
-		}
-
-		gsd.Subrecords = append(gsd.Subrecords, s)
-		size += len(enc)
-	}
-
-	m.Records = append(m.Records, gsd)
-
-	tir := &TIR{Type: RecTIR}
-	size = 1
-
-	for _, c := range b.commands {
-		enc, err := c.encode(nil)
-		if err != nil {
-			return nil, err
-		}
-
-		if 1+len(enc) > limit {
-			return nil, fmt.Errorf("%s command is too long for a %d-byte record", c.Op, limit)
-		}
-
-		if size+len(enc) > limit {
-			m.Records = append(m.Records, tir)
-			tir, size = &TIR{Type: RecTIR}, 1
-		}
-
-		tir.Commands = append(tir.Commands, c)
-		size += len(enc)
-	}
-
-	if len(tir.Commands) > 0 {
-		m.Records = append(m.Records, tir)
 	}
 
 	eom := &EOM{Severity: b.Severity}
@@ -200,6 +216,71 @@ func (b *Builder) Build() (*Module, error) {
 	m.Records = append(m.Records, eom)
 
 	return m, nil
+}
+
+// packChunk packs one chunk's subrecords or commands into as few records
+// as fit in limit bytes.
+func packChunk(c chunk, limit int) ([]Record, error) {
+	var (
+		out  []Record
+		gsd  *GSD
+		tir  *TIR
+		size int
+	)
+
+	start := func() {
+		if c.gsd {
+			gsd = &GSD{}
+			out = append(out, gsd)
+		} else {
+			tir = &TIR{Type: RecTIR}
+			out = append(out, tir)
+		}
+
+		size = 1
+	}
+
+	add := func(n int, what string) error {
+		if 1+n > limit {
+			return fmt.Errorf("%s is too long for a %d-byte record", what, limit)
+		}
+
+		if len(out) == 0 || size+n > limit {
+			start()
+		}
+
+		size += n
+
+		return nil
+	}
+
+	for _, s := range c.subs {
+		enc, err := encodeGSDEntry(nil, s)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := add(len(enc), s.GSDType().String()+" subrecord"); err != nil {
+			return nil, err
+		}
+
+		gsd.Subrecords = append(gsd.Subrecords, s)
+	}
+
+	for _, cmd := range c.commands {
+		enc, err := cmd.encode(nil)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := add(len(enc), cmd.Op.String()+" command"); err != nil {
+			return nil, err
+		}
+
+		tir.Commands = append(tir.Commands, cmd)
+	}
+
+	return out, nil
 }
 
 // FormatTime formats a time in the object language's fixed 17-character

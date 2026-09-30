@@ -121,6 +121,8 @@ type fixup struct {
 	expr     *rexpr
 	pending  int    // how many of expr's symbols are still undefined
 	base     uint32 // fixCaseW: the .CASE block's base address
+	// mode says the field follows an operand's addressing mode byte.
+	mode bool
 }
 
 // symbol is one entry in the assembler's symbol table.

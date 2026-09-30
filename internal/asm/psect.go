@@ -84,7 +84,7 @@ func (a *Assembler) useBlankPsect() {
 	}
 
 	a.implicitAbs = false
-	a.cur = a.psect(blankPsect, defaultPsectFlags, 0)
+	a.enterSection(a.psect(blankPsect, defaultPsectFlags, 0))
 }
 
 // psect returns the psect named name, defining it with flags and align
@@ -172,7 +172,7 @@ func (a *Assembler) pseudoPsect(c *cursor) error {
 			return vmserrors.New(vmserrors.VAX_PSECTCONFLICT, "alignment", name)
 		}
 
-		a.cur = s
+		a.enterSection(s)
 
 		return nil
 	}
@@ -186,7 +186,7 @@ func (a *Assembler) pseudoPsect(c *cursor) error {
 		return vmserrors.New(vmserrors.VAX_TOOMANYPSECTS, maxUserPsects)
 	}
 
-	a.cur = a.psect(name, flags, align)
+	a.enterSection(a.psect(name, flags, align))
 
 	return nil
 }
@@ -267,8 +267,8 @@ func (a *Assembler) pseudoRestorePsect(*cursor) error {
 	a.psectStack = a.psectStack[:n-1]
 
 	a.implicitAbs = false
-	a.cur = ctx.sect
-	a.cur.loc = ctx.loc
+	ctx.sect.loc = ctx.loc
+	a.enterSection(ctx.sect)
 
 	if ctx.withBlock {
 		if err := a.checkLocalBlock(); err != nil {

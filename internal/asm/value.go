@@ -135,7 +135,7 @@ func (a *Assembler) unaryVal(op rop, x exprVal) (exprVal, error) {
 // relocatable one.
 func (a *Assembler) dot() exprVal {
 	if a.cur.relocatable {
-		return exprVal{x: baseNode(a.cur, a.cur.loc)}
+		return exprVal{x: &rexpr{op: rBase, sect: a.cur, v: a.cur.loc, dot: true}}
 	}
 
 	return constVal(a.pc())

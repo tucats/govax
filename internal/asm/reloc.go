@@ -48,6 +48,9 @@ type rexpr struct {
 	bin  byte // rBinary's operator
 	v    uint32
 	sect *section
+	// dot marks an rBase that is ".", which real MACRO pushes with the
+	// longword form STA_PL, where a label gets the shortest form.
+	dot  bool
 	key  string
 	sym  *symbol
 	l, r *rexpr
@@ -245,6 +248,9 @@ type relocation struct {
 	offset uint32
 	kind   fixupKind
 	expr   *rexpr
+	// mode says the field follows an operand's addressing mode byte,
+	// which real MACRO stores after the value's stack program.
+	mode bool
 }
 
 func (r relocation) String() string {
@@ -313,7 +319,7 @@ func (a *Assembler) completeFixup(f *fixup) error {
 		return a.applyFixup(f, t.v)
 	}
 
-	a.relocs = append(a.relocs, relocation{sect: f.sect, offset: f.location, kind: f.kind, expr: t})
+	a.relocs = append(a.relocs, relocation{sect: f.sect, offset: f.location, kind: f.kind, expr: t, mode: f.mode})
 
 	// The linker writes the field, so it holds zeros, not the placeholder.
 	for i := uint32(0); i < uint32(fixupSize(f.kind)); i++ {

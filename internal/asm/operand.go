@@ -237,6 +237,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				// forward by one byte — matching asm_operand.c's own late
 				// correction of vax.console.last_symbol->forward->location.
 				a.lastFixup.location++
+				a.lastFixup.mode = true
 			}
 		} else {
 			constant = litShort
@@ -426,9 +427,13 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		if constant != litImmediate {
 			loc := a.pc()
 
-			v, _, err := a.exprValue(c, loc, addrFixup(scale))
+			v, deferred, err := a.exprValue(c, loc, addrFixup(scale))
 			if err != nil {
 				return err
+			}
+
+			if deferred {
+				a.lastFixup.mode = true
 			}
 
 			litValue = v
@@ -561,7 +566,7 @@ func (a *Assembler) storeImmediateFloat(scale int, f float64) error {
 		}
 	}
 
-	a.advance(uint32(scale))
+	a.advanceData(uint32(scale))
 
 	return nil
 }
@@ -754,6 +759,7 @@ func (a *Assembler) relativeOperand(x exprVal, deferred byte, size int) error {
 		}
 
 		a.queueFixup(loc, dispFixup(size), x.tree())
+		a.lastFixup.mode = true
 
 		return nil
 	}
@@ -807,6 +813,7 @@ func (a *Assembler) registerDisplacement(x exprVal, deferred, reg byte, size int
 		}
 
 		a.queueFixup(loc, addrFixup(size), x.x)
+		a.lastFixup.mode = true
 
 		return nil
 	}
@@ -849,6 +856,7 @@ func (a *Assembler) absoluteOperand(x exprVal) error {
 	}
 
 	a.queueFixup(loc, fixAddrL, x.x)
+	a.lastFixup.mode = true
 
 	return nil
 }
