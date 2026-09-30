@@ -121,6 +121,9 @@ const (
 	cliAsmErrors
 	cliAsmWarning
 	cliObjWrite
+
+	// docs/PHASE-30.md: the LINK command.
+	cliLinking
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -261,6 +264,10 @@ const (
 	// CLI_OBJWRITE reports a MACRO whose object file couldn't be built or
 	// written.
 	CLI_OBJWRITE = CLIFacility<<FacilityPosition | cliObjWrite<<MessagePosition | StatusError
+
+	// CLI_LINKING reports a LINK that couldn't read an object module,
+	// link the image, or write it.
+	CLI_LINKING = CLIFacility<<FacilityPosition | cliLinking<<MessagePosition | StatusError
 )
 
 func init() {
@@ -362,5 +369,6 @@ func init() {
 	DefineMessage(CLI_ASMERRORS, CLIFacility, "ASMERRORS", "!D error(s) assembling !S; no object file written")
 	DefineMessage(CLI_ASMWARNING, CLIFacility, "ASMWARNING", "Assembling !S")
 	DefineMessage(CLI_OBJWRITE, CLIFacility, "OBJWRITE", "Writing object file !S")
+	DefineMessage(CLI_LINKING, CLIFacility, "LINKING", "Linking !S")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

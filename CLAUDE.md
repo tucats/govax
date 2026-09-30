@@ -89,10 +89,13 @@ expect adjustment as phases land):
   `go.work` file at the repo root (`use .` / `use ../ods2`, gitignored — see
   `docs/PHASE-22.md`'s "Dependency: `go.work`, not a `replace` directive") to
   build at all, since `ods2` isn't a `go.mod` dependency.
+- `internal/link` — the VAX linker (Phase 30): builds a VMS executable image from
+  `internal/obj` modules, laid out as real LINK lays images out (byte for byte on
+  the fixtures). The console's `LINK` command (`internal/console/link.go`) drives it.
 - `cmd/govax` — `main.go` (CLI entry point) plus `grammar.go` (the `tucats/gopackages`
   `app-cli/cli` option/subcommand grammar — `stats`/`path`/`instruction-limit`/
   `time-limit` options, repeatable `mount`/`mount-write DEVICE=container`,
-  `console`/`asm`/`run`/`macro` subcommands). A one-shot subcommand that fails
+  `console`/`asm`/`run`/`macro`/`link` subcommands). A one-shot subcommand that fails
   makes govax exit nonzero, and volumes still mounted are dismounted (flushed)
   when a session ends. Briefly moved to the repo
   root (2026-09-17); moved back into `cmd/govax` as the more standard layout

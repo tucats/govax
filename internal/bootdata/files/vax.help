@@ -34,6 +34,7 @@
 //                          SHOW TRANSLATION; rewrote SHOW LOGICAL for VMS
 //                          logical names (docs/PHASE-25.md)
 //              09/30/26    Added MACRO (docs/PHASE-27.md)
+//              09/30/26    Added LINK (docs/PHASE-30.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2175,6 +2176,7 @@ $HELP
     GO              Execute VAX instructions
     INCLUDE         Execute a text file of console commands
     INITIALIZE      Initialize the virtual VAX
+    LINK            Link object modules into an executable image
     LOAD            Load a saved memory image
     MACRO           Assemble a MACRO-32 source file into an object module
     MOUNT           Attach a disk-image container file to a device
@@ -3401,6 +3403,61 @@ $MACR
         $ govax --mount-write DUA0=work.dsk macro DUA0:[000000]HELLO.MAR
 
     See also the help for COPY, MOUNT, and SET DEFAULT.
+
+$LINK
+
+    The LINK command links object modules (.OBJ files, such as MACRO
+    writes) into a VAX/VMS executable image (.EXE) that RUN can run.
+
+    Syntax:
+
+        LINK <object>[,<object>...][/HOST] [/EXECUTABLE[=<image>] |
+             /NOEXECUTABLE] [/[NO]TRACEBACK]
+
+    Parameter:
+
+        <object>        An object file.  Without a file type it is .OBJ.
+                        Objects follow MACRO's rules for host files and
+                        files on mounted volumes (see HELP MACRO), and a
+                        later object's bare name is found beside the one
+                        before it.  /HOST applies to every object.
+
+    Qualifiers:
+
+        /EXECUTABLE[=<image>]
+                        Writes the image.  This is the default.  Without
+                        a file name, the image has the first object's
+                        name and location, with the type EXE in the same
+                        case as the object's type.  A name that is only a
+                        directory gets that name in it.
+
+        /NOEXECUTABLE   Links and reports any errors, but writes no image.
+
+        /TRACEBACK      Starts the image through SYS$IMGSTA, as VMS LINK
+                        does by default.  /NOTRACEBACK starts it at its
+                        own transfer address.
+
+    Program sections are laid out as VMS LINK lays them out: grouped into
+    image sections by their attributes, from address 200 (hexadecimal).
+    Writable pages nothing is stored in become demand-zero.
+
+    For now, every global symbol must be defined in the objects being
+    linked: references to shareable images (LIB$ routines) and system
+    services aren't resolved yet.  Traceback records in objects are
+    skipped, so an image has no debug symbol table.
+
+    From the host shell, "govax link <object>..." runs this command, with
+    --executable <file>, --no-executable, or --no-traceback.
+
+    Examples:
+
+        MACRO "prog.mar"
+        LINK "prog"
+        RUN "prog.exe"
+
+        LINK DUA0:[OBJ]MAIN,SUB /EXECUTABLE=DUA0:[EXE]PROG.EXE
+
+    See also the help for MACRO and RUN.
 
 $SET ,DEFA
 $SE  ,DEFA

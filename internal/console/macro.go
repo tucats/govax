@@ -2,11 +2,7 @@ package console
 
 import (
 	"errors"
-	"io/fs"
-	"os"
-	"path/filepath"
 	"strings"
-	"unicode"
 
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/obj"
@@ -70,7 +66,7 @@ func (c *Console) Macro(opts MacroOptions) error {
 		return fileFailure(err, opts.Source)
 	}
 
-	loc = withDefaultType(loc)
+	loc = withDefaultType(loc, defaultSourceType)
 
 	lines, found, err := s.ReadRecordFile(loc, rms.TextRecords)
 	if err != nil {
@@ -115,7 +111,7 @@ func (c *Console) Macro(opts MacroOptions) error {
 		return nil
 	}
 
-	objLoc, err := objectLocation(s, opts.Object, found)
+	objLoc, err := outputLocation(s, opts.Object, found, "OBJ")
 	if err != nil {
 		return fileFailure(err, opts.Object)
 	}
@@ -153,168 +149,6 @@ func joinLines(lines [][]byte) string {
 	}
 
 	return b.String()
-}
-
-// withDefaultType gives a source named without a file type the type
-// .MAR. On the host, a file that exists under the name as given is used
-// as it is, and the added extension is lowercase unless the name has an
-// uppercase letter.
-func withDefaultType(loc rms.FileLocation) rms.FileLocation {
-	if loc.Host {
-		if filepath.Ext(loc.Name) != "" {
-			return loc
-		}
-
-		if _, err := os.Stat(loc.Name); err == nil {
-			return loc
-		}
-
-		loc.Name += "." + matchCase("", defaultSourceType, filepath.Base(loc.Name))
-
-		return loc
-	}
-
-	name, version := splitVersion(loc.Name)
-	if !strings.Contains(vmsNameType(name), ".") {
-		loc.Name = name + "." + defaultSourceType + version
-	}
-
-	return loc
-}
-
-// objectLocation is where the object goes: the /OBJECT= name, or by
-// default the source's name with the type OBJ, next to the source. An
-// /OBJECT= that names only a directory (an existing host directory, or a
-// VMS specification with no name or type) gets the default name in it.
-func objectLocation(s *rms.Session, name string, source rms.FileLocation) (rms.FileLocation, error) {
-	if name == "" {
-		return defaultObjectLocation(s, source)
-	}
-
-	loc, err := s.LocateRelated(name, false, source)
-	if err != nil {
-		return loc, err
-	}
-
-	if loc.Host {
-		if info, err := os.Stat(loc.Name); err == nil && info.IsDir() {
-			def, err := defaultObjectLocation(s, source)
-			loc.Name = filepath.Join(loc.Name, filepath.Base(def.Name))
-
-			return loc, err
-		}
-
-		return loc, nil
-	}
-
-	if rest, _ := splitVersion(loc.Name); vmsNameType(rest) == "" {
-		def, err := defaultObjectLocation(s, source)
-		loc.Name = rest + vmsNameType(def.Name)
-
-		return loc, err
-	}
-
-	return loc, nil
-}
-
-// defaultObjectLocation is the source's name with the type OBJ, next to
-// the source.
-func defaultObjectLocation(s *rms.Session, source rms.FileLocation) (rms.FileLocation, error) {
-
-	if source.Host {
-		base := filepath.Base(source.Name)
-		ext := filepath.Ext(base)
-		stem := strings.TrimSuffix(base, ext)
-		ext = strings.TrimPrefix(ext, ".")
-
-		return rms.FileLocation{Host: true, Name: filepath.Join(filepath.Dir(source.Name), stem+"."+matchCase(ext, "OBJ", base))}, nil
-	}
-
-	// The version is dropped, so the object gets the next version of its
-	// own name.
-	name, _ := splitVersion(source.Name)
-	nameType := vmsNameType(name)
-
-	if i := strings.LastIndexByte(nameType, '.'); i >= 0 {
-		nameType = nameType[:i]
-	}
-
-	return s.LocateRelated(nameType+".OBJ", false, source)
-}
-
-// matchCase returns word in the case of model, letter by letter: each
-// letter of word takes the case of model's letter at the same position,
-// or of model's last letter past its end. With no model, word is
-// lowercase if whole (the file name) has no uppercase letters, and
-// uppercase otherwise.
-func matchCase(model, word, whole string) string {
-	if model == "" {
-		if strings.ToLower(whole) == whole {
-			return strings.ToLower(word)
-		}
-
-		return strings.ToUpper(word)
-	}
-
-	m := []rune(model)
-	out := []rune(word)
-
-	for i := range out {
-		ref := m[min(i, len(m)-1)]
-		if unicode.IsUpper(ref) {
-			out[i] = unicode.ToUpper(out[i])
-		} else {
-			out[i] = unicode.ToLower(out[i])
-		}
-	}
-
-	return string(out)
-}
-
-// splitVersion splits a VMS file specification's ";version" off,
-// returning the rest and the version with its ";".
-func splitVersion(spec string) (rest, version string) {
-	if i := strings.LastIndexByte(spec, ';'); i >= 0 {
-		return spec[:i], spec[i:]
-	}
-
-	return spec, ""
-}
-
-// vmsNameType is the name and type of a VMS file specification with no
-// version: what follows its device and directory.
-func vmsNameType(spec string) string {
-	if i := strings.LastIndexAny(spec, "]>:"); i >= 0 {
-		return spec[i+1:]
-	}
-
-	return spec
-}
-
-// fileFailure turns an error finding, reading, or creating a file into
-// the console's status for it, as TYPE and COPY report the same
-// failures.
-func fileFailure(err error, spec string) error {
-	if lnmErr := logicalNameFailure(err); lnmErr != nil {
-		return lnmErr
-	}
-
-	var notMounted *rms.NotMountedError
-	if errors.As(err, &notMounted) {
-		return vmserrors.Wrap(vmserrors.SS_DEVNOTMOUNT, err, notMounted.Device)
-	}
-
-	var notFound *rms.NotFoundError
-	if errors.As(err, &notFound) || errors.Is(err, fs.ErrNotExist) {
-		return vmserrors.Wrap(vmserrors.SS_NOSUCHFILE, err, spec)
-	}
-
-	var ambiguous *rms.AmbiguousError
-	if errors.As(err, &ambiguous) {
-		return vmserrors.Wrap(vmserrors.CLI_AMBIGUOUS, err, "file specification", spec)
-	}
-
-	return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, spec)
 }
 
 // objectFailure turns an error creating the object file into the

@@ -25,6 +25,12 @@ var (
 	// and --no-object options.
 	macroObject   string
 	macroNoObject bool
+
+	// linkExecutable, linkNoExecutable, and linkNoTraceback are the link
+	// subcommand's options.
+	linkExecutable   string
+	linkNoExecutable bool
+	linkNoTraceback  bool
 )
 
 // mountRequest is one --mount DEVICE=container option.
@@ -105,6 +111,15 @@ var grammar = []cli.Option{
 		Value:                macroGrammar,
 	},
 	{
+		LongName:             "link",
+		Description:          "Link object modules into a VMS executable image",
+		OptionType:           cli.Subcommand,
+		Action:               linkCmd,
+		ParametersExpected:   -99,
+		ParameterDescription: "object...",
+		Value:                linkGrammar,
+	},
+	{
 		LongName:             "run",
 		Description:          "Run a VAX/VMS executable",
 		OptionType:           cli.Subcommand,
@@ -133,6 +148,41 @@ var macroGrammar = []cli.Option{
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
 			macroNoObject = true
+
+			return nil
+		},
+	},
+}
+
+// linkGrammar is the link subcommand's own options.
+var linkGrammar = []cli.Option{
+	{
+		LongName:    "executable",
+		ShortName:   "e",
+		Description: "Image file name (default: the first object's, with type .exe)",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			linkExecutable, _ = c.String("executable")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "no-executable",
+		Description: "Link and report errors without writing an image",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			linkNoExecutable = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "no-traceback",
+		Description: "Don't start the image through SYS$IMGSTA",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			linkNoTraceback = true
 
 			return nil
 		},
@@ -227,6 +277,42 @@ func macroCommand(source, object string, noObject bool) string {
 // dclQuote quotes a file name for a DCL command line.
 func dclQuote(s string) string {
 	return `"` + s + `"`
+}
+
+// linkCmd runs the console's LINK command for the objects given.
+func linkCmd(c *cli.Context) error {
+	objects := c.FindGlobal().Parameters
+	if len(objects) == 0 {
+		return fmt.Errorf("link: expected one or more object files")
+	}
+
+	paths = loadConfigPaths(paths)
+
+	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{linkCommand(objects, linkExecutable, linkNoExecutable, linkNoTraceback)})
+}
+
+// linkCommand is the console LINK command for the link subcommand's
+// objects and options, each file name quoted as macroCommand quotes them.
+func linkCommand(objects []string, executable string, noExecutable, noTraceback bool) string {
+	quoted := make([]string, len(objects))
+	for i, o := range objects {
+		quoted[i] = dclQuote(o)
+	}
+
+	command := "LINK " + strings.Join(quoted, ",")
+
+	switch {
+	case noExecutable:
+		command += "/NOEXECUTABLE"
+	case executable != "":
+		command += "/EXECUTABLE=" + dclQuote(executable)
+	}
+
+	if noTraceback {
+		command += "/NOTRACEBACK"
+	}
+
+	return command
 }
 
 func runCmd(c *cli.Context) error {

@@ -764,4 +764,25 @@ grammar console
                     /type=$string               -
                     /default=""
 
+    !
+    ! govax-native extension (docs/PHASE-30.md, internal/console +
+    ! internal/link): LINK links object modules into a VMS executable
+    ! image. OBJECTS is a comma-separated list, and its /HOST applies to
+    ! each, as MACRO's does to its source. EXECUTABLE is VMS LINK's own
+    ! /[NO]EXECUTABLE[=file] (empty default: the first object's name with
+    ! type EXE), and TRACEBACK is on unless /NOTRACEBACK.
+    !
+    verb link/id=1350
+
+        parameter   objects/id=1351             -
+                    /type=$string/list          -
+                    /prompt="Object"
+        qualifier   host/id=1352                -
+                    /parameter=objects
+
+        qualifier   executable/id=1353          -
+                    /type=$string               -
+                    /default=""
+        qualifier   traceback/id=1354
+
 end

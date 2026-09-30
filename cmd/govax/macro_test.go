@@ -33,6 +33,44 @@ func TestMacroCommand(t *testing.T) {
 	}
 }
 
+func TestLinkCommand(t *testing.T) {
+	cases := []struct {
+		objects     []string
+		executable  string
+		noExe, noTB bool
+		want        string
+	}{
+		{[]string{"a.obj"}, "", false, false, `LINK "a.obj"`},
+		{[]string{"a.obj", "/x/b"}, "", false, false, `LINK "a.obj","/x/b"`},
+		{[]string{"a"}, "out.exe", false, true, `LINK "a"/EXECUTABLE="out.exe"/NOTRACEBACK`},
+		{[]string{"a"}, "", true, false, `LINK "a"/NOEXECUTABLE`},
+	}
+
+	for _, c := range cases {
+		if got := linkCommand(c.objects, c.executable, c.noExe, c.noTB); got != c.want {
+			t.Errorf("linkCommand(%v, %q, %v, %v) = %q, want %q", c.objects, c.executable, c.noExe, c.noTB, got, c.want)
+		}
+	}
+}
+
+// TestRun_macroLinkRunOneShot assembles, links, and runs a program with
+// three one-shot commands, as govax macro, link, and run would.
+func TestRun_macroLinkRunOneShot(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "prog.mar")
+
+	if err := os.WriteFile(src, []byte("\t.PSECT\tC,NOWRT,EXE\n\t.ENTRY\tGO,^M<>\n\tMOVL\t#1,R0\n\tRET\n\t.END\tGO\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, command := range []string{macroCommand(src, "", false), linkCommand([]string{filepath.Join(dir, "prog")}, "", false, false), "RUN " + dclQuote(filepath.Join(dir, "prog.exe"))} {
+		var buf bytes.Buffer
+		if err := run(nil, 0, 0, &buf, emptyStdin(), []string{command}); err != nil {
+			t.Fatalf("%s: %v\n%s", command, err, buf.String())
+		}
+	}
+}
+
 // TestRun_macroOneShot runs the macro subcommand's console command as a
 // one-shot command: a host source, keeping the case of its path.
 func TestRun_macroOneShot(t *testing.T) {

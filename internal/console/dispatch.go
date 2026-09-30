@@ -549,6 +549,18 @@ func (d *Dispatcher) bindGrammar() {
 	// an object module (Console.Macro, internal/console/macro.go). The
 	// command as typed goes into the object's SRC header, as real MACRO
 	// records its command line.
+	// docs/PHASE-30.md: LINK links object modules into an executable
+	// image (Console.Link, internal/console/link.go).
+	g.Bind("LINK", func(id int64, r *dcl.Result) error {
+		return d.Console.Link(LinkOptions{
+			Objects:      r.List("OBJECTS"),
+			Host:         r.ParamPresent("OBJECTS", "HOST"),
+			Executable:   r.String("EXECUTABLE"),
+			NoExecutable: r.Present("EXECUTABLE") && r.Negated("EXECUTABLE"),
+			NoTraceback:  r.Present("TRACEBACK") && r.Negated("TRACEBACK"),
+		})
+	})
+
 	g.Bind("MACRO", func(id int64, r *dcl.Result) error {
 		return d.Console.Macro(MacroOptions{
 			Source:      r.String("SOURCE"),

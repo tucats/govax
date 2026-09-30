@@ -285,3 +285,55 @@ func TestRecordFile_hostWriteIsAllOrNothing(t *testing.T) {
 		t.Error("CreateRecordFile into a missing directory succeeded")
 	}
 }
+
+// TestRecordFile_imageBlocks checks the image kind: fixed 512-byte
+// records, with real LINK's attributes on a volume and the raw blocks on
+// the host.
+func TestRecordFile_imageBlocks(t *testing.T) {
+	s, vol := newCopyTestSession(t)
+	blocks := [][]byte{bytes.Repeat([]byte{1}, 512), bytes.Repeat([]byte{2}, 512)}
+
+	if _, err := s.CreateRecordFile(FileLocation{Name: "T.EXE"}, ImageBlocks, blocks); err != nil {
+		t.Fatal(err)
+	}
+
+	attr := fileAttributes(t, vol, "T.EXE", 1)
+	if attr.Format != ondisk.RecordFormatFixed || attr.RecordSize != 512 || attr.MaxRecordSize != 512 {
+		t.Errorf("attributes = %+v, want FIX, 512-byte records", attr)
+	}
+
+	got, _, err := s.ReadRecordFile(FileLocation{Name: "T.EXE"}, ImageBlocks)
+	if err != nil || !reflect.DeepEqual(got, blocks) {
+		t.Errorf("volume image read back = %d blocks, %v", len(got), err)
+	}
+
+	path := filepath.Join(t.TempDir(), "t.exe")
+	if _, err := s.CreateRecordFile(FileLocation{Host: true, Name: path}, ImageBlocks, blocks); err != nil {
+		t.Fatal(err)
+	}
+
+	if data, _ := os.ReadFile(path); !bytes.Equal(data, bytes.Join(blocks, nil)) {
+		t.Error("host image isn't the blocks one after another")
+	}
+
+	// The same mode os.Create gives a new file.
+	ref, err := os.Create(filepath.Join(filepath.Dir(path), "ref"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ref.Close()
+
+	refInfo, _ := os.Stat(ref.Name())
+	if info, _ := os.Stat(path); info.Mode() != refInfo.Mode() {
+		t.Errorf("host file mode = %v, want %v, as os.Create makes files", info.Mode(), refInfo.Mode())
+	}
+
+	if got, _, err := s.ReadRecordFile(FileLocation{Host: true, Name: path}, ImageBlocks); err != nil || len(got) != 2 {
+		t.Errorf("host image read back = %d blocks, %v", len(got), err)
+	}
+
+	if _, err := s.CreateRecordFile(FileLocation{Host: true, Name: path}, ImageBlocks, [][]byte{{1}}); err == nil {
+		t.Error("a short image record was written")
+	}
+}
