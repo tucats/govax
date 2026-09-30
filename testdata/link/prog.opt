@@ -1,0 +1,5 @@
+! Link fixture: an options file
+SHARE1, SHARE2		! the program
+STACK=30
+IDENTIFICATION="V9"
+SYMBOL=LIMIT,41

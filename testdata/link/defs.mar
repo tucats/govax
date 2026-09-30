@@ -1,0 +1,24 @@
+	.TITLE	DEFS	Link fixture: the Phase 27 fixtures' externals
+	.IDENT	/V1.0/
+
+; Defines the symbols the Phase 27 fixtures EXTERN, EXPRS, MODES,
+; GENERAL, and GLOBALS refer to but don't define, so each links with
+; this module. MAYBE, GLOBALS's weak reference, stays undefined.
+
+EXT1	== ^X100			; absolute
+EXT2	== ^X40
+EXTOFF	== 8
+EXTVAL	== ^X1234
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+EXTDATA::
+	.LONG	1, 2, 3, 4
+EXTV::	.LONG	^X55
+OTHER::	.LONG	^X66
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	SUB_ONE, ^M<>
+	MOVL	#1, R0
+	RET
+
+	.END

@@ -1,0 +1,17 @@
+	.TITLE	ADDR	Link fixture: .ADDRESS of a shareable image routine
+	.IDENT	/V1.0/
+
+; PUTOUT holds LIB$PUT_OUTPUT's address, which the image activator must
+; fix up (a .ADDRESS fixup, not a G^ one). The program calls through it.
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+PUTOUT:	.ADDRESS LIB$PUT_OUTPUT
+MSG:	.ASCID	/Called through .ADDRESS/
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	ADDR, ^M<>
+	PUSHAQ	MSG
+	CALLS	#1, @PUTOUT
+	RET
+
+	.END	ADDR

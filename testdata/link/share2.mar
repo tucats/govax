@@ -1,0 +1,20 @@
+	.TITLE	SHARE2	Link fixture: psects shared across modules
+	.IDENT	/V2.0/
+
+; With SHARE1. SHARE2's contribution to LIST is quadword aligned, and its
+; COMMON is 12 bytes, of which it stores only the last longword.
+
+	.PSECT	LIST, WRT, NOEXE, CON, QUAD
+SECOND:: .LONG	^X10
+
+	.PSECT	COMMON, WRT, NOEXE, OVR, LONG
+	.BLKL	2
+	.LONG	^X20
+
+	.PSECT	CODE, NOWRT, EXE, CON, QUAD
+	.ENTRY	TWO, ^M<>
+	MOVL	SECOND, R0
+	ADDL2	G^COMMON+8, R0
+	RET
+
+	.END

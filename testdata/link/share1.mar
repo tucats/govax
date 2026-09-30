@@ -1,0 +1,25 @@
+	.TITLE	SHARE1	Link fixture: psects shared across modules
+	.IDENT	/V1.0/
+
+; With SHARE2: CON psects LIST (aligned differently in each module) and
+; CODE, and an OVR psect COMMON, bigger in SHARE2, that both store into.
+; START returns FIRST, plus COMMON's first longword, plus what SHARE2's
+; TWO returns: 1 + 3 + (^X10 + ^X20) = ^X34, the image's exit status.
+
+	.PSECT	LIST, WRT, NOEXE, CON, BYTE
+FIRST::	.BYTE	1
+	.LONG	2			; unaligned: LIST is byte aligned here
+
+	.PSECT	COMMON, WRT, NOEXE, OVR, LONG
+COMMON::
+	.LONG	3
+
+	.PSECT	CODE, NOWRT, EXE, CON, LONG
+	.ENTRY	START, ^M<R2>
+	CALLS	#0, TWO
+	ADDL2	COMMON, R0
+	MOVZBL	FIRST, R2
+	ADDL2	R2, R0
+	RET
+
+	.END	START
