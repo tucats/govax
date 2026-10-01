@@ -49,6 +49,19 @@ type Builder struct {
 // language's own 2048-byte limit.
 const DefaultRecordLimit = 512
 
+// VAX MACRO V5.4-3 fills a record only so far: it starts a new GSD record
+// once one holds gsdFill bytes, and a new TIR record once one holds
+// tirFill, cutting a run of immediate data to end a TIR record there (but
+// storing at least one byte of it). A subrecord or command that doesn't
+// fit in the record limit starts a new record too. Measured from real
+// MACRO's objects (docs/PHASE-32.md, subtask 4): of the Phase 27-32
+// fixtures' TIR records, most that end in a cut immediate run are exactly
+// 461 bytes, and GSD records of 460 bytes are always followed by another.
+const (
+	gsdFill = 460
+	tirFill = 461
+)
+
 // chunk is a run of GSD subrecords or TIR commands that Build packs into
 // records of one type, starting a new record at the chunk's start.
 type chunk struct {
@@ -218,8 +231,11 @@ func (b *Builder) Build() (*Module, error) {
 	return m, nil
 }
 
-// packChunk packs one chunk's subrecords or commands into as few records
-// as fit in limit bytes.
+// packChunk packs one chunk's subrecords or commands into records as
+// VAX MACRO does: each record is filled to gsdFill or tirFill bytes (see
+// their comment), and never past limit. Consecutive STORE IMMEDIATE
+// commands are one run of data, cut into pieces of at most MaxImmediate
+// bytes where a record or a piece ends.
 func packChunk(c chunk, limit int) ([]Record, error) {
 	var (
 		out  []Record
@@ -227,6 +243,11 @@ func packChunk(c chunk, limit int) ([]Record, error) {
 		tir  *TIR
 		size int
 	)
+
+	fill := tirFill
+	if c.gsd {
+		fill = gsdFill
+	}
 
 	start := func() {
 		if c.gsd {
@@ -245,7 +266,7 @@ func packChunk(c chunk, limit int) ([]Record, error) {
 			return fmt.Errorf("%s is too long for a %d-byte record", what, limit)
 		}
 
-		if len(out) == 0 || size+n > limit {
+		if len(out) == 0 || size >= fill || size+n > limit {
 			start()
 		}
 
@@ -267,7 +288,37 @@ func packChunk(c chunk, limit int) ([]Record, error) {
 		gsd.Subrecords = append(gsd.Subrecords, s)
 	}
 
-	for _, cmd := range c.commands {
+	for i := 0; i < len(c.commands); i++ {
+		cmd := c.commands[i]
+
+		if cmd.Op == OpStoreImmediate {
+			// The whole run of immediate data, cut to fill records.
+			data := append([]byte(nil), cmd.Data...)
+			for i+1 < len(c.commands) && c.commands[i+1].Op == OpStoreImmediate {
+				i++
+				data = append(data, c.commands[i].Data...)
+			}
+
+			for len(data) > 0 {
+				if len(out) == 0 || size >= fill {
+					start()
+				}
+
+				n := min(len(data), MaxImmediate, max(1, fill-size-1))
+				if size+1+n > limit {
+					start()
+
+					n = min(len(data), MaxImmediate, fill-size-1)
+				}
+
+				tir.Commands = append(tir.Commands, Command{Op: OpStoreImmediate, Data: data[:n]})
+				size += 1 + n
+				data = data[n:]
+			}
+
+			continue
+		}
+
 		enc, err := cmd.encode(nil)
 		if err != nil {
 			return nil, err

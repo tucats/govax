@@ -345,3 +345,38 @@ clean, and a commit. `build -i` follows each one that changes behavior.
     STARLET's internals before redacting them (subtask 0). The macros are
     written from `docs/RMS-MACROS.md`, the manual, and the oracle's
     objects, which they're tested against.
+- 2026-09-30: Subtask 4 done.
+  - **The macros.** `internal/bootdata/mkdefs` generates
+    `files/starletdef.mar`, 28 `$xxxDEF` macros, from
+    `testdata/mar/rms/defined.txt`. Each defines exactly the names, and
+    the values, real MACRO showed its namesake defining.
+    - It does `.SAVE LOCAL_BLOCK` and `.PSECT $ABS$,ABS`, defines each
+      name with `=`, or with `==` when the argument is `GLOBAL`, then sets
+      a guard symbol of govax's own and does `.RESTORE`. A second call
+      defines nothing.
+    - `go generate ./internal/bootdata` runs `mkdefs`, then `mkstarlet`,
+      which builds the library from both sources (`StarletSources`).
+  - **More names.** `decode.go` now also takes every global symbol the
+    global-form probes define. That added `SYSTEM$_FACILITY` to `$SSDEF`;
+    the SS$_ candidates had missed it.
+  - **Object records** (`internal/obj/builder.go`, govax's own Phase 27
+    code). The objects matched real MACRO's except for where long runs of
+    data were cut into records. govax filled records to 512 bytes in
+    128-byte pieces. Real MACRO starts a new TIR record once one holds 461
+    bytes, cutting a run of immediate data to end there (at least one
+    byte of it), and a new GSD record once one holds 460.
+    - Measured on every TIR record of the Phase 27–32 fixtures: most
+      records closed by a cut run are exactly 461 bytes, and a 460-byte
+      record that can take one more data byte does. GSD records of 460
+      bytes are always followed by another.
+    - Repacking the real objects' records under this rule reproduces 405
+      of their 440 runs of TIR records. The rest are broken by other
+      events, such as fix-ups, which govax models separately.
+    - `packChunk` now follows the rule. Every existing fixture comparison
+      still passes.
+  - **Tests.** `TestOracleObjects` (`internal/asm/oracle_test.go`)
+    assembles each oracle probe with govax's own STARLET.MLB and compares
+    the object with real MACRO's, record for record, apart from traceback
+    records. All 31 definition probes match, including `def_twice` and
+    both global forms. `def_state` is left out: VAX 7.3 has no
+    `$STATEDEF`.

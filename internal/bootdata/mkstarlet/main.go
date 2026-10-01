@@ -1,4 +1,4 @@
-// Command mkstarlet builds govax's STARLET.MLB from its source, both in
+// Command mkstarlet builds govax's STARLET.MLB from its sources, all in
 // internal/bootdata/files. It's run by "go generate ./internal/bootdata",
 // from that directory.
 package main
@@ -12,12 +12,12 @@ import (
 )
 
 func main() {
-	src, err := os.ReadFile(filepath.Join("files", bootdata.StarletSource))
+	src, err := bootdata.StarletSources(os.DirFS("files"))
 	if err != nil {
 		fail(err)
 	}
 
-	data, err := bootdata.BuildStarlet(string(src))
+	data, err := bootdata.BuildStarlet(src)
 	if err != nil {
 		fail(err)
 	}

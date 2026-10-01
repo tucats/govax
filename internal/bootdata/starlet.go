@@ -2,6 +2,7 @@ package bootdata
 
 import (
 	"fmt"
+	"io/fs"
 	"strings"
 	"time"
 
@@ -9,16 +10,37 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
+//go:generate go run ./mkdefs
 //go:generate go run ./mkstarlet
 
 // govax's own STARLET.MLB, MACRO's system macro library when no real one
-// is found, and the source it's built from (docs/PHASE-28.md). The library
-// is generated from the source and committed beside it; a test rebuilds it
-// and checks that the two match.
+// is found, and the sources it's built from (docs/PHASE-28.md): the
+// hand-written macros, and the $xxxDEF definition macros, which mkdefs
+// generates (docs/PHASE-32.md). The library is generated from the sources
+// and committed beside them; a test rebuilds it and checks that the two
+// match.
 const (
-	StarletLibrary = "starlet.mlb"
-	StarletSource  = "starlet.mar"
+	StarletLibrary   = "starlet.mlb"
+	StarletSource    = "starlet.mar"
+	StarletDefSource = "starletdef.mar"
 )
+
+// StarletSources returns the text of the library's sources, in fsys,
+// joined in the order they're built.
+func StarletSources(fsys fs.FS) (string, error) {
+	var b strings.Builder
+
+	for _, name := range []string{StarletSource, StarletDefSource} {
+		data, err := fs.ReadFile(fsys, name)
+		if err != nil {
+			return "", err
+		}
+
+		b.Write(data)
+	}
+
+	return b.String(), nil
+}
 
 // starletTime is the library's creation, revision, and insertion time,
 // fixed so that the generated library doesn't change unless its source

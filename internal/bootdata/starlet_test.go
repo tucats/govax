@@ -13,7 +13,7 @@ import (
 // builds, so the two can't drift apart. If this fails, run
 // "go generate ./internal/bootdata".
 func TestStarletMatchesSource(t *testing.T) {
-	src, err := fs.ReadFile(FS, StarletSource)
+	src, err := StarletSources(FS)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,7 +23,7 @@ func TestStarletMatchesSource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := BuildStarlet(string(src))
+	got, err := BuildStarlet(src)
 	if err != nil {
 		t.Fatal(err)
 	}

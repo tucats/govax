@@ -118,6 +118,36 @@ func longwords(m *obj.Module) ([]stored, error) {
 	return out, nil
 }
 
+// globalProbes are the objects of the error probes that call a $xxxDEF
+// with GLOBAL: each defines every name the macro does as a global symbol.
+var globalProbes = map[string]string{
+	"FAB": "ERR_DEF_GLOBAL.OBJ;1",
+	"SS":  "ERR_SS_GLOBAL.OBJ;1",
+}
+
+type global struct {
+	name  string
+	value uint32
+}
+
+// globals returns the global symbols an object defines.
+func globals(path string) ([]global, error) {
+	m, err := load(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var out []global
+
+	for _, s := range m.Symbols() {
+		if s.Defined() {
+			out = append(out, global{name: s.Name, value: s.Value})
+		}
+	}
+
+	return out, nil
+}
+
 // names returns the names a probe's .LONG lines store, in order.
 func names(path string) ([]string, error) {
 	f, err := os.Open(path)
@@ -193,13 +223,34 @@ func main() {
 			log.Fatalf("%s: %d longwords for %d names", path, len(ls), len(ns))
 		}
 
-		fmt.Fprintf(&b, "\n# $%sDEF\n", strings.ToUpper(strings.TrimPrefix(probe, "def_")))
+		family := strings.ToUpper(strings.TrimPrefix(probe, "def_"))
+
+		fmt.Fprintf(&b, "\n# $%sDEF\n", family)
+
+		probed := map[string]bool{}
 
 		for i, n := range ns {
+			probed[n] = true
+
 			if ls[i].external != "" {
 				fmt.Fprintf(&b, "%s undefined\n", n)
 			} else {
 				fmt.Fprintf(&b, "%s = %#x\n", n, ls[i].value)
+			}
+		}
+
+		// A global-form probe's object defines every name its macro does,
+		// as a global symbol: any the candidates missed are added.
+		if g, ok := globalProbes[family]; ok {
+			extra, err := globals(filepath.Join(dir, "vax", g))
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			for _, s := range extra {
+				if !probed[s.name] {
+					fmt.Fprintf(&b, "%s = %#x\n", s.name, s.value)
+				}
 			}
 		}
 	}
