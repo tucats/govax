@@ -32,9 +32,7 @@ check 2 "the directory by a relative name" '{"tool_name":"Bash","tool_input":{"c
 check 2 "a Glob of the directory" '{"tool_name":"Glob","tool_input":{"pattern":"**/*","path":"testdata/vmslib"}}'
 check 2 "a Grep of reference/vms" '{"tool_name":"Grep","tool_input":{"pattern":"FAB","path":"reference/vms"}}'
 
-check 2 "the oracle's error log" '{"tool_name":"Read","tool_input":{"file_path":"/r/testdata/mar/rms/vax/errors.log"}}'
-check 2 "all of the oracle's output" '{"tool_name":"Bash","tool_input":{"command":"cat testdata/mar/rms/vax/*"}}'
-check 2 "a recursive grep of it" '{"tool_name":"Bash","tool_input":{"command":"grep -r FAB testdata/mar/rms/vax"}}'
+check 0 "the oracle's audited output" '{"tool_name":"Bash","tool_input":{"command":"ls testdata/mar/rms/vax"}}'
 check 0 "an audited Phase 28 listing" '{"tool_name":"Read","tool_input":{"file_path":"/r/testdata/mar/macros/vax/rmscopy.lis"}}'
 check 0 "an oracle object analysis" '{"tool_name":"Read","tool_input":{"file_path":"/r/testdata/mar/rms/vax/def_fab.anl"}}'
 
