@@ -1,0 +1,60 @@
+
+$ ! RMS2.COM - the Phase 32 oracle's the second round's probes.
+$ ! Written by testdata/mar/rms/gen.go. Run it with the exchange volume as
+$ ! the default directory:
+$ !
+$ !     @RMS2/OUTPUT=RMS2.LOG
+$ !
+$ ! Each program is assembled with /NOLIST, so no listing of a macro
+$ ! expansion is made, and its object is analyzed.
+$ !
+$ SET NOON
+$ SET VERIFY
+$ MACRO/NOLIST R2_ORDER_FAB
+$ ANALYZE/OBJECT/OUTPUT=R2_ORDER_FAB.ANL R2_ORDER_FAB.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R2_ORDER_FAB.OBJ;1                         0 errors
+$ MACRO/NOLIST R2_ORDER_NAM
+$ ANALYZE/OBJECT/OUTPUT=R2_ORDER_NAM.ANL R2_ORDER_NAM.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R2_ORDER_NAM.OBJ;1                         0 errors
+$ MACRO/NOLIST R2_ORDER_RAB
+$ ANALYZE/OBJECT/OUTPUT=R2_ORDER_RAB.ANL R2_ORDER_RAB.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R2_ORDER_RAB.OBJ;1                         0 errors
+$ MACRO/NOLIST R2_ORDER_XABALL
+$ ANALYZE/OBJECT/OUTPUT=R2_ORDER_XABALL.ANL R2_ORDER_XABALL.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R2_ORDER_XABALL.OBJ;1                      0 errors
+$ MACRO/NOLIST R2_ORDER_XABDAT
+$ ANALYZE/OBJECT/OUTPUT=R2_ORDER_XABDAT.ANL R2_ORDER_XABDAT.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R2_ORDER_XABDAT.OBJ;1                      0 errors
+$ MACRO/NOLIST R2_ORDER_XABKEY
+$ ANALYZE/OBJECT/OUTPUT=R2_ORDER_XABKEY.ANL R2_ORDER_XABKEY.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R2_ORDER_XABKEY.OBJ;1                      0 errors
+$ MACRO/NOLIST R2_ORDER_XABPRO
+$ ANALYZE/OBJECT/OUTPUT=R2_ORDER_XABPRO.ANL R2_ORDER_XABPRO.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R2_ORDER_XABPRO.OBJ;1                      0 errors
+$ MACRO/NOLIST R2_ORDER_XABRDT
+$ ANALYZE/OBJECT/OUTPUT=R2_ORDER_XABRDT.ANL R2_ORDER_XABRDT.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R2_ORDER_XABRDT.OBJ;1                      0 errors
+$ MACRO/NOLIST R2_ORDER_XABTRM
+$ ANALYZE/OBJECT/OUTPUT=R2_ORDER_XABTRM.ANL R2_ORDER_XABTRM.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R2_ORDER_XABTRM.OBJ;1                      0 errors
+$ DIRECTORY/SIZE=ALL *.OBJ
+
+Directory DUA1:[000000]
+
+R2_ORDER_FAB.OBJ;1         2/3      
+R2_ORDER_NAM.OBJ;1         2/3      
+R2_ORDER_RAB.OBJ;1         2/3      
+R2_ORDER_XABALL.OBJ;1
+                           2/3      
+R2_ORDER_XABDAT.OBJ;1
+                           2/3      
+R2_ORDER_XABKEY.OBJ;1
+                           2/3      
+R2_ORDER_XABPRO.OBJ;1
+                           2/3      
+R2_ORDER_XABRDT.OBJ;1
+                           2/3      
+R2_ORDER_XABTRM.OBJ;1
+                           2/3      
+
+Total of 9 files, 18/27 blocks.

@@ -321,6 +321,15 @@ The objects and analyses are in `testdata/mar/rms/vax/`.
 
   The remaining answers (O8, O10–O12, O14) are in the probes' objects,
   and each macro is checked against them as it's written (subtasks 5–7).
+- **Second round** (2026-10-01, `r2_*`), for what the first left open:
+  - Each store macro stores its fields in a fixed order of its own,
+    whatever order the call gives them. The order is in the macros, and
+    the `r2_order_*` probes check it.
+  - `$NAM_STORE DVI=` is an error in every form tried.
+  - `$XABPRO_STORE PRO=` is a protection list when its text is only R, W,
+    E, D, and commas, and an address otherwise. UIC= is a list only with
+    a comma.
+  - `$XABPRO UIC=` must be two elements: otherwise "INVALID UIC_FIELD;".
 
 ## Oracle questions
 

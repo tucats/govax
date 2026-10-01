@@ -507,3 +507,27 @@ clean, and a commit. `build -i` follows each one that changes behavior.
     Round one's files are unchanged.
   - **Checked.** The order probes all assemble with govax's own macros.
     The volume is built and waiting for the author's VAX run.
+- 2026-10-01: The second round's results. The author ran it, audited the
+  logs (clean), and added the results to `testdata/mar/rms/vax/`.
+  - **Order.** Each store macro has a fixed internal order: both calls in
+    every order probe assemble identically. It isn't govax's guessed
+    grouping, so each inner `$$xxx_STO` macro's statements were
+    reordered to match.
+  - **DVI=** is an error in every form, as govax had it.
+  - **PRO=/UIC=.** PRO= is a list exactly when its text is only R, W, E,
+    D, and commas; govax decided by a comma before, and now counts the
+    other characters with `.IRPC`. UIC= stays decided by a comma. The
+    `$XABPRO` initialization macro now reports "INVALID UIC_FIELD;" for
+    a UIC= that isn't two elements.
+  - **A date bug.** These objects were made on 1 October, and real MACRO
+    writes a day before the 10th with a blank (" 1-OCT-2026"), as VMS
+    always does. `obj.FormatTime` zero-padded it ("01-OCT-2026"), so any
+    object govax wrote on days 1–9 differed from real MACRO's. It's fixed
+    (`TestFormatTime`), along with the test helper's date parser. The
+    librarian, LINK's map, and the RTL already used `%2d`.
+  - **Tests.** `TestOracleObjects` adds the nine order probes and the
+    four PRO/UIC probes, all byte-identical (81 probes).
+    `TestRMSKeywordErrors` adds the DVI= and UIC= errors.
+  - DEVIATIONS.md's store-macro entry is resolved. All of Phase 32's open
+    items are closed except `$RENAME` with no arguments, which was kept
+    deliberately.

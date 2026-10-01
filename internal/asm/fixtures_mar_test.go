@@ -460,7 +460,7 @@ func requireSameObject(t *testing.T, a *Assembler, realModule *obj.Module) {
 	for _, rec := range realModule.Records {
 		switch h := rec.(type) {
 		case *obj.MainHeader:
-			if opts.Created, err = time.Parse("02-Jan-2006 15:04", h.Created); err != nil {
+			if opts.Created, err = time.Parse("_2-Jan-2006 15:04", h.Created); err != nil {
 				t.Fatal(err)
 			}
 

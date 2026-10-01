@@ -335,9 +335,11 @@ func packChunk(c chunk, limit int) ([]Record, error) {
 }
 
 // FormatTime formats a time in the object language's fixed 17-character
-// form, "dd-mmm-yyyy hh:mm", with the month in capitals as VMS writes it.
+// form, "dd-mmm-yyyy hh:mm", with the month in capitals as VMS writes it,
+// and a day before the 10th padded with a blank (" 1-OCT-2026"), as real
+// MACRO's objects show (testdata/mar/rms/vax/R2_*.OBJ).
 func FormatTime(t time.Time) string {
-	return strings.ToUpper(t.Format("02-Jan-2006 15:04"))
+	return strings.ToUpper(t.Format("_2-Jan-2006 15:04"))
 }
 
 // Name returns the module's name from its main header, or "" if it has

@@ -37,6 +37,9 @@ var oracleProbes = []string{
 	"init_xabsum_all", "init_xabtrm", "init_xabtrm_all",
 	"store_xabdat", "store_xabfhc", "store_xabkey", "store_xabpro", "store_xabrdt",
 	"store_xabsum", "store_xabtrm", "services",
+	"r2_order_fab", "r2_order_nam", "r2_order_rab", "r2_order_xaball",
+	"r2_order_xabdat", "r2_order_xabkey", "r2_order_xabpro", "r2_order_xabrdt",
+	"r2_order_xabtrm", "r2_pro_one", "r2_pro_all", "r2_pro_sym", "r2_uic_one",
 }
 
 // TestOracleObjects assembles each oracle probe with govax's own
@@ -125,6 +128,9 @@ func TestRMSKeywordErrors(t *testing.T) {
 		"B:\t$FAB\tSHR=NQL":            "UNDEFINED BIT VALUE CODE: NQL;",
 		"B:\t$XABKEY\tFLG=CHG":         "PRIMARY KEY MAY NOT CHANGE;",
 		"\t$RAB_STORE\tRAB=B, RFA=R12": "ILLEGAL USE OF REGISTER : R12 ;",
+		"B:\t$XABPRO\tUIC=<377>":       "INVALID UIC_FIELD;",
+		"\t$NAM_STORE\tNAM=B, DVI=R2":  "** R2 ** -- ILLEGAL ADDRESSING MODE FOR _DVI;",
+		"\t$NAM_STORE\tNAM=B, DVI=#B":  "** #B ** -- ILLEGAL ADDRESSING MODE FOR _DVI;",
 	} {
 		a := macroAssembler()
 		a.SetMacroLibraries(govaxStarlet(t))

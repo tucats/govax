@@ -411,7 +411,7 @@ func TestBuilder_defaults(t *testing.T) {
 	}
 
 	h := m.Records[0].(*MainHeader)
-	if h.Name != ".MAIN." || h.Created != "02-JAN-2026 03:04" || h.MaxRecordSize != DefaultRecordLimit || h.Patched != "                 " {
+	if h.Name != ".MAIN." || h.Created != " 2-JAN-2026 03:04" || h.MaxRecordSize != DefaultRecordLimit || h.Patched != "                 " {
 		t.Errorf("main header %+v", h)
 	}
 

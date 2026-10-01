@@ -2259,23 +2259,31 @@ widened."
 - **Where**: `internal/bootdata/files/starlet.mar`'s `$xxx_STORE` macros,
   written from the RMS Reference Manual and the Phase 32 oracle's objects
   (docs/RMS-MACROS.md).
-- **What**: every single-keyword store, and every register and error form
-  the oracle tried, matches real MACRO. Three choices rest on less:
-  - *The order of stores in a call with several keywords.* The oracle had
-    one such call (FAC, FNA, ALQ), which stored the keyword field, then
-    the address, then the value. govax stores all keyword fields, then
-    addresses, then values, each group in a fixed order. A call whose
-    keywords fall in one group may order them differently from real MACRO.
-    The block it leaves is the same; only the instruction order differs.
-  - *`$NAM_STORE DVI=` given a register.* A symbolic address is an error
-    in real MACRO ("ILLEGAL ADDRESSING MODE FOR _DVI"), and govax reports
-    that error for every DVI= form. The manual says a register mustn't be
-    used, and the oracle didn't try one.
-  - *`$XABPRO_STORE PRO=` and `UIC=` with one element.* A list is told
-    from an address by its comma, so `PRO=<R>` (a single class, without a
-    comma) is taken as an address. The oracle tried only full lists and
-    addresses.
-- **Status**: deferred. A future oracle run can settle each one.
+- **What**: the first oracle round left three choices resting on little
+  evidence:
+  - *the order of stores in a call with several keywords*, from one
+    example;
+  - *`$NAM_STORE DVI=` given a register*, never tried;
+  - *`$XABPRO_STORE PRO=` and `UIC=` with one element*, never tried.
+
+  govax had guessed: keyword fields, then addresses, then values; DVI=
+  always an error; and a list told from an address by its comma.
+- **Status**: fixed in Go, after the second oracle round (2026-10-01,
+  testdata/mar/rms/r2_*):
+  - *Order.* Each store macro has a fixed order of its own, whatever order
+    the call gives (both orders of every keyword assemble the same). The
+    orders weren't the guessed grouping: `$FAB_STORE` starts FAC, SHR, FNA,
+    FNS, DNA, DNS, for example. govax now uses real MACRO's order for every
+    macro, and the nine probes are byte-identical.
+  - *DVI=*. Every form is an error in real MACRO: a register and an
+    immediate give govax's message, and `(R2)` an operand syntax error.
+    Kept as it was.
+  - *PRO=/UIC=*. PRO= is a protection list when it holds only R, W, E, D,
+    and commas. So `PRO=<R>` is ^XFFFE, and `PRO=RW` is RW protection
+    rather than the word at RW; any other text is an address. UIC= is a
+    list only with a comma (`UIC=<377>` is the address 377). In the
+    `$XABPRO` initialization macro, a UIC= that isn't two elements is
+    "INVALID UIC_FIELD". govax now follows all of these.
 
 ### [Phase 32] `$RENAME` with no arguments is an error in real MACRO
 
