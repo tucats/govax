@@ -1,10 +1,14 @@
 package asm
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/obj"
 )
 
 // The Phase 32 oracle (docs/PHASE-32.md, testdata/mar/rms): govax-written
@@ -31,6 +35,8 @@ var oracleProbes = []string{
 	"init_xabitm_opt", "init_xabkey", "init_xabkey_all", "init_xabpro",
 	"init_xabpro_opt", "init_xabrdt", "init_xabrdt_all", "init_xabsum",
 	"init_xabsum_all", "init_xabtrm", "init_xabtrm_all",
+	"store_xabdat", "store_xabfhc", "store_xabkey", "store_xabpro", "store_xabrdt",
+	"store_xabsum", "store_xabtrm",
 }
 
 // TestOracleObjects assembles each oracle probe with govax's own
@@ -99,10 +105,11 @@ func TestRMSBlockAlignmentMessage(t *testing.T) {
 // MACRO's message (docs/RMS-MACROS.md, O1).
 func TestRMSKeywordErrors(t *testing.T) {
 	for src, want := range map[string]string{
-		"B:\t$FAB\tFAC=<GET,BOGUS>": "UNDEFINED BIT VALUE CODE: BOGUS;",
-		"B:\t$FAB\tORG=BOGUS":       "UNDEFINED VALUE FOR FIELD : BOGUS;",
-		"B:\t$FAB\tSHR=NQL":         "UNDEFINED BIT VALUE CODE: NQL;",
-		"B:\t$XABKEY\tFLG=CHG":      "PRIMARY KEY MAY NOT CHANGE;",
+		"B:\t$FAB\tFAC=<GET,BOGUS>":    "UNDEFINED BIT VALUE CODE: BOGUS;",
+		"B:\t$FAB\tORG=BOGUS":          "UNDEFINED VALUE FOR FIELD : BOGUS;",
+		"B:\t$FAB\tSHR=NQL":            "UNDEFINED BIT VALUE CODE: NQL;",
+		"B:\t$XABKEY\tFLG=CHG":         "PRIMARY KEY MAY NOT CHANGE;",
+		"\t$RAB_STORE\tRAB=B, RFA=R12": "ILLEGAL USE OF REGISTER : R12 ;",
 	} {
 		a := macroAssembler()
 		a.SetMacroLibraries(govaxStarlet(t))
@@ -112,4 +119,161 @@ func TestRMSKeywordErrors(t *testing.T) {
 			t.Errorf("%s: error %v, want one with %q", src, err, want)
 		}
 	}
+}
+
+// codeStream is the CODE psect's contents, in order: each run of
+// immediate bytes in hex, and each relocated longword as <command psect
+// +offset>. Positions are left out, so two modules whose code differs
+// only by a line's code removed can be compared.
+func codeStream(t *testing.T, m *obj.Module) string {
+	t.Helper()
+
+	psects := m.Psects()
+	code := -1
+
+	for i, p := range psects {
+		if p.Name == "CODE" {
+			code = i
+		}
+	}
+
+	var (
+		b       strings.Builder
+		stack   []string
+		current = -1
+	)
+
+	for _, rec := range m.Records {
+		tir, ok := rec.(*obj.TIR)
+		if !ok || tir.Type != obj.RecTIR {
+			continue
+		}
+
+		for _, c := range tir.Commands {
+			switch op := c.Op.String(); {
+			case op == "STA_PB" || op == "STA_PW" || op == "STA_PL":
+				stack = append(stack, fmt.Sprintf("%d|%s+%#x", c.Psect, psects[c.Psect].Name, c.Value))
+			case op == "STA_GBL":
+				stack = append(stack, "-1|"+c.Name)
+			case strings.HasPrefix(op, "STA_"):
+				stack = append(stack, fmt.Sprintf("-1|%#x", c.StackedValue()))
+			case op == "CTL_SETRB":
+				if _, err := fmt.Sscanf(stack[len(stack)-1], "%d|", &current); err != nil {
+					t.Fatal(err)
+				}
+				stack = stack[:len(stack)-1]
+			case op == "STO_IMM":
+				if current == code {
+					for _, x := range c.Data {
+						fmt.Fprintf(&b, "%02x ", x)
+					}
+				}
+			case strings.HasPrefix(op, "STO_"):
+				x := stack[len(stack)-1]
+				stack = stack[:len(stack)-1]
+
+				if current == code {
+					fmt.Fprintf(&b, "<%s %s> ", op, x[strings.Index(x, "|")+1:])
+				}
+			}
+		}
+	}
+
+	return b.String()
+}
+
+// TestOracleStoreProbesWithErrors covers the store probes real MACRO
+// reported errors in (docs/RMS-MACROS.md, "Oracle answers"). Each rejected
+// line is an error for govax too, with real MACRO's message where the
+// macro reports it; and the probe without those lines assembles to real
+// MACRO's code without theirs. A rejected line left only the MOVAL of its
+// block's address in real MACRO's object (two MOVALs in a row), and
+// DNA=R8 an illegal MOVAL R8.
+func TestOracleStoreProbesWithErrors(t *testing.T) {
+	for name, rejected := range map[string]map[string]string{
+		"store_fab": {"$FAB_STORE\tFAB=FAB1, DNA=R8": ""},
+		"store_nam": {
+			"$NAM_STORE\tNAM=NAM1, DID=TRIP": "** TRIP ** -- ILLEGAL ADDRESSING MODE FOR _DID;",
+			"$NAM_STORE\tNAM=NAM1, DVI=DVIB": "** DVIB ** -- ILLEGAL ADDRESSING MODE FOR _DVI;",
+			"$NAM_STORE\tNAM=NAM1, FID=TRIP": "** TRIP ** -- ILLEGAL ADDRESSING MODE FOR _FID;",
+		},
+		"store_rab":    {"$RAB_STORE\tRAB=RBUF, RFA=TRIP": "** TRIP ** -- ILLEGAL ADDRESSING MODE FOR _RFA;"},
+		"store_xaball": {"$XABALL_STORE\tXAB=XAB1, RFI=TRIP": "** TRIP ** -- ILLEGAL ADDRESSING MODE FOR _RFI;"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			src, err := os.ReadFile(filepath.Join(oracleDir, name+".mar"))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var kept []string
+
+			for _, line := range strings.Split(string(src), "\n") {
+				msg, ok := rejected[strings.TrimPrefix(line, "\t")]
+				if !ok {
+					kept = append(kept, line)
+
+					continue
+				}
+
+				// The line alone, in the probe's place, is an error.
+				a := macroAssembler()
+				a.SetMacroLibraries(govaxStarlet(t))
+
+				if _, err := a.Assemble(strings.Join(append(append([]string(nil), kept...), line, "\tRET", labelsOf(string(src)), "\t.END"), "\n")); err == nil || !strings.Contains(err.Error(), msg) {
+					t.Errorf("%s: error %v, want one with %q", line, err, msg)
+				}
+			}
+
+			a := macroAssembler()
+			a.SetMacroLibraries(govaxStarlet(t))
+
+			if _, err := a.Assemble(strings.Join(kept, "\n")); err != nil {
+				t.Fatalf("assemble: %v", err)
+			}
+
+			got, err := a.Object(ObjectOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			real, err := filepath.Glob(filepath.Join(oracleDir, "vax", toUpperASCII(name)+".OBJ;*"))
+			if err != nil || len(real) != 1 {
+				t.Fatalf("real MACRO's object: %v, %v", real, err)
+			}
+
+			want := strings.Replace(codeStream(t, readObjectFile(t, real[0])), "de 58 a0 30 ", "", 1)
+
+			// Collapse each MOVAL of the block's address that a rejected
+			// line left, which the next line's MOVAL follows directly.
+			moval := regexp.MustCompile(`(de ef <STO_LD [^>]+> 50 )(de ef <STO_LD [^>]+> 50 )`)
+			for {
+				next := moval.ReplaceAllStringFunc(want, func(s string) string {
+					m := moval.FindStringSubmatch(s)
+					if m[1] == m[2] {
+						return m[2]
+					}
+
+					return s
+				})
+				if next == want {
+					break
+				}
+
+				want = next
+			}
+
+			if got := codeStream(t, got); got != want {
+				t.Errorf("code:\n%s\nwant:\n%s", got, want)
+			}
+		})
+	}
+}
+
+// labelsOf returns the LABELS psect's part of a probe's source.
+func labelsOf(src string) string {
+	i := strings.Index(src, "\t.PSECT\tLABELS")
+	j := strings.LastIndex(src, "\t.END")
+
+	return src[i:j]
 }

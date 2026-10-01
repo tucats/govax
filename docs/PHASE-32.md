@@ -413,3 +413,34 @@ clean, and a commit. `build -i` follows each one that changes behavior.
     STARLET and gets real MACRO's object. `TestRMSBlockAlignmentMessage`
     checks the message appears once, for the misaligned block.
     `TestRMSKeywordErrors` checks the error messages.
+- 2026-09-30: Subtask 6 done. The 11 store macros are in `starlet.mar`:
+  `$FAB_STORE`, `$RAB_STORE`, `$NAM_STORE`, and the eight XAB ones.
+  - **Instruction forms**, decoded from the oracle's code:
+    - The block address: a register is used as is, a label is loaded
+      into R0 with MOVAL, and with neither R0 is used.
+    - Keyword fields get `MOVx #mask` or `MOVB #code`, replacing the
+      field rather than OR-ing into it (O12).
+    - Address fields get MOVAL, and value fields MOVB/W/L/Q by the
+      field's size, with the operand as given.
+    - CHAN_MODE and LNM_MODE get INSV into FAB$B_ACMODES.
+    - DID/FID/RFA/RFI take a register pair (MOVL Rn, MOVW Rn+1). A
+      symbolic address is real MACRO's "ILLEGAL ADDRESSING MODE", and R12
+      is "ILLEGAL USE OF REGISTER".
+    - POS/SIZ lists get one move per element. XABPRO's PRO/UIC are
+      constants from a list or a move from an address.
+  - **The macros' structure.** Each calls its `$xxxDEF`(s), then passes
+    its arguments by position to an inner macro of govax's own
+    (`$$xxx_STO`) with the base register. A formal's name is substituted
+    wherever it appears, so the outer macro can't pass keywords by name.
+    The helpers are `$$RMSBASE`, `$$RMSOPT`, `$$RMSCHO`, `$$RMSPAIR`,
+    `$$RMSLIST`, `$$RMSPROS`, and `$$RMSUICS`.
+  - **Tested.** `TestOracleObjects` adds the seven clean store probes, all
+    byte-identical (67 probes). `TestOracleStoreProbesWithErrors` covers
+    the four with rejected lines:
+    - each rejected line is an error for govax too, with real MACRO's
+      message;
+    - the probe without those lines assembles to real MACRO's code
+      without theirs, compared as a stream of code bytes and relocations.
+  - **Not settled by the oracle**, in DEVIATIONS.md: the store order in a
+    call with several keywords (one data point), DVI= with a register, and
+    a one-element PRO=/UIC= list.

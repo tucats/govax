@@ -2254,6 +2254,29 @@ widened."
   spare slot are deliberately left as they are. `TestSymbols_matchLibrarySymbols`
   pins the remaining differences and checks that the SS$_ sets are the same.
 
+### [Phase 32] RMS store macros: choices real MACRO's output didn't settle
+
+- **Where**: `internal/bootdata/files/starlet.mar`'s `$xxx_STORE` macros,
+  written from the RMS Reference Manual and the Phase 32 oracle's objects
+  (docs/RMS-MACROS.md).
+- **What**: every single-keyword store, and every register and error form
+  the oracle tried, matches real MACRO. Three choices rest on less:
+  - *The order of stores in a call with several keywords.* The oracle had
+    one such call (FAC, FNA, ALQ), which stored the keyword field, then
+    the address, then the value. govax stores all keyword fields, then
+    addresses, then values, each group in a fixed order. A call whose
+    keywords fall in one group may order them differently from real MACRO.
+    The block it leaves is the same; only the instruction order differs.
+  - *`$NAM_STORE DVI=` given a register.* A symbolic address is an error
+    in real MACRO ("ILLEGAL ADDRESSING MODE FOR _DVI"), and govax reports
+    that error for every DVI= form. The manual says a register mustn't be
+    used, and the oracle didn't try one.
+  - *`$XABPRO_STORE PRO=` and `UIC=` with one element.* A list is told
+    from an address by its comma, so `PRO=<R>` (a single class, without a
+    comma) is taken as an address. The oracle tried only full lists and
+    addresses.
+- **Status**: deferred. A future oracle run can settle each one.
+
 <!--
 Entry template:
 
