@@ -264,7 +264,11 @@ $CREA,/DIR
         /ALLOCATION=<n> The number of blocks to give the directory at
                         once.  The default is 1.
 
-        /LOG            Reports each directory made.
+        /LOG            Reports the directory made.  The directories
+                        made above it aren't reported.
+
+    A /VERSION_LIMIT out of range is reported and ignored, and the
+    directory still made, as VMS does.
 
     Examples:
 

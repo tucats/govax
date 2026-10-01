@@ -11,9 +11,9 @@ never had.
 
 - `docs/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
   index.
-- `docs/PHASE-00.md` … `PHASE-33.md` — one doc per phase: goal, C-source file
+- `docs/PHASE-00.md` … `PHASE-34.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (29 is
-  planned, not started; 28 and 30–33 are done). Read the relevant phase doc
+  planned, not started; 28 and 30–34 are done). Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
@@ -127,6 +127,11 @@ expect adjustment as phases land):
   is shared by every service, and `$SEARCH` (`search.go`) keeps VMS's two
   kinds of wildcard context; Phase 33's runtime oracle (`testdata/mar/rms3`,
   `TestRMS3Oracle`) checks them against VMS 7.3 byte for byte.
+  `Session.CreateDirectory` (`createdir.go`, Phase 34) is the console's
+  `CREATE/DIRECTORY` (`internal/console/create.go`): ods2 lays the directory
+  files out (`volume.CreateDirectory`, `filespec.CreateDirectoryPath`), and
+  `TestCreateDirectoryOracle` (`testdata/credir`) checks headers and
+  messages against VMS 7.3's run.
 - `internal/link` — the VAX linker (Phase 30): builds a VMS executable image from
   `internal/obj` modules, laid out as real LINK lays images out (byte for byte on
   the fixtures). The console's `LINK` command (`internal/console/link.go`) drives it.

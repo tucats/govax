@@ -1,6 +1,9 @@
 # Phase 34 — CREATE/DIRECTORY
 
-**Status:** in progress (2026-10-01).
+**Status:** done (2026-10-01). govax's `CREATE/DIRECTORY` matches VMS
+7.3's on the oracle run (`testdata/credir`): every directory's header and
+every message, except the default owner, which is the process UIC by
+decision (see Decisions 2 and DEVIATIONS.md).
 
 ## Goal
 
@@ -372,7 +375,7 @@ The author accepted each proposal below on 2026-10-01.
     status from VMS's message table: `-RMS-F-DIR` (too deep, name too
     long), `-LIB-F-INVFILSPE` (file name, wildcard, `...`, unparsable),
     `-SYSTEM-W-NOSUCHDEV` (unknown device; `DEVNOTMOUNT` for a known
-    one), `-SYSTEM-W-WRITLCK` (read-only). A bad `/OWNER_UIC` is
+    one), `-SYSTEM-F-WRITLCK` (read-only). A bad `/OWNER_UIC` is
     `%CREATE-F-SYNTAX, error parsing '...'` and `-SYSTEM-F-IVIDENT`, and
     makes nothing; a bad `/PROTECTION` gets the same first line (VMS's
     wasn't probed).
@@ -388,3 +391,10 @@ The author accepted each proposal below on 2026-10-01.
   - The replay now copies `[ALLOC]FIRST.DAT` in from a host file, so the
     directory's first entry is compared too; the log is read as text
     (it's VFC).
+- 2026-10-01: Subtask 9, close-out. PLAN.md marks the phase done;
+  CLAUDE.md notes `Session.CreateDirectory` and the oracle; HELP CREATE
+  /DIRECTORY says what `/LOG` reports and how a bad `/VERSION_LIMIT` is
+  handled. ods2's README, COMMANDS.md, and `docs/PHASE-04.md` cover its
+  side. Follow-ons left out of scope: `LIB$CREATE_DIR` (Decisions 4),
+  `SET FILE/OWNER`/`SET PROTECTION` on the same parsers, and the default
+  owner, should the author want VMS's rule (DEVIATIONS.md).
