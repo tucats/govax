@@ -330,8 +330,8 @@ func TestSysCreate_unsupportedRFM(t *testing.T) {
 }
 
 // TestSysCreate_noNameGiven confirms a file spec naming only a device,
-// with no file name at all, is rejected rather than reaching
-// vol.CreateFile with an empty name.
+// with no file name at all, is rejected with RMS$_FNM rather than
+// reaching vol.CreateFile with an empty name.
 func TestSysCreate_noNameGiven(t *testing.T) {
 	f := newCreateFixture(t, true)
 	newFAB(t, f.ctx, "DUA0:")
@@ -341,13 +341,13 @@ func TestSysCreate_noNameGiven(t *testing.T) {
 		t.Fatalf("SysCreate: %v", err)
 	}
 
-	if r0 != rmsFileNotFound {
-		t.Errorf("r0 = %d, want rmsFileNotFound (%d)", r0, rmsFileNotFound)
+	if r0 != rmsFileNameError {
+		t.Errorf("r0 = %d, want rmsFileNameError (%d)", r0, rmsFileNameError)
 	}
 }
 
 // TestSysCreate_directoryNotFound confirms a file spec naming a
-// subdirectory that doesn't exist on the volume fails cleanly (RMS$_FNF)
+// subdirectory that doesn't exist on the volume fails cleanly (RMS$_DNF)
 // rather than panicking inside filespec.ResolveDirectory.
 func TestSysCreate_directoryNotFound(t *testing.T) {
 	f := newCreateFixture(t, true)
@@ -358,8 +358,8 @@ func TestSysCreate_directoryNotFound(t *testing.T) {
 		t.Fatalf("SysCreate: %v", err)
 	}
 
-	if r0 != rmsFileNotFound {
-		t.Errorf("r0 = %d, want rmsFileNotFound (%d)", r0, rmsFileNotFound)
+	if r0 != rmsDirNotFound {
+		t.Errorf("r0 = %d, want rmsDirNotFound (%d)", r0, rmsDirNotFound)
 	}
 }
 

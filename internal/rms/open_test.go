@@ -280,10 +280,9 @@ func TestSysOpen_explicitVersion(t *testing.T) {
 	}
 }
 
-// TestSysOpen_invalidVersion confirms a file spec naming a version syntax
-// this phase's SYS$OPEN doesn't support (VMS's ";*" wildcard, here) fails
-// with RMS$_VER rather than being silently misinterpreted or panicking
-// inside strconv.Atoi.
+// TestSysOpen_invalidVersion confirms a file spec with a wildcard version
+// (";*") fails with RMS$_WLD, as any wildcard does on $OPEN, rather than
+// being silently misinterpreted or panicking inside strconv.Atoi.
 func TestSysOpen_invalidVersion(t *testing.T) {
 	f := newCreateFixture(t, true)
 
@@ -297,8 +296,8 @@ func TestSysOpen_invalidVersion(t *testing.T) {
 		t.Fatalf("SysOpen: %v", err)
 	}
 
-	if r0 != rmsInvalidVersion {
-		t.Errorf("r0 = %d, want rmsInvalidVersion (%d)", r0, rmsInvalidVersion)
+	if r0 != rmsWildcardError {
+		t.Errorf("r0 = %d, want rmsWildcardError (%d)", r0, rmsWildcardError)
 	}
 }
 
@@ -435,7 +434,7 @@ func TestSysOpen_fileNotFound(t *testing.T) {
 }
 
 // TestSysOpen_directoryNotFound confirms a file spec naming a subdirectory
-// that doesn't exist on the volume fails cleanly (RMS$_FNF) rather than
+// that doesn't exist on the volume fails cleanly (RMS$_DNF) rather than
 // panicking inside filespec.ResolveDirectory, mirroring SysCreate's own
 // TestSysCreate_directoryNotFound.
 func TestSysOpen_directoryNotFound(t *testing.T) {
@@ -448,8 +447,8 @@ func TestSysOpen_directoryNotFound(t *testing.T) {
 		t.Fatalf("SysOpen: %v", err)
 	}
 
-	if r0 != rmsFileNotFound {
-		t.Errorf("r0 = %d, want rmsFileNotFound (%d)", r0, rmsFileNotFound)
+	if r0 != rmsDirNotFound {
+		t.Errorf("r0 = %d, want rmsDirNotFound (%d)", r0, rmsDirNotFound)
 	}
 }
 

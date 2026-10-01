@@ -4,6 +4,8 @@ import (
 	"strconv"
 
 	"github.com/tucats/ods2/filespec"
+	"github.com/tucats/ods2/ondisk"
+	"github.com/tucats/ods2/volume"
 )
 
 // SysOpen implements SYS$OPEN: given a FAB's VAX address (argv[0]), finds
@@ -51,40 +53,95 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 		return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsPrivilegeViolation)
 	}
 
-	// See SysCreate for how the spec is translated and defaulted. A
-	// search list opens the first element's file that exists; if none
-	// does, the status for the last element tried is returned (User's
-	// Manual §11.7).
-	specs, failStatus, err := ctx.resolveFAB(fabAddr)
+	nam, failStatus, err := fabNAMBlock(ctx, fabAddr)
 	if err != nil {
 		return 0, err
 	}
 
 	if failStatus != 0 {
-		return storeStatus(ctx, fabAddr, fabSTS, fabSTV, failStatus)
+		return fabStatus(ctx, fabAddr, failStatus, 0)
 	}
 
-	var ifi uint16
+	fop, err := ctx.loadLongword(fabAddr + fabFOP)
+	if err != nil {
+		return 0, err
+	}
 
-	for _, r := range specs {
-		if normalizeDeviceName(r.Spec.Device) == consoleDeviceName {
+	// FAB$V_NAM: open by the NAM's file ID, or by its directory ID and
+	// the file name (namfid.go).
+	if nam != 0 && fop&fopNAM != 0 {
+		if sts, done, err := ctx.openByNAM(fabAddr, nam, fac); done || err != nil {
+			return sts, err
+		}
+	}
+
+	// See SysCreate for how the spec is translated and defaulted. A
+	// search list opens the first element's file that exists; if none
+	// does, the status for the last element tried is returned (User's
+	// Manual §11.7).
+	names, failStatus, err := ctx.expandFAB(fabAddr, nam)
+	if err != nil {
+		return 0, err
+	}
+
+	if failStatus == 0 && names[0].FNB&fnbWildcard != 0 {
+		failStatus = rmsWildcardError
+	}
+
+	if failStatus == 0 && nam != 0 {
+		if failStatus, err = ctx.checkESS(nam, names[0]); err != nil {
+			return 0, err
+		}
+	}
+
+	if failStatus != 0 {
+		return fabStatus(ctx, fabAddr, failStatus, 0)
+	}
+
+	var (
+		ifi   uint16
+		found foundFile
+		ok    bool
+	)
+
+	for _, p := range names {
+		if normalizeDeviceName(p.Lookup) == consoleDeviceName {
 			ifi, failStatus = ctx.Files.Alloc(&FileHandle{Console: ctx.Console}), 0
 
 			break
 		}
 
-		ifi, failStatus, err = openOnVolume(ctx, fac, r.Spec)
+		ifi, found, failStatus, err = openOnVolume(ctx, fac, p)
 		if err != nil {
 			return 0, err
 		}
 
-		if failStatus != rmsFileNotFound && failStatus != rmsDeviceNotReady {
+		if failStatus == 0 {
+			ok = true
+
+			break
+		}
+
+		if failStatus != rmsFileNotFound && failStatus != rmsDeviceNotReady && failStatus != rmsDirNotFound {
 			break
 		}
 	}
 
 	if failStatus != 0 {
-		return storeStatus(ctx, fabAddr, fabSTS, fabSTV, failStatus)
+		return fabStatus(ctx, fabAddr, failStatus, 0)
+	}
+
+	if nam != 0 && ok {
+		sts, err := ctx.fillNAM(fabAddr, nam, found, namOutputs{Expanded: true, Resultant: true})
+		if err != nil {
+			return 0, err
+		}
+
+		if sts != 0 {
+			ctx.Files.Release(ifi)
+
+			return fabStatus(ctx, fabAddr, sts, 0)
+		}
 	}
 
 	if err := ctx.storeWord(fabAddr+fabIFI, ifi); err != nil {
@@ -95,67 +152,68 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 }
 
 // openOnVolume is SysOpen's real-ODS-2-volume path: everything after
-// "this isn't the TTA0: console special case" — resolving spec.Device to a
-// mounted volume, looking the file's directory entry up by name/version,
-// opening it via ods2's volume.Volume.OpenFID, arming it for writing if
-// fac asked for that, and allocating an IFI for the result.
+// "this isn't the TTA0: console special case" — resolving the device to a
+// mounted volume, looking the file's directory entry up by name and
+// version, and opening it (openFID). It returns the new IFI and the file
+// found, for the NAM.
 //
-// Its three-result shape matches create.go's createOnVolume exactly (see
-// that function's own doc comment for the full explanation): err is a
-// genuine Go/VAX-memory-access failure to propagate unchanged, a nonzero
-// failStatus is an ordinary RMS$_ failure for the caller to store into the
-// FAB and return as R0, and both zero means ifi holds the freshly
-// allocated handle for the now-open file.
-func openOnVolume(ctx *Context, fac byte, spec filespec.Spec) (ifi uint16, failStatus uint32, err error) {
+// err is a genuine Go/VAX-memory-access failure to propagate unchanged,
+// a nonzero failStatus is an ordinary RMS$_ failure for the caller to
+// store into the FAB and return as R0, and both zero means ifi holds the
+// freshly allocated handle for the now-open file.
+func openOnVolume(ctx *Context, fac byte, p parsedName) (ifi uint16, found foundFile, failStatus uint32, err error) {
+	spec := p.spec()
+
 	vol, ok := ctx.Mounts.Lookup(spec.Device)
 	if !ok {
-		return 0, rmsDeviceNotReady, nil
+		return 0, found, rmsDeviceNotReady, nil
 	}
 
+	if spec.Name == "" && spec.Type == "" {
+		return 0, found, rmsFileNotFound, nil
+	}
+
+	dir, err := filespec.ResolveDirectory(vol, spec.Dirs)
+	if err != nil {
+		return 0, found, rmsDirNotFound, nil
+	}
+
+	entry, sts := lookupVersion(dir, specFileName(spec), spec.Version)
+	if sts != 0 {
+		return 0, found, sts, nil
+	}
+
+	if ifi, sts, err = openFID(ctx, fac, spec.Device, vol, entry.Fid); err != nil || sts != 0 {
+		return 0, found, sts, err
+	}
+
+	name, typ := splitEntryName(entry.Name)
+	found = foundFile{
+		Parsed: p, Device: spec.Device, Dirs: spec.Dirs,
+		Name: name, Type: typ, Version: entry.Version,
+		FID: entry.Fid, DID: dir.Header.Fid,
+	}
+
+	return ifi, found, 0, nil
+}
+
+// openFID opens the file whose ID is fid on vol (mounted as device),
+// arming it for writing when fac asks to write, and allocates its IFI.
+func openFID(ctx *Context, fac byte, device string, vol *volume.Volume, fid ondisk.Fid) (uint16, uint32, error) {
 	// Real RMS lets a program SYS$OPEN a file read-only even on a
 	// read-only-mounted device — only actually asking to write is a
 	// problem, unlike SYS$CREATE (create.go), which always implies
 	// writing and so always has to check this.
 	wantsWrite := fac&(facPut|facUpd) != 0
-	if wantsWrite && !ctx.Mounts.Writable(spec.Device) {
+	if wantsWrite && !ctx.Mounts.Writable(device) {
 		return 0, rmsPrivilegeViolation, nil
 	}
 
-	if spec.Name == "" {
-		return 0, rmsFileNotFound, nil
-	}
-
-	version, ok := parseOpenVersion(spec.Version)
-	if !ok {
-		return 0, rmsInvalidVersion, nil
-	}
-
-	dir, err := filespec.ResolveDirectory(vol, spec.Dirs)
+	f, err := vol.OpenFID(fid)
 	if err != nil {
+		// A file ID that names no file: a bad FAB$V_NAM open, or a
+		// directory entry pointing at a header ods2 then failed to read.
 		return 0, rmsFileNotFound, nil
-	}
-
-	name := spec.Name
-	if spec.Type != "" {
-		name += "." + spec.Type
-	}
-
-	entry, err := dir.Lookup(name, version)
-	if err != nil {
-		// A well-formed spec naming a file that genuinely isn't in this
-		// directory — Directory.Lookup's own error, not a Go-level bug.
-		return 0, rmsFileNotFound, nil
-	}
-
-	f, err := vol.OpenFID(entry.Fid)
-	if err != nil {
-		// A directory entry pointing at a file header ods2 itself then
-		// failed to read — a real ods2/volume-layer problem, not
-		// something this package caused, so it's reported as a generic
-		// RMS device error rather than propagated as a Go error (the same
-		// convention create.go's createOnVolume uses for a failing
-		// vol.CreateFile).
-		return 0, rmsDeviceError, nil
 	}
 
 	if wantsWrite {

@@ -361,6 +361,8 @@ var (
 	fnbWildcard   = vmsConst("NAM$M_WILDCARD")
 	fnbSearchList = vmsConst("NAM$M_SEARCH_LIST")
 	fnbCnclDev    = vmsConst("NAM$M_CNCL_DEV")
+	fnbHighVer    = vmsConst("NAM$M_HIGHVER")
+	fnbLowVer     = vmsConst("NAM$M_LOWVER")
 	fnbWildDir    = vmsConst("NAM$M_WILD_DIR")
 	fnbWildUFD    = vmsConst("NAM$M_WILD_UFD")
 	fnbWildSFD1   = vmsConst("NAM$M_WILD_SFD1")

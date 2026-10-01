@@ -136,3 +136,24 @@ commit, plus `build -i` when it changes behavior.
     oracle shows VMS's reading (SEARCH case 10, OPEN case 9).
   - **Tests.** `TestRMS3Search_govaxTree` runs the SEARCH probe against
     the govax-built tree.
+- 2026-10-01: Subtask 4, the NAM on `$OPEN` and `$CREATE`
+  (`internal/rms/namopen.go`, `namfid.go`).
+  - **`$OPEN`** reports the file in its NAM: the expanded and resultant
+    strings, the components (into the resultant string), FNB, FID, DID,
+    and DVI. A wildcard is RMS$_WLD, a missing directory RMS$_DNF (it was
+    RMS$_FNF), and a version of -n opens the one n below the highest.
+  - **`$CREATE`** does the same, and sets FNB's HIGHVER and LOWVER. It
+    now honors an explicit version (RMS$_FEX when it exists), FAB$V_CIF
+    (an existing file is opened, with RMS$_NORMAL), and the default name.
+    A specification with no name is RMS$_FNM.
+  - **FAB$V_NAM.** `$OPEN` opens by NAM$W_FID on the device NAM$T_DVI
+    names, writing no strings; or, with no FID, by the file name in the
+    directory NAM$W_DID names, writing the resultant string (its
+    directory found from the back links).
+  - **Unsettled until the oracle:** `$CREATE`'s success status (govax has
+    always returned RMS$_CREATED), FAB$L_STV on success (the manual says
+    the channel), what a search list's expanded string shows when a later
+    element is opened, and the strings and FNB on a FID open.
+  - **Tests.** `TestRMS3OpenCreate_govaxTree` runs the OPEN, NAMFID, and
+    CREATE probes on the govax-built tree. Four unit tests now expect the
+    VMS statuses above.

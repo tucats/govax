@@ -287,3 +287,106 @@ func TestRMS3Search_govaxTree(t *testing.T) {
 		}
 	}
 }
+
+// probeSummary is one line per service call in a probe's records: the
+// case, the op, the status, and the NAM's expanded and resultant strings
+// and FNB.
+func probeSummary(recs []probeRecord) []string {
+	var (
+		out      []string
+		sts      uint32
+		nam, esa []byte
+	)
+
+	for _, r := range recs {
+		switch r.Tag {
+		case "STAT":
+			sts = binary.LittleEndian.Uint32(r.Data)
+			if r.Op == 6 {
+				out = append(out, fmt.Sprintf("%d close %08X", r.Step, sts))
+			}
+		case "NAM_":
+			nam = r.Data
+		case "ESA_":
+			esa = r.Data
+		case "RSA_":
+			es, rs := "", ""
+			if n := int(nam[0xb]); n <= len(esa) {
+				es = string(esa[:n])
+			}
+
+			if n := int(nam[3]); n <= len(r.Data) {
+				rs = string(r.Data[:n])
+			}
+
+			out = append(out, fmt.Sprintf("%d op%d %08X es=%q rs=%q fnb=%08X fid=% X did=% X",
+				r.Step, r.Op, sts, es, rs, binary.LittleEndian.Uint32(nam[0x34:]), nam[0x24:0x2a], nam[0x2a:0x30]))
+		}
+	}
+
+	return out
+}
+
+// TestRMS3OpenCreate_govaxTree runs the OPEN, NAMFID, and CREATE probes
+// against a govax-built copy of the oracle's tree and checks the
+// statuses and resultant strings that don't depend on VMS's details.
+func TestRMS3OpenCreate_govaxTree(t *testing.T) {
+	for _, tc := range []struct {
+		probe string
+		want  []string
+	}{
+		{"open", []string{
+			`1 op3 00010001 es="DUA0:[TEST]A.DAT;" rs="DUA0:[TEST]A.DAT;3"`,
+			`2 op3 00010001 es="DUA0:[TEST]A.DAT;1" rs="DUA0:[TEST]A.DAT;1"`,
+			`4 op3 00018292`,
+			`5 op3 0001C04A`,
+			`6 op3 00018744`,
+			`9 op3 00010001 es="DUA0:[TEST]A.DAT;-1" rs="DUA0:[TEST]A.DAT;2"`,
+		}},
+		{"namfid", []string{
+			`2 op3 00010001 es="" rs="" fnb=00000000 fid=13 00 01 00 00 00`,
+			`3 op3 00010001 es="" rs="_DUA0:[TEST]B.TXT;1"`,
+			`4 op3 00018292`,
+			`5 op3 000184C4`,
+			`6 op3 00010001 es="" rs="_DUA0:[TEST]C.DAT;1"`,
+			`8 op3 00010001 es="DUA0:[TEST]A.DAT;" rs="DUA0:[TEST]A.DAT;3"`,
+			`10 op3 00018744`,
+		}},
+		{"create", []string{
+			`1 op4 00010619 es="DUA0:[CRE]N1.DAT;" rs="DUA0:[CRE]N1.DAT;1" fnb=00000046`,
+			`2 op4 00010619 es="DUA0:[CRE]N1.DAT;" rs="DUA0:[CRE]N1.DAT;2" fnb=00004046`,
+			`3 op4 00018282`,
+			`4 op4 00010001 es="DUA0:[CRE]N1.DAT;" rs="DUA0:[CRE]N1.DAT;2"`,
+			`6 op4 00010619 es="DUA0:[CRE]N2.DAT;3" rs="DUA0:[CRE]N2.DAT;3" fnb=00008047`,
+			`8 op4 0001C04A`,
+			`9 op4 00018744`,
+			`10 op4 00010619 es="DUA0:[CRE]N4.LIS;" rs="DUA0:[CRE]N4.LIS;1"`,
+		}},
+	} {
+		c := newBootableConsole(t)
+		c.HostLibrary = t.TempDir()
+
+		mountFreshRMSVolume(t, c)
+		buildRMS3Tree(t, c)
+
+		got := probeSummary(runRMS3Probe(t, c, tc.probe))
+
+		for _, w := range tc.want {
+			found := false
+
+			for _, g := range got {
+				if strings.HasPrefix(g, w) {
+					found = true
+				}
+			}
+
+			if !found {
+				t.Errorf("%s: no call like %s", tc.probe, w)
+			}
+		}
+
+		for _, g := range got {
+			t.Logf("%s %s", tc.probe, g)
+		}
+	}
+}

@@ -48,6 +48,8 @@ var (
 	fabSDC = fabOffset("SDC")
 
 	fopOFP = vmsConst("FAB$M_OFP")
+	fopNAM = vmsConst("FAB$M_NAM")
+	fopCIF = vmsConst("FAB$M_CIF")
 )
 
 // diskDevChar is FAB$L_DEV and FAB$L_SDC for a mounted Files-11 disk: a
