@@ -306,3 +306,18 @@ clean, and a commit. `build -i` follows each one that changes behavior.
   a comment.
 
   **Waiting on the author's VAX run** (`testdata/mar/rms/README.md`).
+- 2026-09-30: VMS couldn't mount the first exchange volume. MOUNT
+  reported `QUOTAFAIL` and `BADSECSYS`, both from `BADIRECTORY`: "bad
+  directory file format" in the MFD.
+  - **Diagnosis.** `ods2`'s AnalyzeDisk found the volume clean, and the
+    MFD was one contiguous extent with sensible size fields. But with 95
+    entries, its third block's records filled all 512 bytes, leaving no
+    room for the 0xFFFF end-of-data marker. `ods2`'s encoder allowed that
+    deliberately, since its own decoder stops by itself. Phase 28's
+    smaller volume never filled a block exactly.
+  - **Fix** (`ods2` cf18a63): records use at most 510 bytes, so every
+    block keeps its marker. `TestDirectoryInsertKeepsBlockSentinels`
+    makes 32-byte records, 16 of which filled a block, and fails with the
+    old encoder. The decoder still reads an exactly-full block.
+  - The volume, rebuilt, has every MFD block ending by byte 510.
+    govax's tests pass.
