@@ -34,14 +34,20 @@ type fixture struct {
 	name   string
 	text   string
 	errors bool
+	round  int
 }
+
+// round is the oracle run the fixtures being added belong to: the first
+// (docs/PHASE-32.md, subtask 3), or the second, which settles what the
+// first left open (docs/DEVIATIONS.md, the Phase 32 entries).
+var round = 1
 
 var fixtures []fixture
 
 func add(name string, errs bool, title string, body string) {
 	text := fmt.Sprintf("\t.TITLE\t%s\t%s\n\t.IDENT\t/V1.0/\n;\n; Written by testdata/mar/rms/gen.go (docs/PHASE-32.md, subtask 3).\n;\n%s\t.END\n",
 		strings.ToUpper(name), title, body)
-	fixtures = append(fixtures, fixture{name: name, text: text, errors: errs})
+	fixtures = append(fixtures, fixture{name: name, text: text, errors: errs, round: round})
 }
 
 // Manual-derived names for the blocks govax has no values for yet
@@ -378,50 +384,179 @@ func errorProbes() {
 	}
 }
 
+// The second round's probes (docs/DEVIATIONS.md's open Phase 32 store
+// items).
+//
+// r2_order_*: each store macro called with every keyword at once, in the
+// manual's order and then reversed, to show the order its moves come in
+// and whether the call's own order matters. $XABKEY_STORE also takes all
+// of POS0-POS7 and SIZ0-SIZ7.
+//
+// r2_dvi_*, r2_pro_*, r2_uic_*: the forms the first round didn't try:
+// $NAM_STORE's DVI= as a register, a register deferred, and an immediate;
+// $XABPRO_STORE's PRO= as a one-class list and as an address named with
+// protection letters; and a one-element UIC= list, stored and initialized.
+// Each is alone in its module, since some may be errors.
+func roundTwo() {
+	round = 2
+
+	orders := []struct {
+		macro string
+		args  []string
+	}{
+		{"FAB", []string{"ALQ=#500", "BKS=#4", "BLS=#512", "CHAN_MODE=#2", "CTX=VALL", "DEQ=#7",
+			"DNA=NAMB", "DNS=#11", "FAC=<GET,PUT>", "FNA=NAMA", "FNS=#5", "FOP=<CTG,SUP>", "FSZ=#3",
+			"GBC=#9", "LNM_MODE=#3", "MRN=#1000", "MRS=#132", "NAM=NAM1", "ORG=REL", "RAT=<CR,BLK>",
+			"RFM=FIX", "RTV=#8", "SHR=<GET,PUT>", "XAB=XAB1"}},
+		{"RAB", []string{"BKT=#17", "CTX=VALL", "FAB=FAB1", "KBF=KBUF", "KRF=#2", "KSZ=#8", "MBC=#16",
+			"MBF=#3", "PBF=PBUF", "PSZ=#4", "RAC=KEY", "RBF=UBUF", "RFA=R2", "RHB=HBUF",
+			"ROP=<LOC,RAH>", "RSZ=#80", "TMO=#10", "UBF=UBUF", "USZ=#200", "XAB=XAB1"}},
+		{"NAM", []string{"DID=R2", "ESA=EBUF", "ESS=#255", "FID=R4", "NOP=<PWD,SYNCHK>", "RLF=NAM2",
+			"RSA=RBUF", "RSS=#128"}},
+		{"XABALL", []string{"AID=#1", "ALN=LBN", "ALQ=#100", "AOP=<CTG,HRD>", "BKZ=#2", "DEQ=#10",
+			"LOC=#500", "NXT=XAB2", "RFI=R2", "VOL=#1"}},
+		{"XABDAT", []string{"CDT=QUAD", "EDT=QUAD", "RDT=QUAD", "RVN=#3", "NXT=XAB2"}},
+		{"XABKEY", []string{"COLTBL=#CTAB", "DAN=#1", "DFL=#200", "DTP=STG", "FLG=<CHG,DUP>", "IAN=#2",
+			"IFL=#300", "KNM=KNAM", "LAN=#3", "NUL=#32", "NXT=XAB2", "POS=<#0,#10>", "PROLOG=#3",
+			"REF=#1", "SIZ=<#4,#6>"}},
+		{"XABPRO", []string{"ACLBUF=ABUF", "ACLCTX=#7", "ACLSIZ=#64", "MTACC=#^A/Z/", "NXT=XAB2",
+			"PRO=<RWED,RWED,RE,R>", "PROT_OPT=<PROPAGATE>", "UIC=<377,377>"}},
+		{"XABRDT", []string{"RDT=QUAD", "RVN=#3", "NXT=XAB2"}},
+		{"XABTRM", []string{"ITMLST=ILST", "ITMLST_LEN=#24", "NXT=XAB2"}},
+	}
+
+	call := func(b *strings.Builder, macro, block string, args []string) {
+		fmt.Fprintf(b, "\t$%s_STORE\t%s", macro, block)
+
+		for _, a := range args {
+			fmt.Fprintf(b, ", -\n\t\t%s", a)
+		}
+
+		b.WriteString("\n")
+	}
+
+	for _, o := range orders {
+		block := map[string]string{"FAB": "FAB=FAB1", "RAB": "RAB=RBUF", "NAM": "NAM=NAM1"}[o.macro]
+		if block == "" {
+			block = "XAB=XAB1"
+		}
+
+		var b strings.Builder
+
+		b.WriteString("\t.PSECT\tCODE,EXE,NOWRT,LONG\n\t.ENTRY\tSTORE,^M<R2,R3,R4,R5,R6,R7,R8>\n")
+		call(&b, o.macro, block, o.args)
+
+		reversed := make([]string, len(o.args))
+		for i, a := range o.args {
+			reversed[len(o.args)-1-i] = a
+		}
+
+		call(&b, o.macro, block, reversed)
+
+		if o.macro == "XABKEY" {
+			var each []string
+			for i := 0; i < 8; i++ {
+				each = append(each, fmt.Sprintf("POS%d=#%d", i, 10+i), fmt.Sprintf("SIZ%d=#%d", i, 20+i))
+			}
+
+			call(&b, o.macro, block, each)
+		}
+
+		fmt.Fprintf(&b, "\tRET\n%s", labels)
+		add("r2_order_"+strings.ToLower(o.macro), false, "$"+o.macro+"_STORE with every keyword", b.String())
+	}
+
+	code := "\t.PSECT\tCODE,EXE,NOWRT,LONG\n\t.ENTRY\tSTORE,^M<R2,R3>\n"
+	data := "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"
+
+	for _, e := range []struct{ name, body string }{
+		{"r2_dvi_reg", code + "\t$NAM_STORE\tNAM=NAM1, DVI=R2\n\tRET\n" + labels},
+		{"r2_dvi_def", code + "\t$NAM_STORE\tNAM=NAM1, DVI=(R2)\n\tRET\n" + labels},
+		{"r2_dvi_imm", code + "\t$NAM_STORE\tNAM=NAM1, DVI=#DVIB\n\tRET\n" + labels},
+		{"r2_pro_one", code + "\t$XABPRO_STORE\tXAB=XAB1, PRO=<R>\n\tRET\n" + labels},
+		{"r2_pro_all", code + "\t$XABPRO_STORE\tXAB=XAB1, PRO=<RWED>\n\tRET\n" + labels},
+		{"r2_pro_sym", code + "\t$XABPRO_STORE\tXAB=XAB1, PRO=RW\n\tRET\n" + labels + "RW:\t.WORD\t^XF00F\n"},
+		{"r2_uic_one", code + "\t$XABPRO_STORE\tXAB=XAB1, UIC=<377>\n\tRET\n" + labels},
+		{"r2_uic_init", data + "B1:\t$XABPRO\tUIC=<377>\n"},
+	} {
+		add(e.name, true, "a second-round probe", e.body)
+	}
+}
+
 func main() {
 	definitionProbes()
 	initProbes()
 	storeProbes()
 	serviceProbes()
 	errorProbes()
+	roundTwo()
 
 	sort.Slice(fixtures, func(i, j int) bool { return fixtures[i].name < fixtures[j].name })
 
-	var probes, errs, copies []string
+	for r, names := range map[int][4]string{
+		1: {"", "RMS", "ERRORS", "subtask 3"},
+		2: {"2", "RMS2", "ERRORS2", "the second round"},
+	} {
+		suffix, logName, errName, what := names[0], names[1], names[2], names[3]
 
-	for _, f := range fixtures {
-		if err := os.WriteFile(filepath.Join(dir, f.name+".mar"), []byte(f.text), 0o644); err != nil {
+		var probes, errs, copies []string
+
+		for _, f := range fixtures {
+			if f.round != r {
+				continue
+			}
+
+			if err := os.WriteFile(filepath.Join(dir, f.name+".mar"), []byte(f.text), 0o644); err != nil {
+				log.Fatal(err)
+			}
+
+			up := strings.ToUpper(f.name)
+			if f.errors {
+				errs = append(errs, up)
+			} else {
+				probes = append(probes, up)
+			}
+
+			copies = append(copies, fmt.Sprintf("COPY \"%s/%s.mar\"/HOST DUA1:[000000]%s.MAR", dir, f.name, up))
+		}
+
+		com, errcom := "rms"+suffix+".com", "rmserr"+suffix+".com"
+		ucom, uerr := strings.ToUpper(com), strings.ToUpper(errcom)
+
+		if r == 1 {
+			writeCOM(com, "RMS.COM - the Phase 32 oracle's probes (docs/PHASE-32.md, subtask 3).", logName, probes)
+			writeCOM(errcom, "RMSERR.COM - the Phase 32 oracle's error probes. Their messages go to\n$ ! ERRORS.LOG, which the author audits for macro text before Claude reads it.", errName, errs)
+		} else {
+			writeCOM(com, ucom+" - the Phase 32 oracle's "+what+"'s probes.", logName, probes)
+			writeCOM(errcom, uerr+" - the Phase 32 oracle's "+what+"'s probes that may be\n$ ! errors. Their messages go to "+errName+".LOG, which the author audits\n$ ! for macro text before Claude reads it.", errName, errs)
+		}
+
+		label, disk := "RMSXCHG", "rms-exchange.dsk"
+		header := "! EXCHANGE.CMD - builds the Phase 32 oracle's exchange volume with govax\n" +
+			"! (docs/PHASE-32.md, subtask 3). Written by testdata/mar/rms/gen.go. Run\n" +
+			"! from the repository root:\n!\n!     govax console < testdata/mar/rms/exchange.cmd\n!\n"
+
+		if r == 2 {
+			label, disk = "RMSXCHG2", "rms2-exchange.dsk"
+			header = "! EXCHANGE2.CMD - builds the Phase 32 oracle's second exchange volume with\n" +
+				"! govax. Written by testdata/mar/rms/gen.go. Run from the repository root:\n" +
+				"!\n!     govax console < testdata/mar/rms/exchange2.cmd\n!\n"
+		}
+
+		exchange := header +
+			"INITIALIZE/CONTAINER \"testdata/disks/" + disk + "\" /DEVICE=RD53 " + label + "\n" +
+			"MOUNT/WRITE DUA1 \"testdata/disks/" + disk + "\"\n" +
+			strings.Join(copies, "\n") + "\n" +
+			"COPY \"" + dir + "/" + com + "\"/HOST DUA1:[000000]" + ucom + "\n" +
+			"COPY \"" + dir + "/" + errcom + "\"/HOST DUA1:[000000]" + uerr + "\n" +
+			"DIRECTORY DUA1:[000000]\nDISMOUNT DUA1\n"
+
+		if err := os.WriteFile(filepath.Join(dir, "exchange"+suffix+".cmd"), []byte(exchange), 0o644); err != nil {
 			log.Fatal(err)
 		}
 
-		up := strings.ToUpper(f.name)
-		if f.errors {
-			errs = append(errs, up)
-		} else {
-			probes = append(probes, up)
-		}
-
-		copies = append(copies, fmt.Sprintf("COPY \"%s/%s.mar\"/HOST DUA1:[000000]%s.MAR", dir, f.name, up))
+		fmt.Printf("gen: round %d: %d probes, %d error probes\n", r, len(probes), len(errs))
 	}
-
-	writeCOM("rms.com", "RMS.COM - the Phase 32 oracle's probes (docs/PHASE-32.md, subtask 3).", "RMS", probes)
-	writeCOM("rmserr.com", "RMSERR.COM - the Phase 32 oracle's error probes. Their messages go to\n$ ! ERRORS.LOG, which the author audits for macro text before Claude reads it.", "ERRORS", errs)
-
-	exchange := "! EXCHANGE.CMD - builds the Phase 32 oracle's exchange volume with govax\n" +
-		"! (docs/PHASE-32.md, subtask 3). Written by testdata/mar/rms/gen.go. Run\n" +
-		"! from the repository root:\n!\n!     govax console < testdata/mar/rms/exchange.cmd\n!\n" +
-		"INITIALIZE/CONTAINER \"testdata/disks/rms-exchange.dsk\" /DEVICE=RD53 RMSXCHG\n" +
-		"MOUNT/WRITE DUA1 \"testdata/disks/rms-exchange.dsk\"\n" +
-		strings.Join(copies, "\n") + "\n" +
-		"COPY \"" + dir + "/rms.com\"/HOST DUA1:[000000]RMS.COM\n" +
-		"COPY \"" + dir + "/rmserr.com\"/HOST DUA1:[000000]RMSERR.COM\n" +
-		"DIRECTORY DUA1:[000000]\nDISMOUNT DUA1\n"
-
-	if err := os.WriteFile(filepath.Join(dir, "exchange.cmd"), []byte(exchange), 0o644); err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("gen: %d probes, %d error probes\n", len(probes), len(errs))
 }
 
 func writeCOM(file, header, logName string, names []string) {

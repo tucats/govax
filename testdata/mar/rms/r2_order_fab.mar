@@ -1,0 +1,87 @@
+	.TITLE	R2_ORDER_FAB	$FAB_STORE with every keyword
+	.IDENT	/V1.0/
+;
+; Written by testdata/mar/rms/gen.go (docs/PHASE-32.md, subtask 3).
+;
+	.PSECT	CODE,EXE,NOWRT,LONG
+	.ENTRY	STORE,^M<R2,R3,R4,R5,R6,R7,R8>
+	$FAB_STORE	FAB=FAB1, -
+		ALQ=#500, -
+		BKS=#4, -
+		BLS=#512, -
+		CHAN_MODE=#2, -
+		CTX=VALL, -
+		DEQ=#7, -
+		DNA=NAMB, -
+		DNS=#11, -
+		FAC=<GET,PUT>, -
+		FNA=NAMA, -
+		FNS=#5, -
+		FOP=<CTG,SUP>, -
+		FSZ=#3, -
+		GBC=#9, -
+		LNM_MODE=#3, -
+		MRN=#1000, -
+		MRS=#132, -
+		NAM=NAM1, -
+		ORG=REL, -
+		RAT=<CR,BLK>, -
+		RFM=FIX, -
+		RTV=#8, -
+		SHR=<GET,PUT>, -
+		XAB=XAB1
+	$FAB_STORE	FAB=FAB1, -
+		XAB=XAB1, -
+		SHR=<GET,PUT>, -
+		RTV=#8, -
+		RFM=FIX, -
+		RAT=<CR,BLK>, -
+		ORG=REL, -
+		NAM=NAM1, -
+		MRS=#132, -
+		MRN=#1000, -
+		LNM_MODE=#3, -
+		GBC=#9, -
+		FSZ=#3, -
+		FOP=<CTG,SUP>, -
+		FNS=#5, -
+		FNA=NAMA, -
+		FAC=<GET,PUT>, -
+		DNS=#11, -
+		DNA=NAMB, -
+		DEQ=#7, -
+		CTX=VALL, -
+		CHAN_MODE=#2, -
+		BLS=#512, -
+		BKS=#4, -
+		ALQ=#500
+	RET
+
+	.PSECT	LABELS,NOEXE,WRT,LONG
+FAB1:	.BLKB	80
+FAB2:	.BLKB	80
+NAM1:	.BLKB	96
+NAM2:	.BLKB	96
+XAB1:	.BLKB	64
+XAB2:	.BLKB	64
+KBUF:	.BLKB	16
+PBUF:	.BLKB	16
+RBUF:	.BLKB	16
+HBUF:	.BLKB	16
+UBUF:	.BLKB	16
+EBUF:	.BLKB	16
+SBUF:	.BLKB	16
+CTAB:	.BLKB	16
+KNAM:	.BLKB	32
+ABUF:	.BLKB	16
+ILST:	.BLKB	16
+NAMA:	.ASCII	/A.DAT/
+NAMB:	.ASCII	/SYS$DISK:[]/
+VALW:	.WORD	300
+VALL:	.LONG	70000
+QUAD:	.QUAD	^X0123456789ABCDEF
+TRIP:	.WORD	1,2,3
+DVIB:	.BLKB	16
+PROW:	.WORD	^XFF00
+UICL:	.LONG	^X00FF00FF
+	.END

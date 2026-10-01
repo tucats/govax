@@ -492,3 +492,18 @@ clean, and a commit. `build -i` follows each one that changes behavior.
     several keywords, DVI= with a register, a one-element PRO=/UIC= list,
     and real MACRO's `$RENAME`-with-no-arguments error.
   - **The next phase:** running programs that use NAM blocks and XABs.
+- 2026-10-01: Follow-up, at the author's request: a second oracle round
+  for the three store-macro details DEVIATIONS.md left open.
+  - **The probes.** `gen.go` (now with a round number on each fixture)
+    writes them.
+    - 9 order probes: each store macro with every keyword at once, in the
+      manual's order and reversed, and `$XABKEY_STORE` with POS0–7 and
+      SIZ0–7.
+    - 8 probes that may be errors: DVI= as a register, `(R2)`, and an
+      immediate; PRO= as `<R>`, `<RWED>`, and an address named `RW`;
+      and UIC=`<377>`, stored and initialized.
+  - **Files.** `rms2.com`, `rmserr2.com` (ERRORS2.LOG, for the author to
+    audit), and `exchange2.cmd` (`testdata/disks/rms2-exchange.dsk`).
+    Round one's files are unchanged.
+  - **Checked.** The order probes all assemble with govax's own macros.
+    The volume is built and waiting for the author's VAX run.

@@ -1,0 +1,8 @@
+	.TITLE	R2_UIC_INIT	a second-round probe
+	.IDENT	/V1.0/
+;
+; Written by testdata/mar/rms/gen.go (docs/PHASE-32.md, subtask 3).
+;
+	.PSECT	DATA,NOEXE,WRT,LONG
+B1:	$XABPRO	UIC=<377>
+	.END

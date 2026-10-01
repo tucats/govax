@@ -1,0 +1,86 @@
+	.TITLE	R2_ORDER_XABKEY	$XABKEY_STORE with every keyword
+	.IDENT	/V1.0/
+;
+; Written by testdata/mar/rms/gen.go (docs/PHASE-32.md, subtask 3).
+;
+	.PSECT	CODE,EXE,NOWRT,LONG
+	.ENTRY	STORE,^M<R2,R3,R4,R5,R6,R7,R8>
+	$XABKEY_STORE	XAB=XAB1, -
+		COLTBL=#CTAB, -
+		DAN=#1, -
+		DFL=#200, -
+		DTP=STG, -
+		FLG=<CHG,DUP>, -
+		IAN=#2, -
+		IFL=#300, -
+		KNM=KNAM, -
+		LAN=#3, -
+		NUL=#32, -
+		NXT=XAB2, -
+		POS=<#0,#10>, -
+		PROLOG=#3, -
+		REF=#1, -
+		SIZ=<#4,#6>
+	$XABKEY_STORE	XAB=XAB1, -
+		SIZ=<#4,#6>, -
+		REF=#1, -
+		PROLOG=#3, -
+		POS=<#0,#10>, -
+		NXT=XAB2, -
+		NUL=#32, -
+		LAN=#3, -
+		KNM=KNAM, -
+		IFL=#300, -
+		IAN=#2, -
+		FLG=<CHG,DUP>, -
+		DTP=STG, -
+		DFL=#200, -
+		DAN=#1, -
+		COLTBL=#CTAB
+	$XABKEY_STORE	XAB=XAB1, -
+		POS0=#10, -
+		SIZ0=#20, -
+		POS1=#11, -
+		SIZ1=#21, -
+		POS2=#12, -
+		SIZ2=#22, -
+		POS3=#13, -
+		SIZ3=#23, -
+		POS4=#14, -
+		SIZ4=#24, -
+		POS5=#15, -
+		SIZ5=#25, -
+		POS6=#16, -
+		SIZ6=#26, -
+		POS7=#17, -
+		SIZ7=#27
+	RET
+
+	.PSECT	LABELS,NOEXE,WRT,LONG
+FAB1:	.BLKB	80
+FAB2:	.BLKB	80
+NAM1:	.BLKB	96
+NAM2:	.BLKB	96
+XAB1:	.BLKB	64
+XAB2:	.BLKB	64
+KBUF:	.BLKB	16
+PBUF:	.BLKB	16
+RBUF:	.BLKB	16
+HBUF:	.BLKB	16
+UBUF:	.BLKB	16
+EBUF:	.BLKB	16
+SBUF:	.BLKB	16
+CTAB:	.BLKB	16
+KNAM:	.BLKB	32
+ABUF:	.BLKB	16
+ILST:	.BLKB	16
+NAMA:	.ASCII	/A.DAT/
+NAMB:	.ASCII	/SYS$DISK:[]/
+VALW:	.WORD	300
+VALL:	.LONG	70000
+QUAD:	.QUAD	^X0123456789ABCDEF
+TRIP:	.WORD	1,2,3
+DVIB:	.BLKB	16
+PROW:	.WORD	^XFF00
+UICL:	.LONG	^X00FF00FF
+	.END

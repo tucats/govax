@@ -57,3 +57,29 @@ committing. Claude's clean-room hook (`.claude/hooks/cleanroom.sh`)
 refuses that log, and the `vax/` directory as a whole, until the hook's
 entry for it is removed. `rms.log` holds only the commands and MACRO's
 informational messages; skim it too.
+
+## The second round
+
+The first round left three store-macro details open (docs/DEVIATIONS.md,
+the Phase 32 entries). `gen.go` writes a second round of probes to settle
+them:
+
+| Files | What they hold |
+| ----- | -------------- |
+| `r2_order_*.mar` | Each store macro with every keyword in one call, in the manual's order and then reversed (and `$XABKEY_STORE` with all of POS0–POS7 and SIZ0–SIZ7), to show the order its moves come in |
+| `r2_dvi_*.mar` | `$NAM_STORE DVI=` as a register, a register deferred, and an immediate |
+| `r2_pro_*.mar`, `r2_uic_*.mar` | `$XABPRO_STORE PRO=` as a one-class list and as an address named with protection letters, and a one-element UIC= list, stored and initialized |
+
+Build its volume, from the repository root:
+
+    govax console < testdata/mar/rms/exchange2.cmd
+
+That makes `testdata/disks/rms2-exchange.dsk` (RD53 size, label
+RMSXCHG2). On VMS, with it as the default directory:
+
+    @RMS2/OUTPUT=RMS2.LOG
+    @RMSERR2/OUTPUT=ERRORS2.LOG
+
+Copy the `.OBJ` and `.ANL` files and both logs into `vax/` as before, after
+auditing `ERRORS2.LOG` (and skimming `RMS2.LOG`) for macro expansion
+text: the probes in `RMSERR2.COM` may draw errors.
