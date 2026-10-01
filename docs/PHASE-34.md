@@ -247,3 +247,24 @@ The author accepted each proposal below on 2026-10-01.
 - 2026-10-01: The author reviewed the plan and accepted every proposed
   answer to its open questions (now "Decisions"). Subtasks proceed with a
   commit after each.
+- 2026-10-01: Subtask 1 done (`testdata/credir/`): `credir.com` covers
+  each qualifier, its defaults, and the errors; `exchange.cmd` builds the
+  exchange volume, which is waiting for the author's VAX run.
+- 2026-10-01: Early facts from the Phase 33 container
+  (`testdata/mar/rms3/vax/rms3-vax.dsk.gz`), whose `[TEST]`, `[OUT]`, and
+  the rest VMS 7.3 made with plain `CREATE/DIRECTORY` as `[1,4]`:
+  characteristics `0x2080` (DIRECTORY, CONTIG); VAR records, RAT `NOSPAN`,
+  RSZ and MRS 512; HIBLK 1, EFBLK 2, FFB 0, high-water mark 2; first block
+  `FFFF` then zeros; IDENT revision **0** (ordinary files VMS wrote read
+  1); protection the parent's less delete (MFD `0xBA00`, directories
+  `0xBA88`); owner `[1,4]`; the parent's entry carries the parent's
+  default version limit (no limit, 32767), as ods2's `Insert` already
+  writes it.
+- 2026-10-01: Subtask 2 done, in ods2 (`eb28f6a`, with `docs/PHASE-04.md`
+  there logging this phase's ods2 work). `volume.CreateDirectory` takes
+  `DirectoryOptions` and writes the layout above; `NewFileHeader` gains
+  `Owner` and `Protection`; a header with the directory characteristic
+  starts at IDENT revision 0. A directory that exists in any version is
+  `ErrExists`, not a new version. A failure part way frees the header and
+  space before anything is entered in the parent. govax's tests that call
+  `CreateDirectory` follow the new signature.

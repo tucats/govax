@@ -11,6 +11,7 @@ import (
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/ods2/ondisk"
+	"github.com/tucats/ods2/volume"
 )
 
 // The Phase 33 oracle's probes (testdata/mar/rms3), run under govax.
@@ -75,19 +76,19 @@ func buildRMS3Tree(t *testing.T, c *Console) {
 		t.Fatal(err)
 	}
 
-	test, err := vol.CreateDirectory(mfd, "TEST.DIR", 0, bm, ib)
+	test, err := vol.CreateDirectory(mfd, "TEST.DIR", volume.DirectoryOptions{}, bm, ib)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, d := range []string{"SUB.DIR", "EMPTY.DIR"} {
-		if _, err := vol.CreateDirectory(test, d, 0, bm, ib); err != nil {
+		if _, err := vol.CreateDirectory(test, d, volume.DirectoryOptions{}, bm, ib); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	for _, d := range []string{"OUT.DIR", "CRE.DIR"} {
-		if _, err := vol.CreateDirectory(mfd, d, 0, bm, ib); err != nil {
+		if _, err := vol.CreateDirectory(mfd, d, volume.DirectoryOptions{}, bm, ib); err != nil {
 			t.Fatal(err)
 		}
 	}

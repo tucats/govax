@@ -57,11 +57,11 @@ func newRenameFixture(t *testing.T) renameFixture {
 
 	fx := renameFixture{createFixture: f, path: path, vol: vol, mfd: mfd, bm: bm, ib: ib}
 
-	if fx.a, err = vol.CreateDirectory(mfd, "A.DIR", 0, bm, ib); err != nil {
+	if fx.a, err = vol.CreateDirectory(mfd, "A.DIR", volume.DirectoryOptions{}, bm, ib); err != nil {
 		t.Fatal(err)
 	}
 
-	if fx.b, err = vol.CreateDirectory(mfd, "B.DIR", 0, bm, ib); err != nil {
+	if fx.b, err = vol.CreateDirectory(mfd, "B.DIR", volume.DirectoryOptions{}, bm, ib); err != nil {
 		t.Fatal(err)
 	}
 

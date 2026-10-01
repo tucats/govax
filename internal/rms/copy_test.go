@@ -846,7 +846,7 @@ func TestSessionCopy_dirsPreservesSubdirectoriesAndMaterializesDirEntries(t *tes
 		t.Fatalf("IndexBitmap: %v", err)
 	}
 
-	testDir, err := vol.CreateDirectory(mfd, "TESTDIR.DIR", 0, bm, ib)
+	testDir, err := vol.CreateDirectory(mfd, "TESTDIR.DIR", volume.DirectoryOptions{}, bm, ib)
 	if err != nil {
 		t.Fatalf("CreateDirectory(TESTDIR.DIR): %v", err)
 	}
@@ -872,7 +872,7 @@ func TestSessionCopy_dirsPreservesSubdirectoriesAndMaterializesDirEntries(t *tes
 		t.Fatalf("Close(NESTED.TXT): %v", err)
 	}
 
-	if _, err := vol.CreateDirectory(testDir, "SUBDIR.DIR", 0, bm, ib); err != nil {
+	if _, err := vol.CreateDirectory(testDir, "SUBDIR.DIR", volume.DirectoryOptions{}, bm, ib); err != nil {
 		t.Fatalf("CreateDirectory(SUBDIR.DIR): %v", err)
 	}
 
@@ -937,7 +937,7 @@ func TestSessionCopy_withoutDirsFlattensAndSkipsDirEntries(t *testing.T) {
 		t.Fatalf("IndexBitmap: %v", err)
 	}
 
-	testDir, err := vol.CreateDirectory(mfd, "TESTDIR.DIR", 0, bm, ib)
+	testDir, err := vol.CreateDirectory(mfd, "TESTDIR.DIR", volume.DirectoryOptions{}, bm, ib)
 	if err != nil {
 		t.Fatalf("CreateDirectory(TESTDIR.DIR): %v", err)
 	}
@@ -949,7 +949,7 @@ func TestSessionCopy_withoutDirsFlattensAndSkipsDirEntries(t *testing.T) {
 		t.Fatalf("CreateFile(NESTED.TXT): %v", err)
 	}
 
-	if _, err := vol.CreateDirectory(testDir, "SUBDIR.DIR", 0, bm, ib); err != nil {
+	if _, err := vol.CreateDirectory(testDir, "SUBDIR.DIR", volume.DirectoryOptions{}, bm, ib); err != nil {
 		t.Fatalf("CreateDirectory(SUBDIR.DIR): %v", err)
 	}
 
@@ -997,7 +997,7 @@ func TestSessionCopy_dirsTest(t *testing.T) {
 		t.Fatalf("IndexBitmap: %v", err)
 	}
 
-	if _, err := vol.CreateDirectory(mfd, "EMPTYSUB.DIR", 0, bm, ib); err != nil {
+	if _, err := vol.CreateDirectory(mfd, "EMPTYSUB.DIR", volume.DirectoryOptions{}, bm, ib); err != nil {
 		t.Fatalf("CreateDirectory(EMPTYSUB.DIR): %v", err)
 	}
 

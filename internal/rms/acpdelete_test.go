@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/ods2/ondisk"
+	"github.com/tucats/ods2/volume"
 )
 
 // gone reports whether the file with ID fid no longer exists.
@@ -150,7 +151,7 @@ func TestACPDelete_errors(t *testing.T) {
 	root, _ := vol.OpenDirectory(ondisk.MasterFileDirectoryFid)
 	bm, ib, _ := deviceBitmaps(root.Device)
 
-	sub, err := vol.CreateDirectory(root, "SUB.DIR", 0, bm, ib)
+	sub, err := vol.CreateDirectory(root, "SUB.DIR", volume.DirectoryOptions{}, bm, ib)
 	if err != nil {
 		t.Fatal(err)
 	}
