@@ -52,9 +52,13 @@ if printf '%s' "$text" | grep -Eq '(^|[^a-z0-9_])vmslib([^a-z0-9_]|$)'; then
 	refuse "testdata/vmslib holds licensed VMS files; only starlet.olb, imagelib.olb, and librtl.exe may be named, for their values"
 fi
 
-# Real-MACRO listings not yet audited for STARLET macro expansion text.
-if printf '%s' "$text" | grep -Eq '(rmscopy|fabalign|qiow)\.lis|macros/vax/\*|macros/vax/?("|$|[[:space:]])'; then
-	refuse "this names a real-MACRO listing that may show STARLET macro expansions and hasn't been audited"
+# Real-MACRO output not yet audited for STARLET macro expansion text.
+# (Phase 28's rmscopy.lis, fabalign.lis, and qiow.lis were audited by the
+# author on 2026-09-30: no expansion text.) The Phase 32 oracle's error
+# probes write their messages to errors.log, which may echo an expansion
+# line; it stays refused until the author has checked it.
+if printf '%s' "$text" | grep -Eq 'rms/vax/errors\.log|rms/vax/\*|rms/vax/?("|$|[[:space:]])'; then
+	refuse "this names real-MACRO output that may show STARLET macro text and hasn't been audited"
 fi
 
 exit 0

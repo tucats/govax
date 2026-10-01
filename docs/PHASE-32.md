@@ -241,6 +241,13 @@ clean, and a commit. `build -i` follows each one that changes behavior.
     `qiow.lis` in `testdata/mar/macros/vax/` for STARLET expansion lines.
     Regenerate them with `.NOSHOW ME,MEB`, or delete them (no test reads
     them). Then remove them from the hook's list.
+- 2026-09-30: Subtask 0 finished. The author audited `rmscopy.lis`,
+  `fabalign.lis`, and `qiow.lis`. They hold no expansion text: a macro
+  call appears, and the location advances by the bytes it generated,
+  nothing more. The hook no longer refuses them. In their place, it
+  refuses the Phase 32 oracle's error log (`testdata/mar/rms/vax/
+  errors.log`) until the author has audited that too, since MACRO's error
+  messages might echo an expansion line. `cleanroom_test.sh` has 18 cases.
 - 2026-09-30: Subtask 1, mostly done.
   - **Captured.** `gen -into symbols` with `-prefix FAB$`, `RAB$`, `NAM$`,
     and `XAB$` against STARLET.OLB merged 550 names into `Symbols` (now
