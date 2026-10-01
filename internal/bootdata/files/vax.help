@@ -3311,7 +3311,8 @@ $DIR
 
     Syntax:
 
-        DIRECTORY [/FULL] [/FILE] [/SIZE] [/DATE] [file-spec]
+        DIRECTORY [/FULL] [/FILE] [/SIZE] [/DATE] [/OWNER] [/PROTECTION]
+                  [file-spec]
 
     Parameter:
 
@@ -3325,15 +3326,20 @@ $DIR
 
     Qualifiers:
 
-        /FULL           Includes the record format, file size, and
-                        creation date for each file.  Implies /FILE,
-                        /SIZE, and /DATE.
+        /FULL           Includes everything the qualifiers below show,
+                        and each file's record format.
 
-        /FILE           Includes each file's record format.
+        /FILE           Includes each file's file ID.
 
         /SIZE           Includes each file's size, in blocks.
 
-        /DATE           Includes each file's creation date.
+        /DATE           Includes each file's date.
+
+        /OWNER          Includes each file's owner UIC, [group,member].
+
+        /PROTECTION     Includes each file's protection: the access
+                        granted to system, owner, group, and world, in
+                        that order, as in (RWED,RWED,RE,).
 
     Examples:
 

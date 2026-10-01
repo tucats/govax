@@ -225,7 +225,7 @@ func TestSession_searchListCommands(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !strings.Contains(text, "Directory DUA0:[]") || !strings.Contains(text, "Directory DUA1:[]") ||
+	if !strings.Contains(text, "Directory DUA0:[000000]") || !strings.Contains(text, "Directory DUA1:[000000]") ||
 		!strings.Contains(text, "Total of 2 file(s).") {
 		t.Errorf("DIRECTORY BOTH:SPEECH.TXT =\n%s", text)
 	}

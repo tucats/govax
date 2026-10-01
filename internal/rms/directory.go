@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tucats/ods2/filespec"
+	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
 )
 
@@ -40,6 +41,22 @@ type DirectoryOptions struct {
 	File bool
 	Size bool
 	Date bool
+
+	// Owner and Protection (docs/PHASE-34.md) add each file's owner UIC
+	// and protection, as VMS's DIRECTORY/OWNER and /PROTECTION do; /FULL
+	// shows both.
+	Owner      bool
+	Protection bool
+}
+
+// columns reports which of the optional columns a listing shows: /FULL
+// implies every one.
+func (o DirectoryOptions) columns() DirectoryOptions {
+	if o.Full {
+		return DirectoryOptions{Full: true, File: true, Size: true, Date: true, Owner: true, Protection: true}
+	}
+
+	return o
 }
 
 // Directory lists every file matching specText (an operator-typed file
@@ -66,9 +83,7 @@ func (s *Session) Directory(specText string, opts DirectoryOptions) (string, err
 		specText = "*.*;*"
 	}
 
-	showFile := opts.Full || opts.File
-	showSize := opts.Full || opts.Size
-	showDate := opts.Full || opts.Date
+	cols := opts.columns()
 
 	var b strings.Builder
 
@@ -85,10 +100,15 @@ func (s *Session) Directory(specText string, opts DirectoryOptions) (string, err
 		}
 
 		for _, group := range groupMatchesByDir(matches) {
-			fmt.Fprintf(&b, "\nDirectory %s:[%s]\n\n", r.Display, strings.Join(group.dirs, "."))
+			dir := strings.Join(group.dirs, ".")
+			if dir == "" {
+				dir = "000000" // the MFD, which VMS writes [000000]
+			}
+
+			fmt.Fprintf(&b, "\nDirectory %s:[%s]\n\n", r.Display, dir)
 
 			for _, m := range group.matches {
-				line, blocks, err := formatDirectoryEntry(vol, m, showFile, showSize, showDate, opts.Full)
+				line, blocks, err := formatDirectoryEntry(vol, m, cols)
 				if err != nil {
 					return err
 				}
@@ -108,7 +128,7 @@ func (s *Session) Directory(specText string, opts DirectoryOptions) (string, err
 
 	fmt.Fprintf(&b, "\nTotal of %d file(s)", totalFiles)
 
-	if showSize {
+	if cols.Size {
 		fmt.Fprintf(&b, ", %d block(s)", totalBlocks)
 	}
 
@@ -177,12 +197,12 @@ const directoryVersionDelim = ';'
 // exact column-aligned, multiple-files-per-line layout for a bare listing
 // — see docs/PHASE-23.md's own open question on this — it always prints
 // one file per line, with any requested extra detail appended after it.
-func formatDirectoryEntry(vol *volume.Volume, m filespec.Match, showFile, showSize, showDate, full bool) (string, uint32, error) {
+func formatDirectoryEntry(vol *volume.Volume, m filespec.Match, cols DirectoryOptions) (string, uint32, error) {
 	var line strings.Builder
 
 	fmt.Fprintf(&line, "%-30s", m.ShortName(directoryVersionDelim))
 
-	if !showFile && !showSize && !showDate && !full {
+	if !cols.File && !cols.Size && !cols.Date && !cols.Owner && !cols.Protection && !cols.Full {
 		return line.String(), 0, nil
 	}
 
@@ -191,25 +211,46 @@ func formatDirectoryEntry(vol *volume.Volume, m filespec.Match, showFile, showSi
 		return "", 0, fmt.Errorf("opening %s.%s: %w", m.Name, m.Type, err)
 	}
 
-	blocks := f.Header.RecordAttributes.HighestBlock
+	h := f.Header
+	blocks := h.RecordAttributes.HighestBlock
 
-	if showFile {
+	if cols.File {
 		fmt.Fprintf(&line, "  %-16s", m.Fid.String())
 	}
 
-	if showSize {
+	if cols.Size {
 		fmt.Fprintf(&line, "  %5d", blocks)
 	}
 
-	if showDate {
-		if ident, err := f.Header.Ident(); err == nil {
+	if cols.Date {
+		if ident, err := h.Ident(); err == nil {
 			fmt.Fprintf(&line, "  %s", ident.RevisionDate.String())
 		}
 	}
 
-	if full {
-		fmt.Fprintf(&line, "  %s", f.Header.RecordAttributes.Format)
+	if cols.Owner {
+		fmt.Fprintf(&line, "  %-16s", h.Owner.String())
+	}
+
+	if cols.Protection {
+		fmt.Fprintf(&line, "  %s", directoryProtection(h.FileProtection))
+	}
+
+	if cols.Full {
+		fmt.Fprintf(&line, "  %s", h.RecordAttributes.Format)
 	}
 
 	return line.String(), blocks, nil
+}
+
+// directoryProtection writes a protection mask the way VMS's DIRECTORY
+// /PROTECTION does: the access each of system, owner, group, and world is
+// granted, in that order, "(RWED,RWED,RE,)".
+func directoryProtection(mask uint16) string {
+	parts := make([]string, 4)
+	for i := range parts {
+		parts[i] = ondisk.ProtectionAccess(mask, i)
+	}
+
+	return "(" + strings.Join(parts, ",") + ")"
 }

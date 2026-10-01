@@ -51,7 +51,7 @@ func TestLogicalNames_fileCommands(t *testing.T) {
 	mustDispatch(t, d, "DIRECTORY BOTH:*.TXT")
 
 	out := buf.String()
-	if !strings.Contains(out, "Directory DUA0:[]") || !strings.Contains(out, "Directory DUA1:[]") ||
+	if !strings.Contains(out, "Directory DUA0:[000000]") || !strings.Contains(out, "Directory DUA1:[000000]") ||
 		!strings.Contains(out, "Total of 3 file(s).") {
 		t.Errorf("DIRECTORY BOTH:*.TXT =\n%s", out)
 	}
@@ -63,7 +63,7 @@ func TestLogicalNames_fileCommands(t *testing.T) {
 	buf.Reset()
 	mustDispatch(t, d, "DIRECTORY DISK$WORKB:*.TXT")
 
-	if !strings.Contains(buf.String(), "Directory DISK$WORKB:[]") {
+	if !strings.Contains(buf.String(), "Directory DISK$WORKB:[000000]") {
 		t.Errorf("DIRECTORY DISK$WORKB:*.TXT =\n%s", buf.String())
 	}
 

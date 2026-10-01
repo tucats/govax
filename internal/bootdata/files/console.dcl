@@ -644,6 +644,8 @@ grammar console
         qualifier   file/id=903
         qualifier   size/id=904
         qualifier   date/id=905
+        qualifier   owner/id=906
+        qualifier   protection/id=907
 
     !
     ! govax-native extension (Phase 23, internal/rms + internal/console):

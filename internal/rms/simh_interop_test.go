@@ -264,8 +264,8 @@ func TestSimhInterop_directoryListsRealVMSDisk(t *testing.T) {
 		t.Fatalf("Directory: %v", err)
 	}
 
-	if !strings.Contains(out, "Directory DUA0:[]") {
-		t.Errorf("Directory output = %q, want it to contain a DUA0:[] header", out)
+	if !strings.Contains(out, "Directory DUA0:[000000]") {
+		t.Errorf("Directory output = %q, want it to contain a DUA0:[000000] header", out)
 	}
 
 	if !strings.Contains(out, "Total of ") {

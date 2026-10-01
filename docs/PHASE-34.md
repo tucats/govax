@@ -329,3 +329,14 @@ The author accepted each proposal below on 2026-10-01.
     every qualifier, `[.SUB]`, `[-.X]`, a logical device, and errors.
   - **Noticed for subtask 7:** DIRECTORY's heading for the MFD prints
     `Directory DUA1:[]`, not `[000000]`.
+- 2026-10-01: Subtask 7 done: `DIRECTORY /OWNER /PROTECTION`.
+  - `rms.DirectoryOptions` gains `Owner` and `Protection`; `/FULL` shows
+    both. The owner is written `[g,m]` (octal); VMS shows an identifier
+    name such as `[SYSTEM]` where one exists, which govax has no rights
+    database to look up. Protection is VMS's `(RWED,RWED,RE,)` form.
+    Both columns are checked against the oracle log in subtask 8.
+  - **Bug fixed:** DIRECTORY headed the MFD `Directory DUA1:[]`; it's now
+    `[000000]`, as VMS writes it, in govax and in ods2's CLI (ods2
+    `f3c474b`). Four govax tests expected the old heading.
+  - HELP DIRECTORY lists the new qualifiers, and now says what `/FILE`
+    shows (the file ID, not the record format).

@@ -461,6 +461,9 @@ func (d *Dispatcher) bindGrammar() {
 			File: r.Present("FILE"),
 			Size: r.Present("SIZE"),
 			Date: r.Present("DATE"),
+
+			Owner:      r.Present("OWNER"),
+			Protection: r.Present("PROTECTION"),
 		}
 
 		return d.Console.Directory(r.String("SPEC"), opts)

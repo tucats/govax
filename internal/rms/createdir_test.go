@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/tucats/ods2/filespec"
@@ -249,5 +250,34 @@ func TestCreateDirectoryHost(t *testing.T) {
 		if _, err := s.CreateDirectory(spec, CreateDirectoryOptions{}); err == nil {
 			t.Errorf("CreateDirectory(%s) on the host: want an error, got none", spec)
 		}
+	}
+}
+
+// TestDirectoryOwnerProtection: DIRECTORY/OWNER and /PROTECTION show a new
+// directory's owner and protection, and /FULL shows both.
+func TestDirectoryOwnerProtection(t *testing.T) {
+	s, _ := newCreateDirSession(t)
+
+	owner := ondisk.Uic{Group: 0o200, Member: 0o201}
+	mustCreateDir(t, s, "[OWNED]", CreateDirectoryOptions{Owner: &owner, Protection: "(S:RWE,O:RWE,G:RE,W:E)"})
+
+	for _, opts := range []DirectoryOptions{{Owner: true, Protection: true}, {Full: true}} {
+		out, err := s.Directory("[000000]OWNED.DIR", opts)
+		if err != nil {
+			t.Fatalf("Directory(%+v): %v", opts, err)
+		}
+
+		if !strings.Contains(out, "[200,201]") || !strings.Contains(out, "(RWE,RWE,RE,E)") {
+			t.Errorf("Directory(%+v) = %q, want the owner [200,201] and protection (RWE,RWE,RE,E)", opts, out)
+		}
+	}
+
+	out, err := s.Directory("[000000]OWNED.DIR", DirectoryOptions{Protection: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.Contains(out, "[200,201]") {
+		t.Errorf("Directory/PROTECTION = %q, want no owner column", out)
 	}
 }

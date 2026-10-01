@@ -86,15 +86,8 @@ func createTestFile(t *testing.T, vol *volume.Volume, name, content string) {
 
 // TestSession_directoryListsFiles confirms the basic happy path: every file
 // created on the volume shows up in a bare DIRECTORY listing, grouped under
-// one "Directory DUA0:[]:" header (the master file directory — an empty
-// joined directory path, exactly matching ods2's own cmdDirectory, which
-// this phase's own "behavioral reference, not necessarily byte-identical"
-// framing means this port deliberately reproduces rather than "improves").
-//
-// The volume's own reserved files (INDEXF.SYS, BITMAP.SYS, ...) are already
-// present in the master file directory from volume.Initialize, so this
-// doesn't assert an exact file count — TestSession_directoryWildcardFilter
-// covers that, scoped to a name pattern the reserved files can't match.
+// one "Directory DUA0:[000000]" header (the master file directory, which
+// VMS writes [000000]; govax wrote "[]" until docs/PHASE-34.md).
 func TestSession_directoryListsFiles(t *testing.T) {
 	s, vol := newDirectoryTestSession(t)
 	createTestFile(t, vol, "FOO.TXT", "hello")
@@ -109,8 +102,8 @@ func TestSession_directoryListsFiles(t *testing.T) {
 		t.Fatalf("Directory: %v", err)
 	}
 
-	if !strings.Contains(out, "Directory DUA0:[]") {
-		t.Errorf("Directory output = %q, want it to contain a DUA0:[] header", out)
+	if !strings.Contains(out, "Directory DUA0:[000000]") {
+		t.Errorf("Directory output = %q, want it to contain a DUA0:[000000] header", out)
 	}
 
 	if !strings.Contains(out, "FOO.TXT;1") {
