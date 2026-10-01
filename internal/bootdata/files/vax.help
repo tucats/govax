@@ -3601,9 +3601,13 @@ $MACR
     MACRO's order: those .LIBRARY names, the last named first; then those
     /LIBRARY names, the last named first; then STARLET.MLB.  STARLET.MLB is
     SYS$LIBRARY:STARLET.MLB on a mounted volume, or else STARLET.MLB in the
-    host directory the vax.library setting names, or else govax's own,
-    which has a few system service macros ($EXIT_S, $ASSIGN_S, $DASSGN_S,
-    $QIO_S, and $QIOW_S).  Macro libraries are made with LIBRARY/MACRO.
+    host directory the vax.library setting names, or else govax's own.
+    govax's own has the RMS macros ($FAB, $RAB, $NAM, the XABs, their
+    _STORE forms, and $OPEN, $GET, $PUT, $CLOSE, and the other RMS
+    services), the symbol definition macros ($FABDEF, $RMSDEF, $SSDEF,
+    $IODEF, and others), and a few system service macros ($EXIT_S,
+    $ASSIGN_S, $DASSGN_S, $QIO_S, and $QIOW_S).  Macro libraries are made
+    with LIBRARY/MACRO.
 
     From the host shell, "govax macro <source>" runs this command, with
     --object <file> or --no-object, and --library <library> (which may be

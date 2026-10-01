@@ -103,7 +103,7 @@ does.
 
 | File | Used by | Without it |
 | ---- | ------- | ---------- |
-| `STARLET.MLB` | `MACRO`: the system macros (`$FAB`, `$RAB`, `$QIOW_S`, ...) | govax's own small STARLET: `$ASSIGN_S`, `$DASSGN_S`, `$EXIT_S`, `$QIO_S`, and `$QIOW_S`. Programs that use the RMS macros need the real one. |
+| `STARLET.MLB` | `MACRO`: the system macros (`$FAB`, `$RAB`, `$QIOW_S`, ...) | govax's own STARLET, written from DIGITAL's manuals and checked against real VAX MACRO's output: the RMS macros (`$FAB`, `$RAB`, `$NAM`, the XABs, their `_STORE` forms, and `$OPEN`, `$GET`, `$PUT`, ...), the `$xxxDEF` definition macros (`$FABDEF`, `$SSDEF`, `$IODEF`, ...), and a few system service macros (`$ASSIGN_S`, `$DASSGN_S`, `$EXIT_S`, `$QIO_S`, `$QIOW_S`). Other system macros need the real one. |
 | `IMAGELIB.OLB` | `LINK`: which shareable image defines each routine | govax's tables of LIBRTL's routines, and the routines govax's shims stand for |
 | `LIBRTL.EXE` (and other shareable images) | `LINK`: routine offsets. `RUN`: the routines themselves | Linking works for every LIBRTL routine. Running one needs the image, or a govax shim. |
 | `STARLET.OLB` | `LINK`: the system library's modules | govax's tables of STARLET's status codes and other definitions (SS$_, RMS$_, IO$_, ...), and its system-service vector. Routines STARLET holds as code (BAS$, MTH$, ...) need the real library. |
@@ -131,9 +131,9 @@ natural next steps are:
 
 - flesh out the skeletal RTL support so more actual images could be
   loaded and run.
-- Add the MACRO-32 macro facility, so programs can use the system
-  macros in `STARLET.MLB` (Phase 28), and listings and traceback
-  records (Phase 29).
+- Listings and traceback records for MACRO (Phase 29).
+- Running programs that use RMS name blocks and XABs: `$PARSE` and
+  `$SEARCH` filling a NAM, and `$OPEN`/`$DISPLAY` filling the XABs.
 
 Beyond that, this project was never aiming to emulate real hardware
 (disk controllers, network controllers, etc.) or boot an unmodified

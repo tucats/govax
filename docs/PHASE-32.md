@@ -1,6 +1,6 @@
 # Phase 32 — govax's own RMS macros, written clean-room
 
-**Status:** planned (2026-09-30), not started.
+**Status:** done (2026-09-30).
 
 ## Goal
 
@@ -464,3 +464,31 @@ clean, and a commit. `build -i` follows each one that changes behavior.
     - `TestRMSCopy_govaxStarlet` assembles it with no VMS library, links
       it, and runs it on a fresh volume, where it copies its source to
       RMSCOPY.OUT record for record.
+- 2026-09-30: Subtask 8 done, and the phase with it.
+  - **Docs.** README's "Optional VMS files" table says what govax's own
+    STARLET.MLB now holds, and that only other system macros need the
+    real one. Its "What's next" names Phase 29 and running NAM/XAB
+    programs. The MACRO help topic lists the RMS and definition macros.
+    CLAUDE.md describes the two sources, `mkdefs`, and the oracle test.
+    PLAN.md marks the phase done.
+  - **The result.** govax's own STARLET.MLB holds:
+    - 12 RMS initialization macros, 11 store macros, and 28 service
+      macros;
+    - 28 `$xxxDEF` macros;
+    - the five system service macros from Phase 28.
+
+    No VMS file is needed to build or test any of them. `TestOracleObjects`
+    compares 68 probes with real MACRO's objects, byte for byte apart from
+    traceback records. Four more are checked line by line, and
+    `rmscopy.mar` runs.
+  - **Found along the way and fixed.**
+    - `ods2`'s directory writer could fill a block with no end marker,
+      which VMS rejects (`ods2` cf18a63).
+    - govax's object writer packed records differently from real MACRO,
+      now measured and matched.
+    - Five ATR$/FIB$ values from a later version's listings were
+      corrected.
+  - **Left open, in DEVIATIONS.md.** The store order in a call with
+    several keywords, DVI= with a register, a one-element PRO=/UIC= list,
+    and real MACRO's `$RENAME`-with-no-arguments error.
+  - **The next phase:** running programs that use NAM blocks and XABs.
