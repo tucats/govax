@@ -3159,8 +3159,11 @@ $XFC
 $MOUN
 
     The MOUNT command attaches a disk-image container file to a device
-    name, making a real ODS-2 volume available for RMS file access (the
-    SYS$CREATE, SYS$OPEN, SYS$CLOSE, SYS$GET, and SYS$PUT system services).
+    name, making a real ODS-2 volume available for RMS file access by a
+    program: the SYS$CREATE, SYS$OPEN, SYS$CLOSE, SYS$CONNECT, SYS$GET,
+    SYS$PUT, SYS$RENAME, SYS$PARSE, SYS$SEARCH, and SYS$DISPLAY services,
+    with name blocks (NAM) and the XABDAT, XABRDT, XABFHC, XABPRO, XABALL,
+    and XABSUM extended attribute blocks.
     If the named device is not already known to the console, MOUNT creates
     it automatically as a disk-class device.
 

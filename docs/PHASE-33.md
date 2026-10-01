@@ -1,6 +1,6 @@
 # Phase 33 — RMS name blocks and XABs at run time
 
-**Status:** in progress (2026-10-01).
+**Status:** done (2026-10-01).
 
 ## Goal
 
@@ -232,3 +232,10 @@ commit, plus `build -i` when it changes behavior.
     number), new files' FIDs and clock dates, the state VMS leaves after
     a wildcard directory's search, and the time VMS writes into the first
     of two XABDATs as it rejects the second.
+- 2026-10-01: Subtask 7, close-out. HELP MOUNT lists the RMS services a
+  program can use, with NAM blocks and the XABs. PLAN.md and CLAUDE.md
+  mark the phase done. DEVIATIONS.md gets no new entry: what the oracle
+  showed is now govax's behavior, and what's masked isn't part of RMS's
+  definition (IFI numbering, channel numbers, clock dates, and VMS's
+  internal search state). Still out of scope, as planned: indexed and
+  relative files, XABTRM, XABITM, NAML, DECnet, and FAB$V_SUP.

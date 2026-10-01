@@ -13,7 +13,7 @@ never had.
   index.
 - `docs/PHASE-00.md` … `PHASE-33.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (29 is
-  planned, not started; 33 is in progress; 28 and 30–32 are done). Read the relevant phase doc
+  planned, not started; 28 and 30–33 are done). Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
@@ -109,7 +109,8 @@ expect adjustment as phases land):
   commands into records. Codes and layouts come from `vmsdef.Symbols`
   (the VAX object language names of VMS 7.3's `objfmt.sdl`). Host files hold records in ODS-2's
   on-disk variable-length layout (`ReadRecords`/`WriteRecords`).
-- `internal/rms` — RMS (`SYS$CREATE`/`CONNECT`/`OPEN`/`CLOSE`/`GET`/`PUT`/`RENAME`) file
+- `internal/rms` — RMS (`SYS$CREATE`/`CONNECT`/`OPEN`/`CLOSE`/`GET`/`PUT`/`RENAME`,
+  and Phase 33's `PARSE`/`SEARCH`/`DISPLAY` with NAM blocks and XABs) file
   I/O backed by the sibling Go module `github.com/tucats/ods2`'s real ODS-2
   volume/file implementation, plus the `MOUNT`/`DISMOUNT`-facing `MountTable`
   (Phase 22). Also decides whether a typed file name means a host file or a
@@ -121,7 +122,11 @@ expect adjustment as phases land):
   tracks real `ods2` handles Phase 10's RTL layer never needed. Requires a
   `go.work` file at the repo root (`use .` / `use ../ods2`, gitignored — see
   `docs/PHASE-22.md`'s "Dependency: `go.work`, not a `replace` directive") to
-  build at all, since `ods2` isn't a `go.mod` dependency.
+  build at all, since `ods2` isn't a `go.mod` dependency. Name processing
+  (`name.go`: default names, related files, logical names, search lists)
+  is shared by every service, and `$SEARCH` (`search.go`) keeps VMS's two
+  kinds of wildcard context; Phase 33's runtime oracle (`testdata/mar/rms3`,
+  `TestRMS3Oracle`) checks them against VMS 7.3 byte for byte.
 - `internal/link` — the VAX linker (Phase 30): builds a VMS executable image from
   `internal/obj` modules, laid out as real LINK lays images out (byte for byte on
   the fixtures). The console's `LINK` command (`internal/console/link.go`) drives it.
