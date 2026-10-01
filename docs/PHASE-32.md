@@ -262,3 +262,19 @@ clean, and a commit. `build -i` follows each one that changes behavior.
     source kit (merged with `gen -sdl`), or the oracle (subtask 3). A
     govax-written program that uses `$XABKEYDEF` and stores each field
     name, assembled by real MACRO, shows the values in its object.
+- 2026-09-30: Subtask 2 done. `docs/RMS-MACROS.md` is the specification,
+  written from the RMS Reference Manual's Appendices A and B, its field
+  chapters, and Part III's calling formats.
+  - **Contents:** the general rules; the keyword encodings (one choice →
+    the `C_` code, options → the OR of the `M_` masks, SHR's `SHRxxx`
+    names), checked against `Symbols` for every keyword the manual lists;
+    each initialization macro's fields and defaults; the store macros'
+    rules; the definition macros; and the service macros' argument
+    lists.
+  - **Open details:** 14 oracle questions (O1–O14), each with the fixture
+    that answers it. Examples: field store order, RFM's default, what an
+    omitted protection class stores, and the service macros' argument
+    lists with ERR omitted.
+  - **Not in VAX 7.3's values:** SHR=NQL, ROP_2's bits, and NOP's
+    NO_SHORT_UPCASE are likely post-7.3 or Alpha-only (O5), and XABKEY,
+    XABSUM, and XABITM still need values (O9).
