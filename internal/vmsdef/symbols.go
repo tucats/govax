@@ -17,9 +17,9 @@ import (
 //     for .FAB and .RAB, at the same offsets (TestFields_matchSymbols).
 //   - NAM$: $NAMDEF's name block: field offsets, bits, and codes.
 //   - XAB$: $XABDEF's extended attribute blocks: the common fields, and
-//     those of the XABALL, XABDAT, XABFHC, XABPRO, XABRDT, and XABTRM
-//     blocks. XABKEY's, XABSUM's, and XABITM's aren't here yet
-//     (docs/PHASE-32.md, subtask 1).
+//     those of the XABALL, XABDAT, XABFHC, XABITM, XABKEY, XABPRO, XABRDT,
+//     XABSUM, and XABTRM blocks. XABKEY's, XABSUM's, and XABITM's came from
+//     real MACRO's output (testdata/mar/rms/defined.txt, docs/PHASE-32.md).
 //   - SS$_: $SSDEF's system-service completion codes, exactly as
 //     STARLET.OLB's SYS$SSDEF defines them (docs/PHASE-31.md).
 //   - LNM$: $LNMDEF's attribute bits, limits, and item codes. LNM$_CHAIN

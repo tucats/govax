@@ -185,3 +185,20 @@ func TestGenerateImagesAndLibrary_roundTrip(t *testing.T) {
 		}
 	}
 }
+
+func TestParseValues(t *testing.T) {
+	src := "# a comment\n\n# $XABKEYDEF\nXAB$C_KEY = 0x15\nXAB$B_DTP = 19\nXAB$B_AID undefined\nSS$_NORMAL = 1\nXAB$C_KEY = 0x15\n"
+
+	got, err := parseValues(src, "XAB$")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := map[string]uint32{"XAB$C_KEY": 0x15, "XAB$B_DTP": 19}; !reflect.DeepEqual(got, want) {
+		t.Errorf("parseValues = %v, want %v", got, want)
+	}
+
+	if _, err := parseValues("A$X = 1\nA$X = 2\n", ""); err == nil {
+		t.Error("parseValues accepted a name listed with two values")
+	}
+}

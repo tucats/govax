@@ -26,6 +26,7 @@
 //	-msg FILE    a message file's listing (sysmsg.txt; see msg.go)
 //	-image FILE  a shareable image's global symbol table (librtl.exe; see images.go)
 //	-olb FILE    an object library's definition modules (starlet.olb; see library.go)
+//	-values FILE "NAME = value" lines (testdata/mar/rms/defined.txt; see values.go)
 //
 // Three further flags change how the symbol and library inputs after them
 // are read: -prefix P keeps only the names that begin with P (and
@@ -67,7 +68,7 @@ import (
 
 // input is one definition file to merge, as the command line gives it.
 type input struct {
-	kind   string // "h", "sdl", "bliss", "msg", "image", or "olb"
+	kind   string // "h", "sdl", "bliss", "msg", "image", "olb", or "values"
 	path   string
 	prefix string // keep only names with this prefix; "" keeps all
 	stop   string // for "sdl", the module to stop reading at, if any
@@ -129,6 +130,7 @@ func main() {
 	flag.Var(inputFlag{&list, "msg"}, "msg", "merge a message listing's facilities and messages")
 	flag.Var(inputFlag{&list, "image"}, "image", "merge a shareable image's global symbol table")
 	flag.Var(inputFlag{&list, "olb"}, "olb", "merge an object library's definition modules' symbols")
+	flag.Var(inputFlag{&list, "values"}, "values", "merge a list of \"NAME = value\" lines")
 	flag.Var(settingFlag{&list.prefix}, "prefix", "keep only names with this prefix, in the inputs after it")
 	flag.Var(settingFlag{&list.stop}, "sdl-stop", "read the SDL sources after it only as far as this module")
 	flag.Var(settingFlag{&list.into}, "into", "merge the object libraries after it into \"symbols\" (Symbols) or \"library\" (LibrarySymbols)")
@@ -143,7 +145,7 @@ func main() {
 	flag.Parse()
 
 	if flag.NArg() > 0 {
-		log.Fatalf("gen: unexpected argument %q: each input is given by -h, -sdl, -bliss, -msg, -image, or -olb", flag.Arg(0))
+		log.Fatalf("gen: unexpected argument %q: each input is given by -h, -sdl, -bliss, -msg, -image, -olb, or -values", flag.Arg(0))
 	}
 
 	symbolsPath := filepath.Join(*dir, symbolsFile)
@@ -302,6 +304,9 @@ func (in input) read() (map[string]uint32, error) {
 
 	case "bliss":
 		return parseBlissLiterals(src, in.prefix)
+
+	case "values":
+		return parseValues(src, in.prefix)
 
 	default:
 		if in.stop != "" {

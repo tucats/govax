@@ -321,3 +321,27 @@ clean, and a commit. `build -i` follows each one that changes behavior.
     old encoder. The decoder still reads an exactly-full block.
   - The volume, rebuilt, has every MFD block ending by byte 510.
     govax's tests pass.
+- 2026-09-30: Subtask 3 done. The author ran the oracle on the VAX,
+  audited both logs (no expansion text), and committed the results in
+  `testdata/mar/rms/vax/`, 83 objects with their analyses. The hook no
+  longer refuses anything there.
+  - **`decode.go`** (`go run`) turns the definition probes' objects into
+    `defined.txt`: for each `$xxxDEF`, every candidate name with its value
+    or "undefined". It pairs each probe's `.LONG`s with the data stored
+    in the DATA psect. Immediate data is gathered as one byte stream,
+    because MACRO splits a run across records at any byte. Across 3,585
+    definitions, no name has two values.
+  - **`gen -values FILE`** merges "NAME = value" lines.
+    - Additions: XABKEY's, XABSUM's, and XABITM's 81 values, and two TT$_
+      codes.
+    - Corrections, with `-replace`: five ATR$/FIB$ values whose listings
+      are evidently a later version's. FIB$C_LENGTH is 92, not 96.
+    - `Symbols` has 4,422 names.
+  - **Answers** to O1–O9 and O13 are in `docs/RMS-MACROS.md`. Each
+    initialization macro's store sequence (O3) is precise enough to build
+    from. The rest are read from the objects as each macro is written.
+  - The author asked for subtasks 4–7 to be done in this session, with a
+    commit after each. This session read Phase 28's descriptions of
+    STARLET's internals before redacting them (subtask 0). The macros are
+    written from `docs/RMS-MACROS.md`, the manual, and the oracle's
+    objects, which they're tested against.
