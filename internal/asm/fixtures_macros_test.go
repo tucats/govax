@@ -87,6 +87,7 @@ func TestMacroFixtureObjects(t *testing.T) {
 		{"qiow", func(t *testing.T) []MacroLibrary { return []MacroLibrary{realStarletLibrary(t)} }},
 		{"rmscopy", func(t *testing.T) []MacroLibrary { return []MacroLibrary{realStarletLibrary(t)} }},
 		{"fabalign", func(t *testing.T) []MacroLibrary { return []MacroLibrary{realStarletLibrary(t)} }},
+		{"fabalign", func(t *testing.T) []MacroLibrary { return []MacroLibrary{govaxStarlet(t)} }},
 		{"uselib", func(t *testing.T) []MacroLibrary {
 			return []MacroLibrary{openMacroFile(t, filepath.Join(macrosDir, "vax", "libmac.mlb"))}
 		}},

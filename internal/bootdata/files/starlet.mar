@@ -157,3 +157,461 @@
 	PUSHL	EFN
 	CALLS	#12,G^SYS$QIOW
 	.ENDM	$QIOW_S
+
+; The RMS control block initialization macros (docs/PHASE-32.md, subtask
+; 5), written from the RMS Reference Manual's appendix A and from what
+; real VAX MACRO assembled for govax's oracle probes (testdata/mar/rms,
+; docs/RMS-MACROS.md). Each one defines its block's symbols ($xxxDEF),
+; notes a block that isn't longword aligned, stores the block's
+; identification bytes, moves to the block's end and back, stores each
+; field in the order real MACRO's objects show, moving to it with ". ="
+; where they show a move, and ends at the block's end. A longword field
+; is stored with .ADDRESS, even a number, as real MACRO's objects show.
+;
+; Helper macros:
+;
+;   $$RMSCHK
+;	Display the informational message for a block at an address that
+;	isn't longword aligned, and set $$RMSBLK to the block's address.
+;
+;   $$RMSBITS SYM,PFX,LIST,ALT
+;	Set SYM to the OR of the PFX'X masks of the options X in LIST,
+;	trying ALT'X first when ALT is given (FAB$M_SHR: SHR's GET is
+;	FAB$M_SHRGET).
+;	An unknown option is an error.
+;
+;   $$RMSCODE SYM,PFX,X
+;	Set SYM to PFX'X, the code for the single choice X. An unknown
+;	choice is an error.
+;
+;   $$RMSPRO SYM,PRO
+;	Set SYM to the XABPRO protection word for <system,owner,group,world>:
+;	each class four deny bits, cleared by its letters R, W, E, and D; an
+;	omitted class denies everything (^XF).
+
+	.MACRO	$$RMSCHK
+	.IIF	NE,.&3, .PRINT ;%MACRO-I-GENINFO, Generated INFO: RMS BLOCK NOT LONGWORD ALIGNED;
+	$$RMSBLK = .
+	.ENDM	$$RMSCHK
+
+	.MACRO	$$RMSBIT SYM,PFX,X,ALT
+	.IF	NB,<ALT>
+	.IF	DF,ALT'X
+	SYM = SYM!ALT'X
+	.MEXIT
+	.ENDC
+	.ENDC
+	.IF	DF,PFX'X
+	SYM = SYM!PFX'X
+	.IFF
+	.ERROR	; UNDEFINED BIT VALUE CODE: X;
+	.ENDC
+	.ENDM	$$RMSBIT
+
+	.MACRO	$$RMSBITS SYM,PFX,LIST,ALT
+	SYM = 0
+	.IF	NB,<LIST>
+	.IRP	$$RMSX,<LIST>
+	$$RMSBIT SYM,PFX,$$RMSX,ALT
+	.ENDR
+	.ENDC
+	.ENDM	$$RMSBITS
+
+	.MACRO	$$RMSCODE SYM,PFX,X
+	.IF	DF,PFX'X
+	SYM = PFX'X
+	.IFF
+	SYM = 0
+	.ERROR	; UNDEFINED VALUE FOR FIELD : X;
+	.ENDC
+	.ENDM	$$RMSCODE
+
+	.MACRO	$$RMSCLASS SYM,LETTERS
+	$$RMSK = ^XF
+	.IRPC	$$RMSL,<LETTERS>
+	.IIF	IDN,<$$RMSL>,<R>,	$$RMSK = $$RMSK&^C1
+	.IIF	IDN,<$$RMSL>,<W>,	$$RMSK = $$RMSK&^C2
+	.IIF	IDN,<$$RMSL>,<E>,	$$RMSK = $$RMSK&^C4
+	.IIF	IDN,<$$RMSL>,<D>,	$$RMSK = $$RMSK&^C8
+	.ENDR
+	SYM = SYM!<$$RMSK@$$RMSSH>
+	$$RMSSH = $$RMSSH+4
+	.ENDM	$$RMSCLASS
+
+	.MACRO	$$RMSPRO SYM,PRO
+	.IF	B,<PRO>
+	SYM = ^XFFFF
+	.MEXIT
+	.ENDC
+	SYM = 0
+	$$RMSSH = 0
+	.IRP	$$RMSC,<PRO>
+	$$RMSCLASS SYM,$$RMSC
+	.ENDR
+	.REPT	<16-$$RMSSH>/4
+	SYM = SYM!<^XF@$$RMSSH>
+	$$RMSSH = $$RMSSH+4
+	.ENDR
+	.ENDM	$$RMSPRO
+
+; $FAB ALQ,BKS,BLS,CHAN_MODE,CTX,DEQ,DNA,DNM,DNS,FAC,FNA,FNM,FNS,FOP,FSZ,
+;	GBC,LNM_MODE,MRN,MRS,NAM,ORG,RAT,RFM,RTV,SHR,XAB (manual A-2)
+;	RFM defaults to VAR, ORG to SEQ, everything else to 0. FNM= and DNM=
+;	strings go in psect $RMSNAM, and FNA/FNS and DNA/DNS are set to them.
+
+	.MACRO	$FAB	ALQ=0,BKS=0,BLS=0,CHAN_MODE=0,CTX=0,DEQ=0,DNA=0,DNM,-
+			DNS=0,FAC,FNA=0,FNM,FNS=0,FOP,FSZ=0,GBC=0,LNM_MODE=0,-
+			MRN=0,MRS=0,NAM=0,ORG=SEQ,RAT,RFM=VAR,RTV=0,SHR,XAB=0
+	$FABDEF
+	$$RMSCHK
+	.BYTE	FAB$C_BID,FAB$C_BLN
+	. = $$RMSBLK+FAB$C_BLN
+	. = $$RMSBLK+FAB$L_FOP
+	$$RMSBITS $$RMSV,FAB$M_,<FOP>
+	.ADDRESS $$RMSV
+	. = $$RMSBLK+FAB$L_ALQ
+	.ADDRESS ALQ
+	.WORD	DEQ
+	$$RMSBITS $$RMSV,FAB$M_,<FAC>
+	.BYTE	$$RMSV
+	$$RMSBITS $$RMSV,FAB$M_,<SHR>,FAB$M_SHR
+	.BYTE	$$RMSV
+	.ADDRESS CTX
+	$$RMSCODE $$RMSV,FAB$C_,ORG
+	$$RMSBITS $$RMSW,FAB$M_,<RAT>
+	$$RMSCODE $$RMSU,FAB$C_,RFM
+	.BYTE	RTV,$$RMSV,$$RMSW,$$RMSU,0,0,0,0
+	.ADDRESS XAB
+	.ADDRESS NAM
+	.ADDRESS FNA
+	.ADDRESS DNA
+	.BYTE	FNS,DNS
+	.WORD	MRS
+	.ADDRESS MRN
+	.WORD	BLS
+	.BYTE	BKS,FSZ
+	. = $$RMSBLK+FAB$W_GBC
+	.WORD	GBC
+	.BYTE	<CHAN_MODE@FAB$V_CHAN_MODE>!<LNM_MODE@FAB$V_LNM_MODE>
+	.IF	NB,<FNM>
+	.SAVE
+	.PSECT	$RMSNAM
+	$$RMSS = .
+	.ASCII	\FNM\
+	$$RMSL = .-$$RMSS
+	.RESTORE
+	. = $$RMSBLK+FAB$L_FNA
+	.ADDRESS $$RMSS
+	. = $$RMSBLK+FAB$B_FNS
+	.BYTE	$$RMSL
+	.ENDC
+	.IF	NB,<DNM>
+	.SAVE
+	.PSECT	$RMSNAM
+	$$RMSS = .
+	.ASCII	\DNM\
+	$$RMSL = .-$$RMSS
+	.RESTORE
+	. = $$RMSBLK+FAB$L_DNA
+	.ADDRESS $$RMSS
+	. = $$RMSBLK+FAB$B_DNS
+	.BYTE	$$RMSL
+	.ENDC
+	. = $$RMSBLK+FAB$C_BLN
+	.ENDM	$FAB
+
+; $RAB BKT,CTX,FAB,KBF,KRF,KSZ,MBC,MBF,PBF,PSZ,RAC,RBF,RHB,ROP,RSZ,TMO,
+;	UBF,USZ,XAB (manual A-11)
+;	RAC defaults to SEQ, everything else to 0. PBF and PSZ share KBF's
+;	and KSZ's fields, and are stored over them when given.
+
+	.MACRO	$RAB	BKT=0,CTX=0,FAB=0,KBF=0,KRF=0,KSZ=0,MBC=0,MBF=0,PBF,-
+			PSZ,RAC=SEQ,RBF=0,RHB=0,ROP,RSZ=0,TMO=0,UBF=0,USZ=0,-
+			XAB=0
+	$RABDEF
+	$$RMSCHK
+	.BYTE	RAB$C_BID,RAB$C_BLN
+	. = $$RMSBLK+RAB$C_BLN
+	. = $$RMSBLK+RAB$L_ROP
+	$$RMSBITS $$RMSV,RAB$M_,<ROP>
+	.ADDRESS $$RMSV
+	. = $$RMSBLK+RAB$L_CTX
+	.ADDRESS CTX
+	. = $$RMSBLK+RAB$B_RAC
+	$$RMSCODE $$RMSV,RAB$C_,RAC
+	.BYTE	$$RMSV,TMO
+	.WORD	USZ,RSZ
+	.ADDRESS UBF
+	.ADDRESS RBF
+	.ADDRESS RHB
+	.ADDRESS KBF
+	.IF	NB,<PBF>
+	. = $$RMSBLK+RAB$L_PBF
+	.ADDRESS PBF
+	.ENDC
+	.BYTE	KSZ
+	.IF	NB,<PSZ>
+	. = $$RMSBLK+RAB$B_PSZ
+	.BYTE	PSZ
+	.ENDC
+	.BYTE	KRF,MBF,MBC
+	.ADDRESS BKT
+	.ADDRESS FAB
+	.ADDRESS XAB
+	. = $$RMSBLK+RAB$C_BLN
+	.ENDM	$RAB
+
+; $NAM ESA,ESS,NOP,RLF,RSA,RSS (manual A-5)
+
+	.MACRO	$NAM	ESA=0,ESS=0,NOP,RLF=0,RSA=0,RSS=0
+	$NAMDEF
+	$$RMSCHK
+	.BYTE	NAM$C_BID,NAM$C_BLN
+	. = $$RMSBLK+NAM$C_BLN
+	. = $$RMSBLK+NAM$B_RSS
+	.BYTE	RSS
+	. = $$RMSBLK+NAM$L_RSA
+	.ADDRESS RSA
+	. = $$RMSBLK+NAM$B_NOP
+	$$RMSBITS $$RMSV,NAM$M_,<NOP>
+	.ADDRESS $$RMSV
+	. = $$RMSBLK+NAM$B_ESS
+	.BYTE	ESS
+	. = $$RMSBLK+NAM$L_ESA
+	.ADDRESS ESA
+	.ADDRESS RLF
+	. = $$RMSBLK+NAM$C_BLN
+	.ENDM	$NAM
+
+; $XABALL AID,ALN,ALQ,AOP,BKZ,DEQ,LOC,NXT,RFI,VOL (manual A-18)
+;	ALN is stored only when given. RFI is three words, <f1,f2,f3>.
+
+	.MACRO	$XABALL	AID=0,ALN,ALQ=0,AOP,BKZ=0,DEQ=0,LOC=0,NXT=0,-
+			RFI=<0,0,0>,VOL=0
+	$XABDEF
+	$XABALLDEF
+	$$RMSCHK
+	.BYTE	XAB$C_ALL,XAB$C_ALLLEN
+	. = $$RMSBLK+XAB$C_ALLLEN
+	. = $$RMSBLK+XAB$W_VOL
+	.WORD	VOL
+	.IF	NB,<ALN>
+	. = $$RMSBLK+XAB$B_ALN
+	$$RMSCODE $$RMSV,XAB$C_,ALN
+	.BYTE	$$RMSV
+	.ENDC
+	. = $$RMSBLK+XAB$B_AOP
+	$$RMSBITS $$RMSV,XAB$M_,<AOP>
+	.BYTE	$$RMSV
+	. = $$RMSBLK+XAB$L_LOC
+	.ADDRESS LOC
+	$$RMSV = $$RMSBLK+XAB$W_RFI
+	.IRP	$$RMSX,<RFI>
+	. = $$RMSV
+	.WORD	$$RMSX
+	$$RMSV = $$RMSV+2
+	.ENDR
+	. = $$RMSBLK+XAB$L_ALQ
+	.ADDRESS ALQ
+	. = $$RMSBLK+XAB$B_AID
+	.BYTE	AID
+	. = $$RMSBLK+XAB$B_BKZ
+	.BYTE	BKZ
+	. = $$RMSBLK+XAB$W_DEQ
+	.WORD	DEQ
+	. = $$RMSBLK+XAB$L_NXT
+	.ADDRESS NXT
+	. = $$RMSBLK+XAB$C_ALLLEN
+	.ENDM	$XABALL
+
+; $XABDAT EDT,NXT (manual A-20)
+
+	.MACRO	$XABDAT	EDT=0,NXT=0
+	$XABDEF
+	$XABDATDEF
+	$$RMSCHK
+	.BYTE	XAB$C_DAT,XAB$C_DATLEN
+	. = $$RMSBLK+XAB$C_DATLEN
+	. = $$RMSBLK+XAB$Q_EDT
+	.QUAD	EDT
+	. = $$RMSBLK+XAB$L_NXT
+	.ADDRESS NXT
+	. = $$RMSBLK+XAB$C_DATLEN
+	.ENDM	$XABDAT
+
+; $XABFHC NXT, $XABRDT NXT, $XABSUM NXT (manual A-22, A-30, A-33)
+
+	.MACRO	$XABFHC	NXT=0
+	$XABDEF
+	$XABFHCDEF
+	$$RMSCHK
+	.BYTE	XAB$C_FHC,XAB$C_FHCLEN
+	. = $$RMSBLK+XAB$C_FHCLEN
+	. = $$RMSBLK+XAB$L_NXT
+	.ADDRESS NXT
+	. = $$RMSBLK+XAB$C_FHCLEN
+	.ENDM	$XABFHC
+
+	.MACRO	$XABRDT	NXT=0
+	$XABDEF
+	$XABRDTDEF
+	$$RMSCHK
+	.BYTE	XAB$C_RDT,XAB$C_RDTLEN
+	. = $$RMSBLK+XAB$C_RDTLEN
+	. = $$RMSBLK+XAB$L_NXT
+	.ADDRESS NXT
+	. = $$RMSBLK+XAB$C_RDTLEN
+	.ENDM	$XABRDT
+
+	.MACRO	$XABSUM	NXT=0
+	$XABDEF
+	$XABSUMDEF
+	$$RMSCHK
+	.BYTE	XAB$C_SUM,XAB$C_SUMLEN
+	. = $$RMSBLK+XAB$C_SUMLEN
+	. = $$RMSBLK+XAB$L_NXT
+	.ADDRESS NXT
+	. = $$RMSBLK+XAB$C_SUMLEN
+	.ENDM	$XABSUM
+
+; $XABITM ITEMLIST,MODE,NXT (manual A-24)
+;	MODE is SENSEMODE (the default) or SETMODE.
+
+	.MACRO	$XABITM	ITEMLIST=0,MODE=SENSEMODE,NXT=0
+	$XABDEF
+	$XABITMDEF
+	$$RMSCHK
+	.BYTE	XAB$C_ITM,XAB$C_ITMLEN
+	. = $$RMSBLK+XAB$C_ITMLEN
+	. = $$RMSBLK+XAB$L_NXT
+	.ADDRESS NXT
+	. = $$RMSBLK+XAB$L_ITEMLIST
+	.ADDRESS ITEMLIST
+	. = $$RMSBLK+XAB$B_MODE
+	$$RMSCODE $$RMSV,XAB$K_,MODE
+	.BYTE	$$RMSV
+	. = $$RMSBLK+XAB$C_ITMLEN
+	.ENDM	$XABITM
+
+; $XABKEY COLTBL,DAN,DFL,DTP,FLG,IAN,IFL,KNM,LAN,NUL,NXT,POS,PROLOG,REF,
+;	SIZ (manual A-25)
+;	POS and SIZ are one value, or a list of up to eight for a segmented
+;	key. With no FLG, an alternate key (REF not 0) allows duplicates and
+;	changes; a primary key may not change.
+
+	.MACRO	$XABKEY	COLTBL=0,DAN=0,DFL=0,DTP=STG,FLG,IAN=0,IFL=0,KNM=0,-
+			LAN=0,NUL=0,NXT=0,POS=0,PROLOG=0,REF=0,SIZ=0
+	$XABDEF
+	$XABKEYDEF
+	$$RMSCHK
+	.BYTE	XAB$C_KEY,XAB$C_KEYLEN
+	. = $$RMSBLK+XAB$C_KEYLEN
+	. = $$RMSBLK+XAB$B_DAN
+	.BYTE	DAN
+	. = $$RMSBLK+XAB$W_DFL
+	.WORD	DFL
+	. = $$RMSBLK+XAB$B_IAN
+	.BYTE	IAN
+	. = $$RMSBLK+XAB$W_IFL
+	.WORD	IFL
+	. = $$RMSBLK+XAB$L_KNM
+	.ADDRESS KNM
+	. = $$RMSBLK+XAB$B_LAN
+	.BYTE	LAN
+	. = $$RMSBLK+XAB$B_NUL
+	.BYTE	NUL
+	. = $$RMSBLK+XAB$B_REF
+	.BYTE	REF
+	. = $$RMSBLK+XAB$B_PROLOG
+	.BYTE	PROLOG
+	. = $$RMSBLK+XAB$L_COLTBL
+	.ADDRESS COLTBL
+	. = $$RMSBLK+XAB$L_COLSIZ
+	.ADDRESS 0
+	. = $$RMSBLK+XAB$L_COLNAM
+	.ADDRESS 0
+	. = $$RMSBLK+XAB$B_FLG
+	.IF	B,<FLG>
+	$$RMSV = 0
+	.IIF	NE,REF,	$$RMSV = XAB$M_DUP!XAB$M_CHG
+	.IFF
+	$$RMSBITS $$RMSV,XAB$M_,<FLG>
+	.IF	EQ,REF
+	.IIF	NE,$$RMSV&XAB$M_CHG, .ERROR ; PRIMARY KEY MAY NOT CHANGE;
+	.ENDC
+	.ENDC
+	.BYTE	$$RMSV
+	. = $$RMSBLK+XAB$B_DTP
+	$$RMSCODE $$RMSV,XAB$C_,DTP
+	.BYTE	$$RMSV
+	$$RMSV = $$RMSBLK+XAB$W_POS0
+	.IRP	$$RMSX,<POS>
+	. = $$RMSV
+	.WORD	$$RMSX
+	$$RMSV = $$RMSV+2
+	.ENDR
+	$$RMSV = $$RMSBLK+XAB$B_SIZ0
+	.IRP	$$RMSX,<SIZ>
+	. = $$RMSV
+	.BYTE	$$RMSX
+	$$RMSV = $$RMSV+1
+	.ENDR
+	. = $$RMSBLK+XAB$L_NXT
+	.ADDRESS NXT
+	. = $$RMSBLK+XAB$C_KEYLEN
+	.ENDM	$XABKEY
+
+; $XABPRO ACLBUF,ACLCTX,ACLSIZ,MTACC,NXT,PRO,PROT_OPT,UIC (manual A-28)
+;	PRO is <system,owner,group,world>; with no PRO, the field is ^XFFFF.
+;	UIC is <group,member>, each octal.
+
+	.MACRO	$XABPRO	ACLBUF=0,ACLCTX=0,ACLSIZ=0,MTACC=0,NXT=0,PRO,-
+			PROT_OPT,UIC=<0,0>
+	$XABDEF
+	$XABPRODEF
+	$$RMSCHK
+	.BYTE	XAB$C_PRO,XAB$C_PROLEN
+	. = $$RMSBLK+XAB$C_PROLEN
+	$$RMSV = XAB$W_GRP
+	.IRP	$$RMSX,<UIC>
+	. = $$RMSBLK+$$RMSV
+	.WORD	^O'$$RMSX
+	$$RMSV = XAB$W_MBM
+	.ENDR
+	. = $$RMSBLK+XAB$W_PRO
+	$$RMSPRO $$RMSV,<PRO>
+	.WORD	$$RMSV
+	. = $$RMSBLK+XAB$B_MTACC
+	.BYTE	MTACC
+	. = $$RMSBLK+XAB$B_PROT_MODE
+	.BYTE	0
+	. = $$RMSBLK+XAB$B_PROT_OPT
+	$$RMSBITS $$RMSV,XAB$M_,<PROT_OPT>
+	.BYTE	$$RMSV
+	. = $$RMSBLK+XAB$L_ACLBUF
+	.ADDRESS ACLBUF
+	. = $$RMSBLK+XAB$W_ACLSIZ
+	.WORD	ACLSIZ
+	. = $$RMSBLK+XAB$L_ACLCTX
+	.ADDRESS ACLCTX
+	. = $$RMSBLK+XAB$L_NXT
+	.ADDRESS NXT
+	. = $$RMSBLK+XAB$C_PROLEN
+	.ENDM	$XABPRO
+
+; $XABTRM ITMLST,ITMLST_LEN,NXT (manual A-35)
+
+	.MACRO	$XABTRM	ITMLST=0,ITMLST_LEN=0,NXT=0
+	$XABDEF
+	$XABTRMDEF
+	$$RMSCHK
+	.BYTE	XAB$C_TRM,XAB$C_TRMLEN
+	. = $$RMSBLK+XAB$C_TRMLEN
+	. = $$RMSBLK+XAB$L_NXT
+	.ADDRESS NXT
+	. = $$RMSBLK+XAB$L_ITMLST
+	.ADDRESS ITMLST
+	. = $$RMSBLK+XAB$W_ITMLST_LEN
+	.WORD	ITMLST_LEN
+	. = $$RMSBLK+XAB$C_TRMLEN
+	.ENDM	$XABTRM

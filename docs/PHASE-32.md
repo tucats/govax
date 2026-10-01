@@ -380,3 +380,36 @@ clean, and a commit. `build -i` follows each one that changes behavior.
     records. All 31 definition probes match, including `def_twice` and
     both global forms. `def_state` is left out: VAX 7.3 has no
     `$STATEDEF`.
+- 2026-09-30: Subtask 5 done. The 12 initialization macros are in
+  `starlet.mar`: `$FAB`, `$RAB`, `$NAM`, `$XABALL`, `$XABDAT`, `$XABFHC`,
+  `$XABITM`, `$XABKEY`, `$XABPRO`, `$XABRDT`, `$XABSUM`, and `$XABTRM`.
+  - **Sources.** Keywords and defaults come from the manual's appendix A.
+    The statement sequence comes from the oracle's objects, decoded into
+    block offsets: which fields are stored, in what order, where `. =`
+    moves appear (zero moves included), and which stores are conditional
+    (`$RAB`'s PBF/PSZ over KBF/KSZ, `$XABALL`'s ALN). Longword fields are
+    stored with `.ADDRESS`; govax's assembler already encodes that as
+    real MACRO does (shortest stack form, `STO_PIDR`).
+  - **Shape of each macro.** It calls its `$xxxDEF`; the XAB macros also
+    call `$XABDEF`, which defines the common XAB names and XAB$B_BKZ.
+    Then it notes a misaligned block, stores the identification bytes,
+    moves to the end and back, stores the fields, and returns to the end.
+  - **`$FAB`'s FNM= and DNM=** go in psect `$RMSNAM`, with
+    `.SAVE`/`.RESTORE` around them, and then FNA/FNS and DNA/DNS are
+    stored.
+  - **Helpers** of govax's own: `$$RMSBITS` and `$$RMSBIT` OR a field's
+    option masks, trying an alternate prefix first (`FAB$M_SHR`), and
+    report "UNDEFINED BIT VALUE CODE". `$$RMSCODE` handles a one-choice
+    value and reports "UNDEFINED VALUE FOR FIELD". `$$RMSPRO` and
+    `$$RMSCLASS` build XABPRO's protection word: four deny bits a class,
+    cleared by R/W/E/D, and an omitted class denies all (^XF).
+    `$$RMSCHK` displays real MACRO's alignment message.
+  - **`$XABKEY`'s FLG default**: an alternate key gets DUP and CHG, and
+    FLG=CHG on a primary key is real MACRO's "PRIMARY KEY MAY NOT
+    CHANGE".
+  - **Tested.** `TestOracleObjects` now covers 60 probes (29 more), all
+    byte-identical to real MACRO's objects apart from traceback records.
+    `TestMacroFixtureObjects` assembles `fabalign.mar` with govax's own
+    STARLET and gets real MACRO's object. `TestRMSBlockAlignmentMessage`
+    checks the message appears once, for the misaligned block.
+    `TestRMSKeywordErrors` checks the error messages.
