@@ -25,9 +25,16 @@ against what VMS 7.3 writes for the same commands.
    Some of its commands fail on purpose. It runs once: run it again only
    on a freshly built volume.
 3. Dismount the volume and copy the container back as
-   `vax/credir-vax.dsk.gz` (gzipped).
+   `vax/credir-vax.dsk.gz` (gzipped). No copy of the volume from before
+   the run is needed: the test builds its own.
 
-The test in subtask 8 replays `credir.com`'s commands under govax on a
-freshly built exchange volume, and compares each directory's file header
-and the log's messages with VMS's. File IDs, LBNs, and dates are masked,
-since they depend on the order of allocation and the time of the run.
+The run's container is `vax/credir-vax.dsk.gz` (2026-10-01, VMS 7.3 on
+simh, device DUA1, as SYSTEM). It holds the directories VMS made, `[ALLOC]`'s
+`FIRST.DAT`, and `CREDIR.LOG`. `TestCreateDirectoryOracle`
+(`internal/console/credir_oracle_test.go`) replays `credir.com`'s
+commands under govax on a freshly built exchange volume (a COPY from a
+host file stands in for `CREATE [ALLOC]FIRST.DAT`), and compares each
+directory's file header with VMS's, and each CREATE/DIRECTORY's messages
+with the log's. File IDs, LBNs, and dates aren't compared, since they
+depend on the order of allocation and the time of the run; the one
+masked field is listed, with its reason, in the test.

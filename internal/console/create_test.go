@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
+	"github.com/tucats/ods2/volume"
 )
 
 // newCreateTestDispatcher is a dispatcher on the real console grammar,
@@ -52,19 +53,24 @@ func TestCreateDirectory_logLevelsAndExisting(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// As on VMS, /LOG reports the directory asked for, not the ones made
+	// above it.
 	wantLines(t, "CREATE/DIRECTORY/LOG [A.B],[C]", lines,
-		"%CREATE-I-CREATED, DUA0:[A] created",
 		"%CREATE-I-CREATED, DUA0:[A.B] created",
 		"%CREATE-I-CREATED, DUA0:[C] created")
 
+	if _, err := filespec.ResolveDirectory(mustVolume(t, d), []string{"A"}); err != nil {
+		t.Errorf("[A]: %v", err)
+	}
+
 	// Without /LOG, a directory made says nothing, but one that already
-	// existed is still reported.
+	// existed is still reported, by the name typed.
 	lines, err = renameLines(t, d, out, "CREATE/DIRECTORY [A.B.NEW],[C]")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	wantLines(t, "CREATE/DIRECTORY [A.B.NEW],[C]", lines, "%CREATE-I-EXISTS, DUA0:[C] already exists")
+	wantLines(t, "CREATE/DIRECTORY [A.B.NEW],[C]", lines, "%CREATE-I-EXISTS, [C] already exists")
 
 	// The process UIC before INIT is SYSTEM's, [1,4].
 	if got := createdHeader(t, d, "A", "B", "NEW").Owner; got != (ondisk.Uic{Group: 1, Member: 4}) {
@@ -124,39 +130,98 @@ func TestCreateDirectory_relativeAndLogical(t *testing.T) {
 		"%CREATE-I-CREATED, DUA0:[LOGICAL] created")
 }
 
-// TestCreateDirectory_errors: a bad qualifier fails before anything is
-// made; in a list, a directory that can't be made is reported and the
-// rest are still made, and the command fails with its message already
-// shown.
+// TestCreateDirectory_errors: each failure prints VMS 7.3's messages
+// (testdata/credir's CREDIR.LOG) and fails the command with its message
+// already shown. A bad /OWNER_UIC or /PROTECTION makes nothing; a bad
+// /VERSION_LIMIT is reported and ignored, and the directory still made.
 func TestCreateDirectory_errors(t *testing.T) {
 	d, out := newCreateTestDispatcher(t)
 
-	for cmd, status := range map[string]uint32{
-		"CREATE/DIRECTORY/OWNER_UIC=[400000,1] [BAD]": vmserrors.CLI_BADQUALIFIER,
-		"CREATE/DIRECTORY/OWNER_UIC=SYSTEM [BAD]":     vmserrors.CLI_BADQUALIFIER,
-		"CREATE/DIRECTORY/VERSION_LIMIT=40000 [BAD]":  vmserrors.CLI_BADQUALIFIER,
-		"CREATE/DIRECTORY/PROTECTION=(X:RWED) [BAD]":  vmserrors.CLI_BADQUALIFIER,
-		"CREATE/DIRECTORY [BAD]FILE.DAT":              vmserrors.CREATE_DIRNOTCRE,
-		"CREATE/DIRECTORY DUB0:[BAD]":                 vmserrors.SS_DEVNOTMOUNT,
-		"CREATE":                                      vmserrors.CLI_MISSINGPARAMETER,
-	} {
-		err := d.Dispatch(cmd)
-		if !errors.Is(err, vmserrors.New(status)) {
-			t.Errorf("%s: err = %v, want %s", cmd, err, vmserrors.New(status))
+	tests := []struct {
+		cmd   string
+		lines []string
+	}{
+		{"CREATE/DIRECTORY/OWNER_UIC=[400000,1] [BAD]", []string{
+			"%CREATE-F-SYNTAX, error parsing '[400000,1]'",
+			"-SYSTEM-F-IVIDENT, invalid identifier format",
+		}},
+		{"CREATE/DIRECTORY/OWNER_UIC=SYSTEM [BAD]", []string{
+			"%CREATE-F-SYNTAX, error parsing 'SYSTEM'",
+			"-SYSTEM-F-IVIDENT, invalid identifier format",
+		}},
+		{"CREATE/DIRECTORY/PROTECTION=(X:RWED) [BAD]", []string{
+			"%CREATE-F-SYNTAX, error parsing '(X:RWED)'",
+		}},
+		{"CREATE/DIRECTORY [BAD]FILE.DAT", []string{
+			"%CREATE-E-DIRNOTCRE, [BAD]FILE.DAT directory file not created",
+			"-LIB-F-INVFILSPE, invalid file specification",
+		}},
+		{"CREATE/DIRECTORY DUB0:[BAD]", []string{
+			"%CREATE-E-DIRNOTCRE, DUB0:[BAD] directory file not created",
+			"-SYSTEM-W-NOSUCHDEV, no such device available",
+		}},
+		{"CREATE/DIRECTORY [L1.L2.L3.L4.L5.L6.L7.L8.L9]", []string{
+			"%CREATE-E-DIRNOTCRE, [L1.L2.L3.L4.L5.L6.L7.L8.L9] directory file not created",
+			"-RMS-F-DIR, error in directory name",
+		}},
+	}
+
+	for _, tt := range tests {
+		lines, err := renameLines(t, d, out, tt.cmd)
+		if err == nil || !vmserrors.MessageInhibited(err) {
+			t.Errorf("%s: err = %v, want a failure already displayed", tt.cmd, err)
+		}
+
+		wantLines(t, tt.cmd, lines, tt.lines...)
+	}
+
+	vol := mustVolume(t, d)
+	for _, dir := range []string{"BAD", "L1"} {
+		if _, err := filespec.ResolveDirectory(vol, []string{dir}); err == nil {
+			t.Errorf("[%s] was made", dir)
 		}
 	}
 
-	vol, _ := d.Console.Mounts.Lookup("DUA0")
-	if _, err := filespec.ResolveDirectory(vol, []string{"BAD"}); err == nil {
-		t.Error("[BAD] was made")
+	// A bad /VERSION_LIMIT is reported, then ignored.
+	lines, err := renameLines(t, d, out, "CREATE/DIRECTORY/LOG/VERSION_LIMIT=40000 [BADLIMIT]")
+	if err == nil || !vmserrors.MessageInhibited(err) {
+		t.Errorf("/VERSION_LIMIT=40000: err = %v, want a failure already displayed", err)
 	}
 
-	lines, err := renameLines(t, d, out, "CREATE/DIRECTORY/LOG [OK1],[*],[OK2]")
+	wantLines(t, "/VERSION_LIMIT=40000", lines,
+		"%CREATE-E-BADVALUE, '40000' is an invalid keyword value",
+		"%CREATE-I-CREATED, DUA0:[BADLIMIT] created")
+
+	if got := createdHeader(t, d, "BADLIMIT").RecordAttributes.VersionLimit; got != 0 {
+		t.Errorf("[BADLIMIT] version limit = %d, want the MFD's, 0", got)
+	}
+
+	// In a list, the rest are still made.
+	lines, err = renameLines(t, d, out, "CREATE/DIRECTORY/LOG [OK1],[*],[OK2]")
 	if err == nil || !vmserrors.MessageInhibited(err) {
 		t.Errorf("list with a bad directory: err = %v, want a failure already displayed", err)
 	}
 
-	if len(lines) != 3 || lines[0] != "%CREATE-I-CREATED, DUA0:[OK1] created" || lines[2] != "%CREATE-I-CREATED, DUA0:[OK2] created" {
-		t.Errorf("list with a bad directory printed %q", lines)
+	wantLines(t, "list with a bad directory", lines,
+		"%CREATE-I-CREATED, DUA0:[OK1] created",
+		"%CREATE-E-DIRNOTCRE, [*] directory file not created",
+		"-LIB-F-INVFILSPE, invalid file specification",
+		"%CREATE-I-CREATED, DUA0:[OK2] created")
+
+	// A bare CREATE is still a missing qualifier.
+	if err := d.Dispatch("CREATE"); !errors.Is(err, vmserrors.New(vmserrors.CLI_MISSINGPARAMETER)) {
+		t.Errorf("CREATE: err = %v, want CLI_MISSINGPARAMETER", err)
 	}
+}
+
+// mustVolume is the volume mounted on DUA0.
+func mustVolume(t *testing.T, d *Dispatcher) *volume.Volume {
+	t.Helper()
+
+	vol, ok := d.Console.Mounts.Lookup("DUA0")
+	if !ok {
+		t.Fatal("DUA0 isn't mounted")
+	}
+
+	return vol
 }

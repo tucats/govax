@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/volume"
 )
@@ -33,12 +34,16 @@ var credirVAXDisk = func() string {
 // credirProcedure is the command procedure VMS ran.
 var credirProcedure = filepath.Join("..", "..", "testdata", "credir", "credir.com")
 
+// credirHostFile is replaced by a host file's name in a replayed command
+// (see credirCommands).
+const credirHostFile = "@HOSTFILE@"
+
 // credirCommands returns the commands of credir.com that govax replays, in
 // order, for a volume mounted as device: every DCL command but the ones
 // that only set up the run or list its result (SET NOON, SET VERIFY, the
-// DEV symbol, WRITE, DIRECTORY), and the CREATE of a file from the data
-// lines that follow it, which govax's CREATE doesn't do. 'DEV' becomes
-// device.
+// DEV symbol, WRITE, DIRECTORY). The CREATE of a file from the data lines
+// that follow it, which govax's CREATE doesn't do, becomes a COPY from a
+// host file (credirHostFile). 'DEV' becomes device.
 func credirCommands(t *testing.T, device string) []string {
 	t.Helper()
 
@@ -63,8 +68,15 @@ func credirCommands(t *testing.T, device string) []string {
 		case line == "", strings.HasPrefix(line, "!"),
 			strings.HasPrefix(upper, "SET NOON"), strings.HasPrefix(upper, "SET VERIFY"),
 			strings.HasPrefix(upper, "DEV ="), strings.HasPrefix(upper, "WRITE "),
-			strings.HasPrefix(upper, "DIRECTORY"),
-			strings.HasPrefix(upper, "CREATE ") && !strings.HasPrefix(upper, "CREATE/"):
+			strings.HasPrefix(upper, "DIRECTORY"):
+			continue
+
+		case strings.HasPrefix(upper, "CREATE ") && !strings.HasPrefix(upper, "CREATE/"):
+			// A file from the data lines that follow, which govax's
+			// CREATE doesn't do: COPY makes it from a host file holding
+			// the same text, so the directory gets the same entry.
+			commands = append(commands, "COPY "+credirHostFile+"/HOST "+strings.TrimSpace(line[len("CREATE "):]))
+
 			continue
 		}
 
@@ -166,7 +178,15 @@ func credirFields(d credirDirectory) []string {
 // credirMasked are fields that differ between VMS's directories and
 // govax's for reasons outside CREATE/DIRECTORY, by directory path and
 // field name, each with its reason.
-var credirMasked = map[string]map[string]string{}
+var credirMasked = map[string]map[string]string{
+	"OWNED.CHILD": {
+		// VMS gave a directory made by SYSTEM, with no /OWNER_UIC, in
+		// [OWNED] (owned by [200,201]) its parent's owner. govax gives
+		// the process's UIC, by the author's decision (docs/PHASE-34.md,
+		// Decisions 2; docs/DEVIATIONS.md).
+		"owner": "the process UIC by decision",
+	},
+}
 
 func TestCreateDirectoryOracle(t *testing.T) {
 	if _, err := os.Stat(credirVAXDisk); err != nil {
@@ -197,12 +217,25 @@ func TestCreateDirectoryOracle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, cmd := range credirCommands(t, "DUA1") {
-		// Some commands fail on purpose, as on VMS.
-		_ = d.Dispatch(cmd)
+	hostFile := filepath.Join(t.TempDir(), "first.dat")
+	if err := os.WriteFile(hostFile, []byte("FIRST.DAT\n"), 0o644); err != nil {
+		t.Fatal(err)
 	}
 
-	t.Logf("govax's messages:\n%s", out.String())
+	var govaxMessages []credirMessages
+
+	for _, cmd := range credirCommands(t, "DUA1") {
+		out.Reset()
+
+		// Some commands fail on purpose, as on VMS.
+		_ = d.Dispatch(strings.ReplaceAll(cmd, credirHostFile, `"`+hostFile+`"`))
+
+		if strings.HasPrefix(strings.ToUpper(cmd), "CREATE/DIRECTORY") {
+			govaxMessages = append(govaxMessages, credirMessages{command: cmd, lines: messageLines(out.String())})
+		}
+	}
+
+	compareCredirMessages(t, credirLogMessages(t, c), govaxMessages)
 
 	vms := credirDirectories(t, c, "DUA2")
 	govax := credirDirectories(t, c, "DUA1")
@@ -250,6 +283,94 @@ func TestCreateDirectoryOracle(t *testing.T) {
 			}
 
 			t.Errorf("[%s] %s: VMS %s, govax %s", p, field, strings.TrimPrefix(vf[i], field+"="), strings.TrimPrefix(gf[i], field+"="))
+		}
+	}
+}
+
+// credirMessages is one CREATE/DIRECTORY command and the message lines it
+// showed.
+type credirMessages struct {
+	command string
+	lines   []string
+}
+
+// messageLines returns text's message lines: those starting "%" or "-".
+func messageLines(text string) []string {
+	var lines []string
+
+	for _, line := range strings.Split(text, "\n") {
+		line = strings.TrimRight(line, "\r ")
+		if strings.HasPrefix(line, "%") || strings.HasPrefix(line, "-") {
+			lines = append(lines, line)
+		}
+	}
+
+	return lines
+}
+
+// credirLogMessages reads CREDIR.LOG from the VMS volume (DUA2) and
+// returns each CREATE/DIRECTORY command in it with its messages.
+func credirLogMessages(t *testing.T, c *Console) []credirMessages {
+	t.Helper()
+
+	records, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA2:[000000]CREDIR.LOG"}, rms.TextRecords)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var (
+		out     []credirMessages
+		current *credirMessages
+	)
+
+	for _, r := range records {
+		line := strings.TrimRight(string(r), "\r ")
+
+		if command, ok := strings.CutPrefix(line, "$ "); ok {
+			current = nil
+
+			if strings.HasPrefix(strings.ToUpper(command), "CREATE/DIRECTORY") {
+				out = append(out, credirMessages{command: command})
+				current = &out[len(out)-1]
+			}
+
+			continue
+		}
+
+		if current != nil && (strings.HasPrefix(line, "%") || strings.HasPrefix(line, "-")) {
+			current.lines = append(current.lines, line)
+		}
+	}
+
+	return out
+}
+
+// compareCredirMessages compares VMS's messages for each CREATE/DIRECTORY
+// with govax's, command by command. VMS's log shows a translated 'DEV' as
+// the device itself, so commands are matched by position.
+func compareCredirMessages(t *testing.T, vms, govax []credirMessages) {
+	t.Helper()
+
+	if len(vms) == 0 {
+		t.Fatal("found no CREATE/DIRECTORY commands in CREDIR.LOG")
+	}
+
+	lines := 0
+	for _, v := range vms {
+		lines += len(v.lines)
+	}
+
+	t.Logf("compared %d commands, %d VMS message lines", len(vms), lines)
+
+	if len(vms) != len(govax) {
+		t.Errorf("VMS's log has %d CREATE/DIRECTORY commands, govax ran %d", len(vms), len(govax))
+	}
+
+	for i := range min(len(vms), len(govax)) {
+		v, g := vms[i], govax[i]
+
+		if strings.Join(v.lines, "\n") != strings.Join(g.lines, "\n") {
+			t.Errorf("$ %s\nVMS:\n  %s\ngovax:\n  %s", v.command, strings.Join(v.lines, "\n  "), strings.Join(g.lines, "\n  "))
 		}
 	}
 }

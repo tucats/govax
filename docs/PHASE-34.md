@@ -353,3 +353,38 @@ The author accepted each proposal below on 2026-10-01.
   **Waiting on the author's VAX run.** One expected difference to look
   for: govax makes a ninth level (`[L1...L9]`), which ODS-2 on VMS 7.3 is
   believed to refuse.
+- 2026-10-01: Subtask 8 done. The author ran `credir.com` on VMS 7.3 on
+  the exchange volume itself (`testdata/credir/vax/credir-vax.dsk.gz`).
+  `TestCreateDirectoryOracle` now matches every directory's header and
+  all 36 CREATE/DIRECTORY commands' 45 message lines. What the oracle
+  changed:
+  - **ods2** (`480534a`): a new directory's entry in its parent has no
+    version limit, whatever the parent's default (VMS: 32767 under
+    `[LIMITED]`, whose default is 3). A directory's new space is zeroed
+    and its high-water mark set past it (`/ALLOCATION=4`: HWM 5), never
+    lowered after. A path deeper than 8 levels, or a name over 39
+    characters, is refused before anything is made
+    (`volume.ErrDirectoryName`).
+  - **Messages** (`internal/console/create.go`, `vmserrors`): `/LOG`
+    reports only the directory asked for, not the levels made above it.
+    EXISTS names the spec as typed (`[PLAIN] already exists`).
+    DIRNOTCRE is `<spec> directory file not created`, then a secondary
+    status from VMS's message table: `-RMS-F-DIR` (too deep, name too
+    long), `-LIB-F-INVFILSPE` (file name, wildcard, `...`, unparsable),
+    `-SYSTEM-W-NOSUCHDEV` (unknown device; `DEVNOTMOUNT` for a known
+    one), `-SYSTEM-W-WRITLCK` (read-only). A bad `/OWNER_UIC` is
+    `%CREATE-F-SYNTAX, error parsing '...'` and `-SYSTEM-F-IVIDENT`, and
+    makes nothing; a bad `/PROTECTION` gets the same first line (VMS's
+    wasn't probed).
+  - **`/VERSION_LIMIT=40000`**: VMS reports
+    `%CREATE-E-BADVALUE, '40000' is an invalid keyword value` and still
+    creates the directory, ignoring the qualifier; govax does too (and
+    fails the command's status, its message shown).
+  - **Owner, by decision:** VMS gave `[OWNED.CHILD]` (no `/OWNER_UIC`,
+    parent owned by `[200,201]`) its parent's owner. govax keeps the
+    process UIC (Decisions 2); masked in the test and logged in
+    DEVIATIONS.md. So is DIRECTORY/OWNER's `[1,4]` where VMS shows
+    `[SYSTEM]`.
+  - The replay now copies `[ALLOC]FIRST.DAT` in from a host file, so the
+    directory's first entry is compared too; the log is read as text
+    (it's VFC).

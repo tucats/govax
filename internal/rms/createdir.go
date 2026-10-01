@@ -90,7 +90,10 @@ var ErrNotDirectorySpec = errors.New("not a directory specification")
 // where the owner, protection, and version limit have no meaning.
 //
 // If a level can't be made, the levels already made stay made and are
-// returned with the error.
+// returned with the error. A specification that doesn't parse, or names
+// something other than a directory, is ErrNotDirectorySpec; one too deep
+// or with a name too long, volume.ErrDirectoryName; a read-only volume,
+// ErrACPWriteLocked; and a device not mounted, a *NotMountedError.
 func (s *Session) CreateDirectory(specText string, opts CreateDirectoryOptions) ([]CreatedDirectory, error) {
 	if opts.VersionLimit != nil && *opts.VersionLimit > MaxVersionLimit {
 		return nil, fmt.Errorf("create directory: version limit %d: want 0 to %d", *opts.VersionLimit, MaxVersionLimit)
@@ -113,7 +116,12 @@ func (s *Session) CreateDirectory(specText string, opts CreateDirectoryOptions) 
 
 	specs, err := expandSpec(s.Logicals, text, s.Default)
 	if err != nil {
-		return nil, fmt.Errorf("create directory: %w", err)
+		var lnmErr *LogicalNameError
+		if errors.As(err, &lnmErr) {
+			return nil, fmt.Errorf("create directory: %w", err)
+		}
+
+		return nil, fmt.Errorf("create directory: %w: %v", ErrNotDirectorySpec, err)
 	}
 
 	r := specs[0]
@@ -135,7 +143,7 @@ func (s *Session) CreateDirectory(specText string, opts CreateDirectoryOptions) 
 	}
 
 	if !s.Mounts.Writable(spec.Device) {
-		return nil, fmt.Errorf("create directory: %s: is mounted read-only", spec.Device)
+		return nil, fmt.Errorf("create directory: %s: %w", spec.Device, ErrACPWriteLocked)
 	}
 
 	if len(vol.Devices) != 1 {

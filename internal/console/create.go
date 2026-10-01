@@ -7,14 +7,17 @@ import (
 
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/rtl"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 	"github.com/tucats/ods2/ondisk"
+	"github.com/tucats/ods2/volume"
 )
 
 // This file implements the console's CREATE/DIRECTORY (docs/PHASE-34.md,
 // subtask 6). The work is internal/rms.Session.CreateDirectory's; this file
 // reads the qualifiers, supplies the process's UIC, and reports each
-// directory as VMS's CREATE does.
+// directory as VMS 7.3's CREATE does (checked against its run of the
+// Phase 34 oracle, testdata/credir).
 
 // CreateDirectoryRequest is CREATE/DIRECTORY's command line: its
 // directories and qualifiers, as typed.
@@ -52,60 +55,85 @@ func (c *Console) processUIC() ondisk.Uic {
 	return ondisk.Uic{Group: uint16(uic >> 16), Member: uint16(uic)}
 }
 
+// The secondary statuses CREATE/DIRECTORY's failures show, as VMS 7.3
+// shows them (testdata/credir): a name too long or a path too deep is
+// RMS$_DIR; a file name, wildcard, or "..." is LIB$_INVFILSPE; a device
+// that isn't there is SS$_NOSUCHDEV; a bad UIC is SS$_IVIDENT.
+var (
+	rmsDIR        = vmsdef.Symbols["RMS$_DIR"]
+	rmsCRE        = vmsdef.Symbols["RMS$_CRE"]
+	ssIVIDENT     = vmsdef.Symbols["SS$_IVIDENT"]
+	ssNOSUCHDEV   = vmsdef.Symbols["SS$_NOSUCHDEV"]
+	ssDEVNOTMOUNT = vmsdef.Symbols["SS$_DEVNOTMOUNT"]
+	ssWRITLCK     = vmsdef.Symbols["SS$_WRITLCK"]
+
+	// libINVFILSPE is LIB$_INVFILSPE (LIB-F-INVFILSPE), which
+	// vmsdef.Symbols doesn't carry; its message is in vmsdef.Messages.
+	libINVFILSPE = uint32(0x15839C)
+)
+
 // CreateDirectory implements CREATE/DIRECTORY: each directory in req is
-// made, with every missing directory above it. With /LOG, each directory
-// made is reported with %CREATE-I-CREATED; a directory that already existed
-// is reported with %CREATE-I-EXISTS whether or not /LOG is given. A
-// directory that can't be made is reported, and the rest of the list is
-// still tried; the command then fails with the first such error.
+// made, with every missing directory above it, and reported as VMS 7.3's
+// CREATE reports it:
+//
+//	%CREATE-I-CREATED, DUA1:[DEEP.A.B] created          (with /LOG)
+//	%CREATE-I-EXISTS, [PLAIN] already exists
+//	%CREATE-E-DIRNOTCRE, [WILD*] directory file not created
+//	-LIB-F-INVFILSPE, invalid file specification
+//
+// /LOG reports only the directory asked for, not the ones made above it;
+// EXISTS names it as typed, with or without /LOG. A directory that can't
+// be made is reported, and the rest of the list is still tried. A bad
+// /OWNER_UIC (CREATE-F-SYNTAX) stops the command before anything is made;
+// a /VERSION_LIMIT out of range (CREATE-E-BADVALUE) is reported and then
+// ignored, as VMS does. Every message is shown here, so a failure is
+// returned with its message inhibited (exit status only).
 func (c *Console) CreateDirectory(req CreateDirectoryRequest) error {
-	opts, err := c.createDirectoryOptions(req)
-	if err != nil {
-		return err
+	opts, failure := c.createDirectoryOptions(req)
+	if opts == nil {
+		return failure
 	}
 
-	var first error
-
 	for _, spec := range req.Directories {
-		created, err := c.ContainerSession.CreateDirectory(spec, opts)
+		created, err := c.ContainerSession.CreateDirectory(spec, *opts)
+		if err != nil {
+			c.Printf("%%%s\n", vmserrors.New(vmserrors.CREATE_DIRNOTCRE, spec))
+			c.Printf("%s\n", conditionLine(c.createDirectoryStatus(err)))
 
-		for i, d := range created {
-			switch {
-			case d.Created && req.Log:
-				c.Printf("%%%s\n", vmserrors.New(vmserrors.CREATE_CREATED, d.Name))
-			case !d.Created && i == len(created)-1 && err == nil:
-				c.Printf("%%%s\n", vmserrors.New(vmserrors.CREATE_EXISTS, d.Name))
+			if failure == nil {
+				failure = vmserrors.InhibitMessage(vmserrors.Wrap(vmserrors.CREATE_DIRNOTCRE, err, spec))
 			}
-		}
 
-		if err == nil {
 			continue
 		}
 
-		failure := c.createDirectoryFailure(err, spec)
-
-		if first == nil {
-			first = failure
-		}
-
-		if len(req.Directories) > 1 {
-			c.Printf("%%%s\n", failure)
+		switch last := created[len(created)-1]; {
+		case !last.Created:
+			c.Printf("%%%s\n", vmserrors.New(vmserrors.CREATE_EXISTS, spec))
+		case req.Log:
+			c.Printf("%%%s\n", vmserrors.New(vmserrors.CREATE_CREATED, last.Name))
 		}
 	}
 
-	// With several directories, each failure was reported as it happened,
-	// so the command's own failure is only for its exit status.
-	if first != nil && len(req.Directories) > 1 {
-		return vmserrors.InhibitMessage(first)
-	}
-
-	return first
+	return failure
 }
 
 // createDirectoryOptions turns req's qualifiers into
-// rms.CreateDirectoryOptions, checking their values.
-func (c *Console) createDirectoryOptions(req CreateDirectoryRequest) (rms.CreateDirectoryOptions, error) {
-	opts := rms.CreateDirectoryOptions{ProcessUIC: c.processUIC()}
+// rms.CreateDirectoryOptions, reporting a bad value as VMS does. A nil
+// result means the command stops there; otherwise the error, if any, is a
+// value that was reported and ignored, for the command's exit status.
+func (c *Console) createDirectoryOptions(req CreateDirectoryRequest) (*rms.CreateDirectoryOptions, error) {
+	opts := &rms.CreateDirectoryOptions{ProcessUIC: c.processUIC()}
+
+	syntax := func(value string, secondary uint32) (*rms.CreateDirectoryOptions, error) {
+		c.Printf("%%%s\n", vmserrors.New(vmserrors.CREATE_SYNTAX, value))
+
+		if secondary != 0 {
+			c.Printf("%s\n", conditionLine(secondary))
+		}
+
+		return nil, vmserrors.InhibitMessage(vmserrors.New(vmserrors.CREATE_SYNTAX, value))
+	}
 
 	switch owner := strings.TrimSpace(req.OwnerUIC); {
 	case owner == "":
@@ -114,54 +142,69 @@ func (c *Console) createDirectoryOptions(req CreateDirectoryRequest) (rms.Create
 	default:
 		uic, err := ondisk.ParseUic(owner)
 		if err != nil {
-			return opts, vmserrors.Wrap(vmserrors.CLI_BADQUALIFIER, err, "/OWNER_UIC="+owner)
+			return syntax(owner, ssIVIDENT)
 		}
 
 		opts.Owner = &uic
 	}
 
-	if req.VersionLimit != nil {
-		n := *req.VersionLimit
-		if n < 0 || n > rms.MaxVersionLimit {
-			return opts, vmserrors.Wrap(vmserrors.CLI_BADQUALIFIER,
-				fmt.Errorf("the version limit must be 0 to %d", rms.MaxVersionLimit), fmt.Sprintf("/VERSION_LIMIT=%d", n))
-		}
-
-		limit := uint16(n)
-		opts.VersionLimit = &limit
-	}
-
 	if len(req.Protection) > 0 {
 		text := "(" + strings.Join(req.Protection, ",") + ")"
 		if _, err := ondisk.ParseProtection(text, 0); err != nil {
-			return opts, vmserrors.Wrap(vmserrors.CLI_BADQUALIFIER, err, "/PROTECTION="+text)
+			return syntax(text, 0)
 		}
 
 		opts.Protection = text
 	}
 
-	if req.Allocation < 0 {
-		return opts, vmserrors.Wrap(vmserrors.CLI_BADQUALIFIER,
-			errors.New("the allocation must be a number of blocks"), fmt.Sprintf("/ALLOCATION=%d", req.Allocation))
+	var ignored error
+
+	badValue := func(n int) {
+		value := fmt.Sprint(n)
+		c.Printf("%%%s\n", vmserrors.New(vmserrors.CREATE_BADVALUE, value))
+
+		if ignored == nil {
+			ignored = vmserrors.InhibitMessage(vmserrors.New(vmserrors.CREATE_BADVALUE, value))
+		}
 	}
 
-	opts.Allocation = uint32(req.Allocation)
+	if req.VersionLimit != nil {
+		if n := *req.VersionLimit; n < 0 || n > rms.MaxVersionLimit {
+			badValue(n)
+		} else {
+			limit := uint16(n)
+			opts.VersionLimit = &limit
+		}
+	}
 
-	return opts, nil
+	if req.Allocation < 0 {
+		badValue(req.Allocation)
+	} else {
+		opts.Allocation = uint32(req.Allocation)
+	}
+
+	return opts, ignored
 }
 
-// createDirectoryFailure reports a directory that couldn't be made as
-// %CREATE-E-DIRNOTCRE, with its cause; an unmounted device as
-// SS_DEVNOTMOUNT, as other file commands report it.
-func (c *Console) createDirectoryFailure(err error, spec string) error {
-	if lnmErr := logicalNameFailure(err); lnmErr != nil {
-		return lnmErr
-	}
-
+// createDirectoryStatus is the secondary status VMS shows for err, a
+// directory CREATE/DIRECTORY couldn't make.
+func (c *Console) createDirectoryStatus(err error) uint32 {
 	var notMounted *rms.NotMountedError
-	if errors.As(err, &notMounted) {
-		return vmserrors.Wrap(vmserrors.SS_DEVNOTMOUNT, err, notMounted.Device)
+
+	switch {
+	case errors.Is(err, volume.ErrDirectoryName):
+		return rmsDIR
+	case errors.Is(err, rms.ErrNotDirectorySpec):
+		return libINVFILSPE
+	case errors.Is(err, rms.ErrACPWriteLocked):
+		return ssWRITLCK
+	case errors.As(err, &notMounted):
+		if _, known := c.Devices.Find(notMounted.Device); known {
+			return ssDEVNOTMOUNT
+		}
+
+		return ssNOSUCHDEV
 	}
 
-	return vmserrors.Wrap(vmserrors.CREATE_DIRNOTCRE, err, spec)
+	return rmsCRE
 }
