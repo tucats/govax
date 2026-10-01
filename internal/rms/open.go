@@ -62,6 +62,15 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 		return fabStatus(ctx, fabAddr, failStatus, 0)
 	}
 
+	chain, failStatus, stv, err := ctx.xabChain(fabAddr)
+	if err != nil {
+		return 0, err
+	}
+
+	if failStatus != 0 {
+		return fabStatus(ctx, fabAddr, failStatus, stv)
+	}
+
 	fop, err := ctx.loadLongword(fabAddr + fabFOP)
 	if err != nil {
 		return 0, err
@@ -70,7 +79,7 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 	// FAB$V_NAM: open by the NAM's file ID, or by its directory ID and
 	// the file name (namfid.go).
 	if nam != 0 && fop&fopNAM != 0 {
-		if sts, done, err := ctx.openByNAM(fabAddr, nam, fac); done || err != nil {
+		if sts, done, err := ctx.openByNAM(fabAddr, nam, fac, chain); done || err != nil {
 			return sts, err
 		}
 	}
@@ -131,14 +140,11 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 		return fabStatus(ctx, fabAddr, failStatus, 0)
 	}
 
-	if nam != 0 && ok {
-		sts, err := ctx.fillNAM(fabAddr, nam, found, namOutputs{Expanded: true, Resultant: true})
-		if err != nil {
-			return 0, err
-		}
-
-		if sts != 0 {
-			ctx.Files.Release(ifi)
+	if ok {
+		if sts, err := ctx.reportOpened(fabAddr, nam, ifi, found, chain, namOutputs{Expanded: true, Resultant: true}); err != nil || sts != 0 {
+			if err != nil {
+				return 0, err
+			}
 
 			return fabStatus(ctx, fabAddr, sts, 0)
 		}
@@ -232,7 +238,7 @@ func openFID(ctx *Context, fac byte, device string, vol *volume.Volume, fid ondi
 		}
 	}
 
-	return ctx.Files.Alloc(&FileHandle{File: f}), 0, nil
+	return ctx.Files.Alloc(&FileHandle{File: f, Writable: wantsWrite}), 0, nil
 }
 
 // parseOpenVersion interprets a file spec's version field (spec.Version —

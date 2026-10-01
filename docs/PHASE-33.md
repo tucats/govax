@@ -157,3 +157,23 @@ commit, plus `build -i` when it changes behavior.
   - **Tests.** `TestRMS3OpenCreate_govaxTree` runs the OPEN, NAMFID, and
     CREATE probes on the govax-built tree. Four unit tests now expect the
     VMS statuses above.
+- 2026-10-01: Subtask 5, XABs and `$DISPLAY` (`internal/rms/xab.go`,
+  `display.go`).
+  - **The chain.** `$OPEN`, `$CREATE`, `$DISPLAY`, and `$CLOSE` walk
+    FAB$L_XAB's chain first. An unknown type code is RMS$_COD and a block
+    shorter than its type's length RMS$_BLN, with the XAB's address in
+    STV. XABKEY, XABITM, and XABTRM are accepted and left alone.
+  - **Outputs.** XABDAT, XABRDT, XABFHC, XABPRO, XABALL, and XABSUM are
+    filled from the file header (a sequential file has no areas, keys, or
+    prolog). The FAB gets the file's attributes too: ALQ, DEQ, ORG, RFM,
+    RAT, MRS, FSZ, BKS, and GBC.
+  - **Inputs.** A new file takes the XABDAT's dates, the XABPRO's
+    protection and owner, and the XABALL's extension quantity. A file
+    opened for writing takes the XABRDT's revision date and number and
+    the XABPRO's protection as it's closed. The XABALL's allocation
+    quantity isn't applied: ods2 has no way to preallocate.
+  - **`$DISPLAY`** reports an open file again: the FAB, the XABs, and the
+    NAM's resultant string, FNB, FID, DID, and DVI.
+  - **Tests.** `TestRMS3XAB_govaxTree` runs the XAB probe and checks the
+    CREATE probe's read-backs (protection, extension, expiration and
+    revision dates, revision number).

@@ -214,7 +214,10 @@ var (
 	rmsDirError   = vmsConst("RMS$_DIR")
 	rmsTypeError  = vmsConst("RMS$_TYP")
 	rmsESSError   = vmsConst("RMS$_ESS")
-	rmsRSSError   = vmsConst("RMS$_RSS")
+
+	// rmsInvalidXABCode is RMS$_COD: a XAB whose type code isn't one.
+	rmsInvalidXABCode = vmsConst("RMS$_COD")
+	rmsRSSError       = vmsConst("RMS$_RSS")
 
 	// $SEARCH's: no more files match (RMS$_NMF), and a search with no
 	// expanded string to work from (RMS$_ESA).

@@ -67,6 +67,12 @@ type FileHandle struct {
 	// case (nil for the console case).
 	File *volume.File
 
+	// Found is the file as $OPEN or $CREATE found it, for $DISPLAY's
+	// NAM; Writable is whether it was opened for writing, so $CLOSE
+	// takes its XABRDT and XABPRO (docs/PHASE-33.md).
+	Found    *foundFile
+	Writable bool
+
 	// Reader/Writer are set once File has actually been armed for
 	// reading or writing respectively (see this type's own doc comment
 	// for why that's a separate step from File being non-nil at all).

@@ -1,6 +1,7 @@
 package rms
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/tucats/ods2/ondisk"
@@ -15,7 +16,7 @@ import (
 //
 // Opened by FID, the NAM gets no strings; by DID, it gets the resultant
 // string only.
-func (ctx *Context) openByNAM(fab, nam uint32, fac byte) (sts uint32, done bool, err error) {
+func (ctx *Context) openByNAM(fab, nam uint32, fac byte, chain []xabEntry) (sts uint32, done bool, err error) {
 	fid, err := ctx.loadFid(nam + namFID)
 	if err != nil {
 		return 0, true, err
@@ -61,6 +62,17 @@ func (ctx *Context) openByNAM(fab, nam uint32, fac byte) (sts uint32, done bool,
 
 		h, _ := ctx.Files.Lookup(ifi)
 		found = foundFile{Device: device, FID: fid, DID: h.File.Header.Backlink}
+
+		if id, err := h.File.Header.Ident(); err == nil {
+			name, ver, _ := strings.Cut(strings.TrimSpace(id.Filename), ";")
+			found.Name, found.Type = splitEntryName(name)
+			found.Dirs, _ = dirPath(vol, found.DID)
+			found.Parsed.Dev = dvi
+
+			if v, err := strconv.Atoi(ver); err == nil {
+				found.Version = uint16(v)
+			}
+		}
 	} else {
 		names, sts, err := ctx.expandFAB(fab, nam)
 		if err != nil {
@@ -114,9 +126,7 @@ func (ctx *Context) openByNAM(fab, nam uint32, fac byte) (sts uint32, done bool,
 		out.Resultant = true
 	}
 
-	if sts, err := ctx.fillNAM(fab, nam, found, out); err != nil || sts != 0 {
-		ctx.Files.Release(ifi)
-
+	if sts, err := ctx.reportOpened(fab, nam, ifi, found, chain, out); err != nil || sts != 0 {
 		if err == nil {
 			sts, err = fabStatus(ctx, fab, sts, 0)
 		}

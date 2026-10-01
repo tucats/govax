@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
@@ -387,6 +388,81 @@ func TestRMS3OpenCreate_govaxTree(t *testing.T) {
 
 		for _, g := range got {
 			t.Logf("%s %s", tc.probe, g)
+		}
+	}
+}
+
+// TestRMS3XAB_govaxTree runs the XAB probe against a govax-built copy of
+// the oracle's tree, and the CREATE probe's read-back, and checks the
+// XABs that don't depend on VMS's details.
+func TestRMS3XAB_govaxTree(t *testing.T) {
+	c := newBootableConsole(t)
+	c.HostLibrary = t.TempDir()
+
+	mountFreshRMSVolume(t, c)
+	buildRMS3Tree(t, c)
+
+	recs := runRMS3Probe(t, c, "xab")
+
+	byTag := map[string][]byte{}
+
+	for _, r := range recs {
+		if r.Step == 1 || r.Step == 5 || r.Step == 7 {
+			byTag[fmt.Sprintf("%d %s", r.Step, r.Tag)] = r.Data
+		}
+
+		t.Logf("%s", r)
+	}
+
+	if sts := binary.LittleEndian.Uint32(byTag["1 STAT"]); sts != 0x10001 {
+		t.Errorf("case 1: status %#x, want RMS$_NORMAL", sts)
+	}
+
+	if fhc := byTag["1 XFHC"]; fhc[0x8] != 2 || binary.LittleEndian.Uint32(fhc[0x10:]) != 1 {
+		t.Errorf("case 1: XABFHC RFO %d, EBK %d, want VAR and 1", fhc[0x8], binary.LittleEndian.Uint32(fhc[0x10:]))
+	}
+
+	if sts := binary.LittleEndian.Uint32(byTag["5 STAT"]); sts&1 == 1 {
+		t.Errorf("case 5 (an unknown XAB code): status %#x, want a failure", sts)
+	}
+
+	// The CREATE probe's read-backs: case 1's XABPRO, XABALL, and
+	// expiration date, and case 7's revision date and number and
+	// protection from its $CLOSE.
+	c = newBootableConsole(t)
+	c.HostLibrary = t.TempDir()
+
+	mountFreshRMSVolume(t, c)
+	buildRMS3Tree(t, c)
+
+	got := map[string][]byte{}
+
+	for _, r := range runRMS3Probe(t, c, "create") {
+		got[fmt.Sprintf("%d %s", r.Step, r.Tag)] = r.Data
+	}
+
+	vms := func(t time.Time) uint64 {
+		return uint64(t.Sub(time.Date(1858, time.November, 17, 0, 0, 0, 0, time.UTC))/time.Second) * 10_000_000
+	}
+
+	for _, tc := range []struct {
+		key  string
+		off  int
+		size int
+		want uint64
+	}{
+		{"11 RPRO", 8, 2, 0xFA00},
+		{"11 RALL", 0x14, 2, 3},
+		{"11 RDAT", 0x1c, 8, vms(time.Date(2030, time.January, 1, 0, 0, 0, 0, time.UTC))},
+		{"107 RRDT", 0xc, 8, vms(time.Date(2031, time.February, 2, 12, 0, 0, 0, time.UTC))},
+		{"107 RRDT", 8, 2, 9},
+		{"107 RPRO", 8, 2, 0xFF00},
+	} {
+		b := make([]byte, 8)
+		copy(b, got[tc.key][tc.off:tc.off+tc.size])
+
+		if v := binary.LittleEndian.Uint64(b); v != tc.want {
+			t.Errorf("CREATE %s at %#x = %#x, want %#x", tc.key, tc.off, v, tc.want)
 		}
 	}
 }

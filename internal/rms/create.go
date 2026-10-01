@@ -59,6 +59,15 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 		return fabStatus(ctx, fabAddr, failStatus, 0)
 	}
 
+	chain, failStatus, stv, err := ctx.xabChain(fabAddr)
+	if err != nil {
+		return 0, err
+	}
+
+	if failStatus != 0 {
+		return fabStatus(ctx, fabAddr, failStatus, stv)
+	}
+
 	fop, err := ctx.loadLongword(fabAddr + fabFOP)
 	if err != nil {
 		return 0, err
@@ -105,17 +114,30 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 			return fabStatus(ctx, fabAddr, failStatus, 0)
 		}
 
-		if nam != 0 {
-			sts, err := ctx.fillNAM(fabAddr, nam, found, namOutputs{Expanded: true, Resultant: true})
+		// A new file takes the XABs' attributes; then, new or opened by
+		// CIF, its NAM, FAB, and XABs report it.
+		if !opened {
+			h, _ := ctx.Files.Lookup(newIFI)
+
+			in, err := ctx.readXABInputs(chain)
 			if err != nil {
 				return 0, err
 			}
 
-			if sts != 0 {
+			if err := applyCreateXABs(h.File, in); err != nil {
 				ctx.Files.Release(newIFI)
 
-				return fabStatus(ctx, fabAddr, sts, 0)
+				return fabStatus(ctx, fabAddr, rmsDeviceError, 0)
 			}
+		}
+
+		sts, err := ctx.reportOpened(fabAddr, nam, newIFI, found, chain, namOutputs{Expanded: true, Resultant: true})
+		if err != nil {
+			return 0, err
+		}
+
+		if sts != 0 {
+			return fabStatus(ctx, fabAddr, sts, 0)
 		}
 
 		ifi = newIFI
@@ -278,7 +300,7 @@ func createOnVolume(ctx *Context, fabAddr uint32, p parsedName, cif bool) (ifi u
 	}
 	found.HighVer, found.LowVer = versionsAround(dir, name, version)
 
-	return ctx.Files.Alloc(&FileHandle{File: f}), found, false, 0, nil
+	return ctx.Files.Alloc(&FileHandle{File: f, Writable: true}), found, false, 0, nil
 }
 
 // loadFileSpecString reads the FAB$L_FNA/FAB$B_FNS pair out of the FAB at

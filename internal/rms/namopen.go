@@ -278,3 +278,31 @@ func splitEntryName(s string) (string, string) {
 
 	return name, typ
 }
+
+// reportOpened is what $OPEN and $CREATE do once the file is open: the
+// NAM (when there is one) gets the file, and the FAB and the XAB chain
+// get its attributes. The handle remembers the file for $DISPLAY. On
+// RMS$_RSS the file is closed again and the status returned.
+func (ctx *Context) reportOpened(fab, nam uint32, ifi uint16, found foundFile, chain []xabEntry, out namOutputs) (uint32, error) {
+	h, _ := ctx.Files.Lookup(ifi)
+	h.Found = &found
+
+	if nam != 0 {
+		sts, err := ctx.fillNAM(fab, nam, found, out)
+		if err != nil {
+			return 0, err
+		}
+
+		if sts != 0 {
+			ctx.Files.Release(ifi)
+
+			return sts, nil
+		}
+	}
+
+	if err := ctx.fillFABAttributes(fab, h.File); err != nil {
+		return 0, err
+	}
+
+	return 0, ctx.fillXABs(chain, h.File)
+}

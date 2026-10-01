@@ -406,8 +406,8 @@ func (p *prog) dumpChain() {
 
 func xabProg() {
 	p := newProg("XAB", `; XABs on $OPEN and $DISPLAY: each case resets the chain DAT, RDT, FHC,
-; PRO, ALL, SUM (filled with ^XEE past each XAB's COD and BLN, so what RMS
-; writes shows), opens a file, and writes the FAB, NAM, and every XAB.
+; PRO, ALL, SUM from a copy of it as the macros built it, opens a file,
+; and writes the FAB, NAM, and every XAB.
 `)
 	p.defs = xabDefs
 	p.data = append(p.data, "FABT:\t$FAB\tFAC=GET,NAM=NAM1")

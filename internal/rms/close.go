@@ -52,6 +52,26 @@ func SysClose(ctx *Context, argv []uint32) (uint32, error) {
 	// does next (creating another TTA0: file, for instance). Only the
 	// real-volume case below needs any actual close work done.
 	if !handle.IsConsole() {
+		// A file opened for writing takes the revision date and number
+		// of a XABRDT, and the protection of a XABPRO, as it's closed
+		// (docs/PHASE-33.md, subtask 5).
+		var in xabInputs
+
+		if handle.Writable {
+			chain, sts, stv, err := ctx.xabChain(fabAddr)
+			if err != nil {
+				return 0, err
+			}
+
+			if sts != 0 {
+				return fabStatus(ctx, fabAddr, sts, stv)
+			}
+
+			if in, err = ctx.readXABInputs(chain); err != nil {
+				return 0, err
+			}
+		}
+
 		if err := closeVolumeFile(handle); err != nil {
 			// A genuine underlying ods2/volume-layer failure while
 			// finalizing the file's on-disk size — not a Go bug, so
@@ -59,6 +79,10 @@ func SysClose(ctx *Context, argv []uint32) (uint32, error) {
 			// error rather than propagated as a Go error, the same
 			// convention create.go's createOnVolume already uses for
 			// vol.CreateFile failures.
+			return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsDeviceError)
+		}
+
+		if err := applyCloseXABs(handle.File, in); err != nil {
 			return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsDeviceError)
 		}
 	}
