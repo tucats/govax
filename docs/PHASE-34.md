@@ -340,3 +340,16 @@ The author accepted each proposal below on 2026-10-01.
     `f3c474b`). Four govax tests expected the old heading.
   - HELP DIRECTORY lists the new qualifiers, and now says what `/FILE`
     shows (the file ID, not the record format).
+- 2026-10-01: Subtask 8 started: `TestCreateDirectoryOracle`
+  (`internal/console/credir_oracle_test.go`) replays `credir.com`'s
+  commands under govax on a freshly built exchange volume and compares
+  each directory with VMS's, field by field: IDENT name and revision,
+  characteristics, owner, protection, record attributes, HIBLK/EFBLK/FFB,
+  high-water mark, version limit, the version limit on its parent's
+  entry, and its extent count. File IDs, LBNs, and dates aren't
+  compared. It skips until `testdata/credir/vax/credir-vax.dsk.gz`
+  exists; checked against a govax-made stand-in, it reports nothing.
+  Comparing the messages with `CREDIR.LOG` waits for the log's format.
+  **Waiting on the author's VAX run.** One expected difference to look
+  for: govax makes a ninth level (`[L1...L9]`), which ODS-2 on VMS 7.3 is
+  believed to refuse.
