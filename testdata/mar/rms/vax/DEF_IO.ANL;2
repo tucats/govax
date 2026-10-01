@@ -1,0 +1,1616 @@
+
+Analyze Object File                          30-SEP-2026 21:50:02.44   Page 1
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 51 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "DEF_IO"
+	module version: "V1.0"
+	creation   date/time: 30-SEP-2026 21:50
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 21 bytes
+
+	Textual information:
+	"MACRO/NOLIST DEF_IO"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 16 bytes
+
+	Textual information:
+	"$IODEF's names"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 16 bytes
+
+	1)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 06 00 00 00 00 00 BC 0D|  0000  |.¼......|
+		       4F 49 5F 46 45 44|  0008  |DEF_IO  |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 477 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_ADD"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:02.44   Page 2
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_BARRIER"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_BUFOBJ"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_FILE_FLUSH"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_FLUSH"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_IDSTRING"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_MT3_DENSITY"
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.44   Page 3
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_NOMINICOPY"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_OPT_MINICOPY"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_PREFERRED_CPU"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_QSRVFILL1"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_QSRV_CLIENT_UPDATE"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:02.44   Page 4
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_REQ_MINICOPY"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_ROUTE"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_SERIALNUM"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_SHOW_MAP"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_SHOW_ROUTE"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_SYS_ASSIGNABLE"
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.44   Page 5
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_TRUSTED"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_UPDATE_MAP"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$M_WRITE_BARRIER"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_ADD"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_BARRIER"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:02.44   Page 6
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_BUFOBJ"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_FILE_FLUSH"
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 479 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_FLUSH"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_IDSTRING"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_MT3_DENSITY"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+
+Analyze Object File                          30-SEP-2026 21:50:02.45   Page 7
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_NOMINICOPY"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_OPT_MINICOPY"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_PREFERRED_CPU"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_QSRVFILL1"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_QSRV_CLIENT_UPDATE"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_REQ_MINICOPY"
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.45   Page 8
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_ROUTE"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_SERIALNUM"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_SHOW_MAP"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_SHOW_ROUTE"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_SYS_ASSIGNABLE"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:02.45   Page 9
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_TRUSTED"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_UPDATE_MAP"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$V_WRITE_BARRIER"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$_BIND"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$_CREDISK"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$_DISMOUNT"
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.45   Page 10
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$_EXPORT"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$_IOCTLV"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$_LOCAL_DRAIN"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$_MANAGE_PE"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$_PATH_VERIFY"
+
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.45   Page 11
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+8.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 48 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$_REMDISK"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$_UNBIND"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "IO$_USBATTR"
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.45   Page 12
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+10.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 15 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: "$ABS$"
+
+
+12.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+13.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+
+Analyze Object File                          30-SEP-2026 21:50:02.45   Page 13
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+			(11) GPS$V_NOMOD      0
+		allocation: 2176 (%X'00000880')
+		symbol: "DATA"
+
+
+14.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 24 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 20 00 00 00 E0 00|  0000  |.à... ..|
+		 00 00 01 00 00 00 00 00|  0008  |........|
+		 00 00 00 40 00 00 00 80|  0010  |....@...|
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$M_ADD"
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  Store Immediate, 32 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 40 00 00 00 00 40|  0000  |@....@..|
+		 00 00 00 80 00 00 02 00|  0008  |........|
+		 00 00 01 00 00 00 01 00|  0010  |........|
+		 00 00 20 00 00 00 40 00|  0018  |.@... ..|
+
+	7)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$M_BARRIER"
+
+	8)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	9)  Store Immediate, 20 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 01 00 00 00 00 40|  0000  |@.......|
+		 00 00 02 00 00 00 40 00|  0008  |.@......|
+		             00 00 10 00|  0010  |....    |
+
+	10)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$M_BUFOBJ"
+
+	11)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	12)  Store Immediate, 128 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 80 00 00 00 40|  0000  |@.......|
+		 00 00 10 00 00 00 00 40|  0008  |@.......|
+
+Analyze Object File                          30-SEP-2026 21:50:02.45   Page 14
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+		 00 00 08 00 00 00 01 00|  0010  |........|
+		 00 00 02 00 00 00 04 00|  0018  |........|
+		 00 00 01 00 00 00 00 40|  0020  |@.......|
+		 00 00 02 00 00 00 00 80|  0028  |........|
+		 00 00 00 80 00 00 01 00|  0030  |........|
+		 00 00 10 00 00 00 01 00|  0038  |........|
+		 00 00 04 00 00 00 40 00|  0040  |.@......|
+		 00 00 01 00 00 00 00 40|  0048  |@.......|
+		 00 00 02 00 00 00 00 80|  0050  |........|
+		 00 00 01 00 00 00 00 40|  0058  |@.......|
+		 00 00 00 80 00 00 01 00|  0060  |........|
+		 00 00 04 00 00 00 04 00|  0068  |........|
+		 00 00 00 40 00 00 00 80|  0070  |....@...|
+		 00 00 40 00 00 00 04 00|  0078  |.....@..|
+
+	13)  Store Immediate, 20 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 20 00 00 00 00 40|  0000  |@.... ..|
+		 00 00 80 00 00 00 00 40|  0008  |@.......|
+		             00 00 00 3F|  0010  |?...    |
+
+	14)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$M_FILE_FLUSH"
+
+	15)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	16)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$M_FLUSH"
+
+	17)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	18)  Store Immediate, 20 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 10 00 00 00 20 00|  0000  |. ......|
+		 00 00 00 40 00 00 FF C0|  0008  |À...@...|
+		             00 00 02 00|  0010  |....    |
+
+	19)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$M_IDSTRING"
+
+	20)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	21)  Store Immediate, 118 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 08 00 00 00 08 00|  0000  |........|
+		 00 00 80 00 00 00 10 00|  0008  |........|
+		 00 00 10 00 00 00 10 00|  0010  |........|
+		 00 00 04 00 00 00 00 40|  0018  |@.......|
+		 00 00 04 00 00 00 08 00|  0020  |........|
+		 00 00 02 00 00 00 00 80|  0028  |........|
+		 00 00 00 80 00 00 08 00|  0030  |........|
+		 00 00 00 80 00 00 01 00|  0038  |........|
+
+Analyze Object File                          30-SEP-2026 21:50:02.45   Page 15
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+		 00 00 20 00 00 00 10 00|  0040  |..... ..|
+		 00 00 00 40 00 00 40 00|  0048  |.@..@...|
+		 00 00 00 01 00 00 00 80|  0050  |........|
+		 00 00 00 20 00 00 00 10|  0058  |.... ...|
+		 00 00 00 04 00 00 00 02|  0060  |........|
+		 00 00 00 08 00 00 02 00|  0068  |........|
+		       04 00 00 00 80 00|  0070  |......  |
+
+
+15.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  Store Immediate, 62 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 01 00 00 00 10 00 00 00|  0000  |........|
+		 20 00 00 00 40 00 00 00|  0008  |...@... |
+		 00 40 00 00 08 00 00 00|  0010  |......@.|
+		 00 40 00 00 02 00 00 00|  0018  |......@.|
+		 00 40 00 00 00 40 00 00|  0020  |..@...@.|
+		 10 00 00 00 02 00 00 00|  0028  |........|
+		 01 00 00 00 00 80 00 00|  0030  |........|
+		       00 00 00 40 00 00|  0038  |..@...  |
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$M_MT3_DENSITY"
+
+	3)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	4)  Store Immediate, 36 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 04 00 00 00 00 80|  0000  |........|
+		 00 00 01 00 00 00 02 00|  0008  |........|
+		 00 00 01 00 00 00 00 40|  0010  |@.......|
+		 00 00 02 00 00 00 00 40|  0018  |@.......|
+		             00 00 01 00|  0020  |....    |
+
+	5)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$M_NOMINICOPY"
+
+	6)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	7)  Store Immediate, 24 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 04 00 00 00 00 40|  0000  |@.......|
+		 00 00 00 40 00 02 00 00|  0008  |....@...|
+		 00 00 02 00 00 00 00 80|  0010  |........|
+
+	8)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$M_OPT_MINICOPY"
+
+	9)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.45   Page 16
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+	10)  Store Immediate, 28 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 01 00 00 00 04 00|  0000  |........|
+		 00 00 00 40 00 00 02 00|  0008  |....@...|
+		 00 00 00 80 00 00 00 80|  0010  |........|
+		             00 00 00 40|  0018  |@...    |
+
+	11)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$M_PREFERRED_CPU"
+
+	12)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	13)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 08 00|  0000  |....    |
+
+	14)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$M_QSRVFILL1"
+
+	15)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	16)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$M_QSRV_CLIENT_UPDATE"
+
+	17)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	18)  Store Immediate, 52 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 01 00 00 00 00 80|  0000  |........|
+		 00 00 00 80 00 00 00 40|  0008  |@.......|
+		 00 00 80 00 00 00 00 80|  0010  |........|
+		 00 00 04 00 00 00 01 00|  0018  |........|
+		 00 00 08 00 00 00 04 00|  0020  |........|
+		 00 00 20 00 00 00 00 40|  0028  |@.... ..|
+		             00 00 08 00|  0030  |....    |
+
+	19)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$M_REQ_MINICOPY"
+
+	20)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	21)  Store Immediate, 16 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 40 00 00 20 00|  0000  |. ..@...|
+		 00 00 00 40 00 00 20 00|  0008  |. ..@...|
+
+	22)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$M_ROUTE"
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.45   Page 17
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+	23)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	24)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 40 00 00 00 01 00|  0000  |.....@..|
+		             00 00 08 00|  0008  |....    |
+
+	25)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$M_SERIALNUM"
+
+	26)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	27)  Store Immediate, 46 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 01 00 00 00 02 00|  0000  |........|
+		 00 00 08 00 00 00 80 00|  0008  |........|
+		 00 00 02 00 00 00 00 40|  0010  |@.......|
+		 00 00 02 00 00 00 04 00|  0018  |........|
+		 00 00 04 00 00 00 08 00|  0020  |........|
+		       04 00 00 00 00 80|  0028  |......  |
+
+
+16.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 40 00 00 02 00 00 00|  0000  |......@.|
+		                   00 00|  0008  |..      |
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$M_SHOW_MAP"
+
+	3)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$M_SHOW_ROUTE"
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  Store Immediate, 40 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 02 00 00 00 00 80|  0000  |........|
+		 00 00 00 40 00 00 00 80|  0008  |....@...|
+		 00 00 00 40 00 00 00 40|  0010  |@...@...|
+		 00 00 01 00 00 00 00 80|  0018  |........|
+		 00 01 00 00 00 00 02 00|  0020  |........|
+
+	7)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$M_SYS_ASSIGNABLE"
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.45   Page 18
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+	8)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	9)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 80 00 00 04 00|  0000  |........|
+		             00 00 10 00|  0008  |....    |
+
+	10)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$M_TRUSTED"
+
+	11)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	12)  Store Immediate, 24 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 08 00 00 00 10 00|  0000  |........|
+		 00 00 20 00 00 00 10 00|  0008  |..... ..|
+		 00 00 01 00 00 00 00 40|  0010  |@.......|
+
+	13)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$M_UPDATE_MAP"
+
+	14)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	15)  Store Immediate, 20 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 02 00 00 00 40 00|  0000  |.@......|
+		 00 00 02 00 00 00 00 40|  0008  |@.......|
+		             00 00 08 00|  0010  |....    |
+
+	16)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$M_WRITE_BARRIER"
+
+	17)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	18)  Store Immediate, 24 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 06 00 00 01 00|  0000  |........|
+		 00 00 00 08 00 00 00 0A|  0008  |........|
+		 00 00 00 06 00 00 00 07|  0010  |........|
+
+	19)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$V_ADD"
+
+	20)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	21)  Store Immediate, 32 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 0E 00 00 00 06|  0000  |........|
+		 00 00 00 07 00 00 00 09|  0008  |........|
+		 00 00 00 08 00 00 00 08|  0010  |........|
+
+Analyze Object File                          30-SEP-2026 21:50:02.46   Page 19
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+		 00 00 00 0D 00 00 00 0E|  0018  |........|
+
+	22)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$V_BARRIER"
+
+	23)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	24)  Store Immediate, 20 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 08 00 00 00 06|  0000  |........|
+		 00 00 00 09 00 00 00 0E|  0008  |........|
+		             00 00 00 0C|  0010  |....    |
+
+	25)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$V_BUFOBJ"
+
+	26)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	27)  Store Immediate, 119 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 07 00 00 00 06|  0000  |........|
+		 00 00 00 0C 00 00 00 06|  0008  |........|
+		 00 00 00 0B 00 00 00 08|  0010  |........|
+		 00 00 00 09 00 00 00 0A|  0018  |........|
+		 00 00 00 08 00 00 00 06|  0020  |........|
+		 00 00 00 09 00 00 00 07|  0028  |........|
+		 00 00 00 07 00 00 00 08|  0030  |........|
+		 00 00 00 0C 00 00 00 08|  0038  |........|
+		 00 00 00 0A 00 00 00 0E|  0040  |........|
+		 00 00 00 08 00 00 00 06|  0048  |........|
+		 00 00 00 09 00 00 00 07|  0050  |........|
+		 00 00 00 08 00 00 00 06|  0058  |........|
+		 00 00 00 07 00 00 00 08|  0060  |........|
+		 00 00 00 0A 00 00 00 0A|  0068  |........|
+		    00 00 06 00 00 00 07|  0070  |....... |
+
+
+17.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 471 bytes
+
+	1)  Store Immediate, 29 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 0E 00 00 00 0A 00|  0000  |........|
+		 00 00 0D 00 00 00 06 00|  0008  |........|
+		 00 00 0F 00 00 00 06 00|  0010  |........|
+		          00 00 00 00 00|  0018  |.....   |
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$V_FILE_FLUSH"
+
+	3)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.46   Page 20
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$V_FLUSH"
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  Store Immediate, 20 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 0C 00 00 00 0D|  0000  |........|
+		 00 00 00 06 00 00 00 06|  0008  |........|
+		             00 00 00 09|  0010  |....    |
+
+	7)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$V_IDSTRING"
+
+	8)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	9)  Store Immediate, 128 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 0B 00 00 00 0B|  0000  |........|
+		 00 00 00 0F 00 00 00 0C|  0008  |........|
+		 00 00 00 0C 00 00 00 0C|  0010  |........|
+		 00 00 00 0A 00 00 00 06|  0018  |........|
+		 00 00 00 0A 00 00 00 0B|  0020  |........|
+		 00 00 00 09 00 00 00 07|  0028  |........|
+		 00 00 00 07 00 00 00 0B|  0030  |........|
+		 00 00 00 07 00 00 00 08|  0038  |........|
+		 00 00 00 0D 00 00 00 0C|  0040  |........|
+		 00 00 00 06 00 00 00 0E|  0048  |........|
+		 00 00 00 00 00 00 00 07|  0050  |........|
+		 00 00 00 05 00 00 00 04|  0058  |........|
+		 00 00 00 02 00 00 00 01|  0060  |........|
+		 00 00 00 03 00 00 00 09|  0068  |........|
+		 00 00 00 0A 00 00 00 0F|  0070  |........|
+		 00 00 00 08 00 00 00 0C|  0078  |........|
+
+	10)  Store Immediate, 52 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 0D 00 00 00 0E|  0000  |........|
+		 00 00 00 06 00 00 00 0B|  0008  |........|
+		 00 00 00 06 00 00 00 09|  0010  |........|
+		 00 00 00 06 00 00 00 06|  0018  |........|
+		 00 00 00 0C 00 00 00 09|  0020  |........|
+		 00 00 00 08 00 00 00 07|  0028  |........|
+		             00 00 00 06|  0030  |....    |
+
+	11)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$V_MT3_DENSITY"
+
+	12)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	13)  Store Immediate, 36 bytes:
+
+Analyze Object File                          30-SEP-2026 21:50:02.46   Page 21
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 0A 00 00 00 07|  0000  |........|
+		 00 00 00 08 00 00 00 09|  0008  |........|
+		 00 00 00 08 00 00 00 06|  0010  |........|
+		 00 00 00 09 00 00 00 06|  0018  |........|
+		             00 00 00 08|  0020  |....    |
+
+	14)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$V_NOMINICOPY"
+
+	15)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	16)  Store Immediate, 24 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 0A 00 00 00 06|  0000  |........|
+		 00 00 00 06 00 00 00 11|  0008  |........|
+		 00 00 00 09 00 00 00 07|  0010  |........|
+
+	17)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$V_OPT_MINICOPY"
+
+	18)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	19)  Store Immediate, 28 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 08 00 00 00 0A|  0000  |........|
+		 00 00 00 06 00 00 00 09|  0008  |........|
+		 00 00 00 07 00 00 00 07|  0010  |........|
+		             00 00 00 06|  0018  |....    |
+
+	20)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$V_PREFERRED_CPU"
+
+	21)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	22)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 0B|  0000  |....    |
+
+	23)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$V_QSRVFILL1"
+
+
+18.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$V_QSRV_CLIENT_UPDATE"
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.46   Page 22
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+	3)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	4)  Store Immediate, 52 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 08 00 00 00 07|  0000  |........|
+		 00 00 00 07 00 00 00 06|  0008  |........|
+		 00 00 00 0F 00 00 00 07|  0010  |........|
+		 00 00 00 0A 00 00 00 08|  0018  |........|
+		 00 00 00 0B 00 00 00 0A|  0020  |........|
+		 00 00 00 0D 00 00 00 06|  0028  |........|
+		             00 00 00 0B|  0030  |....    |
+
+	5)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$V_REQ_MINICOPY"
+
+	6)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	7)  Store Immediate, 16 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 06 00 00 00 0D|  0000  |........|
+		 00 00 00 06 00 00 00 0D|  0008  |........|
+
+	8)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$V_ROUTE"
+
+	9)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	10)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 0E 00 00 00 08|  0000  |........|
+		             00 00 00 0B|  0008  |....    |
+
+	11)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$V_SERIALNUM"
+
+	12)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	13)  Store Immediate, 56 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 08 00 00 00 09|  0000  |........|
+		 00 00 00 0B 00 00 00 0F|  0008  |........|
+		 00 00 00 09 00 00 00 06|  0010  |........|
+		 00 00 00 09 00 00 00 0A|  0018  |........|
+		 00 00 00 0A 00 00 00 0B|  0020  |........|
+		 00 00 00 0A 00 00 00 07|  0028  |........|
+		 00 00 00 06 00 00 00 09|  0030  |........|
+
+	14)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$V_SHOW_MAP"
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.46   Page 23
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+	15)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	16)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$V_SHOW_ROUTE"
+
+	17)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	18)  Store Immediate, 40 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 09 00 00 00 07|  0000  |........|
+		 00 00 00 06 00 00 00 07|  0008  |........|
+		 00 00 00 06 00 00 00 06|  0010  |........|
+		 00 00 00 08 00 00 00 07|  0018  |........|
+		 00 00 00 10 00 00 00 09|  0020  |........|
+
+	19)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$V_SYS_ASSIGNABLE"
+
+	20)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	21)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 07 00 00 00 0A|  0000  |........|
+		             00 00 00 0C|  0008  |....    |
+
+	22)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$V_TRUSTED"
+
+	23)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	24)  Store Immediate, 24 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 0B 00 00 00 0C|  0000  |........|
+		 00 00 00 0D 00 00 00 0C|  0008  |........|
+		 00 00 00 08 00 00 00 06|  0010  |........|
+
+	25)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$V_UPDATE_MAP"
+
+	26)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	27)  Store Immediate, 20 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 09 00 00 00 0E|  0000  |........|
+		 00 00 00 09 00 00 00 06|  0008  |........|
+		             00 00 00 0B|  0010  |....    |
+
+	28)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$V_WRITE_BARRIER"
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.46   Page 24
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+	29)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	30)  Store Immediate, 32 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 32 00 00 00 08|  0000  |....2...|
+		 00 00 00 0E 00 00 00 38|  0008  |8.......|
+		 00 00 00 18 00 00 00 19|  0010  |........|
+		 00 00 00 17 00 00 00 2B|  0018  |+.......|
+
+
+19.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 37 00 00 00 2A|  0000  |*...7...|
+		             00 00 00 11|  0008  |....    |
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$_BIND"
+
+	3)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	4)  Store Immediate, 24 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 3C 00 00 00 1E|  0000  |....<...|
+		 00 00 00 1C 00 00 00 3D|  0008  |=.......|
+		 00 00 00 33 00 00 00 0F|  0010  |....3...|
+
+	5)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$_CREDISK"
+
+	6)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	7)  Store Immediate, 28 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 34 00 00 00 0D|  0000  |....4...|
+		 00 00 00 04 00 00 00 03|  0008  |........|
+		 00 00 00 1D 00 00 00 35|  0010  |5.......|
+		             00 00 00 16|  0018  |....    |
+
+	8)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$_DISMOUNT"
+
+	9)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	10)  Store Immediate, 20 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 00 00 00 13|  0000  |........|
+		 00 00 00 03 00 00 00 15|  0008  |........|
+		             00 00 00 06|  0010  |....    |
+
+Analyze Object File                          30-SEP-2026 21:50:02.46   Page 25
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+
+	11)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$_EXPORT"
+
+	12)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	13)  Store Immediate, 16 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 1E 00 00 00 2A|  0000  |*.......|
+		 00 00 00 04 00 00 00 29|  0008  |).......|
+
+	14)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$_IOCTLV"
+
+	15)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	16)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 01|  0000  |....    |
+
+	17)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$_LOCAL_DRAIN"
+
+	18)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	19)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 2F|  0000  |/...    |
+
+	20)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$_MANAGE_PE"
+
+	21)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	22)  Store Immediate, 32 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 36 00 00 00 04|  0000  |....6...|
+		 00 00 00 17 00 00 00 39|  0008  |9.......|
+		 00 00 00 00 00 00 00 36|  0010  |6.......|
+		 00 00 00 08 00 00 00 06|  0018  |........|
+
+	23)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$_PATH_VERIFY"
+
+	24)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	25)  Store Immediate, 88 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 34 00 00 00 1F|  0000  |....4...|
+		 00 00 00 26 00 00 00 1D|  0008  |....&...|
+
+Analyze Object File                          30-SEP-2026 21:50:02.46   Page 26
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+		 00 00 00 25 00 00 00 1C|  0010  |....%...|
+		 00 00 00 07 00 00 00 32|  0018  |2.......|
+		 00 00 00 3E 00 00 00 0D|  0020  |....>...|
+		 00 00 00 21 00 00 00 0E|  0028  |....!...|
+		 00 00 00 0C 00 00 00 2B|  0030  |+.......|
+		 00 00 00 37 00 00 00 19|  0038  |....7...|
+		 00 00 00 22 00 00 00 09|  0040  |...."...|
+		 00 00 00 31 00 00 00 10|  0048  |....1...|
+		 00 00 00 05 00 00 00 03|  0050  |........|
+
+	26)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "IO$_REMDISK"
+
+	27)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	28)  Store Immediate, 90 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 14 00 00 00 10|  0000  |........|
+		 00 00 00 17 00 00 00 16|  0008  |........|
+		 00 00 00 24 00 00 00 07|  0010  |....$...|
+		 00 00 00 09 00 00 00 22|  0018  |".......|
+		 00 00 00 1B 00 00 00 02|  0020  |........|
+		 00 00 00 1A 00 00 00 27|  0028  |'.......|
+		 00 00 00 05 00 00 00 37|  0030  |7.......|
+		 00 00 00 12 00 00 00 23|  0038  |#.......|
+		 00 00 00 25 00 00 00 1D|  0040  |....%...|
+		 00 00 00 02 00 00 00 26|  0048  |&.......|
+		 00 00 00 38 00 00 00 09|  0050  |....8...|
+		                   00 06|  0058  |..      |
+
+
+20.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 149 bytes
+
+	1)  Store Immediate, 54 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 19 00 00 00 02 00 00|  0000  |........|
+		 00 01 00 00 00 05 00 00|  0008  |........|
+		 00 03 00 00 00 07 00 00|  0010  |........|
+		 00 02 00 00 00 06 00 00|  0018  |........|
+		 00 3A 00 00 00 08 00 00|  0020  |......:.|
+		 00 29 00 00 00 3B 00 00|  0028  |..;...).|
+		       00 00 00 28 00 00|  0030  |..(...  |
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$_UNBIND"
+
+	3)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	4)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 1E 00 00 00 01|  0000  |........|
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.46   Page 27
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+	5)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "IO$_USBATTR"
+
+	6)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	7)  Store Immediate, 56 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 17 00 00 00 3F|  0000  |?.......|
+		 00 00 00 18 00 00 00 0A|  0008  |........|
+		 00 00 00 20 00 00 00 0D|  0010  |.... ...|
+		 00 00 00 1C 00 00 00 2C|  0018  |,.......|
+		 00 00 00 0B 00 00 00 28|  0020  |(.......|
+		 00 00 00 0F 00 00 00 18|  0028  |........|
+		 00 00 00 1D 00 00 00 30|  0030  |0.......|
+
+
+21.  TRACEBACK INFORMATION (OBJ$C_TBT), 21 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 08 80 41 54 41 44 04|  0000  |.DATA...|
+		                BD 01 00|  0008  |..½     |
+
+
+22.  END OF MODULE (OBJ$C_EOM), 2 bytes
+
+	severity: successful (0)
+
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.46   Page 28
+DUA1:[000000]DEF_IO.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   106
+OBJ$C_GSD	    6	  1052
+OBJ$C_TIR	    9	  2935
+OBJ$C_EOM	    1	     2
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    2	    37
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   22	  4132
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=DEF_IO.ANL DEF_IO.OBJ                                     

@@ -1,0 +1,4382 @@
+
+Analyze Object File                          30-SEP-2026 21:50:04.16   Page 1
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 55 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "DEF_XABITM"
+	module version: "V1.0"
+	creation   date/time: 30-SEP-2026 21:50
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 25 bytes
+
+	Textual information:
+	"MACRO/NOLIST DEF_XABITM"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 20 bytes
+
+	Textual information:
+	"$XABITMDEF's names"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 20 bytes
+
+	1)  Store Immediate, 18 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 0A 00 00 00 00 00 BC 11|  0000  |.¼......|
+		 49 42 41 58 5F 46 45 44|  0008  |DEF_XABI|
+		                   4D 54|  0010  |TM      |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 471 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_AID"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                          30-SEP-2026 21:50:04.16   Page 2
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_ALN"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_AOP"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_ATR"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_BKZ"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_BLN"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+
+Analyze Object File                          30-SEP-2026 21:50:04.16   Page 3
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_COD"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_DAN"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_DBS"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_DTP"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_FLG"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_HSZ"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.16   Page 4
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_IAN"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_IBS"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_KREF"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_LAN"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_LVL"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.16   Page 5
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_MTACC"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_NOA"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_NOK"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_NSG"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_NUL"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_PROLOG"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.16   Page 6
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_PROT_MODE"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_PROT_OPT"
+
+	26)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_REF"
+
+	27)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_RFO"
+
+	28)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_SIZ0"
+
+	29)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.16   Page 7
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_SIZ1"
+
+	30)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_SIZ2"
+
+	31)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_SIZ3"
+
+	32)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_SIZ4"
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 460 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_SIZ5"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+
+Analyze Object File                          30-SEP-2026 21:50:04.17   Page 8
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_SIZ6"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_SIZ7"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$B_TKS"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_ALL"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_ALLLEN"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_ANY"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.17   Page 9
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_BN2"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_BN4"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_BN8"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_COL"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_CXT_VER1"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.17   Page 10
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_CYL"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_DAT"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_DATLEN"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_DATLEN_V2"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_DATLEN_V54"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_DBN2"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.17   Page 11
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_DBN4"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_DBN8"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_DCOL"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_DIN2"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_DIN4"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.17   Page 12
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_DIN8"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_DPAC"
+
+	26)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_DSTG"
+
+	27)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_FHC"
+
+	28)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_FHCLEN"
+
+	29)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_IN2"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.17   Page 13
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	30)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_IN4"
+
+
+8.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 474 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_IN8"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_KEY"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_KEYLEN"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_LBN"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.17   Page 14
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_PAC"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_PRO"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_PROLEN"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_PROLEN_V3"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_RDT"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.17   Page 15
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_RDTLEN"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_RFI"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_STG"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_SUM"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_SUMLEN"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_TRM"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.17   Page 16
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_TRMLEN"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$C_VBN"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$K_ALLLEN"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$K_DATLEN"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$K_DATLEN_V2"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.17   Page 17
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$K_DATLEN_V54"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$K_FHCLEN"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$K_PROLEN"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$K_PROLEN_V3"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$K_RDTLEN"
+
+	26)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$K_TRMLEN"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.17   Page 18
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	27)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_ACLBUF"
+
+	28)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_ACLCTX"
+
+	29)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_ACLSTS"
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 478 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_ALQ"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_BDT0"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.18   Page 19
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_BDT4"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_CDT0"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_CDT4"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_COLNAM"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_COLSIZ"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.18   Page 20
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_COLTBL"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_DVB"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_EBK"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_EDT0"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_EDT4"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_EFF0"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.18   Page 21
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_EFF4"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_HBK"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_ITMLST"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_KNM"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_LOC"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.18   Page 22
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_NXT"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_RCD0"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_RCD4"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_RDT0"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_RDT4"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_RVB"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.18   Page 23
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_SBN"
+
+	26)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$L_UIC"
+
+	27)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_BLK"
+
+	28)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_CBT"
+
+	29)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_CHG"
+
+	30)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.18   Page 24
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_CR"
+
+	31)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_CTG"
+
+	32)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_DAT_NCMPR"
+
+
+10.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 464 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_DUP"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_FTN"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+
+Analyze Object File                          30-SEP-2026 21:50:04.18   Page 25
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_HRD"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_IDX_NCMPR"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_KEY_NCMPR"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_NODEL"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_NOEXE"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_NOREAD"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.18   Page 26
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_NOWRITE"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_NUL"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_ONC"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_PRN"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$M_PROPAGATE"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.18   Page 27
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$Q_BDT"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$Q_CDT"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$Q_EDT"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$Q_EFF"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$Q_PROT_MODE"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$Q_RCD"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.18   Page 28
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$Q_RDT"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_AOP_BITS"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_AOP_OVERLAY"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_BDT_FIELDS"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_BDT_OVERLAY"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.18   Page 29
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_CDT_FIELDS"
+
+	26)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_CDT_OVERLAY"
+
+	27)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_EBK_FIELDS"
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 473 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_EBK_OVERLAY"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_EDT_FIELDS"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+
+Analyze Object File                          30-SEP-2026 21:50:04.19   Page 30
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_EDT_OVERLAY"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_EFF_FIELDS"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_EFF_OVERLAY"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_HBK_FIELDS"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_HBK_OVERLAY"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_PROT_MODE_FIELDS"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.19   Page 31
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_PROT_MODE_OVERLAY"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_PROT_OPT_FIELDS"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_PROT_OPT_OVERLAY"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_PRO_BITS"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_PRO_OVERLAY"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.19   Page 32
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_RCD_FIELDS"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_RCD_OVERLAY"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_RDT_FIELDS"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_RDT_OVERLAY"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_RFI_FIELDS"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_RFI_OVERLAY"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.19   Page 33
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_UIC_FIELDS"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_UIC_OVERLAY"
+
+
+12.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 465 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$R_XABPRODEF_BITS"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_BDT"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_CDT"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.19   Page 34
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_EDT"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_EFF"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_GRP"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_OWN"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_PROT_MODE"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.19   Page 35
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_RCD"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_RDT"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_RFI"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_SYS"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_WLD"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_XABALLDEF"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.19   Page 36
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_XABDATDEF"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_XABDEF"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_XABDEF1"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_XABFHCDEF"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_XABPRODEF"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.19   Page 37
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_XABPRODEF1"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_XABRDTDEF"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$S_XABTRMDEF"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_BLK"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_CBT"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_CHG"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.19   Page 38
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	26)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_CR"
+
+	27)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_CTG"
+
+	28)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_DAT_NCMPR"
+
+
+13.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 460 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_DUP"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_FTN"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.19   Page 39
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_GRP"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_HRD"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_IDX_NCMPR"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_KEY_NCMPR"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_NODEL"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.19   Page 40
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_NOEXE"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_NOREAD"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_NOWRITE"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_NUL"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_ONC"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_OWN"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.19   Page 41
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_PRN"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_PROPAGATE"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_SYS"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$V_WLD"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_ACLLEN"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.20   Page 42
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_ACLSIZ"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_DEQ"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_DFL"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_DXQ"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_EBK0"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_EBK2"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.20   Page 43
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_FFB"
+
+	26)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_GBC"
+
+	27)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_GRP"
+
+	28)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_HBK0"
+
+	29)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_HBK2"
+
+	30)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.20   Page 44
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_IFL"
+
+
+14.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 332 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_ITMLST_LEN"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_LRL"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_MBM"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_MRL"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+
+Analyze Object File                          30-SEP-2026 21:50:04.20   Page 45
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_MRZ"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_POS0"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_POS1"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_POS2"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_POS3"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_POS4"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.20   Page 46
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_POS5"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_POS6"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_POS7"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_PRO"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_PVN"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:04.20   Page 47
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_RFI"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_RFI0"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_RFI2"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_RFI4"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_RVN"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_VERLIMIT"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.20   Page 48
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "XAB$W_VOL"
+
+
+15.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+16.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+17.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 15 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+
+Analyze Object File                          30-SEP-2026 21:50:04.20   Page 49
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: "$ABS$"
+
+
+18.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+19.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 1028 (%X'00000404')
+		symbol: "DATA"
+
+
+20.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 466 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$B_AID"
+
+	4)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	5)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$B_ALN"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.20   Page 50
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	6)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	7)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$B_AOP"
+
+	8)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	9)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$B_ATR"
+
+	10)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	11)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_BKZ"
+
+	12)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	13)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_BLN"
+
+	14)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	15)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_COD"
+
+	16)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	17)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_DAN"
+
+	18)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	19)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_DBS"
+
+	20)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	21)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_DTP"
+
+	22)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	23)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_FLG"
+
+	24)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	25)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_HSZ"
+
+	26)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	27)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_IAN"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.20   Page 51
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	28)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	29)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_IBS"
+
+	30)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	31)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_KREF"
+
+	32)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	33)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_LAN"
+
+	34)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	35)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_LVL"
+
+	36)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	37)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 0C|  0000  |....    |
+
+	38)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_MTACC"
+
+	39)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	40)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_NOA"
+
+	41)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	42)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_NOK"
+
+	43)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	44)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_NSG"
+
+	45)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	46)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_NUL"
+
+	47)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	48)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_PROLOG"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.20   Page 52
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	49)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	50)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_PROT_MODE"
+
+	51)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	52)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_PROT_OPT"
+
+	53)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	54)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_REF"
+
+	55)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	56)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_RFO"
+
+	57)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	58)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_SIZ0"
+
+	59)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	60)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_SIZ1"
+
+	61)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	62)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_SIZ2"
+
+	63)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	64)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_SIZ3"
+
+	65)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	66)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_SIZ4"
+
+	67)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	68)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_SIZ5"
+
+	69)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	70)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_SIZ6"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.21   Page 53
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	71)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	72)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_SIZ7"
+
+	73)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	74)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$B_TKS"
+
+
+21.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 466 bytes
+
+	1)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$C_ALL"
+
+	3)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$C_ALLLEN"
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$C_ANY"
+
+	7)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	8)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$C_BN2"
+
+	9)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	10)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_BN4"
+
+	11)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	12)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_BN8"
+
+	13)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	14)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_COL"
+
+	15)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	16)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_CXT_VER1"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.21   Page 54
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	17)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	18)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_CYL"
+
+	19)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	20)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_DAT"
+
+	21)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	22)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_DATLEN"
+
+	23)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	24)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_DATLEN_V2"
+
+	25)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	26)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_DATLEN_V54"
+
+	27)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	28)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_DBN2"
+
+	29)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	30)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_DBN4"
+
+	31)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	32)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_DBN8"
+
+	33)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	34)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_DCOL"
+
+	35)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	36)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_DIN2"
+
+	37)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	38)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_DIN4"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.21   Page 55
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	39)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	40)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_DIN8"
+
+	41)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	42)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_DPAC"
+
+	43)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	44)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_DSTG"
+
+	45)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	46)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_FHC"
+
+	47)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	48)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_FHCLEN"
+
+	49)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	50)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_IN2"
+
+	51)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	52)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_IN4"
+
+	53)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	54)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_IN8"
+
+	55)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	56)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 20 00 00 00 24|  0000  |$... ...|
+
+	57)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_KEY"
+
+	58)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	59)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_KEYLEN"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.21   Page 56
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	60)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	61)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_LBN"
+
+	62)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	63)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_PAC"
+
+	64)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	65)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_PRO"
+
+	66)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	67)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_PROLEN"
+
+	68)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	69)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_PROLEN_V3"
+
+
+22.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 463 bytes
+
+	1)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$C_RDT"
+
+	3)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$C_RDTLEN"
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$C_RFI"
+
+	7)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	8)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$C_STG"
+
+	9)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	10)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_SUM"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.21   Page 57
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	11)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	12)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_SUMLEN"
+
+	13)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	14)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_TRM"
+
+	15)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	16)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_TRMLEN"
+
+	17)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	18)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$C_VBN"
+
+	19)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	20)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$K_ALLLEN"
+
+	21)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	22)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$K_DATLEN"
+
+	23)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	24)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$K_DATLEN_V2"
+
+	25)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	26)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$K_DATLEN_V54"
+
+	27)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	28)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$K_FHCLEN"
+
+	29)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	30)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$K_PROLEN"
+
+	31)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	32)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$K_PROLEN_V3"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.21   Page 58
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	33)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	34)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$K_RDTLEN"
+
+	35)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	36)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 02 00 00 00 01|  0000  |........|
+
+	37)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$K_TRMLEN"
+
+	38)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	39)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_ACLBUF"
+
+	40)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	41)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_ACLCTX"
+
+	42)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	43)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_ACLSTS"
+
+	44)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	45)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_ALQ"
+
+	46)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	47)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_BDT0"
+
+	48)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	49)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_BDT4"
+
+	50)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	51)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_CDT0"
+
+	52)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	53)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_CDT4"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.21   Page 59
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	54)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	55)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_COLNAM"
+
+	56)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	57)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_COLSIZ"
+
+	58)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	59)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_COLTBL"
+
+	60)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	61)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_DVB"
+
+	62)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	63)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_EBK"
+
+	64)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	65)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_EDT0"
+
+
+23.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 470 bytes
+
+	1)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$L_EDT4"
+
+	3)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$L_EFF0"
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$L_EFF4"
+
+	7)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	8)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$L_HBK"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.21   Page 60
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	9)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	10)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 08|  0000  |....    |
+
+	11)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_ITMLST"
+
+	12)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	13)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_KNM"
+
+	14)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	15)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_LOC"
+
+	16)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	17)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_NXT"
+
+	18)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	19)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_RCD0"
+
+	20)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	21)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_RCD4"
+
+	22)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	23)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_RDT0"
+
+	24)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	25)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_RDT4"
+
+	26)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	27)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_RVB"
+
+	28)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	29)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_SBN"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.21   Page 61
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	30)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	31)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$L_UIC"
+
+	32)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	33)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_BLK"
+
+	34)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	35)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_CBT"
+
+	36)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	37)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_CHG"
+
+	38)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	39)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_CR"
+
+	40)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	41)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_CTG"
+
+	42)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	43)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_DAT_NCMPR"
+
+	44)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	45)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_DUP"
+
+	46)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	47)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_FTN"
+
+	48)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	49)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_HRD"
+
+	50)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	51)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_IDX_NCMPR"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.21   Page 62
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	52)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	53)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_KEY_NCMPR"
+
+	54)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	55)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_NODEL"
+
+	56)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	57)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_NOEXE"
+
+	58)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	59)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_NOREAD"
+
+	60)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	61)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_NOWRITE"
+
+	62)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	63)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_NUL"
+
+	64)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	65)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_ONC"
+
+	66)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	67)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_PRN"
+
+	68)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	69)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$M_PROPAGATE"
+
+	70)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	71)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$Q_BDT"
+
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.21   Page 63
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+24.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 467 bytes
+
+	1)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$Q_CDT"
+
+	3)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$Q_EDT"
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$Q_EFF"
+
+	7)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	8)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$Q_PROT_MODE"
+
+	9)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	10)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$Q_RCD"
+
+	11)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	12)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$Q_RDT"
+
+	13)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	14)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_AOP_BITS"
+
+	15)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	16)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_AOP_OVERLAY"
+
+	17)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	18)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_BDT_FIELDS"
+
+	19)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	20)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_BDT_OVERLAY"
+
+	21)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.22   Page 64
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	22)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_CDT_FIELDS"
+
+	23)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	24)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_CDT_OVERLAY"
+
+	25)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	26)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_EBK_FIELDS"
+
+	27)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	28)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_EBK_OVERLAY"
+
+	29)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	30)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_EDT_FIELDS"
+
+	31)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	32)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_EDT_OVERLAY"
+
+	33)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	34)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_EFF_FIELDS"
+
+	35)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	36)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_EFF_OVERLAY"
+
+	37)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	38)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_HBK_FIELDS"
+
+	39)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	40)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_HBK_OVERLAY"
+
+	41)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	42)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_PROT_MODE_FIELDS"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.22   Page 65
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	43)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	44)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_PROT_MODE_OVERLAY"
+
+	45)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	46)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_PROT_OPT_FIELDS"
+
+	47)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	48)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_PROT_OPT_OVERLAY"
+
+	49)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	50)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_PRO_BITS"
+
+
+25.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 472 bytes
+
+	1)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$R_PRO_OVERLAY"
+
+	3)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$R_RCD_FIELDS"
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$R_RCD_OVERLAY"
+
+	7)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	8)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$R_RDT_FIELDS"
+
+	9)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	10)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_RDT_OVERLAY"
+
+	11)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	12)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_RFI_FIELDS"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.22   Page 66
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	13)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	14)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_RFI_OVERLAY"
+
+	15)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	16)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_UIC_FIELDS"
+
+	17)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	18)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_UIC_OVERLAY"
+
+	19)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	20)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$R_XABPRODEF_BITS"
+
+	21)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	22)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_BDT"
+
+	23)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	24)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_CDT"
+
+	25)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	26)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_EDT"
+
+	27)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	28)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_EFF"
+
+	29)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	30)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_GRP"
+
+	31)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	32)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_OWN"
+
+	33)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	34)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_PROT_MODE"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.22   Page 67
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	35)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	36)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_RCD"
+
+	37)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	38)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_RDT"
+
+	39)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	40)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_RFI"
+
+	41)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	42)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_SYS"
+
+	43)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	44)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_WLD"
+
+	45)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	46)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_XABALLDEF"
+
+	47)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	48)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_XABDATDEF"
+
+	49)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	50)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_XABDEF"
+
+	51)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	52)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_XABDEF1"
+
+	53)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	54)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_XABFHCDEF"
+
+	55)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	56)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_XABPRODEF"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.22   Page 68
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	57)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	58)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$S_XABPRODEF1"
+
+
+26.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 463 bytes
+
+	1)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$S_XABRDTDEF"
+
+	3)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$S_XABTRMDEF"
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$V_BLK"
+
+	7)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	8)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$V_CBT"
+
+	9)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	10)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_CHG"
+
+	11)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	12)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_CR"
+
+	13)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	14)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_CTG"
+
+	15)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	16)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_DAT_NCMPR"
+
+	17)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	18)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_DUP"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.22   Page 69
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	19)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	20)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_FTN"
+
+	21)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	22)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_GRP"
+
+	23)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	24)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_HRD"
+
+	25)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	26)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_IDX_NCMPR"
+
+	27)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	28)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_KEY_NCMPR"
+
+	29)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	30)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_NODEL"
+
+	31)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	32)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_NOEXE"
+
+	33)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	34)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_NOREAD"
+
+	35)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	36)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_NOWRITE"
+
+	37)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	38)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_NUL"
+
+	39)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	40)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_ONC"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.22   Page 70
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	41)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	42)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_OWN"
+
+	43)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	44)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_PRN"
+
+	45)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	46)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_PROPAGATE"
+
+	47)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	48)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_SYS"
+
+	49)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	50)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$V_WLD"
+
+	51)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	52)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_ACLLEN"
+
+	53)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	54)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_ACLSIZ"
+
+	55)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	56)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_DEQ"
+
+	57)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	58)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_DFL"
+
+	59)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	60)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_DXQ"
+
+	61)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	62)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_EBK0"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.22   Page 71
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	63)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	64)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_EBK2"
+
+	65)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	66)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_FFB"
+
+	67)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	68)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_GBC"
+
+
+27.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 339 bytes
+
+	1)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$W_GRP"
+
+	3)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$W_HBK0"
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$W_HBK2"
+
+	7)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	8)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "XAB$W_IFL"
+
+	9)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	10)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_ITMLST_LEN"
+
+	11)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	12)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_LRL"
+
+	13)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	14)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_MBM"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.22   Page 72
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	15)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	16)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_MRL"
+
+	17)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	18)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_MRZ"
+
+	19)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	20)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_POS0"
+
+	21)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	22)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_POS1"
+
+	23)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	24)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_POS2"
+
+	25)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	26)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_POS3"
+
+	27)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	28)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_POS4"
+
+	29)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	30)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_POS5"
+
+	31)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	32)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_POS6"
+
+	33)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	34)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_POS7"
+
+	35)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	36)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_PRO"
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.22   Page 73
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	37)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	38)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_PVN"
+
+	39)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	40)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_RFI"
+
+	41)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	42)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_RFI0"
+
+	43)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	44)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_RFI2"
+
+	45)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	46)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_RFI4"
+
+	47)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	48)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_RVN"
+
+	49)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	50)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_VERLIMIT"
+
+	51)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	52)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "XAB$W_VOL"
+
+	53)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+
+28.  TRACEBACK INFORMATION (OBJ$C_TBT), 21 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.22   Page 74
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 04 04 41 54 41 44 04|  0000  |.DATA...|
+		                BD 01 00|  0008  |..½     |
+
+
+29.  END OF MODULE (OBJ$C_EOM), 2 bytes
+
+	severity: successful (0)
+
+
+
+Analyze Object File                          30-SEP-2026 21:50:04.22   Page 75
+DUA1:[000000]DEF_XABITM.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   118
+OBJ$C_GSD	   12	  4125
+OBJ$C_TIR	   10	  3616
+OBJ$C_EOM	    1	     2
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    2	    41
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   29	  7902
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=DEF_XABITM.ANL DEF_XABITM.OBJ                             

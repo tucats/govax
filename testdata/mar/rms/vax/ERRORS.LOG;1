@@ -1,0 +1,163 @@
+
+$ ! RMSERR.COM - the Phase 32 oracle's error probes. Their messages go to
+$ ! ERRORS.LOG, which the author audits for macro text before Claude reads it.
+$ ! Written by testdata/mar/rms/gen.go. Run it with the exchange volume as
+$ ! the default directory:
+$ !
+$ !     @RMSERR/OUTPUT=ERRORS.LOG
+$ !
+$ ! Each program is assembled with /NOLIST, so no listing of a macro
+$ ! expansion is made, and its object is analyzed.
+$ !
+$ SET NOON
+$ SET VERIFY
+$ MACRO/NOLIST ERR_DEF_GLOBAL
+$ ANALYZE/OBJECT/OUTPUT=ERR_DEF_GLOBAL.ANL ERR_DEF_GLOBAL.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]ERR_DEF_GLOBAL.OBJ;1                       0 errors
+$ MACRO/NOLIST ERR_FAC
+%MACRO-E-GENERR, Generated ERROR:  UNDEFINED BIT VALUE CODE: BOGUS;
+$ ANALYZE/OBJECT/OUTPUT=ERR_FAC.ANL ERR_FAC.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]ERR_FAC.OBJ;1                              0 errors
+$ MACRO/NOLIST ERR_KEYWORD
+                                     0016       
+%MACRO-E-IFDIRSYNX, IF directive syntax error                             !
+%MACRO-E-GENERR, Generated ERROR:  UNDEFINED BIT VALUE CODE: BOGUS=1;
+$ ANALYZE/OBJECT/OUTPUT=ERR_KEYWORD.ANL ERR_KEYWORD.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]ERR_KEYWORD.OBJ;1                          0 errors
+$ MACRO/NOLIST ERR_NOP
+%MACRO-E-GENERR, Generated ERROR:  UNDEFINED BIT VALUE CODE: NO_SHORT_UPCASE;
+$ ANALYZE/OBJECT/OUTPUT=ERR_NOP.ANL ERR_NOP.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]ERR_NOP.OBJ;1                              0 errors
+$ MACRO/NOLIST ERR_ORG
+%MACRO-E-GENERR, Generated ERROR:  UNDEFINED VALUE FOR FIELD : BOGUS;
+$ ANALYZE/OBJECT/OUTPUT=ERR_ORG.ANL ERR_ORG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]ERR_ORG.OBJ;1                              0 errors
+$ MACRO/NOLIST ERR_ROP2
+%MACRO-E-GENERR, Generated ERROR:  UNDEFINED BIT VALUE CODE: NODLCKWT;
+                                     001E       
+%MACRO-E-IFDIRSYNX, IF directive syntax error                      !
+%MACRO-E-GENERR, Generated ERROR:  UNDEFINED VALUE FOR FIELD: CNST;
+                           00000000' 0024       
+%MACRO-E-DIRSYNX, Directive syntax error                           !
+$ ANALYZE/OBJECT/OUTPUT=ERR_ROP2.ANL ERR_ROP2.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]ERR_ROP2.OBJ;1                             0 errors
+$ MACRO/NOLIST ERR_SHR_NQL
+%MACRO-E-GENERR, Generated ERROR:  UNDEFINED BIT VALUE CODE: NQL;
+$ ANALYZE/OBJECT/OUTPUT=ERR_SHR_NQL.ANL ERR_SHR_NQL.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]ERR_SHR_NQL.OBJ;1                          0 errors
+$ MACRO/NOLIST ERR_SS_GLOBAL
+$ ANALYZE/OBJECT/OUTPUT=ERR_SS_GLOBAL.ANL ERR_SS_GLOBAL.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]ERR_SS_GLOBAL.OBJ;1                        0 errors
+$ MACRO/NOLIST ERR_STORE_REG
+%MACRO-E-GENERR, Generated ERROR: ILLEGAL USE OF REGISTER : R12 ;
+$ ANALYZE/OBJECT/OUTPUT=ERR_STORE_REG.ANL ERR_STORE_REG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]ERR_STORE_REG.OBJ;1                        0 errors
+$ MACRO/NOLIST ERR_XABDAT_EDT
+$ ANALYZE/OBJECT/OUTPUT=ERR_XABDAT_EDT.ANL ERR_XABDAT_EDT.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]ERR_XABDAT_EDT.OBJ;1                       0 errors
+$ DIRECTORY/SIZE=ALL *.OBJ
+
+Directory DUA1:[000000]
+
+DEF_ATR.OBJ;1              5/6      
+DEF_BRK.OBJ;1              1/3      
+DEF_DEV.OBJ;1              3/3      
+DEF_DVI.OBJ;1              3/3      
+DEF_FAB.OBJ;1              3/3      
+DEF_FIB.OBJ;1              3/3      
+DEF_IO.OBJ;1               9/9      
+DEF_JPI.OBJ;1              7/9      
+DEF_LNM.OBJ;1              2/3      
+DEF_NAM.OBJ;1              2/3      
+DEF_PRT.OBJ;1              1/3      
+DEF_PRV.OBJ;1              1/3      
+DEF_RAB.OBJ;1              2/3      
+DEF_RMS.OBJ;1              3/3      
+DEF_SS.OBJ;1               7/9      
+DEF_STATE.OBJ;1            2/3      
+DEF_SYI.OBJ;1              4/6      
+DEF_TT.OBJ;1               6/6      
+DEF_TT2.OBJ;1              2/3      
+DEF_TWICE.OBJ;1            1/3      
+DEF_XAB.OBJ;1             16/18     
+DEF_XABALL.OBJ;1          15/15     
+DEF_XABDAT.OBJ;1          14/15     
+DEF_XABFHC.OBJ;1          15/15     
+DEF_XABITM.OBJ;1          16/18     
+DEF_XABKEY.OBJ;1          13/15     
+DEF_XABPRO.OBJ;1          14/15     
+DEF_XABRDT.OBJ;1          16/18     
+DEF_XABSUM.OBJ;1          16/18     
+DEF_XABTRM.OBJ;1          16/18     
+ERR_DEF_GLOBAL.OBJ;1
+                           9/9      
+ERR_FAC.OBJ;1              1/3      
+ERR_KEYWORD.OBJ;1          1/3      
+ERR_NOP.OBJ;1              1/3      
+ERR_ORG.OBJ;1              1/3      
+ERR_ROP2.OBJ;1             1/3      
+ERR_SHR_NQL.OBJ;1          1/3      
+ERR_SS_GLOBAL.OBJ;1
+                          34/36     
+ERR_STORE_REG.OBJ;1
+                           1/3      
+ERR_XABDAT_EDT.OBJ;1
+                           1/3      
+INIT_FAB.OBJ;1             1/3      
+INIT_FAB_ALL.OBJ;1         2/3      
+INIT_FAB_OPT.OBJ;1        10/12     
+INIT_NAM.OBJ;1             1/3      
+INIT_NAM_ALL.OBJ;1         1/3      
+INIT_NAM_OPT.OBJ;1         2/3      
+INIT_RAB.OBJ;1             1/3      
+INIT_RAB_ALL.OBJ;1         2/3      
+INIT_RAB_OPT.OBJ;1         6/6      
+INIT_XABALL.OBJ;1          1/3      
+INIT_XABALL_ALL.OBJ;1
+                           2/3      
+INIT_XABALL_OPT.OBJ;1
+                           3/3      
+INIT_XABDAT.OBJ;1          1/3      
+INIT_XABDAT_ALL.OBJ;1
+                           1/3      
+INIT_XABFHC.OBJ;1          1/3      
+INIT_XABFHC_ALL.OBJ;1
+                           1/3      
+INIT_XABITM.OBJ;1          1/3      
+INIT_XABITM_ALL.OBJ;1
+                           1/3      
+INIT_XABITM_OPT.OBJ;1
+                           2/3      
+INIT_XABKEY.OBJ;1          1/3      
+INIT_XABKEY_ALL.OBJ;1
+                           2/3      
+INIT_XABKEY_OPT.OBJ;1
+                           9/9      
+INIT_XABPRO.OBJ;1          1/3      
+INIT_XABPRO_ALL.OBJ;1
+                           2/3      
+INIT_XABPRO_OPT.OBJ;1
+                           3/3      
+INIT_XABRDT.OBJ;1          1/3      
+INIT_XABRDT_ALL.OBJ;1
+                           1/3      
+INIT_XABSUM.OBJ;1          1/3      
+INIT_XABSUM_ALL.OBJ;1
+                           1/3      
+INIT_XABTRM.OBJ;1          1/3      
+INIT_XABTRM_ALL.OBJ;1
+                           1/3      
+SERVICES.OBJ;1            12/12     
+STORE_FAB.OBJ;1            2/3      
+STORE_NAM.OBJ;1            2/3      
+STORE_RAB.OBJ;1            2/3      
+STORE_XABALL.OBJ;1         2/3      
+STORE_XABDAT.OBJ;1         2/3      
+STORE_XABFHC.OBJ;1         2/3      
+STORE_XABKEY.OBJ;1         2/3      
+STORE_XABPRO.OBJ;1         2/3      
+STORE_XABRDT.OBJ;1         2/3      
+STORE_XABSUM.OBJ;1         2/3      
+STORE_XABTRM.OBJ;1         2/3      
+
+Total of 83 files, 367/477 blocks.

@@ -1,0 +1,429 @@
+
+Analyze Object File                          30-SEP-2026 21:50:02.15   Page 1
+DUA1:[000000]DEF_DVI.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 52 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "DEF_DVI"
+	module version: "V1.0"
+	creation   date/time: 30-SEP-2026 21:50
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 22 bytes
+
+	Textual information:
+	"MACRO/NOLIST DEF_DVI"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 17 bytes
+
+	Textual information:
+	"$DVIDEF's names"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 17 bytes
+
+	1)  Store Immediate, 15 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 07 00 00 00 00 00 BC 0E|  0000  |.¼......|
+		    49 56 44 5F 46 45 44|  0008  |DEF_DVI |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 189 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DVI$C_ACP_JNL"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:02.15   Page 2
+DUA1:[000000]DEF_DVI.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DVI$_SHDW_SPARE_BIT_1"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DVI$_SHDW_SPARE_BIT_2"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DVI$_SHDW_SPARE_INTEGER_1"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DVI$_SHDW_SPARE_INTEGER_2"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DVI$_SHDW_SPARE_STRING_1"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DVI$_SHDW_SPARE_STRING_2"
+
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.15   Page 3
+DUA1:[000000]DEF_DVI.OBJ;1
+ANALYZ V07-04
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+8.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 15 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: "$ABS$"
+
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.15   Page 4
+DUA1:[000000]DEF_DVI.OBJ;1
+ANALYZ V07-04
+
+10.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 636 (%X'0000027C')
+		symbol: "DATA"
+
+
+12.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 468 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 02 00 00 00 01|  0000  |........|
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "DVI$C_ACP_JNL"
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  Store Immediate, 128 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 00 00 00 03|  0000  |........|
+		 00 00 00 01 00 00 00 05|  0008  |........|
+		 00 00 00 01 00 00 80 00|  0010  |........|
+		 00 00 00 0F 00 00 00 02|  0018  |........|
+
+Analyze Object File                          30-SEP-2026 21:50:02.15   Page 5
+DUA1:[000000]DEF_DVI.OBJ;1
+ANALYZ V07-04
+
+		 00 00 00 40 00 00 00 00|  0020  |....@...|
+		 00 00 00 6C 00 00 00 42|  0028  |B...l...|
+		 00 00 00 F2 00 00 00 EC|  0030  |ì...ò...|
+		 00 00 00 F6 00 00 00 F4|  0038  |ô...ö...|
+		 00 00 00 62 00 00 00 F8|  0040  |ø...b...|
+		 00 00 00 3A 00 00 00 48|  0048  |H...:...|
+		 00 00 00 28 00 00 00 44|  0050  |D...(...|
+		 00 00 00 02 00 00 00 08|  0058  |........|
+		 00 00 00 04 00 00 00 E6|  0060  |æ.......|
+		 00 00 00 1C 00 00 00 0A|  0068  |........|
+		 00 00 00 20 00 00 00 F0|  0070  |ð... ...|
+		 00 00 00 06 00 00 00 E4|  0078  |ä.......|
+
+	7)  Store Immediate, 128 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 68 00 00 00 4C|  0000  |L...h...|
+		 00 00 00 6A 00 00 00 5C|  0008  |\...j...|
+		 00 00 00 5A 00 00 00 14|  0010  |....Z...|
+		 00 00 00 2A 00 00 00 6E|  0018  |n...*...|
+		 00 00 00 60 00 00 00 E8|  0020  |è...`...|
+		 00 00 00 FC 00 00 00 FA|  0028  |ú...ü...|
+		 00 00 01 00 00 00 00 FE|  0030  |þ.......|
+		 00 00 00 EA 00 00 00 72|  0038  |r...ê...|
+		 00 00 00 1A 00 00 00 2C|  0040  |,.......|
+		 00 00 00 66 00 00 00 3C|  0048  |<...f...|
+		 00 00 01 16 00 00 01 1A|  0050  |........|
+		 00 00 00 64 00 00 01 18|  0058  |....d...|
+		 00 00 00 58 00 00 00 38|  0060  |8...X...|
+		 00 00 00 74 00 00 00 34|  0068  |4...t...|
+		 00 00 00 54 00 00 00 16|  0070  |....T...|
+		 00 00 00 0E 00 00 00 10|  0078  |........|
+
+	8)  Store Immediate, 76 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 56 00 00 00 7A|  0000  |z...V...|
+		 00 00 00 18 00 00 00 46|  0008  |F.......|
+		 00 00 01 02 00 00 00 1E|  0010  |........|
+		 00 00 00 32 00 00 00 76|  0018  |v...2...|
+		 00 00 00 4E 00 00 00 78|  0020  |x...N...|
+		 00 00 00 3E 00 00 00 24|  0028  |$...>...|
+		 00 00 01 06 00 00 01 04|  0030  |........|
+		 00 00 01 0A 00 00 01 08|  0038  |........|
+		 00 00 01 0E 00 00 01 0C|  0040  |........|
+		             00 00 01 10|  0048  |....    |
+
+	9)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "DVI$_SHDW_SPARE_BIT_1"
+
+	10)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	11)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "DVI$_SHDW_SPARE_BIT_2"
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.16   Page 6
+DUA1:[000000]DEF_DVI.OBJ;1
+ANALYZ V07-04
+
+	12)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	13)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "DVI$_SHDW_SPARE_INTEGER_1"
+
+	14)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	15)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "DVI$_SHDW_SPARE_INTEGER_2"
+
+
+13.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 327 bytes
+
+	1)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "DVI$_SHDW_SPARE_STRING_1"
+
+	3)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "DVI$_SHDW_SPARE_STRING_2"
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  Store Immediate, 128 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 52 00 00 00 5E|  0000  |^...R...|
+		 00 00 00 E2 00 00 00 50|  0008  |P...â...|
+		 00 00 00 26 00 00 00 70|  0010  |p...&...|
+		 00 00 00 4A 00 00 00 36|  0018  |6...J...|
+		 00 00 00 D6 00 00 00 B8|  0020  |¸...Ö...|
+		 00 00 00 AE 00 00 00 D2|  0028  |Ò...®...|
+		 00 00 00 DA 00 00 00 DC|  0030  |Ü...Ú...|
+		 00 00 00 92 00 00 00 B4|  0038  |´.......|
+		 00 00 00 E0 00 00 00 BC|  0040  |¼...à...|
+		 00 00 00 C4 00 00 01 14|  0048  |....Ä...|
+		 00 00 00 B6 00 00 00 C8|  0050  |È...¶...|
+		 00 00 00 DE 00 00 00 CE|  0058  |Î...Þ...|
+		 00 00 00 9A 00 00 00 BE|  0060  |¾.......|
+		 00 00 00 C2 00 00 00 84|  0068  |....Â...|
+		 00 00 00 B0 00 00 00 A4|  0070  |¤...°...|
+		 00 00 00 C0 00 00 00 86|  0078  |....À...|
+
+	7)  Store Immediate, 128 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 AC 00 00 00 94|  0000  |....¬...|
+		 00 00 00 9C 00 00 00 8C|  0008  |........|
+		 00 00 00 8E 00 00 00 A2|  0010  |¢.......|
+		 00 00 00 B2 00 00 00 A6|  0018  |¦...²...|
+		 00 00 00 80 00 00 00 9E|  0020  |........|
+		 00 00 00 A8 00 00 00 82|  0028  |....¨...|
+		 00 00 00 7E 00 00 00 AA|  0030  |ª...~...|
+
+Analyze Object File                          30-SEP-2026 21:50:02.16   Page 7
+DUA1:[000000]DEF_DVI.OBJ;1
+ANALYZ V07-04
+
+		 00 00 01 12 00 00 00 CA|  0038  |Ê.......|
+		 00 00 00 A0 00 00 00 D0|  0040  |Ð.......|
+		 00 00 00 98 00 00 00 D8|  0048  |Ø.......|
+		 00 00 00 8A 00 00 00 96|  0050  |........|
+		 00 00 00 BA 00 00 00 C6|  0058  |Æ...º...|
+		 00 00 00 D4 00 00 00 CC|  0060  |Ì...Ô...|
+		 00 00 00 90 00 00 00 88|  0068  |........|
+		 00 00 00 30 00 00 00 0C|  0070  |....0...|
+		 00 00 00 2E 00 00 00 22|  0078  |".......|
+
+	8)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 12 00 00 00 EE|  0000  |î.......|
+		             00 00 00 7C|  0008  ||...    |
+
+
+14.  TRACEBACK INFORMATION (OBJ$C_TBT), 21 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 02 7C 41 54 41 44 04|  0000  |.DATA|..|
+		                BD 01 00|  0008  |..½     |
+
+
+15.  END OF MODULE (OBJ$C_EOM), 2 bytes
+
+	severity: successful (0)
+
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.16   Page 8
+DUA1:[000000]DEF_DVI.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   109
+OBJ$C_GSD	    4	   237
+OBJ$C_TIR	    4	   805
+OBJ$C_EOM	    1	     2
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    2	    38
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   15	  1191
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=DEF_DVI.ANL DEF_DVI.OBJ                                   

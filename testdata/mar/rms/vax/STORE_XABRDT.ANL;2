@@ -1,0 +1,479 @@
+
+Analyze Object File                          30-SEP-2026 21:50:08.85   Page 1
+DUA1:[000000]STORE_XABRDT.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 57 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "STORE_XABRDT"
+	module version: "V1.0"
+	creation   date/time: 30-SEP-2026 21:50
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 27 bytes
+
+	Textual information:
+	"MACRO/NOLIST STORE_XABRDT"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 28 bytes
+
+	Textual information:
+	"$XABRDT_STORE in each form"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 22 bytes
+
+	1)  Store Immediate, 20 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 0C 00 00 00 00 00 BC 13|  0000  |.¼......|
+		 41 58 5F 45 52 4F 54 53|  0008  |STORE_XA|
+		             54 44 52 42|  0010  |BRDT    |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+
+Analyze Object File                          30-SEP-2026 21:50:08.85   Page 2
+DUA1:[000000]STORE_XABRDT.OBJ;1
+ANALYZ V07-04
+
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+7.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+8.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 55 (%X'00000037')
+		symbol: "CODE"
+
+
+9.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 8 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_UW (8, %X'08')                            stack depth: 1
+		unsigned value: 460 (%X'000001CC')
+
+
+10.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 18 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+
+Analyze Object File                          30-SEP-2026 21:50:08.85   Page 3
+DUA1:[000000]STORE_XABRDT.OBJ;1
+ANALYZ V07-04
+
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 1
+		value: 0 (%X'00000000')
+		entry mask: <R2,R3,R6,R7,R8>
+		symbol: "STORE"
+
+
+11.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+12.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 15 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: "$ABS$"
+
+
+13.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 81 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 2 (%X'00000002')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 2 (%X'00000002')
+
+	4)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	5)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DE|  0000  |Þ       |
+
+
+Analyze Object File                          30-SEP-2026 21:50:08.85   Page 4
+DUA1:[000000]STORE_XABRDT.OBJ;1
+ANALYZ V07-04
+
+	6)  TIR$C_STA_PW (5, %X'05')                            stack depth: 1
+		psect: 3
+		value: 352 (%X'00000160')
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	8)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	9)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   7D 50|  0000  |P}      |
+
+	10)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 694 (%X'000002B6')
+
+	11)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	12)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	13)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DE 0C A0|  0000  |..Þ     |
+
+	14)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 352 (%X'00000160')
+
+	15)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	16)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	17)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       DE 0C A0 52 7D 50|  0000  |P}R..Þ  |
+
+	18)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 352 (%X'00000160')
+
+	19)  Store Immediate, 1 byte:
+
+Analyze Object File                          30-SEP-2026 21:50:08.85   Page 5
+DUA1:[000000]STORE_XABRDT.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	20)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	21)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       DE 08 A0 03 B0 50|  0000  |P°...Þ  |
+
+	22)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 352 (%X'00000160')
+
+	23)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	24)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	25)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   DE 50|  0000  |PÞ      |
+
+	26)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 416 (%X'000001A0')
+
+	27)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	28)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	29)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                04 04 A0|  0000  |...     |
+
+
+14.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 16 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 3
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+
+Analyze Object File                          30-SEP-2026 21:50:08.85   Page 6
+DUA1:[000000]STORE_XABRDT.OBJ;1
+ANALYZ V07-04
+
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 730 (%X'000002DA')
+		symbol: "LABELS"
+
+
+15.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 139 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 3
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 80 (%X'00000050')
+
+	4)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 80 (%X'00000050')
+
+	5)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 96 (%X'00000060')
+
+	6)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 96 (%X'00000060')
+
+	7)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 64 (%X'00000040')
+
+	8)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 64 (%X'00000040')
+
+	9)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 16 (%X'00000010')
+
+	10)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 16 (%X'00000010')
+
+	11)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 16 (%X'00000010')
+
+	12)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 16 (%X'00000010')
+
+	13)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 16 (%X'00000010')
+
+	14)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 16 (%X'00000010')
+
+
+Analyze Object File                          30-SEP-2026 21:50:08.85   Page 7
+DUA1:[000000]STORE_XABRDT.OBJ;1
+ANALYZ V07-04
+
+	15)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 16 (%X'00000010')
+
+	16)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 16 (%X'00000010')
+
+	17)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 32 (%X'00000020')
+
+	18)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 16 (%X'00000010')
+
+	19)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 16 (%X'00000010')
+
+	20)  Store Immediate, 36 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 53 59 53 54 41 44 2E 41|  0000  |A.DATSYS|
+		 5D 5B 3A 4B 53 49 44 24|  0008  |$DISK:[]|
+		 CD EF 00 01 11 70 01 2C|  0010  |,.p...ïÍ|
+		 00 01 01 23 45 67 89 AB|  0018  |«.gE#...|
+		             00 03 00 02|  0020  |....    |
+
+	21)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 16 (%X'00000010')
+
+	22)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       00 FF 00 FF FF 00|  0000  |......  |
+
+
+16.  TRACEBACK INFORMATION (OBJ$C_TBT), 19 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 BE 0C|  0000  |.¾.     |
+
+	2)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       45 52 4F 54 53 05|  0000  |.STORE  |
+
+
+
+Analyze Object File                          30-SEP-2026 21:50:08.85   Page 8
+DUA1:[000000]STORE_XABRDT.OBJ;1
+ANALYZ V07-04
+
+17.  TRACEBACK INFORMATION (OBJ$C_TBT), 40 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 37 45 44 4F 43 04|  0000  |.CODE7..|
+		             00 B8 11 00|  0008  |..¸.    |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 3
+		value: 0 (%X'00000000')
+
+	6)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	7)  Store Immediate, 13 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 DA 53 4C 45 42 41 4C 06|  0000  |.LABELSÚ|
+		          BD 01 00 00 02|  0008  |....½   |
+
+
+18.  END OF MODULE (OBJ$C_EOM), 2 bytes
+
+	severity: successful (0)
+
+
+
+Analyze Object File                          30-SEP-2026 21:50:08.85   Page 9
+DUA1:[000000]STORE_XABRDT.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   130
+OBJ$C_GSD	    5	    82
+OBJ$C_TIR	    5	   235
+OBJ$C_EOM	    1	     2
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    3	    81
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   18	   530
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=STORE_XABRDT.ANL STORE_XABRDT.OBJ                         

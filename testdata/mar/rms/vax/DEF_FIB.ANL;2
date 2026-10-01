@@ -1,0 +1,534 @@
+
+Analyze Object File                          30-SEP-2026 21:50:02.30   Page 1
+DUA1:[000000]DEF_FIB.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 52 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "DEF_FIB"
+	module version: "V1.0"
+	creation   date/time: 30-SEP-2026 21:50
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 22 bytes
+
+	Textual information:
+	"MACRO/NOLIST DEF_FIB"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 17 bytes
+
+	Textual information:
+	"$FIBDEF's names"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 17 bytes
+
+	1)  Store Immediate, 15 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 07 00 00 00 00 00 BC 0E|  0000  |.¼......|
+		    42 49 46 5F 46 45 44|  0008  |DEF_FIB |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 288 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "FIB$B_NAME_FORMAT_IN"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:02.31   Page 2
+DUA1:[000000]DEF_FIB.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "FIB$B_NAME_FORMAT_OUT"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "FIB$C_CLONE_FIL_PROFILE"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "FIB$C_ISO_LATIN"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "FIB$C_NOCACHING"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "FIB$C_ODS2"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "FIB$C_UCS2"
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.31   Page 3
+DUA1:[000000]DEF_FIB.OBJ;1
+ANALYZ V07-04
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "FIB$M_NAMES_16BIT"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "FIB$M_NAMES_8BIT"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "FIB$M_PERCENT_LITERAL"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "FIB$V_NAMES_16BIT"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "FIB$V_NAMES_8BIT"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:02.31   Page 4
+DUA1:[000000]DEF_FIB.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "FIB$V_PERCENT_LITERAL"
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+8.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 15 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: "$ABS$"
+
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.31   Page 5
+DUA1:[000000]DEF_FIB.OBJ;1
+ANALYZ V07-04
+
+10.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 512 (%X'00000200')
+		symbol: "DATA"
+
+
+12.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 16 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 21 00 00 00 2E|  0000  |....!...|
+		 00 00 00 09 00 00 00 20|  0008  | .......|
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "FIB$B_NAME_FORMAT_IN"
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "FIB$B_NAME_FORMAT_OUT"
+
+	7)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.31   Page 6
+DUA1:[000000]DEF_FIB.OBJ;1
+ANALYZ V07-04
+
+	8)  Store Immediate, 20 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 00 00 00 2F|  0000  |/.......|
+		 00 00 00 22 00 00 00 0A|  0008  |...."...|
+		             00 00 00 1C|  0010  |....    |
+
+	9)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "FIB$C_CLONE_FIL_PROFILE"
+
+	10)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	11)  Store Immediate, 24 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 0C 00 00 00 00|  0000  |........|
+		 00 00 00 21 00 00 00 20|  0008  | ...!...|
+		 00 00 00 03 00 00 00 01|  0010  |........|
+
+	12)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "FIB$C_ISO_LATIN"
+
+	13)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	14)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 1C 00 00 00 5C|  0000  |\.......|
+		             00 00 00 03|  0008  |....    |
+
+	15)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "FIB$C_NOCACHING"
+
+	16)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	17)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 02|  0000  |....    |
+
+	18)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "FIB$C_ODS2"
+
+	19)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	20)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 00 00 00 06|  0000  |........|
+		             00 00 00 04|  0008  |....    |
+
+	21)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "FIB$C_UCS2"
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.31   Page 7
+DUA1:[000000]DEF_FIB.OBJ;1
+ANALYZ V07-04
+
+	22)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	23)  Store Immediate, 96 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 00 00 00 17|  0000  |........|
+		 00 00 00 01 00 00 00 02|  0008  |........|
+		 00 00 00 00 00 00 00 5C|  0010  |\.......|
+		 00 00 00 34 00 00 00 30|  0018  |0...4...|
+		 00 00 00 50 00 00 00 3C|  0020  |<...P...|
+		 00 00 00 18 00 00 00 18|  0028  |........|
+		 00 00 00 28 00 00 00 1C|  0030  |....(...|
+		 00 00 00 10 00 00 00 38|  0038  |8.......|
+		 00 00 00 02 00 00 00 01|  0040  |........|
+		 00 00 10 00 00 00 00 08|  0048  |........|
+		 00 00 00 04 00 00 00 80|  0050  |........|
+		 00 00 0F 00 00 00 08 00|  0058  |........|
+
+	24)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "FIB$M_NAMES_16BIT"
+
+	25)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	26)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "FIB$M_NAMES_8BIT"
+
+	27)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	28)  Store Immediate, 28 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 10 00 00 00 00 02 00|  0000  |........|
+		 00 00 04 00 00 00 40 00|  0008  |.@......|
+		 00 00 00 01 00 20 00 00|  0010  |.. .....|
+		             00 00 20 00|  0018  |. ..    |
+
+	29)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "FIB$M_PERCENT_LITERAL"
+
+	30)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	31)  Store Immediate, 37 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 01 00 00 00 00 08|  0000  |........|
+		 00 00 01 00 00 00 01 00|  0008  |........|
+		 00 08 00 00 00 00 00 20|  0010  | .......|
+		 00 00 00 06 00 00 00 06|  0018  |........|
+		          01 00 00 00 00|  0020  |.....   |
+
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.31   Page 8
+DUA1:[000000]DEF_FIB.OBJ;1
+ANALYZ V07-04
+
+13.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 278 bytes
+
+	1)  Store Immediate, 67 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 05 00 00 00 03 00 00 00|  0000  |........|
+		 04 00 00 00 04 00 00 00|  0008  |........|
+		 01 00 00 00 03 00 00 00|  0010  |........|
+		 01 00 00 00 04 00 00 00|  0018  |........|
+		 07 00 00 00 10 00 00 00|  0020  |........|
+		 04 00 00 00 02 00 00 00|  0028  |........|
+		 0F 00 00 00 0B 00 00 00|  0030  |........|
+		 0A 00 00 00 0E 00 00 00|  0038  |........|
+		                00 00 00|  0040  |...     |
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "FIB$V_NAMES_16BIT"
+
+	3)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "FIB$V_NAMES_8BIT"
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  Store Immediate, 36 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 0F 00 00 00 09|  0000  |........|
+		 00 00 00 14 00 00 00 09|  0008  |........|
+		 00 00 00 0A 00 00 00 0E|  0010  |........|
+		 00 00 00 0B 00 00 00 15|  0018  |........|
+		             00 00 00 00|  0020  |....    |
+
+	7)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "FIB$V_PERCENT_LITERAL"
+
+	8)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	9)  Store Immediate, 108 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 11 00 00 00 03|  0000  |........|
+		 00 00 00 03 00 00 00 09|  0008  |........|
+		 00 00 00 06 00 00 00 12|  0010  |........|
+		 00 00 00 08 00 00 00 0A|  0018  |........|
+		 00 00 00 08 00 00 00 06|  0020  |........|
+		 00 00 00 05 00 00 00 08|  0028  |........|
+		 00 00 00 16 00 00 00 13|  0030  |........|
+		 00 00 00 0A 00 00 00 0A|  0038  |........|
+		 00 00 00 0C 00 00 00 0E|  0040  |........|
+		 00 00 00 04 00 00 00 16|  0048  |........|
+		 00 00 00 08 00 00 00 04|  0050  |........|
+		 00 00 00 22 00 00 00 06|  0058  |...."...|
+		 00 00 00 14 00 00 00 26|  0060  |&.......|
+
+Analyze Object File                          30-SEP-2026 21:50:02.31   Page 9
+DUA1:[000000]DEF_FIB.OBJ;1
+ANALYZ V07-04
+
+		             00 00 00 2C|  0068  |,...    |
+
+
+14.  TRACEBACK INFORMATION (OBJ$C_TBT), 21 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 02 00 41 54 41 44 04|  0000  |.DATA...|
+		                BD 01 00|  0008  |..½     |
+
+
+15.  END OF MODULE (OBJ$C_EOM), 2 bytes
+
+	severity: successful (0)
+
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.31   Page 10
+DUA1:[000000]DEF_FIB.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   109
+OBJ$C_GSD	    4	   336
+OBJ$C_TIR	    4	   749
+OBJ$C_EOM	    1	     2
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    2	    38
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   15	  1234
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=DEF_FIB.ANL DEF_FIB.OBJ                                   

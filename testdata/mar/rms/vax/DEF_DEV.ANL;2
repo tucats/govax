@@ -1,0 +1,535 @@
+
+Analyze Object File                          30-SEP-2026 21:50:02.09   Page 1
+DUA1:[000000]DEF_DEV.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 52 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "DEF_DEV"
+	module version: "V1.0"
+	creation   date/time: 30-SEP-2026 21:50
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 22 bytes
+
+	Textual information:
+	"MACRO/NOLIST DEF_DEV"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 17 bytes
+
+	Textual information:
+	"$DEVDEF's names"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 17 bytes
+
+	1)  Store Immediate, 15 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 07 00 00 00 00 00 BC 0E|  0000  |.¼......|
+		    56 45 44 5F 46 45 44|  0008  |DEF_DEV |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 267 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DEV$M_FILLER"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:02.09   Page 2
+DUA1:[000000]DEF_DEV.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DEV$M_FILL_2"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DEV$M_MPDEV_MEMBER"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DEV$M_MPDEV_SECONDARY"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DEV$M_POOL_MBR"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DEV$M_QSVBL"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DEV$M_QSVD"
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.09   Page 3
+DUA1:[000000]DEF_DEV.OBJ;1
+ANALYZ V07-04
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DEV$V_FILLER"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DEV$V_FILL_2"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DEV$V_MPDEV_MEMBER"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DEV$V_MPDEV_SECONDARY"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DEV$V_POOL_MBR"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                          30-SEP-2026 21:50:02.09   Page 4
+DUA1:[000000]DEF_DEV.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DEV$V_QSVBL"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "DEV$V_QSVD"
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+8.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 15 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+
+Analyze Object File                          30-SEP-2026 21:50:02.09   Page 5
+DUA1:[000000]DEF_DEV.OBJ;1
+ANALYZ V07-04
+
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: "$ABS$"
+
+
+10.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 512 (%X'00000200')
+		symbol: "DATA"
+
+
+12.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 60 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 80 00 00 00 00 00 10|  0000  |........|
+		 00 00 00 02 00 04 00 00|  0008  |........|
+
+Analyze Object File                          30-SEP-2026 21:50:02.09   Page 6
+DUA1:[000000]DEF_DEV.OBJ;1
+ANALYZ V07-04
+
+		 00 00 00 01 00 00 00 08|  0010  |........|
+		 00 00 80 00 10 00 00 00|  0018  |........|
+		 00 00 40 00 00 00 00 02|  0020  |.....@..|
+		 00 20 00 00 00 00 00 08|  0028  |...... .|
+		 00 00 80 00 20 00 00 00|  0030  |... ....|
+		             00 40 00 00|  0038  |..@.    |
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "DEV$M_FILLER"
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "DEV$M_FILL_2"
+
+	7)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	8)  Store Immediate, 36 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 01 00 00 00 00 00 40 00|  0000  |.@......|
+		 00 00 10 00 00 02 00 00|  0008  |........|
+		 00 10 00 00 04 00 00 00|  0010  |........|
+		 00 10 00 00 00 00 20 00|  0018  |. ......|
+		             00 08 00 00|  0020  |....    |
+
+	9)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "DEV$M_MPDEV_MEMBER"
+
+	10)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	11)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "DEV$M_MPDEV_SECONDARY"
+
+	12)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	13)  Store Immediate, 36 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 20 00 00 00 00 20|  0000  | .... ..|
+		 00 00 02 00 00 01 00 00|  0008  |........|
+		 04 00 00 00 00 40 00 00|  0010  |..@.....|
+		 08 00 00 00 00 20 00 00|  0018  |.. .....|
+		             00 00 00 80|  0020  |....    |
+
+	14)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "DEV$M_POOL_MBR"
+
+	15)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	16)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "DEV$M_QSVBL"
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.09   Page 7
+DUA1:[000000]DEF_DEV.OBJ;1
+ANALYZ V07-04
+
+	17)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	18)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "DEV$M_QSVD"
+
+	19)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	20)  Store Immediate, 128 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 01 00 40 00 00 00|  0000  |...@....|
+		 00 00 01 00 00 00 00 01|  0008  |........|
+		 20 00 00 00 10 00 00 00|  0010  |....... |
+		 01 00 00 00 00 00 00 04|  0018  |........|
+		 00 02 00 00 00 00 00 10|  0020  |........|
+		 00 01 00 00 00 04 00 00|  0028  |........|
+		 00 00 00 20 00 00 00 40|  0030  |@... ...|
+		 00 00 00 40 00 00 00 80|  0038  |....@...|
+		 00 00 00 04 02 00 00 00|  0040  |........|
+		 00 08 00 00 00 80 00 00|  0048  |........|
+		 80 00 00 00 00 00 04 00|  0050  |........|
+		 00 00 08 00 02 00 00 00|  0058  |........|
+		 00 00 00 17 00 00 00 04|  0060  |........|
+		 00 00 00 01 00 00 00 12|  0068  |........|
+		 00 00 00 00 00 00 00 03|  0070  |........|
+		 00 00 00 0F 00 00 00 1C|  0078  |........|
+
+	21)  Store Immediate, 28 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 0E 00 00 00 01|  0000  |........|
+		 00 00 00 15 00 00 00 03|  0008  |........|
+		 00 00 00 0F 00 00 00 1D|  0010  |........|
+		             00 00 00 16|  0018  |....    |
+
+	22)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "DEV$V_FILLER"
+
+	23)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	24)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "DEV$V_FILL_2"
+
+	25)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	26)  Store Immediate, 13 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 18 00 00 00 0E|  0000  |........|
+		          0C 00 00 00 11|  0008  |.....   |
+
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.10   Page 8
+DUA1:[000000]DEF_DEV.OBJ;1
+ANALYZ V07-04
+
+13.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 248 bytes
+
+	1)  Store Immediate, 23 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 14 00 00 00 1A 00 00 00|  0000  |........|
+		 14 00 00 00 0D 00 00 00|  0008  |........|
+		    00 00 00 13 00 00 00|  0010  |....... |
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "DEV$V_MPDEV_MEMBER"
+
+	3)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "DEV$V_MPDEV_SECONDARY"
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  Store Immediate, 36 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 0D 00 00 00 05|  0000  |........|
+		 00 00 00 09 00 00 00 10|  0008  |........|
+		 00 00 00 1A 00 00 00 16|  0010  |........|
+		 00 00 00 1B 00 00 00 15|  0018  |........|
+		             00 00 00 07|  0020  |....    |
+
+	7)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "DEV$V_POOL_MBR"
+
+	8)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	9)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "DEV$V_QSVBL"
+
+	10)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	11)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "DEV$V_QSVD"
+
+	12)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	13)  Store Immediate, 96 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 08 00 00 00 1E|  0000  |........|
+		 00 00 00 08 00 00 00 00|  0008  |........|
+		 00 00 00 1D 00 00 00 1C|  0010  |........|
+		 00 00 00 18 00 00 00 02|  0018  |........|
+		 00 00 00 11 00 00 00 04|  0020  |........|
+		 00 00 00 10 00 00 00 12|  0028  |........|
+		 00 00 00 05 00 00 00 06|  0030  |........|
+		 00 00 00 06 00 00 00 07|  0038  |........|
+		 00 00 00 02 00 00 00 19|  0040  |........|
+
+Analyze Object File                          30-SEP-2026 21:50:02.10   Page 9
+DUA1:[000000]DEF_DEV.OBJ;1
+ANALYZ V07-04
+
+		 00 00 00 13 00 00 00 17|  0048  |........|
+		 00 00 00 1F 00 00 00 0A|  0050  |........|
+		 00 00 00 0B 00 00 00 19|  0058  |........|
+
+
+14.  TRACEBACK INFORMATION (OBJ$C_TBT), 21 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 02 00 41 54 41 44 04|  0000  |.DATA...|
+		                BD 01 00|  0008  |..½     |
+
+
+15.  END OF MODULE (OBJ$C_EOM), 2 bytes
+
+	severity: successful (0)
+
+
+
+Analyze Object File                          30-SEP-2026 21:50:02.10   Page 10
+DUA1:[000000]DEF_DEV.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   109
+OBJ$C_GSD	    4	   315
+OBJ$C_TIR	    4	   719
+OBJ$C_EOM	    1	     2
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    2	    38
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   15	  1183
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=DEF_DEV.ANL DEF_DEV.OBJ                                   
