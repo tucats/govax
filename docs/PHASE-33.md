@@ -177,3 +177,12 @@ commit, plus `build -i` when it changes behavior.
   - **Tests.** `TestRMS3XAB_govaxTree` runs the XAB probe and checks the
     CREATE probe's read-backs (protection, extension, expiration and
     revision dates, revision number).
+- 2026-10-01: Subtask 6's harness, ahead of the VAX run.
+  `TestRMS3Oracle` (`internal/console/rms3oracle_test.go`) mounts a copy
+  of `testdata/disks/rms3-vax.dsk` under the device name VMS used (from
+  VMS's own PARSE dump), sets RUN.COM's default and logical names, empties
+  `[CRE]`, runs each probe under govax, and compares its records with
+  VMS's byte for byte. It skips without the container; `RMS3_VAX_DISK`
+  names another. A dry run against a container govax made and ran itself
+  matched exactly, except CREATE's new FIDs and creation dates, which are
+  the variable data to mask.
