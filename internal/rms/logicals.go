@@ -161,7 +161,11 @@ func expandSpec(db *lnm.Database, text string, base filespec.Spec) ([]resolvedSp
 	)
 
 	for _, f := range fs {
-		probe, err := parseTranslated(f, filespec.Spec{})
+		// The probe only asks whether the translation names a device, but
+		// it's parsed against the default directory too, or a relative
+		// directory that goes up ("[-.X]") would fail as going above the
+		// MFD.
+		probe, err := parseTranslated(f, filespec.Spec{Dirs: base.Dirs})
 		if err != nil {
 			return nil, fmt.Errorf("rms: %q: %w", text, err)
 		}

@@ -283,3 +283,26 @@ The author accepted each proposal below on 2026-10-01.
   - **ods2's CLI** `CREATE DIRECTORY` makes several levels, reports an
     existing directory (the MFD too) as `%CREATE-I-EXISTS`, and gains
     `/OWNER`, `/PROTECTION`, `/ALLOCATION` (COMMANDS.md, README).
+- 2026-10-01: Subtask 5 done: `Session.CreateDirectory`
+  (`internal/rms/createdir.go`).
+  - It resolves the spec with `expandSpec`, so logical names, the
+    default, and `[.SUB]`/`[-.X]` work. A search list creates in its first
+    element, as `$CREATE` does. It refuses a name, type, version,
+    wildcard, or `...` (`ErrNotDirectorySpec`), an unmounted device
+    (`*NotMountedError`), a read-only volume, a version limit over 32767,
+    and a bad protection, each before anything is made.
+  - `CreateDirectoryOptions.forParent` is `CreateDirectoryPath`'s
+    callback: the process UIC (or `/OWNER_UIC`, or `PARENT`'s owner), the
+    parent's limit, and the parent's protection less delete with
+    `/PROTECTION`'s categories laid over it.
+  - Each level comes back with its display name (`DUA0:[A.B]`, through a
+    concealed logical name if there was one) and whether it was made.
+  - **Host directories** (decision 1): with no device and no default on a
+    volume, or a host path, the directory is made on the host, relative
+    to the current directory (`[.A.B]` and `[A.B]` are `A/B`, `[-.A]` is
+    `../A`).
+  - **Bug fixed in passing:** `expandSpec` probed each translation for a
+    device by parsing it with an empty default directory, so any
+    `[-.X]` failed as "goes above the master file directory", for
+    DIRECTORY, DELETE, and every other command too. It now probes with
+    the default directory.
