@@ -122,3 +122,17 @@ commit, plus `build -i` when it changes behavior.
   - **Tests.** `name_test.go` covers scanning, directories, and the
     sources' precedence. `TestRMS3Parse_govaxTree` runs the PARSE probe
     against a govax-built copy of the oracle's tree.
+- 2026-10-01: Subtask 3, `$SEARCH` (`internal/rms/search.go`).
+  - It continues the context `$PARSE` kept for the NAM, or, when WCC
+    doesn't name one, starts a search for the expanded string (RMS$_ESA
+    when there is none). A search list's elements are searched in turn.
+  - Each file found is reported in the NAM: the resultant string and its
+    components (in RSA, RMS$_RSS if it doesn't fit), FID, and the DID of
+    its directory. When nothing matched, the status is RMS$_FNF, then
+    RMS$_NMF.
+  - **Versions.** `$SEARCH` reads a version itself: none or 0 is the
+    highest, and -n the version n below it, as VMS has it. ods2's
+    `filespec` reads ";-1" as the highest. That's left alone until the
+    oracle shows VMS's reading (SEARCH case 10, OPEN case 9).
+  - **Tests.** `TestRMS3Search_govaxTree` runs the SEARCH probe against
+    the govax-built tree.

@@ -221,3 +221,69 @@ func TestRMS3Parse_govaxTree(t *testing.T) {
 		t.Logf("%2d: %s", step, got[step])
 	}
 }
+
+// resultantStrings returns each $SEARCH call's status and resultant
+// string, in order, from a probe's STAT, NAM_, and RSA_ records.
+func resultantStrings(recs []probeRecord) []string {
+	var (
+		out []string
+		sts uint32
+		rsl int
+	)
+
+	for _, r := range recs {
+		switch r.Tag {
+		case "STAT":
+			sts = binary.LittleEndian.Uint32(r.Data)
+		case "NAM_":
+			rsl = int(r.Data[3])
+		case "RSA_":
+			if r.Op == 2 {
+				s := ""
+				if sts&1 == 1 {
+					s = string(r.Data[:rsl])
+				}
+
+				out = append(out, fmt.Sprintf("%d %08X %s", r.Step, sts, s))
+			}
+		}
+	}
+
+	return out
+}
+
+// TestRMS3Search_govaxTree runs the SEARCH probe against a govax-built
+// copy of the oracle's tree and checks what each search returns.
+func TestRMS3Search_govaxTree(t *testing.T) {
+	c := newBootableConsole(t)
+	c.HostLibrary = t.TempDir()
+
+	mountFreshRMSVolume(t, c)
+	buildRMS3Tree(t, c)
+
+	got := resultantStrings(runRMS3Probe(t, c, "search"))
+
+	want := map[string]bool{
+		"101 00010001 DUA0:[TEST]A.DAT;3":     true,
+		"102 00010001 DUA0:[TEST]A.DAT;2":     true,
+		"201 00010001 DUA0:[TEST]A.DAT;3":     true,
+		"202 000182CA ":                       true,
+		"401 00018292 ":                       true,
+		"601 00010001 DUA0:[TEST.SUB]C.DAT;1": true,
+		"1001 00010001 DUA0:[TEST]A.DAT;2":    true,
+		"1101 00010001 DUA0:[TEST]A.DAT;3":    true,
+	}
+
+	seen := map[string]bool{}
+	for _, g := range got {
+		seen[g] = true
+
+		t.Log(g)
+	}
+
+	for w := range want {
+		if !seen[w] {
+			t.Errorf("no %q among the searches", w)
+		}
+	}
+}

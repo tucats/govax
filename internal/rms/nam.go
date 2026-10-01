@@ -14,6 +14,7 @@ import (
 var (
 	namBID  = vmsConst("NAM$B_BID")
 	namBLN  = vmsConst("NAM$B_BLN")
+	namRSS  = vmsConst("NAM$B_RSS")
 	namRSL  = vmsConst("NAM$B_RSL")
 	namRSA  = vmsConst("NAM$L_RSA")
 	namNOP  = vmsConst("NAM$B_NOP")
