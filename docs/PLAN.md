@@ -83,6 +83,7 @@ questions, and a progress log extended as that phase is worked.
 | 30 | [PHASE-30.md](PHASE-30.md) | A govax `LINK`: `.OBJ` modules to a runnable `.EXE` — done; its images match real LINK's and run on VMS |
 | 31 | [PHASE-31.md](PHASE-31.md) | Build without licensed VMS material: one symbol table, an augmenting gen, captured GSTs — done |
 | 32 | [PHASE-32.md](PHASE-32.md) | govax's own RMS macros ($FAB, $RAB, $NAM, XABs, services, $xxxDEF), written clean-room — done |
+| 33 | [PHASE-33.md](PHASE-33.md) | RMS name blocks and XABs at run time: $PARSE, $SEARCH, $DISPLAY, NAM/XABs on $OPEN/$CREATE/$CLOSE — in progress |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
