@@ -51,16 +51,15 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 		return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsPrivilegeViolation)
 	}
 
-	fn, err := loadFileSpecString(ctx, fabAddr)
-	if err != nil {
-		return 0, err
-	}
-
 	// See SysCreate for how the spec is translated and defaulted. A
 	// search list opens the first element's file that exists; if none
 	// does, the status for the last element tried is returned (User's
 	// Manual §11.7).
-	specs, failStatus := ctx.resolveFileSpec(fn)
+	specs, failStatus, err := ctx.resolveFAB(fabAddr)
+	if err != nil {
+		return 0, err
+	}
+
 	if failStatus != 0 {
 		return storeStatus(ctx, fabAddr, fabSTS, fabSTV, failStatus)
 	}

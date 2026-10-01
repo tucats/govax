@@ -101,6 +101,13 @@ func (h *FileHandle) IsConsole() bool {
 // individually usable yet.
 type FileTable struct {
 	handles map[uint16]*FileHandle
+
+	// searches is $PARSE and $SEARCH's wildcard contexts, by the NAM
+	// block's address (search.go).
+	searches map[uint32]*searchState
+
+	// lastWCC is the last context number given out.
+	lastWCC uint32
 }
 
 // NewFileTable returns a FileTable with IFI 1 (SYS$OUTPUT) pre-seeded to

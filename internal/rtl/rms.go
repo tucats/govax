@@ -41,6 +41,9 @@ func registerRMSServices(t *ServiceTable) {
 	t.Register("SYS$PUT", func(env *Environment, argv []uint32) (uint32, error) {
 		return rms.SysPut(env.rmsContext(), argv)
 	})
+	t.Register("SYS$PARSE", func(env *Environment, argv []uint32) (uint32, error) {
+		return rms.SysParse(env.rmsContext(), argv)
+	})
 	t.Register("SYS$RENAME", func(env *Environment, argv []uint32) (uint32, error) {
 		return rms.SysRename(env.rmsContext(), argv)
 	})

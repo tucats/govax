@@ -118,17 +118,19 @@ type renameSide struct {
 // returning the RMS status and STV to report: RMS$_NORMAL on success. err
 // is a VAX memory access failure.
 func renameFile(ctx *Context, oldFAB, newFAB uint32) (sts, stv uint32, err error) {
-	oldText, err := loadFileSpecString(ctx, oldFAB)
-	if err != nil {
-		return 0, 0, err
+	// Each name goes through name processing with its FAB's default name
+	// and related file (docs/PHASE-33.md).
+	oldSpecs, sts, err := ctx.resolveFAB(oldFAB)
+	if err != nil || sts != 0 {
+		return sts, sts, err
 	}
 
-	newText, err := loadFileSpecString(ctx, newFAB)
-	if err != nil {
-		return 0, 0, err
+	newSpecs, sts, err := ctx.resolveFAB(newFAB)
+	if err != nil || sts != 0 {
+		return sts, sts, err
 	}
 
-	_, sts, stv = renameText(ctx, oldText, newText)
+	_, sts, stv = renameSpecs(ctx, oldSpecs, newSpecs)
 
 	return sts, stv, nil
 }
@@ -140,14 +142,29 @@ func renameFile(ctx *Context, oldFAB, newFAB uint32) (sts, stv uint32, err error
 // (Session.Rename) calls it too, once per file, as DCL's RENAME calls
 // $RENAME through LIB$RENAME_FILE.
 func renameText(ctx *Context, oldText, newText string) (r volume.Renamed, sts, stv uint32) {
+	oldSpecs, sts := ctx.resolveFileSpec(oldText)
+	if sts != 0 {
+		return r, sts, sts
+	}
+
+	newSpecs, sts := ctx.resolveFileSpec(newText)
+	if sts != 0 {
+		return r, sts, sts
+	}
+
+	return renameSpecs(ctx, oldSpecs, newSpecs)
+}
+
+// renameSpecs is renameText once both names are resolved.
+func renameSpecs(ctx *Context, oldSpecs, newSpecs []resolvedSpec) (r volume.Renamed, sts, stv uint32) {
 	// Steps 2 and 3: the old name, and the old file.
-	oldSide, oldDir, oldVersion, sts := findRenameSource(ctx, oldText)
+	oldSide, oldDir, oldVersion, sts := findRenameSource(ctx, oldSpecs)
 	if sts != 0 {
 		return r, sts, sts
 	}
 
 	// Step 4: the new name.
-	newSide, sts := parseRenameTarget(ctx, newText)
+	newSide, sts := parseRenameTarget(newSpecs)
 	if sts != 0 {
 		return r, sts, sts
 	}
@@ -207,13 +224,8 @@ func renameText(ctx *Context, oldText, newText string) (r volume.Renamed, sts, s
 // searched: the first element holding the file wins, and if none does,
 // the status for the last element tried is returned (User's Manual
 // §11.7), as SYS$OPEN does.
-func findRenameSource(ctx *Context, text string) (renameSide, *volume.Directory, uint16, uint32) {
-	specs, sts := ctx.resolveFileSpec(text)
-	if sts != 0 {
-		return renameSide{}, nil, 0, sts
-	}
-
-	sts = rmsFileNotFound
+func findRenameSource(ctx *Context, specs []resolvedSpec) (renameSide, *volume.Directory, uint16, uint32) {
+	sts := rmsFileNotFound
 
 	for _, r := range specs {
 		if sts = checkRenameSpec(r.Spec); sts != 0 {
@@ -259,12 +271,7 @@ func findRenameSource(ctx *Context, text string) (renameSide, *volume.Directory,
 
 // parseRenameTarget resolves $RENAME's new name (step 4), using a search
 // list's first element as SYS$CREATE does.
-func parseRenameTarget(ctx *Context, text string) (renameSide, uint32) {
-	specs, sts := ctx.resolveFileSpec(text)
-	if sts != 0 {
-		return renameSide{}, sts
-	}
-
+func parseRenameTarget(specs []resolvedSpec) (renameSide, uint32) {
 	spec := specs[0].Spec
 
 	if sts := checkRenameSpec(spec); sts != 0 {

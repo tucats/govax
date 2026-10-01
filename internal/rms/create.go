@@ -47,15 +47,14 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 		return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsPrivilegeViolation)
 	}
 
-	fn, err := loadFileSpecString(ctx, fabAddr)
+	// The spec's logical names are translated ("SYS$OUTPUT" becomes the
+	// console terminal) and the default device and directory applied.
+	// A search list creates the file in its first element, as RMS does.
+	specs, failStatus, err := ctx.resolveFAB(fabAddr)
 	if err != nil {
 		return 0, err
 	}
 
-	// The spec's logical names are translated ("SYS$OUTPUT" becomes the
-	// console terminal) and the default device and directory applied.
-	// A search list creates the file in its first element, as RMS does.
-	specs, failStatus := ctx.resolveFileSpec(fn)
 	if failStatus != 0 {
 		return storeStatus(ctx, fabAddr, fabSTS, fabSTV, failStatus)
 	}

@@ -205,6 +205,20 @@ var (
 	ssDuplicateFileName = ssConst("SS$_DUPFILENAME")
 	ssBadFileVersion    = ssConst("SS$_BADFILEVER")
 	ssInsufficientArgs  = ssConst("SS$_INSFARG")
+
+	// Name processing's failures (docs/PHASE-33.md): a block passed as a
+	// NAM isn't one (RMS$_NAM), a directory, type, or device that isn't
+	// well formed (RMS$_DIR, RMS$_TYP, RMS$_DEV), and an expanded
+	// string too long for its buffer (RMS$_ESS).
+	rmsInvalidNAM = vmsConst("RMS$_NAM")
+	rmsDirError   = vmsConst("RMS$_DIR")
+	rmsTypeError  = vmsConst("RMS$_TYP")
+	rmsESSError   = vmsConst("RMS$_ESS")
+
+	// SS$_ values name processing reports in STV: no such device, and no
+	// such directory or file.
+	ssNoSuchDevice = ssConst("SS$_NOSUCHDEV")
+	ssNoSuchFile   = ssConst("SS$_NOSUCHFILE")
 )
 
 // ssConst looks up name in internal/vmsdef.Symbols, VMS's $SSDEF

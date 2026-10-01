@@ -97,3 +97,28 @@ commit, plus `build -i` when it changes behavior.
 
 - 2026-10-01: Plan written. At the author's direction, subtasks proceed
   without a separate review, with a commit after each.
+- 2026-10-01: Subtask 1 done. `testdata/mar/rms3/gen.go` writes the six
+  probes, `BUILD.COM`, `RUN.COM`, and `exchange.cmd`. All six assemble and
+  link with govax, and the exchange volume is built and waiting for the
+  author's VAX run.
+- 2026-10-01: Subtask 2, name processing and `$PARSE`.
+  - **Name processing** (`internal/rms/name.go`). `scanName` splits a
+    specification into its fields, keeping their text, and reports a
+    malformed one as RMS does (RMS$_DEV, DIR, FNM, TYP, VER, or SYN).
+    `expandName` fills the fields from the primary name (after its logical
+    name), the default name, the related file, and the process defaults,
+    applying relative directories, and works out the FNB bits.
+  - **`$PARSE`** (`parse.go`, `nam.go`) fills the NAM from the manual's
+    output list: the expanded string and component pointers, FNB, and,
+    unless SYNCHK, DID, DVI, and the FAB's DEV and SDC after checking the
+    device and directory. Its search context is kept by NAM address, and
+    numbered in WCC (`search.go`).
+  - **`$OPEN`, `$CREATE`, and `$RENAME`** now use the same name
+    processing (`resolveFAB`), so a FAB's default name and related file
+    apply to them too.
+  - **Unsettled until the oracle:** the related file's fields without
+    OFP, whether EXP_* counts a logical name's fields, the DVI text,
+    FAB$L_DEV's bits, what's written on a failure, and WCC's value.
+  - **Tests.** `name_test.go` covers scanning, directories, and the
+    sources' precedence. `TestRMS3Parse_govaxTree` runs the PARSE probe
+    against a govax-built copy of the oracle's tree.
