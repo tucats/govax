@@ -126,12 +126,13 @@ func TestSymbols_SS_values(t *testing.T) {
 }
 
 // TestSymbolNames_rmsFamilies pins the set .RMSDEF (internal/asm) defines:
-// the 393 FAB$/RAB$/RMS$ names of $FABDEF, $RABDEF, and $RMSDEF, which
-// were a map of their own before the tables were merged into Symbols.
+// the 605 FAB$/RAB$/RMS$ names of $FABDEF, $RABDEF, and $RMSDEF. They were
+// 393 until Phase 32 merged STARLET.OLB's, which added the field offsets,
+// bit numbers, and sizes.
 func TestSymbolNames_rmsFamilies(t *testing.T) {
 	names := SymbolNames("FAB$", "RAB$", "RMS$")
-	if len(names) != 393 {
-		t.Errorf("%d FAB$/RAB$/RMS$ symbols, want 393", len(names))
+	if len(names) != 605 {
+		t.Errorf("%d FAB$/RAB$/RMS$ symbols, want 605", len(names))
 	}
 
 	for i := 1; i < len(names); i++ {

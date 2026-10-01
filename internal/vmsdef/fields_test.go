@@ -98,3 +98,24 @@ func TestFieldTables_keywordsUnique(t *testing.T) {
 		}
 	}
 }
+
+// TestFields_matchSymbols checks FABFields' and RABFields' offsets, which
+// were derived by hand from VMS 7.3's fabdef.h and rabdef.h, against the
+// offsets STARLET.OLB's definition modules give (merged into Symbols in
+// Phase 32): two independent sources for each field.
+func TestFields_matchSymbols(t *testing.T) {
+	for _, fields := range [][]Field{FABFields, RABFields} {
+		for _, f := range fields {
+			v, ok := Symbols[f.Symbol]
+			if !ok {
+				t.Errorf("%s isn't in Symbols", f.Symbol)
+
+				continue
+			}
+
+			if v != f.Offset {
+				t.Errorf("%s is at %d, but Symbols has %d", f.Symbol, f.Offset, v)
+			}
+		}
+	}
+}

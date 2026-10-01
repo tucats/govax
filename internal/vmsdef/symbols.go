@@ -10,10 +10,16 @@ import (
 // its own prefix, so the prefix says where a name comes from and no two
 // files' names collide:
 //
-//   - FAB$, RAB$, RMS$_: $FABDEF, $RABDEF, and $RMSDEF's bitmask flags,
-//     named code values, and RMS$_ completion codes; what .RMSDEF
-//     (internal/asm) defines as assembler symbols. The field offsets
-//     (FAB$L_STS, ...) come from FABFields and RABFields instead.
+//   - FAB$, RAB$, RMS$_: $FABDEF, $RABDEF, and $RMSDEF's field offsets
+//     (FAB$L_STS, ...), bit numbers, bitmask flags, named code values, and
+//     RMS$_ completion codes; what .RMSDEF (internal/asm) defines as
+//     assembler symbols. FABFields and RABFields describe the same fields
+//     for .FAB and .RAB, at the same offsets (TestFields_matchSymbols).
+//   - NAM$: $NAMDEF's name block: field offsets, bits, and codes.
+//   - XAB$: $XABDEF's extended attribute blocks: the common fields, and
+//     those of the XABALL, XABDAT, XABFHC, XABPRO, XABRDT, and XABTRM
+//     blocks. XABKEY's, XABSUM's, and XABITM's aren't here yet
+//     (docs/PHASE-32.md, subtask 1).
 //   - SS$_: $SSDEF's system-service completion codes, exactly as
 //     STARLET.OLB's SYS$SSDEF defines them (docs/PHASE-31.md).
 //   - LNM$: $LNMDEF's attribute bits, limits, and item codes. LNM$_CHAIN

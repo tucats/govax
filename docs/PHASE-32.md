@@ -241,3 +241,24 @@ clean, and a commit. `build -i` follows each one that changes behavior.
     `qiow.lis` in `testdata/mar/macros/vax/` for STARLET expansion lines.
     Regenerate them with `.NOSHOW ME,MEB`, or delete them (no test reads
     them). Then remove them from the hook's list.
+- 2026-09-30: Subtask 1, mostly done.
+  - **Captured.** `gen -into symbols` with `-prefix FAB$`, `RAB$`, `NAM$`,
+    and `XAB$` against STARLET.OLB merged 550 names into `Symbols` (now
+    4,339): 126 FAB$, 86 RAB$, 163 NAM$, and 175 XAB$. These are field
+    offsets, bit numbers, sizes, and codes. Not one existing value
+    changed.
+  - **Cross-checked.** `TestFields_matchSymbols`: every field in
+    `FABFields`/`RABFields`, derived by hand from fabdef.h and rabdef.h,
+    is at STARLET's offset.
+  - **`.RMSDEF`** now takes the offsets from `Symbols` and no longer
+    defines them a second time from `FABFields`/`RABFields`. It defines
+    the 153 FAB$/RAB$ names real `$FABDEF`/`$RABDEF` have that it lacked:
+    the three `.RMSDEF` goldens gained exactly those names and nothing
+    else. `TestSymbolNames_rmsFamilies` is now 605.
+  - **Not yet:** XABKEY's, XABSUM's, and XABITM's fields and codes
+    (XAB$C_KEY, XAB$W_POS0, ...). STARLET.OLB's definition modules don't
+    have them, and the manual gives each field's name and size but not its
+    offset. They need either an RMS definition file from the author's VMS
+    source kit (merged with `gen -sdl`), or the oracle (subtask 3). A
+    govax-written program that uses `$XABKEYDEF` and stores each field
+    name, assembled by real MACRO, shows the values in its object.

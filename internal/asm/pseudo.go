@@ -1290,10 +1290,10 @@ func (a *Assembler) pseudoP1Vector(c *cursor) error {
 // pseudoRMSDEF assembles .RMSDEF — this port's combined equivalent of real
 // MACRO-32's $FABDEF/$RABDEF/$RMSDEF library macros (docs/PHASE-24.md):
 // defines every real FAB$/RAB$/RMS$ symbol as a permanent assembler
-// symbol — each field's own offset symbol (internal/vmsdef.FABFields/
-// RABFields' Symbol, e.g. "FAB$B_FAC") plus every bitmask flag, named code
-// value, and RMS$_ completion-status code (internal/vmsdef.Symbols' FAB$,
-// RAB$, and RMS$ names, from VMS 7.3's fabdef.h, rabdef.h, and rmsdef.h)
+// symbol — each field's offset symbol (e.g. "FAB$B_FAC"), every bit
+// number, bitmask flag, and named code value, and every RMS$_
+// completion-status code (internal/vmsdef.Symbols' FAB$, RAB$, and RMS$
+// names; the offsets agree with FABFields/RABFields, TestFields_matchSymbols)
 // — so a program can address a FAB/RAB field the real-MACRO-32 way
 // (<label>+FAB$L_STS) and use symbolic names (FAB$C_SEQ, RMS$_NORMAL, ...)
 // anywhere an expression is expected, including as a .FAB/.RAB keyword's
@@ -1319,18 +1319,6 @@ func (a *Assembler) pseudoRMSDEF(c *cursor) error {
 
 	for _, name := range vmsdef.SymbolNames("FAB$", "RAB$", "RMS$") {
 		if err := a.setSymbol(name, vmsdef.Symbols[name], SymPermanent, false); err != nil {
-			return err
-		}
-	}
-
-	for _, f := range vmsdef.FABFields {
-		if err := a.setSymbol(f.Symbol, f.Offset, SymPermanent, false); err != nil {
-			return err
-		}
-	}
-
-	for _, f := range vmsdef.RABFields {
-		if err := a.setSymbol(f.Symbol, f.Offset, SymPermanent, false); err != nil {
 			return err
 		}
 	}
