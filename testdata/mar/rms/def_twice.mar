@@ -1,0 +1,10 @@
+	.TITLE	DEF_TWICE	$FABDEF called twice
+	.IDENT	/V1.0/
+;
+; Written by testdata/mar/rms/gen.go (docs/PHASE-32.md, subtask 3).
+;
+	$FABDEF
+	$FABDEF
+	.PSECT	DATA,NOEXE,WRT,LONG
+	.LONG	FAB$L_FNA
+	.END

@@ -1,0 +1,8 @@
+	.TITLE	ERR_ROP2	an error probe
+	.IDENT	/V1.0/
+;
+; Written by testdata/mar/rms/gen.go (docs/PHASE-32.md, subtask 3).
+;
+	.PSECT	DATA,NOEXE,WRT,LONG
+B1:	$RAB	ROP_2=<NQL,NODLCKWT,NODLCKBLK>
+	.END

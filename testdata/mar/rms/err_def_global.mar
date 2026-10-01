@@ -1,0 +1,9 @@
+	.TITLE	ERR_DEF_GLOBAL	an error probe
+	.IDENT	/V1.0/
+;
+; Written by testdata/mar/rms/gen.go (docs/PHASE-32.md, subtask 3).
+;
+	$FABDEF	GLOBAL
+	.PSECT	DATA,NOEXE,WRT,LONG
+	.LONG	FAB$L_FNA
+	.END

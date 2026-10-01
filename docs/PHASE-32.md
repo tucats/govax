@@ -285,3 +285,24 @@ clean, and a commit. `build -i` follows each one that changes behavior.
   - **Not in VAX 7.3's values:** SHR=NQL, ROP_2's bits, and NOP's
     NO_SHORT_UPCASE are likely post-7.3 or Alpha-only (O5), and XABKEY,
     XABSUM, and XABITM still need values (O9).
+- 2026-09-30: Subtask 3, the govax side. `testdata/mar/rms/gen.go` (a
+  `go run` program) writes the oracle from govax's tables and the manual:
+  - 73 probes: definition probes for 29 `$xxxDEF` macros; defaults,
+    every-keyword, and one-option-at-a-time probes for the 12 block
+    macros; store probes for the 12 `_STORE` macros; and every service
+    in seven forms.
+  - 10 error probes, assembled by a separate procedure into
+    `ERRORS.LOG`, which the hook refuses until the author audits it.
+  - `rms.com`/`rmserr.com` (`MACRO/NOLIST` and `ANALYZE/OBJECT`), and
+    `exchange.cmd`.
+
+  The definition probes' candidates are `Symbols`' names per family, plus
+  the manual's XABKEY, XABSUM, and XABITM names. Names longer than
+  MACRO's 31-character limit are dropped (one BLISS name).
+
+  *Checked:* with scratch stub macros (Appendix A's keywords as formal
+  arguments, empty bodies) prepended, all 73 probes assemble with govax.
+  That caught one mistake of mine: `FNM=<A.DAT;1>`, where the `;` starts
+  a comment.
+
+  **Waiting on the author's VAX run** (`testdata/mar/rms/README.md`).

@@ -1,0 +1,9 @@
+	.TITLE	ERR_SS_GLOBAL	an error probe
+	.IDENT	/V1.0/
+;
+; Written by testdata/mar/rms/gen.go (docs/PHASE-32.md, subtask 3).
+;
+	$SSDEF	GLOBAL
+	.PSECT	DATA,NOEXE,WRT,LONG
+	.LONG	SS$_NORMAL
+	.END

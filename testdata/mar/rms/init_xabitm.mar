@@ -1,0 +1,9 @@
+	.TITLE	INIT_XABITM	$XABITM with defaults
+	.IDENT	/V1.0/
+;
+; Written by testdata/mar/rms/gen.go (docs/PHASE-32.md, subtask 3).
+;
+	.PSECT	DATA,NOEXE,WRT,LONG
+B1:	$XABITM
+	.LONG	XAB$L_NXT
+	.END
