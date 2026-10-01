@@ -120,9 +120,9 @@ confirmed or corrected by the oracle (subtask 1) before ods2 is changed:
 ### govax pieces
 
 - **`internal/rms`**:
-  - `ParseUIC` (`[g,m]` in octal; `PARENT` is handled by the caller);
-  - `ParseProtection`/`FormatProtection` (`(S:RWED,O:RWED,G:RE,W)` to and
-    from the 16-bit mask, where a set bit denies access);
+  - UIC and protection parsing come from ods2's `ondisk` (`ParseUic`,
+    `ParseProtection`, `FormatProtection`; moved there during subtask 3
+    so ods2's CLI shares them); `PARENT` is handled by the caller;
   - `Session.CreateDirectory(specText string, opts CreateDirectoryOptions)
     ([]CreatedDirectory, error)`. It resolves the spec with the shared
     name processing and checks that the device is mounted for writing. It
@@ -183,8 +183,9 @@ commit.
    `/ALLOCATION` (`docs/COMMANDS.md`). Tests: several levels, a partly
    existing path, MFD-level (`[FOO]`) creation, and a full volume partway
    through (what's left behind).
-4. **govax UIC and protection parsing** (`internal/rms`), with tests,
-   including malformed input and octal limits.
+4. **UIC and protection parsing**, with tests, including malformed input
+   and octal limits. (Done in ods2's `ondisk` during subtask 3; see the
+   log.)
 5. **govax `Session.CreateDirectory`.** Name processing, checks, the
    defaults (process UIC, parent's limit, parent's protection), and errors
    for a read-only volume, an unknown device, a missing parent with
@@ -268,3 +269,17 @@ The author accepted each proposal below on 2026-10-01.
   `ErrExists`, not a new version. A failure part way frees the header and
   space before anything is entered in the parent. govax's tests that call
   `CreateDirectory` follow the new signature.
+- 2026-10-01: Subtasks 3 and 4 done, in ods2 (`e6f8b1d`, `bc8784d`).
+  - **Parsing moved to ods2.** `ondisk.ParseUic` (`[g,m]` or `<g,m>`,
+    octal, group up to 37776 and member up to 177776), `ParseProtection`
+    (categories by any abbreviation, `:` or `=`, a category left out keeps
+    the base mask's field), `FormatProtection`, and `ProtectionAccess`.
+    The plan had these in govax's `internal/rms`; in `ondisk`, ods2's CLI
+    uses the same code, so subtask 4 was folded into subtask 3.
+  - **`filespec.CreateDirectoryPath`** makes each missing level, asking a
+    callback for each level's options given its own parent, and reports
+    which levels it made, also on failure (levels made stay made).
+    `volume.InheritedDirectoryOptions` gives the parent-derived defaults.
+  - **ods2's CLI** `CREATE DIRECTORY` makes several levels, reports an
+    existing directory (the MFD too) as `%CREATE-I-EXISTS`, and gains
+    `/OWNER`, `/PROTECTION`, `/ALLOCATION` (COMMANDS.md, README).
