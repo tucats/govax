@@ -35,8 +35,23 @@ grammar console
         qualifier log/id=246
         disallow any2(user_mode, supervisor_mode, executive_mode)
 
+    !
+    ! docs/PHASE-34.md: CREATE/DIRECTORY makes a directory on a mounted
+    ! volume, and every missing directory above it (internal/rms.Session.
+    ! CreateDirectory, internal/console/create.go). OWNER_UIC is a UIC or
+    ! PARENT; PROTECTION is a list of category:access items.
+    !
+    syntax create_directory
+        parameter directories/id=1501/type=$string/list/prompt="Directory"
+        qualifier owner_uic/id=1502/type=$any
+        qualifier version_limit/id=1503/type=$integer
+        qualifier protection/id=1504/type=$any/list
+        qualifier allocation/id=1505/type=$integer
+        qualifier log/id=1506
+
     verb create
         qualifier name_table/syntax=create_name_table
+        qualifier directory/syntax=create_directory
 
     verb assign
         parameter value/id=221/type=$any/list/prompt="Equ_Name"

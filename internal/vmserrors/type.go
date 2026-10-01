@@ -31,6 +31,7 @@ const (
 	CLIFacility = 2  // Command line or DCL errors
 	DBGFacility = 3  // Messages from the debugger
 	LIBFacility = 6  // MEssages from the LIBRTL shims and runtimes
+	CREFacility = 7  // The CREATE command (docs/PHASE-34.md)
 	VAXFacility = 15 // This is the facility used by govax internal messages
 
 	// Well known names for the severity field values. Note that, matching
@@ -100,6 +101,7 @@ var FacilityNames = map[uint32]string{
 	CLIFacility: "CLI",
 	DBGFacility: "DBG",
 	LIBFacility: "LIB",
+	CREFacility: "CREATE",
 	VAXFacility: "VAX", // These are the errors used by govax internally
 }
 

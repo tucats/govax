@@ -306,3 +306,26 @@ The author accepted each proposal below on 2026-10-01.
     `[-.X]` failed as "goes above the master file directory", for
     DIRECTORY, DELETE, and every other command too. It now probes with
     the default directory.
+- 2026-10-01: Subtask 6 done: the console's `CREATE/DIRECTORY`.
+  - **Grammar** (`console.dcl`): `CREATE` gains `/DIRECTORY` with
+    `syntax create_directory` (ids 1501-1506): a list of directories,
+    `/OWNER_UIC` (`$any`, so `[200,201]` and `PARENT` pass through),
+    `/VERSION_LIMIT`, `/PROTECTION` (a list, so `(S:RWED,...)` and
+    `W:RE` both work), `/ALLOCATION`, and `/LOG`.
+  - **Binding** (`internal/console/create.go`, bound in `logical.go` with
+    `CREATE_NAME_TABLE`): the process UIC is the RTL process's, or
+    `rtl.NominalUIC` before INIT. Bad qualifier values are
+    `CLI_BADQUALIFIER`, before anything is made. In a list, a directory
+    that fails is reported and the rest are still made; the command then
+    fails with its message inhibited (exit status only).
+  - **Messages:** a new CREATE facility (`vmserrors/codes_create.go`):
+    `%CREATE-I-CREATED` (with `/LOG`), `%CREATE-I-EXISTS` (always, for an
+    existing last level), `%CREATE-E-DIRNOTCRE` (with the cause). The
+    texts are VMS's as best known; subtask 8 checks them against the log.
+  - **HELP** (`vax.help`): `HELP CREATE` is now an overview, with
+    `HELP CREATE /DIRECTORY` and `/NAME_TABLE` for the two forms. A bare
+    `CREATE` says `/DIRECTORY or /NAME_TABLE` is required.
+  - Tests (`create_test.go`) drive the real grammar: levels and `/LOG`,
+    every qualifier, `[.SUB]`, `[-.X]`, a logical device, and errors.
+  - **Noticed for subtask 7:** DIRECTORY's heading for the MFD prints
+    `Directory DUA1:[]`, not `[000000]`.

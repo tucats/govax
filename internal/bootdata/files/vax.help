@@ -36,6 +36,7 @@
 //              09/30/26    Added MACRO (docs/PHASE-27.md)
 //              09/30/26    Added LINK (docs/PHASE-30.md)
 //              09/30/26    Added RENAME (docs/PHASE-22.md)
+//              10/01/26    Added CREATE/DIRECTORY (docs/PHASE-34.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -189,7 +190,6 @@ $DEAS
             Delete every such name in the table.
 
 $CREA,/NAM
-$CREA
     The CREATE/NAME_TABLE command creates a logical name table.
 
     Syntax:
@@ -216,6 +216,74 @@ $CREA
 
          $ DEFINE/TABLE=LNM$PROCESS_DIRECTORY LNM$PROCESS -
                 LNM$PROCESS_TABLE, TAX
+
+$CREA,/DIR
+    The CREATE/DIRECTORY command creates a directory on a mounted ODS-2
+    volume, as VMS DCL's CREATE/DIRECTORY does, and every directory above
+    it that doesn't exist yet: CREATE/DIRECTORY [A.B.C] makes [A], [A.B],
+    and [A.B.C], whichever are missing.  A directory that already exists
+    is reported, and isn't an error.
+
+    Syntax:
+
+        CREATE/DIRECTORY [qualifiers] <directory>[,<directory>...]
+
+    Parameter:
+
+        <directory>     A directory specification, such as [A.B] or
+                        DUA0:[A.B].  It may be relative to the current
+                        default directory ([.SUB], [-.OTHER]; see SET
+                        DEFAULT), and its device may be a logical name.
+                        It can't name a file, or use wildcards.  With no
+                        device and no default device on a mounted volume,
+                        the directory is made on the host instead,
+                        relative to the host's current directory.
+
+    Qualifiers:
+
+        /OWNER_UIC=<uic>
+        /OWNER_UIC=PARENT
+                        The new directory's owner: a UIC, [group,member]
+                        in octal, or PARENT for the owner of the
+                        directory it's made in.  The default is the
+                        process's UIC, [1,4].
+
+        /VERSION_LIMIT=<n>
+                        The default version limit for files created in
+                        the new directory; 0 means no limit.  The default
+                        is the limit of the directory it's made in.
+
+        /PROTECTION=(<category>:<access>,...)
+                        The new directory's protection: for each of
+                        SYSTEM, OWNER, GROUP, and WORLD (or S, O, G, W),
+                        the access granted, any of R, W, E, and D, or
+                        none.  The default is the protection of the
+                        directory it's made in, less delete access; a
+                        category not given keeps that default.
+
+        /ALLOCATION=<n> The number of blocks to give the directory at
+                        once.  The default is 1.
+
+        /LOG            Reports each directory made.
+
+    Examples:
+
+        CREATE/DIRECTORY [PROJECTS.TEST]
+
+        CREATE/DIRECTORY/LOG/OWNER_UIC=[200,201]/VERSION_LIMIT=3 [USER]
+
+        CREATE/DIRECTORY/PROTECTION=(S:RWE,O:RWE,G:RE,W) [.SHARED]
+
+    See also the help for DIRECTORY and SET DEFAULT.
+
+$CREA
+    The CREATE command creates a directory on a mounted volume
+    (CREATE/DIRECTORY) or a logical name table (CREATE/NAME_TABLE).
+    Creating a file from terminal input, CREATE's form with neither
+    qualifier on VMS, isn't supported.  For details, see:
+
+        HELP CREATE /DIRECTORY
+        HELP CREATE /NAME_TABLE
 
 $SHOW,DEVI
 $SH  ,DEVI
@@ -2180,7 +2248,7 @@ $HELP
     CALL            Execute instructions by calling into a procedure
     CLEAR           Clear memory, symbols, etc.
     COPY            Copy a file between the host and a mounted volume
-    CREATE          Create a logical name table
+    CREATE          Create a directory or a logical name table
     DEASSIGN        Delete a logical name
     DEFINE          Create a logical name
     DELETE          Delete a file on a mounted volume
