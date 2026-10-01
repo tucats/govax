@@ -190,12 +190,14 @@ func TestSysCreate_diskFile(t *testing.T) {
 		t.Fatalf("SysCreate: %v", err)
 	}
 
-	if r0 != rmsCreated {
-		t.Errorf("r0 = %d, want rmsCreated (%d)", r0, rmsCreated)
+	// An ordinary create is RMS$_NORMAL; RMS$_CREATED is for FAB$V_CIF
+	// (VMS 7.3, the Phase 33 oracle's CREATE probe).
+	if r0 != rmsNormal {
+		t.Errorf("r0 = %d, want rmsNormal (%d)", r0, rmsNormal)
 	}
 
-	if sts := readLongword(t, f.ctx, testFabAddr+fabSTS); sts != rmsCreated {
-		t.Errorf("FAB$L_STS = %d, want rmsCreated (%d)", sts, rmsCreated)
+	if sts := readLongword(t, f.ctx, testFabAddr+fabSTS); sts != rmsNormal {
+		t.Errorf("FAB$L_STS = %d, want rmsNormal (%d)", sts, rmsNormal)
 	}
 
 	ifi := readWord(t, f.ctx, testFabAddr+fabIFI)

@@ -70,6 +70,10 @@ type Context struct {
 	// (the TTA0: special case — see fab.go's package doc comment and
 	// ifi.go's FileHandle) actually writes its output to.
 	Console io.Writer
+
+	// NodeName is the system's node name, as $GETSYI reports it: part of
+	// NAM$T_DVI's device name.
+	NodeName string
 }
 
 // loadByte/loadWord/loadLongword/storeByte/storeWord/storeLongword are

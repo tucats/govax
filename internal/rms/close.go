@@ -1,5 +1,11 @@
 package rms
 
+import (
+	"time"
+
+	"github.com/tucats/ods2/vmstime"
+)
+
 // SysClose implements SYS$CLOSE: given a FAB's VAX address (argv[0] — like
 // SYS$CREATE, and unlike SYS$CONNECT/SYS$PUT, SYS$CLOSE operates on a FAB
 // directly rather than a RAB), finalizes whatever file that FAB's
@@ -82,7 +88,9 @@ func SysClose(ctx *Context, argv []uint32) (uint32, error) {
 			return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsDeviceError)
 		}
 
-		if err := applyCloseXABs(handle.File, in); err != nil {
+		if !handle.Writable {
+			// Nothing to update.
+		} else if err := applyCloseXABs(handle.File, in, vmstime.FromTime(time.Now())); err != nil {
 			return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsDeviceError)
 		}
 	}

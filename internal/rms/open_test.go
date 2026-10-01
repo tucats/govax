@@ -551,7 +551,7 @@ func TestSysCreate_searchListUsesFirstElement(t *testing.T) {
 		spec string
 		want uint32
 	}{
-		{"GOOD:NEW.DAT", rmsCreated},
+		{"GOOD:NEW.DAT", rmsNormal},
 		{"BAD:NEW.DAT", rmsDeviceNotReady},
 	} {
 		newFAB(t, f.ctx, tt.spec)

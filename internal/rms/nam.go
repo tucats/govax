@@ -50,14 +50,19 @@ var (
 	fopOFP = vmsConst("FAB$M_OFP")
 	fopNAM = vmsConst("FAB$M_NAM")
 	fopCIF = vmsConst("FAB$M_CIF")
+	fopCTG = vmsConst("FAB$M_CTG")
+	fopCBT = vmsConst("FAB$M_CBT")
 )
 
-// diskDevChar is FAB$L_DEV and FAB$L_SDC for a mounted Files-11 disk: a
-// file-oriented, directory-structured, shareable, random-access device,
-// available and mounted, that does input and output.
+// diskDevChar is FAB$L_DEV and FAB$L_SDC for a mounted Files-11 disk, as
+// VMS 7.3 reports an RA disk (the oracle's ^X1CCD4108): file-oriented,
+// directory-structured, shareable, random-access, available and mounted,
+// doing input and output, with a revector cache table (RCT), and
+// error-logged (ELG) and allocated (ALL).
 var diskDevChar = vmsConst("DEV$M_FOD") | vmsConst("DEV$M_DIR") | vmsConst("DEV$M_SHR") |
 	vmsConst("DEV$M_AVL") | vmsConst("DEV$M_MNT") | vmsConst("DEV$M_IDV") |
-	vmsConst("DEV$M_ODV") | vmsConst("DEV$M_RND")
+	vmsConst("DEV$M_ODV") | vmsConst("DEV$M_RND") | vmsConst("DEV$M_RCT") |
+	vmsConst("DEV$M_ELG") | vmsConst("DEV$M_ALL")
 
 // checkNAM confirms nam is a NAM block: NAM$B_BID says so and NAM$B_BLN
 // is long enough. It returns RMS$_NAM if not. err is a VAX memory access
@@ -200,10 +205,10 @@ func (ctx *Context) storeFid(addr uint32, f ondisk.Fid) error {
 	return ctx.storeByte(addr+5, f.Nmx)
 }
 
-// deviceID is NAM$T_DVI's text for a device: its physical name, with
-// "_" and ":".
-func deviceID(device string) string {
-	return "_" + strings.ToUpper(device) + ":"
+// deviceID is NAM$T_DVI's text for a device: its full name, with the
+// node's name and no ":" ("_SIMVAX$DUA1", as VMS 7.3 writes it).
+func (ctx *Context) deviceID(device string) string {
+	return "_" + ctx.NodeName + "$" + strings.ToUpper(device)
 }
 
 // storeDVI writes NAM$T_DVI: a counted string, zero-filled.
@@ -273,4 +278,89 @@ func (ctx *Context) resolveFAB(fab uint32) ([]resolvedSpec, uint32, error) {
 	}
 
 	return out, 0, nil
+}
+
+// namNameFields are the offsets of NAM$B_NODE through NAM$L_VER: the six
+// component lengths, then the six pointers.
+var namNameFields = struct{ start, end uint32 }{namNODE, vmsConst("NAM$L_VER") + 4}
+
+// clearNAMOutputs clears what name processing writes to a NAM, as VMS
+// does before a $PARSE or $OPEN: ESL, RSL, FID, DID, DVI, WCC, FNB, and
+// the component lengths and pointers.
+func (ctx *Context) clearNAMOutputs(nam uint32) error {
+	for _, f := range []struct{ off, size uint32 }{
+		{namESL, 1}, {namRSL, 1}, {namFID, 6}, {namDID, 6}, {namDVI, namDVISize},
+		{namWCC, 4}, {namFNB, 4}, {namNameFields.start, namNameFields.end - namNameFields.start},
+	} {
+		for i := range f.size {
+			if err := ctx.storeByte(nam+f.off+i, 0); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// storeNameString writes f's text to a NAM string buffer (buf, of size
+// bytes) with its length at lenOff, and points the NAM's components into
+// it. A zero buf or size writes nothing. When the text doesn't fit,
+// overflow is true, and the buffer is left as VMS leaves it (the oracle's
+// PARSE cases 9 and 28, OPEN case 10): the length is the buffer's size,
+// as much of the text as fits is written when the device name fits, and
+// only the device's component is set.
+func (ctx *Context) storeNameString(nam, buf uint32, size byte, lenOff uint32, f fileName) (overflow bool, err error) {
+	if buf == 0 || size == 0 {
+		return false, nil
+	}
+
+	text := f.Dev + f.Dir + f.Name + f.Type + f.Ver
+
+	if len(text) <= int(size) {
+		if _, err := ctx.storeString(buf, size, text); err != nil {
+			return false, err
+		}
+
+		if err := ctx.storeByte(nam+lenOff, byte(len(text))); err != nil {
+			return false, err
+		}
+
+		return false, ctx.storeComponents(nam, buf, f)
+	}
+
+	if err := ctx.storeByte(nam+lenOff, size); err != nil {
+		return true, err
+	}
+
+	dir := buf
+
+	if len(f.Dev) <= int(size) {
+		if _, err := ctx.storeString(buf, size, text[:size]); err != nil {
+			return true, err
+		}
+
+		dir += uint32(len(f.Dev))
+	}
+
+	for i := range uint32(6) {
+		at := buf
+		if i == 2 {
+			at = dir
+		}
+
+		if err := ctx.storeLongword(nam+namLNOD+4*i, at); err != nil {
+			return true, err
+		}
+
+		n := byte(0)
+		if i == 1 {
+			n = byte(len(f.Dev))
+		}
+
+		if err := ctx.storeByte(nam+namNODE+i, n); err != nil {
+			return true, err
+		}
+	}
+
+	return true, nil
 }

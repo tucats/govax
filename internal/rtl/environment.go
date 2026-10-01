@@ -204,6 +204,7 @@ func (env *Environment) rmsContext() *rms.Context {
 		Logicals: env.Logicals,
 		Session:  env.Session,
 		Console:  env.consoleOut,
+		NodeName: env.NodeName,
 	}
 }
 
@@ -320,7 +321,7 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 	waiting := errors.Is(err, ErrWait)
 
 	var call *CallRequest
-	
+
 	retry := waiting && env.waitingPC == pc
 
 	if waiting {

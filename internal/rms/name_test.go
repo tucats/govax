@@ -23,8 +23,10 @@ func TestScanName(t *testing.T) {
 		{"A;", fileName{"", "", "A", "", ";"}, 0},
 		{"[TEST...]*.*;*", fileName{"", "[TEST...]", "*", ".*", ";*"}, 0},
 		{"_DUA1:X", fileName{"_DUA1:", "", "X", "", ""}, 0},
-		{"A.B.C", fileName{}, rmsInvalidVersion},
-		{"A;32768", fileName{}, rmsInvalidVersion},
+		{"A.B.C", fileName{}, rmsSyntaxError},
+		{"A;C", fileName{}, rmsInvalidVersion},
+		{"A;32768", fileName{"", "", "A", "", ";32768"}, 0},
+		{"A;65536", fileName{}, rmsInvalidVersion},
 		{"[TEST", fileName{}, rmsDirError},
 		{"[A..B]", fileName{}, rmsDirError},
 		{"NODE::X", fileName{}, rmsSyntaxError},
@@ -51,7 +53,8 @@ func TestDirSpec(t *testing.T) {
 	for _, tc := range []struct{ body, base, want string }{
 		{"TEST", "", "[TEST]"},
 		{"000000", "", "[000000]"},
-		{"000000.TEST", "", "[TEST]"},
+		{"000000.TEST", "", "[000000.TEST]"},
+		{".SUB", "", "[000000.SUB]"},
 		{"TEST...", "", "[TEST...]"},
 		{".SUB", "TEST", "[TEST.SUB]"},
 		{"-", "TEST.SUB", "[TEST]"},
@@ -114,11 +117,15 @@ func TestExpandName(t *testing.T) {
 	}{
 		{nameInputs{Primary: "X"}, "DUA1:[HOME]X.;", fnbExpName},
 		{nameInputs{Primary: "A", Default: "[TEST].DAT"}, "DUA1:[TEST]A.DAT;", fnbExpName},
-		{nameInputs{Primary: "[.SUB]C", Default: "[TEST].DAT"}, "DUA1:[TEST.SUB]C.DAT;", fnbExpDir | fnbExpName | 1<<fnbDirLvls},
+		// A relative directory applies to the process default, not the
+		// default name's (VMS 7.3, the oracle's PARSE case 21).
+		{nameInputs{Primary: "[.SUB]C", Default: "[TEST].DAT"}, "DUA1:[HOME.SUB]C.DAT;", fnbExpDir | fnbExpName | 1<<fnbDirLvls},
 		{nameInputs{Primary: "TST:A.DAT"}, "DUA1:[TEST]A.DAT;", fnbExpDev | fnbExpDir | fnbExpName | fnbExpType},
 		{nameInputs{Primary: "TSL:C.DAT"}, "DUA1:[TEST.SUB]C.DAT;", fnbExpDev | fnbExpDir | fnbExpName | fnbExpType | fnbSearchList | 1<<fnbDirLvls},
 		{nameInputs{Primary: "X", Related: "DUA2:[R]B.TXT;1"}, "DUA2:[R]X.TXT;", fnbExpName},
-		{nameInputs{Primary: "X", Related: "DUA2:[R]B.TXT;1", OFP: true}, "DUA1:[R]X.TXT;", fnbExpName},
+		// With OFP, the related file gives only the name and type (PARSE
+		// case 14).
+		{nameInputs{Primary: "X", Related: "DUA2:[R]B.TXT;1", OFP: true}, "DUA1:[HOME]X.TXT;", fnbExpName},
 		{nameInputs{Primary: "[TEST]*.DAT;*"}, "DUA1:[TEST]*.DAT;*",
 			fnbExpDir | fnbExpName | fnbExpType | fnbExpVer | fnbWildName | fnbWildVer | fnbWildcard},
 		{nameInputs{Primary: "[A.*.C]X"}, "DUA1:[A.*.C]X.;",

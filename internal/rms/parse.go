@@ -78,16 +78,10 @@ func (ctx *Context) parseInto(fab, nam uint32) (sts, stv uint32, err error) {
 		return 0, 0, err
 	}
 
-	// RSL, FID, DID, DVI, and WCC start clear.
-	for _, f := range []struct {
-		off  uint32
-		size uint32
-	}{{namRSL, 1}, {namFID, 6}, {namDID, 6}, {namDVI, namDVISize}, {namWCC, 4}} {
-		for i := range f.size {
-			if err := ctx.storeByte(nam+f.off+i, 0); err != nil {
-				return 0, 0, err
-			}
-		}
+	// What a $PARSE writes starts clear; a name that isn't well formed
+	// leaves it so (the oracle's PARSE case 10).
+	if err := ctx.clearNAMOutputs(nam); err != nil {
+		return 0, 0, err
 	}
 
 	names, sts := ctx.expandName(in)
@@ -96,10 +90,6 @@ func (ctx *Context) parseInto(fab, nam uint32) (sts, stv uint32, err error) {
 	}
 
 	p := names[0]
-
-	if err := ctx.storeLongword(nam+namFNB, p.FNB); err != nil {
-		return 0, 0, err
-	}
 
 	ess, err := ctx.loadByte(nam + namESS)
 	if err != nil {
@@ -111,9 +101,7 @@ func (ctx *Context) parseInto(fab, nam uint32) (sts, stv uint32, err error) {
 		return 0, 0, err
 	}
 
-	text := p.String()
-
-	overflow, err := ctx.storeString(esa, ess, text)
+	overflow, err := ctx.storeNameString(nam, esa, ess, namESL, p.fileName)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -122,14 +110,8 @@ func (ctx *Context) parseInto(fab, nam uint32) (sts, stv uint32, err error) {
 		return rmsESSError, 0, nil
 	}
 
-	if esa != 0 && ess != 0 {
-		if err := ctx.storeByte(nam+namESL, byte(len(text))); err != nil {
-			return 0, 0, err
-		}
-
-		if err := ctx.storeComponents(nam, esa, p.fileName); err != nil {
-			return 0, 0, err
-		}
+	if err := ctx.storeLongword(nam+namFNB, p.FNB); err != nil {
+		return 0, 0, err
 	}
 
 	if nop&nopSynChk != 0 {
@@ -141,7 +123,7 @@ func (ctx *Context) parseInto(fab, nam uint32) (sts, stv uint32, err error) {
 		return sts, stv, nil
 	}
 
-	if err := ctx.storeDVI(nam, deviceID(p.Lookup)); err != nil {
+	if err := ctx.storeDVI(nam, ctx.deviceID(p.Lookup)); err != nil {
 		return 0, 0, err
 	}
 
@@ -157,17 +139,21 @@ func (ctx *Context) parseInto(fab, nam uint32) (sts, stv uint32, err error) {
 		return 0, 0, err
 	}
 
-	if err := ctx.saveSearch(nam, names); err != nil {
-		return 0, 0, err
+	// A wildcard directory or a search list needs a context for $SEARCH
+	// to continue; any other search starts again from the expanded string
+	// each time (search.go).
+	if p.FNB&(fnbWildDir|fnbSearchList) != 0 {
+		return rmsNormal, 0, ctx.saveSearch(nam, names)
 	}
 
 	return rmsNormal, 0, nil
 }
 
-// checkParsed confirms a parsed name's device is mounted and, when the
-// directory has no wildcard, that the directory exists, returning its
-// file ID. A wildcard directory's DID is zero. On failure it returns the
-// status and STV to report.
+// checkParsed confirms a parsed name's device is mounted and its
+// directory exists, returning the directory's file ID. A wildcard
+// directory's DID is the first directory a search would look in (the
+// oracle's PARSE case 4, SEARCH case 9), and when there's none, zero. On
+// failure it returns the status and STV to report.
 func (ctx *Context) checkParsed(p parsedName) (did ondisk.Fid, sts, stv uint32) {
 	vol, ok := ctx.Mounts.Lookup(p.Lookup)
 	if !ok {
@@ -175,6 +161,10 @@ func (ctx *Context) checkParsed(p parsedName) (did ondisk.Fid, sts, stv uint32) 
 	}
 
 	if p.FNB&fnbWildDir != 0 {
+		if dirs := searchDirs(vol, p.DirSpec); len(dirs) > 0 {
+			did = dirs[0].Dir.Header.Fid
+		}
+
 		return did, 0, 0
 	}
 

@@ -208,8 +208,10 @@ func TestRMS3Parse_govaxTree(t *testing.T) {
 		12: "00010001 DUA0:[TEST.SUB]C.DAT;",
 		15: "00010001 DUA0:[TEST]A.DAT;",
 		16: "00010001 DUA0:[TEST]A.DAT;2",
-		20: "00010001 DUA0:[TEST]A.DAT;",
-		21: "00010001 DUA0:[TEST.SUB]C.DAT;",
+		// A relative directory applies to the process default, not the
+		// default name (VMS 7.3).
+		20: "000184CC ",
+		21: "0001C04A DUA0:[000000.SUB]C.DAT;",
 		25: "00010001 DUA0:[TEST].;",
 		26: "00010001 DUA0:[000000]A.DAT;",
 	} {
@@ -346,22 +348,22 @@ func TestRMS3OpenCreate_govaxTree(t *testing.T) {
 		}},
 		{"namfid", []string{
 			`2 op3 00010001 es="" rs="" fnb=00000000 fid=13 00 01 00 00 00`,
-			`3 op3 00010001 es="" rs="_DUA0:[TEST]B.TXT;1"`,
+			`3 op3 00010001 es="" rs="_GOVAX$DUA0:[000000]B.TXT;1"`,
 			`4 op3 00018292`,
-			`5 op3 000184C4`,
-			`6 op3 00010001 es="" rs="_DUA0:[TEST]C.DAT;1"`,
+			`5 op3 00018292`,
+			`6 op3 00010001 es="" rs="_GOVAX$DUA0:[TEST.SUB]C.DAT;1"`,
 			`8 op3 00010001 es="DUA0:[TEST]A.DAT;" rs="DUA0:[TEST]A.DAT;3"`,
 			`10 op3 00018744`,
 		}},
 		{"create", []string{
-			`1 op4 00010619 es="DUA0:[CRE]N1.DAT;" rs="DUA0:[CRE]N1.DAT;1" fnb=00000046`,
-			`2 op4 00010619 es="DUA0:[CRE]N1.DAT;" rs="DUA0:[CRE]N1.DAT;2" fnb=00004046`,
+			`1 op4 00010001 es="DUA0:[CRE]N1.DAT;" rs="DUA0:[CRE]N1.DAT;1" fnb=00000046`,
+			`2 op4 00010001 es="DUA0:[CRE]N1.DAT;" rs="DUA0:[CRE]N1.DAT;2" fnb=00004046`,
 			`3 op4 00018282`,
 			`4 op4 00010001 es="DUA0:[CRE]N1.DAT;" rs="DUA0:[CRE]N1.DAT;2"`,
-			`6 op4 00010619 es="DUA0:[CRE]N2.DAT;3" rs="DUA0:[CRE]N2.DAT;3" fnb=00008047`,
+			`6 op4 00010001 es="DUA0:[CRE]N2.DAT;3" rs="DUA0:[CRE]N2.DAT;3" fnb=00008047`,
 			`8 op4 0001C04A`,
 			`9 op4 00018744`,
-			`10 op4 00010619 es="DUA0:[CRE]N4.LIS;" rs="DUA0:[CRE]N4.LIS;1"`,
+			`10 op4 00010001 es="DUA0:[CRE]N4.LIS;" rs="DUA0:[CRE]N4.LIS;1"`,
 		}},
 	} {
 		c := newBootableConsole(t)

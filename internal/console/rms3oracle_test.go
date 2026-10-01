@@ -2,6 +2,7 @@ package console
 
 import (
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"os"
@@ -16,23 +17,24 @@ import (
 // The Phase 33 oracle's reconciliation (docs/PHASE-33.md, subtask 6):
 // each probe runs under govax on a copy of the container the author's VMS
 // 7.3 system ran it on (testdata/mar/rms3/README.md), and what it writes
-// is compared with what it wrote there. The container is local-only, so
-// the test skips without it.
+// is compared with what it wrote there.
 
-// rms3VAXDisk is the container, after BUILD.COM and RUN.COM on VMS. The
-// environment variable RMS3_VAX_DISK names another.
+// rms3VAXDisk is the container, after BUILD.COM and RUN.COM on VMS:
+// testdata/mar/rms3/vax/rms3-vax.dsk.gz, unless the environment variable
+// RMS3_VAX_DISK names another.
 var rms3VAXDisk = func() string {
 	if p := os.Getenv("RMS3_VAX_DISK"); p != "" {
 		return p
 	}
 
-	return filepath.Join("..", "..", "testdata", "disks", "rms3-vax.dsk")
+	return filepath.Join("..", "..", "testdata", "mar", "rms3", "vax", "rms3-vax.dsk.gz")
 }()
 
 // rms3Probes are the probes, in RUN.COM's order.
 var rms3Probes = []string{"parse", "search", "open", "xab", "namfid", "create"}
 
-// copyFile copies a host file.
+// copyFile copies a host file, decompressing it when its name ends in
+// ".gz".
 func copyFile(t *testing.T, from, to string) {
 	t.Helper()
 
@@ -43,12 +45,25 @@ func copyFile(t *testing.T, from, to string) {
 
 	defer in.Close()
 
+	var src io.Reader = in
+
+	if strings.HasSuffix(from, ".gz") {
+		zr, err := gzip.NewReader(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		defer zr.Close()
+
+		src = zr
+	}
+
 	out, err := os.Create(to)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := io.Copy(out, in); err != nil {
+	if _, err := io.Copy(out, src); err != nil {
 		t.Fatal(err)
 	}
 
@@ -57,25 +72,27 @@ func copyFile(t *testing.T, from, to string) {
 	}
 }
 
-// vaxDevice is the device VMS ran the probes on, from the expanded string
-// of PARSE's first case: its name, without "_" or ":".
-func vaxDevice(t *testing.T, recs []probeRecord) string {
+// vaxDevice is the device VMS ran the probes on, and its node name, from
+// the device ID ("_SIMVAX$DUA1") of PARSE's first case.
+func vaxDevice(t *testing.T, recs []probeRecord) (device, node string) {
 	t.Helper()
 
 	for _, r := range recs {
-		if r.Tag == "ESA_" && r.Step == 1 {
-			dev, _, ok := bytes.Cut(r.Data, []byte(":"))
+		if r.Tag == "NAM_" && r.Step == 1 {
+			dvi := string(r.Data[0x15 : 0x15+int(r.Data[0x14])])
+
+			node, device, ok := strings.Cut(strings.TrimPrefix(dvi, "_"), "$")
 			if !ok {
-				t.Fatalf("PARSE case 1's expanded string %q has no device", r.Data)
+				t.Fatalf("PARSE case 1's device ID %q has no node name", dvi)
 			}
 
-			return strings.TrimPrefix(string(dev), "_")
+			return device, node
 		}
 	}
 
 	t.Fatal("PARSE has no case 1")
 
-	return ""
+	return "", ""
 }
 
 // readDump reads a probe's highest-version dump from the mounted volume.
@@ -93,7 +110,7 @@ func readDump(t *testing.T, c *Console, device, probe string) []probeRecord {
 // runOracleProbe runs probe under govax on a copy of the VAX container
 // mounted as device, as RUN.COM ran it, and returns VMS's records and
 // govax's.
-func runOracleProbe(t *testing.T, device, probe string) (vms, govax []probeRecord) {
+func runOracleProbe(t *testing.T, device, node, probe string) (vms, govax []probeRecord) {
 	t.Helper()
 
 	disk := filepath.Join(t.TempDir(), "rms3.dsk")
@@ -101,6 +118,7 @@ func runOracleProbe(t *testing.T, device, probe string) (vms, govax []probeRecor
 
 	c := newBootableConsole(t)
 	c.HostLibrary = t.TempDir()
+	c.RTL.NodeName = node
 
 	if err := c.Mounts.Mount(device, disk, true); err != nil {
 		t.Fatal(err)
@@ -149,6 +167,61 @@ func runOracleProbe(t *testing.T, device, probe string) (vms, govax []probeRecor
 	return vms, readDump(t, c, device, probe)
 }
 
+// maskRecord zeroes the bytes of r that differ between VMS and govax for
+// reasons outside RMS's definition (docs/PHASE-33.md, subtask 6):
+//
+//   - a FAB's IFI, an index into RMS's own table, and FAB$L_STV after a
+//     success, an I/O channel number (govax has no channels);
+//   - in the CREATE probe, the file IDs of the files it makes, which
+//     depend on the index file's history, and the creation and revision
+//     dates set from the clock as they're made and closed (case 107's
+//     revision date is the probe's own, and is compared);
+//   - in the SEARCH probe, what a search of a wildcard directory leaves in
+//     the NAM and resultant string buffer when it runs out (cases 3 and
+//     9): VMS's own search state, not a file;
+//   - in the XAB probe, the first of two XABDATs (DUP1), into which VMS
+//     writes the time as it rejects the second with RMS$_IMX.
+func maskRecord(probe string, r probeRecord) probeRecord {
+	d := append([]byte{}, r.Data...)
+	zero := func(from, to int) {
+		for i := from; i < to && i < len(d); i++ {
+			d[i] = 0
+		}
+	}
+
+	switch {
+	case r.Tag == "FAB_":
+		zero(2, 4)
+
+		if d[8]&1 == 1 {
+			zero(12, 16)
+		}
+
+	case probe == "create" && r.Tag == "NAM_":
+		zero(0x24, 0x2a)
+
+	case probe == "create" && (r.Tag == "CDAT" || r.Tag == "RDAT"):
+		zero(0x14, 0x1c)
+
+		if r.Step != 107 {
+			zero(0xc, 0x14)
+		}
+
+	case probe == "create" && r.Tag == "RRDT" && r.Step != 107:
+		zero(0xc, 0x14)
+
+	case probe == "search" && (r.Step == 312 || r.Step == 905) && (r.Tag == "NAM_" || r.Tag == "RSA_"):
+		zero(0, len(d))
+
+	case probe == "xab" && r.Tag == "DUP1":
+		zero(0, len(d))
+	}
+
+	r.Data = d
+
+	return r
+}
+
 // diffRecords lists where govax's records differ from VMS's.
 func diffRecords(vms, govax []probeRecord) []string {
 	var out []string
@@ -186,7 +259,7 @@ func diffRecords(vms, govax []probeRecord) []string {
 // container and compares what it wrote with what VMS wrote.
 func TestRMS3Oracle(t *testing.T) {
 	if _, err := os.Stat(rms3VAXDisk); err != nil {
-		t.Skip("no VAX run's container (testdata/disks/rms3-vax.dsk)")
+		t.Skip("no VAX run's container (" + rms3VAXDisk + ")")
 	}
 
 	// The device VMS ran on, from VMS's own PARSE dump.
@@ -198,11 +271,19 @@ func TestRMS3Oracle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	device := vaxDevice(t, readDump(t, c, "DUA9", "parse"))
+	device, node := vaxDevice(t, readDump(t, c, "DUA9", "parse"))
 
 	for _, probe := range rms3Probes {
 		t.Run(probe, func(t *testing.T) {
-			vms, govax := runOracleProbe(t, device, probe)
+			vms, govax := runOracleProbe(t, device, node, probe)
+
+			for i := range vms {
+				vms[i] = maskRecord(probe, vms[i])
+			}
+
+			for i := range govax {
+				govax[i] = maskRecord(probe, govax[i])
+			}
 
 			for _, d := range diffRecords(vms, govax) {
 				t.Error(d)

@@ -59,13 +59,11 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 		return fabStatus(ctx, fabAddr, failStatus, 0)
 	}
 
-	chain, failStatus, stv, err := ctx.xabChain(fabAddr)
+	// The XAB chain is checked once the name is processed: VMS writes
+	// the expanded string first (the oracle's XAB cases 5, 6, and 8).
+	chain, xabSts, xabSTV, err := ctx.xabChain(fabAddr)
 	if err != nil {
 		return 0, err
-	}
-
-	if failStatus != 0 {
-		return fabStatus(ctx, fabAddr, failStatus, stv)
 	}
 
 	fop, err := ctx.loadLongword(fabAddr + fabFOP)
@@ -76,19 +74,18 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 	// The spec's logical names are translated ("SYS$OUTPUT" becomes the
 	// console terminal) and the default device and directory applied.
 	// A search list creates the file in its first element, as RMS does.
+	// The NAM's outputs start clear; the expanded string and FNB are
+	// written even when the create then fails (the oracle's CREATE cases
+	// 3, 8, and 9).
+	if nam != 0 {
+		if err := ctx.clearNAMOutputs(nam); err != nil {
+			return 0, err
+		}
+	}
+
 	names, failStatus, err := ctx.expandFAB(fabAddr, nam)
 	if err != nil {
 		return 0, err
-	}
-
-	if failStatus == 0 && names[0].FNB&fnbWildcard != 0 {
-		failStatus = rmsWildcardError
-	}
-
-	if failStatus == 0 && nam != 0 {
-		if failStatus, err = ctx.checkESS(nam, names[0]); err != nil {
-			return 0, err
-		}
 	}
 
 	if failStatus != 0 {
@@ -96,6 +93,24 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	p := names[0]
+
+	if nam != 0 {
+		if failStatus, err = ctx.expandedOrESS(nam, p); err != nil || failStatus != 0 {
+			if err != nil {
+				return 0, err
+			}
+
+			return fabStatus(ctx, fabAddr, failStatus, 0)
+		}
+	}
+
+	if xabSts != 0 {
+		return fabStatus(ctx, fabAddr, xabSts, xabSTV)
+	}
+
+	if p.FNB&fnbWildcard != 0 {
+		return fabStatus(ctx, fabAddr, rmsWildcardError, 0)
+	}
 
 	var (
 		ifi     uint16
@@ -111,7 +126,7 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 		}
 
 		if failStatus != 0 {
-			return fabStatus(ctx, fabAddr, failStatus, 0)
+			return fabStatus(ctx, fabAddr, failStatus, stvFor(failStatus))
 		}
 
 		// A new file takes the XABs' attributes; then, new or opened by
@@ -124,14 +139,28 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 				return 0, err
 			}
 
-			if err := applyCreateXABs(h.File, in); err != nil {
+			alq, err := ctx.loadLongword(fabAddr + fabOffset("ALQ"))
+			if err != nil {
+				return 0, err
+			}
+
+			if in.HasAll {
+				alq = in.Alloc
+			}
+
+			if err := applyCreateXABs(h.File, in, alq); err != nil {
 				ctx.Files.Release(newIFI)
 
 				return fabStatus(ctx, fabAddr, rmsDeviceError, 0)
 			}
 		}
 
-		sts, err := ctx.reportOpened(fabAddr, nam, newIFI, found, chain, namOutputs{Expanded: true, Resultant: true})
+		mode := xabCreate
+		if opened {
+			mode = xabOpen
+		}
+
+		sts, err := ctx.reportOpened(fabAddr, nam, newIFI, found, chain, allOutputs, mode)
 		if err != nil {
 			return 0, err
 		}
@@ -148,8 +177,10 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
+	// RMS$_CREATED says FAB$V_CIF made a new file; an ordinary create
+	// is RMS$_NORMAL (the oracle's CREATE case 1).
 	status := uint32(rmsNormal)
-	if created {
+	if created && fop&fopCIF != 0 {
 		status = rmsCreated
 	}
 
@@ -175,6 +206,13 @@ func createOnVolume(ctx *Context, fabAddr uint32, p parsedName, cif bool) (ifi u
 	vol, ok := ctx.Mounts.Lookup(spec.Device)
 	if !ok {
 		return 0, found, false, rmsDeviceNotReady, nil
+	}
+
+	// The device's block size is the FAB's once the device is found,
+	// whether the create then succeeds or not (the oracle's CREATE cases
+	// 3 and 8).
+	if err := ctx.storeWord(fabAddr+fabOffset("BLS"), ondisk.BlockSize); err != nil {
+		return 0, found, false, 0, err
 	}
 
 	if !ctx.Mounts.Writable(spec.Device) {

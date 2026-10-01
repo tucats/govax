@@ -70,8 +70,9 @@ func validName(s string) bool {
 
 // scanName splits text into its fields. A field that isn't well formed
 // gives the RMS status for it instead: RMS$_DEV, RMS$_DIR, RMS$_FNM,
-// RMS$_TYP, RMS$_VER, or RMS$_SYN for text left over. Node names
-// (DECnet) aren't supported, and give RMS$_SYN.
+// RMS$_TYP, RMS$_VER, or RMS$_SYN. A version after a second "." must be
+// a number ("A.B.C" is RMS$_SYN, as VMS has it); one after ";" that isn't
+// is RMS$_VER. Node names (DECnet) aren't supported, and give RMS$_SYN.
 func scanName(text string) (fileName, uint32) {
 	s := strings.ToUpper(text)
 
@@ -135,6 +136,10 @@ func scanName(text string) (fileName, uint32) {
 	if s != "" {
 		v := s[1:]
 		if !validVersion(v) {
+			if s[0] == '.' {
+				return f, rmsSyntaxError
+			}
+
 			return f, rmsInvalidVersion
 		}
 
@@ -144,9 +149,10 @@ func scanName(text string) (fileName, uint32) {
 	return f, 0
 }
 
-// validVersion reports whether v (the text after ";") is a version RMS
-// accepts: none, "*", a number up to 32767, or a negative one (that many
-// versions below the highest).
+// validVersion reports whether v (the text after ";") is a version name
+// processing accepts: none, "*", a number, or a negative one (that many
+// versions below the highest). VMS's $PARSE takes ";32768" (the oracle's
+// PARSE case 24), so the bound here is a word's.
 func validVersion(v string) bool {
 	if v == "" || v == "*" {
 		return true
@@ -154,7 +160,7 @@ func validVersion(v string) bool {
 
 	n, err := strconv.Atoi(v)
 
-	return err == nil && n >= -32767 && n <= 32767 && v[0] != '+'
+	return err == nil && n >= -32767 && n <= 65535 && v[0] != '+'
 }
 
 // dirSpec is a directory's elements: names, "..." for an ellipsis, and,
@@ -226,22 +232,22 @@ func scanDir(body string) (dirSpec, bool) {
 		return d, false
 	}
 
-	// [000000] is the MFD itself, and [000000.X] is [X].
-	if len(d.Elems) > 0 && d.Elems[0] == "000000" && !d.Relative {
-		d.Elems = d.Elems[1:]
-	}
-
 	return d, true
 }
 
 // applyDir applies the relative directory rel to base, an absolute one.
-// It fails when "-" climbs above the MFD.
+// It fails when "-" climbs above the MFD. As VMS writes it, a directory
+// below the MFD reached this way keeps the MFD's name: [.SUB] on [000000]
+// is [000000.SUB] (the oracle's PARSE case 21).
 func applyDir(rel, base dirSpec) (dirSpec, bool) {
 	out := append([]string{}, base.Elems...)
+	if len(out) == 0 {
+		out = []string{"000000"}
+	}
 
 	for _, e := range rel.Elems {
 		if strings.Trim(e, "-") == "" {
-			if len(out) < len(e) {
+			if len(out) < len(e) || len(out) == len(e) && out[0] == "000000" {
 				return dirSpec{}, false
 			}
 
@@ -251,6 +257,10 @@ func applyDir(rel, base dirSpec) (dirSpec, bool) {
 		}
 
 		out = append(out, e)
+	}
+
+	if len(out) == 1 && out[0] == "000000" {
+		out = nil
 	}
 
 	return dirSpec{Elems: out}, true
@@ -284,12 +294,13 @@ func (d dirSpec) String() string {
 	return b.String()
 }
 
-// names returns d's elements without ellipses, for looking it up.
+// names returns d's elements without ellipses, for looking it up: the
+// MFD's own name, [000000.X]'s first element, isn't one.
 func (d dirSpec) names() []string {
 	var out []string
 
-	for _, e := range d.Elems {
-		if e != ellipsis {
+	for i, e := range d.Elems {
+		if e != ellipsis && (i > 0 || e != "000000") {
 			out = append(out, e)
 		}
 	}
@@ -340,7 +351,7 @@ type nameInputs struct {
 	// Related is the related file's resultant string, or "".
 	Related string
 
-	// OFP is FAB$V_OFP: the related file gives no device.
+	// OFP is FAB$V_OFP: the related file gives only the name and type.
 	OFP bool
 
 	// NoConceal is NAM$V_NOCONCEAL: show a concealed device's
@@ -491,7 +502,7 @@ func (ctx *Context) expandName(in nameInputs) ([]parsedName, uint32) {
 
 		related.Ver = ""
 		if in.OFP {
-			related.Dev = ""
+			related.Dev, related.Dir = "", ""
 		}
 	}
 
@@ -532,16 +543,36 @@ func (ctx *Context) expandName(in nameInputs) ([]parsedName, uint32) {
 		f := p.fileName
 		concealed := p.Concealed
 
-		if f, sts = mergeName(f, defs[0].fileName); sts != 0 {
-			return nil, sts
-		}
-
 		if concealed == "" && p.Dev == "" {
 			concealed = defs[0].Concealed
 		}
 
-		if f, sts = mergeName(f, related); sts != 0 {
-			return nil, sts
+		// The default name, then the related file, fill what the primary
+		// name left out. A directory from any of them that's relative is
+		// applied to the process default directory, not to a directory
+		// a later source gives (the oracle's PARSE cases 20 and 21).
+		dir := f.Dir
+		f.Dir = ""
+
+		for _, src := range []fileName{defs[0].fileName, related} {
+			if dir == "" {
+				dir = src.Dir
+			}
+
+			src.Dir = ""
+			f, _ = mergeName(f, src)
+		}
+
+		if dir != "" {
+			d, _ := scanDir(strings.Trim(dir, "[]"))
+			if d.Relative {
+				out, ok := applyDir(d, dirSpec{Elems: base.Dirs})
+				if !ok {
+					return nil, rmsDirError
+				}
+
+				dir = out.String()
+			}
 		}
 
 		// The process defaults: SYS$DISK (a search list gives one name
@@ -562,13 +593,18 @@ func (ctx *Context) expandName(in nameInputs) ([]parsedName, uint32) {
 
 		for _, disk := range disks {
 			g := f
+			g.Dir = dir
 
-			if g, sts = mergeName(g, disk.fileName); sts != 0 {
-				return nil, sts
+			if g.Dev == "" {
+				g.Dev = disk.Dev
 			}
 
-			if g, sts = mergeName(g, fileName{Dir: defaultDir}); sts != 0 {
-				return nil, sts
+			if g.Dir == "" {
+				g.Dir = disk.Dir
+			}
+
+			if g.Dir == "" {
+				g.Dir = defaultDir
 			}
 
 			c := concealed

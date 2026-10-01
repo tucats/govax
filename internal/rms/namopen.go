@@ -59,78 +59,57 @@ func (f foundFile) resultant() fileName {
 	}
 }
 
-// namOutputs says which strings a NAM gets: by FAB$V_NAM, $OPEN writes
-// the expanded string only when it had neither a DID nor a FID, and the
-// resultant string only when it had no FID.
+// namOutputs says what a NAM gets besides FID, DID, and DVI: the
+// expanded and resultant strings, and FNB. By FAB$V_NAM, $OPEN by file ID
+// writes none of them, and by directory ID only the resultant string (the
+// oracle's NAMFID probe).
 type namOutputs struct {
-	Expanded, Resultant bool
+	Expanded, Resultant, FNB bool
 }
 
-// checkESS reports RMS$_ESS when the NAM's expanded string buffer is
-// given but too small for p, before a service does anything.
-func (ctx *Context) checkESS(nam uint32, p parsedName) (uint32, error) {
-	ess, err := ctx.loadByte(nam + namESS)
-	if err != nil {
-		return 0, err
-	}
+// allOutputs is what an ordinary $OPEN or $CREATE writes.
+var allOutputs = namOutputs{Expanded: true, Resultant: true, FNB: true}
 
-	esa, err := ctx.loadLongword(nam + namESA)
-	if err != nil {
-		return 0, err
-	}
-
-	if esa != 0 && ess != 0 && len(p.String()) > int(ess) {
-		return rmsESSError, nil
-	}
-
-	return 0, nil
-}
-
-// fillNAM reports f in the NAM: the strings out asks for, the component
-// pointers (into the resultant string when RSS is nonzero, the expanded
-// string otherwise), FNB, FID, DID, and DVI, and the FAB's DEV and SDC.
-// It returns RMS$_RSS when the resultant string doesn't fit.
+// fillNAM reports f in the NAM: what out asks for, the component
+// pointers (into the last string written), FID, DID, and DVI. When the
+// resultant string doesn't fit it returns RMS$_RSS, having written FNB
+// and the strings as VMS does but no FID, DID, or DVI (the oracle's OPEN
+// case 10).
 func (ctx *Context) fillNAM(fab, nam uint32, f foundFile, out namOutputs) (uint32, error) {
-	ess, err := ctx.loadByte(nam + namESS)
-	if err != nil {
-		return 0, err
-	}
-
-	esa, err := ctx.loadLongword(nam + namESA)
-	if err != nil {
-		return 0, err
-	}
-
-	rss, err := ctx.loadByte(nam + namRSS)
-	if err != nil {
-		return 0, err
-	}
-
-	rsa, err := ctx.loadLongword(nam + namRSA)
-	if err != nil {
-		return 0, err
-	}
-
-	if out.Expanded && esa != 0 && ess != 0 {
-		text := f.Parsed.String()
-		if _, err := ctx.storeString(esa, ess, text); err != nil {
-			return 0, err
-		}
-
-		if err := ctx.storeByte(nam+namESL, byte(len(text))); err != nil {
-			return 0, err
-		}
-
-		if err := ctx.storeComponents(nam, esa, f.Parsed.fileName); err != nil {
+	if out.Expanded {
+		if err := ctx.storeExpanded(nam, f.Parsed); err != nil {
 			return 0, err
 		}
 	}
 
-	if out.Resultant && rsa != 0 && rss != 0 {
-		r := f.resultant()
-		text := r.Dev + r.Dir + r.Name + r.Type + r.Ver
+	if out.FNB {
+		fnb := f.Parsed.FNB
 
-		overflow, err := ctx.storeString(rsa, rss, text)
+		if f.HighVer {
+			fnb |= fnbHighVer
+		}
+
+		if f.LowVer {
+			fnb |= fnbLowVer
+		}
+
+		if err := ctx.storeLongword(nam+namFNB, fnb); err != nil {
+			return 0, err
+		}
+	}
+
+	if out.Resultant {
+		rss, err := ctx.loadByte(nam + namRSS)
+		if err != nil {
+			return 0, err
+		}
+
+		rsa, err := ctx.loadLongword(nam + namRSA)
+		if err != nil {
+			return 0, err
+		}
+
+		overflow, err := ctx.storeNameString(nam, rsa, rss, namRSL, f.resultant())
 		if err != nil {
 			return 0, err
 		}
@@ -138,28 +117,6 @@ func (ctx *Context) fillNAM(fab, nam uint32, f foundFile, out namOutputs) (uint3
 		if overflow {
 			return rmsRSSError, nil
 		}
-
-		if err := ctx.storeByte(nam+namRSL, byte(len(text))); err != nil {
-			return 0, err
-		}
-
-		if err := ctx.storeComponents(nam, rsa, r); err != nil {
-			return 0, err
-		}
-	}
-
-	fnb := f.Parsed.FNB
-
-	if f.HighVer {
-		fnb |= fnbHighVer
-	}
-
-	if f.LowVer {
-		fnb |= fnbLowVer
-	}
-
-	if err := ctx.storeLongword(nam+namFNB, fnb); err != nil {
-		return 0, err
 	}
 
 	if err := ctx.storeFid(nam+namFID, f.FID); err != nil {
@@ -170,15 +127,22 @@ func (ctx *Context) fillNAM(fab, nam uint32, f foundFile, out namOutputs) (uint3
 		return 0, err
 	}
 
-	if err := ctx.storeDVI(nam, deviceID(f.Device)); err != nil {
-		return 0, err
+	return 0, ctx.storeDVI(nam, ctx.deviceID(f.Device))
+}
+
+// stvFor is the STV value VMS reports with a failure to find or make a
+// file: the file system's SS$_ reason.
+func stvFor(sts uint32) uint32 {
+	switch sts {
+	case rmsFileNotFound, rmsDirNotFound:
+		return ssNoSuchFile
+	case rmsDeviceError, rmsDeviceNotReady:
+		return ssNoSuchDevice
+	case rmsFileExists:
+		return ssDuplicateFileName
 	}
 
-	if err := ctx.storeLongword(fab+fabDEV, diskDevChar); err != nil {
-		return 0, err
-	}
-
-	return 0, ctx.storeLongword(fab+fabSDC, diskDevChar)
+	return 0
 }
 
 // lookupVersion finds name's entry in dir for a version as written after
@@ -244,34 +208,6 @@ func versionsAround(dir *volume.Directory, name string, version uint16) (higher,
 	return higher, lower
 }
 
-// dirPath returns the path of the directory whose file ID is did, by its
-// back links, and whether it could be found.
-func dirPath(vol *volume.Volume, did ondisk.Fid) ([]string, bool) {
-	var path []string
-
-	for fid := did; !fid.Equal(ondisk.MasterFileDirectoryFid); {
-		if len(path) > maxDirDepth {
-			return nil, false
-		}
-
-		f, err := vol.OpenFID(fid)
-		if err != nil || !f.Header.IsDirectory() {
-			return nil, false
-		}
-
-		id, err := f.Header.Ident()
-		if err != nil {
-			return nil, false
-		}
-
-		name, _, _ := strings.Cut(strings.TrimSpace(id.Filename), ".")
-		path = append([]string{name}, path...)
-		fid = f.Header.Backlink
-	}
-
-	return path, true
-}
-
 // splitEntryName splits a directory entry's name into its name and type.
 func splitEntryName(s string) (string, string) {
 	name, typ, _ := strings.Cut(s, ".")
@@ -283,7 +219,7 @@ func splitEntryName(s string) (string, string) {
 // NAM (when there is one) gets the file, and the FAB and the XAB chain
 // get its attributes. The handle remembers the file for $DISPLAY. On
 // RMS$_RSS the file is closed again and the status returned.
-func (ctx *Context) reportOpened(fab, nam uint32, ifi uint16, found foundFile, chain []xabEntry, out namOutputs) (uint32, error) {
+func (ctx *Context) reportOpened(fab, nam uint32, ifi uint16, found foundFile, chain []xabEntry, out namOutputs, mode xabMode) (uint32, error) {
 	h, _ := ctx.Files.Lookup(ifi)
 	h.Found = &found
 
@@ -300,9 +236,15 @@ func (ctx *Context) reportOpened(fab, nam uint32, ifi uint16, found foundFile, c
 		}
 	}
 
+	for _, s := range []struct{ off, v uint32 }{{fabDEV, diskDevChar}, {fabSDC, diskDevChar}} {
+		if err := ctx.storeLongword(fab+s.off, s.v); err != nil {
+			return 0, err
+		}
+	}
+
 	if err := ctx.fillFABAttributes(fab, h.File); err != nil {
 		return 0, err
 	}
 
-	return 0, ctx.fillXABs(chain, h.File)
+	return 0, ctx.fillXABs(chain, h.File, mode)
 }

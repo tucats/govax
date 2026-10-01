@@ -42,10 +42,15 @@ layout.
 
    `BUILD.COM` runs once. `RUN.COM` empties `[OUT]` and `[CRE]` first, so
    it can be run again.
-3. Dismount the volume and copy the container back as
-   `testdata/disks/rms3-vax.dsk`. The tree, the dumps, and both logs are
-   on it; govax's test runs the probes against a copy of it, so the file
-   IDs, directory IDs, and dates are the ones VMS saw.
+3. Dismount the volume and copy the container back.
+
+The run's container is `vax/rms3-vax.dsk.gz` (gzipped; 2026-10-01, VMS 7.3
+on simh, node SIMVAX, device DUA1). It holds the tree, the dumps, both
+logs, and the probes VMS built; the author audited it. `TestRMS3Oracle`
+(`internal/console/rms3oracle_test.go`) runs each probe under govax on a
+copy of it, so the file IDs, directory IDs, and dates are the ones VMS
+saw, and compares the dumps byte for byte. The fields that differ for
+reasons outside RMS's definition are masked there, each with its reason.
 
 Nothing here makes a listing of a macro expansion: the probes are
 assembled with `/NOLIST`. The logs hold DCL's commands, `DIRECTORY`'s

@@ -217,17 +217,30 @@ var (
 
 	// rmsInvalidXABCode is RMS$_COD: a XAB whose type code isn't one.
 	rmsInvalidXABCode = vmsConst("RMS$_COD")
-	rmsRSSError       = vmsConst("RMS$_RSS")
 
-	// $SEARCH's: no more files match (RMS$_NMF), and a search with no
-	// expanded string to work from (RMS$_ESA).
+	// rmsInvalidXAB is RMS$_XAB: a XAB shorter than its type's length;
+	// rmsDuplicateXAB is RMS$_IMX: a second XAB of a type there can be
+	// only one of.
+	rmsInvalidXAB   = vmsConst("RMS$_XAB")
+	rmsDuplicateXAB = vmsConst("RMS$_IMX")
+	rmsRSSError     = vmsConst("RMS$_RSS")
+
+	// $SEARCH's: no more files match (RMS$_NMF), a search with no
+	// expanded string to work from (RMS$_ESL), and a WCC that names no
+	// context (RMS$_WCC).
 	rmsNoMoreFiles = vmsConst("RMS$_NMF")
-	rmsESAError    = vmsConst("RMS$_ESA")
+	rmsInvalidESL  = vmsConst("RMS$_ESL")
+	rmsInvalidWCC  = vmsConst("RMS$_WCC")
 
-	// SS$_ values name processing reports in STV: no such device, and no
-	// such directory or file.
+	// SS$_ values name processing reports in STV: no such device, no
+	// such directory or file, and no more files.
 	ssNoSuchDevice = ssConst("SS$_NOSUCHDEV")
 	ssNoSuchFile   = ssConst("SS$_NOSUCHFILE")
+	ssNoMoreFiles  = ssConst("SS$_NOMOREFILES")
+
+	// XABPRO's ACL status: an empty ACL ($OPEN), or success.
+	ssNormal   = ssConst("SS$_NORMAL")
+	ssACLEmpty = ssConst("SS$_ACLEMPTY")
 )
 
 // ssConst looks up name in internal/vmsdef.Symbols, VMS's $SSDEF

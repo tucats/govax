@@ -66,8 +66,10 @@ var (
 	xabSBN      = vmsConst("XAB$L_SBN")
 
 	// XABPRO.
-	xabPROw = vmsConst("XAB$W_PRO")
-	xabUIC  = vmsConst("XAB$L_UIC")
+	xabPROw   = vmsConst("XAB$W_PRO")
+	xabUIC    = vmsConst("XAB$L_UIC")
+	xabMTACC  = vmsConst("XAB$B_MTACC")
+	xabACLSTS = vmsConst("XAB$L_ACLSTS")
 
 	// XABALL.
 	xabALQ = vmsConst("XAB$L_ALQ")
@@ -91,9 +93,10 @@ type xabEntry struct {
 	Cod  byte
 }
 
-// xabChain walks the chain FAB$L_XAB starts, checking each block: an
-// unknown type is RMS$_COD and a block too short for its type RMS$_BLN,
-// each with the XAB's address as STV.
+// xabChain walks the chain FAB$L_XAB starts, checking each block, as VMS
+// 7.3 does (the oracle's XAB probe): an unknown type is RMS$_COD, a block
+// too short for its type RMS$_XAB, and a second XAB of a type there can
+// be only one of RMS$_IMX, each with the XAB's address as STV.
 func (ctx *Context) xabChain(fab uint32) ([]xabEntry, uint32, uint32, error) {
 	addr, err := ctx.loadLongword(fab + fabOffset("XAB"))
 	if err != nil {
@@ -101,6 +104,8 @@ func (ctx *Context) xabChain(fab uint32) ([]xabEntry, uint32, uint32, error) {
 	}
 
 	var chain []xabEntry
+
+	seen := map[byte]bool{}
 
 	for addr != 0 && len(chain) < maxXABs {
 		cod, err := ctx.loadByte(addr + xabCOD)
@@ -119,8 +124,15 @@ func (ctx *Context) xabChain(fab uint32) ([]xabEntry, uint32, uint32, error) {
 		}
 
 		if bln < min {
-			return nil, rmsInvalidBLN, addr, nil
+			return nil, rmsInvalidXAB, addr, nil
 		}
+
+		// XABALL and XABKEY come one per area or key.
+		if seen[cod] && cod != xabALL && cod != xabKEY {
+			return nil, rmsDuplicateXAB, addr, nil
+		}
+
+		seen[cod] = true
 
 		chain = append(chain, xabEntry{Addr: addr, Cod: cod})
 
@@ -153,8 +165,29 @@ func (ctx *Context) loadQuad(addr uint32) (vmstime.VMSTime, error) {
 	return vmstime.VMSTime(uint64(hi)<<32 | uint64(lo)), err
 }
 
-// fillXABs fills each output XAB of chain from f's header.
-func (ctx *Context) fillXABs(chain []xabEntry, f *volume.File) error {
+// xabMode is the service filling the XABs, which VMS fills a little
+// differently (the oracle's XAB and CREATE probes).
+type xabMode int
+
+const (
+	xabOpen xabMode = iota
+	xabDisplay
+	xabCreate
+)
+
+// mtaccDefault is XAB$B_MTACC as $OPEN reports it for a disk file: a
+// blank, the magnetic tape accessibility character no tape has set.
+const mtaccDefault = ' '
+
+// fillXABs fills each output XAB of chain from f's header. As VMS does:
+//
+//   - XABPRO's ACL status is SS$_ACLEMPTY from $OPEN and SS$_NORMAL from
+//     $DISPLAY; $CREATE sets only the status, leaving the protection and
+//     owner it was given;
+//   - XABFHC's version limit is 32767 for none from $OPEN, and the
+//     header's own value from $DISPLAY;
+//   - $CREATE leaves the XABALL it was given.
+func (ctx *Context) fillXABs(chain []xabEntry, f *volume.File, mode xabMode) error {
 	h := f.Header
 
 	id, err := h.Ident()
@@ -203,19 +236,35 @@ func (ctx *Context) fillXABs(chain []xabEntry, f *volume.File) error {
 				func() error { return ctx.storeWord(a+xabMRZ, ra.MaxRecordSize) },
 				func() error { return ctx.storeWord(a+xabDXQ, ra.DefaultExtend) },
 				func() error { return ctx.storeWord(a+xabGBC, ra.GlobalBufferCount) },
-				func() error { return ctx.storeWord(a+xabVERLIMIT, ra.VersionLimit) },
+				func() error { return ctx.storeWord(a+xabVERLIMIT, verLimit(ra.VersionLimit, mode)) },
 				func() error { return ctx.storeLongword(a+xabSBN, sbn) },
 			}
 
 		case xabPRO:
+			aclsts := ssNormal
+			if mode == xabOpen {
+				aclsts = ssACLEmpty
+			}
+
 			stores = []func() error{
-				func() error { return ctx.storeWord(a+xabPROw, h.FileProtection) },
-				func() error {
-					return ctx.storeLongword(a+xabUIC, uint32(h.Owner.Group)<<16|uint32(h.Owner.Member))
-				},
+				func() error { return ctx.storeLongword(a+xabACLSTS, aclsts) },
+			}
+
+			if mode != xabCreate {
+				stores = append(stores,
+					func() error { return ctx.storeWord(a+xabPROw, h.FileProtection) },
+					func() error { return ctx.storeByte(a+xabMTACC, mtaccDefault) },
+					func() error {
+						return ctx.storeLongword(a+xabUIC, uint32(h.Owner.Group)<<16|uint32(h.Owner.Member))
+					},
+				)
 			}
 
 		case xabALL:
+			if mode == xabCreate {
+				continue
+			}
+
 			aop := byte(0)
 			if h.FileCharacteristics&ondisk.FchContig != 0 {
 				aop = xabContiguous
@@ -245,8 +294,19 @@ func (ctx *Context) fillXABs(chain []xabEntry, f *volume.File) error {
 	return nil
 }
 
+// verLimit is XABFHC's version limit for a header's: $OPEN reports no
+// limit (0) as 32767.
+func verLimit(limit uint16, mode xabMode) uint16 {
+	if limit == 0 && mode == xabOpen {
+		return 32767
+	}
+
+	return limit
+}
+
 // fillFABAttributes writes the file's attributes into the FAB, as $OPEN
-// and $DISPLAY do: ALQ, DEQ, ORG, RFM, RAT, MRS, FSZ, BKS, and GBC.
+// and $DISPLAY do: ALQ, DEQ, ORG, RFM, RAT, MRS, FSZ, BKS, GBC, BLS (the
+// block size), and FOP's CTG and CBT for a contiguous file.
 func (ctx *Context) fillFABAttributes(fab uint32, f *volume.File) error {
 	ra := f.Header.RecordAttributes
 
@@ -260,6 +320,24 @@ func (ctx *Context) fillFABAttributes(fab uint32, f *volume.File) error {
 		func() error { return ctx.storeByte(fab+fabOffset("FSZ"), ra.VfcSize) },
 		func() error { return ctx.storeByte(fab+fabOffset("BKS"), ra.BucketSize) },
 		func() error { return ctx.storeWord(fab+fabOffset("GBC"), ra.GlobalBufferCount) },
+		func() error { return ctx.storeWord(fab+fabOffset("BLS"), ondisk.BlockSize) },
+		func() error {
+			fop, err := ctx.loadLongword(fab + fabFOP)
+			if err != nil {
+				return err
+			}
+
+			fop &^= fopCTG | fopCBT
+
+			switch {
+			case f.Header.FileCharacteristics&ondisk.FchContig != 0:
+				fop |= fopCTG
+			case f.Header.FileCharacteristics&ondisk.FchContigB != 0:
+				fop |= fopCBT
+			}
+
+			return ctx.storeLongword(fab+fabFOP, fop)
+		},
 	} {
 		if err := s(); err != nil {
 			return err
@@ -279,8 +357,9 @@ type xabInputs struct {
 	Protection uint16
 	Owner      ondisk.Uic
 
-	// Extend from the XABALL, when HasAll.
+	// Alloc and Extend from the XABALL, when HasAll.
 	HasAll bool
+	Alloc  uint32
 	Extend uint16
 
 	// RDT and RVN from a XABRDT ($CLOSE), when HasRDT.
@@ -328,6 +407,10 @@ func (ctx *Context) readXABInputs(chain []xabEntry) (xabInputs, error) {
 		case xabALL:
 			in.HasAll = true
 
+			if in.Alloc, err = ctx.loadLongword(a + xabALQ); err != nil {
+				return in, err
+			}
+
 			if in.Extend, err = ctx.loadWord(a + xabDEQ); err != nil {
 				return in, err
 			}
@@ -348,12 +431,32 @@ func (ctx *Context) readXABInputs(chain []xabEntry) (xabInputs, error) {
 	return in, nil
 }
 
-// applyCreateXABs writes $CREATE's XAB inputs into a new file's header:
-// the XABDAT's dates (a zero creation or revision date keeps the file
+// applyCreateXABs writes $CREATE's inputs into a new file's header: the
+// XABDAT's dates (a zero creation or revision date keeps the file
 // system's), the XABPRO's protection and owner (a zero owner keeps the
-// file system's), and the XABALL's extension quantity.
-func applyCreateXABs(f *volume.File, in xabInputs) error {
+// file system's), the XABALL's extension quantity, and alq blocks
+// allocated (the XABALL's quantity, or else the FAB's). As VMS has it, a
+// new file's revision number is 0 until it's first closed.
+func applyCreateXABs(f *volume.File, in xabInputs, alq uint32) error {
+	if alq > f.Blocks() {
+		bm, err := f.Device.Bitmap()
+		if err != nil {
+			return err
+		}
+
+		ib, err := f.Device.IndexBitmap()
+		if err != nil {
+			return err
+		}
+
+		if err := volume.Extend(f, bm, ib, alq-f.Blocks()); err != nil {
+			return err
+		}
+	}
+
 	return volume.UpdateHeader(f, func(h *ondisk.FileHeader, id *ondisk.Ident) {
+		id.Revision = 0
+
 		if in.Created != 0 {
 			id.CreationDate = in.Created
 		}
@@ -379,18 +482,27 @@ func applyCreateXABs(f *volume.File, in xabInputs) error {
 	})
 }
 
-// applyCloseXABs writes $CLOSE's XAB inputs into a file opened for
-// writing: the XABRDT's revision date and number (a zero date keeps the
-// header's), and the XABPRO's protection and owner.
-func applyCloseXABs(f *volume.File, in xabInputs) error {
-	if !in.HasRDT && !in.HasPro {
-		return nil
-	}
-
+// applyCloseXABs updates the header of a file opened for writing as it's
+// closed (the manual's XABRDT chapter, and the oracle's CREATE case 7). An
+// empty file's end of file is block 1, byte 0, as VMS has it. Then:
+// the revision date and number are the XABRDT's when it gives a date, and
+// otherwise now and one more than they were; a XABPRO gives the
+// protection and owner.
+func applyCloseXABs(f *volume.File, in xabInputs, now vmstime.VMSTime) error {
 	return volume.UpdateHeader(f, func(h *ondisk.FileHeader, id *ondisk.Ident) {
+		// An empty file ends at the start of its first block, as VMS
+		// writes it, not at block 0 (the oracle's CREATE case 7).
+		if h.RecordAttributes.EndOfFileBlock == 0 {
+			h.RecordAttributes.EndOfFileBlock = 1
+			h.RecordAttributes.FirstFreeByte = 0
+		}
+
 		if in.HasRDT && in.RDT != 0 {
 			id.RevisionDate = in.RDT
 			id.Revision = in.RVN
+		} else {
+			id.RevisionDate = now
+			id.Revision++
 		}
 
 		if in.HasPro {

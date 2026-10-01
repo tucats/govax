@@ -62,13 +62,11 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 		return fabStatus(ctx, fabAddr, failStatus, 0)
 	}
 
-	chain, failStatus, stv, err := ctx.xabChain(fabAddr)
+	// The XAB chain is checked once the name is processed: VMS writes
+	// the expanded string first (the oracle's XAB cases 5, 6, and 8).
+	chain, xabSts, xabSTV, err := ctx.xabChain(fabAddr)
 	if err != nil {
 		return 0, err
-	}
-
-	if failStatus != 0 {
-		return fabStatus(ctx, fabAddr, failStatus, stv)
 	}
 
 	fop, err := ctx.loadLongword(fabAddr + fabFOP)
@@ -79,28 +77,26 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 	// FAB$V_NAM: open by the NAM's file ID, or by its directory ID and
 	// the file name (namfid.go).
 	if nam != 0 && fop&fopNAM != 0 {
-		if sts, done, err := ctx.openByNAM(fabAddr, nam, fac, chain); done || err != nil {
+		if sts, done, err := ctx.openByNAM(fabAddr, nam, fac, chain, xabSts, xabSTV); done || err != nil {
 			return sts, err
+		}
+	}
+
+	// The NAM's outputs start clear.
+	if nam != 0 {
+		if err := ctx.clearNAMOutputs(nam); err != nil {
+			return 0, err
 		}
 	}
 
 	// See SysCreate for how the spec is translated and defaulted. A
 	// search list opens the first element's file that exists; if none
 	// does, the status for the last element tried is returned (User's
-	// Manual §11.7).
+	// Manual §11.7). Each element tried is the NAM's expanded string in
+	// turn.
 	names, failStatus, err := ctx.expandFAB(fabAddr, nam)
 	if err != nil {
 		return 0, err
-	}
-
-	if failStatus == 0 && names[0].FNB&fnbWildcard != 0 {
-		failStatus = rmsWildcardError
-	}
-
-	if failStatus == 0 && nam != 0 {
-		if failStatus, err = ctx.checkESS(nam, names[0]); err != nil {
-			return 0, err
-		}
 	}
 
 	if failStatus != 0 {
@@ -114,6 +110,24 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 	)
 
 	for _, p := range names {
+		if nam != 0 {
+			if failStatus, err = ctx.expandedOrESS(nam, p); err != nil || failStatus != 0 {
+				if err != nil {
+					return 0, err
+				}
+
+				return fabStatus(ctx, fabAddr, failStatus, 0)
+			}
+		}
+
+		if xabSts != 0 {
+			return fabStatus(ctx, fabAddr, xabSts, xabSTV)
+		}
+
+		if p.FNB&fnbWildcard != 0 {
+			return fabStatus(ctx, fabAddr, rmsWildcardError, 0)
+		}
+
 		if normalizeDeviceName(p.Lookup) == consoleDeviceName {
 			ifi, failStatus = ctx.Files.Alloc(&FileHandle{Console: ctx.Console}), 0
 
@@ -137,11 +151,11 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	if failStatus != 0 {
-		return fabStatus(ctx, fabAddr, failStatus, 0)
+		return fabStatus(ctx, fabAddr, failStatus, stvFor(failStatus))
 	}
 
 	if ok {
-		if sts, err := ctx.reportOpened(fabAddr, nam, ifi, found, chain, namOutputs{Expanded: true, Resultant: true}); err != nil || sts != 0 {
+		if sts, err := ctx.reportOpened(fabAddr, nam, ifi, found, chain, allOutputs, xabOpen); err != nil || sts != 0 {
 			if err != nil {
 				return 0, err
 			}

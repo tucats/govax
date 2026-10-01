@@ -186,3 +186,49 @@ commit, plus `build -i` when it changes behavior.
   names another. A dry run against a container govax made and ran itself
   matched exactly, except CREATE's new FIDs and creation dates, which are
   the variable data to mask.
+- 2026-10-01: Subtask 6, reconciled with the oracle. The author ran
+  `BUILD.COM` and `RUN.COM` on VMS 7.3 and audited the container (now
+  `testdata/mar/rms3/vax/rms3-vax.dsk.gz`, 55 KB). All six probes match
+  VMS byte for byte, except for masked fields. What VMS showed, and govax
+  now does:
+  - **`$PARSE`.** NAM$T_DVI is "_node$device", with no colon (the
+    console's node name, `GOVAX`, by default). FAB$L_DEV is ^X1CCD4108.
+    A relative directory applies to the process default directory, never
+    to the default name's or the related file's, and keeps the MFD's name
+    ("[.SUB]" on [000000] is [000000.SUB]). FAB$V_OFP takes only the name
+    and type from the related file; without it, its directory too. "A.B.C"
+    is RMS$_SYN, and ";32768" parses. A wildcard directory's DID is the
+    first directory searched. The outputs start clear, and an expanded
+    string that doesn't fit is written as far as it goes, with ESL = ESS.
+  - **`$SEARCH`.** A plain wildcard search keeps no context: WCC is the
+    position of the entry returned, and each search starts from the
+    expanded string. A wildcard directory or a search list keeps a
+    numbered context (WCC ^X1000n, from 2). At the end, WCC is ^X40000000,
+    the resultant string is the expanded string, and STV is
+    SS$_NOMOREFILES (or SS$_NOSUCHFILE with RMS$_FNF). A search list's
+    later elements rewrite the expanded string. ";-1" is the version below
+    the highest. No $PARSE first is RMS$_ESL.
+  - **`$OPEN` and `$CREATE`.** The expanded string and FNB are written
+    even on failure; a resultant string that doesn't fit is RMS$_RSS with
+    no file left open. FAB$W_BLS is 512, and FOP gets CTG for a contiguous
+    file. `$CREATE` returns RMS$_NORMAL (RMS$_CREATED only for CIF), STV
+    SS$_DUPFILENAME with RMS$_FEX, and allocates the XABALL's (or FAB's)
+    ALQ. A new file's revision is 0; closing a written file stamps the
+    revision date and adds one, unless a XABRDT gives them. An empty file
+    ends at block 1.
+  - **By name block.** With no DVI, FAB$V_NAM is ignored. Opened by FID,
+    the NAM's DID is cleared; by DID, the resultant string is the DVI and
+    the expanded directory (not the directory's real path).
+  - **XABs.** A short XAB is RMS$_XAB and a second of a kind RMS$_IMX
+    (STV its address), checked after the expanded string is written.
+    XABPRO's MTACC is a blank and its ACL status SS$_ACLEMPTY ($OPEN) or
+    SS$_NORMAL ($DISPLAY, $CREATE); `$CREATE` sets only that. XABFHC's
+    version limit is 32767 for none from `$OPEN`, the header's from
+    `$DISPLAY`.
+  - **ods2.** Its `filespec` read ";-1" as the highest version, walked
+    "[dir...]" breadth-first, and let a wildcard directory match the MFD's
+    own 000000.DIR. All three are fixed there (ods2 e7097f3).
+  - **Masked** (`maskRecord`): the FAB's IFI and success STV (a channel
+    number), new files' FIDs and clock dates, the state VMS leaves after
+    a wildcard directory's search, and the time VMS writes into the first
+    of two XABDATs as it rejects the second.

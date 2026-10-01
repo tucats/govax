@@ -57,7 +57,7 @@ func SysDisplay(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
-	if err := ctx.fillXABs(chain, h.File); err != nil {
+	if err := ctx.fillXABs(chain, h.File, xabDisplay); err != nil {
 		return 0, err
 	}
 
