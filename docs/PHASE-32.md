@@ -444,3 +444,23 @@ clean, and a commit. `build -i` follows each one that changes behavior.
   - **Not settled by the oracle**, in DEVIATIONS.md: the store order in a
     call with several keywords (one data point), DVI= with a register, and
     a one-element PRO=/UIC= list.
+- 2026-09-30: Subtask 7 done. The 28 service macros are in `starlet.mar`:
+  the 10 FAB services, the 16 RAB services, `$RENAME`, and `$WAIT`.
+  - **Forms.** With no arguments, each does `CALLG (AP),G^SYS$xxx`.
+    Otherwise it pushes SUC (if given) and ERR, or 0 before a given SUC,
+    as addresses, then the control block (PUSHL for a register, PUSHAL
+    otherwise), and does `CALLS #n`. `$RENAME` always pushes four:
+    NEWFAB, SUC or 0, ERR or 0, and OLDFAB. `$WAIT` takes only RAB.
+    These were all decoded from the probe's code.
+  - **Tests.**
+    - `services.mar`'s object is byte-identical to real MACRO's except
+      its EOM severity. Real MACRO reports an unrecognized statement
+      after `$RENAME`'s CALLG when it has no arguments, which govax
+      doesn't (DEVIATIONS.md).
+    - `rmscopy.mar` (`$RMSDEF`, `$FAB`, `$RAB`, `$OPEN`, `$CONNECT`,
+      `$CREATE`, `$GET`, `$PUT`, `$CLOSE`), assembled with govax's own
+      STARLET.MLB, gives Phase 28's real MACRO object exactly
+      (`TestMacroFixtureObjects`).
+    - `TestRMSCopy_govaxStarlet` assembles it with no VMS library, links
+      it, and runs it on a fresh volume, where it copies its source to
+      RMSCOPY.OUT record for record.

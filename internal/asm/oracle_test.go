@@ -36,7 +36,7 @@ var oracleProbes = []string{
 	"init_xabpro_opt", "init_xabrdt", "init_xabrdt_all", "init_xabsum",
 	"init_xabsum_all", "init_xabtrm", "init_xabtrm_all",
 	"store_xabdat", "store_xabfhc", "store_xabkey", "store_xabpro", "store_xabrdt",
-	"store_xabsum", "store_xabtrm",
+	"store_xabsum", "store_xabtrm", "services",
 }
 
 // TestOracleObjects assembles each oracle probe with govax's own
@@ -62,7 +62,22 @@ func TestOracleObjects(t *testing.T) {
 				t.Fatalf("assemble: %v", err)
 			}
 
-			requireSameObject(t, a, readObjectFile(t, real[0]))
+			want := readObjectFile(t, real[0])
+
+			// Real MACRO's $RENAME, called with no arguments, emits its
+			// CALLG and then reports an unrecognized statement
+			// (testdata/mar/rms/vax/RMS.LOG, at location 0A7F of
+			// services.mar), so its object's severity is ERROR. govax's
+			// $RENAME doesn't (docs/DEVIATIONS.md); the code is the same.
+			if name == "services" {
+				for _, rec := range want.Records {
+					if eom, ok := rec.(*obj.EOM); ok {
+						eom.Severity = obj.SeveritySuccess
+					}
+				}
+			}
+
+			requireSameObject(t, a, want)
 		})
 	}
 }

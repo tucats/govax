@@ -2277,6 +2277,20 @@ widened."
     addresses.
 - **Status**: deferred. A future oracle run can settle each one.
 
+### [Phase 32] `$RENAME` with no arguments is an error in real MACRO
+
+- **Where**: `internal/bootdata/files/starlet.mar`'s `$RENAME`, against the
+  Phase 32 oracle's `services.mar` (testdata/mar/rms/vax/RMS.LOG).
+- **What**: called with no arguments, real MACRO's `$RENAME` emits
+  `CALLG (AP),G^SYS$RENAME`, as the manual says a service macro does, and
+  then reports `%MACRO-E-UNRECSTMT, Unrecognized statement` at the
+  location after it. Its object is otherwise the same as with any other
+  service, but its severity is ERROR. govax's `$RENAME` emits the CALLG
+  and nothing else, as every other service macro does.
+- **Status**: kept, deliberately: the manual documents the call as valid,
+  and a program using it gets the same code. `TestOracleObjects` treats the
+  services probe's object severity as SUCCESS for this.
+
 <!--
 Entry template:
 
