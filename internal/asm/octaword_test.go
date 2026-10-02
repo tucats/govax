@@ -40,7 +40,9 @@ func TestOcta(t *testing.T) {
 }
 
 // TestOctawordImmediates checks MOVO's immediate operand: a short literal
-// when the value is 0-63, otherwise 0x8F (immediate mode) and 16 bytes.
+// when the value is 0-63, otherwise 0x8F (immediate mode) and 16 bytes:
+// a single unsigned number at full width, and any other value a 32-bit
+// expression, zero-extended.
 func TestOctawordImmediates(t *testing.T) {
 	movo := []byte{0xFD, 0x7D} // MOVO is a two-byte opcode
 	r0 := []byte{0x50}
@@ -51,12 +53,14 @@ func TestOctawordImmediates(t *testing.T) {
 	}{
 		{"short literal", "MOVO #5,R0", cat(movo, []byte{0x05}, r0)},
 		{"longword value", "MOVO #1000,R0", cat(movo, []byte{0x8F, 0xE8, 0x03}, zeros(14), r0)},
-		{"negative", "MOVO #-1,R0", cat(movo, []byte{0x8F}, ones(16), r0)},
+		// A negative value is a 32-bit expression, zero-extended, as VAX
+		// MACRO assembled the Phase 35 probe's MOVO #-1.
+		{"negative", "MOVO #-1,R0", cat(movo, []byte{0x8F}, ones(4), zeros(12), r0)},
 		{"full width", "MOVO #^X1000000000000000000000005,R0",
 			cat(movo, []byte{0x8F, 0x05}, zeros(11), []byte{0x01}, zeros(3), r0)},
 		{"wider than 64 bits isn't a short literal", "MOVO #^X10000000000000005,R0",
 			cat(movo, []byte{0x8F, 0x05}, zeros(7), []byte{0x01}, zeros(7), r0)},
-		{"expression sign-extended", "MOVO #<0-2>,R0", cat(movo, []byte{0x8F, 0xFE}, ones(15), r0)},
+		{"expression zero-extended", "MOVO #<0-2>,R0", cat(movo, []byte{0x8F, 0xFE}, ones(3), zeros(12), r0)},
 		{"forward symbol", "MOVO #V,R0\nV=-3", cat(movo, []byte{0x8F, 0xFD, 0xFF, 0xFF, 0xFF}, zeros(12), r0)},
 		{"CLRH is CLRO", "CLRH R0", []byte{0xFD, 0x7C, 0x50}},
 		{"PUSHAO of an immediate", "PUSHAO I^#5", cat([]byte{0xFD, 0x7F, 0x8F, 0x05}, zeros(15))},

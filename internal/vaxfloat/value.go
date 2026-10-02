@@ -90,6 +90,19 @@ func (v Value) Float64() float64 {
 	return f
 }
 
+// Decimal returns v in plain decimal notation (never an exponent), with
+// the fewest digits that identify v among the values of the format it was
+// unpacked from or rounded to: Parse of the result, rounded to that format,
+// gives v back. For a disassembler, whose text must reassemble to the
+// same bits.
+func (v Value) Decimal() string {
+	if v.x == nil {
+		return "0"
+	}
+
+	return v.x.Text('f', -1)
+}
+
 // String returns v in decimal, with enough digits to show an H value.
 func (v Value) String() string { return v.float().Text('g', 36) }
 

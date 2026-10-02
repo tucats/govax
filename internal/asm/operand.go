@@ -1,6 +1,8 @@
 package asm
 
 import (
+	"errors"
+
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vaxfloat"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -88,8 +90,13 @@ func (a *Assembler) assembleOperand(c *cursor, inst *cpu.Instruction, opIndex in
 // its own index prefix.
 func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex int, parsingIndex bool) error {
 	access := inst.Access[opIndex]
-	dtype := inst.Type
 	scale := inst.Scale[opIndex]
+
+	// A literal on a floating operand is a floating value, in that
+	// operand's format; on any other operand it's an integer. Each operand
+	// has its own type: CVTLF's source is an integer, EMODF's extension
+	// byte too.
+	isFloat := inst.DataType[opIndex].IsFloat()
 
 	// The operand syntax for indexed mode is "BASE[Rx]": the index appears
 	// textually after the base, but its addressing-mode byte must be
@@ -222,7 +229,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	var (
 		litValue      uint32  // the short-literal value/table-index (int or float)
 		litWide       octa    // an integer literal's value at full width
-		litFloat      float64 // the parsed float, valid when dtype is float
+		litFloat      vaxfloat.Value // the parsed float, valid when isFloat
 		litWasForward bool
 	)
 
@@ -230,7 +237,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		loc := a.pc()
 		fx := addrFixup(scale)
 
-		if dtype == cpu.ShortLiteralInt {
+		if !isFloat {
 			v, wasForward, err := a.immediateValue(c, loc, fx, scale)
 			if err != nil {
 				return err
@@ -250,8 +257,8 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 			litFloat = f
 
-			if idx, ok := cpu.FindShortFloat(f); ok {
-				litValue = uint32(idx)
+			if lit, ok := vaxfloat.FindShortLiteral(f); ok {
+				litValue = uint32(lit)
 			} else {
 				litValue = 0xFFFFFFFF
 			}
@@ -290,7 +297,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				return vmserrors.New(vmserrors.VAX_BADSHORTLIT)
 			}
 
-			if dtype == cpu.ShortLiteralInt {
+			if !isFloat {
 				// An expression like any other literal; the reference
 				// tool read only hex digits here, whatever the radix.
 				v, err := a.exprNoForward(c)
@@ -309,12 +316,12 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 					return err
 				}
 
-				idx, ok := cpu.FindShortFloat(f)
+				lit, ok := vaxfloat.FindShortLiteral(f)
 				if !ok {
 					return vmserrors.New(vmserrors.VAX_BADSHORTFLOAT)
 				}
 
-				litValue = uint32(idx)
+				litValue = uint32(lit)
 			}
 		}
 
@@ -456,7 +463,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			return err
 		}
 
-		if dtype == cpu.ShortLiteralFloat {
+		if isFloat {
 			if constant != litImmediate {
 				f, err := a.parseFloat(c)
 				if err != nil {
@@ -466,7 +473,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				litFloat = f
 			}
 
-			return a.storeImmediateFloat(scale, litFloat)
+			return a.storeImmediateFloat(floatFormat(inst.DataType[opIndex]), litFloat)
 		}
 
 		if constant != litImmediate {
@@ -620,29 +627,34 @@ func modeAllowed(mode string, inst *cpu.Instruction, opIndex int, indexed bool) 
 
 // immediateValue reads a literal's integer value for an operand of scale
 // bytes. A quadword's or octaword's literal is read at full width when
-// it's a single number, as .QUAD and .OCTA read one, and otherwise
-// evaluated in 32 bits and sign-extended, as MACRO-32 does. A forward
-// reference is reported as deferred; its fixup patches the low longword,
-// and its high bits are zero.
+// it's a single unsigned number, as .QUAD and .OCTA read one. Anything
+// else, a negative number included, is an expression evaluated in 32 bits
+// and zero-extended: VAX MACRO assembled the Phase 35 probe's MOVO #-1 as
+// ^XFFFFFFFF followed by zeros (testdata/insn35), and the MACRO manual's
+// .QUAD example calls a symbol's value "32-bit, zero-extended". (Phase 28
+// sign-extended it, by analogy with a longword; see docs/DEVIATIONS.md.)
+// A forward reference is reported as deferred; its fixup patches the low
+// longword, and its high bits are zero.
 func (a *Assembler) immediateValue(c *cursor, loc uint32, fx fixupKind, scale int) (octa, bool, error) {
 	if scale >= 8 {
-		if v, ok := a.wideLiteral(c); ok {
-			return v, false, nil
+		save := c.pos
+		c.skipBlanks()
+		negative := c.peek() == '-'
+		c.pos = save
+
+		if !negative {
+			if v, ok := a.wideLiteral(c); ok {
+				return v, false, nil
+			}
 		}
 	}
 
 	v, deferred, err := a.exprValue(c, loc, fx)
-
-	switch {
-	case err != nil:
+	if err != nil {
 		return octa{}, false, err
-	case deferred, scale < 8:
-		// A value not known yet, or one for a byte, word, or longword
-		// operand: only the low longword is ever stored.
-		return octa{lo: uint64(v)}, deferred, nil
 	}
 
-	return signExtendOcta(v), false, nil
+	return octa{lo: uint64(v)}, deferred, nil
 }
 
 // storeImmediateInt writes an I^# immediate literal's integer data: 1, 2,
@@ -665,44 +677,43 @@ func (a *Assembler) storeImmediateInt(scale int, value octa) error {
 	}
 }
 
-// storeImmediateFloat writes an I^# immediate literal's F_FLOAT (scale 4)
-// or D_FLOAT (scale 8) data.
+// storeImmediateFloat writes value in format f (4, 8, or 16 bytes): an
+// I^# immediate's data, or one item of .F_FLOATING, .D_FLOATING,
+// .G_FLOATING, or .H_FLOATING. A value too large for the format is
+// VAX_FLOATRANGE; one too small is stored as zero.
 //
-// asm_operand.c's own D_FLOAT case advances the deposit pointer by 4 mid-
-// branch (after writing the first longword) and *again* by the full scale
-// (8) in the shared code path every branch falls through to, over-
-// advancing by 4 bytes — a plain arithmetic double-count, not an ISA
-// fidelity question (VAX D_FLOAT is unambiguously 8 bytes), and not one
-// any testdata/asm fixture exercises (none use an 8-byte float immediate
-// literal). Per docs/CLAUDE.md's bug-fixing policy this is fixed here
-// rather than replicated: write exactly 8 bytes and advance by 8.
-func (a *Assembler) storeImmediateFloat(scale int, f float64) error {
-	bits, overflow := cpu.EncodeFloat(sizeFormat(scale), f)
-	if overflow {
+// asm_operand.c's own D_FLOAT case advanced the deposit pointer by 4 mid-
+// branch and again by the full 8 afterward, over-advancing by 4 bytes; that
+// isn't replicated: exactly the format's size is written and advanced.
+func (a *Assembler) storeImmediateFloat(f vaxfloat.Format, value vaxfloat.Value) error {
+	bits, err := vaxfloat.Pack(f, value)
+	if errors.Is(err, vaxfloat.ErrOverflow) {
 		return vmserrors.New(vmserrors.VAX_FLOATRANGE)
 	}
 
-	if err := a.cur.img.storeLongword(a.pc(), uint32(bits.Lo)); err != nil {
-		return err
-	}
+	longwords := []uint32{uint32(bits.Lo), uint32(bits.Lo >> 32), uint32(bits.Hi), uint32(bits.Hi >> 32)}
 
-	if scale == 8 {
-		if err := a.cur.img.storeLongword(a.pc()+4, uint32(bits.Lo>>32)); err != nil {
+	for _, l := range longwords[:f.Size()/4] {
+		if err := a.cur.img.storeLongword(a.pc(), l); err != nil {
 			return err
 		}
-	}
 
-	a.advanceData(uint32(scale))
+		a.advanceData(4)
+	}
 
 	return nil
 }
 
-// sizeFormat returns the floating format the assembler takes a floating
-// operand of size bytes to be: F_floating for 4, D_floating for 8. (G and
-// H operands come with their own formats in later Phase 35 subtasks.)
-func sizeFormat(size int) vaxfloat.Format {
-	if size == 8 {
+// floatFormat returns the floating format of data type t, which must be
+// one of the four floating types.
+func floatFormat(t cpu.DataType) vaxfloat.Format {
+	switch t {
+	case cpu.DataDFloating:
 		return vaxfloat.D
+	case cpu.DataGFloating:
+		return vaxfloat.G
+	case cpu.DataHFloating:
+		return vaxfloat.H
 	}
 
 	return vaxfloat.F

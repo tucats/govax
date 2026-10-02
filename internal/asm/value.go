@@ -1,18 +1,18 @@
 package asm
 
 import (
-	"strconv"
 	"strings"
 
+	"github.com/tucats/govax/internal/vaxfloat"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // parseFloat reads a floating-point literal (digits, '.', a leading sign,
 // and an exponent marker), matching asm_float()'s greedy character-class
 // scan: it doesn't validate the shape of what it collects, just hands the
-// substring to the native float parser the way asm_float hands its buffer
-// to atof().
-func (a *Assembler) parseFloat(c *cursor) (float64, error) {
+// substring to the decimal parser the way asm_float hands its buffer to
+// atof(). The value is exact until a caller rounds it to a format.
+func (a *Assembler) parseFloat(c *cursor) (vaxfloat.Value, error) {
 	start := c.pos
 
 	for {
@@ -28,12 +28,15 @@ func (a *Assembler) parseFloat(c *cursor) (float64, error) {
 
 	s := c.s[start:c.pos]
 	if s == "" {
-		return 0, vmserrors.New(vmserrors.VAX_BADFLOAT, s)
+		return vaxfloat.Value{}, vmserrors.New(vmserrors.VAX_BADFLOAT, s)
 	}
 
-	v, err := strconv.ParseFloat(s, 64)
+	// Read exactly (to far more bits than any format holds), so each
+	// format rounds the decimal number itself once, as VAX MACRO does;
+	// going through a float64 first rounded D, G, and H values twice.
+	v, err := vaxfloat.Parse(s)
 	if err != nil {
-		return 0, vmserrors.New(vmserrors.VAX_BADFLOAT, s)
+		return vaxfloat.Value{}, vmserrors.New(vmserrors.VAX_BADFLOAT, s)
 	}
 
 	return v, nil

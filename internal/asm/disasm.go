@@ -2,7 +2,6 @@ package asm
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/tucats/govax/internal/cpu"
@@ -102,7 +101,7 @@ func Disassemble(r ByteReader, pc uint32) (Decoded, error) {
 	dec := Decoded{Mnemonic: inst.Name}
 
 	for i := 0; i < inst.OperandCount; i++ {
-		text, value, err := formatOperand(r, &pc, inst.Access[i], inst.Scale[i], inst.Type, false)
+		text, value, err := formatOperand(r, &pc, inst.Access[i], inst.Scale[i], inst.DataType[i], false)
 		if err != nil {
 			return Decoded{}, err
 		}
@@ -206,20 +205,12 @@ func formatWideHex(r ByteReader, addr uint32, size int) string {
 	return b.String()
 }
 
-// formatFloatValue renders f in plain decimal (never exponent) notation, so
-// it round-trips through this package's own parseFloat (which only accepts
-// digits, '.', a sign, and 'E' — Go's %g form can emit a bare exponent with
-// no 'E' for some values, which parseFloat wouldn't recognize).
-func formatFloatValue(f float64) string {
-	return strconv.FormatFloat(f, 'f', -1, 64)
-}
-
 // formatOperand formats one operand at *pc, advancing it past whatever it
 // reads — matching disasm_operand.c. indexed is true only for the
 // recursive call formatting Indexed mode's own base operand, to reject
 // Indexed mode nested inside itself the same way internal/cpu's
 // decodeOperand does.
-func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, litType cpu.ShortLiteralType, indexed bool) (string, uint32, error) {
+func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, dtype cpu.DataType, indexed bool) (string, uint32, error) {
 	switch access {
 	case cpu.AccessImmediate:
 		v := loadSized(r, *pc, size)
@@ -243,8 +234,8 @@ func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, li
 
 	switch {
 	case mode < 4:
-		if litType == cpu.ShortLiteralFloat {
-			return "S^#" + formatFloatValue(cpu.ShortFloat(int(optype))), uint32(optype), nil
+		if dtype.IsFloat() {
+			return "S^#" + vaxfloat.ShortLiteral(optype).Decimal(), uint32(optype), nil
 		}
 
 		// A short literal (0-63) is shown in decimal, as MACRO-32 writes it.
@@ -254,10 +245,10 @@ func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, li
 		return regNames[reg], uint32(reg), nil
 
 	case mode >= 8 && reg == 0x0F:
-		return formatPCRelative(r, pc, mode, size, litType)
+		return formatPCRelative(r, pc, mode, size, dtype)
 
 	default:
-		return formatGeneral(r, pc, mode, reg, access, size, litType, indexed)
+		return formatGeneral(r, pc, mode, reg, access, size, dtype, indexed)
 	}
 }
 
@@ -277,23 +268,30 @@ func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, li
 // a valid absolute address, so this is treated as a fixable disassembler
 // issue rather than reference behavior worth replicating — see
 // docs/PHASE-11.md.
-func formatPCRelative(r ByteReader, pc *uint32, mode byte, size int, litType cpu.ShortLiteralType) (string, uint32, error) {
+func formatPCRelative(r ByteReader, pc *uint32, mode byte, size int, dtype cpu.DataType) (string, uint32, error) {
 	switch mode {
 	case 0x08: // Immediate: I^#n
-		if litType == cpu.ShortLiteralFloat && (size == 4 || size == 8) {
-			var bits uint64
+		if dtype.IsFloat() {
+			// A floating immediate, in its own format, with the fewest
+			// digits that reassemble to the same bits. (A reserved
+			// operand or a "dirty zero" has no decimal form, and shows
+			// as 0.)
+			var bits vaxfloat.Bits
 
-			if size == 4 {
-				bits = uint64(loadSized(r, *pc, 4))
-			} else {
-				lo := uint64(loadSized(r, *pc, 4))
-				hi := uint64(loadSized(r, *pc+4, 4))
-				bits = lo | hi<<32
+			bits.Lo = uint64(loadSized(r, *pc, 4))
+			if size >= 8 {
+				bits.Lo |= uint64(loadSized(r, *pc+4, 4)) << 32
+			}
+
+			if size == 16 {
+				bits.Hi = uint64(loadSized(r, *pc+8, 4)) | uint64(loadSized(r, *pc+12, 4))<<32
 			}
 
 			*pc += uint32(size)
 
-			return "I^#" + formatFloatValue(cpu.DecodeFloat(sizeFormat(size), vaxfloat.Bits{Lo: bits})), 0, nil
+			v, _ := vaxfloat.Unpack(floatFormat(dtype), bits)
+
+			return "I^#" + v.Decimal(), 0, nil
 		}
 
 		if size >= 8 {
@@ -353,7 +351,7 @@ func formatPCRelTarget(pc uint32, disp int32, prefix string, deferred bool) stri
 // formatGeneral formats the general-register addressing modes: Indexed,
 // Register deferred, Autodecrement, Autoincrement [deferred], and Byte/
 // Word/Long displacement (direct and deferred).
-func formatGeneral(r ByteReader, pc *uint32, mode, reg byte, access cpu.AccessKind, size int, litType cpu.ShortLiteralType, indexed bool) (string, uint32, error) {
+func formatGeneral(r ByteReader, pc *uint32, mode, reg byte, access cpu.AccessKind, size int, dtype cpu.DataType, indexed bool) (string, uint32, error) {
 	rn := regNames[reg]
 
 	switch mode {
@@ -362,7 +360,7 @@ func formatGeneral(r ByteReader, pc *uint32, mode, reg byte, access cpu.AccessKi
 			return "", 0, vmserrors.New(vmserrors.VAX_INDEXNEST)
 		}
 
-		base, value, err := formatOperand(r, pc, access, size, litType, true)
+		base, value, err := formatOperand(r, pc, access, size, dtype, true)
 		if err != nil {
 			return "", 0, err
 		}

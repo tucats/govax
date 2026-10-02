@@ -13,6 +13,15 @@ func init() {
 	reg(0x70, emulMoveFloat)   // MOVD
 	reg(0x52, emulNegateFloat) // MNEGF
 	reg(0x72, emulNegateFloat) // MNEGD
+
+	regFD(0x50, emulMoveFloat)   // MOVG
+	regFD(0x52, emulNegateFloat) // MNEGG
+}
+
+// regFD registers handler h for the two-byte opcode FD fn: the G and H
+// floating instructions and the other FD-prefixed ones.
+func regFD(fn byte, h Handler) {
+	instructionTable.SetHandler(instructionTable.Lookup(Opcode{Extended: 0xFD, Function: fn}), h)
 }
 
 // emulMoveFloat is MOVx: dst <- src. N and Z from the value, V cleared, C

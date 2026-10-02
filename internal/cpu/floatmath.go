@@ -34,6 +34,16 @@ func init() {
 	for _, fn := range []byte{0x46, 0x47, 0x66, 0x67} { // DIVF2/3, DIVD2/3
 		reg(Opcode{Function: fn}, floatArithmetic(vaxfloat.Div))
 	}
+
+	// G_floating: the same opcodes after the FD prefix.
+	for fn, op := range map[byte]floatOp{
+		0x40: vaxfloat.Add, 0x41: vaxfloat.Add, // ADDG2/3
+		0x42: vaxfloat.Sub, 0x43: vaxfloat.Sub, // SUBG2/3
+		0x44: vaxfloat.Mul, 0x45: vaxfloat.Mul, // MULG2/3
+		0x46: vaxfloat.Div, 0x47: vaxfloat.Div, // DIVG2/3
+	} {
+		reg(Opcode{Extended: 0xFD, Function: fn}, floatArithmetic(op))
+	}
 }
 
 // floatOp is one of the floating core's rounded operations.

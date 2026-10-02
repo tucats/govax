@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vaxfloat"
 )
 
 // shortFloatLit returns the short-literal addressing-mode byte for value,
@@ -14,8 +15,8 @@ import (
 func shortFloatLit(t *testing.T, value float64) byte {
 	t.Helper()
 
-	if i, ok := FindShortFloat(value); ok {
-		return byte(i)
+	if lit, ok := vaxfloat.FindShortLiteral(vaxfloat.FromFloat64(value)); ok {
+		return lit
 	}
 
 	t.Fatalf("shortFloatLit(%v): not exactly representable as a VAX float short literal", value)

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/vmsdef"
+	"github.com/tucats/govax/internal/vaxfloat"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -580,12 +581,11 @@ func (a *Assembler) pseudoMask(c *cursor) error {
 	return nil
 }
 
-// pseudoFloat assembles .F_FLOAT/.D_FLOAT: a comma-separated list of
-// floating constants, each stored in VAX F_floating (size 4) or D_floating
-// (size 8) form — matching case 16-17 (see storeImmediateFloat's doc
-// comment for the one deliberate deviation, an over-advance bug in the
-// D_FLOAT case that isn't replicated).
-func (a *Assembler) pseudoFloat(c *cursor, size int) error {
+// pseudoFloat assembles .F_FLOATING, .D_FLOATING, .G_FLOATING, and
+// .H_FLOATING (and the console's .F_FLOAT/.D_FLOAT): a comma-separated
+// list of floating constants, each stored in format f, rounded once from
+// its decimal value as VAX MACRO rounds it.
+func (a *Assembler) pseudoFloat(c *cursor, f vaxfloat.Format) error {
 	first := true
 
 	for {
@@ -601,12 +601,12 @@ func (a *Assembler) pseudoFloat(c *cursor, size int) error {
 			return err
 		}
 
-		f, err := a.parseFloat(c)
+		v, err := a.parseFloat(c)
 		if err != nil {
 			return err
 		}
 
-		if err := a.storeImmediateFloat(size, f); err != nil {
+		if err := a.storeImmediateFloat(f, v); err != nil {
 			return err
 		}
 	}

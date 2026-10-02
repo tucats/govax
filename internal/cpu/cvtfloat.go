@@ -38,6 +38,20 @@ func init() {
 
 	reg(0x56, emulCvtFloatToFloat) // CVTFD
 	reg(0x76, emulCvtFloatToFloat) // CVTDF
+
+	// G_floating.
+	for _, fn := range []byte{0x48, 0x49, 0x4A} { // CVTGB/W/L
+		regFD(fn, emulCvtFloatToInt)
+	}
+
+	regFD(0x4B, emulCvtRoundFloatToInt) // CVTRGL
+
+	for _, fn := range []byte{0x4C, 0x4D, 0x4E} { // CVTBG/WG/LG
+		regFD(fn, emulCvtIntToFloat)
+	}
+
+	regFD(0x33, emulCvtFloatToFloat) // CVTGF
+	regFD(0x99, emulCvtFloatToFloat) // CVTFG
 }
 
 // cvtFloatToInt is CVTxB/W/L and CVTRxL's shared body.
@@ -112,8 +126,9 @@ func emulCvtIntToFloat(e *Engine, d *Decoded) error {
 }
 
 // emulCvtFloatToFloat is a conversion between floating formats: CVTFD
-// (exact), CVTDF (rounded, and can overflow when a value just under 2^127
-// rounds up), and in later subtasks the G and H conversions.
+// and CVTFG (exact), CVTDF (rounded, and can overflow when a value just
+// under 2^127 rounds up), and CVTGF (rounded, and can overflow or
+// underflow: G's exponent range is wider than F's).
 func emulCvtFloatToFloat(e *Engine, d *Decoded) error {
 	value, err := e.loadFloat(d, 0)
 	if err != nil {

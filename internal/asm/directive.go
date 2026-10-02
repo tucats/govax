@@ -1,6 +1,7 @@
 package asm
 
 import (
+	"github.com/tucats/govax/internal/vaxfloat"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -116,10 +117,12 @@ func init() {
 
 		// More data storage.
 		"ADDRESS":    {both, (*Assembler).pseudoAddress},
-		"F_FLOATING": {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, 4) }},
-		"FLOAT":      {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, 4) }},
-		"D_FLOATING": {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, 8) }},
-		"DOUBLE":     {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, 8) }},
+		"F_FLOATING": {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, vaxfloat.F) }},
+		"FLOAT":      {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, vaxfloat.F) }},
+		"D_FLOATING": {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, vaxfloat.D) }},
+		"G_FLOATING": {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, vaxfloat.G) }},
+		"H_FLOATING": {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, vaxfloat.H) }},
+		"DOUBLE":     {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, vaxfloat.D) }},
 
 		// Module identification. Listings will use .SUBTITLE's text.
 		"TITLE":    {both, (*Assembler).pseudoTitle},
@@ -204,8 +207,8 @@ func init() {
 		"INCLUDE": {both, (*Assembler).pseudoInclude},
 
 		// eVAX console directives, and eVAX forms of MACRO-32 names.
-		"F_FLOAT": {console, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, 4) }},
-		"D_FLOAT": {console, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, 8) }},
+		"F_FLOAT": {console, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, vaxfloat.F) }},
+		"D_FLOAT": {console, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, vaxfloat.D) }},
 		"SPACE":   {console, (*Assembler).pseudoSpace},
 		"BASE":    {console, (*Assembler).pseudoBase},
 		"SET":     {console, (*Assembler).pseudoSet},

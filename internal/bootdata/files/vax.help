@@ -2547,6 +2547,8 @@ $ASM ,PSEU
         ENTRY
         ERROR
         F_FLOAT
+        G_FLOATING
+        H_FLOATING
         IF
         IIF
         INCLUDE
@@ -2760,6 +2762,33 @@ $ASM ,PSEU,OCTA
                    ^X0123456789ABCDEF, is stored in full; any other
                    expression is computed as a longword and
                    sign-extended.
+
+$ASM ,PSEU,F_FL
+$ASM ,PSEU,D_FL
+$ASM ,PSEU,G_FL
+$ASM ,PSEU,H_FL
+
+    The F_FLOAT, D_FLOAT, G_FLOATING, and H_FLOATING pseudo-opcodes
+    (also F_FLOATING, D_FLOATING, FLOAT, and DOUBLE) store floating
+    values in the VAX's four formats: 4, 8, 8, or 16 bytes.
+
+    Syntax:
+
+        .F_FLOAT     <value> [, <value> ]
+
+        .D_FLOAT     <value> [, <value> ]
+
+        .G_FLOATING  <value> [, <value> ]
+
+        .H_FLOATING  <value> [, <value> ]
+
+     Parameter:
+
+        <value>    A decimal number, such as 1.5, -0.1, or 6.02E23.
+                   Each is rounded once, from its decimal value, to
+                   the format's precision (half away from zero, as
+                   the VAX rounds).  A value too large for the format
+                   is an error; one too small is stored as zero.
 
 $ASM ,PSEU,ENTR
 

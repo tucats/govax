@@ -561,3 +561,31 @@ The author accepted each proposal below on 2026-10-02.
     tests' float64 helpers (`fpuStore`/`fpuLoad`) moved to
     `fpu_helpers_test.go`, on the core. `shortdouble.go`'s table is gone
     (`vaxfloat.ShortLiteral`).
+- 2026-10-02: Subtask 6 done: G_floating.
+  - **CPU**: the G instructions (ADDG2/3 through DIVG2/3, CVTGB/GW/GL,
+    CVTRGL, CVTBG/WG/LG, ACBG, MOVG, CMPG, MNEGG, TSTG, CVTGF, CVTFG)
+    are the format-generic handlers registered for their FD opcodes
+    (`regFD`). Under govax the G probe matches VMS on every case but
+    EMODG and POLYG.
+  - **Assembler**: literals and immediates take each operand's own data
+    type (`Instruction.DataType`), so `CVTLG #3` and EMODG's extension
+    word are integers; floating literals are parsed exactly
+    (`vaxfloat.Parse`) and rounded once to the operand's format, which
+    also fixes `MOVD #1.1` (it now matches VAX MACRO's encoding); new
+    `.G_FLOATING` and `.H_FLOATING` directives (HELP updated). The
+    disassembler shows a floating immediate in its own format, with the
+    fewest digits that reassemble to the same bytes (`Value.Decimal`).
+  - **Wide immediates**: the probe's `MOVO #-1` showed VAX MACRO
+    zero-extends a 32-bit value into an octaword immediate, where govax
+    sign-extended (Phase 28's rule for quadwords). Quadword and octaword
+    immediates now zero-extend (`DEVIATIONS.md`); with that, the
+    octaword probe matches VMS on all 28 cases.
+  - `cpu.EncodeFloat`, `DecodeFloat`, `ShortFloat`, and `FindShortFloat`
+    are gone: the assembler uses `internal/vaxfloat` directly.
+    `Instruction.Type` is now read only by tests and the generator;
+    subtask 15 retires it.
+  - **For a later VMS run** (batched with subtask 10's `.PACKED`): the
+    new directives (`.G_FLOATING`, `.H_FLOATING`, `.OCTA`), `MOVQ #-1`,
+    `.QUAD`/`.OCTA` of a negative expression, and a floating operand
+    given as a symbol (`MOVG #PI,R6`, which MACRO stores unconverted and
+    govax doesn't support yet), each checked against VAX MACRO's object.

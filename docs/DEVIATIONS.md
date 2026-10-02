@@ -2485,6 +2485,42 @@ widened."
   parenthesis in an expression is VAX_ILLEXPR; the console dialect keeps
   eVAX's parentheses. `TestMACRODialectParenthesisIsIllegalExpression`.
 
+### [Phase 35] Quadword and octaword immediates were sign-extended
+
+- **Where**: `internal/asm/operand.go`'s `immediateValue` (Phase 28's
+  quadword immediates, extended to octawords in Phase 35 subtask 2).
+- **What**: an expression in a quadword or octaword immediate (`MOVQ
+  #-1`, `MOVO #<0-2>`, a symbol's value) was evaluated in 32 bits and
+  sign-extended, by analogy with a longword; `-1` was read as a single
+  number at full width. VAX MACRO assembled the Phase 35 probe's `MOVO
+  #-1` as ^XFFFFFFFF followed by zeros (testdata/insn35), and the MACRO
+  manual's `.QUAD` example says a symbol "has a 32-bit, zero-extended
+  value" (though its parameter text says sign-extended).
+- **Status**: fixed in Go (2026-10-02, Phase 35 subtask 6): an immediate
+  that isn't a single unsigned number is a 32-bit value, zero-extended.
+  The quadword case follows from the octaword one and the manual, and
+  isn't yet checked on VMS; nor are `.QUAD` and `.OCTA`, which keep
+  Phase 28's sign extension. `TestQuadwordImmediates`,
+  `TestOctawordImmediates`.
+
+### [Phase 35] Floating literals were read through a float64
+
+- **Where**: `internal/asm/value.go`'s `parseFloat` (a port of
+  `asm_float`, which used `atof`).
+- **What**: a decimal floating literal was parsed as a Go `float64`, then
+  converted to the operand's format, so a D value was rounded twice
+  (`MOVD #1.1` came out 3 units low in its last place against VAX
+  MACRO's encoding, testdata/insn35), and G and H couldn't be encoded at
+  all. A floating literal's format came from the instruction's size.
+- **Status**: fixed in Go (2026-10-02, Phase 35 subtask 6): literals are
+  read exactly (`vaxfloat.Parse`) and rounded once to each operand's own
+  format; `.G_FLOATING` and `.H_FLOATING` are new, and the disassembler
+  shows a floating immediate in its own format with the fewest digits
+  that reassemble to the same bits. Not yet done: MACRO's rule that a
+  floating operand given as a symbol (`MOVG #PI,R6`) uses the symbol's
+  value as the bits, unconverted. `TestFloatingImmediates`,
+  `TestFloatingDirectives`, `TestDisassembleFloatingImmediates`.
+
 <!--
 Entry template:
 

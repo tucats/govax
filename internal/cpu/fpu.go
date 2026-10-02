@@ -176,36 +176,3 @@ func setFloatCC(cpu *vax.CPU, v vaxfloat.Value, keepC bool) {
 
 	cpu.SetPSL(psl)
 }
-
-// EncodeFloat returns x's bits in format f, rounded as the VAX rounds,
-// for internal/asm's floating directives and immediates. A value too large
-// for the format reports overflow; one too small encodes as zero.
-func EncodeFloat(f vaxfloat.Format, x float64) (bits vaxfloat.Bits, overflow bool) {
-	bits, err := vaxfloat.Pack(f, vaxfloat.FromFloat64(x))
-
-	return bits, errors.Is(err, vaxfloat.ErrOverflow)
-}
-
-// DecodeFloat returns bits, in format f, as a float64, for internal/asm's
-// disassembler. A reserved operand decodes as 0: there's no fault to take
-// when just formatting bytes for display.
-func DecodeFloat(f vaxfloat.Format, bits vaxfloat.Bits) float64 {
-	v, err := vaxfloat.Unpack(f, bits)
-	if err != nil {
-		return 0
-	}
-
-	return v.Float64()
-}
-
-// ShortFloat returns the value of floating short literal i (0-63), for
-// internal/asm.
-func ShortFloat(i int) float64 { return vaxfloat.ShortLiteral(byte(i)).Float64() }
-
-// FindShortFloat returns the floating short literal whose value is x, and
-// whether there is one, for internal/asm.
-func FindShortFloat(x float64) (int, bool) {
-	lit, ok := vaxfloat.FindShortLiteral(vaxfloat.FromFloat64(x))
-
-	return int(lit), ok
-}
