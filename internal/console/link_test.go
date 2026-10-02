@@ -38,7 +38,7 @@ func assembleFixture(t *testing.T, c *Console, name, dir string) string {
 func runImage(t *testing.T, c *Console, path string) uint32 {
 	t.Helper()
 
-	if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 

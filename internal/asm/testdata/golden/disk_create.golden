@@ -720,8 +720,8 @@ p1vector: 7FFEDE00-7FFEE91D
 000003CF: 0A 11 00 14 00 00 00 E6 03 00 00 14 00 00 00 FA
 000003DF: 03 00 00 00 00 00 00
 0000040E: 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-sym 10$@185 0000030F flags=82 forward=0
-sym 10$@186 0000031B flags=82 forward=0
+sym 10$@191 0000030F flags=82 forward=0
+sym 10$@192 0000031B flags=82 forward=0
 sym ALIAS 0000033A flags=2 forward=0
 sym ALIASD 00000343 flags=2 forward=0
 sym ALIASE 00000343 flags=2 forward=0

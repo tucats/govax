@@ -140,7 +140,7 @@ func TestDispatch_runActivatesImage(t *testing.T) {
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g, nil)
 
-	if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
@@ -403,7 +403,7 @@ func TestDispatch_entryPointCommandCallsRealRoutine(t *testing.T) {
 			g := loadEvaxGrammar(t)
 			d := NewDispatcher(c, g, nil)
 
-			if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+			if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 				t.Fatalf("Assemble(kernel.asm): %v", err)
 			}
 
@@ -413,8 +413,8 @@ func TestDispatch_entryPointCommandCallsRealRoutine(t *testing.T) {
 				t.Fatalf("Dispatch(%s): %v", cmd, err)
 			}
 
-			if out := buf.String(); !strings.HasPrefix(out, "e") {
-				t.Errorf("Dispatch(%s) output = %q, want it to start with EXE$ABOUT's banner ('eVAX 1.1...')", cmd, out)
+			if out := buf.String(); !strings.HasPrefix(out, "g") {
+				t.Errorf("Dispatch(%s) output = %q, want it to start with EXE$ABOUT's banner ('govax Console Microkernel...')", cmd, out)
 			}
 		})
 	}

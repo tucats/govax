@@ -204,7 +204,7 @@ func TestImageRundown(t *testing.T) {
 func TestImageRundown_run(t *testing.T) {
 	c := newBootableConsole(t)
 
-	if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 

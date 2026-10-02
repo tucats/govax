@@ -153,7 +153,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			// issue this replaces: only the few branches that happened to
 			// fall through to the "already at '['" special case below
 			// consumed it; every other base mode -- e.g. "(Rn)[Rx]",
-			// exercised for real by testdata/asm/kernel.asm's own
+			// exercised for real by internal/bootdata/files/kernel.asm's own
 			// EXE$DISPATCH -- silently left it in place, corrupting
 			// whatever operand parsing came next).
 			c.skipBlanks()

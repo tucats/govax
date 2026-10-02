@@ -28,25 +28,33 @@ func TestGoldenFixtures(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// The microkernel itself is bootdata's (see kernelDir).
+	names = append(names, kernelDir+"kernel.asm")
+
 	for _, path := range names {
 		name := filepath.Base(path)
 
 		t.Run(name, func(t *testing.T) {
 			var sb strings.Builder
 
+			source, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			sb.WriteString("== alone\n")
-			dumpAssembly(&sb, goldenAssembler(t), readFixture(t, name))
+			dumpAssembly(&sb, goldenAssembler(t), string(source))
 
 			if name != "kernel.asm" {
 				a := goldenAssembler(t)
-				if _, err := a.Assemble(readFixture(t, "kernel.asm")); err != nil {
+				if _, err := a.Assemble(readKernel(t)); err != nil {
 					t.Fatalf("kernel.asm: %v", err)
 				}
 
 				before := snapshotKeys(a)
 
 				sb.WriteString("== after kernel.asm\n")
-				dumpAssemblyExcept(&sb, a, readFixture(t, name), before)
+				dumpAssemblyExcept(&sb, a, string(source), before)
 			}
 
 			compareGolden(t, strings.TrimSuffix(name, ".asm")+".golden", sb.String())

@@ -17,14 +17,15 @@
 ;      CALLS pushed SUB3's argument (SPOK).
 ;
 ; The .SHIM lines give the program the LIB$ routines' stubs, as the
-; booted kernel.asm's own .SHIM table does.
+; booted kernel.asm's own .SHIM table does; each is skipped when the
+; kernel, assembled first, has already defined it.
 
 	.microkernel
 	.p1vector
 	.scb	exc$accvio, console$handler
-	.shim	lib$stop,	^d34, LIBRTL, ^X04F8
-	.shim	lib$establish,	^d35, LIBRTL, ^X03C0
-	.shim	lib$sig_to_ret,	^d37, LIBRTL, ^X0500
+	.iif not_defined lib$stop, .shim lib$stop, ^d34, LIBRTL, ^X04F8
+	.iif not_defined lib$establish, .shim lib$establish, ^d35, LIBRTL, ^X03C0
+	.iif not_defined lib$sig_to_ret, .shim lib$sig_to_ret, ^d37, LIBRTL, ^X0500
 
 	.entry	main, ^m<r2>
 	calls	#0, @#sub1

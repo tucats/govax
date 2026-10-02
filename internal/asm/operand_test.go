@@ -111,7 +111,7 @@ func TestAddressingModes(t *testing.T) {
 // base itself was consumed, without checking for and skipping the trailing
 // "[Rx]" text still sitting in the cursor. For a single-operand instruction
 // (TestAddressingModes' own "indexed" case, CLRL 4(R2)[R3]) there's nothing
-// after to corrupt, so this was invisible; testdata/asm/kernel.asm's own
+// after to corrupt, so this was invisible; internal/bootdata/files/kernel.asm's own
 // EXE$DISPATCH ("movl (r3)[r2], r0", a real, working microkernel routine)
 // is a genuine multi-operand instance that surfaced it: the leftover
 // "[r2]" text got reinterpreted as the start of the destination operand,

@@ -67,7 +67,7 @@ func TestDispatch_runHost(t *testing.T) {
 	mountFreshContainer(t, c, "DUA0")
 
 	// RUN needs the kernel's shims, as runImage sets them up.
-	if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatal(err)
 	}
 

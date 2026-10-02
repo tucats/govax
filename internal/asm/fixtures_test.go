@@ -16,6 +16,23 @@ func readFixture(t *testing.T, name string) string {
 	return string(b)
 }
 
+// kernelDir holds the microkernel tests assemble, and the files it
+// includes: bootdata's, the one govax itself boots. (testdata/asm once
+// held an older copy; it was removed so no test can use it.)
+const kernelDir = "../bootdata/files/"
+
+// readKernel returns kernel.asm's source.
+func readKernel(t *testing.T) string {
+	t.Helper()
+
+	b, err := os.ReadFile(kernelDir + "kernel.asm")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return string(b)
+}
+
 // TestAssembleFixtures assembles every self-contained testdata/asm program
 // (excluding ssdef.asm, an .INCLUDE-only fragment with no code of its own —
 // see docs/PHASE-11.md's own open question about it — and kernel.asm/
@@ -80,15 +97,15 @@ func TestAssembleForth(t *testing.T) {
 func TestAssembleKernel(t *testing.T) {
 	a := New(true)
 	a.SetIncludeResolver(func(name string) (string, error) {
-		b, err := os.ReadFile("../../testdata/asm/" + name)
+		b, err := os.ReadFile(kernelDir + name)
 		if err != nil {
 			return "", err
 		}
-		
+
 		return string(b), nil
 	})
 
-	if _, err := a.Assemble(readFixture(t, "kernel.asm")); err != nil {
+	if _, err := a.Assemble(readKernel(t)); err != nil {
 		t.Fatalf("assemble: %v", err)
 	}
 

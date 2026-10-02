@@ -141,7 +141,7 @@ func TestRun_debugImagesTrace(t *testing.T) {
 	c := newRunnableConsole(t)
 	c.CPU.SetDebug(vax.DebugImages)
 
-	if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
@@ -161,7 +161,7 @@ func TestRun_debugImagesTrace(t *testing.T) {
 func TestRun_noExecuteLoadsAndFixesUpOnly(t *testing.T) {
 	c := newRunnableConsole(t)
 
-	if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
@@ -191,7 +191,7 @@ func TestRun_everyMilestoneFixture(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			c := newBootableConsole(t)
 
-			if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+			if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 				t.Fatalf("Assemble(kernel.asm): %v", err)
 			}
 

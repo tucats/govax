@@ -36,7 +36,7 @@ func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 	// looking up kernel.asm's own already-assembled routine by name -- see
 	// shim.go's own doc comment -- so it must be assembled first here,
 	// matching vax.init's own boot sequence (ASM kernel.asm before any RUN).
-	if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
@@ -99,7 +99,7 @@ func TestEnsureShims_stubDispatchesThroughXFCShim(t *testing.T) {
 	c := newRunnableConsole(t)
 	c.Engine.SetModeStack(vax.Kernel, false)
 
-	if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 

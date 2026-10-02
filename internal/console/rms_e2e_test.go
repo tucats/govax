@@ -104,7 +104,7 @@ func TestRMSRoundTrip_afterKernelAlreadyP1VectoredIsIdempotent(t *testing.T) {
 
 	mountFreshRMSVolume(t, c)
 
-	if _, _, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 

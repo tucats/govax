@@ -21,15 +21,16 @@
 ;      SEVERE, message inhibited). REACHED stays 0.
 ;
 ; The .SHIM lines give the program the LIB$ routines' stubs, as the
-; booted kernel.asm's own .SHIM table does.
+; booted kernel.asm's own .SHIM table does; each is skipped when the
+; kernel, assembled first, has already defined it.
 
 	.microkernel
 	.p1vector
-	.shim	lib$signal,	^d33, LIBRTL, ^X04F0
-	.shim	lib$stop,	^d34, LIBRTL, ^X04F8
-	.shim	lib$establish,	^d35, LIBRTL, ^X03C0
-	.shim	lib$revert,	^d36, LIBRTL, ^X0490
-	.shim	lib$match_cond,	^d38, LIBRTL, ^X0460
+	.iif not_defined lib$signal, .shim lib$signal, ^d33, LIBRTL, ^X04F0
+	.iif not_defined lib$stop, .shim lib$stop, ^d34, LIBRTL, ^X04F8
+	.iif not_defined lib$establish, .shim lib$establish, ^d35, LIBRTL, ^X03C0
+	.iif not_defined lib$revert, .shim lib$revert, ^d36, LIBRTL, ^X0490
+	.iif not_defined lib$match_cond, .shim lib$match_cond, ^d38, LIBRTL, ^X0460
 
 	.entry	main, ^m<>
 	pushal	@#handler

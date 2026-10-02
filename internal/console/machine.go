@@ -169,7 +169,7 @@ type Console struct {
 	// single session-wide object, multiple "ASM <file>" commands in a row
 	// share one location counter and one symbol table, so a later file can
 	// reference an earlier one's labels (e.g. testdata/asm/hello.asm's
-	// "@#lib$put_output" resolving to testdata/asm/kernel.asm's own
+	// "@#lib$put_output" resolving to internal/bootdata/files/kernel.asm's own
 	// .ENTRY lib$put_output, once kernel.asm has been ASMed first in the
 	// same session) exactly as vax.init's own boot sequence relies on.
 	// Reset (nil, so the next ASM lazily creates a fresh one) by VMInit,

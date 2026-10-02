@@ -21,6 +21,21 @@ func asmFixturePath(t testing.TB, name string) string {
 	return filepath.Join(filepath.Dir(file), "..", "..", "testdata", "asm", name)
 }
 
+// kernelPath is the microkernel tests assemble: bootdata's kernel.asm, the
+// one govax itself boots. (testdata/asm once held an older copy, without
+// the arithmetic and translation-not-valid vectors; it was removed so no
+// test can run against a kernel govax doesn't use.)
+func kernelPath(t testing.TB) string {
+	t.Helper()
+
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+
+	return filepath.Join(filepath.Dir(file), "..", "bootdata", "files", "kernel.asm")
+}
+
 // TestAssemble_xorDepositsAndIsCallable assembles testdata/asm/xor.asm (a
 // small, dependency-free fixture: MOVL/MOVL/XORL3/RET, no RTL/kernel calls)
 // and CALLs its "test" entry point, checking the computed XOR lands in R4 --
@@ -155,7 +170,7 @@ func TestAssemble_kernelThenHelloRunsBounded(t *testing.T) {
 	out := &bytes.Buffer{}
 	c.Out = out
 
-	if _, hasEntry, err := c.Assemble(asmFixturePath(t, "kernel.asm")); err != nil {
+	if _, hasEntry, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	} else if hasEntry {
 		t.Fatal("kernel.asm has no .end entry name; should not auto-CALL")
