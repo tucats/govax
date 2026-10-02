@@ -502,3 +502,32 @@ The author accepted each proposal below on 2026-10-02.
   instruction has the previous mode user (`^X03C0nnnn`, govax `^X0300nnnn`),
   and the signal arrays' PCs differ by a few bytes, so govax's image
   layout isn't VMS's yet.
+- 2026-10-02: Subtask 4 done: the floating core, `internal/vaxfloat`.
+  - **`Format`** (F, D, G, H), **`Bits`** (an operand's bytes as the CPU
+    loads them, `Lo`/`Hi`), and **`Value`**, an exact number held as a
+    `big.Float` (Decision 2). `Unpack`/`Pack` handle each format's
+    word-swapped layout, bias, zero (exponent 0, sign clear, whatever the
+    fraction), and reserved operands (`ErrReserved`).
+  - **Arithmetic** (`Add`, `Sub`, `Mul`, `Div`) rounds once, to the
+    destination's precision, half away from zero (`big.ToNearestAway`),
+    then checks the exponent: `ErrOverflow`, or `ErrUnderflow` with a
+    zero result for the CPU to store when PSL<FU> is clear;
+    `ErrDivideByZero`. `Round` does the same for conversions.
+  - **For EMOD and POLY**: `MulExact`, `AddExact`, `Value.Split`
+    (integer and fraction parts); **integers**: `Value.Int` (truncated,
+    or rounded half away from zero, exact at any size), `FromInt`,
+    `FromBigInt`; **literals**: `ShortLiteral`/`FindShortLiteral` (the
+    value is the same in every format; `Pack` gives each format's bits),
+    and `Parse` for the assembler's decimal literals.
+  - **Checked against VMS**: `TestVMSVectors` runs 198 of the probes'
+    floating cases (arithmetic, moves, negation, the conversions between
+    formats and to and from integers) through the core and compares with
+    the bits VMS stored or the condition it signalled; every one
+    matches, including the ties, D's low bits, G and H division, and
+    underflow with and without FU. Hand-worked tests cover the layouts,
+    reserved operands and dirty zeros, each format's limits, ties, short
+    literals, and integer conversion.
+  - **Benchmark** (Decision 2): unpack two operands, operate, and pack
+    takes 200-280 ns and 15-18 allocations on the author's machine (F
+    add 206 ns, H multiply 282 ns). That's acceptable; no F/D fast path
+    unless a real program shows the cost.
