@@ -1,0 +1,28 @@
+	.TITLE	FAILSIG	Phase 29 probe: signaled conditions, for traceback
+	.IDENT	/V1.0/
+
+; Signals an error-severity condition (RMS$_EOF, which traceback reports
+; and then lets the program go on from), then stops with a fatal one
+; (SS$_ABORT), each from a nested routine. The values are written out so
+; the source needs no system macros.
+
+RMS$_EOF = ^X0001827A
+SS$_ABORT = ^X0000002C
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	FAILSIG, ^M<>
+	CALLS	#0, WARNIT
+	CALLS	#0, STOPIT
+	RET
+
+	.ENTRY	WARNIT, ^M<>
+	PUSHL	#RMS$_EOF
+	CALLS	#1, G^LIB$SIGNAL
+	RET
+
+	.ENTRY	STOPIT, ^M<>
+	PUSHL	#SS$_ABORT
+	CALLS	#1, G^LIB$STOP
+	RET
+
+	.END	FAILSIG

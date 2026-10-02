@@ -1,0 +1,54 @@
+	.TITLE	ERRORS	Phase 29 probe: errors and warnings in a listing
+	.IDENT	/V1.0/
+
+; One statement per kind of error govax reports, so the listing shows
+; where MACRO puts each message and what the summary counts. The lines
+; between them are good, to show that assembly goes on.
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+GOOD1:	.LONG	1
+	.BYTE	300			; doesn't fit in a byte
+	.WORD	^X12345			; nor in a word
+DUP:	.LONG	2
+DUP:	.LONG	3			; a label defined twice
+	.LONG	10/0			; division by zero
+	.ASCII	/unterminated		; no closing delimiter
+	.ALIGN	QUAD			; more than the psect's alignment
+	.PSECT	BADATTR, NOSUCH		; an attribute that doesn't exist
+	.PSECT	DATA
+	.ENDC				; .ENDC without a conditional
+	.ENDR				; .ENDR without a repeat block
+	.ENDM				; .ENDM without a macro
+	.FOO				; a directive that doesn't exist
+GOOD2:	.LONG	4
+
+	.DISABLE GLOBAL
+	.LONG	NOWHERE			; undefined, with GLOBAL disabled
+	.ENABLE	GLOBAL
+
+	.MACRO	BAD	X
+	.BYTE	X
+	.ENDM	BAD
+	BAD	1			; a good call
+	BAD	999			; an error inside an expansion
+
+	.ERROR	; ERRORS: a message from .ERROR
+	.WARN	; ERRORS: a message from .WARN
+	.PRINT	; ERRORS: a message from .PRINT
+	.ERROR	27			; .ERROR with a value
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	ERRORS, ^M<>
+	FOO	R0			; an opcode that doesn't exist
+	MOVL	R0			; too few operands
+	MOVL	R0, R1, R2		; too many
+	MOVL	R16, R0			; R16 is a name, not a register
+	MOVL	S^#100, R0		; too big for a short literal
+	MOVL	R0, #1			; a literal destination
+	MOVL	(R0)+[R0], R1		; index register the same as the base
+	CLRL	PC			; PC as a register operand
+	BRB	FAR			; out of a byte branch's range
+	.BLKB	200
+FAR:	RET
+
+	.END	ERRORS

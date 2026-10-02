@@ -1,0 +1,10 @@
+; NOTITLE.MAR - Phase 29 probe: a module with no .TITLE and no .IDENT, so
+; the listing's heading shows MACRO's defaults (.MAIN.), and a .SBTTL
+; before any other statement.
+
+	.SBTTL	A subtitle without a title
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+VAL:	.LONG	1
+
+	.END

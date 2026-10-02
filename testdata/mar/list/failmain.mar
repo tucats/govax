@@ -1,0 +1,17 @@
+	.TITLE	FAILMAIN Phase 29 probe: a program that fails, for traceback
+	.IDENT	/V1.0/
+
+; With FAILSUB, a program whose third routine, two calls and one module
+; away, reads address 0 (the no-access page): an access violation that
+; nothing handles, so VMS's traceback prints the call chain. LIST.COM
+; links it with and without traceback and runs both, keeping what they
+; print for a future govax traceback to be checked against.
+
+	.EXTERNAL SUB1
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	FAILMAIN, ^M<>
+	CALLS	#0, G^SUB1
+	RET
+
+	.END	FAILMAIN

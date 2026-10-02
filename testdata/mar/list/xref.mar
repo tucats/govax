@@ -1,0 +1,41 @@
+	.TITLE	XREF	Phase 29 probe: the cross reference
+	.IDENT	/V1.0/
+
+; Symbols defined and referenced in several places, a macro called more
+; than once, registers, and a stretch under .NOCROSS, for
+; /CROSS_REFERENCE and /CROSS_REFERENCE=ALL.
+
+	.EXTERNAL LIB$PUT_OUTPUT
+
+COUNT = 3				; defined here
+LIMIT == COUNT * 2			; referenced, and global
+
+	.MACRO	STORE	VALUE
+	.LONG	VALUE
+	.ENDM	STORE
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+TABLE:	STORE	COUNT			; referenced through a macro
+	STORE	LIMIT
+	STORE	TABLE
+	.NOCROSS
+HIDDEN:	.LONG	COUNT, TABLE		; references not cross-referenced
+	.CROSS
+	.NOCROSS COUNT			; only COUNT left out
+	.LONG	COUNT, LIMIT
+	.CROSS	COUNT
+	.LONG	HIDDEN
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	XREF, ^M<R2>
+	MOVAL	TABLE, R2		; R2 used and changed
+	MOVL	(R2)+, R0
+	ADDL2	#LIMIT, R0
+	CMPL	R0, #COUNT
+	BNEQ	10$
+	MOVL	R2, R1
+10$:	PUSHAL	TABLE
+	CALLS	#1, G^LIB$PUT_OUTPUT
+	RET
+
+	.END	XREF

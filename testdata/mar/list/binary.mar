@@ -1,0 +1,103 @@
+	.TITLE	BINARY	Phase 29 probe: the listing's binary field
+	.IDENT	/V1.0/
+
+; Every kind of statement that stores something, so the listing shows how
+; MACRO lays out the binary field for each: data too long for one line,
+; every operand mode, relocatable and external fields, branches, case
+; tables, floating and packed data, and gaps.
+
+	.EXTERNAL EXT1, EXT2
+
+	.PSECT	DATA, WRT, NOEXE, QUAD
+STR:	.ASCII	/The quick brown fox jumps over the lazy dog, twice: the quick brown fox./
+CSTR:	.ASCIC	/counted/
+ZSTR:	.ASCIZ	/zero/
+DSTR:	.ASCID	/a descriptor string/
+BYTES:	.BYTE	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+WORDS:	.WORD	1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+LONGS:	.LONG	1, 2, 3, 4, 5, 6, 7
+RELS:	.LONG	STR, EXT1, EXT1+4, STR+8, PROC
+	.WORD	FWDDATA-STR
+	.BYTE	EXT2
+QUADS:	.QUAD	^X0123456789ABCDEF
+	.QUAD	5
+OCTAS:	.OCTA	^X0123456789ABCDEF0123456789ABCDEF
+	.OCTA	7
+FLOATS:	.F_FLOATING	1.5, -2.25
+	.D_FLOATING	3.14159265358979
+	.G_FLOATING	2.5
+	.H_FLOATING	1.0E10
+PACK:	.PACKED	-12345, PK_LEN
+	.PACKED	+7
+ADDRS:	.ADDRESS STR, EXT1, PROC
+MASK:	.MASK	PROC
+BLKS:	.BLKB	3
+	.BLKW	2
+	.BLKL	1
+	.BLKQ	1
+	.ALIGN	QUAD
+	.BYTE	^XAA
+	.ALIGN	LONG
+	. = . + 5
+	.BYTE	^XBB
+	. = BLKS + 64
+FWDDATA: .LONG	FWDDATA
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	PROC, ^M<R2, R3, R4, R5>
+	MOVL	R1, R2			; register
+	MOVL	(R1), R2		; register deferred
+	MOVL	-(R1), R2		; autodecrement
+	MOVL	(R1)+, R2		; autoincrement
+	MOVL	@(R1)+, R2		; autoincrement deferred
+	MOVL	#5, R2			; short literal
+	MOVL	#1000, R2		; immediate
+	MOVL	S^#7, R2
+	MOVL	I^#7, R2
+	MOVL	@#^X200, R2		; absolute
+	MOVL	B^4(R1), R2		; displacements
+	MOVL	W^400(R1), R2
+	MOVL	L^4(R1), R2
+	MOVL	4(R1), R2
+	MOVL	@4(R1), R2		; displacement deferred
+	MOVL	LONGS, R2		; relative
+	MOVL	@LONGS, R2		; relative deferred
+	MOVL	EXT1, R2		; external
+	MOVL	G^EXT1, R2		; general
+	MOVL	@#EXT1, R2		; absolute, external
+	MOVL	(R1)[R3], R2		; indexed
+	MOVL	LONGS[R3], R2
+	MOVL	@4(R1)[R3], R2
+	MOVL	G^EXT1[R3], R2
+	ADDL3	L^1000(R1), #^X12345678, L^2000(R2)	; a long instruction
+	MOVC5	#10, L^STR, #32, #20, L^BYTES		; and a longer one
+	MOVAB	BACK, R0		; backward, in this psect
+	MOVAB	FWD, R0			; forward, in this psect
+	MOVAB	FWDDATA, R0		; another psect
+	PUSHAL	EXT1+8
+	CALLS	#0, G^EXT2
+	CALLG	(AP), PROC2
+	MOVF	#1.5, R0		; a floating short literal
+	MOVF	#123.456, R0		; a floating immediate
+	MOVD	#3.75, R0
+	MOVQ	#1, R0
+BACK:	BRB	BACK			; branches
+	BRW	FWD
+	BNEQ	BACK
+	SOBGTR	R4, BACK
+	AOBLSS	#10, R5, BACK
+	ACBL	#100, #1, R5, BACK
+	BBS	#3, R1, BACK
+	BLBC	R0, FWD
+	JSB	@#^X300
+	JMP	FWD
+	CASEL	R1, #0, #2		; a case table
+10$:	.WORD	20$-10$, 30$-10$, 20$-10$
+20$:	NOP
+30$:	NOP
+FWD:	RET
+
+	.ENTRY	PROC2, ^M<>
+	RET
+
+	.END	PROC

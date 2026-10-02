@@ -1,0 +1,11 @@
+	.TITLE	ERREND	Phase 29 probe: errors only the end of a source finds
+
+; A conditional and a macro definition left open, and no .END: what the
+; listing says about each, and where.
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+	.LONG	1
+	.IF	EQ 0
+	.LONG	2
+	.MACRO	OPEN	X
+	.LONG	X

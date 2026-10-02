@@ -1,0 +1,15 @@
+	.TITLE	FAILSUB	Phase 29 probe: the routines FAILMAIN calls
+	.IDENT	/V1.0/
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	SUB1, ^M<>
+	NOP
+	CALLS	#0, SUB2
+	RET
+
+	.ENTRY	SUB2, ^M<R2>
+	MOVL	#5, R2
+	MOVL	@#0, R0			; address 0: an access violation
+	RET
+
+	.END

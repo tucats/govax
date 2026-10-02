@@ -15,7 +15,8 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: planned; subtasks written and decisions taken 2026-10-02.**
+**Status: in progress. Subtask 1's probe is ready for the author's VMS
+run (2026-10-02).**
 
 ## What Phase 27 leaves in place
 
@@ -228,8 +229,10 @@ govax-linked image. `/NOTRACEBACK` leaves the DST out, as it does now.
 holds STARLET.MLB's text (Phase 32). The probe's sources never expand a
 system macro with `.SHOW EXPANSIONS` (they use their own macros for every
 expansion case, and any system macro call stays under `.NOSHOW ME,MEB`).
-Until the author has audited the probe's listings, their names go in
-`.claude/hooks/cleanroom.sh`'s unaudited list, as Phase 28's three were.
+A probe listing that could show a system macro's text has its name put
+in `.claude/hooks/cleanroom.sh`'s unaudited list until the author has
+audited it, as Phase 28's three were. Subtask 1's sources call no system
+macros at all, so none of its listings needs to be there.
 
 ## Subtasks
 
@@ -248,8 +251,7 @@ changes behavior. Each adds to this doc's progress log.
      contents if MACRO makes one), a missing `.TITLE` (`.MAIN.`), a long
      `.TITLE`, and `.IDENT`;
    - `/SHOW=` and `/NOSHOW=`, and `/LIST` with `/NOOBJECT`;
-   - `.INCLUDE` (the file number in the heading) and lines longer than
-     132 characters;
+   - lines longer than 132 characters;
    - the binary field's harder cases: long data (`.ASCII`, `.LONG`
      lists, `.BLKx`, `.QUAD`/`.OCTA`, floating, `.PACKED`), every
      operand mode, indexed operands, branches, case tables, `.ADDRESS`,
@@ -296,8 +298,11 @@ changes behavior. Each adds to this doc's progress log.
    them by default. `TestMacroFixtureListings` compares the nine Phase
    28 macro listings whole.
 7. **Listing controls.** `.LIST`/`.NLIST`, `.SHOW`/`.NOSHOW` and their
-   options, `.PAGE`, `.SBTTL` and the table of contents, `/SHOW=`, and
-   `.INCLUDE`'s file numbers, from the probe's listings. The directives
+   options, `.PAGE`, `.SBTTL` and the table of contents, and
+   `/SHOW=`/`/NOSHOW=`, from the probe's listings. (VAX MACRO has no
+   `.INCLUDE`, so govax's eVAX-style `.INCLUDE` lists its lines as part
+   of the including file's, with file number 1; the number changes only
+   with concatenated sources, which are out of scope.) The directives
    stop being "accepted and ignored".
 8. **Messages in the listing.** Errors, warnings, and informational
    messages where real MACRO puts them, with `.ERROR`, `.WARN`, and
@@ -406,3 +411,22 @@ The author decided each of these on 2026-10-02.
 - The author decided all five: the `govax MACRO` heading; statistics
   without the items govax has no value for; cross reference in scope;
   no LINK/DEBUG; no `ASM` listings.
+
+### 2026-10-02 — Subtask 1: the probe, ready for VMS
+
+- `testdata/mar/list/`: twelve sources, `gen.go` (which writes
+  `lctl.mar`), `list.com`, `exchange.cmd`, and a README listing what each
+  covers. `exchange.cmd` builds `testdata/disks/list-exchange.dsk`
+  (label LISTXCHG); built and checked.
+- VAX MACRO has no `.INCLUDE`, so the plan's `.INCLUDE` item went:
+  `lctl.mar` repeats one body under each `.SHOW`/`.NOSHOW` option
+  instead, written out by `gen.go`.
+- No source calls a system macro, so no listing can hold STARLET text and
+  the clean-room hook needs no entry for them.
+- govax assembles every source except the two error sources. On those,
+  it misses `.DISABLE GLOBAL`'s undefined symbol, `(R0)+[R0]`,
+  `CLRL PC`, an open conditional at the end, and a missing `.END`. The
+  README records them, and subtask 8 settles them against what real
+  MACRO says.
+- Waiting on the author's VMS run (`@LIST/OUTPUT=LIST.LOG`). Subtasks 2
+  to 6 need only the existing fixtures, so they can go ahead now.

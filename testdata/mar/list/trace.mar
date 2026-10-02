@@ -1,0 +1,44 @@
+	.TITLE	TRACE	Phase 29 probe: traceback and debugger records
+	.IDENT	/V1.0/
+
+; A module with what traceback and debugger records describe: routines
+; (.ENTRY), a JSB subroutine, labels global and local, assigned symbols,
+; and three psects. LIST.COM assembles it with each /DEBUG, /ENABLE, and
+; /DISABLE choice, and analyzes each object.
+
+	.EXTERNAL LIB$PUT_OUTPUT
+
+MAXLEN = 80
+LEVEL == 2
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+MSG:	.ASCID	/TRACE: three routines ran/
+COUNT:	.LONG	0
+GLOBDATA:: .LONG MAXLEN
+
+	.PSECT	$CODE, NOWRT, EXE, LONG
+	.ENTRY	TRACE, ^M<R2>
+	CALLS	#0, FIRST
+	CALLS	#0, SECOND
+	PUSHAQ	MSG
+	CALLS	#1, G^LIB$PUT_OUTPUT
+	RET
+
+	.ENTRY	FIRST, ^M<>
+	INCL	COUNT
+	JSB	HELPER
+	RET
+
+	.ENTRY	SECOND, ^M<R2>
+	MOVL	#LEVEL, R2
+10$:	INCL	COUNT
+	SOBGTR	R2, 10$
+	RET
+
+HELPER:	INCL	COUNT			; a JSB subroutine, not a routine
+	RSB
+
+	.PSECT	$CONST, NOWRT, NOEXE, BYTE
+CONST:	.ASCII	/constant/
+
+	.END	TRACE

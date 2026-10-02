@@ -1,0 +1,65 @@
+	.TITLE	SYMTAB	Phase 29 probe: the symbol table and psect synopsis
+	.IDENT	/V1.0/
+
+; Every kind of symbol the symbol table distinguishes, and symbols a macro
+; defines that the program does and doesn't use, to find which ones the
+; table leaves out (RMSCOPY.LIS lists about 55 of its 625 symbols), with
+; .ENABLE and .DISABLE SUPPRESSION. Long psect names and every psect
+; attribute fill the psect synopsis.
+
+	.EXTERNAL EXTREF
+	.WEAK	WEAKREF, WEAKDEF
+
+; Assigned symbols: local, global, an expression, and a relocatable one.
+ABSVAL = 42
+GLOBVAL == 43
+EXPRVAL = ABSVAL * 2 + GLOBVAL
+UNUSED = 44				; never used
+
+; A macro defining many symbols, as the $xxxDEF macros do; only some are
+; used below.
+	.MACRO	DEFS	PREFIX
+PREFIX'_A = 1
+PREFIX'_B = 2
+PREFIX'_C = 3
+PREFIX'_D == 4
+	.ENDM	DEFS
+
+	DEFS	DFLT			; suppression as the default leaves it
+	.ENABLE	SUPPRESSION
+	DEFS	SUPP			; with suppression enabled
+	.DISABLE SUPPRESSION
+	DEFS	NOSUP			; and disabled again
+
+	.ENABLE	SUPPRESSION
+SUPPLAIN = 5				; outside a macro, with suppression
+	.DISABLE SUPPRESSION
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+LABEL:	.LONG	DFLT_A, SUPP_A, NOSUP_A, SUPPLAIN
+RELVAL = LABEL + 4
+	.LONG	RELVAL, ABSVAL, EXPRVAL, EXTREF, WEAKREF
+GLOB::	.LONG	UNDEF			; undefined: external, by .ENABLE GLOBAL (the default)
+WEAKDEF: .LONG	0
+10$:	.LONG	10$			; a local label
+
+	.PSECT	A_PSECT_NAME_THAT_IS_31_CHARS_X, RD, WRT, NOEXE, GBL, SHR, PIC, OVR, QUAD
+	.LONG	1
+
+	.PSECT	ABSPSECT, ABS
+ABSLBL:	.BLKL	2
+ABSEND:
+
+	.PSECT	VECS, NOWRT, EXE, VEC, PAGE, NOPIC, CON, LCL, NOSHR, USR
+	.LONG	2
+
+	.PSECT	LIBP, LIB, NORD, NOWRT, BYTE
+	.BYTE	3
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	SYMTAB, ^M<>
+	MOVAL	ABSLBL, R0
+	MOVL	#ABSEND, R1
+	RET
+
+	.END	SYMTAB

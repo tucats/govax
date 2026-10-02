@@ -1,0 +1,27 @@
+	.TITLE	DBGSRC	Phase 29 probe: .ENABLE DEBUG and .DISABLE TRACEBACK
+	.IDENT	/V1.0/
+
+; Debugger records asked for by the source, not the command, and
+; traceback turned off part way through: which records each part gets.
+
+	.ENABLE	DEBUG
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+ONE:	.LONG	1
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	DBGSRC, ^M<>
+	MOVL	ONE, R0
+	RET
+
+	.DISABLE TRACEBACK
+	.DISABLE DEBUG
+
+	.ENTRY	LATER, ^M<>			; after both are disabled
+	MOVL	TWO, R0
+	RET
+
+	.PSECT	DATA
+TWO:	.LONG	2
+
+	.END	DBGSRC
