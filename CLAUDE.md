@@ -11,9 +11,9 @@ never had.
 
 - `docs/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
   index.
-- `docs/PHASE-00.md` … `PHASE-34.md` — one doc per phase: goal, C-source file
+- `docs/PHASE-00.md` … `PHASE-35.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (29 is
-  planned, not started; 28 and 30–34 are done). Read the relevant phase doc
+  planned, not started; 28 and 30–35 are done). Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
@@ -76,7 +76,23 @@ expect adjustment as phases land):
 - `internal/vax` — core machine state: registers, PSL, condition codes (Phase 01).
 - `internal/vm` — virtual memory: address translation, load/store primitives (Phase 02).
 - `internal/cpu` — instruction decode/execute engine and instruction-set emulation
-  (Phases 03-07).
+  (Phases 03-07). Phase 35 finished the set: every instruction but LDPCTX and
+  SVPCTX has a handler (`TestEveryInstructionImplemented`). Each operand has a
+  `DataType` in the generated table, which decides how a short literal or
+  floating operand is read. F, D, G, and H instructions run on
+  `internal/vaxfloat` (`fpu.go` is the CPU's side), packed decimal on
+  `decimal.go` (`decimalmath.go`, `decimalconvert.go`, `editpc.go`), and
+  octawords through `Operand.LoadOctaword`/`StoreOctaword`. An arithmetic
+  *trap* (integer or decimal overflow, DIVP by zero) is
+  `Engine.arithmeticTrap`, whose saved PC is the next instruction's. The
+  Phase 35 oracle (`testdata/insn35`, `TestInsn35Oracle` in
+  `internal/console`) compares 567 instruction cases with VMS's run.
+- `internal/vaxfloat` — the VAX floating formats (Phase 35): `Unpack`/`Pack` for
+  F, D, G, and H, and exact `Value`s (`math/big`) whose arithmetic rounds once,
+  half away from zero, to the destination format, reporting overflow,
+  underflow, reserved operands, and divide by zero; plus EMOD and POLY's
+  arithmetic, short literals, and decimal parsing for the assembler. A leaf
+  package: no CPU dependency.
 - `internal/console` — interactive monitor + DCL grammar interpreter (Phase 08).
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,

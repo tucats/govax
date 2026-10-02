@@ -1,7 +1,10 @@
 # Phase 35 — The rest of the instruction set: G, H, octaword, and packed decimal
 
-**Status:** in progress (2026-10-02). The author accepted the plan and
-every proposed answer under "Decisions".
+**Status:** done (2026-10-02), but for one check: VAX MACRO's run of the
+assembler fixture (`testdata/insn35/asm`), which settles a few encodings
+govax's assembler chose without VAX MACRO's output (see subtask 16's
+log entry). The author accepted the plan and every proposed answer under
+"Decisions".
 
 ## Goal
 
@@ -751,3 +754,23 @@ The author accepted each proposal below on 2026-10-02.
     unimplemented handler. The other comments the plan named were
     rewritten as their subtasks went: `fpu.go`, `pseudo.go`'s
     `pseudoFloat`, and `operand.go`'s wide-immediate comments.
+- 2026-10-02: Subtask 16 done: close-out. PLAN.md's index, CLAUDE.md's
+  package notes (`internal/vaxfloat`, and `internal/cpu`'s Phase 35 work),
+  and this doc's status. HELP gained `.G_FLOATING`, `.H_FLOATING`,
+  `.OCTA`, and `.PACKED` along the way (subtasks 2, 6, and 10).
+  - **Outcome**: all 79 instructions are implemented, and every one of
+    the probes' 567 cases matches VMS 7.1's run under govax but two
+    masked fields (an UNPREDICTABLE DIVP result, and PSL<FPD> on EDITPC's
+    aborts). Fixes to existing code along the way: D_floating's lost
+    bits and tie rounding, MNEG's C, MOVA/PUSHA's condition codes,
+    floating divide by zero, floating-to-integer overflow and the IV
+    trap, the previous mode images run with, MACRO's parenthesized
+    expressions, wide immediates' zero extension, and the tests' stale
+    copy of the kernel.
+  - **Still open**: the assembler fixture (`testdata/insn35/asm`), for
+    the author's next VMS session. Its object will settle whether govax's
+    `.QUAD`/`.OCTA` of a negative value, `MOVQ #-1`, `.PACKED`'s unsigned
+    and `-0` signs, and the floating directives match VAX MACRO's, and
+    how MACRO stores a floating operand given as a symbol (`MOVG #PI`),
+    which govax doesn't assemble yet. A test comparing the objects comes
+    with that run.
