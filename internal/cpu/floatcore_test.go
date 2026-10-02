@@ -96,7 +96,7 @@ func TestDIVDLowBits(t *testing.T) {
 func TestCVTFDAndCVTDF(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0xAAAB3EAA) // 1/3 in F: ^X3EAA, ^XAAAB
+	cpu.SetGPR(vax.R1, 0xAAAB3EAA) // 1/12 in F: ^X3EAA, ^XAAAB
 
 	if err := runFloat(t, e, 0x56, regMode(vax.R1), regMode(vax.R2)); err != nil { // CVTFD R1,R2
 		t.Fatal(err)

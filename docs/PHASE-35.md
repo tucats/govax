@@ -603,3 +603,20 @@ The author accepted each proposal below on 2026-10-02.
     `TestDisassembleFloatingImmediates`).
   - **Tests**: `TestHFloating` (a tie in ADDH, CVTGH widening exactly
     into four registers, CVTHG overflow).
+- 2026-10-02: Subtask 8 done: EMODF, EMODD, EMODG, EMODH.
+  - **`vaxfloat.EMOD`** follows the manual: the extension operand's bits
+    (a byte for F and D; the high 11 of the word for G, the high 15 for
+    H) extend the multiplier's fraction; the exact product is truncated,
+    before normalization, to a 32-bit (F), 64-bit (D, G), or 128-bit (H)
+    fraction; the result splits into an exact integer part and a fraction
+    part rounded to the format (`ErrUnderflow`, with both zero, if the
+    fraction underflows).
+  - **The CPU** (`internal/cpu/emod.go`) stores the integer's low 32 bits
+    (V on overflow, an integer overflow trap under PSL<IV>) and the
+    fraction; N and Z from the fraction, C cleared.
+  - **Against VMS**: all 68 EMOD cases of the F/D, G, and H probes match
+    VMS's run under govax (the extension's edge bits, truncation, integer
+    overflow with and without IV, underflow with and without FU, and
+    reserved operands). `TestEMOD`, `TestEMODExtension` (whose expected
+    fraction, 255 * 2^-31, was worked out exactly from the manual's
+    definition, truncation included).
