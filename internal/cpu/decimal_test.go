@@ -475,3 +475,73 @@ func TestCVTPTAndCVTTP(t *testing.T) {
 		t.Errorf("CVTTP \"12*\": %v, want a reserved operand", err)
 	}
 }
+
+// TestEDITPC runs EDITPC patterns whose results VMS's run of the Phase 35
+// probe confirmed (testdata/insn35), with the manual's pattern operators.
+func TestEDITPC(t *testing.T) {
+	const pattern = 0x3500
+
+	for _, tc := range []struct {
+		name    string
+		length  byte
+		src     []byte
+		pat     []byte
+		want    string
+		n, z, c bool
+		abort   bool
+	}{
+		// A floating sign: "ZZZ,ZZ9.99"-style, with "-" floated left.
+		{"floating sign", 8, []byte{0x01, 0x23, 0x45, 0x67, 0x8D},
+			[]byte{eoFloat | 3, eoInsert, ',', eoFloat | 2, eoEndFloat, eoMove | 1, eoInsert, '.', eoMove | 2, eoEnd},
+			"-123,456.78", true, false, true, false},
+		// Check protection: "*" fill, with significance forced before the
+		// units digit.
+		{"check protection of zero", 7, []byte{0x00, 0x00, 0x00, 0x0C},
+			[]byte{eoLoadFill, '*', eoMove | 3, eoInsert, ',', eoMove | 1, eoSetSignif, eoMove | 1, eoInsert, '.', eoMove | 2, eoEnd},
+			"*****0.00", false, true, true, false},
+		// A trailing "CR" for a credit (negative) amount.
+		{"CR", 5, []byte{0x00, 0x12, 0x0D},
+			[]byte{eoMove | 5, eoLoadPlus, ' ', eoLoadMinus, '-', eoStoreSign, eoInsert, 'C', eoInsert, 'R', eoEnd},
+			"  120-CR", true, false, true, false},
+		// -0, with the stored sign replaced: all blanks, N cleared.
+		{"replace sign of -0", 3, []byte{0x00, 0x0D},
+			[]byte{eoMove | 3, eoReplaceSign, 3, eoEnd},
+			"   ", false, true, false, false},
+		// Too few source digits: the two there are stored, then a
+		// reserved operand.
+		{"digits run out", 2, []byte{0x01, 0x2C},
+			[]byte{eoMove | 3, eoEnd}, "12", false, false, false, true},
+	} {
+		e := decimalEngine()
+		putMem(t, e, decSrc, tc.src...)
+		putMem(t, e, pattern, tc.pat...)
+
+		insn := append([]byte{0x38, tc.length}, absolute(decSrc)...)
+		insn = append(insn, absolute(pattern)...)
+		insn = append(insn, absolute(decDst)...)
+
+		err := runFloat(t, e, insn...)
+
+		var f *Fault
+		if aborted := errors.As(err, &f) && f.Code == ExcReservedOp; aborted != tc.abort || (err != nil && !aborted) {
+			t.Errorf("%s: err %v, want abort %v", tc.name, err, tc.abort)
+		}
+
+		if got := getMem(t, e, decDst, len(tc.want)); string(got) != tc.want {
+			t.Errorf("%s: dst = %q, want %q", tc.name, got, tc.want)
+		}
+
+		if tc.abort {
+			continue
+		}
+
+		if p := e.cpu.PSL(); p.N() != tc.n || p.Z() != tc.z || p.C() != tc.c {
+			t.Errorf("%s: PSL %+v, want N %v Z %v C %v", tc.name, p, tc.n, tc.z, tc.c)
+		}
+
+		if e.cpu.GPR(vax.R0) != uint32(tc.length) || e.cpu.GPR(vax.R3) != pattern+uint32(len(tc.pat))-1 ||
+			e.cpu.GPR(vax.R5) != decDst+uint32(len(tc.want)) {
+			t.Errorf("%s: R0 %#x R3 %#x R5 %#x", tc.name, e.cpu.GPR(vax.R0), e.cpu.GPR(vax.R3), e.cpu.GPR(vax.R5))
+		}
+	}
+}

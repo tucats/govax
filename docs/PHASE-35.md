@@ -697,3 +697,20 @@ The author accepted each proposal below on 2026-10-02.
     traps under DV.
   - **Against VMS**: all 28 cases of the packed probe match.
     `TestCVTPSAndCVTSP`, `TestCVTPTAndCVTTP`.
+- 2026-10-02: Subtask 13 done: EDITPC (`internal/cpu/editpc.go`).
+  - Every pattern operator, from the instruction-set manual and the 1987
+    architecture manual's Operation (which neither has a worked EDITPC
+    example; the tests use cases VMS confirmed): the fill and sign
+    registers, significance, Z, V from EO$ADJUST_INPUT's discarded
+    digits, EO$BLANK_ZERO and EO$REPLACE_SIGN reaching back into the
+    output, N cleared at the end for -0, and the manual's registers.
+  - A source length over 31, a reserved pattern operator, a pattern that
+    reads a digit the source doesn't have, and digits left over at
+    EO$END are reserved operands. Digits are read one at a time, as the
+    1987 manual's READ does, so the output before the missing digit is
+    stored, and VMS's run shows the destination keeps what was produced
+    before any of these aborts; govax stores it too. The registers are
+    left unchanged (no PSL<FPD>, so not the manual's part-way state).
+  - **Against VMS**: all 22 EDITPC cases match. With that, every case of
+    the packed probe matches VMS's run under govax but the one
+    UNPREDICTABLE DIVP case (subtask 11). `TestEDITPC`.
