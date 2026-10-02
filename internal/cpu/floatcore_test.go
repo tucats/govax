@@ -281,3 +281,41 @@ func TestHFloating(t *testing.T) {
 		t.Errorf("CVTHG of 2^2000: %v, want a floating overflow fault", err)
 	}
 }
+
+// TestPOLYFManualExample runs the manual's POLY example: P(x) = 1.0 +
+// 0.5x + 0.25x^2 with the table C2, C1, C0 = 0.25, 0.5, 1.0; at x = 2 it
+// is 3. R1 and R2 are zero and R3 points just past the table. A degree
+// over 31 is a reserved operand.
+func TestPOLYFManualExample(t *testing.T) {
+	cpu, mem := fixture()
+	e := NewEngine(cpu, mem)
+
+	const table = 0x3000
+	for i, v := range []uint32{0x00003F80, 0x00004000, 0x00004080} { // 0.25, 0.5, 1.0
+		if err := mem.StoreLongword(cpu, table+uint32(4*i), v); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	cpu.SetGPR(vax.R6, 0x00004100) // x = 2.0
+	cpu.SetGPR(vax.R7, table)
+	cpu.SetGPR(vax.R1, 0x11111111)
+	cpu.SetGPR(vax.R2, 0x22222222)
+
+	if err := runFloat(t, e, 0x55, regMode(vax.R6), 0x02, 0x67); err != nil { // POLYF R6,#2,(R7)
+		t.Fatal(err)
+	}
+
+	for r, want := range map[vax.Reg]uint32{vax.R0: 0x00004140, vax.R1: 0, vax.R2: 0, vax.R3: table + 12} {
+		if got := cpu.GPR(r); got != want {
+			t.Errorf("R%d = %#x, want %#x", r, got, want)
+		}
+	}
+
+	err := runFloat(t, e, 0x55, regMode(vax.R6), 0x8F, 0x20, 0x00, 0x67) // POLYF R6,#32,(R7)
+
+	var f *Fault
+	if !errors.As(err, &f) || f.Code != ExcReservedOp {
+		t.Errorf("degree 32: %v, want a reserved operand fault", err)
+	}
+}

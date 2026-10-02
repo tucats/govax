@@ -620,3 +620,24 @@ The author accepted each proposal below on 2026-10-02.
     reserved operands). `TestEMOD`, `TestEMODExtension` (whose expected
     fraction, 255 * 2^-31, was worked out exactly from the manual's
     definition, truncation included).
+- 2026-10-02: Subtask 9 done: POLYF, POLYD, POLYG, POLYH.
+  - **The arithmetic** comes from the POLY "Operation" in the 1987
+    *VAX Architecture Reference Manual* (EY-3459E-DP; the instruction-set
+    manual leaves it out): each Horner step keeps the 31 (F), 63 (D, G),
+    or 127 (H) most significant bits of the unnormalized product, adds
+    the next coefficient and truncates the unnormalized sum the same way,
+    then rounds; overflow and underflow are checked after the whole step,
+    and underflow with FU clear zeroes the partial result and goes on.
+    `vaxfloat.POLYStep` is one step, reading "truncate the unnormalized
+    sum" as truncating relative to the larger operand's exponent; VMS's
+    results agree.
+  - **The CPU** (`internal/cpu/poly.go`) checks the degree (over 31 is a
+    reserved operand), walks the table, and sets the registers the
+    manual lists (the result, zeros, and the address past the table in
+    R3, or R5 for POLYH); POLYH also leaves its argument in the 16 bytes
+    below SP, as the manual's Operation does. A fault leaves the
+    registers unchanged (no PSL<FPD> resumption).
+  - **Against VMS**: all 56 POLY cases match, so every floating and
+    octaword case of the probes (413 in all) now matches VMS's run under
+    govax: result bytes, R0-R11, condition codes, and conditions.
+    `TestPOLYStep`, `TestPOLYFManualExample` (the manual's example).
