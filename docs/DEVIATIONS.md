@@ -2407,6 +2407,43 @@ widened."
   value above 2^64 is never taken for a short literal.
   `TestDisassembleWideImmediates`, `TestOctawordImmediates`, `TestOcta`.
 
+### [Phase 35] MOVA and PUSHA left the condition codes unchanged
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/emul_mova.c` and
+  `emul_push.c`'s PUSHA path, ported to `internal/cpu/mova.go`.
+- **What**: neither set any condition code, and the Go port's comment
+  said the manual lists none. The manual's MOVA and PUSHA pages say
+  `N <- dst LSS 0; Z <- dst EQL 0; V <- 0; C <- C` (for PUSHA, of the
+  address pushed). Found when govax ran the Phase 35 probe's MOVAO and
+  PUSHAO cases (which share the handlers) and left the probe's preset
+  N, Z, V, C all set.
+- **Status**: fixed in Go (2026-10-02), for every MOVAx and PUSHAx.
+  `TestEmulMova`, `TestEmulMovaPushaConditionCodes`.
+
+### [Phase 35] Floating divide by zero, and floating-to-integer overflow
+
+- **Where**: `internal/cpu/floatmath.go` (DIVF/DIVD) and
+  `internal/cpu/cvtfloat.go` (CVTF*/CVTD* to an integer), ports of the
+  C source's `fpu.c` paths.
+- **What**: found running the Phase 35 probe under govax:
+  - DIVF and DIVD by zero compute ±Inf in Go and then fault as a
+    floating *overflow* (SS$_FLTOVF_F, type 8). The manual's arithmetic
+    exception for it is the floating divide-by-zero fault (SS$_FLTDIV_F,
+    type 9).
+  - CVTFL and the other floating-to-integer conversions raise the
+    integer-overflow exception on every overflow, as a fault (the PC
+    still at the instruction), whether or not PSL<IV> is set, and store
+    nothing. The manual sets V, stores the low-order bits of the integer,
+    and takes the integer-overflow *trap* (the PC past the instruction)
+    only when IV is set. A condition handler that continued therefore
+    ran the instruction again, forever. govax has no integer-overflow
+    traps yet anywhere (EDIV's and DIV's comments say so too).
+- **Status**: to be fixed in Phase 35: the conversions and division move
+  to the new floating core in subtask 5, and the arithmetic traps (IV and
+  PSL<DV>) come with the packed decimal subtasks; the oracle's VMS run
+  confirms the results. Until then the probe's handler unwinds a case
+  that signals twice, so the run still finishes.
+
 <!--
 Entry template:
 

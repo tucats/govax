@@ -44,26 +44,51 @@ func init() {
 // generic decode-time reject briefly existed but broke CALLG's own
 // legitimate use of Register mode, so it was reverted).
 //
-// MOVAx doesn't touch any condition codes: emul_mova.c never writes
-// vax.pslw, matching the manual (MOVA isn't listed as affecting N/Z/V/C).
+// The condition codes follow the manual: N and Z from the address (as a
+// signed longword), V cleared, C unaffected. emul_mova.c never wrote
+// them, and govax copied that until Phase 35's probe showed it
+// (docs/DEVIATIONS.md).
 func emulMova(e *Engine, d *Decoded) error {
 	if d.Operands[0].Kind == OperandRegister {
 		return &Fault{Code: ExcReservedAddr}
 	}
 
-	return d.Operands[1].Store(e.cpu, e.mem, uint64(d.Operands[0].Addr))
+	addr := uint64(d.Operands[0].Addr)
+	if err := d.Operands[1].Store(e.cpu, e.mem, addr); err != nil {
+		return err
+	}
+
+	setAddressCC(e.cpu, addr)
+
+	return nil
+}
+
+// setAddressCC sets the condition codes MOVA and PUSHA leave: N and Z
+// from the address, V cleared, C unaffected.
+func setAddressCC(cpu *vax.CPU, addr uint64) {
+	setNZ(cpu, addr, 4)
+
+	psl := cpu.PSL()
+	psl.SetV(false)
+	cpu.SetPSL(psl)
 }
 
 // emulPusha is PUSHA{B,W,L,Q}: pushes the source operand's VAX address, never
 // dereferenced, onto the stack -- port of emul_push.c's non-PUSHL path
-// (`opcode->function != 0xDD`). Same register-mode fault and
-// no-condition-codes behavior as MOVAx.
+// (`opcode->function != 0xDD`). Same register-mode fault and condition
+// codes as MOVAx.
 func emulPusha(e *Engine, d *Decoded) error {
 	if d.Operands[0].Kind == OperandRegister {
 		return &Fault{Code: ExcReservedAddr}
 	}
 
-	return push(e, d.Operands[0].Addr)
+	if err := push(e, d.Operands[0].Addr); err != nil {
+		return err
+	}
+
+	setAddressCC(e.cpu, uint64(d.Operands[0].Addr))
+
+	return nil
 }
 
 // emulPushl is PUSHL: pushes the source operand's *value* (not its address)

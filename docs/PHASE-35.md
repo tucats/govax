@@ -443,3 +443,38 @@ The author accepted each proposal below on 2026-10-02.
     invalid page leaving memory unchanged); `internal/asm/octaword_test.go`
     (`.OCTA`, MOVO immediates, wide disassembly round trips).
 
+- 2026-10-02: Subtask 3 done: the oracle probe (`testdata/insn35/`).
+  - **`gen.go`** writes five probes, one per family (`p35fd.mar`,
+    `p35g.mar`, `p35h.mar`, `p35o.mar`, `p35p.mar`: 146, 113, 126, 28,
+    and 154 cases), `insn35.com`, and `exchange.cmd`. Each case is one
+    instruction in its own routine under a condition handler, with known
+    registers, DST filled with `^XAA`, and N, Z, V, C preset to 1; it
+    records the PSL, R0-R11, DST, and any signal array. Traps continue
+    (so results are recorded); faults unwind. Floating operands are
+    written as bytes by `gen.go`'s own encoder (`math/big`, rounded half
+    away from zero), independent of the floating core to come.
+  - **The VMS run** is the author's: see the README. Its container goes
+    in `testdata/insn35/vax/` for subtask 14.
+  - **govax runs every probe to the end** (`TestInsn35ProbesRun`, a
+    smoke test subtask 14 turns into the comparison). Doing so found:
+    - MOVA and PUSHA (so MOVAO and PUSHAO) never set the condition codes;
+      the manual sets N and Z from the address and clears V. Fixed
+      (`DEVIATIONS.md`).
+    - DIVF/DIVD by zero signal floating overflow instead of floating
+      divide by zero, and the floating-to-integer conversions fault on
+      every overflow, ignoring PSL<IV>, where the manual sets V and traps
+      only under IV (`DEVIATIONS.md`; subtask 5, and the decimal traps in
+      subtasks 10-11, which need a general arithmetic-trap path). A
+      handler that continued looped forever, so the probe's handler now
+      unwinds a case that signals twice.
+  - **The microkernel tests use is bootdata's.** The tests' helpers
+    assembled `testdata/asm/kernel.asm`, an old copy of the microkernel
+    without the arithmetic and translation-not-valid SCB vectors, so an
+    arithmetic exception in a test image stopped the run ("exception
+    vector is zero") where govax itself would have signalled it. At the
+    author's direction the copy is gone: every test assembles
+    `internal/bootdata/files/kernel.asm` (`kernelPath` in
+    `internal/console`, `kernelDir` in `internal/asm`), and the golden
+    snapshots were regenerated. `signals.asm` and `unwind.asm` declared
+    LIB$ shims the old kernel lacked; each is now skipped when the kernel
+    has defined it.
