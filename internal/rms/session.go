@@ -86,6 +86,11 @@ type Session struct {
 	// explicitly until SET DEFAULT establishes one. Its Device is always
 	// empty: the default device is SYS$DISK, as on VMS.
 	Default filespec.Spec
+
+	// HostFallback, when set, reads a host input file named with no
+	// directory that isn't in the current directory (hostfile.go). The
+	// console sets it to its search-path resolver's ReadFile.
+	HostFallback func(name string) ([]byte, error)
 }
 
 // NewSession returns a Session sharing mounts (a Console's existing

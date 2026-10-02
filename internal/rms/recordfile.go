@@ -92,7 +92,7 @@ var hostRecordTypes = map[string]RecordKind{
 // file; with no version, it's the highest.
 func (s *Session) ReadRecordFile(loc FileLocation, kind RecordKind) ([][]byte, FileLocation, error) {
 	if loc.Host {
-		records, err := readHostRecords(loc.Name, kind)
+		records, err := s.readHostRecords(loc.Name, kind)
 
 		return records, loc, err
 	}
@@ -145,7 +145,7 @@ func (s *Session) ReadRecordFile(loc FileLocation, kind RecordKind) ([][]byte, F
 // ReadRecordFile does.
 func (s *Session) ReadRawFile(loc FileLocation) ([]byte, FileLocation, error) {
 	if loc.Host {
-		data, err := os.ReadFile(loc.Name)
+		data, err := s.readHostFile(loc.Name)
 
 		return data, loc, err
 	}
@@ -194,12 +194,19 @@ func fullSpec(device string, m filespec.Match) string {
 	return filespec.Spec{Device: device, Dirs: m.Dirs, Name: m.Name, Type: m.Type, Version: fmt.Sprint(m.Version)}.String()
 }
 
-// readHostRecords reads a host file in kind's layout.
-func readHostRecords(path string, kind RecordKind) ([][]byte, error) {
-	data, err := os.ReadFile(path)
+// readHostRecords reads a host file (hostfile.go) in kind's layout.
+func (s *Session) readHostRecords(path string, kind RecordKind) ([][]byte, error) {
+	data, err := s.readHostFile(path)
 	if err != nil {
 		return nil, err
 	}
+
+	return hostRecords(path, data, kind)
+}
+
+// hostRecords splits a host file's bytes, read from path, into records in
+// kind's layout.
+func hostRecords(path string, data []byte, kind RecordKind) ([][]byte, error) {
 
 	switch kind {
 	case VariableRecords:

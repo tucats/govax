@@ -2,6 +2,7 @@ package rms
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -435,13 +436,9 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 // onto destText, a VMS file specification naming a location on a mounted
 // (and writable) volume.
 func (s *Session) copyFromHost(hostPath, destText string, opts CopyOptions) ([]CopyResult, error) {
-	info, err := os.Stat(hostPath)
+	data, err := s.readHostFile(hostPath)
 	if err != nil {
 		return nil, fmt.Errorf("copy: %w", err)
-	}
-
-	if info.IsDir() {
-		return nil, fmt.Errorf("copy: %s: is a directory, not a file", hostPath)
 	}
 
 	destVol, destSpec, err := s.resolveVolume(destText)
@@ -463,22 +460,16 @@ func (s *Session) copyFromHost(hostPath, destText string, opts CopyOptions) ([]C
 		return nil, fmt.Errorf("copy: %w", err)
 	}
 
-	f, err := os.Open(hostPath)
-	if err != nil {
-		return nil, fmt.Errorf("copy: %w", err)
-	}
-	defer f.Close()
-
 	var version uint16
 
 	switch kind, ok := hostRecordTypes[hostType]; {
 	case ok:
-		version, err = createRecordFileFromHost(destVol, destDir, destBm, destIb, name, typ, hostPath, kind)
+		version, err = createRecordFileFromHost(destVol, destDir, destBm, destIb, name, typ, hostPath, data, kind)
 	case opts.Binary:
-		version, err = createBinaryFileFromHost(destVol, destDir, destBm, destIb, name, typ, f, info.Size())
+		version, err = createBinaryFileFromHost(destVol, destDir, destBm, destIb, name, typ, bytes.NewReader(data), int64(len(data)))
 	default:
 		version, err = createTextFile(destVol, destDir, destBm, destIb, name, typ, func(w *odsrms.Writer) error {
-			return copyHostLinesAsRecords(w, f)
+			return copyHostLinesAsRecords(w, bytes.NewReader(data))
 		})
 	}
 
@@ -917,10 +908,10 @@ func isHostRecordType(typ string) bool {
 // of a hostRecordTypes type, reading the host file in kind's layout and
 // writing its records with kind's attributes (recordfile.go), so a host
 // object module comes back as a real variable-length record file.
-func createRecordFileFromHost(destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ, hostPath string, kind RecordKind) (uint16, error) {
+func createRecordFileFromHost(destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ, hostPath string, data []byte, kind RecordKind) (uint16, error) {
 	fullName := name + "." + typ
 
-	records, err := readHostRecords(hostPath, kind)
+	records, err := hostRecords(hostPath, data, kind)
 	if err != nil {
 		return 0, err
 	}
@@ -938,11 +929,11 @@ func createRecordFileFromHost(destVol *volume.Volume, destDir *volume.Directory,
 }
 
 // createBinaryFileFromHost mirrors createBinaryFile for a /HOST source
-// (copyFromHost's own /BINARY case), reading from a plain host *os.File
+// (copyFromHost's own /BINARY case), reading a host file's bytes
 // with a known size instead of an already-open volume.File whose valid
 // length comes from odsrms.FileByteLength. Functionally matches ods2's
 // own copyHostFileToVolume(binary: true).
-func createBinaryFileFromHost(destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ string, src *os.File, size int64) (uint16, error) {
+func createBinaryFileFromHost(destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ string, src io.Reader, size int64) (uint16, error) {
 	fullName := name + "." + typ
 
 	dst, err := destVol.CreateFile(destDir, fullName, ondisk.RecAttr{Format: ondisk.RecordFormatUndefined, MaxRecordSize: ondisk.BlockSize}, destBm, destIb)

@@ -249,6 +249,15 @@ func New(out io.Writer) *Console {
 	c.Logicals.Trace = c.traceLogicals
 	c.ContainerSession.Logicals = c.Logicals
 
+	// An input host file named with no directory, and not in the current
+	// directory, is looked for along c.Paths too, ending with govax's
+	// embedded files, so that LIBRARY/LIST of a bare macro library name
+	// finds govax's own (internal/rms/hostfile.go). c.Paths is read at
+	// each lookup, since main.go sets it after NewConsole returns.
+	c.ContainerSession.HostFallback = func(name string) ([]byte, error) {
+		return c.Paths.ReadFile(name)
+	}
+
 	return c
 }
 
