@@ -204,7 +204,9 @@ func (a *Assembler) assembleLines(source string) error {
 		return vmserrors.New(vmserrors.VAX_INCLUDEDEPTH)
 	}
 
-	return a.runSource(&sourceFrame{kind: kind}, strings.Split(source, "\n"))
+	// A newline ends the last line rather than starting another, empty,
+	// one: a file's lines are its records.
+	return a.runSource(&sourceFrame{kind: kind}, strings.Split(strings.TrimSuffix(source, "\n"), "\n"))
 }
 
 // runSource pushes f and assembles lines as its text, then pops it.

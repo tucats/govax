@@ -1,6 +1,9 @@
 package asm
 
-import "github.com/tucats/govax/internal/vmserrors"
+import (
+	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/vmserrors"
+)
 
 // opcodeAliases maps an alternate mnemonic spelling to the real instruction
 // name the assembler should look up instead, matching asm_opcode.c's
@@ -67,6 +70,7 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 	// The opcode, then each operand specifier, is a group of the
 	// listing's binary field (see listField.group).
 	a.listOp(inst.Name)
+	a.listInstruction()
 	a.listGroup(0)
 
 	defer a.listGroup(0)
@@ -75,6 +79,8 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 		if err := a.emitByte(inst.Opcode.Extended); err != nil {
 			return err
 		}
+
+		a.listJoin()
 	}
 
 	if err := a.emitByte(inst.Opcode.Function); err != nil {
@@ -90,7 +96,14 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 			return vmserrors.New(vmserrors.VAX_BADOPERANDS, inst.Name)
 		}
 
-		a.listGroup(n + 1)
+		// A branch displacement joins the operand before it, as real
+		// MACRO lists it (SOBGTR R4, BACK is F6 54   F5); only a branch's
+		// sole operand is a group of its own (BRB BACK is FE   11).
+		if inst.Access[n] == cpu.AccessBranch && n > 0 {
+			a.listGroup(n)
+		} else {
+			a.listGroup(n + 1)
+		}
 
 		if err := a.assembleOperand(c, inst, n); err != nil {
 			return vmserrors.Wrap(vmserrors.VAX_OPERANDERR, err, inst.Name, n+1)

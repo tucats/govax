@@ -387,7 +387,6 @@ func TestListingFrames(t *testing.T) {
 		"3 1:1 0002 1234",
 		"3 1:1 0004 1234",
 		"0 0:10 0006 ",
-		"0 0:11 0006 ",
 	)
 
 	// The expansion's lines are the definition's, with the argument

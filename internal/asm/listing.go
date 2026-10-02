@@ -53,8 +53,10 @@ type listLine struct {
 	stmt int
 	// op is the statement's directive (".PSECT"), instruction ("MOVL"),
 	// or macro name, or "=" for a direct assignment, or "" if it had
-	// none.
-	op string
+	// none. instruction says op is an instruction, whose binary field
+	// the listing lays out by operand (see listField.group).
+	op          string
+	instruction bool
 	// value is the value a direct assignment gave its symbol, or ". ="
 	// gave the location counter (hasValue says there is one). valueSect
 	// is the section a relocatable value is an offset in, or nil.
@@ -99,6 +101,10 @@ type listField struct {
 	// same statement (.ASCIC's count), with value.
 	patch bool
 	value uint32
+	// join says the listing writes the field right after the one stored
+	// after it, with no blank between them: an index prefix and its
+	// operand's mode byte (6143), or a two-byte opcode's bytes.
+	join bool
 }
 
 // listMark is how the listing marks a field's value.
@@ -125,6 +131,9 @@ type listBytes struct {
 	data   []byte
 	group  int
 	mark   listMark
+	// patch and join are the field's listField.patch and join.
+	patch bool
+	join  bool
 }
 
 // SetListing turns the recording of listing lines on or off for the
@@ -178,6 +187,21 @@ func (a *Assembler) listEnd(l *listLine) {
 func (a *Assembler) listOp(name string) {
 	if a.listCur != nil {
 		a.listCur.op = name
+	}
+}
+
+// listInstruction records that the statement is an instruction.
+func (a *Assembler) listInstruction() {
+	if a.listCur != nil {
+		a.listCur.instruction = true
+	}
+}
+
+// listJoin marks the field just stored as one the listing joins to the
+// field stored after it (see listField.join).
+func (a *Assembler) listJoin() {
+	if a.listCur != nil && len(a.listCur.fields) > 0 {
+		a.listCur.fields[len(a.listCur.fields)-1].join = true
 	}
 }
 
@@ -267,7 +291,7 @@ func (a *Assembler) listFields(l *listLine) []listBytes {
 			continue
 
 		case f.patch:
-			out = append(out, listBytes{offset: f.offset, data: littleEndian(f.value, f.size), group: f.group})
+			out = append(out, listBytes{offset: f.offset, data: littleEndian(f.value, f.size), group: f.group, patch: true})
 
 			continue
 		}
@@ -317,7 +341,7 @@ func (a *Assembler) listFields(l *listLine) []listBytes {
 				data = append(data, f.sect.byteStoredBy(i, l.stmt))
 			}
 
-			out = append(out, listBytes{offset: p, data: data, group: f.group, mark: markNone})
+			out = append(out, listBytes{offset: p, data: data, group: f.group, mark: markNone, join: f.join && q == end})
 			p = q
 		}
 

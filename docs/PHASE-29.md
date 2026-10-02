@@ -15,7 +15,7 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress. Subtasks 1 and 2 are done
+**Status: in progress. Subtasks 1 to 3 are done
 (2026-10-02).**
 
 ## What Phase 27 leaves in place
@@ -519,3 +519,58 @@ The author decided each of these on 2026-10-02.
     statement. A source without the `.SBTTL`, in subtask 14's VMS round,
     can settle it.
   - the `/DEBUG` objects, which belong to subtask 12.
+
+### 2026-10-02 — Subtask 3: source pages
+
+- **`internal/asm/listpage.go`**: `Assembler.Listing(ListingOptions)`
+  lays the recorded lines out as the listing's source pages and returns
+  its lines, each page's first line beginning with a form feed.
+  `ListingOptions` carries what the heading shows that the assembler
+  doesn't know: when the assembly ran, the assembler's name and version,
+  and the source file's specification and revision date. The closing
+  pages are subtask 4's.
+- **What the real listings showed**, beyond "What a real listing looks
+  like":
+  - The heading's fields are fixed columns: the name in 32, the title
+    cut to 40, a blank, the date (`%2d-MON-YYYY`) and time from column
+    73, two blanks, the assembler in 28, then `Page` and a 4-digit
+    number. The second line has the `.IDENT` string in 73 columns, the
+    revision date and time, the file specification in 34, and `(1)`.
+  - The line number is 6 columns (a blank and 5 digits), then a blank.
+    A continuation line ends with 7 blanks where they'd be.
+  - Each field is its hex value and its mark column (`'` or a blank),
+    so data fields are one column apart; quadwords, octawords, and
+    floating values show as longwords. An instruction's operand
+    specifiers are three columns apart (mark column and two blanks).
+    An index prefix joins its operand's mode byte with no blank
+    (`EF43`), and a branch displacement joins the operand before it
+    (`F6 54   F5`); a branch's only operand is a group of its own.
+    The recording now marks both (`listField.join`, and the
+    displacement's group).
+  - A line holds what fits in the binary field's 36 columns, lowest
+    address first. An instruction's continuation lines leave the
+    opcode's 5 columns blank. `.ASCIC`'s count, stored back over its
+    first byte, goes on a line of its own.
+  - A direct assignment and `.BLKx` show an 8-digit value with no mark,
+    even a relocatable one. `.RESTORE_PSECT` shows the psect's location
+    as `.PSECT` does; a `.PSECT` to an absolute psect shows a plain
+    location instead.
+  - Long source lines are kept whole, past column 132.
+- Only the program's own lines are listed for now. A macro call already
+  lists as the defaults show it (its line, no bytes); expansions,
+  repeat blocks, and conditionals are subtask 6's.
+- A two-byte opcode (`FD` prefix) is listed as one field (`32FD`). No
+  real listing has one yet, so this is unconfirmed.
+- **Fix:** a source's final newline no longer makes an extra, empty
+  line (`assembleLines`). It only showed in the recorded lines; a file's
+  lines are its records.
+- **`TestFixtureListings`** compares the source pages of 28 real
+  listings line for line, with the heading masks: the 12 ladder
+  fixtures, the 9 `testdata/link/vax/` listings, and 7 of the probe's
+  default-option listings (`binary`, `symtab`, `xref`, `trace`,
+  `failmain`, `failsub`, `failsig`). All match, with no allowed
+  differences. `notitle` waits for subtask 7 (its table of contents is
+  page 0). `TestListingHeading` checks the heading unmasked and
+  `TestListingPagination` a page break after 57 lines. Whether real
+  MACRO splits a statement's continuation lines across a page break
+  isn't shown by any listing; govax does.

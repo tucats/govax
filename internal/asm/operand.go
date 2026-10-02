@@ -137,6 +137,8 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				return err
 			}
 
+			a.listJoin()
+
 			before := a.lastFixup
 
 			if err := a.assembleOperandRec(c, inst, opIndex, true); err != nil {
