@@ -341,6 +341,8 @@ func (a *Assembler) assembleMacroCall(c *cursor) (handled bool, err error) {
 // expandMacro expands a call of m whose arguments are at c, and assembles
 // the expansion.
 func (a *Assembler) expandMacro(m *macroDef, c *cursor) error {
+	a.listOp(m.name)
+
 	if a.expansions() >= maxExpansionDepth {
 		return vmserrors.New(vmserrors.VAX_MACRODEPTH, maxExpansionDepth)
 	}

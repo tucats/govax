@@ -64,6 +64,13 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 		return vmserrors.New(vmserrors.VAX_BADOPCODE, name)
 	}
 
+	// The opcode, then each operand specifier, is a group of the
+	// listing's binary field (see listField.group).
+	a.listOp(inst.Name)
+	a.listGroup(0)
+
+	defer a.listGroup(0)
+
 	if inst.Opcode.Extended != 0 {
 		if err := a.emitByte(inst.Opcode.Extended); err != nil {
 			return err
@@ -82,6 +89,8 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 		if c.atEnd() {
 			return vmserrors.New(vmserrors.VAX_BADOPERANDS, inst.Name)
 		}
+
+		a.listGroup(n + 1)
 
 		if err := a.assembleOperand(c, inst, n); err != nil {
 			return vmserrors.Wrap(vmserrors.VAX_OPERANDERR, err, inst.Name, n+1)

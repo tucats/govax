@@ -238,6 +238,11 @@ func (a *Assembler) runSource(f *sourceFrame, lines []string) error {
 	// definition's lines are collected, not assembled.)
 	defer func() { a.defining = nil }()
 
+	// The line being recorded for a listing is this source's while its
+	// lines run, and the caller's again after (see listing.go).
+	outerList := a.listCur
+	defer func() { a.listCur = outerList }()
+
 	for i, raw := range lines {
 		if a.stop || f.exit {
 			break
@@ -245,15 +250,27 @@ func (a *Assembler) runSource(f *sourceFrame, lines []string) error {
 
 		a.line = i + 1
 
+		entry := a.listBegin(f, i+1, raw)
+
 		if a.defining != nil {
 			// A repeat block's end assembles the block, as a new
 			// source named by the block's first line: a.line is that
 			// line when an error comes back from it.
-			if err := a.collectDefinition(raw); err != nil {
+			if entry != nil {
+				entry.collected = true
+			}
+
+			err := a.collectDefinition(raw)
+
+			a.listCur = entry
+			a.listEnd(entry)
+
+			if err != nil {
 				if a.dialect != DialectMACRO {
 					return f.wrap(a.line, err)
 				}
 
+				a.listError(err)
 				a.errs = append(a.errs, a.located(err))
 			}
 
@@ -271,24 +288,53 @@ func (a *Assembler) runSource(f *sourceFrame, lines []string) error {
 					return f.wrap(i+1, err)
 				}
 
+				a.listError(err)
+				a.listEnd(entry)
 				a.errs = append(a.errs, a.located(err))
 
 				continue
 			}
 
 			raw = expanded
+
+			if entry != nil {
+				entry.text = expanded
+			}
+		}
+
+		if entry != nil {
+			entry.skipped = a.skipping()
 		}
 
 		line, ok := a.statement(raw)
 		if !ok || line == "" {
+			if entry != nil {
+				entry.continued = !ok
+			}
+
+			a.listEnd(entry)
+
 			continue
 		}
 
-		if err := a.assembleStatement(line); err != nil {
+		stmt := a.stmt
+		err := a.assembleStatement(line)
+
+		// A macro call or repeat block recorded lines of its own; this
+		// line is its statement's.
+		a.listCur = entry
+		a.listEnd(entry)
+
+		if entry != nil && a.stmt > stmt {
+			entry.stmt = stmt + 1
+		}
+
+		if err != nil {
 			if a.dialect != DialectMACRO {
 				return f.wrap(i+1, err)
 			}
 
+			a.listError(err)
 			a.errs = append(a.errs, a.located(err))
 		}
 	}

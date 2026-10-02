@@ -490,6 +490,14 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 			if deferred {
 				a.lastFixup.prefix = 1
+			} else if scale <= 4 {
+				// Real MACRO stores an explicit I^# value through the
+				// linker's stack, constant or not: the value, then the
+				// mode byte, then the store (testdata/mar/list's
+				// binary.mar). A fixup with a constant does that (see
+				// completeFixup).
+				a.queueFixup(loc, addrFixup(scale), constNode(uint32(v.lo)))
+				a.lastFixup.prefix = 1
 			}
 
 			litWide = v

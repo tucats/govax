@@ -323,6 +323,8 @@ func (a *Assembler) assemblePseudo(c *cursor) (handled bool, err error) {
 		return true, vmserrors.New(vmserrors.VAX_MACROONLY, "."+name)
 	}
 
+	a.listOp("." + name)
+
 	// Any directive other than .CASE empties the running .CASE block base,
 	// matching asm_pseudo.c's own reset ahead of its switch.
 	if name != "CASE" {

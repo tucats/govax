@@ -90,12 +90,18 @@ func (c *checker) run() {
 
 	// Psects are numbered across the whole module in the order their GSD
 	// subrecords appear, and a symbol or TIR command may refer to one
-	// defined later in the GSD, so count them all first.
+	// defined later in the GSD, so count them all first. A TIR command
+	// may name a global symbol a later GSD record defines, too: real
+	// MACRO's .MASK of an entry point defined after it does
+	// (testdata/mar/list's binary.mar), and ANALYZE/OBJECT accepts it.
 	for _, rec := range recs {
 		if g, ok := rec.(*GSD); ok {
 			for _, s := range g.Subrecords {
-				if _, ok := s.(*Psect); ok {
+				switch s := s.(type) {
+				case *Psect:
 					c.psects++
+				case *Symbol:
+					c.globals[s.Name] = true
 				}
 			}
 		}

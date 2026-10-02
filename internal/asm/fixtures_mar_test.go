@@ -497,3 +497,27 @@ func requireSameObject(t *testing.T, a *Assembler, realModule *obj.Module) {
 		t.Errorf("object:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+// TestListProbeObjects checks govax's objects for the Phase 29 probe's
+// sources (testdata/mar/list) against real MACRO's, as
+// TestFixtureLadderObjects does the ladder's. The probe's objects
+// assembled with debugger records are subtask 12's, and two sources are
+// left out:
+//   - notitle.mar: with no .TITLE, real MACRO writes a TTL header record
+//     of "\x01 ", which may come from the .SBTTL before any other
+//     statement; a later VMS run settles it.
+//   - errors.mar and errend.mar, which don't assemble.
+func TestListProbeObjects(t *testing.T) {
+	dir := filepath.Join("..", "..", "testdata", "mar", "list")
+
+	for _, name := range []string{"lctl", "binary", "symtab", "xref", "trace", "failmain", "failsub", "failsig"} {
+		t.Run(name, func(t *testing.T) {
+			src, err := os.ReadFile(filepath.Join(dir, name+".mar"))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			requireSameObject(t, macroAssemble(t, string(src)), readObjectFile(t, filepath.Join(dir, "vax", name+".obj")))
+		})
+	}
+}

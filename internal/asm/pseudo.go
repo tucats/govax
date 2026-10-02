@@ -347,7 +347,12 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 			return err
 		}
 
-		a.advanceData(1)
+		// Real MACRO stores the count through the linker's stack, still
+		// zero, as a signed byte, and stores the count once it's counted
+		// the string (see the evPatch below).
+		a.logEvent(outEvent{kind: evConst, sect: a.cur, offset: a.cur.loc, size: 1, signed: true})
+		a.listConst(a.cur.loc, 1, 0)
+		a.move(1)
 
 	case asciiDescriptor:
 		if err := a.cur.img.storeWord(countPC, 0); err != nil { // length (patched below)
@@ -362,6 +367,7 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 		// length still zero, and stores the length once it's counted the
 		// string (see the evPatch below).
 		a.logEvent(outEvent{kind: evConst, sect: a.cur, offset: a.cur.loc, size: 4, value: 0x010E << 16})
+		a.listConst(a.cur.loc, 4, 0x010E<<16)
 		a.move(4)
 
 		// The address of the string, just past this longword: ".+4".
@@ -403,6 +409,9 @@ func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 		if err := a.cur.img.storeByte(countPC, byte(count)); err != nil {
 			return err
 		}
+
+		a.logEvent(outEvent{kind: evPatch, sect: a.cur, offset: countPC - a.cur.base, size: 1, value: uint32(count), immediate: true})
+		a.listPatch(countPC-a.cur.base, 1, uint32(count))
 
 	case asciiDescriptor:
 		if count > 0xFFFF {
@@ -799,6 +808,7 @@ func (a *Assembler) pseudoEntry(c *cursor) error {
 	}
 
 	a.logEvent(outEvent{kind: evEntry, sect: a.cur, offset: a.cur.loc, size: 2, value: mask, sym: sym})
+	a.listData(a.cur.loc, 2)
 	a.move(2)
 
 	return nil

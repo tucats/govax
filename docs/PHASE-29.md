@@ -15,8 +15,8 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress. Subtask 1's probe is ready for the author's VMS
-run (2026-10-02).**
+**Status: in progress. Subtasks 1 and 2 are done
+(2026-10-02).**
 
 ## What Phase 27 leaves in place
 
@@ -457,3 +457,65 @@ The author decided each of these on 2026-10-02.
 - **The traceback output** for the future RUN feature is in `list.log`:
   `FAILMAIN` and `FAILDBG` (access violation), `FAILSIG` (an error, then
   a fatal stop), and their `/NOTRACEBACK` counterparts.
+
+### 2026-10-02 — Subtask 2: listing entries
+
+- **`internal/asm/listing.go`** records a `listLine` for every source
+  line once `SetListing(true)` is called. That includes blank and
+  comment lines, collected definition lines, lines a conditional
+  leaves out, and continuation lines, at every level of the source
+  stack. Macro library definitions are the exception: real MACRO never
+  lists them.
+- Each line records:
+  - its frame (kind, depth, line number) and its text (an expansion's
+    text has its arguments substituted);
+  - where it started and where it left the location counter;
+  - its statement number and directive, instruction, or macro name;
+  - an assignment's value;
+  - the fields it stored, each with its operand group;
+  - its own errors, warnings, and `.PRINT` messages.
+- Fields are recorded where bytes are stored: `advanceData`, plus the
+  `.ASCID`, `.ASCIC`, and `.ENTRY` paths that store directly.
+- `listFields` works out each field's final bytes after assembly. It
+  uses the per-byte owner history (`byteStoredBy`), so a forward
+  reference shows its final value and a field a later statement stored
+  over shows what this statement stored. The marks come from the
+  relocations the statement left:
+  - a relocation is one field holding the linker's addend, marked `'`;
+  - a G^ operand is a `G` mode byte plus the longword;
+  - a constant stored through the linker's stack is marked `'` too.
+- **`TestListingLines`** compares every program line of 27 real listings
+  (the 12 ladder fixtures, 7 of the Phase 28 macro fixtures, and 8 of the
+  probe's default-option listings) with the recorded lines. Each line's
+  location, `.PSECT` location, assignment value, and binary field (with
+  blanks taken out) must match. All match.
+  - `fabalign` is left out: its comments were rewritten after the VAX
+    run, so its line numbers moved.
+  - Lines being collected (such as `.ENDR`) and macro expansions are
+    left to subtask 6.
+  - Unit tests cover the frames, collected and skipped lines,
+    continuations, values, per-line messages, library definitions, and
+    recording being off by default.
+- **Three object fidelity fixes the probe found** (`binary.mar`; no
+  earlier fixture used either form):
+  - **`.ASCIC`:** real MACRO stores the count through the stack as a
+    signed byte (`STA_UB 0`, `STO_SB`), then the string. It then stores
+    the count back with an immediate store between two `CTL_AUGRB`s.
+    govax stored the count as data. The new `outEvent` fields `signed`
+    and `immediate` cover both stores.
+  - **An explicit `I^#` integer** is stored through the stack (the
+    value, then the `8F` mode byte, then `STO_L`), constant or not. It
+    now queues a constant fixup with a one-byte prefix, which the MACRO
+    dialect turns into that relocation.
+  - **`obj.Check`** rejected a `STA_EPM` naming an entry point defined in
+    a later GSD record, as `.MASK PROC` before `PROC` produces. VMS's
+    ANALYZE accepts it, so Check now collects every GSD symbol first, as
+    it already did for psects.
+- **`TestListProbeObjects`** checks govax's objects for 8 of the probe's
+  sources against real MACRO's, record for record (traceback aside, as
+  for the fixtures). All match. Left out:
+  - `notitle`: with no `.TITLE`, real MACRO writes a TTL header of
+    `"\x01 "`, which may come from the `.SBTTL` before any other
+    statement. A source without the `.SBTTL`, in subtask 14's VMS round,
+    can settle it.
+  - the `/DEBUG` objects, which belong to subtask 12.

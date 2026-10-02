@@ -233,7 +233,12 @@ func (e *emitter) event(ev outEvent) error {
 		return e.data(ev.sect, ev.offset, ev.size)
 
 	case evConst:
-		e.b.Emit(stackConstant(ev.value), storeCommand(ev.size))
+		store := storeCommand(ev.size)
+		if ev.signed {
+			store = obj.Command{Op: tirOp("STO_SB")}
+		}
+
+		e.b.Emit(stackConstant(ev.value), store)
 		e.loc += ev.size
 
 	case evEntry:
@@ -245,12 +250,15 @@ func (e *emitter) event(ev outEvent) error {
 		e.loc += ev.size
 
 	case evPatch:
-		e.b.Emit(
-			obj.Command{Op: opAugmentRelocBase, Value: ev.offset - e.loc},
-			stackConstant(ev.value),
-			storeCommand(ev.size),
-			obj.Command{Op: opAugmentRelocBase, Value: e.loc - ev.offset - ev.size},
-		)
+		e.b.Emit(obj.Command{Op: opAugmentRelocBase, Value: ev.offset - e.loc})
+
+		if ev.immediate {
+			e.b.Store(littleEndian(ev.value, ev.size))
+		} else {
+			e.b.Emit(stackConstant(ev.value), storeCommand(ev.size))
+		}
+
+		e.b.Emit(obj.Command{Op: opAugmentRelocBase, Value: e.loc - ev.offset - ev.size})
 	}
 
 	return nil

@@ -187,6 +187,18 @@ type Assembler struct {
 	// cond holds the open conditional assembly blocks (see
 	// conditional.go), innermost last.
 	cond []condFrame
+
+	// listing says to record each source line for a listing (see
+	// listing.go): listLines are the lines recorded, in source order,
+	// and listCur the one being assembled, or nil. group is the part of
+	// an instruction being stored (see listField.group), and endError
+	// the error found at the end of the assembly, if any, which belongs
+	// to no line.
+	listing   bool
+	listLines []*listLine
+	listCur   *listLine
+	group     int
+	endError  error
 }
 
 // New returns an Assembler ready to assemble source, using the built-in VAX
@@ -406,6 +418,9 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 	a.defining = nil
 	a.createdLabel = firstCreatedLabel
 	a.dotLibraries = nil
+	a.listLines = nil
+	a.listCur = nil
+	a.endError = nil
 
 	err := a.assembleLines(source)
 
@@ -419,7 +434,10 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 
 	if err != nil {
 		a.errs = append(a.errs, err)
+		a.endError = err
 	}
+
+	a.listCur = nil
 
 	switch len(a.errs) {
 	case 0:
@@ -940,7 +958,11 @@ func (a *Assembler) assembleAssignment(c *cursor) (handled bool, err error) {
 		return true, err
 	}
 
+	a.listOp("=")
+
 	if x.known() {
+		a.listValue(nil, x.v)
+
 		if name == "." {
 			a.setPC(x.v)
 
@@ -959,10 +981,13 @@ func (a *Assembler) assembleAssignment(c *cursor) (handled bool, err error) {
 		return true, vmserrors.New(vmserrors.VAX_RELEXPR)
 
 	case name == ".":
+		a.listValue(sect, offset)
 		a.setPC(offset)
 
 		return true, nil
 	}
+
+	a.listValue(sect, offset)
 
 	return true, a.setSymbolIn(name, sect, offset, flags, false)
 }

@@ -100,6 +100,7 @@ func (a *Assembler) advance(n uint32) {
 func (a *Assembler) advanceData(n uint32) {
 	a.logEvent(outEvent{kind: evData, sect: a.cur, offset: a.cur.loc, size: n})
 	a.claim(a.cur, a.cur.loc, n)
+	a.listData(a.cur.loc, n)
 	a.move(n)
 }
 

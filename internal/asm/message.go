@@ -56,6 +56,7 @@ func (a *Assembler) pseudoPrintMACRO(c *cursor) error {
 	}
 
 	a.messages = append(a.messages, text)
+	a.listMessage(text)
 
 	return nil
 }

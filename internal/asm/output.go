@@ -41,6 +41,12 @@ type outEvent struct {
 	// implicit marks the switch into . BLANK . that code or data before
 	// any .PSECT makes (see useBlankPsect).
 	implicit bool
+	// signed says an evConst byte is stored as a signed byte (STO_SB),
+	// as real MACRO stores .ASCIC's count; immediate says an evPatch
+	// stores its value as data (STO_IMM), not through the stack, as
+	// .ASCIC's count is patched.
+	signed    bool
+	immediate bool
 }
 
 // logEvent records an output event, in the MACRO dialect only. A data
