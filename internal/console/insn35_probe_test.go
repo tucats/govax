@@ -2,6 +2,7 @@ package console
 
 import (
 	"encoding/binary"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -14,10 +15,10 @@ import (
 
 // The Phase 35 instruction probes (docs/PHASE-35.md, subtask 3):
 // testdata/insn35/*.mar, written by testdata/insn35/gen.go. Each runs a
-// table of instruction cases and writes one record per case. Subtask 14
-// compares govax's records with VMS 7.3's; until then, this checks that
-// govax's MACRO and LINK build each probe and that it runs to the end,
-// writing a well-formed record for every case.
+// table of instruction cases and writes one record per case.
+// TestInsn35ProbesRun checks govax's MACRO and LINK build each probe and
+// that it runs to the end; TestInsn35Oracle compares every record with
+// VMS's run (subtask 14).
 
 // insn35Probes are the probe programs, one per family of instructions.
 var insn35Probes = []string{"P35FD", "P35G", "P35H", "P35O", "P35P"}
@@ -253,5 +254,96 @@ func TestInsn35VAXRun(t *testing.T) {
 		if strings.TrimRight(string(ours), "\n") != strings.TrimRight(sources[name], "\n") {
 			t.Errorf("%s: the probe VMS ran differs from testdata/insn35/%s.mar: run gen.go's output on VMS again", name, strings.ToLower(name))
 		}
+	}
+}
+
+// insn35Mask is a field of one case's record that differs between VMS's
+// run and govax's for a reason the architecture allows, with the reason
+// (each also in docs/DEVIATIONS.md).
+type insn35Mask struct {
+	dst       bool   // the destination bytes
+	signalFPD bool   // PSL<FPD> in the signal array's saved PSL
+	reason    string // why
+}
+
+// insn35Masks are the masked fields, by probe and case name.
+var insn35Masks = map[string]map[string]insn35Mask{
+	"P35P": {
+		"DIVP bad divisor digit": {dst: true,
+			reason: "the manual makes the quotient UNPREDICTABLE for an invalid digit; VMS divided by 8 where govax uses the nibble's value, 14"},
+		"EDITPC digits left over": {signalFPD: true,
+			reason: "govax doesn't model PSL<FPD>, which VMS sets on an EDITPC abort (the manual's note 11)"},
+		"EDITPC digits run out": {signalFPD: true,
+			reason: "govax doesn't model PSL<FPD>, which VMS sets on an EDITPC abort (the manual's note 11)"},
+		"EDITPC reserved operator": {signalFPD: true,
+			reason: "govax doesn't model PSL<FPD>, which VMS sets on an EDITPC abort (the manual's note 11)"},
+	},
+}
+
+// pslFPD is PSL<FPD>, first part done (bit 27).
+const pslFPD = 1 << 27
+
+// TestInsn35Oracle runs each Phase 35 probe under govax and compares
+// every record with VMS's run (testdata/insn35/vax): whether the
+// instruction completed or branched, the PSL after it, R0-R11, the
+// signal array of any condition (its PC included, since govax's MACRO
+// and LINK lay the image out as VMS's did), and the destination bytes.
+// The fields insn35Masks lists are skipped, with their reasons.
+func TestInsn35Oracle(t *testing.T) {
+	vms, sources := vaxInsn35Records(t)
+
+	for _, name := range insn35Probes {
+		t.Run(name, func(t *testing.T) {
+			ours, err := os.ReadFile(filepath.Join("..", "..", "testdata", "insn35", strings.ToLower(name)+".mar"))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if strings.TrimRight(string(ours), "\n") != strings.TrimRight(sources[name], "\n") {
+				t.Skipf("VMS ran an earlier %s; run the probes on VMS again (testdata/insn35/README.md)", name)
+			}
+
+			govax := runInsn35Probe(t, name)
+			if len(govax) != len(vms[name]) {
+				t.Fatalf("govax wrote %d records, VMS %d", len(govax), len(vms[name]))
+			}
+
+			for i, v := range vms[name] {
+				g := govax[i]
+				mask := insn35Masks[name][v.Name]
+
+				vSignal, gSignal := append([]uint32{}, v.Signal...), append([]uint32{}, g.Signal...)
+				if mask.signalFPD && len(vSignal) > 0 && len(gSignal) > 0 {
+					vSignal[len(vSignal)-1] &^= pslFPD
+					gSignal[len(gSignal)-1] &^= pslFPD
+				}
+
+				var diffs []string
+
+				if v.Flags != g.Flags {
+					diffs = append(diffs, fmt.Sprintf("flags VMS %d govax %d", v.Flags, g.Flags))
+				}
+
+				if v.PSL != g.PSL {
+					diffs = append(diffs, fmt.Sprintf("PSL VMS %08X govax %08X", v.PSL, g.PSL))
+				}
+
+				if v.Regs != g.Regs {
+					diffs = append(diffs, fmt.Sprintf("R0-R11 VMS %X govax %X", v.Regs, g.Regs))
+				}
+
+				if fmt.Sprint(vSignal) != fmt.Sprint(gSignal) {
+					diffs = append(diffs, fmt.Sprintf("signal VMS %X govax %X", v.Signal, g.Signal))
+				}
+
+				if !mask.dst && string(v.DST) != string(g.DST) {
+					diffs = append(diffs, fmt.Sprintf("DST VMS % X\n\tgovax % X", v.DST, g.DST))
+				}
+
+				if len(diffs) > 0 {
+					t.Errorf("case %d, %s:\n\t%s", v.Case, v.Name, strings.Join(diffs, "\n\t"))
+				}
+			}
+		})
 	}
 }

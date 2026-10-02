@@ -2536,6 +2536,34 @@ widened."
   it would mean guessing from one sample. The oracle test masks this
   case.
 
+### [Phase 35] Images ran in user mode with a previous mode of kernel
+
+- **Where**: `internal/cpu/handlefault.go`'s `setModeStack` (the port of
+  `interrupt.c`'s `set_mode_stack`), which the console also uses to drop
+  to user mode to run an image.
+- **What**: every mode change set PSL<PRV_MOD> to the mode it came from.
+  That's right for an exception, which goes to a more privileged mode,
+  but the console's drop from kernel to user mode is in effect an REI,
+  and REI requires PRV_MOD >= CUR_MOD. So images ran with a previous mode
+  of kernel (PSL ^X0300nnnn) where VMS runs them with user (^X03C0nnnn):
+  every record of the Phase 35 probe showed it (testdata/insn35).
+- **Status**: fixed in Go (2026-10-02, Phase 35 subtask 14): the previous
+  mode becomes the less privileged of the old and new modes. Every PSL
+  the probes record now matches VMS's. `TestInsn35Oracle`.
+
+### [Phase 35] EDITPC's aborts don't set PSL<FPD>
+
+- **Where**: `internal/cpu/editpc.go`.
+- **What**: on a reserved operand abort part way through (a reserved
+  pattern operator, too few or too many source digits), the manual
+  (EDITPC's note 11) sets PSL<FPD> and leaves its part-way state in R0-R5,
+  so a handler can fix the pattern and continue; VMS's signal arrays show
+  FPD set. govax doesn't model FPD for any instruction (the plan's
+  decision), so it leaves FPD and the registers as they were.
+- **Status**: deliberate (2026-10-02, Phase 35 subtask 13). The output
+  produced before the abort does stay in the destination, as on VMS.
+  `TestInsn35Oracle` masks the FPD bit in these three cases.
+
 <!--
 Entry template:
 

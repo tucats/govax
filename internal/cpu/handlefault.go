@@ -226,7 +226,15 @@ func (e *Engine) setModeStack(newMode vax.AccessMode, interruptStack bool) {
 		e.mem.InvalidateProtection()
 	}
 
-	psl.SetPrvMod(curMod)
+	// The previous mode is the less privileged of the old and new modes
+	// (the higher-numbered: kernel is 0, user 3). Taking an exception
+	// into a more privileged mode records the mode it came from, as
+	// before; dropping to a less privileged one, as the console does to
+	// run an image in user mode (an REI, in effect), leaves the previous
+	// mode equal to the new one. Either way PRV >= CUR, which REI
+	// requires of every PSL: govax used to run images in user mode with
+	// a previous mode of kernel, where VMS has user (docs/DEVIATIONS.md).
+	psl.SetPrvMod(max(curMod, actualNewMode))
 
 	var newSP uint32
 	if interruptStack {

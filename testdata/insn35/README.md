@@ -91,14 +91,17 @@ MACRO had accepted it; it now reports the same error.
 
 `TestInsn35ProbesRun` (`internal/console/insn35_probe_test.go`) builds
 each probe with govax's own MACRO and LINK, runs it on a fresh volume, and
-checks that it wrote a well-formed record for every case. Subtask 14
-compares those records with VMS's.
+checks that it wrote a well-formed record for every case.
+`TestInsn35Oracle` compares every record with VMS's: flags, PSL, R0-R11,
+the signal array, and the destination bytes. All 567 cases match, but for
+the fields `insn35Masks` lists with their reasons (DIVP's UNPREDICTABLE
+quotient for an invalid digit, and PSL<FPD> in EDITPC's aborts, which
+govax doesn't model).
 
 Some registers the instructions leave hold addresses (packed decimal and
 POLY leave operand addresses in R1, R3, and R5), and a signal array holds
-the PC. They match VMS's only if govax's MACRO and LINK lay the image out
-as VMS's do; subtask 14 checks that, or compares them relative to their
-labels.
+the PC. They match because govax's MACRO and LINK lay each probe's image
+out exactly as VMS's do.
 
 ## The assembler fixture
 

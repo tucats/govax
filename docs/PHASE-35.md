@@ -714,3 +714,19 @@ The author accepted each proposal below on 2026-10-02.
   - **Against VMS**: all 22 EDITPC cases match. With that, every case of
     the packed probe matches VMS's run under govax but the one
     UNPREDICTABLE DIVP case (subtask 11). `TestEDITPC`.
+- 2026-10-02: Subtask 14 done: `TestInsn35Oracle`.
+  - It runs each probe under govax and compares every record with VMS's
+    run: flags, the whole PSL, R0-R11, the whole signal array (its PC
+    too: govax's MACRO and LINK lay the probes out exactly as VMS's
+    did), and the destination bytes. All 567 cases match but for the
+    masked fields, each with its reason in the test and in
+    `DEVIATIONS.md`: DIVP's UNPREDICTABLE quotient for an invalid digit
+    (subtask 11), and PSL<FPD> in the signal arrays of EDITPC's three
+    aborts (govax doesn't model FPD).
+  - **One more fix it needed**: every PSL differed in its previous-mode
+    field. govax ran images in user mode with a previous mode of kernel,
+    which REI would never allow; VMS has user. A drop to a less
+    privileged mode now sets the previous mode to the new one
+    (`setModeStack`; `DEVIATIONS.md`).
+  - The test skips a probe whose source differs from the one VMS ran, so
+    a change to `gen.go` asks for a new VMS run rather than failing.
