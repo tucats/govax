@@ -6,10 +6,11 @@ import "testing"
 // reference/eVAX/eVAX/Headers/instruction_table.h (284, including the three
 // EXT_FD/EXT_FE/EXT_FF filler entries that keep the single-byte opcode
 // range's array-position-equals-opcode-value convention intact, but
-// excluding the table's own empty-name end-of-array sentinel). A change
-// here should only ever come from regenerating against an updated
-// instruction_table.h, never a hand edit.
-const wantInstructionCount = 284
+// excluding the table's own empty-name end-of-array sentinel), plus the 30
+// architected instructions the header lacks, which the generator adds from
+// gen/operands.go's missingInstructions (Phase 35). A change here should
+// only ever come from regenerating, never a hand edit.
+const wantInstructionCount = 284 + 30
 
 func allInstructions(t *Table) []*Instruction {
 	var out []*Instruction

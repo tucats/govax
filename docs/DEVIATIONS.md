@@ -2344,6 +2344,45 @@ widened."
   DEPOSIT, being a kernel-mode access, can no longer write a read-only
   section; `SET PTE addr PROT=PTE$K_UW` first. `TestLink_helloPageProtection`.
 
+### [Phase 35] Instruction table rows that disagree with the manual
+
+- **Where**: `reference/eVAX/eVAX/Headers/instruction_table.h`, generated
+  into `internal/cpu/instructions_table.go` by `internal/cpu/gen`.
+- **What**: checking every row against the *VAX Architecture Reference
+  Manual*'s format lines (the new `gen/operands.go`) found 14 rows wrong,
+  beyond those `knownTableFixes` already corrected:
+  - CVTWL, CVTWB, CVTBL, CVTBW, CVTLB, and CVTLW gave their destinations
+    modify access (`.ml`) instead of write (`.wl`), so the destination was
+    read before the instruction ran.
+  - BISW3's destination was a longword, not a word (the BISB3 slip again).
+  - PROBER, PROBEW, INSQUE, REMQUE, CALLG, and CALLS sized their address
+    operands as longwords (`.al`) instead of bytes (`.ab`). An address
+    operand's size is how far `(Rn)+` advances Rn and how `[Rx]` scales
+    the index, so `CALLG (R1)[R2],...` used R1+4*R2 instead of R1+R2.
+  - ACBF's short-literal type was integer, though all its read operands
+    are F_floating, so `ACBF #10.0,#1.0,R3,LOOP` read its literals as the
+    integers 34 and 8, then as floating bit patterns (tiny values), and the
+    loop branched the wrong way.
+- **Status**: fixed in Go (2026-10-02). The generator now checks every row
+  against the manual, stops on any difference not listed in
+  `manualCorrections` (where each of these is listed with its reason), and
+  fills in the 49 rows the C header left blank and the 30 it lacks.
+  `TestInstructionTableMatchesManual`, `TestInstructionTableConsistent`,
+  `TestEmulAcbFloatShortLiterals`.
+
+### [Phase 35] A 16-byte immediate operand panicked the decoder
+
+- **Where**: `internal/cpu/operand.go`'s `decodeImmediate` and
+  `loadSized` (a port of `decode_operand.c`, which read 1, 2, or 4 bytes).
+- **What**: an immediate (`I^#`) operand was read through `loadSized`,
+  which panics on any size but 1, 2, or 4 (8 had been special-cased). No
+  instruction had a 16-byte operand until the table gained the H_floating
+  and octaword instructions, but then `MOVH I^#...,R0` would have crashed
+  govax rather than faulting.
+- **Status**: fixed in Go (2026-10-02): the decoder reads the 16 bytes and
+  steps over them; the value itself is kept once Phase 35's subtask 2
+  widens `Operand`. `TestNewInstructionsDecodeAsReserved`.
+
 <!--
 Entry template:
 

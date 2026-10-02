@@ -23,16 +23,24 @@ type Instruction struct {
 	Name         string
 	Opcode       Opcode
 	OperandCount int
-	// Scale gives each operand's natural size in bytes (1, 2, 4, or 8);
-	// entries beyond OperandCount are 0 and unused, matching the C source's
-	// scale[6] array.
+	// Scale gives each operand's natural size in bytes (1, 2, 4, 8, or
+	// 16); entries beyond OperandCount are 0 and unused, matching the C
+	// source's scale[6] array. It always equals DataType[i].Size().
 	Scale [6]int
 	// Access gives each operand's AccessKind; entries beyond OperandCount
 	// are AccessNone.
 	Access [6]AccessKind
 	// Type says how this instruction's short-literal operands (addressing
 	// modes 0-3) are interpreted, matching struct INSTRUCTION's type field.
+	// The generator derives it from DataType: floating if any operand the
+	// instruction reads is a floating type.
 	Type ShortLiteralType
+	// DataType gives each operand's data type from the instruction's
+	// format line in the VAX Architecture Reference Manual (see
+	// datatype.go); entries beyond OperandCount are DataNone. The C
+	// source has no such column: the generator takes it from
+	// gen/operands.go.
+	DataType [6]DataType
 }
 
 // Table is the VAX instruction table: every opcode the decoder knows about,

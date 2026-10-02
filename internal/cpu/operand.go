@@ -214,6 +214,27 @@ func decodeImmediate(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, litType
 
 	var raw uint64
 
+	if size == 16 {
+		// An octaword or H_floating immediate: 16 bytes of data in the
+		// instruction stream. An Operand's Value holds only 64 bits until
+		// Phase 35's subtask 2 widens it, and no instruction with a
+		// 16-byte operand has a handler before then, so for now the
+		// decoder only reads the 16 bytes (a page that isn't there still
+		// faults here, as on a VAX) and steps over them. This used to
+		// panic, which nothing could reach until the table gained these
+		// instructions' operands.
+		for off := uint32(0); off < 16; off += 4 {
+			if _, err := mem.LoadLongword(cpu, *pc+off); err != nil {
+				return err
+			}
+		}
+
+		*pc += 16
+		op.Kind = OperandImmediate
+
+		return nil
+	}
+
 	if size == 8 {
 		lo, err := mem.LoadLongword(cpu, *pc)
 		if err != nil {

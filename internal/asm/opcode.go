@@ -19,6 +19,21 @@ var opcodeAliases = map[string]string{
 	"CLRF":   "CLRL",
 	"MOVAF":  "MOVAL",
 	"PUSHAF": "PUSHAL",
+
+	// The VAX has no separate clear, move-address, or push-address
+	// instructions for the floating types: each uses the integer
+	// instruction of the same size, since those only move bits or
+	// addresses. The manual and VAX MACRO name them both ways. D_floating
+	// and G_floating are quadword-sized, H_floating octaword-sized (the
+	// octaword instructions are Phase 35's, at FD7C-FD7F).
+	"MOVAD":  "MOVAQ",
+	"PUSHAD": "PUSHAQ",
+	"CLRG":   "CLRQ",
+	"MOVAG":  "MOVAQ",
+	"PUSHAG": "PUSHAQ",
+	"CLRH":   "CLRO",
+	"MOVAH":  "MOVAO",
+	"PUSHAH": "PUSHAO",
 }
 
 // assembleOpcode assembles a real VAX instruction: mnemonic, then its
