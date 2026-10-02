@@ -17,7 +17,9 @@ import (
 var ErrImmutableOperand = vmserrors.New(vmserrors.VAX_IMMOPND)
 
 // Load resolves op's current value, sized to op.Size bytes (1, 2, 4, or 8),
-// zero-extended into the result. This is the Go port of storage.c's
+// zero-extended into the result. For a 16-byte operand (an octaword or
+// H_floating value) it returns only the low-order 64 bits; use
+// LoadOctaword for all of it. This is the Go port of storage.c's
 // get_operand, minus the pointer/scratch-register mechanism it uses to give
 // register, memory, and literal operands a uniform pointer interface — see
 // docs/PHASE-03.md's design notes. Sign-extension, when an instruction
@@ -34,6 +36,12 @@ func (op Operand) Load(cpu *vax.CPU, mem *vm.Memory) (uint64, error) {
 		return op.Value, nil
 
 	case OperandRegister:
+		if op.Size == 16 {
+			o, err := op.LoadOctaword(cpu, mem)
+
+			return o.Lo, err
+		}
+
 		if op.Size == 8 {
 			lo := uint64(cpu.GPR(op.Reg))
 			hi := uint64(cpu.GPR(op.Reg + 1))
@@ -60,7 +68,14 @@ func (op Operand) Load(cpu *vax.CPU, mem *vm.Memory) (uint64, error) {
 // bytes" behavior from Phase 02). A register operand sized 8 bytes writes
 // the register pair op.Reg/op.Reg+1, the Store-side counterpart of Load's
 // quadword register-pair handling above.
+//
+// A 16-byte operand gets value zero-extended to 128 bits, which is what
+// CLRO needs (it stores 0); use StoreOctaword to write all 128 bits.
 func (op Operand) Store(cpu *vax.CPU, mem *vm.Memory, value uint64) error {
+	if op.Size == 16 {
+		return op.StoreOctaword(cpu, mem, Octaword{Lo: value})
+	}
+
 	switch op.Kind {
 	case OperandImmediate:
 		return ErrImmutableOperand
@@ -106,6 +121,12 @@ func mergeLow(orig, v uint32, size int) uint32 {
 }
 
 func loadValue(cpu *vax.CPU, mem *vm.Memory, addr uint32, size int) (uint64, error) {
+	if size == 16 {
+		o, err := loadOctaword(cpu, mem, addr)
+
+		return o.Lo, err
+	}
+
 	if size == 8 {
 		return mem.LoadQuadword(cpu, addr)
 	}

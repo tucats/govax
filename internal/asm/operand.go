@@ -220,7 +220,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 	var (
 		litValue      uint32  // the short-literal value/table-index (int or float)
-		litQuad       uint64  // an integer literal's value at full width
+		litWide       octa    // an integer literal's value at full width
 		litFloat      float64 // the parsed float, valid when dtype is float
 		litWasForward bool
 	)
@@ -235,10 +235,10 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				return err
 			}
 
-			litQuad, litWasForward = v, wasForward
-			litValue = uint32(v)
+			litWide, litWasForward = v, wasForward
+			litValue = uint32(v.lo)
 
-			if v >= 64 {
+			if !v.fitsShortLiteral() {
 				litValue = 64 // doesn't fit, whatever its low longword
 			}
 		} else {
@@ -480,10 +480,10 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				a.lastFixup.prefix = 1
 			}
 
-			litQuad, litWasForward = v, deferred
+			litWide = v
 		}
 
-		return a.storeImmediateInt(scale, litQuad, litWasForward)
+		return a.storeImmediateInt(scale, litWide)
 	}
 
 	// @#address: absolute.
@@ -618,52 +618,50 @@ func modeAllowed(mode string, inst *cpu.Instruction, opIndex int, indexed bool) 
 }
 
 // immediateValue reads a literal's integer value for an operand of scale
-// bytes. A quadword's literal is read at full width when it's a single
-// number, as .QUAD reads one, and otherwise evaluated in 32 bits and
-// sign-extended, as MACRO-32 does. A forward reference is reported as
-// deferred; its fixup patches the low longword, and its high bits are
-// zero.
-func (a *Assembler) immediateValue(c *cursor, loc uint32, fx fixupKind, scale int) (uint64, bool, error) {
+// bytes. A quadword's or octaword's literal is read at full width when
+// it's a single number, as .QUAD and .OCTA read one, and otherwise
+// evaluated in 32 bits and sign-extended, as MACRO-32 does. A forward
+// reference is reported as deferred; its fixup patches the low longword,
+// and its high bits are zero.
+func (a *Assembler) immediateValue(c *cursor, loc uint32, fx fixupKind, scale int) (octa, bool, error) {
 	if scale >= 8 {
-		if v, ok := a.quadLiteral(c); ok {
+		if v, ok := a.wideLiteral(c); ok {
 			return v, false, nil
 		}
 	}
 
 	v, deferred, err := a.exprValue(c, loc, fx)
-	if err != nil || deferred || scale < 8 {
-		return uint64(v), deferred, err
+
+	switch {
+	case err != nil:
+		return octa{}, false, err
+	case deferred, scale < 8:
+		// A value not known yet, or one for a byte, word, or longword
+		// operand: only the low longword is ever stored.
+		return octa{lo: uint64(v)}, deferred, nil
 	}
 
-	return uint64(int64(int32(v))), false, nil
+	return signExtendOcta(v), false, nil
 }
 
 // storeImmediateInt writes an I^# immediate literal's integer data: 1, 2,
 // or 4 bytes as asm_operand.c stored them, or a quadword or octaword, which
-// eVAX couldn't assemble. The wider forms extend the value's sign, except
-// for a value not known yet (deferred), whose high bits are zero.
-func (a *Assembler) storeImmediateInt(scale int, value uint64, deferred bool) error {
-	if scale < 8 {
-		return a.emitScaled(uint32(value), scale)
-	}
-
-	fill := uint32(0)
-	if !deferred && int64(value) < 0 {
-		fill = 0xFFFFFFFF
-	}
-
-	longwords := []uint32{uint32(value), uint32(value >> 32)}
-	for len(longwords) < scale/4 {
-		longwords = append(longwords, fill)
-	}
-
-	for _, l := range longwords {
-		if err := a.emitLongword(l); err != nil {
+// eVAX couldn't assemble (immediateValue has already widened the value).
+func (a *Assembler) storeImmediateInt(scale int, value octa) error {
+	switch scale {
+	case 8:
+		if err := a.emitLongword(uint32(value.lo)); err != nil {
 			return err
 		}
-	}
 
-	return nil
+		return a.emitLongword(uint32(value.lo >> 32))
+
+	case 16:
+		return a.emitOcta(value)
+
+	default:
+		return a.emitScaled(uint32(value.lo), scale)
+	}
 }
 
 // storeImmediateFloat writes an I^# immediate literal's F_FLOAT (scale 4)

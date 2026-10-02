@@ -2560,6 +2560,7 @@ $ASM ,PSEU
         NARG
         NCHR
         NTYPE
+        OCTA
         PRINT
         PTE
         QUAD
@@ -2729,9 +2730,11 @@ $ASM ,PSEU,BYTE
 $ASM ,PSEU,WORD
 $ASM ,PSEU,LONG
 $ASM ,PSEU,QUAD
+$ASM ,PSEU,OCTA
 
-    The BYTE, WORD, LONG, and QUAD pseudo-opcodes store specific given
-    values of the indicated size in memory.
+    The BYTE, WORD, LONG, QUAD, and OCTA pseudo-opcodes store specific
+    given values of the indicated size in memory: 1, 2, 4, 8, or 16
+    bytes.
 
     Syntax:
 
@@ -2743,6 +2746,8 @@ $ASM ,PSEU,QUAD
 
         .QUAD    <data> [, <data> ]
 
+        .OCTA    <data> [, <data> ]
+
 
      Parameter:
 
@@ -2750,10 +2755,11 @@ $ASM ,PSEU,QUAD
                    is given, they must be separated by commas.  The
                    data is stored in memory in the order given.  A
                    BYTE or WORD value may be given signed (-1) or
-                   unsigned (255).  A QUAD value that is a single
-                   number, such as -^D100000 or ^X0123456789ABCDEF,
-                   is stored in full; any other expression is
-                   computed as a longword and sign-extended.
+                   unsigned (255).  A QUAD or OCTA value that is a
+                   single number, such as -^D100000 or
+                   ^X0123456789ABCDEF, is stored in full; any other
+                   expression is computed as a longword and
+                   sign-extended.
 
 $ASM ,PSEU,ENTR
 

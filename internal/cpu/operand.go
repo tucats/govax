@@ -38,7 +38,11 @@ type Operand struct {
 	Reg    vax.Reg
 	Addr   uint32
 	Value  uint64
-	Size   int
+	// High is the high-order 64 bits of a 16-byte immediate (an octaword
+	// or H_floating I^# operand), whose low-order 64 bits are in Value.
+	// It is zero for every other operand. See LoadOctaword.
+	High uint64
+	Size int
 }
 
 func loadSized(cpu *vax.CPU, mem *vm.Memory, addr uint32, size int) (uint32, error) {
@@ -139,6 +143,13 @@ func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, 
 		// common addressing mode.
 		op.Kind = OperandRegister
 		op.Reg = reg
+
+		// An octaword (or H_floating) value in registers spans four of
+		// them, Rn through Rn+3; starting past R11 would run into the
+		// PC. See octawordRegisterLimit.
+		if size == 16 && reg > octawordRegisterLimit {
+			return op, &Fault{Code: ExcReservedAddr}
+		}
 		// A register has no VAX address, so an OP_AD/OP_VA operand (e.g.
 		// MOVAL/PUSHAL's destination, a bitfield base) resolving to
 		// Register mode has no address to report here -- but, per
@@ -216,21 +227,23 @@ func decodeImmediate(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, litType
 
 	if size == 16 {
 		// An octaword or H_floating immediate: 16 bytes of data in the
-		// instruction stream. An Operand's Value holds only 64 bits until
-		// Phase 35's subtask 2 widens it, and no instruction with a
-		// 16-byte operand has a handler before then, so for now the
-		// decoder only reads the 16 bytes (a page that isn't there still
-		// faults here, as on a VAX) and steps over them. This used to
-		// panic, which nothing could reach until the table gained these
-		// instructions' operands.
-		for off := uint32(0); off < 16; off += 4 {
-			if _, err := mem.LoadLongword(cpu, *pc+off); err != nil {
-				return err
-			}
+		// instruction stream, low-order quadword first. Go has no 128-bit
+		// integer, so the low half goes in Value and the high half in
+		// High (see LoadOctaword). An H_floating immediate stays as its
+		// raw bits here; the floating code interprets them.
+		lo, err := mem.LoadQuadword(cpu, *pc)
+		if err != nil {
+			return err
+		}
+
+		hi, err := mem.LoadQuadword(cpu, *pc+8)
+		if err != nil {
+			return err
 		}
 
 		*pc += 16
 		op.Kind = OperandImmediate
+		op.Value, op.High = lo, hi
 
 		return nil
 	}

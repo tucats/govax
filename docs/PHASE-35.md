@@ -416,3 +416,30 @@ The author accepted each proposal below on 2026-10-02.
     since `7fbf5c7`; regenerate with `go run ./gen -in
     ../../reference/eVAX/eVAX/Headers/instruction_table.h -out
     instructions_table.go` from `internal/cpu`.
+- 2026-10-02: The author reviewed subtask 1 and asked for subtask 2.
+- 2026-10-02: Subtask 2 done: octaword operands and the octaword moves.
+  - **`Octaword`** (`internal/cpu/octaword.go`): a 128-bit value as two
+    `uint64` halves, with `Operand.LoadOctaword`/`StoreOctaword` for
+    registers (Rn..Rn+3), memory, and immediates. `Operand` gains `High`,
+    the top 64 bits of a 16-byte immediate. `Load`/`Store` stay 64-bit:
+    on a 16-byte operand `Load` returns the low half and `Store`
+    zero-extends (which is all CLRO needs). A memory store checks both
+    ends are writable before writing either half, so a fault leaves the
+    destination unchanged.
+  - **Decision 4**: an octaword register operand past R11 is a reserved
+    addressing-mode fault at decode (`DEVIATIONS.md`).
+  - **Handlers**: CLRO (the shared CLR handler), MOVO (its own, since
+    `emulMove` carries 64 bits), MOVAO and PUSHAO (the shared MOVA/PUSHA
+    handlers; only decode cares about the size).
+  - **Assembler**: integer literals are 128 bits wide (`internal/asm/
+    wide.go`), so octaword immediates keep every bit, and a value of
+    2^64 or more is never taken for a short literal. New `.OCTA`
+    directive (both dialects; HELP updated). The disassembler shows
+    quadword and octaword immediates in full; it used to drop a
+    quadword's high longword (`DEVIATIONS.md`).
+  - **Tests**: `internal/cpu/octaword_test.go` (register, immediate,
+    short literal, `(Rn)+`/`-(Rn)`, indexed scaling by 16, condition
+    codes, the R12 limit, CLRO, MOVAO/PUSHAO, and a store across an
+    invalid page leaving memory unchanged); `internal/asm/octaword_test.go`
+    (`.OCTA`, MOVO immediates, wide disassembly round trips).
+

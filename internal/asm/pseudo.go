@@ -164,72 +164,12 @@ func (a *Assembler) pseudoQuad(c *cursor) error {
 }
 
 // quadLiteral reads a .QUAD item that is exactly one numeric literal,
-// followed by a ',' or the end of the line; otherwise it leaves c where
-// it was and reports false.
+// followed by a ',' or the end of the line, keeping its low 64 bits;
+// otherwise it leaves c where it was and reports false. See wideLiteral.
 func (a *Assembler) quadLiteral(c *cursor) (uint64, bool) {
-	save := c.pos
-	c.skipBlanks()
+	v, ok := a.wideLiteral(c)
 
-	neg := false
-	if c.peek() == '-' || c.peek() == '+' {
-		neg = c.next() == '-'
-	}
-
-	base := uint64(a.radix)
-
-	switch {
-	case c.peek() == '^' && c.peekAt(1) == 'X', c.peek() == '0' && c.peekAt(1) == 'X':
-		base = 16
-
-		c.skip(2)
-
-	case c.peek() == '^' && c.peekAt(1) == 'D':
-		base = 10
-
-		c.skip(2)
-	}
-
-	var v uint64
-
-	digits := 0
-
-	for {
-		ch := c.peek()
-
-		var d uint64
-
-		switch {
-		case isDigit(ch):
-			d = uint64(ch - '0')
-		case base == 16 && ch >= 'A' && ch <= 'F':
-			d = uint64(ch-'A') + 10
-		default:
-			d = base
-		}
-
-		if d >= base {
-			break
-		}
-
-		v = v*base + d
-		digits++
-
-		c.next()
-	}
-
-	c.skipBlanks()
-
-	if digits == 0 || (!c.atEnd() && c.peek() != ',') {
-		c.pos = save
-
-		return 0, false
-	}
-
-	if neg {
-		v = -v
-	}
-
-	return v, true
+	return v.lo, ok
 }
 
 // pseudoBase assembles .BASE value: sets the current deposit location,

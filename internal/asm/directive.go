@@ -90,6 +90,7 @@ func init() {
 		"WORD":  {both, func(a *Assembler, c *cursor) error { return a.pseudoData(c, 2) }},
 		"LONG":  {both, func(a *Assembler, c *cursor) error { return a.pseudoData(c, 4) }},
 		"QUAD":  {both, (*Assembler).pseudoQuad},
+		"OCTA":  {both, (*Assembler).pseudoOcta},
 		"ASCII": {both, func(a *Assembler, c *cursor) error { return a.pseudoAscii(c, asciiPlain) }},
 		"ASCIZ": {both, func(a *Assembler, c *cursor) error { return a.pseudoAscii(c, asciiZ) }},
 		"ASCIC": {both, func(a *Assembler, c *cursor) error { return a.pseudoAscii(c, asciiCounted) }},

@@ -188,6 +188,23 @@ func formatIntHex(v uint32, size int) string {
 	}
 }
 
+// formatWideHex formats the size bytes at addr (8 or 16, a quadword or
+// octaword) as one hexadecimal number with the ^X radix operator, every
+// digit shown. Memory holds the value low-order byte first, so the bytes
+// are printed from the last to the first to put the most significant
+// digits on the left.
+func formatWideHex(r ByteReader, addr uint32, size int) string {
+	var b strings.Builder
+
+	b.WriteString("^X")
+
+	for i := size - 1; i >= 0; i-- {
+		fmt.Fprintf(&b, "%02X", r.ByteAt(addr+uint32(i)))
+	}
+
+	return b.String()
+}
+
 // formatFloatValue renders f in plain decimal (never exponent) notation, so
 // it round-trips through this package's own parseFloat (which only accepts
 // digits, '.', a sign, and 'E' — Go's %g form can emit a bare exponent with
@@ -276,6 +293,17 @@ func formatPCRelative(r ByteReader, pc *uint32, mode byte, size int, litType cpu
 			*pc += uint32(size)
 
 			return "I^#" + formatFloatValue(cpu.DecodeFloat(bits, size)), 0, nil
+		}
+
+		if size >= 8 {
+			// A quadword or octaword immediate: show all of it, so the
+			// text reassembles to the same bytes. The value reported
+			// alongside is the low longword, as for any other operand.
+			text := formatWideHex(r, *pc, size)
+			v := loadSized(r, *pc, 4)
+			*pc += uint32(size)
+
+			return "I^#" + text, v, nil
 		}
 
 		v := loadSized(r, *pc, size)

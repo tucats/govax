@@ -21,6 +21,10 @@ func init() {
 	reg(0xD2, emulMcom) // MCOML
 	reg(0xCE, emulMneg) // MNEGL
 	reg(0x7D, emulMove) // MOVQ
+
+	// MOVO (also used for H_floating values, as MOVQ is for D and G) is a
+	// two-byte opcode, 0xFD 0x7D.
+	instructionTable.SetHandler(instructionTable.Lookup(Opcode{Extended: 0xFD, Function: 0x7D}), emulMoveOctaword)
 }
 
 // emulMove is shared by MOV{B,W,L,Q} and MOVZ{BW,BL,WL}: the destination
@@ -52,6 +56,26 @@ func emulMove(e *Engine, d *Decoded) error {
 	e.cpu.SetPSL(psl)
 
 	return d.Operands[1].Store(e.cpu, e.mem, v)
+}
+
+// emulMoveOctaword is MOVO: the 16-byte destination is replaced by the
+// 16-byte source. As for every MOV, N and Z come from the value moved (N
+// from bit 127, its sign bit), V <- 0, and C is unaffected. emulMove can't
+// do this: Load and Store carry a uint64, which holds only half an
+// octaword, so MOVO uses the octaword forms.
+func emulMoveOctaword(e *Engine, d *Decoded) error {
+	v, err := d.Operands[0].LoadOctaword(e.cpu, e.mem)
+	if err != nil {
+		return err
+	}
+
+	psl := e.cpu.PSL()
+	psl.SetN(v.Negative())
+	psl.SetZ(v.IsZero())
+	psl.SetV(false)
+	e.cpu.SetPSL(psl)
+
+	return d.Operands[1].StoreOctaword(e.cpu, e.mem, v)
 }
 
 // emulMcom is MCOM{B,W,L}: destination <- one's complement of source. N/Z

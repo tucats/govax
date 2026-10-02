@@ -2379,9 +2379,33 @@ widened."
   instruction had a 16-byte operand until the table gained the H_floating
   and octaword instructions, but then `MOVH I^#...,R0` would have crashed
   govax rather than faulting.
-- **Status**: fixed in Go (2026-10-02): the decoder reads the 16 bytes and
-  steps over them; the value itself is kept once Phase 35's subtask 2
-  widens `Operand`. `TestNewInstructionsDecodeAsReserved`.
+- **Status**: fixed in Go (2026-10-02): the decoder reads all 16 bytes,
+  keeping the high half in the new `Operand.High` (subtask 2).
+  `TestNewInstructionsDecodeAsReserved`, `TestMovoImmediateToMemory`.
+
+### [Phase 35] An octaword in R12 or above
+
+- **Where**: `internal/cpu/operand.go`'s register-mode decode.
+- **What**: an octaword (or H_floating) register operand spans Rn through
+  Rn+3. The manual calls one starting in R12 or above UNPREDICTABLE, since
+  it would reach the PC. Real hardware may do anything.
+- **Status**: a deliberate choice (Phase 35 Decision 4): govax raises a
+  reserved-addressing-mode fault at decode, for a source or a destination.
+  The Phase 35 oracle may show what VMS 7.3's MicroVAX does.
+  `TestOctawordRegisterLimit`.
+
+### [Phase 35] The disassembler showed only a quadword immediate's low longword
+
+- **Where**: `internal/asm/disasm.go`'s immediate-mode formatting (a port
+  of `disasm_operand.c`, which knew 1, 2, and 4 bytes).
+- **What**: `MOVQ I^#^X123456789,R0` disassembled as `MOVQ
+  I^#^X23456789,R0`: the instruction length was right, but the text
+  dropped the high longword, so it didn't reassemble to the same bytes.
+- **Status**: fixed in Go (2026-10-02): quadword and octaword immediates
+  are shown in full. The assembler's literals also became 128 bits wide,
+  so `MOVO` immediates and the new `.OCTA` keep all their bits, and a
+  value above 2^64 is never taken for a short literal.
+  `TestDisassembleWideImmediates`, `TestOctawordImmediates`, `TestOcta`.
 
 <!--
 Entry template:

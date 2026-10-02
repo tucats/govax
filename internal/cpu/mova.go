@@ -18,6 +18,14 @@ func init() {
 	reg(0xDF, emulPusha) // PUSHAL
 	reg(0x7F, emulPusha) // PUSHAQ
 
+	// MOVAO and PUSHAO (also spelled MOVAH and PUSHAH) are two-byte
+	// opcodes, 0xFD 0x7E and 0xFD 0x7F. Only the size of the addressed
+	// data differs from MOVAQ/PUSHAQ, and it matters only to decode (how
+	// far (Rn)+ advances, and how [Rx] scales), so the handlers are the
+	// same.
+	instructionTable.SetHandler(instructionTable.Lookup(Opcode{Extended: 0xFD, Function: 0x7E}), emulMova)
+	instructionTable.SetHandler(instructionTable.Lookup(Opcode{Extended: 0xFD, Function: 0x7F}), emulPusha)
+
 	reg(0xDD, emulPushl) // PUSHL
 }
 
