@@ -59,7 +59,7 @@ func dirHeader(t *testing.T, vol *volume.Volume, dirs ...string) ondisk.FileHead
 func TestCreateDirectoryDefaults(t *testing.T) {
 	s, vol := newCreateDirSession(t)
 
-	created := mustCreateDir(t, s, "[A.B]", CreateDirectoryOptions{ProcessUIC: systemUIC})
+	created := mustCreateDir(t, s, "[A.B]", CreateDirectoryOptions{})
 
 	want := []CreatedDirectory{{Name: "DUA0:[A]", Created: true}, {Name: "DUA0:[A.B]", Created: true}}
 	if len(created) != 2 || created[0] != want[0] || created[1] != want[1] {
@@ -85,7 +85,7 @@ func TestCreateDirectoryDefaults(t *testing.T) {
 	}
 
 	// Again: both exist.
-	created = mustCreateDir(t, s, "[A.B]", CreateDirectoryOptions{ProcessUIC: systemUIC})
+	created = mustCreateDir(t, s, "[A.B]", CreateDirectoryOptions{})
 	if len(created) != 2 || created[0].Created || created[1].Created {
 		t.Errorf("second CreateDirectory = %+v, want both existing", created)
 	}
@@ -96,11 +96,12 @@ func TestCreateDirectoryOwner(t *testing.T) {
 
 	owner := ondisk.Uic{Group: 0o200, Member: 0o201}
 
-	mustCreateDir(t, s, "[OWNED]", CreateDirectoryOptions{ProcessUIC: systemUIC, Owner: &owner})
-	mustCreateDir(t, s, "[OWNED.PCHILD]", CreateDirectoryOptions{ProcessUIC: systemUIC, OwnerParent: true})
-	mustCreateDir(t, s, "[OWNED.CHILD]", CreateDirectoryOptions{ProcessUIC: systemUIC})
+	mustCreateDir(t, s, "[OWNED]", CreateDirectoryOptions{Owner: &owner})
+	mustCreateDir(t, s, "[OWNED.CHILD]", CreateDirectoryOptions{})
+	mustCreateDir(t, s, "[OWNED.SELF]", CreateDirectoryOptions{Owner: &systemUIC})
 
-	for dir, want := range map[string]ondisk.Uic{"OWNED": owner, "PCHILD": owner, "CHILD": systemUIC} {
+	// Without an owner, the parent's, as VMS 7.3 gave [OWNED.CHILD].
+	for dir, want := range map[string]ondisk.Uic{"OWNED": owner, "CHILD": owner, "SELF": systemUIC} {
 		dirs := []string{"OWNED", dir}
 		if dir == "OWNED" {
 			dirs = dirs[:1]

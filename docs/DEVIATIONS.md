@@ -2299,22 +2299,6 @@ widened."
   and a program using it gets the same code. `TestOracleObjects` treats the
   services probe's object severity as SUCCESS for this.
 
-### [Phase 34] A new directory's default owner is the process's UIC
-
-- **Where**: `internal/rms/createdir.go` (`CreateDirectoryOptions.forParent`),
-  against the Phase 34 oracle (`testdata/credir`, VMS 7.3's run of
-  `credir.com`).
-- **What**: VMS gave `[OWNED.CHILD]`, made by SYSTEM (`[1,4]`) with no
-  `/OWNER_UIC` in a directory owned by `[200,201]`, its parent's owner,
-  `[200,201]`. A privileged process making a directory in another owner's
-  directory gives it that owner. govax gives every new directory the
-  process's UIC unless `/OWNER_UIC` says otherwise, as the author asked
-  (docs/PHASE-34.md, Decisions 2). Since govax's process is always
-  SYSTEM, VMS's rule would amount to "the parent's owner" everywhere.
-- **Status**: kept by decision. `TestCreateDirectoryOracle` masks the
-  owner of `[OWNED.CHILD]` for it; dropping the mask is how to check a
-  change of mind.
-
 ### [Phase 34] DIRECTORY/OWNER shows a UIC, not an identifier name
 
 - **Where**: `internal/rms/directory.go`, against `CREDIR.LOG`'s

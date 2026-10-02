@@ -515,3 +515,11 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
   - **A limit to watch:** VMInit reserves one 512-byte page for shim stubs,
     room for 42; there are 38, 39 with LIB$CREATE_DIR. More LIBRTL routines
     will need a bigger reservation.
+- 2026-10-01: Subtask 11 done: owners default to the parent's
+  (Decisions 6). ods2's `InheritedDirectoryOptions` gives the parent's
+  owner (ods2 `a1b26bc`, so its CLI follows); `rms.CreateDirectoryOptions`
+  loses `ProcessUIC` and `OwnerParent` (`/OWNER_UIC=PARENT` is now the
+  default spelled out), and the console its process-UIC lookup. The
+  oracle's `[OWNED.CHILD]` mask and the DEVIATIONS entry are gone:
+  `TestCreateDirectoryOracle` matches VMS with nothing masked. HELP
+  CREATE /DIRECTORY says so.

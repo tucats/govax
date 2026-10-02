@@ -1,5 +1,5 @@
 //
-//  Copyright � 1997 Forest Edge Software, All Rights Reserved
+//  Copyright ï¿½ 1997 Forest Edge Software, All Rights Reserved
 //
 //  Program:    govax, a "Virtual VAX" written in Go
 //
@@ -245,8 +245,8 @@ $CREA,/DIR
         /OWNER_UIC=PARENT
                         The new directory's owner: a UIC, [group,member]
                         in octal, or PARENT for the owner of the
-                        directory it's made in.  The default is the
-                        process's UIC, [1,4].
+                        directory it's made in, which is also the
+                        default.
 
         /VERSION_LIMIT=<n>
                         The default version limit for files created in

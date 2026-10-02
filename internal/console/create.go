@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/rtl"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 	"github.com/tucats/ods2/ondisk"
@@ -26,7 +25,8 @@ type CreateDirectoryRequest struct {
 	Directories []string
 
 	// OwnerUIC is /OWNER_UIC's value: a UIC, "[g,m]", or PARENT; "" for
-	// none.
+	// none. Without one, or with PARENT, a new directory has its parent's
+	// owner.
 	OwnerUIC string
 
 	// VersionLimit is /VERSION_LIMIT=n; nil without it.
@@ -41,18 +41,6 @@ type CreateDirectoryRequest struct {
 
 	// Log is /LOG: report each directory made.
 	Log bool
-}
-
-// processUIC is the UIC CREATE/DIRECTORY gives a directory's owner when
-// /OWNER_UIC doesn't say otherwise: the emulated process's, or the nominal
-// SYSTEM UIC, [1,4], before INIT has made a process.
-func (c *Console) processUIC() ondisk.Uic {
-	uic := uint32(rtl.NominalUIC)
-	if c.RTL != nil && c.RTL.Process != nil {
-		uic = c.RTL.Process.UIC
-	}
-
-	return ondisk.Uic{Group: uint16(uic >> 16), Member: uint16(uic)}
 }
 
 // The secondary statuses CREATE/DIRECTORY's failures show, as VMS 7.3
@@ -123,7 +111,7 @@ func (c *Console) CreateDirectory(req CreateDirectoryRequest) error {
 // result means the command stops there; otherwise the error, if any, is a
 // value that was reported and ignored, for the command's exit status.
 func (c *Console) createDirectoryOptions(req CreateDirectoryRequest) (*rms.CreateDirectoryOptions, error) {
-	opts := &rms.CreateDirectoryOptions{ProcessUIC: c.processUIC()}
+	opts := &rms.CreateDirectoryOptions{}
 
 	syntax := func(value string, secondary uint32) (*rms.CreateDirectoryOptions, error) {
 		c.Printf("%%%s\n", vmserrors.New(vmserrors.CREATE_SYNTAX, value))
@@ -138,7 +126,7 @@ func (c *Console) createDirectoryOptions(req CreateDirectoryRequest) (*rms.Creat
 	switch owner := strings.TrimSpace(req.OwnerUIC); {
 	case owner == "":
 	case strings.EqualFold(owner, "PARENT"):
-		opts.OwnerParent = true
+		// The parent's owner, which is also the default.
 	default:
 		uic, err := ondisk.ParseUic(owner)
 		if err != nil {

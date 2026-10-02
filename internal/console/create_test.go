@@ -72,9 +72,9 @@ func TestCreateDirectory_logLevelsAndExisting(t *testing.T) {
 
 	wantLines(t, "CREATE/DIRECTORY [A.B.NEW],[C]", lines, "%CREATE-I-EXISTS, [C] already exists")
 
-	// The process UIC before INIT is SYSTEM's, [1,4].
-	if got := createdHeader(t, d, "A", "B", "NEW").Owner; got != (ondisk.Uic{Group: 1, Member: 4}) {
-		t.Errorf("[A.B.NEW] owner = %v, want [1,4]", got)
+	// Owners come from the parent, down from the MFD's.
+	if got, mfd := createdHeader(t, d, "A", "B", "NEW").Owner, createdHeader(t, d, "A").Owner; got != mfd {
+		t.Errorf("[A.B.NEW] owner = %v, want [A]'s %v", got, mfd)
 	}
 }
 
@@ -105,8 +105,9 @@ func TestCreateDirectory_qualifiers(t *testing.T) {
 
 	// W:RE changes only the world field of [Q]'s protection less delete.
 	want, _ := ondisk.ParseProtection("W:RE", q.FileProtection|ondisk.ProtectionNoDeleteAll)
-	if r := createdHeader(t, d, "Q", "R"); r.FileProtection != want || r.Owner != (ondisk.Uic{Group: 1, Member: 4}) {
-		t.Errorf("[Q.R]: protection %#x, owner %v; want %#x, [1,4]", r.FileProtection, r.Owner, want)
+	// With no /OWNER_UIC, [Q.R] has its parent's owner.
+	if r := createdHeader(t, d, "Q", "R"); r.FileProtection != want || r.Owner != q.Owner {
+		t.Errorf("[Q.R]: protection %#x, owner %v; want %#x, [Q]'s %v", r.FileProtection, r.Owner, want, q.Owner)
 	}
 }
 

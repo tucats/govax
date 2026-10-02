@@ -27,8 +27,8 @@ import (
 // [A.B.C] don't exist yet, top down. Each new directory has an owner (a
 // UIC, "[group,member]"), a protection (who may read, write, execute, or
 // delete it), and a default version limit for the files later created in
-// it. Without qualifiers, the owner is the UIC of the process that made
-// it, and the other two come from the parent directory.
+// it. Without qualifiers, all three come from the parent directory (the
+// protection less delete access).
 
 // MaxVersionLimit is the largest version limit VMS allows (and the largest
 // version number).
@@ -36,16 +36,10 @@ const MaxVersionLimit = 32767
 
 // CreateDirectoryOptions are CREATE/DIRECTORY's qualifiers.
 type CreateDirectoryOptions struct {
-	// ProcessUIC is the UIC of the process creating the directories: the
-	// owner each one gets without /OWNER_UIC.
-	ProcessUIC ondisk.Uic
-
-	// Owner is /OWNER_UIC=uic; nil without it.
+	// Owner is /OWNER_UIC=uic; nil without it (or with /OWNER_UIC=PARENT):
+	// the parent directory's owner, as VMS 7.3 gives a directory a
+	// privileged process makes (docs/PHASE-34.md, Decisions 6).
 	Owner *ondisk.Uic
-
-	// OwnerParent is /OWNER_UIC=PARENT: each new directory is owned by its
-	// parent's owner.
-	OwnerParent bool
 
 	// VersionLimit is /VERSION_LIMIT=n (0 for no limit); nil for the
 	// parent's limit.
@@ -199,16 +193,9 @@ func (s *Session) CreateDirectory(specText string, opts CreateDirectoryOptions) 
 func (o CreateDirectoryOptions) forParent(parent *volume.Directory) volume.DirectoryOptions {
 	d := volume.InheritedDirectoryOptions(parent)
 
-	owner := o.ProcessUIC
-
-	switch {
-	case o.Owner != nil:
-		owner = *o.Owner
-	case o.OwnerParent:
-		owner = parent.Header.Owner
+	if o.Owner != nil {
+		d.Owner = o.Owner
 	}
-
-	d.Owner = &owner
 
 	if o.VersionLimit != nil {
 		d.VersionLimit = *o.VersionLimit

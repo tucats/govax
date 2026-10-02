@@ -178,15 +178,7 @@ func credirFields(d credirDirectory) []string {
 // credirMasked are fields that differ between VMS's directories and
 // govax's for reasons outside CREATE/DIRECTORY, by directory path and
 // field name, each with its reason.
-var credirMasked = map[string]map[string]string{
-	"OWNED.CHILD": {
-		// VMS gave a directory made by SYSTEM, with no /OWNER_UIC, in
-		// [OWNED] (owned by [200,201]) its parent's owner. govax gives
-		// the process's UIC, by the author's decision (docs/PHASE-34.md,
-		// Decisions 2; docs/DEVIATIONS.md).
-		"owner": "the process UIC by decision",
-	},
-}
+var credirMasked = map[string]map[string]string{}
 
 func TestCreateDirectoryOracle(t *testing.T) {
 	if _, err := os.Stat(credirVAXDisk); err != nil {
