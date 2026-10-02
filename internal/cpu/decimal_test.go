@@ -241,3 +241,124 @@ func TestCVTPL(t *testing.T) {
 		}
 	}
 }
+
+// decimal6 runs a 6-operand decimal instruction (opcode op) on src1 and
+// src2 (lengths l1, l2) into a destination of length l3, returning the
+// destination's bytes and the instruction's error.
+func decimal6(t *testing.T, e *Engine, op byte, l1 byte, src1 []byte, l2 byte, src2 []byte, l3 byte) ([]byte, error) {
+	t.Helper()
+
+	putMem(t, e, decSrc, src1...)
+	putMem(t, e, decSrc2, src2...)
+
+	insn := append([]byte{op, l1}, absolute(decSrc)...)
+	insn = append(insn, l2)
+	insn = append(insn, absolute(decSrc2)...)
+	insn = append(insn, l3)
+	insn = append(insn, absolute(decDst)...)
+
+	err := runFloat(t, e, insn...)
+
+	return getMem(t, e, decDst, int(l3)/2+1), err
+}
+
+// TestDecimalArithmetic checks ADDP6, SUBP6, MULP, and DIVP, results the
+// manual defines (and VMS's run of the probe agrees with).
+func TestDecimalArithmetic(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		op      byte
+		l1      byte
+		s1      []byte
+		l2      byte
+		s2      []byte
+		l3      byte
+		want    []byte
+		n, z, v bool
+	}{
+		{"ADDP6 123+877", 0x21, 3, []byte{0x12, 0x3C}, 3, []byte{0x87, 0x7C}, 4, []byte{0x01, 0x00, 0x0C}, false, false, false},
+		{"ADDP6 overflow keeps the low digits", 0x21, 3, []byte{0x12, 0x3C}, 3, []byte{0x87, 0x7C}, 3, []byte{0x00, 0x0C}, false, true, true},
+		{"ADDP6 -5 + +5 is +0", 0x21, 1, []byte{0x5D}, 1, []byte{0x5C}, 1, []byte{0x0C}, false, true, false},
+		{"SUBP6 -1 - 100", 0x23, 3, []byte{0x10, 0x0C}, 1, []byte{0x1D}, 5, []byte{0x00, 0x10, 0x1D}, true, false, false},
+		{"MULP -12 x 12", 0x25, 2, []byte{0x01, 0x2D}, 2, []byte{0x01, 0x2C}, 4, []byte{0x00, 0x14, 0x4D}, true, false, false},
+		{"DIVP -100 / 7 truncates", 0x27, 1, []byte{0x7C}, 3, []byte{0x10, 0x0D}, 3, []byte{0x01, 0x4D}, true, false, false},
+		{"DIVP 6 / 7 is +0", 0x27, 1, []byte{0x7C}, 1, []byte{0x6D}, 3, []byte{0x00, 0x0C}, false, true, false},
+	} {
+		e := decimalEngine()
+
+		got, err := decimal6(t, e, tc.op, tc.l1, tc.s1, tc.l2, tc.s2, tc.l3)
+		if err != nil {
+			t.Fatalf("%s: %v", tc.name, err)
+		}
+
+		if string(got) != string(tc.want) {
+			t.Errorf("%s: dst = % x, want % x", tc.name, got, tc.want)
+		}
+
+		if p := e.cpu.PSL(); p.N() != tc.n || p.Z() != tc.z || p.V() != tc.v || p.C() {
+			t.Errorf("%s: PSL %+v, want N %v Z %v V %v C clear", tc.name, p, tc.n, tc.z, tc.v)
+		}
+
+		if e.cpu.GPR(vax.R1) != decSrc || e.cpu.GPR(vax.R3) != decSrc2 || e.cpu.GPR(vax.R5) != decDst {
+			t.Errorf("%s: R1, R3, R5 = %#x, %#x, %#x", tc.name, e.cpu.GPR(vax.R1), e.cpu.GPR(vax.R3), e.cpu.GPR(vax.R5))
+		}
+	}
+}
+
+// TestDIVPByZero checks a zero divisor is the divide-by-zero trap with
+// nothing changed: VMS left the quotient, registers, and condition codes
+// alone.
+func TestDIVPByZero(t *testing.T) {
+	e := decimalEngine()
+	putMem(t, e, decDst, 0xAA, 0xAA)
+	e.cpu.SetGPR(vax.R1, 0x1111)
+
+	got, err := decimal6(t, e, 0x27, 1, []byte{0x0C}, 3, []byte{0x10, 0x0C}, 3)
+
+	var f *Fault
+	if !errors.As(err, &f) || f.Code != ExcArithmetic || f.Args[0] != trapDivideByZero {
+		t.Errorf("DIVP by zero: %v, want the divide-by-zero trap", err)
+	}
+
+	if string(got) != "\xAA\xAA" || e.cpu.GPR(vax.R1) != 0x1111 {
+		t.Errorf("DIVP by zero changed the quotient (% x) or R1 (%#x)", got, e.cpu.GPR(vax.R1))
+	}
+}
+
+// TestASHP checks shifts both ways and the rounding digit.
+func TestASHP(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		count byte
+		src   []byte
+		round byte
+		want  []byte
+		v     bool
+	}{
+		{"left 2", 2, []byte{0x00, 0x12, 0x3C}, 0, []byte{0x12, 0x30, 0x0C}, false},
+		{"right 2, round 5 carries", 0xFE, []byte{0x12, 0x35, 0x0C}, 5, []byte{0x00, 0x12, 0x4C}, false},
+		{"right 2, round 5, below half", 0xFE, []byte{0x12, 0x34, 0x9C}, 5, []byte{0x00, 0x12, 0x3C}, false},
+		{"right 2, negative rounds away", 0xFE, []byte{0x12, 0x35, 0x0D}, 5, []byte{0x00, 0x12, 0x4D}, false},
+		{"left overflow", 3, []byte{0x00, 0x12, 0x3C}, 0, []byte{0x23, 0x00, 0x0C}, true},
+	} {
+		e := decimalEngine()
+		putMem(t, e, decSrc, tc.src...)
+
+		insn := []byte{0xF8, 0x8F, tc.count, 5}
+		insn = append(insn, absolute(decSrc)...)
+		insn = append(insn, 0x8F, tc.round, 5)
+		insn = append(insn, absolute(decDst)...)
+
+		if err := runFloat(t, e, insn...); err != nil {
+			t.Fatalf("%s: %v", tc.name, err)
+		}
+
+		if got := getMem(t, e, decDst, 3); string(got) != string(tc.want) {
+			t.Errorf("%s: dst = % x, want % x", tc.name, got, tc.want)
+		}
+
+		if e.cpu.PSL().V() != tc.v {
+			t.Errorf("%s: V %v, want %v", tc.name, e.cpu.PSL().V(), tc.v)
+		}
+	}
+}

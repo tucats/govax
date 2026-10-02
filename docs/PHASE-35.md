@@ -669,3 +669,16 @@ The author accepted each proposal below on 2026-10-02.
     from the MACRO manual, with its examples as `TestPacked`. Whether an
     unsigned string gets ^XC and `-0` keeps ^XD is for the batched VMS
     fixture run (subtask 6's note).
+- 2026-10-02: Subtask 11 done: ADDP4, ADDP6, SUBP4, SUBP6, MULP, DIVP,
+  ASHP (`internal/cpu/decimalmath.go`).
+  - Each computes the exact result from its sources' values and stores it
+    with the core's rules (low-order digits and V on overflow, the DV
+    trap); the registers are the manual's (R1, R3, R5 the operand
+    addresses). DIVP truncates toward zero, and a zero divisor is the
+    divide-by-zero trap (type 4) with nothing changed, as VMS did. ASHP
+    rounds a right shift by adding the round operand's low nibble to the
+    most significant discarded digit.
+  - **Against VMS**: every case of these instructions matches but one,
+    DIVP with an invalid divisor digit, whose result the manual makes
+    UNPREDICTABLE (`DEVIATIONS.md`; masked in subtask 14).
+    `TestDecimalArithmetic`, `TestDIVPByZero`, `TestASHP`.

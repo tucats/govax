@@ -2521,6 +2521,21 @@ widened."
   value as the bits, unconverted. `TestFloatingImmediates`,
   `TestFloatingDirectives`, `TestDisassembleFloatingImmediates`.
 
+### [Phase 35] DIVP with an invalid divisor digit
+
+- **Where**: `internal/cpu/decimalmath.go`'s `emulDivp`, and the packed
+  decimal core's treatment of an invalid digit nibble (`decimal.go`).
+- **What**: the manual makes the quotient UNPREDICTABLE when the divisor
+  or dividend has an invalid nibble (^XA-^XF). govax uses a nibble's
+  value, as VMS 7.1 on a VAX 8600 did for CVTPL, CMPP, and ADDP
+  (testdata/insn35), so the probe's DIVP of 100 by the one-digit "E"
+  gives 100/14 = 7. VMS gave 12, as if it had divided by 8; its divide
+  evidently reads an invalid digit some other way than its add does.
+- **Status**: deliberate (2026-10-02, Phase 35 subtask 11): the result is
+  UNPREDICTABLE by definition, and modelling one machine's microcode for
+  it would mean guessing from one sample. The oracle test masks this
+  case.
+
 <!--
 Entry template:
 
