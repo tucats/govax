@@ -641,3 +641,31 @@ The author accepted each proposal below on 2026-10-02.
     octaword case of the probes (413 in all) now matches VMS's run under
     govax: result bytes, R0-R11, condition codes, and conditions.
     `TestPOLYStep`, `TestPOLYFManualExample` (the manual's example).
+- 2026-10-02: Subtask 10 done: the packed decimal core, and MOVP, CMPP3,
+  CMPP4, CVTLP, CVTPL; `.PACKED`.
+  - **What the manual leaves UNPREDICTABLE**, VMS's run settles: an
+    invalid digit nibble (^XA-^XF) isn't checked. MOVP copies it as it
+    is; the arithmetic uses its value (CVTPL of "4C6" is 526; CMPP3 of
+    "12B" with "123" is greater). An even length's unused high nibble is
+    written as zero. Any sign nibble other than ^XB or ^XD is plus.
+  - **Results** (`internal/cpu/decimal.go`): the preferred signs, ^XC and
+    ^XD; a zero result is plus, but an overflowed negative result keeps
+    ^XD over zero digits (VMS: ADDP4 of -123 and -877 into 3 digits is
+    "000D", N clear, Z and V set); N only for a negative result with a
+    nonzero digit. Decimal overflow stores the low-order digits, sets V,
+    and under PSL<DV> traps (type 6, SS$_DECOVF). A length over 31 is a
+    reserved operand before anything changes.
+  - **A fault part way** (the plan's open question): like MOVC3 and the
+    other character instructions, the decimal instructions don't model
+    PSL<FPD>. Each reads all its sources, works out the result, writes
+    the destination, and only then sets the registers, so after a memory
+    fault the restarted instruction redoes the same work (CVTPL sets its
+    registers before storing, as the manual requires, so its destination
+    may be R0-R3).
+  - **Against VMS**: all 47 MOVP, CMPP3, CMPP4, CVTLP, and CVTPL cases of
+    the packed probe match, registers included. `TestMOVP`, `TestCMPP`,
+    `TestCVTLP`, `TestCVTPL`, `TestDecimalLengthOver31`.
+  - **`.PACKED decimal-string[,symbol]`** (both dialects; HELP updated),
+    from the MACRO manual, with its examples as `TestPacked`. Whether an
+    unsigned string gets ^XC and `-0` keeps ^XD is for the batched VMS
+    fixture run (subtask 6's note).

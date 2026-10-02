@@ -116,6 +116,7 @@ const (
 	vaxLibrary
 	vaxModeAccess
 	vaxIllExpr
+	vaxBadPacked
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -264,6 +265,9 @@ const (
 	// VAX_ILLEXPR is MACRO-32's "Illegal expression": for example, a
 	// parenthesis in an expression, which MACRO doesn't group with.
 	VAX_ILLEXPR = VAXFacility<<FacilityPosition | vaxIllExpr<<MessagePosition | StatusError
+	// VAX_BADPACKED is a .PACKED operand that isn't a decimal string of 0
+	// to 31 digits.
+	VAX_BADPACKED = VAXFacility<<FacilityPosition | vaxBadPacked<<MessagePosition | StatusError
 )
 
 func init() {
@@ -359,6 +363,7 @@ func init() {
 	DefineMessage(VAX_LIBRARY, VAXFacility, "LIBRARY", ".LIBRARY !Q")
 	DefineMessage(VAX_MODEACCESS, VAXFacility, "MODEACCESS", "!S mode isn't allowed for !S operand")
 	DefineMessage(VAX_ILLEXPR, VAXFacility, "ILLEXPR", "Illegal expression")
+	DefineMessage(VAX_BADPACKED, VAXFacility, "BADPACKED", "Invalid packed decimal string")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")

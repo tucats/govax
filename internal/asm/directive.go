@@ -122,6 +122,7 @@ func init() {
 		"D_FLOATING": {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, vaxfloat.D) }},
 		"G_FLOATING": {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, vaxfloat.G) }},
 		"H_FLOATING": {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, vaxfloat.H) }},
+		"PACKED":     {both, (*Assembler).pseudoPacked},
 		"DOUBLE":     {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, vaxfloat.D) }},
 
 		// Module identification. Listings will use .SUBTITLE's text.

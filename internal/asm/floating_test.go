@@ -106,3 +106,31 @@ func TestDisassembleFloatingImmediates(t *testing.T) {
 		})
 	}
 }
+
+// TestPacked checks .PACKED with the MACRO manual's examples: the digits
+// two to a byte, the sign last (^XC, or ^XD for minus), a zero first
+// nibble for an even number of digits, and the symbol set to the number
+// of digits.
+func TestPacked(t *testing.T) {
+	cases := []struct {
+		src  string
+		want []byte
+	}{
+		{".PACKED -12,PACK_SIZE\n.BYTE PACK_SIZE", []byte{0x01, 0x2D, 0x02}},
+		{".PACKED +500", []byte{0x50, 0x0C}},
+		{".PACKED 0", []byte{0x0C}},
+		{".PACKED -0,SUM_SIZE\n.BYTE SUM_SIZE", []byte{0x0D, 0x01}},
+		{".PACKED 1234567890123456789012345678901", []byte{0x12, 0x34, 0x56, 0x78, 0x90, 0x12, 0x34, 0x56, 0x78, 0x90, 0x12, 0x34, 0x56, 0x78, 0x90, 0x1C}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.src, func(t *testing.T) {
+			requireBytes(t, assembleBytes(t, tc.src), tc.want...)
+		})
+	}
+
+	for _, bad := range []string{".PACKED", ".PACKED 12345678901234567890123456789012", ".PACKED ABC"} {
+		if _, err := New(true).Assemble(bad); err == nil {
+			t.Errorf("%q assembled, want an error", bad)
+		}
+	}
+}

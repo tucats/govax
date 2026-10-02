@@ -612,6 +612,70 @@ func (a *Assembler) pseudoFloat(c *cursor, f vaxfloat.Format) error {
 	}
 }
 
+// pseudoPacked assembles .PACKED decimal-string[,symbol]: a decimal
+// number of 0 to 31 digits with an optional sign, stored as a packed
+// decimal string, two digits a byte with the sign in the last byte's low
+// nibble (^XC for plus, the default, ^XD for minus) and, for an even
+// number of digits, a zero first nibble. The symbol, if given, is set to
+// the number of digits (the sign doesn't count): the length operand the
+// decimal string instructions take. From the MACRO manual's .PACKED.
+func (a *Assembler) pseudoPacked(c *cursor) error {
+	c.skipBlanks()
+
+	neg := false
+	if c.peek() == '+' || c.peek() == '-' {
+		neg = c.next() == '-'
+	}
+
+	start := c.pos
+	for isDigit(c.peek()) {
+		c.next()
+	}
+
+	digits := c.s[start:c.pos]
+	if len(digits) == 0 || len(digits) > 31 {
+		return vmserrors.New(vmserrors.VAX_BADPACKED)
+	}
+
+	sign := byte(0xC)
+	if neg {
+		sign = 0xD
+	}
+
+	nibbles := make([]byte, 0, len(digits)+2)
+	if len(digits)%2 == 0 {
+		nibbles = append(nibbles, 0)
+	}
+
+	for _, ch := range digits {
+		nibbles = append(nibbles, byte(ch-'0'))
+	}
+
+	nibbles = append(nibbles, sign)
+
+	for i := 0; i < len(nibbles); i += 2 {
+		if err := a.emitByte(nibbles[i]<<4 | nibbles[i+1]); err != nil {
+			return err
+		}
+	}
+
+	c.skipBlanks()
+
+	if c.peek() != ',' {
+		return nil
+	}
+
+	c.next()
+	c.skipBlanks()
+
+	name := scanName(c)
+	if name == "" {
+		return vmserrors.New(vmserrors.VAX_BADPACKED)
+	}
+
+	return a.setSymbol(name, uint32(len(digits)), SymNone, false)
+}
+
 // pseudoBlock assembles .BLKx [count] (.BLKB, .BLKW, .BLKL, .BLKQ,
 // .BLKO, and the address and floating forms .BLKA, .BLKF, .BLKD, .BLKG,
 // .BLKH): reserves count*size zero bytes. The reference tool (case 18-21) zero-fills by

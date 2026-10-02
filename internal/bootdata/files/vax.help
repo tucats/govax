@@ -2563,6 +2563,7 @@ $ASM ,PSEU
         NCHR
         NTYPE
         OCTA
+        PACKED
         PRINT
         PTE
         QUAD
@@ -2789,6 +2790,27 @@ $ASM ,PSEU,H_FL
                    the format's precision (half away from zero, as
                    the VAX rounds).  A value too large for the format
                    is an error; one too small is stored as zero.
+
+$ASM ,PSEU,PACK
+
+    The PACKED pseudo-opcode stores a packed decimal string: the
+    digits two to a byte, most significant first, and the sign in the
+    last byte's low four bits (hex C for plus, D for minus).  An even
+    number of digits gets a zero first half-byte.  The decimal string
+    instructions (MOVP, ADDP4, CVTPL, EDITPC, ...) work on these.
+
+    Syntax:
+
+        .PACKED  <decimal-string> [, <symbol> ]
+
+     Parameter:
+
+        <decimal-string>  A decimal number of 0 to 31 digits, with an
+                          optional sign: -12, +500, 0.
+
+        <symbol>          If given, it is set to the number of digits
+                          (not counting the sign), the length the
+                          decimal instructions take.
 
 $ASM ,PSEU,ENTR
 
