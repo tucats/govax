@@ -71,9 +71,8 @@ are matched by name, from the `LIBCRD.MAR` on VMS's volume, so a run of an
 earlier version of the probe still counts for the cases it has.
 
 The run's container is `vax/libcrd-vax.dsk.gz` (2026-10-01, VMS 7.3 on
-simh, device DUA1, as SYSTEM). That first run's probe called
-LIB$CREATE_DIR with a 0 descriptor address, unhandled, and VMS signalled
-an access violation (virtual address 4) that ended the image: its last two
-cases ("a 0 descriptor address", "no arguments") have no results. The
-probe now runs that case last, under LIB$SIG_TO_RET, and "no arguments"
-before it; a run of the current probe would fill them in.
+simh, device DUA1, as SYSTEM), from the current probe; all 34 cases ran.
+An earlier version of the probe called LIB$CREATE_DIR with a 0 descriptor
+address unhandled: VMS signalled an access violation (virtual address 4)
+that ended the image, which is why that case now runs last, under
+LIB$SIG_TO_RET.

@@ -4,8 +4,7 @@
 on the oracle run (`testdata/credir`), every directory and every message,
 with nothing masked. LIB$CREATE_DIR, in the new `internal/librtl` (which
 now holds every LIBRTL shim), matches VMS 7.3's probe run on all 32 cases
-it reached, and on every directory but one field (DEVIATIONS.md). A run
-of the current probe would check its last two cases.
+cases, and on every directory but one field (DEVIATIONS.md).
 
 ## Goal
 
@@ -592,6 +591,10 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
 - 2026-10-01: Subtask 15, close-out of the expansion. PLAN.md marks the
   phase done; CLAUDE.md lists `internal/librtl` (subtask 10) and now
   notes LIB$CREATE_DIR's probe; DEVIATIONS.md has the `[SUBREL]` entry.
-  Left for later: a run of the current probe (its "no arguments" and
-  handled-ACCVIO cases), the shim page's 42-stub limit (39 used),
+  Left for later: the shim page's 42-stub limit (39 used),
   `SET FILE/OWNER`/`SET PROTECTION`.
+- 2026-10-01: The author re-ran the current probe on VMS 7.3; its
+  container replaces the first run's. All 34 cases match: "no arguments"
+  is LIB$_INVARG, and the 0 descriptor, under LIB$SIG_TO_RET, comes back
+  as SS$_ACCVIO. `[SUBREL]`'s MFD entry limit of 1 recurred, so the
+  quirk is reproducible; its mask and DEVIATIONS entry stay.
