@@ -41,6 +41,7 @@ var Routines = []Routine{
 	{"LIB$REVERT", 0x0490, 36, libRevert},
 	{"LIB$SIG_TO_RET", 0x0500, 37, libSigToRet},
 	{"LIB$MATCH_COND", 0x0460, 38, libMatchCond},
+	{"LIB$CREATE_DIR", 0x0A28, 39, libCreateDir},
 }
 
 // Register installs every routine in Routines into t.

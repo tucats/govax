@@ -523,3 +523,26 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
   oracle's `[OWNED.CHILD]` mask and the DEVIATIONS entry are gone:
   `TestCreateDirectoryOracle` matches VMS with nothing masked. HELP
   CREATE /DIRECTORY says so.
+- 2026-10-01: Subtask 12 done: LIB$CREATE_DIR (`internal/librtl/
+  createdir.go`, shim code 39, LIBRTL+0xA28), from the LIB$ manual.
+  - `rms.CreateDirectoryOptions` gains the manual's masks
+    (`ProtectionEnable`, `ProtectionValue`: enabled bits from the value,
+    the rest from the parent's protection less delete) and `VolumeOnly`
+    (Decisions 7: no host directory; reaching no volume is
+    `ErrNotDirectorySpec`).
+  - The routine reads its arguments by reference (a 0 address or a short
+    argument list is an omitted argument), and returns SS$_CREATED or
+    SS$_NORMAL; LIB$_INVARG for a missing or over-255-character spec;
+    LIB$_INVFILSPE for no explicit directory, a node, name, type,
+    version, or wildcard, or no mounted volume; RMS$_DIR for a name too
+    long or a path too deep; RMS$_DEV for a device not mounted;
+    SS$_WRITLCK for a read-only volume; SS$_ACCVIO for an argument it
+    can't read. relative-volume-number is read and ignored.
+  - **UIC-format directories**, which the manual documents: `[123,321]`
+    makes `123321.DIR` (each part padded to three octal digits), owned by
+    that UIC unless owner-UIC says otherwise.
+  - **Unsettled until the probe:** the status for a device that isn't
+    mounted (RMS$_DEV is a guess from "any condition values returned by
+    $PARSE"), whether a spec whose directory comes only from a logical
+    name counts as explicit (govax requires a bracket in the text), and
+    what VMS 7.3 does with arguments past the sixth.

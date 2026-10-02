@@ -52,6 +52,19 @@ type CreateDirectoryOptions struct {
 
 	// Allocation is /ALLOCATION=n; 0 for VMS's default of 1 block.
 	Allocation uint32
+
+	// ProtectionEnable and ProtectionValue are LIB$CREATE_DIR's protection
+	// masks: each bit set in ProtectionEnable takes its value from
+	// ProtectionValue, and each bit clear from the default (the parent's
+	// protection less delete). An enable of 0 leaves the default alone.
+	// They apply after Protection, when both are given.
+	ProtectionEnable uint16
+	ProtectionValue  uint16
+
+	// VolumeOnly makes a specification always mean a mounted volume, never
+	// a host directory: a program's LIB$CREATE_DIR (docs/PHASE-34.md,
+	// Decisions 7). One that reaches no volume is ErrNotDirectorySpec.
+	VolumeOnly bool
 }
 
 // CreatedDirectory is one directory CreateDirectory reached.
@@ -105,6 +118,10 @@ func (s *Session) CreateDirectory(specText string, opts CreateDirectoryOptions) 
 	}
 
 	if classifyName(text) == nameHost || (!strings.Contains(text, ":") && !s.DefaultOnVolume()) {
+		if opts.VolumeOnly {
+			return nil, fmt.Errorf("create directory: %s: %w: no mounted volume", text, ErrNotDirectorySpec)
+		}
+
 		return createHostDirectory(text)
 	}
 
@@ -204,6 +221,11 @@ func (o CreateDirectoryOptions) forParent(parent *volume.Directory) volume.Direc
 	if o.Protection != "" {
 		// Can't fail: CreateDirectory parsed the same text first.
 		p, _ := ondisk.ParseProtection(o.Protection, *d.Protection)
+		d.Protection = &p
+	}
+
+	if o.ProtectionEnable != 0 {
+		p := o.ProtectionValue&o.ProtectionEnable | *d.Protection&^o.ProtectionEnable
 		d.Protection = &p
 	}
 

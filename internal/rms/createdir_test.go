@@ -282,3 +282,43 @@ func TestDirectoryOwnerProtection(t *testing.T) {
 		t.Errorf("Directory/PROTECTION = %q, want no owner column", out)
 	}
 }
+
+// TestCreateDirectoryProtectionMasks: LIB$CREATE_DIR's masks take the
+// enabled bits from the value and the rest from the parent's protection
+// less delete.
+func TestCreateDirectoryProtectionMasks(t *testing.T) {
+	s, vol := newCreateDirSession(t)
+
+	mustCreateDir(t, s, "[OPEN]", CreateDirectoryOptions{Protection: "(S:RWED,O:RWED,G:RWED,W:RWED)"})
+
+	// Enable the world field only, and give it read: the rest is the
+	// parent's (all access) less delete.
+	mustCreateDir(t, s, "[OPEN.MASKED]", CreateDirectoryOptions{ProtectionEnable: 0xF000, ProtectionValue: 0xE000})
+
+	if got := dirHeader(t, vol, "OPEN", "MASKED").FileProtection; got != 0xE888 {
+		t.Errorf("[OPEN.MASKED] protection = %#x, want 0xe888", got)
+	}
+
+	// An enable of 0 ignores the value.
+	mustCreateDir(t, s, "[OPEN.IGNORED]", CreateDirectoryOptions{ProtectionValue: 0xFFFF})
+
+	if got := dirHeader(t, vol, "OPEN", "IGNORED").FileProtection; got != 0x8888 {
+		t.Errorf("[OPEN.IGNORED] protection = %#x, want 0x8888", got)
+	}
+}
+
+// TestCreateDirectoryVolumeOnly: with VolumeOnly, a spec that reaches no
+// volume is refused, not made on the host.
+func TestCreateDirectoryVolumeOnly(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	s := NewSession(NewMountTable())
+
+	if _, err := s.CreateDirectory("[.WORK]", CreateDirectoryOptions{VolumeOnly: true}); !errors.Is(err, ErrNotDirectorySpec) {
+		t.Errorf("err = %v, want ErrNotDirectorySpec", err)
+	}
+
+	if _, err := os.Stat("WORK"); err == nil {
+		t.Error("WORK was made on the host")
+	}
+}
