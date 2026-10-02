@@ -161,10 +161,16 @@ type Assembler struct {
 	macros   map[string]*macroDef
 	// libraries are the macro libraries searched after the ones
 	// .LIBRARY names (dotLibraries, in the order named), and
-	// libraryResolver opens those (see maclib.go).
-	libraries       []MacroLibrary
-	dotLibraries    []MacroLibrary
+	// libraryResolver opens those (see maclib.go). Each is kept with
+	// how much the assembly took from it, for a listing's statistics.
+	libraries       []*libraryUse
+	dotLibraries    []*libraryUse
 	libraryResolver func(name string) (MacroLibrary, error)
+	// phases are the times the last assembly's phases took, and
+	// objectRecords how many records Object wrote for it, for a
+	// listing's statistics (listclose.go).
+	phases        [phaseCount]PhaseTime
+	objectRecords int
 	defining *definition
 	// createdLabel is the number of the next created local label a
 	// macro call makes up (see bind).
@@ -421,15 +427,30 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 	a.listLines = nil
 	a.listCur = nil
 	a.endError = nil
+	a.phases = [phaseCount]PhaseTime{}
+	a.objectRecords = 0
 
+	for _, use := range a.libraries {
+		use.macros, use.gets = 0, 0
+	}
+
+	// Real MACRO reads the source in pass 1 and finishes the values and
+	// writes the object in pass 2; govax's one pass reads the source,
+	// and finish (with Object) does what's left, so they're timed as
+	// the two passes.
+	pass := StartPhase()
 	err := a.assembleLines(source)
 
 	if err == nil && len(a.cond) > 0 {
 		err = vmserrors.New(vmserrors.VAX_NOENDC, len(a.cond))
 	}
 
+	a.phases[phasePass1] = pass.Elapsed()
+
 	if err == nil && a.dialect == DialectMACRO {
+		pass = StartPhase()
 		err = a.finish()
+		a.phases[phasePass2] = pass.Elapsed()
 	}
 
 	if err != nil {

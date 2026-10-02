@@ -37,6 +37,9 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 		return nil, vmserrors.New(vmserrors.VAX_INTERNAL, "Object needs the MACRO dialect")
 	}
 
+	pass := StartPhase()
+	defer func() { a.phases[phasePass2] = a.phases[phasePass2].add(pass.Elapsed()) }()
+
 	name, title := a.Title()
 
 	b := &obj.Builder{
@@ -93,7 +96,12 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 		b.SetTransfer(psect, a.entryAddr, false)
 	}
 
-	return b.Build()
+	m, err := b.Build()
+	if m != nil {
+		a.objectRecords = len(m.Records)
+	}
+
+	return m, err
 }
 
 // globalSymbols adds a GSD of the module's global symbols, sorted by

@@ -15,7 +15,7 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress. Subtasks 1 to 3 are done
+**Status: in progress. Subtasks 1 to 4 are done
 (2026-10-02).**
 
 ## What Phase 27 leaves in place
@@ -574,3 +574,92 @@ The author decided each of these on 2026-10-02.
   `TestListingPagination` a page break after 57 lines. Whether real
   MACRO splits a statement's continuation lines across a page break
   isn't shown by any listing; govax does.
+
+### 2026-10-02 — Subtask 4: the closing pages
+
+- **`internal/asm/listclose.go`**: `Listing` now goes on past the source
+  pages with the symbol table, the psect synopsis, the performance
+  indicators, the macro library statistics, the summary, and the command
+  line. `ListingOptions` adds the command line (`Command`) and the two
+  phases that happen before the assembler is called
+  (`Initialization`, `CommandProcessing`, measured with `StartPhase`).
+- **What the real listings showed**, beyond "What a real listing looks
+  like":
+  - The symbol table starts a new page. Each later section (synopsis,
+    performance indicators, library statistics, summary, command line)
+    starts with a blank line, even at the top of a page. The second
+    heading line names the section a page starts in: `Symbol table`,
+    `Psect synopsis` (when there are no symbols to list), or `VAX-11
+    Macro Run Statistics` from the performance indicators on.
+  - A symbol line is the name, `=` for a direct assignment, the value
+    (`********` when undefined), the flags `W` (weak), `R`
+    (relocatable), `G` (global), and `X` (external), and the psect
+    number in hex. A relocatable symbol shows its own psect. An
+    external symbol shows the psect that was current when the module
+    first named it (`.EXTERNAL` before any `.PSECT` gives `00`). An
+    absolute symbol shows none, even a label in an absolute psect.
+  - `.EXTERNAL` doesn't make the table show `G`; `.GLOBL` and `.WEAK`
+    do. `.EXTERNAL` now also sets a new `SymExtern` flag so the table can
+    tell them apart. The object is unchanged.
+  - **Which symbols are listed.** Every symbol but local labels and
+    symbols that were defined under `.ENABLE SUPPRESSION` and never
+    referenced (`symtab.lis`'s `SUPP_B` to `SUPP_D`). Each symbol now
+    records whether an expression used it and whether its definition
+    was suppressed. This is how `rmscopy.lis` lists about 55 of its 625
+    symbols.
+  - The name column is 15 wide, or 31 if any symbol, listed or not, is
+    longer than 15 characters. The line then ends in 6 or 8 blanks. Only
+    `fabalign.lis` and `rmscopy.lis` are 31 wide, and neither lists a
+    name longer than 15; their `$FABDEF` defines longer ones.
+  - The library statistics list every library searched, in search
+    order, with a `TOTALS (all libraries)` line when there's more than
+    one. GETs are the records (lines) read from the libraries' modules:
+    `LIBMAC.MLB`'s five macros are 29 lines, as `uselib.lis` says. The
+    assembler now keeps a count for each library (`libraryUse`), and
+    `NamedMacroLibrary` gives a library the file specification the
+    listing shows.
+  - The summary's line list is five `line (1)` entries a row, 14
+    columns each (`errors.lis`).
+- **Decision 2's omissions.** govax leaves out real MACRO's page-fault
+  column and the four lines about its own memory (working set, the
+  intermediate code, symbol table space, and macro pages). The phases
+  are timed with the process's CPU time (`getrusage`, in
+  `cputime_unix.go`; 0 elsewhere) and the elapsed time:
+  - pass 1 is `assembleLines`;
+  - pass 2 is `finish` plus `Object`;
+  - the symbol table sort and output and the psect synopsis output are
+    timed as `Listing` lays them out;
+  - cross-reference output is 0 until subtask 9.
+
+  The object record count is from the last `Object` call (0 without
+  one, as real MACRO's `/NOOBJECT` listing shows).
+- **`TestFixtureListings`** now compares whole listings: the same 28,
+  the source pages with the heading masks as before. The closing pages
+  are compared with these allowed differences:
+  - the four memory lines are dropped from real MACRO's listing, and
+    the page-fault column (columns 25 to 39) is cut from its
+    performance table;
+  - the closing pages are compared without their page headings,
+    because dropping those lines moves real MACRO's page breaks. The
+    first closing heading is still compared, and
+    `TestClosingPageLabels` checks the labels at page breaks;
+  - the times are masked;
+  - the record count is compared less real MACRO's TBT records, until
+    subtask 11 writes them.
+
+  `xref` compares its source pages only: its `.CROSS` makes real MACRO
+  write a cross reference, which is subtask 9's. All the rest match.
+  Unit tests cover the 31-column table (checked against
+  `fabalign.lis`'s lines), suppression, the library statistics with two
+  libraries, and the error summary.
+- **Not yet confirmed by a real listing:**
+  - the singular forms (govax writes `1 warnings` in the summary, as
+    the plural pattern goes, and `define 1 macro.` in the GETs line);
+  - an alignment without a keyword in the synopsis (govax writes its
+    number);
+  - library names longer than 45 columns.
+- **For subtask 6:** the system `$xxxDEF` macros' symbols are left out of
+  real MACRO's table unless they're referenced, as suppression would
+  do. govax's own `starletdef.mar` doesn't enable suppression yet, so
+  its unreferenced symbols would be listed. Subtask 6 settles that
+  along with `fabalign` and `rmscopy`'s listings.

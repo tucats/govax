@@ -3,9 +3,13 @@ package asm
 import (
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/tucats/govax/internal/obj"
 )
 
 // This file checks the listing's pages (listpage.go) against real MACRO's
@@ -43,10 +47,8 @@ func maskListing(lines []string) []string {
 	return out
 }
 
-// realSourcePages returns the lines of a real listing's source pages: the
-// pages before the symbol table's (or, for a module with no symbols, the
-// psect synopsis's).
-func realSourcePages(t *testing.T, path string) []string {
+// readListing returns a real listing's lines.
+func readListing(t *testing.T, path string) []string {
 	t.Helper()
 
 	data, err := os.ReadFile(path)
@@ -54,17 +56,46 @@ func realSourcePages(t *testing.T, path string) []string {
 		t.Fatal(err)
 	}
 
-	lines := strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
+	return strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
+}
+
+// splitListing splits a listing's lines into its source pages and its
+// closing pages, which start at the page headed "Symbol table" (or, for
+// a module with no symbols, "Psect synopsis").
+func splitListing(t *testing.T, lines []string) (source, closing []string) {
+	t.Helper()
 
 	for i := 1; i < len(lines); i++ {
-		if strings.HasPrefix(lines[i-1], "\f") && (strings.HasPrefix(lines[i], "Symbol table") || strings.HasPrefix(lines[i], "Psect synopsis")) {
-			return lines[:i-1]
+		if strings.HasPrefix(lines[i-1], "\f") && (strings.HasPrefix(lines[i], labelSymbols) || strings.HasPrefix(lines[i], labelSynopsis)) {
+			return lines[:i-1], lines[i-1:]
 		}
 	}
 
-	t.Fatalf("%s: no symbol table page", path)
+	t.Fatal("no symbol table page")
 
-	return nil
+	return nil, nil
+}
+
+// listedLibraries returns the macro library names a real listing's
+// statistics show.
+func listedLibraries(lines []string) []string {
+	var names []string
+
+	for i, line := range lines {
+		if !strings.HasPrefix(line, "------------------ ") {
+			continue
+		}
+
+		for _, row := range lines[i+1:] {
+			if row == "" || strings.HasPrefix(row, "TOTALS ") {
+				break
+			}
+
+			names = append(names, strings.Fields(row)[0])
+		}
+	}
+
+	return names
 }
 
 // compareListingLines reports each line of got that differs from want, and a
@@ -91,9 +122,12 @@ func compareListingLines(t *testing.T, got, want []string) {
 	}
 }
 
-// TestFixtureListings compares the source pages govax lists for the
-// Phase 27 fixtures (testdata/mar) and the Phase 30 LINK fixtures
-// (testdata/link) with real MACRO's.
+// TestFixtureListings compares the listings govax writes for the Phase
+// 27 fixtures (testdata/mar), the Phase 30 LINK fixtures
+// (testdata/link), and the Phase 29 probe's sources listed with the
+// default options with real MACRO's, line for line. The source pages are
+// compared with the heading masks; the closing pages with the allowed
+// differences (listingDifferences).
 func TestFixtureListings(t *testing.T) {
 	marDir := filepath.Join("..", "..", "testdata", "mar")
 	linkDir := filepath.Join("..", "..", "testdata", "link")
@@ -134,11 +168,25 @@ func TestFixtureListings(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			real := readListing(t, tc.listing)
+
+			// The system library real MACRO searched, by the name its
+			// listing gives it; none of these sources uses a macro.
+			var libs []MacroLibrary
+			for _, name := range listedLibraries(real) {
+				libs = append(libs, NamedMacroLibrary(newMapLibrary(nil), name))
+			}
+
 			a := macroAssembler()
 			a.SetListing(true)
+			a.SetMacroLibraries(libs...)
 
 			if _, err := a.Assemble(string(src)); err != nil {
 				t.Fatalf("assemble: %v", err)
+			}
+
+			if _, err := a.Object(ObjectOptions{}); err != nil {
+				t.Fatalf("object: %v", err)
 			}
 
 			got := a.Listing(ListingOptions{
@@ -146,11 +194,134 @@ func TestFixtureListings(t *testing.T) {
 				Assembler: "govax MACRO V0.0-0",
 				Source:    strings.ToUpper(filepath.Base(tc.source)) + ";1",
 				Revised:   time.Now(),
+				Command:   real[len(real)-1],
 			})
 
-			compareListingLines(t, got, realSourcePages(t, tc.listing))
+			gotSource, gotClosing := splitListing(t, got)
+			realSource, realClosing := splitListing(t, real)
+
+			compareListingLines(t, gotSource, realSource)
+
+			// The closing pages start under the same heading.
+			if label := realClosing[1][:headDateColumn]; !strings.HasPrefix(gotClosing[1], label) {
+				t.Errorf("closing heading %q, want %q", gotClosing[1], label)
+			}
+
+			// xref.mar's .CROSS makes real MACRO write a cross reference
+			// in its closing pages, which is subtask 9's.
+			if tc.name == "list/xref" {
+				return
+			}
+
+			tbt := countTraceback(readObjectFile(t, strings.TrimSuffix(tc.listing, ".lis")+".obj"))
+
+			compareListingLines(t, closingText(gotClosing), closingText(realClosingAllowed(realClosing, tbt)))
 		})
 	}
+}
+
+// listingDifferences are the lines of real MACRO's closing pages that
+// govax leaves out: the statistics about real MACRO's own memory, which
+// govax has no figure for (Decision 2): its working set limit, and the
+// memory its intermediate code, symbol table, and macros used.
+//
+// realClosingAllowed applies these and the other allowed differences
+// between govax's closing pages and real MACRO's (docs/PHASE-29.md, "The
+// fidelity bar"):
+//
+//   - The performance indicators' page faults column (Decision 2), which
+//     is taken out of real MACRO's lines.
+//   - With those lines gone, the closing pages break at different
+//     places, so the closing pages are compared without their page
+//     headings (closingText). TestClosingPageLabels checks those.
+//   - The CPU and elapsed times, which are masked.
+//   - The object record count, which counts real MACRO's traceback (TBT)
+//     records; govax doesn't write them until subtask 11.
+var listingDifferences = []*regexp.Regexp{
+	regexp.MustCompile(`^The working set limit was \d+ pages\.$`),
+	regexp.MustCompile(`^\d+ bytes \(\d+ pages?\) of virtual memory were used to buffer the intermediate code\.$`),
+	regexp.MustCompile(`^There were \d+ pages of symbol table space allocated to hold \d+ non-local and \d+ local symbols\.$`),
+	regexp.MustCompile(`^\d+ pages? of virtual memory (were|was) used to define \d+ macros?\.$`),
+}
+
+// pageFaultStart and pageFaultEnd bound the performance indicators' page
+// faults column in real MACRO's listing.
+const pageFaultStart, pageFaultEnd = 25, 40
+
+// recordCount finds the object record count in the source line count's
+// line.
+var recordCount = regexp.MustCompile(`producing (\d+) object records`)
+
+// realClosingAllowed returns real MACRO's closing pages with the allowed
+// differences applied, tbt being the number of traceback records in its
+// object.
+func realClosingAllowed(lines []string, tbt int) []string {
+	var out []string
+
+	table := false
+
+	for _, line := range lines {
+		if matchesAny(listingDifferences, line) {
+			continue
+		}
+
+		switch {
+		case strings.HasPrefix(line, "Phase "):
+			table = true
+		case line == "":
+			table = false
+		}
+
+		if table && len(line) > pageFaultEnd {
+			line = line[:pageFaultStart] + line[pageFaultEnd:]
+		}
+
+		if m := recordCount.FindStringSubmatchIndex(line); m != nil {
+			n, _ := strconv.Atoi(line[m[2]:m[3]])
+			line = line[:m[2]] + strconv.Itoa(n-tbt) + line[m[3]:]
+		}
+
+		out = append(out, line)
+	}
+
+	return out
+}
+
+// matchesAny reports whether any of res matches s.
+func matchesAny(res []*regexp.Regexp, s string) bool {
+	for _, re := range res {
+		if re.MatchString(s) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// phaseTime matches a time in the performance indicators.
+var phaseTime = regexp.MustCompile(`\d\d:\d\d:\d\d\.\d\d`)
+
+// closingText returns closing pages' lines without their page headings,
+// and with their times masked.
+func closingText(lines []string) []string {
+	var out []string
+
+	for i := 0; i < len(lines); i++ {
+		if strings.HasPrefix(lines[i], "\f") {
+			i += listHeadLines - 1
+
+			continue
+		}
+
+		out = append(out, phaseTime.ReplaceAllString(lines[i], "hh:mm:ss.cc"))
+	}
+
+	return out
+}
+
+// countTraceback returns the number of traceback records in m.
+func countTraceback(m *obj.Module) int {
+	return len(m.Records) - len(withoutTraceback(m).Records)
 }
 
 // TestListingHeading checks the heading's fields and columns exactly,
@@ -173,6 +344,8 @@ func TestListingHeading(t *testing.T) {
 		"                                     0000     2 \t.IDENT\t/V1.0/",
 	}
 
+	got, _ = splitListing(t, got)
+
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("listing:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
@@ -193,7 +366,7 @@ func TestListingPagination(t *testing.T) {
 	src.WriteString("\t.BYTE\t1,2,3,4,5,6,7,8,9,10,11,12,13\n")
 
 	a := recordListing(t, src.String(), false)
-	got := a.Listing(ListingOptions{})
+	got, _ := splitListing(t, a.Listing(ListingOptions{}))
 
 	if len(got) != 2*listHeadLines+59 {
 		t.Fatalf("%d lines, want %d", len(got), 2*listHeadLines+59)

@@ -60,6 +60,14 @@ type ListingOptions struct {
 	// when the file was last revised.
 	Source  string
 	Revised time.Time
+	// Command is the command line as typed, which the listing ends with:
+	// "MACRO/LIST HELLO".
+	Command string
+	// Initialization and CommandProcessing are how long the caller took
+	// to start up and to read the command, the performance indicators'
+	// first two phases (see StartPhase).
+	Initialization    PhaseTime
+	CommandProcessing PhaseTime
 }
 
 // Listing returns the listing of the last Assemble, which SetListing
@@ -67,12 +75,12 @@ type ListingOptions struct {
 // with a form feed, so joining the lines with newlines gives the listing
 // file's text.
 //
-// The listing holds the program's source pages; the closing pages
-// (symbol table, psect synopsis, and statistics) aren't written yet.
+// The listing holds the program's source pages, then the closing pages:
+// the symbol table, the psect synopsis, and the statistics (listclose.go).
 func (a *Assembler) Listing(opts ListingOptions) []string {
 	p := &listPager{opts: opts}
 	p.name, p.title = a.Title()
-	p.ident = a.Ident()
+	p.label = a.Ident()
 
 	for _, l := range a.listLines {
 		// A macro expansion's and a repeat block's lines are shown, or
@@ -87,14 +95,18 @@ func (a *Assembler) Listing(opts ListingOptions) []string {
 		}
 	}
 
+	a.closingPages(p, opts)
+
 	return p.lines
 }
 
 // listPager collects a listing's lines into pages, starting each with
-// its heading.
+// its heading. label is what the heading's second line begins with: the
+// .IDENT string on the source pages, and on the closing pages the name of
+// the part a page starts in.
 type listPager struct {
 	opts               ListingOptions
-	name, title, ident string
+	name, title, label string
 	page               int
 	used               int // lines on the current page, heading included
 	lines              []string
@@ -111,10 +123,16 @@ func (p *listPager) add(line string) {
 	p.used++
 }
 
+// breakPage ends the current page: the next line starts a new one.
+func (p *listPager) breakPage() {
+	p.used = listPageLines
+}
+
 // newPage starts the next page with its heading. The first line names
 // the module, its .TITLE text, when it was assembled, by what, and the
-// page; the second gives its .IDENT string, the source file's revision
-// date, its file specification, and its file number.
+// page; the second gives its label (the .IDENT string, on a source
+// page), the source file's revision date, its file specification, and
+// its file number.
 func (p *listPager) newPage() {
 	p.page++
 
@@ -132,7 +150,7 @@ func (p *listPager) newPage() {
 		file += " "
 	}
 
-	second := fmt.Sprintf("%-*s%s  %s(1)", headIdentWidth, p.ident, vmsDateTime(p.opts.Revised), file)
+	second := fmt.Sprintf("%-*s%s  %s(1)", headIdentWidth, p.label, vmsDateTime(p.opts.Revised), file)
 
 	p.lines = append(p.lines, first, second, "")
 	p.used = listHeadLines

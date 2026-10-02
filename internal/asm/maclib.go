@@ -64,10 +64,57 @@ func (m lbrMacros) Macro(name string) ([]string, bool, error) {
 	return lines, true, nil
 }
 
+// namedLibrary is a macro library that knows its file specification.
+type namedLibrary struct {
+	MacroLibrary
+	name string
+}
+
+// NamedMacroLibrary returns lib with its file specification, name, which
+// a listing's macro library statistics show it by.
+func NamedMacroLibrary(lib MacroLibrary, name string) MacroLibrary {
+	return namedLibrary{MacroLibrary: lib, name: name}
+}
+
+// libraryUse is a macro library the assembler searches, and what the
+// assembly took from it: how many macros it defined from the library,
+// and how many records (lines) it read to do so, which real MACRO's
+// listing counts as GETs.
+type libraryUse struct {
+	lib    MacroLibrary
+	macros int
+	gets   int
+}
+
+// name returns the library's file specification, if it was given one
+// (see NamedMacroLibrary).
+func (u *libraryUse) name() string {
+	if n, ok := u.lib.(namedLibrary); ok {
+		return n.name
+	}
+
+	return ""
+}
+
 // SetMacroLibraries sets the libraries searched after the ones .LIBRARY
 // names, in the order they're searched.
 func (a *Assembler) SetMacroLibraries(libs ...MacroLibrary) {
-	a.libraries = libs
+	a.libraries = make([]*libraryUse, len(libs))
+	for i, lib := range libs {
+		a.libraries[i] = &libraryUse{lib: lib}
+	}
+}
+
+// searchOrder returns the libraries in the order they're searched: those
+// .LIBRARY named, the last named first, then the caller's.
+func (a *Assembler) searchOrder() []*libraryUse {
+	search := make([]*libraryUse, 0, len(a.dotLibraries)+len(a.libraries))
+
+	for k := len(a.dotLibraries) - 1; k >= 0; k-- {
+		search = append(search, a.dotLibraries[k])
+	}
+
+	return append(search, a.libraries...)
 }
 
 // SetLibraryResolver sets the function that opens the macro library a
@@ -78,37 +125,32 @@ func (a *Assembler) SetLibraryResolver(resolve func(name string) (MacroLibrary, 
 }
 
 // searchLibraries returns the source of the macro name from the first
-// library, in search order, that has it.
-func (a *Assembler) searchLibraries(name string) ([]string, bool, error) {
-	search := make([]MacroLibrary, 0, len(a.dotLibraries)+len(a.libraries))
-
-	for k := len(a.dotLibraries) - 1; k >= 0; k-- {
-		search = append(search, a.dotLibraries[k])
-	}
-
-	search = append(search, a.libraries...)
-
-	for _, lib := range search {
-		lines, found, err := lib.Macro(name)
+// library, in search order, that has it, and that library.
+func (a *Assembler) searchLibraries(name string) ([]string, *libraryUse, error) {
+	for _, use := range a.searchOrder() {
+		lines, found, err := use.lib.Macro(name)
 		if err != nil {
-			return nil, false, vmserrors.Wrap(vmserrors.VAX_LIBREAD, err, name)
+			return nil, nil, vmserrors.Wrap(vmserrors.VAX_LIBREAD, err, name)
 		}
 
 		if found {
-			return lines, true, nil
+			return lines, use, nil
 		}
 	}
 
-	return nil, false, nil
+	return nil, nil, nil
 }
 
 // loadLibraryMacro defines the macro name from the libraries, replacing
 // any definition it has, and returns it, or nil if no library has it.
 func (a *Assembler) loadLibraryMacro(name string) (*macroDef, error) {
-	lines, found, err := a.searchLibraries(name)
-	if err != nil || !found {
+	lines, use, err := a.searchLibraries(name)
+	if err != nil || use == nil {
 		return nil, err
 	}
+
+	use.macros++
+	use.gets += len(lines)
 
 	// The module's lines are assembled as a source of their own, so its
 	// .MACRO line (continuation lines and all) and .ENDM go through the
@@ -231,7 +273,7 @@ func (a *Assembler) pseudoLibrary(c *cursor) error {
 		return vmserrors.Wrap(vmserrors.VAX_LIBRARY, err, name)
 	}
 
-	a.dotLibraries = append(a.dotLibraries, lib)
+	a.dotLibraries = append(a.dotLibraries, &libraryUse{lib: lib})
 
 	return nil
 }

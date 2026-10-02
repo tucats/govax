@@ -141,8 +141,8 @@ func init() {
 		// Global and external symbols.
 		"GLOBAL":   {macro, func(a *Assembler, c *cursor) error { return a.declareSymbols(c, SymGlobal) }},
 		"GLOBL":    {macro, func(a *Assembler, c *cursor) error { return a.declareSymbols(c, SymGlobal) }},
-		"EXTERNAL": {macro, func(a *Assembler, c *cursor) error { return a.declareSymbols(c, SymGlobal) }},
-		"EXTRN":    {macro, func(a *Assembler, c *cursor) error { return a.declareSymbols(c, SymGlobal) }},
+		"EXTERNAL": {macro, func(a *Assembler, c *cursor) error { return a.declareSymbols(c, SymGlobal|SymExtern) }},
+		"EXTRN":    {macro, func(a *Assembler, c *cursor) error { return a.declareSymbols(c, SymGlobal|SymExtern) }},
 		"WEAK":     {macro, func(a *Assembler, c *cursor) error { return a.declareSymbols(c, SymGlobal|SymWeak) }},
 
 		// Assembler functions.

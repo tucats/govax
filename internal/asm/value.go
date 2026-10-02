@@ -411,6 +411,10 @@ func (a *Assembler) lookupSymbolValue(name string, st *exprState) (exprVal, erro
 		sym.flags |= SymLocal
 	}
 
+	if found {
+		sym.referenced = true
+	}
+
 	// The console dialect, like the reference tool, takes a symbol still
 	// waiting on its definition as its placeholder value where forward
 	// references aren't allowed.

@@ -46,9 +46,7 @@ var enableArgs = map[string]enableFlags{
 }
 
 // unsupportedEnables are the functions govax doesn't implement. Enabling
-// one is a warning, and assembly goes on without it. (SUPPRESSION only
-// changes a listing's symbol table, so it's accepted until listings
-// exist.)
+// one is a warning, and assembly goes on without it.
 var unsupportedEnables = map[enableFlags]string{
 	enableTruncation: "TRUNCATION",
 	enableVector:     "VECTOR",
@@ -281,6 +279,7 @@ func (a *Assembler) declareSymbol(name string, flags SymFlag) *symbol {
 	sym, found := a.symbols.find(name)
 	if !found {
 		sym = a.symbols.create(name)
+		sym.firstSect = a.cur
 		flags |= SymUndefined
 	} else if !sym.defined() {
 		flags |= SymUndefined
@@ -362,7 +361,7 @@ func (a *Assembler) pseudoMaskMACRO(c *cursor) error {
 
 	// The mask is the entry point's, wherever it's defined, so the
 	// linker always supplies it: an undefined symbol is external.
-	a.declareSymbol(name, SymNone)
+	a.declareSymbol(name, SymNone).referenced = true
 
 	if err := a.output(); err != nil {
 		return err

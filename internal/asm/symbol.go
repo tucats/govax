@@ -53,6 +53,10 @@ const (
 	// named before (or without) defining it: it has attributes, but no
 	// value yet.
 	SymUndefined
+	// SymExtern marks a symbol named by .EXTERNAL, which a listing's
+	// symbol table doesn't mark global (G) while it's undefined, though
+	// .EXTERNAL also sets SymGlobal.
+	SymExtern
 )
 
 // fixupKind says how a pending forward reference's value should be written
@@ -151,6 +155,17 @@ type symbol struct {
 	// defined in, whose index its GSD record carries, as real MACRO's
 	// does (docs/PHASE-27.md, subtask 11's log). It's nil otherwise.
 	absSect *section
+
+	// What a listing's symbol table needs (listclose.go). firstSect is
+	// the section that was current when a symbol was first named without
+	// being defined (referred to, or declared by .GLOBAL and the like),
+	// which the table shows for an external symbol. referenced says an
+	// expression used the symbol, and suppressed that its last
+	// definition was made under .ENABLE SUPPRESSION: a suppressed symbol
+	// that's never referenced isn't listed.
+	firstSect  *section
+	referenced bool
+	suppressed bool
 }
 
 // defined reports whether s has a value: it isn't waiting on a forward
@@ -328,6 +343,10 @@ func (a *Assembler) getSymbol(name string, allowForward bool, location uint32, f
 		sym.flags |= SymLocal
 	}
 
+	if found {
+		sym.referenced = true
+	}
+
 	switch {
 	case found && sym.defined():
 		return sym.value, false, nil
@@ -360,8 +379,10 @@ func (a *Assembler) queueFixup(location uint32, fx fixupKind, t *rexpr) {
 		sym, found := a.symbols.find(leaf.key)
 		if !found {
 			sym = a.symbols.create(leaf.key)
+			sym.firstSect = a.cur
 		}
 
+		sym.referenced = true
 		leaf.sym = sym
 
 		if len(sym.forward) == 0 || sym.forward[0] != f {
@@ -435,6 +456,7 @@ func (a *Assembler) setSymbolIn(name string, sect *section, value uint32, flags 
 	sym.sect = sect
 	sym.absSect = nil
 	sym.flags = sym.flags&^SymUndefined | flags
+	sym.suppressed = a.enabled&enableSuppression != 0
 
 	waiting := sym.forward
 	sym.forward = nil

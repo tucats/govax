@@ -92,12 +92,16 @@ func TestLibrarySearchOrder(t *testing.T) {
 		"second": newMapLibrary(map[string]string{"M": def("2")}),
 	}
 
-	a := libAssembler(newMapLibrary(map[string]string{"M": def("3"), "N": def("4")}),
-		newMapLibrary(map[string]string{"M": def("5")}))
+	callers := []MacroLibrary{
+		newMapLibrary(map[string]string{"M": def("3"), "N": def("4")}),
+		newMapLibrary(map[string]string{"M": def("5")}),
+	}
+
+	a := libAssembler(callers...)
 
 	requireBytes(t, libBytes(t, a, "\t.PSECT\tDATA\n\tM"), 3)
 
-	a = libAssembler(a.libraries...)
+	a = libAssembler(callers...)
 
 	var resolved []string
 
