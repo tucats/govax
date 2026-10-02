@@ -1,9 +1,9 @@
 # Phase 34 — CREATE/DIRECTORY
 
-**Status:** done (2026-10-01). govax's `CREATE/DIRECTORY` matches VMS
-7.3's on the oracle run (`testdata/credir`): every directory's header and
-every message, except the default owner, which is the process UIC by
-decision (see Decisions 2 and DEVIATIONS.md).
+**Status:** in progress (2026-10-01): expanded with LIB$CREATE_DIR and a
+new `internal/librtl` package (subtasks 10-15). Subtasks 1-9, the
+console's `CREATE/DIRECTORY`, are done and match VMS 7.3 on the oracle run
+(`testdata/credir`).
 
 ## Goal
 
@@ -232,6 +232,94 @@ The author accepted each proposal below on 2026-10-01.
    `docs/PHASE-04.md` that points here and logs its own commits. The
    alternative is to keep it all here.
 
+## Expansion: LIB$CREATE_DIR and `internal/librtl`
+
+Added 2026-10-01 at the author's request. Programs make directories with
+the RTL's LIB$CREATE_DIR, which can sit on the same core as
+`CREATE/DIRECTORY`. Shims that emulate LIBRTL.EXE go in a new package,
+`internal/librtl`, and later *RTL.EXE emulations each get a package of
+their own.
+
+**Clean room.** LIB$CREATE_DIR is written from its documentation, the
+*VMS Run-Time Library Routines Volume: Library (LIB$) Manual* (VMS 5.0,
+AA-LA76A-TE, pp. LIB-35 to LIB-39), and checked against VMS 7.3 by a probe
+program. VMS's source is not read.
+
+**What the manual says.**
+
+```
+LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
+               [,protection-value] [,maximum-versions]
+               [,relative-volume-number]
+```
+
+- *device-directory-spec* (descriptor): an RMS directory specification,
+  with or without a device; no node, name, type, version, or wildcard;
+  at most 255 characters.
+- *owner-UIC* (longword by reference): 0 or omitted means the parent
+  directory's owner (except a UIC-format directory, such as [123,321],
+  whose UIC is used).
+- *protection-enable*, *protection-value* (words by reference): set bits
+  of the enable mask take the value's bits; clear bits take the parent's
+  protection, except that the parent's delete access is never passed on.
+  Enable omitted or 0: the parent's protection, less delete.
+- *maximum-versions* (word by reference): omitted means the parent's
+  default limit; 0 means no limit.
+- *relative-volume-number* (word by reference): placement in a volume
+  set; govax's volumes are single, so it's accepted and ignored.
+- Returns SS$_CREATED (one or more made), SS$_NORMAL (all existed),
+  LIB$_INVARG (spec missing or over 255 characters), LIB$_INVFILSPE (no
+  explicit directory; a node, name, type, version, or wildcard; not a
+  disk), or what $PARSE, $QIO, and the rest return.
+
+**Decisions (2026-10-01, the author).**
+
+5. *Move every LIBRTL shim into `internal/librtl` now*: LIB$ADAWI,
+   STR$UPCASE, LIB$GET_VM, LIB$FREE_VM, LIB$DELETE_VM_ZONE, LIB$SIGNAL,
+   LIB$STOP, LIB$ESTABLISH, LIB$REVERT, LIB$SIG_TO_RET, and
+   LIB$MATCH_COND, not only the new one.
+6. *Owners default to the parent's*, for LIB$CREATE_DIR (its manual) and
+   for `CREATE/DIRECTORY` too (what VMS 7.3 did for `[OWNED.CHILD]`),
+   replacing Decisions 2.
+7. *A program's call means a mounted volume.* LIB$CREATE_DIR never makes
+   a host directory; the console's host fallback stays the console's.
+8. *A VAX probe* settles what the manual leaves open (statuses for an
+   unmounted device or a too-deep path, the protection arithmetic,
+   arguments past the sixth).
+
+**Design.**
+
+- `rtl` keeps the process-level machinery: the condition dispatcher, the
+  call frames, and the heap that DECC$MALLOC shares with LIB$GET_VM. It
+  exports what an RTL package needs: the CPU and memory, reading a string
+  descriptor, starting a software signal, setting the caller's handler,
+  turning a condition into a return, allocating and freeing VM, and the
+  shim table to register into.
+- `librtl` holds each routine's documented interface, and a table of
+  routines (name, LIBRTL transfer-vector offset, shim code, function).
+  The console registers the functions into each new RTL environment and
+  builds the `SHIM$LIBRTL_<offset>` stubs from the same table. Existing
+  shim codes are kept; LIB$CREATE_DIR gets the next, 39. A test checks
+  each offset against LINK's captured LIBRTL symbol table
+  (`vmsdef.ImageSymbols`).
+
+**Subtasks.**
+
+10. **`internal/librtl`, and the move.** The rtl export API; the
+    routines and their tests move; the console wires the package in.
+    `TestConditions*` and the other RUN tests keep passing unchanged.
+11. **Owners default to the parent's** (Decision 6): `rms`,
+    `CREATE/DIRECTORY`, HELP; the oracle mask and DEVIATIONS entry go.
+12. **LIB$CREATE_DIR** in `librtl`, over `rms.Session.CreateDirectory`
+    with the masks (enable and value), volume-only resolution, and the
+    statuses above. Tests drive it through the shim.
+13. **The probe.** `testdata/credir/libcrd.mar` calls LIB$CREATE_DIR for
+    each case and writes R0 and the case to a dump file; a command
+    procedure builds and runs it on VMS 7.3; a govax script builds its
+    exchange volume. The author runs it.
+14. **Reconcile** with the probe's run: statuses and directory headers.
+15. **Close-out**, again.
+
 ## Out of scope
 
 - Plain `CREATE` (a file from terminal input), `CREATE/FDL`, and the rest
@@ -391,10 +479,13 @@ The author accepted each proposal below on 2026-10-01.
   - The replay now copies `[ALLOC]FIRST.DAT` in from a host file, so the
     directory's first entry is compared too; the log is read as text
     (it's VFC).
-- 2026-10-01: Subtask 9, close-out. PLAN.md marks the phase done;
+- 2026-10-01: Subtask 9, close-out (the phase was later expanded; see
+  "Expansion"). PLAN.md marks the phase done;
   CLAUDE.md notes `Session.CreateDirectory` and the oracle; HELP CREATE
   /DIRECTORY says what `/LOG` reports and how a bad `/VERSION_LIMIT` is
   handled. ods2's README, COMMANDS.md, and `docs/PHASE-04.md` cover its
   side. Follow-ons left out of scope: `LIB$CREATE_DIR` (Decisions 4),
   `SET FILE/OWNER`/`SET PROTECTION` on the same parsers, and the default
   owner, should the author want VMS's rule (DEVIATIONS.md).
+- 2026-10-01: Expanded with LIB$CREATE_DIR and `internal/librtl`
+  (subtasks 10-15, Decisions 5-8), from the LIB$ manual's description.
