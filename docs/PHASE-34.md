@@ -591,10 +591,18 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
 - 2026-10-01: Subtask 15, close-out of the expansion. PLAN.md marks the
   phase done; CLAUDE.md lists `internal/librtl` (subtask 10) and now
   notes LIB$CREATE_DIR's probe; DEVIATIONS.md has the `[SUBREL]` entry.
-  Left for later: the shim page's 42-stub limit (39 used),
+  Left for later: the shim page's 42-stub limit (39 used; see the
+  2026-10-01 entry on `shimPageBytes`),
   `SET FILE/OWNER`/`SET PROTECTION`.
 - 2026-10-01: The author re-ran the current probe on VMS 7.3; its
   container replaces the first run's. All 34 cases match: "no arguments"
   is LIB$_INVARG, and the 0 descriptor, under LIB$SIG_TO_RET, comes back
   as SS$_ACCVIO. `[SUBREL]`'s MFD entry limit of 1 recurred, so the
   quirk is reproducible; its mask and DEVIATIONS entry stay.
+- 2026-10-01: The shim page's limit, settled without raising it (the
+  author's call: no principled new size yet). It's now one constant,
+  `shimPageBytes` (`internal/console/shim.go`), which VMInit's reservation
+  uses, and `ensureShims` refuses to lay down more stubs than it holds
+  instead of writing over the SCB that follows the page. The error and
+  `TestEnsureShims_fitsReservedPage` name the constant to raise, by a
+  page, when the 43rd shim arrives.

@@ -325,7 +325,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// the individual SHIM$<name>_<offset> symbols pointing into it.
 	c.shimBase = 0x80000000 + paddr
 	c.shimsReady = false
-	paddr += 512
+	paddr += shimPageBytes
 
 	c.CPU.SetPR(vax.SCBB, paddr)
 

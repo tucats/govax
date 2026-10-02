@@ -2,6 +2,8 @@ package console
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/cpu"
@@ -11,7 +13,7 @@ import (
 // TestEnsureShims_fitsReservedPage checks that the stubs ensureShims
 // synthesizes fit the one page VMInit reserves for them. Only entries
 // with a nonzero code get a stub; code-0 entries resolve to kernel.asm
-// routines. (42 stubs fill the page.)
+// routines. (42 stubs fill one page; shimPageBytes says how many pages.)
 func TestEnsureShims_fitsReservedPage(t *testing.T) {
 	stubs := 0
 
@@ -21,8 +23,8 @@ func TestEnsureShims_fitsReservedPage(t *testing.T) {
 		}
 	}
 
-	if got := stubs * shimStubSize; got > 512 {
-		t.Fatalf("shim stubs need %d bytes, only 512 reserved", got)
+	if got := stubs * shimStubSize; got > shimPageBytes {
+		t.Fatalf("%d shim stubs need %d bytes, only %d reserved: raise shimPageBytes (internal/console/shim.go) by a page", stubs, got, shimPageBytes)
 	}
 }
 
@@ -153,5 +155,24 @@ func TestShimTable_codesDistinctAndRegistered(t *testing.T) {
 		if !c.RTL.HasShim(e.code) {
 			t.Errorf("%s: shim code %d isn't registered", e.name, e.code)
 		}
+	}
+}
+
+// TestEnsureShims_refusesToOverflowPage: more stubs than shimPageBytes
+// holds is an error, not a write over the SCB that follows the page.
+func TestEnsureShims_refusesToOverflowPage(t *testing.T) {
+	saved := shimTable
+	t.Cleanup(func() { shimTable = saved })
+
+	shimTable = append([]shimEntry{}, saved...)
+	for i := 0; i < shimPageBytes/shimStubSize+1; i++ {
+		shimTable = append(shimTable, shimEntry{name: fmt.Sprintf("TEST$FILLER%d", i), library: "TEST", offset: uint32(i), code: uint32(1000 + i)})
+	}
+
+	c := newRunnableConsole(t)
+
+	err := c.ensureShims()
+	if err == nil || !strings.Contains(err.Error(), "shimPageBytes") {
+		t.Fatalf("ensureShims with too many stubs: err = %v, want one naming shimPageBytes", err)
 	}
 }

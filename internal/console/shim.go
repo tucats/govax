@@ -120,6 +120,13 @@ var baseShims = []shimEntry{
 // byte-for-byte.
 const shimStubSize = 12
 
+// shimPageBytes is the space VMInit reserves for the stubs (vminit.go): one
+// page, room for 42. The SCB follows it directly, so ensureShims refuses to
+// write past it. When more shims than fit are needed, raise this (in whole
+// pages) -- VMInit's reservation uses it -- and the error and
+// TestEnsureShims_fitsReservedPage will stop complaining.
+const shimPageBytes = 512
+
 // ensureShims synthesizes a dispatch stub for every shimTable entry that
 // has a real numeric XFC$SHIM code, and resolves every code-0 entry against
 // its already-assembled kernel.asm routine by name instead (see shimEntry's
@@ -134,6 +141,18 @@ const shimStubSize = 12
 func (c *Console) ensureShims() error {
 	if c.shimsReady {
 		return nil
+	}
+
+	stubs := 0
+
+	for _, e := range shimTable {
+		if e.code != 0 {
+			stubs++
+		}
+	}
+
+	if need := stubs * shimStubSize; need > shimPageBytes {
+		return fmt.Errorf("console: %d shim stubs need %d bytes, but VMInit reserves %d (shimPageBytes, internal/console/shim.go)", stubs, need, shimPageBytes)
 	}
 
 	addr := c.shimBase
