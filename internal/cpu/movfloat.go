@@ -16,6 +16,8 @@ func init() {
 
 	regFD(0x50, emulMoveFloat)   // MOVG
 	regFD(0x52, emulNegateFloat) // MNEGG
+	regFD(0x70, emulMoveFloat)   // MOVH
+	regFD(0x72, emulNegateFloat) // MNEGH
 }
 
 // regFD registers handler h for the two-byte opcode FD fn: the G and H

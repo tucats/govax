@@ -16,6 +16,7 @@ func init() {
 	reg(0x6F, emulAcbFloat) // ACBD
 
 	regFD(0x4F, emulAcbFloat) // ACBG
+	regFD(0x6F, emulAcbFloat) // ACBH
 }
 
 // emulAcbFloat is ACBx: the addend is added to the index (rounded to the

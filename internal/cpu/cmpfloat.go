@@ -14,6 +14,8 @@ func init() {
 
 	regFD(0x51, emulCmpFloat) // CMPG
 	regFD(0x53, emulTstFloat) // TSTG
+	regFD(0x71, emulCmpFloat) // CMPH
+	regFD(0x73, emulTstFloat) // TSTH
 }
 
 // emulCmpFloat is CMPx: src1 is compared with src2, exactly. N <- src1 LSS

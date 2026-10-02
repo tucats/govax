@@ -589,3 +589,17 @@ The author accepted each proposal below on 2026-10-02.
     `.QUAD`/`.OCTA` of a negative expression, and a floating operand
     given as a symbol (`MOVG #PI,R6`, which MACRO stores unconverted and
     govax doesn't support yet), each checked against VAX MACRO's object.
+- 2026-10-02: Subtask 7 done: H_floating.
+  - **CPU**: the H instructions (ADDH2/3 through DIVH2/3, CVTHB/HW/HL,
+    CVTRHL, CVTBH/WH/LH, ACBH, MOVH, CMPH, MNEGH, TSTH) and the
+    conversions CVTFH, CVTHF, CVTDH, CVTHD, CVTGH, and CVTHG are the
+    format-generic handlers, registered for their FD opcodes. An H
+    operand in registers spans four, through the octaword paths of
+    subtask 2. Under govax the H probe matches VMS on every case but
+    EMODH and POLYH (95 of 126).
+  - **Assembler**: nothing more was needed: subtask 6's per-operand
+    formats, exact literals, `.H_FLOATING`, and the disassembler already
+    covered H (`TestFloatingImmediates`, `TestFloatingDirectives`,
+    `TestDisassembleFloatingImmediates`).
+  - **Tests**: `TestHFloating` (a tie in ADDH, CVTGH widening exactly
+    into four registers, CVTHG overflow).

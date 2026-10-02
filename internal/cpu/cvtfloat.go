@@ -39,19 +39,30 @@ func init() {
 	reg(0x56, emulCvtFloatToFloat) // CVTFD
 	reg(0x76, emulCvtFloatToFloat) // CVTDF
 
-	// G_floating.
-	for _, fn := range []byte{0x48, 0x49, 0x4A} { // CVTGB/W/L
+	// G_floating and H_floating.
+	for _, fn := range []byte{0x48, 0x49, 0x4A, 0x68, 0x69, 0x6A} { // CVTGB/W/L, CVTHB/W/L
 		regFD(fn, emulCvtFloatToInt)
 	}
 
 	regFD(0x4B, emulCvtRoundFloatToInt) // CVTRGL
+	regFD(0x6B, emulCvtRoundFloatToInt) // CVTRHL
 
-	for _, fn := range []byte{0x4C, 0x4D, 0x4E} { // CVTBG/WG/LG
+	for _, fn := range []byte{0x4C, 0x4D, 0x4E, 0x6C, 0x6D, 0x6E} { // CVTBG/WG/LG, CVTBH/WH/LH
 		regFD(fn, emulCvtIntToFloat)
 	}
 
-	regFD(0x33, emulCvtFloatToFloat) // CVTGF
-	regFD(0x99, emulCvtFloatToFloat) // CVTFG
+	for _, fn := range []byte{
+		0x33, // CVTGF
+		0x99, // CVTFG
+		0x98, // CVTFH
+		0xF6, // CVTHF
+		0x32, // CVTDH
+		0xF7, // CVTHD
+		0x56, // CVTGH
+		0x76, // CVTHG
+	} {
+		regFD(fn, emulCvtFloatToFloat)
+	}
 }
 
 // cvtFloatToInt is CVTxB/W/L and CVTRxL's shared body.
@@ -125,10 +136,11 @@ func emulCvtIntToFloat(e *Engine, d *Decoded) error {
 	return e.storeFloat(d, 1, result)
 }
 
-// emulCvtFloatToFloat is a conversion between floating formats: CVTFD
-// and CVTFG (exact), CVTDF (rounded, and can overflow when a value just
-// under 2^127 rounds up), and CVTGF (rounded, and can overflow or
-// underflow: G's exponent range is wider than F's).
+// emulCvtFloatToFloat is a conversion between floating formats. Widening
+// ones are exact (CVTFD, CVTFG, CVTFH, CVTDH, CVTGH). Narrowing ones round
+// half away from zero, and can overflow (CVTDF, when a value just under
+// 2^127 rounds up, and CVTGF, CVTHF, CVTHD, and CVTHG, from a wider
+// exponent range) or underflow (CVTGF, CVTHF, CVTHD, and CVTHG).
 func emulCvtFloatToFloat(e *Engine, d *Decoded) error {
 	value, err := e.loadFloat(d, 0)
 	if err != nil {

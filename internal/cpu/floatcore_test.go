@@ -223,3 +223,61 @@ func TestEMODFExtensionIsAnInteger(t *testing.T) {
 		t.Errorf("EMODF's multiplier literal = %#x, want 0x4080 (1.0 in F)", d.Operands[0].Value)
 	}
 }
+
+// setH puts H_floating bits, given as the eight words from the most
+// significant, in r through r+3.
+func setH(cpu *vax.CPU, r vax.Reg, w [8]uint16) {
+	for i := 0; i < 4; i++ {
+		cpu.SetGPR(r+vax.Reg(i), uint32(w[2*i+1])<<16|uint32(w[2*i]))
+	}
+}
+
+// TestHFloating checks H_floating through registers (an H value spans
+// four): a tie in ADDH rounds away from zero, CVTGH widens exactly, and
+// CVTHG of a value beyond G's range overflows.
+func TestHFloating(t *testing.T) {
+	cpu, mem := fixture()
+	e := NewEngine(cpu, mem)
+
+	// 1.0 is ^X4001, then zeros; 2^-113 (half a unit in the last place
+	// at 1.0) is exponent 1 - 113 + 16384 = ^X3F90.
+	setH(cpu, vax.R0, [8]uint16{0x4001})
+	setH(cpu, vax.R4, [8]uint16{0x3F90})
+
+	if err := runFloat(t, e, 0xFD, 0x60, regMode(vax.R4), regMode(vax.R0)); err != nil { // ADDH2 R4,R0
+		t.Fatal(err)
+	}
+
+	want := [4]uint32{0x00004001, 0, 0, 0x00010000} // 1 + 2^-112
+	for i, w := range want {
+		if got := cpu.GPR(vax.R0 + vax.Reg(i)); got != w {
+			t.Errorf("ADDH tie: R%d = %#x, want %#x", i, got, w)
+		}
+	}
+
+	// CVTGH of G's 1/3 (^X3FF5, ^X5555, ^X5555, ^X5555: exponent ^X3FF,
+	// fraction 0101...) gives H's ^X3FFF, ^X5555, ^X5555, ^X5555, ^X5000,
+	// then zeros: G's 52 fraction bits, exactly, and H's other 60 zero.
+	cpu.SetGPR(vax.R2, 0x55553FF5)
+	cpu.SetGPR(vax.R3, 0x55555555)
+
+	if err := runFloat(t, e, 0xFD, 0x56, regMode(vax.R2), regMode(vax.R6)); err != nil { // CVTGH R2,R6
+		t.Fatal(err)
+	}
+
+	for i, w := range [4]uint32{0x55553FFF, 0x55555555, 0x00005000, 0} {
+		if got := cpu.GPR(vax.R6 + vax.Reg(i)); got != w {
+			t.Errorf("CVTGH: R%d = %#x, want %#x", 6+i, got, w)
+		}
+	}
+
+	// 2^2000: exponent ^X47D1, beyond G's (at most 2^1023).
+	setH(cpu, vax.R0, [8]uint16{0x47D1})
+
+	err := runFloat(t, e, 0xFD, 0x76, regMode(vax.R0), regMode(vax.R4)) // CVTHG R0,R4
+
+	var f *Fault
+	if !errors.As(err, &f) || f.Code != ExcArithmetic || f.Args[0] != faultFltOvf {
+		t.Errorf("CVTHG of 2^2000: %v, want a floating overflow fault", err)
+	}
+}

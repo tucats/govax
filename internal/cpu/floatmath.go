@@ -35,12 +35,16 @@ func init() {
 		reg(Opcode{Function: fn}, floatArithmetic(vaxfloat.Div))
 	}
 
-	// G_floating: the same opcodes after the FD prefix.
+	// G_floating and H_floating: the F and D opcodes after the FD prefix.
 	for fn, op := range map[byte]floatOp{
 		0x40: vaxfloat.Add, 0x41: vaxfloat.Add, // ADDG2/3
 		0x42: vaxfloat.Sub, 0x43: vaxfloat.Sub, // SUBG2/3
 		0x44: vaxfloat.Mul, 0x45: vaxfloat.Mul, // MULG2/3
 		0x46: vaxfloat.Div, 0x47: vaxfloat.Div, // DIVG2/3
+		0x60: vaxfloat.Add, 0x61: vaxfloat.Add, // ADDH2/3
+		0x62: vaxfloat.Sub, 0x63: vaxfloat.Sub, // SUBH2/3
+		0x64: vaxfloat.Mul, 0x65: vaxfloat.Mul, // MULH2/3
+		0x66: vaxfloat.Div, 0x67: vaxfloat.Div, // DIVH2/3
 	} {
 		reg(Opcode{Extended: 0xFD, Function: fn}, floatArithmetic(op))
 	}
