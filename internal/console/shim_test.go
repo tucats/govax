@@ -131,3 +131,27 @@ func TestEnsureShims_stubDispatchesThroughXFCShim(t *testing.T) {
 		t.Errorf("R0 after DECC$ISASCII stub = %d, want 1", got)
 	}
 }
+
+// TestShimTable_codesDistinctAndRegistered: every stub's code belongs to
+// one routine only, across rtl's shims and internal/librtl's, and each is
+// registered in the RTL environment the console builds.
+func TestShimTable_codesDistinctAndRegistered(t *testing.T) {
+	c := newRunnableConsole(t)
+	seen := map[uint32]string{}
+
+	for _, e := range shimTable {
+		if e.code == 0 {
+			continue
+		}
+
+		if other, dup := seen[e.code]; dup {
+			t.Errorf("%s and %s share shim code %d", e.name, other, e.code)
+		}
+
+		seen[e.code] = e.name
+
+		if !c.RTL.HasShim(e.code) {
+			t.Errorf("%s: shim code %d isn't registered", e.name, e.code)
+		}
+	}
+}

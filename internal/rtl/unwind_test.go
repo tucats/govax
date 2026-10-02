@@ -180,7 +180,7 @@ func TestUnwind_libSignal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := shimLibSignal(env, []uint32{userWarning}); err != nil {
+	if _, err := env.Signal([]uint32{userWarning}, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -222,7 +222,7 @@ func TestLibSigToRet(t *testing.T) {
 	d := env.Process.conditions[0]
 	_, _ = serviceSysSrchandler(env, nil) // "H1" stands in for LIB$SIG_TO_RET
 
-	if r0, err := shimLibSigToRet(env, []uint32{d.sig, d.mech}); err != nil || r0 != ssNormal {
+	if r0, err := env.ConditionToReturn(d.sig, d.mech); err != nil || r0 != ssNormal {
 		t.Fatalf("LIB$SIG_TO_RET = %#x, %v", r0, err)
 	}
 
@@ -233,7 +233,7 @@ func TestLibSigToRet(t *testing.T) {
 	_, _ = serviceSysSrchandler(env, nil) // A's handler again, with SS$_UNWIND
 
 	// Called with SS$_UNWIND, it leaves the saved R0 alone.
-	if r0, _ := shimLibSigToRet(env, []uint32{d.sig, d.mech}); r0 != ssNormal {
+	if r0, _ := env.ConditionToReturn(d.sig, d.mech); r0 != ssNormal {
 		t.Errorf("LIB$SIG_TO_RET during the unwind = %#x", r0)
 	}
 
@@ -242,7 +242,7 @@ func TestLibSigToRet(t *testing.T) {
 		t.Errorf("finish = %#x, %v; want R0 SS$_ROPRAND", r0, err)
 	}
 
-	if r0, _ := shimLibSigToRet(env, []uint32{d.sig, d.mech}); r0 != ssNoSignal {
+	if r0, _ := env.ConditionToReturn(d.sig, d.mech); r0 != ssNoSignal {
 		t.Errorf("with no condition = %#x, want SS$_NOSIGNAL", r0)
 	}
 }

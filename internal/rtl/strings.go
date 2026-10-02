@@ -46,37 +46,6 @@ func classifyShim(fn func(byte) bool) ShimFunc {
 	}
 }
 
-// shimStrUpcase is STR$UPCASE: upcases a string in place through a VAX
-// string descriptor.
-func shimStrUpcase(env *Environment, argv []uint32) (uint32, error) {
-	addr := argv[0]
-
-	length, err := env.mem.LoadWord(env.cpu, addr)
-	if err != nil {
-		return 0, err
-	}
-
-	daddr, err := env.mem.LoadLongword(env.cpu, addr+4)
-	if err != nil {
-		return 0, err
-	}
-
-	for n := uint16(0); n < length; n++ {
-		ch, err := env.mem.LoadByte(env.cpu, daddr+uint32(n))
-		if err != nil {
-			return 0, err
-		}
-
-		if ch >= 'a' && ch <= 'z' {
-			if err := env.mem.StoreByte(env.cpu, daddr+uint32(n), ch-32); err != nil {
-				return 0, err
-			}
-		}
-	}
-
-	return 1, nil
-}
-
 // cAtoi replicates the C library atoi(): skip leading whitespace, an
 // optional sign, then digits, stopping at the first non-digit (0 if none
 // were found).
@@ -199,7 +168,6 @@ func shimDeccStrncpy(env *Environment, argv []uint32) (uint32, error) {
 }
 
 func registerStringShims(t *ShimTable) {
-	t.Register(2, "STR$UPCASE", shimStrUpcase)
 	t.Register(10, "DECC$STRCMP", shimDeccStrcmp)
 	t.Register(11, "DECC$STRNCMP", shimDeccStrncmp)
 	t.Register(12, "DECC$STRNCPY", shimDeccStrncpy)

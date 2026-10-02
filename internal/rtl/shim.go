@@ -44,16 +44,16 @@ func (t *ShimTable) Lookup(code uint32) (ShimFunc, bool) {
 	return e.fn, true
 }
 
-// registerShims installs every implemented shim routine into t. Each
+// registerShims installs the shim routines rtl implements itself into t:
+// the C library's (DECC$) and govax's own (EXE$). LIBRTL.EXE's routines are
+// internal/librtl's, which the console registers alongside. Each
 // register* function lives alongside the routines it registers (math.go,
 // time.go, ...), matching shim_init's own per-routine shim_declare calls.
 func registerShims(t *ShimTable) {
-	registerMathShims(t)
 	registerTimeShims(t)
 	registerStringShims(t)
 	registerMemoryShims(t)
 	registerPrintShims(t)
 	registerFileShims(t)
 	registerInputShims(t)
-	registerSignalShims(t)
 }

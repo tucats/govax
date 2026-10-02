@@ -288,23 +288,18 @@ func (env *Environment) finishUnwind(d *conditionDispatch) (uint32, error) {
 	return r0, nil
 }
 
-// shimLibSigToRet is LIB$SIG_TO_RET:
-//
-//	LIB$SIG_TO_RET signal-args ,mechanism-args
-//
-// A condition handler (usually established directly, with LIB$ESTABLISH)
-// that turns any condition into a return status: it stores the
-// condition value as the mechanism array's R0 and unwinds to the caller
-// of the procedure that established it, which therefore sees that
-// procedure return the condition value. It returns SS$_NORMAL, or
-// $UNWIND's error status.
-func shimLibSigToRet(env *Environment, argv []uint32) (uint32, error) {
+// conditionToReturn is LIB$SIG_TO_RET's work (see ConditionToReturn):
+// a condition handler (usually established directly, with LIB$ESTABLISH)
+// that turns any condition into a return status: it stores the condition
+// value as the mechanism array's R0 and unwinds to the caller of the
+// procedure that established it, which therefore sees that procedure
+// return the condition value. It returns SS$_NORMAL, or $UNWIND's error
+// status.
+func (env *Environment) conditionToReturn(sig, mech uint32) (uint32, error) {
 	d := env.handlingDispatch()
-	if d == nil || len(argv) < 2 {
+	if d == nil {
 		return ssNoSignal, nil
 	}
-
-	sig, mech := argv[0], argv[1]
 
 	cond, err1 := env.mem.LoadLongword(env.cpu, sig+4)
 	depth, err2 := env.mem.LoadLongword(env.cpu, mech+8)

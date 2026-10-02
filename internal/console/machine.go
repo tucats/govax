@@ -7,6 +7,7 @@ import (
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/cpu"
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/librtl"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
@@ -257,6 +258,7 @@ func New(out io.Writer) *Console {
 // engine's system clock.
 func (c *Console) newRTL() *rtl.Environment {
 	env := rtl.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.Mounts, c.In, c.Out)
+	librtl.Register(env.Shims()) // LIBRTL.EXE's routines (docs/PHASE-34.md)
 	env.Session = c.ContainerSession
 
 	// $SETIMR's timers run on the engine's system time, the same time

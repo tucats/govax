@@ -124,23 +124,13 @@ func TestShimDeccFreeCoalescesAdjacentBlocks(t *testing.T) {
 	}
 }
 
-func TestShimLibGetVMFreeVM(t *testing.T) {
+// TestAllocateFreeVM covers the heap methods librtl's LIB$GET_VM,
+// LIB$FREE_VM, and LIB$DELETE_VM_ZONE are built on (export.go).
+func TestAllocateFreeVM(t *testing.T) {
 	env, _ := fixture()
 	env.RegionSize[0] = 0x4000
 
-	sizeAddr, retAddr := uint32(0x1000), uint32(0x1004)
-	putLongword(t, env, sizeAddr, 100)
-
-	r0, err := shimLibGetVM(env, []uint32{sizeAddr, retAddr})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if r0 != ssNormal {
-		t.Fatalf("r0 = %d, want ssNormal", r0)
-	}
-
-	addr, err := env.mem.LoadLongword(env.cpu, retAddr)
+	addr, err := env.AllocateVM(100, 7)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,25 +139,20 @@ func TestShimLibGetVMFreeVM(t *testing.T) {
 		t.Errorf("allocated addr = %#x, want 0x4000", addr)
 	}
 
-	if env.memAllocated[0].zone != 0 {
-		t.Errorf("zone = %d, want 0 (lib_get_vm's own argc==2 bug never actually applies a zone)", env.memAllocated[0].zone)
+	if b := env.memAllocated[0]; b.zone != 7 || b.flags&libvmLibrtl == 0 {
+		t.Errorf("block zone %d, flags %#x; want zone 7, LIBVM_LIBRTL", b.zone, b.flags)
 	}
 
-	r0, err = shimLibFreeVM(env, []uint32{sizeAddr, retAddr})
-	if err != nil {
-		t.Fatal(err)
+	if !env.FreeVM(addr) || len(env.memAllocated) != 0 {
+		t.Errorf("FreeVM: memAllocated has %d entries, want 0", len(env.memAllocated))
 	}
 
-	if r0 != ssNormal {
-		t.Fatalf("r0 = %d, want ssNormal", r0)
-	}
-
-	if len(env.memAllocated) != 0 {
-		t.Errorf("memAllocated has %d entries, want 0", len(env.memAllocated))
+	if env.FreeVM(addr) {
+		t.Error("FreeVM of a block already freed: want false")
 	}
 }
 
-func TestShimLibDeleteVMZone(t *testing.T) {
+func TestFreeVMZone(t *testing.T) {
 	env, _ := fixture()
 	env.RegionSize[0] = 0x1000
 	env.memAllocated = []*memBlock{
@@ -176,18 +161,8 @@ func TestShimLibDeleteVMZone(t *testing.T) {
 		{addr: 0x3000, size: 16, zone: 9},
 	}
 
-	zoneAddr := uint32(0x5000)
-	putLongword(t, env, zoneAddr, 5)
+	env.FreeVMZone(5)
 
-	r0, err := shimLibDeleteVMZone(env, []uint32{zoneAddr})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if r0 != ssNormal {
-		t.Fatalf("r0 = %d, want ssNormal", r0)
-	}
-	
 	if len(env.memAllocated) != 1 || env.memAllocated[0].zone != 9 {
 		t.Errorf("remaining allocations = %+v, want only the zone-9 block", env.memAllocated)
 	}

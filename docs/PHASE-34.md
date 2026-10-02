@@ -489,3 +489,29 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
   owner, should the author want VMS's rule (DEVIATIONS.md).
 - 2026-10-01: Expanded with LIB$CREATE_DIR and `internal/librtl`
   (subtasks 10-15, Decisions 5-8), from the LIB$ manual's description.
+- 2026-10-01: Subtask 10 done: `internal/librtl`, and every LIBRTL shim
+  moved into it.
+  - **rtl's export API** (`internal/rtl/export.go`): `CPU`, `Memory`,
+    `Shims`, `StringDescriptor`, `Signal` (LIB$SIGNAL/LIB$STOP's
+    dispatch), `SetCallerHandler`, `ConditionToReturn` (LIB$SIG_TO_RET's
+    unwind), and the heap: `AllocateVM`, `FreeVM`, `FreeVMZone`. The
+    dispatcher, frames, and heap stay in rtl; signal.go, unwind.go, and
+    memory.go lost their shim functions, and math.go went.
+  - **librtl** (`doc.go`, `routines.go`, `math.go`, `strings.go`, `vm.go`,
+    `condition.go`): LIB$ADAWI, STR$UPCASE, LIB$GET_VM, LIB$FREE_VM,
+    LIB$DELETE_VM_ZONE, LIB$SIGNAL, LIB$STOP, LIB$ESTABLISH, LIB$REVERT,
+    LIB$SIG_TO_RET, LIB$MATCH_COND, with their old codes. `Routines` holds
+    each one's offset and code; a test checks the offsets against
+    `vmsdef.ImageSymbols` and that codes are distinct.
+  - **Console:** `newRTL` registers librtl's routines; `shimTable` takes
+    its LIBRTL rows from `librtl.Routines`. A new test checks every stub's
+    code is distinct and registered.
+  - **Tests:** the routine tests moved to librtl and drive the routines
+    through the shim table; rtl's dispatcher tests call the exported
+    methods. The RUN tests of conditions pass unchanged.
+  - Found while moving: rtl's allocator takes a flag before the zone, so
+    `AllocateVM` passes both; LIB$GET_VM still asks for zone 0, keeping
+    eVAX's behavior (its zone-id was never applied).
+  - **A limit to watch:** VMInit reserves one 512-byte page for shim stubs,
+    room for 42; there are 38, 39 with LIB$CREATE_DIR. More LIBRTL routines
+    will need a bigger reservation.

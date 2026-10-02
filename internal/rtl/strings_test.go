@@ -37,30 +37,6 @@ func TestClassifyShims(t *testing.T) {
 	}
 }
 
-func TestShimStrUpcase(t *testing.T) {
-	env, _ := fixture()
-	descAddr, strAddr := uint32(0x1000), uint32(0x1100)
-	putDescriptor(t, env, descAddr, strAddr, "Hello, World!")
-
-	r0, err := shimStrUpcase(env, []uint32{descAddr})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if r0 != 1 {
-		t.Errorf("r0 = %d, want 1", r0)
-	}
-
-	got, err := loadString(env, strAddr, 32)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if got != "HELLO, WORLD!" {
-		t.Errorf("upcased = %q, want %q", got, "HELLO, WORLD!")
-	}
-}
-
 func TestCAtoi(t *testing.T) {
 	cases := map[string]int32{
 		"123":     123,

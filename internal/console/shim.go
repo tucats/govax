@@ -3,6 +3,7 @@ package console
 import (
 	"fmt"
 
+	"github.com/tucats/govax/internal/librtl"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -50,9 +51,25 @@ type shimEntry struct {
 	code    uint32
 }
 
-var shimTable = []shimEntry{
-	{"LIB$ADAWI", "LIBRTL", 0x0A70, 1},
-	{"STR$UPCASE", "LIBRTL", 0x0778, 2},
+// shimTable is every shim: rtl's own (baseShims) and the shareable-image
+// packages' (internal/librtl's LIBRTL routines, docs/PHASE-34.md), whose
+// rows come from their own tables.
+var shimTable = append(packageShims(), baseShims...)
+
+// packageShims are the rows for the routines internal/librtl provides.
+func packageShims() []shimEntry {
+	rows := make([]shimEntry, 0, len(librtl.Routines))
+
+	for _, r := range librtl.Routines {
+		rows = append(rows, shimEntry{name: r.Name, library: librtl.Library, offset: r.Offset, code: r.Code})
+	}
+
+	return rows
+}
+
+// baseShims are the shims rtl itself implements (codes 3-32), and the
+// code-0 rows resolved against kernel.asm's own routines.
+var baseShims = []shimEntry{
 	{"EXE$INPUT", "EVAX", 0x0004, 3},
 	{"DECC$OPEN", "DECC$SHR", 0x04E8, 4},
 	{"DECC$CLOSE", "DECC$SHR", 0x0490, 5},
@@ -79,16 +96,7 @@ var shimTable = []shimEntry{
 	{"DECC$ISUPPER", "DECC$SHR", 0x0068, 26},
 	{"DECC$ISXDIGIT", "DECC$SHR", 0x0070, 27},
 	{"DECC$ISASCII", "DECC$SHR", 0x0028, 28},
-	{"LIB$GET_VM", "LIBRTL", 0x0550, 29},
-	{"LIB$FREE_VM", "LIBRTL", 0x0548, 30},
-	{"LIB$DELETE_VM_ZONE", "LIBRTL", 0x0A48, 31},
 	{"DECC$TIME", "DECC$SHR", 0x0768, 32},
-	{"LIB$SIGNAL", "LIBRTL", 0x04F0, 33},
-	{"LIB$STOP", "LIBRTL", 0x04F8, 34},
-	{"LIB$ESTABLISH", "LIBRTL", 0x03C0, 35},
-	{"LIB$REVERT", "LIBRTL", 0x0490, 36},
-	{"LIB$SIG_TO_RET", "LIBRTL", 0x0500, 37},
-	{"LIB$MATCH_COND", "LIBRTL", 0x0460, 38},
 
 	// code 0: resolved by symbol lookup against kernel.asm's own
 	// already-assembled native routines, not stub synthesis -- see this

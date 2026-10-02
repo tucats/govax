@@ -45,7 +45,7 @@ func TestLibSignal_continue(t *testing.T) {
 	c := env.cpu
 	psl := c.PSL()
 
-	r0, err := shimLibSignal(env, []uint32{userWarning, 1, 42})
+	r0, err := env.Signal([]uint32{userWarning, 1, 42}, false)
 	if err != nil || r0 != 0 || c.GPR(vax.PC) != condStub {
 		t.Fatalf("LIB$SIGNAL = %#x, %v, PC %#x; want the jump to SYS$SRCHANDLER", r0, err, c.GPR(vax.PC))
 	}
@@ -88,7 +88,7 @@ func TestLibSignal_catchAllContinues(t *testing.T) {
 	putLongword(t, env, condFrameA, 0)
 	putLongword(t, env, condFrameB, 0)
 
-	if _, err := shimLibSignal(env, []uint32{0x870}); err != nil { // SS$_ENDOFFILE: W
+	if _, err := env.Signal([]uint32{0x870}, false); err != nil { // SS$_ENDOFFILE: W
 		t.Fatal(err)
 	}
 
@@ -111,7 +111,7 @@ func TestLibStop(t *testing.T) {
 	env, out := signalFixture(t)
 	c := env.cpu
 
-	if _, err := shimLibStop(env, []uint32{userWarning}); err != nil {
+	if _, err := env.Signal([]uint32{userWarning}, true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -148,7 +148,7 @@ func TestLibStop_catchAllExits(t *testing.T) {
 	putLongword(t, env, condFrameA, 0)
 	putLongword(t, env, condFrameB, 0)
 
-	if _, err := shimLibStop(env, []uint32{0x870}); err != nil {
+	if _, err := env.Signal([]uint32{0x870}, true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -162,13 +162,13 @@ func TestLibStop_catchAllExits(t *testing.T) {
 func TestLibSignal_errors(t *testing.T) {
 	env, _ := signalFixture(t)
 
-	if _, err := shimLibSignal(env, nil); err == nil {
+	if _, err := env.Signal(nil, false); err == nil {
 		t.Error("no condition value: expected an error")
 	}
 
 	putLongword(t, env, condStub, 0) // no SYS$SRCHANDLER stub
 
-	if _, err := shimLibSignal(env, []uint32{userWarning}); err == nil {
+	if _, err := env.Signal([]uint32{userWarning}, false); err == nil {
 		t.Error("no stub: expected an error")
 	}
 }
@@ -176,7 +176,7 @@ func TestLibSignal_errors(t *testing.T) {
 func TestLibEstablishRevert(t *testing.T) {
 	env, _ := signalFixture(t)
 
-	old, err := shimLibEstablish(env, []uint32{0x5555})
+	old, err := env.SetCallerHandler("LIB$ESTABLISH", 0x5555)
 	if err != nil || old != condH1 {
 		t.Fatalf("LIB$ESTABLISH = %#x, %v; want frame A's old handler %#x", old, err, condH1)
 	}
@@ -185,7 +185,7 @@ func TestLibEstablishRevert(t *testing.T) {
 		t.Errorf("frame A's handler %#x, want 0x5555", got)
 	}
 
-	old, err = shimLibRevert(env, nil)
+	old, err = env.SetCallerHandler("LIB$REVERT", 0)
 	if err != nil || old != 0x5555 {
 		t.Fatalf("LIB$REVERT = %#x, %v; want 0x5555", old, err)
 	}
@@ -196,41 +196,5 @@ func TestLibEstablishRevert(t *testing.T) {
 
 	if got := longwordsAt(t, env, signalFrame, 1)[0]; got != 0 {
 		t.Errorf("the stub's own frame was changed: %#x", got)
-	}
-}
-
-func TestLibMatchCond(t *testing.T) {
-	env, _ := fixture()
-
-	const base = 0x6000
-
-	values := []uint32{
-		0x0000000C | 0x10000000, // SS$_ACCVIO, inhibit-message bit set
-		0x00000870,              // SS$_ENDOFFILE
-		0x0000000A,              // SS$_ACCVIO's ID, severity ERROR
-		0x0000000C,
-	}
-
-	for i, v := range values {
-		putLongword(t, env, base+uint32(4*i), v)
-	}
-
-	ref := func(i int) uint32 { return base + uint32(4*i) }
-
-	cases := []struct {
-		argv []uint32
-		want uint32
-	}{
-		{[]uint32{ref(0), ref(1), ref(2), ref(3)}, 2}, // severity and control bits ignored
-		{[]uint32{ref(1), ref(0), ref(1)}, 2},
-		{[]uint32{ref(1), ref(0)}, 0},
-		{[]uint32{ref(0), 0x7FFF0000, ref(3)}, 2}, // unreadable: no match
-		{[]uint32{ref(0)}, 0},
-	}
-
-	for _, tc := range cases {
-		if got, err := shimLibMatchCond(env, tc.argv); err != nil || got != tc.want {
-			t.Errorf("LIB$MATCH_COND%v = %d, %v; want %d", tc.argv, got, err, tc.want)
-		}
 	}
 }

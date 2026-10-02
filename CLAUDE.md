@@ -93,6 +93,15 @@ expect adjustment as phases land):
   search lists, `$TRNLNM`-style lookup and RMS file-spec translation (Phase 25).
   A leaf package shared by the console, `internal/rms`, and `internal/rtl`.
 - `internal/rtl` — VMS RTL/system-service simulation (Phase 10).
+- `internal/librtl` — LIBRTL.EXE's routines (Phase 34): the LIB$ and STR$
+  shims a program reaches through `SHIM$LIBRTL_<offset>` stubs. `Routines`
+  lists each with its transfer-vector offset (checked against
+  `vmsdef.ImageSymbols`) and XFC$SHIM code; the console registers them into
+  each RTL environment and builds the stubs from the same table. The process
+  machinery they use (condition dispatch, the heap, memory) stays in
+  `internal/rtl`, reached through `export.go`. Each further *RTL.EXE emulated
+  gets a package like it. New routines are written from DIGITAL's manuals
+  (clean room), and checked on VMS where a probe can.
 - `internal/asm` — assembler/disassembler (Phase 11). Two dialects share one core
   (Phase 27): the console's `ASM` (absolute, into emulated memory, eVAX
   directives) and MACRO-32 (`SetDialect(DialectMACRO)`: psects, relocation

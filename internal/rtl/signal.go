@@ -6,9 +6,10 @@ import (
 	"github.com/tucats/govax/internal/vax"
 )
 
-// Software conditions (docs/PHASE-26.md subtask 33): LIB$SIGNAL,
-// LIB$STOP, LIB$ESTABLISH, LIB$REVERT, and LIB$MATCH_COND. (LIB$SIG_TO_RET,
-// shim 37, is in unwind.go.)
+// Software conditions (docs/PHASE-26.md subtask 33): the machinery behind
+// LIB$SIGNAL, LIB$STOP, LIB$ESTABLISH, and LIB$REVERT, whose routines are
+// in internal/librtl (docs/PHASE-34.md, subtask 10) and reach this file
+// through Signal and SetCallerHandler (export.go).
 //
 // # Signaling from software
 //
@@ -49,17 +50,6 @@ import (
 // procedure's frame. The stub's own frame is LIB$ESTABLISH's; its saved
 // FP (at 12(FP)) is the caller's frame.
 
-// Shim codes for the routines in this file: the XFC$SHIM dispatch codes
-// kernel.asm's .SHIM table (and the console's shimTable) assign them.
-const (
-	shimCodeLibSignal    = 33
-	shimCodeLibStop      = 34
-	shimCodeLibEstablish = 35
-	shimCodeLibRevert    = 36
-	shimCodeLibSigToRet  = 37
-	shimCodeLibMatchCond = 38
-)
-
 // Offsets in a call frame (see buildCallFrame in internal/cpu): the
 // condition handler, the saved PSW (the low word of the mask longword),
 // the saved FP, and the saved PC (the return address).
@@ -69,17 +59,6 @@ const (
 	frameSavedFP = 12
 	frameSavedPC = 16
 )
-
-// shimLibSignal is LIB$SIGNAL (see this file's opening comment).
-func shimLibSignal(env *Environment, argv []uint32) (uint32, error) {
-	return env.signal(kindSignal, argv)
-}
-
-// shimLibStop is LIB$STOP: LIB$SIGNAL with the severity forced to SEVERE,
-// which can't be continued.
-func shimLibStop(env *Environment, argv []uint32) (uint32, error) {
-	return env.signal(kindStop, argv)
-}
 
 // signal starts dispatching the condition described by argv, the
 // argument list of a LIB$SIGNAL or LIB$STOP call, whose stub is running.
@@ -143,23 +122,6 @@ func (env *Environment) signal(kind signalKind, argv []uint32) (uint32, error) {
 	return 0, nil
 }
 
-// shimLibEstablish is LIB$ESTABLISH:
-//
-//	LIB$ESTABLISH new-handler
-//
-// It makes new-handler (a procedure's entry mask address, passed by
-// value) the condition handler of the calling procedure's frame, and
-// returns the one it replaces (0 if none) in R0.
-func shimLibEstablish(env *Environment, argv []uint32) (uint32, error) {
-	return env.setCallerHandler("LIB$ESTABLISH", optArg(argv, 0))
-}
-
-// shimLibRevert is LIB$REVERT: it removes the calling procedure's
-// condition handler, returning the one it removes (0 if none) in R0.
-func shimLibRevert(env *Environment, _ []uint32) (uint32, error) {
-	return env.setCallerHandler("LIB$REVERT", 0)
-}
-
 // setCallerHandler stores handler in the frame of the procedure that
 // called the running shim, returning the previous one.
 func (env *Environment) setCallerHandler(name string, handler uint32) (uint32, error) {
@@ -186,40 +148,3 @@ func (env *Environment) setCallerHandler(name string, handler uint32) (uint32, e
 // facility and message number, without the severity (bits 0-2) or the
 // control bits (28-31), which a handler along the way may have changed.
 const condIDMask = 0x0FFFFFF8
-
-// shimLibMatchCond is LIB$MATCH_COND:
-//
-//	LIB$MATCH_COND condition-value ,condition-value-1 [,condition-value-2...]
-//
-// Every argument is a condition value passed by reference. It compares
-// the first with each of the others, by their STS$V_COND_ID fields only,
-// and returns the (1-based) position of the first that matches, or 0 if
-// none does. A handler uses it to recognize the conditions it deals
-// with. An argument that can't be read doesn't match.
-func shimLibMatchCond(env *Environment, argv []uint32) (uint32, error) {
-	if len(argv) < 2 {
-		return 0, nil
-	}
-
-	want, err := env.mem.LoadLongword(env.cpu, argv[0])
-	if err != nil {
-		return 0, nil
-	}
-
-	for i, adr := range argv[1:] {
-		if v, err := env.mem.LoadLongword(env.cpu, adr); err == nil && v&condIDMask == want&condIDMask {
-			return uint32(i + 1), nil
-		}
-	}
-
-	return 0, nil
-}
-
-func registerSignalShims(t *ShimTable) {
-	t.Register(shimCodeLibSignal, "LIB$SIGNAL", shimLibSignal)
-	t.Register(shimCodeLibStop, "LIB$STOP", shimLibStop)
-	t.Register(shimCodeLibEstablish, "LIB$ESTABLISH", shimLibEstablish)
-	t.Register(shimCodeLibRevert, "LIB$REVERT", shimLibRevert)
-	t.Register(shimCodeLibSigToRet, "LIB$SIG_TO_RET", shimLibSigToRet)
-	t.Register(shimCodeLibMatchCond, "LIB$MATCH_COND", shimLibMatchCond)
-}
