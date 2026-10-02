@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -48,6 +50,7 @@ const (
 const (
 	isdGBL      = 1 << 0
 	isdDZRO     = 1 << 2
+	isdWRT      = 1 << 3
 	isdFIXUPVEC = 1 << 10
 )
 
@@ -121,6 +124,10 @@ type ICB struct {
 // per-ISD/per-ICB freemem to port -- Go's GC reclaims them once ICBList is
 // replaced.
 func (c *Console) resetICBList() {
+	for _, icb := range c.ICBList {
+		c.setImageProtection(icb, false)
+	}
+
 	c.ICBList = nil
 	c.RTL.RegionSize[0] = 0
 }
@@ -756,6 +763,55 @@ func (c *Console) readImage(fn string, main bool) ([]byte, error) {
 	}
 
 	return c.Paths.ReadFile(path)
+}
+
+// imageProtection is the page protection VMS's image activator gives a
+// process-private image section: UW (user write) for a writable section,
+// UR (read-only to every mode, kernel included) for the rest. VAX pages
+// have no execute protection, so EXE plays no part.
+func imageProtection(isd *ISD) vm.Protection {
+	if isd.Flags&isdWRT != 0 {
+		return vm.ProtUW
+	}
+
+	return vm.ProtUR
+}
+
+// setImageProtection sets the protection of every page icb's sections
+// occupy: each section's own (imageProtection) when protect is true, as
+// RUN does once the image is loaded and fixed up, or UW when it's false,
+// as resetICBList does so the next RUN can load over the old image's
+// read-only pages. Pages never touched (still invalid) are left alone;
+// a page outside the page tables (VMINIT shrank P0 since) is skipped.
+// The C source never sets image page protections, so every page stayed
+// at P0's default (UW); see docs/DEVIATIONS.md.
+func (c *Console) setImageProtection(icb *ICB, protect bool) {
+	if c.CPU == nil || c.Mem == nil || c.CPU.PR(vax.MAPEN) == 0 {
+		return
+	}
+
+	for _, isd := range icb.ISDList {
+		if isdType(isd.Flags) == isdUsrStack || isd.Flags&isdGBL != 0 {
+			continue
+		}
+
+		prot := vm.ProtUW
+		if protect {
+			prot = imageProtection(isd)
+		}
+
+		for n := uint32(0); n < uint32(isd.Pages); n++ {
+			addr := icb.Base + ((n + uint32(isd.VPN)) << 9)
+
+			_, _, pte, err := c.Mem.LookupPTE(c.CPU, addr)
+			if err != nil || !pte.Valid() || pte.Protection() == prot {
+				continue
+			}
+
+			pte.SetProtection(prot)
+			_ = c.Mem.StorePTE(c.CPU, addr, pte)
+		}
+	}
 }
 
 // imageLow is an image's base for its fixup lists: the address of its

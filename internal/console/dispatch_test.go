@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/console/dcl"
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -661,6 +662,33 @@ func TestDispatch_setPTEWithRange(t *testing.T) {
 		t.Fatalf("LookupPTE(0x0): %v", err)
 	} else if pte.Valid() {
 		t.Error("addr 0x0: expected the valid bit untouched (outside the TO range)")
+	}
+}
+
+// TestDispatch_setPTEProtectionNames sets PROT= by the PTE$K_ name SHOW
+// PTE prints for each of the 16 codes, so every name SHOW PTE shows can be
+// typed back into SET PTE.
+func TestDispatch_setPTEProtectionNames(t *testing.T) {
+	d, c, _ := newShowRunnableDispatcher(t)
+
+	if err := d.Dispatch("SET PTE 200 VALID=1,PFN=10"); err != nil {
+		t.Fatalf("Dispatch(SET PTE VALID): %v", err)
+	}
+
+	for code := vm.Protection(0); code < 16; code++ {
+		cmd := "SET PTE 200 PROT=PTE$K_" + code.String()
+		if err := d.Dispatch(cmd); err != nil {
+			t.Fatalf("Dispatch(%s): %v", cmd, err)
+		}
+
+		_, _, pte, err := c.Mem.LookupPTE(c.CPU, 0x200)
+		if err != nil {
+			t.Fatalf("LookupPTE: %v", err)
+		}
+
+		if got := pte.Protection(); got != code {
+			t.Errorf("%s: PROT = %d, want %d", cmd, got, code)
+		}
 	}
 }
 

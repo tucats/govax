@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -47,15 +48,9 @@ func runImage(t *testing.T, c *Console, path string) uint32 {
 		t.Fatalf("ensureShims: %v", err)
 	}
 
-	main, err := c.imageLoad(path, icbMain)
+	main, err := c.activateImage(path)
 	if err != nil {
-		t.Fatalf("imageLoad: %v", err)
-	}
-
-	for _, dep := range c.ICBList {
-		if err := c.imageFixup(dep); err != nil {
-			t.Fatalf("imageFixup: %v", err)
-		}
+		t.Fatalf("activating %s: %v", path, err)
 	}
 
 	driver, ok, err := c.buildImageInitDriver(main, false)
@@ -153,6 +148,74 @@ func TestLink_hello(t *testing.T) {
 	if !strings.Contains(out.String(), "Hello, world!") {
 		t.Errorf("output = %q, want Hello, world!", out.String())
 	}
+}
+
+// TestLink_helloPageProtection checks that RUN gives each section of a
+// linked image its own page protection: hello.mar's writable DATA psect
+// UW, its read-only CODE psect UR (so not even kernel mode may write it).
+// A second activation must be able to load over the read-only pages.
+func TestLink_helloPageProtection(t *testing.T) {
+	c := newBootableConsole(t)
+	dir := t.TempDir()
+	assembleFixture(t, c, "hello", dir)
+
+	exe := filepath.Join(dir, "hello.exe")
+	if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, "hello")}}); err != nil {
+		t.Fatalf("LINK: %v", err)
+	}
+
+	runImage(t, c, exe)
+
+	check := func() {
+		t.Helper()
+
+		var sawWRT, sawRO bool
+
+		main := c.findMainICB()
+		for _, isd := range main.ISDList {
+			if isdType(isd.Flags) == isdUsrStack || isd.Flags&isdGBL != 0 {
+				continue
+			}
+
+			want := vm.ProtUR
+			if isd.Flags&isdWRT != 0 {
+				want, sawWRT = vm.ProtUW, true
+			} else {
+				sawRO = true
+			}
+
+			for n := uint32(0); n < uint32(isd.Pages); n++ {
+				addr := main.Base + (uint32(isd.VPN)+n)<<9
+
+				_, _, pte, err := c.Mem.LookupPTE(c.CPU, addr)
+				if err != nil {
+					t.Fatalf("LookupPTE(%#x): %v", addr, err)
+				}
+
+				if got := pte.Protection(); got != want {
+					t.Errorf("page %#x (ISD flags %#x): PROT = %s, want %s", addr, isd.Flags, got, want)
+				}
+			}
+		}
+
+		if !sawWRT || !sawRO {
+			t.Errorf("hello.exe: writable section %v, read-only section %v; want both", sawWRT, sawRO)
+		}
+	}
+
+	check()
+
+	if _, _, pte, _ := c.Mem.LookupPTE(c.CPU, 0x400); pte.Protection().Allows(vax.Kernel, vm.AccessWrite) {
+		t.Errorf("code page 0x400 (PROT %s) is writable", pte.Protection())
+	}
+
+	c.resetICBList()
+
+	if _, err := c.activateImage(exe); err != nil {
+		t.Fatalf("second activation: %v", err)
+	}
+
+	check()
 }
 
 // TestLink_systemService links a general mode call to a system service,

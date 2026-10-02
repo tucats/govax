@@ -2324,6 +2324,26 @@ widened."
 - **Status**: deferred: govax writes no limit. `TestLibCreateDirOracle`
   masks the field for `[SUBREL]`.
 
+### [Phase 13] Image sections all got P0's default protection (UW)
+
+- **Where**: `reference/eVAX/eVAX/Source/Console/console_run.c`
+  (`image_load`), ported to `internal/console/image.go`/`run.go`.
+- **What**: `image_load` writes each section's pages but never sets their
+  protection, so every page of a loaded image kept the protection P0's
+  demand paging gives a new page, UW (`PTE$K_ALL`): a program's code was
+  writable from user mode. VMS's image activator maps a process-private
+  section UW only if it is writable (`ISD$M_WRT`) and UR otherwise, setting
+  the protection once fixups are done (the IAF's change-protection list
+  exists for that ordering). Found with `testdata/mar/hello.mar`, whose
+  `DATA` page (^X200) and `CODE` page (^X400) showed the same PTE.
+- **Status**: fixed in Go (2026-10-02): `activateImage` sets UW/UR per
+  section after fixups (`setImageProtection`), and `resetICBList` opens
+  the old image's pages to UW again so a later RUN can load over them.
+  Global and user-stack ISDs aren't touched; the image header's own pages
+  aren't either (they're overwritten by the first section). The console's
+  DEPOSIT, being a kernel-mode access, can no longer write a read-only
+  section; `SET PTE addr PROT=PTE$K_UW` first. `TestLink_helloPageProtection`.
+
 <!--
 Entry template:
 

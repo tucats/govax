@@ -291,3 +291,23 @@ knowable by actually loading and running it, which is this phase's job to find o
   deliverable (`image_load`, `image_fixup`, `Console.Call`, `Console.Run`
   with its qualifiers, and the named-fixture milestone) is done and
   unit-tested. Resuming Phase 12 (integration & regression) is unblocked.
+
+### 2026-10-02 — Image page protection; PTE$K_ names at the console
+
+- RUN now gives each image section its own page protection once fixups are
+  written: UW for a writable (`ISD$M_WRT`) section, UR for the rest, as
+  VMS's image activator does. Before, every page stayed at P0's default
+  (UW), so hello.mar's code page was writable from user mode
+  (docs/DEVIATIONS.md). Load, fixup, and protect are one method,
+  `activateImage`, which the `runImage` test helper now shares with RUN;
+  `resetICBList` reopens the previous image's pages so RUN can load over
+  them.
+- The console's expression evaluator now falls back on the assembler's
+  predefined system symbols (`asm.BuiltinSymbol`: `PTE$K_*`, `VAX$PR_*`,
+  `XFC$*`, `EO$*`, `OPC$_*`, ...). The C source kept these in its one
+  shared symbol table; the Go port seeded them only into the assembler's,
+  so `SET PTE 400 PROT=PTE$K_UR` reported `PTE$K_UR` undefined. They aren't
+  added to the console's table, so SHOW SYMBOL is unchanged, and a console
+  symbol of the same name still wins. Every name SHOW PTE prints
+  (`PTE$K_NONE`, `PTE$K_ALL`, `PTE$K_UR`, ...) is one of them
+  (`TestDispatch_setPTEProtectionNames`).

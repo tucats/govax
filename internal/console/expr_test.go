@@ -68,6 +68,36 @@ func TestEvaluator_undefinedSymbol(t *testing.T) {
 	}
 }
 
+// TestEvaluator_builtinSymbols checks that the assembler's predefined
+// system symbols resolve at the console too, and that a console symbol of
+// the same name wins.
+func TestEvaluator_builtinSymbols(t *testing.T) {
+	cases := map[string]uint32{
+		"PTE$K_UR":    15,
+		"pte$k_none":  0,
+		"PTE$K_ALL":   4,
+		"VAX$PR_SBR":  12,
+		"XFC$SHIM":    0x7D,
+		"OPC$_HALT":   0,
+		"OPC$_MOVL":   0xD0,
+		"PTE$K_UR+1":  16,
+	}
+
+	for expr, want := range cases {
+		if got := evalTest(t, 16, nil, expr); got != want {
+			t.Errorf("Eval(%q) = %#x, want %#x", expr, got, want)
+		}
+	}
+
+	if got := evalTest(t, 16, map[string]uint32{"PTE$K_UR": 7}, "PTE$K_UR"); got != 7 {
+		t.Errorf("console PTE$K_UR = %d, want the console's own 7", got)
+	}
+
+	if got := evalTest(t, 16, nil, `DEFINED("PTE$K_KW")`); got != 1 {
+		t.Errorf("DEFINED(PTE$K_KW) = %d, want 1", got)
+	}
+}
+
 func TestEvaluator_here(t *testing.T) {
 	if got := evalTest(t, 16, nil, "."); got != 0x1000 {
 		t.Errorf("got %#x, want 0x1000", got)

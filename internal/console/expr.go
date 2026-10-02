@@ -3,6 +3,7 @@ package console
 import (
 	"strings"
 
+	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -226,7 +227,7 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 			return e.parseDefined(rest)
 		}
 
-		v, ok := e.Symbols.Get(name)
+		v, ok := e.lookupSymbol(name)
 		if !ok {
 			return 0, "", vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
 		}
@@ -383,9 +384,21 @@ func (e *Evaluator) parseDefined(s string) (uint32, string, error) {
 		return 0, "", vmserrors.New(vmserrors.CLI_NEEDPAREN)
 	}
 
-	_, ok := e.Symbols.Get(name)
+	_, ok := e.lookupSymbol(name)
 
 	return boolToUint32(ok), s[1:], nil
+}
+
+// lookupSymbol resolves name from the console's symbol table, then from
+// the assembler's predefined system symbols (asm.BuiltinSymbol: PTE$K_*,
+// VAX$PR_*, XFC$*, OPC$_*, ...), which the C source kept in that same
+// table. A console symbol of the same name wins.
+func (e *Evaluator) lookupSymbol(name string) (uint32, bool) {
+	if v, ok := e.Symbols.Get(name); ok {
+		return v, true
+	}
+
+	return asm.BuiltinSymbol(name)
 }
 
 func peekByte(s string, i int) byte {

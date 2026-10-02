@@ -48,19 +48,9 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 
 	c.runHost = opts.Host
 
-	main, err := c.imageLoad(fn, icbMain)
+	main, err := c.activateImage(fn)
 	if err != nil {
-		return vmserrors.Wrap(vmserrors.CLI_ACTIVATE, err, fn)
-	}
-
-	if c.CPU.DebugEnabled(vax.DebugImages) {
-		c.Printf("Main image is %s\n", main.Name)
-	}
-
-	for _, dep := range c.ICBList {
-		if err := c.imageFixup(dep); err != nil {
-			return vmserrors.Wrap(vmserrors.CLI_FIXUP, err, dep.Name)
-		}
+		return err
 	}
 
 	// console_run.c restores the caller's mode here -- before building and
@@ -86,6 +76,35 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 	c.imageActive = true
 
 	return c.Call(driverAddr, opts.Step)
+}
+
+// activateImage loads fn and its sharable-image dependencies (imageLoad),
+// fixes each up (imageFixup), and then gives every section's pages its
+// protection (setImageProtection) -- only once every fixup is written,
+// as VMS's image activator likewise changes a section's protection after
+// fixing it up (the IAF's change-protection list). Returns the main
+// image's ICB. Needs ensureShims to have run.
+func (c *Console) activateImage(fn string) (*ICB, error) {
+	main, err := c.imageLoad(fn, icbMain)
+	if err != nil {
+		return nil, vmserrors.Wrap(vmserrors.CLI_ACTIVATE, err, fn)
+	}
+
+	if c.CPU.DebugEnabled(vax.DebugImages) {
+		c.Printf("Main image is %s\n", main.Name)
+	}
+
+	for _, dep := range c.ICBList {
+		if err := c.imageFixup(dep); err != nil {
+			return nil, vmserrors.Wrap(vmserrors.CLI_FIXUP, err, dep.Name)
+		}
+	}
+
+	for _, icb := range c.ICBList {
+		c.setImageProtection(icb, true)
+	}
+
+	return main, nil
 }
 
 // DefaultRunInits reports RUN's own default for whether to invoke each

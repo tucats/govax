@@ -1,6 +1,10 @@
 package asm
 
-import "github.com/tucats/govax/internal/cpu"
+import (
+	"strings"
+
+	"github.com/tucats/govax/internal/cpu"
+)
 
 // builtinSymbols is the fixed set of predefined, permanent system symbols
 // every assembly starts with — the literal name/value table half of
@@ -96,6 +100,31 @@ var builtinSymbols = map[string]uint32{
 
 	"CONSOLE$HANDLER": 0xFFFFFFFF,
 	"$STATUS":         0,
+}
+
+// BuiltinSymbol looks up name (case-insensitively) in the predefined
+// system symbols every assembly starts with -- builtinSymbols, plus an
+// "OPC$_<mnemonic>" for each single-byte opcode. The console's expression
+// evaluator falls back on it, so the names init_symbols.c defined in the C
+// source's one shared symbol table (PTE$K_UR in SET PTE's PROT=, say) mean
+// the same thing at the console prompt as in ASM source.
+func BuiltinSymbol(name string) (uint32, bool) {
+	name = strings.ToUpper(name)
+
+	if v, ok := builtinSymbols[name]; ok {
+		return v, true
+	}
+
+	if mnemonic, ok := strings.CutPrefix(name, "OPC$_"); ok {
+		table := cpu.Instructions()
+		for i := 0; i < 256; i++ {
+			if inst := table.Lookup(cpu.Opcode{Function: byte(i)}); inst != nil && inst.Name == mnemonic {
+				return uint32(i), true
+			}
+		}
+	}
+
+	return 0, false
 }
 
 // seedBuiltinSymbols populates a fresh Assembler's symbol table with the
