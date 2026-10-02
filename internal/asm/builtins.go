@@ -127,6 +127,26 @@ func BuiltinSymbol(name string) (uint32, bool) {
 	return 0, false
 }
 
+// BuiltinSymbols returns every predefined system symbol BuiltinSymbol
+// resolves, name to value, in a map of the caller's own -- for the
+// console's SHOW SYMBOL listings.
+func BuiltinSymbols() map[string]uint32 {
+	out := make(map[string]uint32, len(builtinSymbols)+256)
+
+	for name, value := range builtinSymbols {
+		out[name] = value
+	}
+
+	table := cpu.Instructions()
+	for i := 0; i < 256; i++ {
+		if inst := table.Lookup(cpu.Opcode{Function: byte(i)}); inst != nil {
+			out["OPC$_"+inst.Name] = uint32(i)
+		}
+	}
+
+	return out
+}
+
 // seedBuiltinSymbols populates a fresh Assembler's symbol table with the
 // permanent system symbols the reference tool defines at startup —
 // init_symbols.c's init_system_symbols(). Every testdata/asm fixture that

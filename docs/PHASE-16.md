@@ -1049,3 +1049,25 @@ own `ShowBase` already implements.
   deposit cursor). `go build ./...`, `go vet ./...`, and `go test ./...` clean
   (aside from the pre-existing, unrelated `TestShowFault` flake, confirmed
   failing identically on unmodified `main`).
+
+### 2026-10-02 — SHOW SYMBOL wildcards; predefined symbols listed
+
+- `SHOW SYMBOL <name>` with VMS wildcards (`*`: any run of characters,
+  `%`: exactly one; `lnm.Match`) lists every matching symbol in the
+  `/ALL` listing's format; a plain name keeps the single-symbol detail.
+  `SHOW SYMBOL/ALL` and `/SYSTEM` take the same optional pattern (a
+  `symbol` parameter added to `show_sym_all`/`show_sym_sys` in
+  `console.dcl`), which also works after the pattern (`SHOW SYMBOL MY*
+  /ALL`). A pattern that matches nothing reports `CLI-E-UNDEFSYM`.
+- The listings and the single-name form now include the assembler's
+  predefined system symbols (`asm.BuiltinSymbols`: `PTE$K_*`, `VAX$PR_*`,
+  `OPC$_*`, ...), labelled "system, predefined", as the C source's one
+  shared table listed them (the evaluator already resolved them, Phase 13's
+  2026-10-02 entry). A console symbol of the same name shadows one. This
+  adds about 390 lines to an unfiltered `/ALL`, which is what the wildcard
+  filter is for.
+- `HELP` now treats `/` as starting a new word, as DCL does, so `HELP SHOW
+  SYMBOL/ALL` finds the `/ALL` topic (it used to read `SYMBOL/ALL` as one
+  word, `SYMB`). Help text updated for the patterns and `/SYSTEM`.
+- `SHOW SYMBOL/TEMPORARY` and `/UNRESOLVED` (see above) are still unbound.
+

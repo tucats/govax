@@ -2,11 +2,14 @@ package console
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -149,27 +152,90 @@ func (c *Console) ShowMemory() error {
 	return nil
 }
 
-// ShowSymbols prints every defined symbol, matching SHOW SYMBOLS/ALL.
-func (c *Console) ShowSymbols() error {
+// ShowSymbols prints every defined symbol whose name matches pattern,
+// matching SHOW SYMBOL/ALL [pattern]: VMS wildcards, "*" for any run of
+// characters and "%" for exactly one; an empty pattern matches every
+// name. The assembler's predefined system symbols are listed too, as the
+// C source's one shared symbol table listed them.
+func (c *Console) ShowSymbols(pattern string) error {
+	return c.showSymbolList(pattern, false)
+}
+
+// showSymbolList prints the symbols listSymbols selects, one per line, or
+// reports CLI_UNDEFSYM when a pattern matched nothing.
+func (c *Console) showSymbolList(pattern string, systemOnly bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
 
-	for _, s := range c.Symbols.All() {
-		kind := "user"
+	syms := c.listSymbols(pattern, systemOnly)
+	if len(syms) == 0 && strings.TrimSpace(pattern) != "" {
+		return vmserrors.New(vmserrors.CLI_UNDEFSYM, strings.TrimSpace(pattern))
+	}
 
-		if s.Kind == SymbolSystem {
-			kind = "system"
-		}
-
-		if s.IsEntry {
-			kind += ", entry"
-		}
-
-		c.Printf("%-31s = %08X  (%s)\n", s.Name, s.Value, kind)
+	for _, s := range syms {
+		c.Printf("%-31s = %08X  (%s)\n", s.Name, s.Value, symbolKindLabel(s))
 	}
 
 	return nil
+}
+
+// listSymbols returns, sorted by name, every console symbol and every
+// predefined symbol (asm.BuiltinSymbols) not shadowed by a console symbol
+// of the same name, whose name matches pattern (VMS wildcards; empty
+// matches all). systemOnly leaves out user symbols.
+func (c *Console) listSymbols(pattern string, systemOnly bool) []*Symbol {
+	pattern = strings.ToUpper(strings.TrimSpace(pattern))
+	match := func(name string) bool { return pattern == "" || lnm.Match(pattern, name) }
+
+	var out []*Symbol
+
+	seen := map[string]bool{}
+
+	for _, s := range c.Symbols.All() {
+		seen[s.Name] = true
+
+		if (!systemOnly || s.Kind == SymbolSystem) && match(s.Name) {
+			out = append(out, s)
+		}
+	}
+
+	for name, value := range asm.BuiltinSymbols() {
+		if !seen[name] && match(name) {
+			out = append(out, &Symbol{Name: name, Value: value, Kind: SymbolSystem, Predefined: true})
+		}
+	}
+
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+
+	return out
+}
+
+// symbolKindLabel is the attribute list SHOW SYMBOL prints in parentheses.
+func symbolKindLabel(s *Symbol) string {
+	kind := "user"
+
+	switch {
+	case s.Predefined:
+		kind = "system, predefined"
+
+	case s.Kind == SymbolSystem:
+		kind = "system"
+	}
+
+	if s.Permanent {
+		kind += ", permanent"
+	}
+
+	if s.IsEntry {
+		kind += ", entry"
+	}
+
+	if s.IsLabel {
+		kind += ", label"
+	}
+
+	return kind
 }
 
 // ShowBreakpoints prints every active breakpoint, matching SHOW
@@ -1189,10 +1255,12 @@ func (c *Console) ShowImages(full bool) error {
 
 // ShowSymbol prints one symbol's value, matching the single-name form of
 // SHOW SYMBOL (console_show.c's case 149). Unlike the C source, this
-// reports only the value, user/system kind, and entry attribute (matching
-// ShowSymbols' own existing kind label), not the fuller
-// perm/label/local/string attribute set — this port's SymbolKind doesn't
-// track those distinctions (see docs/PHASE-16.md sub-phase 1c).
+// reports only the value and the attributes SymbolKind and Symbol track
+// (symbolKindLabel), not the C source's local/string distinctions (see
+// docs/PHASE-16.md sub-phase 1c). A name with VMS wildcards ("*", "%")
+// lists every symbol it matches instead, as ShowSymbols does; a name the
+// console's table lacks may still be a predefined system symbol
+// (asm.BuiltinSymbol).
 func (c *Console) ShowSymbol(name string) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -1200,49 +1268,30 @@ func (c *Console) ShowSymbol(name string) error {
 
 	name = strings.TrimSpace(name)
 
+	if lnm.HasWildcards(name) {
+		return c.showSymbolList(name, false)
+	}
+
 	sym, ok := c.Symbols.Find(name)
 	if !ok {
-		return vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
+		v, found := asm.BuiltinSymbol(name)
+		if !found {
+			return vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
+		}
+
+		sym = &Symbol{Name: strings.ToUpper(name), Value: v, Kind: SymbolSystem, Predefined: true}
 	}
 
-	kind := "user"
-	if sym.Kind == SymbolSystem {
-		kind = "system"
-	}
-
-	if sym.Permanent {
-		kind += ", permanent"
-	}
-
-	if sym.IsEntry {
-		kind += ", entry"
-	}
-
-	if sym.IsLabel {
-		kind += ", label"
-	}
-
-	c.Printf("    %s = %08X (hex)   %12d (dec)  (%s)\n", sym.Name, sym.Value, int32(sym.Value), kind)
+	c.Printf("    %s = %08X (hex)   %12d (dec)  (%s)\n", sym.Name, sym.Value, int32(sym.Value), symbolKindLabel(sym))
 
 	return nil
 }
 
 // ShowSymbolsSystem prints every system (as opposed to user-defined)
-// symbol, matching SHOW SYMBOL/SYSTEM (dump_system_symbols).
-func (c *Console) ShowSymbolsSystem() error {
-	if err := c.requireInit(); err != nil {
-		return err
-	}
-
-	for _, s := range c.Symbols.All() {
-		if s.Kind != SymbolSystem {
-			continue
-		}
-
-		c.Printf("%-31s = %08X  (system)\n", s.Name, s.Value)
-	}
-
-	return nil
+// symbol whose name matches pattern (see ShowSymbols), matching SHOW
+// SYMBOL/SYSTEM [pattern] (dump_system_symbols).
+func (c *Console) ShowSymbolsSystem(pattern string) error {
+	return c.showSymbolList(pattern, true)
 }
 
 // ShowQuantum reports the interrupt-admission quantum countdown, matching

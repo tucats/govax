@@ -499,7 +499,7 @@ func TestShowSymbols(t *testing.T) {
 	c.Symbols.Set("MYSYM", 0xABCD, SymbolUser)
 	buf.Reset()
 
-	if err := c.ShowSymbols(); err != nil {
+	if err := c.ShowSymbols(""); err != nil {
 		t.Fatalf("ShowSymbols: %v", err)
 	}
 

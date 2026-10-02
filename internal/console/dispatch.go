@@ -220,8 +220,8 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("SHOW_PSL", func(id int64, r *dcl.Result) error { return d.Console.ShowPSL() })
 	g.Bind("SHOW_MEMORY", func(id int64, r *dcl.Result) error { return d.Console.ShowMemory() })
 	g.Bind("SHOW_SYM", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbol(r.String("SYMBOL")) })
-	g.Bind("SHOW_SYM_ALL", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbols() })
-	g.Bind("SHOW_SYM_SYS", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbolsSystem() })
+	g.Bind("SHOW_SYM_ALL", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbols(r.String("SYMBOL")) })
+	g.Bind("SHOW_SYM_SYS", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbolsSystem(r.String("SYMBOL")) })
 	g.Bind("SHOW_BREAK", func(id int64, r *dcl.Result) error { return d.Console.ShowBreakpoints() })
 	g.Bind("SHOW_BREAK_INSTR", func(id int64, r *dcl.Result) error { return d.Console.ShowInstructionBreakpoints() })
 	g.Bind("SHOW_RADIX", func(id int64, r *dcl.Result) error { return d.Console.ShowRadix() })
@@ -963,8 +963,10 @@ func cmdPrint(d *Dispatcher, rest string) error {
 	return d.Console.Print(rest)
 }
 
+// cmdHelp implements HELP. A "/" starts a new word, as it does in DCL, so
+// HELP SHOW SYMBOL/ALL finds the same "/ALL" topic as HELP SHOW SYMBOL /ALL.
 func cmdHelp(d *Dispatcher, rest string) error {
-	return d.Console.Help(d.Help, strings.Fields(rest))
+	return d.Console.Help(d.Help, strings.Fields(strings.ReplaceAll(rest, "/", " /")))
 }
 
 func cmdInclude(d *Dispatcher, rest string) error {

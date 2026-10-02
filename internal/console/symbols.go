@@ -46,6 +46,13 @@ type Symbol struct {
 	// IsEntry, nothing else in this port currently branches on it (the C
 	// source's own find_label also matches SYM_ENTRY, not SYM_LABEL).
 	IsLabel bool
+
+	// Predefined marks one of the assembler's predefined system symbols
+	// (asm.BuiltinSymbols: PTE$K_*, VAX$PR_*, OPC$_*, ...), which the
+	// console resolves but doesn't keep in its own table. Only SHOW
+	// SYMBOL's listings build such Symbols (see Console.listSymbols); its
+	// Kind is SymbolSystem.
+	Predefined bool
 }
 
 // SymbolTable is the console's symbol table — a simplified, map-based

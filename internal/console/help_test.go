@@ -186,3 +186,28 @@ func TestLoadHelpFile_everyKeyResolves(t *testing.T) {
 		t.Fatalf("scanning vax.help: %v", err)
 	}
 }
+
+// TestCmdHelp_qualifierWithoutSpace checks that HELP splits a qualifier
+// off the word it's attached to, as DCL does: HELP SHOW SYMBOL/SYSTEM is
+// HELP SHOW SYMBOL /SYSTEM, not SHOW SYMB(OL/SYSTEM).
+func TestCmdHelp_qualifierWithoutSpace(t *testing.T) {
+	h, err := LoadHelpFile(vaxHelpPath(t))
+	if err != nil {
+		t.Fatalf("LoadHelpFile: %v", err)
+	}
+
+	c, buf := newTestConsole(t)
+	d := &Dispatcher{Console: c, Help: h}
+
+	for _, arg := range []string{"SHOW SYMBOL/SYSTEM", "SHOW SYMBOL /SYSTEM", "SHOW SYMBOL/ALL"} {
+		buf.Reset()
+
+		if err := cmdHelp(d, arg); err != nil {
+			t.Fatalf("HELP %s: %v", arg, err)
+		}
+
+		if !strings.Contains(buf.String(), "SHOW SYMBOLS/SYSTEM [<name>]") {
+			t.Errorf("HELP %s = %q, want the /ALL and /SYSTEM topic", arg, buf.String())
+		}
+	}
+}

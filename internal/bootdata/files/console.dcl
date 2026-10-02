@@ -448,7 +448,11 @@ grammar console
         syntax          show_scb/id=148
             qualifier   all/id=1032
         syntax          show_sym_all/id=150
+            parameter   symbol          /id=1021    -
+                        /type=$name
         syntax          show_sym_sys/id=151
+            parameter   symbol          /id=1021    -
+                        /type=$name
         syntax          show_sym_tmp/id=152
         syntax          show_sym_unres/id=153
         syntax          show_sym/id=149

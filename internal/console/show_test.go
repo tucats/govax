@@ -2,11 +2,14 @@ package console
 
 import (
 	"bytes"
+	"errors"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // newShowDispatcher returns a Dispatcher/Console/output-buffer trio for a
@@ -445,6 +448,92 @@ func TestShowSymbolsSystem(t *testing.T) {
 
 	if strings.Contains(out, "USERSYM") {
 		t.Errorf("output = %q, want the user symbol excluded", out)
+	}
+}
+
+// showSymbolNames dispatches cmd and returns the symbol names its listing
+// printed, in order.
+func showSymbolNames(t *testing.T, d *Dispatcher, buf *bytes.Buffer, cmd string) []string {
+	t.Helper()
+	buf.Reset()
+
+	if err := d.Dispatch(cmd); err != nil {
+		t.Fatalf("Dispatch(%s): %v", cmd, err)
+	}
+
+	var names []string
+
+	for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+		if f := strings.Fields(line); len(f) > 0 {
+			names = append(names, f[0])
+		}
+	}
+
+	return names
+}
+
+// TestShowSymbol_wildcards checks VMS "*" and "%" name filtering in each
+// SHOW SYMBOL form, including the predefined system symbols.
+func TestShowSymbol_wildcards(t *testing.T) {
+	d, c, buf := newShowDispatcher(t)
+
+	c.Symbols.Set("MYSYM", 1, SymbolUser)
+	c.Symbols.Set("MYSYS", 2, SymbolSystem)
+	c.Symbols.Set("MXSYM", 3, SymbolUser)
+	c.Symbols.Set("PTE$K_UR", 7, SymbolUser) // shadows the predefined one
+
+	cases := []struct {
+		cmd  string
+		want []string
+	}{
+		{"SHOW SYMBOL MY*", []string{"MYSYM", "MYSYS"}},
+		{"SHOW SYMBOL my*", []string{"MYSYM", "MYSYS"}},
+		{"SHOW SYMBOL M%SYM", []string{"MXSYM", "MYSYM"}},
+		{"SHOW SYMBOL/ALL MY*", []string{"MYSYM", "MYSYS"}},
+		{"SHOW SYMBOL MY* /ALL", []string{"MYSYM", "MYSYS"}},
+		{"SHOW SYMBOL/SYSTEM M*SY%", []string{"MYSYS"}},
+		{"SHOW SYMBOL PTE$K_UR*", []string{"PTE$K_UR", "PTE$K_UREW", "PTE$K_URKW", "PTE$K_URSW"}},
+		{"SHOW SYMBOL/SYSTEM PTE$K_UR*", []string{"PTE$K_UREW", "PTE$K_URKW", "PTE$K_URSW"}},
+		{"SHOW SYMBOL VAX$PR_%%R", []string{"VAX$PR_ICR", "VAX$PR_PMR", "VAX$PR_SBR", "VAX$PR_SLR"}},
+		{"SHOW SYMBOL OPC$_MOV%", []string{"OPC$_MOVB", "OPC$_MOVD", "OPC$_MOVF", "OPC$_MOVL", "OPC$_MOVP", "OPC$_MOVQ", "OPC$_MOVW"}},
+	}
+
+	for _, tc := range cases {
+		if got := showSymbolNames(t, d, buf, tc.cmd); strings.Join(got, " ") != strings.Join(tc.want, " ") {
+			t.Errorf("%s = %v, want %v", tc.cmd, got, tc.want)
+		}
+	}
+
+	buf.Reset()
+
+	if err := d.Dispatch("SHOW SYMBOL PTE$K_UR"); err != nil || !strings.Contains(buf.String(), "00000007") {
+		t.Errorf("SHOW SYMBOL PTE$K_UR = %q, %v; want the console's own 7", buf.String(), err)
+	}
+
+	for _, cmd := range []string{"SHOW SYMBOL NOSUCH*", "SHOW SYMBOL/ALL NOSUCH%", "SHOW SYMBOL/SYSTEM MX*"} {
+		if err := d.Dispatch(cmd); !errors.Is(err, vmserrors.New(vmserrors.CLI_UNDEFSYM)) {
+			t.Errorf("%s: err = %v, want CLI-E-UNDEFSYM", cmd, err)
+		}
+	}
+}
+
+// TestShowSymbol_predefined checks that a single predefined system symbol
+// shows as one, and that the unfiltered listings include them.
+func TestShowSymbol_predefined(t *testing.T) {
+	d, _, buf := newShowDispatcher(t)
+
+	if err := d.Dispatch("SHOW SYMBOL VAX$PR_SBR"); err != nil {
+		t.Fatalf("Dispatch: %v", err)
+	}
+
+	if out := buf.String(); !strings.Contains(out, "0000000C") || !strings.Contains(out, "predefined") {
+		t.Errorf("output = %q, want VAX$PR_SBR's value 0000000C, predefined", out)
+	}
+
+	for _, cmd := range []string{"SHOW SYMBOL/ALL", "SHOW SYMBOL/SYSTEM"} {
+		if names := showSymbolNames(t, d, buf, cmd); !slices.Contains(names, "PTE$K_KW") {
+			t.Errorf("%s doesn't list PTE$K_KW", cmd)
+		}
 	}
 }
 

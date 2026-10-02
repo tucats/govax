@@ -1870,8 +1870,12 @@ $SH  ,SYM
 
     The SHOW SYMBOL command can be used to display the value of a specific
     symbol in the symbol table.  You can also use the SHOW SYMBOL/ALL
-    command to display all symbols, or the SHOW SYMBOL/UNRESOLVED command
+    command to display all symbols, the SHOW SYMBOL/SYSTEM command to
+    display only system symbols, or the SHOW SYMBOL/UNRESOLVED command
     to display symbols that do not yet have an assigned value.
+
+    The predefined system symbols (such as PTE$K_UR, VAX$PR_SBR, and
+    OPC$_MOVL) are shown along with the symbols in the symbol table.
     
     Syntax:
     
@@ -1881,18 +1885,39 @@ $SH  ,SYM
     
         name        The name of a symbol to be displayed.  If the symbol
                     does not exist then an error message is displayed.
+                    The name can contain the wildcards "*" (any number of
+                    characters, including none) and "%" (exactly one
+                    character); every symbol whose name matches is then
+                    listed, and an error message is displayed if none do.
+    
+    Examples:
+    
+        SHOW SYMBOL PTE$K_UR*
+        SHOW SYMBOL VAX$PR_%%R
 
 $SHOW,SYMB,/ALL
 $SHOW,SYM ,/ALL
 $SH  ,SYMB,/ALL
 $SH  ,SYM ,/ALL
+$SHOW,SYMB,/SYS
+$SHOW,SYM ,/SYS
+$SH  ,SYMB,/SYS
+$SH  ,SYM ,/SYS
 
-    The SHOW SYMBOL/ALL command will display the settings of all user
-    symbols, if there are any.
+    The SHOW SYMBOL/ALL command will display the settings of all
+    symbols.  The SHOW SYMBOL/SYSTEM command displays only the system
+    symbols.  Either can be limited to the symbols whose names match a
+    name that contains the wildcards "*" (any number of characters,
+    including none) and "%" (exactly one character).
     
     Syntax:
     
-        SHOW SYMBOLS/ALL
+        SHOW SYMBOLS/ALL [<name>]
+        SHOW SYMBOLS/SYSTEM [<name>]
+    
+    Example:
+    
+        SHOW SYMBOL/SYSTEM CONSOLE$*
 
 $SHOW,SYMB,/UNR
 $SHOW,SYM ,/UNR
