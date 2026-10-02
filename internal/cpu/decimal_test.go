@@ -362,3 +362,116 @@ func TestASHP(t *testing.T) {
 		}
 	}
 }
+
+// convert4 runs a conversion with no table (CVTPS, CVTSP): source length
+// l1 at decSrc, destination length l2 at decDst.
+func convert4(t *testing.T, e *Engine, op, l1 byte, src []byte, l2 byte) error {
+	t.Helper()
+
+	putMem(t, e, decSrc, src...)
+
+	insn := append([]byte{op, l1}, absolute(decSrc)...)
+	insn = append(insn, l2)
+	insn = append(insn, absolute(decDst)...)
+
+	return runFloat(t, e, insn...)
+}
+
+func TestCVTPSAndCVTSP(t *testing.T) {
+	e := decimalEngine()
+
+	// -123 into 5 digits: "-00123". -0 gives "+".
+	if err := convert4(t, e, 0x08, 3, []byte{0x12, 0x3D}, 5); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := getMem(t, e, decDst, 6); string(got) != "-00123" || !e.cpu.PSL().N() {
+		t.Errorf("CVTPS -123: %q, N %v", got, e.cpu.PSL().N())
+	}
+
+	if err := convert4(t, e, 0x08, 3, []byte{0x00, 0x0D}, 3); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := getMem(t, e, decDst, 4); string(got) != "+000" || !e.cpu.PSL().Z() {
+		t.Errorf("CVTPS -0: %q, Z %v", got, e.cpu.PSL().Z())
+	}
+
+	// A space sign is plus; a bad sign or digit is a reserved operand.
+	if err := convert4(t, e, 0x09, 3, []byte(" 123"), 3); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := getMem(t, e, decDst, 2); string(got) != "\x12\x3C" {
+		t.Errorf("CVTSP \" 123\": % x", got)
+	}
+
+	for _, bad := range []string{"*123", "+1X3"} {
+		var f *Fault
+		if err := convert4(t, e, 0x09, 3, []byte(bad), 3); !errors.As(err, &f) || f.Code != ExcReservedOp {
+			t.Errorf("CVTSP %q: %v, want a reserved operand", bad, err)
+		}
+	}
+}
+
+// TestCVTPTAndCVTTP uses an overpunch table: a packed byte d<<4|C or D
+// becomes "{ABCDEFGHI"[d] or "}JKLMNOPQR"[d], and back.
+func TestCVTPTAndCVTTP(t *testing.T) {
+	const table = 0x3400
+
+	e := decimalEngine()
+
+	for d := 0; d < 10; d++ {
+		putMem(t, e, table+uint32(d<<4|0xC), "{ABCDEFGHI"[d])
+		putMem(t, e, table+uint32(d<<4|0xD), "}JKLMNOPQR"[d])
+	}
+
+	// CVTPT -123 into 5: "0012L".
+	putMem(t, e, decSrc, 0x12, 0x3D)
+
+	insn := append([]byte{0x24, 3}, absolute(decSrc)...)
+	insn = append(insn, absolute(table)...)
+	insn = append(insn, 5)
+	insn = append(insn, absolute(decDst)...)
+
+	if err := runFloat(t, e, insn...); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := getMem(t, e, decDst, 5); string(got) != "0012L" {
+		t.Errorf("CVTPT -123: %q, want \"0012L\"", got)
+	}
+
+	// CVTTP "12L" (into a table mapping back) is -123.
+	back := uint32(0x3600)
+	for i := 0; i < 256; i++ {
+		putMem(t, e, back+uint32(i), 0xFF)
+	}
+
+	for d := 0; d < 10; d++ {
+		putMem(t, e, back+uint32("}JKLMNOPQR"[d]), byte(d<<4|0xD))
+	}
+
+	putMem(t, e, decSrc, '1', '2', 'L')
+
+	insn = append([]byte{0x26, 3}, absolute(decSrc)...)
+	insn = append(insn, absolute(back)...)
+	insn = append(insn, 3)
+	insn = append(insn, absolute(decDst)...)
+
+	if err := runFloat(t, e, insn...); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := getMem(t, e, decDst, 2); string(got) != "\x12\x3D" {
+		t.Errorf("CVTTP \"12L\": % x, want 12 3d", got)
+	}
+
+	// A translation to ^XFF (an invalid digit) is a reserved operand.
+	putMem(t, e, decSrc, '1', '2', '*')
+
+	var f *Fault
+	if err := runFloat(t, e, insn...); !errors.As(err, &f) || f.Code != ExcReservedOp {
+		t.Errorf("CVTTP \"12*\": %v, want a reserved operand", err)
+	}
+}

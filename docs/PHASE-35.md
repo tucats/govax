@@ -682,3 +682,18 @@ The author accepted each proposal below on 2026-10-02.
     DIVP with an invalid divisor digit, whose result the manual makes
     UNPREDICTABLE (`DEVIATIONS.md`; masked in subtask 14).
     `TestDecimalArithmetic`, `TestDIVPByZero`, `TestASHP`.
+- 2026-10-02: Subtask 12 done: CVTPS, CVTSP, CVTPT, CVTTP
+  (`internal/cpu/decimalconvert.go`).
+  - From the manual: CVTPS writes a sign byte by the source's value (-0
+    gives "+") and the digits in ASCII; CVTSP takes "+", "-", or a space,
+    and digits "0"-"9", any other byte a reserved operand; CVTPT
+    translates the source's last byte (last digit and sign, even for -0)
+    through the program's 256-byte table into the destination's last
+    byte; CVTTP translates the source's last byte back into the last
+    digit and sign, a non-digit in any other byte or an invalid
+    translation being a reserved operand. The conversions to numeric
+    strings set N and Z from the source's value, those to packed strings
+    from the result; overflow keeps the low-order digits, sets V, and
+    traps under DV.
+  - **Against VMS**: all 28 cases of the packed probe match.
+    `TestCVTPSAndCVTSP`, `TestCVTPTAndCVTTP`.
