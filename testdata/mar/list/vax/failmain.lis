@@ -1,0 +1,70 @@
+FAILMAIN                        Phase 29 probe: a program that fails, fo  2-OCT-2026 19:03:18  VAX MACRO V5.4-3            Page   1
+V1.0                                                                      2-OCT-2026 18:58:11  DUA1:[000000]FAILMAIN.MAR;1       (1)
+
+                                     0000     1 	.TITLE	FAILMAIN Phase 29 probe: a program that fails, for traceback
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; With FAILSUB, a program whose third routine, two calls and one module
+                                     0000     5 ; away, reads address 0 (the no-access page): an access violation that
+                                     0000     6 ; nothing handles, so VMS's traceback prints the call chain. LIST.COM
+                                     0000     7 ; links it with and without traceback and runs both, keeping what they
+                                     0000     8 ; print for a future govax traceback to be checked against.
+                                     0000     9 
+                                     0000    10 	.EXTERNAL SUB1
+                                     0000    11 
+                                 00000000    12 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0000  0000    13 	.ENTRY	FAILMAIN, ^M<>
+              00000000'GF   00   FB  0002    14 	CALLS	#0, G^SUB1
+                                 04  0009    15 	RET
+                                     000A    16 
+                                     000A    17 	.END	FAILMAIN
+FAILMAIN                        Phase 29 probe: a program that fails, fo  2-OCT-2026 19:03:18  VAX MACRO V5.4-3            Page   2
+Symbol table                                                              2-OCT-2026 18:58:11  DUA1:[000000]FAILMAIN.MAR;1       (1)
+
+FAILMAIN         00000000 RG    01      
+SUB1             ********   X   00      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+CODE                            0000000A  (   10.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  449     00:00:00.01    00:00:00.01
+Command processing              916     00:00:00.00    00:00:00.00
+Pass 1                          180     00:00:00.01    00:00:00.01
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           30     00:00:00.00    00:00:00.00
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1602     00:00:00.02    00:00:00.02
+
+The working set limit was 812 pages.
+206 bytes (1 page) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 2 non-local and 0 local symbols.
+17 source lines were read in Pass 1, producing 15 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST FAILMAIN

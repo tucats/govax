@@ -1,0 +1,91 @@
+
+FSIGNOTB                                                         2-OCT-2026 19:03        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+FAILSIG         V1.0                   45 DUA1:[000000]FAILSIG.OBJ;1            2-OCT-2026 19:03  VAX MACRO V5.4-3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+CODE                            00000200 0000022C 0000002D (         45.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                FAILSIG         00000200 0000022C 0000002D (         45.) LONG  2
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+FAILSIG         00000200-R        
+STOPIT          00000221-R        
+WARNIT          00000211-R        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]FSIGNOTB.EXE;1                                      2-OCT-2026 19:03        Linker V11-39                    Page    2
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000005FF 00000400 (1024. bytes, 2. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        3. (    2. blocks)
+Image name and identification:                    FSIGNOTB V1.0
+Number of files:                                         3.
+Number of modules:                                       2.
+Number of program sections:                              3.
+Number of global symbols:                              308.
+Number of image sections:                                5.
+User transfer address:                            00000200
+Number of code references to shareable images:           2.
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[000000]FSIGNOTB.MAP;1
+Estimated map length:                             29. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                    87	00:00:00.00	00:00:00.00
+    Pass 1:                                               218	00:00:00.01	00:00:00.01
+    Allocation/Relocation:                                 46	00:00:00.00	00:00:00.00
+    Pass 2:                                                70	00:00:00.01	00:00:00.01
+    Map data after object module synopsis:                 17	00:00:00.00	00:00:00.00
+    Symbol table output:                                   14	00:00:00.00	00:00:00.00
+Total run values:                                         452	00:00:00.02	00:00:00.02
+
+Using a working set limited to 662 pages and 106 pages of data storage (excluding image)
+
+Total number object records read (both passes):   66
+    of which 0 were in libraries and 3 were DEBUG data records containing 95 bytes
+
+Number of modules extracted explicitly             = 0
+    with 0 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 0 global symbol table records was written
+
+LINK/MAP=FSIGNOTB/EXECUTABLE=FSIGNOTB/NOTRACEBACK FAILSIG

@@ -1,0 +1,598 @@
+
+$ ! LIST.COM - the govax Phase 29 probe (docs/PHASE-29.md, subtask 1).
+$ !
+$ ! 1. Listings: each source with MACRO/LIST, and LCTL, BINARY, SYMTAB,
+$ !    and XREF again with /SHOW=, /NOSHOW=, /NOOBJECT, and
+$ !    /CROSS_REFERENCE. The error sources'objects (if MACRO writes any)
+$ !    and $STATUS show what an assembly with errors leaves behind.
+$ ! 2. Traceback and debugger records: TRACE assembled with each /DEBUG,
+$ !    /ENABLE, and /DISABLE choice, and DBGSRC with its own .ENABLE and
+$ !    .DISABLE; ANALYZE/OBJECT of every object.
+$ ! 3. Images: TRACE linked with and without traceback and with /DEBUG
+$ !    (not run: it would start the debugger), with maps and
+$ !    ANALYZE/IMAGE; and the failing programs, linked with and without
+$ !    traceback and run, so the log keeps what VMS's traceback printed.
+$ !
+$ ! Run it with the volume holding the sources as the default directory,
+$ ! keeping a log of everything it prints:
+$ !
+$ !     @LIST/OUTPUT=LIST.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ !
+$ ! 1. Listings.
+$ !
+$ MACRO/LIST LCTL
+$ MACRO/LIST=LCTLSHOW/OBJECT=LCTLSHOW/SHOW=(EXPANSIONS,BINARY) LCTL
+$ MACRO/LIST=LCTLNOSH/OBJECT=LCTLNOSH/NOSHOW=(CONDITIONALS,CALLS,DEFINITIONS) LCTL
+$ MACRO/LIST BINARY
+$ MACRO/LIST=BINNOOBJ/NOOBJECT BINARY
+$ MACRO/LIST SYMTAB
+$ MACRO/LIST NOTITLE
+$ MACRO/LIST ERRORS
+                                     0004    10 	.BYTE	300			; doesn't fit in a byte
+%MACRO-W-DATATRUNC, Data truncation error
+                                     0005    11 	.WORD	^X12345			; nor in a word
+%MACRO-W-DATATRUNC, Data truncation error
+                                     0007    12 DUP:	.LONG	2
+%MACRO-E-SYMOUTPHAS, Symbol out of phase
+                                     000B    13 DUP:	.LONG	3			; a label defined twice
+%MACRO-E-MULDEFLBL, Multiple definition of label   !
+                                     000F    14 	.LONG	10/0			; division by zero
+%MACRO-W-DIVBYZERO, Division by zero error                        !
+72 65 74 69 6D 69 6C 65 64 20 67 6E  002B       
+%MACRO-E-UNTERMARG, Unterminated argument                                                                     !
+                                     0037    16 	.ALIGN	QUAD			; more than the psect's alignment
+%MACRO-E-ALIGNXCEED, Alignment exceeds PSECT alignment                 !
+                                     0038    17 	.PSECT	BADATTR, NOSUCH		; an attribute that doesn't exist
+%MACRO-E-NOTPSECOPT, Not a valid PSECT option                                  !
+                                     0038    19 	.ENDC				; .ENDC without a conditional
+%MACRO-E-NOTINANIF, Statement outside condition body                                    !
+                                     0038    20 	.ENDR				; .ENDR without a repeat block
+%MACRO-E-NOTINMACRO, Statement not in MACRO body       !
+                                     0038    21 	.ENDM				; .ENDM without a macro
+%MACRO-E-NOTINMACRO, Statement not in MACRO body       !
+                                     0038    22 	.FOO				; a directive that doesn't exist
+%MACRO-E-UNRECSTMT, Unrecognized statement             !
+                                     0041       
+%MACRO-W-DATATRUNC, Data truncation error
+%MACRO-E-GENERR, Generated ERROR:  ERRORS: a message from .ERROR
+%MACRO-W-GENWRN, Generated WARNING:  ERRORS: a message from .WARN
+ ERRORS: a message from .PRINT
+%MACRO-E-GENERR, Generated ERROR: 27  .ERROR with a value
+                                     0002    42 	FOO	R0			; an opcode that doesn't exist
+%MACRO-E-UNRECSTMT, Unrecognized statement             !
+                            50   D0  0002    43 	MOVL	R0			; too few operands
+%MACRO-E-NOTENUFOPR, Not enough operands supplied               !
+                       51   50   D0  0004    44 	MOVL	R0, R1, R2		; too many
+%MACRO-E-TOOMNYOPND, Too many operands for instruction                 !
+                                 D0  000E    46 	MOVL	S^#100, R0		; too big for a short literal
+%MACRO-W-DATATRUNC, Data truncation error
+                            50   D0  0011    47 	MOVL	R0, #1			; a literal destination
+%MACRO-E-ILLMODE, Illegal mode                                       !
+                                 D0  0014    48 	MOVL	(R0)+[R0], R1		; index register the same as the base
+%MACRO-E-ILLINDXREG, Invalid index register                           !
+                                 D4  0018    49 	CLRL	PC			; PC as a register operand
+%MACRO-E-ILLREGHERE, This register may not be used here         !
+                                 11  001A    50 	BRB	FAR			; out of a byte branch's range
+%MACRO-E-BRDESTRANG, Branch destination out of range
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000002"
+$ MACRO/LIST ERREND
+%MACRO-F-INSVIRMEM, insufficient virtual memory
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10158214"
+$ DIRECTORY/SIZE=ALL ERRORS.*,ERREND.*
+
+Directory DUA1:[000000]
+
+ERRORS.LIS;1              23/23     
+ERRORS.MAR;1               4/4      
+ERRORS.OBJ;1               2/2      
+ERREND.LIS;1               0/0      
+ERREND.MAR;1               1/1      
+
+Total of 5 files, 30/30 blocks.
+$ MACRO/LIST/CROSS_REFERENCE XREF
+$ MACRO/LIST=XREFALL/OBJECT=XREFALL/CROSS_REFERENCE=ALL XREF
+$ MACRO/LIST=SYMXREF/NOOBJECT/CROSS_REFERENCE SYMTAB
+$ !
+$ ! 2. Traceback and debugger records.
+$ !
+$ MACRO/LIST TRACE
+$ MACRO/LIST=TRDEBUG/OBJECT=TRDEBUG/DEBUG TRACE
+$ MACRO/OBJECT=TRDBGALL/DEBUG=ALL TRACE
+$ MACRO/OBJECT=TRDBGTB/DEBUG=TRACEBACK TRACE
+$ MACRO/OBJECT=TRDBGSYM/DEBUG=SYMBOLS TRACE
+$ MACRO/OBJECT=TRDBGNON/DEBUG=NONE TRACE
+$ MACRO/OBJECT=TRNODBG/NODEBUG TRACE
+$ MACRO/OBJECT=TRENADBG/ENABLE=DEBUG TRACE
+$ MACRO/OBJECT=TRDISTBK/DISABLE=TRACEBACK TRACE
+$ MACRO/LIST DBGSRC
+%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000000, PC=0000CD6E, PSL=03C00004
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 000096B9
+		 00000004		 0007CA28
+		 00000000		 0000925F
+		 0000CD6E		 0000CCE1
+		 03C00004		 0007CA02
+					 0000CFCB
+					 000080E1
+					 00000001
+					 0007CADE
+
+	Register dump
+
+	R0 = 00000000  R1 = 00000001  R2 = 0007DE62  R3 = 000080E1
+	R4 = 00000004  R5 = 00000001  R6 = 0007E24B  R7 = 00000001
+	R8 = 000096B9  R9 = 00000000  R10= 00000000  R11= 0000ACAC
+	AP = 7FED5318  FP = 7FED52D8  SP = 7FED5354  PC = 0000CD6E
+	PSL= 03C00004
+
+$ MACRO/LIST FAILMAIN
+$ MACRO/LIST FAILSUB
+$ MACRO/LIST FAILSIG
+$ MACRO/OBJECT=FAILMAID/DEBUG FAILMAIN
+$ MACRO/OBJECT=FAILSUBD/DEBUG FAILSUB
+$ LIST = "LCTL,LCTLSHOW,LCTLNOSH,BINARY,SYMTAB,NOTITLE,XREF,XREFALL," + -
+    "TRACE,TRDEBUG,TRDBGALL,TRDBGTB,TRDBGSYM,TRDBGNON,TRNODBG,TRENADBG," + -
+    "TRDISTBK,DBGSRC,FAILMAIN,FAILSUB,FAILSIG,FAILMAID,FAILSUBD"
+$ I = 0
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=LCTL.ANL LCTL.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]LCTL.OBJ;1                                 0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=LCTLSHOW.ANL LCTLSHOW.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]LCTLSHOW.OBJ;1                             0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=LCTLNOSH.ANL LCTLNOSH.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]LCTLNOSH.OBJ;1                             0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=BINARY.ANL BINARY.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]BINARY.OBJ;1                               0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=SYMTAB.ANL SYMTAB.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SYMTAB.OBJ;1                               0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=NOTITLE.ANL NOTITLE.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]NOTITLE.OBJ;1                              0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=XREF.ANL XREF.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]XREF.OBJ;1                                 0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=XREFALL.ANL XREFALL.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]XREFALL.OBJ;1                              0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=TRACE.ANL TRACE.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]TRACE.OBJ;1                                0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=TRDEBUG.ANL TRDEBUG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]TRDEBUG.OBJ;1                              0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=TRDBGALL.ANL TRDBGALL.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]TRDBGALL.OBJ;1                             0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=TRDBGTB.ANL TRDBGTB.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]TRDBGTB.OBJ;1                              0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=TRDBGSYM.ANL TRDBGSYM.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]TRDBGSYM.OBJ;1                             0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=TRDBGNON.ANL TRDBGNON.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]TRDBGNON.OBJ;1                             0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=TRNODBG.ANL TRNODBG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]TRNODBG.OBJ;1                              0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=TRENADBG.ANL TRENADBG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]TRENADBG.OBJ;1                             0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=TRDISTBK.ANL TRDISTBK.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]TRDISTBK.OBJ;1                             0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=DBGSRC.ANL DBGSRC.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]DBGSRC.OBJ;1                               2 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=FAILMAIN.ANL FAILMAIN.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]FAILMAIN.OBJ;1                             0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=FAILSUB.ANL FAILSUB.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]FAILSUB.OBJ;1                              0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=FAILSIG.ANL FAILSIG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]FAILSIG.OBJ;1                              0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=FAILMAID.ANL FAILMAID.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]FAILMAID.OBJ;1                             0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$   ANALYZE/OBJECT/OUTPUT=FAILSUBD.ANL FAILSUBD.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]FAILSUBD.OBJ;1                             0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO IMAGES
+$ IMAGES:
+$ LINK/MAP TRACE
+$ RUN TRACE
+TRACE: three routines ran
+$ LINK/MAP=TRNOTB/EXECUTABLE=TRNOTB/NOTRACEBACK TRACE
+$ RUN TRNOTB
+TRACE: three routines ran
+$ LINK/MAP=TRDBGTRC/EXECUTABLE=TRDBGTRC TRDEBUG
+$ RUN TRDBGTRC
+TRACE: three routines ran
+$ LINK/MAP=TRDBGLNK/EXECUTABLE=TRDBGLNK/DEBUG TRDEBUG
+$ LINK/MAP=TRLNKDBG/EXECUTABLE=TRLNKDBG/DEBUG TRACE
+$ LINK/MAP FAILMAIN,FAILSUB
+$ RUN FAILMAIN
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=0000021C, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+FAILSUB         SUB2                                       00000005  0000021C
+FAILSUB         SUB1                                       0000000A  00000216
+FAILMAIN        FAILMAIN                                   00000009  00000209
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$ LINK/MAP=FAILNOTB/EXECUTABLE=FAILNOTB/NOTRACEBACK FAILMAIN,FAILSUB
+$ RUN FAILNOTB
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=0000021C, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 20040000
+		 00000000		 7FED53B4
+		 00000000		 7FED53A0
+		 0000021C		 00000216
+		 03C00000		 00000004
+					 00000000
+					 00000000
+					 20000000
+					 7FED53CC
+
+	Register dump
+
+	R0 = 7FFE5E40  R1 = 00000400  R2 = 00000005  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5348  FP = 7FED5308  SP = 7FED5384  PC = 0000021C
+	PSL= 03C00000
+
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$ LINK/MAP=FAILDBG/EXECUTABLE=FAILDBG FAILMAID,FAILSUBD
+$ RUN FAILDBG
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=0000021C, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+FAILSUB         SUB2                                       00000005  0000021C
+FAILSUB         SUB1                                       0000000A  00000216
+FAILMAIN        FAILMAIN                                   00000009  00000209
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$ LINK/MAP FAILSIG
+$ RUN FAILSIG
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+FAILSIG         WARNIT                                     0000000F  00000220
+FAILSIG         FAILSIG                                    00000009  00000209
+%SYSTEM-F-ABORT, abort
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+FAILSIG         STOPIT                                     0000000B  0000022C
+FAILSIG         FAILSIG                                    00000010  00000210
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000002C"
+$ LINK/MAP=FSIGNOTB/EXECUTABLE=FSIGNOTB/NOTRACEBACK FAILSIG
+$ RUN FSIGNOTB
+%RMS-E-EOF, end of file detected
+%SYSTEM-F-ABORT, abort
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1000002C"
+$ LIST = "TRACE,TRNOTB,TRDBGTRC,TRDBGLNK,TRLNKDBG,FAILMAIN,FAILNOTB," + -
+    "FAILDBG,FAILSIG,FSIGNOTB"
+$ I = 0
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO DONE
+$   ANALYZE/IMAGE/OUTPUT=TRACE.ANI TRACE.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]TRACE.EXE;1                                0 errors
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO DONE
+$   ANALYZE/IMAGE/OUTPUT=TRNOTB.ANI TRNOTB.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]TRNOTB.EXE;1                               0 errors
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO DONE
+$   ANALYZE/IMAGE/OUTPUT=TRDBGTRC.ANI TRDBGTRC.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]TRDBGTRC.EXE;1                             0 errors
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO DONE
+$   ANALYZE/IMAGE/OUTPUT=TRDBGLNK.ANI TRDBGLNK.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]TRDBGLNK.EXE;1                             0 errors
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO DONE
+$   ANALYZE/IMAGE/OUTPUT=TRLNKDBG.ANI TRLNKDBG.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]TRLNKDBG.EXE;1                             0 errors
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO DONE
+$   ANALYZE/IMAGE/OUTPUT=FAILMAIN.ANI FAILMAIN.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]FAILMAIN.EXE;1                             0 errors
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO DONE
+$   ANALYZE/IMAGE/OUTPUT=FAILNOTB.ANI FAILNOTB.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]FAILNOTB.EXE;1                             0 errors
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO DONE
+$   ANALYZE/IMAGE/OUTPUT=FAILDBG.ANI FAILDBG.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]FAILDBG.EXE;1                              0 errors
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO DONE
+$   ANALYZE/IMAGE/OUTPUT=FAILSIG.ANI FAILSIG.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]FAILSIG.EXE;1                              0 errors
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO DONE
+$   ANALYZE/IMAGE/OUTPUT=FSIGNOTB.ANI FSIGNOTB.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]FSIGNOTB.EXE;1                             0 errors
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO DONE
+$ DONE:
+$ DIRECTORY/SIZE=ALL/DATE
+
+Directory DUA1:[000000]
+
+000000.DIR;1               8/9         2-OCT-2026 18:58:11.83
+BACKUP.SYS;1               0/0         2-OCT-2026 18:58:11.83
+BADBLK.SYS;1               0/0         2-OCT-2026 18:58:11.83
+BADLOG.SYS;1               0/0         2-OCT-2026 18:58:11.83
+BINARY.ANL;1              56/56        2-OCT-2026 19:03:18.26
+BINARY.LIS;1              27/27        2-OCT-2026 19:02:58.69
+BINARY.MAR;1               6/6         2-OCT-2026 18:58:11.83
+BINARY.OBJ;1               3/3         2-OCT-2026 19:02:58.69
+BINNOOBJ.LIS;1            27/27        2-OCT-2026 19:02:58.72
+BITMAP.SYS;1               7/7         2-OCT-2026 18:58:11.83
+CONTIN.SYS;1               0/0         2-OCT-2026 18:58:11.83
+CORIMG.SYS;1               0/0         2-OCT-2026 18:58:11.83
+DBGSRC.ANL;1               9/9         2-OCT-2026 19:03:18.50
+DBGSRC.LIS;1               3/80        2-OCT-2026 19:03:18.06
+DBGSRC.MAR;1               1/1         2-OCT-2026 18:58:11.84
+DBGSRC.OBJ;1               1/20        2-OCT-2026 19:03:18.05
+ERREND.LIS;1               0/0         2-OCT-2026 19:02:58.84
+ERREND.MAR;1               1/1         2-OCT-2026 18:58:11.84
+ERRORS.LIS;1              23/23        2-OCT-2026 19:02:58.79
+ERRORS.MAR;1               4/4         2-OCT-2026 18:58:11.83
+ERRORS.OBJ;1               2/2         2-OCT-2026 19:02:58.79
+FAILDBG.ANI;1              8/8         2-OCT-2026 19:03:19.24
+FAILDBG.EXE;1              4/4         2-OCT-2026 19:03:19.01
+FAILDBG.MAP;1             11/11        2-OCT-2026 19:03:18.98
+FAILMAID.ANL;1            15/15        2-OCT-2026 19:03:18.55
+FAILMAID.OBJ;1             1/1         2-OCT-2026 19:03:18.18
+FAILMAIN.ANI;1             8/8         2-OCT-2026 19:03:19.22
+FAILMAIN.ANL;1            13/13        2-OCT-2026 19:03:18.51
+FAILMAIN.EXE;1             4/4         2-OCT-2026 19:03:18.90
+FAILMAIN.LIS;1             9/9         2-OCT-2026 19:03:18.09
+FAILMAIN.MAP;1            11/11        2-OCT-2026 19:03:18.88
+FAILMAIN.MAR;1             2/2         2-OCT-2026 18:58:11.84
+FAILMAIN.OBJ;1             1/1         2-OCT-2026 19:03:18.09
+FAILNOTB.ANI;1             8/8         2-OCT-2026 19:03:19.23
+FAILNOTB.EXE;1             3/3         2-OCT-2026 19:03:18.93
+FAILNOTB.MAP;1            11/11        2-OCT-2026 19:03:18.93
+FAILSIG.ANI;1              9/9         2-OCT-2026 19:03:19.26
+FAILSIG.ANL;1             22/22        2-OCT-2026 19:03:18.54
+FAILSIG.EXE;1              4/4         2-OCT-2026 19:03:19.09
+FAILSIG.LIS;1             11/11        2-OCT-2026 19:03:18.15
+FAILSIG.MAP;1             11/11        2-OCT-2026 19:03:19.06
+FAILSIG.MAR;1              2/2         2-OCT-2026 18:58:11.84
+FAILSIG.OBJ;1              1/1         2-OCT-2026 19:03:18.15
+FAILSUB.ANL;1             16/16        2-OCT-2026 19:03:18.52
+FAILSUB.LIS;1              9/9         2-OCT-2026 19:03:18.12
+FAILSUB.MAR;1              1/1         2-OCT-2026 18:58:11.84
+FAILSUB.OBJ;1              1/1         2-OCT-2026 19:03:18.12
+FAILSUBD.ANL;1            18/18        2-OCT-2026 19:03:18.56
+FAILSUBD.OBJ;1             1/1         2-OCT-2026 19:03:18.20
+FSIGNOTB.ANI;1             9/9         2-OCT-2026 19:03:19.27
+FSIGNOTB.EXE;1             3/3         2-OCT-2026 19:03:19.13
+FSIGNOTB.MAP;1            11/11        2-OCT-2026 19:03:19.12
+INDEXF.SYS;1             843/843       2-OCT-2026 18:58:11.83
+LCTL.ANL;1                21/21        2-OCT-2026 19:03:18.22
+LCTL.LIS;1               168/168       2-OCT-2026 19:02:58.50
+LCTL.MAR;1                29/29        2-OCT-2026 18:58:11.83
+LCTL.OBJ;1                 2/2         2-OCT-2026 19:02:58.49
+LCTLNOSH.ANL;1            21/21        2-OCT-2026 19:03:18.25
+LCTLNOSH.LIS;1            97/97        2-OCT-2026 19:02:58.63
+LCTLNOSH.OBJ;1             2/2         2-OCT-2026 19:02:58.62
+LCTLSHOW.ANL;1            21/21        2-OCT-2026 19:03:18.24
+LCTLSHOW.LIS;1           180/180       2-OCT-2026 19:02:58.56
+LCTLSHOW.OBJ;1             2/2         2-OCT-2026 19:02:58.56
+LIST.COM;1                 7/7         2-OCT-2026 18:58:11.84
+LIST.LOG;1                 0/48        2-OCT-2026 19:02:58.49
+NOTITLE.ANL;1              9/9         2-OCT-2026 19:03:18.30
+NOTITLE.LIS;1              8/8         2-OCT-2026 19:02:58.77
+NOTITLE.MAR;1              1/1         2-OCT-2026 18:58:11.83
+NOTITLE.OBJ;1              1/1         2-OCT-2026 19:02:58.76
+SECURITY.SYS;1             1/6         2-OCT-2026 18:58:11.83
+SYMTAB.ANL;1              35/35        2-OCT-2026 19:03:18.29
+SYMTAB.LIS;1              20/20        2-OCT-2026 19:02:58.74
+SYMTAB.MAR;1               4/4         2-OCT-2026 18:58:11.83
+SYMTAB.OBJ;1               2/2         2-OCT-2026 19:02:58.74
+SYMXREF.LIS;1             26/26        2-OCT-2026 19:03:17.79
+TRACE.ANI;1               11/11        2-OCT-2026 19:03:19.14
+TRACE.ANL;1               36/36        2-OCT-2026 19:03:18.34
+TRACE.EXE;1                6/6         2-OCT-2026 19:03:18.62
+TRACE.LIS;1               15/15        2-OCT-2026 19:03:17.82
+TRACE.MAP;1               12/12        2-OCT-2026 19:03:18.60
+TRACE.MAR;1                2/2         2-OCT-2026 18:58:11.84
+TRACE.OBJ;1                2/2         2-OCT-2026 19:03:17.82
+TRDBGALL.ANL;1            44/44        2-OCT-2026 19:03:18.38
+TRDBGALL.OBJ;1             2/2         2-OCT-2026 19:03:17.88
+TRDBGLNK.ANI;1            11/11        2-OCT-2026 19:03:19.19
+TRDBGLNK.EXE;1             8/8         2-OCT-2026 19:03:18.76
+TRDBGLNK.MAP;1            12/12        2-OCT-2026 19:03:18.74
+TRDBGNON.ANL;1            30/30        2-OCT-2026 19:03:18.43
+TRDBGNON.OBJ;1             2/2         2-OCT-2026 19:03:17.95
+TRDBGSYM.ANL;1            32/32        2-OCT-2026 19:03:18.42
+TRDBGSYM.OBJ;1             2/2         2-OCT-2026 19:03:17.93
+TRDBGTB.ANL;1             36/36        2-OCT-2026 19:03:18.40
+TRDBGTB.OBJ;1              2/2         2-OCT-2026 19:03:17.90
+TRDBGTRC.ANI;1            11/11        2-OCT-2026 19:03:19.17
+TRDBGTRC.EXE;1             6/6         2-OCT-2026 19:03:18.70
+TRDBGTRC.MAP;1            12/12        2-OCT-2026 19:03:18.68
+TRDEBUG.ANL;1             44/44        2-OCT-2026 19:03:18.36
+TRDEBUG.LIS;1             15/15        2-OCT-2026 19:03:17.85
+TRDEBUG.OBJ;1              2/2         2-OCT-2026 19:03:17.85
+TRDISTBK.ANL;1            30/30        2-OCT-2026 19:03:18.48
+TRDISTBK.OBJ;1             2/2         2-OCT-2026 19:03:18.03
+TRENADBG.ANL;1            44/44        2-OCT-2026 19:03:18.46
+TRENADBG.OBJ;1             2/2         2-OCT-2026 19:03:18.00
+TRLNKDBG.ANI;1            11/11        2-OCT-2026 19:03:19.20
+TRLNKDBG.EXE;1             8/8         2-OCT-2026 19:03:18.83
+TRLNKDBG.MAP;1            12/12        2-OCT-2026 19:03:18.81
+TRNODBG.ANL;1             30/30        2-OCT-2026 19:03:18.45
+TRNODBG.OBJ;1              2/2         2-OCT-2026 19:03:17.98
+TRNOTB.ANI;1              11/11        2-OCT-2026 19:03:19.16
+TRNOTB.EXE;1               5/5         2-OCT-2026 19:03:18.64
+TRNOTB.MAP;1              12/12        2-OCT-2026 19:03:18.64
+VOLSET.SYS;1               0/0         2-OCT-2026 18:58:11.83
+XREF.ANL;1                21/21        2-OCT-2026 19:03:18.31
+XREF.LIS;1                17/17        2-OCT-2026 19:03:17.72
+XREF.MAR;1                 2/2         2-OCT-2026 18:58:11.84
+XREF.OBJ;1                 1/1         2-OCT-2026 19:03:17.72
+XREFALL.ANL;1             21/21        2-OCT-2026 19:03:18.33
+XREFALL.LIS;1             22/22        2-OCT-2026 19:03:17.75
+XREFALL.OBJ;1              1/1         2-OCT-2026 19:03:17.75
+
+Total of 119 files, 2525/2675 blocks.
+$ SET NOVERIFY

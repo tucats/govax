@@ -1,0 +1,526 @@
+
+Analyze Object File                           2-OCT-2026 19:03:18.45   Page 1
+DUA1:[000000]TRNODBG.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 50 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "TRACE"
+	module version: "V1.0"
+	creation   date/time:  2-OCT-2026 19:03
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 36 bytes
+
+	Textual information:
+	"MACRO/OBJECT=TRNODBG/NODEBUG TRACE"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 42 bytes
+
+	Textual information:
+	"Phase 29 probe: traceback and debugger r"
+
+
+5.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 53 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 1
+		value: 37 (%X'00000025')
+		symbol: "GLOBDATA"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "LEVEL"
+
+
+Analyze Object File                           2-OCT-2026 19:03:18.45   Page 2
+DUA1:[000000]TRNODBG.OBJ;1
+ANALYZ V07-04
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "LIB$PUT_OUTPUT"
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+7.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+8.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+
+Analyze Object File                           2-OCT-2026 19:03:18.45   Page 3
+DUA1:[000000]TRNODBG.OBJ;1
+ANALYZ V07-04
+
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 41 (%X'00000029')
+		symbol: "DATA"
+
+
+9.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 69 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_LW (3, %X'03')                            stack depth: 1
+		value: 17694720 (%X'010E0000')
+
+	4)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	5)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 1
+		value: 4 (%X'00000004')
+
+	6)  TIR$C_STA_UB (7, %X'07')                            stack depth: 2
+		unsigned value: 4 (%X'00000004')
+
+	7)  TIR$C_OPR_ADD (51, %X'33')                          stack depth: 1
+
+	8)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	9)  Store Immediate, 25 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 74 20 3A 45 43 41 52 54|  0000  |TRACE: t|
+		 75 6F 72 20 65 65 72 68|  0008  |hree rou|
+		 61 72 20 73 65 6E 69 74|  0010  |tines ra|
+		                      6E|  0018  |n       |
+
+	10)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: -33 (%X'FFFFFFDF')
+
+	11)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 25 (%X'00000019')
+
+	12)  TIR$C_STO_W (38, %X'26')                           stack depth: 0
+
+	13)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 31 (%X'0000001F')
+
+	14)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 50 00 00 00 00|  0000  |....P...|
+
+
+
+Analyze Object File                           2-OCT-2026 19:03:18.45   Page 4
+DUA1:[000000]TRNODBG.OBJ;1
+ANALYZ V07-04
+
+10.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 15 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 67 (%X'00000043')
+		symbol: "$CODE"
+
+
+11.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 7 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+
+12.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 18 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 2
+		value: 0 (%X'00000000')
+		entry mask: <R2>
+		symbol: "TRACE"
+
+
+13.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+
+Analyze Object File                           2-OCT-2026 19:03:18.45   Page 5
+DUA1:[000000]TRNODBG.OBJ;1
+ANALYZ V07-04
+
+14.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 51 bytes
+
+	1)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   00 FB|  0000  |û.      |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 30 (%X'0000001E')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   00 FB|  0000  |û.      |
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 45 (%X'0000002D')
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	8)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	9)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      7F|  0000  |.       |
+
+	10)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	11)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	12)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	13)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   01 FB|  0000  |û.      |
+
+
+Analyze Object File                           2-OCT-2026 19:03:18.45   Page 6
+DUA1:[000000]TRNODBG.OBJ;1
+ANALYZ V07-04
+
+	14)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "LIB$PUT_OUTPUT"
+
+	15)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	16)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      04|  0000  |.       |
+
+	17)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+15.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 18 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 2
+		value: 30 (%X'0000001E')
+		entry mask: <>
+		symbol: "FIRST"
+
+
+16.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+17.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 21 bytes
+
+	1)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      D6|  0000  |Ö       |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 33 (%X'00000021')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 1 byte:
+
+Analyze Object File                           2-OCT-2026 19:03:18.45   Page 7
+DUA1:[000000]TRNODBG.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      16|  0000  |.       |
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 60 (%X'0000003C')
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	8)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	9)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      04|  0000  |.       |
+
+	10)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+
+18.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 2
+		value: 45 (%X'0000002D')
+		entry mask: <R2>
+		symbol: "SECOND"
+
+
+19.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+20.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 26 bytes
+
+	1)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             D6 52 02 D0|  0000  |Ð.RÖ    |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 33 (%X'00000021')
+
+Analyze Object File                           2-OCT-2026 19:03:18.46   Page 8
+DUA1:[000000]TRNODBG.OBJ;1
+ANALYZ V07-04
+
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          D6 04 F7 52 F5|  0000  |õR÷.Ö   |
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 33 (%X'00000021')
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	8)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	9)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      05|  0000  |.       |
+
+
+21.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 16 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 3
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 8 (%X'00000008')
+		symbol: "$CONST"
+
+
+
+Analyze Object File                           2-OCT-2026 19:03:18.46   Page 9
+DUA1:[000000]TRNODBG.OBJ;1
+ANALYZ V07-04
+
+22.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 14 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 3
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 74 6E 61 74 73 6E 6F 63|  0000  |constant|
+
+
+23.  END OF MODULE (OBJ$C_EOM), 7 bytes
+
+	severity: successful (0)
+	psect: 2
+	value: 0 (%X'00000000')
+
+
+
+Analyze Object File                           2-OCT-2026 19:03:18.46   Page 10
+DUA1:[000000]TRNODBG.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   146
+OBJ$C_GSD	    8	   172
+OBJ$C_TIR	   10	   199
+OBJ$C_EOM	    1	     7
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    0	     0
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   23	   524
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=TRNODBG.ANL TRNODBG.OBJ                                   

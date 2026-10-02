@@ -1,0 +1,346 @@
+
+Analyze Object File                           2-OCT-2026 19:03:18.25   Page 1
+DUA1:[000000]LCTLNOSH.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 53 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "LCTL"
+	module version: "LCTL-1.0"
+	creation   date/time:  2-OCT-2026 19:02
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 82 bytes
+
+	Textual information:
+	"MACRO/LIST=LCTLNOSH/OBJECT=LCTLNOSH/NOSHOW=(CONDITIONALS,CALLS,DE"
+	"FINITIONS) LCTL"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 42 bytes
+
+	Textual information:
+	"Phase 29 probe: listing controls, each ."
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 14 bytes
+
+	1)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 04 00 00 00 00 00 BC 0B|  0000  |.¼......|
+		             4C 54 43 4C|  0008  |LCTL    |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+
+Analyze Object File                           2-OCT-2026 19:03:18.25   Page 2
+DUA1:[000000]LCTLNOSH.OBJ;1
+ANALYZ V07-04
+
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+7.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+8.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 441 (%X'000001B9')
+		symbol: "DATA"
+
+
+9.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 450 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 128 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 01 00 04 03 00 03 02 01|  0000  |........|
+		 08 07 06 05 12 34 12 34|  0008  |4.4.....|
+		 00 03 02 01 0F 0E 0C 0A|  0010  |........|
+		 12 34 12 34 01 00 04 03|  0018  |....4.4.|
+		 0F 0E 0C 0A 08 07 06 05|  0020  |........|
+		 01 00 04 03 00 03 02 01|  0028  |........|
+		 08 07 06 05 12 34 12 34|  0030  |4.4.....|
+		 00 03 02 01 0F 0E 0C 0A|  0038  |........|
+		 12 34 12 34 01 00 04 03|  0040  |....4.4.|
+
+Analyze Object File                           2-OCT-2026 19:03:18.25   Page 3
+DUA1:[000000]LCTLNOSH.OBJ;1
+ANALYZ V07-04
+
+		 0F 0E 0C 0A 08 07 06 05|  0048  |........|
+		 01 00 04 03 00 03 02 01|  0050  |........|
+		 08 07 06 05 12 34 12 34|  0058  |4.4.....|
+		 00 03 02 01 0F 0E 0C 0A|  0060  |........|
+		 12 34 12 34 01 00 04 03|  0068  |....4.4.|
+		 0F 0E 0C 0A 08 07 06 05|  0070  |........|
+		 01 00 04 03 00 03 02 01|  0078  |........|
+
+	4)  Store Immediate, 128 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 08 07 06 05 12 34 12 34|  0000  |4.4.....|
+		 00 03 02 01 0F 0E 0C 0A|  0008  |........|
+		 12 34 12 34 01 00 04 03|  0010  |....4.4.|
+		 0F 0E 0C 0A 08 07 06 05|  0018  |........|
+		 01 00 04 03 00 03 02 01|  0020  |........|
+		 08 07 06 05 12 34 12 34|  0028  |4.4.....|
+		 00 03 02 01 0F 0E 0C 0A|  0030  |........|
+		 12 34 12 34 01 00 04 03|  0038  |....4.4.|
+		 0F 0E 0C 0A 08 07 06 05|  0040  |........|
+		 01 00 04 03 00 03 02 01|  0048  |........|
+		 08 07 06 05 12 34 12 34|  0050  |4.4.....|
+		 00 03 02 01 0F 0E 0C 0A|  0058  |........|
+		 12 34 12 34 01 00 04 03|  0060  |....4.4.|
+		 0F 0E 0C 0A 08 07 06 05|  0068  |........|
+		 01 00 04 03 00 03 02 01|  0070  |........|
+		 08 07 06 05 12 34 12 34|  0078  |4.4.....|
+
+	5)  Store Immediate, 128 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 03 02 01 0F 0E 0C 0A|  0000  |........|
+		 12 34 12 34 01 00 04 03|  0008  |....4.4.|
+		 0F 0E 0C 0A 08 07 06 05|  0010  |........|
+		 01 00 04 03 00 03 02 01|  0018  |........|
+		 08 07 06 05 12 34 12 34|  0020  |4.4.....|
+		 00 03 02 01 0F 0E 0C 0A|  0028  |........|
+		 12 34 12 34 01 00 04 03|  0030  |....4.4.|
+		 0F 0E 0C 0A 08 07 06 05|  0038  |........|
+		 1B 1A 19 18 17 16 15 14|  0040  |........|
+		 23 22 21 20 1F 1E 1D 1C|  0048  |.... !"#|
+		 72 74 73 20 73 69 68 54|  0050  |This str|
+		 74 69 77 20 2C 67 6E 69|  0058  |ing, wit|
+		 74 73 20 73 74 69 20 68|  0060  |h its st|
+		 2C 74 6E 65 6D 65 74 61|  0068  |atement,|
+		 61 70 20 73 6E 75 72 20|  0070  | runs pa|
+		 65 20 65 68 74 20 74 73|  0078  |st the e|
+
+	6)  Store Immediate, 57 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 68 74 20 66 6F 20 64 6E|  0000  |nd of th|
+		 6E 69 74 73 69 6C 20 65|  0008  |e listin|
+		 20 3A 65 6E 69 6C 20 67|  0010  |g line: |
+		 43 41 4D 20 73 65 6F 64|  0018  |does MAC|
+
+Analyze Object File                           2-OCT-2026 19:03:18.25   Page 4
+DUA1:[000000]LCTLNOSH.OBJ;1
+ANALYZ V07-04
+
+		 20 74 73 69 6C 20 4F 52|  0020  |RO list |
+		 69 20 66 6F 20 6C 6C 61|  0028  |all of i|
+		 73 65 74 79 62 20 73 74|  0030  |ts bytes|
+		                      3F|  0038  |?       |
+
+
+10.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 6 (%X'00000006')
+		symbol: "CODE"
+
+
+11.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 7 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+12.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 17 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 2
+		value: 0 (%X'00000000')
+		entry mask: <>
+		symbol: "LCTL"
+
+
+
+Analyze Object File                           2-OCT-2026 19:03:18.26   Page 5
+DUA1:[000000]LCTLNOSH.OBJ;1
+ANALYZ V07-04
+
+13.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+14.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 6 bytes
+
+	1)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 50 01 D0|  0000  |Ð.P.    |
+
+
+15.  TRACEBACK INFORMATION (OBJ$C_TBT), 18 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 BE 0B|  0000  |.¾.     |
+
+	2)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          4C 54 43 4C 04|  0000  |.LCTL   |
+
+
+16.  TRACEBACK INFORMATION (OBJ$C_TBT), 38 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 01 B9 41 54 41 44 04|  0000  |.DATA¹..|
+		             00 B8 0F 00|  0008  |..¸.    |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           2-OCT-2026 19:03:18.26   Page 6
+DUA1:[000000]LCTLNOSH.OBJ;1
+ANALYZ V07-04
+
+	6)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	7)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 06 45 44 4F 43 04|  0000  |.CODE...|
+		                BD 01 00|  0008  |..½     |
+
+
+17.  END OF MODULE (OBJ$C_EOM), 7 bytes
+
+	severity: successful (0)
+	psect: 2
+	value: 0 (%X'00000000')
+
+
+
+Analyze Object File                           2-OCT-2026 19:03:18.26   Page 7
+DUA1:[000000]LCTLNOSH.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   195
+OBJ$C_GSD	    4	    64
+OBJ$C_TIR	    5	   470
+OBJ$C_EOM	    1	     7
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    3	    70
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   17	   806
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=LCTLNOSH.ANL LCTLNOSH.OBJ                                 

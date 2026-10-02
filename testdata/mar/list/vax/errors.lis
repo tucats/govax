@@ -1,0 +1,173 @@
+ERRORS                          Phase 29 probe: errors and warnings in a  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   1
+V1.0                                                                      2-OCT-2026 18:58:11  DUA1:[000000]ERRORS.MAR;1         (1)
+
+                                     0000     1 	.TITLE	ERRORS	Phase 29 probe: errors and warnings in a listing
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; One statement per kind of error govax reports, so the listing shows
+                                     0000     5 ; where MACRO puts each message and what the summary counts. The lines
+                                     0000     6 ; between them are good, to show that assembly goes on.
+                                     0000     7 
+                                 00000000     8 	.PSECT	DATA, WRT, NOEXE, LONG
+                           00000001  0000     9 GOOD1:	.LONG	1
+                                     0004    10 	.BYTE	300			; doesn't fit in a byte
+%MACRO-W-DATATRUNC, Data truncation error
+                                 2C  0004       
+                                     0005    11 	.WORD	^X12345			; nor in a word
+%MACRO-W-DATATRUNC, Data truncation error
+                               2345  0005       
+                                     0007    12 DUP:	.LONG	2
+%MACRO-E-SYMOUTPHAS, Symbol out of phase
+                           00000002  0007       
+                                     000B    13 DUP:	.LONG	3			; a label defined twice
+%MACRO-E-MULDEFLBL, Multiple definition of label   !
+                           00000003  000B       
+                                     000F    14 	.LONG	10/0			; division by zero
+%MACRO-W-DIVBYZERO, Division by zero error                        !
+                           0000000A' 000F       
+64 65 74 61 6E 69 6D 72 65 74 6E 75  0013    15 	.ASCII	/unterminated		; no closing delimiter
+69 73 6F 6C 63 20 6F 6E 20 3B 09 09  001F       
+72 65 74 69 6D 69 6C 65 64 20 67 6E  002B       
+%MACRO-E-UNTERMARG, Unterminated argument                                                                     !
+                                     0037       
+                                     0037    16 	.ALIGN	QUAD			; more than the psect's alignment
+%MACRO-E-ALIGNXCEED, Alignment exceeds PSECT alignment                 !
+                                     0037       
+                                     0038    17 	.PSECT	BADATTR, NOSUCH		; an attribute that doesn't exist
+%MACRO-E-NOTPSECOPT, Not a valid PSECT option                                  !
+                                 00000000       
+                                 00000038    18 	.PSECT	DATA
+                                     0038    19 	.ENDC				; .ENDC without a conditional
+%MACRO-E-NOTINANIF, Statement outside condition body                                    !
+                                     0038       
+                                     0038    20 	.ENDR				; .ENDR without a repeat block
+%MACRO-E-NOTINMACRO, Statement not in MACRO body       !
+                                     0038       
+                                     0038    21 	.ENDM				; .ENDM without a macro
+%MACRO-E-NOTINMACRO, Statement not in MACRO body       !
+                                     0038       
+                                     0038    22 	.FOO				; a directive that doesn't exist
+%MACRO-E-UNRECSTMT, Unrecognized statement             !
+                                     0038       
+                           00000004  0038    23 GOOD2:	.LONG	4
+                                     003C    24 
+                                     003C    25 	.DISABLE GLOBAL
+                           00000000' 003C    26 	.LONG	NOWHERE			; undefined, with GLOBAL disabled
+                                     0040    27 	.ENABLE	GLOBAL
+                                     0040    28 
+                                     0040    29 	.MACRO	BAD	X
+                                     0040    30 	.BYTE	X
+                                     0040    31 	.ENDM	BAD
+ERRORS                          Phase 29 probe: errors and warnings in a  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   2
+V1.0                                                                      2-OCT-2026 18:58:11  DUA1:[000000]ERRORS.MAR;1         (1)
+
+                                     0040    32 	BAD	1			; a good call
+                                     0041    33 	BAD	999			; an error inside an expansion
+                                     0041       
+%MACRO-W-DATATRUNC, Data truncation error
+                                     0042    34 
+%MACRO-E-GENERR, Generated ERROR:  ERRORS: a message from .ERROR
+                                     0042       
+%MACRO-W-GENWRN, Generated WARNING:  ERRORS: a message from .WARN
+                                     0042       
+                                     0042    37 	.PRINT	; ERRORS: a message from .PRINT
+
+%MACRO-E-GENERR, Generated ERROR: 27  .ERROR with a value
+                                     0042       
+                                     0042    39 
+                                 00000000    40 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0000  0000    41 	.ENTRY	ERRORS, ^M<>
+                                     0002    42 	FOO	R0			; an opcode that doesn't exist
+%MACRO-E-UNRECSTMT, Unrecognized statement             !
+                                     0002       
+                            50   D0  0002    43 	MOVL	R0			; too few operands
+%MACRO-E-NOTENUFOPR, Not enough operands supplied               !
+                                     0004       
+                       51   50   D0  0004    44 	MOVL	R0, R1, R2		; too many
+%MACRO-E-TOOMNYOPND, Too many operands for instruction                 !
+                                     0007       
+              50   00000000'EF   D0  0007    45 	MOVL	R16, R0			; R16 is a name, not a register
+                                 D0  000E    46 	MOVL	S^#100, R0		; too big for a short literal
+%MACRO-W-DATATRUNC, Data truncation error
+                            50   64  000F       
+                            50   D0  0011    47 	MOVL	R0, #1			; a literal destination
+%MACRO-E-ILLMODE, Illegal mode                                       !
+                            01'      0013       
+                                 D0  0014    48 	MOVL	(R0)+[R0], R1		; index register the same as the base
+%MACRO-E-ILLINDXREG, Invalid index register                           !
+                     51   8040       0015       
+                                 D4  0018    49 	CLRL	PC			; PC as a register operand
+%MACRO-E-ILLREGHERE, This register may not be used here         !
+                            5F       0019       
+                                 11  001A    50 	BRB	FAR			; out of a byte branch's range
+%MACRO-E-BRDESTRANG, Branch destination out of range
+                                 C8  001B       
+                           000000E4  001C    51 	.BLKB	200
+                                 04  00E4    52 FAR:	RET
+                                     00E5    53 
+                                     00E5    54 	.END	ERRORS
+ERRORS                          Phase 29 probe: errors and warnings in a  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   3
+Symbol table                                                              2-OCT-2026 18:58:11  DUA1:[000000]ERRORS.MAR;1         (1)
+
+DUP              0000000B R     01      
+ERRORS           00000000 RG    03      
+FAR              000000E4 R     03      
+GOOD1            00000000 R     01      
+GOOD2            00000038 R     01      
+NOWHERE          ********   X   01      
+R16              ********   X   03      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000042  (   66.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+BADATTR                         00000000  (    0.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD    WRT NOVEC BYTE  
+CODE                            000000E5  (  229.)  03 (  3.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  432     00:00:00.00    00:00:00.00
+Command processing              935     00:00:00.01    00:00:00.01
+Pass 1                          253     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                          117     00:00:00.01    00:00:00.01
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1766     00:00:00.02    00:00:00.02
+
+The working set limit was 962 pages.
+1330 bytes (3 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 7 non-local and 0 local symbols.
+54 source lines were read in Pass 1, producing 19 object records in Pass 2.
+1 page of virtual memory was used to define 1 macro.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were 22 errors, 2 warnings and 0 information messages, on lines:
+   10 (1)        11 (1)        12 (1)        13 (1)        14 (1)     
+   15 (1)        16 (1)        17 (1)        19 (1)        20 (1)     
+   21 (1)        22 (1)        33 (1)        35 (1)        36 (1)     
+   38 (1)        42 (1)        43 (1)        44 (1)        46 (1)     
+   47 (1)        48 (1)        49 (1)        50 (1)     
+ERRORS                          Phase 29 probe: errors and warnings in a  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   4
+VAX-11 Macro Run Statistics                                               2-OCT-2026 18:58:11  DUA1:[000000]ERRORS.MAR;1         (1)
+
+
+MACRO/LIST ERRORS

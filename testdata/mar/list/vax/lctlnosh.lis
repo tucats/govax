@@ -1,0 +1,841 @@
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   0
+Table of contents
+
+    (1)       12        Defaults
+    (1)       71        .SHOW EXPANSIONS
+    (1)      134        .NOSHOW EXPANSIONS
+    (1)      197        .SHOW BINARY
+    (1)      260        .NOSHOW BINARY
+    (1)      323        .SHOW CALLS
+    (1)      386        .NOSHOW CALLS
+    (1)      449        .SHOW DEFINITIONS
+    (1)      512        .NOSHOW DEFINITIONS
+    (1)      575        .SHOW CONDITIONALS
+    (1)      638        .NOSHOW CONDITIONALS
+    (1)      701        .SHOW ME,MEB,MC,MD,CND (the abbreviations)
+    (1)      764        .SHOW ME and BINARY together
+    (1)      827        .LIST ME (.LIST with an argument)
+    (1)      890        .NLIST MEB (.NLIST with an argument)
+    (1)      953        Defaults again
+    (1)     1012        .NLIST and .LIST levels
+    (1)     1027        Counted options
+    (1)     1035        A subtitle longer than the forty columns of the heading's own subtitle field, to see where it is cut
+    (1)     1038        .PAGE
+    (1)     1046        Long lines
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   1
+LCTL-1.0                                                                  2-OCT-2026 18:58:11  DUA1:[000000]LCTL.MAR;1           (1)
+
+                                     0000     1 	.TITLE	LCTL	Phase 29 probe: listing controls, each .SHOW option, .NLIST levels, and pages
+                                     0000     2 	.IDENT	/LCTL-1.0/
+                                     0000     3 
+                                     0000     4 ; LCTL.MAR - written by testdata/mar/list/gen.go; don't edit it by hand.
+                                     0000     5 ; The same body is listed under each .SHOW and .NOSHOW option, each
+                                     0000     6 ; section with its own .SBTTL, so the listing's table of contents (if
+                                     0000     7 ; MACRO makes one) names every section.
+                                     0000     8 
+                                 00000000     9 	.PSECT	DATA, WRT, NOEXE, LONG
+                                     0000    10 LCTL_D1:
+                                     0000    11 
+                                     0000    12 	.SBTTL	Defaults
+                                     0000    13 
+                                     0000    18 
+                                     0000    23 
+                                     0000    31 
+                                     0000    35 
+                                     0008    41 
+                                     0008    43 	.WORD	^X1234
+                               1234  0008    44 	.ENDR
+                                     000C    45 
+                                     000C    47 	.BYTE	V
+                                 05  000C    48 	.ENDR
+                                     000F    49 
+                                 08  000F    51 	.BYTE	8
+                                     0010    53 
+                                     0010    57 
+                                     0011    60 
+                                 0C  0011    62 	.BYTE	12
+                                 0E  0012    66 	.BYTE	14
+                                 0F  0013    68 	.BYTE	15
+                                     0014    70 
+                                     0014    71 	.SBTTL	.SHOW EXPANSIONS
+                                     0014    72 
+                                     0014    73 	.SHOW	EXPANSIONS
+                                     0014    74 
+                                     0014    79 
+                                     0014    84 
+                                     0014    92 
+                                     0014    96 
+                                 01  0014       	.BYTE	1
+                                 02  0015       	.BYTE	2
+                                     0016       	
+                               0003  0016       	.WORD	3
+                                 03  0018       	.BYTE	3
+                                 04  0019       	.BYTE	3+1
+                                     001A       	
+                                     001A       	
+                                 00  001A       	.BYTE	0
+                                     001B       	
+                                 01  001B       	.BYTE	1
+                                     001C       	
+                           00000001  001C       ...X = 1
+                                     001C       	
+                                     001C   102 
+                                     001C   105 	.ENDR
+                               1234  001C       	.WORD	^X1234
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   2
+LCTL-1.0                        .SHOW EXPANSIONS                          2-OCT-2026 18:58:11  DUA1:[000000]LCTL.MAR;1           (1)
+
+                                     001E       	
+                               1234  001E       	.WORD	^X1234
+                                     0020       	
+                                     0020   106 
+                                     0020   109 	.ENDR
+                                 05  0020       	.BYTE	5
+                                     0021       	
+                                 06  0021       	.BYTE	6
+                                     0022       	
+                                 07  0022       	.BYTE	7
+                                     0023       	
+                                     0023   110 
+                                 08  0023   112 	.BYTE	8
+                                     0024   114 
+                                     0024   118 
+                                     0025   121 
+                                 0C  0025   123 	.BYTE	12
+                                 0E  0026   127 	.BYTE	14
+                                 0F  0027   129 	.BYTE	15
+                                     0028   131 
+                                     0028   132 	.NOSHOW	EXPANSIONS
+                                     0028   133 
+                                     0028   134 	.SBTTL	.NOSHOW EXPANSIONS
+                                     0028   135 
+                                     0028   136 	.NOSHOW	EXPANSIONS
+                                     0028   137 
+                                     0028   142 
+                                     0028   147 
+                                     0028   155 
+                                     0028   159 
+                                     0030   165 
+                                     0030   167 	.WORD	^X1234
+                               1234  0030   168 	.ENDR
+                                     0034   169 
+                                     0034   171 	.BYTE	V
+                                 05  0034   172 	.ENDR
+                                     0037   173 
+                                 08  0037   175 	.BYTE	8
+                                     0038   177 
+                                     0038   181 
+                                     0039   184 
+                                 0C  0039   186 	.BYTE	12
+                                 0E  003A   190 	.BYTE	14
+                                 0F  003B   192 	.BYTE	15
+                                     003C   194 
+                                     003C   195 	.SHOW	EXPANSIONS
+                                     003C   196 
+                                     003C   197 	.SBTTL	.SHOW BINARY
+                                     003C   198 
+                                     003C   199 	.SHOW	BINARY
+                                     003C   200 
+                                     003C   205 
+                                     003C   210 
+                                     003C   218 
+                                     003C   222 
+                                 01  003C       	.BYTE	1
+                                 02  003D       	.BYTE	2
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   3
+LCTL-1.0                        .SHOW BINARY                              2-OCT-2026 18:58:11  DUA1:[000000]LCTL.MAR;1           (1)
+
+                                     003E       	
+                               0003  003E       	.WORD	3
+                                 03  0040       	.BYTE	3
+                                 04  0041       	.BYTE	3+1
+                                     0042       	
+                                     0042       	
+                                 00  0042       	.BYTE	0
+                                     0043       	
+                                 01  0043       	.BYTE	1
+                                     0044       	
+                           00000001  0044       ...X = 1
+                                     0044       	
+                                     0044   228 
+                                     0044   231 	.ENDR
+                               1234  0044       	.WORD	^X1234
+                                     0046       	
+                               1234  0046       	.WORD	^X1234
+                                     0048       	
+                                     0048   232 
+                                     0048   235 	.ENDR
+                                 05  0048       	.BYTE	5
+                                     0049       	
+                                 06  0049       	.BYTE	6
+                                     004A       	
+                                 07  004A       	.BYTE	7
+                                     004B       	
+                                     004B   236 
+                                 08  004B   238 	.BYTE	8
+                                     004C   240 
+                                     004C   244 
+                                     004D   247 
+                                 0C  004D   249 	.BYTE	12
+                                 0E  004E   253 	.BYTE	14
+                                 0F  004F   255 	.BYTE	15
+                                     0050   257 
+                                     0050   258 	.NOSHOW	BINARY
+                                     0050   259 
+                                     0050   260 	.SBTTL	.NOSHOW BINARY
+                                     0050   261 
+                                     0050   262 	.NOSHOW	BINARY
+                                     0050   263 
+                                     0050   268 
+                                     0050   273 
+                                     0050   281 
+                                     0050   285 
+                                 01  0050       	.BYTE	1
+                                 02  0051       	.BYTE	2
+                                     0052       	
+                               0003  0052       	.WORD	3
+                                 03  0054       	.BYTE	3
+                                 04  0055       	.BYTE	3+1
+                                     0056       	
+                                     0056       	
+                                 00  0056       	.BYTE	0
+                                     0057       	
+                                 01  0057       	.BYTE	1
+                                     0058       	
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   4
+LCTL-1.0                        .NOSHOW BINARY                            2-OCT-2026 18:58:11  DUA1:[000000]LCTL.MAR;1           (1)
+
+                           00000001  0058       ...X = 1
+                                     0058       	
+                                     0058   291 
+                                     0058   294 	.ENDR
+                               1234  0058       	.WORD	^X1234
+                                     005A       	
+                               1234  005A       	.WORD	^X1234
+                                     005C       	
+                                     005C   295 
+                                     005C   298 	.ENDR
+                                 05  005C       	.BYTE	5
+                                     005D       	
+                                 06  005D       	.BYTE	6
+                                     005E       	
+                                 07  005E       	.BYTE	7
+                                     005F       	
+                                     005F   299 
+                                 08  005F   301 	.BYTE	8
+                                     0060   303 
+                                     0060   307 
+                                     0061   310 
+                                 0C  0061   312 	.BYTE	12
+                                 0E  0062   316 	.BYTE	14
+                                 0F  0063   318 	.BYTE	15
+                                     0064   320 
+                                     0064   321 	.SHOW	BINARY
+                                     0064   322 
+                                     0064   323 	.SBTTL	.SHOW CALLS
+                                     0064   324 
+                                     0064   325 	.SHOW	CALLS
+                                     0064   326 
+                                     0064   331 
+                                     0064   336 
+                                     0064   344 
+                                     0064   348 
+                                 01  0064       	.BYTE	1
+                                 02  0065       	.BYTE	2
+                                     0066       	
+                               0003  0066       	.WORD	3
+                                 03  0068       	.BYTE	3
+                                 04  0069       	.BYTE	3+1
+                                     006A       	
+                                     006A       	
+                                 00  006A       	.BYTE	0
+                                     006B       	
+                                 01  006B       	.BYTE	1
+                                     006C       	
+                           00000001  006C       ...X = 1
+                                     006C       	
+                                     006C   354 
+                                     006C   357 	.ENDR
+                               1234  006C       	.WORD	^X1234
+                                     006E       	
+                               1234  006E       	.WORD	^X1234
+                                     0070       	
+                                     0070   358 
+                                     0070   361 	.ENDR
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   5
+LCTL-1.0                        .SHOW CALLS                               2-OCT-2026 18:58:11  DUA1:[000000]LCTL.MAR;1           (1)
+
+                                 05  0070       	.BYTE	5
+                                     0071       	
+                                 06  0071       	.BYTE	6
+                                     0072       	
+                                 07  0072       	.BYTE	7
+                                     0073       	
+                                     0073   362 
+                                 08  0073   364 	.BYTE	8
+                                     0074   366 
+                                     0074   370 
+                                     0075   373 
+                                 0C  0075   375 	.BYTE	12
+                                 0E  0076   379 	.BYTE	14
+                                 0F  0077   381 	.BYTE	15
+                                     0078   383 
+                                     0078   384 	.NOSHOW	CALLS
+                                     0078   385 
+                                     0078   386 	.SBTTL	.NOSHOW CALLS
+                                     0078   387 
+                                     0078   388 	.NOSHOW	CALLS
+                                     0078   389 
+                                     0078   394 
+                                     0078   399 
+                                     0078   407 
+                                     0078   411 
+                                 01  0078       	.BYTE	1
+                                 02  0079       	.BYTE	2
+                                     007A       	
+                               0003  007A       	.WORD	3
+                                 03  007C       	.BYTE	3
+                                 04  007D       	.BYTE	3+1
+                                     007E       	
+                                     007E       	
+                                 00  007E       	.BYTE	0
+                                     007F       	
+                                 01  007F       	.BYTE	1
+                                     0080       	
+                           00000001  0080       ...X = 1
+                                     0080       	
+                                     0080   417 
+                                     0080   420 	.ENDR
+                               1234  0080       	.WORD	^X1234
+                                     0082       	
+                               1234  0082       	.WORD	^X1234
+                                     0084       	
+                                     0084   421 
+                                     0084   424 	.ENDR
+                                 05  0084       	.BYTE	5
+                                     0085       	
+                                 06  0085       	.BYTE	6
+                                     0086       	
+                                 07  0086       	.BYTE	7
+                                     0087       	
+                                     0087   425 
+                                 08  0087   427 	.BYTE	8
+                                     0088   429 
+                                     0088   433 
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   6
+LCTL-1.0                        .NOSHOW CALLS                             2-OCT-2026 18:58:11  DUA1:[000000]LCTL.MAR;1           (1)
+
+                                     0089   436 
+                                 0C  0089   438 	.BYTE	12
+                                 0E  008A   442 	.BYTE	14
+                                 0F  008B   444 	.BYTE	15
+                                     008C   446 
+                                     008C   447 	.SHOW	CALLS
+                                     008C   448 
+                                     008C   449 	.SBTTL	.SHOW DEFINITIONS
+                                     008C   450 
+                                     008C   451 	.SHOW	DEFINITIONS
+                                     008C   452 
+                                     008C   457 
+                                     008C   462 
+                                     008C   470 
+                                     008C   474 
+                                 01  008C       	.BYTE	1
+                                 02  008D       	.BYTE	2
+                                     008E       	
+                               0003  008E       	.WORD	3
+                                 03  0090       	.BYTE	3
+                                 04  0091       	.BYTE	3+1
+                                     0092       	
+                                     0092       	
+                                 00  0092       	.BYTE	0
+                                     0093       	
+                                 01  0093       	.BYTE	1
+                                     0094       	
+                           00000001  0094       ...X = 1
+                                     0094       	
+                                     0094   480 
+                                     0094   483 	.ENDR
+                               1234  0094       	.WORD	^X1234
+                                     0096       	
+                               1234  0096       	.WORD	^X1234
+                                     0098       	
+                                     0098   484 
+                                     0098   487 	.ENDR
+                                 05  0098       	.BYTE	5
+                                     0099       	
+                                 06  0099       	.BYTE	6
+                                     009A       	
+                                 07  009A       	.BYTE	7
+                                     009B       	
+                                     009B   488 
+                                 08  009B   490 	.BYTE	8
+                                     009C   492 
+                                     009C   496 
+                                     009D   499 
+                                 0C  009D   501 	.BYTE	12
+                                 0E  009E   505 	.BYTE	14
+                                 0F  009F   507 	.BYTE	15
+                                     00A0   509 
+                                     00A0   510 	.NOSHOW	DEFINITIONS
+                                     00A0   511 
+                                     00A0   512 	.SBTTL	.NOSHOW DEFINITIONS
+                                     00A0   513 
+                                     00A0   514 	.NOSHOW	DEFINITIONS
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   7
+LCTL-1.0                        .NOSHOW DEFINITIONS                       2-OCT-2026 18:58:11  DUA1:[000000]LCTL.MAR;1           (1)
+
+                                     00A0   515 
+                                     00A0   520 
+                                     00A0   525 
+                                     00A0   533 
+                                     00A0   537 
+                                 01  00A0       	.BYTE	1
+                                 02  00A1       	.BYTE	2
+                                     00A2       	
+                               0003  00A2       	.WORD	3
+                                 03  00A4       	.BYTE	3
+                                 04  00A5       	.BYTE	3+1
+                                     00A6       	
+                                     00A6       	
+                                 00  00A6       	.BYTE	0
+                                     00A7       	
+                                 01  00A7       	.BYTE	1
+                                     00A8       	
+                           00000001  00A8       ...X = 1
+                                     00A8       	
+                                     00A8   543 
+                                     00A8   546 	.ENDR
+                               1234  00A8       	.WORD	^X1234
+                                     00AA       	
+                               1234  00AA       	.WORD	^X1234
+                                     00AC       	
+                                     00AC   547 
+                                     00AC   550 	.ENDR
+                                 05  00AC       	.BYTE	5
+                                     00AD       	
+                                 06  00AD       	.BYTE	6
+                                     00AE       	
+                                 07  00AE       	.BYTE	7
+                                     00AF       	
+                                     00AF   551 
+                                 08  00AF   553 	.BYTE	8
+                                     00B0   555 
+                                     00B0   559 
+                                     00B1   562 
+                                 0C  00B1   564 	.BYTE	12
+                                 0E  00B2   568 	.BYTE	14
+                                 0F  00B3   570 	.BYTE	15
+                                     00B4   572 
+                                     00B4   573 	.SHOW	DEFINITIONS
+                                     00B4   574 
+                                     00B4   575 	.SBTTL	.SHOW CONDITIONALS
+                                     00B4   576 
+                                     00B4   577 	.SHOW	CONDITIONALS
+                                     00B4   578 
+                                     00B4   583 
+                                     00B4   588 
+                                     00B4   596 
+                                     00B4   600 
+                                 01  00B4       	.BYTE	1
+                                 02  00B5       	.BYTE	2
+                                     00B6       	
+                               0003  00B6       	.WORD	3
+                                 03  00B8       	.BYTE	3
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   8
+LCTL-1.0                        .SHOW CONDITIONALS                        2-OCT-2026 18:58:11  DUA1:[000000]LCTL.MAR;1           (1)
+
+                                 04  00B9       	.BYTE	3+1
+                                     00BA       	
+                                     00BA       	
+                                 00  00BA       	.BYTE	0
+                                     00BB       	
+                                 01  00BB       	.BYTE	1
+                                     00BC       	
+                           00000001  00BC       ...X = 1
+                                     00BC       	
+                                     00BC   606 
+                                     00BC   609 	.ENDR
+                               1234  00BC       	.WORD	^X1234
+                                     00BE       	
+                               1234  00BE       	.WORD	^X1234
+                                     00C0       	
+                                     00C0   610 
+                                     00C0   613 	.ENDR
+                                 05  00C0       	.BYTE	5
+                                     00C1       	
+                                 06  00C1       	.BYTE	6
+                                     00C2       	
+                                 07  00C2       	.BYTE	7
+                                     00C3       	
+                                     00C3   614 
+                                 08  00C3   616 	.BYTE	8
+                                     00C4   618 
+                                     00C4   622 
+                                     00C5   625 
+                                 0C  00C5   627 	.BYTE	12
+                                 0E  00C6   631 	.BYTE	14
+                                 0F  00C7   633 	.BYTE	15
+                                     00C8   635 
+                                     00C8   636 	.NOSHOW	CONDITIONALS
+                                     00C8   637 
+                                     00C8   638 	.SBTTL	.NOSHOW CONDITIONALS
+                                     00C8   639 
+                                     00C8   640 	.NOSHOW	CONDITIONALS
+                                     00C8   641 
+                                     00C8   646 
+                                     00C8   651 
+                                     00C8   659 
+                                     00C8   663 
+                                 01  00C8       	.BYTE	1
+                                 02  00C9       	.BYTE	2
+                                     00CA       	
+                               0003  00CA       	.WORD	3
+                                 03  00CC       	.BYTE	3
+                                 04  00CD       	.BYTE	3+1
+                                     00CE       	
+                                     00CE       	
+                                 00  00CE       	.BYTE	0
+                                     00CF       	
+                                 01  00CF       	.BYTE	1
+                                     00D0       	
+                           00000001  00D0       ...X = 1
+                                     00D0       	
+                                     00D0   669 
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   9
+LCTL-1.0                        .NOSHOW CONDITIONALS                      2-OCT-2026 18:58:11  DUA1:[000000]LCTL.MAR;1           (1)
+
+                                     00D0   672 	.ENDR
+                               1234  00D0       	.WORD	^X1234
+                                     00D2       	
+                               1234  00D2       	.WORD	^X1234
+                                     00D4       	
+                                     00D4   673 
+                                     00D4   676 	.ENDR
+                                 05  00D4       	.BYTE	5
+                                     00D5       	
+                                 06  00D5       	.BYTE	6
+                                     00D6       	
+                                 07  00D6       	.BYTE	7
+                                     00D7       	
+                                     00D7   677 
+                                 08  00D7   679 	.BYTE	8
+                                     00D8   681 
+                                     00D8   685 
+                                     00D9   688 
+                                 0C  00D9   690 	.BYTE	12
+                                 0E  00DA   694 	.BYTE	14
+                                 0F  00DB   696 	.BYTE	15
+                                     00DC   698 
+                                     00DC   699 	.SHOW	CONDITIONALS
+                                     00DC   700 
+                                     00DC   701 	.SBTTL	.SHOW ME,MEB,MC,MD,CND (the abbreviations)
+                                     00DC   702 
+                                     00DC   703 	.SHOW	ME, MEB, MC, MD, CND
+                                     00DC   704 
+                                     00DC   709 
+                                     00DC   714 
+                                     00DC   722 
+                                     00DC   726 
+                                 01  00DC       	.BYTE	1
+                                 02  00DD       	.BYTE	2
+                                     00DE       	
+                               0003  00DE       	.WORD	3
+                                 03  00E0       	.BYTE	3
+                                 04  00E1       	.BYTE	3+1
+                                     00E2       	
+                                     00E2       	
+                                 00  00E2       	.BYTE	0
+                                     00E3       	
+                                 01  00E3       	.BYTE	1
+                                     00E4       	
+                           00000001  00E4       ...X = 1
+                                     00E4       	
+                                     00E4   732 
+                                     00E4   735 	.ENDR
+                               1234  00E4       	.WORD	^X1234
+                                     00E6       	
+                               1234  00E6       	.WORD	^X1234
+                                     00E8       	
+                                     00E8   736 
+                                     00E8   739 	.ENDR
+                                 05  00E8       	.BYTE	5
+                                     00E9       	
+                                 06  00E9       	.BYTE	6
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page  10
+LCTL-1.0                        .SHOW ME,MEB,MC,MD,CND (the abbreviation  2-OCT-2026 18:58:11  DUA1:[000000]LCTL.MAR;1           (1)
+
+                                     00EA       	
+                                 07  00EA       	.BYTE	7
+                                     00EB       	
+                                     00EB   740 
+                                 08  00EB   742 	.BYTE	8
+                                     00EC   744 
+                                     00EC   748 
+                                     00ED   751 
+                                 0C  00ED   753 	.BYTE	12
+                                 0E  00EE   757 	.BYTE	14
+                                 0F  00EF   759 	.BYTE	15
+                                     00F0   761 
+                                     00F0   762 	.NOSHOW	ME, MEB, MC, MD, CND
+                                     00F0   763 
+                                     00F0   764 	.SBTTL	.SHOW ME and BINARY together
+                                     00F0   765 
+                                     00F0   766 	.SHOW	EXPANSIONS, BINARY
+                                     00F0   767 
+                                     00F0   772 
+                                     00F0   777 
+                                     00F0   785 
+                                     00F0   789 
+                                 01  00F0       	.BYTE	1
+                                 02  00F1       	.BYTE	2
+                                     00F2       	
+                               0003  00F2       	.WORD	3
+                                 03  00F4       	.BYTE	3
+                                 04  00F5       	.BYTE	3+1
+                                     00F6       	
+                                     00F6       	
+                                 00  00F6       	.BYTE	0
+                                     00F7       	
+                                 01  00F7       	.BYTE	1
+                                     00F8       	
+                           00000001  00F8       ...X = 1
+                                     00F8       	
+                                     00F8   795 
+                                     00F8   798 	.ENDR
+                               1234  00F8       	.WORD	^X1234
+                                     00FA       	
+                               1234  00FA       	.WORD	^X1234
+                                     00FC       	
+                                     00FC   799 
+                                     00FC   802 	.ENDR
+                                 05  00FC       	.BYTE	5
+                                     00FD       	
+                                 06  00FD       	.BYTE	6
+                                     00FE       	
+                                 07  00FE       	.BYTE	7
+                                     00FF       	
+                                     00FF   803 
+                                 08  00FF   805 	.BYTE	8
+                                     0100   807 
+                                     0100   811 
+                                     0101   814 
+                                 0C  0101   816 	.BYTE	12
+                                 0E  0102   820 	.BYTE	14
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page  11
+LCTL-1.0                        .SHOW ME and BINARY together              2-OCT-2026 18:58:11  DUA1:[000000]LCTL.MAR;1           (1)
+
+                                 0F  0103   822 	.BYTE	15
+                                     0104   824 
+                                     0104   825 	.NOSHOW	EXPANSIONS, BINARY
+                                     0104   826 
+                                     0104   827 	.SBTTL	.LIST ME (.LIST with an argument)
+                                     0104   828 
+                                     0104   829 	.LIST	ME
+                                     0104   830 
+                                     0104   835 
+                                     0104   840 
+                                     0104   848 
+                                     0104   852 
+                                 01  0104       	.BYTE	1
+                                 02  0105       	.BYTE	2
+                                     0106       	
+                               0003  0106       	.WORD	3
+                                 03  0108       	.BYTE	3
+                                 04  0109       	.BYTE	3+1
+                                     010A       	
+                                     010A       	
+                                 00  010A       	.BYTE	0
+                                     010B       	
+                                 01  010B       	.BYTE	1
+                                     010C       	
+                           00000001  010C       ...X = 1
+                                     010C       	
+                                     010C   858 
+                                     010C   861 	.ENDR
+                               1234  010C       	.WORD	^X1234
+                                     010E       	
+                               1234  010E       	.WORD	^X1234
+                                     0110       	
+                                     0110   862 
+                                     0110   865 	.ENDR
+                                 05  0110       	.BYTE	5
+                                     0111       	
+                                 06  0111       	.BYTE	6
+                                     0112       	
+                                 07  0112       	.BYTE	7
+                                     0113       	
+                                     0113   866 
+                                 08  0113   868 	.BYTE	8
+                                     0114   870 
+                                     0114   874 
+                                     0115   877 
+                                 0C  0115   879 	.BYTE	12
+                                 0E  0116   883 	.BYTE	14
+                                 0F  0117   885 	.BYTE	15
+                                     0118   887 
+                                     0118   888 	.NLIST	ME
+                                     0118   889 
+                                     0118   890 	.SBTTL	.NLIST MEB (.NLIST with an argument)
+                                     0118   891 
+                                     0118   892 	.NLIST	MEB
+                                     0118   893 
+                                     0118   898 
+                                     0118   903 
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page  12
+LCTL-1.0                        .NLIST MEB (.NLIST with an argument)      2-OCT-2026 18:58:11  DUA1:[000000]LCTL.MAR;1           (1)
+
+                                     0118   911 
+                                     0118   915 
+                                     0120   921 
+                                     0120   923 	.WORD	^X1234
+                               1234  0120   924 	.ENDR
+                                     0124   925 
+                                     0124   927 	.BYTE	V
+                                 05  0124   928 	.ENDR
+                                     0127   929 
+                                 08  0127   931 	.BYTE	8
+                                     0128   933 
+                                     0128   937 
+                                     0129   940 
+                                 0C  0129   942 	.BYTE	12
+                                 0E  012A   946 	.BYTE	14
+                                 0F  012B   948 	.BYTE	15
+                                     012C   950 
+                                     012C   951 	.LIST	MEB
+                                     012C   952 
+                                     012C   953 	.SBTTL	Defaults again
+                                     012C   954 
+                                     012C   959 
+                                     012C   964 
+                                     012C   972 
+                                     012C   976 
+                                 01  012C       	.BYTE	1
+                                 02  012D       	.BYTE	2
+                               0003  012E       	.WORD	3
+                                 03  0130       	.BYTE	3
+                                 04  0131       	.BYTE	3+1
+                                 00  0132       	.BYTE	0
+                                 01  0133       	.BYTE	1
+                                     0134   982 
+                                     0134   985 	.ENDR
+                               1234  0134       	.WORD	^X1234
+                               1234  0136       	.WORD	^X1234
+                                     0138   986 
+                                     0138   989 	.ENDR
+                                 05  0138       	.BYTE	5
+                                 06  0139       	.BYTE	6
+                                 07  013A       	.BYTE	7
+                                     013B   990 
+                                 08  013B   992 	.BYTE	8
+                                     013C   994 
+                                     013C   998 
+                                     013D  1001 
+                                 0C  013D  1003 	.BYTE	12
+                                 0E  013E  1007 	.BYTE	14
+                                 0F  013F  1009 	.BYTE	15
+                                     0140  1011 
+                                     0140  1012 	.SBTTL	.NLIST and .LIST levels
+                                 14  0140  1013 	.BYTE	20			; listed
+                                 18  0144  1021 	.BYTE	24			; level 0: listed again
+                                     0145  1022 	.LIST
+                                 19  0145  1023 	.BYTE	25			; level 1: listed
+                                 1A  0146  1025 	.BYTE	26			; level 0
+                                     0147  1026 
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page  13
+LCTL-1.0                        Counted options                           2-OCT-2026 18:58:11  DUA1:[000000]LCTL.MAR;1           (1)
+
+                                     0147  1027 	.SBTTL	Counted options
+                                     0147  1028 	.SHOW	EXPANSIONS
+                                     0147  1029 	.SHOW	EXPANSIONS
+                                     0147  1030 	.NOSHOW	EXPANSIONS
+                                 1B  0147       	.BYTE	27
+                                 1C  0148       	.BYTE	28
+                                     0149  1032 	.NOSHOW	EXPANSIONS
+                                 1D  0149       	.BYTE	29
+                                 1E  014A       	.BYTE	30
+                                     014B  1034 
+                                     014B  1035 	.SBTTL	A subtitle longer than the forty columns of the heading's own subtitle field, to see where it is cut
+                                 1F  014B  1036 	.BYTE	31
+                                     014C  1037 
+                                     014C  1038 	.SBTTL	.PAGE
+                                 20  014C  1039 	.BYTE	32			; before the first .PAGE
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page  14
+LCTL-1.0                        .PAGE                                     2-OCT-2026 18:58:11  DUA1:[000000]LCTL.MAR;1           (1)
+
+                                 21  014D  1041 	.BYTE	33			; the first line of a new page
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page  15
+LCTL-1.0                        .PAGE                                     2-OCT-2026 18:58:11  DUA1:[000000]LCTL.MAR;1           (1)
+
+                                 22  014E  1044 	.BYTE	34			; after two .PAGEs in a row
+                                     014F  1045 
+                                     014F  1046 	.SBTTL	Long lines
+                                 23  014F  1047 	.BYTE	35			; a comment long enough to run well past the 132 columns of a listing line, to see whether the listing cuts it, wraps it, or keeps it
+2C 67 6E 69 72 74 73 20 73 69 68 54  0150  1048 	.ASCII	/This string, with its statement, runs past the end of the listing line: does MACRO list all of its bytes?/
+74 73 20 73 74 69 20 68 74 69 77 20  015C       
+6E 75 72 20 2C 74 6E 65 6D 65 74 61  0168       
+65 20 65 68 74 20 74 73 61 70 20 73  0174       
+69 6C 20 65 68 74 20 66 6F 20 64 6E  0180       
+20 3A 65 6E 69 6C 20 67 6E 69 74 73  018C       
+6C 20 4F 52 43 41 4D 20 73 65 6F 64  0198       
+69 20 66 6F 20 6C 6C 61 20 74 73 69  01A4       
+         3F 73 65 74 79 62 20 73 74  01B0       
+                                     01B9  1049 
+                                 00000000  1050 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0000  0000  1051 	.ENTRY	LCTL, ^M<>
+                       50   01   D0  0002  1052 	MOVL	#1, R0
+                                 04  0005  1053 	RET
+                                     0006  1054 
+                                     0006  1055 	.END	LCTL
+LCTL                            Phase 29 probe: listing controls, each .  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page  16
+Symbol table                                                              2-OCT-2026 18:58:11  DUA1:[000000]LCTL.MAR;1           (1)
+
+...X           = 00000001               
+LCTL             00000000 RG    02      
+LCTL_D1          00000000 R     01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            000001B9  (  441.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE                            00000006  (    6.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  433     00:00:00.00    00:00:00.00
+Command processing              927     00:00:00.01    00:00:00.01
+Pass 1                          315     00:00:00.03    00:00:00.03
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           27     00:00:00.01    00:00:00.01
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1728     00:00:00.05    00:00:00.05
+
+The working set limit was 812 pages.
+27973 bytes (55 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 3 non-local and 0 local symbols.
+1055 source lines were read in Pass 1, producing 16 object records in Pass 2.
+4 pages of virtual memory were used to define 4 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST=LCTLNOSH/OBJECT=LCTLNOSH/NOSHOW=(CONDITIONALS,CALLS,DEFINITIONS) LCTL

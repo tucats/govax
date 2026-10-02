@@ -59,6 +59,60 @@ detached), govax mounts it read-only and copies the results into `vax/`:
 text files as text, objects in the host variable-length record layout,
 and images as raw blocks (`COPY/BINARY`), with names lowercased.
 
+## What came back (`vax/`)
+
+From the user's run of `@LIST/OUTPUT=LIST.LOG` on 2-OCT-2026.
+`copyout.cmd` (`govax console < testdata/mar/list/copyout.cmd`) copied
+all 96 results off the volume: listings (`.LIS`), object and image
+analyses (`.ANL`, `.ANI`), maps, `LIST.LOG`, the objects, and the images.
+Every object decodes with `internal/obj`.
+
+What stood out on a first look (the subtasks that use each one look
+closer):
+
+- **Real MACRO crashed twice.**
+  - On `ERREND` it stopped with `%MACRO-F-INSVIRMEM` and left an empty
+    `ERREND.LIS` and no object. So there's no reference for errors
+    found only at the end of a source, and govax keeps its own
+    messages for them.
+  - On `DBGSRC` it took an access violation after line 12, the
+    `.PSECT CODE` that follows `.ENABLE DEBUG`. It left a listing cut
+    off there and an object that `ANALYZE/OBJECT` rejects (no end of
+    module record, a longword left on the stack). Which statement is
+    to blame needs a smaller follow-up source.
+- **An assembly with errors still writes an object.** `ERRORS.OBJ`
+  exists, and `$STATUS` is `%X10000002`, an error. govax writes no
+  object when there are errors (Phase 27's choice).
+- **Errors in the listing.** Each message follows its line, with a `!`
+  under the column where the error was found. The listing ends with a
+  summary and the line numbers that had messages. That summary is
+  "There were 22 errors, 2 warnings and 0 information messages, on
+  lines:", followed by `line (file)` pairs, five to a row.
+- **Table of contents.** `.SBTTL` makes MACRO write a "Table of
+  contents" page, numbered page 0, before page 1. Each entry gives the
+  file number, the line number, and the subtitle.
+- **Which records each choice writes.** Traceback records are TBT;
+  debugger records are DBG.
+
+  | Choice | TBT | DBG |
+  | --- | --- | --- |
+  | no qualifier, `/DEBUG=TRACEBACK` | 3 | 0 |
+  | `/DEBUG`, `/DEBUG=ALL`, `/ENABLE=DEBUG` | 3 | 2 |
+  | `/DEBUG=SYMBOLS` | 0 | 1 |
+  | `/DEBUG=NONE`, `/NODEBUG`, `/DISABLE=TRACEBACK` | 0 | 0 |
+
+  So `/NODEBUG` turns traceback off too.
+- **Traceback output.** After the condition's message comes
+  `%TRACE-F-TRACEBACK, symbolic stack dump follows` (or `-E-`, for an
+  error that lets the program go on). Then a table with the columns
+  module name, routine name, line, rel PC, and abs PC, innermost call
+  first. A MACRO module leaves the line column empty, even when it was
+  assembled with `/DEBUG` (`FAILDBG`).
+  - Without traceback, an unhandled access violation gets the
+    "Improperly handled condition" register dump instead (`FAILNOTB`).
+  - Without traceback, a signaled condition just gets its message
+    (`FSIGNOTB`).
+
 ## What govax said before the probe ran
 
 Every source but the two error sources assembles under govax. On

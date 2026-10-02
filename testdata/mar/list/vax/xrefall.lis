@@ -1,0 +1,178 @@
+XREF                            Phase 29 probe: the cross reference       2-OCT-2026 19:03:17  VAX MACRO V5.4-3            Page   1
+V1.0                                                                      2-OCT-2026 18:58:11  DUA1:[000000]XREF.MAR;1           (1)
+
+                                     0000     1 	.TITLE	XREF	Phase 29 probe: the cross reference
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; Symbols defined and referenced in several places, a macro called more
+                                     0000     5 ; than once, registers, and a stretch under .NOCROSS, for
+                                     0000     6 ; /CROSS_REFERENCE and /CROSS_REFERENCE=ALL.
+                                     0000     7 
+                                     0000     8 	.EXTERNAL LIB$PUT_OUTPUT
+                                     0000     9 
+                           00000003  0000    10 COUNT = 3				; defined here
+                           00000006  0000    11 LIMIT == COUNT * 2			; referenced, and global
+                                     0000    12 
+                                     0000    13 	.MACRO	STORE	VALUE
+                                     0000    14 	.LONG	VALUE
+                                     0000    15 	.ENDM	STORE
+                                     0000    16 
+                                 00000000    17 	.PSECT	DATA, WRT, NOEXE, LONG
+                                     0000    18 TABLE:	STORE	COUNT			; referenced through a macro
+                                     0004    19 	STORE	LIMIT
+                                     0008    20 	STORE	TABLE
+                                     000C    21 	.NOCROSS
+                  00000000'00000003  000C    22 HIDDEN:	.LONG	COUNT, TABLE		; references not cross-referenced
+                                     0014    23 	.CROSS
+                                     0014    24 	.NOCROSS COUNT			; only COUNT left out
+                  00000006 00000003  0014    25 	.LONG	COUNT, LIMIT
+                                     001C    26 	.CROSS	COUNT
+                           0000000C' 001C    27 	.LONG	HIDDEN
+                                     0020    28 
+                                 00000000    29 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0004  0000    30 	.ENTRY	XREF, ^M<R2>
+              52   00000000'EF   DE  0002    31 	MOVAL	TABLE, R2		; R2 used and changed
+                       50   82   D0  0009    32 	MOVL	(R2)+, R0
+                       50   06   C0  000C    33 	ADDL2	#LIMIT, R0
+                       03   50   D1  000F    34 	CMPL	R0, #COUNT
+                            03   12  0012    35 	BNEQ	10$
+                       51   52   D0  0014    36 	MOVL	R2, R1
+                   00000000'EF   DF  0017    37 10$:	PUSHAL	TABLE
+              00000000'GF   01   FB  001D    38 	CALLS	#1, G^LIB$PUT_OUTPUT
+                                 04  0024    39 	RET
+                                     0025    40 
+                                     0025    41 	.END	XREF
+XREF                            Phase 29 probe: the cross reference       2-OCT-2026 19:03:17  VAX MACRO V5.4-3            Page   2
+Symbol table                                                              2-OCT-2026 18:58:11  DUA1:[000000]XREF.MAR;1           (1)
+
+COUNT          = 00000003               
+HIDDEN           0000000C R     01      
+LIB$PUT_OUTPUT   ********   X   00      
+LIMIT          = 00000006  G            
+TABLE            00000000 R     01      
+XREF             00000000 RG    02      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000020  (   32.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE                            00000025  (   37.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+XREF                            Phase 29 probe: the cross reference       2-OCT-2026 19:03:17  VAX MACRO V5.4-3            Page   3
+Cross reference                                                           2-OCT-2026 18:58:11  DUA1:[000000]XREF.MAR;1           (1)
+
+
+                                             +------------------------+
+                                             ! Symbol Cross Reference !
+                                             +------------------------+
+
+SYMBOL          VALUE        DEFINITION      REFERENCES... 
+------          -----        ----------      ------------- 
+COUNT          =00000003     10     (1)      11     (1)      18     (1)    #-34     (1)    
+HIDDEN          0000000C-R                   27     (1)    
+LIB$PUT_OUTPUT  00000000-XR                  38     (1)      8      (1)    
+LIMIT          =00000006     11     (1)      19     (1)      25     (1)    #-33     (1)    
+TABLE           00000000-R   18     (1)      20     (1)      31     (1)      37     (1)    
+XREF            00000000-R   30     (1)    
+XREF                            Phase 29 probe: the cross reference       2-OCT-2026 19:03:17  VAX MACRO V5.4-3            Page   4
+Cross reference                                                           2-OCT-2026 18:58:11  DUA1:[000000]XREF.MAR;1           (1)
+
+
+                                             +------------------------+
+                                             ! Macros Cross Reference !
+                                             +------------------------+
+
+MACRO             SIZE          DEFINITION       REFERENCES... 
+-----             ----          ----------       ------------- 
+STORE             1             13     (1)       18     (1)       19     (1)       20     (1)    
+XREF                            Phase 29 probe: the cross reference       2-OCT-2026 19:03:17  VAX MACRO V5.4-3            Page   5
+Cross reference                                                           2-OCT-2026 18:58:11  DUA1:[000000]XREF.MAR;1           (1)
+
+
+                                             +------------------------+
+                                             ! Opcode Cross Reference !
+                                             +------------------------+
+
+OPCODE         VALUE     REFERENCES... 
+------         -----     ------------- 
+ADDL2          00C0      33     (1)    
+BNEQ           0012      35     (1)    
+CALLS          00FB      38     (1)    
+CMPL           00D1      34     (1)    
+MOVAL          00DE      31     (1)    
+MOVL           00D0      32     (1)    36     (1)    
+PUSHAL         00DF      37     (1)    
+RET            0004      39     (1)    
+XREF                            Phase 29 probe: the cross reference       2-OCT-2026 19:03:17  VAX MACRO V5.4-3            Page   6
+Cross reference                                                           2-OCT-2026 18:58:11  DUA1:[000000]XREF.MAR;1           (1)
+
+
+                                           +----------------------------+
+                                           ! Directives Cross Reference !
+                                           +----------------------------+
+
+DIRECTIVE      REFERENCES... 
+---------      ------------- 
+.CROSS         26     (1)    
+.END           41     (1)    
+.ENDM          15     (1)    
+.ENTRY         30     (1)    
+.EXTERNAL      8      (1)    
+.IDENT         2      (1)    
+.LONG          18     (1)    19     (1)    20     (1)    25     (1)    27     (1)    
+.MACRO         13     (1)    
+.NOCROSS       21     (1)    24     (1)    
+.PSECT         17     (1)    29     (1)    
+.TITLE         1      (1)    
+XREF                            Phase 29 probe: the cross reference       2-OCT-2026 19:03:17  VAX MACRO V5.4-3            Page   7
+Cross reference                                                           2-OCT-2026 18:58:11  DUA1:[000000]XREF.MAR;1           (1)
+
+
+                                            +--------------------------+
+                                            ! Register Cross Reference !
+                                            +--------------------------+
+
+REGISTER  NO. REFERENCES     REFERENCES... 
+--------  --------------     ------------- 
+R0                 3         #-32     (1)    #-33     (1)    #-34     (1)    
+R1                 1         #-36     (1)    
+R2                 4           30     (1)    #-31     (1)    #-32     (1)    #-36     (1)    
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  426     00:00:00.01    00:00:00.01
+Command processing              924     00:00:00.01    00:00:00.01
+Pass 1                          273     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           31     00:00:00.00    00:00:00.00
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output           12     00:00:00.01    00:00:00.01
+Assembler run totals           1691     00:00:00.03    00:00:00.03
+
+The working set limit was 962 pages.
+707 bytes (2 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 6 non-local and 1 local symbols.
+41 source lines were read in Pass 1, producing 17 object records in Pass 2.
+1 page of virtual memory was used to define 1 macro.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST=XREFALL/OBJECT=XREFALL/CROSS_REFERENCE=ALL XREF

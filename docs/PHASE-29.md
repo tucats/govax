@@ -430,3 +430,30 @@ The author decided each of these on 2026-10-02.
   MACRO says.
 - Waiting on the author's VMS run (`@LIST/OUTPUT=LIST.LOG`). Subtasks 2
   to 6 need only the existing fixtures, so they can go ahead now.
+
+### 2026-10-02 — Subtask 1: the probe's results
+
+- The author ran `@LIST/OUTPUT=LIST.LOG` on VMS 7.3. `copyout.cmd`
+  copied the 96 results into `testdata/mar/list/vax/`, and every
+  object decodes. `testdata/mar/list/README.md` ("What came back")
+  records the first findings.
+- **Real MACRO crashed on two sources.** `ERREND` (`INSVIRMEM`, nothing
+  written) and `DBGSRC` (an access violation after the `.PSECT` that
+  follows `.ENABLE DEBUG`, a cut-off listing, and an object ANALYZE
+  rejects). For `ERREND`, govax keeps its own end-of-source messages.
+  For `DBGSRC`, a smaller follow-up source, split by statement, can go
+  in subtask 14's VMS round. Until then, subtask 12 has the `/DEBUG`
+  and `/ENABLE=DEBUG` objects, which are complete.
+- **An assembly with errors still writes an object** on VMS
+  (`ERRORS.OBJ`, `$STATUS` `%X10000002`). govax doesn't write one,
+  Phase 27's deliberate choice. That stays; it's noted as a difference,
+  not a listing matter.
+- **`/NODEBUG` turns traceback off**, like `/DEBUG=NONE`. The default is
+  `/DEBUG=TRACEBACK`. The README has the full table of which records
+  each choice writes.
+- **Listing layout.** The table of contents is page 0. Each error
+  message follows its line, with a `!` marking the column. The
+  summary's line list holds five `line (file)` pairs a row.
+- **The traceback output** for the future RUN feature is in `list.log`:
+  `FAILMAIN` and `FAILDBG` (access violation), `FAILSIG` (an error, then
+  a fatal stop), and their `/NOTRACEBACK` counterparts.

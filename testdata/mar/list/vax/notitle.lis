@@ -1,0 +1,66 @@
+.MAIN.                                                                    2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   0
+Table of contents
+
+    (1)        5        A subtitle without a title
+.MAIN.                                                                    2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   1
+                                                                          2-OCT-2026 18:58:11  DUA1:[000000]NOTITLE.MAR;1        (1)
+
+                                     0000     1 ; NOTITLE.MAR - Phase 29 probe: a module with no .TITLE and no .IDENT, so
+                                     0000     2 ; the listing's heading shows MACRO's defaults (.MAIN.), and a .SBTTL
+                                     0000     3 ; before any other statement.
+                                     0000     4 
+                                     0000     5 	.SBTTL	A subtitle without a title
+                                     0000     6 
+                                 00000000     7 	.PSECT	DATA, WRT, NOEXE, LONG
+                           00000001  0000     8 VAL:	.LONG	1
+                                     0004     9 
+                                     0004    10 	.END
+.MAIN.                                                                    2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   2
+Symbol table                                                              2-OCT-2026 18:58:11  DUA1:[000000]NOTITLE.MAR;1        (1)
+
+VAL              00000000 R     01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000004  (    4.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  432     00:00:00.00    00:00:00.00
+Command processing              941     00:00:00.00    00:00:00.01
+Pass 1                          181     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           21     00:00:00.00    00:00:00.00
+Symbol table output               0     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1602     00:00:00.00    00:00:00.01
+
+The working set limit was 662 pages.
+143 bytes (1 page) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 1 non-local and 0 local symbols.
+10 source lines were read in Pass 1, producing 10 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST NOTITLE

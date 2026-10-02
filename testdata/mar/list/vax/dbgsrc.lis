@@ -1,0 +1,15 @@
+DBGSRC                          Phase 29 probe: .ENABLE DEBUG and .DISAB  2-OCT-2026 19:03:18  VAX MACRO V5.4-3            Page   1
+V1.0                                                                      2-OCT-2026 18:58:11  DUA1:[000000]DBGSRC.MAR;1         (1)
+
+                                     0000     1 	.TITLE	DBGSRC	Phase 29 probe: .ENABLE DEBUG and .DISABLE TRACEBACK
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; Debugger records asked for by the source, not the command, and
+                                     0000     5 ; traceback turned off part way through: which records each part gets.
+                                     0000     6 
+                                     0000     7 	.ENABLE	DEBUG
+                                     0000     8 
+                                 00000000     9 	.PSECT	DATA, WRT, NOEXE, LONG
+                           00000001  0000    10 ONE:	.LONG	1
+                                     0004    11 
+                                 00000000    12 	.PSECT	CODE, NOWRT, EXE, LONG

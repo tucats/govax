@@ -1,0 +1,113 @@
+TRACE                           Phase 29 probe: traceback and debugger r  2-OCT-2026 19:03:17  VAX MACRO V5.4-3            Page   1
+V1.0                                                                      2-OCT-2026 18:58:11  DUA1:[000000]TRACE.MAR;1          (1)
+
+                                     0000     1 	.TITLE	TRACE	Phase 29 probe: traceback and debugger records
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; A module with what traceback and debugger records describe: routines
+                                     0000     5 ; (.ENTRY), a JSB subroutine, labels global and local, assigned symbols,
+                                     0000     6 ; and three psects. LIST.COM assembles it with each /DEBUG, /ENABLE, and
+                                     0000     7 ; /DISABLE choice, and analyzes each object.
+                                     0000     8 
+                                     0000     9 	.EXTERNAL LIB$PUT_OUTPUT
+                                     0000    10 
+                           00000050  0000    11 MAXLEN = 80
+                           00000002  0000    12 LEVEL == 2
+                                     0000    13 
+                                 00000000    14 	.PSECT	DATA, WRT, NOEXE, LONG
+3A 45 43 41 52 54 00000008'010E0000' 0000    15 MSG:	.ASCID	/TRACE: three routines ran/
+69 74 75 6F 72 20 65 65 72 68 74 20  000E       
+               6E 61 72 20 73 65 6E  001A       
+                           00000000  0021    16 COUNT:	.LONG	0
+                           00000050  0025    17 GLOBDATA:: .LONG MAXLEN
+                                     0029    18 
+                                 00000000    19 	.PSECT	$CODE, NOWRT, EXE, LONG
+                               0004  0000    20 	.ENTRY	TRACE, ^M<R2>
+              0000001E'EF   00   FB  0002    21 	CALLS	#0, FIRST
+              0000002D'EF   00   FB  0009    22 	CALLS	#0, SECOND
+                   00000000'EF   7F  0010    23 	PUSHAQ	MSG
+              00000000'GF   01   FB  0016    24 	CALLS	#1, G^LIB$PUT_OUTPUT
+                                 04  001D    25 	RET
+                                     001E    26 
+                               0000  001E    27 	.ENTRY	FIRST, ^M<>
+                   00000021'EF   D6  0020    28 	INCL	COUNT
+                   0000003C'EF   16  0026    29 	JSB	HELPER
+                                 04  002C    30 	RET
+                                     002D    31 
+                               0004  002D    32 	.ENTRY	SECOND, ^M<R2>
+                       52   02   D0  002F    33 	MOVL	#LEVEL, R2
+                   00000021'EF   D6  0032    34 10$:	INCL	COUNT
+                         F7 52   F5  0038    35 	SOBGTR	R2, 10$
+                                 04  003B    36 	RET
+                                     003C    37 
+                   00000021'EF   D6  003C    38 HELPER:	INCL	COUNT			; a JSB subroutine, not a routine
+                                 05  0042    39 	RSB
+                                     0043    40 
+                                 00000000    41 	.PSECT	$CONST, NOWRT, NOEXE, BYTE
+            74 6E 61 74 73 6E 6F 63  0000    42 CONST:	.ASCII	/constant/
+                                     0008    43 
+                                     0008    44 	.END	TRACE
+TRACE                           Phase 29 probe: traceback and debugger r  2-OCT-2026 19:03:17  VAX MACRO V5.4-3            Page   2
+Symbol table                                                              2-OCT-2026 18:58:11  DUA1:[000000]TRACE.MAR;1          (1)
+
+CONST            00000000 R  D  03      
+COUNT            00000021 R  D  01      
+FIRST            0000001E RG D  02      
+GLOBDATA         00000025 RG D  01      
+HELPER           0000003C R  D  02      
+LEVEL          = 00000002  G D          
+LIB$PUT_OUTPUT   ********   X   00      
+MAXLEN         = 00000050    D          
+MSG              00000000 R  D  01      
+SECOND           0000002D RG D  02      
+TRACE            00000000 RG D  02      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000029  (   41.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+$CODE                           00000043  (   67.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+$CONST                          00000008  (    8.)  03 (  3.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD  NOWRT NOVEC BYTE  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  453     00:00:00.01    00:00:00.01
+Command processing              918     00:00:00.01    00:00:00.01
+Pass 1                          193     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           33     00:00:00.00    00:00:00.00
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1624     00:00:00.02    00:00:00.02
+
+The working set limit was 662 pages.
+901 bytes (2 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 11 non-local and 1 local symbols.
+44 source lines were read in Pass 1, producing 27 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+TRACE                           Phase 29 probe: traceback and debugger r  2-OCT-2026 19:03:17  VAX MACRO V5.4-3            Page   3
+VAX-11 Macro Run Statistics                                               2-OCT-2026 18:58:11  DUA1:[000000]TRACE.MAR;1          (1)
+
+MACRO/LIST=TRDEBUG/OBJECT=TRDEBUG/DEBUG TRACE

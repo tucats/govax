@@ -1,0 +1,197 @@
+SYMTAB                          Phase 29 probe: the symbol table and pse  2-OCT-2026 19:03:17  VAX MACRO V5.4-3            Page   1
+V1.0                                                                      2-OCT-2026 18:58:11  DUA1:[000000]SYMTAB.MAR;1         (1)
+
+                                     0000     1 	.TITLE	SYMTAB	Phase 29 probe: the symbol table and psect synopsis
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; Every kind of symbol the symbol table distinguishes, and symbols a macro
+                                     0000     5 ; defines that the program does and doesn't use, to find which ones the
+                                     0000     6 ; table leaves out (RMSCOPY.LIS lists about 55 of its 625 symbols), with
+                                     0000     7 ; .ENABLE and .DISABLE SUPPRESSION. Long psect names and every psect
+                                     0000     8 ; attribute fill the psect synopsis.
+                                     0000     9 
+                                     0000    10 	.EXTERNAL EXTREF
+                                     0000    11 	.WEAK	WEAKREF, WEAKDEF
+                                     0000    12 
+                                     0000    13 ; Assigned symbols: local, global, an expression, and a relocatable one.
+                           0000002A  0000    14 ABSVAL = 42
+                           0000002B  0000    15 GLOBVAL == 43
+                           0000007F  0000    16 EXPRVAL = ABSVAL * 2 + GLOBVAL
+                           0000002C  0000    17 UNUSED = 44				; never used
+                                     0000    18 
+                                     0000    19 ; A macro defining many symbols, as the $xxxDEF macros do; only some are
+                                     0000    20 ; used below.
+                                     0000    21 	.MACRO	DEFS	PREFIX
+                                     0000    22 PREFIX'_A = 1
+                                     0000    23 PREFIX'_B = 2
+                                     0000    24 PREFIX'_C = 3
+                                     0000    25 PREFIX'_D == 4
+                                     0000    26 	.ENDM	DEFS
+                                     0000    27 
+                                     0000    28 	DEFS	DFLT			; suppression as the default leaves it
+                                     0000    29 	.ENABLE	SUPPRESSION
+                                     0000    30 	DEFS	SUPP			; with suppression enabled
+                                     0000    31 	.DISABLE SUPPRESSION
+                                     0000    32 	DEFS	NOSUP			; and disabled again
+                                     0000    33 
+                                     0000    34 	.ENABLE	SUPPRESSION
+                           00000005  0000    35 SUPPLAIN = 5				; outside a macro, with suppression
+                                     0000    36 	.DISABLE SUPPRESSION
+                                     0000    37 
+                                 00000000    38 	.PSECT	DATA, WRT, NOEXE, LONG
+00000005 00000001 00000001 00000001  0000    39 LABEL:	.LONG	DFLT_A, SUPP_A, NOSUP_A, SUPPLAIN
+                           00000004  0010    40 RELVAL = LABEL + 4
+00000000'0000007F 0000002A 00000004' 0010    41 	.LONG	RELVAL, ABSVAL, EXPRVAL, EXTREF, WEAKREF
+                           00000000' 0020       
+                           00000000' 0024    42 GLOB::	.LONG	UNDEF			; undefined: external, by .ENABLE GLOBAL (the default)
+                           00000000  0028    43 WEAKDEF: .LONG	0
+                           0000002C' 002C    44 10$:	.LONG	10$			; a local label
+                                     0030    45 
+                                 00000000    46 	.PSECT	A_PSECT_NAME_THAT_IS_31_CHARS_X, RD, WRT, NOEXE, GBL, SHR, PIC, OVR, QUAD
+                           00000001  0000    47 	.LONG	1
+                                     0004    48 
+                                     0004    49 	.PSECT	ABSPSECT, ABS
+                           00000008  0000    50 ABSLBL:	.BLKL	2
+                                     0008    51 ABSEND:
+                                     0008    52 
+                                 00000000    53 	.PSECT	VECS, NOWRT, EXE, VEC, PAGE, NOPIC, CON, LCL, NOSHR, USR
+                           00000002  0000    54 	.LONG	2
+                                     0004    55 
+                                 00000000    56 	.PSECT	LIBP, LIB, NORD, NOWRT, BYTE
+SYMTAB                          Phase 29 probe: the symbol table and pse  2-OCT-2026 19:03:17  VAX MACRO V5.4-3            Page   2
+V1.0                                                                      2-OCT-2026 18:58:11  DUA1:[000000]SYMTAB.MAR;1         (1)
+
+                                 03  0000    57 	.BYTE	3
+                                     0001    58 
+                                 00000000    59 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0000  0000    60 	.ENTRY	SYMTAB, ^M<>
+              50   00000000'EF   DE  0002    61 	MOVAL	ABSLBL, R0
+                       51   08   D0  0009    62 	MOVL	#ABSEND, R1
+                                 04  000C    63 	RET
+                                     000D    64 
+                                     000D    65 	.END	SYMTAB
+SYMTAB                          Phase 29 probe: the symbol table and pse  2-OCT-2026 19:03:17  VAX MACRO V5.4-3            Page   3
+Symbol table                                                              2-OCT-2026 18:58:11  DUA1:[000000]SYMTAB.MAR;1         (1)
+
+ABSEND           00000008               
+ABSLBL           00000000               
+ABSVAL         = 0000002A               
+DFLT_A         = 00000001               
+DFLT_B         = 00000002               
+DFLT_C         = 00000003               
+DFLT_D         = 00000004  G            
+EXPRVAL        = 0000007F               
+EXTREF           ********   X   00      
+GLOB             00000024 RG    01      
+GLOBVAL        = 0000002B  G            
+LABEL            00000000 R     01      
+NOSUP_A        = 00000001               
+NOSUP_B        = 00000002               
+NOSUP_C        = 00000003               
+NOSUP_D        = 00000004  G            
+RELVAL         = 00000004 R     01      
+SUPPLAIN       = 00000005               
+SUPP_A         = 00000001               
+SYMTAB           00000000 RG    06      
+UNDEF            ********   X   01      
+UNUSED         = 0000002C               
+WEAKDEF          00000028WRG    01      
+WEAKREF          ********W GX   00      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000030  (   48.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+A_PSECT_NAME_THAT_IS_31_CHARS_X 00000004  (    4.)  02 (  2.)    PIC   USR   OVR   REL   GBL   SHR NOEXE   RD    WRT NOVEC QUAD  
+ABSPSECT                        00000008  (    8.)  03 (  3.)  NOPIC   USR   CON   ABS   LCL NOSHR   EXE   RD    WRT NOVEC BYTE  
+VECS                            00000004  (    4.)  04 (  4.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT   VEC PAGE  
+LIBP                            00000001  (    1.)  05 (  5.)  NOPIC   LIB   CON   REL   LCL NOSHR   EXE NORD  NOWRT NOVEC BYTE  
+CODE                            0000000D  (   13.)  06 (  6.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+SYMTAB                          Phase 29 probe: the symbol table and pse  2-OCT-2026 19:03:17  VAX MACRO V5.4-3            Page   4
+Cross reference                                                           2-OCT-2026 18:58:11  DUA1:[000000]SYMTAB.MAR;1         (1)
+
+
+                                             +------------------------+
+                                             ! Symbol Cross Reference !
+                                             +------------------------+
+
+SYMBOL          VALUE        DEFINITION      REFERENCES... 
+------          -----        ----------      ------------- 
+ABSEND          00000008     51     (1)    #-62     (1)    
+ABSLBL          00000000     50     (1)      61     (1)    
+ABSVAL         =0000002A     14     (1)      16     (1)      41     (1)    
+DFLT_A         =00000001     28     (1)      39     (1)    
+DFLT_B         =00000002     28     (1)    
+DFLT_C         =00000003     28     (1)    
+DFLT_D         =00000004     28     (1)    
+EXPRVAL        =0000007F     16     (1)      41     (1)    
+EXTREF          00000000-XR                  10     (1)      41     (1)    
+GLOB            00000024-R   42     (1)    
+GLOBVAL        =0000002B     15     (1)      16     (1)    
+LABEL           00000000-R   39     (1)      40     (1)    
+NOSUP_A        =00000001     32     (1)      39     (1)    
+NOSUP_B        =00000002     32     (1)    
+NOSUP_C        =00000003     32     (1)    
+NOSUP_D        =00000004     32     (1)    
+RELVAL         =00000004-R   40     (1)      41     (1)    
+SUPPLAIN       =00000005     35     (1)      39     (1)    
+SUPP_A         =00000001     30     (1)      39     (1)    
+SUPP_B         =00000002     30     (1)    
+SUPP_C         =00000003     30     (1)    
+SUPP_D         =00000004     30     (1)    
+SYMTAB          00000000-R   60     (1)    
+UNDEF           00000000-XR                  42     (1)    
+UNUSED         =0000002C     17     (1)    
+WEAKDEF         00000028-R   43     (1)      11     (1)    
+WEAKREF         00000000-XR                  11     (1)      41     (1)    
+SYMTAB                          Phase 29 probe: the symbol table and pse  2-OCT-2026 19:03:17  VAX MACRO V5.4-3            Page   5
+Cross reference                                                           2-OCT-2026 18:58:11  DUA1:[000000]SYMTAB.MAR;1         (1)
+
+
+                                             +------------------------+
+                                             ! Macros Cross Reference !
+                                             +------------------------+
+
+MACRO             SIZE          DEFINITION       REFERENCES... 
+-----             ----          ----------       ------------- 
+DEFS              1             21     (1)       28     (1)       30     (1)       32     (1)    
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  469     00:00:00.00    00:00:00.00
+Command processing              481     00:00:00.01    00:00:00.01
+Pass 1                          254     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           18     00:00:00.01    00:00:00.01
+Symbol table output               0     00:00:00.00    00:00:00.00
+Psect synopsis output             3     00:00:00.00    00:00:00.00
+Cross-reference output           10     00:00:00.00    00:00:00.00
+Assembler run totals           1256     00:00:00.02    00:00:00.02
+
+The working set limit was 812 pages.
+1222 bytes (3 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 27 non-local and 1 local symbols.
+65 source lines were read in Pass 1, producing 0 object records in Pass 2.
+1 page of virtual memory was used to define 1 macro.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST=SYMXREF/NOOBJECT/CROSS_REFERENCE SYMTAB

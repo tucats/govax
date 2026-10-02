@@ -1,0 +1,201 @@
+BINARY                          Phase 29 probe: the listing's binary fie  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   1
+V1.0                                                                      2-OCT-2026 18:58:11  DUA1:[000000]BINARY.MAR;1         (1)
+
+                                     0000     1 	.TITLE	BINARY	Phase 29 probe: the listing's binary field
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; Every kind of statement that stores something, so the listing shows how
+                                     0000     5 ; MACRO lays out the binary field for each: data too long for one line,
+                                     0000     6 ; every operand mode, relocatable and external fields, branches, case
+                                     0000     7 ; tables, floating and packed data, and gaps.
+                                     0000     8 
+                                     0000     9 	.EXTERNAL EXT1, EXT2
+                                     0000    10 
+                                 00000000    11 	.PSECT	DATA, WRT, NOEXE, QUAD
+72 62 20 6B 63 69 75 71 20 65 68 54  0000    12 STR:	.ASCII	/The quick brown fox jumps over the lazy dog, twice: the quick brown fox./
+70 6D 75 6A 20 78 6F 66 20 6E 77 6F  000C       
+6C 20 65 68 74 20 72 65 76 6F 20 73  0018       
+69 77 74 20 2C 67 6F 64 20 79 7A 61  0024       
+63 69 75 71 20 65 68 74 20 3A 65 63  0030       
+2E 78 6F 66 20 6E 77 6F 72 62 20 6B  003C       
+            64 65 74 6E 75 6F 63 00' 0048    13 CSTR:	.ASCIC	/counted/
+                                 07  0048       
+                     00 6F 72 65 7A  0050    14 ZSTR:	.ASCIZ	/zero/
+63 73 65 64 20 61 0000005D'010E0000' 0055    15 DSTR:	.ASCID	/a descriptor string/
+6E 69 72 74 73 20 72 6F 74 70 69 72  0063       
+                                 67  006F       
+0C 0B 0A 09 08 07 06 05 04 03 02 01  0070    16 BYTES:	.BYTE	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
+            14 13 12 11 10 0F 0E 0D  007C       
+ 0007 0006 0005 0004 0003 0002 0001  0084    17 WORDS:	.WORD	1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+                     000A 0009 0008  0092       
+00000004 00000003 00000002 00000001  0098    18 LONGS:	.LONG	1, 2, 3, 4, 5, 6, 7
+         00000007 00000006 00000005  00A8       
+00000008'00000004'00000000'00000000' 00B4    19 RELS:	.LONG	STR, EXT1, EXT1+4, STR+8, PROC
+                           00000000' 00C4       
+                               0175' 00C8    20 	.WORD	FWDDATA-STR
+                                 00' 00CA    21 	.BYTE	EXT2
+                  01234567 89ABCDEF  00CB    22 QUADS:	.QUAD	^X0123456789ABCDEF
+                  00000000 00000005  00D3    23 	.QUAD	5
+01234567 89ABCDEF 01234567 89ABCDEF  00DB    24 OCTAS:	.OCTA	^X0123456789ABCDEF0123456789ABCDEF
+00000000 00000000 00000000 00000007  00EB    25 	.OCTA	7
+                  0000C110 000040C0  00FB    26 FLOATS:	.F_FLOATING	1.5, -2.25
+                  6888A221 0FDA4149  0103    27 	.D_FLOATING	3.14159265358979
+                  00000000 00004024  010B    28 	.G_FLOATING	2.5
+00000000 00000000 0000F200 2A054022  0113    29 	.H_FLOATING	1.0E10
+                           5D 34 12  0123    30 PACK:	.PACKED	-12345, PK_LEN
+                                 7C  0126    31 	.PACKED	+7
+         00000000'00000000'00000000' 0127    32 ADDRS:	.ADDRESS STR, EXT1, PROC
+                               0000' 0133    33 MASK:	.MASK	PROC
+                           00000138  0135    34 BLKS:	.BLKB	3
+                           0000013C  0138    35 	.BLKW	2
+                           00000140  013C    36 	.BLKL	1
+                           00000148  0140    37 	.BLKQ	1
+                                     0148    38 	.ALIGN	QUAD
+                                 AA  0148    39 	.BYTE	^XAA
+                                     0149    40 	.ALIGN	LONG
+                           00000151  014C    41 	. = . + 5
+                                 BB  0151    42 	.BYTE	^XBB
+                           00000175  0152    43 	. = BLKS + 64
+                           00000175' 0175    44 FWDDATA: .LONG	FWDDATA
+                                     0179    45 
+BINARY                          Phase 29 probe: the listing's binary fie  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   2
+V1.0                                                                      2-OCT-2026 18:58:11  DUA1:[000000]BINARY.MAR;1         (1)
+
+                                 00000000    46 	.PSECT	CODE, NOWRT, EXE, LONG
+                               003C  0000    47 	.ENTRY	PROC, ^M<R2, R3, R4, R5>
+                       52   51   D0  0002    48 	MOVL	R1, R2			; register
+                       52   61   D0  0005    49 	MOVL	(R1), R2		; register deferred
+                       52   71   D0  0008    50 	MOVL	-(R1), R2		; autodecrement
+                       52   81   D0  000B    51 	MOVL	(R1)+, R2		; autoincrement
+                       52   91   D0  000E    52 	MOVL	@(R1)+, R2		; autoincrement deferred
+                       52   05   D0  0011    53 	MOVL	#5, R2			; short literal
+              52   000003E8 8F   D0  0014    54 	MOVL	#1000, R2		; immediate
+                       52   07   D0  001B    55 	MOVL	S^#7, R2
+              52   00000007'8F   D0  001E    56 	MOVL	I^#7, R2
+              52   00000200 9F   D0  0025    57 	MOVL	@#^X200, R2		; absolute
+                    52   04 A1   D0  002C    58 	MOVL	B^4(R1), R2		; displacements
+                  52   0190 C1   D0  0030    59 	MOVL	W^400(R1), R2
+              52   00000004 E1   D0  0035    60 	MOVL	L^4(R1), R2
+                    52   04 A1   D0  003C    61 	MOVL	4(R1), R2
+                    52   04 B1   D0  0040    62 	MOVL	@4(R1), R2		; displacement deferred
+              52   00000098'EF   D0  0044    63 	MOVL	LONGS, R2		; relative
+              52   00000098'FF   D0  004B    64 	MOVL	@LONGS, R2		; relative deferred
+              52   00000000'EF   D0  0052    65 	MOVL	EXT1, R2		; external
+              52   00000000'GF   D0  0059    66 	MOVL	G^EXT1, R2		; general
+              52   00000000'9F   D0  0060    67 	MOVL	@#EXT1, R2		; absolute, external
+                     52   6143   D0  0067    68 	MOVL	(R1)[R3], R2		; indexed
+            52   00000098'EF43   D0  006B    69 	MOVL	LONGS[R3], R2
+                  52   04 B143   D0  0073    70 	MOVL	@4(R1)[R3], R2
+            52   00000000'GF43   D0  0078    71 	MOVL	G^EXT1[R3], R2
+     12345678 8F   000003E8 E1   C1  0080    72 	ADDL3	L^1000(R1), #^X12345678, L^2000(R2)	; a long instruction
+                   000007D0 E2       008B       
+    14   20   00000000'EF   0A   2C  0090    73 	MOVC5	#10, L^STR, #32, #20, L^BYTES		; and a longer one
+                   00000070'EF       0099       
+              50   000000D7'EF   9E  009E    74 	MOVAB	BACK, R0		; backward, in this psect
+              50   0000010E'EF   9E  00A5    75 	MOVAB	FWD, R0			; forward, in this psect
+              50   00000175'EF   9E  00AC    76 	MOVAB	FWDDATA, R0		; another psect
+                   00000008'EF   DF  00B3    77 	PUSHAL	EXT1+8
+              00000000'GF   00   FB  00B9    78 	CALLS	#0, G^EXT2
+              0000010F'EF   6C   FA  00C0    79 	CALLG	(AP), PROC2
+                       50   0C   50  00C7    80 	MOVF	#1.5, R0		; a floating short literal
+              50   E97943F6 8F   50  00CA    81 	MOVF	#123.456, R0		; a floating immediate
+                       50   17   70  00D1    82 	MOVD	#3.75, R0
+                       50   01   7D  00D4    83 	MOVQ	#1, R0
+                            FE   11  00D7    84 BACK:	BRB	BACK			; branches
+                          0032   31  00D9    85 	BRW	FWD
+                            F9   12  00DC    86 	BNEQ	BACK
+                         F6 54   F5  00DE    87 	SOBGTR	R4, BACK
+                    F2 55   0A   F2  00E1    88 	AOBLSS	#10, R5, BACK
+    FFE8 55   01   00000064 8F   F1  00E5    89 	ACBL	#100, #1, R5, BACK
+                    E4 51   03   E0  00EF    90 	BBS	#3, R1, BACK
+                         18 50   E9  00F3    91 	BLBC	R0, FWD
+                   00000300 9F   16  00F6    92 	JSB	@#^X300
+                   0000010E'EF   17  00FC    93 	JMP	FWD
+                  02   00   51   CF  0102    94 	CASEL	R1, #0, #2		; a case table
+                     0006'0007'0006' 0106    95 10$:	.WORD	20$-10$, 30$-10$, 20$-10$
+                                 01  010C    96 20$:	NOP
+                                 01  010D    97 30$:	NOP
+                                 04  010E    98 FWD:	RET
+                                     010F    99 
+                               0000  010F   100 	.ENTRY	PROC2, ^M<>
+BINARY                          Phase 29 probe: the listing's binary fie  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   3
+V1.0                                                                      2-OCT-2026 18:58:11  DUA1:[000000]BINARY.MAR;1         (1)
+
+                                 04  0111   101 	RET
+                                     0112   102 
+                                     0112   103 	.END	PROC
+BINARY                          Phase 29 probe: the listing's binary fie  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   4
+Symbol table                                                              2-OCT-2026 18:58:11  DUA1:[000000]BINARY.MAR;1         (1)
+
+ADDRS            00000127 R     01      
+BACK             000000D7 R     02      
+BLKS             00000135 R     01      
+BYTES            00000070 R     01      
+CSTR             00000048 R     01      
+DSTR             00000055 R     01      
+EXT1             ********   X   00      
+EXT2             ********   X   00      
+FLOATS           000000FB R     01      
+FWD              0000010E R     02      
+FWDDATA          00000175 R     01      
+LONGS            00000098 R     01      
+MASK             00000133 R     01      
+OCTAS            000000DB R     01      
+PACK             00000123 R     01      
+PK_LEN         = 00000005               
+PROC             00000000 RG    02      
+PROC2            0000010F RG    02      
+QUADS            000000CB R     01      
+RELS             000000B4 R     01      
+STR              00000000 R     01      
+WORDS            00000084 R     01      
+ZSTR             00000050 R     01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000179  (  377.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC QUAD  
+CODE                            00000112  (  274.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  433     00:00:00.00    00:00:00.00
+Command processing              478     00:00:00.00    00:00:00.01
+Pass 1                          215     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           21     00:00:00.01    00:00:00.01
+Symbol table output               0     00:00:00.00    00:00:00.00
+Psect synopsis output             3     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1176     00:00:00.01    00:00:00.02
+
+The working set limit was 662 pages.
+3266 bytes (7 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 23 non-local and 3 local symbols.
+103 source lines were read in Pass 1, producing 0 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+BINARY                          Phase 29 probe: the listing's binary fie  2-OCT-2026 19:02:58  VAX MACRO V5.4-3            Page   5
+VAX-11 Macro Run Statistics                                               2-OCT-2026 18:58:11  DUA1:[000000]BINARY.MAR;1         (1)
+
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST=BINNOOBJ/NOOBJECT BINARY
