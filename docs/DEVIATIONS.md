@@ -2312,7 +2312,7 @@ widened."
 ### [Phase 34] LIB$CREATE_DIR's relative directory got an entry limit of 1
 
 - **Where**: `internal/librtl/createdir.go`, against the LIB$CREATE_DIR
-  probe (`testdata/credir/libcrd.mar`, VMS 7.3's first run).
+  probe (`testdata/credir/libcrd.mar`, both of VMS 7.3's runs; it recurred).
 - **What**: `LIB$CREATE_DIR("[.SUBREL]")`, with `[000000]` the default
   directory, made `[SUBREL]` with an MFD entry whose version limit is 1.
   Every directory made from an absolute specification got an entry with
