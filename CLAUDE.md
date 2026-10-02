@@ -101,7 +101,9 @@ expect adjustment as phases land):
   machinery they use (condition dispatch, the heap, memory) stays in
   `internal/rtl`, reached through `export.go`. Each further *RTL.EXE emulated
   gets a package like it. New routines are written from DIGITAL's manuals
-  (clean room), and checked on VMS where a probe can.
+  (clean room), and checked on VMS where a probe can: LIB$CREATE_DIR
+  (`createdir.go`) against `testdata/credir/libcrd.mar`'s VMS 7.3 run
+  (`TestLibCreateDirOracle`).
 - `internal/asm` — assembler/disassembler (Phase 11). Two dialects share one core
   (Phase 27): the console's `ASM` (absolute, into emulated memory, eVAX
   directives) and MACRO-32 (`SetDialect(DialectMACRO)`: psects, relocation

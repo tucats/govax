@@ -1,9 +1,11 @@
 # Phase 34 — CREATE/DIRECTORY
 
-**Status:** in progress (2026-10-01): expanded with LIB$CREATE_DIR and a
-new `internal/librtl` package (subtasks 10-15). Subtasks 1-9, the
-console's `CREATE/DIRECTORY`, are done and match VMS 7.3 on the oracle run
-(`testdata/credir`).
+**Status:** done (2026-10-01). govax's `CREATE/DIRECTORY` matches VMS 7.3
+on the oracle run (`testdata/credir`), every directory and every message,
+with nothing masked. LIB$CREATE_DIR, in the new `internal/librtl` (which
+now holds every LIBRTL shim), matches VMS 7.3's probe run on all 32 cases
+it reached, and on every directory but one field (DEVIATIONS.md). A run
+of the current probe would check its last two cases.
 
 ## Goal
 
@@ -587,3 +589,9 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
     first run still checks its 32; the two it never reached are logged.
     The exchange volume is rebuilt for a run of the current probe, which
     would check those two.
+- 2026-10-01: Subtask 15, close-out of the expansion. PLAN.md marks the
+  phase done; CLAUDE.md lists `internal/librtl` (subtask 10) and now
+  notes LIB$CREATE_DIR's probe; DEVIATIONS.md has the `[SUBREL]` entry.
+  Left for later: a run of the current probe (its "no arguments" and
+  handled-ACCVIO cases), the shim page's 42-stub limit (39 used),
+  `SET FILE/OWNER`/`SET PROTECTION`.

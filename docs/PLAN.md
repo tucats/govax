@@ -84,7 +84,7 @@ questions, and a progress log extended as that phase is worked.
 | 31 | [PHASE-31.md](PHASE-31.md) | Build without licensed VMS material: one symbol table, an augmenting gen, captured GSTs — done |
 | 32 | [PHASE-32.md](PHASE-32.md) | govax's own RMS macros ($FAB, $RAB, $NAM, XABs, services, $xxxDEF), written clean-room — done |
 | 33 | [PHASE-33.md](PHASE-33.md) | RMS name blocks and XABs at run time: $PARSE, $SEARCH, $DISPLAY, NAM/XABs on $OPEN/$CREATE/$CLOSE — done; matches VMS 7.3 on a runtime oracle |
-| 34 | [PHASE-34.md](PHASE-34.md) | `CREATE/DIRECTORY` (owner UIC, version limit, protection), with ods2 support; LIB$CREATE_DIR and `internal/librtl` — in progress |
+| 34 | [PHASE-34.md](PHASE-34.md) | `CREATE/DIRECTORY` (owner UIC, version limit, protection), with ods2 support; LIB$CREATE_DIR and `internal/librtl` — done; both match VMS 7.3 on oracle runs |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
