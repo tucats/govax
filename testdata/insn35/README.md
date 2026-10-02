@@ -76,7 +76,13 @@ decimal). Either implements the architected results, so either is the
 reference; if a difference turns up in those families, this is worth
 remembering.
 
-The first run (2026-10-02) stopped at MACRO: each probe grouped an
+The run's container is `vax/insn35-vax.dsk.gz` (2026-10-02, OpenVMS
+V7.1 on simh's VAX 8600, node SIMVAX, device DUA1). It holds the probes,
+their objects and images, the five .DMP files (all 567 cases), and
+`INSN35.LOG`; the author audited it. `TestInsn35VAXRun` checks it has a
+record for every case and that the probes it ran are the ones here.
+
+An earlier run (2026-10-02) stopped at MACRO: each probe grouped an
 expression with parentheses (`#<4*(1+1+12+9)>`), which VAX MACRO rejects
 with `%MACRO-E-ILLEXPR` (it groups only with angle brackets). govax's
 MACRO had accepted it; it now reports the same error.

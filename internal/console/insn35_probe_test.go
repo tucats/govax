@@ -159,3 +159,99 @@ func TestInsn35ProbesRun(t *testing.T) {
 		})
 	}
 }
+
+// insn35VAXDisk is the exchange volume after INSN35.COM ran on VMS:
+// testdata/insn35/vax/insn35-vax.dsk.gz, unless INSN35_VAX_DISK names
+// another.
+var insn35VAXDisk = func() string {
+	if p := os.Getenv("INSN35_VAX_DISK"); p != "" {
+		return p
+	}
+
+	return filepath.Join("..", "..", "testdata", "insn35", "vax", "insn35-vax.dsk.gz")
+}()
+
+// vaxInsn35Records reads each probe's records from VMS's run, by probe
+// name, and the probe sources VMS assembled. It skips the test if there's
+// no VMS run.
+func vaxInsn35Records(t *testing.T) (map[string][]insn35Record, map[string]string) {
+	t.Helper()
+
+	if _, err := os.Stat(insn35VAXDisk); err != nil {
+		t.Skipf("no VMS run of the Phase 35 probes (%s): see testdata/insn35/README.md", insn35VAXDisk)
+	}
+
+	disk := filepath.Join(t.TempDir(), "insn35-vax.dsk")
+	copyFile(t, insn35VAXDisk, disk)
+
+	c := newBootableConsole(t)
+	if err := c.Mounts.Mount("DUA2", disk, false); err != nil {
+		t.Fatal(err)
+	}
+
+	records := map[string][]insn35Record{}
+	sources := map[string]string{}
+
+	for _, name := range insn35Probes {
+		raw, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA2:[000000]" + name + ".DMP"}, rms.VariableRecords)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+
+		for i, b := range raw {
+			r, ok := parseInsn35Record(b)
+			if !ok {
+				t.Fatalf("%s: record %d isn't a probe record (%d bytes)", name, i+1, len(b))
+			}
+
+			records[name] = append(records[name], r)
+		}
+
+		lines, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA2:[000000]" + name + ".MAR"}, rms.TextRecords)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+
+		text := make([]string, len(lines))
+		for i, l := range lines {
+			text[i] = string(l)
+		}
+
+		sources[name] = strings.Join(text, "\n")
+	}
+
+	return records, sources
+}
+
+// TestInsn35VAXRun checks VMS's run of the probes is complete: a record
+// for every case of the probe VMS assembled, in order, and that the
+// probe VMS assembled is the one in the repository, so subtask 14's
+// comparison compares like with like.
+func TestInsn35VAXRun(t *testing.T) {
+	records, sources := vaxInsn35Records(t)
+
+	for _, name := range insn35Probes {
+		names := insn35CaseNames(sources[name])
+
+		if len(records[name]) != len(names) || len(names) == 0 {
+			t.Errorf("%s: VMS wrote %d records, its probe has %d cases", name, len(records[name]), len(names))
+
+			continue
+		}
+
+		for i, r := range records[name] {
+			if want := uint32(i + 1); r.Case != want || r.Name != names[want] {
+				t.Errorf("%s: record %d is case %d %q, want case %d %q", name, i+1, r.Case, r.Name, want, names[want])
+			}
+		}
+
+		ours, err := os.ReadFile(filepath.Join("..", "..", "testdata", "insn35", strings.ToLower(name)+".mar"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if strings.TrimRight(string(ours), "\n") != strings.TrimRight(sources[name], "\n") {
+			t.Errorf("%s: the probe VMS ran differs from testdata/insn35/%s.mar: run gen.go's output on VMS again", name, strings.ToLower(name))
+		}
+	}
+}

@@ -489,3 +489,16 @@ The author accepted each proposal below on 2026-10-02.
   MicroVAX 3900 as "Method" assumed: G, H, and packed decimal run in the
   simulated processor, not VMS's instruction emulator. The README says
   so.
+- 2026-10-02: The author's second VMS run completed (OpenVMS V7.1, simh
+  VAX 8600), and audited the volume; it's `testdata/insn35/vax/
+  insn35-vax.dsk.gz`. All five probes assembled, linked, and ran, 567
+  records in all. `TestInsn35VAXRun` checks the run is complete and was
+  of the current probes. A first look agrees with the manual where govax
+  was already known to differ: MOVAO/PUSHAO set N, Z, and V (the MOVA
+  fix above); MOVO from R12 is a reserved addressing-mode fault (Decision
+  4); DIVF by zero is SS$_FLTDIV_F; CVTFL overflow sets V and completes,
+  trapping (SS$_INTOVF, continued) only under IV; ties round away from
+  zero (ADDF2, ADDD2, CVTLF). For subtask 14: VMS's PSL after the
+  instruction has the previous mode user (`^X03C0nnnn`, govax `^X0300nnnn`),
+  and the signal arrays' PCs differ by a few bytes, so govax's image
+  layout isn't VMS's yet.
