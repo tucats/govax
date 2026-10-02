@@ -196,6 +196,16 @@ a normal terminal to populate a proper `require` + `go.sum` entry — should
 work cleanly now that the repo is public. `go.work`'s `use` directive still
 wins for local source resolution either way.
 
+**Update (2026-10-01):** that's done. `go.mod` requires a tagged `ods2`
+(`v0.1.15` at the time of writing; an older `v0.1.6` pin had been sitting
+there, stale and masked by the workspace), and `GOWORK=off go build`/`vet`/
+`test ./...` all pass, so a plain clone of `govax` builds without `go.work`
+or a sibling checkout. The workspace remains the co-development mechanism:
+with it present, `use ../ods2` overrides the pin. Since the workspace hides a
+stale pin, the routine when govax starts using new `ods2` API is: tag and
+push `ods2`, `GOWORK=off go get github.com/tucats/ods2@vX.Y.Z`, then confirm
+`GOWORK=off go build ./...` before pushing `govax`.
+
 ### New package `internal/rms`: the sole RMS implementation
 
 Mirrors `internal/rtl`'s own registry-over-switch convention

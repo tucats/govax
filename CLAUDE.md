@@ -130,10 +130,14 @@ expect adjustment as phases land):
   which keeps a volume file's version; `recordfile.go`; Phase
   27). The sole place in this project allowed to import `ods2`; owns its
   own IFI (open-file) table separately from `internal/rtl`'s state, since it
-  tracks real `ods2` handles Phase 10's RTL layer never needed. Requires a
-  `go.work` file at the repo root (`use .` / `use ../ods2`, gitignored — see
-  `docs/PHASE-22.md`'s "Dependency: `go.work`, not a `replace` directive") to
-  build at all, since `ods2` isn't a `go.mod` dependency. Name processing
+  tracks real `ods2` handles Phase 10's RTL layer never needed. `go.mod`
+  pins a tagged `ods2` release, so a plain clone builds; a local, gitignored
+  `go.work` (`use .` / `use ../ods2`) overrides it with the sibling checkout
+  for co-development (see `docs/PHASE-22.md`'s "Dependency: `go.work`, not a
+  `replace` directive"). Because the workspace hides a stale pin, when govax
+  starts using new `ods2` API, tag and push `ods2`, then
+  `GOWORK=off go get github.com/tucats/ods2@vX.Y.Z` and check
+  `GOWORK=off go build ./...` before pushing govax. Name processing
   (`name.go`: default names, related files, logical names, search lists)
   is shared by every service, and `$SEARCH` (`search.go`) keeps VMS's two
   kinds of wildcard context; Phase 33's runtime oracle (`testdata/mar/rms3`,
