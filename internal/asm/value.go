@@ -255,7 +255,8 @@ func (a *Assembler) exprTop(c *cursor, st *exprState) (exprVal, error) {
 	return x1, nil
 }
 
-// exprAtom parses one expression atom: a parenthesized sub-expression, "."
+// exprAtom parses one expression atom: a parenthesized sub-expression (in
+// the console dialect only), "."
 // (the current location counter), a function call or symbol reference, a
 // character literal, or a numeric constant. Matches asm_expr3(), plus a
 // leading unary +/- that asm_expr3 doesn't support — the reference tool has
@@ -288,6 +289,14 @@ func (a *Assembler) exprAtom(c *cursor, st *exprState) (exprVal, error) {
 			return a.dot(), nil
 		}
 	case '(':
+		// MACRO-32 groups only with angle brackets; in an expression a
+		// parenthesis is VAX MACRO's "Illegal expression" (as in
+		// "#<4*(1+2)>"). The console dialect, like the reference tool,
+		// groups with parentheses.
+		if a.dialect == DialectMACRO {
+			return exprVal{}, vmserrors.New(vmserrors.VAX_ILLEXPR)
+		}
+
 		c.next()
 
 		x, err := a.exprTop(c, st)

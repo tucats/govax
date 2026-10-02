@@ -2444,6 +2444,19 @@ widened."
   confirms the results. Until then the probe's handler unwinds a case
   that signals twice, so the run still finishes.
 
+### [Phase 35] MACRO expressions took parentheses as grouping
+
+- **Where**: `internal/asm/value.go`'s `exprAtom` (from the C source's
+  `asm_expr3`, whose only grouping was parentheses).
+- **What**: the MACRO dialect, like the console one, read `(...)` in an
+  expression as a group, so `#<4*(1+2)>` assembled. VAX MACRO groups
+  only with angle brackets, and rejected that line with
+  `%MACRO-E-ILLEXPR, Illegal expression` (the Phase 35 probe's VMS run,
+  OpenVMS V7.1).
+- **Status**: fixed in Go (2026-10-02): in the MACRO dialect a
+  parenthesis in an expression is VAX_ILLEXPR; the console dialect keeps
+  eVAX's parentheses. `TestMACRODialectParenthesisIsIllegalExpression`.
+
 <!--
 Entry template:
 

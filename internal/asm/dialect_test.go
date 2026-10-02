@@ -104,3 +104,27 @@ func TestConsoleDialectAcceptsConsoleDirectives(t *testing.T) {
 		t.Errorf("Deposit() = %d, want 301", got)
 	}
 }
+
+// TestMACRODialectParenthesisIsIllegalExpression checks that MACRO-32's
+// expressions group only with angle brackets: VAX MACRO rejected
+// "#<4*(1+2)>" with "%MACRO-E-ILLEXPR, Illegal expression" (the Phase 35
+// probe's VMS run). The console dialect still groups with parentheses, as
+// the reference tool did, and both take nested angle brackets.
+func TestMACRODialectParenthesisIsIllegalExpression(t *testing.T) {
+	_, err := macroAssembler().Assemble("\tMOVL\t#<4*(1+2)>,R0\n")
+	requireCode(t, err, vmserrors.VAX_ILLEXPR)
+
+	out, err := macroAssembler().Assemble("\tMOVL\t#<4*<1+2>>,R0\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	requireBytes(t, out, 0xD0, 12, 0x50) // MOVL S^#12,R0
+
+	out, err = New(true).Assemble("\tMOVL\t#<4*(1+2)>,R0\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	requireBytes(t, out, 0xD0, 12, 0x50)
+}

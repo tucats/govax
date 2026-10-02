@@ -67,11 +67,19 @@ DST's 128 bytes. `gen.go`'s comment gives the layout.
 3. Skim `INSN35.LOG` for MACRO or LINK messages, then dismount the volume
    and copy the container back, gzipped, as `vax/insn35-vax.dsk.gz`.
 
-A MicroVAX 3900 runs F, D, and G in hardware, but H_floating and packed
-decimal through VMS's instruction emulator. The emulator implements the
-architected results, so it's still the reference; if a difference turns
-up in those families, this is worth remembering. The log records the
-hardware name (`F$GETSYI("HW_NAME")`).
+The log records the VMS version and the hardware name
+(`F$GETSYI("HW_NAME")`). The author's system reports OpenVMS V7.1 on a
+VAX 8600, simh's model of a VAX with the full instruction set, so G,
+H, and packed decimal run in the simulated processor rather than in VMS's
+instruction emulator (which a MicroVAX would use for H and packed
+decimal). Either implements the architected results, so either is the
+reference; if a difference turns up in those families, this is worth
+remembering.
+
+The first run (2026-10-02) stopped at MACRO: each probe grouped an
+expression with parentheses (`#<4*(1+1+12+9)>`), which VAX MACRO rejects
+with `%MACRO-E-ILLEXPR` (it groups only with angle brackets). govax's
+MACRO had accepted it; it now reports the same error.
 
 ## govax's run
 

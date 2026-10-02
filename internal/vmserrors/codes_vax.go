@@ -115,6 +115,7 @@ const (
 	vaxNoLibResolver
 	vaxLibrary
 	vaxModeAccess
+	vaxIllExpr
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -260,6 +261,9 @@ const (
 	// operand's access type, or as an indexed operand's base (the
 	// architecture manual's tables 8-5 and 8-6).
 	VAX_MODEACCESS   = VAXFacility<<FacilityPosition | vaxModeAccess<<MessagePosition | StatusError
+	// VAX_ILLEXPR is MACRO-32's "Illegal expression": for example, a
+	// parenthesis in an expression, which MACRO doesn't group with.
+	VAX_ILLEXPR = VAXFacility<<FacilityPosition | vaxIllExpr<<MessagePosition | StatusError
 )
 
 func init() {
@@ -354,6 +358,7 @@ func init() {
 	DefineMessage(VAX_NOLIBRESOLVER, VAXFacility, "NOLIBRESOLVER", ".LIBRARY !Q: no library resolver configured")
 	DefineMessage(VAX_LIBRARY, VAXFacility, "LIBRARY", ".LIBRARY !Q")
 	DefineMessage(VAX_MODEACCESS, VAXFacility, "MODEACCESS", "!S mode isn't allowed for !S operand")
+	DefineMessage(VAX_ILLEXPR, VAXFacility, "ILLEXPR", "Illegal expression")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")

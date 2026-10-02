@@ -1205,7 +1205,7 @@ DST:	.BLKB	128
 	RET
 
 ; SETUP clears a case's results and fills DST with ^XAA.
-SETUP:	MOVC5	#0,(SP),#0,#<4*(1+1+12+9)>,FLAGS
+SETUP:	MOVC5	#0,(SP),#0,#<4*<1+1+12+9>>,FLAGS
 	MOVC5	#0,(SP),#^XAA,#128,DST
 	RSB
 

@@ -478,3 +478,14 @@ The author accepted each proposal below on 2026-10-02.
     snapshots were regenerated. `signals.asm` and `unwind.asm` declared
     LIB$ shims the old kernel lacked; each is now skipped when the kernel
     has defined it.
+- 2026-10-02: The author's first VMS run of the probe stopped at MACRO:
+  every probe's SETUP used `#<4*(1+1+12+9)>`, and VAX MACRO, which groups
+  expressions only with angle brackets, rejected it (`%MACRO-E-ILLEXPR`).
+  govax's MACRO dialect had taken the parentheses as grouping; it now
+  reports VAX_ILLEXPR as VMS does (`TestMACRODialectParenthesisIsIllegalExpression`;
+  the console dialect still groups with parentheses, as eVAX did), and
+  the probe uses `#<4*<1+1+12+9>>`. The run's log also shows the
+  author's system is OpenVMS V7.1 on simh's VAX 8600, not VMS 7.3 on a
+  MicroVAX 3900 as "Method" assumed: G, H, and packed decimal run in the
+  simulated processor, not VMS's instruction emulator. The README says
+  so.
