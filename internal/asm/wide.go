@@ -119,10 +119,7 @@ func (a *Assembler) wideLiteral(c *cursor) (octa, bool) {
 }
 
 // pseudoOcta assembles .OCTA: a comma-separated list of 128-bit values, 16
-// bytes each. An item that is a single number is read at full width;
-// any other expression is evaluated as a longword and sign-extended, as
-// for .QUAD. A forward reference is patched in the low longword only, and
-// its high bits are zero.
+// bytes each, each read by wideItem, as .QUAD's are.
 func (a *Assembler) pseudoOcta(c *cursor) error {
 	first := true
 
@@ -135,17 +132,9 @@ func (a *Assembler) pseudoOcta(c *cursor) error {
 
 		first = false
 
-		v, ok := a.wideLiteral(c)
-		if !ok {
-			lo, wasForward, err := a.exprValue(c, a.pc(), fixAddrL)
-			if err != nil {
-				return err
-			}
-
-			v = signExtendOcta(lo)
-			if wasForward {
-				v = octa{}
-			}
+		v, err := a.wideItem(c)
+		if err != nil {
+			return err
 		}
 
 		if err := a.emitOcta(v); err != nil {

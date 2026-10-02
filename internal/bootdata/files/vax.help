@@ -2759,10 +2759,11 @@ $ASM ,PSEU,OCTA
                    data is stored in memory in the order given.  A
                    BYTE or WORD value may be given signed (-1) or
                    unsigned (255).  A QUAD or OCTA value that is a
-                   single number, such as -^D100000 or
-                   ^X0123456789ABCDEF, is stored in full; any other
-                   expression is computed as a longword and
-                   sign-extended.
+                   single number, such as ^X0123456789ABCDEF, is
+                   stored in full.  Any other expression is computed
+                   as a longword and sign-extended, as eVAX did; in
+                   MACRO-32 source it is zero-extended, and a negative
+                   number such as -1 is an error, as with VAX MACRO.
 
 $ASM ,PSEU,F_FL
 $ASM ,PSEU,D_FL

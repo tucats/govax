@@ -1,0 +1,26 @@
+
+$ ! ASM35.COM - assembles the Phase 35 assembler fixture with VAX MACRO
+$ ! (testdata/insn35/README.md). Run it with the exchange volume's
+$ ! [000000] as the default directory:
+$ !
+$ !     @ASM35/OUTPUT=ASM35.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ DEV = F$PARSE("[000000]",,,"DEVICE")
+$ SET DEFAULT DUA1:[000000]
+$ MACRO/NOLIST ASM35
+                  00000000 00000000  0064    20 Q1:	.QUAD	-1
+%MACRO-E-DIRSYNX, Directive syntax error                        !
+00000000 00000000 00000000 00000000  007C    23 O1:	.OCTA	-1
+%MACRO-E-DIRSYNX, Directive syntax error                        !
+$ DIRECTORY/SIZE/DATE ASM35.*
+
+Directory DUA1:[000000]
+
+ASM35.COM;1                1   2-OCT-2026 16:25:34.51
+ASM35.LOG;1                0   2-OCT-2026 18:00:40.55
+ASM35.MAR;1                4   2-OCT-2026 16:25:34.51
+ASM35.OBJ;1                2   2-OCT-2026 18:00:40.55
+
+Total of 4 files, 7 blocks.

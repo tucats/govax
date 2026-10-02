@@ -1,10 +1,7 @@
 # Phase 35 — The rest of the instruction set: G, H, octaword, and packed decimal
 
-**Status:** done (2026-10-02), but for one check: VAX MACRO's run of the
-assembler fixture (`testdata/insn35/asm`), which settles a few encodings
-govax's assembler chose without VAX MACRO's output (see subtask 16's
-log entry). The author accepted the plan and every proposed answer under
-"Decisions".
+**Status:** done (2026-10-02). The author accepted the plan and every
+proposed answer under "Decisions".
 
 ## Goal
 
@@ -774,3 +771,16 @@ The author accepted each proposal below on 2026-10-02.
     how MACRO stores a floating operand given as a symbol (`MOVG #PI`),
     which govax doesn't assemble yet. A test comparing the objects comes
     with that run.
+- 2026-10-02: The assembler fixture's VMS run is in (`testdata/insn35/
+  asm/vax`), and `TestAsm35Object` compares govax's object with VAX
+  MACRO's record for record. VAX MACRO confirmed the floating
+  directives, `.PACKED` (an unsigned string gets ^XC, `-0` keeps ^XD),
+  the zero-extended quadword and octaword immediates, and the literals.
+  It refused `.QUAD -1` and `.OCTA -1` (`DIRSYNX`) and zero-extends a
+  symbol in `.QUAD`/`.OCTA`; govax's MACRO dialect now does both
+  (`wideItem`; the console dialect keeps eVAX's rules for its delta
+  times). A floating operand given as a symbol is its 32-bit value,
+  unconverted and zero-extended (`floatOperand`); govax assembles it now.
+  Two fields are masked, with reasons: the run's ERROR severity from the
+  refused lines, and a stale high quadword VAX MACRO stored for `.OCTA
+  NEG` (`DEVIATIONS.md`). Nothing in Phase 35 is left open.

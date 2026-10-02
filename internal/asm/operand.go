@@ -229,7 +229,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	var (
 		litValue      uint32  // the short-literal value/table-index (int or float)
 		litWide       octa    // an integer literal's value at full width
-		litFloat      vaxfloat.Value // the parsed float, valid when isFloat
+		litFloat      floatLiteral // the parsed float, valid when isFloat
 		litWasForward bool
 	)
 
@@ -250,14 +250,14 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				litValue = 64 // doesn't fit, whatever its low longword
 			}
 		} else {
-			f, err := a.parseFloat(c)
+			f, err := a.floatOperand(c, floatFormat(inst.DataType[opIndex]))
 			if err != nil {
 				return err
 			}
 
 			litFloat = f
 
-			if lit, ok := vaxfloat.FindShortLiteral(f); ok {
+			if lit, ok := f.shortLiteral(); ok {
 				litValue = uint32(lit)
 			} else {
 				litValue = 0xFFFFFFFF
@@ -311,12 +311,12 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 				litValue = v
 			} else {
-				f, err := a.parseFloat(c)
+				f, err := a.floatOperand(c, floatFormat(inst.DataType[opIndex]))
 				if err != nil {
 					return err
 				}
 
-				lit, ok := vaxfloat.FindShortLiteral(f)
+				lit, ok := f.shortLiteral()
 				if !ok {
 					return vmserrors.New(vmserrors.VAX_BADSHORTFLOAT)
 				}
@@ -465,7 +465,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 		if isFloat {
 			if constant != litImmediate {
-				f, err := a.parseFloat(c)
+				f, err := a.floatOperand(c, floatFormat(inst.DataType[opIndex]))
 				if err != nil {
 					return err
 				}
@@ -473,7 +473,11 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				litFloat = f
 			}
 
-			return a.storeImmediateFloat(floatFormat(inst.DataType[opIndex]), litFloat)
+			if litFloat.raw {
+				return a.storeFloatBits(floatFormat(inst.DataType[opIndex]), litFloat.bits)
+			}
+
+			return a.storeImmediateFloat(floatFormat(inst.DataType[opIndex]), litFloat.value)
 		}
 
 		if constant != litImmediate {
@@ -677,6 +681,68 @@ func (a *Assembler) storeImmediateInt(scale int, value octa) error {
 	}
 }
 
+// floatLiteral is a floating operand's literal: a number, converted to
+// the operand's format, or (raw) bits taken as they are.
+type floatLiteral struct {
+	value vaxfloat.Value
+	bits  vaxfloat.Bits
+	raw   bool
+}
+
+// floatOperand reads a floating operand's literal for format f. A number
+// (digits, ".", or a sign first) is converted to the format. Anything
+// else, a symbol or an expression, is used as the floating bits
+// themselves, unconverted: the MACRO manual's immediate mode, note 3
+// ("Symbols are not converted"). Its 32-bit value is zero-extended to the
+// operand's size, as VAX MACRO stored MOVD #PI and MOVH #PI
+// (testdata/insn35/asm).
+func (a *Assembler) floatOperand(c *cursor, f vaxfloat.Format) (floatLiteral, error) {
+	c.skipBlanks()
+
+	if ch := c.peek(); isDigit(ch) || ch == '.' || ch == '+' || ch == '-' {
+		v, err := a.parseFloat(c)
+
+		return floatLiteral{value: v}, err
+	}
+
+	v, err := a.exprNoForward(c)
+	if err != nil {
+		return floatLiteral{}, err
+	}
+
+	bits := vaxfloat.Bits{Lo: uint64(v)}
+	value, _ := vaxfloat.Unpack(f, bits) // a reserved operand has no value, and isn't a literal
+
+	return floatLiteral{value: value, bits: bits, raw: true}, nil
+}
+
+// shortLiteral returns the short literal for l, if there is one. For raw
+// bits that means bits that are exactly a literal's value in the format
+// (the manual: the assembler "tries to convert the internal
+// representation of the value to a short floating literal").
+func (l floatLiteral) shortLiteral() (byte, bool) {
+	if l.raw && l.value.IsZero() {
+		return 0, false
+	}
+
+	return vaxfloat.FindShortLiteral(l.value)
+}
+
+// storeFloatBits writes bits as a format f immediate's data, unconverted.
+func (a *Assembler) storeFloatBits(f vaxfloat.Format, bits vaxfloat.Bits) error {
+	longwords := []uint32{uint32(bits.Lo), uint32(bits.Lo >> 32), uint32(bits.Hi), uint32(bits.Hi >> 32)}
+
+	for _, l := range longwords[:f.Size()/4] {
+		if err := a.cur.img.storeLongword(a.pc(), l); err != nil {
+			return err
+		}
+
+		a.advanceData(4)
+	}
+
+	return nil
+}
+
 // storeImmediateFloat writes value in format f (4, 8, or 16 bytes): an
 // I^# immediate's data, or one item of .F_FLOATING, .D_FLOATING,
 // .G_FLOATING, or .H_FLOATING. A value too large for the format is
@@ -691,17 +757,7 @@ func (a *Assembler) storeImmediateFloat(f vaxfloat.Format, value vaxfloat.Value)
 		return vmserrors.New(vmserrors.VAX_FLOATRANGE)
 	}
 
-	longwords := []uint32{uint32(bits.Lo), uint32(bits.Lo >> 32), uint32(bits.Hi), uint32(bits.Hi >> 32)}
-
-	for _, l := range longwords[:f.Size()/4] {
-		if err := a.cur.img.storeLongword(a.pc(), l); err != nil {
-			return err
-		}
-
-		a.advanceData(4)
-	}
-
-	return nil
+	return a.storeFloatBits(f, bits)
 }
 
 // floatFormat returns the floating format of data type t, which must be

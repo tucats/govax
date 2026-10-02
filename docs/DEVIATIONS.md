@@ -2503,10 +2503,11 @@ widened."
   value" (though its parameter text says sign-extended).
 - **Status**: fixed in Go (2026-10-02, Phase 35 subtask 6): an immediate
   that isn't a single unsigned number is a 32-bit value, zero-extended.
-  The quadword case follows from the octaword one and the manual, and
-  isn't yet checked on VMS; nor are `.QUAD` and `.OCTA`, which keep
-  Phase 28's sign extension. `TestQuadwordImmediates`,
-  `TestOctawordImmediates`.
+  VAX MACRO's object for the assembler fixture (testdata/insn35/asm)
+  confirmed the quadword case (`MOVQ #-1`, `MOVQ #NEG`), and showed
+  `.QUAD` and `.OCTA` work the same way in the MACRO dialect: see "`.QUAD`
+  and `.OCTA` in the MACRO dialect". `TestQuadwordImmediates`,
+  `TestOctawordImmediates`, `TestAsm35Object`.
 
 ### [Phase 35] Floating literals were read through a float64
 
@@ -2521,10 +2522,12 @@ widened."
   read exactly (`vaxfloat.Parse`) and rounded once to each operand's own
   format; `.G_FLOATING` and `.H_FLOATING` are new, and the disassembler
   shows a floating immediate in its own format with the fewest digits
-  that reassemble to the same bits. Not yet done: MACRO's rule that a
-  floating operand given as a symbol (`MOVG #PI,R6`) uses the symbol's
-  value as the bits, unconverted. `TestFloatingImmediates`,
-  `TestFloatingDirectives`, `TestDisassembleFloatingImmediates`.
+  that reassemble to the same bits. A floating operand given as a symbol
+  or expression (`MOVG #PI,R6`) uses its 32-bit value as the bits,
+  unconverted and zero-extended to the operand's size, as the MACRO
+  manual says and VAX MACRO's object for the assembler fixture shows
+  (`floatOperand`). `TestFloatingImmediates`, `TestFloatingDirectives`,
+  `TestDisassembleFloatingImmediates`, `TestAsm35Object`.
 
 ### [Phase 35] DIVP with an invalid divisor digit
 
@@ -2568,6 +2571,27 @@ widened."
 - **Status**: deliberate (2026-10-02, Phase 35 subtask 13). The output
   produced before the abort does stay in the destination, as on VMS.
   `TestInsn35Oracle` masks the FPD bit in these three cases.
+
+### [Phase 35] `.QUAD` and `.OCTA` in the MACRO dialect
+
+- **Where**: `internal/asm/pseudo.go`'s `wideItem`, used by `.QUAD` and
+  `.OCTA` (Phase 28's `.QUAD`, Phase 35's `.OCTA`).
+- **What**: both dialects read a negative number at full width (`.QUAD
+  -1` stored eight ^XFF bytes) and sign-extended an expression's 32-bit
+  value. VAX MACRO, assembling testdata/insn35/asm/asm35.mar, refused
+  `.QUAD -1` and `.OCTA -1` with `%MACRO-E-DIRSYNX, Directive syntax
+  error`, and stored `.QUAD NEG` (NEG = -3) as ^XFFFFFFFD followed by
+  zeros: zero-extended, as the MACRO manual's `.QUAD` example says
+  (though its parameter text says sign-extended).
+- **Status**: fixed in Go for the MACRO dialect (2026-10-02, Phase 35):
+  a negative number is VAX_DIRSYNX, and an expression is zero-extended.
+  The console dialect keeps eVAX's behavior, since its fixtures write
+  delta times as `.quad -^D100000`. `TestAsm35Refused`,
+  `TestAsm35Object`.
+- **Not replicated**: VAX MACRO stored `.OCTA NEG`'s high quadword as the
+  value of the `.OCTA` before it (^X0123456789ABCDEF), apparently a
+  stale register. One sample isn't enough to model it, and it looks like
+  a bug, so govax zero-extends; `TestAsm35Object` masks those 8 bytes.
 
 <!--
 Entry template:

@@ -122,13 +122,8 @@ func (a *Assembler) listSeparator(c *cursor, first bool) error {
 	return nil
 }
 
-// pseudoQuad assembles .QUAD: a comma-separated list of 64-bit values.
-// The expression evaluator works in 32 bits, so an item that is a single
-// numeric literal (an optional sign, then digits in the current radix or
-// after a ^X/^D/0X prefix) is read at full 64-bit width; any other
-// expression is evaluated as a longword and sign-extended, as MACRO-32
-// does. A forward reference patches only the low longword, whose high
-// longword stays zero. The reference tool had no .QUAD at all.
+// pseudoQuad assembles .QUAD: a comma-separated list of 64-bit values,
+// each read by wideItem. The reference tool had no .QUAD at all.
 func (a *Assembler) pseudoQuad(c *cursor) error {
 	first := true
 
@@ -141,36 +136,60 @@ func (a *Assembler) pseudoQuad(c *cursor) error {
 
 		first = false
 
-		v, ok := a.quadLiteral(c)
-		if !ok {
-			lo, wasForward, err := a.exprValue(c, a.pc(), fixAddrL)
-			if err != nil {
-				return err
-			}
-
-			v = uint64(int64(int32(lo)))
-			if wasForward {
-				v = 0
-			}
-		}
-
-		if err := a.emitLongword(uint32(v)); err != nil {
+		v, err := a.wideItem(c)
+		if err != nil {
 			return err
 		}
 
-		if err := a.emitLongword(uint32(v >> 32)); err != nil {
+		if err := a.emitLongword(uint32(v.lo)); err != nil {
+			return err
+		}
+
+		if err := a.emitLongword(uint32(v.lo >> 32)); err != nil {
 			return err
 		}
 	}
 }
 
-// quadLiteral reads a .QUAD item that is exactly one numeric literal,
-// followed by a ',' or the end of the line, keeping its low 64 bits;
-// otherwise it leaves c where it was and reports false. See wideLiteral.
-func (a *Assembler) quadLiteral(c *cursor) (uint64, bool) {
-	v, ok := a.wideLiteral(c)
+// wideItem reads one .QUAD or .OCTA item. An item that is a single
+// numeric literal (digits in the current radix, or after a ^X, ^D, or 0X
+// prefix) is read at full width; the expression evaluator works in 32
+// bits, so any other expression is a longword, widened. A forward
+// reference patches only the low longword, and the rest stays zero.
+//
+// The two dialects widen differently. VAX MACRO (the MACRO dialect)
+// zero-extends an expression, and refuses a negative number with
+// "Directive syntax error": its object for testdata/insn35/asm/asm35.mar
+// shows both (.QUAD NEG, NEG = -3, is ^XFFFFFFFD then zeros). The console
+// dialect keeps what eVAX's fixtures need: a negative number at full
+// width (.QUAD -^D100000 for a delta time) and an expression
+// sign-extended.
+func (a *Assembler) wideItem(c *cursor) (octa, error) {
+	if a.dialect == DialectMACRO {
+		save := c.pos
+		c.skipBlanks()
+		negative := c.peek() == '-'
+		c.pos = save
 
-	return v.lo, ok
+		if negative {
+			return octa{}, vmserrors.New(vmserrors.VAX_DIRSYNX)
+		}
+	}
+
+	if v, ok := a.wideLiteral(c); ok {
+		return v, nil
+	}
+
+	lo, wasForward, err := a.exprValue(c, a.pc(), fixAddrL)
+
+	switch {
+	case err != nil:
+		return octa{}, err
+	case wasForward, a.dialect == DialectMACRO:
+		return octa{lo: uint64(lo)}, nil
+	}
+
+	return signExtendOcta(lo), nil
 }
 
 // pseudoBase assembles .BASE value: sets the current deposit location,

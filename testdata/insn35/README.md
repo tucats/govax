@@ -123,3 +123,14 @@ as symbols (which govax doesn't assemble yet).
 2. On VMS, mount it, set its `[000000]` as the default directory, and
    run `@ASM35/OUTPUT=ASM35.LOG`.
 3. Copy the container back, gzipped, as `asm/vax/asm35-vax.dsk.gz`.
+
+The run is in `asm/vax/` (2026-10-02, OpenVMS V7.1, simh VAX 8600): the
+container, VAX MACRO's object (`asm35.obj`, copied off the volume in the
+host record layout `obj.ReadRecords` reads), and the log. VAX MACRO
+refused `.QUAD -1` and `.OCTA -1` (`DIRSYNX`) and stored zeros for them;
+everything else assembled. `TestAsm35Object` (`internal/asm`) compares
+govax's object with it record for record, the refused lines replaced by
+those zeros, after two adjustments its comment explains (the ERROR
+severity those lines gave, and a stale high quadword VAX MACRO stored
+for `.OCTA NEG`); `TestAsm35Refused` checks govax refuses the same two
+lines.

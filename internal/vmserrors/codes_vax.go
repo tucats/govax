@@ -117,6 +117,7 @@ const (
 	vaxModeAccess
 	vaxIllExpr
 	vaxBadPacked
+	vaxDirSynx
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -268,6 +269,9 @@ const (
 	// VAX_BADPACKED is a .PACKED operand that isn't a decimal string of 0
 	// to 31 digits.
 	VAX_BADPACKED = VAXFacility<<FacilityPosition | vaxBadPacked<<MessagePosition | StatusError
+	// VAX_DIRSYNX is MACRO-32's "Directive syntax error": for example, a
+	// negative number in .QUAD or .OCTA, which VAX MACRO refuses.
+	VAX_DIRSYNX = VAXFacility<<FacilityPosition | vaxDirSynx<<MessagePosition | StatusError
 )
 
 func init() {
@@ -364,6 +368,7 @@ func init() {
 	DefineMessage(VAX_MODEACCESS, VAXFacility, "MODEACCESS", "!S mode isn't allowed for !S operand")
 	DefineMessage(VAX_ILLEXPR, VAXFacility, "ILLEXPR", "Illegal expression")
 	DefineMessage(VAX_BADPACKED, VAXFacility, "BADPACKED", "Invalid packed decimal string")
+	DefineMessage(VAX_DIRSYNX, VAXFacility, "DIRSYNX", "Directive syntax error")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")
