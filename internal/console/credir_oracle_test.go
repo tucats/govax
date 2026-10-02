@@ -229,54 +229,7 @@ func TestCreateDirectoryOracle(t *testing.T) {
 
 	compareCredirMessages(t, credirLogMessages(t, c), govaxMessages)
 
-	vms := credirDirectories(t, c, "DUA2")
-	govax := credirDirectories(t, c, "DUA1")
-
-	paths := map[string]bool{}
-	for p := range vms {
-		paths[p] = true
-	}
-
-	for p := range govax {
-		paths[p] = true
-	}
-
-	sorted := make([]string, 0, len(paths))
-	for p := range paths {
-		sorted = append(sorted, p)
-	}
-
-	sort.Strings(sorted)
-
-	for _, p := range sorted {
-		v, inVMS := vms[p]
-		g, inGovax := govax[p]
-
-		switch {
-		case !inGovax:
-			t.Errorf("[%s]: VMS made it, govax didn't", p)
-
-			continue
-		case !inVMS:
-			t.Errorf("[%s]: govax made it, VMS didn't", p)
-
-			continue
-		}
-
-		vf, gf := credirFields(v), credirFields(g)
-		for i := range vf {
-			if vf[i] == gf[i] {
-				continue
-			}
-
-			field, _, _ := strings.Cut(vf[i], "=")
-			if credirMasked[p][field] != "" {
-				continue
-			}
-
-			t.Errorf("[%s] %s: VMS %s, govax %s", p, field, strings.TrimPrefix(vf[i], field+"="), strings.TrimPrefix(gf[i], field+"="))
-		}
-	}
+	compareDirectories(t, credirDirectories(t, c, "DUA2"), credirDirectories(t, c, "DUA1"), credirMasked)
 }
 
 // credirMessages is one CREATE/DIRECTORY command and the message lines it
@@ -363,6 +316,58 @@ func compareCredirMessages(t *testing.T, vms, govax []credirMessages) {
 
 		if strings.Join(v.lines, "\n") != strings.Join(g.lines, "\n") {
 			t.Errorf("$ %s\nVMS:\n  %s\ngovax:\n  %s", v.command, strings.Join(v.lines, "\n  "), strings.Join(g.lines, "\n  "))
+		}
+	}
+}
+
+// compareDirectories compares each directory VMS made with govax's, field
+// by field (credirFields), skipping the fields masked for a path.
+func compareDirectories(t *testing.T, vms, govax map[string]credirDirectory, masked map[string]map[string]string) {
+	t.Helper()
+
+	paths := map[string]bool{}
+	for p := range vms {
+		paths[p] = true
+	}
+
+	for p := range govax {
+		paths[p] = true
+	}
+
+	sorted := make([]string, 0, len(paths))
+	for p := range paths {
+		sorted = append(sorted, p)
+	}
+
+	sort.Strings(sorted)
+
+	for _, p := range sorted {
+		v, inVMS := vms[p]
+		g, inGovax := govax[p]
+
+		switch {
+		case !inGovax:
+			t.Errorf("[%s]: VMS made it, govax didn't", p)
+
+			continue
+		case !inVMS:
+			t.Errorf("[%s]: govax made it, VMS didn't", p)
+
+			continue
+		}
+
+		vf, gf := credirFields(v), credirFields(g)
+		for i := range vf {
+			if vf[i] == gf[i] {
+				continue
+			}
+
+			field, _, _ := strings.Cut(vf[i], "=")
+			if masked[p][field] != "" {
+				continue
+			}
+
+			t.Errorf("[%s] %s: VMS %s, govax %s", p, field, strings.TrimPrefix(vf[i], field+"="), strings.TrimPrefix(gf[i], field+"="))
 		}
 	}
 }

@@ -546,3 +546,14 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
     $PARSE"), whether a spec whose directory comes only from a logical
     name counts as explicit (govax requires a bracket in the text), and
     what VMS 7.3 does with arguments past the sixth.
+- 2026-10-01: Subtask 13 done: the LIB$CREATE_DIR probe.
+  `testdata/credir/gen.go` writes `libcrd.mar` (34 cases, each a CALLG
+  with its own argument list; R0 per case to `LIBCRD.DMP`), `libcrd.com`
+  (MACRO, LINK, RUN, with CRDDEV and CRDLOG defined, then DIRECTORY
+  listings), and `libcrd.cmd` (the exchange volume, built and waiting for
+  the author's VAX run). `TestLibCreateDirOracle` already assembles,
+  links, and runs the probe under govax (govax's MACRO and LINK, its
+  LIBRTL stubs) and compares with VMS's once the container is in
+  `testdata/credir/vax/`; until then it logs govax's statuses and skips.
+  The header comparison is shared with `TestCreateDirectoryOracle`
+  (`compareDirectories`).

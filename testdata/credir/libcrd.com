@@ -1,0 +1,19 @@
+$ ! LIBCRD.COM - the Phase 34 LIB$CREATE_DIR probe. Written by
+$ ! testdata/credir/gen.go. Run it once, with the exchange volume's
+$ ! [000000] as the default directory:
+$ !
+$ !     @LIBCRD/OUTPUT=LIBCRD.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ DEV = F$PARSE("[000000]",,,"DEVICE")
+$ SET DEFAULT 'DEV'[000000]
+$ DEFINE CRDDEV 'DEV'
+$ DEFINE CRDLOG 'DEV'[PLOG]
+$ MACRO/NOLIST LIBCRD
+$ LINK LIBCRD
+$ RUN LIBCRD
+$ DEASSIGN CRDDEV
+$ DEASSIGN CRDLOG
+$ DIRECTORY/FULL [000000...]*.DIR
+$ DIRECTORY/OWNER/PROTECTION/SIZE=ALL [000000...]*.DIR
