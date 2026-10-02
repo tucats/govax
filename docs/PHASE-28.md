@@ -795,7 +795,8 @@ All settled (2026-09-30):
 - Still open, not part of this: other packages have older lint findings
   (an unused `strPut` in `internal/rtl/utils.go`, an ineffective assignment
   in `internal/rtl/core.go`, a gosimple hint in `cmd/govax/grammar.go`).
-  G/H floating, octawords, and packed decimal belong to a later phase.
+  G/H floating, octawords, and packed decimal belong to a later phase. (Phase 35
+  implemented them.)
 
 ### 2026-09-30 — Subtask 9: the MACRO command's macro libraries
 

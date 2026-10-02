@@ -168,13 +168,11 @@ func TestInstructionTableMatchesManual(t *testing.T) {
 
 // TestInstructionTableConsistent checks, for every entry, that the
 // generated columns agree with each other: each operand's Scale is its
-// data type's size, unused slots are empty, and the short-literal Type is
-// floating exactly when the instruction reads a floating operand. (ACBF
-// once had an integer Type although it reads only floating operands.)
+// data type's size, and unused slots are empty. (A short literal's kind
+// comes from its operand's DataType; the table's old per-instruction
+// short-literal Type, which once gave ACBF integer literals, is gone.)
 func TestInstructionTableConsistent(t *testing.T) {
 	for _, inst := range instructionTable.All() {
-		readsFloat := false
-
 		for i := 0; i < 6; i++ {
 			dt := inst.DataType[i]
 
@@ -194,30 +192,21 @@ func TestInstructionTableConsistent(t *testing.T) {
 				t.Errorf("%s: operand %d scale %d, but its type %v is %d bytes",
 					inst.Name, i, inst.Scale[i], dt, dt.Size())
 			}
-
-			if (inst.Access[i] == AccessRead || inst.Access[i] == AccessModify) && dt.IsFloat() {
-				readsFloat = true
-			}
-		}
-
-		if got := inst.Type == ShortLiteralFloat; got != readsFloat {
-			t.Errorf("%s: short-literal type floating = %v, want %v", inst.Name, got, readsFloat)
 		}
 	}
 }
 
-// TestNewInstructionsDecodeAsReserved checks that each Phase 35
-// instruction decodes (its operands are known now), and until it has a
-// handler, executes as a reserved-instruction fault, as every
-// unimplemented instruction does. Each read operand is an immediate (I^#,
+// TestNewInstructionsDecode checks that each Phase 35 instruction
+// decodes to its full length. Each read operand is an immediate (I^#,
 // the bytes of the value inline in the instruction stream), the widest
 // form there is, so the decoder must step over 16 bytes for an H_floating
-// or octaword operand without failing.
-func TestNewInstructionsDecodeAsReserved(t *testing.T) {
+// or octaword operand without failing. (In subtask 1, before the handlers
+// existed, this also checked each ran as a reserved-instruction fault.)
+func TestNewInstructionsDecode(t *testing.T) {
 	for _, want := range phase35Instructions {
 		inst := instructionTable.Lookup(Opcode{Extended: want.ext, Function: want.opc})
-		if inst == nil || instructionTable.Implemented(inst) {
-			continue // already reported, or a corrected entry that runs
+		if inst == nil {
+			continue // already reported
 		}
 
 		t.Run(want.name, func(t *testing.T) {
@@ -235,13 +224,28 @@ func TestNewInstructionsDecodeAsReserved(t *testing.T) {
 			if got, want := d.NextPC-base, uint32(len(code)); got != want {
 				t.Errorf("decoded length %d, want %d", got, want)
 			}
-
-			e := &Engine{cpu: cpu, mem: mem, table: instructionTable}
-			err = instructionTable.HandlerFor(inst)(e, &d)
-			if f, ok := err.(*Fault); !ok || f.Code != ExcPrivileged {
-				t.Errorf("executing = %v, want a reserved-instruction fault", err)
-			}
 		})
+	}
+}
+
+// TestEveryInstructionImplemented checks every instruction in the table
+// has a handler (Phase 35 finished the set), except the two left out by
+// Phase 35's Decision 1, LDPCTX and SVPCTX, and the table's placeholder
+// entries: the reserved opcodes (RSVD_xx), which raise the
+// reserved-instruction fault, and the FD/FE/FF prefix bytes (EXT_xx). So
+// SHOW INSTRUCTIONS/UNIMPLEMENTED lists only those.
+func TestEveryInstructionImplemented(t *testing.T) {
+	notImplemented := map[string]bool{"LDPCTX": true, "SVPCTX": true}
+
+	for _, inst := range instructionTable.All() {
+		placeholder := strings.HasPrefix(inst.Name, "RSVD_") || strings.HasPrefix(inst.Name, "EXT_")
+
+		switch implemented := instructionTable.Implemented(inst); {
+		case !implemented && !placeholder && !notImplemented[inst.Name]:
+			t.Errorf("%s has no handler", inst.Name)
+		case implemented && (placeholder || notImplemented[inst.Name]):
+			t.Errorf("%s has a handler; update this test and PHASE-35.md's Decision 1", inst.Name)
+		}
 	}
 }
 

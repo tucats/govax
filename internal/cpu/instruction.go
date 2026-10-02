@@ -30,16 +30,14 @@ type Instruction struct {
 	// Access gives each operand's AccessKind; entries beyond OperandCount
 	// are AccessNone.
 	Access [6]AccessKind
-	// Type says how this instruction's short-literal operands (addressing
-	// modes 0-3) are interpreted, matching struct INSTRUCTION's type field.
-	// The generator derives it from DataType: floating if any operand the
-	// instruction reads is a floating type.
-	Type ShortLiteralType
 	// DataType gives each operand's data type from the instruction's
 	// format line in the VAX Architecture Reference Manual (see
 	// datatype.go); entries beyond OperandCount are DataNone. The C
 	// source has no such column: the generator takes it from
-	// gen/operands.go.
+	// gen/operands.go. A short literal (addressing modes 0-3) is a
+	// floating literal on a floating operand and an integer on any other;
+	// the C source's struct INSTRUCTION gave the whole instruction one
+	// type field instead, which Phase 35 retired.
 	DataType [6]DataType
 }
 

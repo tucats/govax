@@ -15,14 +15,3 @@ const (
 	AccessBranch                      // OP_BR: operand is a branch displacement
 	AccessImmediate                   // OP_IM: operand is an implicit immediate value
 )
-
-// ShortLiteralType says how an instruction's short-literal operands (VAX
-// addressing modes 0-3) should be interpreted: as a raw integer bit pattern,
-// or as an index into the short_double floating-point literal table.
-// Matches vaxinstr.h's OP_TYPE_INT/OP_TYPE_FLOAT.
-type ShortLiteralType int
-
-const (
-	ShortLiteralInt   ShortLiteralType = iota // OP_TYPE_INT
-	ShortLiteralFloat                         // OP_TYPE_FLOAT
-)

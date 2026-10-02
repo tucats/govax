@@ -2147,6 +2147,11 @@ widened."
   its fixup patching the low one (as for `.QUAD`). Octawords would extend
   the same way, though no implemented instruction has one yet (they come
   with G/H floating, a later phase). `TestQuadwordImmediates`.
+- **Update (Phase 35)**: octaword immediates came with the octaword moves
+  (subtask 2), and VAX MACRO's own encoding of `MOVO #-1` showed the
+  sign extension above was wrong: an expression's 32-bit value is
+  zero-extended, for quadword immediates as for octaword ones. See
+  "Quadword and octaword immediates were sign-extended".
 
 ### [Phase 28] The assembler didn't check addressing modes against operand access
 

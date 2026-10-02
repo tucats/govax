@@ -156,6 +156,11 @@ D_floating's 55-bit field). F_floating store additionally rounds (adds 1 at the 
 dropped bit, propagating carry into the exponent, matching `fpu.c`'s explicit rounding
 block) since it only keeps 23 of the 52 IEEE mantissa bits.
 
+(Phase 35: the CPU no longer holds F and D values as `float64`s. They go through
+`internal/vaxfloat`, exactly, so D keeps all 55 fraction bits and every result is
+rounded once, half away from zero; see `docs/PHASE-35.md`, subtask 5, and
+`docs/DEVIATIONS.md`, "F and D values held as float64".)
+
 ## Sub-phases
 
 Each is one buildable, testable commit, following Phase 04's pattern.
@@ -425,7 +430,8 @@ Each is one buildable, testable commit, following Phase 04's pattern.
   opcode range (`ADAWI`, `INSQHI`/`TI`, `REMQHI`/`TI`) remain on
   `unimplementedHandler`, correctly — none of them were ever in this phase's named
   scope (extended-precision/packed-decimal-adjacent float ops and Phase 06/07
-  territory, respectively).
+  territory, respectively). (Phase 35 implemented `EMODF`/`POLYF`/`CVTFD` and
+  `EMODD`/`POLYD`/`CVTDF`: subtasks 5, 8, and 9 of `docs/PHASE-35.md`.)
 - Full `docs/DEVIATIONS.md` tally for this phase: 6 resolved findings (the D-floating
   `fpu_load` argument-order bug, `fpu_store`'s dead-code underflow flush, the seven
   D-floating table/dispatch gaps, floating arithmetic's missing V/C clear plus

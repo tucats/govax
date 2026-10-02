@@ -730,3 +730,24 @@ The author accepted each proposal below on 2026-10-02.
     (`setModeStack`; `DEVIATIONS.md`).
   - The test skips a probe whose source differs from the one VMS ran, so
     a change to `gen.go` asks for a new VMS run rather than failing.
+- 2026-10-02: Subtask 15 done: clean-up of the old "missing" references.
+  - **`TestEveryInstructionImplemented`**: every instruction in the table
+    has a handler but LDPCTX and SVPCTX (Decision 1) and the reserved and
+    prefix placeholder entries, so SHOW INSTRUCTIONS/UNIMPLEMENTED lists
+    only those. Subtask 1's `TestNewInstructionsDecodeAsReserved` became
+    `TestNewInstructionsDecode` (every Phase 35 instruction still decodes
+    to its full length with 16-byte immediates; none is reserved now).
+  - **`Instruction.Type` is retired**, with the `ShortLiteralType` type:
+    a short literal's kind comes from its operand's `DataType` (subtask
+    5). The generator still checks the C header's OP_TYPE against the
+    manual but no longer emits it; the table was regenerated (only the
+    `Type` lines changed), and its header and the generator's comment now
+    give the `go run ./gen` command, since the `go:generate` directive is
+    disabled.
+  - **Notes, not rewrites**: PHASE-05.md (D's three lost bits; EMODF,
+    POLYF, CVTFD and the D counterparts), PHASE-28.md (G/H, octawords,
+    packed decimal "for a later phase"), DEVIATIONS.md's Phase 28
+    quadword-immediate entry, and `dispatch.go`'s comment on the
+    unimplemented handler. The other comments the plan named were
+    rewritten as their subtasks went: `fpu.go`, `pseudo.go`'s
+    `pseudoFloat`, and `operand.go`'s wide-immediate comments.

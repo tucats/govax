@@ -204,8 +204,8 @@ func TestInstructionTableDFloatingFixedEntries(t *testing.T) {
 				t.Errorf("%s.Access = %v, want %v", c.name, inst.Access, c.access)
 			}
 
-			if inst.Type != ShortLiteralFloat {
-				t.Errorf("%s.Type = %v, want ShortLiteralFloat", c.name, inst.Type)
+			if !inst.DataType[0].IsFloat() {
+				t.Errorf("%s's first operand is %v, want D_floating", c.name, inst.DataType[0])
 			}
 		})
 	}
