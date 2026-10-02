@@ -39,47 +39,52 @@ func uic(g, m uint32) argument { return long(g<<16 | m) }
 func long256() argument        { return argument{kind: 'L'} } // a 256-character spec
 func nullDescriptor() argument { return argument{kind: 'n'} } // a 0 descriptor address
 
-// testCase is one call.
+// testCase is one call. A handled case runs in a subroutine that
+// establishes LIB$SIG_TO_RET first, so a condition LIB$CREATE_DIR signals
+// comes back as the subroutine's status instead of ending the probe.
 type testCase struct {
 	comment string
 	args    []argument
+	handled bool
 }
 
 var cases = []testCase{
-	{"defaults", []argument{desc("[P1]")}},
-	{"again: it exists", []argument{desc("[P1]")}},
-	{"several levels", []argument{desc("[P2.A.B]")}},
-	{"a new leaf under existing levels", []argument{desc("[P2.A.C]")}},
-	{"owner-UIC", []argument{desc("[P3]"), uic(0o200, 0o201)}},
-	{"owner-UIC 0: the parent's", []argument{desc("[P3.CHILD]"), long(0)}},
-	{"owner-UIC omitted: the parent's", []argument{desc("[P3.OMIT]")}},
-	{"enable world, value W:R", []argument{desc("[P4]"), omitted(), word(0xF000), word(0xE000)}},
-	{"enable 0: value ignored", []argument{desc("[P4E]"), omitted(), word(0), word(0xFFFF)}},
-	{"value omitted with enable", []argument{desc("[P4V]"), omitted(), word(0xF000)}},
-	{"the manual's parent, %X13FF", []argument{desc("[P5]"), omitted(), word(0xFFFF), word(0x13FF)}},
-	{"the manual's example, %XDBFF/%X37FF", []argument{desc("[P5.EX]"), omitted(), word(0xDBFF), word(0x37FF)}},
-	{"maximum-versions 3", []argument{desc("[P6]"), omitted(), omitted(), omitted(), word(3)}},
-	{"maximum-versions omitted: the parent's", []argument{desc("[P6.INH]")}},
-	{"maximum-versions 0: no limit", []argument{desc("[P6.ZERO]"), omitted(), omitted(), omitted(), word(0)}},
-	{"all six arguments, volume 1", []argument{desc("[P7]"), uic(0o300, 0o301), word(0x000F), word(0x0000), word(2), word(1)}},
-	{"a seventh argument (initial allocation?)", []argument{desc("[P8]"), omitted(), omitted(), omitted(), omitted(), omitted(), long(4)}},
-	{"a device by logical name", []argument{desc("CRDDEV:[P10]")}},
-	{"UIC format", []argument{desc("[123,321]")}},
-	{"UIC format with owner-UIC", []argument{desc("[1,4]"), uic(0o200, 0o201)}},
-	{"relative to the default", []argument{desc("[.SUBREL]")}},
-	{"relative, above the MFD", []argument{desc("[-.UP]")}},
-	{"no directory", []argument{desc("CRDDEV:")}},
-	{"a directory from a logical name only", []argument{desc("CRDLOG:")}},
-	{"a file name", []argument{desc("[P1]X.DAT")}},
-	{"a version", []argument{desc("[P1];1")}},
-	{"a wildcard", []argument{desc("[P*]")}},
-	{"a node", []argument{desc("NODE::[P9]")}},
-	{"no such device", []argument{desc("NOSUCH:[X]")}},
-	{"nine levels", []argument{desc("[L1.L2.L3.L4.L5.L6.L7.L8.L9]")}},
-	{"a 40-character name", []argument{desc("[ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCD]")}},
-	{"a 256-character spec", []argument{long256()}},
-	{"a 0 descriptor address", []argument{nullDescriptor()}},
-	{"no arguments", nil},
+	{"defaults", []argument{desc("[P1]")}, false},
+	{"again: it exists", []argument{desc("[P1]")}, false},
+	{"several levels", []argument{desc("[P2.A.B]")}, false},
+	{"a new leaf under existing levels", []argument{desc("[P2.A.C]")}, false},
+	{"owner-UIC", []argument{desc("[P3]"), uic(0o200, 0o201)}, false},
+	{"owner-UIC 0: the parent's", []argument{desc("[P3.CHILD]"), long(0)}, false},
+	{"owner-UIC omitted: the parent's", []argument{desc("[P3.OMIT]")}, false},
+	{"enable world, value W:R", []argument{desc("[P4]"), omitted(), word(0xF000), word(0xE000)}, false},
+	{"enable 0: value ignored", []argument{desc("[P4E]"), omitted(), word(0), word(0xFFFF)}, false},
+	{"value omitted with enable", []argument{desc("[P4V]"), omitted(), word(0xF000)}, false},
+	{"the manual's parent, %X13FF", []argument{desc("[P5]"), omitted(), word(0xFFFF), word(0x13FF)}, false},
+	{"the manual's example, %XDBFF/%X37FF", []argument{desc("[P5.EX]"), omitted(), word(0xDBFF), word(0x37FF)}, false},
+	{"maximum-versions 3", []argument{desc("[P6]"), omitted(), omitted(), omitted(), word(3)}, false},
+	{"maximum-versions omitted: the parent's", []argument{desc("[P6.INH]")}, false},
+	{"maximum-versions 0: no limit", []argument{desc("[P6.ZERO]"), omitted(), omitted(), omitted(), word(0)}, false},
+	{"all six arguments, volume 1", []argument{desc("[P7]"), uic(0o300, 0o301), word(0x000F), word(0x0000), word(2), word(1)}, false},
+	{"a seventh argument (initial allocation?)", []argument{desc("[P8]"), omitted(), omitted(), omitted(), omitted(), omitted(), long(4)}, false},
+	{"a device by logical name", []argument{desc("CRDDEV:[P10]")}, false},
+	{"UIC format", []argument{desc("[123,321]")}, false},
+	{"UIC format with owner-UIC", []argument{desc("[1,4]"), uic(0o200, 0o201)}, false},
+	{"relative to the default", []argument{desc("[.SUBREL]")}, false},
+	{"relative, above the MFD", []argument{desc("[-.UP]")}, false},
+	{"no directory", []argument{desc("CRDDEV:")}, false},
+	{"a directory from a logical name only", []argument{desc("CRDLOG:")}, false},
+	{"a file name", []argument{desc("[P1]X.DAT")}, false},
+	{"a version", []argument{desc("[P1];1")}, false},
+	{"a wildcard", []argument{desc("[P*]")}, false},
+	{"a node", []argument{desc("NODE::[P9]")}, false},
+	{"no such device", []argument{desc("NOSUCH:[X]")}, false},
+	{"nine levels", []argument{desc("[L1.L2.L3.L4.L5.L6.L7.L8.L9]")}, false},
+	{"a 40-character name", []argument{desc("[ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCD]")}, false},
+	{"a 256-character spec", []argument{long256()}, false},
+	{"no arguments", nil, false},
+	// VMS 7.3 signals an access violation (virtual address 4) here: on the
+	// first run, unhandled, it ended the probe.
+	{"a 0 descriptor address, under LIB$SIG_TO_RET", []argument{nullDescriptor()}, true},
 }
 
 func main() {
@@ -98,7 +103,7 @@ func write(path, text string) {
 }
 
 func probe() string {
-	var data, code strings.Builder
+	var data, code, subs strings.Builder
 
 	for i, c := range cases {
 		n := i + 1
@@ -135,6 +140,13 @@ func probe() string {
 
 		data.WriteString(extra.String())
 
+		if c.handled {
+			fmt.Fprintf(&code, "\tMOVL\t#%d,STEP\n\tCALLS\t#0,C%d\n\tJSB\tSAVE\n", n, n)
+			fmt.Fprintf(&subs, "; %d, with LIB$SIG_TO_RET as its handler.\n\t.ENTRY\tC%d,^M<>\n\tPUSHAB\tG^LIB$SIG_TO_RET\n\tCALLS\t#1,G^LIB$ESTABLISH\n\tCALLG\tA%d,G^LIB$CREATE_DIR\n\tRET\n\n", n, n, n)
+
+			continue
+		}
+
 		fmt.Fprintf(&code, "\tMOVL\t#%d,STEP\n\tCALLG\tA%d,G^LIB$CREATE_DIR\n\tJSB\tSAVE\n", n, n)
 	}
 
@@ -170,8 +182,8 @@ SAVE:	MOVL	R0,STAT
 	$PUT	RAB=ORAB
 	RSB
 
-	.END	LIBCRD
-`, data.String(), code.String())
+%s	.END	LIBCRD
+`, data.String(), code.String(), subs.String())
 }
 
 func procedure() string {

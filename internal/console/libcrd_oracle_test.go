@@ -2,6 +2,7 @@ package console
 
 import (
 	"encoding/binary"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,28 +28,43 @@ var libcrdVAXDisk = func() string {
 	return filepath.Join("..", "..", "testdata", "credir", "vax", "libcrd-vax.dsk.gz")
 }()
 
-// libcrdCaseNames are the probe's cases, from its comments, by number.
-func libcrdCaseNames(t *testing.T) map[uint32]string {
-	t.Helper()
-
-	data, err := os.ReadFile(filepath.Join("..", "..", "testdata", "credir", "libcrd.mar"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
+// libcrdCaseNames are the cases of a probe source, from its comments
+// ("; 3: several levels"), by number.
+func libcrdCaseNames(source string) map[uint32]string {
 	names := map[uint32]string{}
-	n := uint32(0)
 
-	for _, line := range strings.Split(string(data), "\n") {
-		if rest, ok := strings.CutPrefix(line, "; "); ok {
-			if num, text, ok := strings.Cut(rest, ": "); ok && strings.Trim(num, "0123456789") == "" {
-				n++
-				names[n] = text
-			}
+	for _, line := range strings.Split(source, "\n") {
+		rest, ok := strings.CutPrefix(strings.TrimRight(line, "\r"), "; ")
+		if !ok {
+			continue
+		}
+
+		num, text, ok := strings.Cut(rest, ": ")
+		if !ok || num == "" || strings.Trim(num, "0123456789") != "" {
+			continue
+		}
+
+		var n uint32
+		if _, err := fmt.Sscan(num, &n); err == nil {
+			names[n] = text
 		}
 	}
 
 	return names
+}
+
+// libcrdMasked are fields of the directories the probe makes that differ
+// between VMS's and govax's for reasons the documentation doesn't give, by
+// path and field, each with its reason (also in docs/DEVIATIONS.md).
+var libcrdMasked = map[string]map[string]string{
+	"SUBREL": {
+		// VMS 7.3 gave [SUBREL], made by LIB$CREATE_DIR("[.SUBREL]")
+		// with [000000] the default, an MFD entry with a version limit
+		// of 1, where every directory made from an absolute spec (and
+		// every one CREATE/DIRECTORY made relative to a default) got
+		// none. Neither manual says why; govax writes none.
+		"entry-versions": "a VMS quirk the manuals don't explain",
+	},
 }
 
 // libcrdStatuses reads LIBCRD.DMP from device: R0 by case number.
@@ -119,7 +135,12 @@ func runLibcrdProbe(t *testing.T) *Console {
 }
 
 func TestLibCreateDirOracle(t *testing.T) {
-	names := libcrdCaseNames(t)
+	source, err := os.ReadFile(filepath.Join("..", "..", "testdata", "credir", "libcrd.mar"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	names := libcrdCaseNames(string(source))
 
 	c := runLibcrdProbe(t)
 	govax := libcrdStatuses(t, c, "DUA1")
@@ -143,13 +164,48 @@ func TestLibCreateDirOracle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	vms := libcrdStatuses(t, c, "DUA2")
+	// VMS's run may be of an earlier version of the probe, with its cases
+	// in another order: they're matched by name, from the probe source VMS
+	// assembled, which is on its volume. A case VMS never reached (its
+	// first run ended at an unhandled access violation) is reported, not
+	// compared.
+	vmsSource, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA2:[000000]LIBCRD.MAR"}, rms.TextRecords)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	for n := uint32(1); n <= uint32(len(names)); n++ {
-		if vms[n] != govax[n] {
-			t.Errorf("case %d, %s: VMS %#x, govax %#x", n, names[n], vms[n], govax[n])
+	lines := make([]string, len(vmsSource))
+	for i, r := range vmsSource {
+		lines[i] = string(r)
+	}
+
+	vmsByName := map[string]uint32{}
+
+	vmsStatuses := libcrdStatuses(t, c, "DUA2")
+	for n, name := range libcrdCaseNames(strings.Join(lines, "\n")) {
+		if st, ran := vmsStatuses[n]; ran {
+			vmsByName[name] = st
 		}
 	}
 
-	compareDirectories(t, credirDirectories(t, c, "DUA2"), credirDirectories(t, c, "DUA1"), nil)
+	compared := 0
+
+	for n := uint32(1); n <= uint32(len(names)); n++ {
+		v, ran := vmsByName[names[n]]
+		if !ran {
+			t.Logf("case %d, %s: not run on VMS; govax %#x", n, names[n], govax[n])
+
+			continue
+		}
+
+		compared++
+
+		if v != govax[n] {
+			t.Errorf("case %d, %s: VMS %#x, govax %#x", n, names[n], v, govax[n])
+		}
+	}
+
+	t.Logf("compared %d of %d cases with VMS", compared, len(names))
+
+	compareDirectories(t, credirDirectories(t, c, "DUA2"), credirDirectories(t, c, "DUA1"), libcrdMasked)
 }

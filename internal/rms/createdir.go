@@ -61,6 +61,11 @@ type CreateDirectoryOptions struct {
 	ProtectionEnable uint16
 	ProtectionValue  uint16
 
+	// RequireDirectory refuses (ErrNotDirectorySpec) a specification that
+	// names no directory itself, even through a logical name, rather than
+	// taking the default directory: LIB$CREATE_DIR's rule.
+	RequireDirectory bool
+
 	// VolumeOnly makes a specification always mean a mounted volume, never
 	// a host directory: a program's LIB$CREATE_DIR (docs/PHASE-34.md,
 	// Decisions 7). One that reaches no volume is ErrNotDirectorySpec.
@@ -132,11 +137,21 @@ func (s *Session) CreateDirectory(specText string, opts CreateDirectoryOptions) 
 			return nil, fmt.Errorf("create directory: %w", err)
 		}
 
+		// Going up past the MFD ("[-.X]" there) is an error in the
+		// directory name, RMS$_DIR, as VMS reports it.
+		if errors.Is(err, filespec.ErrAboveMFD) {
+			return nil, fmt.Errorf("create directory: %w: %v", volume.ErrDirectoryName, err)
+		}
+
 		return nil, fmt.Errorf("create directory: %w: %v", ErrNotDirectorySpec, err)
 	}
 
 	r := specs[0]
 	spec := r.Spec
+
+	if opts.RequireDirectory && !r.Explicit {
+		return nil, fmt.Errorf("create directory: %s: %w: no directory named", text, ErrNotDirectorySpec)
+	}
 
 	if spec.Recursive || spec.Name != "" || spec.Type != "" || spec.Version != "" {
 		return nil, fmt.Errorf("create directory: %s: %w", text, ErrNotDirectorySpec)

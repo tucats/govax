@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/rtl"
 	"github.com/tucats/ods2/filespec"
@@ -179,17 +180,16 @@ func TestLibCreateDirErrors(t *testing.T) {
 		want uint32
 	}{
 		{"no arguments", nil, libInvArg},
-		{"no descriptor", []uint32{0}, libInvArg},
 		{"too long", []uint32{a.desc("DUA0:[" + strings.Repeat("A", 250) + "]")}, libInvArg},
 		{"no directory", []uint32{a.desc("DUA0:")}, libInvFilSpe},
 		{"file name", []uint32{a.desc("DUA0:[A]X.DAT")}, libInvFilSpe},
 		{"wildcard", []uint32{a.desc("DUA0:[A*]")}, libInvFilSpe},
 		{"node", []uint32{a.desc("NODE::DUA0:[A]")}, libInvFilSpe},
 		{"no volume default", []uint32{a.desc("[A]")}, libInvFilSpe},
-		{"not mounted", []uint32{a.desc("DUB0:[A]")}, rmsDev},
+		{"no such device", []uint32{a.desc("NOSUCH:[A]")}, ssNoSuchDev},
+		{"above the MFD", []uint32{a.desc("DUA0:[-.A]")}, rmsDir},
 		{"nine levels", []uint32{a.desc("DUA0:[L1.L2.L3.L4.L5.L6.L7.L8.L9]")}, rmsDir},
 		{"name too long", []uint32{a.desc("DUA0:[" + strings.Repeat("N", 40) + "]")}, rmsDir},
-		{"unreadable owner", []uint32{a.desc("DUA0:[A]"), 0x7FFF0000}, ssAccVio},
 	}
 
 	for _, tt := range tests {
@@ -206,5 +206,57 @@ func TestLibCreateDirErrors(t *testing.T) {
 	ro := createDirFixture(t, true)
 	if r0 := call(t, ro, "LIB$CREATE_DIR", newArena(t, ro).desc("DUA0:[A]")); r0 != ssWritLck {
 		t.Errorf("read-only volume: %#x, want SS$_WRITLCK", r0)
+	}
+}
+
+// TestLibCreateDirAccessViolation: an argument LIB$CREATE_DIR can't read,
+// a 0 descriptor address among them, is an access violation it signals,
+// not a status. (This fixture has no SYS$SRCHANDLER stub to signal
+// through, so the signal fails with an error; the probe's replay checks
+// the signal itself, under a handler.)
+func TestLibCreateDirAccessViolation(t *testing.T) {
+	env := createDirFixture(t, false)
+	a := newArena(t, env)
+	fn, _ := env.Shims().Lookup(39)
+
+	for name, argv := range map[string][]uint32{
+		"0 descriptor":     {0},
+		"unreadable owner": {a.desc("DUA0:[A]"), 0x7FFF0000},
+	} {
+		if _, err := fn(env, argv); err == nil || !strings.Contains(err.Error(), "signal") {
+			t.Errorf("%s: err = %v, want a signal", name, err)
+		}
+	}
+}
+
+// TestLibCreateDirLogicalAndAllocation: a directory named only through a
+// logical name counts as named (VMS made [PLOG] from "CRDLOG:"), and a
+// seventh argument is the initial allocation (VMS gave [P8] 4 blocks).
+func TestLibCreateDirLogicalAndAllocation(t *testing.T) {
+	env := createDirFixture(t, false)
+	a := newArena(t, env)
+
+	for name, value := range map[string]string{"CRDLOG": "DUA0:[PLOG]", "CRDDEV": "DUA0:"} {
+		if _, err := env.Logicals.Define(lnm.ProcessTableName, name, lnm.Supervisor, 0, []lnm.Equivalence{{Value: value}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if r0 := call(t, env, "LIB$CREATE_DIR", a.desc("CRDLOG:")); r0 != ssCreated {
+		t.Errorf("CRDLOG: = %#x, want SS$_CREATED", r0)
+	}
+
+	dirHeader(t, env, "PLOG")
+
+	if r0 := call(t, env, "LIB$CREATE_DIR", a.desc("CRDDEV:")); r0 != libInvFilSpe {
+		t.Errorf("CRDDEV: (no directory) = %#x, want LIB$_INVFILSPE", r0)
+	}
+
+	if r0 := call(t, env, "LIB$CREATE_DIR", a.desc("DUA0:[P8]"), 0, 0, 0, 0, 0, a.long(4)); r0 != ssCreated {
+		t.Fatalf("[P8] = %#x, want SS$_CREATED", r0)
+	}
+
+	if h := dirHeader(t, env, "P8"); h.RecordAttributes.HighestBlock != 4 {
+		t.Errorf("[P8] has %d blocks, want 4", h.RecordAttributes.HighestBlock)
 	}
 }

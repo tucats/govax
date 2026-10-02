@@ -19,18 +19,21 @@ import (
 //
 //	LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
 //	               [,protection-value] [,maximum-versions]
-//	               [,relative-volume-number]
+//	               [,relative-volume-number] [,initial-allocation]
 //
 // It creates the directory the specification names, and every missing
 // directory above it, on a mounted volume. The directories themselves are
-// made as CREATE/DIRECTORY makes them (rms.Session.CreateDirectory).
+// made as CREATE/DIRECTORY makes them (rms.Session.CreateDirectory). The
+// seventh argument isn't in the VMS 5.0 manual, but VMS 7.3 takes it: the
+// probe's call with a longword 4 there made a 4-block directory.
 
 // Statuses LIB$CREATE_DIR returns.
 var (
 	ssCreated    = vmsdef.Symbols["SS$_CREATED"]
 	ssWritLck    = vmsdef.Symbols["SS$_WRITLCK"]
+	ssNoSuchDev  = vmsdef.Symbols["SS$_NOSUCHDEV"]
+	ssDevNotMnt  = vmsdef.Symbols["SS$_DEVNOTMOUNT"]
 	rmsDir       = vmsdef.Symbols["RMS$_DIR"]
-	rmsDev       = vmsdef.Symbols["RMS$_DEV"]
 	rmsCre       = vmsdef.Symbols["RMS$_CRE"]
 	libInvArg    = vmsdef.LibrarySymbols["LIB$_INVARG"]
 	libInvFilSpe = vmsdef.LibrarySymbols["LIB$_INVFILSPE"]
@@ -60,31 +63,43 @@ var uicDirectory = regexp.MustCompile(`^([^\[<]*)[\[<]([0-7]+),([0-7]+)[\]>]$`)
 //     default limit, 0 no limit.
 //   - relative-volume-number (a word by reference): govax's volumes are
 //     single, so it has no effect.
+//   - initial-allocation (a longword by reference): the blocks to give each
+//     new directory; omitted or 0, one.
 //
 // It returns SS$_CREATED when it made any directory and SS$_NORMAL when
-// all of them existed. Otherwise the status says why, as $PARSE or the
-// file system would: RMS$_DIR for a name too long or a path too deep,
-// RMS$_DEV for a device that isn't mounted, SS$_WRITLCK for a volume
-// mounted read-only, SS$_ACCVIO for an argument it can't read.
+// all of them existed. Otherwise the status says why, as VMS 7.3 returned
+// it on the probe (testdata/credir/libcrd.mar): RMS$_DIR for a name too
+// long, a path too deep, or one above the MFD; SS$_NOSUCHDEV for a device
+// that doesn't exist (SS$_DEVNOTMOUNT for one that isn't mounted);
+// SS$_WRITLCK for a volume mounted read-only. A directory named only
+// through a logical name ("CRDLOG:", for "DUA1:[PLOG]") counts as named.
+// An argument it can't read -- a 0 descriptor address included -- isn't a
+// status: VMS signals an access violation, and so does govax.
 func libCreateDir(env *rtl.Environment, argv []uint32) (uint32, error) {
-	descAddr := arg(argv, 0)
-	if descAddr == 0 {
+	if len(argv) == 0 {
 		return libInvArg, nil
+	}
+
+	// VMS reads the descriptor without checking its address: a 0 address
+	// is an access violation at 4, where its string pointer would be.
+	descAddr := argv[0]
+	if descAddr == 0 {
+		return accessViolation(env, 4)
 	}
 
 	spec, ok, err := env.StringDescriptor(descAddr, maxDirectorySpec)
 
 	switch {
 	case err != nil:
-		return ssAccVio, nil
+		return accessViolation(env, descAddr)
 	case !ok:
 		return libInvArg, nil
 	}
 
-	opts := rms.CreateDirectoryOptions{VolumeOnly: true}
+	opts := rms.CreateDirectoryOptions{VolumeOnly: true, RequireDirectory: true}
 
-	if status := readCreateDirArgs(env, argv, &opts); status != 0 {
-		return status, nil
+	if bad, unreadable := readCreateDirArgs(env, argv, &opts); unreadable {
+		return accessViolation(env, bad)
 	}
 
 	spec, status := uicFormat(spec, &opts)
@@ -92,15 +107,13 @@ func libCreateDir(env *rtl.Environment, argv []uint32) (uint32, error) {
 		return status, nil
 	}
 
-	// The specification must name a directory itself: without one, RMS
-	// would fill in the default, which the manual doesn't allow.
-	if !strings.ContainsAny(spec, "[<") || strings.Contains(spec, "::") {
+	if strings.Contains(spec, "::") {
 		return libInvFilSpe, nil
 	}
 
 	created, err := session(env).CreateDirectory(spec, opts)
 	if err != nil {
-		return createDirStatus(err), nil
+		return createDirStatus(env, err), nil
 	}
 
 	for _, c := range created {
@@ -112,56 +125,76 @@ func libCreateDir(env *rtl.Environment, argv []uint32) (uint32, error) {
 	return ssNormal, nil
 }
 
-// readCreateDirArgs reads LIB$CREATE_DIR's optional arguments into opts,
-// returning SS$_ACCVIO for one it can't read and 0 otherwise.
-func readCreateDirArgs(env *rtl.Environment, argv []uint32, opts *rms.CreateDirectoryOptions) uint32 {
+// accessViolation signals SS$_ACCVIO for a read at va (reason mask 0), as
+// the hardware would have had LIB$CREATE_DIR touched it on VMS. The
+// signal array is the hardware's: the condition, the reason, the address,
+// then the PC and PSL.
+func accessViolation(env *rtl.Environment, va uint32) (uint32, error) {
+	return env.Signal([]uint32{ssAccVio, 0, va}, false)
+}
+
+// readCreateDirArgs reads LIB$CREATE_DIR's optional arguments into opts.
+// If one can't be read, it returns that argument's address and true.
+func readCreateDirArgs(env *rtl.Environment, argv []uint32, opts *rms.CreateDirectoryOptions) (uint32, bool) {
 	mem, cpu := env.Memory(), env.CPU()
 
-	if a := arg(argv, 1); a != 0 {
-		uic, err := mem.LoadLongword(cpu, a)
-		if err != nil {
-			return ssAccVio
+	word := func(i int) (uint16, bool, bool) {
+		a := arg(argv, i)
+		if a == 0 {
+			return 0, false, false
 		}
 
-		if uic != 0 {
-			opts.Owner = &ondisk.Uic{Group: uint16(uic >> 16), Member: uint16(uic)}
-		}
+		v, err := mem.LoadWord(cpu, a)
+
+		return v, true, err != nil
 	}
 
-	if a := arg(argv, 2); a != 0 {
-		enable, err := mem.LoadWord(cpu, a)
-		if err != nil {
-			return ssAccVio
+	long := func(i int) (uint32, bool, bool) {
+		a := arg(argv, i)
+		if a == 0 {
+			return 0, false, false
 		}
 
+		v, err := mem.LoadLongword(cpu, a)
+
+		return v, true, err != nil
+	}
+
+	if uic, given, bad := long(1); bad {
+		return arg(argv, 1), true
+	} else if given && uic != 0 {
+		opts.Owner = &ondisk.Uic{Group: uint16(uic >> 16), Member: uint16(uic)}
+	}
+
+	if enable, _, bad := word(2); bad {
+		return arg(argv, 2), true
+	} else {
 		opts.ProtectionEnable = enable
 	}
 
-	if a := arg(argv, 3); a != 0 {
-		value, err := mem.LoadWord(cpu, a)
-		if err != nil {
-			return ssAccVio
-		}
-
+	if value, _, bad := word(3); bad {
+		return arg(argv, 3), true
+	} else {
 		opts.ProtectionValue = value
 	}
 
-	if a := arg(argv, 4); a != 0 {
-		limit, err := mem.LoadWord(cpu, a)
-		if err != nil {
-			return ssAccVio
-		}
-
+	if limit, given, bad := word(4); bad {
+		return arg(argv, 4), true
+	} else if given {
 		opts.VersionLimit = &limit
 	}
 
-	if a := arg(argv, 5); a != 0 {
-		if _, err := mem.LoadWord(cpu, a); err != nil {
-			return ssAccVio
-		}
+	if _, _, bad := word(5); bad { // relative-volume-number: no effect
+		return arg(argv, 5), true
 	}
 
-	return 0
+	if blocks, _, bad := long(6); bad {
+		return arg(argv, 6), true
+	} else {
+		opts.Allocation = blocks
+	}
+
+	return 0, false
 }
 
 // uicFormat rewrites a directory in UIC format, [g,m], as the directory it
@@ -199,7 +232,7 @@ func session(env *rtl.Environment) *rms.Session {
 }
 
 // createDirStatus is the status for err, a directory that couldn't be made.
-func createDirStatus(err error) uint32 {
+func createDirStatus(env *rtl.Environment, err error) uint32 {
 	var notMounted *rms.NotMountedError
 
 	switch {
@@ -210,7 +243,13 @@ func createDirStatus(err error) uint32 {
 	case errors.Is(err, rms.ErrACPWriteLocked):
 		return ssWritLck
 	case errors.As(err, &notMounted):
-		return rmsDev
+		if env.Devices != nil {
+			if _, known := env.Devices.Find(notMounted.Device); known {
+				return ssDevNotMnt
+			}
+		}
+
+		return ssNoSuchDev
 	}
 
 	return rmsCre

@@ -557,3 +557,33 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
   `testdata/credir/vax/`; until then it logs govax's statuses and skips.
   The header comparison is shared with `TestCreateDirectoryOracle`
   (`compareDirectories`).
+- 2026-10-01: Subtask 14: the probe's VMS 7.3 run
+  (`testdata/credir/vax/libcrd-vax.dsk.gz`). It ended at case 33, a 0
+  descriptor address: VMS **signals an access violation** (VA 4) rather
+  than returning a status. Of the 32 cases before it, govax differed on
+  five, now matching:
+  - `[-.UP]` above the MFD is RMS$_DIR (ods2 `filespec.ErrAboveMFD`,
+    `fa56922`, mapped to `volume.ErrDirectoryName` by `rms`).
+  - `CRDLOG:`, a directory only through a logical name, counts as named
+    and is created; `CRDDEV:`, a device only, is still LIB$_INVFILSPE.
+    `rms` records whether a translation names a directory
+    (`resolvedSpec.Explicit`) and `CreateDirectoryOptions.RequireDirectory`
+    replaces librtl's bracket test.
+  - `NOSUCH:[X]` is SS$_NOSUCHDEV (SS$_DEVNOTMOUNT for a known device that
+    isn't mounted), not RMS$_DEV.
+  - A **seventh argument** is the initial allocation: VMS gave `[P8]` 4
+    blocks for a longword 4 there. govax reads it as a longword by
+    reference.
+  - An unreadable argument, a 0 descriptor address included, signals
+    SS$_ACCVIO (reason 0, the address) through rtl's `Signal`, the
+    hardware's signal array.
+  - Every owner, protection (the manual's %XDBFF/%X37FF example too), and
+    version limit matched. One field doesn't, masked and logged in
+    DEVIATIONS.md: `[SUBREL]`'s MFD entry has a version limit of 1 on VMS.
+  - **The probe** now runs "no arguments" next to last and the 0
+    descriptor last, in a subroutine that establishes LIB$SIG_TO_RET, so
+    the access violation comes back as SS$_ACCVIO (govax: 0xC). The test
+    matches cases by name, from the `LIBCRD.MAR` on VMS's volume, so the
+    first run still checks its 32; the two it never reached are logged.
+    The exchange volume is rebuilt for a run of the current probe, which
+    would check those two.

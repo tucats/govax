@@ -57,6 +57,12 @@ type resolvedSpec struct {
 	// logical name when the translation went through one, Spec.Device
 	// otherwise.
 	Display string
+
+	// Explicit reports that the specification, once its logical names
+	// were translated, named a directory itself, rather than taking the
+	// default's: "[A]" or "DISK:" where DISK translates to "DUA1:[A]",
+	// but not "DUA1:".
+	Explicit bool
 }
 
 // translateSpec returns text's logical-name translations in search order
@@ -193,7 +199,7 @@ func expandSpec(db *lnm.Database, text string, base filespec.Spec) ([]resolvedSp
 				display = f.Concealed
 			}
 
-			out = append(out, resolvedSpec{Spec: spec, Display: display})
+			out = append(out, resolvedSpec{Spec: spec, Display: display, Explicit: strings.ContainsAny(f.Spec, "[<")})
 		}
 	}
 

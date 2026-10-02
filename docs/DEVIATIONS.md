@@ -2309,6 +2309,21 @@ widened."
   open question). The protection column, `(RWE,RWE,RE,E)`, is VMS's.
 - **Status**: deferred: govax has no rights database to name UICs from.
 
+### [Phase 34] LIB$CREATE_DIR's relative directory got an entry limit of 1
+
+- **Where**: `internal/librtl/createdir.go`, against the LIB$CREATE_DIR
+  probe (`testdata/credir/libcrd.mar`, VMS 7.3's first run).
+- **What**: `LIB$CREATE_DIR("[.SUBREL]")`, with `[000000]` the default
+  directory, made `[SUBREL]` with an MFD entry whose version limit is 1.
+  Every directory made from an absolute specification got an entry with
+  no limit, as did those `CREATE/DIRECTORY` made relative to a default
+  (`[.SUB]`, `[-.SIBLING]`). The directory file itself (its default limit
+  for files) is the same either way. Neither the LIB$ manual nor the DCL
+  dictionary explains it; 1 is the limit on the MFD's own entry,
+  `000000.DIR;1`, which may be where it comes from.
+- **Status**: deferred: govax writes no limit. `TestLibCreateDirOracle`
+  masks the field for `[SUBREL]`.
+
 <!--
 Entry template:
 
