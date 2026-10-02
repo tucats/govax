@@ -1,0 +1,72 @@
+	.TITLE	ASM35	Phase 35 assembler fixture
+	.IDENT	/V1.0/
+
+; The Phase 35 directives and immediate operands, assembled by VAX MACRO
+; on VMS so govax's MACRO can be checked against its object byte for
+; byte (testdata/insn35/README.md). Every line is something govax's
+; assembler had to decide without seeing VAX MACRO's output.
+
+	.PSECT	DATA,NOEXE,WRT,LONG
+
+; Floating data in each format, rounded once from the decimal value.
+F1:	.F_FLOATING	1.1, -0.5, 120
+D1:	.D_FLOATING	1.1, 0.333333333333333333333333333333
+G1:	.G_FLOATING	1.1, -0.5, 1.0E300
+H1:	.H_FLOATING	1.1, -0.5, 1.0E4000
+
+; Quadwords and octawords: a negative number, a full-width number, and a
+; symbol with a negative value.
+NEG = -3
+Q1:	.QUAD	-1
+Q2:	.QUAD	^X0123456789ABCDEF
+Q3:	.QUAD	NEG
+O1:	.OCTA	-1
+O2:	.OCTA	^X0123456789ABCDEF0123456789ABCDEF
+O3:	.OCTA	NEG
+
+; Packed decimal: the MACRO manual's examples, and more.
+P1:	.PACKED	-12,P1_LEN
+P2:	.PACKED	+500
+P3:	.PACKED	0
+P4:	.PACKED	-0,P4_LEN
+P5:	.PACKED	123
+P6:	.PACKED	1234567890123456789012345678901,P6_LEN
+	.LONG	P1_LEN, P4_LEN, P6_LEN
+
+	.PSECT	CODE,EXE,NOWRT,LONG
+	.ENTRY	ASM35,^M<>
+
+; Wide immediates: a negative number, a negative symbol, an expression.
+	MOVQ	#-1,R0
+	MOVQ	#NEG,R0
+	MOVQ	#<0-2>,R0
+	MOVQ	#^X123456789,R0
+	MOVO	#-1,R0
+	MOVO	#NEG,R0
+
+; Floating immediates and literals in each format.
+	MOVF	#1.1,R0
+	MOVD	#1.1,R0
+	MOVG	#1.1,R0
+	MOVH	#1.1,R0
+	MOVG	#0.5,R0
+	MOVH	#120.0,R0
+	ADDG2	#3,R0
+
+; Integer operands of floating instructions take integer literals.
+	CVTLG	#3,R0
+	EMODG	#1.0,#5,#1.0,R0,R2
+	POLYH	#0.5,#2,G1
+
+; A floating operand given as a symbol: the MACRO manual says its value
+; is used as the floating bits, unconverted.
+PI = ^X40490FDB
+	MOVF	#PI,R0
+	MOVD	#PI,R0
+	MOVG	#PI,R0
+	MOVH	#PI,R0
+
+	MOVL	#1,R0
+	RET
+
+	.END	ASM35

@@ -99,3 +99,24 @@ POLY leave operand addresses in R1, R3, and R5), and a signal array holds
 the PC. They match VMS's only if govax's MACRO and LINK lay the image out
 as VMS's do; subtask 14 checks that, or compares them relative to their
 labels.
+
+## The assembler fixture
+
+`asm/` holds a second, smaller VMS run: `asm35.mar`, assembled by VAX
+MACRO so govax's MACRO can be compared with its object byte for byte. It
+covers what govax's assembler had to decide in Phase 35 without VAX
+MACRO's output to go by: `.F_FLOATING` through `.H_FLOATING`, `.QUAD`
+and `.OCTA` of negative values and symbols, `.PACKED` (signed, unsigned,
+`-0`, 31 digits, and its length symbol), quadword and octaword immediates
+of negative expressions, floating literals and immediates in each format,
+integer literals on floating instructions, and floating operands given
+as symbols (which govax doesn't assemble yet).
+
+1. Build its exchange volume, from the repository root:
+
+       govax console < testdata/insn35/asm/exchange.cmd
+
+   This makes `testdata/disks/asm35-exchange.dsk` (label ASM35).
+2. On VMS, mount it, set its `[000000]` as the default directory, and
+   run `@ASM35/OUTPUT=ASM35.LOG`.
+3. Copy the container back, gzipped, as `asm/vax/asm35-vax.dsk.gz`.
