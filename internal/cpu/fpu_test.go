@@ -2,7 +2,6 @@ package cpu
 
 import (
 	"errors"
-	"math"
 	"testing"
 )
 
@@ -258,37 +257,3 @@ func TestFpuLoadZero(t *testing.T) {
 	}
 }
 
-func TestLoadFloatShortLiteralIsPreDecoded(t *testing.T) {
-	// decodeOperand stores a short-literal float operand's value as
-	// math.Float64bits directly (already an IEEE double, not VAX F/D
-	// bits) -- loadFloat must read it straight through, not via fpuLoad.
-	cpu, mem := fixture()
-	op := Operand{Kind: OperandImmediate, Value: math.Float64bits(0.5), Size: 4}
-
-	got, err := loadFloat(cpu, mem, op)
-	if err != nil {
-		t.Fatalf("loadFloat: %v", err)
-	}
-
-	if got != 0.5 {
-		t.Errorf("loadFloat(short literal 0.5) = %v, want 0.5", got)
-	}
-}
-
-func TestStoreFloatRegisterRoundTrip(t *testing.T) {
-	cpu, mem := fixture()
-
-	op := Operand{Kind: OperandRegister, Reg: 1, Size: 4, Access: AccessWrite}
-	if err := storeFloat(cpu, mem, op, 2.0); err != nil {
-		t.Fatalf("storeFloat: %v", err)
-	}
-
-	got, err := loadFloat(cpu, mem, Operand{Kind: OperandRegister, Reg: 1, Size: 4, Access: AccessRead})
-	if err != nil {
-		t.Fatalf("loadFloat: %v", err)
-	}
-	
-	if got != 2.0 {
-		t.Errorf("round trip via storeFloat/loadFloat = %v, want 2.0", got)
-	}
-}

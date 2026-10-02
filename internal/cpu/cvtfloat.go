@@ -1,26 +1,29 @@
 package cpu
 
-import "math"
+import (
+	"math/big"
 
-// This is the Go port of emul_float_math.c's conversion paths (func 4/5):
-// float->integer (CVTFB/CVTFW/CVTFL/CVTRFL and D-floating counterparts) and
-// integer->float (CVTBF/CVTWF/CVTLF and D-floating counterparts).
+	"github.com/tucats/govax/internal/vaxfloat"
+)
+
+// CVT between the floating formats and integers, and between floating
+// formats (originally the port of emul_float_math.c's conversion paths,
+// for F and D). Every handler works for any format: the operands' data
+// types say which.
 //
-// Two confirmed fixes along the way (docs/DEVIATIONS.md): the shared C
-// handler's float->integer case always reads its source as a single 4-byte
-// F_FLOAT longword regardless of dsize, which would read only half of an
-// 8-byte D_FLOAT source for CVTDB/CVTDW/CVTDL/CVTRDL (dead code in the C
-// reference, since those opcodes are never dispatched there -- see
-// docs/PHASE-05.md's design notes -- but a real bug had they been); and
-// CVTRFL/CVTRDL (func==4, dsize2==3) fall through the C switch's default
-// case and always fault EXC_PRIV instead of rounding. Both fixed directly:
-// loadFloat already dispatches on the source operand's own declared size,
-// and emulCvtRoundFloatToInt implements real round-to-nearest.
+// The manual's CVT: N and Z from the destination, V set on integer
+// overflow, C cleared. A conversion to an integer truncates toward zero
+// (CVTRxL rounds, half away from zero); on overflow the destination gets
+// the low-order bits of the true result, V is set, and, if PSL<IV> is set,
+// an integer overflow trap follows. A conversion to a floating format is
+// exact or rounded as the formats allow; one that narrows can overflow (a
+// fault) or underflow (zero, or a fault with PSL<FU>).
 
 func init() {
 	reg := func(fn byte, h Handler) {
 		instructionTable.SetHandler(instructionTable.Lookup(Opcode{Function: fn}), h)
 	}
+
 	for _, fn := range []byte{0x48, 0x49, 0x4A, 0x68, 0x69, 0x6A} { // CVTFB/W/L, CVTDB/W/L
 		reg(fn, emulCvtFloatToInt)
 	}
@@ -28,103 +31,101 @@ func init() {
 	for _, fn := range []byte{0x4B, 0x6B} { // CVTRFL, CVTRDL
 		reg(fn, emulCvtRoundFloatToInt)
 	}
-	
-	for _, fn := range []byte{0x4C, 0x4D, 0x4E, 0x6C, 0x6D, 0x6E} { // CVTBF/W/L, CVTBD/W/L/CVTLD
+
+	for _, fn := range []byte{0x4C, 0x4D, 0x4E, 0x6C, 0x6D, 0x6E} { // CVTBF/W/L, CVTBD/W/L
 		reg(fn, emulCvtIntToFloat)
 	}
+
+	reg(0x56, emulCvtFloatToFloat) // CVTFD
+	reg(0x76, emulCvtFloatToFloat) // CVTDF
 }
 
-// intOverflowBounds returns the signed range representable at size bytes
-// (1, 2, or 4), per the VAX ISA manual's §8.3 "Data Types" -- the named
-// byteMin/Max/wordMin/Max/longMin/Max constants in fpu.go, already fixed
-// per reference/eVAX/AUDIT.md's N2 finding.
-func intOverflowBounds(size int) (minValue, maxValue float64) {
-	switch size {
-	case 1:
-		return byteMin, byteMax
-
-	case 2:
-		return wordMin, wordMax
-
-	case 4:
-		return longMin, longMax
-
-	default:
-		panic("cpu: unsupported integer conversion size")
-	}
-}
-
-// cvtFloatToInt is emulCvtFloatToInt/emulCvtRoundFloatToInt's shared body:
-// load the float source, optionally round, range-check against the
-// destination's integer bounds (faulting -- always synchronous, matching
-// fpu_store's own overflow handling, never just a set-and-continue V bit --
-// on overflow, matching the manual and, for the non-rounding forms, the C
-// source's own behavior), and store the truncated result. N/Z come from the
-// destination value, V/C are always false on the surviving path (matches
-// the C source's SETCONDITIONBITS(d1, 0L) idiom for N/Z; V/C are always 0
-// here since overflow diverts to a fault rather than ever setting V).
+// cvtFloatToInt is CVTxB/W/L and CVTRxL's shared body.
 func cvtFloatToInt(e *Engine, d *Decoded, round bool) error {
-	src := d.Operands[0]
-	dst := d.Operands[1]
-
-	value, err := loadFloat(e.cpu, e.mem, src)
+	value, err := e.loadFloat(d, 0)
 	if err != nil {
 		return err
 	}
-	// The bounds check compares the pre-truncation value (matching the C
-	// source's already-N2-fixed style -- compare the raw float against
-	// exact integer min/max literals, not the post-truncation result) --
-	// but the *rounded* value for CVTRFL/CVTRDL, since rounding can itself
-	// push an in-range value out of range (e.g. word max 32767.6 rounds to
-	// 32768, which overflows even though 32767.6 alone wouldn't have).
-	if round {
-		value = math.Round(value) // VAX round-to-nearest: ties away from zero, matching math.Round.
+
+	dst := d.Operands[1]
+	exact := value.Int(round)
+	result, overflow := lowOrderBits(exact, dst.Size)
+
+	setArithPSL(e.cpu, result, overflow, false, dst.Size)
+
+	if err := dst.Store(e.cpu, e.mem, result); err != nil {
+		return err
 	}
 
-	minSize, maxSize := intOverflowBounds(dst.Size)
-	if value < minSize || value > maxSize {
-		return &Fault{Code: ExcArithmetic, Args: []uint32{trapIntOvf}}
+	if overflow && e.cpu.PSL().IV() {
+		return e.arithmeticTrap(trapIntOvf)
 	}
 
-	result := maskToSize(int64(value), dst.Size)
-	setArithPSL(e.cpu, result, false, false, dst.Size)
-
-	return dst.Store(e.cpu, e.mem, result)
+	return nil
 }
 
-// emulCvtFloatToInt is CVTFB/CVTFW/CVTFL/CVTDB/CVTDW/CVTDL: truncate toward
-// zero.
+// lowOrderBits returns the low size bytes of the two's complement integer
+// i, and whether i is outside the signed range of that size (an integer
+// overflow).
+func lowOrderBits(i *big.Int, size int) (uint64, bool) {
+	bits := uint(8 * size)
+	limit := new(big.Int).Lsh(big.NewInt(1), bits-1)
+	overflow := i.Cmp(limit) >= 0 || i.Cmp(new(big.Int).Neg(limit)) < 0
+
+	// And with a mask works on a negative big.Int as on its infinite
+	// two's complement form, so this is the low-order bits either way.
+	mask := new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), bits), big.NewInt(1))
+
+	return new(big.Int).And(i, mask).Uint64(), overflow
+}
+
+// emulCvtFloatToInt is CVTxB, CVTxW, and CVTxL: truncate toward zero.
 func emulCvtFloatToInt(e *Engine, d *Decoded) error {
 	return cvtFloatToInt(e, d, false)
 }
 
-// emulCvtRoundFloatToInt is CVTRFL/CVTRDL: round to nearest, halfway cases
-// away from zero -- unimplemented in the C reference (see this file's
-// package comment); implemented fresh from the manual.
+// emulCvtRoundFloatToInt is CVTRxL: round to the nearest integer, half
+// away from zero.
 func emulCvtRoundFloatToInt(e *Engine, d *Decoded) error {
 	return cvtFloatToInt(e, d, true)
 }
 
-// emulCvtIntToFloat is CVTBF/CVTWF/CVTLF/CVTBD/CVTWD/CVTLD: the source
-// integer, sign-extended, converted exactly to float64 (always exact --
-// every representable byte/word/long value fits well within float64's
-// 53-bit exact-integer range) and stored as F_floating/D_floating per the
-// destination's own declared size. N/Z from the result, V/C always false
-// (matches the C source's SETCONDITIONBITS(d1, 0L) plus its explicit
-// vax.pslw.v = 0 -- confirmed not a bug: an exact int->float conversion in
-// this range can never overflow or need a carry).
+// emulCvtIntToFloat is CVTBx, CVTWx, and CVTLx: the sign-extended integer,
+// rounded to the destination's format (only CVTLF can need rounding: a
+// longword has more bits than F_floating's 24).
 func emulCvtIntToFloat(e *Engine, d *Decoded) error {
 	src := d.Operands[0]
-	dst := d.Operands[1]
 
 	raw, err := src.Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
 
-	value := float64(signExtend(raw, src.Size))
+	result, err := e.roundFloat(d, 1, vaxfloat.FromInt(signExtend(raw, src.Size)))
+	if err != nil {
+		return err
+	}
 
-	setFloatPSL(e.cpu, value)
-	
-	return storeFloat(e.cpu, e.mem, dst, value)
+	setFloatCC(e.cpu, result, false)
+
+	return e.storeFloat(d, 1, result)
+}
+
+// emulCvtFloatToFloat is a conversion between floating formats: CVTFD
+// (exact), CVTDF (rounded, and can overflow when a value just under 2^127
+// rounds up), and in later subtasks the G and H conversions.
+func emulCvtFloatToFloat(e *Engine, d *Decoded) error {
+	value, err := e.loadFloat(d, 0)
+	if err != nil {
+		return err
+	}
+
+	result, err := e.roundFloat(d, 1, value)
+	if err != nil {
+		return err
+	}
+
+	setFloatCC(e.cpu, result, false)
+
+	return e.storeFloat(d, 1, result)
 }

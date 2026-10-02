@@ -531,3 +531,33 @@ The author accepted each proposal below on 2026-10-02.
     takes 200-280 ns and 15-18 allocations on the author's machine (F
     add 206 ns, H multiply 282 ns). That's acceptable; no F/D fast path
     unless a real program shows the cost.
+- 2026-10-02: Subtask 5 done: F and D on the floating core.
+  - **Decode**: `decodeOperand` takes each operand's `DataType` instead of
+    the instruction's short-literal type. A floating short literal is
+    expanded to its value's bits in the operand's own format (so the same
+    literal differs in F, G, and H), and a floating immediate stays as its
+    raw bits; neither is converted to IEEE bits any more. EMODF's
+    extension byte and POLYF's degree word, as literals, are integers.
+  - **`fpu.go`** is now the CPU's side of `internal/vaxfloat`:
+    `Engine.loadFloat`/`storeFloat` by operand and format (16-byte H
+    operands through the octaword paths), `floatException` (reserved
+    operand; overflow, divide by zero, and, under PSL<FU>, underflow
+    faults; underflow with FU clear stores zero), and `arithmeticTrap`, a
+    trap whose saved PC is the next instruction's.
+  - **Handlers**, each format-generic so subtasks 6-7 only register G and
+    H opcodes: ADD/SUB/MUL/DIV (`floatArithmetic`), MOV, MNEG (now clears
+    C), CMP, TST, ACB, and CVT to and from integers (overflow: low-order
+    bits, V, and an integer-overflow trap only under IV) and between
+    formats: **CVTFD and CVTDF are new**.
+  - **Assembler**: `cpu.EncodeFloat`/`DecodeFloat` take a
+    `vaxfloat.Format`; the assembler still picks F or D by size, and
+    still parses decimal literals through `float64` (so `MOVD #1.1` is
+    3 bits off VMS's encoding), until subtask 6.
+  - **Against VMS**: run under govax, the F/D probe matches VMS's records
+    exactly (results, condition codes, conditions) on every case but
+    EMOD/POLY (subtasks 8-9) and `MOVD #1.1`.
+  - **Tests changed**: the old CVT overflow tests expected a fault on
+    every overflow; they now check the manual's (and VMS's) behavior. The
+    tests' float64 helpers (`fpuStore`/`fpuLoad`) moved to
+    `fpu_helpers_test.go`, on the core. `shortdouble.go`'s table is gone
+    (`vaxfloat.ShortLiteral`).

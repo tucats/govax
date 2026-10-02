@@ -175,19 +175,18 @@ func TestEmulFAddOverflowFaults(t *testing.T) {
 		t.Fatalf("decodeInstruction: %v", err)
 	}
 
-	err = emulFAdd(e, &d)
+	err = instructionTable.HandlerFor(d.Instruction)(e, &d)
 
 	var f *Fault
 
 	if !errors.As(err, &f) || f.Code != ExcArithmetic {
-		t.Fatalf("emulFAdd() = %v, want *Fault{Code: ExcArithmetic} (result exceeds F_floating range)", err)
+		t.Fatalf("ADDF2 = %v, want *Fault{Code: ExcArithmetic} (result exceeds F_floating range)", err)
 	}
 }
 
 func TestEmulFAddShortLiteralSource(t *testing.T) {
-	// A short-literal float source (mode 0-3) arrives pre-decoded as IEEE
-	// double bits, not VAX F_floating bits -- see fpu.go's loadFloat. 0.5 is
-	// exactly representable in shortDouble[64].
+	// A short-literal float source (mode 0-3) is decoded to F_floating
+	// bits, as if read from memory (decodeOperand).
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 	

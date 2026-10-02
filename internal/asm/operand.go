@@ -2,6 +2,7 @@ package asm
 
 import (
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/vaxfloat"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -676,17 +677,17 @@ func (a *Assembler) storeImmediateInt(scale int, value octa) error {
 // literal). Per docs/CLAUDE.md's bug-fixing policy this is fixed here
 // rather than replicated: write exactly 8 bytes and advance by 8.
 func (a *Assembler) storeImmediateFloat(scale int, f float64) error {
-	bits, overflow := cpu.EncodeFloat(scale, f)
+	bits, overflow := cpu.EncodeFloat(sizeFormat(scale), f)
 	if overflow {
 		return vmserrors.New(vmserrors.VAX_FLOATRANGE)
 	}
 
-	if err := a.cur.img.storeLongword(a.pc(), uint32(bits)); err != nil {
+	if err := a.cur.img.storeLongword(a.pc(), uint32(bits.Lo)); err != nil {
 		return err
 	}
 
 	if scale == 8 {
-		if err := a.cur.img.storeLongword(a.pc()+4, uint32(bits>>32)); err != nil {
+		if err := a.cur.img.storeLongword(a.pc()+4, uint32(bits.Lo>>32)); err != nil {
 			return err
 		}
 	}
@@ -694,6 +695,17 @@ func (a *Assembler) storeImmediateFloat(scale int, f float64) error {
 	a.advanceData(uint32(scale))
 
 	return nil
+}
+
+// sizeFormat returns the floating format the assembler takes a floating
+// operand of size bytes to be: F_floating for 4, D_floating for 8. (G and
+// H operands come with their own formats in later Phase 35 subtasks.)
+func sizeFormat(size int) vaxfloat.Format {
+	if size == 8 {
+		return vaxfloat.D
+	}
+
+	return vaxfloat.F
 }
 
 // storeAddrValue parses an absolute address's 4-byte value and writes it,

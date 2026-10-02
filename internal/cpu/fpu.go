@@ -1,229 +1,211 @@
 package cpu
 
 import (
-	"math"
+	"errors"
 
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vaxfloat"
 	"github.com/tucats/govax/internal/vm"
 )
 
-// This is the Go port of fpu.c's fpu_load/fpu_store: VAX F_floating (4-byte)
-// and D_floating (8-byte) conversion to/from a native float64. It is a
-// from-scratch reimplementation of the conversion algorithm using direct bit
-// arithmetic, not a port of fpu.c's byte-shuffle loops -- see
-// docs/PHASE-05.md's design notes for why, and for how the layout below was
-// derived and cross-checked against a standalone C harness built from the
-// real fpu.c.
+// The CPU's side of floating point: loading and storing floating operands,
+// and turning the floating core's conditions into exceptions. The values
+// themselves, their formats, and their arithmetic are internal/vaxfloat's
+// (docs/PHASE-35.md, subtasks 4 and 5); this file only moves bits between
+// operands and that package.
+//
+// An operand's format comes from its data type in the instruction table
+// (Instruction.DataType), never from its size: D_floating and G_floating
+// are both 8 bytes. A floating short literal or immediate operand carries
+// its value as bits in its own format, exactly as if it had been read from
+// memory (decodeOperand does that), so every operand loads the same way.
+//
+// Before Phase 35 the CPU held F and D values as Go float64s. A float64's
+// fraction is 52 bits, three short of D_floating's 55, and it rounds ties
+// to even where the VAX rounds them away from zero, so D values lost
+// their low bits and some results rounded the wrong way
+// (docs/DEVIATIONS.md).
 
-// Floating-exception signal-argument sub-codes, matching fpu.h's FAULT_FLT_*/
-// TRAP_INT_OVF constants (the second signal argument passed to set_fault
-// alongside EXC_ARITH/EXC_RESOP).
+// Arithmetic exception type codes: the parameter of an arithmetic
+// exception (SCB vector ^X34), from the VAX Architecture Reference
+// Manual's table of arithmetic exception types. 1 to 7 are traps (the
+// instruction has completed), 8 to 10 are faults (it hasn't).
 const (
-	trapIntOvf  = 0x01 // TRAP_INT_OVF: integer overflow during a float->int conversion
-	faultFltOvf = 0x08 // FAULT_FLT_OVF: floating overflow (store exponent > 127)
-	faultFltUnd = 0x0A // FAULT_FLT_UND: floating underflow (store exponent < -127), PSL<FU> set
+	trapIntOvf  = 0x01 // integer overflow
+	faultFltOvf = 0x08 // floating overflow
+	faultFltDiv = 0x09 // floating divide by zero
+	faultFltUnd = 0x0A // floating underflow (only when PSL<FU> is set)
 )
 
-// Integer-overflow bounds for float->integer conversion (CVTFB/CVTFW/CVTFL/
-// CVTRFL and their D-floating counterparts), per the VAX ISA manual's §8.3
-// "Data Types" -- named constants per this phase's own deliverable, rather
-// than re-derived ad hoc at each call site. These are the bounds
-// reference/eVAX/AUDIT.md's N2 finding fixed in the C reference (already
-// fixed there; replicated here, not a live bug).
+// Integer bounds, for conversions and quotients that must fit a longword.
 const (
-	byteMin = -128
-	byteMax = 127
-	wordMin = -32768
-	wordMax = 32767
 	longMin = -2147483648
 	longMax = 2147483647
 )
 
-// wordSwap exchanges the upper and lower 16 bits of a 32-bit value -- VAX's
-// floating-point "word-swapped" storage convention: a register or memory
-// longword read as a plain integer has its two conceptual halves in the
-// opposite order from a straightforward sign/exponent/fraction packing.
-func wordSwap(v uint32) uint32 {
-	return v<<16 | v>>16
+// floatFormat returns the floating format of data type t. It panics for a
+// type that isn't floating: the instruction table gives every floating
+// operand a floating type, so that would be a table error.
+func floatFormat(t DataType) vaxfloat.Format {
+	switch t {
+	case DataFFloating:
+		return vaxfloat.F
+	case DataDFloating:
+		return vaxfloat.D
+	case DataGFloating:
+		return vaxfloat.G
+	case DataHFloating:
+		return vaxfloat.H
+	}
+
+	panic("cpu: " + t.String() + " isn't a floating data type")
 }
 
-// fpuStore converts value to VAX F_floating (size 4) or D_floating (size 8)
-// bits, returning them zero-extended in a uint64 the same way Operand.Store
-// expects (low 32 bits = the low-address/low-order longword, high 32 = the
-// high-address/high-order longword, for size 8).
-//
-// Matches fpu_store's algorithm: a zero value short-circuits to all-zero
-// bits; the exponent is checked against VAX's excess-128 8-bit range before
-// biasing, faulting on overflow (always) or underflow (only when PSL<FU> is
-// set -- otherwise flushed to zero, fixing fpu_store's dead-code underflow
-// flush, see docs/PHASE-05.md's design notes); F_floating additionally
-// rounds the 52-bit IEEE mantissa down to F_floating's 23 bits (round the
-// first dropped bit, propagating carry into the exponent -- possibly turning
-// a rounding carry into an overflow fault), matching fpu_store's explicit
-// rounding block.
-func fpuStore(cpu *vax.CPU, size int, value float64) (uint64, error) {
-	bits, underflow, overflow := encodeFloatCore(size, value)
-	if underflow {
-		if cpu.PSL().FU() {
-			return 0, &Fault{Code: ExcArithmetic, Args: []uint32{faultFltUnd}}
+// operandFormat returns the floating format of decoded instruction d's
+// operand i.
+func operandFormat(d *Decoded, i int) vaxfloat.Format {
+	return floatFormat(d.Instruction.DataType[i])
+}
+
+// loadFloatBits reads operand op's raw bits: 16 bytes for H_floating, 8
+// or 4 otherwise.
+func loadFloatBits(cpu *vax.CPU, mem *vm.Memory, op Operand) (vaxfloat.Bits, error) {
+	if op.Size == 16 {
+		o, err := op.LoadOctaword(cpu, mem)
+
+		return vaxfloat.Bits{Lo: o.Lo, Hi: o.Hi}, err
+	}
+
+	raw, err := op.Load(cpu, mem)
+
+	return vaxfloat.Bits{Lo: raw}, err
+}
+
+// loadFloat reads decoded instruction d's operand i as a floating value in
+// its own format. A reserved operand is a reserved-operand fault.
+func (e *Engine) loadFloat(d *Decoded, i int) (vaxfloat.Value, error) {
+	bits, err := loadFloatBits(e.cpu, e.mem, d.Operands[i])
+	if err != nil {
+		return vaxfloat.Value{}, err
+	}
+
+	v, err := vaxfloat.Unpack(operandFormat(d, i), bits)
+	if err != nil {
+		return v, e.floatException(err)
+	}
+
+	return v, nil
+}
+
+// storeFloat writes v to decoded instruction d's operand i, in that
+// operand's format. v should already be rounded to the format (by an
+// arithmetic operation or by roundFloat); if it isn't, it's rounded here.
+func (e *Engine) storeFloat(d *Decoded, i int, v vaxfloat.Value) error {
+	op := d.Operands[i]
+
+	bits, err := vaxfloat.Pack(operandFormat(d, i), v)
+	if err != nil {
+		if err = e.floatException(err); err != nil {
+			return err
+		}
+	}
+
+	if op.Size == 16 {
+		return op.StoreOctaword(e.cpu, e.mem, Octaword{Lo: bits.Lo, Hi: bits.Hi})
+	}
+
+	return op.Store(e.cpu, e.mem, bits.Lo)
+}
+
+// roundFloat rounds v to decoded instruction d's operand i's format, as a
+// conversion does, returning the exception the result causes, if any.
+func (e *Engine) roundFloat(d *Decoded, i int, v vaxfloat.Value) (vaxfloat.Value, error) {
+	r, err := vaxfloat.Round(operandFormat(d, i), v)
+
+	return r, e.floatException(err)
+}
+
+// floatException turns a condition from the floating core into the
+// exception the architecture defines, or nil if there's none: an
+// underflow with PSL<FU> clear isn't an exception, and the result (which
+// the core has already made zero) is stored.
+func (e *Engine) floatException(err error) error {
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, vaxfloat.ErrReserved):
+		return &Fault{Code: ExcReservedOp}
+	case errors.Is(err, vaxfloat.ErrOverflow):
+		return &Fault{Code: ExcArithmetic, Args: []uint32{faultFltOvf}}
+	case errors.Is(err, vaxfloat.ErrDivideByZero):
+		return &Fault{Code: ExcArithmetic, Args: []uint32{faultFltDiv}}
+	case errors.Is(err, vaxfloat.ErrUnderflow):
+		if e.cpu.PSL().FU() {
+			return &Fault{Code: ExcArithmetic, Args: []uint32{faultFltUnd}}
 		}
 
-		return 0, nil
+		return nil
 	}
 
-	if overflow {
-		return 0, &Fault{Code: ExcArithmetic, Args: []uint32{faultFltOvf}}
+	return err
+}
+
+// arithmeticTrap returns an arithmetic trap of type code: an exception
+// taken after the instruction has completed (its results stored and its
+// condition codes set), so the PC saved for it is the next instruction's,
+// not this one's. A handler that continues goes on from there. (A fault,
+// by contrast, saves the instruction's own PC, so it runs again.)
+func (e *Engine) arithmeticTrap(code uint32) error {
+	e.instructionPC = e.cpu.GPR(vax.PC)
+
+	return &Fault{Code: ExcArithmetic, Args: []uint32{code}}
+}
+
+// setFloatCC sets N and Z from v and clears V; it clears C too unless
+// keepC (MOV and ACB leave C alone; the other floating instructions clear
+// it).
+func setFloatCC(cpu *vax.CPU, v vaxfloat.Value, keepC bool) {
+	psl := cpu.PSL()
+	psl.SetN(v.Sign() < 0)
+	psl.SetZ(v.IsZero())
+	psl.SetV(false)
+
+	if !keepC {
+		psl.SetC(false)
 	}
 
-	return bits, nil
+	cpu.SetPSL(psl)
 }
 
-// EncodeFloat is fpuStore's no-CPU sibling, exported for internal/asm's
-// assembler: it needs to encode F_FLOAT/D_FLOAT literals (.F_FLOAT/
-// .D_FLOAT, and floating "#"/"I^#" immediate operands) with no live CPU/PSL
-// to consult for the underflow trap. Underflow always flushes to zero (as
-// it would with PSL<FU> clear); overflow is reported via the bool return
-// instead of a machine fault.
-func EncodeFloat(size int, value float64) (bits uint64, overflow bool) {
-	bits, _, overflow = encodeFloatCore(size, value)
+// EncodeFloat returns x's bits in format f, rounded as the VAX rounds,
+// for internal/asm's floating directives and immediates. A value too large
+// for the format reports overflow; one too small encodes as zero.
+func EncodeFloat(f vaxfloat.Format, x float64) (bits vaxfloat.Bits, overflow bool) {
+	bits, err := vaxfloat.Pack(f, vaxfloat.FromFloat64(x))
 
-	return bits, overflow
+	return bits, errors.Is(err, vaxfloat.ErrOverflow)
 }
 
-// DecodeFloat converts VAX F_floating (size 4) or D_floating (size 8) bits
-// to a float64, exported for internal/asm's disassembler. Unlike fpuLoad, a
-// reserved (malformed) encoding decodes as 0 rather than reporting the
-// reserved-operand fault fpuLoad raises on a live CPU — there's no fault to
-// deliver when just formatting bytes for display, with no CPU at hand.
-func DecodeFloat(bits uint64, size int) float64 {
-	v, err := fpuLoad(bits, size)
+// DecodeFloat returns bits, in format f, as a float64, for internal/asm's
+// disassembler. A reserved operand decodes as 0: there's no fault to take
+// when just formatting bytes for display.
+func DecodeFloat(f vaxfloat.Format, bits vaxfloat.Bits) float64 {
+	v, err := vaxfloat.Unpack(f, bits)
 	if err != nil {
 		return 0
 	}
 
-	return v
+	return v.Float64()
 }
 
-// encodeFloatCore is the pure bit-arithmetic half of VAX F_floating/
-// D_floating encoding, shared by fpuStore (which layers on the CPU-trap
-// semantics for an out-of-range result) and EncodeFloat above. bits is only
-// meaningful when both underflow and overflow are false.
-func encodeFloatCore(size int, value float64) (bits uint64, underflow, overflow bool) {
-	if value == 0 {
-		return 0, false, false
-	}
+// ShortFloat returns the value of floating short literal i (0-63), for
+// internal/asm.
+func ShortFloat(i int) float64 { return vaxfloat.ShortLiteral(byte(i)).Float64() }
 
-	raw := math.Float64bits(value)
-	hi32 := uint32(raw >> 32)
-	lo32 := uint32(raw)
+// FindShortFloat returns the floating short literal whose value is x, and
+// whether there is one, for internal/asm.
+func FindShortFloat(x float64) (int, bool) {
+	lit, ok := vaxfloat.FindShortLiteral(vaxfloat.FromFloat64(x))
 
-	sign := hi32 >> 31
-	ieeeExp := int((hi32 >> 20) & 0x7FF)
-	vaxExp := ieeeExp - 1023 + 1
-
-	if vaxExp < -127 {
-		return 0, true, false
-	}
-
-	if vaxExp > 127 {
-		return 0, false, true
-	}
-
-	biasedExp := uint32(vaxExp + 128)
-	frac20 := hi32 & 0xFFFFF
-	frac23 := frac20<<3 | lo32>>29
-
-	if size == 4 {
-		if lo32>>28&1 == 1 {
-			frac23++
-			if frac23 > 0x7FFFFF {
-				frac23 = 0
-				biasedExp++
-			}
-
-			if biasedExp > 255 {
-				return 0, false, true
-			}
-		}
-
-		natural := sign<<31 | biasedExp<<23 | frac23
-
-		return uint64(wordSwap(natural)), false, false
-	}
-
-	natural := sign<<31 | biasedExp<<23 | frac23
-	lowLong := wordSwap(natural)
-	highLong := wordSwap(lo32 << 3)
-
-	return uint64(lowLong) | uint64(highLong)<<32, false, false
-}
-
-// fpuLoad converts VAX F_floating (size 4) or D_floating (size 8) bits (in
-// the same low/high-longword layout fpuStore produces) to a float64.
-//
-// A stored exponent of zero is the architecture's (vax_instr_set.pdf's
-// F_floating and D_floating definitions): with a sign of zero the value
-// is 0.0, whatever the fraction holds, and with a sign of one it's a
-// reserved operand, which faults. fpu_load had these backwards, faulting
-// on a zero with fraction bits set and loading -0 as 0.0; see
-// docs/DEVIATIONS.md.
-func fpuLoad(raw uint64, size int) (float64, error) {
-	lowLong := wordSwap(uint32(raw))
-
-	sign := lowLong >> 31
-	biasedExp := lowLong >> 23 & 0xFF
-	frac23 := lowLong & 0x7FFFFF
-
-	if biasedExp == 0 {
-		if sign != 0 {
-			return 0, &Fault{Code: ExcReservedOp}
-		}
-
-		return 0, nil
-	}
-
-	ieeeExp := uint32(int(biasedExp) - 129 + 1023)
-	hi32 := sign<<31 | ieeeExp<<20 | frac23>>3
-
-	var lo32 uint32
-
-	if size == 8 {
-		highLong := wordSwap(uint32(raw >> 32))
-		lo32 = frac23&0x7<<29 | highLong>>3
-	} else {
-		lo32 = frac23 & 0x7 << 29
-	}
-
-	return math.Float64frombits(uint64(hi32)<<32 | uint64(lo32)), nil
-}
-
-// loadFloat reads op's value as a float64: an immediate (short-literal)
-// operand already carries pre-converted IEEE double bits (decodeOperand's
-// ShortLiteralFloat handling, internal/cpu/operand.go), while a register or
-// memory operand carries real VAX F_floating/D_floating bits needing
-// fpuLoad. See docs/PHASE-05.md's design notes.
-func loadFloat(cpu *vax.CPU, mem *vm.Memory, op Operand) (float64, error) {
-	raw, err := op.Load(cpu, mem)
-	if err != nil {
-		return 0, err
-	}
-
-	if op.Kind == OperandImmediate {
-		return math.Float64frombits(raw), nil
-	}
-
-	return fpuLoad(raw, op.Size)
-}
-
-// storeFloat converts value to op's VAX F_floating/D_floating representation
-// and stores it. Destinations are never immediate (decode already rejects a
-// write to a short literal as a reserved-addressing-mode fault), so unlike
-// loadFloat there is no short-literal case to special-case here.
-func storeFloat(cpu *vax.CPU, mem *vm.Memory, op Operand, value float64) error {
-	raw, err := fpuStore(cpu, op.Size, value)
-	if err != nil {
-		return err
-	}
-	
-	return op.Store(cpu, mem, raw)
+	return int(lit), ok
 }

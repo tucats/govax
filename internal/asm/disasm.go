@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/vaxfloat"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -292,7 +293,7 @@ func formatPCRelative(r ByteReader, pc *uint32, mode byte, size int, litType cpu
 
 			*pc += uint32(size)
 
-			return "I^#" + formatFloatValue(cpu.DecodeFloat(bits, size)), 0, nil
+			return "I^#" + formatFloatValue(cpu.DecodeFloat(sizeFormat(size), vaxfloat.Bits{Lo: bits})), 0, nil
 		}
 
 		if size >= 8 {

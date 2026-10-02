@@ -2438,11 +2438,39 @@ widened."
     only when IV is set. A condition handler that continued therefore
     ran the instruction again, forever. govax has no integer-overflow
     traps yet anywhere (EDIV's and DIV's comments say so too).
-- **Status**: to be fixed in Phase 35: the conversions and division move
-  to the new floating core in subtask 5, and the arithmetic traps (IV and
-  PSL<DV>) come with the packed decimal subtasks; the oracle's VMS run
-  confirms the results. Until then the probe's handler unwinds a case
-  that signals twice, so the run still finishes.
+- **Status**: fixed in Go (2026-10-02, Phase 35 subtask 5), as VMS 7.1's
+  run of the probe confirms: a divide by zero is the divide-by-zero fault,
+  and a conversion to an integer stores the low-order bits, sets V, and
+  takes an integer overflow *trap* (`Engine.arithmeticTrap`: the saved PC
+  is the next instruction's) only under IV. The probe's handler still
+  unwinds a case that signals twice. `TestDIVFByZeroFault`,
+  `TestEmulCvtFloatToIntOverflow`, `TestEmulCvtRoundFloatToIntOverflow`.
+
+### [Phase 35] F and D values held as float64: D's low bits, and ties
+
+- **Where**: `internal/cpu/fpu.go`'s `fpuLoad`/`fpuStore` (the Phase 05
+  port of `fpu.c`), and every F and D handler.
+- **What**: the CPU converted F and D operands to Go `float64`s. A
+  `float64` has a 52-bit fraction, three bits short of D_floating's 55, so
+  the low 3 bits of every D value were lost: even MOVD of an arbitrary D
+  value could change it (PHASE-05.md's design notes). And a `float64`
+  rounds ties to even where the VAX rounds them away from zero, so a
+  result exactly half way between two values (ADDF of 1 and 2^-24, CVTLF
+  of 2^24+1) came out one unit low. Also: MNEGF/MNEGD left C unchanged,
+  where the manual clears it; a floating short literal took its type from
+  the whole instruction, so EMODF's extension byte or POLYF's degree word,
+  given as a literal, would have read as floating; and a floating
+  immediate was converted to IEEE bits at decode.
+- **Status**: fixed in Go (2026-10-02, Phase 35 subtask 5): every F and D
+  instruction runs on `internal/vaxfloat`, which holds values exactly and
+  rounds once, half away from zero. Literals and immediates carry their
+  own format's bits, by each operand's data type. Under govax the F/D
+  probe now matches VMS on every case it has a handler for, apart from
+  `MOVD #1.1`, whose immediate govax's assembler still encodes through a
+  `float64` (subtask 6). `TestMOVDKeepsLowBits`, `TestADDFTieRoundsAway`,
+  `TestDIVDLowBits`, `TestCVTFDAndCVTDF`, `TestMNEGFClearsC`,
+  `TestFloatUnderflow`, `TestEMODFExtensionIsAnInteger`,
+  `TestDecodeOperandShortLiteralFloat`.
 
 ### [Phase 35] MACRO expressions took parentheses as grouping
 

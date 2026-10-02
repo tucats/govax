@@ -2,9 +2,9 @@ package cpu
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vaxfloat"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -88,12 +88,16 @@ func signExtend32(raw uint32, size int) int32 {
 // decode_operand.c: register side effects happen during decode, exactly
 // once per operand specifier evaluated.
 //
+// dtype is the operand's data type (Instruction.DataType): a short
+// literal on a floating operand is a floating literal, encoded in that
+// operand's format; on any other operand it's an integer.
+//
 // indexed is true only for the recursive call resolving Indexed mode's base
 // operand specifier, to reject Indexed mode nested inside itself (see
 // docs/DEVIATIONS.md).
 //
 // This is the Go port of decode_operand.c.
-func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, size int, litType ShortLiteralType, indexed bool) (Operand, error) {
+func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, size int, dtype DataType, indexed bool) (Operand, error) {
 	op := Operand{Access: access, Size: size}
 
 	// Branch and implicit-immediate operands are encoded directly in the
@@ -175,8 +179,11 @@ func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, 
 
 	case mode < 4: // Short literal: S^#n (integer) or S^#f (float).
 		op.Kind = OperandImmediate
-		if litType == ShortLiteralFloat {
-			op.Value = math.Float64bits(shortDouble[optype])
+		if dtype.IsFloat() {
+			// A floating literal: its value (0.5 to 120) in the
+			// operand's own format, as bits, as though read from memory.
+			bits, _ := vaxfloat.Pack(floatFormat(dtype), vaxfloat.ShortLiteral(optype))
+			op.Value, op.High = bits.Lo, bits.Hi
 		} else {
 			op.Value = uint64(optype)
 		}
@@ -193,28 +200,26 @@ func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, 
 		return op, nil
 
 	case mode >= 8 && reg == vax.PC:
-		return decodePCRelative(cpu, mem, pc, access, size, litType, mode, op)
+		return decodePCRelative(cpu, mem, pc, access, size, dtype, mode, op)
 
 	default:
-		return decodeGeneral(cpu, mem, pc, size, litType, mode, reg, indexed, op)
+		return decodeGeneral(cpu, mem, pc, size, dtype, mode, reg, indexed, op)
 	}
 }
 
 // decodeImmediate reads an immediate mode (I^#) operand's size bytes of
 // data from the instruction stream into op. A quadword's (MOVQ, EDIV's
-// dividend, a D_floating operand) are read whole; decode_operand.c's
-// loadSized only knew 1, 2, and 4 bytes, and the port panicked on 8. A
-// float instruction's F_floating or D_floating operand is converted to the
-// IEEE bits loadFloat expects of an immediate, as a short literal's is;
-// the raw VAX bits were read as IEEE bits before, so an immediate float
-// always loaded as zero. A reserved float's reserved operand fault happens
-// here, as it would when the instruction loaded it.
+// dividend, a D_floating or G_floating operand) are read whole;
+// decode_operand.c's loadSized only knew 1, 2, and 4 bytes, and the port
+// panicked on 8. A floating immediate stays as its raw bits, in its own
+// format, as a short literal's are (see fpu.go); a reserved one faults
+// when the instruction loads it, as a reserved operand in memory does.
 //
 // Immediate mode is autoincrement on the PC, (PC)+, so for an address or
 // field operand (PUSHAL I^#5, a field base) the operand is the data's own
 // address in the instruction stream: a memory operand there. This port
 // used to give it no address at all (PUSHAL I^#5 pushed zero).
-func decodeImmediate(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, litType ShortLiteralType, op *Operand) error {
+func decodeImmediate(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype DataType, op *Operand) error {
 	if op.Access == AccessAddress || op.Access == AccessVarField {
 		op.Kind = OperandMemory
 		op.Addr = *pc
@@ -273,15 +278,6 @@ func decodeImmediate(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, litType
 	op.Kind = OperandImmediate
 	op.Value = raw
 
-	if litType == ShortLiteralFloat && (size == 4 || size == 8) && op.Access != AccessModify && op.Access != AccessWrite {
-		f, err := fpuLoad(raw, size)
-		if err != nil {
-			return err
-		}
-
-		op.Value = math.Float64bits(f)
-	}
-
 	return nil
 }
 
@@ -289,10 +285,10 @@ func decodeImmediate(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, litType
 // Absolute, and Byte/Word/Long Relative (direct and deferred) — the mode
 // 0x08-0x0F forms selected by using the PC as the addressing-mode byte's
 // register field.
-func decodePCRelative(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, size int, litType ShortLiteralType, mode byte, op Operand) (Operand, error) {
+func decodePCRelative(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, size int, dtype DataType, mode byte, op Operand) (Operand, error) {
 	switch mode {
 	case 0x08: // Immediate: I^#n
-		if err := decodeImmediate(cpu, mem, pc, size, litType, &op); err != nil {
+		if err := decodeImmediate(cpu, mem, pc, size, dtype, &op); err != nil {
 			return op, err
 		}
 
@@ -376,7 +372,7 @@ func pcRelativeTarget(cpu *vax.CPU, mem *vm.Memory, pc *uint32, deferred bool, d
 // decodeGeneral handles the general-register addressing modes: Indexed,
 // Register deferred, Autodecrement, Autoincrement [deferred], and Byte/
 // Word/Long displacement (direct and deferred).
-func decodeGeneral(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, litType ShortLiteralType, mode byte, reg vax.Reg, indexed bool, op Operand) (Operand, error) {
+func decodeGeneral(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype DataType, mode byte, reg vax.Reg, indexed bool, op Operand) (Operand, error) {
 	switch mode {
 	case 0x04: // Indexed: base[Rx]
 		if indexed {
@@ -392,7 +388,7 @@ func decodeGeneral(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, litType S
 
 		index := cpu.GPR(reg)
 
-		base, err := decodeOperand(cpu, mem, pc, op.Access, size, litType, true)
+		base, err := decodeOperand(cpu, mem, pc, op.Access, size, dtype, true)
 		if err != nil {
 			return op, err
 		}

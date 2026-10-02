@@ -67,23 +67,53 @@ func TestEmulCvtFloatToByteExactValue(t *testing.T) {
 	}
 }
 
-func TestEmulCvtFloatToIntOverflowFaults(t *testing.T) {
-	cpu, mem := fixture()
-	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.PC, base)
-	setFloatReg(t, cpu, 4, vax.R1, 200.0)                               // exceeds byte range (-128..127)
-	putBytes(t, cpu, mem, base, 0x48, regMode(vax.R1), regMode(vax.R2)) // CVTFB
+// TestEmulCvtFloatToIntOverflow checks the manual's integer overflow on a
+// conversion (as VMS does it, testdata/insn35's CVTFB and CVTFL cases): the
+// destination gets the low-order bits of the true result and V is set;
+// with PSL<IV> clear there's no exception, and with it set there's an
+// integer overflow trap, whose saved PC is the next instruction's.
+func TestEmulCvtFloatToIntOverflow(t *testing.T) {
+	for _, iv := range []bool{false, true} {
+		cpu, mem := fixture()
+		e := NewEngine(cpu, mem)
+		cpu.SetGPR(vax.PC, base)
+		setFloatReg(t, cpu, 4, vax.R1, 200.0)                               // exceeds byte range (-128..127)
+		putBytes(t, cpu, mem, base, 0x48, regMode(vax.R1), regMode(vax.R2)) // CVTFB
 
-	d, err := decodeInstruction(cpu, mem, instructionTable)
-	if err != nil {
-		t.Fatalf("decodeInstruction: %v", err)
-	}
+		psl := cpu.PSL()
+		psl.SetIV(iv)
+		psl.SetC(true)
+		cpu.SetPSL(psl)
 
-	err = emulCvtFloatToInt(e, &d)
+		d, err := decodeInstruction(cpu, mem, instructionTable)
+		if err != nil {
+			t.Fatalf("decodeInstruction: %v", err)
+		}
 
-	var f *Fault
-	if !errors.As(err, &f) || f.Code != ExcArithmetic || len(f.Args) != 1 || f.Args[0] != trapIntOvf {
-		t.Fatalf("err = %v, want *Fault{ExcArithmetic, [trapIntOvf]}", err)
+		cpu.SetGPR(vax.PC, d.NextPC)
+		e.instructionPC = base
+
+		err = instructionTable.HandlerFor(d.Instruction)(e, &d)
+
+		// 200 is ^XC8: as a byte, -56, so N is set.
+		if got := byte(cpu.GPR(vax.R2)); got != 0xC8 {
+			t.Errorf("IV %v: R2's low byte = %#x, want 0xc8 (the low-order bits of 200)", iv, got)
+		}
+
+		if p := cpu.PSL(); !p.V() || !p.N() || p.Z() || p.C() {
+			t.Errorf("IV %v: PSL = %+v, want N and V set, Z and C clear", iv, p)
+		}
+
+		var f *Fault
+
+		switch {
+		case !iv && err != nil:
+			t.Errorf("IV clear: err = %v, want none", err)
+		case iv && (!errors.As(err, &f) || f.Code != ExcArithmetic || len(f.Args) != 1 || f.Args[0] != trapIntOvf):
+			t.Errorf("IV set: err = %v, want an integer overflow trap", err)
+		case iv && e.instructionPC != d.NextPC:
+			t.Errorf("IV set: the trap's PC is %#x, want the next instruction's, %#x", e.instructionPC, d.NextPC)
+		}
 	}
 }
 
@@ -120,25 +150,21 @@ func TestEmulCvtRoundVsTruncate(t *testing.T) {
 }
 
 func TestEmulCvtRoundFloatToIntOverflow(t *testing.T) {
-	// 32767.6 alone would fit a word... but CVTRFW doesn't exist (the R
-	// variants are long-destination only); use a long-boundary case instead
-	// via CVTRDL: a value that only overflows *after* rounding.
+	// A value that overflows a longword only once rounded: 2147483647.6
+	// rounds to 2^31. V is set and the destination gets 2^31's low 32
+	// bits (PSL<IV> is clear, so there's no trap).
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.PC, base)
-	setFloatReg(t, cpu, 8, vax.R1, 2147483647.6)                        // rounds to 2147483648, overflows Long
-	putBytes(t, cpu, mem, base, 0x6B, regMode(vax.R1), regMode(vax.R3)) // CVTRDL
+	setFloatReg(t, cpu, 8, vax.R1, 2147483647.6)
 
-	d, err := decodeInstruction(cpu, mem, instructionTable)
-	if err != nil {
-		t.Fatalf("decodeInstruction: %v", err)
+	stepInstruction(t, e, 0x6B, regMode(vax.R1), regMode(vax.R3)) // CVTRDL
+
+	if got := cpu.GPR(vax.R3); got != 0x80000000 {
+		t.Errorf("R3 = %#x, want 0x80000000", got)
 	}
 
-	err = emulCvtRoundFloatToInt(e, &d)
-
-	var f *Fault
-	if !errors.As(err, &f) || f.Code != ExcArithmetic {
-		t.Fatalf("err = %v, want *Fault{Code: ExcArithmetic} (rounding pushed the value out of Long range)", err)
+	if !cpu.PSL().V() {
+		t.Error("V clear, want set (rounding pushed the value out of a longword's range)")
 	}
 }
 

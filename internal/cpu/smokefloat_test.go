@@ -8,16 +8,14 @@ import (
 )
 
 // shortFloatLit returns the short-literal addressing-mode byte for value,
-// the inverse of decodeOperand's shortDouble[optype] lookup -- lets this
+// the inverse of decodeOperand's floating short-literal expansion -- lets this
 // test's program read in terms of the actual float values used (1.5, 2.5,
 // 4.0) rather than pre-computed magic mode bytes.
 func shortFloatLit(t *testing.T, value float64) byte {
 	t.Helper()
 
-	for i, v := range shortDouble {
-		if v == value {
-			return byte(i)
-		}
+	if i, ok := FindShortFloat(value); ok {
+		return byte(i)
 	}
 
 	t.Fatalf("shortFloatLit(%v): not exactly representable as a VAX float short literal", value)

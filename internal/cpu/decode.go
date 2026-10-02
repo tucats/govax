@@ -96,7 +96,7 @@ func decodeInstruction(cpu *vax.CPU, mem *vm.Memory, table *Table) (Decoded, err
 	d := Decoded{Opcode: opcode, Instruction: inst}
 
 	for i := 0; i < inst.OperandCount; i++ {
-		op, err := decodeOperand(cpu, mem, &pc, inst.Access[i], inst.Scale[i], inst.Type, false)
+		op, err := decodeOperand(cpu, mem, &pc, inst.Access[i], inst.Scale[i], inst.DataType[i], false)
 		d.Operands[i] = op
 
 		if err != nil {
