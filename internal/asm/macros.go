@@ -279,8 +279,12 @@ func (a *Assembler) pseudoEndm(*cursor) error {
 }
 
 // pseudoMdelete assembles .MDELETE macro-name-list: the named macros are
-// deleted. Deleting a macro that isn't defined does nothing.
+// deleted. Deleting a macro that isn't defined does nothing. A listing
+// shows how many macros were deleted, as a direct assignment shows its
+// value.
 func (a *Assembler) pseudoMdelete(c *cursor) error {
+	deleted := uint32(0)
+
 	for {
 		c.skipBlanks()
 
@@ -291,6 +295,8 @@ func (a *Assembler) pseudoMdelete(c *cursor) error {
 		}
 
 		if c.atEnd() {
+			a.listValue(nil, deleted)
+
 			return nil
 		}
 
@@ -299,7 +305,11 @@ func (a *Assembler) pseudoMdelete(c *cursor) error {
 			return vmserrors.New(vmserrors.VAX_MACRONAME, c.rest())
 		}
 
-		delete(a.macros, name)
+		if _, ok := a.macros[name]; ok {
+			delete(a.macros, name)
+
+			deleted++
+		}
 	}
 }
 

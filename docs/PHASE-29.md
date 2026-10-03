@@ -15,7 +15,7 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress. Subtasks 1 to 5 are done
+**Status: in progress. Subtasks 1 to 6 are done
 (2026-10-02).**
 
 ## What Phase 27 leaves in place
@@ -704,3 +704,60 @@ The author decided each of these on 2026-10-02.
   - the library names;
   - `/LIST`, `/LIST=`, and `/NOLIST` through DCL.
   `cmd/govax`'s `TestMacroCommand` covers the new options.
+
+### 2026-10-02 — Subtask 6: macro expansions with the defaults
+
+- **What real MACRO lists by default** (`.NOSHOW EXPANSIONS`), from the
+  nine Phase 28 listings and the "Defaults" section of the probe's
+  `lctl.lis`:
+  - A macro call is its own line, with its location and no bytes, at
+    any depth of nesting. None of an expansion's lines are listed, nor
+    a `.PRINT`'s or a conditional's inside one. A library macro is
+    listed the same way.
+  - A repeat block is listed as its definition's lines. The `.ENDR`
+    that ends it shows the bytes of the first line of the first
+    repetition, with the block's location: `.REPEAT 3` of `.BYTE ^X11`
+    shows `11`, and an `.IRP` whose first line is
+    `.IIF ... .MEXIT` shows nothing (`repeatFirstLine`, `listpage.go`).
+  - `.MDELETE` shows how many macros it deleted, in the value column,
+    as a direct assignment shows its value. govax counts only names
+    that were defined (`TestListingRepeatsAndMdelete`); no real listing
+    deletes an undefined one.
+  - The program's own conditionals list every line, the ones left out
+    too, with their locations. An `.IF` with an arithmetic test shows
+    the value it tested (`.IF EQ 0` shows `00000000`); `.IF DF` shows
+    nothing.
+  - A `.PRINT`'s line is followed by an empty line.
+- **`TestMacroFixtureListings`** compares all nine Phase 28 listings
+  whole (usermac, qiow, rmscopy, fabalign, uselib, gv_uselibm, and the
+  three lib modules), with govax's own system macro library standing in
+  for VMS's. All match. Allowed differences, for the three fixtures that
+  call system macros, because govax's macros are clean room and work
+  differently inside (`systemMacroDifferences`):
+  - a symbol whose name begins `$$` (each library's working symbols) is
+    left out of both symbol tables;
+  - a symbol a `$xxxDEF` macro defines is left out of both unless the
+    program names it: govax's `$FAB` builds its options from the
+    `FAB$M_` masks where VMS's uses the `FAB$V_` bit numbers, and a
+    table lists the ones referred to;
+  - the system library's macro counts and the GETS count are masked:
+    the macros are split into helpers differently (`fabalign`'s `$FAB`
+    takes 7 macros from VMS's library and 5 from govax's), and their
+    lines differ.
+- **`fabalign.mar`'s** comments were rewritten after the VAX run, so the
+  test assembles the source the listing shows (`sourceFromListing`).
+- **`TestListingDefaultsSection`** compares `lctl.lis`'s lines 1 to 70:
+  nested calls, macros with conditionals and with no bytes, `.REPEAT`
+  and `.IRP`, and true, false, immediate, and subconditional blocks.
+  All match. The rest of `lctl` is subtask 7's.
+- **govax's system macros** (Phase 32's `starlet.mar` and
+  `starletdef.mar`), changed so their listings match; every object test,
+  including the Phase 32 oracle, still matches byte for byte:
+  - `mkdefs` now defines each `$xxxDEF` macro's names under
+    `.ENABLE SUPPRESSION`, as subtask 4 noted they'd need, so a table
+    lists only the ones used. VAX MACRO can't save `.ENABLE`'s
+    settings, so the macro leaves SUPPRESSION disabled after.
+  - The RMS service macros (`$$RMSSVC`, `$RENAME`, `$WAIT`) declare
+    their service `.GLOBL`, as the system service macros already did:
+    real MACRO's table shows `SYS$OPEN` and the rest `GX`, which only
+    `.GLOBL` gives (a symbol that's only referred to is ` X`).

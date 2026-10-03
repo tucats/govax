@@ -82,16 +82,28 @@ func (a *Assembler) Listing(opts ListingOptions) []string {
 	p.name, p.title = a.Title()
 	p.label = a.Ident()
 
-	for _, l := range a.listLines {
-		// A macro expansion's and a repeat block's lines are shown, or
-		// not, as the listing options say; for now only the program's
-		// own lines are listed.
+	for i, l := range a.listLines {
+		// MACRO's default listing options (.NOSHOW EXPANSIONS) leave a
+		// macro expansion's and a repeat block's lines out: a macro call
+		// is listed as its own line, with no bytes, and a repeat block
+		// as the lines of its definition (see repeatFirstLine).
 		if l.depth > 0 {
 			continue
 		}
 
-		for _, line := range a.listSourceLine(l) {
+		lines := a.listSourceLine(l)
+		if first := a.repeatFirstLine(i); first != nil {
+			lines = a.listRepeatEnd(l, first)
+		}
+
+		for _, line := range lines {
 			p.add(line)
+		}
+
+		// Real MACRO follows a .PRINT's line with an empty line (the
+		// message itself goes to the terminal).
+		for range l.messages {
+			p.add("")
 		}
 	}
 
@@ -176,10 +188,11 @@ func (a *Assembler) listSourceLine(l *listLine) []string {
 	case (l.op == ".PSECT" || l.op == ".RESTORE_PSECT") && l.endSect != nil && l.endSect.relocatable:
 		return []string{fmt.Sprintf("%*s%08X%s", binaryWidth-3, "", l.endLoc, tail)}
 
-	// A direct assignment shows the value it assigned, and a .BLKx the
+	// A direct assignment shows the value it assigned (.MDELETE how many
+	// macros it deleted, and an .IF the value it tested), and a .BLKx the
 	// location it leaves, as a longword (with no mark, relocatable or
 	// not).
-	case l.op == "=" && l.hasValue:
+	case (l.op == "=" || l.op == ".MDELETE" || l.op == ".IF") && l.hasValue:
 		return []string{listColumns(fmt.Sprintf("%08X ", l.value), l.loc) + tail}
 
 	case strings.HasPrefix(l.op, ".BLK"):
@@ -201,6 +214,38 @@ func (a *Assembler) listSourceLine(l *listLine) []string {
 	}
 
 	return out
+}
+
+// repeatFirstLine returns the line that the recorded line i shows the
+// bytes of, or nil. That's the line i ended a repeat block (.ENDR), which
+// MACRO then repeated: real MACRO's listing shows the bytes of the first
+// line of the block's first repetition on the .ENDR line, as though that
+// line were its own (usermac.lis: a .REPEAT 3 of .BYTE ^X11 shows 11).
+// The repetition's lines are recorded right after the line that ended the
+// block, one level down.
+func (a *Assembler) repeatFirstLine(i int) *listLine {
+	l := a.listLines[i]
+	if !l.collected || i+1 == len(a.listLines) {
+		return nil
+	}
+
+	next := a.listLines[i+1]
+	if next.kind != sourceRepeat || next.depth != l.depth+1 {
+		return nil
+	}
+
+	return next
+}
+
+// listRepeatEnd returns end, the line that ended a repeat block, as the
+// listing shows it: with the bytes of first, the first line of the
+// block's first repetition (see repeatFirstLine).
+func (a *Assembler) listRepeatEnd(end, first *listLine) []string {
+	shown := *first
+	shown.text = end.text
+	shown.line = end.line
+
+	return a.listSourceLine(&shown)
 }
 
 // listColumns returns a listing line's binary field (right-aligned) and

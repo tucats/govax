@@ -218,6 +218,10 @@ func (a *Assembler) condition(c *cursor) (bool, error) {
 		n = int32(x.x.placeholder())
 	}
 
+	// A listing shows the value tested on an .IF's line, as it shows a
+	// direct assignment's (lctl.lis: ".IF EQ 0" shows 00000000).
+	a.listValue(nil, uint32(n))
+
 	switch test {
 	case "EQ":
 		return n == 0, nil

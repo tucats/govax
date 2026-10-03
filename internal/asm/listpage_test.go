@@ -163,11 +163,6 @@ func TestFixtureListings(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			src, err := os.ReadFile(tc.source)
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			real := readListing(t, tc.listing)
 
 			// The system library real MACRO searched, by the name its
@@ -177,47 +172,87 @@ func TestFixtureListings(t *testing.T) {
 				libs = append(libs, NamedMacroLibrary(newMapLibrary(nil), name))
 			}
 
-			a := macroAssembler()
-			a.SetListing(true)
-			a.SetMacroLibraries(libs...)
-
-			if _, err := a.Assemble(string(src)); err != nil {
-				t.Fatalf("assemble: %v", err)
-			}
-
-			if _, err := a.Object(ObjectOptions{}); err != nil {
-				t.Fatalf("object: %v", err)
-			}
-
-			got := a.Listing(ListingOptions{
-				Assembled: time.Now(),
-				Assembler: "govax MACRO V0.0-0",
-				Source:    strings.ToUpper(filepath.Base(tc.source)) + ";1",
-				Revised:   time.Now(),
-				Command:   real[len(real)-1],
-			})
-
-			gotSource, gotClosing := splitListing(t, got)
-			realSource, realClosing := splitListing(t, real)
-
-			compareListingLines(t, gotSource, realSource)
-
-			// The closing pages start under the same heading.
-			if label := realClosing[1][:headDateColumn]; !strings.HasPrefix(gotClosing[1], label) {
-				t.Errorf("closing heading %q, want %q", gotClosing[1], label)
-			}
-
 			// xref.mar's .CROSS makes real MACRO write a cross reference
 			// in its closing pages, which is subtask 9's.
-			if tc.name == "list/xref" {
-				return
-			}
-
-			tbt := countTraceback(readObjectFile(t, strings.TrimSuffix(tc.listing, ".lis")+".obj"))
-
-			compareListingLines(t, closingText(gotClosing), closingText(realClosingAllowed(realClosing, tbt)))
+			checkListing(t, tc.source, tc.listing, libs, listingCheck{noClosing: tc.name == "list/xref"})
 		})
 	}
+}
+
+// listingCheck is how checkListing compares a listing.
+type listingCheck struct {
+	// source, when set, is the source to assemble instead of the file's
+	// (see sourceFromListing).
+	source string
+	// noClosing compares the source pages only.
+	noClosing bool
+	// allow, when set, applies allowed differences of the fixture's own
+	// to both sides' closing pages, once headings are gone.
+	allow func([]string) []string
+}
+
+// checkListing assembles source with libs, and compares its listing with
+// the real one at listing: the source pages with the heading masks, and
+// the closing pages with the allowed differences (listingDifferences).
+func checkListing(t *testing.T, source, listing string, libs []MacroLibrary, check listingCheck) {
+	t.Helper()
+
+	src := check.source
+	if src == "" {
+		data, err := os.ReadFile(source)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		src = string(data)
+	}
+
+	real := readListing(t, listing)
+
+	a := macroAssembler()
+	a.SetListing(true)
+	a.SetMacroLibraries(libs...)
+
+	if _, err := a.Assemble(src); err != nil {
+		t.Fatalf("assemble: %v", err)
+	}
+
+	if _, err := a.Object(ObjectOptions{}); err != nil {
+		t.Fatalf("object: %v", err)
+	}
+
+	got := a.Listing(ListingOptions{
+		Assembled: time.Now(),
+		Assembler: "govax MACRO V0.0-0",
+		Source:    strings.ToUpper(filepath.Base(source)) + ";1",
+		Revised:   time.Now(),
+		Command:   real[len(real)-1],
+	})
+
+	gotSource, gotClosing := splitListing(t, got)
+	realSource, realClosing := splitListing(t, real)
+
+	compareListingLines(t, gotSource, realSource)
+
+	// The closing pages start under the same heading.
+	if label := realClosing[1][:headDateColumn]; !strings.HasPrefix(gotClosing[1], label) {
+		t.Errorf("closing heading %q, want %q", gotClosing[1], label)
+	}
+
+	if check.noClosing {
+		return
+	}
+
+	tbt := countTraceback(readObjectFile(t, strings.TrimSuffix(listing, ".lis")+".obj"))
+
+	gotText := closingText(gotClosing)
+	realText := closingText(realClosingAllowed(realClosing, tbt))
+
+	if check.allow != nil {
+		gotText, realText = check.allow(gotText), check.allow(realText)
+	}
+
+	compareListingLines(t, gotText, realText)
 }
 
 // listingDifferences are the lines of real MACRO's closing pages that

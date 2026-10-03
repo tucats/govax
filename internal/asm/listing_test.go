@@ -195,17 +195,17 @@ func compareListing(t *testing.T, a *Assembler, path string) {
 			t.Errorf("line %d (%q): location %04X, want %04X", r.number, r.text, l.loc, r.loc)
 		}
 
-		// A line of a definition being collected (the .ENDR of a repeat
-		// block lists its first repetition's bytes) and a macro call's
-		// expansion are the listing's choice, as is .MDELETE's count.
-		if l.collected || l.op == ".MDELETE" {
+		// A line of a definition being collected is the listing's
+		// choice: the .ENDR of a repeat block lists its first
+		// repetition's bytes (see repeatFirstLine).
+		if l.collected {
 			continue
 		}
 
 		var got string
 
 		switch {
-		case l.op == "=" && l.hasValue:
+		case (l.op == "=" || l.op == ".MDELETE" || l.op == ".IF") && l.hasValue:
 			got = fmt.Sprintf("%08X", l.value)
 		case strings.HasPrefix(l.op, ".BLK"):
 			got = fmt.Sprintf("%08X", l.endLoc)

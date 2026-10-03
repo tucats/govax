@@ -1085,6 +1085,11 @@
 ;
 ;   $$RMSSVC NAME,BLOCK,ERR,SUC
 ;	Call SYS$NAME with BLOCK and the completion routines ERR and SUC.
+;
+; Each service is declared .GLOBL, as the system service macros declare
+; theirs: real MACRO's listings show the RMS services as global (GX) in
+; the symbol table, where a symbol that's only referred to is external
+; (X) (docs/PHASE-29.md, subtask 6).
 
 	.MACRO	$$RMSPUSH ARG
 	.NTYPE	$$RMSM,ARG
@@ -1096,6 +1101,7 @@
 	.ENDM	$$RMSPUSH
 
 	.MACRO	$$RMSSVC NAME,BLOCK,ERR,SUC
+	.GLOBL	SYS$'NAME
 	.IF	B,<BLOCK>
 	CALLG	(AP),G^SYS$'NAME
 	.MEXIT
@@ -1226,6 +1232,7 @@
 	.ENDM	$WRITE
 
 	.MACRO	$RENAME	OLDFAB,ERR,SUC,NEWFAB
+	.GLOBL	SYS$RENAME
 	.IF	B,<OLDFAB>
 	CALLG	(AP),G^SYS$RENAME
 	.MEXIT
@@ -1246,6 +1253,7 @@
 	.ENDM	$RENAME
 
 	.MACRO	$WAIT	RAB
+	.GLOBL	SYS$WAIT
 	.IF	B,<RAB>
 	CALLG	(AP),G^SYS$WAIT
 	.MEXIT
