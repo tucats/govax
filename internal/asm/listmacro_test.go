@@ -100,37 +100,6 @@ func TestMacroFixtureListings(t *testing.T) {
 	}
 }
 
-// TestListingDefaultsSection compares the first section of the probe's
-// lctl.mar, which is listed with MACRO's default options, with real
-// MACRO's listing of it, line for line without the page headings: macro
-// calls, a nested call, macros with conditionals and with no bytes,
-// repeat blocks, and the program's own conditionals (true, false, .IIF,
-// and the subconditionals). The rest of lctl.mar, and the table of
-// contents and subtitles in its headings, are the listing controls'
-// (subtask 7).
-func TestListingDefaultsSection(t *testing.T) {
-	listDir := filepath.Join("..", "..", "testdata", "mar", "list")
-
-	src, err := os.ReadFile(filepath.Join(listDir, "lctl.mar"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	a := recordListing(t, string(src), false)
-
-	// lctl.mar's line 71 starts the next section.
-	const end = 71
-
-	got := numberedSection(a.Listing(ListingOptions{}), end)
-	want := numberedSection(readListing(t, filepath.Join(listDir, "vax", "lctl.lis")), end)
-
-	if len(want) < end-1 {
-		t.Fatalf("%d lines read from the real listing, want at least %d", len(want), end-1)
-	}
-
-	compareListingLines(t, got, want)
-}
-
 // TestListingRepeatsAndMdelete checks, on lines no real listing has:
 // .MDELETE counts only the macros it deleted; an .ENDR shows the bytes of
 // its block's first repetition's first line, with the block's location,
@@ -178,43 +147,6 @@ func TestListingRepeatsAndMdelete(t *testing.T) {
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("listing:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
-}
-
-// numberedSection returns a listing's lines without its page headings,
-// from source line 1 up to source line end: each numbered line, and the
-// unnumbered lines that follow one (continuation lines, a .PRINT's).
-func numberedSection(lines []string, end int) []string {
-	var out []string
-
-	started := false
-
-	for i := 0; i < len(lines); i++ {
-		if strings.HasPrefix(lines[i], "\f") {
-			i += listHeadLines - 1
-
-			continue
-		}
-
-		line := lines[i]
-
-		n := 0
-		if len(line) >= 47 {
-			n, _ = strconv.Atoi(strings.TrimSpace(line[41:47]))
-		}
-
-		switch {
-		case n == 1:
-			started = true
-		case n >= end:
-			return out
-		}
-
-		if started {
-			out = append(out, line)
-		}
-	}
-
-	return out
 }
 
 // getsLine matches the macro library statistics' count of GETs and

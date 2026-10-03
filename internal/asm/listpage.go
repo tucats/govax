@@ -39,11 +39,12 @@ const (
 	opcodeSlot = 5
 
 	// The heading's fields: the module name and the title (cut to fit),
-	// the .IDENT string (the second line's first field), and the
+	// the .IDENT string or other label (the second line's first field,
+	// before the subtitle, which is cut as the title is), and the
 	// assembler's name.
 	headNameWidth      = 32
 	headTitleWidth     = 40
-	headIdentWidth     = 73
+	headLabelWidth     = 32
 	headAssemblerWidth = 28
 	headFileWidth      = 34
 )
@@ -75,59 +76,115 @@ type ListingOptions struct {
 // with a form feed, so joining the lines with newlines gives the listing
 // file's text.
 //
-// The listing holds the program's source pages, then the closing pages:
-// the symbol table, the psect synopsis, and the statistics (listclose.go).
+// The listing holds a table of contents, when the program has .SBTTL
+// lines, then the program's source pages, and then the closing pages: the
+// symbol table, the psect synopsis, and the statistics (listclose.go).
+// Which lines the source pages show is the listing controls' choice
+// (listctl.go).
 func (a *Assembler) Listing(opts ListingOptions) []string {
 	p := &listPager{opts: opts}
 	p.name, p.title = a.Title()
 	p.label = a.Ident()
 
+	a.tableOfContents(p)
+
 	for i, l := range a.listLines {
-		// MACRO's default listing options (.NOSHOW EXPANSIONS) leave a
-		// macro expansion's and a repeat block's lines out: a macro call
-		// is listed as its own line, with no bytes, and a repeat block
-		// as the lines of its definition (see repeatFirstLine).
-		if l.depth > 0 {
-			continue
+		// .PAGE starts a new page, unless this one is still empty.
+		if l.page && !l.skipped && !l.collected && p.used > listHeadLines {
+			p.breakPage()
 		}
 
-		lines := a.listSourceLine(l)
-		if first := a.repeatFirstLine(i); first != nil {
-			lines = a.listRepeatEnd(l, first)
+		// A .SBTTL's text heads the pages from here on, including the
+		// one its own line starts (lctlnosh.lis's page 13).
+		if l.hasSubtitle && !l.skipped && !l.collected {
+			p.subtitle = l.subtitle
 		}
 
-		for _, line := range lines {
-			p.add(line)
-		}
+		if listShown(l) {
+			lines := a.listSourceLine(l)
 
-		// Real MACRO follows a .PRINT's line with an empty line (the
-		// message itself goes to the terminal).
-		for range l.messages {
-			p.add("")
+			// A repeat block's .ENDR shows the bytes of its first
+			// repetition's first line when the repetitions themselves
+			// aren't listed (see repeatFirstLine).
+			if first := a.repeatFirstLine(i); first != nil && !l.show.has(showExpansions|showBinary) {
+				lines = a.listRepeatEnd(l, first)
+			}
+
+			for _, line := range lines {
+				p.add(line)
+			}
+
+			// Real MACRO follows a .PRINT's line with an empty line (the
+			// message itself goes to the terminal).
+			for range l.messages {
+				p.add("")
+			}
 		}
 	}
 
+	p.subtitle = ""
 	a.closingPages(p, opts)
 
 	return p.lines
+}
+
+// tableOfContents starts the listing with its table of contents, page 0,
+// if the program has any .SBTTL lines: each one's file number, line
+// number, and text, uncut. A .SBTTL in a macro expansion is listed at the
+// line of the program that called the macro.
+func (a *Assembler) tableOfContents(p *listPager) {
+	var entries []string
+
+	line := 0
+
+	for _, l := range a.listLines {
+		if l.depth == 0 {
+			line = l.line
+		}
+
+		if l.hasSubtitle && !l.skipped && !l.collected {
+			entries = append(entries, fmt.Sprintf("    (1)%9d        %s", line, l.subtitle))
+		}
+	}
+
+	if len(entries) == 0 {
+		return
+	}
+
+	p.page = -1
+	p.contents = true
+
+	for _, e := range entries {
+		p.add(e)
+	}
+
+	p.contents = false
+	p.breakPage()
 }
 
 // listPager collects a listing's lines into pages, starting each with
 // its heading. label is what the heading's second line begins with: the
 // .IDENT string on the source pages, and on the closing pages the name of
 // the part a page starts in.
+//
+// subtitle is the .SBTTL text in force, which the second line shows after
+// the label, and contents says the page is the table of contents, whose
+// second line is just "Table of contents".
 type listPager struct {
 	opts               ListingOptions
 	name, title, label string
+	subtitle           string
+	contents           bool
 	page               int
-	used               int // lines on the current page, heading included
+	started            bool // a page has been started
+	used               int  // lines on the current page, heading included
 	lines              []string
 }
 
 // add appends line to the listing, starting a new page first if this
 // one is full (or none has been started).
 func (p *listPager) add(line string) {
-	if p.page == 0 || p.used == listPageLines {
+	if !p.started || p.used == listPageLines {
 		p.newPage()
 	}
 
@@ -147,6 +204,7 @@ func (p *listPager) breakPage() {
 // its file number.
 func (p *listPager) newPage() {
 	p.page++
+	p.started = true
 
 	title := p.title
 	if len(title) > headTitleWidth {
@@ -162,7 +220,16 @@ func (p *listPager) newPage() {
 		file += " "
 	}
 
-	second := fmt.Sprintf("%-*s%s  %s(1)", headIdentWidth, p.label, vmsDateTime(p.opts.Revised), file)
+	subtitle := p.subtitle
+	if len(subtitle) > headTitleWidth {
+		subtitle = subtitle[:headTitleWidth]
+	}
+
+	second := fmt.Sprintf("%-*s%-*s %s  %s(1)", headLabelWidth, p.label, headTitleWidth, subtitle,
+		vmsDateTime(p.opts.Revised), file)
+	if p.contents {
+		second = "Table of contents"
+	}
 
 	p.lines = append(p.lines, first, second, "")
 	p.used = listHeadLines
@@ -178,8 +245,13 @@ func vmsDateTime(t time.Time) string {
 // listSourceLine returns l as the listing shows it: its line, then any
 // continuation lines its binary field needs, each with the location of
 // the bytes it shows and no line number.
+//
+// A line of a macro expansion or repeat block has no line number.
 func (a *Assembler) listSourceLine(l *listLine) []string {
 	tail := fmt.Sprintf("%6d %s", l.line, l.text)
+	if l.depth > 0 {
+		tail = strings.Repeat(" ", 7) + l.text
+	}
 
 	switch {
 	// A .PSECT or .RESTORE_PSECT line (to a relocatable psect) shows the
@@ -244,6 +316,7 @@ func (a *Assembler) listRepeatEnd(end, first *listLine) []string {
 	shown := *first
 	shown.text = end.text
 	shown.line = end.line
+	shown.depth = end.depth
 
 	return a.listSourceLine(&shown)
 }

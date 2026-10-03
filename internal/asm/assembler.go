@@ -205,6 +205,12 @@ type Assembler struct {
 	listCur   *listLine
 	group     int
 	endError  error
+
+	// show is the listing state in force (listctl.go), and showOn and
+	// showOff the options MACRO's /SHOW= and /NOSHOW= turn on and off
+	// from the defaults when an assembly starts (SetListingShow).
+	show            listShow
+	showOn, showOff listOptions
 }
 
 // New returns an Assembler ready to assemble source, using the built-in VAX
@@ -427,6 +433,7 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 	a.listLines = nil
 	a.listCur = nil
 	a.endError = nil
+	a.show = a.startShow()
 	a.phases = [phaseCount]PhaseTime{}
 	a.objectRecords = 0
 

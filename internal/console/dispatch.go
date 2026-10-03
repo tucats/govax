@@ -621,6 +621,15 @@ func (d *Dispatcher) bindGrammar() {
 	})
 
 	g.Bind("MACRO", func(id int64, r *dcl.Result) error {
+		// /SHOW=(...) and /NOSHOW=(...) are one qualifier, negated or
+		// not.
+		var show, noshow []string
+		if r.Negated("SHOW") {
+			noshow = r.List("SHOW")
+		} else {
+			show = r.List("SHOW")
+		}
+
 		return d.Console.Macro(MacroOptions{
 			Source:      r.String("SOURCE"),
 			SourceHost:  r.ParamPresent("SOURCE", "HOST"),
@@ -628,6 +637,8 @@ func (d *Dispatcher) bindGrammar() {
 			NoObject:    r.Present("OBJECT") && r.Negated("OBJECT"),
 			List:        r.Present("LIST") && !r.Negated("LIST") && !r.Defaulted("LIST"),
 			ListFile:    r.String("LIST"),
+			Show:        show,
+			NoShow:      noshow,
 			Libraries:   r.List("LIBRARY"),
 			CommandLine: d.line,
 		})

@@ -38,6 +38,7 @@
 //              09/30/26    Added RENAME (docs/PHASE-22.md)
 //              10/01/26    Added CREATE/DIRECTORY (docs/PHASE-34.md)
 //              10/02/26    Added MACRO/LIST (docs/PHASE-29.md)
+//              10/03/26    Added MACRO/SHOW, /NOSHOW (docs/PHASE-29.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -3709,6 +3710,7 @@ $MACR
 
         MACRO <source>[/HOST] [/OBJECT[=<object>] | /NOOBJECT]
               [/LIST[=<listing>] | /NOLIST] [/LIBRARY=(<library>[,...])]
+              [/SHOW=(<option>[,...]) | /NOSHOW=(<option>[,...])]
 
     Parameter:
 
@@ -3763,6 +3765,24 @@ $MACR
 
         /NOLIST         Writes no listing.  This is the default.
 
+        /SHOW=(<option>[,...])
+        /NOSHOW=(<option>[,...])
+                        Turns listing options on or off for the whole
+                        listing, whatever the source's .SHOW and .NOSHOW
+                        directives say.  The options are BINARY (MEB),
+                        the lines of a macro expansion that store bytes;
+                        CALLS (MC), macro calls; CONDITIONALS (CND),
+                        conditional directives and the lines they leave
+                        out; DEFINITIONS (MD), macro definitions; and
+                        EXPANSIONS (ME), every line of a macro expansion.
+                        By default, all but BINARY and EXPANSIONS are on.
+
+    In the source, .SHOW and .NOSHOW (or .LIST and .NLIST) with options
+    turn them on and off; without options they raise and lower the listing
+    level, and nothing is listed below level 0.  .PAGE starts a new page,
+    and .SBTTL names the pages that follow and adds a line to the table of
+    contents, page 0.
+
         /LIBRARY=(<library>[,...])
                         Macro libraries (.MLB, the default type) to
                         search for macros the source calls but doesn't
@@ -3791,8 +3811,9 @@ $MACR
     with LIBRARY/MACRO.
 
     From the host shell, "govax macro <source>" runs this command, with
-    --object <file> or --no-object, --list or --list-file <file>, and
-    --library <library> (which may be repeated).  --mount DEVICE=container (or
+    --object <file> or --no-object, --list or --list-file <file>,
+    --show and --no-show <option,...>, and --library <library> (which may
+    be repeated).  --mount DEVICE=container (or
     --mount-write, to allow writing) mounts a container first, and may be
     repeated.  govax exits with a nonzero status if the command fails.
 

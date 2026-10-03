@@ -74,6 +74,13 @@ type MacroOptions struct {
 	List     bool
 	ListFile string
 
+	// Show and NoShow are /SHOW=(...) and /NOSHOW=(...): listing options
+	// (BINARY, CALLS, CONDITIONALS, DEFINITIONS, EXPANSIONS, or their
+	// abbreviations) turned on or off for the whole listing, whatever the
+	// source's .SHOW and .NOSHOW say.
+	Show   []string
+	NoShow []string
+
 	// Libraries are the macro libraries /LIBRARY= names, in the order
 	// given.
 	Libraries []string
@@ -111,6 +118,10 @@ func (c *Console) Macro(opts MacroOptions) error {
 	a := asm.New(false)
 	a.SetDialect(asm.DialectMACRO)
 	a.SetListing(opts.List)
+
+	if err := a.SetListingShow(opts.Show, opts.NoShow); err != nil {
+		return err
+	}
 	a.SetIncludeResolver(func(name string) (string, error) {
 		incLoc, err := s.LocateRelated(name, false, found)
 		if err != nil {

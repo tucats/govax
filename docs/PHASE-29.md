@@ -15,8 +15,8 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress. Subtasks 1 to 6 are done
-(2026-10-02).**
+**Status: in progress. Subtasks 1 to 7 are done
+(2026-10-03).**
 
 ## What Phase 27 leaves in place
 
@@ -761,3 +761,80 @@ The author decided each of these on 2026-10-02.
     their service `.GLOBL`, as the system service macros already did:
     real MACRO's table shows `SYS$OPEN` and the rest `GX`, which only
     `.GLOBL` gives (a symbol that's only referred to is ` X`).
+
+### 2026-10-03 — Subtask 7: listing controls
+
+- **`internal/asm/listctl.go`**: `.SHOW`/`.NOSHOW` and `.LIST`/`.NLIST`
+  (`pseudoShow`), `.PAGE`, and `.SBTTL`/`.SUBTITLE` are no longer
+  "accepted and ignored". Each recorded line keeps the listing state in
+  force when it began (`listLine.show`), and `listShown` decides from it
+  which lines the source pages show. `SetListingShow` is MACRO's
+  `/SHOW=`/`/NOSHOW=`. `.CROSS`/`.NOCROSS` stay ignored until subtask 9.
+- **What the probe's `lctl.lis`, `lctlshow.lis`, and `lctlnosh.lis`
+  showed:**
+  - The options are on or off, not counted: `.SHOW ME` twice and
+    `.NOSHOW ME` once leaves ME off. Since each `lctl` section undoes its
+    option with the opposite one, a `.NOSHOW` section ends with the option
+    *on*. So ME is on from line 195 to 762, and the later sections run
+    with MC, MD, and CND off.
+  - **ME** lists every expansion line, unnumbered, by the same rules as
+    the program's own lines. Each expansion and each repetition ends with
+    its `.ENDM` or `.ENDR` line, the directive taken out (a lone tab).
+    The assembler now records that line (`macroDef.end`, `endLineText`).
+    A labeled `.ENDM`'s label is already the body's last line, so it
+    gets no extra line.
+  - **MEB** without ME lists only the expansion lines that stored bytes.
+    No end lines, assignments, or `.IF` values.
+  - **MC** off hides macro calls, nested ones in expansions too.
+  - **MD** off hides a macro definition from `.MACRO` to `.ENDM`. It
+    hides a repeat block's first line too. It also hides the block's
+    lines, but only when the repetitions are listed (ME or MEB). With
+    neither, the lines stay and `.ENDR` shows the first repetition's
+    bytes, as by default. The `.ENDR` line is always listed. It shows
+    bytes only when neither ME nor MEB is on.
+  - **CND** off hides the conditional directives, `.IIF` included (even a
+    true one that stores bytes), and the lines a conditional leaves out,
+    in the program and in expansions.
+  - **The level.** `.LIST`/`.NLIST` (and `.SHOW`/`.NOSHOW`) without
+    arguments raise and lower it. Below 0 nothing is listed. The
+    directive's own line is listed only when the level it leaves is
+    above 0. With arguments they're `.SHOW`/`.NOSHOW`, and listed.
+  - **`/SHOW=` and `/NOSHOW=` override the source.** An option the
+    command names stays as named whatever `.SHOW`/`.NOSHOW` say. With
+    `/SHOW=(EXPANSIONS,BINARY)`, the `.NOSHOW EXPANSIONS` section still
+    lists expansions.
+  - **`.PAGE`** isn't listed. It starts a new page unless the page is
+    still empty, so two in a row make one break.
+  - **`.SBTTL`'s text** goes in the second heading line after the
+    `.IDENT` string (32 columns), cut to 40. A page shows the subtitle in
+    force when its first line is added, so a `.SBTTL` that is the first
+    line on a page heads that page (`lctlnosh.lis`'s page 13).
+  - **The table of contents** is page 0, written when there's any
+    `.SBTTL`. Its second heading line is just `Table of contents`, then a
+    blank line. Each entry is `    (1)`, the line number in 9 columns, 8
+    blanks, and the whole subtitle. The source pages then start at page
+    1.
+- **Not shown by any real listing, so unconfirmed:**
+  - At a level above 0, every line is listed, a macro's expansion
+    included (as MACRO-11's manual describes it).
+  - A `.SBTTL` in an expansion is a table of contents entry at the
+    calling line's number.
+  - The table of contents breaks at 57 entries a page, as source pages
+    do.
+  - `.MEXIT` ends an expansion with no end line.
+- **Tests.**
+  - `TestFixtureListings` now compares `lctl`, `lctlshow`, `lctlnosh`
+    (with their `/SHOW=`/`/NOSHOW=`), and `notitle` whole, so
+    `TestListingDefaultsSection` is gone.
+  - All match. The one allowed difference is `notitle`'s object
+    record count: with no `.TITLE`, real MACRO writes a title header
+    record (`"\x01 "`) that govax doesn't, which is still subtask 14's to
+    settle.
+  - `listctl_test.go` covers the level (unconfirmed above 0), unknown
+    options, expansion end lines for an `.ENDM` in column 1 and a
+    labeled one, and `.PAGE` and `.SBTTL` at the start of a listing.
+- **The MACRO command.** `/SHOW=(...)` and `/NOSHOW=(...)` are one DCL
+  qualifier, negatable (`show`, id 1306). An unknown option fails the
+  command with `BADKEYWORD`. `govax macro` has `--show` and `--no-show`
+  (comma-separated). HELP MACRO documents them and the directives.
+  `TestDispatch_macroShow` covers the DCL path.

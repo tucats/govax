@@ -53,6 +53,8 @@ type macroFlags struct {
 	noObject  bool     // --no-object
 	list      bool     // --list, or --list-file
 	listFile  string   // --list-file
+	show      []string // --show: MACRO's /SHOW=
+	noShow    []string // --no-show: MACRO's /NOSHOW=
 	libraries []string // --library, repeatable: MACRO's /LIBRARY=
 }
 
@@ -216,6 +218,28 @@ var macroGrammar = []cli.Option{
 		Action: func(c *cli.Context) error {
 			macro.list = true
 			macro.listFile, _ = c.String("list-file")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "show",
+		Description: "Listing options to turn on, separated by commas (EXPANSIONS, BINARY, ...)",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			list, _ := c.String("show")
+			macro.show = strings.Split(list, ",")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "no-show",
+		Description: "Listing options to turn off, separated by commas (CALLS, CONDITIONALS, ...)",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			list, _ := c.String("no-show")
+			macro.noShow = strings.Split(list, ",")
 
 			return nil
 		},
@@ -486,6 +510,14 @@ func macroCommand(source string, f macroFlags) string {
 		command += "/LIST=" + dclQuote(f.listFile)
 	case f.list:
 		command += "/LIST"
+	}
+
+	// DCL takes one of /SHOW and /NOSHOW; --show wins.
+	switch {
+	case len(f.show) > 0:
+		command += "/SHOW=(" + strings.Join(f.show, ",") + ")"
+	case len(f.noShow) > 0:
+		command += "/NOSHOW=(" + strings.Join(f.noShow, ",") + ")"
 	}
 
 	if len(f.libraries) > 0 {

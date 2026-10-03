@@ -132,7 +132,11 @@ func TestFixtureListings(t *testing.T) {
 	marDir := filepath.Join("..", "..", "testdata", "mar")
 	linkDir := filepath.Join("..", "..", "testdata", "link")
 
-	type fixture struct{ name, source, listing string }
+	type fixture struct {
+		name, source, listing string
+		// show and noshow are the listing's /SHOW= and /NOSHOW=.
+		show, noshow []string
+	}
 
 	var cases []fixture
 
@@ -143,23 +147,31 @@ func TestFixtureListings(t *testing.T) {
 
 	for _, path := range ladder {
 		name := strings.TrimSuffix(filepath.Base(path), ".mar")
-		cases = append(cases, fixture{name, path, filepath.Join(marDir, "vax", name+".lis")})
+		cases = append(cases, fixture{name: name, source: path, listing: filepath.Join(marDir, "vax", name+".lis")})
 	}
 
 	// testdata/link/vax's listings: its own four modules, and five of
 	// the ladder's, assembled again for the LINK run.
 	for _, name := range []string{"addr", "defs", "share1", "share2"} {
-		cases = append(cases, fixture{"link/" + name, filepath.Join(linkDir, name+".mar"), filepath.Join(linkDir, "vax", name+".lis")})
+		cases = append(cases, fixture{name: "link/" + name, source: filepath.Join(linkDir, name+".mar"), listing: filepath.Join(linkDir, "vax", name+".lis")})
 	}
 
 	for _, name := range []string{"exprs", "extern", "general", "globals", "modes"} {
-		cases = append(cases, fixture{"link/" + name, filepath.Join(marDir, name+".mar"), filepath.Join(linkDir, "vax", name+".lis")})
+		cases = append(cases, fixture{name: "link/" + name, source: filepath.Join(marDir, name+".mar"), listing: filepath.Join(linkDir, "vax", name+".lis")})
 	}
 
 	// The Phase 29 probe's sources listed with the default options.
-	for _, name := range []string{"binary", "symtab", "xref", "trace", "failmain", "failsub", "failsig"} {
-		cases = append(cases, fixture{"list/" + name, filepath.Join(marDir, "list", name+".mar"), filepath.Join(marDir, "list", "vax", name+".lis")})
+	for _, name := range []string{"binary", "symtab", "xref", "trace", "failmain", "failsub", "failsig", "notitle", "lctl"} {
+		cases = append(cases, fixture{name: "list/" + name, source: filepath.Join(marDir, "list", name+".mar"), listing: filepath.Join(marDir, "list", "vax", name+".lis")})
 	}
+
+	// The listing controls' source, listed again with /SHOW= and
+	// /NOSHOW= (list.com).
+	lctl := filepath.Join(marDir, "list", "lctl.mar")
+	cases = append(cases,
+		fixture{"list/lctlshow", lctl, filepath.Join(marDir, "list", "vax", "lctlshow.lis"), []string{"EXPANSIONS", "BINARY"}, nil},
+		fixture{"list/lctlnosh", lctl, filepath.Join(marDir, "list", "vax", "lctlnosh.lis"), nil, []string{"CONDITIONALS", "CALLS", "DEFINITIONS"}},
+	)
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -174,7 +186,16 @@ func TestFixtureListings(t *testing.T) {
 
 			// xref.mar's .CROSS makes real MACRO write a cross reference
 			// in its closing pages, which is subtask 9's.
-			checkListing(t, tc.source, tc.listing, libs, listingCheck{noClosing: tc.name == "list/xref"})
+			check := listingCheck{noClosing: tc.name == "list/xref", show: tc.show, noshow: tc.noshow}
+
+			// With no .TITLE, real MACRO writes a title header record
+			// ("\x01 ") that govax doesn't; what makes it is left to the
+			// VMS round (docs/PHASE-29.md, subtask 14).
+			if tc.name == "list/notitle" {
+				check.extraRecords = 1
+			}
+
+			checkListing(t, tc.source, tc.listing, libs, check)
 		})
 	}
 }
@@ -189,6 +210,13 @@ type listingCheck struct {
 	// allow, when set, applies allowed differences of the fixture's own
 	// to both sides' closing pages, once headings are gone.
 	allow func([]string) []string
+	// show and noshow are the listing options MACRO's /SHOW= and
+	// /NOSHOW= set.
+	show, noshow []string
+	// extraRecords is how many more object records than govax's real
+	// MACRO's object holds, besides its traceback records, for a known
+	// difference in the object (not the listing).
+	extraRecords int
 }
 
 // checkListing assembles source with libs, and compares its listing with
@@ -212,6 +240,10 @@ func checkListing(t *testing.T, source, listing string, libs []MacroLibrary, che
 	a := macroAssembler()
 	a.SetListing(true)
 	a.SetMacroLibraries(libs...)
+
+	if err := a.SetListingShow(check.show, check.noshow); err != nil {
+		t.Fatal(err)
+	}
 
 	if _, err := a.Assemble(src); err != nil {
 		t.Fatalf("assemble: %v", err)
@@ -243,7 +275,7 @@ func checkListing(t *testing.T, source, listing string, libs []MacroLibrary, che
 		return
 	}
 
-	tbt := countTraceback(readObjectFile(t, strings.TrimSuffix(listing, ".lis")+".obj"))
+	tbt := countTraceback(readObjectFile(t, strings.TrimSuffix(listing, ".lis")+".obj")) + check.extraRecords
 
 	gotText := closingText(gotClosing)
 	realText := closingText(realClosingAllowed(realClosing, tbt))

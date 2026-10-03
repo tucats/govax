@@ -776,7 +776,9 @@ grammar console
     ! ahead of STARLET.MLB: govax's form of VMS's "PROG+LIB/LIBRARY".
     ! LIST (docs/PHASE-29.md subtask 5) is VMS MACRO's /[NO]LIST[=file]:
     ! off unless given, and with no value (the empty default) the listing
-    ! is the source's name with type LIS.
+    ! is the source's name with type LIS. SHOW (subtask 7) is VMS MACRO's
+    ! /SHOW=(option,...) and /NOSHOW=(option,...), the listing options set
+    ! for the whole listing.
     !
     verb macro/id=1300
 
@@ -794,6 +796,8 @@ grammar console
         qualifier   list/id=1305                -
                     /type=$string               -
                     /default=""
+        qualifier   show/id=1306                -
+                    /type=$string/list
 
     !
     ! govax-native extension (docs/PHASE-30.md, internal/console +

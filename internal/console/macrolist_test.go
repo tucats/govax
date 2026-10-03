@@ -255,3 +255,36 @@ func TestDispatch_macroList(t *testing.T) {
 
 	listingLines(t, d.Console, rms.FileLocation{Host: true, Name: filepath.Join(dir, "named.lis")})
 }
+
+// TestDispatch_macroShow checks MACRO's /SHOW= and /NOSHOW= through the
+// DCL grammar (docs/PHASE-29.md subtask 7): /SHOW=EXPANSIONS lists a
+// macro's expansion, /NOSHOW=CALLS leaves its call out, and an option
+// MACRO doesn't have fails the command.
+func TestDispatch_macroShow(t *testing.T) {
+	d, _ := newTestDispatcher(t)
+	dir := t.TempDir()
+	src := filepath.Join(dir, "show.mar")
+	writeHostFile(t, src, "\t.TITLE\tSHOW\n\t.PSECT\tD\n\t.MACRO\tONE\n\t.BYTE\t^X5A\n\t.ENDM\tONE\n\tONE\t\t; the call\n\t.END\n")
+	listing := rms.FileLocation{Host: true, Name: filepath.Join(dir, "show.lis")}
+
+	if err := d.Dispatch(`MACRO "` + src + `"/NOOBJECT/LIST/SHOW=(EXPANSIONS)`); err != nil {
+		t.Fatalf("MACRO/SHOW: %v", err)
+	}
+
+	lines := listingLines(t, d.Console, listing)
+	if lineWith(lines, "; the call") == "" || lineWith(lines, "5A  ") == "" {
+		t.Errorf("/SHOW=EXPANSIONS: the call or its expansion is missing:\n%s", strings.Join(lines, "\n"))
+	}
+
+	if err := d.Dispatch(`MACRO "` + src + `"/NOOBJECT/LIST/NOSHOW=(MC)`); err != nil {
+		t.Fatalf("MACRO/NOSHOW: %v", err)
+	}
+
+	if line := lineWith(listingLines(t, d.Console, listing), "; the call"); line != "" {
+		t.Errorf("/NOSHOW=MC listed the call: %q", line)
+	}
+
+	if err := d.Dispatch(`MACRO "` + src + `"/NOOBJECT/LIST/SHOW=(SYMBOLS)`); err == nil {
+		t.Error("/SHOW=SYMBOLS: no error")
+	}
+}

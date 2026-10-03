@@ -65,6 +65,20 @@ type macroDef struct {
 	// body is the macro's lines as written in the source, from the line
 	// after .MACRO to the line before .ENDM.
 	body []string
+	// end is the text an expansion's listing shows for the .ENDM (or a
+	// repeat block's .ENDR) that ended the definition: the line with the
+	// directive taken out, which leaves its leading blanks (see
+	// endLineText). hasEnd is false when the directive had a label: the
+	// label is the body's last line, and is listed as the expansion's
+	// last line.
+	end    string
+	hasEnd bool
+}
+
+// endLineText returns the text a listing shows for raw, the .ENDM or
+// .ENDR line that ended a definition with no label: its leading blanks.
+func endLineText(raw string) string {
+	return raw[:len(raw)-len(strings.TrimLeft(raw, " \t"))]
 }
 
 // formal is one formal argument.
@@ -238,6 +252,8 @@ func (a *Assembler) collectDefinition(raw string) error {
 		// part of the range, as .ENDM's is part of a macro's body.
 		if label != "" {
 			d.def.body = append(d.def.body, label)
+		} else {
+			d.def.end, d.def.hasEnd = endLineText(raw), true
 		}
 
 		a.defining = nil
@@ -251,6 +267,8 @@ func (a *Assembler) collectDefinition(raw string) error {
 		// expansion.
 		if label != "" {
 			d.def.body = append(d.def.body, label)
+		} else {
+			d.def.end, d.def.hasEnd = endLineText(raw), true
 		}
 
 		a.defining = nil
@@ -352,6 +370,7 @@ func (a *Assembler) assembleMacroCall(c *cursor) (handled bool, err error) {
 // the expansion.
 func (a *Assembler) expandMacro(m *macroDef, c *cursor) error {
 	a.listOp(m.name)
+	a.listCall()
 
 	if a.expansions() >= maxExpansionDepth {
 		return vmserrors.New(vmserrors.VAX_MACRODEPTH, maxExpansionDepth)
@@ -377,6 +396,8 @@ func (a *Assembler) expandMacro(m *macroDef, c *cursor) error {
 		kind:      sourceMacro,
 		name:      m.name,
 		expansion: &expansion{def: m, positional: positional},
+		end:       m.end,
+		hasEnd:    m.hasEnd,
 	}
 
 	return a.runSource(f, lines)

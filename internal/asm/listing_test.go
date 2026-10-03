@@ -381,13 +381,22 @@ func TestListingFrames(t *testing.T) {
 		"0 0:6 0000 ",
 		"2 1:1 0000 05",
 		"2 1:2 0001 06",
+		"2 1:3 0002 ",
 		"0 0:7 0002 ",
 		"0 0:8 0002  collected",
 		"0 0:9 0002  collected",
 		"3 1:1 0002 1234",
+		"3 1:2 0004 ",
 		"3 1:1 0004 1234",
+		"3 1:2 0006 ",
 		"0 0:10 0006 ",
 	)
+
+	// Each expansion and repetition ends with its .ENDM or .ENDR line,
+	// the directive taken out.
+	if got := a.listLines[8].text; got != "\t" {
+		t.Errorf("expansion end = %q, want %q", got, "\t")
+	}
 
 	// The expansion's lines are the definition's, with the argument
 	// substituted.

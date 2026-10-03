@@ -125,11 +125,12 @@ func init() {
 		"PACKED":     {both, (*Assembler).pseudoPacked},
 		"DOUBLE":     {both, func(a *Assembler, c *cursor) error { return a.pseudoFloat(c, vaxfloat.D) }},
 
-		// Module identification. Listings will use .SUBTITLE's text.
+		// Module identification. A listing's headings and table of
+		// contents show .SUBTITLE's text (listctl.go).
 		"TITLE":    {both, (*Assembler).pseudoTitle},
 		"IDENT":    {both, (*Assembler).pseudoIdent},
-		"SUBTITLE": {both, ignoreRest},
-		"SBTTL":    {both, ignoreRest},
+		"SUBTITLE": {both, (*Assembler).pseudoSubtitle},
+		"SBTTL":    {both, (*Assembler).pseudoSubtitle},
 
 		// Program sections.
 		"PSECT":         {macro, (*Assembler).pseudoPsect},
@@ -192,15 +193,16 @@ func init() {
 		"WARN":  {both, (*Assembler).pseudoWarn},
 		"PRINT": {both, byDialect((*Assembler).pseudoPrint, (*Assembler).pseudoPrintMACRO)},
 
-		// Listing control. govax makes no listing, so these are accepted
-		// and ignored, arguments and all.
-		"LIST":    {both, ignoreRest},
-		"NLIST":   {both, ignoreRest},
-		"SHOW":    {both, ignoreRest},
-		"NOSHOW":  {both, ignoreRest},
+		// Listing control (listctl.go). .CROSS and .NOCROSS are accepted
+		// and ignored until the cross reference (docs/PHASE-29.md,
+		// subtask 9).
+		"LIST":    {both, func(a *Assembler, c *cursor) error { return a.pseudoShow(c, true) }},
+		"NLIST":   {both, func(a *Assembler, c *cursor) error { return a.pseudoShow(c, false) }},
+		"SHOW":    {both, func(a *Assembler, c *cursor) error { return a.pseudoShow(c, true) }},
+		"NOSHOW":  {both, func(a *Assembler, c *cursor) error { return a.pseudoShow(c, false) }},
 		"CROSS":   {both, ignoreRest},
 		"NOCROSS": {both, ignoreRest},
-		"PAGE":    {both, ignoreRest},
+		"PAGE":    {both, (*Assembler).pseudoPage},
 
 		// Not a MACRO-32 directive (it has .LIBRARY and .MCALL instead),
 		// but the MACRO command resolves .INCLUDE across host and ODS-2
@@ -267,8 +269,8 @@ func byDialect(consoleForm, macroForm func(*Assembler, *cursor) error) func(*Ass
 	}
 }
 
-// ignoreRest assembles a directive that only matters to a listing:
-// .SUBTITLE, .SBTTL, and the listing-control directives.
+// ignoreRest assembles a directive that only matters to a part of the
+// listing govax doesn't write yet: .CROSS and .NOCROSS.
 func ignoreRest(_ *Assembler, c *cursor) error {
 	c.pos = len(c.s)
 
@@ -324,6 +326,10 @@ func (a *Assembler) assemblePseudo(c *cursor) (handled bool, err error) {
 	}
 
 	a.listOp("." + name)
+
+	if conditionalDirectives[name] {
+		a.listConditional()
+	}
 
 	// Any directive other than .CASE empties the running .CASE block base,
 	// matching asm_pseudo.c's own reset ahead of its switch.

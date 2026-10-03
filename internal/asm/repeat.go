@@ -181,7 +181,7 @@ func (a *Assembler) assembleRepeat(d *definition) error {
 			lines[k] = substitute(line, d.def, values)
 		}
 
-		f := &sourceFrame{kind: sourceRepeat, name: d.repeat.directive, repetition: i + 1}
+		f := &sourceFrame{kind: sourceRepeat, name: d.repeat.directive, repetition: i + 1, end: d.def.end, hasEnd: d.def.hasEnd}
 
 		if err := a.runSource(f, lines); err != nil {
 			return err

@@ -87,6 +87,11 @@ type sourceFrame struct {
 	// expansion is the macro's expansion state (arguments, for .NARG),
 	// for a sourceMacro frame.
 	expansion *expansion
+	// end is the text a listing shows for the .ENDM or .ENDR that ended
+	// the definition, as the expansion's last line, when hasEnd says
+	// there's one (see macroDef.end).
+	end    string
+	hasEnd bool
 }
 
 // wrap puts a frame's location on err, an error at line of the frame's
@@ -260,9 +265,14 @@ func (a *Assembler) runSource(f *sourceFrame, lines []string) error {
 			// line when an error comes back from it.
 			if entry != nil {
 				entry.collected = true
+				entry.def = a.definitionKind()
 			}
 
 			err := a.collectDefinition(raw)
+
+			if entry != nil && a.defining == nil {
+				entry.defEnd = true
+			}
 
 			a.listCur = entry
 			a.listEnd(entry)
@@ -327,6 +337,12 @@ func (a *Assembler) runSource(f *sourceFrame, lines []string) error {
 		a.listCur = entry
 		a.listEnd(entry)
 
+		// A line that began a macro definition or a repeat block.
+		if entry != nil && a.defining != nil {
+			entry.def = a.definitionKind()
+			entry.defStart = true
+		}
+
 		if entry != nil && a.stmt > stmt {
 			entry.stmt = stmt + 1
 		}
@@ -348,6 +364,13 @@ func (a *Assembler) runSource(f *sourceFrame, lines []string) error {
 		if err := a.assembleStatement(line); err != nil {
 			return err
 		}
+	}
+
+	// A listing shows an expansion's (or repetition's) end as a line of
+	// its own: the .ENDM or .ENDR line, without the directive. .MEXIT
+	// leaves the expansion without it.
+	if f.hasEnd && !a.stop && !f.exit {
+		a.listEnd(a.listBegin(f, len(lines)+1, f.end))
 	}
 
 	// .MEXIT leaves the expansion (or repetition) from inside any

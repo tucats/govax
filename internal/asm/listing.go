@@ -82,6 +82,50 @@ type listLine struct {
 	collected bool
 	skipped   bool
 	continued bool
+
+	// The listing controls (listctl.go). show is the listing state in
+	// force when the line began. levelChange says the line raised or
+	// lowered the listing level, to levelAfter. conditional says it's a
+	// conditional directive, and call a macro call. def is the kind of
+	// definition (a macro's, or a repeat block's) the line is part of:
+	// defStart says it began one (.MACRO, .REPEAT), and defEnd that it
+	// ended one (.ENDM, .ENDR). page says it was a .PAGE, and subtitle
+	// is a .SBTTL's text (hasSubtitle says there is one).
+	show        listShow
+	levelChange bool
+	levelAfter  int
+	conditional bool
+	call        bool
+	def         defKind
+	defStart    bool
+	defEnd      bool
+	page        bool
+	subtitle    string
+	hasSubtitle bool
+}
+
+// defKind is the kind of definition a recorded line is part of.
+type defKind int
+
+const (
+	defNone defKind = iota
+	// defMacro is a macro definition.
+	defMacro
+	// defRepeat is a repeat block.
+	defRepeat
+)
+
+// definitionKind returns the kind of the definition being collected, if
+// any.
+func (a *Assembler) definitionKind() defKind {
+	switch {
+	case a.defining == nil:
+		return defNone
+	case a.defining.repeat != nil:
+		return defRepeat
+	}
+
+	return defMacro
 }
 
 // listField is one field a statement stored: size bytes at offset in
@@ -158,6 +202,7 @@ func (a *Assembler) listBegin(f *sourceFrame, line int, raw string) *listLine {
 		line:  line,
 		sect:  a.cur,
 		loc:   a.cur.loc,
+		show:  a.show,
 	}
 
 	a.listLines = append(a.listLines, l)
