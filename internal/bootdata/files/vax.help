@@ -37,6 +37,7 @@
 //              09/30/26    Added LINK (docs/PHASE-30.md)
 //              09/30/26    Added RENAME (docs/PHASE-22.md)
 //              10/01/26    Added CREATE/DIRECTORY (docs/PHASE-34.md)
+//              10/02/26    Added MACRO/LIST (docs/PHASE-29.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -3707,7 +3708,7 @@ $MACR
     Syntax:
 
         MACRO <source>[/HOST] [/OBJECT[=<object>] | /NOOBJECT]
-              [/LIBRARY=(<library>[,...])]
+              [/LIST[=<listing>] | /NOLIST] [/LIBRARY=(<library>[,...])]
 
     Parameter:
 
@@ -3746,6 +3747,22 @@ $MACR
         /NOOBJECT       Assembles the source and reports any errors, but
                         writes no object module.
 
+        /LIST[=<listing>]
+                        Writes a listing file: the source beside the
+                        bytes each line produced, in 60-line pages with
+                        headings, then the symbol table, the psect
+                        synopsis, the run statistics, and the command
+                        line, laid out as VAX MACRO lays out its
+                        listings.  The listing is named and placed as the
+                        object is, with the type LIS (hello.mar gives
+                        hello.lis).  It is written even when the assembly
+                        finds errors.  The heading shows the source's
+                        full file specification and when it was last
+                        revised (a volume file's revision date, or a host
+                        file's modification time).
+
+        /NOLIST         Writes no listing.  This is the default.
+
         /LIBRARY=(<library>[,...])
                         Macro libraries (.MLB, the default type) to
                         search for macros the source calls but doesn't
@@ -3774,8 +3791,8 @@ $MACR
     with LIBRARY/MACRO.
 
     From the host shell, "govax macro <source>" runs this command, with
-    --object <file> or --no-object, and --library <library> (which may be
-    repeated).  --mount DEVICE=container (or
+    --object <file> or --no-object, --list or --list-file <file>, and
+    --library <library> (which may be repeated).  --mount DEVICE=container (or
     --mount-write, to allow writing) mounts a container first, and may be
     repeated.  govax exits with a nonzero status if the command fails.
 
@@ -3786,6 +3803,8 @@ $MACR
         MACRO DUA0:[SRC]HELLO /OBJECT=DUA0:[OBJ]
 
         MACRO "hello.mar"/HOST /OBJECT=DUA0:[000000]HELLO.OBJ
+
+        MACRO "hello.mar"/LIST
 
         MACRO "prog.mar"/LIBRARY=("mymacros","common.mlb")
 

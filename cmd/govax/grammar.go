@@ -51,6 +51,8 @@ type libraryFlags struct {
 type macroFlags struct {
 	object    string   // --object
 	noObject  bool     // --no-object
+	list      bool     // --list, or --list-file
+	listFile  string   // --list-file
 	libraries []string // --library, repeatable: MACRO's /LIBRARY=
 }
 
@@ -193,6 +195,27 @@ var macroGrammar = []cli.Option{
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
 			macro.noObject = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "list",
+		Description: "Write a listing file (the source's name, with type .lis)",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			macro.list = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "list-file",
+		Description: "Write a listing file with this name",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			macro.list = true
+			macro.listFile, _ = c.String("list-file")
 
 			return nil
 		},
@@ -456,6 +479,13 @@ func macroCommand(source string, f macroFlags) string {
 		command += "/NOOBJECT"
 	case f.object != "":
 		command += "/OBJECT=" + dclQuote(f.object)
+	}
+
+	switch {
+	case f.listFile != "":
+		command += "/LIST=" + dclQuote(f.listFile)
+	case f.list:
+		command += "/LIST"
 	}
 
 	if len(f.libraries) > 0 {

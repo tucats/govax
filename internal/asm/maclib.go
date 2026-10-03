@@ -64,11 +64,23 @@ func (m lbrMacros) Macro(name string) ([]string, bool, error) {
 	return lines, true, nil
 }
 
-// namedLibrary is a macro library that knows its file specification.
+// NamedLibrary is a macro library that knows its file specification,
+// which a listing's macro library statistics show it by. A library the
+// caller opens only when it's first searched (as the console does the
+// system library) implements it to name itself.
+type NamedLibrary interface {
+	MacroLibrary
+	LibraryName() string
+}
+
+// namedLibrary is a macro library given its file specification.
 type namedLibrary struct {
 	MacroLibrary
 	name string
 }
+
+// LibraryName implements NamedLibrary.
+func (n namedLibrary) LibraryName() string { return n.name }
 
 // NamedMacroLibrary returns lib with its file specification, name, which
 // a listing's macro library statistics show it by.
@@ -87,10 +99,10 @@ type libraryUse struct {
 }
 
 // name returns the library's file specification, if it was given one
-// (see NamedMacroLibrary).
+// (see NamedLibrary).
 func (u *libraryUse) name() string {
-	if n, ok := u.lib.(namedLibrary); ok {
-		return n.name
+	if n, ok := u.lib.(NamedLibrary); ok {
+		return n.LibraryName()
 	}
 
 	return ""

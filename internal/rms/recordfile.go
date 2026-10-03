@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/tucats/govax/internal/obj"
 	"github.com/tucats/ods2/filespec"
@@ -187,6 +188,58 @@ func (s *Session) ReadRawFile(loc FileLocation) ([]byte, FileLocation, error) {
 	}
 
 	return buf.Bytes(), found, nil
+}
+
+// RevisionDate returns when the file at loc was last revised: a volume
+// file's revision date from its header, or a host file's modification
+// time. MACRO's listing shows it for the source file. A host file that
+// can't be found (one read through the host fallback, say) has none, and
+// gives the zero time.
+func (s *Session) RevisionDate(loc FileLocation) (time.Time, error) {
+	if loc.Host {
+		info, err := os.Stat(loc.Name)
+		if err != nil {
+			return time.Time{}, nil //nolint:nilerr // no date is no error
+		}
+
+		return info.ModTime(), nil
+	}
+
+	var revised time.Time
+
+	err := s.firstSpec(loc.Name, func(vol *volume.Volume, r resolvedSpec) error {
+		matches, err := filespec.Glob(vol, r.Spec)
+		if err != nil {
+			return err
+		}
+
+		switch len(matches) {
+		case 0:
+			return &NotFoundError{Spec: loc.Name}
+		case 1:
+		default:
+			return &AmbiguousError{Spec: loc.Name, Count: len(matches)}
+		}
+
+		f, err := vol.OpenFID(matches[0].Fid)
+		if err != nil {
+			return err
+		}
+
+		ident, err := f.Header.Ident()
+		if err != nil {
+			return err
+		}
+
+		revised = ident.RevisionDate.Time()
+
+		return nil
+	})
+	if err != nil {
+		return time.Time{}, fmt.Errorf("rms: reading %s: %w", loc.Name, err)
+	}
+
+	return revised, nil
 }
 
 // fullSpec is a matched file's complete specification.

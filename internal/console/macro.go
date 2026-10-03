@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/bootdata"
@@ -17,7 +19,8 @@ import (
 // This file implements docs/PHASE-27.md subtask 10's MACRO command, with
 // docs/PHASE-28.md subtask 9's macro libraries:
 //
-//	MACRO source[/HOST] [/[NO]OBJECT[=object]] [/LIBRARY=(library[,...])]
+//	MACRO source[/HOST] [/[NO]OBJECT[=object]] [/[NO]LIST[=listing]]
+//	      [/LIBRARY=(library[,...])]
 //
 // It assembles a MACRO-32 source file with internal/asm's MACRO dialect
 // and writes the object module. The source and object can each be a host
@@ -41,6 +44,10 @@ import (
 // the object is built in memory and written only once assembly succeeds,
 // so a failed assembly never leaves a partial object or replaces a good
 // one.
+//
+// /LIST (docs/PHASE-29.md subtask 5) writes the listing internal/asm lays
+// out, named and placed as the object is but with the type LIS. It's
+// written whether or not the assembly succeeds, as real MACRO's is.
 
 // BuildVersion is govax's version ("1.0-115"), set by cmd/govax. The
 // object's language processor header names it, as real MACRO's names
@@ -61,6 +68,12 @@ type MacroOptions struct {
 	Object   string
 	NoObject bool
 
+	// List is /LIST: write a listing, to ListFile, or by default to the
+	// source's name with the type LIS, beside the source as the object
+	// is (docs/PHASE-29.md subtask 5).
+	List     bool
+	ListFile string
+
 	// Libraries are the macro libraries /LIBRARY= names, in the order
 	// given.
 	Libraries []string
@@ -75,8 +88,12 @@ type MacroOptions struct {
 const defaultSourceType = "MAR"
 
 // Macro assembles one MACRO-32 source file and, unless opts.NoObject,
-// writes its object module.
+// writes its object module; with opts.List, it writes the listing too.
 func (c *Console) Macro(opts MacroOptions) error {
+	// Everything before the assembler is called (finding and reading the
+	// source, opening the libraries) is the listing's command processing
+	// phase.
+	commandStart := asm.StartPhase()
 	s := c.ContainerSession
 
 	loc, err := s.Locate(opts.Source, opts.SourceHost)
@@ -93,6 +110,7 @@ func (c *Console) Macro(opts MacroOptions) error {
 
 	a := asm.New(false)
 	a.SetDialect(asm.DialectMACRO)
+	a.SetListing(opts.List)
 	a.SetIncludeResolver(func(name string) (string, error) {
 		incLoc, err := s.LocateRelated(name, false, found)
 		if err != nil {
@@ -120,6 +138,8 @@ func (c *Console) Macro(opts MacroOptions) error {
 
 	a.SetMacroLibraries(append(libs, &starletMacros{c: c})...)
 
+	commandProcessing := commandStart.Elapsed()
+
 	_, asmErr := a.Assemble(joinLines(lines))
 
 	for _, m := range a.Messages() {
@@ -130,7 +150,14 @@ func (c *Console) Macro(opts MacroOptions) error {
 		c.Printf("%%%s\n", vmserrors.Wrap(vmserrors.CLI_ASMWARNING, w, found.Name))
 	}
 
-	if asmErr != nil {
+	// The object is written only when the assembly succeeds; the listing
+	// is written either way, as real MACRO writes it, after the object so
+	// that it can count the object's records. A failure writing the
+	// listing is reported only if nothing failed before it.
+	var status error
+
+	switch {
+	case asmErr != nil:
 		all := []error{asmErr}
 
 		var list *asm.Errors
@@ -142,12 +169,24 @@ func (c *Console) Macro(opts MacroOptions) error {
 			c.Printf("%%%s\n", vmserrors.Wrap(vmserrors.CLI_ASSEMBLING, e, found.Name))
 		}
 
-		return vmserrors.New(vmserrors.CLI_ASMERRORS, len(all), found.Name)
+		status = vmserrors.New(vmserrors.CLI_ASMERRORS, len(all), found.Name)
+	case !opts.NoObject:
+		status = c.writeObject(a, opts, found)
 	}
 
-	if opts.NoObject {
-		return nil
+	if opts.List {
+		if err := c.writeListing(a, opts, found, commandProcessing); err != nil && status == nil {
+			status = err
+		}
 	}
+
+	return status
+}
+
+// writeObject writes the object module of a's assembly of the source
+// found.
+func (c *Console) writeObject(a *asm.Assembler, opts MacroOptions, found rms.FileLocation) error {
+	s := c.ContainerSession
 
 	objLoc, err := outputLocation(s, opts.Object, found, "OBJ")
 	if err != nil {
@@ -155,7 +194,7 @@ func (c *Console) Macro(opts MacroOptions) error {
 	}
 
 	module, err := a.Object(asm.ObjectOptions{
-		Language: "govax MACRO V" + BuildVersion,
+		Language: macroAssemblerName(),
 		Source:   opts.CommandLine,
 	})
 	if err != nil {
@@ -172,6 +211,59 @@ func (c *Console) Macro(opts MacroOptions) error {
 	}
 
 	return nil
+}
+
+// writeListing writes the listing of a's assembly of the source found, a
+// text file with a record for each line. commandProcessing is how long
+// the command took before the assembler was called.
+func (c *Console) writeListing(a *asm.Assembler, opts MacroOptions, found rms.FileLocation, commandProcessing asm.PhaseTime) error {
+	s := c.ContainerSession
+
+	lisLoc, err := outputLocation(s, opts.ListFile, found, "LIS")
+	if err != nil {
+		return fileFailure(err, opts.ListFile)
+	}
+
+	// The heading shows the source's full file specification: a volume
+	// file's, version included, or a host file's absolute path.
+	source := found.Name
+	if found.Host {
+		if abs, err := filepath.Abs(source); err == nil {
+			source = abs
+		}
+	}
+
+	revised, err := s.RevisionDate(found)
+	if err != nil {
+		return fileFailure(err, found.Name)
+	}
+
+	lines := a.Listing(asm.ListingOptions{
+		Assembled:         time.Now(),
+		Assembler:         macroAssemblerName(),
+		Source:            source,
+		Revised:           revised,
+		Command:           opts.CommandLine,
+		CommandProcessing: commandProcessing,
+	})
+
+	records := make([][]byte, len(lines))
+	for i, line := range lines {
+		records[i] = []byte(line)
+	}
+
+	if _, err := s.CreateRecordFile(lisLoc, rms.TextRecords, records); err != nil {
+		return objectFailureAs(vmserrors.CLI_LISWRITE, err, lisLoc.Name)
+	}
+
+	return nil
+}
+
+// macroAssemblerName is how the object's language processor header and
+// the listing's heading name the assembler, where real MACRO's say "VAX
+// MACRO V5.4-3".
+func macroAssemblerName() string {
+	return "govax MACRO V" + BuildVersion
 }
 
 // openMacroLibrary reads the macro library name, a /LIBRARY= or .LIBRARY
@@ -191,7 +283,12 @@ func (c *Console) openMacroLibrary(name string, source rms.FileLocation) (asm.Ma
 		return nil, fileFailure(err, loc.Name)
 	}
 
-	return macroLibrary(data, found.Name)
+	lib, err := macroLibrary(data, found.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return asm.NamedMacroLibrary(lib, found.Name), nil
 }
 
 // macroLibrary reads data, the library file name, as a macro library.
@@ -229,6 +326,21 @@ func (s *starletMacros) Macro(name string) ([]string, bool, error) {
 	return s.lib.Macro(name)
 }
 
+// LibraryName implements asm.NamedLibrary, for the listing's macro
+// library statistics, which name the library even when no macro came
+// from it, as real MACRO's do. So a listing opens it if nothing has yet.
+func (s *starletMacros) LibraryName() string {
+	if s.lib == nil && s.err == nil {
+		s.lib, s.err = s.c.openStarlet()
+	}
+
+	if n, ok := s.lib.(asm.NamedLibrary); ok {
+		return n.LibraryName()
+	}
+
+	return "SYS$LIBRARY:STARLET.MLB"
+}
+
 // openStarlet reads STARLET.MLB: SYS$LIBRARY's, the host library
 // directory's, or govax's own.
 func (c *Console) openStarlet() (asm.MacroLibrary, error) {
@@ -245,7 +357,12 @@ func (c *Console) openStarlet() (asm.MacroLibrary, error) {
 		}
 	}
 
-	return macroLibrary(data, name)
+	lib, err := macroLibrary(data, name)
+	if err != nil {
+		return nil, err
+	}
+
+	return asm.NamedMacroLibrary(lib, name), nil
 }
 
 // joinLines turns records read from a text file back into source text.

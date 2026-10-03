@@ -23,6 +23,9 @@ func TestMacroCommand(t *testing.T) {
 		{"/abs/Hello.mar", macroFlags{}, `MACRO "/abs/Hello.mar"`},
 		{"hello.mar", macroFlags{object: "out/x.obj"}, `MACRO "hello.mar"/OBJECT="out/x.obj"`},
 		{"hello.mar", macroFlags{noObject: true}, `MACRO "hello.mar"/NOOBJECT`},
+		{"hello.mar", macroFlags{list: true}, `MACRO "hello.mar"/LIST`},
+		{"hello.mar", macroFlags{list: true, listFile: "out/x.lis"}, `MACRO "hello.mar"/LIST="out/x.lis"`},
+		{"hello.mar", macroFlags{noObject: true, list: true}, `MACRO "hello.mar"/NOOBJECT/LIST`},
 		{"DUA0:[X]HELLO.MAR", macroFlags{}, `MACRO "DUA0:[X]HELLO.MAR"`},
 		{"p", macroFlags{libraries: []string{"a.mlb", "/x/B"}}, `MACRO "p"/LIBRARY=("a.mlb","/x/B")`},
 	}

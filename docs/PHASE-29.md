@@ -15,7 +15,7 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress. Subtasks 1 to 4 are done
+**Status: in progress. Subtasks 1 to 5 are done
 (2026-10-02).**
 
 ## What Phase 27 leaves in place
@@ -663,3 +663,44 @@ The author decided each of these on 2026-10-02.
   do. govax's own `starletdef.mar` doesn't enable suppression yet, so
   its unreferenced symbols would be listed. Subtask 6 settles that
   along with `fabalign` and `rmscopy`'s listings.
+
+### 2026-10-02 — Subtask 5: the `/LIST` qualifier
+
+- **`MACRO/[NO]LIST[=file]`** (`internal/console/macro.go`). The DCL
+  grammar's `list` qualifier works like LINK's `map`: off unless given,
+  and with no value the listing gets the source's name with the type
+  `LIS`, beside the source, as the object does (`outputLocation`). It's
+  written through `rms.Session.CreateRecordFile` as text records, on the
+  host or a volume.
+- The listing is written whether or not the assembly succeeds, after
+  the object so that it can count the object's records. A failed
+  assembly still writes no object and still fails with `CLI_ASMERRORS`.
+  A listing that can't be written fails the command with the new
+  `CLI_LISWRITE`, unless something failed before it.
+- **The heading's source.** A volume source shows its full
+  specification, version included; a host source shows its absolute
+  path. The revision date comes from the new
+  `rms.Session.RevisionDate`: a volume file's header, or a host file's
+  modification time (the zero time for a file only the host fallback
+  finds).
+- **Timing.** Everything `Macro` does before calling the assembler
+  (finding and reading the source, opening the libraries) is the
+  command-processing phase. govax has no separate initialization phase
+  to measure, so that one is 0.
+- **Library names.** A `/LIBRARY` or `.LIBRARY` library is now named by
+  the file it was read from, for the macro library statistics. The
+  system library is opened only when a macro is looked for in it. So
+  `asm.NamedLibrary` is now an interface, which the console's lazy
+  system library implements. A listing asks it for its name, which
+  opens it, because real MACRO names it even when no macro came from it.
+- **`govax macro --list`**, or `--list-file FILE`, adds `/LIST`.
+- **HELP MACRO** documents `/LIST` and `/NOLIST`.
+- Tests (`internal/console/macrolist_test.go`) cover:
+  - the default name on the host;
+  - a named listing (bare, and a host path);
+  - no listing without `/LIST`;
+  - a listing after errors;
+  - a volume source, with its revision date;
+  - the library names;
+  - `/LIST`, `/LIST=`, and `/NOLIST` through DCL.
+  `cmd/govax`'s `TestMacroCommand` covers the new options.

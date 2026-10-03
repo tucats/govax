@@ -774,6 +774,9 @@ grammar console
     ! qualifier at all, the object is the source's name with type OBJ.
     ! LIBRARY (docs/PHASE-28.md subtask 9) names macro libraries to search
     ! ahead of STARLET.MLB: govax's form of VMS's "PROG+LIB/LIBRARY".
+    ! LIST (docs/PHASE-29.md subtask 5) is VMS MACRO's /[NO]LIST[=file]:
+    ! off unless given, and with no value (the empty default) the listing
+    ! is the source's name with type LIS.
     !
     verb macro/id=1300
 
@@ -788,6 +791,9 @@ grammar console
                     /default=""
         qualifier   library/id=1304             -
                     /type=$string/list
+        qualifier   list/id=1305                -
+                    /type=$string               -
+                    /default=""
 
     !
     ! govax-native extension (docs/PHASE-30.md, internal/console +

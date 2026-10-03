@@ -131,6 +131,9 @@ const (
 	cliLibInserted
 	cliLibReplaced
 	cliLibDeleted
+
+	// docs/PHASE-29.md subtask 5: MACRO's listing.
+	cliLisWrite
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -272,6 +275,10 @@ const (
 	// written.
 	CLI_OBJWRITE = CLIFacility<<FacilityPosition | cliObjWrite<<MessagePosition | StatusError
 
+	// CLI_LISWRITE reports a MACRO whose listing file couldn't be
+	// written.
+	CLI_LISWRITE = CLIFacility<<FacilityPosition | cliLisWrite<<MessagePosition | StatusError
+
 	// CLI_LINKING reports a LINK that couldn't read an object module,
 	// link the image, or write it.
 	CLI_LINKING = CLIFacility<<FacilityPosition | cliLinking<<MessagePosition | StatusError
@@ -394,6 +401,7 @@ func init() {
 	DefineMessage(CLI_ASMERRORS, CLIFacility, "ASMERRORS", "!D error(s) assembling !S; no object file written")
 	DefineMessage(CLI_ASMWARNING, CLIFacility, "ASMWARNING", "Assembling !S")
 	DefineMessage(CLI_OBJWRITE, CLIFacility, "OBJWRITE", "Writing object file !S")
+	DefineMessage(CLI_LISWRITE, CLIFacility, "LISWRITE", "Writing listing file !S")
 	DefineMessage(CLI_LINKING, CLIFacility, "LINKING", "Linking !S")
 	DefineMessage(CLI_LIBRARY, CLIFacility, "LIBRARY", "Library !S")
 	DefineMessage(CLI_LIBWARNING, CLIFacility, "LIBWARNING", "Library !S")
