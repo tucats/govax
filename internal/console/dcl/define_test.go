@@ -6,6 +6,11 @@ import (
 	"testing"
 )
 
+const (
+	testParameterName = "SPEC"
+	testQualifierName = "HIST"
+)
+
 // evaxGrammarPath locates internal/bootdata/files/evax.dcl relative to this
 // source file, so tests work regardless of the package under test's working
 // directory. This is the grammar govax actually parses at runtime (Phase
@@ -149,6 +154,8 @@ func TestLoadEvaxGrammar_mountDismount(t *testing.T) {
 // docs/PHASE-23.md's "INITIALIZE: unifying INIT and INITIALIZE under one
 // verb" design section.
 func TestLoadEvaxGrammar_initializeVaxContainer(t *testing.T) {
+	const testSyntaxName = "INITIALIZE_VAX"
+
 	g := loadEvaxGrammar(t)
 
 	initialize, ok := g.entries["INITIALIZE"]
@@ -165,8 +172,8 @@ func TestLoadEvaxGrammar_initializeVaxContainer(t *testing.T) {
 		t.Fatalf("INITIALIZE should have a VAX qualifier: %v", err)
 	}
 
-	if vaxQual.Syntax != "INITIALIZE_VAX" {
-		t.Errorf("VAX qualifier syntax = %q, want INITIALIZE_VAX", vaxQual.Syntax)
+	if vaxQual.Syntax != testSyntaxName {
+		t.Errorf("VAX qualifier syntax = %q, want %q", vaxQual.Syntax, testSyntaxName)
 	}
 
 	containerQual, _, err := initialize.qualifier("CONTAINER")
@@ -226,8 +233,8 @@ func TestLoadEvaxGrammar_directory(t *testing.T) {
 		t.Fatal("missing verb DIRECTORY")
 	}
 
-	if len(directory.Parameters) != 1 || directory.Parameters[0].Name != "SPEC" {
-		t.Fatalf("DIRECTORY parameters = %+v, want a single SPEC parameter", directory.Parameters)
+	if len(directory.Parameters) != 1 || directory.Parameters[0].Name != testParameterName {
+		t.Fatalf("DIRECTORY parameters = %+v, want a single %s parameter", directory.Parameters, testParameterName)
 	}
 
 	if directory.Parameters[0].required() {
@@ -253,8 +260,8 @@ func TestLoadEvaxGrammar_delete(t *testing.T) {
 		t.Fatal("missing verb DELETE")
 	}
 
-	if len(del.Parameters) != 1 || del.Parameters[0].Name != "SPEC" {
-		t.Fatalf("DELETE parameters = %+v, want a single SPEC parameter", del.Parameters)
+	if len(del.Parameters) != 1 || del.Parameters[0].Name != testParameterName {
+		t.Fatalf("DELETE parameters = %+v, want a single %s parameter", del.Parameters, testParameterName)
 	}
 
 	if !del.Parameters[0].required() {
@@ -274,8 +281,8 @@ func TestLoadEvaxGrammar_purge(t *testing.T) {
 		t.Fatal("missing verb PURGE")
 	}
 
-	if len(purge.Parameters) != 1 || purge.Parameters[0].Name != "SPEC" {
-		t.Fatalf("PURGE parameters = %+v, want a single SPEC parameter", purge.Parameters)
+	if len(purge.Parameters) != 1 || purge.Parameters[0].Name != testParameterName {
+		t.Fatalf("PURGE parameters = %+v, want a single %s parameter", purge.Parameters, testParameterName)
 	}
 
 	if purge.Parameters[0].required() {
@@ -299,8 +306,8 @@ func TestLoadEvaxGrammar_type(t *testing.T) {
 		t.Fatal("missing verb TYPE")
 	}
 
-	if len(typ.Parameters) != 1 || typ.Parameters[0].Name != "SPEC" {
-		t.Fatalf("TYPE parameters = %+v, want a single SPEC parameter", typ.Parameters)
+	if len(typ.Parameters) != 1 || typ.Parameters[0].Name != testParameterName {
+		t.Fatalf("TYPE parameters = %+v, want a single %s parameter", typ.Parameters, testParameterName)
 	}
 
 	if !typ.Parameters[0].required() {
@@ -338,12 +345,12 @@ func TestLoadEvaxGrammar_copy(t *testing.T) {
 		t.Errorf("COPY parameter 1 = %+v, want required DESTINATION", destination)
 	}
 
-	if len(source.Qualifiers) != 1 || source.Qualifiers[0].Name != "HOST" {
-		t.Errorf("SOURCE.Qualifiers = %+v, want a single HOST qualifier", source.Qualifiers)
+	if len(source.Qualifiers) != 1 || source.Qualifiers[0].Name != testQualifierName {
+		t.Errorf("SOURCE.Qualifiers = %+v, want a single %s qualifier", source.Qualifiers, testQualifierName)
 	}
 
-	if len(destination.Qualifiers) != 1 || destination.Qualifiers[0].Name != "HOST" {
-		t.Errorf("DESTINATION.Qualifiers = %+v, want a single HOST qualifier", destination.Qualifiers)
+	if len(destination.Qualifiers) != 1 || destination.Qualifiers[0].Name != testQualifierName {
+		t.Errorf("DESTINATION.Qualifiers = %+v, want a single %s qualifier", destination.Qualifiers, testQualifierName)
 	}
 
 	wantQualifiers := []string{"BINARY", "QUIET", "VERBOSE", "TEST", "TIME", "IGNORE", "DIRS", "STREAM", "VFC", "CRLF", "LF"}

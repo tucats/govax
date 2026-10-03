@@ -3,8 +3,8 @@ package console
 import (
 	"errors"
 
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/rtl"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -38,7 +38,7 @@ func (c *Console) ConsoleReadByte() byte {
 	if c.In == nil {
 		return 0
 	}
-	
+
 	if _, err := c.In.Read(buf[:]); err != nil {
 		return 0
 	}
@@ -153,23 +153,23 @@ func (c *Console) RequestQuit() {
 	c.quit = true
 }
 
-// translateHalt turns rtl.ErrHalt (a SYS$ service or shim requesting the
+// translateHalt turns corevms.ErrHalt (a SYS$ service or shim requesting the
 // machine halt, e.g. an unrecognized SYS$CLI request) into cpu.ErrHalted,
-// rtl.ErrWait (a service waiting for an event flag, docs/PHASE-26.md)
-// into cpu.ErrServiceWait, and $EXIT's rtl.CallRequest (call an exit
-// handler) and rtl.ErrExit (the image has exited) into cpu.ServiceCall
+// corevms.ErrWait (a service waiting for an event flag, docs/PHASE-26.md)
+// into cpu.ErrServiceWait, and $EXIT's corevms.CallRequest (call an exit
+// handler) and corevms.ErrExit (the image has exited) into cpu.ServiceCall
 // and cpu.ErrImageExit — the signals Engine.Step actually recognizes,
 // kept as a translation at the boundary rather than internal/rtl
 // importing internal/cpu, so that package has no dependency on this one.
 func translateHalt(err error) error {
-	var call *rtl.CallRequest
+	var call *corevms.CallRequest
 
 	switch {
-	case errors.Is(err, rtl.ErrHalt):
+	case errors.Is(err, corevms.ErrHalt):
 		return cpu.ErrHalted
-	case errors.Is(err, rtl.ErrWait):
+	case errors.Is(err, corevms.ErrWait):
 		return cpu.ErrServiceWait
-	case errors.Is(err, rtl.ErrExit):
+	case errors.Is(err, corevms.ErrExit):
 		return cpu.ErrImageExit
 	case errors.As(err, &call):
 		return &cpu.ServiceCall{Routine: call.Routine, ArgList: call.ArgList}

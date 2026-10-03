@@ -9,7 +9,7 @@ import (
 
 // shimEntry is one row of kernel.asm's `.shim <name>, <code>, <library>,
 // <offset>` pseudo-op table. code selects the numeric XFC$SHIM dispatch
-// (internal/rtl.ShimTable, already fully implemented by Phase 10) a
+// (internal/corevms.ShimTable, already fully implemented by Phase 10) a
 // sharable image's real routine at (library, offset) is replaced by --
 // *except* when code is 0. asm_pseudo.c's own `.SHIM` handling (case 33)
 // branches on exactly this: a nonzero code synthesizes a small dispatch

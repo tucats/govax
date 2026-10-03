@@ -194,7 +194,7 @@ against real VMS.
 ### [Phase 25] No privilege model: logical-name privileges aren't checked
 
 - **Where**: `internal/lnm` (`Define`/`Delete`/`CreateTable`) and
-  `internal/rtl/logicals.go`.
+  `internal/coreos/logicals.go`.
 - **What**: VMS requires SYSNAM for executive or kernel mode names, GRPNAM
   for the group table, SYSNAM/SYSPRV for the system table, and SYSPRV for
   shareable tables. govax has no privileges, so every caller is treated as
@@ -203,7 +203,7 @@ against real VMS.
   The old by-value services do maximize, since their 0 means "omitted".
   Structural rules still hold: a name can't be more privileged than its
   table, and the startup tables can't be deleted.
-- **Status**: fixed in Phase 26 subtask 38, in `internal/rtl/logicals.go`
+- **Status**: fixed in Phase 26 subtask 38, in `internal/coreos/logicals.go`
   (`lnmWriteMode`, `lnmTablePrivilege`) rather than `internal/lnm`: the
   privileges are the process's, which `lnm` doesn't know. Table protection
   (the UIC-based part) is still not modeled; see the privilege
@@ -259,7 +259,7 @@ changed as a result.
 
 ### [Phase 26] `$ADJSTK` doesn't probe the new stack segment
 
-- **Where**: `internal/rtl/process.go`'s `serviceSysAdjstk`.
+- **Where**: `internal/coreos/process.go`'s `serviceSysAdjstk`.
 - **What**: the manual returns `SS$_ACCVIO` when "a portion of the new stack
   segment cannot be written by the caller". govax checks only that `newadr`
   can be read and written, not the memory the new stack pointer points at.
@@ -267,7 +267,7 @@ changed as a result.
 
 ### [Phase 26] Working-set limits are recorded, not enforced
 
-- **Where**: `internal/rtl/process.go` (`Process.WSLimit`/`WSDefault`/
+- **Where**: `internal/coreos/process.go` (`Process.WSLimit`/`WSDefault`/
   `WSQuota`/`WSExtent`/`MinWSCount`, `serviceSysAdjwsl`).
 - **What**: `$ADJWSL` adjusts and clamps the limit as documented, but govax
   has no paging or working set, so the limit has no effect on execution. The
@@ -277,7 +277,7 @@ changed as a result.
 
 ### [Phase 26] `$ALLOC` simplifications
 
-- **Where**: `internal/rtl/devices.go`'s `serviceSysAlloc`.
+- **Where**: `internal/coreos/devices.go`'s `serviceSysAlloc`.
 - **What**: condition values govax never returns, because it has nothing to
   check them against:
   - `SS$_DEVOFFLINE`: devices have no online/offline state.
@@ -296,7 +296,7 @@ changed as a result.
 
 ### [Phase 26] `$ASSIGN` now refuses a device allocated to another process
 
-- **Where**: `internal/rtl/devices.go`'s `serviceSysAssign`.
+- **Where**: `internal/coreos/devices.go`'s `serviceSysAssign`.
 - **What**: `$ASSIGN` returns `SS$_DEVALLOC` for a device allocated
   (`DEV$M_ALL`) to a different PID, as on VMS. eVAX's `sys_assign` had no
   allocation concept and always assigned the channel, overwriting the
@@ -306,21 +306,21 @@ changed as a result.
 ### [Phase 26] eVAX event flags: no common clusters, no range check, no previous-state status
 
 - **Where**: `reference/eVAX/eVAX/Source/RTL/service.c`'s `sys_clref`/
-  `sys_setef`/`sys_readef`, ported into `internal/rtl/core.go`.
+  `sys_setef`/`sys_readef`, ported into `internal/coreos/core.go`.
 - **What**: flags 64-127 were stored in process-local longwords, so there
   were no common event flag clusters and no `SS$_UNASEFC`. The flag number
   was reduced `% 0xFF` (or `& 0xFF`), so flags 128-254 indexed past the
   four-longword array instead of returning `SS$_ILLEFC`. `$SETEF`/`$CLREF`
   always returned `SS$_NORMAL` rather than `SS$_WASSET`/`SS$_WASCLR`.
 - **Status**: fixed in Phase 26 subtask 5, per the VMS 5.0 System Services
-  Reference Manual. The services moved to `internal/rtl/eventflags.go`.
+  Reference Manual. The services moved to `internal/coreos/eventflags.go`.
   Flags 64-127 reach the common cluster `$ASCEFC` associated, or fail with
   `SS$_UNASEFC`. A program relying on eVAX's local flags 64-127 now needs to
   call `$ASCEFC` first, as it would on VMS.
 
 ### [Phase 26] `$ASCEFC` simplifications
 
-- **Where**: `internal/rtl/eventflags.go`'s `serviceSysAscefc`.
+- **Where**: `internal/coreos/eventflags.go`'s `serviceSysAscefc`.
 - **What**: no `TQELM` quota (`SS$_EXQUOTA`), no multiport shared memory
   (`SS$_EXPORTQUOTA`, `SS$_INTERLOCK`, `SS$_NOSHMBLOCK`,
   `SS$_SHMNOTCNCT`). Cluster names are compared case-sensitively as
@@ -331,19 +331,19 @@ changed as a result.
 ### [Phase 26] eVAX `$GETJPIW`: two hard-coded items with the wrong lengths
 
 - **Where**: `reference/eVAX/eVAX/Source/RTL/service.c`'s `sys_getjpiw`,
-  ported into `internal/rtl/core.go`.
+  ported into `internal/coreos/core.go`.
 - **What**: only `JPI$_ACCOUNT` and `JPI$_CLINAME` were recognized.
   `ACCOUNT` returned the stand-in `"USER    "` with a return length of 4,
   though the manual defines an 8-byte blank-padded field. `CLINAME` always
   wrote 4 bytes (`DCL` and a NUL) whatever the buffer length. Any argument
   count other than exactly 7 was `SS$_INSFARG`.
-- **Status**: fixed in Phase 26 subtask 8. `internal/rtl/getjpi.go`
-  implements `$GETJPI`/`$GETJPIW` from the manual over `rtl.Process`, with
+- **Status**: fixed in Phase 26 subtask 8. `internal/coreos/getjpi.go`
+  implements `$GETJPI`/`$GETJPIW` from the manual over `coreos.Process`, with
   21 items. `ACCOUNT` is the process's account, `SYSTEM`, with length 8.
 
 ### [Phase 26] `$GETJPI` simplifications
 
-- **Where**: `internal/rtl/getjpi.go`.
+- **Where**: `internal/coreos/getjpi.go`.
 - **What**:
   - Only 28 item codes are supported (21 until subtask 21 added the AST
     items, the priorities, and `STATE`). The others, for state govax
@@ -361,7 +361,7 @@ changed as a result.
 
 ### [Phase 26] Event-flag waits re-execute the service instead of blocking
 
-- **Where**: `internal/rtl/eventflags.go` (`$WAITFR`/`$WFLAND`/`$WFLOR`),
+- **Where**: `internal/coreos/eventflags.go` (`$WAITFR`/`$WFLAND`/`$WFLOR`),
   `internal/cpu/xfc.go` (`ErrServiceWait`).
 - **What**: an unsatisfied wait re-executes the service's `XFC` on every
   instruction step, instead of descheduling the process. Interrupts are
@@ -374,7 +374,7 @@ changed as a result.
 
 ### [Phase 26] `$SETIMR`/`$CANTIM` simplifications
 
-- **Where**: `internal/rtl/timers.go`, `internal/cpu/systime.go`.
+- **Where**: `internal/coreos/timers.go`, `internal/cpu/systime.go`.
 - **What**:
   - The CPU-time flag is treated as elapsed time.
   - There is no `TQELM` quota.
@@ -389,7 +389,7 @@ changed as a result.
 
 ### [Phase 26] `$GETTIM`'s clock isn't rounded to 10ms
 
-- **Where**: `internal/rtl/vmstime.go`, `internal/cpu/systime.go`.
+- **Where**: `internal/coreos/vmstime.go`, `internal/cpu/systime.go`.
 - **What**: VMS updates its system time every 10ms, so `$GETTIM` returns
   multiples of 100,000. govax's system time moves in 1ms steps (one per
   interval-clock tick) and is returned as is.
@@ -397,7 +397,7 @@ changed as a result.
 
 ### [Phase 26] `$ASCTIM`/`$BINTIM` details the manual leaves open
 
-- **Where**: `internal/rtl/vmstime.go`.
+- **Where**: `internal/coreos/vmstime.go`.
 - **What**:
   - `$ASCTIM` truncates hundredths rather than rounding them.
   - An absolute time past 31-DEC-9999 is `SS$_IVTIME` from `$ASCTIM`
@@ -410,7 +410,7 @@ changed as a result.
 
 ### [Phase 26] Hibernation simplifications
 
-- **Where**: `internal/rtl/hibernate.go`, `internal/rtl/timers.go`.
+- **Where**: `internal/coreos/hibernate.go`, `internal/coreos/timers.go`.
 - **What**:
   - `$WAKE`, `$SCHDWK`, and `$CANWAK` can only name the calling process
     (there are no others), so `SS$_NOPRIV` never happens.
@@ -422,7 +422,7 @@ changed as a result.
 ### [Phase 26] eVAX `$SETAST`: one flag, always `SS$_NORMAL`
 
 - **Where**: `reference/eVAX` `service.c` (`vms_ast_flag`), now
-  `internal/rtl/ast.go`.
+  `internal/coreos/ast.go`.
 - **What**: eVAX recorded a single process-wide flag and returned
   `SS$_NORMAL`. The manual has one switch per access mode (the caller's),
   and returns `SS$_WASSET`/`SS$_WASCLR` for its previous state.
@@ -431,7 +431,7 @@ changed as a result.
 
 ### [Phase 26] AST delivery simplifications
 
-- **Where**: `internal/rtl/ast.go`, `internal/cpu/ast.go`.
+- **Where**: `internal/coreos/ast.go`, `internal/cpu/ast.go`.
 - **What**:
   - (Resolved in subtask 22: an inner-mode AST is now delivered to
     outer-mode code by switching into the AST's mode, as on VMS. Until
@@ -447,7 +447,7 @@ changed as a result.
 
 ### [Phase 26] Terminal `$QIO` simplifications
 
-- **Where**: `internal/rtl/qio.go`, `internal/rtl/ttdriver.go`.
+- **Where**: `internal/coreos/qio.go`, `internal/coreos/ttdriver.go`.
 - **What**:
   - Every terminal request completes before `$QIO` returns. A read with
     no input typed yet blocks the whole emulator until the host delivers
@@ -475,7 +475,7 @@ changed as a result.
 
 ### [Phase 26] Exit handler simplifications
 
-- **Where**: `internal/rtl/exit.go`, `internal/cpu/exit.go`.
+- **Where**: `internal/coreos/exit.go`, `internal/cpu/exit.go`.
 - **What**:
   - `$EXIT` calls only the exit handlers of the mode it's called from.
     VMS then runs the supervisor- and executive-mode handlers in their
@@ -491,7 +491,7 @@ changed as a result.
 
 ### [Phase 26] `$GETSYI` simplifications
 
-- **Where**: `internal/rtl/getsyi.go`.
+- **Where**: `internal/coreos/getsyi.go`.
 - **What**:
   - The system is one node outside any cluster: only this node can be
     named, a wildcard scan finds only it, and the cluster items report
@@ -506,7 +506,7 @@ changed as a result.
 
 ### [Phase 26] `$FAO`/`$FAOL` simplifications
 
-- **Where**: `internal/rtl/fao.go`.
+- **Where**: `internal/coreos/fao.go`.
 - **What**:
   - The directives are the VMS 5.0 manual's, plus the VMS 7 size letters
     `A`, `I`, `H`, and `J` (all a longword on a VAX, which is how the VMS
@@ -525,7 +525,7 @@ changed as a result.
 
 ### [Phase 26] `$GETMSG`/`$PUTMSG` simplifications
 
-- **Where**: `internal/rtl/message.go`, `internal/vmsdef/gen/msg.go`.
+- **Where**: `internal/coreos/message.go`, `internal/vmsdef/gen/msg.go`.
 - **What**:
   - Only the CLI, LIB, MTH, OTS, RMS, and SYSTEM facilities of the VMS
     7.3 system message file are known. Images can't carry message
@@ -548,7 +548,7 @@ changed as a result.
 
 ### [Phase 26] `$CMKRNL`/`$CMEXEC` simplifications, and VMINIT's stacks
 
-- **Where**: `internal/rtl/cmode.go`; VMINIT (`internal/console`).
+- **Where**: `internal/coreos/cmode.go`; VMINIT (`internal/console`).
 - **What**:
   - ~~The process holds every privilege~~: since subtask 38, a caller in
     supervisor or user mode needs `CMKRNL`/`CMEXEC`.
@@ -567,16 +567,16 @@ changed as a result.
 ### [Phase 26] eVAX `$GETDVIW`: three items, wrong sizes
 
 - **Where**: `devices.c`'s `sys_getdviw`, ported to
-  `internal/rtl/devices.go`.
+  `internal/coreos/devices.go`.
 - **What**: it knew `DVI$_DEVCLASS`, `DEVTYPE`, and `DEVBUFSIZ`, wrote
   the first two as single bytes (VMS returns longwords), required exactly
   eight arguments, and returned `SS$_IVCHAN` for an unassigned channel
   (the manual: `SS$_NOPRIV`). There was no `$GETDVI`.
-- **Status**: fixed in Phase 26 subtask 28 (`internal/rtl/getdvi.go`).
+- **Status**: fixed in Phase 26 subtask 28 (`internal/coreos/getdvi.go`).
 
 ### [Phase 26] `$GETDVI` simplifications
 
-- **Where**: `internal/rtl/getdvi.go`.
+- **Where**: `internal/coreos/getdvi.go`.
 - **What**:
   - One node: `FULLDEVNAM` and `ALLDEVNAM` carry its name, the allocation
     class is 0, and no device is remote or served (`SS$_NONLOCAL` can't
@@ -589,7 +589,7 @@ changed as a result.
 
 ### [Phase 26] Mailbox simplifications
 
-- **Where**: `internal/rtl/mailbox.go`, `internal/rtl/mbxdriver.go`,
+- **Where**: `internal/coreos/mailbox.go`, `internal/coreos/mbxdriver.go`,
   `internal/lnm/database.go`.
 - **What**:
   - One process: a mailbox connects the process with itself (its AST
@@ -613,7 +613,7 @@ changed as a result.
 
 ### [Phase 26] Process-control simplifications
 
-- **Where**: `internal/rtl/process.go`.
+- **Where**: `internal/coreos/process.go`.
 - **What**:
   - There is one process, so `$SETPRI`, `$FORCEX`, and `$DELPRC` of any
     other process are `SS$_NONEXPR`, and `$SETPRN` never finds a
@@ -626,7 +626,7 @@ changed as a result.
 
 ### [Phase 26] CTRL/C and CTRL/Y AST simplifications
 
-- **Where**: `internal/rtl/ctrlast.go`, `internal/cpu/attention.go`,
+- **Where**: `internal/coreos/ctrlast.go`, `internal/cpu/attention.go`,
   `cmd/govax/attention.go`.
 - **What**:
   - Only the host's Ctrl-C reaches the program. Host Ctrl-Y isn't
@@ -655,14 +655,14 @@ changed as a result.
   severity. Its handlers also run through nested console `CALL`s, and a
   continued exception ends the console's run loop.
 - **Status**: fixed in Phase 26 subtask 31 by a VMS-style dispatcher in
-  the RTL (`internal/rtl/condition.go`), which the engine offers every
+  the RTL (`internal/coreos/condition.go`), which the engine offers every
   `console$handler` exception first. `chf.go` is kept, unchanged, as the
   fallback for exceptions the RTL declines (see the dispatcher's
   simplifications below).
 
 ### [Phase 26] Condition dispatch simplifications
 
-- **Where**: `internal/rtl/condition.go`, `internal/cpu/handlefault.go`.
+- **Where**: `internal/coreos/condition.go`, `internal/cpu/handlefault.go`.
 - **What**:
   - Only exceptions kernel.asm's SCB sends to `console$handler` are
     dispatched (access violation, translation not valid, privileged and
@@ -695,7 +695,7 @@ changed as a result.
 
 ### [Phase 26] Privilege simplifications
 
-- **Where**: `internal/rtl/privilege.go` and the services that check.
+- **Where**: `internal/coreos/privilege.go` and the services that check.
 - **What**:
   - No UIC-based object protection: VMS lets a process write a logical
     name table (or delete a cluster, a mailbox, ...) the object's
@@ -712,7 +712,7 @@ changed as a result.
 
 ### [Phase 26] Operator and broadcast simplifications
 
-- **Where**: `internal/rtl/operator.go`.
+- **Where**: `internal/coreos/operator.go`.
 - **What**:
   - One operator terminal, the console. `$SNDOPR`'s `OPC$T_MS_ONAME`
     terminal names are ignored; there's no operator log file and no
@@ -733,7 +733,7 @@ changed as a result.
 
 ### [Phase 26] Rights database simplifications
 
-- **Where**: `internal/rtl/rights.go`.
+- **Where**: `internal/coreos/rights.go`.
 - **What**: no RIGHTSLIST.DAT: the database is the process's own UIC
   identifier and the six environmental identifiers, built in memory, so
   there are no other users' identifiers, no group identifiers, no
@@ -746,7 +746,7 @@ changed as a result.
 
 ### [Phase 26] Disk `$QIO` simplifications
 
-- **Where**: `internal/rtl/diskdriver.go`, `internal/rms/acp.go`.
+- **Where**: `internal/coreos/diskdriver.go`, `internal/rms/acp.go`.
 - **What**:
   - Only the file-level (ACP) functions: `IO$_ACCESS` (lookup, and
     access with `IO$M_ACCESS`), `IO$_DEACCESS`, `IO$_MODIFY` (extension
@@ -766,7 +766,7 @@ changed as a result.
 
 ### [Phase 26] Virtual address space simplifications
 
-- **Where**: `internal/rtl/vaspace.go`, `internal/console/vminit.go`.
+- **Where**: `internal/coreos/vaspace.go`, `internal/console/vminit.go`.
 - **What**:
   - The page tables are built once by VMINIT and never grow: `$CRETVA`
     beyond them is `SS$_VASFULL`, where VMS would extend the region.
@@ -1079,12 +1079,12 @@ _None yet._
   three addresses collide in `p1_vector.c` in the same order, so the real
   reference tool's own `p1_init()` would produce byte-for-byte the same
   corrupted output.
-- **Also**: `internal/rtl`'s address-to-service map was built last-entry-
+- **Also**: `internal/coreos`'s address-to-service map was built last-entry-
   wins, so a `CALLS` to `SYS$CLRAST_2` dispatched as `SYS$GL_ASTRET`.
 - **Status**: fixed 2026-09-29 (the assembler gaps pass). The new
   `vmsdef.P1VectorEntry.DataCell` marks the `SYS$GL_` entries as data.
   `.P1VECTOR` defines their symbols but writes no trampoline for them, and
-  `internal/rtl` leaves them out of service dispatch. Every callable
+  `internal/coreos` leaves them out of service dispatch. Every callable
   entry's trampoline is now intact (`TestPseudoP1VectorDefinesSymbolsAndTrampolines`),
   and address `0x7FFEE110` dispatches as `SYS$CLRAST_2`
   (`TestLookupP1VectorSkipsDataCells`).

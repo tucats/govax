@@ -8,7 +8,7 @@ support — `SYS$CREATE`, `SYS$OPEN`, `SYS$CLOSE`, `SYS$GET`, `SYS$PUT` (plus
 access via the sibling Go module `github.com/tucats/ods2` (working directory
 `/Users/tom/go/src/github.com/tucats/ods2`).
 
-Phase 10's `internal/rtl/rms.go` is a stopgap that never implemented real RMS
+Phase 10's `internal/coreos/rms.go` is a stopgap that never implemented real RMS
 semantics at all: it just `fopen`s an arbitrary host path (or, for `TTA0:`,
 writes to the console) and calls that "RMS". That's incomplete, not faithful to
 VMS, and — per the user's explicit direction — gets **removed**, not kept
@@ -42,7 +42,7 @@ above.**
 `reference/eVAX/eVAX/Source/RTL/rms.c` never touches real ODS-2 structures — its
 three operations (`rms_create`/`rms_connect`/`rms_put`) just `fopen`/`fwrite`
 directly against the host filesystem, exactly matching what Phase 10's
-`internal/rtl/rms.go` already ports (see that file's own doc comment). There is no
+`internal/coreos/rms.go` already ports (see that file's own doc comment). There is no
 C-source counterpart for real volume/file-system semantics to diff against, and no
 `MOUNT` command anywhere in `reference/eVAX` (confirmed by search — the only
 "mount" hits in the whole C tree are `devices.c`'s `mountcount` field, initialized
@@ -52,7 +52,7 @@ reference is **not** `reference/eVAX`; it's:
 
 - The real VMS RMS layout, from `reference/eVAX/eVAX/Headers/fab.h`/`rab.h` — the
   actual `$FABDEF`/`$RABDEF` struct layouts the original C project's own `rms.c`
-  was built against (confirmed authoritative: `internal/rtl/rms.go`'s existing
+  was built against (confirmed authoritative: `internal/coreos/rms.go`'s existing
   `fabIFI`/`fabFAC`/`fabFNA`/... offsets already derive from these headers, not
   guessed).
 - `~/Documents/Technical Doc/VMS/rms_manual.pdf` — service semantics ($CREATE/
@@ -87,7 +87,7 @@ rest.
   `DeviceClassDisk` fields this phase finally populates for real.
 - `internal/bootdata/files/evax.dcl` — new `MOUNT`/`DISMOUNT` grammar (see the
   "Grammar file" decision below — **not** `testdata/dcl/evax.dcl`).
-- `internal/rtl` — existing `ServiceTable`/`Environment`; `rms.go`'s three
+- `internal/coreos` — existing `ServiceTable`/`Environment`; `rms.go`'s three
   host-passthrough handlers are removed and their `ServiceTable` slots
   re-registered against the new package.
 - New package: `internal/rms` — the sole RMS implementation from this phase on.
@@ -208,10 +208,10 @@ push `ods2`, `GOWORK=off go get github.com/tucats/ods2@vX.Y.Z`, then confirm
 
 ### New package `internal/rms`: the sole RMS implementation
 
-Mirrors `internal/rtl`'s own registry-over-switch convention
+Mirrors `internal/coreos`'s own registry-over-switch convention
 ([[feedback_table_driven_dispatch]]) and its `ServiceFunc` shape, but lives
-separately from `internal/rtl` because it owns real state (`ods2` handles) that
-Phase 10's stopgap never needed. It replaces `internal/rtl/rms.go` entirely —
+separately from `internal/coreos` because it owns real state (`ods2` handles) that
+Phase 10's stopgap never needed. It replaces `internal/coreos/rms.go` entirely —
 see "Removing Phase 10's host-passthrough RMS" below — and becomes the only
 place `SYS$CREATE`/`SYS$CONNECT`/`SYS$OPEN`/`SYS$CLOSE`/`SYS$GET`/`SYS$PUT` are
 implemented:
@@ -222,9 +222,9 @@ implemented:
   `volume.Mount`), `Dismount(device string) error` (`vol.Dismount()` + remove),
   `Lookup(device string) (*volume.Volume, bool)`. Owned by `internal/console`'s
   `Console` (constructed once, alongside `Devices`/`Logicals`) and injected into
-  `rtl.Environment` the same way those two already are.
+  `coreos.Environment` the same way those two already are.
 - `internal/rms/fab.go`/`rab.go` — real `$FABDEF`/`$RABDEF` field offsets. Starts
-  from `internal/rtl/rms.go`'s existing `fabIFI`/`fabFAC`/`fabFNA`/`fabFNS`/
+  from `internal/coreos/rms.go`'s existing `fabIFI`/`fabFAC`/`fabFNA`/`fabFNS`/
   `fabSTS`/`fabSTV`/`rabFAB`/`rabISI`/`rabRAC`/`rabRSZ`/`rabRBF`/`rabSTS`/`rabSTV`
   set (moved here, not duplicated) plus the new fields this phase needs:
   `FAB$B_ORG`/`FAB$B_RFM`/`FAB$B_RAT`/`FAB$W_MRS` (record organization/format/
@@ -234,7 +234,7 @@ implemented:
   this file, not by re-deriving from the manual's prose.
 - `internal/rms/status.go` — real, literal `RMS$_` symbol values (`RMS$_NORMAL`,
   `RMS$_EOF`, `RMS$_FNF`, ...) pulled from `rms_manual.pdf`, matching
-  `internal/rtl/status.go`'s own literal-constant style (**not** routed through
+  `internal/coreos/status.go`'s own literal-constant style (**not** routed through
   `internal/vmserrors`'s `RMSFacility` codes — those are govax's own internal
   diagnostic-message IDs under the real RMS facility number, a different
   numbering space from the fixed, well-known `$RMSDEF` values a real compiled VAX
@@ -259,16 +259,16 @@ implemented:
 
 ### Removing Phase 10's host-passthrough RMS
 
-`internal/rtl/rms.go`'s three handlers (`serviceSysCreate`/`serviceSysConnect`/
+`internal/coreos/rms.go`'s three handlers (`serviceSysCreate`/`serviceSysConnect`/
 `serviceSysPut`, plus `allocIFI`/`ifiWriter`/`storeRMSStatus`/`openRMSFile` and
 the `fab*`/`rab*` offset consts) are deleted outright, not kept as a fallback —
 per the user's explicit direction: this support is incomplete and doesn't
 represent real RMS behavior (arbitrary host-path `fopen` has no VMS analogue;
 real RMS always operates against a mounted device/volume), so there's nothing
-worth preserving behind a routing branch. `internal/rtl/rms_test.go` (if any
+worth preserving behind a routing branch. `internal/coreos/rms_test.go` (if any
 exists exercising the removed handlers) moves to `internal/rms` and gets
 rewritten against the new implementation rather than kept as regression coverage
-for code that no longer exists. `internal/rtl`'s `registerRMSServices` shrinks to
+for code that no longer exists. `internal/coreos`'s `registerRMSServices` shrinks to
 registering `internal/rms`'s handlers into the shared `ServiceTable`.
 
 ### Container format fidelity / `simh` interoperability
@@ -328,7 +328,7 @@ the real mounted `*volume.Volume`.
 
 `SS_DEVMOUNT`/`SS_DEVNOTMOUNT`/`SS_NOMOUNT` (real `ss_def.h` values 108/124/
 10380) back `MOUNT`/`DISMOUNT`'s own operational-error reporting — add them to
-`internal/rtl/status.go`'s existing literal `ssXxx` table alongside the ones
+`internal/coreos/status.go`'s existing literal `ssXxx` table alongside the ones
 already there, rather than inventing new numbers.
 
 ### Test fixtures: generated on the fly, not committed binaries
@@ -359,10 +359,10 @@ This local convenience doesn't feed the committed test suite.
    `internal/console/dcl`'s two direct-load tests (plus
    `internal/console/dispatch_test.go`'s own direct load, found along the
    way) onto the bootdata copy.
-3. **Done.** Delete `internal/rtl/rms.go` (and its test, if any) — `serviceSysCreate`/
+3. **Done.** Delete `internal/coreos/rms.go` (and its test, if any) — `serviceSysCreate`/
    `serviceSysConnect`/`serviceSysPut`, `allocIFI`/`ifiWriter`/
    `storeRMSStatus`/`openRMSFile`, and the `fab*`/`rab*` offset consts all go;
-   confirm nothing else in `internal/rtl` referenced them.
+   confirm nothing else in `internal/coreos` referenced them.
 4. **Done.** `internal/rms`: mount table (`mount.go`), FAB/RAB offset tables
    (`fab.go`/`rab.go`, seeded from the deleted file's consts plus the new
    fields, verified against a real VMS system's `$FABDEF`/`$RABDEF`), status-
@@ -386,7 +386,7 @@ This local convenience doesn't feed the committed test suite.
 10. **Done.** `internal/rms`: `SYS$GET` — `rms.NewReader`/`.Next` per record, copying the
     record into the RAB's `RBF`/`RSZ` (and `UBF`/`USZ` if distinct) fields,
     `RMS$_EOF` on exhaustion.
-11. **Done.** `internal/rtl`: `registerRMSServices` shrinks to registering `internal/rms`'s
+11. **Done.** `internal/coreos`: `registerRMSServices` shrinks to registering `internal/rms`'s
     handlers into the shared `ServiceTable`.
 12. **Done.** `internal/io`/`internal/console/device.go`: `MOUNT`/`DISMOUNT` console
     methods (auto-create device record, call `internal/rms.MountTable`); `SHOW
@@ -527,7 +527,7 @@ check and status. `internal/console/rename.go` prints the results.
   VMS system and placed it at the repo root (gitignored, never committed —
   see `.gitignore`); `internal/rms/status.go`'s values are transcribed
   straight from it.
-- ~~Whether the FAB/RAB offsets beyond `internal/rtl/rms.go`'s existing set...
+- ~~Whether the FAB/RAB offsets beyond `internal/coreos/rms.go`'s existing set...
   need any further fields~~ **Resolved (subtask 4)**: the needed new fields
   (`FAB$B_ORG`/`FAB$B_RAT`/`FAB$B_RFM`/`FAB$W_MRS`, `RAB$L_UBF`/`RAB$W_USZ`)
   are exactly what docs/PHASE-22.md's "Design decisions" already anticipated,
@@ -562,7 +562,7 @@ check and status. `internal/console/rename.go` prints the results.
   upstream import; `INITIALIZE` is deferred to a later phase, keeping this one
   scoped to `MOUNT` + the five named RMS services (plus `SYS$CONNECT`, already
   present from Phase 10).
-- User clarified mid-planning: Phase 10's `internal/rtl/rms.go` is a buggy,
+- User clarified mid-planning: Phase 10's `internal/coreos/rms.go` is a buggy,
   incomplete stopgap (arbitrary host-path `fopen` masquerading as RMS) with no
   real VMS fidelity, and gets removed outright rather than kept as a fallback
   path — the whole point of this phase is a true, `ods2`-backed VMS file system,
@@ -678,7 +678,7 @@ check and status. `internal/console/rename.go` prints the results.
 
 ### 2026-09-22 — Subtask 3 complete
 
-- Deleted `internal/rtl/rms.go` and `internal/rtl/rms_test.go` outright, per
+- Deleted `internal/coreos/rms.go` and `internal/coreos/rms_test.go` outright, per
   "Removing Phase 10's host-passthrough RMS": `serviceSysCreate`/
   `serviceSysConnect`/`serviceSysPut`, `allocIFI`/`ifiWriter`/
   `storeRMSStatus`/`openRMSFile`, and the `fab*`/`rab*` offset/access consts
@@ -686,25 +686,25 @@ check and status. `internal/console/rename.go` prints the results.
 - Confirmed via grep that `ifiFiles`/`nextIFI` (the `Environment` fields
   backing the removed IFI table) were referenced nowhere else in the tree,
   so removed both fields and their initialization from
-  `internal/rtl/environment.go`, and updated that file's doc comments
+  `internal/coreos/environment.go`, and updated that file's doc comments
   (struct field block, `NewEnvironment`'s own comment) to stop describing an
   IFI table that no longer lives here — it moves to `internal/rms` from
   subtask 4 on. `consoleOut` itself stays: `print.go`/`file.go` still write
   through it independently of RMS.
-- `internal/rtl/service.go`'s `registerServices` no longer calls
+- `internal/coreos/service.go`'s `registerServices` no longer calls
   `registerRMSServices` (deleted with the rest of the file) — its doc
   comment now explains RMS registration moves to `internal/rms` once that
   package exists (subtask 11), rather than silently dropping the mention.
-- Updated three stale `internal/rtl/rms.go` references found by grep in
+- Updated three stale `internal/coreos/rms.go` references found by grep in
   files this subtask didn't otherwise touch, so nothing in the tree points
-  at a deleted file: `internal/rtl/file.go`'s doc comment (IFI table now in
+  at a deleted file: `internal/coreos/file.go`'s doc comment (IFI table now in
   `internal/rms`), `internal/console/show.go`'s `ShowMap` (both its doc
   comment and its printed "Not applicable" text, now pointing at
   `internal/rms/fab.go`/`rab.go` — `TestShowMap` only asserts on the
   "Not applicable" substring, so the reworded message doesn't break it),
   and `internal/console/image.go`'s doc comment citing the FAB/RAB
   direct-offset-read precedent.
-- Left `internal/rtl/status.go`'s `ssNoSuchFac`/`ssNoSuchFile` constants in
+- Left `internal/coreos/status.go`'s `ssNoSuchFac`/`ssNoSuchFile` constants in
   place even though nothing currently references them post-deletion — real,
   generic `SS$_` codes (not RMS-specific) that subtask 5's `SYS$CREATE`
   device/file-error paths will need again almost immediately; removing and
@@ -766,7 +766,7 @@ check and status. `internal/console/rename.go` prints the results.
   own `BLBC`-style success check actually branches on).
 - No handler files yet (`create.go`/`connect.go`/`open.go`/`close.go`/
   `get.go`/`put.go` are subtasks 5-10) — `internal/rms` doesn't register
-  anything into `internal/rtl`'s `ServiceTable` yet, so `go build`/`go vet`/
+  anything into `internal/coreos`'s `ServiceTable` yet, so `go build`/`go vet`/
   `go test ./...` are clean but nothing in this new package is reachable
   from a running VAX program yet.
 - `go build ./...`, `go vet ./...`, `go test ./...` all clean.
@@ -780,15 +780,15 @@ check and status. `internal/console/rename.go` prints the results.
   console `io.Writer` — plus small `ctx.load*`/`ctx.store*` forwarders and
   `loadFixedString`, the non-NUL-terminated string reader RMS file specs
   need). `Context` exists specifically so this package never has to import
-  `internal/rtl`: `internal/rtl.Environment` bundles almost the same state,
-  but its fields are unexported, and subtask 11 has `internal/rtl` register
-  this package's handlers into its own `ServiceTable` (`rtl` -> `rms`) —
-  the reverse dependency (`rms` -> `rtl`, needed only to spell
-  `*rtl.Environment` as a handler parameter type) would make the two
+  `internal/coreos`: `internal/coreos.Environment` bundles almost the same state,
+  but its fields are unexported, and subtask 11 has `internal/coreos` register
+  this package's handlers into its own `ServiceTable` (`coreos` -> `rms`) —
+  the reverse dependency (`rms` -> `coreos`, needed only to spell
+  `*coreos.Environment` as a handler parameter type) would make the two
   packages import each other, which Go refuses to build. Handler functions
   in this package therefore take `(*Context, []uint32)` rather than
-  matching `rtl.ServiceFunc`'s literal signature; subtask 11 is where
-  `internal/rtl` adapts between the two (small closures over its own
+  matching `coreos.ServiceFunc`'s literal signature; subtask 11 is where
+  `internal/coreos` adapts between the two (small closures over its own
   private `mem`/`cpu`/`consoleOut` fields, calling into this package's
   exported handlers).
 - Also added `status.go`'s `storeStatus` helper (forward-declared by that
@@ -826,7 +826,7 @@ check and status. `internal/console/rename.go` prints the results.
   values (`RMS$_ORG`/`RMS$_RFM`); a device-only spec with no file name at
   all, and a spec naming a nonexistent subdirectory (both `RMS$_FNF`); and
   logical-name translation reaching the console path indirectly through a
-  made-up logical. No handler is wired into `internal/rtl`'s `ServiceTable`
+  made-up logical. No handler is wired into `internal/coreos`'s `ServiceTable`
   yet (still subtask 11) — `SysCreate` is only reachable by calling it
   directly, exactly as this subtask's own tests do.
 - No bugs found in the sibling `ods2` module while implementing this
@@ -1047,7 +1047,7 @@ check and status. `internal/console/rename.go` prints the results.
 
 ### 2026-09-23 — Subtask 11 complete
 
-- Added `internal/rtl/rms.go` (`registerRMSServices`): six thin wrapper
+- Added `internal/coreos/rms.go` (`registerRMSServices`): six thin wrapper
   closures, one per `SYS$CREATE`/`SYS$CONNECT`/`SYS$OPEN`/`SYS$CLOSE`/
   `SYS$GET`/`SYS$PUT`, each building a `*rms.Context` from the
   `*Environment` a call was actually made against (`environment.go`'s new
@@ -1057,7 +1057,7 @@ check and status. `internal/console/rename.go` prints the results.
   `func(*Environment, []uint32) (uint32, error)` (`ServiceFunc`), and
   `internal/rms`'s handlers are `func(*rms.Context, []uint32) (uint32,
   error)` instead — same shape, different first-argument type, because
-  `internal/rms` can't import `internal/rtl` to spell out `*rtl.Environment`
+  `internal/rms` can't import `internal/coreos` to spell out `*coreos.Environment`
   itself without the two packages importing each other (subtask 5's
   `context.go` doc comment anticipated exactly this back when `Context`
   was first added). `service.go`'s `registerServices` now calls
@@ -1081,14 +1081,14 @@ check and status. `internal/console/rename.go` prints the results.
   how `Devices`/`Logicals`/`Mounts` behave. `internal/console`'s `Console`
   (`machine.go`) gained the matching `Mounts *rms.MountTable` field,
   constructed once in `New()` via `rms.NewMountTable()` alongside
-  `Devices`/`Logicals`, and all three `rtl.NewEnvironment` call sites
+  `Devices`/`Logicals`, and all three `coreos.NewEnvironment` call sites
   (`init.go`'s `Init`/`Zero`, `vminit.go`'s `VMInit`) now pass `c.Mounts`
   through. `internal/console/device.go`'s actual `MOUNT`/`DISMOUNT`
   commands that populate this table are still subtask 12, not this one —
   this subtask only had to make sure a `MountTable` exists and reaches
   `internal/rms`'s handlers; subtask 12 makes it possible to put anything
   into it via the console.
-- Test coverage (`internal/rtl/rms_test.go`, new): unlike this package's
+- Test coverage (`internal/coreos/rms_test.go`, new): unlike this package's
   existing tests, these deliberately dispatch through `env.SystemService`
   by p1Vector address — the same path a real `CALLS`/`CALLG` instruction
   resolves through — rather than calling an `internal/rms` function
@@ -1149,12 +1149,12 @@ check and status. `internal/console/rename.go` prints the results.
   record itself in place — real VMS's `DISMOUNT` makes a device unmounted,
   not undefined.
 - Refined this file's own "Device model" design decision while
-  implementing: it named `internal/rtl/status.go`'s unexported `ssXxx`
+  implementing: it named `internal/coreos/status.go`'s unexported `ssXxx`
   table as where `SS_DEVMOUNT`/`SS_DEVNOTMOUNT`/`SS_NOMOUNT` should live,
   written before subtask 11 had settled that `MOUNT`/`DISMOUNT` are
   `internal/console`-only DCL commands with no `SYS$` service/P1-vector
-  entry of their own — `internal/rtl/status.go`'s table is private to
-  package `rtl` and exists purely to back `ServiceFunc` R0 return values,
+  entry of their own — `internal/coreos/status.go`'s table is private to
+  package `coreos` and exists purely to back `ServiceFunc` R0 return values,
   neither of which applies here. `internal/console` already has an
   established, cross-package mechanism for exactly this need (a real,
   numbered VMS status code becoming a Go `error` an operator-facing command
@@ -1327,7 +1327,7 @@ check and status. `internal/console/rename.go` prints the results.
   `SYS$CONNECT` -> `SYS$GET` x3 -> `SYS$CLOSE` against a mounted `DUA0:`
   device, entirely through real `CALLS #n,@#SYS$xxx` instructions (the
   `SYS$xxx` symbols are `.set /perm` literals pointing straight at
-  `internal/rtl/p1vector.go`'s real P1-vector addresses, matching how every
+  `internal/coreos/p1vector.go`'s real P1-vector addresses, matching how every
   other SYS$/LIB$ call in this project's own `.asm` fixtures already
   resolves a bare symbol). The FAB/RAB byte layouts are `.BLKB`/`.BYTE`/
   `.WORD`/`.LONG` blocks laid out field-by-field at the real offsets
@@ -1369,16 +1369,16 @@ check and status. `internal/console/rename.go` prints the results.
   doesn't reach that low), mounts a throwaway `ods2`-initialized container
   on `DUA0` (`mountFreshRMSVolume`, the same `diskimage.Create`+
   `volume.Initialize` pattern `internal/rms/mount_test.go`'s
-  `newTestVolumeFile`/`internal/rtl/rms_test.go`'s
+  `newTestVolumeFile`/`internal/coreos/rms_test.go`'s
   `newMountedVolumeFixture` already use, just wired through `Console.Mounts`
-  instead of a bare `*rms.MountTable`/`*rtl.Environment`), deposits a real
+  instead of a bare `*rms.MountTable`/`*coreos.Environment`), deposits a real
   P1-vector stub at each of the six `SYS$xxx` addresses the program calls
   (`depositP1VectorTrampolines` — see the real bug this surfaced, next
   paragraph), assembles `rms_roundtrip.asm` via `Console.Assemble` (the
   same real, production `ASM <file>` path `internal/console`'s other tests
   already exercise), and runs it via the existing `callBounded` helper,
   checking the program's own `R0` result. Every other RMS test in this
-  project (`internal/rms/*_test.go`, `internal/rtl/rms_test.go`) either
+  project (`internal/rms/*_test.go`, `internal/coreos/rms_test.go`) either
   calls the `internal/rms` handlers directly or drives them through
   `env.SystemService(pc)` from Go — never through genuinely assembled and
   executed VAX instructions; this is the first one that does, exactly this
@@ -1392,7 +1392,7 @@ check and status. `internal/console/rename.go` prints the results.
   address-arithmetic bug in `internal/cpu/xfc.go`'s `emulXfcP1Vector`: it
   computed the SYS$-service dispatch address as `PC-2`, but its own doc
   comment already said it should match `reference/eVAX/eVAX/Source/RTL/
-  p1_vector.c`'s `call_service(vax.PC - 4)` — and `internal/rtl/
+  p1_vector.c`'s `call_service(vax.PC - 4)` — and `internal/coreos/
   p1vector.go`'s own `p1VectorByMatchAddr` table (its `Jmp` case's `Addr-2`
   adjustment, and that field's own doc comment) was already built assuming
   the `PC-4` formula, not `PC-2`. Nothing before this subtask ever
@@ -1552,7 +1552,7 @@ now-removed `showMountedVolume`), not a new RMS capability.
   ```
 
   "Reference count" is `Device.RefCnt`, the count `SYS$ASSIGN` already
-  maintains (`internal/rtl/devices.go`) — real VMS's own meaning (channel
+  maintains (`internal/coreos/devices.go`) — real VMS's own meaning (channel
   assigns), not anything ODS-2-volume-specific (an earlier framing raised
   mid-session and explicitly retracted before implementation started).
   "Free blocks"/"Number of files"/"Total blocks"/"Cluster size"/"Maximum
@@ -1643,7 +1643,7 @@ now-removed `showMountedVolume`), not a new RMS capability.
   directory loops (including the MFD), version-limit purge, alias entries,
   and a dismount/remount round trip that also passes `AnalyzeDisk`.
 - **`govax`**: `internal/rms/rename.go` (`SysRename`), registered as
-  `SYS$RENAME` in `internal/rtl/rms.go`. New FAB fields `fabBID`/`fabBLN`
+  `SYS$RENAME` in `internal/coreos/rms.go`. New FAB fields `fabBID`/`fabBLN`
   (`fab.go`) and statuses (`status.go`, including a small `ssConst` for
   `SS$_` values from `vmsdef.SSConstants`). `internal/rms/rename_test.go`
   covers every status in the addendum's list, the logical-name same-device

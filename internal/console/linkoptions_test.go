@@ -169,7 +169,7 @@ func TestLink_userLibraries(t *testing.T) {
 		t.Error("the image linked with IMAGELIB/LIBRARY differs from govax's tables'")
 	}
 
-	opt := filepath.Join(dir, "rtl.opt")
+	opt := filepath.Join(dir, "corevms.opt")
 	writeHostFile(t, opt, `"`+librtl+`"/SHAREABLE`+"\n") // a host path is quoted, for its slashes
 
 	if withImage := linkHello(t, c, LinkOptions{Files: []link.InputFile{{Name: opt, Options: true}}, NoSysLib: true}); !sameImage(hello, withImage) {

@@ -1,11 +1,11 @@
 package librtl
 
-import "github.com/tucats/govax/internal/rtl"
+import "github.com/tucats/govax/internal/corevms"
 
 // strUpcase is STR$UPCASE (ported from eVAX's librtl_strings.c), as eVAX
 // has it: it upcases, in place, the string the descriptor at its first
 // argument describes, and returns 1.
-func strUpcase(env *rtl.Environment, argv []uint32) (uint32, error) {
+func strUpcase(env *corevms.Environment, argv []uint32) (uint32, error) {
 	mem, cpu := env.Memory(), env.CPU()
 	addr := arg(argv, 0)
 

@@ -252,7 +252,7 @@ func TestDispatch_callStepQualifier(t *testing.T) {
 func TestDispatch_callStepStopsAfterOneInstruction(t *testing.T) {
 	c := newRunnableConsole(t)
 	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
-	
+
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g, nil)
 
@@ -384,7 +384,7 @@ func TestDispatch_entryPointCommandCallsRealRoutine(t *testing.T) {
 		t.Run(cmd, func(t *testing.T) {
 			// Inlines newRunnableConsole's own body (image_test.go) rather
 			// than calling it directly: RTL's console-output writer is
-			// captured by value at Init time (rtl.NewEnvironment's
+			// captured by value at Init time (corevms.NewEnvironment's
 			// consoleOut), so the buffer this test inspects has to be in
 			// place before Init runs, not swapped in afterward.
 			var buf strings.Builder
@@ -789,7 +789,7 @@ func TestDispatch_if(t *testing.T) {
 	if err := d.Dispatch(`IF 1 THEN SET R0=1`); err != nil {
 		t.Fatalf("Dispatch(IF, true, THEN): %v", err)
 	}
-	
+
 	if got := c.CPU.GPR(vax.R0); got != 1 {
 		t.Errorf("R0 = %#x, want 1", got)
 	}

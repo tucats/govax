@@ -14,20 +14,20 @@ import (
 // handful of small helper methods on it that every handler would
 // otherwise have to repeat.
 //
-// # Why not just use internal/rtl.Environment directly?
+// # Why not just use internal/corevms.Environment directly?
 //
-// internal/rtl.Environment already bundles almost exactly this same set
+// internal/corevms.Environment already bundles almost exactly this same set
 // of things (its own *vm.Memory, *vax.CPU, console-output io.Writer,
 // Logicals) — using it directly here would avoid a second, similar-looking
 // type. But Environment's mem/cpu/consoleOut fields are unexported,
-// reachable only from code inside package rtl itself, and this package's
+// reachable only from code inside package corevms itself, and this package's
 // handlers need to read and write VAX memory directly (FAB/RAB fields —
 // see fab.go/rab.go) the same way internal/rtl's own shims and services
-// do. Since package rtl is what will register this package's handlers
+// do. Since package corevms is what will register this package's handlers
 // into its ServiceTable (docs/PHASE-22.md's subtask 11 — "registerRMSServices
 // shrinks to registering internal/rms's handlers"), the dependency has to
 // run rtl -> rms, not rms -> rtl: if this package imported internal/rtl
-// too (for example, just to spell out *rtl.Environment as a parameter
+// too (for example, just to spell out *corevms.Environment as a parameter
 // type), the two packages would import each other, which Go simply
 // refuses to build at all. Context is this package's own, self-contained
 // answer to the same need, built from types (internal/vm, internal/vax,
@@ -52,7 +52,7 @@ type Context struct {
 	Files *FileTable
 
 	// Logicals is the process's logical-name database, shared with the
-	// console and internal/rtl. It is consulted so that a file
+	// console and internal/corevms. It is consulted so that a file
 	// specification which is itself a defined logical name (for instance
 	// "SYS$OUTPUT", which the console points at "_TTA0:") is translated
 	// to what it actually names before being parsed as a device/file

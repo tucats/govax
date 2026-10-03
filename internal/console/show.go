@@ -614,7 +614,7 @@ func (c *Console) ShowROM() error {
 
 // ShowShim prints every RTL shim symbol (kernel.asm's `.shim` table, see
 // shim.go's ensureShims) matching shim.c's own shim_dump: for a nonzero
-// numeric-dispatch code, whether internal/rtl.Environment has a live
+// numeric-dispatch code, whether internal/corevms.Environment has a live
 // handler for it; for a code-0 entry, the already-assembled kernel.asm
 // routine it resolves to by name -- exactly shim_dump's own "resolves each
 // SHIM$<library>_<offset> symbol to a second, separately-defined label at

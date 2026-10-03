@@ -1,6 +1,6 @@
 package librtl
 
-import "github.com/tucats/govax/internal/rtl"
+import "github.com/tucats/govax/internal/corevms"
 
 // Library is the name of the shareable image these routines stand for, as
 // a program's image names it and SHIM$<library>_<offset> spells it.
@@ -23,7 +23,7 @@ type Routine struct {
 	Code uint32
 
 	// Fn is the routine.
-	Fn rtl.ShimFunc
+	Fn corevms.ShimFunc
 }
 
 // Routines are the LIBRTL routines govax provides. The codes of the ones
@@ -45,7 +45,7 @@ var Routines = []Routine{
 }
 
 // Register installs every routine in Routines into t.
-func Register(t *rtl.ShimTable) {
+func Register(t *corevms.ShimTable) {
 	for _, r := range Routines {
 		t.Register(r.Code, r.Name, r.Fn)
 	}

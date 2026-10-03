@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/rtl"
 
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/vax"
@@ -975,8 +975,8 @@ func TestAttentionKeys_matchRTL(t *testing.T) {
 
 	var _ cpu.AttentionHandler = c
 
-	if cpu.AttentionCtrlC != rtl.AttentionCtrlC || cpu.AttentionCtrlY != rtl.AttentionCtrlY {
-		t.Errorf("engine keys %#x/%#x, RTL keys %#x/%#x", cpu.AttentionCtrlC, cpu.AttentionCtrlY, rtl.AttentionCtrlC, rtl.AttentionCtrlY)
+	if cpu.AttentionCtrlC != corevms.AttentionCtrlC || cpu.AttentionCtrlY != corevms.AttentionCtrlY {
+		t.Errorf("engine keys %#x/%#x, RTL keys %#x/%#x", cpu.AttentionCtrlC, cpu.AttentionCtrlY, corevms.AttentionCtrlC, corevms.AttentionCtrlY)
 	}
 
 	// With nothing enabled, neither key is taken.

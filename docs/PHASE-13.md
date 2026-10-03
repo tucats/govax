@@ -61,7 +61,7 @@ assembler:
   fully-enumerable `(library, vector offset) -> (name, numeric shim code or "dead")`
   list. A Go port can synthesize the equivalent tiny stub (`MOVL #code,R0` / `XFC #0x7D`
   / `RET`, or a dead `XFC #0x7D` with an intentionally-unregistered code for the
-  literal-`0` entries) directly as bytes at `internal/rtl` construction time, and register
+  literal-`0` entries) directly as bytes at `internal/coreos` construction time, and register
   each stub's address under the matching `SHIM$...` name in whatever symbol table `RUN`'s
   fixup resolver consults — no parser needed.
 
@@ -148,7 +148,7 @@ knowable by actually loading and running it, which is this phase's job to find o
 
 - `internal/console/image.go`: `ICB`/`ISD`/`IAF`/`SHR` Go types and
   `Console.imageLoad`, ported from `console_run.c`'s `image_load` and
-  `imgdef.h`. Per the precedent already set by `internal/rtl/rms.go`'s own
+  `imgdef.h`. Per the precedent already set by `internal/coreos/rms.go`'s own
   FAB/RAB field access, this reads each struct's fields directly at their
   documented byte offsets (taken from `init_ihd_maps`'s own table) rather
   than porting `structure_mapping.c`'s generic name-keyed `map()`/`STROFF`
@@ -203,7 +203,7 @@ knowable by actually loading and running it, which is this phase's job to find o
   combination): `VMInit` replaces `c.Engine` and `c.Mem` (a fresh, wiped
   address space) but was never re-running `c.Engine.SetSystemServices(c)`
   (so `e.services` stayed nil after the reassignment) nor recreating
-  `c.RTL` (so `rtl.Environment` kept a stale reference to the *pre-VMINIT*
+  `c.RTL` (so `coreos.Environment` kept a stale reference to the *pre-VMINIT*
   `vm.Memory`, with no page tables -- reads through it access-violated even
   though the same address read fine through the live `c.Mem`). Both are
   plain missing-reassignment bugs, not ISA/hardware-fidelity questions
@@ -217,7 +217,7 @@ knowable by actually loading and running it, which is this phase's job to find o
   entry's stub (`MOVL #code,R0` / `XFC #0x7D` / `RET`, matching
   `asm_pseudo.c`'s own `.SHIM` code-generation case byte-for-byte, code 0
   entries included -- see the file's doc comment on why a "dead" stub needs
-  no special-casing: `internal/rtl.ShimTable.Lookup(0)` already misses
+  no special-casing: `internal/coreos.ShimTable.Lookup(0)` already misses
   naturally) into a dedicated S0 page `VMInit` now reserves (`shimBase`,
   separate from `CONSOLE$SCRATCH`, which stays reserved for RUN's own
   transient `IMAGE$INIT` driver -- conflating the two was an early design

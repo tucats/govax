@@ -5,13 +5,13 @@ import (
 	"io"
 
 	"github.com/tucats/govax/internal/asm"
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/librtl"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/rtl"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -72,7 +72,7 @@ type Console struct {
 	// purely so a later SHOW MEMORY can display it, matching that struct's
 	// own doc comment ("stored in the virtual machine so a SHOW VM command
 	// can display them"). Not to be confused with RTL's own RegionSize
-	// (rtl.Environment.RegionSize): that's SYS$EXPREG/image-activation
+	// (corevms.Environment.RegionSize): that's SYS$EXPREG/image-activation
 	// high-water-mark bookkeeping for SHOW REGIONS, an unrelated concept
 	// that happens to share a name in the C source (see ShowRegions' own
 	// doc comment in show.go).
@@ -98,7 +98,7 @@ type Console struct {
 	// VAX's own address space, and must survive an INIT/ZERO/VMINIT that
 	// wipes that address space (see RTL's own doc comment below for the
 	// contrast: RTL is recreated on every one of those, Mounts is not).
-	// Injected into each new rtl.Environment the same way Devices/Logicals
+	// Injected into each new corevms.Environment the same way Devices/Logicals
 	// already are (init.go, vminit.go).
 	Mounts *rms.MountTable
 
@@ -122,7 +122,7 @@ type Console struct {
 	// the XFC$P1VECTOR/XFC$SHIM selectors. Created fresh alongside the
 	// Engine on every Init/Zero (see init.go), since it's addressed
 	// through the same CPU/Memory pair.
-	RTL *rtl.Environment
+	RTL *corevms.Environment
 
 	// Dispatcher backs XFC$CONSOLE_CMD (a running VAX program asking the
 	// console to execute a command line on its behalf). Unlike Engine/RTL,
@@ -265,8 +265,8 @@ func New(out io.Writer) *Console {
 // sharing the console's devices, logical names, mounts, and session (so
 // a program's RMS calls see SET DEFAULT's default directory), and the
 // engine's system clock.
-func (c *Console) newRTL() *rtl.Environment {
-	env := rtl.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.Mounts, c.In, c.Out)
+func (c *Console) newRTL() *corevms.Environment {
+	env := corevms.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.Mounts, c.In, c.Out)
 	librtl.Register(env.Shims()) // LIBRTL.EXE's routines (docs/PHASE-34.md)
 	env.Session = c.ContainerSession
 
@@ -346,7 +346,7 @@ func allocPhysMemory(bytes uint32) uint32 {
 	if aligned < minPhysMemory {
 		aligned = minPhysMemory
 	}
-	
+
 	if aligned != bytes {
 		aligned += physMemAlign
 	}

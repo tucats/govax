@@ -1,7 +1,7 @@
 package librtl
 
 import (
-	"github.com/tucats/govax/internal/rtl"
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -26,7 +26,7 @@ const statusFreeVMBadBlock = 4042
 // heap and stores the block's address at base-address. As in eVAX, the
 // block gets no zone (0), whatever zone-id says: eVAX's lib_get_vm passed
 // the zone where its allocator never read it.
-func libGetVM(env *rtl.Environment, argv []uint32) (uint32, error) {
+func libGetVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 	mem, cpu := env.Memory(), env.CPU()
 	sizeAddr, retAddr := arg(argv, 0), arg(argv, 1)
 
@@ -56,7 +56,7 @@ func libGetVM(env *rtl.Environment, argv []uint32) (uint32, error) {
 //	LIB$FREE_VM number-of-bytes ,base-address [,zone-id]
 //
 // It frees the block whose address is the longword at base-address.
-func libFreeVM(env *rtl.Environment, argv []uint32) (uint32, error) {
+func libFreeVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 	addr, err := env.Memory().LoadLongword(env.CPU(), arg(argv, 1))
 	if err != nil {
 		return ssAccVio, nil
@@ -74,7 +74,7 @@ func libFreeVM(env *rtl.Environment, argv []uint32) (uint32, error) {
 //	LIB$DELETE_VM_ZONE zone-id
 //
 // It frees every block tagged with the zone the longword at zone-id names.
-func libDeleteVMZone(env *rtl.Environment, argv []uint32) (uint32, error) {
+func libDeleteVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
 	zone, err := env.Memory().LoadLongword(env.CPU(), arg(argv, 0))
 	if err != nil {
 		return ssAccVio, nil

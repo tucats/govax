@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/rtl"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -91,7 +91,7 @@ func TestConsoleShimDelegatesToRTL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	
+
 	if !handled {
 		t.Fatal("DECC$TIME shim not handled")
 	}
@@ -115,8 +115,8 @@ func TestConsoleReInitReplacesRTLEnvironment(t *testing.T) {
 }
 
 func TestTranslateHalt(t *testing.T) {
-	if !errors.Is(translateHalt(rtl.ErrHalt), cpu.ErrHalted) {
-		t.Error("translateHalt(rtl.ErrHalt) does not unwrap to cpu.ErrHalted")
+	if !errors.Is(translateHalt(corevms.ErrHalt), cpu.ErrHalted) {
+		t.Error("translateHalt(corevms.ErrHalt) does not unwrap to cpu.ErrHalted")
 	}
 
 	other := errors.New("boom")

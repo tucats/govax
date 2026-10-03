@@ -23,7 +23,7 @@ import (
 //     physical block is a logical block (IO$_READPBLK).
 //
 // Logical I/O bypasses the file system entirely, so VMS requires a
-// privilege for it (LOG_IO; PHY_IO for physical), checked by internal/rtl.
+// privilege for it (LOG_IO; PHY_IO for physical), checked by internal/corevms.
 // Here it's just block reads and writes on the mounted disk image.
 //
 // A logical write goes straight to the image, under ods2's feet: ods2

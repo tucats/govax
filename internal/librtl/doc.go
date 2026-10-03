@@ -10,7 +10,7 @@
 // console instead lays down a small stub for each routine (entry mask;
 // MOVL #code, R0; XFC; RET) and points SHIM$LIBRTL_<offset> at it, so the
 // fixup lands on the stub. The XFC runs the Go function registered under
-// code in the process's rtl.ShimTable, with the call's argument list.
+// code in the process's corevms.ShimTable, with the call's argument list.
 // Routines lists every routine with its offset and code; Register installs
 // them.
 //

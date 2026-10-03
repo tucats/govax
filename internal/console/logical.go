@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/console/dcl"
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/rtl"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -28,10 +28,10 @@ const consoleTerminal = "_TTA0:"
 const dclLogicalName = "LNM$DCL_LOGICAL"
 
 // newLogicals returns the console's logical-name database: the standard
-// VMS directories and tables for rtl.NominalUIC (the same UIC the RTL
+// VMS directories and tables for corevms.NominalUIC (the same UIC the RTL
 // reports for this process), plus the process-permanent terminal names.
 func newLogicals() *lnm.Database {
-	db := lnm.NewDatabase(rtl.NominalUIC)
+	db := lnm.NewDatabase(corevms.NominalUIC)
 	if err := db.DefineProcessNames(consoleTerminal); err != nil {
 		// Only reachable if the fixed names above were invalid.
 		panic(err)
@@ -262,7 +262,7 @@ func (c *Console) logicalTables(specs []string) ([]*lnm.Table, error) {
 		for _, t := range tables {
 			if !seen[t] {
 				seen[t] = true
-				
+
 				out = append(out, t)
 			}
 		}

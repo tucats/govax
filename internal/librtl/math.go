@@ -1,6 +1,6 @@
 package librtl
 
-import "github.com/tucats/govax/internal/rtl"
+import "github.com/tucats/govax/internal/corevms"
 
 // libAdawi is LIB$ADAWI (ported from eVAX's librtl_math.c):
 //
@@ -9,7 +9,7 @@ import "github.com/tucats/govax/internal/rtl"
 // It adds the longword at add to the longword at sum and stores the sign of
 // the result (-1, 0, or 1) at sign. Like eVAX's, it doesn't model the ADAWI
 // instruction's interlock, and it returns 1.
-func libAdawi(env *rtl.Environment, argv []uint32) (uint32, error) {
+func libAdawi(env *corevms.Environment, argv []uint32) (uint32, error) {
 	mem, cpu := env.Memory(), env.CPU()
 	sumAddr, baseAddr, signAddr := arg(argv, 0), arg(argv, 1), arg(argv, 2)
 

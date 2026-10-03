@@ -21,7 +21,7 @@ var ErrServiceWait = errors.New("cpu: system service waiting")
 // See docs/PHASE-07.md's XFC deferral and docs/PHASE-10.md's scope note.
 //
 // internal/console.Console implements this, delegating the RTL-specific
-// methods (SystemService/Shim) to an embedded *rtl.Environment — kept as an
+// methods (SystemService/Shim) to an embedded *corevms.Environment — kept as an
 // interface here, rather than internal/cpu importing internal/console or
 // internal/rtl directly, so internal/cpu stays independent of both (matching
 // this project's layering: internal/cpu doesn't know about the console or

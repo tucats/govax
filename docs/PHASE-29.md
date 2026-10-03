@@ -760,7 +760,7 @@ The author decided each of these on 2026-10-02.
   - The RMS service macros (`$$RMSSVC`, `$RENAME`, `$WAIT`) declare
     their service `.GLOBL`, as the system service macros already did:
     real MACRO's table shows `SYS$OPEN` and the rest `GX`, which only
-    `.GLOBL` gives (a symbol that's only referred to is ` X`).
+    `.GLOBL` gives (a symbol that's only referred to is `X`).
 
 ### 2026-10-03 — Subtask 7: listing controls
 
@@ -811,7 +811,7 @@ The author decided each of these on 2026-10-02.
     line on a page heads that page (`lctlnosh.lis`'s page 13).
   - **The table of contents** is page 0, written when there's any
     `.SBTTL`. Its second heading line is just `Table of contents`, then a
-    blank line. Each entry is `    (1)`, the line number in 9 columns, 8
+    blank line. Each entry is `(1)`, the line number in 9 columns, 8
     blanks, and the whole subtitle. The source pages then start at page
     1.
 - **Not shown by any real listing, so unconfirmed:**

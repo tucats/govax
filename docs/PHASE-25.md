@@ -88,7 +88,7 @@ is traceable.
 | [internal/console/device.go:141-175](../internal/console/device.go#L141-L175) + `DEFINE_LOGICAL` binding in [dispatch.go:375](../internal/console/dispatch.go#L375) | `DEFINE/LOGICAL name value [/TABLE=]`, which defaults to the table `LNM_PROCESS` (an underscore, not `$`). `SHOW LOGICAL_NAMES [name] [/TABLE=]`. | The default table name is wrong: `LNM_PROCESS` is never searched, including by RMS, which only looks in `LNM$FILE_DEV`. So **a name defined with the console's own DEFINE command is invisible to RMS today.** `DEFINE/LOGICAL` isn't VMS syntax. The SHOW output doesn't follow the VMS format. |
 | [internal/rms/create.go:59](../internal/rms/create.go#L59), [open.go:61](../internal/rms/open.go#L61) | Look up the **entire** file-spec string as a name in the table `LNM$FILE_DEV`, then replace the spec with the value. | This isn't how VMS translates: it doesn't split off the leftmost `name:` component, doesn't iterate, doesn't handle search lists, and doesn't handle `_`. `SCRATCH:PAYROLL.DAT` never translates. |
 | [internal/rms/session.go](../internal/rms/session.go) (DIRECTORY/TYPE/COPY/DELETE/PURGE/SET DEFAULT) | Parse the operator's spec directly with `filespec.Parse`. | No logical-name translation at all. |
-| [internal/rtl/logicals.go](../internal/rtl/logicals.go) | `SYS$TRNLNM` looks up one table name exactly. `LNM$_MAX_INDEX` is always 1. `LNM$_INDEX` is ignored. | A call like `$TRNLNM(tabnam="LNM$FILE_DEV", ...)`, the most common form in real code, only works by accident of the seeding described above. There's no `$CRELNM`/`$DELLNM`/`$CRELNT`, even though all three are already in the P1 vector ([internal/vmsdef/p1vector.go](../internal/vmsdef/p1vector.go)). |
+| [internal/coreos/logicals.go](../internal/coreos/logicals.go) | `SYS$TRNLNM` looks up one table name exactly. `LNM$_MAX_INDEX` is always 1. `LNM$_INDEX` is ignored. | A call like `$TRNLNM(tabnam="LNM$FILE_DEV", ...)`, the most common form in real code, only works by accident of the seeding described above. There's no `$CRELNM`/`$DELLNM`/`$CRELNT`, even though all three are already in the P1 vector ([internal/vmsdef/p1vector.go](../internal/vmsdef/p1vector.go)). |
 | `internal/bootdata/files/console.dcl` | `verb define` has only the `/LOGICAL` and `/DEVICE` syntax-redirect qualifiers. | A bare `DEFINE name value` doesn't parse. |
 
 The data model is the core problem (single-valued names and no directories), so
@@ -105,12 +105,12 @@ The logical-name database moves out of `internal/io` into a new package,
   subsystem that the console, RMS, and RTL all use, so none of those packages
   is the natural owner.
 - A leaf package can be imported by `internal/console`, `internal/rms`, and
-  `internal/rtl`, and by any later RTL/system-service package, without cycles.
+  `internal/coreos`, and by any later RTL/system-service package, without cycles.
   This matches the user's requirement that the database be available to "the RMS
   package and any peer package to that".
 - Ownership stays the same as today. The `Console` constructs one
   `*lnm.Database` in `New`, alongside `Devices`/`Mounts`, and passes the same
-  pointer into `rtl.NewEnvironment` and `rms.Context`/`rms.Session`. There's no
+  pointer into `coreos.NewEnvironment` and `rms.Context`/`rms.Session`. There's no
   package-level singleton (as required by the PLAN.md architecture rules).
   Logical names survive `INIT`/`ZERO` exactly as the current `Logicals` field
   does.
@@ -385,7 +385,7 @@ the process default directory. RMS then gets its default device by translating
   - `MOUNT`/`DISMOUNT` translate their device argument, with `_` suppressing
     translation. On VMS, `MOUNT` also defines the volume label as a logical
     name. Open question 3 asks whether to do that too.
-- **`internal/rtl`**:
+- **`internal/coreos`**:
   - Rewrite `SYS$TRNLNM` against `internal/lnm`: table-name resolution through
     the directories, `LNM$_INDEX` for search-list elements, a real
     `LNM$_MAX_INDEX`, `LNM$_ATTRIBUTES` with the real `LNM$M_EXISTS`/
@@ -435,7 +435,7 @@ the process default directory. RMS then gets its default device by translating
    NESTED, and so on).
 4. **Done.** **Swap consumers over to `internal/lnm`** without changing behavior:
    - `Console` builds a `*lnm.Database`.
-   - `rtl.Environment` and `rms.Context`/`Session` take it instead of
+   - `coreos.Environment` and `rms.Context`/`Session` take it instead of
      `*iodev.LogicalNameTable`.
    - The console's device names move from the fake `LNM$FILE_DEV` table into
      `LNM$PROCESS_TABLE`.
@@ -513,12 +513,12 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
    exactly like the process table? *Recommendation: leave it out for now. The
    directory-based design makes it a few lines to add later.* **CONFIRMED: leave
    it out for now.**
-2. **UIC group number.** `rtl.Environment` already has a nominal UIC
+2. **UIC group number.** `coreos.Environment` already has a nominal UIC
    (`nominalUIC`). The group table should be named from its group field
    (`LNM$GROUP_000001`, or whatever `nominalUIC` holds), which means the UIC has
    to move somewhere the console-owned `lnm.Database` can see it at
    construction. *Recommendation: pass the UIC into `lnm.NewDatabase`, and
-   have `rtl.NewEnvironment` take it from the same place.* **CONFIRMED: passing
+   have `coreos.NewEnvironment` take it from the same place.* **CONFIRMED: passing
    the uic into new database.**
 3. **Default system-table and mount-time names.** Should `MOUNT` define the
    volume label as a logical name (as VMS does, in the system table for
@@ -629,7 +629,7 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
   byte-for-byte identical to before.
 - **Cross-checks.** The generated `$LNMDEF` values independently match what
   govax already hard-coded:
-  - `internal/rtl/logicals.go`: `LNM$M_CASE_BLIND` = `0x2000000`,
+  - `internal/coreos/logicals.go`: `LNM$M_CASE_BLIND` = `0x2000000`,
     `LNM$_STRING` = 2 through `LNM$_MAX_INDEX` = 7.
   - `internal/io/logical.go`: `LNM$M_TABLE` = `0x8`, `LNM$M_TERMINAL` =
     `0x200`.
@@ -637,7 +637,7 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
     question 5's 7.3 limits.
 
   `LNM$_CHAIN` (-1) is stored as `0xFFFFFFFF`.
-- **Finding for subtask 8.** Three `SS$_` codes in `internal/rtl/status.go` are
+- **Finding for subtask 8.** Three `SS$_` codes in `internal/coreos/status.go` are
   **not in the VAX 7.3 `$SSDEF` at all**: `ssNoSuchFac` = 9276, `ssInvArg` =
   4042, and `ssTooManyArgs` = 10060. No name in `ssdef.txt` has any of those
   values either. They probably come from eVAX or from a later/Alpha VMS.
@@ -773,10 +773,10 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
 ### 2026-09-27 — Subtask 4: consumers moved to `internal/lnm`
 
 - **Ownership.** `Console.New` builds the single `*lnm.Database`
-  (`newLogicals` in `internal/console/device.go`) from `rtl.NominalUIC`.
+  (`newLogicals` in `internal/console/device.go`) from `coreos.NominalUIC`.
   That constant was `nominalUIC`, exported so that the group table and the
   RTL's reported UIC come from one place (open question 2). The database is
-  passed unchanged into `rtl.NewEnvironment` and on to `rms.Context`. The
+  passed unchanged into `coreos.NewEnvironment` and on to `rms.Context`. The
   `Logicals` field names stay the same; only their type changed.
 - **Process-permanent names.** New `lnm.Database.DefineProcessNames(terminal)`
   defines `SYS$INPUT`/`OUTPUT`/`ERROR`/`COMMAND` (executive mode,
@@ -975,7 +975,7 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
     unparseable spec is still `RMS$_FNF`.
   - A spec with no device now gets `SYS$DISK`'s. Before, it always failed
     with `RMS$_DNR`.
-  - `rms.Context.Session` (set through the new `rtl.Environment.Session`,
+  - `rms.Context.Session` (set through the new `coreos.Environment.Session`,
     which the console's new `newRTL` helper fills in) supplies SET
     DEFAULT's directory.
 - **MOUNT/DISMOUNT.**
@@ -1012,7 +1012,7 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
 
 ### 2026-09-27 — Subtask 8: system services
 
-- **`internal/rtl/logicals.go` rewritten.** It now holds seven services, all
+- **`internal/coreos/logicals.go` rewritten.** It now holds seven services, all
   registered through `ServiceTable.Register`: `SYS$TRNLNM`, `SYS$CRELNM`,
   `SYS$DELLNM`, `SYS$CRELNT`, `SYS$CRELOG`, `SYS$DELLOG`, and `SYS$TRNLOG`.
   They follow the VMS 5.0 System Services Reference Manual. Item codes and
@@ -1099,7 +1099,7 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
   checks that it runs to completion, which it still does. It's an upstream
   eVAX fixture, so it was left alone.
 - **Tests.**
-  - `internal/rtl/logicals_test.go` (rewritten around a small memory
+  - `internal/coreos/logicals_test.go` (rewritten around a small memory
     "arena" helper): every `$TRNLNM` item code, including index past the
     end, overflow, bad item/index, case-blind, acmode, and a chained or
     looping list. Also `$CRELNM` with positional attributes, `LNM$_TABLE`,

@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/tucats/govax/internal/corevms"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/rtl"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -15,22 +15,22 @@ import (
 
 // fixture is an RTL environment with 1MB of memory, used directly
 // (virtual memory off), with this package's routines registered.
-func fixture(t *testing.T) *rtl.Environment {
+func fixture(t *testing.T) *corevms.Environment {
 	t.Helper()
 
-	logicals := lnm.NewDatabase(rtl.NominalUIC)
+	logicals := lnm.NewDatabase(corevms.NominalUIC)
 	if err := logicals.DefineProcessNames("_TTA0:"); err != nil {
 		t.Fatal(err)
 	}
 
-	env := rtl.NewEnvironment(vax.New(), vm.NewMemory(1<<20), iodev.NewDeviceTable(), logicals,
+	env := corevms.NewEnvironment(vax.New(), vm.NewMemory(1<<20), iodev.NewDeviceTable(), logicals,
 		rms.NewMountTable(), bytes.NewReader(nil), &bytes.Buffer{})
 	Register(env.Shims())
 
 	return env
 }
 
-func putLongword(t *testing.T, env *rtl.Environment, addr, v uint32) {
+func putLongword(t *testing.T, env *corevms.Environment, addr, v uint32) {
 	t.Helper()
 
 	if err := env.Memory().StoreLongword(env.CPU(), addr, v); err != nil {
@@ -38,7 +38,7 @@ func putLongword(t *testing.T, env *rtl.Environment, addr, v uint32) {
 	}
 }
 
-func longword(t *testing.T, env *rtl.Environment, addr uint32) uint32 {
+func longword(t *testing.T, env *corevms.Environment, addr uint32) uint32 {
 	t.Helper()
 
 	v, err := env.Memory().LoadLongword(env.CPU(), addr)
@@ -51,7 +51,7 @@ func longword(t *testing.T, env *rtl.Environment, addr uint32) uint32 {
 
 // putDescriptor writes a fixed-length string descriptor for s at addr,
 // with the string at strAddr.
-func putDescriptor(t *testing.T, env *rtl.Environment, addr, strAddr uint32, s string) {
+func putDescriptor(t *testing.T, env *corevms.Environment, addr, strAddr uint32, s string) {
 	t.Helper()
 
 	mem, cpu := env.Memory(), env.CPU()
@@ -75,7 +75,7 @@ func putDescriptor(t *testing.T, env *rtl.Environment, addr, strAddr uint32, s s
 
 // call runs the routine registered as name through the shim table, as a
 // program's call would reach it.
-func call(t *testing.T, env *rtl.Environment, name string, argv ...uint32) uint32 {
+func call(t *testing.T, env *corevms.Environment, name string, argv ...uint32) uint32 {
 	t.Helper()
 
 	for _, r := range Routines {

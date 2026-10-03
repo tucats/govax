@@ -107,15 +107,15 @@ expect adjustment as phases land):
   (Phase 31).
 - `internal/lnm` — VMS logical-name database: directories, tables, access modes,
   search lists, `$TRNLNM`-style lookup and RMS file-spec translation (Phase 25).
-  A leaf package shared by the console, `internal/rms`, and `internal/rtl`.
-- `internal/rtl` — VMS RTL/system-service simulation (Phase 10).
+  A leaf package shared by the console, `internal/rms`, and `internal/coreos`.
+- `internal/coreos` — VMS RTL/system-service simulation (Phase 10).
 - `internal/librtl` — LIBRTL.EXE's routines (Phase 34): the LIB$ and STR$
   shims a program reaches through `SHIM$LIBRTL_<offset>` stubs. `Routines`
   lists each with its transfer-vector offset (checked against
   `vmsdef.ImageSymbols`) and XFC$SHIM code; the console registers them into
   each RTL environment and builds the stubs from the same table. The process
   machinery they use (condition dispatch, the heap, memory) stays in
-  `internal/rtl`, reached through `export.go`. Each further *RTL.EXE emulated
+  `internal/coreos`, reached through `export.go`. Each further *RTL.EXE emulated
   gets a package like it. New routines are written from DIGITAL's manuals
   (clean room), and checked on VMS where a probe can: LIB$CREATE_DIR
   (`createdir.go`) against `testdata/credir/libcrd.mar`'s VMS 7.3 run
@@ -145,7 +145,7 @@ expect adjustment as phases land):
   on either side (`ReadRecordFile`/`CreateRecordFile`, and `RewriteRecordFile`,
   which keeps a volume file's version; `recordfile.go`; Phase
   27). The sole place in this project allowed to import `ods2`; owns its
-  own IFI (open-file) table separately from `internal/rtl`'s state, since it
+  own IFI (open-file) table separately from `internal/coreos`'s state, since it
   tracks real `ods2` handles Phase 10's RTL layer never needed. `go.mod`
   pins a tagged `ods2` release, so a plain clone builds; a local, gitignored
   `go.work` (`use .` / `use ../ods2`) overrides it with the sibling checkout

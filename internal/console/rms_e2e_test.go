@@ -16,7 +16,7 @@ import (
 // pattern internal/rms/mount_test.go's newTestVolumeFile and
 // internal/rtl/rms_test.go's newMountedVolumeFixture already use, just at
 // the Console level (c.Mounts) rather than a bare *rms.MountTable or
-// *rtl.Environment.
+// *corevms.Environment.
 func mountFreshRMSVolume(t *testing.T, c *Console) {
 	t.Helper()
 
@@ -29,7 +29,7 @@ func mountFreshRMSVolume(t *testing.T, c *Console) {
 
 	if err := volume.Initialize(container, volume.InitializeOptions{Label: "TESTVOL"}); err != nil {
 		_ = container.Close()
-		
+
 		t.Fatalf("volume.Initialize: %v", err)
 	}
 

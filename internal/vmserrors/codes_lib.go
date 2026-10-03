@@ -13,7 +13,7 @@ const (
 // status codes.
 const (
 	// LIB_HALT reports a ServiceFunc/ShimFunc requesting the machine
-	// halt (rtl.ErrHalt), matching cli.c's own "vax.halted = 1" on an
+	// halt (corevms.ErrHalt), matching cli.c's own "vax.halted = 1" on an
 	// unrecognized CLI request -- not a failure, hence StatusSuccess.
 	LIB_HALT = LIBFacility<<FacilityPosition | libHalt<<MessagePosition | StatusSuccess
 	// LIB_PANIC reports a recovered panic from inside a service/shim

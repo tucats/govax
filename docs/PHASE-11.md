@@ -208,15 +208,15 @@ commands and used generally for operand encoding — this unlocks assembling
   services actually exist to call through it, worth finishing rather than
   deferring further.
 - Root design question first: `.P1VECTOR` needs the same fixed VMS P1
-  address table (~250 `SYS$xxx` entries) `internal/rtl/p1vector.go` already
+  address table (~250 `SYS$xxx` entries) `internal/coreos/p1vector.go` already
   has for dispatch — but `internal/asm` deliberately doesn't depend on
-  `internal/rtl` (this doc's own scope-cut note above explained the original
+  `internal/coreos` (this doc's own scope-cut note above explained the original
   no-op that way). Asked the user rather than deciding unilaterally; picked
   option (a) of three (duplicate the table in `internal/asm`; (b) export it
-  from `internal/rtl` and import that; (c) a new shared leaf package): a new
+  from `internal/coreos` and import that; (c) a new shared leaf package): a new
   `internal/p1vector` package holding just the data (`Entry`/`Table`, copied
   verbatim from `p1_vector.c`'s own array), imported by both
-  `internal/rtl` (`p1vector.go` now just builds its PC-match index over it)
+  `internal/coreos` (`p1vector.go` now just builds its PC-match index over it)
   and `internal/asm` — single source of truth, no new backwards dependency
   either direction.
 - `internal/asm/pseudo.go`'s `pseudoP1Vector` now ports `p1_vector.c`'s own
@@ -232,7 +232,7 @@ commands and used generally for operand encoding — this unlocks assembling
   defines `EXE$P1_VECTOR_BASE`/`END` from the real min/max addresses seen.
   Requires `.MICROKERNEL`, matching `.SCB`/`.SHIM`/`.REGION`. Not ported:
   `p1_init()`'s own `declare_services()` call (this port already registers
-  every implemented `SYS$` handler statically at `internal/rtl` package
+  every implemented `SYS$` handler statically at `internal/coreos` package
   init, independent of assembly) and its closing `setpte_multiple(...
   PROT=PTE$K_UR)` (no PTE-protection pseudo-op/enforcement this fine-grained
   exists here, and every caller through this trampoline already works

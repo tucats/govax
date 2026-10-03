@@ -381,7 +381,7 @@ Matches Phase 22's `Mount`/`Dismount` convention (`internal/console/mount.go`):
 each thin console-layer wrapper checks the relevant precondition itself
 (file not found, device not mounted, version required for `DELETE`, ...)
 before or after calling into `internal/rms`, and translates a plain Go error
-into a real, literal VMS status via `vmserrors`. `internal/rtl/status.go`
+into a real, literal VMS status via `vmserrors`. `internal/coreos/status.go`
 already carries two unused-since-Phase-22-subtask-3 constants anticipating
 exactly this need — `ssNoSuchFac`/`ssNoSuchFile` — good fits for `DELETE`/
 `TYPE`/`COPY`'s own "not found" cases; any further codes this phase needs

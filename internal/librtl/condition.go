@@ -1,6 +1,6 @@
 package librtl
 
-import "github.com/tucats/govax/internal/rtl"
+import "github.com/tucats/govax/internal/corevms"
 
 // The condition-handling routines (moved from rtl, docs/PHASE-26.md
 // subtask 33). The dispatch itself -- building the signal and mechanism
@@ -13,13 +13,13 @@ import "github.com/tucats/govax/internal/rtl"
 //
 // It signals the condition: its argument list becomes the signal array,
 // and the condition goes through the same search a hardware exception does.
-func libSignal(env *rtl.Environment, argv []uint32) (uint32, error) {
+func libSignal(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return env.Signal(argv, false)
 }
 
 // libStop is LIB$STOP: LIB$SIGNAL with the severity forced to SEVERE,
 // which can't be continued.
-func libStop(env *rtl.Environment, argv []uint32) (uint32, error) {
+func libStop(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return env.Signal(argv, true)
 }
 
@@ -30,13 +30,13 @@ func libStop(env *rtl.Environment, argv []uint32) (uint32, error) {
 // It makes new-handler (a procedure's entry mask address, passed by value)
 // the condition handler of the calling procedure's frame, and returns the
 // one it replaces (0 if none).
-func libEstablish(env *rtl.Environment, argv []uint32) (uint32, error) {
+func libEstablish(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return env.SetCallerHandler("LIB$ESTABLISH", arg(argv, 0))
 }
 
 // libRevert is LIB$REVERT: it removes the calling procedure's condition
 // handler, returning the one it removes (0 if none).
-func libRevert(env *rtl.Environment, _ []uint32) (uint32, error) {
+func libRevert(env *corevms.Environment, _ []uint32) (uint32, error) {
 	return env.SetCallerHandler("LIB$REVERT", 0)
 }
 
@@ -48,7 +48,7 @@ func libRevert(env *rtl.Environment, _ []uint32) (uint32, error) {
 // procedure that established it returns the condition value to its caller.
 // It returns SS$_NORMAL, SS$_NOSIGNAL outside a handler, or $UNWIND's
 // error status.
-func libSigToRet(env *rtl.Environment, argv []uint32) (uint32, error) {
+func libSigToRet(env *corevms.Environment, argv []uint32) (uint32, error) {
 	if len(argv) < 2 {
 		return ssNoSignal, nil
 	}
@@ -69,7 +69,7 @@ const condIDMask = 0x0FFFFFF8
 // first with each of the others, by their STS$V_COND_ID fields only, and
 // returns the (1-based) position of the first that matches, or 0 if none
 // does. An argument that can't be read doesn't match.
-func libMatchCond(env *rtl.Environment, argv []uint32) (uint32, error) {
+func libMatchCond(env *corevms.Environment, argv []uint32) (uint32, error) {
 	if len(argv) < 2 {
 		return 0, nil
 	}

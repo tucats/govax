@@ -89,7 +89,7 @@ func (h *FileHandle) IsConsole() bool {
 // FileTable is this package's registry of currently open files, keyed by
 // IFI ("internal file index") — RMS's rough equivalent of a Unix
 // process's table of open file descriptors. One FileTable belongs to one
-// VAX "process" (see internal/rtl.Environment's own doc comment on what
+// VAX "process" (see internal/corevms.Environment's own doc comment on what
 // "process" means in this emulator), the same way that Environment's own
 // (now-removed) Phase 10 IFI table used to be per-Environment.
 //
@@ -116,7 +116,7 @@ type FileTable struct {
 // NewFileTable returns a FileTable with IFI 1 (SYS$OUTPUT) pre-seeded to
 // write to consoleOut — typically the same io.Writer the owning
 // Environment already uses for its own non-RMS console output (see
-// internal/rtl.NewEnvironment's consoleOut parameter). Passing a nil
+// internal/corevms.NewEnvironment's consoleOut parameter). Passing a nil
 // consoleOut is valid and simply leaves slot 1 unusable (Lookup(1) will
 // report "not found"), matching how a FileTable used purely in a test
 // that never touches the console case doesn't need a real writer.

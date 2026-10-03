@@ -5,16 +5,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/rtl"
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 )
 
 // createDirFixture is the fixture with a fresh volume mounted on DUA0,
 // writable unless readOnly.
-func createDirFixture(t *testing.T, readOnly bool) *rtl.Environment {
+func createDirFixture(t *testing.T, readOnly bool) *corevms.Environment {
 	t.Helper()
 
 	env := fixture(t)
@@ -34,11 +34,11 @@ func createDirFixture(t *testing.T, readOnly bool) *rtl.Environment {
 // arena hands out addresses for arguments, from 0x10000 up.
 type arena struct {
 	t    *testing.T
-	env  *rtl.Environment
+	env  *corevms.Environment
 	next uint32
 }
 
-func newArena(t *testing.T, env *rtl.Environment) *arena {
+func newArena(t *testing.T, env *corevms.Environment) *arena {
 	return &arena{t: t, env: env, next: 0x10000}
 }
 
@@ -72,7 +72,7 @@ func (a *arena) word(v uint16) uint32 {
 	return addr
 }
 
-func dirHeader(t *testing.T, env *rtl.Environment, dirs ...string) ondisk.FileHeader {
+func dirHeader(t *testing.T, env *corevms.Environment, dirs ...string) ondisk.FileHeader {
 	t.Helper()
 
 	vol, _ := env.Mounts.Lookup("DUA0")

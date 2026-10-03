@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/rtl"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
@@ -75,7 +75,7 @@ var uicDirectory = regexp.MustCompile(`^([^\[<]*)[\[<]([0-7]+),([0-7]+)[\]>]$`)
 // through a logical name ("CRDLOG:", for "DUA1:[PLOG]") counts as named.
 // An argument it can't read -- a 0 descriptor address included -- isn't a
 // status: VMS signals an access violation, and so does govax.
-func libCreateDir(env *rtl.Environment, argv []uint32) (uint32, error) {
+func libCreateDir(env *corevms.Environment, argv []uint32) (uint32, error) {
 	if len(argv) == 0 {
 		return libInvArg, nil
 	}
@@ -129,13 +129,13 @@ func libCreateDir(env *rtl.Environment, argv []uint32) (uint32, error) {
 // the hardware would have had LIB$CREATE_DIR touched it on VMS. The
 // signal array is the hardware's: the condition, the reason, the address,
 // then the PC and PSL.
-func accessViolation(env *rtl.Environment, va uint32) (uint32, error) {
+func accessViolation(env *corevms.Environment, va uint32) (uint32, error) {
 	return env.Signal([]uint32{ssAccVio, 0, va}, false)
 }
 
 // readCreateDirArgs reads LIB$CREATE_DIR's optional arguments into opts.
 // If one can't be read, it returns that argument's address and true.
-func readCreateDirArgs(env *rtl.Environment, argv []uint32, opts *rms.CreateDirectoryOptions) (uint32, bool) {
+func readCreateDirArgs(env *corevms.Environment, argv []uint32, opts *rms.CreateDirectoryOptions) (uint32, bool) {
 	mem, cpu := env.Memory(), env.CPU()
 
 	word := func(i int) (uint16, bool, bool) {
@@ -220,7 +220,7 @@ func uicFormat(spec string, opts *rms.CreateDirectoryOptions) (string, uint32) {
 
 // session is the RMS session a program's call resolves names in: the
 // console's, so SET DEFAULT applies, or one of the environment's own.
-func session(env *rtl.Environment) *rms.Session {
+func session(env *corevms.Environment) *rms.Session {
 	if env.Session != nil {
 		return env.Session
 	}
@@ -232,7 +232,7 @@ func session(env *rtl.Environment) *rms.Session {
 }
 
 // createDirStatus is the status for err, a directory that couldn't be made.
-func createDirStatus(env *rtl.Environment, err error) uint32 {
+func createDirStatus(env *corevms.Environment, err error) uint32 {
 	var notMounted *rms.NotMountedError
 
 	switch {

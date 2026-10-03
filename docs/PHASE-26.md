@@ -6,7 +6,7 @@ Grow govax's set of emulated VMS system services beyond the handful ported from
 eVAX (Phase 10) and the logical-name services (Phase 25), one service per
 subtask. Many of these services act on "the calling process", so the phase
 also builds up the **emulated process**: a record of process identity and
-quota state (`rtl.Process`) that services read and update, in place of the
+quota state (`coreos.Process`) that services read and update, in place of the
 loose PID/UIC constants Phase 10 left behind.
 
 This document is meant to be **extended as more services are added**. Each new
@@ -63,7 +63,7 @@ These are the patterns the existing services follow. New services should
 follow them too, and this list should grow when a new pattern is settled.
 
 - **Where the code lives.** Services are grouped by VMS facility into files
-  under `internal/rtl`: `core.go` (event flags, `$EXPREG`, `$GETJPIW`, ...),
+  under `internal/coreos`: `core.go` (event flags, `$EXPREG`, `$GETJPIW`, ...),
   `devices.go` (`$ASSIGN`, `$ALLOC`, `$DALLOC`, `$DASSGN`), `logicals.go`, `cli.go`,
   `rms.go`, `process.go` (process record and process-control services),
   `eventflags.go` (event flags and common event flag clusters), `timers.go`
@@ -121,7 +121,7 @@ follow them too, and this list should grow when a new pattern is settled.
   cover. A handler returns a Go `error` only for an emulator failure, never
   for a VMS condition: VMS conditions are the `uint32` R0 value.
 - **Process and system state.** Anything that belongs to "the calling
-  process" goes in `rtl.Process` (`env.Process`), with a comment naming the
+  process" goes in `coreos.Process` (`env.Process`), with a comment naming the
   VMS field (PCB, PHD, JIB, UAF) it stands in for. System-wide state that
   VMS keeps in system memory (for example common event flag clusters,
   `env.EventFlagClusters`) belongs to the Environment, which INIT/VMINIT/
@@ -129,7 +129,7 @@ follow them too, and this list should grow when a new pattern is settled.
   those (devices, logical names, mounts) is owned by the `Console` and
   injected into the Environment.
 - **Waiting.** A service that must put the process in a wait state
-  returns `rtl.ErrWait` while its condition isn't met. The engine then
+  returns `coreos.ErrWait` while its condition isn't met. The engine then
   re-executes the service's `XFC` on the next step (see the event-flag
   wait design). `$HIBER` and `$SYNCH` use it too, and any later
   waiting service should.
@@ -171,7 +171,7 @@ follow them too, and this list should grow when a new pattern is settled.
   handlers, ...) runs from
   `Environment.ImageRundown`, which the console calls when an image started
   by RUN returns.
-- **Tests.** Each service gets unit tests in `internal/rtl/*_test.go` that
+- **Tests.** Each service gets unit tests in `internal/coreos/*_test.go` that
   call the `ServiceFunc` directly, using the memory `arena` helper in
   `logicals_test.go` to lay out descriptors, longwords, and buffers. Cover
   the success path, each documented condition value the implementation can
@@ -196,7 +196,7 @@ lists the ones the implementation can actually return.
 | `$DALLOC` | 6 | `devices.go` | `NORMAL`, `ACCVIO`, `DEVASSIGN`, `DEVNOTALLOC`, `IVLOGNAM`, `NOPRIV`, `NOSUCHDEV`, `TOOMANYLNAM` | Releases one allocation, or (no `devnam`) all at `acmode` or outer. |
 | `$DACEFC` | 7 | `eventflags.go` | `NORMAL`, `ILLEFC` | Drops an association; an unassociated number still succeeds. |
 | `$DLCEFC` | 7 | `eventflags.go` | `NORMAL`, `ACCVIO`, `IVLOGNAM` | Marks a cluster for deletion; deleted when unassociated. |
-| `$GETJPI`, `$GETJPIW` | 8 | `getjpi.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLEFC`, `INSFARG`, `IVLOGNAM`, `NOMOREPROC`, `NONEXPR`, `UNASEFC` | 21 item codes from `rtl.Process`, in a registry keyed by the generated `$JPIDEF` codes (28 since subtask 21). |
+| `$GETJPI`, `$GETJPIW` | 8 | `getjpi.go` | `NORMAL`, `ACCVIO`, `BADPARAM`, `ILLEFC`, `INSFARG`, `IVLOGNAM`, `NOMOREPROC`, `NONEXPR`, `UNASEFC` | 21 item codes from `coreos.Process`, in a registry keyed by the generated `$JPIDEF` codes (28 since subtask 21). |
 | `$WAITFR`, `$WFLAND`, `$WFLOR` | 9 | `eventflags.go` | `NORMAL`, `ILLEFC`, `UNASEFC` | Wait by re-executing the service's `XFC` until satisfied; timer interrupts run in between. |
 | `$DASSGN` | 10 | `devices.go` | `NORMAL`, `IVCHAN`, `NOPRIV` | Releases a channel; image rundown releases user-mode channels. |
 | `$SETIMR`, `$CANTIM` | 11 | `timers.go` | `NORMAL`, `ACCVIO`, `ILLEFC`, `UNASEFC` | RTL timer queue on the engine's system time (1 ms per interval-clock tick); no guest interrupt needed. |
@@ -257,11 +257,11 @@ lists the ones the implementation can actually return.
 
 ## Service designs
 
-### The emulated process (`rtl.Process`)
+### The emulated process (`coreos.Process`)
 
 Before this phase, `Environment` had unexported `pid`/`uic` fields, set from
 constants and read only by `$ASSIGN` to stamp a device's owner. They're
-replaced by `Environment.Process *Process` (`internal/rtl/process.go`):
+replaced by `Environment.Process *Process` (`internal/coreos/process.go`):
 
 | Field | Stands in for | Default |
 | --- | --- | --- |
@@ -278,7 +278,7 @@ account, not copied from a real UAF. govax doesn't page, so nothing enforces
 them.
 
 A `Process` is built by `NewEnvironment`, so INIT/VMINIT/ZERO start a fresh
-process, the emulated equivalent of logging in again. `rtl.NominalUIC` stays
+process, the emulated equivalent of logging in again. `coreos.NominalUIC` stays
 exported: the console names the group logical-name table from it before an
 Environment exists.
 
@@ -428,7 +428,7 @@ are in `CommonEventFlags`, a system-wide table keyed by (group, name), at
 the table belongs to the Environment: INIT/VMINIT/ZERO wipe it along with
 memory, and a permanent cluster survives from one RUN to the next.
 
-**The service** (`internal/rtl/eventflags.go`):
+**The service** (`internal/coreos/eventflags.go`):
 
 - `efn` (by value, low byte only) is any flag in the target cluster: 64-95
   for cluster 2, 96-127 for cluster 3. Anything else is `SS$_ILLEFC`.
@@ -532,7 +532,7 @@ They complete the cluster lifecycle `$ASCEFC` started (`eventflags.go`).
 
 Replaces the eVAX-derived `$GETJPIW`, which knew two hard-coded items
 (`ACCOUNT` = `"USER"`, `CLINAME` = `"DCL"`), with a real `$GETJPI` reading
-`rtl.Process` (`internal/rtl/getjpi.go`). Both names are registered to the
+`coreos.Process` (`internal/coreos/getjpi.go`). Both names are registered to the
 same function.
 
 **`$JPIDEF`.** The item codes come from the real VMS 7.3 `jpidef.sdl`
@@ -623,9 +623,9 @@ good, as on VMS.
 its P1-vector stub, so it has no way to block. Instead, when the condition
 isn't met:
 
-1. The service returns `rtl.ErrWait`, not a status.
+1. The service returns `coreos.ErrWait`, not a status.
 2. The console translates it to `cpu.ErrServiceWait` (as it does
-   `rtl.ErrHalt` → `cpu.ErrHalted`).
+   `coreos.ErrHalt` → `cpu.ErrHalted`).
 3. `emulXfcP1Vector` sets PC back to the `XFC` (`e.instructionPC`) and
    leaves R0 alone.
 4. The next `Step` executes the `XFC` again, calling the service again.
@@ -654,7 +654,7 @@ where an AST can be delivered.)
 
 `SYS$DASSGN chan`
 
-Releases a channel `$ASSIGN` created (`internal/rtl/devices.go`).
+Releases a channel `$ASSIGN` created (`internal/coreos/devices.go`).
 
 - `$ASSIGN` now records each channel's access mode (`channel.Mode`: its
   `acmode` argument maximized with the caller's mode). Until now it
@@ -747,7 +747,7 @@ The two mechanisms coexist. A guest that runs its own interval-timer
 interrupt still does (`wait_timer.asm`), and RTL timers work whether or
 not it does (`timer_services.asm`).
 
-#### The services (`internal/rtl/timers.go`)
+#### The services (`internal/coreos/timers.go`)
 
 - **`$SETIMR`** checks `efn` (default 0; `SS$_ILLEFC`/`SS$_UNASEFC` as for
   `$SETEF`), reads the `daytim` quadword (`SS$_ACCVIO` if unreadable or 0),
@@ -776,7 +776,7 @@ Not implemented (see `docs/DEVIATIONS.md`):
 `SYS$GETTIM timadr`
 
 Stores the current system time, `env.Clock()`, in the quadword at
-`timadr` (`internal/rtl/vmstime.go`). A zero or unwritable `timadr` is
+`timadr` (`internal/coreos/vmstime.go`). A zero or unwritable `timadr` is
 `SS$_ACCVIO`. The clock is the one `$SETIMR` uses: the engine's
 `SystemTime`, one millisecond per interval-clock tick.
 
@@ -805,7 +805,7 @@ The two text forms are:
 | Absolute | `dd-mmm-yyyy hh:mm:ss.cc` | 23 | ` 9-OCT-1988 07:05:03.45` |
 | Delta | `dddd hh:mm:ss.cc` | 16 | `   5 03:18:32.07` |
 
-The conversions are pure functions in `internal/rtl/vmstime.go`
+The conversions are pure functions in `internal/coreos/vmstime.go`
 (`formatVMSTime`, `parseVMSTime`), so the manual's example table is tested
 directly. The services are thin wrappers.
 
@@ -856,7 +856,7 @@ taken as a typo. By its own rule the omitted day is today's, so govax gives
 
 Hibernation is one flag per process, **wake pending**
 (`Process.WakePending`, VMS's `PCB$V_WAKEPEN`), in
-`internal/rtl/hibernate.go`:
+`internal/coreos/hibernate.go`:
 
 - **`$WAKE`** sets it.
 - **`$SCHDWK`** sets it later, from the timer queue.
@@ -935,7 +935,7 @@ package lines, with neither package learning the other's data:
 | Step | Who | Where |
 | --- | --- | --- |
 | 1. Before every instruction, ask whether an AST can run | engine | `Engine.Step` → `deliverAST` (`internal/cpu/ast.go`) |
-| 2. Decide, pick the AST, push its argument list, mark it active | RTL | `Environment.NextAST` (`internal/rtl/ast.go`) |
+| 2. Decide, pick the AST, push its argument list, mark it active | RTL | `Environment.NextAST` (`internal/coreos/ast.go`) |
 | 3. Call the routine exactly as `CALLG` would | engine | `buildCallFrame`, shared with `CALLS`/`CALLG` |
 | 4. On the routine's `RET`, restore the interrupted state | RTL | `serviceSysClrast` |
 
@@ -943,8 +943,8 @@ The engine reaches the RTL through a new **optional** interface,
 `cpu.ASTSource` (`NextAST() (ASTCall, bool, error)`).
 `SetSystemServices` checks for it with a type assertion, so the test
 doubles that implement only `SystemServices` are unaffected. The console
-implements it by delegating to its `rtl.Environment` and converting types,
-the same way it translates `rtl.ErrWait`, so `internal/rtl` still doesn't
+implements it by delegating to its `coreos.Environment` and converting types,
+the same way it translates `coreos.ErrWait`, so `internal/coreos` still doesn't
 import `internal/cpu`.
 
 #### When an AST is delivered
@@ -1213,7 +1213,7 @@ handlers, each once, then ends the image; it never returns.
 Calling a guest procedure from a service is the same problem AST delivery
 solved, with one difference: the service isn't done when the procedure
 returns. So a service may now return a **call request**
-(`rtl.CallRequest`, translated by the console to `cpu.ServiceCall`). The
+(`coreos.CallRequest`, translated by the console to `cpu.ServiceCall`). The
 XFC handler (`Engine.callForService`) builds a `CALLG` frame for the
 routine whose return address is the **XFC itself**. When the handler
 executes `RET`, the XFC runs again, calling `$EXIT` again, which moves on
@@ -1221,7 +1221,7 @@ to the next handler. Since `$EXIT` removes each handler from its list
 before asking for the call, the lists themselves are all the state it
 needs, and a handler that calls `$EXIT` just continues with the rest.
 
-When no handlers are left, `$EXIT` returns `rtl.ErrExit` (the console's
+When no handlers are left, `$EXIT` returns `coreos.ErrExit` (the console's
 `cpu.ErrImageExit`) with the status as R0. `Engine.exitImage` then ends
 the image: it follows the frame chain (each frame's saved FP, at FP+12)
 to the console's own call frame (`CallEntry`'s, with saved PC and FP both
@@ -1607,7 +1607,7 @@ and the next `Step` returned `ErrAttention`, stopping the machine.
 Now the engine remembers *which* key (`AttentionKey`: `AttentionCtrlC` or
 `AttentionCtrlY`), and `Step` first offers it to the services' optional
 `cpu.AttentionHandler` (found by `SetSystemServices`, as `ASTSource` is).
-The console forwards to `rtl.Environment.Attention`, which applies the
+The console forwards to `coreos.Environment.Attention`, which applies the
 rules above: if it queues an AST, the key is consumed and `Step` goes on
 (delivering the AST at that same boundary); if not, `ErrAttention`
 stops the machine as before.
@@ -1824,7 +1824,7 @@ reached by a jump, which searches in that mode. govax does the same:
 
 1. The engine's `HandleFault`, finding the `console$handler` sentinel,
    first offers the exception to a `cpu.ExceptionDispatcher`: the
-   console, delegating to `rtl.Environment.DispatchException`. That maps
+   console, delegating to `coreos.Environment.DispatchException`. That maps
    the exception to a condition value (below), pushes the signal array,
    the mechanism array, and the handlers' argument list (`2, sig, mech`)
    on the current stack, records a `conditionDispatch`, and sets PC to
@@ -2133,7 +2133,7 @@ generator's 32-bit values, so bit numbers are kept instead).
 
 #### The four masks
 
-`rtl.Process` gains VMS's four masks: `AuthorizedPrivileges` (AUTHPRIV,
+`coreos.Process` gains VMS's four masks: `AuthorizedPrivileges` (AUTHPRIV,
 what the process may enable; never changes), `ProcessPrivileges`
 (PROCPRIV, the permanent ones), `CurrentPrivileges` (CURPRIV, the
 enabled ones, which services check), and `ImagePrivileges` (IMAGPRIV,
@@ -2282,7 +2282,7 @@ control word asks for write access with `FIB$M_WRITE`.
 | `IO$_READVBLK` | p1 buffer, p2 bytes, p3 VBN | Reads consecutive blocks; stops at the end of file with `SS$_ENDOFFILE` and the count read. |
 | `IO$_WRITEVBLK` | p1 buffer, p2 bytes, p3 VBN | Writes whole blocks (a short last one zero-padded), within the allocation (`SS$_ENDOFFILE` past it); needs write access. |
 
-#### Design: rms does the files, rtl the `$QIO`
+#### Design: rms does the files, coreos the `$QIO`
 
 As the user asked, the file work is wired into the sibling ods2 module:
 `internal/rms/acp.go` (rms being govax's only package allowed to import
@@ -2296,7 +2296,7 @@ system-service status codes. One addition to ods2 was needed:
 isn't there (`SS$_NOSUCHFILE`) can be told from a directory that can't be
 read (a device error). It's committed in the ods2 repository.
 
-`internal/rtl/diskdriver.go` is the driver in `ioDrivers` for the disk
+`internal/coreos/diskdriver.go` is the driver in `ioDrivers` for the disk
 class: it reads the FIB (which may be shorter than the full structure;
 missing fields read as 0), keeps the accessed file on the channel
 (`channel.acp`), maps rms's errors to statuses, and completes each request
@@ -2311,7 +2311,7 @@ writable mount (`SS$_WRITLCK` otherwise).
 
 The rest of the disk ACP's interface (subtasks 42-45), on the same
 design: the file work is ods2's, reached through `internal/rms/acp.go`;
-`internal/rtl/diskdriver.go` decodes the `$QIO` and maps the errors.
+`internal/coreos/diskdriver.go` decodes the `$QIO` and maps the errors.
 
 | Function | Arguments | Effect |
 | --- | --- | --- |
@@ -2356,7 +2356,7 @@ read back as zeros until the file was closed.
 
 ## Subtasks
 
-1. **Done.** **Emulated process record.** `rtl.Process` replaces
+1. **Done.** **Emulated process record.** `coreos.Process` replaces
    `Environment`'s `pid`/`uic` fields; `$ASSIGN` reads the PID/UIC from it.
    Adds `optArg` for omitted trailing arguments. This document.
 2. **Done.** **`$ADJSTK`.** `serviceSysAdjstk` in `process.go`, registered
@@ -2377,7 +2377,7 @@ batch listed):
 
 6. **Done.** **`$DALLOC`.** `serviceSysDalloc` in `devices.go`.
 7. **Done.** **`$DACEFC` and `$DLCEFC`.** In `eventflags.go`.
-8. **Done.** **`$GETJPI`/`$GETJPIW`** reading `rtl.Process`, in the new
+8. **Done.** **`$GETJPI`/`$GETJPIW`** reading `coreos.Process`, in the new
    `getjpi.go`; `$JPIDEF` generated from real VMS source.
 9. **Done.** **`$WAITFR`, `$WFLAND`, `$WFLOR`.** In `eventflags.go`, with
    `cpu.ErrServiceWait` re-executing the `XFC`. Acceptance fixture
@@ -2435,7 +2435,7 @@ fourth batch listed):
 20. **Done.** **`$NUMTIM`.** In `vmstime.go`: a time's numeric breakdown.
 21. **Done.** **`$GETJPI` items for AST and scheduling state**: `JPI$_ASTACT`,
     `ASTEN`, `ASTCNT`, `ASTLM`, and `STATE`, with an `ASTLM` quota on
-    `rtl.Process`.
+    `coreos.Process`.
 22. **Done.** **Mode-switching AST delivery.** `NextAST` delivers a more
     privileged mode's AST by switching the CPU into that mode, as VMS
     does, and `$CLRAST` switches back, closing subtask 15's main
@@ -2508,7 +2508,7 @@ sixth batch listed):
     mailbox makes the writer wait), read and write attention ASTs
     (`IO$M_READATTN`/`WRTATTN`), and `$DASSGN`'s cancel status checked
     against the I/O manual.
-38. **Done.** **Privileges**: a privilege mask on `rtl.Process`, `$SETPRV`, the
+38. **Done.** **Privileges**: a privilege mask on `coreos.Process`, `$SETPRV`, the
     `$GETJPI` privilege items, and the checks the services have skipped.
 39. **Done.** **`$SNDOPR`, `$BRKTHRU`/`$BRKTHRUW`**: operator and broadcast
     messages, written to the console terminal.
@@ -2573,7 +2573,7 @@ tables, privileges, and disk files are all within reach of a program:
 - Confirmed `reference/eVAX` implements none of the four (no matches outside
   `p1_vector.c`), and that the VMS 7.3 archive has no source for them. The
   VMS 5.0 System Services Reference Manual is the behavioral reference.
-- **`rtl.Process`** (`internal/rtl/process.go`) holds the PID, username,
+- **`coreos.Process`** (`internal/coreos/process.go`) holds the PID, username,
   UIC, and working-set state. `Environment.pid`/`uic` are gone; `$ASSIGN`
   stamps `Process.PID`/`Process.UIC`. `optArg` reads an omitted trailing
   argument as 0.
@@ -2582,7 +2582,7 @@ tables, privileges, and disk files are all within reach of a program:
 
 ### 2026-09-27 — Subtask 2: `$ADJSTK`
 
-- `serviceSysAdjstk` (`internal/rtl/process.go`), per the design above.
+- `serviceSysAdjstk` (`internal/coreos/process.go`), per the design above.
   `registerProcessServices` is new and is called from `registerServices`.
 - `SS$_NOPRIV` is read from `vmsdef.SSConstants` (`ssNoPriv`).
 - Tests (`process_test.go`): each `adjust`/`newadr` combination from the
@@ -2594,7 +2594,7 @@ tables, privileges, and disk files are all within reach of a program:
 
 ### 2026-09-27 — Subtask 3: `$ADJWSL`
 
-- `serviceSysAdjwsl` (`internal/rtl/process.go`), per the design above,
+- `serviceSysAdjwsl` (`internal/coreos/process.go`), per the design above,
   working on `Process.WSLimit`.
 - Tests: report-only (`pagcnt` 0 and an omitted argument list), grow,
   shrink, clamping at both `WSEXTENT` and `MINWSCNT`, and an unwritable
@@ -2613,7 +2613,7 @@ tables, privileges, and disk files are all within reach of a program:
 - **`iodev.Device`** gained `AllocMode`, `Allocated()`, `Allocate()`, and
   `Deallocate()`.
 - **`serviceSysAlloc`**, `allocatable`, and `genericDevice` in
-  `internal/rtl/devices.go`, per the design above. `$ASSIGN` checks
+  `internal/coreos/devices.go`, per the design above. `$ASSIGN` checks
   another process's allocation. `Environment.ImageRundown` deallocates
   user-mode allocations, called from the console's `imageRundown`.
   SHOW DEVICE/FULL shows `allocated`.
@@ -2626,7 +2626,7 @@ tables, privileges, and disk files are all within reach of a program:
     two new rejected forms.
   - `vmsdef`: pinned `DEV$` values, and the prefix guard extended to
     `DEVConstants`.
-  - `rtl/devices_test.go`: allocate by name and via a logical name,
+  - `coreos/devices_test.go`: allocate by name and via a logical name,
     `SS$_DEVALRALLOC`, devnam-only calls, maximized access mode, image
     rundown (user mode released, others kept), every error status the
     service returns, `SS$_BUFFEROVF` with truncated output, generic
@@ -2639,7 +2639,7 @@ tables, privileges, and disk files are all within reach of a program:
 
 ### 2026-09-27 — Subtask 5: `$ASCEFC`; first batch complete
 
-- **`internal/rtl/eventflags.go`** (new): `EventFlagCluster`,
+- **`internal/coreos/eventflags.go`** (new): `EventFlagCluster`,
   `CommonEventFlags` (with `Lookup` and `All` for a future SHOW command or
   `$GETJPI`), `serviceSysAscefc`, and `registerEventFlagServices`.
   `$SETEF`/`$CLREF`/`$READEF` moved here from `core.go` and share
@@ -2687,7 +2687,7 @@ tables, privileges, and disk files are all within reach of a program:
   it re-executes the service's `XFC` (see the subtask 9 design). The process
   then waits in emulated time, with timer interrupts still delivered between
   retries.
-- **`serviceSysDalloc`** and `hasChannel` in `internal/rtl/devices.go`, per
+- **`serviceSysDalloc`** and `hasChannel` in `internal/coreos/devices.go`, per
   the design above.
 - Tests (`devices_test.go`): release by name and via a logical name;
   `SS$_DEVNOTALLOC` for a device that is unallocated or allocated to
@@ -2699,7 +2699,7 @@ tables, privileges, and disk files are all within reach of a program:
 ### 2026-09-27 — Subtask 7: `$DACEFC` and `$DLCEFC`
 
 - `serviceSysDacefc`, `serviceSysDlcefc`, and the shared `clusterName`
-  (factored out of `$ASCEFC`) in `internal/rtl/eventflags.go`.
+  (factored out of `$ASCEFC`) in `internal/coreos/eventflags.go`.
 - `EventFlagCluster.DeletePending` is new. `CommonEventFlags.release` now
   goes through `deleteIfUnused`, which also deletes a marked permanent
   cluster.
@@ -2718,11 +2718,11 @@ tables, privileges, and disk files are all within reach of a program:
   bitfield structures nested in a structure aggregate. `go generate`
   produces `vmsdef.JPIConstants` (219 entries), and the `go:generate` line
   gained `-jpidef`.
-- **`internal/rtl/getjpi.go`** (new): `serviceSysGetjpi` (registered as
+- **`internal/coreos/getjpi.go`** (new): `serviceSysGetjpi` (registered as
   both `SYS$GETJPI` and `SYS$GETJPIW`), the `jpiItemsByName` registry,
   `storeJPIItem`, and `jpiTarget`. The old `serviceSysGetjpiw` and its
   constants are gone from `core.go`, and its tests from `core_test.go`.
-- `rtl.Process` gained `Name`, `Account`, `Terminal`, and `CLIName`.
+- `coreos.Process` gained `Name`, `Account`, `Terminal`, and `CLIName`.
 - **Changed from eVAX:** `JPI$_ACCOUNT` returns the process's account
   (`SYSTEM`) rather than eVAX's stand-in `USER`, with a return length of 8
   (eVAX reported 4). `JPI$_CLINAME` writes only `DCL`, truncated to the
@@ -2748,8 +2748,8 @@ tables, privileges, and disk files are all within reach of a program:
   `emulXfcP1Vector` handles it by resetting PC to `e.instructionPC` and
   leaving R0 alone. `TestEmulXfcP1VectorWait` shows three waiting steps
   parked on the `XFC`, then completion continuing past it.
-- **`rtl.ErrWait`**, `waitFor`, and the three services in
-  `internal/rtl/eventflags.go`. The console's `translateHalt` maps
+- **`coreos.ErrWait`**, `waitFor`, and the three services in
+  `internal/coreos/eventflags.go`. The console's `translateHalt` maps
   `ErrWait` to `cpu.ErrServiceWait`. `Environment.SystemService` traces a
   wait once (`waitingPC`).
 - **Acceptance fixture** `testdata/asm/wait_timer.asm`: it installs an
@@ -2762,7 +2762,7 @@ tables, privileges, and disk files are all within reach of a program:
   - `TestEventFlagWait_blocksUntilSet` keeps ICCS clear so no tick can
     happen, shows the program parked on the `$WAITFR` stub after 5,000
     steps, then sets the flag from Go and lets the program finish.
-- **rtl tests**: each service's satisfied and waiting cases, the empty
+- **coreos tests**: each service's satisfied and waiting cases, the empty
   masks, the low-byte rule, `SS$_ILLEFC`/`SS$_UNASEFC`, a wait on a common
   cluster, and the once-per-wait trace.
 - `go test ./...` passes.
@@ -2776,7 +2776,7 @@ tables, privileges, and disk files are all within reach of a program:
   whether to build on the microkernel's timer interrupt or keep the RTL
   timer independent (subtask 11).
 - `serviceSysDassgn`, `releaseChannel`, and `deassignUserChannels` in
-  `internal/rtl/devices.go`. `channel.Mode` is recorded by `$ASSIGN`.
+  `internal/coreos/devices.go`. `channel.Mode` is recorded by `$ASSIGN`.
   `deallocateAll` is shared by `$DALLOC` (no name) and image rundown.
 - Found while testing: rundown's user-mode deallocation ignored channels,
   unlike `$DALLOC`. It now uses the same rule.
@@ -2795,7 +2795,7 @@ tables, privileges, and disk files are all within reach of a program:
   `bootTime`/`clockTicks` fields. `tickQuantum` counts `clockTicks`.
 - **`internal/vmsdef/time.go`**: `Time` and `UnixEpoch`
   (1-Jan-1970 = `0x007C95674BEB4000`, as pinned by a test).
-- **`internal/rtl/timers.go`** (new): the timer queue, `serviceSysSetimr`,
+- **`internal/coreos/timers.go`** (new): the timer queue, `serviceSysSetimr`,
   `serviceSysCantim`, `expireTimers`, `cancelTimers`, and `PendingTimers`.
   `Environment.Clock` defaults to the host clock; the console's `newRTL`
   binds it to `Engine.SystemTime`. `eventFlagWord` now expires timers
@@ -2808,7 +2808,7 @@ tables, privileges, and disk files are all within reach of a program:
 - **Tests:**
   - `cpu`: quantum ticks advance `SystemTime` by exactly 1ms each.
   - `vmsdef`: epoch conversions.
-  - `rtl/timers_test.go`: delta expiry exactly at the deadline, absolute
+  - `coreos/timers_test.go`: delta expiry exactly at the deadline, absolute
     times (future and past), the default flag 0, `$WAITFR` on a timer,
     error statuses with nothing queued, a common cluster (including a
     disassociated one), `$CANTIM` by ID, all, and access mode (with
@@ -2830,7 +2830,7 @@ tables, privileges, and disk files are all within reach of a program:
     found the console is at kernel mode, IPL 0 after VMINIT, so they
     don't need to lower it.)
 - `serviceSysGettim`, `loadQuad`, and `storeQuad` in the new
-  `internal/rtl/vmstime.go`. `$SETIMR` reads `daytim` with `loadQuad`.
+  `internal/coreos/vmstime.go`. `$SETIMR` reads `daytim` with `loadQuad`.
 - `vmsdef.Time` adds the zone offset; `vmsdef.GoTime` and
   `vmsdef.TicksPerSecond` are new.
 - Tests: `$GETTIM` against a hand-set clock, its `SS$_ACCVIO` cases; the
@@ -2841,7 +2841,7 @@ tables, privileges, and disk files are all within reach of a program:
 
 - `formatVMSTime`, `parseVMSTime` (with `parseAbsoluteTime`,
   `parseTimeOfDay`, `parseTimeNumber`), `serviceSysAsctim`, and
-  `serviceSysBintim` in `internal/rtl/vmstime.go`, per the design above.
+  `serviceSysBintim` in `internal/coreos/vmstime.go`, per the design above.
 - **Found while testing:** `vmsdef.Time` and `GoTime` went through
   nanoseconds since 1970, which overflow an int64 outside 1678-2262. They
   now work in seconds plus a remainder, so 31-DEC-9999 converts correctly.
@@ -2860,7 +2860,7 @@ tables, privileges, and disk files are all within reach of a program:
 
 ### 2026-09-28 — Subtask 14: `$HIBER`, `$WAKE`, `$SCHDWK`, `$CANWAK`
 
-- `internal/rtl/hibernate.go` (new): the four services and
+- `internal/coreos/hibernate.go` (new): the four services and
   `registerHibernateServices`. `Process.WakePending` is new.
 - `timers.go`: `timerRequest.wake`/`repeat`; `expireTimers` wakes the
   process and reschedules repeating entries; `$CANTIM` skips wakeups.
@@ -2884,7 +2884,7 @@ tables, privileges, and disk files are all within reach of a program:
   interface, and `Engine.deliverAST`. `SetSystemServices` records
   `astSource`, and `Step` calls `deliverAST` after interrupt delivery. A
   frame fault is raised with the routine's address as the PC.
-- **`internal/rtl/ast.go`** (new): `astState` (in `Process.ast`),
+- **`internal/coreos/ast.go`** (new): `astState` (in `Process.ast`),
   `queueAST`, `PendingASTs`, `NextAST`, `pushASTFrame`, and the services
   `$DCLAST`, `$SETAST`, and `$CLRAST` (the AST exit, via the new
   `ServiceTable.RegisterNoArgs`/`ReadsArgs`). `ImageRundown` calls
@@ -2909,7 +2909,7 @@ tables, privileges, and disk files are all within reach of a program:
     `RET` leaving SP at the argument list; `Step` asking at each boundary
     and running the routine's first instruction; the bad-routine fault;
     no `astSource` for services without it.
-  - `rtl/ast_test.go`: `$DCLAST` queuing with maximized modes; the frame
+  - `coreos/ast_test.go`: `$DCLAST` queuing with maximized modes; the frame
     `NextAST` pushes; one active AST per mode; FIFO order; each
     delivery condition (other modes, IPL 2, interrupt stack, disabled
     here or in a more privileged mode); the missing-stub and bad-stack
@@ -2935,7 +2935,7 @@ tables, privileges, and disk files are all within reach of a program:
 
   `TestTimerAST_assembledProgram` also checks the system time advanced at
   least 70ms, `JPI$_PID` was returned, and nothing is left queued.
-- Tests (`rtl/ast_test.go`): a timer's AST (mode, parameter, and flag),
+- Tests (`coreos/ast_test.go`): a timer's AST (mode, parameter, and flag),
   also expired by `NextAST` alone; no AST from a cancelled, rundown, or
   AST-less timer; a timer on a disassociated cluster still queuing its
   AST; `$HIBER` interrupted by a timer AST that wakes it, resuming on
@@ -2955,11 +2955,11 @@ tables, privileges, and disk files are all within reach of a program:
   bitfield lengths that use them (`16-#fcode_size`), and constants inside
   an aggregate (default prefix, tag `K`). `TestIOConstants_values` pins
   the function codes and terminal modifiers.
-- **`internal/rtl/qio.go`** (new): `serviceSysQio` (registered as both
+- **`internal/coreos/qio.go`** (new): `serviceSysQio` (registered as both
   `SYS$QIO` and `SYS$QIOW`), `serviceSysCancel`, the `ioDrivers`
   registry, and `accessible` (a buffer check through `ProbeTranslate`,
   also bounded by memory size since it passes everything with MAPEN off).
-- **`internal/rtl/ttdriver.go`** (new): the terminal driver's function
+- **`internal/coreos/ttdriver.go`** (new): the terminal driver's function
   table: reads, prompted reads, writes with FORTRAN and print-file
   carriage control, sense/set mode, and the type-ahead count.
 - **Acceptance fixture** `testdata/asm/terminal_qio.asm`: a prompted
@@ -2968,7 +2968,7 @@ tables, privileges, and disk files are all within reach of a program:
   `$DASSGN`. `TestTerminalQIO_assembledProgram` feeds it `Tom` and
   checks the output is `"Name? \nHello, \rTom"`. (The assembler's
   default radix is hex: decimal numbers above 9 need `^D`.)
-- Tests (`rtl/qio_test.go`): writes, with the IOSB, flag, and AST; each
+- Tests (`coreos/qio_test.go`): writes, with the IOSB, flag, and AST; each
   carriage-control form; reads ending by terminator, full buffer, and end
   of input (with and without data); `"\r\n"`; `CVTLOW`, `PURGE`, and
   zero-time `TIMED` reads; short- and long-form terminator sets; the
@@ -2995,7 +2995,7 @@ tables, privileges, and disk files are all within reach of a program:
 
 ### 2026-09-28 — Subtask 19: `$EXIT`, `$DCLEXH`, `$CANEXH`
 
-- **`internal/rtl/exit.go`** (new): `CallRequest`, `ErrExit`, the three
+- **`internal/coreos/exit.go`** (new): `CallRequest`, `ErrExit`, the three
   services, `ExitHandlers`, and `cancelUserExitHandlers` (called by
   `ImageRundown`). `Process` gains `exitHandlers` and `ExitStatus`.
   eVAX's `$DCLEXH` stub (`core.go`), `Environment.exitHandler`, and its
@@ -3017,7 +3017,7 @@ tables, privileges, and disk files are all within reach of a program:
   (`TestRun_driverCallsExitHandlers`).
 - Tests: `cpu/exit_test.go` (the call's frame and return to the XFC with
   R0 untouched; unwinding two frames to the console's; halting with no
-  console frame). `rtl/exit_test.go` (`$DCLEXH` links and errors;
+  console frame). `coreos/exit_test.go` (`$DCLEXH` links and errors;
   `$CANEXH` relinking, all, and errors; `$EXIT`'s order, status
   argument, argument-less blocks, default status, skipped unreadable
   blocks, only the caller's mode; rundown).
@@ -3081,7 +3081,7 @@ tables, privileges, and disk files are all within reach of a program:
   generated as `vmsdef.SYIConstants` (309 symbols). `gen/bliss.go`'s
   literal pattern now accepts the VEST `I4` type
   (`TestParseBlissLiterals_vestListing`).
-- **`internal/rtl/getsyi.go`** (new): `serviceSysGetsyi` (both entry
+- **`internal/coreos/getsyi.go`** (new): `serviceSysGetsyi` (both entry
   points), `nodeTarget`, and the item registry. `Environment` gains
   `NodeName` and `BootTime`; the console resets `BootTime` after binding
   the engine's clock.
@@ -3106,7 +3106,7 @@ tables, privileges, and disk files are all within reach of a program:
 - The user asked for the fifth batch's candidates, `$FAO` through the
   small process-control services. They became subtasks 24-30. (Subtask
   17 is also now marked done in the list; it was done, only unmarked.)
-- **`internal/rtl/fao.go`** (new): `formatFAO`, the `faoFormatter` that
+- **`internal/coreos/fao.go`** (new): `formatFAO`, the `faoFormatter` that
   parses directives, the `faoDirectives` registry (the numeric entries
   generated by `init` from `faoRadixes` and `faoSizes`), and the
   services `serviceSysFao`/`serviceSysFaol` sharing `faoOutput`.
@@ -3144,7 +3144,7 @@ tables, privileges, and disk files are all within reach of a program:
   aren't VMS's real values (its CLI facility is 2, VMS's is 3), and its
   VAX facility (15) is VMS's RUF, so it would show wrong texts for real
   condition values. The VMS message file covers the facilities instead.
-- **`internal/rtl/message.go`** (new): `messageFor`, `messageLine`,
+- **`internal/coreos/message.go`** (new): `messageFor`, `messageLine`,
   `serviceSysGetmsg`, `serviceSysPutmsg`, `parseMessageVector`, and
   `putmsgCall` (in the new `Process.putmsg`); `ImageRundown` calls
   `cancelPutmsgCalls`.
@@ -3154,7 +3154,7 @@ tables, privileges, and disk files are all within reach of a program:
   `TestPutmsg_assembledProgram` checks the output and the line length the
   routine saw.
 - Tests: `vmsdef/gen` (each listing-line form, the two errors, the
-  parameter count); `rtl/message_test.go` (`$GETMSG`'s flag combinations,
+  parameter count); `coreos/message_test.go` (`$GETMSG`'s flag combinations,
   severity from `msgid`, unformatted text, `outadr`, other facilities,
   the stand-in, truncation, and errors; `$PUTMSG`'s vector forms, default
   and new flags, `facnam`, unformattable texts, and errors; the action
@@ -3164,7 +3164,7 @@ tables, privileges, and disk files are all within reach of a program:
 
 ### 2026-09-28 — Subtask 26: `$CMKRNL`/`$CMEXEC`
 
-- **`internal/rtl/cmode.go`** (new): `serviceSysCmkrnl`,
+- **`internal/coreos/cmode.go`** (new): `serviceSysCmkrnl`,
   `serviceSysCmexec`, their shared `changeMode`, and `cmodeCall` (in the
   new `Process.cmode`); `ImageRundown` calls `cancelChangeModeCalls`.
   The conventions' "calling guest code" entry now describes telling a
@@ -3193,7 +3193,7 @@ tables, privileges, and disk files are all within reach of a program:
   `Step` now calls. `Engine.attentionRequested` became `attentionKey`
   (which key); `Attention` is `AttentionKey(AttentionCtrlC)`;
   `SetSystemServices` finds the handler.
-- **`internal/rtl/ctrlast.go`** (new): the requests (`attentionAST`,
+- **`internal/coreos/ctrlast.go`** (new): the requests (`attentionAST`,
   `Environment.attentionASTs`), `armAttentionAST`, `disarmChannel`, and
   `Attention`, which applies VMS's rules. `ttdriver.go`'s `ttSetMode`
   sends `IO$M_CTRLCAST`/`CTRLYAST` to the new `ttAttentionAST`;
@@ -3209,7 +3209,7 @@ tables, privileges, and disk files are all within reach of a program:
   finished rather than stopping.
 - Tests: `cpu/attention_test.go` (a taken key runs the instruction and
   clears; a declined one stops until `BeginRun`; no handler stops);
-  `rtl/ctrlast_test.go` (delivery, mode maximized, one-shot, CTRL/C not
+  `coreos/ctrlast_test.go` (delivery, mode maximized, one-shot, CTRL/C not
   catching CTRL/Y, CTRL/C falling back to CTRL/Y, replacement per
   channel, several channels, `p1` 0, `$CANCEL`, `$DASSGN`, rundown);
   the console's handler and the two packages' keys agreeing.
@@ -3223,7 +3223,7 @@ tables, privileges, and disk files are all within reach of a program:
   the VMS 7.3 VEST listings (`vest_dblrtl/lis/`), generated as
   `vmsdef.DVIConstants` and `TTConstants` (flags `-dvidef`, `-ttdef`).
   `gen/bliss.go` accepts mixed-case names (`DVI$_SHDW_spare_bit_1`).
-- **`internal/rtl/getdvi.go`** (new): `serviceSysGetdvi` (both entry
+- **`internal/coreos/getdvi.go`** (new): `serviceSysGetdvi` (both entry
   points), `dviTarget`, the item registry with its generated Booleans,
   `devChar` and `volumeInfo` (live mount state). eVAX's
   `serviceSysGetdviw` and its `dvi*` constants are gone from `devices.go`,
@@ -3237,7 +3237,7 @@ tables, privileges, and disk files are all within reach of a program:
   for `FULLDEVNAM` with `$SYNCH`. `TestGetdvi_assembledProgram` checks the
   values.
 - Tests: `vmsdef` pins `DVI$`/`TT$`/`TT2$` values and the prefix guard;
-  `gen` a mixed-case literal; `rtl/getdvi_test.go` (the items of a
+  `gen` a mixed-case literal; `coreos/getdvi_test.go` (the items of a
   terminal, a disk's unit, the secondary flag, a one-byte buffer, the
   registry covering every `DVI$_TT_` code, completion, `SS$_BADPARAM`
   completing, each rejection completing nothing, `SS$_INSFARG`, an
@@ -3251,11 +3251,11 @@ tables, privileges, and disk files are all within reach of a program:
   `DeviceTable.Remove`.
 - **`internal/lnm`**: `LNM$TEMPORARY_MAILBOX` (= `LNM$PROCESS`) and
   `LNM$PERMANENT_MAILBOX` (= `LNM$SYSTEM`) in the system directory.
-- **`internal/rtl/qio.go`**: `ioRequest` carries its completion;
+- **`internal/coreos/qio.go`**: `ioRequest` carries its completion;
   `ioPending`; `queueIO` (the old `$QIO` body), `completeIO`,
   `cancelIO`, `PendingIO`; `serviceSysQiow` with `qiowWait`. `$CANCEL`
   and `releaseChannel` cancel pending I/O.
-- **`internal/rtl/mailbox.go`** (new): `Mailbox`, `MailboxTable`
+- **`internal/coreos/mailbox.go`** (new): `Mailbox`, `MailboxTable`
   (`Environment.Mailboxes`), `serviceSysCrembx`, `serviceSysDelmbx`,
   `releaseMailbox`, `removeStaleMailboxes`. **`mbxdriver.go`** (new): the
   driver.
@@ -3269,7 +3269,7 @@ tables, privileges, and disk files are all within reach of a program:
   the empty mailbox; deassigning both channels. `TestMailbox_assembledProgram`
   checks both messages, at least 10ms of system time (the wait was real),
   the mailbox deleted, and nothing pending.
-- Tests: `io` (`Remove`); `lnm` (the two tables); `rtl/mailbox_test.go`
+- Tests: `io` (`Remove`); `lnm` (the two tables); `coreos/mailbox_test.go`
   (`$CREMBX` creating, finding by name, `$ASSIGN` by name, unit numbers,
   sizes; its errors creating nothing; temporary and permanent deletion,
   logical names removed, `$DELMBX`'s errors, rundown; a new Environment
@@ -3283,7 +3283,7 @@ tables, privileges, and disk files are all within reach of a program:
 ### 2026-09-28 — Subtask 30: `$SETPRN`, `$SETPRI`, `$FORCEX`, `$DELPRC`; sixth batch complete
 
 - `serviceSysSetprn`, `serviceSysSetpri`, `serviceSysForcex` (with
-  `exitEntryAddr`), and `serviceSysDelprc` in `internal/rtl/process.go`.
+  `exitEntryAddr`), and `serviceSysDelprc` in `internal/coreos/process.go`.
   The exit-handler design's "not implemented" no longer lists `$FORCEX`.
 - **Acceptance fixture** `testdata/asm/process_control.asm`: `$SETPRN`,
   `$SETPRI`, then in user mode an exit handler and `$FORCEX` of itself.
@@ -3328,13 +3328,13 @@ fixed.
 - The user asked for the sixth batch's candidates. They became subtasks
   31-41; signals split into the dispatcher, `$SETEXV`, the `LIB$`
   routines, and `$UNWIND`, and the virtual-memory services into two.
-- **`internal/rtl/condition.go`** (new): `DispatchException`,
+- **`internal/coreos/condition.go`** (new): `DispatchException`,
   `exceptionCondition`, `startDispatch`, `serviceSysSrchandler` with
   `nextHandler`, `callConditionHandler`, `continueCondition`, `catchAll`,
   and `exitForCondition`; `Process.conditions` and (for subtask 32)
   `Process.exceptionVectors`, already searched; `p1VectorAddr`, which
   `exitEntryAddr` now uses too. Image rundown forgets dispatches.
-- **`internal/rtl/message.go`**: `parseMessageVector`'s formatting half
+- **`internal/coreos/message.go`**: `parseMessageVector`'s formatting half
   is `formatMessageVector`, with the trailing longwords described in the
   design.
 - **`internal/cpu`**: `ExceptionDispatcher`, offered the exception in
@@ -3362,7 +3362,7 @@ fixed.
 
 ### 2026-09-28 — Subtask 32: `$SETEXV`
 
-- `serviceSysSetexv` in `internal/rtl/condition.go`; `cancelConditions`
+- `serviceSysSetexv` in `internal/coreos/condition.go`; `cancelConditions`
   also clears the user-mode vectors.
 - **Acceptance fixture** `testdata/asm/exception_vectors.asm`: primary
   (resignaling) and last-chance vectors around an access violation with
@@ -3378,7 +3378,7 @@ fixed.
 
 ### 2026-09-28 — Subtask 33: `LIB$SIGNAL` and friends
 
-- **`internal/rtl/signal.go`** (new): `shimLibSignal`, `shimLibStop`
+- **`internal/coreos/signal.go`** (new): `shimLibSignal`, `shimLibStop`
   (both through `Environment.signal`), `shimLibEstablish`,
   `shimLibRevert` (`setCallerHandler`), `shimLibMatchCond`, and
   `registerSignalShims`. `LIB$SIG_TO_RET` moved to subtask 34, since it
@@ -3401,7 +3401,7 @@ fixed.
 
 ### 2026-09-28 — Subtask 34: `$UNWIND`, `LIB$SIG_TO_RET`
 
-- **`internal/rtl/unwind.go`** (new): `serviceSysUnwind`,
+- **`internal/coreos/unwind.go`** (new): `serviceSysUnwind`,
   `requestUnwind`, `continueUnwind`, `finishUnwind`, `handlingDispatch`,
   and `shimLibSigToRet`; `conditionDispatch.unwind`, which
   `serviceSysSrchandler` checks first when a handler returns.
@@ -3426,7 +3426,7 @@ fixed.
 
 ### 2026-09-28 — Subtask 35: `$CRETVA`, `$DELTVA`, `$CNTREG`
 
-- **`internal/rtl/vaspace.go`** (new): the three services, with
+- **`internal/coreos/vaspace.go`** (new): the three services, with
   `pageRange`, `readRange`, `storeRetadr`, `replacePTE`, `createPage`,
   and `deletePages`.
 - **`internal/vm`**: `Memory.FreePage`, which clears the page it frees.
@@ -3441,13 +3441,13 @@ fixed.
   protection, retadr order, and high-water mark; a recreated page
   cleared; deletion including a missing page; `NOPRIV`, `VASFULL`,
   `ACCVIO`; `PAGOWNVIO` from user mode and a user page deleted; `$CNTREG`
-  in P0 and P1 and its errors), `internal/rtl/vaspace_test.go` (the range
+  in P0 and P1 and its errors), `internal/coreos/vaspace_test.go` (the range
   arithmetic), and `TestFreePage`.
 - `go test ./...` passes.
 
 ### 2026-09-28 — Subtask 36: `$SETPRT` and page locking
 
-- **`internal/rtl/pageprot.go`** (new): `serviceSysSetprt`,
+- **`internal/coreos/pageprot.go`** (new): `serviceSysSetprt`,
   `pageForChange`, the four locking services through `lockPages`,
   `forgetPageLocks` (called by `$DELTVA`), and `cancelPageLocks` (image
   rundown); `Process.memoryLocks`/`workingSetLocks`.
@@ -3469,10 +3469,10 @@ fixed.
 
 ### 2026-09-28 — Subtask 37: resource wait, `$SETRWM`, mailbox attention ASTs
 
-- **`internal/rtl/qio.go`**: `ioResourceWait`, a driver's "wait and ask
+- **`internal/coreos/qio.go`**: `ioResourceWait`, a driver's "wait and ask
   again", which `$QIO`/`$QIOW` turn into `ErrWait`; `cancelIO` also
   forgets the channel's attention ASTs.
-- **`internal/rtl/mbxdriver.go`**: a full mailbox makes the writer wait
+- **`internal/coreos/mbxdriver.go`**: a full mailbox makes the writer wait
   unless resource wait mode is off or the write has `IO$M_NORSWAIT`;
   `mbxSetMode` enables and disables the three attention ASTs
   (`deliverAttention`, `cancelAttention`); reads and writes deliver them.
@@ -3497,7 +3497,7 @@ fixed.
 
 ### 2026-09-28 — Subtask 38: privileges
 
-- **`internal/rtl/privilege.go`** (new): `privilegeBit`, the `priv...`
+- **`internal/coreos/privilege.go`** (new): `privilegeBit`, the `priv...`
   masks, `allPrivileges`, `Process.hasPrivilege`/`hasAnyPrivilege`,
   `resetImagePrivileges` (image rundown), and `serviceSysSetprv`.
   `Process` gains the four masks and `AuthorizedPriority`; `$GETJPI` the
@@ -3524,7 +3524,7 @@ fixed.
 
 ### 2026-09-28 — Subtask 39: `$SNDOPR`, `$BRKTHRU`, `$BRKTHRUW`
 
-- **`internal/rtl/operator.go`** (new): `operatorState`
+- **`internal/coreos/operator.go`** (new): `operatorState`
   (`Environment.Operator`), `serviceSysSndopr` with one function per
   request code, `operatorReplyTo`, `postMailboxMessage` (a system
   message into a mailbox, through the driver's `send`), and
@@ -3555,7 +3555,7 @@ fixed.
 - The user asked, during this subtask, that disk `$QIO` (subtask 41) be
   wired into the sibling `ods2` package, adding exported functions to it
   as needed.
-- **`internal/rtl/rights.go`** (new): `rightsDatabase`,
+- **`internal/coreos/rights.go`** (new): `rightsDatabase`,
   `environmentalIdentifiers`, `identifierByValue`,
   `validIdentifierName`, and the three services. **`fao.go`**:
   `faoIdentifier` uses the database.
@@ -3576,7 +3576,7 @@ fixed.
 - **`internal/rms/acp.go`** (new): `FileID`, the `ErrACP...` errors,
   `MountTable.ACPLookup`/`ACPAccess`, `splitACPName`, and `ACPFile`'s
   `ReadVirtual`, `WriteVirtual`, `Extend`, `Deaccess`.
-- **`internal/rtl/diskdriver.go`** (new): `diskFunctions` (now in
+- **`internal/coreos/diskdriver.go`** (new): `diskFunctions` (now in
   `ioDrivers`), `readFIB`, `acpStatus`, and the five functions;
   `channel.acp`, closed by `releaseChannel`.
 - **`$FIBDEF`**: `reference/vms/fibdef.txt`, generated as
@@ -3593,7 +3593,7 @@ fixed.
 - Tests: `internal/rms/acp_test.go` (name splitting; lookup and its
   errors; reading, end of file, VBN 0, read-only refusals; writing,
   zero padding, the allocation limit, extending, the end of file after
-  deaccess; access errors), `internal/rtl/diskdriver_test.go` (access by
+  deaccess; access errors), `internal/coreos/diskdriver_test.go` (access by
   name with the result name and FID; multi-block and end-of-file reads;
   `FILALRACC`, `NOPRIV`, `FILNOTACC`; lookup without access, access by
   FID, `$DASSGN`; write, `IO$_MODIFY`, read back; the errors). The `$QIO`
@@ -3632,7 +3632,7 @@ fixed.
   for writing and just overwriting block 1 made it 2048 bytes. `ACPFile`
   now remembers the highest block written and lets `Close` move the end
   of file only past the old one.
-- **`internal/rtl/diskattr.go`** (new): `diskAttributes`, a registry of
+- **`internal/coreos/diskattr.go`** (new): `diskAttributes`, a registry of
   the attribute codes govax handles (`UCHAR`, `RECATTR`, `FPRO`, `UIC`,
   the four dates, and, read only, `ASCNAME`, `HEADER`, `BACKLINK`,
   `HIGHWATER`), `readAttributeList`, `storeAttributes`,
@@ -3653,7 +3653,7 @@ fixed.
 - Tests: `internal/rms/acpattr_test.go` (reading, by FID and its
   errors; writing, the kept allocation and bits, read-only mounts; the
   end of file on deaccess, read access refused; the partial end of file
-  kept), `internal/rtl/diskattr_test.go` (reading on access and by FID,
+  kept), `internal/coreos/diskattr_test.go` (reading on access and by FID,
   short and long sizes; writing on deaccess, partly; `IO$_MODIFY` by FID
   and on the accessed file; `BADATTRIB`, `ACCVIO`, `NOPRIV`,
   `FILNOTACC`).
@@ -3685,7 +3685,7 @@ fixed.
   asked), `ACPEnter` (a new entry for an existing file),
   `ErrACPDuplicate`, and `flushBitmaps`, which writes the bitmaps back
   after a create rather than leaving it to DISMOUNT.
-- **`internal/rtl/diskcreate.go`** (new): `diskCreate` (`IO$_CREATE`,
+- **`internal/coreos/diskcreate.go`** (new): `diskCreate` (`IO$_CREATE`,
   now in `diskFunctions`), `createFile`, `enterFile`, `diskFileName`,
   `storeResultName`. **`diskdriver.go`**: `IO$_ACCESS!IO$M_CREATE`
   creates a name its lookup doesn't find (`SS$_CREATED`); the FIB's
@@ -3707,7 +3707,7 @@ fixed.
   owner, attributes, and access, written and read back; the next
   version, explicit versions, duplicates, `NewVersion`, `Supersede` and
   the superseded file gone, 32767; no directory; the errors; `ACPEnter`
-  and its errors), `internal/rtl/diskcreate_test.go` (the FIB's file ID
+  and its errors), `internal/coreos/diskcreate_test.go` (the FIB's file ID
   and allocation, the result name, the attribute list, the owner, the end
   of file; `DUPFILENAME`, `FIB$M_NEWVER`, `FIB$M_SUPERSEDE`; no
   directory then entering; `IO$_ACCESS!IO$M_CREATE`; `WRITLCK`,
@@ -3741,7 +3741,7 @@ fixed.
 - **Fixed while there:** a channel couldn't read back blocks it had just
   written past the recorded end of file (which moves only at deaccess):
   `ReadVirtual` now counts the blocks this access wrote as data.
-- **`internal/rtl/diskdelete.go`** (new): `diskDelete` (`IO$_DELETE`,
+- **`internal/coreos/diskdelete.go`** (new): `diskDelete` (`IO$_DELETE`,
   now in `diskFunctions`). **`diskcreate.go`**: `IO$_CREATE!IO$M_CREATE
   !IO$M_DELETE` makes a temporary file (entering an existing file with
   `IO$M_DELETE` is `SS$_ILLIOFUNC`). **`diskdriver.go`**:
@@ -3757,7 +3757,7 @@ fixed.
   twice; by name with the file, and the slot's next file getting a new
   ID; deleting while accessed on two channels; temporary files, accessed
   and not; the errors, including a directory with an entry and the
-  entry left in place), `internal/rtl/diskdelete_test.go` (entry then
+  entry left in place), `internal/coreos/diskdelete_test.go` (entry then
   file with the FIB and result name; from a second channel while
   accessed, gone at `$DASSGN`; a temporary file; `NOSUCHFILE`,
   `BADPARAM`, `NOPRIV`, `ACCVIO`, `DEVNOTMOUNT`), and a read-back case in
@@ -3772,7 +3772,7 @@ fixed.
   block zero-padded; the whole transfer on the volume or nothing moved,
   `ErrACPIllegalBlock`; writes need a writable mount). ods2 needed
   nothing new: the mounted `Device`'s container does it.
-- **`internal/rtl/disklogical.go`** (new): `IO$_READLBLK`/`WRITELBLK`
+- **`internal/coreos/disklogical.go`** (new): `IO$_READLBLK`/`WRITELBLK`
   (LOG_IO or PHY_IO) and `IO$_READPBLK`/`WRITEPBLK` (PHY_IO), in
   `diskFunctions`; the privilege is checked before anything else, as
   `$QIO`'s R0 (`SS$_NOPRIV`). `SS$_ILLBLKNUM` from rms. A physical block
@@ -3790,7 +3790,7 @@ fixed.
   image after a DISMOUNT and MOUNT.
 - Tests: `internal/rms/acplogical_test.go` (the home block, a transfer
   across two blocks, the last block and past it, unmounted; a short
-  write padded, past the end, read-only), `internal/rtl/
+  write padded, past the end, read-only), `internal/coreos/
   disklogical_test.go` (logical and physical reads of the home block,
   writes read back; the four privilege combinations; `ILLBLKNUM`,
   `WRITLCK`, `ACCVIO`, `DEVNOTMOUNT`). `TestQIO_rejected`'s example of a

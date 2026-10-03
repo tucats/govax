@@ -37,7 +37,7 @@ real code against a stable layout.
 
 ## Open questions / notes
 
-- Package boundaries under `internal/` (`vax`, `vm`, `cpu`, `console`, `io`, `rtl`,
+- Package boundaries under `internal/` (`vax`, `vm`, `cpu`, `console`, `io`, `coreos`,
   `asm`) are a starting point, not final — expect adjustment once Phase 01 is under way
   and the actual Go types take shape (e.g. `vax` and `vm` may end up merged, or `cpu`
   may need splitting once its real size is visible in Go).
@@ -56,7 +56,7 @@ real code against a stable layout.
 - Ran a planning session with the user (see `docs/PLAN.md` for the locked-in
   decisions): instantiated-struct state model, full source import, bottom-up phase
   order, C source as primary correctness reference.
-- Scaffolded `go.mod`, `cmd/govax/`, and `internal/{vax,vm,cpu,console,io,rtl,asm}/`
+- Scaffolded `go.mod`, `cmd/govax/`, and `internal/{vax,vm,cpu,console,io,coreos,asm}/`
   with placeholder `doc.go` files.
 - Imported the C source via `git archive HEAD | tar -x` from the eVAX repo (clean
   working tree at import time, no uncommitted changes lost) into `reference/eVAX/`.

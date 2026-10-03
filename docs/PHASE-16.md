@@ -70,10 +70,10 @@ fields exist); the gap is purely a missing `show.go` function + grammar binding.
   `{"KERNEL","EXEC","SUPER","USER","INTERRUPT"}` name table.
 - **`SHOW SHIM`** (`show_shim`, C: `console_show.c:348`, body is `shim_dump()`) — dump
   `internal/console/shim.go`'s `shimTable` (already exists, built from `kernel.asm`'s
-  `.shim` pseudo-op table) and, for each entry, whether `internal/rtl.ShimTable` (the
+  `.shim` pseudo-op table) and, for each entry, whether `internal/coreos.ShimTable` (the
   real numeric dispatch) has a live handler for its `code`. C's `shim_dump` lives in
   the RTL/shim source, not shown above — read it before implementing to match its
-  exact column layout, but the underlying data (`shimTable`, `rtl.ShimTable`) is
+  exact column layout, but the underlying data (`shimTable`, `coreos.ShimTable`) is
   already present in this port, so no new state is needed.
 - **`SHOW STRING`** (`show_string`/`string_pool`, C: `console_show.c:216`) — walks a
   linked list of string descriptors in *emulated VAX memory*, rooted at the VAX
@@ -283,7 +283,7 @@ worth the user's attention before deciding whether to fix now or track in
   exist yet. Worth picking up as a follow-on, not part of this resolved question.
 - **`SHOW MAP`** (`show_map`, C: `structure_mapping.c:23`, body `map_dump()`) —
   dumps `structure_mapping.c`'s own runtime FAB/RAB field-offset registry
-  (`STROFF`/`map()`/`map_add()`). `internal/rtl/rms.go`'s own doc comment
+  (`STROFF`/`map()`/`map_add()`). `internal/coreos/rms.go`'s own doc comment
   (`rms.go:16`) confirms this port deliberately did **not** replicate that
   declarative-mapping mechanism — RMS struct fields are read/written directly by
   hardcoded Go offsets instead. There is nothing for `SHOW MAP` to dump in this
@@ -592,7 +592,7 @@ records what actually shipped, not a re-scope of the plan above.
   population at `govax` startup, no `SET EXPAND` state): `SHOW NVRAM`/`SHOW ROM`
   (new `Console.ROMFile`/`NVRAMFile` fields, set by `LoadROM`/`LoadNVRAM`), `SHOW
   MODE`, `SHOW SHIM` (reports each stub's numeric dispatch code and whether
-  `internal/rtl.Environment.HasShim` — a new non-invoking predicate — has a live
+  `internal/coreos.Environment.HasShim` — a new non-invoking predicate — has a live
   handler for it, not a second resolved label the way C's `shim_dump` does; see
   `ShowShim`'s own doc comment for why), `SHOW STRING`, `SHOW PAGE`/`PTE` (new
   `internal/vm.Memory.LookupPTE` read-only PTE walk plus `Protection.Allows`/
@@ -650,7 +650,7 @@ records what actually shipped, not a re-scope of the plan above.
   expects `p1lr`, which made `SHOW P1LR` unparseable; fixed in both copies
   (`testdata/dcl/evax.dcl` and `internal/bootdata/files/evax.dcl`).
 - All new/changed behavior has direct test coverage (`internal/vm/translate_test.go`,
-  `internal/cpu/instruction_test.go`/`interrupt_test.go`, `internal/rtl/rtl_test.go`,
+  `internal/cpu/instruction_test.go`/`interrupt_test.go`, `internal/coreos/rtl_test.go`,
   `internal/console/show_test.go` and small edits to existing `dispatch_test.go`/
   `set_test.go`); `go build ./...`, `go vet ./...`, `go test ./...` all clean.
 - **Deliberately still not done, matching this document's own categorization**:
