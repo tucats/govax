@@ -606,3 +606,36 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
   instead of writing over the SCB that follows the page. The error and
   `TestEnsureShims_fitsReservedPage` name the constant to raise, by a
   page, when the 43rd shim arrives.
+- 2026-10-04: **LIB$PUT_OUTPUT, terminal input, and the FORTH fixture.**
+  `testdata/mar/forth.mar` is a MACRO-32 port of `testdata/asm/forth.asm`
+  (Vforth), a larger program fixture for ANALYZE/OBJECT, ANALYZE/IMAGE,
+  and debugger work: five psects, dictionary headers built by macros,
+  and RMS I/O on the terminal and on volume files. Getting it to run
+  needed four govax changes:
+  - **LIB$PUT_OUTPUT** is now `internal/librtl`'s (`output.go`, XFC code
+    40, offset ^X478): one descriptor, written as one line. The
+    microkernel's old version, a character at a time through the console
+    transmit interrupt, is renamed `EXE$PUT_OUTPUT`/`EXE$PUT_ONE` and
+    kept only for the kernel's own messages; kernel.asm's `.shim` row
+    for code 40 still defines `LIB$PUT_OUTPUT` for eVAX-dialect ASM
+    programs. `foo.asm` now runs to completion
+    (`TestRegression_rtlDependentAsmFixtures`). Shim stubs: 40 of 42.
+  - **Terminal SYS$GET** (`internal/rms/terminal.go`): a RAB connected to
+    the terminal used to get RMS$_PRV. It now reads a line from the
+    console's input (shared with the terminal driver's reader), writes
+    the RAB$L_PBF/RAB$B_PSZ prompt first when RAB$V_PMT is set, ends a
+    record at CR or LF, reads at most RAB$W_USZ bytes (the rest is the
+    next record), and returns RMS$_EOF at Ctrl/Z or end of input.
+  - **The RTL's console streams** are now read through `c.In`/`c.Out` at
+    the time of each read or write (`consoleInput`/`consoleOutput`,
+    `internal/console/machine.go`), not as they were when the
+    environment was made, so a program's output follows a later change
+    of `c.Out`, as the console device's already did.
+  - **The assembler** kept a `;` inside angle brackets or a `^%...%`
+    argument as the start of a comment, so `DEFWORD <;>,F_SEMI` failed.
+    The MACRO-32 manual's "Argument Delimiters" lets either kind enclose
+    a semicolon; `preprocessCase` now does too (`delimitedArgumentAt`).
+  `TestForth_interpreter` and `TestForth_files` (`internal/console`)
+  run the fixture against scripted input and a fresh volume. It isn't
+  on the MACRO ladder (`notLadder`, `internal/asm`) until real MACRO's
+  object and listing for it are in `testdata/mar/vax/`.

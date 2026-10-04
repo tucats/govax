@@ -208,8 +208,8 @@ func runAsmRegressionWithKernel(t *testing.T, fixture, entrySymbol string, maxSt
 // cleanly.
 //
 // wantHitCap records which of these are currently known to spin forever
-// rather than fault or complete: LIB$PUT_OUTPUT (foo.asm) and
-// LIB$GET_INPUT (input.asm, test.asm) both poll a "ready"/"available" flag
+// rather than fault or complete: LIB$GET_INPUT (input.asm, test.asm) polls
+// a "ready"/"available" flag
 // kernel.asm expects an EXC$CONWRITE/EXC$CONREAD interrupt's own ISR to
 // reset -- this port's TXCS/TXDB/RXCS/RXDB privileged-register handling has
 // no interrupt-delivery modeling at all yet (see
@@ -217,13 +217,15 @@ func runAsmRegressionWithKernel(t *testing.T, fixture, entrySymbol string, maxSt
 // docs/PHASE-12.md's own progress log for the full story), so the wait
 // never ends. decc$printf/decc$atoi (atoi.asm, fmt.asm) and sys$trnlnm
 // (logname.asm) don't go through that console-I/O polling loop at all, so
-// they're held to the stricter "must not hit the cap" bar.
+// they're held to the stricter "must not hit the cap" bar. Nor does
+// LIB$PUT_OUTPUT (foo.asm) any longer: it's internal/librtl's routine,
+// reached through its .SHIM stub, not kernel.asm's polling loop.
 func TestRegression_rtlDependentAsmFixtures(t *testing.T) {
 	for _, tc := range []struct {
 		fixture, entry string
 		wantHitCap     bool
 	}{
-		{"foo.asm", "TEST", true},
+		{"foo.asm", "TEST", false},
 		{"atoi.asm", "TEST", false},
 		{"fmt.asm", "TEST", false},
 		{"input.asm", "INPUT_TEST", true},

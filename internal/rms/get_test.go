@@ -1,7 +1,9 @@
 package rms
 
 import (
+	"bufio"
 	"bytes"
+	"strings"
 	"testing"
 )
 
@@ -144,8 +146,6 @@ func TestSysGet_multipleRecordsThenEOF(t *testing.T) {
 // separate RAB$L_UBF/RAB$W_USZ "user buffer" pair: the record lands in
 // UBF, not RBF, matching rab.go's own doc comment on the two fields.
 func TestSysGet_userBuffer(t *testing.T) {
-	const testUserBufAddr = 0x6000
-
 	f := newCreateFixture(t, true)
 
 	record := bytes.Repeat([]byte{'U'}, 80)
@@ -204,8 +204,6 @@ func TestSysGet_userBuffer(t *testing.T) {
 // matching SysPut's own equivalent check for an outgoing record that
 // doesn't fit a file's declared format.
 func TestSysGet_userBufferTooSmall(t *testing.T) {
-	const testUserBufAddr = 0x6000
-
 	f := newCreateFixture(t, true)
 
 	record := bytes.Repeat([]byte{'S'}, 80)
@@ -269,12 +267,19 @@ func TestSysGet_invalidRAC(t *testing.T) {
 	}
 }
 
-// TestSysGet_console confirms SYS$GET against a RAB connected to the
-// TTA0: console pseudo-device fails with RMS$_PRV rather than
-// dereferencing a nil Reader — the console has no input to give SYS$GET
-// at all (see SysGet's own doc comment).
-func TestSysGet_console(t *testing.T) {
+// consoleGetFixture creates TTA0: and connects a RAB to it, with typed
+// as the terminal's input and the RAB's prompt (RAB$V_PMT) set to prompt
+// when it isn't empty. Records go to the user buffer at testUserBufAddr,
+// usz bytes long. It returns the fixture and what the console was sent.
+func consoleGetFixture(t *testing.T, typed, prompt string, usz uint16) (*createFixture, *bytes.Buffer) {
+	t.Helper()
+
+	const testPromptAddr = 0x7000
+
 	f := newCreateFixture(t, true)
+	out := &bytes.Buffer{}
+	f.ctx.Console = out
+	f.ctx.ConsoleIn = bufio.NewReader(strings.NewReader(typed))
 	newFAB(t, f.ctx, "TTA0:")
 
 	if _, err := SysCreate(f.ctx, []uint32{testFabAddr}); err != nil {
@@ -283,14 +288,87 @@ func TestSysGet_console(t *testing.T) {
 
 	connectRAB(t, f.ctx, testFabAddr)
 	putByte(t, f.ctx, testRabAddr+rabRAC, racSeq)
+	putLongwordAt(t, f.ctx, testRabAddr+rabUBF, testUserBufAddr)
+	putWord(t, f.ctx, testRabAddr+rabUSZ, usz)
+
+	if prompt != "" {
+		putLongwordAt(t, f.ctx, testRabAddr+rabROP, ropPMT)
+		putLongwordAt(t, f.ctx, testRabAddr+rabPBF, testPromptAddr)
+		putByte(t, f.ctx, testRabAddr+rabPSZ, byte(len(prompt)))
+
+		for i := 0; i < len(prompt); i++ {
+			putByte(t, f.ctx, testPromptAddr+uint32(i), prompt[i])
+		}
+	}
+
+	return f, out
+}
+
+// testUserBufAddr is where the tests' RABs point RAB$L_UBF.
+const testUserBufAddr = 0x6000
+
+// consoleGet runs SYS$GET on consoleGetFixture's RAB, returning its
+// status and the record it read.
+func consoleGet(t *testing.T, f *createFixture) (uint32, string) {
+	t.Helper()
 
 	r0, err := SysGet(f.ctx, []uint32{testRabAddr})
 	if err != nil {
 		t.Fatalf("SysGet: %v", err)
 	}
 
-	if r0 != rmsPrivilegeViolation {
-		t.Errorf("r0 = %d, want rmsPrivilegeViolation (%d)", r0, rmsPrivilegeViolation)
+	if r0 != rmsNormal {
+		return r0, ""
+	}
+
+	n := readWord(t, f.ctx, testRabAddr+rabRSZ)
+	got := make([]byte, n)
+
+	for i := range got {
+		got[i] = readByte(t, f.ctx, testUserBufAddr+uint32(i))
+	}
+
+	return r0, string(got)
+}
+
+// TestSysGet_console reads lines typed at the terminal: each SYS$GET
+// writes the prompt, then returns one line without its terminator (a
+// "\r\n" pair is one), and the end of input is RMS$_EOF.
+func TestSysGet_console(t *testing.T) {
+	f, out := consoleGetFixture(t, "2 3 + .\r\nhalt\n\nlast", "> ", 80)
+
+	for _, want := range []string{"2 3 + .", "halt", "", "last"} {
+		if r0, got := consoleGet(t, f); r0 != rmsNormal || got != want {
+			t.Errorf("SYS$GET = %#x, %q; want RMS$_NORMAL, %q", r0, got, want)
+		}
+	}
+
+	if r0, _ := consoleGet(t, f); r0 != rmsEOF {
+		t.Errorf("SYS$GET at end of input = %#x, want RMS$_EOF", r0)
+	}
+
+	if got, want := out.String(), strings.Repeat("> ", 5); got != want {
+		t.Errorf("prompts = %q, want %q", got, want)
+	}
+}
+
+// TestSysGet_consoleCtrlZ is end of file at a Ctrl/Z, and a line longer
+// than the user buffer is read a buffer at a time.
+func TestSysGet_consoleCtrlZ(t *testing.T) {
+	f, out := consoleGetFixture(t, "abcdef\n\x1Amore\n", "", 4)
+
+	for _, want := range []string{"abcd", "ef"} {
+		if r0, got := consoleGet(t, f); r0 != rmsNormal || got != want {
+			t.Errorf("SYS$GET = %#x, %q; want RMS$_NORMAL, %q", r0, got, want)
+		}
+	}
+
+	if r0, _ := consoleGet(t, f); r0 != rmsEOF {
+		t.Errorf("SYS$GET at Ctrl/Z = %#x, want RMS$_EOF", r0)
+	}
+
+	if out.Len() != 0 {
+		t.Errorf("console output = %q, want none without RAB$V_PMT", out.String())
 	}
 }
 

@@ -101,7 +101,6 @@ var baseShims = []shimEntry{
 	// code 0: resolved by symbol lookup against kernel.asm's own
 	// already-assembled native routines, not stub synthesis -- see this
 	// file's own top comment.
-	{"LIB$PUT_OUTPUT", "LIBRTL", 0x0478, 0},
 	{"DECC$MAIN", "DECC$SHR", 0x0000, 0},
 	{"DECC$EXIT", "DECC$SHR", 0x0528, 0},
 	{"DECC$STRLEN", "DECC$SHR", 0x06E8, 0},

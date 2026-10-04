@@ -146,15 +146,39 @@ func summarizeAssembly(a *Assembler) objectSummary {
 	return s
 }
 
+// notLadder names the testdata/mar sources that aren't on the fixture
+// ladder: programs that haven't been through real MACRO, so vax/ has no
+// object or listing to compare with. forth.mar (a FORTH interpreter) is
+// run by internal/console's TestForth tests instead.
+var notLadder = map[string]bool{"forth": true}
+
+// ladderSources returns the ladder's sources in dir: its .mar files but
+// notLadder's.
+func ladderSources(t *testing.T, dir string) []string {
+	t.Helper()
+
+	paths, err := filepath.Glob(filepath.Join(dir, "*.mar"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ladder := paths[:0]
+
+	for _, path := range paths {
+		if !notLadder[strings.TrimSuffix(filepath.Base(path), ".mar")] {
+			ladder = append(ladder, path)
+		}
+	}
+
+	return ladder
+}
+
 // TestFixtureLadderDeclarations assembles each testdata/mar fixture and
 // checks that it declares what real MACRO's object for it does: the
 // module name and version, each psect's index, attributes, and
 // allocation, and the global symbols it defines and refers to.
 func TestFixtureLadderDeclarations(t *testing.T) {
-	paths, err := filepath.Glob(filepath.Join("..", "..", "testdata", "mar", "*.mar"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	paths := ladderSources(t, filepath.Join("..", "..", "testdata", "mar"))
 
 	for _, path := range paths {
 		name := strings.TrimSuffix(filepath.Base(path), ".mar")
@@ -356,10 +380,7 @@ func replayText(t *testing.T, m *obj.Module) objectText {
 // that it leaves the linker the same values to finish, as the same stack
 // programs.
 func TestFixtureLadderText(t *testing.T) {
-	paths, err := filepath.Glob(filepath.Join("..", "..", "testdata", "mar", "*.mar"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	paths := ladderSources(t, filepath.Join("..", "..", "testdata", "mar"))
 
 	for _, path := range paths {
 		name := strings.TrimSuffix(filepath.Base(path), ".mar")
@@ -410,10 +431,7 @@ func dumpText(t *testing.T, m *obj.Module) string {
 // command line, and the time are given real MACRO's values. The object
 // must also encode and decode unchanged, and pass Check.
 func TestFixtureLadderObjects(t *testing.T) {
-	paths, err := filepath.Glob(filepath.Join("..", "..", "testdata", "mar", "*.mar"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	paths := ladderSources(t, filepath.Join("..", "..", "testdata", "mar"))
 
 	for _, path := range paths {
 		name := strings.TrimSuffix(filepath.Base(path), ".mar")

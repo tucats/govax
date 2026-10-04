@@ -75,7 +75,21 @@ var (
 	// expects to find populated.
 	rabUBF = rabOffset("UBF")
 	rabUSZ = rabOffset("USZ")
+
+	// rabROP is RAB$L_ROP, the record-processing options: bits that
+	// change how one $GET or $PUT behaves. SYS$GET reads RAB$V_PMT from
+	// it (ropPMT): prompt the terminal before reading.
+	rabROP = rabOffset("ROP")
+
+	// rabPBF/rabPSZ are RAB$L_PBF/RAB$B_PSZ, the prompt buffer's address
+	// and size: the text a terminal $GET writes before reading, when
+	// RAB$V_PMT is set.
+	rabPBF = rabOffset("PBF")
+	rabPSZ = rabOffset("PSZ")
 )
+
+// ropPMT is RAB$M_PMT, the ROP bit asking a terminal $GET to prompt.
+var ropPMT = vmsConst("RAB$M_PMT")
 
 // RAB$B_RAC values (record access modes) this package recognizes. Real
 // VMS defines several (sequential, keyed by an indexed file's key, direct

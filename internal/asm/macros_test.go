@@ -114,6 +114,11 @@ func TestMacroStringArguments(t *testing.T) {
 	requireBytes(t, macroBytes(t, repeat+"\tREPEAT <A B>"), 'A', ' ', 'B', 'A', ' ', 'B')
 	requireBytes(t, macroBytes(t, repeat+"\tREPEAT ^%<X>%"), '<', 'X', '>', '<', 'X', '>')
 	requireCode(t, macroErr(t, repeat+"\tREPEAT A B"), vmserrors.VAX_TOOMNYARGS)
+
+	// A semicolon inside either kind of delimiter is part of the
+	// argument, not a comment; one after the call still is.
+	requireBytes(t, macroBytes(t, repeat+"\tREPEAT <;>\t; comment"), ';', ';')
+	requireBytes(t, macroBytes(t, repeat+"\tREPEAT ^%a;b%"), 'a', ';', 'b', 'a', ';', 'b')
 }
 
 // TestNestedMacroCalls is §4.4's CNTRPT and CNTRPT2: a macro passes its

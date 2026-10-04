@@ -197,14 +197,15 @@ func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, lo
 // of a field whose only reader is this one method.
 func (env *Environment) rmsContext() *rms.Context {
 	return &rms.Context{
-		Mem:      env.mem,
-		CPU:      env.cpu,
-		Mounts:   env.Mounts,
-		Files:    env.files,
-		Logicals: env.Logicals,
-		Session:  env.Session,
-		Console:  env.consoleOut,
-		NodeName: env.NodeName,
+		Mem:       env.mem,
+		CPU:       env.cpu,
+		Mounts:    env.Mounts,
+		Files:     env.files,
+		Logicals:  env.Logicals,
+		Session:   env.Session,
+		Console:   env.consoleOut,
+		ConsoleIn: env.consoleReader(),
+		NodeName:  env.NodeName,
 	}
 }
 

@@ -38,6 +38,13 @@ func assembleFixture(t *testing.T, c *Console, name, dir string) string {
 func runImage(t *testing.T, c *Console, path string) uint32 {
 	t.Helper()
 
+	return runImageBounded(t, c, path, 100_000)
+}
+
+// runImageBounded is runImage, running at most maxSteps instructions.
+func runImageBounded(t *testing.T, c *Console, path string, maxSteps int) uint32 {
+	t.Helper()
+
 	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
@@ -60,7 +67,7 @@ func runImage(t *testing.T, c *Console, path string) uint32 {
 
 	c.Engine.SetModeStack(vax.User, false)
 
-	if runErr, hitCap := callBounded(t, c, driver, 100_000); runErr != nil || hitCap {
+	if runErr, hitCap := callBounded(t, c, driver, maxSteps); runErr != nil || hitCap {
 		t.Fatalf("running %s: err=%v hitCap=%v", path, runErr, hitCap)
 	}
 

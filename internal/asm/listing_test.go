@@ -233,10 +233,7 @@ func TestListingLines(t *testing.T) {
 
 	var cases []fixture
 
-	ladder, err := filepath.Glob(filepath.Join(marDir, "*.mar"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	ladder := ladderSources(t, marDir)
 
 	for _, path := range ladder {
 		name := strings.TrimSuffix(filepath.Base(path), ".mar")

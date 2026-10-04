@@ -1,0 +1,1675 @@
+	.TITLE	FORTH	Vforth, a subroutine-threaded FORTH
+	.IDENT	/V2.0/
+
+;
+; Vforth--a 32 bit forth system using subroutine threading for
+;   increased speed.
+;
+;   By Andy Valencia, 1984
+;
+; Modifications:
+;
+;   05/15/99  Tom Cole
+;   Port to run under eVAX. This involves changing a few
+;   pseudo-instructions to the assembler, and storing the
+;   code resident in the microkernel space.
+;
+;   09/26/28  Tom Cole
+;   This was written to run within the microkernel, but
+;   that was never practical. Modified to run in P0
+;   space as a regular program, not a resident feature of
+;   the microkernel.
+;
+;   10/04/26  MACRO-32 port (testdata/asm/forth.asm is the eVAX original)
+;   Rewritten for VAX MACRO: assembled with MACRO, linked with LINK,
+;   and run with RUN. The changes:
+;
+;   - Program sections: code (FORTH_CODE), constant text and tables
+;     (FORTH_TEXT), variables and buffers (FORTH_DATA), the built-in
+;     dictionary's headers (FORTH_WORDS), and the dictionary new words
+;     are compiled into (FORTH_DICT, writable and executable).
+;   - I/O is RMS: the terminal is SYS$INPUT and SYS$OUTPUT, and "input"
+;     and "output" open files (default types .FTH and .LIS). The original
+;     used Unix-style CHMK system calls and DEC C's string routines.
+;     Output is gathered a line at a time and written as one record; a
+;     line still unfinished when the terminal is read becomes part of
+;     the prompt.
+;   - The DEFWORD and DEFPRIM macros build the dictionary headers, and
+;     DEFPRIM computes a primitive's length instead of hand-counting it.
+;   - BSD-style jbr/jeql/jnequ pseudo-branches are BRB/BRW/BSBW and
+;     branches around BRW; addresses are taken with MOVAB/MOVAL.
+;   - The operand stack is an area of its own, not 80 bytes below the
+;     return stack (where nested calls and RMS calls overwrote it).
+;   - Bugs fixed: "(" compared R0 with the byte at address 0 instead of
+;     testing for a NUL; "and" was a logical, not bitwise, and; "c@"
+;     sign-extended; "mod" ignored a negative dividend's sign; "fill"
+;     wrote one byte for a count of 0; "." needed more room for base 2
+;     and printed no trailing blank; numbers like "12x" were accepted
+;     as 12, and digits above F were misread in bases over 16; a ";"
+;     with an unmatched control structure didn't abort; "(.")" across
+;     input lines lost its string pointer; words longer than 80
+;     characters, ." strings over 132, and more than 7 nested input or
+;     output files overran their buffers.
+;
+; Registers with fixed uses:
+;   PC  - Since we're using subroutine threading, this operates as the
+;         actual execution vector for each instruction.
+;   SP  - Maintains the return stack (the VMS user stack)
+;   R11 - The operand stack
+;   R10 - Next open byte in the dictionary--"HERE"
+;   R9  - Index into current input line
+;   R8  - Points to last entry in the dictionary chain
+;
+; A dictionary entry is laid out as:
+;    0  link to the previous entry (0 ends the chain)
+;    4  PFA: address of the word's code
+;    8  SFP: for a primitive, the length of its code, without the RSB
+;   10  SFA: flag bits (XRECURSIVE, XSMUDGED, PRIORITY, PRIMITIVE)
+;   12  the word's name, as an ASCIZ string
+;
+
+	$FABDEF				; FAB field offsets
+	$RABDEF				; RAB field offsets
+	$SSDEF				; system status codes
+
+;
+; These are the instruction fragments compiled into the executable code
+;
+JSB_HEADER	= ^X9F16		; JSB @#...
+LIT_HEADER	= ^X8FD0		; MOVL #...,-(R11)
+LIT_TAILER	= ^X7B
+RSB_HEADER	= ^X05			; RSB
+AGAIN_HEADER	= ^X9F17		; JMP @#...
+SKIPT		= ^X06128BD5		; TSTL (R11)+ / BNEQ .+8
+
+;
+; These are the other constants
+;
+XRECURSIVE	= 1			; SFA bits: recursive function
+XSMUDGED	= 2			;   SMUDGE bit
+PRIORITY	= 4			;   IMMEDIATE
+PRIMITIVE	= 8			;   PRIMITIVE--is a code macro
+
+NL		= 10			; Newline
+SPC		= 32			; Space
+TAB		= 9			; Tab
+
+MRKCOLON	= 1			; For control structure matching
+MRKIF		= 2
+MRKDO		= 3
+MRKBEGIN	= 4
+MRKWHILE	= 5
+
+;
+; Sizes
+;
+LINSIZ		= 132			; Longest output line
+INLMAX		= 1024			; Longest input record
+INLSIZ		= INLMAX+2		;  plus the newline and NUL we add
+WRDMAX		= 80			; Longest word
+DOTQMAX		= 132			; Longest ." string
+MAXDEP		= 8			; Input and output stack depths
+OPSDEP		= 256			; Operand stack size, in longwords
+DICTSIZ		= 30000			; Room for new words
+
+;
+; A unit block is one open file: its FAB, its RAB, and (for output) the
+; line being built. A unit, as the input and output stacks hold it, is
+; the address of its unit block.
+;
+UB_FAB		= 0			; The FAB
+UB_RAB		= FAB$C_BLN		; The RAB
+UB_LEN		= UB_RAB+RAB$C_BLN	; Bytes in the output line
+UB_BUF		= UB_LEN+4		; The output line
+UB_BLN		= UB_BUF+LINSIZ+2	;  (room for a "> " prompt after it)
+
+;
+; DEFWORD builds a dictionary header for the word NAME in FORTH_WORDS,
+; chained to the one before it, then defines LABEL, the word's code,
+; where the assembly was. FLAGS are the SFA bits.
+;
+; DEFPRIM is DEFWORD for a primitive: one whose code is copied in line
+; when a definition is compiled. Its code ends with ENDPRIM LABEL, which
+; marks the end of the bytes to copy and adds the RSB.
+;
+	.MACRO	DEFWORD	NAME,LABEL,FLAGS=0
+	.SAVE_PSECT
+	.PSECT	FORTH_WORDS,NOWRT,NOEXE,LONG
+LABEL'_H:
+	.ADDRESS LASTWORD
+	.ADDRESS LABEL
+	.WORD	0,FLAGS
+	.ASCIZ	\NAME\
+LASTWORD = LABEL'_H
+	.RESTORE_PSECT
+LABEL:
+	.ENDM	DEFWORD
+
+	.MACRO	DEFPRIM	NAME,LABEL
+	.SAVE_PSECT
+	.PSECT	FORTH_WORDS,NOWRT,NOEXE,LONG
+LABEL'_H:
+	.ADDRESS LASTWORD
+	.ADDRESS LABEL
+	.WORD	LABEL'_E-LABEL,PRIMITIVE
+	.ASCIZ	\NAME\
+LASTWORD = LABEL'_H
+	.RESTORE_PSECT
+LABEL:
+	.ENDM	DEFPRIM
+
+	.MACRO	ENDPRIM	LABEL
+LABEL'_E:
+	RSB
+	.ENDM	ENDPRIM
+
+LASTWORD = 0				; The chain starts empty
+
+;
+; ----Data
+;
+	.PSECT	FORTH_DATA,WRT,NOEXE,LONG
+
+SP_HOLD:				; Holds return stack base
+	.BLKL	1
+INLINE:					; Room for a record of input
+	.BLKB	INLSIZ
+WRD:					;  and up to an 80-char word
+	.BLKB	WRDMAX+1
+DOTQBUF:				; A ." string
+	.BLKB	DOTQMAX+1
+FPRBUF:					; "f." fraction digits
+	.BLKB	10
+	.BLKB	34			; "." digits, built backward
+PRNBUF:	.BYTE	0			;  from here
+SIGN:	.BLKB	1			; Flags a number's sign
+BASE:	.LONG	10			; BASE variable--the current base
+STATE:	.LONG	0			; STATE variable--0=interp, 1=compiling
+
+;
+; The operand stack, which grows down from OPSTK_END. The guard after
+; it keeps a word run on an empty stack from storing into anything else.
+;
+	.ALIGN	LONG
+OPSTK:	.BLKL	OPSDEP
+OPSTK_END:
+	.BLKL	4
+
+;
+; Pushdown lists of input & output units. The terminal is at the
+; bottom of each.
+;
+ISTK:	.ADDRESS TTIN
+	.BLKL	MAXDEP-1
+ISP:	.ADDRESS ISTK
+IDEEP:	.LONG	0
+IUNIT:	.ADDRESS TTIN
+OSTK:	.ADDRESS TTOUT
+	.BLKL	MAXDEP-1
+OSP:	.ADDRESS OSTK
+ODEEP:	.LONG	0
+OUNIT:	.ADDRESS TTOUT
+
+;
+; KLUDGE city! When we push down an input file, we have to save the buffer,
+;   otherwise the new input file will abuse it in various undesireable
+;   ways. So we make room for a save image of each input unit.
+;
+IBUFS:	.BLKB	INLSIZ*<MAXDEP-1>	; The input buffers
+IBUFX:	.BLKL	MAXDEP-1		;  and the current position within them
+
+;
+; The terminal's unit blocks. Each $GET from the terminal prompts with
+; whatever's in RAB$L_PBF, which GETLIN sets.
+;
+	.ALIGN	LONG
+TTIN:	$FAB	FNM=<SYS$INPUT>,FAC=GET
+	$RAB	FAB=TTIN,UBF=INLINE,USZ=INLMAX,ROP=PMT
+	.LONG	0
+	.BLKB	LINSIZ+2
+
+	.ALIGN	LONG
+TTOUT:	$FAB	FNM=<SYS$OUTPUT>,FAC=PUT,RAT=CR
+	$RAB	FAB=TTOUT
+	.LONG	0
+	.BLKB	LINSIZ+2
+
+;
+; The unit blocks of the files "input" and "output" open, one for each
+; level of nesting.
+;
+	.ALIGN	LONG
+IUNITS:	.BLKB	UB_BLN*<MAXDEP-1>
+OUNITS:	.BLKB	UB_BLN*<MAXDEP-1>
+
+;
+; ----Constant text and tables
+;
+	.PSECT	FORTH_TEXT,NOWRT,NOEXE,LONG
+
+;
+; The FAB and RAB an input or output file's unit block starts as.
+;
+IFABT:	$FAB	FAC=GET,DNM=<.FTH>
+IRABT:	$RAB	UBF=INLINE,USZ=INLMAX
+OFABT:	$FAB	FAC=PUT,RAT=CR,DNM=<.LIS>
+ORABT:	$RAB
+
+BANNER:	.ASCIZ	|Vforth V2.0 -- "halt" or Ctrl/Z to exit|<NL>
+OUTOP_MSG:
+	.ASCIZ	/ Could not open output file/<NL>
+INOP_MSG:
+	.ASCIZ	/ Could not open input file/<NL>
+DEEP_MSG:
+	.ASCIZ	/ Files nested too deeply/<NL>
+ELSE_MSG:
+	.ASCIZ	/ 'else' does not match an 'if'/<NL>
+ENDIF_MSG:
+	.ASCIZ	| 'endif' does not match 'else'/'if'|<NL>
+WHILE_MSG:
+	.ASCIZ	/ 'while' does not match a 'begin'/<NL>
+REPEAT_MSG:
+	.ASCIZ	/ 'repeat' does not match a 'while'/<NL>
+AGAIN_MSG:
+	.ASCIZ	/ 'again' does not match a 'begin'/<NL>
+UNTIL_MSG:
+	.ASCIZ	/ 'until' does not match a 'begin'/<NL>
+LOOP_MSG:
+	.ASCIZ	/ 'loop' does not match a 'do'/<NL>
+PLOOP_MSG:
+	.ASCIZ	/ '+loop' does not match a 'do'/<NL>
+SEMI_MSG:
+	.ASCIZ	/ ';' not matched to ':'/<NL>
+EMPTY_MSG:
+	.ASCIZ	/ ?Stack empty/<NL>
+FULL_MSG:
+	.ASCIZ	/ ?Stack full/<NL>
+DUNNO_MSG:
+	.ASCIZ	/: not found/<NL>
+
+;
+; sin(0..90 degrees), times 10000
+;
+SINTAB:
+	.LONG	0, 174, 348, 523, 697, 871, 1045, 1218, 1391, 1564, 1736
+	.LONG	1908, 2079, 2249, 2419, 2588, 2756, 2923, 3090, 3255, 3420
+	.LONG	3583, 3746, 3907, 4067, 4226, 4383, 4539, 4694, 4848, 5000
+	.LONG	5150, 5299, 5446, 5591, 5735, 5877, 6018, 6156, 6293, 6427
+	.LONG	6560, 6691, 6819, 6946, 7071, 7193, 7313, 7431, 7547, 7660
+	.LONG	7771, 7880, 7986, 8090, 8191, 8290, 8386, 8480, 8571, 8660
+	.LONG	8746, 8829, 8910, 8987, 9063, 9135, 9205, 9271, 9335, 9396
+	.LONG	9455, 9510, 9563, 9612, 9659, 9702, 9743, 9781, 9816, 9848
+	.LONG	9876, 9902, 9925, 9945, 9961, 9975, 9986, 9993, 9998, 10000
+
+;
+; ----Start-up
+;
+	.PSECT	FORTH_CODE,NOWRT,EXE,LONG
+
+	.ENTRY	FORTH,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+
+	$OPEN	FAB=TTIN		; Open the terminal
+	BLBC	R0,10$
+	$CONNECT RAB=TTIN+UB_RAB
+	BLBC	R0,10$
+	$CREATE	FAB=TTOUT
+	BLBC	R0,10$
+	$CONNECT RAB=TTOUT+UB_RAB
+	BLBC	R0,10$
+
+	MOVAB	BANNER,R0
+	BSBW	PRSTR
+	MOVL	DICTEND,R10		; R10 is end of dictionary
+	MOVL	SP,SP_HOLD		; For resetting SP later
+	MOVL	LATEST,R8		; Setup R8 to end of dict.
+	BRB	ABORT
+10$:	RET				; Couldn't open the terminal
+
+;
+; abort--reset the stacks and the input, and restart the interpreter
+;
+ABORT:	MOVL	SP_HOLD,SP		; Start SP from its initial value
+	BSBW	CLOSEALL		; Back to the terminal
+	MOVAB	OPSTK_END,R11		; Empty the operand stack
+	CLRL	STATE			; Turn off compile mode
+	MOVAB	INLINE,R9		; Set up input line as empty
+	CLRB	(R9)
+	BRW	INTERP			; Start up the interpretive loop
+
+;
+; ----Start of FORTH dictionary
+;
+
+;
+; over--copy second to new top
+;
+	DEFPRIM	<over>,F_OVER
+	MOVL	4(R11),-(R11)
+	ENDPRIM	F_OVER
+
+;
+; abs,fabs--get absolute value
+;
+	DEFWORD	<abs>,F_ABS
+	TSTL	(R11)
+	BGEQ	10$
+	MNEGL	(R11),(R11)
+10$:	RSB
+
+	DEFWORD	<fabs>,F_FABS
+	TSTF	(R11)
+	BGEQ	10$
+	MNEGF	(R11),(R11)
+10$:	RSB
+
+;
+; max,fmax--get maximum value
+;
+	DEFWORD	<max>,F_MAX
+	MOVL	(R11)+,R0
+	CMPL	R0,(R11)
+	BLEQ	10$
+	MOVL	R0,(R11)
+10$:	RSB
+
+	DEFWORD	<fmax>,F_FMAX
+	MOVF	(R11)+,R0
+	CMPF	R0,(R11)
+	BLEQ	10$
+	MOVF	R0,(R11)
+10$:	RSB
+
+;
+; min,fmin--get minimum value
+;
+	DEFWORD	<min>,F_MIN
+	MOVL	(R11)+,R0
+	CMPL	R0,(R11)
+	BGEQ	10$
+	MOVL	R0,(R11)
+10$:	RSB
+
+	DEFWORD	<fmin>,F_FMIN
+	MOVF	(R11)+,R0
+	CMPF	R0,(R11)
+	BGEQ	10$
+	MOVF	R0,(R11)
+10$:	RSB
+
+;
+; c@, c!--byte fetch/store operators
+;
+	DEFPRIM	<c@>,F_CFETCH
+	MOVL	(R11),R0
+	MOVZBL	(R0),(R11)
+	ENDPRIM	F_CFETCH
+
+	DEFPRIM	<c!>,F_CSTORE
+	MOVL	(R11)+,R0
+	CVTLB	(R11)+,(R0)
+	ENDPRIM	F_CSTORE
+
+;
+; negate & fnegate
+;
+	DEFPRIM	<negate>,F_NEGATE
+	MNEGL	(R11),(R11)
+	ENDPRIM	F_NEGATE
+
+	DEFPRIM	<fnegate>,F_FNEGATE
+	MNEGF	(R11),(R11)
+	ENDPRIM	F_FNEGATE
+
+;
+; HERE--provide the address of the next open byte in the dictionary
+;
+	DEFPRIM	<here>,F_HERE
+	MOVL	R10,-(R11)
+	ENDPRIM	F_HERE
+
+;
+; "r>" & ">r"--move a word between op & return stacks. Like i, j, k,
+;   and leave, these only make sense compiled in line.
+;
+	DEFPRIM	^%>r%,F_TO_R
+	PUSHL	(R11)+
+	ENDPRIM	F_TO_R
+
+	DEFPRIM	^%r>%,F_FROM_R
+	MOVL	(SP)+,-(R11)
+	ENDPRIM	F_FROM_R
+
+;
+; fill--fill an area of memory with a constant ( addr count char -- )
+;
+	DEFWORD	<fill>,F_FILL
+	MOVL	(R11)+,R6		; The fill character
+	MOVL	(R11)+,R1		; The count
+	MOVL	(R11)+,R3		; The address
+	TSTL	R1
+	BLEQ	10$
+	MOVC5	#0,(R3),R6,R1,(R3)
+10$:	RSB
+
+;
+; pick--get a word in the stack
+;
+	DEFWORD	<pick>,F_PICK
+	MOVL	(R11)+,R0
+	MOVL	(R11)[R0],-(R11)
+	RSB
+
+;
+; 'c,' & ','--push word to HERE
+;
+	DEFPRIM	<,>,F_COMMA
+	MOVL	(R11)+,(R10)+
+	ENDPRIM	F_COMMA
+
+	DEFPRIM	<c,>,F_CCOMMA
+	CVTLB	(R11)+,(R10)+
+	ENDPRIM	F_CCOMMA
+
+;
+; rot,-rot --the rotational operators
+;
+	DEFWORD	<rot>,F_ROT
+	MOVL	(R11)+,R0
+	MOVL	(R11)+,R1
+	MOVL	(R11),R2
+	MOVL	R1,(R11)
+	MOVL	R0,-(R11)
+	MOVL	R2,-(R11)
+	RSB
+
+	DEFWORD	<-rot>,F_MROT
+	MOVL	(R11)+,R0
+	MOVL	(R11)+,R1
+	MOVL	(R11),R2
+	MOVL	R0,(R11)
+	MOVL	R2,-(R11)
+	MOVL	R1,-(R11)
+	RSB
+
+;
+; allot--move the end of the dictionary forward a number of bytes
+;
+	DEFPRIM	<allot>,F_ALLOT
+	ADDL2	(R11)+,R10
+	ENDPRIM	F_ALLOT
+
+;
+; 2dup, 2swap--double-int stack operators
+;
+	DEFWORD	<2dup>,F_TWODUP
+	MOVL	(R11)+,R0
+	MOVL	(R11),R1
+	MOVL	R0,-(R11)
+	MOVL	R1,-(R11)
+	MOVL	R0,-(R11)
+	RSB
+
+	DEFWORD	<2swap>,F_TWOSWAP
+	MOVL	(R11)+,R0
+	MOVL	(R11)+,R1
+	MOVL	(R11)+,R2
+	MOVL	(R11),R3
+	MOVL	R1,(R11)
+	MOVL	R0,-(R11)
+	MOVL	R3,-(R11)
+	MOVL	R2,-(R11)
+	RSB
+
+;
+; "("--handle forth comments
+;
+	DEFWORD	<(>,F_PAREN,PRIORITY
+10$:	MOVB	(R9)+,R0		; Get next byte of input
+	BEQL	30$			; Get another buffer-full if hit end of cur.
+	CMPB	R0,#NL			; End comment on newline or close paren
+	BEQL	20$
+	CMPB	R0,#^A/)/
+	BNEQ	10$
+20$:	RSB
+30$:	BSBW	GETLIN			; Get another buffer
+	BRB	10$
+
+;
+; "abort"--calls the forth abort code
+;
+	DEFWORD	<abort>,F_ABORT
+	BRW	ABORT
+
+;
+; "halt"--cause forth to exit, closing any files. The dictionary's end
+;   is saved, as the original's resident version needed.
+;
+	DEFWORD	<halt>,F_HALT
+	BSBW	CLOSEALL		; Close the files
+	MOVAL	TTOUT,R1		; Finish the terminal's last line
+	TSTL	UB_LEN(R1)
+	BEQL	10$
+	BSBW	FLUSHU
+10$:	MOVL	R10,DICTEND		; save end of dictionary storage area
+	MOVL	R8,LATEST		; end of dictionary linked list
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; "outpop"--do for the output list what EOF does for the input list;
+;   close the current output file & pop back a level
+;
+	DEFWORD	<outpop>,F_OUTPOP
+	MOVAL	OSTK,R0			; Don't pop off end of stack
+	CMPL	OSP,R0
+	BEQL	20$
+	MOVL	OUNIT,R1		; Write the unit's last line
+	TSTL	UB_LEN(R1)
+	BEQL	10$
+	BSBW	FLUSHU
+10$:	MOVL	OUNIT,R1		; Close the current unit
+	$CLOSE	FAB=(R1)
+	SUBL2	#4,OSP			; Move back a position
+	MOVL	@OSP,OUNIT		;  and set output to that unit
+	DECL	ODEEP			; Decrement nesting count
+20$:	RSB
+
+;
+; "output"--open the named output file & make it the new output unit
+;
+	DEFWORD	<output>,F_OUTPUT
+	BSBW	GETW
+	BSBW	OUTOPEN
+	RSB
+
+;
+; "input"--open the named file & make it the new input unit
+;
+	DEFWORD	<input>,F_INPUT
+	BSBW	GETW			; Get the name of the file
+	BSBW	INOPEN
+	RSB
+
+;
+; Push logical constants to stack
+;
+	DEFPRIM	<false>,F_FALSE
+	CLRL	-(R11)
+	ENDPRIM	F_FALSE
+
+	DEFPRIM	<true>,F_TRUE
+	CVTBL	#-1,-(R11)
+	ENDPRIM	F_TRUE
+
+;
+; the logical operators. Note that they serve for both logical and
+;   bitwise purposes, as "true" is defined as -1.
+;
+	DEFPRIM	<or>,F_OR
+	BISL2	(R11)+,(R11)
+	ENDPRIM	F_OR
+
+	DEFPRIM	<and>,F_AND
+	MCOML	(R11)+,R0
+	BICL2	R0,(R11)
+	ENDPRIM	F_AND
+
+;
+; the floating relational operators
+;
+	DEFWORD	<f=>,F_FEQ
+	CMPF	(R11)+,(R11)
+	BEQL	10$
+	CLRL	(R11)
+	RSB
+10$:	CVTBL	#-1,(R11)
+	RSB
+
+	DEFWORD	^%f>%,F_FGT		; Greater than
+	CMPF	(R11)+,(R11)
+	BLSS	10$
+	CLRL	(R11)
+	RSB
+10$:	CVTBL	#-1,(R11)
+	RSB
+
+	DEFWORD	^%f<%,F_FLT		; Less than
+	CMPF	(R11)+,(R11)
+	BGTR	10$
+	CLRL	(R11)
+	RSB
+10$:	CVTBL	#-1,(R11)
+	RSB
+
+;
+; the relational operators
+;
+	DEFWORD	<=>,F_EQ
+	CMPL	(R11)+,(R11)
+	BEQL	10$
+	CLRL	(R11)
+	RSB
+10$:	CVTBL	#-1,(R11)
+	RSB
+
+	DEFWORD	^%>%,F_GT		; Greater than
+	CMPL	(R11)+,(R11)
+	BLSS	10$
+	CLRL	(R11)
+	RSB
+10$:	CVTBL	#-1,(R11)
+	RSB
+
+	DEFWORD	^%<%,F_LT		; Less than
+	CMPL	(R11)+,(R11)
+	BGTR	10$
+	CLRL	(R11)
+	RSB
+10$:	CVTBL	#-1,(R11)
+	RSB
+
+;
+; drop,2drop--get rid of top item(s)
+;
+	DEFPRIM	<2drop>,F_TWODROP
+	ADDL2	#8,R11
+	ENDPRIM	F_TWODROP
+
+	DEFPRIM	<drop>,F_DROP
+	MOVL	(R11)+,R0
+	ENDPRIM	F_DROP
+
+;
+; swap--exchange top & second
+;
+	DEFPRIM	<swap>,F_SWAP
+	MOVL	(R11)+,R0
+	MOVL	(R11),R1
+	MOVL	R0,(R11)
+	MOVL	R1,-(R11)
+	ENDPRIM	F_SWAP
+
+;
+; dup--duplicate top
+;
+	DEFPRIM	<dup>,F_DUP
+	MOVL	(R11),-(R11)
+	ENDPRIM	F_DUP
+
+;
+; "if"--conditional control structure
+;
+	DEFWORD	<if>,F_IF,PRIORITY
+	MOVL	#SKIPT,(R10)+		; TSTL (R11)+ / BNEQ .+8
+	MOVW	#AGAIN_HEADER,(R10)+	; JMP @#...
+	MOVL	R10,-(R11)
+	ADDL2	#4,R10
+	MOVL	#MRKIF,-(R11)		; Mark the control structure
+	RSB
+
+;
+; "else"
+;
+	DEFWORD	<else>,F_ELSE,PRIORITY
+	CMPL	#MRKIF,(R11)+		; Check for matching IF
+	BNEQ	10$
+	MOVW	#AGAIN_HEADER,(R10)+	; JMP @#...
+	MOVL	R10,R0
+	ADDL2	#4,R10			; Leave room for the jump address
+	MOVL	R10,@(R11)+		; Have FALSE branch here
+	MOVL	R0,-(R11)		; Put our fill-in addr.
+	MOVL	#MRKIF,-(R11)		;  and put back the marker
+	RSB
+10$:	MOVAB	ELSE_MSG,R0		; Complain
+	BSBW	PRSTR
+	BRW	ABORT
+
+;
+; endif--finish off the conditional
+;
+	DEFWORD	<endif>,F_ENDIF,PRIORITY
+	CMPL	(R11)+,#MRKIF		; Check match
+	BNEQ	10$
+	MOVL	R10,@(R11)+
+	RSB
+10$:	MOVAB	ENDIF_MSG,R0		; Complain on no match
+	BSBW	PRSTR
+	BRW	ABORT
+
+;
+; begin--start of all looping conditionals
+;
+	DEFWORD	<begin>,F_BEGIN,PRIORITY
+	MOVL	R10,-(R11)		; Save current address
+	MOVL	#MRKBEGIN,-(R11)	;  and control structure marker
+	RSB
+
+;
+; "while".."repeat" looping construct
+;
+	DEFWORD	<while>,F_WHILE,PRIORITY
+	CMPL	#MRKBEGIN,(R11)+	; Check match
+	BNEQ	10$
+	MOVL	#SKIPT,(R10)+		; TSTL (R11)+ / BNEQ .+8
+	MOVW	#AGAIN_HEADER,(R10)+	; JMP @#<forward>
+	MOVL	R10,-(R11)		; Mark where to plug in
+	ADDL2	#4,R10			; Leave room for the patch
+	MOVL	#MRKWHILE,-(R11)
+	RSB
+10$:	MOVAB	WHILE_MSG,R0		; Bad match, complain
+	BSBW	PRSTR
+	BRW	ABORT
+
+	DEFWORD	<repeat>,F_REPEAT,PRIORITY
+	CMPL	#MRKWHILE,(R11)+	; Check match
+	BNEQ	10$
+	MOVL	(R11)+,R0		; Save where to patch
+	MOVW	#AGAIN_HEADER,(R10)+	; JMP @#<back>
+	MOVL	(R11)+,(R10)+
+	MOVL	R10,(R0)		; Backpatch
+	RSB
+10$:	MOVAB	REPEAT_MSG,R0		; Complain
+	BSBW	PRSTR
+	BRW	ABORT
+
+;
+; again--unconditional back branch
+;
+	DEFWORD	<again>,F_AGAIN,PRIORITY
+	CMPL	#MRKBEGIN,(R11)+	; verify match of control structures
+	BNEQ	10$
+	MOVW	#AGAIN_HEADER,(R10)+	; compile in back branch
+	MOVL	(R11)+,(R10)+
+	RSB
+10$:	MOVAB	AGAIN_MSG,R0		; Complain
+	BSBW	PRSTR
+	BRW	ABORT
+
+;
+; until--loop until condition becomes true
+;
+	DEFWORD	<until>,F_UNTIL,PRIORITY
+	CMPL	#MRKBEGIN,(R11)+	; Verify match
+	BNEQ	10$
+	MOVL	#SKIPT,(R10)+		; Branch over backbranch if true
+	MOVW	#AGAIN_HEADER,(R10)+	; compile in backbranch
+	MOVL	(R11)+,(R10)+
+	RSB
+10$:	MOVAB	UNTIL_MSG,R0		; Complain
+	BSBW	PRSTR
+	BRW	ABORT
+
+;
+; leave--setup innermost loop so it will exit at next iteration
+;
+	DEFPRIM	<leave>,F_LEAVE
+	MOVL	(SP),4(SP)
+	ENDPRIM	F_LEAVE
+
+;
+; "k"--return index of third loop
+;
+	DEFPRIM	<k>,F_K
+	MOVL	20(SP),-(R11)
+	ENDPRIM	F_K
+
+;
+; "j"--return index of second loop
+;
+	DEFPRIM	<j>,F_J
+	MOVL	12(SP),-(R11)
+	ENDPRIM	F_J
+
+;
+; "i"--return index of innermost loop
+;
+	DEFPRIM	<i>,F_I
+	MOVL	4(SP),-(R11)
+	ENDPRIM	F_I
+
+;
+; "do"--start a loop ( limit index -- ). At run time the return stack
+;   holds the limit at (SP) and the index at 4(SP).
+;
+XDO1	= ^XD07E8BD0		; MOVL (R11)+,-(SP) / MOVL (R11)+,-(SP)
+XDO2	= ^X7E8B
+XDO3	= ^XD0508ED0		; MOVL (SP)+,R0 / MOVL (SP)+,R1
+XDO4	= ^X51D1518E		;   CMPL R1,R0 / BLSS .+8
+XDO5	= ^X17061950		;   JMP @#<forward>
+XDO6	= ^X9F
+XDO7	= ^XD07E51D0		; MOVL R1,-(SP) / MOVL R0,-(SP)
+XDO8	= ^X7E50
+
+	DEFWORD	<do>,F_DO,PRIORITY
+	MOVL	#XDO1,(R10)+
+	MOVW	#XDO2,(R10)+
+	MOVL	R10,-(R11)		; Save current pos. for back branch
+	MOVL	#XDO3,(R10)+
+	MOVL	#XDO4,(R10)+
+	MOVL	#XDO5,(R10)+
+	MOVB	#XDO6,(R10)+
+	MOVL	R10,-(R11)		; Save this loc for fill-in as forward branch
+	ADDL2	#4,R10
+	MOVL	#XDO7,(R10)+
+	MOVW	#XDO8,(R10)+
+	MOVL	#MRKDO,-(R11)		; Flag our control structure
+	RSB
+
+;
+; loop--branch back to the opening "DO"
+;
+XLOOP1	= ^X1704AED6		; INCL 4(SP) / JMP @#<back>
+XLOOP2	= ^X9F
+
+	DEFWORD	<loop>,F_LOOP,PRIORITY
+	CMPL	#MRKDO,(R11)+		; Check for match of control structures
+	BNEQ	10$
+	MOVL	(R11)+,R0		; Keep where to fill in forward branch addr.
+	MOVL	#XLOOP1,(R10)+		; Build code to increment loop
+	MOVB	#XLOOP2,(R10)+
+	MOVL	(R11)+,(R10)+
+	MOVL	R10,(R0)		; Fill in this location as loop exit addr.
+	RSB
+10$:	MOVAB	LOOP_MSG,R0		; Bad match--complain
+	BSBW	PRSTR
+	BRW	ABORT
+
+;
+; +loop--like loop, but add by the top item instead of 1
+;
+XPLOOP1	= ^X04AE8BC0		; ADDL2 (R11)+,4(SP)
+XPLOOP2	= ^X9F17		; JMP @#<back>
+
+	DEFWORD	<+loop>,F_PLOOP,PRIORITY
+	CMPL	#MRKDO,(R11)+		; Check for match of control structures
+	BNEQ	10$
+	MOVL	(R11)+,R0		; Keep where to fill in forward branch addr.
+	MOVL	#XPLOOP1,(R10)+		; Build code to increment loop
+	MOVW	#XPLOOP2,(R10)+
+	MOVL	(R11)+,(R10)+
+	MOVL	R10,(R0)		; Fill in this location as loop exit addr.
+	RSB
+10$:	MOVAB	PLOOP_MSG,R0		; Bad match--complain
+	BSBW	PRSTR
+	BRW	ABORT
+
+;
+; "@"--fetch the contents of the addressed word
+;
+	DEFPRIM	<@>,F_FETCH
+	MOVL	@(R11),(R11)
+	ENDPRIM	F_FETCH
+
+;
+; "!"--store the word (second) to address (top)
+;
+	DEFPRIM	<!>,F_STORE
+	MOVL	(R11)+,R0
+	MOVL	(R11)+,(R0)
+	ENDPRIM	F_STORE
+
+;
+; "variable"--build a variable. Its code pushes the address of the
+;   longword that follows it.
+;
+XVAR1	= ^X8FD0			; MOVL #<addr>,-(R11)
+XVAR2	= ^X7B
+
+	DEFWORD	<variable>,F_VARIABLE
+	MOVZWL	#7,R4			; SFP = 7
+	MOVZWL	#PRIMITIVE,R5		; SFA = PRIMITIVE
+	BSBW	MKHEAD			; Build the header
+	MOVW	#XVAR1,(R10)+		; Our in-line code
+	ADDL3	#6,R10,(R10)+
+	MOVB	#XVAR2,(R10)+
+	MOVB	#RSB_HEADER,(R10)+
+	CLRL	(R10)+			; The first word of space (= 0)
+	RSB
+
+;
+; "constant"--build a constant value
+;
+	DEFWORD	<constant>,F_CONSTANT
+	MOVZWL	#7,R4			; SFP = 7
+	MOVZWL	#PRIMITIVE,R5		; SFA = PRIMITIVE
+	BSBW	MKHEAD			; Build the header
+	MOVW	#XVAR1,(R10)+		; Our in-line code
+	MOVL	(R11)+,(R10)+		; the value to push
+	MOVB	#XVAR2,(R10)+
+	MOVB	#RSB_HEADER,(R10)+
+	RSB
+
+;
+; ":"--start a colon definition
+;
+	DEFWORD	<:>,F_COLON
+	MOVL	#1,STATE		; Set our state to "compile"
+	CLRL	R4			; SFP = 0
+	MOVZWL	#XSMUDGED,R5		; SFA = SMUDGED
+	BSBW	MKHEAD			; Build the header
+	MOVL	#MRKCOLON,-(R11)	; and leave our mark on the stack
+	RSB
+
+;
+; ";"--end compile mode
+;
+	DEFWORD	<;>,F_SEMI,PRIORITY
+	CLRL	STATE			; Reset compile state
+	CMPL	#MRKCOLON,(R11)+	; Check the mark
+	BEQL	10$
+	MOVAB	SEMI_MSG,R0		; Uh-oh, bad match. Complain
+	BSBW	PRSTR
+	BRW	ABORT
+10$:	CLRW	10(R8)			; All OK, so clear the smudge
+	MOVB	#RSB_HEADER,(R10)+	; Add the closing RSB
+	RSB
+
+;
+; "mod"--get remainder of division
+;
+	DEFWORD	<mod>,F_MOD
+	MOVL	(R11)+,R0		; The divisor
+	EMUL	#1,(R11),#0,R2		; The dividend, as a quadword
+	EDIV	R0,R2,R1,(R11)		; Keep the remainder
+	RSB
+
+;
+; "/"--divide second by top
+;
+	DEFPRIM	</>,F_DIVIDE
+	DIVL2	(R11)+,(R11)
+	ENDPRIM	F_DIVIDE
+
+;
+; "*"--multiply top two items on stack
+;
+	DEFPRIM	<*>,F_TIMES
+	MULL2	(R11)+,(R11)
+	ENDPRIM	F_TIMES
+
+;
+; "-"--subtract top two integers, push result
+;
+	DEFPRIM	<->,F_MINUS
+	SUBL2	(R11)+,(R11)
+	ENDPRIM	F_MINUS
+
+;
+; "f+"--add floating
+;
+	DEFPRIM	<f+>,F_FPLUS
+	ADDF2	(R11)+,(R11)
+	ENDPRIM	F_FPLUS
+
+;
+; "f-"--subtract floating
+;
+	DEFPRIM	<f->,F_FMINUS
+	SUBF2	(R11)+,(R11)
+	ENDPRIM	F_FMINUS
+
+;
+; "f*"--multiply floating
+;
+	DEFPRIM	<f*>,F_FTIMES
+	MULF2	(R11)+,(R11)
+	ENDPRIM	F_FTIMES
+
+;
+; "f/"--divide floating
+;
+	DEFPRIM	<f/>,F_FDIVIDE
+	DIVF2	(R11)+,(R11)
+	ENDPRIM	F_FDIVIDE
+
+;
+; "i->f"--convert int to float
+;
+	DEFPRIM	^%i->f%,F_ITOF
+	CVTLF	(R11),(R11)
+	ENDPRIM	F_ITOF
+
+;
+; "f->i"--convert float to int
+;
+	DEFPRIM	^%f->i%,F_FTOI
+	CVTFL	(R11),(R11)
+	ENDPRIM	F_FTOI
+
+;
+; "+"--add top two integers, push result back to stack
+;
+	DEFPRIM	<+>,F_PLUS
+	ADDL2	(R11)+,(R11)
+	ENDPRIM	F_PLUS
+
+;
+; emit--print the specified character
+;
+	DEFWORD	<emit>,F_EMIT
+	MOVL	(R11)+,R0
+	BSBW	PUTCH
+	RSB
+
+;
+; cr--print newline
+;
+	DEFWORD	<cr>,F_CR
+	MOVZBL	#NL,R0
+	BSBW	PUTCH
+	RSB
+
+;
+; "f."--print a floating point number, then a blank
+;
+	DEFWORD	<f.>,F_FDOT
+	TSTF	(R11)			; If it's negative...
+	BGEQ	10$
+	MOVZBL	#^A/-/,R0		;  Print a '-'
+	BSBW	PUTCH
+	MNEGF	(R11),(R11)		;  And negate it
+10$:	CVTFL	(R11),-(R11)		; Print the integer part
+	BSBW	PRINT_INT
+	MOVAB	FPRBUF,R3		; R3 points to buffer position
+	MOVF	(R11)+,R0		; Get the number
+	CVTFL	R0,R1			; Get the integer part
+	CVTLF	R1,R1
+	SUBF2	R1,R0			; And take it off the number
+	MOVB	#^A/./,(R3)+		; The decimal point
+	MOVL	#6,R4			; We always print 6 places
+20$:	MULF2	#10.0,R0		; Get the next digit
+	CVTFL	R0,R1			; R1 is the next digit
+	CVTLF	R1,R5			; Take this digit off the number
+	SUBF2	R5,R0
+	ADDB3	#^A/0/,R1,(R3)+		; Turn it into the ASCII byte
+	SOBGTR	R4,20$			; Loop 6 times
+	MOVB	#SPC,(R3)+
+	CLRB	(R3)
+	MOVAB	FPRBUF,R0		; Now print it
+	BSBW	PRSTR
+	RSB
+
+;
+; ." --if compiling, generate code to print a string, otherwise just
+;   print the string
+;
+	DEFWORD	^%."%,F_DOTQ,PRIORITY
+	MOVAB	DOTQBUF,R1
+	MOVAB	DOTQBUF+DOTQMAX,R2	; Where the string has to stop
+	CMPB	(R9),#SPC		; Skip char if it's the separating blank
+	BNEQ	10$
+	INCL	R9
+10$:	MOVB	(R9)+,R0		; get the next char of the string
+	CMPB	R0,#^A/"/		; End string on newline or close quote
+	BEQL	30$
+	CMPB	R0,#NL
+	BEQL	30$
+	TSTB	R0			; At end of current input buffer?
+	BEQL	20$
+	CMPL	R1,R2			;  No. Is there room for it?
+	BGEQU	10$
+	MOVB	R0,(R1)+		;  Yes. Add this char to our output line
+	BRB	10$
+20$:	BSBW	GETLIN			; Get another buffer
+	BRB	10$
+
+30$:	CLRB	(R1)			; Make the resulting string NULL-terminated
+	MOVAB	DOTQBUF,R0		; Point R0 to head of this string
+	TSTL	STATE			; Check state
+	BEQL	50$
+	MOVW	#JSB_HEADER,(R10)+	; Compile in reference to (.")
+	MOVAB	F_PDOTQ,(R10)+
+40$:	MOVB	(R0)+,(R10)+		; Copy in the string
+	BNEQ	40$
+	RSB
+50$:	BSBW	PRSTR			; Print the string
+	RSB
+
+;
+; (.")--run-time code to print a string: the string follows the JSB
+;   that called us, and we return past it
+;
+	DEFWORD	^%(.")%,F_PDOTQ
+	MOVL	(SP)+,R0		; Get the address of our return loc.
+	BSBW	PRSTR			; Print the string
+	JMP	(R2)			; Return to addr following string
+
+;
+; "."--pop and print the top number on the stack, then a blank
+;
+	DEFWORD	<.>,F_DOT
+	BSBW	PRINT_INT
+	MOVZBL	#SPC,R0
+	BSBW	PUTCH
+	RSB
+
+;
+; sin & cos (and the corresponding fsin & fcos)
+;
+	DEFWORD	<sin>,F_SIN
+	MOVL	(R11)+,R0		; Get angle
+	CLRL	R1			; Negative quadrant flag
+10$:	TSTL	R0			; Fold negative angles
+	BGEQ	20$
+	ADDL2	#360,R0
+	BRB	10$
+20$:	CMPL	R0,#360			; Fold angles > 360
+	BLSS	30$
+	SUBL2	#360,R0
+	BRB	20$
+30$:	CMPL	R0,#181			; Flag & fold negative quadrant vals
+	BLSS	40$
+	MOVB	#-1,R1
+	SUBL3	R0,#360,R0
+40$:	CMPL	R0,#91			; Fold equivalent 2nd quadrant
+	BLSS	50$
+	SUBL3	R0,#180,R0
+50$:	MOVL	SINTAB[R0],R0		; Get the value
+	TSTL	R1			; Negate if needed
+	BEQL	60$
+	MNEGL	R0,R0
+60$:	MOVL	R0,-(R11)		; Push result
+	RSB
+
+	DEFWORD	<cos>,F_COS
+	SUBL3	(R11),#90,(R11)		; sin(90-a) = cos(a)
+	BSBW	F_SIN
+	RSB
+
+	DEFWORD	<fsin>,F_FSIN
+	CVTFL	(R11),(R11)		; Change to int & call sin
+	BSBW	F_SIN
+	CVTLF	(R11),R0
+	DIVF3	#10000.0,R0,(R11)	; Scale down to true float
+	RSB
+
+	DEFWORD	<fcos>,F_FCOS
+	CVTFL	(R11),(R11)		; Change to int & call cos
+	BSBW	F_COS
+	CVTLF	(R11),R0
+	DIVF3	#10000.0,R0,(R11)	; Scale down to true float
+	RSB
+
+;
+; decimal--set FORTH's base to decimal
+;
+	DEFWORD	<decimal>,F_DECIMAL
+	MOVL	#10,BASE
+	RSB
+
+;
+; hex--set FORTH's base to hexadecimal
+;
+	DEFWORD	<hex>,F_HEX
+	MOVL	#16,BASE
+	RSB
+
+;
+; BASE variable--holds the current base
+;
+	DEFWORD	<base>,F_BASE
+	MOVAL	BASE,-(R11)
+	RSB
+
+;
+; STATE variable--0=interp, 1=compiling
+;
+	DEFWORD	<state>,F_STATE
+	MOVAL	STATE,-(R11)
+	RSB
+
+;
+; interp--the interpreter's loop: read a word, then execute it, compile
+;   it, or push it as a number
+;
+	DEFWORD	<interp>,INTERP
+	MOVAB	OPSTK_END,R0		; Check for underflow
+	CMPL	R11,R0
+	BLEQU	10$
+	MOVAB	EMPTY_MSG,R0		; Underflowed. Complain & abort
+	BRB	15$
+10$:	MOVAB	OPSTK,R0		; Check for overflow
+	CMPL	R11,R0
+	BGEQU	20$
+	MOVAB	FULL_MSG,R0		; Overflowed. Complain & abort
+15$:	BSBW	PRSTR
+	BRW	ABORT
+
+20$:	BSBW	GETW			; Get next word
+	BSBW	LOOKUP			; In the dictionary?
+	BEQL	30$
+	BRW	CKNUM			;  No, see if it's a number
+30$:	TSTB	STATE			; Yes, either compile or execute
+	BNEQ	50$
+40$:	JSB	(R0)			; execute via its address
+	BRB	INTERP
+50$:	BITL	#PRIORITY,R1		; See if it's immediate
+	BNEQ	40$
+	BITL	#PRIMITIVE,R1		; See if it generates in-line code
+	BNEQ	60$
+	MOVW	#JSB_HEADER,(R10)+	; compile it with a JSB header
+	MOVL	R0,(R10)+
+	BRB	INTERP
+60$:	CVTWL	8(R2),R1		; Get number of bytes in def.
+70$:	MOVB	(R0)+,(R10)+		; Copy bytes of instructions
+	SOBGTR	R1,70$			; See if done
+	BRB	INTERP
+
+;
+; ----Internal routines
+;
+
+;
+; cknum--the word isn't in the dictionary: push or compile it as a number
+;   if it is one, in BASE (or as a float, decimal, with a point)
+;
+CKNUM:	MOVAB	WRD,R7			; R7 is our index to the line
+	CLRB	SIGN			; Take care of negative numbers here
+	CMPB	(R7),#^A/-/
+	BNEQ	10$
+	MOVB	#-1,SIGN
+	INCL	R7
+10$:	MOVL	BASE,R6			; Keep base in R6
+	BSBW	ISDIG			; Is this a number?
+	BEQL	15$
+	BRW	BADWRD			;  No, complain
+
+15$:	CLRL	R1
+20$:	MOVZBL	(R7)+,R0		; Loop. Get next digit
+	SUBL2	#^A/0/,R0
+	CMPL	R0,#10			; Fix things up for letters
+	BLSS	30$
+	SUBL2	#^A/A/-^A/0/,R0		; A..Z are 0..25
+	CMPL	R0,#^A/a/-^A/A/		; a..z are 32..57
+	BLSS	25$
+	SUBL2	#^A/a/-^A/A/,R0
+25$:	ADDL2	#10,R0
+30$:	MULL2	R6,R1			; Scale up R1, add in R0
+	ADDL2	R0,R1
+	BSBW	ISDIG			; Loop if have more chars
+	BEQL	20$
+
+	TSTB	(R7)			; An integer if that's all
+	BEQL	70$
+	CMPB	(R7)+,#^A/./		; If has decimal point, is floating pt.
+	BEQL	40$
+	BRW	BADWRD
+40$:	CVTLF	R1,R1
+	MOVF	#0.1,R0			; R0 is our scaling factor
+	MOVL	#10,R6			; The fraction is decimal
+50$:	BSBW	ISDIG			; See if more digits
+	BNEQ	60$
+	SUBB3	#^A/0/,(R7)+,R2		; Get next digit, convert to float num
+	CVTBF	R2,R2
+	MULF2	R0,R2			; Scale by current factor
+	ADDF2	R2,R1			; Add it in to the current number
+	DIVF2	#10.0,R0		; Move our factor down one place
+	BRB	50$
+60$:	TSTB	(R7)			; Nothing may follow the digits
+	BEQL	65$
+	BRW	BADWRD
+65$:	TSTB	SIGN			; Do negation if needed
+	BEQL	80$
+	MNEGF	R1,R1
+	BRB	80$
+
+70$:	TSTB	SIGN			; negate if it started with '-'
+	BEQL	80$
+	MNEGL	R1,R1
+
+80$:	TSTB	STATE			; Compile or push this number
+	BNEQ	90$
+	MOVL	R1,-(R11)
+	BRW	INTERP
+90$:	MOVW	#LIT_HEADER,(R10)+	; MOVL #...,-(R11)
+	MOVL	R1,(R10)+
+	MOVB	#LIT_TAILER,(R10)+
+	BRW	INTERP
+
+;
+; badwrd--print the offending word, then call abort to restart the
+;   interpreter.
+;
+BADWRD:	MOVAB	WRD,R0			; First print the offending word
+	BSBW	PRSTR
+	MOVAB	DUNNO_MSG,R0		; then, ": not found"
+	BSBW	PRSTR
+	BRW	ABORT
+
+;
+; isdig--return Z if the character at R7 is a digit in base R6 (watch
+;   out for HEX!). Uses R3 and R4.
+;
+ISDIG:	MOVB	(R7),R3			; Put the char in question into R3
+	CMPB	R3,#^A/0/		; Check for 0..9
+	BLSSU	90$
+	CMPB	R3,#^A/9/
+	BLEQU	80$
+	CMPL	R6,#11			; For higher bases, check A..?
+	BLSS	90$
+	ADDL3	#^A/A/-11,R6,R4		; Change the base into the highest char
+	CMPB	R3,#^A/a/		; Map a..? to A..?
+	BLSSU	10$
+	SUBB2	#^A/a/-^A/A/,R3
+10$:	CMPB	R3,#^A/A/		; Check against 'A'
+	BLSSU	90$
+	CMPB	R3,R4			; Check against highest char
+	BGTRU	90$
+80$:	CLRL	R3			; A digit: Z
+	RSB
+90$:	MOVL	#1,R3			; Not a digit: NZ
+	RSB
+
+;
+; print_int--pop the top number and print it in BASE
+;
+PRINT_INT:
+	MOVL	BASE,R5			; Get the base
+	MOVAB	PRNBUF,R1		; R1 points to the char positions
+	MOVL	(R11)+,R0		; R0 holds the number
+	MOVL	R0,R2			; Keep a copy to do the sign
+	BGEQ	10$			; Negate if negative
+	MNEGL	R0,R0
+10$:	DIVL3	R5,R0,R3		; R3 holds new number
+	MULL3	R5,R3,R4		; Calculate remainder the hard way
+	SUBL3	R4,R0,R4
+	CMPL	R4,#9			; See if it's a HEX digit
+	BLEQ	20$
+	ADDB3	#^A/a/-10,R4,-(R1)
+	BRB	30$
+20$:	ADDB3	#^A/0/,R4,-(R1)		; Put it in as the next digit
+30$:	MOVL	R3,R0			; Update number
+	BNEQ	10$
+	TSTL	R2			; Now check sign
+	BGEQ	40$
+	MOVB	#^A/-/,-(R1)
+40$:	MOVL	R1,R0			; print the number
+	BSBW	PRSTR
+	RSB
+
+;
+; prstr--print the null-terminated string pointed to by R0 on the
+;   output unit. Returns R2 pointing past the NUL. Uses R0 and R1.
+;
+PRSTR:	MOVL	R0,R2
+10$:	MOVZBL	(R2)+,R0
+	BEQL	20$
+	BSBW	PUTCH
+	BRB	10$
+20$:	RSB
+
+;
+; putch--write the character in R0 to the output unit: a newline ends
+;   the line, writing it as a record, as does a full line. Uses R0 and R1.
+;
+PUTCH:	MOVL	OUNIT,R1
+	CMPB	R0,#NL
+	BEQL	FLUSHU
+	PUSHL	R2
+	MOVL	UB_LEN(R1),R2
+	MOVB	R0,UB_BUF(R1)[R2]
+	INCL	UB_LEN(R1)
+	MOVL	(SP)+,R2
+	CMPL	UB_LEN(R1),#LINSIZ
+	BGEQ	FLUSHU
+	RSB
+
+;
+; flushu--write the line of the unit at R1 as a record, and empty it.
+;   Uses R0 and R1.
+;
+FLUSHU:	MOVAB	UB_BUF(R1),UB_RAB+RAB$L_RBF(R1)
+	MOVW	UB_LEN(R1),UB_RAB+RAB$W_RSZ(R1)
+	CLRL	UB_LEN(R1)
+	$PUT	RAB=UB_RAB(R1)
+	RSB
+
+;
+; lookup--take the current word in "wrd" and see if it's in the dictionary
+;   chain. If it is, return with address in R0 and Z; otherwise
+;   return with NZ. If it is found, R1 will contain the SFA and R2 the
+;   entry.
+;
+LOOKUP:	MOVAB	WRD,R0			; R0 -> word
+	MOVL	R8,R1			; R1 -> next entry to check against
+10$:	ADDL3	#12,R1,R2		; R2 -> cur entry's name
+	MOVL	R0,R3			; R3 -> our word
+	BITW	#XSMUDGED,10(R1)	; Smudged?
+	BNEQ	30$
+20$:	CMPB	(R3)+,(R2)		; Compare the names
+	BNEQ	30$			;  they didn't match
+	TSTB	(R2)+			; They did; at end of names?
+	BNEQ	20$			; No, keep going
+	MOVL	4(R1),R0		; We have a match. R0 -> entry
+	MOVL	R1,R2			; R2 -> top of entry
+	CVTWL	10(R1),R1		; R1 = (SFA)
+	CLRL	R3			; Return Z
+	RSB
+30$:	MOVL	(R1),R1			; Move to next entry
+	BNEQ	10$
+	MOVL	#1,R3			; No match, return NZ
+	RSB
+
+;
+; iswhite--return Z if the character pointed to by R9 is a white
+;   space character or the NUL ending the line. Uses R3.
+;
+ISWHITE:
+	MOVB	(R9),R3			; Keep this char in register
+	CMPB	#TAB,R3			; Tab
+	BEQL	10$
+	CMPB	#SPC,R3			; Space
+	BEQL	10$
+	CMPB	#NL,R3			; Newline
+	BEQL	10$
+	TSTB	R3			; NULL
+10$:	RSB
+
+;
+; getlin--read another line of input from the current input unit into
+;   INLINE, ending it with a newline and a NUL, and point R9 at it. The
+;   terminal prompts with the output line so far and "> ". At the end of
+;   a file, the file is closed and the input it interrupted resumes; at
+;   the end of the terminal's input, forth exits. Uses R0.
+;
+GETLIN:	PUSHR	#^M<R1,R2,R3,R4,R5>
+	MOVL	IUNIT,R2		; Get the input unit
+	MOVAL	TTIN,R0			; Prompt if it's the terminal
+	CMPL	R2,R0
+	BNEQ	10$
+	MOVAL	TTOUT,R1		; Add "> " to what's been printed
+	MOVL	UB_LEN(R1),R0
+	MOVAB	UB_BUF(R1)[R0],R3
+	MOVB	#^A/>/,(R3)+
+	MOVB	#SPC,(R3)
+	MOVAB	UB_BUF(R1),UB_RAB+RAB$L_PBF(R2)
+	ADDB3	#2,R0,UB_RAB+RAB$B_PSZ(R2)
+	CLRL	UB_LEN(R1)		;  and make that the prompt
+10$:	$GET	RAB=UB_RAB(R2)		; Read a record
+	BLBC	R0,20$			; Test for EOF
+	MOVZWL	UB_RAB+RAB$W_RSZ(R2),R0
+	MOVAB	INLINE,R9		; Set the input line pointer
+	MOVB	#NL,(R9)[R0]		; Terminate the line
+	CLRB	1(R9)[R0]
+	POPR	#^M<R1,R2,R3,R4,R5>
+	RSB
+
+20$:	MOVAL	TTIN,R0			; If at top, forth exits
+	CMPL	R2,R0
+	BNEQ	30$
+	BRW	F_HALT
+30$:	$CLOSE	FAB=(R2)		; EOF--Close the unit
+	DECL	IDEEP			; Decrement nesting depth count
+	SUBL2	#4,ISP			; Pop back to the input before it
+	MOVL	@ISP,IUNIT
+	MULL3	#INLSIZ,IDEEP,R0	; Restore its buffer
+	MOVC3	#INLSIZ,IBUFS[R0],INLINE
+	MOVL	IDEEP,R0		; and its input index
+	MOVL	IBUFX[R0],R9
+	POPR	#^M<R1,R2,R3,R4,R5>
+	RSB				; Return with the restored input buffer
+
+;
+; getw--get the next word in the current input line. If there are no
+;   more words in this line, get another from the input. Uses R0, R1,
+;   and R3.
+;
+GETW:	BSBW	ISWHITE			; Skip initial white space
+	BNEQ	10$
+	TSTB	(R9)+			; Is white. If NULL, need new line
+	BNEQ	GETW
+	BSBW	GETLIN
+	BRB	GETW
+10$:	MOVAB	WRD,R0			; Found word. Copy into "wrd"
+	MOVAB	WRD+WRDMAX,R1		;  up to this far
+20$:	CMPL	R0,R1
+	BGEQU	30$
+	MOVB	(R9),(R0)+
+30$:	INCL	R9
+40$:	BSBW	ISWHITE
+	BNEQ	20$
+	TSTB	(R9)			; Read new buffer if at end
+	BNEQ	50$
+	PUSHL	R0			; Save R0, then call "getlin"
+	BSBW	GETLIN
+	MOVL	(SP)+,R0
+	BRB	40$
+50$:	CLRB	(R0)			; add NULL at end of word
+	RSB
+
+;
+; mkhead--build the header of a new word, named by the next word of
+;   input, with SFP R4 and SFA R5, and make it the latest. Its PFA is
+;   HERE when the header's done.
+;
+MKHEAD:	BSBW	GETW			; Get the name of the new word
+	MOVL	R8,R2			; Add this word to the chain
+	MOVL	R10,R8
+	MOVL	R2,(R10)+
+	MOVL	R10,R0			; Save this position (PFA)
+	CLRL	(R10)+
+	MOVW	R4,(R10)+		; SFP
+	MOVW	R5,(R10)+		; SFA
+	MOVAB	WRD,R1			; Now copy the name in
+10$:	MOVB	(R1)+,(R10)+
+	BNEQ	10$
+	MOVL	R10,(R0)		; Finally, update the PFA
+	RSB
+
+;
+; setname--point the FAB of the unit at R6 at the name in "wrd", and
+;   its RAB at its FAB.
+;
+SETNAME:
+	MOVAB	WRD,R2
+	LOCC	#0,#WRDMAX+1,(R2)	; Find the name's end
+	SUBL3	R2,R1,R0
+	MOVL	R2,FAB$L_FNA(R6)
+	MOVB	R0,FAB$B_FNS(R6)
+	MOVL	R6,UB_RAB+RAB$L_FAB(R6)
+	RSB
+
+;
+; inopen--open the file named in "wrd" for input; add it to the pushdown
+;   stack. Error if it can't be opened.
+;
+INOPEN:	CMPL	IDEEP,#MAXDEP-1		; Room for another?
+	BLSS	10$
+	MOVAB	DEEP_MSG,R0
+	BSBW	PRSTR
+	BRW	ABORT
+10$:	MULL3	#UB_BLN,IDEEP,R6	; R6 -> the unit block for it
+	MOVAB	IUNITS[R6],R6
+	MOVC3	#FAB$C_BLN,IFABT,(R6)
+	MOVC3	#RAB$C_BLN,IRABT,UB_RAB(R6)
+	BSBW	SETNAME
+	CLRL	UB_LEN(R6)
+	$OPEN	FAB=(R6)
+	BLBC	R0,90$
+	$CONNECT RAB=UB_RAB(R6)
+	BLBC	R0,80$
+
+	MULL3	#INLSIZ,IDEEP,R0	; Open successful, save previous buffer
+	MOVC3	#INLSIZ,INLINE,IBUFS[R0]
+	MOVL	IDEEP,R0		; Now save the input index
+	MOVL	R9,IBUFX[R0]
+	MOVAB	INLINE,R9		; Clear the input buffer
+	CLRB	(R9)
+
+	ADDL2	#4,ISP			; Push down the old unit
+	MOVL	R6,@ISP
+	MOVL	R6,IUNIT
+	INCL	IDEEP
+	RSB
+
+80$:	$CLOSE	FAB=(R6)
+90$:	MOVAB	INOP_MSG,R0		; Bad open, complain & abort
+	BSBW	PRSTR
+	BRW	ABORT
+
+;
+; outopen--open the file named in "wrd" for output; add it to the
+;   pushdown stack. Error if it can't be opened.
+;
+OUTOPEN:
+	CMPL	ODEEP,#MAXDEP-1		; Room for another?
+	BLSS	10$
+	MOVAB	DEEP_MSG,R0
+	BSBW	PRSTR
+	BRW	ABORT
+10$:	MULL3	#UB_BLN,ODEEP,R6	; R6 -> the unit block for it
+	MOVAB	OUNITS[R6],R6
+	MOVC3	#FAB$C_BLN,OFABT,(R6)
+	MOVC3	#RAB$C_BLN,ORABT,UB_RAB(R6)
+	BSBW	SETNAME
+	CLRL	UB_LEN(R6)
+	$CREATE	FAB=(R6)
+	BLBC	R0,90$
+	$CONNECT RAB=UB_RAB(R6)
+	BLBC	R0,80$
+	ADDL2	#4,OSP			; Push it
+	MOVL	R6,@OSP
+	MOVL	R6,OUNIT
+	INCL	ODEEP
+	RSB
+
+80$:	$CLOSE	FAB=(R6)
+90$:	MOVAB	OUTOP_MSG,R0		; Couldn't open--complain
+	BSBW	PRSTR
+	BRW	ABORT
+
+;
+; closeall--close every file "input" and "output" opened, returning
+;   to the terminal. Uses R0, R1, and R2.
+;
+CLOSEALL:
+10$:	MOVAL	OSTK,R0			; Pop the output files
+	CMPL	OSP,R0
+	BEQL	20$
+	BSBW	F_OUTPOP
+	BRB	10$
+20$:	MOVAL	ISTK,R0			; and the input files
+	CMPL	ISP,R0
+	BEQL	30$
+	MOVL	IUNIT,R2
+	$CLOSE	FAB=(R2)
+	SUBL2	#4,ISP
+	MOVL	@ISP,IUNIT
+	DECL	IDEEP
+	BRB	20$
+30$:	RSB
+
+;
+; ----The dictionary new words are compiled into
+;
+	.PSECT	FORTH_DATA
+
+LATEST:	.ADDRESS LASTWORD		; Last intrinsic word in dictionary
+DICTEND:
+	.ADDRESS FORTH_DICT		; Initially here
+
+	.PSECT	FORTH_DICT,WRT,EXE,PAGE
+FORTH_DICT:
+	.BLKB	DICTSIZ			; Dictionary space
+
+	.END	FORTH

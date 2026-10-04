@@ -516,7 +516,7 @@ _wait:          tstl            @#exe$tx_ready
                 pushl           b^^X0c(AP)        ; len  part of descriptor
             
                 pushl           sp              ; Make addr of descriptor on stack
-                calls           #1, @#lib$put_one
+                calls           #1, @#exe$put_one
                 ret
                 
 ;--------------------------------------------------------------------
@@ -656,7 +656,7 @@ exe$init_exit:  tstl		@#exe$verbose
 
 exe$printinitmsg:
                 pushal          @#exe$init_msg
-                calls           #1, @#LIB$PUT_OUTPUT
+                calls           #1, @#exe$put_output
                 brw		exe$silenthalt
 
 ;       Let's protect the dispatcher so that you can't even read/see it
@@ -829,10 +829,10 @@ _nocmd:        ; calls            #0, @#exe$forth
 		.entry 		exe$about
 
 		pushal		@#_msg1
-		calls		#1, @#lib$put_output
+		calls		#1, @#exe$put_output
 
 		pushal		@#_msg2
-		calls		#1, @#lib$put_output
+		calls		#1, @#exe$put_output
 		ret
 
 _msg1:		.ascid		"govax Console Microkernel 2.0"
@@ -848,25 +848,27 @@ _msg2:		.ascid		"By Tom Cole"
               
 ;
 ;       Write a list of items, passed as parameters via standard calling
-;       conventions.  Each item is passed to lib$put_output() as a single
-;       item for output.
+;       conventions.  Each item is passed to exe$put_one() as a single
+;       item for output.  The microkernel's own messages (the boot
+;       banner, ABOUT) are written this way; a program's LIB$PUT_OUTPUT
+;       is internal/librtl's routine, not this one.
 ;
 
-                .entry          lib$put_output, ^m<r3,r4>
+                .entry          exe$put_output, ^m<r3,r4>
                 movl            (ap), r3                ; Count of arguments
                 tstl            r3                      ; Are there any?
                 beql            _exit                   ; No, we're done
                 addl3           #4, ap, r4              ; Yes, find first one
 
 _loop:          pushl           (r4)+                   ; push the parameter
-                calls           #1, @#lib$put_one       ; call output
+                calls           #1, @#exe$put_one       ; call output
                 sobgtr          r3, _loop               ; loop if more
                 
                 pushl           #^X0a                     ; else end with LF
-                calls           #1, @#lib$put_one
+                calls           #1, @#exe$put_one
                 
                 pushl           #^X0d                     ; and CR
-                calls           #1, @#lib$put_one
+                calls           #1, @#exe$put_one
                 
                 movl            #1, r0                  ; now done
                 ret
@@ -876,7 +878,7 @@ _exit:          movl            #1, r0
 
 ;               LIB$PUT_ONE( struct dsc$descriptor_s * msg );
 
-                .entry          lib$put_one, ^m<r2,r3,r4,r5,r6>
+                .entry          exe$put_one, ^m<r2,r3,r4,r5,r6>
 
                 movl            b^4(ap), r5          ; Get descriptor address
 
@@ -918,7 +920,7 @@ _errexit:       ret                                  ; And flee
                 tstl            r3
                 beql            _get                ; If no prompt, skip it
                 pushl           r3
-                calls           #1, lib$put_one     ; Else put out prompt
+                calls           #1, exe$put_one     ; Else put out prompt
                 
 _get:           cvtwl           (r2),r4             ; Get length
                 pushl           r4                  ; push length of buffer
@@ -1186,6 +1188,7 @@ _done:          ret
                 .shim   lib$revert,          ^d36, LIBRTL,      ^X0490
                 .shim   lib$sig_to_ret,      ^d37, LIBRTL,      ^X0500
                 .shim   lib$match_cond,      ^d38, LIBRTL,      ^X0460
+                .shim   lib$put_output,      ^d40, LIBRTL,      ^X0478
 ;                       ------------        -----  --------   ------
 ;                       Entry Name             ID  RTL        Offset
 ;                       ------------        -----  --------   ------
@@ -1554,7 +1557,6 @@ exe$dclstring:  .blkb           ^X100
 ;
 ;--------------------------------------------------------------------
 
-                .shim   lib$put_output,         0, LIBRTL,      ^X0478
                 .shim   decc$main,              0, DECC$SHR,    0000
                 .shim   decc$exit,              0, DECC$SHR,    ^X0528
                 .shim   decc$strlen,            0, DECC$SHR,    ^X06E8

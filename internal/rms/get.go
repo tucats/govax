@@ -77,17 +77,7 @@ func SysGet(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	if handle.IsConsole() {
-		// ctx.Console (ifi.go's FileHandle) is a plain io.Writer — this
-		// emulator's console pseudo-device has no way to supply an input
-		// record at all, so there's nothing for SYS$GET to read here.
-		// Real, unmodified VMS RMS does support interactive terminal
-		// input through SYS$GET, but that's out of this phase's scope
-		// (docs/PHASE-22.md only carries the TTA0: special case forward
-		// for its *output* side — SysCreate/SysPut). Reported the same
-		// RMS$_PRV way as the "wrong direction" check just below, since
-		// both boil down to the same thing: this stream isn't set up for
-		// reading.
-		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsPrivilegeViolation)
+		return getTerminal(ctx, rabAddr)
 	}
 
 	if handle.Reader == nil {
@@ -123,6 +113,49 @@ func SysGet(ctx *Context, argv []uint32) (uint32, error) {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsDeviceError)
 	}
 
+	return storeRecord(ctx, rabAddr, record)
+}
+
+// getTerminal is SYS$GET for a RAB connected to the terminal: it reads a
+// record as terminalRecord describes, into the user buffer (RAB$L_UBF,
+// at most RAB$W_USZ bytes) or, with none, RAB$L_RBF, as storeRecord
+// does for a file's record.
+func getTerminal(ctx *Context, rabAddr uint32) (uint32, error) {
+	capacity := maxTerminalRecord
+
+	ubf, err := ctx.loadLongword(rabAddr + rabUBF)
+	if err != nil {
+		return 0, err
+	}
+
+	if ubf != 0 {
+		usz, err := ctx.loadWord(rabAddr + rabUSZ)
+		if err != nil {
+			return 0, err
+		}
+
+		capacity = int(usz)
+	}
+
+	record, status, err := terminalRecord(ctx, rabAddr, capacity)
+	if err != nil {
+		return 0, err
+	}
+
+	if status != 0 {
+		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, status)
+	}
+
+	return storeRecord(ctx, rabAddr, record)
+}
+
+// maxTerminalRecord is the longest terminal record SYS$GET reads into a
+// RAB$L_RBF buffer, which has no size of its own: RAB$W_RSZ's limit.
+const maxTerminalRecord = 65535
+
+// storeRecord copies a record SYS$GET has read into the caller's buffer
+// and sets RAB$W_RSZ to its length (see SysGet's doc comment).
+func storeRecord(ctx *Context, rabAddr uint32, record []byte) (uint32, error) {
 	destAddr, err := ctx.loadLongword(rabAddr + rabUBF)
 	if err != nil {
 		return 0, err

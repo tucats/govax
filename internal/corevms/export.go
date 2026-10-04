@@ -84,3 +84,8 @@ func (env *Environment) FreeVMZone(zone uint32) {
 		env.freeBlock(addr)
 	}
 }
+
+// WriteOutput writes s to the process's output stream (the console
+// terminal, which SYS$OUTPUT names), as it is: a caller that wants a line
+// ends s with a newline.
+func (env *Environment) WriteOutput(s string) { env.writeConsole(s) }

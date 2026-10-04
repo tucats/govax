@@ -261,12 +261,38 @@ func New(out io.Writer) *Console {
 	return c
 }
 
+// consoleInput and consoleOutput are the RTL's input and output streams:
+// whatever c.In and c.Out are when a program reads or writes, not when
+// the environment was made, so that changing them (as a test scripting a
+// program's input or capturing its output does) reaches LIB$PUT_OUTPUT,
+// the terminal driver, and RMS's terminal $GET and $PUT too, as it
+// already reaches the console device.
+type consoleInput struct{ c *Console }
+
+func (r consoleInput) Read(p []byte) (int, error) {
+	if r.c.In == nil {
+		return 0, io.EOF
+	}
+
+	return r.c.In.Read(p)
+}
+
+type consoleOutput struct{ c *Console }
+
+func (w consoleOutput) Write(p []byte) (int, error) {
+	if w.c.Out == nil {
+		return len(p), nil
+	}
+
+	return w.c.Out.Write(p)
+}
+
 // newRTL returns a fresh RTL environment for the current CPU and memory,
 // sharing the console's devices, logical names, mounts, and session (so
 // a program's RMS calls see SET DEFAULT's default directory), and the
 // engine's system clock.
 func (c *Console) newRTL() *corevms.Environment {
-	env := corevms.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.Mounts, c.In, c.Out)
+	env := corevms.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.Mounts, consoleInput{c}, consoleOutput{c})
 	librtl.Register(env.Shims()) // LIBRTL.EXE's routines (docs/PHASE-34.md)
 	env.Session = c.ContainerSession
 

@@ -1,6 +1,7 @@
 package rms
 
 import (
+	"bufio"
 	"io"
 
 	"github.com/tucats/govax/internal/lnm"
@@ -70,6 +71,12 @@ type Context struct {
 	// (the TTA0: special case — see fab.go's package doc comment and
 	// ifi.go's FileHandle) actually writes its output to.
 	Console io.Writer
+
+	// ConsoleIn is where a terminal $GET reads its record from (see
+	// terminal.go): the console's own input stream, shared with the
+	// terminal driver's reads so neither loses what the other buffered.
+	// nil reads as end of file.
+	ConsoleIn *bufio.Reader
 
 	// NodeName is the system's node name, as $GETSYI reports it: part of
 	// NAM$T_DVI's device name.

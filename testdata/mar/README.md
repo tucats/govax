@@ -13,7 +13,14 @@ links and runs `entry`, `hello`, and `psects`, the complete programs, with
 maps, and writes `DIRECTORY/FULL` output for the objects (their record
 attributes) to `OBJECTS.LST`.
 
-Fixtures 1 to 9 are the ladder. Fixtures 10 to 12 (`modes`, `psects`,
+Fixtures 1 to 9 are the ladder.
+
+`forth.mar` isn't on the ladder: it's a FORTH interpreter (a MACRO-32
+port of `testdata/asm/forth.asm`), a larger program for ANALYZE and the
+debugger. It hasn't been through real MACRO yet, so `internal/asm`'s
+ladder tests skip it (`notLadder`); `internal/console`'s `TestForth`
+tests assemble, link, and run it. Its `input` and `output` words read
+and write `.FTH` and `.LIS` files on a mounted volume. Fixtures 10 to 12 (`modes`, `psects`,
 `general`) were added in subtask 11 for the encoding choices the ladder
 didn't settle.
 

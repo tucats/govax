@@ -599,6 +599,7 @@ func preprocessComment(line string) (string, string) {
 func preprocessCase(line string) (string, string, string) {
 	b := []byte(line)
 	inDouble, inSingle := false, false
+	angles := 0
 	out := make([]byte, 0, len(b))
 	raw := make([]byte, 0, len(b))
 	comment := ""
@@ -622,6 +623,32 @@ func preprocessCase(line string) (string, string, string) {
 		}
 
 		if !inSingle && !inDouble {
+			// A ";" inside angle brackets, or inside a "^x...x"
+			// delimited macro argument, is part of the argument, not
+			// the start of a comment (MACRO-32 manual, "Argument
+			// Delimiters"): "DEFWORD <;>,SEMI" passes ";".
+			switch {
+			case ch == '<':
+				angles++
+
+			case ch == '>' && angles > 0:
+				angles--
+
+			case ch == ';' && angles > 0:
+				raw = append(raw, ch)
+				out = append(out, ch)
+
+				continue
+			}
+
+			if n := delimitedArgumentAt(b, i); n > 0 {
+				out = append(out, b[i:i+n]...)
+				raw = append(raw, b[i:i+n]...)
+				i += n - 1
+
+				continue
+			}
+
 			if ch == ';' {
 				comment = string(b[i+1:])
 
@@ -810,6 +837,40 @@ func asciiOperatorAt(b []byte, i int) int {
 	}
 
 	for j := i + 3; j < len(b); j++ {
+		if b[j] == q {
+			return j - i + 1
+		}
+	}
+
+	return 0
+}
+
+// delimitedArgumentAt returns the length of a macro argument written with
+// the circumflex form, "^" then a delimiter, the text, and the delimiter
+// again (as in "^%>r%"), starting at b[i], or 0 if there isn't one. The
+// MACRO-32 operators ^A, ^B, ^X, ^M, and the rest are a letter after the
+// circumflex, so a delimiter must be a printing character that isn't a
+// letter, digit, or "<" (which starts ^M<...>-style operands' brackets).
+// The text is kept as written: preprocessing neither uppercases it nor
+// strips a ";" from it.
+func delimitedArgumentAt(b []byte, i int) int {
+	if i+2 >= len(b) || b[i] != '^' {
+		return 0
+	}
+
+	// It starts an argument, so it follows a blank or a comma: "B^^X0C"
+	// is a displacement, not an argument.
+	if i > 0 && !isBlank(b[i-1]) && b[i-1] != ',' {
+		return 0
+	}
+
+	q := b[i+1]
+	if q <= ' ' || q > '~' || q == '<' || q == ';' || q == '_' || q == '$' || q == '.' ||
+		(q >= '0' && q <= '9') || (q >= 'A' && q <= 'Z') || (q >= 'a' && q <= 'z') {
+		return 0
+	}
+
+	for j := i + 2; j < len(b); j++ {
 		if b[j] == q {
 			return j - i + 1
 		}

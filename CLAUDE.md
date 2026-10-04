@@ -39,6 +39,9 @@ never had.
   a second copy here too; it was consolidated down to the single, live copy
   at `internal/bootdata/files/vax.help` (Phase 22) since, unlike `evax.dcl`,
   it had no ongoing reason to track a separate upstream-import lineage.
+- `testdata/mar/forth.mar` — a FORTH interpreter in MACRO-32 (RMS I/O,
+  five psects, macro-built dictionary), run by `internal/console`'s
+  `TestForth` tests; not on the real-MACRO ladder yet.
 - `testdata/mar/` — Phase 27's MACRO-32 fixtures, with real VAX MACRO's objects,
   listings, and analyses in `vax/` (see its README for the simh round trip).
   `testdata/disks/` holds local-only ODS-2 containers (gitignored).
@@ -126,7 +129,8 @@ expect adjustment as phases land):
   gets a package like it. New routines are written from DIGITAL's manuals
   (clean room), and checked on VMS where a probe can: LIB$CREATE_DIR
   (`createdir.go`) against `testdata/credir/libcrd.mar`'s VMS 7.3 run
-  (`TestLibCreateDirOracle`).
+  (`TestLibCreateDirOracle`). LIB$PUT_OUTPUT is here too (`output.go`); kernel.asm's
+  old interrupt-driven one is now its private `EXE$PUT_OUTPUT`.
 - `internal/asm` — assembler/disassembler (Phase 11). Two dialects share one core
   (Phase 27): the console's `ASM` (absolute, into emulated memory, eVAX
   directives) and MACRO-32 (`SetDialect(DialectMACRO)`: psects, relocation
@@ -180,7 +184,9 @@ expect adjustment as phases land):
   `CREATE/DIRECTORY` (`internal/console/create.go`): ods2 lays the directory
   files out (`volume.CreateDirectory`, `filespec.CreateDirectoryPath`), and
   `TestCreateDirectoryOracle` (`testdata/credir`) checks headers and
-  messages against VMS 7.3's run.
+  messages against VMS 7.3's run. A RAB connected to the terminal reads lines from the
+  console's input, prompting with RAB$L_PBF when RAB$V_PMT is set
+  (`terminal.go`).
 - `internal/link` — the VAX linker (Phase 30): builds a VMS executable image from
   `internal/obj` modules, laid out as real LINK lays images out (byte for byte on
   the fixtures). The console's `LINK` command (`internal/console/link.go`) drives it.
