@@ -1,0 +1,8 @@
+; NOTITLE2.MAR - Phase 29's VMS round: no .TITLE, .IDENT, or .SBTTL at
+; all. NOTITLE.MAR's object has a title header record of "\x01 "; this
+; says whether the .SBTTL before any statement made it.
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+VAL:	.LONG	1
+
+	.END

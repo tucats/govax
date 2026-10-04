@@ -1271,3 +1271,34 @@ come from those objects' bytes.
   - The console's `TestLink_volume` image is 5 blocks now, as real
     LINK's `PSECTS.EXE` is.
 
+### 2026-10-04 — Subtask 14: the round, ready for VMS
+
+- **`testdata/mar/round/`** holds:
+  - `exchange.cmd`, which builds the exchange volume;
+  - `round.com`, the VMS side;
+  - `copyout.cmd`;
+  - `notitle2.mar` and `notitle3.mar`;
+  - a README that says what each check is for.
+- **On the volume** (`testdata/disks/round-exchange.dsk`, label
+  ROUNDXCHG), govax put:
+  - the probe's nine sources that govax assembles (all but `DBGSRC`),
+    and the two new ones;
+  - govax's object of each (`GV*.OBJ`);
+  - six images linked by govax's LINK, with maps: TRACE, FAILMAIN with
+    FAILSUB, and FAILSIG, each with traceback and with `/NOTRACEBACK`.
+
+  Built and listed; govax's links reported no warnings.
+- **On VMS**, `@ROUND/OUTPUT=ROUND.LOG`:
+  - analyzes every govax object and image;
+  - links govax's objects with real LINK (`RL*.EXE`) as govax linked
+    them;
+  - runs all twelve images, so their tracebacks can be compared with
+    each other and with the probe's `list.log`;
+  - assembles `NOTITLE2` and `NOTITLE3` with real MACRO, for subtask 2's
+    open question about the title header (`notitle.obj`'s `"\x01 "`).
+- **Left out:**
+  - debugger records, and the follow-up source for real MACRO's
+    `DBGSRC` crash: subtask 12 is deferred;
+  - `ERRORS` and `ERREND`, which govax doesn't assemble.
+- Waiting on the author's VMS run.
+

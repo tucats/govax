@@ -1,0 +1,9 @@
+; NOTITLE3.MAR - Phase 29's VMS round: no .TITLE or .IDENT, and a .SBTTL
+; after the first statement rather than before it (compare NOTITLE.MAR
+; and NOTITLE2.MAR).
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+	.SBTTL	A subtitle after a statement
+VAL:	.LONG	1
+
+	.END
