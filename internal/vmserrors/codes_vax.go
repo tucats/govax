@@ -118,6 +118,13 @@ const (
 	vaxIllExpr
 	vaxBadPacked
 	vaxDirSynx
+
+	// Errors real MACRO reports and assembles past (docs/PHASE-29.md,
+	// subtask 8).
+	vaxIndexBase
+	vaxPCRegister
+	vaxOutOfPhase
+	vaxBranchRange
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -272,6 +279,23 @@ const (
 	// VAX_DIRSYNX is MACRO-32's "Directive syntax error": for example, a
 	// negative number in .QUAD or .OCTA, which VAX MACRO refuses.
 	VAX_DIRSYNX = VAXFacility<<FacilityPosition | vaxDirSynx<<MessagePosition | StatusError
+	// VAX_INDEXBASE is an indexed operand whose index register is also
+	// its base register's, autoincremented or autodecremented ((R0)+[R0]),
+	// which the architecture makes UNPREDICTABLE.
+	VAX_INDEXBASE = VAXFacility<<FacilityPosition | vaxIndexBase<<MessagePosition | StatusError
+	// VAX_PCREGISTER is PC used as a register operand (CLRL PC), or as an
+	// index register, which the architecture makes UNPREDICTABLE.
+	VAX_PCREGISTER = VAXFacility<<FacilityPosition | vaxPCRegister<<MessagePosition | StatusError
+	// VAX_OUTOFPHASE is reported on a label's definition when a later
+	// line defines the label again: the label no longer has the value
+	// of its location there (real MACRO's "Symbol out of phase").
+	VAX_OUTOFPHASE = VAXFacility<<FacilityPosition | vaxOutOfPhase<<MessagePosition | StatusError
+	// VAX_BRANCHRANGE is a branch whose destination is too far away for
+	// its displacement.
+	VAX_BRANCHRANGE = VAXFacility<<FacilityPosition | vaxBranchRange<<MessagePosition | StatusError
+	// VAX_DIVZEROWARN is VAX_DIVZERO as a warning: MACRO-32 leaves a
+	// division by zero to the linker and only warns of it.
+	VAX_DIVZEROWARN = VAXFacility<<FacilityPosition | vaxDivZero<<MessagePosition | StatusWarning
 )
 
 func init() {
@@ -369,6 +393,11 @@ func init() {
 	DefineMessage(VAX_ILLEXPR, VAXFacility, "ILLEXPR", "Illegal expression")
 	DefineMessage(VAX_BADPACKED, VAXFacility, "BADPACKED", "Invalid packed decimal string")
 	DefineMessage(VAX_DIRSYNX, VAXFacility, "DIRSYNX", "Directive syntax error")
+	DefineMessage(VAX_INDEXBASE, VAXFacility, "INDEXBASE", "Index register !S is the operand's base register")
+	DefineMessage(VAX_PCREGISTER, VAXFacility, "PCREGISTER", "PC can't be used as a register operand here")
+	DefineMessage(VAX_OUTOFPHASE, VAXFacility, "OUTOFPHASE", "Label !S is defined again later")
+	DefineMessage(VAX_BRANCHRANGE, VAXFacility, "BRANCHRANGE", "Branch displacement !D out of range")
+	DefineMessage(VAX_DIVZEROWARN, VAXFacility, "DIVZERO", "Division by zero")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")

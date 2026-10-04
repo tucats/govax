@@ -164,6 +164,25 @@ func (a *Assembler) located(err error) error {
 	return err
 }
 
+// where returns a function that locates an error, as located does, at
+// the line being assembled now, for an error found about it later (see
+// outOfPhase).
+func (a *Assembler) where() func(error) error {
+	frames := append([]*sourceFrame(nil), a.sources...)
+	line := a.line
+
+	return func(err error) error {
+		at := line
+
+		for k := len(frames) - 1; k >= 0; k-- {
+			err = frames[k].wrap(at, err)
+			at = frames[k].callLine
+		}
+
+		return err
+	}
+}
+
 // count returns how many frames of kind are on the source stack.
 func (a *Assembler) count(kind sourceKind) int {
 	n := 0

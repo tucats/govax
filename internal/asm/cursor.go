@@ -8,6 +8,10 @@ package asm
 type cursor struct {
 	s   string
 	pos int
+	// beyond says the statement's scanner read on past the blanks after
+	// the statement, to its comment or the end of the line, which a
+	// listing's error marks (see listLine.cursorColumn).
+	beyond bool
 }
 
 func newCursor(s string) *cursor { return &cursor{s: s} }

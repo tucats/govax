@@ -435,7 +435,7 @@ func (a *Assembler) summary(p *listPager) {
 			line = l.line
 		}
 
-		if len(l.errs) == 0 && len(l.warnings) == 0 || line == last {
+		if len(l.notes) == 0 || line == last {
 			continue
 		}
 
@@ -447,6 +447,12 @@ func (a *Assembler) summary(p *listPager) {
 			p.add(row.String())
 			row.Reset()
 		}
+	}
+
+	// The errors found at the end of the source are counted on its last
+	// line.
+	if len(a.endErrors) > 0 && line != last {
+		fmt.Fprintf(&row, "%5d (1)     ", line)
 	}
 
 	if row.Len() > 0 {

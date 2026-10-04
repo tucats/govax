@@ -235,8 +235,11 @@ func applyOp(op byte, v1, v2 uint32) uint32 {
 		return v1 * v2
 
 	case '/':
+		// A division by zero is the linker's to report; until then,
+		// real MACRO's listing shows the dividend (10/0 is 0000000A',
+		// errors.lis).
 		if v2 == 0 {
-			return 0
+			return v1
 		}
 
 		return v1 / v2

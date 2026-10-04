@@ -15,8 +15,8 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress. Subtasks 1 to 7 are done
-(2026-10-03).**
+**Status: in progress. Subtasks 1 to 8 are done
+(2026-10-04).**
 
 ## What Phase 27 leaves in place
 
@@ -838,3 +838,108 @@ The author decided each of these on 2026-10-02.
   command with `BADKEYWORD`. `govax macro` has `--show` and `--no-show`
   (comma-separated). HELP MACRO documents them and the directives.
   `TestDispatch_macroShow` covers the DCL path.
+
+### 2026-10-04 — Subtask 8: messages in the listing
+
+- **MACRO's own messages.** `internal/vmsdef/gen -msg` merged the MACRO
+  facility (125) into `vmsdef.Messages` from the message listing in the
+  VMS 7.3 source archive (`amacro2000/lis/macmsg.lis`, 113 messages).
+  `internal/asm/macmsg.go` maps each of govax's assembler errors to the
+  MACRO message for the same problem (`macroIdents`). A listing shows
+  `%MACRO-s-IDENT, Text`, with MACRO's text capitalized, and the severity
+  from the message file's `.SEVERITY` sections. A few of govax's errors are
+  told apart by the statement: extra text after an instruction is
+  TOOMNYOPND, elsewhere DIRSYNX. An error with no MACRO equivalent keeps
+  govax's own words (`%VAX-E-NOENDM, ...`). govax's terminal messages are
+  unchanged.
+- **What `errors.lis` showed:**
+  - A line with a message is split where the message was raised. The
+    bytes stored before it stay on the source line, at the line's
+    location. Then comes the message, then the rest of the bytes on
+    continuation lines, or just the location if nothing follows. A
+    `.PSECT`'s location (or an assignment's value) moves to that last
+    line.
+  - After an error MACRO finds in its first pass, an instruction's
+    continuation lines leave the opcode's 5 columns blank. After one it
+    finds in its second pass (DATATRUNC, BRDESTRANG), they don't.
+  - A first-pass message ends with a `!` under the column of the last
+    character MACRO's scanner had read, tabs expanded. Second-pass
+    messages (DATATRUNC, SYMOUTPHAS, BRDESTRANG, GENERR, GENWRN) have
+    none. govax keeps the statement's cursor on its recorded line
+    (`listLine.cursor`, `cursorColumn`). Each probed error's site leaves
+    the cursor where MACRO's mark falls:
+    - a duplicate label at its colon;
+    - a division by zero at the operator;
+    - an unknown or misplaced directive just before its name;
+    - `.ENDC` outside a conditional at what follows the statement;
+    - too few operands at the last operand;
+    - too many just before the extra one;
+    - an illegal literal at its value.
+  - `.ERROR` and `.WARN` lines aren't listed: the message, which carries
+    their text, takes the line's place.
+  - An error in a line the listing controls leave out (an expansion,
+    under the defaults) is listed as the line's location alone, then the
+    message.
+  - `.ERROR 27 ; text` is `Generated ERROR: 27  text`: one blank after
+    the value, then the comment with its own leading blank. govax had
+    trimmed the comment, from the manual's example. Three message tests
+    now expect the real form.
+  - The summary counts DATATRUNC as an error, though its message says W:
+    22 errors are 18 E messages and 4 DATATRUNCs, and the 2 warnings are
+    DIVBYZERO and GENWRN.
+- **Errors real MACRO assembles past.** A statement used to stop at its
+  first error. In the MACRO dialect, these errors are now reported
+  through `recoverable`, and the statement goes on as real MACRO's does.
+  The assembly still fails, and the console dialect is unchanged. That
+  puts every later location where MACRO's listing has it:
+  - a `.BYTE`/`.WORD` value or an `S^#` literal too big for its field is
+    stored truncated (DATATRUNC);
+  - `.ALIGN` beyond the psect's alignment aligns to the psect's own
+    alignment (ALIGNXCEED);
+  - an unknown `.PSECT` attribute is skipped, and the psect is still made
+    (NOTPSECOPT);
+  - a label defined again takes the later value. The second definition
+    gets MULDEFLBL, and the earlier one SYMOUTPHAS, which real MACRO
+    finds there in pass 2 (`outOfPhase`; new code `VAX_OUTOFPHASE`);
+  - a division by zero is a warning (`VAX_DIVZEROWARN`), and the
+    division goes to the linker as a tree. Real MACRO's object holds
+    `STA_UB 10`, `STA_UB 0`, `OPR_DIV`, and its listing shows the
+    dividend, so `applyOp`'s x/0 is now x;
+  - a literal or immediate in a mode the operand doesn't allow is stored
+    anyway (ILLMODE). A written operand's `#1` stays a short literal,
+    which real MACRO stores through the linker (`STO_LI`), so it's
+    marked `'`;
+  - two new checks real MACRO makes: PC as a register operand
+    (ILLREGHERE, `VAX_PCREGISTER`), and an index register that is the
+    autoincrement or autodecrement base's own register (ILLINDXREG,
+    `VAX_INDEXBASE`, listed before the index byte);
+  - a forward branch out of range is reported on the branch's line, not
+    the label's (BRDESTRANG, `VAX_BRANCHRANGE`), and its displacement is
+    stored truncated. A fixup now remembers its line (`fixup.line`,
+    `where`) for this (`fixupRange`).
+- **`.DISABLE GLOBAL`'s undefined symbol** (`NOWHERE`) isn't an error to
+  real MACRO either: it's an external reference (` X` in the table), as
+  govax already made it.
+- **Errors at the end of the source** (`errend.mar`, which real MACRO
+  ran out of memory on, so these are govax's own choices): they're
+  listed after the source's last line, and the summary counts them on
+  that line. In the MACRO dialect, an open conditional (UNTERMCOND) is
+  now reported along with an open macro definition. MACRO's message
+  file has MISSINGEND (a warning) for a missing `.END`, but it's the
+  Alpha compiler's file and no VAX listing shows it, so govax still
+  says nothing.
+- **Tests.**
+  - `TestFixtureListings` compares `errors` whole. Its one allowed
+    difference is the object record count: real MACRO wrote an object
+    despite the errors (19 records), and govax writes none (Phase 27's
+    choice), so the count is 0.
+  - `listmsg_test.go` checks the columns and MACRO's words for govax's
+    errors (the fallback included).
+  - It also checks two messages on one line, the end-of-source layout,
+    and that recovery and the new checks are the MACRO dialect's only.
+- **Not shown by any real listing, so unconfirmed:** two messages on one
+  line (each listed where it was raised, with the bytes between them on
+  their own line); a message too long to reach its `!` column (govax
+  writes ` !` after it); the `!` columns of the errors the probe didn't
+  raise; and an error inside an expansion under `.SHOW EXPANSIONS`.
+

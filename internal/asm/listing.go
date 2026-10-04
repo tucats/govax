@@ -1,5 +1,7 @@
 package asm
 
+import "strings"
+
 // This file records what a MACRO listing (MACRO/LIST, docs/PHASE-29.md)
 // shows for each source line, as the line is assembled. A later step lays
 // the recorded lines out as the listing's pages.
@@ -67,13 +69,13 @@ type listLine struct {
 	// fields are the fields the statement stored, in the order stored.
 	fields []listField
 
-	// errs, warnings, and messages are what the statement reported:
-	// errors and warnings as the statement raised them (without the
-	// source stack's location, which the listing shows by placing them
-	// after the line), and .PRINT's messages.
-	errs     []error
-	warnings []error
+	// notes are the errors and warnings the statement reported, in the
+	// order it reported them (see listNote), and messages are its .PRINT
+	// messages.
+	notes    []listNote
 	messages []string
+	// cursor reads the line's statement (see cursorColumn).
+	cursor *cursor
 
 	// collected says the line was taken into a macro definition or
 	// repeat block being collected, not assembled; skipped says a
@@ -102,6 +104,29 @@ type listLine struct {
 	page        bool
 	subtitle    string
 	hasSubtitle bool
+}
+
+// listNote is an error or warning a recorded line's statement reported.
+// Real MACRO lists a message at the point in the line where it found the
+// problem: the line's bytes stored before then are listed with the line,
+// then the message, then the rest of the line's bytes on lines of their
+// own (errors.lis; see listpage.go's listNotedLine). So a note records
+// where in the statement it was raised.
+type listNote struct {
+	// err is the error or warning, without the source stack's location
+	// (the listing places it after its line), and warning says it was
+	// reported as a warning.
+	err     error
+	warning bool
+	// sect and loc are where the location counter was when it was
+	// raised: the line's fields stored below loc come before it.
+	sect *section
+	loc  uint32
+	// column is the listing column, counted from the start of the
+	// source text with its tabs expanded, of the last character of the
+	// statement read when the problem was found, which real MACRO marks
+	// with a "!" under it; -1 if it isn't known.
+	column int
 }
 
 // defKind is the kind of definition a recorded line is part of.
@@ -280,6 +305,15 @@ func (a *Assembler) listConst(offset, n, value uint32) {
 	}
 }
 
+// listStack records that the field just stored, value, was stored
+// through the linker's stack, as listConst's are.
+func (a *Assembler) listStack(value uint32) {
+	if a.listCur != nil && len(a.listCur.fields) > 0 {
+		f := &a.listCur.fields[len(a.listCur.fields)-1]
+		f.stack, f.value = true, value
+	}
+}
+
 // listPatch records that the statement went back and stored the n-byte
 // value at offset in the current section, as .ASCIC stores its count once
 // the string is counted. The listing shows it as a field of its own,
@@ -291,17 +325,102 @@ func (a *Assembler) listPatch(offset, n, value uint32) {
 }
 
 // listError records an error the statement raised.
-func (a *Assembler) listError(err error) {
+func (a *Assembler) listError(err error) { a.listNote(err, false) }
+
+// listWarning records a warning the statement raised.
+func (a *Assembler) listWarning(err error) { a.listNote(err, true) }
+
+// listNote records an error or warning the statement raised, where in the
+// statement it raised it (see listNote).
+func (a *Assembler) listNote(err error, warning bool) {
+	l := a.listCur
+	if l == nil {
+		return
+	}
+
+	l.notes = append(l.notes, listNote{
+		err:     err,
+		warning: warning,
+		sect:    a.cur,
+		loc:     a.cur.loc,
+		column:  l.cursorColumn(),
+	})
+}
+
+// notesOrNil returns l's notes, or nil if l is nil (no line is being
+// recorded).
+func (l *listLine) notesOrNil() []listNote {
+	if l == nil {
+		return nil
+	}
+
+	return l.notes
+}
+
+// addNote adds n, a note found after l was assembled, among l's notes in
+// the order of where in the line they were raised.
+func (l *listLine) addNote(n listNote) {
+	k := len(l.notes)
+	for k > 0 && l.notes[k-1].loc > n.loc {
+		k--
+	}
+
+	l.notes = append(l.notes, listNote{})
+	copy(l.notes[k+1:], l.notes[k:])
+	l.notes[k] = n
+}
+
+// listStatement records that c reads the statement of the line being
+// recorded, so that a note can say how far it had read (see
+// cursorColumn).
+func (a *Assembler) listStatement(c *cursor) {
 	if a.listCur != nil {
-		a.listCur.errs = append(a.listCur.errs, err)
+		a.listCur.cursor = c
 	}
 }
 
-// listWarning records a warning the statement raised.
-func (a *Assembler) listWarning(err error) {
-	if a.listCur != nil {
-		a.listCur.warnings = append(a.listCur.warnings, err)
+// cursorColumn returns the column of the character the statement's
+// cursor is at, the last one real MACRO's scanner had read (it reads a
+// character ahead of what it has taken), or -1 if the cursor isn't
+// reading the line as written: a statement continued from an earlier
+// line, or a line that had no statement.
+func (l *listLine) cursorColumn() int {
+	c := l.cursor
+	if c == nil || len(c.s) > len(l.text) || !strings.EqualFold(c.s, l.text[:len(c.s)]) {
+		return -1
 	}
+
+	pos := c.pos
+	if c.beyond {
+		for pos < len(l.text) && isBlank(l.text[pos]) {
+			pos++
+		}
+	}
+
+	return textColumn(l.text, pos)
+}
+
+// textColumn returns the column of text's character i, with tabs set
+// every 8 columns: for a tab, the last column it fills. Past the end of
+// text, it's the column just after it, where the scanner reads the end
+// of the line.
+func textColumn(text string, i int) int {
+	col := 0
+
+	for k := 0; k < len(text); k++ {
+		next := col + 1
+		if text[k] == '\t' {
+			next = (col/8 + 1) * 8
+		}
+
+		if k == i {
+			return next - 1
+		}
+
+		col = next
+	}
+
+	return col
 }
 
 // listMessage records a .PRINT message.

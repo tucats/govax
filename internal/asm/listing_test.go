@@ -483,17 +483,17 @@ func TestListingMessages(t *testing.T) {
 
 	l := a.listLines
 
-	if len(l[1].errs) != 1 || !strings.Contains(l[1].errs[0].Error(), "300") {
-		t.Errorf(".BYTE 300: errors %v", l[1].errs)
+	if n := l[1].notes; len(n) != 1 || n[0].warning || !strings.Contains(n[0].err.Error(), "300") {
+		t.Errorf(".BYTE 300: notes %v", n)
 	}
 
-	if len(l[2].warnings) != 1 || len(l[3].messages) != 1 || l[3].messages[0] != " hello" {
-		t.Errorf(".WARN: %v; .PRINT: %q", l[2].warnings, l[3].messages)
+	if n := l[2].notes; len(n) != 1 || !n[0].warning || len(l[3].messages) != 1 || l[3].messages[0] != " hello" {
+		t.Errorf(".WARN: %v; .PRINT: %q", n, l[3].messages)
 	}
 
 	call, expansion := l[7], l[8]
-	if len(call.errs) != 0 || expansion.kind != sourceMacro || len(expansion.errs) != 1 {
-		t.Errorf("call errors %v; expansion (kind %d) errors %v", call.errs, expansion.kind, expansion.errs)
+	if len(call.notes) != 0 || expansion.kind != sourceMacro || len(expansion.notes) != 1 {
+		t.Errorf("call notes %v; expansion (kind %d) notes %v", call.notes, expansion.kind, expansion.notes)
 	}
 }
 

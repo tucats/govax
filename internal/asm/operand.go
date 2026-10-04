@@ -111,10 +111,13 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 		save := c.pos
 		foundIndex := false
+		indexPos := 0
 
 		for !c.atEnd() && c.peek() != ',' {
 			if c.peek() == '[' {
 				c.next()
+
+				indexPos = c.pos
 
 				reg, err := parseRegister(c, 0)
 				if err != nil {
@@ -133,6 +136,8 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		c.pos = save
 
 		if foundIndex {
+			indexLoc := a.cur.loc
+
 			if err := a.emitByte(indexMode); err != nil {
 				return err
 			}
@@ -140,8 +145,13 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			a.listJoin()
 
 			before := a.lastFixup
+			baseAddr := a.pc()
 
 			if err := a.assembleOperandRec(c, inst, opIndex, true); err != nil {
+				return err
+			}
+
+			if err := a.checkIndexBase(c, indexMode, baseAddr, indexPos, indexLoc); err != nil {
 				return err
 			}
 
@@ -235,6 +245,10 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		litWasForward bool
 	)
 
+	// valuePos is where a literal's value starts, where an error in its
+	// mode is listed.
+	valuePos := c.pos
+
 	if ch == '#' {
 		loc := a.pc()
 		fx := addrFixup(scale)
@@ -268,8 +282,15 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 		// Only a read operand can be a literal (the architecture
 		// manual's table 8-5): an address or field operand takes the
-		// immediate form, and a written one neither.
-		if litWasForward || litValue >= 64 || access != cpu.AccessRead {
+		// immediate form, and a written one neither. MACRO-32 keeps a
+		// written operand's literal short, reporting its mode as illegal
+		// (errors.lis's MOVL R0, #1 stores 01).
+		illegal := access != cpu.AccessRead
+		if a.dialect == DialectMACRO {
+			illegal = access == cpu.AccessAddress || access == cpu.AccessVarField
+		}
+
+		if litWasForward || litValue >= 64 || illegal {
 			constant = litImmediate
 
 			if litWasForward {
@@ -288,7 +309,16 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 	// S^#literal: either just decided above, or spelled out explicitly.
 	if constant == litShort || (ch == 'S' && c.peek() == '^') {
-		if err := modeAllowed("Literal", inst, opIndex, parsingIndex); err != nil {
+		end := c.pos
+		if constant == litShort {
+			c.pos = valuePos
+		}
+
+		illegal := modeAllowed("Literal", inst, opIndex, parsingIndex)
+		err := a.recoverable(illegal)
+		c.pos = end
+
+		if err != nil {
 			return err
 		}
 
@@ -307,8 +337,12 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 					return err
 				}
 
+				// Real MACRO stores a value too big for a short literal
+				// as the byte it truncates to (DATATRUNC), and goes on.
 				if v >= 64 {
-					return vmserrors.New(vmserrors.VAX_SHORTRANGE)
+					if err := a.recoverable(vmserrors.New(vmserrors.VAX_SHORTRANGE)); err != nil {
+						return err
+					}
 				}
 
 				litValue = v
@@ -331,6 +365,13 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			return err
 		}
 
+		// Real MACRO stores a literal whose mode it reports as illegal
+		// through the linker's stack (STA_UB 1, STO_LI, errors.obj), so
+		// its listing marks it as the linker's.
+		if illegal != nil {
+			a.listStack(litValue)
+		}
+
 		return nil
 	}
 
@@ -339,8 +380,22 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		save := c.pos
 
 		if reg, err := parseRegister(c, ch); err == nil {
-			if err := modeAllowed("Register", inst, opIndex, parsingIndex); err != nil {
+			if err := a.recoverable(modeAllowed("Register", inst, opIndex, parsingIndex)); err != nil {
 				return err
+			}
+
+			// PC as a register operand is UNPREDICTABLE (the
+			// architecture manual, 8.2.1), an error real MACRO reports
+			// at the register (ILLREGHERE) and assembles past.
+			if reg == 15 && a.dialect == DialectMACRO {
+				end := c.pos
+				c.pos = save - 1
+				err := a.recoverable(vmserrors.New(vmserrors.VAX_PCREGISTER))
+				c.pos = end
+
+				if err != nil {
+					return err
+				}
 			}
 
 			mode := byte(0x50) | byte(reg)
@@ -449,7 +504,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	// I^#constant: immediate literal, either just decided above via "#",
 	// or spelled out explicitly.
 	if constant == litImmediate || (ch == 'I' && c.peek() == '^') {
-		if err := modeAllowed("Immediate", inst, opIndex, parsingIndex); err != nil {
+		if err := a.recoverable(modeAllowed("Immediate", inst, opIndex, parsingIndex)); err != nil {
 			return err
 		}
 
@@ -584,6 +639,39 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	c.pos-- // put back `ch`; the value parser needs the whole token.
 
 	return a.assembleBareOperand(c, deferred)
+}
+
+// checkIndexBase checks an indexed operand whose index prefix is
+// indexMode and whose base operand specifier starts at baseAddr. An
+// autoincrement, autodecrement, or autoincrement deferred base whose
+// register is the index register's is UNPREDICTABLE (the architecture
+// manual, 8.2.4), an error real MACRO reports at the index register
+// (ILLINDXREG) and assembles past. indexPos is where the index register
+// is written in the statement, which the listing marks, and indexLoc the
+// index prefix's location, where the listing shows the error.
+func (a *Assembler) checkIndexBase(c *cursor, indexMode byte, baseAddr uint32, indexPos int, indexLoc uint32) error {
+	if a.dialect != DialectMACRO {
+		return nil
+	}
+
+	mode := a.cur.img.loadByte(baseAddr)
+
+	switch mode >> 4 {
+	case 7, 8, 9:
+	default:
+		return nil
+	}
+
+	if mode&0x0F != indexMode&0x0F {
+		return nil
+	}
+
+	save := c.pos
+	c.pos = indexPos
+
+	defer func() { c.pos = save }()
+
+	return a.recoverableAt(vmserrors.New(vmserrors.VAX_INDEXBASE, regNames[mode&0x0F]), indexLoc)
 }
 
 // litKind mirrors asm_operand.c's ASM_LIT_NONE/SHORT/IMMEDIATE local flag.

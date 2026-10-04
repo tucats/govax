@@ -137,6 +137,11 @@ type fixup struct {
 	// statement stored over its field, so it's never applied (see claim).
 	stmt int
 	dead bool
+	// line and where are the line that queued the fixup (when it's
+	// listed) and its place in the source, in the MACRO dialect, for a
+	// value the fixup finds out of range (see fixupRange).
+	line  *listLine
+	where func(error) error
 }
 
 // symbol is one entry in the assembler's symbol table.
@@ -166,6 +171,12 @@ type symbol struct {
 	firstSect  *section
 	referenced bool
 	suppressed bool
+
+	// A MACRO-dialect label's definition: the line it was defined on
+	// (listed, if a listing was asked for), so that a later definition
+	// can report it out of phase (see outOfPhase).
+	defLine  *listLine
+	defWhere func(error) error
 }
 
 // defined reports whether s has a value: it isn't waiting on a forward
@@ -375,6 +386,10 @@ func (a *Assembler) getSymbol(name string, allowForward bool, location uint32, f
 func (a *Assembler) queueFixup(location uint32, fx fixupKind, t *rexpr) {
 	f := &fixup{sect: a.cur, location: location, kind: fx, expr: t, base: a.caseBase, stmt: a.stmt}
 
+	if a.dialect == DialectMACRO {
+		f.line, f.where = a.listCur, a.where()
+	}
+
 	t.leaves(func(leaf *rexpr) {
 		sym, found := a.symbols.find(leaf.key)
 		if !found {
@@ -445,11 +460,23 @@ func (a *Assembler) setSymbolIn(name string, sect *section, value uint32, flags 
 
 	sym, found := a.symbols.find(resolved)
 	if unique && found && sym.defined() {
-		return vmserrors.New(vmserrors.VAX_DUPSYM, name)
+		// Real MACRO reports a label defined again on both lines and
+		// goes on, the later definition giving its value (errors.lis).
+		if a.dialect == DialectMACRO {
+			a.outOfPhase(sym, name)
+		}
+
+		if err := a.recoverable(vmserrors.New(vmserrors.VAX_DUPSYM, name)); err != nil {
+			return err
+		}
 	}
 
 	if !found {
 		sym = a.symbols.create(resolved)
+	}
+
+	if unique && a.dialect == DialectMACRO {
+		sym.defLine, sym.defWhere = a.listCur, a.where()
 	}
 
 	sym.value = value
@@ -475,6 +502,49 @@ func (a *Assembler) setSymbolIn(name string, sect *section, value uint32, flags 
 	return nil
 }
 
+// outOfPhase reports sym, a label being defined again, on the line that
+// last defined it. Real MACRO finds it there in its second pass: by then
+// the label has the later definition's value, which isn't the location
+// of that line ("Symbol out of phase", errors.lis).
+func (a *Assembler) outOfPhase(sym *symbol, name string) {
+	if sym.defWhere == nil {
+		return
+	}
+
+	err := vmserrors.New(vmserrors.VAX_OUTOFPHASE, name)
+	a.errs = append(a.errs, sym.defWhere(err))
+
+	if l := sym.defLine; l != nil {
+		l.addNote(listNote{err: err, sect: l.sect, loc: l.loc, column: -1})
+	}
+}
+
+// fixupRange reports err, fp's value (or displacement) v found too big
+// for its field once it was known. In the MACRO dialect it's reported on
+// the line that queued fixup, as real MACRO reports it there in its
+// second pass, and fixupRange returns nil, so the field is stored
+// truncated, as real MACRO stores it: a branch's out of range
+// displacement is "Branch destination out of range" (BRDESTRANG,
+// errors.lis), and any other value is truncated data. In the console
+// dialect it returns err.
+func (a *Assembler) fixupRange(fp *fixup, err error, v int64) error {
+	if a.dialect != DialectMACRO || fp.where == nil {
+		return err
+	}
+
+	if isBranch(fp.kind) {
+		err = vmserrors.New(vmserrors.VAX_BRANCHRANGE, v)
+	}
+
+	a.errs = append(a.errs, fp.where(err))
+
+	if l := fp.line; l != nil {
+		l.addNote(listNote{err: err, sect: fp.sect, loc: fp.location, column: -1})
+	}
+
+	return nil
+}
+
 // applyFixup stores one fixup's value, now that it's known, matching
 // set_symbol()'s fixup switch. fixCaseW measures the offset from the
 // .CASE block's base rather than from the fixup's own location.
@@ -490,7 +560,9 @@ func (a *Assembler) applyFixup(fp *fixup, value uint32) error {
 	case fixCaseW:
 		d := int64(int32(value - fp.base))
 		if d < math.MinInt16 || d > math.MaxInt16 {
-			return vmserrors.New(vmserrors.VAX_FWDWORD, d)
+			if err := a.fixupRange(fp, vmserrors.New(vmserrors.VAX_FWDWORD, d), d); err != nil {
+				return err
+			}
 		}
 
 		return img.storeWord(fp.location, uint16(int16(d)))
@@ -498,28 +570,36 @@ func (a *Assembler) applyFixup(fp *fixup, value uint32) error {
 	case fixAddrB, fixSignedB:
 		// A value, signed or unsigned, as .BYTE takes it.
 		if v := int64(int32(value)); v < -128 || v > 0xFF {
-			return vmserrors.New(vmserrors.VAX_FWDBYTE, v)
+			if err := a.fixupRange(fp, vmserrors.New(vmserrors.VAX_FWDBYTE, v), v); err != nil {
+				return err
+			}
 		}
 
 		return img.storeByte(fp.location, byte(value))
 
 	case fixDispB, fixBranchB:
 		if disp < -128 || disp > 127 {
-			return vmserrors.New(vmserrors.VAX_FWDBYTE, disp)
+			if err := a.fixupRange(fp, vmserrors.New(vmserrors.VAX_FWDBYTE, disp), disp); err != nil {
+				return err
+			}
 		}
 
 		return img.storeByte(fp.location, byte(int8(disp)))
 
 	case fixAddrW, fixSignedW:
 		if v := int64(int32(value)); v < -32768 || v > 0xFFFF {
-			return vmserrors.New(vmserrors.VAX_FWDWORD, v)
+			if err := a.fixupRange(fp, vmserrors.New(vmserrors.VAX_FWDWORD, v), v); err != nil {
+				return err
+			}
 		}
 
 		return img.storeWord(fp.location, uint16(value))
 
 	case fixDispW, fixBranchW:
 		if disp < -32768 || disp > 32767 {
-			return vmserrors.New(vmserrors.VAX_FWDWORD, disp)
+			if err := a.fixupRange(fp, vmserrors.New(vmserrors.VAX_FWDWORD, disp), disp); err != nil {
+				return err
+			}
 		}
 
 		return img.storeWord(fp.location, uint16(int16(disp)))

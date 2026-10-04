@@ -88,12 +88,17 @@ func (a *Assembler) pseudoData(c *cursor, scale int) error {
 			v = 0
 		}
 
-		if scale == 1 && (int32(v) < -128 || int32(v) > 0xFF) {
-			return vmserrors.New(vmserrors.VAX_DATARANGE, ".BYTE", int32(v))
+		// A value too big for its field is an error; real MACRO stores
+		// it truncated (DATATRUNC) and goes on.
+		switch {
+		case scale == 1 && (int32(v) < -128 || int32(v) > 0xFF):
+			err = a.recoverable(vmserrors.New(vmserrors.VAX_DATARANGE, ".BYTE", int32(v)))
+		case scale == 2 && (int32(v) < -32768 || int32(v) > 0xFFFF):
+			err = a.recoverable(vmserrors.New(vmserrors.VAX_DATARANGE, ".WORD", int32(v)))
 		}
 
-		if scale == 2 && (int32(v) < -32768 || int32(v) > 0xFFFF) {
-			return vmserrors.New(vmserrors.VAX_DATARANGE, ".WORD", int32(v))
+		if err != nil {
+			return err
 		}
 
 		if err := a.emitScaled(v, scale); err != nil {

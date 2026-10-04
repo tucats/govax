@@ -86,13 +86,10 @@ func (a *Assembler) messageText(c *cursor) (string, error) {
 		}
 	}
 
+	// After a value, one blank separates it from the comment, which keeps
+	// its own leading blank: real MACRO's ".ERROR 27 ; .ERROR with a
+	// value" is "Generated ERROR: 27  .ERROR with a value" (errors.lis).
 	comment := strings.TrimRight(a.comment, " \t")
-
-	// After a value, one blank separates it from the comment, as in the
-	// manual's examples ("25 Need larger WORK_AREA").
-	if len(parts) > 0 {
-		comment = strings.TrimLeft(comment, " \t")
-	}
 
 	if comment != "" {
 		parts = append(parts, comment)

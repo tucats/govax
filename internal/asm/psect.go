@@ -138,9 +138,16 @@ func (a *Assembler) pseudoPsect(c *cursor) error {
 			break
 		}
 
+		// An attribute that isn't one is an error, which real MACRO
+		// reports and then goes on from, making the psect without it
+		// (NOTPSECOPT, errors.lis).
 		word := scanName(c)
 		if word == "" {
-			return vmserrors.New(vmserrors.VAX_PSECTATTR, c.rest())
+			if err := a.recoverable(vmserrors.New(vmserrors.VAX_PSECTATTR, c.rest())); err != nil {
+				return err
+			}
+
+			break
 		}
 
 		if attr, ok := psectAttributes[word]; ok {
@@ -157,7 +164,11 @@ func (a *Assembler) pseudoPsect(c *cursor) error {
 
 		n, ok := alignmentValue(word)
 		if !ok {
-			return vmserrors.New(vmserrors.VAX_PSECTATTR, word)
+			if err := a.recoverable(vmserrors.New(vmserrors.VAX_PSECTATTR, word)); err != nil {
+				return err
+			}
+
+			continue
 		}
 
 		align, alignNamed = n, true
@@ -341,8 +352,14 @@ func (a *Assembler) pseudoAlignMACRO(c *cursor) error {
 
 	a.useBlankPsect()
 
+	// Real MACRO aligns to the psect's own alignment instead
+	// (ALIGNXCEED), and goes on.
 	if power > a.cur.align {
-		return vmserrors.New(vmserrors.VAX_ALIGNPSECT, power, a.cur.name)
+		if err := a.recoverable(vmserrors.New(vmserrors.VAX_ALIGNPSECT, power, a.cur.name)); err != nil {
+			return err
+		}
+
+		power = a.cur.align
 	}
 
 	size := uint32(1) << power

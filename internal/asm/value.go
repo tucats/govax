@@ -106,8 +106,16 @@ func (a *Assembler) shaped(v uint32, shape *rexpr) exprVal {
 
 // binaryVal applies a binary operator to two values (see exprTop).
 func (a *Assembler) binaryVal(op byte, x1, x2 exprVal) (exprVal, error) {
+	// Real MACRO warns of a division by zero and leaves the division to
+	// the linker: 10/0 is STA_UB 10, STA_UB 0, OPR_DIV (errors.obj).
 	if op == '/' && x2.known() && x2.v == 0 {
-		return exprVal{}, vmserrors.New(vmserrors.VAX_DIVZERO)
+		if a.dialect != DialectMACRO {
+			return exprVal{}, vmserrors.New(vmserrors.VAX_DIVZERO)
+		}
+
+		a.warn(vmserrors.New(vmserrors.VAX_DIVZEROWARN))
+
+		return exprVal{x: &rexpr{op: rBinary, bin: op, l: x1.tree(), r: x2.tree()}}, nil
 	}
 
 	if x1.known() && x2.known() {
@@ -242,6 +250,7 @@ func (a *Assembler) exprTop(c *cursor, st *exprState) (exprVal, error) {
 			break
 		}
 
+		opPos := c.pos
 		c.next()
 
 		x2, err := a.exprAtom(c, st)
@@ -249,7 +258,12 @@ func (a *Assembler) exprTop(c *cursor, st *exprState) (exprVal, error) {
 			return exprVal{}, err
 		}
 
+		// A division by zero is listed at its operator.
+		end := c.pos
+		c.pos = opPos
 		x1, err = a.binaryVal(ch, x1, x2)
+		c.pos = end
+
 		if err != nil {
 			return exprVal{}, err
 		}

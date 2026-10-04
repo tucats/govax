@@ -126,3 +126,11 @@ Every source but the two error sources assembles under govax. On
 On `errend.mar` it reports the open macro definition (`NOENDM`), but not
 the open conditional or the missing `.END`. The probe will show which of
 these real MACRO reports, and how. Subtask 8 settles the differences.
+
+Subtask 8 settled them: real MACRO reports `(R0)+[R0]` (ILLINDXREG) and
+`CLRL PC` (ILLREGHERE), and govax now does too. `.DISABLE GLOBAL`'s
+`NOWHERE` is an external reference to real MACRO, not an error. For
+`errend.mar` there's no reference, so govax keeps its own messages, and
+it now also reports the open conditional (docs/PHASE-29.md, subtask 8's
+log).
+

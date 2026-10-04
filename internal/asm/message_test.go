@@ -23,9 +23,10 @@ func requireMessage(t *testing.T, err error, code uint32, want string) {
 	}
 }
 
-// TestErrorDirective is the manual's .ERROR example: the value, then the
-// comment as written, a library comment's closing ";" included (real
-// MACRO keeps it; testdata/mar/macros/vax/macros.log).
+// TestErrorDirective is the manual's .ERROR example: the value, a blank,
+// then the comment as written, its leading blank and a library comment's
+// closing ";" included (real MACRO keeps both;
+// testdata/mar/list/vax/errors.lis and testdata/mar/macros/vax/macros.log).
 func TestErrorDirective(t *testing.T) {
 	src := `
 LONG_MESS = 1
@@ -37,7 +38,7 @@ WORK_AREA = 900
 	.ENDC`
 
 	err := macroErr(t, src)
-	requireMessage(t, err, vmserrors.VAX_GENERR, "Generated ERROR: 25 Need larger WORK_AREA;")
+	requireMessage(t, err, vmserrors.VAX_GENERR, "Generated ERROR: 25  Need larger WORK_AREA;")
 
 	var located *Error
 	if !errors.As(err, &located) || located.Line != 6 {
@@ -136,8 +137,9 @@ func TestPrintDirective(t *testing.T) {
 		t.Fatalf("messages = %v, want two", msgs)
 	}
 
-	// Displayed bare: MACRO adds no prefix of its own.
-	if msgs[0] != "2 The sine routine has been changed" || msgs[1] != "3 Continued" {
+	// Displayed bare: MACRO adds no prefix of its own. The comment keeps
+	// its leading blank after the value.
+	if msgs[0] != "2  The sine routine has been changed" || msgs[1] != "3  Continued" {
 		t.Errorf("messages = %q", msgs)
 	}
 }
@@ -215,5 +217,5 @@ func TestConsoleDialectMessages(t *testing.T) {
 	}
 
 	_, err := New(false).Assemble(".ERROR 5 ; stop here")
-	requireMessage(t, err, vmserrors.VAX_GENERR, "Generated ERROR: 5 stop here")
+	requireMessage(t, err, vmserrors.VAX_GENERR, "Generated ERROR: 5  stop here")
 }

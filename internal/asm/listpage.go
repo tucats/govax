@@ -100,26 +100,46 @@ func (a *Assembler) Listing(opts ListingOptions) []string {
 			p.subtitle = l.subtitle
 		}
 
-		if listShown(l) {
-			lines := a.listSourceLine(l)
+		if !listShown(l) {
+			// A line the listing controls leave out is still listed
+			// when it has a message, as its location alone.
+			if len(l.notes) > 0 && !l.collected {
+				p.add(listColumns("", l.loc) + strings.Repeat(" ", 7))
 
-			// A repeat block's .ENDR shows the bytes of its first
-			// repetition's first line when the repetitions themselves
-			// aren't listed (see repeatFirstLine).
-			if first := a.repeatFirstLine(i); first != nil && !l.show.has(showExpansions|showBinary) {
-				lines = a.listRepeatEnd(l, first)
+				for _, n := range l.notes {
+					p.add(l.messageLine(n))
+				}
 			}
 
-			for _, line := range lines {
-				p.add(line)
-			}
-
-			// Real MACRO follows a .PRINT's line with an empty line (the
-			// message itself goes to the terminal).
-			for range l.messages {
-				p.add("")
-			}
+			continue
 		}
+
+		lines := a.listSourceLine(l)
+
+		// A repeat block's .ENDR shows the bytes of its first
+		// repetition's first line when the repetitions themselves
+		// aren't listed (see repeatFirstLine).
+		if first := a.repeatFirstLine(i); first != nil && !l.show.has(showExpansions|showBinary) {
+			lines = a.listRepeatEnd(l, first)
+		}
+
+		for _, line := range lines {
+			p.add(line)
+		}
+
+		// Real MACRO follows a .PRINT's line with an empty line (the
+		// message itself goes to the terminal).
+		for range l.messages {
+			p.add("")
+		}
+	}
+
+	// The errors found only at the end of the source follow its last
+	// line. (Real MACRO ran out of memory on the probe's source for
+	// them, errend.mar, so this is govax's own choice.)
+	for _, err := range a.endErrors {
+		end := &listLine{}
+		p.add(end.messageLine(listNote{err: err, column: -1}))
 	}
 
 	p.subtitle = ""
@@ -248,10 +268,11 @@ func vmsDateTime(t time.Time) string {
 //
 // A line of a macro expansion or repeat block has no line number.
 func (a *Assembler) listSourceLine(l *listLine) []string {
-	tail := fmt.Sprintf("%6d %s", l.line, l.text)
-	if l.depth > 0 {
-		tail = strings.Repeat(" ", 7) + l.text
+	if len(l.notes) > 0 {
+		return a.listNotedLine(l)
 	}
+
+	tail := l.tail()
 
 	switch {
 	// A .PSECT or .RESTORE_PSECT line (to a relocatable psect) shows the
@@ -286,6 +307,133 @@ func (a *Assembler) listSourceLine(l *listLine) []string {
 	}
 
 	return out
+}
+
+// tail returns l's line number (blank for a line of a macro expansion
+// or repeat block, which has none), a blank, and its text: what follows
+// the location on its listing line.
+func (l *listLine) tail() string {
+	if l.depth > 0 {
+		return strings.Repeat(" ", 7) + l.text
+	}
+
+	return fmt.Sprintf("%6d %s", l.line, l.text)
+}
+
+// listNotedLine returns l, a line with errors or warnings, as real MACRO
+// lists it (errors.lis): split where each message was raised. The line
+// shows the bytes stored before the first message, at the line's
+// location; then comes the message; then the bytes stored after it, on
+// continuation lines of their own, and so on. A value the line shows in
+// its binary field (a .PSECT's location, an assignment's value, a .BLKx's
+// end) goes on its last line. Something is listed after the last
+// message: the rest of the line's bytes, or else its location then.
+//
+// .ERROR's and .WARN's own line isn't listed: their message, which
+// carries their text, takes its place.
+func (a *Assembler) listNotedLine(l *listLine) []string {
+	var (
+		out    []string
+		fields = a.listFields(l)
+		value  = l.binaryValue()
+		next   int
+	)
+
+	// segment returns the fields stored before loc, from next on.
+	segment := func(loc uint32, last bool) []listBytes {
+		start := next
+		for next < len(fields) && (last || fields[next].offset < loc) {
+			next++
+		}
+
+		return fields[start:next]
+	}
+
+	first := segment(l.notes[0].loc, false)
+
+	if l.op != ".ERROR" && l.op != ".WARN" {
+		rows := layoutRows(first, l.instruction, false)
+		if len(rows) == 0 {
+			rows = []binaryRow{{}}
+		}
+
+		out = append(out, listColumns(rows[0].text, l.loc)+l.tail())
+
+		for _, r := range rows[1:] {
+			out = append(out, listColumns(r.text, r.offset)+strings.Repeat(" ", 7))
+		}
+	}
+
+	for i, n := range l.notes {
+		out = append(out, l.messageLine(n))
+
+		last := i == len(l.notes)-1
+
+		var after []listBytes
+		if last {
+			after = segment(0, true)
+		} else {
+			after = segment(l.notes[i+1].loc, false)
+		}
+
+		// After a message MACRO finds in its first pass (one with a
+		// column), an instruction's continuation lines keep the
+		// opcode's columns empty; after one it finds as it stores the
+		// bytes, they start afresh.
+		rows := layoutRows(after, l.instruction, l.macroMessageFor(n).column)
+
+		for _, r := range rows {
+			out = append(out, listColumns(r.text, r.offset)+strings.Repeat(" ", 7))
+		}
+
+		if last && len(rows) == 0 {
+			switch {
+			case value != "" && (l.op == ".PSECT" || l.op == ".RESTORE_PSECT"):
+				out = append(out, fmt.Sprintf("%*s%s%s", binaryWidth-3, "", value, strings.Repeat(" ", 7)))
+			case value != "":
+				out = append(out, listColumns(value+" ", n.loc)+strings.Repeat(" ", 7))
+			default:
+				out = append(out, listColumns("", n.loc)+strings.Repeat(" ", 7))
+			}
+		}
+	}
+
+	return out
+}
+
+// binaryValue returns the value l shows in its binary field in place of
+// bytes, as 8 hex digits, or "": a .PSECT's location in a relocatable
+// psect, an assignment's (or .MDELETE's, or .IF's) value, or a .BLKx's
+// end (see listSourceLine).
+func (l *listLine) binaryValue() string {
+	switch {
+	case (l.op == ".PSECT" || l.op == ".RESTORE_PSECT") && l.endSect != nil && l.endSect.relocatable:
+		return fmt.Sprintf("%08X", l.endLoc)
+	case (l.op == "=" || l.op == ".MDELETE" || l.op == ".IF") && l.hasValue:
+		return fmt.Sprintf("%08X", l.value)
+	case strings.HasPrefix(l.op, ".BLK"):
+		return fmt.Sprintf("%08X", l.endLoc)
+	}
+
+	return ""
+}
+
+// messageLine returns n's message line, as real MACRO's listing shows
+// it, with a "!" under the column where the problem was found, if MACRO
+// marks one: the source text starts in column 48 (see listpage.go's
+// layout).
+func (l *listLine) messageLine(n listNote) string {
+	m := l.macroMessageFor(n)
+	if !m.column {
+		return m.text
+	}
+
+	col := binaryWidth + 12 + n.column
+	if len(m.text) >= col {
+		return m.text + " !"
+	}
+
+	return m.text + strings.Repeat(" ", col-len(m.text)) + "!"
 }
 
 // repeatFirstLine returns the line that the recorded line i shows the
@@ -358,15 +506,26 @@ type binaryUnit struct {
 // continuation lines, which for an instruction leave the opcode's
 // columns blank.
 func (a *Assembler) binaryRows(l *listLine) []binaryRow {
-	fields := a.listFields(l)
+	return layoutRows(a.listFields(l), l.instruction, false)
+}
+
+// layoutRows lays fields out as binary field lines, as binaryRows does.
+// continued says they all go on continuation lines, so an instruction's
+// opcode columns are empty on the first of them too.
+func layoutRows(fields []listBytes, instruction, continued bool) []binaryRow {
 	if len(fields) == 0 {
 		return nil
 	}
 
-	units := binaryUnits(fields, l.instruction)
+	units := binaryUnits(fields, instruction)
 
 	width := binaryWidth
 	pad := ""
+
+	if continued && instruction {
+		width -= opcodeSlot
+		pad = strings.Repeat(" ", opcodeSlot)
+	}
 
 	var (
 		rows []binaryRow
@@ -386,7 +545,7 @@ func (a *Assembler) binaryRows(l *listLine) []binaryRow {
 
 			// An instruction's continuation lines keep its opcode's
 			// columns empty.
-			if l.instruction && pad == "" {
+			if instruction && pad == "" {
 				width -= opcodeSlot
 				pad = strings.Repeat(" ", opcodeSlot)
 			}
@@ -395,7 +554,7 @@ func (a *Assembler) binaryRows(l *listLine) []binaryRow {
 		cur = &binaryRow{text: u.text, offset: u.offset}
 	}
 
-	if len(rows) > 0 {
+	if len(rows) > 0 || continued {
 		cur.text += pad
 	}
 

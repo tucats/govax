@@ -161,7 +161,7 @@ func TestFixtureListings(t *testing.T) {
 	}
 
 	// The Phase 29 probe's sources listed with the default options.
-	for _, name := range []string{"binary", "symtab", "xref", "trace", "failmain", "failsub", "failsig", "notitle", "lctl"} {
+	for _, name := range []string{"binary", "symtab", "xref", "trace", "failmain", "failsub", "failsig", "notitle", "lctl", "errors"} {
 		cases = append(cases, fixture{name: "list/" + name, source: filepath.Join(marDir, "list", name+".mar"), listing: filepath.Join(marDir, "list", "vax", name+".lis")})
 	}
 
@@ -195,6 +195,8 @@ func TestFixtureListings(t *testing.T) {
 				check.extraRecords = 1
 			}
 
+			check.fails = tc.name == "list/errors"
+
 			checkListing(t, tc.source, tc.listing, libs, check)
 		})
 	}
@@ -217,6 +219,10 @@ type listingCheck struct {
 	// MACRO's object holds, besides its traceback records, for a known
 	// difference in the object (not the listing).
 	extraRecords int
+	// fails says the source has errors. Real MACRO still writes an
+	// object, which govax doesn't (Phase 27's choice), so the listing's
+	// record count is 0.
+	fails bool
 }
 
 // checkListing assembles source with libs, and compares its listing with
@@ -245,12 +251,17 @@ func checkListing(t *testing.T, source, listing string, libs []MacroLibrary, che
 		t.Fatal(err)
 	}
 
-	if _, err := a.Assemble(src); err != nil {
-		t.Fatalf("assemble: %v", err)
-	}
+	_, err := a.Assemble(src)
 
-	if _, err := a.Object(ObjectOptions{}); err != nil {
-		t.Fatalf("object: %v", err)
+	switch {
+	case check.fails && err == nil:
+		t.Fatal("assembly succeeded, want errors")
+	case !check.fails && err != nil:
+		t.Fatalf("assemble: %v", err)
+	case !check.fails:
+		if _, err := a.Object(ObjectOptions{}); err != nil {
+			t.Fatalf("object: %v", err)
+		}
 	}
 
 	got := a.Listing(ListingOptions{
@@ -275,7 +286,18 @@ func checkListing(t *testing.T, source, listing string, libs []MacroLibrary, che
 		return
 	}
 
-	tbt := countTraceback(readObjectFile(t, strings.TrimSuffix(listing, ".lis")+".obj")) + check.extraRecords
+	realObject := readObjectFile(t, strings.TrimSuffix(listing, ".lis")+".obj")
+
+	tbt := countTraceback(realObject) + check.extraRecords
+
+	// With no object, every record real MACRO counted is a difference.
+	if check.fails {
+		for _, line := range realClosing {
+			if m := recordCount.FindStringSubmatch(line); m != nil {
+				tbt, _ = strconv.Atoi(m[1])
+			}
+		}
+	}
 
 	gotText := closingText(gotClosing)
 	realText := closingText(realClosingAllowed(realClosing, tbt))

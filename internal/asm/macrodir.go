@@ -378,6 +378,45 @@ func (a *Assembler) warn(err error) {
 	a.warnings = append(a.warnings, a.located(err))
 }
 
+// recoverable reports err, an error real MACRO reports and then goes on
+// from, assembling the rest of the statement as best it can (a value too
+// big for its field is stored truncated, for one). In the MACRO dialect
+// it records err for the statement being assembled and returns nil, so
+// the caller goes on as MACRO does; the assembly still fails. In the
+// console dialect it returns err, which ends the statement, as eVAX did.
+// A nil err is returned as it is.
+func (a *Assembler) recoverable(err error) error {
+	if err == nil || a.dialect != DialectMACRO {
+		return err
+	}
+
+	a.listError(err)
+	a.errs = append(a.errs, a.located(err))
+
+	return nil
+}
+
+// recoverableAt is recoverable for an error the listing shows before
+// the statement's bytes from loc on, in the current section, rather than
+// before those stored from the location counter on.
+func (a *Assembler) recoverableAt(err error, loc uint32) error {
+	if err == nil || a.dialect != DialectMACRO {
+		return err
+	}
+
+	n := len(a.listCur.notesOrNil())
+
+	if err := a.recoverable(err); err != nil {
+		return err
+	}
+
+	if l := a.listCur; l != nil && len(l.notes) > n {
+		l.notes[n].loc = loc
+	}
+
+	return nil
+}
+
 // Warnings returns the warnings assembly produced, each an *Error naming
 // its line.
 func (a *Assembler) Warnings() []error { return a.warnings }

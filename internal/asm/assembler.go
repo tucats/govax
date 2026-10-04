@@ -197,14 +197,14 @@ type Assembler struct {
 	// listing says to record each source line for a listing (see
 	// listing.go): listLines are the lines recorded, in source order,
 	// and listCur the one being assembled, or nil. group is the part of
-	// an instruction being stored (see listField.group), and endError
-	// the error found at the end of the assembly, if any, which belongs
-	// to no line.
+	// an instruction being stored (see listField.group), and endErrors
+	// the errors found at the end of the assembly, which belong to no
+	// line.
 	listing   bool
 	listLines []*listLine
 	listCur   *listLine
 	group     int
-	endError  error
+	endErrors []error
 
 	// show is the listing state in force (listctl.go), and showOn and
 	// showOff the options MACRO's /SHOW= and /NOSHOW= turn on and off
@@ -432,7 +432,7 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 	a.dotLibraries = nil
 	a.listLines = nil
 	a.listCur = nil
-	a.endError = nil
+	a.endErrors = nil
 	a.show = a.startShow()
 	a.phases = [phaseCount]PhaseTime{}
 	a.objectRecords = 0
@@ -446,24 +446,30 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 	// and finish (with Object) does what's left, so they're timed as
 	// the two passes.
 	pass := StartPhase()
-	err := a.assembleLines(source)
 
-	if err == nil && len(a.cond) > 0 {
-		err = vmserrors.New(vmserrors.VAX_NOENDC, len(a.cond))
+	if err := a.assembleLines(source); err != nil {
+		a.endErrors = append(a.endErrors, err)
+	}
+
+	// A conditional still open at the end. MACRO-32 reports it along
+	// with a macro definition or repeat block left open.
+	if len(a.cond) > 0 && (len(a.endErrors) == 0 || a.dialect == DialectMACRO) {
+		a.endErrors = append(a.endErrors, vmserrors.New(vmserrors.VAX_NOENDC, len(a.cond)))
 	}
 
 	a.phases[phasePass1] = pass.Elapsed()
 
-	if err == nil && a.dialect == DialectMACRO {
+	if len(a.endErrors) == 0 && a.dialect == DialectMACRO {
 		pass = StartPhase()
-		err = a.finish()
+
+		if err := a.finish(); err != nil {
+			a.endErrors = append(a.endErrors, err)
+		}
+
 		a.phases[phasePass2] = pass.Elapsed()
 	}
 
-	if err != nil {
-		a.errs = append(a.errs, err)
-		a.endError = err
-	}
+	a.errs = append(a.errs, a.endErrors...)
 
 	a.listCur = nil
 
@@ -839,6 +845,7 @@ func (a *Assembler) assembleStatementBody(line string) error {
 	}
 
 	c := newCursor(line)
+	a.listStatement(c)
 	c.skipBlanks()
 
 	if c.atEnd() || c.peek() == '#' { // GNU-style leading "#" comment line
@@ -859,9 +866,11 @@ func (a *Assembler) assembleStatementBody(line string) error {
 		return err
 	}
 
+	opStart := c.pos
+
 	handled, err := a.assemblePseudo(c)
 	if err != nil {
-		return err
+		return statementError(c, opStart, err)
 	}
 
 	if handled {
@@ -880,18 +889,46 @@ func (a *Assembler) assembleStatementBody(line string) error {
 	}
 
 	if err := a.assembleOpcode(c); err != nil {
-		return err
+		return statementError(c, opStart, err)
 	}
 
 	// The reference tool ignored anything after the last operand it
-	// expected, so "MOVL R0, R1 R2" assembled as "MOVL R0, R1".
+	// expected, so "MOVL R0, R1 R2" assembled as "MOVL R0, R1". Real
+	// MACRO lists the error just before the extra operand.
+	end := c.pos
 	c.skipBlanks()
 
 	if !c.atEnd() {
-		return vmserrors.New(vmserrors.VAX_EXTRATEXT, c.s[c.pos:])
+		extra := c.s[c.pos:]
+		c.pos = end
+
+		return vmserrors.New(vmserrors.VAX_EXTRATEXT, extra)
 	}
 
 	return nil
+}
+
+// statementError returns err, an error a statement whose directive or
+// instruction starts at opStart returned, having left c where real MACRO
+// lists the error (see listNote's column): a statement it doesn't know,
+// or that's out of place, just before the name, and a conditional's end
+// outside a conditional at what follows the statement.
+func statementError(c *cursor, opStart int, err error) error {
+	e, ok := innermostError(err)
+	if !ok {
+		return err
+	}
+
+	switch e.Status {
+	case vmserrors.VAX_BADOPCODE, vmserrors.VAX_NOTMACRO, vmserrors.VAX_NOTINREPEAT,
+		vmserrors.VAX_NOTINDEF, vmserrors.VAX_NOTINMACRO:
+		c.pos = max(opStart-1, 0)
+	case vmserrors.VAX_NOCOND:
+		c.pos = len(c.s)
+		c.beyond = true
+	}
+
+	return err
 }
 
 // parseLabel consumes a leading "NAME:" or "NAME::" label, if present, and
@@ -928,8 +965,6 @@ func (a *Assembler) parseLabel(c *cursor) error {
 		flags |= SymPermanent | SymGlobal
 	}
 
-	c.pos = end
-
 	if !isLocalLabel(name) {
 		if err := a.endLocalBlock(); err != nil {
 			return err
@@ -938,7 +973,13 @@ func (a *Assembler) parseLabel(c *cursor) error {
 		return vmserrors.New(vmserrors.VAX_NOTGLOBAL, name)
 	}
 
-	return a.defineHere(name, flags, true)
+	// A label defined twice is listed at its colon, so the cursor moves
+	// past it once the label is defined.
+	c.pos = i
+	err := a.defineHere(name, flags, true)
+	c.pos = end
+
+	return err
 }
 
 // assembleAssignment handles a MACRO-32 direct assignment statement:

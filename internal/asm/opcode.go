@@ -105,13 +105,18 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 			a.listGroup(n + 1)
 		}
 
+		start := c.pos
+
 		if err := a.assembleOperand(c, inst, n); err != nil {
 			return vmserrors.Wrap(vmserrors.VAX_OPERANDERR, err, inst.Name, n+1)
 		}
 
 		c.skipBlanks()
 
+		// Real MACRO lists too few operands at the last one there is.
 		if n < inst.OperandCount-1 && c.atEnd() {
+			c.pos = start
+
 			return vmserrors.New(vmserrors.VAX_BADOPERANDS, inst.Name)
 		}
 
