@@ -8,7 +8,7 @@ import (
 
 const (
 	testParameterName = "SPEC"
-	testQualifierName = "HIST"
+	testQualifierName = "HOST"
 )
 
 // evaxGrammarPath locates internal/bootdata/files/evax.dcl relative to this
