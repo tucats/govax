@@ -136,6 +136,11 @@ func TestFixtureListings(t *testing.T) {
 		name, source, listing string
 		// show and noshow are the listing's /SHOW= and /NOSHOW=.
 		show, noshow []string
+		// xref and xrefKinds are its /CROSS_REFERENCE[=(...)], and
+		// noObject its /NOOBJECT.
+		xref      bool
+		xrefKinds []string
+		noObject  bool
 	}
 
 	var cases []fixture
@@ -169,9 +174,18 @@ func TestFixtureListings(t *testing.T) {
 	// /NOSHOW= (list.com).
 	lctl := filepath.Join(marDir, "list", "lctl.mar")
 	cases = append(cases,
-		fixture{"list/lctlshow", lctl, filepath.Join(marDir, "list", "vax", "lctlshow.lis"), []string{"EXPANSIONS", "BINARY"}, nil},
-		fixture{"list/lctlnosh", lctl, filepath.Join(marDir, "list", "vax", "lctlnosh.lis"), nil, []string{"CONDITIONALS", "CALLS", "DEFINITIONS"}},
+		fixture{name: "list/lctlshow", source: lctl, listing: filepath.Join(marDir, "list", "vax", "lctlshow.lis"), show: []string{"EXPANSIONS", "BINARY"}},
+		fixture{name: "list/lctlnosh", source: lctl, listing: filepath.Join(marDir, "list", "vax", "lctlnosh.lis"), noshow: []string{"CONDITIONALS", "CALLS", "DEFINITIONS"}},
 	)
+
+	// The cross-reference listings (list.com): XREF with
+	// /CROSS_REFERENCE=ALL, and SYMTAB with /CROSS_REFERENCE and
+	// /NOOBJECT. (xref.lis, above, is /CROSS_REFERENCE's.)
+	cases = append(cases,
+		fixture{name: "list/xrefall", source: filepath.Join(marDir, "list", "xref.mar"), listing: filepath.Join(marDir, "list", "vax", "xrefall.lis"), xref: true, xrefKinds: []string{"ALL"}},
+		fixture{name: "list/symxref", source: filepath.Join(marDir, "list", "symtab.mar"), listing: filepath.Join(marDir, "list", "vax", "symxref.lis"), xref: true, noObject: true},
+	)
+
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -184,9 +198,11 @@ func TestFixtureListings(t *testing.T) {
 				libs = append(libs, NamedMacroLibrary(newMapLibrary(nil), name))
 			}
 
-			// xref.mar's .CROSS makes real MACRO write a cross reference
-			// in its closing pages, which is subtask 9's.
-			check := listingCheck{noClosing: tc.name == "list/xref", show: tc.show, noshow: tc.noshow}
+			check := listingCheck{
+				show: tc.show, noshow: tc.noshow,
+				xref: tc.xref || tc.name == "list/xref", xrefKinds: tc.xrefKinds,
+				noObject: tc.noObject,
+			}
 
 			// With no .TITLE, real MACRO writes a title header record
 			// ("\x01 ") that govax doesn't; what makes it is left to the
@@ -219,6 +235,11 @@ type listingCheck struct {
 	// MACRO's object holds, besides its traceback records, for a known
 	// difference in the object (not the listing).
 	extraRecords int
+	// xref and xrefKinds are MACRO's /CROSS_REFERENCE[=(...)], and
+	// noObject its /NOOBJECT: no object, so the record count is 0.
+	xref      bool
+	xrefKinds []string
+	noObject  bool
 	// fails says the source has errors. Real MACRO still writes an
 	// object, which govax doesn't (Phase 27's choice), so the listing's
 	// record count is 0.
@@ -251,6 +272,10 @@ func checkListing(t *testing.T, source, listing string, libs []MacroLibrary, che
 		t.Fatal(err)
 	}
 
+	if err := a.SetCrossReference(check.xref, check.xrefKinds); err != nil {
+		t.Fatal(err)
+	}
+
 	_, err := a.Assemble(src)
 
 	switch {
@@ -258,7 +283,7 @@ func checkListing(t *testing.T, source, listing string, libs []MacroLibrary, che
 		t.Fatal("assembly succeeded, want errors")
 	case !check.fails && err != nil:
 		t.Fatalf("assemble: %v", err)
-	case !check.fails:
+	case !check.fails && !check.noObject:
 		if _, err := a.Object(ObjectOptions{}); err != nil {
 			t.Fatalf("object: %v", err)
 		}
@@ -286,9 +311,10 @@ func checkListing(t *testing.T, source, listing string, libs []MacroLibrary, che
 		return
 	}
 
-	realObject := readObjectFile(t, strings.TrimSuffix(listing, ".lis")+".obj")
-
-	tbt := countTraceback(realObject) + check.extraRecords
+	tbt := check.extraRecords
+	if !check.noObject {
+		tbt += countTraceback(readObjectFile(t, strings.TrimSuffix(listing, ".lis")+".obj"))
+	}
 
 	// With no object, every record real MACRO counted is a difference.
 	if check.fails {

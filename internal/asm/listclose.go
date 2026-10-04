@@ -15,6 +15,7 @@ import (
 //     defined or referred to, in name order, with its value and
 //     attributes;
 //   - the psect synopsis: each psect's size, number, and attributes;
+//   - the cross reference, if one was asked for (xref.go);
 //   - the performance indicators: the time each phase of the assembly
 //     took, and how many source lines and object records there were;
 //   - the macro library statistics: how many macros each library
@@ -118,6 +119,10 @@ func (a *Assembler) closingPages(p *listPager, opts ListingOptions) {
 	phase = StartPhase()
 	a.psectSynopsis(p)
 	a.phases[phaseSynopsisOutput] = phase.Elapsed()
+
+	phase = StartPhase()
+	a.crossReference(p)
+	a.phases[phaseCrossReference] = phase.Elapsed()
 
 	p.label = labelStatistics
 	a.performance(p)

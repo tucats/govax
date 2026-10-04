@@ -211,6 +211,12 @@ type Assembler struct {
 	// from the defaults when an assembly starts (SetListingShow).
 	show            listShow
 	showOn, showOff listOptions
+
+	// xrefKinds are the kinds of cross reference MACRO's
+	// /CROSS_REFERENCE asked for (SetCrossReference), and xref what an
+	// assembly has recorded for them, or nil (xref.go).
+	xrefKinds uint
+	xref      *crossRef
 }
 
 // New returns an Assembler ready to assemble source, using the built-in VAX
@@ -434,6 +440,7 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 	a.listCur = nil
 	a.endErrors = nil
 	a.show = a.startShow()
+	a.startCrossReference()
 	a.phases = [phaseCount]PhaseTime{}
 	a.objectRecords = 0
 

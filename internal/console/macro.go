@@ -20,6 +20,7 @@ import (
 // docs/PHASE-28.md subtask 9's macro libraries:
 //
 //	MACRO source[/HOST] [/[NO]OBJECT[=object]] [/[NO]LIST[=listing]]
+//	      [/[NO]SHOW=(option[,...])] [/[NO]CROSS_REFERENCE[=(option[,...])]]
 //	      [/LIBRARY=(library[,...])]
 //
 // It assembles a MACRO-32 source file with internal/asm's MACRO dialect
@@ -81,6 +82,13 @@ type MacroOptions struct {
 	Show   []string
 	NoShow []string
 
+	// Xref is /CROSS_REFERENCE: the listing ends with a cross reference,
+	// of the kinds XrefKinds names (SYMBOLS, MACROS, OPCODES, DIRECTIVES,
+	// REGISTERS, ALL, or NONE), or of symbols and macros if it names
+	// none. It needs /LIST.
+	Xref      bool
+	XrefKinds []string
+
 	// Libraries are the macro libraries /LIBRARY= names, in the order
 	// given.
 	Libraries []string
@@ -122,6 +130,11 @@ func (c *Console) Macro(opts MacroOptions) error {
 	if err := a.SetListingShow(opts.Show, opts.NoShow); err != nil {
 		return err
 	}
+
+	if err := a.SetCrossReference(opts.Xref, opts.XrefKinds); err != nil {
+		return err
+	}
+
 	a.SetIncludeResolver(func(name string) (string, error) {
 		incLoc, err := s.LocateRelated(name, false, found)
 		if err != nil {

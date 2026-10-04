@@ -193,15 +193,14 @@ func init() {
 		"WARN":  {both, (*Assembler).pseudoWarn},
 		"PRINT": {both, byDialect((*Assembler).pseudoPrint, (*Assembler).pseudoPrintMACRO)},
 
-		// Listing control (listctl.go). .CROSS and .NOCROSS are accepted
-		// and ignored until the cross reference (docs/PHASE-29.md,
-		// subtask 9).
+		// Listing control (listctl.go), and the cross reference's
+		// (xref.go).
 		"LIST":    {both, func(a *Assembler, c *cursor) error { return a.pseudoShow(c, true) }},
 		"NLIST":   {both, func(a *Assembler, c *cursor) error { return a.pseudoShow(c, false) }},
 		"SHOW":    {both, func(a *Assembler, c *cursor) error { return a.pseudoShow(c, true) }},
 		"NOSHOW":  {both, func(a *Assembler, c *cursor) error { return a.pseudoShow(c, false) }},
-		"CROSS":   {both, ignoreRest},
-		"NOCROSS": {both, ignoreRest},
+		"CROSS":   {both, func(a *Assembler, c *cursor) error { return a.pseudoCross(c, true) }},
+		"NOCROSS": {both, func(a *Assembler, c *cursor) error { return a.pseudoCross(c, false) }},
 		"PAGE":    {both, (*Assembler).pseudoPage},
 
 		// Not a MACRO-32 directive (it has .LIBRARY and .MCALL instead),
@@ -269,14 +268,6 @@ func byDialect(consoleForm, macroForm func(*Assembler, *cursor) error) func(*Ass
 	}
 }
 
-// ignoreRest assembles a directive that only matters to a part of the
-// listing govax doesn't write yet: .CROSS and .NOCROSS.
-func ignoreRest(_ *Assembler, c *cursor) error {
-	c.pos = len(c.s)
-
-	return nil
-}
-
 // ignoreExpression assembles a directive that evaluates its operand and
 // does nothing with it: .PSL, .DATA, and .TEXT, which mattered only to the
 // reference tool's live console.
@@ -326,6 +317,7 @@ func (a *Assembler) assemblePseudo(c *cursor) (handled bool, err error) {
 	}
 
 	a.listOp("." + name)
+	a.xrefRefer(xrefDirectives, "."+name, "")
 
 	if conditionalDirectives[name] {
 		a.listConditional()

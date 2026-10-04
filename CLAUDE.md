@@ -53,6 +53,12 @@ never had.
   mentions the library's file name is refused too. Use the Edit/Write tools
   for docs that name it, and `git commit -F` for such commit messages. Don't
   work around the hook; its test cases are in `cleanroom_test.sh`.
+  Since 2026-10-04 the project is fully clean room: the VMS source archive
+  (`~/Documents/Technical Doc/VMS/vmssrc_archive/`, VMS's own source
+  listings) is off-limits too. Earlier phase docs that cite it record
+  history, not a method to follow. When neither a manual nor real VMS
+  output settles a rule, make a reasonable choice and log it as
+  unconfirmed in the phase doc.
 - `reference/vms/` — local-only (gitignored, Phase 31): licensed VMS 7.3
   definition files (SDL sources, C headers, BLISS and message listings) that
   `internal/vmsdef`'s tables were first generated from. Nothing in the build

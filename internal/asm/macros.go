@@ -137,6 +137,12 @@ func (a *Assembler) defineMacro(m *macroDef) {
 	}
 
 	a.macros[m.name] = m
+
+	if a.xref != nil {
+		if e := a.xrefEntryFor(xrefMacros, m.name); e != nil {
+			e.size = macroSize(m.body)
+		}
+	}
 }
 
 // pseudoMacro assembles .MACRO name [formal-argument-list], starting a
@@ -158,6 +164,7 @@ func (a *Assembler) pseudoMacro(c *cursor) error {
 	}
 
 	a.defining = &definition{def: &macroDef{name: name, formals: formals}}
+	a.xrefDefine(xrefMacros, name)
 
 	return nil
 }
@@ -248,6 +255,8 @@ func (a *Assembler) collectDefinition(raw string) error {
 		d.depth--
 
 	case kind == blockEnd && d.repeat != nil:
+		a.xrefRefer(xrefDirectives, "."+word, "")
+
 		// The end of a repeat block. A label on the .ENDR line is
 		// part of the range, as .ENDM's is part of a macro's body.
 		if label != "" {
@@ -261,6 +270,8 @@ func (a *Assembler) collectDefinition(raw string) error {
 		return a.assembleRepeat(d)
 
 	case word == "ENDM":
+		a.xrefRefer(xrefDirectives, ".ENDM", "")
+
 		// The end of the definition. A label on the .ENDM line is
 		// part of the body: the manual's POSITIVE macro ends with
 		// "L1: .ENDM", so that L1 labels the line after the
@@ -371,6 +382,11 @@ func (a *Assembler) assembleMacroCall(c *cursor) (handled bool, err error) {
 func (a *Assembler) expandMacro(m *macroDef, c *cursor) error {
 	a.listOp(m.name)
 	a.listCall()
+	// A library macro's size is set here, at its call: its definition
+	// was read from the library, which records nothing.
+	if e := a.xrefRefer(xrefMacros, m.name, ""); e != nil {
+		e.size = macroSize(m.body)
+	}
 
 	if a.expansions() >= maxExpansionDepth {
 		return vmserrors.New(vmserrors.VAX_MACRODEPTH, maxExpansionDepth)

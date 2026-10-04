@@ -28,6 +28,8 @@ func TestMacroCommand(t *testing.T) {
 		{"hello.mar", macroFlags{noObject: true, list: true}, `MACRO "hello.mar"/NOOBJECT/LIST`},
 		{"hello.mar", macroFlags{list: true, show: []string{"ME", "MEB"}}, `MACRO "hello.mar"/LIST/SHOW=(ME,MEB)`},
 		{"hello.mar", macroFlags{list: true, noShow: []string{"CALLS"}}, `MACRO "hello.mar"/LIST/NOSHOW=(CALLS)`},
+		{"hello.mar", macroFlags{list: true, xref: true}, `MACRO "hello.mar"/LIST/CROSS_REFERENCE`},
+		{"hello.mar", macroFlags{list: true, xref: true, xrefKinds: []string{"ALL"}}, `MACRO "hello.mar"/LIST/CROSS_REFERENCE=(ALL)`},
 		{"DUA0:[X]HELLO.MAR", macroFlags{}, `MACRO "DUA0:[X]HELLO.MAR"`},
 		{"p", macroFlags{libraries: []string{"a.mlb", "/x/B"}}, `MACRO "p"/LIBRARY=("a.mlb","/x/B")`},
 	}

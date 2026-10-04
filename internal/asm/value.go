@@ -429,6 +429,8 @@ func (a *Assembler) lookupSymbolValue(name string, st *exprState) (exprVal, erro
 		sym.referenced = true
 	}
 
+	a.xrefSymbol(resolved)
+
 	// The console dialect, like the reference tool, takes a symbol still
 	// waiting on its definition as its placeholder value where forward
 	// references aren't allowed.
@@ -817,6 +819,12 @@ func (a *Assembler) maskLiteral(c *cursor) (uint32, error) {
 		bit, ok := maskBit(name)
 		if !ok {
 			return 0, vmserrors.New(vmserrors.VAX_BADMASKENTRY, name)
+		}
+
+		// A register in a mask is a reference, with no mark (xrefall.lis's
+		// R2 on an .ENTRY line); IV and DV aren't registers.
+		if bit < 12 {
+			a.xrefRegister(name, "")
 		}
 
 		mask |= 1 << bit

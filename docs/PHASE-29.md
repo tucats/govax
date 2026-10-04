@@ -15,7 +15,7 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress. Subtasks 1 to 8 are done
+**Status: in progress. Subtasks 1 to 9 are done
 (2026-10-04).**
 
 ## What Phase 27 leaves in place
@@ -384,10 +384,12 @@ The author decided each of these on 2026-10-02.
   records in the object language, and the image's debug symbol table.
 - *VAX/VMS Symbolic Debugger Reference* (V2.0): what the DST records
   mean.
-- `vmssrc_archive/v73/debug/lis/dstrecrds.sdl` (and `.lis`): the debug
-  symbol table (DST) records that TBT and DBG records carry.
-- `vmssrc_archive/v73/trace/lis/`: the traceback facility, which reads
-  TBT data at run time.
+- **Not** the VMS source archive (`vmssrc_archive`). The author put it
+  off-limits on 2026-10-04: the project is fully clean room now. This
+  list used to name its DST definitions (`debug/lis/dstrecrds.sdl`) and
+  the traceback facility (`trace/lis/`). Subtasks 10 to 14 work from the
+  manuals above and real VMS output (the probe's objects, images, and
+  logs) instead.
 - The real listings and objects in `testdata/mar/vax/`,
   `testdata/mar/macros/vax/`, and `testdata/link/vax/`, and the
   preserved exchange containers in `testdata/disks/`.
@@ -942,4 +944,103 @@ The author decided each of these on 2026-10-02.
   their own line); a message too long to reach its `!` column (govax
   writes ` !` after it); the `!` columns of the errors the probe didn't
   raise; and an error inside an expansion under `.SHOW EXPANSIONS`.
+
+### 2026-10-04 — Subtask 9: the cross reference
+
+- **`internal/asm/xref.go`**: `SetCrossReference` is MACRO's
+  `/CROSS_REFERENCE[=(...)]`. Its keywords are `SYMBOLS`, `MACROS`,
+  `OPCODES`, `DIRECTIVES`, `REGISTERS`, `ALL`, and `NONE`; with none,
+  it lists symbols and macros. While the assembly runs, the assembler
+  records each definition and reference at the program line it's on.
+  The listing then adds a page for each kind after the psect synopsis.
+  The "Cross-reference output" phase is timed now. `.CROSS` and
+  `.NOCROSS` are no longer ignored (`pseudoCross`), and the unused
+  `ignoreRest` is gone.
+- **What the probe's `xref.lis`, `xrefall.lis`, and `symxref.lis`
+  showed:**
+  - Each section starts a page labelled `Cross reference`, with a
+    boxed title. The order is symbols, macros, opcodes, directives,
+    registers. The performance indicators follow the last section on
+    its page.
+  - **Symbols.** The name (15 columns), `=` for a direct assignment, the
+    8-digit value, then `-R` (relocatable) or `-XR` (external, value 0).
+    Then the line that defined it and the lines that referred to it,
+    each in 16 columns: a 2-column mark, the line number in 7, `(1)`, 4
+    blanks. `G` and `W` aren't shown.
+    - Every symbol is listed but local labels. That includes the ones
+      the symbol table leaves out under `.ENABLE SUPPRESSION`.
+    - A symbol defined in a macro expansion is defined at the calling
+      line.
+    - `.EXTERNAL`, `.WEAK` (and so `.GLOBAL`) refer to the symbols they
+      name. `.END`'s transfer address isn't a reference.
+  - **The `#-` mark** is on an instruction's register operands (any
+    mode: `R0`, `(R2)+`), and on a symbol in a literal operand (`#COUNT`).
+    A symbol used as an address (`MOVAL TABLE, R2`, `G^`) has no mark, nor
+    has a register in a mask (`^M<R2>`). What the two characters mean
+    separately isn't known; govax writes them together.
+  - **Reference order** is the order of the line numbers' text: line 38
+    comes before line 8 (`LIB$PUT_OUTPUT`).
+  - **`.NOCROSS`** with no symbols leaves out everything from the next
+    line to the next `.CROSS`: definitions (`HIDDEN` has none), symbol
+    references, and directives (`.LONG` on line 22). The `.CROSS` that
+    ends it isn't listed either; cross-referencing was off when its line
+    began. `.NOCROSS COUNT` leaves out only `COUNT`, until `.CROSS
+    COUNT`.
+  - **Macros.** The name (18), the size (11), the definition and the
+    calls, each in 17 columns (a 3-column blank mark).
+  - **Opcodes.** The name as written, the 4-digit opcode, the lines, 14
+    columns each. **Directives:** the name as written, the lines. `.ENDM`
+    is listed though the definition collector takes it, not the
+    directive table.
+  - **Registers.** The name, the number of lines that referred to it
+    (right-justified to column 19), and the lines, marked as above.
+- **The MACRO command.**
+  - `/[NO]CROSS_REFERENCE[=(option,...)]` (DCL id 1307, with an empty
+    default as `/LIST` has, so it can be given bare). An unknown keyword
+    fails with `BADKEYWORD`.
+  - `govax macro --cross-reference` and `--cross-reference-kinds`.
+  - HELP MACRO documents the qualifier and `.CROSS`/`.NOCROSS`.
+- **Tests.**
+  - `TestFixtureListings` now compares `xref` whole (with
+    `/CROSS_REFERENCE`). It adds `xrefall` (`=ALL`) and `symxref`
+    (`symtab.mar`, `/NOOBJECT`, so a record count of 0). All three
+    match, with no allowed differences.
+  - `xref_test.go` covers the choices below.
+  - `TestDispatch_macroCrossReference` covers the DCL path, and
+    `TestMacroCommand` the new `govax macro` options.
+- **Clean room.** Before the author put the VMS source archive
+  off-limits (partway through this subtask), part of its
+  cross-reference facility's listing (CRF) had been read. Nothing here
+  rests on it alone. Reference order is shown by `xref.lis` itself. The other rules
+  that listing covered (wrapping, long names, a line named twice) are
+  govax's own choices below.
+- **govax's own choices**, which no real listing shows. The author said
+  (2026-10-04) that format fidelity here matters less than having the
+  same information, so these aren't probed further. They can be
+  revisited if users find a difference.
+  - **Wrapping.** An entry's references fill each line to 132 columns:
+    5 for a symbol, 5 for a macro, 7 for an opcode, 8 for a directive,
+    6 for a register. Further lines are indented to the first
+    reference's column. Pages break as source pages do, with no
+    repeated column headings.
+  - A symbol name longer than 15 characters widens the name column to
+    31, as the symbol table's does.
+  - A line that names a symbol or register twice is one reference, with
+    its first mark.
+  - Names sort as text: `R10` before `R2`, and lines `10`, `100`, `9`.
+  - A section with no entries is left out.
+  - A macro's size is the 512-byte pages its body's text fills. Both
+    real macros, one short line and four, show 1.
+  - A library macro is listed at its calls, with no definition line.
+    Nothing a library's definition does is recorded.
+  - A two-byte opcode's value is its bytes as a word, prefix low
+    (`CVTDH` is `32FD`), as the binary field shows it.
+  - `.NOCROSS` with no symbols also leaves out opcodes, macros, and
+    registers. The real listings show it only for symbols and
+    directives.
+  - A `.CROSS SYM` while everything is off takes effect when everything
+    is turned on again (the manual's note 2).
+  - `.IF DF` and `.IF NDF` aren't references. A symbol in a
+    displacement (`4(R2)`) or a branch target has no mark. The index
+    register of an indexed operand is marked as an operand.
 

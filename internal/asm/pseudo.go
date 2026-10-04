@@ -503,8 +503,19 @@ func (a *Assembler) pseudoEnd(c *cursor) error {
 	case c.atEnd():
 
 	case a.dialect == DialectMACRO:
-		// The transfer address, for the end of module record.
+		// The transfer address, for the end of module record. Real
+		// MACRO's cross reference doesn't list it as a reference
+		// (xref.lis's XREF).
+		if a.xref != nil {
+			a.xref.quiet = true
+		}
+
 		x, err := a.exprKnown(c)
+
+		if a.xref != nil {
+			a.xref.quiet = false
+		}
+
 		if err != nil {
 			return err
 		}

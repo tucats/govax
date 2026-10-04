@@ -119,7 +119,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 				indexPos = c.pos
 
-				reg, err := parseRegister(c, 0)
+				reg, err := a.register(c, 0)
 				if err != nil {
 					return err
 				}
@@ -332,7 +332,9 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			if !isFloat {
 				// An expression like any other literal; the reference
 				// tool read only hex digits here, whatever the radix.
+				endMark := a.xrefOperandMark()
 				v, err := a.exprNoForward(c)
+				endMark()
 				if err != nil {
 					return err
 				}
@@ -379,7 +381,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	if ch == 'R' || ch == 'S' || ch == 'A' || ch == 'F' || ch == 'P' {
 		save := c.pos
 
-		if reg, err := parseRegister(c, ch); err == nil {
+		if reg, err := a.register(c, ch); err == nil {
 			if err := a.recoverable(modeAllowed("Register", inst, opIndex, parsingIndex)); err != nil {
 				return err
 			}
@@ -415,7 +417,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 		c.skipBlanks()
 		c.next()
 
-		reg, err := parseRegister(c, 0)
+		reg, err := a.register(c, 0)
 		if err != nil {
 			return err
 		}
@@ -438,7 +440,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	if ch == '@' && c.peek() == '(' {
 		c.next()
 
-		reg, err := parseRegister(c, 0)
+		reg, err := a.register(c, 0)
 		if err != nil {
 			return err
 		}
@@ -475,7 +477,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 	// (Rn) / (Rn)+: register deferred, or autoincrement.
 	if ch == '(' {
-		reg, err := parseRegister(c, 0)
+		reg, err := a.register(c, 0)
 		if err != nil {
 			return err
 		}
@@ -583,7 +585,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	// @(Rn): byte-displacement-deferred with an implied zero displacement
 	// (no explicit displacement given at all).
 	if deferred != 0 && ch == '(' {
-		reg, err := parseRegister(c, 0)
+		reg, err := a.register(c, 0)
 		if err != nil {
 			return err
 		}
@@ -738,6 +740,8 @@ func modeAllowed(mode string, inst *cpu.Instruction, opIndex int, indexed bool) 
 // A forward reference is reported as deferred; its fixup patches the low
 // longword, and its high bits are zero.
 func (a *Assembler) immediateValue(c *cursor, loc uint32, fx fixupKind, scale int) (octa, bool, error) {
+	defer a.xrefOperandMark()()
+
 	if scale >= 8 {
 		save := c.pos
 		c.skipBlanks()
@@ -795,6 +799,8 @@ type floatLiteral struct {
 // operand's size, as VAX MACRO stored MOVD #PI and MOVH #PI
 // (testdata/insn35/asm).
 func (a *Assembler) floatOperand(c *cursor, f vaxfloat.Format) (floatLiteral, error) {
+	defer a.xrefOperandMark()()
+
 	c.skipBlanks()
 
 	if ch := c.peek(); isDigit(ch) || ch == '.' || ch == '+' || ch == '-' {
@@ -997,7 +1003,7 @@ func (a *Assembler) displacementOperand(c *cursor, deferred byte, size int) erro
 	if c.peek() == '(' {
 		c.next()
 
-		r, err := parseRegister(c, 0)
+		r, err := a.register(c, 0)
 		if err != nil {
 			return err
 		}

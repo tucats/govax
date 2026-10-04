@@ -55,6 +55,8 @@ type macroFlags struct {
 	listFile  string   // --list-file
 	show      []string // --show: MACRO's /SHOW=
 	noShow    []string // --no-show: MACRO's /NOSHOW=
+	xref      bool     // --cross-reference, or --cross-reference-kinds
+	xrefKinds []string // --cross-reference-kinds: MACRO's /CROSS_REFERENCE=
 	libraries []string // --library, repeatable: MACRO's /LIBRARY=
 }
 
@@ -240,6 +242,28 @@ var macroGrammar = []cli.Option{
 		Action: func(c *cli.Context) error {
 			list, _ := c.String("no-show")
 			macro.noShow = strings.Split(list, ",")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "cross-reference",
+		Description: "End the listing with a cross reference of symbols and macros",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			macro.xref = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "cross-reference-kinds",
+		Description: "What the cross reference lists, separated by commas (SYMBOLS, MACROS, OPCODES, DIRECTIVES, REGISTERS, ALL)",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			list, _ := c.String("cross-reference-kinds")
+			macro.xref = true
+			macro.xrefKinds = strings.Split(list, ",")
 
 			return nil
 		},
@@ -518,6 +542,13 @@ func macroCommand(source string, f macroFlags) string {
 		command += "/SHOW=(" + strings.Join(f.show, ",") + ")"
 	case len(f.noShow) > 0:
 		command += "/NOSHOW=(" + strings.Join(f.noShow, ",") + ")"
+	}
+
+	switch {
+	case len(f.xrefKinds) > 0:
+		command += "/CROSS_REFERENCE=(" + strings.Join(f.xrefKinds, ",") + ")"
+	case f.xref:
+		command += "/CROSS_REFERENCE"
 	}
 
 	if len(f.libraries) > 0 {

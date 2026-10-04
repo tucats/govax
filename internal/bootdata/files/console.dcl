@@ -778,7 +778,9 @@ grammar console
     ! off unless given, and with no value (the empty default) the listing
     ! is the source's name with type LIS. SHOW (subtask 7) is VMS MACRO's
     ! /SHOW=(option,...) and /NOSHOW=(option,...), the listing options set
-    ! for the whole listing.
+    ! for the whole listing. CROSS_REFERENCE (subtask 9) is VMS MACRO's
+    ! /[NO]CROSS_REFERENCE[=(option,...)]: the listing's cross reference,
+    ! of SYMBOLS and MACROS unless options say which.
     !
     verb macro/id=1300
 
@@ -798,6 +800,9 @@ grammar console
                     /default=""
         qualifier   show/id=1306                -
                     /type=$string/list
+        qualifier   cross_reference/id=1307     -
+                    /type=$string/list          -
+                    /default=""
 
     !
     ! govax-native extension (docs/PHASE-30.md, internal/console +

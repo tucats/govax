@@ -57,6 +57,7 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 	}
 
 	name := c.s[start:c.pos]
+	written := name
 
 	if realName, ok := opcodeAliases[name]; ok {
 		name = realName
@@ -71,6 +72,7 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 	// listing's binary field (see listField.group).
 	a.listOp(inst.Name)
 	a.listInstruction()
+	a.xrefOpcode(written, opcodeValue(inst))
 	a.listGroup(0)
 
 	defer a.listGroup(0)
@@ -126,4 +128,15 @@ func (a *Assembler) assembleOpcode(c *cursor) error {
 	}
 
 	return nil
+}
+
+// opcodeValue returns inst's opcode as the cross reference shows it: a
+// one-byte opcode's value, or a two-byte one's bytes as a word, the
+// prefix (FD) low, as the listing's binary field shows them (32FD).
+func opcodeValue(inst *cpu.Instruction) uint32 {
+	if inst.Opcode.Extended != 0 {
+		return uint32(inst.Opcode.Function)<<8 | uint32(inst.Opcode.Extended)
+	}
+
+	return uint32(inst.Opcode.Function)
 }

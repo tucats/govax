@@ -639,6 +639,8 @@ func (d *Dispatcher) bindGrammar() {
 			ListFile:    r.String("LIST"),
 			Show:        show,
 			NoShow:      noshow,
+			Xref:        r.Present("CROSS_REFERENCE") && !r.Negated("CROSS_REFERENCE") && !r.Defaulted("CROSS_REFERENCE"),
+			XrefKinds:   r.List("CROSS_REFERENCE"),
 			Libraries:   r.List("LIBRARY"),
 			CommandLine: d.line,
 		})

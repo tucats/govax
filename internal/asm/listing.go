@@ -214,6 +214,10 @@ func (a *Assembler) SetListing(on bool) { a.listing = on }
 // nothing) when no listing was asked for, or the line is a macro
 // library's.
 func (a *Assembler) listBegin(f *sourceFrame, line int, raw string) *listLine {
+	if len(a.sources) == 1 {
+		a.xrefProgramLine(line)
+	}
+
 	if !a.listing || f.kind == sourceLibrary || a.inLibrary() {
 		a.listCur = nil
 

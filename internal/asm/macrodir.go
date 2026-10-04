@@ -276,6 +276,10 @@ func (a *Assembler) declareSymbols(c *cursor, flags SymFlag) error {
 // declareSymbol gives the symbol name flags, creating it, with no value
 // yet, if the module hasn't defined it.
 func (a *Assembler) declareSymbol(name string, flags SymFlag) *symbol {
+	// .GLOBAL, .EXTERNAL, and .WEAK refer to the symbols they name
+	// (xref.lis's LIB$PUT_OUTPUT, symxref.lis's WEAKDEF).
+	a.xrefSymbol(name)
+
 	sym, found := a.symbols.find(name)
 	if !found {
 		sym = a.symbols.create(name)

@@ -260,6 +260,52 @@ func TestDispatch_macroList(t *testing.T) {
 // DCL grammar (docs/PHASE-29.md subtask 7): /SHOW=EXPANSIONS lists a
 // macro's expansion, /NOSHOW=CALLS leaves its call out, and an option
 // MACRO doesn't have fails the command.
+// TestDispatch_macroCrossReference checks /CROSS_REFERENCE through DCL:
+// symbols and macros by default, the kinds named, none with
+// /NOCROSS_REFERENCE, and an unknown kind refused.
+func TestDispatch_macroCrossReference(t *testing.T) {
+	d, _ := newTestDispatcher(t)
+	dir := t.TempDir()
+	src := filepath.Join(dir, "xr.mar")
+	writeHostFile(t, src, "\t.TITLE\tXR\n\t.PSECT\tD\nVAL = 1\n\t.LONG\tVAL\n\t.END\n")
+	listing := rms.FileLocation{Host: true, Name: filepath.Join(dir, "xr.lis")}
+
+	for _, tc := range []struct {
+		qualifier       string
+		symbols, macros bool
+		directives      bool
+	}{
+		{"/CROSS_REFERENCE", true, false, false},
+		{"/CROSS_REFERENCE=(DIRECTIVES)", false, false, true},
+		{"/CROSS_REFERENCE=ALL", true, false, true},
+		{"/NOCROSS_REFERENCE", false, false, false},
+		{"", false, false, false},
+	} {
+		if err := d.Dispatch(`MACRO "` + src + `"/NOOBJECT/LIST` + tc.qualifier); err != nil {
+			t.Fatalf("MACRO%s: %v", tc.qualifier, err)
+		}
+
+		lines := listingLines(t, d.Console, listing)
+
+		for _, section := range []struct {
+			title string
+			want  bool
+		}{
+			{"Symbol Cross Reference", tc.symbols},
+			{"Macros Cross Reference", tc.macros},
+			{"Directives Cross Reference", tc.directives},
+		} {
+			if got := lineWith(lines, section.title) != ""; got != section.want {
+				t.Errorf("MACRO%s: %s listed %v, want %v", tc.qualifier, section.title, got, section.want)
+			}
+		}
+	}
+
+	if err := d.Dispatch(`MACRO "` + src + `"/NOOBJECT/LIST/CROSS_REFERENCE=(BOGUS)`); err == nil {
+		t.Error("/CROSS_REFERENCE=BOGUS: no error")
+	}
+}
+
 func TestDispatch_macroShow(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	dir := t.TempDir()

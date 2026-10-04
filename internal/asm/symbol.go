@@ -358,6 +358,8 @@ func (a *Assembler) getSymbol(name string, allowForward bool, location uint32, f
 		sym.referenced = true
 	}
 
+	a.xrefSymbol(resolved)
+
 	switch {
 	case found && sym.defined():
 		return sym.value, false, nil
@@ -478,6 +480,8 @@ func (a *Assembler) setSymbolIn(name string, sect *section, value uint32, flags 
 	if unique && a.dialect == DialectMACRO {
 		sym.defLine, sym.defWhere = a.listCur, a.where()
 	}
+
+	a.xrefDefine(xrefSymbols, resolved)
 
 	sym.value = value
 	sym.sect = sect

@@ -39,6 +39,7 @@
 //              10/01/26    Added CREATE/DIRECTORY (docs/PHASE-34.md)
 //              10/02/26    Added MACRO/LIST (docs/PHASE-29.md)
 //              10/03/26    Added MACRO/SHOW, /NOSHOW (docs/PHASE-29.md)
+//              10/04/26    Added MACRO/CROSS_REFERENCE (docs/PHASE-29.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -3711,6 +3712,7 @@ $MACR
         MACRO <source>[/HOST] [/OBJECT[=<object>] | /NOOBJECT]
               [/LIST[=<listing>] | /NOLIST] [/LIBRARY=(<library>[,...])]
               [/SHOW=(<option>[,...]) | /NOSHOW=(<option>[,...])]
+              [/CROSS_REFERENCE[=(<option>[,...])] | /NOCROSS_REFERENCE]
 
     Parameter:
 
@@ -3777,11 +3779,27 @@ $MACR
                         EXPANSIONS (ME), every line of a macro expansion.
                         By default, all but BINARY and EXPANSIONS are on.
 
+        /CROSS_REFERENCE[=(<option>[,...])]
+                        Ends the listing (with /LIST) with a cross
+                        reference: for each name, the line that defined
+                        it and the lines that referred to it.  The
+                        options say what it lists: SYMBOLS, MACROS,
+                        OPCODES (instructions), DIRECTIVES, REGISTERS,
+                        ALL, or NONE.  Without options it lists symbols
+                        and macros.  A reference marked #- is an
+                        instruction's register operand, or a symbol in a
+                        literal operand (#VALUE).
+
+        /NOCROSS_REFERENCE
+                        Writes no cross reference.  This is the default.
+
     In the source, .SHOW and .NOSHOW (or .LIST and .NLIST) with options
     turn them on and off; without options they raise and lower the listing
     level, and nothing is listed below level 0.  .PAGE starts a new page,
     and .SBTTL names the pages that follow and adds a line to the table of
-    contents, page 0.
+    contents, page 0.  .NOCROSS leaves the lines that follow out of the
+    cross reference, until a .CROSS; with symbols named, it leaves out just
+    those symbols, until a .CROSS names them.
 
         /LIBRARY=(<library>[,...])
                         Macro libraries (.MLB, the default type) to
