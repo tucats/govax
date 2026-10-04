@@ -15,7 +15,7 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress. Subtasks 1 to 11 are done
+**Status: in progress. Subtasks 1 to 11 are done, and 12 is deferred
 (2026-10-04).**
 
 ## What Phase 27 leaves in place
@@ -320,9 +320,10 @@ changes behavior. Each adds to this doc's progress log.
     `/DEBUG=TRACEBACK` on the MACRO command. `withoutTraceback` goes
     away: all 21 fixtures' objects (and the Phase 32 RMS oracle's) match
     real MACRO's with their TBT records.
-12. **Debugger records.** `/DEBUG[=(ALL|SYMBOLS|TRACEBACK|NONE)]`,
-    `/NODEBUG`, and `.ENABLE DEBUG`: the DBG records the probe's `/DEBUG`
-    objects hold, compared byte for byte.
+12. **Debugger records.** *Deferred* (2026-10-04; see the progress
+    log). `/DEBUG[=(ALL|SYMBOLS|TRACEBACK|NONE)]`, `/NODEBUG`, and
+    `.ENABLE DEBUG`: the DBG records the probe's `/DEBUG` objects hold,
+    compared byte for byte.
 13. **LINK's debug symbol table.** LINK builds the DST from the modules'
     TBT records for a traceback link, and the image header points at it;
     `withoutDST` goes away, so the multi-module images match real LINK's
@@ -1166,4 +1167,51 @@ The author decided each of these on 2026-10-02.
   - Two tests that counted every record's stores now count only TIR
     records (`TestObjectLongData`), or assemble without traceback
     (`TestOverwriteWithAddress`).
+
+### 2026-10-04 — Subtask 12 deferred
+
+The author deferred the debugger (DBG) records after a look at what the
+probe's `/DEBUG` objects hold. Under Decision 6, their layouts can only
+come from those objects' bytes.
+
+- **What they hold.** Decoded with subtask 10's `DecodeDST`, the DBG
+  records of `trdebug.obj`, `trdbgsym.obj`, `failmaid.obj`, and
+  `failsubd.obj` are:
+  - **Symbol records**, which look workable:
+    - `08`: a flag byte (1 for an address, 0 for a constant), the
+      value, and the name (`COUNT`, `GLOBDATA`, `LEVEL`, `MAXLEN`).
+    - `BB`: a byte, an address, and the name, for a JSB label
+      (`HELPER`).
+    - `0E`: a name, a value, and nested bytes (`MSG`, an `.ASCID`;
+      `CONST`, an `.ASCII`).
+  - **Line-number records**, which don't yet:
+    - `9B`, the source file: the line count, the file's date (a VMS
+      quadword), a size, its full specification, then short commands
+      (`02 01 00`, `04 01 00`, `06 01 00`, and `0B n` in a second
+      record).
+    - `B9`, a compact table from code addresses to lines. The address
+      steps are clear: a negative byte advances the address by its
+      size, so `f9` is a 7-byte `CALLS`, and the steps add up to each
+      routine's size. But a recurring `02 01` before each `RET` changes
+      no address, and no reading of it makes the line numbers come out
+      consistent. Four objects aren't enough examples to settle it.
+- **Why defer.**
+  - Nothing needs these records now. There's no requirement to hand
+    govax's objects back to VMS with full debugger support
+    (Decision 6).
+  - The planned use, the console's SHOW CALLS and DISASM, needs the
+    traceback records (subtask 11) and LINK's debug symbol table
+    (subtask 13).
+  - VMS's own traceback leaves the line column empty for MACRO modules,
+    even ones assembled `/DEBUG` (the probe's `FAILDBG`), so line
+    numbers wouldn't show there anyway.
+- **What's in place.** `/DEBUG=SYMBOLS` and `.ENABLE DEBUG` are accepted
+  and set the DEBUG function, but write no DBG records. `/DEBUG` objects
+  from real MACRO still decode, dump, and link; LINK skips their DBG
+  records (Decision 4).
+- **To pick it up again.** A small VMS probe would likely settle the
+  line tables. It would hold sources with known instruction sizes,
+  blank and comment lines in different places, a routine without
+  `RET` last, and two psects of code, each assembled `/DEBUG`. The
+  symbol records could be done from the existing objects alone.
 
