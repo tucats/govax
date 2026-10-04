@@ -169,8 +169,8 @@ func TestFixtureListings(t *testing.T) {
 		cases = append(cases, fixture{name: "list/" + name, source: filepath.Join(marDir, "list", name+".mar"), listing: filepath.Join(marDir, "list", "vax", name+".lis")})
 	}
 
-	// The VMS round's sources with no .TITLE (testdata/mar/round).
-	for _, name := range []string{"notitle2", "notitle3"} {
+	// The VMS round's sources (testdata/mar/round).
+	for _, name := range []string{"notitle2", "notitle3", "cells", "cellsb"} {
 		cases = append(cases, fixture{name: "round/" + name, source: filepath.Join(marDir, "round", name+".mar"), listing: filepath.Join(marDir, "round", "vax", name+".lis")})
 	}
 

@@ -159,6 +159,9 @@ type value struct {
 	v   uint32
 	rel bool
 	img string
+	// sym is the global symbol an offset in a shareable image is the
+	// value of, untouched by arithmetic, or "" (see sharedRef.names).
+	sym string
 }
 
 // store is how a store command writes the value it pops.
@@ -329,7 +332,7 @@ func (x *machine) command(c obj.Command) error {
 			x.undefinedReference(g)
 		}
 
-		x.push(value{v: g.value, rel: g.contrib != nil, img: g.image})
+		x.push(value{v: g.value, rel: g.contrib != nil, img: g.image, sym: c.Name})
 
 	case "STA_EPM":
 		g := x.l.symbols[c.Name]
@@ -445,7 +448,7 @@ func (x *machine) store(st store) error {
 	case a.img != "" && x.debug:
 		return fmt.Errorf("an address in shareable image %s in a traceback record", a.img)
 	case a.img != "" && st.address:
-		x.l.referAddress(a.img, a.v, x.loc)
+		x.l.referAddress(a.img, a.v, a.sym, x.loc)
 	case a.img != "":
 		return fmt.Errorf("a reference to shareable image %s must be general mode (G^) or .ADDRESS", a.img)
 	}
@@ -500,7 +503,7 @@ func (x *machine) storePICR() error {
 	case a.img != "":
 		b[0] = 0xFF
 
-		x.l.referShared(a.img, a.v, x.loc+1)
+		x.l.referShared(a.img, a.v, a.sym, x.loc+1)
 
 	case a.rel:
 		b[0] = 0xEF

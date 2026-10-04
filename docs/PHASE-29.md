@@ -15,7 +15,7 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress. Subtasks 1 to 11 and 13 are done, and 12 is
+**Status: in progress. Subtasks 1 to 11, 13, and 14 are done, and 12 is
 deferred (2026-10-04).**
 
 ## What Phase 27 leaves in place
@@ -1336,4 +1336,36 @@ details).
   `NOTITLE2`). govax now does the same (`noTitleText`, `object.go`).
   `notitle`, `notitle2`, and `notitle3` match real MACRO's objects and
   listings whole, so the `extraRecords` allowance is gone.
+
+### 2026-10-04 — Subtask 14: the fixup cell follow-up
+
+- The author ran `@CELLS/OUTPUT=CELLS.LOG`. Real LINK gave `CELLS.EXE`'s
+  cells in the order `LIB$ADDX`, `LIB$GET_INPUT`, `LIB$WAIT`, though the
+  code calls `LIB$WAIT` first. `CELLS2.EXE` (`CELLS,CELLSB`) has
+  `LIB$ADDX`, `LIB$GET_INPUT`, `LIB$PUT_OUTPUT`, `LIB$WAIT`, with
+  CELLSB's new routine in its place by name.
+- That's name order, but FAILSIG (`LIB$STOP` before `LIB$SIGNAL`) isn't.
+  No rule tried fits all three:
+  - reverse of first or last call;
+  - offset order, either way;
+  - name order;
+  - name length;
+  - GSD order.
+
+  It may come from real LINK's hash table, or from LIBRTL's own global
+  symbol table, which its output doesn't show and the clean room can't
+  look into.
+- **govax gives cells in name order** (`sharedRef.orderCells`,
+  `internal/link/fixup.go`). LINK now keeps the global symbol a value
+  came from (`value.sym`) for that. A target reached through arithmetic
+  has no name, and keeps its first-reference place after the named
+  ones. Under the author's fidelity leeway, FAILSIG's images are a
+  known, cosmetic difference: the programs run the same.
+- **Tests.**
+  - `TestLinkRoundImagesMatchRealLINK` adds CELLS and CELLS2, which
+    match real LINK's images byte for byte. FAILSIG's two images are
+    skipped, with the reason.
+  - `cells.mar` and `cellsb.mar` match real MACRO's objects
+    (`TestListProbeObjects`) and listings (`TestFixtureListings`).
+- **Subtask 14 is done.**
 

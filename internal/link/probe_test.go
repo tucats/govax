@@ -264,44 +264,45 @@ func govaxTables() *TableSource {
 // for byte the one real LINK made of the same objects in Phase 29's VMS
 // round (testdata/mar/round/vax/rl*.exe), given its name, link time, and
 // linker ID. VMS ran both, and printed the same traceback for each
-// (round.log).
+// (round.log). CELLS and CELLS2 are the round's follow-up on the order of
+// fixup cells, which real MACRO assembled and real LINK linked.
 func TestLinkRoundImagesMatchRealLINK(t *testing.T) {
-	round := filepath.Join("..", "..", "testdata", "mar", "round", "vax")
+	mar := filepath.Join("..", "..", "testdata", "mar")
 
 	for _, c := range []struct {
 		image   string
-		sources []string
+		sources []string // under testdata/mar
 		trace   bool
 	}{
-		{"rltrace", []string{"trace"}, true},
-		{"rltrnotb", []string{"trace"}, false},
-		{"rlfail", []string{"failmain", "failsub"}, true},
-		{"rlfailnt", []string{"failmain", "failsub"}, false},
-		{"rlfsig", []string{"failsig"}, true},
-		{"rlfsignt", []string{"failsig"}, false},
+		{"rltrace", []string{"list/trace"}, true},
+		{"rltrnotb", []string{"list/trace"}, false},
+		{"rlfail", []string{"list/failmain", "list/failsub"}, true},
+		{"rlfailnt", []string{"list/failmain", "list/failsub"}, false},
+		{"rlfsig", []string{"list/failsig"}, true},
+		{"rlfsignt", []string{"list/failsig"}, false},
+		{"cells", []string{"round/cells"}, true},
+		{"cells2", []string{"round/cells", "round/cellsb"}, true},
 	} {
 		t.Run(c.image, func(t *testing.T) {
-			// FAILSIG calls two LIBRTL routines with G^, and real LINK
-			// orders their fixup cells differently from govax; which rule
-			// it follows is CELLS.COM's to settle (docs/PHASE-29.md,
-			// subtask 14).
+			// FAILSIG's two fixup cells are in an order no rule found
+			// explains (orderCells): a known difference.
 			if strings.HasPrefix(c.image, "rlfsig") {
-				t.Skip("the order of two fixup cells waits on the CELLS follow-up")
+				t.Skip("real LINK's order of FAILSIG's two fixup cells is a known difference (docs/PHASE-29.md, subtask 14)")
 			}
 
-			want, opts := realImage(t, filepath.Join(round, c.image+".exe"))
+			want, opts := realImage(t, filepath.Join(mar, "round", "vax", c.image+".exe"))
 			opts.Traceback = c.trace
 			opts.Sources = []SymbolSource{govaxTables()}
 
 			inputs := make([]Input, len(c.sources))
 
-			for i, name := range c.sources {
-				src, err := os.ReadFile(filepath.Join(probeDir, name+".mar"))
+			for i, path := range c.sources {
+				src, err := os.ReadFile(filepath.Join(mar, filepath.FromSlash(path)+".mar"))
 				if err != nil {
 					t.Fatal(err)
 				}
 
-				inputs[i] = Input{File: "GV" + strings.ToUpper(name) + ".OBJ", Module: macroModule(t, string(src))}
+				inputs[i] = Input{File: strings.ToUpper(filepath.Base(path)) + ".OBJ", Module: macroModule(t, string(src))}
 			}
 
 			img, err := Link(inputs, opts)

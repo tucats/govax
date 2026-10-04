@@ -1,0 +1,30 @@
+
+$ MACRO/LIST CELLS
+$ MACRO/LIST CELLSB
+$ LINK/MAP CELLS
+$ LINK/MAP=CELLS2/EXECUTABLE=CELLS2 CELLS,CELLSB
+$ ANALYZE/IMAGE/OUTPUT=CELLS.ANI CELLS.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]CELLS.EXE;1                                0 errors
+$ ANALYZE/IMAGE/OUTPUT=CELLS2.ANI CELLS2.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]CELLS2.EXE;1                               0 errors
+$ DIRECTORY/SIZE=ALL/DATE CELLS*.*
+
+Directory DUA1:[000000]
+
+CELLS.ANI;1                9/9         4-OCT-2026 16:00:53.61
+CELLS.COM;1                1/1         4-OCT-2026 15:58:52.02
+CELLS.EXE;1                4/4         4-OCT-2026 16:00:53.55
+CELLS.LIS;1               11/11        4-OCT-2026 16:00:53.47
+CELLS.LOG;1                0/16        4-OCT-2026 16:00:53.46
+CELLS.MAP;1               11/11        4-OCT-2026 16:00:53.53
+CELLS.MAR;1                2/2         4-OCT-2026 15:58:52.02
+CELLS.OBJ;1                1/1         4-OCT-2026 16:00:53.47
+CELLS2.ANI;1               9/9         4-OCT-2026 16:00:53.62
+CELLS2.EXE;1               4/4         4-OCT-2026 16:00:53.60
+CELLS2.MAP;1              11/11        4-OCT-2026 16:00:53.58
+CELLSB.LIS;1               9/9         4-OCT-2026 16:00:53.49
+CELLSB.MAR;1               1/1         4-OCT-2026 15:58:52.02
+CELLSB.OBJ;1               1/1         4-OCT-2026 16:00:53.49
+
+Total of 14 files, 74/90 blocks.
+$ SET NOVERIFY

@@ -485,8 +485,9 @@ func requireSameObject(t *testing.T, a *Assembler, realModule *obj.Module) {
 
 // TestListProbeObjects checks govax's objects for the Phase 29 probe's
 // sources (testdata/mar/list) against real MACRO's, as
-// TestFixtureLadderObjects does the ladder's, and the VMS round's two
-// sources with no .TITLE (testdata/mar/round). The probe's objects
+// TestFixtureLadderObjects does the ladder's, and the VMS round's
+// sources (testdata/mar/round): two with no .TITLE, and the fixup cell
+// follow-up's two. The probe's objects
 // assembled with debugger records are subtask 12's (deferred), and
 // errors.mar and errend.mar don't assemble.
 func TestListProbeObjects(t *testing.T) {
@@ -495,7 +496,7 @@ func TestListProbeObjects(t *testing.T) {
 	for _, path := range []string{
 		"list/lctl", "list/binary", "list/symtab", "list/notitle", "list/xref",
 		"list/trace", "list/failmain", "list/failsub", "list/failsig",
-		"round/notitle2", "round/notitle3",
+		"round/notitle2", "round/notitle3", "round/cells", "round/cellsb",
 	} {
 		dir, name := filepath.Join(mar, filepath.Dir(path)), filepath.Base(path)
 

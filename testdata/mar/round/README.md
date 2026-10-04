@@ -128,7 +128,31 @@ those routines and one new one.
     @CELLS/OUTPUT=CELLS.LOG                              (on VMS)
     govax console < testdata/mar/round/cells-out.cmd
 
-`cells-in.cmd` has already copied the sources and `CELLS.COM` onto
+`cells-in.cmd` copied the sources and `CELLS.COM` onto
 `round-exchange.dsk`. `CELLS.COM` assembles both sources, links `CELLS`
 alone and `CELLS,CELLSB`, with maps, and analyzes the images.
 `cells-out.cmd` copies the results into `vax/`.
+
+**What came back** (the user's run, 4-OCT-2026). `ANALYZE/IMAGE` found
+no errors.
+
+- `CELLS.EXE` gives the cells in the order `LIB$ADDX`, `LIB$GET_INPUT`,
+  `LIB$WAIT`.
+- `CELLS2.EXE` gives `LIB$ADDX`, `LIB$GET_INPUT`, `LIB$PUT_OUTPUT`,
+  `LIB$WAIT`.
+
+That's the names' order, whatever order the code calls them in, and
+whichever module calls them. But FAILSIG's `LIB$STOP` comes before its
+`LIB$SIGNAL`, which no rule tried fits along with these:
+
+- reverse of first or last call;
+- offset order, either way;
+- name order;
+- name length;
+- GSD order (which is name order).
+
+Real LINK's order may come from its hash table, or from LIBRTL's own
+global symbol table, and its output shows neither. govax gives cells in
+name order (`orderCells`, `internal/link/fixup.go`). Its images of
+CELLS and CELLS2 match real LINK's byte for byte. FAILSIG's are a known
+difference, cosmetic only: the programs run the same.

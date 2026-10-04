@@ -1,0 +1,94 @@
+
+CELLS2                                                           4-OCT-2026 16:00        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+CELLS           V1.0                   31 DUA1:[000000]CELLS.OBJ;1              4-OCT-2026 16:00  VAX MACRO V5.4-3
+CELLSB          V1.0                   17 DUA1:[000000]CELLSB.OBJ;1             4-OCT-2026 16:00  VAX MACRO V5.4-3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+CODE                            00000200 00000230 00000031 (         49.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                CELLS           00000200 0000021E 0000001F (         31.) LONG  2
+                CELLSB          00000220 00000230 00000011 (         17.) LONG  2
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+CELLS           00000200-R        
+CELLSB          00000220-R        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]CELLS2.EXE;1                                        4-OCT-2026 16:00        Linker V11-39                    Page    2
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000005FF 00000400 (1024. bytes, 2. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        3. (    2. blocks)
+Image name and identification:                    CELLS2 V1.0
+Number of files:                                         5.
+Number of modules:                                       4.
+Number of program sections:                              4.
+Number of global symbols:                              308.
+Number of image sections:                                5.
+User transfer address:                            00000200
+Debugger transfer address:                        7FFEDF68
+Number of code references to shareable images:           4.
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[000000]CELLS2.MAP;1
+Estimated map length:                             31. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                   103	00:00:00.00	00:00:00.00
+    Pass 1:                                              1584	00:00:00.02	00:00:00.02
+    Allocation/Relocation:                                 77	00:00:00.00	00:00:00.00
+    Pass 2:                                               889	00:00:00.02	00:00:00.02
+    Map data after object module synopsis:                 41	00:00:00.00	00:00:00.00
+    Symbol table output:                                   13	00:00:00.00	00:00:00.00
+Total run values:                                        2707	00:00:00.04	00:00:00.04
+
+Using a working set limited to 662 pages and 109 pages of data storage (excluding image)
+
+Total number object records read (both passes):   138
+    of which 26 were in libraries and 6 were DEBUG data records containing 112 bytes
+90 bytes of DEBUG data were written,starting at VBN 4 with 1 blocks allocated
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 0 global symbol table records was written
+
+LINK/MAP=CELLS2/EXECUTABLE=CELLS2 CELLS,CELLSB

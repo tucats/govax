@@ -3,17 +3,20 @@ package link
 import (
 	"encoding/binary"
 	"fmt"
+	"sort"
 )
 
 // sharedRef is a shareable image the image refers to, and the offsets of
 // the targets its references reach in it, each of which gets a cell in
 // the fixup section. addresses are the image addresses of the .ADDRESS
 // longwords that hold an offset in it, which the image activator adds its
-// base to.
+// base to. names are the global symbols the offsets were reached through,
+// by offset, which order the cells (see orderCells).
 type sharedRef struct {
 	image     SharedImage
 	offsets   []uint32
 	addresses []uint32
+	names     map[uint32]string
 }
 
 // gRef is a general mode operand that reaches a shareable image: the
@@ -26,23 +29,24 @@ type gRef struct {
 
 // referShared records a general mode operand at field (its displacement)
 // that reaches offset in the shareable image name.
-func (l *linker) referShared(name string, offset, field uint32) {
-	ref := l.sharedTarget(name, offset)
+func (l *linker) referShared(name string, offset uint32, sym string, field uint32) {
+	ref := l.sharedTarget(name, offset, sym)
 	l.gRefs = append(l.gRefs, gRef{field: field, shared: ref, offset: offset})
 }
 
 // referAddress records a .ADDRESS longword at addr that holds offset in the
 // shareable image name. Real LINK gives the target a cell too, as it does a
 // general mode operand's (ADDR.EXE, testdata/link/vax).
-func (l *linker) referAddress(name string, offset, addr uint32) {
-	ref := l.sharedTarget(name, offset)
+func (l *linker) referAddress(name string, offset uint32, sym string, addr uint32) {
+	ref := l.sharedTarget(name, offset, sym)
 	ref.addresses = append(ref.addresses, addr)
 	l.addressFixups++
 }
 
 // sharedTarget records a reference to offset in the shareable image name,
-// giving it a cell, and returns the image's record.
-func (l *linker) sharedTarget(name string, offset uint32) *sharedRef {
+// reached through the global symbol sym ("" for none), giving it a cell,
+// and returns the image's record.
+func (l *linker) sharedTarget(name string, offset uint32, sym string) *sharedRef {
 	var ref *sharedRef
 
 	for _, r := range l.shared {
@@ -54,8 +58,12 @@ func (l *linker) sharedTarget(name string, offset uint32) *sharedRef {
 	}
 
 	if ref == nil {
-		ref = &sharedRef{image: l.sharedImage(name)}
+		ref = &sharedRef{image: l.sharedImage(name), names: map[uint32]string{}}
 		l.shared = append(l.shared, ref)
+	}
+
+	if _, named := ref.names[offset]; !named && sym != "" {
+		ref.names[offset] = sym
 	}
 
 	found := false
@@ -68,6 +76,31 @@ func (l *linker) sharedTarget(name string, offset uint32) *sharedRef {
 	}
 
 	return ref
+}
+
+// orderCells puts a shareable image's targets in the order real LINK
+// gives their cells. In two of the three images Phase 29's VMS round
+// probed, that's the order of the symbols' names: CELLS.EXE and CELLS2.EXE
+// (testdata/mar/round) give LIB$ADDX, LIB$GET_INPUT, LIB$PUT_OUTPUT, and
+// LIB$WAIT their cells in that order, whatever order the code calls them
+// in, and whichever module calls them. FAILSIG.EXE is the exception: its
+// LIB$STOP's cell comes before LIB$SIGNAL's. No rule found fits all
+// three; real LINK's order may come from its hash table or from LIBRTL's
+// own symbol table, neither of which its output shows. So govax uses the
+// names' order, and FAILSIG's images are a known difference
+// (docs/PHASE-29.md, subtask 14). A target reached without a symbol (an
+// offset from arithmetic) has no name, and keeps its place after the
+// named ones.
+func (r *sharedRef) orderCells() {
+	sort.SliceStable(r.offsets, func(i, j int) bool {
+		a, b := r.names[r.offsets[i]], r.names[r.offsets[j]]
+
+		if (a == "") != (b == "") {
+			return b == ""
+		}
+
+		return a < b
+	})
 }
 
 // fixupLayout is where each part of the fixup section goes, as offsets
@@ -91,6 +124,10 @@ type fixupLayout struct {
 // image's base), ended by a zero count.
 func (l *linker) layoutFixups() fixupLayout {
 	f := fixupLayout{gfix: iafFixedLength, cells: map[*sharedRef][]uint32{}}
+
+	for _, r := range l.shared {
+		r.orderCells()
+	}
 
 	p := f.gfix
 	for _, r := range l.shared {
