@@ -12,8 +12,9 @@ never had.
 - `docs/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
   index.
 - `docs/PHASE-00.md` … `PHASE-35.md` — one doc per phase: goal, C-source file
-  mapping, deliverables, open questions, and a dated progress log (29 is
-  planned, not started; 28 and 30–35 are done). Read the relevant phase doc
+  mapping, deliverables, open questions, and a dated progress log (all
+  done through 35; Phase 29's debugger records, its subtask 12, are
+  deferred). Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
@@ -135,13 +136,24 @@ expect adjustment as phases land):
   (`source.go`); the MACRO dialect also searches macro libraries
   (`MacroLibrary`, `maclib.go`) handed in by the console's MACRO command.
   `overwrite.go` keeps a field stored twice (as `$FAB` does) as real MACRO
-  writes it.
+  writes it. Phase 29 adds MACRO listings: `SetListing` records a
+  `listLine` per source line (`listing.go`), and `Listing` lays out the
+  source pages (`listpage.go`), the listing controls (`listctl.go`),
+  messages, the cross reference (`xref.go`, `SetCrossReference`), and the
+  closing pages (`listclose.go`), as real MACRO lays them out. `Object()`
+  writes traceback (TBT) records by default (`traceback`; `SetFunctions`
+  is `/ENABLE=`/`/DISABLE=`, and the console maps `/DEBUG` onto it).
+  Debugger (DBG) records aren't written (Phase 29's subtask 12, deferred).
 - `internal/obj` — the VAX object language (Phase 27): reads, writes, dumps, and
   checks `.OBJ` object modules, keeping every record so a real VAX object
   round-trips byte for byte; `Builder` packs a module's psects, symbols, and TIR
   commands into records. Codes and layouts come from `vmsdef.Symbols`
   (the VAX object language names of VMS 7.3's `objfmt.sdl`). Host files hold records in ODS-2's
   on-disk variable-length layout (`ReadRecords`/`WriteRecords`).
+  `dst.go` (Phase 29) decodes and encodes the debug symbol table (DST)
+  records TBT and DBG records carry, and builds real MACRO's four
+  traceback records; their layouts come from real objects (clean room),
+  and `obj.Dump` shows them. `Builder.Traceback` adds TBT records.
 - `internal/rms` — RMS (`SYS$CREATE`/`CONNECT`/`OPEN`/`CLOSE`/`GET`/`PUT`/`RENAME`,
   and Phase 33's `PARSE`/`SEARCH`/`DISPLAY` with NAM blocks and XABs) file
   I/O backed by the sibling Go module `github.com/tucats/ods2`'s real ODS-2
@@ -174,7 +186,11 @@ expect adjustment as phases land):
   the fixtures). The console's `LINK` command (`internal/console/link.go`) drives it.
   Undefined symbols come from symbol sources (`source.go`, `libsource.go`):
   IMAGELIB.OLB plus shareable images' GSTs, STARLET.OLB, then govax's own tables
-  (`internal/console/linksource.go`).
+  (`internal/console/linksource.go`). With traceback (the default), pass 2
+  also runs each module's TBT records into the image's debug symbol table,
+  which follows the image's other blocks and the IHS block points at
+  (Phase 29); DBG records are skipped. Fixup cells for a shareable image
+  are in symbol-name order (`orderCells`).
 - `internal/lbr` — the librarian file format (Phase 30): reads `.OLB`/`.MLB`/etc.
   libraries, their B-tree indexes and module records, including DCX data-reduced
   libraries (`dcx.go`) such as STARLET.OLB. Writes them too (Phase 28): `Builder`

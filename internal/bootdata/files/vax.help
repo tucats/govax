@@ -41,6 +41,7 @@
 //              10/03/26    Added MACRO/SHOW, /NOSHOW (docs/PHASE-29.md)
 //              10/04/26    Added MACRO/CROSS_REFERENCE (docs/PHASE-29.md)
 //              10/04/26    Added MACRO/DEBUG, /ENABLE, /DISABLE (docs/PHASE-29.md)
+//              10/04/26    LINK writes the debug symbol table (docs/PHASE-29.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -3923,8 +3924,10 @@ $LINK
         /NOEXECUTABLE   Links and reports any errors, but writes no image.
 
         /TRACEBACK      Starts the image through SYS$IMGSTA, as VMS LINK
-                        does by default.  /NOTRACEBACK starts it at its
-                        own transfer address.
+                        does by default, and gives it a debug symbol
+                        table built from the objects' traceback records.
+                        /NOTRACEBACK starts it at its own transfer
+                        address, with no debug symbol table.
 
         /SYSLIB         Searches IMAGELIB.OLB and STARLET.OLB for symbols
                         the objects don't define, as VMS LINK does by
@@ -3993,8 +3996,13 @@ $LINK
     A symbol nothing defines is a warning, as in VMS LINK: it is 0, each
     reference to it is reported, and the image is still written.  A
     symbol referred to only weakly (.WEAK) is 0 without a warning.  An
-    image with no transfer address is written with a warning too.  Traceback records in objects are
-    skipped, so an image has no debug symbol table.
+    image with no transfer address is written with a warning too.
+
+    With /TRACEBACK, the objects' traceback records become the image's
+    debug symbol table, after the image's other blocks, as VMS LINK
+    writes it, so a failing program gives VMS's symbolic traceback.
+    Debugger records (from MACRO/DEBUG) are skipped: LINK/DEBUG isn't
+    supported.
 
     From the host shell, "govax link <object>..." runs this command, with
     --executable <file>, --no-executable, --no-traceback, --no-syslib,

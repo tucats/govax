@@ -15,8 +15,8 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress. Subtasks 1 to 11, 13, and 14 are done, and 12 is
-deferred (2026-10-04).**
+**Status: complete (2026-10-04).** Every subtask is done but 12, the
+debugger records, which the author deferred (see its log entry).
 
 ## What Phase 27 leaves in place
 
@@ -1368,4 +1368,36 @@ details).
   - `cells.mar` and `cellsb.mar` match real MACRO's objects
     (`TestListProbeObjects`) and listings (`TestFixtureListings`).
 - **Subtask 14 is done.**
+
+### 2026-10-04 — Subtask 15: clean-up and close-out
+
+- **Code comments.**
+  - `object.go`'s and `macrodir.go`'s notes on debugger records now say
+    they're deferred.
+  - `internal/link/image.go` describes the DST.
+  - `image.go`'s and `mapfile.go`'s notes on where their layouts came
+    from now say the VMS source archive they cite is off-limits since
+    this phase (CLAUDE.md).
+  - The "accepted and ignored" notes for the listing directives, the
+    test helpers (`withoutTraceback`, `withoutDST`, `countTraceback`),
+    and LINK's "read and skipped" note went in the subtasks that
+    replaced them.
+- **Earlier phase docs.** "Done in Phase 29" notes, not rewrites, where
+  PHASE-27, PHASE-28, PHASE-30, and PHASE-32 say listings, traceback
+  records, or the DST don't exist yet.
+- **PLAN.md's index and CLAUDE.md** describe the listings, the cross
+  reference, traceback records, `obj`'s DST records, and LINK's debug
+  symbol table, with debugger records deferred.
+- **HELP LINK** says `/TRACEBACK` builds the debug symbol table.
+  HELP MACRO already covered `/LIST`, `/SHOW`, `/CROSS_REFERENCE`,
+  `/DEBUG`, `/ENABLE`, and `/DISABLE`.
+- **What's left, for later phases.**
+  - Debugger records (subtask 12, deferred): the symbol records look
+    workable from the existing objects; the line tables need a small
+    VMS probe.
+  - FAILSIG's fixup cell order, a known, cosmetic difference.
+  - A traceback printed by govax's own RUN, and the console's SHOW
+    CALLS and DISASM using the DST, the author's planned uses.
+  - `TestLinkProbeImagesMatchRealLINK` has yet to run on a machine with
+    VMS's own libraries.
 

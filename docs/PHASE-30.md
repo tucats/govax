@@ -53,7 +53,9 @@ traceback records), decided 2026-09-30. Neither is a prerequisite:
   real LINK builds a debug symbol table (DST) from them by default. This
   phase's LINK reads TBT and DBG records and skips them. Its images carry
   no DST, which is what real LINK writes for govax's objects, which have
-  no TBT records (`GV_PSECTS.EXE`). The traceback transfer address is
+  no TBT records (`GV_PSECTS.EXE`). *Done in Phase 29 (subtask 13):
+  LINK builds the DST from TBT records, and the images match real
+  LINK's whole.* The traceback transfer address is
   still written: it's `SYS$IMGSTA` in the P1 vector, which govax has at
   the same address as VMS.
 - **The librarian reader** this phase needs for `.OLB` object libraries
@@ -300,7 +302,9 @@ them.
     or else the first module's.
   - Real MACRO writes its global symbols before its psect definitions,
     so a symbol's psect is resolved once its module has been read.
-  - Traceback and debugger records are skipped.
+  - Traceback and debugger records are skipped. (Phase 29, subtask 13:
+    traceback records now build the DST; debugger records are still
+    skipped.)
   - Every symbol must be defined in the objects for now: the symbol
     sources are subtask 2.
 - **Matches real LINK byte for byte.** `TestLinkMatchesRealLINK` links
@@ -799,7 +803,8 @@ them.
     `/SELECTIVE_SEARCH`, `/OPTIONS`; options files with `/SHAREABLE`,
     `STACK=`, `IDENTIFICATION=`, `NAME=`, and `SYMBOL=`.
 - **Left for later.**
-  - No debug symbol table (Phase 29 brings traceback records).
+  - No debug symbol table (Phase 29 brings traceback records). *Done in
+    Phase 29 (subtask 13).*
   - `/FULL` and `/CROSS_REFERENCE` maps, and the run statistics.
   - Shareable images as output (`LINK/SHAREABLE`), clusters, and options
     such as `PSECT_ATTR=`, `CLUSTER=`, and `GSMATCH=`.

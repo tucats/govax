@@ -395,7 +395,8 @@ govax's `go.work` picks up local `ods2` changes right away.
 program:
 
 - `.TITLE` (the module name, `.MAIN.` by default), `.IDENT`, and
-  `.SUBTITLE`/`.SBTTL` (accepted, and ignored until listings exist)
+  `.SUBTITLE`/`.SBTTL` (accepted, and ignored until listings exist;
+  done in Phase 29)
 - `.PSECT name[,attributes…]`, `.SAVE_PSECT`/`.RESTORE_PSECT`, the default
   psects `. ABS .` and `. BLANK .` with the manual's attributes, the
   named-psect attribute defaults, the attribute-consistency check on
@@ -1130,7 +1131,7 @@ above record the answers:
 
 - **The first-milestone directives** are in the directive table:
   - `.TITLE`, `.IDENT`, and `.SUBTITLE`/`.SBTTL`, which is ignored until
-    listings exist. `preprocessLine` keeps the case of `.TITLE`'s comment
+    listings exist (done in Phase 29). `preprocessLine` keeps the case of `.TITLE`'s comment
     and of `.IDENT`'s string. The module name is uppercased and cut to 31
     characters, and the comment is cut to 40. Without a `.TITLE`, the
     module is `.MAIN.`.
@@ -1359,7 +1360,8 @@ above record the answers:
     them all, since leaving out a global definition could break a link,
     and no fixture shows the behavior.
 - **Not written yet:** traceback records (the later traceback
-  sub-phase).
+  sub-phase). *Done in Phase 29 (subtask 11): the objects match real
+  MACRO's with their traceback records.*
 - Tests: `object_test.go` covers the headers, the global symbol GSD,
   weak symbols, going back to a psect, `. =`, the psect offset forms,
   gaps, `.MASK`, each operand mode's order, the constant forms, long

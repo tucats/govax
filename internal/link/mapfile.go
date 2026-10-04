@@ -10,11 +10,14 @@ import (
 	"github.com/tucats/govax/internal/obj"
 )
 
-// This file writes a link map, as LINK/MAP does, from the VAX linker's own
-// map routines (vmssrc_archive/v73/linker/lis/lnkmaprtn.lis) and the cross
-// reference facility that lays out its symbol table (crf/lis/cref.lis).
-// Real LINK's maps of the Phase 27 fixtures (testdata/mar/vax/*.map) are
-// what it's checked against.
+// This file writes a link map, as LINK/MAP does. In Phase 30 it was
+// written from the VAX linker's own map routines (vmssrc_archive/v73/
+// linker/lis/lnkmaprtn.lis) and the cross reference facility that lays
+// out its symbol table (crf/lis/cref.lis); that archive is off-limits now
+// that the project is fully clean room (CLAUDE.md), so changes go by real
+// LINK's maps alone. Those maps (testdata/mar/vax/*.map,
+// testdata/link/vax, testdata/mar/list/vax) are what it's checked
+// against.
 //
 // A map is pages of at most 58 lines (LIB$LP_LINES' 66, less 8), each
 // starting with a form feed and a heading. The default map has:

@@ -36,8 +36,8 @@ const defaultLanguage = "govax MACRO"
 // and contents in source order, with each entry point's EPM where its
 // mask is stored, then the end of module record. With traceback (the
 // default, .ENABLE TRACEBACK), traceback records go after the headers and
-// before the end of module record (see traceback). Debugger records
-// aren't written yet.
+// before the end of module record (see traceback). Debugger (DBG)
+// records aren't written: docs/PHASE-29.md deferred them (subtask 12).
 func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 	if a.dialect != DialectMACRO {
 		return nil, vmserrors.New(vmserrors.VAX_INTERNAL, "Object needs the MACRO dialect")

@@ -210,7 +210,8 @@ inside it. Repeat blocks collect their lines to `.ENDR` the same way.
    MACRO's form (message from the comment; `.ERROR` is an assembly error,
    `.WARN` a warning, `.PRINT` an informational message), and the
    listing-control directives (`.LIST`, `.NLIST`, `.SHOW`, `.NOSHOW`,
-   `.CROSS`, `.NOCROSS`, `.PAGE`) accepted and ignored.
+   `.CROSS`, `.NOCROSS`, `.PAGE`) accepted and ignored. *Done in Phase
+   29 (subtasks 7 and 9).*
 5. **Done.** **Macro libraries in `internal/asm`:** the `MacroLibrary` interface
    over `*lbr.Library`, `.MCALL`, `.LIBRARY` (through a resolver, default
    type `.MLB`), and the automatic search for an undefined opcode.

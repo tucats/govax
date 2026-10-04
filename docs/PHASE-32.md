@@ -377,7 +377,8 @@ clean, and a commit. `build -i` follows each one that changes behavior.
   - **Tests.** `TestOracleObjects` (`internal/asm/oracle_test.go`)
     assembles each oracle probe with govax's own STARLET.MLB and compares
     the object with real MACRO's, record for record, apart from traceback
-    records. All 31 definition probes match, including `def_twice` and
+    records (included since Phase 29, subtask 11). All 31 definition
+    probes match, including `def_twice` and
     both global forms. `def_state` is left out: VAX 7.3 has no
     `$STATEDEF`.
 - 2026-09-30: Subtask 5 done. The 12 initialization macros are in
@@ -479,7 +480,7 @@ clean, and a commit. `build -i` follows each one that changes behavior.
 
     No VMS file is needed to build or test any of them. `TestOracleObjects`
     compares 68 probes with real MACRO's objects, byte for byte apart from
-    traceback records. Four more are checked line by line, and
+    traceback records (and with them, since Phase 29). Four more are checked line by line, and
     `rmscopy.mar` runs.
   - **Found along the way and fixed.**
     - `ods2`'s directory writer could fill a block with no end marker,
