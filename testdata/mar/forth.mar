@@ -34,6 +34,11 @@
 ;     Output is gathered a line at a time and written as one record; a
 ;     line still unfinished when the terminal is read becomes part of
 ;     the prompt.
+;   - A command's text (LIB$GET_FOREIGN), when it's run as a foreign
+;     command ("FORTH :== $FORTH" then "FORTH 2 3 + ."), is interpreted
+;     and then forth halts, as the original's string-argument entry did;
+;     without it, forth is interactive. Words are found whatever their
+;     case, since DCL uppercases a command's unquoted text.
 ;   - The DEFWORD and DEFPRIM macros build the dictionary headers, and
 ;     DEFPRIM computes a primitive's length instead of hand-counting it.
 ;   - BSD-style jbr/jeql/jnequ pseudo-branches are BRB/BRW/BSBW and
@@ -89,6 +94,9 @@ XRECURSIVE	= 1			; SFA bits: recursive function
 XSMUDGED	= 2			;   SMUDGE bit
 PRIORITY	= 4			;   IMMEDIATE
 PRIMITIVE	= 8			;   PRIMITIVE--is a code macro
+
+DSC_T		= 14			; DSC$K_DTYPE_T, text
+DSC_S		= 1			; DSC$K_CLASS_S, a fixed-length string
 
 NL		= 10			; Newline
 SPC		= 32			; Space
@@ -183,6 +191,16 @@ FPRBUF:					; "f." fraction digits
 	.BLKB	34			; "." digits, built backward
 PRNBUF:	.BYTE	0			;  from here
 SIGN:	.BLKB	1			; Flags a number's sign
+CMDLEN:	.BLKW	1			; The command text's length
+ONESHOT:				; Nonzero when running a command's text
+	.BLKB	1
+	.ALIGN	LONG
+EXITSTS:				; The status forth exits with
+	.LONG	SS$_NORMAL
+	.ALIGN	LONG
+CMDDSC:	.WORD	INLMAX-HALT_LEN		; Descriptor: the command's text
+	.BYTE	DSC_T,DSC_S		;  goes into INLINE, leaving room
+	.ADDRESS INLINE			;  to add " halt" 
 BASE:	.LONG	10			; BASE variable--the current base
 STATE:	.LONG	0			; STATE variable--0=interp, 1=compiling
 
@@ -255,6 +273,9 @@ IRABT:	$RAB	UBF=INLINE,USZ=INLMAX
 OFABT:	$FAB	FAC=PUT,RAT=CR,DNM=<.LIS>
 ORABT:	$RAB
 
+HALT_TEXT:				; What follows the command's text
+	.ASCII	/ halt/<NL><0>
+HALT_LEN = .-HALT_TEXT
 BANNER:	.ASCIZ	|Vforth V2.0 -- "halt" or Ctrl/Z to exit|<NL>
 OUTOP_MSG:
 	.ASCIZ	/ Could not open output file/<NL>
@@ -315,21 +336,42 @@ SINTAB:
 	$CREATE	FAB=TTOUT
 	BLBC	R0,10$
 	$CONNECT RAB=TTOUT+UB_RAB
-	BLBC	R0,10$
-
-	MOVAB	BANNER,R0
-	BSBW	PRSTR
-	MOVL	DICTEND,R10		; R10 is end of dictionary
-	MOVL	SP,SP_HOLD		; For resetting SP later
-	MOVL	LATEST,R8		; Setup R8 to end of dict.
-	BRB	ABORT
+	BLBS	R0,15$
 10$:	RET				; Couldn't open the terminal
 
+15$:	MOVL	DICTEND,R10		; R10 is end of dictionary
+	MOVL	SP,SP_HOLD		; For resetting SP later
+	MOVL	LATEST,R8		; Setup R8 to end of dict.
+
+	PUSHAW	CMDLEN			; Get the command's text, if any
+	CLRL	-(SP)			;  (no prompt)
+	PUSHAQ	CMDDSC
+	CALLS	#3,G^LIB$GET_FOREIGN
+	BLBC	R0,20$
+	MOVZWL	CMDLEN,R0
+	BEQL	20$
+	MOVC3	#HALT_LEN,HALT_TEXT,INLINE[R0] ; Run it, then halt
+	MOVB	#1,ONESHOT		;  (or stop at an error)
+	MOVAB	OPSTK_END,R11		; Empty the operand stack
+	CLRL	STATE			; Not compiling
+	MOVAB	INLINE,R9		; Interpret the command's text
+	BRW	INTERP
+
+20$:	MOVAB	BANNER,R0		; No text: interactive
+	BSBW	PRSTR
+	BRB	ABORT
+
 ;
-; abort--reset the stacks and the input, and restart the interpreter
+; abort--reset the stacks and the input, and restart the interpreter.
+;   When running a command's text, there's no restarting: forth exits
+;   with SS$_ABORT instead.
 ;
 ABORT:	MOVL	SP_HOLD,SP		; Start SP from its initial value
-	BSBW	CLOSEALL		; Back to the terminal
+	TSTB	ONESHOT			; Running a command's text?
+	BEQL	10$
+	MOVL	#SS$_ABORT,EXITSTS	; Yes, give up
+	BRW	F_HALT
+10$:	BSBW	CLOSEALL		; Back to the terminal
 	MOVAB	OPSTK_END,R11		; Empty the operand stack
 	CLRL	STATE			; Turn off compile mode
 	MOVAB	INLINE,R9		; Set up input line as empty
@@ -552,7 +594,7 @@ ABORT:	MOVL	SP_HOLD,SP		; Start SP from its initial value
 	BSBW	FLUSHU
 10$:	MOVL	R10,DICTEND		; save end of dictionary storage area
 	MOVL	R8,LATEST		; end of dictionary linked list
-	MOVL	#SS$_NORMAL,R0
+	MOVL	EXITSTS,R0		; SS$_NORMAL, unless abort says otherwise
 	RET
 
 ;
@@ -1428,7 +1470,8 @@ FLUSHU:	MOVAB	UB_BUF(R1),UB_RAB+RAB$L_RBF(R1)
 ; lookup--take the current word in "wrd" and see if it's in the dictionary
 ;   chain. If it is, return with address in R0 and Z; otherwise
 ;   return with NZ. If it is found, R1 will contain the SFA and R2 the
-;   entry.
+;   entry. Case doesn't matter, as DCL uppercases a command's text.
+;   Uses R3, R4, and R5.
 ;
 LOOKUP:	MOVAB	WRD,R0			; R0 -> word
 	MOVL	R8,R1			; R1 -> next entry to check against
@@ -1436,7 +1479,12 @@ LOOKUP:	MOVAB	WRD,R0			; R0 -> word
 	MOVL	R0,R3			; R3 -> our word
 	BITW	#XSMUDGED,10(R1)	; Smudged?
 	BNEQ	30$
-20$:	CMPB	(R3)+,(R2)		; Compare the names
+20$:	MOVB	(R3)+,R4		; Compare the names, ignoring case
+	BSBB	LOWER
+	MOVB	R4,R5
+	MOVB	(R2),R4
+	BSBB	LOWER
+	CMPB	R4,R5
 	BNEQ	30$			;  they didn't match
 	TSTB	(R2)+			; They did; at end of names?
 	BNEQ	20$			; No, keep going
@@ -1449,6 +1497,16 @@ LOOKUP:	MOVAB	WRD,R0			; R0 -> word
 	BNEQ	10$
 	MOVL	#1,R3			; No match, return NZ
 	RSB
+
+;
+; lower--make the character in R4 lowercase, if it's a letter
+;
+LOWER:	CMPB	R4,#^A/A/
+	BLSSU	10$
+	CMPB	R4,#^A/Z/
+	BGTRU	10$
+	BISB2	#^X20,R4
+10$:	RSB
 
 ;
 ; iswhite--return Z if the character pointed to by R9 is a white

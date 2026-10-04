@@ -41,8 +41,9 @@ func runImage(t *testing.T, c *Console, path string) uint32 {
 	return runImageBounded(t, c, path, 100_000)
 }
 
-// runImageBounded is runImage, running at most maxSteps instructions.
-func runImageBounded(t *testing.T, c *Console, path string, maxSteps int) uint32 {
+// prepareRun boots c's microkernel and lays down the shims, as vax.init
+// and RUN do, so that an image can run.
+func prepareRun(t *testing.T, c *Console) {
 	t.Helper()
 
 	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
@@ -54,6 +55,13 @@ func runImageBounded(t *testing.T, c *Console, path string, maxSteps int) uint32
 	if err := c.ensureShims(); err != nil {
 		t.Fatalf("ensureShims: %v", err)
 	}
+}
+
+// runImageBounded is runImage, running at most maxSteps instructions.
+func runImageBounded(t *testing.T, c *Console, path string, maxSteps int) uint32 {
+	t.Helper()
+
+	prepareRun(t, c)
 
 	main, err := c.activateImage(path)
 	if err != nil {

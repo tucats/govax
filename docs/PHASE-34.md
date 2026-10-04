@@ -639,3 +639,41 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
   run the fixture against scripted input and a fresh volume. It isn't
   on the MACRO ladder (`notLadder`, `internal/asm`) until real MACRO's
   object and listing for it are in `testdata/mar/vax/`.
+- 2026-10-04: **LIB$GET_FOREIGN and foreign commands**, so an image can
+  be given command text (the FORTH fixture interprets it, then halts).
+  - **LIB$GET_FOREIGN** (`internal/librtl/foreign.go`, XFC code 41,
+    offset ^X878) returns `Environment.CommandLine`; with none, or bit 0
+    of flags set, and a prompt given, it prompts on SYS$INPUT instead,
+    then sets flags to 1. Fixed-length results are blank-padded
+    (LIB$_INPSTRTRU when cut short); dynamic ones get new heap storage.
+    Written from the RTL Library manual. **Unconfirmed** (no VMS probe
+    yet): that flags is set to 1 whether or not it prompted, and that a
+    prompted line is returned as typed rather than uppercased.
+  - **DCL symbols** (`internal/console/dclsym.go`): `:=`/`:==` assign the
+    rest of the line, `=`/`==` a quoted string or a decimal integer; an
+    `*` in the name marks the shortest abbreviation;
+    `DELETE/SYMBOL [/GLOBAL|/LOCAL] name` removes one. A command whose
+    first word is a symbol has the word replaced by the value; a value
+    starting with `$` is a foreign command, run as RUN runs an image with
+    the rest of the line as its command text. One table serves local and
+    global symbols (the console has no command procedures for locals to
+    be local to). Not done: apostrophe substitution, DCL's SHOW SYMBOL
+    (the console's SHOW SYMBOL is its VAX symbols'), and SYS$SYSTEM as a
+    foreign command's default directory (govax has none).
+  - **Command text** gets DCL's treatment: uppercased, blanks compressed,
+    and cut at a `!`, outside quotes; quoted text is kept as typed, quotes
+    included. **Unconfirmed**: that LIB$GET_FOREIGN's text keeps the
+    quotes and their contents' case.
+  - **govax's own command line**: `govax run IMAGE text...` gives the
+    image the text after the file name, as typed (the host shell has
+    already parsed it), through `console.RunCommandLine`.
+  - The vestigial FORTH verb is gone from `console.dcl` (with kernel.asm's
+    `exe$forth_dcl`, which called a microkernel FORTH that was never
+    built in), so FORTH is free to be a foreign command.
+  - `forth.mar` reads its command text at start-up, interprets it, and
+    halts, as the original's string-argument entry did; an error in it
+    ends the run with SS$_ABORT instead of falling back to the terminal.
+    Words are now found whatever their case, since DCL uppercases.
+  `TestForth_foreignCommand`, `TestDispatch_dclSymbols`, and the
+  `LIB$GET_FOREIGN` tests cover it. Shim stubs: 41 of 42. Still open:
+  RUN doesn't report an image's failing exit status the way DCL does.

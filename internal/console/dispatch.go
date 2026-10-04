@@ -40,6 +40,10 @@ type Dispatcher struct {
 	// line is the command line being dispatched, for a handler that
 	// records it (MACRO's SRC header).
 	line string
+
+	// symbolDepth is how many DCL symbol substitutions the command being
+	// dispatched has been through (dclsym.go).
+	symbolDepth int
 }
 
 // NewDispatcher returns a Dispatcher wired to c and g, with every DCL
@@ -65,6 +69,13 @@ func (d *Dispatcher) Dispatch(line string) error {
 	// is a statement for the assembler, not a console command.
 	if d.Console.assemblerMode {
 		return d.assembleInteractiveLine(line)
+	}
+
+	// A symbol assignment, DELETE/SYMBOL, or a command whose first word
+	// is a DCL symbol (a foreign command or an alias): DCL looks for a
+	// symbol before a verb (dclsym.go).
+	if handled, err := d.dclSymbolLine(line); handled {
+		return err
 	}
 
 	verb, _ := readCommandVerb(line)
@@ -851,6 +862,10 @@ func cmdRun(d *Dispatcher, rest string) error {
 	if fn == "" {
 		return vmserrors.New(vmserrors.CLI_NOFILE)
 	}
+
+	// The one-shot command's RUN gives its image the rest of govax's
+	// command line (RunCommandLine).
+	opts.CommandLine, d.Console.runCommandLine = d.Console.runCommandLine, ""
 
 	return d.Console.Run(fn, opts)
 }

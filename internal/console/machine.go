@@ -227,6 +227,14 @@ type Console struct {
 
 	// runHost is RUN's /HOST: the main image is a host file (readImage).
 	runHost bool
+
+	// dclSymbols are the DCL symbols assignments at the prompt define
+	// (dclsym.go): foreign commands and command abbreviations.
+	dclSymbols dclSymbols
+
+	// runCommandLine is RunCommandLine, taken when govax's one-shot
+	// command runs, for that command's RUN to give its image.
+	runCommandLine string
 }
 
 // New returns a Console with no machine allocated yet (vax_init == 0 in the

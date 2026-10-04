@@ -42,6 +42,8 @@
 //              10/04/26    Added MACRO/CROSS_REFERENCE (docs/PHASE-29.md)
 //              10/04/26    Added MACRO/DEBUG, /ENABLE, /DISABLE (docs/PHASE-29.md)
 //              10/04/26    LINK writes the debug symbol table (docs/PHASE-29.md)
+//              10/04/26    Added symbol assignment, foreign commands, and
+//                          DELETE/SYMBOL (docs/PHASE-34.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1010,6 +1012,65 @@ $RUN ,/DEB
                         shareable images it uses are always looked for on
                         the native system; govax's shims stand in for any
                         that aren't there.
+
+    RUN gives the image no command text: LIB$GET_FOREIGN returns an empty
+    string.  To pass an image text, run it as a foreign command (see HELP
+    FOREIGN), or give the text after the file name on govax's own command
+    line ("govax run forth.exe 2 3 + .").
+
+$SYMB
+    A symbol assignment gives a name to a string, as DCL's do.  When the first
+    word of a command is a symbol, its value replaces the word before the
+    command is read.  A value beginning with "$" makes the symbol a foreign
+    command (see HELP FOREIGN); any other value is the start of a command, so
+    a symbol can abbreviate or rename one.
+
+    Syntax:
+
+        symbol-name :=  string            symbol-name =  expression
+        symbol-name :== string            symbol-name == expression
+
+    The string is the rest of the line: outside quotes, letters are made
+    uppercase, runs of blanks become one, and a "!" begins a comment; quotes
+    keep text as written, and are removed ("" inside them is a quote).  The
+    expression is a quoted string or a decimal integer.
+
+    An "*" in the name says how short an abbreviation still means the symbol:
+    after "FO*RTH :== $FORTH", FO, FOR, FORT, and FORTH all do.
+
+    The console keeps one table of symbols, so ":=" and ":==" are the same,
+    as are "=" and "==".  These are DCL symbols, not the VAX symbols ASM,
+    CALL, and SHOW SYMBOL use.
+
+    Examples:
+
+        SD :== SET DEFAULT
+        FORTH :== $DUA0:[TOOLS]FORTH.EXE
+        GREETING == "Hello, ""World"""
+
+$FORE
+    A foreign command runs an image with the rest of the command line as its
+    command text, which the image reads with LIB$GET_FOREIGN.  Define one with
+    a symbol whose value is "$" and the image's file name (see HELP SYMBOL):
+
+        FORTH :== $DUA0:[TOOLS]FORTH.EXE
+        FORTH 2 3 + . CR
+
+    The image is found as RUN finds it.  The command text is treated as DCL
+    treats a command's parameters: outside quotes it is made uppercase and its
+    blanks are compressed, and a "!" begins a comment; quoted text, quotes and
+    all, is passed as typed.
+
+$DELE,/SYM
+$DEL ,/SYM
+    The DELETE/SYMBOL command deletes a symbol (see HELP SYMBOL).
+
+    Syntax:
+
+        DELETE/SYMBOL [/GLOBAL | /LOCAL] symbol-name
+
+    The name may be any abbreviation the symbol allows.  /GLOBAL and /LOCAL
+    are accepted; the console has one table of symbols.
 
 $CALL
     The CALL command is used to invoke the emulator and begin execution of a

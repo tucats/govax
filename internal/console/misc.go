@@ -15,6 +15,13 @@ import (
 // empty there is no effect.
 var CommandLineString string
 
+// RunCommandLine is the text after the image's file name in govax's own
+// "run" command line (cmd/govax): the one-shot command's RUN gives it to
+// the image as its command text (RunOptions.CommandLine), as a foreign
+// command's parameters are given. The host's shell has already parsed it,
+// so it's passed as it is, without DCL's uppercasing.
+var RunCommandLine string
+
 // Print implements the PRINT/ECHO console command: a comma-separated list
 // of double-quoted literal strings and/or expressions (printed in the
 // console's current radix), matching console_print.c — including its
@@ -134,6 +141,7 @@ func (c *Console) Include(path string, dispatch func(string) error) error {
 		if CommandLineString != "" {
 			text := CommandLineString
 			CommandLineString = ""
+			c.runCommandLine, RunCommandLine = RunCommandLine, ""
 
 			// The command ends the session either way: a failed
 			// one-shot command shouldn't leave the user at a prompt.

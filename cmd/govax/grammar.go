@@ -9,6 +9,8 @@ import (
 
 	"github.com/tucats/gopackages/app-cli/cli"
 	"github.com/tucats/gopackages/app-cli/settings"
+	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 var (
@@ -179,8 +181,8 @@ var grammar = []cli.Option{
 		Description:          "Run a VAX/VMS executable",
 		OptionType:           cli.Subcommand,
 		Action:               runCmd,
-		ParametersExpected:   1,
-		ParameterDescription: "filename",
+		ParametersExpected:   -99,
+		ParameterDescription: "filename [text...]",
 	},
 }
 
@@ -770,8 +772,19 @@ func libraryCommand(lib string, inputs []string, f libraryFlags) string {
 	return command
 }
 
+// runCmd runs the console's RUN command for an image. Any parameters after
+// the image's file name are its command text, which it reads with
+// LIB$GET_FOREIGN, as a foreign command's image does.
 func runCmd(c *cli.Context) error {
-	return doCmd(c, "run")
+	params := c.FindGlobal().Parameters
+	if len(params) == 0 {
+		return vmserrors.New(vmserrors.CLI_NOFILE)
+	}
+
+	console.RunCommandLine = strings.Join(params[1:], " ")
+	paths = loadConfigPaths(paths)
+
+	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{"run", params[0]})
 }
 
 func doCmd(c *cli.Context, cmd string) error {

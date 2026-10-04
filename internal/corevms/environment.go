@@ -119,6 +119,12 @@ type Environment struct {
 	// NodeName is the system's node name ($GETSYI's SYI$_NODENAME).
 	NodeName string
 
+	// CommandLine is the text of the command that ran the current image,
+	// after its verb: what LIB$GET_FOREIGN returns. A foreign command
+	// sets it (internal/console's RunOptions.CommandLine); RUN leaves it
+	// empty, as RUN takes no parameters.
+	CommandLine string
+
 	// timers is the process's $SETIMR timer queue (timers.go).
 	timers []*timerRequest
 

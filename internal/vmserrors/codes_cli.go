@@ -134,6 +134,10 @@ const (
 
 	// docs/PHASE-29.md subtask 5: MACRO's listing.
 	cliLisWrite
+
+	// docs/PHASE-34.md (2026-10-04): DCL symbols and foreign commands.
+	cliExpSyn
+	cliSymDepth
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -300,6 +304,15 @@ const (
 	CLI_LIBINSERTED = CLIFacility<<FacilityPosition | cliLibInserted<<MessagePosition | StatusSuccess
 	CLI_LIBREPLACED = CLIFacility<<FacilityPosition | cliLibReplaced<<MessagePosition | StatusSuccess
 	CLI_LIBDELETED  = CLIFacility<<FacilityPosition | cliLibDeleted<<MessagePosition | StatusSuccess
+
+	// CLI_EXPSYN reports a symbol assignment whose value isn't a quoted
+	// string or an integer, the only expressions the console evaluates
+	// for "=" and "==".
+	CLI_EXPSYN = CLIFacility<<FacilityPosition | cliExpSyn<<MessagePosition | StatusError
+
+	// CLI_SYMDEPTH reports symbols that substitute for one another too
+	// many times, as an alias defined in terms of itself does.
+	CLI_SYMDEPTH = CLIFacility<<FacilityPosition | cliSymDepth<<MessagePosition | StatusError
 )
 
 func init() {
@@ -318,6 +331,8 @@ func init() {
 	DefineMessage(CLI_BADCOUNT, CLIFacility, "BADCOUNT", "Invalid count !Q")
 	DefineMessage(CLI_NOFRAMES, CLIFacility, "NOFRAMES", "No call frames (FP/AP not established)")
 	DefineMessage(CLI_UNDEFSYM, CLIFacility, "UNDEFSYM", "Undefined symbol !Q")
+	DefineMessage(CLI_EXPSYN, CLIFacility, "EXPSYN", "Invalid expression syntax: !Q")
+	DefineMessage(CLI_SYMDEPTH, CLIFacility, "SYMDEPTH", "Symbol !Q substitutes for itself")
 	DefineMessage(CLI_NOPROFILE, CLIFacility, "NOPROFILE", "SHOW INSTRUCTIONS/PROFILE is not implemented (no per-opcode execution counters in this port)")
 	DefineMessage(CLI_NOMODES, CLIFacility, "NOMODES", "SHOW INSTRUCTIONS/MODES is not implemented (no addressing-mode legality table exposed by this port)")
 	DefineMessage(CLI_BADOPCODE, CLIFacility, "BADOPCODE", "Invalid opcode !Q")

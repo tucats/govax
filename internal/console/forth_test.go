@@ -7,14 +7,16 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// forthSession assembles, links, and runs testdata/mar/forth.mar, a FORTH
-// interpreter, with typed as its terminal input and a fresh volume on
-// DUA0: (the default directory) holding files, each of whose lines is a
-// record. It returns what the program wrote to the terminal, and the
-// console, for looking at the volume afterward.
-func forthSession(t *testing.T, typed string, files map[string]string) (string, *Console) {
+// forthConsole returns a console with typed as its terminal input, a
+// fresh volume on DUA0: (the default directory) holding files, each of
+// whose lines is a record, and testdata/mar/forth.mar, a FORTH
+// interpreter, assembled and linked. It returns the console, what the
+// console writes, and the image's file name.
+func forthConsole(t *testing.T, typed string, files map[string]string) (*Console, *bytes.Buffer, string) {
 	t.Helper()
 
 	c := newBootableConsole(t)
@@ -46,7 +48,19 @@ func forthSession(t *testing.T, typed string, files map[string]string) (string, 
 		t.Fatalf("LINK: %v", err)
 	}
 
-	if r0 := runImageBounded(t, c, filepath.Join(dir, "forth.exe"), 20_000_000); r0 != 1 {
+	return c, out, filepath.Join(dir, "forth.exe")
+}
+
+// forthSession runs forth interactively, with typed as its terminal
+// input and files on its volume (see forthConsole). It returns what the
+// program wrote to the terminal, and the console, for looking at the
+// volume afterward.
+func forthSession(t *testing.T, typed string, files map[string]string) (string, *Console) {
+	t.Helper()
+
+	c, out, exe := forthConsole(t, typed, files)
+
+	if r0 := runImageBounded(t, c, exe, 20_000_000); r0 != 1 {
 		t.Errorf("R0 = %#x, want SS$_NORMAL", r0)
 	}
 
@@ -149,5 +163,49 @@ func TestForth_files(t *testing.T) {
 
 	if got, want := string(bytes.Join(records, []byte("|"))), "5 |to file"; got != want {
 		t.Errorf("OUT.LIS = %q, want %q", got, want)
+	}
+}
+
+// TestForth_foreignCommand runs forth as a foreign command: it interprets
+// the command's text (uppercased by DCL, but for its quoted string), then
+// halts, without its banner or a prompt. An error in the text ends the run
+// with SS$_ABORT, instead of falling back to the terminal.
+func TestForth_foreignCommand(t *testing.T) {
+	c, out, exe := forthConsole(t, "", nil)
+	prepareRun(t, c)
+
+	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+
+	for _, line := range []string{
+		"FO*RTH :== $" + exe,
+		`forth : cube dup dup * * ;  3 cube .  ." is 3 cubed" cr`,
+	} {
+		out.Reset()
+
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+	}
+
+	if got, want := out.String(), "27 is 3 cubed\n"; got != want {
+		t.Errorf("output = %q, want %q", got, want)
+	}
+
+	if r0 := c.CPU.GPR(vax.R0); r0 != 1 {
+		t.Errorf("status = %#x, want SS$_NORMAL", r0)
+	}
+
+	out.Reset()
+
+	if err := d.Dispatch("fort 1 nosuch 2"); err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := out.String(), "NOSUCH: not found\n"; got != want {
+		t.Errorf("output = %q, want %q", got, want)
+	}
+
+	if r0 := c.CPU.GPR(vax.R0); r0 != vmsdef.Symbols["SS$_ABORT"] {
+		t.Errorf("status = %#x, want SS$_ABORT", r0)
 	}
 }

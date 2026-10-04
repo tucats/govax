@@ -20,6 +20,12 @@ type RunOptions struct {
 	// Host is an explicit /HOST after the file name: the image is a host
 	// file whatever its name looks like (see readMainImage).
 	Host bool
+
+	// CommandLine is the text the image reads with LIB$GET_FOREIGN: a
+	// foreign command's parameters (dclsym.go), or the text after the
+	// file name on govax's own command line (RunCommandLine). RUN itself
+	// takes no parameters, so it's empty for RUN.
+	CommandLine string
 }
 
 // Run implements the RUN <filename> command: loads fn and its sharable-
@@ -47,6 +53,7 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 	}
 
 	c.runHost = opts.Host
+	c.RTL.CommandLine = opts.CommandLine
 
 	main, err := c.activateImage(fn)
 	if err != nil {

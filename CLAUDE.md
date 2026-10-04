@@ -131,6 +131,9 @@ expect adjustment as phases land):
   (`createdir.go`) against `testdata/credir/libcrd.mar`'s VMS 7.3 run
   (`TestLibCreateDirOracle`). LIB$PUT_OUTPUT is here too (`output.go`); kernel.asm's
   old interrupt-driven one is now its private `EXE$PUT_OUTPUT`.
+  LIB$GET_FOREIGN (`foreign.go`) returns `Environment.CommandLine`: a
+  foreign command's text (DCL symbols, `internal/console/dclsym.go`), or
+  what follows the image on `govax run IMAGE text...`.
 - `internal/asm` — assembler/disassembler (Phase 11). Two dialects share one core
   (Phase 27): the console's `ASM` (absolute, into emulated memory, eVAX
   directives) and MACRO-32 (`SetDialect(DialectMACRO)`: psects, relocation
