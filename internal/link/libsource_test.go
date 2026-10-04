@@ -103,11 +103,12 @@ func TestReadShareableImage(t *testing.T) {
 }
 
 // TestLinkFromVMSLibraries links hello with only real LINK's sources, and
-// gets GV_HELLO.EXE byte for byte, as with govax's own tables: IMAGELIB
-// says LIB$PUT_OUTPUT is in LIBRTL, and LIBRTL.EXE gives its offset and the
+// gets real LINK's HELLO.EXE byte for byte, debug symbol table and all, as
+// with govax's own tables (TestLinkMatchesRealLINK): IMAGELIB says
+// LIB$PUT_OUTPUT is in LIBRTL, and LIBRTL.EXE gives its offset and the
 // global section ISD's facts.
 func TestLinkFromVMSLibraries(t *testing.T) {
-	want, opts := realImage(t, filepath.Join(fixtureDir, "vax", "govax", "gv_hello.exe"))
+	want, opts := realImage(t, filepath.Join(fixtureDir, "vax", "hello.exe"))
 	opts.Sources = vmsSources(t)
 
 	for _, from := range []string{"govax", "real"} {

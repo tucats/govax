@@ -1398,6 +1398,40 @@ details).
   - FAILSIG's fixup cell order, a known, cosmetic difference.
   - A traceback printed by govax's own RUN, and the console's SHOW
     CALLS and DISASM using the DST, the author's planned uses.
-  - `TestLinkProbeImagesMatchRealLINK` has yet to run on a machine with
-    VMS's own libraries.
+  - ~~`TestLinkProbeImagesMatchRealLINK` has yet to run on a machine with
+    VMS's own libraries.~~ Done: see the next entry.
 
+### 2026-10-04 — Validation against VMS's own libraries
+
+The author copied VMS 7.3's IMAGELIB.OLB, STARLET.OLB, and LIBRTL.EXE
+into the local-only library directory `vmsSources` reads, so the tests
+that need them ran for the first time since Phase 29's traceback work.
+The files were used only as LINK's symbol sources, as real LINK uses
+them, to check images govax already builds. Nothing was taken from them:
+no symbol values, no tables.
+
+- **The files are sound.** Both libraries are whole 512-byte blocks
+  (574 and 7185), `lbr` opens and searches them, and LIBRTL.EXE's global
+  symbol table is the one `TestReadShareableImage` expects. (A first copy
+  of IMAGELIB.OLB was 62 bytes too long from a damaged transfer, and
+  wouldn't open. It was replaced.)
+- **`TestLinkProbeImagesMatchRealLINK`** passes for six of the probe's
+  eight images, byte for byte, debug symbol table and all: TRACE,
+  TRNOTB, TRDBGTRC, FAILMAIN, FAILNOTB, and FAILDBG, from real MACRO's
+  objects and, where govax assembles the sources, govax's. FAILSIG and
+  FSIGNOTB differ only in the order of their two LIBRTL fixup cells
+  (`LIB$SIGNAL`'s `4F0` and `LIB$STOP`'s `4F8`) and the two `G^`
+  displacements that point at them, the known difference from subtask
+  14. They're skipped with that reason, as in
+  `TestLinkRoundImagesMatchRealLINK`.
+- **The other library tests pass too:** `TestLinkAddsLibraryModules`,
+  `TestImageLibraryNeedsItsImage`, `TestLinkMultiModuleMatchesRealLINK`,
+  `TestMapMatchesRealLINK`, and `TestMapMultiModuleMatchesRealLINK`.
+- **`TestLinkFromVMSLibraries` was stale.** It still compared with
+  `gv_hello.exe`, an image without traceback records, which this phase
+  moved `TestLinkMatchesRealLINK` off of. Because the test skipped
+  without the libraries, nobody noticed. It now compares with real LINK's
+  `hello.exe`, and both the govax and real MACRO objects match it.
+- **Nothing is left** of this phase's validation that VMS's libraries
+  can settle. Debugger records (subtask 12) and FAILSIG's cell order stay
+  as recorded above.
