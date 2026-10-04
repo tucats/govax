@@ -16,7 +16,7 @@ import (
 // real MACRO writes it: a run of AddPsect and AddSymbol calls fills GSD
 // records, and a run of Emit, SetLocation, and Store calls fills TIR
 // records. Break ends the current record early, so the next content
-// starts a new one.
+// starts a new one. Traceback adds traceback (TBT) records of their own.
 type Builder struct {
 	Name     string
 	Version  string
@@ -62,22 +62,23 @@ const (
 	tirFill = 461
 )
 
-// chunk is a run of GSD subrecords or TIR commands that Build packs into
-// records of one type, starting a new record at the chunk's start.
+// chunk is a run of GSD subrecords, or of TIR (or TBT) commands, that
+// Build packs into records of type typ, starting a new record at the
+// chunk's start. An empty chunk of type 0 is a Break.
 type chunk struct {
-	gsd      bool
+	typ      RecordType
 	subs     []Subrecord
 	commands []Command
 }
 
-// current returns the chunk content of the given type goes into, starting
-// a new one if the last is of the other type or Break ended it.
-func (b *Builder) current(gsd bool) *chunk {
-	if n := len(b.chunks); n > 0 && b.chunks[n-1].gsd == gsd {
+// current returns the chunk content of type typ goes into, starting a new
+// one if the last is of another type or Break ended it.
+func (b *Builder) current(typ RecordType) *chunk {
+	if n := len(b.chunks); n > 0 && b.chunks[n-1].typ == typ {
 		return &b.chunks[n-1]
 	}
 
-	b.chunks = append(b.chunks, chunk{gsd: gsd})
+	b.chunks = append(b.chunks, chunk{typ: typ})
 
 	return &b.chunks[len(b.chunks)-1]
 }
@@ -87,7 +88,7 @@ func (b *Builder) current(gsd bool) *chunk {
 func (b *Builder) AddPsect(p Psect) uint16 {
 	b.flushImmediate()
 
-	c := b.current(true)
+	c := b.current(RecGSD)
 	c.subs = append(c.subs, &p)
 	b.psects++
 
@@ -99,7 +100,7 @@ func (b *Builder) AddPsect(p Psect) uint16 {
 func (b *Builder) AddSymbol(s Symbol) {
 	b.flushImmediate()
 
-	c := b.current(true)
+	c := b.current(RecGSD)
 	c.subs = append(c.subs, &s)
 }
 
@@ -107,7 +108,7 @@ func (b *Builder) AddSymbol(s Symbol) {
 func (b *Builder) Emit(cmds ...Command) {
 	b.flushImmediate()
 
-	c := b.current(false)
+	c := b.current(RecTIR)
 	c.commands = append(c.commands, cmds...)
 }
 
@@ -116,8 +117,25 @@ func (b *Builder) Break() {
 	b.flushImmediate()
 
 	if len(b.chunks) > 0 {
-		b.chunks = append(b.chunks, chunk{gsd: !b.chunks[len(b.chunks)-1].gsd})
+		b.chunks = append(b.chunks, chunk{})
 	}
+}
+
+// Traceback adds traceback records holding recs: TBT records of their
+// own, which the content added next doesn't join. Real MACRO writes its
+// module begin record in one, after the headers, and its routine begin
+// records, then its psect and module end records, in two more before
+// the end of module record.
+func (b *Builder) Traceback(recs ...DSTRecord) error {
+	cmds, err := EncodeDST(recs)
+	if err != nil {
+		return err
+	}
+
+	b.flushImmediate()
+	b.chunks = append(b.chunks, chunk{typ: RecTBT, commands: cmds}, chunk{})
+
+	return nil
 }
 
 // SetLocation points the linker's location counter at an offset in a
@@ -138,7 +156,7 @@ func (b *Builder) flushImmediate() {
 		return
 	}
 
-	c := b.current(false)
+	c := b.current(RecTIR)
 
 	for data := b.pendingImmediate; len(data) > 0; {
 		n := min(len(data), MaxImmediate)
@@ -244,17 +262,19 @@ func packChunk(c chunk, limit int) ([]Record, error) {
 		size int
 	)
 
+	gsdChunk := c.typ == RecGSD
+
 	fill := tirFill
-	if c.gsd {
+	if gsdChunk {
 		fill = gsdFill
 	}
 
 	start := func() {
-		if c.gsd {
+		if gsdChunk {
 			gsd = &GSD{}
 			out = append(out, gsd)
 		} else {
-			tir = &TIR{Type: RecTIR}
+			tir = &TIR{Type: c.typ}
 			out = append(out, tir)
 		}
 

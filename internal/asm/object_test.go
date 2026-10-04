@@ -201,7 +201,8 @@ func TestObjectLongData(t *testing.T) {
 			t.Errorf("a %d-byte record", len(raw))
 		}
 
-		if tir, ok := rec.(*obj.TIR); ok {
+		// The image's bytes: TIR records, not the traceback records.
+		if tir, ok := rec.(*obj.TIR); ok && tir.Type == obj.RecTIR {
 			for _, c := range tir.Commands {
 				if c.Op == obj.OpStoreImmediate {
 					stored += len(c.Data)

@@ -21,6 +21,8 @@ import (
 //
 //	MACRO source[/HOST] [/[NO]OBJECT[=object]] [/[NO]LIST[=listing]]
 //	      [/[NO]SHOW=(option[,...])] [/[NO]CROSS_REFERENCE[=(option[,...])]]
+//	      [/ENABLE=(function[,...])] [/DISABLE=(function[,...])]
+//	      [/[NO]DEBUG[=(option[,...])]]
 //	      [/LIBRARY=(library[,...])]
 //
 // It assembles a MACRO-32 source file with internal/asm's MACRO dialect
@@ -89,6 +91,19 @@ type MacroOptions struct {
 	Xref      bool
 	XrefKinds []string
 
+	// Enable and Disable are /ENABLE=(...) and /DISABLE=(...): .ENABLE's
+	// functions (TRACEBACK, DEBUG, SUPPRESSION, ...) turned on or off at
+	// the start of the assembly, which the source can still change.
+	Enable  []string
+	Disable []string
+
+	// Debug is /DEBUG, of the kinds DebugKinds names (ALL, SYMBOLS,
+	// TRACEBACK, or NONE; ALL if it names none), and NoDebug /NODEBUG
+	// (see debugFunctions).
+	Debug      bool
+	DebugKinds []string
+	NoDebug    bool
+
 	// Libraries are the macro libraries /LIBRARY= names, in the order
 	// given.
 	Libraries []string
@@ -96,6 +111,52 @@ type MacroOptions struct {
 	// CommandLine is the command as typed, for the object's SRC header,
 	// where real MACRO records its command line.
 	CommandLine string
+}
+
+// debugFunctions returns the .ENABLE functions /DEBUG=(kinds) (or, with
+// none, /NODEBUG) turns on and off, as the Phase 29 probe's objects show
+// (testdata/mar/list/README.md): TRACEBACK writes traceback records,
+// SYMBOLS debugger records and no traceback, ALL (and /DEBUG alone)
+// both, and NONE and /NODEBUG neither.
+func debugFunctions(none bool, kinds []string) (on, off []string, err error) {
+	traceback, symbols := false, false
+	named := false
+
+	for _, kind := range kinds {
+		switch strings.ToUpper(strings.TrimSpace(kind)) {
+		case "":
+			continue
+		case "ALL":
+			traceback, symbols = true, true
+		case "TRACEBACK":
+			traceback = true
+		case "SYMBOLS":
+			symbols = true
+		case "NONE":
+			traceback, symbols = false, false
+		default:
+			return nil, nil, vmserrors.New(vmserrors.VAX_BADKEYWORD, "/DEBUG", kind)
+		}
+
+		named = true
+	}
+
+	if !none && !named {
+		traceback, symbols = true, true
+	}
+
+	for _, f := range []struct {
+		name string
+		set  bool
+	}{{"TRACEBACK", traceback}, {"DEBUG", symbols}} {
+		if f.set {
+			on = append(on, f.name)
+		} else {
+			off = append(off, f.name)
+		}
+	}
+
+	return on, off, nil
 }
 
 // defaultSourceType is the file type MACRO gives a source named without
@@ -132,6 +193,21 @@ func (c *Console) Macro(opts MacroOptions) error {
 	}
 
 	if err := a.SetCrossReference(opts.Xref, opts.XrefKinds); err != nil {
+		return err
+	}
+
+	if opts.Debug || opts.NoDebug {
+		on, off, err := debugFunctions(opts.NoDebug, opts.DebugKinds)
+		if err != nil {
+			return err
+		}
+
+		if err := a.SetFunctions(on, off); err != nil {
+			return err
+		}
+	}
+
+	if err := a.SetFunctions(opts.Enable, opts.Disable); err != nil {
 		return err
 	}
 

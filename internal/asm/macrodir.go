@@ -112,6 +112,45 @@ func (a *Assembler) pseudoEnable(c *cursor, on bool) error {
 	}
 }
 
+// SetFunctions turns the .ENABLE functions enable names on, and those
+// disable names off, for the start of the assembly: MACRO's /ENABLE= and
+// /DISABLE=, and /DEBUG= mapped onto DEBUG and TRACEBACK (see the console's
+// MACRO command). The source's .ENABLE and .DISABLE can still change
+// them. Names are .ENABLE's arguments, long or short (TRACEBACK or TBK);
+// LOCAL_BLOCK, which starts a block rather than setting a function, isn't
+// one. Call it after SetDialect, which sets the defaults.
+func (a *Assembler) SetFunctions(enable, disable []string) error {
+	for _, list := range []struct {
+		names []string
+		on    bool
+	}{{enable, true}, {disable, false}} {
+		for _, name := range list.names {
+			name = strings.ToUpper(strings.TrimSpace(name))
+			if name == "" {
+				continue
+			}
+
+			f, ok := enableArgs[name]
+			if !ok || f == enableLocalBlock {
+				qualifier := "/ENABLE"
+				if !list.on {
+					qualifier = "/DISABLE"
+				}
+
+				return vmserrors.New(vmserrors.VAX_BADKEYWORD, qualifier, name)
+			}
+
+			if list.on {
+				a.enabled |= f
+			} else {
+				a.enabled &^= f
+			}
+		}
+	}
+
+	return nil
+}
+
 // pseudoDefault assembles .DEFAULT DISPLACEMENT,BYTE|WORD|LONG: the
 // displacement size of a relative operand whose target isn't already
 // defined in the same psect.

@@ -40,6 +40,7 @@
 //              10/02/26    Added MACRO/LIST (docs/PHASE-29.md)
 //              10/03/26    Added MACRO/SHOW, /NOSHOW (docs/PHASE-29.md)
 //              10/04/26    Added MACRO/CROSS_REFERENCE (docs/PHASE-29.md)
+//              10/04/26    Added MACRO/DEBUG, /ENABLE, /DISABLE (docs/PHASE-29.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -3713,6 +3714,8 @@ $MACR
               [/LIST[=<listing>] | /NOLIST] [/LIBRARY=(<library>[,...])]
               [/SHOW=(<option>[,...]) | /NOSHOW=(<option>[,...])]
               [/CROSS_REFERENCE[=(<option>[,...])] | /NOCROSS_REFERENCE]
+              [/DEBUG[=(<option>[,...])] | /NODEBUG]
+              [/ENABLE=(<function>[,...])] [/DISABLE=(<function>[,...])]
 
     Parameter:
 
@@ -3792,6 +3795,29 @@ $MACR
 
         /NOCROSS_REFERENCE
                         Writes no cross reference.  This is the default.
+
+        /DEBUG[=(<option>[,...])]
+        /NODEBUG
+                        Says what the object carries for the debugger and
+                        for traceback, the symbolic stack dump VMS prints
+                        when a program fails.  The options are TRACEBACK
+                        (traceback records), SYMBOLS (debugger records,
+                        and no traceback), ALL (both; the same as /DEBUG
+                        alone), and NONE.  /NODEBUG is /DEBUG=NONE, which
+                        writes no traceback records either.  The default
+                        is /DEBUG=TRACEBACK.  govax doesn't write
+                        debugger records yet.
+
+        /ENABLE=(<function>[,...])
+        /DISABLE=(<function>[,...])
+                        Turns assembler functions on or off at the start
+                        of the source, as .ENABLE and .DISABLE do in it:
+                        ABSOLUTE (AMA), DEBUG (DBG), GLOBAL (GBL),
+                        SUPPRESSION (SUP), TRACEBACK (TBK), TRUNCATION
+                        (FPT), and VECTOR.  The source's own .ENABLE and
+                        .DISABLE can still change them.  /DISABLE=TRACEBACK
+                        writes no traceback records.  /DEBUG is applied
+                        first, then /ENABLE and /DISABLE.
 
     In the source, .SHOW and .NOSHOW (or .LIST and .NLIST) with options
     turn them on and off; without options they raise and lower the listing

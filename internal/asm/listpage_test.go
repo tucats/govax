@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tucats/govax/internal/obj"
 )
 
 // This file checks the listing's pages (listpage.go) against real MACRO's
@@ -232,8 +231,8 @@ type listingCheck struct {
 	// /NOSHOW= set.
 	show, noshow []string
 	// extraRecords is how many more object records than govax's real
-	// MACRO's object holds, besides its traceback records, for a known
-	// difference in the object (not the listing).
+	// MACRO's object holds, for a known difference in the object (not
+	// the listing).
 	extraRecords int
 	// xref and xrefKinds are MACRO's /CROSS_REFERENCE[=(...)], and
 	// noObject its /NOOBJECT: no object, so the record count is 0.
@@ -311,22 +310,19 @@ func checkListing(t *testing.T, source, listing string, libs []MacroLibrary, che
 		return
 	}
 
-	tbt := check.extraRecords
-	if !check.noObject {
-		tbt += countTraceback(readObjectFile(t, strings.TrimSuffix(listing, ".lis")+".obj"))
-	}
+	missing := check.extraRecords
 
 	// With no object, every record real MACRO counted is a difference.
 	if check.fails {
 		for _, line := range realClosing {
 			if m := recordCount.FindStringSubmatch(line); m != nil {
-				tbt, _ = strconv.Atoi(m[1])
+				missing, _ = strconv.Atoi(m[1])
 			}
 		}
 	}
 
 	gotText := closingText(gotClosing)
-	realText := closingText(realClosingAllowed(realClosing, tbt))
+	realText := closingText(realClosingAllowed(realClosing, missing))
 
 	if check.allow != nil {
 		gotText, realText = check.allow(gotText), check.allow(realText)
@@ -350,8 +346,9 @@ func checkListing(t *testing.T, source, listing string, libs []MacroLibrary, che
 //     places, so the closing pages are compared without their page
 //     headings (closingText). TestClosingPageLabels checks those.
 //   - The CPU and elapsed times, which are masked.
-//   - The object record count, which counts real MACRO's traceback (TBT)
-//     records; govax doesn't write them until subtask 11.
+//   - The object record count, less the records real MACRO's object has
+//     that govax's doesn't, for a known difference in the object
+//     (listingCheck.extraRecords and fails).
 var listingDifferences = []*regexp.Regexp{
 	regexp.MustCompile(`^The working set limit was \d+ pages\.$`),
 	regexp.MustCompile(`^\d+ bytes \(\d+ pages?\) of virtual memory were used to buffer the intermediate code\.$`),
@@ -368,9 +365,9 @@ const pageFaultStart, pageFaultEnd = 25, 40
 var recordCount = regexp.MustCompile(`producing (\d+) object records`)
 
 // realClosingAllowed returns real MACRO's closing pages with the allowed
-// differences applied, tbt being the number of traceback records in its
-// object.
-func realClosingAllowed(lines []string, tbt int) []string {
+// differences applied, missing being the number of records its object
+// has that govax's doesn't.
+func realClosingAllowed(lines []string, missing int) []string {
 	var out []string
 
 	table := false
@@ -393,7 +390,7 @@ func realClosingAllowed(lines []string, tbt int) []string {
 
 		if m := recordCount.FindStringSubmatchIndex(line); m != nil {
 			n, _ := strconv.Atoi(line[m[2]:m[3]])
-			line = line[:m[2]] + strconv.Itoa(n-tbt) + line[m[3]:]
+			line = line[:m[2]] + strconv.Itoa(n-missing) + line[m[3]:]
 		}
 
 		out = append(out, line)
@@ -434,10 +431,6 @@ func closingText(lines []string) []string {
 	return out
 }
 
-// countTraceback returns the number of traceback records in m.
-func countTraceback(m *obj.Module) int {
-	return len(m.Records) - len(withoutTraceback(m).Records)
-}
 
 // TestListingHeading checks the heading's fields and columns exactly,
 // without masks.

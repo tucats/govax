@@ -57,6 +57,10 @@ type macroFlags struct {
 	noShow    []string // --no-show: MACRO's /NOSHOW=
 	xref      bool     // --cross-reference, or --cross-reference-kinds
 	xrefKinds []string // --cross-reference-kinds: MACRO's /CROSS_REFERENCE=
+	enable    []string // --enable: MACRO's /ENABLE=
+	disable   []string // --disable: MACRO's /DISABLE=
+	debug     []string // --debug: MACRO's /DEBUG=
+	noDebug   bool     // --no-debug: MACRO's /NODEBUG
 	libraries []string // --library, repeatable: MACRO's /LIBRARY=
 }
 
@@ -264,6 +268,49 @@ var macroGrammar = []cli.Option{
 			list, _ := c.String("cross-reference-kinds")
 			macro.xref = true
 			macro.xrefKinds = strings.Split(list, ",")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "enable",
+		Description: "Assembler functions to turn on, separated by commas (TRACEBACK, DEBUG, SUPPRESSION, ...)",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			list, _ := c.String("enable")
+			macro.enable = strings.Split(list, ",")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "disable",
+		Description: "Assembler functions to turn off, separated by commas (TRACEBACK, GLOBAL, ...)",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			list, _ := c.String("disable")
+			macro.disable = strings.Split(list, ",")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "debug",
+		Description: "Debugger and traceback records to write, separated by commas (ALL, SYMBOLS, TRACEBACK, NONE)",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			list, _ := c.String("debug")
+			macro.debug = strings.Split(list, ",")
+
+			return nil
+		},
+	},
+	{
+		LongName:    "no-debug",
+		Description: "Write no debugger or traceback records",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			macro.noDebug = true
 
 			return nil
 		},
@@ -549,6 +596,22 @@ func macroCommand(source string, f macroFlags) string {
 		command += "/CROSS_REFERENCE=(" + strings.Join(f.xrefKinds, ",") + ")"
 	case f.xref:
 		command += "/CROSS_REFERENCE"
+	}
+
+	if len(f.enable) > 0 {
+		command += "/ENABLE=(" + strings.Join(f.enable, ",") + ")"
+	}
+
+	if len(f.disable) > 0 {
+		command += "/DISABLE=(" + strings.Join(f.disable, ",") + ")"
+	}
+
+	// DCL takes one of /DEBUG and /NODEBUG; --debug wins.
+	switch {
+	case len(f.debug) > 0:
+		command += "/DEBUG=(" + strings.Join(f.debug, ",") + ")"
+	case f.noDebug:
+		command += "/NODEBUG"
 	}
 
 	if len(f.libraries) > 0 {

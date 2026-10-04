@@ -507,3 +507,59 @@ func splitSource(text string) [][]byte {
 
 	return out
 }
+
+// TestDispatch_macroTraceback checks which choices of /DEBUG, /NODEBUG,
+// /ENABLE, and /DISABLE write traceback records, as the Phase 29 probe's
+// objects show (testdata/mar/list/README.md): all but /DEBUG=SYMBOLS,
+// /DEBUG=NONE, /NODEBUG, and /DISABLE=TRACEBACK. The source's .ENABLE
+// still has the last word.
+func TestDispatch_macroTraceback(t *testing.T) {
+	d, _ := newTestDispatcher(t)
+	dir := t.TempDir()
+	src := filepath.Join(dir, "tb.mar")
+	writeHostFile(t, src, "\t.TITLE\tTB\n\t.PSECT\tCODE\n\t.ENTRY\tGO, ^M<>\n\tRET\n\t.END\tGO\n")
+	again := filepath.Join(dir, "tbon.mar")
+	writeHostFile(t, again, "\t.TITLE\tTB\n\t.ENABLE\tTRACEBACK\n\t.PSECT\tCODE\n\t.ENTRY\tGO, ^M<>\n\tRET\n\t.END\tGO\n")
+
+	for _, tc := range []struct {
+		source, qualifiers string
+		traceback          bool
+	}{
+		{src, "", true},
+		{src, "/DEBUG", true},
+		{src, "/DEBUG=TRACEBACK", true},
+		{src, "/DEBUG=ALL", true},
+		{src, "/ENABLE=DEBUG", true},
+		{src, "/DEBUG=SYMBOLS", false},
+		{src, "/DEBUG=NONE", false},
+		{src, "/NODEBUG", false},
+		{src, "/DISABLE=TRACEBACK", false},
+		{src, "/DISABLE=TBK", false},
+		{src, "/NODEBUG/ENABLE=TRACEBACK", true},
+		{again, "/DISABLE=TRACEBACK", true},
+	} {
+		object := filepath.Join(dir, "tb.obj")
+		if err := d.Dispatch(`MACRO "` + tc.source + `"/OBJECT="` + object + `"` + tc.qualifiers); err != nil {
+			t.Fatalf("MACRO%s: %v", tc.qualifiers, err)
+		}
+
+		m := readObject(t, d.Console, rms.FileLocation{Host: true, Name: object})
+
+		tbt := 0
+		for _, r := range m.Records {
+			if r.RecordType() == obj.RecTBT {
+				tbt++
+			}
+		}
+
+		if got := tbt > 0; got != tc.traceback {
+			t.Errorf("%s%s: %d traceback records", filepath.Base(tc.source), tc.qualifiers, tbt)
+		}
+	}
+
+	for _, bad := range []string{"/DEBUG=BOGUS", "/ENABLE=BOGUS", "/DISABLE=LOCAL_BLOCK"} {
+		if err := d.Dispatch(`MACRO "` + src + `"/NOOBJECT` + bad); err == nil {
+			t.Errorf("MACRO%s: no error", bad)
+		}
+	}
+}

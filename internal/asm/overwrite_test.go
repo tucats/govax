@@ -8,9 +8,11 @@ import (
 // TestOverwriteWithAddress is $FAB's pattern: a field stored as zero,
 // then stored again, through ". =", as the address of a string in another
 // psect. The object must store the address last, where the linker's
-// last store wins.
+// last store wins. (Without traceback records, whose psect records store
+// addresses with STO_PIDR too.)
 func TestOverwriteWithAddress(t *testing.T) {
-	a := macroAssemble(t, `	.PSECT	DATA, LONG
+	a := macroAssemble(t, `	.DISABLE TRACEBACK
+	.PSECT	DATA, LONG
 TAB:	.LONG	0, 0
 END:
 	.SAVE

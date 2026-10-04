@@ -641,6 +641,11 @@ func (d *Dispatcher) bindGrammar() {
 			NoShow:      noshow,
 			Xref:        r.Present("CROSS_REFERENCE") && !r.Negated("CROSS_REFERENCE") && !r.Defaulted("CROSS_REFERENCE"),
 			XrefKinds:   r.List("CROSS_REFERENCE"),
+			Enable:      r.List("ENABLE"),
+			Disable:     r.List("DISABLE"),
+			Debug:       r.Present("DEBUG") && !r.Negated("DEBUG") && !r.Defaulted("DEBUG"),
+			DebugKinds:  r.List("DEBUG"),
+			NoDebug:     r.Present("DEBUG") && r.Negated("DEBUG"),
 			Libraries:   r.List("LIBRARY"),
 			CommandLine: d.line,
 		})

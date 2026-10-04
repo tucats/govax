@@ -15,7 +15,7 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress. Subtasks 1 to 10 are done
+**Status: in progress. Subtasks 1 to 11 are done
 (2026-10-04).**
 
 ## What Phase 27 leaves in place
@@ -1115,4 +1115,55 @@ The author decided each of these on 2026-10-02.
   `9B` and `B9` are the hard ones. Following Decision 6, if their bytes
   can't be worked out from the probe's objects, they're the part to
   defer.
+
+### 2026-10-04 — Subtask 11: traceback records by default
+
+- **Where real MACRO puts them** (the `.anl` record lists):
+  - A TBT record holding the module begin record comes right after the
+    headers, before the first GSD record.
+  - Before the end of module record come two more. The first holds a
+    routine begin record for each `.ENTRY`, in name order (`trace.obj`
+    has FIRST, SECOND, TRACE, defined TRACE first). It's left out when
+    there are none. The second holds a psect record for each
+    relocatable psect, in psect order, then the module end record.
+  - An absolute psect gets no psect record, even a named one
+    (`psects.obj`'s `OFFSETS`).
+- **`internal/obj`'s Builder** packs content of any record type now (a
+  chunk's `typ`, which was a GSD-or-TIR flag). `Traceback(recs...)`
+  adds DST records as TBT records of their own.
+- **`Assembler.Object`** writes them when `.ENABLE TRACEBACK` is in force
+  at the end of the assembly (the default) (`traceback`, `object.go`).
+- **The MACRO command.**
+  - `/ENABLE=(...)` and `/DISABLE=(...)` (`Assembler.SetFunctions`) set
+    `.ENABLE`'s functions at the start of the source. `LOCAL_BLOCK` isn't
+    one, and an unknown name fails with `BADKEYWORD`.
+  - `/[NO]DEBUG[=(ALL|SYMBOLS|TRACEBACK|NONE)]` maps onto the DEBUG and
+    TRACEBACK functions as the probe's table shows: TRACEBACK is
+    traceback alone, SYMBOLS is debug symbols and no traceback, ALL (and
+    a bare `/DEBUG`) is both, and NONE and `/NODEBUG` are neither.
+  - `govax macro` has `--enable`, `--disable`, `--debug`, and
+    `--no-debug`. HELP MACRO documents all of these.
+  - govax doesn't write debugger records yet (subtask 12), so DEBUG
+    changes nothing in the object for now.
+- **govax's own choices, unconfirmed:**
+  - The source's `.ENABLE` and `.DISABLE` override the command's
+    `/ENABLE`, `/DISABLE`, and `/DEBUG` (unlike `/SHOW`, which overrides
+    the source).
+  - `/DEBUG` is applied first, then `/ENABLE` and `/DISABLE`.
+  - Whether a module has traceback is decided by the state at its end.
+    Real MACRO crashed on the probe source that turns traceback off
+    partway (`DBGSRC`).
+- **Tests.**
+  - `withoutTraceback` is gone. Every object comparison matches real
+    MACRO's whole, TBT records included: the 12 ladder fixtures, the 9
+    macro fixtures, the probe's 8, and the Phase 32 RMS oracle's.
+  - So is `countTraceback`: the listings' object record counts now
+    match with no traceback allowance.
+  - `TestTracebackChoices` compares `trace.mar` assembled four ways
+    (`/DEBUG=TRACEBACK`, `/DEBUG=NONE`, `/NODEBUG`,
+    `/DISABLE=TRACEBACK`) with the probe's real objects. All match.
+  - `TestDispatch_macroTraceback` checks every choice through DCL.
+  - Two tests that counted every record's stores now count only TIR
+    records (`TestObjectLongData`), or assemble without traceback
+    (`TestOverwriteWithAddress`).
 

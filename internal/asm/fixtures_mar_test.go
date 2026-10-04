@@ -391,20 +391,6 @@ func TestFixtureLadderText(t *testing.T) {
 	}
 }
 
-// withoutTraceback returns m without its traceback records, which govax
-// doesn't write yet.
-func withoutTraceback(m *obj.Module) *obj.Module {
-	out := &obj.Module{}
-
-	for _, rec := range m.Records {
-		if rec.RecordType() != obj.RecTBT {
-			out.Records = append(out.Records, rec)
-		}
-	}
-
-	return out
-}
-
 func dumpText(t *testing.T, m *obj.Module) string {
 	t.Helper()
 
@@ -418,10 +404,9 @@ func dumpText(t *testing.T, m *obj.Module) string {
 
 // TestFixtureLadderObjects assembles each testdata/mar fixture into an
 // object module and checks it against real MACRO's, record for record:
-// the same headers, GSD and TIR records, in the same order, holding the
-// same subrecords and commands, and the same end of module record. Only
-// what govax doesn't write yet, the traceback records, is left out of the
-// comparison, and the headers that name the language processor, its
+// the same headers, GSD, TIR, and traceback (TBT) records, in the same
+// order, holding the same subrecords and commands, and the same end of
+// module record. The headers that name the language processor, its
 // command line, and the time are given real MACRO's values. The object
 // must also encode and decode unchanged, and pass Check.
 func TestFixtureLadderObjects(t *testing.T) {
@@ -445,9 +430,9 @@ func TestFixtureLadderObjects(t *testing.T) {
 }
 
 // requireSameObject checks a's object module against real MACRO's,
-// record for record, as TestFixtureLadderObjects describes: the
-// traceback records left out, and the headers naming the language
-// processor, its command line, and the time given real MACRO's values.
+// record for record, as TestFixtureLadderObjects describes: the headers
+// naming the language processor, its command line, and the time given
+// real MACRO's values.
 // The object must also encode and decode unchanged, and pass Check.
 func requireSameObject(t *testing.T, a *Assembler, realModule *obj.Module) {
 	t.Helper()
@@ -493,7 +478,7 @@ func requireSameObject(t *testing.T, a *Assembler, realModule *obj.Module) {
 		t.Errorf("Check: %v", problems)
 	}
 
-	if got, want := dumpText(t, back), dumpText(t, withoutTraceback(realModule)); got != want {
+	if got, want := dumpText(t, back), dumpText(t, realModule); got != want {
 		t.Errorf("object:\n%s\nwant:\n%s", got, want)
 	}
 }
@@ -518,6 +503,43 @@ func TestListProbeObjects(t *testing.T) {
 			}
 
 			requireSameObject(t, macroAssemble(t, string(src)), readObjectFile(t, filepath.Join(dir, "vax", name+".obj")))
+		})
+	}
+}
+
+// TestTracebackChoices checks govax's objects for the probe's trace.mar,
+// assembled with the choices of /DEBUG, /NODEBUG, and /DISABLE that
+// write no debugger records (list.com), against real MACRO's, record for
+// record: traceback records or none, as each choice says. The console's
+// MACRO command maps each choice onto these .ENABLE functions.
+func TestTracebackChoices(t *testing.T) {
+	dir := filepath.Join("..", "..", "testdata", "mar", "list")
+
+	src, err := os.ReadFile(filepath.Join(dir, "trace.mar"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		object          string
+		enable, disable []string
+	}{
+		{"trdbgtb", []string{"TRACEBACK"}, []string{"DEBUG"}}, // /DEBUG=TRACEBACK
+		{"trdbgnon", nil, []string{"TRACEBACK", "DEBUG"}},     // /DEBUG=NONE
+		{"trnodbg", nil, []string{"TRACEBACK", "DEBUG"}},      // /NODEBUG
+		{"trdistbk", nil, []string{"TRACEBACK"}},              // /DISABLE=TRACEBACK
+	} {
+		t.Run(tc.object, func(t *testing.T) {
+			a := macroAssembler()
+			if err := a.SetFunctions(tc.enable, tc.disable); err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := a.Assemble(string(src)); err != nil {
+				t.Fatalf("assemble: %v", err)
+			}
+
+			requireSameObject(t, a, readObjectFile(t, filepath.Join(dir, "vax", tc.object+".obj")))
 		})
 	}
 }

@@ -30,8 +30,10 @@ const defaultLanguage = "govax MACRO"
 // order (docs/PHASE-27.md, subtask 3's log): the headers, then a GSD of
 // every global symbol but the entry points, then each psect's definition
 // and contents in source order, with each entry point's EPM where its
-// mask is stored, then the end of module record. Traceback and debugger
-// records aren't written yet.
+// mask is stored, then the end of module record. With traceback (the
+// default, .ENABLE TRACEBACK), traceback records go after the headers and
+// before the end of module record (see traceback). Debugger records
+// aren't written yet.
 func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 	if a.dialect != DialectMACRO {
 		return nil, vmserrors.New(vmserrors.VAX_INTERNAL, "Object needs the MACRO dialect")
@@ -65,6 +67,13 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 		b.Severity = obj.SeveritySuccess
 	}
 
+	traceback := a.enabled&enableTraceback != 0
+	if traceback {
+		if err := b.Traceback(obj.DSTModuleBeginRecord(name)); err != nil {
+			return nil, err
+		}
+	}
+
 	a.globalSymbols(b)
 	b.Break()
 
@@ -96,12 +105,58 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 		b.SetTransfer(psect, a.entryAddr, false)
 	}
 
+	if traceback {
+		if err := a.traceback(b); err != nil {
+			return nil, err
+		}
+	}
+
 	m, err := b.Build()
 	if m != nil {
 		a.objectRecords = len(m.Records)
 	}
 
 	return m, err
+}
+
+// traceback adds the traceback records real MACRO writes at the end of a
+// module (docs/PHASE-29.md, subtask 10): a TBT record of routine begin
+// records, one for each .ENTRY in name order, then one of psect records,
+// one for each relocatable psect in psect number order (none for an
+// absolute psect, named or not: psects.obj's OFFSETS), and the module
+// end record. (The module begin record is written after the
+// headers.)
+func (a *Assembler) traceback(b *obj.Builder) error {
+	var entries []*symbol
+
+	for _, s := range a.symbols.byName {
+		if s.flags&SymEntry != 0 && s.defined() && s.sect != nil {
+			entries = append(entries, s)
+		}
+	}
+
+	sort.Slice(entries, func(i, j int) bool { return entries[i].name < entries[j].name })
+
+	routines := make([]obj.DSTRecord, 0, len(entries))
+	for _, s := range entries {
+		routines = append(routines, obj.DSTRoutineBeginRecord(s.name, uint16(s.sect.index), s.value))
+	}
+
+	if len(routines) > 0 {
+		if err := b.Traceback(routines...); err != nil {
+			return err
+		}
+	}
+
+	var psects []obj.DSTRecord
+
+	for _, s := range a.sections {
+		if s.relocatable {
+			psects = append(psects, obj.DSTPsectRecord(s.name, uint16(s.index), s.hi))
+		}
+	}
+
+	return b.Traceback(append(psects, obj.DSTModuleEndRecord())...)
 }
 
 // globalSymbols adds a GSD of the module's global symbols, sorted by

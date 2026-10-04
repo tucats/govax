@@ -44,7 +44,7 @@ var oracleProbes = []string{
 
 // TestOracleObjects assembles each oracle probe with govax's own
 // STARLET.MLB and checks the object against real MACRO's, record for
-// record (apart from traceback records, which govax doesn't write yet).
+// record, traceback records included.
 func TestOracleObjects(t *testing.T) {
 	for _, name := range oracleProbes {
 		t.Run(name, func(t *testing.T) {

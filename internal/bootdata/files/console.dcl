@@ -780,7 +780,10 @@ grammar console
     ! /SHOW=(option,...) and /NOSHOW=(option,...), the listing options set
     ! for the whole listing. CROSS_REFERENCE (subtask 9) is VMS MACRO's
     ! /[NO]CROSS_REFERENCE[=(option,...)]: the listing's cross reference,
-    ! of SYMBOLS and MACROS unless options say which.
+    ! of SYMBOLS and MACROS unless options say which. ENABLE and DISABLE
+    ! (subtask 11) are VMS MACRO's /ENABLE=(function,...) and
+    ! /DISABLE=(function,...), .ENABLE's functions at the start, and DEBUG
+    ! is /[NO]DEBUG[=(ALL|SYMBOLS|TRACEBACK|NONE)].
     !
     verb macro/id=1300
 
@@ -801,6 +804,13 @@ grammar console
         qualifier   show/id=1306                -
                     /type=$string/list
         qualifier   cross_reference/id=1307     -
+                    /type=$string/list          -
+                    /default=""
+        qualifier   enable/id=1308              -
+                    /type=$string/list
+        qualifier   disable/id=1309             -
+                    /type=$string/list
+        qualifier   debug/id=1310               -
                     /type=$string/list          -
                     /default=""
 
