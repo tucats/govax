@@ -87,13 +87,12 @@ func realImage(t *testing.T, path string) ([]byte, Options) {
 
 // TestLinkMatchesRealLINK links the self-contained fixtures, from govax's
 // objects and from real MACRO's, and checks each image is byte for byte
-// the one real LINK V11-39 made from govax's object (testdata/mar/vax/
-// govax/gv_*.exe), given its name, link time, and linker ID. Real LINK
-// puts no debug symbol table in those images, since govax's objects have
-// no traceback records, and govax's LINK skips real MACRO's.
+// the one real LINK V11-39 made from real MACRO's object (testdata/mar/
+// vax/*.exe), debug symbol table included, given its name, link time, and
+// linker ID.
 func TestLinkMatchesRealLINK(t *testing.T) {
 	for _, name := range []string{"psects", "entry"} {
-		want, opts := realImage(t, filepath.Join(fixtureDir, "vax", "govax", "gv_"+name+".exe"))
+		want, opts := realImage(t, filepath.Join(fixtureDir, "vax", name+".exe"))
 
 		for _, from := range []string{"govax", "real"} {
 			t.Run(name+"/"+from, func(t *testing.T) {
@@ -112,6 +111,37 @@ func TestLinkMatchesRealLINK(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// TestLinkWithoutTracebackRecords links real MACRO's objects with their
+// traceback records taken out, as govax's objects were before Phase 29,
+// and checks each image is byte for byte the one real LINK made from
+// such an object (testdata/mar/vax/govax/gv_*.exe): a traceback link
+// (SYS$IMGSTA first), with no debug symbol table and an all-zero IHS.
+func TestLinkWithoutTracebackRecords(t *testing.T) {
+	for _, name := range []string{"psects", "entry", "hello"} {
+		t.Run(name, func(t *testing.T) {
+			want, opts := realImage(t, filepath.Join(fixtureDir, "vax", "govax", "gv_"+name+".exe"))
+			opts.Sources = []SymbolSource{librtl}
+
+			m := &obj.Module{}
+
+			for _, r := range realObject(t, name).Records {
+				if r.RecordType() != obj.RecTBT {
+					m.Records = append(m.Records, r)
+				}
+			}
+
+			img, err := Link([]Input{{File: name + ".obj", Module: m}}, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !bytes.Equal(img.Bytes, want) {
+				t.Errorf("image differs from real LINK's:\n%s", diffBlocks(img.Bytes, want))
+			}
+		})
 	}
 }
 
@@ -147,11 +177,11 @@ var librtl = &TableSource{
 
 // TestLinkSharedImageMatchesRealLINK links hello, which calls
 // LIB$PUT_OUTPUT with a general mode operand, and checks the image is
-// byte for byte GV_HELLO.EXE: the code reaches the routine through a cell
-// in the fixup section, which lists LIBRTL, and a global section ISD maps
-// LIBRTL.
+// byte for byte real LINK's HELLO.EXE: the code reaches the routine
+// through a cell in the fixup section, which lists LIBRTL, a global
+// section ISD maps LIBRTL, and the debug symbol table follows.
 func TestLinkSharedImageMatchesRealLINK(t *testing.T) {
-	want, opts := realImage(t, filepath.Join(fixtureDir, "vax", "govax", "gv_hello.exe"))
+	want, opts := realImage(t, filepath.Join(fixtureDir, "vax", "hello.exe"))
 	opts.Sources = []SymbolSource{librtl}
 
 	for _, from := range []string{"govax", "real"} {

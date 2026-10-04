@@ -15,8 +15,8 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress. Subtasks 1 to 11 are done, and 12 is deferred
-(2026-10-04).**
+**Status: in progress. Subtasks 1 to 11 and 13 are done, and 12 is
+deferred (2026-10-04).**
 
 ## What Phase 27 leaves in place
 
@@ -1214,4 +1214,60 @@ come from those objects' bytes.
   blank and comment lines in different places, a routine without
   `RET` last, and two psects of code, each assembled `/DEBUG`. The
   symbol records could be done from the existing objects alone.
+
+### 2026-10-04 — Subtask 13: LINK's debug symbol table
+
+- **What real LINK writes**, from the probe's and fixtures' images. The
+  field names come from `ANALYZE/IMAGE` (`trace.ani`); the layout comes
+  from the bytes.
+  - The DST is every module's TBT byte stream, joined in link order,
+    each address resolved to its final virtual address (`TRACE`'s
+    routine FIRST is `0000061E`). It has no fixups, and LINK adds no
+    records of its own.
+  - It follows everything else in the file, zero-filled to a whole
+    block (`trace.exe`: 106 bytes at VBN 6, the last of 6 blocks).
+  - The IHS block holds the DST's first VBN at +0 (a longword) and its
+    block count at +8 (a word). `ANALYZE/IMAGE` also names the global
+    symbol table's VBN and record count (+4, +10) and the debug
+    module/psect table's VBN and byte count (+12, +16), all 0 here.
+  - The longword at +20 is 1 in every traced image. `ANALYZE/IMAGE`
+    doesn't name it, so what it means isn't known.
+  - A module's DBG records stay out of a traceback link's DST
+    (`trdbgtrc.exe`, `faildbg.exe`), as the manual says (7.7).
+  - The image block limits in the map leave the DST out.
+- **`internal/link`.**
+  - Pass 2 runs each module's TBT records on the same TIR machine as its
+    TIR records, with `debug` set (`pass2.go`). Stores then go into
+    `linker.dst` at a DST location counter, which starts where the last
+    module's records ended.
+  - A general mode operand (`STO_PICR`), or an address in a shareable
+    image, is an error in a TBT record. A reference to an undefined
+    symbol there isn't reported.
+  - `image()` puts the DST after the fixup section, and `header()` fills
+    the IHS fields.
+  - `/NOTRACEBACK` skips TBT records as before.
+  - DST location values start at 0, not where the manual puts the DST's
+    location counter (above the program region). Only a TBT record that
+    stored the location itself would notice, and MACRO's don't.
+- **Tests.**
+  - `withoutDST` is gone. `TestLinkMultiModuleMatchesRealLINK`'s 11
+    links match real LINK's images whole.
+  - `TestLinkMatchesRealLINK` and `TestLinkSharedImageMatchesRealLINK`
+    now compare with real LINK's images of real MACRO's objects
+    (`testdata/mar/vax/*.exe`), linked from govax's objects and real
+    MACRO's.
+  - The `gv_*.exe` images, which real LINK made from govax's objects
+    before they had traceback, are still checked, by
+    `TestLinkWithoutTracebackRecords`. An object with no TBT records
+    gets a traceback link with no DST and an all-zero IHS.
+  - `TestLinkProbeDST` compares the DST blocks of the probe's seven
+    images with real LINK's, from real MACRO's objects and govax's. All
+    match. It needs none of VMS's libraries: the DST describes only the
+    program's own modules.
+  - `TestLinkProbeImagesMatchRealLINK` compares those images whole. It
+    needs VMS's own libraries, the local-only files `vmsSources` reads,
+    so it's skipped without them, and it hasn't run yet on a machine
+    that has them.
+  - The console's `TestLink_volume` image is 5 blocks now, as real
+    LINK's `PSECTS.EXE` is.
 

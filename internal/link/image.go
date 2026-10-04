@@ -181,7 +181,17 @@ func (l *linker) header(isds []isd, global [][]byte, fixupVA uint32) ([]byte, er
 		le.PutUint32(b[ihaOffset+4*i:], t)
 	}
 
-	// IHS is all zero: no debug symbol table or global symbol table.
+	// IHS: the debug symbol table's first block and block count, or all
+	// zero without one. ANALYZE/IMAGE also names the global symbol
+	// table's block and record count (+4, +10) and the debug module and
+	// psect table's (+12, +16), which an executable image doesn't have.
+	// Real LINK sets the longword at +20, which ANALYZE doesn't name, to 1
+	// whenever there's a DST; what it means isn't known.
+	if l.dstVBN != 0 {
+		le.PutUint32(b[ihsOffset:], l.dstVBN)
+		le.PutUint16(b[ihsOffset+8:], uint16(pageUp(uint32(len(l.dst)))/blockSize))
+		le.PutUint32(b[ihsOffset+20:], 1)
+	}
 
 	// IHI: the image name, image ID, link time, and linker ID, each
 	// name a counted string in a fixed field.

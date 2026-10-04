@@ -17,8 +17,14 @@
 //   - Last, writable pages nothing was stored in become demand-zero, the
 //     fixup section is added, and the image header is written.
 //
-// Traceback and debugger records are read and skipped: the image has no
-// debug symbol table. A symbol the modules refer to but don't define comes
+// With traceback (Options.Traceback, LINK's default), pass 2 also runs
+// each module's traceback (TBT) records, whose bytes go into the image's
+// debug symbol table (DST) instead of its sections: the modules' DST
+// records, in link order, with their addresses resolved. The DST follows
+// the image's other blocks, and the header's IHS block points at it (the
+// Linker manual, 7.7 and 7.8). Debugger (DBG) records are read and
+// skipped: LINK/DEBUG is out of scope (docs/PHASE-29.md, Decision 4). A
+// symbol the modules refer to but don't define comes
 // from the symbol sources (source.go): an absolute value, or a routine in
 // a shareable image, which a general mode (G^) operand reaches through a
 // cell in the fixup section that the image activator fills in.
@@ -231,6 +237,12 @@ type linker struct {
 	fixupVA     uint32
 	fixupLength uint32
 	imageBlocks uint32
+
+	// dst is the debug symbol table pass 2 builds from the modules'
+	// traceback records, and dstVBN its first block in the image file
+	// (0 if there's none).
+	dst    []byte
+	dstVBN uint32
 }
 
 // module is one input module during the link.

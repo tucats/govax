@@ -104,20 +104,9 @@ func p1Source(t *testing.T) SymbolSource {
 	return &TableSource{Symbols: map[string]Definition{"SYS$EXIT": {Value: p1Address(t, "SYS$EXIT")}}}
 }
 
-// withoutDST is a real image as govax would write it: without its debug
-// symbol table, which real LINK builds from real MACRO's traceback
-// records and govax doesn't (IHS zero, and no blocks after the image's
-// own).
-func withoutDST(img []byte, blocks int) []byte {
-	img = bytes.Clone(img[:min(len(img), blocks)])
-	clear(img[ihsOffset : ihsOffset+ihsLength])
-
-	return img
-}
-
 // TestLinkMultiModuleMatchesRealLINK links each of realLinks from real
 // MACRO's objects with only LIBRTL's offsets as a source, and checks the
-// image is real LINK's byte for byte, its debug symbol table aside:
+// image is real LINK's byte for byte, debug symbol table included:
 //   - externals defined by another module, and by a user library's module;
 //   - undefined symbols, which are 0, and a weak reference nothing
 //     defines;
@@ -131,7 +120,7 @@ func TestLinkMultiModuleMatchesRealLINK(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			img, want := linkReal(t, c.name, c.modules, []SymbolSource{librtl, p1Source(t)})
 
-			if want = withoutDST(want, len(img.Bytes)); !bytes.Equal(img.Bytes, want) {
+			if !bytes.Equal(img.Bytes, want) {
 				t.Errorf("image differs from real LINK's:\n%s", diffBlocks(img.Bytes, want))
 			}
 		})

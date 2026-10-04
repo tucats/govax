@@ -211,12 +211,26 @@ var binaryOps = map[string]func(a, b uint32) uint32{
 	},
 }
 
-// machine runs one module's TIR commands.
+// machine runs one module's TIR commands, or its traceback commands:
+// with debug set, what it stores goes into the debug symbol table
+// (linker.dst), loc being an offset in it, and not into the image.
 type machine struct {
 	l     *linker
 	m     *module
 	stack []value
 	loc   uint32
+	debug bool
+}
+
+// write stores data at the machine's location.
+func (x *machine) write(data []byte) error {
+	if x.debug {
+		x.l.writeDST(x.loc, data)
+
+		return nil
+	}
+
+	return x.l.write(x.loc, data)
 }
 
 func (x *machine) push(v value) { x.stack = append(x.stack, v) }
@@ -233,26 +247,35 @@ func (x *machine) pop() (value, error) {
 }
 
 // pass2 runs a module's TIR records, storing its contents into the image
-// sections. Debugger and traceback records are skipped.
+// sections, and, with traceback, its traceback records, adding its DST
+// records to the debug symbol table after the modules' before it (each
+// TBT record stores where the last left off). Debugger records are
+// skipped.
 func (l *linker) pass2(m *module) error {
 	x := &machine{l: l, m: m}
+	tb := &machine{l: l, m: m, debug: true, loc: uint32(len(l.dst))}
 
 	for _, rec := range m.input.Module.Records {
 		switch r := rec.(type) {
 		case *obj.TIR:
-			if r.Type != obj.RecTIR {
+			run := x
+
+			switch {
+			case r.Type == obj.RecTBT && l.opts.Traceback:
+				run = tb
+			case r.Type != obj.RecTIR:
 				continue
 			}
 
 			for _, c := range r.Commands {
-				if err := x.command(c); err != nil {
+				if err := run.command(c); err != nil {
 					return fmt.Errorf("link: %s: %s: %w", m.input.File, c.Op, err)
 				}
 			}
 
 		case *obj.EOM:
-			if len(x.stack) != 0 {
-				return fmt.Errorf("link: %s: %d values left on the linker's stack", m.input.File, len(x.stack))
+			if n := len(x.stack) + len(tb.stack); n != 0 {
+				return fmt.Errorf("link: %s: %d values left on the linker's stack", m.input.File, n)
 			}
 		}
 	}
@@ -260,10 +283,20 @@ func (l *linker) pass2(m *module) error {
 	return nil
 }
 
+// writeDST stores data at offset off in the debug symbol table, which
+// grows to hold it.
+func (l *linker) writeDST(off uint32, data []byte) {
+	if end := int(off) + len(data); end > len(l.dst) {
+		l.dst = append(l.dst, make([]byte, end-len(l.dst))...)
+	}
+
+	copy(l.dst[off:], data)
+}
+
 // command runs one TIR command.
 func (x *machine) command(c obj.Command) error {
 	if c.Op == obj.OpStoreImmediate {
-		if err := x.l.write(x.loc, c.Data); err != nil {
+		if err := x.write(c.Data); err != nil {
 			return err
 		}
 
@@ -292,7 +325,7 @@ func (x *machine) command(c obj.Command) error {
 			return fmt.Errorf("%s isn't in the module's symbol directory", c.Name)
 		}
 
-		if !g.defined && g.strongRef {
+		if !g.defined && g.strongRef && !x.debug {
 			x.undefinedReference(g)
 		}
 
@@ -332,6 +365,10 @@ func (x *machine) command(c obj.Command) error {
 		x.loc += c.StackedValue()
 
 	case "STO_PICR":
+		if x.debug {
+			return fmt.Errorf("a general mode operand in a traceback record")
+		}
+
 		return x.storePICR()
 
 	default:
@@ -405,6 +442,8 @@ func (x *machine) store(st store) error {
 	}
 
 	switch {
+	case a.img != "" && x.debug:
+		return fmt.Errorf("an address in shareable image %s in a traceback record", a.img)
 	case a.img != "" && st.address:
 		x.l.referAddress(a.img, a.v, x.loc)
 	case a.img != "":
@@ -432,7 +471,7 @@ func (x *machine) store(st store) error {
 	b := make([]byte, 4)
 	binary.LittleEndian.PutUint32(b, uint32(v))
 
-	if err := x.l.write(x.loc, b[:st.size]); err != nil {
+	if err := x.write(b[:st.size]); err != nil {
 		return err
 	}
 
@@ -572,6 +611,16 @@ func (l *linker) image() (*Image, error) {
 	)
 
 	pages = append(pages, fixup)
+	vbn += uint32(len(fixup)) / blockSize
+
+	// The debug symbol table follows everything else, in whole blocks.
+	var dst []byte
+	if len(l.dst) > 0 {
+		l.dstVBN = vbn
+		dst = append(dst, l.dst...)
+		dst = append(dst, make([]byte, int(pageUp(uint32(len(dst))))-len(dst))...)
+	}
+
 	global := make([][]byte, 0, len(l.shared))
 
 	for _, r := range l.shared {
@@ -613,6 +662,7 @@ func (l *linker) image() (*Image, error) {
 	}
 
 	l.imageBlocks = uint32(len(img.Bytes)/blockSize) - 1
+	img.Bytes = append(img.Bytes, dst...)
 
 	for _, p := range l.order {
 		if p.flags&obj.PsectREL != 0 {

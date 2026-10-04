@@ -384,8 +384,10 @@ func TestLink_volume(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if found.Name != "DUA0:[000000]PSECTS.EXE;1" || len(blocks) != 4 {
-		t.Errorf("image %s has %d blocks, want 4", found.Name, len(blocks))
+	// Five blocks, as real LINK's PSECTS.EXE: the header, the image
+	// sections, the fixup section, and the debug symbol table.
+	if found.Name != "DUA0:[000000]PSECTS.EXE;1" || len(blocks) != 5 {
+		t.Errorf("image %s has %d blocks, want 5", found.Name, len(blocks))
 	}
 
 	// To the host, then compare.
