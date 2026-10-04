@@ -9,9 +9,10 @@ import (
 // Dump writes a readable description of every record in the module, in
 // the spirit of ANALYZE/OBJECT: one heading line per record, then one
 // indented line per GSD subrecord or TIR command. Psects are numbered as
-// the linker numbers them, in order of definition.
+// the linker numbers them, in order of definition. A TBT or DBG record's
+// commands are followed by the DST records (dst.go) that end in it.
 func Dump(w io.Writer, m *Module) error {
-	d := dumper{w: w}
+	d := dumper{w: w, dst: dstByRecord(m)}
 
 	for i, rec := range m.Records {
 		d.record(i+1, rec)
@@ -24,6 +25,48 @@ type dumper struct {
 	w      io.Writer
 	err    error
 	psects int
+	// dst holds, for each TBT and DBG record (by its index in the
+	// module), the lines describing the DST records that end in it.
+	dst map[int][]string
+}
+
+// dstByRecord decodes m's TBT records, and its DBG records, as DST
+// records, and returns the lines Dump shows after each record. A stream
+// that doesn't decode is described by its error, after its first record.
+func dstByRecord(m *Module) map[int][]string {
+	out := map[int][]string{}
+
+	for _, typ := range []RecordType{RecTBT, RecDBG} {
+		var (
+			groups  [][]Command
+			indexes []int
+		)
+
+		for i, r := range m.Records {
+			if tir, ok := r.(*TIR); ok && tir.Type == typ {
+				groups = append(groups, tir.Commands)
+				indexes = append(indexes, i)
+			}
+		}
+
+		if len(groups) == 0 {
+			continue
+		}
+
+		recs, ends, err := DecodeDST(groups)
+		if err != nil {
+			out[indexes[0]] = append(out[indexes[0]], "DST records: "+err.Error())
+
+			continue
+		}
+
+		for k, r := range recs {
+			i := indexes[ends[k]]
+			out[i] = append(out[i], FormatDST(r))
+		}
+	}
+
+	return out
 }
 
 func (d *dumper) line(indent int, format string, args ...any) {
@@ -59,6 +102,10 @@ func (d *dumper) record(n int, rec Record) {
 
 		for _, c := range rec.Commands {
 			d.line(1, "%s", FormatCommand(c))
+		}
+
+		for _, text := range d.dst[n-1] {
+			d.line(1, "%s", text)
 		}
 
 	case *EOM:

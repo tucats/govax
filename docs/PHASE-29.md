@@ -15,7 +15,7 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: in progress. Subtasks 1 to 9 are done
+**Status: in progress. Subtasks 1 to 10 are done
 (2026-10-04).**
 
 ## What Phase 27 leaves in place
@@ -197,11 +197,11 @@ name, size), and a module-end record. A DST builder in `internal/obj`
 assembler and LINK from each knowing the byte layout, and lets
 `obj.Dump` show them decoded.
 
-The DST record types and field codes (`DST$K_...`) go into
-`vmsdef.Symbols` like every other VMS constant, through Phase 31's
-`internal/vmsdef/gen` from VMS's local definition files, if they hold the
-DST definitions; otherwise they're taken from the VMS debugger manuals
-and confirmed against the fixtures' objects.
+The DST record types are govax's own (`obj.DSTType`), worked out from
+real MACRO's objects (Decision 6): neither the linker nor the debugger
+manuals give their layouts, and VMS's definition files are outside the
+clean room. (The plan had them going into `vmsdef.Symbols` through
+`gen`.)
 
 `/DEBUG` (and `.ENABLE DEBUG`) adds DBG records: by the manual, symbol
 records for the module's labels, which the probe's `/DEBUG` objects
@@ -310,9 +310,8 @@ changes behavior. Each adds to this doc's progress log.
 9. **Cross reference.** `/CROSS_REFERENCE` and `.CROSS`/`.NOCROSS`: the
    cross-reference pages (symbols, and macros if MACRO lists them), from
    the probe.
-10. **DST records.** The `DST$K_...` definitions in `vmsdef.Symbols`
-    (through `gen` if VMS's definition files have them), and
-    `internal/obj`'s DST builder and decoder, with `obj.Dump` showing the
+10. **DST records.** The record types, from the real objects
+    (Decision 6), and `internal/obj`'s DST builder and decoder, with `obj.Dump` showing the
     DST records inside TBT and DBG records. Tests: decoding every TBT
     record in the 21 real objects and encoding them back byte for byte.
 11. **Traceback records by default.** MACRO writes the module-begin,
@@ -364,6 +363,13 @@ The author decided each of these on 2026-10-02.
    later.
 5. **Listings for the console's `ASM` command** (the eVAX dialect). Out
    of scope: `ASM` doesn't make listings.
+6. **DST records in strict clean room** (2026-10-04). The DST layouts
+   come only from the manuals and real VMS output (the probe's objects,
+   images, and logs), never from VMS's source or definition files. If
+   that hits a dead end, DST support is deferred. There's no requirement
+   to hand govax's objects or images back to VMS with full DST support.
+   The future use is govax's own: traceback and debugger data for the
+   console's SHOW CALLS and DISASM.
 
 ## Out of scope
 
@@ -1043,4 +1049,70 @@ The author decided each of these on 2026-10-02.
   - `.IF DF` and `.IF NDF` aren't references. A symbol in a
     displacement (`4(R2)`) or a branch target has no mark. The index
     register of an indexed operand is marked as an operand.
+
+### 2026-10-04 — Subtask 10: DST records
+
+- **Decision 6.** The author asked for strict clean room here. DST
+  layouts come from the manuals and real VMS output only. Govax names
+  the types itself, and nothing goes into `vmsdef` through `gen`.
+- **What the sources give.**
+  - The linker manuals (VMS 5.0, 7.7 and 7.8, and the 2.0 and 7.3
+    editions) say how LINK treats DBG and TBT records: as TIR commands
+    whose bytes go into the DST, not the image.
+  - Neither they nor the V2.0 debugger reference give any DST record's
+    layout. The probe's `ANALYZE/OBJECT` output shows only the TIR
+    commands.
+  - So the layouts come from the bytes of the 53 real objects in
+    `testdata/mar` (the fixtures' and the probe's). Each DST record is a
+    length byte (the bytes after it), a type byte, and its fields. An
+    address is stacked (`STA_PL` or `STA_PB`) and stored (`STO_PIDR`).
+- **Real MACRO's traceback** is four kinds of record (`obj.DSTType`):
+  - **psect** (`B8`): a byte (0), the psect's base (`STA_PB`, even at
+    offset 0), the counted name, and the size (a longword). One for each
+    psect but the absolute one.
+  - **module begin** (`BC`): five zero bytes and the counted name.
+  - **module end** (`BD`): no fields.
+  - **routine begin** (`BE`): a byte (0), the entry address (`STA_PL`,
+    whatever the offset), and the counted name. One for each `.ENTRY`.
+    There's no routine end record.
+
+  What the zero bytes mean isn't known; every real object has 0 there.
+- **The stream.** A DST record can start in one TBT record and end in
+  the next, and a STORE IMMEDIATE runs across record boundaries (the
+  end of one routine begin and the start of the next). So a module's TBT
+  records are one stream, and its DBG records another.
+- **`internal/obj/dst.go`**:
+  - `DecodeDST` splits a stream into `DSTRecord`s. Each holds its type,
+    its fields (zeros where the linker stores an address), and each
+    address's own TIR commands, so a record re-encodes exactly. It also
+    returns the TBT or DBG record each DST record ends in.
+  - `EncodeDST` writes the commands back. Bytes go into STORE
+    IMMEDIATEs of up to `MaxImmediate`, flushed only before an address,
+    as real MACRO's are.
+  - `DSTModuleBeginRecord`, `DSTModuleEndRecord`,
+    `DSTRoutineBeginRecord`, and `DSTPsectRecord` build the four
+    traceback records, for subtask 11.
+  - `FormatDST` describes a record. `obj.Dump` lists the DST records
+    after the TBT or DBG record each ends in, or the stream's error.
+- **Tests.**
+  - `TestDSTRealObjects` decodes the TBT and DBG streams of all 53 real
+    objects (40 have traceback) and encodes them back. The commands match
+    with adjacent STORE IMMEDIATEs joined; how they're split into records
+    is the Builder's job, checked in subtask 11.
+  - Every traceback record is one of the four kinds, and its constructor
+    builds it exactly.
+  - Unit tests cover a record spanning two TBT records, an immediate
+    longer than `MaxImmediate`, malformed streams, and `Dump`.
+- **For subtask 12 (debugger records).** The probe's `/DEBUG` objects'
+  DBG records decode as DST records too, with five more types.
+  - `08` appears to be a symbol's value: a flag byte (1 for an address,
+    0 for a constant), then the value, then the name.
+  - `0E` holds a name, a value, and nested bytes.
+  - `BB` is like a routine begin, for a JSB label (`HELPER`).
+  - `9B` holds the source file's specification and dates.
+  - `B9` looks like a compact line-number table.
+
+  `9B` and `B9` are the hard ones. Following Decision 6, if their bytes
+  can't be worked out from the probe's objects, they're the part to
+  defer.
 
