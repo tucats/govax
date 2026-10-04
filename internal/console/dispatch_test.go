@@ -350,7 +350,7 @@ func TestDispatch_exitStopsRunning(t *testing.T) {
 }
 
 // TestDispatch_entryPointCommandUndefinedWithoutMicrokernel checks that a
-// DCL /entry= command (ABOUT, FORTH, XTEST, SHOW VERSION — see
+// DCL /entry= command (ABOUT, XTEST, SHOW VERSION — see
 // docs/PHASE-16.md sub-phase 4) reports the entry symbol as undefined
 // rather than as a categorically-unimplemented mechanism, once no
 // microkernel has been booted to define it — the same "Undefined symbol"

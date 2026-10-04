@@ -191,9 +191,6 @@ grammar console
 
     verb about /entry=exe$about
 
-    verb forth /entry=exe$forth_dcl
-        parameter   cmd/id=6001/type=$string
-
     verb exit
     
     verb quit/alias=exit

@@ -12,7 +12,7 @@
 // internal/lnm); the inline mini-assembler (ASM/DISASM,
 // and EXAMINE's address-expression syntax) is replaced by a small
 // standalone expression evaluator (expr.go) rather than waiting on Phase
-// 11's real assembler. Every DCL /entry= command (ABOUT, FORTH, XTEST, SHOW
+// 11's real assembler. Every DCL /entry= command (ABOUT, XTEST, SHOW
 // VERSION) now works: Dispatch resolves the entry name as a VAX symbol
 // (populated once kernel.asm's .ENTRY has been ASMed/booted) and CALLs it,
 // matching the C source's own "these are real VAX routines, not native C

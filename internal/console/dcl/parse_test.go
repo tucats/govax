@@ -207,7 +207,7 @@ func TestParse_aboutHasEntryPoint(t *testing.T) {
 func TestParse_ambiguousVerb(t *testing.T) {
 	g := loadEvaxGrammar(t)
 	// C and CA... let's find a genuinely ambiguous abbreviation: "CA" could
-	// only mean CALL among {define,about,forth,exit,quit,test,call,clear,
+	// only mean CALL among {define,about,exit,quit,test,call,clear,
 	// show,vminit} - not ambiguous. Use a single letter that's ambiguous.
 	if _, err := g.Parse("C"); err == nil {
 		t.Error("expected ambiguous verb error for \"C\"")

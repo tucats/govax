@@ -805,24 +805,6 @@ _msg5:         .asciz           "Name is %s"<^X0A>
 _msg6:         .asciz           "No name given"<^X0A>
 
 ;--------------------------------------------------------------------
-;   "FORTH" console command
-;--------------------------------------------------------------------
-
-               .entry           exe$forth_dcl
-
-               pushl            #^d6001
-               pushl            #DCL$_PARAMETER
-               calls            #2, @#dcl$string
-               tstl             r0
-               beql             _nocmd
-               pushl            r0
-               ; calls            #1, @#exe$cforth
-               ret
-
-_nocmd:        ; calls            #0, @#exe$forth
-               ret
-
-;--------------------------------------------------------------------
 ;   "ABOUT" console command
 ;--------------------------------------------------------------------
 
@@ -1519,13 +1501,6 @@ lib$hex_table:
 
                 .align          ^X200
                 .set            exe$fbase .
-;
-;   I've been playing around with a forth interpreter written back in 1984
-;   for a VAX.  It might be interesting to include it in the microkernel
-;   for handling logic at the virtual VAX level.  If the interpreter source
-;   is present, assemble it as well.
-
-                ; .if file_exists("forth.asm") .include       "forth.asm"
                 nop
 
 ;   DCL string storage

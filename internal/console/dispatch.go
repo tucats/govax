@@ -98,8 +98,8 @@ func (d *Dispatcher) Dispatch(line string) error {
 
 	d.line = line
 
-	// A DCL /entry= redirect (ABOUT, FORTH, XTEST, SHOW VERSION -- the C
-	// source's exe$about/exe$forth_dcl/exe$xtest, all real VAX routines
+	// A DCL /entry= redirect (ABOUT, XTEST, SHOW VERSION -- the C
+	// source's exe$about/exe$xtest, all real VAX routines
 	// defined in kernel.asm itself, not native C functions -- see
 	// docs/PHASE-16.md sub-phase 4) resolves the entry name as a VAX symbol
 	// (populated by an .ENTRY once kernel.asm has been ASMed/booted) and

@@ -38,7 +38,6 @@ clear sym/all
 
 set quantum 1
 go exe$initialize
-;if defined("exe$forth_init" ) call exe$forth_init
 
 set PC=200
 

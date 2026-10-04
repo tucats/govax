@@ -47,7 +47,7 @@ func TestLoadConsoleGrammar(t *testing.T) {
 		t.Errorf("grammar name = %q, want EVAX", g.Name)
 	}
 
-	wantVerbs := []string{"DEFINE", "ABOUT", "FORTH", "EXIT", "QUIT", "TEST", "CALL", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE", "DIRECTORY", "DELETE", "PURGE", "TYPE"}
+	wantVerbs := []string{"DEFINE", "ABOUT", "EXIT", "QUIT", "TEST", "CALL", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE", "DIRECTORY", "DELETE", "PURGE", "TYPE"}
 	for _, v := range wantVerbs {
 		if _, ok := g.entries[v]; !ok {
 			t.Errorf("missing verb %s", v)
@@ -96,16 +96,17 @@ func TestLoadConsoleGrammar(t *testing.T) {
 
 func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	g := loadEvaxGrammar(t)
-	// define, about, forth, exit, quit, test, call, clear, show, vminit,
+	// define, about, exit, quit, test, call, clear, show, vminit,
 	// mount, dismount, initialize, directory, delete, purge, type, copy,
 	// create, assign, deassign, macro, link, library, rename (the last
 	// fifteen are govax-native additions -- Phase 22 for mount/dismount/
 	// rename, Phase 23 for initialize/directory/delete/purge/type/copy,
 	// Phase 25 for create/assign/deassign, Phase 27 for macro, Phase 30
 	// for link, Phase 28 for library -- with no testdata/dcl/evax.dcl
-	// counterpart).
-	if len(g.verbOrder) != 25 {
-		t.Errorf("got %d verbs, want 25: %v", len(g.verbOrder), verbNames(g))
+	// counterpart). evax.dcl's FORTH verb, which called a microkernel
+	// FORTH that was never built in, was dropped (2026-10-04).
+	if len(g.verbOrder) != 24 {
+		t.Errorf("got %d verbs, want 24: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 

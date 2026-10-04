@@ -702,8 +702,8 @@ p1vector: 7FFEDE00-7FFEE91D
 00000388: 14 00 00 00 74 03 00 00 00 00 48 65 6C 6C 6F 2C
 00000398: 20 64 69 73 6B 21 00 00 00 00 00 00 00 00 00 00
 000003A8: 00 00 00 00
-sym 10$@191 00000302 flags=82 forward=0
-sym 10$@192 0000030E flags=82 forward=0
+sym 10$@189 00000302 flags=82 forward=0
+sym 10$@190 0000030E flags=82 forward=0
 sym BUF1 000003AC flags=2 forward=0
 sym BUF2 000005AC flags=2 forward=0
 sym CHAN 0000039E flags=2 forward=0
