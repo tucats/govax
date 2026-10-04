@@ -1,0 +1,13 @@
+	.TITLE	CELLSB	Phase 29 round: fixup cells from a second module
+	.IDENT	/V1.0/
+
+; Linked after CELLS (CELLS,CELLSB): one routine CELLS calls too, and one
+; it doesn't, to show where a later module's cells go.
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	CELLSB, ^M<>
+	CALLS	#0, G^LIB$PUT_OUTPUT
+	CALLS	#0, G^LIB$WAIT
+	RET
+
+	.END

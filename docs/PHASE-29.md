@@ -1302,3 +1302,38 @@ come from those objects' bytes.
   - `ERRORS` and `ERREND`, which govax doesn't assemble.
 - Waiting on the author's VMS run.
 
+### 2026-10-04 — Subtask 14: the round's results
+
+The author ran `@ROUND/OUTPUT=ROUND.LOG` on VMS 7.3, and `copyout.cmd`
+brought back 47 files (`testdata/mar/round/vax/`; its README has the
+details).
+
+- **Clean on VMS.** `ANALYZE/OBJECT` and `ANALYZE/IMAGE` found 0 errors
+  in all 11 govax objects, all 6 govax images, and the 6 images real
+  LINK made of govax's objects.
+- **Same tracebacks.** Each failing program printed the same thing
+  three ways: from govax's objects linked by govax, from the same
+  objects linked by real LINK, and from real MACRO's objects linked by
+  real LINK (the probe's `list.log`). That covers the traceback tables,
+  the register dumps without traceback, and `$STATUS`. So the TBT
+  records and the DST are right where it counts.
+- **Images.**
+  - Real LINK's images of govax's objects differ from those of real
+    MACRO's only in the header's link time, image name, and linker ID.
+  - govax's images of TRACE and FAILMAIN with FAILSUB are real LINK's
+    byte for byte. `TestLinkRoundImagesMatchRealLINK` checks the four,
+    linked with govax's own symbol tables (no VMS libraries needed).
+  - FAILSIG's two images differ in the order of two fixup cells (the
+    cells `G^` calls into LIBRTL go through). govax orders them by
+    first call; real LINK gives `LIB$STOP` (offset `4F8`) the first,
+    though `LIB$SIGNAL` (`4F0`) is called first. Several rules fit, so
+    a small follow-up (`cells.mar`, `cellsb.mar`, `CELLS.COM`, already
+    on the volume) will tell them apart. Until then the test skips
+    FAILSIG's two images.
+- **The title header** (open since subtask 2). Real MACRO writes a
+  title header record of `"\x01 "` for a module with no `.TITLE`,
+  with a `.SBTTL` first, later, or not at all (`NOTITLE`, `NOTITLE3`,
+  `NOTITLE2`). govax now does the same (`noTitleText`, `object.go`).
+  `notitle`, `notitle2`, and `notitle3` match real MACRO's objects and
+  listings whole, so the `extraRecords` allowance is gone.
+

@@ -84,4 +84,51 @@ own objects and images aren't copied back; `exchange.cmd` remakes them.
 
 ## What came back (`vax/`)
 
-Not run yet.
+From the user's run of `@ROUND/OUTPUT=ROUND.LOG` on 4-OCT-2026.
+`copyout.cmd` copied all 47 results.
+
+- **Every govax object and image is clean.** `ANALYZE/OBJECT` found 0
+  errors in each of the 11 `GV*.OBJ`, and `ANALYZE/IMAGE` 0 in each of
+  the 6 `GV*.EXE`. It also found 0 in the 6 `RL*.EXE` real LINK made
+  of them.
+- **Real LINK links govax's objects.** Each `RL*.EXE` differs from the
+  image real LINK made of real MACRO's objects in the probe only in the
+  header's link time, image name, and linker ID.
+- **The tracebacks are the same.** Each program printed the same thing
+  three ways: from govax's objects linked by govax (`GV`), the same
+  objects linked by real LINK (`RL`), and real MACRO's objects linked by
+  real LINK (the probe's `list.log`). That covers the traceback tables
+  (module, routine, rel PC, abs PC), the "Improperly handled condition"
+  register dumps without traceback, and `$STATUS`. `GVTRACE` and
+  `RLTRACE` printed `TRACE: three routines ran`.
+- **govax's images against real LINK's.**
+  - `GVTRACE`, `GVTRNOTB`, `GVFAIL`, and `GVFAILNT` are the `RL` images
+    byte for byte, but for the header's identification fields.
+  - `GVFSIG` and `GVFSIGNT` also differ in the order of their two fixup
+    cells. FAILSIG calls `LIB$SIGNAL` (LIBRTL offset `4F0`), then
+    `LIB$STOP` (`4F8`), with `G^`. govax gives them cells in that order;
+    real LINK gives `LIB$STOP` the first. Each call's displacement
+    follows its cell, so the code differs by those two displacements.
+    Several rules fit one example, so `cells.mar` and `cellsb.mar`
+    follow up (below).
+- **The title header.** Real MACRO's `NOTITLE2` (no `.SBTTL`) and
+  `NOTITLE3` (a `.SBTTL` after the first statement) both have a title
+  header record of `"\x01 "`, as `NOTITLE` (a `.SBTTL` first) does. So
+  it comes from having no `.TITLE`, and govax now writes it.
+
+## The fixup cell follow-up
+
+`cells.mar` calls `LIB$WAIT`, `LIB$ADDX`, `LIB$GET_INPUT`, and
+`LIB$ADDX` again with `G^`. Each rule that fits FAILSIG gives these
+cells a different order (the source's comment lists them).
+`cellsb.mar` is a second module, linked after it, that calls one of
+those routines and one new one.
+
+    govax console < testdata/mar/round/cells-in.cmd     (done)
+    @CELLS/OUTPUT=CELLS.LOG                              (on VMS)
+    govax console < testdata/mar/round/cells-out.cmd
+
+`cells-in.cmd` has already copied the sources and `CELLS.COM` onto
+`round-exchange.dsk`. `CELLS.COM` assembles both sources, links `CELLS`
+alone and `CELLS,CELLSB`, with maps, and analyzes the images.
+`cells-out.cmd` copies the results into `vax/`.

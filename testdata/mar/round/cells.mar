@@ -1,0 +1,26 @@
+	.TITLE	CELLS	Phase 29 round: fixup cell order
+	.IDENT	/V1.0/
+
+; In what order does LINK lay out the fixup section's cells, one for
+; each LIBRTL routine a general mode (G^) operand calls? FAILSIG gives
+; LIB$STOP (offset 4F8) a cell before LIB$SIGNAL (4F0), the reverse of
+; their first calls. This calls four routines in an order where each
+; possible rule gives a different order:
+;
+;	reverse of first calls:		LIB$GET_INPUT, LIB$ADDX, LIB$WAIT
+;	reverse of last calls:		LIB$ADDX, LIB$GET_INPUT, LIB$WAIT
+;	highest offset first:		LIB$ADDX (7D0), LIB$WAIT (558),
+;					LIB$GET_INPUT (410)
+;	name order, last first:		LIB$WAIT, LIB$GET_INPUT, LIB$ADDX
+;
+; It's only linked, never run: the calls have no arguments to speak of.
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	CELLS, ^M<>
+	CALLS	#0, G^LIB$WAIT
+	CALLS	#0, G^LIB$ADDX
+	CALLS	#0, G^LIB$GET_INPUT
+	CALLS	#0, G^LIB$ADDX
+	RET
+
+	.END	CELLS

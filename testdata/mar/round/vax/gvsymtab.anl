@@ -1,0 +1,621 @@
+
+Analyze Object File                           4-OCT-2026 15:53:14.47   Page 1
+DUA1:[000000]GVSYMTAB.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 51 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "SYMTAB"
+	module version: "V1.0"
+	creation   date/time:  4-OCT-2026 15:52
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 20 bytes
+
+	Textual information:
+	"govax MACRO V0.0-0"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 47 bytes
+
+	Textual information:
+	"MACRO DUA1:[000000]SYMTAB.MAR/OBJECT=GVSYMTAB"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 42 bytes
+
+	Textual information:
+	"Phase 29 probe: the symbol table and pse"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 16 bytes
+
+	1)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 06 00 00 00 00 00 BC 0D|  0000  |.¼......|
+		       42 41 54 4D 59 53|  0008  |SYMTAB  |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 131 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "DFLT_D"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           4-OCT-2026 15:53:14.47   Page 2
+DUA1:[000000]GVSYMTAB.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "EXTREF"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 1
+		value: 36 (%X'00000024')
+		symbol: "GLOB"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 43 (%X'0000002B')
+		symbol: "GLOBVAL"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "NOSUP_D"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "SUPP_D"
+
+Analyze Object File                           4-OCT-2026 15:53:14.48   Page 3
+DUA1:[000000]GVSYMTAB.OBJ;1
+ANALYZ V07-04
+
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "UNDEF"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       1
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 1
+		value: 40 (%X'00000028')
+		symbol: "WEAKDEF"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       1
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "WEAKREF"
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+
+Analyze Object File                           4-OCT-2026 15:53:14.48   Page 4
+DUA1:[000000]GVSYMTAB.OBJ;1
+ANALYZ V07-04
+
+8.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 48 (%X'00000030')
+		symbol: "DATA"
+
+
+10.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 71 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 16 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 01 00 00 00 01|  0000  |........|
+		 00 00 00 05 00 00 00 01|  0008  |........|
+
+	4)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 4 (%X'00000004')
+
+	5)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	6)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 7F 00 00 00 2A|  0000  |*.......|
+
+
+Analyze Object File                           4-OCT-2026 15:53:14.48   Page 5
+DUA1:[000000]GVSYMTAB.OBJ;1
+ANALYZ V07-04
+
+	7)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "EXTREF"
+
+	8)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	9)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "WEAKREF"
+
+	10)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	11)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "UNDEF"
+
+	12)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	13)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 00|  0000  |....    |
+
+	14)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 44 (%X'0000002C')
+
+	15)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 41 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 8-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        1
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        1
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        1
+			(5)  GPS$V_SHR        1
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 4 (%X'00000004')
+		symbol: "A_PSECT_NAME_THAT_IS_31_CHARS_X"
+
+
+12.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 10 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           4-OCT-2026 15:53:14.48   Page 6
+DUA1:[000000]GVSYMTAB.OBJ;1
+ANALYZ V07-04
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 01|  0000  |....    |
+
+
+13.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 18 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 3
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: "ABSPSECT"
+
+
+14.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 512-byte boundary                     <-- psect 4
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        1
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 4 (%X'00000004')
+		symbol: "VECS"
+
+
+15.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 10 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 4
+		value: 0 (%X'00000000')
+
+Analyze Object File                           4-OCT-2026 15:53:14.48   Page 7
+DUA1:[000000]GVSYMTAB.OBJ;1
+ANALYZ V07-04
+
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 02|  0000  |....    |
+
+
+16.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 5
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        1
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 1 (%X'00000001')
+		symbol: "LIBP"
+
+
+17.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 7 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 5
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      03|  0000  |.       |
+
+
+18.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 6
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+
+Analyze Object File                           4-OCT-2026 15:53:14.48   Page 8
+DUA1:[000000]GVSYMTAB.OBJ;1
+ANALYZ V07-04
+
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 13 (%X'0000000D')
+		symbol: "CODE"
+
+
+19.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 7 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 6
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+20.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 6
+		value: 0 (%X'00000000')
+		entry mask: <>
+		symbol: "SYMTAB"
+
+
+21.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+22.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 14 bytes
+
+	1)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DE|  0000  |Þ       |
+
+	2)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	3)  Store Immediate, 1 byte:
+
+Analyze Object File                           4-OCT-2026 15:53:14.48   Page 9
+DUA1:[000000]GVSYMTAB.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          04 51 08 D0 50|  0000  |PÐ.Q.   |
+
+
+23.  TRACEBACK INFORMATION (OBJ$C_TBT), 20 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 BE 0D|  0000  |.¾.     |
+
+	2)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 6
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    42 41 54 4D 59 53 06|  0000  |.SYMTAB |
+
+
+24.  TRACEBACK INFORMATION (OBJ$C_TBT), 116 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 30 41 54 41 44 04|  0000  |.DATA0..|
+		             00 B8 2A 00|  0008  |.*¸.    |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           4-OCT-2026 15:53:14.48   Page 10
+DUA1:[000000]GVSYMTAB.OBJ;1
+ANALYZ V07-04
+
+	6)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	7)  Store Immediate, 39 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 54 43 45 53 50 5F 41 1F|  0000  |.A_PSECT|
+		 48 54 5F 45 4D 41 4E 5F|  0008  |_NAME_TH|
+		 31 33 5F 53 49 5F 54 41|  0010  |AT_IS_31|
+		 58 5F 53 52 41 48 43 5F|  0018  |_CHARS_X|
+		    00 B8 0F 00 00 00 04|  0020  |.....¸. |
+
+	8)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 4
+		value: 0 (%X'00000000')
+
+	9)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	10)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 04 53 43 45 56 04|  0000  |.VECS...|
+		             00 B8 0F 00|  0008  |..¸.    |
+
+	11)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 5
+		value: 0 (%X'00000000')
+
+	12)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	13)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 01 50 42 49 4C 04|  0000  |.LIBP...|
+		             00 B8 0F 00|  0008  |..¸.    |
+
+	14)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 6
+		value: 0 (%X'00000000')
+
+	15)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	16)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 0D 45 44 4F 43 04|  0000  |.CODE...|
+		                BD 01 00|  0008  |..½     |
+
+
+25.  END OF MODULE (OBJ$C_EOM), 7 bytes
+
+	severity: successful (0)
+	psect: 6
+	value: 0 (%X'00000000')
+
+
+
+Analyze Object File                           4-OCT-2026 15:53:14.48   Page 11
+DUA1:[000000]GVSYMTAB.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   160
+OBJ$C_GSD	    9	   284
+OBJ$C_TIR	    8	   126
+OBJ$C_EOM	    1	     7
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    3	   152
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   25	   729
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=GVSYMTAB.ANL GVSYMTAB.OBJ                                 

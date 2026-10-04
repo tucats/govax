@@ -1,0 +1,528 @@
+
+$ !
+$ ! 1. govax's objects.
+$ !
+$ LIST = "GVLCTL,GVBINARY,GVSYMTAB,GVNOTITLE,GVNOTITLE2,GVNOTITLE3," + -
+    "GVXREF,GVTRACE,GVFAILMAIN,GVFAILSUB,GVFAILSIG"
+$ I = 0
+$ ONEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LINKS
+$   ANALYZE/OBJECT/OUTPUT=GVLCTL.ANL GVLCTL.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]GVLCTL.OBJ;1                               0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO ONEXT
+$ ONEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LINKS
+$   ANALYZE/OBJECT/OUTPUT=GVBINARY.ANL GVBINARY.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]GVBINARY.OBJ;1                             0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO ONEXT
+$ ONEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LINKS
+$   ANALYZE/OBJECT/OUTPUT=GVSYMTAB.ANL GVSYMTAB.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]GVSYMTAB.OBJ;1                             0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO ONEXT
+$ ONEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LINKS
+$   ANALYZE/OBJECT/OUTPUT=GVNOTITLE.ANL GVNOTITLE.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]GVNOTITLE.OBJ;1                            0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO ONEXT
+$ ONEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LINKS
+$   ANALYZE/OBJECT/OUTPUT=GVNOTITLE2.ANL GVNOTITLE2.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]GVNOTITLE2.OBJ;1                           0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO ONEXT
+$ ONEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LINKS
+$   ANALYZE/OBJECT/OUTPUT=GVNOTITLE3.ANL GVNOTITLE3.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]GVNOTITLE3.OBJ;1                           0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO ONEXT
+$ ONEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LINKS
+$   ANALYZE/OBJECT/OUTPUT=GVXREF.ANL GVXREF.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]GVXREF.OBJ;1                               0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO ONEXT
+$ ONEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LINKS
+$   ANALYZE/OBJECT/OUTPUT=GVTRACE.ANL GVTRACE.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]GVTRACE.OBJ;1                              0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO ONEXT
+$ ONEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LINKS
+$   ANALYZE/OBJECT/OUTPUT=GVFAILMAIN.ANL GVFAILMAIN.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]GVFAILMAIN.OBJ;1                           0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO ONEXT
+$ ONEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LINKS
+$   ANALYZE/OBJECT/OUTPUT=GVFAILSUB.ANL GVFAILSUB.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]GVFAILSUB.OBJ;1                            0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO ONEXT
+$ ONEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LINKS
+$   ANALYZE/OBJECT/OUTPUT=GVFAILSIG.ANL GVFAILSIG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]GVFAILSIG.OBJ;1                            0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO ONEXT
+$ ONEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LINKS
+$ LINKS:
+$ LINK/MAP=RLTRACE/EXECUTABLE=RLTRACE GVTRACE
+$ LINK/MAP=RLTRNOTB/EXECUTABLE=RLTRNOTB/NOTRACEBACK GVTRACE
+$ LINK/MAP=RLFAIL/EXECUTABLE=RLFAIL GVFAILMAIN,GVFAILSUB
+$ LINK/MAP=RLFAILNT/EXECUTABLE=RLFAILNT/NOTRACEBACK GVFAILMAIN,GVFAILSUB
+$ LINK/MAP=RLFSIG/EXECUTABLE=RLFSIG GVFAILSIG
+$ LINK/MAP=RLFSIGNT/EXECUTABLE=RLFSIGNT/NOTRACEBACK GVFAILSIG
+$ LIST = "GVTRACE,GVTRNOTB,GVFAIL,GVFAILNT,GVFSIG,GVFSIGNT," + -
+    "RLTRACE,RLTRNOTB,RLFAIL,RLFAILNT,RLFSIG,RLFSIGNT"
+$ I = 0
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=GVTRACE.ANI GVTRACE.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]GVTRACE.EXE;1                              0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=GVTRNOTB.ANI GVTRNOTB.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]GVTRNOTB.EXE;1                             0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=GVFAIL.ANI GVFAIL.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]GVFAIL.EXE;1                               0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=GVFAILNT.ANI GVFAILNT.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]GVFAILNT.EXE;1                             0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=GVFSIG.ANI GVFSIG.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]GVFSIG.EXE;1                               0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=GVFSIGNT.ANI GVFSIGNT.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]GVFSIGNT.EXE;1                             0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=RLTRACE.ANI RLTRACE.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]RLTRACE.EXE;1                              0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=RLTRNOTB.ANI RLTRNOTB.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]RLTRNOTB.EXE;1                             0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=RLFAIL.ANI RLFAIL.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]RLFAIL.EXE;1                               0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=RLFAILNT.ANI RLFAILNT.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]RLFAILNT.EXE;1                             0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=RLFSIG.ANI RLFSIG.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]RLFSIG.EXE;1                               0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=RLFSIGNT.ANI RLFSIGNT.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]RLFSIGNT.EXE;1                             0 errors
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10B18033"
+$   I = I + 1
+$   GOTO INEXT
+$ INEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$ RUNS:
+$ I = 0
+$ RNEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO TITLES
+$   RUN GVTRACE
+TRACE: three routines ran
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO TITLES
+$   RUN GVTRNOTB
+TRACE: three routines ran
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO TITLES
+$   RUN GVFAIL
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=0000021C, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+FAILSUB         SUB2                                       00000005  0000021C
+FAILSUB         SUB1                                       0000000A  00000216
+FAILMAIN        FAILMAIN                                   00000009  00000209
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO TITLES
+$   RUN GVFAILNT
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=0000021C, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 20040000
+		 00000000		 7FED53B4
+		 00000000		 7FED53A0
+		 0000021C		 00000216
+		 03C00000		 00000004
+					 00000000
+					 00000000
+					 20000000
+					 7FED53CC
+
+	Register dump
+
+	R0 = 7FFE5E40  R1 = 00000400  R2 = 00000005  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5348  FP = 7FED5308  SP = 7FED5384  PC = 0000021C
+	PSL= 03C00000
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO TITLES
+$   RUN GVFSIG
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+FAILSIG         WARNIT                                     0000000F  00000220
+FAILSIG         FAILSIG                                    00000009  00000209
+%SYSTEM-F-ABORT, abort
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+FAILSIG         STOPIT                                     0000000B  0000022C
+FAILSIG         FAILSIG                                    00000010  00000210
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000002C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO TITLES
+$   RUN GVFSIGNT
+%RMS-E-EOF, end of file detected
+%SYSTEM-F-ABORT, abort
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000002C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO TITLES
+$   RUN RLTRACE
+TRACE: three routines ran
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO TITLES
+$   RUN RLTRNOTB
+TRACE: three routines ran
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO TITLES
+$   RUN RLFAIL
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=0000021C, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+FAILSUB         SUB2                                       00000005  0000021C
+FAILSUB         SUB1                                       0000000A  00000216
+FAILMAIN        FAILMAIN                                   00000009  00000209
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO TITLES
+$   RUN RLFAILNT
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=0000021C, PSL=03C00000
+
+  Improperly handled condition, image exit forced.
+
+	Signal arguments	      Stack contents
+
+	Number = 00000005		 00000000
+	Name   = 0000000C		 20040000
+		 00000000		 7FED53B4
+		 00000000		 7FED53A0
+		 0000021C		 00000216
+		 03C00000		 00000004
+					 00000000
+					 00000000
+					 20000000
+					 7FED53CC
+
+	Register dump
+
+	R0 = 7FFE5E40  R1 = 00000400  R2 = 00000005  R3 = 7FF65BD3
+	R4 = 7FFE5E0C  R5 = 7FFE5EBC  R6 = 7FFED188  R7 = 7FFED188
+	R8 = 7FFECA48  R9 = 7FFECC50  R10= 7FFED7D4  R11= 7FFE2BDC
+	AP = 7FED5348  FP = 7FED5308  SP = 7FED5384  PC = 0000021C
+	PSL= 03C00000
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000000C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO TITLES
+$   RUN RLFSIG
+%RMS-E-EOF, end of file detected
+%TRACE-E-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+FAILSIG         WARNIT                                     0000000F  00000220
+FAILSIG         FAILSIG                                    00000009  00000209
+%SYSTEM-F-ABORT, abort
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+FAILSIG         STOPIT                                     0000000B  0000022C
+FAILSIG         FAILSIG                                    00000010  00000210
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000002C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO TITLES
+$   RUN RLFSIGNT
+%RMS-E-EOF, end of file detected
+%SYSTEM-F-ABORT, abort
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X1000002C"
+$   I = I + 1
+$   GOTO RNEXT
+$ RNEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO TITLES
+$ TITLES:
+$ MACRO/LIST NOTITLE2
+$ ANALYZE/OBJECT/OUTPUT=NOTITLE2.ANL NOTITLE2.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]NOTITLE2.OBJ;1                             0 errors
+$ MACRO/LIST NOTITLE3
+$ ANALYZE/OBJECT/OUTPUT=NOTITLE3.ANL NOTITLE3.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]NOTITLE3.OBJ;1                             0 errors
+$ DIRECTORY/SIZE=ALL/DATE
+
+Directory DUA1:[000000]
+
+000000.DIR;1               7/9         4-OCT-2026 15:52:59.09
+BACKUP.SYS;1               0/0         4-OCT-2026 15:52:59.09
+BADBLK.SYS;1               0/0         4-OCT-2026 15:52:59.09
+BADLOG.SYS;1               0/0         4-OCT-2026 15:52:59.09
+BINARY.MAR;1               6/6         4-OCT-2026 15:52:59.09
+BITMAP.SYS;1               7/7         4-OCT-2026 15:52:59.09
+CONTIN.SYS;1               0/0         4-OCT-2026 15:52:59.09
+CORIMG.SYS;1               0/0         4-OCT-2026 15:52:59.09
+FAILMAIN.MAR;1             2/2         4-OCT-2026 15:52:59.09
+FAILSIG.MAR;1              2/2         4-OCT-2026 15:52:59.10
+FAILSUB.MAR;1              1/1         4-OCT-2026 15:52:59.09
+GVBINARY.ANL;1            57/57        4-OCT-2026 15:53:14.45
+GVBINARY.OBJ;1             3/3         4-OCT-2026 15:52:59.10
+GVFAIL.ANI;1               8/8         4-OCT-2026 15:53:14.80
+GVFAIL.EXE;1               4/4         4-OCT-2026 15:52:59.10
+GVFAIL.MAP;1               8/8         4-OCT-2026 15:52:59.10
+GVFAILMAIN.ANL;1          13/13        4-OCT-2026 15:53:14.55
+GVFAILMAIN.OBJ;1           1/1         4-OCT-2026 15:52:59.10
+GVFAILNT.ANI;1             8/8         4-OCT-2026 15:53:14.80
+GVFAILNT.EXE;1             3/3         4-OCT-2026 15:52:59.10
+GVFAILNT.MAP;1             8/8         4-OCT-2026 15:52:59.10
+GVFAILSIG.ANL;1           22/22        4-OCT-2026 15:53:14.57
+GVFAILSIG.OBJ;1            2/2         4-OCT-2026 15:52:59.10
+GVFAILSUB.ANL;1           16/16        4-OCT-2026 15:53:14.55
+GVFAILSUB.OBJ;1            1/1         4-OCT-2026 15:52:59.10
+GVFSIG.ANI;1               9/9         4-OCT-2026 15:53:14.81
+GVFSIG.EXE;1               4/4         4-OCT-2026 15:52:59.11
+GVFSIG.MAP;1               8/8         4-OCT-2026 15:52:59.11
+GVFSIGNT.ANI;1             9/9         4-OCT-2026 15:53:14.83
+GVFSIGNT.EXE;1             3/3         4-OCT-2026 15:52:59.11
+GVFSIGNT.MAP;1             8/8         4-OCT-2026 15:52:59.11
+GVLCTL.ANL;1              21/21        4-OCT-2026 15:53:14.44
+GVLCTL.OBJ;1               2/2         4-OCT-2026 15:52:59.10
+GVNOTITLE.ANL;1            9/9         4-OCT-2026 15:53:14.49
+GVNOTITLE.OBJ;1            1/1         4-OCT-2026 15:52:59.10
+GVNOTITLE2.ANL;1           9/9         4-OCT-2026 15:53:14.50
+GVNOTITLE2.OBJ;1           1/1         4-OCT-2026 15:52:59.10
+GVNOTITLE3.ANL;1           9/9         4-OCT-2026 15:53:14.51
+GVNOTITLE3.OBJ;1           1/1         4-OCT-2026 15:52:59.10
+GVSYMTAB.ANL;1            35/35        4-OCT-2026 15:53:14.47
+GVSYMTAB.OBJ;1             2/2         4-OCT-2026 15:52:59.10
+GVTRACE.ANI;1             11/11        4-OCT-2026 15:53:14.77
+GVTRACE.ANL;1             36/36        4-OCT-2026 15:53:14.53
+GVTRACE.EXE;1              6/6         4-OCT-2026 15:52:59.10
+GVTRACE.MAP;1              9/9         4-OCT-2026 15:52:59.10
+GVTRACE.OBJ;1              2/2         4-OCT-2026 15:52:59.10
+GVTRNOTB.ANI;1            11/11        4-OCT-2026 15:53:14.78
+GVTRNOTB.EXE;1             5/5         4-OCT-2026 15:52:59.10
+GVTRNOTB.MAP;1             9/9         4-OCT-2026 15:52:59.10
+GVXREF.ANL;1              21/21        4-OCT-2026 15:53:14.52
+GVXREF.OBJ;1               1/1         4-OCT-2026 15:52:59.10
+INDEXF.SYS;1             856/856       4-OCT-2026 15:52:59.09
+LCTL.MAR;1                29/29        4-OCT-2026 15:52:59.09
+NOTITLE.MAR;1              1/1         4-OCT-2026 15:52:59.09
+NOTITLE2.ANL;1             9/9         4-OCT-2026 15:53:14.98
+NOTITLE2.LIS;1             8/8         4-OCT-2026 15:53:14.96
+NOTITLE2.MAR;1             1/1         4-OCT-2026 15:52:59.10
+NOTITLE2.OBJ;1             1/1         4-OCT-2026 15:53:14.95
+NOTITLE3.ANL;1             9/9         4-OCT-2026 15:53:15.02
+NOTITLE3.LIS;1             8/8         4-OCT-2026 15:53:15.00
+NOTITLE3.MAR;1             1/1         4-OCT-2026 15:52:59.10
+NOTITLE3.OBJ;1             1/1         4-OCT-2026 15:53:15.00
+RLFAIL.ANI;1               8/8         4-OCT-2026 15:53:14.86
+RLFAIL.EXE;1               4/4         4-OCT-2026 15:53:14.68
+RLFAIL.MAP;1              11/11        4-OCT-2026 15:53:14.67
+RLFAILNT.ANI;1             8/8         4-OCT-2026 15:53:14.87
+RLFAILNT.EXE;1             3/3         4-OCT-2026 15:53:14.70
+RLFAILNT.MAP;1            11/11        4-OCT-2026 15:53:14.70
+RLFSIG.ANI;1               9/9         4-OCT-2026 15:53:14.88
+RLFSIG.EXE;1               4/4         4-OCT-2026 15:53:14.74
+RLFSIG.MAP;1              11/11        4-OCT-2026 15:53:14.73
+RLFSIGNT.ANI;1             9/9         4-OCT-2026 15:53:14.89
+RLFSIGNT.EXE;1             3/3         4-OCT-2026 15:53:14.76
+RLFSIGNT.MAP;1            11/11        4-OCT-2026 15:53:14.76
+RLTRACE.ANI;1             11/11        4-OCT-2026 15:53:14.84
+RLTRACE.EXE;1              6/6         4-OCT-2026 15:53:14.62
+RLTRACE.MAP;1             12/12        4-OCT-2026 15:53:14.60
+RLTRNOTB.ANI;1            11/11        4-OCT-2026 15:53:14.85
+RLTRNOTB.EXE;1             5/5         4-OCT-2026 15:53:14.64
+RLTRNOTB.MAP;1            12/12        4-OCT-2026 15:53:14.64
+ROUND.COM;1                5/5         4-OCT-2026 15:52:59.10
+ROUND.LOG;1                0/48        4-OCT-2026 15:53:14.44
+SECURITY.SYS;1             1/6         4-OCT-2026 15:52:59.09
+SYMTAB.MAR;1               4/4         4-OCT-2026 15:52:59.09
+TRACE.MAR;1                2/2         4-OCT-2026 15:52:59.09
+VOLSET.SYS;1               0/0         4-OCT-2026 15:52:59.09
+XREF.MAR;1                 2/2         4-OCT-2026 15:52:59.09
+
+Total of 87 files, 1508/1563 blocks.
+$ SET NOVERIFY

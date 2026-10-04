@@ -22,6 +22,10 @@ type ObjectOptions struct {
 	Source string
 }
 
+// noTitleText is the title header record's text for a module with no
+// .TITLE.
+const noTitleText = "\x01 "
+
 // defaultLanguage names the language processor when ObjectOptions doesn't.
 const defaultLanguage = "govax MACRO"
 
@@ -55,6 +59,13 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 
 	if b.Language == "" {
 		b.Language = defaultLanguage
+	}
+
+	// With no .TITLE at all, real MACRO still writes a title header
+	// record, of "\x01 ", whether or not a .SBTTL came first
+	// (testdata/mar/round: NOTITLE, NOTITLE2, and NOTITLE3).
+	if a.title == "" {
+		b.Title = noTitleText
 	}
 
 	if b.Created.IsZero() {

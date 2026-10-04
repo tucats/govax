@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/obj"
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // probeDir is the Phase 29 probe's directory (testdata/mar/list), whose
@@ -229,6 +230,88 @@ func TestLinkProbeDST(t *testing.T) {
 			}
 
 			check("govax's objects", govax)
+		})
+	}
+}
+
+// govaxTables is the symbol source govax's LINK falls back on with none
+// of VMS's libraries (the console's govaxSymbols, internal/console/
+// linksource.go, less its shims): the shareable images and their
+// routines from vmsdef, and the P1 vector.
+func govaxTables() *TableSource {
+	src := &TableSource{Symbols: map[string]Definition{}, Images: map[string]SharedImage{}}
+
+	for name, i := range vmsdef.SharedImages {
+		src.Images[name] = SharedImage{
+			Name: name, Pages: i.Pages, MajorID: i.MajorID, MinorID: i.MinorID, Match: Match(i.Match),
+			Symbols: i.Symbols, Psects: i.Psects, Sections: i.Sections,
+		}
+	}
+
+	for name, s := range vmsdef.ImageSymbols {
+		src.Symbols[name] = Definition{Image: s.Image, Value: s.Value}
+	}
+
+	for _, e := range vmsdef.P1VectorTable {
+		src.Symbols[e.Name] = Definition{Value: e.Addr}
+	}
+
+	return src
+}
+
+// TestLinkRoundImagesMatchRealLINK links govax's objects of the probe's
+// programs with govax's own symbol tables, and checks each image is byte
+// for byte the one real LINK made of the same objects in Phase 29's VMS
+// round (testdata/mar/round/vax/rl*.exe), given its name, link time, and
+// linker ID. VMS ran both, and printed the same traceback for each
+// (round.log).
+func TestLinkRoundImagesMatchRealLINK(t *testing.T) {
+	round := filepath.Join("..", "..", "testdata", "mar", "round", "vax")
+
+	for _, c := range []struct {
+		image   string
+		sources []string
+		trace   bool
+	}{
+		{"rltrace", []string{"trace"}, true},
+		{"rltrnotb", []string{"trace"}, false},
+		{"rlfail", []string{"failmain", "failsub"}, true},
+		{"rlfailnt", []string{"failmain", "failsub"}, false},
+		{"rlfsig", []string{"failsig"}, true},
+		{"rlfsignt", []string{"failsig"}, false},
+	} {
+		t.Run(c.image, func(t *testing.T) {
+			// FAILSIG calls two LIBRTL routines with G^, and real LINK
+			// orders their fixup cells differently from govax; which rule
+			// it follows is CELLS.COM's to settle (docs/PHASE-29.md,
+			// subtask 14).
+			if strings.HasPrefix(c.image, "rlfsig") {
+				t.Skip("the order of two fixup cells waits on the CELLS follow-up")
+			}
+
+			want, opts := realImage(t, filepath.Join(round, c.image+".exe"))
+			opts.Traceback = c.trace
+			opts.Sources = []SymbolSource{govaxTables()}
+
+			inputs := make([]Input, len(c.sources))
+
+			for i, name := range c.sources {
+				src, err := os.ReadFile(filepath.Join(probeDir, name+".mar"))
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				inputs[i] = Input{File: "GV" + strings.ToUpper(name) + ".OBJ", Module: macroModule(t, string(src))}
+			}
+
+			img, err := Link(inputs, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !bytes.Equal(img.Bytes, want) {
+				t.Errorf("image differs from real LINK's:\n%s", diffBlocks(img.Bytes, want))
+			}
 		})
 	}
 }

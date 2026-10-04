@@ -485,18 +485,21 @@ func requireSameObject(t *testing.T, a *Assembler, realModule *obj.Module) {
 
 // TestListProbeObjects checks govax's objects for the Phase 29 probe's
 // sources (testdata/mar/list) against real MACRO's, as
-// TestFixtureLadderObjects does the ladder's. The probe's objects
-// assembled with debugger records are subtask 12's, and two sources are
-// left out:
-//   - notitle.mar: with no .TITLE, real MACRO writes a TTL header record
-//     of "\x01 ", which may come from the .SBTTL before any other
-//     statement; a later VMS run settles it.
-//   - errors.mar and errend.mar, which don't assemble.
+// TestFixtureLadderObjects does the ladder's, and the VMS round's two
+// sources with no .TITLE (testdata/mar/round). The probe's objects
+// assembled with debugger records are subtask 12's (deferred), and
+// errors.mar and errend.mar don't assemble.
 func TestListProbeObjects(t *testing.T) {
-	dir := filepath.Join("..", "..", "testdata", "mar", "list")
+	mar := filepath.Join("..", "..", "testdata", "mar")
 
-	for _, name := range []string{"lctl", "binary", "symtab", "xref", "trace", "failmain", "failsub", "failsig"} {
-		t.Run(name, func(t *testing.T) {
+	for _, path := range []string{
+		"list/lctl", "list/binary", "list/symtab", "list/notitle", "list/xref",
+		"list/trace", "list/failmain", "list/failsub", "list/failsig",
+		"round/notitle2", "round/notitle3",
+	} {
+		dir, name := filepath.Join(mar, filepath.Dir(path)), filepath.Base(path)
+
+		t.Run(path, func(t *testing.T) {
 			src, err := os.ReadFile(filepath.Join(dir, name+".mar"))
 			if err != nil {
 				t.Fatal(err)

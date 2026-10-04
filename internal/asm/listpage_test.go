@@ -169,6 +169,11 @@ func TestFixtureListings(t *testing.T) {
 		cases = append(cases, fixture{name: "list/" + name, source: filepath.Join(marDir, "list", name+".mar"), listing: filepath.Join(marDir, "list", "vax", name+".lis")})
 	}
 
+	// The VMS round's sources with no .TITLE (testdata/mar/round).
+	for _, name := range []string{"notitle2", "notitle3"} {
+		cases = append(cases, fixture{name: "round/" + name, source: filepath.Join(marDir, "round", name+".mar"), listing: filepath.Join(marDir, "round", "vax", name+".lis")})
+	}
+
 	// The listing controls' source, listed again with /SHOW= and
 	// /NOSHOW= (list.com).
 	lctl := filepath.Join(marDir, "list", "lctl.mar")
@@ -201,13 +206,6 @@ func TestFixtureListings(t *testing.T) {
 				show: tc.show, noshow: tc.noshow,
 				xref: tc.xref || tc.name == "list/xref", xrefKinds: tc.xrefKinds,
 				noObject: tc.noObject,
-			}
-
-			// With no .TITLE, real MACRO writes a title header record
-			// ("\x01 ") that govax doesn't; what makes it is left to the
-			// VMS round (docs/PHASE-29.md, subtask 14).
-			if tc.name == "list/notitle" {
-				check.extraRecords = 1
 			}
 
 			check.fails = tc.name == "list/errors"
