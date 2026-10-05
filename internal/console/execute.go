@@ -96,10 +96,11 @@ func (c *Console) breakpointAt(addr uint32) *Breakpoint {
 
 // removeBreakpointPtr removes target by identity rather than by address, so
 // runLoop can clear the exact one-shot breakpoint it just hit even if a
-// permanent user breakpoint happens to share its address (in which case
-// breakpointAt returns the permanent one first and this is never reached
-// for the temporary one — matching the C source's own first-match linear
-// scan of a single breakpoint_list).
+// permanent user breakpoint happens to share its address. In that case
+// breakpointAt returns the permanent one first (the C source's first-match
+// scan of a single breakpoint_list), and the STEP that set the one-shot
+// breakpoint removes it when its run stops (step.go's endStep). Removing
+// one that is already gone does nothing.
 func (c *Console) removeBreakpointPtr(target *Breakpoint) {
 	for i, bp := range c.Breakpoints {
 		if bp == target {
@@ -170,7 +171,7 @@ func (c *Console) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) err
 			}
 
 			if c.instructionBreakpointHit() {
-				c.Printf("Instruction break at %08X\n", pc)
+				c.Printf("Instruction break at %s\n", c.locationText(pc))
 
 				return nil
 			}

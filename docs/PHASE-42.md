@@ -1,7 +1,8 @@
 # Phase 42 — The debugger: its own package, grammar, and prompt
 
 **Status:** in progress. Planned and reviewed 2026-10-05 (the author
-took every recommended decision). Subtask 1's probe is ready for VMS.
+took every recommended decision). Subtasks 1 (the probe, run on VMS) and
+2 (the run-control bugs) are done.
 
 ## Goal
 
@@ -876,3 +877,42 @@ subtasks that use them:
 - Under `SET OUTPUT VERIFY`, a command that fails while being parsed or
   while its names are looked up isn't echoed; its message is all the
   log shows. Subtask 16's oracle needs this rule.
+
+### 2026-10-05 — Subtask 2: the run-control bugs, fixed in place
+
+Fixed in `internal/console`, before anything moves to the debugger
+package, each with a regression test in `runcontrol_test.go` on
+DBGDIS. Each test failed on the old code (checked by stashing the
+fixes) and passes now.
+
+- **Bug 1, RUN and CALL ignored breakpoints.** `Console.Call` had its
+  own run loop with no breakpoint check, and RUN goes through it. It
+  now runs through `runLoop`, as GO does. The first instruction is
+  checked too (`skipFirstCheck` false): it's the called routine's, not
+  where the console was stopped, so a breakpoint there fires at once.
+  `TestRunStopsAtBreakpoint` (RUN stops at SUB2 twice, then GO
+  finishes the image) and `TestCallStopsAtBreakpoint` (a break on the
+  called routine's first instruction). The console's `/entry=` commands
+  (ABOUT, SHOW VERSION) call kernel routines through `Call` too, and so
+  now stop at a breakpoint set in them.
+- **Bugs 2 and 3, a STEP's one-shot breakpoint outlived it.**
+  `setStepBreakpoint` returns the breakpoint, and STEP/OVER and
+  STEP/RETURN remove it when their run stops for any reason (`endStep`,
+  deferred). That covers a run stopped elsewhere first (bug 2) and a
+  return to an address with a user breakpoint, which `breakpointAt`
+  finds first (bug 3); the stop is reported as the user's breakpoint.
+  `TestStepOverEndsAtBreakpoint`, `TestStepReturnEndsAtBreakpoint`,
+  `TestStepOverReturnsToBreakpoint`. VMS's debugger kept a STEP/RETURN
+  pending across an exception break (subtask 1's results); govax ends an
+  interrupted STEP, and `endStep`'s comment says so.
+- **Bug 4** was not a bug (subtask 1's results); nothing changed.
+- **Bug 6, instruction breaks gave a bare address.** The message names
+  the location as `Break at` does: `Instruction break at
+  DBGDIS\START\%LINE 87` in a debug image, the eight-digit address
+  elsewhere (so the existing tests are unchanged).
+  `TestInstructionBreakNamesLocation`.
+
+Bugs 5 (grammar entries with no handler) and 7 (registers in
+expressions) belong to the subtasks that rework those commands (14 and
+9). No other bug turned up in this code. `go build`, `go vet`, `go test
+./...`, and golangci-lint are clean.

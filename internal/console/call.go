@@ -1,9 +1,5 @@
 package console
 
-import (
-	"github.com/tucats/govax/internal/vax"
-)
-
 // Call implements the console CALL command's core mechanism (see
 // docs/PHASE-13.md): invokes the procedure at addr with the given arguments
 // (pushed right-to-left, matching a real CALLS instruction -- see
@@ -15,6 +11,13 @@ import (
 // console_call: on /STEP (or its /BREAK|/DEBUG synonyms) it doesn't run the
 // code at all, it delegates straight to console_step for one instruction --
 // the run-to-completion path below is only taken otherwise.
+//
+// The run goes through runLoop, as GO's does, so breakpoints stop it: RUN
+// (which calls its IMAGE$INIT driver through here) and CALL used to run
+// to completion past every breakpoint (docs/PHASE-42.md, bug 1). The
+// first instruction is checked too (skipFirstCheck false): it's the
+// called routine's, not a place the console was already stopped at, so
+// a breakpoint there fires at once, as one does for STEP/OVER's callee.
 func (c *Console) Call(addr uint32, step bool, args ...uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -30,14 +33,5 @@ func (c *Console) Call(addr uint32, step bool, args ...uint32) error {
 		return c.stepInto()
 	}
 
-	for {
-		pc := c.CPU.GPR(vax.PC)
-		finish := c.traceStep(pc, false)
-
-		if err := c.Engine.Step(); err != nil {
-			return c.reportStopReason(err)
-		}
-		
-		finish()
-	}
+	return c.runLoop(false, func(pc uint32) func() { return c.traceStep(pc, false) })
 }

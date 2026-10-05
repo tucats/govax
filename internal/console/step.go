@@ -118,9 +118,29 @@ func (c *Console) returnAddress() (uint32, error) {
 // by STEP/OVER and STEP/RETURN to resume the console once execution returns
 // to addr — the Go equivalent of vax.c's own set_break(pc, 0,
 // BREAK_ADDRESS|BREAK_STEP|BREAK_TEMPORARY) calls in its STEP_OVER/
-// STEP_RETURN handling.
-func (c *Console) setStepBreakpoint(addr uint32) {
-	c.Breakpoints = append(c.Breakpoints, &Breakpoint{Kind: BreakAddress, Addr: addr, Temporary: true, Step: true})
+// STEP_RETURN handling. It returns the breakpoint, for the STEP to remove
+// once its run stops for any reason (endStep).
+func (c *Console) setStepBreakpoint(addr uint32) *Breakpoint {
+	bp := &Breakpoint{Kind: BreakAddress, Addr: addr, Temporary: true, Step: true}
+	c.Breakpoints = append(c.Breakpoints, bp)
+
+	return bp
+}
+
+// endStep removes a STEP's one-shot breakpoint when the STEP's run stops.
+// When the run reached it, runLoop has already removed it and this does
+// nothing; when the run stopped first somewhere else (a user breakpoint,
+// a fault breakpoint, Ctrl-C, a HALT, an unhandled fault), the STEP is
+// over, and its breakpoint would otherwise stay set and stop a later GO
+// with a stray "Stepped to" (docs/PHASE-42.md, bug 2). The same goes for
+// one that shares its address with a user breakpoint, which breakpointAt
+// finds first, so runLoop never removes it (bug 3).
+//
+// VMS's debugger kept a STEP/RETURN pending across an exception break in
+// the Phase 42 probe (testdata/dbgcmd/vax/step.dlg); govax ends an
+// interrupted STEP instead, a deliberate difference.
+func (c *Console) endStep(bp *Breakpoint) {
+	c.removeBreakpointPtr(bp)
 }
 
 // Step implements STEP: starting at the current PC (or startAddr, if
@@ -224,7 +244,7 @@ func (c *Console) stepOver() error {
 		return nil
 	}
 
-	c.setStepBreakpoint(dec.NextPC)
+	defer c.endStep(c.setStepBreakpoint(dec.NextPC))
 
 	return c.runLoop(false, func(uint32) func() { return func() {} })
 }
@@ -245,7 +265,7 @@ func (c *Console) stepReturn() error {
 		return err
 	}
 
-	c.setStepBreakpoint(addr)
+	defer c.endStep(c.setStepBreakpoint(addr))
 
 	return c.runLoop(true, func(pc uint32) func() { return c.traceStep(pc, false) })
 }
