@@ -5,6 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/dbgsym"
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -294,4 +295,117 @@ func (c *Console) AccessModeName() string {
 	}
 
 	return modeNames[c.CPU.PSL().CurMod()]
+}
+
+// ImageInfo describes one loaded image for the debugger's SHOW IMAGE.
+type ImageInfo struct {
+	// Name is the image's file name without directory, type, or version,
+	// in upper case (DBGDIS for DUA0:[DIR]DBGDIS.EXE;1), as SHOW IMAGE
+	// lists it.
+	Name string
+
+	// Base and End are the first and last addresses the image occupies.
+	Base, End uint32
+
+	// Main is true for the image RUN started, which SHOW IMAGE marks with
+	// an asterisk.
+	Main bool
+
+	// Program is the image's debug symbol table, nil for an image linked
+	// without one. An image whose symbols the debugger can use is one
+	// that has one.
+	Program *dbgsym.Program
+}
+
+// Images returns the loaded images, main image first, as the debugger's
+// SHOW IMAGE lists them.
+func (c *Console) Images() []ImageInfo {
+	var out []ImageInfo
+
+	for _, icb := range c.ICBList {
+		// The image's first address is its lowest section's: the load
+		// offset alone would include the unused page 0 below it.
+		base := icb.Base
+
+		first := true
+
+		for _, isd := range icb.ISDList {
+			// The user stack and global sections aren't part of the
+			// image's own pages (imageLoad skips them too).
+			if isdType(isd.Flags) == isdUsrStack || isd.Flags&isdGBL != 0 || isd.Pages == 0 {
+				continue
+			}
+
+			if addr := icb.Base + uint32(isd.VPN)<<9; first || addr < base {
+				base, first = addr, false
+			}
+		}
+
+		out = append(out, ImageInfo{
+			Name:    imageDisplayName(icb.File),
+			Base:    base,
+			End:     icb.End,
+			Main:    icb.Flags&icbMain != 0,
+			Program: icb.Debug,
+		})
+	}
+
+	return out
+}
+
+// imageDisplayName reduces an image file specification to its bare name:
+// the part after the last "]", ":", or "/", up to the first ".", in upper
+// case.
+func imageDisplayName(file string) string {
+	if at := strings.LastIndexAny(file, "]:/"); at >= 0 {
+		file = file[at+1:]
+	}
+
+	name, _, _ := strings.Cut(file, ".")
+
+	return strings.ToUpper(name)
+}
+
+// ScopeFrames returns the routine of each call frame, innermost first, as
+// "MODULE\ROUTINE" (just "MODULE" for a routine named as its module, or a
+// frame in no routine). It is what SHOW SCOPE lists: the same frames as
+// SHOW CALLS. ok is false when the PC isn't in an image with debug
+// symbols.
+func (c *Console) ScopeFrames() (paths []string, ok bool, err error) {
+	rows, ok, err := c.debugFrames(0)
+
+	for _, row := range rows {
+		path := row.module
+
+		if row.hasRoutine && !strings.EqualFold(row.routine, row.module) {
+			path += `\` + row.routine
+		}
+
+		paths = append(paths, path)
+	}
+
+	return paths, ok, err
+}
+
+// LanguageName is the name of the language a module's DST says it was
+// written in, as the debugger shows it (MACRO).
+func LanguageName(code uint32) string { return languageName(code) }
+
+// HasSymbol reports whether the console's own symbol table (not the
+// program's debug symbols) has a symbol matching name, which may contain
+// the VMS wildcards.
+func (c *Console) HasSymbol(name string) bool {
+	if lnm.HasWildcards(name) {
+		for _, s := range c.Symbols.All() {
+			if lnm.Match(strings.ToUpper(name), strings.ToUpper(s.Name)) {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	_, ok := c.Symbols.Find(name)
+
+	return ok
 }

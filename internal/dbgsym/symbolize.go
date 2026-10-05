@@ -205,6 +205,15 @@ func (m *Module) path(s *symtab.Symbol) string {
 	return Path(s)
 }
 
+// Path is a symbol's path name as the debugger lists it in SHOW SYMBOL: the
+// same as the package-level Path, except that a routine named as its
+// module is just its name (TRACE, not TRACE\TRACE).
+func (m *Module) Path(s *symtab.Symbol) string { return m.path(s) }
+
+// DatumNamed returns the module's data record for the data symbol or
+// constant called name, or nil if it has none (a routine, a label, a psect).
+func (m *Module) DatumNamed(name string) *Datum { return m.datumNamed(name) }
+
 // routinePath is routine r's path name: MODULE\ROUTINE, or the routine's
 // name alone when it's named as its module.
 func (m *Module) routinePath(r *Routine) string {

@@ -1,7 +1,7 @@
 # Phase 42 — The debugger: its own package, grammar, and prompt
 
 **Status:** in progress. Planned and reviewed 2026-10-05 (the author
-took every recommended decision). Subtasks 1 to 11 are done (see the
+took every recommended decision). Subtasks 1 to 12 are done (see the
 progress log).
 
 ## Goal
@@ -1533,5 +1533,69 @@ grammars answer for now.
   the blank lines the log reader can't see; plus SET/CANCEL MODE and the
   abbreviation rule, the access modes, the moved SHOW/SET/CANCEL commands
   (with decimal input radix), and NOCALLS after the image exits.
+- `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
+  touched are clean.
+
+### 2026-10-05 — Subtask 12: what the debugger knows about the program
+
+`SHOW IMAGE`, `SHOW MODULE`, `SHOW SYMBOL`, `SHOW SCOPE`, `SHOW LANGUAGE`,
+and `SET MODULE` are the debugger's (`internal/debugger/program.go`; the
+grammar is in `debug.dcl`).
+
+- **SHOW IMAGE** lists the loaded images by name, `*` before the main one,
+  with `set` (the image has debug symbols), base, and end addresses, in
+  VMS's layout. Names come from the file RUN loaded (`ICB.File`, new:
+  `Name` is `<MAIN>` for the main image). The base is the lowest of the
+  image's own sections, so `DBGDIS` is `00000200`..`000007FF` as VMS shows.
+  VMS also lists its debugger's own images (DEBUG, DBGSSISHR, LIBRTL);
+  govax has none of those and lists only what it loaded. `/FULL` is
+  govax's: the image's module and routine counts.
+- **SHOW MODULE** and **SET MODULE [/ALL] name,...**: the symbols
+  column says which modules are "set". The main routine's module is at
+  start-up (`seedModules`, at the stop at the main routine's first
+  instruction); SET MODULE adds modules. govax reads every module's
+  symbols when it loads the image, so setting changes only that column
+  and which modules a `SHOW SYMBOL` with no `IN` searches. An unknown
+  module is `%DEBUG-E-NOSUCHMODULE` (**govax's wording**, unconfirmed).
+- **SHOW SYMBOL [/ADDRESS][/TYPE] pattern [IN module,...]**: VMS's layout
+  and order (routines by name, then data and labels by name, then psects
+  by address), with `*` and `%` wildcards, matched against the symbol's
+  name, or its whole path name if the pattern has a backslash. `/TYPE`:
+  atomic, string descriptor, and array descriptor types with the cell
+  type. A pattern that matches nothing in the program's symbols falls
+  back on the console's own symbol table, then `%DEBUG-E-NOSYMBOL`
+  (the probe's text). **Unconfirmed:** neither qualifier is `/ADDRESS`;
+  both is the address then the type; a multi-dimension array's bounds
+  are `[a:b,c:d]`; and a descriptor datum's "descriptor address" is
+  govax's data address (VMS's is in its own heap).
+- **SHOW SCOPE** lists the call levels as SHOW CALLS' frames, level 0
+  marked `*`, each ending `, ` but the last. A routine already in an
+  inner level is numbered by how many inner levels have it (`FACT 1`).
+  The probe has only two levels of a routine; the numbering past that is
+  unconfirmed. No `SET SCOPE` yet, so the current scope is always level
+  0 (the plan's later work). With no frame: `%DEBUG-E-NOCALLS`.
+- **SHOW LANGUAGE**: `language: MACRO` for the module at the PC;
+  `UNKNOWN` with none (unconfirmed).
+- **Not matching VMS** (the tests mask them): SHOW MODULE's *size* column
+  (VMS's in-memory figure: 1804 for DBGDIS where its DST records are
+  582 bytes) and both footers' *bytes allocated* (VMS's own tables).
+  govax prints the DST record size and, as bytes allocated, the sum of
+  the set modules' sizes (modules) or of the images (images).
+- **Unexplained VMS omission:** VMS's `SHOW SYMBOL/ADDRESS F_A* IN FORTH`
+  lists only the labels (7); govax also lists FORTH's dictionary headers
+  (`F_ABORT_H`, labels DEFWORD puts in the FORTH_WORDS psect, as data).
+  No probe says why VMS leaves them out; the test filters them. VMS's
+  listing for the TRACE images (only the routine named as its module)
+  is still not an oracle.
+- **Console side:** `console.Images`, `ScopeFrames`, `HasSymbol`, and
+  `LanguageName` (`export.go`); `debugFrames` is `showDebugCalls`'
+  frame walk, shared with SHOW SCOPE. `dbgsym.Module` got `Path` and
+  `DatumNamed`. New messages `DBG_NOSYMBOL` and `DBG_NOSUCHMODULE`.
+- **Tests** (`program_test.go`): `TestShowSymbolOracle` replays every
+  SHOW SYMBOL, SHOW MODULE, SHOW LANGUAGE, SHOW SCOPE, and SET MODULE of
+  the dbgdis, dbgtrc, gvdbgdis, and forth sessions (291 lines);
+  `TestShowImage`, `TestSetModule`, `TestShowSymbolForms` (IN,
+  qualifiers, wildcards, path patterns, errors), and
+  `TestShowScopeRecursion`.
 - `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
   touched are clean.

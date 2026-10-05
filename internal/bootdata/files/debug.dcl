@@ -96,6 +96,7 @@ grammar debugger
         keyword     source              /syntax=set_source/nonegatable
         keyword     mode                /syntax=set_mode/nonegatable
         keyword     radix               /syntax=set_radix/nonegatable
+        keyword     module              /syntax=set_module/nonegatable
         keyword     psl                 /syntax=set_psl/nonegatable
         keyword     pte                 /syntax=set_pte/nonegatable
         keyword     page                /syntax=set_pte/nonegatable
@@ -146,6 +147,14 @@ grammar debugger
             parameter   words/id=81             -
                         /type=$rest_of_line     -
                         /prompt="Mode"
+
+        ! SET MODULE module[,module...] (or /ALL) loads a module's symbols;
+        ! govax has them all loaded already, so it only changes what SHOW
+        ! MODULE says.
+        syntax set_module/id=279
+            qualifier   all/id=280/nonegatable
+            parameter   modules/id=281          -
+                        /type=$rest_of_line
 
         ! SET RADIX [/INPUT|/OUTPUT] DECIMAL|HEXADECIMAL|OCTAL|BINARY. With
         ! neither qualifier it sets both radixes.
@@ -221,6 +230,13 @@ grammar debugger
         keyword     usp                 /syntax=show_usp
         keyword     mode                /syntax=show_mode
         keyword     radix               /syntax=show_radix
+        keyword     image               /syntax=show_image
+        keyword     images              /syntax=show_image
+        keyword     module              /syntax=show_module
+        keyword     modules             /syntax=show_module
+        keyword     symbol              /syntax=show_symbol
+        keyword     scope               /syntax=show_scope
+        keyword     language            /syntax=show_language
         keyword     r0
         keyword     r1
         keyword     r2
@@ -282,6 +298,24 @@ grammar debugger
         syntax show_step/id=43
 
         syntax show_source/id=72
+
+        ! What the debugger knows about the program (VMS's own commands).
+        ! SHOW IMAGE lists the loaded images, SHOW MODULE the modules of
+        ! the program's debug symbols, SHOW SYMBOL the symbols matching a
+        ! pattern ("pattern [IN module[,module...]]", read by the handler),
+        ! SHOW SCOPE the call levels names are looked up in, and SHOW
+        ! LANGUAGE the language of the current module.
+        syntax show_image/id=270
+            qualifier   full/id=271
+        syntax show_module/id=272
+        syntax show_symbol/id=273
+            qualifier   address/id=274
+            qualifier   type/id=275
+            parameter   pattern/id=276          -
+                        /type=$rest_of_line     -
+                        /prompt="Symbol"
+        syntax show_scope/id=277
+        syntax show_language/id=278
 
         ! The commands below show the machine's state; they are govax's own
         ! except SHOW CALLS, SHOW STACK, SHOW MODE, and SHOW RADIX, which

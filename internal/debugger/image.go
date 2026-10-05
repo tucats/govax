@@ -51,6 +51,7 @@ func (d *Debugger) startImage(a console.Activation) (runOutcome, error) {
 	d.imageDebug = true
 	d.imageExited = false
 	d.pendingReturn = nil
+	d.symbolsSet = nil
 
 	// The program stops at its first instruction without a message: this
 	// breakpoint is the debugger's own, not one the user set.
@@ -64,6 +65,10 @@ func (d *Debugger) startImage(a console.Activation) (runOutcome, error) {
 		// The image ended before it reached its main routine (or stopped
 		// being a program the debugger can follow): nothing to debug.
 		d.imageDebug = false
+	} else {
+		// Stopped at the main routine: its module is the one whose
+		// symbols the debugger starts with.
+		d.seedModules()
 	}
 
 	return outcome, err

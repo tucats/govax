@@ -110,7 +110,11 @@ type SHR struct {
 // ICB is an Image Control Block: one loaded image (main or a sharable
 // dependency), matching imgdef.h's struct ICB.
 type ICB struct {
-	Name     string
+	Name string
+	// File is the file the image was loaded from, as RUN or the shareable
+	// image search named it. Name is "<MAIN>" for the main image, so File
+	// is what the debugger's SHOW IMAGE names it by.
+	File     string
 	Base     uint32
 	End      uint32
 	Flags    uint32
@@ -387,7 +391,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 		return nil, err
 	}
 
-	icb := &ICB{Base: c.RTL.RegionSize[0], Flags: flag | icbIncomplete}
+	icb := &ICB{Base: c.RTL.RegionSize[0], Flags: flag | icbIncomplete, File: fn}
 	if flag == icbMain {
 		icb.Name = "<MAIN>"
 	} else {

@@ -15,6 +15,8 @@ const (
 	dbgNoAccessR
 	dbgNoSourceDir
 	dbgNoCalls
+	dbgNoSymbol
+	dbgNoSuchModule
 )
 
 // DBG facility status codes.
@@ -57,6 +59,15 @@ const (
 	// call frame to show, as after the image has exited (the probe's
 	// errors.dlg).
 	DBG_NOCALLS = DBGFacility<<FacilityPosition | dbgNoCalls<<MessagePosition | StatusError
+	// DBG_NOSYMBOL says a name isn't in the debugger's symbol table; its
+	// argument is the name. The text is the VMS debugger's own (the
+	// probe's sessions), as SHOW SYMBOL answers a pattern that matches
+	// nothing.
+	DBG_NOSYMBOL = DBGFacility<<FacilityPosition | dbgNoSymbol<<MessagePosition | StatusError
+	// DBG_NOSUCHMODULE is SET MODULE's and SHOW SYMBOL's answer to a
+	// module name no loaded image has. The wording is govax's choice: no
+	// probe showed it.
+	DBG_NOSUCHMODULE = DBGFacility<<FacilityPosition | dbgNoSuchModule<<MessagePosition | StatusError
 )
 
 func init() {
@@ -69,5 +80,7 @@ func init() {
 	DefineMessage(DBG_NOBREAKS, DBGFacility, "NOBREAKS", "no breakpoints are set")
 	DefineMessage(DBG_NOACCESSR, DBGFacility, "NOACCESSR", "no read access to address !XL")
 	DefineMessage(DBG_NOCALLS, DBGFacility, "NOCALLS", "no active call frames")
+	DefineMessage(DBG_NOSYMBOL, DBGFacility, "NOSYMBOL", "symbol '!S' is not in the symbol table")
+	DefineMessage(DBG_NOSUCHMODULE, DBGFacility, "NOSUCHMODULE", "module '!S' is not in the module table")
 	DefineMessage(DBG_NOSOURCEDIR, DBGFacility, "NOSOURCEDIR", "no source directory search list is in effect")
 }

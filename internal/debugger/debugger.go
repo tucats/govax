@@ -6,6 +6,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/dcl"
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/dbgsym"
 )
 
 // Prompt is what the front end shows while a debugger session is active,
@@ -96,6 +97,11 @@ type Debugger struct {
 	// examined is where EXAMINE last looked (data.go): what "EXAMINE" with
 	// no location, "." and "^" are relative to.
 	examined examineState
+
+	// symbolsSet are the modules whose symbols are "set" (SET MODULE,
+	// program.go), which SHOW MODULE reports and a SHOW SYMBOL without IN
+	// searches. nil until first needed or until an image starts.
+	symbolsSet map[*dbgsym.Module]bool
 
 	// active is true while a session is in progress, which is whether
 	// the prompt is "DBG> " and command lines come here.

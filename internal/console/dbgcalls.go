@@ -91,6 +91,57 @@ func (c *Console) debugCallRow(pc uint32, caller bool) (callRow, bool) {
 	return row, true
 }
 
+// debugFrames walks the call frames as SHOW CALLS and SHOW SCOPE do: a
+// row for the PC, then one for the saved PC of each frame before it,
+// following the saved FPs from the current FP, for as long as that PC is
+// in a module of a loaded image's debug symbol table. ok is false when
+// the PC itself isn't in one. count bounds the rows; 0 is every frame.
+func (c *Console) debugFrames(count uint32) (rows []callRow, ok bool, err error) {
+	pc := c.CPU.GPR(vax.PC)
+
+	row, ok := c.debugCallRow(pc, false)
+	if !ok {
+		return nil, false, nil
+	}
+
+	if count == 0 {
+		count = maxDebugFrames
+	}
+
+	rows = append(rows, row)
+
+	fp := c.CPU.GPR(vax.FP)
+
+	for n := uint32(1); n < count && fp != 0 && fp != cpu.SentinelReturn; n++ {
+		savedFP, err := c.Mem.LoadLongword(c.CPU, fp+12)
+		if err != nil {
+			return rows, true, err
+		}
+
+		savedPC, err := c.Mem.LoadLongword(c.CPU, fp+16)
+		if err != nil {
+			return rows, true, err
+		}
+
+		row, ok := c.debugCallRow(savedPC, true)
+		if !ok {
+			break
+		}
+
+		rows = append(rows, row)
+
+		// The stack grows down, so a caller's frame is above its
+		// callee's: anything else is a broken chain.
+		if savedFP <= fp {
+			break
+		}
+
+		fp = savedFP
+	}
+
+	return rows, true, nil
+}
+
 // showDebugCalls prints SHOW CALLS as the debugger does, when the PC is
 // in a module of a loaded image's debug symbol table, and reports false
 // (printing nothing) when it isn't, for the console's own frame dump.
@@ -104,48 +155,16 @@ func (c *Console) debugCallRow(pc uint32, caller bool) (callRow, bool) {
 // (LOCALR at DBGDIS's JSBRTN, though START called it). count bounds the
 // rows; 0 is every frame.
 func (c *Console) showDebugCalls(count uint32) (bool, error) {
-	pc := c.CPU.GPR(vax.PC)
-
-	row, ok := c.debugCallRow(pc, false)
+	rows, ok, err := c.debugFrames(count)
 	if !ok {
 		return false, nil
 	}
 
-	if count == 0 {
-		count = maxDebugFrames
-	}
-
 	c.Printf("%s\n", debugCallsHeading)
-	c.Printf("%s\n", row)
 
-	fp := c.CPU.GPR(vax.FP)
-
-	for n := uint32(1); n < count && fp != 0 && fp != cpu.SentinelReturn; n++ {
-		savedFP, err := c.Mem.LoadLongword(c.CPU, fp+12)
-		if err != nil {
-			return true, err
-		}
-
-		savedPC, err := c.Mem.LoadLongword(c.CPU, fp+16)
-		if err != nil {
-			return true, err
-		}
-
-		row, ok := c.debugCallRow(savedPC, true)
-		if !ok {
-			break
-		}
-
+	for _, row := range rows {
 		c.Printf("%s\n", row)
-
-		// The stack grows down, so a caller's frame is above its
-		// callee's: anything else is a broken chain.
-		if savedFP <= fp {
-			break
-		}
-
-		fp = savedFP
 	}
 
-	return true, nil
+	return true, err
 }
