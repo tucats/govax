@@ -1,0 +1,308 @@
+# Phase 40 — ANALYZE/IMAGE
+
+**Status:** planned (2026-10-05).
+
+## Goal
+
+A console `ANALYZE/IMAGE` command whose output matches VMS 7.3's
+`ANALYZE/IMAGE` (ANALYZ V07-04) line for line: the image header (fixed
+header, activation, symbol table and debug pointers, identification,
+patch information, each image section descriptor with its flag bits), the
+image activator fixup section (its fixed part, the shareable image list,
+G^ and .ADDRESS reference fixups, protection change fixups), the errors
+ANALYZE finds, and VMS's page layout.
+
+Phase 38 built `ANALYZE/OBJECT` and laid the verb, the `Pager`, and
+`internal/anl` out so `/IMAGE` could slot in beside it (`TitleImage` is
+already defined). This phase adds that analyzer, its grammar, and its
+console and `govax analyze` entry points.
+
+## Reference output
+
+Twenty-nine `.ani` files in `testdata/` have the `.exe` they describe
+beside them, all from VMS 7.3's `ANALYZE/IMAGE/OUTPUT=NAME.ANI NAME.EXE`:
+
+| Directory | Pairs | What the images exercise |
+|---|---|---|
+| `testdata/link/vax/` | 11 | Phase 30's LINK fixtures: no transfer address (`exprs`, `globals`), three or four ISDs, LIBRTL references (`addr`: a G^ and a .ADDRESS fixup), `STACK=30` (`prog`) |
+| `testdata/mar/list/vax/` | 10 | Phase 29's traceback images: a DST (VBN and block count), `LINK/DEBUG` (`trlnkdbg`, `trdbglnk`: LNKDEBUG set, a GST and a DMT), several G^ references to one image |
+| `testdata/mar/round/vax/` | 8 | Phase 29's round trip (`rl*`, `cells*`): up to four G^ references on a line |
+
+Twenty-one more (`testdata/link/vax/govax/gv_*.ani`,
+`testdata/mar/round/vax/gv*.ani`) are VMS's analyses of images govax's
+LINK wrote at the time, without the images beside them: extra samples of
+the format, not oracle pairs. Since govax's LINK now writes the fixtures'
+images byte for byte, an image govax links from the fixtures' objects
+analyzes to the same report but for the link time.
+
+All 29 are executable images (`IHD$K_EXE`) referring at most to LIBRTL.
+None is a shareable or system image, has patches, more than one header
+block, an image with ISDs of other section types, or an error.
+
+### What the output looks like
+
+```
+<FF>
+Analyze Image                                30-SEP-2026 06:01:55.94   Page 1
+DUA1:[000000]PROG.EXE;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX image file
+
+IMAGE HEADER
+
+	Fixed Header Information
+
+		image format major id: 02, minor id: 05
+		header block count: 1
+		image type: executable (IHD$K_EXE)
+		I/O channel count: default
+		I/O page count: default
+		linker flags:
+			(0)  IHD$V_LNKDEBUG   0
+			...
+			(8)  IHD$V_UPCALLS    0
+
+	Image Activation Information
+
+		first transfer address:  %X'7FFEDF68'
+		second transfer address: %X'00000400'
+		third transfer address:  %X'00000000'
+
+	Global Symbol Table & Debug Symbol Table Information
+
+		debug symbol table VBN:  5, block count: 1
+		global symbol table VBN: 0, record count: 0
+		debug module/psect table VBN: 0, byte count: 0
+
+	Image Identification Information
+
+		image name: "PROG"
+		image file identification: "V9"
+		link date/time: 30-SEP-2026 06:01:55.90
+		linker identification: "V11-39"
+
+	Patch Information
+
+		There are no patches at this time.
+
+	Image Section Descriptors (ISD)
+
+		1)  image section descriptor (16 bytes)
+			page count: 1
+			base virtual address: %X'00000200' (P0 space)
+			page fault cluster size: default
+			ISD flags:
+				(0)  ISD$V_GBL        0
+				...
+				(18) ISD$V_PROTECT    0
+			section type: ISD$K_NORMAL
+			base VBN: 2
+		...
+		5)  image section descriptor (31 bytes)
+			...
+			section type: ISD$K_SHRPIC
+			base VBN: 0
+			global section major id: %X'01', minor id: %X'00000E'
+			match control: ISD$K_MATLEQ
+			global section name: "LIBRTL_001"
+<FF> ... (new page)
+IMAGE ACTIVATOR FIXUP SECTION
+
+
+	Fixed Information
+
+		Flags:
+			(0)  IAF$V_SHR        0
+		shareable image count: 2
+		extra image count: 0
+
+	Shareable Image List
+
+		0)  this image
+		1)  "LIBRTL"
+
+	G^ Reference Fixups
+
+		1 reference to image 1:
+			  00000478
+
+	.ADDRESS Reference Fixups (relative to %X'00000200')
+
+		1 reference to image 1:
+			  00000000
+
+	Protection Change Fixups (relative to %X'00000200')
+
+		address: %X'00000400', page count: 1
+		protection: PRT$C_UREW
+
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/IMAGE/OUTPUT=ADDR.ANI ADDR.EXE<blanks to column 80>
+```
+
+Observations from the survey (all from the fixtures and the images'
+bytes; the clean-room rule leaves ANALYZE's output and real LINK's images
+as the only sources):
+
+- **Page header and trailer** are Phase 38's, with the title `Analyze
+  Image`. Pages hold 55 report lines, as ANALYZE/OBJECT's do. The fixup
+  section always starts a new page.
+- **Indentation** is tabs: one for a section's parts, two for their
+  fields and items, three for an item's fields and flags, four for an
+  ISD's flag bits.
+- **Flag bits** are listed by number and name with their value, padded as
+  ANALYZE/OBJECT's are (`(10) ISD$V_FIXUPVEC   0`); only the named bits
+  are shown (ISD bits 4–6 are the match control, 12–16 and 19–23 are
+  unnamed, and the top byte is the section type). `IHD$L_LNKFLAGS`'s top
+  byte (match control, 1 in every fixture) isn't shown.
+- **Header fields** read from the bytes (offsets confirmed against the
+  fixture images, and already used by `internal/link/image.go`): the
+  fixed header's offsets to the other blocks at +0/+2/+4/+6, the patch
+  block's at +8 (0: "There are no patches at this time."), ASCII major and
+  minor ids, block count, image type, I/O counts at +0x1C/+0x1E (0 shows
+  as `default`), link flags at +0x20. Activation: three transfer
+  addresses. Symbol table and debug: DST VBN +0, GST VBN +4, DST blocks
+  +8 (word), GST records +10 (word), DMT VBN +12, DMT bytes +16.
+  Identification: counted name (40 bytes), counted id (16), link time
+  (quadword, shown as VMS shows times, the day blank-padded), counted
+  linker id (16).
+- **ISDs**: size word, page count word, a longword holding the VPN (low 23
+  bits) and the page fault cluster (top byte; 0 shows as `default`), the
+  flags (section type in the top byte), and, unless demand zero, the base
+  VBN. A global section's ISD adds its ident (`major id: %X'01', minor
+  id: %X'00000E'`: the top byte, then 24 bits), match control
+  (`ISD$K_MATLEQ`, from flag bits 4–6), and counted name. A base address
+  is `(P0 space)` or `(P1 space)` (bit 30).
+- **The fixup section** is found through `IHD$L_IAFVA` and the ISD with
+  `ISD$V_FIXUPVEC` that maps it, read from that ISD's base VBN. Its fixed
+  part gives the G^ list (+0x0C), .ADDRESS list (+0x10),
+  change-protection list (+0x14), and shareable image list (+0x18)
+  offsets, and the shareable image count (+0x1C). A list part is shown
+  only when its offset isn't 0 (no G^ or .ADDRESS lists in `prog`).
+- **Reference fixups**: per shareable image, `n reference(s) to image
+  k:` then the values on lines of their own, each `  XXXXXXXX`, up to four
+  per line in the fixtures. A G^ list shows each cell's contents (the
+  target's offset in the shareable image); a .ADDRESS list shows each
+  longword's address relative to the image base.
+- **Protection change fixups**: one `address:`/`protection:` pair per
+  entry, the protection named from `PRT$C_` (in `vmsdef.Symbols`).
+- **The relative base** (`relative to %X'00000200'`) is the base of the
+  image's first P0 section for every fixture (unconfirmed for a based
+  image).
+- The debug tables' **contents** (DST, DMT, and the GST of an executable
+  linked /DEBUG) are not shown by ANALYZE/IMAGE: the fixtures give only
+  their VBNs and sizes, even with LNKDEBUG set.
+
+## Design
+
+### Package `internal/anl`
+
+Beside the object analyzer, sharing `Line`, `report`, and `Pager`:
+
+- `image.go` — `ReadImage(data []byte) (*Image, error)`, a decoder of its
+  own (not the console's loader, which works through emulated memory, nor
+  `internal/link`, which only writes): the header blocks, ISDs (across
+  header blocks; a size of `0xFFFF` continues in the next block), and the
+  fixup section. Decoding problems are collected for the report, not
+  returned, unless the file can't be an image at all.
+- `imagehdr.go` — `AnalyzeImage(img, ImageOptions) []Line`: the image
+  header report. Table-driven like the object analyzer (feedback: tables,
+  not switches): the IHD and ISD flag bits, image types, section types,
+  match controls, each a table of names.
+- `imagefix.go` — the fixup section report.
+- Image-header names (`IHD$V_`, `ISD$V_`, `ISD$K_`, `IAF$V_`, and the
+  image type names) aren't in `vmsdef.Symbols`; they're taken from
+  ANALYZE's output and kept in `anl`'s tables. `PRT$C_` names come from
+  `vmsdef.Symbols`.
+
+`ImageOptions` carries the selection (`/HEADER`, `/FIXUP_SECTION`).
+
+### DCL grammar
+
+```
+    syntax analyze_image
+        parameter files/type=$string/list/prompt="File"
+        qualifier host/parameter=files
+        qualifier output/type=$string/default=""
+        qualifier header
+        qualifier fixup_section
+
+    verb analyze
+        qualifier object/syntax=analyze_object
+        qualifier image/syntax=analyze_image
+```
+
+### Files
+
+As ANALYZE/OBJECT: `rms.Session.Locate`, default type `.EXE`; `/OUTPUT`
+defaults to the console, and a named or empty `/OUTPUT` to NAME.ANI beside
+the first input. Each input gets a complete report.
+
+### `govax analyze`
+
+`govax analyze --image [--header] [--fixup-section] FILE...`, beside
+Phase 38's object options.
+
+## Subtasks
+
+1. **Plan** (this document), committed.
+2. **Image decoding.** `ReadImage`: header blocks, ISDs, the fixup
+   section. Unit tests on the fixture images (fields against the values
+   the `.ani` files show) and on hand-built images.
+3. **Header and fixup content, unpaginated.** `AnalyzeImage`, tested
+   against the 29 fixtures with page headers removed: every content line
+   must match.
+4. **Pagination.** Each line kind's `Keep`, reconstructed from the
+   fixtures' page breaks as Phase 38 did; the fixup section's new page.
+   The fixture test then compares whole files, masking only the time.
+5. **Errors.** ANALYZE's checks in place (a header block too short, a
+   block offset or ISD outside the header, an ISD list without its end, a
+   fixup section that no ISD maps or whose lists overrun it, a shareable
+   image index out of range), in ANALYZE's style (unconfirmed text),
+   with the count closing the report. Unit tests on damaged images.
+6. **Image kinds the fixtures lack.** Shareable (`IHD$K_LIM`) and system
+   images, other section types (`ISD$K_SHRFXD`, `PRVFXD`, `PRVPIC`, and
+   the rest), the other match controls, a page fault cluster, I/O counts,
+   based images, patch information, more than one header block, more
+   transfer addresses, `IHD$V_INISHR`. A golden report collects these
+   unconfirmed layouts in one place (as `kinds.txt` does for objects).
+   Logged as unconfirmed.
+7. **Console command.** The `analyze_image` syntax, the handler beside
+   `AnalyzeObject` in `internal/console/analyze.go`, host and volume
+   files, `/OUTPUT`, `/HEADER`, `/FIXUP_SECTION`. Tests through `Dispatch`,
+   including an image govax LINKs from fixture objects, whose analysis
+   must match VMS's but for the times.
+8. **`govax analyze --image`**, help text (`vax.help`), `CLAUDE.md`,
+   `PLAN.md`.
+
+### Future expansion
+
+- **Debug data.** govax's MACRO and LINK don't write debugger (DBG)
+  records or a DMT yet (Phase 29's subtask 12), and ANALYZE/IMAGE shows
+  only where the debug tables are. Showing their contents (the DST's
+  records, as `obj.Dump` decodes them; the DMT; the GST of an image
+  linked /DEBUG) is left for later, as an option of govax's own if real
+  ANALYZE never shows them.
+- **A shareable image's GST.** A shareable image's global symbol table is
+  object-language GSD records; if ANALYZE/IMAGE shows them, it would be in
+  ANALYZE/OBJECT's style, and `anl`'s object analyzer can describe them.
+  No fixture shows it, and govax's LINK doesn't write shareable images yet.
+- `/INTERACTIVE` isn't planned.
+
+## Decisions and unconfirmed rules
+
+- The output is matched to the fixtures byte for byte except for the page
+  headers' times; anything they don't show is a reasonable choice in the
+  same style, recorded here when made.
+
+## Progress log
+
+- 2026-10-05: Survey and plan. 29 `.ani`/`.exe` pairs found; the header,
+  ISD, and fixup-section formats read off them and the images' bytes; the
+  page geometry is ANALYZE/OBJECT's (55 lines), with the fixup section on
+  a new page. Debug data marked future expansion at the author's request.
