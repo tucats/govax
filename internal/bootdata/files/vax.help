@@ -46,6 +46,7 @@
 //                          DELETE/SYMBOL, and SHOW SYMBOL/DCL
 //                          (docs/PHASE-36.md)
 //              10/05/26    Added ANALYZE/OBJECT (docs/PHASE-38.md)
+//              10/05/26    Added ANALYZE/IMAGE (docs/PHASE-40.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -201,6 +202,43 @@ $ANAL
         ANALYZE/OBJECT "hello.obj"
         ANALYZE/OBJECT/OUTPUT DUA0:[000000]HELLO
         ANALYZE/OBJECT/GSD/INCLUDE=(MAIN) DUA0:[000000]MINE.OLB
+
+    The ANALYZE/IMAGE command describes an executable or shareable image
+    as VMS's ANALYZE/IMAGE does, in the same words and page layout: the
+    image header (transfer addresses, symbol table locations, the
+    image's name, ident, and link time, and each image section
+    descriptor with its flags), then the image activator's fixup
+    section (the shareable images the image uses, its G^ and .ADDRESS
+    references to them, and the protection changes).  Errors in the
+    file are flagged with "***" where they're found and counted at the
+    end.
+
+    Syntax:
+
+        ANALYZE/IMAGE <file>[,...][/HOST] [qualifiers...]
+
+    Parameters:
+
+        <file>          An image file (default type .EXE), on the host
+                        or on a mounted volume, found as for
+                        ANALYZE/OBJECT.
+
+    Qualifiers:
+
+        /OUTPUT[=<file>]
+                        Writes the report to a file instead of the
+                        console: by default the first file's name with
+                        the type .ANI, beside it.
+
+        /HEADER         Shows only the image header.
+
+        /FIXUP_SECTION  Shows the fixup section with the header (the
+                        default when neither qualifier is given).
+
+    Examples:
+
+        ANALYZE/IMAGE "prog.exe"
+        ANALYZE/IMAGE/HEADER/OUTPUT DUA0:[000000]PROG
 
 $ASSI
     The ASSIGN command creates a logical name, like DEFINE, but with its
@@ -2423,7 +2461,7 @@ $HELP
 
     For additional information, see the help on the following command topics:
 
-    ANALYZE         Describe object files, as VMS's ANALYZE/OBJECT does
+    ANALYZE         Describe object and image files, as VMS's ANALYZE does
     ASM             Assemble VAX source into memory
     ASSIGN          Create a logical name (equivalence first)
     CALL            Execute instructions by calling into a procedure

@@ -1,6 +1,8 @@
 # Phase 40 — ANALYZE/IMAGE
 
-**Status:** planned (2026-10-05).
+**Status:** done (2026-10-05). All 29 fixture analyses match VMS 7.3's
+byte for byte, page layout included, but for the time. Debug table
+contents are future expansion.
 
 ## Goal
 
@@ -419,3 +421,10 @@ fixup section without a section to hold it.
   the fixture objects, whose analysis matches VMS's analysis of real
   LINK's image but for the times and the linker's identification
   (`"govax Vn"`, by design).
+- 2026-10-05: Subtask 8: `govax analyze --image [--header]
+  [--fixup-section]` (`cmd/govax/analyze.go`; the object-only options
+  with `--image`, or `--header`/`--fixup-section` without it, are
+  refused), `TestAnalyzeCommand` and `TestRun_analyzeImageOneShot`;
+  ANALYZE/IMAGE in `HELP ANALYZE` (`vax.help`); `CLAUDE.md` and
+  `PLAN.md`. Checked by hand with `govax analyze --image` on CELLS2.EXE.
+  Phase done.
