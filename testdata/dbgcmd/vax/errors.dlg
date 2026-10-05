@@ -1,0 +1,60 @@
+@ERRORS.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure ERRORS.DBG
+! ! ERRORS.DBG - the debugger's messages (docs/PHASE-42.md, subtask 1):
+! ! unknown symbols, verbs, keywords, and qualifiers; conflicting
+! ! qualifiers; cancelling what isn't set; DCL commands; bad addresses;
+! ! what happens at a signal no handler handles with no
+! ! SET BREAK/EXCEPTION; and commands after the program has exited.
+! !
+!%DEBUG-E-NOSYMBOL, symbol 'NOSUCH' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'NOSUCH' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'NOSUCH' is not in the symbol table
+!%DEBUG-E-SYNTAX, command syntax error at or near 'START'
+!%DEBUG-E-SYNTAX, command syntax error at or near 'NOSUCHQUAL'
+! CANCEL BREAK FACT
+!%DEBUG-I-NOBREAKS, no breakpoints are set
+! CANCEL WATCH WATCHL
+!%DEBUG-I-NOWATCHES, no watchpoints are set
+! CANCEL TRACE FACT
+!%DEBUG-I-NOTRACES, no tracepoints are set, no opcode tracing
+!%DEBUG-E-SYNTAX, command syntax error at or near 'FOO'
+!%DEBUG-E-SYNTAX, command syntax error at or near 'DIRECTORY'
+!%DEBUG-E-SYNTAX, command syntax error at or near 'DEFAULT'
+!%DEBUG-E-SYNTAX, command syntax error at or near 'DEFAULT'
+! STEP/INTO/OVER
+!stepped to DBGCMD\START\%LINE 34
+!    34:         PUSHL   R2
+!%DEBUG-E-SYNTAX, command syntax error at or near 'BOGUS'
+!%DEBUG-E-SYNTAX, command syntax error at or near '7'
+! EXAMINE/BYTE/WORD WATCHL
+!DBGCMD\WATCHL:  0000
+!%DEBUG-W-NEEDMORE, unexpected end of command line
+! EXAMINE 0
+!%DEBUG-E-NOACCESSR, no read access to address 00000000
+! EXAMINE 7FFFFFFF
+!%DEBUG-E-NOACCESSR, no read access to address 7FFFFFFF
+! !
+! ! The unhandled signal, then the end of the program.
+! GO
+!%SYSTEM-W-ENDOFFILE, end of file
+!break on unhandled exception preceding DBGCMD\START\%LINE 48
+!    48:         PUSHAQ  MSG
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          START               47               0000005D         0000045D
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+! !
+! ! After the program has exited.
+! GO
+!%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+! STEP
+!%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+! SHOW CALLS
+!%DEBUG-E-NOCALLS, no active call frames
+! EXAMINE/INSTRUCTION .PC
+!%DEBUG-E-NOACCESSR, no read access to address 00000000
+! EXAMINE WATCHL
+!DBGCMD\WATCHL:  00000003
+!%DEBUG-I-VERIFYICF, exiting command procedure ERRORS.DBG
+EXIT

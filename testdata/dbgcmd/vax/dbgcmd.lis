@@ -1,0 +1,158 @@
+DBGCMD                          Phase 42 probe: breakpoints, stepping, w  5-OCT-2026 16:23:36  VAX MACRO V5.4-3            Page   1
+V1.0                                                                      5-OCT-2026 16:21:41  DUA1:[000000]DBGCMD.MAR;1         (1)
+
+                                     0000     1 	.TITLE	DBGCMD	Phase 42 probe: breakpoints, stepping, watching
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; A small program for the VMS debugger's run-control commands to work
+                                     0000     5 ; on (docs/PHASE-42.md, subtask 1): a recursive routine (STEP/OVER and
+                                     0000     6 ; STEP/RETURN across recursion, SET BREAK/AFTER), a loop of branches
+                                     0000     7 ; (SET BREAK/BRANCH, /LINE), data written a longword, a byte, and 16
+                                     0000     8 ; bytes at a time (SET WATCH), a JSB subroutine, a condition signalled
+                                     0000     9 ; and handled, and one signalled with no handler (SET BREAK/EXCEPTION).
+                                     0000    10 ; DBGCMD.COM assembles and links it /DEBUG and runs it under the
+                                     0000    11 ; debugger with each .DBG file.
+                                     0000    12 ;
+                                     0000    13 ; It runs to the end: the unhandled signal is a warning, which VMS
+                                     0000    14 ; reports and continues from.
+                                     0000    15 
+                                     0000    16 	.EXTERNAL LIB$PUT_OUTPUT, LIB$SIGNAL
+                                     0000    17 
+                           00000001  0000    18 SS$_CONTINUE = 1			; a handler's "continue"
+                           00000870  0000    19 SS$_ENDOFFILE = ^X870			; a warning: %SYSTEM-W-ENDOFFILE
+                                     0000    20 
+                                 00000000    21 	.PSECT	DATA, WRT, NOEXE, LONG
+                           00000000  0000    22 WATCHL:	.LONG	0			; a watched longword
+                                 00  0004    23 WATCHB:	.BYTE	0			; a watched byte
+                                     0005    24 	.ALIGN	LONG
+                           00000018  0008    25 BUFFER:	.BLKB	16			; written 16 bytes at once (MOVC3)
+42 41 39 38 37 36 35 34 33 32 31 30  0018    26 SOURCE:	.ASCII	/0123456789ABCDEF/
+                        46 45 44 43  0024       
+                           00000000  0028    27 RESULT:	.LONG	0			; FACT(5)
+                           00000000  002C    28 COUNT:	.LONG	0			; the loop's counter
+44 4D 43 47 42 44 00000038'010E0000' 0030    29 MSG:	.ASCID	/DBGCMD: done/
+                  65 6E 6F 64 20 3A  003E       
+                                     0044    30 
+                                 00000000    31 	.PSECT	CODE, NOWRT, EXE, LONG
+                               000C  0000    32 	.ENTRY	START, ^M<R2,R3>
+                       52   05   D0  0002    33 	MOVL	#5, R2			; FACT's argument
+                            52   DD  0005    34 	PUSHL	R2
+              0000006E'EF   01   FB  0007    35 	CALLS	#1, FACT		; FACT(5), recursively
+              00000028'EF   50   D0  000E    36 	MOVL	R0, RESULT
+                       53   03   D0  0015    37 	MOVL	#3, R3			; a loop of branches
+                   0000002C'EF   D6  0018    38 LOOP:	INCL	COUNT
+                07 0000002C'EF   E8  001E    39 	BLBS	COUNT, ODD
+              00000000'EF   02   C0  0025    40 	ADDL2	#2, WATCHL		; writes the watched longword
+                         E9 53   F5  002C    41 ODD:	SOBGTR	R3, LOOP
+           00000004'EF   41 8F   90  002F    42 	MOVB	#^X41, WATCHB		; writes the watched byte
+00000008'EF   00000018'EF   10   28  0037    43 	MOVC3	#16, SOURCE, BUFFER	; writes 16 bytes at once
+                   00000089'EF   16  0043    44 	JSB	BUMP			; a JSB subroutine
+              00000090'EF   00   FB  0049    45 	CALLS	#0, CATCH		; signals, and handles it
+                   00000870 8F   DD  0050    46 	PUSHL	#SS$_ENDOFFILE		; signals with no handler
+              00000000'GF   01   FB  0056    47 	CALLS	#1, G^LIB$SIGNAL
+                   00000030'EF   7F  005D    48 	PUSHAQ	MSG
+              00000000'GF   01   FB  0063    49 	CALLS	#1, G^LIB$PUT_OUTPUT
+                       50   01   D0  006A    50 	MOVL	#1, R0
+                                 04  006D    51 LAST:	RET
+                                     006E    52 
+                               0004  006E    53 	.ENTRY	FACT, ^M<R2>		; FACT(n) = n!, by recursion
+                    52   04 AC   D0  0070    54 	MOVL	4(AP), R2
+                       01   52   D1  0074    55 	CMPL	R2, #1
+DBGCMD                          Phase 42 probe: breakpoints, stepping, w  5-OCT-2026 16:23:36  VAX MACRO V5.4-3            Page   2
+V1.0                                                                      5-OCT-2026 16:21:41  DUA1:[000000]DBGCMD.MAR;1         (1)
+
+                            04   14  0077    56 	BGTR	RECUR
+                       50   01   D0  0079    57 	MOVL	#1, R0
+                                 04  007C    58 	RET
+                  7E   52   01   C3  007D    59 RECUR:	SUBL3	#1, R2, -(SP)
+                    E9 AF   01   FB  0081    60 	CALLS	#1, FACT
+                       50   52   C4  0085    61 BACK:	MULL2	R2, R0			; each FACT call returns here
+                                 04  0088    62 	RET
+                                     0089    63 
+                   00000000'EF   D6  0089    64 BUMP:	INCL	WATCHL			; a JSB subroutine
+                                 05  008F    65 	RSB
+                                     0090    66 
+                               0000  0090    67 	.ENTRY	CATCH, ^M<>
+              6D   000000A7'EF   9E  0092    68 	MOVAB	HANDLR, (FP)		; establishes HANDLR
+                   00000870 8F   DD  0099    69 	PUSHL	#SS$_ENDOFFILE
+              00000000'GF   01   FB  009F    70 	CALLS	#1, G^LIB$SIGNAL
+                                 04  00A6    71 	RET
+                                     00A7    72 
+                               0000  00A7    73 	.ENTRY	HANDLR, ^M<>		; continues from any condition
+                       50   01   D0  00A9    74 	MOVL	#SS$_CONTINUE, R0
+                                 04  00AC    75 	RET
+                                     00AD    76 
+                                     00AD    77 	.END	START
+DBGCMD                          Phase 42 probe: breakpoints, stepping, w  5-OCT-2026 16:23:36  VAX MACRO V5.4-3            Page   3
+Symbol table                                                              5-OCT-2026 16:21:41  DUA1:[000000]DBGCMD.MAR;1         (1)
+
+BACK             00000085 R  D  02      
+BUFFER           00000008 R  D  01      
+BUMP             00000089 R  D  02      
+CATCH            00000090 RG D  02      
+COUNT            0000002C R  D  01      
+FACT             0000006E RG D  02      
+HANDLR           000000A7 RG D  02      
+LAST             0000006D R  D  02      
+LIB$PUT_OUTPUT   ********   X   00      
+LIB$SIGNAL       ********   X   00      
+LOOP             00000018 R  D  02      
+MSG              00000030 R  D  01      
+ODD              0000002C R  D  02      
+RECUR            0000007D R  D  02      
+RESULT           00000028 R  D  01      
+SOURCE           00000018 R  D  01      
+SS$_CONTINUE   = 00000001    D          
+SS$_ENDOFFILE  = 00000870    D          
+START            00000000 RG D  02      
+WATCHB           00000004 R  D  01      
+WATCHL           00000000 R  D  01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000044  (   68.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE                            000000AD  (  173.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  481     00:00:00.01    00:00:00.01
+Command processing              921     00:00:00.00    00:00:00.00
+Pass 1                          203     00:00:00.01    00:00:00.01
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           35     00:00:00.00    00:00:00.00
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1667     00:00:00.02    00:00:00.02
+
+The working set limit was 812 pages.
+1758 bytes (4 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 21 non-local and 0 local symbols.
+77 source lines were read in Pass 1, producing 28 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+DBGCMD                          Phase 42 probe: breakpoints, stepping, w  5-OCT-2026 16:23:36  VAX MACRO V5.4-3            Page   4
+VAX-11 Macro Run Statistics                                               5-OCT-2026 16:21:41  DUA1:[000000]DBGCMD.MAR;1         (1)
+
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/DEBUG/LIST DBGCMD

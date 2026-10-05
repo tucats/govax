@@ -1,0 +1,336 @@
+@EXAM.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure EXAM.DBG
+! ! EXAM.DBG - examining and depositing (docs/PHASE-42.md, subtask 1), in
+! ! a recursive call four deep: SHOW STACK; registers; the current and
+! ! previous locations; type and radix qualifiers; ranges and lists;
+! ! labels of data as arrays; numeric addresses; EVALUATE with MACRO's
+! ! operators; DEPOSIT to memory and registers; SET MODE, SET RADIX, and
+! ! CANCEL of each, with SHOW MODE and SHOW RADIX after each.
+! !
+! SET BREAK/AFTER:3 BACK
+! GO
+!break at DBGCMD\FACT\BACK
+!    61: BACK:   MULL2   R2, R0                  ; each FACT call returns here
+! CANCEL BREAK/ALL
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          FACT                61               00000017         00000485
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          START               35               0000000E         0000040E
+! SHOW STACK
+!
+!
+!stack frame 0 (7FED5314)
+!
+!    condition handler: 00000000
+!       SPA:            0
+!       S:              1
+!       mask:           ^M<R2>
+!       PSW:            0000 (hexadecimal)
+!    saved AP:          7FED534C
+!    saved FP:          7FED5334
+!    saved PC:          DBGCMD\FACT\BACK
+!    saved R2:          00000005
+!    argument list:(1)  00000004
+!                  
+!
+!stack frame 1 (7FED5334)
+!
+!    condition handler: 00000000
+!       SPA:            0
+!       S:              1
+!       mask:           ^M<R2>
+!       PSW:            0000 (hexadecimal)
+!    saved AP:          7FED5370
+!    saved FP:          7FED5354
+!    saved PC:          DBGCMD\START\%LINE 36
+!    saved R2:          00000005
+!    argument list:(1)  00000005
+!                  
+!
+!stack frame 2 (7FED5354)
+!
+!    condition handler: 00000000
+!       SPA:            0
+!       S:              1
+!       mask:           ^M<R2,R3>
+!       PSW:            0000 (hexadecimal)
+!    saved AP:          7FED53CC
+!    saved FP:          7FED53B8
+!    saved PC:          SHARE$DEBUG+0AD
+!    saved R2:          00000000
+!    saved R3:          7FED5394
+! SHOW STACK 1
+!
+!
+!stack frame 0 (7FED5314)
+!
+!    condition handler: 00000000
+!       SPA:            0
+!       S:              1
+!       mask:           ^M<R2>
+!       PSW:            0000 (hexadecimal)
+!    saved AP:          7FED534C
+!    saved FP:          7FED5334
+!    saved PC:          DBGCMD\FACT\BACK
+!    saved R2:          00000005
+!    argument list:(1)  00000004
+! !
+! ! Registers.
+! EXAMINE R0
+!DBGCMD\FACT\%R0:        00000006
+! EXAMINE R2
+!DBGCMD\FACT\%R2:        00000004
+! EXAMINE AP
+!DBGCMD\FACT\%AP:        7FED532C
+! EXAMINE FP
+!DBGCMD\FACT\%FP:        7FED5314
+! EXAMINE SP
+!DBGCMD\FACT\%SP:        7FED5314
+! EXAMINE PC
+!DBGCMD\FACT\%PC:        00000485
+! EXAMINE PSL
+!DBGCMD\FACT\%PSL:       
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! EXAMINE/PSL PSL
+!DBGCMD\FACT\%PSL:       
+!        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+!         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+! EXAMINE .SP
+!7FED5314:       00000000
+! EXAMINE @SP
+!7FED5314:       00000000
+! EXAMINE .AP+4
+!7FED5330:       00000004
+! EXAMINE/INSTRUCTION .PC
+!DBGCMD\FACT\BACK:       MULL2    R2,R0
+! EXAMINE/OPERANDS .PC
+!DBGCMD\FACT\BACK:       MULL2    R2,R0
+!     R2         R2 contains 00000004
+!     R0         R0 contains 00000006
+! !
+! ! The current location, the next, and the previous.
+! EXAMINE WATCHL
+!DBGCMD\WATCHL:  00000000
+! EXAMINE
+!DBGCMD\WATCHB:  00
+! EXAMINE .
+!DBGCMD\WATCHB:  00
+! EXAMINE ^
+!DBGCMD\WATCHL+3:        00000000
+! !
+! ! Types, sizes, and radixes.
+! EXAMINE SOURCE
+!DBGCMD\SOURCE:  '0123456789ABCDEF'
+! EXAMINE/ASCII:16 SOURCE
+!DBGCMD\SOURCE:  '0123456789ABCDEF......'
+! EXAMINE/ASCII SOURCE
+!DBGCMD\SOURCE:  '0123456789ABCDEF'
+! EXAMINE/BYTE SOURCE
+!DBGCMD\SOURCE:  30
+! EXAMINE/WORD SOURCE
+!DBGCMD\SOURCE:  3130
+! EXAMINE/LONGWORD SOURCE
+!DBGCMD\SOURCE:  33323130
+! EXAMINE/QUADWORD SOURCE
+!DBGCMD\SOURCE:  3736353433323130
+! EXAMINE/BYTE SOURCE:SOURCE+5
+!DBGCMD\SOURCE:  30
+!DBGCMD\SOURCE+1:        31
+!DBGCMD\SOURCE+2:        32
+!DBGCMD\SOURCE+3:        33
+!DBGCMD\SOURCE+4:        34
+!DBGCMD\SOURCE+5:        35
+! EXAMINE/DECIMAL/BYTE SOURCE:SOURCE+3
+!DBGCMD\SOURCE:  48
+!DBGCMD\SOURCE+1:        49
+!DBGCMD\SOURCE+2:        50
+!DBGCMD\SOURCE+3:        51
+! EXAMINE/HEXADECIMAL R2
+!DBGCMD\FACT\%R2:        00000004
+! EXAMINE/DECIMAL R2
+!DBGCMD\FACT\%R2:        4
+! EXAMINE/OCTAL R2
+!DBGCMD\FACT\%R2:        00000000004
+! EXAMINE/BINARY R2
+!DBGCMD\FACT\%R2:        0000000000000000 0000000000000100
+! EXAMINE WATCHL, WATCHB, COUNT
+!DBGCMD\WATCHL:  00000000
+!DBGCMD\WATCHB:  00
+!DBGCMD\COUNT:   00000000
+! EXAMINE WATCHB
+!DBGCMD\WATCHB:  00
+! EXAMINE BUFFER
+!DBGCMD\BUFFER[0:15]
+!    [0]:        00
+!    [1]:        00
+!    [2]:        00
+!    [3]:        00
+!    [4]:        00
+!    [5]:        00
+!    [6]:        00
+!    [7]:        00
+!    [8]:        00
+!    [9]:        00
+!    [10]:       00
+!    [11]:       00
+!    [12]:       00
+!    [13]:       00
+!    [14]:       00
+!    [15]:       00
+! EXAMINE BUFFER[2]
+!DBGCMD\BUFFER[2]:       00
+! EXAMINE MSG
+!DBGCMD\MSG:     'DBGCMD: done'
+! EXAMINE/NOSYMBOLIC WATCHL
+!DBGCMD\WATCHL:  00000000
+! !
+! ! Numeric addresses (the DATA psect starts at 200).
+! EXAMINE 200
+!DBGCMD\WATCHL:  00000000
+! EXAMINE 200:20C
+!DBGCMD\WATCHL:  00000000
+!DBGCMD\WATCHB:  00
+!DBGCMD\BUFFER[0]:       00
+!DBGCMD\BUFFER[4]:       00
+! EXAMINE/BYTE 204
+!DBGCMD\WATCHB:  00
+! !
+! ! EVALUATE: names, contents, registers, and MACRO's operators.
+! EVALUATE WATCHL
+!00000000
+!%DEBUG-E-NOACCESSR, no read access to address 00000000
+! EVALUATE/ADDRESS WATCHL
+!00000200
+! EVALUATE R2
+!00000004
+! EVALUATE R2+1
+!00000005
+!%DEBUG-E-NOACCESSR, no read access to address 00000004
+! EVALUATE AP+4
+!7FED5330
+! EVALUATE 7 MOD 3
+!00000001
+! EVALUATE 5 EQL 5
+!00000001
+! EVALUATE 5 NEQ 5
+!00000000
+! EVALUATE 1@4
+!00000010
+! EVALUATE NOT 0
+!0FFFFFFFF
+! EVALUATE 6 AND 3
+!00000002
+! EVALUATE/DECIMAL 100
+!256
+! !
+! ! DEPOSIT to memory and to registers.
+! DEPOSIT WATCHL = 7
+! EXAMINE WATCHL
+!DBGCMD\WATCHL:  00000007
+! DEPOSIT/BYTE WATCHB = 42
+! EXAMINE WATCHB
+!DBGCMD\WATCHB:  42
+! DEPOSIT/ASCII:4 BUFFER = "WXYZ"
+! EXAMINE/ASCII:4 BUFFER
+!DBGCMD\BUFFER[0:15]:    'WXYZ'
+! DEPOSIT R3 = 99
+! EXAMINE R3
+!DBGCMD\FACT\%R3:        00000099
+! !
+! ! Modes.
+! SHOW MODE
+!modes: symbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+!input radix : hexadecimal
+!output radix: hexadecimal
+! SET MODE NOSYMBOLIC
+! SHOW MODE
+!modes: nosymbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+!input radix : hexadecimal
+!output radix: hexadecimal
+! EXAMINE WATCHL
+!DBGCMD\WATCHL:  00000007
+! EXAMINE/INSTRUCTION .PC
+!00000485:       MULL2    R2,R0
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          FACT                61               00000017         00000485
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          START               35               0000000E         0000040E
+! SET MODE SYMBOLIC
+! SET MODE NOLINE
+! SHOW MODE
+!modes: symbolic, noline, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+!input radix : hexadecimal
+!output radix: hexadecimal
+! EXAMINE/INSTRUCTION .PC
+!DBGCMD\FACT\BACK:       MULL2    R2,R0
+! STEP
+!stepped to DBGCMD\FACT+1A
+!    62:         RET
+! SET MODE LINE
+! SET MODE OPERANDS
+! SHOW MODE
+!modes: symbolic, line, d_float, brief operands, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+!input radix : hexadecimal
+!output radix: hexadecimal
+! EXAMINE/INSTRUCTION .PC
+!DBGCMD\FACT\%LINE 62:   RET     
+! SET MODE OPERANDS=FULL
+! EXAMINE/INSTRUCTION .PC
+!DBGCMD\FACT\%LINE 62:   RET     
+! SET MODE NOOPERANDS
+! SET MODE G_FLOAT
+! SHOW MODE
+!modes: symbolic, line, g_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+!input radix : hexadecimal
+!output radix: hexadecimal
+! CANCEL MODE
+! SHOW MODE
+!modes: symbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+!input radix : hexadecimal
+!output radix: hexadecimal
+! !
+! ! Radix.
+! SHOW RADIX
+!input radix : hexadecimal
+!output radix: hexadecimal
+! SET RADIX DECIMAL
+! SHOW RADIX
+!input radix : decimal
+!output radix: decimal
+! EXAMINE R2
+!DBGCMD\FACT\%R2:        4
+! EVALUATE 10
+!10
+! SET RADIX/OUTPUT OCTAL
+! SHOW RADIX
+!input radix : decimal
+!output radix: octal
+! EXAMINE R2
+!DBGCMD\FACT\%R2:        00000000004
+! EVALUATE 10
+!00000000012
+! SET RADIX/INPUT HEXADECIMAL
+! SHOW RADIX
+!input radix : hexadecimal
+!output radix: octal
+! EVALUATE 10
+!00000000020
+! CANCEL RADIX
+! SHOW RADIX
+!input radix : hexadecimal
+!output radix: hexadecimal
+! !
+! SHOW SCOPE
+!scope: 
+! *  0 [ = DBGCMD\FACT ], 
+!    1 [ = DBGCMD\FACT 1 ], 
+!    2 [ = DBGCMD\START ]
+! GO
+!%SYSTEM-W-ENDOFFILE, end of file
+!break on unhandled exception preceding DBGCMD\START\%LINE 48
+!    48:         PUSHAQ  MSG
+!%DEBUG-I-VERIFYICF, exiting command procedure EXAM.DBG
+EXIT

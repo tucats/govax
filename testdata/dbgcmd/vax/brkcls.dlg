@@ -1,0 +1,130 @@
+@BRKCLS.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure BRKCLS.DBG
+! ! BRKCLS.DBG - breakpoints on classes of instruction (docs/PHASE-42.md,
+! ! subtask 1): /CALL, /RETURN, /BRANCH, /LINE, and /INSTRUCTION, with and
+! ! without opcodes, and how SHOW BREAK and CANCEL BREAK show them.
+! !
+! ! Every call and return instruction.
+! SET BREAK/CALL
+! SHOW BREAK
+!breakpoint on calls:
+! BSBB     BSBW     CALLG    CALLS    JSB      RET      RSB     
+! GO
+!break on calls at DBGCMD\START\%LINE 35
+!    35:         CALLS   #1, FACT                ; FACT(5), recursively
+! GO
+!break on calls at DBGCMD\FACT\%LINE 60
+!    60:         CALLS   #1, FACT
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          FACT                60               00000013         00000481
+!*DBGCMD          START               35               0000000E         0000040E
+! GO
+!break on calls at DBGCMD\FACT\%LINE 60
+!    60:         CALLS   #1, FACT
+! GO
+!break on calls at DBGCMD\FACT\%LINE 60
+!    60:         CALLS   #1, FACT
+! CANCEL BREAK/CALL
+! SHOW BREAK
+!%DEBUG-I-NOBREAKS, no breakpoints are set
+! !
+! ! Each return from FACT.
+! SET BREAK/RETURN FACT
+! SHOW BREAK
+!breakpoint on return from routine DBGCMD\FACT
+! GO
+!break on return from routine DBGCMD\FACT at DBGCMD\FACT\%LINE 58
+!    58:         RET
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          FACT                58               0000000E         0000047C
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          START               35               0000000E         0000040E
+! GO
+!break on return from routine DBGCMD\FACT at DBGCMD\FACT\%LINE 62
+!    62:         RET
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          FACT                62               0000001A         00000488
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          START               35               0000000E         0000040E
+! CANCEL BREAK/ALL
+! !
+! ! Every branch.
+! SET BREAK/BRANCH
+! SHOW BREAK
+!breakpoint on branches:
+! ACBB     ACBD     ACBF     ACBG     ACBH     ACBL     ACBW     AOBLEQ  
+! AOBLSS   BBC      BBCC     BBCCI    BBCS     BBS      BBSC     BBSS    
+! BBSSI    BCC      BCS      BEQL     BEQLU    BGEQ     BGEQU    BGTR    
+! BGTRU    BLBC     BLBS     BLEQ     BLEQU    BLSS     BLSSU    BNEQ    
+! BNEQU    BRB      BRW      BVC      BVS      CASEB    CASEL    CASEW   
+! JMP      SOBGEQ   SOBGTR  
+! GO
+!break on branches at DBGCMD\START\%LINE 39
+!    39:         BLBS    COUNT, ODD
+! GO
+!break on branches at DBGCMD\START\ODD
+!    41: ODD:    SOBGTR  R3, LOOP
+! GO
+!break on branches at DBGCMD\START\%LINE 39
+!    39:         BLBS    COUNT, ODD
+! CANCEL BREAK/BRANCH
+! !
+! ! Every line.
+! SET BREAK/LINE
+! SHOW BREAK
+!breakpoint on lines
+! GO
+!break on lines at DBGCMD\START\%LINE 40
+!    40:         ADDL2   #2, WATCHL              ; writes the watched longword
+! GO
+!break on lines at DBGCMD\START\ODD
+!    41: ODD:    SOBGTR  R3, LOOP
+! GO
+!break on lines at DBGCMD\START\LOOP
+!    38: LOOP:   INCL    COUNT
+! CANCEL BREAK/LINE
+! !
+! ! Given opcodes, then every instruction.
+! SET BREAK/INSTRUCTION=(MOVB,MOVC3)
+! SHOW BREAK
+!breakpoint on instruction(s): 
+! MOVB     MOVC3   
+! GO
+!break on instruction(s) at DBGCMD\START\%LINE 42
+!    42:         MOVB    #^X41, WATCHB           ; writes the watched byte
+! GO
+!break on instruction(s) at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+! CANCEL BREAK/INSTRUCTION
+! SET BREAK/INSTRUCTION
+! SHOW BREAK
+!breakpoint on instructions
+! GO
+!break on instruction at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+! GO
+!break on instruction at DBGCMD\FACT\BUMP
+!    64: BUMP:   INCL    WATCHL                  ; a JSB subroutine
+! CANCEL BREAK/INSTRUCTION
+! SHOW BREAK
+!%DEBUG-I-NOBREAKS, no breakpoints are set
+! !
+! ! To the end.
+! SET BREAK LAST
+! GO
+!%SYSTEM-W-ENDOFFILE, end of file
+!break on unhandled exception preceding DBGCMD\START\%LINE 48
+!    48:         PUSHAQ  MSG
+! CANCEL BREAK/ALL
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+!%DEBUG-I-VERIFYICF, exiting command procedure BRKCLS.DBG
+EXIT

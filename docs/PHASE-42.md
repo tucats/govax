@@ -92,11 +92,10 @@ against `dbgdis.exe`.
    is never removed.** `breakpointAt` returns the user breakpoint
    first, so the temporary one is never hit. `runLoop`'s comment
    accepts this, but it's the same leak as item 2.
-4. **STEP/OVER isn't tied to a call frame.** Its return breakpoint
-   fires at the address however it's reached. A recursive or re-entered
-   routine stops in the wrong frame. The VMS debugger's STEP/OVER
-   completes in the frame it started from. (Found by reading the code.
-   Subtask 2 confirms it with a test.)
+4. ~~**STEP/OVER isn't tied to a call frame.**~~ Not a bug: the probe
+   (`step.dlg`) shows VMS's STEP/OVER of FACT's recursive CALLS stopping
+   at the first return to BACK, four frames deep, as govax's does. govax
+   keeps that behavior.
 5. **Grammar entries with no handler.** `CLEAR ERROR`, `CLEAR PROFILES`,
    `SHOW ASSEMBLER_FLAGS`, `SHOW COMMAND_ARGS`, `SHOW ERROR`,
    `SHOW SYMBOL/TEMPORARY`, `SHOW SYMBOL/UNRESOLVED`, and
@@ -368,8 +367,8 @@ debugger's address expressions need:
 A single eventpoint list replaces `Console.Breakpoints`, the
 instruction-breakpoint map, and the step breakpoints. Each entry has a
 kind (address, instruction class, exception, govax fault, internal
-step), `/AFTER` count, `/TEMPORARY`, `WHEN`, `DO`, and, for a step
-breakpoint, the frame it belongs to (bugs 2 to 4). Fault breakpoints
+step), `/AFTER` count, `/TEMPORARY`, `WHEN`, and `DO`. A step
+breakpoint belongs to the STEP that set it (bugs 2 and 3). Fault breakpoints
 still trip inside `Engine.Step` (`cpu/faultbreak.go`), but they are set
 and cancelled through the same list. A tracepoint is a breakpoint that
 reports and continues. A watchpoint compares its location after each
@@ -414,11 +413,9 @@ bug found and fixed on the way.
    move starts from a correct baseline. Bug 1: `Call`'s loop uses the
    shared run loop, so RUN and CALL honor breakpoints. Bugs 2 and 3:
    step breakpoints are removed whenever the run stops, and can share
-   an address with a user breakpoint. Bug 4: STEP/OVER's breakpoint
-   records the frame (FP) and fires only there. Bug 6: the
-   instruction-break message names the location. Tests: each bug's
-   scenario on `dbgdis.exe` (and a recursive fixture for bug 4) fails
-   before the fix and passes after.
+   an address with a user breakpoint. Bug 6: the instruction-break
+   message names the location. Tests: each bug's scenario on
+   `dbgdis.exe` fails before the fix and passes after.
 3. **The package, the grammar, and the mode switch.**
    `internal/debugger` with a `Debugger` (session state) and its
    `Dispatcher`; `internal/bootdata/files/debug.dcl` with `EXIT`,
@@ -461,8 +458,11 @@ bug found and fixed on the way.
    `/LINE`, `/INTO`, `/OVER`, `/RETURN`, `/SILENT`, and `/[NO]SOURCE`
    (accepted now, and acted on in subtask 8); line stepping from
    `dbgsym`'s line table; govax's `IN` and `RETURN` spellings;
-   `SHOW STEP`. Tests: `dbgdis.dlg`'s instruction and line steps, the
-   new probe's STEP/OVER across recursion, and STEP/RETURN.
+   `SHOW STEP`. STEP/RETURN stops *at* the routine's RET, as VMS's
+   does (`stepped on return from X to Y`), where govax's stops after
+   it, in the caller. `/BRANCH` and `/CALL` step to the next instruction
+   of that class. Tests: `dbgdis.dlg`'s instruction and line steps, and
+   `step.dlg`.
 8. **Source lines.** Locate a module's source file from its DST source
    correlation (`dbgsym.SourceFile`): on a mounted volume, as a host
    file, or along a `SET SOURCE` directory list (`SHOW SOURCE`,
@@ -702,3 +702,177 @@ From the *VMS 5.5 Debugger Manual*, notes for later subtasks:
   `%DESCR` otherwise), and saves and restores the general registers
   around the call.
 - **SHOW STACK** takes a count (`SHOW STACK [n]`), as SHOW CALLS does.
+
+### 2026-10-05 — Subtask 1: the probe's results
+
+The author ran `@DBGCMD/OUTPUT=DBGCMD.LOG` on VMS 7.3; `copyout.cmd`
+brought back `testdata/dbgcmd/vax/` (the README lists the files). Every
+session ran to its end. govax's object for DBGCMD matches VMS's but for
+header text and the source file's name. What the sessions show, for the
+subtasks that use them:
+
+**Breakpoints** (`break.dlg`, `brkcls.dlg`; subtask 6)
+
+- SHOW BREAK lines: `breakpoint at routine DBGCMD\FACT` (a routine
+  name), `breakpoint at DBGCMD\FACT\BACK` (a label),
+  `breakpoint at DBGCMD\FACT\%LINE 62` (an address with no label, named
+  by its line), with ` [temporary]` appended, and indented
+  `   /after: 3`, `   when (.WATCHL EQL 2)`, `   do (EXAMINE R0; SHOW
+  CALLS)` lines below. None: `%DEBUG-I-NOBREAKS, no breakpoints are
+  set` (also CANCEL BREAK of one that isn't set).
+- The order SHOW BREAK lists them in isn't the order they were set
+  (`LOOP, ODD` then `LAST` lists ODD, LOOP, LAST; adding BUMP, CATCH,
+  and HANDLR lists LAST first). Unconfirmed: govax will choose an order
+  and log it, unless a rule shows itself.
+- Breaks: `break at routine DBGCMD\FACT`, `break at DBGCMD\FACT\BACK`,
+  then the source line. `/AFTER:3` breaks the third time and every time
+  after.
+- Instruction classes: `breakpoint on calls:` followed by the opcodes
+  eight to a line in nine-column fields (BSBB BSBW CALLG CALLS JSB RET
+  RSB); `breakpoint on branches:` likewise (43 opcodes, including
+  CASEx, JMP, ACBx, AOBxxx, SOBxxx, BBxx, BLBx); `breakpoint on lines`;
+  `breakpoint on instruction(s): ` and the opcodes given;
+  `breakpoint on instructions` (all). Breaks: `break on calls at X`,
+  `break on branches at X`, `break on lines at X`,
+  `break on instruction(s) at X` (given opcodes), `break on instruction
+  at X` (all).
+- `/RETURN FACT`: `breakpoint on return from routine DBGCMD\FACT`;
+  `break on return from routine DBGCMD\FACT at DBGCMD\FACT\%LINE 58`,
+  at each RET of each recursion.
+- **WHEN and DO.** In a MACRO language expression a data label's value
+  is its contents: `WHEN (.WATCHL EQL 2)` read address 2,
+  `%DEBUG-E-NOACCESSR, no read access to address 00000002`, and the
+  break was taken anyway (an error in WHEN breaks). DO's commands are
+  echoed as split at the `;`: `EXAMINE R0;` then `  SHOW CALLS`.
+- SHOW CALLS shows a handler's frame with `----- above condition handler
+  called with exception 00000870:`, the condition's message, and
+  `----- end of exception message`.
+
+**Exceptions** (`except.dlg`, every session; subtasks 5 and 6)
+
+- An unhandled condition: its message, then `break on unhandled
+  exception preceding DBGCMD\START\%LINE 48` and the source line:
+  *preceding*, since the PC is after the CALLS of LIB$SIGNAL. It stops
+  even for a warning, so every session that reached it stopped there.
+- `SET BREAK/EXCEPTION` (`breakpoint on exception`): `break on exception
+  preceding X` for a handled condition and for an unhandled one, and
+  then `break on unhandled exception` too for the unhandled one. STEP
+  from an exception break goes into the handler: `stepped to routine
+  DBGCMD\HANDLR`.
+- The image's end: `%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal
+  successful completion'`. After it, GO and STEP give
+  `%DEBUG-E-BADSTARTPC, cannot start from PC 00000000`, SHOW CALLS
+  `%DEBUG-E-NOCALLS, no active call frames`, and the image's data can
+  still be examined.
+
+**Stepping** (`step.dlg`; subtask 7)
+
+- SHOW STEP: `step type: source, nosilent, by line,` then
+  `           over routine calls` (or `into`, `by instruction`,
+  `nosource`).
+- `stepped to X` (by line) or `stepped to X: INSTRUCTION` (by
+  instruction), then the source line; `stepped to routine DBGCMD\FACT`
+  into a routine. `STEP 2` takes a count. `/SILENT` prints nothing;
+  `/NOSOURCE` only the `stepped to` line.
+- **STEP/OVER isn't frame-bound**: over FACT's recursive CALLS it
+  stopped at the first return to BACK, four frames deep (R0 = 1). So
+  bug 4 isn't a bug; the plan is corrected.
+- **STEP/RETURN stops at the RET**: `stepped on return from
+  DBGCMD\FACT\BACK to DBGCMD\FACT\%LINE 62: RET`, still in the routine.
+  From a JSB subroutine it didn't stop at the RSB; it ran to the
+  unhandled exception, and the step's return event fired later, at
+  START's RET (`stepped on return from DBGCMD\FACT\BUMP to
+  DBGCMD\START\LAST`). VMS kept that pending step across the exception
+  break. govax will end an interrupted STEP instead (bug 2's fix), and
+  logs this as a deliberate difference.
+- `STEP/INTO/OVER` is accepted (the last wins); so is
+  `EXAMINE/BYTE/WORD`.
+
+**Watchpoints** (`watch.dlg`; subtask 13)
+
+- SHOW WATCH: `watchpoint of DBGCMD\WATCHL`, `watchpoint of
+  DBGCMD\BUFFER[0:15]` (an array), `[temporary]`; none:
+  `%DEBUG-I-NOWATCHES, no watchpoints are set`.
+- A report: `watch of DBGCMD\WATCHL at DBGCMD\START\%LINE 40`, the
+  source line, `   old value: 00000000`, `   new value: 00000002`,
+  then `break at` the next instruction and its source line. Values are
+  shown at the datum's size (`00` for a byte).
+- MOVC3 into the watched array gives one report per element changed,
+  from [15] down to [0], each with its own `break at`, for one GO.
+- DEPOSIT to a watched location doesn't trigger it; a temporary
+  watchpoint is gone after it triggers.
+
+**Tracepoints** (`trace.dlg`; subtask 13)
+
+- SHOW TRACE: `tracepoint on instructions`, `tracepoint at routine X`,
+  `tracepoint at X`, `tracepoint on lines`, `tracepoint on branches:`
+  and the opcodes; none: `%DEBUG-I-NOTRACES, no tracepoints are set, no
+  opcode tracing`.
+- Reports: `trace on instruction at X`, `trace at routine X`,
+  `trace on lines at X`, `trace on branches at X`, each followed by the
+  source line, which is shown only once when two reports (or a trace
+  and a break) fall on one PC.
+
+**Examining** (`exam.dlg`; subtasks 9 to 11)
+
+- Registers: `DBGCMD\FACT\%R0:        00000006`, named in the current
+  routine's scope. `EXAMINE PSL` (and `/PSL`) prints a field table:
+  `        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C` and the
+  values beneath.
+- A location with no symbol is shown by address: `.SP` and `@SP` give
+  `7FED5314:       00000000`; `.AP+4` works.
+- `EXAMINE` with no address shows the next location (after WATCHL,
+  WATCHB); `.` the current; `^` the previous (here `DBGCMD\WATCHL+3`,
+  a longword: going back by the current type's size from a byte).
+- Data are typed by the DST: SOURCE (`.ASCII`) is a string
+  (`'0123456789ABCDEF'`), BUFFER (`.BLKB 16`) a byte array shown one
+  element a line (`    [0]:        00`), WATCHB a byte (`00`), MSG
+  (`.ASCID`) its string. `EXAMINE/ASCII:16 SOURCE` shows
+  `'0123456789ABCDEF......'`, 22 characters: VMS's own oddity, to
+  match or log. A numeric range is shown by symbol and type
+  (`EXAMINE 200:20C`: WATCHL, WATCHB, BUFFER[0], BUFFER[4]).
+- Radix forms: decimal unpadded (`4`), octal 11 digits
+  (`00000000004`), binary in two groups of 16 bits.
+- **EVALUATE**: a data label is its contents (`EVALUATE WATCHL` is 0),
+  a register its value, `.R2` the contents at R2's value; MOD, EQL,
+  NEQ, infix `@` (shift), NOT, AND work; a hex result starting with a
+  letter gets a leading 0 (`0FFFFFFFF`); `EVALUATE/DECIMAL 100` is 256
+  (input hexadecimal). DEPOSIT's value is read in the input radix
+  (`DEPOSIT R3 = 99` gives `00000099`).
+- SHOW STACK: per frame, `stack frame n (address)`, the handler, SPA,
+  S, mask, PSW, saved AP, FP, PC (symbolic), saved registers, and the
+  argument list; the last frame is the debugger's own
+  (`SHARE$DEBUG+0AD`). `SHOW STACK 1` shows one frame.
+- SET MODE NOSYMBOLIC numbers instruction addresses (`00000485:
+  MULL2 R2,R0`) but EXAMINE of data still names it. NOLINE names a
+  location `DBGCMD\FACT+1A`. SHOW MODE: `modes: symbolic, line,
+  d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate
+  window` and the two radix lines; OPERANDS adds `brief operands`.
+  CANCEL MODE and CANCEL RADIX restore the defaults.
+- SHOW SCOPE lists the call levels: ` *  0 [ = DBGCMD\FACT ], `,
+  `    1 [ = DBGCMD\FACT 1 ], `, `    2 [ = DBGCMD\START ]`.
+
+**CALL** (`call.dlg`; subtasks 4 and 6)
+
+- `value returned is 00000018`; R0 and R2 are as before the call.
+- A break inside a called routine stops there; SHOW CALLS marks the
+  boundary with `----- above routine called from DEBUG CALL command`,
+  and the GO that finishes the call prints `value returned is`.
+- `CALL LIB$PUT_OUTPUT` gives NOSYMBOL: the debugger doesn't know
+  LIBRTL's symbols until it is told to (`SET IMAGE`).
+
+**Errors** (`errors.dlg`; subtasks 3 and 6)
+
+- Unknown verbs, keywords, and qualifiers, DCL commands (`DIRECTORY`,
+  `SHOW DEFAULT`, `SET DEFAULT`), an address with `/CALL`, and
+  `SET RADIX 7` all give `%DEBUG-E-SYNTAX, command syntax error at or
+  near 'X'`, naming the first word it couldn't take. So subtask 3's
+  message for a console command at `DBG>` is this one, with govax's
+  hint after it.
+- Unknown symbols: `%DEBUG-E-NOSYMBOL, symbol 'NOSUCH' is not in the
+  symbol table`. A missing value: `%DEBUG-W-NEEDMORE, unexpected end of
+  command line`. A bad address: `%DEBUG-E-NOACCESSR, no read access to
+  address 00000000`.
+- Under `SET OUTPUT VERIFY`, a command that fails while being parsed or
+  while its names are looked up isn't echoed; its message is all the
+  log shows. Subtask 16's oracle needs this rule.

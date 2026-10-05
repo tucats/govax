@@ -1,0 +1,48 @@
+@EXCEPT.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure EXCEPT.DBG
+! ! EXCEPT.DBG - SET BREAK/EXCEPTION (docs/PHASE-42.md, subtask 1): the
+! ! break for a condition a handler will handle, STEP from it (into the
+! ! handler), the break for one no handler handles, and GO from each.
+! !
+! SET BREAK/EXCEPTION
+! SHOW BREAK
+!breakpoint on exception
+! GO
+!%SYSTEM-W-ENDOFFILE, end of file
+!break on exception preceding DBGCMD\CATCH\%LINE 71
+!    71:         RET
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          CATCH               70               00000016         000004A6
+!*DBGCMD          START               45               00000050         00000450
+! EXAMINE/INSTRUCTION .PC
+!DBGCMD\CATCH\%LINE 71:  RET     
+! STEP
+!stepped to routine DBGCMD\HANDLR
+!    74:         MOVL    #SS$_CONTINUE, R0
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          HANDLR              74               00000002         000004A9
+!----- above condition handler called with exception 00000870:
+!%SYSTEM-W-ENDOFFILE, end of file
+!----- end of exception message
+!*DBGCMD          CATCH               70               00000016         000004A6
+!*DBGCMD          START               45               00000050         00000450
+! GO
+!%SYSTEM-W-ENDOFFILE, end of file
+!break on exception preceding DBGCMD\START\%LINE 48
+!    48:         PUSHAQ  MSG
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          START               47               0000005D         0000045D
+! GO
+!%SYSTEM-W-ENDOFFILE, end of file
+!break on unhandled exception preceding DBGCMD\START\%LINE 48
+!    48:         PUSHAQ  MSG
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          START               47               0000005D         0000045D
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+!%DEBUG-I-VERIFYICF, exiting command procedure EXCEPT.DBG
+EXIT

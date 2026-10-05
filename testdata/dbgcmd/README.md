@@ -84,4 +84,33 @@ and at `DBG>` type `@RUN.DBG` after making `RUN.DBG` as `DBGCMD.COM`'s
 
 ## What came back (`vax/`)
 
-Not yet run.
+From the author's run of `@DBGCMD/OUTPUT=DBGCMD.LOG` on 5-OCT-2026, copied
+by `copyout.cmd`: `dbgcmd.log` (the build and every session, with the
+debugger's banner, `OpenVMS VAX DEBUG Version V7.1-000`); the image's
+`.exe`, `.map`, and `.ani`; the listing and object; and the nine session
+logs (`.dlg`, LF line endings, every line but the first starting with
+`!`).
+
+- **Every session ran to its end.** Each reached the unhandled signal
+  or the image's exit; none was cut short.
+- **govax's object matches VMS's** (ANALYZE/OBJECT of both), but for the
+  header's processor name and command line and the source file's name
+  in the DBG records, which is a host path in govax's.
+- **Commands that fail aren't echoed.** With `SET OUTPUT VERIFY`, a
+  command the debugger rejects while parsing it or looking up a symbol
+  (a SYNTAX or NOSYMBOL error, or `EVALUATE .WATCHL`'s NOACCESSR) shows
+  only its message, not the command. A command that fails later
+  (`EXAMINE 0`) is echoed.
+- **Results differing from what the command files expected**, each
+  itself a result: in a language expression a data label's value is
+  its contents, so `WHEN (.WATCHL EQL 2)` read address 2 (an error, and
+  the break was taken anyway); STEP/OVER of FACT's recursive CALLS
+  stopped at the first return to BACK, four frames deep, not in the
+  frame it started from; STEP/RETURN stops *at* the routine's RET;
+  STEP/RETURN in a JSB subroutine doesn't stop at its RSB; the unhandled
+  warning stops every session that reaches it (`break on unhandled
+  exception`), so LAST's breaks were never reached; `CALL LIB$PUT_OUTPUT`
+  needs LIBRTL's symbols (NOSYMBOL); `SET MODE OPERANDS` was shown on a
+  RET, which has none.
+
+docs/PHASE-42.md's progress log lists what the sessions show.

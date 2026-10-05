@@ -1,0 +1,106 @@
+@TRACE.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure TRACE.DBG
+! ! TRACE.DBG - tracepoints (docs/PHASE-42.md, subtask 1): every
+! ! instruction up to a break, a routine through its recursion, a JSB
+! ! subroutine, every line and branch, and how SET, SHOW, and CANCEL TRACE
+! ! word things.
+! !
+! SHOW TRACE
+!%DEBUG-I-NOTRACES, no tracepoints are set, no opcode tracing
+! !
+! ! Every instruction, up to FACT.
+! SET TRACE/INSTRUCTION
+! SET BREAK FACT
+! SHOW TRACE
+!tracepoint on instructions
+! GO
+!trace on instruction at DBGCMD\START\%LINE 34
+!    34:         PUSHL   R2
+!trace on instruction at DBGCMD\START\%LINE 35
+!    35:         CALLS   #1, FACT                ; FACT(5), recursively
+!trace on instruction at routine DBGCMD\FACT
+!    54:         MOVL    4(AP), R2
+!break at routine DBGCMD\FACT
+! CANCEL TRACE/INSTRUCTION
+! CANCEL BREAK FACT
+! !
+! ! FACT at each recursion, and the JSB subroutine, up to the loop.
+! SET TRACE FACT
+! SET TRACE BUMP
+! SET BREAK LOOP
+! SHOW TRACE
+!tracepoint at routine DBGCMD\FACT
+!tracepoint at DBGCMD\FACT\BUMP
+! GO
+!trace at routine DBGCMD\FACT
+!    54:         MOVL    4(AP), R2
+!trace at routine DBGCMD\FACT
+!    54:         MOVL    4(AP), R2
+!trace at routine DBGCMD\FACT
+!    54:         MOVL    4(AP), R2
+!trace at routine DBGCMD\FACT
+!    54:         MOVL    4(AP), R2
+!break at DBGCMD\START\LOOP
+!    38: LOOP:   INCL    COUNT
+! CANCEL TRACE FACT
+! SHOW TRACE
+!tracepoint at DBGCMD\FACT\BUMP
+! CANCEL BREAK LOOP
+! !
+! ! Every line and every branch, up to BUMP.
+! SET TRACE/LINE
+! SET TRACE/BRANCH
+! SET BREAK BUMP
+! SHOW TRACE
+!tracepoint on lines
+!tracepoint on branches:
+! ACBB     ACBD     ACBF     ACBG     ACBH     ACBL     ACBW     AOBLEQ  
+! AOBLSS   BBC      BBCC     BBCCI    BBCS     BBS      BBSC     BBSS    
+! BBSSI    BCC      BCS      BEQL     BEQLU    BGEQ     BGEQU    BGTR    
+! BGTRU    BLBC     BLBS     BLEQ     BLEQU    BLSS     BLSSU    BNEQ    
+! BNEQU    BRB      BRW      BVC      BVS      CASEB    CASEL    CASEW   
+! JMP      SOBGEQ   SOBGTR  
+! GO
+!trace on lines at DBGCMD\START\%LINE 39
+!    39:         BLBS    COUNT, ODD
+!trace on branches at DBGCMD\START\%LINE 39
+!trace on lines at DBGCMD\START\ODD
+!    41: ODD:    SOBGTR  R3, LOOP
+!trace on branches at DBGCMD\START\ODD
+!trace on lines at DBGCMD\START\LOOP
+!    38: LOOP:   INCL    COUNT
+!trace on branches at DBGCMD\START\%LINE 39
+!    39:         BLBS    COUNT, ODD
+!trace on lines at DBGCMD\START\%LINE 39
+!trace on lines at DBGCMD\START\%LINE 40
+!    40:         ADDL2   #2, WATCHL              ; writes the watched longword
+!trace on branches at DBGCMD\START\ODD
+!    41: ODD:    SOBGTR  R3, LOOP
+!trace on lines at DBGCMD\START\ODD
+!trace on lines at DBGCMD\START\LOOP
+!    38: LOOP:   INCL    COUNT
+!trace on branches at DBGCMD\START\%LINE 39
+!    39:         BLBS    COUNT, ODD
+!trace on lines at DBGCMD\START\%LINE 39
+!trace on branches at DBGCMD\START\ODD
+!    41: ODD:    SOBGTR  R3, LOOP
+!trace on lines at DBGCMD\START\ODD
+!trace on lines at DBGCMD\START\%LINE 42
+!    42:         MOVB    #^X41, WATCHB           ; writes the watched byte
+!trace on lines at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!trace on lines at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+!trace on lines at DBGCMD\FACT\BUMP
+!    64: BUMP:   INCL    WATCHL                  ; a JSB subroutine
+!break at DBGCMD\FACT\BUMP
+! CANCEL TRACE/ALL
+! SHOW TRACE
+!%DEBUG-I-NOTRACES, no tracepoints are set, no opcode tracing
+! CANCEL BREAK/ALL
+! GO
+!%SYSTEM-W-ENDOFFILE, end of file
+!break on unhandled exception preceding DBGCMD\START\%LINE 48
+!    48:         PUSHAQ  MSG
+!%DEBUG-I-VERIFYICF, exiting command procedure TRACE.DBG
+EXIT

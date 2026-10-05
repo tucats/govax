@@ -1,0 +1,150 @@
+@BREAK.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure BREAK.DBG
+! ! BREAK.DBG - breakpoints at addresses (docs/PHASE-42.md, subtask 1):
+! ! how SET BREAK, SHOW BREAK, and CANCEL BREAK word things, /AFTER,
+! ! /TEMPORARY, WHEN, DO, a list of addresses, and a break at an address
+! ! with no label. DBGCMD.COM runs it with SET LOG and SET OUTPUT
+! ! LOG,VERIFY.
+! !
+! ! None set yet.
+! SHOW BREAK
+!%DEBUG-I-NOBREAKS, no breakpoints are set
+! !
+! ! A routine: the break is after its entry mask, at each recursion.
+! SET BREAK FACT
+! SHOW BREAK
+!breakpoint at routine DBGCMD\FACT
+! GO
+!break at routine DBGCMD\FACT
+!    54:         MOVL    4(AP), R2
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          FACT                54               00000002         00000470
+!*DBGCMD          START               35               0000000E         0000040E
+! GO
+!break at routine DBGCMD\FACT
+!    54:         MOVL    4(AP), R2
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          FACT                54               00000002         00000470
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          START               35               0000000E         0000040E
+! CANCEL BREAK FACT
+! SHOW BREAK
+!%DEBUG-I-NOBREAKS, no breakpoints are set
+! !
+! ! /AFTER:3 - the third time BACK is reached, and every time after.
+! SET BREAK/AFTER:3 BACK
+! SHOW BREAK
+!breakpoint at DBGCMD\FACT\BACK
+!   /after: 3
+! GO
+!break at DBGCMD\FACT\BACK
+!    61: BACK:   MULL2   R2, R0                  ; each FACT call returns here
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          FACT                61               00000017         00000485
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          START               35               0000000E         0000040E
+! EXAMINE R0
+!DBGCMD\FACT\%R0:        00000006
+! GO
+!break at DBGCMD\FACT\BACK
+!    61: BACK:   MULL2   R2, R0                  ; each FACT call returns here
+! EXAMINE R0
+!DBGCMD\FACT\%R0:        00000018
+! CANCEL BREAK BACK
+! !
+! ! An address with no label of its own (the RET after BACK's MULL2).
+! SET BREAK BACK+3
+! SHOW BREAK
+!breakpoint at DBGCMD\FACT\%LINE 62
+! GO
+!break at DBGCMD\FACT\%LINE 62
+!    62:         RET
+! CANCEL BREAK BACK+3
+! !
+! ! A list, and a temporary break.
+! SET BREAK LOOP, ODD
+! SET BREAK/TEMPORARY LAST
+! SHOW BREAK
+!breakpoint at DBGCMD\START\ODD
+!breakpoint at DBGCMD\START\LOOP
+!breakpoint at DBGCMD\START\LAST [temporary]
+! GO
+!break at DBGCMD\START\LOOP
+!    38: LOOP:   INCL    COUNT
+! GO
+!break at DBGCMD\START\ODD
+!    41: ODD:    SOBGTR  R3, LOOP
+! GO
+!break at DBGCMD\START\LOOP
+!    38: LOOP:   INCL    COUNT
+! CANCEL BREAK LOOP
+! SHOW BREAK
+!breakpoint at DBGCMD\START\ODD
+!breakpoint at DBGCMD\START\LAST [temporary]
+! GO
+!break at DBGCMD\START\ODD
+!    41: ODD:    SOBGTR  R3, LOOP
+! GO
+!break at DBGCMD\START\ODD
+!    41: ODD:    SOBGTR  R3, LOOP
+! CANCEL BREAK ODD
+! !
+! ! WHEN (true, then false) and DO. The GO after HANDLR's break goes on
+! ! to LAST, unless the debugger stops first at the signal no handler
+! ! handles.
+! SET BREAK BUMP WHEN (.WATCHL EQL 2)
+! SET BREAK CATCH WHEN (.WATCHL EQL 99)
+! SET BREAK HANDLR DO (EXAMINE R0; SHOW CALLS)
+! SHOW BREAK
+!breakpoint at DBGCMD\START\LAST [temporary]
+!breakpoint at DBGCMD\FACT\BUMP
+!   when (.WATCHL EQL 2)
+!breakpoint at routine DBGCMD\CATCH
+!   when (.WATCHL EQL 99)
+!breakpoint at routine DBGCMD\HANDLR
+!   do (EXAMINE R0; SHOW CALLS)
+! GO
+!%DEBUG-E-NOACCESSR, no read access to address 00000002
+!break at DBGCMD\FACT\BUMP
+!    64: BUMP:   INCL    WATCHL                  ; a JSB subroutine
+! EXAMINE WATCHL
+!DBGCMD\WATCHL:  00000002
+! GO
+!%DEBUG-E-NOACCESSR, no read access to address 00000003
+!break at routine DBGCMD\CATCH
+!    68:         MOVAB   HANDLR, (FP)            ; establishes HANDLR
+! GO
+!break at routine DBGCMD\HANDLR
+!    74:         MOVL    #SS$_CONTINUE, R0
+! EXAMINE R0;
+!DBGCMD\HANDLR\%R0:      03C00000
+!  SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          HANDLR              74               00000002         000004A9
+!----- above condition handler called with exception 00000870:
+!%SYSTEM-W-ENDOFFILE, end of file
+!----- end of exception message
+!*DBGCMD          CATCH               70               00000016         000004A6
+!*DBGCMD          START               45               00000050         00000450
+! SHOW BREAK
+!breakpoint at DBGCMD\START\LAST [temporary]
+!breakpoint at DBGCMD\FACT\BUMP
+!   when (.WATCHL EQL 2)
+!breakpoint at routine DBGCMD\CATCH
+!   when (.WATCHL EQL 99)
+!breakpoint at routine DBGCMD\HANDLR
+!   do (EXAMINE R0; SHOW CALLS)
+! !
+! ! LAST's temporary break is gone; the program ends.
+! CANCEL BREAK/ALL
+! SHOW BREAK
+!%DEBUG-I-NOBREAKS, no breakpoints are set
+! GO
+!%SYSTEM-W-ENDOFFILE, end of file
+!break on unhandled exception preceding DBGCMD\START\%LINE 48
+!    48:         PUSHAQ  MSG
+!%DEBUG-I-VERIFYICF, exiting command procedure BREAK.DBG
+EXIT

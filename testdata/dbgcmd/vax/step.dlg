@@ -1,0 +1,138 @@
+@STEP.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure STEP.DBG
+! ! STEP.DBG - stepping (docs/PHASE-42.md, subtask 1): the default unit
+! ! (a line), /INSTRUCTION, /INTO and /OVER, a count, STEP/OVER of a
+! ! recursive call (which frame it stops in), /RETURN from a routine and
+! ! from a JSB subroutine, /BRANCH, /CALL, /SILENT, /NOSOURCE, SET STEP's
+! ! keywords, SHOW STEP after each, and stepping over a signal.
+! !
+! SHOW STEP
+!step type: source, nosilent, by line,
+!           over routine calls
+! STEP
+!stepped to DBGCMD\START\%LINE 34
+!    34:         PUSHL   R2
+! STEP/INSTRUCTION
+!stepped to DBGCMD\START\%LINE 35: CALLS    S^#01,L^DBGCMD\FACT
+!    35:         CALLS   #1, FACT                ; FACT(5), recursively
+! !
+! ! Into FACT, then through it an instruction at a time.
+! STEP/INTO
+!stepped to routine DBGCMD\FACT
+!    54:         MOVL    4(AP), R2
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          FACT                54               00000002         00000470
+!*DBGCMD          START               35               0000000E         0000040E
+! SET STEP INSTRUCTION
+! SHOW STEP
+!step type: source, nosilent, by instruction,
+!           over routine calls
+! STEP
+!stepped to DBGCMD\FACT\%LINE 55: CMPL     R2,S^#01
+!    55:         CMPL    R2, #1
+! STEP
+!stepped to DBGCMD\FACT\%LINE 56: BGTR     DBGCMD\FACT\RECUR
+!    56:         BGTR    RECUR
+! STEP 2
+!stepped to DBGCMD\FACT\%LINE 60: CALLS    S^#01,B^DBGCMD\FACT
+!    60:         CALLS   #1, FACT
+! !
+! ! At FACT's own CALLS: over the whole recursion, back in this frame.
+! EXAMINE/INSTRUCTION .PC
+!DBGCMD\FACT\%LINE 60:   CALLS    S^#01,B^DBGCMD\FACT
+! STEP/OVER
+!stepped to DBGCMD\FACT\BACK: MULL2    R2,R0
+!    61: BACK:   MULL2   R2, R0                  ; each FACT call returns here
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          FACT                61               00000017         00000485
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          START               35               0000000E         0000040E
+! EXAMINE R0
+!DBGCMD\FACT\%R0:        00000001
+! !
+! ! Out of FACT, then on to the loop.
+! STEP/RETURN
+!stepped on return from DBGCMD\FACT\BACK to DBGCMD\FACT\%LINE 62: RET     
+!    62:         RET
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          FACT                62               0000001A         00000488
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          FACT                60               00000017         00000485
+!*DBGCMD          START               35               0000000E         0000040E
+! STEP
+!stepped to DBGCMD\FACT\BACK: MULL2    R2,R0
+!    61: BACK:   MULL2   R2, R0                  ; each FACT call returns here
+! STEP/BRANCH
+!stepped to DBGCMD\START\%LINE 39: BLBS     L^DBGCMD\COUNT,DBGCMD\START\ODD
+!    39:         BLBS    COUNT, ODD
+! STEP/BRANCH
+!stepped to DBGCMD\START\ODD: SOBGTR   R3,DBGCMD\START\LOOP
+!    41: ODD:    SOBGTR  R3, LOOP
+! STEP/CALL
+!stepped to DBGCMD\START\%LINE 44: JSB      L^DBGCMD\FACT\BUMP
+!    44:         JSB     BUMP                    ; a JSB subroutine
+! EXAMINE/INSTRUCTION .PC
+!DBGCMD\START\%LINE 44:  JSB      L^DBGCMD\FACT\BUMP
+! !
+! ! Into the JSB subroutine and out again.
+! SET STEP INTO
+! SHOW STEP
+!step type: source, nosilent, by instruction,
+!           into routine calls
+! STEP
+!stepped to DBGCMD\FACT\BUMP: INCL     L^DBGCMD\WATCHL
+!    64: BUMP:   INCL    WATCHL                  ; a JSB subroutine
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          FACT                64               0000001B         00000489
+! STEP/RETURN
+!%SYSTEM-W-ENDOFFILE, end of file
+!break on unhandled exception preceding DBGCMD\START\%LINE 48: PUSHAQ   L^00000230
+!    48:         PUSHAQ  MSG
+! STEP
+!stepped to DBGCMD\START\%LINE 49: CALLS    S^#01,@L^HANDLR+1A1
+!    49:         CALLS   #1, G^LIB$PUT_OUTPUT
+! SET STEP OVER
+! !
+! ! Quietly, and without source lines.
+! STEP/SILENT
+! EXAMINE/INSTRUCTION .PC
+!DBGCMD\START\%LINE 50:  MOVL     S^#01,R0
+! STEP/NOSOURCE
+!stepped to DBGCMD\START\LAST: RET     
+! SET STEP NOSOURCE
+! SHOW STEP
+!step type: nosource, nosilent, by instruction,
+!           over routine calls
+! STEP
+!stepped on return from DBGCMD\FACT\BUMP to DBGCMD\START\LAST: RET     
+! SET STEP SOURCE
+! SET STEP LINE
+! SHOW STEP
+!step type: source, nosilent, by line,
+!           over routine calls
+! !
+! ! Over the call that signals and handles a condition, then over the
+! ! signal no one handles.
+! STEP
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+! STEP
+!%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+! STEP
+!%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+! STEP
+!%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+! STEP
+!%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+! SHOW CALLS
+!%DEBUG-E-NOCALLS, no active call frames
+! GO
+!%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+!%DEBUG-I-VERIFYICF, exiting command procedure STEP.DBG
+EXIT

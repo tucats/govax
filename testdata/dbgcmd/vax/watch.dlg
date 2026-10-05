@@ -1,0 +1,179 @@
+@WATCH.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure WATCH.DBG
+! ! WATCH.DBG - watchpoints (docs/PHASE-42.md, subtask 1): a longword, a
+! ! byte, and a 16-byte area, each written by a different instruction
+! ! (MOVL, ADDL2, INCL in a JSB subroutine, MOVB, MOVC3), a temporary
+! ! watchpoint, a DEPOSIT to a watched location, and how SET, SHOW, and
+! ! CANCEL WATCH word things.
+! !
+! SHOW WATCH
+!%DEBUG-I-NOWATCHES, no watchpoints are set
+! SET WATCH WATCHL
+! SET WATCH WATCHB
+! SET WATCH BUFFER
+! SET WATCH/TEMPORARY RESULT
+! SHOW WATCH
+!watchpoint of DBGCMD\WATCHL
+!watchpoint of DBGCMD\WATCHB
+!watchpoint of DBGCMD\BUFFER[0:15]
+!watchpoint of DBGCMD\RESULT [temporary]
+! !
+! ! RESULT (temporary), then WATCHL by ADDL2.
+! GO
+!watch of DBGCMD\RESULT at DBGCMD\START\%LINE 36
+!    36:         MOVL    R0, RESULT
+!   old value: 00000000
+!   new value: 00000078
+!break at DBGCMD\START\%LINE 37
+!    37:         MOVL    #3, R3                  ; a loop of branches
+! SHOW WATCH
+!watchpoint of DBGCMD\WATCHL
+!watchpoint of DBGCMD\WATCHB
+!watchpoint of DBGCMD\BUFFER[0:15]
+! GO
+!watch of DBGCMD\WATCHL at DBGCMD\START\%LINE 40
+!    40:         ADDL2   #2, WATCHL              ; writes the watched longword
+!   old value: 00000000
+!   new value: 00000002
+!break at DBGCMD\START\ODD
+!    41: ODD:    SOBGTR  R3, LOOP
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          START               41               0000002C         0000042C
+! !
+! ! A DEPOSIT doesn't trigger a watchpoint.
+! DEPOSIT WATCHL = 5
+! EXAMINE WATCHL
+!DBGCMD\WATCHL:  00000005
+! !
+! ! WATCHB by MOVB, BUFFER by MOVC3, WATCHL by BUMP's INCL.
+! GO
+!watch of DBGCMD\WATCHB at DBGCMD\START\%LINE 42
+!    42:         MOVB    #^X41, WATCHB           ; writes the watched byte
+!   old value: 00
+!   new value: 41
+!break at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+! GO
+!watch of DBGCMD\BUFFER[15] at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!   old value: 00
+!   new value: 46
+!break at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+!watch of DBGCMD\BUFFER[14] at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!   old value: 00
+!   new value: 45
+!break at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+!watch of DBGCMD\BUFFER[13] at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!   old value: 00
+!   new value: 44
+!break at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+!watch of DBGCMD\BUFFER[12] at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!   old value: 00
+!   new value: 43
+!break at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+!watch of DBGCMD\BUFFER[11] at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!   old value: 00
+!   new value: 42
+!break at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+!watch of DBGCMD\BUFFER[10] at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!   old value: 00
+!   new value: 41
+!break at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+!watch of DBGCMD\BUFFER[9] at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!   old value: 00
+!   new value: 39
+!break at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+!watch of DBGCMD\BUFFER[8] at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!   old value: 00
+!   new value: 38
+!break at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+!watch of DBGCMD\BUFFER[7] at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!   old value: 00
+!   new value: 37
+!break at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+!watch of DBGCMD\BUFFER[6] at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!   old value: 00
+!   new value: 36
+!break at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+!watch of DBGCMD\BUFFER[5] at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!   old value: 00
+!   new value: 35
+!break at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+!watch of DBGCMD\BUFFER[4] at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!   old value: 00
+!   new value: 34
+!break at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+!watch of DBGCMD\BUFFER[3] at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!   old value: 00
+!   new value: 33
+!break at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+!watch of DBGCMD\BUFFER[2] at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!   old value: 00
+!   new value: 32
+!break at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+!watch of DBGCMD\BUFFER[1] at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!   old value: 00
+!   new value: 31
+!break at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+!watch of DBGCMD\BUFFER[0] at DBGCMD\START\%LINE 43
+!    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+!   old value: 00
+!   new value: 30
+!break at DBGCMD\START\%LINE 44
+!    44:         JSB     BUMP                    ; a JSB subroutine
+! EXAMINE/ASCII:16 BUFFER
+!DBGCMD\BUFFER[0:15]:    '0123456789ABCDEF012345'
+! GO
+!watch of DBGCMD\WATCHL at DBGCMD\FACT\BUMP
+!    64: BUMP:   INCL    WATCHL                  ; a JSB subroutine
+!   old value: 00000005
+!   new value: 00000006
+!break at DBGCMD\FACT\%LINE 65
+!    65:         RSB
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          FACT                65               00000021         0000048F
+! !
+! CANCEL WATCH WATCHL
+! SHOW WATCH
+!watchpoint of DBGCMD\WATCHB
+!watchpoint of DBGCMD\BUFFER[0:15]
+! CANCEL WATCH/ALL
+! SHOW WATCH
+!%DEBUG-I-NOWATCHES, no watchpoints are set
+! GO
+!%SYSTEM-W-ENDOFFILE, end of file
+!break on unhandled exception preceding DBGCMD\START\%LINE 48
+!    48:         PUSHAQ  MSG
+!%DEBUG-I-VERIFYICF, exiting command procedure WATCH.DBG
+EXIT

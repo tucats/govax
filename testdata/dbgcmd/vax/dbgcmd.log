@@ -1,0 +1,1435 @@
+
+$ ! DBGCMD.COM - Phase 42's probe (docs/PHASE-42.md, subtask 1): how the
+$ ! VMS debugger's run-control commands behave and word their output
+$ ! (breakpoints, tracepoints, watchpoints, STEP, EXAMINE and DEPOSIT,
+$ ! CALL, exceptions, and its error messages), for govax's debugger to
+$ ! be checked against.
+$ !
+$ ! 1. Builds DBGCMD with /DEBUG, linked /DEBUG, with its listing, map,
+$ !    and ANALYZE/IMAGE.
+$ ! 2. Runs it under the debugger once for each file of debugger commands
+$ !    (*.DBG), logging each session to a file of the same name with
+$ !    type DLG.
+$ !
+$ ! Run it with the exchange volume as the default directory, keeping a
+$ ! log of everything it prints:
+$ !
+$ !     @DBGCMD/OUTPUT=DBGCMD.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ !
+$ ! 1. The build.
+$ !
+$ MACRO/DEBUG/LIST DBGCMD
+$ LINK/DEBUG/MAP DBGCMD
+$ ANALYZE/IMAGE/OUTPUT=DBGCMD.ANI DBGCMD.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]DBGCMD.EXE;1                               0 errors
+$ !
+$ ! 2. Debugger sessions. DEBUG writes a file of debugger commands that
+$ !    opens P1.DLG as the log, runs the probe's commands (P1.DBG), and
+$ !    exits, then runs DBGCMD under the debugger reading it.
+$ !
+$ CALL DEBUG BREAK
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG BREAK.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@BREAK.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBGCMD
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBGCMD
+%DEBUG-I-VERIFYICF, entering command procedure BREAK.DBG
+ ! BREAK.DBG - breakpoints at addresses (docs/PHASE-42.md, subtask 1):
+ ! how SET BREAK, SHOW BREAK, and CANCEL BREAK word things, /AFTER,
+ ! /TEMPORARY, WHEN, DO, a list of addresses, and a break at an address
+ ! with no label. DBGCMD.COM runs it with SET LOG and SET OUTPUT
+ ! LOG,VERIFY.
+ !
+ ! None set yet.
+ SHOW BREAK
+%DEBUG-I-NOBREAKS, no breakpoints are set
+ !
+ ! A routine: the break is after its entry mask, at each recursion.
+ SET BREAK FACT
+ SHOW BREAK
+breakpoint at routine DBGCMD\FACT
+ GO
+break at routine DBGCMD\FACT
+    54:         MOVL    4(AP), R2
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          FACT                54               00000002         00000470
+*DBGCMD          START               35               0000000E         0000040E
+ GO
+break at routine DBGCMD\FACT
+    54:         MOVL    4(AP), R2
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          FACT                54               00000002         00000470
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          START               35               0000000E         0000040E
+ CANCEL BREAK FACT
+ SHOW BREAK
+%DEBUG-I-NOBREAKS, no breakpoints are set
+ !
+ ! /AFTER:3 - the third time BACK is reached, and every time after.
+ SET BREAK/AFTER:3 BACK
+ SHOW BREAK
+breakpoint at DBGCMD\FACT\BACK
+   /after: 3
+ GO
+break at DBGCMD\FACT\BACK
+    61: BACK:   MULL2   R2, R0                  ; each FACT call returns here
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          FACT                61               00000017         00000485
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          START               35               0000000E         0000040E
+ EXAMINE R0
+DBGCMD\FACT\%R0:        00000006
+ GO
+break at DBGCMD\FACT\BACK
+    61: BACK:   MULL2   R2, R0                  ; each FACT call returns here
+ EXAMINE R0
+DBGCMD\FACT\%R0:        00000018
+ CANCEL BREAK BACK
+ !
+ ! An address with no label of its own (the RET after BACK's MULL2).
+ SET BREAK BACK+3
+ SHOW BREAK
+breakpoint at DBGCMD\FACT\%LINE 62
+ GO
+break at DBGCMD\FACT\%LINE 62
+    62:         RET
+ CANCEL BREAK BACK+3
+ !
+ ! A list, and a temporary break.
+ SET BREAK LOOP, ODD
+ SET BREAK/TEMPORARY LAST
+ SHOW BREAK
+breakpoint at DBGCMD\START\ODD
+breakpoint at DBGCMD\START\LOOP
+breakpoint at DBGCMD\START\LAST [temporary]
+ GO
+break at DBGCMD\START\LOOP
+    38: LOOP:   INCL    COUNT
+ GO
+break at DBGCMD\START\ODD
+    41: ODD:    SOBGTR  R3, LOOP
+ GO
+break at DBGCMD\START\LOOP
+    38: LOOP:   INCL    COUNT
+ CANCEL BREAK LOOP
+ SHOW BREAK
+breakpoint at DBGCMD\START\ODD
+breakpoint at DBGCMD\START\LAST [temporary]
+ GO
+break at DBGCMD\START\ODD
+    41: ODD:    SOBGTR  R3, LOOP
+ GO
+break at DBGCMD\START\ODD
+    41: ODD:    SOBGTR  R3, LOOP
+ CANCEL BREAK ODD
+ !
+ ! WHEN (true, then false) and DO. The GO after HANDLR's break goes on
+ ! to LAST, unless the debugger stops first at the signal no handler
+ ! handles.
+ SET BREAK BUMP WHEN (.WATCHL EQL 2)
+ SET BREAK CATCH WHEN (.WATCHL EQL 99)
+ SET BREAK HANDLR DO (EXAMINE R0; SHOW CALLS)
+ SHOW BREAK
+breakpoint at DBGCMD\START\LAST [temporary]
+breakpoint at DBGCMD\FACT\BUMP
+   when (.WATCHL EQL 2)
+breakpoint at routine DBGCMD\CATCH
+   when (.WATCHL EQL 99)
+breakpoint at routine DBGCMD\HANDLR
+   do (EXAMINE R0; SHOW CALLS)
+ GO
+%DEBUG-E-NOACCESSR, no read access to address 00000002
+break at DBGCMD\FACT\BUMP
+    64: BUMP:   INCL    WATCHL                  ; a JSB subroutine
+ EXAMINE WATCHL
+DBGCMD\WATCHL:  00000002
+ GO
+%DEBUG-E-NOACCESSR, no read access to address 00000003
+break at routine DBGCMD\CATCH
+    68:         MOVAB   HANDLR, (FP)            ; establishes HANDLR
+ GO
+break at routine DBGCMD\HANDLR
+    74:         MOVL    #SS$_CONTINUE, R0
+ EXAMINE R0;
+DBGCMD\HANDLR\%R0:      03C00000
+  SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          HANDLR              74               00000002         000004A9
+----- above condition handler called with exception 00000870:
+%SYSTEM-W-ENDOFFILE, end of file
+----- end of exception message
+*DBGCMD          CATCH               70               00000016         000004A6
+*DBGCMD          START               45               00000050         00000450
+ SHOW BREAK
+breakpoint at DBGCMD\START\LAST [temporary]
+breakpoint at DBGCMD\FACT\BUMP
+   when (.WATCHL EQL 2)
+breakpoint at routine DBGCMD\CATCH
+   when (.WATCHL EQL 99)
+breakpoint at routine DBGCMD\HANDLR
+   do (EXAMINE R0; SHOW CALLS)
+ !
+ ! LAST's temporary break is gone; the program ends.
+ CANCEL BREAK/ALL
+ SHOW BREAK
+%DEBUG-I-NOBREAKS, no breakpoints are set
+ GO
+%SYSTEM-W-ENDOFFILE, end of file
+break on unhandled exception preceding DBGCMD\START\%LINE 48
+    48:         PUSHAQ  MSG
+%DEBUG-I-VERIFYICF, exiting command procedure BREAK.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ CALL DEBUG BRKCLS
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG BRKCLS.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@BRKCLS.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBGCMD
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBGCMD
+%DEBUG-I-VERIFYICF, entering command procedure BRKCLS.DBG
+ ! BRKCLS.DBG - breakpoints on classes of instruction (docs/PHASE-42.md,
+ ! subtask 1): /CALL, /RETURN, /BRANCH, /LINE, and /INSTRUCTION, with and
+ ! without opcodes, and how SHOW BREAK and CANCEL BREAK show them.
+ !
+ ! Every call and return instruction.
+ SET BREAK/CALL
+ SHOW BREAK
+breakpoint on calls:
+ BSBB     BSBW     CALLG    CALLS    JSB      RET      RSB     
+ GO
+break on calls at DBGCMD\START\%LINE 35
+    35:         CALLS   #1, FACT                ; FACT(5), recursively
+ GO
+break on calls at DBGCMD\FACT\%LINE 60
+    60:         CALLS   #1, FACT
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          FACT                60               00000013         00000481
+*DBGCMD          START               35               0000000E         0000040E
+ GO
+break on calls at DBGCMD\FACT\%LINE 60
+    60:         CALLS   #1, FACT
+ GO
+break on calls at DBGCMD\FACT\%LINE 60
+    60:         CALLS   #1, FACT
+ CANCEL BREAK/CALL
+ SHOW BREAK
+%DEBUG-I-NOBREAKS, no breakpoints are set
+ !
+ ! Each return from FACT.
+ SET BREAK/RETURN FACT
+ SHOW BREAK
+breakpoint on return from routine DBGCMD\FACT
+ GO
+break on return from routine DBGCMD\FACT at DBGCMD\FACT\%LINE 58
+    58:         RET
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          FACT                58               0000000E         0000047C
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          START               35               0000000E         0000040E
+ GO
+break on return from routine DBGCMD\FACT at DBGCMD\FACT\%LINE 62
+    62:         RET
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          FACT                62               0000001A         00000488
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          START               35               0000000E         0000040E
+ CANCEL BREAK/ALL
+ !
+ ! Every branch.
+ SET BREAK/BRANCH
+ SHOW BREAK
+breakpoint on branches:
+ ACBB     ACBD     ACBF     ACBG     ACBH     ACBL     ACBW     AOBLEQ  
+ AOBLSS   BBC      BBCC     BBCCI    BBCS     BBS      BBSC     BBSS    
+ BBSSI    BCC      BCS      BEQL     BEQLU    BGEQ     BGEQU    BGTR    
+ BGTRU    BLBC     BLBS     BLEQ     BLEQU    BLSS     BLSSU    BNEQ    
+ BNEQU    BRB      BRW      BVC      BVS      CASEB    CASEL    CASEW   
+ JMP      SOBGEQ   SOBGTR  
+ GO
+break on branches at DBGCMD\START\%LINE 39
+    39:         BLBS    COUNT, ODD
+ GO
+break on branches at DBGCMD\START\ODD
+    41: ODD:    SOBGTR  R3, LOOP
+ GO
+break on branches at DBGCMD\START\%LINE 39
+    39:         BLBS    COUNT, ODD
+ CANCEL BREAK/BRANCH
+ !
+ ! Every line.
+ SET BREAK/LINE
+ SHOW BREAK
+breakpoint on lines
+ GO
+break on lines at DBGCMD\START\%LINE 40
+    40:         ADDL2   #2, WATCHL              ; writes the watched longword
+ GO
+break on lines at DBGCMD\START\ODD
+    41: ODD:    SOBGTR  R3, LOOP
+ GO
+break on lines at DBGCMD\START\LOOP
+    38: LOOP:   INCL    COUNT
+ CANCEL BREAK/LINE
+ !
+ ! Given opcodes, then every instruction.
+ SET BREAK/INSTRUCTION=(MOVB,MOVC3)
+ SHOW BREAK
+breakpoint on instruction(s): 
+ MOVB     MOVC3   
+ GO
+break on instruction(s) at DBGCMD\START\%LINE 42
+    42:         MOVB    #^X41, WATCHB           ; writes the watched byte
+ GO
+break on instruction(s) at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+ CANCEL BREAK/INSTRUCTION
+ SET BREAK/INSTRUCTION
+ SHOW BREAK
+breakpoint on instructions
+ GO
+break on instruction at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+ GO
+break on instruction at DBGCMD\FACT\BUMP
+    64: BUMP:   INCL    WATCHL                  ; a JSB subroutine
+ CANCEL BREAK/INSTRUCTION
+ SHOW BREAK
+%DEBUG-I-NOBREAKS, no breakpoints are set
+ !
+ ! To the end.
+ SET BREAK LAST
+ GO
+%SYSTEM-W-ENDOFFILE, end of file
+break on unhandled exception preceding DBGCMD\START\%LINE 48
+    48:         PUSHAQ  MSG
+ CANCEL BREAK/ALL
+ GO
+DBGCMD: done
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+%DEBUG-I-VERIFYICF, exiting command procedure BRKCLS.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ENDSUBROUTINE
+$ CALL DEBUG STEP
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG STEP.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@STEP.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBGCMD
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBGCMD
+%DEBUG-I-VERIFYICF, entering command procedure STEP.DBG
+ ! STEP.DBG - stepping (docs/PHASE-42.md, subtask 1): the default unit
+ ! (a line), /INSTRUCTION, /INTO and /OVER, a count, STEP/OVER of a
+ ! recursive call (which frame it stops in), /RETURN from a routine and
+ ! from a JSB subroutine, /BRANCH, /CALL, /SILENT, /NOSOURCE, SET STEP's
+ ! keywords, SHOW STEP after each, and stepping over a signal.
+ !
+ SHOW STEP
+step type: source, nosilent, by line,
+           over routine calls
+ STEP
+stepped to DBGCMD\START\%LINE 34
+    34:         PUSHL   R2
+ STEP/INSTRUCTION
+stepped to DBGCMD\START\%LINE 35: CALLS    S^#01,L^DBGCMD\FACT
+    35:         CALLS   #1, FACT                ; FACT(5), recursively
+ !
+ ! Into FACT, then through it an instruction at a time.
+ STEP/INTO
+stepped to routine DBGCMD\FACT
+    54:         MOVL    4(AP), R2
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          FACT                54               00000002         00000470
+*DBGCMD          START               35               0000000E         0000040E
+ SET STEP INSTRUCTION
+ SHOW STEP
+step type: source, nosilent, by instruction,
+           over routine calls
+ STEP
+stepped to DBGCMD\FACT\%LINE 55: CMPL     R2,S^#01
+    55:         CMPL    R2, #1
+ STEP
+stepped to DBGCMD\FACT\%LINE 56: BGTR     DBGCMD\FACT\RECUR
+    56:         BGTR    RECUR
+ STEP 2
+stepped to DBGCMD\FACT\%LINE 60: CALLS    S^#01,B^DBGCMD\FACT
+    60:         CALLS   #1, FACT
+ !
+ ! At FACT's own CALLS: over the whole recursion, back in this frame.
+ EXAMINE/INSTRUCTION .PC
+DBGCMD\FACT\%LINE 60:   CALLS    S^#01,B^DBGCMD\FACT
+ STEP/OVER
+stepped to DBGCMD\FACT\BACK: MULL2    R2,R0
+    61: BACK:   MULL2   R2, R0                  ; each FACT call returns here
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          FACT                61               00000017         00000485
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          START               35               0000000E         0000040E
+ EXAMINE R0
+DBGCMD\FACT\%R0:        00000001
+ !
+ ! Out of FACT, then on to the loop.
+ STEP/RETURN
+stepped on return from DBGCMD\FACT\BACK to DBGCMD\FACT\%LINE 62: RET     
+    62:         RET
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          FACT                62               0000001A         00000488
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          START               35               0000000E         0000040E
+ STEP
+stepped to DBGCMD\FACT\BACK: MULL2    R2,R0
+    61: BACK:   MULL2   R2, R0                  ; each FACT call returns here
+ STEP/BRANCH
+stepped to DBGCMD\START\%LINE 39: BLBS     L^DBGCMD\COUNT,DBGCMD\START\ODD
+    39:         BLBS    COUNT, ODD
+ STEP/BRANCH
+stepped to DBGCMD\START\ODD: SOBGTR   R3,DBGCMD\START\LOOP
+    41: ODD:    SOBGTR  R3, LOOP
+ STEP/CALL
+stepped to DBGCMD\START\%LINE 44: JSB      L^DBGCMD\FACT\BUMP
+    44:         JSB     BUMP                    ; a JSB subroutine
+ EXAMINE/INSTRUCTION .PC
+DBGCMD\START\%LINE 44:  JSB      L^DBGCMD\FACT\BUMP
+ !
+ ! Into the JSB subroutine and out again.
+ SET STEP INTO
+ SHOW STEP
+step type: source, nosilent, by instruction,
+           into routine calls
+ STEP
+stepped to DBGCMD\FACT\BUMP: INCL     L^DBGCMD\WATCHL
+    64: BUMP:   INCL    WATCHL                  ; a JSB subroutine
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          FACT                64               0000001B         00000489
+ STEP/RETURN
+%SYSTEM-W-ENDOFFILE, end of file
+break on unhandled exception preceding DBGCMD\START\%LINE 48: PUSHAQ   L^00000230
+    48:         PUSHAQ  MSG
+ STEP
+stepped to DBGCMD\START\%LINE 49: CALLS    S^#01,@L^HANDLR+1A1
+    49:         CALLS   #1, G^LIB$PUT_OUTPUT
+ SET STEP OVER
+ !
+ ! Quietly, and without source lines.
+ STEP/SILENT
+DBGCMD: done
+ EXAMINE/INSTRUCTION .PC
+DBGCMD\START\%LINE 50:  MOVL     S^#01,R0
+ STEP/NOSOURCE
+stepped to DBGCMD\START\LAST: RET     
+ SET STEP NOSOURCE
+ SHOW STEP
+step type: nosource, nosilent, by instruction,
+           over routine calls
+ STEP
+stepped on return from DBGCMD\FACT\BUMP to DBGCMD\START\LAST: RET     
+ SET STEP SOURCE
+ SET STEP LINE
+ SHOW STEP
+step type: source, nosilent, by line,
+           over routine calls
+ !
+ ! Over the call that signals and handles a condition, then over the
+ ! signal no one handles.
+ STEP
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+ STEP
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+ STEP
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+ STEP
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+ STEP
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+ SHOW CALLS
+%DEBUG-E-NOCALLS, no active call frames
+ GO
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+%DEBUG-I-VERIFYICF, exiting command procedure STEP.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ENDSUBROUTINE
+$ CALL DEBUG WATCH
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG WATCH.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@WATCH.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBGCMD
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBGCMD
+%DEBUG-I-VERIFYICF, entering command procedure WATCH.DBG
+ ! WATCH.DBG - watchpoints (docs/PHASE-42.md, subtask 1): a longword, a
+ ! byte, and a 16-byte area, each written by a different instruction
+ ! (MOVL, ADDL2, INCL in a JSB subroutine, MOVB, MOVC3), a temporary
+ ! watchpoint, a DEPOSIT to a watched location, and how SET, SHOW, and
+ ! CANCEL WATCH word things.
+ !
+ SHOW WATCH
+%DEBUG-I-NOWATCHES, no watchpoints are set
+ SET WATCH WATCHL
+ SET WATCH WATCHB
+ SET WATCH BUFFER
+ SET WATCH/TEMPORARY RESULT
+ SHOW WATCH
+watchpoint of DBGCMD\WATCHL
+watchpoint of DBGCMD\WATCHB
+watchpoint of DBGCMD\BUFFER[0:15]
+watchpoint of DBGCMD\RESULT [temporary]
+ !
+ ! RESULT (temporary), then WATCHL by ADDL2.
+ GO
+watch of DBGCMD\RESULT at DBGCMD\START\%LINE 36
+    36:         MOVL    R0, RESULT
+   old value: 00000000
+   new value: 00000078
+break at DBGCMD\START\%LINE 37
+    37:         MOVL    #3, R3                  ; a loop of branches
+ SHOW WATCH
+watchpoint of DBGCMD\WATCHL
+watchpoint of DBGCMD\WATCHB
+watchpoint of DBGCMD\BUFFER[0:15]
+ GO
+watch of DBGCMD\WATCHL at DBGCMD\START\%LINE 40
+    40:         ADDL2   #2, WATCHL              ; writes the watched longword
+   old value: 00000000
+   new value: 00000002
+break at DBGCMD\START\ODD
+    41: ODD:    SOBGTR  R3, LOOP
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          START               41               0000002C         0000042C
+ !
+ ! A DEPOSIT doesn't trigger a watchpoint.
+ DEPOSIT WATCHL = 5
+ EXAMINE WATCHL
+DBGCMD\WATCHL:  00000005
+ !
+ ! WATCHB by MOVB, BUFFER by MOVC3, WATCHL by BUMP's INCL.
+ GO
+watch of DBGCMD\WATCHB at DBGCMD\START\%LINE 42
+    42:         MOVB    #^X41, WATCHB           ; writes the watched byte
+   old value: 00
+   new value: 41
+break at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+ GO
+watch of DBGCMD\BUFFER[15] at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+   old value: 00
+   new value: 46
+break at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+watch of DBGCMD\BUFFER[14] at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+   old value: 00
+   new value: 45
+break at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+watch of DBGCMD\BUFFER[13] at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+   old value: 00
+   new value: 44
+break at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+watch of DBGCMD\BUFFER[12] at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+   old value: 00
+   new value: 43
+break at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+watch of DBGCMD\BUFFER[11] at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+   old value: 00
+   new value: 42
+break at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+watch of DBGCMD\BUFFER[10] at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+   old value: 00
+   new value: 41
+break at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+watch of DBGCMD\BUFFER[9] at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+   old value: 00
+   new value: 39
+break at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+watch of DBGCMD\BUFFER[8] at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+   old value: 00
+   new value: 38
+break at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+watch of DBGCMD\BUFFER[7] at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+   old value: 00
+   new value: 37
+break at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+watch of DBGCMD\BUFFER[6] at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+   old value: 00
+   new value: 36
+break at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+watch of DBGCMD\BUFFER[5] at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+   old value: 00
+   new value: 35
+break at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+watch of DBGCMD\BUFFER[4] at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+   old value: 00
+   new value: 34
+break at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+watch of DBGCMD\BUFFER[3] at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+   old value: 00
+   new value: 33
+break at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+watch of DBGCMD\BUFFER[2] at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+   old value: 00
+   new value: 32
+break at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+watch of DBGCMD\BUFFER[1] at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+   old value: 00
+   new value: 31
+break at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+watch of DBGCMD\BUFFER[0] at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+   old value: 00
+   new value: 30
+break at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+ EXAMINE/ASCII:16 BUFFER
+DBGCMD\BUFFER[0:15]:    '0123456789ABCDEF012345'
+ GO
+watch of DBGCMD\WATCHL at DBGCMD\FACT\BUMP
+    64: BUMP:   INCL    WATCHL                  ; a JSB subroutine
+   old value: 00000005
+   new value: 00000006
+break at DBGCMD\FACT\%LINE 65
+    65:         RSB
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          FACT                65               00000021         0000048F
+ !
+ CANCEL WATCH WATCHL
+ SHOW WATCH
+watchpoint of DBGCMD\WATCHB
+watchpoint of DBGCMD\BUFFER[0:15]
+ CANCEL WATCH/ALL
+ SHOW WATCH
+%DEBUG-I-NOWATCHES, no watchpoints are set
+ GO
+%SYSTEM-W-ENDOFFILE, end of file
+break on unhandled exception preceding DBGCMD\START\%LINE 48
+    48:         PUSHAQ  MSG
+%DEBUG-I-VERIFYICF, exiting command procedure WATCH.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ CALL DEBUG TRACE
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG TRACE.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@TRACE.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBGCMD
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBGCMD
+%DEBUG-I-VERIFYICF, entering command procedure TRACE.DBG
+ ! TRACE.DBG - tracepoints (docs/PHASE-42.md, subtask 1): every
+ ! instruction up to a break, a routine through its recursion, a JSB
+ ! subroutine, every line and branch, and how SET, SHOW, and CANCEL TRACE
+ ! word things.
+ !
+ SHOW TRACE
+%DEBUG-I-NOTRACES, no tracepoints are set, no opcode tracing
+ !
+ ! Every instruction, up to FACT.
+ SET TRACE/INSTRUCTION
+ SET BREAK FACT
+ SHOW TRACE
+tracepoint on instructions
+ GO
+trace on instruction at DBGCMD\START\%LINE 34
+    34:         PUSHL   R2
+trace on instruction at DBGCMD\START\%LINE 35
+    35:         CALLS   #1, FACT                ; FACT(5), recursively
+trace on instruction at routine DBGCMD\FACT
+    54:         MOVL    4(AP), R2
+break at routine DBGCMD\FACT
+ CANCEL TRACE/INSTRUCTION
+ CANCEL BREAK FACT
+ !
+ ! FACT at each recursion, and the JSB subroutine, up to the loop.
+ SET TRACE FACT
+ SET TRACE BUMP
+ SET BREAK LOOP
+ SHOW TRACE
+tracepoint at routine DBGCMD\FACT
+tracepoint at DBGCMD\FACT\BUMP
+ GO
+trace at routine DBGCMD\FACT
+    54:         MOVL    4(AP), R2
+trace at routine DBGCMD\FACT
+    54:         MOVL    4(AP), R2
+trace at routine DBGCMD\FACT
+    54:         MOVL    4(AP), R2
+trace at routine DBGCMD\FACT
+    54:         MOVL    4(AP), R2
+break at DBGCMD\START\LOOP
+    38: LOOP:   INCL    COUNT
+ CANCEL TRACE FACT
+ SHOW TRACE
+tracepoint at DBGCMD\FACT\BUMP
+ CANCEL BREAK LOOP
+ !
+ ! Every line and every branch, up to BUMP.
+ SET TRACE/LINE
+ SET TRACE/BRANCH
+ SET BREAK BUMP
+ SHOW TRACE
+tracepoint on lines
+tracepoint on branches:
+ ACBB     ACBD     ACBF     ACBG     ACBH     ACBL     ACBW     AOBLEQ  
+ AOBLSS   BBC      BBCC     BBCCI    BBCS     BBS      BBSC     BBSS    
+ BBSSI    BCC      BCS      BEQL     BEQLU    BGEQ     BGEQU    BGTR    
+ BGTRU    BLBC     BLBS     BLEQ     BLEQU    BLSS     BLSSU    BNEQ    
+ BNEQU    BRB      BRW      BVC      BVS      CASEB    CASEL    CASEW   
+ JMP      SOBGEQ   SOBGTR  
+ GO
+trace on lines at DBGCMD\START\%LINE 39
+    39:         BLBS    COUNT, ODD
+trace on branches at DBGCMD\START\%LINE 39
+trace on lines at DBGCMD\START\ODD
+    41: ODD:    SOBGTR  R3, LOOP
+trace on branches at DBGCMD\START\ODD
+trace on lines at DBGCMD\START\LOOP
+    38: LOOP:   INCL    COUNT
+trace on branches at DBGCMD\START\%LINE 39
+    39:         BLBS    COUNT, ODD
+trace on lines at DBGCMD\START\%LINE 39
+trace on lines at DBGCMD\START\%LINE 40
+    40:         ADDL2   #2, WATCHL              ; writes the watched longword
+trace on branches at DBGCMD\START\ODD
+    41: ODD:    SOBGTR  R3, LOOP
+trace on lines at DBGCMD\START\ODD
+trace on lines at DBGCMD\START\LOOP
+    38: LOOP:   INCL    COUNT
+trace on branches at DBGCMD\START\%LINE 39
+    39:         BLBS    COUNT, ODD
+trace on lines at DBGCMD\START\%LINE 39
+trace on branches at DBGCMD\START\ODD
+    41: ODD:    SOBGTR  R3, LOOP
+trace on lines at DBGCMD\START\ODD
+trace on lines at DBGCMD\START\%LINE 42
+    42:         MOVB    #^X41, WATCHB           ; writes the watched byte
+trace on lines at DBGCMD\START\%LINE 43
+    43:         MOVC3   #16, SOURCE, BUFFER     ; writes 16 bytes at once
+trace on lines at DBGCMD\START\%LINE 44
+    44:         JSB     BUMP                    ; a JSB subroutine
+trace on lines at DBGCMD\FACT\BUMP
+    64: BUMP:   INCL    WATCHL                  ; a JSB subroutine
+break at DBGCMD\FACT\BUMP
+ CANCEL TRACE/ALL
+ SHOW TRACE
+%DEBUG-I-NOTRACES, no tracepoints are set, no opcode tracing
+ CANCEL BREAK/ALL
+ GO
+%SYSTEM-W-ENDOFFILE, end of file
+break on unhandled exception preceding DBGCMD\START\%LINE 48
+    48:         PUSHAQ  MSG
+%DEBUG-I-VERIFYICF, exiting command procedure TRACE.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ CALL DEBUG EXAM
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG EXAM.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@EXAM.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBGCMD
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBGCMD
+%DEBUG-I-VERIFYICF, entering command procedure EXAM.DBG
+ ! EXAM.DBG - examining and depositing (docs/PHASE-42.md, subtask 1), in
+ ! a recursive call four deep: SHOW STACK; registers; the current and
+ ! previous locations; type and radix qualifiers; ranges and lists;
+ ! labels of data as arrays; numeric addresses; EVALUATE with MACRO's
+ ! operators; DEPOSIT to memory and registers; SET MODE, SET RADIX, and
+ ! CANCEL of each, with SHOW MODE and SHOW RADIX after each.
+ !
+ SET BREAK/AFTER:3 BACK
+ GO
+break at DBGCMD\FACT\BACK
+    61: BACK:   MULL2   R2, R0                  ; each FACT call returns here
+ CANCEL BREAK/ALL
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          FACT                61               00000017         00000485
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          START               35               0000000E         0000040E
+ SHOW STACK
+
+
+stack frame 0 (7FED5314)
+
+    condition handler: 00000000
+       SPA:            0
+       S:              1
+       mask:           ^M<R2>
+       PSW:            0000 (hexadecimal)
+    saved AP:          7FED534C
+    saved FP:          7FED5334
+    saved PC:          DBGCMD\FACT\BACK
+    saved R2:          00000005
+    argument list:(1)  00000004
+                  
+
+stack frame 1 (7FED5334)
+
+    condition handler: 00000000
+       SPA:            0
+       S:              1
+       mask:           ^M<R2>
+       PSW:            0000 (hexadecimal)
+    saved AP:          7FED5370
+    saved FP:          7FED5354
+    saved PC:          DBGCMD\START\%LINE 36
+    saved R2:          00000005
+    argument list:(1)  00000005
+                  
+
+stack frame 2 (7FED5354)
+
+    condition handler: 00000000
+       SPA:            0
+       S:              1
+       mask:           ^M<R2,R3>
+       PSW:            0000 (hexadecimal)
+    saved AP:          7FED53CC
+    saved FP:          7FED53B8
+    saved PC:          SHARE$DEBUG+0AD
+    saved R2:          00000000
+    saved R3:          7FED5394
+ SHOW STACK 1
+
+
+stack frame 0 (7FED5314)
+
+    condition handler: 00000000
+       SPA:            0
+       S:              1
+       mask:           ^M<R2>
+       PSW:            0000 (hexadecimal)
+    saved AP:          7FED534C
+    saved FP:          7FED5334
+    saved PC:          DBGCMD\FACT\BACK
+    saved R2:          00000005
+    argument list:(1)  00000004
+ !
+ ! Registers.
+ EXAMINE R0
+DBGCMD\FACT\%R0:        00000006
+ EXAMINE R2
+DBGCMD\FACT\%R2:        00000004
+ EXAMINE AP
+DBGCMD\FACT\%AP:        7FED532C
+ EXAMINE FP
+DBGCMD\FACT\%FP:        7FED5314
+ EXAMINE SP
+DBGCMD\FACT\%SP:        7FED5314
+ EXAMINE PC
+DBGCMD\FACT\%PC:        00000485
+ EXAMINE PSL
+DBGCMD\FACT\%PSL:       
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+ EXAMINE/PSL PSL
+DBGCMD\FACT\%PSL:       
+        CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
+         0   0  0   0  USER   USER    0  0  0  0 0 0 0 0 0
+ EXAMINE .SP
+7FED5314:       00000000
+ EXAMINE @SP
+7FED5314:       00000000
+ EXAMINE .AP+4
+7FED5330:       00000004
+ EXAMINE/INSTRUCTION .PC
+DBGCMD\FACT\BACK:       MULL2    R2,R0
+ EXAMINE/OPERANDS .PC
+DBGCMD\FACT\BACK:       MULL2    R2,R0
+     R2         R2 contains 00000004
+     R0         R0 contains 00000006
+ !
+ ! The current location, the next, and the previous.
+ EXAMINE WATCHL
+DBGCMD\WATCHL:  00000000
+ EXAMINE
+DBGCMD\WATCHB:  00
+ EXAMINE .
+DBGCMD\WATCHB:  00
+ EXAMINE ^
+DBGCMD\WATCHL+3:        00000000
+ !
+ ! Types, sizes, and radixes.
+ EXAMINE SOURCE
+DBGCMD\SOURCE:  '0123456789ABCDEF'
+ EXAMINE/ASCII:16 SOURCE
+DBGCMD\SOURCE:  '0123456789ABCDEF......'
+ EXAMINE/ASCII SOURCE
+DBGCMD\SOURCE:  '0123456789ABCDEF'
+ EXAMINE/BYTE SOURCE
+DBGCMD\SOURCE:  30
+ EXAMINE/WORD SOURCE
+DBGCMD\SOURCE:  3130
+ EXAMINE/LONGWORD SOURCE
+DBGCMD\SOURCE:  33323130
+ EXAMINE/QUADWORD SOURCE
+DBGCMD\SOURCE:  3736353433323130
+ EXAMINE/BYTE SOURCE:SOURCE+5
+DBGCMD\SOURCE:  30
+DBGCMD\SOURCE+1:        31
+DBGCMD\SOURCE+2:        32
+DBGCMD\SOURCE+3:        33
+DBGCMD\SOURCE+4:        34
+DBGCMD\SOURCE+5:        35
+ EXAMINE/DECIMAL/BYTE SOURCE:SOURCE+3
+DBGCMD\SOURCE:  48
+DBGCMD\SOURCE+1:        49
+DBGCMD\SOURCE+2:        50
+DBGCMD\SOURCE+3:        51
+ EXAMINE/HEXADECIMAL R2
+DBGCMD\FACT\%R2:        00000004
+ EXAMINE/DECIMAL R2
+DBGCMD\FACT\%R2:        4
+ EXAMINE/OCTAL R2
+DBGCMD\FACT\%R2:        00000000004
+ EXAMINE/BINARY R2
+DBGCMD\FACT\%R2:        0000000000000000 0000000000000100
+ EXAMINE WATCHL, WATCHB, COUNT
+DBGCMD\WATCHL:  00000000
+DBGCMD\WATCHB:  00
+DBGCMD\COUNT:   00000000
+ EXAMINE WATCHB
+DBGCMD\WATCHB:  00
+ EXAMINE BUFFER
+DBGCMD\BUFFER[0:15]
+    [0]:        00
+    [1]:        00
+    [2]:        00
+    [3]:        00
+    [4]:        00
+    [5]:        00
+    [6]:        00
+    [7]:        00
+    [8]:        00
+    [9]:        00
+    [10]:       00
+    [11]:       00
+    [12]:       00
+    [13]:       00
+    [14]:       00
+    [15]:       00
+ EXAMINE BUFFER[2]
+DBGCMD\BUFFER[2]:       00
+ EXAMINE MSG
+DBGCMD\MSG:     'DBGCMD: done'
+ EXAMINE/NOSYMBOLIC WATCHL
+DBGCMD\WATCHL:  00000000
+ !
+ ! Numeric addresses (the DATA psect starts at 200).
+ EXAMINE 200
+DBGCMD\WATCHL:  00000000
+ EXAMINE 200:20C
+DBGCMD\WATCHL:  00000000
+DBGCMD\WATCHB:  00
+DBGCMD\BUFFER[0]:       00
+DBGCMD\BUFFER[4]:       00
+ EXAMINE/BYTE 204
+DBGCMD\WATCHB:  00
+ !
+ ! EVALUATE: names, contents, registers, and MACRO's operators.
+ EVALUATE WATCHL
+00000000
+%DEBUG-E-NOACCESSR, no read access to address 00000000
+ EVALUATE/ADDRESS WATCHL
+00000200
+ EVALUATE R2
+00000004
+ EVALUATE R2+1
+00000005
+%DEBUG-E-NOACCESSR, no read access to address 00000004
+ EVALUATE AP+4
+7FED5330
+ EVALUATE 7 MOD 3
+00000001
+ EVALUATE 5 EQL 5
+00000001
+ EVALUATE 5 NEQ 5
+00000000
+ EVALUATE 1@4
+00000010
+ EVALUATE NOT 0
+0FFFFFFFF
+ EVALUATE 6 AND 3
+00000002
+ EVALUATE/DECIMAL 100
+256
+ !
+ ! DEPOSIT to memory and to registers.
+ DEPOSIT WATCHL = 7
+ EXAMINE WATCHL
+DBGCMD\WATCHL:  00000007
+ DEPOSIT/BYTE WATCHB = 42
+ EXAMINE WATCHB
+DBGCMD\WATCHB:  42
+ DEPOSIT/ASCII:4 BUFFER = "WXYZ"
+ EXAMINE/ASCII:4 BUFFER
+DBGCMD\BUFFER[0:15]:    'WXYZ'
+ DEPOSIT R3 = 99
+ EXAMINE R3
+DBGCMD\FACT\%R3:        00000099
+ !
+ ! Modes.
+ SHOW MODE
+modes: symbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+input radix : hexadecimal
+output radix: hexadecimal
+ SET MODE NOSYMBOLIC
+ SHOW MODE
+modes: nosymbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+input radix : hexadecimal
+output radix: hexadecimal
+ EXAMINE WATCHL
+DBGCMD\WATCHL:  00000007
+ EXAMINE/INSTRUCTION .PC
+00000485:       MULL2    R2,R0
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          FACT                61               00000017         00000485
+*DBGCMD          FACT                60               00000017         00000485
+*DBGCMD          START               35               0000000E         0000040E
+ SET MODE SYMBOLIC
+ SET MODE NOLINE
+ SHOW MODE
+modes: symbolic, noline, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+input radix : hexadecimal
+output radix: hexadecimal
+ EXAMINE/INSTRUCTION .PC
+DBGCMD\FACT\BACK:       MULL2    R2,R0
+ STEP
+stepped to DBGCMD\FACT+1A
+    62:         RET
+ SET MODE LINE
+ SET MODE OPERANDS
+ SHOW MODE
+modes: symbolic, line, d_float, brief operands, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+input radix : hexadecimal
+output radix: hexadecimal
+ EXAMINE/INSTRUCTION .PC
+DBGCMD\FACT\%LINE 62:   RET     
+ SET MODE OPERANDS=FULL
+ EXAMINE/INSTRUCTION .PC
+DBGCMD\FACT\%LINE 62:   RET     
+ SET MODE NOOPERANDS
+ SET MODE G_FLOAT
+ SHOW MODE
+modes: symbolic, line, g_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+input radix : hexadecimal
+output radix: hexadecimal
+ CANCEL MODE
+ SHOW MODE
+modes: symbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+input radix : hexadecimal
+output radix: hexadecimal
+ !
+ ! Radix.
+ SHOW RADIX
+input radix : hexadecimal
+output radix: hexadecimal
+ SET RADIX DECIMAL
+ SHOW RADIX
+input radix : decimal
+output radix: decimal
+ EXAMINE R2
+DBGCMD\FACT\%R2:        4
+ EVALUATE 10
+10
+ SET RADIX/OUTPUT OCTAL
+ SHOW RADIX
+input radix : decimal
+output radix: octal
+ EXAMINE R2
+DBGCMD\FACT\%R2:        00000000004
+ EVALUATE 10
+00000000012
+ SET RADIX/INPUT HEXADECIMAL
+ SHOW RADIX
+input radix : hexadecimal
+output radix: octal
+ EVALUATE 10
+00000000020
+ CANCEL RADIX
+ SHOW RADIX
+input radix : hexadecimal
+output radix: hexadecimal
+ !
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBGCMD\FACT ], 
+    1 [ = DBGCMD\FACT 1 ], 
+    2 [ = DBGCMD\START ]
+ GO
+%SYSTEM-W-ENDOFFILE, end of file
+break on unhandled exception preceding DBGCMD\START\%LINE 48
+    48:         PUSHAQ  MSG
+%DEBUG-I-VERIFYICF, exiting command procedure EXAM.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ CALL DEBUG CALL
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG CALL.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@CALL.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBGCMD
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBGCMD
+%DEBUG-I-VERIFYICF, entering command procedure CALL.DBG
+ ! CALL.DBG - the debugger's CALL command (docs/PHASE-42.md, subtask 1):
+ ! arguments by value, the value returned, registers saved and restored,
+ ! a breakpoint inside a called routine, and a call to a LIBRTL routine.
+ !
+ EXAMINE R0
+DBGCMD\START\%R0:       00000000
+ EXAMINE R2
+DBGCMD\START\%R2:       00000000
+ CALL FACT (%VAL 4)
+value returned is 00000018
+ CALL FACT (%VAL 1)
+value returned is 00000001
+ EXAMINE R0
+DBGCMD\START\%R0:       00000000
+ EXAMINE R2
+DBGCMD\START\%R2:       00000000
+ CALL HANDLR
+value returned is 00000001
+ !
+ ! A breakpoint inside the called routine.
+ SET BREAK BACK
+ CALL FACT (%VAL 3)
+break at DBGCMD\FACT\BACK
+    61: BACK:   MULL2   R2, R0                  ; each FACT call returns here
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          FACT                61               00000017         00000485
+*DBGCMD          FACT                60               00000017         00000485
+----- above routine called from DEBUG CALL command
+*DBGCMD          START               33               00000002         00000402
+ GO
+break at DBGCMD\FACT\BACK
+    61: BACK:   MULL2   R2, R0                  ; each FACT call returns here
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          FACT                61               00000017         00000485
+----- above routine called from DEBUG CALL command
+*DBGCMD          START               33               00000002         00000402
+ GO
+value returned is 00000006
+ CANCEL BREAK/ALL
+ !
+ ! A LIBRTL routine, given MSG's descriptor by address (the default).
+%DEBUG-E-NOSYMBOL, symbol 'LIB$PUT_OUTPUT' is not in the symbol table
+ !
+ ! The program is still at its start.
+ EXAMINE/INSTRUCTION .PC
+DBGCMD\START\%LINE 33:  MOVL     S^#05,R2
+ GO
+%SYSTEM-W-ENDOFFILE, end of file
+break on unhandled exception preceding DBGCMD\START\%LINE 48
+    48:         PUSHAQ  MSG
+%DEBUG-I-VERIFYICF, exiting command procedure CALL.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ CALL DEBUG EXCEPT
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG EXCEPT.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@EXCEPT.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBGCMD
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBGCMD
+%DEBUG-I-VERIFYICF, entering command procedure EXCEPT.DBG
+ ! EXCEPT.DBG - SET BREAK/EXCEPTION (docs/PHASE-42.md, subtask 1): the
+ ! break for a condition a handler will handle, STEP from it (into the
+ ! handler), the break for one no handler handles, and GO from each.
+ !
+ SET BREAK/EXCEPTION
+ SHOW BREAK
+breakpoint on exception
+ GO
+%SYSTEM-W-ENDOFFILE, end of file
+break on exception preceding DBGCMD\CATCH\%LINE 71
+    71:         RET
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          CATCH               70               00000016         000004A6
+*DBGCMD          START               45               00000050         00000450
+ EXAMINE/INSTRUCTION .PC
+DBGCMD\CATCH\%LINE 71:  RET     
+ STEP
+stepped to routine DBGCMD\HANDLR
+    74:         MOVL    #SS$_CONTINUE, R0
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          HANDLR              74               00000002         000004A9
+----- above condition handler called with exception 00000870:
+%SYSTEM-W-ENDOFFILE, end of file
+----- end of exception message
+*DBGCMD          CATCH               70               00000016         000004A6
+*DBGCMD          START               45               00000050         00000450
+ GO
+%SYSTEM-W-ENDOFFILE, end of file
+break on exception preceding DBGCMD\START\%LINE 48
+    48:         PUSHAQ  MSG
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          START               47               0000005D         0000045D
+ GO
+%SYSTEM-W-ENDOFFILE, end of file
+break on unhandled exception preceding DBGCMD\START\%LINE 48
+    48:         PUSHAQ  MSG
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          START               47               0000005D         0000045D
+ GO
+DBGCMD: done
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+%DEBUG-I-VERIFYICF, exiting command procedure EXCEPT.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ENDSUBROUTINE
+$ CALL DEBUG ERRORS
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG ERRORS.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@ERRORS.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBGCMD
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBGCMD
+%DEBUG-I-VERIFYICF, entering command procedure ERRORS.DBG
+ ! ERRORS.DBG - the debugger's messages (docs/PHASE-42.md, subtask 1):
+ ! unknown symbols, verbs, keywords, and qualifiers; conflicting
+ ! qualifiers; cancelling what isn't set; DCL commands; bad addresses;
+ ! what happens at a signal no handler handles with no
+ ! SET BREAK/EXCEPTION; and commands after the program has exited.
+ !
+%DEBUG-E-NOSYMBOL, symbol 'NOSUCH' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'NOSUCH' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'NOSUCH' is not in the symbol table
+%DEBUG-E-SYNTAX, command syntax error at or near 'START'
+%DEBUG-E-SYNTAX, command syntax error at or near 'NOSUCHQUAL'
+ CANCEL BREAK FACT
+%DEBUG-I-NOBREAKS, no breakpoints are set
+ CANCEL WATCH WATCHL
+%DEBUG-I-NOWATCHES, no watchpoints are set
+ CANCEL TRACE FACT
+%DEBUG-I-NOTRACES, no tracepoints are set, no opcode tracing
+%DEBUG-E-SYNTAX, command syntax error at or near 'FOO'
+%DEBUG-E-SYNTAX, command syntax error at or near 'DIRECTORY'
+%DEBUG-E-SYNTAX, command syntax error at or near 'DEFAULT'
+%DEBUG-E-SYNTAX, command syntax error at or near 'DEFAULT'
+ STEP/INTO/OVER
+stepped to DBGCMD\START\%LINE 34
+    34:         PUSHL   R2
+%DEBUG-E-SYNTAX, command syntax error at or near 'BOGUS'
+%DEBUG-E-SYNTAX, command syntax error at or near '7'
+ EXAMINE/BYTE/WORD WATCHL
+DBGCMD\WATCHL:  0000
+%DEBUG-W-NEEDMORE, unexpected end of command line
+ EXAMINE 0
+%DEBUG-E-NOACCESSR, no read access to address 00000000
+ EXAMINE 7FFFFFFF
+%DEBUG-E-NOACCESSR, no read access to address 7FFFFFFF
+ !
+ ! The unhandled signal, then the end of the program.
+ GO
+%SYSTEM-W-ENDOFFILE, end of file
+break on unhandled exception preceding DBGCMD\START\%LINE 48
+    48:         PUSHAQ  MSG
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGCMD          START               47               0000005D         0000045D
+ GO
+DBGCMD: done
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+ !
+ ! After the program has exited.
+ GO
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+ STEP
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+ SHOW CALLS
+%DEBUG-E-NOCALLS, no active call frames
+ EXAMINE/INSTRUCTION .PC
+%DEBUG-E-NOACCESSR, no read access to address 00000000
+ EXAMINE WATCHL
+DBGCMD\WATCHL:  00000003
+%DEBUG-I-VERIFYICF, exiting command procedure ERRORS.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ENDSUBROUTINE
+$ DIRECTORY/SIZE=ALL/DATE *.*
+
+Directory DUA1:[000000]
+
+000000.DIR;1               3/3         5-OCT-2026 16:21:41.20
+BACKUP.SYS;1               0/0         5-OCT-2026 16:21:41.20
+BADBLK.SYS;1               0/0         5-OCT-2026 16:21:41.20
+BADLOG.SYS;1               0/0         5-OCT-2026 16:21:41.20
+BITMAP.SYS;1               7/7         5-OCT-2026 16:21:41.20
+BREAK.DBG;1                3/3         5-OCT-2026 16:21:41.20
+BREAK.DLG;1               11/11        5-OCT-2026 16:23:36.30
+BRKCLS.DBG;1               2/2         5-OCT-2026 16:21:41.20
+BRKCLS.DLG;1              10/10        5-OCT-2026 16:23:36.50
+CALL.DBG;1                 2/2         5-OCT-2026 16:21:41.21
+CALL.DLG;1                 5/5         5-OCT-2026 16:23:37.73
+CONTIN.SYS;1               0/0         5-OCT-2026 16:21:41.20
+CORIMG.SYS;1               0/0         5-OCT-2026 16:21:41.20
+DBGCMD.ANI;1              10/10        5-OCT-2026 16:23:36.16
+DBGCMD.COM;1               4/4         5-OCT-2026 16:21:41.20
+DBGCMD.EXE;1               7/7         5-OCT-2026 16:23:36.15
+DBGCMD.LIS;1              21/21        5-OCT-2026 16:23:36.09
+DBGCMD.LOG;1               0/112       5-OCT-2026 16:23:36.08
+DBGCMD.MAP;1              11/11        5-OCT-2026 16:23:36.13
+DBGCMD.MAR;1               5/5         5-OCT-2026 16:21:41.20
+DBGCMD.OBJ;1               3/3         5-OCT-2026 16:23:36.09
+ERRORS.DBG;1               2/2         5-OCT-2026 16:21:41.21
+ERRORS.DLG;1               5/5         5-OCT-2026 16:23:38.13
+EXAM.DBG;1                 5/5         5-OCT-2026 16:21:41.21
+EXAM.DLG;1                19/19        5-OCT-2026 16:23:37.40
+EXCEPT.DBG;1               1/1         5-OCT-2026 16:21:41.21
+EXCEPT.DLG;1               5/5         5-OCT-2026 16:23:37.93
+INDEXF.SYS;1             843/843       5-OCT-2026 16:21:41.20
+RUN.DBG;9                  1/1         5-OCT-2026 16:23:37.97
+RUN.DBG;8                  1/1         5-OCT-2026 16:23:37.77
+RUN.DBG;7                  1/1         5-OCT-2026 16:23:37.56
+RUN.DBG;6                  1/1         5-OCT-2026 16:23:37.24
+RUN.DBG;5                  1/1         5-OCT-2026 16:23:37.01
+RUN.DBG;4                  1/1         5-OCT-2026 16:23:36.75
+RUN.DBG;3                  1/1         5-OCT-2026 16:23:36.55
+RUN.DBG;2                  1/1         5-OCT-2026 16:23:36.36
+RUN.DBG;1                  1/1         5-OCT-2026 16:23:36.17
+SECURITY.SYS;1             1/6         5-OCT-2026 16:21:41.20
+STEP.DBG;1                 3/3         5-OCT-2026 16:21:41.20
+STEP.DLG;1                12/12        5-OCT-2026 16:23:36.69
+TRACE.DBG;1                2/2         5-OCT-2026 16:21:41.21
+TRACE.DLG;1                8/8         5-OCT-2026 16:23:37.17
+VOLSET.SYS;1               0/0         5-OCT-2026 16:21:41.20
+WATCH.DBG;1                2/2         5-OCT-2026 16:21:41.20
+WATCH.DLG;1               15/15        5-OCT-2026 16:23:36.91
+
+Total of 45 files, 1036/1153 blocks.
+$ EXIT

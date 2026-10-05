@@ -1,0 +1,56 @@
+@CALL.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure CALL.DBG
+! ! CALL.DBG - the debugger's CALL command (docs/PHASE-42.md, subtask 1):
+! ! arguments by value, the value returned, registers saved and restored,
+! ! a breakpoint inside a called routine, and a call to a LIBRTL routine.
+! !
+! EXAMINE R0
+!DBGCMD\START\%R0:       00000000
+! EXAMINE R2
+!DBGCMD\START\%R2:       00000000
+! CALL FACT (%VAL 4)
+!value returned is 00000018
+! CALL FACT (%VAL 1)
+!value returned is 00000001
+! EXAMINE R0
+!DBGCMD\START\%R0:       00000000
+! EXAMINE R2
+!DBGCMD\START\%R2:       00000000
+! CALL HANDLR
+!value returned is 00000001
+! !
+! ! A breakpoint inside the called routine.
+! SET BREAK BACK
+! CALL FACT (%VAL 3)
+!break at DBGCMD\FACT\BACK
+!    61: BACK:   MULL2   R2, R0                  ; each FACT call returns here
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          FACT                61               00000017         00000485
+!*DBGCMD          FACT                60               00000017         00000485
+!----- above routine called from DEBUG CALL command
+!*DBGCMD          START               33               00000002         00000402
+! GO
+!break at DBGCMD\FACT\BACK
+!    61: BACK:   MULL2   R2, R0                  ; each FACT call returns here
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGCMD          FACT                61               00000017         00000485
+!----- above routine called from DEBUG CALL command
+!*DBGCMD          START               33               00000002         00000402
+! GO
+!value returned is 00000006
+! CANCEL BREAK/ALL
+! !
+! ! A LIBRTL routine, given MSG's descriptor by address (the default).
+!%DEBUG-E-NOSYMBOL, symbol 'LIB$PUT_OUTPUT' is not in the symbol table
+! !
+! ! The program is still at its start.
+! EXAMINE/INSTRUCTION .PC
+!DBGCMD\START\%LINE 33:  MOVL     S^#05,R2
+! GO
+!%SYSTEM-W-ENDOFFILE, end of file
+!break on unhandled exception preceding DBGCMD\START\%LINE 48
+!    48:         PUSHAQ  MSG
+!%DEBUG-I-VERIFYICF, exiting command procedure CALL.DBG
+EXIT
