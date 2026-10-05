@@ -21,6 +21,7 @@ var imageFixtureDirs = []string{
 	"../../testdata/link/vax",
 	"../../testdata/mar/list/vax",
 	"../../testdata/mar/round/vax",
+	"../../testdata/mar/dst/vax",
 }
 
 // imageFixture is one image and its real analysis.
@@ -57,8 +58,8 @@ func imageFixtures(t *testing.T) []imageFixture {
 		}
 	}
 
-	if len(out) < 29 {
-		t.Fatalf("found %d image fixtures, want at least 29", len(out))
+	if len(out) < 30 {
+		t.Fatalf("found %d image fixtures, want at least 30", len(out))
 	}
 
 	return out
@@ -194,7 +195,7 @@ var imagePageHeaderRE = regexp.MustCompile("\f\nAnalyze Image[^\n]*\n[^\n]*\nANA
 func imagePageContent(analysis []byte) string {
 	text := imagePageHeaderRE.ReplaceAllString(string(analysis), "")
 
-	if i := strings.LastIndex(text, "\nANALYZE/IMAGE"); i >= 0 {
+	if i := strings.LastIndex(text, "\nANAL"); i >= 0 {
 		text = text[:i+1]
 	}
 

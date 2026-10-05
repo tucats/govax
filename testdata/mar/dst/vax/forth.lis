@@ -1,0 +1,2158 @@
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page   1
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                                     0000     1 	.TITLE	FORTH	Vforth, a subroutine-threaded FORTH
+                                     0000     2 	.IDENT	/V2.0/
+                                     0000     3 
+                                     0000     4 ;
+                                     0000     5 ; Vforth--a 32 bit forth system using subroutine threading for
+                                     0000     6 ;   increased speed.
+                                     0000     7 ;
+                                     0000     8 ;   By Andy Valencia, 1984
+                                     0000     9 ;
+                                     0000    10 ; Modifications:
+                                     0000    11 ;
+                                     0000    12 ;   05/15/99  Tom Cole
+                                     0000    13 ;   Port to run under eVAX. This involves changing a few
+                                     0000    14 ;   pseudo-instructions to the assembler, and storing the
+                                     0000    15 ;   code resident in the microkernel space.
+                                     0000    16 ;
+                                     0000    17 ;   09/26/28  Tom Cole
+                                     0000    18 ;   This was written to run within the microkernel, but
+                                     0000    19 ;   that was never practical. Modified to run in P0
+                                     0000    20 ;   space as a regular program, not a resident feature of
+                                     0000    21 ;   the microkernel.
+                                     0000    22 ;
+                                     0000    23 ;   10/04/26  MACRO-32 port (testdata/asm/forth.asm is the eVAX original)
+                                     0000    24 ;   Rewritten for VAX MACRO: assembled with MACRO, linked with LINK,
+                                     0000    25 ;   and run with RUN. The changes:
+                                     0000    26 ;
+                                     0000    27 ;   - Program sections: code (FORTH_CODE), constant text and tables
+                                     0000    28 ;     (FORTH_TEXT), variables and buffers (FORTH_DATA), the built-in
+                                     0000    29 ;     dictionary's headers (FORTH_WORDS), and the dictionary new words
+                                     0000    30 ;     are compiled into (FORTH_DICT, writable and executable).
+                                     0000    31 ;   - I/O is RMS: the terminal is SYS$INPUT and SYS$OUTPUT, and "input"
+                                     0000    32 ;     and "output" open files (default types .FTH and .LIS). The original
+                                     0000    33 ;     used Unix-style CHMK system calls and DEC C's string routines.
+                                     0000    34 ;     Output is gathered a line at a time and written as one record; a
+                                     0000    35 ;     line still unfinished when the terminal is read becomes part of
+                                     0000    36 ;     the prompt.
+                                     0000    37 ;   - A command's text (LIB$GET_FOREIGN), when it's run as a foreign
+                                     0000    38 ;     command ("FORTH :== $FORTH" then "FORTH 2 3 + ."), is interpreted
+                                     0000    39 ;     and then forth halts, as the original's string-argument entry did;
+                                     0000    40 ;     without it, forth is interactive. Words are found whatever their
+                                     0000    41 ;     case, since DCL uppercases a command's unquoted text.
+                                     0000    42 ;   - The DEFWORD and DEFPRIM macros build the dictionary headers, and
+                                     0000    43 ;     DEFPRIM computes a primitive's length instead of hand-counting it.
+                                     0000    44 ;   - BSD-style jbr/jeql/jnequ pseudo-branches are BRB/BRW/BSBW and
+                                     0000    45 ;     branches around BRW; addresses are taken with MOVAB/MOVAL.
+                                     0000    46 ;   - The operand stack is an area of its own, not 80 bytes below the
+                                     0000    47 ;     return stack (where nested calls and RMS calls overwrote it).
+                                     0000    48 ;   - Bugs fixed: "(" compared R0 with the byte at address 0 instead of
+                                     0000    49 ;     testing for a NUL; "and" was a logical, not bitwise, and; "c@"
+                                     0000    50 ;     sign-extended; "mod" ignored a negative dividend's sign; "fill"
+                                     0000    51 ;     wrote one byte for a count of 0; "." needed more room for base 2
+                                     0000    52 ;     and printed no trailing blank; numbers like "12x" were accepted
+                                     0000    53 ;     as 12, and digits above F were misread in bases over 16; a ";"
+                                     0000    54 ;     with an unmatched control structure didn't abort; "(.")" across
+                                     0000    55 ;     input lines lost its string pointer; words longer than 80
+                                     0000    56 ;     characters, ." strings over 132, and more than 7 nested input or
+                                     0000    57 ;     output files overran their buffers.
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page   2
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                                     0000    58 ;
+                                     0000    59 ; Registers with fixed uses:
+                                     0000    60 ;   PC  - Since we're using subroutine threading, this operates as the
+                                     0000    61 ;         actual execution vector for each instruction.
+                                     0000    62 ;   SP  - Maintains the return stack (the VMS user stack)
+                                     0000    63 ;   R11 - The operand stack
+                                     0000    64 ;   R10 - Next open byte in the dictionary--"HERE"
+                                     0000    65 ;   R9  - Index into current input line
+                                     0000    66 ;   R8  - Points to last entry in the dictionary chain
+                                     0000    67 ;
+                                     0000    68 ; A dictionary entry is laid out as:
+                                     0000    69 ;    0  link to the previous entry (0 ends the chain)
+                                     0000    70 ;    4  PFA: address of the word's code
+                                     0000    71 ;    8  SFP: for a primitive, the length of its code, without the RSB
+                                     0000    72 ;   10  SFA: flag bits (XRECURSIVE, XSMUDGED, PRIORITY, PRIMITIVE)
+                                     0000    73 ;   12  the word's name, as an ASCIZ string
+                                     0000    74 ;
+                                     0000    75 
+                                     0000    76 	$FABDEF				; FAB field offsets
+                                     0000    77 	$RABDEF				; RAB field offsets
+                                     0000    78 	$SSDEF				; system status codes
+                                     0000    79 
+                                     0000    80 ;
+                                     0000    81 ; These are the instruction fragments compiled into the executable code
+                                     0000    82 ;
+                           00009F16  0000    83 JSB_HEADER	= ^X9F16		; JSB @#...
+                           00008FD0  0000    84 LIT_HEADER	= ^X8FD0		; MOVL #...,-(R11)
+                           0000007B  0000    85 LIT_TAILER	= ^X7B
+                           00000005  0000    86 RSB_HEADER	= ^X05			; RSB
+                           00009F17  0000    87 AGAIN_HEADER	= ^X9F17		; JMP @#...
+                           06128BD5  0000    88 SKIPT		= ^X06128BD5		; TSTL (R11)+ / BNEQ .+8
+                                     0000    89 
+                                     0000    90 ;
+                                     0000    91 ; These are the other constants
+                                     0000    92 ;
+                           00000001  0000    93 XRECURSIVE	= 1			; SFA bits: recursive function
+                           00000002  0000    94 XSMUDGED	= 2			;   SMUDGE bit
+                           00000004  0000    95 PRIORITY	= 4			;   IMMEDIATE
+                           00000008  0000    96 PRIMITIVE	= 8			;   PRIMITIVE--is a code macro
+                                     0000    97 
+                           0000000E  0000    98 DSC_T		= 14			; DSC$K_DTYPE_T, text
+                           00000001  0000    99 DSC_S		= 1			; DSC$K_CLASS_S, a fixed-length string
+                                     0000   100 
+                           0000000A  0000   101 NL		= 10			; Newline
+                           00000020  0000   102 SPC		= 32			; Space
+                           00000009  0000   103 TAB		= 9			; Tab
+                                     0000   104 
+                           00000001  0000   105 MRKCOLON	= 1			; For control structure matching
+                           00000002  0000   106 MRKIF		= 2
+                           00000003  0000   107 MRKDO		= 3
+                           00000004  0000   108 MRKBEGIN	= 4
+                           00000005  0000   109 MRKWHILE	= 5
+                                     0000   110 
+                                     0000   111 ;
+                                     0000   112 ; Sizes
+                                     0000   113 ;
+                           00000084  0000   114 LINSIZ		= 132			; Longest output line
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page   3
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                           00000400  0000   115 INLMAX		= 1024			; Longest input record
+                           00000402  0000   116 INLSIZ		= INLMAX+2		;  plus the newline and NUL we add
+                           00000050  0000   117 WRDMAX		= 80			; Longest word
+                           00000084  0000   118 DOTQMAX		= 132			; Longest ." string
+                           00000008  0000   119 MAXDEP		= 8			; Input and output stack depths
+                           00000100  0000   120 OPSDEP		= 256			; Operand stack size, in longwords
+                           00007530  0000   121 DICTSIZ		= 30000			; Room for new words
+                                     0000   122 
+                                     0000   123 ;
+                                     0000   124 ; A unit block is one open file: its FAB, its RAB, and (for output) the
+                                     0000   125 ; line being built. A unit, as the input and output stacks hold it, is
+                                     0000   126 ; the address of its unit block.
+                                     0000   127 ;
+                           00000000  0000   128 UB_FAB		= 0			; The FAB
+                           00000050  0000   129 UB_RAB		= FAB$C_BLN		; The RAB
+                           00000094  0000   130 UB_LEN		= UB_RAB+RAB$C_BLN	; Bytes in the output line
+                           00000098  0000   131 UB_BUF		= UB_LEN+4		; The output line
+                           0000011E  0000   132 UB_BLN		= UB_BUF+LINSIZ+2	;  (room for a "> " prompt after it)
+                                     0000   133 
+                                     0000   134 ;
+                                     0000   135 ; DEFWORD builds a dictionary header for the word NAME in FORTH_WORDS,
+                                     0000   136 ; chained to the one before it, then defines LABEL, the word's code,
+                                     0000   137 ; where the assembly was. FLAGS are the SFA bits.
+                                     0000   138 ;
+                                     0000   139 ; DEFPRIM is DEFWORD for a primitive: one whose code is copied in line
+                                     0000   140 ; when a definition is compiled. Its code ends with ENDPRIM LABEL, which
+                                     0000   141 ; marks the end of the bytes to copy and adds the RSB.
+                                     0000   142 ;
+                                     0000   143 	.MACRO	DEFWORD	NAME,LABEL,FLAGS=0
+                                     0000   144 	.SAVE_PSECT
+                                     0000   145 	.PSECT	FORTH_WORDS,NOWRT,NOEXE,LONG
+                                     0000   146 LABEL'_H:
+                                     0000   147 	.ADDRESS LASTWORD
+                                     0000   148 	.ADDRESS LABEL
+                                     0000   149 	.WORD	0,FLAGS
+                                     0000   150 	.ASCIZ	\NAME\
+                                     0000   151 LASTWORD = LABEL'_H
+                                     0000   152 	.RESTORE_PSECT
+                                     0000   153 LABEL:
+                                     0000   154 	.ENDM	DEFWORD
+                                     0000   155 
+                                     0000   156 	.MACRO	DEFPRIM	NAME,LABEL
+                                     0000   157 	.SAVE_PSECT
+                                     0000   158 	.PSECT	FORTH_WORDS,NOWRT,NOEXE,LONG
+                                     0000   159 LABEL'_H:
+                                     0000   160 	.ADDRESS LASTWORD
+                                     0000   161 	.ADDRESS LABEL
+                                     0000   162 	.WORD	LABEL'_E-LABEL,PRIMITIVE
+                                     0000   163 	.ASCIZ	\NAME\
+                                     0000   164 LASTWORD = LABEL'_H
+                                     0000   165 	.RESTORE_PSECT
+                                     0000   166 LABEL:
+                                     0000   167 	.ENDM	DEFPRIM
+                                     0000   168 
+                                     0000   169 	.MACRO	ENDPRIM	LABEL
+                                     0000   170 LABEL'_E:
+                                     0000   171 	RSB
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page   4
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                                     0000   172 	.ENDM	ENDPRIM
+                                     0000   173 
+                           00000000  0000   174 LASTWORD = 0				; The chain starts empty
+                                     0000   175 
+                                     0000   176 ;
+                                     0000   177 ; ----Data
+                                     0000   178 ;
+                                 00000000   179 	.PSECT	FORTH_DATA,WRT,NOEXE,LONG
+                                     0000   180 
+                                     0000   181 SP_HOLD:				; Holds return stack base
+                           00000004  0000   182 	.BLKL	1
+                                     0004   183 INLINE:					; Room for a record of input
+                           00000406  0004   184 	.BLKB	INLSIZ
+                                     0406   185 WRD:					;  and up to an 80-char word
+                           00000457  0406   186 	.BLKB	WRDMAX+1
+                                     0457   187 DOTQBUF:				; A ." string
+                           000004DC  0457   188 	.BLKB	DOTQMAX+1
+                                     04DC   189 FPRBUF:					; "f." fraction digits
+                           000004E6  04DC   190 	.BLKB	10
+                           00000508  04E6   191 	.BLKB	34			; "." digits, built backward
+                                 00  0508   192 PRNBUF:	.BYTE	0			;  from here
+                           0000050A  0509   193 SIGN:	.BLKB	1			; Flags a number's sign
+                           0000050C  050A   194 CMDLEN:	.BLKW	1			; The command text's length
+                                     050C   195 ONESHOT:				; Nonzero when running a command's text
+                           0000050D  050C   196 	.BLKB	1
+                                     050D   197 	.ALIGN	LONG
+                                     0510   198 EXITSTS:				; The status forth exits with
+                           00000001  0510   199 	.LONG	SS$_NORMAL
+                                     0514   200 	.ALIGN	LONG
+                               03F9' 0514   201 CMDDSC:	.WORD	INLMAX-HALT_LEN		; Descriptor: the command's text
+                              01 0E  0516   202 	.BYTE	DSC_T,DSC_S		;  goes into INLINE, leaving room
+                           00000004' 0518   203 	.ADDRESS INLINE			;  to add " halt" 
+                           0000000A  051C   204 BASE:	.LONG	10			; BASE variable--the current base
+                           00000000  0520   205 STATE:	.LONG	0			; STATE variable--0=interp, 1=compiling
+                                     0524   206 
+                                     0524   207 ;
+                                     0524   208 ; The operand stack, which grows down from OPSTK_END. The guard after
+                                     0524   209 ; it keeps a word run on an empty stack from storing into anything else.
+                                     0524   210 ;
+                                     0524   211 	.ALIGN	LONG
+                           00000924  0524   212 OPSTK:	.BLKL	OPSDEP
+                                     0924   213 OPSTK_END:
+                           00000934  0924   214 	.BLKL	4
+                                     0934   215 
+                                     0934   216 ;
+                                     0934   217 ; Pushdown lists of input & output units. The terminal is at the
+                                     0934   218 ; bottom of each.
+                                     0934   219 ;
+                           000025B8' 0934   220 ISTK:	.ADDRESS TTIN
+                           00000954  0938   221 	.BLKL	MAXDEP-1
+                           00000934' 0954   222 ISP:	.ADDRESS ISTK
+                           00000000  0958   223 IDEEP:	.LONG	0
+                           000025B8' 095C   224 IUNIT:	.ADDRESS TTIN
+                           000026D8' 0960   225 OSTK:	.ADDRESS TTOUT
+                           00000980  0964   226 	.BLKL	MAXDEP-1
+                           00000960' 0980   227 OSP:	.ADDRESS OSTK
+                           00000000  0984   228 ODEEP:	.LONG	0
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page   5
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                           000026D8' 0988   229 OUNIT:	.ADDRESS TTOUT
+                                     098C   230 
+                                     098C   231 ;
+                                     098C   232 ; KLUDGE city! When we push down an input file, we have to save the buffer,
+                                     098C   233 ;   otherwise the new input file will abuse it in various undesireable
+                                     098C   234 ;   ways. So we make room for a save image of each input unit.
+                                     098C   235 ;
+                           0000259A  098C   236 IBUFS:	.BLKB	INLSIZ*<MAXDEP-1>	; The input buffers
+                           000025B6  259A   237 IBUFX:	.BLKL	MAXDEP-1		;  and the current position within them
+                                     25B6   238 
+                                     25B6   239 ;
+                                     25B6   240 ; The terminal's unit blocks. Each $GET from the terminal prompts with
+                                     25B6   241 ; whatever's in RAB$L_PBF, which GETLIN sets.
+                                     25B6   242 ;
+                                     25B6   243 	.ALIGN	LONG
+                                     25B8   244 TTIN:	$FAB	FNM=<SYS$INPUT>,FAC=GET
+                                     2608   245 	$RAB	FAB=TTIN,UBF=INLINE,USZ=INLMAX,ROP=PMT
+                           00000000  264C   246 	.LONG	0
+                           000026D6  2650   247 	.BLKB	LINSIZ+2
+                                     26D6   248 
+                                     26D6   249 	.ALIGN	LONG
+                                     26D8   250 TTOUT:	$FAB	FNM=<SYS$OUTPUT>,FAC=PUT,RAT=CR
+                                     2728   251 	$RAB	FAB=TTOUT
+                           00000000  276C   252 	.LONG	0
+                           000027F6  2770   253 	.BLKB	LINSIZ+2
+                                     27F6   254 
+                                     27F6   255 ;
+                                     27F6   256 ; The unit blocks of the files "input" and "output" open, one for each
+                                     27F6   257 ; level of nesting.
+                                     27F6   258 ;
+                                     27F6   259 	.ALIGN	LONG
+                           00002FCA  27F8   260 IUNITS:	.BLKB	UB_BLN*<MAXDEP-1>
+                           0000379C  2FCA   261 OUNITS:	.BLKB	UB_BLN*<MAXDEP-1>
+                                     379C   262 
+                                     379C   263 ;
+                                     379C   264 ; ----Constant text and tables
+                                     379C   265 ;
+                                 00000000   266 	.PSECT	FORTH_TEXT,NOWRT,NOEXE,LONG
+                                     0000   267 
+                                     0000   268 ;
+                                     0000   269 ; The FAB and RAB an input or output file's unit block starts as.
+                                     0000   270 ;
+                                     0000   271 IFABT:	$FAB	FAC=GET,DNM=<.FTH>
+                                     0050   272 IRABT:	$RAB	UBF=INLINE,USZ=INLMAX
+                                     0094   273 OFABT:	$FAB	FAC=PUT,RAT=CR,DNM=<.LIS>
+                                     00E4   274 ORABT:	$RAB
+                                     0128   275 
+                                     0128   276 HALT_TEXT:				; What follows the command's text
+               00 0A 74 6C 61 68 20  0128   277 	.ASCII	/ halt/<NL><0>
+                           00000007  012F   278 HALT_LEN = .-HALT_TEXT
+20 30 2E 32 56 20 68 74 72 6F 66 56  012F   279 BANNER:	.ASCIZ	|Vforth V2.0 -- "halt" or Ctrl/Z to exit|<NL>
+72 6F 20 22 74 6C 61 68 22 20 2D 2D  013B       
+65 20 6F 74 20 5A 2F 6C 72 74 43 20  0147       
+                     00 0A 74 69 78  0153       
+                                     0158   280 OUTOP_MSG:
+6F 20 74 6F 6E 20 64 6C 75 6F 43 20  0158   281 	.ASCIZ	/ Could not open output file/<NL>
+66 20 74 75 70 74 75 6F 20 6E 65 70  0164       
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page   6
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                     00 0A 65 6C 69  0170       
+                                     0175   282 INOP_MSG:
+6F 20 74 6F 6E 20 64 6C 75 6F 43 20  0175   283 	.ASCIZ	/ Could not open input file/<NL>
+69 66 20 74 75 70 6E 69 20 6E 65 70  0181       
+                        00 0A 65 6C  018D       
+                                     0191   284 DEEP_MSG:
+65 74 73 65 6E 20 73 65 6C 69 46 20  0191   285 	.ASCIZ	/ Files nested too deeply/<NL>
+79 6C 70 65 65 64 20 6F 6F 74 20 64  019D       
+                              00 0A  01A9       
+                                     01AB   286 ELSE_MSG:
+73 65 6F 64 20 27 65 73 6C 65 27 20  01AB   287 	.ASCIZ	/ 'else' does not match an 'if'/<NL>
+61 20 68 63 74 61 6D 20 74 6F 6E 20  01B7       
+            00 0A 27 66 69 27 20 6E  01C3       
+                                     01CB   288 ENDIF_MSG:
+65 6F 64 20 27 66 69 64 6E 65 27 20  01CB   289 	.ASCIZ	| 'endif' does not match 'else'/'if'|<NL>
+20 68 63 74 61 6D 20 74 6F 6E 20 73  01D7       
+0A 27 66 69 27 2F 27 65 73 6C 65 27  01E3       
+                                 00  01EF       
+                                     01F0   290 WHILE_MSG:
+65 6F 64 20 27 65 6C 69 68 77 27 20  01F0   291 	.ASCIZ	/ 'while' does not match a 'begin'/<NL>
+20 68 63 74 61 6D 20 74 6F 6E 20 73  01FC       
+   00 0A 27 6E 69 67 65 62 27 20 61  0208       
+                                     0213   292 REPEAT_MSG:
+6F 64 20 27 74 61 65 70 65 72 27 20  0213   293 	.ASCIZ	/ 'repeat' does not match a 'while'/<NL>
+68 63 74 61 6D 20 74 6F 6E 20 73 65  021F       
+00 0A 27 65 6C 69 68 77 27 20 61 20  022B       
+                                     0237   294 AGAIN_MSG:
+65 6F 64 20 27 6E 69 61 67 61 27 20  0237   295 	.ASCIZ	/ 'again' does not match a 'begin'/<NL>
+20 68 63 74 61 6D 20 74 6F 6E 20 73  0243       
+   00 0A 27 6E 69 67 65 62 27 20 61  024F       
+                                     025A   296 UNTIL_MSG:
+65 6F 64 20 27 6C 69 74 6E 75 27 20  025A   297 	.ASCIZ	/ 'until' does not match a 'begin'/<NL>
+20 68 63 74 61 6D 20 74 6F 6E 20 73  0266       
+   00 0A 27 6E 69 67 65 62 27 20 61  0272       
+                                     027D   298 LOOP_MSG:
+73 65 6F 64 20 27 70 6F 6F 6C 27 20  027D   299 	.ASCIZ	/ 'loop' does not match a 'do'/<NL>
+61 20 68 63 74 61 6D 20 74 6F 6E 20  0289       
+               00 0A 27 6F 64 27 20  0295       
+                                     029C   300 PLOOP_MSG:
+65 6F 64 20 27 70 6F 6F 6C 2B 27 20  029C   301 	.ASCIZ	/ '+loop' does not match a 'do'/<NL>
+20 68 63 74 61 6D 20 74 6F 6E 20 73  02A8       
+            00 0A 27 6F 64 27 20 61  02B4       
+                                     02BC   302 SEMI_MSG:
+74 61 6D 20 74 6F 6E 20 27 3B 27 20  02BC   303 	.ASCIZ	/ ';' not matched to ':'/<NL>
+0A 27 3A 27 20 6F 74 20 64 65 68 63  02C8       
+                                 00  02D4       
+                                     02D5   304 EMPTY_MSG:
+74 70 6D 65 20 6B 63 61 74 53 3F 20  02D5   305 	.ASCIZ	/ ?Stack empty/<NL>
+                           00 0A 79  02E1       
+                                     02E4   306 FULL_MSG:
+6C 6C 75 66 20 6B 63 61 74 53 3F 20  02E4   307 	.ASCIZ	/ ?Stack full/<NL>
+                              00 0A  02F0       
+                                     02F2   308 DUNNO_MSG:
+0A 64 6E 75 6F 66 20 74 6F 6E 20 3A  02F2   309 	.ASCIZ	/: not found/<NL>
+                                 00  02FE       
+                                     02FF   310 
+                                     02FF   311 ;
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page   7
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                                     02FF   312 ; sin(0..90 degrees), times 10000
+                                     02FF   313 ;
+                                     02FF   314 SINTAB:
+0000020B 0000015C 000000AE 00000000  02FF   315 	.LONG	0, 174, 348, 523, 697, 871, 1045, 1218, 1391, 1564, 1736
+000004C2 00000415 00000367 000002B9  030F       
+         000006C8 0000061C 0000056F  031F       
+00000973 000008C9 0000081F 00000774  032B   316 	.LONG	1908, 2079, 2249, 2419, 2588, 2756, 2923, 3090, 3255, 3420
+00000C12 00000B6B 00000AC4 00000A1C  033B       
+                  00000D5C 00000CB7  034B       
+00000FE3 00000F43 00000EA2 00000DFF  0353   317 	.LONG	3583, 3746, 3907, 4067, 4226, 4383, 4539, 4694, 4848, 5000
+00001256 000011BB 0000111F 00001082  0363       
+                  00001388 000012F0  0373       
+000015D7 00001546 000014B3 0000141E  037B   318 	.LONG	5150, 5299, 5446, 5591, 5735, 5877, 6018, 6156, 6293, 6427
+0000180C 00001782 000016F5 00001667  038B       
+                  0000191B 00001895  039B       
+00001B22 00001AA3 00001A23 000019A0  03A3   319 	.LONG	6560, 6691, 6819, 6946, 7071, 7193, 7313, 7431, 7547, 7660
+00001D07 00001C91 00001C19 00001B9F  03B3       
+                  00001DEC 00001D7B  03C3       
+00001F9A 00001F32 00001EC8 00001E5B  03CB   320 	.LONG	7771, 7880, 7986, 8090, 8191, 8290, 8386, 8480, 8571, 8660
+00002120 000020C2 00002062 00001FFF  03DB       
+                  000021D4 0000217B  03EB       
+0000231B 000022CE 0000227D 0000222A  03F3   321 	.LONG	8746, 8829, 8910, 8987, 9063, 9135, 9205, 9271, 9335, 9396
+00002437 000023F5 000023AF 00002367  0403       
+                  000024B4 00002477  0413       
+0000258C 0000255B 00002526 000024EF  041B   322 	.LONG	9455, 9510, 9563, 9612, 9659, 9702, 9743, 9781, 9816, 9848
+00002635 0000260F 000025E6 000025BB  042B       
+                  00002678 00002658  043B       
+000026D9 000026C5 000026AE 00002694  0443   323 	.LONG	9876, 9902, 9925, 9945, 9961, 9975, 9986, 9993, 9998, 10000
+00002709 00002702 000026F7 000026E9  0453       
+                  00002710 0000270E  0463       
+                                     046B   324 
+                                     046B   325 ;
+                                     046B   326 ; ----Start-up
+                                     046B   327 ;
+                                 00000000   328 	.PSECT	FORTH_CODE,NOWRT,EXE,LONG
+                                     0000   329 
+                               0FFC  0000   330 	.ENTRY	FORTH,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+                                     0002   331 
+                                     0002   332 	$OPEN	FAB=TTIN		; Open the terminal
+                         30 50   E9  000F   333 	BLBC	R0,10$
+                                     0012   334 	$CONNECT RAB=TTIN+UB_RAB
+                         20 50   E9  001F   335 	BLBC	R0,10$
+                                     0022   336 	$CREATE	FAB=TTOUT
+                         10 50   E9  002F   337 	BLBC	R0,10$
+                                     0032   338 	$CONNECT RAB=TTOUT+UB_RAB
+                         01 50   E8  003F   339 	BLBS	R0,15$
+                                 04  0042   340 10$:	RET				; Couldn't open the terminal
+                                     0043   341 
+              5A   000037A0'EF   D0  0043   342 15$:	MOVL	DICTEND,R10		; R10 is end of dictionary
+              00000000'EF   5E   D0  004A   343 	MOVL	SP,SP_HOLD		; For resetting SP later
+              58   0000379C'EF   D0  0051   344 	MOVL	LATEST,R8		; Setup R8 to end of dict.
+                                     0058   345 
+                   0000050A'EF   3F  0058   346 	PUSHAW	CMDLEN			; Get the command's text, if any
+                            7E   D4  005E   347 	CLRL	-(SP)			;  (no prompt)
+                   00000514'EF   7F  0060   348 	PUSHAQ	CMDDSC
+              00000000'GF   03   FB  0066   349 	CALLS	#3,G^LIB$GET_FOREIGN
+                         34 50   E9  006D   350 	BLBC	R0,20$
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page   8
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+              50   0000050A'EF   3C  0070   351 	MOVZWL	CMDLEN,R0
+                            2B   13  0077   352 	BEQL	20$
+              00000128'EF   07   28  0079   353 	MOVC3	#HALT_LEN,HALT_TEXT,INLINE[R0] ; Run it, then halt
+                 00000004'EF40       0080       
+              0000050C'EF   01   90  0086   354 	MOVB	#1,ONESHOT		;  (or stop at an error)
+              5B   00000924'EF   9E  008D   355 	MOVAB	OPSTK_END,R11		; Empty the operand stack
+                   00000520'EF   D4  0094   356 	CLRL	STATE			; Not compiling
+              59   00000004'EF   9E  009A   357 	MOVAB	INLINE,R9		; Interpret the command's text
+                          05D2   31  00A1   358 	BRW	INTERP
+                                     00A4   359 
+              50   0000012F'EF   9E  00A4   360 20$:	MOVAB	BANNER,R0		; No text: interactive
+                          077A   30  00AB   361 	BSBW	PRSTR
+                            00   11  00AE   362 	BRB	ABORT
+                                     00B0   363 
+                                     00B0   364 ;
+                                     00B0   365 ; abort--reset the stacks and the input, and restart the interpreter.
+                                     00B0   366 ;   When running a command's text, there's no restarting: forth exits
+                                     00B0   367 ;   with SS$_ABORT instead.
+                                     00B0   368 ;
+              5E   00000000'EF   D0  00B0   369 ABORT:	MOVL	SP_HOLD,SP		; Start SP from its initial value
+                   0000050C'EF   95  00B7   370 	TSTB	ONESHOT			; Running a command's text?
+                            0A   13  00BD   371 	BEQL	10$
+              00000510'EF   2C   D0  00BF   372 	MOVL	#SS$_ABORT,EXITSTS	; Yes, give up
+                          0111   31  00C6   373 	BRW	F_HALT
+                          0AAF   30  00C9   374 10$:	BSBW	CLOSEALL		; Back to the terminal
+              5B   00000924'EF   9E  00CC   375 	MOVAB	OPSTK_END,R11		; Empty the operand stack
+                   00000520'EF   D4  00D3   376 	CLRL	STATE			; Turn off compile mode
+              59   00000004'EF   9E  00D9   377 	MOVAB	INLINE,R9		; Set up input line as empty
+                            69   94  00E0   378 	CLRB	(R9)
+                          0591   31  00E2   379 	BRW	INTERP			; Start up the interpretive loop
+                                     00E5   380 
+                                     00E5   381 ;
+                                     00E5   382 ; ----Start of FORTH dictionary
+                                     00E5   383 ;
+                                     00E5   384 
+                                     00E5   385 ;
+                                     00E5   386 ; over--copy second to new top
+                                     00E5   387 ;
+                                     00E5   388 	DEFPRIM	<over>,F_OVER
+                    7B   04 AB   D0  00E5   389 	MOVL	4(R11),-(R11)
+                                     00E9   390 	ENDPRIM	F_OVER
+                                     00EA   391 
+                                     00EA   392 ;
+                                     00EA   393 ; abs,fabs--get absolute value
+                                     00EA   394 ;
+                                     00EA   395 	DEFWORD	<abs>,F_ABS
+                            6B   D5  00EA   396 	TSTL	(R11)
+                            03   18  00EC   397 	BGEQ	10$
+                       6B   6B   CE  00EE   398 	MNEGL	(R11),(R11)
+                                 05  00F1   399 10$:	RSB
+                                     00F2   400 
+                                     00F2   401 	DEFWORD	<fabs>,F_FABS
+                            6B   53  00F2   402 	TSTF	(R11)
+                            03   18  00F4   403 	BGEQ	10$
+                       6B   6B   52  00F6   404 	MNEGF	(R11),(R11)
+                                 05  00F9   405 10$:	RSB
+                                     00FA   406 
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page   9
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                                     00FA   407 ;
+                                     00FA   408 ; max,fmax--get maximum value
+                                     00FA   409 ;
+                                     00FA   410 	DEFWORD	<max>,F_MAX
+                       50   8B   D0  00FA   411 	MOVL	(R11)+,R0
+                       6B   50   D1  00FD   412 	CMPL	R0,(R11)
+                            03   15  0100   413 	BLEQ	10$
+                       6B   50   D0  0102   414 	MOVL	R0,(R11)
+                                 05  0105   415 10$:	RSB
+                                     0106   416 
+                                     0106   417 	DEFWORD	<fmax>,F_FMAX
+                       50   8B   50  0106   418 	MOVF	(R11)+,R0
+                       6B   50   51  0109   419 	CMPF	R0,(R11)
+                            03   15  010C   420 	BLEQ	10$
+                       6B   50   50  010E   421 	MOVF	R0,(R11)
+                                 05  0111   422 10$:	RSB
+                                     0112   423 
+                                     0112   424 ;
+                                     0112   425 ; min,fmin--get minimum value
+                                     0112   426 ;
+                                     0112   427 	DEFWORD	<min>,F_MIN
+                       50   8B   D0  0112   428 	MOVL	(R11)+,R0
+                       6B   50   D1  0115   429 	CMPL	R0,(R11)
+                            03   18  0118   430 	BGEQ	10$
+                       6B   50   D0  011A   431 	MOVL	R0,(R11)
+                                 05  011D   432 10$:	RSB
+                                     011E   433 
+                                     011E   434 	DEFWORD	<fmin>,F_FMIN
+                       50   8B   50  011E   435 	MOVF	(R11)+,R0
+                       6B   50   51  0121   436 	CMPF	R0,(R11)
+                            03   18  0124   437 	BGEQ	10$
+                       6B   50   50  0126   438 	MOVF	R0,(R11)
+                                 05  0129   439 10$:	RSB
+                                     012A   440 
+                                     012A   441 ;
+                                     012A   442 ; c@, c!--byte fetch/store operators
+                                     012A   443 ;
+                                     012A   444 	DEFPRIM	<c@>,F_CFETCH
+                       50   6B   D0  012A   445 	MOVL	(R11),R0
+                       6B   60   9A  012D   446 	MOVZBL	(R0),(R11)
+                                     0130   447 	ENDPRIM	F_CFETCH
+                                     0131   448 
+                                     0131   449 	DEFPRIM	<c!>,F_CSTORE
+                       50   8B   D0  0131   450 	MOVL	(R11)+,R0
+                       60   8B   F6  0134   451 	CVTLB	(R11)+,(R0)
+                                     0137   452 	ENDPRIM	F_CSTORE
+                                     0138   453 
+                                     0138   454 ;
+                                     0138   455 ; negate & fnegate
+                                     0138   456 ;
+                                     0138   457 	DEFPRIM	<negate>,F_NEGATE
+                       6B   6B   CE  0138   458 	MNEGL	(R11),(R11)
+                                     013B   459 	ENDPRIM	F_NEGATE
+                                     013C   460 
+                                     013C   461 	DEFPRIM	<fnegate>,F_FNEGATE
+                       6B   6B   52  013C   462 	MNEGF	(R11),(R11)
+                                     013F   463 	ENDPRIM	F_FNEGATE
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  10
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                                     0140   464 
+                                     0140   465 ;
+                                     0140   466 ; HERE--provide the address of the next open byte in the dictionary
+                                     0140   467 ;
+                                     0140   468 	DEFPRIM	<here>,F_HERE
+                       7B   5A   D0  0140   469 	MOVL	R10,-(R11)
+                                     0143   470 	ENDPRIM	F_HERE
+                                     0144   471 
+                                     0144   472 ;
+                                     0144   473 ; "r>" & ">r"--move a word between op & return stacks. Like i, j, k,
+                                     0144   474 ;   and leave, these only make sense compiled in line.
+                                     0144   475 ;
+                                     0144   476 	DEFPRIM	^%>r%,F_TO_R
+                            8B   DD  0144   477 	PUSHL	(R11)+
+                                     0146   478 	ENDPRIM	F_TO_R
+                                     0147   479 
+                                     0147   480 	DEFPRIM	^%r>%,F_FROM_R
+                       7B   8E   D0  0147   481 	MOVL	(SP)+,-(R11)
+                                     014A   482 	ENDPRIM	F_FROM_R
+                                     014B   483 
+                                     014B   484 ;
+                                     014B   485 ; fill--fill an area of memory with a constant ( addr count char -- )
+                                     014B   486 ;
+                                     014B   487 	DEFWORD	<fill>,F_FILL
+                       56   8B   D0  014B   488 	MOVL	(R11)+,R6		; The fill character
+                       51   8B   D0  014E   489 	MOVL	(R11)+,R1		; The count
+                       53   8B   D0  0151   490 	MOVL	(R11)+,R3		; The address
+                            51   D5  0154   491 	TSTL	R1
+                            06   15  0156   492 	BLEQ	10$
+        63   51   56   63   00   2C  0158   493 	MOVC5	#0,(R3),R6,R1,(R3)
+                                 05  015E   494 10$:	RSB
+                                     015F   495 
+                                     015F   496 ;
+                                     015F   497 ; pick--get a word in the stack
+                                     015F   498 ;
+                                     015F   499 	DEFWORD	<pick>,F_PICK
+                       50   8B   D0  015F   500 	MOVL	(R11)+,R0
+                     7B   6B40   D0  0162   501 	MOVL	(R11)[R0],-(R11)
+                                 05  0166   502 	RSB
+                                     0167   503 
+                                     0167   504 ;
+                                     0167   505 ; 'c,' & ','--push word to HERE
+                                     0167   506 ;
+                                     0167   507 	DEFPRIM	<,>,F_COMMA
+                       8A   8B   D0  0167   508 	MOVL	(R11)+,(R10)+
+                                     016A   509 	ENDPRIM	F_COMMA
+                                     016B   510 
+                                     016B   511 	DEFPRIM	<c,>,F_CCOMMA
+                       8A   8B   F6  016B   512 	CVTLB	(R11)+,(R10)+
+                                     016E   513 	ENDPRIM	F_CCOMMA
+                                     016F   514 
+                                     016F   515 ;
+                                     016F   516 ; rot,-rot --the rotational operators
+                                     016F   517 ;
+                                     016F   518 	DEFWORD	<rot>,F_ROT
+                       50   8B   D0  016F   519 	MOVL	(R11)+,R0
+                       51   8B   D0  0172   520 	MOVL	(R11)+,R1
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  11
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                       52   6B   D0  0175   521 	MOVL	(R11),R2
+                       6B   51   D0  0178   522 	MOVL	R1,(R11)
+                       7B   50   D0  017B   523 	MOVL	R0,-(R11)
+                       7B   52   D0  017E   524 	MOVL	R2,-(R11)
+                                 05  0181   525 	RSB
+                                     0182   526 
+                                     0182   527 	DEFWORD	<-rot>,F_MROT
+                       50   8B   D0  0182   528 	MOVL	(R11)+,R0
+                       51   8B   D0  0185   529 	MOVL	(R11)+,R1
+                       52   6B   D0  0188   530 	MOVL	(R11),R2
+                       6B   50   D0  018B   531 	MOVL	R0,(R11)
+                       7B   52   D0  018E   532 	MOVL	R2,-(R11)
+                       7B   51   D0  0191   533 	MOVL	R1,-(R11)
+                                 05  0194   534 	RSB
+                                     0195   535 
+                                     0195   536 ;
+                                     0195   537 ; allot--move the end of the dictionary forward a number of bytes
+                                     0195   538 ;
+                                     0195   539 	DEFPRIM	<allot>,F_ALLOT
+                       5A   8B   C0  0195   540 	ADDL2	(R11)+,R10
+                                     0198   541 	ENDPRIM	F_ALLOT
+                                     0199   542 
+                                     0199   543 ;
+                                     0199   544 ; 2dup, 2swap--double-int stack operators
+                                     0199   545 ;
+                                     0199   546 	DEFWORD	<2dup>,F_TWODUP
+                       50   8B   D0  0199   547 	MOVL	(R11)+,R0
+                       51   6B   D0  019C   548 	MOVL	(R11),R1
+                       7B   50   D0  019F   549 	MOVL	R0,-(R11)
+                       7B   51   D0  01A2   550 	MOVL	R1,-(R11)
+                       7B   50   D0  01A5   551 	MOVL	R0,-(R11)
+                                 05  01A8   552 	RSB
+                                     01A9   553 
+                                     01A9   554 	DEFWORD	<2swap>,F_TWOSWAP
+                       50   8B   D0  01A9   555 	MOVL	(R11)+,R0
+                       51   8B   D0  01AC   556 	MOVL	(R11)+,R1
+                       52   8B   D0  01AF   557 	MOVL	(R11)+,R2
+                       53   6B   D0  01B2   558 	MOVL	(R11),R3
+                       6B   51   D0  01B5   559 	MOVL	R1,(R11)
+                       7B   50   D0  01B8   560 	MOVL	R0,-(R11)
+                       7B   53   D0  01BB   561 	MOVL	R3,-(R11)
+                       7B   52   D0  01BE   562 	MOVL	R2,-(R11)
+                                 05  01C1   563 	RSB
+                                     01C2   564 
+                                     01C2   565 ;
+                                     01C2   566 ; "("--handle forth comments
+                                     01C2   567 ;
+                                     01C2   568 	DEFWORD	<(>,F_PAREN,PRIORITY
+                       50   89   90  01C2   569 10$:	MOVB	(R9)+,R0		; Get next byte of input
+                            0B   13  01C5   570 	BEQL	30$			; Get another buffer-full if hit end of cur.
+                       0A   50   91  01C7   571 	CMPB	R0,#NL			; End comment on newline or close paren
+                            05   13  01CA   572 	BEQL	20$
+                       29   50   91  01CC   573 	CMPB	R0,#^A/)/
+                            F1   12  01CF   574 	BNEQ	10$
+                                 05  01D1   575 20$:	RSB
+                          0711   30  01D2   576 30$:	BSBW	GETLIN			; Get another buffer
+                            EB   11  01D5   577 	BRB	10$
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  12
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                                     01D7   578 
+                                     01D7   579 ;
+                                     01D7   580 ; "abort"--calls the forth abort code
+                                     01D7   581 ;
+                                     01D7   582 	DEFWORD	<abort>,F_ABORT
+                          FED6   31  01D7   583 	BRW	ABORT
+                                     01DA   584 
+                                     01DA   585 ;
+                                     01DA   586 ; "halt"--cause forth to exit, closing any files. The dictionary's end
+                                     01DA   587 ;   is saved, as the original's resident version needed.
+                                     01DA   588 ;
+                                     01DA   589 	DEFWORD	<halt>,F_HALT
+                          099E   30  01DA   590 	BSBW	CLOSEALL		; Close the files
+              51   000026D8'EF   DE  01DD   591 	MOVAL	TTOUT,R1		; Finish the terminal's last line
+                       0094 C1   D5  01E4   592 	TSTL	UB_LEN(R1)
+                            03   13  01E8   593 	BEQL	10$
+                          0675   30  01EA   594 	BSBW	FLUSHU
+              000037A0'EF   5A   D0  01ED   595 10$:	MOVL	R10,DICTEND		; save end of dictionary storage area
+              0000379C'EF   58   D0  01F4   596 	MOVL	R8,LATEST		; end of dictionary linked list
+              50   00000510'EF   D0  01FB   597 	MOVL	EXITSTS,R0		; SS$_NORMAL, unless abort says otherwise
+                                 04  0202   598 	RET
+                                     0203   599 
+                                     0203   600 ;
+                                     0203   601 ; "outpop"--do for the output list what EOF does for the input list;
+                                     0203   602 ;   close the current output file & pop back a level
+                                     0203   603 ;
+                                     0203   604 	DEFWORD	<outpop>,F_OUTPOP
+              50   00000960'EF   DE  0203   605 	MOVAL	OSTK,R0			; Don't pop off end of stack
+              50   00000980'EF   D1  020A   606 	CMPL	OSP,R0
+                            38   13  0211   607 	BEQL	20$
+              51   00000988'EF   D0  0213   608 	MOVL	OUNIT,R1		; Write the unit's last line
+                       0094 C1   D5  021A   609 	TSTL	UB_LEN(R1)
+                            03   13  021E   610 	BEQL	10$
+                          063F   30  0220   611 	BSBW	FLUSHU
+              51   00000988'EF   D0  0223   612 10$:	MOVL	OUNIT,R1		; Close the current unit
+                                     022A   613 	$CLOSE	FAB=(R1)
+              00000980'EF   04   C2  0233   614 	SUBL2	#4,OSP			; Move back a position
+     00000988'EF   00000980'FF   D0  023A   615 	MOVL	@OSP,OUNIT		;  and set output to that unit
+                   00000984'EF   D7  0245   616 	DECL	ODEEP			; Decrement nesting count
+                                 05  024B   617 20$:	RSB
+                                     024C   618 
+                                     024C   619 ;
+                                     024C   620 ; "output"--open the named output file & make it the new output unit
+                                     024C   621 ;
+                                     024C   622 	DEFWORD	<output>,F_OUTPUT
+                          0755   30  024C   623 	BSBW	GETW
+                          0898   30  024F   624 	BSBW	OUTOPEN
+                                 05  0252   625 	RSB
+                                     0253   626 
+                                     0253   627 ;
+                                     0253   628 ; "input"--open the named file & make it the new input unit
+                                     0253   629 ;
+                                     0253   630 	DEFWORD	<input>,F_INPUT
+                          074E   30  0253   631 	BSBW	GETW			; Get the name of the file
+                          07CD   30  0256   632 	BSBW	INOPEN
+                                 05  0259   633 	RSB
+                                     025A   634 
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  13
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                                     025A   635 ;
+                                     025A   636 ; Push logical constants to stack
+                                     025A   637 ;
+                                     025A   638 	DEFPRIM	<false>,F_FALSE
+                            7B   D4  025A   639 	CLRL	-(R11)
+                                     025C   640 	ENDPRIM	F_FALSE
+                                     025D   641 
+                                     025D   642 	DEFPRIM	<true>,F_TRUE
+                    7B   FF 8F   98  025D   643 	CVTBL	#-1,-(R11)
+                                     0261   644 	ENDPRIM	F_TRUE
+                                     0262   645 
+                                     0262   646 ;
+                                     0262   647 ; the logical operators. Note that they serve for both logical and
+                                     0262   648 ;   bitwise purposes, as "true" is defined as -1.
+                                     0262   649 ;
+                                     0262   650 	DEFPRIM	<or>,F_OR
+                       6B   8B   C8  0262   651 	BISL2	(R11)+,(R11)
+                                     0265   652 	ENDPRIM	F_OR
+                                     0266   653 
+                                     0266   654 	DEFPRIM	<and>,F_AND
+                       50   8B   D2  0266   655 	MCOML	(R11)+,R0
+                       6B   50   CA  0269   656 	BICL2	R0,(R11)
+                                     026C   657 	ENDPRIM	F_AND
+                                     026D   658 
+                                     026D   659 ;
+                                     026D   660 ; the floating relational operators
+                                     026D   661 ;
+                                     026D   662 	DEFWORD	<f=>,F_FEQ
+                       6B   8B   51  026D   663 	CMPF	(R11)+,(R11)
+                            03   13  0270   664 	BEQL	10$
+                            6B   D4  0272   665 	CLRL	(R11)
+                                 05  0274   666 	RSB
+                    6B   FF 8F   98  0275   667 10$:	CVTBL	#-1,(R11)
+                                 05  0279   668 	RSB
+                                     027A   669 
+                                     027A   670 	DEFWORD	^%f>%,F_FGT		; Greater than
+                       6B   8B   51  027A   671 	CMPF	(R11)+,(R11)
+                            03   19  027D   672 	BLSS	10$
+                            6B   D4  027F   673 	CLRL	(R11)
+                                 05  0281   674 	RSB
+                    6B   FF 8F   98  0282   675 10$:	CVTBL	#-1,(R11)
+                                 05  0286   676 	RSB
+                                     0287   677 
+                                     0287   678 	DEFWORD	^%f<%,F_FLT		; Less than
+                       6B   8B   51  0287   679 	CMPF	(R11)+,(R11)
+                            03   14  028A   680 	BGTR	10$
+                            6B   D4  028C   681 	CLRL	(R11)
+                                 05  028E   682 	RSB
+                    6B   FF 8F   98  028F   683 10$:	CVTBL	#-1,(R11)
+                                 05  0293   684 	RSB
+                                     0294   685 
+                                     0294   686 ;
+                                     0294   687 ; the relational operators
+                                     0294   688 ;
+                                     0294   689 	DEFWORD	<=>,F_EQ
+                       6B   8B   D1  0294   690 	CMPL	(R11)+,(R11)
+                            03   13  0297   691 	BEQL	10$
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  14
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                            6B   D4  0299   692 	CLRL	(R11)
+                                 05  029B   693 	RSB
+                    6B   FF 8F   98  029C   694 10$:	CVTBL	#-1,(R11)
+                                 05  02A0   695 	RSB
+                                     02A1   696 
+                                     02A1   697 	DEFWORD	^%>%,F_GT		; Greater than
+                       6B   8B   D1  02A1   698 	CMPL	(R11)+,(R11)
+                            03   19  02A4   699 	BLSS	10$
+                            6B   D4  02A6   700 	CLRL	(R11)
+                                 05  02A8   701 	RSB
+                    6B   FF 8F   98  02A9   702 10$:	CVTBL	#-1,(R11)
+                                 05  02AD   703 	RSB
+                                     02AE   704 
+                                     02AE   705 	DEFWORD	^%<%,F_LT		; Less than
+                       6B   8B   D1  02AE   706 	CMPL	(R11)+,(R11)
+                            03   14  02B1   707 	BGTR	10$
+                            6B   D4  02B3   708 	CLRL	(R11)
+                                 05  02B5   709 	RSB
+                    6B   FF 8F   98  02B6   710 10$:	CVTBL	#-1,(R11)
+                                 05  02BA   711 	RSB
+                                     02BB   712 
+                                     02BB   713 ;
+                                     02BB   714 ; drop,2drop--get rid of top item(s)
+                                     02BB   715 ;
+                                     02BB   716 	DEFPRIM	<2drop>,F_TWODROP
+                       5B   08   C0  02BB   717 	ADDL2	#8,R11
+                                     02BE   718 	ENDPRIM	F_TWODROP
+                                     02BF   719 
+                                     02BF   720 	DEFPRIM	<drop>,F_DROP
+                       50   8B   D0  02BF   721 	MOVL	(R11)+,R0
+                                     02C2   722 	ENDPRIM	F_DROP
+                                     02C3   723 
+                                     02C3   724 ;
+                                     02C3   725 ; swap--exchange top & second
+                                     02C3   726 ;
+                                     02C3   727 	DEFPRIM	<swap>,F_SWAP
+                       50   8B   D0  02C3   728 	MOVL	(R11)+,R0
+                       51   6B   D0  02C6   729 	MOVL	(R11),R1
+                       6B   50   D0  02C9   730 	MOVL	R0,(R11)
+                       7B   51   D0  02CC   731 	MOVL	R1,-(R11)
+                                     02CF   732 	ENDPRIM	F_SWAP
+                                     02D0   733 
+                                     02D0   734 ;
+                                     02D0   735 ; dup--duplicate top
+                                     02D0   736 ;
+                                     02D0   737 	DEFPRIM	<dup>,F_DUP
+                       7B   6B   D0  02D0   738 	MOVL	(R11),-(R11)
+                                     02D3   739 	ENDPRIM	F_DUP
+                                     02D4   740 
+                                     02D4   741 ;
+                                     02D4   742 ; "if"--conditional control structure
+                                     02D4   743 ;
+                                     02D4   744 	DEFWORD	<if>,F_IF,PRIORITY
+              8A   06128BD5 8F   D0  02D4   745 	MOVL	#SKIPT,(R10)+		; TSTL (R11)+ / BNEQ .+8
+                  8A   9F17 8F   B0  02DB   746 	MOVW	#AGAIN_HEADER,(R10)+	; JMP @#...
+                       7B   5A   D0  02E0   747 	MOVL	R10,-(R11)
+                       5A   04   C0  02E3   748 	ADDL2	#4,R10
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  15
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                       7B   02   D0  02E6   749 	MOVL	#MRKIF,-(R11)		; Mark the control structure
+                                 05  02E9   750 	RSB
+                                     02EA   751 
+                                     02EA   752 ;
+                                     02EA   753 ; "else"
+                                     02EA   754 ;
+                                     02EA   755 	DEFWORD	<else>,F_ELSE,PRIORITY
+                       8B   02   D1  02EA   756 	CMPL	#MRKIF,(R11)+		; Check for matching IF
+                            15   12  02ED   757 	BNEQ	10$
+                  8A   9F17 8F   B0  02EF   758 	MOVW	#AGAIN_HEADER,(R10)+	; JMP @#...
+                       50   5A   D0  02F4   759 	MOVL	R10,R0
+                       5A   04   C0  02F7   760 	ADDL2	#4,R10			; Leave room for the jump address
+                       9B   5A   D0  02FA   761 	MOVL	R10,@(R11)+		; Have FALSE branch here
+                       7B   50   D0  02FD   762 	MOVL	R0,-(R11)		; Put our fill-in addr.
+                       7B   02   D0  0300   763 	MOVL	#MRKIF,-(R11)		;  and put back the marker
+                                 05  0303   764 	RSB
+              50   000001AB'EF   9E  0304   765 10$:	MOVAB	ELSE_MSG,R0		; Complain
+                          051A   30  030B   766 	BSBW	PRSTR
+                          FD9F   31  030E   767 	BRW	ABORT
+                                     0311   768 
+                                     0311   769 ;
+                                     0311   770 ; endif--finish off the conditional
+                                     0311   771 ;
+                                     0311   772 	DEFWORD	<endif>,F_ENDIF,PRIORITY
+                       02   8B   D1  0311   773 	CMPL	(R11)+,#MRKIF		; Check match
+                            04   12  0314   774 	BNEQ	10$
+                       9B   5A   D0  0316   775 	MOVL	R10,@(R11)+
+                                 05  0319   776 	RSB
+              50   000001CB'EF   9E  031A   777 10$:	MOVAB	ENDIF_MSG,R0		; Complain on no match
+                          0504   30  0321   778 	BSBW	PRSTR
+                          FD89   31  0324   779 	BRW	ABORT
+                                     0327   780 
+                                     0327   781 ;
+                                     0327   782 ; begin--start of all looping conditionals
+                                     0327   783 ;
+                                     0327   784 	DEFWORD	<begin>,F_BEGIN,PRIORITY
+                       7B   5A   D0  0327   785 	MOVL	R10,-(R11)		; Save current address
+                       7B   04   D0  032A   786 	MOVL	#MRKBEGIN,-(R11)	;  and control structure marker
+                                 05  032D   787 	RSB
+                                     032E   788 
+                                     032E   789 ;
+                                     032E   790 ; "while".."repeat" looping construct
+                                     032E   791 ;
+                                     032E   792 	DEFWORD	<while>,F_WHILE,PRIORITY
+                       8B   04   D1  032E   793 	CMPL	#MRKBEGIN,(R11)+	; Check match
+                            16   12  0331   794 	BNEQ	10$
+              8A   06128BD5 8F   D0  0333   795 	MOVL	#SKIPT,(R10)+		; TSTL (R11)+ / BNEQ .+8
+                  8A   9F17 8F   B0  033A   796 	MOVW	#AGAIN_HEADER,(R10)+	; JMP @#<forward>
+                       7B   5A   D0  033F   797 	MOVL	R10,-(R11)		; Mark where to plug in
+                       5A   04   C0  0342   798 	ADDL2	#4,R10			; Leave room for the patch
+                       7B   05   D0  0345   799 	MOVL	#MRKWHILE,-(R11)
+                                 05  0348   800 	RSB
+              50   000001F0'EF   9E  0349   801 10$:	MOVAB	WHILE_MSG,R0		; Bad match, complain
+                          04D5   30  0350   802 	BSBW	PRSTR
+                          FD5A   31  0353   803 	BRW	ABORT
+                                     0356   804 
+                                     0356   805 	DEFWORD	<repeat>,F_REPEAT,PRIORITY
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  16
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                       8B   05   D1  0356   806 	CMPL	#MRKWHILE,(R11)+	; Check match
+                            0F   12  0359   807 	BNEQ	10$
+                       50   8B   D0  035B   808 	MOVL	(R11)+,R0		; Save where to patch
+                  8A   9F17 8F   B0  035E   809 	MOVW	#AGAIN_HEADER,(R10)+	; JMP @#<back>
+                       8A   8B   D0  0363   810 	MOVL	(R11)+,(R10)+
+                       60   5A   D0  0366   811 	MOVL	R10,(R0)		; Backpatch
+                                 05  0369   812 	RSB
+              50   00000213'EF   9E  036A   813 10$:	MOVAB	REPEAT_MSG,R0		; Complain
+                          04B4   30  0371   814 	BSBW	PRSTR
+                          FD39   31  0374   815 	BRW	ABORT
+                                     0377   816 
+                                     0377   817 ;
+                                     0377   818 ; again--unconditional back branch
+                                     0377   819 ;
+                                     0377   820 	DEFWORD	<again>,F_AGAIN,PRIORITY
+                       8B   04   D1  0377   821 	CMPL	#MRKBEGIN,(R11)+	; verify match of control structures
+                            09   12  037A   822 	BNEQ	10$
+                  8A   9F17 8F   B0  037C   823 	MOVW	#AGAIN_HEADER,(R10)+	; compile in back branch
+                       8A   8B   D0  0381   824 	MOVL	(R11)+,(R10)+
+                                 05  0384   825 	RSB
+              50   00000237'EF   9E  0385   826 10$:	MOVAB	AGAIN_MSG,R0		; Complain
+                          0499   30  038C   827 	BSBW	PRSTR
+                          FD1E   31  038F   828 	BRW	ABORT
+                                     0392   829 
+                                     0392   830 ;
+                                     0392   831 ; until--loop until condition becomes true
+                                     0392   832 ;
+                                     0392   833 	DEFWORD	<until>,F_UNTIL,PRIORITY
+                       8B   04   D1  0392   834 	CMPL	#MRKBEGIN,(R11)+	; Verify match
+                            10   12  0395   835 	BNEQ	10$
+              8A   06128BD5 8F   D0  0397   836 	MOVL	#SKIPT,(R10)+		; Branch over backbranch if true
+                  8A   9F17 8F   B0  039E   837 	MOVW	#AGAIN_HEADER,(R10)+	; compile in backbranch
+                       8A   8B   D0  03A3   838 	MOVL	(R11)+,(R10)+
+                                 05  03A6   839 	RSB
+              50   0000025A'EF   9E  03A7   840 10$:	MOVAB	UNTIL_MSG,R0		; Complain
+                          0477   30  03AE   841 	BSBW	PRSTR
+                          FCFC   31  03B1   842 	BRW	ABORT
+                                     03B4   843 
+                                     03B4   844 ;
+                                     03B4   845 ; leave--setup innermost loop so it will exit at next iteration
+                                     03B4   846 ;
+                                     03B4   847 	DEFPRIM	<leave>,F_LEAVE
+                    04 AE   6E   D0  03B4   848 	MOVL	(SP),4(SP)
+                                     03B8   849 	ENDPRIM	F_LEAVE
+                                     03B9   850 
+                                     03B9   851 ;
+                                     03B9   852 ; "k"--return index of third loop
+                                     03B9   853 ;
+                                     03B9   854 	DEFPRIM	<k>,F_K
+                    7B   14 AE   D0  03B9   855 	MOVL	20(SP),-(R11)
+                                     03BD   856 	ENDPRIM	F_K
+                                     03BE   857 
+                                     03BE   858 ;
+                                     03BE   859 ; "j"--return index of second loop
+                                     03BE   860 ;
+                                     03BE   861 	DEFPRIM	<j>,F_J
+                    7B   0C AE   D0  03BE   862 	MOVL	12(SP),-(R11)
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  17
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                                     03C2   863 	ENDPRIM	F_J
+                                     03C3   864 
+                                     03C3   865 ;
+                                     03C3   866 ; "i"--return index of innermost loop
+                                     03C3   867 ;
+                                     03C3   868 	DEFPRIM	<i>,F_I
+                    7B   04 AE   D0  03C3   869 	MOVL	4(SP),-(R11)
+                                     03C7   870 	ENDPRIM	F_I
+                                     03C8   871 
+                                     03C8   872 ;
+                                     03C8   873 ; "do"--start a loop ( limit index -- ). At run time the return stack
+                                     03C8   874 ;   holds the limit at (SP) and the index at 4(SP).
+                                     03C8   875 ;
+                           D07E8BD0  03C8   876 XDO1	= ^XD07E8BD0		; MOVL (R11)+,-(SP) / MOVL (R11)+,-(SP)
+                           00007E8B  03C8   877 XDO2	= ^X7E8B
+                           D0508ED0  03C8   878 XDO3	= ^XD0508ED0		; MOVL (SP)+,R0 / MOVL (SP)+,R1
+                           51D1518E  03C8   879 XDO4	= ^X51D1518E		;   CMPL R1,R0 / BLSS .+8
+                           17061950  03C8   880 XDO5	= ^X17061950		;   JMP @#<forward>
+                           0000009F  03C8   881 XDO6	= ^X9F
+                           D07E51D0  03C8   882 XDO7	= ^XD07E51D0		; MOVL R1,-(SP) / MOVL R0,-(SP)
+                           00007E50  03C8   883 XDO8	= ^X7E50
+                                     03C8   884 
+                                     03C8   885 	DEFWORD	<do>,F_DO,PRIORITY
+              8A   D07E8BD0 8F   D0  03C8   886 	MOVL	#XDO1,(R10)+
+                  8A   7E8B 8F   B0  03CF   887 	MOVW	#XDO2,(R10)+
+                       7B   5A   D0  03D4   888 	MOVL	R10,-(R11)		; Save current pos. for back branch
+              8A   D0508ED0 8F   D0  03D7   889 	MOVL	#XDO3,(R10)+
+              8A   51D1518E 8F   D0  03DE   890 	MOVL	#XDO4,(R10)+
+              8A   17061950 8F   D0  03E5   891 	MOVL	#XDO5,(R10)+
+                    8A   9F 8F   90  03EC   892 	MOVB	#XDO6,(R10)+
+                       7B   5A   D0  03F0   893 	MOVL	R10,-(R11)		; Save this loc for fill-in as forward branch
+                       5A   04   C0  03F3   894 	ADDL2	#4,R10
+              8A   D07E51D0 8F   D0  03F6   895 	MOVL	#XDO7,(R10)+
+                  8A   7E50 8F   B0  03FD   896 	MOVW	#XDO8,(R10)+
+                       7B   03   D0  0402   897 	MOVL	#MRKDO,-(R11)		; Flag our control structure
+                                 05  0405   898 	RSB
+                                     0406   899 
+                                     0406   900 ;
+                                     0406   901 ; loop--branch back to the opening "DO"
+                                     0406   902 ;
+                           1704AED6  0406   903 XLOOP1	= ^X1704AED6		; INCL 4(SP) / JMP @#<back>
+                           0000009F  0406   904 XLOOP2	= ^X9F
+                                     0406   905 
+                                     0406   906 	DEFWORD	<loop>,F_LOOP,PRIORITY
+                       8B   03   D1  0406   907 	CMPL	#MRKDO,(R11)+		; Check for match of control structures
+                            15   12  0409   908 	BNEQ	10$
+                       50   8B   D0  040B   909 	MOVL	(R11)+,R0		; Keep where to fill in forward branch addr.
+              8A   1704AED6 8F   D0  040E   910 	MOVL	#XLOOP1,(R10)+		; Build code to increment loop
+                    8A   9F 8F   90  0415   911 	MOVB	#XLOOP2,(R10)+
+                       8A   8B   D0  0419   912 	MOVL	(R11)+,(R10)+
+                       60   5A   D0  041C   913 	MOVL	R10,(R0)		; Fill in this location as loop exit addr.
+                                 05  041F   914 	RSB
+              50   0000027D'EF   9E  0420   915 10$:	MOVAB	LOOP_MSG,R0		; Bad match--complain
+                          03FE   30  0427   916 	BSBW	PRSTR
+                          FC83   31  042A   917 	BRW	ABORT
+                                     042D   918 
+                                     042D   919 ;
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  18
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                                     042D   920 ; +loop--like loop, but add by the top item instead of 1
+                                     042D   921 ;
+                           04AE8BC0  042D   922 XPLOOP1	= ^X04AE8BC0		; ADDL2 (R11)+,4(SP)
+                           00009F17  042D   923 XPLOOP2	= ^X9F17		; JMP @#<back>
+                                     042D   924 
+                                     042D   925 	DEFWORD	<+loop>,F_PLOOP,PRIORITY
+                       8B   03   D1  042D   926 	CMPL	#MRKDO,(R11)+		; Check for match of control structures
+                            16   12  0430   927 	BNEQ	10$
+                       50   8B   D0  0432   928 	MOVL	(R11)+,R0		; Keep where to fill in forward branch addr.
+              8A   04AE8BC0 8F   D0  0435   929 	MOVL	#XPLOOP1,(R10)+		; Build code to increment loop
+                  8A   9F17 8F   B0  043C   930 	MOVW	#XPLOOP2,(R10)+
+                       8A   8B   D0  0441   931 	MOVL	(R11)+,(R10)+
+                       60   5A   D0  0444   932 	MOVL	R10,(R0)		; Fill in this location as loop exit addr.
+                                 05  0447   933 	RSB
+              50   0000029C'EF   9E  0448   934 10$:	MOVAB	PLOOP_MSG,R0		; Bad match--complain
+                          03D6   30  044F   935 	BSBW	PRSTR
+                          FC5B   31  0452   936 	BRW	ABORT
+                                     0455   937 
+                                     0455   938 ;
+                                     0455   939 ; "@"--fetch the contents of the addressed word
+                                     0455   940 ;
+                                     0455   941 	DEFPRIM	<@>,F_FETCH
+                    6B   00 BB   D0  0455   942 	MOVL	@(R11),(R11)
+                                     0459   943 	ENDPRIM	F_FETCH
+                                     045A   944 
+                                     045A   945 ;
+                                     045A   946 ; "!"--store the word (second) to address (top)
+                                     045A   947 ;
+                                     045A   948 	DEFPRIM	<!>,F_STORE
+                       50   8B   D0  045A   949 	MOVL	(R11)+,R0
+                       60   8B   D0  045D   950 	MOVL	(R11)+,(R0)
+                                     0460   951 	ENDPRIM	F_STORE
+                                     0461   952 
+                                     0461   953 ;
+                                     0461   954 ; "variable"--build a variable. Its code pushes the address of the
+                                     0461   955 ;   longword that follows it.
+                                     0461   956 ;
+                           00008FD0  0461   957 XVAR1	= ^X8FD0			; MOVL #<addr>,-(R11)
+                           0000007B  0461   958 XVAR2	= ^X7B
+                                     0461   959 
+                                     0461   960 	DEFWORD	<variable>,F_VARIABLE
+                       54   07   3C  0461   961 	MOVZWL	#7,R4			; SFP = 7
+                       55   08   3C  0464   962 	MOVZWL	#PRIMITIVE,R5		; SFA = PRIMITIVE
+                          0576   30  0467   963 	BSBW	MKHEAD			; Build the header
+                  8A   8FD0 8F   B0  046A   964 	MOVW	#XVAR1,(R10)+		; Our in-line code
+                  8A   5A   06   C1  046F   965 	ADDL3	#6,R10,(R10)+
+                    8A   7B 8F   90  0473   966 	MOVB	#XVAR2,(R10)+
+                       8A   05   90  0477   967 	MOVB	#RSB_HEADER,(R10)+
+                            8A   D4  047A   968 	CLRL	(R10)+			; The first word of space (= 0)
+                                 05  047C   969 	RSB
+                                     047D   970 
+                                     047D   971 ;
+                                     047D   972 ; "constant"--build a constant value
+                                     047D   973 ;
+                                     047D   974 	DEFWORD	<constant>,F_CONSTANT
+                       54   07   3C  047D   975 	MOVZWL	#7,R4			; SFP = 7
+                       55   08   3C  0480   976 	MOVZWL	#PRIMITIVE,R5		; SFA = PRIMITIVE
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  19
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                          055A   30  0483   977 	BSBW	MKHEAD			; Build the header
+                  8A   8FD0 8F   B0  0486   978 	MOVW	#XVAR1,(R10)+		; Our in-line code
+                       8A   8B   D0  048B   979 	MOVL	(R11)+,(R10)+		; the value to push
+                    8A   7B 8F   90  048E   980 	MOVB	#XVAR2,(R10)+
+                       8A   05   90  0492   981 	MOVB	#RSB_HEADER,(R10)+
+                                 05  0495   982 	RSB
+                                     0496   983 
+                                     0496   984 ;
+                                     0496   985 ; ":"--start a colon definition
+                                     0496   986 ;
+                                     0496   987 	DEFWORD	<:>,F_COLON
+              00000520'EF   01   D0  0496   988 	MOVL	#1,STATE		; Set our state to "compile"
+                            54   D4  049D   989 	CLRL	R4			; SFP = 0
+                       55   02   3C  049F   990 	MOVZWL	#XSMUDGED,R5		; SFA = SMUDGED
+                          053B   30  04A2   991 	BSBW	MKHEAD			; Build the header
+                       7B   01   D0  04A5   992 	MOVL	#MRKCOLON,-(R11)	; and leave our mark on the stack
+                                 05  04A8   993 	RSB
+                                     04A9   994 
+                                     04A9   995 ;
+                                     04A9   996 ; ";"--end compile mode
+                                     04A9   997 ;
+                                     04A9   998 	DEFWORD	<;>,F_SEMI,PRIORITY
+                   00000520'EF   D4  04A9   999 	CLRL	STATE			; Reset compile state
+                       8B   01   D1  04AF  1000 	CMPL	#MRKCOLON,(R11)+	; Check the mark
+                            0D   13  04B2  1001 	BEQL	10$
+              50   000002BC'EF   9E  04B4  1002 	MOVAB	SEMI_MSG,R0		; Uh-oh, bad match. Complain
+                          036A   30  04BB  1003 	BSBW	PRSTR
+                          FBEF   31  04BE  1004 	BRW	ABORT
+                         0A A8   B4  04C1  1005 10$:	CLRW	10(R8)			; All OK, so clear the smudge
+                       8A   05   90  04C4  1006 	MOVB	#RSB_HEADER,(R10)+	; Add the closing RSB
+                                 05  04C7  1007 	RSB
+                                     04C8  1008 
+                                     04C8  1009 ;
+                                     04C8  1010 ; "mod"--get remainder of division
+                                     04C8  1011 ;
+                                     04C8  1012 	DEFWORD	<mod>,F_MOD
+                       50   8B   D0  04C8  1013 	MOVL	(R11)+,R0		; The divisor
+             52   00   6B   01   7A  04CB  1014 	EMUL	#1,(R11),#0,R2		; The dividend, as a quadword
+             6B   51   52   50   7B  04D0  1015 	EDIV	R0,R2,R1,(R11)		; Keep the remainder
+                                 05  04D5  1016 	RSB
+                                     04D6  1017 
+                                     04D6  1018 ;
+                                     04D6  1019 ; "/"--divide second by top
+                                     04D6  1020 ;
+                                     04D6  1021 	DEFPRIM	</>,F_DIVIDE
+                       6B   8B   C6  04D6  1022 	DIVL2	(R11)+,(R11)
+                                     04D9  1023 	ENDPRIM	F_DIVIDE
+                                     04DA  1024 
+                                     04DA  1025 ;
+                                     04DA  1026 ; "*"--multiply top two items on stack
+                                     04DA  1027 ;
+                                     04DA  1028 	DEFPRIM	<*>,F_TIMES
+                       6B   8B   C4  04DA  1029 	MULL2	(R11)+,(R11)
+                                     04DD  1030 	ENDPRIM	F_TIMES
+                                     04DE  1031 
+                                     04DE  1032 ;
+                                     04DE  1033 ; "-"--subtract top two integers, push result
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  20
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                                     04DE  1034 ;
+                                     04DE  1035 	DEFPRIM	<->,F_MINUS
+                       6B   8B   C2  04DE  1036 	SUBL2	(R11)+,(R11)
+                                     04E1  1037 	ENDPRIM	F_MINUS
+                                     04E2  1038 
+                                     04E2  1039 ;
+                                     04E2  1040 ; "f+"--add floating
+                                     04E2  1041 ;
+                                     04E2  1042 	DEFPRIM	<f+>,F_FPLUS
+                       6B   8B   40  04E2  1043 	ADDF2	(R11)+,(R11)
+                                     04E5  1044 	ENDPRIM	F_FPLUS
+                                     04E6  1045 
+                                     04E6  1046 ;
+                                     04E6  1047 ; "f-"--subtract floating
+                                     04E6  1048 ;
+                                     04E6  1049 	DEFPRIM	<f->,F_FMINUS
+                       6B   8B   42  04E6  1050 	SUBF2	(R11)+,(R11)
+                                     04E9  1051 	ENDPRIM	F_FMINUS
+                                     04EA  1052 
+                                     04EA  1053 ;
+                                     04EA  1054 ; "f*"--multiply floating
+                                     04EA  1055 ;
+                                     04EA  1056 	DEFPRIM	<f*>,F_FTIMES
+                       6B   8B   44  04EA  1057 	MULF2	(R11)+,(R11)
+                                     04ED  1058 	ENDPRIM	F_FTIMES
+                                     04EE  1059 
+                                     04EE  1060 ;
+                                     04EE  1061 ; "f/"--divide floating
+                                     04EE  1062 ;
+                                     04EE  1063 	DEFPRIM	<f/>,F_FDIVIDE
+                       6B   8B   46  04EE  1064 	DIVF2	(R11)+,(R11)
+                                     04F1  1065 	ENDPRIM	F_FDIVIDE
+                                     04F2  1066 
+                                     04F2  1067 ;
+                                     04F2  1068 ; "i->f"--convert int to float
+                                     04F2  1069 ;
+                                     04F2  1070 	DEFPRIM	^%i->f%,F_ITOF
+                       6B   6B   4E  04F2  1071 	CVTLF	(R11),(R11)
+                                     04F5  1072 	ENDPRIM	F_ITOF
+                                     04F6  1073 
+                                     04F6  1074 ;
+                                     04F6  1075 ; "f->i"--convert float to int
+                                     04F6  1076 ;
+                                     04F6  1077 	DEFPRIM	^%f->i%,F_FTOI
+                       6B   6B   4A  04F6  1078 	CVTFL	(R11),(R11)
+                                     04F9  1079 	ENDPRIM	F_FTOI
+                                     04FA  1080 
+                                     04FA  1081 ;
+                                     04FA  1082 ; "+"--add top two integers, push result back to stack
+                                     04FA  1083 ;
+                                     04FA  1084 	DEFPRIM	<+>,F_PLUS
+                       6B   8B   C0  04FA  1085 	ADDL2	(R11)+,(R11)
+                                     04FD  1086 	ENDPRIM	F_PLUS
+                                     04FE  1087 
+                                     04FE  1088 ;
+                                     04FE  1089 ; emit--print the specified character
+                                     04FE  1090 ;
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  21
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                                     04FE  1091 	DEFWORD	<emit>,F_EMIT
+                       50   8B   D0  04FE  1092 	MOVL	(R11)+,R0
+                          0332   30  0501  1093 	BSBW	PUTCH
+                                 05  0504  1094 	RSB
+                                     0505  1095 
+                                     0505  1096 ;
+                                     0505  1097 ; cr--print newline
+                                     0505  1098 ;
+                                     0505  1099 	DEFWORD	<cr>,F_CR
+                       50   0A   9A  0505  1100 	MOVZBL	#NL,R0
+                          032B   30  0508  1101 	BSBW	PUTCH
+                                 05  050B  1102 	RSB
+                                     050C  1103 
+                                     050C  1104 ;
+                                     050C  1105 ; "f."--print a floating point number, then a blank
+                                     050C  1106 ;
+                                     050C  1107 	DEFWORD	<f.>,F_FDOT
+                            6B   53  050C  1108 	TSTF	(R11)			; If it's negative...
+                            09   18  050E  1109 	BGEQ	10$
+                       50   2D   9A  0510  1110 	MOVZBL	#^A/-/,R0		;  Print a '-'
+                          0320   30  0513  1111 	BSBW	PUTCH
+                       6B   6B   52  0516  1112 	MNEGF	(R11),(R11)		;  And negate it
+                       7B   6B   4A  0519  1113 10$:	CVTFL	(R11),-(R11)		; Print the integer part
+                          02C1   30  051C  1114 	BSBW	PRINT_INT
+              53   000004DC'EF   9E  051F  1115 	MOVAB	FPRBUF,R3		; R3 points to buffer position
+                       50   8B   50  0526  1116 	MOVF	(R11)+,R0		; Get the number
+                       51   50   4A  0529  1117 	CVTFL	R0,R1			; Get the integer part
+                       51   51   4E  052C  1118 	CVTLF	R1,R1
+                       50   51   42  052F  1119 	SUBF2	R1,R0			; And take it off the number
+                       83   2E   90  0532  1120 	MOVB	#^A/./,(R3)+		; The decimal point
+                       54   06   D0  0535  1121 	MOVL	#6,R4			; We always print 6 places
+                       50   22   44  0538  1122 20$:	MULF2	#10.0,R0		; Get the next digit
+                       51   50   4A  053B  1123 	CVTFL	R0,R1			; R1 is the next digit
+                       55   51   4E  053E  1124 	CVTLF	R1,R5			; Take this digit off the number
+                       50   55   42  0541  1125 	SUBF2	R5,R0
+                  83   51   30   81  0544  1126 	ADDB3	#^A/0/,R1,(R3)+		; Turn it into the ASCII byte
+                         ED 54   F5  0548  1127 	SOBGTR	R4,20$			; Loop 6 times
+                       83   20   90  054B  1128 	MOVB	#SPC,(R3)+
+                            63   94  054E  1129 	CLRB	(R3)
+              50   000004DC'EF   9E  0550  1130 	MOVAB	FPRBUF,R0		; Now print it
+                          02CE   30  0557  1131 	BSBW	PRSTR
+                                 05  055A  1132 	RSB
+                                     055B  1133 
+                                     055B  1134 ;
+                                     055B  1135 ; ." --if compiling, generate code to print a string, otherwise just
+                                     055B  1136 ;   print the string
+                                     055B  1137 ;
+                                     055B  1138 	DEFWORD	^%."%,F_DOTQ,PRIORITY
+              51   00000457'EF   9E  055B  1139 	MOVAB	DOTQBUF,R1
+              52   000004DB'EF   9E  0562  1140 	MOVAB	DOTQBUF+DOTQMAX,R2	; Where the string has to stop
+                       20   69   91  0569  1141 	CMPB	(R9),#SPC		; Skip char if it's the separating blank
+                            02   12  056C  1142 	BNEQ	10$
+                            59   D6  056E  1143 	INCL	R9
+                       50   89   90  0570  1144 10$:	MOVB	(R9)+,R0		; get the next char of the string
+                       22   50   91  0573  1145 	CMPB	R0,#^A/"/		; End string on newline or close quote
+                            18   13  0576  1146 	BEQL	30$
+                       0A   50   91  0578  1147 	CMPB	R0,#NL
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  22
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                            13   13  057B  1148 	BEQL	30$
+                            50   95  057D  1149 	TSTB	R0			; At end of current input buffer?
+                            0A   13  057F  1150 	BEQL	20$
+                       52   51   D1  0581  1151 	CMPL	R1,R2			;  No. Is there room for it?
+                            EA   1E  0584  1152 	BGEQU	10$
+                       81   50   90  0586  1153 	MOVB	R0,(R1)+		;  Yes. Add this char to our output line
+                            E5   11  0589  1154 	BRB	10$
+                          0358   30  058B  1155 20$:	BSBW	GETLIN			; Get another buffer
+                            E0   11  058E  1156 	BRB	10$
+                                     0590  1157 
+                            61   94  0590  1158 30$:	CLRB	(R1)			; Make the resulting string NULL-terminated
+              50   00000457'EF   9E  0592  1159 	MOVAB	DOTQBUF,R0		; Point R0 to head of this string
+                   00000520'EF   D5  0599  1160 	TSTL	STATE			; Check state
+                            12   13  059F  1161 	BEQL	50$
+                  8A   9F16 8F   B0  05A1  1162 	MOVW	#JSB_HEADER,(R10)+	; Compile in reference to (.")
+              8A   000005B7'EF   9E  05A6  1163 	MOVAB	F_PDOTQ,(R10)+
+                       8A   80   90  05AD  1164 40$:	MOVB	(R0)+,(R10)+		; Copy in the string
+                            FB   12  05B0  1165 	BNEQ	40$
+                                 05  05B2  1166 	RSB
+                          0272   30  05B3  1167 50$:	BSBW	PRSTR			; Print the string
+                                 05  05B6  1168 	RSB
+                                     05B7  1169 
+                                     05B7  1170 ;
+                                     05B7  1171 ; (.")--run-time code to print a string: the string follows the JSB
+                                     05B7  1172 ;   that called us, and we return past it
+                                     05B7  1173 ;
+                                     05B7  1174 	DEFWORD	^%(.")%,F_PDOTQ
+                       50   8E   D0  05B7  1175 	MOVL	(SP)+,R0		; Get the address of our return loc.
+                          026B   30  05BA  1176 	BSBW	PRSTR			; Print the string
+                            62   17  05BD  1177 	JMP	(R2)			; Return to addr following string
+                                     05BF  1178 
+                                     05BF  1179 ;
+                                     05BF  1180 ; "."--pop and print the top number on the stack, then a blank
+                                     05BF  1181 ;
+                                     05BF  1182 	DEFWORD	<.>,F_DOT
+                          021E   30  05BF  1183 	BSBW	PRINT_INT
+                       50   20   9A  05C2  1184 	MOVZBL	#SPC,R0
+                          026E   30  05C5  1185 	BSBW	PUTCH
+                                 05  05C8  1186 	RSB
+                                     05C9  1187 
+                                     05C9  1188 ;
+                                     05C9  1189 ; sin & cos (and the corresponding fsin & fcos)
+                                     05C9  1190 ;
+                                     05C9  1191 	DEFWORD	<sin>,F_SIN
+                       50   8B   D0  05C9  1192 	MOVL	(R11)+,R0		; Get angle
+                            51   D4  05CC  1193 	CLRL	R1			; Negative quadrant flag
+                            50   D5  05CE  1194 10$:	TSTL	R0			; Fold negative angles
+                            09   18  05D0  1195 	BGEQ	20$
+              50   00000168 8F   C0  05D2  1196 	ADDL2	#360,R0
+                            F3   11  05D9  1197 	BRB	10$
+              00000168 8F   50   D1  05DB  1198 20$:	CMPL	R0,#360			; Fold angles > 360
+                            09   19  05E2  1199 	BLSS	30$
+              50   00000168 8F   C2  05E4  1200 	SUBL2	#360,R0
+                            EE   11  05EB  1201 	BRB	20$
+              000000B5 8F   50   D1  05ED  1202 30$:	CMPL	R0,#181			; Flag & fold negative quadrant vals
+                            0C   19  05F4  1203 	BLSS	40$
+                    51   FF 8F   90  05F6  1204 	MOVB	#-1,R1
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  23
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+         50   00000168 8F   50   C3  05FA  1205 	SUBL3	R0,#360,R0
+              0000005B 8F   50   D1  0602  1206 40$:	CMPL	R0,#91			; Fold equivalent 2nd quadrant
+                            08   19  0609  1207 	BLSS	50$
+         50   000000B4 8F   50   C3  060B  1208 	SUBL3	R0,#180,R0
+            50   000002FF'EF40   D0  0613  1209 50$:	MOVL	SINTAB[R0],R0		; Get the value
+                            51   D5  061B  1210 	TSTL	R1			; Negate if needed
+                            03   13  061D  1211 	BEQL	60$
+                       50   50   CE  061F  1212 	MNEGL	R0,R0
+                       7B   50   D0  0622  1213 60$:	MOVL	R0,-(R11)		; Push result
+                                 05  0625  1214 	RSB
+                                     0626  1215 
+                                     0626  1216 	DEFWORD	<cos>,F_COS
+         6B   0000005A 8F   6B   C3  0626  1217 	SUBL3	(R11),#90,(R11)		; sin(90-a) = cos(a)
+                          FF98   30  062E  1218 	BSBW	F_SIN
+                                 05  0631  1219 	RSB
+                                     0632  1220 
+                                     0632  1221 	DEFWORD	<fsin>,F_FSIN
+                       6B   6B   4A  0632  1222 	CVTFL	(R11),(R11)		; Change to int & call sin
+                          FF91   30  0635  1223 	BSBW	F_SIN
+                       50   6B   4E  0638  1224 	CVTLF	(R11),R0
+         6B   50   4000471C 8F   47  063B  1225 	DIVF3	#10000.0,R0,(R11)	; Scale down to true float
+                                 05  0643  1226 	RSB
+                                     0644  1227 
+                                     0644  1228 	DEFWORD	<fcos>,F_FCOS
+                       6B   6B   4A  0644  1229 	CVTFL	(R11),(R11)		; Change to int & call cos
+                          FFDC   30  0647  1230 	BSBW	F_COS
+                       50   6B   4E  064A  1231 	CVTLF	(R11),R0
+         6B   50   4000471C 8F   47  064D  1232 	DIVF3	#10000.0,R0,(R11)	; Scale down to true float
+                                 05  0655  1233 	RSB
+                                     0656  1234 
+                                     0656  1235 ;
+                                     0656  1236 ; decimal--set FORTH's base to decimal
+                                     0656  1237 ;
+                                     0656  1238 	DEFWORD	<decimal>,F_DECIMAL
+              0000051C'EF   0A   D0  0656  1239 	MOVL	#10,BASE
+                                 05  065D  1240 	RSB
+                                     065E  1241 
+                                     065E  1242 ;
+                                     065E  1243 ; hex--set FORTH's base to hexadecimal
+                                     065E  1244 ;
+                                     065E  1245 	DEFWORD	<hex>,F_HEX
+              0000051C'EF   10   D0  065E  1246 	MOVL	#16,BASE
+                                 05  0665  1247 	RSB
+                                     0666  1248 
+                                     0666  1249 ;
+                                     0666  1250 ; BASE variable--holds the current base
+                                     0666  1251 ;
+                                     0666  1252 	DEFWORD	<base>,F_BASE
+              7B   0000051C'EF   DE  0666  1253 	MOVAL	BASE,-(R11)
+                                 05  066D  1254 	RSB
+                                     066E  1255 
+                                     066E  1256 ;
+                                     066E  1257 ; STATE variable--0=interp, 1=compiling
+                                     066E  1258 ;
+                                     066E  1259 	DEFWORD	<state>,F_STATE
+              7B   00000520'EF   DE  066E  1260 	MOVAL	STATE,-(R11)
+                                 05  0675  1261 	RSB
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  24
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                                     0676  1262 
+                                     0676  1263 ;
+                                     0676  1264 ; interp--the interpreter's loop: read a word, then execute it, compile
+                                     0676  1265 ;   it, or push it as a number
+                                     0676  1266 ;
+                                     0676  1267 	DEFWORD	<interp>,INTERP
+              50   00000924'EF   9E  0676  1268 	MOVAB	OPSTK_END,R0		; Check for underflow
+                       50   5B   D1  067D  1269 	CMPL	R11,R0
+                            09   1B  0680  1270 	BLEQU	10$
+              50   000002D5'EF   9E  0682  1271 	MOVAB	EMPTY_MSG,R0		; Underflowed. Complain & abort
+                            13   11  0689  1272 	BRB	15$
+              50   00000524'EF   9E  068B  1273 10$:	MOVAB	OPSTK,R0		; Check for overflow
+                       50   5B   D1  0692  1274 	CMPL	R11,R0
+                            0D   1E  0695  1275 	BGEQU	20$
+              50   000002E4'EF   9E  0697  1276 	MOVAB	FULL_MSG,R0		; Overflowed. Complain & abort
+                          0187   30  069E  1277 15$:	BSBW	PRSTR
+                          FA0C   31  06A1  1278 	BRW	ABORT
+                                     06A4  1279 
+                          02FD   30  06A4  1280 20$:	BSBW	GETW			; Get next word
+                          01D3   30  06A7  1281 	BSBW	LOOKUP			; In the dictionary?
+                            03   13  06AA  1282 	BEQL	30$
+                          002C   31  06AC  1283 	BRW	CKNUM			;  No, see if it's a number
+                   00000520'EF   95  06AF  1284 30$:	TSTB	STATE			; Yes, either compile or execute
+                            04   12  06B5  1285 	BNEQ	50$
+                            60   16  06B7  1286 40$:	JSB	(R0)			; execute via its address
+                            BB   11  06B9  1287 	BRB	INTERP
+                       51   04   D3  06BB  1288 50$:	BITL	#PRIORITY,R1		; See if it's immediate
+                            F7   12  06BE  1289 	BNEQ	40$
+                       51   08   D3  06C0  1290 	BITL	#PRIMITIVE,R1		; See if it generates in-line code
+                            0A   12  06C3  1291 	BNEQ	60$
+                  8A   9F16 8F   B0  06C5  1292 	MOVW	#JSB_HEADER,(R10)+	; compile it with a JSB header
+                       8A   50   D0  06CA  1293 	MOVL	R0,(R10)+
+                            A7   11  06CD  1294 	BRB	INTERP
+                    51   08 A2   32  06CF  1295 60$:	CVTWL	8(R2),R1		; Get number of bytes in def.
+                       8A   80   90  06D3  1296 70$:	MOVB	(R0)+,(R10)+		; Copy bytes of instructions
+                         FA 51   F5  06D6  1297 	SOBGTR	R1,70$			; See if done
+                            9B   11  06D9  1298 	BRB	INTERP
+                                     06DB  1299 
+                                     06DB  1300 ;
+                                     06DB  1301 ; ----Internal routines
+                                     06DB  1302 ;
+                                     06DB  1303 
+                                     06DB  1304 ;
+                                     06DB  1305 ; cknum--the word isn't in the dictionary: push or compile it as a number
+                                     06DB  1306 ;   if it is one, in BASE (or as a float, decimal, with a point)
+                                     06DB  1307 ;
+              57   00000406'EF   9E  06DB  1308 CKNUM:	MOVAB	WRD,R7			; R7 is our index to the line
+                   00000509'EF   94  06E2  1309 	CLRB	SIGN			; Take care of negative numbers here
+                       2D   67   91  06E8  1310 	CMPB	(R7),#^A/-/
+                            0A   12  06EB  1311 	BNEQ	10$
+           00000509'EF   FF 8F   90  06ED  1312 	MOVB	#-1,SIGN
+                            57   D6  06F5  1313 	INCL	R7
+              56   0000051C'EF   D0  06F7  1314 10$:	MOVL	BASE,R6			; Keep base in R6
+                          00AE   30  06FE  1315 	BSBW	ISDIG			; Is this a number?
+                            03   13  0701  1316 	BEQL	15$
+                          0092   31  0703  1317 	BRW	BADWRD			;  No, complain
+                                     0706  1318 
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  25
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                            51   D4  0706  1319 15$:	CLRL	R1
+                       50   87   9A  0708  1320 20$:	MOVZBL	(R7)+,R0		; Loop. Get next digit
+                       50   30   C2  070B  1321 	SUBL2	#^A/0/,R0
+                       0A   50   D1  070E  1322 	CMPL	R0,#10			; Fix things up for letters
+                            0E   19  0711  1323 	BLSS	30$
+                       50   11   C2  0713  1324 	SUBL2	#^A/A/-^A/0/,R0		; A..Z are 0..25
+                       20   50   D1  0716  1325 	CMPL	R0,#^A/a/-^A/A/		; a..z are 32..57
+                            03   19  0719  1326 	BLSS	25$
+                       50   20   C2  071B  1327 	SUBL2	#^A/a/-^A/A/,R0
+                       50   0A   C0  071E  1328 25$:	ADDL2	#10,R0
+                       51   56   C4  0721  1329 30$:	MULL2	R6,R1			; Scale up R1, add in R0
+                       51   50   C0  0724  1330 	ADDL2	R0,R1
+                          0085   30  0727  1331 	BSBW	ISDIG			; Loop if have more chars
+                            DC   13  072A  1332 	BEQL	20$
+                                     072C  1333 
+                            67   95  072C  1334 	TSTB	(R7)			; An integer if that's all
+                            40   13  072E  1335 	BEQL	70$
+                       2E   87   91  0730  1336 	CMPB	(R7)+,#^A/./		; If has decimal point, is floating pt.
+                            03   13  0733  1337 	BEQL	40$
+                          0060   31  0735  1338 	BRW	BADWRD
+                       51   51   4E  0738  1339 40$:	CVTLF	R1,R1
+              50   CCCD3ECC 8F   50  073B  1340 	MOVF	#0.1,R0			; R0 is our scaling factor
+                       56   0A   D0  0742  1341 	MOVL	#10,R6			; The fraction is decimal
+                          0067   30  0745  1342 50$:	BSBW	ISDIG			; See if more digits
+                            12   12  0748  1343 	BNEQ	60$
+                  52   87   30   83  074A  1344 	SUBB3	#^A/0/,(R7)+,R2		; Get next digit, convert to float num
+                       52   52   4C  074E  1345 	CVTBF	R2,R2
+                       52   50   44  0751  1346 	MULF2	R0,R2			; Scale by current factor
+                       51   52   40  0754  1347 	ADDF2	R2,R1			; Add it in to the current number
+                       50   22   46  0757  1348 	DIVF2	#10.0,R0		; Move our factor down one place
+                            E9   11  075A  1349 	BRB	50$
+                            67   95  075C  1350 60$:	TSTB	(R7)			; Nothing may follow the digits
+                            03   13  075E  1351 	BEQL	65$
+                          0035   31  0760  1352 	BRW	BADWRD
+                   00000509'EF   95  0763  1353 65$:	TSTB	SIGN			; Do negation if needed
+                            10   13  0769  1354 	BEQL	80$
+                       51   51   52  076B  1355 	MNEGF	R1,R1
+                            0B   11  076E  1356 	BRB	80$
+                                     0770  1357 
+                   00000509'EF   95  0770  1358 70$:	TSTB	SIGN			; negate if it started with '-'
+                            03   13  0776  1359 	BEQL	80$
+                       51   51   CE  0778  1360 	MNEGL	R1,R1
+                                     077B  1361 
+                   00000520'EF   95  077B  1362 80$:	TSTB	STATE			; Compile or push this number
+                            06   12  0781  1363 	BNEQ	90$
+                       7B   51   D0  0783  1364 	MOVL	R1,-(R11)
+                          FEED   31  0786  1365 	BRW	INTERP
+                  8A   8FD0 8F   B0  0789  1366 90$:	MOVW	#LIT_HEADER,(R10)+	; MOVL #...,-(R11)
+                       8A   51   D0  078E  1367 	MOVL	R1,(R10)+
+                    8A   7B 8F   90  0791  1368 	MOVB	#LIT_TAILER,(R10)+
+                          FEDE   31  0795  1369 	BRW	INTERP
+                                     0798  1370 
+                                     0798  1371 ;
+                                     0798  1372 ; badwrd--print the offending word, then call abort to restart the
+                                     0798  1373 ;   interpreter.
+                                     0798  1374 ;
+              50   00000406'EF   9E  0798  1375 BADWRD:	MOVAB	WRD,R0			; First print the offending word
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  26
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                          0086   30  079F  1376 	BSBW	PRSTR
+              50   000002F2'EF   9E  07A2  1377 	MOVAB	DUNNO_MSG,R0		; then, ": not found"
+                          007C   30  07A9  1378 	BSBW	PRSTR
+                          F901   31  07AC  1379 	BRW	ABORT
+                                     07AF  1380 
+                                     07AF  1381 ;
+                                     07AF  1382 ; isdig--return Z if the character at R7 is a digit in base R6 (watch
+                                     07AF  1383 ;   out for HEX!). Uses R3 and R4.
+                                     07AF  1384 ;
+                       53   67   90  07AF  1385 ISDIG:	MOVB	(R7),R3			; Put the char in question into R3
+                       30   53   91  07B2  1386 	CMPB	R3,#^A/0/		; Check for 0..9
+                            25   1F  07B5  1387 	BLSSU	90$
+                       39   53   91  07B7  1388 	CMPB	R3,#^A/9/
+                            1D   1B  07BA  1389 	BLEQU	80$
+                       0B   56   D1  07BC  1390 	CMPL	R6,#11			; For higher bases, check A..?
+                            1B   19  07BF  1391 	BLSS	90$
+                  54   56   36   C1  07C1  1392 	ADDL3	#^A/A/-11,R6,R4		; Change the base into the highest char
+                    61 8F   53   91  07C5  1393 	CMPB	R3,#^A/a/		; Map a..? to A..?
+                            03   1F  07C9  1394 	BLSSU	10$
+                       53   20   82  07CB  1395 	SUBB2	#^A/a/-^A/A/,R3
+                    41 8F   53   91  07CE  1396 10$:	CMPB	R3,#^A/A/		; Check against 'A'
+                            08   1F  07D2  1397 	BLSSU	90$
+                       54   53   91  07D4  1398 	CMPB	R3,R4			; Check against highest char
+                            03   1A  07D7  1399 	BGTRU	90$
+                            53   D4  07D9  1400 80$:	CLRL	R3			; A digit: Z
+                                 05  07DB  1401 	RSB
+                       53   01   D0  07DC  1402 90$:	MOVL	#1,R3			; Not a digit: NZ
+                                 05  07DF  1403 	RSB
+                                     07E0  1404 
+                                     07E0  1405 ;
+                                     07E0  1406 ; print_int--pop the top number and print it in BASE
+                                     07E0  1407 ;
+                                     07E0  1408 PRINT_INT:
+              55   0000051C'EF   D0  07E0  1409 	MOVL	BASE,R5			; Get the base
+              51   00000508'EF   9E  07E7  1410 	MOVAB	PRNBUF,R1		; R1 points to the char positions
+                       50   8B   D0  07EE  1411 	MOVL	(R11)+,R0		; R0 holds the number
+                       52   50   D0  07F1  1412 	MOVL	R0,R2			; Keep a copy to do the sign
+                            03   18  07F4  1413 	BGEQ	10$			; Negate if negative
+                       50   50   CE  07F6  1414 	MNEGL	R0,R0
+                  53   50   55   C7  07F9  1415 10$:	DIVL3	R5,R0,R3		; R3 holds new number
+                  54   53   55   C5  07FD  1416 	MULL3	R5,R3,R4		; Calculate remainder the hard way
+                  54   50   54   C3  0801  1417 	SUBL3	R4,R0,R4
+                       09   54   D1  0805  1418 	CMPL	R4,#9			; See if it's a HEX digit
+                            07   15  0808  1419 	BLEQ	20$
+               71   54   57 8F   81  080A  1420 	ADDB3	#^A/a/-10,R4,-(R1)
+                            04   11  080F  1421 	BRB	30$
+                  71   54   30   81  0811  1422 20$:	ADDB3	#^A/0/,R4,-(R1)		; Put it in as the next digit
+                       50   53   D0  0815  1423 30$:	MOVL	R3,R0			; Update number
+                            DF   12  0818  1424 	BNEQ	10$
+                            52   D5  081A  1425 	TSTL	R2			; Now check sign
+                            03   18  081C  1426 	BGEQ	40$
+                       71   2D   90  081E  1427 	MOVB	#^A/-/,-(R1)
+                       50   51   D0  0821  1428 40$:	MOVL	R1,R0			; print the number
+                          0001   30  0824  1429 	BSBW	PRSTR
+                                 05  0827  1430 	RSB
+                                     0828  1431 
+                                     0828  1432 ;
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  27
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                                     0828  1433 ; prstr--print the null-terminated string pointed to by R0 on the
+                                     0828  1434 ;   output unit. Returns R2 pointing past the NUL. Uses R0 and R1.
+                                     0828  1435 ;
+                       52   50   D0  0828  1436 PRSTR:	MOVL	R0,R2
+                       50   82   9A  082B  1437 10$:	MOVZBL	(R2)+,R0
+                            05   13  082E  1438 	BEQL	20$
+                          0003   30  0830  1439 	BSBW	PUTCH
+                            F6   11  0833  1440 	BRB	10$
+                                 05  0835  1441 20$:	RSB
+                                     0836  1442 
+                                     0836  1443 ;
+                                     0836  1444 ; putch--write the character in R0 to the output unit: a newline ends
+                                     0836  1445 ;   the line, writing it as a record, as does a full line. Uses R0 and R1.
+                                     0836  1446 ;
+              51   00000988'EF   D0  0836  1447 PUTCH:	MOVL	OUNIT,R1
+                       0A   50   91  083D  1448 	CMPB	R0,#NL
+                            20   13  0840  1449 	BEQL	FLUSHU
+                            52   DD  0842  1450 	PUSHL	R2
+                  52   0094 C1   D0  0844  1451 	MOVL	UB_LEN(R1),R2
+                0098 C142   50   90  0849  1452 	MOVB	R0,UB_BUF(R1)[R2]
+                       0094 C1   D6  084F  1453 	INCL	UB_LEN(R1)
+                       52   8E   D0  0853  1454 	MOVL	(SP)+,R2
+         00000084 8F   0094 C1   D1  0856  1455 	CMPL	UB_LEN(R1),#LINSIZ
+                            01   18  085F  1456 	BGEQ	FLUSHU
+                                 05  0861  1457 	RSB
+                                     0862  1458 
+                                     0862  1459 ;
+                                     0862  1460 ; flushu--write the line of the unit at R1 as a record, and empty it.
+                                     0862  1461 ;   Uses R0 and R1.
+                                     0862  1462 ;
+               78 A1   0098 C1   9E  0862  1463 FLUSHU:	MOVAB	UB_BUF(R1),UB_RAB+RAB$L_RBF(R1)
+               72 A1   0094 C1   B0  0868  1464 	MOVW	UB_LEN(R1),UB_RAB+RAB$W_RSZ(R1)
+                       0094 C1   D4  086E  1465 	CLRL	UB_LEN(R1)
+                                     0872  1466 	$PUT	RAB=UB_RAB(R1)
+                                 05  087C  1467 	RSB
+                                     087D  1468 
+                                     087D  1469 ;
+                                     087D  1470 ; lookup--take the current word in "wrd" and see if it's in the dictionary
+                                     087D  1471 ;   chain. If it is, return with address in R0 and Z; otherwise
+                                     087D  1472 ;   return with NZ. If it is found, R1 will contain the SFA and R2 the
+                                     087D  1473 ;   entry. Case doesn't matter, as DCL uppercases a command's text.
+                                     087D  1474 ;   Uses R3, R4, and R5.
+                                     087D  1475 ;
+              50   00000406'EF   9E  087D  1476 LOOKUP:	MOVAB	WRD,R0			; R0 -> word
+                       51   58   D0  0884  1477 	MOVL	R8,R1			; R1 -> next entry to check against
+                  52   51   0C   C1  0887  1478 10$:	ADDL3	#12,R1,R2		; R2 -> cur entry's name
+                       53   50   D0  088B  1479 	MOVL	R0,R3			; R3 -> our word
+                    0A A1   02   B3  088E  1480 	BITW	#XSMUDGED,10(R1)	; Smudged?
+                            24   12  0892  1481 	BNEQ	30$
+                       54   83   90  0894  1482 20$:	MOVB	(R3)+,R4		; Compare the names, ignoring case
+                            28   10  0897  1483 	BSBB	LOWER
+                       55   54   90  0899  1484 	MOVB	R4,R5
+                       54   62   90  089C  1485 	MOVB	(R2),R4
+                            20   10  089F  1486 	BSBB	LOWER
+                       55   54   91  08A1  1487 	CMPB	R4,R5
+                            12   12  08A4  1488 	BNEQ	30$			;  they didn't match
+                            82   95  08A6  1489 	TSTB	(R2)+			; They did; at end of names?
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  28
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                            EA   12  08A8  1490 	BNEQ	20$			; No, keep going
+                    50   04 A1   D0  08AA  1491 	MOVL	4(R1),R0		; We have a match. R0 -> entry
+                       52   51   D0  08AE  1492 	MOVL	R1,R2			; R2 -> top of entry
+                    51   0A A1   32  08B1  1493 	CVTWL	10(R1),R1		; R1 = (SFA)
+                            53   D4  08B5  1494 	CLRL	R3			; Return Z
+                                 05  08B7  1495 	RSB
+                       51   61   D0  08B8  1496 30$:	MOVL	(R1),R1			; Move to next entry
+                            CA   12  08BB  1497 	BNEQ	10$
+                       53   01   D0  08BD  1498 	MOVL	#1,R3			; No match, return NZ
+                                 05  08C0  1499 	RSB
+                                     08C1  1500 
+                                     08C1  1501 ;
+                                     08C1  1502 ; lower--make the character in R4 lowercase, if it's a letter
+                                     08C1  1503 ;
+                    41 8F   54   91  08C1  1504 LOWER:	CMPB	R4,#^A/A/
+                            09   1F  08C5  1505 	BLSSU	10$
+                    5A 8F   54   91  08C7  1506 	CMPB	R4,#^A/Z/
+                            03   1A  08CB  1507 	BGTRU	10$
+                       54   20   88  08CD  1508 	BISB2	#^X20,R4
+                                 05  08D0  1509 10$:	RSB
+                                     08D1  1510 
+                                     08D1  1511 ;
+                                     08D1  1512 ; iswhite--return Z if the character pointed to by R9 is a white
+                                     08D1  1513 ;   space character or the NUL ending the line. Uses R3.
+                                     08D1  1514 ;
+                                     08D1  1515 ISWHITE:
+                       53   69   90  08D1  1516 	MOVB	(R9),R3			; Keep this char in register
+                       53   09   91  08D4  1517 	CMPB	#TAB,R3			; Tab
+                            0C   13  08D7  1518 	BEQL	10$
+                       53   20   91  08D9  1519 	CMPB	#SPC,R3			; Space
+                            07   13  08DC  1520 	BEQL	10$
+                       53   0A   91  08DE  1521 	CMPB	#NL,R3			; Newline
+                            02   13  08E1  1522 	BEQL	10$
+                            53   95  08E3  1523 	TSTB	R3			; NULL
+                                 05  08E5  1524 10$:	RSB
+                                     08E6  1525 
+                                     08E6  1526 ;
+                                     08E6  1527 ; getlin--read another line of input from the current input unit into
+                                     08E6  1528 ;   INLINE, ending it with a newline and a NUL, and point R9 at it. The
+                                     08E6  1529 ;   terminal prompts with the output line so far and "> ". At the end of
+                                     08E6  1530 ;   a file, the file is closed and the input it interrupted resumes; at
+                                     08E6  1531 ;   the end of the terminal's input, forth exits. Uses R0.
+                                     08E6  1532 ;
+                            3E   BB  08E6  1533 GETLIN:	PUSHR	#^M<R1,R2,R3,R4,R5>
+              52   0000095C'EF   D0  08E8  1534 	MOVL	IUNIT,R2		; Get the input unit
+              50   000025B8'EF   DE  08EF  1535 	MOVAL	TTIN,R0			; Prompt if it's the terminal
+                       50   52   D1  08F6  1536 	CMPL	R2,R0
+                            29   12  08F9  1537 	BNEQ	10$
+              51   000026D8'EF   DE  08FB  1538 	MOVAL	TTOUT,R1		; Add "> " to what's been printed
+                  50   0094 C1   D0  0902  1539 	MOVL	UB_LEN(R1),R0
+                53   0098 C140   9E  0907  1540 	MOVAB	UB_BUF(R1)[R0],R3
+                       83   3E   90  090D  1541 	MOVB	#^A/>/,(R3)+
+                       63   20   90  0910  1542 	MOVB	#SPC,(R3)
+             0080 C2   0098 C1   9E  0913  1543 	MOVAB	UB_BUF(R1),UB_RAB+RAB$L_PBF(R2)
+             0084 C2   50   02   81  091A  1544 	ADDB3	#2,R0,UB_RAB+RAB$B_PSZ(R2)
+                       0094 C1   D4  0920  1545 	CLRL	UB_LEN(R1)		;  and make that the prompt
+                                     0924  1546 10$:	$GET	RAB=UB_RAB(R2)		; Read a record
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  29
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                         16 50   E9  092E  1547 	BLBC	R0,20$			; Test for EOF
+                    50   72 A2   3C  0931  1548 	MOVZWL	UB_RAB+RAB$W_RSZ(R2),R0
+              59   00000004'EF   9E  0935  1549 	MOVAB	INLINE,R9		; Set the input line pointer
+                     6940   0A   90  093C  1550 	MOVB	#NL,(R9)[R0]		; Terminate the line
+                       01 A940   94  0940  1551 	CLRB	1(R9)[R0]
+                            3E   BA  0944  1552 	POPR	#^M<R1,R2,R3,R4,R5>
+                                 05  0946  1553 	RSB
+                                     0947  1554 
+              50   000025B8'EF   DE  0947  1555 20$:	MOVAL	TTIN,R0			; If at top, forth exits
+                       50   52   D1  094E  1556 	CMPL	R2,R0
+                            03   12  0951  1557 	BNEQ	30$
+                          F884   31  0953  1558 	BRW	F_HALT
+                                     0956  1559 30$:	$CLOSE	FAB=(R2)		; EOF--Close the unit
+                   00000958'EF   D7  095F  1560 	DECL	IDEEP			; Decrement nesting depth count
+              00000954'EF   04   C2  0965  1561 	SUBL2	#4,ISP			; Pop back to the input before it
+     0000095C'EF   00000954'FF   D0  096C  1562 	MOVL	@ISP,IUNIT
+50   00000958'EF   00000402 8F   C5  0977  1563 	MULL3	#INLSIZ,IDEEP,R0	; Restore its buffer
+       0000098C'EF40   0402 8F   28  0983  1564 	MOVC3	#INLSIZ,IBUFS[R0],INLINE
+                   00000004'EF       098D       
+              50   00000958'EF   D0  0992  1565 	MOVL	IDEEP,R0		; and its input index
+            59   0000259A'EF40   D0  0999  1566 	MOVL	IBUFX[R0],R9
+                            3E   BA  09A1  1567 	POPR	#^M<R1,R2,R3,R4,R5>
+                                 05  09A3  1568 	RSB				; Return with the restored input buffer
+                                     09A4  1569 
+                                     09A4  1570 ;
+                                     09A4  1571 ; getw--get the next word in the current input line. If there are no
+                                     09A4  1572 ;   more words in this line, get another from the input. Uses R0, R1,
+                                     09A4  1573 ;   and R3.
+                                     09A4  1574 ;
+                          FF2A   30  09A4  1575 GETW:	BSBW	ISWHITE			; Skip initial white space
+                            09   12  09A7  1576 	BNEQ	10$
+                            89   95  09A9  1577 	TSTB	(R9)+			; Is white. If NULL, need new line
+                            F7   12  09AB  1578 	BNEQ	GETW
+                          FF36   30  09AD  1579 	BSBW	GETLIN
+                            F2   11  09B0  1580 	BRB	GETW
+              50   00000406'EF   9E  09B2  1581 10$:	MOVAB	WRD,R0			; Found word. Copy into "wrd"
+              51   00000456'EF   9E  09B9  1582 	MOVAB	WRD+WRDMAX,R1		;  up to this far
+                       51   50   D1  09C0  1583 20$:	CMPL	R0,R1
+                            03   1E  09C3  1584 	BGEQU	30$
+                       80   69   90  09C5  1585 	MOVB	(R9),(R0)+
+                            59   D6  09C8  1586 30$:	INCL	R9
+                          FF04   30  09CA  1587 40$:	BSBW	ISWHITE
+                            F1   12  09CD  1588 	BNEQ	20$
+                            69   95  09CF  1589 	TSTB	(R9)			; Read new buffer if at end
+                            0A   12  09D1  1590 	BNEQ	50$
+                            50   DD  09D3  1591 	PUSHL	R0			; Save R0, then call "getlin"
+                          FF0E   30  09D5  1592 	BSBW	GETLIN
+                       50   8E   D0  09D8  1593 	MOVL	(SP)+,R0
+                            ED   11  09DB  1594 	BRB	40$
+                            60   94  09DD  1595 50$:	CLRB	(R0)			; add NULL at end of word
+                                 05  09DF  1596 	RSB
+                                     09E0  1597 
+                                     09E0  1598 ;
+                                     09E0  1599 ; mkhead--build the header of a new word, named by the next word of
+                                     09E0  1600 ;   input, with SFP R4 and SFA R5, and make it the latest. Its PFA is
+                                     09E0  1601 ;   HERE when the header's done.
+                                     09E0  1602 ;
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  30
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                          FFC1   30  09E0  1603 MKHEAD:	BSBW	GETW			; Get the name of the new word
+                       52   58   D0  09E3  1604 	MOVL	R8,R2			; Add this word to the chain
+                       58   5A   D0  09E6  1605 	MOVL	R10,R8
+                       8A   52   D0  09E9  1606 	MOVL	R2,(R10)+
+                       50   5A   D0  09EC  1607 	MOVL	R10,R0			; Save this position (PFA)
+                            8A   D4  09EF  1608 	CLRL	(R10)+
+                       8A   54   B0  09F1  1609 	MOVW	R4,(R10)+		; SFP
+                       8A   55   B0  09F4  1610 	MOVW	R5,(R10)+		; SFA
+              51   00000406'EF   9E  09F7  1611 	MOVAB	WRD,R1			; Now copy the name in
+                       8A   81   90  09FE  1612 10$:	MOVB	(R1)+,(R10)+
+                            FB   12  0A01  1613 	BNEQ	10$
+                       60   5A   D0  0A03  1614 	MOVL	R10,(R0)		; Finally, update the PFA
+                                 05  0A06  1615 	RSB
+                                     0A07  1616 
+                                     0A07  1617 ;
+                                     0A07  1618 ; setname--point the FAB of the unit at R6 at the name in "wrd", and
+                                     0A07  1619 ;   its RAB at its FAB.
+                                     0A07  1620 ;
+                                     0A07  1621 SETNAME:
+              52   00000406'EF   9E  0A07  1622 	MOVAB	WRD,R2
+             62   0051 8F   00   3A  0A0E  1623 	LOCC	#0,#WRDMAX+1,(R2)	; Find the name's end
+                  50   51   52   C3  0A14  1624 	SUBL3	R2,R1,R0
+                    2C A6   52   D0  0A18  1625 	MOVL	R2,FAB$L_FNA(R6)
+                    34 A6   50   90  0A1C  1626 	MOVB	R0,FAB$B_FNS(R6)
+                  008C C6   56   D0  0A20  1627 	MOVL	R6,UB_RAB+RAB$L_FAB(R6)
+                                 05  0A25  1628 	RSB
+                                     0A26  1629 
+                                     0A26  1630 ;
+                                     0A26  1631 ; inopen--open the file named in "wrd" for input; add it to the pushdown
+                                     0A26  1632 ;   stack. Error if it can't be opened.
+                                     0A26  1633 ;
+              07   00000958'EF   D1  0A26  1634 INOPEN:	CMPL	IDEEP,#MAXDEP-1		; Room for another?
+                            0D   19  0A2D  1635 	BLSS	10$
+              50   00000191'EF   9E  0A2F  1636 	MOVAB	DEEP_MSG,R0
+                          FDEF   30  0A36  1637 	BSBW	PRSTR
+                          F674   31  0A39  1638 	BRW	ABORT
+56   00000958'EF   0000011E 8F   C5  0A3C  1639 10$:	MULL3	#UB_BLN,IDEEP,R6	; R6 -> the unit block for it
+            56   000027F8'EF46   9E  0A48  1640 	MOVAB	IUNITS[R6],R6
+    66   00000000'EF   0050 8F   28  0A50  1641 	MOVC3	#FAB$C_BLN,IFABT,(R6)
+ 50 A6   00000050'EF   0044 8F   28  0A5A  1642 	MOVC3	#RAB$C_BLN,IRABT,UB_RAB(R6)
+                          FF9F   30  0A65  1643 	BSBW	SETNAME
+                       0094 C6   D4  0A68  1644 	CLRL	UB_LEN(R6)
+                                     0A6C  1645 	$OPEN	FAB=(R6)
+                         65 50   E9  0A75  1646 	BLBC	R0,90$
+                                     0A78  1647 	$CONNECT RAB=UB_RAB(R6)
+                         4F 50   E9  0A82  1648 	BLBC	R0,80$
+                                     0A85  1649 
+50   00000958'EF   00000402 8F   C5  0A85  1650 	MULL3	#INLSIZ,IDEEP,R0	; Open successful, save previous buffer
+         00000004'EF   0402 8F   28  0A91  1651 	MOVC3	#INLSIZ,INLINE,IBUFS[R0]
+                 0000098C'EF40       0A9A       
+              50   00000958'EF   D0  0AA0  1652 	MOVL	IDEEP,R0		; Now save the input index
+            0000259A'EF40   59   D0  0AA7  1653 	MOVL	R9,IBUFX[R0]
+              59   00000004'EF   9E  0AAF  1654 	MOVAB	INLINE,R9		; Clear the input buffer
+                            69   94  0AB6  1655 	CLRB	(R9)
+                                     0AB8  1656 
+              00000954'EF   04   C0  0AB8  1657 	ADDL2	#4,ISP			; Push down the old unit
+              00000954'FF   56   D0  0ABF  1658 	MOVL	R6,@ISP
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  31
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+              0000095C'EF   56   D0  0AC6  1659 	MOVL	R6,IUNIT
+                   00000958'EF   D6  0ACD  1660 	INCL	IDEEP
+                                 05  0AD3  1661 	RSB
+                                     0AD4  1662 
+                                     0AD4  1663 80$:	$CLOSE	FAB=(R6)
+              50   00000175'EF   9E  0ADD  1664 90$:	MOVAB	INOP_MSG,R0		; Bad open, complain & abort
+                          FD41   30  0AE4  1665 	BSBW	PRSTR
+                          F5C6   31  0AE7  1666 	BRW	ABORT
+                                     0AEA  1667 
+                                     0AEA  1668 ;
+                                     0AEA  1669 ; outopen--open the file named in "wrd" for output; add it to the
+                                     0AEA  1670 ;   pushdown stack. Error if it can't be opened.
+                                     0AEA  1671 ;
+                                     0AEA  1672 OUTOPEN:
+              07   00000984'EF   D1  0AEA  1673 	CMPL	ODEEP,#MAXDEP-1		; Room for another?
+                            0D   19  0AF1  1674 	BLSS	10$
+              50   00000191'EF   9E  0AF3  1675 	MOVAB	DEEP_MSG,R0
+                          FD2B   30  0AFA  1676 	BSBW	PRSTR
+                          F5B0   31  0AFD  1677 	BRW	ABORT
+56   00000984'EF   0000011E 8F   C5  0B00  1678 10$:	MULL3	#UB_BLN,ODEEP,R6	; R6 -> the unit block for it
+            56   00002FCA'EF46   9E  0B0C  1679 	MOVAB	OUNITS[R6],R6
+    66   00000094'EF   0050 8F   28  0B14  1680 	MOVC3	#FAB$C_BLN,OFABT,(R6)
+ 50 A6   000000E4'EF   0044 8F   28  0B1E  1681 	MOVC3	#RAB$C_BLN,ORABT,UB_RAB(R6)
+                          FEDB   30  0B29  1682 	BSBW	SETNAME
+                       0094 C6   D4  0B2C  1683 	CLRL	UB_LEN(R6)
+                                     0B30  1684 	$CREATE	FAB=(R6)
+                         32 50   E9  0B39  1685 	BLBC	R0,90$
+                                     0B3C  1686 	$CONNECT RAB=UB_RAB(R6)
+                         1C 50   E9  0B46  1687 	BLBC	R0,80$
+              00000980'EF   04   C0  0B49  1688 	ADDL2	#4,OSP			; Push it
+              00000980'FF   56   D0  0B50  1689 	MOVL	R6,@OSP
+              00000988'EF   56   D0  0B57  1690 	MOVL	R6,OUNIT
+                   00000984'EF   D6  0B5E  1691 	INCL	ODEEP
+                                 05  0B64  1692 	RSB
+                                     0B65  1693 
+                                     0B65  1694 80$:	$CLOSE	FAB=(R6)
+              50   00000158'EF   9E  0B6E  1695 90$:	MOVAB	OUTOP_MSG,R0		; Couldn't open--complain
+                          FCB0   30  0B75  1696 	BSBW	PRSTR
+                          F535   31  0B78  1697 	BRW	ABORT
+                                     0B7B  1698 
+                                     0B7B  1699 ;
+                                     0B7B  1700 ; closeall--close every file "input" and "output" opened, returning
+                                     0B7B  1701 ;   to the terminal. Uses R0, R1, and R2.
+                                     0B7B  1702 ;
+                                     0B7B  1703 CLOSEALL:
+              50   00000960'EF   DE  0B7B  1704 10$:	MOVAL	OSTK,R0			; Pop the output files
+              50   00000980'EF   D1  0B82  1705 	CMPL	OSP,R0
+                            05   13  0B89  1706 	BEQL	20$
+                          F675   30  0B8B  1707 	BSBW	F_OUTPOP
+                            EB   11  0B8E  1708 	BRB	10$
+              50   00000934'EF   DE  0B90  1709 20$:	MOVAL	ISTK,R0			; and the input files
+              50   00000954'EF   D1  0B97  1710 	CMPL	ISP,R0
+                            2A   13  0B9E  1711 	BEQL	30$
+              52   0000095C'EF   D0  0BA0  1712 	MOVL	IUNIT,R2
+                                     0BA7  1713 	$CLOSE	FAB=(R2)
+              00000954'EF   04   C2  0BB0  1714 	SUBL2	#4,ISP
+     0000095C'EF   00000954'FF   D0  0BB7  1715 	MOVL	@ISP,IUNIT
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  32
+V2.0                                                                      5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+                   00000958'EF   D7  0BC2  1716 	DECL	IDEEP
+                            C6   11  0BC8  1717 	BRB	20$
+                                 05  0BCA  1718 30$:	RSB
+                                     0BCB  1719 
+                                     0BCB  1720 ;
+                                     0BCB  1721 ; ----The dictionary new words are compiled into
+                                     0BCB  1722 ;
+                                 0000379C  1723 	.PSECT	FORTH_DATA
+                                     379C  1724 
+                           000005AC' 379C  1725 LATEST:	.ADDRESS LASTWORD		; Last intrinsic word in dictionary
+                                     37A0  1726 DICTEND:
+                           00000000' 37A0  1727 	.ADDRESS FORTH_DICT		; Initially here
+                                     37A4  1728 
+                                 00000000  1729 	.PSECT	FORTH_DICT,WRT,EXE,PAGE
+                                     0000  1730 FORTH_DICT:
+                           00007530  0000  1731 	.BLKB	DICTSIZ			; Dictionary space
+                                     7530  1732 
+                                     7530  1733 	.END	FORTH
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  33
+Symbol table                                                              5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+$$.TAB                         = 000000E4 R  D  04        F_ALLOT                          00000195 R  D  05        
+$$.TABEND                      = 00000128 R  D  04        F_ALLOT_E                        00000198 R  D  05        
+$$.TMP                         = 00000000    D            F_ALLOT_H                        00000148 R  D  06        
+$$.TMP1                        = 00000001    D            F_AND                            00000266 R  D  05        
+$$.TMP2                        = 00000062                 F_AND_E                          0000026C R  D  05        
+$$.TMPX                        = 00000017 R  D  03        F_AND_H                          00000218 R  D  06        
+$$.TMPX1                       = 00000004    D            F_BASE                           00000666 R  D  05        
+ABORT                            000000B0 R  D  05        F_BASE_H                         00000589 R  D  06        
+AGAIN_HEADER                   = 00009F17    D            F_BEGIN                          00000327 R  D  05        
+AGAIN_MSG                        00000237 R  D  04        F_BEGIN_H                        000002F5 R  D  06        
+BADWRD                           00000798 R  D  05        F_CCOMMA                         0000016B R  D  05        
+BANNER                           0000012F R  D  04        F_CCOMMA_E                       0000016E R  D  05        
+BASE                             0000051C R  D  02        F_CCOMMA_H                       00000118 R  D  06        
+CKNUM                            000006DB R  D  05        F_CFETCH                         0000012A R  D  05        
+CLOSEALL                         00000B7B R  D  05        F_CFETCH_E                       00000130 R  D  05        
+CMDDSC                           00000514 R  D  02        F_CFETCH_H                       00000074 R  D  06        
+CMDLEN                           0000050A R  D  02        F_COLON                          00000496 R  D  05        
+DEEP_MSG                         00000191 R  D  04        F_COLON_H                        00000404 R  D  06        
+DICTEND                          000037A0 R  D  02        F_COMMA                          00000167 R  D  05        
+DICTSIZ                        = 00007530    D            F_COMMA_E                        0000016A R  D  05        
+DOTQBUF                          00000457 R  D  02        F_COMMA_H                        0000010A R  D  06        
+DOTQMAX                        = 00000084    D            F_CONSTANT                       0000047D R  D  05        
+DSC_S                          = 00000001    D            F_CONSTANT_H                     000003EF R  D  06        
+DSC_T                          = 0000000E    D            F_COS                            00000626 R  D  05        
+DUNNO_MSG                        000002F2 R  D  04        F_COS_H                          00000533 R  D  06        
+ELSE_MSG                         000001AB R  D  04        F_CR                             00000505 R  D  05        
+EMPTY_MSG                        000002D5 R  D  04        F_CR_H                           000004D7 R  D  06        
+ENDIF_MSG                        000001CB R  D  04        F_CSTORE                         00000131 R  D  05        
+EXITSTS                          00000510 R  D  02        F_CSTORE_E                       00000137 R  D  05        
+FAB$B_DNS                      = 00000035    D            F_CSTORE_H                       00000083 R  D  06        
+FAB$B_FNS                      = 00000034    D            F_DECIMAL                        00000656 R  D  05        
+FAB$C_BID                      = 00000003    D            F_DECIMAL_H                      00000565 R  D  06        
+FAB$C_BLN                      = 00000050    D            F_DIVIDE                         000004D6 R  D  05        
+FAB$C_SEQ                      = 00000000    D            F_DIVIDE_E                       000004D9 R  D  05        
+FAB$C_VAR                      = 00000002    D            F_DIVIDE_H                       00000430 R  D  06        
+FAB$L_ALQ                      = 00000010    D            F_DO                             000003C8 R  D  05        
+FAB$L_DNA                      = 00000030    D            F_DOT                            000005BF R  D  05        
+FAB$L_FNA                      = 0000002C    D            F_DOTQ                           0000055B R  D  05        
+FAB$L_FOP                      = 00000004    D            F_DOTQ_H                         000004F5 R  D  06        
+FAB$V_CHAN_MODE                = 00000002    D            F_DOT_H                          00000515 R  D  06        
+FAB$V_CR                       = 00000001    D            F_DO_H                           0000038C R  D  06        
+FAB$V_FILE_MODE                = 00000004    D            F_DROP                           000002BF R  D  05        
+FAB$V_GET                      = 00000001    D            F_DROP_E                         000002C2 R  D  05        
+FAB$V_LNM_MODE                 = 00000000    D            F_DROP_H                         00000291 R  D  06        
+FAB$V_PUT                      = 00000000    D            F_DUP                            000002D0 R  D  05        
+FAB$W_GBC                      = 00000048    D            F_DUP_E                          000002D3 R  D  05        
+FLUSHU                           00000862 R  D  05        F_DUP_H                          000002B3 R  D  06        
+FORTH                            00000000 RG D  05        F_ELSE                           000002EA R  D  05        
+FORTH_DICT                       00000000 R  D  07        F_ELSE_H                         000002D2 R  D  06        
+FPRBUF                           000004DC R  D  02        F_EMIT                           000004FE R  D  05        
+FULL_MSG                         000002E4 R  D  04        F_EMIT_H                         000004C6 R  D  06        
+F_ABORT                          000001D7 R  D  05        F_ENDIF                          00000311 R  D  05        
+F_ABORT_H                        0000018B R  D  06        F_ENDIF_H                        000002E3 R  D  06        
+F_ABS                            000000EA R  D  05        F_EQ                             00000294 R  D  05        
+F_ABS_H                          00000011 R  D  06        F_EQ_H                           00000255 R  D  06        
+F_AGAIN                          00000377 R  D  05        F_FABS                           000000F2 R  D  05        
+F_AGAIN_H                        0000032C R  D  06        F_FABS_H                         00000021 R  D  06        
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  34
+Symbol table                                                              5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+F_FALSE                          0000025A R  D  05        F_INPUT                          00000253 R  D  05        
+F_FALSE_E                        0000025C R  D  05        F_INPUT_H                        000001D4 R  D  06        
+F_FALSE_H                        000001E6 R  D  06        F_ITOF                           000004F2 R  D  05        
+F_FCOS                           00000644 R  D  05        F_ITOF_E                         000004F5 R  D  05        
+F_FCOS_H                         00000554 R  D  06        F_ITOF_H                         00000496 R  D  06        
+F_FDIVIDE                        000004EE R  D  05        F_I_E                            000003C7 R  D  05        
+F_FDIVIDE_E                      000004F1 R  D  05        F_I_H                            0000037E R  D  06        
+F_FDIVIDE_H                      00000487 R  D  06        F_J                              000003BE R  D  05        
+F_FDOT                           0000050C R  D  05        F_J_E                            000003C2 R  D  05        
+F_FDOT_H                         000004E6 R  D  06        F_J_H                            00000370 R  D  06        
+F_FEQ                            0000026D R  D  05        F_K                              000003B9 R  D  05        
+F_FEQ_H                          00000228 R  D  06        F_K_E                            000003BD R  D  05        
+F_FETCH                          00000455 R  D  05        F_K_H                            00000362 R  D  06        
+F_FETCH_E                        00000459 R  D  05        F_LEAVE                          000003B4 R  D  05        
+F_FETCH_H                        000003BE R  D  06        F_LEAVE_E                        000003B8 R  D  05        
+F_FGT                            0000027A R  D  05        F_LEAVE_H                        00000350 R  D  06        
+F_FGT_H                          00000237 R  D  06        F_LOOP                           00000406 R  D  05        
+F_FILL                           0000014B R  D  05        F_LOOP_H                         0000039B R  D  06        
+F_FILL_H                         000000E8 R  D  06        F_LT                             000002AE R  D  05        
+F_FLT                            00000287 R  D  05        F_LT_H                           00000271 R  D  06        
+F_FLT_H                          00000246 R  D  06        F_MAX                            000000FA R  D  05        
+F_FMAX                           00000106 R  D  05        F_MAX_H                          00000032 R  D  06        
+F_FMAX_H                         00000042 R  D  06        F_MIN                            00000112 R  D  05        
+F_FMIN                           0000011E R  D  05        F_MINUS                          000004DE R  D  05        
+F_FMINUS                         000004E6 R  D  05        F_MINUS_E                        000004E1 R  D  05        
+F_FMINUS_E                       000004E9 R  D  05        F_MINUS_H                        0000044C R  D  06        
+F_FMINUS_H                       00000469 R  D  06        F_MIN_H                          00000053 R  D  06        
+F_FMIN_H                         00000063 R  D  06        F_MOD                            000004C8 R  D  05        
+F_FNEGATE                        0000013C R  D  05        F_MOD_H                          00000420 R  D  06        
+F_FNEGATE_E                      0000013F R  D  05        F_MROT                           00000182 R  D  05        
+F_FNEGATE_H                      000000A5 R  D  06        F_MROT_H                         00000137 R  D  06        
+F_FPLUS                          000004E2 R  D  05        F_NEGATE                         00000138 R  D  05        
+F_FPLUS_E                        000004E5 R  D  05        F_NEGATE_E                       0000013B R  D  05        
+F_FPLUS_H                        0000045A R  D  06        F_NEGATE_H                       00000092 R  D  06        
+F_FROM_R                         00000147 R  D  05        F_OR                             00000262 R  D  05        
+F_FROM_R_E                       0000014A R  D  05        F_OR_E                           00000265 R  D  05        
+F_FROM_R_H                       000000D9 R  D  06        F_OR_H                           00000209 R  D  06        
+F_FSIN                           00000632 R  D  05        F_OUTPOP                         00000203 R  D  05        
+F_FSIN_H                         00000543 R  D  06        F_OUTPOP_H                       000001AE R  D  06        
+F_FTIMES                         000004EA R  D  05        F_OUTPUT                         0000024C R  D  05        
+F_FTIMES_E                       000004ED R  D  05        F_OUTPUT_H                       000001C1 R  D  06        
+F_FTIMES_H                       00000478 R  D  06        F_OVER                           000000E5 R  D  05        
+F_FTOI                           000004F6 R  D  05        F_OVER_E                         000000E9 R  D  05        
+F_FTOI_E                         000004F9 R  D  05        F_OVER_H                         00000000 R  D  06        
+F_FTOI_H                         000004A7 R  D  06        F_PAREN                          000001C2 R  D  05        
+F_GT                             000002A1 R  D  05        F_PAREN_H                        0000017D R  D  06        
+F_GT_H                           00000263 R  D  06        F_PDOTQ                          000005B7 R  D  05        
+F_HALT                           000001DA R  D  05        F_PDOTQ_H                        00000504 R  D  06        
+F_HALT_H                         0000019D R  D  06        F_PICK                           0000015F R  D  05        
+F_HERE                           00000140 R  D  05        F_PICK_H                         000000F9 R  D  06        
+F_HERE_E                         00000143 R  D  05        F_PLOOP                          0000042D R  D  05        
+F_HERE_H                         000000B9 R  D  06        F_PLOOP_H                        000003AC R  D  06        
+F_HEX                            0000065E R  D  05        F_PLUS                           000004FA R  D  05        
+F_HEX_H                          00000579 R  D  06        F_PLUS_E                         000004FD R  D  05        
+F_I                              000003C3 R  D  05        F_PLUS_H                         000004B8 R  D  06        
+F_IF                             000002D4 R  D  05        F_REPEAT                         00000356 R  D  05        
+F_IF_H                           000002C3 R  D  06        F_REPEAT_H                       00000319 R  D  06        
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  35
+Symbol table                                                              5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+F_ROT                            0000016F R  D  05        IUNITS                           000027F8 R  D  02        
+F_ROT_H                          00000127 R  D  06        JSB_HEADER                     = 00009F16    D            
+F_SEMI                           000004A9 R  D  05        LASTWORD                       = 000005AC R  D  06        
+F_SEMI_H                         00000412 R  D  06        LATEST                           0000379C R  D  02        
+F_SIN                            000005C9 R  D  05        LIB$GET_FOREIGN                  ********   X   05        
+F_SIN_H                          00000523 R  D  06        LINSIZ                         = 00000084    D            
+F_STATE                          0000066E R  D  05        LIT_HEADER                     = 00008FD0    D            
+F_STATE_H                        0000059A R  D  06        LIT_TAILER                     = 0000007B    D            
+F_STORE                          0000045A R  D  05        LOOKUP                           0000087D R  D  05        
+F_STORE_E                        00000460 R  D  05        LOOP_MSG                         0000027D R  D  04        
+F_STORE_H                        000003CC R  D  06        LOWER                            000008C1 R  D  05        
+F_SWAP                           000002C3 R  D  05        MAXDEP                         = 00000008    D            
+F_SWAP_E                         000002CF R  D  05        MKHEAD                           000009E0 R  D  05        
+F_SWAP_H                         000002A2 R  D  06        MRKBEGIN                       = 00000004    D            
+F_TIMES                          000004DA R  D  05        MRKCOLON                       = 00000001    D            
+F_TIMES_E                        000004DD R  D  05        MRKDO                          = 00000003    D            
+F_TIMES_H                        0000043E R  D  06        MRKIF                          = 00000002    D            
+F_TO_R                           00000144 R  D  05        MRKWHILE                       = 00000005    D            
+F_TO_R_E                         00000146 R  D  05        NL                             = 0000000A    D            
+F_TO_R_H                         000000CA R  D  06        ODEEP                            00000984 R  D  02        
+F_TRUE                           0000025D R  D  05        OFABT                            00000094 R  D  04        
+F_TRUE_E                         00000261 R  D  05        ONESHOT                          0000050C R  D  02        
+F_TRUE_H                         000001F8 R  D  06        OPSDEP                         = 00000100    D            
+F_TWODROP                        000002BB R  D  05        OPSTK                            00000524 R  D  02        
+F_TWODROP_E                      000002BE R  D  05        OPSTK_END                        00000924 R  D  02        
+F_TWODROP_H                      0000027F R  D  06        ORABT                            000000E4 R  D  04        
+F_TWODUP                         00000199 R  D  05        OSP                              00000980 R  D  02        
+F_TWODUP_H                       0000015A R  D  06        OSTK                             00000960 R  D  02        
+F_TWOSWAP                        000001A9 R  D  05        OUNIT                            00000988 R  D  02        
+F_TWOSWAP_H                      0000016B R  D  06        OUNITS                           00002FCA R  D  02        
+F_UNTIL                          00000392 R  D  05        OUTOPEN                          00000AEA R  D  05        
+F_UNTIL_H                        0000033E R  D  06        OUTOP_MSG                        00000158 R  D  04        
+F_VARIABLE                       00000461 R  D  05        PLOOP_MSG                        0000029C R  D  04        
+F_VARIABLE_H                     000003DA R  D  06        PRIMITIVE                      = 00000008    D            
+F_WHILE                          0000032E R  D  05        PRINT_INT                        000007E0 R  D  05        
+F_WHILE_H                        00000307 R  D  06        PRIORITY                       = 00000004    D            
+GETLIN                           000008E6 R  D  05        PRNBUF                           00000508 R  D  02        
+GETW                             000009A4 R  D  05        PRSTR                            00000828 R  D  05        
+HALT_LEN                       = 00000007    D            PUTCH                            00000836 R  D  05        
+HALT_TEXT                        00000128 R  D  04        RAB$B_PSZ                      = 00000034    D            
+IBUFS                            0000098C R  D  02        RAB$B_RAC                      = 0000001E    D            
+IBUFX                            0000259A R  D  02        RAB$C_BID                      = 00000001    D            
+IDEEP                            00000958 R  D  02        RAB$C_BLN                      = 00000044    D            
+IFABT                            00000000 R  D  04        RAB$C_SEQ                      = 00000000    D            
+INLINE                           00000004 R  D  02        RAB$L_CTX                      = 00000018    D            
+INLMAX                         = 00000400    D            RAB$L_FAB                      = 0000003C    D            
+INLSIZ                         = 00000402    D            RAB$L_PBF                      = 00000030    D            
+INOPEN                           00000A26 R  D  05        RAB$L_RBF                      = 00000028    D            
+INOP_MSG                         00000175 R  D  04        RAB$L_ROP                      = 00000004    D            
+INTERP                           00000676 R  D  05        RAB$V_PMT                      = 0000001E    D            
+INTERP_H                         000005AC R  D  06        RAB$W_RSZ                      = 00000022    D            
+IRABT                            00000050 R  D  04        REPEAT_MSG                       00000213 R  D  04        
+ISDIG                            000007AF R  D  05        RSB_HEADER                     = 00000005    D            
+ISP                              00000954 R  D  02        SEMI_MSG                         000002BC R  D  04        
+ISTK                             00000934 R  D  02        SETNAME                          00000A07 R  D  05        
+ISWHITE                          000008D1 R  D  05        SIGN                             00000509 R  D  02        
+IUNIT                            0000095C R  D  02        SINTAB                           000002FF R  D  04        
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  36
+Symbol table                                                              5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+SKIPT                          = 06128BD5    D            
+SPC                            = 00000020    D            
+SP_HOLD                          00000000 R  D  02        
+SS$_ABORT                      = 0000002C    D            
+SS$_NORMAL                     = 00000001    D            
+STATE                            00000520 R  D  02        
+SYS$CLOSE                        ********  GX   05        
+SYS$CONNECT                      ********  GX   05        
+SYS$CREATE                       ********  GX   05        
+SYS$GET                          ********  GX   05        
+SYS$OPEN                         ********  GX   05        
+SYS$PUT                          ********  GX   05        
+TAB                            = 00000009    D            
+TTIN                             000025B8 R  D  02        
+TTOUT                            000026D8 R  D  02        
+UB_BLN                         = 0000011E    D            
+UB_BUF                         = 00000098    D            
+UB_FAB                         = 00000000    D            
+UB_LEN                         = 00000094    D            
+UB_RAB                         = 00000050    D            
+UNTIL_MSG                        0000025A R  D  04        
+WHILE_MSG                        000001F0 R  D  04        
+WRD                              00000406 R  D  02        
+WRDMAX                         = 00000050    D            
+XDO1                           = D07E8BD0    D            
+XDO2                           = 00007E8B    D            
+XDO3                           = D0508ED0    D            
+XDO4                           = 51D1518E    D            
+XDO5                           = 17061950    D            
+XDO6                           = 0000009F    D            
+XDO7                           = D07E51D0    D            
+XDO8                           = 00007E50    D            
+XLOOP1                         = 1704AED6    D            
+XLOOP2                         = 0000009F    D            
+XPLOOP1                        = 04AE8BC0    D            
+XPLOOP2                        = 00009F17    D            
+XRECURSIVE                     = 00000001    D            
+XSMUDGED                       = 00000002    D            
+XVAR1                          = 00008FD0    D            
+XVAR2                          = 0000007B    D            
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+$ABS$                           00000000  (    0.)  01 (  1.)  NOPIC   USR   CON   ABS   LCL NOSHR   EXE   RD    WRT NOVEC BYTE  
+FORTH_DATA                      000037A4  (14244.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+$RMSNAM                         0000001B  (   27.)  03 (  3.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD    WRT NOVEC BYTE  
+FORTH_TEXT                      0000046B  ( 1131.)  04 (  4.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD  NOWRT NOVEC LONG  
+FORTH_CODE                      00000BCB  ( 3019.)  05 (  5.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+FORTH_WORDS                     000005BF  ( 1471.)  06 (  6.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD  NOWRT NOVEC LONG  
+FORTH_DICT                      00007530  (30000.)  07 (  7.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD    WRT NOVEC PAGE  
+FORTH                           Vforth, a subroutine-threaded FORTH       5-OCT-2026 06:04:18  VAX MACRO V5.4-3            Page  37
+VAX-11 Macro Run Statistics                                               5-OCT-2026 06:15:15  DUA1:[000000]FORTH.MAR;1          (1)
+
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  455     00:00:00.00    00:00:00.00
+Command processing             1339     00:00:00.01    00:00:00.01
+Pass 1                         1293     00:00:00.21    00:00:00.21
+Symbol table sort                 4     00:00:00.01    00:00:00.01
+Pass 2                          621     00:00:00.04    00:00:00.06
+Symbol table output              52     00:00:00.00    00:00:00.00
+Psect synopsis output             6     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           3815     00:00:00.27    00:00:00.29
+
+The working set limit was 1412 pages.
+159191 bytes (311 pages) of virtual memory were used to buffer the intermediate code.
+There were 90 pages of symbol table space allocated to hold 1420 non-local and 97 local symbols.
+1733 source lines were read in Pass 1, producing 108 object records in Pass 2.
+29 pages of virtual memory were used to define 23 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                       17        
+
+1341 GETS were required to define 17 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/DEBUG FORTH/DIAG/LIST

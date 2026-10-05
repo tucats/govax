@@ -125,6 +125,11 @@ var (
 const (
 	keepImageItem  = 3
 	keepImageFlags = 3
+	// keepImageISD is an image section descriptor's heading: FORTH.ANI
+	// (testdata/mar/dst/vax) pushes one off a page with 3 rows left, and
+	// the fixtures write one with 6 left, so 4 to 6 fit; 4 keeps the
+	// heading with the three lines before its flags (unconfirmed).
+	keepImageISD = 4
 )
 
 // flagList adds a flags label, then a line for each named bit of flags
@@ -265,7 +270,7 @@ func spaceName(addr uint32) string {
 
 // section describes one image section descriptor.
 func (a *imageAnalyzer) section(n int, d ISD) {
-	a.keep(keepImageItem, fmt.Sprintf("\t\t%d)  image section descriptor (%d bytes)", n, d.Size))
+	a.keep(keepImageISD, fmt.Sprintf("\t\t%d)  image section descriptor (%d bytes)", n, d.Size))
 	a.line(fmt.Sprintf("\t\t\tpage count: %d", d.Pages))
 	a.line(fmt.Sprintf("\t\t\tbase virtual address: %%X'%08X' (%s)", d.Address(), spaceName(d.Address())))
 	a.line("\t\t\tpage fault cluster size: " + orDefault(int(d.PFC)))

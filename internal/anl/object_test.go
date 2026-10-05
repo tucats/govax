@@ -20,6 +20,7 @@ var fixtureDirs = []string{
 	"../../testdata/mar/macros/vax",
 	"../../testdata/mar/list/vax",
 	"../../testdata/mar/round/vax",
+	"../../testdata/mar/dst/vax",
 }
 
 // objectFixture is one object and its real analysis.
@@ -65,8 +66,8 @@ func objectFixtures(t *testing.T) []objectFixture {
 		}
 	}
 
-	if len(out) < 54 {
-		t.Fatalf("found %d object fixtures, want at least 54", len(out))
+	if len(out) < 55 {
+		t.Fatalf("found %d object fixtures, want at least 55", len(out))
 	}
 
 	return out
@@ -77,11 +78,12 @@ func objectFixtures(t *testing.T) []objectFixture {
 var pageHeaderRE = regexp.MustCompile("\f\nAnalyze Object File[^\n]*\n[^\n]*\nANALYZ V07-04\n\n")
 
 // pageContent is an analysis's text without its page layout: the page
-// headers and the closing command line removed.
+// headers and the closing command line (ANALYZE/OBJECT, or an
+// abbreviation such as ANAL/OBJ) removed.
 func pageContent(analysis []byte) string {
 	text := pageHeaderRE.ReplaceAllString(string(analysis), "")
 
-	if i := strings.LastIndex(text, "\nANALYZE/OBJECT"); i >= 0 {
+	if i := strings.LastIndex(text, "\nANAL"); i >= 0 {
 		text = text[:i+1]
 	}
 

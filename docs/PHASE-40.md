@@ -299,14 +299,15 @@ Phase 38's object options.
 ## Page layout
 
 Reconstructed from the fixtures' page breaks (subtask 4), and matching all
-29 byte for byte. The geometry is ANALYZE/OBJECT's (docs/PHASE-38.md): a
+30 byte for byte (the 29, and Phase 29's `/DEBUG` FORTH image). The
+geometry is ANALYZE/OBJECT's (docs/PHASE-38.md): a
 5-line page header and 55 lines of report. The fixup section starts a new
 page. Each heading needs room for what follows it (`Line.Keep`):
 
 | Line | Needs | Evidence |
 |---|---|---|
 | `ISD flags:` | 3 | written at row 53, and pushed off a page holding 53: exactly 3 |
-| `N)  image section descriptor` | 3 | written as low as row 50, never pushed: 1 to 6 fit (unconfirmed) |
+| `N)  image section descriptor` | 4 | written as low as row 50, and pushed off a page with 3 rows left (`testdata/mar/dst/vax/forth.ani`): 4 to 6 fit (unconfirmed) |
 | a part's title (`\tImage Activation ...`) | 3 | written as low as row 46, never pushed: 1 to 10 fit (unconfirmed) |
 | `linker flags:`, `Flags:` | 3 | always near a page's top: any fits (unconfirmed) |
 | `n references to image k:` | 3 | always near a page's top: any fits (unconfirmed) |
@@ -428,3 +429,9 @@ fixup section without a section to hold it.
   ANALYZE/IMAGE in `HELP ANALYZE` (`vax.help`); `CLAUDE.md` and
   `PLAN.md`. Checked by hand with `govax analyze --image` on CELLS2.EXE.
   Phase done.
+- 2026-10-05: A follow-up from Phase 29's `/DEBUG` FORTH build
+  (`testdata/mar/dst/vax`): its ANALYZE/IMAGE report pushes an image
+  section descriptor's heading off a page with 3 rows left, so that
+  heading now needs 4 (`keepImageISD`). Both page tests take its
+  `forth.ani` and `forth.anl`, whose closing command lines are
+  abbreviated (`ANAL/IMAGE`), which the tests now allow.
