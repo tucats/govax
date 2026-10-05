@@ -128,7 +128,7 @@ func TestStep_advancesOneInstruction(t *testing.T) {
 		t.Errorf("PC after one step = %#x, want 0x201", got)
 	}
 
-	if !strings.Contains(buf.String(), "Stepped to") {
+	if !strings.Contains(buf.String(), "stepped to") {
 		t.Errorf("output = %q, want a step message", buf.String())
 	}
 
@@ -169,8 +169,12 @@ func TestBreakpoints_addRemoveClear(t *testing.T) {
 // TestExecute_stopsOnAttention's own end-to-end (if inherently
 // timing-dependent) coverage above.
 
-func TestStep_alwaysTracesRegardlessOfConsoleTrace(t *testing.T) {
+// TestStep_tracesOnlyWhenConsoleTraceIsOn: a STEP reports where it landed
+// and nothing else, as the VMS debugger does; SET TRACE adds the console's
+// trace line for each instruction it executes.
+func TestStep_tracesOnlyWhenConsoleTraceIsOn(t *testing.T) {
 	c, buf := newTestConsole(t)
+	noUserStep(c)
 	movR0Program(t, c, 0x200)
 	c.Trace = false
 
@@ -179,8 +183,19 @@ func TestStep_alwaysTracesRegardlessOfConsoleTrace(t *testing.T) {
 		t.Fatalf("Step: %v", err)
 	}
 
-	out := buf.String()
-	if !strings.Contains(out, "[KSP ") || !strings.Contains(out, "MOVL") {
-		t.Errorf("output = %q, want STEP to trace even though Console.Trace is off", out)
+	if out := buf.String(); strings.Contains(out, "[KSP ") || !strings.HasPrefix(out, "stepped to ") {
+		t.Errorf("output = %q, want only the stepped-to line", out)
+	}
+
+	buf.Reset()
+
+	c.Trace = true
+
+	if err := c.Step(nil, "INTO"); err != nil {
+		t.Fatalf("Step: %v", err)
+	}
+
+	if out := buf.String(); !strings.Contains(out, "[KSP ") {
+		t.Errorf("output = %q, want the trace line with SET TRACE", out)
 	}
 }

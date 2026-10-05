@@ -113,6 +113,10 @@ type Breakpoint struct {
 	After int
 	hits  int
 
+	// fired is set when this breakpoint was the one that stopped a run.
+	// A STEP's own breakpoints use it to tell their stop from another's.
+	fired bool
+
 	// When is the text of a WHEN (condition) clause, parentheses and all,
 	// as SHOW BREAK shows it; the breakpoint stops only when the
 	// condition is true. Do is a DO (commands) clause, run each time the
@@ -266,6 +270,12 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 			}
 		}
 
+		// A STEP/RETURN waiting for this RET fires before it runs, even on
+		// the run's first instruction.
+		if d.returnDue() {
+			return runStopped, nil
+		}
+
 		first = false
 		finish := trace(pc)
 
@@ -384,7 +394,10 @@ func (d *Debugger) callRun(addr uint32, step bool, args []uint32) (runOutcome, e
 	c.Engine.BeginRun()
 
 	if step {
-		return d.stepInto()
+		// One instruction, into the routine, as STEP/INSTRUCTION/INTO would.
+		outcome, _, err := d.stepUnit(stepRequest{mode: StepInto, byInstruction: true, count: 1})
+
+		return outcome, err
 	}
 
 	return d.runLoop(false, func(pc uint32) func() { return c.TraceStep(pc, false) })

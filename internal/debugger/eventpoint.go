@@ -129,6 +129,8 @@ func (d *Debugger) breakpointHit(pc uint32) bool {
 		return false
 	}
 
+	stopped.fired = true
+
 	if text := d.stopMessage(stopped, pc); text != "" {
 		d.Console.Printf("%s\n", text)
 	}
@@ -184,6 +186,10 @@ func (d *Debugger) reached(bp *Breakpoint, pc uint32, peek func() *cpu.Instructi
 //
 // It is empty for the debugger's own silent breakpoints.
 func (d *Debugger) stopMessage(bp *Breakpoint, pc uint32) string {
+	if bp.Quiet {
+		return ""
+	}
+
 	where := d.Console.LocationText(pc)
 
 	switch bp.Kind {
@@ -209,9 +215,6 @@ func (d *Debugger) stopMessage(bp *Breakpoint, pc uint32) string {
 	switch {
 	case bp.Quiet:
 		return ""
-
-	case bp.Step:
-		return "Stepped to " + where
 
 	case bp.Routine:
 		return "break at routine " + bp.Name
@@ -294,7 +297,7 @@ func (d *Debugger) signalBreak() bool {
 		d.Console.Printf("%s\n", text)
 	}
 
-	d.Console.Printf("break on exception %s %s\n", where, d.Console.LocationText(u.PC))
+	d.Console.Printf("break on exception %s %s\n", where, d.exceptionLocation(u.PC))
 
 	if bp.Temporary {
 		d.removeBreakpointPtr(bp)

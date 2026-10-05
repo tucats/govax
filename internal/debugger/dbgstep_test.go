@@ -79,10 +79,7 @@ func TestStepSymbolic(t *testing.T) {
 		t.Errorf("RUN/DEBUG:\n%s", run)
 	}
 
-	want := `DBGDIS\START\%LINE 42:  MOVL     S^#0A,R2
-                     R2:  0000000A  10
-Stepped to DBGDIS\START\%LINE 43
-`
+	want := "stepped to DBGDIS\\START\\%LINE 43\n"
 	if got := withoutStack(dispatchOutput(t, d, buf, "STEP")); got != want {
 		t.Errorf("STEP:\ngot:\n%s\nwant:\n%s", got, want)
 	}
@@ -93,11 +90,11 @@ Stepped to DBGDIS\START\%LINE 43
 		t.Errorf("GO: got %q", got)
 	}
 
-	// STEP into a JSB subroutine lands on its label.
-	want = `DBGSUB\SUB2\%LINE 20:   JSB      L^DBGSUB\SUB2\SUBJSB
-Stepped to DBGSUB\SUB2\SUBJSB
-`
-	if got := withoutStack(dispatchOutput(t, d, buf, "STEP")); got != want {
+	// STEP/INTO a JSB subroutine lands on its label.
+	dispatchOutput(t, d, buf, "SET STEP INSTRUCTION")
+
+	want = "stepped to DBGSUB\\SUB2\\SUBJSB: INCL     L^DBGSUB\\SUBDATA\n"
+	if got := withoutStack(dispatchOutput(t, d, buf, "STEP/INTO")); got != want {
 		t.Errorf("STEP into SUBJSB:\ngot:\n%s\nwant:\n%s", got, want)
 	}
 }
@@ -108,10 +105,7 @@ Stepped to DBGSUB\SUB2\SUBJSB
 func TestStepTraceback(t *testing.T) {
 	d, buf, _ := stepImage(t, "dbgtrc.exe")
 
-	want := `DBGDIS\START+2: MOVL     S^#0A,R2
-                     R2:  0000000A  10
-Stepped to DBGDIS\START+5
-`
+	want := "stepped to DBGDIS\\START+5: MOVL     I^#000003E8,R3\n"
 	if got := withoutStack(dispatchOutput(t, d, buf, "STEP")); got != want {
 		t.Errorf("STEP:\ngot:\n%s\nwant:\n%s", got, want)
 	}
@@ -138,10 +132,9 @@ func TestStepNoSymbolic(t *testing.T) {
 		t.Errorf("RUN/DEBUG:\n%s", run)
 	}
 
-	want := `00000402: MOVL S^#10,R2
-                     R2:  0000000A  10
-Stepped to 00000405
-`
+	dispatchOutput(t, d, buf, "SET STEP INSTRUCTION")
+
+	want := "stepped to 00000405: MOVL I^#^X000003E8,R3\n"
 	if got := withoutStack(dispatchOutput(t, d, buf, "STEP")); got != want {
 		t.Errorf("STEP:\ngot:\n%s\nwant:\n%s", got, want)
 	}
@@ -155,6 +148,9 @@ Stepped to 00000405
 // where SHOW CALLS is the console's dump too.
 func TestShowCallsFault(t *testing.T) {
 	d, buf, _ := stepImage(t, "faillnk.exe")
+
+	dispatchOutput(t, d, buf, "SET STEP INSTRUCTION")
+	dispatchOutput(t, d, buf, "SET STEP INTO")
 
 	for range 4 {
 		dispatchOutput(t, d, buf, "STEP")
@@ -186,7 +182,7 @@ func TestShowCallsFault(t *testing.T) {
 	}
 
 	// The fault sends the PC to the condition dispatcher, in no image.
-	want := "FAILSUB\\SUB2\\%LINE 12:  MOVL     @#00000000,R0\nStepped to 7FFEE118\n"
+	want := "stepped to 7FFEE118: XFC #^X7A\n"
 	if got := withoutStack(dispatchOutput(t, d, buf, "STEP")); got != want {
 		t.Errorf("STEP into the fault:\ngot:\n%s\nwant:\n%s", got, want)
 	}

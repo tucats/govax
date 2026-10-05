@@ -39,20 +39,15 @@ func TestStepOver_runsCallToCompletion(t *testing.T) {
 		t.Errorf("PC after STEP/OVER = %#x, want 0x209 (past the CALLS, not inside it)", got)
 	}
 
-	out := buf.String()
-	if !strings.Contains(out, "CALLS") {
-		t.Errorf("output = %q, want the CALLS instruction traced", out)
-	}
-
-	if !strings.Contains(out, "Stepped to") {
-		t.Errorf("output = %q, want a step message", out)
+	if out := buf.String(); out != "stepped to 00000209: RET\n" {
+		t.Errorf("output = %q, want the step's report", out)
 	}
 }
 
 // TestStepOver_silentInsideCalledRoutine confirms STEP/OVER's traversal of
 // the called routine is silent even with Console.Trace on -- vax.c forces
 // its own local disasm flag to zero for exactly this span (see step.go's
-// stepOver doc comment) -- while the CALLS instruction itself is still
+// stepUnit doc comment) -- while the CALLS instruction itself is still
 // traced exactly once.
 func TestStepOver_silentInsideCalledRoutine(t *testing.T) {
 	c, buf := newTestConsole(t)
@@ -85,13 +80,18 @@ func TestStepOver_ordinaryInstructionActsLikeStepInto(t *testing.T) {
 		t.Errorf("PC after STEP/OVER of a NOP = %#x, want 0x201", got)
 	}
 
-	if !strings.Contains(buf.String(), "Stepped to") {
+	if !strings.Contains(buf.String(), "stepped to") {
 		t.Errorf("output = %q, want a step message", buf.String())
 	}
 }
 
-func TestStepReturn_runsUntilCallerResumes(t *testing.T) {
+// TestStepReturn_stopsAtTheFramesRet: STEP/RETURN stops *at* the RET that
+// ends the frame (before it runs), reporting where it was given and where
+// it stopped, and the next STEP executes the RET (docs/PHASE-42.md,
+// subtask 7).
+func TestStepReturn_stopsAtTheFramesRet(t *testing.T) {
 	c, buf := newTestConsole(t)
+	noUserStep(c)
 	loadCallProgram(t, c)
 
 	// Manually execute the CALLS instruction (bypassing Console.Step) to
@@ -111,12 +111,49 @@ func TestStepReturn_runsUntilCallerResumes(t *testing.T) {
 		t.Fatalf("Step/RETURN: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x209 {
-		t.Errorf("PC after STEP/RETURN = %#x, want 0x209 (back in the caller)", got)
+	if got := c.CPU.GPR(vax.PC); got != 0x302 {
+		t.Errorf("PC after STEP/RETURN = %#x, want 0x302 (at the RET, not past it)", got)
 	}
 
-	if !strings.Contains(buf.String(), "Stepped to") {
-		t.Errorf("output = %q, want a step message", buf.String())
+	if got, want := buf.String(), "stepped on return from 00000302 to 00000302: RET\n"; got != want {
+		t.Errorf("output = %q, want %q", got, want)
+	}
+
+	buf.Reset()
+
+	if err := c.Step(nil, "OVER"); err != nil {
+		t.Fatalf("Step: %v", err)
+	}
+
+	if got := c.CPU.GPR(vax.PC); got != 0x209 {
+		t.Errorf("PC after the RET = %#x, want 0x209 (back in the caller)", got)
+	}
+}
+
+// TestStepReturn_boundToItsFrame: a RET of a deeper frame doesn't satisfy
+// the wait; the RET of the frame the command was given in does. Here the
+// command is given in the outer procedure, which calls the nested one.
+func TestStepReturn_boundToItsFrame(t *testing.T) {
+	c, buf := newTestConsole(t)
+	noUserStep(c)
+	loadCallProgram(t, c)
+
+	// Enter the outer procedure as a CALLS would, so it has a frame.
+	if err := c.Engine.CallEntry(0x200); err != nil {
+		t.Fatalf("CallEntry: %v", err)
+	}
+
+	if err := c.Step(nil, "RETURN"); err != nil {
+		t.Fatalf("Step/RETURN: %v", err)
+	}
+
+	// The nested RET at 0x302 went by; the outer RET at 0x209 is the stop.
+	if got := c.CPU.GPR(vax.PC); got != 0x209 {
+		t.Errorf("PC after STEP/RETURN = %#x, want 0x209 (the outer frame's RET)", got)
+	}
+
+	if got, want := buf.String(), "stepped on return from 00000202 to 00000209: RET\n"; got != want {
+		t.Errorf("output = %q, want %q", got, want)
 	}
 }
 
@@ -160,8 +197,8 @@ func TestSetStepMode_andShowStepMode(t *testing.T) {
 
 	db := dbgOf(c)
 
-	if db.StepMode != debugger.StepInto {
-		t.Errorf("StepMode default = %v, want INTO", db.StepMode)
+	if db.StepMode != debugger.StepOver {
+		t.Errorf("StepMode default = %v, want OVER (VMS's default)", db.StepMode)
 	}
 
 	for _, tc := range []struct {
@@ -195,8 +232,8 @@ func TestSetStepMode_andShowStepMode(t *testing.T) {
 		t.Fatalf("ShowStepMode: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "STEP/OVER") {
-		t.Errorf("output = %q, want it to name STEP/OVER", buf.String())
+	if want := "step type: source, nosilent, by line,\n           over routine calls\n"; buf.String() != want {
+		t.Errorf("output = %q, want %q", buf.String(), want)
 	}
 }
 

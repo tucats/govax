@@ -102,12 +102,14 @@ func TestDebuggerStepAtPrompt(t *testing.T) {
 		t.Errorf("PC after STEP = %#x, want 0x201", got)
 	}
 
-	if err := d.Dispatch("STEP 200"); err != nil {
-		t.Fatalf("STEP 200: %v", err)
+	// At DBG> a STEP's parameter is a count, as VMS has it (the console's
+	// STEP takes an address).
+	if err := d.Dispatch("STEP 1"); err != nil {
+		t.Fatalf("STEP 1: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x201 {
-		t.Errorf("PC after STEP 200 = %#x, want 0x201", got)
+	if got := c.CPU.GPR(vax.PC); got != 0x202 {
+		t.Errorf("PC after STEP 1 = %#x, want 0x202", got)
 	}
 
 	if !db.Active() {

@@ -67,6 +67,20 @@ type Activation struct {
 	// the debugger's own default (SET STEP).
 	StepMode string
 
+	// The rest of a STEP's request (the debugger's STEP command; the
+	// console's own STEP leaves them zero). Each empty or nil value means
+	// "the debugger's default" (SET STEP).
+	//
+	// StepUnit is "LINE" or "INSTRUCTION": how far one step goes. StepClass
+	// is "BRANCH" or "CALL": step to the next instruction of that class
+	// instead. StepSilent and StepSource turn the report and the source
+	// line on or off for this STEP. Count is how many steps to take (zero
+	// is one).
+	StepUnit, StepClass string
+	StepSilent          *bool
+	StepSource          *bool
+	Count               int
+
 	// StopAt is where an ActivateImage run first stops: the main routine's
 	// first instruction after its entry mask (a VAX routine begins with a
 	// 16-bit mask saying which registers it saves, which isn't code).

@@ -11,6 +11,7 @@
 //                          far: EXIT, QUIT, HELP, and @ (docs/PHASE-42.md,
 //                          subtask 3).
 //              10/05/26    Added GO, CALL, and STEP (subtask 4).
+//              10/05/26    STEP as VMS's (subtask 7).
 //
 
 $HELP
@@ -88,17 +89,35 @@ $QUIT
     QUIT
 
 $STEP
-  Executes one step of the program and stops again.
+  Executes one or more steps of the program and stops again. A step is
+  one source line, or one instruction, as SET STEP says.
 
   Format:
 
-    STEP[/INTO|/OVER|/RETURN] [address]
+    STEP[/qualifier...] [count]
 
-  /INTO (also /IN and /INSTRUCTION) executes one instruction.
+  count is the number of steps to take (one if none is given); only where
+  the last one ends is reported.
 
-  /OVER does the same, but a call (CALLS, CALLG, JSB, BSBB, BSBW, or a
-  change-mode instruction) runs to its end, and the step stops after it.
+  /LINE (the default) steps to the first instruction of the next source
+  line. /INSTRUCTION steps one instruction. Where the program has no line
+  numbers, a step is one instruction either way.
 
-  /RETURN runs until the current routine returns to its caller.
+  /OVER (the default) runs a call (CALLS, CALLG, JSB, BSBB, BSBW, or a
+  change-mode instruction) to its end, and the step stops after it. /INTO
+  (also /IN) follows the call into the routine.
 
-  With no qualifier, STEP uses the mode SET STEP chose.
+  /RETURN runs until the RET that ends the routine's call frame is about
+  to execute. The wait belongs to that frame: a deeper call's RET doesn't
+  end it, and it stays in force across breakpoints and other STEPs until
+  the RET is reached.
+
+  /BRANCH and /CALL run until the next branch or call instruction is about
+  to execute.
+
+  /SILENT reports nothing. /NOSILENT (the default) reports where the
+  step stopped. /[NO]SOURCE chooses whether the source line is shown with
+  it.
+
+  With a qualifier left out, STEP uses what SET STEP chose.
+

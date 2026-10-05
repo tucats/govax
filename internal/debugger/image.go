@@ -50,6 +50,7 @@ func (d *Debugger) startImage(a console.Activation) (runOutcome, error) {
 
 	d.imageDebug = true
 	d.imageExited = false
+	d.pendingReturn = nil
 
 	// The program stops at its first instruction without a message: this
 	// breakpoint is the debugger's own, not one the user set.
@@ -107,7 +108,7 @@ func (d *Debugger) unhandledBreak() bool {
 		where = "preceding"
 	}
 
-	d.Console.Printf("break on unhandled exception %s %s\n", where, d.Console.LocationText(u.PC))
+	d.Console.Printf("break on unhandled exception %s %s\n", where, d.exceptionLocation(u.PC))
 
 	return true
 }
@@ -134,6 +135,9 @@ func (d *Debugger) imageExit(err error) (ok bool) {
 	d.imageDebug = false
 	d.imageExited = true
 
+	// A STEP/RETURN waiting for a frame of the image is moot now.
+	d.pendingReturn = nil
+
 	return true
 }
 
@@ -147,4 +151,20 @@ func (d *Debugger) requireProgram() error {
 	}
 
 	return nil
+}
+
+// exceptionLocation is where a break on an exception happened. While steps
+// are by instruction (SET STEP INSTRUCTION) VMS adds the instruction there
+// ("... preceding DBGCMD\START\%LINE 48: PUSHAQ   L^00000230"); by line it
+// doesn't. The one probe that shows it (step.dlg) was by instruction, and
+// no probe of a break at an address was, so the rule is applied to the
+// exception breaks alone (unconfirmed for the others).
+func (d *Debugger) exceptionLocation(pc uint32) string {
+	where := d.Console.LocationText(pc)
+
+	if d.stepDefaults.byInstruction {
+		where += ": " + d.Console.InstructionText(pc)
+	}
+
+	return where
 }

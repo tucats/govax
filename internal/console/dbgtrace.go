@@ -78,3 +78,53 @@ func (c *Console) symbolicTraceLine(pc uint32) (text string, ok bool, err error)
 
 	return debuggerLine(loc, dec.Format(format)), true, nil
 }
+
+// InstructionText is the instruction at pc as the debugger words it after
+// a location in a STEP report: "MULL2    R2,R0", with the mnemonic padded
+// to eight columns, and symbolic names where pc is inside an image that
+// has a debug symbol table. Where it isn't, the text is the console's own
+// disassembly. An instruction that can't be decoded is "<unreadable>".
+func (c *Console) InstructionText(pc uint32) string {
+	if _, names, ok := c.symbolicLocation(pc); ok {
+		if dec, err := c.decodeAt(memByteReader{c: c}, pc); err == nil {
+			return dec.Format(c.formatOptions(DisassembleOptions{Symbolic: true}, names))
+		}
+	} else if dec, err := c.decodeInstruction(memByteReader{c: c}, pc); err == nil {
+		return dec.String()
+	}
+
+	return "<unreadable>"
+}
+
+// HasLineInfo reports whether pc is inside code that a loaded image's
+// line-number table covers, which is what lets the debugger step by source
+// line there. Anywhere else (the kernel, code assembled at the console) a
+// step can only be by instruction.
+func (c *Console) HasLineInfo(pc uint32) bool {
+	prog := c.debugImageAt(pc)
+	if prog == nil {
+		return false
+	}
+
+	_, _, ok := prog.LineAt(pc)
+
+	return ok
+}
+
+// EnteredRoutine reports whether pc is the first instruction of a routine
+// in a loaded image's debug symbol table that starts with an entry mask (one
+// called by CALLS or CALLG): the address just past the mask, where a call
+// lands. It returns the routine's path name (DBGCMD\FACT).
+func (c *Console) EnteredRoutine(pc uint32) (string, bool) {
+	prog := c.debugImageAt(pc)
+	if prog == nil || pc < 2 {
+		return "", false
+	}
+
+	r, _, ok := prog.RoutineAt(pc)
+	if !ok || r.NoCall || r.Address+2 != pc {
+		return "", false
+	}
+
+	return c.locationText(r.Address), true
+}

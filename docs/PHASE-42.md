@@ -1207,3 +1207,82 @@ the debugger's commands share the one list.
   new text ("break at", "no breakpoints are set", `breakpoint on fault`).
 - `go build`, `go vet`, `go test ./...` clean; golangci-lint reports
   nothing in the changed files.
+
+### 2026-10-05 — Subtask 7: STEP as VMS's
+
+`STEP`, `SET STEP`, and `SHOW STEP` are the debugger's commands now
+(`internal/debugger/step.go`, the `step`/`set`/`show` verbs in `debug.dcl`),
+with the output of `step.dlg` and `dbgdis.dlg`. The console's own `STEP`,
+`SET STEP`, and `SHOW STEP_MODE` still work at `VAX>` (subtask 14 removes
+them) and reach the same code.
+
+- **Three choices, not one mode.** The unit (`/LINE`, the default, or
+  `/INSTRUCTION`), what to do about calls (`/OVER`, the default, `/INTO`
+  or `/IN`, `/RETURN`), and the report (`/[NO]SILENT`, `/[NO]SOURCE`);
+  `/BRANCH` and `/CALL` run to the next instruction of the class. SET STEP
+  takes the same keywords, several at once (`SET STEP INSTRUCTION,INTO`),
+  and SHOW STEP prints the two-line form. **The defaults are VMS's now**
+  (line, over), where `StepMode` used to default to INTO and
+  `/INSTRUCTION` was a synonym for INTO. `STEP n` (the debugger's
+  parameter is a count; the console's `STEP address` is unchanged) reports
+  only where the last step ends. Of `/INTO`, `/OVER`, `/RETURN` the last
+  typed wins (`lastCallMode` reads the order from the command line, since
+  the grammar result doesn't keep it).
+- **Reports.** `stepped to LOC` (by line), `stepped to LOC: INSTR` (by
+  instruction, with `Console.InstructionText`: the mnemonic padded to 8),
+  `stepped to routine R` (the PC is just past a routine's entry mask), and
+  `stepped on return from X to Y: RET`. A stop that isn't the step's (a
+  break, an unhandled exception, the program ending) says what it always
+  did and ends the whole command. **STEP no longer shows the trace line
+  for each instruction** (VMS doesn't); `SET TRACE` still does, and
+  Decision 3's `SET MODE REGISTERS` is to bring back the register lines.
+- **Line stepping** executes until the PC is at the start of a line in
+  the line table (`Console.LineStart`). Where the PC has no line table
+  (the kernel, console-assembled code) a step is by instruction. A line step
+  that began in code with lines and leaves it (into a library routine, or
+  off START's RET into the image driver) carries on until it is back in
+  some or the program ends, so stepping off the last RET reaches
+  `%DEBUG-I-EXITSTATUS`. **Unconfirmed:** a RET or RSB ends a line step
+  at once, in the middle of the caller's line.
+- **STEP/OVER** is as before: a call-like instruction (`BSBx`, `JSB`,
+  `CALLG`, `CALLS`, `CHMx`) runs silently to the instruction after it, not
+  bound to the frame (bug 4 wasn't a bug). Interrupted by a break it ends,
+  as before (unconfirmed for VMS).
+- **STEP/RETURN copies VMS's** (`pendingReturn`): bound to FP when the
+  command was given, it fires when a RET is about to run with FP equal to
+  that frame (`returnDue`, checked before every instruction by `runLoop` and
+  `stepOne`), so a deeper call's RET and a JSB subroutine's RSB pass. It
+  stays pending across breaks, exception breaks, and other commands, and
+  a plain STEP that begins at the RET reports it without executing the
+  RET (`step.dlg`'s STEP after `stepped to ... LAST: RET`). `endStep` no
+  longer touches it. **Unconfirmed rules:** a second STEP/RETURN replaces
+  a pending one; GO fires it as STEP does; it is dropped when FP moves
+  above the frame (an unwind) and when the image exits or a new one runs.
+  A frame whose saved PC can't be read, or no frame at all, is still
+  `%CLI-F-NOFRAMES`/the memory error.
+- **Step breakpoints.** A STEP's own breakpoints (the OVER target, and
+  the class breakpoints `/BRANCH` and `/CALL` use) are `Quiet` and
+  `Step`, are removed when they fire, and set `Breakpoint.fired`, which is
+  how the STEP knows its breakpoint, not a user's, stopped the run. Where a
+  user breakpoint stops the run first, only its message is shown. "Stepped
+  to" as a breakpoint message is gone.
+- **Exception breaks name the instruction when steps are by
+  instruction** (`exceptionLocation`): `step.dlg`'s `break on unhandled
+  exception preceding DBGCMD\START\%LINE 48: PUSHAQ   L^00000230` was in
+  that mode, and every other log's break was in the default mode and has no
+  instruction. Applied to exception breaks only; unconfirmed for the rest.
+- **Not done here:** the source line after a step or break and
+  `/[NO]SOURCE`'s effect (subtask 8), and `/EXCEPTION` for STEP (not in the
+  plan). `SHOW CALLS` and `EXAMINE`, which `step.dlg` runs between the
+  steps, aren't debugger commands yet, so `TestStep*` in `stepcmd_test.go`
+  check the steps' own lines of the log.
+- **Tests.** `stepcmd_test.go` replays `step.dlg` on the probe's DBGCMD
+  image (defaults and units, a count, into a routine, STEP/OVER of the
+  recursive call, STEP/RETURN and its stop at the frame's RET, BRANCH and
+  CALL, the pending return across the unhandled-exception break, /SILENT,
+  SET/SHOW STEP, last-mode-wins, a break inside a stepped-over call).
+  `step_test.go` adds STEP/RETURN at the RET and its frame binding. Older
+  tests changed only where the output did ("stepped to", no trace line, the
+  defaults, `STEP 1` at `DBG>`).
+- `go build`, `go vet`, `go test ./...` clean; golangci-lint reports nothing
+  in `internal/debugger` or `internal/console`.

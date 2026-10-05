@@ -6,7 +6,6 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/dcl"
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // Prompt is what the front end shows while a debugger session is active,
@@ -39,10 +38,17 @@ type Debugger struct {
 	// breakpoint_list either (instbreak.go).
 	InstructionBreakpoints map[*cpu.Instruction]bool
 
-	// StepMode is STEP's default mode (SET STEP, SHOW STEP_MODE), the Go
-	// equivalent of vax.console.stepmode. Its zero value, StepInto, is
-	// initialization.c's own startup default.
+	// StepMode is what STEP does about routine calls by default (SET STEP
+	// INTO, OVER, or RETURN). New sets it to the VMS default, StepOver.
 	StepMode StepMode
+
+	// stepDefaults are SET STEP's other defaults: the unit (line or
+	// instruction), silent, and source (step.go).
+	stepDefaults stepSettings
+
+	// pendingReturn is a STEP/RETURN still waiting for the RET it was
+	// given for (step.go), or nil.
+	pendingReturn *pendingReturn
 
 	// running counts the runs in progress. It is more than one when a run
 	// starts another from inside itself: the console's condition handling
@@ -84,7 +90,7 @@ type Debugger struct {
 // (parsed from debug.dcl) and its HELP command reading help (parsed from
 // debug.help; nil is allowed, and HELP then says there is none).
 func New(c *console.Console, g *dcl.Grammar, help *console.Help) *Debugger {
-	d := &Debugger{Console: c}
+	d := &Debugger{Console: c, StepMode: StepOver}
 	d.Dispatcher = newDispatcher(d, g, help)
 	c.OnUnhandled = d.onUnhandled
 	c.OnSignal = d.onSignal
@@ -144,17 +150,13 @@ func (d *Debugger) Start(a console.Activation) error {
 		outcome, err = d.startImage(a)
 
 	case console.ActivateStep:
-		mode := d.StepMode
+		var req stepRequest
 
-		if a.StepMode != "" {
-			var ok bool
-
-			if mode, ok = parseStepModeWord(a.StepMode); !ok {
-				return vmserrors.New(vmserrors.CLI_BADQUALIFIER, a.StepMode)
-			}
+		if req, err = d.buildStepRequest(a); err != nil {
+			return err
 		}
 
-		outcome, err = d.stepRun(a.Addr, mode)
+		outcome, err = d.stepRun(a.Addr, req)
 	}
 
 	// A run started inside another one (a condition handler) is a

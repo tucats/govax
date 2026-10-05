@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/dcl"
@@ -18,6 +19,10 @@ type Dispatcher struct {
 	Debugger *Debugger
 	Grammar  *dcl.Grammar
 	Help     *console.Help
+
+	// line is the command line being run, which a handler may need for
+	// what the grammar's result doesn't keep (the order of qualifiers).
+	line string
 }
 
 // newDispatcher returns a Dispatcher for d with every command this
@@ -78,25 +83,9 @@ func (d *Dispatcher) bind() {
 		})
 	})
 
-	g.Bind("STEP", func(id int64, r *dcl.Result) error {
-		mode := ""
+	g.Bind("STEP", func(id int64, r *dcl.Result) error { return d.step(r) })
 
-		switch {
-		case r.Present("INTO"):
-			mode = "INTO"
-		case r.Present("OVER"):
-			mode = "OVER"
-		case r.Present("RETURN"):
-			mode = "RETURN"
-		}
-
-		addr, err := d.optionalAddress(r, "ADDRESS")
-		if err != nil {
-			return err
-		}
-
-		return d.Debugger.Start(console.Activation{Kind: console.ActivateStep, Addr: addr, StepMode: mode})
-	})
+	d.bindSetStep()
 
 	// @file reads debugger commands from a file. Each line goes through
 	// the console dispatcher's routing, not straight back here: if one of
@@ -121,6 +110,8 @@ func (d *Dispatcher) Dispatch(line string) error {
 	if line == "" || strings.HasPrefix(line, "!") {
 		return nil
 	}
+
+	d.line = line
 
 	r, err := d.Grammar.Parse(line)
 	if err != nil {
@@ -225,4 +216,81 @@ func (d *Dispatcher) optionalAddress(r *dcl.Result, name string) (*uint32, error
 	}
 
 	return &v, nil
+}
+
+// step runs the STEP command: STEP[/qualifiers] [count].
+//
+// The qualifiers fall in groups. /INSTRUCTION and /LINE choose the unit;
+// /INTO (/IN), /OVER, and /RETURN choose what to do about calls, and when
+// more than one of those is given the last one typed wins, as it does on
+// VMS; /BRANCH and /CALL step to the next instruction of that class;
+// /SILENT and /SOURCE (each negatable) choose the report. A qualifier not
+// given leaves SET STEP's default.
+func (d *Dispatcher) step(r *dcl.Result) error {
+	a := console.Activation{Kind: console.ActivateStep}
+
+	switch {
+	case r.Present("INSTRUCTION"):
+		a.StepUnit = "INSTRUCTION"
+	case r.Present("LINE"):
+		a.StepUnit = "LINE"
+	}
+
+	a.StepMode = lastCallMode(d.line)
+
+	switch {
+	case r.Present("BRANCH"):
+		a.StepClass = "BRANCH"
+	case r.Present("CALL"):
+		a.StepClass = "CALL"
+	}
+
+	if r.Present("SILENT") {
+		silent := !r.Negated("SILENT")
+		a.StepSilent = &silent
+	}
+
+	if r.Present("SOURCE") {
+		source := !r.Negated("SOURCE")
+		a.StepSource = &source
+	}
+
+	if r.Present("COUNT") {
+		n, err := d.Debugger.Console.EvalWhole(r.String("COUNT"))
+		if err != nil {
+			return err
+		}
+
+		a.Count = int(n)
+	}
+
+	return d.Debugger.Start(a)
+}
+
+// lastCallMode finds which of /INTO (/IN), /OVER, and /RETURN comes last in
+// a command line, and returns its name, or "" if none is there. The
+// grammar only says which qualifiers were given, not in what order, and
+// VMS lets the last one win (STEP/INTO/OVER is STEP/OVER).
+func lastCallMode(line string) string {
+	mode := ""
+
+	for _, word := range strings.Split(line, "/")[1:] {
+		end := strings.IndexFunc(word, func(r rune) bool { return !unicode.IsLetter(r) })
+		if end < 0 {
+			end = len(word)
+		}
+
+		w := strings.ToUpper(word[:end])
+
+		switch {
+		case w == "IN" || (len(w) >= 3 && strings.HasPrefix("INTO", w)):
+			mode = "INTO"
+		case len(w) >= 2 && strings.HasPrefix("OVER", w):
+			mode = "OVER"
+		case len(w) >= 3 && strings.HasPrefix("RETURN", w):
+			mode = "RETURN"
+		}
+	}
+
+	return mode
 }

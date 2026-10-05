@@ -56,17 +56,28 @@ grammar debugger
         parameter   arguments/id=12             -
                     /type=$expression
 
-    ! STEP[/mode] [address]: /INTO (also /IN, /INSTRUCTION), /OVER, or
-    ! /RETURN, defaulting to SET STEP's mode.
+    ! STEP[/qualifiers] [count] takes count steps (one if none is given).
+    ! /LINE (the default) and /INSTRUCTION say how far a step goes;
+    ! /OVER (the default), /INTO (/IN), and /RETURN say what to do about
+    ! calls. /BRANCH and /CALL step to the next instruction of that class.
+    ! /SILENT reports nothing, and /SOURCE shows the source line. SET STEP
+    ! changes the defaults. Of /INTO, /OVER, and /RETURN the last one
+    ! typed wins (internal/debugger reads their order from the line).
     verb step/id=13
-        qualifier   into/id=14/nonegatable
+        qualifier   instruction/id=14/nonegatable
+        qualifier   line/id=15/nonegatable
+        qualifier   into/id=16/nonegatable
         qualifier   in/alias=into
-        qualifier   instruction/alias=into
-        qualifier   over/id=15/nonegatable
-        qualifier   return/id=16/nonegatable
-        parameter   address/id=17               -
+        qualifier   over/id=17/nonegatable
+        qualifier   return/id=18/nonegatable
+        qualifier   branch/id=19/nonegatable
+        qualifier   call/id=62/nonegatable
+        qualifier   silent/id=63
+        qualifier   source/id=64
+        parameter   count/id=65                 -
                     /type=$expression
-        disallow    any2(into, over, return)
+        disallow    any2(instruction, line)
+        disallow    any2(branch, call)
     verb st/alias=step
     verb s/alias=step
 
@@ -81,6 +92,7 @@ grammar debugger
     type set_types
         keyword     break               /syntax=set_break/nonegatable
         keyword     breakpoint          /syntax=set_break/nonegatable
+        keyword     step                /syntax=set_step/nonegatable
 
     verb set/id=20
         parameter   what/id=21                  -
@@ -104,11 +116,20 @@ grammar debugger
             parameter   target/id=32            -
                         /type=$rest_of_line
 
-    ! SHOW BREAK lists the breakpoints.
+        ! SET STEP keyword[,keyword...]: LINE or INSTRUCTION; OVER, INTO
+        ! (IN), or RETURN; SILENT or NOSILENT; SOURCE or NOSOURCE.
+        syntax set_step/id=33
+            parameter   words/id=34             -
+                        /type=$rest_of_line     -
+                        /prompt="Step type"
+
+    ! SHOW BREAK lists the breakpoints, and SHOW STEP the defaults STEP
+    ! uses.
     type show_types
         keyword     break               /syntax=show_break
         keyword     breakpoint          /syntax=show_break
         keyword     breakpoints         /syntax=show_break
+        keyword     step                /syntax=show_step
 
     verb show/id=40
         parameter   what/id=41                  -
@@ -116,6 +137,8 @@ grammar debugger
                     /prompt="What"
 
         syntax show_break/id=42
+
+        syntax show_step/id=43
 
     ! CANCEL BREAK [qualifier] [address[,address...]] removes breakpoints:
     ! at the addresses, of a kind (/CALL, /BRANCH, ...), or all of them
