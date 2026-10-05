@@ -4,9 +4,9 @@ A VAX emulator, written in Go
 
 This is a translation (not cross-compile) of the `evax` project on
 [github](https://github.com/tucats/evax), originaly written in C.
-The original C code was written entirely by Tom Cole as a hobby
+The original C code was written by Tom Cole as a hobby
 project starting in the late 90's when `VAX` was still _slightly_
-cool, though Compaq was already working hard to replace it with
+cool, though Digital/Compaq were already working hard to replace it with
 the new hot-ness of the `Alpha` architecture.
 
 This port to Go was intiailly completed entirely by Claude Code
@@ -108,30 +108,17 @@ does.
 | `LIBRTL.EXE` (and other shareable images) | `LINK`: routine offsets. `RUN`: the routines themselves | Linking works for every LIBRTL routine. Running one needs the image, or a govax shim. |
 | `STARLET.OLB` | `LINK`: the system library's modules | govax's tables of STARLET's status codes and other definitions (SS$_, RMS$_, IO$_, ...), and its system-service vector. Routines STARLET holds as code (BAS$, MTH$, ...) need the real library. |
 
-govax's tables were captured from VMS 7.3's own files. To add
-definitions they lack, run `internal/vmsdef/gen` against your copies of
-VMS's definition files. It merges what they define into the tables and
-never overwrites an existing value without `-replace`. `-n` shows what
-would change without writing anything:
 
-```sh
-go run ./internal/vmsdef/gen -n -sdl /path/to/iodef.sdl
-go run ./internal/vmsdef/gen -bliss /path/to/ssdef.txt -msg /path/to/sysmsg.txt
-go run ./internal/vmsdef/gen -image /path/to/SMGSHR.EXE -olb /path/to/STARLET.OLB
-```
-
-The tables are Go source, so rebuild govax afterward. Please don't commit
-VMS's files themselves: `reference/vms/`, `testdata/vmslib/`, and
-`testdata/disks/` are gitignored for that purpose.
 
 ## What's next?
 
 With the assembler, skelatal RTL, and image loader all in place, the
 natural next steps are:
 
+- Use TBT and DST records in loaded images to support symbolication
+  of disassembler output.
 - flesh out the skeletal RTL support so more actual images could be
   loaded and run.
-- Listings and traceback records for MACRO (Phase 29).
 - Running programs that use RMS name blocks and XABs: `$PARSE` and
   `$SEARCH` filling a NAM, and `$OPEN`/`$DISPLAY` filling the XABs.
 
