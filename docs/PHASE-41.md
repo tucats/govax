@@ -630,3 +630,44 @@ system services, and the layout of a location longer than 24 columns.
   `TestImagePages` passes), `internal/console/analyze.go`, and
   `internal/link`'s debug test. `TestSymbolTableBlock` checks the IHS
   of four probe images against VMS's ANALYZE/IMAGE.
+
+### 2026-10-05 — Subtask 5, part 2: reading the DST (`internal/dbgsym`)
+
+- **What MACRO's images hold.** A survey of every fixture image's DST:
+  module begin and end (188, 189), routine begin (190, never a routine
+  end: section 5.3), psect (184), label (187), data records (types 4,
+  6–10, 14, 46: the DSC$K_DTYPE codes), source correlation (155), and
+  line numbers (185). No continuation, block, label-or-literal, entry,
+  or fixup records; padding (zeros) after the last module end.
+- **`internal/dbgsym`**: `Read(img, data, base)` (or `ReadDST`) gives a
+  `Program` of `Module`s, each with its `Psects`, `Routines` (sorted by
+  address), `Data` (data symbols and constants, with any embedded
+  descriptor: class, type, length, pointer, array bounds), and a
+  `symtab.Table` of every name with its `Scope`. `base` relocates
+  addresses (not constants). Records it doesn't interpret are counted
+  in `Program.Skipped`: none in any fixture. Line and source records
+  are kept for subtask 6.
+- **Rules from the images and the debugger's SHOW SYMBOL/ADDRESS:**
+  - Routine-begin records come in name order, not address order, and
+    MACRO writes no routine end, so a routine runs to the next routine
+    in its psect or the psect's end (START's size 0x132, LOCALR's 0x10).
+  - Labels come after all the routines; a label is scoped by address to
+    the routine that holds it (`DBGDIS\START\DONE`,
+    `DBGDIS\LOCALR\JSBRTN`), data and psects to the module.
+  - A routine named as its module isn't repeated in a path
+    (`FORTH\F_ABS`, not `FORTH\FORTH\F_ABS`): `Path` and `DisplayScope`
+    write it so, and `Lookup` takes either form.
+  - A data record in descriptor form (value flags 250) has its
+    descriptor at the name's count byte plus the value
+    (`docs/DEBUG-RECORDS.md` 7.6); the data's address is the
+    descriptor's pointer. `.ASCID`'s label is a value-kind-DESC record
+    whose value is the descriptor's address (MSG, 0x232).
+  - The debugger's `SHOW SYMBOL/ADDRESS * IN TRACE` named the routine
+    TRACE, not the module, listing only the routine: not usable as an
+    oracle.
+- **Tests.** `TestSymbolsMatchDebugger`: every symbol in DBGDIS's,
+  GVDBGDIS's, and DBGTRC's DSTs, with its kind, path, address, size, or
+  constant, is the set the VMS debugger listed. `TestForthLabels`
+  (FORTH's F_A* labels), `TestDescriptors`, `TestLookupAndRoutines`
+  (paths, `RoutineAt`, `ModuleAt`, relocation), `TestNoDST`, and
+  `TestReadEveryImage` (21 fixture images with a DST, nothing skipped).
