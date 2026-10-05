@@ -1,0 +1,16 @@
+! EXCEPT.DBG - SET BREAK/EXCEPTION (docs/PHASE-42.md, subtask 1): the
+! break for a condition a handler will handle, STEP from it (into the
+! handler), the break for one no handler handles, and GO from each.
+!
+SET BREAK/EXCEPTION
+SHOW BREAK
+GO
+SHOW CALLS
+EXAMINE/INSTRUCTION .PC
+STEP
+SHOW CALLS
+GO
+SHOW CALLS
+GO
+SHOW CALLS
+GO

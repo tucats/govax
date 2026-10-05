@@ -1,0 +1,35 @@
+! WATCH.DBG - watchpoints (docs/PHASE-42.md, subtask 1): a longword, a
+! byte, and a 16-byte area, each written by a different instruction
+! (MOVL, ADDL2, INCL in a JSB subroutine, MOVB, MOVC3), a temporary
+! watchpoint, a DEPOSIT to a watched location, and how SET, SHOW, and
+! CANCEL WATCH word things.
+!
+SHOW WATCH
+SET WATCH WATCHL
+SET WATCH WATCHB
+SET WATCH BUFFER
+SET WATCH/TEMPORARY RESULT
+SHOW WATCH
+!
+! RESULT (temporary), then WATCHL by ADDL2.
+GO
+SHOW WATCH
+GO
+SHOW CALLS
+!
+! A DEPOSIT doesn't trigger a watchpoint.
+DEPOSIT WATCHL = 5
+EXAMINE WATCHL
+!
+! WATCHB by MOVB, BUFFER by MOVC3, WATCHL by BUMP's INCL.
+GO
+GO
+EXAMINE/ASCII:16 BUFFER
+GO
+SHOW CALLS
+!
+CANCEL WATCH WATCHL
+SHOW WATCH
+CANCEL WATCH/ALL
+SHOW WATCH
+GO

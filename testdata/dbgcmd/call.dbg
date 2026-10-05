@@ -1,0 +1,27 @@
+! CALL.DBG - the debugger's CALL command (docs/PHASE-42.md, subtask 1):
+! arguments by value, the value returned, registers saved and restored,
+! a breakpoint inside a called routine, and a call to a LIBRTL routine.
+!
+EXAMINE R0
+EXAMINE R2
+CALL FACT (%VAL 4)
+CALL FACT (%VAL 1)
+EXAMINE R0
+EXAMINE R2
+CALL HANDLR
+!
+! A breakpoint inside the called routine.
+SET BREAK BACK
+CALL FACT (%VAL 3)
+SHOW CALLS
+GO
+SHOW CALLS
+GO
+CANCEL BREAK/ALL
+!
+! A LIBRTL routine, given MSG's descriptor by address (the default).
+CALL LIB$PUT_OUTPUT (MSG)
+!
+! The program is still at its start.
+EXAMINE/INSTRUCTION .PC
+GO

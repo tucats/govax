@@ -1,0 +1,63 @@
+! STEP.DBG - stepping (docs/PHASE-42.md, subtask 1): the default unit
+! (a line), /INSTRUCTION, /INTO and /OVER, a count, STEP/OVER of a
+! recursive call (which frame it stops in), /RETURN from a routine and
+! from a JSB subroutine, /BRANCH, /CALL, /SILENT, /NOSOURCE, SET STEP's
+! keywords, SHOW STEP after each, and stepping over a signal.
+!
+SHOW STEP
+STEP
+STEP/INSTRUCTION
+!
+! Into FACT, then through it an instruction at a time.
+STEP/INTO
+SHOW CALLS
+SET STEP INSTRUCTION
+SHOW STEP
+STEP
+STEP
+STEP 2
+!
+! At FACT's own CALLS: over the whole recursion, back in this frame.
+EXAMINE/INSTRUCTION .PC
+STEP/OVER
+SHOW CALLS
+EXAMINE R0
+!
+! Out of FACT, then on to the loop.
+STEP/RETURN
+SHOW CALLS
+STEP
+STEP/BRANCH
+STEP/BRANCH
+STEP/CALL
+EXAMINE/INSTRUCTION .PC
+!
+! Into the JSB subroutine and out again.
+SET STEP INTO
+SHOW STEP
+STEP
+SHOW CALLS
+STEP/RETURN
+STEP
+SET STEP OVER
+!
+! Quietly, and without source lines.
+STEP/SILENT
+EXAMINE/INSTRUCTION .PC
+STEP/NOSOURCE
+SET STEP NOSOURCE
+SHOW STEP
+STEP
+SET STEP SOURCE
+SET STEP LINE
+SHOW STEP
+!
+! Over the call that signals and handles a condition, then over the
+! signal no one handles.
+STEP
+STEP
+STEP
+STEP
+STEP
+SHOW CALLS
+GO

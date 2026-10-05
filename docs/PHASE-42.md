@@ -1,7 +1,7 @@
 # Phase 42 — The debugger: its own package, grammar, and prompt
 
-**Status:** planned and reviewed (2026-10-05); the author took every
-recommended decision. No subtask started.
+**Status:** in progress. Planned and reviewed 2026-10-05 (the author
+took every recommended decision). Subtask 1's probe is ready for VMS.
 
 ## Goal
 
@@ -658,3 +658,47 @@ The author took every recommended decision (1 to 9). `vax.init`'s
 `set PC=200` is dropped rather than replaced: a loaded program starts at
 its transfer address, and the assembler's first run starts at X^200.
 Subtask 14 removes the line, and its tests check the assembler's start.
+
+### 2026-10-05 — Subtask 1: the probe, ready for VMS
+
+`testdata/dbgcmd/`, laid out as Phase 41's probe was:
+
+- **`dbgcmd.mar`**: one module with a recursive routine (`FACT`, called
+  as FACT(5), returning to `BACK` at each depth), a three-pass loop of
+  branches, data written by MOVL, ADDL2, INCL, MOVB, and MOVC3, a JSB
+  subroutine, and `SS$_ENDOFFILE` (a warning) signalled twice: once
+  with a frame handler established, and once with none. govax
+  assembles, links, and runs it (`DBGCMD: done`, after
+  `%SYSTEM-W-ENDOFFILE` for the unhandled signal); its listing confirms
+  the addresses the command files assume (`BACK+3` is the RET; DATA at
+  200, CODE at 400).
+- **Nine debugger command files**, one per topic: `break`, `brkcls`
+  (instruction-class breaks), `step`, `watch`, `trace`, `exam`, `call`,
+  `except`, `errors`. The README's table says what each asks.
+- **`dbgcmd.com`** builds the image `/DEBUG`, with its listing, map, and
+  ANALYZE/IMAGE, and runs it under the debugger once per file, each
+  session logged to its own `.dlg`.
+- **`exchange.cmd`** builds `testdata/disks/dbgcmd-exchange.dsk` (label
+  DBGCMDX): checked by running it under govax; the volume is built and
+  ready. **`copyout.cmd`** brings the results back to `vax/`.
+
+No govax image goes on the volume this time. Phase 41 showed that VMS
+reads govax's `LINK/DEBUG` images, and subtask 16's oracle runs VMS's
+own image under govax.
+
+Ctrl/C can't be scripted, so it isn't probed; the manual's description
+(it interrupts the program and returns to `DBG>`) stands for it.
+
+From the *VMS 5.5 Debugger Manual*, notes for later subtasks:
+
+- **MACRO's language expressions** (appendix E.8) use BLISS-style
+  operators: `EQL`, `NEQ`, `GTR`, `GEQ`, `LSS`, `LEQ` and their
+  unsigned `U` forms, `MOD`, `NOT`, `AND`, `OR`, `XOR`, `EQV`, infix
+  `@` for a left shift, and prefix `.` and `@` for contents. Also `[ ]`
+  subscripts, `<p,s,e>` bit fields, and a label followed by a storage
+  directive is an array. Subtasks 6 (`WHEN`), 9, and 10 use these; the
+  probe's `exam.dbg` checks a few.
+- **`CALL`** passes arguments `%ADDR` by default (`%VAL`, `%REF`,
+  `%DESCR` otherwise), and saves and restores the general registers
+  around the call.
+- **SHOW STACK** takes a count (`SHOW STACK [n]`), as SHOW CALLS does.

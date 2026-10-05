@@ -1,0 +1,77 @@
+	.TITLE	DBGCMD	Phase 42 probe: breakpoints, stepping, watching
+	.IDENT	/V1.0/
+
+; A small program for the VMS debugger's run-control commands to work
+; on (docs/PHASE-42.md, subtask 1): a recursive routine (STEP/OVER and
+; STEP/RETURN across recursion, SET BREAK/AFTER), a loop of branches
+; (SET BREAK/BRANCH, /LINE), data written a longword, a byte, and 16
+; bytes at a time (SET WATCH), a JSB subroutine, a condition signalled
+; and handled, and one signalled with no handler (SET BREAK/EXCEPTION).
+; DBGCMD.COM assembles and links it /DEBUG and runs it under the
+; debugger with each .DBG file.
+;
+; It runs to the end: the unhandled signal is a warning, which VMS
+; reports and continues from.
+
+	.EXTERNAL LIB$PUT_OUTPUT, LIB$SIGNAL
+
+SS$_CONTINUE = 1			; a handler's "continue"
+SS$_ENDOFFILE = ^X870			; a warning: %SYSTEM-W-ENDOFFILE
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+WATCHL:	.LONG	0			; a watched longword
+WATCHB:	.BYTE	0			; a watched byte
+	.ALIGN	LONG
+BUFFER:	.BLKB	16			; written 16 bytes at once (MOVC3)
+SOURCE:	.ASCII	/0123456789ABCDEF/
+RESULT:	.LONG	0			; FACT(5)
+COUNT:	.LONG	0			; the loop's counter
+MSG:	.ASCID	/DBGCMD: done/
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	START, ^M<R2,R3>
+	MOVL	#5, R2			; FACT's argument
+	PUSHL	R2
+	CALLS	#1, FACT		; FACT(5), recursively
+	MOVL	R0, RESULT
+	MOVL	#3, R3			; a loop of branches
+LOOP:	INCL	COUNT
+	BLBS	COUNT, ODD
+	ADDL2	#2, WATCHL		; writes the watched longword
+ODD:	SOBGTR	R3, LOOP
+	MOVB	#^X41, WATCHB		; writes the watched byte
+	MOVC3	#16, SOURCE, BUFFER	; writes 16 bytes at once
+	JSB	BUMP			; a JSB subroutine
+	CALLS	#0, CATCH		; signals, and handles it
+	PUSHL	#SS$_ENDOFFILE		; signals with no handler
+	CALLS	#1, G^LIB$SIGNAL
+	PUSHAQ	MSG
+	CALLS	#1, G^LIB$PUT_OUTPUT
+	MOVL	#1, R0
+LAST:	RET
+
+	.ENTRY	FACT, ^M<R2>		; FACT(n) = n!, by recursion
+	MOVL	4(AP), R2
+	CMPL	R2, #1
+	BGTR	RECUR
+	MOVL	#1, R0
+	RET
+RECUR:	SUBL3	#1, R2, -(SP)
+	CALLS	#1, FACT
+BACK:	MULL2	R2, R0			; each FACT call returns here
+	RET
+
+BUMP:	INCL	WATCHL			; a JSB subroutine
+	RSB
+
+	.ENTRY	CATCH, ^M<>
+	MOVAB	HANDLR, (FP)		; establishes HANDLR
+	PUSHL	#SS$_ENDOFFILE
+	CALLS	#1, G^LIB$SIGNAL
+	RET
+
+	.ENTRY	HANDLR, ^M<>		; continues from any condition
+	MOVL	#SS$_CONTINUE, R0
+	RET
+
+	.END	START

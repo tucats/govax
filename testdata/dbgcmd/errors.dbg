@@ -1,0 +1,37 @@
+! ERRORS.DBG - the debugger's messages (docs/PHASE-42.md, subtask 1):
+! unknown symbols, verbs, keywords, and qualifiers; conflicting
+! qualifiers; cancelling what isn't set; DCL commands; bad addresses;
+! what happens at a signal no handler handles with no
+! SET BREAK/EXCEPTION; and commands after the program has exited.
+!
+SET BREAK NOSUCH
+EXAMINE NOSUCH
+CALL NOSUCH
+SET BREAK/CALL START
+SET BREAK/NOSUCHQUAL FACT
+CANCEL BREAK FACT
+CANCEL WATCH WATCHL
+CANCEL TRACE FACT
+FOO
+DIRECTORY
+SHOW DEFAULT
+SET DEFAULT [000000]
+STEP/INTO/OVER
+SET STEP BOGUS
+SET RADIX 7
+EXAMINE/BYTE/WORD WATCHL
+DEPOSIT WATCHL
+EXAMINE 0
+EXAMINE 7FFFFFFF
+!
+! The unhandled signal, then the end of the program.
+GO
+SHOW CALLS
+GO
+!
+! After the program has exited.
+GO
+STEP
+SHOW CALLS
+EXAMINE/INSTRUCTION .PC
+EXAMINE WATCHL

@@ -1,0 +1,65 @@
+! BREAK.DBG - breakpoints at addresses (docs/PHASE-42.md, subtask 1):
+! how SET BREAK, SHOW BREAK, and CANCEL BREAK word things, /AFTER,
+! /TEMPORARY, WHEN, DO, a list of addresses, and a break at an address
+! with no label. DBGCMD.COM runs it with SET LOG and SET OUTPUT
+! LOG,VERIFY.
+!
+! None set yet.
+SHOW BREAK
+!
+! A routine: the break is after its entry mask, at each recursion.
+SET BREAK FACT
+SHOW BREAK
+GO
+SHOW CALLS
+GO
+SHOW CALLS
+CANCEL BREAK FACT
+SHOW BREAK
+!
+! /AFTER:3 - the third time BACK is reached, and every time after.
+SET BREAK/AFTER:3 BACK
+SHOW BREAK
+GO
+SHOW CALLS
+EXAMINE R0
+GO
+EXAMINE R0
+CANCEL BREAK BACK
+!
+! An address with no label of its own (the RET after BACK's MULL2).
+SET BREAK BACK+3
+SHOW BREAK
+GO
+CANCEL BREAK BACK+3
+!
+! A list, and a temporary break.
+SET BREAK LOOP, ODD
+SET BREAK/TEMPORARY LAST
+SHOW BREAK
+GO
+GO
+GO
+CANCEL BREAK LOOP
+SHOW BREAK
+GO
+GO
+CANCEL BREAK ODD
+!
+! WHEN (true, then false) and DO. The GO after HANDLR's break goes on
+! to LAST, unless the debugger stops first at the signal no handler
+! handles.
+SET BREAK BUMP WHEN (.WATCHL EQL 2)
+SET BREAK CATCH WHEN (.WATCHL EQL 99)
+SET BREAK HANDLR DO (EXAMINE R0; SHOW CALLS)
+SHOW BREAK
+GO
+EXAMINE WATCHL
+GO
+GO
+SHOW BREAK
+!
+! LAST's temporary break is gone; the program ends.
+CANCEL BREAK/ALL
+SHOW BREAK
+GO

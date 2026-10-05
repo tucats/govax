@@ -1,0 +1,35 @@
+! TRACE.DBG - tracepoints (docs/PHASE-42.md, subtask 1): every
+! instruction up to a break, a routine through its recursion, a JSB
+! subroutine, every line and branch, and how SET, SHOW, and CANCEL TRACE
+! word things.
+!
+SHOW TRACE
+!
+! Every instruction, up to FACT.
+SET TRACE/INSTRUCTION
+SET BREAK FACT
+SHOW TRACE
+GO
+CANCEL TRACE/INSTRUCTION
+CANCEL BREAK FACT
+!
+! FACT at each recursion, and the JSB subroutine, up to the loop.
+SET TRACE FACT
+SET TRACE BUMP
+SET BREAK LOOP
+SHOW TRACE
+GO
+CANCEL TRACE FACT
+SHOW TRACE
+CANCEL BREAK LOOP
+!
+! Every line and every branch, up to BUMP.
+SET TRACE/LINE
+SET TRACE/BRANCH
+SET BREAK BUMP
+SHOW TRACE
+GO
+CANCEL TRACE/ALL
+SHOW TRACE
+CANCEL BREAK/ALL
+GO
