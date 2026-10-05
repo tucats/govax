@@ -294,6 +294,22 @@ Phase 38's object options.
   No fixture shows it, and govax's LINK doesn't write shareable images yet.
 - `/INTERACTIVE` isn't planned.
 
+## Page layout
+
+Reconstructed from the fixtures' page breaks (subtask 4), and matching all
+29 byte for byte. The geometry is ANALYZE/OBJECT's (docs/PHASE-38.md): a
+5-line page header and 55 lines of report. The fixup section starts a new
+page. Each heading needs room for what follows it (`Line.Keep`):
+
+| Line | Needs | Evidence |
+|---|---|---|
+| `ISD flags:` | 3 | written at row 53, and pushed off a page holding 53: exactly 3 |
+| `N)  image section descriptor` | 3 | written as low as row 50, never pushed: 1 to 6 fit (unconfirmed) |
+| a part's title (`\tImage Activation ...`) | 3 | written as low as row 46, never pushed: 1 to 10 fit (unconfirmed) |
+| `linker flags:`, `Flags:` | 3 | always near a page's top: any fits (unconfirmed) |
+| `n references to image k:` | 3 | always near a page's top: any fits (unconfirmed) |
+| anything else | 1 | |
+
 ## Decisions and unconfirmed rules
 
 - The output is matched to the fixtures byte for byte except for the page
@@ -326,3 +342,8 @@ Phase 38's object options.
   blank line between protection changes, `(system space)` for an S0
   address, a shareable image's type text, and a patched image's one-line
   note (subtask 6 fills in the rest).
+- 2026-10-05: Subtask 4: pagination ("Page layout"). `TestImagePages`
+  lays each fixture's report out with `Pager` and compares whole files,
+  masking only the page headers' times: all 29 match byte for byte. Of
+  the page-break rules only `ISD flags:` needing 3 lines is pinned by the
+  fixtures; the other headings' 3 is a choice inside their bounds.

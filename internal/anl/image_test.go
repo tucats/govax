@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -216,6 +217,48 @@ func TestImageContent(t *testing.T) {
 		}
 
 		if diff := firstDiff(imagePageContent(f.analysis), b.String()); diff != "" {
+			t.Errorf("%s: %s", f.name, diff)
+		}
+	}
+}
+
+// imageTimeRE matches the time in an ANALYZE/IMAGE page header.
+var imageTimeRE = regexp.MustCompile(`(?m)^(Analyze Image {1,40})[ 0-9]{2}-[A-Z]{3}-[0-9]{4} [0-9:.]{11}`)
+
+// TestImagePages compares each fixture's whole analysis, page layout
+// included, masking only the page headers' times.
+func TestImagePages(t *testing.T) {
+	when := time.Date(2026, time.October, 5, 9, 8, 7, 650_000_000, time.UTC)
+
+	for _, f := range imageFixtures(t) {
+		text := string(f.analysis)
+
+		lines := strings.Split(text, "\n")
+		file := lines[2]
+		command := strings.TrimRight(lines[len(lines)-2], " ")
+
+		img, err := ReadImage(f.data)
+		if err != nil {
+			t.Fatalf("%s: %v", f.name, err)
+		}
+
+		rep := AnalyzeImage(img, ImageOptions{})
+
+		var b bytes.Buffer
+
+		p := NewPager(&b, TitleImage, file, command)
+		p.Now = func() time.Time { return when }
+
+		if err := p.Write(rep.Lines); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := p.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		want := imageTimeRE.ReplaceAllString(text, "${1}"+vmsTime(when))
+		if diff := firstDiff(want, b.String()); diff != "" {
 			t.Errorf("%s: %s", f.name, diff)
 		}
 	}
