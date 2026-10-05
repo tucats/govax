@@ -304,8 +304,8 @@ func (img *Image) block(h []byte, what string, offset, n int) []byte {
 const (
 	ihaLength    = 0x14
 	ihaInitShare = 0x10
-	ihsLength = 0x1C
-	ihiLength = 0x50
+	ihsLength    = 0x1C
+	ihiLength    = 0x50
 )
 
 func (img *Image) activation(h []byte) {
