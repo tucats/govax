@@ -137,8 +137,10 @@ func (c *Console) setStepBreakpoint(addr uint32) *Breakpoint {
 // finds first, so runLoop never removes it (bug 3).
 //
 // VMS's debugger kept a STEP/RETURN pending across an exception break in
-// the Phase 42 probe (testdata/dbgcmd/vax/step.dlg); govax ends an
-// interrupted STEP instead, a deliberate difference.
+// the Phase 42 probe (testdata/dbgcmd/vax/step.dlg), and govax will copy
+// that: docs/PHASE-42.md's subtask 7 makes STEP/RETURN wait for its
+// frame's RET across other stops, and this then applies to STEP/OVER
+// only.
 func (c *Console) endStep(bp *Breakpoint) {
 	c.removeBreakpointPtr(bp)
 }

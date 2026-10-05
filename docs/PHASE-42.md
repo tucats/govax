@@ -459,11 +459,36 @@ bug found and fixed on the way.
    `/LINE`, `/INTO`, `/OVER`, `/RETURN`, `/SILENT`, and `/[NO]SOURCE`
    (accepted now, and acted on in subtask 8); line stepping from
    `dbgsym`'s line table; govax's `IN` and `RETURN` spellings;
-   `SHOW STEP`. STEP/RETURN stops *at* the routine's RET, as VMS's
-   does (`stepped on return from X to Y`), where govax's stops after
-   it, in the caller. `/BRANCH` and `/CALL` step to the next instruction
-   of that class. Tests: `dbgdis.dlg`'s instruction and line steps, and
+   `SHOW STEP`. `/BRANCH` and `/CALL` step to the next instruction of
+   that class. Tests: `dbgdis.dlg`'s instruction and line steps, and
    `step.dlg`.
+
+   **STEP/RETURN copies VMS's** (the author's choice at subtask 2's
+   review), as `step.dlg` shows it:
+   - It stops *at* the RET that ends the call frame current when the
+     command was given (the frame FP pointed to), before that RET runs,
+     still in the routine: `stepped on return from X to Y: RET`, where
+     X is the location the STEP/RETURN was given at. govax's stops
+     after the RET, in the caller.
+   - It is bound to the frame, not to the code. From a JSB subroutine,
+     which has no frame of its own, it waits for the RET of the CALLS
+     frame the subroutine runs in, and passes the subroutine's RSB.
+     In a recursive routine, a deeper call's RET doesn't stop it, since
+     that RET ends another frame.
+   - It stays pending until that RET is reached. A break, an exception
+     break, or other STEPs in between don't cancel it: in `step.dlg` it
+     fired three STEPs after an unhandled-exception break, at START's
+     RET. This replaces subtask 2's removal of STEP/RETURN's breakpoint
+     when its run stops (`endStep`); `TestStepReturnEndsAtBreakpoint`
+     changes to expect the pending return to fire later.
+   - Rules `step.dlg` doesn't settle, chosen and logged as unconfirmed:
+     a second STEP/RETURN replaces a pending one; the pending return
+     fires the same way during a GO as during a STEP; it is dropped when
+     the frame goes away without its RET running (an unwind, or the
+     image's exit).
+   - STEP/OVER interrupted by a break keeps subtask 2's behavior (it
+     ends). VMS's wasn't probed; this is logged as unconfirmed, for a
+     later simh round.
 8. **Source lines.** Locate a module's source file from its DST source
    correlation (`dbgsym.SourceFile`): on a mounted volume, as a host
    file, or along a `SET SOURCE` directory list (`SHOW SOURCE`,
@@ -784,8 +809,8 @@ subtasks that use them:
   unhandled exception, and the step's return event fired later, at
   START's RET (`stepped on return from DBGCMD\FACT\BUMP to
   DBGCMD\START\LAST`). VMS kept that pending step across the exception
-  break. govax will end an interrupted STEP instead (bug 2's fix), and
-  logs this as a deliberate difference.
+  break. govax will copy this (the author, at subtask 2's review; see
+  subtask 7).
 - `STEP/INTO/OVER` is accepted (the last wins); so is
   `EXAMINE/BYTE/WORD`.
 
@@ -903,8 +928,10 @@ fixes) and passes now.
   finds first (bug 3); the stop is reported as the user's breakpoint.
   `TestStepOverEndsAtBreakpoint`, `TestStepReturnEndsAtBreakpoint`,
   `TestStepOverReturnsToBreakpoint`. VMS's debugger kept a STEP/RETURN
-  pending across an exception break (subtask 1's results); govax ends an
-  interrupted STEP, and `endStep`'s comment says so.
+  pending across an exception break (subtask 1's results). At review,
+  the author chose to copy that: subtask 7 makes STEP/RETURN wait for
+  its frame's RET across other stops, replacing `endStep` for it.
+  `endStep`'s comment says so.
 - **Bug 4** was not a bug (subtask 1's results); nothing changed.
 - **Bug 6, instruction breaks gave a bare address.** The message names
   the location as `Break at` does: `Instruction break at
@@ -916,3 +943,12 @@ Bugs 5 (grammar entries with no handler) and 7 (registers in
 expressions) belong to the subtasks that rework those commands (14 and
 9). No other bug turned up in this code. `go build`, `go vet`, `go test
 ./...`, and golangci-lint are clean.
+
+### 2026-10-05 — Subtask 2 reviewed
+
+The author chose to copy VMS's STEP/RETURN rather than end it when its
+run is interrupted. Subtask 7 now says how: it stops at the RET that ends
+the frame current when it was given, and stays pending across other
+stops until that RET runs. Until then, subtask 2's `endStep` removes
+STEP/RETURN's breakpoint as it does STEP/OVER's; its comment points at
+subtask 7.
