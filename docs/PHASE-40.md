@@ -306,3 +306,12 @@ Phase 38's object options.
   ISD, and fixup-section formats read off them and the images' bytes; the
   page geometry is ANALYZE/OBJECT's (55 lines), with the fixup section on
   a new page. Debug data marked future expansion at the author's request.
+- 2026-10-05: Subtask 2: `anl.ReadImage` (`internal/anl/image.go`): the
+  fixed header and its blocks, ISDs (continued across header blocks at a
+  size of `0xFFFF`), and the fixup section, found as the private section
+  holding `IHD$L_IAFVA`. What can't be decoded becomes `Image.Problems`
+  (shown as errors in subtask 5). `TestReadImageFixtures` decodes all 29
+  fixture images cleanly; `TestReadImageAddr` checks every field of
+  ADDR.EXE against `addr.ani`; `TestReadImageContinuedISDs` a two-block
+  header. The IAF's flags (+0x24) and extra image count (+0x20) are
+  placed by guess: both are 0 in every fixture (unconfirmed).
