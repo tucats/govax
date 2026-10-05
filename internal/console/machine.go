@@ -218,6 +218,11 @@ type Console struct {
 	// imageRundown).
 	imageActive bool
 
+	// OnUnhandled, when set, is told of every condition no handler
+	// continued, before VMS's catch-all acts on it. Returning true pauses
+	// the program there. The debugger sets it (docs/PHASE-42.md, subtask 5).
+	OnUnhandled func(UnhandledException) bool
+
 	// runHost is RUN's /HOST: the main image is a host file (readImage).
 	runHost bool
 
@@ -296,6 +301,15 @@ func (c *Console) newRTL() *corevms.Environment {
 	env := corevms.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.Mounts, consoleInput{c}, consoleOutput{c})
 	librtl.Register(env.Shims()) // LIBRTL.EXE's routines (docs/PHASE-34.md)
 	env.Session = c.ContainerSession
+
+	// A condition nobody handled goes to the debugger first, if there is
+	// one that wants it. The hook reads c.OnUnhandled each time, so a
+	// debugger installed later still gets it.
+	env.OnUnhandled = func(u corevms.UnhandledCondition) bool {
+		return c.OnUnhandled != nil && c.OnUnhandled(UnhandledException{
+			Condition: u.Condition, PC: u.PC, Preceding: u.Preceding,
+		})
+	}
 
 	// $SETIMR's timers run on the engine's system time, the same time
 	// base as the interval clock (docs/PHASE-26.md subtask 11).

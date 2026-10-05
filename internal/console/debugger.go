@@ -36,6 +36,14 @@ const (
 	// ActivateStep executes one STEP from Activation.Addr (or the current
 	// PC) in Activation.StepMode.
 	ActivateStep
+
+	// ActivateImage runs an image RUN has loaded, under the debugger:
+	// Activation.Addr is the driver that calls the image (and its shareable
+	// images' initialization routines), and the debugger stops the program
+	// at Activation.StopAt, the first instruction of the image's main
+	// routine, before any of it runs. It is RUN/DEBUG, and RUN of an image
+	// linked /DEBUG.
+	ActivateImage
 )
 
 // Activation describes what is starting a debugger session. Later
@@ -58,6 +66,31 @@ type Activation struct {
 	// StepMode is a STEP's mode word (INTO, OVER, or RETURN); empty means
 	// the debugger's own default (SET STEP).
 	StepMode string
+
+	// StopAt is where an ActivateImage run first stops: the main routine's
+	// first instruction after its entry mask (a VAX routine begins with a
+	// 16-bit mask saying which registers it saves, which isn't code).
+	StopAt *uint32
+
+	// Module and Language name the module the image's main routine is in,
+	// and its source language, for the debugger's start-up message
+	// (%DEBUG-I-INITIAL).
+	Module, Language string
+}
+
+// UnhandledException describes a condition that no condition handler
+// continued, at the moment VMS's catch-all handler is about to deal with it
+// (ending the image, for a severe one). The debugger is told so that it can
+// stop the program there, as the VMS debugger does.
+type UnhandledException struct {
+	// Condition is the condition value, such as SS$_ACCVIO.
+	Condition uint32
+
+	// PC is where the condition happened. Preceding says that PC is the
+	// instruction *after* the one that signaled it (a call of LIB$SIGNAL),
+	// not the one that raised it (a hardware fault).
+	PC        uint32
+	Preceding bool
 }
 
 // Debugger is what the console asks of the debugger. internal/debugger

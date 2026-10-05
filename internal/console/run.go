@@ -8,13 +8,31 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// RunOptions holds RUN's qualifiers: /[NO]INIT, /STEP (/BREAK, /DEBUG),
-// /NOEXECUTE, and the file's /HOST. console_run read at most one, leading
-// qualifier; the DCL grammar (docs/PHASE-37.md) reads any combination
-// (commands.go's runOptions).
+// RunDebug is RUN's /[NO]DEBUG choice: whether the image runs under the
+// debugger.
+type RunDebug int
+
+const (
+	// DebugDefault: no qualifier. The debugger starts if the image was
+	// linked /DEBUG (its header's IHD$V_LNKDEBUG), as VMS starts it.
+	DebugDefault RunDebug = iota
+
+	// DebugOn: /DEBUG (also /STEP and /BREAK, govax's older spellings).
+	// The debugger starts if the image has a debug symbol table, which
+	// traceback alone provides.
+	DebugOn
+
+	// DebugOff: /NODEBUG. The image runs without the debugger.
+	DebugOff
+)
+
+// RunOptions holds RUN's qualifiers: /[NO]INIT, /[NO]DEBUG (/STEP,
+// /BREAK), /NOEXECUTE, and the file's /HOST. console_run read at most one,
+// leading qualifier; the DCL grammar (docs/PHASE-37.md) reads any
+// combination (commands.go's runOptions).
 type RunOptions struct {
-	RunInits  bool // /INIT (run each dependency's LIB$INITIALIZE); /NOINIT is the same as the zero value
-	Step      bool // /BREAK, /DEBUG, /STEP: single-step the main call
+	RunInits  bool     // /INIT (run each dependency's LIB$INITIALIZE); /NOINIT is the same as the zero value
+	Debug     RunDebug // /[NO]DEBUG: run under the debugger (see RunDebug)
 	NoExecute bool // /NOEXECUTE: load and fix up, but don't transfer control
 	// Host is an explicit /HOST after the file name: the image is a host
 	// file whatever its name looks like (see readMainImage).
@@ -64,6 +82,8 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 	// whatever mode RUN itself was invoked from.
 	c.Engine.SetModeStack(savedMode, false)
 
+	entry, _ := mainTransferAddress(main)
+
 	driverAddr, ok, err := c.buildImageInitDriver(main, opts.RunInits)
 	if err != nil {
 		return err
@@ -81,7 +101,65 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 
 	c.imageActive = true
 
-	return c.Call(driverAddr, opts.Step)
+	if !c.runsUnderDebugger(main, opts.Debug) {
+		return c.Call(driverAddr, false)
+	}
+
+	if c.Debugger == nil {
+		return vmserrors.New(vmserrors.DBG_NOTAVAILABLE)
+	}
+
+	// The debugger stops the program at the main routine's first
+	// instruction, which follows its two-byte entry mask.
+	stopAt := entry + 2
+
+	a := Activation{
+		Kind:     ActivateImage,
+		Addr:     &driverAddr,
+		StopAt:   &stopAt,
+		Language: "MACRO",
+	}
+
+	if m, ok := main.Debug.ModuleAt(entry); ok {
+		a.Module = m.Name
+		a.Language = languageName(m.Language)
+	}
+
+	return c.Debugger.Start(a)
+}
+
+// runsUnderDebugger decides whether RUN starts the debugger on the image
+// main. An image with no debug symbol table (linked /NOTRACEBACK) runs
+// without it, however RUN was asked, as the VMS debugger does for such an
+// image (docs/PHASE-42.md, subtask 1's probe). Otherwise /DEBUG starts it,
+// /NODEBUG doesn't, and with neither it starts for an image linked
+// /DEBUG.
+func (c *Console) runsUnderDebugger(main *ICB, choice RunDebug) bool {
+	if main.Debug == nil {
+		return false
+	}
+
+	switch choice {
+	case DebugOn:
+		return true
+	case DebugOff:
+		return false
+	default:
+		return main.LinkDebug && c.Debugger != nil
+	}
+}
+
+// languageName is the name the debugger shows for a module's source
+// language, from the language code in the debug symbol table's module
+// record. Only MACRO (code 0) is confirmed, by every image the Phase 41
+// and 42 probes ran; govax's tools write no other kind, so any other code
+// is shown as UNKNOWN until a probe of a compiler's output settles it.
+func languageName(code uint32) string {
+	if code == 0 {
+		return "MACRO"
+	}
+
+	return "UNKNOWN"
 }
 
 // activateImage loads fn and its sharable-image dependencies (imageLoad),

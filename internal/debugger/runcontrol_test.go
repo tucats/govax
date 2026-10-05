@@ -28,7 +28,7 @@ func stepBreakpoints(c *console.Console) int {
 	return n
 }
 
-// TestRunStopsAtBreakpoint: RUN without /STEP stops at a breakpoint set
+// TestRunStopsAtBreakpoint: RUN/NODEBUG stops at a breakpoint set
 // before it, and GO then finishes the image (bug 1: RUN used to run past
 // every breakpoint to "DBGDIS: done").
 func TestRunStopsAtBreakpoint(t *testing.T) {
@@ -43,7 +43,7 @@ func TestRunStopsAtBreakpoint(t *testing.T) {
 	buf := c.Out.(*bytes.Buffer)
 	buf.Reset()
 
-	if err := c.Run(dbgImagePath(t, "dbgdis.exe"), console.RunOptions{}); err != nil {
+	if err := c.Run(dbgImagePath(t, "dbgdis.exe"), console.RunOptions{Debug: console.DebugOff}); err != nil {
 		t.Fatalf("RUN: %v", err)
 	}
 

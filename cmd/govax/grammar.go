@@ -29,6 +29,9 @@ var (
 	// link holds the link subcommand's options.
 	link linkFlags
 
+	// runOpts holds the run subcommand's options.
+	runOpts runFlags
+
 	// library holds the library subcommand's options.
 	library libraryFlags
 )
@@ -80,6 +83,12 @@ type linkFlags struct {
 	// libraries and options are --library and --options, each of which
 	// can be repeated: files LINK gets with /LIBRARY and /OPTIONS.
 	libraries, options []string
+}
+
+// runFlags are the run subcommand's options, which become RUN's qualifiers.
+type runFlags struct {
+	debug   bool // --debug: RUN/DEBUG
+	noDebug bool // --no-debug: RUN/NODEBUG
 }
 
 // mountRequest is one --mount DEVICE=container option.
@@ -193,6 +202,31 @@ var grammar = []cli.Option{
 		Action:               runCmd,
 		ParametersExpected:   -99,
 		ParameterDescription: "filename [text...]",
+		Value:                runGrammar,
+	},
+}
+
+// runGrammar is the run subcommand's own options.
+var runGrammar = []cli.Option{
+	{
+		LongName:    "debug",
+		Description: "Run the image under the debugger (RUN/DEBUG)",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			runOpts.debug = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "no-debug",
+		Description: "Run the image without the debugger, even if it was linked /DEBUG (RUN/NODEBUG)",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			runOpts.noDebug = true
+
+			return nil
+		},
 	},
 }
 
@@ -808,7 +842,22 @@ func runCmd(c *cli.Context) error {
 	console.RunCommandLine = strings.Join(params[1:], " ")
 	paths = loadConfigPaths(paths)
 
-	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{"run", dclQuote(params[0])})
+	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{runCommand(params[0], runOpts)})
+}
+
+// runCommand is the console RUN command for the run subcommand's image
+// and options. DCL takes one of /DEBUG and /NODEBUG; --debug wins.
+func runCommand(image string, f runFlags) string {
+	command := "run " + dclQuote(image)
+
+	switch {
+	case f.debug:
+		command += "/DEBUG"
+	case f.noDebug:
+		command += "/NODEBUG"
+	}
+
+	return command
 }
 
 // doCmd runs the console command cmd on the subcommand's parameters, each

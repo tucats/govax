@@ -128,6 +128,10 @@ type ICB struct {
 	Debug    *dbgsym.Program
 	DebugErr error
 
+	// LinkDebug is the image header's IHD$V_LNKDEBUG: the image was
+	// linked /DEBUG, so RUN starts the debugger on it unless told not to.
+	LinkDebug bool
+
 	// Cells are the image's G^ fixup cells, by address, once imageFixup
 	// has filled them: what shareable image and transfer-vector offset
 	// each one's G^ reference asked for (Phase 41). The disassembler names
@@ -504,7 +508,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 
 	icb.Flags &^= icbIncomplete
 
-	icb.Debug, icb.DebugErr = readDebugSymbols(data, icb.Base)
+	icb.Debug, icb.LinkDebug, icb.DebugErr = readDebugSymbols(data, icb.Base)
 
 	if icb.FixupISD != nil {
 		addr := icb.Base + (uint32(icb.FixupISD.VPN) << 9)
@@ -575,19 +579,22 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 // error. A table that can't be read doesn't stop the image from loading
 // or running, since only the disassembler's names depend on it, so the
 // error is returned for SHOW IMAGES/FULL to report rather than for
-// imageLoad to fail on.
-func readDebugSymbols(data []byte, base uint32) (*dbgsym.Program, error) {
+// imageLoad to fail on. It also reports whether the image header says the
+// image was linked /DEBUG (IHD$V_LNKDEBUG).
+func readDebugSymbols(data []byte, base uint32) (*dbgsym.Program, bool, error) {
 	img, err := vmsimage.ReadImage(data)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
+
+	linkDebug := img.LinkFlags&vmsimage.IHDFlagLNKDEBUG != 0
 
 	prog, err := dbgsym.Read(img, data, base)
 	if errors.Is(err, dbgsym.ErrNoDST) {
-		return nil, nil
+		return nil, linkDebug, nil
 	}
 
-	return prog, err
+	return prog, linkDebug, err
 }
 
 // findSHRByID returns the SHR entry with the given id from icb's dependency

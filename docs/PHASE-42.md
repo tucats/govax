@@ -1072,3 +1072,63 @@ now live in `internal/debugger` (`runcontrol.go`, `step.go`,
   use `stepdebugger_test.go`, a stand-in that takes one step (the real
   debugger imports the console, so the tests can't use it).
 - `go build`, `go vet`, `go test ./...`, and golangci-lint are clean.
+
+### 2026-10-05 — Subtask 5: RUN under the debugger
+
+`RUN` now starts the debugger on an image the way VMS does
+(`internal/debugger/image.go`, `internal/console/run.go`).
+
+- **Qualifiers.** `/DEBUG` is a negatable qualifier; `/STEP` and `/BREAK`
+  are synonyms for it (`RunOptions.Debug`: `DebugDefault`, `DebugOn`,
+  `DebugOff`, replacing `Step`). `govax run` gets `--debug` and
+  `--no-debug`.
+- **When the debugger starts.** `/DEBUG`: if the image has a debug symbol
+  table (traceback alone is enough, as `dbgtrc` showed). `/NODEBUG`:
+  never. Neither: if the image header has `IHD$V_LNKDEBUG` (new
+  `ICB.LinkDebug`) and a debugger is installed. An image with no table
+  (`/NOTRACEBACK`) runs without the debugger whatever was asked, silently,
+  as VMS ran DBGNOTB. `/DEBUG` with no debugger installed is
+  `%DEBUG-E-NOTAVAILABLE`.
+- **Start-up.** A new `console.ActivateImage` runs RUN's IMAGE$INIT driver
+  (so shareable images' initialization routines run first) until the PC
+  reaches the main routine's entry plus two (its entry mask is not code), a
+  silent `Breakpoint.Quiet` of the debugger's own. It prints a banner and
+  `%DEBUG-I-INITIAL, Language: MACRO, Module: DBGDIS` and opens the
+  session. VMS's banner names its own version, so govax prints
+  `govax VAX DEBUG`; the probe logs start after it, so no oracle compares
+  it. Only language code 0 (MACRO) is known; other codes print `UNKNOWN`
+  (unconfirmed).
+- **Image exit.** When the driver's call returns (the outermost run only;
+  a condition handler's call returns the same way) the debugger prints
+  `%DEBUG-I-EXITSTATUS, is '<status message>'` from R0 and keeps the
+  session open. GO and STEP then say `%DEBUG-E-BADSTARTPC, cannot start
+  from PC 00000000` until the next RUN (PC is shown as 0, as the probe
+  shows). A status with no message of its own is shown as `$GETMSG` would,
+  FAO directives and all (`!XB`), which is what VMS prints too.
+- **Unhandled conditions.** `corevms`' catch-all handler now writes its
+  message once and, if `Environment.OnUnhandled` (the console's
+  `OnUnhandled`, which the debugger sets) wants the condition, makes the
+  `SYS$SRCHANDLER` service wait (`ErrWait`): the program is paused with
+  its XFC unexecuted. The run loop sees the pending condition after that
+  instruction and prints `break on unhandled exception at LOC` (a hardware
+  exception: the faulting instruction) or `... preceding LOC` (LIB$SIGNAL
+  or LIB$STOP: the return address). GO runs the XFC again, which skips the
+  already-shown message and does the catch-all's action: exit for a severe
+  condition, continue for a warning (`except.dlg`: ENDOFFILE breaks, then
+  GO reaches the exit). Only while an image runs under the debugger; a
+  plain GO or RUN/NODEBUG behaves as before. The source line VMS shows
+  below the break is subtask 8's.
+- **Unconfirmed.** The exit status of an image that ended in a severe
+  condition is shown by VMS's debugger in a way `faillnk.dlg` doesn't show;
+  govax prints the condition's message line. STEP/GO at an unhandled
+  break all just run the pending XFC.
+- **Tests.** `image_test.go`: RUN/DEBUG stops at START with no breakpoint
+  left; defaults follow the link flag, `/NODEBUG`, and `/NOTRACEBACK`;
+  exit status and BADSTARTPC; the access violation break (`faillnk`); the
+  signalled warning's `preceding` break and its continue (the VMS-built
+  `dbgcmd.exe`); no break without the debugger. `TestStatusText`,
+  `TestRunCommandDebugQualifiers`, and RUN's option parsing. The tests
+  that RUN/STEP-ed an image to land in it now land at its main routine
+  (the stand-in debugger in `internal/console` does the same).
+- `go build`, `go vet`, `go test ./...` clean; golangci-lint reports
+  nothing in the changed files (existing findings elsewhere remain).

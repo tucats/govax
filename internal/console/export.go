@@ -121,3 +121,17 @@ func (c *Console) callArguments(s string) ([]uint32, string, error) {
 		s = rest
 	}
 }
+
+// ImageActive reports whether an image started by RUN is running, from its
+// start until it exits (or the machine is reset).
+func (c *Console) ImageActive() bool { return c.imageActive }
+
+// StatusText is a status value's message line, such as "%SYSTEM-S-NORMAL,
+// normal successful completion".
+func (c *Console) StatusText(status uint32) string {
+	if c.RTL == nil {
+		return ""
+	}
+
+	return c.RTL.StatusText(status)
+}

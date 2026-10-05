@@ -44,3 +44,23 @@ func TestRun_debugSession(t *testing.T) {
 		t.Errorf("the syntax error was shown %d times, want 1", n)
 	}
 }
+
+// TestRunCommandDebugQualifiers: the run subcommand's --debug and
+// --no-debug become RUN's /DEBUG and /NODEBUG; with both, --debug wins.
+func TestRunCommandDebugQualifiers(t *testing.T) {
+	cases := []struct {
+		flags runFlags
+		want  string
+	}{
+		{runFlags{}, `run "x.exe"`},
+		{runFlags{debug: true}, `run "x.exe"/DEBUG`},
+		{runFlags{noDebug: true}, `run "x.exe"/NODEBUG`},
+		{runFlags{debug: true, noDebug: true}, `run "x.exe"/DEBUG`},
+	}
+
+	for _, tc := range cases {
+		if got := runCommand("x.exe", tc.flags); got != tc.want {
+			t.Errorf("runCommand(%+v) = %q, want %q", tc.flags, got, tc.want)
+		}
+	}
+}

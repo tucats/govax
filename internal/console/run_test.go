@@ -134,8 +134,10 @@ func TestRunOptions_defaultAndOverride(t *testing.T) {
 		{"RUN FOO.EXE", true, RunOptions{RunInits: true}},
 		{"RUN/NOINIT FOO.EXE", true, RunOptions{}},
 		{"RUN/INIT FOO.EXE", false, RunOptions{RunInits: true}},
-		{`R/NOEXECUTE/DEBUG "foo.exe"/HOST`, false, RunOptions{Step: true, NoExecute: true, Host: true}},
-		{"RUN FOO.EXE /BREAK /NOINIT", true, RunOptions{Step: true}},
+		{`R/NOEXECUTE/DEBUG "foo.exe"/HOST`, false, RunOptions{Debug: DebugOn, NoExecute: true, Host: true}},
+		{"RUN FOO.EXE /BREAK /NOINIT", true, RunOptions{Debug: DebugOn}},
+		{"RUN/STEP FOO.EXE", false, RunOptions{Debug: DebugOn}},
+		{"RUN/NODEBUG FOO.EXE", false, RunOptions{Debug: DebugOff}},
 	}
 
 	for _, c := range cases {

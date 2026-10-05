@@ -1,6 +1,7 @@
 package corevms
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/tucats/govax/internal/vax"
@@ -105,4 +106,20 @@ func (env *Environment) ReadInputLine(prompt string, maxLen int) (line string, o
 	}
 
 	return strings.TrimRight(line, "\r\n"), true
+}
+
+// StatusText is the message line for a status value as the system shows
+// it, such as "%SYSTEM-S-NORMAL, normal successful completion". A status
+// with no message of its own is shown by its number, as $GETMSG shows it.
+func (env *Environment) StatusText(status uint32) string {
+	// STS$M_INHIB_MSG only says the message was already shown; it isn't
+	// part of the message's identity.
+	status &^= stsInhibitMsg
+
+	lines := env.formatMessageVector([]uint32{status, 0}, nil, defaultMessageFlags, "")
+	if len(lines) == 0 {
+		return fmt.Sprintf("%%SYSTEM-?-NOMSG, message number %08X", status)
+	}
+
+	return lines[0]
 }

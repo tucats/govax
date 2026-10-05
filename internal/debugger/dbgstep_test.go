@@ -30,7 +30,7 @@ func stepImage(t *testing.T, image string) (*console.Dispatcher, *bytes.Buffer, 
 	buf := c.Out.(*bytes.Buffer)
 	buf.Reset()
 
-	if err := c.Run(dbgImagePath(t, image), console.RunOptions{Step: true}); err != nil {
+	if err := c.Run(dbgImagePath(t, image), console.RunOptions{Debug: console.DebugOn}); err != nil {
 		t.Fatalf("RUN/STEP %s: %v", image, err)
 	}
 
@@ -74,14 +74,12 @@ func withoutStack(s string) string {
 func TestStepSymbolic(t *testing.T) {
 	d, buf, run := stepImage(t, "dbgdis.exe")
 
-	want := `8000660A: CALLS I^#^X00000000,@#START
-Stepped to DBGDIS\START\%LINE 42
-`
-	if got := withoutStack(run); !strings.HasPrefix(got, "8000660A:") || !strings.HasSuffix(got, "Stepped to DBGDIS\\START\\%LINE 42\n") {
-		t.Errorf("RUN/STEP:\ngot:\n%s\nwant (registers aside):\n%s", got, want)
+	// RUN/DEBUG stops silently at START's first instruction.
+	if !strings.HasSuffix(run, "%DEBUG-I-INITIAL, Language: MACRO, Module: DBGDIS\n") {
+		t.Errorf("RUN/DEBUG:\n%s", run)
 	}
 
-	want = `DBGDIS\START\%LINE 42:  MOVL     S^#0A,R2
+	want := `DBGDIS\START\%LINE 42:  MOVL     S^#0A,R2
                      R2:  0000000A  10
 Stepped to DBGDIS\START\%LINE 43
 `
@@ -136,8 +134,8 @@ func TestStepNoSymbolic(t *testing.T) {
 
 	d, buf, run := stepImage(t, "dbgdis.exe")
 
-	if !strings.HasSuffix(run, "Stepped to 00000402\n") {
-		t.Errorf("RUN/STEP:\n%s", run)
+	if !strings.HasSuffix(run, "Module: DBGDIS\n") {
+		t.Errorf("RUN/DEBUG:\n%s", run)
 	}
 
 	want := `00000402: MOVL S^#10,R2

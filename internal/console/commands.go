@@ -368,7 +368,14 @@ func runOptions(r *dcl.Result, defaultRunInits bool) RunOptions {
 		opts.RunInits = !r.Negated("INIT")
 	}
 
-	opts.Step = r.Present("STEP")
+	if r.Present("DEBUG") {
+		opts.Debug = DebugOn
+
+		if r.Negated("DEBUG") {
+			opts.Debug = DebugOff
+		}
+	}
+
 	opts.NoExecute = r.Present("EXECUTE") && r.Negated("EXECUTE")
 	opts.Host = r.ParamPresent("FILE", "HOST")
 

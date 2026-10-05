@@ -29,6 +29,14 @@ type Environment struct {
 	mem *vm.Memory
 	cpu *vax.CPU
 
+	// OnUnhandled, when set, is told of every condition no handler
+	// continued, after the catch-all has shown its message and before it
+	// acts (ends the image, or lets the program continue). If it returns
+	// true the program is paused there, for a debugger to look at, and
+	// carries on with the catch-all's action when it next runs. See
+	// condition.go's catchAll.
+	OnUnhandled func(UnhandledCondition) bool
+
 	shims    *ShimTable
 	services *ServiceTable
 

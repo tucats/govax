@@ -8,6 +8,9 @@ const (
 	dbgSyntax uint32 = iota + 1
 	dbgNotAvailable
 	dbgConsoleCommand
+	dbgInitial
+	dbgExitStatus
+	dbgBadStartPC
 )
 
 // DBG facility status codes.
@@ -26,10 +29,24 @@ const (
 	// has no DCL, but EXIT returns to the console where it works. VMS has
 	// no such message; this one is govax's.
 	DBG_CONSOLECOMMAND = DBGFacility<<FacilityPosition | dbgConsoleCommand<<MessagePosition | StatusInfo
+	// DBG_INITIAL is the debugger's start-up message for an image: the
+	// language and module of the program's main routine. Its arguments
+	// are the language and the module name (VMS's own text).
+	DBG_INITIAL = DBGFacility<<FacilityPosition | dbgInitial<<MessagePosition | StatusInfo
+	// DBG_EXITSTATUS is shown when the image under the debugger exits.
+	// Its argument is the exit status's own message line, minus the
+	// leading percent sign (VMS's own text).
+	DBG_EXITSTATUS = DBGFacility<<FacilityPosition | dbgExitStatus<<MessagePosition | StatusInfo
+	// DBG_BADSTARTPC is what GO and STEP say when there is no program to
+	// run, as after the image has exited. Its argument is the PC.
+	DBG_BADSTARTPC = DBGFacility<<FacilityPosition | dbgBadStartPC<<MessagePosition | StatusError
 )
 
 func init() {
 	DefineMessage(DBG_SYNTAX, DBGFacility, "SYNTAX", "command syntax error at or near '!S'")
 	DefineMessage(DBG_NOTAVAILABLE, DBGFacility, "NOTAVAILABLE", "the debugger is not available")
 	DefineMessage(DBG_CONSOLECOMMAND, DBGFacility, "CONSOLECOMMAND", "'!S' is a console command; EXIT returns to the console")
+	DefineMessage(DBG_INITIAL, DBGFacility, "INITIAL", "Language: !S, Module: !S")
+	DefineMessage(DBG_EXITSTATUS, DBGFacility, "EXITSTATUS", "is '!S'")
+	DefineMessage(DBG_BADSTARTPC, DBGFacility, "BADSTARTPC", "cannot start from PC !XL")
 }

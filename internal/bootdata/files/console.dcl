@@ -1067,8 +1067,10 @@ grammar console
                     /type=$expression
 
     ! RUN activates a VMS image. /NOINIT and /INIT override whether each
-    ! shareable image's LIB$INITIALIZE runs; /STEP (/BREAK, /DEBUG)
-    ! single-steps the main call; /NOEXECUTE loads without running.
+    ! shareable image's LIB$INITIALIZE runs; /DEBUG (/STEP, /BREAK) runs
+    ! it under the debugger, stopped at its first instruction, and /NODEBUG
+    ! doesn't (with neither, an image linked /DEBUG starts the debugger);
+    ! /NOEXECUTE loads without running.
     verb run/id=1680
         parameter   file/id=1681                -
                     /type=$string               -
@@ -1076,9 +1078,9 @@ grammar console
         qualifier   host/id=1682                -
                     /parameter=file
         qualifier   init/id=1683
-        qualifier   step/id=1684/nonegatable
-        qualifier   break/alias=step
-        qualifier   debug/alias=step
+        qualifier   debug/id=1684
+        qualifier   step/alias=debug
+        qualifier   break/alias=debug
         qualifier   execute/id=1685
     verb r/alias=run
 

@@ -50,6 +50,21 @@ type Debugger struct {
 	// still going. Only the outermost run opens or closes the session.
 	running int
 
+	// imageDebug is true while an image RUN loaded is running under the
+	// debugger (startImage) and hasn't exited. It is what makes the
+	// debugger break on an unhandled condition and report the image's
+	// exit; a plain GO of other code does neither.
+	imageDebug bool
+
+	// imageExited is true once that image has exited: GO and STEP then
+	// have no program to run (requireProgram) until the next RUN.
+	imageExited bool
+
+	// unhandled is a condition no handler continued, set by onUnhandled
+	// while the machine runs and taken by the run loop at the next
+	// instruction boundary (unhandledBreak).
+	unhandled *console.UnhandledException
+
 	// active is true while a session is in progress, which is whether
 	// the prompt is "DBG> " and command lines come here.
 	active bool
@@ -61,6 +76,7 @@ type Debugger struct {
 func New(c *console.Console, g *dcl.Grammar, help *console.Help) *Debugger {
 	d := &Debugger{Console: c}
 	d.Dispatcher = newDispatcher(d, g, help)
+	c.OnUnhandled = d.onUnhandled
 
 	return d
 }
@@ -112,6 +128,9 @@ func (d *Debugger) Start(a console.Activation) error {
 
 	case console.ActivateCall:
 		outcome, err = d.callRun(*a.Addr, a.Step, a.Args)
+
+	case console.ActivateImage:
+		outcome, err = d.startImage(a)
 
 	case console.ActivateStep:
 		mode := d.StepMode

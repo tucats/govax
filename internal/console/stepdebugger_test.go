@@ -35,6 +35,24 @@ func (s *stepDebugger) Start(a Activation) error {
 		}
 	}
 
+	// RUN under the debugger: run the image's driver up to the main
+	// routine's first instruction, as the real debugger does.
+	if a.Kind == ActivateImage {
+		if err := c.Engine.CallEntry(*a.Addr); err != nil {
+			return err
+		}
+
+		c.Engine.BeginRun()
+
+		for c.CPU.GPR(vax.PC) != *a.StopAt {
+			if err := c.Engine.Step(); err != nil {
+				return c.ReportStop(err)
+			}
+		}
+
+		return nil
+	}
+
 	if a.Kind == ActivateGo {
 		if a.Addr != nil {
 			c.CPU.SetGPR(vax.PC, *a.Addr)

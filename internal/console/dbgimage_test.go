@@ -32,7 +32,7 @@ func runStepped(t *testing.T, path string) (*Console, *bytes.Buffer) {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
-	if err := c.Run(path, RunOptions{Step: true}); err != nil {
+	if err := c.Run(path, RunOptions{Debug: DebugOn}); err != nil {
 		t.Fatalf("RUN/STEP %s: %v", filepath.Base(path), err)
 	}
 

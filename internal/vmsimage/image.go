@@ -75,6 +75,9 @@ const (
 
 // Link flags (IHD$L_LNKFLAGS) the decoder and its users test.
 const (
+	// IHDFlagLNKDEBUG is IHD$V_LNKDEBUG: the image was linked /DEBUG, so
+	// running it starts the debugger.
+	IHDFlagLNKDEBUG = 1 << 0
 	// IHDFlagINISHR is IHD$V_INISHR: the image has a shareable image
 	// initialization list.
 	IHDFlagINISHR = 1 << 6

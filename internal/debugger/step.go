@@ -155,6 +155,8 @@ func (d *Debugger) stepRun(startAddr *uint32, mode StepMode) (runOutcome, error)
 
 	if startAddr != nil {
 		c.CPU.SetGPR(vax.PC, *startAddr)
+	} else if err := d.requireProgram(); err != nil {
+		return runEnded, err
 	}
 
 	c.Engine.BeginRun()
@@ -215,6 +217,12 @@ func (d *Debugger) stepOne() (outcome runOutcome, done bool, err error) {
 	}
 
 	finish()
+
+	// A condition nobody handled pauses the program at the instruction
+	// that raised it.
+	if d.unhandledBreak() {
+		return runStopped, true, nil
+	}
 
 	return runStopped, false, nil
 }

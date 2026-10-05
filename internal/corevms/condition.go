@@ -179,6 +179,12 @@ type conditionDispatch struct {
 	// calling is true while a handler this dispatch called is running.
 	calling bool
 
+	// reported is true once the catch-all has written the condition's
+	// message and offered the condition to the debugger (OnUnhandled), so
+	// that running the catch-all again, after the debugger has let the
+	// program continue, doesn't show the message twice.
+	reported bool
+
 	// unwind is the $UNWIND a handler asked for, carried out when the
 	// handler returns (unwind.go); nil if none.
 	unwind *unwindRequest
@@ -621,10 +627,25 @@ func (env *Environment) catchAll(d *conditionDispatch) (uint32, error) {
 	}
 
 	cond := words[0]
-	body, tail := words[:len(words)-2], words[len(words)-2:]
 
-	for _, line := range env.formatMessageVector(body, tail, defaultMessageFlags, "") {
-		env.writeConsole(line + "\n")
+	if !d.reported {
+		body, tail := words[:len(words)-2], words[len(words)-2:]
+
+		for _, line := range env.formatMessageVector(body, tail, defaultMessageFlags, "") {
+			env.writeConsole(line + "\n")
+		}
+
+		d.reported = true
+
+		// A debugger gets to look at the program before the catch-all
+		// acts (the VMS debugger's "break on unhandled exception"). If it
+		// wants to, the service is made to wait: the XFC runs again on the
+		// next instruction, finds the message already shown, and carries
+		// on with the catch-all's action, so letting the program continue
+		// is just running it.
+		if env.OnUnhandled != nil && env.OnUnhandled(env.unhandledCondition(d, cond)) {
+			return 0, ErrWait
+		}
 	}
 
 	if d.kind == kindStop || cond&7 == severitySevere {
@@ -632,6 +653,42 @@ func (env *Environment) catchAll(d *conditionDispatch) (uint32, error) {
 	}
 
 	return env.continueCondition(d)
+}
+
+// UnhandledCondition describes a condition no handler continued, as the
+// catch-all is about to act on it. It is what a debugger is told
+// (Environment.OnUnhandled).
+type UnhandledCondition struct {
+	// Condition is the condition value (SS$_ACCVIO, or a program's own).
+	Condition uint32
+
+	// PC is where the program was when the condition happened: for a
+	// hardware exception, the instruction that raised it; for LIB$SIGNAL
+	// or LIB$STOP, the instruction after the CALLS that signaled it.
+	PC uint32
+
+	// Preceding is true when PC is the instruction *after* the one that
+	// signaled the condition (a LIB$SIGNAL or LIB$STOP call), which the
+	// VMS debugger words as "preceding".
+	Preceding bool
+}
+
+// unhandledCondition builds d's UnhandledCondition. A hardware exception's
+// PC is in the signal array; a software signal's is the return address in
+// the call frame of the LIB$SIGNAL or LIB$STOP stub, which resumeFP is.
+func (env *Environment) unhandledCondition(d *conditionDispatch, cond uint32) UnhandledCondition {
+	u := UnhandledCondition{Condition: cond}
+
+	if d.kind == kindException {
+		u.PC, _ = env.mem.LoadLongword(env.cpu, d.sig+4*(d.sigCount-1))
+
+		return u
+	}
+
+	u.PC, _ = env.mem.LoadLongword(env.cpu, d.resumeFP+16)
+	u.Preceding = true
+
+	return u
 }
 
 // attemptToContinueFromStop is a handler continuing a LIB$STOP, which

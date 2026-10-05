@@ -60,6 +60,11 @@ type Breakpoint struct {
 	Addr      uint32
 	Temporary bool // removed the moment it fires
 	Step      bool // hit message reads "Stepped to" instead of "Break at"
+
+	// Quiet stops the run without a message. It is the debugger's own
+	// breakpoint at an image's first instruction (startImage), where VMS
+	// shows nothing more than the start-up messages.
+	Quiet bool
 }
 
 // AddBreakpoint sets an address breakpoint, matching SET BREAKPOINT (see
@@ -200,9 +205,11 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 					d.removeBreakpointPtr(bp)
 				}
 
-				if bp.Step {
+				switch {
+				case bp.Quiet:
+				case bp.Step:
 					c.Printf("Stepped to %s\n", c.LocationText(pc))
-				} else {
+				default:
 					c.Printf("Break at %s\n", c.LocationText(pc))
 				}
 
@@ -224,6 +231,12 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 		}
 
 		finish()
+
+		// A condition nobody handled pauses the program at the
+		// instruction that raised it.
+		if d.unhandledBreak() {
+			return runStopped, nil
+		}
 	}
 }
 
@@ -261,8 +274,16 @@ func (d *Debugger) reportStop(err error) (runOutcome, error) {
 		return runStopped, nil
 	}
 
+	// The image exiting under the debugger isn't the end of the session:
+	// the user may still look at the program's data.
+	exited := d.imageExit(err)
+
 	if err := d.Console.ReportStop(err); err != nil {
 		return runEnded, err
+	}
+
+	if exited {
+		return runStopped, nil
 	}
 
 	if errors.Is(err, cpu.ErrAttention) {
@@ -285,6 +306,8 @@ func (d *Debugger) goRun(startAddr *uint32) (runOutcome, error) {
 
 	if startAddr != nil {
 		c.CPU.SetGPR(vax.PC, *startAddr)
+	} else if err := d.requireProgram(); err != nil {
+		return runEnded, err
 	}
 
 	c.Engine.BeginRun()
