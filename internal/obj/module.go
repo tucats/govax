@@ -108,6 +108,14 @@ func (s *Symbol) Defined() bool {
 	return s.Flags&SymDEF != 0 || symbolLayouts[s.Type].alwaysDefines
 }
 
+// HasEntryMask reports whether the subrecord's type has an entry mask
+// (entry points and procedures), which a definition holds.
+func (s *Symbol) HasEntryMask() bool { return symbolLayouts[s.Type].entry }
+
+// IsLocal reports whether the subrecord's type is module-local (LSY,
+// LEPM, LPRO), with an environment index.
+func (s *Symbol) IsLocal() bool { return symbolLayouts[s.Type].local }
+
 // Formals are a procedure definition's argument counts and formal argument
 // descriptors (section 7.3.4). There is one descriptor for each of the
 // maximum number of arguments.

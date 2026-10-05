@@ -243,6 +243,28 @@ console command.
   same style, recorded here when made.
 - `ANALYZE` with no qualifier asks for one rather than assuming `/OBJECT`
   (unconfirmed what VMS does).
+- **ANALYZE's names differ from VMS 7.3's objfmt.sdl in two places.**
+  TIR command 22 is `TIR$C_STO_LW` to ANALYZE and `TIR$C_STO_L` in the
+  SDL (`commandNames` in `internal/anl/tir.go`). ANALYZE labels psect
+  flag bit 10 `GPS$V_COM` and bit 11 `GPS$V_NOMOD`; the SDL has
+  `GPS$V_NOMOD` = 10 and `GPS$V_COM` = 11. No fixture sets either bit,
+  so whether ANALYZE's labels or the bits it reads are out of step is
+  unconfirmed; govax shows ANALYZE's labels over the bits in their
+  positions (`psectFlagBits`).
+- **Text headers** are shown 65 characters to a line, each piece quoted on
+  its own line, with unprintable characters as periods (the hex dump's
+  rule). Read off `lctlnosh.anl`, `gv_uselibm.anl`, and `notitle.anl`.
+- **Stack depth** is shown only for a command that changes it, and the
+  depth carries from record to record (TIR, DBG, and TBT alike) until the
+  module's end.
+- **Unconfirmed layouts** (no fixture shows them; same style as the rest):
+  the MHD's `last patch date/time:` line (its label is the one `creation
+  date/time` is padded to match), EOM transfer flags, severities other than
+  `successful`, a psect's shareable-image base, symbol environments,
+  vectors, version masks, procedures' formal arguments, IDC and ENV
+  subrecords, the GSD titles other than PSC, SYM, and EPM, and the fields
+  of TIR commands other than the stack commands the fixtures show and
+  CTL_AUGRB. Data types are named from `DSC$K_DTYPE_` (only `Z` is seen).
 
 ## Open items
 
@@ -255,3 +277,10 @@ console command.
 - 2026-10-04: Survey and plan. 54 `.anl`/`.obj` pairs found; line formats,
   the hex dump's character rule, the error lines, and the trailer read off
   them; pagination found to need its own reconstruction.
+- 2026-10-04: Subtask 2: `internal/anl` (`line.go`, `object.go`,
+  `gsd.go`, `tir.go`, `dump.go`). `TestObjectContent` matches all 54
+  fixtures line for line once page headers and the closing command line
+  are removed. Found on the way: ANALYZE's `STO_LW` and COM/NOMOD labels,
+  the 65-character text-header lines, no blank line after the closing
+  errors. `obj.Symbol` gains `HasEntryMask` and `IsLocal`, so `anl`
+  doesn't repeat `obj`'s layout table.
