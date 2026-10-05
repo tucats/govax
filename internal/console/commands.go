@@ -60,6 +60,8 @@ func (d *Dispatcher) bindConsoleCommands() {
 	})
 	g.Bind("SAVE", d.saveCommand)
 	g.Bind("LOAD", d.loadCommand)
+
+	d.bindSetCommands()
 }
 
 // asmCommand implements ASM: the batch "ASM file" form (Console.Assemble)

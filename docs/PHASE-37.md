@@ -154,8 +154,36 @@ Each subtask is committed when its tests pass.
   Go port and aren't added.
 - **`govax asm` quotes its file names,** as `govax run`, `macro`, and
   `link` do (`doCmd`).
+- **SET is a keyword parameter whose keywords redirect** into one syntax
+  per form (`set_types`, `set_radix`, ...), as SHOW's are. An assignment
+  is recognized first (`/assignment=set_symbol`), as console_set.c does:
+  `SET R=5` assigns R though `R` abbreviates RADIX, and `SET RADIX = 10`
+  assigns a symbol named RADIX. SET's keywords now abbreviate (`SET BR`,
+  `SET UIQ`), where the old switch wanted the exact words it listed.
+  `/PERMANENT`, `/ENTRY`, and `/LABEL` (and C's `/PRM`, `/LBL`) may come
+  before or after the assignment.
+- **SET's NO forms are negated keywords:** `NOTRACE`, `NODISASSEMBLE`
+  (`DISASSEMBLER`, which `vax.help` documents, was added beside
+  `DISASSEMBLY` so the old `NODISASSEMBLE` spelling still matches), `NOVM`,
+  `NOMAPEN`, `NOVERBOSE`. Every other SET keyword is `/nonegatable`.
+- **SET PSL's clauses are a DCL list of `$expression`s**, each split at its
+  first `=` by the handler, so `SET PSL IPL = 1F, N=1` works. SET PTE's
+  changes stay `$rest_of_line`, after an `$expression` address: the
+  optional `TO address` between them is the handler's to recognize, since
+  DCL has no optional positional keyword.
+- **SET DEBUG's flags are a DCL list:** commas, not blanks, separate them.
+- **SET QUANTUM, UIQUANTUM, FAULT, and HISTORY take `$integer`**, so a bad
+  count is CLI_BADINTEGER (was CLI_BADNUMBER).
+- **Missing parameters are the grammar's CLI_MISSINGPARAMETER.** The
+  former fixed commands' own statuses for them (CLI_NEEDSETARG,
+  CLI_NEEDRADIX, CLI_NEEDBREAKADDR, CLI_NEEDBREAKOPCODE, CLI_NEEDSTEPMODE,
+  CLI_NEEDMODE, CLI_NEEDDEPOSIT, CLI_NEEDENTRY, and the unrecognized-SET-
+  qualifier CLI_BADQUALPREFIX) are no longer raised; they stay defined in
+  `internal/vmserrors`. CLI_NEEDROMNVRAM and CLI_NEEDFILENAME are still
+  SAVE's and LOAD's, whose handlers name the qualifier they want.
 - **Handlers live in `internal/console/commands.go`** (`bindConsoleCommands`),
-  called from `bindGrammar`.
+  called from `bindGrammar`, and SET's in `setcommand.go`
+  (`bindSetCommands`).
 
 ## Progress log
 
@@ -178,3 +206,8 @@ Each subtask is committed when its tests pass.
 - 2026-10-04: Subtask 5: ASM/ASSEMBLE, INCLUDE/`@`, SAVE, LOAD. Tests
   quote the host paths they pass. `TestCommands_saveLoad`,
   `TestCommands_include`. Only SET is left in `fixedCommands`.
+- 2026-10-04: Subtask 6: SET, every form (`setcommand.go`,
+  `TestCommands_set`). `fixedCommands` is now empty. Also fixed: the DCL
+  package's grammar-file tests (`TestLoadEvaxGrammar_verbCount`, and the
+  parameter-qualifier walk, which now expects RUN's /HOST) had failed
+  since subtasks 2 and 3, which ran only the console package's tests.

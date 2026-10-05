@@ -40,7 +40,7 @@ func (c *Console) SetSymbol(name string, value uint32) error {
 
 // SetSymbolQualified is SetSymbol with console_set.c's own /PERMANENT,
 // /ENTRY, /LABEL qualifier scan applied (its own qualifier-token loop ahead
-// of the NAME=value parse — see cmdSet, dispatch.go) — see
+// of the NAME=value parse — see setcommand.go's SET_SYMBOL) — see
 // symbols.go's Symbol.Permanent/IsEntry/IsLabel.
 func (c *Console) SetSymbolQualified(name string, value uint32, permanent, entry, label bool) error {
 	if err := c.requireInit(); err != nil {
@@ -128,7 +128,7 @@ func setPSLRange(set func(uint32), v, maxValue uint32) error {
 	return nil
 }
 
-// SetPSLField implements one "<field>=<value>" clause of SET PSL (cmdSet
+// SetPSLField implements one "<field>=<value>" clause of SET PSL (setcommand.go
 // loops over a comma-separated list of these, matching console_set.c's own
 // parsing loop). CM/TP/FPD/IS/DV/FU/IV/T/N/Z/V/C are boolean bits (0 or 1);
 // IPL is 0-31; PRV_MOD is 0-3; CUR_MOD/MODE switches the active mode/stack
@@ -461,7 +461,7 @@ var pteFieldNames = map[string]func(pte *vm.PTE, v uint32){
 }
 
 // SetPTE implements one "<addr> <field>=<value>[,<field>=<value>...]" SET
-// PTE/SET PAGE command (cmdSet parses the field=value list and calls this
+// PTE/SET PAGE command (setPTECommand parses the field=value list and calls this
 // once per field, matching console_set.c's own parse_pte_changes loop
 // structure) — the write-side counterpart to ShowPage. Reports
 // "Cannot SET PAGE when virtual memory is disabled" (not an error, matching

@@ -32,7 +32,7 @@ import (
 // mergeAsmSymbols helpers below, so a file assembled in one form can be
 // continued in the other.
 //
-// Returns the assembler's own Entry() result, so cmdAssemble can replicate
+// Returns the assembler's own Entry() result, so asmCommand (commands.go) can replicate
 // console.c's "if ASM_ENTRY, push_command(CALL __ENTRY)" behavior: a
 // program whose .END named an explicit start address is invoked
 // immediately afterward, with no arguments, exactly as the reference

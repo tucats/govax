@@ -326,3 +326,52 @@ func TestCommands_include(t *testing.T) {
 		t.Errorf("R7 = %#x, want 7", got)
 	}
 }
+
+// TestCommands_set checks SET's grammar: assignments, which win over a
+// keyword they abbreviate, negated keywords, and its sub-forms' values.
+func TestCommands_set(t *testing.T) {
+	d, c, _ := newCommandDispatcher(t)
+
+	steps := []string{
+		"SET R=5",
+		"SET X = 1 + 2 /PERMANENT",
+		"SET/LBL Y=X",
+		"SET PSL IPL = 1F, N=1",
+		"SET NODISASSEMBLE",
+		"SET NOVERBOSE",
+		"SET UIQ 7",
+		"SET BR/TMP 400",
+		"SET DEBUG VM, NOUSERHALT",
+		"SET RADIX = 10",
+	}
+
+	for _, line := range steps {
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+	}
+
+	for name, want := range map[string]uint32{"R": 5, "X": 3, "Y": 3, "RADIX": 0x10} {
+		if v, ok := c.Symbols.Get(name); !ok || v != want {
+			t.Errorf("symbol %s = %#x, %v; want %#x", name, v, ok, want)
+		}
+	}
+
+	if c.Radix != 16 {
+		t.Errorf("radix %d after SET RADIX = 10 (an assignment)", c.Radix)
+	}
+
+	if c.CPU.PSL().IPL() != 0x1F || !c.CPU.PSL().N() {
+		t.Errorf("PSL = %#x", uint32(c.CPU.PSL()))
+	}
+
+	if c.Trace || c.Verbose {
+		t.Errorf("Trace %v, Verbose %v; want both off", c.Trace, c.Verbose)
+	}
+
+	for _, line := range []string{"SET NORADIX 10", "SET RADIX", "SET BOGUS", "SET V", "SET PSL IPL", "SET BREAK/BOGUS 100", "SET QUANTUM X"} {
+		if err := d.Dispatch(line); err == nil {
+			t.Errorf("%s: no error", line)
+		}
+	}
+}

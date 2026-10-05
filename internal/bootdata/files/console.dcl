@@ -1094,4 +1094,155 @@ grammar console
                     /type=$string
         disallow    rom and nvram
 
+    ! SET (console_set.c). SET name=value assigns a symbol, register, or
+    ! privileged register; console_set.c looks for that form first, so a
+    ! name that abbreviates a keyword (SET R=5) is still an assignment.
+    ! Otherwise the keyword picks the syntax. TRACE (DISASSEMBLY,
+    ! DISASSEMBLER), VM (MAPEN), and VERBOSE take NO; the rest don't.
+    type set_types
+        keyword     radix               /syntax=set_radix/nonegatable
+        keyword     breakpoint          /syntax=set_breakpoint/nonegatable
+        keyword     step                /syntax=set_step/nonegatable
+        keyword     trace               /syntax=set_trace
+        keyword     disassembly         /syntax=set_trace
+        keyword     disassembler        /syntax=set_trace
+        keyword     debug               /syntax=set_debug/nonegatable
+        keyword     dbg                 /syntax=set_debug/nonegatable
+        keyword     psl                 /syntax=set_psl/nonegatable
+        keyword     mode                /syntax=set_mode/nonegatable
+        keyword     pte                 /syntax=set_pte/nonegatable
+        keyword     page                /syntax=set_pte/nonegatable
+        keyword     fault               /syntax=set_fault_history/nonegatable
+        keyword     history             /syntax=set_fault_history/nonegatable
+        keyword     vm                  /syntax=set_vm
+        keyword     mapen               /syntax=set_vm
+        keyword     base                /syntax=set_base/nonegatable
+        keyword     verbose             /syntax=set_verbose
+        keyword     verify              /syntax=set_verify/nonegatable
+        keyword     quantum             /syntax=set_quantum/nonegatable
+        keyword     uiquantum           /syntax=set_uiquantum/nonegatable
+        keyword     default             /syntax=set_default/nonegatable
+
+    verb set/id=1760/assignment=set_symbol
+        qualifier   permanent/id=1761/nonegatable
+        qualifier   prm/alias=permanent
+        qualifier   entry/id=1762/nonegatable
+        qualifier   label/id=1763/nonegatable
+        qualifier   lbl/alias=label
+        parameter   what/id=1764                -
+                    /type=set_types             -
+                    /prompt="What"
+
+    ! SET [/PERMANENT] [/ENTRY] [/LABEL] name=value.
+    syntax set_symbol/id=1770
+        qualifier   permanent/id=1761/nonegatable
+        qualifier   prm/alias=permanent
+        qualifier   entry/id=1762/nonegatable
+        qualifier   label/id=1763/nonegatable
+        qualifier   lbl/alias=label
+        parameter   name/id=1771                -
+                    /type=$name                 -
+                    /separator="="              -
+                    /prompt="Name"
+        parameter   value/id=1772               -
+                    /type=$expression           -
+                    /prompt="Value"
+
+    ! SET RADIX 8|10|16|HEX|DEC.
+    syntax set_radix/id=1773
+        parameter   radix/id=1774               -
+                    /type=$any                  -
+                    /prompt="Radix"
+
+    ! SET BREAKPOINT address; /TEMPORARY (/TMP) for one stop only;
+    ! /INSTRUCTION opcode stops at any instruction with that mnemonic;
+    ! /FAULT name stops when that fault is taken.
+    syntax set_breakpoint/id=1775
+        qualifier   instruction/syntax=set_break_instruction
+        qualifier   temporary/syntax=set_break_temporary
+        qualifier   tmp/alias=temporary
+        qualifier   fault/syntax=set_break_fault
+        parameter   address/id=1776             -
+                    /type=$expression           -
+                    /prompt="Address"
+    syntax set_break_instruction/id=1777
+        parameter   opcode/id=1778              -
+                    /type=$any                  -
+                    /prompt="Opcode"
+    syntax set_break_temporary/id=1779
+        parameter   address/id=1776             -
+                    /type=$expression           -
+                    /prompt="Address"
+    syntax set_break_fault/id=1780
+        parameter   fault/id=1781               -
+                    /type=$any                  -
+                    /prompt="Fault"
+
+    ! SET STEP INTO|IN|INSTRUCTION|OVER|RETURN: STEP's default mode.
+    syntax set_step/id=1782
+        parameter   mode/id=1783                -
+                    /type=$any                  -
+                    /prompt="Mode"
+
+    syntax set_trace/id=1784
+
+    ! SET DEBUG [flag[,flag...]]: a flag with NO clears it; no flags sets
+    ! NATIVE.
+    syntax set_debug/id=1785
+        parameter   flags/id=1786               -
+                    /type=$any/list
+
+    ! SET PSL field=value[,field=value...].
+    syntax set_psl/id=1787
+        parameter   fields/id=1788              -
+                    /type=$expression/list      -
+                    /prompt="Fields"
+
+    syntax set_mode/id=1789
+        parameter   mode/id=1790                -
+                    /type=$any                  -
+                    /prompt="Mode"
+
+    ! SET PTE address [TO address] field=value[,field=value...]: the
+    ! changes, with the TO range when there is one, are the handler's to
+    ! read.
+    syntax set_pte/id=1791
+        parameter   address/id=1792             -
+                    /type=$expression           -
+                    /prompt="Address"
+        parameter   changes/id=1793             -
+                    /type=$rest_of_line         -
+                    /prompt="Fields"
+
+    syntax set_fault_history/id=1794
+        parameter   count/id=1795               -
+                    /type=$integer              -
+                    /prompt="Count"
+
+    syntax set_vm/id=1796
+
+    syntax set_base/id=1797
+        parameter   address/id=1798             -
+                    /type=$expression           -
+                    /prompt="Address"
+
+    syntax set_verbose/id=1799
+    syntax set_verify/id=1800
+
+    syntax set_quantum/id=1801
+        parameter   count/id=1802               -
+                    /type=$integer              -
+                    /prompt="Quantum"
+    syntax set_uiquantum/id=1803
+        parameter   count/id=1802               -
+                    /type=$integer              -
+                    /prompt="Quantum"
+
+    ! SET DEFAULT device:[directory], the default for file names
+    ! (docs/PHASE-23.md).
+    syntax set_default/id=1804
+        parameter   spec/id=1805                -
+                    /type=$string               -
+                    /prompt="Directory"
+
 end

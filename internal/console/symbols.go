@@ -81,8 +81,8 @@ func (t *SymbolTable) SetEntry(name string, value uint32, kind SymbolKind) {
 }
 
 // SetQualified defines or redefines a user symbol with the /PERMANENT,
-// /ENTRY, /LABEL attributes SET's own qualifier scan supports (set.go's
-// cmdSet) — see Symbol.Permanent/IsEntry/IsLabel.
+// /ENTRY, /LABEL attributes SET's qualifiers give (setcommand.go's
+// SET_SYMBOL) — see Symbol.Permanent/IsEntry/IsLabel.
 func (t *SymbolTable) SetQualified(name string, value uint32, permanent, entry, label bool) {
 	t.m[strings.ToUpper(name)] = &Symbol{
 		Name: strings.ToUpper(name), Value: value, Kind: SymbolUser,

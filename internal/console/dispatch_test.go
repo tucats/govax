@@ -505,7 +505,7 @@ func TestDispatch_setDebugAndShowDebug(t *testing.T) {
 }
 
 // TestDispatch_setPSL checks SET PSL's own comma-separated field=value
-// clause list (cmdSetPSL), including its CUR_MOD alias for SET MODE.
+// clause list (setcommand.go's SET_PSL), including its CUR_MOD alias for SET MODE.
 func TestDispatch_setPSL(t *testing.T) {
 	d, c := newTestDispatcher(t)
 

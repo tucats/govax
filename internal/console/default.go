@@ -28,7 +28,7 @@ import "github.com/tucats/govax/internal/vmserrors"
 // specification is translated from internal/rms's plain Go error into the
 // real CLI_BADFILESPEC console status, matching every other console
 // command that reports a bad argument this way (e.g. SET RADIX's
-// CLI_BADRADIXVAL, SET MODE's CLI_BADMODE — see dispatch.go's cmdSet).
+// CLI_BADRADIXVAL, SET MODE's CLI_BADMODE — see setcommand.go).
 func (c *Console) SetDefault(text string) error {
 	if err := c.ContainerSession.SetDefault(text); err != nil {
 		if lnmErr := logicalNameFailure(err); lnmErr != nil {

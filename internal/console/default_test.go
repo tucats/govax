@@ -61,11 +61,11 @@ func TestConsoleShowDefault_initialState(t *testing.T) {
 	}
 }
 
-// TestDispatch_setDefaultViaFixedTable exercises SET DEFAULT through the
-// real Dispatcher (SET is a fixedCommands entry -- dispatch.go's cmdSet --
-// not a DCL grammar verb), confirming the command line actually reaches
-// Console.SetDefault with its argument threaded through correctly.
-func TestDispatch_setDefaultViaFixedTable(t *testing.T) {
+// TestDispatch_setDefault exercises SET DEFAULT through the real
+// Dispatcher and the DCL grammar's set_default syntax, confirming the
+// command line actually reaches Console.SetDefault with its argument
+// threaded through correctly.
+func TestDispatch_setDefault(t *testing.T) {
 	d, c := newTestDispatcher(t)
 
 	if err := d.Dispatch("SET DEFAULT DUA0:[MYDIR]"); err != nil {
@@ -78,20 +78,19 @@ func TestDispatch_setDefaultViaFixedTable(t *testing.T) {
 }
 
 // TestDispatch_setDefaultNeedsArgument confirms a bare "SET DEFAULT" with
-// no file specification at all is reported as CLI_NEEDSETARG (matching
-// every other SET sub-form's own "you didn't give me anything" check, e.g.
-// SET RADIX/SET BASE) rather than silently doing nothing or panicking on
-// an empty string.
+// no file specification at all is reported as the grammar's
+// CLI_MISSINGPARAMETER (since docs/PHASE-37.md; CLI_NEEDSETARG before),
+// rather than silently doing nothing or panicking on an empty string.
 func TestDispatch_setDefaultNeedsArgument(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 
 	err := d.Dispatch("SET DEFAULT")
 	if err == nil {
-		t.Fatal("Dispatch \"SET DEFAULT\" with no argument = nil error, want CLI_NEEDSETARG")
+		t.Fatal("Dispatch \"SET DEFAULT\" with no argument = nil error, want CLI_MISSINGPARAMETER")
 	}
 
-	if !errors.Is(err, vmserrors.New(vmserrors.CLI_NEEDSETARG)) {
-		t.Errorf("Dispatch SET DEFAULT error = %v, want CLI_NEEDSETARG", err)
+	if !errors.Is(err, vmserrors.New(vmserrors.CLI_MISSINGPARAMETER)) {
+		t.Errorf("Dispatch SET DEFAULT error = %v, want CLI_MISSINGPARAMETER", err)
 	}
 }
 

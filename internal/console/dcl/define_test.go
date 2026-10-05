@@ -96,17 +96,19 @@ func TestLoadConsoleGrammar(t *testing.T) {
 
 func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	g := loadEvaxGrammar(t)
-	// define, about, exit, quit, test, call, clear, show, vminit,
-	// mount, dismount, initialize, directory, delete, purge, type, copy,
-	// create, assign, deassign, macro, link, library, rename (the last
-	// fifteen are govax-native additions -- Phase 22 for mount/dismount/
-	// rename, Phase 23 for initialize/directory/delete/purge/type/copy,
-	// Phase 25 for create/assign/deassign, Phase 27 for macro, Phase 30
-	// for link, Phase 28 for library -- with no testdata/dcl/evax.dcl
-	// counterpart). evax.dcl's FORTH verb, which called a microkernel
-	// FORTH that was never built in, was dropped (2026-10-04).
-	if len(g.verbOrder) != 24 {
-		t.Errorf("got %d verbs, want 24: %v", len(g.verbOrder), verbNames(g))
+	// define, about, exit, quit, test, clear, show, vminit, mount,
+	// dismount, initialize, directory, delete, purge, type, copy, create,
+	// assign, deassign, macro, link, library, rename (govax-native
+	// additions from mount on -- Phase 22 for mount/dismount/rename,
+	// Phase 23 for initialize/directory/delete/purge/type/copy, Phase 25
+	// for create/assign/deassign, Phase 27 for macro, Phase 30 for link,
+	// Phase 28 for library -- with no testdata/dcl/evax.dcl counterpart).
+	// evax.dcl's FORTH verb, which called a microkernel FORTH that was
+	// never built in, was dropped (2026-10-04). Phase 37 adds the 32
+	// verbs and aliases of the console's former fixed commands (zero
+	// through set; call moved there).
+	if len(g.verbOrder) != 55 {
+		t.Errorf("got %d verbs, want 55: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 
