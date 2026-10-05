@@ -388,7 +388,18 @@ func (c *Console) withKernelMode(fn func() error) error {
 // Evaluator returns an Evaluator bound to this console's symbol table,
 // radix, and current deposit address.
 func (c *Console) Evaluator() *Evaluator {
-	return &Evaluator{Symbols: c.Symbols, Radix: c.Radix, Here: c.DepositAddr, Mem: c.Mem, CPU: c.CPU, Debug: imageNames{c: c}}
+	return &Evaluator{
+		Symbols: c.Symbols, Radix: c.Radix, Here: c.DepositAddr, Mem: c.Mem, CPU: c.CPU,
+		Debug: imageNames{c: c},
+		Load: func(addr uint32) (uint32, error) {
+			v, err := c.loadSized(addr, SizeLongword)
+			if err != nil {
+				return 0, vmserrors.New(vmserrors.DBG_NOACCESSR, addr)
+			}
+
+			return v, nil
+		},
+	}
 }
 
 // Printf writes to the console's output stream, matching the C source's

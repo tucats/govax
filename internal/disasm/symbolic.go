@@ -351,3 +351,18 @@ func debuggerFloat(f vaxfloat.Format, v vaxfloat.Value) string {
 
 	return fmt.Sprintf("%#.*g", digits, v.Float64())
 }
+
+// Symbolized returns a copy of dec with its operands named as opts say, the
+// way Format names them, for a caller that lays the operands out itself
+// (the debugger's EXAMINE/OPERANDS).
+func (dec Decoded) Symbolized(opts Options) Decoded {
+	if opts.Symbolizer != nil || opts.Constants != nil || opts.Cells != nil {
+		return dec.symbolized(opts)
+	}
+
+	return dec
+}
+
+// DebuggerText is the operand as the debugger writes it in StyleDebugger
+// (L^DBGDIS\COUNT, (R1)+, S^#03), including its index register.
+func (op Operand) DebuggerText() string { return op.debuggerString() }

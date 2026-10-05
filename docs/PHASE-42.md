@@ -1335,3 +1335,65 @@ find the file.
   come in later subtasks; the session oracle (subtask 16) covers them.
 - `go build`, `go vet`, `go test ./...` clean; golangci-lint reports nothing
   in the packages touched.
+
+### 2026-10-05 — Subtask 9: expressions and EXAMINE/INSTRUCTION
+
+Bug 7 is fixed, and the debugger has `EXAMINE/INSTRUCTION`.
+
+- **Evaluator** (`internal/console/expr.go`). A register name (`R0` to
+  `R11`, `AP`, `FP`, `SP`, `PC`, `PSL`, any case, and `%R0`) is its
+  contents, so `R1+4` and `SP-8` work wherever an address does. A `.` or
+  `@` before an operand is "the contents of": for a register the same
+  value (`.PC` is `PC`; `EXAMINE .SP` then shows memory at SP, as
+  `exam.dlg` does), otherwise the longword at that address, read through
+  `Evaluator.Load` (kernel-mode translation, as EXAMINE reads). An
+  unreadable address is `%DEBUG-E-NOACCESSR`. A lone `.` is still the
+  current location. A console symbol of a register's name beats the
+  register. `condition.go`'s stopgap `.expr` handling is gone: WHEN
+  operands go through the evaluator, so `WHEN (R1 GTR 2)` works too.
+  `.` before a digit is now "contents of" that number (it was an error).
+- **The debugger's radix** (`SET RADIX [/INPUT|/OUTPUT] radix`, `CANCEL
+  RADIX`; Decision 8). Every expression the debugger evaluates
+  (`Debugger.evalWhole`) reads unprefixed numbers in its input radix, and
+  the output radix decides the offsets in names (`GLIMIT+589`). `SHOW RADIX`
+  and the rest of the radix commands are subtask 11's.
+- **`SET MODE [NO]SYMBOLIC`, `[NO]OPERANDS[=FULL|BRIEF]`**, the display
+  modes `EXAMINE/INSTRUCTION` follows. `SYMBOLIC` is seeded from
+  `vax.disassemble.symbolic` (`console.SymbolicDefault`). The other
+  modes and govax's access mode are subtask 11's; any other word is
+  `%DEBUG-E-SYNTAX`.
+- **`EXAMINE/INSTRUCTION`** (`internal/debugger/examine.go`): a list of
+  locations, each `a` or `a:b`, split outside parentheses and quotes, one
+  instruction layout per `Console.DisassembleWith` (which got `Radix` and
+  `Operands` options). A range's start typed as `%LINE n` is named by the
+  line. `/CONSTANTS` and `/SHAREABLE` are govax's. With no location it
+  shows the instruction at the current location (the deposit address, for
+  now; subtask 10 gives the debugger its own). The data forms of EXAMINE
+  (`EXAMINE R0`, ...) answer `%DEBUG-E-NOTAVAILABLE` until subtask 10. The
+  console's `DISASSEMBLE` is untouched until subtask 14 removes it.
+- **`/OPERANDS`** (`internal/console/dbgoperands.go`): after the
+  instruction, a line per register or memory operand, as `dbgdis.dlg`,
+  `dbgtrc.dlg`, and `exam.dlg` show: five spaces, the operand's text in
+  ten columns, then `R0 contains 00000003` or `NAME (address A) contains V`
+  (the address alone when no symbol names it); an operand longer than
+  ten columns takes a line, and its description follows indented to
+  column 16. The machine is as it is before the instruction runs (an
+  autoincrement operand's address is the register's value now). Operand
+  addresses are computed from the registers without running anything.
+  `/OPERANDS` alone implies `/INSTRUCTION`. **Unconfirmed, govax's
+  choices:** `=FULL` is the same as brief (the probe's two are identical);
+  literals, immediates, branch targets, and inline data get no line; a
+  quadword register operand shows the register pair as 16 digits; a
+  value wider than 8 bytes shows 4; an unreadable location shows
+  `<inaccessible>`.
+- **Tests.** `TestExamineInstructionOracle` is Phase 41's
+  `TestDebuggerOracle` moved here and driven through the debugger:
+  every symbolic range in the seven sessions (514 lines, the session's and
+  relinked images), with `SET RADIX` for the decimal offsets.
+  `examine_test.go` replays `dbgdis.dlg`'s and `dbgtrc.dlg`'s
+  `EXAMINE/OPERANDS` lines, ranges and lists, `SET MODE`/`SET RADIX`,
+  and registers in expressions; `expr_test.go` has the evaluator's cases.
+  The `exam.dlg` register lines (`EXAMINE R0` and the like) wait for
+  subtask 10.
+- `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
+  touched are clean.

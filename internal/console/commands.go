@@ -428,3 +428,9 @@ func (d *Dispatcher) ifCommand(id int64, r *dcl.Result) error {
 
 	return d.Dispatch(command)
 }
+
+// SymbolicDefault is whether the debugger's instruction display names
+// addresses from the debug symbols when nothing says otherwise: the
+// vax.disassemble.symbolic setting, true when it isn't set. It seeds the
+// debugger's SET MODE SYMBOLIC.
+func SymbolicDefault() bool { return symbolicDefault() }

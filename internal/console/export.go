@@ -40,7 +40,16 @@ func (c *Console) ExceptionName(code cpu.Exception) string { return exceptionNam
 // left over after the expression is an error. It is how a command's
 // address or value parameter becomes a number.
 func (c *Console) EvalWhole(text string) (uint32, error) {
-	v, rest, err := c.Evaluator().Eval(text)
+	return c.EvalWholeIn(c.Radix, text)
+}
+
+// EvalWholeIn is EvalWhole with the radix a number without a prefix is read
+// in: the debugger has a radix of its own (SET RADIX).
+func (c *Console) EvalWholeIn(radix int, text string) (uint32, error) {
+	ev := c.Evaluator()
+	ev.Radix = radix
+
+	v, rest, err := ev.Eval(text)
 	if err != nil {
 		return 0, err
 	}

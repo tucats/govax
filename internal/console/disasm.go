@@ -58,6 +58,16 @@ type DisassembleOptions struct {
 	// so its first instruction is named by the line, as the debugger
 	// names it, even where a label is there too.
 	StartLine bool
+
+	// Operands adds a line to each instruction for every operand that
+	// names a register or a memory location (EXAMINE/OPERANDS). Only the
+	// symbolic layout has them.
+	Operands OperandsMode
+
+	// Radix is the radix a symbolic name's offsets are written in (10
+	// or 16). Zero takes the console's own (symbolRadix); the debugger,
+	// which has a radix of its own (Decision 8), sets it.
+	Radix int
 }
 
 // DisassembleWith implements DISASSEMBLE: decodes and prints instructions
@@ -74,7 +84,12 @@ func (c *Console) DisassembleWith(start, end uint32, opts DisassembleOptions) er
 	}
 
 	r := memByteReader{c: c}
-	names := consoleSymbolizer{c: c, radix: c.symbolRadix()}
+	radix := opts.Radix
+	if radix == 0 {
+		radix = c.symbolRadix()
+	}
+
+	names := consoleSymbolizer{c: c, radix: radix}
 	format := c.formatOptions(opts, names)
 
 	for pc := start; pc <= end; {
@@ -109,6 +124,11 @@ func (c *Console) DisassembleWith(start, end uint32, opts DisassembleOptions) er
 		}
 
 		c.Printf("%s\n", debuggerLine(loc, dec.Format(format)))
+
+		if opts.Operands != OperandsOff {
+			c.printOperands(dec, format, names)
+		}
+
 		pc += dec.Length
 
 		if strings.HasPrefix(dec.Mnemonic, "CASE") {

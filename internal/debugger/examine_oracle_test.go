@@ -1,10 +1,13 @@
-package console
+package debugger_test
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/console"
 )
 
 // oracleRange is one EXAMINE/INSTRUCTION command in a debugger session
@@ -89,20 +92,20 @@ type oracleImage struct {
 	debug   bool     // linked /DEBUG (else with traceback only)
 }
 
-// TestDebuggerOracle (docs/PHASE-41.md, subtask 13): every range the
-// probe's sessions examined under SET MODE SYMBOLIC, run through the
-// console's DISASSEMBLE command, prints exactly what VMS's debugger
-// printed: the locations, the instructions with their operands named,
+// TestExamineInstructionOracle (docs/PHASE-41.md, subtask 13, moved to
+// the debugger's EXAMINE/INSTRUCTION by docs/PHASE-42.md, subtask 9):
+// every range the probe's sessions examined under SET MODE SYMBOLIC,
+// run through the debugger's EXAMINE/INSTRUCTION with the session's
+// SET MODE and SET RADIX, prints exactly what VMS's debugger printed: the locations, the instructions with their operands named,
 // CASE tables, and SET RADIX DECIMAL's offsets. Each session is checked
 // on the image VMS's debugger ran (real LINK's, or govax's for GVDBGDIS
 // and GVTRACE) and on govax's LINK of VMS MACRO's objects for the same
 // image, so the oracle covers govax's linker's debug tables as well as
 // its disassembler.
 //
-// SET MODE NOSYMBOLIC's ranges aren't run here: DISASSEMBLE/NOSYMBOLIC
-// is the console's own layout (Decision 1), and the debugger's numeric
-// layout is checked in internal/dbgsym's TestSymbolicInstructions.
-func TestDebuggerOracle(t *testing.T) {
+// SET MODE NOSYMBOLIC's ranges aren't run here: the numeric layout is
+// checked in internal/dbgsym's TestSymbolicInstructions.
+func TestExamineInstructionOracle(t *testing.T) {
 	images := []oracleImage{
 		{"dbgdis.dlg", "dbgdis.exe", []string{"testdata/dbg/vax/dbgdis.obj", "testdata/dbg/vax/dbgsub.obj"}, true},
 		{"dbgtrc.dlg", "dbgtrc.exe", []string{"testdata/dbg/vax/dbgdis.obj", "testdata/dbg/vax/dbgsub.obj"}, false},
@@ -142,21 +145,28 @@ func TestDebuggerOracle(t *testing.T) {
 			path := b.path
 
 			t.Run(strings.TrimSuffix(im.session, ".dlg")+"/"+b.name, func(t *testing.T) {
-				c, buf := runStepped(t, path)
-				d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+				c, _ := runImage(t, path, console.RunOptions{Debug: console.DebugOn})
+				buf := c.Out.(*bytes.Buffer)
 
 				for _, r := range ranges {
 					if !r.symbolic {
 						continue
 					}
 
-					// EXAMINE/INSTRUCTION A:B is DISASSEMBLE A B.
-					command := "DISASSEMBLE " + strings.Replace(r.command, ":", " ", 1)
+					command := "EXAMINE/INSTRUCTION " + r.command
 
 					buf.Reset()
-					c.Radix = r.radix
 
-					if err := d.Dispatch(command); err != nil {
+					radix := "HEXADECIMAL"
+					if r.radix == 10 {
+						radix = "DECIMAL"
+					}
+
+					if err := c.Debugger.Dispatch("SET RADIX " + radix); err != nil {
+						t.Fatal(err)
+					}
+
+					if err := c.Debugger.Dispatch(command); err != nil {
 						t.Errorf("%s: %v", command, err)
 
 						continue

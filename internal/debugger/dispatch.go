@@ -50,6 +50,7 @@ func (d *Dispatcher) bind() {
 
 	d.bindBreak()
 	d.bindSource()
+	d.bindExamine()
 
 	g.Bind("EXIT", end)
 	g.Bind("QUIT", end)
@@ -211,7 +212,7 @@ func (d *Dispatcher) optionalAddress(r *dcl.Result, name string) (*uint32, error
 		return nil, nil
 	}
 
-	v, err := d.Debugger.Console.EvalWhole(r.String(name))
+	v, err := d.Debugger.evalWhole(r.String(name))
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +258,7 @@ func (d *Dispatcher) step(r *dcl.Result) error {
 	}
 
 	if r.Present("COUNT") {
-		n, err := d.Debugger.Console.EvalWhole(r.String("COUNT"))
+		n, err := d.Debugger.evalWhole(r.String("COUNT"))
 		if err != nil {
 			return err
 		}

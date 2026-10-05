@@ -22,8 +22,14 @@ import (
 // same precedence levels asm_expr's three-tier grammar uses. Register names
 // and indirect (@) register/PSL references are not supported — EXAMINE/
 // DEPOSIT special-case a bare register name themselves before ever calling
-// the evaluator (matching console_exam.c's own register short-circuit), and
-// no other console command in scope needs them.
+// the evaluator (matching console_exam.c's own register short-circuit).
+//
+// Phase 42 adds what the VMS debugger's address expressions use: a register
+// name (R0 to R11, AP, FP, SP, PC, PSL, and the debugger's %R0 spelling) is
+// its contents, so R1+4 and SP-8 work; and a "." or "@" in front of an
+// operand means "the contents of": .PC is the address the PC holds, and
+// .COUNT is the longword stored at COUNT. A "." with nothing after it that
+// could start an operand is still the current location.
 type Evaluator struct {
 	Symbols *SymbolTable
 	Radix   int    // 8, 10, or 16 — the default for a prefix-less numeric literal
@@ -34,6 +40,12 @@ type Evaluator struct {
 	// used only for address/value arithmetic that never touches memory.
 	Mem *vm.Memory
 	CPU *vax.CPU
+
+	// Load reads the longword at an address for "." and "@" (the contents
+	// of a memory operand). The console sets it to read through kernel-mode
+	// translation, as EXAMINE does; nil leaves those operators without
+	// memory to read, and they fail.
+	Load func(addr uint32) (uint32, error)
 
 	// Debug resolves the names the console's table doesn't have from the
 	// loaded images' debug symbol tables (Phase 41): a symbol, a
@@ -227,8 +239,28 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 		return v, rest[1:], nil
 	}
 
+	// ".X" and "@X" are the contents of X: the register's value, or the
+	// longword in memory at X's address. A "." with nothing operand-like
+	// after it is the current location.
+	if (s[0] == '.' || s[0] == '@') && startsOperand(peekByte(s, 1)) {
+		return e.parseContents(s[1:])
+	}
+
 	if s[0] == '.' && !isDigit(peekByte(s, 1)) {
 		return e.Here, s[1:], nil
+	}
+
+	if s[0] == '%' && lineKeyword(s) == 0 {
+		i := 1
+		for i < len(s) && isSymbolChar(s[i]) {
+			i++
+		}
+
+		if v, ok := registerValue(e, s[1:i]); ok {
+			return v, s[i:], nil
+		}
+
+		return 0, "", vmserrors.New(vmserrors.CLI_UNDEFSYM, s[:i])
 	}
 
 	if s[0] == '"' {
@@ -277,6 +309,90 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 	}
 
 	return e.parseNumber(s)
+}
+
+// startsOperand reports whether ch can begin the operand a "." or "@"
+// takes: a name, a number, a parenthesis, or a "%" register. (A "." before
+// a digit is a number's own point, and is left to the number.)
+func startsOperand(ch byte) bool {
+	return isSymbolStart(ch) || isDigit(ch) || ch == '(' || ch == '%'
+}
+
+// parseContents evaluates the operand after a "." or "@" and returns its
+// contents. A register's contents are its value, which is what the bare
+// register name already gives; anything else is an address, and the
+// contents are the longword stored there.
+func (e *Evaluator) parseContents(s string) (uint32, string, error) {
+	addr, rest, err := e.parseAtom(s)
+	if err != nil {
+		return 0, "", err
+	}
+
+	if e.isRegister(s) {
+		return addr, rest, nil
+	}
+
+	if e.Load == nil {
+		return 0, "", vmserrors.New(vmserrors.CLI_NOVAX)
+	}
+
+	v, err := e.Load(addr)
+	if err != nil {
+		return 0, "", err
+	}
+
+	return v, rest, nil
+}
+
+// isRegister reports whether the operand at the start of s is a register
+// name (with or without the debugger's "%"), and so evaluates to the
+// register's contents. A console symbol of the same name wins over a
+// register, as it does in lookupSymbol.
+func (e *Evaluator) isRegister(s string) bool {
+	t := strings.TrimPrefix(s, "%")
+
+	i := 0
+	for i < len(t) && isSymbolChar(t[i]) {
+		i++
+	}
+
+	name := t[:i]
+	if _, ok := registerValue(e, name); !ok {
+		return false
+	}
+
+	if t == s && e.Symbols != nil {
+		if _, isSym := e.Symbols.Get(name); isSym {
+			return false
+		}
+	}
+
+	return true
+}
+
+// registerValue returns the contents of the register named name: a
+// general register, or the PSL. ok is false when name is neither.
+func registerValue(e *Evaluator, name string) (uint32, bool) {
+	name = strings.ToUpper(name)
+
+	if name == "PSL" {
+		if e.CPU == nil {
+			return 0, true
+		}
+
+		return uint32(e.CPU.PSL()), true
+	}
+
+	r, ok := registerNames[name]
+	if !ok {
+		return 0, false
+	}
+
+	if e.CPU == nil {
+		return 0, true
+	}
+
+	return e.CPU.GPR(r), true
 }
 
 // parseQuotedString parses a double-quoted string literal, matching
@@ -440,6 +556,10 @@ func (e *Evaluator) parseDefined(s string) (uint32, string, error) {
 func (e *Evaluator) lookupSymbol(name string) (uint32, bool) {
 	if !strings.Contains(name, `\`) {
 		if v, ok := e.Symbols.Get(name); ok {
+			return v, true
+		}
+
+		if v, ok := registerValue(e, name); ok {
 			return v, true
 		}
 

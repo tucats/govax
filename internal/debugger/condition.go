@@ -2,8 +2,6 @@ package debugger
 
 import (
 	"strings"
-
-	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // A breakpoint's WHEN clause holds a condition such as
@@ -13,13 +11,9 @@ import (
 // This file evaluates the conditions the debugger's commands accept so
 // far: comparisons (EQL, NEQ, LSS, LEQ, GTR, GEQ) between two operands,
 // joined with AND, OR, and NOT, and grouped with parentheses. An operand
-// is an address expression (the console's expression evaluator), or one
-// preceded by a period, which means the longword stored at that address
-// (".COUNT" is COUNT's contents; "COUNT" is its address).
-//
-// This is a stopgap: docs/PHASE-42.md's subtask 9 gives the debugger a
-// full expression evaluator (registers, ".R1", and so on), and the
-// conditions will be parsed by it then.
+// is an address expression (the console's expression evaluator, with the
+// debugger's registers and ".COUNT" for the longword stored at an address
+// in it: ".COUNT" is COUNT's contents; "COUNT" is its address).
 //
 // Unconfirmed against VMS: in a MACRO-language expression the VMS
 // debugger takes a data label's *value* to be its contents, so its ".COUNT"
@@ -110,29 +104,12 @@ func compare(op string, l, r int32) bool {
 	return l >= r // GEQ
 }
 
-// operand evaluates one side of a comparison: an address expression, or
-// ".expression" for the longword at that address. An address the program
-// can't read is %DEBUG-E-NOACCESSR.
+// operand evaluates one side of a comparison: an address expression. The
+// evaluator takes registers (R1, SP), and ".expression" for the longword
+// at an address, which is %DEBUG-E-NOACCESSR when the program can't read
+// it.
 func (d *Debugger) operand(text string) (uint32, error) {
-	text = unparenthesize(text)
-
-	c := d.Console
-
-	if rest, ok := strings.CutPrefix(text, "."); ok && strings.TrimSpace(rest) != "" {
-		addr, err := c.EvalWhole(rest)
-		if err != nil {
-			return 0, err
-		}
-
-		v, err := c.Mem.LoadLongword(c.CPU, addr)
-		if err != nil {
-			return 0, vmserrors.New(vmserrors.DBG_NOACCESSR, addr)
-		}
-
-		return v, nil
-	}
-
-	return c.EvalWhole(text)
+	return d.evalWhole(unparenthesize(text))
 }
 
 // splitWord splits text around the first occurrence of word (compared

@@ -191,7 +191,7 @@ func (d *Debugger) setAddressBreaks(proto Breakpoint, target string) error {
 	var made []*Breakpoint
 
 	for _, text := range splitTop(target, ',') {
-		addr, err := d.Console.EvalWhole(text)
+		addr, err := d.evalWhole(text)
 		if err != nil {
 			return err
 		}
@@ -230,7 +230,7 @@ func (d *Debugger) setReturnBreak(proto Breakpoint, target string) error {
 		return vmserrors.New(vmserrors.CLI_NEEDBREAKADDR)
 	}
 
-	addr, err := d.Console.EvalWhole(target)
+	addr, err := d.evalWhole(target)
 	if err != nil {
 		return err
 	}
@@ -487,7 +487,7 @@ func (d *Debugger) cancelAddressBreaks(target string) error {
 	}
 
 	for _, text := range splitTop(target, ',') {
-		addr, err := d.Console.EvalWhole(text)
+		addr, err := d.evalWhole(text)
 		if err != nil {
 			return err
 		}
@@ -545,7 +545,7 @@ func (d *Debugger) cancelReturnBreak(target string) error {
 		return nil
 	}
 
-	addr, err := d.Console.EvalWhole(target)
+	addr, err := d.evalWhole(target)
 	if err != nil {
 		return err
 	}

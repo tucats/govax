@@ -94,6 +94,8 @@ grammar debugger
         keyword     breakpoint          /syntax=set_break/nonegatable
         keyword     step                /syntax=set_step/nonegatable
         keyword     source              /syntax=set_source/nonegatable
+        keyword     mode                /syntax=set_mode/nonegatable
+        keyword     radix               /syntax=set_radix/nonegatable
 
     verb set/id=20
         parameter   what/id=21                  -
@@ -130,6 +132,22 @@ grammar debugger
                         /type=$rest_of_line     -
                         /prompt="Directories"
 
+        ! SET MODE keyword[,keyword...]: [NO]SYMBOLIC, and [NO]OPERANDS
+        ! with an optional =FULL or =BRIEF.
+        syntax set_mode/id=80
+            parameter   words/id=81             -
+                        /type=$rest_of_line     -
+                        /prompt="Mode"
+
+        ! SET RADIX [/INPUT|/OUTPUT] DECIMAL|HEXADECIMAL|OCTAL|BINARY. With
+        ! neither qualifier it sets both radixes.
+        syntax set_radix/id=82
+            qualifier   input/id=83/nonegatable
+            qualifier   output/id=84/nonegatable
+            parameter   radix/id=85             -
+                        /type=$rest_of_line     -
+                        /prompt="Radix"
+
     ! SHOW BREAK lists the breakpoints, and SHOW STEP the defaults STEP
     ! uses.
     type show_types
@@ -158,6 +176,7 @@ grammar debugger
         keyword     break               /syntax=cancel_break
         keyword     breakpoint          /syntax=cancel_break
         keyword     source              /syntax=cancel_source
+        keyword     radix               /syntax=cancel_radix
 
     verb cancel/id=50
         parameter   what/id=51                  -
@@ -181,5 +200,24 @@ grammar debugger
                         /type=$rest_of_line
 
         syntax cancel_source/id=73
+
+        syntax cancel_radix/id=86
+
+    ! EXAMINE[/qualifiers] [location[,location...]] shows what is at each
+    ! location. Subtask 9 has /INSTRUCTION, the machine instruction there
+    ! (a location may be a range, start:end); /OPERANDS[=FULL] explains
+    ! each operand; /CONSTANTS and /SHAREABLE are govax's, naming a
+    ! constant and a G^ reference's routine. The location is the rest of
+    ! the line, which internal/debugger takes apart.
+    verb examine/id=87
+        qualifier   instruction/id=88/nonegatable
+        qualifier   operands/id=89              -
+                    /type=$string               -
+                    /default=""
+        qualifier   constants/id=90/nonegatable
+        qualifier   shareable/id=91/nonegatable
+        parameter   location/id=92              -
+                    /type=$rest_of_line
+    verb ex/alias=examine
 
 end

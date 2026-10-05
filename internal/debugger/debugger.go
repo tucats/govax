@@ -81,6 +81,17 @@ type Debugger struct {
 	// program. Start runs it once the debugger is at its prompt.
 	pendingDo string
 
+	// symbolic and operands are SET MODE's display modes for
+	// EXAMINE/INSTRUCTION: whether names come from the debug symbols, and
+	// whether each operand gets an explanation. inputRadix and outputRadix
+	// are SET RADIX's: the radix numbers without a prefix are typed in,
+	// and the one the offsets in names are shown in. The debugger's own
+	// radix is separate from the console's (Decision 8).
+	symbolic    bool
+	operands    console.OperandsMode
+	inputRadix  int
+	outputRadix int
+
 	// active is true while a session is in progress, which is whether
 	// the prompt is "DBG> " and command lines come here.
 	active bool
@@ -90,7 +101,10 @@ type Debugger struct {
 // (parsed from debug.dcl) and its HELP command reading help (parsed from
 // debug.help; nil is allowed, and HELP then says there is none).
 func New(c *console.Console, g *dcl.Grammar, help *console.Help) *Debugger {
-	d := &Debugger{Console: c, StepMode: StepOver}
+	d := &Debugger{
+		Console: c, StepMode: StepOver,
+		symbolic: console.SymbolicDefault(), inputRadix: 16, outputRadix: 16,
+	}
 	d.Dispatcher = newDispatcher(d, g, help)
 	c.OnUnhandled = d.onUnhandled
 	c.OnSignal = d.onSignal

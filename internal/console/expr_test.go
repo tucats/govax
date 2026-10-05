@@ -2,12 +2,13 @@ package console
 
 import (
 	"bytes"
+	"github.com/tucats/govax/internal/vax"
 	"testing"
 )
 
 func evalTest(t *testing.T, radix int, syms map[string]uint32, expr string) uint32 {
 	t.Helper()
-	
+
 	st := NewSymbolTable()
 
 	for k, v := range syms {
@@ -46,7 +47,7 @@ func TestEvaluator_radixPrefix(t *testing.T) {
 		"^O17":   15,
 		"^B101":  5,
 	}
-	
+
 	for expr, want := range cases {
 		if got := evalTest(t, 16, nil, expr); got != want {
 			t.Errorf("Eval(%q) = %#x, want %#x", expr, got, want)
@@ -73,14 +74,14 @@ func TestEvaluator_undefinedSymbol(t *testing.T) {
 // the same name wins.
 func TestEvaluator_builtinSymbols(t *testing.T) {
 	cases := map[string]uint32{
-		"PTE$K_UR":    15,
-		"pte$k_none":  0,
-		"PTE$K_ALL":   4,
-		"VAX$PR_SBR":  12,
-		"XFC$SHIM":    0x7D,
-		"OPC$_HALT":   0,
-		"OPC$_MOVL":   0xD0,
-		"PTE$K_UR+1":  16,
+		"PTE$K_UR":   15,
+		"pte$k_none": 0,
+		"PTE$K_ALL":  4,
+		"VAX$PR_SBR": 12,
+		"XFC$SHIM":   0x7D,
+		"OPC$_HALT":  0,
+		"OPC$_MOVL":  0xD0,
+		"PTE$K_UR+1": 16,
 	}
 
 	for expr, want := range cases {
@@ -379,5 +380,63 @@ func TestEvaluator_quotedStringOverflow(t *testing.T) {
 	huge := `"` + string(make([]byte, size+64)) + `"`
 	if _, _, err := ev.Eval(huge); err == nil {
 		t.Error("expected a string pool overflow error")
+	}
+}
+
+// TestEvaluator_registers: a register name is its contents (Phase 42's
+// bug 7), in either case and with the debugger's "%", and "." or "@" before
+// one gives the same; before anything else they read the longword there.
+func TestEvaluator_registers(t *testing.T) {
+	cpu := vax.New()
+	cpu.SetGPR(vax.R1, 0x100)
+	cpu.SetGPR(vax.SP, 0x7FF00000)
+	cpu.SetGPR(vax.PC, 0x400)
+
+	st := NewSymbolTable()
+	st.Set("DATA", 0x2000, SymbolUser)
+	st.Set("R2", 0x55, SymbolUser) // a console symbol beats a register
+
+	e := &Evaluator{
+		Symbols: st, Radix: 16, Here: 0x1000, CPU: cpu,
+		Load: func(addr uint32) (uint32, error) { return addr + 1, nil },
+	}
+
+	cases := []struct {
+		expr string
+		want uint32
+	}{
+		{"R1", 0x100},
+		{"r1+4", 0x104},
+		{"%R1", 0x100},
+		{"SP-8", 0x7FEFFFF8},
+		{".PC", 0x400},
+		{"@PC", 0x400},
+		{".%PC", 0x400},
+		{".DATA", 0x2001},
+		{".(R1+10)", 0x111},
+		{".R1+4", 0x104},
+		{"R2", 0x55},
+		{".", 0x1000},
+		{". + 4", 0x1004},
+	}
+
+	for _, tc := range cases {
+		got, rest, err := e.Eval(tc.expr)
+		if err != nil || rest != "" || got != tc.want {
+			t.Errorf("Eval(%q) = %#x, %q, %v; want %#x", tc.expr, got, rest, err, tc.want)
+		}
+	}
+
+	// A name that isn't a register, and a "%" name that isn't one.
+	for _, expr := range []string{"R16", "%NOPE", "R1X"} {
+		if _, _, err := e.Eval(expr); err == nil {
+			t.Errorf("Eval(%q) succeeded", expr)
+		}
+	}
+
+	// With no way to read memory, "." of a memory operand fails.
+	e.Load = nil
+	if _, _, err := e.Eval(".DATA"); err == nil {
+		t.Error(".DATA with no Load succeeded")
 	}
 }
