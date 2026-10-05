@@ -41,7 +41,20 @@ const (
 )
 
 // showSource prints the source line at pc, if there is one to show.
+//
+// While the program runs (runLoop), a source line is shown once for each
+// instruction however many reports are made at it: when a tracepoint and a
+// breakpoint (or two tracepoints) are reached at one pc, only the first
+// report is followed by the line (the probe's trace.dlg).
 func (d *Debugger) showSource(pc uint32) {
+	if d.shown.active {
+		if d.shown.ok && d.shown.pc == pc {
+			return
+		}
+
+		d.shown.pc, d.shown.ok = pc, true
+	}
+
 	n, text, ok := d.Console.SourceLine(pc)
 	if !ok {
 		return

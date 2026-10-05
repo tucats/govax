@@ -31,6 +31,18 @@ func (d *Dispatcher) bindBreak() {
 	d.Grammar.Bind("CANCEL_BREAK", func(id int64, r *dcl.Result) error { return d.Debugger.cancelBreak(r) })
 }
 
+// pointList returns the list a command works on: the tracepoints when trace
+// is true, else the breakpoints. Tracepoints are Breakpoint values too
+// (they are reached the same way), kept in their own list; what differs is
+// what happens when one is reached (tracepoint.go).
+func (d *Debugger) pointList(trace bool) *[]*Breakpoint {
+	if trace {
+		return &d.Tracepoints
+	}
+
+	return &d.Breakpoints
+}
+
 // splitClauses separates a SET BREAK parameter into what comes before its
 // WHEN and DO clauses (the addresses or the routine), and those clauses'
 // text, parentheses and all. The clauses may come in either order. A
@@ -123,7 +135,16 @@ func class(r *dcl.Result, extra ...string) (string, error) {
 }
 
 // setBreak implements SET BREAK.
-func (d *Debugger) setBreak(r *dcl.Result) error {
+func (d *Debugger) setBreak(r *dcl.Result) error { return d.setPoint(r, false) }
+
+// setTrace implements SET TRACE: the same command as SET BREAK (except for
+// /EXCEPTION and /FAULT, which the grammar leaves out), making tracepoints.
+func (d *Debugger) setTrace(r *dcl.Result) error { return d.setPoint(r, true) }
+
+// setPoint is SET BREAK, or SET TRACE when trace is true.
+func (d *Debugger) setPoint(r *dcl.Result, trace bool) error {
+	list := d.pointList(trace)
+
 	if err := d.Console.RequireInit(); err != nil {
 		return err
 	}
@@ -157,23 +178,23 @@ func (d *Debugger) setBreak(r *dcl.Result) error {
 
 	switch kind {
 	case "":
-		return d.setAddressBreaks(proto, target)
+		return d.setAddressBreaks(list, proto, target)
 
 	case "RETURN":
-		return d.setReturnBreak(proto, target)
+		return d.setReturnBreak(list, proto, target)
 
 	case "FAULT":
 		return d.AddFaultBreakpoint(r.String("FAULT"))
 
 	case "INSTRUCTION":
-		return d.setInstructionBreak(proto, r.List("INSTRUCTION"))
+		return d.setInstructionBreak(list, proto, r.List("INSTRUCTION"))
 	}
 
 	proto.Kind = map[string]BreakKind{
 		"CALL": BreakCall, "BRANCH": BreakBranch, "LINE": BreakLine, "EXCEPTION": BreakException,
 	}[kind]
 
-	d.replaceClassBreak(&proto)
+	d.replaceClassBreak(list, &proto)
 
 	return nil
 }
@@ -181,7 +202,7 @@ func (d *Debugger) setBreak(r *dcl.Result) error {
 // setAddressBreaks makes an address breakpoint for each address in the
 // list. An address that is a routine's entry gets its breakpoint just past
 // the entry mask, shown as "at routine NAME".
-func (d *Debugger) setAddressBreaks(proto Breakpoint, target string) error {
+func (d *Debugger) setAddressBreaks(list *[]*Breakpoint, proto Breakpoint, target string) error {
 	if target == "" {
 		return vmserrors.New(vmserrors.CLI_NEEDBREAKADDR)
 	}
@@ -210,14 +231,26 @@ func (d *Debugger) setAddressBreaks(proto Breakpoint, target string) error {
 	}
 
 	for _, bp := range made {
+		// A place has one eventpoint of the user's: a breakpoint, or a
+		// tracepoint, replaces the other of the same address, as the VMS
+		// debugger's SET BREAK replaced an earlier SET TRACE (the probe's
+		// trace.dlg).
+		for _, other := range []*[]*Breakpoint{&d.Breakpoints, &d.Tracepoints} {
+			if other != list {
+				*other = slices.DeleteFunc(*other, func(old *Breakpoint) bool {
+					return old.Kind == BreakAddress && old.Addr == bp.Addr && !old.Step && !old.Quiet
+				})
+			}
+		}
+
 		// A breakpoint already at this address is replaced, so the new
 		// options (/AFTER, WHEN) take its place. The debugger's own step
 		// breakpoints are left alone: they coexist with a user's.
-		d.Breakpoints = slices.DeleteFunc(d.Breakpoints, func(old *Breakpoint) bool {
+		*list = slices.DeleteFunc(*list, func(old *Breakpoint) bool {
 			return old.Kind == BreakAddress && old.Addr == bp.Addr && !old.Step && !old.Quiet
 		})
 
-		d.Breakpoints = append(d.Breakpoints, bp)
+		*list = append(*list, bp)
 	}
 
 	return nil
@@ -225,7 +258,7 @@ func (d *Debugger) setAddressBreaks(proto Breakpoint, target string) error {
 
 // setReturnBreak makes a SET BREAK/RETURN breakpoint: it stops at each RET
 // that ends a call of the named routine.
-func (d *Debugger) setReturnBreak(proto Breakpoint, target string) error {
+func (d *Debugger) setReturnBreak(list *[]*Breakpoint, proto Breakpoint, target string) error {
 	if target == "" {
 		return vmserrors.New(vmserrors.CLI_NEEDBREAKADDR)
 	}
@@ -244,7 +277,7 @@ func (d *Debugger) setReturnBreak(proto Breakpoint, target string) error {
 	proto.Start, proto.Size = start, size
 	proto.Name = d.Console.LocationText(start)
 
-	d.replaceClassBreak(&proto)
+	d.replaceClassBreak(list, &proto)
 
 	return nil
 }
@@ -252,7 +285,7 @@ func (d *Debugger) setReturnBreak(proto Breakpoint, target string) error {
 // setInstructionBreak makes a SET BREAK/INSTRUCTION breakpoint: with
 // opcodes, it stops before each of those instructions; with none, before
 // every instruction.
-func (d *Debugger) setInstructionBreak(proto Breakpoint, names []string) error {
+func (d *Debugger) setInstructionBreak(list *[]*Breakpoint, proto Breakpoint, names []string) error {
 	names = slices.DeleteFunc(slices.Clone(names), func(s string) bool { return strings.TrimSpace(s) == "" })
 
 	proto.Kind = BreakAnyInstruction
@@ -273,7 +306,7 @@ func (d *Debugger) setInstructionBreak(proto Breakpoint, names []string) error {
 		}
 	}
 
-	d.replaceClassBreak(&proto)
+	d.replaceClassBreak(list, &proto)
 
 	return nil
 }
@@ -282,8 +315,8 @@ func (d *Debugger) setInstructionBreak(proto Breakpoint, names []string) error {
 // lines, instructions, a routine's returns, exceptions), replacing the one
 // of the same class already set: a class has one breakpoint, as in the
 // VMS debugger.
-func (d *Debugger) replaceClassBreak(bp *Breakpoint) {
-	d.Breakpoints = slices.DeleteFunc(d.Breakpoints, func(old *Breakpoint) bool {
+func (d *Debugger) replaceClassBreak(list *[]*Breakpoint, bp *Breakpoint) {
+	*list = slices.DeleteFunc(*list, func(old *Breakpoint) bool {
 		if bp.Kind == BreakReturn {
 			return old.Kind == BreakReturn && old.Start == bp.Start
 		}
@@ -294,7 +327,7 @@ func (d *Debugger) replaceClassBreak(bp *Breakpoint) {
 		return old.Kind == bp.Kind || instruction(old.Kind) && instruction(bp.Kind)
 	})
 
-	d.Breakpoints = append(d.Breakpoints, bp)
+	*list = append(*list, bp)
 }
 
 // ShowBreakpoints implements SHOW BREAK: every breakpoint, in the order
@@ -318,25 +351,7 @@ func (d *Debugger) ShowBreakpoints() error {
 
 		shown++
 
-		c.Printf("%s\n", d.breakDescription(bp))
-
-		if bp.Kind == BreakCall || bp.Kind == BreakBranch || bp.Kind == BreakInstruction {
-			for _, line := range opcodeLines(d.breakOpNames(bp)) {
-				c.Printf("%s\n", line)
-			}
-		}
-
-		if bp.After > 0 {
-			c.Printf("   /after: %d\n", bp.After)
-		}
-
-		if bp.When != "" {
-			c.Printf("   when %s\n", bp.When)
-		}
-
-		if bp.Do != "" {
-			c.Printf("   do %s\n", bp.Do)
-		}
+		d.showPoint(bp, "breakpoint")
 	}
 
 	for _, code := range faults {
@@ -352,38 +367,66 @@ func (d *Debugger) ShowBreakpoints() error {
 	return nil
 }
 
-// breakDescription is the first line SHOW BREAK shows for bp.
-func (d *Debugger) breakDescription(bp *Breakpoint) string {
+// showPoint prints one SHOW BREAK or SHOW TRACE entry: its description (word
+// is "breakpoint" or "tracepoint"), the opcodes of an instruction class, and
+// the /AFTER, WHEN, and DO clauses.
+func (d *Debugger) showPoint(bp *Breakpoint, word string) {
+	c := d.Console
+
+	c.Printf("%s\n", d.breakDescription(bp, word))
+
+	if bp.Kind == BreakCall || bp.Kind == BreakBranch || bp.Kind == BreakInstruction {
+		for _, line := range opcodeLines(d.breakOpNames(bp)) {
+			c.Printf("%s\n", line)
+		}
+	}
+
+	if bp.After > 0 {
+		c.Printf("   /after: %d\n", bp.After)
+	}
+
+	if bp.When != "" {
+		c.Printf("   when %s\n", bp.When)
+	}
+
+	if bp.Do != "" {
+		c.Printf("   do %s\n", bp.Do)
+	}
+}
+
+// breakDescription is the first line SHOW BREAK shows for bp, or SHOW TRACE,
+// whose word for it ("breakpoint" or "tracepoint") it takes.
+func (d *Debugger) breakDescription(bp *Breakpoint, word string) string {
 	var text string
 
 	switch bp.Kind {
 	case BreakCall:
-		text = "breakpoint on calls:"
+		text = word + " on calls:"
 
 	case BreakBranch:
-		text = "breakpoint on branches:"
+		text = word + " on branches:"
 
 	case BreakLine:
-		text = "breakpoint on lines"
+		text = word + " on lines"
 
 	case BreakInstruction:
 		// VMS ends this line with a blank before the opcodes' lines.
-		text = "breakpoint on instruction(s): "
+		text = word + " on instruction(s): "
 
 	case BreakAnyInstruction:
-		text = "breakpoint on instructions"
+		text = word + " on instructions"
 
 	case BreakReturn:
-		text = "breakpoint on return from routine " + bp.Name
+		text = word + " on return from routine " + bp.Name
 
 	case BreakException:
-		text = "breakpoint on exception"
+		text = word + " on exception"
 
 	case BreakAddress:
 		if bp.Routine {
-			text = "breakpoint at routine " + bp.Name
+			text = word + " at routine " + bp.Name
 		} else {
-			text = "breakpoint at " + d.Console.LocationText(bp.Addr)
+			text = word + " at " + d.Console.LocationText(bp.Addr)
 		}
 	}
 
@@ -459,10 +502,10 @@ func (d *Debugger) cancelBreak(r *dcl.Result) error {
 		}
 
 	case kind == "":
-		err = d.cancelAddressBreaks(r.String("TARGET"))
+		err = d.cancelAddressBreaks(&d.Breakpoints, r.String("TARGET"))
 
 	default:
-		err = d.cancelClassBreak(kind, r)
+		err = d.cancelClassBreak(&d.Breakpoints, kind, r)
 	}
 
 	if err != nil {
@@ -481,7 +524,7 @@ func (d *Debugger) cancelBreak(r *dcl.Result) error {
 // cancelAddressBreaks removes the user's address breakpoints at each
 // address in the list. A routine's name cancels its breakpoint "at
 // routine", which is past its entry mask.
-func (d *Debugger) cancelAddressBreaks(target string) error {
+func (d *Debugger) cancelAddressBreaks(list *[]*Breakpoint, target string) error {
 	if strings.TrimSpace(target) == "" {
 		return vmserrors.New(vmserrors.CLI_NEEDBREAKADDR)
 	}
@@ -496,7 +539,7 @@ func (d *Debugger) cancelAddressBreaks(target string) error {
 			addr += 2
 		}
 
-		d.Breakpoints = slices.DeleteFunc(d.Breakpoints, func(bp *Breakpoint) bool {
+		*list = slices.DeleteFunc(*list, func(bp *Breakpoint) bool {
 			return bp.Kind == BreakAddress && bp.Addr == addr && !bp.Step && !bp.Quiet
 		})
 	}
@@ -507,40 +550,40 @@ func (d *Debugger) cancelAddressBreaks(target string) error {
 // cancelClassBreak removes the breakpoints of a class qualifier's kind.
 // /INSTRUCTION=(opcodes) removes just those opcodes from an opcode
 // breakpoint, and /RETURN routine just that routine's.
-func (d *Debugger) cancelClassBreak(kind string, r *dcl.Result) error {
+func (d *Debugger) cancelClassBreak(list *[]*Breakpoint, kind string, r *dcl.Result) error {
 	switch kind {
 	case "CALL":
-		d.removeKind(BreakCall)
+		d.removeKind(list, BreakCall)
 
 	case "BRANCH":
-		d.removeKind(BreakBranch)
+		d.removeKind(list, BreakBranch)
 
 	case "LINE":
-		d.removeKind(BreakLine)
+		d.removeKind(list, BreakLine)
 
 	case "EXCEPTION":
-		d.removeKind(BreakException)
+		d.removeKind(list, BreakException)
 
 	case "RETURN":
-		return d.cancelReturnBreak(strings.TrimSpace(r.String("TARGET")))
+		return d.cancelReturnBreak(list, strings.TrimSpace(r.String("TARGET")))
 
 	case "INSTRUCTION":
-		return d.cancelInstructionBreak(r.List("INSTRUCTION"))
+		return d.cancelInstructionBreak(list, r.List("INSTRUCTION"))
 	}
 
 	return nil
 }
 
 // removeKind removes every breakpoint of a kind.
-func (d *Debugger) removeKind(kind BreakKind) {
-	d.Breakpoints = slices.DeleteFunc(d.Breakpoints, func(bp *Breakpoint) bool { return bp.Kind == kind })
+func (d *Debugger) removeKind(list *[]*Breakpoint, kind BreakKind) {
+	*list = slices.DeleteFunc(*list, func(bp *Breakpoint) bool { return bp.Kind == kind })
 }
 
 // cancelReturnBreak removes the /RETURN breakpoint of the named routine,
 // or of every routine when none is named.
-func (d *Debugger) cancelReturnBreak(target string) error {
+func (d *Debugger) cancelReturnBreak(list *[]*Breakpoint, target string) error {
 	if target == "" {
-		d.removeKind(BreakReturn)
+		d.removeKind(list, BreakReturn)
 
 		return nil
 	}
@@ -552,7 +595,7 @@ func (d *Debugger) cancelReturnBreak(target string) error {
 
 	start, _, _ := d.Console.RoutineExtent(addr)
 
-	d.Breakpoints = slices.DeleteFunc(d.Breakpoints, func(bp *Breakpoint) bool {
+	*list = slices.DeleteFunc(*list, func(bp *Breakpoint) bool {
 		return bp.Kind == BreakReturn && bp.Start == start
 	})
 
@@ -562,7 +605,7 @@ func (d *Debugger) cancelReturnBreak(target string) error {
 // cancelInstructionBreak removes opcodes from the instruction breakpoint,
 // or the whole breakpoint when no opcodes are given (or it breaks on every
 // instruction). A breakpoint left with no opcodes is removed.
-func (d *Debugger) cancelInstructionBreak(names []string) error {
+func (d *Debugger) cancelInstructionBreak(list *[]*Breakpoint, names []string) error {
 	var gone []*cpu.Instruction
 
 	for _, name := range names {
@@ -579,13 +622,13 @@ func (d *Debugger) cancelInstructionBreak(names []string) error {
 	}
 
 	if len(gone) == 0 {
-		d.removeKind(BreakInstruction)
-		d.removeKind(BreakAnyInstruction)
+		d.removeKind(list, BreakInstruction)
+		d.removeKind(list, BreakAnyInstruction)
 
 		return nil
 	}
 
-	for _, bp := range d.Breakpoints {
+	for _, bp := range *list {
 		if bp.Kind != BreakInstruction {
 			continue
 		}
@@ -598,7 +641,7 @@ func (d *Debugger) cancelInstructionBreak(names []string) error {
 		}
 	}
 
-	d.Breakpoints = slices.DeleteFunc(d.Breakpoints, func(bp *Breakpoint) bool {
+	*list = slices.DeleteFunc(*list, func(bp *Breakpoint) bool {
 		return bp.Kind == BreakInstruction && len(bp.Ops) == 0
 	})
 

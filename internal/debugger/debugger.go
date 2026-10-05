@@ -32,6 +32,23 @@ type Debugger struct {
 	// one-shot ones a STEP arms for itself (runcontrol.go).
 	Breakpoints []*Breakpoint
 
+	// Tracepoints are the tracepoints SET TRACE made (tracepoint.go). They
+	// are Breakpoint values, reached by the same rules, but the program
+	// goes on after one is reported.
+	Tracepoints []*Breakpoint
+
+	// Watchpoints are the locations SET WATCH watches (watch.go).
+	Watchpoints []*Watchpoint
+
+	// shown remembers, while the program runs, which pc's source line the
+	// last report showed, so that two reports at one pc show it once
+	// (showSource). active is true only inside runLoop.
+	shown struct {
+		pc     uint32
+		ok     bool
+		active bool
+	}
+
 	// InstructionBreakpoints holds every opcode currently flagged to break
 	// on execution — SET BREAK/INSTRUCTION, the Go equivalent of vax.c's
 	// own instruction[n].debugdata & OP_DBG_BREAK flag. Kept separate from

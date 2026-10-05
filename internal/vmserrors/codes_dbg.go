@@ -17,6 +17,8 @@ const (
 	dbgNoCalls
 	dbgNoSymbol
 	dbgNoSuchModule
+	dbgNoTraces
+	dbgNoWatches
 )
 
 // DBG facility status codes.
@@ -68,6 +70,12 @@ const (
 	// module name no loaded image has. The wording is govax's choice: no
 	// probe showed it.
 	DBG_NOSUCHMODULE = DBGFacility<<FacilityPosition | dbgNoSuchModule<<MessagePosition | StatusError
+	// DBG_NOTRACES is SHOW TRACE's answer when no tracepoint is set (the
+	// probe's trace.dlg). CANCEL TRACE of nothing says it too: unconfirmed.
+	DBG_NOTRACES = DBGFacility<<FacilityPosition | dbgNoTraces<<MessagePosition | StatusInfo
+	// DBG_NOWATCHES is SHOW WATCH's answer when no watchpoint is set (the
+	// probe's watch.dlg). CANCEL WATCH of nothing says it too: unconfirmed.
+	DBG_NOWATCHES = DBGFacility<<FacilityPosition | dbgNoWatches<<MessagePosition | StatusInfo
 )
 
 func init() {
@@ -82,5 +90,7 @@ func init() {
 	DefineMessage(DBG_NOCALLS, DBGFacility, "NOCALLS", "no active call frames")
 	DefineMessage(DBG_NOSYMBOL, DBGFacility, "NOSYMBOL", "symbol '!S' is not in the symbol table")
 	DefineMessage(DBG_NOSUCHMODULE, DBGFacility, "NOSUCHMODULE", "module '!S' is not in the module table")
+	DefineMessage(DBG_NOTRACES, DBGFacility, "NOTRACES", "no tracepoints are set, no opcode tracing")
+	DefineMessage(DBG_NOWATCHES, DBGFacility, "NOWATCHES", "no watchpoints are set")
 	DefineMessage(DBG_NOSOURCEDIR, DBGFacility, "NOSOURCEDIR", "no source directory search list is in effect")
 }

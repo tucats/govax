@@ -79,40 +79,14 @@ var (
 // queues that breakpoint's DO commands for Start to run once the
 // debugger is back at its prompt. It reports whether the program stops.
 func (d *Debugger) breakpointHit(pc uint32) bool {
-	// The instruction at pc, read only if a breakpoint wants to know
-	// what it is (most runs have none that do).
-	var (
-		inst   *cpu.Instruction
-		peeked bool
-	)
-
-	peek := func() *cpu.Instruction {
-		if !peeked {
-			peeked = true
-			inst, _ = d.Console.Engine.PeekInstruction()
-		}
-
-		return inst
-	}
+	peek := d.instructionPeeker()
 
 	var stopped *Breakpoint
 
 	// Work from a copy: a one-shot breakpoint removes itself from the
 	// list as it stops the program.
 	for _, bp := range slices.Clone(d.Breakpoints) {
-		if !d.reached(bp, pc, peek) {
-			continue
-		}
-
-		if bp.After > 0 {
-			bp.hits++
-
-			if bp.hits < bp.After {
-				continue
-			}
-		}
-
-		if bp.When != "" && !d.whenHolds(bp) {
+		if !d.triggers(bp, pc, peek) {
 			continue
 		}
 
@@ -139,6 +113,46 @@ func (d *Debugger) breakpointHit(pc uint32) bool {
 	d.pendingDo = stopped.Do
 
 	return true
+}
+
+// instructionPeeker returns a function that reads the instruction about to
+// run, but only the first time it is asked (most runs have no breakpoint
+// that wants to know what it is), and remembers the answer.
+func (d *Debugger) instructionPeeker() func() *cpu.Instruction {
+	var (
+		inst   *cpu.Instruction
+		peeked bool
+	)
+
+	return func() *cpu.Instruction {
+		if !peeked {
+			peeked = true
+			inst, _ = d.Console.Engine.PeekInstruction()
+		}
+
+		return inst
+	}
+}
+
+// triggers reports whether the eventpoint bp (a breakpoint or a tracepoint)
+// acts now, with the instruction at pc about to run: pc is a place it
+// applies to, its /AFTER count is up, and its WHEN condition, if it has one,
+// holds. Reaching the place counts toward /AFTER even if the condition
+// then says no.
+func (d *Debugger) triggers(bp *Breakpoint, pc uint32, peek func() *cpu.Instruction) bool {
+	if !d.reached(bp, pc, peek) {
+		return false
+	}
+
+	if bp.After > 0 {
+		bp.hits++
+
+		if bp.hits < bp.After {
+			return false
+		}
+	}
+
+	return bp.When == "" || d.whenHolds(bp)
 }
 
 // reached reports whether the instruction about to run at pc is one bp
@@ -193,6 +207,13 @@ func (d *Debugger) stopMessage(bp *Breakpoint, pc uint32) string {
 
 	where := d.Console.LocationText(pc)
 
+	// A class of instruction reached at a routine's first instruction
+	// (the one after its entry mask) says "at routine NAME", as an address
+	// breakpoint at the routine's name does (the probe's trace.dlg).
+	if bp.Kind != BreakAddress && bp.Kind != BreakReturn && pc >= 2 && d.Console.RoutineEntry(pc-2) {
+		where = "routine " + d.Console.LocationText(pc-2)
+	}
+
 	switch bp.Kind {
 	case BreakCall:
 		return "break on calls at " + where
@@ -229,8 +250,12 @@ func (d *Debugger) stopMessage(bp *Breakpoint, pc uint32) string {
 // error and counts as true, so the breakpoint stops: the VMS debugger
 // stops rather than run past a breakpoint it couldn't judge
 // (testdata/dbgcmd/vax/break.dlg).
-func (d *Debugger) whenHolds(bp *Breakpoint) bool {
-	ok, err := d.evalCondition(bp.When)
+func (d *Debugger) whenHolds(bp *Breakpoint) bool { return d.conditionHolds(bp.When) }
+
+// conditionHolds is whenHolds for the text of a WHEN clause, as a
+// watchpoint's also has.
+func (d *Debugger) conditionHolds(when string) bool {
+	ok, err := d.evalCondition(when)
 	if err != nil {
 		d.Console.Printf("%%%s\n", err)
 
@@ -318,6 +343,12 @@ func (d *Debugger) runDo() {
 	text := d.pendingDo
 	d.pendingDo = ""
 
+	d.runCommands(text)
+}
+
+// runCommands runs a DO clause's commands, "(command; command; ...)", as
+// runDo describes. It does nothing for an empty clause.
+func (d *Debugger) runCommands(text string) {
 	if text == "" {
 		return
 	}

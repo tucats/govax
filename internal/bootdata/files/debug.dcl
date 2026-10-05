@@ -92,6 +92,10 @@ grammar debugger
     type set_types
         keyword     break               /syntax=set_break/nonegatable
         keyword     breakpoint          /syntax=set_break/nonegatable
+        keyword     trace               /syntax=set_trace/nonegatable
+        keyword     tracepoint          /syntax=set_trace/nonegatable
+        keyword     watch               /syntax=set_watch/nonegatable
+        keyword     watchpoint          /syntax=set_watch/nonegatable
         keyword     step                /syntax=set_step/nonegatable
         keyword     source              /syntax=set_source/nonegatable
         keyword     mode                /syntax=set_mode/nonegatable
@@ -126,6 +130,31 @@ grammar debugger
             qualifier   fault/id=31             -
                         /type=$string/nonegatable
             parameter   target/id=32            -
+                        /type=$rest_of_line
+
+        ! SET TRACE [qualifiers] [address[,address...]] [WHEN (cond)] [DO
+        ! (cmds)] sets tracepoints: like SET BREAK, but the program goes on
+        ! after the report. SET WATCH [/AFTER:n] [/TEMPORARY] location
+        ! [WHEN (cond)] [DO (cmds)] stops when what is stored there changes.
+        syntax set_trace/id=290
+            qualifier   after/id=291            -
+                        /type=$integer/nonegatable
+            qualifier   temporary/id=292/nonegatable
+            qualifier   call/id=293/nonegatable
+            qualifier   branch/id=294/nonegatable
+            qualifier   line/id=295/nonegatable
+            qualifier   return/id=296/nonegatable
+            qualifier   instruction/id=297      -
+                        /type=$string/list/nonegatable -
+                        /default=""
+            parameter   target/id=298           -
+                        /type=$rest_of_line
+
+        syntax set_watch/id=299
+            qualifier   after/id=300            -
+                        /type=$integer/nonegatable
+            qualifier   temporary/id=301/nonegatable
+            parameter   target/id=302           -
                         /type=$rest_of_line
 
         ! SET STEP keyword[,keyword...]: LINE or INSTRUCTION; OVER, INTO
@@ -199,6 +228,10 @@ grammar debugger
         keyword     break               /syntax=show_break
         keyword     breakpoint          /syntax=show_break
         keyword     breakpoints         /syntax=show_break
+        keyword     trace               /syntax=show_trace
+        keyword     tracepoints         /syntax=show_trace
+        keyword     watch               /syntax=show_watch
+        keyword     watchpoints         /syntax=show_watch
         keyword     step                /syntax=show_step
         keyword     source              /syntax=show_source
         keyword     registers           /syntax=show_reg
@@ -295,6 +328,10 @@ grammar debugger
 
         syntax show_break/id=42
 
+        syntax show_trace/id=303
+
+        syntax show_watch/id=304
+
         syntax show_step/id=43
 
         syntax show_source/id=72
@@ -389,6 +426,10 @@ grammar debugger
     type cancel_types
         keyword     break               /syntax=cancel_break
         keyword     breakpoint          /syntax=cancel_break
+        keyword     trace               /syntax=cancel_trace
+        keyword     tracepoint          /syntax=cancel_trace
+        keyword     watch               /syntax=cancel_watch
+        keyword     watchpoint          /syntax=cancel_watch
         keyword     source              /syntax=cancel_source
         keyword     radix               /syntax=cancel_radix
         keyword     mode                /syntax=cancel_mode
@@ -416,6 +457,25 @@ grammar debugger
                         /type=$string/nonegatable -
                         /default=""
             parameter   target/id=61            -
+                        /type=$rest_of_line
+
+        ! CANCEL TRACE and CANCEL WATCH remove tracepoints and watchpoints,
+        ! as CANCEL BREAK removes breakpoints.
+        syntax cancel_trace/id=305
+            qualifier   all/id=306/nonegatable
+            qualifier   call/id=307/nonegatable
+            qualifier   branch/id=308/nonegatable
+            qualifier   line/id=309/nonegatable
+            qualifier   return/id=310/nonegatable
+            qualifier   instruction/id=311      -
+                        /type=$string/list/nonegatable -
+                        /default=""
+            parameter   target/id=312           -
+                        /type=$rest_of_line
+
+        syntax cancel_watch/id=313
+            qualifier   all/id=314/nonegatable
+            parameter   target/id=315           -
                         /type=$rest_of_line
 
         syntax cancel_source/id=73

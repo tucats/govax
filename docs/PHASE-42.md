@@ -1,7 +1,7 @@
 # Phase 42 — The debugger: its own package, grammar, and prompt
 
 **Status:** in progress. Planned and reviewed 2026-10-05 (the author
-took every recommended decision). Subtasks 1 to 12 are done (see the
+took every recommended decision). Subtasks 1 to 13 are done (see the
 progress log).
 
 ## Goal
@@ -1597,5 +1597,65 @@ grammar is in `debug.dcl`).
   `TestShowImage`, `TestSetModule`, `TestShowSymbolForms` (IN,
   qualifiers, wildcards, path patterns, errors), and
   `TestShowScopeRecursion`.
+- `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
+  touched are clean.
+
+### 2026-10-05 — Subtask 13: tracepoints and watchpoints
+
+`SET/SHOW/CANCEL TRACE` and `SET/SHOW/CANCEL WATCH` are the debugger's
+(`internal/debugger/tracepoint.go`, `watch.go`; the grammar is in
+`debug.dcl`, with `TRACEPOINT` and `WATCHPOINT` as synonyms).
+
+- **Tracepoints** are `Breakpoint` values in their own list
+  (`Debugger.Tracepoints`), so SET TRACE takes everything SET BREAK does:
+  an address or routine, `/CALL`, `/BRANCH`, `/LINE`, `/INSTRUCTION[=ops]`,
+  `/RETURN routine`, `/AFTER`, `/TEMPORARY`, `WHEN`, and `DO`. (Not
+  `/EXCEPTION` or `/FAULT`: the grammar leaves them out.) `breakcmd.go`'s
+  helpers now take the list they work on. The run loop calls `traceHit`
+  before `breakpointHit`, so a trace is reported before a break at the same
+  pc. A report is `trace on lines at X`, `trace at routine X`, and so on:
+  the break message with "trace" for "break". A DO clause runs at once
+  and the program goes on.
+- **Report order.** When two tracepoints are reached at one pc, they report
+  in list order, and each one reported then moves to the end of the list. That
+  rule reproduces every line of `trace.dlg`'s `/LINE` + `/BRANCH` run,
+  where the order of "lines" and "branches" at a pc flips after a pc that
+  was only a line start. **Unconfirmed** beyond that probe: it fits one log.
+- **One source line per pc.** While the run loop runs, `showSource` shows a
+  pc's line once however many reports fall on it (`Debugger.shown`): the
+  trace and the break at the same pc show it once.
+- **A break and a trace at one address replace each other:** the probe's
+  `SET BREAK BUMP` removed the earlier `SET TRACE BUMP`. Class tracepoints
+  coexist with address ones.
+- **A class reached at a routine's first instruction** says
+  `at routine NAME` (`trace on instruction at routine DBGCMD\FACT`),
+  also for the break messages of the classes.
+- **Watchpoints** (`Watchpoint`): the location is read after every
+  instruction and compared with a baseline taken when the run starts
+  (so a DEPOSIT isn't reported) and after each report. The extent comes
+  from the debug symbols: a scalar by its type's size, an array
+  (`BUFFER[0:15]`) element by element, anything else a longword. A change
+  reports `watch of X at <the instruction's location>`, its source line,
+  `   old value:` and `   new value:` in the output radix at the item's
+  width, then `break at` the next instruction and its line; an instruction
+  that changes several array items (MOVC3) reports each, highest first, as
+  `watch.dlg` shows. `/TEMPORARY`, `/AFTER:n`, `WHEN`, and `DO` work as for
+  breakpoints (`/AFTER` and `WHEN` unconfirmed: the probe didn't use them).
+  STEP stops at a watchpoint's change too (`stepOne`). Watching a place
+  already watched replaces it.
+- **Messages:** `DBG_NOTRACES` ("no tracepoints are set, no opcode
+  tracing") and `DBG_NOWATCHES`, from the probe. CANCEL TRACE/WATCH of
+  nothing says them too (**unconfirmed**), as CANCEL BREAK says NOBREAKS.
+- **Not done:** the console's `SET TRACE` (govax's per-instruction trace
+  line) is still the console's, and a register or an expression that
+  isn't an address can't be watched (a register is a longword at its
+  address's value). Subtask 14 moves the console's.
+- **Tests** (`tracewatch_test.go`): `TestTraceOracle` and
+  `TestWatchOracle` replay `trace.dbg` and `watch.dbg` and compare every
+  GO, SET, SHOW, and CANCEL of a trace or watch with the VMS log, source
+  lines and all; `TestTraceCommands` (`/AFTER`, `/TEMPORARY`, DO,
+  replacement by a breakpoint, the NOTRACES message) and
+  `TestWatchCommands` (`/AFTER`, WHEN, replacement, a STEP over MOVC3,
+  a non-symbol address).
 - `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
   touched are clean.

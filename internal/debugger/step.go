@@ -417,7 +417,10 @@ func (d *Debugger) stepOne() (outcome runOutcome, done bool, err error) {
 		return runStopped, true, nil
 	}
 
-	finish := c.TraceStep(c.CPU.GPR(vax.PC), false)
+	d.snapshotWatches()
+
+	startPC := c.CPU.GPR(vax.PC)
+	finish := c.TraceStep(startPC, false)
 	userStep := c.Engine.CPU().DebugEnabled(vax.DebugUserStep)
 
 	for {
@@ -439,9 +442,9 @@ func (d *Debugger) stepOne() (outcome runOutcome, done bool, err error) {
 
 	finish()
 
-	// A condition nobody handled pauses the program at the instruction
-	// that raised it.
-	if d.signalBreak() || d.unhandledBreak() {
+	// A watched location the instruction changed ends the step with the
+	// watchpoint's report, and so does a condition nobody handled.
+	if d.watchHit(startPC) || d.signalBreak() || d.unhandledBreak() {
 		return runStopped, true, nil
 	}
 

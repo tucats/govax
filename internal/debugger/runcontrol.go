@@ -256,9 +256,26 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 	c := d.Console
 	first := skipFirstCheck
 
+	// Source lines are shown once per instruction while the loop runs
+	// (showSource). A loop inside another (a condition handler's) leaves
+	// the outer's setting as it found it.
+	outer := d.shown.active
+	d.shown.active = true
+
+	defer func() { d.shown.active = outer }()
+
+	// A watchpoint reports what changes while the program runs, not what
+	// the user changed meanwhile (a DEPOSIT), so its baseline is the
+	// memory as it is now.
+	d.snapshotWatches()
+
 	for {
 		pc := c.CPU.GPR(vax.PC)
+		d.shown.ok = false
+
 		if !first {
+			d.traceHit(pc)
+
 			if d.breakpointHit(pc) {
 				return runStopped, nil
 			}
@@ -285,9 +302,10 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 
 		finish()
 
-		// A condition nobody handled pauses the program at the
+		// A watched location the instruction changed stops the program
+		// after it; so does a condition nobody handled, at the
 		// instruction that raised it.
-		if d.signalBreak() || d.unhandledBreak() {
+		if d.watchHit(pc) || d.signalBreak() || d.unhandledBreak() {
 			return runStopped, nil
 		}
 	}

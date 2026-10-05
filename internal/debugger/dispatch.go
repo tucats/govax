@@ -49,6 +49,8 @@ func (d *Dispatcher) bind() {
 	}
 
 	d.bindBreak()
+	d.bindTrace()
+	d.bindWatch()
 	d.bindSource()
 	d.bindExamine()
 	d.bindMachine()
