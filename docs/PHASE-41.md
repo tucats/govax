@@ -671,3 +671,44 @@ system services, and the layout of a location longer than 24 columns.
   (FORTH's F_A* labels), `TestDescriptors`, `TestLookupAndRoutines`
   (paths, `RoutineAt`, `ModuleAt`, relocation), `TestNoDST`, and
   `TestReadEveryImage` (21 fixture images with a DST, nothing skipped).
+
+### 2026-10-05 — Subtask 6: lines and source files
+
+- **The line-number program** (`lines.go`, `docs/DEBUG-RECORDS.md` 13):
+  each module's line-number records are joined into one command stream
+  and run into `Module.Lines`, rows of (line, statement, address,
+  length) sorted by address. A Delta-PC starts a row: the line moves on
+  by the increment, the PC by the delta, and the new line begins there;
+  the row before ends where it starts, and a TERM gives the last row's
+  length. Every command is implemented, statement mode and relative
+  `SET_PC` (from the lowest routine address) included;
+  `DST$K_SET_STMTNUM`'s operand is read as a word (section 23.3's
+  advice; no MACRO image has one). `SET_ABS_PC` addresses are relocated
+  by the load base.
+- **What real MACRO's tables show.** `SET_LINUM_B 0`, `SET_ABS_PC` of
+  the code psect, `SET_LINUM_B` to the line before the first with code,
+  then a Delta-PC of 0, so the `.ENTRY` line gets a row for its mask
+  word (line 41 at 0x400, two bytes). Lines without code are skipped
+  with `INCR_LINUM`. Data in code gets no row: CASEL's row (line 95)
+  is 10 bytes long, taking in its `.WORD` table (lines 96 to 98), as the
+  debugger shows the table under the CASEL. The TERM is a record of its
+  own after the source record that counts the lines.
+- **Source correlation** (`source.go`, section 14): the declared files
+  (`Module.Files`: ID, specification, creation time, end-of-file block,
+  first free byte, record format, library module) and the line ranges
+  mapped to their records. `Module.SourceOf(line)` gives the file and
+  record. Each probe module's file is `DUA1:[000000]DBGDIS.MAR;1` (or
+  DBGSUB's), its lines one to one with its records.
+- **Lookups**: `Module.LineAt(addr)`, `Program.LineAt(addr)`,
+  `Module.AddressOfLine(n)` (the line's first instruction).
+- **Tests.** `TestLinesMatchListings` checks DBGDIS's, DBGSUB's,
+  TRACE's (`/DEBUG`), and FORTH's tables against real MACRO's listings
+  both ways: every row is a listed line at the listing's address, every
+  listed instruction is in its line's row, and data in code has no row
+  of its own (listing parsing skips direct assignments, whose values sit
+  in the binary field). `TestLinesMatchDebugger` checks the debugger's
+  answers (`EVALUATE/ADDRESS %LINE 47` = 0x419, `DBGSUB\%LINE 14` =
+  0x546, `SYMBOLIZE JSBRTN+3` = line 110 + 3, FAILLNK's frames at lines
+  12, 7, and 14). `TestSourceFiles`, and `TestLineProgram` (hand-made
+  programs with the commands MACRO doesn't use; it caught the
+  operandless commands 6 to 8 missing from the operand table).

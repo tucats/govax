@@ -39,9 +39,19 @@ type Module struct {
 	// name: "DBGDIS" or "DBGDIS\START".
 	Symbols *symtab.Table
 
+	// Lines is the module's line-number table, sorted by address: which
+	// listing line each stretch of code comes from (empty for a
+	// traceback link).
+	Lines []Line
+
+	// Files are the source files the module's source correlation
+	// records declare, and sources maps listing lines to their records.
+	Files   []SourceFile
+	sources []sourceRange
+
 	// lineData is the module's line-number program, its line-number
 	// records joined (section 13.1), and sourceData its source
-	// correlation commands; subtask 6 interprets them.
+	// correlation commands, gathered until the module ends.
 	lineData   []byte
 	sourceData []byte
 }

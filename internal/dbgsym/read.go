@@ -47,7 +47,9 @@ func ReadDST(dst []byte, base uint32) (*Program, error) {
 	}
 
 	if b.mod != nil {
-		b.finishModule()
+		if err := b.finishModule(); err != nil {
+			return nil, err
+		}
 	}
 
 	return b.prog, nil
@@ -80,7 +82,7 @@ func (b *builder) record(r record) error {
 		return b.moduleBegin(r)
 
 	case r.typ == typeModuleEnd:
-		b.finishModule()
+		return b.finishModule()
 
 	case r.typ == typeRoutineBegin:
 		return b.routineBegin(r)
@@ -130,7 +132,9 @@ func (b *builder) record(r record) error {
 // and the name.
 func (b *builder) moduleBegin(r record) error {
 	if b.mod != nil {
-		b.finishModule()
+		if err := b.finishModule(); err != nil {
+			return err
+		}
 	}
 
 	lang, err := long(r.data, 1)
@@ -323,12 +327,32 @@ func descriptor(b []byte, at int) (*Descriptor, error) {
 	return d, nil
 }
 
-// finishModule works out the routines' extents, scopes the labels, and
-// puts every name in the module's symbol table.
-func (b *builder) finishModule() {
+// finishModule works out the routines' extents, scopes the labels, puts
+// every name in the module's symbol table, and runs the line-number and
+// source correlation programs.
+func (b *builder) finishModule() error {
 	m := b.mod
 
 	sort.SliceStable(m.Routines, func(i, j int) bool { return m.Routines[i].Address < m.Routines[j].Address })
+
+	// The relative SET_PC commands count from the lowest routine
+	// address (docs/DEBUG-RECORDS.md 13.3).
+	var startPC uint32
+	if len(m.Routines) > 0 {
+		startPC = m.Routines[0].Address
+	}
+
+	var err error
+
+	if m.Lines, err = lineTable(m.lineData, startPC, b.base); err != nil {
+		return fmt.Errorf("module %s: %w", m.Name, err)
+	}
+
+	if m.Files, m.sources, err = sourceTable(m.sourceData); err != nil {
+		return fmt.Errorf("module %s: %w", m.Name, err)
+	}
+
+	m.lineData, m.sourceData = nil, nil
 
 	for i, r := range m.Routines {
 		if r.Size != 0 {
@@ -387,4 +411,6 @@ func (b *builder) finishModule() {
 
 	b.prog.Modules = append(b.prog.Modules, m)
 	b.mod, b.labels, b.entries = nil, nil, nil
+
+	return nil
 }
