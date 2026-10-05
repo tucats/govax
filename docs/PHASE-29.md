@@ -1909,3 +1909,30 @@ It also corrected two of them.
   byte, FORTH's included.
 - **Tests.** `TestLinkGlobalSymbolTable` compares the GST records and
   IHS fields of TRDBGLNK, TRLNKDBG, and FORTH.
+
+### 2026-10-05 — Subtask 19: whole images
+
+- **`TestLinkDebugImagesMatchRealLINK`** links TRDBGLNK, TRLNKDBG, and
+  FORTH from real MACRO's objects, and TRLNKDBG from govax's object of
+  TRACE too. Each image is real LINK's byte for byte (header, image
+  sections, DST, DMT, and GST), followed by the GST block's zero
+  padding (Decision 7).
+  - govax's object of TRDEBUG isn't linked here. `internal/asm`'s
+    `TestDebugRecords` already shows it's real MACRO's whole, given
+    the source file's attributes, which only `asm`'s test helpers
+    supply. FORTH's object can't match (`TestDebugRecordsForth`).
+  - govax's own symbol tables stand in for VMS's libraries, so these
+    links need none of the local-only files.
+- **ANALYZE/IMAGE** reports each padded image exactly as it reports
+  real LINK's: the test compares `anl.AnalyzeImage`'s lines for the two.
+  `TestImagePages` already matches real ANALYZE's `trdbglnk.ani`,
+  `trlnkdbg.ani`, and `forth.ani`, so govax's images' reports match
+  real ANALYZE's too.
+- **RUN** runs an image linked `/DEBUG` as any other
+  (`TestDispatch_linkDebug`, subtask 16).
+- **The maps** are unchanged by `/DEBUG`: real LINK's differ only in the
+  run statistics, which govax's map leaves out.
+- **Still to do on VMS** (Decision 7's check): put a govax `LINK/DEBUG`
+  image of TRACE on an exchange volume, then on simh run `ANALYZE/IMAGE`
+  on it, `RUN` it, and use the debugger: `SHOW MODULE`, `EXAMINE` a
+  symbol, `GO`. That shows whether the GST's padding matters to VMS.

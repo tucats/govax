@@ -5,8 +5,11 @@ import (
 	"encoding/binary"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/anl"
 	"github.com/tucats/govax/internal/obj"
 )
 
@@ -206,4 +209,106 @@ func TestLinkGlobalSymbolTable(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestLinkDebugImagesMatchRealLINK links the three images real LINK linked
+// /DEBUG, from real MACRO's objects and, for TRLNKDBG, from govax's object
+// of TRACE, and checks each is real LINK's byte for byte: header, image
+// sections, DST, DMT, and GST (docs/PHASE-29.md, subtask 19). The one
+// difference is Decision 7's: real LINK ends the file at the GST's last
+// byte, and govax pads that block with zeros.
+func TestLinkDebugImagesMatchRealLINK(t *testing.T) {
+	src, err := os.ReadFile(filepath.Join(probeDir, "trace.mar"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, c := range debugCases() {
+		t.Run(c.image, func(t *testing.T) {
+			check := func(from string, got, want []byte) {
+				t.Helper()
+
+				if len(got) != int(pageUp(uint32(len(want)))) {
+					t.Fatalf("%s: image is %d bytes, want %d padded to a block", from, len(got), len(want))
+				}
+
+				if !bytes.Equal(got[:len(want)], want) {
+					t.Errorf("%s: image differs from real LINK's:\n%s", from, diffBlocks(got[:len(want)], want))
+				}
+
+				if n := len(got) - len(want); bytes.Count(got[len(want):], []byte{0}) != n {
+					t.Errorf("%s: the GST's padding isn't zeros", from)
+				}
+
+				// ANALYZE/IMAGE reports the padded image as it does
+				// real LINK's.
+				if a, b := analyzeImage(t, got), analyzeImage(t, want); a != b {
+					t.Errorf("%s: ANALYZE/IMAGE differs:\n%s", from, firstLineDiff(a, b))
+				}
+			}
+
+			got, want := linkDebugCase(t, c)
+			check("real MACRO's objects", got, want)
+
+			// govax's objects of TRDEBUG and FORTH are compared with
+			// real MACRO's by internal/asm's TestDebugRecords and
+			// TestDebugRecordsForth: TRDEBUG's matches whole, given the
+			// source file's attributes, and FORTH's can't (govax's
+			// STARLET defines other $$ symbols).
+			if c.image != "trlnkdbg" {
+				return
+			}
+
+			m := macroModule(t, string(src))
+
+			_, opts := realImage(t, filepath.Join(c.dir, c.image+".exe"))
+			opts.Debug, opts.Sources = true, c.sources
+
+			img, err := Link([]Input{{File: "TRACE.OBJ", Module: m}}, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			check("govax's object", img.Bytes, want)
+		})
+	}
+}
+
+// analyzeImage returns ANALYZE/IMAGE's report of an image, unpaged.
+func analyzeImage(t *testing.T, data []byte) string {
+	t.Helper()
+
+	img, err := anl.ReadImage(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var b bytes.Buffer
+	if err := anl.WriteText(&b, anl.AnalyzeImage(img, anl.ImageOptions{}).Lines); err != nil {
+		t.Fatal(err)
+	}
+
+	return b.String()
+}
+
+// firstLineDiff shows the first line where two texts differ.
+func firstLineDiff(got, want string) string {
+	g, w := strings.Split(got, "\n"), strings.Split(want, "\n")
+
+	for i := 0; i < len(g) || i < len(w); i++ {
+		var a, b string
+		if i < len(g) {
+			a = g[i]
+		}
+
+		if i < len(w) {
+			b = w[i]
+		}
+
+		if a != b {
+			return "line " + strconv.Itoa(i+1) + ":\n got " + a + "\nwant " + b
+		}
+	}
+
+	return ""
 }
