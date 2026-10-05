@@ -997,3 +997,27 @@ system services, and the layout of a location longer than 24 columns.
   these turn off `USERSTEP` to step the image's own instructions.
 - `HELP SHOW CALLS` and `HELP STEP` describe the display, and
   `CLAUDE.md` the setting's wider reach.
+
+### 2026-10-05 — Subtask 13: the oracle
+
+- **`TestDebuggerOracle`** (`internal/console/dbgoracle_test.go`) reads
+  every `EXAMINE/INSTRUCTION` range in seven sessions (DBGDIS, DBGTRC,
+  GVDBGDIS, FAILLNK, FORTH, TRDBGLNK, GVTRACE), following `SET MODE`
+  and `SET RADIX`, and runs each symbolic one through the console's
+  `DISASSEMBLE` (`A:B` is `DISASSEMBLE A B`) with the image loaded as
+  `RUN/STEP` leaves it. The output must be the debugger's, line for
+  line: locations, named operands, CASE tables, decimal offsets.
+- **Two builds of each image.** The image the session ran, and, where
+  VMS MACRO's objects are in `testdata`, govax's `LINK` of them (`/DEBUG`
+  or traceback, as `dbg.com` linked them): DBGDIS and DBGTRC from
+  `dbgdis.obj`/`dbgsub.obj`, FAILLNK from `failmaid.obj`/`failsubd.obj`,
+  FORTH from `mar/dst/vax/forth.obj`, TRDBGLNK from `trdebug.obj`. So
+  the oracle checks govax's linker's debug tables as well as its
+  disassembler, and covers govax MACRO and LINK together through
+  GVDBGDIS and GVTRACE. 514 lines over 12 runs, all matching on the
+  first run.
+- **Left out**: ranges at `.PC` (they depend on where the program had
+  stopped; `TestStepSymbolic` and `TestShowCallsFault` cover stepping),
+  and `SET MODE NOSYMBOLIC`'s ranges, since `DISASSEMBLE/NOSYMBOLIC` is
+  the console's own layout (Decision 1). The debugger's numeric layout
+  is checked in `internal/dbgsym`'s `TestSymbolicInstructions`.
