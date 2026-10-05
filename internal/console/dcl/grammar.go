@@ -18,6 +18,13 @@ const (
 	TypeInteger
 	TypeRestOfLine
 	TypeKeyword
+
+	// TypeExpression (Phase 37) is a console address or value
+	// expression, read whole by readExpression: blanks around an
+	// operator, parentheses, and quoted strings are all part of it. Its
+	// value is the expression's text, quotes kept, for the console's
+	// expression evaluator; the grammar never evaluates it.
+	TypeExpression
 )
 
 // Keyword is one named value of a Type, matching a grammar "keyword"
@@ -29,6 +36,10 @@ type Keyword struct {
 	Name   string
 	ID     int64
 	Syntax string // target Entry name, or "" for no redirect
+
+	// NoNegate is dclrtl.c's per-keyword DCL_NONEGATE flag (the grammar's
+	// /nonegatable): the keyword can't be given with a NO prefix.
+	NoNegate bool
 }
 
 // Type is a named list of keywords, matching a grammar "type" statement
@@ -86,6 +97,12 @@ type Parameter struct {
 	// comma-separated list of values ("A,B", "A, B", or quoted elements
 	// that themselves contain commas), read back with Result.List.
 	List bool
+
+	// Separator, when nonzero, is a character that ends this parameter's
+	// value (the grammar's /separator="c"): one is skipped, with blanks
+	// around it, before the next parameter, so DEPOSIT X=5 reads as
+	// DEPOSIT X 5 does.
+	Separator byte
 
 	typeRef *Type // resolved by validate()
 }
@@ -173,6 +190,13 @@ type Entry struct {
 	IsVerb     bool
 	Alias      string // e.g. "quit" is an alias for "exit"
 	EntryPoint string // /entry=, a VAX microkernel routine name (Phase 10/RTL, not dispatched here)
+
+	// Assignment names the syntax a command line continues in when its
+	// first positional token is a name followed by "=" (the grammar's
+	// /assignment=): SET NAME=value, which console_set.c recognizes
+	// before it looks for any SET keyword.
+	Assignment string
+
 	Parameters []*Parameter
 	Qualifiers []*Qualifier
 	Disallows  []*Disallow

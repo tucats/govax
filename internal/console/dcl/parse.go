@@ -290,7 +290,13 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 		return nil, vmserrors.New(vmserrors.CLI_EMPTYCOMMAND)
 	}
 
-	verbTok, pos := readBareToken(pos)
+	// A leading '@' is a verb by itself, as DCL reads "@FILE".
+	var verbTok string
+	if strings.HasPrefix(pos, "@") {
+		verbTok, pos = "@", pos[1:]
+	} else {
+		verbTok, pos = readBareToken(pos)
+	}
 
 	verb, err := g.matchVerb(verbTok)
 	if err != nil {
@@ -348,6 +354,14 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 			break
 		}
 
+		// An entry with /assignment= continues in that syntax when its
+		// first positional token is "name=": SET NAME=value.
+		if nextParam == 0 && lastParam == nil && active.Assignment != "" && isAssignment(pos) {
+			active = g.entries[active.Assignment]
+
+			continue
+		}
+
 		if nextParam >= len(active.Parameters) {
 			return nil, vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, pos)
 		}
@@ -374,7 +388,7 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 		}
 
 		if p.List {
-			tokens, rem, err := readList(pos, false)
+			tokens, rem, err := readList(pos, false, elementReader(p.Type))
 			if err != nil {
 				return nil, vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
 			}
@@ -384,7 +398,7 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 				return nil, vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
 			}
 
-			pos = rem
+			pos = skipSeparator(rem, p.Separator)
 
 			r.setList(p.Name, p.ID, vals)
 			lastParam = p
@@ -393,12 +407,12 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 			continue
 		}
 
-		token, rem, err := readValueToken(pos)
+		token, rem, err := readTypedValue(pos, p.Type, p.Separator)
 		if err != nil {
 			return nil, err
 		}
 
-		pos = rem
+		pos = skipSeparator(rem, p.Separator)
 
 		val, redirect, negated, err := g.resolveValue(p.Type, p.TypeName, token)
 		if err != nil {
@@ -487,7 +501,7 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, lastPa
 	haveVal := false
 
 	if strings.HasPrefix(rest, "=") && q.List && q.hasValue() {
-		tokens, rem, err := readList(rest[1:], true)
+		tokens, rem, err := readList(rest[1:], true, elementReader(q.Type))
 		if err != nil {
 			return nil, 0, nil, "", vmserrors.Wrap(vmserrors.CLI_BADQUALIFIER, err, q.Name)
 		}
@@ -508,7 +522,7 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, lastPa
 	}
 
 	if strings.HasPrefix(rest, "=") {
-		token, rest, err = readValueToken(rest[1:])
+		token, rest, err = readTypedValue(rest[1:], q.Type, 0)
 		if err != nil {
 			return nil, 0, nil, "", err
 		}
@@ -605,9 +619,13 @@ func (g *Grammar) resolveValue(typ ValueType, typeName string, token string) (va
 			return Value{}, "", false, err
 		}
 
+		if neg && kw.NoNegate {
+			return Value{}, "", false, vmserrors.New(vmserrors.CLI_NONEGATE, kw.Name)
+		}
+
 		return Value{IsString: true, IsKeyword: true, Str: kw.Name, Int: kw.ID}, kw.Syntax, neg, nil
 
-	default: // TypeAny, TypeName, TypeString, TypeRestOfLine, TypeSwitch
+	default: // TypeAny, TypeName, TypeString, TypeRestOfLine, TypeExpression, TypeSwitch
 		return Value{IsString: true, Str: token}, "", false, nil
 	}
 }
@@ -823,13 +841,13 @@ func readValueToken(s string) (token, rest string, err error) {
 // element, and whitespace may follow "(" or precede ")". Without "(" a
 // qualifier's value is a single element, as in DCL, where "/X=A,B" means
 // /X=A followed by a second parameter-list element.
-func readList(s string, paren bool) (tokens []string, rest string, err error) {
+func readList(s string, paren bool, element elementFunc) (tokens []string, rest string, err error) {
 	orig := s
 	s = strings.TrimLeft(s, " \t")
 
 	if paren {
 		if !strings.HasPrefix(s, "(") {
-			tok, rem, err := readListElement(s, false)
+			tok, rem, err := element(s, false)
 			if err != nil {
 				return nil, "", err
 			}
@@ -847,7 +865,7 @@ func readList(s string, paren bool) (tokens []string, rest string, err error) {
 	for {
 		s = strings.TrimLeft(s, " \t")
 
-		tok, rem, err := readListElement(s, paren)
+		tok, rem, err := element(s, paren)
 		if err != nil {
 			return nil, "", err
 		}
@@ -997,7 +1015,7 @@ func (g *Grammar) itemQualifier(item *Result, q *Qualifier, negated bool, rest s
 	}
 
 	if q.List {
-		tokens, rem, err := readList(rest[1:], true)
+		tokens, rem, err := readList(rest[1:], true, elementReader(q.Type))
 		if err != nil {
 			return "", vmserrors.Wrap(vmserrors.CLI_BADQUALIFIER, err, q.Name)
 		}
@@ -1013,7 +1031,7 @@ func (g *Grammar) itemQualifier(item *Result, q *Qualifier, negated bool, rest s
 		return rem, nil
 	}
 
-	token, rem, err := readValueToken(rest[1:])
+	token, rem, err := readTypedValue(rest[1:], q.Type, 0)
 	if err != nil {
 		return "", err
 	}

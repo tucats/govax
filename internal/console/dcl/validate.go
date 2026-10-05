@@ -19,6 +19,12 @@ func (g *Grammar) validate() error {
 			e.aliasRef = target
 		}
 
+		if e.Assignment != "" {
+			if _, ok := g.entries[e.Assignment]; !ok {
+				return vmserrors.New(vmserrors.CLI_SYNTAXNOTFOUND, e.Name, e.Assignment)
+			}
+		}
+
 		for _, p := range e.Parameters {
 			if p.Type == TypeKeyword {
 				t, ok := g.types[p.TypeName]

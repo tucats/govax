@@ -41,6 +41,20 @@
 //   - "disallow any2(A,B,C)", CDU's "at most one of these" form, alongside
 //     the pairwise "disallow A and B" it expands into.
 //
+// Phase 37 (docs/PHASE-37.md) adds what the console's former fixed
+// commands need:
+//
+//   - The $expression value type: a console address or value expression,
+//     whose extent readExpression finds (blanks around operators,
+//     parentheses, and quoted strings belong to it; a '/' after a blank
+//     and before a letter starts a qualifier). The handler evaluates it.
+//   - A parameter's /separator="c", which ends its value and is skipped
+//     before the next parameter (DEPOSIT X=5).
+//   - A verb's or syntax's /assignment=syntax: a line whose first
+//     positional token is "name=" continues in that syntax (SET X=5).
+//   - A keyword's /nonegatable, dclrtl.c's DCL_NONEGATE.
+//   - A leading '@' is a verb by itself ("@FILE").
+//
 // This is a from-scratch,
 // behavior-preserving reimplementation appropriate to this project's "not a
 // cross-compile" goal (see docs/PLAN.md), not a fidelity deviation — the DCL

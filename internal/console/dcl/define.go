@@ -67,6 +67,9 @@ func ParseGrammar(text string) (*Grammar, error) {
 				case "SYNTAX":
 					kw.Syntax = upcase(v)
 
+				case "NONEGATABLE":
+					kw.NoNegate = true
+
 				default:
 					err = vmserrors.New(vmserrors.CLI_BADSWITCH, "keyword", k)
 				}
@@ -95,6 +98,9 @@ func ParseGrammar(text string) (*Grammar, error) {
 
 				case "ALIAS":
 					e.Alias = upcase(v)
+
+				case "ASSIGNMENT":
+					e.Assignment = upcase(v)
 
 				default:
 					err = vmserrors.New(vmserrors.CLI_BADSWITCH, directive, k)
@@ -137,6 +143,16 @@ func ParseGrammar(text string) (*Grammar, error) {
 			}
 
 			_, p.List = switches["LIST"]
+
+			if sep, ok := switches["SEPARATOR"]; ok {
+				if len(sep) != 1 {
+					err := fmt.Errorf("parameter %s: separator %q isn't one character", p.Name, sep)
+
+					return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
+				}
+
+				p.Separator = sep[0]
+			}
 
 			cur.Parameters = append(cur.Parameters, p)
 
@@ -424,6 +440,9 @@ func applyValueSwitches(switches map[string]string, typ *ValueType, typeName *st
 
 		case "$REST_OF_LINE":
 			*typ = TypeRestOfLine
+
+		case "$EXPRESSION":
+			*typ = TypeExpression
 
 		default:
 			*typ = TypeKeyword
