@@ -1,15 +1,12 @@
 package asm
 
 import (
-	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/bootdata"
 )
 
 // This file checks the listings of the Phase 28 macro fixtures
@@ -25,7 +22,7 @@ const systemLibraryName = "SYS$COMMON:[SYSLIB]STARLET.MLB;1"
 // Phase 28 fixture, with the macro libraries real MACRO searched, with
 // real MACRO's, as TestFixtureListings does. govax's own system library
 // stands in for VMS's, so a fixture that calls system macros is compared
-// with the allowed differences systemMacroDifferences makes.
+// with the allowed differences withoutMacroInternals makes.
 func TestMacroFixtureListings(t *testing.T) {
 	vaxDir := filepath.Join(macrosDir, "vax")
 
@@ -92,7 +89,7 @@ func TestMacroFixtureListings(t *testing.T) {
 					src = string(data)
 				}
 
-				check.allow = systemMacroDifferences(t, src)
+				check.allow = withoutMacroInternals(src)
 			}
 
 			checkListing(t, source, listing, libs, check)
@@ -147,92 +144,6 @@ func TestListingRepeatsAndMdelete(t *testing.T) {
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("listing:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
-}
-
-// getsLine matches the macro library statistics' count of GETs and
-// macros, and macroCount a library's count of macros.
-var (
-	getsLine   = regexp.MustCompile(`^\d+ GETS were required to define \d+ macros`)
-	macroCount = regexp.MustCompile(`\d+( +)$`)
-)
-
-// systemMacroDifferences returns the allowed differences between the
-// closing pages of a listing of src, a program that calls system macros,
-// from govax's system macro library and from VMS's. govax's macros are
-// written clean room (docs/PHASE-32.md), so they work differently inside:
-//
-//   - They use symbols of their own: a symbol whose name begins "$$" is
-//     left out of both symbol tables.
-//   - They refer to different $xxxDEF symbols (govax's $FAB builds its
-//     options from FAB$M_ masks where VMS's uses the FAB$V_ bit numbers),
-//     and a listing shows the ones referred to: a symbol a $xxxDEF macro
-//     defines is left out of both tables unless src names it itself.
-//   - Their definitions are split into helper macros differently, and
-//     are a different number of lines: the library statistics' counts of
-//     the system library's macros (and the totals) and of GETs are
-//     masked.
-func systemMacroDifferences(t *testing.T, src string) func([]string) []string {
-	t.Helper()
-
-	defs := definitionSymbols(t)
-	named := map[string]bool{}
-
-	for _, name := range strings.FieldsFunc(strings.ToUpper(src), func(ch rune) bool { return ch > 0x7F || !isSymbolChar(byte(ch)) }) {
-		named[name] = true
-	}
-
-	return func(lines []string) []string {
-		var out []string
-
-		// The symbol table comes first, and ends at the first blank line
-		// (the closing pages' headings are already gone).
-		table := true
-
-		for _, line := range lines {
-			if line == "" {
-				table = false
-			}
-
-			if table {
-				name := strings.Fields(line)[0]
-				if strings.HasPrefix(name, "$$") || defs[name] && !named[name] {
-					continue
-				}
-			}
-
-			if strings.HasPrefix(line, systemLibraryName+" ") || strings.HasPrefix(line, "TOTALS ") {
-				line = macroCount.ReplaceAllString(line, "n$1")
-			}
-
-			out = append(out, getsLine.ReplaceAllString(line, "n GETS were required to define n macros"))
-		}
-
-		return out
-	}
-}
-
-// definitionAssignment matches a symbol definition in govax's $xxxDEF
-// macros.
-var definitionAssignment = regexp.MustCompile(`^([A-Z0-9$_]+) ==? \^X`)
-
-// definitionSymbols returns the names govax's $xxxDEF macros define.
-func definitionSymbols(t *testing.T) map[string]bool {
-	t.Helper()
-
-	data, err := fs.ReadFile(bootdata.FS, bootdata.StarletDefSource)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	out := map[string]bool{}
-
-	for _, line := range strings.Split(string(data), "\n") {
-		if m := definitionAssignment.FindStringSubmatch(line); m != nil {
-			out[m[1]] = true
-		}
-	}
-
-	return out
 }
 
 // sourceFromListing returns the source a real listing lists: each

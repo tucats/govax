@@ -146,14 +146,12 @@ func summarizeAssembly(a *Assembler) objectSummary {
 	return s
 }
 
-// notLadder names the testdata/mar sources that aren't on the fixture
-// ladder: programs that haven't been through real MACRO, so vax/ has no
-// object or listing to compare with. forth.mar (a FORTH interpreter) is
-// run by internal/console's TestForth tests instead.
-var notLadder = map[string]bool{"forth": true}
+// usesStarlet names the ladder's sources that call system macros ($FAB,
+// $OPEN, and the rest): they're assembled with govax's own STARLET, where
+// real MACRO used VMS's. forth.mar is a FORTH interpreter.
+var usesStarlet = map[string]bool{"forth": true}
 
-// ladderSources returns the ladder's sources in dir: its .mar files but
-// notLadder's.
+// ladderSources returns the ladder's sources in dir: its .mar files.
 func ladderSources(t *testing.T, dir string) []string {
 	t.Helper()
 
@@ -162,15 +160,24 @@ func ladderSources(t *testing.T, dir string) []string {
 		t.Fatal(err)
 	}
 
-	ladder := paths[:0]
+	return paths
+}
 
-	for _, path := range paths {
-		if !notLadder[strings.TrimSuffix(filepath.Base(path), ".mar")] {
-			ladder = append(ladder, path)
-		}
+// ladderAssemble assembles the ladder source name, src, as MACRO-32, with
+// govax's STARLET if it calls system macros.
+func ladderAssemble(t *testing.T, name, src string) *Assembler {
+	t.Helper()
+
+	a := macroAssembler()
+	if usesStarlet[name] {
+		a.SetMacroLibraries(govaxStarlet(t))
 	}
 
-	return ladder
+	if _, err := a.Assemble(src); err != nil {
+		t.Fatalf("assemble: %v", err)
+	}
+
+	return a
 }
 
 // TestFixtureLadderDeclarations assembles each testdata/mar fixture and
@@ -189,7 +196,7 @@ func TestFixtureLadderDeclarations(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			a := macroAssemble(t, string(src))
+			a := ladderAssemble(t, name, string(src))
 
 			got, want := summarizeAssembly(a), summarizeObject(realObject(t, name))
 
@@ -368,7 +375,14 @@ func replayText(t *testing.T, m *obj.Module) objectText {
 		return relocs[i].offset < relocs[j].offset
 	})
 
-	for _, r := range relocs {
+	// A field stored twice ($FAB's FAB$L_FNA, given FNM=: first 0, then
+	// the name's address) has two stores, in source order, and the last
+	// is its value: the one Relocations lists (see overwrite.go).
+	for i, r := range relocs {
+		if i+1 < len(relocs) && relocs[i+1].psect == r.psect && relocs[i+1].offset == r.offset {
+			continue
+		}
+
 		out.relocs = append(out.relocs, r.line)
 	}
 
@@ -391,7 +405,7 @@ func TestFixtureLadderText(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			a := macroAssemble(t, string(src))
+			a := ladderAssemble(t, name, string(src))
 			want := replayText(t, realObject(t, name))
 
 			for _, s := range a.sections {
@@ -442,7 +456,7 @@ func TestFixtureLadderObjects(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			requireSameObject(t, macroAssemble(t, string(src)), realObject(t, name))
+			requireSameObject(t, ladderAssemble(t, name, string(src)), realObject(t, name))
 		})
 	}
 }

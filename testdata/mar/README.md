@@ -13,18 +13,25 @@ links and runs `entry`, `hello`, and `psects`, the complete programs, with
 maps, and writes `DIRECTORY/FULL` output for the objects (their record
 attributes) to `OBJECTS.LST`.
 
-Fixtures 1 to 9 are the ladder.
-
-`forth.mar` isn't on the ladder: it's a FORTH interpreter (a MACRO-32
-port of `testdata/asm/forth.asm`), a larger program for ANALYZE and the
-debugger. It hasn't been through real MACRO yet, so `internal/asm`'s
-ladder tests skip it (`notLadder`); `internal/console`'s `TestForth`
-tests assemble, link, and run it. Its `input` and `output` words read
-and write `.FTH` and `.LIS` files on a mounted volume. Run as a foreign command
-(`FORTH :== $FORTH` then `FORTH 2 3 + .`) or as `govax run forth.exe
-2 3 + .`, it interprets the command's text and exits. Fixtures 10 to 12 (`modes`, `psects`,
+Fixtures 1 to 9 are the ladder. Fixtures 10 to 12 (`modes`, `psects`,
 `general`) were added in subtask 11 for the encoding choices the ladder
 didn't settle.
+
+`forth.mar` (Phase 36, `docs/PHASE-36.md`) is a FORTH interpreter, a
+MACRO-32 port of `testdata/asm/forth.asm`: a larger program for ANALYZE
+and the debugger. It calls system macros ($FAB, $OPEN, ...), so the
+ladder tests assemble it with govax's own STARLET (`usesStarlet` in
+`internal/asm`). The author assembled it `/LIST/CROSS_REFERENCE` and
+linked it `/MAP` on VMS 7.3 (from `testdata/disks/forth-exchange.dsk`,
+local only): `vax/forth.obj`, `.lis`, `.map`, and `.exe` (copied out
+`/BINARY`; a text copy adds a line feed to each block). govax's object
+matches real MACRO's record for record, its listing real MACRO's line
+for line (with the allowed differences for each STARLET's internals),
+and its image and map real LINK's. `internal/console`'s `TestForth`
+tests run it. Its `input` and `output` words read and write `.FTH` and
+`.LIS` files on a mounted volume. Run as a foreign command
+(`FORTH :== $FORTH` then `FORTH 2 3 + .`) or as `govax run forth.exe
+2 3 + .`, it interprets the command's text and exits.
 
 When the volume also holds `GV_NAME.OBJ`, govax's own object for
 `NAME.MAR` written straight onto the volume by govax's MACRO command, the

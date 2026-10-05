@@ -85,6 +85,10 @@ func main() {
 ;	that a listing's symbol table shows only the ones the program
 ;	used, as real MACRO's does (docs/PHASE-29.md, subtask 6); MACRO
 ;	can't save .ENABLE's settings, so SUPPRESSION is left disabled.
+;	They're defined under .NOCROSS too: real MACRO's cross reference
+;	gives such a name no definition line, and leaves out one the
+;	program never used (testdata/mar/vax/forth.lis); .CROSS turns
+;	cross-referencing back on after them.
 `)
 
 	for _, m := range macros {
@@ -97,7 +101,7 @@ func main() {
 
 		fmt.Fprintf(&b, "\n\t.MACRO\t%s\tGBL\n", name)
 		fmt.Fprintf(&b, "\t.IF\tNOT_DEFINED\t%s\n", guard)
-		b.WriteString("\t.SAVE\tLOCAL_BLOCK\n\t.PSECT\t$ABS$,ABS\n\t.ENABLE\tSUPPRESSION\n")
+		b.WriteString("\t.SAVE\tLOCAL_BLOCK\n\t.PSECT\t$ABS$,ABS\n\t.ENABLE\tSUPPRESSION\n\t.NOCROSS\n")
 		b.WriteString("\t.IF\tIDENTICAL\t<GBL>,<GLOBAL>\n")
 
 		for i, n := range m.names {
@@ -112,7 +116,7 @@ func main() {
 
 		b.WriteString("\t.ENDC\n")
 		fmt.Fprintf(&b, "%s = 1\n", guard)
-		b.WriteString("\t.DISABLE\tSUPPRESSION\n\t.RESTORE\n\t.ENDC\n")
+		b.WriteString("\t.CROSS\n\t.DISABLE\tSUPPRESSION\n\t.RESTORE\n\t.ENDC\n")
 		fmt.Fprintf(&b, "\t.ENDM\t%s\n", name)
 	}
 

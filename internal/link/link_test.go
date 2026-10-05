@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,8 @@ import (
 	"time"
 
 	"github.com/tucats/govax/internal/asm"
+	"github.com/tucats/govax/internal/bootdata"
+	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/obj"
 )
 
@@ -28,6 +31,7 @@ func govaxObject(t *testing.T, name string) *obj.Module {
 
 	a := asm.New(false)
 	a.SetDialect(asm.DialectMACRO)
+	a.SetMacroLibraries(govaxStarlet(t))
 
 	if _, err := a.Assemble(string(src)); err != nil {
 		t.Fatalf("%s: %v", name, err)
@@ -39,6 +43,29 @@ func govaxObject(t *testing.T, name string) *obj.Module {
 	}
 
 	return m
+}
+
+// govaxStarlet returns govax's own system macro library, from bootdata,
+// for the fixtures that call system macros ($FAB, $OPEN, ...).
+func govaxStarlet(t *testing.T) asm.MacroLibrary {
+	t.Helper()
+
+	data, err := fs.ReadFile(bootdata.FS, bootdata.StarletLibrary)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	l, err := lbr.Open(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lib, err := asm.NewMacroLibrary(l)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return lib
 }
 
 // realObject reads the object real VAX MACRO made from name.mar.
@@ -192,6 +219,35 @@ func TestLinkSharedImageMatchesRealLINK(t *testing.T) {
 			}
 
 			img, err := Link([]Input{{File: "hello.obj", Module: m}}, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !bytes.Equal(img.Bytes, want) {
+				t.Errorf("image differs from real LINK's:\n%s", diffBlocks(img.Bytes, want))
+			}
+		})
+	}
+}
+
+// TestLinkForthMatchesRealLINK links forth, a FORTH interpreter that
+// calls RMS's services and LIB$GET_FOREIGN, with real LINK's libraries,
+// from govax's object and from real MACRO's, and checks the image is byte
+// for byte real LINK's FORTH.EXE (testdata/mar/vax/forth.exe): five
+// psects of its own and $RMSNAM, the system services' addresses from
+// STARLET.OLB, and LIBRTL through the fixup section.
+func TestLinkForthMatchesRealLINK(t *testing.T) {
+	want, opts := realImage(t, filepath.Join(fixtureDir, "vax", "forth.exe"))
+	opts.Sources = vmsSources(t)
+
+	for _, from := range []string{"govax", "real"} {
+		t.Run(from, func(t *testing.T) {
+			m := realObject(t, "forth")
+			if from == "govax" {
+				m = govaxObject(t, "forth")
+			}
+
+			img, err := Link([]Input{{File: "forth.obj", Module: m}}, opts)
 			if err != nil {
 				t.Fatal(err)
 			}

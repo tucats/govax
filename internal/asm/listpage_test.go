@@ -4,11 +4,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
-
 )
 
 // This file checks the listing's pages (listpage.go) against real MACRO's
@@ -140,6 +140,9 @@ func TestFixtureListings(t *testing.T) {
 		xref      bool
 		xrefKinds []string
 		noObject  bool
+		// starlet says the source calls system macros, from govax's
+		// own STARLET where real MACRO used VMS's.
+		starlet bool
 	}
 
 	var cases []fixture
@@ -148,7 +151,12 @@ func TestFixtureListings(t *testing.T) {
 
 	for _, path := range ladder {
 		name := strings.TrimSuffix(filepath.Base(path), ".mar")
-		cases = append(cases, fixture{name: name, source: path, listing: filepath.Join(marDir, "vax", name+".lis")})
+
+		// forth was listed /CROSS_REFERENCE.
+		cases = append(cases, fixture{
+			name: name, source: path, listing: filepath.Join(marDir, "vax", name+".lis"),
+			starlet: usesStarlet[name], xref: usesStarlet[name],
+		})
 	}
 
 	// testdata/link/vax's listings: its own four modules, and five of
@@ -187,16 +195,21 @@ func TestFixtureListings(t *testing.T) {
 		fixture{name: "list/symxref", source: filepath.Join(marDir, "list", "symtab.mar"), listing: filepath.Join(marDir, "list", "vax", "symxref.lis"), xref: true, noObject: true},
 	)
 
-
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			real := readListing(t, tc.listing)
 
 			// The system library real MACRO searched, by the name its
-			// listing gives it; none of these sources uses a macro.
+			// listing gives it: govax's STARLET for a source that calls
+			// system macros, and an empty one for the rest.
 			var libs []MacroLibrary
 			for _, name := range listedLibraries(real) {
-				libs = append(libs, NamedMacroLibrary(newMapLibrary(nil), name))
+				var lib MacroLibrary = newMapLibrary(nil)
+				if tc.starlet {
+					lib = govaxStarlet(t)
+				}
+
+				libs = append(libs, NamedMacroLibrary(lib, name))
 			}
 
 			check := listingCheck{
@@ -206,6 +219,15 @@ func TestFixtureListings(t *testing.T) {
 			}
 
 			check.fails = tc.name == "list/errors"
+
+			if tc.starlet {
+				src, err := os.ReadFile(tc.source)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				check.allow = withoutMacroInternals(string(src))
+			}
 
 			checkListing(t, tc.source, tc.listing, libs, check)
 		})
@@ -326,6 +348,127 @@ func checkListing(t *testing.T, source, listing string, libs []MacroLibrary, che
 	compareListingLines(t, gotText, realText)
 }
 
+// macroInternal is a name a system macro library uses for its own
+// purposes: a "$$" symbol its macros define, or a "$$" macro they call.
+// VMS's STARLET and govax's clean-room one name theirs differently, and
+// have different numbers of them.
+//
+// FAB$V_FILE_MODE is here too: VMS's $FAB refers to it, building
+// FAB$B_ACMODES from a file access mode as well as CHAN_MODE and
+// LNM_MODE, but the RMS manual gives $FAB no argument for one, so govax's
+// $FAB leaves it out (docs/PHASE-34.md, 2026-10-04).
+func macroInternal(name string) bool {
+	return strings.HasPrefix(name, "$$") || strings.HasPrefix(name, "FAB$V_FILE_MODE ")
+}
+
+// libraryCounts are the macro library statistics' counts, which differ
+// with the libraries' internal macros: how many macros a library
+// defined, and how many reads that took.
+var libraryCounts = regexp.MustCompile(`^(\S.*\S)\s+\d+\s*$|\d+ GETS were required to define \d+ macros`)
+
+// withoutMacroInternals returns the allowed difference for source, which
+// calls system macros that real MACRO took from VMS's STARLET and govax
+// from its own (usesStarlet): each side's closing pages without the
+// libraries' internal symbols and macros, and without the library
+// statistics' counts. The symbol table becomes one entry a line, in name
+// order, since leaving entries out moves the rest between columns and
+// pages. The macro cross reference keeps only the macros source names,
+// since the libraries' helper macros differ (VMS's aren't all "$$"
+// names), and the size of each one source doesn't define, since the
+// libraries' text differs.
+func withoutMacroInternals(source string) func([]string) []string {
+	named := map[string]bool{}
+	defined := map[string]bool{}
+
+	for _, line := range strings.Split(strings.ToUpper(source), "\n") {
+		line, _, _ = strings.Cut(line, ";")
+		fields := strings.FieldsFunc(line, func(r rune) bool {
+			return !(r == '$' || r == '_' || r == '.' || r >= '0' && r <= '9' || r >= 'A' && r <= 'Z')
+		})
+
+		for i, f := range fields {
+			named[f] = true
+
+			if f == ".MACRO" && i+1 < len(fields) {
+				defined[fields[i+1]] = true
+			}
+		}
+	}
+
+	return func(lines []string) []string { return withoutInternals(lines, named, defined) }
+}
+
+// withoutInternals is withoutMacroInternals's function, for a source that
+// names the macros in named and defines the ones in defined.
+func withoutInternals(lines []string, named, defined map[string]bool) []string {
+	var (
+		out     []string
+		entries []string
+	)
+
+	const entryWidth = 58 // a 31-column name's entry
+
+	section := "symbols"
+	dropping := false
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		switch {
+		case section == "symbols" && strings.HasPrefix(trimmed, "+-"):
+			sort.Strings(entries)
+			out = append(out, entries...)
+			section = "other"
+
+		case section == "symbols":
+			for i := 0; i < len(line); i += entryWidth {
+				entry := strings.TrimRight(line[i:min(i+entryWidth, len(line))], " ")
+				if entry != "" && !macroInternal(entry) {
+					entries = append(entries, entry)
+				}
+			}
+
+			continue
+
+		case strings.Contains(line, "Cross Reference !"):
+			section = "xref"
+		case strings.Contains(line, "Macro library statistics"):
+			section = "libraries"
+		}
+
+		if strings.Contains(line, "Macros Cross Reference !") {
+			section = "macros"
+		}
+
+		if section == "xref" || section == "macros" {
+			// An entry starts at the left margin; its continuation
+			// lines are indented references.
+			if line != "" && line[0] != ' ' && !strings.HasPrefix(line, "SYMBOL ") && !strings.HasPrefix(line, "MACRO ") && line[0] != '-' {
+				name, _, _ := strings.Cut(line, " ")
+				dropping = macroInternal(line) || (section == "macros" && !named[name])
+
+				if section == "macros" && !dropping && !defined[name] && len(line) > 30 {
+					line = line[:18] + "(size)     " + line[29:]
+				}
+			} else if trimmed == "" || !isDigit(trimmed[0]) {
+				dropping = false
+			}
+
+			if dropping {
+				continue
+			}
+		}
+
+		if section == "libraries" && libraryCounts.MatchString(line) && !strings.HasPrefix(line, "Macro library name") {
+			line = "(counts)"
+		}
+
+		out = append(out, line)
+	}
+
+	return out
+}
+
 // listingDifferences are the lines of real MACRO's closing pages that
 // govax leaves out: the statistics about real MACRO's own memory, which
 // govax has no figure for (Decision 2): its working set limit, and the
@@ -425,7 +568,6 @@ func closingText(lines []string) []string {
 
 	return out
 }
-
 
 // TestListingHeading checks the heading's fields and columns exactly,
 // without masks.

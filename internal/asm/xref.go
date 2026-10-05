@@ -473,16 +473,13 @@ func xrefRows(head string, refs []xrefRef, flagWidth int) []string {
 // symbol), "-R" if it's relocatable or "-XR" if external, the line that
 // defined it, and the lines that referred to it, each with its mark.
 //
-// The name column is 15 wide, or 31 if a name is longer, as the symbol
-// table's is (no real cross reference shows a longer name yet).
+// The name column is the symbol table's (listedSymbols): 31 wide if any
+// symbol's name is longer than 15, whether the cross reference lists it
+// or not. Real MACRO's cross reference of testdata/mar/forth.mar is 31
+// wide though no name it lists is longer than 15: the long ones are
+// $FABDEF's, defined under .NOCROSS.
 func (a *Assembler) symbolXrefLines(names []string) []string {
-	width := 15
-
-	for _, name := range names {
-		if len(name) > width {
-			width = 31
-		}
-	}
+	_, width := a.listedSymbols()
 
 	out := []string{
 		fmt.Sprintf("%-*s%-13s%-16s%s", width+1, "SYMBOL", "VALUE", "DEFINITION", "REFERENCES... "),
@@ -527,8 +524,9 @@ func (a *Assembler) symbolXrefLines(names []string) []string {
 }
 
 // macroXrefLines returns the macro cross reference: each macro's name, its
-// size (see macroSize), the line that defined it (blank for a library's),
-// and the lines that called it.
+// size (see macroSize), the line that defined it (for a library's, the
+// line that loaded it; see loadLibraryMacro), and the lines that called
+// it.
 func (x *crossRef) macroXrefLines(names []string) []string {
 	out := []string{
 		"MACRO             SIZE          DEFINITION       REFERENCES... ",

@@ -171,7 +171,9 @@ func TestXrefOpcodes(t *testing.T) {
 }
 
 // TestXrefLibraryMacro checks a library macro in the macro cross
-// reference: listed at its calls, with no definition line.
+// reference: defined at the line that loaded it, its first call, and
+// listed at its calls, that one included (as real MACRO's listing of
+// testdata/mar/forth.mar shows STARLET's macros).
 func TestXrefLibraryMacro(t *testing.T) {
 	a := macroAssembler()
 	a.SetListing(true)
@@ -186,7 +188,7 @@ func TestXrefLibraryMacro(t *testing.T) {
 	}
 
 	text := strings.Join(a.Listing(ListingOptions{}), "\n")
-	want := fmt.Sprintf("%-18s%-11d%17s   %-7d(1)       %-7d(1)    ", "LIBM", 1, "", 2, 3)
+	want := fmt.Sprintf("%-18s%-11d   %-7d(1)       %-7d(1)       %-7d(1)    ", "LIBM", 1, 2, 2, 3)
 
 	if !strings.Contains(text, "\n"+want+"\n") {
 		t.Errorf("no line %q in:\n%s", want, text)

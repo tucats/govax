@@ -109,8 +109,13 @@ func (a *Assembler) closingPages(p *listPager, opts ListingOptions) {
 
 	phase = StartPhase()
 
-	for _, s := range symbols {
-		p.add(symbolTableLine(s, width))
+	entries := make([]string, len(symbols))
+	for i, s := range symbols {
+		entries[i] = symbolTableLine(s, width)
+	}
+
+	for _, line := range symbolTableColumns(entries) {
+		p.add(line)
 	}
 
 	a.phases[phaseSymbolOutput] = phase.Elapsed()
@@ -168,6 +173,51 @@ func (a *Assembler) listedSymbols() ([]*symbol, int) {
 	sort.Slice(out, func(i, j int) bool { return out[i].name < out[j].name })
 
 	return out, width
+}
+
+// listLineWidth is the width of a listing's line: what the symbol table's
+// columns must fit in.
+const listLineWidth = 132
+
+// symbolTableColumns lays the symbol table's entries (symbolTableLine's,
+// all the same width) out in columns, as real MACRO does: a page takes as
+// many columns as fit in a line, filled down the page's 57 lines, the
+// leftmost first; a page with fewer entries than its first column holds
+// has just that column. The symbol table starts a page (Listing), so its
+// pages line up with these.
+//
+// Seen in real MACRO's listing of testdata/mar/forth.mar (VMS 7.3): 31
+// column names, two columns of 58-character entries, 57 lines a page, and
+// the last page's 40 entries in one column. Unconfirmed: that a table
+// of 15-column names takes three columns (its 40-character entries fit
+// three to a line); no real listing has had enough symbols to show it.
+func symbolTableColumns(entries []string) []string {
+	if len(entries) == 0 {
+		return nil
+	}
+
+	columns := max(1, listLineWidth/len(entries[0]))
+	rowsPerPage := listPageLines - listHeadLines
+	perPage := rowsPerPage * columns
+
+	var lines []string
+
+	for start := 0; start < len(entries); start += perPage {
+		page := entries[start:min(start+perPage, len(entries))]
+		rows := min(rowsPerPage, len(page))
+
+		for r := range rows {
+			var b strings.Builder
+
+			for c := r; c < len(page); c += rows {
+				b.WriteString(page[c])
+			}
+
+			lines = append(lines, b.String())
+		}
+	}
+
+	return lines
 }
 
 // symbolTableLine returns s's line in the symbol table, its name in a column

@@ -50,7 +50,7 @@ func realMap(t *testing.T, path string) (lines []string, object, image, mapFile 
 // statistics: the object module synopsis, the program sections and their
 // contributions, the symbols, and the image synopsis's layout and counts.
 func TestMapMatchesRealLINK(t *testing.T) {
-	for _, name := range []string{"entry", "hello", "psects"} {
+	for _, name := range []string{"entry", "hello", "psects", "forth"} {
 		t.Run(name, func(t *testing.T) {
 			var err error
 

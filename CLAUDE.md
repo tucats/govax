@@ -11,9 +11,9 @@ never had.
 
 - `docs/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
   index.
-- `docs/PHASE-00.md` … `PHASE-35.md` — one doc per phase: goal, C-source file
+- `docs/PHASE-00.md` … `PHASE-36.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
-  done through 35; Phase 29's debugger records, its subtask 12, are
+  done through 36; Phase 29's debugger records, its subtask 12, are
   deferred). Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -40,8 +40,9 @@ never had.
   at `internal/bootdata/files/vax.help` (Phase 22) since, unlike `evax.dcl`,
   it had no ongoing reason to track a separate upstream-import lineage.
 - `testdata/mar/forth.mar` — a FORTH interpreter in MACRO-32 (RMS I/O,
-  five psects, macro-built dictionary), run by `internal/console`'s
-  `TestForth` tests; not on the real-MACRO ladder yet.
+  five psects, macro-built dictionary; Phase 36), run by `internal/console`'s
+  `TestForth` tests; its VMS 7.3 object, listing, image, and map are in
+  `testdata/mar/vax/`, and govax's match them.
 - `testdata/mar/` — Phase 27's MACRO-32 fixtures, with real VAX MACRO's objects,
   listings, and analyses in `vax/` (see its README for the simh round trip).
   `testdata/disks/` holds local-only ODS-2 containers (gitignored).

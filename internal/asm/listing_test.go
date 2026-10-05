@@ -233,14 +233,20 @@ func TestListingLines(t *testing.T) {
 
 	var cases []fixture
 
+	starlet := func(t *testing.T) []MacroLibrary { return []MacroLibrary{govaxStarlet(t)} }
+
 	ladder := ladderSources(t, marDir)
 
 	for _, path := range ladder {
 		name := strings.TrimSuffix(filepath.Base(path), ".mar")
-		cases = append(cases, fixture{name, path, filepath.Join(marDir, "vax", name+".lis"), nil})
-	}
 
-	starlet := func(t *testing.T) []MacroLibrary { return []MacroLibrary{govaxStarlet(t)} }
+		var libs func(t *testing.T) []MacroLibrary
+		if usesStarlet[name] {
+			libs = starlet
+		}
+
+		cases = append(cases, fixture{name, path, filepath.Join(marDir, "vax", name+".lis"), libs})
+	}
 
 	for _, name := range []string{"usermac", "libsub1", "libsub2", "libmain"} {
 		cases = append(cases, fixture{name, filepath.Join(macrosDir, name+".mar"), filepath.Join(macrosDir, "vax", name+".lis"), nil})

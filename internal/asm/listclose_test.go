@@ -37,12 +37,14 @@ func headings(lines []string) []string {
 // page: the symbol table's, the psect synopsis's when there are no
 // symbols, and the statistics' when a page breaks in them.
 func TestClosingPageLabels(t *testing.T) {
-	// A symbol table of 87 symbols: 57 on its first page, 30 on the
-	// next, which goes on with the psect synopsis (8 lines) and the
-	// start of the statistics; the third page starts in the statistics.
+	// A symbol table of 144 symbols with names longer than 15
+	// characters, so two columns to a page: 114 on its first page, 30
+	// on the next, which goes on with the psect synopsis (8 lines) and
+	// the start of the statistics; the third page starts in the
+	// statistics.
 	var src strings.Builder
-	for i := 0; i < 87; i++ {
-		fmt.Fprintf(&src, "S%02d = %d\n", i, i)
+	for i := 0; i < 144; i++ {
+		fmt.Fprintf(&src, "SYMBOL_NUMBER_%03d = %d\n", i, i)
 	}
 
 	a := recordListing(t, src.String(), false)

@@ -360,6 +360,16 @@ func isBranch(kind fixupKind) bool {
 func (a *Assembler) completeFixup(f *fixup) error {
 	t := f.expr.resolved()
 
+	// Real MACRO decides in its first pass how to write an expression,
+	// so one that used a symbol not yet defined there is handed to the
+	// linker even when it turns out constant: with the symbol's value in
+	// place, but not folded. INLMAX-HALT_LEN, with HALT_LEN = 7 defined
+	// later, is STA_UW 1024, STA_UB 7, OPR_SUB (testdata/mar/forth.mar's
+	// object, VMS 7.3).
+	if a.dialect == DialectMACRO && t.op == rConst && f.expr.hasSymbols() && isAddrFixup(f.kind) {
+		t = f.expr.substituted()
+	}
+
 	switch {
 	case f.dead && t.op == rConst && f.kind != fixPICR && f.kind != fixAddress:
 		// A later statement stored over the field (see overwrite.go).

@@ -186,6 +186,12 @@ func (a *Assembler) loadLibraryMacro(name string) (*macroDef, error) {
 		return nil, vmserrors.New(vmserrors.VAX_UNDEFMACRO, name)
 	}
 
+	// The cross reference's definition line for a library macro is the
+	// program line that loaded it: its first call, which is listed as a
+	// reference too (testdata/mar/vax/forth.lis, VMS 7.3: $CLOSE is
+	// defined at 613, and referred to there and at its later calls).
+	a.xrefDefine(xrefMacros, name)
+
 	return m, nil
 }
 

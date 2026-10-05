@@ -79,6 +79,16 @@ func (a *Assembler) storeScaled(addr uint32, value uint32, scale int) error {
 // access kind, data type (int/float short-literal interpretation) and
 // scale (byte width) from the instruction table.
 func (a *Assembler) assembleOperand(c *cursor, inst *cpu.Instruction, opIndex int) error {
+	// The cross reference marks a symbol in an operand that's read,
+	// written, modified, or branched to (MOVL BASE,R5, MOVL #10,BASE,
+	// BSBW PUTCH), but not one in an operand that's only an address
+	// (MOVAB BANNER,R0, MOVC3's source and destination): real MACRO's
+	// listing of testdata/mar/forth.mar. Unconfirmed: a field operand's
+	// base (INSV, EXTV), treated as an address.
+	if access := inst.Access[opIndex]; access != cpu.AccessAddress && access != cpu.AccessVarField {
+		defer a.xrefOperandMark()()
+	}
+
 	return a.assembleOperandRec(c, inst, opIndex, false)
 }
 

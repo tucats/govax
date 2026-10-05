@@ -606,74 +606,7 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
   instead of writing over the SCB that follows the page. The error and
   `TestEnsureShims_fitsReservedPage` name the constant to raise, by a
   page, when the 43rd shim arrives.
-- 2026-10-04: **LIB$PUT_OUTPUT, terminal input, and the FORTH fixture.**
-  `testdata/mar/forth.mar` is a MACRO-32 port of `testdata/asm/forth.asm`
-  (Vforth), a larger program fixture for ANALYZE/OBJECT, ANALYZE/IMAGE,
-  and debugger work: five psects, dictionary headers built by macros,
-  and RMS I/O on the terminal and on volume files. Getting it to run
-  needed four govax changes:
-  - **LIB$PUT_OUTPUT** is now `internal/librtl`'s (`output.go`, XFC code
-    40, offset ^X478): one descriptor, written as one line. The
-    microkernel's old version, a character at a time through the console
-    transmit interrupt, is renamed `EXE$PUT_OUTPUT`/`EXE$PUT_ONE` and
-    kept only for the kernel's own messages; kernel.asm's `.shim` row
-    for code 40 still defines `LIB$PUT_OUTPUT` for eVAX-dialect ASM
-    programs. `foo.asm` now runs to completion
-    (`TestRegression_rtlDependentAsmFixtures`). Shim stubs: 40 of 42.
-  - **Terminal SYS$GET** (`internal/rms/terminal.go`): a RAB connected to
-    the terminal used to get RMS$_PRV. It now reads a line from the
-    console's input (shared with the terminal driver's reader), writes
-    the RAB$L_PBF/RAB$B_PSZ prompt first when RAB$V_PMT is set, ends a
-    record at CR or LF, reads at most RAB$W_USZ bytes (the rest is the
-    next record), and returns RMS$_EOF at Ctrl/Z or end of input.
-  - **The RTL's console streams** are now read through `c.In`/`c.Out` at
-    the time of each read or write (`consoleInput`/`consoleOutput`,
-    `internal/console/machine.go`), not as they were when the
-    environment was made, so a program's output follows a later change
-    of `c.Out`, as the console device's already did.
-  - **The assembler** kept a `;` inside angle brackets or a `^%...%`
-    argument as the start of a comment, so `DEFWORD <;>,F_SEMI` failed.
-    The MACRO-32 manual's "Argument Delimiters" lets either kind enclose
-    a semicolon; `preprocessCase` now does too (`delimitedArgumentAt`).
-  `TestForth_interpreter` and `TestForth_files` (`internal/console`)
-  run the fixture against scripted input and a fresh volume. It isn't
-  on the MACRO ladder (`notLadder`, `internal/asm`) until real MACRO's
-  object and listing for it are in `testdata/mar/vax/`.
-- 2026-10-04: **LIB$GET_FOREIGN and foreign commands**, so an image can
-  be given command text (the FORTH fixture interprets it, then halts).
-  - **LIB$GET_FOREIGN** (`internal/librtl/foreign.go`, XFC code 41,
-    offset ^X878) returns `Environment.CommandLine`; with none, or bit 0
-    of flags set, and a prompt given, it prompts on SYS$INPUT instead,
-    then sets flags to 1. Fixed-length results are blank-padded
-    (LIB$_INPSTRTRU when cut short); dynamic ones get new heap storage.
-    Written from the RTL Library manual. **Unconfirmed** (no VMS probe
-    yet): that flags is set to 1 whether or not it prompted, and that a
-    prompted line is returned as typed rather than uppercased.
-  - **DCL symbols** (`internal/console/dclsym.go`): `:=`/`:==` assign the
-    rest of the line, `=`/`==` a quoted string or a decimal integer; an
-    `*` in the name marks the shortest abbreviation;
-    `DELETE/SYMBOL [/GLOBAL|/LOCAL] name` removes one. A command whose
-    first word is a symbol has the word replaced by the value; a value
-    starting with `$` is a foreign command, run as RUN runs an image with
-    the rest of the line as its command text. One table serves local and
-    global symbols (the console has no command procedures for locals to
-    be local to). Not done: apostrophe substitution, DCL's SHOW SYMBOL
-    (the console's SHOW SYMBOL is its VAX symbols'), and SYS$SYSTEM as a
-    foreign command's default directory (govax has none).
-  - **Command text** gets DCL's treatment: uppercased, blanks compressed,
-    and cut at a `!`, outside quotes; quoted text is kept as typed, quotes
-    included. **Unconfirmed**: that LIB$GET_FOREIGN's text keeps the
-    quotes and their contents' case.
-  - **govax's own command line**: `govax run IMAGE text...` gives the
-    image the text after the file name, as typed (the host shell has
-    already parsed it), through `console.RunCommandLine`.
-  - The vestigial FORTH verb is gone from `console.dcl` (with kernel.asm's
-    `exe$forth_dcl`, which called a microkernel FORTH that was never
-    built in), so FORTH is free to be a foreign command.
-  - `forth.mar` reads its command text at start-up, interprets it, and
-    halts, as the original's string-argument entry did; an error in it
-    ends the run with SS$_ABORT instead of falling back to the terminal.
-    Words are now found whatever their case, since DCL uppercases.
-  `TestForth_foreignCommand`, `TestDispatch_dclSymbols`, and the
-  `LIB$GET_FOREIGN` tests cover it. Shim stubs: 41 of 42. Still open:
-  RUN doesn't report an image's failing exit status the way DCL does.
+- 2026-10-04: LIB$PUT_OUTPUT and LIB$GET_FOREIGN joined `internal/librtl`
+  (codes 40 and 41) as part of the FORTH fixture's work; see
+  [PHASE-36.md](PHASE-36.md), which also records the terminal $GET, DCL
+  symbols and foreign commands, and the assembler fixes found on the way.
