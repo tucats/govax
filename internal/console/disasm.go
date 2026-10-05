@@ -3,13 +3,14 @@ package console
 import (
 	"strings"
 
-	"github.com/tucats/govax/internal/asm"
+	"github.com/tucats/govax/internal/disasm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// memByteReader adapts a live vax.CPU + vm.Memory pair to asm.ByteReader,
-// so internal/asm's disassembler (Phase 11) can read instruction bytes
-// straight out of the running VAX's memory. A translation/access fault
+// memByteReader adapts a live vax.CPU + vm.Memory pair to disasm.ByteReader,
+// so the disassembler (Phase 11's, which Phase 41 moved from internal/asm
+// to internal/disasm) can read instruction bytes straight out of the
+// running VAX's memory. A translation/access fault
 // reads back as 0 rather than aborting the whole disassembly — matching
 // EXAMINE's per-unit error handling being about that one memory access,
 // not the disassembler's own multi-byte instruction-length bookkeeping,
@@ -33,7 +34,7 @@ func (r memByteReader) ByteAt(addr uint32) byte {
 // start), matching console_disasm.c's own address-range loop. Unlike the
 // reference tool's disasm_operand.c, this doesn't substitute a matching
 // label's name for a raw hex address, or append a branch-destination
-// comment — internal/asm's Disassemble deliberately leaves those out (see
+// comment — disasm.Disassemble deliberately leaves those out (see
 // its own doc comment); a caller wanting them can post-process
 // Decoded.Operands against d.Console.Symbols itself.
 func (c *Console) Disassemble(start, end uint32) error {
@@ -59,7 +60,7 @@ func (c *Console) Disassemble(start, end uint32) error {
 	return nil
 }
 
-// decodeInstruction wraps asm.Disassemble with entry-mask detection: if pc
+// decodeInstruction wraps disasm.Disassemble with entry-mask detection: if pc
 // is a symbol's .ENTRY address (Console.Symbols' IsEntry, merged from
 // internal/asm's own SymEntry flag — see asm.go's Assemble), the word there
 // is a register-save mask, not an instruction, and is decoded as one —
@@ -67,19 +68,19 @@ func (c *Console) Disassemble(start, end uint32) error {
 // which scans the symbol table by PC for exactly this reason. Without this,
 // a mask word like hello.asm's ".entry main, ^m<>" either misdecodes as a
 // bogus opcode or, worse, as some unrelated real instruction.
-func (c *Console) decodeInstruction(r asm.ByteReader, pc uint32) (asm.Decoded, error) {
+func (c *Console) decodeInstruction(r disasm.ByteReader, pc uint32) (disasm.Decoded, error) {
 	if name, ok := c.Symbols.EntryAt(pc); ok {
 		mask := uint16(r.ByteAt(pc)) | uint16(r.ByteAt(pc+1))<<8
 
-		return asm.Decoded{
+		return disasm.Decoded{
 			Mnemonic: ".ENTRY",
-			Operands: []string{name, asm.FormatMask(mask)},
+			Operands: []string{name, disasm.FormatMask(mask)},
 			Length:   2,
 		}, nil
 	}
 
 	// Decode the instruction
-	instr, err := asm.Disassemble(r, pc)
+	instr, err := disasm.Disassemble(r, pc)
 
 	// IF it was a CALLS or CALLG to a fixed address that is an entry point address,
 	// we can substitute the symbol name.

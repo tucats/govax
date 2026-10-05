@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/disasm"
 )
 
 // TestRoundTripEveryInstruction encodes every instruction in the CPU's
@@ -45,13 +46,13 @@ func TestRoundTripEveryInstruction(t *testing.T) {
 				}
 			}
 
-			dec, err := Disassemble(SliceReader(want), 0)
+			dec, err := disasm.Disassemble(disasm.SliceReader(want), 0)
 			if err != nil {
-				t.Fatalf("Disassemble(% X): %v", want, err)
+				t.Fatalf("disasm.Disassemble(% X): %v", want, err)
 			}
 
 			if dec.Mnemonic != inst.Name {
-				t.Fatalf("Disassemble(% X) found %s", want, dec.Mnemonic)
+				t.Fatalf("disasm.Disassemble(% X) found %s", want, dec.Mnemonic)
 			}
 
 			// The disassembly was made at address 0, so a branch's target

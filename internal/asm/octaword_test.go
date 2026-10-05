@@ -3,6 +3,8 @@ package asm
 import (
 	"bytes"
 	"testing"
+
+	"github.com/tucats/govax/internal/disasm"
 )
 
 // ones returns n bytes of 0xFF, the bytes of -1 at any width.
@@ -88,7 +90,7 @@ func TestDisassembleWideImmediates(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.want, func(t *testing.T) {
-			dec, err := Disassemble(SliceReader(tc.bytes), 0)
+			dec, err := disasm.Disassemble(disasm.SliceReader(tc.bytes), 0)
 			if err != nil {
 				t.Fatalf("Disassemble: %v", err)
 			}

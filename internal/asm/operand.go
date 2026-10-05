@@ -276,7 +276,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				litValue = 64 // doesn't fit, whatever its low longword
 			}
 		} else {
-			f, err := a.floatOperand(c, floatFormat(inst.DataType[opIndex]))
+			f, err := a.floatOperand(c, inst.DataType[opIndex].FloatFormat())
 			if err != nil {
 				return err
 			}
@@ -359,7 +359,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 				litValue = v
 			} else {
-				f, err := a.floatOperand(c, floatFormat(inst.DataType[opIndex]))
+				f, err := a.floatOperand(c, inst.DataType[opIndex].FloatFormat())
 				if err != nil {
 					return err
 				}
@@ -534,7 +534,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 
 		if isFloat {
 			if constant != litImmediate {
-				f, err := a.floatOperand(c, floatFormat(inst.DataType[opIndex]))
+				f, err := a.floatOperand(c, inst.DataType[opIndex].FloatFormat())
 				if err != nil {
 					return err
 				}
@@ -543,10 +543,10 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 			}
 
 			if litFloat.raw {
-				return a.storeFloatBits(floatFormat(inst.DataType[opIndex]), litFloat.bits)
+				return a.storeFloatBits(inst.DataType[opIndex].FloatFormat(), litFloat.bits)
 			}
 
-			return a.storeImmediateFloat(floatFormat(inst.DataType[opIndex]), litFloat.value)
+			return a.storeImmediateFloat(inst.DataType[opIndex].FloatFormat(), litFloat.value)
 		}
 
 		if constant != litImmediate {
@@ -683,7 +683,7 @@ func (a *Assembler) checkIndexBase(c *cursor, indexMode byte, baseAddr uint32, i
 
 	defer func() { c.pos = save }()
 
-	return a.recoverableAt(vmserrors.New(vmserrors.VAX_INDEXBASE, regNames[mode&0x0F]), indexLoc)
+	return a.recoverableAt(vmserrors.New(vmserrors.VAX_INDEXBASE, cpu.RegisterName(int(mode))), indexLoc)
 }
 
 // litKind mirrors asm_operand.c's ASM_LIT_NONE/SHORT/IMMEDIATE local flag.
@@ -872,21 +872,6 @@ func (a *Assembler) storeImmediateFloat(f vaxfloat.Format, value vaxfloat.Value)
 	}
 
 	return a.storeFloatBits(f, bits)
-}
-
-// floatFormat returns the floating format of data type t, which must be
-// one of the four floating types.
-func floatFormat(t cpu.DataType) vaxfloat.Format {
-	switch t {
-	case cpu.DataDFloating:
-		return vaxfloat.D
-	case cpu.DataGFloating:
-		return vaxfloat.G
-	case cpu.DataHFloating:
-		return vaxfloat.H
-	}
-
-	return vaxfloat.F
 }
 
 // storeAddrValue parses an absolute address's 4-byte value and writes it,

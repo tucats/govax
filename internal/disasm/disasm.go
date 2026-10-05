@@ -1,4 +1,4 @@
-package asm
+package disasm
 
 import (
 	"fmt"
@@ -10,9 +10,9 @@ import (
 )
 
 // ByteReader supplies bytes for disassembly by VAX virtual address.
-// *Assembler satisfies it via ByteAt, so a program's own output can be
-// disassembled directly; SliceReader adapts a plain []byte for anything
-// else (a loaded .exe image, a console's live memory snapshot, ...).
+// internal/asm's *Assembler satisfies it via ByteAt, so a program's own
+// output can be disassembled directly; SliceReader adapts a plain []byte
+// for anything else (a loaded .exe image, a console's live memory snapshot, ...).
 type ByteReader interface {
 	ByteAt(addr uint32) byte
 }
@@ -29,11 +29,6 @@ func (s SliceReader) ByteAt(addr uint32) byte {
 	return s[addr]
 }
 
-var regNames = [16]string{
-	"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7",
-	"R8", "R9", "R10", "R11", "AP", "FP", "SP", "PC",
-}
-
 // Decoded is one disassembled instruction: its mnemonic and formatted
 // operand list, plus the number of bytes it occupied in the instruction
 // stream.
@@ -44,7 +39,7 @@ type Decoded struct {
 	Length   uint32
 }
 
-// String renders dec in the syntax this package's own Assemble can parse
+// String renders dec in the syntax internal/asm's Assemble can parse
 // back in: "MNEMONIC OP1,OP2,...". This is what makes the round-trip
 // property in docs/PHASE-11.md's deliverables checkable: assemble a
 // fixture, disassemble each instruction, reassemble the disassembly, and
@@ -67,7 +62,7 @@ func (dec Decoded) String() string {
 
 // Disassemble decodes one instruction from r at pc, matching
 // decode_opcode.c/disasm_operand.c's combined algorithm — reusing the same
-// internal/cpu instruction table Assemble does rather than a duplicate copy
+// internal/cpu instruction table internal/asm's Assemble does rather than a duplicate copy
 // (see docs/PHASE-11.md). Unlike internal/cpu's own decodeOperand (used at
 // execution time), this never reads or writes register state: autoincrement/
 // autodecrement addressing modes are formatted as text, never performed.
@@ -242,7 +237,7 @@ func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, dt
 		return fmt.Sprintf("S^#%d", optype), uint32(optype), nil
 
 	case mode == 5:
-		return regNames[reg], uint32(reg), nil
+		return cpu.RegisterName(int(reg)), uint32(reg), nil
 
 	case mode >= 8 && reg == 0x0F:
 		return formatPCRelative(r, pc, mode, size, dtype)
@@ -261,7 +256,7 @@ func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, dt
 // byte/word/longword the reference tool's disasm_operand.c prints: PC's
 // value is exactly known at disassembly time, so showing the destination is
 // both more readable and — unlike the reference tool's own choice here —
-// actually round-trips through this package's own assembleDisplacement,
+// actually round-trips through internal/asm's assembleDisplacement,
 // which parses "B^address" as an absolute address and computes the
 // relative displacement itself. Printing the raw displacement byte instead
 // would silently reassemble to a wrong target unless it happened to also be
@@ -289,7 +284,7 @@ func formatPCRelative(r ByteReader, pc *uint32, mode byte, size int, dtype cpu.D
 
 			*pc += uint32(size)
 
-			v, _ := vaxfloat.Unpack(floatFormat(dtype), bits)
+			v, _ := vaxfloat.Unpack(dtype.FloatFormat(), bits)
 
 			return "I^#" + v.Decimal(), 0, nil
 		}
@@ -352,7 +347,7 @@ func formatPCRelTarget(pc uint32, disp int32, prefix string, deferred bool) stri
 // Register deferred, Autodecrement, Autoincrement [deferred], and Byte/
 // Word/Long displacement (direct and deferred).
 func formatGeneral(r ByteReader, pc *uint32, mode, reg byte, access cpu.AccessKind, size int, dtype cpu.DataType, indexed bool) (string, uint32, error) {
-	rn := regNames[reg]
+	rn := cpu.RegisterName(int(reg))
 
 	switch mode {
 	case 0x04: // Indexed: base[Rx]

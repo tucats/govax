@@ -146,7 +146,12 @@ expect adjustment as phases land):
   LIB$GET_FOREIGN (`foreign.go`) returns `Environment.CommandLine`: a
   foreign command's text (DCL symbols, `internal/console/dclsym.go`), or
   what follows the image on `govax run IMAGE text...`.
-- `internal/asm` — assembler/disassembler (Phase 11). Two dialects share one core
+- `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
+  Phase 41 so other packages can use it): `Disassemble` decodes one instruction
+  with `internal/cpu`'s table into text `internal/asm` reassembles. It imports
+  `cpu` and `vaxfloat`, never `asm`. `cpu.RegisterName` and
+  `cpu.DataType.FloatFormat` are shared by the CPU, assembler, and disassembler.
+- `internal/asm` — assembler (Phase 11). Two dialects share one core
   (Phase 27): the console's `ASM` (absolute, into emulated memory, eVAX
   directives) and MACRO-32 (`SetDialect(DialectMACRO)`: psects, relocation
   trees, every error reported, and `Object()` for a `.OBJ` module). Phase 28's

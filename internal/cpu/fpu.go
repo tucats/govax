@@ -47,18 +47,11 @@ const (
 // type that isn't floating: the instruction table gives every floating
 // operand a floating type, so that would be a table error.
 func floatFormat(t DataType) vaxfloat.Format {
-	switch t {
-	case DataFFloating:
-		return vaxfloat.F
-	case DataDFloating:
-		return vaxfloat.D
-	case DataGFloating:
-		return vaxfloat.G
-	case DataHFloating:
-		return vaxfloat.H
+	if !t.IsFloat() {
+		panic("cpu: " + t.String() + " isn't a floating data type")
 	}
 
-	panic("cpu: " + t.String() + " isn't a floating data type")
+	return t.FloatFormat()
 }
 
 // operandFormat returns the floating format of decoded instruction d's

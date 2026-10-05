@@ -3,6 +3,8 @@ package asm
 import (
 	"os"
 	"testing"
+
+	"github.com/tucats/govax/internal/disasm"
 )
 
 func readFixture(t *testing.T, name string) string {
@@ -180,7 +182,7 @@ func TestRoundTripFixtures(t *testing.T) {
 			// an INSV with a literal base, which the assembler rightly
 			// refuses to assemble. The code starts after it.
 			for pc := a.Origin() + 2; pc < stop; {
-				dec, err := Disassemble(a, pc)
+				dec, err := disasm.Disassemble(a, pc)
 				if err != nil {
 					t.Fatalf("Disassemble at %08X: %v", pc, err)
 				}

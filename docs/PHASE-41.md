@@ -529,3 +529,29 @@ probe objects now match real MACRO's whole (`TestDebugRecords`'s
 Still unconfirmed (not covered by the probe): a byte displacement to a
 named address (`B^` relative), a symbol in a shareable image other than
 system services, and the layout of a location longer than 24 columns.
+
+### 2026-10-05 — Subtask 2: `internal/disasm`
+
+- **The move.** `internal/asm/disasm.go` is now `internal/disasm/disasm.go`
+  (`git mv`, so its history follows), package `disasm`, with a package
+  doc (`doc.go`). Its API is unchanged: `Disassemble`, `Decoded`,
+  `ByteReader`, `SliceReader`, `FormatMask`. It imports `internal/cpu`,
+  `internal/vaxfloat`, and `internal/vmserrors`, not `internal/asm`;
+  `*asm.Assembler` still satisfies `disasm.ByteReader` through its
+  `ByteAt`.
+- **Shared helpers in `internal/cpu`.** The register names are
+  `cpu.RegisterName` (`registers.go`), used by the disassembler and the
+  assembler's index-base message. There were three copies of "data type
+  to floating format": the disassembler's, the assembler's (both
+  falling back to F), and the CPU's (which panics on a non-floating
+  type, a table error). They're now `cpu.DataType.FloatFormat`, falling
+  back to F; the CPU's `floatFormat` keeps its panic as a wrapper.
+- **Tests.** The three pure decoding tests moved to
+  `internal/disasm/disasm_test.go`. The round-trip tests, which
+  reassemble, stay in `internal/asm` and call `disasm.Disassemble`, as do
+  the fixture, floating, octaword, and opcode-table tests. No test's
+  expectations changed.
+- **The console** (`internal/console/disasm.go`) uses `disasm`. Output
+  is unchanged.
+- `CLAUDE.md` lists `internal/disasm`; `internal/asm`'s package doc
+  says where the disassembler went.

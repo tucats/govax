@@ -1,5 +1,7 @@
 package cpu
 
+import "github.com/tucats/govax/internal/vaxfloat"
+
 // DataType is the kind of data one instruction operand holds, as the VAX
 // Architecture Reference Manual gives it in each instruction's format line:
 // the second letter of an operand such as "sum.wl" (l, a longword). Each
@@ -64,6 +66,24 @@ func (t DataType) Size() int { return dataTypeInfo[t].size }
 // IsFloat reports whether t is one of the four floating formats.
 func (t DataType) IsFloat() bool {
 	return t >= DataFFloating && t <= DataHFloating
+}
+
+// FloatFormat returns the floating format of t: vaxfloat.D, G, or H for
+// those types, and vaxfloat.F for F_floating and for any type that isn't
+// floating (callers check IsFloat first when that matters). The
+// assembler, the disassembler, and the CPU's floating instructions all
+// use it.
+func (t DataType) FloatFormat() vaxfloat.Format {
+	switch t {
+	case DataDFloating:
+		return vaxfloat.D
+	case DataGFloating:
+		return vaxfloat.G
+	case DataHFloating:
+		return vaxfloat.H
+	}
+
+	return vaxfloat.F
 }
 
 // String returns the data type's name, so fmt's %v prints it readably (Go's

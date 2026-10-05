@@ -1,6 +1,10 @@
 package asm
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/tucats/govax/internal/disasm"
+)
 
 // Floating literals, immediates, and directives in each format (docs/
 // PHASE-35.md, subtasks 6 and 7). Each value is rounded once, from its
@@ -93,7 +97,7 @@ func TestDisassembleFloatingImmediates(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.want, func(t *testing.T) {
-			dec, err := Disassemble(SliceReader(tc.bytes), 0)
+			dec, err := disasm.Disassemble(disasm.SliceReader(tc.bytes), 0)
 			if err != nil {
 				t.Fatalf("Disassemble: %v", err)
 			}
