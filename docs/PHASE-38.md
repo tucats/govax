@@ -347,3 +347,12 @@ that `obj.Check` also applies (`internal/anl/check.go`):
   Each module's psects are counted when it starts, as `obj.Check` does.
   `TestObjectErrors` and `TestObjectMalformedCommand`; the 54 fixtures
   still match.
+- 2026-10-04: Subtask 5: every record, header, GSD subrecord, and TIR
+  command type. `TestEveryCommandShown` decodes each command code and
+  checks it's named and its operands shown; `TestEveryKind` analyzes a
+  module with one of everything (stack balanced, no errors) against
+  `internal/anl/testdata/kinds.txt`, a golden report that collects the
+  unconfirmed layouts in one place for review (`go test -update` rewrites
+  it). IDC flags are shown field by field (ident match, error severity,
+  binary ident); ENV flags as named bits. On a stack underflow the stack
+  is taken as empty, so each underflow is reported once.

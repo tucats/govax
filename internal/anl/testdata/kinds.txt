@@ -1,0 +1,821 @@
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 50 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "KINDS"
+	module version: "V1.0"
+	creation   date/time:  4-OCT-2026 09:00
+	last patch date/time:  5-OCT-2026 10:00
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  COPYRIGHT HEADER (OBJ$C_HDR_CPR), 16 bytes
+
+	Textual information:
+	"Copyright text"
+
+
+4.  MAINTENANCE STATUS HEADER (OBJ$C_HDR_MTC), 20 bytes
+
+	Textual information:
+	"Maintenance status"
+
+
+5.  GENERAL TEXT HEADER (OBJ$C_HDR_GTX), 14 bytes
+
+	Textual information:
+	"General text"
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 33 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 512-byte boundary                     <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 512 (%X'00000200')
+		symbol: "PAGE"
+
+	2)  Shareable Image Program Section Definition (GSD$C_SPSC)
+		alignment: 4-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        1
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 16 (%X'00000010')
+		base address: 512 (%X'00000200')
+		symbol: "SHARED"
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 443 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "SYM_SYM"
+
+	2)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		entry mask: <R2,R3,IV,DV>
+		symbol: "EPM_SYM"
+
+	3)  Procedure Definition with Formal Arguments (GSD$C_PRO)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		entry mask: <R2,R3,IV,DV>
+		symbol: "PRO_SYM"
+		minimum arguments: 1
+		maximum arguments: 3
+		argument 1: by value
+		argument 2: by reference
+		argument 3: by descriptor
+
+	4)  Global Symbol Specification with Word Psect (GSD$C_SYMW)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "SYMW_SYM"
+
+	5)  Entry Point Symbol and Mask Definition with Word Psect (GSD$C_EPMW)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		entry mask: <R2,R3,IV,DV>
+		symbol: "EPMW_SYM"
+
+	6)  Procedure Definition with Formal Arguments with Word Psect (GSD$C_PROW)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		entry mask: <R2,R3,IV,DV>
+		symbol: "PROW_SYM"
+		minimum arguments: 1
+		maximum arguments: 3
+		argument 1: by value
+		argument 2: by reference
+		argument 3: by descriptor
+
+	7)  Module-Local Symbol Specification (GSD$C_LSY)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		environment: 1
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LSY_SYM"
+
+	8)  Module-Local Entry Point Definition (GSD$C_LEPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		environment: 1
+		psect: 0
+		value: 8 (%X'00000008')
+		entry mask: <R2,R3,IV,DV>
+		symbol: "LEPM_SYM"
+
+	9)  Module-Local Procedure Definition (GSD$C_LPRO)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		environment: 1
+		psect: 0
+		value: 8 (%X'00000008')
+		entry mask: <R2,R3,IV,DV>
+		symbol: "LPRO_SYM"
+		minimum arguments: 1
+		maximum arguments: 3
+		argument 1: by value
+		argument 2: by reference
+		argument 3: by descriptor
+
+	10)  Vectored Global Symbol Specification (GSD$C_SYMV)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		vector: 4660 (%X'00001234')
+		symbol: "SYMV_SYM"
+
+	11)  Vectored Entry Point Symbol and Mask Definition (GSD$C_EPMV)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		vector: 4660 (%X'00001234')
+		entry mask: <R2,R3,IV,DV>
+		symbol: "EPMV_SYM"
+
+	12)  Vectored Procedure Definition (GSD$C_PROV)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		vector: 4660 (%X'00001234')
+		entry mask: <R2,R3,IV,DV>
+		symbol: "PROV_SYM"
+		minimum arguments: 1
+		maximum arguments: 3
+		argument 1: by value
+		argument 2: by reference
+		argument 3: by descriptor
+
+	13)  Version Mask Global Symbol Specification (GSD$C_SYMM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		version mask: %X'00001234'
+		symbol: "SYMM_SYM"
+
+	14)  Version Mask Entry Point Symbol and Mask Definition (GSD$C_EPMM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		version mask: %X'00001234'
+		entry mask: <R2,R3,IV,DV>
+		symbol: "EPMM_SYM"
+
+	15)  Version Mask Procedure Definition (GSD$C_PROM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		version mask: %X'00001234'
+		entry mask: <R2,R3,IV,DV>
+		symbol: "PROM_SYM"
+		minimum arguments: 1
+		maximum arguments: 3
+		argument 1: by value
+		argument 2: by reference
+		argument 3: by descriptor
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_L (8)
+		symbol flags:
+			(0)  GSY$V_WEAK       1
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		symbol: "REFERENCE"
+
+	17)  Entity Ident Consistency Check (GSD$C_IDC)
+		flags: 18 (%X'0012')
+		ident match: IDC$C_EQUAL (1)
+		error severity: error (2)
+		entity: "ENTITY"
+		ident: "V1.0"
+		object: "OBJECT"
+
+	18)  Entity Ident Consistency Check (GSD$C_IDC)
+		flags: 1 (%X'0001')
+		ident match: IDC$C_LEQ (0)
+		error severity: successful (0)
+		entity: "ENTITY"
+		binary ident: 131073 (%X'00020001')
+		object: "OBJECT"
+
+	19)  Environment Definition/Reference (GSD$C_ENV)
+		environment flags:
+			(0)  ENV$V_DEF        1
+			(1)  ENV$V_NESTED     1
+		parent environment: 0
+		environment: "ENVIRONMENT"
+
+
+8.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 510 bytes
+
+	1)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYM"
+
+	2)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	3)  TIR$C_STA_SB (1, %X'01')                            stack depth: 1
+		value: -4 (%X'FFFFFFFC')
+
+	4)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	5)  TIR$C_STA_SW (2, %X'02')                            stack depth: 1
+		value: -4 (%X'FFFFFFFC')
+
+	6)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	7)  TIR$C_STA_LW (3, %X'03')                            stack depth: 1
+		value: -4 (%X'FFFFFFFC')
+
+	8)  TIR$C_STO_LW (22, %X'16')                           stack depth: 0
+
+	9)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: -4 (%X'FFFFFFFC')
+
+	10)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	11)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 0
+		value: -4 (%X'FFFFFFFC')
+
+	12)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	13)  TIR$C_STA_PL (6, %X'06')                           stack depth: 1
+		psect: 0
+		value: -4 (%X'FFFFFFFC')
+
+	14)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	15)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 252 (%X'000000FC')
+
+	16)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	17)  TIR$C_STA_UW (8, %X'08')                           stack depth: 1
+		unsigned value: 65532 (%X'0000FFFC')
+
+	18)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	19)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	20)  TIR$C_STA_BFI (9, %X'09')
+
+	21)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	22)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	23)  TIR$C_STA_WFI (10, %X'0A')
+
+	24)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	25)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	26)  TIR$C_STA_LFI (11, %X'0B')
+
+	27)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	28)  TIR$C_STA_EPM (12, %X'0C')                         stack depth: 1
+		symbol: "SYM"
+
+	29)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	30)  TIR$C_STA_CKARG (13, %X'0D')                       stack depth: 1
+		symbol: "SYM"
+		argument index: 2
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             BB AA 02 01|  0000  |..ª»    |
+
+	31)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	32)  TIR$C_STA_WPB (14, %X'0E')                         stack depth: 1
+		psect: 0
+		value: -4 (%X'FFFFFFFC')
+
+	33)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	34)  TIR$C_STA_WPW (15, %X'0F')                         stack depth: 1
+		psect: 0
+		value: -4 (%X'FFFFFFFC')
+
+	35)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	36)  TIR$C_STA_WPL (16, %X'10')                         stack depth: 1
+		psect: 0
+		value: -4 (%X'FFFFFFFC')
+
+	37)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	38)  TIR$C_STA_LSY (17, %X'11')                         stack depth: 1
+		environment: 0
+		symbol: "SYM"
+
+	39)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	40)  TIR$C_STA_LIT (18, %X'12')                         stack depth: 1
+		literal index: 2
+
+	41)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	42)  TIR$C_STA_LEPM (19, %X'13')                        stack depth: 1
+		environment: 0
+		symbol: "SYM"
+
+	43)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	44)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	45)  TIR$C_STO_SB (20, %X'14')                          stack depth: 0
+
+	46)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	47)  TIR$C_STO_SW (21, %X'15')                          stack depth: 0
+
+	48)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	49)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	50)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	51)  TIR$C_STO_BD (23, %X'17')                          stack depth: 0
+
+	52)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	53)  TIR$C_STO_WD (24, %X'18')                          stack depth: 0
+
+	54)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	55)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	56)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	57)  TIR$C_STO_LI (26, %X'1A')                          stack depth: 0
+
+	58)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	59)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	60)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	61)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	62)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	63)  TIR$C_STA_LW (3, %X'03')                           stack depth: 2
+		value: 1 (%X'00000001')
+
+	64)  TIR$C_STO_RSB (29, %X'1D')                         stack depth: 0
+
+	65)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	66)  TIR$C_STA_LW (3, %X'03')                           stack depth: 2
+		value: 1 (%X'00000001')
+
+	67)  TIR$C_STO_RSW (30, %X'1E')                         stack depth: 0
+
+	68)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	69)  TIR$C_STA_LW (3, %X'03')                           stack depth: 2
+		value: 1 (%X'00000001')
+
+	70)  TIR$C_STO_RL (31, %X'1F')                          stack depth: 0
+
+	71)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	72)  TIR$C_STO_VPS (32, %X'20')                         stack depth: 0
+		bit position: 3
+		field size: 5
+
+	73)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	74)  TIR$C_STO_USB (33, %X'21')                         stack depth: 0
+
+	75)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	76)  TIR$C_STO_USW (34, %X'22')                         stack depth: 0
+
+	77)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	78)  TIR$C_STA_LW (3, %X'03')                           stack depth: 2
+		value: 1 (%X'00000001')
+
+	79)  TIR$C_STO_RUB (35, %X'23')                         stack depth: 0
+
+	80)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	81)  TIR$C_STA_LW (3, %X'03')                           stack depth: 2
+		value: 1 (%X'00000001')
+
+	82)  TIR$C_STO_RUW (36, %X'24')                         stack depth: 0
+
+	83)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	84)  TIR$C_STO_B (37, %X'25')                           stack depth: 0
+
+	85)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	86)  TIR$C_STO_W (38, %X'26')                           stack depth: 0
+
+	87)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	88)  TIR$C_STA_LW (3, %X'03')                           stack depth: 2
+		value: 1 (%X'00000001')
+
+	89)  TIR$C_STO_RB (39, %X'27')                          stack depth: 0
+
+	90)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	91)  TIR$C_STA_LW (3, %X'03')                           stack depth: 2
+		value: 1 (%X'00000001')
+
+	92)  TIR$C_STO_RW (40, %X'28')                          stack depth: 0
+
+	93)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	94)  TIR$C_STO_RIVB (41, %X'29')                        stack depth: 0
+		byte count: 2
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   20 10|  0000  |.       |
+
+	95)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	96)  TIR$C_STA_LW (3, %X'03')                           stack depth: 2
+		value: 1 (%X'00000001')
+
+	97)  TIR$C_STO_PIRR (42, %X'2A')                        stack depth: 0
+
+	98)  TIR$C_OPR_NOP (50, %X'32')
+
+	99)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 1 (%X'00000001')
+
+	100)  TIR$C_STA_LW (3, %X'03')                          stack depth: 2
+		value: 1 (%X'00000001')
+
+	101)  TIR$C_OPR_ADD (51, %X'33')                        stack depth: 1
+
+	102)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	103)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	104)  TIR$C_STA_LW (3, %X'03')                          stack depth: 2
+		value: 1 (%X'00000001')
+
+	105)  TIR$C_OPR_SUB (52, %X'34')                        stack depth: 1
+
+	106)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	107)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	108)  TIR$C_STA_LW (3, %X'03')                          stack depth: 2
+		value: 1 (%X'00000001')
+
+	109)  TIR$C_OPR_MUL (53, %X'35')                        stack depth: 1
+
+	110)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	111)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	112)  TIR$C_STA_LW (3, %X'03')                          stack depth: 2
+		value: 1 (%X'00000001')
+
+	113)  TIR$C_OPR_DIV (54, %X'36')                        stack depth: 1
+
+	114)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	115)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	116)  TIR$C_STA_LW (3, %X'03')                          stack depth: 2
+		value: 1 (%X'00000001')
+
+	117)  TIR$C_OPR_AND (55, %X'37')                        stack depth: 1
+
+	118)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	119)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	120)  TIR$C_STA_LW (3, %X'03')                          stack depth: 2
+		value: 1 (%X'00000001')
+
+	121)  TIR$C_OPR_IOR (56, %X'38')                        stack depth: 1
+
+	122)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	123)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	124)  TIR$C_STA_LW (3, %X'03')                          stack depth: 2
+		value: 1 (%X'00000001')
+
+	125)  TIR$C_OPR_EOR (57, %X'39')                        stack depth: 1
+
+	126)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	127)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	128)  TIR$C_OPR_NEG (58, %X'3A')
+
+	129)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	130)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	131)  TIR$C_OPR_COM (59, %X'3B')
+
+	132)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	133)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	134)  TIR$C_STA_LW (3, %X'03')                          stack depth: 2
+		value: 1 (%X'00000001')
+
+	135)  TIR$C_OPR_INSV (60, %X'3C')                       stack depth: 1
+		bit position: 3
+		field size: 5
+
+	136)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	137)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	138)  TIR$C_STA_LW (3, %X'03')                          stack depth: 2
+		value: 1 (%X'00000001')
+
+	139)  TIR$C_OPR_ASH (61, %X'3D')                        stack depth: 1
+
+	140)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	141)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	142)  TIR$C_STA_LW (3, %X'03')                          stack depth: 2
+		value: 1 (%X'00000001')
+
+	143)  TIR$C_OPR_USH (62, %X'3E')                        stack depth: 1
+
+	144)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	145)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	146)  TIR$C_STA_LW (3, %X'03')                          stack depth: 2
+		value: 1 (%X'00000001')
+
+	147)  TIR$C_OPR_ROT (63, %X'3F')                        stack depth: 1
+
+	148)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	149)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	150)  TIR$C_STA_LW (3, %X'03')                          stack depth: 2
+		value: 1 (%X'00000001')
+
+	151)  TIR$C_STA_LW (3, %X'03')                          stack depth: 3
+		value: 1 (%X'00000001')
+
+	152)  TIR$C_OPR_SEL (64, %X'40')                        stack depth: 1
+
+	153)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	154)  TIR$C_OPR_REDEF (65, %X'41')
+		symbol: "SYM"
+
+	155)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	156)  TIR$C_OPR_DFLIT (66, %X'42')                      stack depth: 0
+		literal index: 2
+
+	157)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	158)  TIR$C_CTL_SETRB (80, %X'50')                      stack depth: 0
+
+	159)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: -4 (%X'FFFFFFFC')
+
+	160)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	161)  TIR$C_CTL_DFLOC (82, %X'52')                      stack depth: 0
+
+	162)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	163)  TIR$C_CTL_STLOC (83, %X'53')                      stack depth: 0
+
+	164)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 1 (%X'00000001')
+
+	165)  TIR$C_CTL_STKDL (84, %X'54')
+
+	166)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+
+9.  LINK OPTION SPECIFICATION (OBJ$C_LNK), 15 bytes
+
+	link option type: object library (0)
+	flags: 0 (%X'0000')
+	file name: "MYLIB.OLB"
+
+
+10.  LINK OPTION SPECIFICATION (OBJ$C_LNK), 19 bytes
+
+	link option type: object library with inclusion list (2)
+	flags: 0 (%X'0000')
+	file name: "MYLIB.OLB"
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             44 4F 4D 03|  0000  |.MOD    |
+
+
+11.  END OF MODULE WITH WORD PSECT (OBJ$C_EOMW), 9 bytes
+
+	severity: warning (1)
+	psect: 0
+	value: 4 (%X'00000004')
+	transfer flags: 1 (%X'01')
+
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    5	   118
+OBJ$C_GSD	    2	   476
+OBJ$C_TIR	    1	   510
+OBJ$C_EOM	    0	     0
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    0	     0
+OBJ$C_LNK	    2	    34
+OBJ$C_EOMW	    1	     9
+
+Totals		   11	  1147
+
+
+The analysis uncovered NO errors.
+
+

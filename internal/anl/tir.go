@@ -97,8 +97,11 @@ func commandName(op obj.Op) string {
 }
 
 // command describes one TIR command, numbered k within its record, and
-// follows its effect on the linker's stack whether it's shown or not.
-func (a *objectAnalyzer) command(show bool, k int, c obj.Command) {
+// follows its effect on the linker's stack whether it's shown or not. It
+// reports whether the command popped more than the stack held; the stack
+// is then taken as empty before the command pushes its result, so one
+// underflow is reported once.
+func (a *objectAnalyzer) command(show bool, k int, c obj.Command) (underflow bool) {
 	if c.Op == obj.OpStoreImmediate {
 		if show {
 			n := len(c.Data)
@@ -106,14 +109,20 @@ func (a *objectAnalyzer) command(show bool, k int, c obj.Command) {
 			a.hexDump("\t\t", c.Data)
 		}
 
-		return
+		return false
 	}
 
 	pop, push := c.Op.StackEffect()
-	a.depth += push - pop
+
+	a.depth -= pop
+	if a.depth < 0 {
+		underflow, a.depth = true, 0
+	}
+
+	a.depth += push
 
 	if !show {
-		return
+		return underflow
 	}
 
 	heading := fmt.Sprintf("\t%d)  TIR$C_%s (%d, %%X'%02X')", k, commandName(c.Op), int(c.Op), int(c.Op))
@@ -126,6 +135,8 @@ func (a *objectAnalyzer) command(show bool, k int, c obj.Command) {
 	for _, f := range commandFields[c.Op.String()] {
 		f(a, c)
 	}
+
+	return underflow
 }
 
 // quote puts a name or text in double quotes as it is, without escaping

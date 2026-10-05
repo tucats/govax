@@ -299,8 +299,8 @@ func (a *objectAnalyzer) tirRecord(show bool, b []byte) {
 			a.blank()
 		}
 
-		a.command(show, k, c)
-		a.checkCommand(c)
+		underflow := a.command(show, k, c)
+		a.checkCommand(c, underflow)
 
 		b = b[used:]
 	}

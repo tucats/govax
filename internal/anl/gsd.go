@@ -189,17 +189,54 @@ func mechanismName(valctl byte) string {
 	return "unknown mechanism"
 }
 
+// identCheck describes an entity ident consistency check (unconfirmed
+// layout): its flags field by field (IDC$V_BINIDENT, IDC$V_IDMATCH, and
+// IDC$V_ERRSEV), the entity, the ident, and the object it's checked
+// against. A binary ident is a longword, shown as a number.
 func (a *objectAnalyzer) identCheck(c *obj.IdentCheck) {
+	flags := uint32(c.Flags)
+	binary := flags>>objConst("IDC$V_BINIDENT")&1 != 0
+	match := flags >> objConst("IDC$V_IDMATCH") & (1<<objConst("IDC$S_IDMATCH") - 1)
+	severity := flags >> objConst("IDC$V_ERRSEV") & (1<<objConst("IDC$S_ERRSEV") - 1)
+
+	matchName := "unknown"
+
+	switch match {
+	case objConst("IDC$C_LEQ"):
+		matchName = "IDC$C_LEQ"
+	case objConst("IDC$C_EQUAL"):
+		matchName = "IDC$C_EQUAL"
+	}
+
 	a.line(fmt.Sprintf("\t\tflags: %d (%%X'%04X')", c.Flags, c.Flags))
-	a.line(fmt.Sprintf("\t\tentity: %q", c.Name))
-	a.line(fmt.Sprintf("\t\tident: %q", c.Ident))
-	a.line(fmt.Sprintf("\t\tobject: %q", c.Object))
+	a.line(fmt.Sprintf("\t\tident match: %s (%d)", matchName, match))
+	a.line(fmt.Sprintf("\t\terror severity: %s (%d)", severityName(byte(severity)), severity))
+	a.line("\t\tentity: " + quote(c.Name))
+
+	if binary && len(c.Ident) == 4 {
+		a.line("\t\tbinary ident: " + unsignedValue(binary32(c.Ident)))
+	} else {
+		a.line("\t\tident: " + quote(string(c.Ident)))
+	}
+
+	a.line("\t\tobject: " + quote(c.Object))
 }
 
+// binary32 is a little-endian longword.
+func binary32(b []byte) uint32 {
+	return uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
+}
+
+// environmentFlagBits are the named bits of an environment's flags.
+var environmentFlagBits = flagBits("ENV$V_")
+
+// environment describes an environment definition or reference
+// (unconfirmed layout).
 func (a *objectAnalyzer) environment(e *obj.Environment) {
-	a.line(fmt.Sprintf("\t\tflags: %d (%%X'%04X')", e.Flags, e.Flags))
+	a.keep(keepFlags, "\t\tenvironment flags:")
+	a.flagLines(environmentFlagBits, e.Flags)
 	a.line(fmt.Sprintf("\t\tparent environment: %d", e.Parent))
-	a.line(fmt.Sprintf("\t\tenvironment: %q", e.Name))
+	a.line("\t\tenvironment: " + quote(e.Name))
 }
 
 // entryMask shows an entry mask as the registers it saves: "<R2,R3>". The

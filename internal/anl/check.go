@@ -23,14 +23,12 @@ import (
 // in longwords (section 7.4 of the Linker Utility Manual).
 const linkerStackDepth = 25
 
-// checkCommand checks a TIR command's effect on the linker's stack, and
-// the psect it names.
-func (a *objectAnalyzer) checkCommand(c obj.Command) {
+// checkCommand checks a TIR command's effect on the linker's stack (an
+// underflow is found by command), and the psect it names.
+func (a *objectAnalyzer) checkCommand(c obj.Command, underflow bool) {
 	switch {
-	case a.depth < 0:
+	case underflow:
 		a.fail("The stack underflowed.")
-
-		a.depth = 0
 
 	case a.depth > linkerStackDepth:
 		a.fail("The stack is deeper than %d longwords.", linkerStackDepth)
