@@ -65,7 +65,7 @@ func TestRunDebugStopsAtMain(t *testing.T) {
 		t.Errorf("RUN/DEBUG output:\n%s", out)
 	}
 
-	if strings.Contains(out, "Break at") || strings.Contains(out, "done") {
+	if strings.Contains(out, "break at") || strings.Contains(out, "done") {
 		t.Errorf("RUN/DEBUG ran or reported a break:\n%s", out)
 	}
 

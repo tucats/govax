@@ -68,7 +68,7 @@ func withoutStack(s string) string {
 
 // TestStepSymbolic: inside an image with a debug symbol table, STEP's
 // trace shows each instruction as DISASSEMBLE/SYMBOLIC does, and
-// "Stepped to" and "Break at" name the location as the debugger's
+// "Stepped to" and "break at" name the location as the debugger's
 // "stepped to" and "break at" do (dbgdis.dlg); outside one (the IMAGE$INIT
 // driver's CALLS), the trace is the console's own.
 func TestStepSymbolic(t *testing.T) {
@@ -89,7 +89,7 @@ Stepped to DBGDIS\START\%LINE 43
 
 	dispatchOutput(t, d, buf, `SET BREAK DBGSUB\SUB2+2`)
 
-	if got := dispatchOutput(t, d, buf, "GO"); got != "Break at DBGSUB\\SUB2\\%LINE 20\n" {
+	if got := dispatchOutput(t, d, buf, "GO"); got != "break at DBGSUB\\SUB2\\%LINE 20\n" {
 		t.Errorf("GO: got %q", got)
 	}
 

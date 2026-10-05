@@ -27,25 +27,50 @@ import (
 //     frame pointer (FP) and argument pointer (AP), and the return
 //     address.
 
-// BreakKind distinguishes the kinds of breakpoint vax.h's struct BREAKSTR
-// supports that actually live in a breakpoint_list-like collection.
-// BreakAddress is the only kind represented here: fault-kind breakpoints
-// (a breakpoint that fires when a given exception code is about to be
-// delivered, C's BREAK_FAULT) are implemented — see SET BREAKPOINT/FAULT,
-// docs/PHASE-16.md — but deliberately live on cpu.Engine instead of growing
-// this type, since they're checked synchronously inside Engine.Step's own
-// fault-delivery path (see cpu/faultbreak.go's own doc comment for why that
-// rules out Debugger.Breakpoints, which runLoop only ever consults between
-// Step calls). Instruction (opcode) breakpoints are a third BREAKSTR-
-// adjacent kind the C source itself never stores in breakpoint_list at all
-// (it flags the opcode directly via instruction[n].debugdata instead — see
-// console_set.c's own BREAK_INSTRUCTION handling), so this port follows
-// suit with an entirely separate mechanism (Debugger.InstructionBreakpoints,
-// instbreak.go) rather than growing BreakKind to include it either.
+// BreakKind says what makes a Breakpoint stop the program. An address
+// breakpoint stops *at a place*: before the instruction at one address
+// runs. The others stop at a *kind of instruction*, wherever it is (every
+// call, every branch, the first instruction of every source line, and so
+// on): the VMS debugger's SET BREAK/CALL, /BRANCH, /LINE, /INSTRUCTION,
+// and /RETURN. All of them live in one list, Debugger.Breakpoints, so
+// SHOW BREAK and CANCEL BREAK see them together.
+//
+// Two kinds of stop have their own mechanisms outside the list, for
+// reasons that predate it: fault breakpoints (SET BREAK/FAULT, a stop when
+// a given exception code is about to be delivered) live on cpu.Engine,
+// because Engine.Step checks them inside its own fault delivery
+// (cpu/faultbreak.go); and the older opcode flags the console's SET
+// BREAKPOINT/INSTRUCTION sets are Debugger.InstructionBreakpoints
+// (instbreak.go).
 type BreakKind int
 
 const (
+	// BreakAddress stops before the instruction at Addr.
 	BreakAddress BreakKind = iota
+
+	// BreakCall stops before any instruction that transfers control to a
+	// routine or back from one: BSBB, BSBW, CALLG, CALLS, JSB, RET, RSB.
+	BreakCall
+
+	// BreakBranch stops before any branch, jump, loop, or case
+	// instruction.
+	BreakBranch
+
+	// BreakLine stops before the first instruction of each source line.
+	BreakLine
+
+	// BreakInstruction stops before any instruction in Ops.
+	BreakInstruction
+
+	// BreakAnyInstruction stops before every instruction.
+	BreakAnyInstruction
+
+	// BreakReturn stops before a RET inside the routine at Start.
+	BreakReturn
+
+	// BreakException stops when a condition is signaled, before the
+	// program's handlers hear of it.
+	BreakException
 )
 
 // Breakpoint is one entry in Debugger.Breakpoints. Temporary and Step back
@@ -59,12 +84,41 @@ type Breakpoint struct {
 	Kind      BreakKind
 	Addr      uint32
 	Temporary bool // removed the moment it fires
-	Step      bool // hit message reads "Stepped to" instead of "Break at"
+	Step      bool // hit message reads "Stepped to" instead of "break at"
 
 	// Quiet stops the run without a message. It is the debugger's own
 	// breakpoint at an image's first instruction (startImage), where VMS
 	// shows nothing more than the start-up messages.
 	Quiet bool
+
+	// Routine is true for a breakpoint SET BREAK made at a routine's name:
+	// Addr is just past the routine's entry mask, and the breakpoint is
+	// shown "at routine NAME" rather than at an address. Name is that
+	// routine's path name (DBGCMD\FACT), also used by BreakReturn.
+	Routine bool
+	Name    string
+
+	// Ops are the instructions a BreakInstruction stops before, and
+	// OpNames the mnemonics as typed, which SHOW BREAK lists.
+	Ops     []*cpu.Instruction
+	OpNames []string
+
+	// Start and Size are the extent of the routine a BreakReturn watches:
+	// it stops at a RET whose address is in that range.
+	Start, Size uint32
+
+	// After is SET BREAK/AFTER:n: the breakpoint is passed n-1 times
+	// before it first stops, and stops every time after. Zero means no
+	// count. hits is how many times it has been reached so far.
+	After int
+	hits  int
+
+	// When is the text of a WHEN (condition) clause, parentheses and all,
+	// as SHOW BREAK shows it; the breakpoint stops only when the
+	// condition is true. Do is a DO (commands) clause, run each time the
+	// breakpoint stops. Both are empty when the clause wasn't given.
+	When string
+	Do   string
 }
 
 // AddBreakpoint sets an address breakpoint, matching SET BREAKPOINT (see
@@ -127,6 +181,7 @@ func (d *Debugger) ClearBreakpoint(addr uint32, all bool) error {
 	return nil
 }
 
+// breakpointAt returns the address breakpoint at addr, if there is one.
 func (d *Debugger) breakpointAt(addr uint32) *Breakpoint {
 	for _, bp := range d.Breakpoints {
 		if bp.Kind == BreakAddress && bp.Addr == addr {
@@ -200,19 +255,7 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 	for {
 		pc := c.CPU.GPR(vax.PC)
 		if !first {
-			if bp := d.breakpointAt(pc); bp != nil {
-				if bp.Temporary {
-					d.removeBreakpointPtr(bp)
-				}
-
-				switch {
-				case bp.Quiet:
-				case bp.Step:
-					c.Printf("Stepped to %s\n", c.LocationText(pc))
-				default:
-					c.Printf("Break at %s\n", c.LocationText(pc))
-				}
-
+			if d.breakpointHit(pc) {
 				return runStopped, nil
 			}
 
@@ -234,7 +277,7 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 
 		// A condition nobody handled pauses the program at the
 		// instruction that raised it.
-		if d.unhandledBreak() {
+		if d.signalBreak() || d.unhandledBreak() {
 			return runStopped, nil
 		}
 	}
@@ -345,45 +388,4 @@ func (d *Debugger) callRun(addr uint32, step bool, args []uint32) (runOutcome, e
 	}
 
 	return d.runLoop(false, func(pc uint32) func() { return c.TraceStep(pc, false) })
-}
-
-// ShowBreakpoints prints every active breakpoint, matching SHOW
-// BREAKPOINTS.
-func (d *Debugger) ShowBreakpoints() error {
-	if err := d.Console.RequireInit(); err != nil {
-		return err
-	}
-
-	faults := d.Console.Engine.FaultBreakpoints()
-
-	if len(d.Breakpoints) == 0 && len(faults) == 0 {
-		d.Console.Printf("No breakpoints set\n")
-
-		return nil
-	}
-
-	for _, bp := range d.Breakpoints {
-		tag := ""
-
-		switch {
-		case bp.Step:
-			tag = " <step>"
-
-		case bp.Temporary:
-			tag = " <temporary>"
-		}
-
-		d.Console.Printf("Breakpoint at %08X%s\n", bp.Addr, tag)
-	}
-
-	// Fault-kind breakpoints are a separate list from Debugger.Breakpoints
-	// (see execute.go's BreakKind doc comment on why), but console_show.c's
-	// own SHOW BREAK prints both kinds together in one listing -- matched
-	// here by simply printing this second group right after the first,
-	// each entry marked 'F' the way that C source's own print loop does.
-	for _, code := range faults {
-		d.Console.Printf("F Breakpoint on fault %02X %s\n", uint8(code), d.Console.ExceptionName(code))
-	}
-
-	return nil
 }

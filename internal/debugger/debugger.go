@@ -65,6 +65,16 @@ type Debugger struct {
 	// instruction boundary (unhandledBreak).
 	unhandled *console.UnhandledException
 
+	// signalled is a condition just signaled that SET BREAK/EXCEPTION
+	// wants to stop at, and signalBP the breakpoint that wants it; the run
+	// loop takes them at the next instruction boundary (signalBreak).
+	signalled *console.UnhandledException
+	signalBP  *Breakpoint
+
+	// pendingDo is the DO clause of the breakpoint that just stopped the
+	// program. Start runs it once the debugger is at its prompt.
+	pendingDo string
+
 	// active is true while a session is in progress, which is whether
 	// the prompt is "DBG> " and command lines come here.
 	active bool
@@ -77,6 +87,7 @@ func New(c *console.Console, g *dcl.Grammar, help *console.Help) *Debugger {
 	d := &Debugger{Console: c}
 	d.Dispatcher = newDispatcher(d, g, help)
 	c.OnUnhandled = d.onUnhandled
+	c.OnSignal = d.onSignal
 
 	return d
 }
@@ -151,6 +162,8 @@ func (d *Debugger) Start(a console.Activation) error {
 	// session opens.
 	if !nested && outcome == runStopped && err == nil {
 		d.active = true
+
+		d.runDo()
 	}
 
 	return err

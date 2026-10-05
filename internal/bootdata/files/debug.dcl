@@ -70,4 +70,79 @@ grammar debugger
     verb st/alias=step
     verb s/alias=step
 
+    ! SET BREAK [qualifiers] [address[,address...]] [WHEN (cond)] [DO (cmds)]
+    ! sets breakpoints. The parameter is the rest of the line, which
+    ! internal/debugger takes apart: it holds a list of addresses and the
+    ! WHEN and DO clauses. A qualifier picks a kind of breakpoint instead
+    ! of an address; at most one may be given. /INSTRUCTION may name the
+    ! opcodes (/INSTRUCTION=(MOVB,MOVC3)); with none, every instruction
+    ! breaks. /FAULT=code is govax's own (a break when that exception is
+    ! about to be delivered).
+    type set_types
+        keyword     break               /syntax=set_break/nonegatable
+        keyword     breakpoint          /syntax=set_break/nonegatable
+
+    verb set/id=20
+        parameter   what/id=21                  -
+                    /type=set_types             -
+                    /prompt="What"
+
+        syntax set_break/id=22
+            qualifier   after/id=23             -
+                        /type=$integer/nonegatable
+            qualifier   temporary/id=24/nonegatable
+            qualifier   call/id=25/nonegatable
+            qualifier   branch/id=26/nonegatable
+            qualifier   line/id=27/nonegatable
+            qualifier   exception/id=28/nonegatable
+            qualifier   return/id=29/nonegatable
+            qualifier   instruction/id=30       -
+                        /type=$string/list/nonegatable -
+                        /default=""
+            qualifier   fault/id=31             -
+                        /type=$string/nonegatable
+            parameter   target/id=32            -
+                        /type=$rest_of_line
+
+    ! SHOW BREAK lists the breakpoints.
+    type show_types
+        keyword     break               /syntax=show_break
+        keyword     breakpoint          /syntax=show_break
+        keyword     breakpoints         /syntax=show_break
+
+    verb show/id=40
+        parameter   what/id=41                  -
+                    /type=show_types            -
+                    /prompt="What"
+
+        syntax show_break/id=42
+
+    ! CANCEL BREAK [qualifier] [address[,address...]] removes breakpoints:
+    ! at the addresses, of a kind (/CALL, /BRANCH, ...), or all of them
+    ! (/ALL).
+    type cancel_types
+        keyword     break               /syntax=cancel_break
+        keyword     breakpoint          /syntax=cancel_break
+
+    verb cancel/id=50
+        parameter   what/id=51                  -
+                    /type=cancel_types          -
+                    /prompt="What"
+
+        syntax cancel_break/id=52
+            qualifier   all/id=53/nonegatable
+            qualifier   call/id=54/nonegatable
+            qualifier   branch/id=55/nonegatable
+            qualifier   line/id=56/nonegatable
+            qualifier   exception/id=57/nonegatable
+            qualifier   return/id=58/nonegatable
+            qualifier   instruction/id=59       -
+                        /type=$string/list/nonegatable -
+                        /default=""
+            qualifier   fault/id=60             -
+                        /type=$string/nonegatable -
+                        /default=""
+            parameter   target/id=61            -
+                        /type=$rest_of_line
+
 end

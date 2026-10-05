@@ -11,6 +11,8 @@ const (
 	dbgInitial
 	dbgExitStatus
 	dbgBadStartPC
+	dbgNoBreaks
+	dbgNoAccessR
 )
 
 // DBG facility status codes.
@@ -40,6 +42,12 @@ const (
 	// DBG_BADSTARTPC is what GO and STEP say when there is no program to
 	// run, as after the image has exited. Its argument is the PC.
 	DBG_BADSTARTPC = DBGFacility<<FacilityPosition | dbgBadStartPC<<MessagePosition | StatusError
+	// DBG_NOBREAKS is SHOW BREAK's answer when none is set, and CANCEL
+	// BREAK's when there is nothing to cancel.
+	DBG_NOBREAKS = DBGFacility<<FacilityPosition | dbgNoBreaks<<MessagePosition | StatusInfo
+	// DBG_NOACCESSR reports a read of an address the program can't read,
+	// as a breakpoint's WHEN condition can do. Its argument is the address.
+	DBG_NOACCESSR = DBGFacility<<FacilityPosition | dbgNoAccessR<<MessagePosition | StatusError
 )
 
 func init() {
@@ -49,4 +57,6 @@ func init() {
 	DefineMessage(DBG_INITIAL, DBGFacility, "INITIAL", "Language: !S, Module: !S")
 	DefineMessage(DBG_EXITSTATUS, DBGFacility, "EXITSTATUS", "is '!S'")
 	DefineMessage(DBG_BADSTARTPC, DBGFacility, "BADSTARTPC", "cannot start from PC !XL")
+	DefineMessage(DBG_NOBREAKS, DBGFacility, "NOBREAKS", "no breakpoints are set")
+	DefineMessage(DBG_NOACCESSR, DBGFacility, "NOACCESSR", "no read access to address !XL")
 }

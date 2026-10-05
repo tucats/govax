@@ -473,3 +473,27 @@ func TestParse_syntaxQualifierLater(t *testing.T) {
 		t.Error(`ANALYZE/GSD "/OBJECT" parsed`)
 	}
 }
+
+// TestQualifierValueColon: a qualifier's value may follow ":" as well as
+// "=" (the VMS debugger's /AFTER:3).
+func TestQualifierValueColon(t *testing.T) {
+	g, err := ParseGrammar(`grammar t
+    verb go/id=1
+        qualifier after/id=2/type=$integer
+        parameter target/id=3/type=$rest_of_line
+end`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, line := range []string{"GO/AFTER:3 X", "GO/AFTER=3 X"} {
+		r, err := g.Parse(line)
+		if err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+
+		if r.Int("AFTER") != 3 || r.String("TARGET") != "X" {
+			t.Errorf("%s: after = %d, target = %q", line, r.Int("AFTER"), r.String("TARGET"))
+		}
+	}
+}

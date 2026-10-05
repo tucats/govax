@@ -47,7 +47,7 @@ func TestRunStopsAtBreakpoint(t *testing.T) {
 		t.Fatalf("RUN: %v", err)
 	}
 
-	if got := buf.String(); got != "Break at DBGSUB\\SUB2\\%LINE 20\n" {
+	if got := buf.String(); got != "break at DBGSUB\\SUB2\\%LINE 20\n" {
 		t.Fatalf("RUN: got %q, want the break at SUB2", got)
 	}
 
@@ -59,7 +59,7 @@ func TestRunStopsAtBreakpoint(t *testing.T) {
 
 	// SUB2 is called twice (SUB1 is called by CALLS and by CALLG), so GO
 	// stops there once more before the image finishes.
-	if got := buf.String(); got != "Break at DBGSUB\\SUB2\\%LINE 20\n" {
+	if got := buf.String(); got != "break at DBGSUB\\SUB2\\%LINE 20\n" {
 		t.Fatalf("first GO: got %q, want the second break at SUB2", got)
 	}
 
@@ -98,7 +98,7 @@ func TestCallStopsAtBreakpoint(t *testing.T) {
 		t.Fatalf("CALL SUB2: %v", err)
 	}
 
-	if got := buf.String(); got != "Break at DBGSUB\\SUB2\\%LINE 20\n" {
+	if got := buf.String(); got != "break at DBGSUB\\SUB2\\%LINE 20\n" {
 		t.Errorf("CALL SUB2: got %q, want the break on its first instruction", got)
 	}
 }
@@ -112,11 +112,11 @@ func TestStepOverEndsAtBreakpoint(t *testing.T) {
 	dispatchOutput(t, d, buf, `SET BREAK DBGSUB\SUB2+2`)
 	dispatchOutput(t, d, buf, `SET BREAK DBGDIS\START\%LINE 90`)
 
-	if got := dispatchOutput(t, d, buf, "GO"); got != "Break at DBGDIS\\START\\%LINE 90\n" {
+	if got := dispatchOutput(t, d, buf, "GO"); got != "break at DBGDIS\\START\\%LINE 90\n" {
 		t.Fatalf("GO: got %q", got)
 	}
 
-	if got := withoutStack(dispatchOutput(t, d, buf, "STEP/OVER")); !strings.HasSuffix(got, "Break at DBGSUB\\SUB2\\%LINE 20\n") {
+	if got := withoutStack(dispatchOutput(t, d, buf, "STEP/OVER")); !strings.HasSuffix(got, "break at DBGSUB\\SUB2\\%LINE 20\n") {
 		t.Fatalf("STEP/OVER: got %q, want it to stop at SUB2's breakpoint", got)
 	}
 
@@ -138,13 +138,13 @@ func TestStepReturnEndsAtBreakpoint(t *testing.T) {
 
 	dispatchOutput(t, d, buf, `SET BREAK DBGSUB\SUB1+2`)
 
-	if got := dispatchOutput(t, d, buf, "GO"); !strings.HasPrefix(got, "Break at DBGSUB\\SUB1") {
+	if got := dispatchOutput(t, d, buf, "GO"); !strings.HasPrefix(got, "break at DBGSUB\\SUB1") {
 		t.Fatalf("GO: got %q, want the break in SUB1", got)
 	}
 
 	dispatchOutput(t, d, buf, `SET BREAK DBGSUB\SUB2+2`)
 
-	if got := dispatchOutput(t, d, buf, "STEP/RETURN"); !strings.HasSuffix(got, "Break at DBGSUB\\SUB2\\%LINE 20\n") {
+	if got := dispatchOutput(t, d, buf, "STEP/RETURN"); !strings.HasSuffix(got, "break at DBGSUB\\SUB2\\%LINE 20\n") {
 		t.Fatalf("STEP/RETURN: got %q, want it to stop at SUB2's breakpoint", got)
 	}
 
@@ -162,11 +162,11 @@ func TestStepOverReturnsToBreakpoint(t *testing.T) {
 	dispatchOutput(t, d, buf, `SET BREAK DBGDIS\START\%LINE 90`)
 	dispatchOutput(t, d, buf, `SET BREAK DBGDIS\START\%LINE 91`)
 
-	if got := dispatchOutput(t, d, buf, "GO"); got != "Break at DBGDIS\\START\\%LINE 90\n" {
+	if got := dispatchOutput(t, d, buf, "GO"); got != "break at DBGDIS\\START\\%LINE 90\n" {
 		t.Fatalf("GO: got %q", got)
 	}
 
-	if got := withoutStack(dispatchOutput(t, d, buf, "STEP/OVER")); !strings.HasSuffix(got, "Break at DBGDIS\\START\\%LINE 91\n") {
+	if got := withoutStack(dispatchOutput(t, d, buf, "STEP/OVER")); !strings.HasSuffix(got, "break at DBGDIS\\START\\%LINE 91\n") {
 		t.Fatalf("STEP/OVER: got %q, want the user breakpoint at line 91", got)
 	}
 
@@ -177,7 +177,7 @@ func TestStepOverReturnsToBreakpoint(t *testing.T) {
 
 // TestInstructionBreakNamesLocation: an instruction breakpoint in an image
 // with a debug symbol table names where it stopped, as an address
-// breakpoint's "Break at" does (bug 6): the first JSB is START's line 87.
+// breakpoint's "break at" does (bug 6): the first JSB is START's line 87.
 func TestInstructionBreakNamesLocation(t *testing.T) {
 	d, buf, _ := stepImage(t, "dbgdis.exe")
 

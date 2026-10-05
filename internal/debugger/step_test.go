@@ -144,13 +144,13 @@ func TestStep_respectsBreakpointHitDuringStepOver(t *testing.T) {
 	// The permanent breakpoint at the callee's entry must still fire (STEP/
 	// OVER's continuation phase does not treat that address as its own
 	// "starting point" the way the very first STEP command's PC is -- see
-	// runLoop's skipFirstCheck doc comment), reporting "Break at", not
+	// runLoop's skipFirstCheck doc comment), reporting "break at", not
 	// "Stepped to".
 	if got := c.CPU.GPR(vax.PC); got != 0x302 {
 		t.Errorf("PC = %#x, want 0x302 (stopped at the permanent breakpoint)", got)
 	}
 
-	if !strings.Contains(buf.String(), "Break at") {
+	if !strings.Contains(buf.String(), "break at") {
 		t.Errorf("output = %q, want a break message", buf.String())
 	}
 }

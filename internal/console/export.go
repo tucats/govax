@@ -135,3 +135,52 @@ func (c *Console) StatusText(status uint32) string {
 
 	return c.RTL.StatusText(status)
 }
+
+// RoutineEntry reports whether addr is the entry point of a routine in a
+// loaded image's debug symbol table, one that starts with a two-byte entry
+// mask (a CALLS/CALLG routine, as opposed to a JSB subroutine). The
+// debugger sets a breakpoint "at routine X" *after* that mask: the mask is
+// data (which registers the routine saves), not an instruction, so a stop
+// there would be somewhere no instruction starts.
+func (c *Console) RoutineEntry(addr uint32) bool {
+	prog := c.debugImageAt(addr)
+	if prog == nil {
+		return false
+	}
+
+	r, _, ok := prog.RoutineAt(addr)
+
+	return ok && r.Address == addr && !r.NoCall
+}
+
+// RoutineExtent returns the first address and the size in bytes of the
+// routine in a loaded image's debug symbol table that holds addr. ok is
+// false where addr is in no routine the debugger knows. SET BREAK/RETURN
+// uses it to know which RET instructions belong to a routine.
+func (c *Console) RoutineExtent(addr uint32) (start, size uint32, ok bool) {
+	prog := c.debugImageAt(addr)
+	if prog == nil {
+		return 0, 0, false
+	}
+
+	r, _, found := prog.RoutineAt(addr)
+	if !found {
+		return 0, 0, false
+	}
+
+	return r.Address, r.Size, true
+}
+
+// LineStart reports whether pc is the first byte of a source line's code in
+// a loaded image's line-number table. SET BREAK/LINE stops at each such
+// address: the first instruction of every line the program runs.
+func (c *Console) LineStart(pc uint32) bool {
+	prog := c.debugImageAt(pc)
+	if prog == nil {
+		return false
+	}
+
+	line, _, ok := prog.LineAt(pc)
+
+	return ok && line.Address == pc
+}

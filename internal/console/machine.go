@@ -223,6 +223,11 @@ type Console struct {
 	// the program there. The debugger sets it (docs/PHASE-42.md, subtask 5).
 	OnUnhandled func(UnhandledException) bool
 
+	// OnSignal, when set, is told of every condition as it starts being
+	// dispatched to the program's handlers, handled or not. The debugger
+	// uses it for SET BREAK/EXCEPTION.
+	OnSignal func(UnhandledException)
+
 	// runHost is RUN's /HOST: the main image is a host file (readImage).
 	runHost bool
 
@@ -305,6 +310,12 @@ func (c *Console) newRTL() *corevms.Environment {
 	// A condition nobody handled goes to the debugger first, if there is
 	// one that wants it. The hook reads c.OnUnhandled each time, so a
 	// debugger installed later still gets it.
+	env.OnSignal = func(u corevms.UnhandledCondition) {
+		if c.OnSignal != nil {
+			c.OnSignal(UnhandledException{Condition: u.Condition, PC: u.PC, Preceding: u.Preceding})
+		}
+	}
+
 	env.OnUnhandled = func(u corevms.UnhandledCondition) bool {
 		return c.OnUnhandled != nil && c.OnUnhandled(UnhandledException{
 			Condition: u.Condition, PC: u.PC, Preceding: u.Preceding,

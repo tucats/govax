@@ -1132,3 +1132,78 @@ now live in `internal/debugger` (`runcontrol.go`, `step.go`,
   (the stand-in debugger in `internal/console` does the same).
 - `go build`, `go vet`, `go test ./...` clean; golangci-lint reports
   nothing in the changed files (existing findings elsewhere remain).
+
+### 2026-10-05 — Subtask 6: breakpoints as VMS's
+
+`SET BREAK`, `SHOW BREAK`, and `CANCEL BREAK` are now debugger commands
+(`internal/debugger/breakcmd.go`, the `set`/`show`/`cancel` verbs in
+`debug.dcl`), with the VMS messages from `break.dlg` and `brkcls.dlg`.
+The console's own `SET BREAKPOINT`, `SHOW BREAKPOINTS`, and `CLEAR
+BREAKPOINT` still work at `VAX>` (subtask 14 removes them); they and
+the debugger's commands share the one list.
+
+- **One list, more kinds.** `Breakpoint.Kind` is now `BreakAddress`,
+  `BreakCall`, `BreakBranch`, `BreakLine`, `BreakInstruction` (opcodes),
+  `BreakAnyInstruction`, `BreakReturn` (a routine's RETs), or
+  `BreakException`; each has `/AFTER`, `/TEMPORARY`, `WHEN`, and `DO`
+  (`eventpoint.go`). `runLoop` asks `breakpointHit`, which counts every
+  breakpoint reached, applies `/AFTER` then `WHEN`, removes the one-shot
+  ones that stop the run, and prints the first stop's message. A STEP's
+  one-shot breakpoint now coexists with a user breakpoint at the same
+  address and is removed when it's reached (bug 3's other half).
+  Fault breakpoints stay on `cpu.Engine`, and the console's
+  opcode-flag `InstructionBreakpoints` map stays for the old command;
+  `CANCEL BREAK/ALL` clears all three.
+- **Messages.** `break at X`, `break at routine DBGCMD\FACT` (a routine's
+  name breaks just past its entry mask, found by
+  `Console.RoutineEntry`), `break on calls|branches|lines at X`,
+  `break on instruction(s) at X`, `break on instruction at X`, `break on
+  return from routine R at X`, `break on exception preceding X`, and the
+  condition's message line before an exception break. `SHOW BREAK`
+  words each as `brkcls.dlg` does, with opcodes eight to a line (the
+  branch list's 43 names are the probe's). Nothing set (or cancelled) is
+  `%DEBUG-I-NOBREAKS`. The old stop text "Break at" is now "break at".
+  govax's `/FAULT=code` is kept for `SET`, and `CANCEL BREAK/FAULT[=code]`.
+- **`/EXCEPTION`** needs to know of every signal, handled or not, so
+  `corevms.Environment` has `OnSignal` (called from `startDispatch`) and the
+  console `Console.OnSignal`; the debugger holds the signal for the run
+  loop, which stops at the next instruction boundary. The program is
+  paused with the dispatch set up, and GO sends it into the handlers.
+  The stop is after the dispatch is set up, where VMS's is before the
+  signal is delivered, so `SHOW CALLS` there may differ from VMS's
+  (untested; the SHOW CALLS rewrite is a later subtask's).
+- **WHEN and DO.** `condition.go` is a stopgap for subtask 9's
+  evaluator: comparisons (`EQL NEQ LSS LEQ GTR GEQ`), `AND`, `OR`, `NOT`,
+  parentheses, and `.expr` for the longword at an address. A condition
+  that can't be evaluated shows its error and breaks (as in `break.dlg`).
+  **Difference from VMS, unconfirmed:** the probe's `WHEN (.WATCHL EQL 2)`
+  failed with `NOACCESSR` at address 2, since in a MACRO-language
+  expression the debugger takes a data label's value to be its contents;
+  govax's evaluator takes a label's value to be its address, so `.WATCHL`
+  is WATCHL's contents and the condition works. Subtask 10 (data typing)
+  decides whether to follow VMS; `TestDebuggerSessionOracle` will list it
+  as an expected difference if not. DO's commands run when the debugger is
+  back at its prompt (`Start` calls `runDo`) and are not echoed (VMS echoes
+  them only under SET OUTPUT VERIFY). EXAMINE and SHOW CALLS aren't debugger
+  commands yet, so a DO using them reports `%DEBUG-E-SYNTAX` until the
+  later subtasks.
+- **SHOW BREAK's order** is the order set. The probe's isn't (a list's
+  order reversed; `LAST` before the later ones), and no rule showed itself:
+  unconfirmed.
+- **Source lines** after each break are subtask 8's.
+- **DCL parser.** A qualifier's value may follow `:` as well as `=`
+  (`/AFTER:3`; `dcl.readBareToken`, `TestQualifierValueColon`). A
+  qualifier with a `/default` is present in every result, so the
+  grammar's `DISALLOW` can't say "at most one of /CALL, /INSTRUCTION, ..."
+  once `/INSTRUCTION` takes an optional list; the commands check that
+  themselves (`class`), using `Result.Defaulted`.
+- **Tests.** `breakcmd_test.go` runs the probe's DBGCMD image: the
+  routine, `/AFTER`, unlabeled-address, list, temporary, `WHEN`, `DO`,
+  unreadable-`WHEN`, `/CALL`, `/RETURN`, `/BRANCH`, `/LINE`,
+  `/INSTRUCTION`, and `/EXCEPTION` sequences of `break.dlg`, `brkcls.dlg`,
+  and `except.dlg` (the messages and stops, not the SHOW CALLS and
+  EXAMINE lines), the `WHEN` operators on a program of NOPs, and the
+  commands' errors. The existing run-control tests changed only for the
+  new text ("break at", "no breakpoints are set", `breakpoint on fault`).
+- `go build`, `go vet`, `go test ./...` clean; golangci-lint reports
+  nothing in the changed files.

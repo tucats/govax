@@ -511,6 +511,12 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, lastPa
 		q = q.aliasRef
 	}
 
+	// DCL writes a qualifier's value after "=" or ":" (/AFTER=3, /AFTER:3);
+	// the VMS debugger's commands favor the colon.
+	if strings.HasPrefix(rest, ":") {
+		rest = "=" + rest[1:]
+	}
+
 	var token string
 
 	haveVal := false
@@ -844,14 +850,14 @@ func (g *Grammar) syntaxLater(r *Result, verb *Entry, line string) (*Entry, stri
 	return nil, "", false
 }
 
-// readBareToken reads a run of characters up to the next '=', '/',
+// readBareToken reads a run of characters up to the next '=', ':', '/',
 // whitespace, or end of string — used for verb and qualifier names, which
 // are never quoted.
 func readBareToken(s string) (token, rest string) {
 	i := 0
 	for i < len(s) {
 		switch s[i] {
-		case '=', '/', ',', ' ', '\t':
+		case '=', ':', '/', ',', ' ', '\t':
 			return s[:i], s[i:]
 		}
 

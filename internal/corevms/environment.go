@@ -37,6 +37,14 @@ type Environment struct {
 	// condition.go's catchAll.
 	OnUnhandled func(UnhandledCondition) bool
 
+	// OnSignal, when set, is told of every condition as its dispatch to
+	// the program's handlers begins, whether or not a handler will go on
+	// to handle it (the VMS debugger's SET BREAK/EXCEPTION). The dispatch
+	// is already set up; the program is at SYS$SRCHANDLER's stub, and
+	// carries on into the handler search whenever it next runs. See
+	// condition.go's startDispatch.
+	OnSignal func(UnhandledCondition)
+
 	shims    *ShimTable
 	services *ServiceTable
 

@@ -67,8 +67,8 @@ func TestShowBreakpoints_mergesFaultBreakpoints(t *testing.T) {
 		t.Errorf("output = %q, want the address breakpoint listed", out)
 	}
 
-	if !strings.Contains(out, "F Breakpoint on fault 10") {
-		t.Errorf("output = %q, want the fault breakpoint listed with an F marker", out)
+	if !strings.Contains(out, "breakpoint on fault 10") {
+		t.Errorf("output = %q, want the fault breakpoint listed", out)
 	}
 }
 

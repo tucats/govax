@@ -412,6 +412,10 @@ func (env *Environment) startDispatch(d *conditionDispatch, sig []uint32, r0, r1
 	c.SetGPR(vax.SP, d.sp)
 	c.SetGPR(vax.PC, srchandlerAddr)
 
+	if env.OnSignal != nil {
+		env.OnSignal(env.unhandledCondition(d, sig[0]))
+	}
+
 	return true
 }
 

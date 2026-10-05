@@ -40,7 +40,7 @@ func TestShowBreakpoints(t *testing.T) {
 		t.Fatalf("ShowBreakpoints: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "No breakpoints") {
+	if !strings.Contains(buf.String(), "no breakpoints are set") {
 		t.Errorf("output = %q, want a no-breakpoints message", buf.String())
 	}
 
@@ -92,7 +92,7 @@ func TestExecute_stopsAtBreakpoint(t *testing.T) {
 		t.Errorf("PC at breakpoint = %#x, want 0x202", got)
 	}
 
-	if !strings.Contains(buf.String(), "Break at") {
+	if !strings.Contains(buf.String(), "break at") {
 		t.Errorf("output = %q, want a break message", buf.String())
 	}
 }
