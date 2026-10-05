@@ -88,6 +88,7 @@ questions, and a progress log extended as that phase is worked.
 | 35 | [PHASE-35.md](PHASE-35.md) | The rest of the instruction set: G/H floating, octaword moves, EMOD/POLY, packed decimal and EDITPC — done; matches VMS on a 567-case oracle |
 | 36 | [PHASE-36.md](PHASE-36.md) | The FORTH fixture (`testdata/mar/forth.mar`): RMS terminal I/O, LIB$PUT_OUTPUT/LIB$GET_FOREIGN, DCL symbols and foreign commands, MACRO listing/object fixes — done; object, listing, image, and map match VMS 7.3 |
 | 37 | [PHASE-37.md](PHASE-37.md) | The console's fixed commands (EXAMINE, DEPOSIT, SET, STEP, RUN, ...) move onto the DCL grammar, which gains `$expression`, separators, assignments, and nonegatable keywords — done |
+| 38 | [PHASE-38.md](PHASE-38.md) | `ANALYZE/OBJECT`, matching VMS 7.3's output line for line (records, GSD, TIR commands, dumps, errors, pages); the verb laid out for a later `ANALYZE/IMAGE` — in progress |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
