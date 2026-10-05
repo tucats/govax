@@ -6,29 +6,30 @@ Symbol names and numeric values precise; all other text are newly written
 requirements specifications.
 
 **Contents:**
-1 Overview ·
-2 Locating the DST ·
-3 Overall structure ·
-4 Record header and code tables ·
-5 Scope records ·
-6 Record types and variants ·
-7 Data symbol records ·
-8 Value specifications and the stack machine ·
-9 Type specifications ·
-10 Enumerations ·
-11 BLISS records ·
-12 Image, PSECT, label and entry records ·
-13 Line-number program ·
-14 Source correlation ·
-15 GEM locators ·
-16 Continuation ·
-17 GOTO/TARGET ·
-18 Fixups ·
-19 Prolog, epilog and register records ·
-20 Ada records ·
-21 C++ records ·
-22 Obsolete records ·
-23 Implementation notes
+
+1. Overview
+2. Locating the DST
+3. Overall structure
+4. Record header and code tables
+5. Scope records
+6. Record types and variants
+7. Data symbol records
+8. Value specifications and the stack machine
+9. Type specifications
+10. Enumerations
+11. BLISS records
+12. Image, PSECT, label and entry records
+13. Line-number program
+14. Source correlation
+15. GEM locators
+16. Continuation
+17. GOTO/TARGET
+18. Fixups
+19. Prolog, epilog and register records
+20. Ada records
+21. C++ records
+22. Obsolete records
+23. Implementation notes
 
 All multi-byte fields are little-endian. "byte", "word", "long" and "quad"
 mean 1, 2, 4 and 8 bytes. Offsets in the layout tables are measured from
@@ -68,7 +69,7 @@ languages, because breakpoints and stepping rely on native code.
 A compiler emits DST data in two kinds of object-language records:
 
 | Object record | Contents | Copied to the image when |
-|---|---|---|
+| - | - | - |
 | **TBT** (traceback) | Module Begin/End, Routine Begin/End, Block Begin/End, Line Number PC-Correlation, optionally Version Number | default `LINK` and `LINK/DEBUG` |
 | **DBT** (debug) | All other DST records | only `LINK/DEBUG` |
 
@@ -79,7 +80,7 @@ their meaning.
 Typical compiler qualifiers:
 
 | Qualifier | Effect |
-|---|---|
+| - | - |
 | `/DEBUG` (= `/DEBUG=(TRACEBACK,SYMBOLS)`) | everything |
 | `/DEBUG=TRACEBACK` | TBT records only |
 | `/DEBUG=(NOTRACE,NOSYMBOL)` | nothing |
@@ -112,7 +113,7 @@ start of the header, of the **Image Header Symbol Table Descriptor (IHS)**.
 ### 2.2 IHS layout
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | long | `IHS$L_DSTVBN` | Virtual block number where the DST starts |
 | 4 | long | `IHS$L_GSTVBN` | Virtual block number where the GST starts |
 | 8 | word | `IHS$W_DSTBLKS` | DST size in 512-byte blocks (16-bit) |
@@ -139,7 +140,7 @@ descriptors.
 `DBG$DMT_HEADER` (size `DBG$K_DMT_HEADER_SIZE` = 12):
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | long | `dbg$l_dmt_modbeg` | Offset of this module's Module Begin record from the start of the DST |
 | 4 | long | `dbg$l_dmt_dst_size` | Size in bytes of this module's DST |
 | 8 | word | `dbg$w_dmt_psect_count` | Number of PSECT entries that follow |
@@ -149,7 +150,7 @@ descriptors.
 `dbg$w_dmt_psect_count` times:
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | long | `dbg$l_dmt_psect_start` | PSECT start address |
 | 4 | long | `dbg$l_dmt_psect_length` | PSECT length in bytes |
 
@@ -168,7 +169,7 @@ The DST is one contiguous run of variable-length records. Each record
 starts with a length byte and a type byte. Modules follow one another with
 no gap:
 
-```
+```text
 Module Begin (M1) … symbols for M1 … Module End
 Module Begin (M2) … symbols for M2 … Module End
 …
@@ -183,7 +184,7 @@ Scopes and composite types are expressed by bracketing records. A record
 belongs to the innermost open Begin/End pair. Bracket types:
 
 | Construct | Opening record | Closing record |
-|---|---|---|
+| - | - | - |
 | Module | `DST$K_MODBEG` | `DST$K_MODEND` |
 | Routine | `DST$K_RTNBEG` | `DST$K_RTNEND` |
 | Lexical block | `DST$K_BLKBEG` | `DST$K_BLKEND` |
@@ -198,7 +199,7 @@ belongs to the innermost open Begin/End pair. Bracket types:
 Routines and blocks can nest inside each other to any reasonable depth.
 Example:
 
-```
+```text
 Source                           DST stream
 ------                           ----------
 module M                         Module Begin "M"
@@ -243,7 +244,7 @@ in the stream.
 
 Example of declaring objects of a record type:
 
-```
+```text
 Data REC1 (SEPTYP)            <- REC1's type is the record that follows
 Record Begin "RECTYP"  (VFLAGS = NOVAL, i.e. a type, not an object)
   Data COMP1 (DTYPE_L)
@@ -264,7 +265,7 @@ Variant records and enumerations work the same way (see §5.4 and §8).
 Every DST record begins with `DST$HEADER`:
 
 | Offset | Size | Field (alias) | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | byte | `DST$B_LENGTH` (`DST$X_LENGTH`) | Number of bytes in the record **after** this length byte |
 | 1 | byte | `DST$B_TYPE` (`DST$X_TYPE`) | Record type code (type `DST$DTYPE`, unsigned byte) |
 | 2 | var | `DST$A_NEXT` | Type-specific body |
@@ -272,7 +273,7 @@ Every DST record begins with `DST$HEADER`:
 Header-related constants:
 
 | Constant | Value | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$K_DST_HEADER_SIZE` | 2 | Size of the header |
 | `DST$K_DST_BASE_FOR_NEXT` | 1 | Offset from which `DST$B_LENGTH` is counted |
 | `DST$K_LENGTH_LENGTH` | 1 | Size of the length field |
@@ -294,7 +295,7 @@ that is nothing but a header has `DST$B_LENGTH = 1`.
 `DST$B_TYPE` is a single unsigned byte, interpreted by range:
 
 | Range | Meaning |
-|---|---|
+| - | - |
 | `DST$K_BLI` (0) | BLISS special-case record (historical; code 0) |
 | `DSC$K_DTYPE_LOWEST` (1) … `DBG$K_MAXIMUM_DTYPE` | Data-type code: the record is a data symbol in Standard Data form or one of its variants, and the code is the symbol's type |
 | `DST$K_LOWEST` (116) … `DST$K_HIGHEST` | Special DST record kinds, listed in §4.4 |
@@ -310,7 +311,7 @@ The calling standard defines the standard codes. They are listed here so the
 reference is complete.
 
 | Value | Symbol | Data type |
-|---|---|---|
+| - | - | - |
 | 0 | `DSC$K_DTYPE_Z` | Unspecified (never valid in a DST) |
 | 1 | `DSC$K_DTYPE_V` | Aligned bit |
 | 2 | `DSC$K_DTYPE_BU` | Unsigned byte |
@@ -358,7 +359,7 @@ Range constants: `DSC$K_DTYPE_LOWEST` = 1 and `DSC$K_DTYPE_HIGHEST` = 39.
 passed in run-time descriptors to other software:
 
 | Value | Symbol | Data type |
-|---|---|---|
+| - | - | - |
 | 40 | `DSC$K_DTYPE_TF` | Boolean true/false (length in bits) |
 | 41 | `DSC$K_DTYPE_SV` | Signed bit field, aligned |
 | 42 | `DSC$K_DTYPE_SVU` | Signed bit field, unaligned |
@@ -385,14 +386,14 @@ The calling-standard body must approve any new data-type code.
 These codes are used only inside the debugger and never appear in a DST:
 
 | Value | Symbol | Purpose |
-|---|---|---|
+| - | - | - |
 | 191 | `DSC$K_DTYPE_LITERAL` | Marks a parsed literal during expression evaluation |
 | 192 | `DBG$K_DTYPE_AD` | Descriptor-addressed ASCII text (internal) |
 
 ### 4.4 Special DST record type codes (`DST$K_*`)
 
 | Value | Symbol | Record kind |
-|---|---|---|
+| - | - | - |
 | 0 | `DST$K_BLI` | BLISS special cases |
 | 116 | `DST$K_SYMBOL_FIXUP_64` | Symbol fixup (quadword) |
 | 117 | `DST$K_FIXUP_64` | DST fixup (quadword) |
@@ -484,7 +485,7 @@ The Module Begin record stores a language code in a longword (typedef
 `DBG$K_x` alias.
 
 | Value | Symbol | Language |
-|---|---|---|
+| - | - | - |
 | 0 | `DST$K_MACRO` | MACRO (VAX assembler) |
 | 1 | `DST$K_FORTRAN` | Fortran |
 | 2 | `DST$K_BLISS` | BLISS |
@@ -527,7 +528,7 @@ may contain only one Module Begin/Module End pair. If there are more, the
 debugger sees only the first, because the linker reports only that one.
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | byte | `DST$B_MODBEG_FLAGS` | Flag bits, listed below |
 | 3 | long | `DST$L_MODBEG_LANGUAGE` | Language code (§4.5) |
@@ -540,7 +541,7 @@ count byte.
 Flag bits:
 
 | Bit | Field | Meaning |
-|---|---|---|
+| - | - | - |
 | 0 | `DST$V_MODBEG_HIDE` | Leave this module out of `SHOW MODULE` output |
 | 1 | `DST$V_MODBEG_VERSION` | The record carries a version field (Alpha variant only) |
 | 2–7 | `DST$V_MODBEG_UNUSED` | Must be zero |
@@ -558,7 +559,7 @@ have no well-defined end, so in those modules the Routine End is always
 omitted.
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | byte | `DST$B_RTNBEG_FLAGS` | Flag bits, listed below |
 | 3 | long | `DST$L_RTNBEG_ADDRESS` | Start address, which is also the entry point |
@@ -570,7 +571,7 @@ omitted.
 Flag bits:
 
 | Bit | Field | Meaning |
-|---|---|---|
+| - | - | - |
 | 0–3 | `DST$V_RTNBEG_UNUSED` | Must be zero |
 | 4 | `DST$V_RTNBEG_UNALLOC` | The routine was optimized away. Ignore the address fields, but a Routine End is still required |
 | 5 | `DST$V_RTNBEG_PROTOTYPE` | This is a prototype only. Ignore the address and the size in the Routine End |
@@ -580,7 +581,7 @@ Flag bits:
 ### 5.4 Routine End (`DST$K_RTNEND` = 191), `DST$ROUTINE_END`
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header (`DST$B_LENGTH` = 6) | |
 | 2 | byte | `dst$b_rtnend_unused` | Must be zero |
 | 3 | long | `DST$L_RTNEND_SIZE` | Length of the routine's code in bytes |
@@ -593,7 +594,7 @@ A compact record for a routine that was declared but never generated as
 code. It carries only the name and, for C++, a type signature.
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | byte | `DST$B_RTNUNALLOC_NAME` | Length of the name |
 | 3 | var | — | Name |
@@ -612,7 +613,7 @@ and epilog ranges of the instance are described with the ordinary Prolog
 and Epilog records.
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | long | `DST$L_INLINE_RTN_DST` | DST offset of the Routine Begin of the inlined routine |
 | 6 | long | `DST$L_INLINE_CALLER_LINE` | Line number of the call site |
@@ -630,7 +631,7 @@ its line numbers can still be used.
 `DST$BLOCK_BEGIN`:
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | byte | `dst$b_blkbeg_unused` | Must be zero |
 | 3 | long | `DST$L_BLKBEG_ADDRESS` | Address where the block's code starts |
@@ -642,7 +643,7 @@ its line numbers can still be used.
 `DST$BLOCK_END` (`DST$B_LENGTH` = 6):
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 2 | byte | `dst$b_blkend_unused` | Must be zero |
 | 3 | long | `DST$L_BLKEND_SIZE` | Length of the block's code in bytes |
 
@@ -657,7 +658,7 @@ profiling tools can treat them alike. That layout must be kept.
 **Package Spec Begin** (`DST$K_PACK_SPEC_BEG` = 146), `DST$PACKAGE_SPEC_BEGIN`:
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 2 | byte | `DST$B_PACKSPEC_FLAGS` | Bits 0–1 are `DST$V_PACKSPEC_ELAB`, bit 2 is `DST$V_PACKSPEC_DUPL` (this is a duplicate definition), bits 3–7 are `dst$v_packspec_beg_unused` |
 | 3 | long | `DST$L_PACKSPEC_ADDRESS` | Address of the elaboration code |
 | 7 | byte | `DST$B_PACKSPEC_NAME` | Length of the package name, which is the source name as written |
@@ -668,7 +669,7 @@ profiling tools can treat them alike. That layout must be kept.
 Elaboration codes, used by both the spec and the body:
 
 | Value | Symbol | Meaning |
-|---|---|---|
+| - | - | - |
 | 0 | `DST$K_NOELAB` | There is no elaboration code |
 | 1 | `DST$K_ELAB_NOCALL` | There is elaboration code with no entry mask, so the address is the first instruction |
 | 2 | `DST$K_ELAB_CALL` | There is elaboration code that starts with an entry mask, so the address points to the mask |
@@ -697,7 +698,7 @@ list of ranges.
 `DST$DIS_RANGES`:
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | long | `DST$LU_DISRNG_COUNT` | Number of ranges that follow |
 
@@ -708,7 +709,7 @@ slip in the original.
 Each range is a `DST$DIS_RANGE` (`DST$K_DISRNG_SIZE` = 8):
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | long | `DST$LU_DISRNG_ADDRESS` | Start address |
 | 4 | long | `DST$LU_DISRNG_SIZE` | Length in bytes |
 
@@ -743,7 +744,7 @@ Record Begin can define either a **type** or an **object**:
 
 **Variants** (Pascal variant records, Ada discriminated records):
 
-```
+```text
 Record Begin
   <fixed components>
   Variant Set Begin      (names the tag component)
@@ -767,7 +768,7 @@ object's address needs a Trailing Value Spec, that spec follows the name,
 and the trailer comes after it.
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | header + `DST$B_VFLAGS` + `DST$L_VALUE` + `DST$B_NAME` + name | — | As in Standard Data |
 | `DST$L_RECBEG_SIZE` | long | Bit size of objects of this type, or 0 if unknown at compile time |
 
@@ -783,14 +784,14 @@ Same layout as Standard Data. The name is normally empty. It is followed by
 the trailer `DST$VARBEG_TRAILER` (`DST$K_VARBEG_TRAILER_SIZE` = 8):
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$L_VARBEG_SIZE` | long | Bit size of the largest variant, or 0 |
 | `DST$L_VARBEG_TAG_PTR` | long | DST offset of the tag component's data record |
 
 ### 6.5 Variant Value (`DST$K_VARVAL` = 157), `DST$VARIANT_VALUE`
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | long | `DST$L_VARVAL_SIZE` | Bit size of this variant, or 0 |
 | 6 | word | `DST$W_VARVAL_COUNT` | Number of tag-range specs that follow |
@@ -802,12 +803,12 @@ the trailer `DST$VARBEG_TRAILER` (`DST$K_VARBEG_TRAILER_SIZE` = 8):
 `DST$K_VARVAL_RANGE_SIZE` = 1):
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$B_VARVAL_RNGKIND` | byte | Range kind, listed below |
 | `DST$A_VARVAL_RNGADDR` | var | One or two value specs, depending on the kind |
 
 | Value | Symbol | What follows |
-|---|---|---|
+| - | - | - |
 | 1 | `DST$K_VARVAL_SINGLE` | One value spec giving a single tag value |
 | 2 | `DST$K_VARVAL_RANGE` | Two value specs giving the lower and upper bounds |
 
@@ -822,7 +823,7 @@ Header only. `DST$K_VARSET_END_SIZE` = 2.
 ### 7.1 Choosing a form
 
 | Situation | Record to use |
-|---|---|
+| - | - |
 | Simple scalar; address or value fits the 5-byte encoding | **Standard Data**, with the record type set to the dtype or `DST$K_BOOL` |
 | Static object whose type needs a descriptor, and none exists in memory | **Descriptor Format**: a descriptor embedded in the record |
 | Address or value too complex, or a constant wider than 32 bits | **Trailing Value Spec**: a value spec embedded in the record |
@@ -841,7 +842,7 @@ carries both the address and the type.
 (`DST$K_DATA_SIZE` = 8):
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | byte | `DST$B_VFLAGS` | Value flags, see §7.3 |
 | 3 | long | `DST$L_VALUE` | Value, address, offset, or register number |
@@ -854,7 +855,7 @@ Unless the byte holds one of the special values in §7.4, it is split into
 bit fields:
 
 | Bits | Field | Meaning |
-|---|---|---|
+| - | - | - |
 | 0–1 | `DST$V_VALKIND` | Kind of result, listed below |
 | 2 | `DST$V_INDIRECT` | Dereference the computed address once |
 | 3 | `DST$V_DISP` | Add the contents of register `REGNUM` to `DST$L_VALUE` |
@@ -863,7 +864,7 @@ bit fields:
 Value kinds:
 
 | Value | Symbol | Meaning |
-|---|---|---|
+| - | - | - |
 | 0 | `DST$K_VALKIND_LITERAL` | `DST$L_VALUE` is the constant itself (up to 32 bits) |
 | 1 | `DST$K_VALKIND_ADDR` | The computation yields the object's address |
 | 2 | `DST$K_VALKIND_DESC` | The computation yields the address of a descriptor for the object |
@@ -901,7 +902,7 @@ except NOVAL have the top four bits set. That cannot happen for an ordinary
 flags byte, because REGNUM = 15 (the VAX PC) is never used for displacement.
 
 | Value | Symbol | Meaning |
-|---|---|---|
+| - | - | - |
 | 128 | `DST$K_VFLAGS_NOVAL` | No value: the record describes a type. Valid only in Record Begin |
 | 248 | `DST$K_VFLAGS_NOTACTIVE` | The object has storage but is not live at the current PC, for example an Ada object not yet elaborated. Typically used inside split-lifetime specs |
 | 249 | `DST$K_VFLAGS_UNALLOC` | The object never has storage, for example an unreferenced Pascal variable. Valid only in the flags byte of a data record. Not valid in value specs nested in type specs, and not valid for enumeration literals |
@@ -919,7 +920,7 @@ field. `DST$K_NO_SUCH_REG` = −1 marks an empty range.
 **VAX** (`DST$K_REG_VAX_MIN` = 0, `DST$K_REG_VAX_MAX` = 35):
 
 | Value | Symbol(s) |
-|---|---|
+| - | - |
 | 0–11 | `DST$K_REG_VAX_R0` … `DST$K_REG_VAX_R11` |
 | 12 | `DST$K_REG_VAX_R12` = `DST$K_REG_VAX_AP` |
 | 13 | `DST$K_REG_VAX_R13` = `DST$K_REG_VAX_FP` |
@@ -941,7 +942,7 @@ integer registers are rotated so that R16–R31 take the values 0–15, which
 fit in the 4-bit REGNUM field:
 
 | Value | Symbol(s) |
-|---|---|
+| - | - |
 | 0–15 | `DST$K_REG_ALPHA_R16` … `DST$K_REG_ALPHA_R31` |
 | 36–51 | `DST$K_REG_ALPHA_R0` … `DST$K_REG_ALPHA_R15` |
 | 52–83 | `DST$K_REG_ALPHA_F0` … `DST$K_REG_ALPHA_F31` |
@@ -951,7 +952,7 @@ fit in the 4-bit REGNUM field:
 Alpha aliases:
 
 | Alias | Equals | Value |
-|---|---|---|
+| - | - | - |
 | `DST$K_REG_ALPHA_AI` | R25 (argument information) | 9 |
 | `DST$K_REG_ALPHA_RA` | R26 (return address) | 10 |
 | `DST$K_REG_ALPHA_PV` | R27 (procedure value) | 11 |
@@ -967,7 +968,7 @@ anyway. Alpha ranges: scalar R0–R31; float F0–F31; vector none.
 **Motorola 68xxx / 68881** (`DST$K_REG_M68_MIN` = 0, `…_MAX` = 35):
 
 | Value | Symbol(s) |
-|---|---|
+| - | - |
 | 0–7 | `DST$K_REG_M68_A0` … `A7` |
 | 8–15 | `DST$K_REG_M68_D0` … `D7` |
 | 16–23 | `DST$K_REG_M68_FP0` … `FP7` |
@@ -979,7 +980,7 @@ Ranges: scalar A0–D7; float FP0–FP7; vector none.
 is reversed:
 
 | Value | Symbol(s) |
-|---|---|
+| - | - |
 | 0–15 | `DST$K_REG_1750_R15` … `DST$K_REG_1750_R0` (R15 = 0, R0 = 15) |
 | 16–23 | `PC`, `SW`, `FT`, `MK`, `PI`, `IOIC`, `MFSR`, `PAGE` (each `DST$K_REG_1750_*`). Compilers must not emit these |
 
@@ -994,7 +995,7 @@ value longword becomes `DST$L_DSC_OFFS` (aggregate
 `DST$DESCRIPTOR_FORMAT`). `DST$K_DESCRIPTOR_FORMAT_SIZE` = 7 is the offset
 of the name count byte, which is also called `DST$A_DSC_BASE`.
 
-```
+```text
 descriptor_address = record + DST$K_DESCRIPTOR_FORMAT_SIZE + DST$L_DSC_OFFS
 ```
 
@@ -1008,7 +1009,7 @@ value longword becomes `DST$L_TVS_OFFSET` (aggregate
 `DST$TRAILING_VALSPEC`, `DST$K_TRAILING_VALSPEC_SIZE` = 7, base
 `DST$A_TVS_BASE`).
 
-```
+```text
 value_spec_address = record + DST$K_TRAILING_VALSPEC_SIZE + DST$L_TVS_OFFSET
 ```
 
@@ -1042,7 +1043,7 @@ Every value spec starts with a flags byte, `DST$B_VS_VFLAGS`. The rest of the
 spec is chosen by that byte:
 
 | Flags byte | Form |
-|---|---|
+| - | - |
 | ordinary bit fields | Standard (§8.2) |
 | `DST$K_VFLAGS_DSC` | Descriptor (§8.3) |
 | `DST$K_VFLAGS_TVS` | Trailing (§8.3) |
@@ -1052,7 +1053,7 @@ spec is chosen by that byte:
 ### 8.2 `DST$VAL_SPEC` layout
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | byte | `DST$B_VS_VFLAGS` | Bit fields `DST$V_VS_VALKIND` (bits 0–1), `DST$V_VS_INDIRECT` (bit 2), `DST$V_VS_DISP` (bit 3), `DST$V_VS_REGNUM` (bits 4–7), or a special value |
 | 1 | long | `DST$L_VS_VALUE` | Standard form: the value, address, or bit offset |
 | 1 | long | `DST$L_VS_DSC_OFFS` | Descriptor form: offset to the descriptor |
@@ -1068,7 +1069,7 @@ are always exactly 5 bytes.
 Offset constants (BLISS names in parentheses):
 
 | Constant | Value | Points to |
-|---|---|---|
+| - | - | - |
 | `DST$K_VS_DSC_BASE` (`DST$A_VS_DSC_BASE`) | 5 | Base for `DST$L_VS_DSC_OFFS` |
 | `DST$K_VS_TVS_BASE` (`DST$A_VS_TVS_BASE`) | 5 | Base for `DST$L_VS_TVS_OFFSET` |
 | `DST$K_VS_MATSPEC_BASE` (`DST$A_VS_MATSPEC`) | 4 | Start of the materialization spec |
@@ -1082,7 +1083,7 @@ Offset constants (BLISS names in parentheses):
 Both forms are 5 bytes long. Each holds an offset, measured from the byte
 just after the 5-byte spec, to more data later **in the same DST record**:
 
-```
+```text
 descriptor = vs + DST$K_VS_DSC_BASE + DST$L_VS_DSC_OFFS   ; a standard descriptor
 next_vs    = vs + DST$K_VS_TVS_BASE + DST$L_VS_TVS_OFFSET ; usually a VS-Follows spec
 ```
@@ -1091,7 +1092,7 @@ The trailing form lets a short spec point to a spec of any length.
 
 ### 8.4 VS-Follows form and allocation kinds
 
-```
+```text
 byte  DST$B_VS_VFLAGS = DST$K_VS_FOLLOWS (253)
 word  DST$W_VS_LENGTH
 byte  DST$B_VS_ALLOC
@@ -1101,7 +1102,7 @@ var   body chosen by DST$B_VS_ALLOC
 `DST$B_VS_ALLOC` (typedef `DST$VS_ALLOC_KIND`):
 
 | Value | Symbol | Body |
-|---|---|---|
+| - | - | - |
 | 1 | `DST$K_VS_ALLOC_STAT` | Materialization spec (§8.5) for a static value |
 | 2 | `DST$K_VS_ALLOC_DYN` | Materialization spec for a dynamic value |
 | 3 | `DST$K_VS_ALLOC_SPLIT` | Split-lifetime bindings (§8.6) |
@@ -1120,7 +1121,7 @@ difference.
 `DST$MATER_SPEC` starts at `DST$A_VS_MATSPEC`:
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | byte | `DST$B_MS_KIND` | What kind of value is produced |
 | 1 | byte | `DST$B_MS_MECH` | How it is produced |
 | 2 | byte | `DST$B_MS_FLAGBITS` | Flag bits, listed below |
@@ -1132,7 +1133,7 @@ mechanism-specific part starts at `dst$a_ms_mech_spec`, offset 3.
 `DST$B_MS_KIND` (typedef `DST$MS_KIND`):
 
 | Value | Symbol | Result produced |
-|---|---|---|
+| - | - | - |
 | 1 | `DST$K_MS_BYTADDR` | 32-bit byte address |
 | 2 | `DST$K_MS_BITADDR` | Byte address plus a 32-bit bit offset (two longwords) |
 | 3 | `DST$K_MS_BITOFFS` | Bit offset from the start of the record (components) |
@@ -1146,7 +1147,7 @@ mechanism-specific part starts at `dst$a_ms_mech_spec`, offset 3.
 `DST$B_MS_MECH` (typedef `DST$MS_MECH`):
 
 | Value | Symbol | Mechanism |
-|---|---|---|
+| - | - | - |
 | 1 | `DST$K_MS_MECH_RTNCALL` | Call a compiler-generated thunk whose address is in `DST$L_MS_MECH_RTNADDR` |
 | 2 | `DST$K_MS_MECH_STK` | Run a DST stack-machine routine (§8.9) |
 | 3 | `DST$K_MS_MECH_RTN_NOFP` | Like 1, but the debugger skips its check for a zero FP |
@@ -1156,7 +1157,7 @@ mechanism-specific part starts at `dst$a_ms_mech_spec`, offset 3.
 `DST$B_MS_FLAGBITS`:
 
 | Bit | Field | Meaning |
-|---|---|---|
+| - | - | - |
 | 0 | `DST$V_MS_NOEVAL` | Purpose undocumented |
 | 1 | `DST$V_MS_DUMARG` | Pass a 16-byte result buffer as an extra first argument |
 | 2 | `DST$V_MS_WRONGBOUNDS` | The array bounds in the produced descriptor may be wrong (see below) |
@@ -1189,7 +1190,7 @@ For example, it might be unallocated in one range, in a register in
 another, and on the stack in a third. A variable that keeps one location
 for the whole of its scope does **not** need this form.
 
-```
+```text
 byte  DST$K_VS_FOLLOWS
 word  DST$W_VS_LENGTH
 byte  DST$K_VS_ALLOC_SPLIT
@@ -1201,7 +1202,7 @@ repeated NUM_BINDINGS times:
 `DST$BIND_SPEC` (`DST$K_BIND_SPEC_SIZE` = 8):
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | long | `DST$L_BS_LO_PC` | Low end of the PC range |
 | 4 | long | `DST$L_BS_HI_PC` | High end of the PC range |
 | 8 | var | `DST$A_BS_VALSPEC` | Nested value spec of any kind, including UNALLOC or NOTACTIVE |
@@ -1217,7 +1218,7 @@ fields, so it can name any register in the architecture, such as Alpha
 R0–R15 or the floating-point registers, for displacement or indirection.
 It is always wrapped in a VS-Follows spec:
 
-```
+```text
 byte  DST$K_VS_FOLLOWS
 word  DST$W_VS_LENGTH = 13
 byte  DST$K_VS_ALLOC_XVS
@@ -1233,7 +1234,7 @@ DST$XVS_SPEC:
 standard flags byte:
 
 | Bits | Field |
-|---|---|
+| - | - |
 | 0 | `DST$V_XVS_INDIRECT` |
 | 1 | `DST$V_XVS_DISP` |
 | 2–3 | `DST$V_XVS_VALKIND` |
@@ -1247,7 +1248,7 @@ Some Ada representation clauses store a value in fewer bits than it needs by
 subtracting a bias. For example, the range 100..103 can be stored in 2 bits
 as 0..3. This spec describes such values.
 
-```
+```text
 byte  DST$K_VS_FOLLOWS
 word  DST$W_VS_LENGTH
 byte  DST$K_VS_ALLOC_BIASED
@@ -1266,7 +1267,7 @@ never supported, and their format is not defined here.
 
 ### 8.9 The DST stack machine
 
-```
+```text
 byte  DST$K_VS_FOLLOWS
 word  DST$W_VS_LENGTH
 byte  DST$B_VS_ALLOC          (DYN for addresses, STAT for constants)
@@ -1293,7 +1294,7 @@ var   DST$A_MS_MECH_SPEC      stack-machine code, ending in STOP
 **Push register:**
 
 | Opcode | Symbol | VAX register |
-|---|---|---|
+| - | - | - |
 | 0–11 | `DST$K_STK_PUSHR0` … `DST$K_STK_PUSHR11` | R0–R11 |
 | 12 | `DST$K_STK_PUSHRAP` | AP |
 | 13 | `DST$K_STK_PUSHRFP` | FP |
@@ -1314,7 +1315,7 @@ Aliases: `…_AI` = R25 (80), `…_RA` = R26 (81), `…_PV` = R27 (82),
 **Push immediate.** The operand bytes follow the opcode.
 
 | Opcode | Symbol | Operand | Extension |
-|---|---|---|---|
+| - | - | - | - |
 | 16 | `DST$K_STK_PUSHIMB` | 1 byte | sign |
 | 17 | `DST$K_STK_PUSHIMW` | 2 bytes | sign |
 | 18 | `DST$K_STK_PUSHIML` | 4 bytes | — |
@@ -1326,7 +1327,7 @@ Aliases: `…_AI` = R25 (80), `…_RA` = R26 (81), `…_PV` = R27 (82),
 there, extended to 32 bits.
 
 | Opcode | Symbol | Width | Extension |
-|---|---|---|---|
+| - | - | - | - |
 | 20 | `DST$K_STK_PUSHINB` | byte | sign |
 | 21 | `DST$K_STK_PUSHINW` | word | sign |
 | 22 | `DST$K_STK_PUSHINL` | long | — |
@@ -1337,7 +1338,7 @@ there, extended to 32 bits.
 cell and S is the second.
 
 | Opcode | Symbol | Result |
-|---|---|---|
+| - | - | - |
 | 19 | `DST$K_STK_ADD` | T + S |
 | 29 | `DST$K_STK_SUB` | T − S (the *second* is subtracted from the *top*) |
 | 30 | `DST$K_STK_MULT` | T × S |
@@ -1350,7 +1351,7 @@ cell and S is the second.
 is the operand, or for the indirect forms the operand's address.
 
 | Opcode | Symbol | Operand | Extension |
-|---|---|---|---|
+| - | - | - | - |
 | 45 | `DST$K_STK_EXTV_IMED` | value | sign |
 | 46 | `DST$K_STK_EXTZV_IMED` | value | zero |
 | 47 | `DST$K_STK_EXTV_IND` | address | sign |
@@ -1359,7 +1360,7 @@ is the operand, or for the indirect forms the operand's address.
 **Stack manipulation:**
 
 | Opcode | Symbol | Effect |
-|---|---|---|
+| - | - | - |
 | 34 | `DST$K_STK_COP` | Duplicate the top cell |
 | 35 | `DST$K_STK_EXCH` | Swap the top two cells |
 | 39 | `DST$K_STK_POP` | Discard the top cell |
@@ -1376,7 +1377,7 @@ both, *k* is an unsigned byte offset counted from the second cell.
 **Control:**
 
 | Opcode | Symbol | Effect |
-|---|---|---|
+| - | - | - |
 | 23 | `DST$K_STK_STOP` | Stop. The top of the stack is the result |
 | 40 | `DST$K_STK_RTNCALL` | Pop a thunk address and call it. Argument 1 is the register vector (R0–R11, AP, FP, SP, PC, PSL; read-only) and argument 2 is the current stack-top address, so the code can push arguments for the thunk first. R1 holds the frame's FP. The R0 result is pushed |
 | 41 | `DST$K_STK_RTNCALL_ALT` | Like 40, but argument 1 is a 16-byte result buffer and the register vector and stack pointer move to arguments 2 and 3. The whole buffer is pushed |
@@ -1387,14 +1388,14 @@ on sibling components, such as PL/I arrays with bounds taken from other
 fields.
 
 | Opcode | Symbol | Effect |
-|---|---|---|
+| - | - | - |
 | 42 | `DST$K_STK_PUSH_OUTER_REC` | Push the address of the outermost record that contains the current symbol |
 | 43 | `DST$K_STK_PUSH_INNER_REC` | Push the address of the innermost record that contains the current symbol |
 
 **Other:**
 
 | Opcode | Symbol | Effect |
-|---|---|---|
+| - | - | - |
 | 52 | `DST$K_STK_POS` | Operand: a longword DST offset of an Enumeration Begin or Type Spec record. Replaces the value on top of the stack with its zero-based position in that enumeration. Every enumeration element must have a LITERAL value kind |
 | 53 | `DST$K_STK_PUSH_VALSPEC` | Reserved, not implemented. Meant to push the result of another value spec |
 | 54 | `DST$K_STK_PUSH_INNER_ARRAY` | Reserved, not implemented |
@@ -1416,7 +1417,7 @@ appears in one of two places:
 `DST$TYPSPEC`:
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | byte | `DST$B_TYPSPEC_NAME` | Length of the type name (0 if the type is unnamed) |
 | 3 | var | — | Type name |
@@ -1428,7 +1429,7 @@ length.
 ### 9.2 Common type-spec header (`DST$TYPE_SPEC`)
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | word | `DST$W_TS_LENGTH` | Number of bytes after this word |
 | 2 | byte | `DST$B_TS_KIND` | Kind of type spec (typedef `DST$TS_DTYPE`) |
 | 3 | var | — | Body, which depends on the kind |
@@ -1447,7 +1448,7 @@ Indirect specs.
 ### 9.3 Type-spec kinds
 
 | Value | Symbol | Kind |
-|---|---|---|
+| - | - | - |
 | 1 | `DST$K_TS_ATOM` | Atomic |
 | 2 | `DST$K_TS_DSC` | Standard descriptor |
 | 3 | `DST$K_TS_IND` | Indirect (pointer into the DST) |
@@ -1491,7 +1492,7 @@ kinds, including the length word. The other constants give the offset,
 from the start of the type spec, of a variable-length part.
 
 | Constant | Value | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$K_TS_ATOM_LENG` | 4 | Atomic spec size |
 | `DST$K_TS_IND_LENG` | 7 | Indirect spec size |
 | `DST$K_TS_PTR_LENG` | 3 | Pointer spec size |
@@ -1539,7 +1540,7 @@ longword for the length, which overwrites the class and dtype bytes, so the
 type spec supplies them separately.
 
 | Field | Size |
-|---|---|
+| - | - |
 | `DST$B_TS_ADA_DSC_CLASS` | byte |
 | `DST$B_TS_ADA_DSC_DTYPE` | byte |
 | `DST$A_TS_ADA_DSC_VSPEC` | value spec producing the extended descriptor |
@@ -1552,7 +1553,7 @@ counted from the start of another module's DST. Ada uses it to refer to
 types in library packages.
 
 | Field | Size |
-|---|---|
+| - | - |
 | `DST$L_TS_XMOD_OFFSET` | long |
 | `DST$B_TS_XMOD_MODNAME` | count byte, followed by the module name |
 
@@ -1572,7 +1573,7 @@ POINTER. There is no body, and `DST$W_TS_LENGTH` = 1.
 as ASCII strings.
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$B_TS_PIC_DLENG` | byte | Object length in bytes |
 | `DST$B_TS_PIC_LANG` | byte | Language code |
 | `DST$B_TS_PIC_PLENG` | byte | Length of the encoding that follows, in bytes |
@@ -1593,7 +1594,7 @@ as ASCII strings.
 **Array (7).**
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$B_TS_ARRAY_DIM` | byte | Number of dimensions, *n* |
 | `DST$A_TS_ARRAY_FLAGS_ADDR` | ⌈(*n*+1)/8⌉ bytes | Presence bit vector |
 | — | var | Value spec that produces an array descriptor (class `DSC$K_CLASS_A`, `NCA`, or `UBA`) |
@@ -1614,7 +1615,7 @@ as ASCII strings.
 form, so the class and dtype are given explicitly.
 
 | Field | Size |
-|---|---|
+| - | - |
 | `DST$B_TS_ADA_ARRAY_DIM` | byte |
 | `DST$B_TS_ADA_ARRAY_CLASS` | byte (`A`, `NCA`, or `UBA`) |
 | `DST$B_TS_ADA_ARRAY_DTYPE` | byte (0 if an element type spec is present) |
@@ -1626,7 +1627,7 @@ These are followed by the descriptor value spec and the optional type specs.
 set exactly when the *k*-th element of the parent type is a member.
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$L_TS_SET_LENG` | long | Bit length of objects |
 | `DST$A_TS_SET_PAR_TSPEC_ADDR` | var | Parent type: integer, an enumeration (through Indirect), or a subrange |
 
@@ -1637,7 +1638,7 @@ integer sets).
 **Subrange (9).**
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$L_TS_SUBR_LENG` | long | Bit length of objects |
 | `DST$A_TS_SUBR_PAR_TSPEC_ADDR` | var | Parent type spec |
 | — | var | Value spec for the lower bound |
@@ -1648,7 +1649,7 @@ The bounds are expressed as values of the parent type.
 **File (11).**
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$B_TS_FILE_LANG` | byte | Language code |
 | `DST$A_TS_FILE_RCRD_TYP` | var | Optional type spec for the record type. If missing, a file of characters is assumed |
 
@@ -1664,7 +1665,7 @@ for example a 1-bit Boolean in a packed record. The debugger widens such
 values to the parent's normal length when it accesses them.
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$L_TS_NOV_LENG` | long | The new length, in bits |
 | `DST$L_TS_NOV_LENG_PAR_TSPEC` | long | DST offset of the parent type's Type Spec, Record Begin, or Enumeration Begin record |
 
@@ -1674,7 +1675,7 @@ values to the parent's normal length when it accesses them.
 at run time.
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$A_TS_NOV_LENG_VSPEC` | 5 | Value spec (`dst$a_dyn_nov_val_spec`) giving the length |
 | `DST$A_TS_NOV_LENG_TSPEC` | var | Nested parent type spec (may be Indirect) |
 
@@ -1689,14 +1690,14 @@ layout.
 interprets. If `DST$W_TS_LENGTH` = 1 there is no body. Otherwise:
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$WU_TS_TASK_ENTRY_COUNT` | word | Number of entries |
 | — | var | That many entry descriptors, starting at `DST$K_TS_TASK_ENTRY` |
 
 Each entry is a `DST$TASK_TS_ENTRY` (fixed part `DST$K_TASK_TS_ENTRY_SIZE` = 2):
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$BU_TS_TASK_ENTRY_FLAGS` | byte | Bit 0 is `DST$V_TS_TASK_ENTRY_FAMILY` (the entry is a family); bits 1–7 are `DST$V_TS_TASK_ENTRY_MBZ` |
 | `DST$BU_TS_TASK_ENTRY_NAME` | byte | Length of the entry name. The same byte is also named `DST$BU_TS_TASK_ENTRY_TRLR_OFFS`, because it is also the offset from `dst$a_ts_task_entry_trlr_base` (= 2) to the trailer |
 | — | var | Entry name |
@@ -1706,7 +1707,7 @@ Family trailer `DST$TASK_TS_FAMILY` (BLISS alias
 `DST$TASK_TS_ENTRY_FAMILY`; size `DST$K_TASK_TS_ENTRY_FAMILY_SIZE` = 10):
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$A_TS_ENTRY_FAMILY_LB` | 5 | Value spec for the lower bound |
 | `DST$A_TS_ENTRY_FAMILY_UB` | 5 | Value spec for the upper bound |
 | `dst$a_ts_entry_family_type` | var | Type spec for the family index, starting at offset 10 |
@@ -1715,7 +1716,7 @@ Family trailer `DST$TASK_TS_FAMILY` (BLISS alias
 discriminants are fixed.
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$L_TS_CONSTR_RECORD` | long | DST offset of a Record Begin, a Typed Pointer type spec, or a Cross-Module Indirect type spec |
 | `DST$L_TS_CONSTR_COUNT` | long | Number of constrained components |
 | `DST$A_TS_CONSTR_LIST` | var | Repeated pairs, described below |
@@ -1728,7 +1729,7 @@ whenever the record is accessed.
 parameter whose actual argument may be constrained.
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$L_TS_MIGHTBE_RECORD` | long | DST offset of the Record Begin |
 | `DST$A_TS_MIGHTBE_VALSPEC` | var | Value spec whose low bit is TRUE when the actual argument is constrained. Evaluated for `'CONSTRAINED` |
 
@@ -1737,7 +1738,7 @@ Apart from that, the record is treated as an ordinary record.
 **SCAN tree (25).**
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$B_TS_SCAN_TREE_DEPTH` | byte | Number of subscripts, *d* |
 | `DST$A_TS_SCAN_TREE_FLAGS` | ⌈(*d*+1)/8⌉ bytes | Bit 0 means a leaf type spec is present; bit *i* means a type spec for subscript *i* is present |
 | — | var | Optional leaf type spec, then optional subscript type specs |
@@ -1768,7 +1769,7 @@ BLOCK is described as a typed pointer to a block, and a BLOCKVECTOR as an
 array of blocks. This kind replaces the older `DST$K_BLI` record.
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | `DST$L_TS_NUMBER_UNITS` | long | *n*, the number of units |
 | `DST$B_TS_UNIT_SIZE` | byte | Unit size: 1 = BYTE, 2 = WORD, 4 = LONG |
 | `DST$B_TS_FIELD_SET_COUNT` | byte | Number of field-set pointers that follow |
@@ -1793,7 +1794,7 @@ them.
 ### 10.1 Enumeration Type Begin (`DST$K_ENUMBEG` = 165), `DST$ENUM_BEGIN`
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | byte | `DST$B_ENUMBEG_LENG` | Bit length of objects of the type |
 | 3 | byte | `DST$B_ENUMBEG_NAME` | Length of the type name |
@@ -1835,7 +1836,7 @@ debugger uses these names as BLOCK and BLOCKVECTOR subscripts and can also
 EVALUATE them.
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | byte | `dst$b_blifld_unused` | Must be zero |
 | 3 | long | `DST$L_BLIFLD_COMPS` | Number of components in the tuple |
@@ -1857,7 +1858,7 @@ objects, and REFs to them. It is still accepted, but new compilers should
 use these forms instead:
 
 | Object | Records to emit |
-|---|---|
+| - | - |
 | VECTOR, BITVECTOR, BLOCKVECTOR | Separate Type Spec, then an Array type spec |
 | BLOCK | Separate Type Spec, then a BLISS Block type spec |
 | REF … | Separate Type Spec, then a Typed Pointer type spec |
@@ -1865,7 +1866,7 @@ use these forms instead:
 Layout, using `DST$BLI_FIELDS` followed by two trailers:
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | byte | `DST$B_BLI_LNG` | Byte count from offset 3 up to the first trailer (3…12) |
 | 3 | byte | `DST$B_BLI_FORMAL` | Nonzero if the symbol is a routine formal parameter |
@@ -1879,7 +1880,7 @@ Layout, using `DST$BLI_FIELDS` followed by two trailers:
 Structure kinds (`DST$V_BLI_STRUC`):
 
 | Value | Symbol | Attributes |
-|---|---|---|
+| - | - | - |
 | 0 | `DST$K_BLI_NOSTRUC` | None |
 | 1 | `DST$K_BLI_VEC` | `DST$L_BLI_VEC_UNITS` (long); then one byte holding `DST$V_BLI_VEC_UNIT_SIZE` (bits 0–3: 1, 2 or 4) and `DST$V_BLI_VEC_SIGN_EXT` (bits 4–7) |
 | 2 | `DST$K_BLI_BITVEC` | `DST$L_BLI_BITVEC_SIZE` (long, number of bits) |
@@ -1916,7 +1917,7 @@ other languages.
 `DST$PSECT` (`DST$K_PSECT_HEADER_SIZE` = 8):
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | byte | `dst$b_psect_unused` | Must be zero |
 | 3 | long | `DST$L_PSECT_VALUE` | Start address of the PSECT |
@@ -1955,7 +1956,7 @@ routine's main entry point, which the Routine Begin already gives. Entry
 points are always assumed to use CALLS/CALLG linkage.
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | byte | `DST$B_ENTRY_FLAGS` | Bits 0–7 are `DST$V_ENTRY_MBZ`, all zero |
 | 3 | long | `DST$L_ENTRY_ADDRESS` | Entry address |
@@ -1972,7 +1973,7 @@ as in Standard Data, so the data-record field names also work. The separate
 
 ### 13.1 Record and stream rules
 
-```
+```text
 header  (DST$LINE_NUM_HEADER, DST$K_LINE_NUM_HEADER_SIZE = 2)
 commands...  (starting at dst$a_line_num_data)
 ```
@@ -1998,7 +1999,7 @@ unsigned word (`DST$W_PCLINE_UNSWORD`), or a longword
 - A **positive** byte is one of the commands in this table:
 
 | Code | Symbol | Parameter |
-|---|---|---|
+| - | - | - |
 | 1 | `DST$K_DELTA_PC_W` | word |
 | 2 | `DST$K_INCR_LINUM` | byte |
 | 3 | `DST$K_INCR_LINUM_W` | word |
@@ -2031,7 +2032,7 @@ unsigned word (`DST$W_PCLINE_UNSWORD`), or a longword
 ### 13.3 Interpreter state
 
 | Variable | Initial value | Meaning |
-|---|---|---|
+| - | - | - |
 | `CURRENT_LINE` | 0 | Listing line number |
 | `CURRENT_STMT` | 1 | Statement number within the line |
 | `CURRENT_INCR` | 1 | Amount a Delta-PC adds to the line number |
@@ -2045,7 +2046,7 @@ unsigned word (`DST$W_PCLINE_UNSWORD`), or a longword
 *Delta-PC family* (an inline negative byte, `DELTA_PC_W`, `DELTA_PC_L`).
 Moves to the start of the next line or statement:
 
-```
+```text
 if STMT_MODE: STMT += 1  else: LINE += INCR
 PC   += delta             ; for the inline form, delta = -command_byte
 MARK  = LINE_OPEN
@@ -2055,7 +2056,7 @@ MARK  = LINE_OPEN
 *Line-number adjustments:*
 
 | Command | Effect |
-|---|---|
+| - | - |
 | `INCR_LINUM`, `_W`, `_L` | `LINE += n`. If in statement mode, `STMT = 1` |
 | `SET_LINUM_B`, `SET_LINUM` (word), `SET_LINUM_L` | `LINE = n` |
 | `SET_LINUM_INCR`, `_W` | `INCR = n`. If in statement mode, `STMT = 1` |
@@ -2065,7 +2066,7 @@ MARK  = LINE_OPEN
 line:
 
 | Command | Effect |
-|---|---|
+| - | - |
 | `BEG_STMT_MODE` | Valid only while a line is open. Sets `STMT_MODE = true` and `STMT = 1` |
 | `END_STMT_MODE` | Sets `STMT_MODE = false` and `STMT = 1` |
 | `SET_STMTNUM` | `STMT = n`. Meaningful only in statement mode |
@@ -2074,14 +2075,14 @@ line:
 program units:
 
 | Command | Effect |
-|---|---|
+| - | - |
 | `SET_PC`, `_W`, `_L` | `PC = START_PC + n` |
 | `SET_ABS_PC` | `PC = n` |
 
 *Termination:*
 
 | Command | Effect |
-|---|---|
+| - | - |
 | `TERM`, `TERM_W`, `TERM_L` | `PC += n`, then `MARK = LINE_CLOSED` |
 
 `n` is the length in bytes of the last line defined. A Delta-PC only gives
@@ -2120,7 +2121,7 @@ on their own. They are not merged with the normal `DST$K_SOURCE` records.
 ### 14.2 Model
 
 | State variable | Initial value | Meaning |
-|---|---|---|
+| - | - | - |
 | `LINE_NUM` | 1 | Listing line number |
 | `SRC_FILE` | undefined | File ID of the current source file |
 | `SRC_REC` | undefined | Record number within that file |
@@ -2142,7 +2143,7 @@ the first source record is the best place for it.
 ### 14.3 Command codes
 
 | Code | Symbol | Operand | Effect |
-|---|---|---|---|
+| - | - | - | - |
 | 1 | `DST$K_SRC_DECLFILE` | Declare File structure (§14.4) | Declares a source file and assigns its File ID |
 | 2 | `DST$K_SRC_SETFILE` | word File ID | `SRC_FILE = id`. `SRC_REC` becomes the current record position remembered for that file |
 | 3 | `DST$K_SRC_SETREC_L` | long | `SRC_REC = n` |
@@ -2167,7 +2168,7 @@ the size of the largest fixed form.
 ### 14.4 Declare Source File command
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | byte | `DST$B_SRC_COMMAND` | = 1 |
 | 1 | byte | `DST$B_SRC_DF_LENGTH` | Number of bytes left in this command after this byte |
 | 2 | byte | `DST$B_SRC_DF_FLAGS` | Reserved, must be zero |
@@ -2215,7 +2216,7 @@ Commands that end in `_INCR` add 4 to `CURRENT_PC` after recording, since 4
 bytes is one instruction.
 
 | Code | Symbol | Operands (after the command byte) | Effect |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | `DST$K_PCLOC_END` | — | End of the table |
 | 1 | `DST$K_PCLOC_PNTS_INCR` | short point | Record the point at PC, then PC += 4 |
 | 2 | `DST$K_PCLOC_PNTL_INCR` | long point | Same, using the long form |
@@ -2245,7 +2246,7 @@ bytes is one instruction.
 The command byte is `DST$B_PCLOC_COMMAND`. The operands are:
 
 | Form | Fields |
-|---|---|
+| - | - |
 | Short point | `DST$W_PCLOC_PNTS_LINE` (word), `DST$B_PCLOC_PNTS_COLUMN` (byte) |
 | Long point | `DST$L_PCLOC_PNTL_LINE` (long), `DST$W_PCLOC_PNTL_COLUMN` (word) |
 | Short range | `DST$W_PCLOC_RNGS_LOW_LINE`, `DST$B_PCLOC_RNGS_LOW_COLUMN`, `DST$W_PCLOC_RNGS_HIGH_LINE`, `DST$B_PCLOC_RNGS_HIGH_COLUMN` |
@@ -2263,7 +2264,7 @@ For every range, the low end must not come after the high end. That is,
 Total command sizes, including the command byte:
 
 | Constant | Value |
-|---|---|
+| - | - |
 | `DST$K_PCLOC_CMD_SIZE_END`, `DST$K_PCLOC_CMD_SIZE_INCR`, `DST$K_PCLOC_CMD_SIZE_EVENT` | 1 |
 | `DST$K_PCLOC_CMD_SIZE_PNTS` | 4 |
 | `DST$K_PCLOC_CMD_SIZE_PNTL` | 7 |
@@ -2278,7 +2279,7 @@ Total command sizes, including the command byte:
 ### 15.4 Event meanings
 
 | Event | Meaning |
-|---|---|
+| - | - |
 | **INST** | The location at this PC matters only when stepping by instruction. Line-level stepping skips it, which suits address-constant loads and similar housekeeping instructions |
 | **READ** | The instruction reads one or two user variables. `SYM1` is the DST offset of one variable's definition and must be nonzero. `SYM2` is the second variable's offset, or 0 if only one is read |
 | **WRITE** | The instruction completely overwrites a user variable. `SYM` is its DST offset and must be nonzero |
@@ -2338,7 +2339,7 @@ when it generates code for an inner routine before the outer one.
 Example: emitting an inner routine B first, then its enclosing routine A,
 while keeping the logical nesting.
 
-```
+```text
 GOTO T2
 T1: TARGET
     Routine Begin B … Routine End B
@@ -2367,7 +2368,7 @@ between that Module End and the first fixup record.
 The body of every fixup record is one or more groups, and the groups from
 all fixup records are joined into a single table:
 
-```
+```text
 group:
     count of offsets
     counted-ASCII image name
@@ -2389,7 +2390,7 @@ These exist on Alpha to support FORTRAN shared COMMON. The value added
 comes from an entry in a shareable image's **symbol vector**, not from the
 image's base address.
 
-```
+```text
 group:
     count of offsets
     counted-ASCII image name
@@ -2419,7 +2420,7 @@ has set up locals and parameters.
   that record.
 
 | Offset | Size | Field |
-|---|---|---|
+| - | - | - |
 | 0 | 2 | header (`DST$B_LENGTH` = 5) |
 | 2 | long | `DST$L_PROLOG_BKPT_ADDR` |
 
@@ -2430,7 +2431,7 @@ has set up locals and parameters.
 The same as Prolog, but it gives several breakpoint addresses.
 
 | Offset | Size | Field |
-|---|---|---|
+| - | - | - |
 | 0 | 2 | header |
 | 2 | long | `DST$LU_PROLIST_COUNT` |
 | 6 | 4 × count | `DST$PROLIST_ENTRY` entries, each holding `DST$LU_PROLIST_BKPT_ADDR` |
@@ -2452,7 +2453,7 @@ local variables can still be read.
   ignore the newer code, so it is safe to emit.
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | byte | `DST$B_EPILOG_FLAGS` | Bit 0 is `DST$V_EPILOG_ADDR_PAIRS_FLAG` (the list holds pairs, not single addresses); bits 1–7 are `DST$V_EPILOG_MBZ` |
 | 3 | long | `DST$LU_EPILOG_COUNT` | Number of entries |
@@ -2474,7 +2475,7 @@ Lists a routine's return-instruction addresses for execution profilers. It
 is placed the same way as Epilog records.
 
 | Offset | Size | Field |
-|---|---|---|
+| - | - | - |
 | 0 | 2 | header |
 | 2 | byte | `dst$b_return_mbz` (must be zero) |
 | 3 | long | `DST$LU_RETURN_COUNT` |
@@ -2502,7 +2503,7 @@ Layout: the header (`DST$K_STATLINK_SIZE` = 2), then a value spec at
 These describe where registers are saved in routines that do not use the
 CALLx register-save mask. The required order is:
 
-```
+```text
 Register Save Begin
   Register Save    (one per saved register, in ascending register number)
   ...
@@ -2520,7 +2521,7 @@ Register Save End
 (BLISS alias `DST$REGISTER_SAVE_BEGIN`):
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | byte | `DST$BU_REGBEG_FLAGS` | Bit 0 is `DST$V_REGBEG_SAVE_MASK_FLAG` (a mask follows); bits 1–7 are `DST$V_REGBEG_MBZ` |
 | 3 | byte | `DST$BU_REGBEG_SAVE_MASK_LENGTH` | Length of the mask in bytes |
@@ -2539,7 +2540,7 @@ Register Save End
 **Register Save** (`DST$K_REG_SAVE` = 129), `DST$REGISTER_SAVE`:
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | 5 | `DST$A_REG_SAVE_VALSPEC` | Value spec giving where the register is saved |
 | 7 | byte | `DST$BU_REG_SAVE_REGNUM` | Register number, using the same numbering as the mask |
@@ -2561,7 +2562,7 @@ data record is declared. The debugger ignores this record, but compilers
 may emit it.
 
 | Offset | Size | Field |
-|---|---|---|
+| - | - | - |
 | 0 | 2 | header (`DST$B_LENGTH` = 6) |
 | 2 | byte | `dst$b_def_lnum_mbz` |
 | 3 | long | `DST$L_DEF_LNUM_LINE` |
@@ -2575,7 +2576,7 @@ inside the module. The debugger reads it only when it needs to tell old
 compiler output from new.
 
 | Offset | Size | Field |
-|---|---|---|
+| - | - | - |
 | 0 | 2 | header (`DST$B_LENGTH` = 3) |
 | 2 | byte | `DST$B_VERSION_MAJOR` |
 | 3 | byte | `DST$B_VERSION_MINOR` |
@@ -2604,7 +2605,7 @@ Records that one name stands for several entities in the same scope.
 - C++ uses this record the same way for overloaded functions.
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | header | 2 | |
 | `DST$B_OL_NAME` | byte + var | The real name |
 | `DST$W_OL_COUNT` | word | Number of instances |
@@ -2635,7 +2636,7 @@ Placed immediately after the Routine Begin of an Ada separate subunit.
 It names the scope where the subunit logically belongs.
 
 | Field | Size | Meaning |
-|---|---|---|
+| - | - | - |
 | header | 2 | |
 | `DST$B_SUBUNIT_PATHNAME_COUNT` | byte | Number of path elements plus one |
 | — | var | Counted-ASCII strings, as described below |
@@ -2711,7 +2712,7 @@ Gives another name for a symbol, valid in the scope where the record
 appears. Ada renaming uses it, and so do C++ namespace aliases.
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | long | `DST$L_ALIAS_MOD_OFFSET` | Offset of the target record, counted from the start of the named module's DST |
 | 6 | byte + var | `DST$B_ALIAS_NAME` | The alias |
@@ -2753,7 +2754,7 @@ number to a name, so tools can show names in call and stack displays.
   compared case-sensitively.
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | byte | `DST$BU_EXCEPTION_FLAGS` | Bit 0 is `DST$V_EXCEPTION_MOD_NAME_FLAG` (a module-name trailer is present); bits 1–7 are `DST$V_EXCEPTION_MBZ` |
 | 3 | long | `DST$LU_EXCEPTION_VALUE` | Exception number |
@@ -2817,7 +2818,7 @@ Place these inside the derived class's Record Begin/End, after the Record
 Begin and before any members, in the order the bases are declared.
 
 | Offset | Size | Field | Meaning |
-|---|---|---|---|
+| - | - | - | - |
 | 0 | 2 | header | |
 | 2 | byte | `DST$B_BASE_CLASS_FLAGS` | Bit 0 is `DST$V_BASE_CLASS_VIRTUAL`; bits 1–7 are `DST$V_BASE_CLASS_UNUSED` |
 | 3 | long | `DST$L_BASE_CLASS_DST` | DST offset of the base class's Record Begin |
@@ -2832,7 +2833,7 @@ Begin and before any members, in the order the bases are declared.
   Routine Begin.
 
 | Offset | Size | Field |
-|---|---|---|
+| - | - | - |
 | 0 | 2 | header |
 | 2 | byte | `DST$B_VIRT_FUNC_FLAGS` (bits 0–7 are `DST$V_VIRT_FUNC_UNUSED`) |
 | 3 | long | `DST$L_VIRT_FUNC_INDEX`: index into the vtbl |
@@ -2853,7 +2854,7 @@ preferably right after the Routine Begin. Every function should have one,
 even if it is not overloaded.
 
 | Offset | Size | Field |
-|---|---|---|
+| - | - | - |
 | 0 | 2 | header |
 | 2 | byte | `DST$B_TYPE_SIG_FLAGS` (bits 0–7 are `DST$V_TYPE_SIG_UNUSED`) |
 | 3 | byte + var | `DST$B_TYPE_SIG_STRING` (`DST$A_TYPE_SIG_STRING`): counted ASCII |
@@ -2875,14 +2876,14 @@ Applies to the symbol in the **next** record. Set the bits that apply. Bits
 left clear mean the default.
 
 | Offset | Size | Field |
-|---|---|---|
+| - | - | - |
 | 0 | 2 | header |
 | 2 | word | `DST$W_CXXA_FLAGS` |
 
 `DST$K_CXX_ATTRIBUTES_SIZE` = 4.
 
 | Bit | Field | Meaning |
-|---|---|---|
+| - | - | - |
 | 0–2 | `DST$V_CXXA_UNUSED1`, `…2`, `…3` | Must be zero |
 | 3 | `DST$V_CXXA_NAMESPACE` | The record that follows is a namespace |
 | 4 | `DST$V_CXXA_STRUCT` | The record that follows is a struct |
@@ -2904,7 +2905,7 @@ Represents a using-declaration or a using-directive. Place it where the
 corresponding scope is.
 
 | Offset | Size | Field |
-|---|---|---|
+| - | - | - |
 | 0 | 2 | header |
 | 2 | long | `DST$L_USING_DST`: DST offset of the namespace or namespace member being used |
 
@@ -2923,7 +2924,7 @@ New compilers must not emit these. The debugger may or may not still
 accept them.
 
 | Code | Symbol | Notes |
-|---|---|---|
+| - | - | - |
 | 160 | `DST$K_GLOBNXT` | Global-is-next. Header only. Never implemented |
 | 159 | `DST$K_EXTRNXT` | External-is-next. Header only. Never implemented |
 | 182 | `DST$K_LINE_NUM_REL_R11` | Threaded-code PC correlation for an old COBOL compiler. Same layout as `DST$K_LINE_NUM`, but the "PC" values are offsets from R11 into a threaded-code vector. No longer supported |
@@ -2991,7 +2992,7 @@ dtype must match `DST$B_CH_TYPE`.
 ### 23.3 Where the original definitions disagree with themselves
 
 | Topic | What the source says | Recommended reading |
-|---|---|---|
+| - | - | - |
 | `DST$K_HIGHEST` | The prose says 191, but the code list ends at 192 (`DST$K_PCLOC`) | 192 |
 | `DST$K_SET_STMTNUM` operand | The code list says byte, the semantics say word | Word; check against real compiler output |
 | Word-sized header drawings | Several newer records are drawn with a word length and word type | The SDL uses the byte `DST$HEADER` for all of them |
