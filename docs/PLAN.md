@@ -91,6 +91,7 @@ questions, and a progress log extended as that phase is worked.
 | 38 | [PHASE-38.md](PHASE-38.md) | `ANALYZE/OBJECT`, matching VMS 7.3's output line for line (records, GSD, TIR commands, dumps, errors, pages); the verb laid out for a later `ANALYZE/IMAGE` — done; matches VMS 7.3 byte for byte on 54 fixtures |
 | 40 | [PHASE-40.md](PHASE-40.md) | `ANALYZE/IMAGE`, matching VMS 7.3's output line for line (image header, ISDs, fixup section, errors, pages) — done; matches VMS 7.3 byte for byte on 29 fixtures |
 | 41 | [PHASE-41.md](PHASE-41.md) | Symbolic disassembly from a loaded image's DST, DMT, and GST, as the VMS debugger's `EXAMINE/INSTRUCTION` shows it; the disassembler moves to `internal/disasm`, symbols to `internal/symtab`, debug tables to `internal/dbgsym` (groundwork for a debugger mode) — done; `DISASSEMBLE` matches the VMS 7.3 debugger's 514 lines in 7 sessions, on VMS's images and govax's relinks |
+| 42 | [PHASE-42.md](PHASE-42.md) | The debugger as its own package (`internal/debugger`), grammar (`debug.dcl`), and `DBG>` prompt, entered by GO, CALL, and RUN/DEBUG; SET/SHOW split between console and debugger; VMS-compatible breakpoints, STEP, and EXAMINE; fixes to the existing run-control bugs — planned |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
