@@ -1836,3 +1836,27 @@ It also corrected two of them.
 - **Not yet:** the DMT and the GST (subtasks 17 and 18). The IHS fields
   for them are still 0, so the three `/DEBUG` images don't yet match
   whole.
+
+### 2026-10-05 — Subtask 17: the debug module table
+
+- **`internal/link/debug.go`**, `debugModuleTable`:
+  - Pass 2 records where each module's records start and end in the
+    DST (`module.dstStart`/`dstEnd`).
+  - The DMT has an entry for each module with DST records, in link
+    order. A module without them, such as a library module or an object
+    with no traceback, gets none (TRACE's link has STARLET's module and
+    LIBRTL too, but its DMT has one entry).
+  - An entry's psects are the module's contributions to relocatable
+    psects, in its object's psect order. FORTH's six (DATA, $RMSNAM,
+    TEXT, CODE, WORDS, DICT) leave out its empty absolute `$ABS$`.
+  - The DMT follows the DST at the next block and is padded to a whole
+    block. The IHS gives its VBN (+12) and byte count (+16).
+- **Tests.** `TestLinkDebugModuleTable` checks the DMT blocks and IHS
+  fields of TRDBGLNK, TRLNKDBG, and FORTH. All three match.
+  `TestLinkProbeDST` no longer expects a `/DEBUG` link's DST to be its
+  last blocks.
+- **Still unconfirmed:**
+  - a zero-length relocatable psect (kept here, as MACRO writes a psect
+    record for it);
+  - several modules sharing a psect: each module lists its own part, by
+    the manual's description of a module's address range.

@@ -201,6 +201,13 @@ func (l *linker) header(isds []isd, global [][]byte, fixupVA uint32) ([]byte, er
 		le.PutUint32(b[ihsOffset+20:], blocks)
 	}
 
+	// The debug module table's first block (IHS$L_DMTVBN) and size in
+	// bytes (IHS$L_DMTBYTES), in an image linked /DEBUG.
+	if l.dmtVBN != 0 {
+		le.PutUint32(b[ihsOffset+12:], l.dmtVBN)
+		le.PutUint32(b[ihsOffset+16:], uint32(len(l.dmt)))
+	}
+
 	// IHI: the image name, image ID, link time, and linker ID, each
 	// name a counted string in a fixed field.
 	if err := putCounted(b[ihiOffset:ihiOffset+40], l.opts.ImageName); err != nil {

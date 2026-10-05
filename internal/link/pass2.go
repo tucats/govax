@@ -258,6 +258,9 @@ func (x *machine) pop() (value, error) {
 func (l *linker) pass2(m *module) error {
 	x := &machine{l: l, m: m}
 	tb := &machine{l: l, m: m, debug: true, loc: uint32(len(l.dst))}
+	m.dstStart = tb.loc
+
+	defer func() { m.dstEnd = uint32(len(l.dst)) }()
 
 	for _, rec := range m.input.Module.Records {
 		switch r := rec.(type) {
@@ -618,12 +621,21 @@ func (l *linker) image() (*Image, error) {
 	pages = append(pages, fixup)
 	vbn += uint32(len(fixup)) / blockSize
 
-	// The debug symbol table follows everything else, in whole blocks.
+	// The debug symbol table follows everything else, in whole blocks,
+	// and, linked /DEBUG, the debug module table after it.
 	var dst []byte
 	if len(l.dst) > 0 {
 		l.dstVBN = vbn
 		dst = append(dst, l.dst...)
 		dst = append(dst, make([]byte, int(pageUp(uint32(len(dst))))-len(dst))...)
+		vbn += uint32(len(dst)) / blockSize
+
+		if l.opts.Debug {
+			l.dmt = l.debugModuleTable()
+			l.dmtVBN = vbn
+			dst = append(dst, l.dmt...)
+			dst = append(dst, make([]byte, int(pageUp(uint32(len(dst))))-len(dst))...)
+		}
 	}
 
 	global := make([][]byte, 0, len(l.shared))

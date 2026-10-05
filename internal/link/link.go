@@ -256,6 +256,10 @@ type linker struct {
 	// (0 if there's none).
 	dst    []byte
 	dstVBN uint32
+	// dmt is the debug module table of an image linked /DEBUG
+	// (debug.go), and dmtVBN its first block.
+	dmt    []byte
+	dmtVBN uint32
 }
 
 // module is one input module during the link.
@@ -279,6 +283,9 @@ type module struct {
 	// contribs are the module's psect contributions, by its own psect
 	// index.
 	contribs []*contribution
+	// dstStart and dstEnd are where the module's records are in the
+	// debug symbol table, for the debug module table (debug.go).
+	dstStart, dstEnd uint32
 }
 
 // psect is one program section of the image, which modules contribute to.

@@ -212,7 +212,9 @@ func TestLinkProbeDST(t *testing.T) {
 					t.Errorf("%s: DST differs from real LINK's:\n%s", from, diffBlocks(got, wantDST))
 				}
 
-				if got != nil && !bytes.Equal(got, img.Bytes[len(img.Bytes)-len(got):]) {
+				// Linked /DEBUG, the debug module table and global
+				// symbol table follow the DST.
+				if got != nil && !c.debug && !bytes.Equal(got, img.Bytes[len(img.Bytes)-len(got):]) {
 					t.Errorf("%s: the DST isn't the image's last blocks", from)
 				}
 
