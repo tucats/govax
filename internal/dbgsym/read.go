@@ -27,7 +27,31 @@ func Read(img *vmsimage.Image, data []byte, base uint32) (*Program, error) {
 		return nil, fmt.Errorf("the debug symbol table (VBN %d, %d blocks) isn't in the file", img.DSTVBN, img.DSTBlockCount())
 	}
 
-	return ReadDST(dst, base)
+	p, err := ReadDST(dst, base)
+	if err != nil {
+		return nil, err
+	}
+
+	// An image linked /DEBUG has a debug module table and a global symbol
+	// table beside the DST; a traceback link has neither.
+	if img.DMTVBN != 0 {
+		dmt := vmsimage.Blocks(data, img.DMTVBN, (img.DMTBytes+vmsimage.BlockSize-1)/vmsimage.BlockSize)
+		if dmt == nil {
+			return nil, fmt.Errorf("the debug module table (VBN %d, %d bytes) isn't in the file", img.DMTVBN, img.DMTBytes)
+		}
+
+		if err := p.applyDMT(dmt[:img.DMTBytes], base); err != nil {
+			return nil, err
+		}
+	}
+
+	if img.GSTVBN != 0 {
+		if err := p.readGST(img, data, base); err != nil {
+			return nil, err
+		}
+	}
+
+	return p, nil
 }
 
 // ReadDST reads a debug symbol table's records, adding base to every
@@ -82,6 +106,8 @@ func (b *builder) record(r record) error {
 		return b.moduleBegin(r)
 
 	case r.typ == typeModuleEnd:
+		b.mod.DSTSize = uint32(r.end) - b.mod.DSTOffset
+
 		return b.finishModule()
 
 	case r.typ == typeRoutineBegin:
@@ -132,6 +158,9 @@ func (b *builder) record(r record) error {
 // and the name.
 func (b *builder) moduleBegin(r record) error {
 	if b.mod != nil {
+		// A module with no module end runs to this one's begin.
+		b.mod.DSTSize = uint32(r.offset) - b.mod.DSTOffset
+
 		if err := b.finishModule(); err != nil {
 			return err
 		}
@@ -147,7 +176,7 @@ func (b *builder) moduleBegin(r record) error {
 		return err
 	}
 
-	b.mod = &Module{Name: name, Language: lang, Symbols: symtab.New()}
+	b.mod = &Module{Name: name, Language: lang, Symbols: symtab.New(), DSTOffset: uint32(r.offset)}
 
 	return nil
 }

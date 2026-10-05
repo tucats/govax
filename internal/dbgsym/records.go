@@ -50,6 +50,7 @@ const (
 // type), with any continuation records joined on.
 type record struct {
 	offset int // where it starts in the DST
+	end    int // where the next record starts, past any continuations
 	typ    byte
 	data   []byte
 }
@@ -76,11 +77,12 @@ func readRecords(dst []byte) ([]record, error) {
 			return out, fmt.Errorf("DST record at %#x runs past the table's end", i)
 		}
 
-		r := record{offset: i, typ: dst[i+1], data: dst[i+2 : i+1+n]}
+		r := record{offset: i, end: i + 1 + n, typ: dst[i+1], data: dst[i+2 : i+1+n]}
 
 		if r.typ == typeContinuation && len(out) > 0 {
 			last := &out[len(out)-1]
 			last.data = append(append([]byte(nil), last.data...), r.data...)
+			last.end = r.end
 		} else {
 			out = append(out, r)
 		}

@@ -712,3 +712,34 @@ system services, and the layout of a location longer than 24 columns.
   12, 7, and 14). `TestSourceFiles`, and `TestLineProgram` (hand-made
   programs with the commands MACRO doesn't use; it caught the
   operandless commands 6 to 8 missing from the operand table).
+
+### 2026-10-05 — Subtask 7: the DMT and the GST
+
+- **The debug module table** (`dmt.go`, `docs/DEBUG-RECORDS.md` 2.3):
+  each entry is matched to its module by the offset of its module begin
+  record, its size checked against the module's records
+  (`Module.DSTOffset`/`DSTSize`, now kept as the DST is read), and its
+  psect ranges kept as `Module.Ranges`. In all seven `/DEBUG` images the
+  ranges are the module's PSECT records exactly, order included (FORTH's
+  six, DBGDIS's three). `ModuleAt` uses the ranges where there are any,
+  as the debugger finds a module without its records, and the PSECT
+  records otherwise.
+- **The global symbol table** (`gst.go`): read from its VBN to the end of
+  the file with `obj.ReadRecords` and `obj.Decode`, the IHS's record
+  count taken (govax pads the last block, real LINK doesn't). Each
+  defined symbol goes into `Program.Globals`, flagged `Global`, and
+  `Entry` for an entry point or procedure. Besides the map's symbols,
+  the GST holds the system services the link resolved (`SYS$IMGSTA`
+  in every image, FORTH's RMS services).
+- **Unconfirmed**: whether a shareable image's globals are relocated by
+  its load base. A GST's symbols are all absolute, so a constant and an
+  address look alike; every value is relocated, which changes nothing
+  for a main image, the only kind the fixtures have.
+- **Tests.** `TestGlobalsMatchMap` (every map symbol in the GST with its
+  value, routines as entry points), `TestGlobalsMatchSymbolize` (the
+  `(global)` half of every SYMBOLIZE answer in six sessions is the
+  nearest global at or below the address, in the session's radix:
+  `GLIMIT+209`, `SECOND+0F`, `LEVEL+421`), `TestModuleTable`,
+  `TestTracebackOnly` (DBGTRC and TRDBGTRC read from the DST alone:
+  no ranges, no globals, `ModuleAt` from the PSECT records), and
+  `TestRelocatedTables`.

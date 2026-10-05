@@ -9,7 +9,10 @@
 // relocated by the linker into the image (docs/DEBUG-RECORDS.md). A
 // traceback link holds only the scope records (module, routine, psect);
 // a /DEBUG link adds labels, data symbols, constants, and the line and
-// source correlation records.
+// source correlation records, and two tables beside the DST: the debug
+// module table, each module's psect ranges (dmt.go), and the global
+// symbol table, the link's globals, which the debugger falls back on
+// where no module names an address (gst.go).
 //
 // The VMS debugger names things by path: DBGDIS\START is routine START
 // in module DBGDIS, DBGDIS\START\LOOP is a label inside that routine, and

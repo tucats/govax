@@ -12,6 +12,12 @@ import (
 type Program struct {
 	Modules []*Module
 
+	// Globals are the global symbol table's symbols (an image linked
+	// /DEBUG has one; see gst.go): every global the link defined, by
+	// value, without types or scopes. The debugger falls back on them
+	// where no module's symbols name an address. Empty without a GST.
+	Globals *symtab.Table
+
 	// Skipped counts the records of each type the reader didn't
 	// interpret: none, in the images MACRO and LINK write.
 	Skipped map[byte]int
@@ -22,9 +28,21 @@ type Module struct {
 	Name     string
 	Language uint32 // DST$L_MODBEG_LANGUAGE (MACRO is 0)
 
+	// DSTOffset and DSTSize are where the module's records are in the
+	// DST: the offset of its module begin record, and the size of its
+	// records through its module end. The debug module table gives the
+	// same two numbers for each module (dmt.go).
+	DSTOffset, DSTSize uint32
+
 	// Psects are the module's contributions to its psects (DST$K_PSECT
 	// records), in the DST's order.
 	Psects []Psect
+
+	// Ranges are the module's psect contributions as the debug module
+	// table gives them (dmt.go): the same address ranges as Psects, in
+	// the same order in every fixture, but without names. Empty for an
+	// image with no DMT (a traceback link).
+	Ranges []Range
 
 	// Routines are the module's routines, sorted by address, each with
 	// its extent worked out (see Read).
@@ -65,6 +83,18 @@ type Psect struct {
 
 // End is the address just past the psect.
 func (p Psect) End() uint32 { return p.Address + p.Size }
+
+// Range is a stretch of addresses: a psect contribution as the debug
+// module table gives it.
+type Range struct {
+	Address uint32
+	Size    uint32
+}
+
+// Contains reports whether addr is in the range.
+func (r Range) Contains(addr uint32) bool {
+	return addr >= r.Address && addr-r.Address < r.Size
+}
 
 // Routine is a routine: a CALLS/CALLG entry point, or, with NoCall, a
 // JSB one.
@@ -151,9 +181,22 @@ func (p *Program) ModuleNamed(name string) (*Module, bool) {
 	return nil, false
 }
 
-// ModuleAt returns the module one of whose psects holds addr.
+// ModuleAt returns the module one of whose psects holds addr: by the
+// debug module table's ranges where the image has one, as the debugger
+// finds a module without reading its DST records, or else by the DST's
+// PSECT records.
 func (p *Program) ModuleAt(addr uint32) (*Module, bool) {
 	for _, m := range p.Modules {
+		if len(m.Ranges) > 0 {
+			for _, r := range m.Ranges {
+				if r.Contains(addr) {
+					return m, true
+				}
+			}
+
+			continue
+		}
+
 		for _, ps := range m.Psects {
 			if addr >= ps.Address && addr < ps.End() {
 				return m, true
