@@ -168,6 +168,15 @@ var grammar = []cli.Option{
 		Value:                linkGrammar,
 	},
 	{
+		LongName:             "analyze",
+		Description:          "Analyze object files or object library modules, as ANALYZE/OBJECT does",
+		OptionType:           cli.Subcommand,
+		Action:               analyzeCmd,
+		ParametersExpected:   -99,
+		ParameterDescription: "file...",
+		Value:                analyzeGrammar,
+	},
+	{
 		LongName:             "library",
 		Description:          "Create, change, extract from, or list a macro or object library",
 		OptionType:           cli.Subcommand,

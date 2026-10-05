@@ -1,6 +1,7 @@
 # Phase 38 — ANALYZE/OBJECT
 
-**Status:** in progress (started 2026-10-04).
+**Status:** done (2026-10-05). All 54 fixture analyses match VMS 7.3's
+byte for byte, page layout included, but for the time.
 
 ## Goal
 
@@ -211,8 +212,8 @@ each module's main header starting it, with one summary at the end.
 ### `govax analyze`
 
 A one-shot `analyze` subcommand in `cmd/govax`, beside `macro`, `link`,
-and `library`: `govax analyze --object FILE [--output FILE]`, running the
-console command.
+and `library`: `govax analyze [--output | --output-file FILE] [--gsd ...]
+[--include MODULES] FILE...`, running the console's ANALYZE/OBJECT.
 
 ## Subtasks
 
@@ -334,6 +335,11 @@ that `obj.Check` also applies (`internal/anl/check.go`):
 - `ANALYZE/IMAGE` (a later phase; `testdata/link/vax/*.ani` are its
   reference output).
 - `/INTERACTIVE` (ANALYZE's record-by-record mode) isn't planned.
+- The unconfirmed layouts (`internal/anl/testdata/kinds.txt`) and error
+  messages could be settled by a VMS probe: an object with LNK records,
+  procedures, IDC/ENV subrecords, word-psect forms, a psect with COM or
+  NOMOD set (which also settles the COM/NOMOD label question), and
+  deliberately malformed records; and an ANALYZE/OBJECT of a library.
 
 ## Progress log
 
@@ -392,3 +398,7 @@ that `obj.Check` also applies (`internal/anl/check.go`):
   object library, or a name that matches no module, is `CLI_ANALYZE`.
   `/INCLUDE`'s and `/OUTPUT`'s empty defaults are told from the
   qualifiers themselves with `Defaulted`. `TestAnalyze_library`.
+- 2026-10-05: Subtask 8: `govax analyze` (`cmd/govax/analyze.go`,
+  `TestAnalyzeCommand`, `TestRun_analyzeOneShot`), `HELP ANALYZE` in
+  `vax.help`, `CLAUDE.md`, and `PLAN.md`. Checked by hand in the console
+  and with `govax analyze --gsd`. Phase done.

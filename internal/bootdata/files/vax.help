@@ -45,6 +45,7 @@
 //              10/04/26    Added symbol assignment, foreign commands,
 //                          DELETE/SYMBOL, and SHOW SYMBOL/DCL
 //                          (docs/PHASE-36.md)
+//              10/05/26    Added ANALYZE/OBJECT (docs/PHASE-38.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -154,6 +155,52 @@ $DEF
             Report when an existing definition is superseded.
 
     DEFINE/DEVICE, which defines a pseudodevice, is described separately.
+
+$ANAL
+
+    The ANALYZE/OBJECT command describes each record of an object file
+    (or of an object library's modules) as VMS's ANALYZE/OBJECT does,
+    in the same words and page layout: headers, global symbol directory
+    subrecords with their flags, each TIR command with the linker's
+    stack depth, STORE IMMEDIATE data as hex and characters, and the
+    end of module record.  Errors in the file are flagged with "***"
+    where they're found, and counted in a summary at the end.
+
+    Syntax:
+
+        ANALYZE/OBJECT <file>[,...][/HOST] [qualifiers...]
+
+    Parameters:
+
+        <file>          An object file (default type .OBJ), or an object
+                        library (.OLB), whose modules are analyzed one
+                        after another.  It can be a host file or a file
+                        on a mounted volume, by the rules MACRO uses for
+                        its source (see HELP MACRO).  A bare name is
+                        found beside the file before it.
+
+    Qualifiers:
+
+        /OUTPUT[=<file>]
+                        Writes the report to a file instead of the
+                        console: by default the first file's name with
+                        the type .ANL, beside it.
+
+        /MHD, /GSD, /TIR, /TBT, /DBG, /LNK, /EOM
+                        Shows only these kinds of records (/MHD shows
+                        every header record).  Every record is still
+                        checked and counted in the summary.
+
+        /INCLUDE[=(<module>,...)]
+                        Analyzes these modules of an object library;
+                        names may hold the wildcards * and %.  Without
+                        names, or without /INCLUDE, every module.
+
+    Examples:
+
+        ANALYZE/OBJECT "hello.obj"
+        ANALYZE/OBJECT/OUTPUT DUA0:[000000]HELLO
+        ANALYZE/OBJECT/GSD/INCLUDE=(MAIN) DUA0:[000000]MINE.OLB
 
 $ASSI
     The ASSIGN command creates a logical name, like DEFINE, but with its
@@ -2376,6 +2423,7 @@ $HELP
 
     For additional information, see the help on the following command topics:
 
+    ANALYZE         Describe object files, as VMS's ANALYZE/OBJECT does
     ASM             Assemble VAX source into memory
     ASSIGN          Create a logical name (equivalence first)
     CALL            Execute instructions by calling into a procedure

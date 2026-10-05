@@ -11,9 +11,9 @@ never had.
 
 - `docs/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
   index.
-- `docs/PHASE-00.md` … `PHASE-37.md` — one doc per phase: goal, C-source file
+- `docs/PHASE-00.md` … `PHASE-38.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
-  done through 37; Phase 29's debugger records, its subtask 12, are
+  done through 38; Phase 29's debugger records, its subtask 12, are
   deferred). Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -217,10 +217,23 @@ expect adjustment as phases land):
   `List` is LIBRARY/LIST's listing, in LIBRARIAN's own formats. The console's
   `LIBRARY` command (`internal/console/library.go`) drives it. Imports only
   `internal/obj` and `internal/vmsdef`.
+- `internal/anl` — VMS's ANALYZE utility (Phase 38): `AnalyzeObject` turns an
+  object file's records into report `Line`s exactly as VMS 7.3's ANALYZE/OBJECT
+  words them (`object.go`, `gsd.go`, `tir.go`, `dump.go`, errors in
+  `check.go`), and `Pager` (`page.go`) lays them out on ANALYZE's pages, by a
+  page-break rule reconstructed from real output (`Line.Keep`/`Spill`;
+  docs/PHASE-38.md). `TestObjectPages` matches all 54 `.anl`/`.obj` pairs in
+  `testdata/mar` byte for byte but for the time; `testdata/kinds.txt` shows
+  the layouts no fixture settles. ANALYZE/IMAGE (a later phase) gets its own
+  analyzer beside it and reuses `Pager` (`TitleImage`;
+  `testdata/link/vax/*.ani` are its reference). The console's `ANALYZE/OBJECT`
+  (`internal/console/analyze.go`) finds files (and object libraries'
+  modules) and writes the report; in `console.dcl` each kind of analysis is
+  a qualifier switching to its own syntax.
 - `cmd/govax` — `main.go` (CLI entry point) plus `grammar.go` (the `tucats/gopackages`
   `app-cli/cli` option/subcommand grammar — `stats`/`path`/`instruction-limit`/
   `time-limit` options, repeatable `mount`/`mount-write DEVICE=container`,
-  `console`/`asm`/`run`/`macro`/`link`/`library` subcommands). A one-shot subcommand that fails
+  `console`/`asm`/`run`/`macro`/`link`/`library`/`analyze` subcommands). A one-shot subcommand that fails
   makes govax exit nonzero, and volumes still mounted are dismounted (flushed)
   when a session ends. Briefly moved to the repo
   root (2026-09-17); moved back into `cmd/govax` as the more standard layout
