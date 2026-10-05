@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/symtab"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -195,14 +196,14 @@ func (c *Console) listSymbols(pattern string, systemOnly bool) []*Symbol {
 	for _, s := range c.Symbols.All() {
 		seen[s.Name] = true
 
-		if (!systemOnly || s.Kind == SymbolSystem) && match(s.Name) {
+		if (!systemOnly || s.IsSystem()) && match(s.Name) {
 			out = append(out, s)
 		}
 	}
 
 	for name, value := range asm.BuiltinSymbols() {
 		if !seen[name] && match(name) {
-			out = append(out, &Symbol{Name: name, Value: value, Kind: SymbolSystem, Predefined: true})
+			out = append(out, &Symbol{Name: name, Value: value, Flags: symtab.System | symtab.Builtin})
 		}
 	}
 
@@ -216,22 +217,22 @@ func symbolKindLabel(s *Symbol) string {
 	kind := "user"
 
 	switch {
-	case s.Predefined:
+	case s.IsBuiltin():
 		kind = "system, predefined"
 
-	case s.Kind == SymbolSystem:
+	case s.IsSystem():
 		kind = "system"
 	}
 
-	if s.Permanent {
+	if s.IsPermanent() {
 		kind += ", permanent"
 	}
 
-	if s.IsEntry {
+	if s.IsEntry() {
 		kind += ", entry"
 	}
 
-	if s.IsLabel {
+	if s.IsLabel() {
 		kind += ", label"
 	}
 
@@ -1279,7 +1280,7 @@ func (c *Console) ShowSymbol(name string) error {
 			return vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
 		}
 
-		sym = &Symbol{Name: strings.ToUpper(name), Value: v, Kind: SymbolSystem, Predefined: true}
+		sym = &Symbol{Name: strings.ToUpper(name), Value: v, Flags: symtab.System | symtab.Builtin}
 	}
 
 	c.Printf("    %s = %08X (hex)   %12d (dec)  (%s)\n", sym.Name, sym.Value, int32(sym.Value), symbolKindLabel(sym))

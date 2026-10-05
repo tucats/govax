@@ -83,12 +83,12 @@ func TestLocalLabelsNotExported(t *testing.T) {
 	}
 
 	syms := a.Symbols()
-	if _, ok := syms["A"]; !ok {
+	if _, ok := syms.Get("A"); !ok {
 		t.Fatal("A missing from Symbols()")
 	}
 
-	if len(syms) != 1 {
-		t.Fatalf("Symbols() = %v, want only A", syms)
+	if syms.Len() != 1 {
+		t.Fatalf("Symbols() = %v, want only A", syms.All())
 	}
 }
 

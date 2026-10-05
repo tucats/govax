@@ -579,3 +579,33 @@ system services, and the layout of a location longer than 24 columns.
   passes unchanged).
 - **Tests**: `TestOperandFields` (every mode's fields, Targets worked
   out by hand), `TestOperandSymbol`, `TestEntryMask`.
+
+### 2026-10-05 — Subtask 4: `internal/symtab`
+
+- **`internal/symtab`**, a leaf package: `Symbol` (name, value, `Flags`,
+  `Scope`, `Size`) and `Table` (by name, ignoring case, and by value
+  through a sorted index rebuilt on the first lookup after a change).
+  `At(v, match)` finds a symbol at an address and `Nearest(v, match)`
+  the nearest at or below it with the offset (`NAME+offset`); `match`
+  filters (entry points only, no literals, ...), and of several at one
+  value the first by name wins.
+- **Flags, not a kind.** A console symbol can be both an entry point and
+  a label (`SET/ENTRY/LABEL`), so attributes are flags: `Entry`,
+  `Label`, `Data`, `Literal`, `Psect`, `Module`, `Global`, `System`,
+  `Permanent`, `Builtin`. The DST's kinds of symbol (subtask 5) map onto
+  the first six.
+- **The assembler.** `asm.Assembler.Symbols()` returns a `*symtab.Table`
+  instead of `map[string]SymbolInfo`, carrying the label, entry,
+  permanent, system, and global flags over (`symbolFlags`).
+- **The console** (Decision 3). `SymbolTable` keeps its methods but
+  stores a `symtab.Table`, and `console.Symbol` is `symtab.Symbol`: the
+  old `Kind`, `IsEntry`, `Permanent`, `IsLabel`, and `Predefined` fields
+  are the `System`, `Entry`, `Permanent`, `Label`, and `Builtin` flags.
+  `EntryAt` and `FindByValue` use the address index instead of scanning
+  every symbol. `Table()` hands the table to the disassembler (subtask
+  9). The ASM command's merge is unchanged in effect: it still sets only
+  the entry flag and decides "system" by a `$` in the name, so SHOW
+  SYMBOL's output is unchanged.
+- **The `disasm.Symbolizer` interface** waits for subtask 9, where its
+  shape is settled by the probe's rules; `symtab.Table`'s `At` and
+  `Nearest` are what it will use.

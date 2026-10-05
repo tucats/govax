@@ -192,28 +192,28 @@ func TestSymbols(t *testing.T) {
 	}
 
 	syms := a.Symbols()
-	if _, ok := syms["EXC$CHMK"]; ok {
+	if _, ok := syms.Get("EXC$CHMK"); ok {
 		t.Error("expected a builtin symbol (EXC$CHMK) to be excluded from Symbols()")
 	}
 
-	if _, ok := syms["OPC$_HALT"]; ok {
+	if _, ok := syms.Get("OPC$_HALT"); ok {
 		t.Error("expected a builtin symbol (OPC$_HALT) to be excluded from Symbols()")
 	}
 
-	if v, ok := syms["FOO"]; !ok || v.Value != a.Origin() {
-		t.Errorf("FOO = (%#x, %v), want (%#x, true)", v.Value, ok, a.Origin())
+	if v, ok := syms.Get("FOO"); !ok || v.Value != a.Origin() {
+		t.Errorf("FOO = (%+v, %v), want (%#x, true)", v, ok, a.Origin())
 	}
 
-	if v, ok := syms["FOO"]; !ok || v.Entry {
-		t.Errorf("FOO.Entry = %v, want false (it's a label, not a .ENTRY)", v.Entry)
+	if v, ok := syms.Get("FOO"); !ok || v.IsEntry() || !v.IsLabel() {
+		t.Errorf("FOO = %+v, want a label, not a .ENTRY", v)
 	}
 
-	if v, ok := syms["BAR"]; !ok || v.Value != 0x10 {
-		t.Errorf("BAR = (%#x, %v), want (0x10, true)", v.Value, ok)
+	if v, ok := syms.Get("BAR"); !ok || v.Value != 0x10 {
+		t.Errorf("BAR = (%+v, %v), want (0x10, true)", v, ok)
 	}
 }
 
-// TestSymbolsEntryFlag checks that Symbols() reports Entry=true for a name
+// TestSymbolsEntryFlag checks that Symbols() marks a name
 // defined by .ENTRY, and false for an ordinary label -- the flag the
 // console's ASM command (asm.go) relies on to merge entry-point-ness into
 // its own symbol table for the disassembler's entry-mask detection.
@@ -225,12 +225,12 @@ func TestSymbolsEntryFlag(t *testing.T) {
 	}
 
 	syms := a.Symbols()
-	if v, ok := syms["MAIN"]; !ok || !v.Entry {
-		t.Errorf("MAIN.Entry = (%v, %v), want (true, true)", v.Entry, ok)
+	if v, ok := syms.Get("MAIN"); !ok || !v.IsEntry() {
+		t.Errorf("MAIN = (%+v, %v), want an entry", v, ok)
 	}
 
-	if v, ok := syms["OTHER"]; !ok || v.Entry {
-		t.Errorf("OTHER.Entry = (%v, %v), want (false, true)", v.Entry, ok)
+	if v, ok := syms.Get("OTHER"); !ok || v.IsEntry() {
+		t.Errorf("OTHER = (%+v, %v), want not an entry", v, ok)
 	}
 }
 
@@ -283,7 +283,7 @@ func TestSetS0Origin(t *testing.T) {
 		t.Fatalf("Assemble: %v", err)
 	}
 
-	if v, ok := a.Symbols()["X"]; !ok || v.Value != newBase {
-		t.Errorf("X = (%#x, %v), want (%#x, true)", v.Value, ok, newBase)
+	if v, ok := a.Symbols().Get("X"); !ok || v.Value != newBase {
+		t.Errorf("X = (%+v, %v), want (%#x, true)", v, ok, newBase)
 	}
 }

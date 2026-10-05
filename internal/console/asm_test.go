@@ -108,9 +108,9 @@ func TestAssemble_persistentSessionSharesSymbolsAcrossFiles(t *testing.T) {
 
 // TestAssemble_helloEntrySymbolAndMask assembles testdata/asm/hello.asm on
 // its own and checks that ".entry main, ^m<>" (hello.asm:1) both marks
-// "MAIN" as an entry symbol in Console.Symbols (previously lost at
-// asm.Assembler.Symbols()'s map[string]uint32 boundary -- see symbol.go's
-// SymbolInfo) and that disassembling its address shows the register-save
+// "MAIN" as an entry symbol in Console.Symbols (once lost when
+// asm.Assembler.Symbols() returned only values; it now returns a
+// symtab.Table with each symbol's flags) and that disassembling its address shows the register-save
 // mask word as ".ENTRY MAIN,^M<>" rather than misdecoding it as an
 // instruction.
 func TestAssemble_helloEntrySymbolAndMask(t *testing.T) {
@@ -126,7 +126,7 @@ func TestAssemble_helloEntrySymbolAndMask(t *testing.T) {
 		t.Fatal("expected hello.asm's \"main\" label to be merged into Console.Symbols")
 	}
 
-	if !sym.IsEntry {
+	if !sym.IsEntry() {
 		t.Error("expected MAIN to be marked IsEntry, matching its .ENTRY definition")
 	}
 

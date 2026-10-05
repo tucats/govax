@@ -638,7 +638,7 @@ func TestDispatch_setSymbolQualifiers(t *testing.T) {
 	}
 
 	sym, ok := c.Symbols.Find("PERMSYM")
-	if !ok || !sym.Permanent {
+	if !ok || !sym.IsPermanent() {
 		t.Errorf("PERMSYM = %+v, ok=%v; want a permanent symbol", sym, ok)
 	}
 
@@ -647,7 +647,7 @@ func TestDispatch_setSymbolQualifiers(t *testing.T) {
 	}
 
 	sym, ok = c.Symbols.Find("ENTRYSYM")
-	if !ok || !sym.IsEntry {
+	if !ok || !sym.IsEntry() {
 		t.Errorf("ENTRYSYM = %+v, ok=%v; want an entry symbol", sym, ok)
 	}
 }

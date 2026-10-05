@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/tucats/govax/internal/vmserrors"
 	"strings"
+
+	"github.com/tucats/govax/internal/symtab"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // SymFlag records characteristics of a symbol, matching asm_symbols.c's
@@ -640,32 +642,47 @@ func (a *Assembler) hasUnresolvedSymbols() bool {
 	return false
 }
 
-// SymbolInfo is one entry returned by Symbols(): a symbol's value plus
-// whether it was defined by .ENTRY (or a .SHIM stub) — SymEntry — so a
-// caller merging these into its own symbol table (the console's ASM
-// command) can preserve that attribute instead of losing it, which
-// previously left the disassembler with no way to recognize a routine's
-// register-save mask word (see decode_opcode.c's own SYM_ENTRY scan).
-type SymbolInfo struct {
-	Value uint32
-	Entry bool
-}
-
 // Symbols returns every symbol this assembly itself defined (labels,
 // .ENTRY points, .SET values, .SHIM stubs, ...) with no pending forward
 // references — excluding the fixed set seeded by seedBuiltinSymbols at
-// construction time (see SymBuiltin). Used by the console's ASM command
-// (Phase 12) to merge a freshly assembled program's own symbol table into
-// Console.Symbols once its bytes have been deposited into live memory.
-func (a *Assembler) Symbols() map[string]SymbolInfo {
-	out := make(map[string]SymbolInfo)
+// construction time (see SymBuiltin) and local labels. Used by the
+// console's ASM command (Phase 12) to merge a freshly assembled program's
+// own symbol table into Console.Symbols once its bytes have been
+// deposited into live memory. Each symbol's attributes are carried over
+// as symtab flags (symbolFlags), so, for one, the disassembler can
+// recognize a .ENTRY's register-save mask (decode_opcode.c's SYM_ENTRY
+// scan).
+func (a *Assembler) Symbols() *symtab.Table {
+	out := symtab.New()
 
 	for name, s := range a.symbols.byName {
 		if s.flags&(SymBuiltin|SymLocalLabel) != 0 || !s.defined() {
 			continue
 		}
 
-		out[name] = SymbolInfo{Value: s.value, Entry: s.flags&SymEntry != 0}
+		out.Set(symtab.Symbol{Name: name, Value: s.value, Flags: symbolFlags(s.flags)})
+	}
+
+	return out
+}
+
+// symbolFlags translates an assembler symbol's flags into symtab's.
+func symbolFlags(f SymFlag) symtab.Flags {
+	var out symtab.Flags
+
+	for _, m := range []struct {
+		from SymFlag
+		to   symtab.Flags
+	}{
+		{SymLabel, symtab.Label},
+		{SymEntry, symtab.Entry},
+		{SymPermanent, symtab.Permanent},
+		{SymSystem, symtab.System},
+		{SymGlobal, symtab.Global},
+	} {
+		if f&m.from != 0 {
+			out |= m.to
+		}
 	}
 
 	return out

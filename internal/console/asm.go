@@ -177,16 +177,16 @@ func (c *Console) depositAsmImage(a *asm.Assembler) error {
 // consults), so a freshly assembled label is immediately usable by name --
 // shared by the batch and interactive-mode forms alike.
 func (c *Console) mergeAsmSymbols(a *asm.Assembler) {
-	for name, info := range a.Symbols() {
+	for _, s := range a.Symbols().All() {
 		kind := SymbolUser
-		if strings.ContainsRune(name, '$') {
+		if strings.ContainsRune(s.Name, '$') {
 			kind = SymbolSystem
 		}
 
-		if info.Entry {
-			c.Symbols.SetEntry(name, info.Value, kind)
+		if s.IsEntry() {
+			c.Symbols.SetEntry(s.Name, s.Value, kind)
 		} else {
-			c.Symbols.Set(name, info.Value, kind)
+			c.Symbols.Set(s.Name, s.Value, kind)
 		}
 	}
 }

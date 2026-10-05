@@ -1,16 +1,18 @@
 package console
 
 import (
-	"sort"
 	"strings"
+
+	"github.com/tucats/govax/internal/symtab"
 )
 
-// SymbolKind classifies a Symbol, matching the categories
+// SymbolKind says who defined a symbol, matching the categories
 // reference/eVAX/eVAX/Source/Console/console_show.c's SHOW SYMBOL and
 // console_clear.c's CLEAR SYMBOL distinguish (system symbols like
 // CONSOLE$SCRATCH survive a VMINIT/CLEAR SYMBOL/ALL that wipes user-defined
 // ones; see console_vminit.c's "doesn't include reserved symbols with a $
-// character" comment).
+// character" comment). It's the argument to SymbolTable.Set; a stored
+// symbol records it as symtab.System.
 type SymbolKind int
 
 const (
@@ -18,81 +20,86 @@ const (
 	SymbolSystem
 )
 
-// Symbol is one entry in a SymbolTable.
-type Symbol struct {
-	Name  string
-	Value uint32
-	Kind  SymbolKind
-	// IsEntry marks a symbol defined by .ENTRY (or a .SHIM stub) --
-	// SYM_ENTRY in the C reference. Independent of Kind (an entry point
-	// can be either a user or a system symbol): SHOW SYMBOL displays it,
-	// and Disassemble/traceStep consult it (via EntryAt) to recognize a
-	// routine's register-save mask word instead of misdecoding it as an
-	// instruction (matching decode_opcode.c's own SYM_ENTRY scan).
-	IsEntry bool
+// Symbol is one entry in a SymbolTable: a symtab.Symbol, whose flags hold
+// the console's attributes (Phase 41 moved the table onto internal/symtab,
+// so the disassembler can look console symbols up by address):
+//
+//   - System: defined by the system, not the user (SymbolSystem).
+//   - Entry: defined by .ENTRY (or a .SHIM stub) or SET/ENTRY -- SYM_ENTRY
+//     in the C reference. SHOW SYMBOL displays it, and Disassemble/
+//     traceStep consult it (via EntryAt) to recognize a routine's
+//     register-save mask word instead of misdecoding it as an instruction
+//     (matching decode_opcode.c's own SYM_ENTRY scan).
+//   - Permanent: defined with SET/PERMANENT -- SYM_PERMANENT in the C
+//     reference. CLEAR SYMBOL/TEMPORARY (ClearTemporary) removes every
+//     user symbol without it.
+//   - Label: defined with SET/LABEL -- SYM_LABEL in the C reference,
+//     tracked for SHOW SYMBOL's attribute display.
+//   - Builtin: one of the assembler's predefined system symbols
+//     (asm.BuiltinSymbols: PTE$K_*, VAX$PR_*, OPC$_*, ...), which the
+//     console resolves but doesn't keep in its own table. Only SHOW
+//     SYMBOL's listings build such Symbols (see Console.listSymbols).
+type Symbol = symtab.Symbol
 
-	// Permanent marks a symbol defined with SET/PERMANENT -- SYM_PERMANENT
-	// in the C reference (console_set.c's own qualifier scan ahead of its
-	// NAME=value symbol path). CLEAR SYMBOL/TEMPORARY (ClearTemporary,
-	// below) removes every user symbol *without* this flag, leaving
-	// permanent ones untouched -- the C source's own "non-permanent user
-	// symbols" wording for that command. An ordinary SET NAME=value (no
-	// qualifier) leaves this false, matching set_symbol's own perm==0
-	// default.
-	Permanent bool
-
-	// IsLabel marks a symbol defined with SET/LABEL -- SYM_LABEL in the C
-	// reference. Tracked purely for SHOW SYMBOL's attribute display; unlike
-	// IsEntry, nothing else in this port currently branches on it (the C
-	// source's own find_label also matches SYM_ENTRY, not SYM_LABEL).
-	IsLabel bool
-
-	// Predefined marks one of the assembler's predefined system symbols
-	// (asm.BuiltinSymbols: PTE$K_*, VAX$PR_*, OPC$_*, ...), which the
-	// console resolves but doesn't keep in its own table. Only SHOW
-	// SYMBOL's listings build such Symbols (see Console.listSymbols); its
-	// Kind is SymbolSystem.
-	Predefined bool
-}
-
-// SymbolTable is the console's symbol table — a simplified, map-based
-// replacement for the C source's SYMBOL/FSYMBOL linked lists (struct
-// SYMBOL's forward-reference-patching machinery has no purpose here since
-// this port's expression evaluator, unlike the inline assembler, never
-// forward-references a symbol before it's defined; see expr.go).
+// SymbolTable is the console's symbol table — a simplified replacement
+// for the C source's SYMBOL/FSYMBOL linked lists (struct SYMBOL's
+// forward-reference-patching machinery has no purpose here since this
+// port's expression evaluator, unlike the inline assembler, never
+// forward-references a symbol before it's defined; see expr.go). Names
+// are stored uppercased.
 type SymbolTable struct {
-	m map[string]*Symbol
+	t *symtab.Table
 }
 
 // NewSymbolTable returns an empty SymbolTable.
 func NewSymbolTable() *SymbolTable {
-	return &SymbolTable{m: map[string]*Symbol{}}
+	return &SymbolTable{t: symtab.New()}
+}
+
+// kindFlags is the flag a SymbolKind sets.
+func kindFlags(kind SymbolKind) symtab.Flags {
+	if kind == SymbolSystem {
+		return symtab.System
+	}
+
+	return 0
 }
 
 // Set defines or redefines a symbol.
 func (t *SymbolTable) Set(name string, value uint32, kind SymbolKind) {
-	t.m[strings.ToUpper(name)] = &Symbol{Name: strings.ToUpper(name), Value: value, Kind: kind}
+	t.t.Set(Symbol{Name: strings.ToUpper(name), Value: value, Flags: kindFlags(kind)})
 }
 
-// SetEntry defines or redefines a symbol with IsEntry set, matching .ENTRY
-// (or a .SHIM stub) — see Symbol.IsEntry.
+// SetEntry defines or redefines a symbol that is an entry point, matching
+// .ENTRY (or a .SHIM stub).
 func (t *SymbolTable) SetEntry(name string, value uint32, kind SymbolKind) {
-	t.m[strings.ToUpper(name)] = &Symbol{Name: strings.ToUpper(name), Value: value, Kind: kind, IsEntry: true}
+	t.t.Set(Symbol{Name: strings.ToUpper(name), Value: value, Flags: kindFlags(kind) | symtab.Entry})
 }
 
 // SetQualified defines or redefines a user symbol with the /PERMANENT,
 // /ENTRY, /LABEL attributes SET's qualifiers give (setcommand.go's
-// SET_SYMBOL) — see Symbol.Permanent/IsEntry/IsLabel.
+// SET_SYMBOL).
 func (t *SymbolTable) SetQualified(name string, value uint32, permanent, entry, label bool) {
-	t.m[strings.ToUpper(name)] = &Symbol{
-		Name: strings.ToUpper(name), Value: value, Kind: SymbolUser,
-		Permanent: permanent, IsEntry: entry, IsLabel: label,
+	var flags symtab.Flags
+
+	if permanent {
+		flags |= symtab.Permanent
 	}
+
+	if entry {
+		flags |= symtab.Entry
+	}
+
+	if label {
+		flags |= symtab.Label
+	}
+
+	t.t.Set(Symbol{Name: strings.ToUpper(name), Value: value, Flags: flags})
 }
 
 // Get looks up a symbol by name (case-insensitive).
 func (t *SymbolTable) Get(name string) (uint32, bool) {
-	s, ok := t.m[strings.ToUpper(name)]
+	s, ok := t.t.Get(name)
 	if !ok {
 		return 0, false
 	}
@@ -102,40 +109,32 @@ func (t *SymbolTable) Get(name string) (uint32, bool) {
 
 // Find returns the full Symbol record for name (case-insensitive), or
 // (nil, false) if undefined -- unlike Get, which only reports the value,
-// for a caller (SHOW SYMBOL) that also needs Kind.
+// for a caller (SHOW SYMBOL) that also needs its attributes.
 func (t *SymbolTable) Find(name string) (*Symbol, bool) {
-	s, ok := t.m[strings.ToUpper(name)]
-
-	return s, ok
+	return t.t.Get(name)
 }
 
-// FindByValue returns the name of a symbol (in All's sorted order, for
+// FindByValue returns the name of a symbol (the first by name, for
 // determinism, when more than one matches) whose value equals v, or ("",
 // false) if none — a simplified stand-in for find_label's SYM_LABEL/
-// SYM_ENTRY-kind-filtered reverse lookup: this port's SymbolKind doesn't
-// distinguish a label/entry point from any other kind of symbol (see
-// docs/PHASE-16.md sub-phase 1c), so every symbol is a candidate here.
+// SYM_ENTRY-kind-filtered reverse lookup: every symbol is a candidate
+// here (see docs/PHASE-16.md sub-phase 1c).
 func (t *SymbolTable) FindByValue(v uint32) (string, bool) {
-	for _, s := range t.All() {
-		if s.Value == v {
-			return s.Name, true
-		}
+	if s, ok := t.t.At(v, nil); ok {
+		return s.Name, true
 	}
 
 	return "", false
 }
 
-// EntryAt returns the name of an IsEntry symbol whose value equals addr (in
-// All's sorted order, for determinism, when more than one matches), or
-// ("", false) if none — matching decode_opcode.c's own linear SYM_ENTRY
-// scan by PC. Used by Disassemble/traceStep to recognize a routine's
-// register-save mask word at its .ENTRY address instead of decoding it as
-// an instruction.
+// EntryAt returns the name of an entry-point symbol whose value equals
+// addr (the first by name when more than one matches), or ("", false) if
+// none — matching decode_opcode.c's own SYM_ENTRY scan by PC. Used by
+// Disassemble/traceStep to recognize a routine's register-save mask word
+// at its .ENTRY address instead of decoding it as an instruction.
 func (t *SymbolTable) EntryAt(addr uint32) (string, bool) {
-	for _, s := range t.All() {
-		if s.IsEntry && s.Value == addr {
-			return s.Name, true
-		}
+	if s, ok := t.t.At(addr, (*Symbol).IsEntry); ok {
+		return s.Name, true
 	}
 
 	return "", false
@@ -143,47 +142,31 @@ func (t *SymbolTable) EntryAt(addr uint32) (string, bool) {
 
 // Delete removes one symbol by name.
 func (t *SymbolTable) Delete(name string) {
-	delete(t.m, strings.ToUpper(name))
+	t.t.Delete(name)
 }
 
 // ClearAll removes every user symbol, matching CLEAR SYMBOL/ALL — system
 // symbols are untouched.
 func (t *SymbolTable) ClearAll() {
-	for k, s := range t.m {
-		if s.Kind == SymbolUser {
-			delete(t.m, k)
-		}
-	}
+	t.t.DeleteIf(func(s *Symbol) bool { return !s.IsSystem() })
 }
 
 // ClearTemporary removes every non-permanent user symbol, matching CLEAR
 // SYMBOL/TEMPORARY (console_clear.c's clear_temp_symbols) — a permanent one
-// (SET/PERMANENT, Symbol.Permanent) survives, as does every system symbol.
-// Returns the count removed, matching CLEAR SYMBOL/ALL's own report
-// convention (see ClearSymbol, misc.go).
+// (SET/PERMANENT) survives, as does every system symbol. Returns the count
+// removed, matching CLEAR SYMBOL/ALL's own report convention (see
+// ClearSymbol, misc.go).
 func (t *SymbolTable) ClearTemporary() int {
-	n := 0
-
-	for k, s := range t.m {
-		if s.Kind == SymbolUser && !s.Permanent {
-			delete(t.m, k)
-			
-			n++
-		}
-	}
-
-	return n
+	return t.t.DeleteIf(func(s *Symbol) bool { return !s.IsSystem() && !s.IsPermanent() })
 }
 
 // All returns every symbol, sorted by name, for SHOW SYMBOL.
 func (t *SymbolTable) All() []*Symbol {
-	out := make([]*Symbol, 0, len(t.m))
+	return t.t.All()
+}
 
-	for _, s := range t.m {
-		out = append(out, s)
-	}
-
-	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
-
-	return out
+// Table returns the symtab.Table the console's symbols are kept in, for a
+// caller that looks them up by address (the disassembler).
+func (t *SymbolTable) Table() *symtab.Table {
+	return t.t
 }
