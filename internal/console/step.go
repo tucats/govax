@@ -75,32 +75,6 @@ func parseStepModeWord(word string) (StepMode, bool) {
 	}
 }
 
-// parseStepQualifier reads STEP's own optional leading qualifier —
-// /OVER, /INTO, /IN, /INSTRUCTION, or /RETURN — matching console_step.c's
-// narrower, slash-only acceptance (unlike SET STEP, which also takes a bare
-// word; see cmdSet's own "STEP" case). An unrecognized (or absent) leading
-// "/word" is left in place and def is returned, matching console_step's own
-// "reset parse pointer, use default mode" fallback — the caller then tries
-// to parse the same text as a starting address, exactly as the C source
-// falls through to asm_hex on the same unconsumed text.
-func parseStepQualifier(rest string, def StepMode) (StepMode, string) {
-	trimmed := strings.TrimLeft(rest, " \t")
-	if !strings.HasPrefix(trimmed, "/") {
-		return def, rest
-	}
-
-	i := 1
-	for i < len(trimmed) && trimmed[i] != ' ' && trimmed[i] != '\t' {
-		i++
-	}
-
-	if mode, ok := parseStepModeWord(trimmed[1:i]); ok {
-		return mode, trimmed[i:]
-	}
-
-	return def, rest
-}
-
 // SetStepMode implements SET STEP <OVER|INTO|IN|INSTRUCTION|RETURN>
 // (console_set.c:450-486), matching console_step.c's own reading of
 // Console.StepMode as STEP's default mode when no explicit qualifier is
@@ -154,7 +128,7 @@ func (c *Console) setStepBreakpoint(addr uint32) {
 // to completion (StepOver), or runs until the current procedure returns
 // (StepReturn) — matching console_step.c. mode is the qualifier the STEP
 // command itself parsed (or, for a bare STEP with none, Console.StepMode --
-// see cmdStep).
+// see commands.go's stepCommand).
 func (c *Console) Step(startAddr *uint32, mode StepMode) error {
 	if err := c.requireInit(); err != nil {
 		return err

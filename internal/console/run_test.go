@@ -120,20 +120,35 @@ func TestDefaultRunInits(t *testing.T) {
 	}
 }
 
-func TestParseRunQualifier_defaultAndOverride(t *testing.T) {
-	opts, rest := parseRunQualifier("foo.exe", true)
-	if !opts.RunInits || rest != "foo.exe" {
-		t.Errorf("parseRunQualifier(no qualifier, default=true) = %+v, %q, want RunInits=true", opts, rest)
+// TestRunOptions_defaultAndOverride checks RUN's qualifiers as the
+// grammar reads them (docs/PHASE-37.md): /INIT and /NOINIT override the
+// default, and the qualifiers combine.
+func TestRunOptions_defaultAndOverride(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	cases := []struct {
+		line string
+		def  bool
+		want RunOptions
+	}{
+		{"RUN FOO.EXE", true, RunOptions{RunInits: true}},
+		{"RUN/NOINIT FOO.EXE", true, RunOptions{}},
+		{"RUN/INIT FOO.EXE", false, RunOptions{RunInits: true}},
+		{`R/NOEXECUTE/DEBUG "foo.exe"/HOST`, false, RunOptions{Step: true, NoExecute: true, Host: true}},
+		{"RUN FOO.EXE /BREAK /NOINIT", true, RunOptions{Step: true}},
 	}
 
-	opts, rest = parseRunQualifier("/NOINIT foo.exe", true)
-	if opts.RunInits || rest != " foo.exe" {
-		t.Errorf("parseRunQualifier(/NOINIT, default=true) = %+v, %q, want RunInits=false", opts, rest)
-	}
+	for _, c := range cases {
+		r, err := g.Parse(c.line)
+		if err != nil {
+			t.Errorf("%s: %v", c.line, err)
 
-	opts, rest = parseRunQualifier("/INIT foo.exe", false)
-	if !opts.RunInits || rest != " foo.exe" {
-		t.Errorf("parseRunQualifier(/INIT, default=false) = %+v, %q, want RunInits=true", opts, rest)
+			continue
+		}
+
+		if got := runOptions(r, c.def); got != c.want {
+			t.Errorf("%s: %+v, want %+v", c.line, got, c.want)
+		}
 	}
 }
 

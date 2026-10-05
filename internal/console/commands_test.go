@@ -143,3 +143,48 @@ func TestCommands_zero(t *testing.T) {
 		t.Errorf("memory after ZERO = %#x, %v", got, err)
 	}
 }
+
+// TestCommands_stepGrammar checks STEP's spellings and qualifiers as the
+// grammar reads them.
+func TestCommands_stepGrammar(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	cases := []struct {
+		line, qual, addr string
+	}{
+		{"S", "", ""},
+		{"ST/IN", "INTO", ""},
+		{"STEP/INSTRUCTION 200", "INTO", "200"},
+		{"STEP 200 + 4 /OVER", "OVER", "200 + 4"},
+		{"STE/RET", "RETURN", ""},
+	}
+
+	for _, c := range cases {
+		r, err := g.Parse(c.line)
+		if err != nil {
+			t.Errorf("%s: %v", c.line, err)
+
+			continue
+		}
+
+		if r.Active != "STEP" || r.String("ADDRESS") != c.addr {
+			t.Errorf("%s: %s, address %q", c.line, r.Active, r.String("ADDRESS"))
+		}
+
+		if c.qual != "" && !r.Present(c.qual) {
+			t.Errorf("%s: %s not present", c.line, c.qual)
+		}
+	}
+
+	for _, line := range []string{"STEP/OVER/RETURN", "STEP/NOOVER", "STEP/I"} {
+		if _, err := g.Parse(line); err == nil {
+			t.Errorf("%s: no error", line)
+		}
+	}
+
+	for _, line := range []string{"G", "GO 200", "EXEC", "EXECUTE ."} {
+		if r, err := g.Parse(line); err != nil || r.Active != "EXECUTE" {
+			t.Errorf("%s: %v", line, err)
+		}
+	}
+}

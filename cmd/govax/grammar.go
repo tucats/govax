@@ -784,7 +784,7 @@ func runCmd(c *cli.Context) error {
 	console.RunCommandLine = strings.Join(params[1:], " ")
 	paths = loadConfigPaths(paths)
 
-	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{"run", params[0]})
+	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{"run", dclQuote(params[0])})
 }
 
 func doCmd(c *cli.Context, cmd string) error {

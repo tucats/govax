@@ -144,7 +144,7 @@ func TestDispatch_runActivatesImage(t *testing.T) {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
-	if err := d.Dispatch("RUN/NOEXECUTE " + exeFixturePath(t, "simple.exe")); err != nil {
+	if err := d.Dispatch(`RUN/NOEXECUTE "` + exeFixturePath(t, "simple.exe") + `"`); err != nil {
 		t.Fatalf("Dispatch(RUN/NOEXECUTE): %v", err)
 	}
 
@@ -155,7 +155,7 @@ func TestDispatch_runActivatesImage(t *testing.T) {
 	// simple.exe (per docs/PHASE-13.md's own milestone notes) runs to a
 	// clean completion, so a real (non-/NOEXECUTE) RUN can be dispatched
 	// end-to-end here too, via the "R" abbreviation.
-	if err := d.Dispatch("R " + exeFixturePath(t, "simple.exe")); err != nil {
+	if err := d.Dispatch(`R "` + exeFixturePath(t, "simple.exe") + `"`); err != nil {
 		t.Fatalf("Dispatch(R): %v", err)
 	}
 }
@@ -211,6 +211,19 @@ func TestDispatch_callWithArgumentList(t *testing.T) {
 		t.Errorf("R0 = %d, want 42", got)
 	}
 
+	// The argument list may follow the routine after a blank.
+	if err := d.Dispatch("CALL DBLTEST (^D4)"); err != nil {
+		t.Fatalf("Dispatch(CALL, blank before the list): %v", err)
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 8 {
+		t.Errorf("R0 = %d, want 8", got)
+	}
+
+	if err := d.Dispatch("CALL DBLTEST(^D21)"); err != nil {
+		t.Fatalf("Dispatch(CALL): %v", err)
+	}
+
 	// Text after the argument list, or after an address with no list, is
 	// an error, and nothing is called.
 	for _, cmd := range []string{"CALL DBLTEST(^D5) JUNK", "CALL DBLTEST JUNK"} {
@@ -227,7 +240,7 @@ func TestDispatch_callWithArgumentList(t *testing.T) {
 
 // TestDispatch_callStepQualifier checks CALL/STEP is accepted (parsed and
 // dispatched without error) -- console_call's own /STEP|/BREAK|/DEBUG
-// qualifier, matching RUN's identical convention (parseRunQualifier).
+// qualifier, matching RUN's identical convention.
 func TestDispatch_callStepQualifier(t *testing.T) {
 	c := newRunnableConsole(t)
 	g := loadEvaxGrammar(t)
@@ -772,7 +785,7 @@ func TestDispatch_helpFixedCommand(t *testing.T) {
 }
 
 // TestDispatch_if exercises the IF <expr> [THEN] <command> console verb
-// (cmdIf) against the same pattern vax.init uses (IF DEFINED("...") THEN
+// (commands.go's ifCommand) against the same pattern vax.init uses (IF DEFINED("...") THEN
 // SET ...): the conditioned command runs only when the expression is
 // nonzero, and THEN is optional either way.
 func TestDispatch_if(t *testing.T) {

@@ -8,11 +8,10 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// RunOptions controls RUN's optional qualifier, matching console_run's own
-// single-leading-qualifier parsing: exactly one of /NOINIT, /INIT,
-// /BREAK|/DEBUG|/STEP, or /NOEXECUTE may appear (not a combinable list),
-// unrecognized-4-character-prefix rules and all (see dispatch.go's
-// parseRunQualifier, the DCL-facing counterpart of this struct).
+// RunOptions holds RUN's qualifiers: /[NO]INIT, /STEP (/BREAK, /DEBUG),
+// /NOEXECUTE, and the file's /HOST. console_run read at most one, leading
+// qualifier; the DCL grammar (docs/PHASE-37.md) reads any combination
+// (commands.go's runOptions).
 type RunOptions struct {
 	RunInits  bool // /INIT (run each dependency's LIB$INITIALIZE); /NOINIT is the same as the zero value
 	Step      bool // /BREAK, /DEBUG, /STEP: single-step the main call
@@ -119,7 +118,7 @@ func (c *Console) activateImage(fn string) (*ICB, error) {
 // overrides it, matching console_run.c:208's `run_inits = vax.debug &
 // DBG_LIBINIT` -- DebugLibinit defaults on (vax.DebugDefault), so
 // LIB$INITIALIZE runs by default, not only when /INIT is given explicitly.
-// See dispatch.go's parseRunQualifier, the DCL-facing counterpart.
+// See commands.go's runOptions, which applies the qualifiers.
 func (c *Console) DefaultRunInits() bool {
 	return c.CPU != nil && c.CPU.DebugEnabled(vax.DebugLibinit)
 }

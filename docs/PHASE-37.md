@@ -131,6 +131,15 @@ Each subtask is committed when its tests pass.
   joined by an operator: `IF X = 1 THEN ...` and `IF DEFINED("X") SET ...`
   read as before. Text left after evaluating it is an error, where it
   used to be dispatched as the command.
+- **Qualifiers combine and go anywhere** DCL allows: `RUN/NOINIT/STEP`,
+  `STEP 200 /OVER`. console_run, console_call, and console_step read one
+  leading qualifier.
+- **CALL's argument list may follow a blank** (`CALL F (1,2)`): the list
+  is a second `$expression` parameter, since a blank before `(` ends the
+  routine's expression. The list itself is still read by the handler,
+  with the evaluator, as console_call reads it.
+- **RUN's file is required by the grammar** (`/prompt=`): a bare RUN is
+  CLI_MISSINGPARAMETER, not CLI_NOFILE.
 - **Handlers live in `internal/console/commands.go`** (`bindConsoleCommands`),
   called from `bindGrammar`.
 
@@ -145,3 +154,7 @@ Each subtask is committed when its tests pass.
 - 2026-10-04: Subtask 2: ZERO, BOOT, ROM, TIME, PRINT/ECHO, HELP/`?`, and
   IF are grammar verbs; `Console.Print` takes the item list.
   `commands_test.go` covers them through `Dispatch`.
+- 2026-10-04: Subtask 3: STEP/ST/S, EXECUTE/GO/G, CALL, and RUN/R. The old
+  unbound `call` verb in `console.dcl` is replaced. `govax run` quotes the
+  image's name. `TestRunOptions_defaultAndOverride` replaces the
+  `parseRunQualifier` test.

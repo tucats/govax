@@ -161,7 +161,7 @@ func TestEvaluator_definedFunction(t *testing.T) {
 		t.Errorf(`Eval(defined("FOO")) = %d, want 1`, got)
 	}
 	// DEFINED() composes with the rest of the expression grammar, since
-	// cmdIf (dispatch.go) evaluates it as one ordinary expression.
+	// ifCommand (commands.go) evaluates it as one ordinary expression.
 	if got := evalTest(t, 16, nil, `DEFINED("NOSUCH")=0`); got != 1 {
 		t.Errorf(`Eval(DEFINED("NOSUCH")=0) = %d, want 1`, got)
 	}

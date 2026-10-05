@@ -202,13 +202,8 @@ grammar console
                     /prompt="Code"
 
 
-    verb call
+    ! CALL is in the Phase 37 block at the end of this file.
 
-        qualifier step
-        parameter   routine                     -
-                    /type=$rest_of_line         -
-                    /prompt="Routine"
-    
     
     type clear_types
         keyword     breakpoint          /syntax=clear_breakpoint
@@ -970,5 +965,55 @@ grammar console
         parameter   command/id=1642             -
                     /type=$rest_of_line         -
                     /prompt="Command"
+
+    ! STEP[/mode] [address]: /INTO (also /IN, /INSTRUCTION), /OVER, or
+    ! /RETURN, defaulting to SET STEP's mode.
+    verb step/id=1650
+        qualifier   into/id=1651/nonegatable
+        qualifier   in/alias=into
+        qualifier   instruction/alias=into
+        qualifier   over/id=1652/nonegatable
+        qualifier   return/id=1653/nonegatable
+        parameter   address/id=1654             -
+                    /type=$expression
+        disallow    any2(into, over, return)
+    verb st/alias=step
+    verb s/alias=step
+
+    ! EXECUTE [address] runs the CPU (GO, G).
+    verb execute/id=1660
+        parameter   address/id=1661             -
+                    /type=$expression
+    verb go/alias=execute
+    verb g/alias=execute
+
+    ! CALL[/STEP] routine[(argument,...)]: the argument list may follow
+    ! the routine after a blank, so it's a parameter of its own too.
+    verb call/id=1670
+        qualifier   step/id=1671/nonegatable
+        qualifier   break/alias=step
+        qualifier   debug/alias=step
+        qualifier   dbg/alias=step
+        parameter   routine/id=1672             -
+                    /type=$expression           -
+                    /prompt="Routine"
+        parameter   arguments/id=1673           -
+                    /type=$expression
+
+    ! RUN activates a VMS image. /NOINIT and /INIT override whether each
+    ! shareable image's LIB$INITIALIZE runs; /STEP (/BREAK, /DEBUG)
+    ! single-steps the main call; /NOEXECUTE loads without running.
+    verb run/id=1680
+        parameter   file/id=1681                -
+                    /type=$string               -
+                    /prompt="File"
+        qualifier   host/id=1682                -
+                    /parameter=file
+        qualifier   init/id=1683
+        qualifier   step/id=1684/nonegatable
+        qualifier   break/alias=step
+        qualifier   debug/alias=step
+        qualifier   execute/id=1685
+    verb r/alias=run
 
 end
