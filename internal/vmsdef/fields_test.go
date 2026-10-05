@@ -57,7 +57,7 @@ func TestFABFields_tileEightyBytes(t *testing.T) {
 	// exactly at it — RCF at offset 75 + size 1 = 76, then 4 reserved bytes
 	// to reach FAB$K_BLN.
 	maxPos := uint32(0)
-	
+
 	for _, f := range FABFields {
 		if end := f.Offset + f.Size; end > maxPos {
 			maxPos = end

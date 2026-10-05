@@ -9,9 +9,9 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}", 
+            "program": "${workspaceFolder}/cmd/govax", 
             "debugAdapter": "dlv-dap",
-            "args": ["-s", "run", "testdata/exe/sieve.exe"]
+            "args": ["-s", "run", "../../pi.exe"]
         },  
         
 

@@ -122,6 +122,7 @@ constant "THREE" equals 3 prefix ZZZ$ tag C;
 end_module $ZZZDEF;
 `
 	path := filepath.Join(t.TempDir(), "test.sdl")
+	
 	if err := os.WriteFile(path, []byte(src), 0o600); err != nil {
 		t.Fatal(err)
 	}

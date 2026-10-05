@@ -39,6 +39,8 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
+const platformName = "govax"
+
 // Input is one object module to link, and the file it came from (for
 // messages).
 type Input struct {
@@ -154,7 +156,7 @@ func Link(inputs []Input, opts Options) (*Image, error) {
 	}
 
 	if opts.LinkerID == "" {
-		opts.LinkerID = "govax"
+		opts.LinkerID = platformName
 	}
 
 	if opts.StackPages == 0 {

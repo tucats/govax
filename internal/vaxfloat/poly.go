@@ -49,7 +49,7 @@ func POLYStep(f Format, arg, acc, coef Value) (Value, error) {
 		ea := arg.x.MantExp(fa)
 		eb := acc.x.MantExp(fb)
 
-		frac := new(big.Float).SetPrec(fa.MinPrec() + fb.MinPrec()).Mul(fa, fb)
+		frac := new(big.Float).SetPrec(fa.MinPrec()+fb.MinPrec()).Mul(fa, fb)
 		product = truncateFraction(frac, n)
 		productExp = ea + eb
 		product.SetMantExp(product, productExp)
@@ -63,11 +63,15 @@ func POLYStep(f Format, arg, acc, coef Value) (Value, error) {
 	switch {
 	case product == nil && coef.IsZero():
 		return Value{}, nil
+
 	case product == nil:
 		sum = new(big.Float).Set(coef.x)
+
 		return Round(f, newValue(sum))
+
 	case coef.IsZero():
 		sum = product
+
 	default:
 		ec := coef.x.MantExp(nil)
 		top := max(productExp, ec)
@@ -88,7 +92,7 @@ func POLYStep(f Format, arg, acc, coef Value) (Value, error) {
 // truncateFraction returns x with its bits below 2^-n dropped (toward
 // zero).
 func truncateFraction(x *big.Float, n int) *big.Float {
-	scaled := new(big.Float).SetPrec(x.MinPrec() + uint(n) + 2).SetMantExp(x, n)
+	scaled := new(big.Float).SetPrec(x.MinPrec()+uint(n)+2).SetMantExp(x, n)
 	i, _ := scaled.Int(nil)
 
 	r := new(big.Float).SetPrec(uint(max(i.BitLen(), 1))).SetInt(i)

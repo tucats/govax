@@ -111,10 +111,10 @@ func TestLinkFromVMSLibraries(t *testing.T) {
 	want, opts := realImage(t, filepath.Join(fixtureDir, "vax", "hello.exe"))
 	opts.Sources = vmsSources(t)
 
-	for _, from := range []string{"govax", "real"} {
+	for _, from := range []string{platformName, "real"} {
 		t.Run(from, func(t *testing.T) {
 			m := realObject(t, "hello")
-			if from == "govax" {
+			if from == platformName {
 				m = govaxObject(t, "hello")
 			}
 

@@ -91,6 +91,7 @@ func TestEmulCvtFloatToIntOverflow(t *testing.T) {
 		}
 
 		cpu.SetGPR(vax.PC, d.NextPC)
+		
 		e.instructionPC = base
 
 		err = instructionTable.HandlerFor(d.Instruction)(e, &d)

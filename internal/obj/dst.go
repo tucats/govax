@@ -248,6 +248,7 @@ func EncodeDST(recs []DSTRecord) ([]Command, error) {
 			}
 
 			imm = append(imm, r.Data[at:a.Offset]...)
+			
 			flush()
 
 			out = append(out, a.Commands...)

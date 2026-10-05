@@ -124,7 +124,7 @@ func emulAddp6(e *Engine, d *Decoded) error {
 // emulSubp6 is SUBP6 sublen, subaddr, minlen, minaddr, diflen, difaddr:
 // dif <- min - sub.
 func emulSubp6(e *Engine, d *Decoded) error {
-	return e.decimal6(d, func(sub, min *big.Int) (*big.Int, bool) { return new(big.Int).Sub(min, sub), true })
+	return e.decimal6(d, func(sub, minValue *big.Int) (*big.Int, bool) { return new(big.Int).Sub(minValue, sub), true })
 }
 
 // emulMulp is MULP mulrlen, mulraddr, muldlen, muldaddr, prodlen,

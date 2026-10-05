@@ -111,7 +111,7 @@ func TestEmulAshq(t *testing.T) {
 	if cpu.GPR(vax.R4) != 16 || cpu.GPR(vax.R5) != 0 {
 		t.Errorf("result pair = %#x:%#x, want 16:0", cpu.GPR(vax.R4), cpu.GPR(vax.R5))
 	}
-	
+
 	if cpu.PSL().V() {
 		t.Error("V = true, want false")
 	}

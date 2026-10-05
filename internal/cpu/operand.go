@@ -179,6 +179,7 @@ func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, 
 
 	case mode < 4: // Short literal: S^#n (integer) or S^#f (float).
 		op.Kind = OperandImmediate
+
 		if dtype.IsFloat() {
 			// A floating literal: its value (0.5 to 120) in the
 			// operand's own format, as bits, as though read from memory.
@@ -433,7 +434,7 @@ func decodeGeneral(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype Dat
 		// this mode.
 		ptr := cpu.GPR(reg)
 		cpu.SetGPR(reg, ptr+4)
-		
+
 		addr, err := mem.LoadLongword(cpu, ptr)
 		if err != nil {
 			return op, err

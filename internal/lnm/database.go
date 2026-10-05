@@ -235,7 +235,7 @@ func (db *Database) resolveTableName(name string, mode Mode, depth int, out *[]*
 	if e.IsTable() {
 		if e.Target.Mode <= mode && !seen[e.Target] {
 			seen[e.Target] = true
-			
+
 			*out = append(*out, e.Target)
 		}
 

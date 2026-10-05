@@ -98,12 +98,12 @@ func TestLinkProbeImagesMatchRealLINK(t *testing.T) {
 				}
 			}
 
-			var real []*obj.Module
+			var realModule []*obj.Module
 			for _, name := range c.objects {
-				real = append(real, probeObject(t, name))
+				realModule = append(realModule, probeObject(t, name))
 			}
 
-			link(real)
+			link(realModule)
 
 			if c.sources == nil {
 				return
@@ -214,12 +214,12 @@ func TestLinkProbeDST(t *testing.T) {
 				}
 			}
 
-			var real []*obj.Module
+			var realModule []*obj.Module
 			for _, name := range c.objects {
-				real = append(real, probeObject(t, name))
+				realModule = append(realModule, probeObject(t, name))
 			}
 
-			check("real MACRO's objects", real)
+			check("real MACRO's objects", realModule)
 
 			if !c.govax {
 				return

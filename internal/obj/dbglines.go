@@ -178,6 +178,7 @@ func (t *LineTable) Finish(lines int, end DSTItem) []*TIR {
 	t.closeOpen()
 
 	count := dstItems(DSTLineCountRecord(lines))
+
 	if len(t.parts) > 0 && recordSize(t.parts)+lineReserve > lineFill {
 		out = append(out, t.flush())
 	}
@@ -208,6 +209,7 @@ func (t *LineTable) flush() *TIR {
 
 		if it.Address != nil {
 			store()
+			
 			rec.Commands = append(rec.Commands, it.Address...)
 		}
 	}

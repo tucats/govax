@@ -85,7 +85,7 @@ func emodProduct(f Format, mulr Value, ext uint16, muld Value) Value {
 	extension := new(big.Float).SetUint64(emodExtension(f, ext))
 	extension.SetMantExp(extension, -(p + extBits))
 
-	f1 := new(big.Float).SetPrec(uint(p + extBits)).Add(m1, extension)
+	f1 := new(big.Float).SetPrec(uint(p+extBits)).Add(m1, extension)
 
 	m2 := new(big.Float)
 	e2 := muld.x.MantExp(m2)
@@ -94,7 +94,7 @@ func emodProduct(f Format, mulr Value, ext uint16, muld Value) Value {
 	// The product of the fractions is in [0.25, 1). Truncate it, as it
 	// stands (before normalizing it), to width bits after the binary
 	// point.
-	prod := new(big.Float).SetPrec(uint(2*p + extBits)).Mul(f1, m2)
+	prod := new(big.Float).SetPrec(uint(2*p+extBits)).Mul(f1, m2)
 	prod.SetMantExp(prod, width)
 
 	truncated, _ := prod.Int(nil)

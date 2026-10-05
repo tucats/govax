@@ -130,6 +130,7 @@ func emulEditpc(e *Engine, d *Decoded) error {
 
 		// The operand byte of the operators that take one.
 		var arg byte
+
 		if op >= eoLoadFill && op <= eoAdjustInput {
 			if arg, err = e.mem.LoadByte(e.cpu, pattern+1); err != nil {
 				return err

@@ -121,10 +121,10 @@ func TestLinkMatchesRealLINK(t *testing.T) {
 	for _, name := range []string{"psects", "entry"} {
 		want, opts := realImage(t, filepath.Join(fixtureDir, "vax", name+".exe"))
 
-		for _, from := range []string{"govax", "real"} {
+		for _, from := range []string{platformName, "real"} {
 			t.Run(name+"/"+from, func(t *testing.T) {
 				m := realObject(t, name)
-				if from == "govax" {
+				if from == platformName {
 					m = govaxObject(t, name)
 				}
 
@@ -149,7 +149,7 @@ func TestLinkMatchesRealLINK(t *testing.T) {
 func TestLinkWithoutTracebackRecords(t *testing.T) {
 	for _, name := range []string{"psects", "entry", "hello"} {
 		t.Run(name, func(t *testing.T) {
-			want, opts := realImage(t, filepath.Join(fixtureDir, "vax", "govax", "gv_"+name+".exe"))
+			want, opts := realImage(t, filepath.Join(fixtureDir, "vax", platformName, "gv_"+name+".exe"))
 			opts.Sources = []SymbolSource{librtl}
 
 			m := &obj.Module{}
@@ -211,10 +211,10 @@ func TestLinkSharedImageMatchesRealLINK(t *testing.T) {
 	want, opts := realImage(t, filepath.Join(fixtureDir, "vax", "hello.exe"))
 	opts.Sources = []SymbolSource{librtl}
 
-	for _, from := range []string{"govax", "real"} {
+	for _, from := range []string{platformName, "real"} {
 		t.Run(from, func(t *testing.T) {
 			m := realObject(t, "hello")
-			if from == "govax" {
+			if from == platformName {
 				m = govaxObject(t, "hello")
 			}
 
@@ -240,10 +240,10 @@ func TestLinkForthMatchesRealLINK(t *testing.T) {
 	want, opts := realImage(t, filepath.Join(fixtureDir, "vax", "forth.exe"))
 	opts.Sources = vmsSources(t)
 
-	for _, from := range []string{"govax", "real"} {
+	for _, from := range []string{platformName, "real"} {
 		t.Run(from, func(t *testing.T) {
 			m := realObject(t, "forth")
-			if from == "govax" {
+			if from == platformName {
 				m = govaxObject(t, "forth")
 			}
 
@@ -267,10 +267,10 @@ func TestLinkNoTracebackMatchesRealLINK(t *testing.T) {
 	want, opts := realImage(t, filepath.Join(fixtureDir, "vax", "psects-notraceback.exe"))
 	opts.Traceback = false
 
-	for _, from := range []string{"govax", "real"} {
+	for _, from := range []string{platformName, "real"} {
 		t.Run(from, func(t *testing.T) {
 			m := realObject(t, "psects")
-			if from == "govax" {
+			if from == platformName {
 				m = govaxObject(t, "psects")
 			}
 

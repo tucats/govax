@@ -413,6 +413,7 @@ func packChunk(c chunk, limit int) ([]Record, error) {
 
 			for i+1 < len(c.commands) && c.commands[i+1].Op == OpStoreImmediate {
 				i++
+				
 				cuts = append(cuts, len(data))
 				data = append(data, c.commands[i].Data...)
 			}

@@ -110,6 +110,7 @@ func TestRoutinesMatchLIBRTL(t *testing.T) {
 
 	for _, r := range Routines {
 		sym, ok := vmsdef.ImageSymbols[r.Name]
+
 		switch {
 		case !ok:
 			t.Errorf("%s: not in vmsdef.ImageSymbols", r.Name)
@@ -194,7 +195,7 @@ func TestLibDeleteVMZone(t *testing.T) {
 	env := fixture(t)
 	env.RegionSize[0] = 0x4000
 
-	var blocks []uint32
+	blocks := make([]uint32, 0, 3)
 
 	for _, zone := range []uint32{5, 5, 9} {
 		addr, err := env.AllocateVM(16, zone)

@@ -46,7 +46,7 @@ func realLineTable(t *testing.T, path string) (recs []*TIR, source DSTRecord, cm
 	}
 
 	// The table's items, each address after the bytes before it.
-	var stream []DSTItem
+	stream := make([]DSTItem, 0, len(dsts))
 
 	last := 0
 
