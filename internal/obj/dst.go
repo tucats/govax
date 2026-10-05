@@ -262,14 +262,15 @@ func EncodeDST(recs []DSTRecord) ([]Command, error) {
 	return out, nil
 }
 
-// Name returns the counted name in a module begin, routine begin, or
-// psect record, or "" for another record. Each has five bytes before it:
-// a module begin's zeros, or a byte and the address.
+// Name returns the counted name in a module begin, routine begin, psect,
+// or symbol record (dbg.go), or "" for another record. Each has five
+// bytes before it: a module begin's zeros, or a byte and the address or
+// value.
 func (r DSTRecord) Name() string {
 	const at = 5
 
 	switch {
-	case r.Type != DSTModuleBegin && r.Type != DSTRoutineBegin && r.Type != DSTPsect,
+	case r.Type != DSTModuleBegin && r.Type != DSTRoutineBegin && r.Type != DSTPsect && !isSymbolRecord(r.Type),
 		at >= len(r.Data), at+1+int(r.Data[at]) > len(r.Data):
 		return ""
 	}
@@ -333,7 +334,7 @@ func FormatDST(r DSTRecord) string {
 	case r.Type == DSTPsect && len(r.Data) >= 4:
 		n := len(r.Data)
 		fmt.Fprintf(&b, ", %d bytes", uint32(r.Data[n-4])|uint32(r.Data[n-3])<<8|uint32(r.Data[n-2])<<16|uint32(r.Data[n-1])<<24)
-	case dstTypeNames[r.Type] == "" && len(r.Data) > 0:
+	case (dstTypeNames[r.Type] == "" || isSymbolRecord(r.Type) || r.Type == DSTSourceFile || r.Type == DSTLineNumbers) && len(r.Data) > 0:
 		fmt.Fprintf(&b, ": % x", r.Data)
 	}
 

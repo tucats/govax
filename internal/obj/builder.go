@@ -62,13 +62,25 @@ const (
 	tirFill = 461
 )
 
-// chunk is a run of GSD subrecords, or of TIR (or TBT) commands, that
-// Build packs into records of type typ, starting a new record at the
-// chunk's start. An empty chunk of type 0 is a Break.
+// chunk is a run of GSD subrecords, or of TIR (or TBT or DBG) commands,
+// that Build packs into records of type typ, starting a new record at the
+// chunk's start. An empty chunk of type 0 is a Break. A chunk of
+// records alone (typ 0) holds records Insert added where no record was
+// being filled: they go out as they are.
 type chunk struct {
 	typ      RecordType
 	subs     []Subrecord
 	commands []Command
+	// inserts are records Insert put among the chunk's content.
+	inserts []insertion
+	records []Record
+}
+
+// insertion is records Insert added while a chunk was being filled: at
+// is how many of its commands (or subrecords) came before them.
+type insertion struct {
+	at      int
+	records []Record
 }
 
 // current returns the chunk content of type typ goes into, starting a new
@@ -136,6 +148,49 @@ func (b *Builder) Traceback(recs ...DSTRecord) error {
 	b.chunks = append(b.chunks, chunk{typ: RecTBT, commands: cmds}, chunk{})
 
 	return nil
+}
+
+// Debug adds debugger records holding recs, a module's symbol records:
+// DBG records of their own, which the content added next doesn't join,
+// packed as TIR records are. Real MACRO writes them after the TBT record
+// of routine begin records.
+func (b *Builder) Debug(recs ...DSTRecord) error {
+	cmds, err := EncodeDST(recs)
+	if err != nil {
+		return err
+	}
+
+	b.flushImmediate()
+	b.chunks = append(b.chunks, chunk{typ: RecDBG, commands: cmds}, chunk{})
+
+	return nil
+}
+
+// Insert puts finished records (a LineTable's) into the module where the
+// content added so far ends, as real MACRO writes a record it has filled
+// while it fills another: ahead of the record being filled then (the one
+// the content added next goes into), after the records already full.
+func (b *Builder) Insert(recs ...Record) {
+	if len(recs) == 0 {
+		return
+	}
+
+	b.flushImmediate()
+
+	if n := len(b.chunks); n > 0 && b.chunks[n-1].typ != 0 {
+		c := &b.chunks[n-1]
+
+		at := len(c.commands)
+		if c.typ == RecGSD {
+			at = len(c.subs)
+		}
+
+		c.inserts = append(c.inserts, insertion{at: at, records: recs})
+
+		return
+	}
+
+	b.chunks = append(b.chunks, chunk{records: recs})
 }
 
 // SetLocation points the linker's location counter at an offset in a
@@ -224,6 +279,12 @@ func (b *Builder) Build() (*Module, error) {
 	for _, c := range b.chunks {
 		hasGSD = hasGSD || len(c.subs) > 0
 
+		if len(c.records) > 0 {
+			m.Records = append(m.Records, c.records...)
+
+			continue
+		}
+
 		records, err := packChunk(c, limit)
 		if err != nil {
 			return nil, err
@@ -253,7 +314,9 @@ func (b *Builder) Build() (*Module, error) {
 // VAX MACRO does: each record is filled to gsdFill or tirFill bytes (see
 // their comment), and never past limit. Consecutive STORE IMMEDIATE
 // commands are one run of data, cut into pieces of at most MaxImmediate
-// bytes where a record or a piece ends.
+// bytes where a record or a piece ends. Records Insert put among the
+// chunk's content go ahead of the record the content after them goes
+// into, or, at the chunk's end, ahead of its last record.
 func packChunk(c chunk, limit int) ([]Record, error) {
 	var (
 		out  []Record
@@ -267,6 +330,29 @@ func packChunk(c chunk, limit int) ([]Record, error) {
 	fill := tirFill
 	if gsdChunk {
 		fill = gsdFill
+	}
+
+	// pending are inserted records waiting for the next content: they go
+	// ahead of the record it goes into, out's last once it's placed.
+	var pending []Record
+
+	place := func() {
+		if len(pending) == 0 {
+			return
+		}
+
+		at := len(out) - 1
+		out = append(out[:at], append(append([]Record(nil), pending...), out[at:]...)...)
+		pending = nil
+	}
+
+	// inserted moves the insertions at index i of the content to pending.
+	nextInsert := 0
+	inserted := func(i int) {
+		for nextInsert < len(c.inserts) && c.inserts[nextInsert].at <= i {
+			pending = append(pending, c.inserts[nextInsert].records...)
+			nextInsert++
+		}
 	}
 
 	start := func() {
@@ -290,12 +376,16 @@ func packChunk(c chunk, limit int) ([]Record, error) {
 			start()
 		}
 
+		place()
+
 		size += n
 
 		return nil
 	}
 
-	for _, s := range c.subs {
+	for i, s := range c.subs {
+		inserted(i)
+
 		enc, err := encodeGSDEntry(nil, s)
 		if err != nil {
 			return nil, err
@@ -309,15 +399,26 @@ func packChunk(c chunk, limit int) ([]Record, error) {
 	}
 
 	for i := 0; i < len(c.commands); i++ {
+		inserted(i)
+
 		cmd := c.commands[i]
 
 		if cmd.Op == OpStoreImmediate {
 			// The whole run of immediate data, cut to fill records.
+			// cuts are where in it each later command of the run
+			// starts, for an insertion there.
 			data := append([]byte(nil), cmd.Data...)
+
+			var cuts []int
+
 			for i+1 < len(c.commands) && c.commands[i+1].Op == OpStoreImmediate {
 				i++
+				cuts = append(cuts, len(data))
 				data = append(data, c.commands[i].Data...)
 			}
+
+			first := i - len(cuts)
+			done := 0
 
 			for len(data) > 0 {
 				if len(out) == 0 || size >= fill {
@@ -331,9 +432,22 @@ func packChunk(c chunk, limit int) ([]Record, error) {
 					n = min(len(data), MaxImmediate, fill-size-1)
 				}
 
+				// An insertion inside the run goes ahead of the
+				// record the byte after it is in: this piece's, if
+				// the byte is in it. The piece isn't cut there:
+				// real MACRO's run of data goes on across it.
+				for k, at := range cuts {
+					if at >= done && at < done+n {
+						inserted(first + k + 1)
+					}
+				}
+
+				place()
+
 				tir.Commands = append(tir.Commands, Command{Op: OpStoreImmediate, Data: data[:n]})
 				size += 1 + n
 				data = data[n:]
+				done += n
 			}
 
 			continue
@@ -349,6 +463,14 @@ func packChunk(c chunk, limit int) ([]Record, error) {
 		}
 
 		tir.Commands = append(tir.Commands, cmd)
+	}
+
+	inserted(len(c.commands) + len(c.subs))
+
+	if len(out) > 0 {
+		place()
+	} else {
+		out = append(out, pending...)
 	}
 
 	return out, nil
