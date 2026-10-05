@@ -1015,3 +1015,60 @@ does the same; `XFC$CONSOLE_CMD` reaches the console grammar during a
 session; DEBUG with no debugger installed; and the whole thing through
 `cmd/govax`'s `run`. `go build`, `go vet`, `go test ./...`, and
 golangci-lint are clean.
+
+### 2026-10-05 — Subtask 4: run control moves to the debugger
+
+The run loop, the breakpoint lists, the step modes, and the stop messages
+now live in `internal/debugger` (`runcontrol.go`, `step.go`,
+`instbreak.go`, `faultbreak.go`); `internal/console` keeps the VMS side.
+
+- **Who owns what.** `Debugger` holds `Breakpoints`,
+  `InstructionBreakpoints`, and `StepMode`; fault breakpoints are still
+  armed on `cpu.Engine` (they trip inside `Engine.Step`) but are set,
+  cleared, and shown through the debugger. `Console.Execute`, `Call`, and
+  `Step` are now thin: with a debugger installed they hand the run to
+  `Debugger.Start` with an `Activation` (`ActivateGo`, `ActivateCall`,
+  `ActivateStep`); a bare `Console` (no debugger) runs GO and CALL to the
+  end with no breakpoints (`runPlain`), and refuses STEP and CALL/STEP.
+  `RUN`'s IMAGE$INIT driver and the CHF's condition handlers still call
+  `Console.Call`, so they go through the debugger too (bug 1 stays fixed).
+- **What the console exports** (`export.go`, one file as planned):
+  `RequireInit`, `LocationText`, `TraceStep`, `ExceptionName`,
+  `ReportStop` (every non-debugger way a run ends: HALT, limits, a CALL's
+  return, a CHF exception), `EvalWhole`, and `ParseCall` (CALL's routine
+  and argument list, shared by both grammars).
+- **The console's breakpoint commands** (`SET/CLEAR/SHOW BREAKPOINT`,
+  `SET STEP`, `SHOW STEP_MODE`) stay in the console grammar for now, but
+  reach the debugger's state through the `console.Eventpoints` interface
+  (embedded in `console.Debugger`); with no debugger they say
+  `%DEBUG-E-NOTAVAILABLE`. Subtasks 6 and 7 give the debugger its own
+  `SET BREAK` and `SET STEP`, and this interface goes away.
+- **Session lifetime (Decision 2).** `Debugger.Start` classifies each run
+  as ended (HALT, CALL return, a govax limit, a CHF-reported exception) or
+  stopped (breakpoint, completed STEP, a fault breakpoint, Ctrl-C). A stop
+  opens the session (`DBG>`); an end opens none, so `go exe$initialize` in
+  `vax.init` and any GO that halts return to `VAX>`. A session already
+  open stays open however the run ends. A run started inside another (a
+  condition handler) doesn't decide this; only the outermost does. A
+  `STEP` at the console always stops, so it opens a session.
+- **`debug.dcl`** gained `GO` (`EXECUTE`, `G`), `CALL`, and `STEP` (`ST`,
+  `S`), same qualifiers as the console's; `debug.help` has their topics.
+- **Known limit until subtask 6 and later:** at `DBG>` only the commands
+  above, `EXIT`/`QUIT`, `HELP`, and `@` exist. `SET BREAK`, `EXAMINE`,
+  `SHOW CALLS` and the rest still live in the console grammar, so after a
+  stop one types `EXIT` to reach them, and `GO` from the console continues
+  as before. (The moved tests send those through
+  `Dispatcher.DispatchConsole`.)
+- **Tests.** `step_test`, `instbreak_test`, `faultbreak_test`,
+  `dbgstep_test`, `runcontrol_test`, the break/step parts of
+  `execute_test`/`dispatch_test`/`set_test`/`misc_test` moved to
+  `internal/debugger` (package `debugger_test`, helpers in
+  `helpers_test.go`), changed only where they used console-private names.
+  New `session_test.go`: GO that halts returns to `VAX>`; GO that breaks
+  gives `DBG>` and the debugger's own GO continues it; STEP at `DBG>` and
+  at the console; `CALL/STEP`; `CALL` with arguments at `DBG>`; Ctrl-C
+  through `Engine.Attention`; breakpoint commands without a debugger.
+  `internal/console`'s tests that only use `RUN/STEP` to land in an image
+  use `stepdebugger_test.go`, a stand-in that takes one step (the real
+  debugger imports the console, so the tests can't use it).
+- `go build`, `go vet`, `go test ./...`, and golangci-lint are clean.

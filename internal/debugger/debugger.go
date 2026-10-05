@@ -5,6 +5,8 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/dcl"
+	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // Prompt is what the front end shows while a debugger session is active,
@@ -25,6 +27,28 @@ type Debugger struct {
 
 	// Dispatcher parses and runs the debugger's commands.
 	Dispatcher *Dispatcher
+
+	// Breakpoints is the list of address breakpoints, user-set and the
+	// one-shot ones a STEP arms for itself (runcontrol.go).
+	Breakpoints []*Breakpoint
+
+	// InstructionBreakpoints holds every opcode currently flagged to break
+	// on execution — SET BREAK/INSTRUCTION, the Go equivalent of vax.c's
+	// own instruction[n].debugdata & OP_DBG_BREAK flag. Kept separate from
+	// Breakpoints because the C source itself never folds this into its
+	// breakpoint_list either (instbreak.go).
+	InstructionBreakpoints map[*cpu.Instruction]bool
+
+	// StepMode is STEP's default mode (SET STEP, SHOW STEP_MODE), the Go
+	// equivalent of vax.console.stepmode. Its zero value, StepInto, is
+	// initialization.c's own startup default.
+	StepMode StepMode
+
+	// running counts the runs in progress. It is more than one when a run
+	// starts another from inside itself: the console's condition handling
+	// calls a VMS condition handler while the faulting program's run is
+	// still going. Only the outermost run opens or closes the session.
+	running int
 
 	// active is true while a session is in progress, which is whether
 	// the prompt is "DBG> " and command lines come here.
@@ -54,14 +78,63 @@ func Install(c *console.Console, g *dcl.Grammar, help *console.Help) *Debugger {
 // Active reports whether a session is in progress.
 func (d *Debugger) Active() bool { return d.active }
 
-// Start begins a session, as the console's DEBUG command asks. With
-// nothing running there is no state to set up yet: the session is just
-// the DBG> prompt on the machine as it stands. (The other ways in are
-// added with the commands that need them, in later subtasks.)
+// Start begins a session, or runs what the activation names under the
+// debugger (docs/PHASE-42.md, Decision 2).
+//
+//   - ActivateAttach just opens the session: the DBG> prompt on the
+//     machine as it stands.
+//   - GO, CALL, and STEP run the program. A run the debugger *stopped* (a
+//     breakpoint, a completed STEP, Ctrl-C) opens a session if there was
+//     none, and the DBG> prompt appears. A run that *ended* (a HALT, the
+//     CALLed routine's return) leaves no session behind if it opened none,
+//     so GO at the console that halts returns to VAX>. A session that was
+//     open when the run started stays open either way, until EXIT.
 func (d *Debugger) Start(a console.Activation) error {
-	d.active = true
+	if a.Kind == console.ActivateAttach {
+		d.active = true
 
-	return nil
+		return nil
+	}
+
+	nested := d.running > 0
+	d.running++
+
+	defer func() { d.running-- }()
+
+	var (
+		outcome runOutcome
+		err     error
+	)
+
+	switch a.Kind {
+	case console.ActivateGo:
+		outcome, err = d.goRun(a.Addr)
+
+	case console.ActivateCall:
+		outcome, err = d.callRun(*a.Addr, a.Step, a.Args)
+
+	case console.ActivateStep:
+		mode := d.StepMode
+
+		if a.StepMode != "" {
+			var ok bool
+
+			if mode, ok = parseStepModeWord(a.StepMode); !ok {
+				return vmserrors.New(vmserrors.CLI_BADQUALIFIER, a.StepMode)
+			}
+		}
+
+		outcome, err = d.stepRun(a.Addr, mode)
+	}
+
+	// A run started inside another one (a condition handler) is a
+	// subroutine of that run; only the outermost one decides whether the
+	// session opens.
+	if !nested && outcome == runStopped && err == nil {
+		d.active = true
+	}
+
+	return err
 }
 
 // Dispatch parses and runs one line of debugger command, as the console's

@@ -239,47 +239,6 @@ func symbolKindLabel(s *Symbol) string {
 	return kind
 }
 
-// ShowBreakpoints prints every active breakpoint, matching SHOW
-// BREAKPOINTS.
-func (c *Console) ShowBreakpoints() error {
-	if err := c.requireInit(); err != nil {
-		return err
-	}
-
-	faults := c.Engine.FaultBreakpoints()
-
-	if len(c.Breakpoints) == 0 && len(faults) == 0 {
-		c.Printf("No breakpoints set\n")
-
-		return nil
-	}
-
-	for _, bp := range c.Breakpoints {
-		tag := ""
-
-		switch {
-		case bp.Step:
-			tag = " <step>"
-
-		case bp.Temporary:
-			tag = " <temporary>"
-		}
-
-		c.Printf("Breakpoint at %08X%s\n", bp.Addr, tag)
-	}
-
-	// Fault-kind breakpoints are a separate list from Console.Breakpoints
-	// (see execute.go's BreakKind doc comment on why), but console_show.c's
-	// own SHOW BREAK prints both kinds together in one listing -- matched
-	// here by simply printing this second group right after the first,
-	// each entry marked 'F' the way that C source's own print loop does.
-	for _, code := range faults {
-		c.Printf("F Breakpoint on fault %02X %s\n", uint8(code), exceptionName(code))
-	}
-
-	return nil
-}
-
 // ShowRadix prints the console's current default radix, matching SHOW
 // RADIX.
 func (c *Console) ShowRadix() error {

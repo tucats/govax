@@ -51,20 +51,6 @@ type Console struct {
 	// and docs/PHASE-17.md sub-phases 6-7, docs/PHASE-18.md.
 	Trace bool
 
-	// StepMode is STEP's default mode (SET STEP, SHOW STEP_MODE) — the Go
-	// equivalent of vax.console.stepmode, initialized to StepInto (its zero
-	// value) matching initialization.c's own startup default. See step.go.
-	StepMode StepMode
-
-	Breakpoints []*Breakpoint
-
-	// InstructionBreakpoints holds every opcode currently flagged to break
-	// on execution — SET BREAK/INSTRUCTION, the Go equivalent of vax.c's own
-	// instruction[n].debugdata & OP_DBG_BREAK flag. Kept entirely separate
-	// from Breakpoints/BreakKind because the C source itself never folds
-	// this into its breakpoint_list either — see instbreak.go.
-	InstructionBreakpoints map[*cpu.Instruction]bool
-
 	VMInitValid bool // set by VMINIT (vminit.go); cleared by INIT/ZERO
 
 	// Regions holds the P0/P1/S0 region bookkeeping VMInit computes (index

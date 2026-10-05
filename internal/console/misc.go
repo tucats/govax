@@ -315,29 +315,3 @@ func (c *Console) ClearAllInterrupts() error {
 	return nil
 }
 
-// ClearBreakpoint implements CLEAR BREAKPOINT: a specific address, or
-// every breakpoint (CLEAR BREAKPOINT/ALL) — matching console_clear.c's
-// clear_breakpoint case for address breakpoints. Its /FAULT sub-form isn't
-// implemented, since fault breakpoints themselves aren't (see execute.go's
-// BreakKind doc comment); /INSTRUCTION is implemented, but as an entirely
-// separate command path (its own DCL syntax, dispatched straight to
-// RemoveInstructionBreakpoint/ClearAllInstructionBreakpoints in
-// instbreak.go) rather than through this function — matching the C
-// source's own instruction[].debugdata mechanism, never part of
-// clear_breakpoint's address-oriented breakpoint_list walk either. See
-// docs/PHASE-18.md.
-func (c *Console) ClearBreakpoint(addr uint32, all bool) error {
-	if err := c.requireInit(); err != nil {
-		return err
-	}
-
-	if all {
-		c.ClearAllBreakpoints()
-
-		return nil
-	}
-
-	c.RemoveBreakpoint(addr)
-
-	return nil
-}

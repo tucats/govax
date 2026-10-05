@@ -1,9 +1,11 @@
-package console
+package debugger_test
 
 import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/debugger"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -12,7 +14,7 @@ import (
 // (empty entry mask, CALLS a nested procedure at 0x300, then RET) and the
 // nested procedure at 0x300 (empty entry mask, RET immediately). The CALLS
 // instruction occupies 0x202-0x208 (7 bytes); its own RET sits at 0x209.
-func loadCallProgram(t *testing.T, c *Console) {
+func loadCallProgram(t *testing.T, c *console.Console) {
 	t.Helper()
 
 	loadProgram(t, c, 0x200,
@@ -29,7 +31,7 @@ func TestStepOver_runsCallToCompletion(t *testing.T) {
 	loadCallProgram(t, c)
 
 	addr := uint32(0x202) // the CALLS instruction itself
-	if err := c.Step(&addr, StepOver); err != nil {
+	if err := c.Step(&addr, "OVER"); err != nil {
 		t.Fatalf("Step/OVER: %v", err)
 	}
 
@@ -59,7 +61,7 @@ func TestStepOver_silentInsideCalledRoutine(t *testing.T) {
 	c.Trace = true
 
 	addr := uint32(0x202)
-	if err := c.Step(&addr, StepOver); err != nil {
+	if err := c.Step(&addr, "OVER"); err != nil {
 		t.Fatalf("Step/OVER: %v", err)
 	}
 
@@ -75,7 +77,7 @@ func TestStepOver_ordinaryInstructionActsLikeStepInto(t *testing.T) {
 	loadProgram(t, c, 0x200, opNop, opNop)
 
 	addr := uint32(0x200)
-	if err := c.Step(&addr, StepOver); err != nil {
+	if err := c.Step(&addr, "OVER"); err != nil {
 		t.Fatalf("Step/OVER: %v", err)
 	}
 
@@ -105,7 +107,7 @@ func TestStepReturn_runsUntilCallerResumes(t *testing.T) {
 		t.Fatalf("PC after CALLS = %#x, want 0x302 (inside the nested procedure)", got)
 	}
 
-	if err := c.Step(nil, StepReturn); err != nil {
+	if err := c.Step(nil, "RETURN"); err != nil {
 		t.Fatalf("Step/RETURN: %v", err)
 	}
 
@@ -123,7 +125,7 @@ func TestStepReturn_noFramesReportsError(t *testing.T) {
 	loadProgram(t, c, 0x200, opNop)
 
 	addr := uint32(0x200)
-	if err := c.Step(&addr, StepReturn); err == nil {
+	if err := c.Step(&addr, "RETURN"); err == nil {
 		t.Fatal("expected an error with no call frame established (FP/AP both zero)")
 	}
 }
@@ -132,10 +134,10 @@ func TestStep_respectsBreakpointHitDuringStepOver(t *testing.T) {
 	c, buf := newTestConsole(t)
 	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
 	loadCallProgram(t, c)
-	c.AddBreakpoint(0x302) // a real, permanent breakpoint at the callee's entry
+	dbgOf(c).AddBreakpoint(0x302) // a real, permanent breakpoint at the callee's entry
 
 	addr := uint32(0x202)
-	if err := c.Step(&addr, StepOver); err != nil {
+	if err := c.Step(&addr, "OVER"); err != nil {
 		t.Fatalf("Step/OVER: %v", err)
 	}
 
@@ -156,38 +158,40 @@ func TestStep_respectsBreakpointHitDuringStepOver(t *testing.T) {
 func TestSetStepMode_andShowStepMode(t *testing.T) {
 	c, buf := newTestConsole(t)
 
-	if c.StepMode != StepInto {
-		t.Errorf("StepMode default = %v, want StepInto", c.StepMode)
+	db := dbgOf(c)
+
+	if db.StepMode != debugger.StepInto {
+		t.Errorf("StepMode default = %v, want INTO", db.StepMode)
 	}
 
 	for _, tc := range []struct {
 		word string
-		want StepMode
+		want debugger.StepMode
 	}{
-		{"OVER", StepOver},
-		{"/OVER", StepOver},
-		{"into", StepInto},
-		{"/RETURN", StepReturn},
-		{"RET", StepReturn},
+		{"OVER", debugger.StepOver},
+		{"/OVER", debugger.StepOver},
+		{"into", debugger.StepInto},
+		{"/RETURN", debugger.StepReturn},
+		{"RET", debugger.StepReturn},
 	} {
-		if err := c.SetStepMode(tc.word); err != nil {
+		if err := db.SetStepMode(tc.word); err != nil {
 			t.Fatalf("SetStepMode(%q): %v", tc.word, err)
 		}
 
-		if c.StepMode != tc.want {
-			t.Errorf("SetStepMode(%q): StepMode = %v, want %v", tc.word, c.StepMode, tc.want)
+		if db.StepMode != tc.want {
+			t.Errorf("SetStepMode(%q): StepMode = %v, want %v", tc.word, db.StepMode, tc.want)
 		}
 	}
 
-	if err := c.SetStepMode("BOGUS"); err == nil {
+	if err := db.SetStepMode("BOGUS"); err == nil {
 		t.Error("expected an error for an unrecognized SET STEP mode")
 	}
 
 	buf.Reset()
-	
-	c.StepMode = StepOver
 
-	if err := c.ShowStepMode(); err != nil {
+	db.StepMode = debugger.StepOver
+
+	if err := db.ShowStepMode(); err != nil {
 		t.Fatalf("ShowStepMode: %v", err)
 	}
 
@@ -201,25 +205,25 @@ func TestDispatch_stepQualifiers(t *testing.T) {
 	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
 	loadCallProgram(t, c)
 
-	if err := d.Dispatch("SET STEP OVER"); err != nil {
+	if err := d.DispatchConsole("SET STEP OVER"); err != nil {
 		t.Fatalf("Dispatch(SET STEP OVER): %v", err)
 	}
 
-	if c.StepMode != StepOver {
-		t.Fatalf("StepMode = %v, want StepOver", c.StepMode)
+	if dbgOf(c).StepMode != debugger.StepOver {
+		t.Fatalf("StepMode = %v, want OVER", dbgOf(c).StepMode)
 	}
 
-	if err := d.Dispatch("SHOW STEP_MODE"); err != nil {
+	if err := d.DispatchConsole("SHOW STEP_MODE"); err != nil {
 		t.Fatalf("Dispatch(SHOW STEP_MODE): %v", err)
 	}
 
 	// A bare STEP now defaults to OVER (per the SET STEP above) and should
 	// run the CALLS at 0x202 to completion.
-	if err := d.Dispatch("DEP PC = 202"); err != nil {
+	if err := d.DispatchConsole("DEP PC = 202"); err != nil {
 		t.Fatalf("Dispatch(DEPOSIT PC): %v", err)
 	}
 
-	if err := d.Dispatch("STEP"); err != nil {
+	if err := d.DispatchConsole("STEP"); err != nil {
 		t.Fatalf("Dispatch(STEP): %v", err)
 	}
 
@@ -228,11 +232,11 @@ func TestDispatch_stepQualifiers(t *testing.T) {
 	}
 
 	// An explicit /INTO overrides the OVER default for one invocation.
-	if err := d.Dispatch("DEP PC = 202"); err != nil {
+	if err := d.DispatchConsole("DEP PC = 202"); err != nil {
 		t.Fatalf("Dispatch(DEPOSIT PC): %v", err)
 	}
 
-	if err := d.Dispatch("STEP/INTO"); err != nil {
+	if err := d.DispatchConsole("STEP/INTO"); err != nil {
 		t.Fatalf("Dispatch(STEP/INTO): %v", err)
 	}
 

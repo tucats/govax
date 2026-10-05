@@ -508,30 +508,6 @@ func TestShowSymbols(t *testing.T) {
 	}
 }
 
-func TestShowBreakpoints(t *testing.T) {
-	c, buf := newTestConsole(t)
-	buf.Reset()
-
-	if err := c.ShowBreakpoints(); err != nil {
-		t.Fatalf("ShowBreakpoints: %v", err)
-	}
-
-	if !strings.Contains(buf.String(), "No breakpoints") {
-		t.Errorf("output = %q, want a no-breakpoints message", buf.String())
-	}
-
-	c.AddBreakpoint(0x300)
-	buf.Reset()
-
-	if err := c.ShowBreakpoints(); err != nil {
-		t.Fatalf("ShowBreakpoints: %v", err)
-	}
-
-	if !strings.Contains(buf.String(), "00000300") {
-		t.Errorf("output = %q, want it to contain the breakpoint address", buf.String())
-	}
-}
-
 func TestShowRadix(t *testing.T) {
 	c, buf := newTestConsole(t)
 	buf.Reset()

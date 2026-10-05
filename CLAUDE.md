@@ -123,9 +123,12 @@ expect adjustment as phases land):
   `console.Debugger` interface (`debugger.go`); `cmd/govax` installs it.
   The console's `DEBUG` command starts a session, and while one is active
   `Dispatcher.Dispatch` routes lines to it (`DispatchConsole` is the
-  console's own, for `XFC$CONSOLE_CMD`). The run-control and the
-  EXAMINE/SET/SHOW commands still live in the console until the later
-  subtasks move them. `internal/console/consoletest` is its test support.
+  console's own, for `XFC$CONSOLE_CMD`). Run control is the debugger's
+  since subtask 4 (`runcontrol.go`, `step.go`, `instbreak.go`,
+  `faultbreak.go`; `Console.Execute`/`Call`/`Step` hand runs to
+  `Debugger.Start`, and `console/export.go` is what it reaches back
+  through). The EXAMINE/SET/SHOW commands still live in the console
+  until the later subtasks move them. `internal/console/consoletest` is its test support.
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,
   and LINK: `Symbols` (every symbolic constant, one table; `symbols.go` says

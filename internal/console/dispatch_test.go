@@ -110,28 +110,6 @@ func TestDispatch_depositAndExamine(t *testing.T) {
 	}
 }
 
-func TestDispatch_stepAndGo(t *testing.T) {
-	d, c := newTestDispatcher(t)
-	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
-	loadProgram(t, c, 0x200, opNop, opNop, opHalt)
-
-	if err := d.Dispatch("STEP 200"); err != nil {
-		t.Fatalf("Dispatch(STEP): %v", err)
-	}
-
-	if c.CPU.GPR(vax.PC) != 0x201 {
-		t.Errorf("PC after STEP = %#x, want 0x201", c.CPU.GPR(vax.PC))
-	}
-
-	if err := d.Dispatch("GO"); err != nil {
-		t.Fatalf("Dispatch(GO): %v", err)
-	}
-
-	if c.CPU.GPR(vax.PC) != 0x203 {
-		t.Errorf("PC after GO = %#x, want 0x203", c.CPU.GPR(vax.PC))
-	}
-}
-
 // TestDispatch_runActivatesImage checks that RUN (and its /NOEXECUTE
 // qualifier) reach Console.Run -- real VMS image activation (Phase 13),
 // not plain CPU execution (that's EXEC/GO/G, see TestDispatch_stepAndGo).
@@ -238,74 +216,6 @@ func TestDispatch_callWithArgumentList(t *testing.T) {
 	}
 }
 
-// TestDispatch_callStepQualifier checks CALL/STEP is accepted (parsed and
-// dispatched without error) -- console_call's own /STEP|/BREAK|/DEBUG
-// qualifier, matching RUN's identical convention.
-func TestDispatch_callStepQualifier(t *testing.T) {
-	c := newRunnableConsole(t)
-	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
-
-	if err := d.Dispatch(`ASM "` + asmFixturePath(t, "xor.asm") + `"`); err != nil {
-		t.Fatalf("Dispatch(ASM): %v", err)
-	}
-
-	if err := d.Dispatch("CALL/STEP TEST"); err != nil {
-		t.Fatalf("Dispatch(CALL/STEP): %v", err)
-	}
-}
-
-// TestDispatch_callStepStopsAfterOneInstruction confirms CALL/STEP executes
-// only the entered procedure's first instruction and hands control back to
-// the console -- console_exec.c's console_call delegates straight to
-// console_step (a single instruction) rather than running to completion, so
-// the rest must be walked with explicit STEP commands. A prior version of
-// Console.Call instead looped through every instruction internally, only
-// printing "Stepped to" without ever actually stopping.
-func TestDispatch_callStepStopsAfterOneInstruction(t *testing.T) {
-	c := newRunnableConsole(t)
-	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
-
-	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
-
-	src := "\t.entry\tdbltest, ^m<>\n\tmovl\t4(ap), r0\n\taddl2\tr0, r0\n\tret\n\t.end\n"
-	path := filepath.Join(t.TempDir(), "dbl_test.asm")
-
-	if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-
-	if err := d.Dispatch(`ASM "` + path + `"`); err != nil {
-		t.Fatalf("Dispatch(ASM): %v", err)
-	}
-
-	if err := d.Dispatch("CALL/STEP DBLTEST(^D21)"); err != nil {
-		t.Fatalf("Dispatch(CALL/STEP): %v", err)
-	}
-
-	// Only the MOVL has executed: R0 holds the argument, not yet doubled.
-	if got := c.CPU.GPR(vax.R0); got != 21 {
-		t.Errorf("R0 after CALL/STEP = %d, want 21 (only the first instruction should have run)", got)
-	}
-
-	// STEP continues past the ADDL2 ...
-	if err := d.Dispatch("STEP"); err != nil {
-		t.Fatalf("Dispatch(STEP) [ADDL2]: %v", err)
-	}
-
-	if got := c.CPU.GPR(vax.R0); got != 42 {
-		t.Errorf("R0 after STEP = %d, want 42", got)
-	}
-
-	// ... and a further STEP executes the RET, cleanly returning control to
-	// the console (no error) rather than erroring on the internal
-	// console-call-completion signal.
-	if err := d.Dispatch("STEP"); err != nil {
-		t.Fatalf("Dispatch(STEP) [RET]: %v", err)
-	}
-}
-
 func TestDispatch_showViaDCL(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 
@@ -324,19 +234,6 @@ func TestDispatch_showRegisterShortcut(t *testing.T) {
 
 	if err := d.Dispatch("SHOW R2"); err != nil {
 		t.Fatalf("Dispatch(SHOW R2): %v", err)
-	}
-}
-
-func TestDispatch_clearBreakpoint(t *testing.T) {
-	d, c := newTestDispatcher(t)
-	c.AddBreakpoint(0x400)
-
-	if err := d.Dispatch("CLEAR BREAKPOINT/ALL"); err != nil {
-		t.Fatalf("Dispatch(CLEAR BREAKPOINT/ALL): %v", err)
-	}
-
-	if len(c.Breakpoints) != 0 {
-		t.Errorf("expected breakpoints cleared, got %d", len(c.Breakpoints))
 	}
 }
 
@@ -613,18 +510,6 @@ func TestDispatch_setRadixKeywords(t *testing.T) {
 
 	if c.Radix != 8 {
 		t.Errorf("Radix = %d, want 8", c.Radix)
-	}
-}
-
-func TestDispatch_setBreakTemporary(t *testing.T) {
-	d, c := newTestDispatcher(t)
-
-	if err := d.Dispatch("SET BREAK/TEMPORARY 400"); err != nil {
-		t.Fatalf("Dispatch(SET BREAK/TEMPORARY): %v", err)
-	}
-
-	if len(c.Breakpoints) != 1 || !c.Breakpoints[0].Temporary {
-		t.Fatalf("Breakpoints = %+v, want one temporary breakpoint", c.Breakpoints)
 	}
 }
 

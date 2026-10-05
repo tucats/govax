@@ -176,7 +176,7 @@ func TestImageRundown(t *testing.T) {
 	define("SUPERNAME", lnm.Supervisor)
 
 	// Not a RUN image: nothing is run down.
-	if err := c.reportStopReason(cpu.ErrConsoleCallReturned); err != nil {
+	if err := c.ReportStop(cpu.ErrConsoleCallReturned); err != nil {
 		t.Fatal(err)
 	}
 
@@ -186,7 +186,7 @@ func TestImageRundown(t *testing.T) {
 
 	c.imageActive = true
 
-	if err := c.reportStopReason(cpu.ErrConsoleCallReturned); err != nil {
+	if err := c.ReportStop(cpu.ErrConsoleCallReturned); err != nil {
 		t.Fatal(err)
 	}
 

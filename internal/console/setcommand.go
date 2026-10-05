@@ -40,7 +40,12 @@ func (d *Dispatcher) bindSetCommands() {
 			return err
 		}
 
-		c.AddBreakpoint(addr)
+		ep, err := c.eventpoints()
+		if err != nil {
+			return err
+		}
+
+		ep.AddBreakpoint(addr)
 
 		return nil
 	})
@@ -50,18 +55,40 @@ func (d *Dispatcher) bindSetCommands() {
 			return err
 		}
 
-		c.AddTemporaryBreakpoint(addr)
+		ep, err := c.eventpoints()
+		if err != nil {
+			return err
+		}
+
+		ep.AddTemporaryBreakpoint(addr)
 
 		return nil
 	})
 	g.Bind("SET_BREAK_INSTRUCTION", func(id int64, r *dcl.Result) error {
-		return c.AddInstructionBreakpoint(r.String("OPCODE"))
+		ep, err := c.eventpoints()
+		if err != nil {
+			return err
+		}
+
+		return ep.AddInstructionBreakpoint(r.String("OPCODE"))
 	})
 	g.Bind("SET_BREAK_FAULT", func(id int64, r *dcl.Result) error {
-		return c.AddFaultBreakpoint(r.String("FAULT"))
+		ep, err := c.eventpoints()
+		if err != nil {
+			return err
+		}
+
+		return ep.AddFaultBreakpoint(r.String("FAULT"))
 	})
 
-	g.Bind("SET_STEP", func(id int64, r *dcl.Result) error { return c.SetStepMode(r.String("MODE")) })
+	g.Bind("SET_STEP", func(id int64, r *dcl.Result) error {
+		ep, err := c.eventpoints()
+		if err != nil {
+			return err
+		}
+
+		return ep.SetStepMode(r.String("MODE"))
+	})
 
 	// SET TRACE, or SET NOTRACE: the keyword's NO is the parameter's.
 	g.Bind("SET_TRACE", func(id int64, r *dcl.Result) error {

@@ -1,4 +1,4 @@
-package console
+package debugger
 
 import (
 	"strings"
@@ -79,20 +79,20 @@ func parseStepModeWord(word string) (StepMode, bool) {
 // (console_set.c:450-486), matching console_step.c's own reading of
 // Console.StepMode as STEP's default mode when no explicit qualifier is
 // given.
-func (c *Console) SetStepMode(word string) error {
+func (d *Debugger) SetStepMode(word string) error {
 	mode, ok := parseStepModeWord(word)
 	if !ok {
 		return vmserrors.New(vmserrors.CLI_BADQUALIFIER, word)
 	}
 
-	c.StepMode = mode
+	d.StepMode = mode
 
 	return nil
 }
 
 // ShowStepMode implements SHOW STEP_MODE (show_step, console_show.c:765).
-func (c *Console) ShowStepMode() error {
-	c.Printf("Default is STEP/%s\n", c.StepMode)
+func (d *Debugger) ShowStepMode() error {
+	d.Console.Printf("Default is STEP/%s\n", d.StepMode)
 
 	return nil
 }
@@ -103,15 +103,15 @@ func (c *Console) ShowStepMode() error {
 // decode (handler @FP+0, mask @FP+4, saved AP @FP+8, saved FP @FP+12, saved
 // PC @FP+16). Unlike get_return, this never arms a breakpoint before
 // checking for an error — see stepReturn's own doc comment for why.
-func (c *Console) returnAddress() (uint32, error) {
-	fp := c.CPU.GPR(vax.FP)
-	ap := c.CPU.GPR(vax.AP)
+func (d *Debugger) returnAddress() (uint32, error) {
+	fp := d.Console.CPU.GPR(vax.FP)
+	ap := d.Console.CPU.GPR(vax.AP)
 
 	if fp == 0 || ap == 0 {
 		return 0, vmserrors.New(vmserrors.CLI_NOFRAMES)
 	}
 
-	return c.Mem.LoadLongword(c.CPU, fp+16)
+	return d.Console.Mem.LoadLongword(d.Console.CPU, fp+16)
 }
 
 // setStepBreakpoint installs a one-shot address breakpoint used internally
@@ -120,9 +120,9 @@ func (c *Console) returnAddress() (uint32, error) {
 // BREAK_ADDRESS|BREAK_STEP|BREAK_TEMPORARY) calls in its STEP_OVER/
 // STEP_RETURN handling. It returns the breakpoint, for the STEP to remove
 // once its run stops for any reason (endStep).
-func (c *Console) setStepBreakpoint(addr uint32) *Breakpoint {
+func (d *Debugger) setStepBreakpoint(addr uint32) *Breakpoint {
 	bp := &Breakpoint{Kind: BreakAddress, Addr: addr, Temporary: true, Step: true}
-	c.Breakpoints = append(c.Breakpoints, bp)
+	d.Breakpoints = append(d.Breakpoints, bp)
 
 	return bp
 }
@@ -141,20 +141,17 @@ func (c *Console) setStepBreakpoint(addr uint32) *Breakpoint {
 // that: docs/PHASE-42.md's subtask 7 makes STEP/RETURN wait for its
 // frame's RET across other stops, and this then applies to STEP/OVER
 // only.
-func (c *Console) endStep(bp *Breakpoint) {
-	c.removeBreakpointPtr(bp)
+func (d *Debugger) endStep(bp *Breakpoint) {
+	d.removeBreakpointPtr(bp)
 }
 
-// Step implements STEP: starting at the current PC (or startAddr, if
+// stepRun implements STEP: starting at the current PC (or startAddr, if
 // non-nil), single-steps one instruction (StepInto), runs a called routine
 // to completion (StepOver), or runs until the current procedure returns
 // (StepReturn) — matching console_step.c. mode is the qualifier the STEP
-// command itself parsed (or, for a bare STEP with none, Console.StepMode --
-// see commands.go's stepCommand).
-func (c *Console) Step(startAddr *uint32, mode StepMode) error {
-	if err := c.requireInit(); err != nil {
-		return err
-	}
+// command itself parsed (or, for a bare STEP with none, Debugger.StepMode).
+func (d *Debugger) stepRun(startAddr *uint32, mode StepMode) (runOutcome, error) {
+	c := d.Console
 
 	if startAddr != nil {
 		c.CPU.SetGPR(vax.PC, *startAddr)
@@ -164,11 +161,11 @@ func (c *Console) Step(startAddr *uint32, mode StepMode) error {
 
 	switch mode {
 	case StepOver:
-		return c.stepOver()
+		return d.stepOver()
 	case StepReturn:
-		return c.stepReturn()
+		return d.stepReturn()
 	default:
-		return c.stepInto()
+		return d.stepInto()
 	}
 }
 
@@ -177,22 +174,39 @@ func (c *Console) Step(startAddr *uint32, mode StepMode) error {
 // reports where it landed.
 //
 // The default is USER-mode stepping, so we just keep running the CPU loop
-// if we get out of USER mdoe (for example, handling an interrupt). Use the
-// SET DEBUG commadn to turn on USER mode stepping if you need to step into
+// if we get out of USER mode (for example, handling an interrupt). Use the
+// SET DEBUG command to turn on USER mode stepping if you need to step into
 // KERNEL mode, etc.
-func (c *Console) stepInto() error {
-	finish := c.traceStep(c.CPU.GPR(vax.PC), true)
+func (d *Debugger) stepInto() (runOutcome, error) {
+	if outcome, done, err := d.stepOne(); done {
+		return outcome, err
+	}
 
+	d.Console.Printf("Stepped to %s\n", d.Console.LocationText(d.Console.CPU.GPR(vax.PC)))
+
+	return runStopped, nil
+}
+
+// stepOne executes the one instruction at the current PC, traced. It is
+// the first half of both STEP/INTO and STEP/OVER. done is true when the
+// run ended in that instruction (a HALT, a fault, ...), in which case
+// outcome and err are the run's result and the caller returns them as they
+// are.
+func (d *Debugger) stepOne() (outcome runOutcome, done bool, err error) {
+	c := d.Console
+	finish := c.TraceStep(c.CPU.GPR(vax.PC), true)
 	userStep := c.Engine.CPU().DebugEnabled(vax.DebugUserStep)
 
 	for {
-		if err := c.Engine.Step(); err != nil {
-			return c.reportStopReason(err)
+		if stepErr := c.Engine.Step(); stepErr != nil {
+			outcome, err = d.reportStop(stepErr)
+
+			return outcome, true, err
 		}
 
 		// If USER-mode only stepping is enabled and we are not in USER
 		// mode, just keep running. This allows a STEP operation to trace
-		// just USER mode code and ingnores timer interrupts, etc.
+		// just USER mode code and ignores timer interrupts, etc.
 		if userStep && c.Engine.CPU().PSL().CurMod() < 0b11 {
 			continue
 		}
@@ -202,9 +216,7 @@ func (c *Console) stepInto() error {
 
 	finish()
 
-	c.Printf("Stepped to %s\n", c.locationText(c.CPU.GPR(vax.PC)))
-
-	return nil
+	return runStopped, false, nil
 }
 
 // stepOver executes the first instruction unconditionally traced (matching
@@ -218,41 +230,27 @@ func (c *Console) stepInto() error {
 // see docs/DEVIATIONS.md) this port never decodes the call twice — and then
 // runs silently (regardless of Console.Trace, matching vax.c's own
 // silencing of the stepped-over subroutine) until control returns there.
-func (c *Console) stepOver() error {
-	finish := c.traceStep(c.CPU.GPR(vax.PC), true)
-	userStep := c.Engine.CPU().DebugEnabled(vax.DebugUserStep)
-
-	for {
-		if err := c.Engine.Step(); err != nil {
-			return c.reportStopReason(err)
-		}
-
-		// If USER-mode only stepping is enabled and we are not in USER
-		// mode, just keep running. This allows a STEP operation to trace
-		// just USER mode code and ingnores timer interrupts, etc.
-		if userStep && c.Engine.CPU().PSL().CurMod() < 0b11 {
-			continue
-		}
-
-		break
+func (d *Debugger) stepOver() (runOutcome, error) {
+	if outcome, done, err := d.stepOne(); done {
+		return outcome, err
 	}
 
-	finish()
-
+	c := d.Console
 	dec := c.Engine.LastDecoded()
-	if !stepOverInstructions[dec.Instruction.Name] {
-		c.Printf("Stepped to %s\n", c.locationText(c.CPU.GPR(vax.PC)))
 
-		return nil
+	if !stepOverInstructions[dec.Instruction.Name] {
+		c.Printf("Stepped to %s\n", c.LocationText(c.CPU.GPR(vax.PC)))
+
+		return runStopped, nil
 	}
 
-	defer c.endStep(c.setStepBreakpoint(dec.NextPC))
+	defer d.endStep(d.setStepBreakpoint(dec.NextPC))
 
-	return c.runLoop(false, func(uint32) func() { return func() {} })
+	return d.runLoop(false, func(uint32) func() { return func() {} })
 }
 
 // stepReturn arms a one-shot breakpoint at the current procedure's return
-// address before running anything, then runs exactly like Execute (tracing
+// address before running anything, then runs exactly like GO (tracing
 // per Console.Trace throughout, matching vax.c's own STEP_RETURN — unlike
 // STEP_OVER, no local disasm silencing applies to it). Unlike get_return's
 // own C caller (vax.c:536-541, which calls set_break with whatever *Addr
@@ -261,13 +259,15 @@ func (c *Console) stepOver() error {
 // slip (leaving a spurious breakpoint at address 0 behind on error), not an
 // ISA-fidelity question, so fixed directly per CLAUDE.md's bug-fixing
 // policy.
-func (c *Console) stepReturn() error {
-	addr, err := c.returnAddress()
+func (d *Debugger) stepReturn() (runOutcome, error) {
+	addr, err := d.returnAddress()
 	if err != nil {
-		return err
+		return runEnded, err
 	}
 
-	defer c.endStep(c.setStepBreakpoint(addr))
+	defer d.endStep(d.setStepBreakpoint(addr))
 
-	return c.runLoop(true, func(pc uint32) func() { return c.traceStep(pc, false) })
+	c := d.Console
+
+	return d.runLoop(true, func(pc uint32) func() { return c.TraceStep(pc, false) })
 }

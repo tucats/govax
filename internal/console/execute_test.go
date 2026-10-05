@@ -15,7 +15,7 @@ const (
 
 func loadProgram(t *testing.T, c *Console, addr uint32, bytes ...byte) {
 	t.Helper()
-	
+
 	for i, b := range bytes {
 		if err := c.Deposit("", addr+uint32(i), SizeByte, uint32(b)); err != nil {
 			t.Fatalf("Deposit: %v", err)
@@ -104,22 +104,6 @@ func TestExecute_noTraceByDefault(t *testing.T) {
 
 	if strings.Contains(buf.String(), "MOVL") {
 		t.Errorf("output = %q, want no MOVL trace line with Trace off", buf.String())
-	}
-}
-
-func TestStep_alwaysTracesRegardlessOfConsoleTrace(t *testing.T) {
-	c, buf := newTestConsole(t)
-	movR0Program(t, c, 0x200)
-	c.Trace = false
-
-	addr := uint32(0x200)
-	if err := c.Step(&addr, StepInto); err != nil {
-		t.Fatalf("Step: %v", err)
-	}
-
-	out := buf.String()
-	if !strings.Contains(out, "[KSP ") || !strings.Contains(out, "MOVL") {
-		t.Errorf("output = %q, want STEP to trace even though Console.Trace is off", out)
 	}
 }
 
@@ -213,92 +197,6 @@ func TestCall_tracesWhenTraceEnabled(t *testing.T) {
 	}
 }
 
-func TestExecute_stopsAtBreakpoint(t *testing.T) {
-	c, buf := newTestConsole(t)
-	loadProgram(t, c, 0x200, opNop, opNop, opNop, opHalt)
-	c.AddBreakpoint(0x202)
-
-	addr := uint32(0x200)
-	if err := c.Execute(&addr); err != nil {
-		t.Fatalf("Execute: %v", err)
-	}
-
-	if got := c.CPU.GPR(vax.PC); got != 0x202 {
-		t.Errorf("PC at breakpoint = %#x, want 0x202", got)
-	}
-
-	if !strings.Contains(buf.String(), "Break at") {
-		t.Errorf("output = %q, want a break message", buf.String())
-	}
-}
-
-func TestExecute_breakpointAtStartDoesNotStopImmediately(t *testing.T) {
-	c, _ := newTestConsole(t)
-	loadProgram(t, c, 0x200, opNop, opHalt)
-	c.AddBreakpoint(0x200)
-
-	addr := uint32(0x200)
-	if err := c.Execute(&addr); err != nil {
-		t.Fatalf("Execute: %v", err)
-	}
-	// Should run to completion (HALT), not stop immediately at the
-	// breakpoint it started on. PC lands past both instructions (decode
-	// advances PC before a Handler, including HALT's, runs).
-	if got := c.CPU.GPR(vax.PC); got != 0x202 {
-		t.Errorf("PC after halt = %#x, want 0x202", got)
-	}
-}
-
-func TestStep_advancesOneInstruction(t *testing.T) {
-	c, buf := newTestConsole(t)
-	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
-	loadProgram(t, c, 0x200, opNop, opNop)
-
-	addr := uint32(0x200)
-	if err := c.Step(&addr, StepInto); err != nil {
-		t.Fatalf("Step: %v", err)
-	}
-
-	if got := c.CPU.GPR(vax.PC); got != 0x201 {
-		t.Errorf("PC after one step = %#x, want 0x201", got)
-	}
-
-	if !strings.Contains(buf.String(), "Stepped to") {
-		t.Errorf("output = %q, want a step message", buf.String())
-	}
-
-	if err := c.Step(nil, StepInto); err != nil {
-		t.Fatalf("Step: %v", err)
-	}
-
-	if got := c.CPU.GPR(vax.PC); got != 0x202 {
-		t.Errorf("PC after second step = %#x, want 0x202", got)
-	}
-}
-
-func TestBreakpoints_addRemoveClear(t *testing.T) {
-	c, _ := newTestConsole(t)
-	c.AddBreakpoint(0x300)
-	c.AddBreakpoint(0x300) // duplicate, should not double-add
-	c.AddBreakpoint(0x400)
-
-	if len(c.Breakpoints) != 2 {
-		t.Fatalf("len(Breakpoints) = %d, want 2", len(c.Breakpoints))
-	}
-
-	c.RemoveBreakpoint(0x300)
-
-	if len(c.Breakpoints) != 1 || c.breakpointAt(0x400) == nil {
-		t.Errorf("RemoveBreakpoint left unexpected state: %+v", c.Breakpoints)
-	}
-
-	c.ClearAllBreakpoints()
-	
-	if len(c.Breakpoints) != 0 {
-		t.Errorf("ClearAllBreakpoints left %d breakpoints", len(c.Breakpoints))
-	}
-}
-
 // TestExecute_stopsAtInstructionLimit exercises govax's own -instruction-limit
 // flag (docs/PHASE-15.md's sub-phase 2): an infinite loop (NOP; BRB back to
 // itself) must not hang Execute when a limit is configured -- it should stop
@@ -375,25 +273,25 @@ func TestExecute_stopsOnAttention(t *testing.T) {
 	}
 }
 
-// TestReportStopReason_attention is a direct, non-racy unit test of the
-// message reportStopReason prints for ErrAttention, complementing
+func TestExecute_requiresInit(t *testing.T) {
+	c := New(&strings.Builder{})
+	if err := c.Execute(nil); err == nil {
+		t.Error("expected error before Init")
+	}
+}
+
+// TestReportStop_attention is a direct, non-racy unit test of the
+// message ReportStop prints for ErrAttention, complementing
 // TestExecute_stopsOnAttention's own end-to-end (if inherently
 // timing-dependent) coverage above.
 func TestReportStopReason_attention(t *testing.T) {
 	c, buf := newTestConsole(t)
 
-	if err := c.reportStopReason(cpu.ErrAttention); err != nil {
-		t.Fatalf("reportStopReason(ErrAttention) = %v, want nil (a benign, reported stop)", err)
+	if err := c.ReportStop(cpu.ErrAttention); err != nil {
+		t.Fatalf("ReportStop(ErrAttention) = %v, want nil (a benign, reported stop)", err)
 	}
 
 	if !strings.Contains(buf.String(), "ATTENTION") {
 		t.Errorf("output = %q, want an attention/interrupt message", buf.String())
-	}
-}
-
-func TestExecute_requiresInit(t *testing.T) {
-	c := New(&strings.Builder{})
-	if err := c.Execute(nil); err == nil {
-		t.Error("expected error before Init")
 	}
 }

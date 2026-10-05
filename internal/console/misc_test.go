@@ -122,28 +122,6 @@ func TestClearSymbol(t *testing.T) {
 	}
 }
 
-func TestClearBreakpoint(t *testing.T) {
-	c, _ := newTestConsole(t)
-	c.AddBreakpoint(0x100)
-	c.AddBreakpoint(0x200)
-
-	if err := c.ClearBreakpoint(0x100, false); err != nil {
-		t.Fatalf("ClearBreakpoint: %v", err)
-	}
-
-	if len(c.Breakpoints) != 1 {
-		t.Errorf("len(Breakpoints) = %d, want 1", len(c.Breakpoints))
-	}
-
-	if err := c.ClearBreakpoint(0, true); err != nil {
-		t.Fatalf("ClearBreakpoint: %v", err)
-	}
-
-	if len(c.Breakpoints) != 0 {
-		t.Errorf("len(Breakpoints) = %d, want 0", len(c.Breakpoints))
-	}
-}
-
 func TestClearSymbolTemporary(t *testing.T) {
 	c, _ := newTestConsole(t)
 	c.Symbols.SetQualified("PERM", 1, true, false, false)

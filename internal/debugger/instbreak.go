@@ -1,4 +1,4 @@
-package console
+package debugger
 
 import (
 	"fmt"
@@ -39,11 +39,11 @@ func lookupInstruction(name string) *cpu.Instruction {
 // unspecified map iteration order — matching decode_opcode.c's own
 // `for (n = 0; n < 512; n++)` scan order for SHOW BREAK/INSTRUCTION and
 // CLEAR BREAK/INSTRUCTION/ALL.
-func (c *Console) instructionBreakpointsInOrder() []*cpu.Instruction {
+func (d *Debugger) instructionBreakpointsInOrder() []*cpu.Instruction {
 	var out []*cpu.Instruction
 
 	for _, inst := range cpu.Instructions().All() {
-		if c.InstructionBreakpoints[inst] {
+		if d.InstructionBreakpoints[inst] {
 			out = append(out, inst)
 		}
 	}
@@ -70,8 +70,8 @@ func pluralS(n int) string {
 // (CLI_BADOPCODE) rather than a printed message with the command otherwise
 // reporting success — a clear, obvious improvement in error signaling, not
 // an ISA-fidelity question.
-func (c *Console) AddInstructionBreakpoint(name string) error {
-	if err := c.requireInit(); err != nil {
+func (d *Debugger) AddInstructionBreakpoint(name string) error {
+	if err := d.Console.RequireInit(); err != nil {
 		return err
 	}
 
@@ -80,13 +80,13 @@ func (c *Console) AddInstructionBreakpoint(name string) error {
 		return vmserrors.New(vmserrors.CLI_BADOPCODE, strings.TrimSpace(name))
 	}
 
-	if c.InstructionBreakpoints == nil {
-		c.InstructionBreakpoints = make(map[*cpu.Instruction]bool)
+	if d.InstructionBreakpoints == nil {
+		d.InstructionBreakpoints = make(map[*cpu.Instruction]bool)
 	}
 
-	c.InstructionBreakpoints[inst] = true
+	d.InstructionBreakpoints[inst] = true
 
-	c.Printf("Breakpoint set on instruction %s %s\n", opcodeString(inst.Opcode), inst.Name)
+	d.Console.Printf("Breakpoint set on instruction %s %s\n", opcodeString(inst.Opcode), inst.Name)
 
 	return nil
 }
@@ -103,8 +103,8 @@ func (c *Console) AddInstructionBreakpoint(name string) error {
 // ISA-fidelity questions, so this port just does the plainly-intended
 // thing: clear the flag on the Instruction actually found, once, per
 // CLAUDE.md's bug-fixing policy.
-func (c *Console) RemoveInstructionBreakpoint(name string) error {
-	if err := c.requireInit(); err != nil {
+func (d *Debugger) RemoveInstructionBreakpoint(name string) error {
+	if err := d.Console.RequireInit(); err != nil {
 		return err
 	}
 
@@ -113,13 +113,13 @@ func (c *Console) RemoveInstructionBreakpoint(name string) error {
 		return vmserrors.New(vmserrors.CLI_BADOPCODE, strings.TrimSpace(name))
 	}
 
-	if !c.InstructionBreakpoints[inst] {
+	if !d.InstructionBreakpoints[inst] {
 		return nil
 	}
 
-	delete(c.InstructionBreakpoints, inst)
+	delete(d.InstructionBreakpoints, inst)
 
-	c.Printf("Removed breakpoint on instruction %s %s\n", opcodeString(inst.Opcode), inst.Name)
+	d.Console.Printf("Removed breakpoint on instruction %s %s\n", opcodeString(inst.Opcode), inst.Name)
 
 	return nil
 }
@@ -127,25 +127,25 @@ func (c *Console) RemoveInstructionBreakpoint(name string) error {
 // ClearAllInstructionBreakpoints implements CLEAR
 // BREAKPOINT/INSTRUCTION/ALL (console_clear.c's case 553), printing each
 // cleared opcode followed by a count summary, matching the C source.
-func (c *Console) ClearAllInstructionBreakpoints() error {
-	if err := c.requireInit(); err != nil {
+func (d *Debugger) ClearAllInstructionBreakpoints() error {
+	if err := d.Console.RequireInit(); err != nil {
 		return err
 	}
 
-	insts := c.instructionBreakpointsInOrder()
+	insts := d.instructionBreakpointsInOrder()
 	if len(insts) == 0 {
-		c.Printf("No instruction breakpoints were set.\n")
+		d.Console.Printf("No instruction breakpoints were set.\n")
 
 		return nil
 	}
 
 	for _, inst := range insts {
-		c.Printf("    %s %s\n", opcodeString(inst.Opcode), inst.Name)
+		d.Console.Printf("    %s %s\n", opcodeString(inst.Opcode), inst.Name)
 	}
 
-	c.Printf("Cleared %d instruction breakpoint%s\n", len(insts), pluralS(len(insts)))
+	d.Console.Printf("Cleared %d instruction breakpoint%s\n", len(insts), pluralS(len(insts)))
 
-	c.InstructionBreakpoints = nil
+	d.InstructionBreakpoints = nil
 
 	return nil
 }
@@ -153,23 +153,23 @@ func (c *Console) ClearAllInstructionBreakpoints() error {
 // ShowInstructionBreakpoints implements SHOW BREAKPOINTS/INSTRUCTIONS
 // (console_show.c's case 412, show_break_instr), matching its per-opcode
 // listing plus count summary.
-func (c *Console) ShowInstructionBreakpoints() error {
-	if err := c.requireInit(); err != nil {
+func (d *Debugger) ShowInstructionBreakpoints() error {
+	if err := d.Console.RequireInit(); err != nil {
 		return err
 	}
 
-	insts := c.instructionBreakpointsInOrder()
+	insts := d.instructionBreakpointsInOrder()
 	if len(insts) == 0 {
-		c.Printf("No instruction breakpoints set\n")
+		d.Console.Printf("No instruction breakpoints set\n")
 
 		return nil
 	}
 
 	for _, inst := range insts {
-		c.Printf("    %s  %s\n", opcodeString(inst.Opcode), inst.Name)
+		d.Console.Printf("    %s  %s\n", opcodeString(inst.Opcode), inst.Name)
 	}
 
-	c.Printf("%d instruction breakpoint%s set\n", len(insts), pluralS(len(insts)))
+	d.Console.Printf("%d instruction breakpoint%s set\n", len(insts), pluralS(len(insts)))
 
 	return nil
 }
@@ -186,15 +186,15 @@ func (c *Console) ShowInstructionBreakpoints() error {
 // avoiding vax.c's own double-decode-adjacent quirks (see step.go's
 // stepOver doc comment for a related case) for a debugger feature with no
 // ISA-fidelity stakes.
-func (c *Console) instructionBreakpointHit() bool {
-	if len(c.InstructionBreakpoints) == 0 {
+func (d *Debugger) instructionBreakpointHit() bool {
+	if len(d.InstructionBreakpoints) == 0 {
 		return false
 	}
 
-	inst, err := c.Engine.PeekInstruction()
+	inst, err := d.Console.Engine.PeekInstruction()
 	if err != nil || inst == nil {
 		return false
 	}
 
-	return c.InstructionBreakpoints[inst]
+	return d.InstructionBreakpoints[inst]
 }

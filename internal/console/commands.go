@@ -318,32 +318,23 @@ func (d *Dispatcher) optionalAddress(r *dcl.Result, name string) (*uint32, error
 // evalWhole evaluates one $expression parameter's text, which must be
 // one whole expression.
 func (d *Dispatcher) evalWhole(text string) (uint32, error) {
-	v, rest, err := d.Console.Evaluator().Eval(text)
-	if err != nil {
-		return 0, err
-	}
-
-	if extra := strings.TrimSpace(rest); extra != "" {
-		return 0, vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, extra)
-	}
-
-	return v, nil
+	return d.Console.EvalWhole(text)
 }
 
 // stepCommand implements STEP [/INTO|/IN|/INSTRUCTION|/OVER|/RETURN]
-// [address] (console_step.c). With no qualifier, the mode is SET STEP's
-// (Console.StepMode, docs/PHASE-18.md); the address, when given, is where
-// stepping starts.
+// [address] (console_step.c). With no qualifier, the mode is SET STEP's,
+// which the debugger keeps; the address, when given, is where stepping
+// starts.
 func (d *Dispatcher) stepCommand(id int64, r *dcl.Result) error {
-	mode := d.Console.StepMode
+	mode := ""
 
 	switch {
 	case r.Present("INTO"):
-		mode = StepInto
+		mode = "INTO"
 	case r.Present("OVER"):
-		mode = StepOver
+		mode = "OVER"
 	case r.Present("RETURN"):
-		mode = StepReturn
+		mode = "RETURN"
 	}
 
 	addr, err := d.optionalAddress(r, "ADDRESS")
@@ -359,69 +350,12 @@ func (d *Dispatcher) stepCommand(id int64, r *dcl.Result) error {
 // follows the routine directly ("F(1,2)", part of the ROUTINE expression)
 // or after a blank ("F (1,2)", the ARGUMENTS parameter).
 func (d *Dispatcher) callCommand(id int64, r *dcl.Result) error {
-	ev := d.Console.Evaluator()
-
-	addr, list, err := ev.Eval(r.String("ROUTINE"))
+	addr, args, err := d.Console.ParseCall(r.String("ROUTINE"), r.String("ARGUMENTS"))
 	if err != nil {
 		return err
 	}
 
-	list = strings.TrimSpace(list + " " + r.String("ARGUMENTS"))
-
-	var args []uint32
-
-	if list != "" {
-		if !strings.HasPrefix(list, "(") {
-			return vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, list)
-		}
-
-		if args, list, err = d.callArguments(list[1:]); err != nil {
-			return err
-		}
-
-		// Nothing may follow the argument list.
-		if extra := strings.TrimSpace(list); extra != "" {
-			return vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, extra)
-		}
-	}
-
 	return d.Console.Call(addr, r.Present("STEP"), args...)
-}
-
-// callArguments evaluates a CALL argument list, s being what follows its
-// "(": expressions separated by commas, up to the closing ")". It returns
-// the values and what follows the ")".
-func (d *Dispatcher) callArguments(s string) ([]uint32, string, error) {
-	var args []uint32
-
-	ev := d.Console.Evaluator()
-
-	for {
-		s = strings.TrimSpace(s)
-		if strings.HasPrefix(s, ")") {
-			return args, s[1:], nil
-		}
-
-		if s == "" {
-			return nil, "", vmserrors.New(vmserrors.CLI_INCOMPLETEARGS)
-		}
-
-		if len(args) > 0 {
-			if !strings.HasPrefix(s, ",") {
-				return nil, "", vmserrors.New(vmserrors.CLI_NEEDCOMMA)
-			}
-
-			s = s[1:]
-		}
-
-		v, rest, err := ev.Eval(s)
-		if err != nil {
-			return nil, "", err
-		}
-
-		args = append(args, v)
-		s = rest
-	}
 }
 
 // runOptions applies RUN's qualifiers to defaults, whose RunInits is

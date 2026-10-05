@@ -1,9 +1,11 @@
-package console
+package debugger_test
 
 import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vax"
 )
@@ -11,12 +13,12 @@ import (
 func TestInstructionBreakpoints_addRemoveClear(t *testing.T) {
 	c, buf := newTestConsole(t)
 
-	if err := c.AddInstructionBreakpoint("nop"); err != nil { // lower-case: must fold
+	if err := dbgOf(c).AddInstructionBreakpoint("nop"); err != nil { // lower-case: must fold
 		t.Fatalf("AddInstructionBreakpoint: %v", err)
 	}
 
 	nop := cpu.Instructions().ByName("NOP")
-	if !c.InstructionBreakpoints[nop] {
+	if !dbgOf(c).InstructionBreakpoints[nop] {
 		t.Fatalf("InstructionBreakpoints does not contain NOP after Add")
 	}
 
@@ -26,11 +28,11 @@ func TestInstructionBreakpoints_addRemoveClear(t *testing.T) {
 
 	buf.Reset()
 
-	if err := c.RemoveInstructionBreakpoint("NOP"); err != nil {
+	if err := dbgOf(c).RemoveInstructionBreakpoint("NOP"); err != nil {
 		t.Fatalf("RemoveInstructionBreakpoint: %v", err)
 	}
 
-	if c.InstructionBreakpoints[nop] {
+	if dbgOf(c).InstructionBreakpoints[nop] {
 		t.Fatalf("InstructionBreakpoints still contains NOP after Remove")
 	}
 
@@ -42,7 +44,7 @@ func TestInstructionBreakpoints_addRemoveClear(t *testing.T) {
 	// RemoveBreakpoint's own address-breakpoint behavior.
 	buf.Reset()
 
-	if err := c.RemoveInstructionBreakpoint("NOP"); err != nil {
+	if err := dbgOf(c).RemoveInstructionBreakpoint("NOP"); err != nil {
 		t.Fatalf("RemoveInstructionBreakpoint (no-op): %v", err)
 	}
 
@@ -50,22 +52,22 @@ func TestInstructionBreakpoints_addRemoveClear(t *testing.T) {
 		t.Errorf("output = %q, want no output for removing an unset breakpoint", buf.String())
 	}
 
-	if err := c.AddInstructionBreakpoint("HALT"); err != nil {
+	if err := dbgOf(c).AddInstructionBreakpoint("HALT"); err != nil {
 		t.Fatalf("AddInstructionBreakpoint(HALT): %v", err)
 	}
 
-	if err := c.AddInstructionBreakpoint("NOP"); err != nil {
+	if err := dbgOf(c).AddInstructionBreakpoint("NOP"); err != nil {
 		t.Fatalf("AddInstructionBreakpoint(NOP): %v", err)
 	}
 
 	buf.Reset()
 
-	if err := c.ClearAllInstructionBreakpoints(); err != nil {
+	if err := dbgOf(c).ClearAllInstructionBreakpoints(); err != nil {
 		t.Fatalf("ClearAllInstructionBreakpoints: %v", err)
 	}
 
-	if len(c.InstructionBreakpoints) != 0 {
-		t.Errorf("InstructionBreakpoints left %d entries after ClearAll", len(c.InstructionBreakpoints))
+	if len(dbgOf(c).InstructionBreakpoints) != 0 {
+		t.Errorf("InstructionBreakpoints left %d entries after ClearAll", len(dbgOf(c).InstructionBreakpoints))
 	}
 
 	if !strings.Contains(buf.String(), "Cleared 2 instruction breakpoints") {
@@ -76,11 +78,11 @@ func TestInstructionBreakpoints_addRemoveClear(t *testing.T) {
 func TestInstructionBreakpoints_unknownOpcode(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	if err := c.AddInstructionBreakpoint("BOGUSOP"); err == nil {
+	if err := dbgOf(c).AddInstructionBreakpoint("BOGUSOP"); err == nil {
 		t.Error("expected an error for an unrecognized mnemonic")
 	}
 
-	if err := c.RemoveInstructionBreakpoint("BOGUSOP"); err == nil {
+	if err := dbgOf(c).RemoveInstructionBreakpoint("BOGUSOP"); err == nil {
 		t.Error("expected an error for an unrecognized mnemonic")
 	}
 }
@@ -88,7 +90,7 @@ func TestInstructionBreakpoints_unknownOpcode(t *testing.T) {
 func TestShowInstructionBreakpoints_emptyAndSet(t *testing.T) {
 	c, buf := newTestConsole(t)
 
-	if err := c.ShowInstructionBreakpoints(); err != nil {
+	if err := dbgOf(c).ShowInstructionBreakpoints(); err != nil {
 		t.Fatalf("ShowInstructionBreakpoints: %v", err)
 	}
 
@@ -98,13 +100,13 @@ func TestShowInstructionBreakpoints_emptyAndSet(t *testing.T) {
 
 	buf.Reset()
 
-	if err := c.AddInstructionBreakpoint("NOP"); err != nil {
+	if err := dbgOf(c).AddInstructionBreakpoint("NOP"); err != nil {
 		t.Fatalf("AddInstructionBreakpoint: %v", err)
 	}
 
 	buf.Reset()
 
-	if err := c.ShowInstructionBreakpoints(); err != nil {
+	if err := dbgOf(c).ShowInstructionBreakpoints(); err != nil {
 		t.Fatalf("ShowInstructionBreakpoints: %v", err)
 	}
 
@@ -122,7 +124,7 @@ func TestExecute_stopsAtInstructionBreakpoint(t *testing.T) {
 	c, buf := newTestConsole(t)
 	loadProgram(t, c, 0x200, opNop, opNop, opHalt)
 
-	if err := c.AddInstructionBreakpoint("HALT"); err != nil {
+	if err := dbgOf(c).AddInstructionBreakpoint("HALT"); err != nil {
 		t.Fatalf("AddInstructionBreakpoint: %v", err)
 	}
 
@@ -155,10 +157,10 @@ func TestExecute_instructionBreakpointAtStartDoesNotStopImmediately(t *testing.T
 	c, buf := newTestConsole(t)
 	loadProgram(t, c, 0x200, opNop, opNop, opHalt)
 
-	if err := c.AddInstructionBreakpoint("NOP"); err != nil {
+	if err := dbgOf(c).AddInstructionBreakpoint("NOP"); err != nil {
 		t.Fatalf("AddInstructionBreakpoint: %v", err)
 	}
-	
+
 	buf.Reset()
 
 	addr := uint32(0x200)
@@ -179,20 +181,20 @@ func TestExecute_instructionBreakpointAtStartDoesNotStopImmediately(t *testing.T
 
 func TestDispatch_instructionBreakpoints(t *testing.T) {
 	c, buf := newTestConsole(t)
-	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
+	g := consoletest.ConsoleGrammar(t)
+	d := console.NewDispatcher(c, g, nil)
 
-	if err := d.Dispatch("SET BREAK/INSTRUCTION NOP"); err != nil {
+	if err := d.DispatchConsole("SET BREAK/INSTRUCTION NOP"); err != nil {
 		t.Fatalf("Dispatch(SET BREAK/INSTRUCTION NOP): %v", err)
 	}
 
-	if !c.InstructionBreakpoints[cpu.Instructions().ByName("NOP")] {
+	if !dbgOf(c).InstructionBreakpoints[cpu.Instructions().ByName("NOP")] {
 		t.Fatal("SET BREAK/INSTRUCTION NOP did not flag NOP")
 	}
 
 	buf.Reset()
 
-	if err := d.Dispatch("SHOW BREAKPOINTS/INSTRUCTIONS"); err != nil {
+	if err := d.DispatchConsole("SHOW BREAKPOINTS/INSTRUCTIONS"); err != nil {
 		t.Fatalf("Dispatch(SHOW BREAKPOINTS/INSTRUCTIONS): %v", err)
 	}
 
@@ -203,7 +205,7 @@ func TestDispatch_instructionBreakpoints(t *testing.T) {
 	loadProgram(t, c, 0x200, opNop, opNop, opHalt)
 	buf.Reset()
 
-	if err := d.Dispatch("EXEC 200"); err != nil {
+	if err := d.DispatchConsole("EXEC 200"); err != nil {
 		t.Fatalf("Dispatch(EXEC 200): %v", err)
 	}
 
@@ -211,31 +213,31 @@ func TestDispatch_instructionBreakpoints(t *testing.T) {
 		t.Errorf("PC after EXEC = %#x, want 0x201 (stopped at the second NOP)", got)
 	}
 
-	if err := d.Dispatch("CLEAR BREAKPOINT/INSTRUCTION NOP"); err != nil {
+	if err := d.DispatchConsole("CLEAR BREAKPOINT/INSTRUCTION NOP"); err != nil {
 		t.Fatalf("Dispatch(CLEAR BREAKPOINT/INSTRUCTION NOP): %v", err)
 	}
 
-	if c.InstructionBreakpoints[cpu.Instructions().ByName("NOP")] {
+	if dbgOf(c).InstructionBreakpoints[cpu.Instructions().ByName("NOP")] {
 		t.Fatal("CLEAR BREAKPOINT/INSTRUCTION NOP left NOP flagged")
 	}
 
-	if err := d.Dispatch("SET BREAK/INSTRUCTION HALT"); err != nil {
+	if err := d.DispatchConsole("SET BREAK/INSTRUCTION HALT"); err != nil {
 		t.Fatalf("Dispatch(SET BREAK/INSTRUCTION HALT): %v", err)
 	}
 
-	if err := d.Dispatch("CLEAR BREAKPOINT/INSTRUCTION/ALL"); err != nil {
+	if err := d.DispatchConsole("CLEAR BREAKPOINT/INSTRUCTION/ALL"); err != nil {
 		t.Fatalf("Dispatch(CLEAR BREAKPOINT/INSTRUCTION/ALL): %v", err)
 	}
 
-	if len(c.InstructionBreakpoints) != 0 {
-		t.Errorf("InstructionBreakpoints left %d entries after CLEAR .../ALL", len(c.InstructionBreakpoints))
+	if len(dbgOf(c).InstructionBreakpoints) != 0 {
+		t.Errorf("InstructionBreakpoints left %d entries after CLEAR .../ALL", len(dbgOf(c).InstructionBreakpoints))
 	}
 }
 
 func TestDispatch_setBreakInstructionRequiresOpcode(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 
-	if err := d.Dispatch("SET BREAK/INSTRUCTION"); err == nil {
+	if err := d.DispatchConsole("SET BREAK/INSTRUCTION"); err == nil {
 		t.Error("expected an error for SET BREAK/INSTRUCTION with no mnemonic")
 	}
 }
@@ -243,7 +245,7 @@ func TestDispatch_setBreakInstructionRequiresOpcode(t *testing.T) {
 func TestDispatch_setBreakBadQualifier(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 
-	if err := d.Dispatch("SET BREAK/BOGUS 100"); err == nil {
+	if err := d.DispatchConsole("SET BREAK/BOGUS 100"); err == nil {
 		t.Error("expected an error for an unrecognized SET BREAK qualifier")
 	}
 }

@@ -340,7 +340,6 @@ func TestCommands_set(t *testing.T) {
 		"SET NODISASSEMBLE",
 		"SET NOVERBOSE",
 		"SET UIQ 7",
-		"SET BR/TMP 400",
 		"SET DEBUG VM, NOUSERHALT",
 		"SET RADIX = 10",
 	}

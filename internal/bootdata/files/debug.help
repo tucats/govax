@@ -10,6 +10,7 @@
 //  History:    10/05/26    Started, with the commands the debugger has so
 //                          far: EXIT, QUIT, HELP, and @ (docs/PHASE-42.md,
 //                          subtask 3).
+//              10/05/26    Added GO, CALL, and STEP (subtask 4).
 //
 
 $HELP
@@ -19,7 +20,7 @@ $HELP
 
   Additional information available:
 
-  @  EXIT  HELP  QUIT
+  @  CALL  EXIT  GO  HELP  QUIT  STEP
 
   The debugger is a separate command set from the console's: the VMS
   command line (DIRECTORY, MACRO, LINK, ...) isn't available here. EXIT
@@ -36,6 +37,18 @@ $@
   command in it ends the debugger session (EXIT), the lines after it are
   console commands.
 
+$CALL
+  Calls a routine under the debugger.
+
+  Format:
+
+    CALL[/STEP] routine [(argument[,argument...])]
+
+  The arguments are pushed as a CALLS instruction pushes them. The routine
+  runs until it returns, a breakpoint stops it, or Ctrl-C interrupts it.
+
+  /STEP runs only the routine's first instruction and stops.
+
 $EXIT
   Ends the debugger session and returns to the console. The machine is
   left as it is.
@@ -43,6 +56,17 @@ $EXIT
   Format:
 
     EXIT
+
+$GO
+  Runs the program, from the current PC or from an address.
+
+  Format:
+
+    GO [address]
+
+  The program runs until it halts, a breakpoint stops it, or Ctrl-C
+  interrupts it. A breakpoint at the address the run starts from doesn't
+  stop it at once.
 
 $HELP,HELP
   Displays help on a debugger command.
@@ -62,3 +86,19 @@ $QUIT
   Format:
 
     QUIT
+
+$STEP
+  Executes one step of the program and stops again.
+
+  Format:
+
+    STEP[/INTO|/OVER|/RETURN] [address]
+
+  /INTO (also /IN and /INSTRUCTION) executes one instruction.
+
+  /OVER does the same, but a call (CALLS, CALLG, JSB, BSBB, BSBW, or a
+  change-mode instruction) runs to its end, and the step stops after it.
+
+  /RETURN runs until the current routine returns to its caller.
+
+  With no qualifier, STEP uses the mode SET STEP chose.

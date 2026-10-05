@@ -54,6 +54,48 @@ func (d *Dispatcher) bind() {
 		return d.Debugger.Console.Help(d.Help, words)
 	})
 
+	// GO, CALL, and STEP run the program. When the session is already
+	// open (we are at DBG>), a run that ends leaves it open.
+	g.Bind("GO", func(id int64, r *dcl.Result) error {
+		addr, err := d.optionalAddress(r, "ADDRESS")
+		if err != nil {
+			return err
+		}
+
+		return d.Debugger.Start(console.Activation{Kind: console.ActivateGo, Addr: addr})
+	})
+
+	g.Bind("CALL", func(id int64, r *dcl.Result) error {
+		addr, args, err := d.Debugger.Console.ParseCall(r.String("ROUTINE"), r.String("ARGUMENTS"))
+		if err != nil {
+			return err
+		}
+
+		return d.Debugger.Start(console.Activation{
+			Kind: console.ActivateCall, Addr: &addr, Step: r.Present("STEP"), Args: args,
+		})
+	})
+
+	g.Bind("STEP", func(id int64, r *dcl.Result) error {
+		mode := ""
+
+		switch {
+		case r.Present("INTO"):
+			mode = "INTO"
+		case r.Present("OVER"):
+			mode = "OVER"
+		case r.Present("RETURN"):
+			mode = "RETURN"
+		}
+
+		addr, err := d.optionalAddress(r, "ADDRESS")
+		if err != nil {
+			return err
+		}
+
+		return d.Debugger.Start(console.Activation{Kind: console.ActivateStep, Addr: addr, StepMode: mode})
+	})
+
 	// @file reads debugger commands from a file. Each line goes through
 	// the console dispatcher's routing, not straight back here: if one of
 	// them ends the session (EXIT), the lines after it are console
@@ -166,4 +208,19 @@ func qualifierAsTyped(line, word string, isVerb bool) string {
 // isWordByte reports whether b can be part of a qualifier's name.
 func isWordByte(b byte) bool {
 	return b >= 'A' && b <= 'Z' || b >= '0' && b <= '9' || b == '_' || b == '$'
+}
+
+// optionalAddress evaluates the $expression parameter name, or returns nil
+// if the command line didn't give it.
+func (d *Dispatcher) optionalAddress(r *dcl.Result, name string) (*uint32, error) {
+	if !r.Present(name) {
+		return nil, nil
+	}
+
+	v, err := d.Debugger.Console.EvalWhole(r.String(name))
+	if err != nil {
+		return nil, err
+	}
+
+	return &v, nil
 }

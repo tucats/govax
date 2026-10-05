@@ -23,21 +23,51 @@ const (
 	// nothing running: the console's DEBUG command. It is the counterpart
 	// of typing Ctrl/Y and then DEBUG at a VMS process.
 	ActivateAttach ActivationKind = iota
+
+	// ActivateGo runs the program from Activation.Addr (or the current PC):
+	// the console's GO and EXECUTE.
+	ActivateGo
+
+	// ActivateCall runs the routine at Activation.Addr with Args: the
+	// console's CALL, and the console's own internal calls (RUN's
+	// IMAGE$INIT driver, a VMS condition handler).
+	ActivateCall
+
+	// ActivateStep executes one STEP from Activation.Addr (or the current
+	// PC) in Activation.StepMode.
+	ActivateStep
 )
 
 // Activation describes what is starting a debugger session. Later
-// subtasks of docs/PHASE-42.md add the other ways in (GO, CALL, and RUN
-// of a debug image) and what each needs, such as the address to start at.
+// subtasks of docs/PHASE-42.md add the other ways in (RUN of a debug
+// image) and what each needs.
 type Activation struct {
 	Kind ActivationKind
+
+	// Addr is where a GO or STEP starts (nil: at the current PC), or the
+	// routine a CALL invokes.
+	Addr *uint32
+
+	// Args are a CALL's arguments, in order.
+	Args []uint32
+
+	// Step, on a CALL, runs only the routine's first instruction and stops
+	// (CALL/STEP).
+	Step bool
+
+	// StepMode is a STEP's mode word (INTO, OVER, or RETURN); empty means
+	// the debugger's own default (SET STEP).
+	StepMode string
 }
 
 // Debugger is what the console asks of the debugger. internal/debugger
 // implements it and cmd/govax installs it in Console.Debugger.
 type Debugger interface {
-	// Start begins a session. It returns once the debugger is ready to
-	// read commands (or, for a run that finished by itself, once it is
-	// over).
+	// Start begins a session, or runs the program the activation names
+	// under the debugger. It returns when the run has ended, or when the
+	// debugger has stopped it and is waiting for commands. A run that ended
+	// by itself (a HALT, a CALLed routine's return) closes the session it
+	// opened; a stop leaves the session open, and the prompt "DBG> ".
 	Start(a Activation) error
 
 	// Active reports whether a session is in progress, which is whether
@@ -46,6 +76,46 @@ type Debugger interface {
 
 	// Dispatch runs one line of debugger command.
 	Dispatch(line string) error
+
+	// Eventpoints is the debugger state the console's SET, CLEAR, and
+	// SHOW commands for breakpoints and the step mode still reach until
+	// the debugger has its own grammar for them (docs/PHASE-42.md,
+	// subtasks 6 and 7).
+	Eventpoints
+}
+
+// Eventpoints is the set of breakpoint and step-mode operations the
+// console's own commands (SET BREAKPOINT, CLEAR BREAKPOINT, SHOW
+// BREAKPOINTS, SET STEP, SHOW STEP_MODE) hand to the debugger, which owns
+// the breakpoint lists. A *breakpoint* is a place where the debugger stops
+// the program before an instruction runs.
+type Eventpoints interface {
+	// AddBreakpoint sets a breakpoint at addr; temporary ones are removed
+	// when first hit.
+	AddBreakpoint(addr uint32)
+	AddTemporaryBreakpoint(addr uint32)
+
+	// ClearBreakpoint removes the breakpoint at addr, or all of them.
+	ClearBreakpoint(addr uint32, all bool) error
+
+	// Instruction breakpoints stop before every execution of an opcode
+	// (SET BREAK/INSTRUCTION MOVL).
+	AddInstructionBreakpoint(name string) error
+	RemoveInstructionBreakpoint(name string) error
+	ClearAllInstructionBreakpoints() error
+	ShowInstructionBreakpoints() error
+
+	// Fault breakpoints stop when an exception is about to be delivered.
+	AddFaultBreakpoint(codeExpr string) error
+	RemoveFaultBreakpoint(codeExpr string) error
+	ClearAllFaultBreakpoints() error
+
+	// ShowBreakpoints lists the address and fault breakpoints.
+	ShowBreakpoints() error
+
+	// SetStepMode and ShowStepMode are SET STEP and SHOW STEP_MODE.
+	SetStepMode(word string) error
+	ShowStepMode() error
 }
 
 // StartDebugger is the console's DEBUG command: it starts a debugger
@@ -74,4 +144,15 @@ func (c *Console) StartDebugger() error {
 // front end's choice of prompt and grammar.
 func (c *Console) InDebugger() bool {
 	return c.Debugger != nil && c.Debugger.Active()
+}
+
+// eventpoints returns the debugger's breakpoint and step-mode operations
+// for the console commands that reach them, or the error that the
+// debugger is not available when none is installed.
+func (c *Console) eventpoints() (Eventpoints, error) {
+	if c.Debugger == nil {
+		return nil, vmserrors.New(vmserrors.DBG_NOTAVAILABLE)
+	}
+
+	return c.Debugger, nil
 }

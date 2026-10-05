@@ -1,9 +1,11 @@
-package console
+package debugger_test
 
 import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/console"
 )
 
 // The run-control bugs docs/PHASE-42.md fixes in subtask 2, each on
@@ -14,10 +16,10 @@ import (
 
 // stepBreakpoints counts the one-shot breakpoints STEP/OVER and
 // STEP/RETURN set, which should never outlive their STEP.
-func stepBreakpoints(c *Console) int {
+func stepBreakpoints(c *console.Console) int {
 	n := 0
 
-	for _, bp := range c.Breakpoints {
+	for _, bp := range dbgOf(c).Breakpoints {
 		if bp.Step {
 			n++
 		}
@@ -36,12 +38,12 @@ func TestRunStopsAtBreakpoint(t *testing.T) {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
-	c.AddBreakpoint(0x55A)
+	dbgOf(c).AddBreakpoint(0x55A)
 
 	buf := c.Out.(*bytes.Buffer)
 	buf.Reset()
 
-	if err := c.Run(dbgImagePath(t, "dbgdis.exe"), RunOptions{}); err != nil {
+	if err := c.Run(dbgImagePath(t, "dbgdis.exe"), console.RunOptions{}); err != nil {
 		t.Fatalf("RUN: %v", err)
 	}
 
@@ -61,7 +63,7 @@ func TestRunStopsAtBreakpoint(t *testing.T) {
 		t.Fatalf("first GO: got %q, want the second break at SUB2", got)
 	}
 
-	c.ClearAllBreakpoints()
+	dbgOf(c).ClearAllBreakpoints()
 	buf.Reset()
 
 	if err := c.Execute(nil); err != nil {
@@ -83,11 +85,11 @@ func TestCallStopsAtBreakpoint(t *testing.T) {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
-	if err := c.Run(dbgImagePath(t, "dbgdis.exe"), RunOptions{NoExecute: true}); err != nil {
+	if err := c.Run(dbgImagePath(t, "dbgdis.exe"), console.RunOptions{NoExecute: true}); err != nil {
 		t.Fatalf("RUN/NOEXECUTE: %v", err)
 	}
 
-	c.AddBreakpoint(0x55A)
+	dbgOf(c).AddBreakpoint(0x55A)
 
 	buf := c.Out.(*bytes.Buffer)
 	buf.Reset()

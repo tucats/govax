@@ -208,26 +208,58 @@ func (d *Dispatcher) bindGrammar() {
 
 	g.Bind("CLEAR_SYM_ALL", func(id int64, r *dcl.Result) error { return d.Console.ClearSymbol("", true) })
 	g.Bind("CLEAR_SYMBOLS", func(id int64, r *dcl.Result) error { return d.Console.ClearSymbol(r.String("P1"), false) })
-	g.Bind("CLEAR_BREAK_ALL", func(id int64, r *dcl.Result) error { return d.Console.ClearBreakpoint(0, true) })
+	g.Bind("CLEAR_BREAK_ALL", func(id int64, r *dcl.Result) error {
+		ep, err := d.Console.eventpoints()
+		if err != nil {
+			return err
+		}
+
+		return ep.ClearBreakpoint(0, true)
+	})
 	g.Bind("CLEAR_BREAKPOINT", func(id int64, r *dcl.Result) error {
 		addr, _, err := d.Console.Evaluator().Eval(r.String("BREAK_ADDR"))
 		if err != nil {
 			return err
 		}
 
-		return d.Console.ClearBreakpoint(addr, false)
+		ep, err := d.Console.eventpoints()
+		if err != nil {
+			return err
+		}
+
+		return ep.ClearBreakpoint(addr, false)
 	})
 	g.Bind("CLEAR_BREAK_INSTR_ALL", func(id int64, r *dcl.Result) error {
-		return d.Console.ClearAllInstructionBreakpoints()
+		ep, err := d.Console.eventpoints()
+		if err != nil {
+			return err
+		}
+
+		return ep.ClearAllInstructionBreakpoints()
 	})
 	g.Bind("CLEAR_BREAK_INSTR", func(id int64, r *dcl.Result) error {
-		return d.Console.RemoveInstructionBreakpoint(r.String("P1"))
+		ep, err := d.Console.eventpoints()
+		if err != nil {
+			return err
+		}
+
+		return ep.RemoveInstructionBreakpoint(r.String("P1"))
 	})
 	g.Bind("CLEAR_BREAK_FAULT_ALL", func(id int64, r *dcl.Result) error {
-		return d.Console.ClearAllFaultBreakpoints()
+		ep, err := d.Console.eventpoints()
+		if err != nil {
+			return err
+		}
+
+		return ep.ClearAllFaultBreakpoints()
 	})
 	g.Bind("CLEAR_BREAK_FAULT", func(id int64, r *dcl.Result) error {
-		return d.Console.RemoveFaultBreakpoint(r.String("P1"))
+		ep, err := d.Console.eventpoints()
+		if err != nil {
+			return err
+		}
+
+		return ep.RemoveFaultBreakpoint(r.String("P1"))
 	})
 
 	g.Bind("CLEAR_SYM_TEMP", func(id int64, r *dcl.Result) error { return d.Console.ClearSymbolTemporary() })
@@ -253,8 +285,22 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("SHOW_SYM_ALL", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbols(r.String("SYMBOL")) })
 	g.Bind("SHOW_SYM_SYS", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbolsSystem(r.String("SYMBOL")) })
 	g.Bind("SHOW_SYM_DCL", func(id int64, r *dcl.Result) error { return d.Console.ShowDCLSymbols(r.String("SYMBOL")) })
-	g.Bind("SHOW_BREAK", func(id int64, r *dcl.Result) error { return d.Console.ShowBreakpoints() })
-	g.Bind("SHOW_BREAK_INSTR", func(id int64, r *dcl.Result) error { return d.Console.ShowInstructionBreakpoints() })
+	g.Bind("SHOW_BREAK", func(id int64, r *dcl.Result) error {
+		ep, err := d.Console.eventpoints()
+		if err != nil {
+			return err
+		}
+
+		return ep.ShowBreakpoints()
+	})
+	g.Bind("SHOW_BREAK_INSTR", func(id int64, r *dcl.Result) error {
+		ep, err := d.Console.eventpoints()
+		if err != nil {
+			return err
+		}
+
+		return ep.ShowInstructionBreakpoints()
+	})
 	g.Bind("SHOW_RADIX", func(id int64, r *dcl.Result) error { return d.Console.ShowRadix() })
 	g.Bind("SHOW_BASE", func(id int64, r *dcl.Result) error { return d.Console.ShowBase() })
 	g.Bind("SHOW_CPU", func(id int64, r *dcl.Result) error { return d.Console.ShowCPU() })
@@ -362,7 +408,14 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("SHOW_TB", func(id int64, r *dcl.Result) error { return d.Console.ShowTB() })
 	g.Bind("SHOW_DEBUG", func(id int64, r *dcl.Result) error { return d.Console.ShowDebug() })
 	g.Bind("SHOW_TRACE", func(id int64, r *dcl.Result) error { return d.Console.ShowTrace() })
-	g.Bind("SHOW_STEP", func(id int64, r *dcl.Result) error { return d.Console.ShowStepMode() })
+	g.Bind("SHOW_STEP", func(id int64, r *dcl.Result) error {
+		ep, err := d.Console.eventpoints()
+		if err != nil {
+			return err
+		}
+
+		return ep.ShowStepMode()
+	})
 
 	g.Bind("SHOW_INSTRUCTIONS", func(id int64, r *dcl.Result) error {
 		return d.Console.ShowInstructions(

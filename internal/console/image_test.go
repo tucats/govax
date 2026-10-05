@@ -44,6 +44,8 @@ func newRunnableConsole(t testing.TB) *Console {
 		t.Fatalf("VMInit: %v", err)
 	}
 
+	c.Debugger = &stepDebugger{c: c}
+
 	return c
 }
 

@@ -1,4 +1,4 @@
-package console
+package debugger_test
 
 import (
 	"bytes"
@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/tucats/gopackages/app-cli/settings"
+	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -14,7 +16,7 @@ import (
 // STEP's default of stepping only user-mode code (USERSTEP) is turned
 // off. It returns a dispatcher and RUN/STEP's output; the buffer is
 // cleared before each command by dispatchOutput.
-func stepImage(t *testing.T, image string) (*Dispatcher, *bytes.Buffer, string) {
+func stepImage(t *testing.T, image string) (*console.Dispatcher, *bytes.Buffer, string) {
 	t.Helper()
 
 	c := newRunnableConsole(t)
@@ -28,20 +30,20 @@ func stepImage(t *testing.T, image string) (*Dispatcher, *bytes.Buffer, string) 
 	buf := c.Out.(*bytes.Buffer)
 	buf.Reset()
 
-	if err := c.Run(dbgImagePath(t, image), RunOptions{Step: true}); err != nil {
+	if err := c.Run(dbgImagePath(t, image), console.RunOptions{Step: true}); err != nil {
 		t.Fatalf("RUN/STEP %s: %v", image, err)
 	}
 
-	return NewDispatcher(c, loadEvaxGrammar(t), nil), buf, buf.String()
+	return console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil), buf, buf.String()
 }
 
 // dispatchOutput runs command and returns what it printed.
-func dispatchOutput(t *testing.T, d *Dispatcher, buf *bytes.Buffer, command string) string {
+func dispatchOutput(t *testing.T, d *console.Dispatcher, buf *bytes.Buffer, command string) string {
 	t.Helper()
 
 	buf.Reset()
 
-	if err := d.Dispatch(command); err != nil {
+	if err := d.DispatchConsole(command); err != nil {
 		t.Fatalf("%s: %v", command, err)
 	}
 
@@ -120,17 +122,17 @@ Stepped to DBGDIS\START+5
 // TestStepNoSymbolic: with the vax.disassemble.symbolic setting false,
 // STEP is the console's own display, in an image with debug data too.
 func TestStepNoSymbolic(t *testing.T) {
-	old, had := settings.Get(symbolicSetting), settings.Exists(symbolicSetting)
+	old, had := settings.Get("vax.disassemble.symbolic"), settings.Exists("vax.disassemble.symbolic")
 
 	t.Cleanup(func() {
 		if had {
-			settings.Set(symbolicSetting, old)
+			settings.Set("vax.disassemble.symbolic", old)
 		} else {
-			_ = settings.Delete(symbolicSetting)
+			_ = settings.Delete("vax.disassemble.symbolic")
 		}
 	})
 
-	settings.Set(symbolicSetting, "false")
+	settings.Set("vax.disassemble.symbolic", "false")
 
 	d, buf, run := stepImage(t, "dbgdis.exe")
 
@@ -166,7 +168,7 @@ func TestShowCallsFault(t *testing.T) {
 
 	// faillnk.dlg's lines 21 to 24 and 44 to 45.
 	rows := []string{
-		debugCallsHeading,
+		" module name     routine name      line                rel PC           abs PC",
 		"*FAILSUB         SUB2                12               00000005         0000021C",
 		"*FAILSUB         SUB1                 7               0000000A         00000216",
 		"*FAILMAIN        FAILMAIN            14               00000009         00000209",
@@ -201,7 +203,7 @@ func TestShowCallsFault(t *testing.T) {
 // that holds it), and in SUB2, four calls deep, from START's two calls of
 // SUB1. In DBGTRC, a traceback link, the line column is blank.
 func TestShowCallsFrames(t *testing.T) {
-	const heading = debugCallsHeading + "\n"
+	const heading = " module name     routine name      line                rel PC           abs PC" + "\n"
 
 	d, buf, _ := stepImage(t, "dbgdis.exe")
 

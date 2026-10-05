@@ -34,4 +34,40 @@ grammar debugger
                     /prompt="File"
     verb @/alias=include
 
+    ! GO [address] continues the program (from the address, if one is
+    ! given). It runs until a breakpoint, the program's end, or Ctrl-C.
+    verb go/id=7
+        parameter   address/id=8                -
+                    /type=$expression
+    verb execute/alias=go
+    verb g/alias=go
+
+    ! CALL[/STEP] routine[(argument,...)] calls a routine under the
+    ! debugger. The argument list may follow the routine after a blank,
+    ! so it is a parameter of its own too.
+    verb call/id=9
+        qualifier   step/id=10/nonegatable
+        qualifier   break/alias=step
+        qualifier   debug/alias=step
+        qualifier   dbg/alias=step
+        parameter   routine/id=11               -
+                    /type=$expression           -
+                    /prompt="Routine"
+        parameter   arguments/id=12             -
+                    /type=$expression
+
+    ! STEP[/mode] [address]: /INTO (also /IN, /INSTRUCTION), /OVER, or
+    ! /RETURN, defaulting to SET STEP's mode.
+    verb step/id=13
+        qualifier   into/id=14/nonegatable
+        qualifier   in/alias=into
+        qualifier   instruction/alias=into
+        qualifier   over/id=15/nonegatable
+        qualifier   return/id=16/nonegatable
+        parameter   address/id=17               -
+                    /type=$expression
+        disallow    any2(into, over, return)
+    verb st/alias=step
+    verb s/alias=step
+
 end

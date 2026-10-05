@@ -1,4 +1,4 @@
-package console
+package debugger
 
 import "github.com/tucats/govax/internal/cpu"
 
@@ -17,46 +17,46 @@ import "github.com/tucats/govax/internal/cpu"
 // own mixed radix/no-forward-reference conventions exactly — a console-
 // command-scope convenience, not an ISA-fidelity question). Setting an
 // already-armed code is a no-op, matching cpu.Engine.SetFaultBreakpoint.
-func (c *Console) AddFaultBreakpoint(codeExpr string) error {
-	if err := c.requireInit(); err != nil {
+func (d *Debugger) AddFaultBreakpoint(codeExpr string) error {
+	if err := d.Console.RequireInit(); err != nil {
 		return err
 	}
 
-	code, _, err := c.Evaluator().Eval(codeExpr)
+	code, _, err := d.Console.Evaluator().Eval(codeExpr)
 	if err != nil {
 		return err
 	}
 
-	c.Engine.SetFaultBreakpoint(cpu.Exception(code))
+	d.Console.Engine.SetFaultBreakpoint(cpu.Exception(code))
 
 	return nil
 }
 
 // RemoveFaultBreakpoint implements CLEAR BREAKPOINT/FAULT <code>, matching
 // console_clear.c's case 108.
-func (c *Console) RemoveFaultBreakpoint(codeExpr string) error {
-	if err := c.requireInit(); err != nil {
+func (d *Debugger) RemoveFaultBreakpoint(codeExpr string) error {
+	if err := d.Console.RequireInit(); err != nil {
 		return err
 	}
 
-	code, _, err := c.Evaluator().Eval(codeExpr)
+	code, _, err := d.Console.Evaluator().Eval(codeExpr)
 	if err != nil {
 		return err
 	}
 
-	c.Engine.RemoveFaultBreakpoint(cpu.Exception(code))
+	d.Console.Engine.RemoveFaultBreakpoint(cpu.Exception(code))
 
 	return nil
 }
 
 // ClearAllFaultBreakpoints implements CLEAR BREAKPOINT/FAULT/ALL, matching
 // console_clear.c's case 109.
-func (c *Console) ClearAllFaultBreakpoints() error {
-	if err := c.requireInit(); err != nil {
+func (d *Debugger) ClearAllFaultBreakpoints() error {
+	if err := d.Console.RequireInit(); err != nil {
 		return err
 	}
 
-	c.Engine.ClearFaultBreakpoints()
+	d.Console.Engine.ClearFaultBreakpoints()
 
 	return nil
 }
