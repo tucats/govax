@@ -46,6 +46,7 @@
 //                          DELETE/SYMBOL, and SHOW SYMBOL/DCL
 //                          (docs/PHASE-36.md)
 //              10/05/26    Added ANALYZE/OBJECT (docs/PHASE-38.md)
+//              10/05/26    Added LINK/DEBUG (docs/PHASE-29.md)
 //              10/05/26    Added ANALYZE/IMAGE (docs/PHASE-40.md)
 //              10/05/26    MACRO/DEBUG writes debugger records (docs/PHASE-29.md)
 
@@ -4076,7 +4077,7 @@ $LINK
     Syntax:
 
         LINK <file>[,<file>...][/HOST] [/EXECUTABLE[=<image>] |
-             /NOEXECUTABLE] [/[NO]TRACEBACK] [/[NO]SYSLIB]
+             /NOEXECUTABLE] [/[NO]TRACEBACK] [/[NO]DEBUG] [/[NO]SYSLIB]
              [/MAP[=<map>] [/BRIEF] | /NOMAP]
 
     Parameter:
@@ -4118,6 +4119,15 @@ $LINK
                         table built from the objects' traceback records.
                         /NOTRACEBACK starts it at its own transfer
                         address, with no debug symbol table.
+
+        /DEBUG          Puts the objects' debugger records (from
+                        MACRO/DEBUG) in the debug symbol table too, and
+                        marks the image for the debugger, as VMS LINK
+                        does.  /DEBUG includes /TRACEBACK, even if
+                        /NOTRACEBACK is given.  govax has no debugger,
+                        so RUN runs such an image as any other.  A
+                        user-written debugger module (/DEBUG=<file>)
+                        isn't supported.  /NODEBUG is the default.
 
         /SYSLIB         Searches IMAGELIB.OLB and STARLET.OLB for symbols
                         the objects don't define, as VMS LINK does by
@@ -4191,12 +4201,12 @@ $LINK
     With /TRACEBACK, the objects' traceback records become the image's
     debug symbol table, after the image's other blocks, as VMS LINK
     writes it, so a failing program gives VMS's symbolic traceback.
-    Debugger records (from MACRO/DEBUG) are skipped: LINK/DEBUG isn't
-    supported.
+    Debugger records (from MACRO/DEBUG) are skipped unless the link is
+    /DEBUG.
 
     From the host shell, "govax link <object>..." runs this command, with
-    --executable <file>, --no-executable, --no-traceback, --no-syslib,
-    --map, --map-file <file>, --brief, --library <file>, or
+    --executable <file>, --no-executable, --no-traceback, --debug,
+    --no-syslib, --map, --map-file <file>, --brief, --library <file>, or
     --options <file>.
 
     Examples:

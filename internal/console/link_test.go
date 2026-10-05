@@ -551,3 +551,75 @@ func vmsdefP1Address(name string) (uint32, bool) {
 
 	return 0, false
 }
+
+// TestDispatch_linkDebug runs LINK/DEBUG through the DCL grammar on an
+// object MACRO/DEBUG wrote (docs/PHASE-29.md, subtask 16). The image
+// asks for the debugger (IHD$V_LNKDEBUG) and its debug symbol table holds
+// the debugger records too, so it's longer than a traceback link's.
+// /DEBUG keeps traceback on through /NOTRACEBACK, as VMS LINK's does;
+// /DEBUG=file, a user-written debugger module, is refused; and RUN runs
+// the image, since govax has no debugger to start.
+func TestDispatch_linkDebug(t *testing.T) {
+	d, _ := newTestDispatcher(t)
+	dir := t.TempDir()
+	object := filepath.Join(dir, "entry.obj")
+
+	if err := d.Dispatch(`MACRO "` + marFixture("entry") + `"/OBJECT="` + object + `"/DEBUG`); err != nil {
+		t.Fatalf("MACRO/DEBUG: %v", err)
+	}
+
+	// link links the object with the qualifiers given, and returns the
+	// image's link flags, first transfer address, and DST block count.
+	link := func(qualifiers string) (flags, first, dstBlocks uint32) {
+		t.Helper()
+
+		exe := filepath.Join(dir, "entry.exe")
+		if err := d.Dispatch(`LINK "` + object + `"/EXECUTABLE="` + exe + `"` + qualifiers); err != nil {
+			t.Fatalf("LINK%s: %v", qualifiers, err)
+		}
+
+		data, err := os.ReadFile(exe)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		long := func(off int) uint32 {
+			return uint32(data[off]) | uint32(data[off+1])<<8 | uint32(data[off+2])<<16 | uint32(data[off+3])<<24
+		}
+
+		return long(0x20), long(0x30), long(0x44 + 20)
+	}
+
+	const lnkDebug = 1
+
+	flags, first, traceBlocks := link("")
+	if flags&lnkDebug != 0 || first != 0x7FFEDF68 {
+		t.Errorf("LINK: flags %08X, first transfer %08X", flags, first)
+	}
+
+	for _, q := range []string{"/DEBUG", "/DEBUG/NOTRACEBACK"} {
+		flags, first, blocks := link(q)
+		if flags&lnkDebug == 0 || first != 0x7FFEDF68 {
+			t.Errorf("LINK%s: flags %08X, first transfer %08X", q, flags, first)
+		}
+
+		if blocks == 0 || blocks < traceBlocks {
+			t.Errorf("LINK%s: DST of %d blocks, a traceback link's %d", q, blocks, traceBlocks)
+		}
+	}
+
+	if flags, _, _ := link("/NODEBUG"); flags&lnkDebug != 0 {
+		t.Errorf("LINK/NODEBUG: flags %08X", flags)
+	}
+
+	err := d.Dispatch(`LINK "` + object + `"/DEBUG=MYDEBUG`)
+	if err == nil || !strings.Contains(err.Error(), "debugger module") {
+		t.Errorf("LINK/DEBUG=MYDEBUG: %v", err)
+	}
+
+	link("/DEBUG")
+
+	if got := runImage(t, newBootableConsole(t), filepath.Join(dir, "entry.exe")); got != 1 {
+		t.Errorf("R0 = %d, want 1", got)
+	}
+}

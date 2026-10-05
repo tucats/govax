@@ -1803,3 +1803,36 @@ It also corrected two of them.
 - Found on the way: IHS+20 is IHS$L_DSTBLKS, the DST's block count.
   It's 56 in FORTH's image, but govax writes 1 for every DST.
 - Wrote subtasks 16 to 20.
+
+### 2026-10-05 — Subtask 16: DBG records into the DST
+
+- **`internal/link`.**
+  - `Options.Debug` is LINK/DEBUG, and it turns `Traceback` on.
+  - Pass 2 runs a module's DBG records on the traceback machine with
+    its TBT records, in record order, so both go on the one DST
+    location counter (`pass2.go`).
+  - The header sets IHD$V_LNKDEBUG.
+- **Confirmed:** record order is real LINK's. TRDBGLNK's 308-byte DST
+  and FORTH's 56 blocks match byte for byte with no other change.
+- **IHS$L_DSTBLKS (+20)** is now the DST's block count, not a constant
+  1, in every link. Every image earlier tests compared had a one-block
+  DST, so none of them changes.
+- **The console.**
+  - `LINK/[NO]DEBUG` (`console.dcl`, id 1362).
+  - `/DEBUG=file` is refused: it would name a user-written debugger
+    module.
+  - `/DEBUG` with `/NOTRACEBACK` still traces.
+  - `govax link --debug` gives the same option, and HELP LINK
+    describes it.
+- **Tests.**
+  - `TestLinkProbeDST` takes TRDBGLNK and TRLNKDBG, the latter from
+    govax's object as well.
+  - `TestLinkForthDST` (`debug_test.go`) checks FORTH's DST and
+    IHS+20.
+  - `TestDispatch_linkDebug` checks the flag, the DST, `/NOTRACEBACK`,
+    `/NODEBUG`, the refusal, and that RUN runs an image linked `/DEBUG`.
+    That last check is subtask 19's RUN item, done early.
+  - `TestLinkCommand` takes `--debug`.
+- **Not yet:** the DMT and the GST (subtasks 17 and 18). The IHS fields
+  for them are still 0, so the three `/DEBUG` images don't yet match
+  whole.

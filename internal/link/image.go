@@ -48,6 +48,7 @@ const (
 	ihdPICIMG    = 1 << 3
 	ihdDBGDMT    = 1 << 5
 	ihdIHSLONG   = 1 << 7
+	ihdLNKDEBUG  = 1 << 0 // linked /DEBUG: the debugger takes control
 	ihdLNKNOTFR  = 1 << 1 // no user transfer address
 	ihdMatchCtl  = 1 << 24
 	ihdLinkFlags = ihdPICIMG | ihdDBGDMT | ihdIHSLONG | ihdMatchCtl
@@ -163,6 +164,10 @@ func (l *linker) header(isds []isd, global [][]byte, fixupVA uint32) ([]byte, er
 		flags |= ihdLNKNOTFR
 	}
 
+	if l.opts.Debug {
+		flags |= ihdLNKDEBUG
+	}
+
 	le.PutUint32(b[0x20:], flags)
 	le.PutUint32(b[0x24:], uint32(linkTime>>16)) // IHD$L_IDENT
 	le.PutUint32(b[0x2C:], fixupVA)              // IHD$L_IAFVA
@@ -183,16 +188,17 @@ func (l *linker) header(isds []isd, global [][]byte, fixupVA uint32) ([]byte, er
 		le.PutUint32(b[ihaOffset+4*i:], t)
 	}
 
-	// IHS: the debug symbol table's first block and block count, or all
-	// zero without one. ANALYZE/IMAGE also names the global symbol
+	// IHS: the debug symbol table's first block (IHS$L_DSTVBN) and its
+	// block count, as a word (IHS$W_DSTBLKS, +8) and a longword
+	// (IHS$L_DSTBLKS, +20), or all zero without one (docs/
+	// DEBUG-RECORDS.md, 2.2). ANALYZE/IMAGE also names the global symbol
 	// table's block and record count (+4, +10) and the debug module and
-	// psect table's (+12, +16), which an executable image doesn't have.
-	// Real LINK sets the longword at +20, which ANALYZE doesn't name, to 1
-	// whenever there's a DST; what it means isn't known.
+	// psect table's (+12, +16), which only an image linked /DEBUG has.
 	if l.dstVBN != 0 {
+		blocks := pageUp(uint32(len(l.dst))) / blockSize
 		le.PutUint32(b[ihsOffset:], l.dstVBN)
-		le.PutUint16(b[ihsOffset+8:], uint16(pageUp(uint32(len(l.dst)))/blockSize))
-		le.PutUint32(b[ihsOffset+20:], 1)
+		le.PutUint16(b[ihsOffset+8:], uint16(blocks))
+		le.PutUint32(b[ihsOffset+20:], blocks)
 	}
 
 	// IHI: the image name, image ID, link time, and linker ID, each

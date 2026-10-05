@@ -583,6 +583,8 @@ func (d *Dispatcher) bindGrammar() {
 			Executable:   r.String("EXECUTABLE"),
 			NoExecutable: r.Present("EXECUTABLE") && r.Negated("EXECUTABLE"),
 			NoTraceback:  r.Present("TRACEBACK") && r.Negated("TRACEBACK"),
+			Debug:        r.Present("DEBUG") && !r.Negated("DEBUG") && !r.Defaulted("DEBUG"),
+			DebugModule:  r.String("DEBUG"),
 			NoSysLib:     r.Present("SYSLIB") && r.Negated("SYSLIB"),
 			Map:          r.Present("MAP") && !r.Negated("MAP") && !r.Defaulted("MAP"),
 			MapFile:      r.String("MAP"),

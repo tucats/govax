@@ -53,6 +53,7 @@ func TestLinkCommand(t *testing.T) {
 		{[]string{"a.obj"}, linkFlags{}, `LINK "a.obj"`},
 		{[]string{"a.obj", "/x/b"}, linkFlags{}, `LINK "a.obj","/x/b"`},
 		{[]string{"a"}, linkFlags{executable: "out.exe", noTraceback: true}, `LINK "a"/EXECUTABLE="out.exe"/NOTRACEBACK`},
+		{[]string{"a"}, linkFlags{debug: true}, `LINK "a"/DEBUG`},
 		{[]string{"a"}, linkFlags{noExecutable: true}, `LINK "a"/NOEXECUTABLE`},
 		{[]string{"a"}, linkFlags{noSysLib: true}, `LINK "a"/NOSYSLIB`},
 		{[]string{"a"}, linkFlags{mapWanted: true}, `LINK "a"/MAP`},

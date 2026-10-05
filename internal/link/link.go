@@ -22,9 +22,11 @@
 // debug symbol table (DST) instead of its sections: the modules' DST
 // records, in link order, with their addresses resolved. The DST follows
 // the image's other blocks, and the header's IHS block points at it (the
-// Linker manual, 7.7 and 7.8). Debugger (DBG) records are read and
-// skipped: LINK/DEBUG is out of scope (docs/PHASE-29.md, Decision 4). A
-// symbol the modules refer to but don't define comes
+// Linker manual, 7.7 and 7.8). A module's debugger (DBG) records are
+// skipped, unless the link is LINK/DEBUG (Options.Debug): then they go
+// into the DST too, with the TBT records, in record order (docs/
+// PHASE-29.md, subtasks 16 to 20). A symbol the modules refer to but
+// don't define comes
 // from the symbol sources (source.go): an absolute value, or a routine in
 // a shareable image, which a general mode (G^) operand reaches through a
 // cell in the fixup section that the image activator fills in.
@@ -71,6 +73,11 @@ type Options struct {
 	// Traceback makes SYS$IMGSTA the image's first transfer address, as
 	// LINK/TRACEBACK (the default) does.
 	Traceback bool
+	// Debug is LINK/DEBUG: the modules' debugger (DBG) records go into
+	// the debug symbol table with their traceback records, and the image
+	// header asks for the debugger (IHD$V_LNKDEBUG). It turns Traceback
+	// on, as the Linker manual says /DEBUG does even with /NOTRACEBACK.
+	Debug bool
 	// StackPages is the user stack's size; 0 means 20 pages, LINK's
 	// default.
 	StackPages int
@@ -161,6 +168,10 @@ func Link(inputs []Input, opts Options) (*Image, error) {
 
 	if opts.StackPages == 0 {
 		opts.StackPages = defaultStackPages
+	}
+
+	if opts.Debug {
+		opts.Traceback = true
 	}
 
 	l := &linker{opts: opts, psects: map[string]*psect{}, symbols: map[string]*global{}}

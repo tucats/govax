@@ -159,7 +159,10 @@ var probeRoutines = &TableSource{
 
 // TestLinkProbeDST checks the debug symbol table of each of the probe's
 // traced images against real LINK's, block for block, and that an
-// untraced image has none, from real MACRO's objects and govax's. Unlike
+// untraced image has none, from real MACRO's objects and govax's. The
+// two images linked /DEBUG put their objects' debugger records in the
+// DST too: TRDBGLNK's (308 bytes where TRDBGTRC's has 106), and none
+// for TRLNKDBG, whose object has none (docs/PHASE-29.md, subtask 16). Unlike
 // TestLinkProbeImagesMatchRealLINK it needs none of VMS's libraries: the
 // DST describes only the program's own modules, whose psects come first.
 func TestLinkProbeDST(t *testing.T) {
@@ -167,19 +170,23 @@ func TestLinkProbeDST(t *testing.T) {
 		image   string
 		objects []string
 		trace   bool
+		debug   bool // linked /DEBUG
 		govax   bool // also link govax's objects of the same sources
 	}{
-		{"trace", []string{"trace"}, true, true},
-		{"trnotb", []string{"trace"}, false, true},
-		{"trdbgtrc", []string{"trdebug"}, true, false},
-		{"failmain", []string{"failmain", "failsub"}, true, true},
-		{"faildbg", []string{"failmaid", "failsubd"}, true, false},
-		{"failsig", []string{"failsig"}, true, true},
-		{"fsignotb", []string{"failsig"}, false, true},
+		{"trace", []string{"trace"}, true, false, true},
+		{"trnotb", []string{"trace"}, false, false, true},
+		{"trdbgtrc", []string{"trdebug"}, true, false, false},
+		{"trdbglnk", []string{"trdebug"}, true, true, false},
+		{"trlnkdbg", []string{"trace"}, true, true, true},
+		{"failmain", []string{"failmain", "failsub"}, true, false, true},
+		{"faildbg", []string{"failmaid", "failsubd"}, true, false, false},
+		{"failsig", []string{"failsig"}, true, false, true},
+		{"fsignotb", []string{"failsig"}, false, false, true},
 	} {
 		t.Run(c.image, func(t *testing.T) {
 			want, opts := realImage(t, filepath.Join(probeDir, "vax", c.image+".exe"))
 			opts.Traceback = c.trace
+			opts.Debug = c.debug
 			opts.Sources = []SymbolSource{probeRoutines}
 
 			wantDST := imageDST(t, want)

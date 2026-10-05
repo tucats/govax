@@ -14,7 +14,7 @@ import (
 
 // This file implements docs/PHASE-30.md's LINK command:
 //
-//	LINK file[,file...][/HOST] [/EXECUTABLE[=image] | /NOEXECUTABLE] [/[NO]TRACEBACK] [/[NO]SYSLIB]
+//	LINK file[,file...][/HOST] [/EXECUTABLE[=image] | /NOEXECUTABLE] [/[NO]TRACEBACK] [/[NO]DEBUG] [/[NO]SYSLIB]
 //	     [/MAP[=map] [/BRIEF] | /NOMAP]
 //
 // where each file is an object, or has its own qualifier:
@@ -60,6 +60,14 @@ type LinkOptions struct {
 	// SYS$IMGSTA.
 	NoTraceback bool
 
+	// Debug is /DEBUG: the objects' debugger records go into the image's
+	// debug symbol table with their traceback records, and traceback is
+	// on whatever NoTraceback says, as VMS LINK's /DEBUG does.
+	// DebugModule is /DEBUG='s value, VMS's user-written debugger
+	// module, which govax refuses.
+	Debug       bool
+	DebugModule string
+
 	// NoSysLib is /NOSYSLIB: don't search IMAGELIB.OLB and STARLET.OLB
 	// (linksource.go).
 	NoSysLib bool
@@ -102,6 +110,10 @@ func (c *Console) Link(opts LinkOptions) error {
 		return vmserrors.New(vmserrors.CLI_NEEDFILENAME, "LINK")
 	}
 
+	if opts.Debug && opts.DebugModule != "" {
+		return vmserrors.Wrap(vmserrors.CLI_LINKING, fmt.Errorf("a user-written debugger module (/DEBUG=%s) isn't supported", opts.DebugModule), "LINK")
+	}
+
 	in := &linkInputs{}
 
 	for _, f := range files {
@@ -135,6 +147,7 @@ func (c *Console) Link(opts LinkOptions) error {
 		ImageName:  name,
 		LinkerID:   linkerID(),
 		Traceback:  !opts.NoTraceback,
+		Debug:      opts.Debug,
 		Sources:    sources,
 		StackPages: in.options.Stack,
 		Ident:      in.options.Ident,

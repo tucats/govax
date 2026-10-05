@@ -817,7 +817,10 @@ grammar console
     ! image. OBJECTS is a comma-separated list, and its /HOST applies to
     ! each, as MACRO's does to its source. EXECUTABLE is VMS LINK's own
     ! /[NO]EXECUTABLE[=file] (empty default: the first object's name with
-    ! type EXE), and TRACEBACK is on unless /NOTRACEBACK. /NOSYSLIB
+    ! type EXE), and TRACEBACK is on unless /NOTRACEBACK. DEBUG is
+    ! /[NO]DEBUG (docs/PHASE-29.md, subtask 16): the objects' debugger
+    ! records go into the image too; its value, VMS's user-written
+    ! debugger module, is refused. /NOSYSLIB
     ! skips IMAGELIB.OLB and STARLET.OLB, as VMS LINK's does. MAP is
     ! /[NO]MAP[=file] (empty default: the first object's name with type
     ! MAP), and /BRIEF makes the map brief. LIBRARY, INCLUDE,
@@ -849,6 +852,9 @@ grammar console
                     /type=$string               -
                     /default=""
         qualifier   traceback/id=1354
+        qualifier   debug/id=1362               -
+                    /type=$string               -
+                    /default=""
         qualifier   syslib/id=1355
         qualifier   map/id=1356                 -
                     /type=$string               -

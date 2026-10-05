@@ -253,7 +253,8 @@ func (x *machine) pop() (value, error) {
 // sections, and, with traceback, its traceback records, adding its DST
 // records to the debug symbol table after the modules' before it (each
 // TBT record stores where the last left off). Debugger records are
-// skipped.
+// skipped, but for LINK/DEBUG, which runs them with the traceback
+// records, in the order they come, as one stream.
 func (l *linker) pass2(m *module) error {
 	x := &machine{l: l, m: m}
 	tb := &machine{l: l, m: m, debug: true, loc: uint32(len(l.dst))}
@@ -264,7 +265,8 @@ func (l *linker) pass2(m *module) error {
 			run := x
 
 			switch {
-			case r.Type == obj.RecTBT && l.opts.Traceback:
+			case r.Type == obj.RecTBT && l.opts.Traceback,
+				r.Type == obj.RecDBG && l.opts.Debug:
 				run = tb
 			case r.Type != obj.RecTIR:
 				continue

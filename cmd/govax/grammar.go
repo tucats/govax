@@ -72,6 +72,7 @@ type linkFlags struct {
 	executable   string // --executable
 	noExecutable bool   // --no-executable
 	noTraceback  bool   // --no-traceback
+	debug        bool   // --debug
 	noSysLib     bool   // --no-syslib
 	mapWanted    bool   // --map, or --map-file
 	mapFile      string // --map-file
@@ -368,6 +369,16 @@ var linkGrammar = []cli.Option{
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
 			link.noTraceback = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "debug",
+		Description: "Put the objects' debugger records in the image (LINK/DEBUG)",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			link.debug = true
 
 			return nil
 		},
@@ -681,6 +692,10 @@ func linkCommand(objects []string, f linkFlags) string {
 
 	if f.noTraceback {
 		command += "/NOTRACEBACK"
+	}
+
+	if f.debug {
+		command += "/DEBUG"
 	}
 
 	if f.noSysLib {
