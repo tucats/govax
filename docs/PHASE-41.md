@@ -836,3 +836,47 @@ system services, and the layout of a location longer than 24 columns.
   `TestFormatAssemblerStyle` check the formatter. The console doesn't
   use any of it yet: that's subtask 11 (`DISASSEMBLE/SYMBOLIC`) and 12
   (trace and `STEP`).
+
+### 2026-10-05 — Subtask 10: shareable image references
+
+- **What the probe says.** The plan expected the debugger to name a
+  `G^` reference's routine; it doesn't. DBGDIS's
+  `CALLS #1,G^LIB$PUT_OUTPUT` is `CALLS S^#01,@L^SUB2+0F0` in both
+  DBGDIS's and GVDBGDIS's sessions: LINK makes the operand a deferred
+  relative one through a longword (the cell) in the image's fixup
+  section, and the debugger names the cell's address, by the GST's
+  nearest global, as it names any other. `SHOW IMAGE` listed LIBRTL as
+  not set, so whether `SET IMAGE LIBRTL` changes this is unconfirmed;
+  since the operand's address is the cell, in DBGDIS, it likely
+  doesn't. `@#SYS$OPEN` (FORTH) is already named by subtask 9: a system
+  service's `G^` is an absolute address the GST names.
+- **So, as with constants (Decision 5)**, govax matches the debugger by
+  default, and naming the routine is an option: `disasm.CellNamer`
+  (`Cell(addr) (name, ok)`) in `Options.Cells`, nil by default. Set, a
+  deferred relative operand whose address is a fixup cell gets
+  `Operand.Cell`, and is shown as the source wrote it:
+  `CALLS    S^#01,G^LIB$PUT_OUTPUT` (debugger style),
+  `CALLS S^#1,G^LIB$PUT_OUTPUT` (assembler style). A deferred operand
+  that isn't a cell falls to the symbolizer. Subtask 11 decides how the
+  console turns it on.
+- **The cells** (`internal/console/shared.go`): `imageFixup` records
+  each `G^` cell it fills in `ICB.Cells` (address to shareable image
+  and transfer-vector offset). The console is the `CellNamer`: it names
+  a cell by what the reference asked for, not by what the cell now
+  holds, so a real LIBRTL.EXE and govax's shim give the same name.
+  `sharedName(image, offset)` looks in the shim table (which covers
+  `DECC$SHR` and the others vmsdef lacks), then in
+  `vmsdef.ImageSymbols` turned around (offset to name; of two names at
+  one offset, the first alphabetically).
+- **Addresses in a loaded shareable image.** `sharedSymbolizer` names an
+  address in a real shareable image the program loaded (not the main
+  image) by the image's universal symbol at that offset, for subtask
+  11's chain of symbolizers. Shim stubs need no help: `ensureShims`
+  already names them in the console's table. Unconfirmed: the debugger
+  would name addresses in LIBRTL from LIBRTL's own GST once it's `SET
+  IMAGE`, with names that may differ from the transfer vector's.
+- **Tests.** `TestSharedImageReference` runs DBGDIS and GVDBGDIS as
+  `RUN/STEP` does and formats line 93 with and without the cell namer
+  (the cell is among `ICB.Cells`, and holds `LIB$PUT_OUTPUT`'s stub);
+  `TestSharedName`, `TestSharedSymbolizer`; `TestCells` in
+  `internal/disasm` checks the option's rendering and fallbacks.

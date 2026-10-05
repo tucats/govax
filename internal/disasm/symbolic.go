@@ -28,6 +28,18 @@ type ConstantNamer interface {
 	Constant(pc, value uint32) (name string, ok bool)
 }
 
+// CellNamer names what a G^ reference to a shareable image leads to: an
+// option beyond what the VMS debugger shows. The linker turns
+// CALLS #1,G^LIB$PUT_OUTPUT into CALLS #1,@L^cell, through a longword
+// (the cell) in the image's fixup section, which the image activator
+// fills with the routine's address; the debugger names the cell's
+// address (@L^SUB2+0F0), not the routine (docs/PHASE-41.md, subtask 10).
+type CellNamer interface {
+	// Cell returns the name of what the fixup cell at addr points to
+	// (LIB$PUT_OUTPUT), or ok false when addr isn't a fixup cell.
+	Cell(addr uint32) (name string, ok bool)
+}
+
 // Style is how Format writes an instruction.
 type Style int
 
@@ -46,12 +58,15 @@ const (
 )
 
 // Options are Format's choices: the style, the symbolizer that names the
-// addresses operands refer to (nil for none), and the namer of constants
-// (nil, the default, for none: the debugger shows a constant's value).
+// addresses operands refer to (nil for none), the namer of constants
+// (nil, the default, for none: the debugger shows a constant's value),
+// and the namer of fixup cells (nil, the default, for none: the debugger
+// shows a G^ reference as the cell it goes through).
 type Options struct {
 	Style      Style
 	Symbolizer Symbolizer
 	Constants  ConstantNamer
+	Cells      CellNamer
 }
 
 // Format renders dec as opts say. An operand that refers to an address
@@ -60,10 +75,12 @@ type Options struct {
 // displacement (a constant's value stays a number: MOVL #LIMIT,R2 is
 // MOVL S^#0A,R2); with Constants set, a short literal or integer
 // immediate that's exactly one constant's value is shown by its name
-// (MOVL S^#DBGDIS\LIMIT,R2). With StyleAssembler and neither namer,
-// Format is String.
+// (MOVL S^#DBGDIS\LIMIT,R2). With Cells set, a deferred relative
+// operand whose pointer is a fixup cell is shown as the G^ reference the
+// source wrote (CALLS S^#01,G^LIB$PUT_OUTPUT). With StyleAssembler and
+// no namer, Format is String.
 func (dec Decoded) Format(opts Options) string {
-	if opts.Symbolizer != nil || opts.Constants != nil {
+	if opts.Symbolizer != nil || opts.Constants != nil || opts.Cells != nil {
 		dec = dec.symbolized(opts)
 	}
 
@@ -133,8 +150,9 @@ func debuggerMask(mask uint16) string {
 }
 
 // symbolized returns a copy of dec with operands' Symbols filled in as
-// opts says: an addressed operand's from the symbolizer, a constant's
-// from the constant namer. An operand that already has one keeps it. The
+// opts says: a fixup cell's routine from the cell namer, else an
+// addressed operand's name from the symbolizer, and a constant's from
+// the constant namer. An operand that already has one keeps it. The
 // copy has its own operand slice, so the caller's Decoded is unchanged.
 func (dec Decoded) symbolized(opts Options) Decoded {
 	ops := make([]Operand, len(dec.Operands))
@@ -144,8 +162,15 @@ func (dec Decoded) symbolized(opts Options) Decoded {
 		op := &ops[i]
 
 		switch {
-		case op.Symbol != "":
+		case op.Symbol != "" || op.Cell != "":
 			continue
+
+		case op.isCell() && opts.Cells != nil:
+			if name, ok := opts.Cells.Cell(op.Target); ok {
+				op.Cell = name
+			} else if opts.Symbolizer != nil {
+				op.Symbol, _ = opts.Symbolizer.Symbolize(op.Target)
+			}
 
 		case op.HasTarget && opts.Symbolizer != nil:
 			if name, ok := opts.Symbolizer.Symbolize(op.Target); ok {
@@ -162,6 +187,13 @@ func (dec Decoded) symbolized(opts Options) Decoded {
 	dec.Operands = ops
 
 	return dec
+}
+
+// isCell reports whether the operand could go through a fixup cell: a
+// deferred relative operand (@L^cell), as the linker writes a G^
+// reference to a shareable image.
+func (op Operand) isCell() bool {
+	return op.Mode == ModeRelative && op.Deferred && op.HasTarget
 }
 
 // isConstant reports whether the operand is a value a constant could
@@ -254,6 +286,10 @@ func (op Operand) debuggerBase() string {
 		return "@#" + op.debuggerTarget()
 
 	case ModeRelative:
+		if op.Cell != "" {
+			return "G^" + op.Cell
+		}
+
 		return op.deferral() + widthPrefix(op.Width) + op.debuggerTarget()
 	}
 

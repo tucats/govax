@@ -101,6 +101,14 @@ type Operand struct {
 	// in place of the value (Options.Constants).
 	Symbol string
 
+	// Cell, when set on a deferred relative operand, names what its
+	// pointer leads to: the operand's Target is a G^ reference's fixup
+	// cell, which the image activator filled with a shareable image's
+	// address, and Cell is that routine's name (Options.Cells). The
+	// operand is then shown as the source wrote it, G^LIB$PUT_OUTPUT, in
+	// place of @L^cell.
+	Cell string
+
 	// Access, Type, and Size are what the instruction table says of this
 	// operand: how the instruction uses it, its data type, and its size
 	// in bytes.

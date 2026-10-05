@@ -108,3 +108,60 @@ func TestFormatAssemblerStyle(t *testing.T) {
 		t.Errorf("Format changed the caller's operand: Symbol %q", dec.Operands[0].Symbol)
 	}
 }
+
+// mapCells names the fixup cells in a map.
+type mapCells map[uint32]string
+
+func (m mapCells) Cell(addr uint32) (string, bool) {
+	name, ok := m[addr]
+
+	return name, ok
+}
+
+// TestCells checks the cell option: a deferred relative operand through a
+// fixup cell is shown as its G^ reference when Cells names the cell, and
+// as the debugger shows it (the cell's address, named or not) otherwise.
+func TestCells(t *testing.T) {
+	const pc = 0x1000
+
+	// CALLS #1,@L^00002000 (the displacement 0xFF9 ends at 0x1007), and
+	// MOVL L^00002000,R0 (0xFFA, ending at 0x1006), which isn't deferred.
+	calls := []byte{0xFB, 0x01, 0xFF, 0xF9, 0x0F, 0x00, 0x00}
+	movl := []byte{0xD0, 0xEF, 0xFA, 0x0F, 0x00, 0x00, 0x50}
+
+	cells := mapCells{0x2000: "LIB$PUT_OUTPUT"}
+	names := mapSymbolizer{0x2000: "SUB2+0F0"}
+
+	cases := []struct {
+		name  string
+		bytes []byte
+		opts  Options
+		want  string
+	}{
+		{"debugger, no cells", calls, Options{Style: StyleDebugger, Symbolizer: names}, "CALLS    S^#01,@L^SUB2+0F0"},
+		{"debugger, cells", calls, Options{Style: StyleDebugger, Symbolizer: names, Cells: cells}, "CALLS    S^#01,G^LIB$PUT_OUTPUT"},
+		{"assembler, cells", calls, Options{Cells: cells}, "CALLS S^#1,G^LIB$PUT_OUTPUT"},
+		{"not a cell", calls, Options{Style: StyleDebugger, Symbolizer: names, Cells: mapCells{}}, "CALLS    S^#01,@L^SUB2+0F0"},
+		{"not deferred", movl, Options{Style: StyleDebugger, Symbolizer: names, Cells: cells}, "MOVL     L^SUB2+0F0,R0"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := make(SliceReader, pc+len(tc.bytes))
+			copy(r[pc:], tc.bytes)
+
+			dec, err := Disassemble(r, pc)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if got := dec.Format(tc.opts); got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+
+			if dec.Operands[1].Cell != "" {
+				t.Errorf("Format changed the caller's operand: Cell %q", dec.Operands[1].Cell)
+			}
+		})
+	}
+}

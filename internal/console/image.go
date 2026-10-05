@@ -127,6 +127,12 @@ type ICB struct {
 	// DebugErr says why (nil when there's simply no table).
 	Debug    *dbgsym.Program
 	DebugErr error
+
+	// Cells are the image's G^ fixup cells, by address, once imageFixup
+	// has filled them: what shareable image and transfer-vector offset
+	// each one's G^ reference asked for (Phase 41). The disassembler names
+	// a reference through one (shared.go).
+	Cells map[uint32]fixupCell
 }
 
 // resetICBList discards every loaded image and resets the P0 high-water
@@ -686,6 +692,8 @@ func (c *Console) imageFixup(icb *ICB) error {
 					if err := c.storeLong(naddr, value); err != nil {
 						return err
 					}
+
+					icb.addCell(naddr, shr.Name, offset)
 				}
 			}
 

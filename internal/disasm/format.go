@@ -111,6 +111,10 @@ func (op Operand) baseString() string {
 		return "@#" + op.target()
 
 	case ModeRelative:
+		if op.Cell != "" {
+			return "G^" + op.Cell
+		}
+
 		return op.deferral() + widthPrefix(op.Width) + op.target()
 	}
 
