@@ -68,6 +68,10 @@ func (op Operand) baseString() string {
 		return op.target()
 
 	case ModeLiteral:
+		if op.Symbol != "" {
+			return "S^#" + op.Symbol
+		}
+
 		if op.Type.IsFloat() {
 			return "S^#" + vaxfloat.ShortLiteral(byte(op.Value)).Decimal()
 		}
@@ -97,6 +101,10 @@ func (op Operand) baseString() string {
 		return op.deferral() + widthPrefix(op.Width) + formatIntHex(raw, op.Width) + "(" + rn + ")"
 
 	case ModeImmediate:
+		if op.Symbol != "" {
+			return "I^#" + op.Symbol
+		}
+
 		return "I^#" + op.immediate()
 
 	case ModeAbsolute:
@@ -135,18 +143,7 @@ func (op Operand) deferral() string {
 // reassembles to the same bytes. Anything else is hexadecimal.
 func (op Operand) immediate() string {
 	if op.Type.IsFloat() {
-		var bits vaxfloat.Bits
-
-		bits.Lo = uint64(loadSized(SliceReader(op.Bytes), 0, 4))
-		if op.Width >= 8 {
-			bits.Lo |= uint64(loadSized(SliceReader(op.Bytes), 4, 4)) << 32
-		}
-
-		if op.Width == 16 {
-			bits.Hi = uint64(loadSized(SliceReader(op.Bytes), 8, 4)) | uint64(loadSized(SliceReader(op.Bytes), 12, 4))<<32
-		}
-
-		v, _ := vaxfloat.Unpack(op.Type.FloatFormat(), bits)
+		v, _ := vaxfloat.Unpack(op.Type.FloatFormat(), op.floatBits())
 
 		return v.Decimal()
 	}

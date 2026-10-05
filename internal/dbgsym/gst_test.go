@@ -2,7 +2,6 @@ package dbgsym
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -153,7 +152,12 @@ func TestGlobalsMatchSymbolize(t *testing.T) {
 
 			got := "nothing"
 			if s, off, ok := p.Globals.Nearest(uint32(addr), nil); ok {
-				got = s.Name + offset(off, decimal)
+				radix := 16
+				if decimal {
+					radix = 10
+				}
+
+				got = s.Name + offset(off, radix)
 			}
 
 			if got != want {
@@ -167,25 +171,6 @@ func TestGlobalsMatchSymbolize(t *testing.T) {
 	if checked < 15 {
 		t.Errorf("checked %d answers, want at least 15", checked)
 	}
-}
-
-// offset writes an offset past a symbol as the debugger does: nothing
-// for none, else "+" and the number, in hexadecimal with a leading 0
-// when its first digit is a letter (+0F), or in decimal.
-func offset(off uint32, decimal bool) string {
-	switch {
-	case off == 0:
-		return ""
-	case decimal:
-		return fmt.Sprintf("+%d", off)
-	}
-
-	s := fmt.Sprintf("%X", off)
-	if s[0] >= 'A' {
-		s = "0" + s
-	}
-
-	return "+" + s
 }
 
 // TestModuleTable checks the debug module table of each /DEBUG image:

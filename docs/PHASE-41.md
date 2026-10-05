@@ -770,3 +770,69 @@ system services, and the layout of a location longer than 24 columns.
   and `SHOW IMAGES`' note; `TestDisassembleImageEntryMasks` disassembles
   TRACE's code in TRLNKDBG and TRDBGTRC and finds `.ENTRY TRACE,^M<R2>`,
   `.ENTRY FIRST,^M<>`, and `.ENTRY SECOND,^M<R2>`.
+
+### 2026-10-05 — Subtask 9: symbolic operands
+
+- **`disasm.Symbolizer`** (`internal/disasm/symbolic.go`): one method,
+  `Symbolize(addr) (name, ok)`. The plan's `EntryAt` isn't in it: the
+  console's `entryAt` (subtask 8) already finds a routine's mask from
+  its own table and every image's DST, and a symbolizer only names
+  addresses.
+- **`Decoded.Format(Options)`**: `Options` has a `Style` and a
+  `Symbolizer`. Each operand with a `Target` (branch, relative,
+  absolute) and no `Symbol` of its own gets the symbolizer's name; a
+  copy of the operands is named, so the caller's `Decoded` is
+  unchanged. Immediates, short literals, and register displacements
+  aren't named, as the debugger names none. With `StyleAssembler` and
+  no namer, `Format` is `String`. `Decoded` now records its `Address`.
+- **Constants** (Decision 5): `Options.Constants`, a
+  `disasm.ConstantNamer`, nil (off) by default. Set, a short literal or
+  integer immediate that is exactly one constant's value in the module
+  holding the instruction shows its name with the mode's prefix kept
+  (`S^#DBGDIS\LIMIT`, `I^#DBGDIS\BIG`); a value two constants share,
+  and a floating literal, stay numbers. The path form is govax's
+  choice (the debugger has no such display).
+- **`StyleDebugger`**, the debugger's `EXAMINE/INSTRUCTION` text: the
+  mnemonic padded to 8 columns and a space, `S^#0A`, `I^#000003E8`,
+  `I^#9F16`, `B^0A(R1)`, an address in eight digits whatever the
+  displacement's width (`W^00000200`), `S^#1.500000`, and `entry mask
+  ^M<...>`. Two differences from the assembler's text came from the
+  sessions: the mask lists IV before DV (`FormatMask` goes by bit
+  number, DV first), and opcode 1E is `BGEQU`, not the table's `BCC`
+  (so 1F is taken to be `BLSSU`, unconfirmed).
+- **`dbgsym.Program.Symbolize(addr, radix)`** (`symbolize.go`), and
+  `dbgsym.Names`, which adapts it to `disasm.Symbolizer`. Its rules,
+  most specific first: (1) a routine entry, else a label or JSB
+  routine, else data at the address, by path with the module always
+  given, a routine named as its module written once (`FORTH`,
+  `FAILMAIN`); psects, constants, and data with a string descriptor or
+  a descriptor address (`.ASCII`, `.ASCID`) never name it; (2) an
+  array's element, `TABLE[2]`, and `NAME[lower]` at the array itself
+  (`OPSTK_END[0]`); (3) a line, `MOD\ROUTINE\%LINE n` at its start and
+  `+offset` past it; (4) a routine plus an offset, where there's no line
+  table; (5) the GST's nearest global at or below, constants included;
+  else nothing, and the number shows. Offsets are in the radix, hex
+  with a leading 0 before a letter; line numbers are decimal.
+- **`Program.LineName`**: an address named by its line alone. The
+  debugger starts an `EXAMINE/INSTRUCTION %LINE 85` range at
+  `DBGDIS\START\%LINE 85:`, though a range from START shows the same
+  instruction at `DBGDIS\START\LOOP:`: the first location keeps the
+  form it was typed in. Subtask 11's command uses it.
+- **Unconfirmed** (no probe line shows them): an operand address in
+  the middle of a line is named as a location is (`%LINE n+off`, not
+  `ROUTINE+off`); an address inside an array but not on an element
+  boundary falls through to the next rule; a subscript is written in
+  the radix; a negative register displacement shows its raw bytes
+  (`B^FC(FP)`); XFC's inline data is `#value`; floating values other
+  than F short literals get their format's significant digits (D 16,
+  G 15, H 16 since a float64 holds no more).
+- **Tests.** `TestSymbolicInstructions` replays every
+  `EXAMINE/INSTRUCTION` range in five sessions (DBGDIS, GVDBGDIS,
+  DBGTRC, FAILLNK, FORTH: 405 lines, symbolic and not, hex and
+  decimal, CASE table entries included) from the images' bytes and
+  matches each line's location and instruction text.
+  `TestSymbolizeRules` checks each rule at an address the sessions
+  name, `TestConstants` the constant option; `TestDebuggerStyle`, `TestDebuggerMask`, and
+  `TestFormatAssemblerStyle` check the formatter. The console doesn't
+  use any of it yet: that's subtask 11 (`DISASSEMBLE/SYMBOLIC`) and 12
+  (trace and `STEP`).

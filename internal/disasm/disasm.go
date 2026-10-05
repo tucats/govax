@@ -36,6 +36,10 @@ type Decoded struct {
 	Operands []Operand
 	Length   uint32
 
+	// Address is where the instruction is: what a symbolizer's
+	// ConstantNamer takes as the current module.
+	Address uint32
+
 	// IsMask marks a routine's register-save mask word, decoded by
 	// EntryMask rather than as an instruction: Mask is the word, and Name
 	// the routine's name ("" if the caller doesn't know it).
@@ -75,7 +79,7 @@ func Disassemble(r ByteReader, pc uint32) (Decoded, error) {
 		return Decoded{}, vmserrors.New(vmserrors.VAX_BADOPCODEAT, start)
 	}
 
-	dec := Decoded{Mnemonic: inst.Name}
+	dec := Decoded{Mnemonic: inst.Name, Address: start}
 
 	for i := 0; i < inst.OperandCount; i++ {
 		operand, err := decodeOperand(r, &pc, inst.Access[i], inst.Scale[i], inst.DataType[i], false)
@@ -98,7 +102,7 @@ func Disassemble(r ByteReader, pc uint32) (Decoded, error) {
 func EntryMask(r ByteReader, pc uint32, name string) Decoded {
 	mask := uint16(r.ByteAt(pc)) | uint16(r.ByteAt(pc+1))<<8
 
-	return Decoded{Mnemonic: ".ENTRY", Length: 2, IsMask: true, Mask: mask, Name: name}
+	return Decoded{Mnemonic: ".ENTRY", Length: 2, Address: pc, IsMask: true, Mask: mask, Name: name}
 }
 
 // loadSized reads a 1, 2, or 4-byte little-endian value at addr.

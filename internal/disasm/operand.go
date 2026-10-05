@@ -96,7 +96,9 @@ type Operand struct {
 	HasTarget bool
 
 	// Symbol, when set, is shown in place of Target's number: a name for
-	// the address, which a caller fills in from its symbol table.
+	// the address, which a caller fills in from its symbol table. On a
+	// short literal or an integer immediate it's a constant's name, shown
+	// in place of the value (Options.Constants).
 	Symbol string
 
 	// Access, Type, and Size are what the instruction table says of this
