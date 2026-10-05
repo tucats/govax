@@ -5,6 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/dbgsym"
+	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -270,3 +271,27 @@ func (c *Console) WriteBytes(addr uint32, data []byte) error {
 // value and its fields (valid, protection, modified, owner, and the
 // physical address of its page frame).
 func (c *Console) FormatPTE(v uint32) string { return c.formatOne(0, SizePTE, v) }
+
+// SetAccessMode switches the CPU to an access mode (kernel, executive,
+// supervisor, or user), which also selects that mode's stack pointer; with
+// interruptStack it switches to the interrupt stack instead, whatever the
+// mode. It is SET MODE's access-mode half, which the debugger took over.
+func (c *Console) SetAccessMode(mode vax.AccessMode, interruptStack bool) error {
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	c.Engine.SetModeStack(mode, interruptStack)
+
+	return nil
+}
+
+// AccessModeName is the name of the CPU's current access mode (KERNEL,
+// EXEC, SUPER, or USER), or "" before INIT has created the machine.
+func (c *Console) AccessModeName() string {
+	if c.requireInit() != nil {
+		return ""
+	}
+
+	return modeNames[c.CPU.PSL().CurMod()]
+}

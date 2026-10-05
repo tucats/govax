@@ -96,6 +96,14 @@ grammar debugger
         keyword     source              /syntax=set_source/nonegatable
         keyword     mode                /syntax=set_mode/nonegatable
         keyword     radix               /syntax=set_radix/nonegatable
+        keyword     psl                 /syntax=set_psl/nonegatable
+        keyword     pte                 /syntax=set_pte/nonegatable
+        keyword     page                /syntax=set_pte/nonegatable
+        keyword     fault               /syntax=set_fault_history/nonegatable
+        keyword     history             /syntax=set_fault_history/nonegatable
+        keyword     vm                  /syntax=set_vm
+        keyword     mapen               /syntax=set_vm
+        keyword     base                /syntax=set_base/nonegatable
 
     verb set/id=20
         parameter   what/id=21                  -
@@ -148,6 +156,34 @@ grammar debugger
                         /type=$rest_of_line     -
                         /prompt="Radix"
 
+        ! SET PSL field=value[,field=value...] changes fields of the
+        ! processor status longword (govax's own).
+        syntax set_psl/id=200
+            parameter   fields/id=201           -
+                        /type=$rest_of_line     -
+                        /prompt="Fields"
+
+        ! SET PTE address [TO address] field=value[,field=value...] changes
+        ! page table entries (govax's own); the handler reads the changes.
+        syntax set_pte/id=202
+            parameter   changes/id=203          -
+                        /type=$rest_of_line     -
+                        /prompt="Address"
+
+        syntax set_fault_history/id=204
+            parameter   count/id=205            -
+                        /type=$integer          -
+                        /prompt="Count"
+
+        ! SET VM and SET NOVM (or SET MAPEN) turn address translation on
+        ! and off (govax's own).
+        syntax set_vm/id=206
+
+        syntax set_base/id=207
+            parameter   address/id=208          -
+                        /type=$rest_of_line     -
+                        /prompt="Address"
+
     ! SHOW BREAK lists the breakpoints, and SHOW STEP the defaults STEP
     ! uses.
     type show_types
@@ -156,6 +192,85 @@ grammar debugger
         keyword     breakpoints         /syntax=show_break
         keyword     step                /syntax=show_step
         keyword     source              /syntax=show_source
+        keyword     registers           /syntax=show_reg
+        keyword     reg                 /syntax=show_reg
+        keyword     psl                 /syntax=show_psl
+        keyword     cpu_status          /syntax=show_cpu
+        keyword     clock               /syntax=show_clock
+        keyword     base                /syntax=show_base
+        keyword     memory              /syntax=show_memory
+        keyword     vm                  /syntax=show_memory
+        keyword     maps                /syntax=show_map
+        keyword     tb                  /syntax=show_tb
+        keyword     translation_buffer  /syntax=show_tb
+        keyword     regions             /syntax=show_regions
+        keyword     page                /syntax=show_page
+        keyword     pte                 /syntax=show_page
+        keyword     scb                 /syntax=show_scb
+        keyword     shim                /syntax=show_shim
+        keyword     exceptions          /syntax=show_fault
+        keyword     faults              /syntax=show_fault
+        keyword     calls               /syntax=show_calls
+        keyword     call_frames         /syntax=show_calls
+        keyword     stack               /syntax=show_stack
+        keyword     sp                  /syntax=show_sp
+        keyword     isp                 /syntax=show_isp
+        keyword     ksp                 /syntax=show_ksp
+        keyword     esp                 /syntax=show_esp
+        keyword     ssp                 /syntax=show_ssp
+        keyword     usp                 /syntax=show_usp
+        keyword     mode                /syntax=show_mode
+        keyword     radix               /syntax=show_radix
+        keyword     r0
+        keyword     r1
+        keyword     r2
+        keyword     r3
+        keyword     r4
+        keyword     r5
+        keyword     r6
+        keyword     r7
+        keyword     r8
+        keyword     r9
+        keyword     r10
+        keyword     r11
+        keyword     r12
+        keyword     r13
+        keyword     r14
+        keyword     r15
+        keyword     ap
+        keyword     fp
+        keyword     pc
+        keyword     p0br
+        keyword     p0lr
+        keyword     p1br
+        keyword     p1lr
+        keyword     sbr
+        keyword     slr
+        keyword     pcbb
+        keyword     scbb
+        keyword     ipl
+        keyword     astlvl
+        keyword     sirr
+        keyword     sisr
+        keyword     iccs
+        keyword     nicr
+        keyword     icr
+        keyword     todr
+        keyword     rxcs
+        keyword     rxdb
+        keyword     txcs
+        keyword     txdb
+        keyword     tbdr
+        keyword     savisp
+        keyword     savpc
+        keyword     savpsl
+        keyword     wcsa
+        keyword     wcsb
+        keyword     tbia
+        keyword     tbis
+        keyword     pmr
+        keyword     sid
+        keyword     tbchk
 
     verb show/id=40
         parameter   what/id=41                  -
@@ -168,6 +283,71 @@ grammar debugger
 
         syntax show_source/id=72
 
+        ! The commands below show the machine's state; they are govax's own
+        ! except SHOW CALLS, SHOW STACK, SHOW MODE, and SHOW RADIX, which
+        ! are the VMS debugger's.
+        syntax show_reg/id=210
+        syntax show_psl/id=211
+        syntax show_cpu/id=212
+        syntax show_clock/id=213
+        syntax show_base/id=214
+        syntax show_memory/id=215
+            qualifier   statistics/id=216
+            qualifier   runtime/id=217
+            qualifier   full/id=218
+        syntax show_map/id=219
+        syntax show_tb/id=220
+        syntax show_regions/id=221
+        syntax show_page/id=222
+            qualifier   write/id=223/nonegatable
+            qualifier   read/id=224/nonegatable
+            parameter   address/id=225          -
+                        /type=$rest_of_line     -
+                        /prompt="Address"
+            disallow    read and write
+        syntax show_scb/id=226
+            qualifier   all/id=227
+        syntax show_shim/id=228
+        syntax show_fault/id=229
+        syntax show_mode/id=230
+        syntax show_radix/id=231
+
+        ! SHOW CALLS [count] lists the call frames, a row each; SHOW STACK
+        ! [count] describes each in full.
+        syntax show_calls/id=232
+            parameter   count/id=233            -
+                        /type=$rest_of_line
+        syntax show_stack/id=234
+            parameter   count/id=235            -
+                        /type=$rest_of_line
+
+        ! SHOW SP, KSP, ESP, SSP, USP, and ISP dump the longwords on a
+        ! stack (govax's own): the current one, or a mode's.
+        syntax show_sp/id=236
+            parameter   count/id=237            -
+                        /type=$rest_of_line
+            qualifier   all/id=238
+        syntax show_ksp/id=239
+            parameter   count/id=237            -
+                        /type=$rest_of_line
+            qualifier   all/id=238
+        syntax show_esp/id=240
+            parameter   count/id=237            -
+                        /type=$rest_of_line
+            qualifier   all/id=238
+        syntax show_ssp/id=241
+            parameter   count/id=237            -
+                        /type=$rest_of_line
+            qualifier   all/id=238
+        syntax show_usp/id=242
+            parameter   count/id=237            -
+                        /type=$rest_of_line
+            qualifier   all/id=238
+        syntax show_isp/id=243
+            parameter   count/id=237            -
+                        /type=$rest_of_line
+            qualifier   all/id=238
+
     ! CANCEL SOURCE forgets SET SOURCE's directories.
     ! CANCEL BREAK [qualifier] [address[,address...]] removes breakpoints:
     ! at the addresses, of a kind (/CALL, /BRANCH, ...), or all of them
@@ -177,6 +357,11 @@ grammar debugger
         keyword     breakpoint          /syntax=cancel_break
         keyword     source              /syntax=cancel_source
         keyword     radix               /syntax=cancel_radix
+        keyword     mode                /syntax=cancel_mode
+        keyword     interrupt           /syntax=cancel_interrupt
+        keyword     tb                  /syntax=cancel_tb
+        keyword     translation_buffer  /syntax=cancel_tb
+        keyword     memory              /syntax=cancel_memory
 
     verb cancel/id=50
         parameter   what/id=51                  -
@@ -202,6 +387,23 @@ grammar debugger
         syntax cancel_source/id=73
 
         syntax cancel_radix/id=86
+
+        ! CANCEL MODE restores SET MODE's defaults.
+        syntax cancel_mode/id=260
+
+        ! CANCEL INTERRUPT [/ALL] [number] removes a pending interrupt,
+        ! CANCEL TB empties the translation buffer, and CANCEL
+        ! MEMORY/STATISTICS zeroes the memory counters (all govax's own).
+        syntax cancel_interrupt/id=261
+            qualifier   all/id=262
+            parameter   code/id=263             -
+                        /type=$rest_of_line
+        syntax cancel_tb/id=264
+        syntax cancel_memory/id=265
+            qualifier   statistics/id=266
+
+    ! CLEAR is a govax synonym for CANCEL (the console's old verb).
+    verb clear/alias=cancel
 
     ! EXAMINE[/qualifiers] [location[,location...]] shows what is at each
     ! location. With /INSTRUCTION it is the machine instruction there (a

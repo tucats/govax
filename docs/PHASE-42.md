@@ -1,9 +1,8 @@
 # Phase 42 — The debugger: its own package, grammar, and prompt
 
 **Status:** in progress. Planned and reviewed 2026-10-05 (the author
-took every recommended decision). Subtasks 1 (the probe, run on VMS),
-2 (the run-control bugs), and 3 (the package, grammar, and mode switch)
-are done.
+took every recommended decision). Subtasks 1 to 11 are done (see the
+progress log).
 
 ## Goal
 
@@ -1461,3 +1460,78 @@ Bug 7 is fixed, and the debugger has `EXAMINE/INSTRUCTION`.
 - `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
   touched are clean. (`TestCtrlCReturnsToPrompt` failed once under the
   whole suite's load and passed on every rerun; it is timing-sensitive.)
+
+### 2026-10-05 — Subtask 11: CPU and kernel state commands move
+
+The debugger has the SHOW, SET, and CANCEL keywords the tables assign it.
+The console's own copies stay until subtask 14 removes them, so both
+grammars answer for now.
+
+- **SHOW** (`internal/debugger/machine.go`, `debug.dcl`): REGISTERS/REG,
+  every register and privileged-register keyword (`SHOW R0`, `SHOW IPL`),
+  PSL, CPU_STATUS, CLOCK, BASE, MEMORY/VM, MAPS, TB, REGIONS, PAGE/PTE, SCB,
+  SHIM, EXCEPTIONS/FAULTS, and the stack dumps `SHOW KSP|ESP|SSP|USP|ISP`.
+  Each calls the console's `Show*` method, so the output is unchanged.
+  Numbers they take (a count, an address) are read in the debugger's
+  input radix. `SHOW SP` is now the current stack's dump (Decision 6),
+  not the SP register's value; `SHOW R14` still shows it.
+- **SHOW CALLS [n]** is the console's VMS-format table (Phase 41), with
+  `%DEBUG-E-NOCALLS, no active call frames` (new `DBG_NOCALLS`, from
+  `errors.dlg`) once the image has exited or there is no frame.
+  **Still missing:** the `----- above routine called from DEBUG CALL
+  command` and `above condition handler called with exception` lines
+  (`call.dlg`, `except.dlg`); they need the frame walk to know a frame's
+  caller kind, which comes with subtask 12's program knowledge.
+- **SHOW STACK [n]** (`stack.go`) follows Decision 6: VMS's per-frame
+  description (`stack frame 0 (addr)`, handler, SPA, S, mask, PSW, saved
+  AP/FP/PC/registers, argument list), laid out from `exam.dlg`. The
+  frame's saved PC is named with the debugger's location text.
+  **Unconfirmed:** the layout of an argument list with more than one
+  argument (the continuation lines are indented to the value column);
+  `PSW:` in a radix other than hexadecimal; a zero-argument list; a saved
+  PC that is govax's console sentinel prints `<console>` (VMS's last
+  frame is its own debugger's `SHARE$DEBUG+0AD`); a frame whose AP isn't
+  a plausible argument list shows none. The walk stops where the chain
+  doesn't climb.
+- **SET MODE / CANCEL MODE / SHOW MODE** (`modes.go`, replacing subtask
+  9's `setMode`). One keyword table, each word a unique abbreviation
+  (`S` is `%CLI-E-AMBIGUOUS`): `[NO]SYMBOLIC`, `[NO]LINE`, `D_FLOAT`,
+  `G_FLOAT`, `[NO]OPERANDS[=FULL|BRIEF]`, `[NO]SCROLL`, `[NO]DYNAMIC`,
+  `[NO]INTERRUPT`, and govax's access modes `KERNEL`, `EXECUTIVE`,
+  `SUPERVISOR`, `USER`, `ISP`. The VMS screen-mode words (`[NO]SCREEN`,
+  `[NO]KEYPAD`, `[NO]SEPARATE`) are known, for the ambiguity rule, but
+  refused with `%DEBUG-E-SYNTAX`. `SHOW MODE` prints the modes line and
+  the two radix lines exactly as `exam.dlg` does, then govax's
+  `access mode: KERNEL`. `CANCEL MODE` restores the start-up modes
+  (`SYMBOLIC` per `vax.disassemble.symbolic`); it leaves the radixes and
+  the access mode.
+  - **Decision (Decision 4's one collision):** `INTERRUPT` is VMS's
+    display mode, so govax's switch to the interrupt stack, which used
+    that word in the console, is `SET MODE ISP` here.
+  - **Not acted on yet:** `NOLINE` (VMS then names `FACT+1A` in place of
+    `%LINE n` and steps by instruction), `G_FLOAT`, `NOSCROLL`,
+    `NODYNAMIC`, and `NOINTERRUPT` are recorded and shown, but change no
+    output. No govax output shows floating values or scrolls. Left for
+    the final cleanup alongside `SET MODE NOSYMBOLIC`'s numeric layout.
+- **SHOW RADIX / SET RADIX / CANCEL RADIX**: `SHOW RADIX` prints VMS's
+  `input radix : hexadecimal` and `output radix: hexadecimal`.
+- **SET** PSL, PTE/PAGE, FAULT or HISTORY, VM/MAPEN (and `NOVM`), BASE,
+  with their values read in the debugger's input radix. `SET PTE addr TO
+  addr field=value[,...]` splits the address at the first blank outside
+  parentheses, so `SET PTE (a + 1) TO ...` needs the parentheses.
+- **CANCEL** INTERRUPT [/ALL] [n], TB, MEMORY/STATISTICS, and `CLEAR` as a
+  synonym for the verb (Decision 5). `CANCEL MEMORY` without
+  `/STATISTICS` is `%DEBUG-E-SYNTAX` (the console's `CLEAR MEMORY`, which
+  zeroes memory, stays console-only).
+- **Not moved in this subtask:** SHOW TRACE, WATCH (subtask 13), SHOW
+  IMAGE, MODULE, SYMBOL (subtask 12). Register assignment
+  (`SET R0=5`) is `DEPOSIT R0 = 5`, which subtask 10 has.
+- **Tests** (`machine_test.go`): `TestMachineStateOracle` replays
+  `exam.dbg` and compares every `SHOW MODE`, `SHOW RADIX`, `SHOW CALLS`,
+  and `SHOW STACK` the log has (the stack addresses masked, the
+  last frame, VMS's own debugger, left out); `TestShowStackLayout` checks
+  the blank lines the log reader can't see; plus SET/CANCEL MODE and the
+  abbreviation rule, the access modes, the moved SHOW/SET/CANCEL commands
+  (with decimal input radix), and NOCALLS after the image exits.
+- `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
+  touched are clean.

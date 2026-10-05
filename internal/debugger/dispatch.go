@@ -51,6 +51,7 @@ func (d *Dispatcher) bind() {
 	d.bindBreak()
 	d.bindSource()
 	d.bindExamine()
+	d.bindMachine()
 
 	g.Bind("EXIT", end)
 	g.Bind("QUIT", end)

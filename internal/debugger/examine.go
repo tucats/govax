@@ -242,48 +242,6 @@ func splitRange(item string) (start, end string, ok bool) {
 	return "", "", false
 }
 
-// setMode runs SET MODE keyword[,keyword...] for the keywords the debugger
-// has so far: [NO]SYMBOLIC, which chooses whether EXAMINE/INSTRUCTION names
-// addresses from the program's debug symbols (the default), and
-// [NO]OPERANDS[=FULL], which adds a line for each operand. The other modes
-// (and govax's access mode) come with subtask 11.
-func (d *Debugger) setMode(words string) error {
-	for _, word := range strings.Split(words, ",") {
-		word = strings.ToUpper(strings.TrimSpace(word))
-		name, value, _ := strings.Cut(word, "=")
-
-		switch {
-		case isKeyword(name, "SYMBOLIC", 3) && value == "":
-			d.symbolic = true
-		case isKeyword(name, "NOSYMBOLIC", 5) && value == "":
-			d.symbolic = false
-		case isKeyword(name, "OPERANDS", 3):
-			switch {
-			case value == "":
-				d.operands = console.OperandsBrief
-			case isKeyword(value, "FULL", 1):
-				d.operands = console.OperandsFull
-			case isKeyword(value, "BRIEF", 1):
-				d.operands = console.OperandsBrief
-			default:
-				return vmserrors.New(vmserrors.DBG_SYNTAX, word)
-			}
-		case isKeyword(name, "NOOPERANDS", 5) && value == "":
-			d.operands = console.OperandsOff
-		default:
-			return vmserrors.New(vmserrors.DBG_SYNTAX, word)
-		}
-	}
-
-	return nil
-}
-
-// isKeyword reports whether word is keyword or an abbreviation of it at
-// least min letters long, as VMS commands allow.
-func isKeyword(word, keyword string, min int) bool {
-	return len(word) >= min && strings.HasPrefix(keyword, word)
-}
-
 // setRadix runs SET RADIX [/INPUT|/OUTPUT] radix. With no qualifier it sets
 // both the radix numbers are typed in and the one they are shown in. (govax
 // shows only the offsets in symbolic names in the output radix so far.)

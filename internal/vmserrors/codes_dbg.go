@@ -14,6 +14,7 @@ const (
 	dbgNoBreaks
 	dbgNoAccessR
 	dbgNoSourceDir
+	dbgNoCalls
 )
 
 // DBG facility status codes.
@@ -52,6 +53,10 @@ const (
 	// DBG_NOSOURCEDIR is SHOW SOURCE's answer when SET SOURCE has given no
 	// directory list. The wording is govax's choice: no probe showed it.
 	DBG_NOSOURCEDIR = DBGFacility<<FacilityPosition | dbgNoSourceDir<<MessagePosition | StatusInfo
+	// DBG_NOCALLS is what SHOW CALLS and SHOW STACK say when there is no
+	// call frame to show, as after the image has exited (the probe's
+	// errors.dlg).
+	DBG_NOCALLS = DBGFacility<<FacilityPosition | dbgNoCalls<<MessagePosition | StatusError
 )
 
 func init() {
@@ -63,5 +68,6 @@ func init() {
 	DefineMessage(DBG_BADSTARTPC, DBGFacility, "BADSTARTPC", "cannot start from PC !XL")
 	DefineMessage(DBG_NOBREAKS, DBGFacility, "NOBREAKS", "no breakpoints are set")
 	DefineMessage(DBG_NOACCESSR, DBGFacility, "NOACCESSR", "no read access to address !XL")
+	DefineMessage(DBG_NOCALLS, DBGFacility, "NOCALLS", "no active call frames")
 	DefineMessage(DBG_NOSOURCEDIR, DBGFacility, "NOSOURCEDIR", "no source directory search list is in effect")
 }

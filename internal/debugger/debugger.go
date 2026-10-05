@@ -88,6 +88,7 @@ type Debugger struct {
 	// and the one the offsets in names are shown in. The debugger's own
 	// radix is separate from the console's (Decision 8).
 	symbolic    bool
+	modes       displayModes
 	operands    console.OperandsMode
 	inputRadix  int
 	outputRadix int
@@ -108,6 +109,7 @@ func New(c *console.Console, g *dcl.Grammar, help *console.Help) *Debugger {
 	d := &Debugger{
 		Console: c, StepMode: StepOver,
 		symbolic: console.SymbolicDefault(), inputRadix: 16, outputRadix: 16,
+		modes: defaultDisplayModes(),
 	}
 	d.Dispatcher = newDispatcher(d, g, help)
 	c.OnUnhandled = d.onUnhandled
