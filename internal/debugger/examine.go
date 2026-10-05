@@ -8,9 +8,9 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This file is the debugger's EXAMINE command, so far in its
-// /INSTRUCTION form (docs/PHASE-42.md, subtask 9; the data forms are
-// subtask 10's), and the display modes and radix it follows.
+// This file is the debugger's EXAMINE command in its /INSTRUCTION form
+// (docs/PHASE-42.md, subtask 9; the data forms are subtask 10's, in
+// data.go), and the display modes and radix it follows.
 //
 // The VMS debugger's EXAMINE shows what is at a location. With
 // /INSTRUCTION that is the machine instruction there, laid out as
@@ -87,6 +87,9 @@ func (d *Dispatcher) bindExamine() {
 	g := d.Grammar
 
 	g.Bind("EXAMINE", func(id int64, r *dcl.Result) error { return d.examine(r) })
+	g.Bind("DEPOSIT", func(id int64, r *dcl.Result) error { return d.deposit(r) })
+	g.Bind("EVALUATE", func(id int64, r *dcl.Result) error { return d.evaluate(r) })
+	g.Bind("SYMBOLIZE", func(id int64, r *dcl.Result) error { return d.symbolize(r) })
 	g.Bind("SET_MODE", func(id int64, r *dcl.Result) error { return d.Debugger.setMode(r.String("WORDS")) })
 	g.Bind("SET_RADIX", func(id int64, r *dcl.Result) error { return d.setRadix(r) })
 	g.Bind("CANCEL_RADIX", func(id int64, r *dcl.Result) error {
@@ -96,9 +99,9 @@ func (d *Dispatcher) bindExamine() {
 	})
 }
 
-// examine runs EXAMINE[/qualifiers] [location[,location...]]. Only
-// /INSTRUCTION is implemented so far; asking for the data forms is an
-// error until subtask 10.
+// examine runs EXAMINE[/qualifiers] [location[,location...]]: the machine
+// instructions at the locations with /INSTRUCTION or /OPERANDS, else the
+// data there (data.go).
 func (d *Dispatcher) examine(r *dcl.Result) error {
 	dbg := d.Debugger
 
@@ -111,7 +114,7 @@ func (d *Dispatcher) examine(r *dcl.Result) error {
 	operandsGiven := r.Present("OPERANDS") && !r.Defaulted("OPERANDS")
 
 	if !r.Present("INSTRUCTION") && !operandsGiven {
-		return vmserrors.New(vmserrors.DBG_NOTAVAILABLE)
+		return d.examineData(r)
 	}
 
 	opts := console.DisassembleOptions{

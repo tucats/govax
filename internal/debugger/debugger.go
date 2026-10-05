@@ -92,6 +92,10 @@ type Debugger struct {
 	inputRadix  int
 	outputRadix int
 
+	// examined is where EXAMINE last looked (data.go): what "EXAMINE" with
+	// no location, "." and "^" are relative to.
+	examined examineState
+
 	// active is true while a session is in progress, which is whether
 	// the prompt is "DBG> " and command lines come here.
 	active bool

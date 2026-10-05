@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -46,8 +47,17 @@ func (c *Console) EvalWhole(text string) (uint32, error) {
 // EvalWholeIn is EvalWhole with the radix a number without a prefix is read
 // in: the debugger has a radix of its own (SET RADIX).
 func (c *Console) EvalWholeIn(radix int, text string) (uint32, error) {
+	return c.EvalWholeMode(radix, text, false)
+}
+
+// EvalWholeMode is EvalWholeIn with the evaluator's Value mode chosen: true
+// gives an expression's value, as EVALUATE shows it (a data label is its
+// contents), and false its location, as EXAMINE and DEPOSIT take it (a
+// data label is its address).
+func (c *Console) EvalWholeMode(radix int, text string, value bool) (uint32, error) {
 	ev := c.Evaluator()
 	ev.Radix = radix
+	ev.Value = value
 
 	v, rest, err := ev.Eval(text)
 	if err != nil {
@@ -193,3 +203,70 @@ func (c *Console) LineStart(pc uint32) bool {
 
 	return ok && line.Address == pc
 }
+
+// DebugProgramAt returns the debug symbol table of the loaded image that
+// holds addr, or nil when addr is in no image or its image has none. The
+// debugger names data and registers' scopes from it.
+func (c *Console) DebugProgramAt(addr uint32) *dbgsym.Program { return c.debugImageAt(addr) }
+
+// DebugPrograms returns the debug symbol table of each loaded image that
+// has one, main image first.
+func (c *Console) DebugPrograms() []*dbgsym.Program {
+	var out []*dbgsym.Program
+
+	for _, icb := range c.ICBList {
+		if icb.Debug != nil {
+			out = append(out, icb.Debug)
+		}
+	}
+
+	return out
+}
+
+// ReadBytes reads n bytes of the machine's memory starting at virtual
+// address addr, as the console's EXAMINE does: through kernel-mode
+// translation, whatever mode the program last ran in. A page that can't
+// be read is the debugger's %DEBUG-E-NOACCESSR for the first address that
+// failed.
+func (c *Console) ReadBytes(addr, n uint32) ([]byte, error) {
+	if err := c.requireInit(); err != nil {
+		return nil, err
+	}
+
+	out := make([]byte, n)
+
+	for i := range out {
+		b, err := c.loadSized(addr+uint32(i), SizeByte)
+		if err != nil {
+			return nil, vmserrors.New(vmserrors.DBG_NOACCESSR, addr+uint32(i))
+		}
+
+		out[i] = byte(b)
+	}
+
+	return out, nil
+}
+
+// WriteBytes stores data into the machine's memory at virtual address
+// addr, as DEPOSIT does (through kernel-mode translation, a byte at a
+// time). It doesn't move the console's current deposit address.
+func (c *Console) WriteBytes(addr uint32, data []byte) error {
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	return c.withKernelMode(func() error {
+		for i, b := range data {
+			if err := c.Mem.StoreByte(c.CPU, addr+uint32(i), b); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+// FormatPTE is a page table entry as EXAMINE/PTE shows it: the entry's
+// value and its fields (valid, protection, modified, owner, and the
+// physical address of its page frame).
+func (c *Console) FormatPTE(v uint32) string { return c.formatOne(0, SizePTE, v) }

@@ -399,6 +399,23 @@ func (c *Console) Evaluator() *Evaluator {
 
 			return v, nil
 		},
+		LoadSized: func(addr, size uint32) (uint32, error) {
+			sz := SizeLongword
+
+			switch size {
+			case 1:
+				sz = SizeByte
+			case 2:
+				sz = SizeWord
+			}
+
+			v, err := c.loadSized(addr, sz)
+			if err != nil {
+				return 0, vmserrors.New(vmserrors.DBG_NOACCESSR, addr)
+			}
+
+			return v, nil
+		},
 	}
 }
 

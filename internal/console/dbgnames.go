@@ -40,6 +40,54 @@ func (n imageNames) Lookup(path string) (uint32, bool) {
 	return 0, false
 }
 
+// DataSize implements DebugData: the size of the data the symbol labels,
+// from the type MACRO's debug records give it (a longword for .LONG, a
+// byte for .BYTE), capped at the longword the evaluator can hold. A
+// string or an array of bytes reads as a byte, the type of its first
+// item. ok is false where no image's debug symbols have the name as data.
+func (n imageNames) DataSize(path string) (uint32, bool) {
+	for _, icb := range n.c.ICBList {
+		d, ok := icb.Debug.DatumPath(path)
+		if !ok {
+			continue
+		}
+
+		// Text and byte arrays read as their first byte; a quadword or
+		// larger as its first longword.
+		size := d.ElementSize()
+		if size == 0 || d.IsText() {
+			size = 1
+		}
+
+		return min(size, 4), true
+	}
+
+	return 0, false
+}
+
+// Element implements DebugData: the address and size of an array's
+// element. Subscripts count from the array's lower bound, and one outside
+// the bounds is an error (ok false), as it is in the debugger.
+func (n imageNames) Element(path string, index int32) (addr, size uint32, ok bool) {
+	for _, icb := range n.c.ICBList {
+		d, found := icb.Debug.DatumPath(path)
+		if !found || !d.IsArray() || len(d.Descriptor.Bounds) != 1 {
+			continue
+		}
+
+		b := d.Descriptor.Bounds[0]
+		if index < b.Lower || index > b.Upper {
+			return 0, 0, false
+		}
+
+		size = max(d.ElementSize(), 1)
+
+		return d.Value + uint32(index-b.Lower)*size, min(size, 4), true
+	}
+
+	return 0, 0, false
+}
+
 // Line returns the address of line n's first instruction. With a scope
 // (DBGSUB, or DBGDIS\START), the line is its module's, the first
 // component naming the module (line numbers are a module's, so a

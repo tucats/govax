@@ -204,11 +204,17 @@ grammar debugger
         syntax cancel_radix/id=86
 
     ! EXAMINE[/qualifiers] [location[,location...]] shows what is at each
-    ! location. Subtask 9 has /INSTRUCTION, the machine instruction there
-    ! (a location may be a range, start:end); /OPERANDS[=FULL] explains
+    ! location. With /INSTRUCTION it is the machine instruction there (a
+    ! location may be a range, start:end); /OPERANDS[=FULL] explains
     ! each operand; /CONSTANTS and /SHAREABLE are govax's, naming a
-    ! constant and a G^ reference's routine. The location is the rest of
-    ! the line, which internal/debugger takes apart.
+    ! constant and a G^ reference's routine. Without them it is the data:
+    ! typed by the program's debug symbols, or by /BYTE, /WORD,
+    ! /LONGWORD, /QUADWORD, or /ASCII[:count] (govax's own /PTE shows a
+    ! page table entry, and /PSL a processor status longword), and shown
+    ! in the output radix, or /HEXADECIMAL, /DECIMAL, /OCTAL, or /BINARY.
+    ! /SYMBOLIC is accepted (SET MODE NOSYMBOLIC doesn't change data
+    ! names). The location is the rest of the line, which
+    ! internal/debugger takes apart.
     verb examine/id=87
         qualifier   instruction/id=88/nonegatable
         qualifier   operands/id=89              -
@@ -216,8 +222,65 @@ grammar debugger
                     /default=""
         qualifier   constants/id=90/nonegatable
         qualifier   shareable/id=91/nonegatable
+        qualifier   byte/id=93/nonegatable
+        qualifier   word/id=94/nonegatable
+        qualifier   longword/id=95/nonegatable
+        qualifier   quadword/id=96/nonegatable
+        qualifier   ascii/id=97                 -
+                    /type=$string               -
+                    /default=""/nonegatable
+        qualifier   psl/id=98/nonegatable
+        qualifier   pte/id=99/nonegatable
+        qualifier   hexadecimal/id=100/nonegatable
+        qualifier   decimal/id=101/nonegatable
+        qualifier   octal/id=102/nonegatable
+        qualifier   binary/id=103/nonegatable
+        qualifier   symbolic/id=104
         parameter   location/id=92              -
                     /type=$rest_of_line
+        disallow    any2(byte, word, longword, quadword, psl, pte, instruction)
+        disallow    any2(hexadecimal, decimal, octal, binary)
     verb ex/alias=examine
+
+    ! DEPOSIT[/type] location = value stores a value (in the input radix)
+    ! or, with /ASCII[:count], a quoted string at a location: a register
+    ! or an address. The type is /BYTE, /WORD, /LONGWORD, or /QUADWORD,
+    ! else the type of the data the location labels, else a longword.
+    verb deposit/id=105
+        qualifier   byte/id=106/nonegatable
+        qualifier   word/id=107/nonegatable
+        qualifier   longword/id=108/nonegatable
+        qualifier   quadword/id=109/nonegatable
+        qualifier   ascii/id=110                -
+                    /type=$string               -
+                    /default=""/nonegatable
+        parameter   assignment/id=111           -
+                    /type=$rest_of_line         -
+                    /prompt="Location"
+        disallow    any2(byte, word, longword, quadword)
+    verb d/alias=deposit
+
+    ! EVALUATE[/radix] expression shows an expression's value: the
+    ! contents of a data label (EVALUATE/ADDRESS shows its address). The
+    ! number is in the output radix, or /HEXADECIMAL, /DECIMAL, /OCTAL, or
+    ! /BINARY.
+    verb evaluate/id=112
+        qualifier   address/id=113/nonegatable
+        qualifier   hexadecimal/id=114/nonegatable
+        qualifier   decimal/id=115/nonegatable
+        qualifier   octal/id=116/nonegatable
+        qualifier   binary/id=117/nonegatable
+        parameter   expression/id=118           -
+                    /type=$rest_of_line         -
+                    /prompt="Expression"
+        disallow    any2(hexadecimal, decimal, octal, binary)
+    verb eval/alias=evaluate
+
+    ! SYMBOLIZE address shows each name the debugger has for an address:
+    ! the program's symbols and lines, and then the global symbol table's.
+    verb symbolize/id=119
+        parameter   address/id=120              -
+                    /type=$rest_of_line         -
+                    /prompt="Address"
 
 end

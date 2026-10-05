@@ -1397,3 +1397,67 @@ Bug 7 is fixed, and the debugger has `EXAMINE/INSTRUCTION`.
   subtask 10.
 - `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
   touched are clean.
+
+### 2026-10-05 — Subtask 10: data EXAMINE, DEPOSIT, EVALUATE, SYMBOLIZE
+
+- **EXAMINE of data** (`internal/debugger/data.go`). Each location is a
+  register (`DBGCMD\FACT\%R2:`, named in the routine the PC is in), a
+  location, a range `a:b`, or, with nothing, the next location after the
+  last one shown (`.` that one again, `^` the one before it, by the size
+  of the last item). A location is typed by the debug symbols where a
+  label is exactly at the address (`dbgsym.Program.DatumAt`: a longword by
+  its DST type, a byte, a string by its descriptor length or, for
+  `.ASCID`, through the descriptor in memory, an array one element a line
+  under `NAME[lo:hi]`), else by the array it is an element of, else a
+  longword. `/BYTE`, `/WORD`, `/LONGWORD`, `/QUADWORD`, `/ASCII[:n]`,
+  `/HEXADECIMAL`, `/DECIMAL`, `/OCTAL`, `/BINARY`, `/PSL` (the field
+  table, `pslTable`), and govax's `/PTE`; `/SYMBOLIC` is accepted and
+  ignored. A location's name is the data symbol, an array element
+  (`BUFFER[4]`), or the nearest data symbol before it and the offset
+  (`WATCHL+3`), padded to the next multiple of 8 columns as the log's tab
+  is (`tabPad`). The output radix (`SET RADIX/OUTPUT`) is the default.
+- **Probe findings.** `/ASCII:16` is 22 characters because the count is
+  read in the *input radix* (hex 16 is 22): not a VMS oddity, so nothing
+  to log. A range steps by a longword (or the size typed), however big
+  each item is (`EXAMINE 200:20C` shows WATCHL, WATCHB, BUFFER[0], and
+  BUFFER[4]). The nearest-data rule isn't bounded by program section
+  (`SYMBOLIZE NOLAB2-4` is `DBGDIS\TEXT+1A`, though NOLAB2's psect
+  starts after TEXT's).
+- **EVALUATE[/ADDRESS][/radix]**: the expression evaluator has a *Value*
+  mode (`Evaluator.Value`, `Console.EvalWholeMode`): a data label is its
+  contents sized by its type (`EVALUATE WATCHL`), `.R2` dereferences the
+  register (EXAMINE's `.SP` is the location SP holds, as before), and
+  `NAME[n]` is an array element, in both modes (`DebugData`,
+  `imageNames.DataSize/Element`). Operators added for it: `MOD`, `@`
+  (shift, as MACRO's), `NOT`, `AND`/`OR`/`XOR`, and `EQL`/`NEQ`/`LSS`/
+  `LEQ`/`GTR`/`GEQ`. Hex output with a leading letter gets a `0`.
+- **DEPOSIT[/type] location = value**: a number in the input radix sized
+  by `/type`, else the label's type, else a longword; `/ASCII[:n]` stores
+  a quoted string (cut or blank-padded to n); a register takes a longword.
+- **SYMBOLIZE address** (`dbgsym.Program.SymbolizeNames`): the module
+  names (the symbol, or the routine or nearest data symbol plus an offset;
+  then the line, in the module's scope for a CALLS routine's entry mask),
+  then `(global)` and the GST's name for an image that has one.
+- **Unconfirmed, govax's choices:** `EXAMINE` with nothing and `^` before
+  any EXAMINE start from the deposit address; a register named outside a
+  routine is a bare `%R2`; a float or octaword label shows as raw hex of
+  its size; `/ASCII` of an array shows its element count of characters;
+  `EVALUATE` of `WATCHL+1` is the *address* WATCHL plus 1 (only a bare
+  label, or one with a subscript, is contents); SYMBOLIZE of an address
+  in no image prints only its heading; subscripts are decimal;
+  `EXAMINE/PTE` of a register.
+- **Left for later:** `NOSYMBOL` messages for an undefined name (the
+  probe's `%DEBUG-E-NOSYMBOL`; govax says `CLI-E-UNDEFSYM`), and
+  `EXAMINE/INSTRUCTION`'s numeric layout under `SET MODE NOSYMBOLIC`
+  (`00000485:       MULL2    R2,R0`, tab-padded, where the console's own
+  layout is still used): subtask 11's `SET MODE` and the final cleanup.
+- **Tests.** `TestExamineDataOracle` replays `exam.dbg` and compares every
+  EXAMINE and EVALUATE the log shows (those that depend on the stack
+  addresses, the user-mode PSL, or `/INSTRUCTION` are left out);
+  `TestSymbolizeOracle` replays the SYMBOLIZE and `EVALUATE/ADDRESS` lines
+  of `dbgdis.dlg` and `dbgtrc.dlg`; `data_test.go` has the PSL table,
+  EVALUATE's radix and operators and errors, DEPOSIT, radix qualifiers,
+  text, and error cases.
+- `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
+  touched are clean. (`TestCtrlCReturnsToPrompt` failed once under the
+  whole suite's load and passed on every rerun; it is timing-sensitive.)

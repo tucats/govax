@@ -47,6 +47,18 @@ type Evaluator struct {
 	// memory to read, and they fail.
 	Load func(addr uint32) (uint32, error)
 
+	// Value makes the evaluator give an expression's value as the
+	// debugger's EVALUATE does, not a location's address as EXAMINE and
+	// DEPOSIT take it. A data label is then the data's contents (EVALUATE
+	// WATCHL is what is stored at WATCHL, where EXAMINE WATCHL means the
+	// location itself), and a register after "." or "@" is dereferenced
+	// (.R2 is what is at the address R2 holds), as any other operand is.
+	Value bool
+
+	// LoadSized reads size bytes (1, 2, or 4) at an address, for a data
+	// label's contents in Value mode. Nil reads a longword with Load.
+	LoadSized func(addr, size uint32) (uint32, error)
+
 	// Debug resolves the names the console's table doesn't have from the
 	// loaded images' debug symbol tables (Phase 41): a symbol, a
 	// debugger path name (FORTH\NEXT, DBGDIS\START\LOOP), or a line
@@ -67,10 +79,79 @@ type DebugNames interface {
 	Line(scope string, n int) (uint32, bool)
 }
 
+// DebugData is what a DebugNames that knows the type of its data symbols
+// adds: the size of the data a name labels, so that the evaluator in Value
+// mode can fetch its contents.
+type DebugData interface {
+	// DataSize returns the size in bytes of the data the symbol path
+	// names, up to a longword (a larger datum is read as its first four
+	// bytes). ok is false for anything that isn't a data symbol.
+	DataSize(path string) (uint32, bool)
+
+	// Element returns the address and size of element index of the array
+	// the symbol path labels (BUFFER[2]); the index counts from the
+	// array's own lower bound. ok is false for anything but an array.
+	Element(path string, index int32) (addr, size uint32, ok bool)
+}
+
 // Eval parses a leading expression from s and returns its value and
 // whatever text remains unconsumed.
 func (e *Evaluator) Eval(s string) (uint32, string, error) {
-	return e.parseCompare(s)
+	return e.parseLogical(s)
+}
+
+// keywordAt reports which of words (upper case) s starts with, ignoring
+// case and only where the word is a whole name: "MOD 3" starts with MOD,
+// but "MODE" doesn't. It returns the word, or "" for none. The VMS
+// debugger spells its comparison and logical operators this way (EQL,
+// NEQ, AND, ...), which a symbol name could also begin with, hence the
+// whole-name test.
+func keywordAt(s string, words ...string) string {
+	for _, w := range words {
+		if len(s) >= len(w) && strings.EqualFold(s[:len(w)], w) &&
+			(len(s) == len(w) || !isSymbolChar(s[len(w)])) {
+			return w
+		}
+	}
+
+	return ""
+}
+
+// parseLogical is the lowest-precedence level of an expression: the
+// bitwise operators AND, OR, and XOR, applied left to right to
+// comparisons. (The debugger's language is the language of the program
+// being debugged, MACRO here, whose own operators are &, !, and \; the
+// keyword forms are what the debugger's expression evaluator takes.)
+func (e *Evaluator) parseLogical(s string) (uint32, string, error) {
+	v1, rest, err := e.parseCompare(s)
+	if err != nil {
+		return 0, "", err
+	}
+
+	for {
+		trimmed := strings.TrimLeft(rest, " \t")
+
+		op := keywordAt(trimmed, "AND", "OR", "XOR")
+		if op == "" {
+			return v1, rest, nil
+		}
+
+		v2, r2, err := e.parseCompare(trimmed[len(op):])
+		if err != nil {
+			return 0, "", err
+		}
+
+		switch op {
+		case "AND":
+			v1 &= v2
+		case "OR":
+			v1 |= v2
+		default:
+			v1 ^= v2
+		}
+
+		rest = r2
+	}
 }
 
 func (e *Evaluator) parseCompare(s string) (uint32, string, error) {
@@ -121,6 +202,13 @@ func (e *Evaluator) parseCompare(s string) (uint32, string, error) {
 func compareOp(s string) (op string, length int) {
 	if len(s) == 0 {
 		return "", 0
+	}
+
+	// The debugger's word forms are the same comparisons as the symbols.
+	if w := keywordAt(s, "EQL", "NEQ", "LSS", "LEQ", "GTR", "GEQ"); w != "" {
+		return map[string]string{
+			"EQL": "=", "NEQ": "<>", "LSS": "<", "LEQ": "<=", "GTR": ">", "GEQ": ">=",
+		}[w], len(w)
 	}
 
 	if strings.HasPrefix(s, "<>") {
@@ -194,28 +282,61 @@ func (e *Evaluator) parseMulDiv(s string) (uint32, string, error) {
 
 	for {
 		trimmed := strings.TrimLeft(rest, " \t")
-		if trimmed == "" || (trimmed[0] != '*' && trimmed[0] != '/') {
+
+		// "*", "/", MOD, and "@" (an arithmetic shift, as MACRO's: 1@4 is
+		// 1 shifted left four places, and a negative count shifts right).
+		op, opLen := "", 0
+
+		switch {
+		case trimmed == "":
+			return v1, rest, nil
+		case trimmed[0] == '*' || trimmed[0] == '/' || trimmed[0] == '@':
+			op, opLen = trimmed[:1], 1
+		case keywordAt(trimmed, "MOD") != "":
+			op, opLen = "MOD", 3
+		default:
 			return v1, rest, nil
 		}
 
-		op := trimmed[0]
-
-		v2, r2, err := e.parseAtom(trimmed[1:])
+		v2, r2, err := e.parseAtom(trimmed[opLen:])
 		if err != nil {
 			return 0, "", err
 		}
 
-		if op == '*' {
-			v1 = v1 * v2
-		} else {
+		switch op {
+		case "*":
+			v1 *= v2
+		case "@":
+			v1 = shiftLeft(v1, int32(v2))
+		default: // "/" and MOD
 			if v2 == 0 {
 				return 0, "", vmserrors.New(vmserrors.CLI_DIVZERO)
 			}
 
-			v1 = v1 / v2
+			if op == "/" {
+				v1 /= v2
+			} else {
+				v1 %= v2
+			}
 		}
 
 		rest = r2
+	}
+}
+
+// shiftLeft shifts v by count bits: left for a positive count, and
+// arithmetically right (keeping the sign) for a negative one, as the VAX's
+// ASHL instruction and MACRO's @ operator do.
+func shiftLeft(v uint32, count int32) uint32 {
+	switch {
+	case count >= 32:
+		return 0
+	case count >= 0:
+		return v << uint(count)
+	case count <= -32:
+		return uint32(int32(v) >> 31)
+	default:
+		return uint32(int32(v) >> uint(-count))
 	}
 }
 
@@ -226,7 +347,7 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 	}
 
 	if s[0] == '(' {
-		v, rest, err := e.parseCompare(s[1:])
+		v, rest, err := e.parseLogical(s[1:])
 		if err != nil {
 			return 0, "", err
 		}
@@ -237,6 +358,16 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 		}
 
 		return v, rest[1:], nil
+	}
+
+	// NOT is the one's complement of what follows (NOT 0 is FFFFFFFF).
+	if w := keywordAt(s, "NOT"); w != "" {
+		v, rest, err := e.parseAtom(s[len(w):])
+		if err != nil {
+			return 0, "", err
+		}
+
+		return ^v, rest, nil
 	}
 
 	// ".X" and "@X" are the contents of X: the register's value, or the
@@ -305,10 +436,102 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 			return 0, "", vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
 		}
 
+		// NAME[n] is an element of an array.
+		if strings.HasPrefix(rest, "[") {
+			return e.parseElement(name, rest[1:])
+		}
+
+		if e.Value {
+			contents, isData, err := e.dataContents(name, v)
+			if err != nil {
+				return 0, "", err
+			}
+
+			if isData {
+				return contents, rest, nil
+			}
+		}
+
 		return v, rest, nil
 	}
 
 	return e.parseNumber(s)
+}
+
+// parseElement evaluates the subscript of NAME[subscript], s being what
+// follows the "[": the address of that element of the array NAME labels,
+// or, in Value mode, the element's contents.
+func (e *Evaluator) parseElement(name, s string) (uint32, string, error) {
+	dd, ok := e.Debug.(DebugData)
+	if !ok {
+		return 0, "", vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
+	}
+
+	index, rest, err := e.parseLogical(s)
+	if err != nil {
+		return 0, "", err
+	}
+
+	rest = strings.TrimLeft(rest, " \t")
+	if !strings.HasPrefix(rest, "]") {
+		return 0, "", vmserrors.New(vmserrors.CLI_NEEDPAREN)
+	}
+
+	addr, size, ok := dd.Element(name, int32(index))
+	if !ok {
+		return 0, "", vmserrors.New(vmserrors.CLI_UNDEFSYM, name+"["+strconv.Itoa(int(int32(index)))+"]")
+	}
+
+	if !e.Value {
+		return addr, rest[1:], nil
+	}
+
+	v, err := e.loadValue(addr, size)
+
+	return v, rest[1:], err
+}
+
+// loadValue reads size bytes (at most a longword's worth) at addr in the
+// way Value mode does.
+func (e *Evaluator) loadValue(addr, size uint32) (uint32, error) {
+	switch {
+	case e.LoadSized != nil:
+		return e.LoadSized(addr, size)
+	case e.Load != nil:
+		return e.Load(addr)
+	}
+
+	return 0, vmserrors.New(vmserrors.CLI_NOVAX)
+}
+
+// dataContents is a data label's value in Value mode: the contents at
+// address addr, sized by the label's data type. isData is false when name
+// isn't a data label (a register, a routine, a constant), and its value
+// is unchanged.
+func (e *Evaluator) dataContents(name string, addr uint32) (v uint32, isData bool, err error) {
+	dd, ok := e.Debug.(DebugData)
+	if !ok || e.Symbols == nil {
+		return 0, false, nil
+	}
+
+	// A name the console's own table or a register defines wins over the
+	// debug symbols, as in lookupSymbol.
+	if _, found := e.Symbols.Get(name); found {
+		return 0, false, nil
+	}
+
+	if _, found := registerValue(e, name); found {
+		return 0, false, nil
+	}
+
+	size, ok := dd.DataSize(name)
+	if !ok {
+		return 0, false, nil
+	}
+
+	v, err = e.loadValue(addr, size)
+
+	return v, true, err
 }
 
 // startsOperand reports whether ch can begin the operand a "." or "@"
@@ -328,7 +551,7 @@ func (e *Evaluator) parseContents(s string) (uint32, string, error) {
 		return 0, "", err
 	}
 
-	if e.isRegister(s) {
+	if !e.Value && e.isRegister(s) {
 		return addr, rest, nil
 	}
 

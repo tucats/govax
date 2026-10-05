@@ -156,11 +156,6 @@ func TestSetModeAndRadix(t *testing.T) {
 	if err := c.Debugger.Dispatch("SET MODE NONSENSE"); err == nil {
 		t.Error("SET MODE NONSENSE succeeded")
 	}
-
-	// The data forms of EXAMINE come later.
-	if err := c.Debugger.Dispatch("EXAMINE R0"); err == nil {
-		t.Error("EXAMINE R0 succeeded before the data forms exist")
-	}
 }
 
 // TestRegistersInExpressions: a register is its contents in an address
