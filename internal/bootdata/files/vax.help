@@ -622,28 +622,58 @@ $CLEA,TB
 
 $DISA
 $EXAM,/INS
-    The EXAMINE/INSTRUCTION command (or it's alias DISASSEMBLE) is used to 
-    display the contents of the virtual VAX memory formatted as executable 
+    The DISASSEMBLE command (or its abbreviation DIS) displays the
+    contents of the virtual VAX memory formatted as executable
     instructions.
 
     Syntax:
 
-        EXAMINE/INSTRUCTION <start-addr> [<end-addr>]
+        DISASSEMBLE [/[NO]SYMBOLIC] [/CONSTANTS] [/SHAREABLE]
+                    [<start-addr> [<end-addr>]]
 
     Parameters:
 
-        <start-addr>    The starting address.  This can be a numeric value in
-                        the current RADIX, or it can be a symbol enclosed in
-                        single quotes.
+        <start-addr>    The starting address: an expression in the current
+                        RADIX.  It may use a symbol, a name from a loaded
+                        image's debug symbol table (START, FORTH\NEXT,
+                        DBGDIS\START\LOOP), or a listing line (%LINE 120,
+                        DBGSUB\%LINE 14).  If not given, the current
+                        location is used.
 
-        <end-addr>      The ending address of instructions to disassemble.
-                        If not given, then one instruction is disassembled.
+        <end-addr>      The address of the last instruction to
+                        disassemble.  If not given, then one instruction is
+                        disassembled.
+
+    Qualifiers:
+
+        /SYMBOLIC       Lay each instruction out as the VMS debugger's
+                        EXAMINE/INSTRUCTION does: its location (a routine,
+                        label, or line, such as DBGDIS\START\%LINE 42),
+                        then the instruction, with each address an operand
+                        refers to shown by name.  Names come from the debug
+                        symbol tables of the images RUN loaded, and from
+                        the console's symbols.  This is the default unless
+                        the vax.disassemble.symbolic setting is false.
+
+        /NOSYMBOLIC     Show each instruction as its address and the text
+                        the console's assembler accepts.
+
+        /CONSTANTS      Show a literal that is the value of exactly one
+                        constant in the module (LIMIT = 10) by its name.
+
+        /SHAREABLE      Show a G^ reference to a shareable image's routine
+                        by the routine's name (G^LIB$PUT_OUTPUT), instead
+                        of the fixup cell it goes through.
 
     Examples:
 
-        EXAM/INSTR MAIN
+        DISASSEMBLE MAIN
 
-        EXAM/INSTR 0200 0210
+        DISASSEMBLE 0200 0210
+
+        DISASSEMBLE %LINE 47 %LINE 56
+
+        DISASSEMBLE/NOSYMBOLIC FORTH\NEXT FORTH\NEXT+20
 
 $EXAM
 $EX  

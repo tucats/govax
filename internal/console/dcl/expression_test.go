@@ -35,6 +35,10 @@ func TestReadExpression(t *testing.T) {
 		{"^X1F", 0, "^X1F", ""},
 		{`"open`, 0, `"open`, ""},
 		{"  7  ", 0, "7", "  "},
+		{"%LINE 120 %LINE 130", 0, "%LINE 120", " %LINE 130"},
+		{`FORTH\%line 332+6 /NOSYMBOLIC`, 0, `FORTH\%line 332+6`, " /NOSYMBOLIC"},
+		{`FORTH\NEXT FORTH\NEXT+20`, 0, `FORTH\NEXT`, ` FORTH\NEXT+20`},
+		{"%LINE", 0, "%LINE", ""},
 	}
 
 	for _, c := range cases {

@@ -3,6 +3,8 @@ package console
 import (
 	"strings"
 
+	"github.com/tucats/gopackages/app-cli/settings"
+
 	"github.com/tucats/govax/internal/console/dcl"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -238,19 +240,35 @@ func (d *Dispatcher) depositCommand(id int64, r *dcl.Result) error {
 	return d.Console.Deposit("", addr, sz, val)
 }
 
-// disassembleCommand implements DISASSEMBLE [start [end]]
-// (console_disasm.c): start defaults to the current deposit address, and
-// end to start (one instruction).
+// disassembleCommand implements DISASSEMBLE[/[NO]SYMBOLIC][/CONSTANTS]
+// [/SHAREABLE] [start [end]] (console_disasm.c; docs/PHASE-41.md subtask
+// 11): start defaults to the current deposit address, and end to start
+// (one instruction). Either may be a debugger path name or a %LINE.
+// /SYMBOLIC's default is the vax.disassemble.symbolic setting, true when
+// it isn't set (Decision 2).
 func (d *Dispatcher) disassembleCommand(id int64, r *dcl.Result) error {
+	opts := DisassembleOptions{
+		Symbolic:  symbolicDefault(),
+		Constants: r.Present("CONSTANTS") && !r.Negated("CONSTANTS"),
+		Shareable: r.Present("SHAREABLE") && !r.Negated("SHAREABLE"),
+	}
+
+	if r.Present("SYMBOLIC") {
+		opts.Symbolic = !r.Negated("SYMBOLIC")
+	}
+
 	start := d.Console.DepositAddr
 
 	if r.Present("START") {
-		v, err := d.evalWhole(r.String("START"))
+		text := r.String("START")
+
+		v, err := d.evalWhole(text)
 		if err != nil {
 			return err
 		}
 
 		start = v
+		opts.StartLine = strings.Contains(strings.ToUpper(text), "%LINE")
 	}
 
 	end := start
@@ -264,7 +282,22 @@ func (d *Dispatcher) disassembleCommand(id int64, r *dcl.Result) error {
 		end = v
 	}
 
-	return d.Console.Disassemble(start, end)
+	return d.Console.DisassembleWith(start, end, opts)
+}
+
+// symbolicSetting is the setting that gives DISASSEMBLE's default for
+// /SYMBOLIC.
+const symbolicSetting = "vax.disassemble.symbolic"
+
+// symbolicDefault is whether DISASSEMBLE is /SYMBOLIC when the command
+// doesn't say: the vax.disassemble.symbolic setting, or true when it
+// isn't set, as the debugger's SET MODE SYMBOLIC is its default.
+func symbolicDefault() bool {
+	if settings.Get(symbolicSetting) == "" {
+		return true
+	}
+
+	return settings.GetBool(symbolicSetting)
 }
 
 // optionalAddress evaluates the $expression parameter name, or returns nil

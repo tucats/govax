@@ -880,3 +880,58 @@ system services, and the layout of a location longer than 24 columns.
   (the cell is among `ICB.Cells`, and holds `LIB$PUT_OUTPUT`'s stub);
   `TestSharedName`, `TestSharedSymbolizer`; `TestCells` in
   `internal/disasm` checks the option's rendering and fallbacks.
+
+### 2026-10-05 — Subtask 11: the `DISASSEMBLE` command
+
+- **Qualifiers** (`console.dcl`): `/[NO]SYMBOLIC`, `/CONSTANTS`, and
+  `/SHAREABLE`. `/SYMBOLIC`'s default is the `vax.disassemble.symbolic`
+  setting, true when it isn't set (Decision 2); `/CONSTANTS` (Decision
+  5) and `/SHAREABLE` (subtask 10) are off unless given, since the
+  debugger shows neither.
+- **`/SYMBOLIC`'s layout** (`Console.DisassembleWith`, `disasm.go`;
+  Decision 1): the location, a colon, spaces to the next multiple of 8
+  columns, then `disasm.StyleDebugger`'s text. The location is the
+  most specific name; a range typed as a `%LINE` starts with the line's
+  name (`DBGDIS\START\%LINE 85:`, though LOOP is there too). After a
+  `CASEx` whose limit is a literal or immediate, the table's entries are
+  printed as the debugger prints them (16 spaces and the destination),
+  at most 1024 of them (govax's bound). `/NOSYMBOLIC` is the console's
+  old layout, unchanged; `Console.Disassemble` is still that.
+- **Names** (`dbgnames.go`, `consoleSymbolizer`): an address inside an
+  image with a debug symbol table is named by that table alone, by
+  subtask 9's rules (GST's nearest global included). Any other address
+  only by an exact match: a GST global (`@#SYS$OPEN`), a console symbol
+  that is an address (an entry point, a label, or a user's symbol, not
+  page 0: the console's table also holds ~800 `SS$_` constants), or a
+  loaded shareable image's universal symbol. Exact-only outside the
+  images is govax's choice: the debugger would take the nearest global
+  there too, giving `SYS$...+offset` for console and kernel addresses.
+  Offsets are decimal when the console's radix is, as with the
+  debugger's `SET RADIX DECIMAL`.
+- **The symbolic path skips the console's old CALLS naming**
+  (`decodeAt`): `decodeInstruction` named an absolute CALLS target by
+  its bare routine name, where the debugger writes the path. The
+  `/NOSYMBOLIC` layout keeps it.
+- **Names in expressions** (`expr.go`): the evaluator takes path names
+  (`FORTH\NEXT`, `DBGDIS\START\LOOP`) and lines (`%LINE 120`,
+  `DBGSUB\%LINE 14`, `DBGDIS\START\%LINE 42+3`). A plain name is looked
+  for in the console's table, then the assembler's built-ins, then the
+  images' DSTs and GSTs (`imageNames`); a path only in the images. A line
+  number is decimal whatever the radix. `%LINE n` with no scope is the
+  line in the module holding the PC, else the first module, in load
+  order, with code there (unconfirmed: the debugger takes the current
+  scope; govax's PC is often in no module, as at `RUN/STEP`'s first
+  stop). A scope's first component names the module; a routine in it
+  doesn't narrow the line.
+- **The grammar** (`dcl/expression.go`): `\` already passed through
+  `readExpression`; `%LINE` now joins its number across the blank.
+- **`HELP DISASSEMBLE`** (`vax.help`) describes the qualifiers and names,
+  and `CLAUDE.md` the setting. EXAMINE/INSTRUCTION, which the old help
+  named as an alias, still isn't a command.
+- **Tests.** `TestDisassembleSymbolic` runs DBGDIS and GVDBGDIS and
+  checks eight commands' output against each image's own debugger
+  session (whole routines with the CASE table, ranges by routine, label,
+  path, `%LINE`, and `MOD\%LINE`), `TestDisassembleSymbolicDecimal`,
+  `TestDisassembleQualifiers`, `TestEvaluateDebugNames` (including the
+  debugger's `EVALUATE/ADDRESS` answers), and `TestReadExpression`'s new
+  `%LINE` cases.

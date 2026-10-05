@@ -85,7 +85,9 @@ const expressionOperators = "+-*/=<>"
 //
 //   - Inside parentheses or double quotes, everything belongs to it.
 //   - A blank ends it unless an operator joins the two sides ("X + 4",
-//     "X+ 4", "X +4"), or the expression so far ends in an operator.
+//     "X+ 4", "X +4"), or the expression so far ends in an operator or
+//     in the debugger's %LINE, whose line number follows a blank
+//     ("%LINE 120", "FORTH\%LINE 332+6"; Phase 41).
 //   - A '/' is division, except after a blank and before a letter, where
 //     it starts a qualifier ("EXAMINE 100 /BYTE"): "X/Y" and "X / Y" are
 //     divisions, "X /Y" is X and the qualifier /Y.
@@ -145,7 +147,7 @@ scan:
 				j++
 			}
 
-			if j == len(s) || !joinsAcrossBlank(s[j:], needOperand, sep) {
+			if j == len(s) || !joinsAcrossBlank(s[j:], needOperand || endsInLine(s[:i]), sep) {
 				break scan
 			}
 
@@ -187,6 +189,14 @@ func joinsAcrossBlank(next string, needOperand bool, sep byte) bool {
 	default:
 		return strings.IndexByte(expressionOperators, ch) >= 0
 	}
+}
+
+// endsInLine reports whether text ends in the debugger's %LINE keyword,
+// which takes a line number after a blank.
+func endsInLine(text string) bool {
+	const keyword = "%LINE"
+
+	return len(text) >= len(keyword) && strings.EqualFold(text[len(text)-len(keyword):], keyword)
 }
 
 func isLetter(ch byte) bool {

@@ -1109,8 +1109,17 @@ grammar console
         disallow    any2(byte, word, longword, ascii, pte)
     verb d/alias=deposit
 
-    ! DISASSEMBLE [start [end]] lists instructions (DIS).
+    ! DISASSEMBLE [start [end]] lists instructions (DIS). /SYMBOLIC
+    ! (the default, unless the vax.disassemble.symbolic setting is false)
+    ! lays them out as the VMS debugger's EXAMINE/INSTRUCTION does, named
+    ! from loaded images' debug symbol tables; /NOSYMBOLIC is the console's
+    ! own layout. /CONSTANTS names constants, and /SHAREABLE a G^
+    ! reference's routine, which the debugger doesn't. A start or end may
+    ! be a path name (FORTH\NEXT) or a line (%LINE 120).
     verb disassemble/id=1710
+        qualifier   symbolic/id=1713
+        qualifier   constants/id=1714
+        qualifier   shareable/id=1715
         parameter   start/id=1711               -
                     /type=$expression
         parameter   end/id=1712                 -

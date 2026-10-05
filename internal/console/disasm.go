@@ -1,6 +1,9 @@
 package console
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/tucats/govax/internal/disasm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -27,14 +30,41 @@ func (r memByteReader) ByteAt(addr uint32) byte {
 	return b
 }
 
-// Disassemble implements DISASSEMBLE/DISA: decodes and prints instructions
-// from start through end (at least one, starting at start, even if end <
-// start), matching console_disasm.c's own address-range loop. Unlike the
-// reference tool's disasm_operand.c, this doesn't substitute a matching
-// label's name for a raw hex address, or append a branch-destination
-// comment: disasm.Disassemble leaves naming addresses to its caller,
-// which sets an operand's Symbol (see decodeInstruction).
+// Disassemble implements DISASSEMBLE/NOSYMBOLIC, the console's own
+// layout: DisassembleWith with no options.
 func (c *Console) Disassemble(start, end uint32) error {
+	return c.DisassembleWith(start, end, DisassembleOptions{})
+}
+
+// DisassembleOptions are DISASSEMBLE's qualifiers (docs/PHASE-41.md,
+// subtask 11).
+type DisassembleOptions struct {
+	// Symbolic lays each instruction out as the VMS debugger's
+	// EXAMINE/INSTRUCTION does, its location and operands named from the
+	// loaded images' debug symbol tables and the console's symbols
+	// (Decision 1). Without it, the layout is the console's own,
+	// "ADDRESS: MNEMONIC operands", in the text the assembler reads back.
+	Symbolic bool
+
+	// Constants names a short literal or immediate that is exactly one
+	// constant's value in the module holding the instruction (Decision
+	// 5); Shareable shows a G^ reference to a shareable image by the
+	// routine it calls (subtask 10). Neither is the debugger's display,
+	// so both are off unless asked for.
+	Constants bool
+	Shareable bool
+
+	// StartLine says the range's start was typed as a line (%LINE 85),
+	// so its first instruction is named by the line, as the debugger
+	// names it, even where a label is there too.
+	StartLine bool
+}
+
+// DisassembleWith implements DISASSEMBLE: decodes and prints instructions
+// from start through end (at least one, starting at start, even if end <
+// start), matching console_disasm.c's own address-range loop, laid out
+// as opts say.
+func (c *Console) DisassembleWith(start, end uint32, opts DisassembleOptions) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -44,17 +74,153 @@ func (c *Console) Disassemble(start, end uint32) error {
 	}
 
 	r := memByteReader{c: c}
+	names := consoleSymbolizer{c: c, radix: c.symbolRadix()}
+	format := c.formatOptions(opts, names)
+
 	for pc := start; pc <= end; {
-		dec, err := c.decodeInstruction(r, pc)
+		if !opts.Symbolic {
+			dec, err := c.decodeInstruction(r, pc)
+			if err != nil {
+				return vmserrors.Wrap(vmserrors.CLI_DISASM, err, pc)
+			}
+
+			c.Printf("%08X: %s\n", pc, dec.Format(format))
+			pc += dec.Length
+
+			continue
+		}
+
+		dec, err := c.decodeAt(r, pc)
 		if err != nil {
 			return vmserrors.Wrap(vmserrors.CLI_DISASM, err, pc)
 		}
 
-		c.Printf("%08X: %s\n", pc, dec.String())
+		loc, ok := "", false
+		if opts.StartLine && pc == start {
+			loc, ok = names.lineName(pc)
+		}
+
+		if !ok {
+			loc, ok = names.Symbolize(pc)
+		}
+
+		if !ok {
+			loc = fmt.Sprintf("%08X", pc)
+		}
+
+		c.Printf("%s\n", debuggerLine(loc, dec.Format(format)))
 		pc += dec.Length
+
+		if strings.HasPrefix(dec.Mnemonic, "CASE") {
+			pc = c.printCaseTable(r, dec, pc, names)
+		}
 	}
 
 	return nil
+}
+
+// formatOptions are the disassembler's options for opts: the debugger's
+// style and names for DISASSEMBLE/SYMBOLIC, and the constant and fixup
+// cell namers when asked for.
+func (c *Console) formatOptions(opts DisassembleOptions, names consoleSymbolizer) disasm.Options {
+	var format disasm.Options
+
+	if opts.Symbolic {
+		format.Style = disasm.StyleDebugger
+		format.Symbolizer = names
+	}
+
+	if opts.Constants {
+		format.Constants = imageConstants{c: c}
+	}
+
+	if opts.Shareable {
+		format.Cells = c
+	}
+
+	return format
+}
+
+// symbolRadix is the radix a symbolic name's offsets are written in: the
+// console's radix when it's decimal, as the debugger's SET RADIX DECIMAL
+// makes them (GLIMIT+589), and hexadecimal otherwise.
+func (c *Console) symbolRadix() int {
+	if c.Radix == 10 {
+		return 10
+	}
+
+	return 16
+}
+
+// debuggerLine lays out one EXAMINE/INSTRUCTION line as the debugger
+// does: the location and a colon, then spaces to the next multiple of 8
+// columns (a full 8 when the colon ends on one), then the instruction.
+func debuggerLine(loc, text string) string {
+	col := len(loc) + 1
+
+	return loc + ":" + strings.Repeat(" ", 8-col%8) + text
+}
+
+// maxCaseEntries bounds the case table printed after a CASE instruction,
+// whose limit could be as large as a longword: a table that long can't be
+// real code (govax's choice).
+const maxCaseEntries = 1024
+
+// printCaseTable prints the displacement table that follows a CASEB,
+// CASEW, or CASEL at table, as the debugger does: one line per entry, 16
+// spaces and the destination (DBGDIS\START\%LINE 100), and returns the
+// address after it. The table has limit+1 word entries; a limit that
+// isn't a literal or immediate can't be known, so nothing is printed and
+// the words that follow are decoded as instructions.
+func (c *Console) printCaseTable(r disasm.ByteReader, dec disasm.Decoded, table uint32, names consoleSymbolizer) uint32 {
+	if len(dec.Operands) < 3 {
+		return table
+	}
+
+	limit := dec.Operands[2]
+	if limit.Mode != disasm.ModeLiteral && limit.Mode != disasm.ModeImmediate {
+		return table
+	}
+
+	count := uint64(limit.Value) + 1
+	if count > maxCaseEntries {
+		count = maxCaseEntries
+	}
+
+	pc := table
+
+	for range count {
+		disp := int16(uint16(r.ByteAt(pc)) | uint16(r.ByteAt(pc+1))<<8)
+		dest := table + uint32(int32(disp))
+
+		text, ok := names.Symbolize(dest)
+		if !ok {
+			text = fmt.Sprintf("%08X", dest)
+		}
+
+		c.Printf("%16s%s\n", "", text)
+		pc += 2
+	}
+
+	return pc
+}
+
+// imageConstants is DISASSEMBLE/CONSTANTS's disasm.ConstantNamer: a
+// constant of the module, in the loaded images' debug symbol tables, that
+// holds the instruction.
+type imageConstants struct {
+	c *Console
+}
+
+// Constant implements disasm.ConstantNamer.
+func (n imageConstants) Constant(pc, value uint32) (string, bool) {
+	for _, icb := range n.c.ICBList {
+		if icb.Debug != nil && pc >= imageLow(icb) && pc <= icb.End {
+			return icb.Debug.Constant(pc, value)
+		}
+	}
+
+	return "", false
 }
 
 // decodeInstruction wraps disasm.Disassemble with entry-mask detection: if pc
@@ -64,12 +230,15 @@ func (c *Console) Disassemble(start, end uint32) error {
 // the symbol table by PC for exactly this reason. Without this, a mask
 // word like hello.asm's ".entry main, ^m<>" either misdecodes as a bogus
 // opcode or, worse, as some unrelated real instruction.
+//
+// A CALLS or CALLG to an absolute address that is an entry point gets the
+// routine's name, for the console's own layout; DISASSEMBLE/SYMBOLIC uses
+// decodeAt, and names it as the debugger does.
 func (c *Console) decodeInstruction(r disasm.ByteReader, pc uint32) (disasm.Decoded, error) {
-	if name, ok := c.entryAt(pc); ok {
-		return disasm.EntryMask(r, pc, name), nil
+	instr, err := c.decodeAt(r, pc)
+	if instr.IsMask {
+		return instr, err
 	}
-
-	instr, err := disasm.Disassemble(r, pc)
 
 	// A CALLS or CALLG to an absolute address that is an entry point
 	// shows the routine's name.
@@ -82,6 +251,16 @@ func (c *Console) decodeInstruction(r disasm.ByteReader, pc uint32) (disasm.Deco
 	}
 
 	return instr, err
+}
+
+// decodeAt decodes the instruction at pc, or the register-save mask there
+// when pc is a routine's entry (entryAt), with no operand named.
+func (c *Console) decodeAt(r disasm.ByteReader, pc uint32) (disasm.Decoded, error) {
+	if name, ok := c.entryAt(pc); ok {
+		return disasm.EntryMask(r, pc, name), nil
+	}
+
+	return disasm.Disassemble(r, pc)
 }
 
 // entryAt reports the name of the CALLS/CALLG routine whose entry (its

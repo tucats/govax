@@ -1,6 +1,7 @@
 package console
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/tucats/govax/internal/asm"
@@ -33,6 +34,25 @@ type Evaluator struct {
 	// used only for address/value arithmetic that never touches memory.
 	Mem *vm.Memory
 	CPU *vax.CPU
+
+	// Debug resolves the names the console's table doesn't have from the
+	// loaded images' debug symbol tables (Phase 41): a symbol, a
+	// debugger path name (FORTH\NEXT, DBGDIS\START\LOOP), or a line
+	// (%LINE 120, DBGSUB\%LINE 14). Nil for none.
+	Debug DebugNames
+}
+
+// DebugNames looks names up in a debugger's symbol table, for the
+// evaluator.
+type DebugNames interface {
+	// Lookup returns the value of the symbol path names: NAME,
+	// MODULE\NAME, or MODULE\ROUTINE\NAME.
+	Lookup(path string) (uint32, bool)
+
+	// Line returns the address of line n's first instruction. scope is
+	// the path written before %LINE (DBGSUB, DBGDIS\START), or "" for
+	// the module the program is in.
+	Line(scope string, n int) (uint32, bool)
 }
 
 // Eval parses a leading expression from s and returns its value and
@@ -215,10 +235,31 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 		return e.parseQuotedString(s)
 	}
 
+	if n := lineKeyword(s); n > 0 {
+		return e.parseLine("", s[n:])
+	}
+
 	if isSymbolStart(s[0]) {
 		i := 1
 		for i < len(s) && isSymbolChar(s[i]) {
 			i++
+		}
+
+		// A debugger path name goes on through each backslash:
+		// MODULE\NAME, MODULE\ROUTINE\NAME, or MODULE\%LINE n.
+		for i+1 < len(s) && s[i] == '\\' {
+			if n := lineKeyword(s[i+1:]); n > 0 {
+				return e.parseLine(s[:i], s[i+1+n:])
+			}
+
+			if !isSymbolStart(s[i+1]) {
+				break
+			}
+
+			i += 2
+			for i < len(s) && isSymbolChar(s[i]) {
+				i++
+			}
 		}
 
 		name, rest := s[:i], s[i:]
@@ -393,12 +434,76 @@ func (e *Evaluator) parseDefined(s string) (uint32, string, error) {
 // the assembler's predefined system symbols (asm.BuiltinSymbol: PTE$K_*,
 // VAX$PR_*, XFC$*, OPC$_*, ...), which the C source kept in that same
 // table. A console symbol of the same name wins.
+//
+// After those come the loaded images' debug symbol tables (e.Debug), and a
+// path name (one with a backslash) is looked for only there.
 func (e *Evaluator) lookupSymbol(name string) (uint32, bool) {
-	if v, ok := e.Symbols.Get(name); ok {
-		return v, true
+	if !strings.Contains(name, `\`) {
+		if v, ok := e.Symbols.Get(name); ok {
+			return v, true
+		}
+
+		if v, ok := asm.BuiltinSymbol(name); ok {
+			return v, true
+		}
 	}
 
-	return asm.BuiltinSymbol(name)
+	if e.Debug == nil {
+		return 0, false
+	}
+
+	return e.Debug.Lookup(name)
+}
+
+// lineKeyword returns the length of the debugger's %LINE keyword when s
+// starts with it, else 0.
+func lineKeyword(s string) int {
+	const keyword = "%LINE"
+
+	if len(s) < len(keyword) || !strings.EqualFold(s[:len(keyword)], keyword) {
+		return 0
+	}
+
+	if len(s) > len(keyword) && isSymbolChar(s[len(keyword)]) {
+		return 0
+	}
+
+	return len(keyword)
+}
+
+// parseLine parses the line number after %LINE, in s, and returns the
+// address of the line's first instruction from the debug symbol tables.
+// scope is the path before it ("" for none). A line number is decimal,
+// whatever the radix, as the debugger takes it.
+func (e *Evaluator) parseLine(scope, s string) (uint32, string, error) {
+	s = strings.TrimLeft(s, " \t")
+
+	i := 0
+	for i < len(s) && isDigit(s[i]) {
+		i++
+	}
+
+	if i == 0 {
+		return 0, "", vmserrors.New(vmserrors.CLI_NEEDEXPR)
+	}
+
+	n, err := strconv.Atoi(s[:i])
+	if err != nil {
+		return 0, "", vmserrors.New(vmserrors.CLI_NEEDEXPR)
+	}
+
+	if e.Debug != nil {
+		if v, ok := e.Debug.Line(scope, n); ok {
+			return v, s[i:], nil
+		}
+	}
+
+	name := "%LINE " + s[:i]
+	if scope != "" {
+		name = scope + `\` + name
+	}
+
+	return 0, "", vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
 }
 
 func peekByte(s string, i int) byte {
