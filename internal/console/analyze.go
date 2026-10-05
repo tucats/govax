@@ -12,6 +12,7 @@ import (
 	"github.com/tucats/govax/internal/obj"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
+	"github.com/tucats/govax/internal/vmsimage"
 )
 
 // ANALYZE/OBJECT (docs/PHASE-38.md) describes object files, and
@@ -85,7 +86,7 @@ func (c *Console) AnalyzeImage(opts AnalyzeOptions) error {
 			return nil, 0, found, fileFailure(err, loc.Name)
 		}
 
-		img, err := anl.ReadImage(data)
+		img, err := vmsimage.ReadImage(data)
 		if err != nil {
 			return nil, 0, found, vmserrors.Wrap(vmserrors.CLI_ANALYZE, err, found.Name)
 		}

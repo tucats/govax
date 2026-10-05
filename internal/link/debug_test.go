@@ -11,6 +11,7 @@ import (
 
 	"github.com/tucats/govax/internal/anl"
 	"github.com/tucats/govax/internal/obj"
+	"github.com/tucats/govax/internal/vmsimage"
 )
 
 // dstDir holds FORTH's /DEBUG build on VMS 7.3 (testdata/mar/dst/vax):
@@ -278,7 +279,7 @@ func TestLinkDebugImagesMatchRealLINK(t *testing.T) {
 func analyzeImage(t *testing.T, data []byte) string {
 	t.Helper()
 
-	img, err := anl.ReadImage(data)
+	img, err := vmsimage.ReadImage(data)
 	if err != nil {
 		t.Fatal(err)
 	}

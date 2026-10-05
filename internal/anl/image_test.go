@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/tucats/govax/internal/vmsdef"
+	"github.com/tucats/govax/internal/vmsimage"
 )
 
 // imageFixtureDirs hold real LINK's images with VMS 7.3's ANALYZE/IMAGE
@@ -68,7 +69,7 @@ func imageFixtures(t *testing.T) []imageFixture {
 // TestReadImageFixtures decodes every fixture image without a problem.
 func TestReadImageFixtures(t *testing.T) {
 	for _, f := range imageFixtures(t) {
-		img, err := ReadImage(f.data)
+		img, err := vmsimage.ReadImage(f.data)
 		if err != nil {
 			t.Fatalf("%s: %v", f.name, err)
 		}
@@ -91,7 +92,7 @@ func TestReadImageAddr(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	img, err := ReadImage(data)
+	img, err := vmsimage.ReadImage(data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,13 +137,13 @@ func TestReadImageAddr(t *testing.T) {
 	}
 
 	f := img.Fixups
-	want := &Fixups{
+	want := &vmsimage.Fixups{
 		VA: 0x600, Base: 0x200, ShareCount: 2,
 		GFixOffset: 0x40, DotAddrOffset: 0xDC, ChgPrtOffset: 0x50, ShlOffset: 0x5C,
 		Shared:      []string{"", "LIBRTL"},
-		GRefs:       []RefList{{Image: 1, Values: []uint32{0x478}}},
-		DotAddrRefs: []RefList{{Image: 1, Values: []uint32{0}}},
-		Protections: []Protection{{Address: 0x400, Pages: 1, Code: 0x0D}},
+		GRefs:       []vmsimage.RefList{{Image: 1, Values: []uint32{0x478}}},
+		DotAddrRefs: []vmsimage.RefList{{Image: 1, Values: []uint32{0}}},
+		Protections: []vmsimage.Protection{{Address: 0x400, Pages: 1, Code: 0x0D}},
 	}
 
 	if !reflect.DeepEqual(f, want) {
@@ -153,24 +154,24 @@ func TestReadImageAddr(t *testing.T) {
 // TestReadImageContinuedISDs checks an ISD list that goes on in a second
 // header block, and that a short file isn't an image.
 func TestReadImageContinuedISDs(t *testing.T) {
-	data := make([]byte, 3*imageBlock)
+	data := make([]byte, 3*vmsimage.BlockSize)
 	le := binary.LittleEndian
 
-	le.PutUint16(data[ihdISDOffset:], 0x1F0)
-	data[ihdBlockCount] = 2
+	le.PutUint16(data[vmsimage.IHDISDOffset:], 0x1F0)
+	data[vmsimage.IHDBlockCount] = 2
 
 	// One ISD at the end of the first block, then a continuation mark.
-	le.PutUint16(data[0x1F0:], isdPrivateLength)
+	le.PutUint16(data[0x1F0:], vmsimage.ISDPrivateLength)
 	le.PutUint16(data[0x1F2:], 1)
 	le.PutUint32(data[0x1F4:], 1)
-	le.PutUint16(data[0x1F0+isdPrivateLength:], isdContinue)
+	le.PutUint16(data[0x1F0+vmsimage.ISDPrivateLength:], vmsimage.ISDContinue)
 
 	// The next, at the start of the second.
-	le.PutUint16(data[imageBlock:], isdDemandZeroLength)
-	le.PutUint16(data[imageBlock+2:], 4)
-	le.PutUint32(data[imageBlock+4:], 2)
+	le.PutUint16(data[vmsimage.BlockSize:], vmsimage.ISDDemandZeroLength)
+	le.PutUint16(data[vmsimage.BlockSize+2:], 4)
+	le.PutUint32(data[vmsimage.BlockSize+4:], 2)
 
-	img, err := ReadImage(data)
+	img, err := vmsimage.ReadImage(data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +184,7 @@ func TestReadImageContinuedISDs(t *testing.T) {
 		t.Errorf("problems %v", img.Problems)
 	}
 
-	if _, err := ReadImage(data[:100]); err == nil {
+	if _, err := vmsimage.ReadImage(data[:100]); err == nil {
 		t.Error("a 100-byte file read as an image")
 	}
 }
@@ -206,7 +207,7 @@ func imagePageContent(analysis []byte) string {
 // fixture, ignoring how the lines are laid out on pages.
 func TestImageContent(t *testing.T) {
 	for _, f := range imageFixtures(t) {
-		img, err := ReadImage(f.data)
+		img, err := vmsimage.ReadImage(f.data)
 		if err != nil {
 			t.Fatalf("%s: %v", f.name, err)
 		}
@@ -239,7 +240,7 @@ func TestImagePages(t *testing.T) {
 		file := lines[2]
 		command := strings.TrimRight(lines[len(lines)-2], " ")
 
-		img, err := ReadImage(f.data)
+		img, err := vmsimage.ReadImage(f.data)
 		if err != nil {
 			t.Fatalf("%s: %v", f.name, err)
 		}
@@ -281,7 +282,7 @@ func TestImageErrors(t *testing.T) {
 	// with the G^ list's image index at +0x44.
 	const (
 		firstISD = 0xB0
-		fixups   = 3 * imageBlock
+		fixups   = 3 * vmsimage.BlockSize
 	)
 
 	tests := []struct {
@@ -293,19 +294,19 @@ func TestImageErrors(t *testing.T) {
 	}{
 		{
 			name:   "image type",
-			damage: func(b []byte) { b[ihdImageType] = 9 },
+			damage: func(b []byte) { b[vmsimage.IHDImageType] = 9 },
 			want:   "***  Image type 9 is undefined.",
 			after:  "\t\timage type: unknown (9)",
 		},
 		{
 			name:   "format",
-			damage: func(b []byte) { copy(b[ihdMajorIDOffset:], "03") },
+			damage: func(b []byte) { copy(b[vmsimage.IHDMajorIDOffset:], "03") },
 			want:   "***  Image format 03.05 is not the VAX image format, 02.05.",
 			after:  "\t\timage type: executable (IHD$K_EXE)",
 		},
 		{
 			name:   "block offset",
-			damage: func(b []byte) { le.PutUint16(b[ihdImgIDOffset:], 0x1F0) },
+			damage: func(b []byte) { le.PutUint16(b[vmsimage.IHDImgIDOffset:], 0x1F0) },
 			want:   "***  The identification block's offset, 496, is outside the header.",
 			after:  "\t\tThere are no patches at this time.",
 		},
@@ -318,13 +319,13 @@ func TestImageErrors(t *testing.T) {
 		},
 		{
 			name:   "section type",
-			damage: func(b []byte) { b[firstISD+isdFlagsOffset+3] = 7 },
+			damage: func(b []byte) { b[firstISD+vmsimage.ISDFlagsOffset+3] = 7 },
 			want:   "***  Section type 7 is undefined.",
 			after:  "\t\t\tsection type: unknown (7)",
 		},
 		{
 			name:   "VBN",
-			damage: func(b []byte) { le.PutUint32(b[firstISD+isdVBNOffset:], 40) },
+			damage: func(b []byte) { le.PutUint32(b[firstISD+vmsimage.ISDVBNOffset:], 40) },
 			want:   "***  The section's blocks, 40 to 40, are not in the file's 5 blocks of image sections.",
 			after:  "\t\t\tbase VBN: 40",
 		},
@@ -336,7 +337,7 @@ func TestImageErrors(t *testing.T) {
 		},
 		{
 			name:   "fixup section",
-			damage: func(b []byte) { le.PutUint32(b[ihdIAFVA:], 0x10000) },
+			damage: func(b []byte) { le.PutUint32(b[vmsimage.IHDIAFVA:], 0x10000) },
 			want:   "***  No image section holds the fixup section at %X'00010000'.",
 			after:  "\t\t\tglobal section name: \"LIBRTL_001\"",
 		},
@@ -346,7 +347,7 @@ func TestImageErrors(t *testing.T) {
 		b := bytes.Clone(good)
 		tt.damage(b)
 
-		img, err := ReadImage(b)
+		img, err := vmsimage.ReadImage(b)
 		if err != nil {
 			t.Fatalf("%s: %v", tt.name, err)
 		}

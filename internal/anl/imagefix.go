@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/vmsdef"
+	"github.com/tucats/govax/internal/vmsimage"
 )
 
 // This file is ANALYZE/IMAGE's report of an image's fixup section
@@ -22,7 +23,7 @@ func (a *imageAnalyzer) fixupSection() {
 	f := a.img.Fixups
 	if f == nil {
 		// The header names a fixup section that couldn't be found.
-		a.problems(PartFixups)
+		a.problems(vmsimage.PartFixups)
 
 		return
 	}
@@ -80,14 +81,14 @@ func (a *imageAnalyzer) fixupSection() {
 		a.blank()
 	}
 
-	if a.hasProblems(PartFixups) {
-		a.problems(PartFixups)
+	if a.hasProblems(vmsimage.PartFixups) {
+		a.problems(vmsimage.PartFixups)
 		a.blank()
 	}
 }
 
 // hasProblems reports whether part of the image has problems to show.
-func (a *imageAnalyzer) hasProblems(part Part) bool {
+func (a *imageAnalyzer) hasProblems(part vmsimage.Part) bool {
 	for _, p := range a.img.Problems {
 		if p.Part == part {
 			return true
@@ -99,7 +100,7 @@ func (a *imageAnalyzer) hasProblems(part Part) bool {
 
 // refLists shows each shareable image's references, each list followed
 // by a blank line.
-func (a *imageAnalyzer) refLists(lists []RefList) {
+func (a *imageAnalyzer) refLists(lists []vmsimage.RefList) {
 	for _, l := range lists {
 		n := len(l.Values)
 		a.keep(keepImageItem, fmt.Sprintf("\t\t%d reference%s to image %d:", n, plural(n), l.Image))

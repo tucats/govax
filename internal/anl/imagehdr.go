@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/tucats/govax/internal/vmsdef"
+	"github.com/tucats/govax/internal/vmsimage"
 )
 
 // This file is ANALYZE/IMAGE's report of an image's header
@@ -27,7 +28,7 @@ type ImageReport struct {
 }
 
 // AnalyzeImage describes an image, as ANALYZE/IMAGE does.
-func AnalyzeImage(img *Image, opts ImageOptions) ImageReport {
+func AnalyzeImage(img *vmsimage.Image, opts ImageOptions) ImageReport {
 	a := &imageAnalyzer{img: img, opts: opts}
 	a.run()
 
@@ -38,7 +39,7 @@ func AnalyzeImage(img *Image, opts ImageOptions) ImageReport {
 type imageAnalyzer struct {
 	report
 
-	img    *Image
+	img    *vmsimage.Image
 	opts   ImageOptions
 	errors int
 }
@@ -192,7 +193,7 @@ func (a *imageAnalyzer) header() {
 	a.line(fmt.Sprintf("\t\tsecond transfer address: %%X'%08X'", img.Transfers[1]))
 	a.line(fmt.Sprintf("\t\tthird transfer address:  %%X'%08X'", img.Transfers[2]))
 
-	if img.LinkFlags&ihdFlagINISHR != 0 {
+	if img.LinkFlags&vmsimage.IHDFlagINISHR != 0 {
 		a.line(fmt.Sprintf("\t\tshareable image initialization list: %%X'%08X'", img.InitShare))
 	}
 	a.blank()
@@ -212,7 +213,7 @@ func (a *imageAnalyzer) header() {
 
 	a.part("Patch Information")
 	a.patchInfo()
-	a.problems(PartHeader)
+	a.problems(vmsimage.PartHeader)
 	a.blank()
 
 	a.part("Image Section Descriptors (ISD)")
@@ -225,21 +226,17 @@ func (a *imageAnalyzer) header() {
 		a.section(i+1, d)
 	}
 
-	a.problems(PartSections)
+	a.problems(vmsimage.PartSections)
 }
 
 // problems reports what couldn't be decoded in part of the image.
-func (a *imageAnalyzer) problems(part Part) {
+func (a *imageAnalyzer) problems(part vmsimage.Part) {
 	for _, p := range a.img.Problems {
 		if p.Part == part {
 			a.fail("%s", p.Text)
 		}
 	}
 }
-
-// ihdFlagINISHR is IHD$V_INISHR: the image has a shareable image
-// initialization list.
-const ihdFlagINISHR = 1 << 6
 
 // patchInfo describes the patch block. No fixture image has been patched,
 // and nothing but a patched image's analysis would show the block's
@@ -269,7 +266,7 @@ func spaceName(addr uint32) string {
 }
 
 // section describes one image section descriptor.
-func (a *imageAnalyzer) section(n int, d ISD) {
+func (a *imageAnalyzer) section(n int, d vmsimage.ISD) {
 	a.keep(keepImageISD, fmt.Sprintf("\t\t%d)  image section descriptor (%d bytes)", n, d.Size))
 	a.line(fmt.Sprintf("\t\t\tpage count: %d", d.Pages))
 	a.line(fmt.Sprintf("\t\t\tbase virtual address: %%X'%08X' (%s)", d.Address(), spaceName(d.Address())))
@@ -287,12 +284,12 @@ func (a *imageAnalyzer) section(n int, d ISD) {
 		a.fail("Section type %d is undefined.", d.Type())
 	}
 
-	if d.Size >= isdPrivateLength {
+	if d.Size >= vmsimage.ISDPrivateLength {
 		a.line(fmt.Sprintf("\t\t\tbase VBN: %d", d.VBN))
 		a.checkBlocks(d)
 	}
 
-	if d.Flags&isdFlagGBL != 0 && d.Size > isdGlobalLength {
+	if d.Flags&vmsimage.ISDFlagGBL != 0 && d.Size > vmsimage.ISDGlobalLength {
 		match, ok := matchControls[d.Match()]
 		if !ok {
 			match = fmt.Sprintf("unknown (%d)", d.Match())
@@ -310,8 +307,8 @@ func (a *imageAnalyzer) section(n int, d ISD) {
 
 // checkBlocks checks that a private section's pages are in the file: a
 // section that isn't demand zero or global is read from VBN on.
-func (a *imageAnalyzer) checkBlocks(d ISD) {
-	if d.Flags&(isdFlagDZRO|isdFlagGBL) != 0 || d.Pages == 0 {
+func (a *imageAnalyzer) checkBlocks(d vmsimage.ISD) {
+	if d.Flags&(vmsimage.ISDFlagDZRO|vmsimage.ISDFlagGBL) != 0 || d.Pages == 0 {
 		return
 	}
 

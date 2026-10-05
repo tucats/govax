@@ -609,3 +609,24 @@ system services, and the layout of a location longer than 24 columns.
 - **The `disasm.Symbolizer` interface** waits for subtask 9, where its
   shape is settled by the probe's rules; `symtab.Table`'s `At` and
   `Nearest` are what it will use.
+
+### 2026-10-05 — Subtask 5, part 1: `internal/vmsimage`
+
+- **Decision 4, with a different name.** `anl.ReadImage` and its types
+  moved to `internal/vmsimage` (`git mv` of `image.go`), not
+  `internal/image`: a package named `image` would shadow Go's standard
+  one, and goimports could pick the wrong one.
+- **Exported layout.** The header, ISD, fixup-section, and shareable
+  image list offsets and flags (`IHD...`, `ISD...`, `IAF...`, `SHL...`,
+  `IHA`/`IHS`/`IHI`/`IHPLength`, `BlockSize`) are exported, since
+  `internal/anl` (its report and tests) and `internal/dbgsym` both need
+  them. `IHDFlagINISHR` moved from `anl` with them.
+- **The IHS's 32-bit sizes.** `DSTBlocksLong` and `GSTRecordsLong` (+20,
+  +24), and `DSTBlockCount`/`GSTRecordCount`, which use them when
+  `IHD$V_IHSLONG` is set (`docs/DEBUG-RECORDS.md` 2.2). Every probe
+  image sets it, and both sizes agree. `Blocks(data, vbn, count)` slices
+  out a table by VBN.
+- **Callers**: `internal/anl` (behavior unchanged; its 29-fixture
+  `TestImagePages` passes), `internal/console/analyze.go`, and
+  `internal/link`'s debug test. `TestSymbolTableBlock` checks the IHS
+  of four probe images against VMS's ANALYZE/IMAGE.

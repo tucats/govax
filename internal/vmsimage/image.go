@@ -1,4 +1,4 @@
-package anl
+package vmsimage
 
 import (
 	"encoding/binary"
@@ -6,8 +6,9 @@ import (
 	"fmt"
 )
 
-// This file decodes a VAX/VMS image file for ANALYZE/IMAGE
-// (docs/PHASE-40.md). An image starts with one or more 512-byte header
+// This file decodes a VAX/VMS image file, for ANALYZE/IMAGE
+// (docs/PHASE-40.md) and the debug symbol reader (internal/dbgsym,
+// docs/PHASE-41.md). An image starts with one or more 512-byte header
 // blocks: the fixed header ($IHD), which gives the offsets of the
 // activation ($IHA), symbol table and debug ($IHS), identification
 // ($IHI), and patch ($IHP) blocks, then the image section descriptors
@@ -23,71 +24,81 @@ import (
 // console's image loader (internal/console/image.go) does that through
 // emulated memory.
 
-// imageBlock is a disk block's size, and a VAX page's.
-const imageBlock = 512
+// BlockSize is a disk block's size, and a VAX page's.
+const BlockSize = 512
 
 // Fixed header ($IHD) offsets.
 const (
-	ihdISDOffset     = 0x00 // word: the first ISD
-	ihdActivOffset   = 0x02 // word: the activation block
-	ihdSymDbgOffset  = 0x04 // word: the symbol table and debug block
-	ihdImgIDOffset   = 0x06 // word: the identification block
-	ihdPatchOffset   = 0x08 // word: the patch block, 0 for none
-	ihdMajorIDOffset = 0x0C // two ASCII characters: "02"
-	ihdMinorIDOffset = 0x0E // two ASCII characters: "05"
-	ihdBlockCount    = 0x10 // byte: how many header blocks
-	ihdImageType     = 0x11 // byte: IHD$K_EXE, IHD$K_LIM, ...
-	ihdIOChannels    = 0x1C // word: I/O channels, 0 for the default
-	ihdIOPages       = 0x1E // word: I/O pages, 0 for the default
-	ihdLinkFlags     = 0x20 // longword: IHD$V_ flags
-	ihdIdent         = 0x24 // longword: the image's ident
-	ihdSysVersion    = 0x28 // longword: the system version linked against
-	ihdIAFVA         = 0x2C // longword: the fixup section's address
-	ihdFixedLength   = 0x30
+	IHDISDOffset     = 0x00 // word: the first ISD
+	IHDActivOffset   = 0x02 // word: the activation block
+	IHDSymDbgOffset  = 0x04 // word: the symbol table and debug block
+	IHDImgIDOffset   = 0x06 // word: the identification block
+	IHDPatchOffset   = 0x08 // word: the patch block, 0 for none
+	IHDMajorIDOffset = 0x0C // two ASCII characters: "02"
+	IHDMinorIDOffset = 0x0E // two ASCII characters: "05"
+	IHDBlockCount    = 0x10 // byte: how many header blocks
+	IHDImageType     = 0x11 // byte: IHD$K_EXE, IHD$K_LIM, ...
+	IHDIOChannels    = 0x1C // word: I/O channels, 0 for the default
+	IHDIOPages       = 0x1E // word: I/O pages, 0 for the default
+	IHDLinkFlags     = 0x20 // longword: IHD$V_ flags
+	IHDIdent         = 0x24 // longword: the image's ident
+	IHDSysVersion    = 0x28 // longword: the system version linked against
+	IHDIAFVA         = 0x2C // longword: the fixup section's address
+	IHDFixedLength   = 0x30
 )
 
 // Image section descriptor ($ISD) layout and flags.
 const (
-	isdSizeOffset  = 0x00 // word: the ISD's size; 0 ends the list, 0xFFFF goes on in the next block
-	isdPagesOffset = 0x02 // word: the section's pages
-	isdVPNOffset   = 0x04 // longword: the VPN (low 23 bits) and page fault cluster (top byte)
-	isdFlagsOffset = 0x08 // longword: ISD$V_ flags, the section type in the top byte
-	isdVBNOffset   = 0x0C // longword: the section's first block in the file
-	isdIdentOffset = 0x10 // longword: a global section's ident
-	isdNameOffset  = 0x14 // counted string: a global section's name
+	ISDSizeOffset  = 0x00 // word: the ISD's size; 0 ends the list, 0xFFFF goes on in the next block
+	ISDPagesOffset = 0x02 // word: the section's pages
+	ISDVPNOffset   = 0x04 // longword: the VPN (low 23 bits) and page fault cluster (top byte)
+	ISDFlagsOffset = 0x08 // longword: ISD$V_ flags, the section type in the top byte
+	ISDVBNOffset   = 0x0C // longword: the section's first block in the file
+	ISDIdentOffset = 0x10 // longword: a global section's ident
+	ISDNameOffset  = 0x14 // counted string: a global section's name
 
-	isdDemandZeroLength = 0x0C // a demand-zero section's ISD has no VBN
-	isdPrivateLength    = 0x10
-	isdGlobalLength     = 0x14 // a global section's, before its name
+	ISDDemandZeroLength = 0x0C // a demand-zero section's ISD has no VBN
+	ISDPrivateLength    = 0x10
+	ISDGlobalLength     = 0x14 // a global section's, before its name
 
-	isdContinue = 0xFFFF
+	ISDContinue = 0xFFFF
 
-	isdFlagGBL      = 1 << 0  // a global section
-	isdFlagDZRO     = 1 << 2  // demand zero
-	isdFlagFIXUPVEC = 1 << 10 // the image activator's fixup section
+	ISDFlagGBL      = 1 << 0  // a global section
+	ISDFlagDZRO     = 1 << 2  // demand zero
+	ISDFlagFIXUPVEC = 1 << 10 // the image activator's fixup section
 
-	isdVPNMask   = 0x7FFFFF
-	isdP1VPN     = 1 << 21 // a VPN in P1 space
-	isdMatchMask = 0x70    // ISD$V_MATCHCTL, bits 4-6
-	isdMatchBit  = 4
+	ISDVPNMask   = 0x7FFFFF
+	ISDP1VPN     = 1 << 21 // a VPN in P1 space
+	ISDMatchMask = 0x70    // ISD$V_MATCHCTL, bits 4-6
+	ISDMatchBit  = 4
+)
+
+// Link flags (IHD$L_LNKFLAGS) the decoder and its users test.
+const (
+	// IHDFlagINISHR is IHD$V_INISHR: the image has a shareable image
+	// initialization list.
+	IHDFlagINISHR = 1 << 6
+	// IHDFlagIHSLONG is IHD$V_IHSLONG: the symbol table block's 32-bit
+	// sizes are the ones to use.
+	IHDFlagIHSLONG = 1 << 7
 )
 
 // Fixup section ($IAF) offsets.
 const (
-	iafGFixOffset    = 0x0C // longword: the G^ reference fixup lists
-	iafDotAddrOffset = 0x10 // longword: the .ADDRESS reference fixup lists
-	iafChgPrtOffset  = 0x14 // longword: the protection change list
-	iafShlOffset     = 0x18 // longword: the shareable image list
-	iafShrImgCount   = 0x1C // longword: entries in the shareable image list
-	iafShlExtra      = 0x20 // longword: extra shareable image entries (unconfirmed)
-	iafFlags         = 0x24 // longword: IAF$V_ flags (unconfirmed)
-	iafFixedLength   = 0x40
+	IAFGFixOffset    = 0x0C // longword: the G^ reference fixup lists
+	IAFDotAddrOffset = 0x10 // longword: the .ADDRESS reference fixup lists
+	IAFChgPrtOffset  = 0x14 // longword: the protection change list
+	IAFShlOffset     = 0x18 // longword: the shareable image list
+	IAFShrImgCount   = 0x1C // longword: entries in the shareable image list
+	IAFShlExtra      = 0x20 // longword: extra shareable image entries (unconfirmed)
+	IAFFlags         = 0x24 // longword: IAF$V_ flags (unconfirmed)
+	IAFFixedLength   = 0x40
 
-	// shlEntryLength is a shareable image list entry's size, and
-	// shlNameOffset where its counted name is.
-	shlEntryLength = 0x40
-	shlNameOffset  = 0x18
-	shlNameLength  = 40
+	// SHLEntryLength is a shareable image list entry's size, and
+	// SHLNameOffset where its counted name is.
+	SHLEntryLength = 0x40
+	SHLNameOffset  = 0x18
+	SHLNameLength  = 40
 )
 
 // Image is a decoded image file: its header and its fixup section.
@@ -120,6 +131,11 @@ type Image struct {
 	DSTVBN, GSTVBN, DMTVBN uint32
 	DSTBlocks, GSTRecords  uint16
 	DMTBytes               uint32
+
+	// The symbol table block's 32-bit sizes (IHS$L_DSTBLKS and
+	// IHS$L_GSTRECS), which an image with IHD$V_IHSLONG set says to use
+	// in place of the 16-bit ones (docs/DEBUG-RECORDS.md, 2.2).
+	DSTBlocksLong, GSTRecordsLong uint32
 
 	// The identification block.
 	Name, FileID, LinkerID string
@@ -182,7 +198,7 @@ func (d ISD) Address() uint32 { return d.VPN << 9 }
 func (d ISD) Type() byte { return byte(d.Flags >> 24) }
 
 // Match is a global section's match control, ISD$K_MAT....
-func (d ISD) Match() int { return int(d.Flags&isdMatchMask) >> isdMatchBit }
+func (d ISD) Match() int { return int(d.Flags&ISDMatchMask) >> ISDMatchBit }
 
 // Fixups is an image's fixup section.
 type Fixups struct {
@@ -234,40 +250,40 @@ var errNotImage = errors.New("the file is too short to be an image")
 // can't be an image at all; what it can't decode past that point is
 // collected in Image.Problems.
 func ReadImage(data []byte) (*Image, error) {
-	if len(data) < imageBlock {
+	if len(data) < BlockSize {
 		return nil, errNotImage
 	}
 
-	img := &Image{FileBlocks: (len(data) + imageBlock - 1) / imageBlock}
+	img := &Image{FileBlocks: (len(data) + BlockSize - 1) / BlockSize}
 	le := binary.LittleEndian
 
-	img.Blocks = int(data[ihdBlockCount])
+	img.Blocks = int(data[IHDBlockCount])
 	if img.Blocks == 0 {
 		img.Blocks = 1
 	}
 
-	if img.Blocks*imageBlock > len(data) {
+	if img.Blocks*BlockSize > len(data) {
 		img.problem("The header block count, %d, is more than the file holds.", img.Blocks)
-		img.Blocks = len(data) / imageBlock
+		img.Blocks = len(data) / BlockSize
 	}
 
-	h := data[:img.Blocks*imageBlock]
+	h := data[:img.Blocks*BlockSize]
 	img.Header = h
 
-	img.MajorID = string(h[ihdMajorIDOffset : ihdMajorIDOffset+2])
-	img.MinorID = string(h[ihdMinorIDOffset : ihdMinorIDOffset+2])
-	img.Type = h[ihdImageType]
-	img.IOChannels = le.Uint16(h[ihdIOChannels:])
-	img.IOPages = le.Uint16(h[ihdIOPages:])
-	img.LinkFlags = le.Uint32(h[ihdLinkFlags:])
-	img.Ident = le.Uint32(h[ihdIdent:])
-	img.SysVersion = le.Uint32(h[ihdSysVersion:])
-	img.IAFVA = le.Uint32(h[ihdIAFVA:])
+	img.MajorID = string(h[IHDMajorIDOffset : IHDMajorIDOffset+2])
+	img.MinorID = string(h[IHDMinorIDOffset : IHDMinorIDOffset+2])
+	img.Type = h[IHDImageType]
+	img.IOChannels = le.Uint16(h[IHDIOChannels:])
+	img.IOPages = le.Uint16(h[IHDIOPages:])
+	img.LinkFlags = le.Uint32(h[IHDLinkFlags:])
+	img.Ident = le.Uint32(h[IHDIdent:])
+	img.SysVersion = le.Uint32(h[IHDSysVersion:])
+	img.IAFVA = le.Uint32(h[IHDIAFVA:])
 
-	img.ActivOffset = int(le.Uint16(h[ihdActivOffset:]))
-	img.SymDbgOffset = int(le.Uint16(h[ihdSymDbgOffset:]))
-	img.ImgIDOffset = int(le.Uint16(h[ihdImgIDOffset:]))
-	img.PatchOffset = int(le.Uint16(h[ihdPatchOffset:]))
+	img.ActivOffset = int(le.Uint16(h[IHDActivOffset:]))
+	img.SymDbgOffset = int(le.Uint16(h[IHDSymDbgOffset:]))
+	img.ImgIDOffset = int(le.Uint16(h[IHDImgIDOffset:]))
+	img.PatchOffset = int(le.Uint16(h[IHDPatchOffset:]))
 
 	img.activation(h)
 	img.symbolTables(h)
@@ -275,7 +291,7 @@ func ReadImage(data []byte) (*Image, error) {
 	img.patch(h)
 
 	img.part = PartSections
-	img.sections(h, int(le.Uint16(h[ihdISDOffset:])))
+	img.sections(h, int(le.Uint16(h[IHDISDOffset:])))
 
 	img.part = PartFixups
 	img.fixups(data)
@@ -291,7 +307,7 @@ func (img *Image) problem(format string, args ...any) {
 // block returns the n bytes of the header block at offset, or nil (with
 // a problem recorded) when they aren't all in the header.
 func (img *Image) block(h []byte, what string, offset, n int) []byte {
-	if offset < ihdFixedLength || offset+n > imageBlock {
+	if offset < IHDFixedLength || offset+n > BlockSize {
 		img.problem("The %s block's offset, %d, is outside the header.", what, offset)
 
 		return nil
@@ -302,10 +318,10 @@ func (img *Image) block(h []byte, what string, offset, n int) []byte {
 
 // Header block sizes.
 const (
-	ihaLength    = 0x14
-	ihaInitShare = 0x10
-	ihsLength    = 0x1C
-	ihiLength    = 0x50
+	IHALength    = 0x14
+	IHAInitShare = 0x10
+	IHSLength    = 0x1C
+	IHILength    = 0x50
 )
 
 func (img *Image) activation(h []byte) {
@@ -313,7 +329,7 @@ func (img *Image) activation(h []byte) {
 		return
 	}
 
-	b := img.block(h, "activation", img.ActivOffset, ihaLength)
+	b := img.block(h, "activation", img.ActivOffset, IHALength)
 	if b == nil {
 		return
 	}
@@ -325,7 +341,7 @@ func (img *Image) activation(h []byte) {
 	// After the transfer addresses comes a zero longword that ends them,
 	// then the initialization list's address (unconfirmed: no fixture
 	// image sets IHD$V_INISHR).
-	img.InitShare = binary.LittleEndian.Uint32(b[ihaInitShare:])
+	img.InitShare = binary.LittleEndian.Uint32(b[IHAInitShare:])
 }
 
 func (img *Image) symbolTables(h []byte) {
@@ -333,7 +349,7 @@ func (img *Image) symbolTables(h []byte) {
 		return
 	}
 
-	b := img.block(h, "symbol table", img.SymDbgOffset, ihsLength)
+	b := img.block(h, "symbol table", img.SymDbgOffset, IHSLength)
 	if b == nil {
 		return
 	}
@@ -345,6 +361,45 @@ func (img *Image) symbolTables(h []byte) {
 	img.GSTRecords = le.Uint16(b[10:])
 	img.DMTVBN = le.Uint32(b[12:])
 	img.DMTBytes = le.Uint32(b[16:])
+	img.DSTBlocksLong = le.Uint32(b[20:])
+	img.GSTRecordsLong = le.Uint32(b[24:])
+}
+
+// DSTBlockCount is the debug symbol table's size in blocks: the 32-bit
+// count when the image has IHD$V_IHSLONG, the 16-bit one otherwise.
+func (img *Image) DSTBlockCount() uint32 {
+	if img.LinkFlags&IHDFlagIHSLONG != 0 {
+		return img.DSTBlocksLong
+	}
+
+	return uint32(img.DSTBlocks)
+}
+
+// GSTRecordCount is the global symbol table's size in records, chosen as
+// DSTBlockCount chooses.
+func (img *Image) GSTRecordCount() uint32 {
+	if img.LinkFlags&IHDFlagIHSLONG != 0 {
+		return img.GSTRecordsLong
+	}
+
+	return uint32(img.GSTRecords)
+}
+
+// Blocks returns count blocks of data starting at virtual block vbn (the
+// file's first block is VBN 1), or nil if the file doesn't hold them all.
+func Blocks(data []byte, vbn, count uint32) []byte {
+	if vbn == 0 {
+		return nil
+	}
+
+	start := uint64(vbn-1) * BlockSize
+	end := start + uint64(count)*BlockSize
+
+	if end > uint64(len(data)) {
+		return nil
+	}
+
+	return data[start:end]
 }
 
 func (img *Image) identification(h []byte) {
@@ -352,7 +407,7 @@ func (img *Image) identification(h []byte) {
 		return
 	}
 
-	b := img.block(h, "identification", img.ImgIDOffset, ihiLength)
+	b := img.block(h, "identification", img.ImgIDOffset, IHILength)
 	if b == nil {
 		return
 	}
@@ -363,16 +418,16 @@ func (img *Image) identification(h []byte) {
 	img.LinkerID = counted(b[64:80])
 }
 
-// ihpLength is the patch block's size (unconfirmed: no fixture image
+// IHPLength is the patch block's size (unconfirmed: no fixture image
 // has one).
-const ihpLength = 0x20
+const IHPLength = 0x20
 
 func (img *Image) patch(h []byte) {
 	if img.PatchOffset == 0 {
 		return
 	}
 
-	img.Patch = img.block(h, "patch", img.PatchOffset, ihpLength)
+	img.Patch = img.block(h, "patch", img.PatchOffset, IHPLength)
 }
 
 // sections reads the ISDs, starting at offset in the header blocks.
@@ -380,7 +435,7 @@ func (img *Image) sections(h []byte, offset int) {
 	le := binary.LittleEndian
 	p := offset
 
-	if p < ihdFixedLength {
+	if p < IHDFixedLength {
 		img.problem("The image section descriptors' offset, %d, is inside the fixed header.", p)
 
 		return
@@ -399,13 +454,13 @@ func (img *Image) sections(h []byte, offset int) {
 		case size == 0:
 			return
 
-		case size == isdContinue:
+		case size == ISDContinue:
 			// The list goes on at the start of the next header block.
-			p = (p/imageBlock + 1) * imageBlock
+			p = (p/BlockSize + 1) * BlockSize
 
 			continue
 
-		case size < isdDemandZeroLength || p+size > len(h):
+		case size < ISDDemandZeroLength || p+size > len(h):
 			img.problem("Image section descriptor %d's size, %d, is invalid.", len(img.ISDs)+1, size)
 
 			return
@@ -419,23 +474,23 @@ func (img *Image) sections(h []byte, offset int) {
 // decodeISD decodes one ISD, b being exactly its bytes.
 func decodeISD(b []byte) ISD {
 	le := binary.LittleEndian
-	vpn := le.Uint32(b[isdVPNOffset:])
+	vpn := le.Uint32(b[ISDVPNOffset:])
 
 	d := ISD{
 		Size:  len(b),
-		Pages: le.Uint16(b[isdPagesOffset:]),
-		VPN:   vpn & isdVPNMask,
+		Pages: le.Uint16(b[ISDPagesOffset:]),
+		VPN:   vpn & ISDVPNMask,
 		PFC:   byte(vpn >> 24),
-		Flags: le.Uint32(b[isdFlagsOffset:]),
+		Flags: le.Uint32(b[ISDFlagsOffset:]),
 	}
 
-	if len(b) >= isdPrivateLength {
-		d.VBN = le.Uint32(b[isdVBNOffset:])
+	if len(b) >= ISDPrivateLength {
+		d.VBN = le.Uint32(b[ISDVBNOffset:])
 	}
 
-	if d.Flags&isdFlagGBL != 0 && len(b) > isdGlobalLength {
-		d.GlobalIdent = le.Uint32(b[isdIdentOffset:])
-		d.GlobalName = counted(b[isdNameOffset:])
+	if d.Flags&ISDFlagGBL != 0 && len(b) > ISDGlobalLength {
+		d.GlobalIdent = le.Uint32(b[ISDIdentOffset:])
+		d.GlobalName = counted(b[ISDNameOffset:])
 	}
 
 	return d
@@ -464,7 +519,7 @@ func (img *Image) fixups(data []byte) {
 
 	for i := range img.ISDs {
 		d := &img.ISDs[i]
-		if img.IAFVA >= d.Address() && img.IAFVA < d.Address()+uint32(d.Pages)*imageBlock && d.Flags&isdFlagGBL == 0 {
+		if img.IAFVA >= d.Address() && img.IAFVA < d.Address()+uint32(d.Pages)*BlockSize && d.Flags&ISDFlagGBL == 0 {
 			sec = d
 
 			break
@@ -477,10 +532,10 @@ func (img *Image) fixups(data []byte) {
 		return
 	}
 
-	start := (int(sec.VBN)-1)*imageBlock + int(img.IAFVA-sec.Address())
-	end := (int(sec.VBN) - 1 + int(sec.Pages)) * imageBlock
+	start := (int(sec.VBN)-1)*BlockSize + int(img.IAFVA-sec.Address())
+	end := (int(sec.VBN) - 1 + int(sec.Pages)) * BlockSize
 
-	if sec.VBN == 0 || start+iafFixedLength > len(data) {
+	if sec.VBN == 0 || start+IAFFixedLength > len(data) {
 		img.problem("The fixup section at %%X'%08X' is outside the file.", img.IAFVA)
 
 		return
@@ -492,13 +547,13 @@ func (img *Image) fixups(data []byte) {
 	f := &Fixups{
 		VA:            img.IAFVA,
 		Base:          img.base(),
-		GFixOffset:    le.Uint32(b[iafGFixOffset:]),
-		DotAddrOffset: le.Uint32(b[iafDotAddrOffset:]),
-		ChgPrtOffset:  le.Uint32(b[iafChgPrtOffset:]),
-		ShlOffset:     le.Uint32(b[iafShlOffset:]),
-		ShareCount:    le.Uint32(b[iafShrImgCount:]),
-		Extra:         le.Uint32(b[iafShlExtra:]),
-		Flags:         le.Uint32(b[iafFlags:]),
+		GFixOffset:    le.Uint32(b[IAFGFixOffset:]),
+		DotAddrOffset: le.Uint32(b[IAFDotAddrOffset:]),
+		ChgPrtOffset:  le.Uint32(b[IAFChgPrtOffset:]),
+		ShlOffset:     le.Uint32(b[IAFShlOffset:]),
+		ShareCount:    le.Uint32(b[IAFShrImgCount:]),
+		Extra:         le.Uint32(b[IAFShlExtra:]),
+		Flags:         le.Uint32(b[IAFFlags:]),
 	}
 	img.Fixups = f
 
@@ -535,17 +590,17 @@ func (img *Image) sharedImages(b []byte, f *Fixups) []string {
 		return nil
 	}
 
-	names := make([]string, 0, min(f.ShareCount, uint32(len(b)/shlEntryLength)))
+	names := make([]string, 0, min(f.ShareCount, uint32(len(b)/SHLEntryLength)))
 
 	for i := range f.ShareCount {
-		p := uint64(f.ShlOffset) + uint64(i)*shlEntryLength
-		if p+shlEntryLength > uint64(len(b)) {
+		p := uint64(f.ShlOffset) + uint64(i)*SHLEntryLength
+		if p+SHLEntryLength > uint64(len(b)) {
 			img.problem("The shareable image list runs past the end of the fixup section.")
 
 			break
 		}
 
-		names = append(names, counted(b[p+shlNameOffset:p+shlNameOffset+shlNameLength]))
+		names = append(names, counted(b[p+SHLNameOffset:p+SHLNameOffset+SHLNameLength]))
 	}
 
 	return names
