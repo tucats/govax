@@ -2,11 +2,13 @@ package console
 
 import (
 	"bytes"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/tucats/govax/internal/anl"
+	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/obj"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -34,6 +36,13 @@ type AnalyzeOptions struct {
 	// input when OutputFile is empty.
 	Output     bool
 	OutputFile string
+
+	// Include is /INCLUDE: Modules names the modules of an object
+	// library to analyze (* and % match), or every module when empty. A
+	// file that is an object library is analyzed module by module even
+	// without /INCLUDE.
+	Include bool
+	Modules []string
 
 	// Select limits the records shown (/MHD, /GSD, /TIR, /TBT, /DBG,
 	// /LNK, /EOM); empty shows every record.
@@ -75,9 +84,9 @@ func (c *Console) AnalyzeObject(opts AnalyzeOptions) error {
 
 		loc = withDefaultType(loc, "OBJ")
 
-		records, found, err := s.ReadRecordFile(loc, rms.VariableRecords)
+		records, found, err := c.analyzeRecords(loc, opts)
 		if err != nil {
-			return fileFailure(err, loc.Name)
+			return err
 		}
 
 		if i == 0 {
@@ -114,6 +123,60 @@ func (c *Console) AnalyzeObject(opts AnalyzeOptions) error {
 	}
 
 	return problems
+}
+
+// analyzeRecords reads the object records to analyze at loc: an object
+// file's, or the records of an object library's modules, one module after
+// another (all of them in name order, or those /INCLUDE names).
+func (c *Console) analyzeRecords(loc rms.FileLocation, opts AnalyzeOptions) ([][]byte, rms.FileLocation, error) {
+	s := c.ContainerSession
+
+	data, found, err := s.ReadRawFile(loc)
+	if err != nil {
+		return nil, found, fileFailure(err, loc.Name)
+	}
+
+	lib, libErr := lbr.Open(data)
+
+	switch {
+	case libErr == nil && lib.Type == lbr.TypeObject:
+	case libErr == nil:
+		return nil, found, vmserrors.Wrap(vmserrors.CLI_ANALYZE, fmt.Errorf("%s is a %s library, not an object library", found.Name, lib.Type), found.Name)
+	case opts.Include:
+		return nil, found, vmserrors.Wrap(vmserrors.CLI_ANALYZE, fmt.Errorf("/INCLUDE needs an object library: %w", libErr), found.Name)
+	default:
+		records, found, err := s.ReadRecordFile(loc, rms.VariableRecords)
+		if err != nil {
+			return nil, found, fileFailure(err, loc.Name)
+		}
+
+		return records, found, nil
+	}
+
+	patterns := opts.Modules
+	if len(patterns) == 0 {
+		patterns = []string{"*"}
+	}
+
+	var records [][]byte
+
+	for _, pattern := range patterns {
+		keys := lib.Match(pattern)
+		if len(keys) == 0 {
+			return nil, found, vmserrors.Wrap(vmserrors.CLI_ANALYZE, fmt.Errorf("%s has no module %s", found.Name, pattern), found.Name)
+		}
+
+		for _, k := range keys {
+			m, err := lib.Module(k.RFA)
+			if err != nil {
+				return nil, found, vmserrors.Wrap(vmserrors.CLI_ANALYZE, err, found.Name)
+			}
+
+			records = append(records, m.Records...)
+		}
+	}
+
+	return records, found, nil
 }
 
 // writeAnalysis writes a report to the output file name (or NAME.ANL
@@ -182,4 +245,18 @@ var analyzeRecordQualifiers = []struct {
 	{"DBG", []obj.RecordType{obj.RecDBG}},
 	{"LNK", []obj.RecordType{obj.RecLNK}},
 	{"EOM", []obj.RecordType{obj.RecEOM, obj.RecEOMW}},
+}
+
+// nonEmpty drops empty strings from a list: a list qualifier given
+// without a value (/INCLUDE) has its empty default.
+func nonEmpty(list []string) []string {
+	var out []string
+
+	for _, s := range list {
+		if s != "" {
+			out = append(out, s)
+		}
+	}
+
+	return out
 }

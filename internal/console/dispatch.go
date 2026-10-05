@@ -612,6 +612,8 @@ func (d *Dispatcher) bindGrammar() {
 			Host:        r.ParamPresent("FILES", "HOST"),
 			Output:      r.Present("OUTPUT") && !r.Negated("OUTPUT") && !r.Defaulted("OUTPUT"),
 			OutputFile:  r.String("OUTPUT"),
+			Include:     r.Present("INCLUDE") && !r.Negated("INCLUDE") && !r.Defaulted("INCLUDE"),
+			Modules:     nonEmpty(r.List("INCLUDE")),
 			Select:      selected,
 			CommandLine: d.line,
 		})

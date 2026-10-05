@@ -204,9 +204,9 @@ path.
 
 `/INCLUDE=(module,...)` analyzes modules of an object library (`.OLB`)
 through `internal/lbr`; with no list, every module. There's no fixture for
-a library's analysis, so its layout (where the module names appear,
-whether each module's pages restart) is a reasonable choice, logged as
-unconfirmed.
+a library's analysis, so its layout is a reasonable choice (unconfirmed):
+the modules' records make one report, numbered on from module to module,
+each module's main header starting it, with one summary at the end.
 
 ### `govax analyze`
 
@@ -384,3 +384,11 @@ that `obj.Check` also applies (`internal/anl/check.go`):
   with `/OUTPUT`'s empty default mistaken for `/OUTPUT`, overwrote two
   fixtures beside their objects; they were restored from git before
   anything was committed.
+- 2026-10-05: Subtask 7: object libraries. A file that opens as an
+  object library (`lbr.Open`) is analyzed module by module, its modules'
+  records one after another in one report (the multi-module handling of
+  subtask 2), all of them in name order or those `/INCLUDE=` names
+  (wildcards by `Library.Match`). `/INCLUDE` on a file that isn't an
+  object library, or a name that matches no module, is `CLI_ANALYZE`.
+  `/INCLUDE`'s and `/OUTPUT`'s empty defaults are told from the
+  qualifiers themselves with `Defaulted`. `TestAnalyze_library`.

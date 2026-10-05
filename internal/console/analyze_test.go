@@ -160,3 +160,52 @@ func TestAnalyze_errors(t *testing.T) {
 		t.Errorf("ANALYZE of a missing file: %v, want SS_NOSUCHFILE", err)
 	}
 }
+
+func TestAnalyze_library(t *testing.T) {
+	d, c, buf := newCommandDispatcher(t)
+	lib := filepath.Join(t.TempDir(), "mods.olb")
+
+	if err := c.Library(LibraryOptions{Library: lib, LibraryHost: true, Create: true, Object: true,
+		Inputs: []string{analyzeFixtureObj, "../../testdata/mar/vax/entry.obj"}, InputHost: true}); err != nil {
+		t.Fatalf("LIBRARY/CREATE: %v", err)
+	}
+
+	cases := []struct {
+		line       string
+		has, hasnt []string
+	}{
+		{`ANALYZE/OBJECT "` + lib + `"`, []string{`module name: "HELLO"`, `module name: "ENTRY"`}, nil},
+		{`ANALYZE/OBJECT/INCLUDE "` + lib + `"`, []string{`module name: "HELLO"`, `module name: "ENTRY"`}, nil},
+		{`ANALYZE/OBJECT/INCLUDE=HEL* "` + lib + `"`, []string{`module name: "HELLO"`}, []string{`"ENTRY"`}},
+	}
+
+	for _, tt := range cases {
+		buf.Reset()
+
+		if err := d.Dispatch(tt.line); err != nil {
+			t.Fatalf("%s: %v", tt.line, err)
+		}
+
+		text := buf.String()
+
+		for _, want := range append(tt.has, "The analysis uncovered NO errors.") {
+			if !strings.Contains(text, want) {
+				t.Errorf("%s: the report lacks %q", tt.line, want)
+			}
+		}
+
+		for _, bad := range tt.hasnt {
+			if strings.Contains(text, bad) {
+				t.Errorf("%s: the report has %q", tt.line, bad)
+			}
+		}
+	}
+
+	if err := d.Dispatch(`ANALYZE/OBJECT/INCLUDE=NONE "` + lib + `"`); !errors.Is(err, vmserrors.New(vmserrors.CLI_ANALYZE)) {
+		t.Errorf("a module that isn't there: %v, want CLI_ANALYZE", err)
+	}
+
+	if err := d.Dispatch(`ANALYZE/OBJECT/INCLUDE "` + analyzeFixtureObj + `"`); !errors.Is(err, vmserrors.New(vmserrors.CLI_ANALYZE)) {
+		t.Errorf("/INCLUDE on an object file: %v, want CLI_ANALYZE", err)
+	}
+}
