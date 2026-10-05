@@ -520,6 +520,7 @@ grammar console
                         /prompt="Address"
             disallow    read and write
         syntax          show_call_frames/id=127
+            qualifier   symbolic/id=1010
             parameter   count/id=1009               -
                         /type=$rest_of_line
         syntax          show_quantum/id=128

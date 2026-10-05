@@ -1319,6 +1319,12 @@ $S
     is executed is disassembled, regardless of the setting of the console
     disassembly mode.  See the help on SET DISASSEMBLE for more information.
 
+    In a loaded image with a debug symbol table, the instruction is shown
+    as DISASSEMBLE/SYMBOLIC shows it, and where STEP stops is named as the
+    VMS debugger names it (Stepped to DBGDIS\START\%LINE 43), as is a
+    breakpoint's location.  The vax.disassemble.symbolic setting, false,
+    turns this off.
+
     See information on STEP/OVER, STEP/INTO and STEP/RETURN for optional
     qualifiers to the STEP command.
 
@@ -2194,9 +2200,24 @@ $SH  ,CALL
     list starting with the current FP).  The frames are displayed until
     a frame is reached that was started by the console.
 
+    When the PC is in a module of a loaded image that has a debug
+    symbol table (an image linked /DEBUG, or with traceback), SHOW
+    CALLS displays the frames as the VMS debugger does: a line per
+    frame giving its module, routine, and source line (blank when the
+    image has no line table), its PC relative to the routine, and its
+    absolute PC.  For a caller's frame, the line is the one with the
+    call.  Frames are listed while their PCs are in such a module.
+
     Syntax:
 
-        SHOW CALLS [<count>]
+        SHOW CALLS[/[NO]SYMBOLIC] [<count>]
+
+    Qualifier:
+
+        /[NO]SYMBOLIC  /NOSYMBOLIC displays the frames' contents, as
+                   below, even where debug data names them.  The default
+                   is the vax.disassemble.symbolic setting (true when it
+                   isn't set), as for DISASSEMBLE.
 
     Parameter:
 
@@ -2205,8 +2226,9 @@ $SH  ,CALL
                    command SHOW CALLS 1 will display only the current
                    stored frame on the stack pointed to by the FP.
 
-                   If the count is ommitted, then all call frames are
-                   displayed.
+                   If the count is omitted, the debugger's display lists
+                   every frame, and the frames' contents only the
+                   current one.
 $SHOW,ERRO
 $SHOW,ERR 
 $SH  ,ERRO

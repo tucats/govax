@@ -975,11 +975,21 @@ func (c *Console) showSCB(all bool) error {
 // different, C-compiler-bit-field-allocation-order-dependent layout that
 // has no bearing on what this port's own frames actually contain).
 func (c *Console) ShowCallFrames(countExpr string) error {
+	return c.ShowCalls(countExpr, false)
+}
+
+// ShowCalls implements SHOW CALLS[/[NO]SYMBOLIC] [count]. With symbolic,
+// and the PC in a module of a loaded image's debug symbol table, it's the
+// VMS debugger's table of frames (showDebugCalls; docs/PHASE-41.md,
+// subtask 12), every frame when no count is given, as the debugger shows
+// them. Otherwise it's the console's own dump of the frames at FP
+// (ShowCallFrames), one frame when no count is given.
+func (c *Console) ShowCalls(countExpr string, symbolic bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
 
-	count := uint32(1)
+	count, given := uint32(1), false
 
 	if s := strings.TrimSpace(countExpr); s != "" {
 		v, err := strconv.ParseUint(s, 16, 32)
@@ -987,7 +997,18 @@ func (c *Console) ShowCallFrames(countExpr string) error {
 			return vmserrors.Wrap(vmserrors.CLI_BADCOUNT, err, s)
 		}
 
-		count = uint32(v)
+		count, given = uint32(v), true
+	}
+
+	if symbolic {
+		debugCount := uint32(0)
+		if given {
+			debugCount = max(count, 1)
+		}
+
+		if shown, err := c.showDebugCalls(debugCount); shown || err != nil {
+			return err
+		}
 	}
 
 	fp := c.CPU.GPR(vax.FP)

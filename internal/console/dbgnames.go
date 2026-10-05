@@ -119,10 +119,8 @@ type consoleSymbolizer struct {
 
 // Symbolize implements disasm.Symbolizer.
 func (s consoleSymbolizer) Symbolize(addr uint32) (string, bool) {
-	for _, icb := range s.c.ICBList {
-		if icb.Debug != nil && addr >= imageLow(icb) && addr <= icb.End {
-			return icb.Debug.Symbolize(addr, s.radix)
-		}
+	if p := s.c.debugImageAt(addr); p != nil {
+		return p.Symbolize(addr, s.radix)
 	}
 
 	for _, icb := range s.c.ICBList {
@@ -148,10 +146,8 @@ func (s consoleSymbolizer) Symbolize(addr uint32) (string, bool) {
 // image's line table has a line starting there: how DISASSEMBLE names
 // the first instruction of a range typed as a %LINE, as the debugger does.
 func (s consoleSymbolizer) lineName(addr uint32) (string, bool) {
-	for _, icb := range s.c.ICBList {
-		if icb.Debug != nil && addr >= imageLow(icb) && addr <= icb.End {
-			return icb.Debug.LineName(addr, s.radix)
-		}
+	if p := s.c.debugImageAt(addr); p != nil {
+		return p.LineName(addr, s.radix)
 	}
 
 	return "", false

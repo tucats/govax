@@ -161,9 +161,9 @@ func (c *Console) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) err
 				}
 
 				if bp.Step {
-					c.Printf("Stepped to %08X\n", pc)
+					c.Printf("Stepped to %s\n", c.locationText(pc))
 				} else {
-					c.Printf("Break at %08X\n", pc)
+					c.Printf("Break at %s\n", c.locationText(pc))
 				}
 
 				return nil

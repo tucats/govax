@@ -279,7 +279,9 @@ expect adjustment as phases land):
   false/unset, the old quantum-driven path is used. `vax.quantum` (int) — default
   quantum-tick interval instead of the hard-coded `defaultQuantum` (20); only takes
   effect if `> 0`. `vax.disassemble.symbolic` (bool) — DISASSEMBLE's default for
-  `/SYMBOLIC` (the VMS debugger's layout and names, Phase 41); true when unset.
+  `/SYMBOLIC` (the VMS debugger's layout and names, Phase 41), and for SHOW
+  CALLS'; the trace and STEP show debug images' locations symbolically when
+  it's on; true when unset.
   `vax.library` (string) — the host directory LINK and MACRO look
   in for IMAGELIB.OLB, STARLET.OLB, shareable images, and STARLET.MLB when
   `SYS$LIBRARY`/`SYS$SHARE` don't lead to them (read by the console, not `NewEngine`;

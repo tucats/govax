@@ -214,10 +214,8 @@ type imageConstants struct {
 
 // Constant implements disasm.ConstantNamer.
 func (n imageConstants) Constant(pc, value uint32) (string, bool) {
-	for _, icb := range n.c.ICBList {
-		if icb.Debug != nil && pc >= imageLow(icb) && pc <= icb.End {
-			return icb.Debug.Constant(pc, value)
-		}
+	if p := n.c.debugImageAt(pc); p != nil {
+		return p.Constant(pc, value)
 	}
 
 	return "", false

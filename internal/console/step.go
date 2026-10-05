@@ -180,7 +180,7 @@ func (c *Console) stepInto() error {
 
 	finish()
 
-	c.Printf("Stepped to %08X\n", c.CPU.GPR(vax.PC))
+	c.Printf("Stepped to %s\n", c.locationText(c.CPU.GPR(vax.PC)))
 
 	return nil
 }
@@ -219,7 +219,7 @@ func (c *Console) stepOver() error {
 
 	dec := c.Engine.LastDecoded()
 	if !stepOverInstructions[dec.Instruction.Name] {
-		c.Printf("Stepped to %08X\n", c.CPU.GPR(vax.PC))
+		c.Printf("Stepped to %s\n", c.locationText(c.CPU.GPR(vax.PC)))
 
 		return nil
 	}

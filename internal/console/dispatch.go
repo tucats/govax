@@ -302,7 +302,12 @@ func (d *Dispatcher) bindGrammar() {
 	})
 
 	g.Bind("SHOW_CALL_FRAMES", func(id int64, r *dcl.Result) error {
-		return d.Console.ShowCallFrames(r.String("COUNT"))
+		symbolic := symbolicDefault()
+		if r.Present("SYMBOLIC") {
+			symbolic = !r.Negated("SYMBOLIC")
+		}
+
+		return d.Console.ShowCalls(r.String("COUNT"), symbolic)
 	})
 
 	g.Bind("SHOW_REGIONS", func(id int64, r *dcl.Result) error { return d.Console.ShowRegions() })

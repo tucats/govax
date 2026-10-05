@@ -935,3 +935,65 @@ system services, and the layout of a location longer than 24 columns.
   `TestDisassembleQualifiers`, `TestEvaluateDebugNames` (including the
   debugger's `EVALUATE/ADDRESS` answers), and `TestReadExpression`'s new
   `%LINE` cases.
+
+### 2026-10-05 — Subtask 12: trace, `STEP`, and `SHOW CALLS`
+
+- **Where it applies** (`dbgtrace.go`): at a PC inside a loaded image
+  with a debug symbol table (`Console.debugImageAt`), with symbolic
+  display on (the `vax.disassemble.symbolic` setting, as for
+  `DISASSEMBLE`). Everywhere else (the kernel, the shims, the
+  `IMAGE$INIT` driver, code the `ASM` command assembled) the trace,
+  `STEP`, and breakpoint messages are as before, byte for byte, so no
+  existing test changed.
+- **The trace** (`traceStep`, so `STEP`, `SET TRACE`, `RUN`, and
+  `CALL` alike): the location and the instruction as
+  `DISASSEMBLE/SYMBOLIC` lays them out, after the usual `[KSP sp] `
+  prefix: `[KSP 800049C0] DBGDIS\START\%LINE 42:  MOVL     S^#0A,R2`.
+  The register and operand dumps that follow are unchanged.
+- **`Stepped to` and `Break at`** name the location as the debugger's
+  `stepped to` and `break at` do: `Stepped to DBGDIS\START\%LINE 43`,
+  `Stepped to DBGSUB\SUB2\SUBJSB`, `Break at DBGDIS\LOCALR\JSBRTN`,
+  `Stepped to DBGDIS\START+5` in a traceback link. The debugger adds
+  the next instruction in instruction mode (`stepped to ...: MOVL ...`)
+  and the source line; govax doesn't, since its next `STEP` traces that
+  instruction anyway, and source display is out of scope. A routine
+  breakpoint is the debugger's `break at routine DBGSUB\SUB2`; govax's
+  breakpoint is an address (`DBGSUB\SUB2+2`), so it's named by its line.
+- **`SHOW CALLS`** (`dbgcalls.go`; Decision 6): with the PC in a module
+  of a debug image, the debugger's table: its heading, then a row per
+  frame, `*`, the module in 16 columns, the routine in 17, the line
+  right-justified in 5 (blank without a line table), 15 spaces, the PC
+  relative to the routine, 9 spaces, the absolute PC. The first row is
+  the PC's; each further row is a saved PC from the FP chain. A caller's
+  line is its call's, found at its return address less one, though its
+  relative PC is the return address's (FAILSUB's SUB1: line 7 at
+  `00000216`, which is line 8's first byte). The rows stop at the first
+  frame whose PC is in no debug image's module, so, as in the sessions,
+  the image activator's frame (govax's `IMAGE$INIT` driver) isn't shown,
+  and a JSB subroutine, which builds no frame, shows as the routine that
+  holds it (`LOCALR` at JSBRTN, called from START). With no count, every
+  frame (the debugger's display), where the console's dump stays one;
+  `SHOW CALLS 1` is the first row. `/NOSYMBOLIC` (new) is the console's
+  dump; so is `SHOW CALLS` with the PC in no debug image's module, such
+  as the condition dispatcher after a fault (Decision 6's "as it does
+  now").
+- **Unconfirmed** (no probe line shows them): a module or routine name
+  longer than its column pushes the rest of the row along; a PC in a
+  module but in no routine leaves the routine and relative PC blank; a
+  frame below an uncovered one is never shown, though it could be in a
+  debug image again (a callback through a shareable image).
+- **Not done here.** govax's fault message is still its own
+  (`%SYSTEM-F-ACCVIO ...`, as before); the debugger's `break on
+  unhandled exception at FAILSUB\SUB2\%LINE 12` belongs with the
+  debugger phase, as does the traceback `RUN` prints (Decision 6).
+- **Tests** (`dbgstep_test.go`). `TestStepSymbolic` (DBGDIS: `RUN/STEP`,
+  `STEP`, a breakpoint in SUB2, and a step into a JSB subroutine),
+  `TestStepTraceback` (DBGTRC's `START+2`), `TestStepNoSymbolic` (the
+  setting false), `TestShowCallsFault` (FAILLNK stepped to its faulting
+  `MOVL @#0`: `SHOW CALLS` and `SHOW CALLS 1` are FAIL.DBG's, then
+  `/NOSYMBOLIC`, then a step into the fault), and `TestShowCallsFrames`
+  (DBGDIS's rows at JSBRTN and SUB2 from both of START's calls, and
+  DBGTRC's, without lines). The test console runs in kernel mode, so
+  these turn off `USERSTEP` to step the image's own instructions.
+- `HELP SHOW CALLS` and `HELP STEP` describe the display, and
+  `CLAUDE.md` the setting's wider reach.

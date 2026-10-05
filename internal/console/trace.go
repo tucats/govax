@@ -129,7 +129,16 @@ func (c *Console) traceStep(pc uint32, force bool) (finish func()) {
 	modep := traceStackName(c.CPU.PSL())
 	sp := c.CPU.GPR(vax.SP)
 
-	if dec, err := c.decodeInstruction(memByteReader{c: c}, pc); err == nil {
+	// Inside an image with a debug symbol table, the instruction is shown
+	// as DISASSEMBLE/SYMBOLIC shows it (Phase 41); elsewhere, in the
+	// console's own layout.
+	if text, ok, err := c.symbolicTraceLine(pc); ok {
+		if err == nil {
+			c.Printf("[%s %08X] %s\n", modep, sp, text)
+		} else {
+			c.Printf("[%s %08X] %08X: <disassembly error: %s>\n", modep, sp, pc, err)
+		}
+	} else if dec, err := c.decodeInstruction(memByteReader{c: c}, pc); err == nil {
 		c.Printf("[%s %08X] %08X: %s\n", modep, sp, pc, dec.String())
 	} else {
 		c.Printf("[%s %08X] %08X: <disassembly error: %s>\n", modep, sp, pc, err)
