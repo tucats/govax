@@ -1,0 +1,403 @@
+# Phase 41 — Symbolic disassembly from an image's debug symbol table
+
+**Status:** planned (2026-10-05). Reviewed; the open questions are
+decided (see Decisions). Not started.
+
+## Goal
+
+When an image is loaded and resident, the console's disassembler (the
+`DISASSEMBLE` command, the instruction trace, and `STEP`) shows
+instructions the way the VMS debugger's `EXAMINE/INSTRUCTION` does: an
+operand that refers to an address the image's debug symbol table (DST)
+names shows that name (`MOD\NAME`, or `NAME+offset`) instead of a raw
+hexadecimal address, and each instruction can be placed by module,
+routine, and listing line.
+
+This phase is groundwork for a later govax **debugger mode**: an image
+activated with its debugger, as VMS's image activator maps DEBUG ahead
+of an image linked `/DEBUG`. So the pieces are built for that use, not
+only for disassembly:
+
+- **A disassembler other packages can use.** It moves out of
+  `internal/asm` into its own package, decodes operands into structured
+  values, and leaves turning addresses into names to a caller-supplied
+  symbolizer.
+- **One symbol model.** Assembler symbols, the console's symbol table,
+  and the DST's symbols are looked up through the same interface, by name
+  and by address.
+- **The debugger's symbol table.** A reader for an image's DST, debug
+  module table (DMT), and global symbol table (GST) builds what the
+  debugger works from: modules, routines, labels and data symbols in
+  their scopes, psects, and the line-number table, with lookups both ways
+  (address to `MOD\ROUTINE\%LINE n`, and path name to address).
+
+A loaded, resident image is assumed throughout. Disassembling an image
+file that isn't loaded is out of scope.
+
+## What earlier phases leave in place
+
+- **The disassembler** (`internal/asm/disasm.go`, Phase 11).
+  `Disassemble(r ByteReader, pc)` decodes one instruction with
+  `internal/cpu`'s instruction table and returns a `Decoded`: the
+  mnemonic, each operand as *text*, a `Values` slot per operand (whose
+  meaning varies by addressing mode), and the length. Its doc comment
+  says symbolic formatting was left out deliberately, for a caller to add
+  by post-processing the text. It depends on `internal/cpu` and
+  `internal/vaxfloat`, and on two `internal/asm` helpers (`regNames`,
+  `floatFormat`).
+- **The console's use of it** (`internal/console/disasm.go`).
+  `decodeInstruction` recognizes a `.ENTRY` register-save mask by
+  looking the PC up in `Console.Symbols` (`EntryAt`), and replaces a
+  `CALLS`/`CALLG` target `@#addr` with an entry symbol's name. Both are
+  linear scans of the console table. `traceStep` (`trace.go`) uses the
+  same decoder. Only the console's `ASM` command puts entry symbols in the
+  table (from `asm.Assembler.Symbols()`, a `map[string]SymbolInfo`), so
+  for a real VMS image `RUN` loads, no routine's mask is recognized: the
+  mask word is decoded as an instruction.
+- **Image loading** (`internal/console/image.go`, `run.go`).
+  `imageLoad` reads the whole image file (`readImage`), maps its ISDs at
+  `ICB.Base` (0 for the main image, so link-time addresses are run-time
+  addresses), and keeps an `ICB` per image in `Console.ICBList`, until
+  the next `RUN` (`resetICBList`). `RUN/STEP` leaves the image loaded and
+  stopped at its first instruction. Nothing reads the image's debug
+  tables.
+- **DST records in objects** (`internal/obj/dst.go`, `dbg.go`,
+  `dbglines.go`; Phase 29). Decoding and encoding the DST records TBT and
+  DBG records carry, as TIR commands. The record types real MACRO writes
+  are named there: module begin and end, routine begin, psect (TBT); the
+  symbol records (labels, typed data, literals, string and array
+  descriptors), source correlation, and line numbers (DBG). These read
+  *object* records, where the linker hasn't yet stored the addresses;
+  an image's DST is the plain byte stream with the addresses in place.
+- **DST, DMT, and GST in images** (`internal/link/debug.go`, Phase 29).
+  LINK writes all three as real LINK does, byte for byte on TRDBGLNK,
+  TRLNKDBG, and FORTH (with the GST padded, Decision 7 there).
+- **Image headers** (`internal/anl/image.go`, Phase 40). `ReadImage`
+  decodes the header blocks, including the IHS: the DST's VBN and block
+  count, the GST's VBN and record count, the DMT's VBN and byte count.
+- **`docs/DEBUG-RECORDS.md`.** The clean-room description of the DST
+  format: the record stream and scope nesting (§3), the record header
+  and type codes (§4), scope records (§5), data symbols (§7), PSECT,
+  label, label-or-literal, and entry records (§12), the line-number
+  program (§13), source correlation (§14), continuation records (§16),
+  fixups (§18), and how to read a DST (§23.1).
+
+## The fixtures
+
+Images with debug data, all already in `testdata/` with their listings
+and maps beside them:
+
+| Image | Built with | Debug data |
+|---|---|---|
+| `mar/list/vax/trlnkdbg.exe`, `trdbglnk.exe` | `MACRO/DEBUG`, `LINK/DEBUG` | DST (TBT and DBG records), DMT, GST |
+| `mar/dst/vax/forth.exe` | `MACRO/DEBUG`, `LINK/DEBUG` | the same, five psects, many symbols and lines |
+| `mar/list/vax/trace.exe`, `trdbgtrc.exe`, `failmain.exe`, `failsig.exe`, `faildbg.exe` | traceback links | DST with module, routine, and psect records only (or more: to survey) |
+| `mar/list/vax/trnotb.exe`, `failnotb.exe`, `fsignotb.exe` | `LINK/NOTRACEBACK` | none |
+
+The listings give each line's address (the oracle for the line-number
+table) and the maps give each symbol's (the oracle for the symbol
+records). What these don't give is how the VMS debugger *shows* an
+instruction: that needs a probe (subtask 1).
+
+govax's own `MACRO/DEBUG` and `LINK/DEBUG` produce the same images, so a
+program assembled and linked inside govax gets symbolic disassembly too.
+
+## Design
+
+### Packages
+
+```
+internal/disasm   (new)  decode an instruction into structured operands;
+                         format them, asking a Symbolizer for names.
+                         imports cpu, vaxfloat. Not asm.
+internal/symtab   (new)  Symbol, Table: by-name and by-address indexes,
+                         nearest-preceding lookup. A leaf package.
+internal/dbgsym   (new)  an image's DST/DMT/GST read into the debugger's
+                         symbol table: modules, scopes, symbols, lines.
+                         imports obj (GST records), symtab.
+internal/asm             assembler; its symbols exported as symtab.
+internal/console         loads dbgsym per image; chains symbol sources
+                         into the disassembler's Symbolizer.
+```
+
+`internal/disasm` must not import `internal/asm`: the assembler, the
+console, ANALYZE, and a future debugger all sit above it. `internal/asm`'s
+round-trip tests import `disasm` (a test-only dependency, no cycle).
+
+### Structured operands
+
+Today an operand is decoded straight to text. The new `Decoded` keeps
+each operand's parts:
+
+```go
+type Operand struct {
+    Mode     Mode          // literal, register, deferred, autoinc, ...,
+                           // displacement, PC-relative, absolute,
+                           // immediate, branch
+    Register int           // Rn, or -1
+    Index    int           // the index register, or -1
+    Disp     int32         // displacement, sign-extended
+    Literal  uint32        // short literal or immediate (low longword)
+    Target   uint32        // the address the operand refers to, when
+    HasTarget bool         //   it is known without running (branch,
+                           //   PC-relative, absolute, @#, deferred forms)
+    Access   cpu.AccessKind
+    Type     cpu.DataType
+    Size     int
+}
+```
+
+Formatting is separate: `Format(dec, Options)` renders the operands, and
+`Options` carries a `Symbolizer`, the radix, and the style. With no
+symbolizer, the output is today's, byte for byte, so the assembler's
+round trip and every existing console test are unchanged.
+
+### Symbolizer
+
+```go
+type Symbolizer interface {
+    // Symbolize names addr: a symbol at it, or the nearest preceding
+    // one within its scope plus an offset. ok is false for none.
+    Symbolize(addr uint32) (name string, ok bool)
+    // EntryAt reports a routine's entry (a register-save mask) at addr.
+    EntryAt(addr uint32) (name string, mask bool)
+}
+```
+
+The console builds a chain: the DST of the image the address falls in,
+then shareable image names (subtask 10), then its own symbol table.
+Which operands are symbolized, and how a name is written (path name,
+offset, radix), are what the probe settles (subtask 9).
+
+### The debugger's symbol table (`internal/dbgsym`)
+
+Read as `docs/DEBUG-RECORDS.md` §23.1 says, from the image bytes
+`readImage` already holds:
+
+- **Finding the tables**: the IHS (via the shared header reader,
+  Decision 4), with `IHD$V_IHSLONG`'s 32-bit sizes.
+- **The DST**: records joined with their continuation records, a stack of
+  open scopes (module, routine, block; MACRO's routines have no routine
+  end, §5.3, so a MACRO routine runs to the next routine or the module's
+  end), unknown types skipped, fixups applied.
+- **What it keeps**: per module, its name, language, psects (from PSECT
+  records and the DMT), routines (name, entry, extent, JSB or CALL
+  linkage), labels, data symbols (address, data type, descriptor),
+  literals (from label-or-literal and value records), the source file,
+  and the line-number table (a row per line: address, length, line).
+- **The GST**: the debugger's fallback when no DST names an address
+  (`docs/DEBUG-RECORDS.md` §1.3), read with `internal/obj`'s record
+  reader.
+- **Lookups**: `ModuleAt(addr)`, `RoutineAt(addr)`, `LineAt(addr)`
+  (line, offset within it), `Symbolize(addr)`, `Lookup(path)` for
+  `MOD\NAME`, `MOD\ROUTINE\%LINE n`, and a bare name in a current scope.
+  These are the queries a debugger's `EXAMINE`, `SET BREAK`, `STEP`,
+  `SHOW CALLS`, and `SET MODULE` need; this phase loads every module
+  eagerly, where VMS's debugger loads them on demand (`SET MODULE`).
+
+Addresses are relocated by `ICB.Base`, so a shareable image's DST (none
+of the fixtures) works as the main image's does.
+
+## Subtasks
+
+Each is independently testable and ends with `go build`, `go vet`,
+`go test`, and golangci-lint clean, a commit, and `build -i` when it
+changes behavior. Each adds to this doc's progress log.
+
+1. **The probe** (`testdata/dbg/`): a source, a link, a debugger command
+   file, and a README, carried to VMS on an exchange container as
+   earlier phases' were. The author runs it on simh while subtasks 2 to 8
+   go ahead; its logs are checked in under `vax/` once audited. It
+   covers:
+   - a MACRO program (`dbgdis.mar`) with two modules, built
+     `MACRO/DEBUG` and `LINK/DEBUG`, whose instructions use every
+     addressing mode against: labels of code and of data, `.ENTRY`
+     routines (CALLS/CALLG, JSB/BSB), constants (`=`), psect bases with
+     no label, addresses past a label (`LABEL+6`), a label in the other
+     module, a global, a LIBRTL routine (`G^LIB$PUT_OUTPUT`), branch
+     targets, a `CASEx` table, and register displacements off `AP`/`FP`;
+   - the same program linked without `/DEBUG` (traceback only) and
+     `/NOTRACEBACK`, run with `RUN/DEBUG`, to see what the debugger shows
+     from TBT records or the GST alone;
+   - debugger commands, logged with `SET LOG`/`SET OUTPUT LOG`:
+     `EXAMINE/INSTRUCTION` over ranges given by address, by routine, and
+     by `%LINE`; `SET MODE SYMBOLIC` and `NOSYMBOLIC`; `SET RADIX`;
+     `SYMBOLIZE`; `EVALUATE/ADDRESS`; `SHOW SYMBOL/ADDRESS`;
+     `SHOW MODULE`; `SET STEP INSTRUCTION` with a few `STEP`s (the
+     "stepped to" lines); `SHOW CALLS`; `EXAMINE/SOURCE`;
+   - TRLNKDBG, TRDBGLNK, and FORTH from the fixtures, a few routines
+     each;
+   - a govax `LINK/DEBUG` image of TRACE, run under VMS's debugger: the
+     check Phase 29's Decision 7 left for the next simh round.
+2. **`internal/disasm`.** Move the disassembler out of `internal/asm`,
+   unchanged in behavior: `Disassemble`, `Decoded`, `ByteReader`,
+   `SliceReader`, `FormatMask`, and the formatters. The register names
+   become `disasm.RegisterName` (or move to `internal/cpu`), and
+   `floatFormat` becomes a `cpu.DataType` method both packages call.
+   `internal/asm`'s round-trip tests and the console move to the new
+   package. No output changes; every existing test passes untouched.
+3. **Structured operands.** `Decoded.Operands` becomes `[]Operand`
+   (above), with `Format` producing today's text when there's no
+   symbolizer. `Values` goes away; the console's `CALLS`/`CALLG` special
+   case uses `Target`. Tests: every addressing mode's fields, and the
+   round trip over the fixtures still reassembles byte for byte.
+4. **`internal/symtab` and the assembler's and console's symbols.** A
+   `Symbol` (name, value, kind: label, entry, routine, data, literal,
+   psect, module; scope; size and data type when known) and a `Table`
+   with a name index and a sorted address index (exact and
+   nearest-preceding lookup). `asm.Assembler.Symbols()` returns a
+   `symtab.Table` instead of `map[string]SymbolInfo`. The console's
+   `SymbolTable` keeps its attributes (permanent, label, system) but is
+   built on `symtab` (Decision 3), so `EntryAt` and `FindByValue` stop
+   being linear scans. Both satisfy `disasm.Symbolizer`.
+5. **Reading the DST** (`internal/dbgsym`). Move `anl.ReadImage` into
+   `internal/image` (Decision 4), with `internal/anl` and its tests
+   unchanged in behavior. Find the DST through the IHS; read the record stream with continuations and the scope stack;
+   keep modules, routines, psects, labels, data symbols, literals, and
+   entry records; skip what it doesn't know; apply fixup records. Tests
+   on every fixture image with a DST: each symbol's address is the one
+   its map gives, each routine is a `.ENTRY` in its listing, and every
+   record in the fixtures is a known type (so nothing is skipped
+   silently). The TBT-only and `/NOTRACEBACK` images give what they hold
+   and nothing.
+6. **Lines and source files.** The line-number program of
+   `docs/DEBUG-RECORDS.md` §13 (`DST$K_SET_STMTNUM`'s operand checked
+   against real output, §23.3) and the source correlation records of §14
+   (the source file's name). `LineAt` and `AddressOfLine`. Tests: every
+   line with code in TRLNKDBG's, TRDBGLNK's, and FORTH's listings maps
+   to the address the listing shows, and back.
+7. **The DMT and the GST.** Module psect ranges from the DMT (checked
+   against the DST's PSECT records), and the GST's symbols as the
+   fallback table, read with `internal/obj`. Tests against the three
+   `/DEBUG` images, and that an image without them (traceback links)
+   still works from the DST alone.
+8. **Loading it with the image.** `imageLoad` reads each image's debug
+   tables from the bytes it already has, relocated by `ICB.Base`, and
+   keeps them on the `ICB` (dropped with `resetICBList`). `SHOW IMAGES`
+   says which images have debug data. The disassembler's entry-mask check
+   asks the DST's routines too, so the mask at a real image's `.ENTRY` is
+   shown as one: a fix even for traceback-only images. Tests: `RUN/STEP`
+   of TRLNKDBG, then `DISASSEMBLE` of a routine shows its mask.
+9. **Symbolic operands.** The rules from the probe's logs, in a
+   `disasm.Symbolizer` backed by `dbgsym`: which operand modes are
+   symbolized (branch, PC-relative and deferred, absolute, and whether
+   immediates or displacements ever are), how a name is written (path
+   name, the module prefix left off in the current module, `+offset`
+   and its radix, `%LINE`), what's shown when nothing names the address,
+   and what the GST alone gives. The constant-name option (Decision 5)
+   is off by default. Rules no probe line settles are chosen
+   and logged as unconfirmed here. Tests: unit tests per rule on built
+   images.
+10. **Shareable image references.** A `G^` reference goes through a
+    fixup cell or a `SHIM$LIBRTL_<offset>` stub to a LIBRTL routine.
+    Name it as the debugger does (per the probe), from
+    `internal/librtl`'s `Routines` table (offset to `LIB$` name) and
+    `vmsdef.ImageSymbols`, so `CALLS #1,@#...` shows the routine's name.
+11. **The `DISASSEMBLE` command.** `/[NO]SYMBOLIC`, on by default with a
+    console setting for the default (Decision 2), and the debugger's
+    line layout under `/SYMBOLIC` (Decision 1). A start or end may be a path name or a line
+    (`DISASSEMBLE FORTH\NEXT`, `DISASSEMBLE %LINE 120`), which means the
+    expression evaluator (`expr.go`) resolves names through `dbgsym`
+    after the console table, and `$expression` accepts `\` in a name.
+    `console.dcl`, `vax.help`.
+12. **Trace and `STEP`.** The instruction trace and `STEP`'s display use
+    the same formatter and options, so stepping through a `/DEBUG` image
+    shows where each instruction is (`MOD\ROUTINE\%LINE n`). `SHOW CALLS`
+    names each frame's module, routine, and line where the debug data
+    covers its PC, as VMS's traceback does (Decision 6). Tests: a
+    `RUN/STEP` of FAILMAIN (an access violation in a nested call) into
+    the fault, then `SHOW CALLS`.
+13. **The oracle.** `TestDebuggerOracle` (in `internal/console`) runs the
+    probe's images (real LINK's, and govax's links of the same objects)
+    and compares govax's `DISASSEMBLE/SYMBOLIC` over the probe's ranges
+    with the debugger's `EXAMINE/INSTRUCTION` lines from the logs.
+14. **Close-out.** `CLAUDE.md` (the three new packages, the
+    disassembler's move), `PLAN.md`'s index, `HELP`, and code comments
+    that still say the disassembler lives in `internal/asm` or that
+    symbolic output is left to the caller.
+
+## Decisions
+
+The author decided each of these on 2026-10-05, taking the plan's
+recommendations for 1 to 5.
+
+1. **Line layout.** Under `/SYMBOLIC`, the debugger's layout, as the
+   probe shows it (a location such as `MOD\ROUTINE\%LINE n` or
+   `NAME+offset`, then the instruction); under `/NOSYMBOLIC`, the
+   console's current `ADDRESS: MNEMONIC operands`. A future debugger's
+   `EXAMINE/INSTRUCTION` and this command print the same.
+2. **The default.** Symbolic by default, as `SET MODE SYMBOLIC` is the
+   debugger's default: `/NOSYMBOLIC` turns it off for one command, and a
+   console setting changes the default.
+3. **The symbol refactor.** The console's `SymbolTable` is rebuilt on
+   `symtab` (subtask 4), not left behind an adapter: a debugger needs
+   address lookups the linear scans can't give, and the console's table
+   is the debugger's last fallback.
+4. **A shared image-header reader.** `anl.ReadImage` moves into a leaf
+   `internal/image` that `anl`, the console, and `dbgsym` share (subtask
+   5), so `dbgsym` doesn't import ANALYZE.
+5. **Constants.** govax matches the debugger by default: if the probe
+   shows only addresses symbolized, so are govax's. An option goes
+   further: an immediate or short literal is shown as a constant's name
+   when exactly one literal in the current module has that value
+   (subtask 9).
+6. **`SHOW CALLS`** names each frame's module, routine, and line in this
+   phase, wherever the loaded images' debug data covers the frame's PC
+   (subtask 12). A frame outside any image with debug data shows as it
+   does now. A traceback printed by `RUN` stays with the debugger phase.
+
+Standing rules this phase follows:
+
+- **Clean room.** The debugger's behavior comes from DIGITAL's manuals
+  (the *VMS Debugger Manual*: `EXAMINE/INSTRUCTION`, `SET MODE`, path
+  names, `%LINE`, symbolization) and real VMS output (the probe's logs),
+  never from VMS's source. A rule neither settles is chosen and logged
+  here as unconfirmed.
+- **The DST format** comes from `docs/DEBUG-RECORDS.md`, checked against
+  the fixture images. Where they disagree, the images win, and the doc
+  gets a note.
+
+## Out of scope
+
+- **The debugger itself**: `RUN/DEBUG`, the image activator mapping
+  DEBUG, the `DBG>` prompt, breakpoints and watchpoints, `SET MODULE`'s
+  on-demand loading, and examining data by type. This phase builds the
+  symbol table and display they'll use.
+- **Disassembling an image file that isn't loaded** (a resident image is
+  assumed).
+- **DST contents in `ANALYZE/IMAGE`** (Phase 40's future expansion),
+  though `dbgsym` would make it straightforward.
+- **Languages other than MACRO.** The reader skips record types MACRO
+  doesn't write (type specifications, records, enumerations, Ada and C++
+  records) rather than interpreting them.
+- **Source display beside instructions** (`EXAMINE/SOURCE`): the source
+  file's name is read (subtask 6), but showing its lines is left for the
+  debugger phase.
+
+## References
+
+- `docs/DEBUG-RECORDS.md`: the DST, DMT, and line-number formats.
+- *VMS Debugger Manual* (`~/Documents/Technical Doc/VMS/`): machine-code
+  debugging, `EXAMINE/INSTRUCTION`, `SET MODE [NO]SYMBOLIC`, path names
+  and `%LINE`, `SYMBOLIZE`.
+- *VMS 5.0 Linker Utility Manual*, chapter 7: the image's debug symbol
+  table.
+- `docs/PHASE-11.md` (the disassembler), `docs/PHASE-29.md` (DST
+  records, LINK/DEBUG), `docs/PHASE-40.md` (image headers).
+- **Not** the VMS source archive (off-limits since 2026-10-04).
+
+## Progress Log
+
+### 2026-10-05 — Planned
+
+This plan written for review. Two pieces of the author's guidance shaped
+it: the disassembler moves out of `internal/asm` for other packages' use,
+which may change how assembler symbols are stored (subtasks 2 to 4); and
+the phase is groundwork for a debugger mode with the image loaded and
+resident (the design of `internal/dbgsym`, and the out-of-scope list).
+
+### 2026-10-05 — Reviewed
+
+The author took the recommendations on open questions 1 to 5 and asked
+for `SHOW CALLS` with module, routine, and line in this phase where the
+data is available (6). They're Decisions 1 to 6; the subtasks cite them.
