@@ -451,6 +451,9 @@ grammar console
             parameter   symbol          /id=1021    -
                         /type=$name
         syntax          show_sym_tmp/id=152
+        syntax          show_sym_dcl/id=157
+            parameter   symbol          /id=1021    -
+                        /type=$name
         syntax          show_sym_unres/id=153
         syntax          show_sym/id=149
             qualifier   system                      -
@@ -461,6 +464,8 @@ grammar console
                         /syntax=show_sym_unres
             qualifier   all                         -
                         /syntax=show_sym_all
+            qualifier   dcl                         -
+                        /syntax=show_sym_dcl
             parameter   symbol          /id=1021    -
                         /type=$name                 -
                         /prompt="Symbol name"

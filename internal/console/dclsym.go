@@ -1,10 +1,12 @@
 package console
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -44,8 +46,10 @@ import (
 //   - DCL defaults a foreign command's image to SYS$SYSTEM:; the console
 //     finds it as RUN finds an image instead (unconfirmed nuance: govax
 //     has no SYS$SYSTEM to default to).
-//   - Not here: apostrophe substitution ('SYMBOL') inside a command, and
-//     DCL's SHOW SYMBOL, whose name the console's own SHOW SYMBOL has.
+//   - SHOW SYMBOL/DCL [name] shows them (ShowDCLSymbols), as DCL's SHOW
+//     SYMBOL does; the console's own SHOW SYMBOL, without /DCL, shows
+//     its VAX symbols.
+//   - Not here: apostrophe substitution ('SYMBOL') inside a command.
 
 // maxSymbolDepth is how many times symbol substitution may rewrite one
 // command: enough for an alias of an alias, short of an alias of itself.
@@ -62,6 +66,15 @@ type dclSymbol struct {
 
 	// value is the string the symbol stands for.
 	value string
+
+	// global says it was assigned with ":==" or "==" (a global symbol,
+	// to DCL), not ":=" or "=" (a local one); the console keeps them in
+	// one table, but SHOW SYMBOL/DCL shows which.
+	global bool
+
+	// integer says "=" or "==" gave it an integer value, which SHOW
+	// SYMBOL/DCL shows as a number, not a string.
+	integer bool
 }
 
 // dclSymbols is the console's table of DCL symbols, by full name.
@@ -199,53 +212,59 @@ func (c *Console) assignSymbol(name, op, text string) error {
 		minLength = star
 	}
 
-	var value string
+	var (
+		value   string
+		integer bool
+	)
 
 	if strings.HasPrefix(op, ":") {
 		value = dclText(text, false)
 	} else {
-		v, err := symbolExpression(text)
+		v, isInt, err := symbolExpression(text)
 		if err != nil {
 			return err
 		}
 
-		value = v
+		value, integer = v, isInt
 	}
 
 	if c.dclSymbols == nil {
 		c.dclSymbols = dclSymbols{}
 	}
 
-	c.dclSymbols[full] = dclSymbol{name: full, minLength: minLength, value: value}
+	c.dclSymbols[full] = dclSymbol{
+		name: full, minLength: minLength, value: value,
+		global: strings.HasSuffix(op, "=="), integer: integer,
+	}
 
 	return nil
 }
 
 // symbolExpression evaluates the expression an "=" or "==" assignment
 // gives: a quoted string (with "" for a quote inside it) or a decimal
-// integer, whose value is its decimal string.
-func symbolExpression(text string) (string, error) {
+// integer, whose value is its decimal string (integer is then true).
+func symbolExpression(text string) (value string, integer bool, err error) {
 	text = strings.TrimSpace(text)
 
 	if strings.HasPrefix(text, `"`) {
 		s, n, ok := quotedString(text)
 		if !ok {
-			return "", vmserrors.New(vmserrors.CLI_UNTERMSTR)
+			return "", false, vmserrors.New(vmserrors.CLI_UNTERMSTR)
 		}
 
 		if strings.TrimSpace(text[n:]) != "" {
-			return "", vmserrors.New(vmserrors.CLI_EXPSYN, text)
+			return "", false, vmserrors.New(vmserrors.CLI_EXPSYN, text)
 		}
 
-		return s, nil
+		return s, false, nil
 	}
 
 	v, err := strconv.ParseInt(text, 10, 32)
 	if err != nil {
-		return "", vmserrors.New(vmserrors.CLI_EXPSYN, text)
+		return "", false, vmserrors.New(vmserrors.CLI_EXPSYN, text)
 	}
 
-	return strconv.FormatInt(v, 10), nil
+	return strconv.FormatInt(v, 10), true, nil
 }
 
 // quotedString reads the quoted string text starts with, returning its
@@ -379,4 +398,76 @@ func (c *Console) deleteSymbols(rest string) error {
 	delete(c.dclSymbols, sym.name)
 
 	return nil
+}
+
+// ShowDCLSymbols is SHOW SYMBOL/DCL [name]: the DCL symbol name means (an
+// abbreviation it allows will do), the ones a wildcard name matches, or
+// with no name every one, in name order, as DCL's SHOW SYMBOL shows them:
+//
+//	FO*RTH == "$DUA0:[TOOLS]FORTH.EXE"
+//	COUNT = 42   Hex = 0000002A  Octal = 00000000052
+//
+// "==" is a global symbol's, "=" a local one's (see assignSymbol), and an
+// "*" marks the shortest abbreviation. A quote in a string value is
+// doubled. Unconfirmed against VMS: the integer line's spacing.
+func (c *Console) ShowDCLSymbols(name string) error {
+	name = strings.ToUpper(strings.TrimSpace(name))
+
+	var shown []dclSymbol
+
+	switch {
+	case name == "" || lnm.HasWildcards(name):
+		for _, sym := range c.dclSymbols {
+			if name == "" || lnm.Match(name, sym.name) {
+				shown = append(shown, sym)
+			}
+		}
+
+		sort.Slice(shown, func(i, j int) bool { return shown[i].name < shown[j].name })
+
+	default:
+		sym, ok := c.dclSymbols.lookup(name)
+		if !ok {
+			return vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
+		}
+
+		shown = append(shown, sym)
+	}
+
+	if len(shown) == 0 {
+		if name == "" {
+			c.Printf("No DCL symbols are defined\n")
+
+			return nil
+		}
+
+		return vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
+	}
+
+	for _, sym := range shown {
+		c.Printf("%s\n", sym.showLine())
+	}
+
+	return nil
+}
+
+// showLine is sym's line in SHOW SYMBOL/DCL.
+func (sym dclSymbol) showLine() string {
+	name := sym.name
+	if sym.minLength < len(name) {
+		name = name[:sym.minLength] + "*" + name[sym.minLength:]
+	}
+
+	op := "="
+	if sym.global {
+		op = "=="
+	}
+
+	if sym.integer {
+		v, _ := strconv.ParseInt(sym.value, 10, 32)
+
+		return fmt.Sprintf("  %s %s %d   Hex = %08X  Octal = %011o", name, op, v, uint32(v), uint32(v))
+	}
+
+	return fmt.Sprintf("  %s %s \"%s\"", name, op, strings.ReplaceAll(sym.value, `"`, `""`))
 }

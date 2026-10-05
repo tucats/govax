@@ -42,8 +42,9 @@
 //              10/04/26    Added MACRO/CROSS_REFERENCE (docs/PHASE-29.md)
 //              10/04/26    Added MACRO/DEBUG, /ENABLE, /DISABLE (docs/PHASE-29.md)
 //              10/04/26    LINK writes the debug symbol table (docs/PHASE-29.md)
-//              10/04/26    Added symbol assignment, foreign commands, and
-//                          DELETE/SYMBOL (docs/PHASE-34.md)
+//              10/04/26    Added symbol assignment, foreign commands,
+//                          DELETE/SYMBOL, and SHOW SYMBOL/DCL
+//                          (docs/PHASE-36.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1039,8 +1040,10 @@ $SYMB
     after "FO*RTH :== $FORTH", FO, FOR, FORT, and FORTH all do.
 
     The console keeps one table of symbols, so ":=" and ":==" are the same,
-    as are "=" and "==".  These are DCL symbols, not the VAX symbols ASM,
-    CALL, and SHOW SYMBOL use.
+    as are "=" and "==", but SHOW SYMBOL/DCL shows which each symbol was
+    assigned with.  These are DCL symbols, not the VAX symbols ASM, CALL,
+    and SHOW SYMBOL use.  SHOW SYMBOL/DCL displays them, and DELETE/SYMBOL
+    deletes one.
 
     Examples:
 
@@ -1942,6 +1945,9 @@ $SH  ,SYM
 
     The predefined system symbols (such as PTE$K_UR, VAX$PR_SBR, and
     OPC$_MOVL) are shown along with the symbols in the symbol table.
+
+    These are the console's VAX symbols.  SHOW SYMBOL/DCL shows the DCL
+    symbols assignments define instead (see HELP SHOW SYMBOL /DCL).
     
     Syntax:
     
@@ -1960,6 +1966,35 @@ $SH  ,SYM
     
         SHOW SYMBOL PTE$K_UR*
         SHOW SYMBOL VAX$PR_%%R
+
+$SHOW,SYMB,/DCL
+$SHOW,SYM ,/DCL
+$SH  ,SYMB,/DCL
+$SH  ,SYM ,/DCL
+
+    The SHOW SYMBOL/DCL command displays DCL symbols: the ones symbol
+    assignments define, such as foreign commands (see HELP SYMBOL and
+    HELP FOREIGN), as DCL's SHOW SYMBOL displays them.  A global
+    symbol's assignment is shown with "==" and a local one's with "=";
+    an "*" marks the shortest abbreviation of the name; an integer is
+    shown in decimal, hexadecimal, and octal.
+
+    Syntax:
+
+        SHOW SYMBOL/DCL [name]
+
+    Parameter:
+
+        name        The symbol to display, or an abbreviation it allows.
+                    With the wildcards "*" and "%", every DCL symbol
+                    whose name matches; with no name, every DCL symbol.
+
+    Examples:
+
+        SHOW SYMBOL/DCL
+              FO*RTH == "$DUA0:[TOOLS]FORTH.EXE"
+              N = 42   Hex = 0000002A  Octal = 00000000052
+        SHOW SYMBOL/DCL FO
 
 $SHOW,SYMB,/ALL
 $SHOW,SYM ,/ALL

@@ -233,6 +233,7 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("SHOW_SYM", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbol(r.String("SYMBOL")) })
 	g.Bind("SHOW_SYM_ALL", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbols(r.String("SYMBOL")) })
 	g.Bind("SHOW_SYM_SYS", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbolsSystem(r.String("SYMBOL")) })
+	g.Bind("SHOW_SYM_DCL", func(id int64, r *dcl.Result) error { return d.Console.ShowDCLSymbols(r.String("SYMBOL")) })
 	g.Bind("SHOW_BREAK", func(id int64, r *dcl.Result) error { return d.Console.ShowBreakpoints() })
 	g.Bind("SHOW_BREAK_INSTR", func(id int64, r *dcl.Result) error { return d.Console.ShowInstructionBreakpoints() })
 	g.Bind("SHOW_RADIX", func(id int64, r *dcl.Result) error { return d.Console.ShowRadix() })

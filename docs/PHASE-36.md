@@ -248,14 +248,33 @@ Anything else goes on to the fixed commands and the grammar as before.
 abbreviation names it); /GLOBAL and /LOCAL are accepted and change
 nothing. An undefined name is CLI_UNDEFSYM.
 
-**HELP SYMBOL, HELP FOREIGN, and HELP DELETE /SYMBOL** describe them
+**`SHOW SYMBOL/DCL [name]`** shows DCL symbols as DCL's SHOW SYMBOL does
+(`ShowDCLSymbols`; the grammar's `show_sym_dcl` syntax, id 157, a
+qualifier of SHOW SYMBOL): with no name every one, in name order; with a
+wildcard name (`*`, `%`, `lnm.Match`) the ones that match; otherwise the
+one the name or an allowed abbreviation means (CLI_UNDEFSYM if none).
+Each is shown as
+
+      FO*RTH == "$DUA0:[TOOLS]FORTH.EXE"
+      N = 42   Hex = 0000002A  Octal = 00000000052
+
+`==` for a symbol assigned with `:==` or `==` (global, to DCL), `=` for
+`:=` or `=` (local), the `*` where the abbreviation point is, a string in
+quotes with any quote in it doubled, and an integer (`=`/`==` of a
+number) in decimal, hexadecimal, and octal. For this, each `dclSymbol`
+also records `global` and `integer`. Without /DCL, SHOW SYMBOL shows the
+console's VAX symbols as before. With no symbols defined it says "No DCL
+symbols are defined".
+
+**HELP SYMBOL, HELP FOREIGN, HELP DELETE /SYMBOL, and HELP SHOW SYMBOL
+/DCL** describe them
 (`vax.help`). `Console.DCLSymbol(name)` returns a symbol's value for Go
 callers and tests.
 
 What the console does **not** have: apostrophe substitution
-(`'SYMBOL'` inside a command), DCL's SHOW SYMBOL (the console's SHOW
-SYMBOL lists VAX symbols), symbols in expressions other commands
-evaluate, and a way to list the DCL symbols.
+(`'SYMBOL'` inside a command), symbols in expressions other commands
+evaluate, SHOW SYMBOL's /GLOBAL and /LOCAL (the table is one), and
+DELETE/SYMBOL/ALL.
 
 ### Command text's treatment
 
@@ -272,7 +291,8 @@ keeps the quotes and their contents' case.
 `dclsym_test.go`: `dclText`'s rules, `splitAssignment` against commands
 that look like assignments (`SET PC=200`), `assignSymbol`'s forms,
 abbreviations, and errors, and through the dispatcher an alias, a
-self-referencing alias, and DELETE/SYMBOL. `forth_test.go`'s
+self-referencing alias, and DELETE/SYMBOL; `TestShowDCLSymbols`, SHOW
+SYMBOL/DCL's forms and format. `forth_test.go`'s
 `TestForth_foreignCommand` defines `FO*RTH :== $...` and runs forth with
 command text through `Dispatch`.
 
@@ -335,7 +355,9 @@ Found by writing the program, or by comparing with the VMS run:
 - **FAB$V_FILE_MODE.** VMS's `$FAB` refers to it (building FAB$B_ACMODES
   from a file mode too), but the RMS manual gives `$FAB` no such argument,
   so govax's `$FAB` doesn't; the listing test masks the name.
-- **Unconfirmed** (no real output yet): a 15-wide symbol table takes three
+- **Unconfirmed** (no real output yet): SHOW SYMBOL/DCL's integer line
+  spacing (written from memory of DCL's, not a captured run); a 15-wide
+  symbol table takes three
   columns; a field operand's base (INSV, EXTV) is unmarked in the cross
   reference; LIB$GET_FOREIGN sets flags to 1 whether or not it prompted,
   and returns a prompted line as typed; a foreign command's text keeps its
@@ -368,4 +390,5 @@ Found by writing the program, or by comparing with the VMS run:
   comparisons. Fixed: forward-referenced expressions, symbol table
   columns, cross reference marks, width, and library macro definitions;
   STARLET's `$V_` option bits and `.NOCROSS` definitions. Object, listing,
-  image, and map all match VMS.
+  image, and map all match VMS (2614b23).
+- 2026-10-04: SHOW SYMBOL/DCL, at the author's request.

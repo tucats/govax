@@ -1,7 +1,9 @@
 package console
 
 import (
+	"bytes"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/vmserrors"
@@ -140,4 +142,56 @@ func hasStatus(err error, code uint32) bool {
 	var v vmserrors.VMSError
 
 	return errors.As(err, &v) && v.Equals(code)
+}
+
+// TestShowDCLSymbols shows symbols as DCL's SHOW SYMBOL does: "==" for a
+// global assignment and "=" for a local one, the abbreviation's "*", a
+// string's quotes doubled, and an integer in decimal, hex, and octal;
+// every symbol in name order with no name, those a wildcard matches, and
+// one by any abbreviation it allows.
+func TestShowDCLSymbols(t *testing.T) {
+	c := newBootableConsole(t)
+	out := &bytes.Buffer{}
+	c.Out = out
+	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+
+	show := func(line string) string {
+		t.Helper()
+		out.Reset()
+
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+
+		return out.String()
+	}
+
+	if got := show("SHOW SYMBOL/DCL"); got != "No DCL symbols are defined\n" {
+		t.Errorf("with none: %q", got)
+	}
+
+	for _, line := range []string{`FO*RTH :== $FORTH`, `say := "a ""b"" c"`, "N == 42", "NEG = -1"} {
+		show(line)
+	}
+
+	all := `  FO*RTH == "$FORTH"
+  N == 42   Hex = 0000002A  Octal = 00000000052
+  NEG = -1   Hex = FFFFFFFF  Octal = 37777777777
+  SAY = "a ""b"" c"
+`
+	if got := show("SHOW SYMBOLS/DCL"); got != all {
+		t.Errorf("all:\n%s\nwant:\n%s", got, all)
+	}
+
+	if got, want := show("show symbol/dcl fo"), "  FO*RTH == \"$FORTH\"\n"; got != want {
+		t.Errorf("by abbreviation: %q, want %q", got, want)
+	}
+
+	if got := show("SHOW SYMBOL/DCL N*"); !strings.HasPrefix(got, "  N == 42") || strings.Count(got, "\n") != 2 {
+		t.Errorf("wildcard: %q", got)
+	}
+
+	if err := d.Dispatch("SHOW SYMBOL/DCL NOSUCH"); !hasStatus(err, vmserrors.CLI_UNDEFSYM) {
+		t.Errorf("undefined: %v, want CLI_UNDEFSYM", err)
+	}
 }
