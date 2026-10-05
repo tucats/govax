@@ -294,6 +294,29 @@ blanks (never pushed) from the separators (pushed at 55).
   of TIR commands other than the stack commands the fixtures show and
   CTL_AUGRB. Data types are named from `DSC$K_DTYPE_` (only `Z` is seen).
 
+## Errors
+
+An error is a `***  ` line right after what it's about (or, for a module
+that ends badly, before the next module or the summary), and the count
+closes the report. Real ANALYZE's output shows two messages; the rest are
+govax's, in their style (unconfirmed), for the object language's rules
+that `obj.Check` also applies (`internal/anl/check.go`):
+
+| Message | When |
+|---|---|
+| `End of module record is missing from previous module.` | a module ends (another MHD, or the file's end) without EOM — **real** |
+| `The stack still contains n longword(s).` | a module ends with a nonempty stack — **real** |
+| `The module header record is missing.` | a module's first record isn't an MHD |
+| `The record is longer than the maximum record size, n bytes.` | a record exceeds its MHD's maximum (the MHD included) |
+| `GSD subrecord k is malformed: ...` / `Command k is malformed: ...` | decoding stops there; the items before it are shown |
+| `The record is malformed: ...` | a header, EOM, or LNK record doesn't decode |
+| `Record type n is undefined.` | an unknown record type |
+| `The stack underflowed.` / `The stack is deeper than 25 longwords.` | a TIR command's effect on the linker's stack |
+| `Psect n is undefined.` | a psect index (TIR, symbol, EOM transfer) the module doesn't define; psects defined later in the module count |
+| `Severity n is undefined.` | an EOM severity above 3 |
+| `The psect/symbol/module/environment name must be 1 to 31 characters.` | a name's length |
+| `Psect alignment n is larger than a page.` | an alignment above 9 |
+
 ## Open items
 
 - `ANALYZE/IMAGE` (a later phase; `testdata/link/vax/*.ani` are its
@@ -318,3 +341,9 @@ blanks (never pushed) from the separators (pushed at 55).
   only the page headers' times: all match byte for byte. The trailer is
   the command padded to 80 columns and a line end (the survey's "8 blanks
   without a line end" was a misreading of an octal dump).
+- 2026-10-04: Subtask 4: errors ("Errors"). GSD and TIR records are
+  decoded item by item (`obj.DecodeSubrecord`, `obj.DecodeCommand`,
+  exported for this), so a malformed record is shown up to its bad item.
+  Each module's psects are counted when it starts, as `obj.Check` does.
+  `TestObjectErrors` and `TestObjectMalformedCommand`; the 54 fixtures
+  still match.

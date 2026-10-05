@@ -715,3 +715,18 @@ func (r *reader) bytes(n int) []byte {
 func (r *reader) counted() string {
 	return string(r.take(int(r.byte())))
 }
+
+// DecodeSubrecord reads one GSD subrecord from the front of b (a GSD
+// record's contents after its type byte), returning it and the number of
+// bytes it used. ANALYZE/OBJECT uses it to describe a record's
+// subrecords up to one that's malformed.
+func DecodeSubrecord(b []byte) (Subrecord, int, error) {
+	r := reader{b: b}
+
+	s, err := decodeGSDEntry(&r)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return s, r.pos, nil
+}

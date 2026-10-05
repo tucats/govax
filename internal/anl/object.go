@@ -1,6 +1,7 @@
 package anl
 
 import (
+	"encoding/binary"
 	"fmt"
 	"sort"
 	"strings"
@@ -60,6 +61,13 @@ type objectAnalyzer struct {
 	inModule bool
 	psects   int
 	depth    int
+
+	// records are the file's records; modulePsects is how many psects
+	// the current module defines in all, and maxSize its main header's
+	// maximum record size.
+	records      [][]byte
+	modulePsects int
+	maxSize      int
 }
 
 // How many lines each kind of heading needs left on a page to be written
@@ -100,6 +108,8 @@ var headerTitles = map[obj.HeaderType]string{
 }
 
 func (a *objectAnalyzer) run(records [][]byte) {
+	a.records = records
+
 	a.line("This is an OpenVMS VAX object file")
 	a.blank()
 
@@ -161,65 +171,44 @@ func (a *objectAnalyzer) record(n int, raw []byte) {
 	a.counts[t]++
 	a.sizes[t] += len(raw)
 
-	m, err := obj.Decode([][]byte{raw})
-	if err != nil {
-		a.heading(n, t, raw)
-		a.fail("%v", err)
-		a.spill()
-		a.spill()
+	mainHeader := t == obj.RecHDR && len(raw) > 1 && obj.HeaderType(raw[1]) == obj.HdrMHD
 
-		return
-	}
-
-	rec := m.Records[0]
-
-	if h, ok := rec.(*obj.MainHeader); ok && h != nil && a.inModule {
+	switch {
+	case mainHeader && a.inModule:
 		a.moduleEnd(true)
+		a.moduleStart(n - 1)
+	case mainHeader:
+		a.moduleStart(n - 1)
+	case !a.inModule:
+		a.moduleStart(n - 1)
+		a.fail("The module header record is missing.")
 	}
 
-	a.inModule = true
+	// A main header's own size is checked against the maximum it gives.
+	if mainHeader && len(raw) >= 5 {
+		a.maxSize = int(binary.LittleEndian.Uint16(raw[3:5]))
+	}
 
 	show := a.selected(t)
 	if show {
 		a.heading(n, t, raw)
 	}
 
-	switch rec := rec.(type) {
-	case *obj.MainHeader:
-		if show {
-			a.mainHeader(rec)
-		}
+	if a.maxSize > 0 && len(raw) > a.maxSize {
+		a.fail("The record is longer than the maximum record size, %d bytes.", a.maxSize)
+	}
 
-	case *obj.TextHeader:
-		if show {
-			a.line("\tTextual information:")
-			for _, part := range headerText(rec.Text) {
-				a.line("\t" + quote(part))
-			}
-		}
+	ended := false
 
-	case *obj.GSD:
-		for k, s := range rec.Subrecords {
-			if show && k > 0 {
-				a.blank()
-			}
+	switch t {
+	case obj.RecGSD:
+		a.gsdRecord(show, raw[1:])
 
-			a.subrecord(show, k+1, s)
-		}
+	case obj.RecTIR, obj.RecDBG, obj.RecTBT:
+		a.tirRecord(show, raw[1:])
 
-	case *obj.TIR:
-		for k, c := range rec.Commands {
-			if show && k > 0 {
-				a.blank()
-			}
-
-			a.command(show, k+1, c)
-		}
-
-	case *obj.EOM:
-		if show {
-			a.endOfModule(rec)
-		}
+	default:
+		ended = a.otherRecord(show, raw)
 	}
 
 	if show {
@@ -227,9 +216,148 @@ func (a *objectAnalyzer) record(n int, raw []byte) {
 		a.spill()
 	}
 
-	if _, ok := rec.(*obj.EOM); ok {
+	if ended {
 		a.moduleEnd(false)
 	}
+}
+
+// moduleStart starts a module whose first record is records[first]: it
+// counts the psects the module defines, since a TIR command or symbol may
+// refer to one a later GSD record defines.
+func (a *objectAnalyzer) moduleStart(first int) {
+	a.inModule, a.psects, a.depth, a.maxSize = true, 0, 0, 0
+	a.modulePsects = 0
+
+	for i, raw := range a.records[first:] {
+		if len(raw) == 0 {
+			continue
+		}
+
+		t := obj.RecordType(raw[0])
+
+		if i > 0 && t == obj.RecHDR && len(raw) > 1 && obj.HeaderType(raw[1]) == obj.HdrMHD {
+			return
+		}
+
+		if t == obj.RecEOM || t == obj.RecEOMW {
+			return
+		}
+
+		if t != obj.RecGSD {
+			continue
+		}
+
+		for b := raw[1:]; len(b) > 0; {
+			sub, used, err := obj.DecodeSubrecord(b)
+			if err != nil {
+				break
+			}
+
+			if _, ok := sub.(*obj.Psect); ok {
+				a.modulePsects++
+			}
+
+			b = b[used:]
+		}
+	}
+}
+
+// gsdRecord describes a GSD record's subrecords, up to one that's
+// malformed.
+func (a *objectAnalyzer) gsdRecord(show bool, b []byte) {
+	for k := 1; len(b) > 0; k++ {
+		sub, used, err := obj.DecodeSubrecord(b)
+		if err != nil {
+			a.fail("GSD subrecord %d is malformed: %v.", k, unwrap(err))
+
+			return
+		}
+
+		if show && k > 1 {
+			a.blank()
+		}
+
+		a.subrecord(show, k, sub)
+		a.checkSubrecord(sub)
+
+		b = b[used:]
+	}
+}
+
+// tirRecord describes a TIR, DBG, or TBT record's commands, up to one
+// that's malformed.
+func (a *objectAnalyzer) tirRecord(show bool, b []byte) {
+	for k := 1; len(b) > 0; k++ {
+		c, used, err := obj.DecodeCommand(b)
+		if err != nil {
+			a.fail("Command %d is malformed: %v.", k, unwrap(err))
+
+			return
+		}
+
+		if show && k > 1 {
+			a.blank()
+		}
+
+		a.command(show, k, c)
+		a.checkCommand(c)
+
+		b = b[used:]
+	}
+}
+
+// otherRecord describes a header, end of module, or link option record,
+// and reports whether it ended the module.
+func (a *objectAnalyzer) otherRecord(show bool, raw []byte) bool {
+	m, err := obj.Decode([][]byte{raw})
+	if err != nil {
+		a.fail("The record is malformed: %v.", unwrap(err))
+
+		return false
+	}
+
+	switch rec := m.Records[0].(type) {
+	case *obj.MainHeader:
+		if show {
+			a.mainHeader(rec)
+		}
+
+		a.checkName("module", rec.Name)
+
+	case *obj.TextHeader:
+		if show {
+			a.line("\tTextual information:")
+
+			for _, part := range headerText(rec.Text) {
+				a.line("\t" + quote(part))
+			}
+		}
+
+	case *obj.EOM:
+		if show {
+			a.endOfModule(rec)
+		}
+
+		if rec.Severity > obj.SeverityAbort {
+			a.fail("Severity %d is undefined.", rec.Severity)
+		}
+
+		if rec.HasTransfer {
+			a.checkPsect(rec.Psect)
+		}
+
+		return true
+
+	case *obj.LNK:
+		if show {
+			a.linkOption(rec)
+		}
+
+	case *obj.Unknown:
+		a.fail("Record type %d is undefined.", byte(rec.Type))
+	}
+
+	return false
 }
 
 // heading adds a record's heading line and the blank line after it.

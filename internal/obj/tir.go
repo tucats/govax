@@ -383,3 +383,9 @@ func appendCounted(b []byte, s string) ([]byte, error) {
 
 	return append(append(b, byte(len(s))), s...), nil
 }
+
+// DecodeCommand reads one TIR command from the front of b, returning it
+// and the number of bytes it used.
+func DecodeCommand(b []byte) (Command, int, error) {
+	return decodeCommand(b)
+}
