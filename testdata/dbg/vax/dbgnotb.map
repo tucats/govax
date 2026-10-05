@@ -1,0 +1,102 @@
+
+DBGNOTB                                                          5-OCT-2026 11:35        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+DBGDIS          V1.0                  424 DUA1:[000000]DBGDIS.OBJ;1             5-OCT-2026 11:35  VAX MACRO V5.4-3
+DBGSUB          V1.0                   40 DUA1:[000000]DBGSUB.OBJ;1             5-OCT-2026 11:35  VAX MACRO V5.4-3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+DATA                            00000200 0000025D 0000005E (         94.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                DBGDIS          00000200 0000025D 0000005E (         94.) LONG  2
+NOLABEL                         00000260 00000267 00000008 (          8.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                DBGDIS          00000260 00000267 00000008 (          8.) LONG  2
+SUBDAT                          00000268 0000026B 00000004 (          4.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                DBGSUB          00000268 0000026B 00000004 (          4.) LONG  2
+CODE                            00000400 00000567 00000168 (        360.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                DBGDIS          00000400 00000541 00000142 (        322.) LONG  2
+                DBGSUB          00000544 00000567 00000024 (         36.) LONG  2
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+GLIMIT          00000003          
+LOCALR          00000532-R        
+START           00000400-R        
+SUB1            00000544-R        
+SUB2            00000558-R        
+SUBDATA         00000268-R        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]DBGNOTB.EXE;1                                       5-OCT-2026 11:35        Linker V11-39                    Page    2
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000007FF 00000600 (1536. bytes, 3. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        4. (    3. blocks)
+Image name and identification:                    DBGNOTB V1.0
+Number of files:                                         4.
+Number of modules:                                       3.
+Number of program sections:                              6.
+Number of global symbols:                              311.
+Number of image sections:                                6.
+User transfer address:                            00000400
+Number of code references to shareable images:           1.
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[000000]DBGNOTB.MAP;1
+Estimated map length:                             32. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                    95	00:00:00.00	00:00:00.00
+    Pass 1:                                               253	00:00:00.01	00:00:00.01
+    Allocation/Relocation:                                 63	00:00:00.00	00:00:00.00
+    Pass 2:                                                90	00:00:00.00	00:00:00.00
+    Map data after object module synopsis:                 26	00:00:00.00	00:00:00.00
+    Symbol table output:                                   13	00:00:00.00	00:00:00.00
+Total run values:                                         540	00:00:00.01	00:00:00.01
+
+Using a working set limited to 512 pages and 109 pages of data storage (excluding image)
+
+Total number object records read (both passes):   118
+    of which 0 were in libraries and 10 were DEBUG data records containing 922 bytes
+
+Number of modules extracted explicitly             = 0
+    with 0 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 0 global symbol table records was written
+
+LINK/MAP=DBGNOTB/EXECUTABLE=DBGNOTB/NOTRACEBACK DBGDIS,DBGSUB

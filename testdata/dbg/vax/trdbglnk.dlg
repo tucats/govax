@@ -1,0 +1,136 @@
+@TRACE.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure TRACE.DBG
+! ! TRACE.DBG - debugger commands for TRACE's images (docs/PHASE-41.md,
+! ! subtask 1): TRDBGLNK (MACRO/DEBUG, LINK/DEBUG), TRLNKDBG (no DBG
+! ! records, LINK/DEBUG), TRDBGTRC (MACRO/DEBUG, a traceback link), and
+! ! govax's GVTRACE (MACRO/DEBUG, LINK/DEBUG). The same commands for each
+! ! show what each kind of image gives the debugger. Line numbers are
+! ! testdata/mar/list/trace.mar's.
+! !
+! SHOW IMAGE
+! image name                      set    base address   end address
+!
+! DBGSSISHR                       no     0008D600       00090BFF
+! DBGTBKMSG                       no     00090C00       0009D1FF
+! DEBUG                           no     00023800       0008D5FF
+! LIBRTL                          no     00000A00       000237FF
+!*TRDBGLNK                        yes    00000200       000009FF
+!
+! total images: 5                 bytes allocated: 63408
+! SHOW MODULE
+!module name                     symbols    size
+!
+!TRACE                           yes         952
+!
+!total MACRO modules: 1.         bytes allocated: 63416.
+! SHOW MODE
+!modes: symbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+!input radix : hexadecimal
+!output radix: hexadecimal
+! EXAMINE/INSTRUCTION .PC
+!TRACE\%LINE 21: CALLS    S^#00,L^TRACE\FIRST
+! SET MODULE/ALL
+! SHOW SYMBOL/ADDRESS * IN TRACE
+!routine TRACE
+!    address: 00000600, size: 0000001E bytes
+! !
+! EXAMINE/INSTRUCTION TRACE:HELPER
+!TRACE:  entry mask ^M<R2>
+!TRACE\%LINE 21: CALLS    S^#00,L^TRACE\FIRST
+!TRACE\%LINE 22: CALLS    S^#00,L^TRACE\SECOND
+!TRACE\%LINE 23: PUSHAQ   L^LEVEL+3FE
+!TRACE\%LINE 24: CALLS    S^#01,@L^SECOND+21B
+!TRACE\%LINE 25: RET     
+!TRACE\FIRST:    entry mask ^M<>
+!TRACE\FIRST\%LINE 28:   INCL     L^TRACE\COUNT
+!TRACE\FIRST\%LINE 29:   JSB      L^TRACE\SECOND\HELPER
+!TRACE\FIRST\%LINE 30:   RET     
+!TRACE\SECOND:   entry mask ^M<R2>
+!TRACE\SECOND\%LINE 33:  MOVL     S^#02,R2
+!TRACE\SECOND\%LINE 34:  INCL     L^TRACE\COUNT
+!TRACE\SECOND\%LINE 35:  SOBGTR   R2,TRACE\SECOND\%LINE 34
+!TRACE\SECOND\%LINE 36:  RET     
+!TRACE\SECOND\HELPER:    INCL     L^TRACE\COUNT
+! EXAMINE/INSTRUCTION HELPER
+!TRACE\SECOND\HELPER:    INCL     L^TRACE\COUNT
+! EXAMINE/INSTRUCTION %LINE 21
+!TRACE\%LINE 21: CALLS    S^#00,L^TRACE\FIRST
+! EXAMINE COUNT
+!TRACE\COUNT:    00000000
+! EXAMINE GLOBDATA
+!TRACE\GLOBDATA: 00000050
+! EVALUATE MAXLEN
+!00000050
+! EVALUATE LEVEL
+!00000002
+! EVALUATE/ADDRESS MSG
+!00000408
+! EVALUATE/ADDRESS CONST
+!00000200
+! SYMBOLIZE COUNT+2
+!address 00000423: 
+!    TRACE\COUNT+2
+!address 00000423: (global)
+!    LEVEL+421
+! SYMBOLIZE SECOND+5
+!address 00000632: 
+!    TRACE\SECOND+5
+!    TRACE\SECOND\%LINE 34
+!address 00000632: (global)
+!    SECOND+5
+! SYMBOLIZE HELPER
+!address 0000063C: 
+!    TRACE\SECOND\HELPER
+!    TRACE\SECOND\%LINE 38
+!address 0000063C: (global)
+!    SECOND+0F
+! !
+! SET MODE NOSYMBOLIC
+! EXAMINE/INSTRUCTION TRACE:HELPER
+!00000600:       entry mask ^M<R2>
+!00000602:       CALLS    S^#00,L^0000061E
+!00000609:       CALLS    S^#00,L^0000062D
+!00000610:       PUSHAQ   L^00000400
+!00000616:       CALLS    S^#01,@L^00000848
+!0000061D:       RET     
+!0000061E:       entry mask ^M<>
+!00000620:       INCL     L^00000421
+!00000626:       JSB      L^0000063C
+!0000062C:       RET     
+!0000062D:       entry mask ^M<R2>
+!0000062F:       MOVL     S^#02,R2
+!00000632:       INCL     L^00000421
+!00000638:       SOBGTR   R2,00000632
+!0000063B:       RET     
+!0000063C:       INCL     L^00000421
+! SET MODE SYMBOLIC
+! !
+! SET STEP INSTRUCTION
+! STEP
+!stepped to TRACE\%LINE 22: CALLS    S^#00,L^TRACE\SECOND
+!    22:         CALLS   #0, SECOND
+! STEP
+!stepped to TRACE\%LINE 23: PUSHAQ   L^LEVEL+3FE
+!    23:         PUSHAQ  MSG
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*TRACE           TRACE               23               00000010         00000610
+! SET BREAK HELPER
+! SET BREAK SECOND
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+! SHOW CALLS
+!%DEBUG-E-NOCALLS, no active call frames
+! EXAMINE/INSTRUCTION .PC
+!%DEBUG-E-NOACCESSR, no read access to address 00000000
+! GO
+!%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+! SHOW CALLS
+!%DEBUG-E-NOCALLS, no active call frames
+! EXAMINE/INSTRUCTION .PC
+!%DEBUG-E-NOACCESSR, no read access to address 00000000
+! CANCEL BREAK/ALL
+! GO
+!%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+!%DEBUG-I-VERIFYICF, exiting command procedure TRACE.DBG
+EXIT

@@ -1,0 +1,226 @@
+@DBGDIS.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBGDIS.DBG
+! ! DBGDIS.DBG - debugger commands for DBGDIS (docs/PHASE-41.md, subtask 1).
+! ! DBG.COM runs them for VMS's DBGDIS.EXE and for govax's GVDBGDIS.EXE,
+! ! after SET LOG and SET OUTPUT LOG,VERIFY. Line numbers are DBGDIS.MAR's
+! ! and DBGSUB.MAR's: change them here if those sources change.
+! !
+! ! What the debugger knows on start-up.
+! SHOW IMAGE
+! image name                      set    base address   end address
+!
+! DBGSSISHR                       no     0008D400       000909FF
+! DBGTBKMSG                       no     00090A00       0009CFFF
+!*DBGTRC                          yes    00000200       000007FF
+! DEBUG                           no     00023600       0008D3FF
+! LIBRTL                          no     00000800       000235FF
+!
+! total images: 5                 bytes allocated: 60936
+! SHOW MODULE
+!module name                     symbols    size
+!
+!DBGDIS                          yes         384
+!DBGSUB                          no          320
+!
+!total MACRO modules: 2.         bytes allocated: 60960.
+! SHOW LANGUAGE
+!language: MACRO
+! SHOW RADIX
+!input radix : hexadecimal
+!output radix: hexadecimal
+! SHOW MODE
+!modes: symbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+!input radix : hexadecimal
+!output radix: hexadecimal
+! SHOW SCOPE
+!scope: 
+! *  0 [ = DBGDIS\START ]
+! EXAMINE/INSTRUCTION .PC
+!DBGDIS\START+2: MOVL     S^#0A,R2
+! !
+! ! Every module's symbols, then their addresses.
+! SET MODULE/ALL
+! SHOW MODULE
+!module name                     symbols    size
+!
+!DBGDIS                          yes         384
+!DBGSUB                          yes         320
+!
+!total MACRO modules: 2.         bytes allocated: 63464.
+! SHOW SYMBOL/ADDRESS * IN DBGDIS
+!routine DBGDIS\LOCALR
+!    address: 00000532, size: 00000010 bytes
+!routine DBGDIS\START
+!    address: 00000400, size: 00000132 bytes
+!label DBGDIS\DATA
+!    address: 00000200, size: 0000005E bytes
+!label DBGDIS\NOLABEL
+!    address: 00000260, size: 00000008 bytes
+!label DBGDIS\CODE
+!    address: 00000400, size: 00000142 bytes
+! SHOW SYMBOL/ADDRESS * IN DBGSUB
+!routine DBGSUB\SUB1
+!    address: 00000544, size: 00000014 bytes
+!routine DBGSUB\SUB2
+!    address: 00000558, size: 00000010 bytes
+!label DBGSUB\SUBDAT
+!    address: 00000268, size: 00000004 bytes
+!label DBGSUB\CODE
+!    address: 00000544, size: 00000024 bytes
+! SHOW SYMBOL/TYPE * IN DBGDIS
+!routine DBGDIS\LOCALR
+!routine DBGDIS\START
+!label DBGDIS\DATA
+!label DBGDIS\NOLABEL
+!label DBGDIS\CODE
+! !
+! ! Instructions, symbolic (the default): each routine whole, by name.
+!%DEBUG-E-NOSYMBOL, symbol 'LAST' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'LOCEND' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'JSBRTN' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\SUBEND' is not in the symbol table
+! !
+! ! By line, and one at a time.
+!%DEBUG-E-NOSYMBOL, symbol '%LINE 47' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol '%LINE 85' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\%LINE 14' is not in the symbol table
+! EXAMINE/INSTRUCTION START
+!DBGDIS\START:   entry mask ^M<R2,R3,R4>
+! EXAMINE/INSTRUCTION START+2
+!DBGDIS\START+2: MOVL     S^#0A,R2
+! EXAMINE START
+!DBGDIS\START:   entry mask ^M<R2,R3,R4>
+! EXAMINE SUB2
+!DBGSUB\SUB2:    entry mask ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11,IV,DV>
+! EXAMINE/INSTRUCTION SUB2
+!DBGSUB\SUB2:    entry mask ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11,IV,DV>
+! !
+! ! Data and constants by name.
+!%DEBUG-E-NOSYMBOL, symbol 'COUNT' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'TABLE' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'TABLE' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'MSG' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'TEXT' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'NOLAB2' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'SUBDATA' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'LIMIT' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'BIG' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'GLIMIT' is not in the symbol table
+! !
+! ! Addresses to names, and names to addresses.
+! EVALUATE/ADDRESS START
+!00000400
+!%DEBUG-E-NOSYMBOL, symbol 'COUNT' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'TABLE' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'NOLAB2' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol '%LINE 47' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\%LINE 14' is not in the symbol table
+! SYMBOLIZE START
+!address 00000400: 
+!    DBGDIS\START
+! SYMBOLIZE START+2
+!address 00000402: 
+!    DBGDIS\START+2
+!%DEBUG-E-NOSYMBOL, symbol 'TABLE' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'TEXT' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'NOLAB2' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'SUBDATA' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'JSBRTN' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol '%LINE 85' is not in the symbol table
+! !
+! ! Not symbolic.
+! SET MODE NOSYMBOLIC
+!%DEBUG-E-NOSYMBOL, symbol 'LAST' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\SUBEND' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'COUNT' is not in the symbol table
+! SET MODE SYMBOLIC
+! !
+! ! Decimal, then the default radix again.
+! SET RADIX DECIMAL
+!%DEBUG-E-NOSYMBOL, symbol '%LINE 47' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'TABLE' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'TEXT' is not in the symbol table
+! CANCEL RADIX
+! !
+! ! Stepping by instruction, then by line.
+! SET STEP INSTRUCTION
+! STEP
+!stepped to DBGDIS\START+5: MOVL     I^#000003E8,R3
+! STEP
+!stepped to DBGDIS\START+0C: MOVL     I^#0000000A,R4
+! STEP
+!stepped to DBGDIS\START+13: MOVL     S^#03,R0
+! STEP
+!stepped to DBGDIS\START+16: MOVF     S^#1.500000,R1
+! STEP
+!stepped to DBGDIS\START+19: MOVL     L^00000200,R0
+! EXAMINE/OPERANDS .PC
+!DBGDIS\START+19:        MOVL     L^00000200,R0
+!     L^00000200 00000200 contains 00000000
+!     R0         R0 contains 00000003
+! EXAMINE/OPERANDS=FULL .PC
+!DBGDIS\START+19:        MOVL     L^00000200,R0
+!     L^00000200 00000200 contains 00000000
+!     R0         R0 contains 00000003
+! SET STEP LINE
+! STEP
+!stepped to DBGDIS\START+20
+! STEP
+!stepped to DBGDIS\START+25
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGDIS          START                                00000025         00000425
+! !
+! ! Breaks in a JSB subroutine (reached by JSB, then BSBW), then three
+! ! and four calls deep (SUB2, and SUBJSB under it).
+! SET BREAK SUB2
+!%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\SUBJSB' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'JSBRTN' is not in the symbol table
+! GO
+!break at routine DBGSUB\SUB2
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGSUB          SUB2                                 00000002         0000055A
+!*DBGSUB          SUB1                                 00000010         00000554
+!*DBGDIS          START                                000000FD         000004FD
+! EXAMINE/INSTRUCTION .PC
+!DBGSUB\SUB2+2:  JSB      L^DBGSUB\SUB2+9
+! GO
+!break at routine DBGSUB\SUB2
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGSUB          SUB2                                 00000002         0000055A
+!*DBGSUB          SUB1                                 00000010         00000554
+!*DBGDIS          START                                00000108         00000508
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+! SHOW CALLS
+!%DEBUG-E-NOCALLS, no active call frames
+! EXAMINE/INSTRUCTION .PC
+!%DEBUG-E-NOACCESSR, no read access to address 00000000
+! GO
+!%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+! SHOW CALLS
+!%DEBUG-E-NOCALLS, no active call frames
+! EXAMINE/INSTRUCTION .PC
+!%DEBUG-E-NOACCESSR, no read access to address 00000000
+! STEP/INSTRUCTION
+!%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+! EXAMINE/INSTRUCTION .PC
+!%DEBUG-E-NOACCESSR, no read access to address 00000000
+! CANCEL BREAK/ALL
+! !
+! ! The end of START, then the end of the program.
+!%DEBUG-E-NOSYMBOL, symbol 'LAST' is not in the symbol table
+! GO
+!%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+! SHOW CALLS
+!%DEBUG-E-NOCALLS, no active call frames
+! EXAMINE/INSTRUCTION .PC
+!%DEBUG-E-NOACCESSR, no read access to address 00000000
+! CANCEL BREAK/ALL
+!%DEBUG-I-NOBREAKS, no breakpoints are set
+! GO
+!%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+!%DEBUG-I-VERIFYICF, exiting command procedure DBGDIS.DBG
+EXIT

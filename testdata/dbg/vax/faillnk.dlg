@@ -1,0 +1,47 @@
+@FAIL.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure FAIL.DBG
+! ! FAIL.DBG - debugger commands for FAILDBG, FAILMAIN and FAILSUB built
+! ! /DEBUG and linked /DEBUG (docs/PHASE-41.md, subtask 1): the access
+! ! violation two calls deep, as the debugger reports it, and the call
+! ! chain there (Decision 6).
+! !
+! SET MODULE/ALL
+! SHOW MODULE
+!module name                     symbols    size
+!
+!FAILMAIN                        yes         412
+!FAILSUB                         yes         452
+!
+!total MACRO modules: 2.         bytes allocated: 59704.
+! GO
+!%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=0000021C, PSL=03C00000
+!break on unhandled exception at FAILSUB\SUB2\%LINE 12
+!    12:         MOVL    @#0, R0                 ; address 0: an access violation
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*FAILSUB         SUB2                12               00000005         0000021C
+!*FAILSUB         SUB1                 7               0000000A         00000216
+!*FAILMAIN        FAILMAIN            14               00000009         00000209
+! EXAMINE/INSTRUCTION .PC
+!FAILSUB\SUB2\%LINE 12:  MOVL     @#00000000,R0
+! EXAMINE/INSTRUCTION SUB2:FAILSUB\%LINE 13
+!FAILSUB\SUB2:   entry mask ^M<R2>
+!FAILSUB\SUB2\%LINE 11:  MOVL     S^#05,R2
+!FAILSUB\SUB2\%LINE 12:  MOVL     @#00000000,R0
+!FAILSUB\SUB2\%LINE 13:  RET     
+! EXAMINE/INSTRUCTION FAILMAIN:FAILMAIN+10
+!FAILMAIN:       entry mask ^M<>
+!FAILMAIN\%LINE 14:      CALLS    S^#00,L^FAILSUB\SUB1
+!FAILMAIN\%LINE 15:      RET     
+!FAILMAIN+0A:    HALT    
+!FAILMAIN+0B:    HALT    
+!FAILSUB\SUB1:   entry mask ^M<>
+!FAILSUB\SUB1\%LINE 6:   NOP     
+!FAILSUB\SUB1\%LINE 7:   CALLS    S^#00,L^FAILSUB\SUB2
+! EXAMINE R2
+!FAILSUB\SUB2\%R2:       00000005
+! SHOW CALLS 1
+! module name     routine name      line                rel PC           abs PC
+!*FAILSUB         SUB2                12               00000005         0000021C
+!%DEBUG-I-VERIFYICF, exiting command procedure FAIL.DBG
+EXIT

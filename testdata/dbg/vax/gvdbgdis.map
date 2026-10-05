@@ -1,0 +1,76 @@
+
+DUA1:[000000]GVDBGDIS.EXE                                        5-OCT-2026 11:34        Linker govax V0.0-0              Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+DBGDIS          V1.0                  426 DUA1:[000000]GVDBGDIS.OBJ;1           5-OCT-2026 11:34  govax MACRO V0.0-0
+DBGSUB          V1.0                   40 DUA1:[000000]GVDBGSUB.OBJ;1           5-OCT-2026 11:34  govax MACRO V0.0-0
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+DATA                            00000200 0000025D 0000005E (         94.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                DBGDIS          00000200 0000025D 0000005E (         94.) LONG  2
+NOLABEL                         00000260 00000267 00000008 (          8.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                DBGDIS          00000260 00000267 00000008 (          8.) LONG  2
+SUBDAT                          00000268 0000026B 00000004 (          4.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                DBGSUB          00000268 0000026B 00000004 (          4.) LONG  2
+CODE                            00000400 00000567 00000168 (        360.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                DBGDIS          00000400 00000543 00000144 (        324.) LONG  2
+                DBGSUB          00000544 00000567 00000024 (         36.) LONG  2
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+GLIMIT          00000003          
+LOCALR          00000534-R        
+START           00000400-R        
+SUB1            00000544-R        
+SUB2            00000558-R        
+SUBDATA         00000268-R        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]GVDBGDIS.EXE;1                                      5-OCT-2026 11:34        Linker govax V0.0-0              Page    2
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000007FF 00000600 (1536. bytes, 3. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        4. (    3. blocks)
+Image name and identification:                    GVDBGDIS V1.0
+Number of files:                                         2.
+Number of modules:                                       3.
+Number of program sections:                              6.
+Number of global symbols:                              312.
+Number of image sections:                                6.
+User transfer address:                            00000400
+Debugger transfer address:                        7FFEDF68
+Number of code references to shareable images:           1.
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[000000]GVDBGDIS.MAP
+Estimated map length:                             32. blocks

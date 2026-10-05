@@ -1,0 +1,2330 @@
+
+$ ! DBG.COM - Phase 41's probe (docs/PHASE-41.md, subtask 1): how the VMS
+$ ! debugger shows instructions, symbols, and call chains, for govax's
+$ ! symbolic disassembler to be checked against.
+$ !
+$ ! 1. Builds DBGDIS (with DBGSUB), TRACE, FAILMAIN (with FAILSUB), and
+$ !    FORTH, with /DEBUG and without, linked /DEBUG, with traceback,
+$ !    and /NOTRACEBACK; maps, listings, and ANALYZE/IMAGE for each.
+$ ! 2. Runs each image under the debugger with a file of debugger
+$ !    commands (*.DBG), logging the session to IMAGE.DLG. The same
+$ !    commands run on govax's own images of DBGDIS and TRACE
+$ !    (GVDBGDIS.EXE, GVTRACE.EXE), which EXCHANGE.CMD put on the volume.
+$ !
+$ ! Run it with the exchange volume as the default directory, keeping a
+$ ! log of everything it prints:
+$ !
+$ !     @DBG/OUTPUT=DBG.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ !
+$ ! 1. Builds.
+$ !
+$ MACRO/DEBUG/LIST DBGDIS
+$ MACRO/DEBUG/LIST DBGSUB
+$ LINK/DEBUG/MAP DBGDIS,DBGSUB
+$ LINK/MAP=DBGTRC/EXECUTABLE=DBGTRC DBGDIS,DBGSUB
+$ LINK/MAP=DBGNOTB/EXECUTABLE=DBGNOTB/NOTRACEBACK DBGDIS,DBGSUB
+$ !
+$ MACRO TRACE
+$ MACRO/OBJECT=TRDEBUG/DEBUG TRACE
+$ LINK/MAP=TRDBGLNK/EXECUTABLE=TRDBGLNK/DEBUG TRDEBUG
+$ LINK/MAP=TRLNKDBG/EXECUTABLE=TRLNKDBG/DEBUG TRACE
+$ LINK/MAP=TRDBGTRC/EXECUTABLE=TRDBGTRC TRDEBUG
+$ LINK/MAP=TRNOTB/EXECUTABLE=TRNOTB/NOTRACEBACK TRACE
+$ !
+$ MACRO/OBJECT=FAILMAID/DEBUG FAILMAIN
+$ MACRO/OBJECT=FAILSUBD/DEBUG FAILSUB
+$ LINK/MAP=FAILLNK/EXECUTABLE=FAILLNK/DEBUG FAILMAID,FAILSUBD
+$ !
+$ MACRO/DEBUG FORTH
+$ LINK/DEBUG/MAP FORTH
+$ !
+$ LIST = "DBGDIS,DBGTRC,DBGNOTB,TRDBGLNK,TRLNKDBG,TRDBGTRC,TRNOTB," + -
+    "FAILLNK,FORTH,GVDBGDIS,GVTRACE"
+$ I = 0
+$ ANALYZE:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=DBGDIS.ANI DBGDIS.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]DBGDIS.EXE;1                               0 errors
+$   I = I + 1
+$   GOTO ANALYZE
+$ ANALYZE:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=DBGTRC.ANI DBGTRC.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]DBGTRC.EXE;1                               0 errors
+$   I = I + 1
+$   GOTO ANALYZE
+$ ANALYZE:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=DBGNOTB.ANI DBGNOTB.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]DBGNOTB.EXE;1                              0 errors
+$   I = I + 1
+$   GOTO ANALYZE
+$ ANALYZE:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=TRDBGLNK.ANI TRDBGLNK.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]TRDBGLNK.EXE;1                             0 errors
+$   I = I + 1
+$   GOTO ANALYZE
+$ ANALYZE:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=TRLNKDBG.ANI TRLNKDBG.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]TRLNKDBG.EXE;1                             0 errors
+$   I = I + 1
+$   GOTO ANALYZE
+$ ANALYZE:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=TRDBGTRC.ANI TRDBGTRC.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]TRDBGTRC.EXE;1                             0 errors
+$   I = I + 1
+$   GOTO ANALYZE
+$ ANALYZE:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=TRNOTB.ANI TRNOTB.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]TRNOTB.EXE;1                               0 errors
+$   I = I + 1
+$   GOTO ANALYZE
+$ ANALYZE:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=FAILLNK.ANI FAILLNK.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]FAILLNK.EXE;1                              0 errors
+$   I = I + 1
+$   GOTO ANALYZE
+$ ANALYZE:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=FORTH.ANI FORTH.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]FORTH.EXE;1                                0 errors
+$   I = I + 1
+$   GOTO ANALYZE
+$ ANALYZE:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=GVDBGDIS.ANI GVDBGDIS.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]GVDBGDIS.EXE;1                             0 errors
+$   I = I + 1
+$   GOTO ANALYZE
+$ ANALYZE:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT=GVTRACE.ANI GVTRACE.EXE
+%ANALYZE-I-ERRORS, DUA1:[000000]GVTRACE.EXE;1                              0 errors
+$   I = I + 1
+$   GOTO ANALYZE
+$ ANALYZE:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$ RUNS:
+$ CALL DEBUG DBGDIS DBGDIS
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBGDIS.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBGDIS.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBGDIS
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBGDIS
+%DEBUG-I-VERIFYICF, entering command procedure DBGDIS.DBG
+ ! DBGDIS.DBG - debugger commands for DBGDIS (docs/PHASE-41.md, subtask 1).
+ ! DBG.COM runs them for VMS's DBGDIS.EXE and for govax's GVDBGDIS.EXE,
+ ! after SET LOG and SET OUTPUT LOG,VERIFY. Line numbers are DBGDIS.MAR's
+ ! and DBGSUB.MAR's: change them here if those sources change.
+ !
+ ! What the debugger knows on start-up.
+ SHOW IMAGE
+ image name                      set    base address   end address
+
+*DBGDIS                          yes    00000200       000007FF
+ DBGSSISHR                       no     0008D400       000909FF
+ DBGTBKMSG                       no     00090A00       0009CFFF
+ DEBUG                           no     00023600       0008D3FF
+ LIBRTL                          no     00000800       000235FF
+
+ total images: 5                 bytes allocated: 67072
+ SHOW MODULE
+module name                     symbols    size
+
+DBGDIS                          yes        1804
+DBGSUB                          no          644
+
+total MACRO modules: 2.         bytes allocated: 67120.
+ SHOW LANGUAGE
+language: MACRO
+ SHOW RADIX
+input radix : hexadecimal
+output radix: hexadecimal
+ SHOW MODE
+modes: symbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+input radix : hexadecimal
+output radix: hexadecimal
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBGDIS\START ]
+ EXAMINE/INSTRUCTION .PC
+DBGDIS\START\%LINE 42:  MOVL     S^#0A,R2
+ !
+ ! Every module's symbols, then their addresses.
+ SET MODULE/ALL
+ SHOW MODULE
+module name                     symbols    size
+
+DBGDIS                          yes        1804
+DBGSUB                          yes         644
+
+total MACRO modules: 2.         bytes allocated: 71024.
+ SHOW SYMBOL/ADDRESS * IN DBGDIS
+routine DBGDIS\LOCALR
+    address: 00000532, size: 00000010 bytes
+routine DBGDIS\START
+    address: 00000400, size: 00000132 bytes
+data DBGDIS\ARGLST
+    address: 0000022E
+data DBGDIS\BIG
+    constant: 000003E8
+data DBGDIS\BYTES
+    descriptor address: 00267AE5
+data DBGDIS\COUNT
+    address: 00000200
+label DBGDIS\START\DONE
+    address: 0000052E
+data DBGDIS\FVAL
+    address: 0000022A
+data DBGDIS\GLIMIT
+    constant: 00000003
+label DBGDIS\LOCALR\JSBEND
+    address: 00000541
+label DBGDIS\LOCALR\JSBRTN
+    address: 0000053B
+label DBGDIS\START\LAST
+    address: 00000531
+data DBGDIS\LIMIT
+    constant: 0000000A
+label DBGDIS\LOCALR\LOCEND
+    address: 0000053A
+label DBGDIS\START\LOOP
+    address: 000004DD
+data DBGDIS\MASK
+    constant: 0000000F
+data DBGDIS\MSG
+    descriptor address: 00000232
+data DBGDIS\NOLAB2
+    address: 00000264
+data DBGDIS\PTR
+    address: 0000021E
+data DBGDIS\QUAD
+    address: 00000222
+data DBGDIS\TABLE
+    descriptor address: 00267BD0
+data DBGDIS\TEXT
+    descriptor address: 00267BFC
+data DBGDIS\WORDV
+    address: 0000021C
+label DBGDIS\DATA
+    address: 00000200, size: 0000005E bytes
+label DBGDIS\NOLABEL
+    address: 00000260, size: 00000008 bytes
+label DBGDIS\CODE
+    address: 00000400, size: 00000142 bytes
+ SHOW SYMBOL/ADDRESS * IN DBGSUB
+routine DBGSUB\SUB1
+    address: 00000544, size: 00000014 bytes
+routine DBGSUB\SUB2
+    address: 00000558, size: 00000010 bytes
+data DBGSUB\SUBDATA
+    address: 00000268
+label DBGSUB\SUB2\SUBEND
+    address: 00000567
+label DBGSUB\SUB2\SUBJSB
+    address: 00000561
+label DBGSUB\SUBDAT
+    address: 00000268, size: 00000004 bytes
+label DBGSUB\CODE
+    address: 00000544, size: 00000024 bytes
+ SHOW SYMBOL/TYPE * IN DBGDIS
+routine DBGDIS\LOCALR
+routine DBGDIS\START
+data DBGDIS\ARGLST
+    atomic type, longword integer, size: 4 bytes
+data DBGDIS\BIG
+    atomic type, longword integer, size: 4 bytes
+data DBGDIS\BYTES
+    array descriptor type, 1 dimension, bounds: [0:7], size: 8 bytes
+        cell type: atomic type, byte integer, size: 1 byte
+data DBGDIS\COUNT
+    atomic type, longword integer, size: 4 bytes
+label DBGDIS\START\DONE
+data DBGDIS\FVAL
+    atomic type, F_floating, size: 4 bytes
+data DBGDIS\GLIMIT
+    atomic type, longword integer, size: 4 bytes
+label DBGDIS\LOCALR\JSBEND
+label DBGDIS\LOCALR\JSBRTN
+label DBGDIS\START\LAST
+data DBGDIS\LIMIT
+    atomic type, longword integer, size: 4 bytes
+label DBGDIS\LOCALR\LOCEND
+label DBGDIS\START\LOOP
+data DBGDIS\MASK
+    atomic type, longword integer, size: 4 bytes
+data DBGDIS\MSG
+    string descriptor type, character-coded text, size: 12 bytes
+data DBGDIS\NOLAB2
+    atomic type, longword integer, size: 4 bytes
+data DBGDIS\PTR
+    atomic type, longword logical, size: 4 bytes
+data DBGDIS\QUAD
+    atomic type, quadword integer, size: 8 bytes
+data DBGDIS\TABLE
+    array descriptor type, 1 dimension, bounds: [0:3], size: 16 bytes
+        cell type: atomic type, longword integer, size: 4 bytes
+data DBGDIS\TEXT
+    string descriptor type, character-coded text, size: 8 bytes
+data DBGDIS\WORDV
+    atomic type, word integer, size: 2 bytes
+label DBGDIS\DATA
+label DBGDIS\NOLABEL
+label DBGDIS\CODE
+ !
+ ! Instructions, symbolic (the default): each routine whole, by name.
+ EXAMINE/INSTRUCTION START:LAST
+DBGDIS\START:   entry mask ^M<R2,R3,R4>
+DBGDIS\START\%LINE 42:  MOVL     S^#0A,R2
+DBGDIS\START\%LINE 43:  MOVL     I^#000003E8,R3
+DBGDIS\START\%LINE 44:  MOVL     I^#0000000A,R4
+DBGDIS\START\%LINE 45:  MOVL     S^#03,R0
+DBGDIS\START\%LINE 46:  MOVF     S^#1.500000,R1
+DBGDIS\START\%LINE 47:  MOVL     L^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 48:  MOVL     W^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 49:  MOVL     L^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 50:  MOVAL    L^DBGDIS\TABLE[0],R1
+DBGDIS\START\%LINE 51:  MOVL     L^DBGDIS\TABLE[2],R0
+DBGDIS\START\%LINE 52:  MOVL     @L^DBGDIS\PTR,R0
+DBGDIS\START\%LINE 53:  MOVL     @W^DBGDIS\PTR,R0
+DBGDIS\START\%LINE 54:  MOVL     @#DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 55:  MOVAB    L^GLIMIT+24D,R0
+DBGDIS\START\%LINE 56:  MOVAL    L^GLIMIT+25D,R0
+DBGDIS\START\%LINE 57:  MOVL     S^#02,R4
+DBGDIS\START\%LINE 58:  MOVL     L^DBGDIS\TABLE[0][R4],R0
+DBGDIS\START\%LINE 59:  CVTBL    L^DBGDIS\BYTES[3],R0
+DBGDIS\START\%LINE 60:  MOVW     L^DBGDIS\WORDV,R0
+DBGDIS\START\%LINE 61:  MOVQ     L^DBGDIS\QUAD,R0
+DBGDIS\START\%LINE 62:  MOVF     L^DBGDIS\FVAL,R0
+DBGDIS\START\%LINE 63:  BICL2    S^#0F,R0
+DBGDIS\START\%LINE 64:  MOVAL    L^DBGDIS\TABLE[0],R1
+DBGDIS\START\%LINE 65:  MOVL     B^0A(R1),R0
+DBGDIS\START\%LINE 66:  MOVL     B^04(AP),R0
+DBGDIS\START\%LINE 67:  MOVL     B^08(FP),R0
+DBGDIS\START\%LINE 68:  MOVAL    L^DBGDIS\PTR,R2
+DBGDIS\START\%LINE 69:  MOVL     (R2),R0
+DBGDIS\START\%LINE 70:  MOVL     @(R2)+,R0
+DBGDIS\START\%LINE 71:  MOVL     -(R2),R0
+DBGDIS\START\%LINE 72:  MOVL     (R2)+,R0
+DBGDIS\START\%LINE 73:  MOVAB    W^DBGDIS\START,R0
+DBGDIS\START\%LINE 74:  MOVAB    W^DBGDIS\START\%LINE 42,R0
+DBGDIS\START\%LINE 75:  MOVL     L^DBGSUB\SUBDATA,R0
+DBGDIS\START\%LINE 76:  MOVL     L^DBGSUB\SUBDATA,R0
+DBGDIS\START\%LINE 77:  PUSHAL   L^DBGSUB\SUBDATA
+DBGDIS\START\%LINE 78:  TSTL     (SP)+
+DBGDIS\START\%LINE 79:  CMPL     R2,S^#03
+DBGDIS\START\%LINE 80:  BLEQ     DBGDIS\START\%LINE 82
+DBGDIS\START\%LINE 81:  BRB      DBGDIS\START\%LINE 83
+DBGDIS\START\%LINE 82:  INCL     L^DBGDIS\COUNT
+DBGDIS\START\%LINE 83:  CMPL     R2,S^#0A
+DBGDIS\START\%LINE 84:  BGEQ     DBGDIS\START\LOOP
+DBGDIS\START\LOOP:      INCL     L^DBGDIS\COUNT
+DBGDIS\START\%LINE 86:  SOBGTR   R4,DBGDIS\START\LOOP
+DBGDIS\START\%LINE 87:  JSB      L^DBGDIS\LOCALR\JSBRTN
+DBGDIS\START\%LINE 88:  BSBW     DBGDIS\LOCALR\JSBRTN
+DBGDIS\START\%LINE 89:  CALLS    S^#00,L^DBGDIS\LOCALR
+DBGDIS\START\%LINE 90:  CALLS    S^#00,L^DBGSUB\SUB1
+DBGDIS\START\%LINE 91:  CALLG    L^DBGDIS\ARGLST,L^DBGSUB\SUB1
+DBGDIS\START\%LINE 92:  PUSHAQ   L^GLIMIT+22F
+DBGDIS\START\%LINE 93:  CALLS    S^#01,@L^SUB2+0F0
+DBGDIS\START\%LINE 94:  MOVL     S^#01,R0
+DBGDIS\START\%LINE 95:  CASEL    R0,S^#00,S^#02
+                DBGDIS\START\%LINE 100
+                DBGDIS\START\%LINE 101
+                DBGDIS\START\%LINE 102
+DBGDIS\START\%LINE 99:  BRW      DBGDIS\START\DONE
+DBGDIS\START\%LINE 100: BRB      DBGDIS\START\DONE
+DBGDIS\START\%LINE 101: NOP     
+DBGDIS\START\%LINE 102: JMP      L^DBGDIS\START\DONE
+DBGDIS\START\DONE:      MOVL     S^#01,R0
+DBGDIS\START\LAST:      RET     
+ EXAMINE/INSTRUCTION LOCALR:LOCEND
+DBGDIS\LOCALR:  entry mask ^M<>
+DBGDIS\LOCALR\%LINE 107:        INCL     L^DBGDIS\COUNT
+DBGDIS\LOCALR\LOCEND:   RET     
+ EXAMINE/INSTRUCTION JSBRTN:JSBEND
+DBGDIS\LOCALR\JSBRTN:   INCL     L^DBGDIS\COUNT
+DBGDIS\LOCALR\JSBEND:   RSB     
+%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\SUBEND' is not in the symbol table
+ !
+ ! By line, and one at a time.
+ EXAMINE/INSTRUCTION %LINE 47:%LINE 56
+DBGDIS\START\%LINE 47:  MOVL     L^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 48:  MOVL     W^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 49:  MOVL     L^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 50:  MOVAL    L^DBGDIS\TABLE[0],R1
+DBGDIS\START\%LINE 51:  MOVL     L^DBGDIS\TABLE[2],R0
+DBGDIS\START\%LINE 52:  MOVL     @L^DBGDIS\PTR,R0
+DBGDIS\START\%LINE 53:  MOVL     @W^DBGDIS\PTR,R0
+DBGDIS\START\%LINE 54:  MOVL     @#DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 55:  MOVAB    L^GLIMIT+24D,R0
+DBGDIS\START\%LINE 56:  MOVAL    L^GLIMIT+25D,R0
+ EXAMINE/INSTRUCTION %LINE 85
+DBGDIS\START\%LINE 85:  INCL     L^DBGDIS\COUNT
+ EXAMINE/INSTRUCTION DBGSUB\%LINE 14
+DBGSUB\SUB1\%LINE 14:   MOVL     L^DBGSUB\SUBDATA,R2
+ EXAMINE/INSTRUCTION START
+DBGDIS\START:   entry mask ^M<R2,R3,R4>
+ EXAMINE/INSTRUCTION START+2
+DBGDIS\START\%LINE 42:  MOVL     S^#0A,R2
+ EXAMINE START
+DBGDIS\START:   entry mask ^M<R2,R3,R4>
+ EXAMINE SUB2
+DBGSUB\SUB2:    entry mask ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11,IV,DV>
+ EXAMINE/INSTRUCTION SUB2
+DBGSUB\SUB2:    entry mask ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11,IV,DV>
+ !
+ ! Data and constants by name.
+ EXAMINE COUNT
+DBGDIS\COUNT:   00000000
+ EXAMINE TABLE
+DBGDIS\TABLE[0:3]
+    [0]:        00000001
+    [1]:        00000002
+    [2]:        00000003
+    [3]:        00000004
+ EXAMINE TABLE+8
+DBGDIS\TABLE[2]:        00000003
+ EXAMINE MSG
+DBGDIS\MSG:     'DBGDIS: done'
+ EXAMINE TEXT
+DBGDIS\TEXT:    'ABCDEFGH'
+ EXAMINE NOLAB2-4
+GLIMIT+25D:     00000005
+ EXAMINE SUBDATA
+DBGSUB\SUBDATA: 00000007
+ EVALUATE LIMIT
+0000000A
+ EVALUATE BIG
+000003E8
+ EVALUATE GLIMIT
+00000003
+ !
+ ! Addresses to names, and names to addresses.
+ EVALUATE/ADDRESS START
+00000400
+ EVALUATE/ADDRESS COUNT
+00000200
+ EVALUATE/ADDRESS TABLE+8
+0000020C
+ EVALUATE/ADDRESS NOLAB2-4
+00000260
+ EVALUATE/ADDRESS %LINE 47
+00000419
+ EVALUATE/ADDRESS DBGSUB\%LINE 14
+00000546
+ SYMBOLIZE START
+address 00000400: 
+    DBGDIS\START
+    DBGDIS\%LINE 41
+address 00000400: (global)
+    START
+ SYMBOLIZE START+2
+address 00000402: 
+    DBGDIS\START+2
+    DBGDIS\START\%LINE 42
+address 00000402: (global)
+    START+2
+ SYMBOLIZE TABLE+8
+address 0000020C: 
+    DBGDIS\TABLE+8
+address 0000020C: (global)
+    GLIMIT+209
+ SYMBOLIZE TEXT+10
+address 00000256: 
+    DBGDIS\TEXT+10
+address 00000256: (global)
+    GLIMIT+253
+ SYMBOLIZE NOLAB2-4
+address 00000260: 
+    DBGDIS\TEXT+1A
+address 00000260: (global)
+    GLIMIT+25D
+ SYMBOLIZE SUBDATA
+address 00000268: 
+    DBGSUB\SUBDATA
+address 00000268: (global)
+    SUBDATA
+ SYMBOLIZE JSBRTN+3
+address 0000053E: 
+    DBGDIS\LOCALR+0C
+    DBGDIS\LOCALR\%LINE 110+3
+address 0000053E: (global)
+    LOCALR+0C
+ SYMBOLIZE %LINE 85
+address 000004DD: 
+    DBGDIS\START\LOOP
+    DBGDIS\START\%LINE 85
+address 000004DD: (global)
+    START+0DD
+ !
+ ! Not symbolic.
+ SET MODE NOSYMBOLIC
+ EXAMINE/INSTRUCTION START:LAST
+00000400:       entry mask ^M<R2,R3,R4>
+00000402:       MOVL     S^#0A,R2
+00000405:       MOVL     I^#000003E8,R3
+0000040C:       MOVL     I^#0000000A,R4
+00000413:       MOVL     S^#03,R0
+00000416:       MOVF     S^#1.500000,R1
+00000419:       MOVL     L^00000200,R0
+00000420:       MOVL     W^00000200,R0
+00000425:       MOVL     L^00000200,R0
+0000042C:       MOVAL    L^00000204,R1
+00000433:       MOVL     L^0000020C,R0
+0000043A:       MOVL     @L^0000021E,R0
+00000441:       MOVL     @W^0000021E,R0
+00000446:       MOVL     @#00000200,R0
+0000044D:       MOVAB    L^00000250,R0
+00000454:       MOVAL    L^00000260,R0
+0000045B:       MOVL     S^#02,R4
+0000045E:       MOVL     L^00000204[R4],R0
+00000466:       CVTBL    L^00000217,R0
+0000046D:       MOVW     L^0000021C,R0
+00000474:       MOVQ     L^00000222,R0
+0000047B:       MOVF     L^0000022A,R0
+00000482:       BICL2    S^#0F,R0
+00000485:       MOVAL    L^00000204,R1
+0000048C:       MOVL     B^0A(R1),R0
+00000490:       MOVL     B^04(AP),R0
+00000494:       MOVL     B^08(FP),R0
+00000498:       MOVAL    L^0000021E,R2
+0000049F:       MOVL     (R2),R0
+000004A2:       MOVL     @(R2)+,R0
+000004A5:       MOVL     -(R2),R0
+000004A8:       MOVL     (R2)+,R0
+000004AB:       MOVAB    W^00000400,R0
+000004B0:       MOVAB    W^00000402,R0
+000004B5:       MOVL     L^00000268,R0
+000004BC:       MOVL     L^00000268,R0
+000004C3:       PUSHAL   L^00000268
+000004C9:       TSTL     (SP)+
+000004CB:       CMPL     R2,S^#03
+000004CE:       BLEQ     000004D2
+000004D0:       BRB      000004D8
+000004D2:       INCL     L^00000200
+000004D8:       CMPL     R2,S^#0A
+000004DB:       BGEQ     000004DD
+000004DD:       INCL     L^00000200
+000004E3:       SOBGTR   R4,000004DD
+000004E6:       JSB      L^0000053B
+000004EC:       BSBW     0000053B
+000004EF:       CALLS    S^#00,L^00000532
+000004F6:       CALLS    S^#00,L^00000544
+000004FD:       CALLG    L^0000022E,L^00000544
+00000508:       PUSHAQ   L^00000232
+0000050E:       CALLS    S^#01,@L^00000648
+00000515:       MOVL     S^#01,R0
+00000518:       CASEL    R0,S^#00,S^#02
+                00000525
+                00000527
+                00000528
+00000522:       BRW      0000052E
+00000525:       BRB      0000052E
+00000527:       NOP     
+00000528:       JMP      L^0000052E
+0000052E:       MOVL     S^#01,R0
+00000531:       RET     
+%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\SUBEND' is not in the symbol table
+ EXAMINE COUNT
+DBGDIS\COUNT:   00000000
+ SET MODE SYMBOLIC
+ !
+ ! Decimal, then the default radix again.
+ SET RADIX DECIMAL
+ EXAMINE/INSTRUCTION %LINE 47:%LINE 56
+DBGDIS\START\%LINE 47:  MOVL     L^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 48:  MOVL     W^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 49:  MOVL     L^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 50:  MOVAL    L^DBGDIS\TABLE[0],R1
+DBGDIS\START\%LINE 51:  MOVL     L^DBGDIS\TABLE[2],R0
+DBGDIS\START\%LINE 52:  MOVL     @L^DBGDIS\PTR,R0
+DBGDIS\START\%LINE 53:  MOVL     @W^DBGDIS\PTR,R0
+DBGDIS\START\%LINE 54:  MOVL     @#DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 55:  MOVAB    L^GLIMIT+589,R0
+DBGDIS\START\%LINE 56:  MOVAL    L^GLIMIT+605,R0
+ EVALUATE/ADDRESS TABLE+8
+524
+ SYMBOLIZE TEXT+10
+address 00000250: 
+    DBGDIS\TEXT+10
+address 00000250: (global)
+    GLIMIT+589
+ CANCEL RADIX
+ !
+ ! Stepping by instruction, then by line.
+ SET STEP INSTRUCTION
+ STEP
+stepped to DBGDIS\START\%LINE 43: MOVL     I^#000003E8,R3
+    43:         MOVL    #BIG, R3
+ STEP
+stepped to DBGDIS\START\%LINE 44: MOVL     I^#0000000A,R4
+    44:         MOVL    I^#LIMIT, R4
+ STEP
+stepped to DBGDIS\START\%LINE 45: MOVL     S^#03,R0
+    45:         MOVL    #GLIMIT, R0
+ STEP
+stepped to DBGDIS\START\%LINE 46: MOVF     S^#1.500000,R1
+    46:         MOVF    #1.5, R1
+ STEP
+stepped to DBGDIS\START\%LINE 47: MOVL     L^DBGDIS\COUNT,R0
+    47:         MOVL    COUNT, R0               ; relative, MACRO's choice of wi
+     -: dth
+ EXAMINE/OPERANDS .PC
+DBGDIS\START\%LINE 47:  MOVL     L^DBGDIS\COUNT,R0
+     L^DBGDIS\COUNT
+                DBGDIS\COUNT (address 00000200) contains 00000000
+     R0         R0 contains 00000003
+ EXAMINE/OPERANDS=FULL .PC
+DBGDIS\START\%LINE 47:  MOVL     L^DBGDIS\COUNT,R0
+     L^DBGDIS\COUNT
+                DBGDIS\COUNT (address 00000200) contains 00000000
+     R0         R0 contains 00000003
+ SET STEP LINE
+ STEP
+stepped to DBGDIS\START\%LINE 48
+    48:         MOVL    W^COUNT, R0             ; relative, each width
+ STEP
+stepped to DBGDIS\START\%LINE 49
+    49:         MOVL    L^COUNT, R0
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGDIS          START               49               00000025         00000425
+ !
+ ! Breaks in a JSB subroutine (reached by JSB, then BSBW), then three
+ ! and four calls deep (SUB2, and SUBJSB under it).
+ SET BREAK SUB2
+%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\SUBJSB' is not in the symbol table
+ SET BREAK JSBRTN
+ GO
+break at DBGDIS\LOCALR\JSBRTN
+   110: JSBRTN: INCL    COUNT                   ; a JSB subroutine, not a routin
+     -: e
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGDIS          LOCALR             110               00000009         0000053B
+ EXAMINE/INSTRUCTION .PC
+DBGDIS\LOCALR\JSBRTN:   INCL     L^DBGDIS\COUNT
+ GO
+break at DBGDIS\LOCALR\JSBRTN
+   110: JSBRTN: INCL    COUNT                   ; a JSB subroutine, not a routin
+     -: e
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGDIS          LOCALR             110               00000009         0000053B
+ GO
+break at routine DBGSUB\SUB2
+    20:         JSB     SUBJSB
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGSUB          SUB2                20               00000002         0000055A
+*DBGSUB          SUB1                15               00000010         00000554
+*DBGDIS          START               90               000000FD         000004FD
+ EXAMINE/INSTRUCTION .PC
+DBGSUB\SUB2\%LINE 20:   JSB      L^DBGSUB\SUB2\SUBJSB
+ GO
+break at routine DBGSUB\SUB2
+    20:         JSB     SUBJSB
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGSUB          SUB2                20               00000002         0000055A
+*DBGSUB          SUB1                15               00000010         00000554
+*DBGDIS          START               91               00000108         00000508
+ EXAMINE/INSTRUCTION .PC
+DBGSUB\SUB2\%LINE 20:   JSB      L^DBGSUB\SUB2\SUBJSB
+ STEP/INSTRUCTION
+stepped to DBGSUB\SUB2\%LINE 21: RET     
+    21:         RET
+ EXAMINE/INSTRUCTION .PC
+DBGSUB\SUB2\%LINE 21:   RET     
+ CANCEL BREAK/ALL
+ !
+ ! The end of START, then the end of the program.
+ SET BREAK LAST
+ GO
+DBGDIS: done
+break at DBGDIS\START\LAST
+   104: LAST:   RET
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGDIS          START              104               00000131         00000531
+ EXAMINE/INSTRUCTION .PC
+DBGDIS\START\LAST:      RET     
+ CANCEL BREAK/ALL
+ GO
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+%DEBUG-I-VERIFYICF, exiting command procedure DBGDIS.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ENDSUBROUTINE
+$ CALL DEBUG GVDBGDIS DBGDIS
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG GVDBGDIS.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBGDIS.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG GVDBGDIS
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBGDIS
+%DEBUG-I-VERIFYICF, entering command procedure DBGDIS.DBG
+ ! DBGDIS.DBG - debugger commands for DBGDIS (docs/PHASE-41.md, subtask 1).
+ ! DBG.COM runs them for VMS's DBGDIS.EXE and for govax's GVDBGDIS.EXE,
+ ! after SET LOG and SET OUTPUT LOG,VERIFY. Line numbers are DBGDIS.MAR's
+ ! and DBGSUB.MAR's: change them here if those sources change.
+ !
+ ! What the debugger knows on start-up.
+ SHOW IMAGE
+ image name                      set    base address   end address
+
+ DBGSSISHR                       no     0008D400       000909FF
+ DBGTBKMSG                       no     00090A00       0009CFFF
+ DEBUG                           no     00023600       0008D3FF
+*GVDBGDIS                        yes    00000200       000007FF
+ LIBRTL                          no     00000800       000235FF
+
+ total images: 5                 bytes allocated: 67088
+ SHOW MODULE
+module name                     symbols    size
+
+DBGDIS                          yes        1804
+DBGSUB                          no          644
+
+total MACRO modules: 2.         bytes allocated: 67136.
+ SHOW LANGUAGE
+language: MACRO
+ SHOW RADIX
+input radix : hexadecimal
+output radix: hexadecimal
+ SHOW MODE
+modes: symbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+input radix : hexadecimal
+output radix: hexadecimal
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBGDIS\START ]
+ EXAMINE/INSTRUCTION .PC
+DBGDIS\START\%LINE 42:  MOVL     S^#0A,R2
+ !
+ ! Every module's symbols, then their addresses.
+ SET MODULE/ALL
+ SHOW MODULE
+module name                     symbols    size
+
+DBGDIS                          yes        1804
+DBGSUB                          yes         644
+
+total MACRO modules: 2.         bytes allocated: 71040.
+ SHOW SYMBOL/ADDRESS * IN DBGDIS
+routine DBGDIS\LOCALR
+    address: 00000534, size: 00000010 bytes
+routine DBGDIS\START
+    address: 00000400, size: 00000134 bytes
+data DBGDIS\ARGLST
+    address: 0000022E
+data DBGDIS\BIG
+    constant: 000003E8
+data DBGDIS\BYTES
+    descriptor address: 00267AE5
+data DBGDIS\COUNT
+    address: 00000200
+label DBGDIS\START\DONE
+    address: 00000530
+data DBGDIS\FVAL
+    address: 0000022A
+data DBGDIS\GLIMIT
+    constant: 00000003
+label DBGDIS\LOCALR\JSBEND
+    address: 00000543
+label DBGDIS\LOCALR\JSBRTN
+    address: 0000053D
+label DBGDIS\START\LAST
+    address: 00000533
+data DBGDIS\LIMIT
+    constant: 0000000A
+label DBGDIS\LOCALR\LOCEND
+    address: 0000053C
+label DBGDIS\START\LOOP
+    address: 000004DF
+data DBGDIS\MASK
+    constant: 0000000F
+data DBGDIS\MSG
+    descriptor address: 00000232
+data DBGDIS\NOLAB2
+    address: 00000264
+data DBGDIS\PTR
+    address: 0000021E
+data DBGDIS\QUAD
+    address: 00000222
+data DBGDIS\TABLE
+    descriptor address: 00267BD0
+data DBGDIS\TEXT
+    descriptor address: 00267BFC
+data DBGDIS\WORDV
+    address: 0000021C
+label DBGDIS\DATA
+    address: 00000200, size: 0000005E bytes
+label DBGDIS\NOLABEL
+    address: 00000260, size: 00000008 bytes
+label DBGDIS\CODE
+    address: 00000400, size: 00000144 bytes
+ SHOW SYMBOL/ADDRESS * IN DBGSUB
+routine DBGSUB\SUB1
+    address: 00000544, size: 00000014 bytes
+routine DBGSUB\SUB2
+    address: 00000558, size: 00000010 bytes
+data DBGSUB\SUBDATA
+    address: 00000268
+label DBGSUB\SUB2\SUBEND
+    address: 00000567
+label DBGSUB\SUB2\SUBJSB
+    address: 00000561
+label DBGSUB\SUBDAT
+    address: 00000268, size: 00000004 bytes
+label DBGSUB\CODE
+    address: 00000544, size: 00000024 bytes
+ SHOW SYMBOL/TYPE * IN DBGDIS
+routine DBGDIS\LOCALR
+routine DBGDIS\START
+data DBGDIS\ARGLST
+    atomic type, longword integer, size: 4 bytes
+data DBGDIS\BIG
+    atomic type, longword integer, size: 4 bytes
+data DBGDIS\BYTES
+    array descriptor type, 1 dimension, bounds: [0:7], size: 8 bytes
+        cell type: atomic type, byte integer, size: 1 byte
+data DBGDIS\COUNT
+    atomic type, longword integer, size: 4 bytes
+label DBGDIS\START\DONE
+data DBGDIS\FVAL
+    atomic type, F_floating, size: 4 bytes
+data DBGDIS\GLIMIT
+    atomic type, longword integer, size: 4 bytes
+label DBGDIS\LOCALR\JSBEND
+label DBGDIS\LOCALR\JSBRTN
+label DBGDIS\START\LAST
+data DBGDIS\LIMIT
+    atomic type, longword integer, size: 4 bytes
+label DBGDIS\LOCALR\LOCEND
+label DBGDIS\START\LOOP
+data DBGDIS\MASK
+    atomic type, longword integer, size: 4 bytes
+data DBGDIS\MSG
+    string descriptor type, character-coded text, size: 12 bytes
+data DBGDIS\NOLAB2
+    atomic type, longword integer, size: 4 bytes
+data DBGDIS\PTR
+    atomic type, longword logical, size: 4 bytes
+data DBGDIS\QUAD
+    atomic type, quadword integer, size: 8 bytes
+data DBGDIS\TABLE
+    array descriptor type, 1 dimension, bounds: [0:3], size: 16 bytes
+        cell type: atomic type, longword integer, size: 4 bytes
+data DBGDIS\TEXT
+    string descriptor type, character-coded text, size: 8 bytes
+data DBGDIS\WORDV
+    atomic type, word integer, size: 2 bytes
+label DBGDIS\DATA
+label DBGDIS\NOLABEL
+label DBGDIS\CODE
+ !
+ ! Instructions, symbolic (the default): each routine whole, by name.
+ EXAMINE/INSTRUCTION START:LAST
+DBGDIS\START:   entry mask ^M<R2,R3,R4>
+DBGDIS\START\%LINE 42:  MOVL     S^#0A,R2
+DBGDIS\START\%LINE 43:  MOVL     I^#000003E8,R3
+DBGDIS\START\%LINE 44:  MOVL     I^#0000000A,R4
+DBGDIS\START\%LINE 45:  MOVL     S^#03,R0
+DBGDIS\START\%LINE 46:  MOVF     S^#1.500000,R1
+DBGDIS\START\%LINE 47:  MOVL     L^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 48:  MOVL     W^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 49:  MOVL     L^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 50:  MOVAL    L^DBGDIS\TABLE[0],R1
+DBGDIS\START\%LINE 51:  MOVL     L^DBGDIS\TABLE[2],R0
+DBGDIS\START\%LINE 52:  MOVL     @L^DBGDIS\PTR,R0
+DBGDIS\START\%LINE 53:  MOVL     @W^DBGDIS\PTR,R0
+DBGDIS\START\%LINE 54:  MOVL     @#DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 55:  MOVAB    L^GLIMIT+24D,R0
+DBGDIS\START\%LINE 56:  MOVAL    L^GLIMIT+25D,R0
+DBGDIS\START\%LINE 57:  MOVL     S^#02,R4
+DBGDIS\START\%LINE 58:  MOVL     L^DBGDIS\TABLE[0][R4],R0
+DBGDIS\START\%LINE 59:  CVTBL    L^DBGDIS\BYTES[3],R0
+DBGDIS\START\%LINE 60:  MOVW     L^DBGDIS\WORDV,R0
+DBGDIS\START\%LINE 61:  MOVQ     L^DBGDIS\QUAD,R0
+DBGDIS\START\%LINE 62:  MOVF     L^DBGDIS\FVAL,R0
+DBGDIS\START\%LINE 63:  BICL2    S^#0F,R0
+DBGDIS\START\%LINE 64:  MOVAL    L^DBGDIS\TABLE[0],R1
+DBGDIS\START\%LINE 65:  MOVL     B^0A(R1),R0
+DBGDIS\START\%LINE 66:  MOVL     B^04(AP),R0
+DBGDIS\START\%LINE 67:  MOVL     B^08(FP),R0
+DBGDIS\START\%LINE 68:  MOVAL    L^DBGDIS\PTR,R2
+DBGDIS\START\%LINE 69:  MOVL     (R2),R0
+DBGDIS\START\%LINE 70:  MOVL     @(R2)+,R0
+DBGDIS\START\%LINE 71:  MOVL     -(R2),R0
+DBGDIS\START\%LINE 72:  MOVL     (R2)+,R0
+DBGDIS\START\%LINE 73:  MOVAB    W^DBGDIS\START,R0
+DBGDIS\START\%LINE 74:  MOVAB    L^DBGDIS\START\%LINE 42,R0
+DBGDIS\START\%LINE 75:  MOVL     L^DBGSUB\SUBDATA,R0
+DBGDIS\START\%LINE 76:  MOVL     L^DBGSUB\SUBDATA,R0
+DBGDIS\START\%LINE 77:  PUSHAL   L^DBGSUB\SUBDATA
+DBGDIS\START\%LINE 78:  TSTL     (SP)+
+DBGDIS\START\%LINE 79:  CMPL     R2,S^#03
+DBGDIS\START\%LINE 80:  BLEQ     DBGDIS\START\%LINE 82
+DBGDIS\START\%LINE 81:  BRB      DBGDIS\START\%LINE 83
+DBGDIS\START\%LINE 82:  INCL     L^DBGDIS\COUNT
+DBGDIS\START\%LINE 83:  CMPL     R2,S^#0A
+DBGDIS\START\%LINE 84:  BGEQ     DBGDIS\START\LOOP
+DBGDIS\START\LOOP:      INCL     L^DBGDIS\COUNT
+DBGDIS\START\%LINE 86:  SOBGTR   R4,DBGDIS\START\LOOP
+DBGDIS\START\%LINE 87:  JSB      L^DBGDIS\LOCALR\JSBRTN
+DBGDIS\START\%LINE 88:  BSBW     DBGDIS\LOCALR\JSBRTN
+DBGDIS\START\%LINE 89:  CALLS    S^#00,L^DBGDIS\LOCALR
+DBGDIS\START\%LINE 90:  CALLS    S^#00,L^DBGSUB\SUB1
+DBGDIS\START\%LINE 91:  CALLG    L^DBGDIS\ARGLST,L^DBGSUB\SUB1
+DBGDIS\START\%LINE 92:  PUSHAQ   L^GLIMIT+22F
+DBGDIS\START\%LINE 93:  CALLS    S^#01,@L^SUB2+0F0
+DBGDIS\START\%LINE 94:  MOVL     S^#01,R0
+DBGDIS\START\%LINE 95:  CASEL    R0,S^#00,S^#02
+                DBGDIS\START\%LINE 100
+                DBGDIS\START\%LINE 101
+                DBGDIS\START\%LINE 102
+DBGDIS\START\%LINE 99:  BRW      DBGDIS\START\DONE
+DBGDIS\START\%LINE 100: BRB      DBGDIS\START\DONE
+DBGDIS\START\%LINE 101: NOP     
+DBGDIS\START\%LINE 102: JMP      L^DBGDIS\START\DONE
+DBGDIS\START\DONE:      MOVL     S^#01,R0
+DBGDIS\START\LAST:      RET     
+ EXAMINE/INSTRUCTION LOCALR:LOCEND
+DBGDIS\LOCALR:  entry mask ^M<>
+DBGDIS\LOCALR\%LINE 107:        INCL     L^DBGDIS\COUNT
+DBGDIS\LOCALR\LOCEND:   RET     
+ EXAMINE/INSTRUCTION JSBRTN:JSBEND
+DBGDIS\LOCALR\JSBRTN:   INCL     L^DBGDIS\COUNT
+DBGDIS\LOCALR\JSBEND:   RSB     
+%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\SUBEND' is not in the symbol table
+ !
+ ! By line, and one at a time.
+ EXAMINE/INSTRUCTION %LINE 47:%LINE 56
+DBGDIS\START\%LINE 47:  MOVL     L^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 48:  MOVL     W^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 49:  MOVL     L^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 50:  MOVAL    L^DBGDIS\TABLE[0],R1
+DBGDIS\START\%LINE 51:  MOVL     L^DBGDIS\TABLE[2],R0
+DBGDIS\START\%LINE 52:  MOVL     @L^DBGDIS\PTR,R0
+DBGDIS\START\%LINE 53:  MOVL     @W^DBGDIS\PTR,R0
+DBGDIS\START\%LINE 54:  MOVL     @#DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 55:  MOVAB    L^GLIMIT+24D,R0
+DBGDIS\START\%LINE 56:  MOVAL    L^GLIMIT+25D,R0
+ EXAMINE/INSTRUCTION %LINE 85
+DBGDIS\START\%LINE 85:  INCL     L^DBGDIS\COUNT
+ EXAMINE/INSTRUCTION DBGSUB\%LINE 14
+DBGSUB\SUB1\%LINE 14:   MOVL     L^DBGSUB\SUBDATA,R2
+ EXAMINE/INSTRUCTION START
+DBGDIS\START:   entry mask ^M<R2,R3,R4>
+ EXAMINE/INSTRUCTION START+2
+DBGDIS\START\%LINE 42:  MOVL     S^#0A,R2
+ EXAMINE START
+DBGDIS\START:   entry mask ^M<R2,R3,R4>
+ EXAMINE SUB2
+DBGSUB\SUB2:    entry mask ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11,IV,DV>
+ EXAMINE/INSTRUCTION SUB2
+DBGSUB\SUB2:    entry mask ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11,IV,DV>
+ !
+ ! Data and constants by name.
+ EXAMINE COUNT
+DBGDIS\COUNT:   00000000
+ EXAMINE TABLE
+DBGDIS\TABLE[0:3]
+    [0]:        00000001
+    [1]:        00000002
+    [2]:        00000003
+    [3]:        00000004
+ EXAMINE TABLE+8
+DBGDIS\TABLE[2]:        00000003
+ EXAMINE MSG
+DBGDIS\MSG:     'DBGDIS: done'
+ EXAMINE TEXT
+DBGDIS\TEXT:    'ABCDEFGH'
+ EXAMINE NOLAB2-4
+GLIMIT+25D:     00000005
+ EXAMINE SUBDATA
+DBGSUB\SUBDATA: 00000007
+ EVALUATE LIMIT
+0000000A
+ EVALUATE BIG
+000003E8
+ EVALUATE GLIMIT
+00000003
+ !
+ ! Addresses to names, and names to addresses.
+ EVALUATE/ADDRESS START
+00000400
+ EVALUATE/ADDRESS COUNT
+00000200
+ EVALUATE/ADDRESS TABLE+8
+0000020C
+ EVALUATE/ADDRESS NOLAB2-4
+00000260
+ EVALUATE/ADDRESS %LINE 47
+00000419
+ EVALUATE/ADDRESS DBGSUB\%LINE 14
+00000546
+ SYMBOLIZE START
+address 00000400: 
+    DBGDIS\START
+    DBGDIS\%LINE 41
+address 00000400: (global)
+    START
+ SYMBOLIZE START+2
+address 00000402: 
+    DBGDIS\START+2
+    DBGDIS\START\%LINE 42
+address 00000402: (global)
+    START+2
+ SYMBOLIZE TABLE+8
+address 0000020C: 
+    DBGDIS\TABLE+8
+address 0000020C: (global)
+    GLIMIT+209
+ SYMBOLIZE TEXT+10
+address 00000256: 
+    DBGDIS\TEXT+10
+address 00000256: (global)
+    GLIMIT+253
+ SYMBOLIZE NOLAB2-4
+address 00000260: 
+    DBGDIS\TEXT+1A
+address 00000260: (global)
+    GLIMIT+25D
+ SYMBOLIZE SUBDATA
+address 00000268: 
+    DBGSUB\SUBDATA
+address 00000268: (global)
+    SUBDATA
+ SYMBOLIZE JSBRTN+3
+address 00000540: 
+    DBGDIS\LOCALR+0C
+    DBGDIS\LOCALR\%LINE 110+3
+address 00000540: (global)
+    LOCALR+0C
+ SYMBOLIZE %LINE 85
+address 000004DF: 
+    DBGDIS\START\LOOP
+    DBGDIS\START\%LINE 85
+address 000004DF: (global)
+    START+0DF
+ !
+ ! Not symbolic.
+ SET MODE NOSYMBOLIC
+ EXAMINE/INSTRUCTION START:LAST
+00000400:       entry mask ^M<R2,R3,R4>
+00000402:       MOVL     S^#0A,R2
+00000405:       MOVL     I^#000003E8,R3
+0000040C:       MOVL     I^#0000000A,R4
+00000413:       MOVL     S^#03,R0
+00000416:       MOVF     S^#1.500000,R1
+00000419:       MOVL     L^00000200,R0
+00000420:       MOVL     W^00000200,R0
+00000425:       MOVL     L^00000200,R0
+0000042C:       MOVAL    L^00000204,R1
+00000433:       MOVL     L^0000020C,R0
+0000043A:       MOVL     @L^0000021E,R0
+00000441:       MOVL     @W^0000021E,R0
+00000446:       MOVL     @#00000200,R0
+0000044D:       MOVAB    L^00000250,R0
+00000454:       MOVAL    L^00000260,R0
+0000045B:       MOVL     S^#02,R4
+0000045E:       MOVL     L^00000204[R4],R0
+00000466:       CVTBL    L^00000217,R0
+0000046D:       MOVW     L^0000021C,R0
+00000474:       MOVQ     L^00000222,R0
+0000047B:       MOVF     L^0000022A,R0
+00000482:       BICL2    S^#0F,R0
+00000485:       MOVAL    L^00000204,R1
+0000048C:       MOVL     B^0A(R1),R0
+00000490:       MOVL     B^04(AP),R0
+00000494:       MOVL     B^08(FP),R0
+00000498:       MOVAL    L^0000021E,R2
+0000049F:       MOVL     (R2),R0
+000004A2:       MOVL     @(R2)+,R0
+000004A5:       MOVL     -(R2),R0
+000004A8:       MOVL     (R2)+,R0
+000004AB:       MOVAB    W^00000400,R0
+000004B0:       MOVAB    L^00000402,R0
+000004B7:       MOVL     L^00000268,R0
+000004BE:       MOVL     L^00000268,R0
+000004C5:       PUSHAL   L^00000268
+000004CB:       TSTL     (SP)+
+000004CD:       CMPL     R2,S^#03
+000004D0:       BLEQ     000004D4
+000004D2:       BRB      000004DA
+000004D4:       INCL     L^00000200
+000004DA:       CMPL     R2,S^#0A
+000004DD:       BGEQ     000004DF
+000004DF:       INCL     L^00000200
+000004E5:       SOBGTR   R4,000004DF
+000004E8:       JSB      L^0000053D
+000004EE:       BSBW     0000053D
+000004F1:       CALLS    S^#00,L^00000534
+000004F8:       CALLS    S^#00,L^00000544
+000004FF:       CALLG    L^0000022E,L^00000544
+0000050A:       PUSHAQ   L^00000232
+00000510:       CALLS    S^#01,@L^00000648
+00000517:       MOVL     S^#01,R0
+0000051A:       CASEL    R0,S^#00,S^#02
+                00000527
+                00000529
+                0000052A
+00000524:       BRW      00000530
+00000527:       BRB      00000530
+00000529:       NOP     
+0000052A:       JMP      L^00000530
+00000530:       MOVL     S^#01,R0
+00000533:       RET     
+%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\SUBEND' is not in the symbol table
+ EXAMINE COUNT
+DBGDIS\COUNT:   00000000
+ SET MODE SYMBOLIC
+ !
+ ! Decimal, then the default radix again.
+ SET RADIX DECIMAL
+ EXAMINE/INSTRUCTION %LINE 47:%LINE 56
+DBGDIS\START\%LINE 47:  MOVL     L^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 48:  MOVL     W^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 49:  MOVL     L^DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 50:  MOVAL    L^DBGDIS\TABLE[0],R1
+DBGDIS\START\%LINE 51:  MOVL     L^DBGDIS\TABLE[2],R0
+DBGDIS\START\%LINE 52:  MOVL     @L^DBGDIS\PTR,R0
+DBGDIS\START\%LINE 53:  MOVL     @W^DBGDIS\PTR,R0
+DBGDIS\START\%LINE 54:  MOVL     @#DBGDIS\COUNT,R0
+DBGDIS\START\%LINE 55:  MOVAB    L^GLIMIT+589,R0
+DBGDIS\START\%LINE 56:  MOVAL    L^GLIMIT+605,R0
+ EVALUATE/ADDRESS TABLE+8
+524
+ SYMBOLIZE TEXT+10
+address 00000250: 
+    DBGDIS\TEXT+10
+address 00000250: (global)
+    GLIMIT+589
+ CANCEL RADIX
+ !
+ ! Stepping by instruction, then by line.
+ SET STEP INSTRUCTION
+ STEP
+stepped to DBGDIS\START\%LINE 43: MOVL     I^#000003E8,R3
+    43:         MOVL    #BIG, R3
+ STEP
+stepped to DBGDIS\START\%LINE 44: MOVL     I^#0000000A,R4
+    44:         MOVL    I^#LIMIT, R4
+ STEP
+stepped to DBGDIS\START\%LINE 45: MOVL     S^#03,R0
+    45:         MOVL    #GLIMIT, R0
+ STEP
+stepped to DBGDIS\START\%LINE 46: MOVF     S^#1.500000,R1
+    46:         MOVF    #1.5, R1
+ STEP
+stepped to DBGDIS\START\%LINE 47: MOVL     L^DBGDIS\COUNT,R0
+    47:         MOVL    COUNT, R0               ; relative, MACRO's choice of wi
+     -: dth
+ EXAMINE/OPERANDS .PC
+DBGDIS\START\%LINE 47:  MOVL     L^DBGDIS\COUNT,R0
+     L^DBGDIS\COUNT
+                DBGDIS\COUNT (address 00000200) contains 00000000
+     R0         R0 contains 00000003
+ EXAMINE/OPERANDS=FULL .PC
+DBGDIS\START\%LINE 47:  MOVL     L^DBGDIS\COUNT,R0
+     L^DBGDIS\COUNT
+                DBGDIS\COUNT (address 00000200) contains 00000000
+     R0         R0 contains 00000003
+ SET STEP LINE
+ STEP
+stepped to DBGDIS\START\%LINE 48
+    48:         MOVL    W^COUNT, R0             ; relative, each width
+ STEP
+stepped to DBGDIS\START\%LINE 49
+    49:         MOVL    L^COUNT, R0
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGDIS          START               49               00000025         00000425
+ !
+ ! Breaks in a JSB subroutine (reached by JSB, then BSBW), then three
+ ! and four calls deep (SUB2, and SUBJSB under it).
+ SET BREAK SUB2
+%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\SUBJSB' is not in the symbol table
+ SET BREAK JSBRTN
+ GO
+break at DBGDIS\LOCALR\JSBRTN
+   110: JSBRTN: INCL    COUNT                   ; a JSB subroutine, not a routin
+     -: e
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGDIS          LOCALR             110               00000009         0000053D
+ EXAMINE/INSTRUCTION .PC
+DBGDIS\LOCALR\JSBRTN:   INCL     L^DBGDIS\COUNT
+ GO
+break at DBGDIS\LOCALR\JSBRTN
+   110: JSBRTN: INCL    COUNT                   ; a JSB subroutine, not a routin
+     -: e
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGDIS          LOCALR             110               00000009         0000053D
+ GO
+break at routine DBGSUB\SUB2
+    20:         JSB     SUBJSB
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGSUB          SUB2                20               00000002         0000055A
+*DBGSUB          SUB1                15               00000010         00000554
+*DBGDIS          START               90               000000FF         000004FF
+ EXAMINE/INSTRUCTION .PC
+DBGSUB\SUB2\%LINE 20:   JSB      L^DBGSUB\SUB2\SUBJSB
+ GO
+break at routine DBGSUB\SUB2
+    20:         JSB     SUBJSB
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGSUB          SUB2                20               00000002         0000055A
+*DBGSUB          SUB1                15               00000010         00000554
+*DBGDIS          START               91               0000010A         0000050A
+ EXAMINE/INSTRUCTION .PC
+DBGSUB\SUB2\%LINE 20:   JSB      L^DBGSUB\SUB2\SUBJSB
+ STEP/INSTRUCTION
+stepped to DBGSUB\SUB2\%LINE 21: RET     
+    21:         RET
+ EXAMINE/INSTRUCTION .PC
+DBGSUB\SUB2\%LINE 21:   RET     
+ CANCEL BREAK/ALL
+ !
+ ! The end of START, then the end of the program.
+ SET BREAK LAST
+ GO
+DBGDIS: done
+break at DBGDIS\START\LAST
+   104: LAST:   RET
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGDIS          START              104               00000133         00000533
+ EXAMINE/INSTRUCTION .PC
+DBGDIS\START\LAST:      RET     
+ CANCEL BREAK/ALL
+ GO
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+%DEBUG-I-VERIFYICF, exiting command procedure DBGDIS.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ENDSUBROUTINE
+$ CALL DEBUG DBGTRC DBGDIS
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBGTRC.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@DBGDIS.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBGTRC
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: DBGDIS
+%DEBUG-I-VERIFYICF, entering command procedure DBGDIS.DBG
+ ! DBGDIS.DBG - debugger commands for DBGDIS (docs/PHASE-41.md, subtask 1).
+ ! DBG.COM runs them for VMS's DBGDIS.EXE and for govax's GVDBGDIS.EXE,
+ ! after SET LOG and SET OUTPUT LOG,VERIFY. Line numbers are DBGDIS.MAR's
+ ! and DBGSUB.MAR's: change them here if those sources change.
+ !
+ ! What the debugger knows on start-up.
+ SHOW IMAGE
+ image name                      set    base address   end address
+
+ DBGSSISHR                       no     0008D400       000909FF
+ DBGTBKMSG                       no     00090A00       0009CFFF
+*DBGTRC                          yes    00000200       000007FF
+ DEBUG                           no     00023600       0008D3FF
+ LIBRTL                          no     00000800       000235FF
+
+ total images: 5                 bytes allocated: 60936
+ SHOW MODULE
+module name                     symbols    size
+
+DBGDIS                          yes         384
+DBGSUB                          no          320
+
+total MACRO modules: 2.         bytes allocated: 60960.
+ SHOW LANGUAGE
+language: MACRO
+ SHOW RADIX
+input radix : hexadecimal
+output radix: hexadecimal
+ SHOW MODE
+modes: symbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+input radix : hexadecimal
+output radix: hexadecimal
+ SHOW SCOPE
+scope: 
+ *  0 [ = DBGDIS\START ]
+ EXAMINE/INSTRUCTION .PC
+DBGDIS\START+2: MOVL     S^#0A,R2
+ !
+ ! Every module's symbols, then their addresses.
+ SET MODULE/ALL
+ SHOW MODULE
+module name                     symbols    size
+
+DBGDIS                          yes         384
+DBGSUB                          yes         320
+
+total MACRO modules: 2.         bytes allocated: 63464.
+ SHOW SYMBOL/ADDRESS * IN DBGDIS
+routine DBGDIS\LOCALR
+    address: 00000532, size: 00000010 bytes
+routine DBGDIS\START
+    address: 00000400, size: 00000132 bytes
+label DBGDIS\DATA
+    address: 00000200, size: 0000005E bytes
+label DBGDIS\NOLABEL
+    address: 00000260, size: 00000008 bytes
+label DBGDIS\CODE
+    address: 00000400, size: 00000142 bytes
+ SHOW SYMBOL/ADDRESS * IN DBGSUB
+routine DBGSUB\SUB1
+    address: 00000544, size: 00000014 bytes
+routine DBGSUB\SUB2
+    address: 00000558, size: 00000010 bytes
+label DBGSUB\SUBDAT
+    address: 00000268, size: 00000004 bytes
+label DBGSUB\CODE
+    address: 00000544, size: 00000024 bytes
+ SHOW SYMBOL/TYPE * IN DBGDIS
+routine DBGDIS\LOCALR
+routine DBGDIS\START
+label DBGDIS\DATA
+label DBGDIS\NOLABEL
+label DBGDIS\CODE
+ !
+ ! Instructions, symbolic (the default): each routine whole, by name.
+%DEBUG-E-NOSYMBOL, symbol 'LAST' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'LOCEND' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'JSBRTN' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\SUBEND' is not in the symbol table
+ !
+ ! By line, and one at a time.
+%DEBUG-E-NOSYMBOL, symbol '%LINE 47' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol '%LINE 85' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\%LINE 14' is not in the symbol table
+ EXAMINE/INSTRUCTION START
+DBGDIS\START:   entry mask ^M<R2,R3,R4>
+ EXAMINE/INSTRUCTION START+2
+DBGDIS\START+2: MOVL     S^#0A,R2
+ EXAMINE START
+DBGDIS\START:   entry mask ^M<R2,R3,R4>
+ EXAMINE SUB2
+DBGSUB\SUB2:    entry mask ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11,IV,DV>
+ EXAMINE/INSTRUCTION SUB2
+DBGSUB\SUB2:    entry mask ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11,IV,DV>
+ !
+ ! Data and constants by name.
+%DEBUG-E-NOSYMBOL, symbol 'COUNT' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'TABLE' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'TABLE' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'MSG' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'TEXT' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'NOLAB2' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'SUBDATA' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'LIMIT' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'BIG' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'GLIMIT' is not in the symbol table
+ !
+ ! Addresses to names, and names to addresses.
+ EVALUATE/ADDRESS START
+00000400
+%DEBUG-E-NOSYMBOL, symbol 'COUNT' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'TABLE' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'NOLAB2' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol '%LINE 47' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\%LINE 14' is not in the symbol table
+ SYMBOLIZE START
+address 00000400: 
+    DBGDIS\START
+ SYMBOLIZE START+2
+address 00000402: 
+    DBGDIS\START+2
+%DEBUG-E-NOSYMBOL, symbol 'TABLE' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'TEXT' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'NOLAB2' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'SUBDATA' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'JSBRTN' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol '%LINE 85' is not in the symbol table
+ !
+ ! Not symbolic.
+ SET MODE NOSYMBOLIC
+%DEBUG-E-NOSYMBOL, symbol 'LAST' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\SUBEND' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'COUNT' is not in the symbol table
+ SET MODE SYMBOLIC
+ !
+ ! Decimal, then the default radix again.
+ SET RADIX DECIMAL
+%DEBUG-E-NOSYMBOL, symbol '%LINE 47' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'TABLE' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'TEXT' is not in the symbol table
+ CANCEL RADIX
+ !
+ ! Stepping by instruction, then by line.
+ SET STEP INSTRUCTION
+ STEP
+stepped to DBGDIS\START+5: MOVL     I^#000003E8,R3
+ STEP
+stepped to DBGDIS\START+0C: MOVL     I^#0000000A,R4
+ STEP
+stepped to DBGDIS\START+13: MOVL     S^#03,R0
+ STEP
+stepped to DBGDIS\START+16: MOVF     S^#1.500000,R1
+ STEP
+stepped to DBGDIS\START+19: MOVL     L^00000200,R0
+ EXAMINE/OPERANDS .PC
+DBGDIS\START+19:        MOVL     L^00000200,R0
+     L^00000200 00000200 contains 00000000
+     R0         R0 contains 00000003
+ EXAMINE/OPERANDS=FULL .PC
+DBGDIS\START+19:        MOVL     L^00000200,R0
+     L^00000200 00000200 contains 00000000
+     R0         R0 contains 00000003
+ SET STEP LINE
+ STEP
+stepped to DBGDIS\START+20
+ STEP
+stepped to DBGDIS\START+25
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGDIS          START                                00000025         00000425
+ !
+ ! Breaks in a JSB subroutine (reached by JSB, then BSBW), then three
+ ! and four calls deep (SUB2, and SUBJSB under it).
+ SET BREAK SUB2
+%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\SUBJSB' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'JSBRTN' is not in the symbol table
+ GO
+break at routine DBGSUB\SUB2
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGSUB          SUB2                                 00000002         0000055A
+*DBGSUB          SUB1                                 00000010         00000554
+*DBGDIS          START                                000000FD         000004FD
+ EXAMINE/INSTRUCTION .PC
+DBGSUB\SUB2+2:  JSB      L^DBGSUB\SUB2+9
+ GO
+break at routine DBGSUB\SUB2
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*DBGSUB          SUB2                                 00000002         0000055A
+*DBGSUB          SUB1                                 00000010         00000554
+*DBGDIS          START                                00000108         00000508
+ GO
+DBGDIS: done
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+ SHOW CALLS
+%DEBUG-E-NOCALLS, no active call frames
+ EXAMINE/INSTRUCTION .PC
+%DEBUG-E-NOACCESSR, no read access to address 00000000
+ GO
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+ SHOW CALLS
+%DEBUG-E-NOCALLS, no active call frames
+ EXAMINE/INSTRUCTION .PC
+%DEBUG-E-NOACCESSR, no read access to address 00000000
+ STEP/INSTRUCTION
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+ EXAMINE/INSTRUCTION .PC
+%DEBUG-E-NOACCESSR, no read access to address 00000000
+ CANCEL BREAK/ALL
+ !
+ ! The end of START, then the end of the program.
+%DEBUG-E-NOSYMBOL, symbol 'LAST' is not in the symbol table
+ GO
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+ SHOW CALLS
+%DEBUG-E-NOCALLS, no active call frames
+ EXAMINE/INSTRUCTION .PC
+%DEBUG-E-NOACCESSR, no read access to address 00000000
+ CANCEL BREAK/ALL
+%DEBUG-I-NOBREAKS, no breakpoints are set
+ GO
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+%DEBUG-I-VERIFYICF, exiting command procedure DBGDIS.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ENDSUBROUTINE
+$ CALL DEBUG DBGNOTB NOTB
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG DBGNOTB.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@NOTB.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG DBGNOTB
+DBGDIS: done
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ ENDSUBROUTINE
+$ CALL DEBUG TRDBGLNK TRACE
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG TRDBGLNK.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@TRACE.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG TRDBGLNK
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: TRACE
+%DEBUG-I-VERIFYICF, entering command procedure TRACE.DBG
+ ! TRACE.DBG - debugger commands for TRACE's images (docs/PHASE-41.md,
+ ! subtask 1): TRDBGLNK (MACRO/DEBUG, LINK/DEBUG), TRLNKDBG (no DBG
+ ! records, LINK/DEBUG), TRDBGTRC (MACRO/DEBUG, a traceback link), and
+ ! govax's GVTRACE (MACRO/DEBUG, LINK/DEBUG). The same commands for each
+ ! show what each kind of image gives the debugger. Line numbers are
+ ! testdata/mar/list/trace.mar's.
+ !
+ SHOW IMAGE
+ image name                      set    base address   end address
+
+ DBGSSISHR                       no     0008D600       00090BFF
+ DBGTBKMSG                       no     00090C00       0009D1FF
+ DEBUG                           no     00023800       0008D5FF
+ LIBRTL                          no     00000A00       000237FF
+*TRDBGLNK                        yes    00000200       000009FF
+
+ total images: 5                 bytes allocated: 63408
+ SHOW MODULE
+module name                     symbols    size
+
+TRACE                           yes         952
+
+total MACRO modules: 1.         bytes allocated: 63416.
+ SHOW MODE
+modes: symbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+input radix : hexadecimal
+output radix: hexadecimal
+ EXAMINE/INSTRUCTION .PC
+TRACE\%LINE 21: CALLS    S^#00,L^TRACE\FIRST
+ SET MODULE/ALL
+ SHOW SYMBOL/ADDRESS * IN TRACE
+routine TRACE
+    address: 00000600, size: 0000001E bytes
+ !
+ EXAMINE/INSTRUCTION TRACE:HELPER
+TRACE:  entry mask ^M<R2>
+TRACE\%LINE 21: CALLS    S^#00,L^TRACE\FIRST
+TRACE\%LINE 22: CALLS    S^#00,L^TRACE\SECOND
+TRACE\%LINE 23: PUSHAQ   L^LEVEL+3FE
+TRACE\%LINE 24: CALLS    S^#01,@L^SECOND+21B
+TRACE\%LINE 25: RET     
+TRACE\FIRST:    entry mask ^M<>
+TRACE\FIRST\%LINE 28:   INCL     L^TRACE\COUNT
+TRACE\FIRST\%LINE 29:   JSB      L^TRACE\SECOND\HELPER
+TRACE\FIRST\%LINE 30:   RET     
+TRACE\SECOND:   entry mask ^M<R2>
+TRACE\SECOND\%LINE 33:  MOVL     S^#02,R2
+TRACE\SECOND\%LINE 34:  INCL     L^TRACE\COUNT
+TRACE\SECOND\%LINE 35:  SOBGTR   R2,TRACE\SECOND\%LINE 34
+TRACE\SECOND\%LINE 36:  RET     
+TRACE\SECOND\HELPER:    INCL     L^TRACE\COUNT
+ EXAMINE/INSTRUCTION HELPER
+TRACE\SECOND\HELPER:    INCL     L^TRACE\COUNT
+ EXAMINE/INSTRUCTION %LINE 21
+TRACE\%LINE 21: CALLS    S^#00,L^TRACE\FIRST
+ EXAMINE COUNT
+TRACE\COUNT:    00000000
+ EXAMINE GLOBDATA
+TRACE\GLOBDATA: 00000050
+ EVALUATE MAXLEN
+00000050
+ EVALUATE LEVEL
+00000002
+ EVALUATE/ADDRESS MSG
+00000408
+ EVALUATE/ADDRESS CONST
+00000200
+ SYMBOLIZE COUNT+2
+address 00000423: 
+    TRACE\COUNT+2
+address 00000423: (global)
+    LEVEL+421
+ SYMBOLIZE SECOND+5
+address 00000632: 
+    TRACE\SECOND+5
+    TRACE\SECOND\%LINE 34
+address 00000632: (global)
+    SECOND+5
+ SYMBOLIZE HELPER
+address 0000063C: 
+    TRACE\SECOND\HELPER
+    TRACE\SECOND\%LINE 38
+address 0000063C: (global)
+    SECOND+0F
+ !
+ SET MODE NOSYMBOLIC
+ EXAMINE/INSTRUCTION TRACE:HELPER
+00000600:       entry mask ^M<R2>
+00000602:       CALLS    S^#00,L^0000061E
+00000609:       CALLS    S^#00,L^0000062D
+00000610:       PUSHAQ   L^00000400
+00000616:       CALLS    S^#01,@L^00000848
+0000061D:       RET     
+0000061E:       entry mask ^M<>
+00000620:       INCL     L^00000421
+00000626:       JSB      L^0000063C
+0000062C:       RET     
+0000062D:       entry mask ^M<R2>
+0000062F:       MOVL     S^#02,R2
+00000632:       INCL     L^00000421
+00000638:       SOBGTR   R2,00000632
+0000063B:       RET     
+0000063C:       INCL     L^00000421
+ SET MODE SYMBOLIC
+ !
+ SET STEP INSTRUCTION
+ STEP
+stepped to TRACE\%LINE 22: CALLS    S^#00,L^TRACE\SECOND
+    22:         CALLS   #0, SECOND
+ STEP
+stepped to TRACE\%LINE 23: PUSHAQ   L^LEVEL+3FE
+    23:         PUSHAQ  MSG
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*TRACE           TRACE               23               00000010         00000610
+ SET BREAK HELPER
+ SET BREAK SECOND
+ GO
+TRACE: three routines ran
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+ SHOW CALLS
+%DEBUG-E-NOCALLS, no active call frames
+ EXAMINE/INSTRUCTION .PC
+%DEBUG-E-NOACCESSR, no read access to address 00000000
+ GO
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+ SHOW CALLS
+%DEBUG-E-NOCALLS, no active call frames
+ EXAMINE/INSTRUCTION .PC
+%DEBUG-E-NOACCESSR, no read access to address 00000000
+ CANCEL BREAK/ALL
+ GO
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+%DEBUG-I-VERIFYICF, exiting command procedure TRACE.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ENDSUBROUTINE
+$ CALL DEBUG TRLNKDBG TRACE
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG TRLNKDBG.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@TRACE.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG TRLNKDBG
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: TRACE
+%DEBUG-I-VERIFYICF, entering command procedure TRACE.DBG
+ ! TRACE.DBG - debugger commands for TRACE's images (docs/PHASE-41.md,
+ ! subtask 1): TRDBGLNK (MACRO/DEBUG, LINK/DEBUG), TRLNKDBG (no DBG
+ ! records, LINK/DEBUG), TRDBGTRC (MACRO/DEBUG, a traceback link), and
+ ! govax's GVTRACE (MACRO/DEBUG, LINK/DEBUG). The same commands for each
+ ! show what each kind of image gives the debugger. Line numbers are
+ ! testdata/mar/list/trace.mar's.
+ !
+ SHOW IMAGE
+ image name                      set    base address   end address
+
+ DBGSSISHR                       no     0008D600       00090BFF
+ DBGTBKMSG                       no     00090C00       0009D1FF
+ DEBUG                           no     00023800       0008D5FF
+ LIBRTL                          no     00000A00       000237FF
+*TRLNKDBG                        yes    00000200       000009FF
+
+ total images: 5                 bytes allocated: 61584
+ SHOW MODULE
+module name                     symbols    size
+
+TRACE                           yes         328
+
+total MACRO modules: 1.         bytes allocated: 61592.
+ SHOW MODE
+modes: symbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+input radix : hexadecimal
+output radix: hexadecimal
+ EXAMINE/INSTRUCTION .PC
+TRACE+2:        CALLS    S^#00,L^TRACE\FIRST
+ SET MODULE/ALL
+ SHOW SYMBOL/ADDRESS * IN TRACE
+routine TRACE
+    address: 00000600, size: 0000001E bytes
+ !
+%DEBUG-E-NOSYMBOL, symbol 'HELPER' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'HELPER' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol '%LINE 21' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'COUNT' is not in the symbol table
+ EXAMINE GLOBDATA
+GLOBDATA:       00000050
+%DEBUG-E-NOSYMBOL, symbol 'MAXLEN' is not in the symbol table
+%DEBUG-E-NOACCESSR, no read access to address 00000002
+%DEBUG-E-NOSYMBOL, symbol 'MSG' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'CONST' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'COUNT' is not in the symbol table
+ SYMBOLIZE SECOND+5
+address 00000632: 
+    TRACE\SECOND+5
+address 00000632: (global)
+    SECOND+5
+%DEBUG-E-NOSYMBOL, symbol 'HELPER' is not in the symbol table
+ !
+ SET MODE NOSYMBOLIC
+%DEBUG-E-NOSYMBOL, symbol 'HELPER' is not in the symbol table
+ SET MODE SYMBOLIC
+ !
+ SET STEP INSTRUCTION
+ STEP
+stepped to TRACE+9: CALLS    S^#00,L^TRACE\SECOND
+ STEP
+stepped to TRACE+10: PUSHAQ   L^LEVEL+3FE
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*TRACE           TRACE                                00000010         00000610
+%DEBUG-E-NOSYMBOL, symbol 'HELPER' is not in the symbol table
+ SET BREAK SECOND
+ GO
+TRACE: three routines ran
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+ SHOW CALLS
+%DEBUG-E-NOCALLS, no active call frames
+ EXAMINE/INSTRUCTION .PC
+%DEBUG-E-NOACCESSR, no read access to address 00000000
+ GO
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+ SHOW CALLS
+%DEBUG-E-NOCALLS, no active call frames
+ EXAMINE/INSTRUCTION .PC
+%DEBUG-E-NOACCESSR, no read access to address 00000000
+ CANCEL BREAK/ALL
+ GO
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+%DEBUG-I-VERIFYICF, exiting command procedure TRACE.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ENDSUBROUTINE
+$ CALL DEBUG TRDBGTRC TRACE
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG TRDBGTRC.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@TRACE.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG TRDBGTRC
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: TRACE
+%DEBUG-I-VERIFYICF, entering command procedure TRACE.DBG
+ ! TRACE.DBG - debugger commands for TRACE's images (docs/PHASE-41.md,
+ ! subtask 1): TRDBGLNK (MACRO/DEBUG, LINK/DEBUG), TRLNKDBG (no DBG
+ ! records, LINK/DEBUG), TRDBGTRC (MACRO/DEBUG, a traceback link), and
+ ! govax's GVTRACE (MACRO/DEBUG, LINK/DEBUG). The same commands for each
+ ! show what each kind of image gives the debugger. Line numbers are
+ ! testdata/mar/list/trace.mar's.
+ !
+ SHOW IMAGE
+ image name                      set    base address   end address
+
+ DBGSSISHR                       no     0008D600       00090BFF
+ DBGTBKMSG                       no     00090C00       0009D1FF
+ DEBUG                           no     00023800       0008D5FF
+ LIBRTL                          no     00000A00       000237FF
+*TRDBGTRC                        yes    00000200       000009FF
+
+ total images: 5                 bytes allocated: 60864
+ SHOW MODULE
+module name                     symbols    size
+
+TRACE                           yes         480
+
+total MACRO modules: 1.         bytes allocated: 60872.
+ SHOW MODE
+modes: symbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+input radix : hexadecimal
+output radix: hexadecimal
+ EXAMINE/INSTRUCTION .PC
+TRACE+2:        CALLS    S^#00,L^TRACE\FIRST
+ SET MODULE/ALL
+ SHOW SYMBOL/ADDRESS * IN TRACE
+routine TRACE
+    address: 00000600, size: 0000001E bytes
+ !
+%DEBUG-E-NOSYMBOL, symbol 'HELPER' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'HELPER' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol '%LINE 21' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'COUNT' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'GLOBDATA' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'MAXLEN' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'LEVEL' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'MSG' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'CONST' is not in the symbol table
+%DEBUG-E-NOSYMBOL, symbol 'COUNT' is not in the symbol table
+ SYMBOLIZE SECOND+5
+address 00000632: 
+    TRACE\SECOND+5
+%DEBUG-E-NOSYMBOL, symbol 'HELPER' is not in the symbol table
+ !
+ SET MODE NOSYMBOLIC
+%DEBUG-E-NOSYMBOL, symbol 'HELPER' is not in the symbol table
+ SET MODE SYMBOLIC
+ !
+ SET STEP INSTRUCTION
+ STEP
+stepped to TRACE+9: CALLS    S^#00,L^TRACE\SECOND
+ STEP
+stepped to TRACE+10: PUSHAQ   L^00000400
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*TRACE           TRACE                                00000010         00000610
+%DEBUG-E-NOSYMBOL, symbol 'HELPER' is not in the symbol table
+ SET BREAK SECOND
+ GO
+TRACE: three routines ran
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+ SHOW CALLS
+%DEBUG-E-NOCALLS, no active call frames
+ EXAMINE/INSTRUCTION .PC
+%DEBUG-E-NOACCESSR, no read access to address 00000000
+ GO
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+ SHOW CALLS
+%DEBUG-E-NOCALLS, no active call frames
+ EXAMINE/INSTRUCTION .PC
+%DEBUG-E-NOACCESSR, no read access to address 00000000
+ CANCEL BREAK/ALL
+ GO
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+%DEBUG-I-VERIFYICF, exiting command procedure TRACE.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ENDSUBROUTINE
+$ CALL DEBUG GVTRACE TRACE
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG GVTRACE.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@TRACE.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG GVTRACE
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: TRACE
+%DEBUG-I-VERIFYICF, entering command procedure TRACE.DBG
+ ! TRACE.DBG - debugger commands for TRACE's images (docs/PHASE-41.md,
+ ! subtask 1): TRDBGLNK (MACRO/DEBUG, LINK/DEBUG), TRLNKDBG (no DBG
+ ! records, LINK/DEBUG), TRDBGTRC (MACRO/DEBUG, a traceback link), and
+ ! govax's GVTRACE (MACRO/DEBUG, LINK/DEBUG). The same commands for each
+ ! show what each kind of image gives the debugger. Line numbers are
+ ! testdata/mar/list/trace.mar's.
+ !
+ SHOW IMAGE
+ image name                      set    base address   end address
+
+ DBGSSISHR                       no     0008D600       00090BFF
+ DBGTBKMSG                       no     00090C00       0009D1FF
+ DEBUG                           no     00023800       0008D5FF
+*GVTRACE                         yes    00000200       000009FF
+ LIBRTL                          no     00000A00       000237FF
+
+ total images: 5                 bytes allocated: 63400
+ SHOW MODULE
+module name                     symbols    size
+
+TRACE                           yes         952
+
+total MACRO modules: 1.         bytes allocated: 63408.
+ SHOW MODE
+modes: symbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+input radix : hexadecimal
+output radix: hexadecimal
+ EXAMINE/INSTRUCTION .PC
+TRACE\%LINE 21: CALLS    S^#00,L^TRACE\FIRST
+ SET MODULE/ALL
+ SHOW SYMBOL/ADDRESS * IN TRACE
+routine TRACE
+    address: 00000600, size: 0000001E bytes
+ !
+ EXAMINE/INSTRUCTION TRACE:HELPER
+TRACE:  entry mask ^M<R2>
+TRACE\%LINE 21: CALLS    S^#00,L^TRACE\FIRST
+TRACE\%LINE 22: CALLS    S^#00,L^TRACE\SECOND
+TRACE\%LINE 23: PUSHAQ   L^LEVEL+3FE
+TRACE\%LINE 24: CALLS    S^#01,@L^SECOND+21B
+TRACE\%LINE 25: RET     
+TRACE\FIRST:    entry mask ^M<>
+TRACE\FIRST\%LINE 28:   INCL     L^TRACE\COUNT
+TRACE\FIRST\%LINE 29:   JSB      L^TRACE\SECOND\HELPER
+TRACE\FIRST\%LINE 30:   RET     
+TRACE\SECOND:   entry mask ^M<R2>
+TRACE\SECOND\%LINE 33:  MOVL     S^#02,R2
+TRACE\SECOND\%LINE 34:  INCL     L^TRACE\COUNT
+TRACE\SECOND\%LINE 35:  SOBGTR   R2,TRACE\SECOND\%LINE 34
+TRACE\SECOND\%LINE 36:  RET     
+TRACE\SECOND\HELPER:    INCL     L^TRACE\COUNT
+ EXAMINE/INSTRUCTION HELPER
+TRACE\SECOND\HELPER:    INCL     L^TRACE\COUNT
+ EXAMINE/INSTRUCTION %LINE 21
+TRACE\%LINE 21: CALLS    S^#00,L^TRACE\FIRST
+ EXAMINE COUNT
+TRACE\COUNT:    00000000
+ EXAMINE GLOBDATA
+TRACE\GLOBDATA: 00000050
+ EVALUATE MAXLEN
+00000050
+ EVALUATE LEVEL
+00000002
+ EVALUATE/ADDRESS MSG
+00000408
+ EVALUATE/ADDRESS CONST
+00000200
+ SYMBOLIZE COUNT+2
+address 00000423: 
+    TRACE\COUNT+2
+address 00000423: (global)
+    LEVEL+421
+ SYMBOLIZE SECOND+5
+address 00000632: 
+    TRACE\SECOND+5
+    TRACE\SECOND\%LINE 34
+address 00000632: (global)
+    SECOND+5
+ SYMBOLIZE HELPER
+address 0000063C: 
+    TRACE\SECOND\HELPER
+    TRACE\SECOND\%LINE 38
+address 0000063C: (global)
+    SECOND+0F
+ !
+ SET MODE NOSYMBOLIC
+ EXAMINE/INSTRUCTION TRACE:HELPER
+00000600:       entry mask ^M<R2>
+00000602:       CALLS    S^#00,L^0000061E
+00000609:       CALLS    S^#00,L^0000062D
+00000610:       PUSHAQ   L^00000400
+00000616:       CALLS    S^#01,@L^00000848
+0000061D:       RET     
+0000061E:       entry mask ^M<>
+00000620:       INCL     L^00000421
+00000626:       JSB      L^0000063C
+0000062C:       RET     
+0000062D:       entry mask ^M<R2>
+0000062F:       MOVL     S^#02,R2
+00000632:       INCL     L^00000421
+00000638:       SOBGTR   R2,00000632
+0000063B:       RET     
+0000063C:       INCL     L^00000421
+ SET MODE SYMBOLIC
+ !
+ SET STEP INSTRUCTION
+ STEP
+stepped to TRACE\%LINE 22: CALLS    S^#00,L^TRACE\SECOND
+    22:         CALLS   #0, SECOND
+ STEP
+stepped to TRACE\%LINE 23: PUSHAQ   L^LEVEL+3FE
+    23:         PUSHAQ  MSG
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*TRACE           TRACE               23               00000010         00000610
+ SET BREAK HELPER
+ SET BREAK SECOND
+ GO
+TRACE: three routines ran
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+ SHOW CALLS
+%DEBUG-E-NOCALLS, no active call frames
+ EXAMINE/INSTRUCTION .PC
+%DEBUG-E-NOACCESSR, no read access to address 00000000
+ GO
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+ SHOW CALLS
+%DEBUG-E-NOCALLS, no active call frames
+ EXAMINE/INSTRUCTION .PC
+%DEBUG-E-NOACCESSR, no read access to address 00000000
+ CANCEL BREAK/ALL
+ GO
+%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+%DEBUG-I-VERIFYICF, exiting command procedure TRACE.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ENDSUBROUTINE
+$ CALL DEBUG TRNOTB NOTB
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG TRNOTB.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@NOTB.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG TRNOTB
+TRACE: three routines ran
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ ENDSUBROUTINE
+$ CALL DEBUG FAILLNK FAIL
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG FAILLNK.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@FAIL.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG FAILLNK
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: FAILMAIN
+%DEBUG-I-VERIFYICF, entering command procedure FAIL.DBG
+ ! FAIL.DBG - debugger commands for FAILDBG, FAILMAIN and FAILSUB built
+ ! /DEBUG and linked /DEBUG (docs/PHASE-41.md, subtask 1): the access
+ ! violation two calls deep, as the debugger reports it, and the call
+ ! chain there (Decision 6).
+ !
+ SET MODULE/ALL
+ SHOW MODULE
+module name                     symbols    size
+
+FAILMAIN                        yes         412
+FAILSUB                         yes         452
+
+total MACRO modules: 2.         bytes allocated: 59704.
+ GO
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=0000021C, PSL=03C00000
+break on unhandled exception at FAILSUB\SUB2\%LINE 12
+    12:         MOVL    @#0, R0                 ; address 0: an access violation
+ SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*FAILSUB         SUB2                12               00000005         0000021C
+*FAILSUB         SUB1                 7               0000000A         00000216
+*FAILMAIN        FAILMAIN            14               00000009         00000209
+ EXAMINE/INSTRUCTION .PC
+FAILSUB\SUB2\%LINE 12:  MOVL     @#00000000,R0
+ EXAMINE/INSTRUCTION SUB2:FAILSUB\%LINE 13
+FAILSUB\SUB2:   entry mask ^M<R2>
+FAILSUB\SUB2\%LINE 11:  MOVL     S^#05,R2
+FAILSUB\SUB2\%LINE 12:  MOVL     @#00000000,R0
+FAILSUB\SUB2\%LINE 13:  RET     
+ EXAMINE/INSTRUCTION FAILMAIN:FAILMAIN+10
+FAILMAIN:       entry mask ^M<>
+FAILMAIN\%LINE 14:      CALLS    S^#00,L^FAILSUB\SUB1
+FAILMAIN\%LINE 15:      RET     
+FAILMAIN+0A:    HALT    
+FAILMAIN+0B:    HALT    
+FAILSUB\SUB1:   entry mask ^M<>
+FAILSUB\SUB1\%LINE 6:   NOP     
+FAILSUB\SUB1\%LINE 7:   CALLS    S^#00,L^FAILSUB\SUB2
+ EXAMINE R2
+FAILSUB\SUB2\%R2:       00000005
+ SHOW CALLS 1
+ module name     routine name      line                rel PC           abs PC
+*FAILSUB         SUB2                12               00000005         0000021C
+%DEBUG-I-VERIFYICF, exiting command procedure FAIL.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ CALL DEBUG FORTH FORTH
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG FORTH.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@FORTH.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG FORTH
+
+         OpenVMS VAX DEBUG Version V7.1-000
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: FORTH
+%DEBUG-I-VERIFYICF, entering command procedure FORTH.DBG
+ ! FORTH.DBG - debugger commands for FORTH (testdata/mar/forth.mar, built
+ ! /DEBUG and linked /DEBUG; docs/PHASE-41.md, subtask 1): a large module
+ ! with system macros' code (the RMS calls at its start), JSB routines,
+ ! and labels the DEFWORD macro defines in another psect. FORTH reads
+ ! the terminal, so it isn't run: the commands only look.
+ !
+ SHOW MODULE
+module name                     symbols    size
+
+FORTH                           yes       88124
+
+total MACRO modules: 1.         bytes allocated: 240984.
+ SET MODULE/ALL
+ SHOW SYMBOL/ADDRESS F_A* IN FORTH
+label FORTH\F_ABORT
+    address: 000047D7
+label FORTH\F_ABS
+    address: 000046EA
+label FORTH\F_AGAIN
+    address: 00004977
+label FORTH\F_ALLOT
+    address: 00004795
+label FORTH\F_ALLOT_E
+    address: 00004798
+label FORTH\F_AND
+    address: 00004866
+label FORTH\F_AND_E
+    address: 0000486C
+ EXAMINE/INSTRUCTION FORTH:FORTH+60
+FORTH:  entry mask ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+FORTH\%LINE 332:        PUSHAL   L^FORTH\TTIN
+FORTH\%LINE 332+6:      CALLS    S^#01,@#SYS$OPEN
+FORTH\%LINE 333:        BLBC     R0,FORTH\%LINE 340
+FORTH\%LINE 334:        PUSHAL   L^00003408
+FORTH\%LINE 334+6:      CALLS    S^#01,@#SYS$CONNECT
+FORTH\%LINE 335:        BLBC     R0,FORTH\%LINE 340
+FORTH\%LINE 336:        PUSHAL   L^FORTH\TTOUT
+FORTH\%LINE 336+6:      CALLS    S^#01,@#SYS$CREATE
+FORTH\%LINE 337:        BLBC     R0,FORTH\%LINE 340
+FORTH\%LINE 338:        PUSHAL   L^00003528
+FORTH\%LINE 338+6:      CALLS    S^#01,@#SYS$CONNECT
+FORTH\%LINE 339:        BLBS     R0,FORTH\%LINE 342
+FORTH\%LINE 340:        RET     
+FORTH\%LINE 342:        MOVL     L^FORTH\DICTEND,R10
+FORTH\%LINE 343:        MOVL     SP,L^FORTH\SP_HOLD
+FORTH\%LINE 344:        MOVL     L^FORTH\LATEST,R8
+FORTH\%LINE 346:        PUSHAW   L^FORTH\CMDLEN
+FORTH\%LINE 347:        CLRL     -(SP)
+FORTH\%LINE 348:        PUSHAQ   L^FORTH\CMDDSC
+ EXAMINE/INSTRUCTION ABORT:ABORT+20
+FORTH\ABORT:    MOVL     L^FORTH\SP_HOLD,SP
+FORTH\%LINE 370:        TSTB     L^FORTH\ONESHOT
+FORTH\%LINE 371:        BEQL     FORTH\%LINE 374
+FORTH\%LINE 372:        MOVL     S^#2C,L^FORTH\EXITSTS
+FORTH\%LINE 373:        BRW      FORTH\F_HALT
+FORTH\%LINE 374:        BSBW     FORTH\CLOSEALL
+FORTH\%LINE 375:        MOVAB    L^FORTH\OPSTK_END[0],R11
+%DEBUG-E-LINEINFO, no line 395, previous line is 390, next line is 396
+ EXAMINE/INSTRUCTION INTERP:INTERP+60
+FORTH\INTERP:   MOVAB    L^FORTH\OPSTK_END[0],R0
+FORTH\%LINE 1269:       CMPL     R11,R0
+FORTH\%LINE 1270:       BLEQU    FORTH\%LINE 1273
+FORTH\%LINE 1271:       MOVAB    L^FORTH\EMPTY_MSG,R0
+FORTH\%LINE 1272:       BRB      FORTH\%LINE 1277
+FORTH\%LINE 1273:       MOVAB    L^FORTH\OPSTK[0],R0
+FORTH\%LINE 1274:       CMPL     R11,R0
+FORTH\%LINE 1275:       BGEQU    FORTH\%LINE 1280
+FORTH\%LINE 1276:       MOVAB    L^FORTH\FULL_MSG,R0
+FORTH\%LINE 1277:       BSBW     FORTH\PRSTR
+FORTH\%LINE 1278:       BRW      FORTH\ABORT
+FORTH\%LINE 1280:       BSBW     FORTH\GETW
+FORTH\%LINE 1281:       BSBW     FORTH\LOOKUP
+FORTH\%LINE 1282:       BEQL     FORTH\%LINE 1284
+FORTH\%LINE 1283:       BRW      FORTH\CKNUM
+FORTH\%LINE 1284:       TSTB     L^FORTH\STATE
+FORTH\%LINE 1285:       BNEQ     FORTH\%LINE 1288
+FORTH\%LINE 1286:       JSB      (R0)
+FORTH\%LINE 1287:       BRB      FORTH\INTERP
+FORTH\%LINE 1288:       BITL     S^#04,R1
+FORTH\%LINE 1289:       BNEQ     FORTH\%LINE 1286
+FORTH\%LINE 1290:       BITL     S^#08,R1
+FORTH\%LINE 1291:       BNEQ     FORTH\%LINE 1295
+FORTH\%LINE 1292:       MOVW     I^#9F16,(R10)+
+FORTH\%LINE 1293:       MOVL     R0,(R10)+
+FORTH\%LINE 1294:       BRB      FORTH\INTERP
+FORTH\%LINE 1295:       CVTWL    B^08(R2),R1
+FORTH\%LINE 1296:       MOVB     (R0)+,(R10)+
+FORTH\%LINE 1297:       SOBGTR   R1,FORTH\%LINE 1296
+ EXAMINE/INSTRUCTION LOOKUP:LOOKUP+30
+FORTH\LOOKUP:   MOVAB    L^FORTH\WRD[0],R0
+FORTH\%LINE 1477:       MOVL     R8,R1
+FORTH\%LINE 1478:       ADDL3    S^#0C,R1,R2
+FORTH\%LINE 1479:       MOVL     R0,R3
+FORTH\%LINE 1480:       BITW     S^#02,B^0A(R1)
+FORTH\%LINE 1481:       BNEQ     FORTH\%LINE 1496
+FORTH\%LINE 1482:       MOVB     (R3)+,R4
+FORTH\%LINE 1483:       BSBB     FORTH\LOWER
+FORTH\%LINE 1484:       MOVB     R4,R5
+FORTH\%LINE 1485:       MOVB     (R2),R4
+FORTH\%LINE 1486:       BSBB     FORTH\LOWER
+FORTH\%LINE 1487:       CMPB     R4,R5
+FORTH\%LINE 1488:       BNEQ     FORTH\%LINE 1496
+FORTH\%LINE 1489:       TSTB     (R2)+
+FORTH\%LINE 1490:       BNEQ     FORTH\%LINE 1482
+FORTH\%LINE 1491:       MOVL     B^04(R1),R0
+ EXAMINE/INSTRUCTION F_OVER:F_OVER_E
+FORTH\F_OVER:   MOVL     B^04(R11),-(R11)
+FORTH\F_OVER_E: RSB     
+ EVALUATE/ADDRESS F_ABS_H
+0000067D
+ SYMBOLIZE F_ABS_H+4
+address 00000681: 
+    FORTH\F_ABS_H+4
+ SYMBOLIZE INTERP+7
+address 00004C7D: 
+    FORTH+67D
+    FORTH\%LINE 1269
+address 00004C7D: (global)
+    FORTH+67D
+ EXAMINE BASE
+FORTH\BASE:     0000000A
+ EXAMINE TTIN
+FORTH\TTIN:     03
+%DEBUG-I-VERIFYICF, exiting command procedure FORTH.DBG
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10028009"
+$ ENDSUBROUTINE
+$ DIRECTORY/SIZE=ALL/DATE *.*
+
+Directory DUA1:[000000]
+
+000000.DIR;1               6/6         5-OCT-2026 11:34:11.75
+BACKUP.SYS;1               0/0         5-OCT-2026 11:34:11.75
+BADBLK.SYS;1               0/0         5-OCT-2026 11:34:11.75
+BADLOG.SYS;1               0/0         5-OCT-2026 11:34:11.75
+BITMAP.SYS;1               7/7         5-OCT-2026 11:34:11.75
+CONTIN.SYS;1               0/0         5-OCT-2026 11:34:11.75
+CORIMG.SYS;1               0/0         5-OCT-2026 11:34:11.75
+DBG.COM;1                  6/6         5-OCT-2026 11:34:11.75
+DBG.LOG;1                  0/176       5-OCT-2026 11:35:38.82
+DBGDIS.ANI;1              10/10        5-OCT-2026 11:35:39.63
+DBGDIS.DBG;1               5/5         5-OCT-2026 11:34:11.75
+DBGDIS.DLG;1              39/39        5-OCT-2026 11:35:39.90
+DBGDIS.EXE;1               8/8         5-OCT-2026 11:35:38.91
+DBGDIS.LIS;1              28/28        5-OCT-2026 11:35:38.83
+DBGDIS.MAP;1              13/13        5-OCT-2026 11:35:38.90
+DBGDIS.MAR;1               7/7         5-OCT-2026 11:34:11.75
+DBGDIS.OBJ;1               4/4         5-OCT-2026 11:35:38.83
+DBGNOTB.ANI;1             10/10        5-OCT-2026 11:35:39.65
+DBGNOTB.EXE;1              4/4         5-OCT-2026 11:35:38.98
+DBGNOTB.MAP;1             12/12        5-OCT-2026 11:35:38.98
+DBGSUB.LIS;1              11/11        5-OCT-2026 11:35:38.86
+DBGSUB.MAR;1               2/2         5-OCT-2026 11:34:11.75
+DBGSUB.OBJ;1               2/2         5-OCT-2026 11:35:38.86
+DBGTRC.ANI;1              10/10        5-OCT-2026 11:35:39.64
+DBGTRC.DLG;1              18/18        5-OCT-2026 11:35:40.93
+DBGTRC.EXE;1               5/5         5-OCT-2026 11:35:38.96
+DBGTRC.MAP;1              13/13        5-OCT-2026 11:35:38.95
+FAIL.DBG;1                 1/1         5-OCT-2026 11:34:11.75
+FAILLNK.ANI;1              8/8         5-OCT-2026 11:35:39.70
+FAILLNK.DLG;1              5/5         5-OCT-2026 11:35:42.14
+FAILLNK.EXE;1              6/6         5-OCT-2026 11:35:39.28
+FAILLNK.MAP;1             11/11        5-OCT-2026 11:35:39.26
+FAILMAID.OBJ;1             1/1         5-OCT-2026 11:35:39.21
+FAILMAIN.MAR;1             2/2         5-OCT-2026 11:34:11.75
+FAILSUB.MAR;1              1/1         5-OCT-2026 11:34:11.75
+FAILSUBD.OBJ;1             1/1         5-OCT-2026 11:35:39.23
+FORTH.ANI;1               19/19        5-OCT-2026 11:35:39.71
+FORTH.DBG;1                2/2         5-OCT-2026 11:34:11.75
+FORTH.DLG;1               11/11        5-OCT-2026 11:35:42.38
+FORTH.EXE;1               81/81        5-OCT-2026 11:35:39.62
+FORTH.MAP;1               13/13        5-OCT-2026 11:35:39.59
+FORTH.MAR;1               78/78        5-OCT-2026 11:34:11.75
+FORTH.OBJ;1               77/77        5-OCT-2026 11:35:39.29
+GVDBGDIS.ANI;1            10/10        5-OCT-2026 11:35:39.72
+GVDBGDIS.DLG;1            39/39        5-OCT-2026 11:35:40.42
+GVDBGDIS.EXE;1             8/8         5-OCT-2026 11:34:11.75
+GVDBGDIS.MAP;1            10/10        5-OCT-2026 11:34:11.75
+GVDBGDIS.OBJ;1             4/4         5-OCT-2026 11:34:11.75
+GVDBGSUB.OBJ;1             2/2         5-OCT-2026 11:34:11.75
+GVTRACE.ANI;1             11/11        5-OCT-2026 11:35:39.73
+GVTRACE.DLG;1             10/10        5-OCT-2026 11:35:41.93
+GVTRACE.EXE;1              8/8         5-OCT-2026 11:34:11.76
+GVTRACE.MAP;1              9/9         5-OCT-2026 11:34:11.76
+GVTRACE.OBJ;1              2/2         5-OCT-2026 11:34:11.76
+INDEXF.SYS;1             843/843       5-OCT-2026 11:34:11.75
+NOTB.DBG;1                 1/1         5-OCT-2026 11:34:11.75
+RUN.DBG;11                 1/1         5-OCT-2026 11:35:42.18
+RUN.DBG;10                 1/1         5-OCT-2026 11:35:42.01
+RUN.DBG;9                  1/1         5-OCT-2026 11:35:42.00
+RUN.DBG;8                  1/1         5-OCT-2026 11:35:41.78
+RUN.DBG;7                  1/1         5-OCT-2026 11:35:41.57
+RUN.DBG;6                  1/1         5-OCT-2026 11:35:41.34
+RUN.DBG;5                  1/1         5-OCT-2026 11:35:41.08
+RUN.DBG;4                  1/1         5-OCT-2026 11:35:41.06
+RUN.DBG;3                  1/1         5-OCT-2026 11:35:40.76
+RUN.DBG;2                  1/1         5-OCT-2026 11:35:40.24
+RUN.DBG;1                  1/1         5-OCT-2026 11:35:39.74
+SECURITY.SYS;1             1/6         5-OCT-2026 11:34:11.75
+TRACE.DBG;1                2/2         5-OCT-2026 11:34:11.75
+TRACE.MAR;1                2/2         5-OCT-2026 11:34:11.75
+TRACE.OBJ;1                2/2         5-OCT-2026 11:35:39.00
+TRDBGLNK.ANI;1            11/11        5-OCT-2026 11:35:39.66
+TRDBGLNK.DLG;1            10/10        5-OCT-2026 11:35:41.23
+TRDBGLNK.EXE;1             8/8         5-OCT-2026 11:35:39.07
+TRDBGLNK.MAP;1            12/12        5-OCT-2026 11:35:39.05
+TRDBGTRC.ANI;1            11/11        5-OCT-2026 11:35:39.68
+TRDBGTRC.DLG;1             7/7         5-OCT-2026 11:35:41.73
+TRDBGTRC.EXE;1             6/6         5-OCT-2026 11:35:39.17
+TRDBGTRC.MAP;1            12/12        5-OCT-2026 11:35:39.15
+TRDEBUG.OBJ;1              2/2         5-OCT-2026 11:35:39.02
+TRLNKDBG.ANI;1            11/11        5-OCT-2026 11:35:39.67
+TRLNKDBG.DLG;1             7/7         5-OCT-2026 11:35:41.50
+TRLNKDBG.EXE;1             8/8         5-OCT-2026 11:35:39.12
+TRLNKDBG.MAP;1            12/12        5-OCT-2026 11:35:39.10
+TRNOTB.ANI;1              11/11        5-OCT-2026 11:35:39.69
+TRNOTB.EXE;1               5/5         5-OCT-2026 11:35:39.19
+TRNOTB.MAP;1              12/12        5-OCT-2026 11:35:39.19
+VOLSET.SYS;1               0/0         5-OCT-2026 11:34:11.75
+
+Total of 88 files, 1657/1838 blocks.
+$ EXIT

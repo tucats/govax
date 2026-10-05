@@ -1037,16 +1037,22 @@ func (a *Assembler) displacementOperand(c *cursor, deferred byte, size int) erro
 // knownTarget reports whether x, a relative operand's target, is known
 // now, and if so its location in the current section. In the console
 // dialect that's any constant. In the MACRO dialect it's only a label
-// already defined in the same psect (the MACRO manual, §5.2.1): anything
-// else, even an absolute address, depends on where the linker puts the
-// psect.
+// already defined in the same psect (the MACRO manual, §5.2.1), or one
+// plus or minus a constant (START+2: real MACRO gives MOVAB START+2,R0 a
+// word displacement, as it does MOVAB START,R0; docs/PHASE-41.md,
+// subtask 1). Anything else, even an absolute address, depends on where
+// the linker puts the psect.
 func (a *Assembler) knownTarget(x exprVal) (uint32, bool) {
 	if a.dialect == DialectConsole {
 		return x.v, x.known()
 	}
 
-	if !x.known() && x.x.op == rBase && x.x.sect == a.cur {
-		return x.x.v, true
+	if x.known() {
+		return 0, false
+	}
+
+	if sect, offset, ok := x.x.simpleRelocatable(); ok && sect == a.cur {
+		return offset, true
 	}
 
 	return 0, false

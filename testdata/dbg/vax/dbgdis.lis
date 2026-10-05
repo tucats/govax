@@ -1,0 +1,199 @@
+DBGDIS                          Phase 41 probe: symbolic disassembly      5-OCT-2026 11:35:38  VAX MACRO V5.4-3            Page   1
+V1.0                                                                      5-OCT-2026 11:34:11  DUA1:[000000]DBGDIS.MAR;1         (1)
+
+                                     0000     1 	.TITLE	DBGDIS	Phase 41 probe: symbolic disassembly
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; The main module of a two-module program (DBGSUB is the other) whose
+                                     0000     5 ; instructions refer, in every addressing mode, to the things a debug
+                                     0000     6 ; symbol table names: labels of code and of data, routines (CALLS,
+                                     0000     7 ; CALLG, JSB, BSBW), constants, a global constant, a psect base with no
+                                     0000     8 ; label, addresses past a label, the other module's data and routines,
+                                     0000     9 ; and a LIBRTL routine. DBG.COM assembles and links it /DEBUG, and the
+                                     0000    10 ; debugger shows its instructions (EXAMINE/INSTRUCTION) for govax's
+                                     0000    11 ; disassembler to be checked against (docs/PHASE-41.md, subtask 1).
+                                     0000    12 ;
+                                     0000    13 ; It runs to the end without faulting: DBGDIS.DBG steps through part of
+                                     0000    14 ; it and then lets it finish.
+                                     0000    15 
+                                     0000    16 	.EXTERNAL LIB$PUT_OUTPUT, SUB1, SUBDATA
+                                     0000    17 
+                           0000000A  0000    18 LIMIT = 10				; a constant (a short literal)
+                           000003E8  0000    19 BIG = 1000				; a constant too big for one
+                           0000000F  0000    20 MASK = ^X0F				; a constant used as a mask
+                           00000003  0000    21 GLIMIT == 3				; a global constant
+                                     0000    22 
+                                 00000000    23 	.PSECT	DATA, WRT, NOEXE, LONG
+                           00000000  0000    24 COUNT:	.LONG	0			; a longword
+00000004 00000003 00000002 00000001  0004    25 TABLE:	.LONG	1, 2, 3, 4		; a list: TABLE+8 has no label
+            08 07 06 05 04 03 02 01  0014    26 BYTES:	.BYTE	1, 2, 3, 4, 5, 6, 7, 8
+                               0000  001C    27 WORDV:	.WORD	0
+                           00000004' 001E    28 PTR:	.ADDRESS TABLE			; a pointer, for deferred modes
+                  00000000 00000000  0022    29 QUAD:	.QUAD	0
+                           000040C0  002A    30 FVAL:	.F_FLOATING 1.5
+                           00000000  002E    31 ARGLST:	.LONG	0			; CALLG's empty argument list
+53 49 44 47 42 44 0000003A'010E0000' 0032    32 MSG:	.ASCID	/DBGDIS: done/
+                  65 6E 6F 64 20 3A  0040       
+            48 47 46 45 44 43 42 41  0046    33 TEXT:	.ASCII	/ABCDEFGH/
+                           0000005E  004E    34 	.BLKB	16			; space after TEXT, with no label
+                                     005E    35 
+                                 00000000    36 	.PSECT	NOLABEL, WRT, NOEXE, LONG
+                           00000005  0000    37 	.LONG	5			; the psect's base has no label
+                           00000006  0004    38 NOLAB2:	.LONG	6			; NOLAB2-4 is the base
+                                     0008    39 
+                                 00000000    40 	.PSECT	CODE, NOWRT, EXE, LONG
+                               001C  0000    41 	.ENTRY	START, ^M<R2,R3,R4>
+                       52   0A   D0  0002    42 	MOVL	#LIMIT, R2		; immediates
+              53   000003E8 8F   D0  0005    43 	MOVL	#BIG, R3
+              54   0000000A'8F   D0  000C    44 	MOVL	I^#LIMIT, R4
+                       50   03   D0  0013    45 	MOVL	#GLIMIT, R0
+                       51   0C   50  0016    46 	MOVF	#1.5, R1
+              50   00000000'EF   D0  0019    47 	MOVL	COUNT, R0		; relative, MACRO's choice of width
+                  50   0000'CF   D0  0020    48 	MOVL	W^COUNT, R0		; relative, each width
+              50   00000000'EF   D0  0025    49 	MOVL	L^COUNT, R0
+              51   00000004'EF   DE  002C    50 	MOVAL	TABLE, R1
+              50   0000000C'EF   D0  0033    51 	MOVL	TABLE+8, R0		; past a label
+              50   0000001E'FF   D0  003A    52 	MOVL	@PTR, R0		; relative deferred
+                  50   001E'DF   D0  0041    53 	MOVL	@W^PTR, R0
+              50   00000000'9F   D0  0046    54 	MOVL	@#COUNT, R0		; absolute
+              50   00000050'EF   9E  004D    55 	MOVAB	TEXT+10, R0		; into the unlabeled space
+              50   00000000'EF   DE  0054    56 	MOVAL	NOLAB2-4, R0		; a psect base with no label
+DBGDIS                          Phase 41 probe: symbolic disassembly      5-OCT-2026 11:35:38  VAX MACRO V5.4-3            Page   2
+V1.0                                                                      5-OCT-2026 11:34:11  DUA1:[000000]DBGDIS.MAR;1         (1)
+
+                       54   02   D0  005B    57 	MOVL	#2, R4
+            50   00000004'EF44   D0  005E    58 	MOVL	TABLE[R4], R0		; indexed
+              50   00000017'EF   98  0066    59 	CVTBL	BYTES+3, R0		; data of each type
+              50   0000001C'EF   B0  006D    60 	MOVW	WORDV, R0
+              50   00000022'EF   7D  0074    61 	MOVQ	QUAD, R0
+              50   0000002A'EF   50  007B    62 	MOVF	FVAL, R0
+                       50   0F   CA  0082    63 	BICL2	#MASK, R0
+              51   00000004'EF   DE  0085    64 	MOVAL	TABLE, R1		; MOVQ set R1
+                    50   0A A1   D0  008C    65 	MOVL	B^LIMIT(R1), R0		; a displacement equal to a constant
+                    50   04 AC   D0  0090    66 	MOVL	4(AP), R0		; displacements off AP and FP
+                    50   08 AD   D0  0094    67 	MOVL	8(FP), R0
+              52   0000001E'EF   DE  0098    68 	MOVAL	PTR, R2			; register modes
+                       50   62   D0  009F    69 	MOVL	(R2), R0
+                       50   92   D0  00A2    70 	MOVL	@(R2)+, R0
+                       50   72   D0  00A5    71 	MOVL	-(R2), R0
+                       50   82   D0  00A8    72 	MOVL	(R2)+, R0
+                  50   FF51 CF   9E  00AB    73 	MOVAB	START, R0		; a routine's address, and past it
+                  50   FF4E CF   9E  00B0    74 	MOVAB	START+2, R0
+              50   00000000'EF   D0  00B5    75 	MOVL	SUBDATA, R0		; the other module's data
+              50   00000000'GF   D0  00BC    76 	MOVL	G^SUBDATA, R0
+                   00000000'EF   DF  00C3    77 	PUSHAL	SUBDATA
+                            8E   D5  00C9    78 	TSTL	(SP)+
+                       03   52   D1  00CB    79 	CMPL	R2, #GLIMIT
+                            02   15  00CE    80 	BLEQ	10$			; branches to a local label
+                            06   11  00D0    81 	BRB	20$
+                   00000000'EF   D6  00D2    82 10$:	INCL	COUNT
+                       0A   52   D1  00D8    83 20$:	CMPL	R2, #LIMIT
+                            00   18  00DB    84 	BGEQ	LOOP			; a branch to a label
+                   00000000'EF   D6  00DD    85 LOOP:	INCL	COUNT
+                         F7 54   F5  00E3    86 	SOBGTR	R4, LOOP
+                   0000013B'EF   16  00E6    87 	JSB	JSBRTN			; a JSB routine, two ways
+                          004C   30  00EC    88 	BSBW	JSBRTN
+              00000132'EF   00   FB  00EF    89 	CALLS	#0, LOCALR		; this module's routine
+              00000000'EF   00   FB  00F6    90 	CALLS	#0, SUB1		; the other module's routines
+     00000000'EF   0000002E'EF   FA  00FD    91 	CALLG	ARGLST, SUB1
+                   00000032'EF   7F  0108    92 	PUSHAQ	MSG			; a LIBRTL routine
+              00000000'GF   01   FB  010E    93 	CALLS	#1, G^LIB$PUT_OUTPUT
+                       50   01   D0  0115    94 	MOVL	#1, R0
+                  02   00   50   CF  0118    95 	CASEL	R0, #0, #2		; a case table
+                               0009' 011C    96 30$:	.WORD	40$-30$
+                               000B' 011E    97 	.WORD	50$-30$
+                               000C' 0120    98 	.WORD	60$-30$
+                          0009   31  0122    99 	BRW	DONE
+                            07   11  0125   100 40$:	BRB	DONE
+                                 01  0127   101 50$:	NOP
+                   0000012E'EF   17  0128   102 60$:	JMP	DONE			; a jump to a label
+                       50   01   D0  012E   103 DONE:	MOVL	#1, R0
+                                 04  0131   104 LAST:	RET
+                                     0132   105 
+                               0000  0132   106 	.ENTRY	LOCALR, ^M<>		; a routine nothing outside calls
+                   00000000'EF   D6  0134   107 	INCL	COUNT
+                                 04  013A   108 LOCEND:	RET
+                                     013B   109 
+                   00000000'EF   D6  013B   110 JSBRTN:	INCL	COUNT			; a JSB subroutine, not a routine
+                                 05  0141   111 JSBEND:	RSB
+                                     0142   112 
+                                     0142   113 	.END	START
+DBGDIS                          Phase 41 probe: symbolic disassembly      5-OCT-2026 11:35:38  VAX MACRO V5.4-3            Page   3
+Symbol table                                                              5-OCT-2026 11:34:11  DUA1:[000000]DBGDIS.MAR;1         (1)
+
+ARGLST           0000002E R  D  01      
+BIG            = 000003E8    D          
+BYTES            00000014 R  D  01      
+COUNT            00000000 R  D  01      
+DONE             0000012E R  D  03      
+FVAL             0000002A R  D  01      
+GLIMIT         = 00000003  G D          
+JSBEND           00000141 R  D  03      
+JSBRTN           0000013B R  D  03      
+LAST             00000131 R  D  03      
+LIB$PUT_OUTPUT   ********   X   00      
+LIMIT          = 0000000A    D          
+LOCALR           00000132 RG D  03      
+LOCEND           0000013A R  D  03      
+LOOP             000000DD R  D  03      
+MASK           = 0000000F    D          
+MSG              00000032 R  D  01      
+NOLAB2           00000004 R  D  02      
+PTR              0000001E R  D  01      
+QUAD             00000022 R  D  01      
+START            00000000 RG D  03      
+SUB1             ********   X   00      
+SUBDATA          ********   X   00      
+TABLE            00000004 R  D  01      
+TEXT             00000046 R  D  01      
+WORDV            0000001C R  D  01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            0000005E  (   94.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+NOLABEL                         00000008  (    8.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE                            00000142  (  322.)  03 (  3.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  462     00:00:00.01    00:00:00.01
+Command processing              923     00:00:00.00    00:00:00.00
+Pass 1                          205     00:00:00.01    00:00:00.01
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           47     00:00:00.00    00:00:00.00
+Symbol table output               1     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1664     00:00:00.02    00:00:00.02
+
+The working set limit was 812 pages.
+2972 bytes (6 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 26 non-local and 6 local symbols.
+DBGDIS                          Phase 41 probe: symbolic disassembly      5-OCT-2026 11:35:38  VAX MACRO V5.4-3            Page   4
+VAX-11 Macro Run Statistics                                               5-OCT-2026 11:34:11  DUA1:[000000]DBGDIS.MAR;1         (1)
+
+113 source lines were read in Pass 1, producing 24 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/DEBUG/LIST DBGDIS

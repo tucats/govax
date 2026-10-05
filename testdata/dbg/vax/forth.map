@@ -1,0 +1,101 @@
+
+                                                                 5-OCT-2026 11:35        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+FORTH           V2.0                49892 DUA1:[000000]FORTH.OBJ;1              5-OCT-2026 11:35  VAX MACRO V5.4-3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+FORTH_TEXT                      00000200 0000066A 0000046B (       1131.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,NOWRT,NOVEC
+                FORTH           00000200 0000066A 0000046B (       1131.) LONG  2
+FORTH_WORDS                     0000066C 00000C2A 000005BF (       1471.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,NOWRT,NOVEC
+                FORTH           0000066C 00000C2A 000005BF (       1471.) LONG  2
+FORTH_DATA                      00000E00 000045A3 000037A4 (      14244.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                FORTH           00000E00 000045A3 000037A4 (      14244.) LONG  2
+FORTH_CODE                      00004600 000051CA 00000BCB (       3019.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                FORTH           00004600 000051CA 00000BCB (       3019.) LONG  2
+$RMSNAM                         00005200 0000521A 0000001B (         27.) BYTE  0 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,  WRT,NOVEC
+                FORTH           00005200 0000521A 0000001B (         27.) BYTE  0
+FORTH_DICT                      00005400 0000C92F 00007530 (      30000.) PAGE  9 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,  WRT,NOVEC
+                FORTH           00005400 0000C92F 00007530 (      30000.) PAGE  9
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+FORTH           00004600-R        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]FORTH.EXE;1                                         5-OCT-2026 11:35        Linker V11-39                    Page    2
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 0000CBFF 0000CA00 (51712. bytes, 101. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.       23. (   22. blocks)
+Image name and identification:                    FORTH V2.0
+Number of files:                                         4.
+Number of modules:                                       3.
+Number of program sections:                              9.
+Number of global symbols:                              313.
+Number of image sections:                               13.
+User transfer address:                            00004600
+Debugger transfer address:                        7FFEDF68
+Number of code references to shareable images:           1.
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[000000]FORTH.MAP;1
+Estimated map length:                             35. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                   103	00:00:00.00	00:00:00.00
+    Pass 1:                                              1365	00:00:00.02	00:00:00.02
+    Allocation/Relocation:                                 82	00:00:00.00	00:00:00.00
+    Pass 2:                                              1097	00:00:00.03	00:00:00.03
+    Map data after object module synopsis:                 47	00:00:00.00	00:00:00.00
+    Symbol table output:                                   17	00:00:00.00	00:00:00.00
+Total run values:                                        2711	00:00:00.05	00:00:00.05
+
+Using a working set limited to 812 pages and 1458 pages of data storage (excluding image)
+
+Total number object records read (both passes):   292
+    of which 26 were in libraries and 69 were DEBUG data records containing 29936 bytes
+28428 bytes of DEBUG data were written,starting at VBN 24 with 56 blocks allocated
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 5 global symbol table records was written
+
+LINK/DEBUG/MAP FORTH

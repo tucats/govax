@@ -428,3 +428,104 @@ data is available (6). They're Decisions 1 to 6; the subtasks cite them.
   (`EXAMINE/OPERANDS=FULL`, `SHOW SYMBOL/TYPE`). A command VMS rejects
   just logs an error; the rest of the session goes on.
 - Waiting on the author's simh run.
+
+### 2026-10-05 — Subtask 1: the probe's results
+
+The author ran the probe; `testdata/dbg/vax/` holds the results and its
+README says what came back. Nine debugger sessions were logged; the two
+`/NOTRACEBACK` images ran without the debugger, which `RUN/DEBUG`
+silently skips for an image with no DST.
+
+**govax's images.** VMS's debugger reads govax's `LINK/DEBUG` images as
+its own: GVTRACE's session is TRDBGLNK's, which closes Phase 29's
+Decision 7 (the padded GST is harmless). GVDBGDIS's differed only from
+a MACRO bug, fixed here: `MOVAB START+2,R0` got a longword displacement
+where real MACRO gives a word, because `knownTarget` took only a bare
+label, not a label plus a constant, as a known same-psect target. Both
+probe objects now match real MACRO's whole (`TestDebugRecords`'s
+`dbgdis` and `dbgsub`).
+
+**What the debugger shows**, the rules subtasks 6, 9, and 12 follow
+(DBGDIS's session but where another is named):
+
+- **Instruction lines** (`EXAMINE/INSTRUCTION`): a location, a colon,
+  spaces to the next multiple of 8 columns (a full 8 when the colon
+  ends on one), then the mnemonic left-justified in 8 columns, a space,
+  and the operands. Spaces, never tabs. A line with no operands ends
+  in the mnemonic's padding (`RET     `).
+- **The location** is the most specific name for the address:
+  - a routine's entry: `DBGDIS\START:` and `entry mask ^M<R2,R3,R4>`
+    for the mask word (`^M<R2,...,R11,IV,DV>` for SUB2);
+  - a label: `DBGDIS\START\LOOP:`, a label being in the scope of the
+    routine before it (`DBGDIS\LOCALR\JSBRTN`, though it's a JSB routine
+    after LOCALR's RET);
+  - else a line's first instruction: `DBGDIS\START\%LINE 42:`, and a
+    later one in the same line `FORTH\%LINE 332+6:` (FORTH's `$OPEN`
+    expands to two instructions on one line);
+  - else, with no line table (a traceback link), the routine plus a hex
+    offset: `DBGDIS\START+2:`, `+0C` (a leading 0 when the first digit
+    is a letter), `TRACE+10:`;
+  - a routine named as its module drops one: `FORTH\%LINE 332:`,
+    `FAILMAIN:`, `FAILMAIN+0A:`;
+  - `SET MODE NOSYMBOLIC`: `00000400:`, 8 hex digits.
+- **Operands.**
+  - Short literals `S^#0A`, hex, two digits; immediates `I^#000003E8`,
+    as many digits as the operand's size (`I^#9F16` for a word);
+    floating literals `S^#1.500000`. Constants are never shown by name
+    (`MOVL #LIMIT,R2` is `S^#0A`): Decision 5's default.
+  - PC-relative and absolute operands always carry their width prefix
+    (`L^`, `W^`, `B^`, `@L^`, `@#`) and are named: `L^DBGDIS\COUNT`,
+    `@#DBGDIS\COUNT`, with the module always given, even in the
+    current module.
+  - A typed array's element: `L^DBGDIS\TABLE[2]` (TABLE+8), `BYTES[3]`,
+    and `L^DBGDIS\TABLE[0][R4]` for an indexed operand.
+  - Data with a string descriptor (`.ASCII`, `.ASCID`) isn't used for
+    an operand: TEXT+10 and MSG fall to the global symbols, by nearest
+    value at or below the address, constants included: `L^GLIMIT+24D`,
+    `PUSHAQ L^GLIMIT+22F`, and the G^ cell `@L^SUB2+0F0`. `SYMBOLIZE`
+    still names `DBGDIS\TEXT+10`. In FORTH, an address past a `$FAB`
+    (`TTIN+UB_RAB`) is just `L^00003408`.
+  - A system service's G^ reference: `@#SYS$OPEN`.
+  - An address that's a line's first instruction but has no label:
+    `W^DBGDIS\START\%LINE 42`.
+  - Branch destinations have no prefix: a label (`DBGDIS\START\LOOP`,
+    `FORTH\ABORT`) or a line (`DBGDIS\START\%LINE 82`); BSBW likewise.
+    JSB to a label keeps `L^`.
+  - Register displacements are numbers: `B^0A(R1)`, `B^04(AP)`, even
+    when a constant has the value.
+  - Without DBG records, operands are numbers: `L^00000200`, but a
+    routine named in the DST still names a CALLS target
+    (`L^TRACE\FIRST`), and globals from the GST name others
+    (`L^LEVEL+3FE`).
+  - `SET RADIX DECIMAL` makes the offsets decimal (`GLIMIT+589`).
+- **Case tables**: after `CASEL`, one line per entry, 16 spaces and the
+  destination (`DBGDIS\START\%LINE 100`).
+- **Out-of-code bytes**: `FAILMAIN+0A:    HALT`.
+- **STEP**: `stepped to DBGDIS\START\%LINE 43: MOVL     I^#000003E8,R3`
+  (one space after the colon), then the source line (`    43:` and the
+  text, wrapped at 80 columns with `     -:` continuation lines). By
+  line: `stepped to DBGDIS\START\%LINE 48` alone.
+- **Breakpoints**: `break at DBGDIS\LOCALR\JSBRTN`, `break at routine
+  DBGSUB\SUB2`; an access violation: the `%SYSTEM-F-ACCVIO` message,
+  then `break on unhandled exception at FAILSUB\SUB2\%LINE 12`.
+- **SHOW CALLS** (Decision 6): a heading
+  `module name     routine name      line                rel PC           abs PC`,
+  then a line per frame with `*` before the module name, the line
+  number right-justified, the PC relative to the routine and absolute.
+  A JSB subroutine has no frame: at JSBRTN the one line is LOCALR's.
+  Without a line table the line column is blank.
+- **SYMBOLIZE** gives the DST's names (`DBGDIS\START+2` and
+  `DBGDIS\START\%LINE 42`) and then the GST's (`(global)`, `START+2`).
+  A psect base with no label symbolizes as the label before it
+  (`DBGDIS\TEXT+1A` for NOLAB2-4), though psects are listed as
+  symbols (`label DBGDIS\NOLABEL`, with its size).
+- **SHOW SYMBOL/ADDRESS** lists routines with their sizes (START's is
+  0x132: from its entry to LOCALR's), data symbols with addresses,
+  constants, labels with their routine, and the psects. A data symbol
+  with a descriptor shows a debugger-internal "descriptor address".
+- The debugger's language for these modules is MACRO, with hex input
+  and output radix by default.
+
+Still unconfirmed (not covered by the probe): a byte displacement to a
+named address (`B^` relative), a symbol in a shareable image other than
+system services, and the layout of a location longer than 24 columns.

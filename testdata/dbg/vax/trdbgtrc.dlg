@@ -1,0 +1,82 @@
+@TRACE.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure TRACE.DBG
+! ! TRACE.DBG - debugger commands for TRACE's images (docs/PHASE-41.md,
+! ! subtask 1): TRDBGLNK (MACRO/DEBUG, LINK/DEBUG), TRLNKDBG (no DBG
+! ! records, LINK/DEBUG), TRDBGTRC (MACRO/DEBUG, a traceback link), and
+! ! govax's GVTRACE (MACRO/DEBUG, LINK/DEBUG). The same commands for each
+! ! show what each kind of image gives the debugger. Line numbers are
+! ! testdata/mar/list/trace.mar's.
+! !
+! SHOW IMAGE
+! image name                      set    base address   end address
+!
+! DBGSSISHR                       no     0008D600       00090BFF
+! DBGTBKMSG                       no     00090C00       0009D1FF
+! DEBUG                           no     00023800       0008D5FF
+! LIBRTL                          no     00000A00       000237FF
+!*TRDBGTRC                        yes    00000200       000009FF
+!
+! total images: 5                 bytes allocated: 60864
+! SHOW MODULE
+!module name                     symbols    size
+!
+!TRACE                           yes         480
+!
+!total MACRO modules: 1.         bytes allocated: 60872.
+! SHOW MODE
+!modes: symbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+!input radix : hexadecimal
+!output radix: hexadecimal
+! EXAMINE/INSTRUCTION .PC
+!TRACE+2:        CALLS    S^#00,L^TRACE\FIRST
+! SET MODULE/ALL
+! SHOW SYMBOL/ADDRESS * IN TRACE
+!routine TRACE
+!    address: 00000600, size: 0000001E bytes
+! !
+!%DEBUG-E-NOSYMBOL, symbol 'HELPER' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'HELPER' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol '%LINE 21' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'COUNT' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'GLOBDATA' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'MAXLEN' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'LEVEL' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'MSG' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'CONST' is not in the symbol table
+!%DEBUG-E-NOSYMBOL, symbol 'COUNT' is not in the symbol table
+! SYMBOLIZE SECOND+5
+!address 00000632: 
+!    TRACE\SECOND+5
+!%DEBUG-E-NOSYMBOL, symbol 'HELPER' is not in the symbol table
+! !
+! SET MODE NOSYMBOLIC
+!%DEBUG-E-NOSYMBOL, symbol 'HELPER' is not in the symbol table
+! SET MODE SYMBOLIC
+! !
+! SET STEP INSTRUCTION
+! STEP
+!stepped to TRACE+9: CALLS    S^#00,L^TRACE\SECOND
+! STEP
+!stepped to TRACE+10: PUSHAQ   L^00000400
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*TRACE           TRACE                                00000010         00000610
+!%DEBUG-E-NOSYMBOL, symbol 'HELPER' is not in the symbol table
+! SET BREAK SECOND
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+! SHOW CALLS
+!%DEBUG-E-NOCALLS, no active call frames
+! EXAMINE/INSTRUCTION .PC
+!%DEBUG-E-NOACCESSR, no read access to address 00000000
+! GO
+!%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+! SHOW CALLS
+!%DEBUG-E-NOCALLS, no active call frames
+! EXAMINE/INSTRUCTION .PC
+!%DEBUG-E-NOACCESSR, no read access to address 00000000
+! CANCEL BREAK/ALL
+! GO
+!%DEBUG-E-BADSTARTPC, cannot start from PC 00000000
+!%DEBUG-I-VERIFYICF, exiting command procedure TRACE.DBG
+EXIT

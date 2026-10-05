@@ -66,4 +66,28 @@ and at `DBG>` type `@RUN.DBG` after making `RUN.DBG` as `DBG.COM`'s
 
 ## What came back (`vax/`)
 
-Not yet run.
+From the author's run of `@DBG/OUTPUT=DBG.LOG` on 5-OCT-2026, copied by
+`copyout.cmd`: `dbg.log`; each image's `.exe`, `.map`, and `.ani`;
+DBGDIS's and DBGSUB's listings and objects; and nine session logs
+(`.dlg`, LF line endings, every line but the first starting with `!`).
+
+- **No `.dlg` for DBGNOTB or TRNOTB.** `RUN/DEBUG` of a `/NOTRACEBACK`
+  image runs the program without the debugger, silently (`dbg.log`
+  shows the program's output and status 1). `copyout.cmd`'s two
+  NOSUCHFILE warnings for them are expected.
+- **govax's images are accepted.** GVTRACE's session matches TRDBGLNK's
+  but for the image name and the debugger's memory counts, so VMS reads
+  a govax `LINK/DEBUG` image, GST padding included (Phase 29's
+  Decision 7). GVDBGDIS's matches DBGDIS's but for addresses after
+  line 74, where govax's MACRO gave `MOVAB START+2,R0` a longword
+  displacement and real MACRO a word; that's fixed now
+  (`internal/asm`'s `knownTarget`), and both objects match real
+  MACRO's whole (`TestDebugRecords`).
+- **Mistakes in the command files.** A label after a routine is in the
+  routine's scope (`DBGSUB\SUB2\SUBEND`, not `DBGSUB\SUBEND`), so the
+  commands naming `DBGSUB\SUBEND` and `DBGSUB\SUBJSB` failed with
+  NOSYMBOL; that is itself a result. FORTH has no code on line 395.
+  TRLNKDBG's break at SECOND didn't stop (a TBT-only routine); worth a
+  look when breakpoints come.
+
+docs/PHASE-41.md's progress log lists what the sessions show.

@@ -1,0 +1,544 @@
+@DBGDIS.DBG
+!%DEBUG-I-VERIFYICF, entering command procedure DBGDIS.DBG
+! ! DBGDIS.DBG - debugger commands for DBGDIS (docs/PHASE-41.md, subtask 1).
+! ! DBG.COM runs them for VMS's DBGDIS.EXE and for govax's GVDBGDIS.EXE,
+! ! after SET LOG and SET OUTPUT LOG,VERIFY. Line numbers are DBGDIS.MAR's
+! ! and DBGSUB.MAR's: change them here if those sources change.
+! !
+! ! What the debugger knows on start-up.
+! SHOW IMAGE
+! image name                      set    base address   end address
+!
+! DBGSSISHR                       no     0008D400       000909FF
+! DBGTBKMSG                       no     00090A00       0009CFFF
+! DEBUG                           no     00023600       0008D3FF
+!*GVDBGDIS                        yes    00000200       000007FF
+! LIBRTL                          no     00000800       000235FF
+!
+! total images: 5                 bytes allocated: 67088
+! SHOW MODULE
+!module name                     symbols    size
+!
+!DBGDIS                          yes        1804
+!DBGSUB                          no          644
+!
+!total MACRO modules: 2.         bytes allocated: 67136.
+! SHOW LANGUAGE
+!language: MACRO
+! SHOW RADIX
+!input radix : hexadecimal
+!output radix: hexadecimal
+! SHOW MODE
+!modes: symbolic, line, d_float, noscreen, scroll, nokeypad, dynamic, interrupt, no separate window
+!input radix : hexadecimal
+!output radix: hexadecimal
+! SHOW SCOPE
+!scope: 
+! *  0 [ = DBGDIS\START ]
+! EXAMINE/INSTRUCTION .PC
+!DBGDIS\START\%LINE 42:  MOVL     S^#0A,R2
+! !
+! ! Every module's symbols, then their addresses.
+! SET MODULE/ALL
+! SHOW MODULE
+!module name                     symbols    size
+!
+!DBGDIS                          yes        1804
+!DBGSUB                          yes         644
+!
+!total MACRO modules: 2.         bytes allocated: 71040.
+! SHOW SYMBOL/ADDRESS * IN DBGDIS
+!routine DBGDIS\LOCALR
+!    address: 00000534, size: 00000010 bytes
+!routine DBGDIS\START
+!    address: 00000400, size: 00000134 bytes
+!data DBGDIS\ARGLST
+!    address: 0000022E
+!data DBGDIS\BIG
+!    constant: 000003E8
+!data DBGDIS\BYTES
+!    descriptor address: 00267AE5
+!data DBGDIS\COUNT
+!    address: 00000200
+!label DBGDIS\START\DONE
+!    address: 00000530
+!data DBGDIS\FVAL
+!    address: 0000022A
+!data DBGDIS\GLIMIT
+!    constant: 00000003
+!label DBGDIS\LOCALR\JSBEND
+!    address: 00000543
+!label DBGDIS\LOCALR\JSBRTN
+!    address: 0000053D
+!label DBGDIS\START\LAST
+!    address: 00000533
+!data DBGDIS\LIMIT
+!    constant: 0000000A
+!label DBGDIS\LOCALR\LOCEND
+!    address: 0000053C
+!label DBGDIS\START\LOOP
+!    address: 000004DF
+!data DBGDIS\MASK
+!    constant: 0000000F
+!data DBGDIS\MSG
+!    descriptor address: 00000232
+!data DBGDIS\NOLAB2
+!    address: 00000264
+!data DBGDIS\PTR
+!    address: 0000021E
+!data DBGDIS\QUAD
+!    address: 00000222
+!data DBGDIS\TABLE
+!    descriptor address: 00267BD0
+!data DBGDIS\TEXT
+!    descriptor address: 00267BFC
+!data DBGDIS\WORDV
+!    address: 0000021C
+!label DBGDIS\DATA
+!    address: 00000200, size: 0000005E bytes
+!label DBGDIS\NOLABEL
+!    address: 00000260, size: 00000008 bytes
+!label DBGDIS\CODE
+!    address: 00000400, size: 00000144 bytes
+! SHOW SYMBOL/ADDRESS * IN DBGSUB
+!routine DBGSUB\SUB1
+!    address: 00000544, size: 00000014 bytes
+!routine DBGSUB\SUB2
+!    address: 00000558, size: 00000010 bytes
+!data DBGSUB\SUBDATA
+!    address: 00000268
+!label DBGSUB\SUB2\SUBEND
+!    address: 00000567
+!label DBGSUB\SUB2\SUBJSB
+!    address: 00000561
+!label DBGSUB\SUBDAT
+!    address: 00000268, size: 00000004 bytes
+!label DBGSUB\CODE
+!    address: 00000544, size: 00000024 bytes
+! SHOW SYMBOL/TYPE * IN DBGDIS
+!routine DBGDIS\LOCALR
+!routine DBGDIS\START
+!data DBGDIS\ARGLST
+!    atomic type, longword integer, size: 4 bytes
+!data DBGDIS\BIG
+!    atomic type, longword integer, size: 4 bytes
+!data DBGDIS\BYTES
+!    array descriptor type, 1 dimension, bounds: [0:7], size: 8 bytes
+!        cell type: atomic type, byte integer, size: 1 byte
+!data DBGDIS\COUNT
+!    atomic type, longword integer, size: 4 bytes
+!label DBGDIS\START\DONE
+!data DBGDIS\FVAL
+!    atomic type, F_floating, size: 4 bytes
+!data DBGDIS\GLIMIT
+!    atomic type, longword integer, size: 4 bytes
+!label DBGDIS\LOCALR\JSBEND
+!label DBGDIS\LOCALR\JSBRTN
+!label DBGDIS\START\LAST
+!data DBGDIS\LIMIT
+!    atomic type, longword integer, size: 4 bytes
+!label DBGDIS\LOCALR\LOCEND
+!label DBGDIS\START\LOOP
+!data DBGDIS\MASK
+!    atomic type, longword integer, size: 4 bytes
+!data DBGDIS\MSG
+!    string descriptor type, character-coded text, size: 12 bytes
+!data DBGDIS\NOLAB2
+!    atomic type, longword integer, size: 4 bytes
+!data DBGDIS\PTR
+!    atomic type, longword logical, size: 4 bytes
+!data DBGDIS\QUAD
+!    atomic type, quadword integer, size: 8 bytes
+!data DBGDIS\TABLE
+!    array descriptor type, 1 dimension, bounds: [0:3], size: 16 bytes
+!        cell type: atomic type, longword integer, size: 4 bytes
+!data DBGDIS\TEXT
+!    string descriptor type, character-coded text, size: 8 bytes
+!data DBGDIS\WORDV
+!    atomic type, word integer, size: 2 bytes
+!label DBGDIS\DATA
+!label DBGDIS\NOLABEL
+!label DBGDIS\CODE
+! !
+! ! Instructions, symbolic (the default): each routine whole, by name.
+! EXAMINE/INSTRUCTION START:LAST
+!DBGDIS\START:   entry mask ^M<R2,R3,R4>
+!DBGDIS\START\%LINE 42:  MOVL     S^#0A,R2
+!DBGDIS\START\%LINE 43:  MOVL     I^#000003E8,R3
+!DBGDIS\START\%LINE 44:  MOVL     I^#0000000A,R4
+!DBGDIS\START\%LINE 45:  MOVL     S^#03,R0
+!DBGDIS\START\%LINE 46:  MOVF     S^#1.500000,R1
+!DBGDIS\START\%LINE 47:  MOVL     L^DBGDIS\COUNT,R0
+!DBGDIS\START\%LINE 48:  MOVL     W^DBGDIS\COUNT,R0
+!DBGDIS\START\%LINE 49:  MOVL     L^DBGDIS\COUNT,R0
+!DBGDIS\START\%LINE 50:  MOVAL    L^DBGDIS\TABLE[0],R1
+!DBGDIS\START\%LINE 51:  MOVL     L^DBGDIS\TABLE[2],R0
+!DBGDIS\START\%LINE 52:  MOVL     @L^DBGDIS\PTR,R0
+!DBGDIS\START\%LINE 53:  MOVL     @W^DBGDIS\PTR,R0
+!DBGDIS\START\%LINE 54:  MOVL     @#DBGDIS\COUNT,R0
+!DBGDIS\START\%LINE 55:  MOVAB    L^GLIMIT+24D,R0
+!DBGDIS\START\%LINE 56:  MOVAL    L^GLIMIT+25D,R0
+!DBGDIS\START\%LINE 57:  MOVL     S^#02,R4
+!DBGDIS\START\%LINE 58:  MOVL     L^DBGDIS\TABLE[0][R4],R0
+!DBGDIS\START\%LINE 59:  CVTBL    L^DBGDIS\BYTES[3],R0
+!DBGDIS\START\%LINE 60:  MOVW     L^DBGDIS\WORDV,R0
+!DBGDIS\START\%LINE 61:  MOVQ     L^DBGDIS\QUAD,R0
+!DBGDIS\START\%LINE 62:  MOVF     L^DBGDIS\FVAL,R0
+!DBGDIS\START\%LINE 63:  BICL2    S^#0F,R0
+!DBGDIS\START\%LINE 64:  MOVAL    L^DBGDIS\TABLE[0],R1
+!DBGDIS\START\%LINE 65:  MOVL     B^0A(R1),R0
+!DBGDIS\START\%LINE 66:  MOVL     B^04(AP),R0
+!DBGDIS\START\%LINE 67:  MOVL     B^08(FP),R0
+!DBGDIS\START\%LINE 68:  MOVAL    L^DBGDIS\PTR,R2
+!DBGDIS\START\%LINE 69:  MOVL     (R2),R0
+!DBGDIS\START\%LINE 70:  MOVL     @(R2)+,R0
+!DBGDIS\START\%LINE 71:  MOVL     -(R2),R0
+!DBGDIS\START\%LINE 72:  MOVL     (R2)+,R0
+!DBGDIS\START\%LINE 73:  MOVAB    W^DBGDIS\START,R0
+!DBGDIS\START\%LINE 74:  MOVAB    L^DBGDIS\START\%LINE 42,R0
+!DBGDIS\START\%LINE 75:  MOVL     L^DBGSUB\SUBDATA,R0
+!DBGDIS\START\%LINE 76:  MOVL     L^DBGSUB\SUBDATA,R0
+!DBGDIS\START\%LINE 77:  PUSHAL   L^DBGSUB\SUBDATA
+!DBGDIS\START\%LINE 78:  TSTL     (SP)+
+!DBGDIS\START\%LINE 79:  CMPL     R2,S^#03
+!DBGDIS\START\%LINE 80:  BLEQ     DBGDIS\START\%LINE 82
+!DBGDIS\START\%LINE 81:  BRB      DBGDIS\START\%LINE 83
+!DBGDIS\START\%LINE 82:  INCL     L^DBGDIS\COUNT
+!DBGDIS\START\%LINE 83:  CMPL     R2,S^#0A
+!DBGDIS\START\%LINE 84:  BGEQ     DBGDIS\START\LOOP
+!DBGDIS\START\LOOP:      INCL     L^DBGDIS\COUNT
+!DBGDIS\START\%LINE 86:  SOBGTR   R4,DBGDIS\START\LOOP
+!DBGDIS\START\%LINE 87:  JSB      L^DBGDIS\LOCALR\JSBRTN
+!DBGDIS\START\%LINE 88:  BSBW     DBGDIS\LOCALR\JSBRTN
+!DBGDIS\START\%LINE 89:  CALLS    S^#00,L^DBGDIS\LOCALR
+!DBGDIS\START\%LINE 90:  CALLS    S^#00,L^DBGSUB\SUB1
+!DBGDIS\START\%LINE 91:  CALLG    L^DBGDIS\ARGLST,L^DBGSUB\SUB1
+!DBGDIS\START\%LINE 92:  PUSHAQ   L^GLIMIT+22F
+!DBGDIS\START\%LINE 93:  CALLS    S^#01,@L^SUB2+0F0
+!DBGDIS\START\%LINE 94:  MOVL     S^#01,R0
+!DBGDIS\START\%LINE 95:  CASEL    R0,S^#00,S^#02
+!                DBGDIS\START\%LINE 100
+!                DBGDIS\START\%LINE 101
+!                DBGDIS\START\%LINE 102
+!DBGDIS\START\%LINE 99:  BRW      DBGDIS\START\DONE
+!DBGDIS\START\%LINE 100: BRB      DBGDIS\START\DONE
+!DBGDIS\START\%LINE 101: NOP     
+!DBGDIS\START\%LINE 102: JMP      L^DBGDIS\START\DONE
+!DBGDIS\START\DONE:      MOVL     S^#01,R0
+!DBGDIS\START\LAST:      RET     
+! EXAMINE/INSTRUCTION LOCALR:LOCEND
+!DBGDIS\LOCALR:  entry mask ^M<>
+!DBGDIS\LOCALR\%LINE 107:        INCL     L^DBGDIS\COUNT
+!DBGDIS\LOCALR\LOCEND:   RET     
+! EXAMINE/INSTRUCTION JSBRTN:JSBEND
+!DBGDIS\LOCALR\JSBRTN:   INCL     L^DBGDIS\COUNT
+!DBGDIS\LOCALR\JSBEND:   RSB     
+!%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\SUBEND' is not in the symbol table
+! !
+! ! By line, and one at a time.
+! EXAMINE/INSTRUCTION %LINE 47:%LINE 56
+!DBGDIS\START\%LINE 47:  MOVL     L^DBGDIS\COUNT,R0
+!DBGDIS\START\%LINE 48:  MOVL     W^DBGDIS\COUNT,R0
+!DBGDIS\START\%LINE 49:  MOVL     L^DBGDIS\COUNT,R0
+!DBGDIS\START\%LINE 50:  MOVAL    L^DBGDIS\TABLE[0],R1
+!DBGDIS\START\%LINE 51:  MOVL     L^DBGDIS\TABLE[2],R0
+!DBGDIS\START\%LINE 52:  MOVL     @L^DBGDIS\PTR,R0
+!DBGDIS\START\%LINE 53:  MOVL     @W^DBGDIS\PTR,R0
+!DBGDIS\START\%LINE 54:  MOVL     @#DBGDIS\COUNT,R0
+!DBGDIS\START\%LINE 55:  MOVAB    L^GLIMIT+24D,R0
+!DBGDIS\START\%LINE 56:  MOVAL    L^GLIMIT+25D,R0
+! EXAMINE/INSTRUCTION %LINE 85
+!DBGDIS\START\%LINE 85:  INCL     L^DBGDIS\COUNT
+! EXAMINE/INSTRUCTION DBGSUB\%LINE 14
+!DBGSUB\SUB1\%LINE 14:   MOVL     L^DBGSUB\SUBDATA,R2
+! EXAMINE/INSTRUCTION START
+!DBGDIS\START:   entry mask ^M<R2,R3,R4>
+! EXAMINE/INSTRUCTION START+2
+!DBGDIS\START\%LINE 42:  MOVL     S^#0A,R2
+! EXAMINE START
+!DBGDIS\START:   entry mask ^M<R2,R3,R4>
+! EXAMINE SUB2
+!DBGSUB\SUB2:    entry mask ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11,IV,DV>
+! EXAMINE/INSTRUCTION SUB2
+!DBGSUB\SUB2:    entry mask ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11,IV,DV>
+! !
+! ! Data and constants by name.
+! EXAMINE COUNT
+!DBGDIS\COUNT:   00000000
+! EXAMINE TABLE
+!DBGDIS\TABLE[0:3]
+!    [0]:        00000001
+!    [1]:        00000002
+!    [2]:        00000003
+!    [3]:        00000004
+! EXAMINE TABLE+8
+!DBGDIS\TABLE[2]:        00000003
+! EXAMINE MSG
+!DBGDIS\MSG:     'DBGDIS: done'
+! EXAMINE TEXT
+!DBGDIS\TEXT:    'ABCDEFGH'
+! EXAMINE NOLAB2-4
+!GLIMIT+25D:     00000005
+! EXAMINE SUBDATA
+!DBGSUB\SUBDATA: 00000007
+! EVALUATE LIMIT
+!0000000A
+! EVALUATE BIG
+!000003E8
+! EVALUATE GLIMIT
+!00000003
+! !
+! ! Addresses to names, and names to addresses.
+! EVALUATE/ADDRESS START
+!00000400
+! EVALUATE/ADDRESS COUNT
+!00000200
+! EVALUATE/ADDRESS TABLE+8
+!0000020C
+! EVALUATE/ADDRESS NOLAB2-4
+!00000260
+! EVALUATE/ADDRESS %LINE 47
+!00000419
+! EVALUATE/ADDRESS DBGSUB\%LINE 14
+!00000546
+! SYMBOLIZE START
+!address 00000400: 
+!    DBGDIS\START
+!    DBGDIS\%LINE 41
+!address 00000400: (global)
+!    START
+! SYMBOLIZE START+2
+!address 00000402: 
+!    DBGDIS\START+2
+!    DBGDIS\START\%LINE 42
+!address 00000402: (global)
+!    START+2
+! SYMBOLIZE TABLE+8
+!address 0000020C: 
+!    DBGDIS\TABLE+8
+!address 0000020C: (global)
+!    GLIMIT+209
+! SYMBOLIZE TEXT+10
+!address 00000256: 
+!    DBGDIS\TEXT+10
+!address 00000256: (global)
+!    GLIMIT+253
+! SYMBOLIZE NOLAB2-4
+!address 00000260: 
+!    DBGDIS\TEXT+1A
+!address 00000260: (global)
+!    GLIMIT+25D
+! SYMBOLIZE SUBDATA
+!address 00000268: 
+!    DBGSUB\SUBDATA
+!address 00000268: (global)
+!    SUBDATA
+! SYMBOLIZE JSBRTN+3
+!address 00000540: 
+!    DBGDIS\LOCALR+0C
+!    DBGDIS\LOCALR\%LINE 110+3
+!address 00000540: (global)
+!    LOCALR+0C
+! SYMBOLIZE %LINE 85
+!address 000004DF: 
+!    DBGDIS\START\LOOP
+!    DBGDIS\START\%LINE 85
+!address 000004DF: (global)
+!    START+0DF
+! !
+! ! Not symbolic.
+! SET MODE NOSYMBOLIC
+! EXAMINE/INSTRUCTION START:LAST
+!00000400:       entry mask ^M<R2,R3,R4>
+!00000402:       MOVL     S^#0A,R2
+!00000405:       MOVL     I^#000003E8,R3
+!0000040C:       MOVL     I^#0000000A,R4
+!00000413:       MOVL     S^#03,R0
+!00000416:       MOVF     S^#1.500000,R1
+!00000419:       MOVL     L^00000200,R0
+!00000420:       MOVL     W^00000200,R0
+!00000425:       MOVL     L^00000200,R0
+!0000042C:       MOVAL    L^00000204,R1
+!00000433:       MOVL     L^0000020C,R0
+!0000043A:       MOVL     @L^0000021E,R0
+!00000441:       MOVL     @W^0000021E,R0
+!00000446:       MOVL     @#00000200,R0
+!0000044D:       MOVAB    L^00000250,R0
+!00000454:       MOVAL    L^00000260,R0
+!0000045B:       MOVL     S^#02,R4
+!0000045E:       MOVL     L^00000204[R4],R0
+!00000466:       CVTBL    L^00000217,R0
+!0000046D:       MOVW     L^0000021C,R0
+!00000474:       MOVQ     L^00000222,R0
+!0000047B:       MOVF     L^0000022A,R0
+!00000482:       BICL2    S^#0F,R0
+!00000485:       MOVAL    L^00000204,R1
+!0000048C:       MOVL     B^0A(R1),R0
+!00000490:       MOVL     B^04(AP),R0
+!00000494:       MOVL     B^08(FP),R0
+!00000498:       MOVAL    L^0000021E,R2
+!0000049F:       MOVL     (R2),R0
+!000004A2:       MOVL     @(R2)+,R0
+!000004A5:       MOVL     -(R2),R0
+!000004A8:       MOVL     (R2)+,R0
+!000004AB:       MOVAB    W^00000400,R0
+!000004B0:       MOVAB    L^00000402,R0
+!000004B7:       MOVL     L^00000268,R0
+!000004BE:       MOVL     L^00000268,R0
+!000004C5:       PUSHAL   L^00000268
+!000004CB:       TSTL     (SP)+
+!000004CD:       CMPL     R2,S^#03
+!000004D0:       BLEQ     000004D4
+!000004D2:       BRB      000004DA
+!000004D4:       INCL     L^00000200
+!000004DA:       CMPL     R2,S^#0A
+!000004DD:       BGEQ     000004DF
+!000004DF:       INCL     L^00000200
+!000004E5:       SOBGTR   R4,000004DF
+!000004E8:       JSB      L^0000053D
+!000004EE:       BSBW     0000053D
+!000004F1:       CALLS    S^#00,L^00000534
+!000004F8:       CALLS    S^#00,L^00000544
+!000004FF:       CALLG    L^0000022E,L^00000544
+!0000050A:       PUSHAQ   L^00000232
+!00000510:       CALLS    S^#01,@L^00000648
+!00000517:       MOVL     S^#01,R0
+!0000051A:       CASEL    R0,S^#00,S^#02
+!                00000527
+!                00000529
+!                0000052A
+!00000524:       BRW      00000530
+!00000527:       BRB      00000530
+!00000529:       NOP     
+!0000052A:       JMP      L^00000530
+!00000530:       MOVL     S^#01,R0
+!00000533:       RET     
+!%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\SUBEND' is not in the symbol table
+! EXAMINE COUNT
+!DBGDIS\COUNT:   00000000
+! SET MODE SYMBOLIC
+! !
+! ! Decimal, then the default radix again.
+! SET RADIX DECIMAL
+! EXAMINE/INSTRUCTION %LINE 47:%LINE 56
+!DBGDIS\START\%LINE 47:  MOVL     L^DBGDIS\COUNT,R0
+!DBGDIS\START\%LINE 48:  MOVL     W^DBGDIS\COUNT,R0
+!DBGDIS\START\%LINE 49:  MOVL     L^DBGDIS\COUNT,R0
+!DBGDIS\START\%LINE 50:  MOVAL    L^DBGDIS\TABLE[0],R1
+!DBGDIS\START\%LINE 51:  MOVL     L^DBGDIS\TABLE[2],R0
+!DBGDIS\START\%LINE 52:  MOVL     @L^DBGDIS\PTR,R0
+!DBGDIS\START\%LINE 53:  MOVL     @W^DBGDIS\PTR,R0
+!DBGDIS\START\%LINE 54:  MOVL     @#DBGDIS\COUNT,R0
+!DBGDIS\START\%LINE 55:  MOVAB    L^GLIMIT+589,R0
+!DBGDIS\START\%LINE 56:  MOVAL    L^GLIMIT+605,R0
+! EVALUATE/ADDRESS TABLE+8
+!524
+! SYMBOLIZE TEXT+10
+!address 00000250: 
+!    DBGDIS\TEXT+10
+!address 00000250: (global)
+!    GLIMIT+589
+! CANCEL RADIX
+! !
+! ! Stepping by instruction, then by line.
+! SET STEP INSTRUCTION
+! STEP
+!stepped to DBGDIS\START\%LINE 43: MOVL     I^#000003E8,R3
+!    43:         MOVL    #BIG, R3
+! STEP
+!stepped to DBGDIS\START\%LINE 44: MOVL     I^#0000000A,R4
+!    44:         MOVL    I^#LIMIT, R4
+! STEP
+!stepped to DBGDIS\START\%LINE 45: MOVL     S^#03,R0
+!    45:         MOVL    #GLIMIT, R0
+! STEP
+!stepped to DBGDIS\START\%LINE 46: MOVF     S^#1.500000,R1
+!    46:         MOVF    #1.5, R1
+! STEP
+!stepped to DBGDIS\START\%LINE 47: MOVL     L^DBGDIS\COUNT,R0
+!    47:         MOVL    COUNT, R0               ; relative, MACRO's choice of wi
+!     -: dth
+! EXAMINE/OPERANDS .PC
+!DBGDIS\START\%LINE 47:  MOVL     L^DBGDIS\COUNT,R0
+!     L^DBGDIS\COUNT
+!                DBGDIS\COUNT (address 00000200) contains 00000000
+!     R0         R0 contains 00000003
+! EXAMINE/OPERANDS=FULL .PC
+!DBGDIS\START\%LINE 47:  MOVL     L^DBGDIS\COUNT,R0
+!     L^DBGDIS\COUNT
+!                DBGDIS\COUNT (address 00000200) contains 00000000
+!     R0         R0 contains 00000003
+! SET STEP LINE
+! STEP
+!stepped to DBGDIS\START\%LINE 48
+!    48:         MOVL    W^COUNT, R0             ; relative, each width
+! STEP
+!stepped to DBGDIS\START\%LINE 49
+!    49:         MOVL    L^COUNT, R0
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGDIS          START               49               00000025         00000425
+! !
+! ! Breaks in a JSB subroutine (reached by JSB, then BSBW), then three
+! ! and four calls deep (SUB2, and SUBJSB under it).
+! SET BREAK SUB2
+!%DEBUG-E-NOSYMBOL, symbol 'DBGSUB\SUBJSB' is not in the symbol table
+! SET BREAK JSBRTN
+! GO
+!break at DBGDIS\LOCALR\JSBRTN
+!   110: JSBRTN: INCL    COUNT                   ; a JSB subroutine, not a routin
+!     -: e
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGDIS          LOCALR             110               00000009         0000053D
+! EXAMINE/INSTRUCTION .PC
+!DBGDIS\LOCALR\JSBRTN:   INCL     L^DBGDIS\COUNT
+! GO
+!break at DBGDIS\LOCALR\JSBRTN
+!   110: JSBRTN: INCL    COUNT                   ; a JSB subroutine, not a routin
+!     -: e
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGDIS          LOCALR             110               00000009         0000053D
+! GO
+!break at routine DBGSUB\SUB2
+!    20:         JSB     SUBJSB
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGSUB          SUB2                20               00000002         0000055A
+!*DBGSUB          SUB1                15               00000010         00000554
+!*DBGDIS          START               90               000000FF         000004FF
+! EXAMINE/INSTRUCTION .PC
+!DBGSUB\SUB2\%LINE 20:   JSB      L^DBGSUB\SUB2\SUBJSB
+! GO
+!break at routine DBGSUB\SUB2
+!    20:         JSB     SUBJSB
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGSUB          SUB2                20               00000002         0000055A
+!*DBGSUB          SUB1                15               00000010         00000554
+!*DBGDIS          START               91               0000010A         0000050A
+! EXAMINE/INSTRUCTION .PC
+!DBGSUB\SUB2\%LINE 20:   JSB      L^DBGSUB\SUB2\SUBJSB
+! STEP/INSTRUCTION
+!stepped to DBGSUB\SUB2\%LINE 21: RET     
+!    21:         RET
+! EXAMINE/INSTRUCTION .PC
+!DBGSUB\SUB2\%LINE 21:   RET     
+! CANCEL BREAK/ALL
+! !
+! ! The end of START, then the end of the program.
+! SET BREAK LAST
+! GO
+!break at DBGDIS\START\LAST
+!   104: LAST:   RET
+! SHOW CALLS
+! module name     routine name      line                rel PC           abs PC
+!*DBGDIS          START              104               00000133         00000533
+! EXAMINE/INSTRUCTION .PC
+!DBGDIS\START\LAST:      RET     
+! CANCEL BREAK/ALL
+! GO
+!%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+!%DEBUG-I-VERIFYICF, exiting command procedure DBGDIS.DBG
+EXIT

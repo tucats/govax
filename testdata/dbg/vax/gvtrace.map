@@ -1,0 +1,71 @@
+
+DUA1:[000000]GVTRACE.EXE                                         5-OCT-2026 11:34        Linker govax V0.0-0              Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+TRACE           V1.0                  116 DUA1:[000000]GVTRACE.OBJ;1            5-OCT-2026 11:34  govax MACRO V0.0-0
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+$CONST                          00000200 00000207 00000008 (          8.) BYTE  0 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,NOWRT,NOVEC
+                TRACE           00000200 00000207 00000008 (          8.) BYTE  0
+DATA                            00000400 00000428 00000029 (         41.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                TRACE           00000400 00000428 00000029 (         41.) LONG  2
+$CODE                           00000600 00000642 00000043 (         67.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                TRACE           00000600 00000642 00000043 (         67.) LONG  2
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+FIRST           0000061E-R        
+GLOBDATA        00000425-R        
+LEVEL           00000002          
+SECOND          0000062D-R        
+TRACE           00000600-R        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]GVTRACE.EXE;1                                       5-OCT-2026 11:34        Linker govax V0.0-0              Page    2
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000009FF 00000800 (2048. bytes, 4. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        5. (    4. blocks)
+Image name and identification:                    GVTRACE V1.0
+Number of files:                                         1.
+Number of modules:                                       2.
+Number of program sections:                              5.
+Number of global symbols:                              311.
+Number of image sections:                                7.
+User transfer address:                            00000600
+Debugger transfer address:                        7FFEDF68
+Number of code references to shareable images:           1.
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[000000]GVTRACE.MAP
+Estimated map length:                             31. blocks

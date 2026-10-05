@@ -85,6 +85,10 @@ func TestDebugRecords(t *testing.T) {
 		{name: "trdbgsym", source: "list/trace.mar", object: "list/vax/trdbgsym.obj", enable: []string{"DEBUG"}, disable: []string{"TRACEBACK"}},
 		{name: "failmaid", source: "list/failmain.mar", object: "list/vax/failmaid.obj", enable: debug},
 		{name: "failsubd", source: "list/failsub.mar", object: "list/vax/failsubd.obj", enable: debug},
+		// Phase 41's debugger probe: DBGDIS has every addressing mode,
+		// with MOVAB START+2,R0's word displacement.
+		{name: "dbgdis", source: "../dbg/dbgdis.mar", object: "../dbg/vax/dbgdis.obj", enable: debug},
+		{name: "dbgsub", source: "../dbg/dbgsub.mar", object: "../dbg/vax/dbgsub.obj", enable: debug},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			src, err := os.ReadFile(filepath.Join(mar, tc.source))
