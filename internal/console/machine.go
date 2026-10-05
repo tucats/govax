@@ -136,7 +136,7 @@ type Console struct {
 	quit bool // set by Quit (misc.go); read via Running
 
 	// commandLineErr is the failure of the one-shot command given on
-	// govax's command line (Include's "/command_line"), which ends the
+	// govax's command line (IncludeCommandLine), which ends the
 	// session; read via CommandLineErr.
 	commandLineErr error
 

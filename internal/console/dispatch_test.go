@@ -169,7 +169,7 @@ func TestDispatch_asmThenCall(t *testing.T) {
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g, nil)
 
-	if err := d.Dispatch("ASM " + asmFixturePath(t, "xor.asm")); err != nil {
+	if err := d.Dispatch(`ASM "` + asmFixturePath(t, "xor.asm") + `"`); err != nil {
 		t.Fatalf("Dispatch(ASM): %v", err)
 	}
 
@@ -199,7 +199,7 @@ func TestDispatch_callWithArgumentList(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
-	if err := d.Dispatch("ASM " + path); err != nil {
+	if err := d.Dispatch(`ASM "` + path + `"`); err != nil {
 		t.Fatalf("Dispatch(ASM): %v", err)
 	}
 
@@ -246,7 +246,7 @@ func TestDispatch_callStepQualifier(t *testing.T) {
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g, nil)
 
-	if err := d.Dispatch("ASM " + asmFixturePath(t, "xor.asm")); err != nil {
+	if err := d.Dispatch(`ASM "` + asmFixturePath(t, "xor.asm") + `"`); err != nil {
 		t.Fatalf("Dispatch(ASM): %v", err)
 	}
 
@@ -276,7 +276,7 @@ func TestDispatch_callStepStopsAfterOneInstruction(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
-	if err := d.Dispatch("ASM " + path); err != nil {
+	if err := d.Dispatch(`ASM "` + path + `"`); err != nil {
 		t.Fatalf("Dispatch(ASM): %v", err)
 	}
 

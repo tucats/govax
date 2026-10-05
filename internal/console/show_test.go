@@ -85,7 +85,7 @@ func TestShowNVRAM_none(t *testing.T) {
 func TestShowROM_loaded(t *testing.T) {
 	d, c, buf := newShowDispatcher(t)
 
-	if err := c.LoadROM(romFixturePath(t)); err != nil {
+	if err := c.LoadROM(romFixturePath(t), false); err != nil {
 		t.Fatalf("LoadROM: %v", err)
 	}
 

@@ -787,11 +787,14 @@ func runCmd(c *cli.Context) error {
 	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{"run", dclQuote(params[0])})
 }
 
+// doCmd runs the console command cmd on the subcommand's parameters, each
+// quoted so DCL keeps a host file name's case and its "/" isn't read as a
+// qualifier.
 func doCmd(c *cli.Context, cmd string) error {
 	args := []string{cmd}
 
 	for _, arg := range c.FindGlobal().Parameters {
-		args = append(args, arg)
+		args = append(args, dclQuote(arg))
 	}
 
 	paths = loadConfigPaths(paths)

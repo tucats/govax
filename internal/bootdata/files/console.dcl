@@ -1057,4 +1057,41 @@ grammar console
                     /type=$expression
     verb dis/alias=disassemble
 
+    ! ASM [file] assembles a file with the console's assembler, or with
+    ! no file enters interactive assembler mode. A host file name with
+    ! lowercase letters or a "/" must be quoted, as everywhere in DCL.
+    verb asm/id=1720
+        parameter   file/id=1721                -
+                    /type=$string
+    verb assemble/alias=asm
+
+    ! INCLUDE file (@file) runs a file of console commands;
+    ! INCLUDE/COMMAND_LINE runs the text left on govax's command line.
+    verb include/id=1730
+        qualifier   command_line/syntax=include_command_line
+        parameter   file/id=1731                -
+                    /type=$string               -
+                    /prompt="File"
+    verb @/alias=include
+
+    syntax include_command_line/id=1732
+
+    ! SAVE/ROM file and SAVE/NVRAM file write the ROM or NVRAM; LOAD
+    ! reads one back. With LOAD's /NOERROR, a file that can't be opened
+    ! loads nothing, and the file defaults to DEFAULT.ROM/DEFAULT.NVRAM.
+    verb save/id=1740
+        qualifier   rom/id=1741/nonegatable
+        qualifier   nvram/id=1742/nonegatable
+        parameter   file/id=1743                -
+                    /type=$string
+        disallow    rom and nvram
+
+    verb load/id=1750
+        qualifier   rom/id=1751/nonegatable
+        qualifier   nvram/id=1752/nonegatable
+        qualifier   error/id=1753
+        parameter   file/id=1754                -
+                    /type=$string
+        disallow    rom and nvram
+
 end

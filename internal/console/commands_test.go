@@ -3,6 +3,8 @@ package console
 import (
 	"bytes"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -233,5 +235,94 @@ func TestCommands_depositExamine(t *testing.T) {
 		if err := d.Dispatch(line); err == nil {
 			t.Errorf("%s: no error", line)
 		}
+	}
+}
+
+// TestCommands_saveLoad checks SAVE's and LOAD's qualifiers, /NOERROR
+// among them (which LoadROM used to recognize as its file name).
+func TestCommands_saveLoad(t *testing.T) {
+	d, c, _ := newCommandDispatcher(t)
+	dir := t.TempDir()
+
+	c.Engine.Memory().NVRAMBase = 0x20140400
+	c.Engine.Memory().NVRAM = []byte{1, 2, 3, 4, 5, 6, 7, 8}
+
+	ok := []string{
+		`LOAD/ROM "` + romFixturePath(t) + `"`,
+		`SAVE/ROM "` + filepath.Join(dir, "x.rom") + `"`,
+		`LOAD "` + filepath.Join(dir, "x.rom") + `" /ROM`,
+		`SAVE/NVRAM "` + filepath.Join(dir, "x.nvram") + `"`,
+		`LOAD/NVRAM "` + filepath.Join(dir, "x.nvram") + `"`,
+		"LOAD/ROM/NOERROR",
+		`LOAD/NVRAM/NOERROR "` + filepath.Join(dir, "missing.nvram") + `"`,
+	}
+
+	for _, line := range ok {
+		if err := d.Dispatch(line); err != nil {
+			t.Errorf("%s: %v", line, err)
+		}
+	}
+
+	bad := []struct {
+		line   string
+		status uint32
+	}{
+		{"SAVE FOO.VAX", vmserrors.CLI_NEEDROMNVRAM},
+		{"LOAD/ROM", vmserrors.CLI_NEEDFILENAME},
+		{"SAVE/ROM/NVRAM X", vmserrors.CLI_BADQUALIFIERCOMBO},
+		{"SAVE/NOROM X", vmserrors.CLI_NONEGATE},
+	}
+
+	for _, c := range bad {
+		if err := d.Dispatch(c.line); !errors.Is(err, vmserrors.New(c.status)) {
+			t.Errorf("%s: %v, want %v", c.line, err, vmserrors.New(c.status))
+		}
+	}
+
+	if err := d.Dispatch(`LOAD/ROM "` + filepath.Join(dir, "missing.rom") + `"`); err == nil {
+		t.Error("LOAD/ROM of a missing file: no error")
+	}
+}
+
+// TestCommands_include checks INCLUDE's spellings and
+// INCLUDE/COMMAND_LINE, now a qualifier rather than a file name.
+func TestCommands_include(t *testing.T) {
+	d, c, _ := newCommandDispatcher(t)
+
+	path := filepath.Join(t.TempDir(), "cmds.com")
+	if err := os.WriteFile(path, []byte("SET R6=6\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, line := range []string{`INCLUDE "` + path + `"`, `INC "` + path + `"`, `@"` + path + `"`, `@ "` + path + `"`} {
+		c.CPU.SetGPR(vax.R6, 0)
+
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+
+		if got := c.CPU.GPR(vax.R6); got != 6 {
+			t.Errorf("%s: R6 = %#x, want 6", line, got)
+		}
+	}
+
+	saved := CommandLineString
+	defer func() { CommandLineString = saved }()
+
+	CommandLineString = ""
+
+	if err := d.Dispatch("INCLUDE/COMMAND_LINE"); err != nil {
+		t.Errorf("INCLUDE/COMMAND_LINE with no command: %v", err)
+	}
+
+	CommandLineString = "SET R7=7"
+
+	err := d.Dispatch("INCLUDE/COMMAND_LINE")
+	if !errors.Is(err, vmserrors.New(vmserrors.VAX_QUIT)) {
+		t.Errorf("INCLUDE/COMMAND_LINE: %v, want VAX_QUIT", err)
+	}
+
+	if got := c.CPU.GPR(vax.R7); got != 7 {
+		t.Errorf("R7 = %#x, want 7", got)
 	}
 }

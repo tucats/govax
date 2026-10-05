@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -77,17 +76,17 @@ func (c *Console) SaveROM(path string) error {
 
 // LoadROM reads a binary ROM image file, matching load_rom. path is
 // resolved through c.Paths (docs/PHASE-15.md).
-func (c *Console) LoadROM(path string) error {
-	var ignoreError bool
-
-	if strings.TrimSpace(strings.ToUpper(path)) == "/NOERROR" {
-		ignoreError = true
+//
+// With noError (LOAD/ROM/NOERROR), a file that can't be opened isn't
+// an error: nothing is loaded. Then path may be "", meaning default.rom.
+func (c *Console) LoadROM(path string, noError bool) error {
+	if path == "" && noError {
 		path = "default.rom"
 	}
 
 	f, err := c.Paths.Open(path)
 	if err != nil {
-		if ignoreError {
+		if noError {
 			return nil
 		}
 
@@ -180,17 +179,17 @@ func (c *Console) SaveNVRAM(path string) error {
 
 // LoadNVRAM reads an NVRAM image file, matching load_nvram. path is
 // resolved through c.Paths (docs/PHASE-15.md).
-func (c *Console) LoadNVRAM(path string) error {
-	var ignoreError bool
-
-	if strings.TrimSpace(strings.ToUpper(path)) == "/NOERROR" {
-		ignoreError = true
+//
+// With noError (LOAD/NVRAM/NOERROR), a file that can't be opened isn't
+// an error: nothing is loaded. Then path may be "", meaning default.nvram.
+func (c *Console) LoadNVRAM(path string, noError bool) error {
+	if path == "" && noError {
 		path = "default.nvram"
 	}
 
 	f, err := c.Paths.Open(path)
 	if err != nil {
-		if ignoreError {
+		if noError {
 			return nil
 		}
 

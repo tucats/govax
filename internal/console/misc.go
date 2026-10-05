@@ -10,7 +10,7 @@ import (
 
 // This string contains any "left over" text from the CLI invocation. It is put
 // here by the main() function when it parses the CLI. It exists so you can issue
-// the command "include/command_line" and it implies that the command line text
+// the command "include/command_line" (IncludeCommandLine) and it implies that the command line text
 // should be treated as a command that is read and dispatched. If the string is
 // empty there is no effect.
 var CommandLineString string
@@ -117,6 +117,29 @@ func (c *Console) Time(cmd string, dispatch func(string) error) error {
 	return err
 }
 
+// IncludeCommandLine implements INCLUDE/COMMAND_LINE: the text left on
+// govax's own command line once its options are parsed
+// (CommandLineString) is dispatched as one command, after which the
+// session ends (VAX_QUIT). With no such text it does nothing.
+func (c *Console) IncludeCommandLine(dispatch func(string) error) error {
+	if CommandLineString == "" {
+		return nil
+	}
+
+	text := CommandLineString
+	CommandLineString = ""
+	c.runCommandLine, RunCommandLine = RunCommandLine, ""
+
+	// The command ends the session either way: a failed one-shot command
+	// shouldn't leave the user at a prompt. run (cmd/govax) reports its
+	// failure and exits nonzero.
+	if status := dispatch(text); status != nil {
+		c.commandLineErr = status
+	}
+
+	return vmserrors.Wrap(vmserrors.VAX_QUIT, nil)
+}
+
 // Include reads path line by line, calling dispatch for each non-blank,
 // non-comment ("!"-prefixed) line — a simplified stand-in for
 // console_include.c's push_include/INCLUDE-stack machinery (which supports
@@ -128,29 +151,6 @@ func (c *Console) Time(cmd string, dispatch func(string) error) error {
 // found via the configured search path / embedded fallback, not just a
 // literal relative-to-cwd read.
 func (c *Console) Include(path string, dispatch func(string) error) error {
-	// If the path is the special case of "/command_line" then we fetch the
-	// command line args that were unused by CLI parsing and form them into
-	// the command to dispatch.
-	if strings.EqualFold(strings.TrimSpace(path), "/command_line") {
-		if CommandLineString != "" {
-			text := CommandLineString
-			CommandLineString = ""
-			c.runCommandLine, RunCommandLine = RunCommandLine, ""
-
-			// The command ends the session either way: a failed
-			// one-shot command shouldn't leave the user at a prompt.
-			// run (cmd/govax) reports its failure and exits nonzero.
-			if status := dispatch(text); status != nil {
-				c.commandLineErr = status
-			}
-
-			return vmserrors.Wrap(vmserrors.VAX_QUIT, nil)
-		}
-
-		return nil
-	}
-
-	// not the special flag, so try to read from the named file.
 	b, err := c.Paths.ReadFile(path)
 	if err != nil {
 		return err

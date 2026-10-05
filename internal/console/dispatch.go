@@ -684,39 +684,9 @@ var fixedCommands map[string]fixedHandler
 
 func init() {
 	fixedCommands = map[string]fixedHandler{
-		"SAVE": cmdSave,
-		"LOAD": cmdLoad,
-
-		"INCL": cmdInclude, "INC": cmdInclude, "@": cmdInclude,
-
 		"SET": cmdSet,
 
-		"ASM": cmdAssemble, "ASSE": cmdAssemble,
 	}
-}
-
-// cmdAssemble implements ASM: the batch "ASM <filename>" form
-// (Console.Assemble) when a name is given, or AssembleBegin's interactive
-// REPL mode (docs/PHASE-19.md) for a bare "ASM".
-func cmdAssemble(d *Dispatcher, rest string) error {
-	path := strings.Trim(strings.TrimSpace(rest), `"`)
-	if path == "" {
-		return d.Console.AssembleBegin()
-	}
-
-	entryAddr, hasEntry, err := d.Console.Assemble(path)
-	if err != nil {
-		return err
-	}
-
-	if hasEntry {
-		// console.c's own post-command hook: a .END-named entry address
-		// auto-invokes "CALL __ENTRY" (no arguments) once the file
-		// finishes assembling.
-		return d.Console.Call(entryAddr, false)
-	}
-
-	return nil
 }
 
 // assembleInteractiveLine hands one line to Console.AssembleInteractiveLine
@@ -734,12 +704,6 @@ func (d *Dispatcher) assembleInteractiveLine(line string) error {
 	}
 
 	return nil
-}
-
-func cmdInclude(d *Dispatcher, rest string) error {
-	path := strings.Trim(strings.TrimSpace(rest), `"`)
-
-	return d.Console.Include(path, d.Dispatch)
 }
 
 // leadingQualifier reads one leading "/word" token off s (up to the next
@@ -1140,68 +1104,4 @@ func cmdSetPTE(d *Dispatcher, rest string) error {
 	}
 
 	return nil
-}
-
-// cmdSave/cmdLoad implement SAVE/LOAD's "/ROM <file>" and "/NVRAM <file>"
-// forms (rom.go); the plain (no qualifier) SAVE/LOAD .VAX-file form isn't
-// implemented — see rom.go's doc comment.
-func cmdSave(d *Dispatcher, rest string) error {
-	// console_save.c checks `if (!vax_init) return VAX_NOVAX;` before doing
-	// anything else -- ROM/NVRAM now live on Engine.Memory(), which doesn't
-	// exist until INIT has allocated a machine.
-	if err := d.Console.requireInit(); err != nil {
-		return err
-	}
-
-	kind, file, err := parseRomOrNvramArg(rest)
-	if err != nil {
-		return err
-	}
-
-	if kind == "ROM" { //nolint:goconst
-		return d.Console.SaveROM(file)
-	}
-
-	return d.Console.SaveNVRAM(file)
-}
-
-func cmdLoad(d *Dispatcher, rest string) error {
-	// console_load.c checks `if (!vax_init) return VAX_NOVAX;` before doing
-	// anything else -- see cmdSave's identical guard above.
-	if err := d.Console.requireInit(); err != nil {
-		return err
-	}
-
-	kind, file, err := parseRomOrNvramArg(rest)
-	if err != nil {
-		return err
-	}
-
-	if kind == "ROM" {
-		return d.Console.LoadROM(file)
-	}
-
-	return d.Console.LoadNVRAM(file)
-}
-
-func parseRomOrNvramArg(rest string) (kind, file string, err error) {
-	rest = strings.TrimSpace(rest)
-
-	switch {
-	case strings.HasPrefix(strings.ToUpper(rest), "/ROM"):
-		kind, rest = "ROM", rest[4:]
-
-	case strings.HasPrefix(strings.ToUpper(rest), "/NVRAM"):
-		kind, rest = "NVRAM", rest[6:]
-
-	default:
-		return "", "", vmserrors.New(vmserrors.CLI_NEEDROMNVRAM)
-	}
-
-	file = strings.Trim(strings.TrimSpace(rest), `"`)
-	if file == "" {
-		return "", "", vmserrors.New(vmserrors.CLI_NEEDFILENAME, kind)
-	}
-
-	return kind, file, nil
 }

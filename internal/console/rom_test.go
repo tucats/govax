@@ -21,7 +21,7 @@ func romFixturePath(t *testing.T) string {
 
 func TestLoadROM_realFixture(t *testing.T) {
 	c, _ := newTestConsole(t)
-	if err := c.LoadROM(romFixturePath(t)); err != nil {
+	if err := c.LoadROM(romFixturePath(t), false); err != nil {
 		t.Fatalf("LoadROM: %v", err)
 	}
 
@@ -59,7 +59,7 @@ func TestSaveROM_roundTripsRealFixtureContent(t *testing.T) {
 	c, _ := newTestConsole(t)
 	orig := romFixturePath(t)
 
-	if err := c.LoadROM(orig); err != nil {
+	if err := c.LoadROM(orig, false); err != nil {
 		t.Fatalf("LoadROM: %v", err)
 	}
 
@@ -69,7 +69,7 @@ func TestSaveROM_roundTripsRealFixtureContent(t *testing.T) {
 	}
 
 	c2, _ := newTestConsole(t)
-	if err := c2.LoadROM(out); err != nil {
+	if err := c2.LoadROM(out, false); err != nil {
 		t.Fatalf("LoadROM(roundtrip): %v", err)
 	}
 
@@ -101,7 +101,7 @@ func TestSaveLoadROM_synthetic(t *testing.T) {
 	}
 
 	c2, _ := newTestConsole(t)
-	if err := c2.LoadROM(path); err != nil {
+	if err := c2.LoadROM(path, false); err != nil {
 		t.Fatalf("LoadROM: %v", err)
 	}
 
@@ -123,7 +123,7 @@ func TestLoadROM_rejectsWrongMagic(t *testing.T) {
 	}
 
 	c, _ := newTestConsole(t)
-	if err := c.LoadROM(path); err == nil {
+	if err := c.LoadROM(path, false); err == nil {
 		t.Error("expected an error loading a non-ROM file")
 	}
 }
@@ -139,7 +139,7 @@ func TestSaveLoadNVRAM_roundTrip(t *testing.T) {
 	}
 
 	c2, _ := newTestConsole(t)
-	if err := c2.LoadNVRAM(path); err != nil {
+	if err := c2.LoadNVRAM(path, false); err != nil {
 		t.Fatalf("LoadNVRAM: %v", err)
 	}
 

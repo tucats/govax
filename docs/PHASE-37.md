@@ -143,6 +143,17 @@ Each subtask is committed when its tests pass.
 - **DEPOSIT's target ends at `=`** (`/separator="="`), so a comparison
   in a DEPOSIT target needs parentheses; the value may compare freely.
   Every DEPOSIT spelling now works, `DEPOSIT` itself included.
+- **`/NOERROR` and `/COMMAND_LINE` are qualifiers.** `LoadROM` and
+  `LoadNVRAM` take a `noError` flag instead of comparing their file name
+  with `/NOERROR`; with it, the file may be omitted (DEFAULT.ROM,
+  DEFAULT.NVRAM) and an unopenable file loads nothing, as before. LOAD's
+  file may now come before the qualifier, too. `INCLUDE/COMMAND_LINE` is
+  a syntax of its own (`Console.IncludeCommandLine`), split out of
+  `Include`. console_load.c's `/SILENT` synonym for `/NOERROR`, and
+  console_include's `/[NO]VERIFY`, `/LIST`, and `/ASM`, were never in the
+  Go port and aren't added.
+- **`govax asm` quotes its file names,** as `govax run`, `macro`, and
+  `link` do (`doCmd`).
 - **Handlers live in `internal/console/commands.go`** (`bindConsoleCommands`),
   called from `bindGrammar`.
 
@@ -164,3 +175,6 @@ Each subtask is committed when its tests pass.
 - 2026-10-04: Subtask 4: EXAMINE/EX/DUMP, DEPOSIT/D, DISASSEMBLE/DIS.
   Sizes are qualifiers anywhere on the line, at most one of them
   (`disallow any2`). `TestCommands_depositExamine`.
+- 2026-10-04: Subtask 5: ASM/ASSEMBLE, INCLUDE/`@`, SAVE, LOAD. Tests
+  quote the host paths they pass. `TestCommands_saveLoad`,
+  `TestCommands_include`. Only SET is left in `fixedCommands`.

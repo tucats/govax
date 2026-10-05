@@ -50,6 +50,103 @@ func (d *Dispatcher) bindConsoleCommands() {
 	g.Bind("EXAMINE", d.examineCommand)
 	g.Bind("DEPOSIT", d.depositCommand)
 	g.Bind("DISASSEMBLE", d.disassembleCommand)
+
+	g.Bind("ASM", d.asmCommand)
+	g.Bind("INCLUDE", func(id int64, r *dcl.Result) error {
+		return d.Console.Include(r.String("FILE"), d.Dispatch)
+	})
+	g.Bind("INCLUDE_COMMAND_LINE", func(id int64, r *dcl.Result) error {
+		return d.Console.IncludeCommandLine(d.Dispatch)
+	})
+	g.Bind("SAVE", d.saveCommand)
+	g.Bind("LOAD", d.loadCommand)
+}
+
+// asmCommand implements ASM: the batch "ASM file" form (Console.Assemble)
+// when a file is named, or AssembleBegin's interactive mode
+// (docs/PHASE-19.md) for a bare "ASM".
+func (d *Dispatcher) asmCommand(id int64, r *dcl.Result) error {
+	if !r.Present("FILE") {
+		return d.Console.AssembleBegin()
+	}
+
+	entryAddr, hasEntry, err := d.Console.Assemble(r.String("FILE"))
+	if err != nil {
+		return err
+	}
+
+	if hasEntry {
+		// console.c's own post-command hook: a .END-named entry address
+		// auto-invokes "CALL __ENTRY" (no arguments) once the file
+		// finishes assembling.
+		return d.Console.Call(entryAddr, false)
+	}
+
+	return nil
+}
+
+// romOrNVRAM returns which of /ROM and /NVRAM a SAVE or LOAD command was
+// given, and its file; one of them is required, and so is the file unless
+// noError allows a default.
+func romOrNVRAM(r *dcl.Result, noError bool) (kind, file string, err error) {
+	switch {
+	case r.Present("ROM"):
+		kind = "ROM"
+	case r.Present("NVRAM"):
+		kind = "NVRAM"
+	default:
+		return "", "", vmserrors.New(vmserrors.CLI_NEEDROMNVRAM)
+	}
+
+	file = r.String("FILE")
+	if file == "" && !noError {
+		return "", "", vmserrors.New(vmserrors.CLI_NEEDFILENAME, kind)
+	}
+
+	return kind, file, nil
+}
+
+// saveCommand implements SAVE/ROM file and SAVE/NVRAM file (rom.go). The
+// plain .VAX-file SAVE isn't implemented; see rom.go's doc comment.
+func (d *Dispatcher) saveCommand(id int64, r *dcl.Result) error {
+	// console_save.c checks `if (!vax_init) return VAX_NOVAX;` before
+	// doing anything else -- ROM/NVRAM live on Engine.Memory(), which
+	// doesn't exist until INIT has allocated a machine.
+	if err := d.Console.requireInit(); err != nil {
+		return err
+	}
+
+	kind, file, err := romOrNVRAM(r, false)
+	if err != nil {
+		return err
+	}
+
+	if kind == "ROM" {
+		return d.Console.SaveROM(file)
+	}
+
+	return d.Console.SaveNVRAM(file)
+}
+
+// loadCommand implements LOAD/ROM and LOAD/NVRAM [/NOERROR] [file].
+func (d *Dispatcher) loadCommand(id int64, r *dcl.Result) error {
+	// console_load.c's same vax_init check as saveCommand's.
+	if err := d.Console.requireInit(); err != nil {
+		return err
+	}
+
+	noError := r.Present("ERROR") && r.Negated("ERROR")
+
+	kind, file, err := romOrNVRAM(r, noError)
+	if err != nil {
+		return err
+	}
+
+	if kind == "ROM" {
+		return d.Console.LoadROM(file, noError)
+	}
+
+	return d.Console.LoadNVRAM(file, noError)
 }
 
 // examineSize returns the size qualifier EXAMINE or DEPOSIT was given,
