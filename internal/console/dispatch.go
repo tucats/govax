@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/console/dcl"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/link"
+	"github.com/tucats/govax/internal/obj"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -586,6 +587,33 @@ func (d *Dispatcher) bindGrammar() {
 			Map:          r.Present("MAP") && !r.Negated("MAP") && !r.Defaulted("MAP"),
 			MapFile:      r.String("MAP"),
 			Brief:        r.Present("BRIEF"),
+		})
+	})
+
+	// docs/PHASE-38.md: ANALYZE/OBJECT describes object files
+	// (Console.AnalyzeObject, internal/console/analyze.go). Each kind of
+	// analysis is a qualifier with its own syntax; a bare ANALYZE names
+	// none.
+	g.Bind("ANALYZE", func(id int64, r *dcl.Result) error {
+		return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "/OBJECT")
+	})
+
+	g.Bind("ANALYZE_OBJECT", func(id int64, r *dcl.Result) error {
+		var selected []obj.RecordType
+
+		for _, q := range analyzeRecordQualifiers {
+			if r.Present(q.name) && !r.Negated(q.name) {
+				selected = append(selected, q.types...)
+			}
+		}
+
+		return d.Console.AnalyzeObject(AnalyzeOptions{
+			Files:       r.List("FILES"),
+			Host:        r.ParamPresent("FILES", "HOST"),
+			Output:      r.Present("OUTPUT") && !r.Negated("OUTPUT") && !r.Defaulted("OUTPUT"),
+			OutputFile:  r.String("OUTPUT"),
+			Select:      selected,
+			CommandLine: d.line,
 		})
 	})
 

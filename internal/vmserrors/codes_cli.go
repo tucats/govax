@@ -138,6 +138,10 @@ const (
 	// docs/PHASE-34.md (2026-10-04): DCL symbols and foreign commands.
 	cliExpSyn
 	cliSymDepth
+
+	// docs/PHASE-38.md: the ANALYZE command.
+	cliAnalyze
+	cliAnalyzeErrors
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -313,6 +317,14 @@ const (
 	// CLI_SYMDEPTH reports symbols that substitute for one another too
 	// many times, as an alias defined in terms of itself does.
 	CLI_SYMDEPTH = CLIFacility<<FacilityPosition | cliSymDepth<<MessagePosition | StatusError
+
+	// CLI_ANALYZE reports an ANALYZE command that couldn't read its input
+	// or write its output.
+	CLI_ANALYZE = CLIFacility<<FacilityPosition | cliAnalyze<<MessagePosition | StatusError
+
+	// CLI_ANALYZEERRORS reports that ANALYZE/OBJECT found errors in a
+	// file; the report says what they are.
+	CLI_ANALYZEERRORS = CLIFacility<<FacilityPosition | cliAnalyzeErrors<<MessagePosition | StatusWarning
 )
 
 func init() {
@@ -333,6 +345,8 @@ func init() {
 	DefineMessage(CLI_UNDEFSYM, CLIFacility, "UNDEFSYM", "Undefined symbol !Q")
 	DefineMessage(CLI_EXPSYN, CLIFacility, "EXPSYN", "Invalid expression syntax: !Q")
 	DefineMessage(CLI_SYMDEPTH, CLIFacility, "SYMDEPTH", "Symbol !Q substitutes for itself")
+	DefineMessage(CLI_ANALYZE, CLIFacility, "ANALYZE", "Analyzing !S")
+	DefineMessage(CLI_ANALYZEERRORS, CLIFacility, "ANALYZEERRORS", "The analysis of !S uncovered errors")
 	DefineMessage(CLI_NOPROFILE, CLIFacility, "NOPROFILE", "SHOW INSTRUCTIONS/PROFILE is not implemented (no per-opcode execution counters in this port)")
 	DefineMessage(CLI_NOMODES, CLIFacility, "NOMODES", "SHOW INSTRUCTIONS/MODES is not implemented (no addressing-mode legality table exposed by this port)")
 	DefineMessage(CLI_BADOPCODE, CLIFacility, "BADOPCODE", "Invalid opcode !Q")

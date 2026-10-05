@@ -856,6 +856,40 @@ grammar console
         qualifier   brief/id=1357
 
     !
+    ! docs/PHASE-38.md (internal/anl, internal/console/analyze.go):
+    ! ANALYZE/OBJECT describes object files as VMS's ANALYZE does. Each
+    ! kind of analysis is a qualifier that switches to its own syntax, so
+    ! ANALYZE/IMAGE can join /OBJECT with qualifiers of its own. FILES may
+    ! be host files or volume files (HOST forces the host). OUTPUT is
+    ! /OUTPUT[=file] (empty default: NAME.ANL beside the input); without
+    ! it the report goes to the console. DBG, EOM, GSD, LNK, MHD, TBT,
+    ! and TIR limit the records shown; INCLUDE names modules of an object
+    ! library (empty default: every module).
+    !
+    syntax analyze_object
+        parameter   files/id=1901               -
+                    /type=$string/list          -
+                    /prompt="File"
+        qualifier   host/id=1902                -
+                    /parameter=files
+        qualifier   output/id=1903              -
+                    /type=$string               -
+                    /default=""
+        qualifier   dbg/id=1904
+        qualifier   eom/id=1905
+        qualifier   gsd/id=1906
+        qualifier   lnk/id=1907
+        qualifier   mhd/id=1908
+        qualifier   tbt/id=1909
+        qualifier   tir/id=1910
+        qualifier   include/id=1911             -
+                    /type=$string/list          -
+                    /default=""
+
+    verb analyze/id=1900
+        qualifier object/syntax=analyze_object
+
+    !
     ! govax-native extension (docs/PHASE-28.md subtask 7, internal/console
     ! + internal/lbr): LIBRARY creates, changes, extracts from, and lists
     ! macro (.MLB) and object (.OLB) libraries, in the style of VMS's

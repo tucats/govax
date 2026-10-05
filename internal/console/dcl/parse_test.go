@@ -451,3 +451,25 @@ func TestParse_quotedStringPreservesCase(t *testing.T) {
 		t.Error("expected DEBUG present")
 	}
 }
+
+// TestParse_syntaxQualifierLater checks that a qualifier of a syntax the
+// verb switches to may come before the qualifier that switches
+// (ANALYZE/GSD/OBJECT), and that quoted text isn't searched.
+func TestParse_syntaxQualifierLater(t *testing.T) {
+	g := loadEvaxGrammar(t)
+
+	for _, line := range []string{"ANALYZE/OBJECT/GSD X", "ANALYZE/GSD/OBJECT X", "ANALYZE/GSD X/OBJECT"} {
+		r, err := g.Parse(line)
+		if err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+
+		if !r.Present("GSD") || !r.Present("OBJECT") || r.String("FILES") != "X" {
+			t.Errorf("%s: GSD %v, OBJECT %v, FILES %q", line, r.Present("GSD"), r.Present("OBJECT"), r.String("FILES"))
+		}
+	}
+
+	if _, err := g.Parse(`ANALYZE/GSD "/OBJECT"`); err == nil {
+		t.Error(`ANALYZE/GSD "/OBJECT" parsed`)
+	}
+}

@@ -1,6 +1,7 @@
 package dcl
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/tucats/govax/internal/vmserrors"
@@ -334,10 +335,24 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 		// (qualifier slashes included) and end the parse, matching
 		// DCLparse's fsm_allow_rest gate.
 		if pos[0] == '/' {
-			active, nextParam, lastParam, pos, err = g.parseQualifier(r, active, nextParam, lastParam, pos[1:])
+			next, np, lp, rest, err := g.parseQualifier(r, active, nextParam, lastParam, pos[1:])
+
+			// A qualifier the verb doesn't know may belong to a syntax
+			// one of the verb's qualifiers switches to later on the line
+			// (ANALYZE/GSD/OBJECT): switch now, and try it again.
+			if err != nil && active == verb && errors.Is(err, vmserrors.New(vmserrors.CLI_UNRECOGNIZED)) {
+				if target, without, ok := g.syntaxLater(r, verb, pos); ok {
+					active, nextParam, lastParam, pos = target, 0, nil, without
+
+					continue
+				}
+			}
+
 			if err != nil {
 				return nil, err
 			}
+
+			active, nextParam, lastParam, pos = next, np, lp, rest
 
 			continue
 		}
@@ -783,6 +798,50 @@ func upcaseOutsideQuotes(s string) string {
 	}
 
 	return b.String()
+}
+
+// syntaxLater looks along line for a qualifier of verb that switches to
+// another syntax (a value-less /syntax= qualifier, such as ANALYZE's
+// /OBJECT). Real DCL applies such a qualifier to the whole command,
+// wherever it is on the line; the parser, which reads left to right,
+// switches only when it reaches it. When a qualifier before it is one only
+// the new syntax knows, Parse calls this to switch early: it marks the
+// switching qualifier present and returns its syntax and the line without
+// it. Quoted text is skipped.
+func (g *Grammar) syntaxLater(r *Result, verb *Entry, line string) (*Entry, string, bool) {
+	inQuote := false
+
+	for i := 0; i < len(line); i++ {
+		switch {
+		case line[i] == '"':
+			inQuote = !inQuote
+
+			continue
+		case inQuote || line[i] != '/':
+			continue
+		}
+
+		name, rest := readBareToken(line[i+1:])
+		if name == "" || strings.HasPrefix(rest, "=") {
+			continue
+		}
+
+		q, negated, err := matchQualifier(verb.Qualifiers, name)
+		if err != nil || negated || q.Syntax == "" || q.hasValue() {
+			continue
+		}
+
+		target, ok := g.entries[q.Syntax]
+		if !ok {
+			return nil, "", false
+		}
+
+		r.markPresent(q.Name, q.ID, false)
+
+		return target, line[:i] + rest, true
+	}
+
+	return nil, "", false
 }
 
 // readBareToken reads a run of characters up to the next '=', '/',

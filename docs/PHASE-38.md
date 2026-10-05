@@ -178,6 +178,13 @@ module.`, as `dbgsrc.anl` shows at the end of the file.
         ! qualifier image/syntax=analyze_image   (a later phase)
 ```
 
+A qualifier of the object syntax may come before `/OBJECT`
+(`ANALYZE/GSD/OBJECT`), as real DCL allows: when the verb doesn't know a
+qualifier, the parser looks ahead on the line for one of the verb's
+syntax-switching qualifiers and switches early (`syntaxLater` in
+`internal/console/dcl/parse.go`; a pure fallback, so lines that parsed
+before parse as they did).
+
 `ANALYZE` alone answers that a qualifier is needed (VMS's own default
 isn't settled from the evidence here); `/OBJECT` selects the object
 syntax, and `/IMAGE` will select its own syntax, with its own
@@ -269,6 +276,11 @@ blanks (never pushed) from the separators (pushed at 55).
 - The output is matched to the fixtures byte for byte except for the date
   and time; anything the fixtures don't show is a reasonable choice in the
   same style, recorded here when made.
+- The closing command line is the line as typed, trimmed (VMS shows it
+  after DCL's processing; the fixtures' commands were already uppercase).
+- Several files on one command, or `/OUTPUT` with several inputs: each
+  report is complete (its own pages from 1, its own summary and closing
+  line), one after another (unconfirmed).
 - `ANALYZE` with no qualifier asks for one rather than assuming `/OBJECT`
   (unconfirmed what VMS does).
 - **ANALYZE's names differ from VMS 7.3's objfmt.sdl in two places.**
@@ -356,3 +368,19 @@ that `obj.Check` also applies (`internal/anl/check.go`):
   it). IDC flags are shown field by field (ident match, error severity,
   binary ident); ENV flags as named bits. On a stack underflow the stack
   is taken as empty, so each underflow is reported once.
+- 2026-10-05: Subtask 6: the console command. `console.dcl`'s `analyze`
+  verb and `analyze_object` syntax; `Console.AnalyzeObject`
+  (`internal/console/analyze.go`): host or volume files (default type
+  OBJ), the report to the console (Latin-1 converted to UTF-8 there) or
+  with `/OUTPUT` to a text file (default NAME.ANL beside the first input;
+  each input's report paged on its own, one after another), the
+  record-type qualifiers, `CLI_ANALYZE` and `CLI_ANALYZEERRORS` (a
+  warning, after every report is written). The DCL engine switches to a
+  syntax early for a qualifier written before the one that selects it.
+  The page header names a host file by its absolute path. Tests:
+  `TestAnalyze_hostFile` (VMS's HELLO.ANL, times, file, and command
+  masked), `_console`, `_volume` (header `DUA0:[000000]HELLO.OBJ;1`),
+  `_errors`; `TestParse_syntaxQualifierLater`. An early run of the tests,
+  with `/OUTPUT`'s empty default mistaken for `/OUTPUT`, overwrote two
+  fixtures beside their objects; they were restored from git before
+  anything was committed.
