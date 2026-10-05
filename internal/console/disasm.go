@@ -58,15 +58,14 @@ func (c *Console) Disassemble(start, end uint32) error {
 }
 
 // decodeInstruction wraps disasm.Disassemble with entry-mask detection: if pc
-// is a symbol's .ENTRY address (Console.Symbols' IsEntry, merged from
-// internal/asm's own SymEntry flag — see asm.go's Assemble), the word there
-// is a register-save mask, not an instruction, and is decoded as one —
-// matching decode_opcode.c's combined execute/disassemble entry point,
-// which scans the symbol table by PC for exactly this reason. Without this,
-// a mask word like hello.asm's ".entry main, ^m<>" either misdecodes as a
-// bogus opcode or, worse, as some unrelated real instruction.
+// is a routine's entry (see entryAt), the word there is a register-save
+// mask, not an instruction, and is decoded as one -- matching
+// decode_opcode.c's combined execute/disassemble entry point, which scans
+// the symbol table by PC for exactly this reason. Without this, a mask
+// word like hello.asm's ".entry main, ^m<>" either misdecodes as a bogus
+// opcode or, worse, as some unrelated real instruction.
 func (c *Console) decodeInstruction(r disasm.ByteReader, pc uint32) (disasm.Decoded, error) {
-	if name, ok := c.Symbols.EntryAt(pc); ok {
+	if name, ok := c.entryAt(pc); ok {
 		return disasm.EntryMask(r, pc, name), nil
 	}
 
@@ -76,11 +75,38 @@ func (c *Console) decodeInstruction(r disasm.ByteReader, pc uint32) (disasm.Deco
 	// shows the routine's name.
 	if instr.Mnemonic == "CALLS" || instr.Mnemonic == "CALLG" {
 		if len(instr.Operands) > 1 && instr.Operands[1].Mode == disasm.ModeAbsolute {
-			if name, ok := c.Symbols.EntryAt(instr.Operands[1].Target); ok {
+			if name, ok := c.entryAt(instr.Operands[1].Target); ok {
 				instr.Operands[1].Symbol = name
 			}
 		}
 	}
 
 	return instr, err
+}
+
+// entryAt reports the name of the CALLS/CALLG routine whose entry (its
+// register-save mask) is at pc: a console symbol flagged as an entry
+// point (the ASM command's .ENTRY symbols, or SET/ENTRY's), else a
+// routine in a loaded image's debug symbol table (Phase 41). The DST's
+// routines are how the mask of a real VMS image's routine is found: RUN
+// puts none of an image's names in the console's table. Both images
+// linked /DEBUG and those linked with only traceback name their routines
+// there. A JSB routine (dbgsym.Routine.NoCall) has no mask, so it isn't
+// one.
+func (c *Console) entryAt(pc uint32) (string, bool) {
+	if name, ok := c.Symbols.EntryAt(pc); ok {
+		return name, true
+	}
+
+	for _, icb := range c.ICBList {
+		if icb.Debug == nil {
+			continue
+		}
+
+		if r, _, ok := icb.Debug.RoutineAt(pc); ok && r.Address == pc && !r.NoCall {
+			return r.Name, true
+		}
+	}
+
+	return "", false
 }

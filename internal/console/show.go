@@ -1203,10 +1203,14 @@ func (c *Console) ShowImages(full bool) error {
 	c.Printf("ACTIVE IMAGES IN MEMORY:\n")
 
 	for _, icb := range c.ICBList {
-		c.Printf("    %-39s  %08X  %08X\n", icb.Name, icb.Base, icb.End)
+		c.Printf("    %-39s  %08X  %08X%s\n", icb.Name, icb.Base, icb.End, debugKind(icb))
 
 		if !full {
 			continue
+		}
+
+		if icb.DebugErr != nil {
+			c.Printf("        debug symbol table unreadable: %v\n", icb.DebugErr)
 		}
 
 		if icb.Transfer[0] == 0 {
@@ -1252,6 +1256,25 @@ func (c *Console) ShowImages(full bool) error {
 	}
 
 	return nil
+}
+
+// debugKind is SHOW IMAGES' note of the debug data an image has: "DEBUG"
+// for one linked /DEBUG (a DST with line numbers and symbols, a debug
+// module table, and a global symbol table), "TRACEBACK" for one linked
+// with traceback only (a DST of modules, routines, and psects), and
+// nothing for one linked /NOTRACEBACK.
+func debugKind(icb *ICB) string {
+	if icb.Debug == nil {
+		return ""
+	}
+
+	for _, m := range icb.Debug.Modules {
+		if len(m.Ranges) > 0 || len(m.Lines) > 0 {
+			return "  DEBUG"
+		}
+	}
+
+	return "  TRACEBACK"
 }
 
 // ShowSymbol prints one symbol's value, matching the single-name form of

@@ -6,10 +6,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
+	"github.com/tucats/govax/internal/vmsimage"
 )
 
 // This file is the Go port of console_run.c's image_load/image_fixup and
@@ -117,6 +119,14 @@ type ICB struct {
 	FixupISD *ISD
 	IAF      IAF
 	SHRList  []*SHR
+
+	// Debug is the image's debug symbol table (Phase 41), read from the
+	// image file when it's loaded and relocated by Base: its modules,
+	// routines, symbols, and line numbers. Nil for an image linked
+	// /NOTRACEBACK, which has none, or when it couldn't be read; then
+	// DebugErr says why (nil when there's simply no table).
+	Debug    *dbgsym.Program
+	DebugErr error
 }
 
 // resetICBList discards every loaded image and resets the P0 high-water
@@ -488,6 +498,8 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 
 	icb.Flags &^= icbIncomplete
 
+	icb.Debug, icb.DebugErr = readDebugSymbols(data, icb.Base)
+
 	if icb.FixupISD != nil {
 		addr := icb.Base + (uint32(icb.FixupISD.VPN) << 9)
 
@@ -550,6 +562,26 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 	}
 
 	return icb, nil
+}
+
+// readDebugSymbols reads the debug symbol table of the image file data,
+// loaded at base (see dbgsym.Read). An image without one gives nil and no
+// error. A table that can't be read doesn't stop the image from loading
+// or running, since only the disassembler's names depend on it, so the
+// error is returned for SHOW IMAGES/FULL to report rather than for
+// imageLoad to fail on.
+func readDebugSymbols(data []byte, base uint32) (*dbgsym.Program, error) {
+	img, err := vmsimage.ReadImage(data)
+	if err != nil {
+		return nil, err
+	}
+
+	prog, err := dbgsym.Read(img, data, base)
+	if errors.Is(err, dbgsym.ErrNoDST) {
+		return nil, nil
+	}
+
+	return prog, err
 }
 
 // findSHRByID returns the SHR entry with the given id from icb's dependency

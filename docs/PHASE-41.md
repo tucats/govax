@@ -743,3 +743,30 @@ system services, and the layout of a location longer than 24 columns.
   `TestTracebackOnly` (DBGTRC and TRDBGTRC read from the DST alone:
   no ranges, no globals, `ModuleAt` from the PSECT records), and
   `TestRelocatedTables`.
+
+### 2026-10-05 — Subtask 8: loading it with the image
+
+- **`ICB.Debug`** (`internal/console/image.go`): `imageLoad` reads each
+  image's debug symbol table from the file bytes it already holds
+  (`readDebugSymbols`: `vmsimage.ReadImage`, then `dbgsym.Read` with
+  `ICB.Base`) once its sections are mapped. It goes with the ICB, so
+  `resetICBList` drops it. An image linked `/NOTRACEBACK` has none (nil,
+  no error). A table that can't be read doesn't stop the image from
+  loading or running, since only the disassembler's names depend on it:
+  the error is kept in `ICB.DebugErr`, and `SHOW IMAGES/FULL` prints it.
+- **`SHOW IMAGES`** notes each image's debug data after its address
+  range: `DEBUG` for a `/DEBUG` link (a debug module table or line
+  numbers), `TRACEBACK` for a DST of modules, routines, and psects only,
+  nothing for none. The notes are govax's own; VMS has no such command.
+- **Entry masks** (`internal/console/disasm.go`): `entryAt` asks the
+  console's symbol table, then every loaded image's DST routines, for a
+  CALL routine (not a JSB one, `NoCall`) whose entry is at the address.
+  `decodeInstruction` uses it for the mask word and for naming an
+  absolute `CALLS`/`CALLG` target. So a real image's `.ENTRY` masks are
+  now shown as masks, in traceback-only images too: TRACE's three were
+  decoded as instructions before.
+- **Tests** (`dbgimage_test.go`): `TestImageDebugSymbols` runs TRLNKDBG,
+  TRDBGTRC, and TRNOTB as `RUN/STEP` does and checks what each ICB holds
+  and `SHOW IMAGES`' note; `TestDisassembleImageEntryMasks` disassembles
+  TRACE's code in TRLNKDBG and TRDBGTRC and finds `.ENTRY TRACE,^M<R2>`,
+  `.ENTRY FIRST,^M<>`, and `.ENTRY SECOND,^M<R2>`.
