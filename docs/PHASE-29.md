@@ -15,8 +15,10 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: complete (2026-10-04).** Every subtask is done but 12, the
-debugger records, which the author deferred (see its log entry).
+**Status: reopened (2026-10-05) for LINK/DEBUG.** Subtasks 1 to 15
+were done by 2026-10-05; 12, the debugger records, was deferred and
+then done. The author then asked for LINK/DEBUG, which Decision 4 had
+left out, so subtasks 16 to 20 add it.
 
 ## What Phase 27 leaves in place
 
@@ -215,6 +217,93 @@ symbol-table descriptor (IHS) at it. govax's LINK does the same, so
 `withoutDST` goes away, and real VMS gives a symbolic traceback for a
 govax-linked image. `/NOTRACEBACK` leaves the DST out, as it does now.
 
+### What real LINK/DEBUG writes
+
+Added 2026-10-05 for subtasks 16 to 20. Three real `LINK/DEBUG` images
+show what it writes:
+
+- `trdbglnk.exe`: TRDEBUG, TRACE assembled `/DEBUG`;
+- `trlnkdbg.exe`: TRACE, with no DBG records;
+- `forth.exe`: FORTH assembled `/DEBUG`, in `testdata/mar/dst/vax`.
+
+Each has an ANALYZE/IMAGE report and a map, and the probe has the same
+objects linked without `/DEBUG` (`trdbgtrc.exe`, `trace.exe`).
+`DEBUG-RECORDS.md` (§1.2, §1.3, §2) names the fields, and the 7.3 Linker
+manual gives `/DEBUG`'s rules.
+
+- **The manual.** `/DEBUG` puts DBG and TBT records in the DST and
+  gives the debugger control when the image runs. It turns traceback
+  on, overriding `/NOTRACEBACK`. `/DEBUG=file` links a user-written
+  debugger module (out of scope). In a traceback link, the DBG records
+  are skipped, as govax does now.
+- **The header.** The only change is IHD$V_LNKDEBUG (bit 0 of the link
+  flags). The transfer addresses are the same as a traceback link's,
+  `SYS$IMGSTA` first: the image activator, not LINK, starts the
+  debugger. (IHD$L_IDENT at +0x24 also differs, but it comes from the
+  link time.)
+- **The DST.**
+  - TRDBGLNK's is 308 bytes where TRDBGTRC's is 106: the DBG records'
+    DST records join the TBT records'.
+  - TRLNKDBG's is TRACE's own 106 bytes.
+  - FORTH's is 28,428 bytes at VBN 24 (56 blocks).
+  - DBG and TBT records very likely go into one stream in record order,
+    since MACRO puts its line-number DBG records among the TIR records
+    and its symbol DBG records between two TBT records. Subtask 16
+    confirms it.
+- **The DMT** (debug module table, §2.3) follows the DST, at the next
+  block:
+  - TRACE's is 36 bytes at VBN 7. Its header gives the module-begin
+    offset (0), the DST size (0x6A), and 3 psects. Then come each
+    psect's base and length: `DATA` (0x400, 0x29), `$CODE` (0x600, 0x43),
+    and `$CONST` (0x200, 0x08). That's the object's psect order, not
+    address order.
+  - FORTH's is 60 bytes at VBN 80, with 6 psects and a DST size of
+    0x6F0C.
+  - Several things are unconfirmed:
+    - Whether a zero-length psect, an absolute psect, or a psect shared
+      by several modules gets a DMT entry. The fixtures have one module
+      each.
+    - Whether the DMT's block is padded to a whole block, as TRACE's
+      VBN 7 to 8 suggests.
+- **The GST** (global symbol table) follows the DMT, at the next block:
+  - It's object records in the variable-length layout (`obj.ReadRecords`
+    reads it), and it isn't padded: `trlnkdbg.exe` is 3,792 bytes, and
+    its GST is its last 208.
+  - The ANALYZE/IMAGE record count is 5: MHD, LNM, a GSD with one PSC
+    (`.$$ABS$$.`), a GSD of symbols, and EOM.
+  - The MHD's module name and ident are the image's, its two dates are
+    the link time, and its structure level is 0.
+  - The LNM is `Linker V11-39`.
+  - Each symbol is absolute (psect 0, DEF, no REL), with its final value.
+    An entry point keeps its mask (EPM).
+  - **Which symbols:** every global the image's modules define, and the
+    ones library modules define that the link uses (FORTH's seven
+    `SYS$` services and `SYS$IMGSTA`, not all of STARLET's). Symbols
+    from shareable images (`LIB$PUT_OUTPUT`) are left out.
+  - **Their order** is unconfirmed. TRACE's is `SYS$IMGSTA`, `LEVEL`,
+    `GLOBDATA`, then `SECOND`, `FIRST`, `TRACE`. FORTH's is the `SYS$`
+    names in name order, then `FORTH`. One rule that fits both: SYM
+    records before EPM records, each in reverse of the order they were
+    defined, with library symbols defined last (so coming first). The
+    library module's own definition order would then have to be
+    reverse name order, which the clean room can't check against
+    STARLET's text.
+  - Whether a large GST splits its symbol GSD into several records, and
+    where, is unconfirmed: FORTH's 8 symbols fit in one.
+- **The IHS** (DEBUG-RECORDS.md §2.2):
+  - IHS$L_DSTVBN (+0) and IHS$W_DSTBLKS (+8), as for traceback.
+  - IHS$L_GSTVBN (+4), and the GST's record count in IHS$W_GSTRECS
+    (+10) and IHS$L_GSTRECS (+24).
+  - IHS$L_DMTVBN (+12) and IHS$L_DMTBYTES (+16).
+  - **IHS$L_DSTBLKS (+20) is the DST's block count**, which FORTH's
+    image shows (56, `0x38`). `image.go` writes a constant 1 there, the
+    "+20 is 1" of subtask 13. That's right only for a DST of one block,
+    which every earlier fixture had, so it's wrong for a longer DST,
+    traceback links included. Subtask 16 fixes it.
+- **The map.** The only differences from a traceback map are in the run
+  statistics (the DEBUG data byte count and "5 global symbol table
+  records"), which govax's map leaves out.
+
 ## Method: the fixtures, then the probe
 
 1. The 30 real listings and 21 real objects already in `testdata/` are
@@ -345,6 +434,56 @@ changes behavior. Each adds to this doc's progress log.
     in Phase 29" note, not a rewrite). Then this doc's status, PLAN.md's
     index, CLAUDE.md's package notes, and HELP.
 
+16. **DBG records into the DST.** `link.Options.Debug`, which turns
+    `Traceback` on as well (the manual: `/DEBUG` overrides
+    `/NOTRACEBACK`). Pass 2 runs a module's DBG records with its TBT
+    records, in record order, on the same DST location counter. The
+    header gets IHD$V_LNKDEBUG, and IHS$L_DSTBLKS (+20) gets the DST's
+    block count, not 1, in every link. The console's `LINK/[NO]DEBUG`
+    (`console.dcl`, `internal/console/link.go`) refuses
+    `/DEBUG=file`, a user-written debugger module (out of scope).
+    `cmd/govax link --debug` is the same option. Tests:
+    `TestLinkProbeDST` takes TRDBGLNK (TRDEBUG's DBG records join its
+    TBT records: 308 bytes, not 106) and TRLNKDBG (TRACE has no DBG
+    records, so its DST is TRACE's), from real MACRO's objects and
+    govax's. FORTH's DST blocks (VBN 24, 56 blocks) are compared too.
+17. **The debug module table (DMT).** One entry per module with DST
+    records: the offset of its module-begin record, its DST size in
+    bytes, a word count of psects and a zero word, then the base and
+    length of each of the module's psect contributions. The DMT is
+    written after the DST, in whole blocks, and the IHS gives its VBN
+    (+12) and byte count (+16). Tests: the DMT blocks of TRDBGLNK,
+    TRLNKDBG, and FORTH.
+18. **The global symbol table (GST).** Object-language records in
+    ODS-2's variable-length layout, after the DMT, which end the file
+    without padding to a whole block. The records are an MHD (the image's
+    name and ident, with the link time as both dates), an LNM
+    (`Linker V11-39`, the linker ID), a GSD with the `.$$ABS$$.` psect,
+    a GSD of the global symbols, then an EOM. The IHS gives the GST's
+    VBN (+4) and its record count (+10, +24). Tests: the GST of TRDBGLNK,
+    TRLNKDBG, and FORTH, record for record.
+19. **Whole images.** TRDBGLNK, TRLNKDBG, and FORTH match real LINK's
+    images byte for byte. These are linked from real MACRO's objects and,
+    where they match (TRACE), from govax's. The links that need VMS's
+    libraries are skipped without them. FORTH may need its own symbol
+    table entries in place of VMS's libraries. The maps already match:
+    govax's map leaves out the run statistics, where real LINK's
+    `/DEBUG` maps differ. ANALYZE/IMAGE of govax's images matches
+    `trdbglnk.ani`, `trlnkdbg.ani`, and `forth.ani` but for the times.
+    RUN of an image linked `/DEBUG` runs the program, since govax has no
+    debugger to start.
+20. **Close-out.** `internal/link/link.go`'s and `pass2.go`'s notes that
+    DBG records are skipped, `image.go`'s IHS comment, HELP LINK
+    (`vax.help`), CLAUDE.md's `internal/link` notes, PHASE-30's and
+    PHASE-40's notes that LINK/DEBUG is out of scope (a "done in Phase
+    29" note, not a rewrite), PLAN.md's index, and this doc's status.
+
+Subtasks 16 to 20, the LINK/DEBUG subtasks, were added on 2026-10-05,
+when the author reversed Decision 4. They work from "What real
+LINK/DEBUG writes" below. As with 1 to 15, each one ends with the
+build, vet, tests, and golangci-lint clean, then a commit, and
+`build -i` when it changes behavior.
+
 ## Decisions
 
 The author decided each of these on 2026-10-02.
@@ -363,7 +502,10 @@ The author decided each of these on 2026-10-02.
    debugger, which govax doesn't have. This phase's LINK writes the DST
    for traceback links only; `/DEBUG` objects still link, with their DBG
    records skipped. The probe still captures a `LINK/DEBUG` image for
-   later.
+   later. *Reversed on 2026-10-05:* now that MACRO writes DBG records,
+   the author asked for LINK/DEBUG to put them in the image (subtasks
+   16 to 20). A debugger is still out of scope: an image linked
+   `/DEBUG` runs as any other does under govax's RUN.
 5. **Listings for the console's `ASM` command** (the eVAX dialect). Out
    of scope: `ASM` doesn't make listings.
 6. **DST records in strict clean room** (2026-10-04). The DST layouts
@@ -378,7 +520,8 @@ The author decided each of these on 2026-10-02.
 
 - A traceback printed by govax's own RUN (a future feature; this phase
   writes the data and captures VMS's output for it).
-- LINK/DEBUG and a debugger (Decision 4).
+- A debugger (Decision 4). LINK/DEBUG itself is now in scope (subtasks
+  16 to 20), though not `/DEBUG=file`, a user-written debugger module.
 - MACRO's file concatenation (`MACRO A+B`), and `/LIBRARY` listings of
   macro library contents (that's LIBRARY/LIST, Phase 28).
 - `ASM` listings (Decision 5).
@@ -1648,3 +1791,15 @@ It also corrected two of them.
     INCR_LINUM_L, DELTA_PC_L, TERM_L, and the line count of more than
     65,535.
 
+### 2026-10-05 — LINK/DEBUG planned (subtasks 16 to 20)
+
+- The author asked for LINK/DEBUG now that MACRO writes DBG records,
+  which reverses Decision 4 (a debugger stays out of scope).
+- Read the three real `LINK/DEBUG` images (TRDBGLNK, TRLNKDBG, FORTH)
+  against their traceback links, with `DEBUG-RECORDS.md` and the 7.3
+  Linker manual. "What real LINK/DEBUG writes" has the findings: the
+  LNKDEBUG flag, the DBG records in the DST, a DMT, and a GST of object
+  records, which the IHS points at.
+- Found on the way: IHS+20 is IHS$L_DSTBLKS, the DST's block count.
+  It's 56 in FORTH's image, but govax writes 1 for every DST.
+- Wrote subtasks 16 to 20.
