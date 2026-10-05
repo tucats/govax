@@ -15,10 +15,11 @@ out:
 
 Split out of Phase 27's "later sub-phases" (docs/PHASE-27.md, subtask 12).
 
-**Status: reopened (2026-10-05) for LINK/DEBUG.** Subtasks 1 to 15
-were done by 2026-10-05; 12, the debugger records, was deferred and
-then done. The author then asked for LINK/DEBUG, which Decision 4 had
-left out, so subtasks 16 to 20 add it.
+**Status: complete (2026-10-05).** Every subtask is done. Subtask 12,
+the debugger records, was deferred on 2026-10-04 and done on 2026-10-05.
+The author then asked for LINK/DEBUG, which Decision 4 had left out,
+and subtasks 16 to 20 added it. One check is still to run on VMS:
+whether VMS minds the GST's padding (Decision 7).
 
 ## What Phase 27 leaves in place
 
@@ -1936,3 +1937,19 @@ It also corrected two of them.
   image of TRACE on an exchange volume, then on simh run `ANALYZE/IMAGE`
   on it, `RUN` it, and use the debugger: `SHOW MODULE`, `EXAMINE` a
   symbol, `GO`. That shows whether the GST's padding matters to VMS.
+
+### 2026-10-05 — Subtask 20: close-out
+
+- **Code comments.**
+  - `link.go`'s and `pass2.go`'s notes that DBG records are skipped now
+    say LINK/DEBUG runs them.
+  - `image.go`'s IHS comment names every field that's filled in.
+- **HELP LINK** (subtask 16) describes `/DEBUG` and `--debug`.
+- **Docs.** CLAUDE.md's `internal/link` notes and PLAN.md's index are
+  updated. PHASE-30 and PHASE-40 get "done in Phase 29" notes where
+  they say LINK/DEBUG or the DMT is out of scope, or list the link
+  flags.
+- **Phase done.** One item is left for the author's next simh round:
+  check that VMS accepts a govax `LINK/DEBUG` image whose GST is padded
+  (Decision 7; subtask 19 says how). If VMS objects, the fallback is an
+  image with a short last block, which means `rms` and ods2 changes.

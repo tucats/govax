@@ -221,7 +221,13 @@ expect adjustment as phases land):
   (`internal/console/linksource.go`). With traceback (the default), pass 2
   also runs each module's TBT records into the image's debug symbol table,
   which follows the image's other blocks and the IHS block points at
-  (Phase 29); DBG records are skipped. Fixup cells for a shareable image
+  (Phase 29); DBG records are skipped. `LINK/DEBUG` (`Options.Debug`,
+  Phase 29's subtasks 16 to 20) runs the DBG records into the DST with the
+  TBT records, sets IHD$V_LNKDEBUG, and adds the debug module table and
+  global symbol table after the DST (`debug.go`). The three real `/DEBUG`
+  images (TRDBGLNK, TRLNKDBG, FORTH) match byte for byte, except that
+  govax pads the GST to a whole block where real LINK ends the file
+  mid-block (Decision 7). Fixup cells for a shareable image
   are in symbol-name order (`orderCells`).
 - `internal/lbr` — the librarian file format (Phase 30): reads `.OLB`/`.MLB`/etc.
   libraries, their B-tree indexes and module records, including DCX data-reduced

@@ -134,7 +134,8 @@ them.
     and the type is 1 (executable). `PRIVREQS` is all ones.
     `LNKFLAGS` is 0x010000A8 in every image: `PICIMG`, `DBGDMT`, and
     `IHSLONG` (bits 3, 5, and 7, as `ANALYZE/IMAGE` names them), and
-    `MATCHCTL` 1 in the top byte. `IDENT` is bytes 2 to 5 of the link
+    `MATCHCTL` 1 in the top byte. (*Phase 29, subtask 16:* `LINK/DEBUG`
+    also sets `LNKDEBUG`, bit 0.) `IDENT` is bytes 2 to 5 of the link
     time, and `IAFVA` is the fixup section's address.
   - **`IHA`** (0x14 bytes): four transfer addresses and `INISHR`. With
     traceback these are `SYS$IMGSTA` (0x7FFEDF68), then the user
