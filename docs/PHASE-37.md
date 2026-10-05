@@ -1,6 +1,7 @@
 # Phase 37 — The fixed console commands move onto the DCL grammar
 
-**Status:** in progress (started 2026-10-04).
+**Status:** done (2026-10-04). Every console command is parsed by the DCL
+grammar; `fixedCommands` is gone.
 
 ## Goal
 
@@ -185,6 +186,21 @@ Each subtask is committed when its tests pass.
   called from `bindGrammar`, and SET's in `setcommand.go`
   (`bindSetCommands`).
 
+## Open items
+
+- `vax.help` is the C project's help file and still documents C features
+  the port never had (EXAMINE/INSTRUCTION, EXAMINE's float and string
+  subtypes, SAVE/TEXT, LOAD/ROM's /BASE and /SIZE, INIT/NVRAM). Only its
+  INCLUDE example changed here (quoting). A pass to match it to govax's
+  commands is its own task.
+- The expression evaluator has no register names (expr.go's doc
+  comment), so `PRINT R0` and `DEPOSIT 2000 = R0` don't work; EXAMINE and
+  DEPOSIT special-case a register by itself, as console_exam.c does.
+- `respath` matches names exactly, so `@vax.init` (uppercased to
+  VAX.INIT) misses the embedded copy; `@"vax.init"` finds it. A
+  case-insensitive fallback for the embedded files would make the
+  unquoted form work too.
+
 ## Progress log
 
 - 2026-10-04: Survey and plan.
@@ -211,3 +227,9 @@ Each subtask is committed when its tests pass.
   package's grammar-file tests (`TestLoadEvaxGrammar_verbCount`, and the
   parameter-qualifier walk, which now expects RUN's /HOST) had failed
   since subtasks 2 and 3, which ran only the console package's tests.
+- 2026-10-04: Subtask 7: `fixedCommands`, `fixedHandler`, and Dispatch's
+  four-character lookup removed; `Dispatcher`'s documentation rewritten;
+  tests named for the fixed table renamed. `vax.help`'s INCLUDE example
+  quotes its file; `CLAUDE.md` and `PLAN.md` updated. Checked end to end
+  through `govax console` (boot, DEPOSIT/EXAMINE, PRINT, SET symbol, IF,
+  SET STEP, DISASSEMBLE, HELP, TIME).

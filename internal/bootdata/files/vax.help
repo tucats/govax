@@ -881,7 +881,10 @@ $INCL
     
     Example:
     
-        INCLUDE MYVAX.STATUS
+        INCLUDE "myvax.status"
+
+    As in every DCL command, a host file name with lowercase letters or
+    a "/" must be in quotes; DCL uppercases unquoted text.
 
 
 $GO  

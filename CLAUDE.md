@@ -11,9 +11,9 @@ never had.
 
 - `docs/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
   index.
-- `docs/PHASE-00.md` … `PHASE-36.md` — one doc per phase: goal, C-source file
+- `docs/PHASE-00.md` … `PHASE-37.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
-  done through 36; Phase 29's debugger records, its subtask 12, are
+  done through 37; Phase 29's debugger records, its subtask 12, are
   deferred). Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -105,6 +105,13 @@ expect adjustment as phases land):
   arithmetic, short literals, and decimal parsing for the assembler. A leaf
   package: no CPU dependency.
 - `internal/console` — interactive monitor + DCL grammar interpreter (Phase 08).
+  Every console command is parsed by the DCL grammar
+  (`internal/bootdata/files/console.dcl`); Phase 37 moved the last
+  hand-parsed "fixed" commands (EXAMINE, SET, STEP, RUN, ...) onto it, with
+  handlers in `commands.go` and `setcommand.go`. An address or value is an
+  `$expression` parameter, whose extent the grammar finds and whose value
+  the handler gets from the expression evaluator (`expr.go`). Unquoted
+  text is uppercased, so a case-sensitive host file name must be quoted.
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,
   and LINK: `Symbols` (every symbolic constant, one table; `symbols.go` says

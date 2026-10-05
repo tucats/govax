@@ -55,7 +55,7 @@ func newTestDispatcher(t *testing.T) (*Dispatcher, *Console) {
 	return d, c
 }
 
-func TestDispatch_fixedTableExamine(t *testing.T) {
+func TestDispatch_examine(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	if err := d.Console.Deposit("", 0x1000, SizeLongword, 0x99887766); err != nil {
 		t.Fatalf("Deposit: %v", err)
@@ -66,10 +66,10 @@ func TestDispatch_fixedTableExamine(t *testing.T) {
 	}
 }
 
-func TestDispatch_fourCharTruncation(t *testing.T) {
+func TestDispatch_verbAbbreviation(t *testing.T) {
 	d, _ := newTestDispatcher(t)
-	// "EXAMINE" truncates to "EXAM" for fixed-table matching, same as
-	// typing "EXAM" itself.
+	// "EXAM" abbreviates EXAMINE, as any unambiguous prefix does (the
+	// fixed table this test was written for matched four characters).
 	if err := d.Dispatch("EXAMINE R0"); err != nil {
 		t.Fatalf("Dispatch(EXAMINE R0): %v", err)
 	}
@@ -753,13 +753,13 @@ func TestDispatch_clearSymbolTemporary(t *testing.T) {
 	}
 }
 
-// TestDispatch_notImplementedFixedCommand checks BOOT, still gated behind
-// cmdNotImplemented (device/RTL support) -- ASM used to be this test's own
+// TestDispatch_notImplementedCommand checks BOOT, still gated behind
+// notImplemented (commands.go; device/RTL support) -- ASM used to be this test's own
 // example (its bare, no-filename form returned CLI_NOASMREPL) until
 // docs/PHASE-19.md implemented interactive assembler mode; see
 // TestDispatchASM_bareEntersInteractiveMode (asm_repl_test.go) for its
 // current behavior.
-func TestDispatch_notImplementedFixedCommand(t *testing.T) {
+func TestDispatch_notImplementedCommand(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	if err := d.Dispatch("BOOT"); err == nil {
 		t.Error("expected an error for BOOT")
@@ -773,7 +773,7 @@ func TestDispatch_saveLoadROMRequiresQualifier(t *testing.T) {
 	}
 }
 
-func TestDispatch_helpFixedCommand(t *testing.T) {
+func TestDispatch_help(t *testing.T) {
 	c, _ := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	h := ParseHelp("$HELP\nTop-level help.\n")

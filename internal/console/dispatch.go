@@ -13,25 +13,19 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Dispatcher routes one command line to either a fixed-spelling handler
-// (matching console_dispatch_table's exact, <=4-character verb spellings —
-// e.g. "EXAM"/"EX"/"DUMP" all reach EXAMINE, since read_verb only ever
-// looks at a token's first 4 characters) or, if no fixed spelling matches,
-// the DCL grammar — matching console_dispatch's own two-tier fallback.
+// Dispatcher parses one command line with the DCL grammar and runs the
+// handler bound to the verb or syntax it ends in.
 //
-// The fixed-spelling set and DCL/verb split here follows console_dispatch_
-// table's own -1-vs-real-function split (SHOW, EXIT/QUIT, CLEAR, TEST,
-// VMINIT are DCL-driven; EXAMINE, SET, STEP, ... are fixed) with a few
-// deliberate deviations, documented where they're implemented: DEPOSIT
-// (exam.go) is a Go-native addition with no C-source command of its own.
-// RUN/R now means what it does in the C source (see run.go's Console.Run,
-// Phase 13) — VMS executable-image activation, not plain CPU execution
-// (that's EXEC/GO/G, unaffected). INIT — a real-function fixed entry in the
-// C source — moved onto the DCL grammar in Phase 23 (see bindGrammar's
-// INITIALIZE_VAX bind) as part of unifying it with the new, govax-native
-// INITIALIZE/CONTAINER under one verb; it's no longer in fixedCommands
-// below, reaching INITIALIZE_VAX purely via Grammar.matchVerb's
-// unambiguous-prefix matching instead.
+// console_dispatch.c has two tiers: console_dispatch_table's "fixed"
+// commands, matched by their first four characters and parsed by hand
+// (EXAMINE, SET, STEP, ...), and the DCL grammar for the rest (SHOW,
+// CLEAR, VMINIT, ...). This port kept that split until docs/PHASE-37.md
+// moved every fixed command onto the grammar (commands.go,
+// setcommand.go); their old spellings ("EX", "D", "G", "@", ...) are
+// grammar verbs or aliases now. Two of them differ from the C source:
+// DEPOSIT (exam.go) is a Go-native addition, and RUN/R means what it does
+// in the C source (run.go's Console.Run, Phase 13) — VMS image
+// activation, not plain CPU execution (that's EXECUTE/GO/G).
 type Dispatcher struct {
 	Console *Console
 	Grammar *dcl.Grammar
@@ -55,8 +49,9 @@ func NewDispatcher(c *Console, g *dcl.Grammar, h *Help) *Dispatcher {
 	return d
 }
 
-// Dispatch parses and executes one command line, matching console_
-// dispatch's own read-verb/fixed-table/DCL-fallback structure.
+// Dispatch parses and executes one command line: assembler mode's
+// statements, DCL symbol assignments and symbol-named commands, and
+// otherwise the DCL grammar.
 func (d *Dispatcher) Dispatch(line string) error {
 	line = strings.TrimSpace(line)
 	if line == "" || strings.HasPrefix(line, "!") {
@@ -76,19 +71,6 @@ func (d *Dispatcher) Dispatch(line string) error {
 	// symbol before a verb (dclsym.go).
 	if handled, err := d.dclSymbolLine(line); handled {
 		return err
-	}
-
-	verb, _ := readCommandVerb(line)
-
-	verb4 := strings.ToUpper(verb)
-	if len(verb4) > 4 {
-		verb4 = verb4[:4]
-	}
-
-	if h, ok := fixedCommands[verb4]; ok {
-		_, rest := readCommandVerb(line)
-
-		return h(d, rest)
 	}
 
 	// DBG_DCL: console_dispatch.c:121 sets the third-party DCL parser
@@ -131,7 +113,9 @@ func (d *Dispatcher) Dispatch(line string) error {
 
 // readCommandVerb reads the leading command word (up to whitespace, '/',
 // ',', or '='), matching read_verb — including its "a leading '@' is a
-// token by itself" special case (the INCLUDE-file shorthand).
+// token by itself" special case (the INCLUDE-file shorthand). DCL symbol
+// lookup (dclsym.go) uses it, and IF and SET PTE use it for their THEN
+// and TO words.
 func readCommandVerb(s string) (verb, rest string) {
 	if strings.HasPrefix(s, "@") {
 		return "@", s[1:]
@@ -170,8 +154,7 @@ func parseHexOrEmpty(s string) (uint32, error) {
 
 // bindGrammar binds every DCL verb/syntax this port implements a handler
 // for. Everything else (device/RTL/assembler-dependent SHOW/CLEAR/DEFINE
-// sub-forms, TEST, CALL's DCL entry — unreachable anyway since CALL is
-// intercepted by the fixed table first) is deliberately left unbound:
+// sub-forms, TEST) is deliberately left unbound:
 // Grammar.Dispatch's own "no handler bound" error already reports that
 // clearly, so no separate stub code is needed for each one.
 func (d *Dispatcher) bindGrammar() {
@@ -664,26 +647,6 @@ func (d *Dispatcher) bindGrammar() {
 			CommandLine: d.line,
 		})
 	})
-}
-
-type fixedHandler func(d *Dispatcher, rest string) error
-
-// fixedCommands is the Go equivalent of console_dispatch_table's real
-// (non -1) entries — see this file's own top comment for the two
-// deliberate deviations (DEPOSIT, RUN/R).
-//
-// Populated in init() rather than as a plain var initializer: cmdTime
-// passes the Dispatcher.Dispatch method (to run a sub-command and time
-// it), and Dispatch itself reads fixedCommands — a plain var initializer
-// referencing cmdTime would make the compiler see that as an
-// initialization cycle (fixedCommands -> cmdTime -> Dispatch ->
-// fixedCommands), even though nothing is actually invoked until well after
-// package initialization.
-var fixedCommands map[string]fixedHandler
-
-func init() {
-	fixedCommands = map[string]fixedHandler{
-	}
 }
 
 // assembleInteractiveLine hands one line to Console.AssembleInteractiveLine
