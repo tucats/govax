@@ -313,7 +313,7 @@ This is an OpenVMS VAX object file
 	17)  Entity Ident Consistency Check (GSD$C_IDC)
 		flags: 18 (%X'0012')
 		ident match: IDC$C_EQUAL (1)
-		error severity: error (2)
+		error severity: errors (2)
 		entity: "ENTITY"
 		ident: "V1.0"
 		object: "OBJECT"

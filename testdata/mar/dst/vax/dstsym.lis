@@ -1,0 +1,211 @@
+DSTSYM                          Phase 29 probe 2: debugger symbol record  5-OCT-2026 07:08:28  VAX MACRO V5.4-3            Page   1
+V1.0                                                                      5-OCT-2026 07:00:17  DUA1:[000000]DSTSYM.MAR;1         (1)
+
+                                     0000     1 	.TITLE	DSTSYM	Phase 29 probe 2: debugger symbol records
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; Each label is followed by a different data directive, so the object's
+                                     0000     5 ; DBG records show what each directive makes of a label. Then the other
+                                     0000     6 ; kinds of symbol: assigned, global, relocatable, suppressed, external,
+                                     0000     7 ; local, and in an absolute psect. DST.COM assembles it /DEBUG/LIST.
+                                     0000     8 
+                                     0000     9 	.EXTERNAL EXTSYM
+                                     0000    10 
+                           00000005  0000    11 CONST1 = 5			; an absolute constant
+                           00000006  0000    12 CONST2 == 6			; a global one
+                           FFFFFFFE  0000    13 NEGCON = -2
+                           12345678  0000    14 BIGCON = ^X12345678
+                           00000001  0000    15 TWICE = 1			; assigned twice, two values
+                           00000002  0000    16 TWICE = 2
+                           00000003  0000    17 SAME = 3			; assigned twice, one value
+                           00000003  0000    18 SAME = 3
+                                     0000    19 	.ENABLE	SUPPRESSION
+                           00000007  0000    20 SUPUNREF = 7			; suppressed, never referred to
+                           00000008  0000    21 SUPREF = 8			; suppressed, referred to below
+                                     0000    22 	.DISABLE SUPPRESSION
+                           00000009  0000    23 A_NAME_OF_31_CHARACTERS_IN_ALL = 9
+                                     0000    24 
+                                 00000000    25 	.PSECT	DATA, WRT, NOEXE, QUAD
+                                 01  0000    26 LBYTE:	.BYTE	1
+                           03 02 01  0001    27 LBYTES:	.BYTE	1, 2, 3
+                                 FF  0004    28 LSBYTE:	.SIGNED_BYTE -1
+                               0001  0005    29 LWORD:	.WORD	1
+                          0002 0001  0007    30 LWORDS:	.WORD	1, 2
+                               FFFF  000B    31 LSWORD:	.SIGNED_WORD -1
+                           00000008  000D    32 LLONG:	.LONG	SUPREF
+00000004 00000003 00000002 00000001  0011    33 LLONGS:	.LONG	1, 2, 3, 4
+                  00000000 00000001  0021    34 LQUAD:	.QUAD	1
+                  00000000 00000001  0029    35 LQUADS:	.QUAD	1, 2
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0031       
+00000000 00000000 00000000 00000001  0031    36 LOCTA:	.OCTA	1
+                           00000000' 0041    37 LADDR:	.ADDRESS LBYTE
+                  00000005'00000000' 0045    38 LADDRS:	.ADDRESS LBYTE, LWORD
+                           00004080  004D    39 LFLOAT:	.F_FLOATING 1.0
+                  00004100 00004080  0051    40 LFLOATS: .F_FLOATING 1.0, 2.0
+                  00000000 00004080  0059    41 LDOUBLE: .D_FLOATING 1.0
+                  00000000 00004010  0061    42 LGFLT:	.G_FLOATING 1.0
+00000000 00000000 00000000 00004001  0069    43 LHFLT:	.H_FLOATING 1.0
+                           63 62 61  0079    44 LASCII:	.ASCII	/abc/
+                                 61  007C    45 LASCII1: .ASCII	/a/
+                        00 63 62 61  007D    46 LASCIZ:	.ASCIZ	/abc/
+                        63 62 61 00' 0081    47 LASCIC:	.ASCIC	/abc/
+                                 03  0081       
+         63 62 61 0000008D'010E0000' 0085    48 LASCID:	.ASCID	/abc/
+                              3D 12  0090    49 LPACKED: .PACKED -123
+                           00000093  0092    50 LBLKB1:	.BLKB	1
+                           00000098  0093    51 LBLKB:	.BLKB	5
+                           0000009A  0098    52 LBLKW1:	.BLKW	1
+                           000000A4  009A    53 LBLKW:	.BLKW	5
+                           000000A8  00A4    54 LBLKL1:	.BLKL	1
+DSTSYM                          Phase 29 probe 2: debugger symbol record  5-OCT-2026 07:08:28  VAX MACRO V5.4-3            Page   2
+V1.0                                                                      5-OCT-2026 07:00:17  DUA1:[000000]DSTSYM.MAR;1         (1)
+
+                           000000BC  00A8    55 LBLKL:	.BLKL	5
+                           000000C4  00BC    56 LBLKQ1:	.BLKQ	1
+                           000000EC  00C4    57 LBLKQ:	.BLKQ	5
+                           0000010C  00EC    58 LBLKO:	.BLKO	2
+                           00000114  010C    59 LBLKF:	.BLKF	2
+                           00000124  0114    60 LBLKD:	.BLKD	2
+                           00000134  0124    61 LBLKG:	.BLKG	2
+                           00000154  0134    62 LBLKH:	.BLKH	2
+                           0000015C  0154    63 LBLKA:	.BLKA	2
+                           0000015C  015C    64 LBLKB0:	.BLKB	0
+                                     015C    65 LNEXT:				; a label on a line of its own
+                           00000007  015C    66 	.LONG	7
+                                     0160    67 LTWO1:				; two labels at one location
+                               0003  0160    68 LTWO2:	.WORD	3
+                                     0162    69 LALIGN:	.ALIGN	QUAD		; a label before .ALIGN
+                           00000008  0168    70 	.LONG	8
+                           00000170  016C    71 LDOT:	. = . + 4		; a label before a location change
+                           00000009  0170    72 GLOBLAB:: .LONG	9		; a global label
+                           00000000' 0174    73 LEXTERN: .LONG	EXTSYM		; an external symbol's value
+                                     0178    74 LEND:				; the psect's last label
+                           00000004  0178    75 RELSYM = LBYTE+4		; a relocatable assignment
+                                     0178    76 
+                                     0178    77 	.PSECT	ABSDATA, ABS
+                           00000004  0000    78 ABSLAB:	.BLKL	1		; a label in an absolute psect
+                                     0004    79 
+                                 00000000    80 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0000  0000    81 	.ENTRY	DSTSYM, ^M<>
+                   00000016'EF   16  0002    82 	JSB	SUB
+                       50   02   D0  0008    83 	MOVL	#TWICE, R0
+                       50   03   D0  000B    84 	MOVL	#SAME, R0
+              50   00000004'EF   9E  000E    85 	MOVAB	RELSYM, R0
+                                 04  0015    86 	RET
+                                     0016    87 
+                                 01  0016    88 SUB:	NOP			; a JSB subroutine
+                                 05  0017    89 10$:	RSB			; a local label
+                                     0018    90 
+                                     0018    91 	.END	DSTSYM
+DSTSYM                          Phase 29 probe 2: debugger symbol record  5-OCT-2026 07:08:28  VAX MACRO V5.4-3            Page   3
+Symbol table                                                              5-OCT-2026 07:00:17  DUA1:[000000]DSTSYM.MAR;1         (1)
+
+ABSLAB                           00000000    D            SUB                              00000016 R  D  03        
+A_NAME_OF_31_CHARACTERS_IN_ALL = 00000009    D            SUPREF                         = 00000008    D            
+BIGCON                         = 12345678    D            TWICE                          = 00000002    D            
+CONST1                         = 00000005    D            
+CONST2                         = 00000006  G D            
+DSTSYM                           00000000 RG D  03        
+EXTSYM                           ********   X   00        
+GLOBLAB                          00000170 RG D  01        
+LADDR                            00000041 R  D  01        
+LADDRS                           00000045 R  D  01        
+LALIGN                           00000162 R  D  01        
+LASCIC                           00000081 R  D  01        
+LASCID                           00000085 R  D  01        
+LASCII                           00000079 R  D  01        
+LASCII1                          0000007C R  D  01        
+LASCIZ                           0000007D R  D  01        
+LBLKA                            00000154 R  D  01        
+LBLKB                            00000093 R  D  01        
+LBLKB0                           0000015C R  D  01        
+LBLKB1                           00000092 R  D  01        
+LBLKD                            00000114 R  D  01        
+LBLKF                            0000010C R  D  01        
+LBLKG                            00000124 R  D  01        
+LBLKH                            00000134 R  D  01        
+LBLKL                            000000A8 R  D  01        
+LBLKL1                           000000A4 R  D  01        
+LBLKO                            000000EC R  D  01        
+LBLKQ                            000000C4 R  D  01        
+LBLKQ1                           000000BC R  D  01        
+LBLKW                            0000009A R  D  01        
+LBLKW1                           00000098 R  D  01        
+LBYTE                            00000000 R  D  01        
+LBYTES                           00000001 R  D  01        
+LDOT                             0000016C R  D  01        
+LDOUBLE                          00000059 R  D  01        
+LEND                             00000178 R  D  01        
+LEXTERN                          00000174 R  D  01        
+LFLOAT                           0000004D R  D  01        
+LFLOATS                          00000051 R  D  01        
+LGFLT                            00000061 R  D  01        
+LHFLT                            00000069 R  D  01        
+LLONG                            0000000D R  D  01        
+LLONGS                           00000011 R  D  01        
+LNEXT                            0000015C R  D  01        
+LOCTA                            00000031 R  D  01        
+LPACKED                          00000090 R  D  01        
+LQUAD                            00000021 R  D  01        
+LQUADS                           00000029 R  D  01        
+LSBYTE                           00000004 R  D  01        
+LSWORD                           0000000B R  D  01        
+LTWO1                            00000160 R  D  01        
+LTWO2                            00000160 R  D  01        
+LWORD                            00000005 R  D  01        
+LWORDS                           00000007 R  D  01        
+NEGCON                         = FFFFFFFE    D            
+RELSYM                         = 00000004 R  D  01        
+SAME                           = 00000003    D            
+DSTSYM                          Phase 29 probe 2: debugger symbol record  5-OCT-2026 07:08:28  VAX MACRO V5.4-3            Page   4
+Psect synopsis                                                            5-OCT-2026 07:00:17  DUA1:[000000]DSTSYM.MAR;1         (1)
+
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000178  (  376.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC QUAD  
+ABSDATA                         00000004  (    4.)  02 (  2.)  NOPIC   USR   CON   ABS   LCL NOSHR   EXE   RD    WRT NOVEC BYTE  
+CODE                            00000018  (   24.)  03 (  3.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  461     00:00:00.00    00:00:00.00
+Command processing              933     00:00:00.00    00:00:00.01
+Pass 1                          208     00:00:00.00    00:00:00.01
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                          137     00:00:00.00    00:00:00.00
+Symbol table output              13     00:00:00.00    00:00:00.00
+Psect synopsis output             6     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1785     00:00:00.00    00:00:00.02
+
+The working set limit was 512 pages.
+1907 bytes (4 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 61 non-local and 1 local symbols.
+91 source lines were read in Pass 1, producing 23 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were 1 error, 0 warnings and 0 information messages, on lines:
+   35 (1)     
+
+MACRO/DEBUG/LIST DSTSYM

@@ -1,0 +1,68 @@
+DSTLN4                          Phase 29 probe 2: line tables after $FAB  5-OCT-2026 07:08:28  VAX MACRO V5.4-3            Page   1
+V1.0                                                                      5-OCT-2026 07:00:17  DUA1:[000000]DSTLN4.MAR;1         (1)
+
+                                     0000     1 	.TITLE	DSTLN4	Phase 29 probe 2: line tables after $FABDEF
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; A system macro of definitions alone before the code: does its
+                                     0000     5 ; expansion move the line numbers? DST.COM assembles it /DEBUG/LIST.
+                                     0000     6 
+                                     0000     7 	$FABDEF
+                                     0000     8 
+                                 00000000     9 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0000  0000    10 	.ENTRY	DSTLN4, ^M<>
+              50   00000050 8F   D0  0002    11 	MOVL	#FAB$C_BLN, R0
+                                 04  0009    12 	RET
+                                     000A    13 
+                                     000A    14 	.END	DSTLN4
+DSTLN4                          Phase 29 probe 2: line tables after $FAB  5-OCT-2026 07:08:28  VAX MACRO V5.4-3            Page   2
+Symbol table                                                              5-OCT-2026 07:00:17  DUA1:[000000]DSTLN4.MAR;1         (1)
+
+DSTLN4                           00000000 RG D  02        
+FAB$C_BLN                      = 00000050    D            
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+$ABS$                           00000000  (    0.)  01 (  1.)  NOPIC   USR   CON   ABS   LCL NOSHR   EXE   RD    WRT NOVEC BYTE  
+CODE                            0000000A  (   10.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  463     00:00:00.01    00:00:00.01
+Command processing              930     00:00:00.00    00:00:00.00
+Pass 1                          541     00:00:00.03    00:00:00.03
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           60     00:00:00.00    00:00:00.00
+Symbol table output               2     00:00:00.00    00:00:00.00
+Psect synopsis output             3     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           2028     00:00:00.04    00:00:00.04
+
+The working set limit was 812 pages.
+9688 bytes (19 pages) of virtual memory were used to buffer the intermediate code.
+There were 20 pages of symbol table space allocated to hold 207 non-local and 0 local symbols.
+14 source lines were read in Pass 1, producing 26 object records in Pass 2.
+8 pages of virtual memory were used to define 7 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        4        
+
+265 GETS were required to define 4 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/DEBUG/LIST DSTLN4

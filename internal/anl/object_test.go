@@ -66,8 +66,8 @@ func objectFixtures(t *testing.T) []objectFixture {
 		}
 	}
 
-	if len(out) < 55 {
-		t.Fatalf("found %d object fixtures, want at least 55", len(out))
+	if len(out) < 65 {
+		t.Fatalf("found %d object fixtures, want at least 65", len(out))
 	}
 
 	return out

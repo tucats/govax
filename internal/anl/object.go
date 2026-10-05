@@ -429,7 +429,9 @@ func headerText(text string) []string {
 	return append(parts, string(b))
 }
 
-// severityName is an EOM completion code's description.
+// severityName is an EOM completion code's description. VMS's word for
+// 2 is "errors" (testdata/mar/dst/vax/dstsym.anl); 4's is govax's
+// (unconfirmed).
 func severityName(s byte) string {
 	switch s {
 	case obj.SeveritySuccess:
@@ -437,7 +439,7 @@ func severityName(s byte) string {
 	case obj.SeverityWarning:
 		return "warning"
 	case obj.SeverityError:
-		return "error"
+		return "errors"
 	case obj.SeverityAbort:
 		return "abort"
 	}

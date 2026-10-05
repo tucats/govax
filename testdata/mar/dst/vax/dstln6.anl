@@ -1,0 +1,418 @@
+
+Analyze Object File                           5-OCT-2026 07:08:28.95   Page 1
+DUA1:[000000]DSTLN6.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 51 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "DSTLN6"
+	module version: "V1.0"
+	creation   date/time:  5-OCT-2026 07:08
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 25 bytes
+
+	Textual information:
+	"MACRO/DEBUG/LIST DSTLN6"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 42 bytes
+
+	Textual information:
+	"Phase 29 probe 2: line tables around $OP"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 16 bytes
+
+	1)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 06 00 00 00 00 00 BC 0D|  0000  |.¼......|
+		       36 4E 4C 54 53 44|  0008  |DSTLN6  |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 28 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "SYS$CLOSE"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                           5-OCT-2026 07:08:28.95   Page 2
+DUA1:[000000]DSTLN6.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "SYS$OPEN"
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+8.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 80 (%X'00000050')
+		symbol: "DATA"
+
+
+
+Analyze Object File                           5-OCT-2026 07:08:28.95   Page 3
+DUA1:[000000]DSTLN6.OBJ;1
+ANALYZ V07-04
+
+10.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 10 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 80 (%X'00000050')
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 35 (%X'00000023')
+		symbol: "CODE"
+
+
+12.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 7 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+13.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+
+Analyze Object File                           5-OCT-2026 07:08:28.95   Page 4
+DUA1:[000000]DSTLN6.OBJ;1
+ANALYZ V07-04
+
+		psect: 2
+		value: 0 (%X'00000000')
+		entry mask: <>
+		symbol: "DSTLN6"
+
+
+14.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+15.  DEBUGGER INFORMATION (OBJ$C_DBG), 88 bytes
+
+	1)  Store Immediate, 64 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 01 00 2D 01 10 9B 3A|  0000  |:...-...|
+		 00 BC 38 1F A4 85 A1 D4|  0008  |Ô¡.¤.8¼.|
+		 19 05 01 84 00 00 00 01|  0010  |........|
+		 30 30 5B 3A 31 41 55 44|  0018  |DUA1:[00|
+		 54 53 44 5D 30 30 30 30|  0020  |0000]DST|
+		 3B 52 41 4D 2E 36 4E 4C|  0028  |LN6.MAR;|
+		 00 01 04 00 01 02 00 31|  0030  |1.......|
+		 10 00 13 B9 11 00 01 06|  0038  |....¹...|
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 17 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 F3 FE F3 FE FE 00 0A 13|  0000  |...þþóþó|
+		 0E B9 03 13 0B 9B 03 FE|  0008  |þ.....¹.|
+		                      01|  0010  |.       |
+
+
+16.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 54 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DF 50 D4|  0000  |ÔPß     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           5-OCT-2026 07:08:28.95   Page 5
+DUA1:[000000]DSTLN6.OBJ;1
+ANALYZ V07-04
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   01 FB|  0000  |û.      |
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$OPEN"
+
+	7)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	8)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DF 50 D6|  0000  |ÖPß     |
+
+	9)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	10)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	11)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	12)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   01 FB|  0000  |û.      |
+
+	13)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CLOSE"
+
+	14)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	15)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                04 50 D6|  0000  |ÖP.     |
+
+
+17.  TRACEBACK INFORMATION (OBJ$C_TBT), 20 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 BE 0D|  0000  |.¾.     |
+
+	2)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           5-OCT-2026 07:08:28.95   Page 6
+DUA1:[000000]DSTLN6.OBJ;1
+ANALYZ V07-04
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    36 4E 4C 54 53 44 06|  0000  |.DSTLN6 |
+
+
+18.  DEBUGGER INFORMATION (OBJ$C_DBG), 70 bytes
+
+	1)  Store Immediate, 32 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 07 00 00 00 01 00 08 0E|  0000  |........|
+		 2C 31 50 4D 54 2E 24 24|  0008  |$$.TMP1,|
+		 4D 05 00 00 00 06 FA 06|  0010  |.ú.....M|
+		 04 06 00 01 42 41 46 59|  0018  |YFAB....|
+
+	2)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 50 01 E0 00 00|  0000  |..à.P...|
+
+	5)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	6)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	7)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 00 00 00 00 50|  0000  |P.......|
+		             00 00 00 4F|  0008  |O...    |
+
+
+19.  TRACEBACK INFORMATION (OBJ$C_TBT), 38 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           5-OCT-2026 07:08:28.96   Page 7
+DUA1:[000000]DSTLN6.OBJ;1
+ANALYZ V07-04
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 50 41 54 41 44 04|  0000  |.DATAP..|
+		             00 B8 0F 00|  0008  |..¸.    |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	6)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	7)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 23 45 44 4F 43 04|  0000  |.CODE#..|
+		                BD 01 00|  0008  |..½     |
+
+
+20.  END OF MODULE (OBJ$C_EOM), 7 bytes
+
+	severity: successful (0)
+	psect: 2
+	value: 0 (%X'00000000')
+
+
+
+Analyze Object File                           5-OCT-2026 07:08:28.96   Page 8
+DUA1:[000000]DSTLN6.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   136
+OBJ$C_GSD	    5	    94
+OBJ$C_TIR	    5	    78
+OBJ$C_EOM	    1	     7
+OBJ$C_DBG	    2	   158
+OBJ$C_TBT	    3	    74
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   20	   547
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=DSTLN6.ANL DSTLN6.OBJ                                     

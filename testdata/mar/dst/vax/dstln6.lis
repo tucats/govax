@@ -1,0 +1,77 @@
+DSTLN6                          Phase 29 probe 2: line tables around $OP  5-OCT-2026 07:08:28  VAX MACRO V5.4-3            Page   1
+V1.0                                                                      5-OCT-2026 07:00:17  DUA1:[000000]DSTLN6.MAR;1         (1)
+
+                                     0000     1 	.TITLE	DSTLN6	Phase 29 probe 2: line tables around $OPEN
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ; System macros of code inside a routine: do their expansions move the
+                                     0000     5 ; line numbers after them? DST.COM assembles it /DEBUG/LIST.
+                                     0000     6 
+                                 00000000     7 	.PSECT	DATA, WRT, NOEXE, LONG
+                           00000050  0000     8 MYFAB:	.BLKB	80
+                                     0050     9 
+                                 00000000    10 	.PSECT	CODE, NOWRT, EXE, LONG
+                               0000  0000    11 	.ENTRY	DSTLN6, ^M<>
+                            50   D4  0002    12 	CLRL	R0
+                                     0004    13 	$OPEN	FAB=MYFAB
+                            50   D6  0011    14 	INCL	R0
+                                     0013    15 	$CLOSE	FAB=MYFAB
+                            50   D6  0020    16 	INCL	R0
+                                 04  0022    17 	RET
+                                     0023    18 
+                                     0023    19 	.END	DSTLN6
+DSTLN6                          Phase 29 probe 2: line tables around $OP  5-OCT-2026 07:08:28  VAX MACRO V5.4-3            Page   2
+Symbol table                                                              5-OCT-2026 07:00:17  DUA1:[000000]DSTLN6.MAR;1         (1)
+
+$$.TMP1        = 00000001    D          
+$$.TMP2        = 000000AF               
+DSTLN6           00000000 RG D  02      
+MYFAB            00000000 R  D  01      
+SYS$CLOSE        ********  GX   02      
+SYS$OPEN         ********  GX   02      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+DATA                            00000050  (   80.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+CODE                            00000023  (   35.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  467     00:00:00.00    00:00:00.00
+Command processing              919     00:00:00.01    00:00:00.01
+Pass 1                          455     00:00:00.01    00:00:00.01
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           54     00:00:00.00    00:00:00.00
+Symbol table output               2     00:00:00.00    00:00:00.00
+Psect synopsis output             3     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1927     00:00:00.02    00:00:00.02
+
+The working set limit was 812 pages.
+1064 bytes (3 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 6 non-local and 0 local symbols.
+19 source lines were read in Pass 1, producing 19 object records in Pass 2.
+4 pages of virtual memory were used to define 3 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        3        
+
+51 GETS were required to define 3 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/DEBUG/LIST DSTLN6

@@ -1,0 +1,359 @@
+
+$ !
+$ ! DSTVAR is DSTLN1 with variable-length records, for the source-file
+$ ! record's format fields.
+$ !
+$ CREATE VAR.FDL
+RECORD
+	CARRIAGE_CONTROL	carriage_return
+	FORMAT			variable
+$ CONVERT/FDL=VAR.FDL DSTLN1.MAR DSTVAR.MAR
+$ DIRECTORY/FULL *.MAR
+
+Directory DUA1:[000000]
+
+DSTDBG.MAR;1                  File ID:  (18,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:    5-OCT-2026 07:00:17.69
+Revised:    5-OCT-2026 07:00:17.69 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+DSTDIS.MAR;1                  File ID:  (19,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:    5-OCT-2026 07:00:17.69
+Revised:    5-OCT-2026 07:00:17.69 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+DSTLN1.MAR;1                  File ID:  (12,1,0)              
+Size:           35/35         Owner:    [SYSTEM]
+Created:    5-OCT-2026 07:00:17.69
+Revised:    5-OCT-2026 07:00:17.69 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 35, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+DSTLN2.MAR;1                  File ID:  (13,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:    5-OCT-2026 07:00:17.69
+Revised:    5-OCT-2026 07:00:17.69 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+DSTLN3.MAR;1                  File ID:  (14,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:    5-OCT-2026 07:00:17.69
+Revised:    5-OCT-2026 07:00:17.69 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+DSTLN4.MAR;1                  File ID:  (15,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:    5-OCT-2026 07:00:17.69
+Revised:    5-OCT-2026 07:00:17.69 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+DSTLN5.MAR;1                  File ID:  (16,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:    5-OCT-2026 07:00:17.69
+Revised:    5-OCT-2026 07:00:17.69 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+DSTLN6.MAR;1                  File ID:  (17,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:    5-OCT-2026 07:00:17.69
+Revised:    5-OCT-2026 07:00:17.69 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+DSTSYM.MAR;1                  File ID:  (11,1,0)              
+Size:            5/5          Owner:    [SYSTEM]
+Created:    5-OCT-2026 07:00:17.69
+Revised:    5-OCT-2026 07:00:17.69 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 5, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+DSTVAR.MAR;1                  File ID:  (23,1,0)              
+Size:           36/36         Owner:    [SYSTEM]
+Created:    5-OCT-2026 07:08:28.55
+Revised:    5-OCT-2026 07:08:28.55 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 36, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 117 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Total of 10 files, 85/85 blocks.
+$ !
+$ LIST = "DSTSYM,DSTLN1,DSTLN2,DSTLN3,DSTLN4,DSTLN5,DSTLN6,DSTDIS,DSTVAR"
+$ I = 0
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO NODEBUG
+$   MACRO/DEBUG/LIST DSTSYM
+                  00000000 00000001  0029    35 LQUADS:	.QUAD	1, 2
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000002"
+$   ANALYZE/OBJECT/OUTPUT=DSTSYM.ANL DSTSYM.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]DSTSYM.OBJ;1                               0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO NODEBUG
+$   MACRO/DEBUG/LIST DSTLN1
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   ANALYZE/OBJECT/OUTPUT=DSTLN1.ANL DSTLN1.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]DSTLN1.OBJ;1                               0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO NODEBUG
+$   MACRO/DEBUG/LIST DSTLN2
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   ANALYZE/OBJECT/OUTPUT=DSTLN2.ANL DSTLN2.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]DSTLN2.OBJ;1                               0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO NODEBUG
+$   MACRO/DEBUG/LIST DSTLN3
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   ANALYZE/OBJECT/OUTPUT=DSTLN3.ANL DSTLN3.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]DSTLN3.OBJ;1                               0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO NODEBUG
+$   MACRO/DEBUG/LIST DSTLN4
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   ANALYZE/OBJECT/OUTPUT=DSTLN4.ANL DSTLN4.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]DSTLN4.OBJ;1                               0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO NODEBUG
+$   MACRO/DEBUG/LIST DSTLN5
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   ANALYZE/OBJECT/OUTPUT=DSTLN5.ANL DSTLN5.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]DSTLN5.OBJ;1                               0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO NODEBUG
+$   MACRO/DEBUG/LIST DSTLN6
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   ANALYZE/OBJECT/OUTPUT=DSTLN6.ANL DSTLN6.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]DSTLN6.OBJ;1                               0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO NODEBUG
+$   MACRO/DEBUG/LIST DSTDIS
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   ANALYZE/OBJECT/OUTPUT=DSTDIS.ANL DSTDIS.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]DSTDIS.OBJ;1                               0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO NODEBUG
+$   MACRO/DEBUG/LIST DSTVAR
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   ANALYZE/OBJECT/OUTPUT=DSTVAR.ANL DSTVAR.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]DSTVAR.OBJ;1                               0 errors
+$   I = I + 1
+$   GOTO NEXT
+$ NEXT:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO NODEBUG
+$ NODEBUG:
+$ MACRO/LIST DSTDBG
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ ANALYZE/OBJECT/OUTPUT=DSTDBG.ANL DSTDBG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]DSTDBG.OBJ;1                               0 errors
+$ DIRECTORY/SIZE/DATE *.*
+
+Directory DUA1:[000000]
+
+000000.DIR;1               4   5-OCT-2026 07:00:17.69
+BACKUP.SYS;1               0   5-OCT-2026 07:00:17.69
+BADBLK.SYS;1               0   5-OCT-2026 07:00:17.69
+BADLOG.SYS;1               0   5-OCT-2026 07:00:17.69
+BITMAP.SYS;1               7   5-OCT-2026 07:00:17.69
+CONTIN.SYS;1               0   5-OCT-2026 07:00:17.69
+CORIMG.SYS;1               0   5-OCT-2026 07:00:17.69
+DST.COM;1                  3   5-OCT-2026 07:00:17.69
+DST.LOG;1                  0   5-OCT-2026 07:08:28.54
+DSTDBG.ANL;1              20   5-OCT-2026 07:08:29.07
+DSTDBG.LIS;1              11   5-OCT-2026 07:08:29.05
+DSTDBG.MAR;1               1   5-OCT-2026 07:00:17.69
+DSTDBG.OBJ;1               1   5-OCT-2026 07:08:29.05
+DSTDIS.ANL;1              21   5-OCT-2026 07:08:28.99
+DSTDIS.LIS;1              11   5-OCT-2026 07:08:28.97
+DSTDIS.MAR;1               1   5-OCT-2026 07:00:17.69
+DSTDIS.OBJ;1               2   5-OCT-2026 07:08:28.97
+DSTLN1.ANL;1              20   5-OCT-2026 07:08:28.67
+DSTLN1.LIS;1              78   5-OCT-2026 07:08:28.65
+DSTLN1.MAR;1              35   5-OCT-2026 07:00:17.69
+DSTLN1.OBJ;1               2   5-OCT-2026 07:08:28.64
+DSTLN2.ANL;1              37   5-OCT-2026 07:08:28.71
+DSTLN2.LIS;1              12   5-OCT-2026 07:08:28.69
+DSTLN2.MAR;1               2   5-OCT-2026 07:00:17.69
+DSTLN2.OBJ;1               2   5-OCT-2026 07:08:28.69
+DSTLN3.ANL;1              17   5-OCT-2026 07:08:28.75
+DSTLN3.LIS;1              13   5-OCT-2026 07:08:28.73
+DSTLN3.MAR;1               2   5-OCT-2026 07:00:17.69
+DSTLN3.OBJ;1               1   5-OCT-2026 07:08:28.73
+DSTLN4.ANL;1              73   5-OCT-2026 07:08:28.81
+DSTLN4.LIS;1               9   5-OCT-2026 07:08:28.77
+DSTLN4.MAR;1               1   5-OCT-2026 07:00:17.69
+DSTLN4.OBJ;1               9   5-OCT-2026 07:08:28.77
+DSTLN5.ANL;1              90   5-OCT-2026 07:08:28.89
+DSTLN5.LIS;1              12   5-OCT-2026 07:08:28.84
+DSTLN5.MAR;1               1   5-OCT-2026 07:00:17.69
+DSTLN5.OBJ;1               9   5-OCT-2026 07:08:28.84
+DSTLN6.ANL;1              24   5-OCT-2026 07:08:28.95
+DSTLN6.LIS;1              10   5-OCT-2026 07:08:28.93
+DSTLN6.MAR;1               1   5-OCT-2026 07:00:17.69
+DSTLN6.OBJ;1               2   5-OCT-2026 07:08:28.92
+DSTSYM.ANL;1              94   5-OCT-2026 07:08:28.61
+DSTSYM.LIS;1              28   5-OCT-2026 07:08:28.59
+DSTSYM.MAR;1               5   5-OCT-2026 07:00:17.69
+DSTSYM.OBJ;1               5   5-OCT-2026 07:08:28.59
+DSTVAR.ANL;1              20   5-OCT-2026 07:08:29.03
+DSTVAR.LIS;1              78   5-OCT-2026 07:08:29.01
+DSTVAR.MAR;1              36   5-OCT-2026 07:08:28.55
+DSTVAR.OBJ;1               2   5-OCT-2026 07:08:29.01
+INDEXF.SYS;1             843   5-OCT-2026 07:00:17.69
+SECURITY.SYS;1             1   5-OCT-2026 07:00:17.69
+VAR.FDL;1                  1   5-OCT-2026 07:08:28.54
+VOLSET.SYS;1               0   5-OCT-2026 07:00:17.69
+
+Total of 53 files, 1657 blocks.
+$ EXIT
