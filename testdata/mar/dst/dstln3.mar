@@ -1,0 +1,45 @@
+	.TITLE	DSTLN3	Phase 29 probe 2: line tables and macros
+	.IDENT	/V1.0/
+
+; Lines from macro expansions, conditionals, and repeat blocks: a macro
+; of data called before the code, one of code called in it, and
+; assembled and skipped conditional lines. No system macros. DST.COM
+; assembles it /DEBUG/LIST.
+
+	.MACRO	DATA3	A		; three data lines and a comment
+	.LONG	A
+	; a comment in the expansion
+	.LONG	A+1
+	.LONG	A+2
+	.ENDM	DATA3
+
+	.MACRO	CODE3	R		; three instructions and a comment
+	INCL	R
+	; a comment in the expansion
+	INCL	R
+	INCL	R
+	.ENDM	CODE3
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+	DATA3	1
+	DATA3	2
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	DSTLN3, ^M<>
+	CLRL	R0
+	CODE3	R0
+	INCL	R0
+	.IF	EQ, 1			; skipped
+	INCL	R1
+	INCL	R1
+	.ENDC
+	.IF	EQ, 0			; assembled
+	INCL	R2
+	.ENDC
+	.REPT	3
+	INCL	R3
+	.ENDR
+	INCL	R0
+	RET
+
+	.END	DSTLN3

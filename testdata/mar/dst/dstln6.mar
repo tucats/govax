@@ -1,0 +1,19 @@
+	.TITLE	DSTLN6	Phase 29 probe 2: line tables around $OPEN
+	.IDENT	/V1.0/
+
+; System macros of code inside a routine: do their expansions move the
+; line numbers after them? DST.COM assembles it /DEBUG/LIST.
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+MYFAB:	.BLKB	80
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	DSTLN6, ^M<>
+	CLRL	R0
+	$OPEN	FAB=MYFAB
+	INCL	R0
+	$CLOSE	FAB=MYFAB
+	INCL	R0
+	RET
+
+	.END	DSTLN6

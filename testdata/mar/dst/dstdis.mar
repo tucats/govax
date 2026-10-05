@@ -1,0 +1,27 @@
+	.TITLE	DSTDIS	Phase 29 probe 2: .DISABLE DEBUG partway
+	.IDENT	/V1.0/
+
+; Assembled /DEBUG, so debugger records start on: which symbols and
+; lines does .DISABLE DEBUG partway leave out? DST.COM assembles it
+; /DEBUG/LIST.
+
+BEFORE = 1
+	.PSECT	DATA, WRT, NOEXE, LONG
+DBEFORE: .LONG	1
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	DSTDIS, ^M<>
+	CLRL	R0
+	INCL	R0
+
+	.DISABLE DEBUG
+
+AFTER = 2
+	.PSECT	DATA
+DAFTER:	.LONG	2
+
+	.PSECT	CODE
+	INCL	R0
+	RET
+
+	.END	DSTDIS

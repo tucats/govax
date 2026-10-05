@@ -1,0 +1,91 @@
+	.TITLE	DSTSYM	Phase 29 probe 2: debugger symbol records
+	.IDENT	/V1.0/
+
+; Each label is followed by a different data directive, so the object's
+; DBG records show what each directive makes of a label. Then the other
+; kinds of symbol: assigned, global, relocatable, suppressed, external,
+; local, and in an absolute psect. DST.COM assembles it /DEBUG/LIST.
+
+	.EXTERNAL EXTSYM
+
+CONST1 = 5			; an absolute constant
+CONST2 == 6			; a global one
+NEGCON = -2
+BIGCON = ^X12345678
+TWICE = 1			; assigned twice, two values
+TWICE = 2
+SAME = 3			; assigned twice, one value
+SAME = 3
+	.ENABLE	SUPPRESSION
+SUPUNREF = 7			; suppressed, never referred to
+SUPREF = 8			; suppressed, referred to below
+	.DISABLE SUPPRESSION
+A_NAME_OF_31_CHARACTERS_IN_ALL = 9
+
+	.PSECT	DATA, WRT, NOEXE, QUAD
+LBYTE:	.BYTE	1
+LBYTES:	.BYTE	1, 2, 3
+LSBYTE:	.SIGNED_BYTE -1
+LWORD:	.WORD	1
+LWORDS:	.WORD	1, 2
+LSWORD:	.SIGNED_WORD -1
+LLONG:	.LONG	SUPREF
+LLONGS:	.LONG	1, 2, 3, 4
+LQUAD:	.QUAD	1
+LQUADS:	.QUAD	1, 2
+LOCTA:	.OCTA	1
+LADDR:	.ADDRESS LBYTE
+LADDRS:	.ADDRESS LBYTE, LWORD
+LFLOAT:	.F_FLOATING 1.0
+LFLOATS: .F_FLOATING 1.0, 2.0
+LDOUBLE: .D_FLOATING 1.0
+LGFLT:	.G_FLOATING 1.0
+LHFLT:	.H_FLOATING 1.0
+LASCII:	.ASCII	/abc/
+LASCII1: .ASCII	/a/
+LASCIZ:	.ASCIZ	/abc/
+LASCIC:	.ASCIC	/abc/
+LASCID:	.ASCID	/abc/
+LPACKED: .PACKED -123
+LBLKB1:	.BLKB	1
+LBLKB:	.BLKB	5
+LBLKW1:	.BLKW	1
+LBLKW:	.BLKW	5
+LBLKL1:	.BLKL	1
+LBLKL:	.BLKL	5
+LBLKQ1:	.BLKQ	1
+LBLKQ:	.BLKQ	5
+LBLKO:	.BLKO	2
+LBLKF:	.BLKF	2
+LBLKD:	.BLKD	2
+LBLKG:	.BLKG	2
+LBLKH:	.BLKH	2
+LBLKA:	.BLKA	2
+LBLKB0:	.BLKB	0
+LNEXT:				; a label on a line of its own
+	.LONG	7
+LTWO1:				; two labels at one location
+LTWO2:	.WORD	3
+LALIGN:	.ALIGN	QUAD		; a label before .ALIGN
+	.LONG	8
+LDOT:	. = . + 4		; a label before a location change
+GLOBLAB:: .LONG	9		; a global label
+LEXTERN: .LONG	EXTSYM		; an external symbol's value
+LEND:				; the psect's last label
+RELSYM = LBYTE+4		; a relocatable assignment
+
+	.PSECT	ABSDATA, ABS
+ABSLAB:	.BLKL	1		; a label in an absolute psect
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	DSTSYM, ^M<>
+	JSB	SUB
+	MOVL	#TWICE, R0
+	MOVL	#SAME, R0
+	MOVAB	RELSYM, R0
+	RET
+
+SUB:	NOP			; a JSB subroutine
+10$:	RSB			; a local label
+
+	.END	DSTSYM

@@ -1,0 +1,14 @@
+	.TITLE	DSTLN4	Phase 29 probe 2: line tables after $FABDEF
+	.IDENT	/V1.0/
+
+; A system macro of definitions alone before the code: does its
+; expansion move the line numbers? DST.COM assembles it /DEBUG/LIST.
+
+	$FABDEF
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	DSTLN4, ^M<>
+	MOVL	#FAB$C_BLN, R0
+	RET
+
+	.END	DSTLN4

@@ -1,0 +1,35 @@
+	.TITLE	DSTLN2	Phase 29 probe 2: line tables, several psects
+	.IDENT	/V1.0/
+
+; Code in two executable psects, switching between them, code before
+; any .ENTRY, code in a NOEXE psect, and a routine that doesn't end in
+; RET. DST.COM assembles it /DEBUG/LIST.
+
+	.PSECT	FIRST, NOWRT, EXE, LONG
+SUBA:	INCL	R0		; code before any .ENTRY
+	RSB
+
+	.PSECT	SECOND, NOWRT, EXE, LONG
+	.ENTRY	DSTLN2, ^M<>
+	JSB	SUBA
+	JSB	SUBB
+	BRB	NEXT
+
+	.PSECT	FIRST
+SUBB:	DECL	R0		; back in the first psect
+	RSB
+
+	.PSECT	SECOND
+NEXT:	JSB	SUBC
+	RET
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+SUBC:	CLRL	R1		; code in a NOEXE psect
+	RSB
+
+	.PSECT	SECOND
+	.ENTRY	LOOPS, ^M<>	; a routine that doesn't end in RET
+20$:	INCL	R0
+	BRB	20$
+
+	.END	DSTLN2

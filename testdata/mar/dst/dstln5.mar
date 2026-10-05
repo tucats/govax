@@ -1,0 +1,15 @@
+	.TITLE	DSTLN5	Phase 29 probe 2: line tables after $FAB
+	.IDENT	/V1.0/
+
+; A system macro of data before the code: does its expansion move the
+; line numbers? DST.COM assembles it /DEBUG/LIST.
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+MYFAB:	$FAB	FNM=<X.DAT>
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	DSTLN5, ^M<>
+	CLRL	R0
+	RET
+
+	.END	DSTLN5

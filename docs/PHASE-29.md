@@ -1439,3 +1439,84 @@ no symbol values, no tables.
 - **Nothing is left** of this phase's validation that VMS's libraries
   can settle. Debugger records (subtask 12) and FAILSIG's cell order stay
   as recorded above.
+
+### 2026-10-05 — Subtask 12 resumed: FORTH's debugger records
+
+The author built `testdata/mar/forth.mar` with `MACRO/DEBUG/LIST` and
+`LINK/DEBUG` on VMS, with ANALYZE/OBJECT and ANALYZE/IMAGE reports
+(`testdata/mar/dst/vax`). Its 66 DBG records hold about 1,420 DST
+records of nine types, enough to work most of them out. Everything below
+comes from those bytes and the listing beside them (Decision 6); the
+data type codes are the VAX calling standard's, a public manual.
+
+- **ANALYZE.** govax's ANALYZE/OBJECT already matched VMS's report for
+  this object. ANALYZE/IMAGE differed by one page break, so an image
+  section descriptor's heading now needs 4 rows (docs/PHASE-40.md).
+  Both reports joined the ANALYZE page tests.
+- **Where the DBG records go.** The line-number table goes out as the
+  code does: a DBG record among the TIR records each time it fills
+  (FORTH's records 29 and 35), and the rest just before the last TIR
+  record, with the source-file record's line count and the table's end
+  in a record of their own. The symbol records follow the TBT record
+  of routine begins, before the TBT record of psects. `/DEBUG=SYMBOLS`
+  alone (the probe's TRDBGSYM) writes the line table and no symbol
+  records: those need traceback too.
+- **Symbol records** (`08`, `BB`, `04`, `06`, `07`, `0E`, `2E` in FORTH),
+  one for each symbol, in ASCII name order. Each is a byte, a longword
+  value, and the counted name.
+  - The type byte is the label's data type, from the first data
+    directive after it, even in a macro expansion: `.LONG`, `.BLKL 1` and
+    absolute constants 08 (L); `.ADDRESS` 04 (LU); `.WORD`, `.BLKW 1` 07
+    (W); `.BYTE`, `.BLKB 1`, `$FAB` 06 (B); `.ASCII` 0E (T); `.ASCIZ`
+    2E. A label followed by an instruction, or by another label, and a
+    relocatable assignment (`$$.TAB`), are `BB`, no data type.
+  - The first byte says what the value is: 0, the value itself (a
+    constant, or a `BB` symbol's address); 1, the data's address; 2 (the
+    probe's `MSG`, an `.ASCID`), a descriptor's address.
+  - `FA` puts a descriptor after the name, the longword giving its
+    offset from there (the counted name's size). `.ASCII` gives a string
+    descriptor (its length, type T, class S, the address). `.BLKB n` and
+    `.BLKL n` (n > 1), and a `.LONG` list, give an array descriptor (class
+    A, flags E0, one dimension, the size in bytes, the address twice, the
+    element count, bounds 0 to count-1). `SINTAB`'s count is 11, its
+    first `.LONG` statement's items, not all 99 longwords.
+  - Every listed symbol but externals and `$$.TMP2` has the new `D`
+    flag in the listing's symbol table, which real MACRO shows with
+    `/DEBUG`. The `$xxxDEF` symbols the listing leaves out (1,038) have
+    records too. An `.ENTRY` routine has `D` but no symbol record; its
+    record is the traceback routine begin.
+- **The source-file record** (`9B`): `10 01`, a word of 20 plus the
+  specification's length, `01 00`, the source's revision date, its end
+  of file block (a longword) and first free byte (a word), its record
+  format (5, stream-LF), the counted specification
+  (`DUA1:[000000]FORTH.MAR;1`), then `00 02 01 00 04 01 00 06 01 00`.
+  A second `9B` holds the line count: `0A` and a word (1733), or `0B`
+  and a byte (TRACE's 44).
+- **The line table** (`B9`), split over as many DST records as it
+  needs: `13 00`, then `10` and the psect's base (stored by the linker),
+  `13` and a word (the line before the first code line), then
+  - a negative byte -n: the current line's code is n bytes, and the
+    next line starts after it;
+  - `02 n`: n more lines with no code (blank, comment, label only), put
+    before the size of the line they follow;
+  - `0E n`: the end, the last line's size n.
+
+  TRACE, FAILMAIN, and FAILSUB come out exactly. FORTH's 847 rows match
+  its listing's addresses, from `.ENTRY FORTH` at 330 to line 1718, but
+  every line number is 512 more than the listing's, and three bytes
+  after the first `13` (`00 01 00`) aren't explained.
+- **What FORTH can't settle, and the clean-room limit.** FORTH calls
+  VMS's system macros, which define symbols govax's own STARLET doesn't
+  (`$$.TAB`, `$$.TMP2`, and the rest), so its DBG records can't match
+  govax's byte for byte; it stays an oracle with those allowed to
+  differ, as its listing already is. If the 512 comes from counting
+  system macros' lines, govax can only match line tables for sources
+  that call none.
+- **A second probe** (`testdata/mar/dst`, `dst2-exchange.dsk`): small
+  sources for the symbol record of each data directive and kind of
+  symbol, the line table's cases (lines before the first instruction,
+  large gaps and skips, several code psects, user macros, conditionals),
+  where the 512 comes from (`$FABDEF`, `$FAB`, `$OPEN`), and `.ENABLE`/
+  `.DISABLE DEBUG` partway. The README says how to run it.
+- **Found on the way:** govax doesn't have `.SIGNED_BYTE` and
+  `.SIGNED_WORD`, which VAX MACRO does; the probe's DSTSYM uses them.
