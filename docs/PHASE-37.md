@@ -122,7 +122,17 @@ Each subtask is committed when its tests pass.
 
 ## Decisions and unconfirmed rules
 
-(Filled in as subtasks land.)
+- **PRINT's items are a DCL list,** separated by commas. console_print.c
+  (and the old Go loop) also took items separated only by blanks
+  (`PRINT "A" 1`); that form is now an extra parameter. A quoted string by
+  itself is printed as text; inside a larger expression it is the
+  evaluator's string literal, as before.
+- **IF's expression is an `$expression`,** so it ends where a blank isn't
+  joined by an operator: `IF X = 1 THEN ...` and `IF DEFINED("X") SET ...`
+  read as before. Text left after evaluating it is an error, where it
+  used to be dispatched as the command.
+- **Handlers live in `internal/console/commands.go`** (`bindConsoleCommands`),
+  called from `bindGrammar`.
 
 ## Progress log
 
@@ -132,3 +142,6 @@ Each subtask is committed when its tests pass.
   expressions too, for PRINT), `/separator=`, `/assignment=`, keyword
   `/nonegatable`, and `@` as a verb. `TestReadExpression` and
   `TestExpressionGrammar` cover each.
+- 2026-10-04: Subtask 2: ZERO, BOOT, ROM, TIME, PRINT/ECHO, HELP/`?`, and
+  IF are grammar verbs; `Console.Print` takes the item list.
+  `commands_test.go` covers them through `Dispatch`.

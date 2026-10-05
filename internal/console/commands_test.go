@@ -1,0 +1,145 @@
+package console
+
+import (
+	"bytes"
+	"errors"
+	"strings"
+	"testing"
+
+	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmserrors"
+)
+
+// newCommandDispatcher returns a Dispatcher on the console grammar and the
+// console's output buffer, emptied.
+func newCommandDispatcher(t *testing.T) (*Dispatcher, *Console, *bytes.Buffer) {
+	t.Helper()
+
+	c, buf := newTestConsole(t)
+	d := NewDispatcher(c, loadEvaxGrammar(t), ParseHelp("$HELP\nTop-level help.\n"))
+
+	buf.Reset()
+
+	return d, c, buf
+}
+
+// TestCommands_print checks PRINT's and ECHO's lists of strings and
+// expressions, now read by the grammar (docs/PHASE-37.md).
+func TestCommands_print(t *testing.T) {
+	d, _, buf := newCommandDispatcher(t)
+
+	cases := []struct{ line, want string }{
+		{`PRINT "Hello, ", 200`, "Hello, 00000200\n"},
+		{`ECHO "a/b", 10 + 6`, "a/b00000016\n"},
+		{`PRIN "Mixed Case"`, "Mixed Case\n"},
+		{"PRINT", "\n"},
+		{"PRINT (1, 2)", ""},
+	}
+
+	for _, c := range cases {
+		buf.Reset()
+
+		err := d.Dispatch(c.line)
+		if c.want == "" {
+			if err == nil {
+				t.Errorf("%s: no error", c.line)
+			}
+
+			continue
+		}
+
+		if err != nil {
+			t.Errorf("%s: %v", c.line, err)
+
+			continue
+		}
+
+		if buf.String() != c.want {
+			t.Errorf("%s printed %q, want %q", c.line, buf.String(), c.want)
+		}
+	}
+}
+
+func TestCommands_helpAliases(t *testing.T) {
+	d, _, buf := newCommandDispatcher(t)
+
+	for _, line := range []string{"HELP", "?", "HEL"} {
+		buf.Reset()
+
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+
+		if !strings.Contains(buf.String(), "Top-level help.") {
+			t.Errorf("%s printed %q", line, buf.String())
+		}
+	}
+}
+
+func TestCommands_time(t *testing.T) {
+	d, c, buf := newCommandDispatcher(t)
+
+	if err := d.Dispatch("TIME SET R3=7"); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := c.CPU.GPR(vax.R3); got != 7 {
+		t.Errorf("R3 = %#x, want 7", got)
+	}
+
+	if !strings.Contains(buf.String(), "Elapsed time:") {
+		t.Errorf("TIME printed %q", buf.String())
+	}
+
+	buf.Reset()
+
+	if err := d.Dispatch("TIME"); err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.HasPrefix(buf.String(), "Time is ") {
+		t.Errorf("bare TIME printed %q", buf.String())
+	}
+}
+
+func TestCommands_ifErrors(t *testing.T) {
+	d, _, _ := newCommandDispatcher(t)
+
+	if err := d.Dispatch("IF"); !errors.Is(err, vmserrors.New(vmserrors.CLI_MISSINGPARAMETER)) {
+		t.Errorf("bare IF: %v, want CLI_MISSINGPARAMETER", err)
+	}
+
+	if err := d.Dispatch("IF 0 THEN BOGUS"); err != nil {
+		t.Errorf("IF 0 THEN BOGUS: %v (a false condition doesn't run its command)", err)
+	}
+
+	if err := d.Dispatch("IF 1 THEN BOGUS"); err == nil {
+		t.Error("IF 1 THEN BOGUS: no error")
+	}
+}
+
+func TestCommands_notImplemented(t *testing.T) {
+	d, _, _ := newCommandDispatcher(t)
+
+	for _, line := range []string{"BOOT", "ROM"} {
+		if err := d.Dispatch(line); !errors.Is(err, vmserrors.New(vmserrors.CLI_NEEDDEP)) {
+			t.Errorf("%s: %v, want CLI_NEEDDEP", line, err)
+		}
+	}
+}
+
+func TestCommands_zero(t *testing.T) {
+	d, c, _ := newCommandDispatcher(t)
+
+	if err := c.Deposit("", 0x1000, SizeLongword, 0x55); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := d.Dispatch("ZERO"); err != nil {
+		t.Fatal(err)
+	}
+
+	if got, err := c.Mem.LoadLongword(c.CPU, 0x1000); err != nil || got != 0 {
+		t.Errorf("memory after ZERO = %#x, %v", got, err)
+	}
+}

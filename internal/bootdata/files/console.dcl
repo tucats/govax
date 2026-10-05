@@ -930,4 +930,45 @@ grammar console
         qualifier   log/id=1453
         qualifier   new_version/id=1454
 
+    !
+    ! docs/PHASE-37.md: the console's former fixed commands, which until
+    ! then dispatch.go's fixedCommands table matched by their first four
+    ! characters and parsed by hand. Their old spellings are verbs or
+    ! aliases here, so each still works, and an exact spelling wins over
+    ! an abbreviation (S is STEP, D is DEPOSIT). An $expression is a
+    ! console expression, evaluated by the handler (expr.go).
+    !
+    verb zero/id=1600
+
+    verb boot/id=1601
+    verb rom/id=1602
+
+    ! TIME runs a command and reports how long it took; with none, it
+    ! prints the time of day.
+    verb time/id=1610
+        parameter   command/id=1611             -
+                    /type=$rest_of_line
+
+    ! PRINT writes a list of quoted strings and expressions.
+    verb print/id=1620
+        parameter   items/id=1621               -
+                    /type=$expression/list
+    verb echo/alias=print
+
+    ! HELP's topic words are the help file's to match, so they're the
+    ! rest of the line ("HELP SHOW SYMBOL/ALL").
+    verb help/id=1630
+        parameter   topic/id=1631               -
+                    /type=$rest_of_line
+    verb ?/alias=help
+
+    ! IF expression [THEN] command: the handler drops THEN.
+    verb if/id=1640
+        parameter   condition/id=1641           -
+                    /type=$expression           -
+                    /prompt="Expression"
+        parameter   command/id=1642             -
+                    /type=$rest_of_line         -
+                    /prompt="Command"
+
 end

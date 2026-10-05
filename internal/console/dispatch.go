@@ -177,6 +177,9 @@ func parseHexOrEmpty(s string) (uint32, error) {
 func (d *Dispatcher) bindGrammar() {
 	g := d.Grammar
 
+	// docs/PHASE-37.md: the former fixed commands (commands.go).
+	d.bindConsoleCommands()
+
 	g.Bind("EXIT", func(id int64, r *dcl.Result) error { return d.Console.Quit() })
 
 	g.Bind("VMINIT", func(id int64, r *dcl.Result) error {
@@ -681,8 +684,6 @@ var fixedCommands map[string]fixedHandler
 
 func init() {
 	fixedCommands = map[string]fixedHandler{
-		"ZERO": cmdZero,
-
 		"EXAM": cmdExamine, "EX": cmdExamine, "DUMP": cmdExamine,
 		"DEP": cmdDeposit, "D": cmdDeposit,
 
@@ -694,9 +695,6 @@ func init() {
 		"SAVE": cmdSave,
 		"LOAD": cmdLoad,
 
-		"TIME": cmdTime,
-		"PRIN": cmdPrint, "ECHO": cmdPrint,
-		"HELP": cmdHelp, "?": cmdHelp,
 		"INCL": cmdInclude, "INC": cmdInclude, "@": cmdInclude,
 
 		"SET": cmdSet,
@@ -704,15 +702,6 @@ func init() {
 		"ASM": cmdAssemble, "ASSE": cmdAssemble,
 		"DISA": cmdDisassemble, "DIS": cmdDisassemble,
 		"CALL": cmdCall,
-		"IF":   cmdIf,
-		"BOOT": cmdNotImplemented("BOOT", "device/RTL support"),
-		"ROM":  cmdNotImplemented("ROM", "device support"),
-	}
-}
-
-func cmdNotImplemented(name, dependency string) fixedHandler {
-	return func(d *Dispatcher, rest string) error {
-		return vmserrors.New(vmserrors.CLI_NEEDDEP, name, dependency)
 	}
 }
 
@@ -756,8 +745,6 @@ func (d *Dispatcher) assembleInteractiveLine(line string) error {
 
 	return nil
 }
-
-func cmdZero(d *Dispatcher, rest string) error { return d.Console.Zero() }
 
 // cmdStep implements STEP [/OVER|/INTO|/IN|/INSTRUCTION|/RETURN] [address]
 // (console_step.c): an optional leading qualifier (defaulting to
@@ -961,48 +948,6 @@ func cmdCall(d *Dispatcher, rest string) error {
 	}
 
 	return d.Console.Call(addr, step, args...)
-}
-
-// cmdIf implements the IF <expression> [THEN] <command> console verb
-// (console_if, reference/eVAX/eVAX/Source/Console/console_include.c): if
-// expression evaluates nonzero, the rest of the line is dispatched
-// recursively as one command (so it can itself be another fixed or DCL
-// command) -- vax.init uses "IF DEFINED(\"CONSOLE$ARG_FILE\") THEN SET
-// NOVERBOSE" (see expr.go's DEFINED() support, added alongside this).
-// Otherwise the rest of the line is simply not executed. Matches
-// console_if's own optional "THEN" keyword (present or absent, either is
-// accepted) ahead of the conditioned command.
-func cmdIf(d *Dispatcher, rest string) error {
-	v, rest, err := d.Console.Evaluator().Eval(rest)
-	if err != nil {
-		return err
-	}
-
-	rest = strings.TrimSpace(rest)
-
-	if then, tail := readCommandVerb(rest); strings.EqualFold(then, "THEN") {
-		rest = strings.TrimSpace(tail)
-	}
-
-	if v == 0 {
-		return nil
-	}
-
-	return d.Dispatch(rest)
-}
-
-func cmdTime(d *Dispatcher, rest string) error {
-	return d.Console.Time(strings.TrimSpace(rest), d.Dispatch)
-}
-
-func cmdPrint(d *Dispatcher, rest string) error {
-	return d.Console.Print(rest)
-}
-
-// cmdHelp implements HELP. A "/" starts a new word, as it does in DCL, so
-// HELP SHOW SYMBOL/ALL finds the same "/ALL" topic as HELP SHOW SYMBOL /ALL.
-func cmdHelp(d *Dispatcher, rest string) error {
-	return d.Console.Help(d.Help, strings.Fields(strings.ReplaceAll(rest, "/", " /")))
 }
 
 func cmdInclude(d *Dispatcher, rest string) error {

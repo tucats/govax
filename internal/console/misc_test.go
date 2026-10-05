@@ -11,7 +11,7 @@ func TestPrint_quotedAndExpression(t *testing.T) {
 	c, buf := newTestConsole(t)
 	buf.Reset()
 
-	if err := c.Print(`"Hello, " 200`); err != nil {
+	if err := c.Print([]string{`"Hello, "`, "200"}); err != nil {
 		t.Fatalf("Print: %v", err)
 	}
 

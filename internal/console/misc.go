@@ -22,47 +22,43 @@ var CommandLineString string
 // so it's passed as it is, without DCL's uppercasing.
 var RunCommandLine string
 
-// Print implements the PRINT/ECHO console command: a comma-separated list
-// of double-quoted literal strings and/or expressions (printed in the
-// console's current radix), matching console_print.c — including its
-// CONSOLE_VERBOSE gate (console_print's own leading check): PRINT is
-// silent whenever SET NOVERBOSE has turned Console.Verbose off (see
-// set.go's SetVerbose/SetNoVerbose).
-func (c *Console) Print(text string) error {
+// Print implements the PRINT/ECHO console command: each item is a
+// double-quoted literal string, printed as it is, or an expression,
+// printed in the console's current radix, matching console_print.c —
+// including its CONSOLE_VERBOSE gate (console_print's own leading check):
+// PRINT is silent whenever SET NOVERBOSE has turned Console.Verbose off
+// (see set.go's SetVerbose/SetNoVerbose). The items are the DCL grammar's
+// list of $expression values (docs/PHASE-37.md), quotes kept.
+func (c *Console) Print(items []string) error {
 	if !c.Verbose {
 		return nil
 	}
 
 	ev := c.Evaluator()
-	pos := text
 
-	for {
-		pos = strings.TrimLeft(pos, " \t")
-		if pos == "" {
-			break
-		}
-
-		if pos[0] == ',' {
-			pos = pos[1:]
-
-			continue
-		}
-
-		if pos[0] == '"' {
-			end := strings.IndexByte(pos[1:], '"')
+	for _, item := range items {
+		// A quoted string by itself is text to print; one inside a
+		// larger expression is the evaluator's string literal.
+		if strings.HasPrefix(item, `"`) {
+			end := strings.IndexByte(item[1:], '"')
 			if end < 0 {
 				return vmserrors.New(vmserrors.CLI_UNTERMSTR)
 			}
 
-			c.Printf("%s", pos[1:end+1])
-			pos = pos[end+2:]
+			if end+2 == len(item) {
+				c.Printf("%s", item[1:end+1])
 
-			continue
+				continue
+			}
 		}
 
-		v, rest, err := ev.Eval(pos)
+		v, rest, err := ev.Eval(item)
 		if err != nil {
 			return err
+		}
+
+		if extra := strings.TrimSpace(rest); extra != "" {
+			return vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, extra)
 		}
 
 		if c.Radix == 10 {
@@ -70,8 +66,6 @@ func (c *Console) Print(text string) error {
 		} else {
 			c.Printf("%08X", v)
 		}
-
-		pos = rest
 	}
 
 	c.Printf("\n")

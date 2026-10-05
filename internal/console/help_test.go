@@ -197,12 +197,12 @@ func TestCmdHelp_qualifierWithoutSpace(t *testing.T) {
 	}
 
 	c, buf := newTestConsole(t)
-	d := &Dispatcher{Console: c, Help: h}
+	d := NewDispatcher(c, loadEvaxGrammar(t), h)
 
 	for _, arg := range []string{"SHOW SYMBOL/SYSTEM", "SHOW SYMBOL /SYSTEM", "SHOW SYMBOL/ALL"} {
 		buf.Reset()
 
-		if err := cmdHelp(d, arg); err != nil {
+		if err := d.Dispatch("HELP " + arg); err != nil {
 			t.Fatalf("HELP %s: %v", arg, err)
 		}
 
