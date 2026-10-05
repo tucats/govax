@@ -11,9 +11,9 @@ never had.
 
 - `docs/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
   index.
-- `docs/PHASE-00.md` … `PHASE-40.md` — one doc per phase: goal, C-source file
+- `docs/PHASE-00.md` … `PHASE-41.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
-  done through 40, which follows 38 directly: there is no Phase 39). Read the relevant phase doc
+  done through 41; 40 follows 38 directly: there is no Phase 39). Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
@@ -148,9 +148,40 @@ expect adjustment as phases land):
   what follows the image on `govax run IMAGE text...`.
 - `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
   Phase 41 so other packages can use it): `Disassemble` decodes one instruction
-  with `internal/cpu`'s table into text `internal/asm` reassembles. It imports
+  with `internal/cpu`'s table into a `Decoded` of structured `Operand`s
+  (`operand.go`: mode, registers, displacement, value, and the `Target`
+  address where it's known). `String` (`format.go`) renders the text
+  `internal/asm` reassembles; `Format(Options)` (`symbolic.go`) renders in a
+  `Style`, `StyleDebugger` being the VMS debugger's `EXAMINE/INSTRUCTION`
+  text, with names from a caller's `Symbolizer` (and, optionally,
+  `ConstantNamer` and `CellNamer`). It knows no symbols itself. It imports
   `cpu` and `vaxfloat`, never `asm`. `cpu.RegisterName` and
   `cpu.DataType.FloatFormat` are shared by the CPU, assembler, and disassembler.
+- `internal/symtab` — a symbol table searched both ways (Phase 41): `Table`
+  by name (ignoring case) and by address (`At`, and `Nearest` for
+  `NAME+offset`), each `Symbol` with `Flags` (entry, label, data, literal,
+  psect, module, global, ...) and a `Scope`. The assembler's `Symbols()`, the
+  console's `SymbolTable`, and `internal/dbgsym` all keep their symbols in
+  it. A leaf package.
+- `internal/vmsimage` — decodes a VMS image file's header blocks, ISDs, and
+  fixup section (`ReadImage`; moved out of `internal/anl` in Phase 41, and not
+  named `image` so as not to shadow Go's). Exports the `IHD`/`ISD`/`IAF`/`SHL`
+  layouts; `DSTBlockCount`/`GSTRecordCount` read the IHS's 32-bit sizes.
+- `internal/dbgsym` — an image's debug symbol table (Phase 41): `Read` turns
+  the DST (`read.go`, `records.go`), the line-number program (`lines.go`),
+  source correlation (`source.go`), the debug module table (`dmt.go`), and the
+  GST (`gst.go`) into a `Program` of modules, routines, labels, data,
+  psects, and lines, relocated by the image's load base. Lookups go both
+  ways: `Lookup` of a path (`MOD\ROUTINE\LABEL`), `AddressOfLine`, and
+  `Symbolize`/`LineAt`/`RoutineAt`/`ModuleAt` of an address, by the
+  debugger's rules (`symbolize.go`; `Names` adapts it to
+  `disasm.Symbolizer`). Its rules come from the probe in `testdata/dbg`
+  (VMS 7.3 debugger sessions, `vax/*.dlg`, and their images). The console
+  keeps one per loaded image (`ICB.Debug`) for `DISASSEMBLE` (symbolic by
+  default), the trace, `STEP`, `SHOW CALLS`, and path names and `%LINE n`
+  in expressions (`dbgnames.go`, `dbgtrace.go`, `dbgcalls.go`);
+  `TestDebuggerOracle` matches `DISASSEMBLE` with every symbolic
+  `EXAMINE/INSTRUCTION` in the sessions. Groundwork for a debugger.
 - `internal/asm` — assembler (Phase 11). Two dialects share one core
   (Phase 27): the console's `ASM` (absolute, into emulated memory, eVAX
   directives) and MACRO-32 (`SetDialect(DialectMACRO)`: psects, relocation
@@ -251,7 +282,7 @@ expect adjustment as phases land):
   docs/PHASE-38.md). `TestObjectPages` matches all 54 `.anl`/`.obj` pairs in
   `testdata/mar` byte for byte but for the time; `testdata/kinds.txt` shows
   the layouts no fixture settles. ANALYZE/IMAGE (Phase 40) is beside it:
-  `ReadImage` (`image.go`) decodes an image's header blocks, ISDs, and fixup
+  `vmsimage.ReadImage` decodes an image's header blocks, ISDs, and fixup
   section, and `AnalyzeImage` (`imagehdr.go`, `imagefix.go`) reports them on
   the same `Pager` (`TitleImage`). `TestImagePages` matches all 29
   `.ani`/`.exe` pairs (`testdata/link/vax`, `testdata/mar/list/vax`,

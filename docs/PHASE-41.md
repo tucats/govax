@@ -1,7 +1,9 @@
 # Phase 41 — Symbolic disassembly from an image's debug symbol table
 
-**Status:** planned (2026-10-05). Reviewed; the open questions are
-decided (see Decisions). Not started.
+**Status:** done (2026-10-05). `DISASSEMBLE`, the trace, `STEP`, and
+`SHOW CALLS` name what a loaded image's debug symbol table names, as
+the VMS 7.3 debugger does: `TestDebuggerOracle` matches every symbolic
+`EXAMINE/INSTRUCTION` range in the probe's seven sessions.
 
 ## Goal
 
@@ -1021,3 +1023,24 @@ system services, and the layout of a location longer than 24 columns.
   and `SET MODE NOSYMBOLIC`'s ranges, since `DISASSEMBLE/NOSYMBOLIC` is
   the console's own layout (Decision 1). The debugger's numeric layout
   is checked in `internal/dbgsym`'s `TestSymbolicInstructions`.
+
+### 2026-10-05 — Subtask 14: close-out
+
+- **`CLAUDE.md`**: entries for `internal/symtab`, `internal/vmsimage`,
+  and `internal/dbgsym` (with the console files that use it and the
+  oracle); `internal/disasm`'s entry describes structured operands,
+  `Format`, and the styles; `internal/anl`'s points at
+  `vmsimage.ReadImage`; the phase docs run to 41.
+- **`docs/PLAN.md`**: Phase 41 is done in the index.
+- **Code comments**: `internal/disasm`'s package doc no longer says its
+  output is only the assembler's text; it describes decoding and the two
+  renderings, and that names come from the caller. No other comment
+  still placed the disassembler in `internal/asm` or left symbolic
+  output to the caller.
+- **`HELP`** was brought up to date as each command changed (subtasks 11
+  and 12); nothing was left.
+- **Left for the debugger phase** (Out of scope): `RUN/DEBUG` and the
+  `DBG>` prompt, breakpoints by routine, the debugger's `break on
+  unhandled exception` message and `RUN`'s traceback, source lines
+  beside instructions, and the unconfirmed rules logged under subtasks
+  1, 7, 9, 10, 11, and 12, for a later simh round.
