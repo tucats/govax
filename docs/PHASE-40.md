@@ -315,3 +315,14 @@ Phase 38's object options.
   ADDR.EXE against `addr.ani`; `TestReadImageContinuedISDs` a two-block
   header. The IAF's flags (+0x24) and extra image count (+0x20) are
   placed by guess: both are 0 in every fixture (unconfirmed).
+- 2026-10-05: Subtask 3: `anl.AnalyzeImage` (`imagehdr.go`, the header
+  and ISDs; `imagefix.go`, the fixup section), table-driven: the IHD,
+  ISD, and IAF flag bits, image types, section types, and match
+  controls are tables; protections are named from `vmsdef.Symbols`'s
+  `PRT$C_`. `TestImageContent` matches all 29 fixtures line for line once
+  page headers and the closing command line are removed (a deliberately
+  broken label fails the 14 with G^ lists, so the comparison bites).
+  Choices the fixtures don't settle: up to four references per line, a
+  blank line between protection changes, `(system space)` for an S0
+  address, a shareable image's type text, and a patched image's one-line
+  note (subtask 6 fills in the rest).

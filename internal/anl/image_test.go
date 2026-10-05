@@ -1,10 +1,12 @@
 package anl
 
 import (
+	"bytes"
 	"encoding/binary"
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -180,5 +182,41 @@ func TestReadImageContinuedISDs(t *testing.T) {
 
 	if _, err := ReadImage(data[:100]); err == nil {
 		t.Error("a 100-byte file read as an image")
+	}
+}
+
+// imagePageHeaderRE matches a page header of real ANALYZE/IMAGE's output.
+var imagePageHeaderRE = regexp.MustCompile("\f\nAnalyze Image[^\n]*\n[^\n]*\nANALYZ V07-04\n\n")
+
+// imagePageContent is an image analysis's text without its page layout.
+func imagePageContent(analysis []byte) string {
+	text := imagePageHeaderRE.ReplaceAllString(string(analysis), "")
+
+	if i := strings.LastIndex(text, "\nANALYZE/IMAGE"); i >= 0 {
+		text = text[:i+1]
+	}
+
+	return text
+}
+
+// TestImageContent checks every line ANALYZE/IMAGE shows for each
+// fixture, ignoring how the lines are laid out on pages.
+func TestImageContent(t *testing.T) {
+	for _, f := range imageFixtures(t) {
+		img, err := ReadImage(f.data)
+		if err != nil {
+			t.Fatalf("%s: %v", f.name, err)
+		}
+
+		rep := AnalyzeImage(img, ImageOptions{})
+
+		var b bytes.Buffer
+		if err := WriteText(&b, rep.Lines); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := firstDiff(imagePageContent(f.analysis), b.String()); diff != "" {
+			t.Errorf("%s: %s", f.name, diff)
+		}
 	}
 }
