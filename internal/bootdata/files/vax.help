@@ -47,6 +47,7 @@
 //                          (docs/PHASE-36.md)
 //              10/05/26    Added ANALYZE/OBJECT (docs/PHASE-38.md)
 //              10/05/26    Added ANALYZE/IMAGE (docs/PHASE-40.md)
+//              10/05/26    MACRO/DEBUG writes debugger records (docs/PHASE-29.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -3991,8 +3992,12 @@ $MACR
                         and no traceback), ALL (both; the same as /DEBUG
                         alone), and NONE.  /NODEBUG is /DEBUG=NONE, which
                         writes no traceback records either.  The default
-                        is /DEBUG=TRACEBACK.  govax doesn't write
-                        debugger records yet.
+                        is /DEBUG=TRACEBACK.  Debugger records give the
+                        source file, a line-number table of the code, and,
+                        with traceback too, a record of each symbol and
+                        its data type.  As with VMS MACRO, .ENABLE DEBUG
+                        part way through a source starts them there, and
+                        .DISABLE DEBUG doesn't stop them.
 
         /ENABLE=(<function>[,...])
         /DISABLE=(<function>[,...])

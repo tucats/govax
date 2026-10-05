@@ -13,9 +13,8 @@ type enableFlags uint16
 const (
 	// enableAbsolute assembles relative operands as absolute ones.
 	enableAbsolute enableFlags = 1 << iota
-	// enableDebug puts local symbols in the object for the debugger. govax
-	// records it but writes no debugger records (docs/PHASE-29.md,
-	// subtask 12, deferred).
+	// enableDebug writes debugger records: the line-number table and the
+	// symbols, from the first point it's on (debug.go).
 	enableDebug
 	// enableGlobal makes every undefined symbol external (on by default).
 	enableGlobal

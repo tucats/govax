@@ -284,8 +284,8 @@ Phase 38's object options.
 
 ### Future expansion
 
-- **Debug data.** govax's MACRO and LINK don't write debugger (DBG)
-  records or a DMT yet (Phase 29's subtask 12), and ANALYZE/IMAGE shows
+- **Debug data.** govax's MACRO writes debugger (DBG) records (Phase
+  29's subtask 12), but LINK/DEBUG and a DMT are out of scope, and ANALYZE/IMAGE shows
   only where the debug tables are. Showing their contents (the DST's
   records, as `obj.Dump` decodes them; the DMT; the GST of an image
   linked /DEBUG) is left for later, as an option of govax's own if real

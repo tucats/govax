@@ -12,11 +12,11 @@ import (
 // the module defines, the source file's record, and the line-number
 // table that maps code addresses to source lines.
 //
-// As with traceback (dst.go), the manuals don't give the layouts, so they
-// come from real MACRO's objects: FORTH's and the two probes' in
-// testdata/mar/list and testdata/mar/dst. The data type codes, and the
-// string and array descriptors some symbol records carry, are the VAX
-// calling standard's (a public manual); the other names are govax's.
+// The layouts were worked out from real MACRO's objects (FORTH's and the
+// two probes' in testdata/mar/list and testdata/mar/dst), then checked
+// against docs/DEBUG-RECORDS.md, a clean-room description of the DST
+// format, whose names (DST$K_...) the comments give. The data type codes
+// (DSC$K_DTYPE_...) and descriptors are the VAX calling standard's.
 
 // The DST record types of a symbol record: the symbol's data type. A
 // label's is the type of the data directive that follows it (.LONG's is
@@ -48,39 +48,45 @@ const (
 	DSTDataG DSTType = 0x1B
 	// DSTDataH is H_floating: .H_FLOATING and .BLKH.
 	DSTDataH DSTType = 0x1C
-	// DSTDataASCIC is a counted string, .ASCIC. The calling standard's
-	// name for the code isn't confirmed; this is govax's.
+	// DSTDataASCIC is counted ASCII text, .ASCIC (DSC$K_DTYPE_AC, a
+	// debugger extension code).
 	DSTDataASCIC DSTType = 0x2D
-	// DSTDataASCIZ is a zero-terminated string, .ASCIZ (govax's name, as
-	// for DSTDataASCIC).
+	// DSTDataASCIZ is zero-terminated ASCII text, .ASCIZ
+	// (DSC$K_DTYPE_AZ).
 	DSTDataASCIZ DSTType = 0x2E
-	// DSTLabel is a symbol with no data type: a label of code, a label
-	// no data follows, or a relocatable assignment.
+	// DSTLabel (DST$K_LABEL, 187) names a code address: real MACRO's
+	// record for a label of code, a label no data follows, or a
+	// relocatable assignment.
 	DSTLabel DSTType = 0xBB
 )
 
 // The DST record types of the line-number information.
 const (
-	// DSTSourceFile describes the source file (DSTSourceFileRecord), and
-	// a second one holds its line count (DSTLineCountRecord).
+	// DSTSourceFile (DST$K_SOURCE, 155) holds source correlation
+	// commands: real MACRO's first declares the source file
+	// (DSTSourceFileRecord), and a second maps the lines to its records
+	// (DSTLineCountRecord).
 	DSTSourceFile DSTType = 0x9B
-	// DSTLineNumbers holds line-number commands (see the Line*
-	// functions); the table runs on across as many as it needs.
+	// DSTLineNumbers (DST$K_LINE_NUM, 185) holds line-number commands
+	// (the Line* functions): a module's line-number records are one
+	// stream of them, split across as many records as it needs.
 	DSTLineNumbers DSTType = 0xB9
 )
 
-// What a symbol record's first byte says its value is.
+// What a symbol record's first byte (DST$B_VFLAGS) says its value is.
 const (
-	// SymbolValue: the longword is the symbol's value (a constant, or a
-	// DSTLabel symbol's address).
+	// SymbolValue (DST$K_VALKIND_LITERAL): the longword is the symbol's
+	// value (a constant, or a DSTLabel symbol's address).
 	SymbolValue byte = 0
-	// SymbolAddress: the longword is the address of the symbol's data.
+	// SymbolAddress (DST$K_VALKIND_ADDR): the longword is the address of
+	// the symbol's data.
 	SymbolAddress byte = 1
-	// SymbolDescriptorAddress: the longword is the address of a
-	// descriptor of the data (.ASCID's).
+	// SymbolDescriptorAddress (DST$K_VALKIND_DESC): the longword is the
+	// address of a descriptor of the data (.ASCID's).
 	SymbolDescriptorAddress byte = 2
-	// symbolDescriptor: a descriptor of the data follows the name, and
-	// the longword is how far after the longword it starts.
+	// symbolDescriptor (DST$K_VFLAGS_DSC): a descriptor of the data
+	// follows the name, and the longword is its offset from the name's
+	// count byte.
 	symbolDescriptor byte = 0xFA
 )
 
@@ -197,20 +203,20 @@ func DSTArrayRecord(typ DSTType, name string, size uint16, count uint32, psect u
 }
 
 // SourceFile is what a source-file record says of the source: its full
-// file specification, revision date, size (the block holding its end of
+// file specification, creation date, size (the block holding its end of
 // file, and the first free byte in that block), and RMS record format
-// (FAB$C_STMLF, 5, for a host file).
+// and organization (5, stream-LF and sequential, for a host file).
 type SourceFile struct {
 	Spec      string
-	Revised   time.Time
+	Created   time.Time
 	EOFBlock  uint32
 	FirstFree uint16
 	Format    byte
 }
 
-// revisedTime is t as a VMS time (its wall-clock reading), or 0 for no
+// vmsTime is t as a VMS time (its wall-clock reading), or 0 for no
 // time.
-func revisedTime(t time.Time) uint64 {
+func vmsTime(t time.Time) uint64 {
 	if t.IsZero() {
 		return 0
 	}
@@ -218,21 +224,35 @@ func revisedTime(t time.Time) uint64 {
 	return vmsdef.Time(t)
 }
 
+// maxSourceSpec is the longest file specification a source file's
+// record has room for: 254 bytes, less the record's 32 others.
+const maxSourceSpec = 254 - 32
+
 // RecordFormatStreamLF is RMS's stream-LF record format, the one a
 // source on the host is described as having.
 const RecordFormatStreamLF = 5
 
-// DSTSourceFileRecord returns the record describing the source file: 10
-// 01, a word counting the bytes from itself through the specification,
-// 01 00 (the file's number), the revision date, the end of file block
-// (a longword) and first free byte (a word), the record format, the
-// counted specification, then 00 02 01 00 04 01 00 06 01 00. What the
-// fixed bytes mean isn't known; every real object has them.
+// DSTSourceFileRecord returns the source correlation record real MACRO
+// starts with, of these commands:
+//
+//   - DST$K_SRC_FORMFEED (10): a line of only a form feed is a line;
+//   - DST$K_SRC_DECLFILE (01): the byte count after it, flags (0), the
+//     file's ID (1), its creation date, end of file block, first free
+//     byte, and record format, the counted file specification, and the
+//     counted library module name (empty);
+//   - DST$K_SRC_SETFILE 1, DST$K_SRC_SETREC_W 1, DST$K_SRC_SETLNUM_W 1
+//     (02, 04, 06): line 1 is the file's record 1.
+//
+// A DST record holds at most 254 bytes after its type, so a specification
+// longer than maxSourceSpec (a long host path) keeps its last
+// maxSourceSpec characters (govax's choice).
 func DSTSourceFileRecord(f SourceFile) DSTRecord {
-	data := []byte{0x10, 0x01}
-	data = binary.LittleEndian.AppendUint16(data, uint16(20+len(f.Spec)))
-	data = append(data, 0x01, 0x00)
-	data = binary.LittleEndian.AppendUint64(data, revisedTime(f.Revised))
+	if len(f.Spec) > maxSourceSpec {
+		f.Spec = f.Spec[len(f.Spec)-maxSourceSpec:]
+	}
+
+	data := []byte{0x10, 0x01, byte(20 + len(f.Spec)), 0x00, 0x01, 0x00}
+	data = binary.LittleEndian.AppendUint64(data, vmsTime(f.Created))
 	data = binary.LittleEndian.AppendUint32(data, f.EOFBlock)
 	data = binary.LittleEndian.AppendUint16(data, f.FirstFree)
 	data = append(data, f.Format)
@@ -242,74 +262,95 @@ func DSTSourceFileRecord(f SourceFile) DSTRecord {
 	return DSTRecord{Type: DSTSourceFile, Data: data}
 }
 
-// DSTLineCountRecord returns the record that ends the line-number
-// information with the source's line count: 0B and a byte, or 0A and a
-// word.
+// DSTLineCountRecord returns the source correlation record that maps the
+// source's lines, one to one, to its records: DST$K_SRC_DEFLINES_B (0B)
+// and a byte, or DST$K_SRC_DEFLINES_W (0A) and a word, as many as it
+// takes.
 func DSTLineCountRecord(lines int) DSTRecord {
-	if lines <= 0xFF {
-		return DSTRecord{Type: DSTSourceFile, Data: []byte{0x0B, byte(lines)}}
+	var data []byte
+
+	for ; lines > 0xFFFF; lines -= 0xFFFF {
+		data = append(data, 0x0A, 0xFF, 0xFF)
 	}
 
-	return DSTRecord{Type: DSTSourceFile, Data: []byte{0x0A, byte(lines), byte(lines >> 8)}}
+	if lines <= 0xFF {
+		data = append(data, 0x0B, byte(lines))
+	} else {
+		data = append(data, 0x0A, byte(lines), byte(lines>>8))
+	}
+
+	return DSTRecord{Type: DSTSourceFile, Data: data}
 }
 
-// The line-number table's commands. The table is a series of rows, each
-// a line and the address its code starts at. A segment (a run of code
-// with no gap) starts with LineSetAddress and LineSetLine (to the line
-// before its first), then LineAdvance(0) makes its first row. Each
-// LineAdvance after that steps past a row's code to the next line, which
-// LineSkip (lines with no code between) or LineSetLine (any other line)
-// can move first. LineEnd ends a segment with its last row's size.
+// The line-number table's commands (docs/DEBUG-RECORDS.md, section 13).
+// The table is a series of rows, each a line and the address its code
+// starts at. Real MACRO starts the table with LineStart. A segment (a run
+// of code with no gap) starts with LineSetAddress and LineSetLine (to
+// the line before its first), then LineAdvance(0) makes its first row.
+// Each LineAdvance after that steps past a row's code to the next line,
+// which LineSkip (lines with no code between) or LineSetLine (any other
+// line) can move first. LineEnd ends a segment with its last row's size.
 
-// LineSetAddress is the command that starts a segment at a psect offset:
-// 10 and the address, which stack (STA_PB, STA_PW, or STA_PL) gives.
+// LineSetAddress is DST$K_SET_ABS_PC (10) and the address, which stack
+// (STA_PB, STA_PW, or STA_PL) gives: where a segment starts.
 func LineSetAddress(stack Command) DSTItem {
 	return DSTItem{Bytes: []byte{0x10}, Address: addressCommands(stack)}
 }
 
-// LineSetLine sets the line to n: 13 and its low byte, then a skip of the
-// rest (03 and a word), as FORTH's 329 is 13 49 03 00 01.
+// LineSetLine sets the line to n as real MACRO does: DST$K_SET_LINUM_B
+// (13) and its low byte, then DST$K_INCR_LINUM_W (03) by the rest, as
+// FORTH's 329 is 13 49 03 00 01.
 func LineSetLine(n int) DSTItem {
 	b := []byte{0x13, byte(n)}
 	if rest := n &^ 0xFF; rest > 0 {
-		b = append(b, 0x03, byte(rest), byte(rest>>8))
+		b = append(b, LineSkip(rest).Bytes...)
 	}
 
 	return DSTItem{Bytes: b}
 }
 
-// LineSkip moves the line on by n lines with no code: 02 and a byte, or
-// 03 and a word.
+// LineSkip moves the line on by n lines with no code: DST$K_INCR_LINUM
+// (02) and a byte, _W (03) and a word, or _L (18) and a longword.
 func LineSkip(n int) DSTItem {
-	if n <= 0xFF {
+	switch {
+	case n <= 0xFF:
 		return DSTItem{Bytes: []byte{0x02, byte(n)}}
+	case n <= 0xFFFF:
+		return DSTItem{Bytes: []byte{0x03, byte(n), byte(n >> 8)}}
 	}
 
-	return DSTItem{Bytes: []byte{0x03, byte(n), byte(n >> 8)}}
+	return DSTItem{Bytes: append([]byte{0x12}, longword(uint32(n))...)}
 }
 
 // LineAdvance steps past size bytes of code to the next line, making a
-// row: a negative byte, -size (0 for none), or 01 and a word. Where the
-// byte form stops isn't confirmed; it's used up to 128.
+// row: a Delta-PC byte, -size (0 to -128), or DST$K_DELTA_PC_W (01) and a
+// word, or _L (17) and a longword.
 func LineAdvance(size uint32) DSTItem {
-	if size <= 128 {
+	switch {
+	case size <= 128:
 		return DSTItem{Bytes: []byte{byte(-int8(int(size)))}}
+	case size <= 0xFFFF:
+		return DSTItem{Bytes: []byte{0x01, byte(size), byte(size >> 8)}}
 	}
 
-	return DSTItem{Bytes: []byte{0x01, byte(size), byte(size >> 8)}}
+	return DSTItem{Bytes: append([]byte{0x11}, longword(size)...)}
 }
 
-// LineEnd ends a segment whose last row has size bytes: 0E and a byte.
-// The form for 256 bytes and more (0F and a word) isn't confirmed.
+// LineEnd ends a segment whose last row has size bytes: DST$K_TERM (0E)
+// and a byte, _W (0F) and a word, or _L (21) and a longword.
 func LineEnd(size uint32) DSTItem {
-	if size <= 0xFF {
+	switch {
+	case size <= 0xFF:
 		return DSTItem{Bytes: []byte{0x0E, byte(size)}}
+	case size <= 0xFFFF:
+		return DSTItem{Bytes: []byte{0x0F, byte(size), byte(size >> 8)}}
 	}
 
-	return DSTItem{Bytes: []byte{0x0F, byte(size), byte(size >> 8)}}
+	return DSTItem{Bytes: append([]byte{0x15}, longword(size)...)}
 }
 
-// LineStart is the bytes the line-number table starts with: 13 00.
+// LineStart is what real MACRO starts the line-number table with:
+// DST$K_SET_LINUM_B 0 (13 00).
 func LineStart() DSTItem {
 	return DSTItem{Bytes: []byte{0x13, 0x00}}
 }

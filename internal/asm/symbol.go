@@ -177,6 +177,13 @@ type symbol struct {
 	// can report it out of phase (see outOfPhase).
 	defLine  *listLine
 	defWhere func(error) error
+
+	// debug says the symbol was defined while debugger records were on,
+	// so it gets a symbol record (and the listing's D flag), and data,
+	// for a label, is what its record says of its data, or nil for none
+	// (debug.go).
+	debug bool
+	data  *labelData
 }
 
 // defined reports whether s has a value: it isn't waiting on a forward
@@ -488,6 +495,7 @@ func (a *Assembler) setSymbolIn(name string, sect *section, value uint32, flags 
 	sym.absSect = nil
 	sym.flags = sym.flags&^SymUndefined | flags
 	sym.suppressed = a.enabled&enableSuppression != 0
+	sym.debug = a.dialect == DialectMACRO && a.debugging()
 
 	waiting := sym.forward
 	sym.forward = nil

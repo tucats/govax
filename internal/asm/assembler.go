@@ -202,6 +202,16 @@ type Assembler struct {
 	// line.
 	listing   bool
 	listLines []*listLine
+	// debugSeen says debugger records have been on at some point of the
+	// assembly, untyped are labels waiting for the statement that gives
+	// them a data type, and fileLines is how many lines the program's
+	// source has (debug.go).
+	debugSeen bool
+	untyped   []*symbol
+	fileLines int
+	// packedDigits is the digit count of the .PACKED just assembled.
+	packedDigits int
+
 	listCur   *listLine
 	group     int
 	endErrors []error
@@ -439,6 +449,14 @@ func (a *Assembler) Assemble(source string) ([]byte, error) {
 	a.listLines = nil
 	a.listCur = nil
 	a.endErrors = nil
+	a.debugSeen = false
+	a.untyped = nil
+	a.fileLines = strings.Count(source, "\n")
+
+	if source != "" && !strings.HasSuffix(source, "\n") {
+		a.fileLines++
+	}
+
 	a.show = a.startShow()
 	a.startCrossReference()
 	a.phases = [phaseCount]PhaseTime{}
@@ -956,6 +974,9 @@ func (a *Assembler) assembleStatementBody(line string) error {
 		return err
 	}
 
+	// An instruction leaves a label before it with no data type.
+	a.typeLabels(nil)
+
 	if err := a.assembleOpcode(c); err != nil {
 		return statementError(c, opStart, err)
 	}
@@ -1047,6 +1068,10 @@ func (a *Assembler) parseLabel(c *cursor) error {
 	err := a.defineHere(name, flags, true)
 	c.pos = end
 
+	if err == nil {
+		a.debugLabelDefined(name)
+	}
+
 	return err
 }
 
@@ -1081,6 +1106,11 @@ func (a *Assembler) assembleAssignment(c *cursor) (handled bool, err error) {
 	}
 
 	c.next()
+
+	// A label before ". =" has no data type (dstsym.mar's LDOT).
+	if name == "." {
+		a.typeLabels(nil)
+	}
 
 	flags := SymNone
 

@@ -29,8 +29,8 @@ import (
 // room, so they come from real VAX MACRO's objects instead: the 21
 // fixtures' and the Phase 29 probe's (testdata/mar). Real MACRO's
 // traceback is four kinds of record, which DSTType names; the debugger
-// records (/DEBUG) have more, which are kept as their bytes for now
-// (subtask 12). A DST record may start in one TBT record and end in the
+// records (/DEBUG) have more (dbg.go, subtask 12). A DST record may
+// start in one TBT record and end in the
 // next, so a module's TBT records are one stream, and its DBG records
 // another.
 
@@ -308,6 +308,18 @@ func DSTRoutineBeginRecord(name string, psect uint16, offset uint32) DSTRecord {
 	stack := Command{Op: OpStackPsectLong, Psect: psect, Value: offset}
 
 	return DSTRecord{Type: DSTRoutineBegin, Data: data, Addresses: []DSTAddress{{Offset: 1, Commands: addressCommands(stack)}}}
+}
+
+// DSTNoCallRoutineRecord returns a routine begin record flagged
+// DST$V_RTNBEG_NO_CALL (80): a routine entered by JSB or BSB. Real MACRO
+// writes one, with no name, at the base of each psect whose code begins
+// with no .ENTRY, when it writes debugger records
+// (testdata/mar/dst/vax/dstln2.obj).
+func DSTNoCallRoutineRecord(name string, psect uint16, offset uint32) DSTRecord {
+	r := DSTRoutineBeginRecord(name, psect, offset)
+	r.Data[0] = 0x80
+
+	return r
 }
 
 // DSTPsectRecord returns the psect record for the psect name, number

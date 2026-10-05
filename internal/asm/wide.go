@@ -1,6 +1,10 @@
 package asm
 
-import "math/big"
+import (
+	"math/big"
+
+	"github.com/tucats/govax/internal/vmserrors"
+)
 
 // octa is a 128-bit integer value: the widest the VAX has (an octaword).
 // Go has no 128-bit integer type, so it's two 64-bit halves; lo holds bits
@@ -125,6 +129,13 @@ func (a *Assembler) pseudoOcta(c *cursor) error {
 
 	for {
 		c.skipBlanks()
+
+		// VAX MACRO takes one value: a second is "Directive syntax
+		// error", after the first is stored (testdata/mar/dst's
+		// DSTSYM, .QUAD 1, 2; .OCTA's is assumed the same).
+		if !first && !c.atEnd() && a.dialect == DialectMACRO {
+			return vmserrors.New(vmserrors.VAX_DIRSYNX)
+		}
 
 		if err := a.listSeparator(c, first); err != nil || c.atEnd() {
 			return err

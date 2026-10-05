@@ -226,11 +226,13 @@ func symbolTableColumns(entries []string) []string {
 //	NAME             00000000 RG    02
 //	LIMIT          = 00000064  G
 //	MAYBE            ********W GX   00
+//	COUNT            00000021 R  D  01
 //
 // After the name comes "=" for a symbol given its value by a direct
 // assignment, then the value ("********" if it's undefined, which in a
-// finished assembly means external), then four flags: W (weak), R
-// (relocatable), G (global), and X (external, or undefined). Last is
+// finished assembly means external), then five flags: W (weak), R
+// (relocatable), G (global), X (external, or undefined), and D (in the
+// debugger's symbol records: defined while they were on). Last is
 // the psect number, in hex: the psect a relocatable symbol is in, or for
 // an external one, the psect that was current where the module first
 // named it. An absolute symbol has none, even a label in an absolute
@@ -288,7 +290,12 @@ func symbolTableLine(s *symbol, width int) string {
 		trail = 8
 	}
 
-	return fmt.Sprintf("%-*s%c %s%s   %s%s", width, s.name, assign, value, flags, psect, strings.Repeat(" ", trail))
+	debug := ' '
+	if s.debug && defined {
+		debug = 'D'
+	}
+
+	return fmt.Sprintf("%-*s%c %s%s%c  %s%s", width, s.name, assign, value, flags, debug, psect, strings.Repeat(" ", trail))
 }
 
 // boxed returns a section's boxed title, indented by indent columns:
@@ -474,7 +481,10 @@ func (a *Assembler) summary(p *listPager) {
 		return
 	}
 
-	p.add(fmt.Sprintf("There were %d errors, %d warnings and 0 information messages, on lines:", errs, warnings))
+	// One error is "1 error" (testdata/mar/dst/vax/dstsym.lis); one
+	// warning's "1 warning" is assumed to follow it.
+	p.add(fmt.Sprintf("There were %s, %s and 0 information messages, on lines:",
+		countOf(errs, "error"), countOf(warnings, "warning")))
 
 	var (
 		row   strings.Builder
@@ -513,4 +523,13 @@ func (a *Assembler) summary(p *listPager) {
 	if row.Len() > 0 {
 		p.add(row.String())
 	}
+}
+
+// countOf is n and noun, plural unless n is 1: "1 error", "2 errors".
+func countOf(n int, noun string) string {
+	if n == 1 {
+		return "1 " + noun
+	}
+
+	return fmt.Sprintf("%d %ss", n, noun)
 }

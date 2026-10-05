@@ -162,7 +162,7 @@ func TestListingSummary(t *testing.T) {
 	closing := closingLines(t, a, ListingOptions{Command: "MACRO/LIST X"})
 
 	want := []string{
-		"There were 5 errors, 1 warnings and 0 information messages, on lines:",
+		"There were 5 errors, 1 warning and 0 information messages, on lines:",
 		"    5 (1)         6 (1)         7 (1)         8 (1)         9 (1)     ",
 		"   10 (1)     ",
 		"",

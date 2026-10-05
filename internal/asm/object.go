@@ -20,6 +20,10 @@ type ObjectOptions struct {
 	// Source, when not "", is the SRC header's text. Real MACRO puts its
 	// command line there.
 	Source string
+	// SourceFile is what the debugger records' source correlation says
+	// of the source file (its specification, date, size, and format);
+	// nil leaves them empty.
+	SourceFile *obj.SourceFile
 }
 
 // noTitleText is the title header record's text for a module with no
@@ -36,8 +40,10 @@ const defaultLanguage = "govax MACRO"
 // and contents in source order, with each entry point's EPM where its
 // mask is stored, then the end of module record. With traceback (the
 // default, .ENABLE TRACEBACK), traceback records go after the headers and
-// before the end of module record (see traceback). Debugger (DBG)
-// records aren't written: docs/PHASE-29.md deferred them (subtask 12).
+// before the end of module record (see traceback). With debugger records
+// (.ENABLE DEBUG, debug.go), the line-number table's DBG records go out
+// among the TIR records as the code they describe does, and, with
+// traceback too, the symbol records after the routine begin records.
 func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 	if a.dialect != DialectMACRO {
 		return nil, vmserrors.New(vmserrors.VAX_INTERNAL, "Object needs the MACRO dialect")
@@ -89,6 +95,18 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 	b.Break()
 
 	e := emitter{a: a, b: b, relocs: map[relocKey]relocation{}, defined: map[*section]bool{}}
+
+	if a.debugSeen {
+		e.rows = a.lineRows()
+		if len(e.rows) > 0 {
+			src := obj.SourceFile{Format: obj.RecordFormatStreamLF}
+			if opts.SourceFile != nil {
+				src = *opts.SourceFile
+			}
+
+			e.lines = obj.NewLineTable(obj.DSTSourceFileRecord(src))
+		}
+	}
 	for _, r := range a.relocs {
 		e.relocs[relocKey{r.sect, r.offset, r.sect.storedBy(r.offset, r.stmt)}] = r
 	}
@@ -102,6 +120,7 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 	}
 
 	e.flushAbsStart(false)
+	e.finishLines()
 
 	if len(e.relocs) > 0 {
 		return nil, vmserrors.New(vmserrors.VAX_INTERNAL, fmt.Sprintf("%d relocations outside any stored data", len(e.relocs)))
@@ -148,7 +167,13 @@ func (a *Assembler) traceback(b *obj.Builder) error {
 
 	sort.Slice(entries, func(i, j int) bool { return entries[i].name < entries[j].name })
 
-	routines := make([]obj.DSTRecord, 0, len(entries))
+	// With debugger records, each psect whose code begins with no
+	// .ENTRY has a routine with no name, which sorts first (debug.go).
+	var routines []obj.DSTRecord
+	for _, s := range a.noCallRoutines() {
+		routines = append(routines, obj.DSTNoCallRoutineRecord("", uint16(s.index), 0))
+	}
+
 	for _, s := range entries {
 		routines = append(routines, obj.DSTRoutineBeginRecord(s.name, uint16(s.sect.index), s.value))
 	}
@@ -156,6 +181,16 @@ func (a *Assembler) traceback(b *obj.Builder) error {
 	if len(routines) > 0 {
 		if err := b.Traceback(routines...); err != nil {
 			return err
+		}
+	}
+
+	// The debugger's symbol records, which real MACRO writes only with
+	// traceback (the probe's TRDBGSYM, /DEBUG=SYMBOLS, has none).
+	if a.debugSeen {
+		if syms := a.debugSymbols(); len(syms) > 0 {
+			if err := b.Debug(syms...); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -235,6 +270,52 @@ type emitter struct {
 	// absStart is set while the location in .  ABS  ., where assembly
 	// starts, is still to be set (see flushAbsStart).
 	absStart bool
+	// rows are the line-number table's rows (debug.go), nextRow the
+	// first whose code isn't written yet, and lines packs the table, or
+	// is nil for none.
+	rows    []lineRow
+	nextRow int
+	lines   *obj.LineTable
+}
+
+// lineAt adds the line-number table's commands for each row whose code
+// starts at p in s, as that code is about to be written: real MACRO
+// fills its DBG records with the table as it writes the code, and a DBG
+// record it fills goes out ahead of the TIR record it's filling.
+func (e *emitter) lineAt(s *section, p uint32) {
+	for e.lines != nil && e.nextRow < len(e.rows) && e.rows[e.nextRow].sect == s && e.rows[e.nextRow].loc == p {
+		e.addLineCommands()
+	}
+}
+
+// addLineCommands adds the next row's commands.
+func (e *emitter) addLineCommands() {
+	for _, cmd := range lineCommands(e.rows, e.nextRow) {
+		for _, rec := range e.lines.Add(cmd) {
+			e.b.Insert(rec)
+		}
+	}
+
+	e.nextRow++
+}
+
+// finishLines ends the line-number table once the code is written: any
+// rows whose code wasn't (none should be left), then the line count
+// and the last segment's end.
+func (e *emitter) finishLines() {
+	if e.lines == nil {
+		return
+	}
+
+	for e.nextRow < len(e.rows) {
+		e.addLineCommands()
+	}
+
+	last := e.rows[len(e.rows)-1]
+
+	for _, rec := range e.lines.Finish(e.a.fileLines, obj.LineEnd(last.size)) {
+		e.b.Insert(rec)
+	}
 }
 
 // flushAbsStart sets the location in .  ABS  . for the start of assembly,
@@ -307,6 +388,8 @@ func (e *emitter) event(ev outEvent) error {
 		return e.data(ev.sect, ev.offset, ev.size)
 
 	case evConst:
+		e.lineAt(ev.sect, ev.offset)
+
 		store := storeCommand(ev.size)
 		if ev.signed {
 			store = obj.Command{Op: tirOp("STO_SB")}
@@ -316,6 +399,7 @@ func (e *emitter) event(ev outEvent) error {
 		e.loc += ev.size
 
 	case evEntry:
+		e.lineAt(ev.sect, ev.offset)
 		e.b.Emit(stackConstant(ev.value))
 		e.entryPoint(ev)
 		e.b.Emit(storeCommand(2))
@@ -394,6 +478,8 @@ func (e *emitter) entryPoint(ev outEvent) {
 // overwrite.go).
 func (e *emitter) data(s *section, offset, size uint32) error {
 	for p := offset; p < offset+size; {
+		e.lineAt(s, p)
+
 		// An operand's index and mode bytes, then the field they
 		// introduce: real MACRO stacks the value first, then stores
 		// those bytes, then the value.

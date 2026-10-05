@@ -13,11 +13,15 @@ never had.
   index.
 - `docs/PHASE-00.md` … `PHASE-40.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
-  done through 40, which follows 38 directly: there is no Phase 39;
-  Phase 29's debugger records, its subtask 12, are deferred). Read the relevant phase doc
+  done through 40, which follows 38 directly: there is no Phase 39). Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
+- `docs/DEBUG-RECORDS.md` — a clean-room description of the debug symbol
+  table (DST) format the author provided (Phase 29): record types,
+  data symbols and descriptors, the line-number program, and source
+  correlation. Usable freely as a reference, though it may have errors;
+  check it against real MACRO's output.
 - `docs/MODE-STACKS.md` — where VMINIT puts each access mode's stack, their sizes and
   page protections, and what was deliberately left unchanged.
 
@@ -158,7 +162,13 @@ expect adjustment as phases land):
   closing pages (`listclose.go`), as real MACRO lays them out. `Object()`
   writes traceback (TBT) records by default (`traceback`; `SetFunctions`
   is `/ENABLE=`/`/DISABLE=`, and the console maps `/DEBUG` onto it).
-  Debugger (DBG) records aren't written (Phase 29's subtask 12, deferred).
+  With `.ENABLE DEBUG` (`/DEBUG`), it writes debugger (DBG) records too
+  (`debug.go`, Phase 29's subtask 12): the line-number table, whose DBG
+  records go out among the TIR records as real MACRO's do, and, with
+  traceback, a symbol record for each symbol, typed by the data
+  directive after a label. `TestDebugRecords` matches 13 real `/DEBUG`
+  objects whole; FORTH's (`TestDebugRecordsForth`) differs only in the
+  `$$` symbols VMS's and govax's STARLETs define.
 - `internal/obj` — the VAX object language (Phase 27): reads, writes, dumps, and
   checks `.OBJ` object modules, keeping every record so a real VAX object
   round-trips byte for byte; `Builder` packs a module's psects, symbols, and TIR
@@ -168,6 +178,11 @@ expect adjustment as phases land):
   `dst.go` (Phase 29) decodes and encodes the debug symbol table (DST)
   records TBT and DBG records carry, and builds real MACRO's four
   traceback records; their layouts come from real objects (clean room),
+  checked against `docs/DEBUG-RECORDS.md`. `dbg.go` builds the debugger
+  records' (symbols with descriptors, source correlation, line-number
+  commands), and `dbglines.go`'s `LineTable` packs a line-number table
+  into DBG records as real MACRO does; `Builder.Insert` places them among
+  the TIR records, and `Builder.Debug` adds the symbol records.
   and `obj.Dump` shows them. `Builder.Traceback` adds TBT records.
 - `internal/rms` — RMS (`SYS$CREATE`/`CONNECT`/`OPEN`/`CLOSE`/`GET`/`PUT`/`RENAME`,
   and Phase 33's `PARSE`/`SEARCH`/`DISPLAY` with NAM blocks and XABs) file

@@ -294,8 +294,9 @@ func (c *Console) writeObject(a *asm.Assembler, opts MacroOptions, found rms.Fil
 	}
 
 	module, err := a.Object(asm.ObjectOptions{
-		Language: macroAssemblerName(),
-		Source:   opts.CommandLine,
+		Language:   macroAssemblerName(),
+		Source:     opts.CommandLine,
+		SourceFile: sourceFile(s, found),
 	})
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.CLI_OBJWRITE, err, objLoc.Name)
@@ -313,6 +314,39 @@ func (c *Console) writeObject(a *asm.Assembler, opts MacroOptions, found rms.Fil
 	return nil
 }
 
+// sourceSpec is the source's full file specification, as a listing's
+// heading and the object's debugger records show it: a volume file's,
+// version included, or a host file's absolute path.
+func sourceSpec(found rms.FileLocation) string {
+	source := found.Name
+	if found.Host {
+		if abs, err := filepath.Abs(source); err == nil {
+			source = abs
+		}
+	}
+
+	return source
+}
+
+// sourceFile is what the object's debugger records say of the source
+// file found, or nil if its attributes can't be read (the records then
+// leave them empty; only a debugger checking it has the right file
+// notices).
+func sourceFile(s *rms.Session, found rms.FileLocation) *obj.SourceFile {
+	attrs, err := s.SourceAttributesOf(found)
+	if err != nil {
+		return nil
+	}
+
+	return &obj.SourceFile{
+		Spec:      sourceSpec(found),
+		Created:   attrs.Created,
+		EOFBlock:  attrs.EOFBlock,
+		FirstFree: attrs.FirstFree,
+		Format:    attrs.Format,
+	}
+}
+
 // writeListing writes the listing of a's assembly of the source found, a
 // text file with a record for each line. commandProcessing is how long
 // the command took before the assembler was called.
@@ -324,14 +358,7 @@ func (c *Console) writeListing(a *asm.Assembler, opts MacroOptions, found rms.Fi
 		return fileFailure(err, opts.ListFile)
 	}
 
-	// The heading shows the source's full file specification: a volume
-	// file's, version included, or a host file's absolute path.
-	source := found.Name
-	if found.Host {
-		if abs, err := filepath.Abs(source); err == nil {
-			source = abs
-		}
-	}
+	source := sourceSpec(found)
 
 	revised, err := s.RevisionDate(found)
 	if err != nil {

@@ -87,15 +87,17 @@ var directives map[string]directive
 func init() {
 	directives = map[string]directive{
 		// Data storage.
-		"BYTE":  {both, func(a *Assembler, c *cursor) error { return a.pseudoData(c, 1) }},
-		"WORD":  {both, func(a *Assembler, c *cursor) error { return a.pseudoData(c, 2) }},
-		"LONG":  {both, func(a *Assembler, c *cursor) error { return a.pseudoData(c, 4) }},
-		"QUAD":  {both, (*Assembler).pseudoQuad},
-		"OCTA":  {both, (*Assembler).pseudoOcta},
-		"ASCII": {both, func(a *Assembler, c *cursor) error { return a.pseudoAscii(c, asciiPlain) }},
-		"ASCIZ": {both, func(a *Assembler, c *cursor) error { return a.pseudoAscii(c, asciiZ) }},
-		"ASCIC": {both, func(a *Assembler, c *cursor) error { return a.pseudoAscii(c, asciiCounted) }},
-		"ASCID": {both, func(a *Assembler, c *cursor) error { return a.pseudoAscii(c, asciiDescriptor) }},
+		"BYTE":        {both, func(a *Assembler, c *cursor) error { return a.pseudoData(c, 1) }},
+		"WORD":        {both, func(a *Assembler, c *cursor) error { return a.pseudoData(c, 2) }},
+		"LONG":        {both, func(a *Assembler, c *cursor) error { return a.pseudoData(c, 4) }},
+		"SIGNED_BYTE": {macro, func(a *Assembler, c *cursor) error { return a.pseudoDataSigned(c, 1, true) }},
+		"SIGNED_WORD": {macro, func(a *Assembler, c *cursor) error { return a.pseudoDataSigned(c, 2, true) }},
+		"QUAD":        {both, (*Assembler).pseudoQuad},
+		"OCTA":        {both, (*Assembler).pseudoOcta},
+		"ASCII":       {both, func(a *Assembler, c *cursor) error { return a.pseudoAscii(c, asciiPlain) }},
+		"ASCIZ":       {both, func(a *Assembler, c *cursor) error { return a.pseudoAscii(c, asciiZ) }},
+		"ASCIC":       {both, func(a *Assembler, c *cursor) error { return a.pseudoAscii(c, asciiCounted) }},
+		"ASCID":       {both, func(a *Assembler, c *cursor) error { return a.pseudoAscii(c, asciiDescriptor) }},
 
 		// Location control.
 		"BLKB": {both, func(a *Assembler, c *cursor) error { return a.pseudoBlock(c, 1) }},
@@ -329,5 +331,20 @@ func (a *Assembler) assemblePseudo(c *cursor) (handled bool, err error) {
 		a.caseBase = 0
 	}
 
-	return true, d.assemble(a, c)
+	sect, loc := a.cur, a.cur.loc
+	a.packedDigits = 0
+
+	err = d.assemble(a, c)
+
+	// The labels waiting for a data type get this directive's.
+	if a.dialect == DialectMACRO {
+		size := uint32(0)
+		if a.cur == sect {
+			size = a.cur.loc - loc
+		}
+
+		a.debugDirective(name, size, a.packedDigits)
+	}
+
+	return true, err
 }

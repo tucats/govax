@@ -1,6 +1,7 @@
 package console
 
 import (
+	"encoding/binary"
 	"errors"
 	"os"
 	"path/filepath"
@@ -523,20 +524,20 @@ func TestDispatch_macroTraceback(t *testing.T) {
 
 	for _, tc := range []struct {
 		source, qualifiers string
-		traceback          bool
+		traceback, debug   bool
 	}{
-		{src, "", true},
-		{src, "/DEBUG", true},
-		{src, "/DEBUG=TRACEBACK", true},
-		{src, "/DEBUG=ALL", true},
-		{src, "/ENABLE=DEBUG", true},
-		{src, "/DEBUG=SYMBOLS", false},
-		{src, "/DEBUG=NONE", false},
-		{src, "/NODEBUG", false},
-		{src, "/DISABLE=TRACEBACK", false},
-		{src, "/DISABLE=TBK", false},
-		{src, "/NODEBUG/ENABLE=TRACEBACK", true},
-		{again, "/DISABLE=TRACEBACK", true},
+		{src, "", true, false},
+		{src, "/DEBUG", true, true},
+		{src, "/DEBUG=TRACEBACK", true, false},
+		{src, "/DEBUG=ALL", true, true},
+		{src, "/ENABLE=DEBUG", true, true},
+		{src, "/DEBUG=SYMBOLS", false, true},
+		{src, "/DEBUG=NONE", false, false},
+		{src, "/NODEBUG", false, false},
+		{src, "/DISABLE=TRACEBACK", false, false},
+		{src, "/DISABLE=TBK", false, false},
+		{src, "/NODEBUG/ENABLE=TRACEBACK", true, false},
+		{again, "/DISABLE=TRACEBACK", true, false},
 	} {
 		object := filepath.Join(dir, "tb.obj")
 		if err := d.Dispatch(`MACRO "` + tc.source + `"/OBJECT="` + object + `"` + tc.qualifiers); err != nil {
@@ -545,11 +546,18 @@ func TestDispatch_macroTraceback(t *testing.T) {
 
 		m := readObject(t, d.Console, rms.FileLocation{Host: true, Name: object})
 
-		tbt := 0
+		tbt, dbg := 0, 0
 		for _, r := range m.Records {
-			if r.RecordType() == obj.RecTBT {
+			switch r.RecordType() {
+			case obj.RecTBT:
 				tbt++
+			case obj.RecDBG:
+				dbg++
 			}
+		}
+
+		if got := dbg > 0; got != tc.debug {
+			t.Errorf("%s%s: %d debugger records", filepath.Base(tc.source), tc.qualifiers, dbg)
 		}
 
 		if got := tbt > 0; got != tc.traceback {
@@ -561,5 +569,50 @@ func TestDispatch_macroTraceback(t *testing.T) {
 		if err := d.Dispatch(`MACRO "` + src + `"/NOOBJECT` + bad); err == nil {
 			t.Errorf("MACRO%s: no error", bad)
 		}
+	}
+}
+
+// TestMacro_debugSourceFile checks the source file a /DEBUG object's
+// source correlation record describes: a host file's absolute path, its
+// size as an end of file block and first free byte, and stream-LF.
+func TestMacro_debugSourceFile(t *testing.T) {
+	d, _ := newTestDispatcher(t)
+	dir := t.TempDir()
+	src := filepath.Join(dir, "dbg.mar")
+	text := "\t.TITLE\tDBG\n\t.PSECT\tCODE\n\t.ENTRY\tGO, ^M<>\n\tRET\n\t.END\tGO\n"
+	writeHostFile(t, src, text)
+
+	object := filepath.Join(dir, "dbg.obj")
+	if err := d.Dispatch(`MACRO "` + src + `"/OBJECT="` + object + `"/DEBUG`); err != nil {
+		t.Fatal(err)
+	}
+
+	m := readObject(t, d.Console, rms.FileLocation{Host: true, Name: object})
+
+	var groups [][]obj.Command
+
+	for _, r := range m.Records {
+		if tir, ok := r.(*obj.TIR); ok && tir.Type == obj.RecDBG {
+			groups = append(groups, tir.Commands)
+		}
+	}
+
+	recs, _, err := obj.DecodeDST(groups)
+	if err != nil || len(recs) == 0 || recs[0].Type != obj.DSTSourceFile {
+		t.Fatalf("DST records %v, %v; want the source file's first", recs, err)
+	}
+
+	abs, err := filepath.Abs(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data := recs[0].Data
+	spec := string(data[22 : 22+int(data[21])])
+	eof, ffb := binary.LittleEndian.Uint32(data[14:]), binary.LittleEndian.Uint16(data[18:])
+
+	if spec != abs || eof != 1 || int(ffb) != len(text) || data[20] != obj.RecordFormatStreamLF {
+		t.Errorf("source file %q, end of file %d/%d, format %d; want %q, 1/%d, %d",
+			spec, eof, ffb, data[20], abs, len(text), obj.RecordFormatStreamLF)
 	}
 }

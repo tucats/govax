@@ -143,6 +143,10 @@ func TestFixtureListings(t *testing.T) {
 		// starlet says the source calls system macros, from govax's
 		// own STARLET where real MACRO used VMS's.
 		starlet bool
+		// debug says it was assembled /DEBUG, and fails that it has
+		// errors. extraRecords is listingCheck's.
+		debug, fails bool
+		extraRecords int
 	}
 
 	var cases []fixture
@@ -195,6 +199,25 @@ func TestFixtureListings(t *testing.T) {
 		fixture{name: "list/symxref", source: filepath.Join(marDir, "list", "symtab.mar"), listing: filepath.Join(marDir, "list", "vax", "symxref.lis"), xref: true, noObject: true},
 	)
 
+	// The debugger-record probe's listings (testdata/mar/dst), and
+	// FORTH's assembled /DEBUG: the symbol table flags D.
+	dstDir := filepath.Join(marDir, "dst")
+
+	for _, name := range []string{"dstsym", "dstln1", "dstln2", "dstln3", "dstln4", "dstln5", "dstln6", "dstdbg", "dstdis"} {
+		cases = append(cases, fixture{
+			name: "dst/" + name, source: filepath.Join(dstDir, name+".mar"), listing: filepath.Join(dstDir, "vax", name+".lis"),
+			starlet: name >= "dstln4" && name <= "dstln6", debug: name != "dstdbg", fails: name == "dstsym",
+		})
+	}
+
+	cases = append(cases, fixture{
+		name: "dst/forth", source: filepath.Join(marDir, "forth.mar"), listing: filepath.Join(dstDir, "vax", "forth.lis"),
+		// govax's STARLET's "$$" symbols ($$RMSBLK, ...) aren't
+		// VMS's ($$.TAB, ...), so the DBG records holding the symbol
+		// records come to one more in govax's object.
+		starlet: true, debug: true, extraRecords: -1,
+	})
+
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			real := readListing(t, tc.listing)
@@ -218,7 +241,12 @@ func TestFixtureListings(t *testing.T) {
 				noObject: tc.noObject,
 			}
 
-			check.fails = tc.name == "list/errors"
+			check.fails = tc.name == "list/errors" || tc.fails
+			check.extraRecords = tc.extraRecords
+
+			if tc.debug {
+				check.enable = []string{"DEBUG", "TRACEBACK"}
+			}
 
 			if tc.starlet {
 				src, err := os.ReadFile(tc.source)
@@ -256,6 +284,8 @@ type listingCheck struct {
 	xref      bool
 	xrefKinds []string
 	noObject  bool
+	// enable are the functions MACRO's /ENABLE (or /DEBUG) turns on.
+	enable []string
 	// fails says the source has errors. Real MACRO still writes an
 	// object, which govax doesn't (Phase 27's choice), so the listing's
 	// record count is 0.
@@ -285,6 +315,10 @@ func checkListing(t *testing.T, source, listing string, libs []MacroLibrary, che
 	a.SetMacroLibraries(libs...)
 
 	if err := a.SetListingShow(check.show, check.noshow); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := a.SetFunctions(check.enable, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -364,7 +398,7 @@ func macroInternal(name string) bool {
 // libraryCounts are the macro library statistics' counts, which differ
 // with the libraries' internal macros: how many macros a library
 // defined, and how many reads that took.
-var libraryCounts = regexp.MustCompile(`^(\S.*\S)\s+\d+\s*$|\d+ GETS were required to define \d+ macros`)
+var libraryCounts = regexp.MustCompile(`^(\S.*\S)\s+\d+\s*$|\d+ GETS were required to define \d+ macros?`)
 
 // withoutMacroInternals returns the allowed difference for source, which
 // calls system macros that real MACRO took from VMS's STARLET and govax

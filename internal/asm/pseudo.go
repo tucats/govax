@@ -56,7 +56,19 @@ func readFileArg(c *cursor) string {
 // expressions, each stored at scale bytes and forward-reference-capable
 // (K_ADDR_B/W/L), matching asm_pseudo.c's cases 1-3.
 func (a *Assembler) pseudoData(c *cursor, scale int) error {
+	return a.pseudoDataSigned(c, scale, false)
+}
+
+// pseudoDataSigned is pseudoData, or with signed MACRO-32's .SIGNED_BYTE
+// and .SIGNED_WORD: each value must fit the field as a signed number,
+// and one the linker stores is stored signed (STO_SB, STO_SW).
+func (a *Assembler) pseudoDataSigned(c *cursor, scale int, signed bool) error {
 	first := true
+
+	fixup := addrFixup(scale)
+	if signed {
+		fixup = signedFixup(scale)
+	}
 
 	// In MACRO-32, one with no value stores a zero: $FAB's ".WORD" (a
 	// spare word) is two zero bytes in real MACRO's object
@@ -76,7 +88,7 @@ func (a *Assembler) pseudoData(c *cursor, scale int) error {
 
 		loc := a.pc()
 
-		v, wasForward, err := a.exprValue(c, loc, addrFixup(scale))
+		v, wasForward, err := a.exprValue(c, loc, fixup)
 		if err != nil {
 			return err
 		}
@@ -91,6 +103,10 @@ func (a *Assembler) pseudoData(c *cursor, scale int) error {
 		// A value too big for its field is an error; real MACRO stores
 		// it truncated (DATATRUNC) and goes on.
 		switch {
+		case signed && scale == 1 && (int32(v) < -128 || int32(v) > 127):
+			err = a.recoverable(vmserrors.New(vmserrors.VAX_DATARANGE, ".SIGNED_BYTE", int32(v)))
+		case signed && scale == 2 && (int32(v) < -32768 || int32(v) > 32767):
+			err = a.recoverable(vmserrors.New(vmserrors.VAX_DATARANGE, ".SIGNED_WORD", int32(v)))
 		case scale == 1 && (int32(v) < -128 || int32(v) > 0xFF):
 			err = a.recoverable(vmserrors.New(vmserrors.VAX_DATARANGE, ".BYTE", int32(v)))
 		case scale == 2 && (int32(v) < -32768 || int32(v) > 0xFFFF):
@@ -134,6 +150,13 @@ func (a *Assembler) pseudoQuad(c *cursor) error {
 
 	for {
 		c.skipBlanks()
+
+		// VAX MACRO takes one value: a second is "Directive syntax
+		// error", after the first is stored (testdata/mar/dst's
+		// DSTSYM, .QUAD 1, 2; .OCTA's is assumed the same).
+		if !first && !c.atEnd() && a.dialect == DialectMACRO {
+			return vmserrors.New(vmserrors.VAX_DIRSYNX)
+		}
 
 		if err := a.listSeparator(c, first); err != nil || c.atEnd() {
 			return err
@@ -681,6 +704,8 @@ func (a *Assembler) pseudoPacked(c *cursor) error {
 		return vmserrors.New(vmserrors.VAX_BADPACKED)
 	}
 
+	a.packedDigits = len(digits)
+
 	sign := byte(0xC)
 	if neg {
 		sign = 0xD
@@ -746,6 +771,12 @@ func (a *Assembler) pseudoBlock(c *cursor, size int) error {
 	// .BLKx only moves the location, defining offsets.
 	if a.dialect == DialectMACRO {
 		a.useBlankPsect()
+	}
+
+	// Real MACRO writes even an empty block's CTL_AUGRB, of 0
+	// (testdata/mar/dst's DSTSYM, .BLKB 0).
+	if n == 0 && a.dialect == DialectMACRO {
+		a.logEvent(outEvent{kind: evGap, sect: a.cur, offset: a.cur.loc})
 	}
 
 	a.advance(n * uint32(size))

@@ -469,6 +469,32 @@ func TestFixtureLadderObjects(t *testing.T) {
 func requireSameObject(t *testing.T, a *Assembler, realModule *obj.Module) {
 	t.Helper()
 
+	requireSameObjectAllowing(t, a, realModule, nil)
+}
+
+// requireSameObjectAllowing is requireSameObject, with allow (if not nil)
+// applied to real MACRO's dump first, for a difference the test knows of.
+func requireSameObjectAllowing(t *testing.T, a *Assembler, realModule *obj.Module, allow func(string) string) {
+	t.Helper()
+
+	back := objectLike(t, a, realModule)
+
+	want := dumpText(t, realModule)
+	if allow != nil {
+		want = allow(want)
+	}
+
+	if got := dumpText(t, back); got != want {
+		t.Errorf("object:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+// objectLike returns a's object, with the headers' and the source file's
+// facts realModule has, after writing and reading it back and checking
+// it.
+func objectLike(t *testing.T, a *Assembler, realModule *obj.Module) *obj.Module {
+	t.Helper()
+
 	var (
 		opts ObjectOptions
 		err  error
@@ -491,6 +517,8 @@ func requireSameObject(t *testing.T, a *Assembler, realModule *obj.Module) {
 		}
 	}
 
+	opts.SourceFile = realSourceFile(t, realModule)
+
 	m, err := a.Object(opts)
 	if err != nil {
 		t.Fatal(err)
@@ -510,18 +538,15 @@ func requireSameObject(t *testing.T, a *Assembler, realModule *obj.Module) {
 		t.Errorf("Check: %v", problems)
 	}
 
-	if got, want := dumpText(t, back), dumpText(t, realModule); got != want {
-		t.Errorf("object:\n%s\nwant:\n%s", got, want)
-	}
+	return back
 }
 
 // TestListProbeObjects checks govax's objects for the Phase 29 probe's
 // sources (testdata/mar/list) against real MACRO's, as
 // TestFixtureLadderObjects does the ladder's, and the VMS round's
 // sources (testdata/mar/round): two with no .TITLE, and the fixup cell
-// follow-up's two. The probe's objects
-// assembled with debugger records are subtask 12's (deferred), and
-// errors.mar and errend.mar don't assemble.
+// follow-up's two. The probe's objects assembled with debugger records
+// are TestDebugRecords', and errors.mar and errend.mar don't assemble.
 func TestListProbeObjects(t *testing.T) {
 	mar := filepath.Join("..", "..", "testdata", "mar")
 

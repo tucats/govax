@@ -267,7 +267,8 @@
 			MRN=0,MRS=0,NAM=0,ORG=SEQ,RAT,RFM=VAR,RTV=0,SHR,XAB=0
 	$FABDEF
 	$$RMSCHK
-	.BYTE	FAB$C_BID,FAB$C_BLN
+	.BYTE	FAB$C_BID		; one byte each: a label before the
+	.BYTE	FAB$C_BLN		;  block is a byte to the debugger
 	. = $$RMSBLK+FAB$C_BLN
 	. = $$RMSBLK+FAB$L_FOP
 	$$RMSBITS $$RMSV,FAB$V_,<FOP>
@@ -333,7 +334,8 @@
 			XAB=0
 	$RABDEF
 	$$RMSCHK
-	.BYTE	RAB$C_BID,RAB$C_BLN
+	.BYTE	RAB$C_BID		; one byte each, as $FAB's
+	.BYTE	RAB$C_BLN
 	. = $$RMSBLK+RAB$C_BLN
 	. = $$RMSBLK+RAB$L_ROP
 	$$RMSBITS $$RMSV,RAB$V_,<ROP>
@@ -369,7 +371,8 @@
 	.MACRO	$NAM	ESA=0,ESS=0,NOP,RLF=0,RSA=0,RSS=0
 	$NAMDEF
 	$$RMSCHK
-	.BYTE	NAM$C_BID,NAM$C_BLN
+	.BYTE	NAM$C_BID		; one byte each, as $FAB's
+	.BYTE	NAM$C_BLN
 	. = $$RMSBLK+NAM$C_BLN
 	. = $$RMSBLK+NAM$B_RSS
 	.BYTE	RSS

@@ -104,6 +104,13 @@ type listLine struct {
 	page        bool
 	subtitle    string
 	hasSubtitle bool
+
+	// debug says debugger records were on when the line began (see
+	// debug.go), and debugLine is the program's line the line-number
+	// table gives it; debugRepeat says it's a line of a repeat block.
+	debug       bool
+	debugLine   int
+	debugRepeat bool
 }
 
 // listNote is an error or warning a recorded line's statement reported.
@@ -218,13 +225,16 @@ func (a *Assembler) listBegin(f *sourceFrame, line int, raw string) *listLine {
 		a.xrefProgramLine(line)
 	}
 
-	if !a.listing || f.kind == sourceLibrary || a.inLibrary() {
+	debug := a.dialect == DialectMACRO && a.debugging()
+
+	if (!a.listing && !debug) || f.kind == sourceLibrary || a.inLibrary() {
 		a.listCur = nil
 
 		return nil
 	}
 
 	l := &listLine{
+		debug: debug,
 		text:  raw,
 		kind:  f.kind,
 		depth: len(a.sources) - 1,
@@ -232,6 +242,10 @@ func (a *Assembler) listBegin(f *sourceFrame, line int, raw string) *listLine {
 		sect:  a.cur,
 		loc:   a.cur.loc,
 		show:  a.show,
+	}
+
+	if debug {
+		l.debugLine, l.debugRepeat = a.debugLine(line)
 	}
 
 	a.listLines = append(a.listLines, l)

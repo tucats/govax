@@ -320,9 +320,11 @@ changes behavior. Each adds to this doc's progress log.
     `/DEBUG=TRACEBACK` on the MACRO command. `withoutTraceback` goes
     away: all 21 fixtures' objects (and the Phase 32 RMS oracle's) match
     real MACRO's with their TBT records.
-12. **Debugger records.** *Deferred* (2026-10-04; see the progress
-    log). `/DEBUG[=(ALL|SYMBOLS|TRACEBACK|NONE)]`, `/NODEBUG`, and
-    `.ENABLE DEBUG`: the DBG records the probe's `/DEBUG` objects hold,
+12. **Debugger records.** Deferred on 2026-10-04, then done on
+    2026-10-05 from FORTH's `/DEBUG` build and a second probe
+    (`testdata/mar/dst`; see the progress log).
+    `/DEBUG[=(ALL|SYMBOLS|TRACEBACK|NONE)]`, `/NODEBUG`, and
+    `.ENABLE DEBUG`: the DBG records the probes' `/DEBUG` objects hold,
     compared byte for byte.
 13. **LINK's debug symbol table.** LINK builds the DST from the modules'
     TBT records for a traceback link, and the image header points at it;
@@ -1520,3 +1522,129 @@ data type codes are the VAX calling standard's, a public manual.
   `.DISABLE DEBUG` partway. The README says how to run it.
 - **Found on the way:** govax doesn't have `.SIGNED_BYTE` and
   `.SIGNED_WORD`, which VAX MACRO does; the probe's DSTSYM uses them.
+
+### 2026-10-05 — Subtask 12: debugger records
+
+The second probe's results (`testdata/mar/dst/vax`) settled what FORTH
+left open. Then the author provided `docs/DEBUG-RECORDS.md`, a
+clean-room description of the DST format. It confirmed the layouts
+worked out from the bytes, and gave their names (below in brackets).
+It also corrected two of them.
+
+- **What the probe and the spec settled.**
+  - **There was no 512-line offset.** `13` (DST$K_SET_LINUM_B) takes a
+    byte, so FORTH's `13 49 03 00 01 00` is three commands: set line 73,
+    then INCR_LINUM_W 256 (329), then a Delta-PC of 0, the `.ENTRY`'s
+    row.
+  - **The line-number commands** [DST$K_LINE_NUM, 185]: Delta-PC bytes
+    0 to -128, DELTA_PC_W (01), INCR_LINUM and _W (02, 03), SET_ABS_PC
+    (10, the segment's address), SET_LINUM_B (13), and TERM and TERM_W
+    (0E, 0F).
+  - **Source correlation** [DST$K_SOURCE, 155]: SRC_FORMFEED (10), then
+    DECLFILE (01). DECLFILE's length is a byte. The `00` after the file
+    specification is the empty library module name. Then come SETFILE,
+    SETREC_W, and SETLNUM_W (all 1), and the line count is DEFLINES_B
+    or DEFLINES_W.
+  - **The date is the file's creation date** (DST$Q_SRC_DF_RMS_CDT), not
+    its revision date. They're the same in every fixture.
+  - **Symbol records** are Standard Data records: the type is the
+    dtype, and the flags byte is DST$K_VALKIND_LITERAL, ADDR, or DESC,
+    or DST$K_VFLAGS_DSC (FA, a descriptor after the name).
+  - `BB` is DST$K_LABEL, and the `.ASCIC`/`.ASCIZ` types are
+    DSC$K_DTYPE_AC and AZ (45, 46).
+  - **Routine begin flag `80`** is DST$V_RTNBEG_NO_CALL (a JSB
+    routine).
+  - **System macros don't move line numbers.** In DSTLN4, 5, and 6 a
+    macro call's whole expansion is one row, the call's.
+- **What real MACRO writes**, as govax now does:
+  - **Lines and symbols** are recorded from the first point DEBUG is on.
+    `.DISABLE DEBUG` doesn't stop them (DSTDIS), and code and symbols
+    before `.ENABLE DEBUG` get none (DSTDBG), not even the routine.
+  - **Line-number rows.** Each instruction line makes a row, at the
+    program line it comes from: a macro call's line, or a repeat
+    block's own line.
+    - Rows of a repeat block start with SET_LINUM_B. Other rows skip
+      forward with INCR_LINUM, or set the line when it doesn't move
+      forward.
+    - Data stored right after a row's code (`.BYTE` in code) is part of
+      that row.
+    - A gap, or code in another psect, starts a new segment: TERM for
+      the old one, then SET_ABS_PC (STA_PB, STA_PW, or STA_PL, the
+      shortest), SET_LINUM_B, and Delta-PC 0.
+    - The table starts with SET_LINUM_B 0. Code in a NOEXE psect gets
+      rows too.
+  - **Packing the table.** Line-number records hold at most 248 bytes.
+    DBG records are filled to 453 bytes, in STORE IMMEDIATEs of up to
+    120. The line-number record being built is cut where its DBG record
+    ends.
+    - The DBG record goes out ahead of the TIR record being filled when
+      it filled. FORTH's are records 29 and 35, among the TIR records.
+    - The last part (the line count, then the last segment's TERM)
+      starts a DBG record of its own unless the current one has 256
+      bytes left. That rule fits FORTH and every smaller table, but
+      isn't confirmed.
+  - **Symbol records** come one per symbol defined while DEBUG was on,
+    in ASCII order, but external symbols, local labels, and `.ENTRY`
+    routines. They're written only with traceback: TRDBGSYM's
+    `/DEBUG=SYMBOLS` has none.
+    - They go in DBG records of their own after the TBT record of
+      routine begins, packed as TIR records are (461 bytes, immediates
+      of 128).
+    - A label's type is the next data directive's. The array and string
+      descriptors follow the calling standard. A list or `.BLKx` of
+      more than one item gives an array, counting the first statement's
+      items only. Its upper bound is a word (`.BLKB 0`'s is FFFF).
+      `.PACKED`'s length is in digits.
+    - A label before an instruction, another label, `.ALIGN`, `. =`, or
+      the psect's end gets DST$K_LABEL.
+    - A constant, or a label in an absolute psect, is an L literal. A
+      relocatable assignment is a LABEL.
+  - **No-call routines.** With debugger records, each psect whose first
+    row isn't an `.ENTRY` gets a routine begin record with no name,
+    flagged NO_CALL, at its base, sorting before the named ones (DSTLN2,
+    DSTDBG). That the rule is the first row's, and not whether the psect
+    has a debug-known `.ENTRY`, fits both but isn't confirmed.
+  - **The listing's symbol table** flags each such symbol D, in a fifth
+    flag column, and says "1 error" (and, assumed, "1 warning").
+- **Found on the way:**
+  - `.SIGNED_BYTE` and `.SIGNED_WORD` are new.
+  - `.QUAD` (and, assumed, `.OCTA`) with a second value is "Directive
+    syntax error" in the MACRO dialect.
+  - `.BLKB 0` writes `CTL_AUGRB 0`.
+  - govax's `$FAB`, `$RAB`, and `$NAM` store their ID and length bytes
+    with two `.BYTE`s, since a label before them is a byte, not an
+    array.
+  - ANALYZE/OBJECT calls severity 2 "errors".
+- **The console.** MACRO passes the source's specification (as the
+  listing heading shows it), creation date, end of file block, first
+  free byte, and record type (`rms.Session.SourceAttributesOf`).
+  - A host file is stream-LF, and its specification is its absolute
+    path, cut to its last 222 characters if longer (govax's choice).
+  - `TestMacro_debugSourceFile` checks a host file's record, and
+    `TestDispatch_macroTraceback` which `/DEBUG` choices write DBG
+    records.
+- **Tests.**
+  - `TestLineTableRealObjects` (`internal/obj`) repacks seven real
+    tables from their commands, FORTH's four DBG records among them.
+  - `TestDebugRecords` assembles 13 probe sources and matches real
+    MACRO's objects whole: DSTSYM, the DSTLN, DSTVAR, DSTDBG, and DSTDIS
+    sources, and TRDEBUG, TRDBGALL, TRENADBG, TRDBGSYM, FAILMAID, and
+    FAILSUBD.
+    - DSTSYM is assembled with `.QUAD 1`, where the source's `.QUAD 1,
+      2` is an error real MACRO still wrote an object for. Its severity
+      is allowed to differ.
+  - `TestDebugRecordsForth` matches FORTH's object but for the DBG
+    records that hold the symbol records. Of those, the 1,405 symbols
+    not named `$$` match one by one. VMS's STARLET defines `$$.TAB`,
+    `$$.TMP`, and the like, and govax's defines `$$RMSBLK` and others,
+    so those can't match (clean room).
+  - The listings of the probe's nine sources and FORTH's `/DEBUG`
+    listing join `TestFixtureListings`. FORTH's object has one more
+    record than real MACRO's.
+- **Still open:**
+  - LINK still skips DBG records (Decision 4: no LINK/DEBUG), so an
+    image carries none.
+  - The forms the probes don't reach are the spec's, untested: TERM_W,
+    INCR_LINUM_L, DELTA_PC_L, TERM_L, and the line count of more than
+    65,535.
+

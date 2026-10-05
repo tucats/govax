@@ -242,6 +242,85 @@ func (s *Session) RevisionDate(loc FileLocation) (time.Time, error) {
 	return revised, nil
 }
 
+// SourceAttributes are the facts a debugger's source correlation records
+// keep of a source file, so that the debugger can tell it has the file
+// that was compiled: its creation date, the block holding its end of
+// file and the first free byte in that block, and its record format and
+// organization (the file header's FAT$B_RTYPE).
+type SourceAttributes struct {
+	Created   time.Time
+	EOFBlock  uint32
+	FirstFree uint16
+	Format    byte
+}
+
+// streamLFSequential is a sequential file of stream-LF records, as a host
+// file is described.
+const streamLFSequential = byte(ondisk.RecordFormatStreamLF)
+
+// SourceAttributesOf returns the source attributes of the file at loc. A
+// host file is described as a stream-LF file of its size, created when it
+// was last modified.
+func (s *Session) SourceAttributesOf(loc FileLocation) (SourceAttributes, error) {
+	if loc.Host {
+		info, err := os.Stat(loc.Name)
+		if err != nil {
+			return SourceAttributes{}, fmt.Errorf("rms: reading %s: %w", loc.Name, err)
+		}
+
+		size := info.Size()
+
+		return SourceAttributes{
+			Created:   info.ModTime(),
+			EOFBlock:  uint32(size/ondisk.BlockSize) + 1,
+			FirstFree: uint16(size % ondisk.BlockSize),
+			Format:    streamLFSequential,
+		}, nil
+	}
+
+	var attrs SourceAttributes
+
+	err := s.firstSpec(loc.Name, func(vol *volume.Volume, r resolvedSpec) error {
+		matches, err := filespec.Glob(vol, r.Spec)
+		if err != nil {
+			return err
+		}
+
+		switch len(matches) {
+		case 0:
+			return &NotFoundError{Spec: loc.Name}
+		case 1:
+		default:
+			return &AmbiguousError{Spec: loc.Name, Count: len(matches)}
+		}
+
+		f, err := vol.OpenFID(matches[0].Fid)
+		if err != nil {
+			return err
+		}
+
+		ident, err := f.Header.Ident()
+		if err != nil {
+			return err
+		}
+
+		ra := f.Header.RecordAttributes
+		attrs = SourceAttributes{
+			Created:   ident.CreationDate.Time(),
+			EOFBlock:  ra.EndOfFileBlock,
+			FirstFree: ra.FirstFreeByte,
+			Format:    byte(ra.Format),
+		}
+
+		return nil
+	})
+	if err != nil {
+		return SourceAttributes{}, fmt.Errorf("rms: reading %s: %w", loc.Name, err)
+	}
+
+	return attrs, nil
+}
+
 // fullSpec is a matched file's complete specification.
 func fullSpec(device string, m filespec.Match) string {
 	return filespec.Spec{Device: device, Dirs: m.Dirs, Name: m.Name, Type: m.Type, Version: fmt.Sprint(m.Version)}.String()

@@ -79,7 +79,7 @@ questions, and a progress log extended as that phase is worked.
 | 26 | [PHASE-26.md](PHASE-26.md) | Expanding system services (emulated process record; `$ADJSTK`, `$ADJWSL`, `$ALLOC`, `$ASCEFC`, ...) |
 | 27 | [PHASE-27.md](PHASE-27.md) | MACRO-32 object modules: `MACRO` command producing VAX `.OBJ` files from `.MAR` source |
 | 28 | [PHASE-28.md](PHASE-28.md) | The MACRO-32 macro facility (`.MACRO`, `.MCALL`, `STARLET.MLB`) and a librarian (`LIBRARY`) |
-| 29 | [PHASE-29.md](PHASE-29.md) | MACRO listings (`/LIST`, cross reference), traceback records, and LINK's debug symbol table — done; debugger records deferred. Objects, listings, and images match real MACRO's and LINK's, and VMS prints the same tracebacks |
+| 29 | [PHASE-29.md](PHASE-29.md) | MACRO listings (`/LIST`, cross reference), traceback and debugger records, and LINK's debug symbol table — done. Objects, listings, and images match real MACRO's and LINK's, and VMS prints the same tracebacks |
 | 30 | [PHASE-30.md](PHASE-30.md) | A govax `LINK`: `.OBJ` modules to a runnable `.EXE` — done; its images match real LINK's and run on VMS |
 | 31 | [PHASE-31.md](PHASE-31.md) | Build without licensed VMS material: one symbol table, an augmenting gen, captured GSTs — done |
 | 32 | [PHASE-32.md](PHASE-32.md) | govax's own RMS macros ($FAB, $RAB, $NAM, XABs, services, $xxxDEF), written clean-room — done |
