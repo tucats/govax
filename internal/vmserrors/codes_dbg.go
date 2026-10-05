@@ -13,6 +13,7 @@ const (
 	dbgBadStartPC
 	dbgNoBreaks
 	dbgNoAccessR
+	dbgNoSourceDir
 )
 
 // DBG facility status codes.
@@ -48,6 +49,9 @@ const (
 	// DBG_NOACCESSR reports a read of an address the program can't read,
 	// as a breakpoint's WHEN condition can do. Its argument is the address.
 	DBG_NOACCESSR = DBGFacility<<FacilityPosition | dbgNoAccessR<<MessagePosition | StatusError
+	// DBG_NOSOURCEDIR is SHOW SOURCE's answer when SET SOURCE has given no
+	// directory list. The wording is govax's choice: no probe showed it.
+	DBG_NOSOURCEDIR = DBGFacility<<FacilityPosition | dbgNoSourceDir<<MessagePosition | StatusInfo
 )
 
 func init() {
@@ -59,4 +63,5 @@ func init() {
 	DefineMessage(DBG_BADSTARTPC, DBGFacility, "BADSTARTPC", "cannot start from PC !XL")
 	DefineMessage(DBG_NOBREAKS, DBGFacility, "NOBREAKS", "no breakpoints are set")
 	DefineMessage(DBG_NOACCESSR, DBGFacility, "NOACCESSR", "no read access to address !XL")
+	DefineMessage(DBG_NOSOURCEDIR, DBGFacility, "NOSOURCEDIR", "no source directory search list is in effect")
 }

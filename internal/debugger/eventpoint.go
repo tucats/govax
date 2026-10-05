@@ -133,6 +133,7 @@ func (d *Debugger) breakpointHit(pc uint32) bool {
 
 	if text := d.stopMessage(stopped, pc); text != "" {
 		d.Console.Printf("%s\n", text)
+		d.showSource(pc)
 	}
 
 	d.pendingDo = stopped.Do
@@ -298,6 +299,7 @@ func (d *Debugger) signalBreak() bool {
 	}
 
 	d.Console.Printf("break on exception %s %s\n", where, d.exceptionLocation(u.PC))
+	d.showSource(u.PC)
 
 	if bp.Temporary {
 		d.removeBreakpointPtr(bp)

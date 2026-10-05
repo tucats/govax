@@ -48,7 +48,6 @@ const (
 	StepReturn
 )
 
-
 // String matches show_step's own ps assignment (console_show.c:765):
 // "INTO" for anything other than OVER/RETURN.
 func (m StepMode) String() string {
@@ -98,9 +97,10 @@ type stepRequest struct {
 // many other commands, breaks, and deeper calls come first. from is where
 // the command was given, for the report.
 type pendingReturn struct {
-	frame  uint32
-	from   string
-	silent bool
+	frame    uint32
+	from     string
+	silent   bool
+	noSource bool
 }
 
 // parseStepWord applies one SET STEP keyword to the settings: LINE or
@@ -504,6 +504,8 @@ func (d *Debugger) stepReturn(req stepRequest) (runOutcome, bool, error) {
 		frame:  c.CPU.GPR(vax.FP),
 		from:   c.LocationText(c.CPU.GPR(vax.PC)),
 		silent: req.silent,
+
+		noSource: req.noSource,
 	}
 
 	outcome, err := d.runLoop(true, func(pc uint32) func() { return c.TraceStep(pc, false) })
@@ -544,6 +546,10 @@ func (d *Debugger) returnDue() bool {
 	if !p.silent {
 		pc := c.CPU.GPR(vax.PC)
 		c.Printf("stepped on return from %s to %s: %s\n", p.from, c.LocationText(pc), c.InstructionText(pc))
+
+		if !p.noSource {
+			d.showSource(pc)
+		}
 	}
 
 	return true
@@ -556,8 +562,8 @@ func (d *Debugger) returnDue() bool {
 //	stepped to DBGCMD\FACT\%LINE 55: CMPL     R2,S^#01 (by instruction)
 //	stepped to routine DBGCMD\FACT                     (into a routine)
 //
-// /SILENT says nothing. The source line that follows in VMS (unless
-// /NOSOURCE) is subtask 8's.
+// /SILENT says nothing. Each report is followed by the source line (unless
+// /NOSOURCE), as the VMS debugger shows it.
 func (d *Debugger) reportStep(req stepRequest, pc uint32) {
 	if req.silent {
 		return
@@ -567,17 +573,28 @@ func (d *Debugger) reportStep(req stepRequest, pc uint32) {
 
 	if name, ok := c.EnteredRoutine(pc); ok {
 		c.Printf("stepped to routine %s\n", name)
+		d.stepSource(req, pc)
 
 		return
 	}
 
 	if req.byInstruction || !c.HasLineInfo(pc) {
 		c.Printf("stepped to %s: %s\n", c.LocationText(pc), c.InstructionText(pc))
+		d.stepSource(req, pc)
 
 		return
 	}
 
 	c.Printf("stepped to %s\n", c.LocationText(pc))
+	d.stepSource(req, pc)
+}
+
+// stepSource shows the source line a step stopped at, unless the step is
+// /NOSOURCE (by its own qualifier or SET STEP NOSOURCE).
+func (d *Debugger) stepSource(req stepRequest, pc uint32) {
+	if !req.noSource {
+		d.showSource(pc)
+	}
 }
 
 // bindSetStep binds SET STEP and SHOW STEP.

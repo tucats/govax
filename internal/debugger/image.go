@@ -109,6 +109,7 @@ func (d *Debugger) unhandledBreak() bool {
 	}
 
 	d.Console.Printf("break on unhandled exception %s %s\n", where, d.exceptionLocation(u.PC))
+	d.showSource(u.PC)
 
 	return true
 }

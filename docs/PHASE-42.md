@@ -1286,3 +1286,52 @@ them) and reach the same code.
   defaults, `STEP 1` at `DBG>`).
 - `go build`, `go vet`, `go test ./...` clean; golangci-lint reports nothing
   in `internal/debugger` or `internal/console`.
+
+### 2026-10-05 — Subtask 8: source lines
+
+After a break or a step the debugger shows the source line at the PC, as
+VMS does, and `SET SOURCE`, `SHOW SOURCE`, and `CANCEL SOURCE` say where to
+find the file.
+
+- **Finding the line** (`internal/console/source.go`, `Console.SourceLine`):
+  `dbgsym`'s `LineAt` gives the module and listing line, `Module.SourceOf`
+  the file and record, and the file is read with `ReadRecordFile`. The
+  file name in the DST is the build machine's (`DUA1:[000000]DBGCMD.MAR;1`
+  in the probe's images), so the search is: the name as recorded; each
+  `SET SOURCE` directory with the file's name and type (as recorded, then
+  lower case, for a host file system with case); then the default
+  directory. Files are cached by recorded name until the list changes. A
+  file that can't be found, or a record it doesn't have, shows nothing:
+  the location line stands alone.
+- **Layout** (`internal/debugger/source.go`, `formatSource`), from the
+  logs: the listing line number right-aligned in six columns, `: `, then
+  the record with tabs expanded to every eighth column of the text; 72
+  columns of text per line, with the overflow on `     -: ` lines
+  (`dbgdis.dlg`'s line 110). **Unconfirmed:** a record over 144 columns
+  wraps again the same way; no probe line is that long.
+- **Where it shows.** After `break at ...` and the other break messages
+  (`stopMessage`), `break on [unhandled] exception ...` (at the exception's
+  PC), and every STEP report: `stepped to`, `stepped to routine`, class
+  steps, and `stepped on return`. `/NOSOURCE` and `SET STEP NOSOURCE` turn
+  it off for steps (STEP/RETURN keeps the choice made when it was given,
+  as it does `/SILENT`). Breaks always show it, as VMS's SET STEP NOSOURCE
+  didn't affect them in `step.dlg`; `SET BREAK/[NO]SOURCE` is still
+  refused. govax's own `Instruction break at` shows none.
+- **SET SOURCE dir[,dir...]** takes host paths and VMS directory
+  specifications. Unquoted text is made upper case and `/` starts a
+  qualifier, so a host path is quoted. `SHOW SOURCE` prints
+  `source directory search list for all modules:` and the directories
+  indented four; with none, `%DEBUG-I-NOSOURCEDIR, no source directory
+  search list is in effect`. **Both wordings are govax's** (no probe
+  showed them; unconfirmed). Per-module lists, `/LATEST` and `/EXACT`
+  aren't done.
+- **Tests.** `source_test.go` replays the source lines of `step.dlg`,
+  `break.dlg`, and `except.dlg` on the probe image with `SET SOURCE`
+  (steps, `/NOSOURCE`, `SET STEP NOSOURCE`, breaks at a routine, an
+  exception break, STEP/RETURN), the not-found case, and SET/SHOW/CANCEL
+  SOURCE; `source_format_test.go` checks the layout against `dbgdis.dlg`'s
+  wrapped line. Not yet replayed: `dbgdis.dlg`, `fail.dlg`, and the
+  probe's remaining sessions need commands (`SHOW CALLS`, `EXAMINE`) that
+  come in later subtasks; the session oracle (subtask 16) covers them.
+- `go build`, `go vet`, `go test ./...` clean; golangci-lint reports nothing
+  in the packages touched.

@@ -49,6 +49,7 @@ func (d *Dispatcher) bind() {
 	}
 
 	d.bindBreak()
+	d.bindSource()
 
 	g.Bind("EXIT", end)
 	g.Bind("QUIT", end)

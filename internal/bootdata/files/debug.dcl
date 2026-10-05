@@ -93,6 +93,7 @@ grammar debugger
         keyword     break               /syntax=set_break/nonegatable
         keyword     breakpoint          /syntax=set_break/nonegatable
         keyword     step                /syntax=set_step/nonegatable
+        keyword     source              /syntax=set_source/nonegatable
 
     verb set/id=20
         parameter   what/id=21                  -
@@ -123,6 +124,12 @@ grammar debugger
                         /type=$rest_of_line     -
                         /prompt="Step type"
 
+        ! SET SOURCE dir[,dir...]: the directories searched for source files.
+        syntax set_source/id=70
+            parameter   directories/id=71       -
+                        /type=$rest_of_line     -
+                        /prompt="Directories"
+
     ! SHOW BREAK lists the breakpoints, and SHOW STEP the defaults STEP
     ! uses.
     type show_types
@@ -130,6 +137,7 @@ grammar debugger
         keyword     breakpoint          /syntax=show_break
         keyword     breakpoints         /syntax=show_break
         keyword     step                /syntax=show_step
+        keyword     source              /syntax=show_source
 
     verb show/id=40
         parameter   what/id=41                  -
@@ -140,12 +148,16 @@ grammar debugger
 
         syntax show_step/id=43
 
+        syntax show_source/id=72
+
+    ! CANCEL SOURCE forgets SET SOURCE's directories.
     ! CANCEL BREAK [qualifier] [address[,address...]] removes breakpoints:
     ! at the addresses, of a kind (/CALL, /BRANCH, ...), or all of them
     ! (/ALL).
     type cancel_types
         keyword     break               /syntax=cancel_break
         keyword     breakpoint          /syntax=cancel_break
+        keyword     source              /syntax=cancel_source
 
     verb cancel/id=50
         parameter   what/id=51                  -
@@ -167,5 +179,7 @@ grammar debugger
                         /default=""
             parameter   target/id=61            -
                         /type=$rest_of_line
+
+        syntax cancel_source/id=73
 
 end

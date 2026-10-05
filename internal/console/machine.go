@@ -103,6 +103,12 @@ type Console struct {
 	// wipe" reasoning as Mounts's own doc comment above.
 	ContainerSession *rms.Session
 
+	// sourceDirs is the debugger's SET SOURCE search list, and
+	// sourceCache the source files read so far, by the file name the
+	// debug symbol table gives (source.go).
+	sourceDirs  []string
+	sourceCache map[string][]string
+
 	// RTL is Phase 10's SYS$/LIB$ calling-convention environment, backing
 	// this Console's cpu.SystemServices implementation (services.go) for
 	// the XFC$P1VECTOR/XFC$SHIM selectors. Created fresh alongside the
