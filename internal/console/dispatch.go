@@ -684,9 +684,6 @@ var fixedCommands map[string]fixedHandler
 
 func init() {
 	fixedCommands = map[string]fixedHandler{
-		"EXAM": cmdExamine, "EX": cmdExamine, "DUMP": cmdExamine,
-		"DEP": cmdDeposit, "D": cmdDeposit,
-
 		"SAVE": cmdSave,
 		"LOAD": cmdLoad,
 
@@ -695,7 +692,6 @@ func init() {
 		"SET": cmdSet,
 
 		"ASM": cmdAssemble, "ASSE": cmdAssemble,
-		"DISA": cmdDisassemble, "DIS": cmdDisassemble,
 	}
 }
 
@@ -744,142 +740,6 @@ func cmdInclude(d *Dispatcher, rest string) error {
 	path := strings.Trim(strings.TrimSpace(rest), `"`)
 
 	return d.Console.Include(path, d.Dispatch)
-}
-
-// parseExamSize reads an optional leading "/BYTE"/"/WORD"/"/LONGWORD"/
-// "/ASCII"/"/PTE" format switch (unambiguous-prefix-matched, matching
-// EXAMINE/DEPOSIT's shared size vocabulary — see exam.go), defaulting to
-// SizeLongword.
-func parseExamSize(rest string) (ExamSize, string) {
-	rest = strings.TrimLeft(rest, " \t")
-	if !strings.HasPrefix(rest, "/") {
-		return SizeLongword, rest
-	}
-
-	i := 1
-	for i < len(rest) && rest[i] != ' ' && rest[i] != '\t' {
-		i++
-	}
-
-	sw, tail := strings.ToUpper(rest[1:i]), rest[i:]
-
-	switch {
-	case sw == "B" || strings.HasPrefix("BYTE", sw):
-		return SizeByte, tail
-
-	case sw == "W" || strings.HasPrefix("WORD", sw):
-		return SizeWord, tail
-
-	case sw == "L" || strings.HasPrefix("LONGWORD", sw):
-		return SizeLongword, tail
-
-	case sw == "A" || strings.HasPrefix("ASCII", sw):
-		return SizeASCII, tail
-
-	case sw == "PTE":
-		return SizePTE, tail
-
-	default:
-		return SizeLongword, rest // not a recognized size switch; leave it for the caller
-	}
-}
-
-func cmdExamine(d *Dispatcher, rest string) error {
-	sz, rest := parseExamSize(rest)
-	rest = strings.TrimSpace(rest)
-
-	if rest == "" {
-		return d.Console.Examine("", d.Console.DepositAddr, 1, sz)
-	}
-
-	if _, ok := registerNames[strings.ToUpper(rest)]; ok {
-		return d.Console.Examine(rest, 0, 1, sz)
-	}
-
-	ev := d.Console.Evaluator()
-
-	addr, remainder, err := ev.Eval(rest)
-	if err != nil {
-		return err
-	}
-
-	count := uint32(1)
-
-	if remainder = strings.TrimSpace(remainder); remainder != "" {
-		end, _, err := ev.Eval(remainder)
-		if err != nil {
-			return err
-		}
-
-		if end < addr {
-			return vmserrors.New(vmserrors.CLI_BADRANGE)
-		}
-
-		count = (end-addr)/sizeBytes(sz) + 1
-	}
-
-	return d.Console.Examine("", addr, count, sz)
-}
-
-func cmdDeposit(d *Dispatcher, rest string) error {
-	var targetStr, valueStr string
-
-	sz, rest := parseExamSize(rest)
-	rest = strings.TrimSpace(rest)
-
-	if eq := strings.IndexByte(rest, '='); eq >= 0 {
-		targetStr, valueStr = strings.TrimSpace(rest[:eq]), strings.TrimSpace(rest[eq+1:])
-	} else if fields := strings.Fields(rest); len(fields) >= 2 {
-		targetStr, valueStr = fields[0], fields[1]
-	} else {
-		return vmserrors.New(vmserrors.CLI_NEEDDEPOSIT)
-	}
-
-	ev := d.Console.Evaluator()
-
-	val, _, err := ev.Eval(valueStr)
-	if err != nil {
-		return err
-	}
-
-	if _, ok := registerNames[strings.ToUpper(targetStr)]; ok {
-		return d.Console.Deposit(targetStr, 0, sz, val)
-	}
-
-	addr, _, err := ev.Eval(targetStr)
-	if err != nil {
-		return err
-	}
-
-	return d.Console.Deposit("", addr, sz, val)
-}
-
-// cmdDisassemble implements DISASSEMBLE/DISA: an optional [start[ end]]
-// address range (each an expression, matching EXAMINE's own convention),
-// defaulting start to the current deposit address and end to start (a
-// single instruction) — matching console_disasm.c's own argument parsing.
-func cmdDisassemble(d *Dispatcher, rest string) error {
-	rest = strings.TrimSpace(rest)
-	if rest == "" {
-		return d.Console.Disassemble(d.Console.DepositAddr, d.Console.DepositAddr)
-	}
-
-	ev := d.Console.Evaluator()
-
-	start, remainder, err := ev.Eval(rest)
-	if err != nil {
-		return err
-	}
-
-	end := start
-	if remainder = strings.TrimSpace(remainder); remainder != "" {
-		end, _, err = ev.Eval(remainder)
-		if err != nil {
-			return err
-		}
-	}
-
-	return d.Console.Disassemble(start, end)
 }
 
 // leadingQualifier reads one leading "/word" token off s (up to the next

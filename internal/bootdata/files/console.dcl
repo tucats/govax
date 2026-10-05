@@ -1016,4 +1016,45 @@ grammar console
         qualifier   execute/id=1685
     verb r/alias=run
 
+    ! EXAMINE[/size] [start [end]] shows memory (a register by name), from
+    ! start to end; DEPOSIT[/size] target[=]value changes it. The size is
+    ! /BYTE, /WORD, /LONGWORD (the default), /ASCII, or /PTE.
+    verb examine/id=1690
+        qualifier   byte/id=1691/nonegatable
+        qualifier   word/id=1692/nonegatable
+        qualifier   longword/id=1693/nonegatable
+        qualifier   ascii/id=1694/nonegatable
+        qualifier   pte/id=1695/nonegatable
+        parameter   start/id=1696               -
+                    /type=$expression
+        parameter   end/id=1697                 -
+                    /type=$expression
+        disallow    any2(byte, word, longword, ascii, pte)
+    verb ex/alias=examine
+    verb dump/alias=examine
+
+    verb deposit/id=1700
+        qualifier   byte/id=1701/nonegatable
+        qualifier   word/id=1702/nonegatable
+        qualifier   longword/id=1703/nonegatable
+        qualifier   ascii/id=1704/nonegatable
+        qualifier   pte/id=1705/nonegatable
+        parameter   target/id=1706              -
+                    /type=$expression           -
+                    /separator="="              -
+                    /prompt="Location"
+        parameter   value/id=1707               -
+                    /type=$expression           -
+                    /prompt="Value"
+        disallow    any2(byte, word, longword, ascii, pte)
+    verb d/alias=deposit
+
+    ! DISASSEMBLE [start [end]] lists instructions (DIS).
+    verb disassemble/id=1710
+        parameter   start/id=1711               -
+                    /type=$expression
+        parameter   end/id=1712                 -
+                    /type=$expression
+    verb dis/alias=disassemble
+
 end

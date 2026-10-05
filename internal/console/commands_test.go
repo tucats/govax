@@ -188,3 +188,50 @@ func TestCommands_stepGrammar(t *testing.T) {
 		}
 	}
 }
+
+// TestCommands_depositExamine checks DEPOSIT's and EXAMINE's spellings,
+// separators, and sizes. DEPOSIT spelled out used to reach no handler:
+// the fixed table knew only DEP and D.
+func TestCommands_depositExamine(t *testing.T) {
+	d, c, buf := newCommandDispatcher(t)
+
+	steps := []string{
+		"DEPOSIT 2000 = 11223344",
+		"DEPOSIT/BYTE 2000=55",
+		"D/WORD 2002 6677",
+		"DEP R0 = 2000 + 4",
+		"D R1=1",
+	}
+
+	for _, line := range steps {
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+	}
+
+	if v, err := c.Mem.LoadLongword(c.CPU, 0x2000); err != nil || v != 0x66773355 {
+		t.Errorf("longword at 2000 = %#x, %v; want 0x66773355", v, err)
+	}
+
+	if got := c.CPU.GPR(vax.R0); got != 0x2004 {
+		t.Errorf("R0 = %#x, want 0x2004", got)
+	}
+
+	for _, line := range []string{"EXA R0", "EX/B 2000 2003", "DUMP 2000", "EXAMINE 2000 /WORD", "DIS 2000", "DISASSEMBLE 2000 2002"} {
+		buf.Reset()
+
+		if err := d.Dispatch(line); err != nil {
+			t.Errorf("%s: %v", line, err)
+		}
+
+		if buf.Len() == 0 {
+			t.Errorf("%s printed nothing", line)
+		}
+	}
+
+	for _, line := range []string{"EXAMINE/BYTE/WORD 2000", "DEPOSIT 2000", "EXAMINE 2004 2000", "DEPOSIT/NOBYTE 2000 1"} {
+		if err := d.Dispatch(line); err == nil {
+			t.Errorf("%s: no error", line)
+		}
+	}
+}

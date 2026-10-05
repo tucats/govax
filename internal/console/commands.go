@@ -46,6 +46,126 @@ func (d *Dispatcher) bindConsoleCommands() {
 	})
 	g.Bind("CALL", d.callCommand)
 	g.Bind("RUN", d.runCommand)
+
+	g.Bind("EXAMINE", d.examineCommand)
+	g.Bind("DEPOSIT", d.depositCommand)
+	g.Bind("DISASSEMBLE", d.disassembleCommand)
+}
+
+// examineSize returns the size qualifier EXAMINE or DEPOSIT was given,
+// SizeLongword by default (exam.go).
+func examineSize(r *dcl.Result) ExamSize {
+	switch {
+	case r.Present("BYTE"):
+		return SizeByte
+	case r.Present("WORD"):
+		return SizeWord
+	case r.Present("ASCII"):
+		return SizeASCII
+	case r.Present("PTE"):
+		return SizePTE
+	default:
+		return SizeLongword
+	}
+}
+
+// isRegisterName reports whether text names a register EXAMINE and
+// DEPOSIT handle themselves (console_exam.c's register short-circuit),
+// rather than an address expression.
+func isRegisterName(text string) bool {
+	_, ok := registerNames[strings.ToUpper(text)]
+
+	return ok
+}
+
+// examineCommand implements EXAMINE[/size] [start [end]] (console_exam.c):
+// one item at start, every item from start to end, or, with no address,
+// the item at the current deposit address. start may be a register name.
+func (d *Dispatcher) examineCommand(id int64, r *dcl.Result) error {
+	sz := examineSize(r)
+
+	if !r.Present("START") {
+		return d.Console.Examine("", d.Console.DepositAddr, 1, sz)
+	}
+
+	start := r.String("START")
+	if isRegisterName(start) && !r.Present("END") {
+		return d.Console.Examine(start, 0, 1, sz)
+	}
+
+	addr, err := d.evalWhole(start)
+	if err != nil {
+		return err
+	}
+
+	count := uint32(1)
+
+	if r.Present("END") {
+		end, err := d.evalWhole(r.String("END"))
+		if err != nil {
+			return err
+		}
+
+		if end < addr {
+			return vmserrors.New(vmserrors.CLI_BADRANGE)
+		}
+
+		count = (end-addr)/sizeBytes(sz) + 1
+	}
+
+	return d.Console.Examine("", addr, count, sz)
+}
+
+// depositCommand implements DEPOSIT[/size] target[=]value: target is a
+// register name or an address expression.
+func (d *Dispatcher) depositCommand(id int64, r *dcl.Result) error {
+	sz := examineSize(r)
+
+	val, err := d.evalWhole(r.String("VALUE"))
+	if err != nil {
+		return err
+	}
+
+	target := r.String("TARGET")
+	if isRegisterName(target) {
+		return d.Console.Deposit(target, 0, sz, val)
+	}
+
+	addr, err := d.evalWhole(target)
+	if err != nil {
+		return err
+	}
+
+	return d.Console.Deposit("", addr, sz, val)
+}
+
+// disassembleCommand implements DISASSEMBLE [start [end]]
+// (console_disasm.c): start defaults to the current deposit address, and
+// end to start (one instruction).
+func (d *Dispatcher) disassembleCommand(id int64, r *dcl.Result) error {
+	start := d.Console.DepositAddr
+
+	if r.Present("START") {
+		v, err := d.evalWhole(r.String("START"))
+		if err != nil {
+			return err
+		}
+
+		start = v
+	}
+
+	end := start
+
+	if r.Present("END") {
+		v, err := d.evalWhole(r.String("END"))
+		if err != nil {
+			return err
+		}
+
+		end = v
+	}
+
+	return d.Console.Disassemble(start, end)
 }
 
 // optionalAddress evaluates the $expression parameter name, or returns nil

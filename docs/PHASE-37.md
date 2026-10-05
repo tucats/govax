@@ -140,6 +140,9 @@ Each subtask is committed when its tests pass.
   with the evaluator, as console_call reads it.
 - **RUN's file is required by the grammar** (`/prompt=`): a bare RUN is
   CLI_MISSINGPARAMETER, not CLI_NOFILE.
+- **DEPOSIT's target ends at `=`** (`/separator="="`), so a comparison
+  in a DEPOSIT target needs parentheses; the value may compare freely.
+  Every DEPOSIT spelling now works, `DEPOSIT` itself included.
 - **Handlers live in `internal/console/commands.go`** (`bindConsoleCommands`),
   called from `bindGrammar`.
 
@@ -158,3 +161,6 @@ Each subtask is committed when its tests pass.
   unbound `call` verb in `console.dcl` is replaced. `govax run` quotes the
   image's name. `TestRunOptions_defaultAndOverride` replaces the
   `parseRunQualifier` test.
+- 2026-10-04: Subtask 4: EXAMINE/EX/DUMP, DEPOSIT/D, DISASSEMBLE/DIS.
+  Sizes are qualifiers anywhere on the line, at most one of them
+  (`disallow any2`). `TestCommands_depositExamine`.
