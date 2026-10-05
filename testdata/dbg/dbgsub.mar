@@ -1,0 +1,26 @@
+	.TITLE	DBGSUB	Phase 41 probe: the routines DBGDIS calls
+	.IDENT	/V1.0/
+
+; DBGDIS's second module: global data, a routine that calls another,
+; one whose mask saves every register and sets IV and DV, and a JSB
+; subroutine. DBGDIS.DBG breaks in SUB2 and SUBJSB for SHOW CALLS, three
+; and four deep (docs/PHASE-41.md, subtask 1).
+
+	.PSECT	SUBDAT, WRT, NOEXE, LONG
+SUBDATA:: .LONG	7			; a global longword
+
+	.PSECT	CODE, NOWRT, EXE, LONG	; the same psect as DBGDIS's code
+	.ENTRY	SUB1, ^M<R2>
+	MOVL	SUBDATA, R2
+	CALLS	#0, SUB2
+	MOVL	#1, R0
+	RET
+
+	.ENTRY	SUB2, ^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11,IV,DV>
+	JSB	SUBJSB
+	RET
+
+SUBJSB:	INCL	SUBDATA			; a JSB subroutine
+SUBEND:	RSB
+
+	.END

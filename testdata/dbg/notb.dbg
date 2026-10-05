@@ -1,0 +1,13 @@
+! NOTB.DBG - debugger commands for TRNOTB, TRACE linked /NOTRACEBACK
+! (docs/PHASE-41.md, subtask 1): what the debugger shows, if it starts
+! at all, for an image with no debug symbol table.
+!
+SHOW IMAGE
+SHOW MODULE
+EXAMINE/INSTRUCTION .PC
+SET STEP INSTRUCTION
+STEP
+STEP
+STEP
+SHOW CALLS
+GO

@@ -1,0 +1,14 @@
+! FAIL.DBG - debugger commands for FAILDBG, FAILMAIN and FAILSUB built
+! /DEBUG and linked /DEBUG (docs/PHASE-41.md, subtask 1): the access
+! violation two calls deep, as the debugger reports it, and the call
+! chain there (Decision 6).
+!
+SET MODULE/ALL
+SHOW MODULE
+GO
+SHOW CALLS
+EXAMINE/INSTRUCTION .PC
+EXAMINE/INSTRUCTION SUB2:FAILSUB\%LINE 13
+EXAMINE/INSTRUCTION FAILMAIN:FAILMAIN+10
+EXAMINE R2
+SHOW CALLS 1

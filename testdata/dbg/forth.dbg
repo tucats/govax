@@ -1,0 +1,20 @@
+! FORTH.DBG - debugger commands for FORTH (testdata/mar/forth.mar, built
+! /DEBUG and linked /DEBUG; docs/PHASE-41.md, subtask 1): a large module
+! with system macros' code (the RMS calls at its start), JSB routines,
+! and labels the DEFWORD macro defines in another psect. FORTH reads
+! the terminal, so it isn't run: the commands only look.
+!
+SHOW MODULE
+SET MODULE/ALL
+SHOW SYMBOL/ADDRESS F_A* IN FORTH
+EXAMINE/INSTRUCTION FORTH:FORTH+60
+EXAMINE/INSTRUCTION ABORT:ABORT+20
+EXAMINE/INSTRUCTION %LINE 395:%LINE 400
+EXAMINE/INSTRUCTION INTERP:INTERP+60
+EXAMINE/INSTRUCTION LOOKUP:LOOKUP+30
+EXAMINE/INSTRUCTION F_OVER:F_OVER_E
+EVALUATE/ADDRESS F_ABS_H
+SYMBOLIZE F_ABS_H+4
+SYMBOLIZE INTERP+7
+EXAMINE BASE
+EXAMINE TTIN

@@ -401,3 +401,30 @@ resident (the design of `internal/dbgsym`, and the out-of-scope list).
 The author took the recommendations on open questions 1 to 5 and asked
 for `SHOW CALLS` with module, routine, and line in this phase where the
 data is available (6). They're Decisions 1 to 6; the subtasks cite them.
+
+### 2026-10-05 — Subtask 1: the probe, ready for VMS
+
+- **`testdata/dbg/`**: `dbgdis.mar` and `dbgsub.mar` (the two-module
+  program the plan describes), five debugger command files (`*.dbg`),
+  `dbg.com`, `exchange.cmd`, `copyout.cmd`, and a README saying how to
+  run it.
+- **The program runs.** govax assembles, links (`/DEBUG`), and runs
+  DBGDIS to the end; the first draft faulted on `B^LIMIT(R1)` after
+  `MOVQ` had set R1, fixed by reloading R1.
+- **The images.** `dbg.com` builds DBGDIS three ways (`/DEBUG`,
+  traceback, `/NOTRACEBACK`), TRACE four ways (as Phase 29's probe did),
+  FAILMAIN and FAILSUB linked `/DEBUG` (FAILLNK, new: Phase 29 linked
+  FAILDBG with traceback only), and FORTH `/DEBUG`, with maps and
+  `ANALYZE/IMAGE`, then runs each under the debugger with
+  `DBG$INPUT` pointing at a generated command file that logs the
+  session to `IMAGE.DLG`.
+- **govax's images on VMS.** `exchange.cmd` builds GVDBGDIS and GVTRACE
+  with govax's `MACRO/DEBUG` and `LINK/DEBUG` onto the volume; their
+  sessions use the same commands as DBGDIS's and TRDBGLNK's. This is
+  also Phase 29's Decision 7 check.
+- **Unconfirmed until it runs**: that the debugger reads `DBG$INPUT` when
+  started by `RUN/DEBUG` from a command procedure (the README gives the
+  by-hand fallback), and the exact syntax of a few commands
+  (`EXAMINE/OPERANDS=FULL`, `SHOW SYMBOL/TYPE`). A command VMS rejects
+  just logs an error; the rest of the session goes on.
+- Waiting on the author's simh run.

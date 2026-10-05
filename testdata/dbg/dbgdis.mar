@@ -1,0 +1,113 @@
+	.TITLE	DBGDIS	Phase 41 probe: symbolic disassembly
+	.IDENT	/V1.0/
+
+; The main module of a two-module program (DBGSUB is the other) whose
+; instructions refer, in every addressing mode, to the things a debug
+; symbol table names: labels of code and of data, routines (CALLS,
+; CALLG, JSB, BSBW), constants, a global constant, a psect base with no
+; label, addresses past a label, the other module's data and routines,
+; and a LIBRTL routine. DBG.COM assembles and links it /DEBUG, and the
+; debugger shows its instructions (EXAMINE/INSTRUCTION) for govax's
+; disassembler to be checked against (docs/PHASE-41.md, subtask 1).
+;
+; It runs to the end without faulting: DBGDIS.DBG steps through part of
+; it and then lets it finish.
+
+	.EXTERNAL LIB$PUT_OUTPUT, SUB1, SUBDATA
+
+LIMIT = 10				; a constant (a short literal)
+BIG = 1000				; a constant too big for one
+MASK = ^X0F				; a constant used as a mask
+GLIMIT == 3				; a global constant
+
+	.PSECT	DATA, WRT, NOEXE, LONG
+COUNT:	.LONG	0			; a longword
+TABLE:	.LONG	1, 2, 3, 4		; a list: TABLE+8 has no label
+BYTES:	.BYTE	1, 2, 3, 4, 5, 6, 7, 8
+WORDV:	.WORD	0
+PTR:	.ADDRESS TABLE			; a pointer, for deferred modes
+QUAD:	.QUAD	0
+FVAL:	.F_FLOATING 1.5
+ARGLST:	.LONG	0			; CALLG's empty argument list
+MSG:	.ASCID	/DBGDIS: done/
+TEXT:	.ASCII	/ABCDEFGH/
+	.BLKB	16			; space after TEXT, with no label
+
+	.PSECT	NOLABEL, WRT, NOEXE, LONG
+	.LONG	5			; the psect's base has no label
+NOLAB2:	.LONG	6			; NOLAB2-4 is the base
+
+	.PSECT	CODE, NOWRT, EXE, LONG
+	.ENTRY	START, ^M<R2,R3,R4>
+	MOVL	#LIMIT, R2		; immediates
+	MOVL	#BIG, R3
+	MOVL	I^#LIMIT, R4
+	MOVL	#GLIMIT, R0
+	MOVF	#1.5, R1
+	MOVL	COUNT, R0		; relative, MACRO's choice of width
+	MOVL	W^COUNT, R0		; relative, each width
+	MOVL	L^COUNT, R0
+	MOVAL	TABLE, R1
+	MOVL	TABLE+8, R0		; past a label
+	MOVL	@PTR, R0		; relative deferred
+	MOVL	@W^PTR, R0
+	MOVL	@#COUNT, R0		; absolute
+	MOVAB	TEXT+10, R0		; into the unlabeled space
+	MOVAL	NOLAB2-4, R0		; a psect base with no label
+	MOVL	#2, R4
+	MOVL	TABLE[R4], R0		; indexed
+	CVTBL	BYTES+3, R0		; data of each type
+	MOVW	WORDV, R0
+	MOVQ	QUAD, R0
+	MOVF	FVAL, R0
+	BICL2	#MASK, R0
+	MOVAL	TABLE, R1		; MOVQ set R1
+	MOVL	B^LIMIT(R1), R0		; a displacement equal to a constant
+	MOVL	4(AP), R0		; displacements off AP and FP
+	MOVL	8(FP), R0
+	MOVAL	PTR, R2			; register modes
+	MOVL	(R2), R0
+	MOVL	@(R2)+, R0
+	MOVL	-(R2), R0
+	MOVL	(R2)+, R0
+	MOVAB	START, R0		; a routine's address, and past it
+	MOVAB	START+2, R0
+	MOVL	SUBDATA, R0		; the other module's data
+	MOVL	G^SUBDATA, R0
+	PUSHAL	SUBDATA
+	TSTL	(SP)+
+	CMPL	R2, #GLIMIT
+	BLEQ	10$			; branches to a local label
+	BRB	20$
+10$:	INCL	COUNT
+20$:	CMPL	R2, #LIMIT
+	BGEQ	LOOP			; a branch to a label
+LOOP:	INCL	COUNT
+	SOBGTR	R4, LOOP
+	JSB	JSBRTN			; a JSB routine, two ways
+	BSBW	JSBRTN
+	CALLS	#0, LOCALR		; this module's routine
+	CALLS	#0, SUB1		; the other module's routines
+	CALLG	ARGLST, SUB1
+	PUSHAQ	MSG			; a LIBRTL routine
+	CALLS	#1, G^LIB$PUT_OUTPUT
+	MOVL	#1, R0
+	CASEL	R0, #0, #2		; a case table
+30$:	.WORD	40$-30$
+	.WORD	50$-30$
+	.WORD	60$-30$
+	BRW	DONE
+40$:	BRB	DONE
+50$:	NOP
+60$:	JMP	DONE			; a jump to a label
+DONE:	MOVL	#1, R0
+LAST:	RET
+
+	.ENTRY	LOCALR, ^M<>		; a routine nothing outside calls
+	INCL	COUNT
+LOCEND:	RET
+
+JSBRTN:	INCL	COUNT			; a JSB subroutine, not a routine
+JSBEND:	RSB
+
+	.END	START

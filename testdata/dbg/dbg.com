@@ -1,0 +1,83 @@
+$ ! DBG.COM - Phase 41's probe (docs/PHASE-41.md, subtask 1): how the VMS
+$ ! debugger shows instructions, symbols, and call chains, for govax's
+$ ! symbolic disassembler to be checked against.
+$ !
+$ ! 1. Builds DBGDIS (with DBGSUB), TRACE, FAILMAIN (with FAILSUB), and
+$ !    FORTH, with /DEBUG and without, linked /DEBUG, with traceback,
+$ !    and /NOTRACEBACK; maps, listings, and ANALYZE/IMAGE for each.
+$ ! 2. Runs each image under the debugger with a file of debugger
+$ !    commands (*.DBG), logging the session to IMAGE.DLG. The same
+$ !    commands run on govax's own images of DBGDIS and TRACE
+$ !    (GVDBGDIS.EXE, GVTRACE.EXE), which EXCHANGE.CMD put on the volume.
+$ !
+$ ! Run it with the exchange volume as the default directory, keeping a
+$ ! log of everything it prints:
+$ !
+$ !     @DBG/OUTPUT=DBG.LOG
+$ !
+$ SET NOON
+$ SET VERIFY
+$ !
+$ ! 1. Builds.
+$ !
+$ MACRO/DEBUG/LIST DBGDIS
+$ MACRO/DEBUG/LIST DBGSUB
+$ LINK/DEBUG/MAP DBGDIS,DBGSUB
+$ LINK/MAP=DBGTRC/EXECUTABLE=DBGTRC DBGDIS,DBGSUB
+$ LINK/MAP=DBGNOTB/EXECUTABLE=DBGNOTB/NOTRACEBACK DBGDIS,DBGSUB
+$ !
+$ MACRO TRACE
+$ MACRO/OBJECT=TRDEBUG/DEBUG TRACE
+$ LINK/MAP=TRDBGLNK/EXECUTABLE=TRDBGLNK/DEBUG TRDEBUG
+$ LINK/MAP=TRLNKDBG/EXECUTABLE=TRLNKDBG/DEBUG TRACE
+$ LINK/MAP=TRDBGTRC/EXECUTABLE=TRDBGTRC TRDEBUG
+$ LINK/MAP=TRNOTB/EXECUTABLE=TRNOTB/NOTRACEBACK TRACE
+$ !
+$ MACRO/OBJECT=FAILMAID/DEBUG FAILMAIN
+$ MACRO/OBJECT=FAILSUBD/DEBUG FAILSUB
+$ LINK/MAP=FAILLNK/EXECUTABLE=FAILLNK/DEBUG FAILMAID,FAILSUBD
+$ !
+$ MACRO/DEBUG FORTH
+$ LINK/DEBUG/MAP FORTH
+$ !
+$ LIST = "DBGDIS,DBGTRC,DBGNOTB,TRDBGLNK,TRLNKDBG,TRDBGTRC,TRNOTB," + -
+    "FAILLNK,FORTH,GVDBGDIS,GVTRACE"
+$ I = 0
+$ ANALYZE:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RUNS
+$   ANALYZE/IMAGE/OUTPUT='F'.ANI 'F'.EXE
+$   I = I + 1
+$   GOTO ANALYZE
+$ !
+$ ! 2. Debugger sessions. DEBUG writes a file of debugger commands that
+$ !    opens IMAGE.DLG as the log, runs the probe's commands (P2.DBG),
+$ !    and exits, then runs the image under the debugger reading it.
+$ !
+$ RUNS:
+$ CALL DEBUG DBGDIS DBGDIS
+$ CALL DEBUG GVDBGDIS DBGDIS
+$ CALL DEBUG DBGTRC DBGDIS
+$ CALL DEBUG DBGNOTB NOTB
+$ CALL DEBUG TRDBGLNK TRACE
+$ CALL DEBUG TRLNKDBG TRACE
+$ CALL DEBUG TRDBGTRC TRACE
+$ CALL DEBUG GVTRACE TRACE
+$ CALL DEBUG TRNOTB NOTB
+$ CALL DEBUG FAILLNK FAIL
+$ CALL DEBUG FORTH FORTH
+$ DIRECTORY/SIZE=ALL/DATE *.*
+$ EXIT
+$ !
+$ DEBUG: SUBROUTINE
+$   OPEN/WRITE DBGF RUN.DBG
+$   WRITE DBGF "SET LOG ''P1'.DLG"
+$   WRITE DBGF "SET OUTPUT LOG,VERIFY"
+$   WRITE DBGF "@''P2'.DBG"
+$   WRITE DBGF "EXIT"
+$   CLOSE DBGF
+$   DEFINE/USER_MODE DBG$INPUT RUN.DBG
+$   DEFINE/USER_MODE DBG$DECW$DISPLAY " "
+$   RUN/DEBUG 'P1'
+$   SHOW SYMBOL $STATUS
+$ ENDSUBROUTINE
