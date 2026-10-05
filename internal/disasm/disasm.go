@@ -2,17 +2,16 @@ package disasm
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vaxfloat"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // ByteReader supplies bytes for disassembly by VAX virtual address.
 // internal/asm's *Assembler satisfies it via ByteAt, so a program's own
 // output can be disassembled directly; SliceReader adapts a plain []byte
-// for anything else (a loaded .exe image, a console's live memory snapshot, ...).
+// for anything else (a loaded .exe image, a console's live memory
+// snapshot, ...).
 type ByteReader interface {
 	ByteAt(addr uint32) byte
 }
@@ -29,51 +28,34 @@ func (s SliceReader) ByteAt(addr uint32) byte {
 	return s[addr]
 }
 
-// Decoded is one disassembled instruction: its mnemonic and formatted
-// operand list, plus the number of bytes it occupied in the instruction
-// stream.
+// Decoded is one disassembled instruction: its mnemonic and operands, and
+// the number of bytes it occupied in the instruction stream. A routine's
+// entry mask (EntryMask) is a Decoded too, with IsMask set.
 type Decoded struct {
 	Mnemonic string
-	Operands []string
-	Values   []uint32
+	Operands []Operand
 	Length   uint32
-}
 
-// String renders dec in the syntax internal/asm's Assemble can parse
-// back in: "MNEMONIC OP1,OP2,...". This is what makes the round-trip
-// property in docs/PHASE-11.md's deliverables checkable: assemble a
-// fixture, disassemble each instruction, reassemble the disassembly, and
-// compare bytes.
-func (dec Decoded) String() string {
-	s := dec.Mnemonic
-
-	for i, op := range dec.Operands {
-		if i == 0 {
-			s += " "
-		} else {
-			s += ","
-		}
-
-		s += op
-	}
-
-	return s
+	// IsMask marks a routine's register-save mask word, decoded by
+	// EntryMask rather than as an instruction: Mask is the word, and Name
+	// the routine's name ("" if the caller doesn't know it).
+	IsMask bool
+	Mask   uint16
+	Name   string
 }
 
 // Disassemble decodes one instruction from r at pc, matching
-// decode_opcode.c/disasm_operand.c's combined algorithm — reusing the same
-// internal/cpu instruction table internal/asm's Assemble does rather than a duplicate copy
-// (see docs/PHASE-11.md). Unlike internal/cpu's own decodeOperand (used at
-// execution time), this never reads or writes register state: autoincrement/
-// autodecrement addressing modes are formatted as text, never performed.
+// decode_opcode.c/disasm_operand.c's combined algorithm — reusing the
+// same internal/cpu instruction table internal/asm's Assemble does rather
+// than a duplicate copy (see docs/PHASE-11.md). Unlike internal/cpu's own
+// decodeOperand (used at execution time), this never reads or writes
+// register state: autoincrement and autodecrement modes are recorded,
+// never performed.
 //
-// Symbolic operand formatting — showing a matching label's name instead of
-// a raw hex address — is intentionally not implemented: it's a pure display
-// nicety in the reference tool (disasm_operand.c consults the symbol table
-// only when printing, never when reparsing its own output), and adding it
-// here would mean every call accepting and searching a symbol table whether
-// or not the caller wants that. A caller that wants symbolic output can
-// post-process Decoded.Operands itself against its own symbol table.
+// Each operand comes back in parts (Operand), with the address it refers
+// to when that's known (Target). Naming those addresses is the caller's:
+// it sets an operand's Symbol from its own symbol table, and String shows
+// the name in place of the number.
 func Disassemble(r ByteReader, pc uint32) (Decoded, error) {
 	start := pc
 	f := r.ByteAt(pc)
@@ -96,13 +78,12 @@ func Disassemble(r ByteReader, pc uint32) (Decoded, error) {
 	dec := Decoded{Mnemonic: inst.Name}
 
 	for i := 0; i < inst.OperandCount; i++ {
-		text, value, err := formatOperand(r, &pc, inst.Access[i], inst.Scale[i], inst.DataType[i], false)
+		operand, err := decodeOperand(r, &pc, inst.Access[i], inst.Scale[i], inst.DataType[i], false)
 		if err != nil {
 			return Decoded{}, err
 		}
 
-		dec.Operands = append(dec.Operands, text)
-		dec.Values = append(dec.Values, value)
+		dec.Operands = append(dec.Operands, operand)
 	}
 
 	dec.Length = pc - start
@@ -110,33 +91,14 @@ func Disassemble(r ByteReader, pc uint32) (Decoded, error) {
 	return dec, nil
 }
 
-// FormatMask renders a 16-bit register-set mask as "^M<...>" text, matching
-// console_disasm.c's format_mask() — used to display a .ENTRY's saved-
-// register mask word during disassembly (see the console's own
-// entry-mask detection, which looks up SymbolInfo.Entry). Bit 15 is IV
-// (integer overflow trap enable), bit 14 is DV (decimal overflow trap
-// enable); bits 0-13 print as "R<n>", matching the reference tool's own
-// formatting even though only R0-R11 are ever settable through this
-// package's maskLiteral parser (see maskBits).
-func FormatMask(mask uint16) string {
-	var names []string
+// EntryMask decodes the word at pc as a routine's register-save mask
+// (the word a CALLS or CALLG to the routine reads, which its .ENTRY
+// directive wrote), not as an instruction. name is the routine's name, if
+// the caller knows it.
+func EntryMask(r ByteReader, pc uint32, name string) Decoded {
+	mask := uint16(r.ByteAt(pc)) | uint16(r.ByteAt(pc+1))<<8
 
-	for n := 0; n < 16; n++ {
-		if mask&(1<<uint(n)) == 0 {
-			continue
-		}
-
-		switch n {
-		case 15:
-			names = append(names, "IV")
-		case 14:
-			names = append(names, "DV")
-		default:
-			names = append(names, fmt.Sprintf("R%d", n))
-		}
-	}
-
-	return "^M<" + strings.Join(names, ",") + ">"
+	return Decoded{Mnemonic: ".ENTRY", Length: 2, IsMask: true, Mask: mask, Name: name}
 }
 
 // loadSized reads a 1, 2, or 4-byte little-endian value at addr.
@@ -154,6 +116,17 @@ func loadSized(r ByteReader, addr uint32, size int) uint32 {
 	}
 }
 
+// loadBytes reads size bytes at addr.
+func loadBytes(r ByteReader, addr uint32, size int) []byte {
+	b := make([]byte, size)
+
+	for i := range b {
+		b[i] = r.ByteAt(addr + uint32(i))
+	}
+
+	return b
+}
+
 func signExtend(raw uint32, size int) int32 {
 	switch size {
 	case 1:
@@ -167,239 +140,164 @@ func signExtend(raw uint32, size int) int32 {
 	}
 }
 
-// formatIntHex formats v in hexadecimal, zero-padded to size bytes, with
-// the ^X radix operator the assembler needs to read it back (its default
-// radix is decimal, as in MACRO-32), so disassembly can be reassembled.
-func formatIntHex(v uint32, size int) string {
-	switch size {
-	case 1:
-		return fmt.Sprintf("^X%02X", v)
-
-	case 2:
-		return fmt.Sprintf("^X%04X", v)
-
-	default:
-		return fmt.Sprintf("^X%08X", v)
-	}
-}
-
-// formatWideHex formats the size bytes at addr (8 or 16, a quadword or
-// octaword) as one hexadecimal number with the ^X radix operator, every
-// digit shown. Memory holds the value low-order byte first, so the bytes
-// are printed from the last to the first to put the most significant
-// digits on the left.
-func formatWideHex(r ByteReader, addr uint32, size int) string {
-	var b strings.Builder
-
-	b.WriteString("^X")
-
-	for i := size - 1; i >= 0; i-- {
-		fmt.Fprintf(&b, "%02X", r.ByteAt(addr+uint32(i)))
-	}
-
-	return b.String()
-}
-
-// formatOperand formats one operand at *pc, advancing it past whatever it
+// decodeOperand decodes one operand at *pc, advancing it past whatever it
 // reads — matching disasm_operand.c. indexed is true only for the
-// recursive call formatting Indexed mode's own base operand, to reject
+// recursive call decoding Indexed mode's own base operand, to reject
 // Indexed mode nested inside itself the same way internal/cpu's
 // decodeOperand does.
-func formatOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, dtype cpu.DataType, indexed bool) (string, uint32, error) {
+func decodeOperand(r ByteReader, pc *uint32, access cpu.AccessKind, size int, dtype cpu.DataType, indexed bool) (Operand, error) {
+	op := Operand{Register: -1, Index: -1, Access: access, Type: dtype, Size: size}
+
 	switch access {
 	case cpu.AccessImmediate:
-		v := loadSized(r, *pc, size)
+		op.Mode = ModeInline
+		op.Width = size
+		op.Value = loadSized(r, *pc, size)
+		op.Bytes = loadBytes(r, *pc, size)
 		*pc += uint32(size)
 
-		return "#" + formatIntHex(v, size), v, nil
+		return op, nil
 
 	case cpu.AccessBranch:
 		raw := loadSized(r, *pc, size)
-		disp := signExtend(raw, size)
+		op.Mode = ModeBranch
+		op.Width = size
+		op.Displacement = signExtend(raw, size)
 		*pc += uint32(size)
-		dest := uint32(int32(*pc) + disp)
+		op.Target = uint32(int32(*pc) + op.Displacement)
+		op.HasTarget = true
 
-		return formatIntHex(dest, 4), dest, nil
+		return op, nil
 	}
 
-	optype := r.ByteAt(*pc)
+	specifier := r.ByteAt(*pc)
 	*pc++
-	mode := optype >> 4
-	reg := optype & 0x0F
+	mode := specifier >> 4
+	reg := specifier & 0x0F
 
 	switch {
 	case mode < 4:
-		if dtype.IsFloat() {
-			return "S^#" + vaxfloat.ShortLiteral(optype).Decimal(), uint32(optype), nil
-		}
+		op.Mode = ModeLiteral
+		op.Value = uint32(specifier)
 
-		// A short literal (0-63) is shown in decimal, as MACRO-32 writes it.
-		return fmt.Sprintf("S^#%d", optype), uint32(optype), nil
+		return op, nil
 
 	case mode == 5:
-		return cpu.RegisterName(int(reg)), uint32(reg), nil
+		op.Mode = ModeRegister
+		op.Register = int(reg)
+
+		return op, nil
 
 	case mode >= 8 && reg == 0x0F:
-		return formatPCRelative(r, pc, mode, size, dtype)
+		return decodePCRelative(r, pc, mode, op)
 
 	default:
-		return formatGeneral(r, pc, mode, reg, access, size, dtype, indexed)
+		return decodeGeneral(r, pc, mode, reg, op, indexed)
 	}
 }
 
-// formatPCRelative formats the PC-relative addressing modes: Immediate,
-// Absolute, and Byte/Word/Long Relative (direct and deferred) — selected by
-// using the PC as the addressing-mode byte's register field.
+// decodePCRelative decodes the PC-relative addressing modes: Immediate,
+// Absolute, and Byte/Word/Long Relative (direct and deferred), selected
+// by using the PC as the specifier's register field.
 //
-// Relative (0x0A/0x0C/0x0E, and their deferred forms) deliberately show the
-// resolved absolute destination address rather than the raw displacement
-// byte/word/longword the reference tool's disasm_operand.c prints: PC's
-// value is exactly known at disassembly time, so showing the destination is
-// both more readable and — unlike the reference tool's own choice here —
-// actually round-trips through internal/asm's assembleDisplacement,
-// which parses "B^address" as an absolute address and computes the
-// relative displacement itself. Printing the raw displacement byte instead
-// would silently reassemble to a wrong target unless it happened to also be
-// a valid absolute address, so this is treated as a fixable disassembler
-// issue rather than reference behavior worth replicating — see
-// docs/PHASE-11.md.
-func formatPCRelative(r ByteReader, pc *uint32, mode byte, size int, dtype cpu.DataType) (string, uint32, error) {
+// A relative operand's Target is its resolved absolute address, not the
+// raw displacement the reference tool's disasm_operand.c prints: PC's
+// value is exactly known at disassembly time, so the address is both more
+// readable and, unlike the reference tool's choice, round-trips through
+// internal/asm's assembleDisplacement, which parses "B^address" as an
+// absolute address and computes the displacement itself (see
+// docs/PHASE-11.md).
+func decodePCRelative(r ByteReader, pc *uint32, mode byte, op Operand) (Operand, error) {
 	switch mode {
 	case 0x08: // Immediate: I^#n
-		if dtype.IsFloat() {
-			// A floating immediate, in its own format, with the fewest
-			// digits that reassemble to the same bits. (A reserved
-			// operand or a "dirty zero" has no decimal form, and shows
-			// as 0.)
-			var bits vaxfloat.Bits
+		op.Mode = ModeImmediate
+		op.Width = op.Size
+		op.Value = loadSized(r, *pc, min(op.Size, 4))
+		op.Bytes = loadBytes(r, *pc, op.Size)
+		*pc += uint32(op.Size)
 
-			bits.Lo = uint64(loadSized(r, *pc, 4))
-			if size >= 8 {
-				bits.Lo |= uint64(loadSized(r, *pc+4, 4)) << 32
-			}
-
-			if size == 16 {
-				bits.Hi = uint64(loadSized(r, *pc+8, 4)) | uint64(loadSized(r, *pc+12, 4))<<32
-			}
-
-			*pc += uint32(size)
-
-			v, _ := vaxfloat.Unpack(dtype.FloatFormat(), bits)
-
-			return "I^#" + v.Decimal(), 0, nil
-		}
-
-		if size >= 8 {
-			// A quadword or octaword immediate: show all of it, so the
-			// text reassembles to the same bytes. The value reported
-			// alongside is the low longword, as for any other operand.
-			text := formatWideHex(r, *pc, size)
-			v := loadSized(r, *pc, 4)
-			*pc += uint32(size)
-
-			return "I^#" + text, v, nil
-		}
-
-		v := loadSized(r, *pc, size)
-		*pc += uint32(size)
-
-		return "I^#" + formatIntHex(v, size), v, nil
+		return op, nil
 
 	case 0x09: // Absolute: @#addr
-		v := loadSized(r, *pc, 4)
+		op.Mode = ModeAbsolute
+		op.Target = loadSized(r, *pc, 4)
+		op.HasTarget = true
 		*pc += 4
 
-		return "@#" + formatIntHex(v, 4), v, nil
+		return op, nil
 
-	case 0x0A, 0x0B: // Byte relative [deferred]
-		raw := loadSized(r, *pc, 1)
-		*pc++
+	case 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F: // Byte, word, long relative [deferred]
+		op.Mode = ModeRelative
+		op.Deferred = mode&1 != 0
+		op.Width = displacementWidth(mode)
+		op.Displacement = signExtend(loadSized(r, *pc, op.Width), op.Width)
+		*pc += uint32(op.Width)
+		op.Target = uint32(int32(*pc) + op.Displacement)
+		op.HasTarget = true
 
-		return formatPCRelTarget(*pc, signExtend(raw, 1), "B^", mode == 0x0B), raw, nil
-
-	case 0x0C, 0x0D: // Word relative [deferred]
-		raw := loadSized(r, *pc, 2)
-		*pc += 2
-
-		return formatPCRelTarget(*pc, signExtend(raw, 2), "W^", mode == 0x0D), raw, nil
-
-	case 0x0E, 0x0F: // Long relative [deferred]
-		raw := loadSized(r, *pc, 4)
-		*pc += 4
-
-		return formatPCRelTarget(*pc, signExtend(raw, 4), "L^", mode == 0x0F), raw, nil
+		return op, nil
 	}
 
-	return "", 0, vmserrors.New(vmserrors.VAX_INTERNAL, fmt.Sprintf("unreachable PC-relative mode %X", mode))
+	return Operand{}, vmserrors.New(vmserrors.VAX_INTERNAL, fmt.Sprintf("unreachable PC-relative mode %X", mode))
 }
 
-func formatPCRelTarget(pc uint32, disp int32, prefix string, deferred bool) string {
-	dest := uint32(int32(pc) + disp)
-
-	if deferred {
-		prefix = "@" + prefix
+// displacementWidth is the displacement size of a displacement mode
+// (0x0A to 0x0F): a byte for A and B, a word for C and D, a longword for
+// E and F.
+func displacementWidth(mode byte) int {
+	switch mode {
+	case 0x0A, 0x0B:
+		return 1
+	case 0x0C, 0x0D:
+		return 2
+	default:
+		return 4
 	}
-
-	return prefix + formatIntHex(dest, 4)
 }
 
-// formatGeneral formats the general-register addressing modes: Indexed,
+// decodeGeneral decodes the general-register addressing modes: Indexed,
 // Register deferred, Autodecrement, Autoincrement [deferred], and Byte/
 // Word/Long displacement (direct and deferred).
-func formatGeneral(r ByteReader, pc *uint32, mode, reg byte, access cpu.AccessKind, size int, dtype cpu.DataType, indexed bool) (string, uint32, error) {
-	rn := cpu.RegisterName(int(reg))
+func decodeGeneral(r ByteReader, pc *uint32, mode, reg byte, op Operand, indexed bool) (Operand, error) {
+	op.Register = int(reg)
 
 	switch mode {
 	case 0x04: // Indexed: base[Rx]
 		if indexed {
-			return "", 0, vmserrors.New(vmserrors.VAX_INDEXNEST)
+			return Operand{}, vmserrors.New(vmserrors.VAX_INDEXNEST)
 		}
 
-		base, value, err := formatOperand(r, pc, access, size, dtype, true)
+		base, err := decodeOperand(r, pc, op.Access, op.Size, op.Type, true)
 		if err != nil {
-			return "", 0, err
+			return Operand{}, err
 		}
 
-		return base + "[" + rn + "]", value, nil
+		base.Index = int(reg)
+
+		return base, nil
 
 	case 0x06: // Register deferred: (Rn)
-		return "(" + rn + ")", uint32(reg), nil
+		op.Mode = ModeRegisterDeferred
 
 	case 0x07: // Autodecrement: -(Rn)
-		return "-(" + rn + ")", uint32(reg), nil
+		op.Mode = ModeAutodecrement
 
 	case 0x08: // Autoincrement: (Rn)+
-		return "(" + rn + ")+", uint32(reg), nil
+		op.Mode = ModeAutoincrement
 
 	case 0x09: // Autoincrement deferred: @(Rn)+
-		return "@(" + rn + ")+", uint32(reg), nil
+		op.Mode = ModeAutoincrementDeferred
 
-	case 0x0A, 0x0B: // Byte displacement [deferred]: B^n(Rn) / @B^n(Rn)
-		raw := loadSized(r, *pc, 1)
-		*pc++
+	case 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F: // Displacement [deferred]: B^n(Rn) / @B^n(Rn)
+		op.Mode = ModeDisplacement
+		op.Deferred = mode&1 != 0
+		op.Width = displacementWidth(mode)
+		op.Displacement = signExtend(loadSized(r, *pc, op.Width), op.Width)
+		*pc += uint32(op.Width)
 
-		return formatDisplacement("B^", raw, 1, rn, mode == 0x0B), raw, nil
-
-	case 0x0C, 0x0D: // Word displacement [deferred]
-		raw := loadSized(r, *pc, 2)
-		*pc += 2
-
-		return formatDisplacement("W^", raw, 2, rn, mode == 0x0D), raw, nil
-
-	case 0x0E, 0x0F: // Long displacement [deferred]
-		raw := loadSized(r, *pc, 4)
-		*pc += 4
-
-		return formatDisplacement("L^", raw, 4, rn, mode == 0x0F), raw, nil
+	default:
+		return Operand{}, vmserrors.New(vmserrors.VAX_INTERNAL, fmt.Sprintf("unreachable addressing mode %X", mode))
 	}
 
-	return "", 0, vmserrors.New(vmserrors.VAX_INTERNAL, fmt.Sprintf("unreachable addressing mode %X", mode))
-}
-
-func formatDisplacement(prefix string, raw uint32, size int, rn string, deferred bool) string {
-	if deferred {
-		prefix = "@" + prefix
-	}
-
-	return fmt.Sprintf("%s%s(%s)", prefix, formatIntHex(raw, size), rn)
+	return op, nil
 }

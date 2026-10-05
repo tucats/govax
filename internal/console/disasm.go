@@ -1,8 +1,6 @@
 package console
 
 import (
-	"strings"
-
 	"github.com/tucats/govax/internal/disasm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -34,9 +32,8 @@ func (r memByteReader) ByteAt(addr uint32) byte {
 // start), matching console_disasm.c's own address-range loop. Unlike the
 // reference tool's disasm_operand.c, this doesn't substitute a matching
 // label's name for a raw hex address, or append a branch-destination
-// comment — disasm.Disassemble deliberately leaves those out (see
-// its own doc comment); a caller wanting them can post-process
-// Decoded.Operands against d.Console.Symbols itself.
+// comment: disasm.Disassemble leaves naming addresses to its caller,
+// which sets an operand's Symbol (see decodeInstruction).
 func (c *Console) Disassemble(start, end uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -70,26 +67,17 @@ func (c *Console) Disassemble(start, end uint32) error {
 // bogus opcode or, worse, as some unrelated real instruction.
 func (c *Console) decodeInstruction(r disasm.ByteReader, pc uint32) (disasm.Decoded, error) {
 	if name, ok := c.Symbols.EntryAt(pc); ok {
-		mask := uint16(r.ByteAt(pc)) | uint16(r.ByteAt(pc+1))<<8
-
-		return disasm.Decoded{
-			Mnemonic: ".ENTRY",
-			Operands: []string{name, disasm.FormatMask(mask)},
-			Length:   2,
-		}, nil
+		return disasm.EntryMask(r, pc, name), nil
 	}
 
-	// Decode the instruction
 	instr, err := disasm.Disassemble(r, pc)
 
-	// IF it was a CALLS or CALLG to a fixed address that is an entry point address,
-	// we can substitute the symbol name.
+	// A CALLS or CALLG to an absolute address that is an entry point
+	// shows the routine's name.
 	if instr.Mnemonic == "CALLS" || instr.Mnemonic == "CALLG" {
-		if len(instr.Operands) > 1 {
-			if strings.HasPrefix(instr.Operands[1], "@#") {
-				if name, ok := c.Symbols.EntryAt(instr.Values[1]); ok {
-					instr.Operands[1] = "@#" + name
-				}
+		if len(instr.Operands) > 1 && instr.Operands[1].Mode == disasm.ModeAbsolute {
+			if name, ok := c.Symbols.EntryAt(instr.Operands[1].Target); ok {
+				instr.Operands[1].Symbol = name
 			}
 		}
 	}

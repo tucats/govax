@@ -50,8 +50,8 @@ func TestRoundTripFloatShortLiteral(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if dec.Operands[0] != "S^#1" {
-		t.Errorf("operand = %q, want S^#1", dec.Operands[0])
+	if dec.Operands[0].String() != "S^#1" {
+		t.Errorf("operand = %q, want S^#1", dec.Operands[0].String())
 	}
 
 	got := assembleBytes(t, dec.String())

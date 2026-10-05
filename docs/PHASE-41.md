@@ -555,3 +555,27 @@ system services, and the layout of a location longer than 24 columns.
   is unchanged.
 - `CLAUDE.md` lists `internal/disasm`; `internal/asm`'s package doc
   says where the disassembler went.
+
+### 2026-10-05 — Subtask 3: structured operands
+
+- **`disasm.Operand`** (`operand.go`): the mode (`ModeLiteral` ...
+  `ModeBranch`, and `ModeInline` for XFC's and BUGL's/BUGW's inline
+  data), `Deferred`, `Register` and `Index` (-1 for none), `Width`,
+  `Displacement` (sign-extended), `Value` and `Bytes` (a literal's or
+  immediate's value, all its bytes for wide and floating ones), `Target`
+  and `HasTarget` (branch, relative, and absolute operands; a deferred
+  relative operand's is the pointer's address, and an indexed operand's
+  the base's), and the table's `Access`, `Type`, and `Size`.
+- **`Symbol`**: a name the caller sets for `Target`, which `String`
+  shows in place of the number with the mode's prefix kept (`@#START`,
+  `L^START`, `BRB START`). Subtask 9's symbolizer fills it; for now the
+  console's CALLS/CALLG case does, replacing its string surgery.
+- **`Decoded`** has `[]Operand`; `Values` is gone. `EntryMask` decodes a
+  routine's mask word (`IsMask`, `Mask`, `Name`), replacing the console's
+  hand-built `.ENTRY` Decoded.
+- **Decoding and rendering are apart**: `disasm.go` decodes, and
+  `format.go` renders the text internal/asm reassembles, byte for byte
+  as before (every existing test, the fixture round trips included,
+  passes unchanged).
+- **Tests**: `TestOperandFields` (every mode's fields, Targets worked
+  out by hand), `TestOperandSymbol`, `TestEntryMask`.
