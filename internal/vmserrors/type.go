@@ -99,7 +99,7 @@ var FacilityNames = map[uint32]string{
 	SYSFacility: "SYSTEM",
 	RMSFacility: "RMS",
 	CLIFacility: "CLI",
-	DBGFacility: "DBG",
+	DBGFacility: "DEBUG", // as the VMS debugger's messages print it
 	LIBFacility: "LIB",
 	CREFacility: "CREATE",
 	VAXFacility: "VAX", // These are the errors used by govax internally

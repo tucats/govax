@@ -58,7 +58,7 @@ func (c *Console) ConsoleCommand(cmdLine string) uint32 {
 		return 1
 	}
 
-	if err := c.Dispatcher.Dispatch(cmdLine); err != nil {
+	if err := c.Dispatcher.DispatchConsole(cmdLine); err != nil {
 		return 1
 	}
 

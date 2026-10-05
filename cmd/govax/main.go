@@ -40,6 +40,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/dcl"
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/debugger"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/vmserrors"
 	"golang.org/x/text/language"
@@ -137,6 +138,27 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		help = console.ParseHelp(string(helpSrc))
 	}
 
+	// The debugger has its own grammar and help file (docs/PHASE-42.md).
+	// They are required, like the console's: the DEBUG command and the
+	// DBG> prompt depend on them.
+	debugGrammarSrc, err := resolver.ReadFile("debug.dcl")
+	if err != nil {
+		return vmserrors.Wrap(vmserrors.VAX_GRAMMAR, err)
+	}
+
+	debugGrammar, err := dcl.ParseGrammar(string(debugGrammarSrc))
+	if err != nil {
+		return vmserrors.Wrap(vmserrors.VAX_GRAMMAR, err)
+	}
+
+	var debugHelp *console.Help
+
+	if helpSrc, err := resolver.ReadFile("debug.help"); err != nil {
+		fmt.Fprintln(out, "Warning: no debugger help file available:", err)
+	} else {
+		debugHelp = console.ParseHelp(string(helpSrc))
+	}
+
 	c := console.New(out)
 
 	c.Paths = resolver
@@ -182,6 +204,11 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	d := console.NewDispatcher(c, grammar, help)
 	c.Dispatcher = d
 
+	// The debugger works on this console's machine. It is idle until the
+	// DEBUG command (or, in later subtasks, GO, CALL, or RUN of a debug
+	// image) starts a session.
+	debugger.Install(c, debugGrammar, debugHelp)
+
 	if len(args) == 0 {
 		fmt.Fprintf(out, "govax %s\n", BuildVersion)
 	}
@@ -224,8 +251,13 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 			// mode (docs/PHASE-19.md) -- the ASM_ADDRPROMPT variant that also
 			// shows the current deposit address isn't implemented (off by
 			// default in the reference tool; see PHASE-19.md's own scope note).
+			// The debugger's session has its own prompt too, as the VMS
+			// debugger's does. Assembler mode comes first, as it does in
+			// Dispatcher.Dispatch.
 			if c.InAssemblerMode() {
 				rl.SetPrompt("ASM> ")
+			} else if c.InDebugger() {
+				rl.SetPrompt(debugger.Prompt)
 			} else {
 				rl.SetPrompt("VAX> ")
 			}

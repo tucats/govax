@@ -142,3 +142,13 @@ func (g *Grammar) matchVerb(token string) (*Entry, error) {
 
 	return found, nil
 }
+
+// HasVerb reports whether word names one of the grammar's verbs, by the
+// same rule a command line's first word is matched: any unambiguous
+// prefix, in any case. The debugger uses it to tell a console command
+// typed at its prompt from a plain typing mistake.
+func (g *Grammar) HasVerb(word string) bool {
+	_, err := g.matchVerb(strings.ToUpper(word))
+
+	return err == nil
+}

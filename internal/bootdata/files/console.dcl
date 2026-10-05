@@ -194,6 +194,11 @@ grammar console
     verb exit
     
     verb quit/alias=exit
+
+    ! DEBUG starts a debugger session on the machine as it stands, with
+    ! nothing running (docs/PHASE-42.md). It is how to look at memory and
+    ! registers now that EXAMINE and SHOW REGISTERS are debugger commands.
+    verb debug/id=6000
     
     verb test
     

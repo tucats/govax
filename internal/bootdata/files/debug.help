@@ -1,0 +1,64 @@
+//
+//  Program:    govax, a "Virtual VAX" written in Go
+//
+//  Module:     DEBUG.HELP
+//
+//  Purpose:    The documentation for the govax debugger, read by the
+//              debugger's HELP command (DBG> HELP). The format is the
+//              same as VAX.HELP's, whose preamble explains it.
+//
+//  History:    10/05/26    Started, with the commands the debugger has so
+//                          far: EXIT, QUIT, HELP, and @ (docs/PHASE-42.md,
+//                          subtask 3).
+//
+
+$HELP
+  The govax debugger examines and controls the emulated VAX. It is modeled
+  on the VMS debugger, and the commands it has follow that debugger's
+  syntax. Type HELP topic for more about a command.
+
+  Additional information available:
+
+  @  EXIT  HELP  QUIT
+
+  The debugger is a separate command set from the console's: the VMS
+  command line (DIRECTORY, MACRO, LINK, ...) isn't available here. EXIT
+  returns to the console, where it is.
+
+$@
+  Runs the debugger commands in a command file.
+
+  Format:
+
+    @file-spec
+
+  The file is read a line at a time, as typed at the DBG> prompt. If a
+  command in it ends the debugger session (EXIT), the lines after it are
+  console commands.
+
+$EXIT
+  Ends the debugger session and returns to the console. The machine is
+  left as it is.
+
+  Format:
+
+    EXIT
+
+$HELP,HELP
+  Displays help on a debugger command.
+
+  Format:
+
+    HELP [topic ...]
+
+  HELP alone lists the topics.
+
+$QUIT
+  Ends the debugger session and returns to the console, as EXIT does.
+  (On VMS, QUIT skips the program's exit handlers, which EXIT runs.
+  govax's debugger doesn't run exit handlers yet, so the two are the
+  same.)
+
+  Format:
+
+    QUIT

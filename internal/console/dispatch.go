@@ -67,6 +67,37 @@ func (d *Dispatcher) Dispatch(line string) error {
 		return d.assembleInteractiveLine(line)
 	}
 
+	// With a debugger session in progress, the line is a debugger
+	// command. Routing here, rather than in the front end alone, lets a
+	// command file (@file, INCLUDE) or a script on stdin mix the two: its
+	// lines go to whichever grammar is current as each is read, so a GO
+	// that stops at a breakpoint is followed by debugger commands, and
+	// the debugger's EXIT by console commands again. (XFC$CONSOLE_CMD
+	// calls DispatchConsole instead, since a VAX program asking for a
+	// console command means the console's.)
+	if d.Console.InDebugger() {
+		return d.Console.Debugger.Dispatch(line)
+	}
+
+	return d.DispatchConsole(line)
+}
+
+// DispatchConsole parses and executes one console command line -- DCL
+// symbols and the console grammar -- whatever mode the front end is in.
+// Dispatch calls it when no debugger session is active; XFC$CONSOLE_CMD
+// (Console.ConsoleCommand) calls it always.
+func (d *Dispatcher) DispatchConsole(line string) error {
+	line = strings.TrimSpace(line)
+	if line == "" || strings.HasPrefix(line, "!") {
+		return nil
+	}
+
+	// Interactive assembler mode, as in Dispatch, for the callers that
+	// come straight here.
+	if d.Console.assemblerMode {
+		return d.assembleInteractiveLine(line)
+	}
+
 	// A symbol assignment, DELETE/SYMBOL, or a command whose first word
 	// is a DCL symbol (a foreign command or an alias): DCL looks for a
 	// symbol before a verb (dclsym.go).
@@ -165,6 +196,7 @@ func (d *Dispatcher) bindGrammar() {
 	d.bindConsoleCommands()
 
 	g.Bind("EXIT", func(id int64, r *dcl.Result) error { return d.Console.Quit() })
+	g.Bind("DEBUG", func(id int64, r *dcl.Result) error { return d.Console.StartDebugger() })
 
 	g.Bind("VMINIT", func(id int64, r *dcl.Result) error {
 		return d.Console.VMInit(

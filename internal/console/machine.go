@@ -133,6 +133,13 @@ type Console struct {
 	// reports failure if this is still nil.
 	Dispatcher *Dispatcher
 
+	// Debugger is the machine debugger (internal/debugger), installed by
+	// cmd/govax; see debugger.go. While it has a session in progress,
+	// Dispatcher.Dispatch hands it each command line instead of parsing
+	// the console grammar. Nil in a console built without it, where the
+	// DEBUG command reports that it isn't available.
+	Debugger Debugger
+
 	quit bool // set by Quit (misc.go); read via Running
 
 	// commandLineErr is the failure of the one-shot command given on

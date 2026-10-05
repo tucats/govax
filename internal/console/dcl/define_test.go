@@ -106,9 +106,10 @@ func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	// evax.dcl's FORTH verb, which called a microkernel FORTH that was
 	// never built in, was dropped (2026-10-04). Phase 37 adds the 32
 	// verbs and aliases of the console's former fixed commands (zero
-	// through set; call moved there). Phase 38 adds analyze.
-	if len(g.verbOrder) != 56 {
-		t.Errorf("got %d verbs, want 56: %v", len(g.verbOrder), verbNames(g))
+	// through set; call moved there). Phase 38 adds analyze. Phase 42
+	// adds debug, which starts a debugger session.
+	if len(g.verbOrder) != 57 {
+		t.Errorf("got %d verbs, want 57: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 

@@ -116,6 +116,16 @@ expect adjustment as phases land):
   `$expression` parameter, whose extent the grammar finds and whose value
   the handler gets from the expression evaluator (`expr.go`). Unquoted
   text is uppercased, so a case-sensitive host file name must be quoted.
+- `internal/debugger` — the machine debugger (Phase 42, in progress): a
+  `Debugger` session and its `Dispatcher` over `debug.dcl`
+  (`internal/bootdata/files`), with `debug.help` and the `DBG> ` prompt. It
+  imports `internal/console`, which knows it only through the
+  `console.Debugger` interface (`debugger.go`); `cmd/govax` installs it.
+  The console's `DEBUG` command starts a session, and while one is active
+  `Dispatcher.Dispatch` routes lines to it (`DispatchConsole` is the
+  console's own, for `XFC$CONSOLE_CMD`). The run-control and the
+  EXAMINE/SET/SHOW commands still live in the console until the later
+  subtasks move them. `internal/console/consoletest` is its test support.
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,
   and LINK: `Symbols` (every symbolic constant, one table; `symbols.go` says

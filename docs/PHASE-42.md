@@ -1,8 +1,9 @@
 # Phase 42 — The debugger: its own package, grammar, and prompt
 
 **Status:** in progress. Planned and reviewed 2026-10-05 (the author
-took every recommended decision). Subtasks 1 (the probe, run on VMS) and
-2 (the run-control bugs) are done.
+took every recommended decision). Subtasks 1 (the probe, run on VMS),
+2 (the run-control bugs), and 3 (the package, grammar, and mode switch)
+are done.
 
 ## Goal
 
@@ -952,3 +953,65 @@ the frame current when it was given, and stays pending across other
 stops until that RET runs. Until then, subtask 2's `endStep` removes
 STEP/RETURN's breakpoint as it does STEP/OVER's; its comment points at
 subtask 7.
+
+### 2026-10-05 — Subtask 3: the package, the grammar, and the mode switch
+
+`internal/debugger` exists, with a `Debugger` (session state, and the
+`console.Debugger` interface it implements) and a `Dispatcher` over its
+own grammar. Nothing of the debugger's old work has moved yet: `GO`,
+`CALL`, `STEP`, `EXAMINE`, and the rest are still the console's
+(subtask 4 on). What this subtask makes is the frame they move into.
+
+- **Grammar and help.** `internal/bootdata/files/debug.dcl` has `EXIT`,
+  `QUIT`, `HELP` (and `?`), and `@`; `debug.help` documents them in
+  `vax.help`'s format. Verb ids start at 1, since the grammar is parsed
+  apart from `console.dcl`'s. `EXIT` and `QUIT` both end the session
+  (they differ on VMS only in running exit handlers, which govax has
+  none of yet; logged here as unconfirmed for later).
+- **Console side** (`internal/console/debugger.go`). `Console.Debugger`
+  is typed by a small interface (`Start`, `Active`, `Dispatch`);
+  `Activation` and `ActivateAttach` name the one way in so far. The new
+  console verb `DEBUG` (`console.dcl`, id 6000) calls
+  `Console.StartDebugger`. With no debugger installed it says
+  `%DEBUG-E-NOTAVAILABLE`.
+- **Routing.** `Dispatcher.Dispatch` sends a line to the debugger when a
+  session is active, after the assembler-mode check (`ASM>` still wins).
+  It's in `Dispatch`, not only the front end, so a command file or a
+  script on stdin changes grammar at the right line. The rest of the old
+  `Dispatch` is `DispatchConsole`, which `XFC$CONSOLE_CMD`
+  (`Console.ConsoleCommand`) calls, so a VAX program asking for a console
+  command gets the console even with a session active.
+- **A console command at `DBG>`.** The debugger's parse failures that are
+  a bad word come out as the VMS debugger words them, `%DEBUG-E-SYNTAX,
+  command syntax error at or near 'X'`, naming the word as typed (the
+  grammar reports `/NOFOO` as `FOO`; `qualifierAsTyped` puts the `NO`
+  back, as `errors.dlg` shows). When the word is a console verb, a govax
+  hint follows (`%DEBUG-I-CONSOLECOMMAND, ... EXIT returns to the
+  console`). Both lines are printed by the debugger, and the error is
+  returned with its message inhibited, so the loop doesn't print the
+  first again. Other parse errors (a missing parameter) pass through
+  unchanged until the subtasks that add commands choose their messages.
+  New: `vmserrors/codes_dbg.go`, and the facility prints as `DEBUG` (it
+  was `DBG`, used by nothing).
+- **Front end.** `cmd/govax` parses `debug.dcl` and `debug.help` (both
+  required, as the console's are), calls `debugger.Install`, and shows
+  `DBG> ` while `Console.InDebugger()`.
+- **`internal/console/consoletest`**: a test-support package with a
+  runnable console, `RepoPath`/`BootFile`/`KernelPath`/`DebugImagePath`,
+  both grammars, and the help files. Subtask 4's moved tests will use it.
+  The console's own in-package tests keep their private helpers, since
+  the package can't import `consoletest` without a cycle.
+- **`dcl.Grammar.HasVerb`** says whether a word names a verb, for the
+  hint above. `TestLoadEvaxGrammar_verbCount` is 57 with `DEBUG`.
+
+Tests (`internal/debugger/debugger_test.go`, `cmd/govax/debug_test.go`):
+DEBUG enters and EXIT/QUIT leave without quitting the console; the
+console's EXIT still quits; the prompt follows the mode; a console verb
+at `DBG>` is refused with the hint and doesn't run, while an unknown word
+and an unknown qualifier get the plain syntax error; `HELP` reads
+`debug.help` at `DBG>` and `vax.help` at `VAX>`; a command file changes
+grammar at the right lines, in both directions, and `@file` at `DBG>`
+does the same; `XFC$CONSOLE_CMD` reaches the console grammar during a
+session; DEBUG with no debugger installed; and the whole thing through
+`cmd/govax`'s `run`. `go build`, `go vet`, `go test ./...`, and
+golangci-lint are clean.
