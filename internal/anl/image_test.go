@@ -3,6 +3,7 @@ package anl
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -260,6 +261,125 @@ func TestImagePages(t *testing.T) {
 		want := imageTimeRE.ReplaceAllString(text, "${1}"+vmsTime(when))
 		if diff := firstDiff(want, b.String()); diff != "" {
 			t.Errorf("%s: %s", f.name, diff)
+		}
+	}
+}
+
+// TestImageErrors damages ADDR.EXE in one way at a time and checks the
+// error each gets, where it's shown, and the closing count.
+func TestImageErrors(t *testing.T) {
+	good, err := os.ReadFile("../../testdata/link/vax/addr.exe")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	le := binary.LittleEndian
+
+	// ADDR.EXE's ISDs start at 0xB0 (the first ISD's flags at 0xB8), its
+	// global section ISD is the fifth, and its fixup section is at VBN 4,
+	// with the G^ list's image index at +0x44.
+	const (
+		firstISD = 0xB0
+		fixups   = 3 * imageBlock
+	)
+
+	tests := []struct {
+		name   string
+		damage func(b []byte)
+		want   string
+		after  string // the line the error follows
+		errors int    // how many errors in all, when not 1
+	}{
+		{
+			name:   "image type",
+			damage: func(b []byte) { b[ihdImageType] = 9 },
+			want:   "***  Image type 9 is undefined.",
+			after:  "\t\timage type: unknown (9)",
+		},
+		{
+			name:   "format",
+			damage: func(b []byte) { copy(b[ihdMajorIDOffset:], "03") },
+			want:   "***  Image format 03.05 is not the VAX image format, 02.05.",
+			after:  "\t\timage type: executable (IHD$K_EXE)",
+		},
+		{
+			name:   "block offset",
+			damage: func(b []byte) { le.PutUint16(b[ihdImgIDOffset:], 0x1F0) },
+			want:   "***  The identification block's offset, 496, is outside the header.",
+			after:  "\t\tThere are no patches at this time.",
+		},
+		{
+			name:   "ISD size",
+			damage: func(b []byte) { le.PutUint16(b[firstISD:], 5) },
+			want:   "***  Image section descriptor 1's size, 5, is invalid.",
+			after:  "",
+			errors: 2, // and then no section holds the fixup section
+		},
+		{
+			name:   "section type",
+			damage: func(b []byte) { b[firstISD+isdFlagsOffset+3] = 7 },
+			want:   "***  Section type 7 is undefined.",
+			after:  "\t\t\tsection type: unknown (7)",
+		},
+		{
+			name:   "VBN",
+			damage: func(b []byte) { le.PutUint32(b[firstISD+isdVBNOffset:], 40) },
+			want:   "***  The section's blocks, 40 to 40, are not in the file's 5 blocks of image sections.",
+			after:  "\t\t\tbase VBN: 40",
+		},
+		{
+			name:   "image index",
+			damage: func(b []byte) { le.PutUint32(b[fixups+0x44:], 7) },
+			want:   "***  Image 7 is not a shareable image in the shareable image list.",
+			after:  "\t\t1 reference to image 7:",
+		},
+		{
+			name:   "fixup section",
+			damage: func(b []byte) { le.PutUint32(b[ihdIAFVA:], 0x10000) },
+			want:   "***  No image section holds the fixup section at %X'00010000'.",
+			after:  "\t\t\tglobal section name: \"LIBRTL_001\"",
+		},
+	}
+
+	for _, tt := range tests {
+		b := bytes.Clone(good)
+		tt.damage(b)
+
+		img, err := ReadImage(b)
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+
+		rep := AnalyzeImage(img, ImageOptions{})
+
+		want := max(tt.errors, 1)
+		if rep.Errors != want {
+			t.Errorf("%s: %d errors, want %d", tt.name, rep.Errors, want)
+		}
+
+		found := false
+
+		for i, l := range rep.Lines {
+			if l.Text != tt.want {
+				continue
+			}
+
+			found = true
+
+			if tt.after != "" && (i == 0 || rep.Lines[i-1].Text != tt.after) {
+				t.Errorf("%s: error follows %q, want %q", tt.name, rep.Lines[i-1].Text, tt.after)
+			}
+		}
+
+		if !found {
+			var text bytes.Buffer
+			_ = WriteText(&text, rep.Lines)
+			t.Errorf("%s: no %q in\n%s", tt.name, tt.want, text.String())
+		}
+
+		closing := fmt.Sprintf("The analysis uncovered %d error%s.", want, plural(want))
+		if last := rep.Lines[len(rep.Lines)-3].Text; last != closing {
+			t.Errorf("%s: closing line %q", tt.name, last)
 		}
 	}
 }

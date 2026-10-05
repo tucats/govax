@@ -131,9 +131,31 @@ type Image struct {
 	// Fixups is the fixup section, nil when the image has none.
 	Fixups *Fixups
 
+	// FileBlocks is the file's size in blocks.
+	FileBlocks int
+
 	// Problems are what couldn't be decoded, in the order found. The
-	// report shows each as an error.
-	Problems []string
+	// report shows each as an error, at the end of the part it's about.
+	Problems []Problem
+
+	// part is the part being decoded, which a problem is about.
+	part Part
+}
+
+// Part is a part of an image a problem is about.
+type Part int
+
+// An image's parts, in the order the report shows them.
+const (
+	PartHeader   Part = iota // the fixed header and its blocks
+	PartSections             // the image section descriptors
+	PartFixups               // the fixup section
+)
+
+// Problem is something in an image that couldn't be decoded.
+type Problem struct {
+	Part Part
+	Text string
 }
 
 // ISD is one image section descriptor.
@@ -213,7 +235,7 @@ func ReadImage(data []byte) (*Image, error) {
 		return nil, errNotImage
 	}
 
-	img := &Image{}
+	img := &Image{FileBlocks: (len(data) + imageBlock - 1) / imageBlock}
 	le := binary.LittleEndian
 
 	img.Blocks = int(data[ihdBlockCount])
@@ -248,7 +270,11 @@ func ReadImage(data []byte) (*Image, error) {
 	img.symbolTables(h)
 	img.identification(h)
 	img.patch(h)
+
+	img.part = PartSections
 	img.sections(h, int(le.Uint16(h[ihdISDOffset:])))
+
+	img.part = PartFixups
 	img.fixups(data)
 
 	return img, nil
@@ -256,7 +282,7 @@ func ReadImage(data []byte) (*Image, error) {
 
 // problem records something that couldn't be decoded.
 func (img *Image) problem(format string, args ...any) {
-	img.Problems = append(img.Problems, fmt.Sprintf(format, args...))
+	img.Problems = append(img.Problems, Problem{Part: img.part, Text: fmt.Sprintf(format, args...)})
 }
 
 // block returns the n bytes of the header block at offset, or nil (with

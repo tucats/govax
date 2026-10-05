@@ -310,6 +310,34 @@ page. Each heading needs room for what follows it (`Line.Keep`):
 | `n references to image k:` | 3 | always near a page's top: any fits (unconfirmed) |
 | anything else | 1 | |
 
+## Errors
+
+No fixture shows an ANALYZE/IMAGE error, so every message is govax's, in
+ANALYZE/OBJECT's style (unconfirmed): a `***  ` line, and the count in
+the closing line. A check on a field follows that field's line;
+something the decoder couldn't read (`Image.Problems`) is shown at the end
+of the part it's about: the header blocks (after the patch information),
+the ISDs (after the last one read), or the fixup section (at its end, or,
+when it can't be found, where it would start).
+
+| Message | When |
+|---|---|
+| `The header block count, n, is more than the file holds.` | IHD$B_HDRBLKCNT past the file's end |
+| `The xxx block's offset, n, is outside the header.` | an activation, symbol table, identification, or patch block not wholly in the first header block |
+| `Image format mm.nn is not the VAX image format, 02.05.` | the major and minor ids |
+| `Image type n is undefined.` | not executable or shareable |
+| `The image section descriptors' offset, n, is inside the fixed header.` / `... don't end within the header.` | the ISD list's start or end |
+| `Image section descriptor k's size, n, is invalid.` | shorter than a demand-zero ISD, or past the header |
+| `Section type n is undefined.` / `Match control n is undefined.` | an ISD's type or a global section's match control |
+| `The section's blocks, v to w, are not in the file's n blocks of image sections.` | a private section's VBN in the header or its pages past the file's end |
+| `No image section holds the fixup section at %X'a'.` / `The fixup section at %X'a' is outside the file.` | IHD$L_IAFVA |
+| `The xxx list runs past the end of the fixup section.` | a G^, .ADDRESS, protection change, or shareable image list |
+| `Image k is not a shareable image in the shareable image list.` | a reference list's image index |
+| `Protection code n is undefined.` | a protection change's code |
+
+One fault can lead to another: an ISD list that can't be read leaves the
+fixup section without a section to hold it.
+
 ## Decisions and unconfirmed rules
 
 - The output is matched to the fixtures byte for byte except for the page
@@ -347,3 +375,8 @@ page. Each heading needs room for what follows it (`Line.Keep`):
   masking only the page headers' times: all 29 match byte for byte. Of
   the page-break rules only `ISD flags:` needing 3 lines is pinned by the
   fixtures; the other headings' 3 is a choice inside their bounds.
+- 2026-10-05: Subtask 5: errors ("Errors"). Decode problems carry the
+  part of the image they're about (`Problem.Part`) and are shown at its
+  end; the analyzer's own checks follow the field they're about.
+  `TestImageErrors` damages ADDR.EXE eight ways and checks each message,
+  its place, and the closing count.

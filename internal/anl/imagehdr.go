@@ -59,10 +59,6 @@ func (a *imageAnalyzer) run() {
 		a.fixupSection()
 	}
 
-	for _, p := range a.img.Problems {
-		a.fail("%s", p)
-	}
-
 	a.blank()
 	a.blank()
 
@@ -172,6 +168,15 @@ func (a *imageAnalyzer) header() {
 	}
 
 	a.line("\t\timage type: " + typ)
+
+	if img.MajorID != "02" || img.MinorID != "05" {
+		a.fail("Image format %s.%s is not the VAX image format, 02.05.", img.MajorID, img.MinorID)
+	}
+
+	if !ok {
+		a.fail("Image type %d is undefined.", img.Type)
+	}
+
 	a.line("\t\tI/O channel count: " + orDefault(int(img.IOChannels)))
 	a.line("\t\tI/O page count: " + orDefault(int(img.IOPages)))
 	a.flagList("\t\t", "linker flags:", linkFlagBits, img.LinkFlags)
@@ -198,6 +203,7 @@ func (a *imageAnalyzer) header() {
 
 	a.part("Patch Information")
 	a.patchInfo()
+	a.problems(PartHeader)
 	a.blank()
 
 	a.part("Image Section Descriptors (ISD)")
@@ -208,6 +214,17 @@ func (a *imageAnalyzer) header() {
 		}
 
 		a.section(i+1, d)
+	}
+
+	a.problems(PartSections)
+}
+
+// problems reports what couldn't be decoded in part of the image.
+func (a *imageAnalyzer) problems(part Part) {
+	for _, p := range a.img.Problems {
+		if p.Part == part {
+			a.fail("%s", p.Text)
+		}
 	}
 }
 
@@ -249,8 +266,13 @@ func (a *imageAnalyzer) section(n int, d ISD) {
 
 	a.line("\t\t\tsection type: " + typ)
 
+	if !ok {
+		a.fail("Section type %d is undefined.", d.Type())
+	}
+
 	if d.Size >= isdPrivateLength {
 		a.line(fmt.Sprintf("\t\t\tbase VBN: %d", d.VBN))
+		a.checkBlocks(d)
 	}
 
 	if d.Flags&isdFlagGBL != 0 && d.Size > isdGlobalLength {
@@ -262,5 +284,23 @@ func (a *imageAnalyzer) section(n int, d ISD) {
 		a.line(fmt.Sprintf("\t\t\tglobal section major id: %%X'%02X', minor id: %%X'%06X'", d.GlobalIdent>>24, d.GlobalIdent&0xFFFFFF))
 		a.line("\t\t\tmatch control: " + match)
 		a.line("\t\t\tglobal section name: " + quote(d.GlobalName))
+
+		if !ok {
+			a.fail("Match control %d is undefined.", d.Match())
+		}
+	}
+}
+
+// checkBlocks checks that a private section's pages are in the file: a
+// section that isn't demand zero or global is read from VBN on.
+func (a *imageAnalyzer) checkBlocks(d ISD) {
+	if d.Flags&(isdFlagDZRO|isdFlagGBL) != 0 || d.Pages == 0 {
+		return
+	}
+
+	last := int(d.VBN) + int(d.Pages) - 1
+
+	if d.VBN <= uint32(a.img.Blocks) || last > a.img.FileBlocks {
+		a.fail("The section's blocks, %d to %d, are not in the file's %d blocks of image sections.", d.VBN, last, a.img.FileBlocks)
 	}
 }

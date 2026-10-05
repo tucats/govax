@@ -21,6 +21,9 @@ const refsPerLine = 4
 func (a *imageAnalyzer) fixupSection() {
 	f := a.img.Fixups
 	if f == nil {
+		// The header names a fixup section that couldn't be found.
+		a.problems(PartFixups)
+
 		return
 	}
 
@@ -68,10 +71,30 @@ func (a *imageAnalyzer) fixupSection() {
 
 			a.line(fmt.Sprintf("\t\taddress: %%X'%08X', page count: %d", p.Address, p.Pages))
 			a.line("\t\tprotection: " + protectionName(p.Code))
+
+			if !strings.HasPrefix(protectionName(p.Code), "PRT$C_") {
+				a.fail("Protection code %d is undefined.", p.Code)
+			}
 		}
 
 		a.blank()
 	}
+
+	if a.hasProblems(PartFixups) {
+		a.problems(PartFixups)
+		a.blank()
+	}
+}
+
+// hasProblems reports whether part of the image has problems to show.
+func (a *imageAnalyzer) hasProblems(part Part) bool {
+	for _, p := range a.img.Problems {
+		if p.Part == part {
+			return true
+		}
+	}
+
+	return false
 }
 
 // refLists shows each shareable image's references, each list followed
@@ -80,6 +103,10 @@ func (a *imageAnalyzer) refLists(lists []RefList) {
 	for _, l := range lists {
 		n := len(l.Values)
 		a.keep(keepImageItem, fmt.Sprintf("\t\t%d reference%s to image %d:", n, plural(n), l.Image))
+
+		if l.Image == 0 || int(l.Image) >= len(a.img.Fixups.Shared) {
+			a.fail("Image %d is not a shareable image in the shareable image list.", l.Image)
+		}
 
 		for i := 0; i < n; i += refsPerLine {
 			var b strings.Builder
