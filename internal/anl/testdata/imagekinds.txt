@@ -1,0 +1,255 @@
+This is an OpenVMS VAX image file
+
+IMAGE HEADER
+
+	Fixed Header Information
+
+		image format major id: 02, minor id: 05
+		header block count: 2
+		image type: shareable (IHD$K_LIM)
+		I/O channel count: 16
+		I/O page count: 8
+		linker flags:
+			(0)  IHD$V_LNKDEBUG   0
+			(1)  IHD$V_LNKNOTFR   0
+			(2)  IHD$V_NOP0BUFS   0
+			(3)  IHD$V_PICIMG     1
+			(4)  IHD$V_P0IMAGE    0
+			(5)  IHD$V_DBGDMT     0
+			(6)  IHD$V_INISHR     1
+			(7)  IHD$V_IHSLONG    1
+			(8)  IHD$V_UPCALLS    0
+
+	Image Activation Information
+
+		first transfer address:  %X'00000000'
+		second transfer address: %X'00000000'
+		third transfer address:  %X'00000000'
+		shareable image initialization list: %X'00000210'
+
+	Global Symbol Table & Debug Symbol Table Information
+
+		debug symbol table VBN:  0, block count: 0
+		global symbol table VBN: 0, record count: 0
+		debug module/psect table VBN: 0, byte count: 0
+
+	Image Identification Information
+
+		image name: "KINDS"
+		image file identification: "V2.0"
+		link date/time:  5-OCT-2026 08:07:06.54
+		linker identification: "V11-39"
+
+	Patch Information
+
+		patch block, 32 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 20 64 65 68 63 74 61 70|  0000  |patched |
+		 2C 64 6E 61 68 20 79 62|  0008  |by hand,|
+		 65 68 74 20 72 6F 66 20|  0010  | for the|
+		 00 74 72 6F 70 65 72 20|  0018  | report.|
+
+	Image Section Descriptors (ISD)
+
+		1)  image section descriptor (16 bytes)
+			page count: 2
+			base virtual address: %X'00000200' (P0 space)
+			page fault cluster size: 8
+			ISD flags:
+				(0)  ISD$V_GBL        0
+				(1)  ISD$V_CRF        1
+				(2)  ISD$V_DZRO       0
+				(3)  ISD$V_WRT        1
+				(7)  ISD$V_LASTCLU    1
+				(8)  ISD$V_INITALCODE 0
+				(9)  ISD$V_BASED      0
+				(10) ISD$V_FIXUPVEC   0
+				(11) ISD$V_RESIDENT   0
+				(17) ISD$V_VECTOR     0
+				(18) ISD$V_PROTECT    0
+			section type: ISD$K_PRVFXD
+			base VBN: 3
+
+		2)  image section descriptor (16 bytes)
+			page count: 1
+			base virtual address: %X'00000600' (P0 space)
+			page fault cluster size: default
+			ISD flags:
+				(0)  ISD$V_GBL        0
+				(1)  ISD$V_CRF        0
+				(2)  ISD$V_DZRO       0
+				(3)  ISD$V_WRT        0
+				(7)  ISD$V_LASTCLU    0
+				(8)  ISD$V_INITALCODE 0
+				(9)  ISD$V_BASED      0
+				(10) ISD$V_FIXUPVEC   0
+				(11) ISD$V_RESIDENT   0
+				(17) ISD$V_VECTOR     0
+				(18) ISD$V_PROTECT    0
+			section type: ISD$K_SHRFXD
+			base VBN: 5
+
+		3)  image section descriptor (16 bytes)
+			page count: 1
+			base virtual address: %X'00000800' (P0 space)
+			page fault cluster size: default
+			ISD flags:
+				(0)  ISD$V_GBL        0
+				(1)  ISD$V_CRF        0
+				(2)  ISD$V_DZRO       0
+				(3)  ISD$V_WRT        0
+				(7)  ISD$V_LASTCLU    0
+				(8)  ISD$V_INITALCODE 0
+				(9)  ISD$V_BASED      0
+				(10) ISD$V_FIXUPVEC   1
+				(11) ISD$V_RESIDENT   0
+				(17) ISD$V_VECTOR     0
+				(18) ISD$V_PROTECT    0
+			section type: ISD$K_PRVPIC
+			base VBN: 6
+
+		4)  image section descriptor (12 bytes)
+			page count: 4
+			base virtual address: %X'80000000' (system space)
+			page fault cluster size: default
+			ISD flags:
+				(0)  ISD$V_GBL        0
+				(1)  ISD$V_CRF        0
+				(2)  ISD$V_DZRO       1
+				(3)  ISD$V_WRT        1
+				(7)  ISD$V_LASTCLU    0
+				(8)  ISD$V_INITALCODE 0
+				(9)  ISD$V_BASED      0
+				(10) ISD$V_FIXUPVEC   0
+				(11) ISD$V_RESIDENT   0
+				(17) ISD$V_VECTOR     0
+				(18) ISD$V_PROTECT    0
+			section type: ISD$K_NORMAL
+
+		5)  image section descriptor (12 bytes)
+			page count: 20
+			base virtual address: %X'7FFFD800' (P1 space)
+			page fault cluster size: default
+			ISD flags:
+				(0)  ISD$V_GBL        0
+				(1)  ISD$V_CRF        0
+				(2)  ISD$V_DZRO       1
+				(3)  ISD$V_WRT        1
+				(7)  ISD$V_LASTCLU    0
+				(8)  ISD$V_INITALCODE 0
+				(9)  ISD$V_BASED      0
+				(10) ISD$V_FIXUPVEC   0
+				(11) ISD$V_RESIDENT   0
+				(17) ISD$V_VECTOR     0
+				(18) ISD$V_PROTECT    0
+			section type: ISD$K_USRSTACK
+
+		6)  image section descriptor (30 bytes)
+			page count: 12
+			base virtual address: %X'00000000' (P0 space)
+			page fault cluster size: default
+			ISD flags:
+				(0)  ISD$V_GBL        1
+				(1)  ISD$V_CRF        0
+				(2)  ISD$V_DZRO       0
+				(3)  ISD$V_WRT        0
+				(7)  ISD$V_LASTCLU    0
+				(8)  ISD$V_INITALCODE 0
+				(9)  ISD$V_BASED      0
+				(10) ISD$V_FIXUPVEC   0
+				(11) ISD$V_RESIDENT   0
+				(17) ISD$V_VECTOR     0
+				(18) ISD$V_PROTECT    0
+			section type: ISD$K_SHRPIC
+			base VBN: 0
+			global section major id: %X'02', minor id: %X'000031'
+			match control: ISD$K_MATALL
+			global section name: "SHR_A_001"
+
+		7)  image section descriptor (30 bytes)
+			page count: 12
+			base virtual address: %X'00000000' (P0 space)
+			page fault cluster size: default
+			ISD flags:
+				(0)  ISD$V_GBL        1
+				(1)  ISD$V_CRF        0
+				(2)  ISD$V_DZRO       0
+				(3)  ISD$V_WRT        0
+				(7)  ISD$V_LASTCLU    0
+				(8)  ISD$V_INITALCODE 0
+				(9)  ISD$V_BASED      0
+				(10) ISD$V_FIXUPVEC   0
+				(11) ISD$V_RESIDENT   0
+				(17) ISD$V_VECTOR     0
+				(18) ISD$V_PROTECT    0
+			section type: ISD$K_SHRPIC
+			base VBN: 0
+			global section major id: %X'02', minor id: %X'000031'
+			match control: ISD$K_MATEQU
+			global section name: "SHR_B_001"
+
+		8)  image section descriptor (30 bytes)
+			page count: 12
+			base virtual address: %X'00000000' (P0 space)
+			page fault cluster size: default
+			ISD flags:
+				(0)  ISD$V_GBL        1
+				(1)  ISD$V_CRF        0
+				(2)  ISD$V_DZRO       0
+				(3)  ISD$V_WRT        0
+				(7)  ISD$V_LASTCLU    0
+				(8)  ISD$V_INITALCODE 0
+				(9)  ISD$V_BASED      0
+				(10) ISD$V_FIXUPVEC   0
+				(11) ISD$V_RESIDENT   0
+				(17) ISD$V_VECTOR     0
+				(18) ISD$V_PROTECT    0
+			section type: ISD$K_SHRPIC
+			base VBN: 0
+			global section major id: %X'02', minor id: %X'000031'
+			match control: ISD$K_MATNEV
+			global section name: "SHR_C_001"
+IMAGE ACTIVATOR FIXUP SECTION
+
+
+	Fixed Information
+
+		Flags:
+			(0)  IAF$V_SHR        1
+		shareable image count: 3
+		extra image count: 1
+
+	Shareable Image List
+
+		0)  this image
+		1)  "SHR_A"
+		2)  "SHR_B"
+
+	G^ Reference Fixups
+
+		5 references to image 1:
+			  00000410  00000478  00000558  000007D0
+			  00000800
+
+		1 reference to image 2:
+			  00000020
+
+	.ADDRESS Reference Fixups (relative to %X'00000200')
+
+		2 references to image 2:
+			  00000010  00000014
+
+	Protection Change Fixups (relative to %X'00000200')
+
+		address: %X'00000600', page count: 1
+		protection: PRT$C_UREW
+
+		address: %X'00000200', page count: 2
+		protection: PRT$C_UR
+
+
+
+The analysis uncovered NO errors.
+
+

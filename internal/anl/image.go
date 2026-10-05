@@ -110,8 +110,11 @@ type Image struct {
 	// the image has no such block.
 	ActivOffset, SymDbgOffset, ImgIDOffset, PatchOffset int
 
-	// The activation block's transfer addresses.
+	// The activation block's transfer addresses, and, with
+	// IHD$V_INISHR, the address of the shareable image initialization
+	// list.
 	Transfers [3]uint32
+	InitShare uint32
 
 	// The symbol table and debug block.
 	DSTVBN, GSTVBN, DMTVBN uint32
@@ -299,7 +302,8 @@ func (img *Image) block(h []byte, what string, offset, n int) []byte {
 
 // Header block sizes.
 const (
-	ihaLength = 0x14
+	ihaLength    = 0x14
+	ihaInitShare = 0x10
 	ihsLength = 0x1C
 	ihiLength = 0x50
 )
@@ -317,6 +321,11 @@ func (img *Image) activation(h []byte) {
 	for i := range img.Transfers {
 		img.Transfers[i] = binary.LittleEndian.Uint32(b[4*i:])
 	}
+
+	// After the transfer addresses comes a zero longword that ends them,
+	// then the initialization list's address (unconfirmed: no fixture
+	// image sets IHD$V_INISHR).
+	img.InitShare = binary.LittleEndian.Uint32(b[ihaInitShare:])
 }
 
 func (img *Image) symbolTables(h []byte) {

@@ -186,6 +186,10 @@ func (a *imageAnalyzer) header() {
 	a.line(fmt.Sprintf("\t\tfirst transfer address:  %%X'%08X'", img.Transfers[0]))
 	a.line(fmt.Sprintf("\t\tsecond transfer address: %%X'%08X'", img.Transfers[1]))
 	a.line(fmt.Sprintf("\t\tthird transfer address:  %%X'%08X'", img.Transfers[2]))
+
+	if img.LinkFlags&ihdFlagINISHR != 0 {
+		a.line(fmt.Sprintf("\t\tshareable image initialization list: %%X'%08X'", img.InitShare))
+	}
 	a.blank()
 
 	a.part("Global Symbol Table & Debug Symbol Table Information")
@@ -228,7 +232,14 @@ func (a *imageAnalyzer) problems(part Part) {
 	}
 }
 
-// patchInfo describes the patch block.
+// ihdFlagINISHR is IHD$V_INISHR: the image has a shareable image
+// initialization list.
+const ihdFlagINISHR = 1 << 6
+
+// patchInfo describes the patch block. No fixture image has been patched,
+// and nothing but a patched image's analysis would show the block's
+// fields, so a patched image's block is shown as a hex dump, in
+// ANALYZE/OBJECT's style (unconfirmed).
 func (a *imageAnalyzer) patchInfo() {
 	if a.img.Patch == nil {
 		a.line("\t\tThere are no patches at this time.")
@@ -236,7 +247,8 @@ func (a *imageAnalyzer) patchInfo() {
 		return
 	}
 
-	a.line("\t\tThe image has been patched.")
+	a.line(fmt.Sprintf("\t\tpatch block, %d bytes:", len(a.img.Patch)))
+	a.hexDump("\t\t", a.img.Patch)
 }
 
 // spaceName is the region of the address space an address is in.

@@ -343,6 +343,21 @@ fixup section without a section to hold it.
 - The output is matched to the fixtures byte for byte except for the page
   headers' times; anything they don't show is a reasonable choice in the
   same style, recorded here when made.
+- **Unconfirmed layouts** (no fixture shows them; collected in
+  `internal/anl/testdata/imagekinds.txt` for review): a shareable image's
+  type (`shareable (IHD$K_LIM)`); nonzero I/O counts and page fault
+  clusters shown as numbers; `(system space)` for an S0 address; the
+  section types other than NORMAL, SHRPIC, and USRSTACK; the match
+  controls other than MATLEQ; a patched image's block, shown as a hex dump
+  (`patch block, n bytes:`) because nothing shows its fields; the
+  shareable image initialization list's address (`IHA` +0x10) when
+  `IHD$V_INISHR` is set; IAF flags at +0x24 and the extra image count at
+  +0x20; four references per line; a blank line between protection
+  changes.
+- **The `/HEADER` and `/FIXUP_SECTION` selection**: with neither, both
+  parts; `/HEADER` alone, the header; `/FIXUP_SECTION` (with or without
+  `/HEADER`), both, since the fixup section's addresses only make sense
+  beside the ISDs (unconfirmed).
 
 ## Progress log
 
@@ -380,3 +395,12 @@ fixup section without a section to hold it.
   end; the analyzer's own checks follow the field they're about.
   `TestImageErrors` damages ADDR.EXE eight ways and checks each message,
   its place, and the closing count.
+- 2026-10-05: Subtask 6: kinds the fixtures lack. A patched image's
+  patch block is a hex dump; with `IHD$V_INISHR` the activation block's
+  initialization list address is shown. `TestEveryImageKind` builds a
+  shareable image with two header blocks (ISDs continued into the
+  second), a patch block, every section type and match control, an S0
+  section, a page fault cluster, I/O counts, two shareable images'
+  G^ lists (one wrapping), a .ADDRESS list, and two protection changes,
+  and checks it analyzes without errors to
+  `internal/anl/testdata/imagekinds.txt` (`go test -update` rewrites it).
