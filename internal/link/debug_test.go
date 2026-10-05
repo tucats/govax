@@ -152,3 +152,58 @@ func TestLinkDebugModuleTable(t *testing.T) {
 		})
 	}
 }
+
+// TestLinkGlobalSymbolTable checks the global symbol table (GST) of each
+// image linked /DEBUG against real LINK's, record for record, with the
+// IHS's VBN and record counts for it (docs/PHASE-29.md, subtask 18). Real
+// LINK's GST ends the file mid-block; the comparison is of the records.
+func TestLinkGlobalSymbolTable(t *testing.T) {
+	for _, c := range debugCases() {
+		t.Run(c.image, func(t *testing.T) {
+			got, want := linkDebugCase(t, c)
+
+			for _, f := range []struct {
+				name     string
+				from, to int
+			}{{"IHS$L_GSTVBN", 4, 8}, {"IHS$W_GSTRECS", 10, 12}, {"IHS$L_GSTRECS", 24, 28}} {
+				if a, b := got[ihsOffset+f.from:ihsOffset+f.to], want[ihsOffset+f.from:ihsOffset+f.to]; !bytes.Equal(a, b) {
+					t.Errorf("%s is % x, want % x", f.name, a, b)
+				}
+			}
+
+			records := func(img []byte) [][]byte {
+				t.Helper()
+
+				vbn := int(binary.LittleEndian.Uint32(img[ihsOffset+4:]))
+				count := int(binary.LittleEndian.Uint32(img[ihsOffset+24:]))
+
+				if vbn == 0 || (vbn-1)*blockSize >= len(img) {
+					t.Fatalf("GST at VBN %d, in an image of %d bytes", vbn, len(img))
+				}
+
+				all, err := obj.ReadRecords(bytes.NewReader(img[(vbn-1)*blockSize:]))
+				if err != nil && len(all) < count {
+					t.Fatal(err)
+				}
+
+				if len(all) < count {
+					t.Fatalf("GST has %d records, the IHS says %d", len(all), count)
+				}
+
+				return all[:count]
+			}
+
+			g, w := records(got), records(want)
+			for i := 0; i < len(g) || i < len(w); i++ {
+				switch {
+				case i >= len(g):
+					t.Errorf("record %d missing: % x", i+1, w[i])
+				case i >= len(w):
+					t.Errorf("record %d extra: % x", i+1, g[i])
+				case !bytes.Equal(g[i], w[i]):
+					t.Errorf("record %d:\n got % x\nwant % x", i+1, g[i], w[i])
+				}
+			}
+		})
+	}
+}

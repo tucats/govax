@@ -622,19 +622,25 @@ func (l *linker) image() (*Image, error) {
 	vbn += uint32(len(fixup)) / blockSize
 
 	// The debug symbol table follows everything else, in whole blocks,
-	// and, linked /DEBUG, the debug module table after it.
+	// and, linked /DEBUG, the debug module table after it. dst gathers
+	// these debug tables, which start at block vbn, each at a block of
+	// its own.
 	var dst []byte
-	if len(l.dst) > 0 {
-		l.dstVBN = vbn
-		dst = append(dst, l.dst...)
+
+	add := func(table []byte) uint32 {
+		at := vbn + uint32(len(dst))/blockSize
+		dst = append(dst, table...)
 		dst = append(dst, make([]byte, int(pageUp(uint32(len(dst))))-len(dst))...)
-		vbn += uint32(len(dst)) / blockSize
+
+		return at
+	}
+
+	if len(l.dst) > 0 {
+		l.dstVBN = add(l.dst)
 
 		if l.opts.Debug {
 			l.dmt = l.debugModuleTable()
-			l.dmtVBN = vbn
-			dst = append(dst, l.dmt...)
-			dst = append(dst, make([]byte, int(pageUp(uint32(len(dst))))-len(dst))...)
+			l.dmtVBN = add(l.dmt)
 		}
 	}
 
@@ -655,6 +661,23 @@ func (l *linker) image() (*Image, error) {
 
 	if l.opts.Ident != "" {
 		l.imageID = l.opts.Ident
+	}
+
+	// Linked /DEBUG, the global symbol table comes last. Real LINK ends
+	// the file at its last record, mid-block; govax pads it to a whole
+	// block, as images are whole blocks everywhere in govax (rms, and
+	// ods2's fixed-length records). Readers find the GST by the IHS's
+	// VBN and record count, so the padding should be harmless; it's a
+	// known difference to revisit if VMS objects (docs/PHASE-29.md,
+	// Decision 7).
+	if l.opts.Debug {
+		gst, records, err := l.globalSymbolTable()
+		if err != nil {
+			return nil, fmt.Errorf("link: the global symbol table: %w", err)
+		}
+
+		l.gst, l.gstRecords = gst, records
+		l.gstVBN = add(gst)
 	}
 
 	header, err := l.header(isds, global, fixupVA)

@@ -455,8 +455,9 @@ changes behavior. Each adds to this doc's progress log.
     (+12) and byte count (+16). Tests: the DMT blocks of TRDBGLNK,
     TRLNKDBG, and FORTH.
 18. **The global symbol table (GST).** Object-language records in
-    ODS-2's variable-length layout, after the DMT, which end the file
-    without padding to a whole block. The records are an MHD (the image's
+    ODS-2's variable-length layout, after the DMT. Real LINK ends the
+    file at the last record; govax pads it to a whole block (Decision 7).
+    The records are an MHD (the image's
     name and ident, with the link time as both dates), an LNM
     (`Linker V11-39`, the linker ID), a GSD with the `.$$ABS$$.` psect,
     a GSD of the global symbols, then an EOM. The IHS gives the GST's
@@ -515,6 +516,21 @@ The author decided each of these on 2026-10-02.
    to hand govax's objects or images back to VMS with full DST support.
    The future use is govax's own: traceback and debugger data for the
    console's SHOW CALLS and DISASM.
+7. **The GST's last block is padded** (2026-10-05). Real LINK ends an
+   image linked `/DEBUG` at the GST's last byte, mid-block: TRLNKDBG.EXE
+   is 3,792 bytes. govax pads the GST to a whole block, so its image is
+   real LINK's byte for byte followed by zeros: 304 more bytes for
+   TRDBGLNK and TRLNKDBG, and 264 for FORTH.
+   - govax's image I/O is whole blocks everywhere: `rms`'s host and
+     volume image files, and ods2's fixed-length record writer and
+     reader, which reject a short record.
+   - The padding should be harmless. The image activator maps only the
+     ISDs' sections. Readers find the GST by the IHS's VBN and record
+     count, and stop before the padding after its EOM. Real LINK pads
+     the DST and DMT the same way.
+   - It's a known difference, to revisit if VMS's ANALYZE/IMAGE or
+     debugger objects to a govax image. The fix would be an image with a
+     short last block: `rms` and ods2 changes, and a new ods2 tag.
 
 ## Out of scope
 
@@ -1860,3 +1876,36 @@ It also corrected two of them.
     record for it);
   - several modules sharing a psect: each module lists its own part, by
     the manual's description of a module's address range.
+
+### 2026-10-05 — Subtask 18: the global symbol table
+
+- **`internal/link/debug.go`, `globalSymbolTable`.** An object module
+  named for the image, encoded with `obj.Encode` and
+  `obj.WriteRecords`. Its records:
+  - an MHD with structure level 0, maximum record size 512, the
+    image's name and ident, and the link time as both dates;
+  - an LNM, `Linker ` plus the linker ID;
+  - a GSD with the absolute psect `.$$ABS$$.` (PIC, LIB, RD);
+  - GSD records of the symbols, each one absolute with its final
+    value, and an entry point with its mask. A GSD record holds as many
+    as fit in 512 bytes, which is govax's rule: no fixture has a longer
+    GST;
+  - an EOM.
+- **The IHS** gives the GST's VBN (+4) and its record count (+10,
+  +24).
+- **Which symbols** (`gstSymbols`): every defined symbol but those in
+  shareable images. That's each one a module defines, and those a
+  library module or govax's tables define for the link. A selectively
+  searched library module defines only the symbols referred to, which
+  matches FORTH's seven `SYS$` services, not all of STARLET's.
+- **Their order** (unconfirmed): symbols before entry points. Within
+  each group, library and table symbols come first, in name order, then
+  the modules' own, the last defined first. The new `global.defSeq`
+  numbers the definitions. This order fits TRACE's and FORTH's GSTs; no
+  other fixture tests it.
+- **Padding.** The GST is padded to a whole block, where real LINK ends
+  the file at its last byte (Decision 7, decided with the author).
+  Otherwise, all three `/DEBUG` images now match real LINK's byte for
+  byte, FORTH's included.
+- **Tests.** `TestLinkGlobalSymbolTable` compares the GST records and
+  IHS fields of TRDBGLNK, TRLNKDBG, and FORTH.

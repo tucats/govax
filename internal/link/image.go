@@ -208,6 +208,14 @@ func (l *linker) header(isds []isd, global [][]byte, fixupVA uint32) ([]byte, er
 		le.PutUint32(b[ihsOffset+16:], uint32(len(l.dmt)))
 	}
 
+	// The global symbol table's first block (IHS$L_GSTVBN) and record
+	// count, as a word (IHS$W_GSTRECS) and a longword (IHS$L_GSTRECS).
+	if l.gstVBN != 0 {
+		le.PutUint32(b[ihsOffset+4:], l.gstVBN)
+		le.PutUint16(b[ihsOffset+10:], uint16(l.gstRecords))
+		le.PutUint32(b[ihsOffset+24:], uint32(l.gstRecords))
+	}
+
 	// IHI: the image name, image ID, link time, and linker ID, each
 	// name a counted string in a fixed field.
 	if err := putCounted(b[ihiOffset:ihiOffset+40], l.opts.ImageName); err != nil {

@@ -220,6 +220,9 @@ type linker struct {
 	order  []*psect
 
 	symbols map[string]*global
+	// definitions counts the modules' symbol definitions, numbering each
+	// (global.defSeq).
+	definitions int
 
 	// sections are the image sections, by address.
 	sections []*section
@@ -260,6 +263,12 @@ type linker struct {
 	// (debug.go), and dmtVBN its first block.
 	dmt    []byte
 	dmtVBN uint32
+	// gst is the global symbol table of an image linked /DEBUG, as
+	// variable-length records (debug.go); gstVBN is its first block, and
+	// gstRecords its record count.
+	gst        []byte
+	gstVBN     uint32
+	gstRecords int
 }
 
 // module is one input module during the link.
@@ -314,6 +323,9 @@ func (c *contribution) base() uint32 { return c.psect.base + c.offset }
 type global struct {
 	name string
 	seq  int // the order it was first seen in
+	// defSeq is the order a module defined it in, for the global symbol
+	// table (debug.go).
+	defSeq int
 	// defined and weak say whether and how it's defined; fromSource, that
 	// a symbol source defined it.
 	defined    bool
@@ -495,6 +507,8 @@ func (l *linker) symbol(m *module, s *obj.Symbol) error {
 	g.entry = s.GSDType() == obj.GSDEntry
 	g.mask = s.Mask
 	g.module, g.psectIndex, g.rel = m, int(s.Psect), s.Flags&obj.SymREL != 0
+	l.definitions++
+	g.defSeq = l.definitions
 
 	return nil
 }
