@@ -14,18 +14,19 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// ANALYZE/OBJECT (docs/PHASE-38.md) describes object files as VMS's
-// ANALYZE/OBJECT does: internal/anl writes the report, and this file finds
-// the files and sends the report where it goes.
+// ANALYZE/OBJECT (docs/PHASE-38.md) describes object files, and
+// ANALYZE/IMAGE (docs/PHASE-40.md) image files, as VMS's ANALYZE does:
+// internal/anl writes the report, and this file finds the files and sends
+// the report where it goes.
 //
 // Every file can be a host file or a file on a mounted ODS-2 volume, by
 // the rules MACRO, LINK, and LIBRARY use (rms.Session.Locate), with the
-// default type OBJ; a file's bare name is found beside the file before it.
-// The report goes to the console, or with /OUTPUT to a text file, by
-// default NAME.ANL beside the first input. Each input file's report is
+// default type OBJ (EXE for an image); a file's bare name is found beside
+// the file before it. The report goes to the console, or with /OUTPUT to a
+// text file, by default NAME.ANL (NAME.ANI) beside the first input. Each input file's report is
 // paged on its own, one after another.
 
-// AnalyzeOptions is one ANALYZE/OBJECT command.
+// AnalyzeOptions is one ANALYZE/OBJECT or ANALYZE/IMAGE command.
 type AnalyzeOptions struct {
 	// Files are the files to analyze, and Host an explicit /HOST on
 	// them.
@@ -48,6 +49,11 @@ type AnalyzeOptions struct {
 	// /LNK, /EOM); empty shows every record.
 	Select []obj.RecordType
 
+	// Header and Fixups are ANALYZE/IMAGE's /HEADER and /FIXUP_SECTION
+	// (anl.ImageOptions).
+	Header bool
+	Fixups bool
+
 	// CommandLine is the command as typed, which closes each report.
 	CommandLine string
 }
@@ -57,6 +63,50 @@ type AnalyzeOptions struct {
 // and the command then ends with CLI_ANALYZEERRORS once every file's
 // report is written.
 func (c *Console) AnalyzeObject(opts AnalyzeOptions) error {
+	return c.analyzeFiles(opts, "OBJ", "ANL", anl.TitleObject, func(loc rms.FileLocation) ([]anl.Line, int, rms.FileLocation, error) {
+		records, found, err := c.analyzeRecords(loc, opts)
+		if err != nil {
+			return nil, 0, found, err
+		}
+
+		rep := anl.AnalyzeObject(records, anl.ObjectOptions{Select: opts.Select})
+
+		return rep.Lines, rep.Errors, found, nil
+	})
+}
+
+// AnalyzeImage runs one ANALYZE/IMAGE command (docs/PHASE-40.md), as
+// AnalyzeObject runs ANALYZE/OBJECT: the default input type is EXE, and
+// the default output NAME.ANI.
+func (c *Console) AnalyzeImage(opts AnalyzeOptions) error {
+	return c.analyzeFiles(opts, "EXE", "ANI", anl.TitleImage, func(loc rms.FileLocation) ([]anl.Line, int, rms.FileLocation, error) {
+		data, found, err := c.ContainerSession.ReadRawFile(loc)
+		if err != nil {
+			return nil, 0, found, fileFailure(err, loc.Name)
+		}
+
+		img, err := anl.ReadImage(data)
+		if err != nil {
+			return nil, 0, found, vmserrors.Wrap(vmserrors.CLI_ANALYZE, err, found.Name)
+		}
+
+		rep := anl.AnalyzeImage(img, anl.ImageOptions{Header: opts.Header, Fixups: opts.Fixups})
+
+		return rep.Lines, rep.Errors, found, nil
+	})
+}
+
+// analyzeOne analyzes the file at loc, returning its report's lines, the
+// errors the analysis found, and the file as found.
+type analyzeOne func(loc rms.FileLocation) ([]anl.Line, int, rms.FileLocation, error)
+
+// analyzeFiles runs an ANALYZE command's analysis on each of its files,
+// inputType being their default type, and writes the reports, each paged
+// on its own under title, to the console or the /OUTPUT file (default
+// type outputType). A file that can't be read stops the command; a file
+// the analysis finds errors in doesn't, and the command then ends with
+// CLI_ANALYZEERRORS once every report is written.
+func (c *Console) analyzeFiles(opts AnalyzeOptions, inputType, outputType, title string, analyze analyzeOne) error {
 	s := c.ContainerSession
 
 	var (
@@ -82,9 +132,9 @@ func (c *Console) AnalyzeObject(opts AnalyzeOptions) error {
 			return fileFailure(err, name)
 		}
 
-		loc = withDefaultType(loc, "OBJ")
+		loc = withDefaultType(loc, inputType)
 
-		records, found, err := c.analyzeRecords(loc, opts)
+		lines, count, found, err := analyze(loc)
 		if err != nil {
 			return err
 		}
@@ -95,10 +145,8 @@ func (c *Console) AnalyzeObject(opts AnalyzeOptions) error {
 
 		prev = found
 
-		rep := anl.AnalyzeObject(records, anl.ObjectOptions{Select: opts.Select})
-
-		p := anl.NewPager(&report, anl.TitleObject, analyzedFileName(found), strings.TrimSpace(opts.CommandLine))
-		if err := p.Write(rep.Lines); err != nil {
+		p := anl.NewPager(&report, title, analyzedFileName(found), strings.TrimSpace(opts.CommandLine))
+		if err := p.Write(lines); err != nil {
 			return vmserrors.Wrap(vmserrors.CLI_ANALYZE, err, found.Name)
 		}
 
@@ -106,7 +154,7 @@ func (c *Console) AnalyzeObject(opts AnalyzeOptions) error {
 			return vmserrors.Wrap(vmserrors.CLI_ANALYZE, err, found.Name)
 		}
 
-		if rep.Errors > 0 && problems == nil {
+		if count > 0 && problems == nil {
 			problems = vmserrors.New(vmserrors.CLI_ANALYZEERRORS, found.Name)
 		}
 
@@ -117,7 +165,7 @@ func (c *Console) AnalyzeObject(opts AnalyzeOptions) error {
 	}
 
 	if opts.Output {
-		if err := c.writeAnalysis(opts.OutputFile, first, report.Bytes()); err != nil {
+		if err := c.writeAnalysis(opts.OutputFile, first, outputType, report.Bytes()); err != nil {
 			return err
 		}
 	}
@@ -179,17 +227,17 @@ func (c *Console) analyzeRecords(loc rms.FileLocation, opts AnalyzeOptions) ([][
 	return records, found, nil
 }
 
-// writeAnalysis writes a report to the output file name (or NAME.ANL
+// writeAnalysis writes a report to the output file name (or NAME.typ
 // beside input), one record per line.
-func (c *Console) writeAnalysis(name string, input rms.FileLocation, text []byte) error {
+func (c *Console) writeAnalysis(name string, input rms.FileLocation, typ string, text []byte) error {
 	s := c.ContainerSession
 
-	out, err := outputLocation(s, name, input, "ANL")
+	out, err := outputLocation(s, name, input, typ)
 	if err != nil {
 		return fileFailure(err, name)
 	}
 
-	out = withDefaultType(out, "ANL")
+	out = withDefaultType(out, typ)
 
 	lines := bytes.Split(bytes.TrimSuffix(text, []byte("\n")), []byte("\n"))
 

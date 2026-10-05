@@ -858,8 +858,8 @@ grammar console
     !
     ! docs/PHASE-38.md (internal/anl, internal/console/analyze.go):
     ! ANALYZE/OBJECT describes object files as VMS's ANALYZE does. Each
-    ! kind of analysis is a qualifier that switches to its own syntax, so
-    ! ANALYZE/IMAGE can join /OBJECT with qualifiers of its own. FILES may
+    ! kind of analysis is a qualifier that switches to its own syntax:
+    ! /OBJECT here, /IMAGE below. FILES may
     ! be host files or volume files (HOST forces the host). OUTPUT is
     ! /OUTPUT[=file] (empty default: NAME.ANL beside the input); without
     ! it the report goes to the console. DBG, EOM, GSD, LNK, MHD, TBT,
@@ -886,8 +886,28 @@ grammar console
                     /type=$string/list          -
                     /default=""
 
+    !
+    ! docs/PHASE-40.md: ANALYZE/IMAGE describes image files. FILES and
+    ! HOST are as ANALYZE/OBJECT's; OUTPUT's empty default is NAME.ANI
+    ! beside the input. HEADER limits the report to the image header;
+    ! FIXUP_SECTION asks for the fixup section with it (both, without
+    ! either).
+    !
+    syntax analyze_image
+        parameter   files/id=1921               -
+                    /type=$string/list          -
+                    /prompt="File"
+        qualifier   host/id=1922                -
+                    /parameter=files
+        qualifier   output/id=1923              -
+                    /type=$string               -
+                    /default=""
+        qualifier   header/id=1924
+        qualifier   fixup_section/id=1925
+
     verb analyze/id=1900
         qualifier object/syntax=analyze_object
+        qualifier image/syntax=analyze_image
 
     !
     ! govax-native extension (docs/PHASE-28.md subtask 7, internal/console

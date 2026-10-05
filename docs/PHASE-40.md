@@ -404,3 +404,18 @@ fixup section without a section to hold it.
   G^ lists (one wrapping), a .ADDRESS list, and two protection changes,
   and checks it analyzes without errors to
   `internal/anl/testdata/imagekinds.txt` (`go test -update` rewrites it).
+- 2026-10-05: Subtask 7: the console command. `console.dcl`'s
+  `analyze_image` syntax (`/HOST`, `/OUTPUT`, `/HEADER`,
+  `/FIXUP_SECTION`) beside `/OBJECT`; `Console.AnalyzeImage`
+  (`internal/console/analyze.go`), sharing a new `analyzeFiles` loop with
+  `AnalyzeObject` (locating, paging, `/OUTPUT`, `CLI_ANALYZEERRORS`):
+  default input type EXE, output NAME.ANI. A bare `ANALYZE` now asks for
+  `/OBJECT or /IMAGE`. Tests (`analyzeimage_test.go`): VMS's ADDR.ANI
+  reproduced from a host file (`/OUTPUT`'s default name, written beside a
+  copy in a temp directory so no fixture can be overwritten) and from a
+  volume file (header `DUA0:[000000]ADDR.EXE;1`); the qualifiers'
+  selection, before or after `/IMAGE`; errors (a damaged image, a short
+  file, a missing one); and EXTERN.EXE linked by govax's own LINK from
+  the fixture objects, whose analysis matches VMS's analysis of real
+  LINK's image but for the times and the linker's identification
+  (`"govax Vn"`, by design).

@@ -595,7 +595,21 @@ func (d *Dispatcher) bindGrammar() {
 	// analysis is a qualifier with its own syntax; a bare ANALYZE names
 	// none.
 	g.Bind("ANALYZE", func(id int64, r *dcl.Result) error {
-		return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "/OBJECT")
+		return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "/OBJECT or /IMAGE")
+	})
+
+	// docs/PHASE-40.md: ANALYZE/IMAGE describes image files
+	// (Console.AnalyzeImage).
+	g.Bind("ANALYZE_IMAGE", func(id int64, r *dcl.Result) error {
+		return d.Console.AnalyzeImage(AnalyzeOptions{
+			Files:       r.List("FILES"),
+			Host:        r.ParamPresent("FILES", "HOST"),
+			Output:      r.Present("OUTPUT") && !r.Negated("OUTPUT") && !r.Defaulted("OUTPUT"),
+			OutputFile:  r.String("OUTPUT"),
+			Header:      r.Present("HEADER") && !r.Negated("HEADER"),
+			Fixups:      r.Present("FIXUP_SECTION") && !r.Negated("FIXUP_SECTION"),
+			CommandLine: d.line,
+		})
 	})
 
 	g.Bind("ANALYZE_OBJECT", func(id int64, r *dcl.Result) error {
