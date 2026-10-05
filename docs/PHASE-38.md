@@ -79,7 +79,6 @@ The analysis uncovered NO errors.
 
 
 ANALYZE/OBJECT/OUTPUT=HELLO.ANL HELLO.OBJ<blanks to column 80>
-<8 blanks, no line end>
 ```
 
 Observations from the survey (all from the fixtures; the clean-room rule
@@ -95,8 +94,8 @@ leaves ANALYZE's output as the only source):
 - **Pagination** is by line count, but not a fixed one: full pages hold 56
   to 62 lines. A record's heading never starts a page below line 56; other
   breaks fall almost anywhere, even between two flag lines, but a hex dump
-  doesn't start where its first rows won't fit. The exact rule is
-  reconstructed from the 54 fixtures in subtask 3.
+  doesn't start where its first rows won't fit. The rule, reconstructed in
+  subtask 3, is under "Page layout" below.
 - **Indentation** is tabs: one for a record's items, two for their fields,
   three for flag bits.
 - **TIR commands** are numbered from 1 within each record:
@@ -120,9 +119,7 @@ leaves ANALYZE's output as the only source):
   contains 1 longword.`), and the count closes the analysis (`The analysis
   uncovered 2 errors.`, or `NO errors.`).
 - **The trailer** is the command line, after DCL's symbol substitution,
-  padded to 80 columns, then eight blanks with no line end. It is likely an
-  artifact of the print-file carriage control of ANALYZE's output file as
-  govax's COPY renders it; govax writes it as VMS's file reads.
+  padded to 80 columns.
 
 ## Design
 
@@ -236,6 +233,37 @@ console command.
 7. **Object libraries.** `/INCLUDE`, through `internal/lbr`.
 8. **`govax analyze`**, help text (`vax.help`), `CLAUDE.md`, `PLAN.md`.
 
+## Page layout
+
+Reconstructed from the fixtures' page breaks (subtask 3), and matching
+all 54 byte for byte:
+
+- A page is a 5-line header (form feed line, title, file, version, blank)
+  and room for **55 lines** of the report.
+- Before each line is written, ANALYZE checks that the lines it needs are
+  left on the page, and starts a new page when they aren't. Most lines
+  need 1. Headings need room for what follows them:
+
+  | Line | Needs |
+  |---|---|
+  | record heading (`N.  ...`) | 5 |
+  | GSD subrecord heading (`k)  Program Section ...`) | 3 (2 or 3 fit the fixtures) |
+  | TIR command heading (`k)  TIR$C_...`) | 3, with or without fields |
+  | `attribute flags:`, `symbol flags:` | 3 |
+  | `Store Immediate, n bytes:` | 2 |
+  | hex dump heading (`7  6  5 ...`) | 4, however many rows follow |
+
+- The two blank lines that close each record are written without the
+  check, so a page can run to 57 lines; the blank line between two items
+  of a record is checked like any other line, so it can start a page.
+- The summary always starts a new page.
+
+The method: with the report's content known to match, each kind of line
+gives two bounds, the furthest down a page it's ever written and the
+fullest page it was ever pushed off of; where they don't overlap the
+need is fixed. Only blank lines conflicted, which separated the closing
+blanks (never pushed) from the separators (pushed at 55).
+
 ## Decisions and unconfirmed rules
 
 - The output is matched to the fixtures byte for byte except for the date
@@ -284,3 +312,9 @@ console command.
   the 65-character text-header lines, no blank line after the closing
   errors. `obj.Symbol` gains `HasEntryMask` and `IsLocal`, so `anl`
   doesn't repeat `obj`'s layout table.
+- 2026-10-04: Subtask 3: `Pager` (`internal/anl/page.go`) and the
+  page-break rule ("Page layout"): `Line.Keep` and `Line.Spill` carry
+  it. `TestObjectPages` compares each of the 54 fixtures whole, masking
+  only the page headers' times: all match byte for byte. The trailer is
+  the command padded to 80 columns and a line end (the survey's "8 blanks
+  without a line end" was a misreading of an octal dump).

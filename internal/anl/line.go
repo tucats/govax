@@ -11,9 +11,14 @@ type Line struct {
 	// ANALYZE writes them.
 	Text string
 
-	// Keep, when more than 1, asks that this line and the Keep-1 lines
-	// after it start on the same page: a heading and what follows it.
+	// Keep, when more than 1, is how many lines must be left on the page
+	// for this line to be written there, rather than on a new page: a
+	// heading asks for room for what follows it.
 	Keep int
+
+	// Spill writes the line on the current page even when the page is
+	// full: the blank lines that close a record do.
+	Spill bool
 
 	// Page starts a new page before this line (the summary does).
 	Page bool
@@ -32,6 +37,16 @@ func (r *report) line(text string) {
 // blank adds an empty line.
 func (r *report) blank() {
 	r.line("")
+}
+
+// keep adds a line that needs n lines left on the page.
+func (r *report) keep(n int, text string) {
+	r.lines = append(r.lines, Line{Text: text, Keep: n})
+}
+
+// spill adds a blank line that's written even on a full page.
+func (r *report) spill() {
+	r.lines = append(r.lines, Line{Spill: true})
 }
 
 // page adds a line that starts a new page.

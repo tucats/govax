@@ -102,7 +102,7 @@ func (a *objectAnalyzer) command(show bool, k int, c obj.Command) {
 	if c.Op == obj.OpStoreImmediate {
 		if show {
 			n := len(c.Data)
-			a.line(fmt.Sprintf("\t%d)  Store Immediate, %d byte%s:", k, n, plural(n)))
+			a.keep(keepImmediate, fmt.Sprintf("\t%d)  Store Immediate, %d byte%s:", k, n, plural(n)))
 			a.hexDump("\t\t", c.Data)
 		}
 
@@ -121,7 +121,7 @@ func (a *objectAnalyzer) command(show bool, k int, c obj.Command) {
 		heading = fmt.Sprintf("%-*sstack depth: %d", commandColumn+1, heading, a.depth)
 	}
 
-	a.line(heading)
+	a.keep(keepItem, heading)
 
 	for _, f := range commandFields[c.Op.String()] {
 		f(a, c)

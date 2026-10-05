@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tucats/govax/internal/obj"
 )
@@ -152,6 +153,44 @@ func TestHexDump(t *testing.T) {
 	for i, w := range want {
 		if r.lines[i].Text != w {
 			t.Errorf("line %d: got %q, want %q", i+1, r.lines[i].Text, w)
+		}
+	}
+}
+
+// headerTimeRE matches the date and time in a page header.
+var headerTimeRE = regexp.MustCompile(`(?m)^(Analyze Object File {1,30})[ 0-9]{2}-[A-Z]{3}-[0-9]{4} [0-9:.]{11}`)
+
+// TestObjectPages checks each fixture's whole analysis, page layout and
+// all, with only the page headers' times masked.
+func TestObjectPages(t *testing.T) {
+	when := time.Date(2026, time.October, 4, 9, 8, 7, 650_000_000, time.UTC)
+
+	for _, f := range objectFixtures(t) {
+		text := string(f.analysis)
+
+		// The file analyzed and the command, as the fixture shows them.
+		lines := strings.Split(text, "\n")
+		file := lines[2]
+		command := strings.TrimRight(lines[len(lines)-2], " ")
+
+		rep := AnalyzeObject(f.records, ObjectOptions{})
+
+		var b bytes.Buffer
+
+		p := NewPager(&b, TitleObject, file, command)
+		p.Now = func() time.Time { return when }
+
+		if err := p.Write(rep.Lines); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := p.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		want := headerTimeRE.ReplaceAllString(text, "${1}"+vmsTime(when))
+		if diff := firstDiff(want, b.String()); diff != "" {
+			t.Errorf("%s: %s", f.name, diff)
 		}
 	}
 }

@@ -24,7 +24,7 @@ const (
 //	 77 20 2C 6F 6C 6C 65 48|  0000  |Hello, w|
 //	          21 64 6C 72 6F|  0008  |orld!   |
 func (r *report) hexDump(indent string, data []byte) {
-	r.line(indent + dumpHeading)
+	r.keep(keepDump, indent+dumpHeading)
 	r.line(indent + dumpUnderline)
 
 	for off := 0; off < len(data); off += dumpRowBytes {

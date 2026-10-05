@@ -62,6 +62,20 @@ type objectAnalyzer struct {
 	depth    int
 }
 
+// How many lines each kind of heading needs left on a page to be written
+// there (Line.Keep). Real ANALYZE's rule, reconstructed from the page
+// breaks of the 54 fixtures (docs/PHASE-38.md): a record's heading needs
+// 5, a GSD subrecord's or a TIR command's 3, a flags list's label 3, a
+// STORE IMMEDIATE's 2, and a hex dump's 4. A subrecord's could be 2: the
+// fixtures allow 2 or 3, and 3 matches a TIR command's.
+const (
+	keepRecord    = 5
+	keepItem      = 3
+	keepFlags     = 3
+	keepImmediate = 2
+	keepDump      = 4
+)
+
 // recordTitles are each record type's heading, by type; header records
 // are titled by their header type instead (headerTitles).
 var recordTitles = map[obj.RecordType]string{
@@ -151,8 +165,8 @@ func (a *objectAnalyzer) record(n int, raw []byte) {
 	if err != nil {
 		a.heading(n, t, raw)
 		a.fail("%v", err)
-		a.blank()
-		a.blank()
+		a.spill()
+		a.spill()
 
 		return
 	}
@@ -209,8 +223,8 @@ func (a *objectAnalyzer) record(n int, raw []byte) {
 	}
 
 	if show {
-		a.blank()
-		a.blank()
+		a.spill()
+		a.spill()
 	}
 
 	if _, ok := rec.(*obj.EOM); ok {
@@ -232,7 +246,7 @@ func (a *objectAnalyzer) heading(n int, t obj.RecordType, raw []byte) {
 		title = "UNKNOWN RECORD TYPE"
 	}
 
-	a.line(fmt.Sprintf("%d.  %s (%s), %d byte%s", n, title, code, len(raw), plural(len(raw))))
+	a.keep(keepRecord, fmt.Sprintf("%d.  %s (%s), %d byte%s", n, title, code, len(raw), plural(len(raw))))
 	a.blank()
 }
 

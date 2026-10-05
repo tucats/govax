@@ -98,7 +98,7 @@ func (a *objectAnalyzer) subrecord(show bool, k int, s obj.Subrecord) {
 		title = "Unknown Subrecord"
 	}
 
-	a.line(fmt.Sprintf("\t%d)  %s (GSD$C_%s)", k, title, s.GSDType()))
+	a.keep(keepItem, fmt.Sprintf("\t%d)  %s (GSD$C_%s)", k, title, s.GSDType()))
 
 	switch s := s.(type) {
 	case *obj.Psect:
@@ -116,7 +116,7 @@ func (a *objectAnalyzer) psect(p *obj.Psect) {
 	a.line(fmt.Sprintf("\t\t%-49s<-- psect %d", fmt.Sprintf("alignment: %d-byte boundary", 1<<p.Align), a.psects))
 	a.psects++
 
-	a.line("\t\tattribute flags:")
+	a.keep(keepFlags, "\t\tattribute flags:")
 	a.flagLines(psectFlagBits, p.Flags)
 	a.line("\t\tallocation: " + unsignedValue(p.Alloc))
 
@@ -134,7 +134,7 @@ func (a *objectAnalyzer) symbol(s *obj.Symbol) {
 	}
 
 	a.line(fmt.Sprintf("\t\tdata type: %s (%d)", name, s.DataType))
-	a.line("\t\tsymbol flags:")
+	a.keep(keepFlags, "\t\tsymbol flags:")
 	a.flagLines(symbolFlagBits, s.Flags)
 
 	if s.IsLocal() {
