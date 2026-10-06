@@ -142,6 +142,9 @@ const (
 	// docs/PHASE-38.md: the ANALYZE command.
 	cliAnalyze
 	cliAnalyzeErrors
+
+	// DIRECTORY's /VERSIONS value.
+	cliBadVersions
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -325,6 +328,10 @@ const (
 	// CLI_ANALYZEERRORS reports that ANALYZE/OBJECT found errors in a
 	// file; the report says what they are.
 	CLI_ANALYZEERRORS = CLIFacility<<FacilityPosition | cliAnalyzeErrors<<MessagePosition | StatusWarning
+
+	// CLI_BADVERSIONS reports a DIRECTORY/VERSIONS value below 1, which
+	// would list no versions at all.
+	CLI_BADVERSIONS = CLIFacility<<FacilityPosition | cliBadVersions<<MessagePosition | StatusError
 )
 
 func init() {
@@ -437,5 +444,6 @@ func init() {
 	DefineMessage(CLI_LIBINSERTED, CLIFacility, "INSERTED", "module !S inserted in !S")
 	DefineMessage(CLI_LIBREPLACED, CLIFacility, "REPLACED", "module !S replaced in !S")
 	DefineMessage(CLI_LIBDELETED, CLIFacility, "DELETED", "module !S deleted from !S")
+	DefineMessage(CLI_BADVERSIONS, CLIFacility, "BADVERSIONS", "Invalid /VERSIONS value !D (must be at least 1)")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

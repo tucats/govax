@@ -454,6 +454,8 @@ grammar console
         qualifier   date/id=905
         qualifier   owner/id=906
         qualifier   protection/id=907
+        qualifier   versions/id=908             -
+                    /type=$integer
 
     !
     ! govax-native extension (Phase 23, internal/rms + internal/console):

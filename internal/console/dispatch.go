@@ -361,6 +361,18 @@ func (d *Dispatcher) bindGrammar() {
 			Protection: r.Present("PROTECTION"),
 		}
 
+		// /VERSIONS=n lists only each file's n newest versions; its value
+		// is required (the grammar's $integer type) and must be at least
+		// 1, since an absent /VERSIONS is what lists every version.
+		if r.Present("VERSIONS") {
+			n := r.Int("VERSIONS")
+			if n < 1 {
+				return vmserrors.New(vmserrors.CLI_BADVERSIONS, n)
+			}
+
+			opts.Versions = int(n)
+		}
+
 		return d.Console.Directory(r.String("SPEC"), opts)
 	})
 

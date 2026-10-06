@@ -153,3 +153,71 @@ func TestDispatch_directoryWithSpecAndQualifiers(t *testing.T) {
 		t.Errorf("Dispatch DIRECTORY .../SIZE output = %q, want it to contain a block count", buf.String())
 	}
 }
+
+// TestDispatch_directoryVersions confirms DIRECTORY/VERSIONS=n lists only
+// each file's n newest versions, and that the value is required and must
+// be at least 1.
+func TestDispatch_directoryVersions(t *testing.T) {
+	c, buf := newTestConsole(t)
+	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.SetDefault("DUA0:"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	vol, ok := c.Mounts.Lookup("DUA0")
+	if !ok {
+		t.Fatal("Lookup(DUA0) after mount = not found")
+	}
+
+	for range 3 {
+		createConsoleTestFile(t, vol, "FOO.TXT")
+	}
+
+	createConsoleTestFile(t, vol, "BAR.TXT")
+
+	tests := []struct {
+		versions string
+		want     []string
+		notWant  []string
+	}{
+		{"1", []string{"FOO.TXT;3", "BAR.TXT;1"}, []string{"FOO.TXT;2", "FOO.TXT;1"}},
+		{"2", []string{"FOO.TXT;3", "FOO.TXT;2", "BAR.TXT;1"}, []string{"FOO.TXT;1"}},
+		{"5", []string{"FOO.TXT;3", "FOO.TXT;2", "FOO.TXT;1", "BAR.TXT;1"}, nil},
+	}
+
+	for _, tt := range tests {
+		buf.Reset()
+
+		if err := d.Dispatch("DIRECTORY/VERSIONS=" + tt.versions + " *.TXT;*"); err != nil {
+			t.Fatalf("DIRECTORY/VERSIONS=%s: %v", tt.versions, err)
+		}
+
+		out := buf.String()
+
+		for _, name := range tt.want {
+			if !strings.Contains(out, name) {
+				t.Errorf("DIRECTORY/VERSIONS=%s output = %q, want %s", tt.versions, out, name)
+			}
+		}
+
+		for _, name := range tt.notWant {
+			if strings.Contains(out, name) {
+				t.Errorf("DIRECTORY/VERSIONS=%s output = %q, don't want %s", tt.versions, out, name)
+			}
+		}
+	}
+
+	for _, bad := range []string{"0", "-1"} {
+		err := d.Dispatch("DIRECTORY/VERSIONS=" + bad)
+		if !errors.Is(err, vmserrors.New(vmserrors.CLI_BADVERSIONS)) {
+			t.Errorf("DIRECTORY/VERSIONS=%s error = %v, want CLI_BADVERSIONS", bad, err)
+		}
+	}
+
+	if err := d.Dispatch("DIRECTORY/VERSIONS"); err == nil {
+		t.Error("DIRECTORY/VERSIONS with no value = nil error, want one")
+	}
+}

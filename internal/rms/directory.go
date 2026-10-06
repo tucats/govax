@@ -47,6 +47,11 @@ type DirectoryOptions struct {
 	// shows both.
 	Owner      bool
 	Protection bool
+
+	// Versions, when above zero, is DIRECTORY/VERSIONS=n: only the n
+	// highest versions of each file name are listed. Zero lists every
+	// version the specification matches.
+	Versions int
 }
 
 // columns reports which of the optional columns a listing shows: /FULL
@@ -107,7 +112,7 @@ func (s *Session) Directory(specText string, opts DirectoryOptions) (string, err
 
 			fmt.Fprintf(&b, "\nDirectory %s:[%s]\n\n", r.Display, dir)
 
-			for _, m := range group.matches {
+			for _, m := range newestVersions(group.matches, opts.Versions) {
 				line, blocks, err := formatDirectoryEntry(vol, m, cols)
 				if err != nil {
 					return err
@@ -179,6 +184,47 @@ func groupMatchesByDir(matches []filespec.Match) []dirGroup {
 	}
 
 	return groups
+}
+
+// newestVersions returns the matches (all in one directory) that are
+// among the keep highest versions of their own name.type, in their
+// original order; a keep of zero or less returns matches unchanged.
+func newestVersions(matches []filespec.Match, keep int) []filespec.Match {
+	if keep <= 0 {
+		return matches
+	}
+
+	// Gather each name.type's versions, then find the lowest version
+	// that still makes the cut: a file is listed if its version is at
+	// least that one.
+	versions := make(map[string][]uint16)
+
+	for _, m := range matches {
+		key := m.Name + "." + m.Type
+		versions[key] = append(versions[key], m.Version)
+	}
+
+	lowest := make(map[string]uint16, len(versions))
+
+	for key, list := range versions {
+		sort.Slice(list, func(i, j int) bool { return list[i] > list[j] })
+
+		if len(list) > keep {
+			lowest[key] = list[keep-1]
+		}
+	}
+
+	kept := make([]filespec.Match, 0, len(matches))
+
+	for _, m := range matches {
+		if floor, ok := lowest[m.Name+"."+m.Type]; ok && m.Version < floor {
+			continue
+		}
+
+		kept = append(kept, m)
+	}
+
+	return kept
 }
 
 // directoryVersionDelim is the character DIRECTORY prints between a file's

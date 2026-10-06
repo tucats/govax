@@ -2903,7 +2903,7 @@ $DIR
     Syntax:
 
         DIRECTORY [/FULL] [/FILE] [/SIZE] [/DATE] [/OWNER] [/PROTECTION]
-                  [file-spec]
+                  [/VERSIONS=n] [file-spec]
 
     Parameter:
 
@@ -2932,9 +2932,15 @@ $DIR
                         granted to system, owner, group, and world, in
                         that order, as in (RWED,RWED,RE,).
 
+        /VERSIONS=n     Lists only the n most recent versions of each
+                        file: /VERSIONS=1 shows just the newest.  The
+                        value is required and must be at least 1.
+
     Examples:
 
         DIRECTORY
+
+        DIRECTORY/VERSIONS=2 *.TXT;*
 
         DIRECTORY/SIZE *.TXT;*
 
