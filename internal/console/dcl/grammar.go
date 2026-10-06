@@ -7,9 +7,7 @@ package dcl
 type ValueType int
 
 // Value type constants. TypeSwitch marks a qualifier that takes no value at
-// all (a plain on/off switch or a /SYNTAX= redirector), which has no
-// corresponding DCL_* datatype code in the C source since such qualifiers
-// never call DCLdefault/set a type.
+// all (a plain on/off switch or a /SYNTAX= redirector).
 const (
 	TypeSwitch ValueType = iota
 	TypeAny
@@ -37,8 +35,7 @@ type Keyword struct {
 	ID     int64
 	Syntax string // target Entry name, or "" for no redirect
 
-	// NoNegate is dclrtl.c's per-keyword DCL_NONEGATE flag (the grammar's
-	// /nonegatable): the keyword can't be given with a NO prefix.
+	// NoNegate means the keyword can't be given with a NO prefix.
 	NoNegate bool
 
 	// Value is the grammar's /value: the keyword may be written
@@ -48,8 +45,9 @@ type Keyword struct {
 	Value bool
 }
 
-// Type is a named list of keywords, matching a grammar "type" statement
-// (e.g. testdata/dcl/evax.dcl's show_types, dev_class).
+// Type is a named list of keywords. This is used in the grammar to
+// declare a set of legal values for a parameter or qualifier, and to
+// implement the grammar's /value= syntax on a keyword statement.
 type Type struct {
 	Name     string
 	Keywords []*Keyword
@@ -226,9 +224,10 @@ func (e *Entry) qualifier(name string) (q *Qualifier, negated bool, err error) {
 }
 
 // Handler is a routine bound to an Entry name via Grammar.Bind, called by
-// Grammar.Dispatch with the matched Entry's ID — the Go equivalent of a
-// DCLbind-registered console_*_dcl routine, which the C source always calls
-// with a single `long id` argument (see DCLdispatch).
+// Grammar.Dispatch with the matched Entry's ID. The ID field can be used
+// by the handler to disambiguate what part of the DCL grammar invoked it. The
+// handler is expected to use the Result to read any parameters or qualifiers
+// that were parsed from the command line.
 type Handler func(id int64, r *Result) error
 
 // Grammar is a parsed DCL-style grammar: the named verbs/syntaxes it
@@ -265,8 +264,11 @@ func (g *Grammar) Verbs() (names []string, alias []bool) {
 	return names, alias
 }
 
-// Bind registers h to be called by Dispatch when the named verb or syntax
-// entry (case-insensitive) ends up active after a Parse.
+// Bind registers a handler to be called by Dispatch when the named
+// verb or syntax entry (case-insensitive) ends up active after a Parse.
+// The handler is called with the entry's ID and the Result of the parse.
+// If there is no binding for a given verb or grammar, it does not caus an
+// error until the Dispatch call is made, at which point an error is returned.
 func (g *Grammar) Bind(name string, h Handler) {
 	g.handlers[upcase(name)] = h
 }

@@ -13,7 +13,7 @@ import (
 type Result struct {
 	Verb       string // the top-level verb name, before any /syntax= or keyword redirect
 	Active     string // the final active entry name (verb or a redirected-to syntax)
-	ActiveID   int64
+	ActiveID   int64 // the final active entry's ID, for the handler to disambiguate what part of the grammar invoked it
 	EntryPoint string
 
 	values map[string]*matchedValue
