@@ -1,7 +1,7 @@
 # Phase 48 — Multiprocessing, part 6: LIB$SPAWN and the milestone
 
-**Status:** planned (2026-10-06), awaiting review. Not started. Needs
-Phases 43–47.
+**Status:** planned (2026-10-06); decisions taken 2026-10-06 (see
+PHASE-43.md, Part A). Not started. Needs Phases 43–47.
 
 The program this phase belongs to is described in
 [PHASE-43.md](PHASE-43.md), Part A. Read that first.
@@ -166,3 +166,5 @@ them with PIDs and times masked.
 ## Progress log
 
 - 2026-10-06: Planned with Phase 43.
+- 2026-10-06: The author took every recommended decision in
+  PHASE-43.md, Part A.

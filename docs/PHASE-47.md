@@ -1,7 +1,8 @@
 # Phase 47 — Multiprocessing, part 5: files shared between processes
 
-**Status:** planned (2026-10-06), awaiting review. Not started. Needs
-Phase 45 (independent of Phase 46).
+**Status:** planned (2026-10-06); decisions taken 2026-10-06 (see
+PHASE-43.md, Part A). Not started. Needs Phase 45 (independent of Phase
+46).
 
 The program this phase belongs to is described in
 [PHASE-43.md](PHASE-43.md), Part A. Read that first.
@@ -199,3 +200,5 @@ because the console only runs at the prompt (Decision 4); checked.
 ## Progress log
 
 - 2026-10-06: Planned with Phase 43.
+- 2026-10-06: The author took every recommended decision in
+  PHASE-43.md, Part A.

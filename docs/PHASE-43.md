@@ -1,6 +1,6 @@
 # Phase 43 — Multiprocessing, part 1: processes as objects
 
-**Status:** planned (2026-10-06), awaiting review. Not started.
+**Status:** planned (2026-10-06); decisions taken 2026-10-06. Not started.
 
 Phase 43 is the first of six phases (43–48) that let govax run several VMS
 processes at once on one engine. This document has two parts:
@@ -346,18 +346,23 @@ Each phase leaves govax working and its new pieces tested. 44 needs 43;
 45 needs 44; 46 and 47 need 45 and are independent of each other; 48
 needs all of them.
 
-## Decisions for the author
+## Decisions
 
-Each has a recommendation; the plan below assumes it.
+**Decided 2026-10-06:** the author took every recommendation below; each
+"*Decided:*" is the option recommended at planning time. The author will
+also run VMS 7.3 probes as the phases need them (Decision 7), and ods2 may
+be changed in parallel with govax as needed (Decision 9). As the work
+proceeds, a reason to change any of these is raised with the author and
+recorded here.
 
-1. **Where the scheduler lives.** *Recommended:* in Go (`internal/sched`
+1. **Where the scheduler lives.** *Decided:* in Go (`internal/sched`
    plus the engine hook), switching contexts with the same code as
    `SVPCTX`/`LDPCTX`, as govax's system services are Go. The alternative,
    a VMS-style scheduler written in VAX code in `kernel.asm` driven by an
    IPL 3 software interrupt, is more faithful but would have to call back
    into Go for every service's wait anyway, and would be far slower to
    write and debug.
-2. **The quantum's unit.** *Recommended:* instructions executed by the
+2. **The quantum's unit.** *Decided:* instructions executed by the
    process (`vax.process.quantum`; a starting default of 20,000, tuned in
    Phase 44 so that switching costs little but processes visibly
    interleave), deterministic in both clock modes. The alternative is VMS's
@@ -365,36 +370,35 @@ Each has a recommendation; the plan below assumes it.
    mode, but wall-clock driven (so not reproducible) with
    `vax.hardware.clock`, and sensitive to `SET QUANTUM` (which `vax.init`
    sets to 1).
-3. **Which modes can be preempted.** *Recommended:* VMS's rule — any
+3. **Which modes can be preempted.** *Decided:* VMS's rule — any
    access mode, when IPL < 3 and not on the interrupt stack — with
    `vax.process.preempt=user` to limit it to user mode while debugging the
    scheduler, and `none` for cooperative switching (waits only).
 4. **Other processes while the console waits at `VAX>`/`DBG>`.**
-   *Recommended:* frozen. They run whenever the engine runs (a RUN, GO,
+   *Decided:* frozen. They run whenever the engine runs (a RUN, GO,
    CALL, or debugger GO/STEP), and a process left running when its parent's
    image ends waits for the next run. Running them in the background while
    the console reads commands would need the engine on its own goroutine,
    with locking around everything the console touches; possible later.
-5. **The scheduler flag's default.** *Recommended:* `false` until Phase
+5. **The scheduler flag's default.** *Decided:* `false` until Phase
    48's milestone passes, then `true`, keeping the key so it can be turned
    off. Alternatively it could stay `false` permanently (multiprocessing
    opt-in).
 6. **Reference books.** May the clean room use DIGITAL's published book
    *VAX/VMS Internals and Data Structures* (in the manuals folder) for
    concepts such as the boost values, state transitions, and the shape of
-   `$CREPRC`'s process startup? *Recommended:* yes, for descriptions only
+   `$CREPRC`'s process startup? *Decided:* yes, for descriptions only
    (it is a published DIGITAL book, like the manuals), never for its code
    excerpts; and the *VMS Internals I ... Listings* course book stays
-   off-limits, as listings. If no, those rules are chosen and logged as
-   unconfirmed.
-7. **VMS 7.3 probes.** Will you run probe programs on your VMS 7.3 system,
-   as for earlier phases? *Recommended:* yes, for the few things only real
+   off-limits, as listings.
+7. **VMS 7.3 probes.** Will the author run probe programs on the VMS 7.3
+   system, as for earlier phases? *Decided:* yes, for the few things only real
    output settles: the termination message's contents, `$GETJPI` across
    processes, `SHOW SYSTEM`/`SHOW PROCESS` layouts, RMS's sharing statuses,
    and `LIB$SPAWN`'s behavior. Each phase names its probes; none blocks
    progress (an unprobed rule is logged as unconfirmed).
 8. **`LIB$SPAWN`'s command language.** A spawned subprocess runs DCL, but
-   govax's DCL is the console, in Go. *Recommended:* the subprocess runs a
+   govax's DCL is the console, in Go. *Decided:* the subprocess runs a
    small Go "subprocess CLI" that executes the commands that run images —
    `RUN`, foreign commands (DCL symbols), and `MCR` if wanted — with
    others rejected as an unsupported command; extended later if needed.
@@ -402,17 +406,18 @@ Each has a recommendation; the plan below assumes it.
    the console made process-aware throughout (its output, its defaults,
    its tables).
 9. **Changing ods2.** The shared file control block (Phase 47) needs new
-   ods2 API, tagged and pinned as in Phase 34. *Recommended:* yes.
-10. **`$ENQ`/`$DEQ` as services.** *Recommended:* yes; they're a thin
+   ods2 API, tagged and pinned as in Phase 34. *Decided:* yes, and ods2
+   may be changed in parallel with govax whenever a phase needs it.
+10. **`$ENQ`/`$DEQ` as services.** *Decided:* yes; they're a thin
     layer on the lock manager RMS needs anyway, and the usual VMS way for
     processes sharing memory to synchronize.
-11. **The debugger with several processes.** *Recommended:* the debugger
+11. **The debugger with several processes.** *Decided:* the debugger
     debugs process 1; breakpoints belong to process 1 (a breakpoint
     address in P0 means process 1's P0); stepping freezes the other
     processes; a subprocess's image never starts a debugger of its own
     (VMS would start one if the image was linked `/DEBUG`). A later phase
     could add debugging a subprocess.
-12. **The milestone's two creation paths.** *Recommended:* the milestone
+12. **The milestone's two creation paths.** *Decided:* the milestone
     runs twice, child created by `$CREPRC` (possible from Phase 45/46) and
     by `LIB$SPAWN` (Phase 48).
 
@@ -599,5 +604,8 @@ Subtask 1 completes and checks this table; it's the map for subtask 2.
 
 ## Progress log
 
-- 2026-10-06: Planned (this document and Phases 44–48). Awaiting the
-  author's review and the decisions above.
+- 2026-10-06: Planned (this document and Phases 44–48).
+- 2026-10-06: The author took every recommended decision (Part A,
+  "Decisions"), agreed to run VMS 7.3 probes as needed, and allowed ods2
+  changes in parallel. The plan is under the author's review before
+  implementation starts.

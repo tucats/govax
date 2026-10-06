@@ -1,7 +1,7 @@
 # Phase 44 — Multiprocessing, part 2: the scheduler
 
-**Status:** planned (2026-10-06), awaiting review. Not started. Needs
-Phase 43.
+**Status:** planned (2026-10-06); decisions taken 2026-10-06 (see
+PHASE-43.md, Part A). Not started. Needs Phase 43.
 
 The program this phase belongs to — its goal, architecture, rules for
 every commit, decisions, and known bugs — is in
@@ -214,3 +214,5 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
 ## Progress log
 
 - 2026-10-06: Planned with Phase 43.
+- 2026-10-06: The author took every recommended decision in
+  PHASE-43.md, Part A.
