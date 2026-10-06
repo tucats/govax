@@ -1,5 +1,7 @@
 package vm
 
+import "github.com/tucats/govax/internal/vax"
+
 // This is the Go port of vm.c's translation buffer cache (struct TB
 // tb[128]) and its "sequential translation cache" (STC, the one-slot
 // cached_virtual_page/cached_physical_page fast path) -- see
@@ -54,26 +56,112 @@ package vm
 // page number) slots.
 const tbSize = 128
 
-// tbProtInvalid is the Go equivalent of vm.c's TB_INVALID (2): a sentinel
-// stored in tbEntry.protMode distinct from AccessRead(0)/AccessWrite(1),
-// meaning "this slot's mapping may still be valid, but its protection must
-// be re-checked" -- set by InvalidateProtection without needing a full
-// mapping flush.
-const tbProtInvalid = AccessType(2)
+// tbGrant is how much access a cached translation lets through without a
+// page-table walk: nothing, reads only, or reads and writes. The values
+// are ordered so that a single comparison answers "may this access use the
+// cached translation?": an access is let through when
+// tbGrant(access) < grant, since AccessRead is 0 and AccessWrite is 1.
+//
+//   - grantNone (0) lets nothing through: AccessRead (0) < 0 is false.
+//   - grantRead (1) lets a read through (0 < 1) but not a write (1 < 1 is
+//     false).
+//   - grantWrite (2) lets both through.
+//
+// grantNone is deliberately the zero value, so an empty (zeroed) TB slot
+// or a flushed STC grants nothing and can never produce a hit.
+type tbGrant uint8
+
+const (
+	grantNone tbGrant = iota
+	grantRead
+	grantWrite
+)
+
+// protGrants is the protection check precomputed as a table (Study 1, R3
+// in docs/PERFORMANCE.md): for each of the 16 protection codes and each of
+// the 4 access modes (kernel, executive, supervisor, user), the widest
+// access the code permits that mode. It holds exactly what
+// Protection.allows computes (see pte.go), so a cached translation can be
+// re-checked against whatever mode the CPU is in now with one array index
+// instead of allows' arithmetic. A write permission always implies a read
+// permission on the VAX (every protection code that lets a mode write
+// lets it read too), which is why one ordered value per mode is enough.
+//
+// `var protGrants = func() ... { ... }()` runs the function once, when the
+// package is initialized (before main starts), and stores its result; it
+// is Go's idiom for a table computed at startup rather than typed out.
+var protGrants = func() (t [16][4]tbGrant) {
+	for code := range t {
+		for mode := range t[code] {
+			switch pr, m := Protection(code), vax.AccessMode(mode); {
+			case pr.allows(m, AccessWrite):
+				t[code][mode] = grantWrite
+			case pr.allows(m, AccessRead):
+				t[code][mode] = grantRead
+			}
+		}
+	}
+
+	return t
+}()
 
 // tbEntry is the Go equivalent of vm.c's struct TB: everything cached about
-// one virtual page's mapping, corresponding one-to-one with a page table
-// entry's own PFN and protection code (see pte.go), plus a couple of
-// cache-management fields with no PTE equivalent. valid replaces the C
-// source's page == -1 sentinel for "this slot is empty"; protMode replaces
-// prot_valid, doing the same double duty (either the last-verified
-// AccessType, or tbProtInvalid).
+// one virtual page's mapping, taken from its page table entry (see pte.go).
+// valid replaces the C source's page == -1 sentinel for "this slot is
+// empty".
+//
+// Unlike vm.c's entry, which remembered the one access type (read or
+// write) it was last checked for and missed whenever the other one came
+// along, an entry here serves reads and writes alike (Study 1, R3 in
+// docs/PERFORMANCE.md). A program that reads and then writes the same
+// page, as nearly every loop over an array does, used to pay a full
+// page-table walk at each switch between the two. To serve both, the
+// entry caches the page's protection code and modify bit, and grants
+// holds, for each of the four access modes, how much access a hit may
+// let through:
+//
+//   - the protection code's own answer for that mode (protGrants), but
+//   - only grantRead where it would be grantWrite while the modify bit is
+//     still clear. The first write to a page has to set the bit in the
+//     page table entry in memory (see translate's walk), so that write
+//     must miss and walk; the walk refills the entry with modified set,
+//     and later writes hit.
+//
+// Because the grant is looked up for the CPU's current mode on every hit,
+// a change of mode needs no sweep over the entries: the next hit simply
+// reads a different element of grants. (vm.c instead marked every entry
+// "protection not verified" on each mode change; see InvalidateProtection.)
 type tbEntry struct {
 	valid    bool
+	modified bool
+	grants   [4]tbGrant
 	page     uint32
 	paddr    uint32
 	code     Protection
-	protMode AccessType
+}
+
+// newTBEntry builds the cache entry for one page from what a page-table
+// walk found: the page number, the physical address of the page's first
+// byte, its protection code, and whether its modify bit is set.
+func newTBEntry(page, paddr uint32, code Protection, modified bool) tbEntry {
+	e := tbEntry{valid: true, modified: modified, page: page, paddr: paddr, code: code}
+
+	// e.grants[mode] for each mode is copied from the table, then held
+	// down to reads if the page hasn't been written yet. `e.grants =
+	// protGrants[code&0xF]` copies the whole 4-element array at once (Go
+	// arrays are values, so assignment copies them); &0xF keeps the
+	// index inside the table even for a malformed code.
+	e.grants = protGrants[code&0xF]
+
+	if !modified {
+		for m, g := range e.grants {
+			if g == grantWrite {
+				e.grants[m] = grantRead
+			}
+		}
+	}
+
+	return e
 }
 
 // tbIndex computes vm.c's tb_idx: (region << 5) + (page & 0x1F).
@@ -112,19 +200,41 @@ type tb struct {
 
 	tries, hits, flushes, pflushes int64
 
-	// stcValid/stcVPage/stcPPage/stcMode are the STC's own one-slot cache
-	// of the most recent translation, matching vm.c's cached_virtual_page/
-	// cached_physical_page/cached_mbit (stcValid replaces the -1 sentinel
-	// on cached_virtual_page).
-	stcValid          bool
+	// stcVPage/stcPPage/stcGrant are the STC's own one-slot cache of the
+	// most recent translation, matching vm.c's cached_virtual_page/
+	// cached_physical_page/cached_mbit. stcVPage and stcPPage are the
+	// virtual and physical addresses of the page's first byte.
+	//
+	// stcGrant is how much access the slot lets through (see tbGrant): the
+	// cached entry's grant for the access mode the CPU was in when the
+	// slot was filled. grantNone means the slot is empty, replacing vm.c's
+	// -1 sentinel on cached_virtual_page. Where vm.c's cached_mbit held
+	// the one access type the slot was filled for, stcGrant lets a read
+	// hit a slot a write filled, and a write hit a slot a read filled once
+	// the page is known writable and modified.
+	//
+	// Unlike a TB entry, the slot doesn't re-check the mode on a hit, to
+	// keep the hit as cheap as possible (it is consulted on every memory
+	// access). So it must be emptied whenever the CPU's mode changes,
+	// which is what InvalidateProtection does.
 	stcVPage          uint32
 	stcPPage          uint32
-	stcMode           AccessType
+	stcGrant          tbGrant
 	stcTries, stcHits int64
 }
 
-// stcFlush is the Go equivalent of vm.c's STC_FLUSH macro.
-func (t *tb) stcFlush() { t.stcValid = false }
+// stcFlush is the Go equivalent of vm.c's STC_FLUSH macro: it empties the
+// one-slot cache, so the next translation can't hit it.
+func (t *tb) stcFlush() { t.stcGrant = grantNone }
+
+// stcFill makes the STC remember entry's translation for the virtual page
+// starting at vpage, letting through what entry grants the access mode
+// mode.
+func (t *tb) stcFill(vpage uint32, entry *tbEntry, mode vax.AccessMode) {
+	t.stcVPage = vpage
+	t.stcPPage = entry.paddr
+	t.stcGrant = entry.grants[mode&0x3]
+}
 
 // Why "invalidate" matters: a cache is only safe to use if it's kept in
 // sync with the thing it's caching. If a page table entry changes — its
@@ -165,26 +275,23 @@ func (m *Memory) InvalidatePage(addr uint32) {
 	m.tb.stcFlush()
 }
 
-// InvalidateProtection is the Go port of vm.c's invalidate_tb_prot(): every
-// slot's cached mapping (page/paddr/code) is left alone, but its verified
-// access mode is cleared to tbProtInvalid, forcing the next access to that
-// page to re-run the protection check -- called whenever CurMod actually
-// changes for a real mode transition (see docs/PHASE-21.md's design notes
-// on why this port hooks the real mode-change sites directly rather than
-// replicating read_psl_bits/write_psl_bits's call-site parity).
+// InvalidateProtection is called whenever the CPU's current access mode
+// (CurMod) actually changes, at a real mode transition (see
+// docs/PHASE-21.md's design notes on why this port hooks the real
+// mode-change sites directly rather than replicating read_psl_bits/
+// write_psl_bits's call-site parity). The same page can be permitted to
+// one mode and denied to another (see pte.go's Protection type), so
+// anything cached about what the *old* mode was allowed must be forgotten.
 //
-// This is a cheaper, more targeted invalidation than InvalidateTB: rather
-// than discarding what physical page each virtual page maps to (which
-// hasn't changed), it only forgets *which access modes were last verified
-// permitted*, which can change independently whenever the processor's
-// current privilege mode (CurMod) changes — see pte.go's Protection type
-// for why the same page can be permitted for one mode and denied for
-// another.
+// It began as the Go port of vm.c's invalidate_tb_prot(), which marked
+// every one of the 128 TB entries "protection not verified", forcing the
+// next access to each page to walk the page table again. Since Study 1's
+// R3 (docs/PERFORMANCE.md) a TB entry checks the current mode on every
+// hit (see tbEntry), so the entries need nothing, and only the STC, which
+// doesn't check the mode, is emptied. That turns a 128-entry sweep at
+// every REI, CHMx, and AST delivery into one store, and pages stay cached
+// across mode changes.
 func (m *Memory) InvalidateProtection() {
-	for i := range m.tb.entries {
-		m.tb.entries[i].protMode = tbProtInvalid
-	}
-
 	m.tb.stcFlush()
 }
 
@@ -217,22 +324,36 @@ func (m *Memory) STCStats() (tries, hits int64) {
 // TBEntry is a read-only snapshot of one populated translation-buffer
 // slot, for SHOW TB's own dump (the Go equivalent of dump_tb()'s per-slot
 // printf). Only slots with a cached mapping (valid) are ever returned by
-// TBSnapshot -- an entry that's merely protection-invalidated (ProtMode ==
-// tbProtInvalid) still has a mapping and is included, matching dump_tb's
-// own `if (tb[n].page == -1L) continue;` skip (which does not test
-// prot_valid).
+// TBSnapshot, matching dump_tb's own `if (tb[n].page == -1L) continue;`
+// skip.
+//
+// Modified is the page's modify bit as the entry cached it: until it is
+// set, a write to the page doesn't hit the entry (see tbEntry).
 type TBEntry struct {
 	Index    int
 	VA       uint32
 	PA       uint32
 	Prot     Protection
-	ProtMode AccessType // AccessRead, AccessWrite, or tbProtInvalid
+	Modified bool
 }
 
-// ProtValid reports whether this entry's cached protection check is still
-// trusted (ProtMode != the invalid sentinel), matching dump_tb's own
-// `tb[n].prot_valid != TB_INVALID` test.
-func (e TBEntry) ProtValid() bool { return e.ProtMode != tbProtInvalid }
+// Permits reports the widest access a translation-buffer hit on this
+// entry lets through for an access mode: AccessWrite (reads and writes),
+// AccessRead (reads only), or ok false (neither, so every access from
+// that mode walks the page table, and faults if the protection code
+// really denies it). It replaces vm.c's per-entry "mode last verified",
+// which SHOW TB used to show, now that an entry serves every mode (see
+// tbEntry).
+func (e TBEntry) Permits(mode vax.AccessMode) (access AccessType, ok bool) {
+	switch newTBEntry(0, 0, e.Prot, e.Modified).grants[mode&0x3] {
+	case grantWrite:
+		return AccessWrite, true
+	case grantRead:
+		return AccessRead, true
+	default:
+		return AccessRead, false
+	}
+}
 
 // TBSnapshot returns every currently-populated TB slot, in index order,
 // matching dump_tb()'s own `for (n = 0; n < 128; n++)` scan. VA is
@@ -263,7 +384,7 @@ func (m *Memory) TBSnapshot() []TBEntry {
 			VA:       va,
 			PA:       e.paddr,
 			Prot:     e.code,
-			ProtMode: e.protMode,
+			Modified: e.modified,
 		})
 	}
 

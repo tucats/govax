@@ -1456,10 +1456,9 @@ func (c *Console) ShowMap() error {
 	return nil
 }
 
-// tbModeNames matches vm.c's mode_name[] ({"READ", "WRITE", "-NONE-"}),
-// indexed by a TBEntry's ProtMode (AccessRead/AccessWrite, or the
-// tbProtInvalid sentinel value 2 -- see internal/vm.TBEntry.ProtValid).
-var tbModeNames = [3]string{"READ", "WRITE", "-NONE-"}
+// tbModeNames matches vm.c's mode_name[] ({"READ", "WRITE"}), indexed by
+// the vm.AccessType a TB entry lets through (vm.TBEntry.Permits).
+var tbModeNames = [2]string{"READ", "WRITE"}
 
 // ShowTB implements SHOW TB, a direct port of console_show.c's case 155
 // plus vm.c's dump_tb(): the sequential translation cache's own try/hit/
@@ -1493,14 +1492,22 @@ func (c *Console) ShowTB() error {
 		tries, hits, tries-hits, ratioPercent(tries, hits))
 	c.Printf("    Flushes=%d   PFlushes=%d\n", flushes, pflushes)
 
+	// Each entry's MODE= says what a hit on it lets the CPU's current
+	// access mode do: "KERNEL WRITE" (reads and writes), "KERNEL READ"
+	// (reads; a write walks the page table, to set the page's modify bit
+	// or to fault), or "-NONE-" (every access walks). vm.c's dump_tb
+	// showed the one access type the entry was last checked for instead;
+	// govax's entries serve both (Study 1, R3 in docs/PERFORMANCE.md).
+	curMod := c.CPU.PSL().CurMod()
+
 	for _, e := range c.Mem.TBSnapshot() {
-		prefix := ""
-		if e.ProtValid() {
-			prefix = modeNames[c.CPU.PSL().CurMod()] + " "
+		mode := "-NONE-"
+		if access, ok := e.Permits(curMod); ok {
+			mode = modeNames[curMod] + " " + tbModeNames[access]
 		}
 
-		c.Printf("    TB(%02X)  VA=%08X  PA=%08X  PROT=%-4s  MODE=%s%s\n",
-			e.Index, e.VA, e.PA, e.Prot, prefix, tbModeNames[e.ProtMode])
+		c.Printf("    TB(%02X)  VA=%08X  PA=%08X  PROT=%-4s  MODE=%s\n",
+			e.Index, e.VA, e.PA, e.Prot, mode)
 	}
 
 	return nil

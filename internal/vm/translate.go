@@ -155,6 +155,16 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 // (whose own hit-check runs after the bit is stripped in the C source).
 // Population of either cache on a successful walk is unaffected: vm.c
 // does that unconditionally regardless of the flag. See docs/PHASE-21.md.
+//
+// PROBEx sets the CPU's mode to the mode being probed for the length of
+// its two translations, then puts it back, without InvalidateProtection.
+// That leaves the STC filled with what the *probed* mode may do. It's
+// safe: PROBEx never probes a mode more privileged than the current one,
+// and a less privileged mode never may do more than a more privileged one
+// (see pte.go's Protection), so the slot can only under-grant, causing at
+// worst an extra miss. A TB entry checks the mode on every hit, so a probe
+// gets the probed mode's answer from it, not the answer cached for the
+// mode that last touched the page (Study 1, R3 in docs/PERFORMANCE.md).
 func (m *Memory) ProbeTranslate(cpu *vax.CPU, addr uint32, access AccessType) (uint32, error) {
 	return m.translate(cpu, addr, access, false)
 }
@@ -196,14 +206,18 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 	byteOffset := addr & (pageSize - 1)
 
 	// The sequential translation cache: a one-slot fast path for the
-	// (very common) case of the same page/mode as the immediately
-	// preceding translation, consulted before the 128-entry TB and
-	// unaffected by TBDR -- matching vm.c's own #if STC block, always
-	// compiled in. See ProbeTranslate's doc comment for why this check is
-	// gated on signal.
+	// (very common) case of the same page as the immediately preceding
+	// translation, consulted before the 128-entry TB and unaffected by
+	// TBDR -- matching vm.c's own #if STC block, always compiled in. See
+	// ProbeTranslate's doc comment for why this check is gated on signal.
+	//
+	// The slot hits if it holds this page and lets this access through:
+	// tbGrant(access) < stcGrant is that test (see tbGrant in tb.go). An
+	// empty slot's stcGrant is grantNone, which lets nothing through, so
+	// no separate "is the slot in use" test is needed.
 	m.tb.stcTries++
 
-	if signal && m.tb.stcValid && vpage == m.tb.stcVPage && access == m.tb.stcMode {
+	if signal && vpage == m.tb.stcVPage && tbGrant(access) < m.tb.stcGrant {
 		m.tb.stcHits++
 
 		return m.tb.stcPPage + byteOffset, nil
@@ -225,22 +239,33 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 	idx := tbIndex(region, page)
 	entry := &m.tb.entries[idx]
 
+	// mode is the CPU's current access mode (kernel, executive,
+	// supervisor, or user), read from the Processor Status Longword. A
+	// TB hit is checked against it, and an STC fill records what it may
+	// do.
+	mode := cpu.PSL().CurMod()
+
 	// The 128-entry translation buffer, consulted only when TBDR == 0
 	// ("TB caching enabled") -- matching vm.c's `if (!vax.TBDR)`. Note
 	// this gates consultation only: a successful full walk below still
 	// populates entry regardless of TBDR, exactly as vm.c does.
+	//
+	// The entry hits if it holds this page and its grant for the current
+	// mode lets this access through (see tbEntry in tb.go). An empty
+	// entry grants nothing to any mode, so it can't hit. Anything else
+	// falls through to the walk below: a page not cached, a write to a
+	// page whose modify bit isn't set yet (the walk sets it), and an
+	// access the protection code denies, which the walk then reports as
+	// the same fault, with the same parameters, it always has.
 	if cpu.PR(vax.TBDR) == 0 {
 		m.tb.tries++
 
-		if entry.valid && entry.page == page && entry.protMode == access {
+		if entry.page == page && tbGrant(access) < entry.grants[mode] {
 			m.tb.hits++
 
 			paddr := entry.paddr + byteOffset
 
-			m.tb.stcValid = true
-			m.tb.stcVPage = vpage
-			m.tb.stcPPage = entry.paddr
-			m.tb.stcMode = access
+			m.tb.stcFill(vpage, entry, mode)
 
 			if cpu.DebugEnabled(vax.DebugTB) {
 				ratio := 0.0
@@ -450,12 +475,13 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 	// function instead of walking the page table all over again.
 	paddr := pte.PFN()<<9 + byteOffset
 
-	*entry = tbEntry{valid: true, page: page, paddr: pte.PFN() << 9, code: pte.Protection(), protMode: access}
+	//
+	// The entry caches the page's protection code and modify bit, so it
+	// can serve reads and writes, from any mode the code permits, not just
+	// this one access (see tbEntry in tb.go).
+	*entry = newTBEntry(page, pte.PFN()<<9, pte.Protection(), pte.Modified())
 
-	m.tb.stcValid = true
-	m.tb.stcVPage = vpage
-	m.tb.stcPPage = pte.PFN() << 9
-	m.tb.stcMode = access
+	m.tb.stcFill(vpage, entry, mode)
 
 	return paddr, nil
 }

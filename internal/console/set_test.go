@@ -43,8 +43,11 @@ func TestSetSymbol_psl(t *testing.T) {
 // TestSetSymbol_pslInvalidatesProtectionOnModeChange matches
 // console_set.c's own bare "SET PSL=value" case, which calls
 // read_psl_bits() right after -- invalidating cached TB protection state
-// if CurMod actually changed (docs/PHASE-21.md). The cached mapping
-// itself must survive; only its verified access mode is reset.
+// if CurMod actually changed (docs/PHASE-21.md). Since Study 1's R3
+// (docs/PERFORMANCE.md) that empties only the one-slot sequential
+// translation cache (STC), which, unlike a TB entry, doesn't check the
+// mode on a hit. So the access after the SET PSL must not be an STC hit,
+// but the TB's cached mapping survives and serves it.
 func TestSetSymbol_pslInvalidatesProtectionOnModeChange(t *testing.T) {
 	c := newRunnableConsole(t)
 
@@ -52,9 +55,16 @@ func TestSetSymbol_pslInvalidatesProtectionOnModeChange(t *testing.T) {
 		t.Fatalf("LoadLongword: %v", err)
 	}
 
-	entries := c.Mem.TBSnapshot()
-	if len(entries) == 0 || !entries[0].ProtValid() {
-		t.Fatalf("TBSnapshot() = %+v, want a populated, protection-valid entry first", entries)
+	// A second load of the same page, in the same mode, is an STC hit:
+	// the baseline the access after the mode change is compared with.
+	_, stcHitsBefore := c.Mem.STCStats()
+
+	if _, err := c.Mem.LoadLongword(c.CPU, 0x200); err != nil {
+		t.Fatalf("LoadLongword (repeat): %v", err)
+	}
+
+	if _, stcHits := c.Mem.STCStats(); stcHits != stcHitsBefore+1 {
+		t.Fatalf("STCStats() hits = %d, want %d (a repeat in the same mode hits the STC)", stcHits, stcHitsBefore+1)
 	}
 
 	// CurMod occupies PSL bits 25:24 -- switch it from Kernel (0) to User
@@ -69,13 +79,23 @@ func TestSetSymbol_pslInvalidatesProtectionOnModeChange(t *testing.T) {
 		t.Fatalf("CurMod() = %v, want User (the SET PSL should have taken effect)", got)
 	}
 
-	entries = c.Mem.TBSnapshot()
-	if len(entries) == 0 {
+	if len(c.Mem.TBSnapshot()) == 0 {
 		t.Fatalf("TBSnapshot() empty after SET PSL, want the mapping to survive")
 	}
 
-	if entries[0].ProtValid() {
-		t.Errorf("entries[0].ProtValid() = true after SET PSL changed CurMod, want false (forced recheck)")
+	_, stcHitsBefore = c.Mem.STCStats()
+	_, tbHitsBefore, _, _ := c.Mem.TBStats() //nolint:dogsled
+
+	if _, err := c.Mem.LoadLongword(c.CPU, 0x200); err != nil {
+		t.Fatalf("LoadLongword (user mode): %v", err)
+	}
+
+	if _, stcHits := c.Mem.STCStats(); stcHits != stcHitsBefore {
+		t.Errorf("STCStats() hits = %d after SET PSL changed CurMod, want %d (the STC emptied)", stcHits, stcHitsBefore)
+	}
+
+	if _, tbHits, _, _ := c.Mem.TBStats(); tbHits != tbHitsBefore+1 { //nolint:dogsled
+		t.Errorf("TBStats() hits = %d after SET PSL changed CurMod, want %d (the TB mapping kept)", tbHits, tbHitsBefore+1)
 	}
 }
 

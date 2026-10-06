@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/tucats/govax/internal/vax"
@@ -159,11 +160,14 @@ func TestInvalidatePageClearsOnlyOneSlot(t *testing.T) {
 	}
 }
 
-// TestInvalidateProtectionKeepsMappingButForcesRecheck matches vm.c's
-// invalidate_tb_prot(): the cached page/paddr survive, but the next
-// access must redo the protection check (i.e. it's reported as a TB miss,
-// not a hit), and after that it's cached again as a hit.
-func TestInvalidateProtectionKeepsMappingButForcesRecheck(t *testing.T) {
+// TestInvalidateProtectionKeepsMappingFlushesSTC covers what a mode
+// change does to the caches since Study 1's R3 (docs/PERFORMANCE.md):
+// InvalidateProtection empties the one-slot STC, which doesn't check the
+// mode on a hit, but leaves the TB alone, since a TB entry checks the
+// current mode on every hit. So the next access to the same page misses
+// the STC and hits the TB. (vm.c's invalidate_tb_prot instead made the
+// TB entry miss too, forcing a page-table walk.)
+func TestInvalidateProtectionKeepsMappingFlushesSTC(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 
 	vaddr := uint32(2*pageSize) + 0x10
@@ -178,33 +182,283 @@ func TestInvalidateProtectionKeepsMappingButForcesRecheck(t *testing.T) {
 		t.Errorf("TBSnapshot() empty after InvalidateProtection, want the mapping to survive")
 	}
 
+	_, stcHitsBefore := mem.STCStats()
 	_, hitsBefore, _, _ := mem.TBStats() //nolint:dogsled
+	walksBefore := mem.translationCount
 
 	if _, err := mem.Translate(cpu, vaddr, AccessRead); err != nil {
 		t.Fatalf("Translate after InvalidateProtection: %v", err)
 	}
 
-	_, hitsAfter, _, _ := mem.TBStats() //nolint:dogsled
-	if hitsAfter != hitsBefore {
-		t.Errorf("TBStats() hits changed right after InvalidateProtection, want a miss (re-checked protection)")
+	if _, stcHits := mem.STCStats(); stcHits != stcHitsBefore {
+		t.Errorf("STCStats() hits = %d right after InvalidateProtection, want %d (the STC emptied)", stcHits, stcHitsBefore)
 	}
 
-	// Now it's cached again -- the next identical access after this one
-	// (via a different page first, to dodge the STC) is a real TB hit.
+	if _, hits, _, _ := mem.TBStats(); hits != hitsBefore+1 { //nolint:dogsled
+		t.Errorf("TBStats() hits = %d, want %d (the TB entry kept, and hit)", hits, hitsBefore+1)
+	}
+
+	if mem.translationCount != walksBefore {
+		t.Errorf("page-table walks = %d, want %d (no walk)", mem.translationCount, walksBefore)
+	}
+}
+
+// TestTBReadThenWriteSetsModifyBitOnce covers Study 1's R3: a TB entry
+// serves reads and writes alike, but a page's first write must still walk
+// the page table, to set the modify (M) bit in its page table entry in
+// memory. The page is read first (the walk caches it with M clear), then
+// written (a walk, which sets M and refills the entry), then read and
+// written again, both of which must hit the cache with no further walk.
+func TestTBReadThenWriteSetsModifyBitOnce(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+
+	pteAddr := uint32(p0PTPhys + 2*4)
+	vaddr := uint32(2*pageSize) + 0x10
+	other := uint32(3*pageSize) + 0x20 // a second page, to empty the STC
+
+	modified := func() bool {
+		raw, err := mem.readPhysLongword(pteAddr)
+		if err != nil {
+			t.Fatalf("read PTE: %v", err)
+		}
+
+		return PTE(raw).Modified()
+	}
+
+	if _, err := mem.Translate(cpu, vaddr, AccessRead); err != nil {
+		t.Fatalf("Translate (read): %v", err)
+	}
+
+	if modified() {
+		t.Fatal("M bit set by a read")
+	}
+
+	// The read left this page in the STC, so the write meets the STC
+	// first: the STC must not let it through, or M would never be set.
+	walks := mem.translationCount
+
+	if _, err := mem.Translate(cpu, vaddr, AccessWrite); err != nil {
+		t.Fatalf("Translate (first write): %v", err)
+	}
+
+	if !modified() {
+		t.Error("M bit not set by the first write after a read")
+	}
+
+	if mem.translationCount != walks+1 {
+		t.Errorf("first write did %d page-table walks, want 1 (to set M)", mem.translationCount-walks)
+	}
+
+	// From here on the page is cached as written: a read and a write,
+	// each after another page has taken the STC, both hit the TB.
+	for _, access := range []AccessType{AccessRead, AccessWrite} {
+		if _, err := mem.Translate(cpu, other, AccessRead); err != nil {
+			t.Fatalf("Translate other: %v", err)
+		}
+
+		walks = mem.translationCount
+		_, hits, _, _ := mem.TBStats() //nolint:dogsled
+
+		got, err := mem.Translate(cpu, vaddr, access)
+		if err != nil {
+			t.Fatalf("Translate (access %d): %v", access, err)
+		}
+
+		if want := uint32(ptBase+2*pageSize) + 0x10; got != want {
+			t.Errorf("Translate (access %d) = %#08x, want %#08x", access, got, want)
+		}
+
+		if mem.translationCount != walks {
+			t.Errorf("access %d walked the page table, want a TB hit", access)
+		}
+
+		if _, h, _, _ := mem.TBStats(); h != hits+1 { //nolint:dogsled
+			t.Errorf("access %d: TB hits = %d, want %d", access, h, hits+1)
+		}
+	}
+}
+
+// TestTBWriteThenReadHitsSTC: a page whose first access was a write is
+// cached as writable, so a read of it right after is an STC hit (it used
+// to miss, since vm.c's STC remembered only the access type it was filled
+// for).
+func TestTBWriteThenReadHitsSTC(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+
+	vaddr := uint32(2*pageSize) + 0x10
+
+	if _, err := mem.Translate(cpu, vaddr, AccessWrite); err != nil {
+		t.Fatalf("Translate (write): %v", err)
+	}
+
+	_, stcHits := mem.STCStats()
+
+	if _, err := mem.Translate(cpu, vaddr, AccessRead); err != nil {
+		t.Fatalf("Translate (read): %v", err)
+	}
+
+	if _, h := mem.STCStats(); h != stcHits+1 {
+		t.Errorf("STCStats() hits = %d, want %d (a read after a write hits the STC)", h, stcHits+1)
+	}
+}
+
+// TestTBHitChecksCurrentMode covers Study 1's R3: a TB entry is checked
+// against the CPU's current mode on every hit, so a kernel-only page
+// cached by a kernel-mode access faults when user mode touches it, with
+// exactly the fault an uncached access gets (the hit falls through to the
+// page-table walk, which reports it). The mode is changed here without
+// InvalidateProtection, and the STC is emptied by touching another page,
+// so it is the TB entry's own check that is tested.
+func TestTBHitChecksCurrentMode(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+
+	setProtection(t, mem, 1, ProtKW)
+
+	vaddr := uint32(1*pageSize) + 0x10
 	other := uint32(3*pageSize) + 0x20
+
+	setMode := func(m vax.AccessMode) {
+		psl := cpu.PSL()
+		psl.SetCurMod(m)
+		cpu.SetPSL(psl)
+	}
+
+	setMode(vax.Kernel)
+
+	if _, err := mem.Translate(cpu, vaddr, AccessWrite); err != nil {
+		t.Fatalf("Translate (kernel write): %v", err)
+	}
+
 	if _, err := mem.Translate(cpu, other, AccessRead); err != nil {
 		t.Fatalf("Translate other: %v", err)
 	}
 
-	_, hitsBefore2, _, _ := mem.TBStats() //nolint:dogsled
+	setMode(vax.User)
 
-	if _, err := mem.Translate(cpu, vaddr, AccessRead); err != nil {
-		t.Fatalf("Translate again: %v", err)
+	for _, access := range []AccessType{AccessRead, AccessWrite} {
+		_, err := mem.Translate(cpu, vaddr, access)
+
+		var tf *TranslationFault
+		if !errors.As(err, &tf) {
+			t.Fatalf("user access %d: error = %v, want a *TranslationFault", access, err)
+		}
+
+		want := TranslationFault{Kind: ProtectionViolation, Addr: vaddr, Mask: byte(access)}
+		if *tf != want {
+			t.Errorf("user access %d: fault = %+v, want %+v", access, *tf, want)
+		}
+
+		// The fault cleared the entry, as vm.c clears a slot on every
+		// fault; cache it again from kernel mode for the next round.
+		setMode(vax.Kernel)
+
+		if _, err := mem.Translate(cpu, vaddr, AccessWrite); err != nil {
+			t.Fatalf("Translate (kernel write again): %v", err)
+		}
+
+		if _, err := mem.Translate(cpu, other, AccessRead); err != nil {
+			t.Fatalf("Translate other: %v", err)
+		}
+
+		setMode(vax.User)
 	}
 
-	_, hitsAfter2, _, _ := mem.TBStats() //nolint:dogsled
-	if hitsAfter2 != hitsBefore2+1 {
-		t.Errorf("TBStats() hits = %d, want %d (re-cached after the forced recheck)", hitsAfter2, hitsBefore2+1)
+	// Back in kernel mode, the cached entry serves the kernel again.
+	setMode(vax.Kernel)
+
+	_, hits, _, _ := mem.TBStats() //nolint:dogsled
+
+	if _, err := mem.Translate(cpu, vaddr, AccessWrite); err != nil {
+		t.Fatalf("Translate (kernel write, cached): %v", err)
+	}
+
+	if _, h, _, _ := mem.TBStats(); h != hits+1 { //nolint:dogsled
+		t.Errorf("TB hits = %d, want %d (kernel write served from the cache)", h, hits+1)
+	}
+}
+
+// TestTBWriteToReadOnlyPageFaults: a page every mode may read but none may
+// write (PTE$K_UR), cached by a read, must not let a write through; the
+// write faults just as it would uncached.
+func TestTBWriteToReadOnlyPageFaults(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+
+	setProtection(t, mem, 1, ProtUR)
+
+	vaddr := uint32(1*pageSize) + 0x10
+
+	if _, err := mem.Translate(cpu, vaddr, AccessRead); err != nil {
+		t.Fatalf("Translate (read): %v", err)
+	}
+
+	_, err := mem.Translate(cpu, vaddr, AccessWrite)
+
+	var tf *TranslationFault
+	if !errors.As(err, &tf) || *tf != (TranslationFault{Kind: ProtectionViolation, Addr: vaddr, Mask: byte(AccessWrite)}) {
+		t.Errorf("write error = %v, want a protection violation for a write", err)
+	}
+}
+
+// TestProtGrantsMatchesAllows checks the precomputed protection table
+// against Protection.allows, for every protection code, mode, and access.
+func TestProtGrantsMatchesAllows(t *testing.T) {
+	for code := range 16 {
+		for mode := range 4 {
+			g := protGrants[code][mode]
+
+			for _, access := range []AccessType{AccessRead, AccessWrite} {
+				want := Protection(code).allows(vax.AccessMode(mode), access)
+				if got := tbGrant(access) < g; got != want {
+					t.Errorf("code %d mode %d access %d: table says %v, allows says %v", code, mode, access, got, want)
+				}
+			}
+		}
+	}
+}
+
+// TestTBEntryPermits checks what SHOW TB reports for an entry: a writable
+// page is reads-only until its modify bit is set, and a mode the code
+// denies gets nothing.
+func TestTBEntryPermits(t *testing.T) {
+	for _, tc := range []struct {
+		prot     Protection
+		modified bool
+		mode     vax.AccessMode
+		want     AccessType
+		ok       bool
+	}{
+		{ProtKW, true, vax.Kernel, AccessWrite, true},
+		{ProtKW, false, vax.Kernel, AccessRead, true},
+		{ProtKW, true, vax.User, AccessRead, false},
+		{ProtUR, true, vax.User, AccessRead, true},
+		{ProtURKW, true, vax.User, AccessRead, true},
+		{ProtURKW, true, vax.Kernel, AccessWrite, true},
+	} {
+		got, ok := TBEntry{Prot: tc.prot, Modified: tc.modified}.Permits(tc.mode)
+		if got != tc.want || ok != tc.ok {
+			t.Errorf("Permits(%v, M=%v, mode %d) = %d, %v, want %d, %v",
+				tc.prot, tc.modified, tc.mode, got, ok, tc.want, tc.ok)
+		}
+	}
+}
+
+// setProtection rewrites the protection code of newTranslateFixture's P0
+// page n directly in its page table, before anything has cached it.
+func setProtection(t *testing.T, mem *Memory, n int, prot Protection) {
+	t.Helper()
+
+	addr := uint32(p0PTPhys + n*4)
+
+	raw, err := mem.readPhysLongword(addr)
+	if err != nil {
+		t.Fatalf("read PTE %d: %v", n, err)
+	}
+
+	pte := PTE(raw)
+	pte.SetProtection(prot)
+
+	if err := mem.writePhysLongword(addr, uint32(pte)); err != nil {
+		t.Fatalf("write PTE %d: %v", n, err)
 	}
 }
 
@@ -366,5 +620,32 @@ func TestResetTBCountersLeavesFlushesAndSTCAlone(t *testing.T) {
 	stcTriesAfter, stcHitsAfter := mem.STCStats()
 	if stcTriesAfter != stcTriesBefore || stcHitsAfter != stcHitsBefore {
 		t.Errorf("STCStats() = %d/%d, want unchanged %d/%d", stcTriesAfter, stcHitsAfter, stcTriesBefore, stcHitsBefore)
+	}
+}
+
+// TestProbeTranslateChecksProbedMode: PROBEx (internal/cpu's emulProbe)
+// lowers the CPU's mode to the probed one around a ProbeTranslate. With
+// vm.c's TB, an entry cached by a kernel-mode read hit for any later read,
+// whatever the mode, so probing a kernel-only page for user mode after the
+// kernel had read it said "accessible". A TB entry now checks the current
+// mode on every hit (Study 1, R3 in docs/PERFORMANCE.md), so the probe
+// gets user mode's answer.
+func TestProbeTranslateChecksProbedMode(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+
+	setProtection(t, mem, 1, ProtKW)
+
+	vaddr := uint32(1*pageSize) + 0x10
+
+	if _, err := mem.Translate(cpu, vaddr, AccessRead); err != nil {
+		t.Fatalf("Translate (kernel read): %v", err)
+	}
+
+	psl := cpu.PSL()
+	psl.SetCurMod(vax.User)
+	cpu.SetPSL(psl)
+
+	if _, err := mem.ProbeTranslate(cpu, vaddr, AccessRead); err == nil {
+		t.Error("ProbeTranslate (user read of a kernel-only page) succeeded, want a protection violation")
 	}
 }

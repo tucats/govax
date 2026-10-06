@@ -305,9 +305,13 @@ func TestSetModeStackSameModeNoOp(t *testing.T) {
 // TestSetModeStackRealModeChangeInvalidatesProtection matches
 // docs/PHASE-21.md's design decision: a real CurMod transition through
 // setModeStack (fault/interrupt delivery, and Phase 13's RUN) must call
-// Memory.InvalidateProtection -- the cached mapping survives, but its
-// verified access mode is reset, forcing the next access to re-check
-// protection.
+// Memory.InvalidateProtection, so that nothing cached about what the old
+// mode could do lets the new mode through. The page here is kernel-only
+// (PTE$K_KW): kernel mode reads it, which caches its translation, and
+// after the drop to user mode the same read must fault, not be served
+// from the cache. The cached mapping itself survives the mode change
+// (Study 1, R3 in docs/PERFORMANCE.md: TB entries check the mode on every
+// hit, so only the one-slot STC needs emptying).
 func TestSetModeStackRealModeChangeInvalidatesProtection(t *testing.T) {
 	e := newEngine()
 	cpu := e.cpu
@@ -326,34 +330,33 @@ func TestSetModeStackRealModeChangeInvalidatesProtection(t *testing.T) {
 	cpu.SetPR(vax.SLR, 0)
 
 	var pte vm.PTE
-	
+
 	pte.SetValid(true)
-	pte.SetProtection(vm.ProtUW)
+	pte.SetProtection(vm.ProtKW)
 	pte.SetPFN(pfn)
 	putLongword(t, cpu, e.mem, sbrPhys, uint32(pte))
 
 	cpu.SetPR(vax.MAPEN, 1)
 
 	if _, err := e.mem.Translate(cpu, vaddr, vm.AccessRead); err != nil {
-		t.Fatalf("Translate: %v", err)
+		t.Fatalf("Translate (kernel): %v", err)
 	}
 
 	cpu.SetPR(vax.MAPEN, 0)
 
-	entries := e.mem.TBSnapshot()
-	if len(entries) == 0 || !entries[0].ProtValid() {
-		t.Fatalf("TBSnapshot() = %+v, want one entry with ProtValid() true before the mode change", entries)
-	}
-
 	e.setModeStack(vax.User, false) // a real Kernel -> User transition
 
-	entries = e.mem.TBSnapshot()
-	if len(entries) == 0 {
+	if len(e.mem.TBSnapshot()) == 0 {
 		t.Fatalf("TBSnapshot() empty after a mode change, want the mapping to survive")
 	}
 
-	if entries[0].ProtValid() {
-		t.Errorf("entries[0].ProtValid() = true after a real mode change, want false (forced recheck)")
+	cpu.SetPR(vax.MAPEN, 1)
+
+	_, err := e.mem.Translate(cpu, vaddr, vm.AccessRead)
+
+	var tf *vm.TranslationFault
+	if !errors.As(err, &tf) || tf.Kind != vm.ProtectionViolation {
+		t.Errorf("Translate (user) error = %v, want a protection violation, not a cached kernel translation", err)
 	}
 }
 

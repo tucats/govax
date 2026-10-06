@@ -2653,6 +2653,25 @@ widened."
   keyword it abbreviates; taking registers out would add a special case.
 - **Status**: deliberate (2026-10-05, Phase 42 subtask 14).
 
+### [Performance, Study 1 R3] PROBE could hit a TB entry cached for another mode
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/vm.c` (`vm()`'s TB hit test,
+  `tbp->page == page && tbp->prot_valid == mode`) with `emul_misc.c`'s
+  `emul_probe`, ported to `internal/vm/translate.go` and
+  `internal/cpu/misc.go`'s `emulProbe`.
+- **What**: a TB entry remembered only the access type (read or write) it
+  was last checked for, not the access mode. Correctness relied on
+  `invalidate_tb_prot` running at every mode change, but PROBER/PROBEW set
+  `cur_mod` to the probed mode directly, around its translations, without
+  it. So once kernel mode had read a kernel-only page, PROBER for user
+  mode hit the kernel's entry and reported the page accessible (Z clear),
+  where the manual's PROBE checks the probed mode's access.
+- **Status**: fixed in Go (2026-10-06), as a side effect of Study 1's R3
+  (`docs/PERFORMANCE.md`): a TB entry now checks the current mode's
+  access on every hit, so the probe gets the probed mode's answer.
+  `TestProbeTranslateChecksProbedMode` (`internal/vm/tb_test.go`) fails on
+  the old TB and passes now.
+
 <!--
 Entry template:
 
