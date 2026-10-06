@@ -53,6 +53,8 @@
 //   - A verb's or syntax's /assignment=syntax: a line whose first
 //     positional token is "name=" continues in that syntax (SET X=5).
 //   - A keyword's /nonegatable, dclrtl.c's DCL_NONEGATE.
+//   - A keyword's /value: KEYWORD=value, the value going to the first
+//     parameter of the keyword's /syntax= (SET PROMPT="text").
 //   - A leading '@' is a verb by itself ("@FILE").
 //
 // This is a from-scratch,

@@ -930,6 +930,7 @@ grammar console
         keyword     quantum             /syntax=set_quantum/nonegatable
         keyword     uiquantum           /syntax=set_uiquantum/nonegatable
         keyword     default             /syntax=set_default/nonegatable
+        keyword     prompt              /syntax=set_prompt/nonegatable/value
 
 
     verb set/id=1760/assignment=set_symbol
@@ -987,5 +988,13 @@ grammar console
         parameter   spec/id=1805                -
                     /type=$string               -
                     /prompt="Directory"
+
+    ! SET PROMPT="text", the console's prompt (and the vax.console.prompt
+    ! setting). PROMPT takes its value after "=", so SET PROMPT="X" isn't
+    ! an assignment to a symbol named PROMPT.
+    syntax set_prompt/id=1810
+        parameter   text/id=1811                -
+                    /type=$string               -
+                    /prompt="Prompt"
 
 end

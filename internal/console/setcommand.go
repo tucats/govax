@@ -60,6 +60,9 @@ func (d *Dispatcher) bindSetCommands() {
 	// operator's default device and directory for DIRECTORY, DELETE,
 	// PURGE, COPY, and TYPE; Session.SetDefault checks its syntax.
 	g.Bind("SET_DEFAULT", func(id int64, r *dcl.Result) error { return c.SetDefault(r.String("SPEC")) })
+
+	// SET PROMPT="text" changes the console's prompt.
+	g.Bind("SET_PROMPT", func(id int64, r *dcl.Result) error { return c.SetPrompt(r.String("TEXT")) })
 }
 
 // parseRadixArg accepts either console_set.c's own HEX/HEXA/16/DEC/DECI/10

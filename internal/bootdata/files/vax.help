@@ -1093,6 +1093,7 @@ $SET
         SET ASSEMBLER
         SET DEBUG
         SET DEFAULT
+        SET PROMPT
         SET QUANTUM
         SET RADIX
         SET SYMBOL
@@ -1638,7 +1639,7 @@ $CONF,KEY
     The console
 
         vax.console.prompt            The console's prompt.  Default
-                                      "VAX> ".
+                                      "VAX> ".  SET PROMPT changes it.
 
         vax.console.lines             The screen's height in lines for
                                       TYPE/PAGE, used when the terminal's
@@ -3690,6 +3691,34 @@ $SE  ,DEFA
         SET DEFAULT DUA0:[MYDIR]
 
     See also the help for SHOW DEFAULT.
+
+$SET ,PROM
+$SE  ,PROM
+
+    The SET PROMPT command changes the prompt the console shows when it
+    reads a command.  The new prompt is also stored as the configuration
+    value vax.console.prompt, so it stays in effect in later govax
+    sessions.
+
+    Syntax:
+
+        SET PROMPT="<text>"
+
+    Parameter:
+
+        <text>          The new prompt, in double quotes so that its case
+                        and any blanks (such as a trailing one) are kept.
+                        An empty string ("") returns to the default
+                        prompt, "VAX> ".
+
+    The ASM> prompt of the interactive assembler and the debugger's DBG>
+    prompt are not changed.
+
+    Examples:
+
+        SET PROMPT="vax$ "
+
+        SET PROMPT=""
 
 $SHOW,DEFA
 $SH  ,DEFA

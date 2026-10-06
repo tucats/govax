@@ -371,7 +371,7 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 
 		// An entry with /assignment= continues in that syntax when its
 		// first positional token is "name=": SET NAME=value.
-		if nextParam == 0 && lastParam == nil && active.Assignment != "" && isAssignment(pos) {
+		if nextParam == 0 && lastParam == nil && active.Assignment != "" && isAssignment(pos) && !g.valueKeyword(active, pos) {
 			active = g.entries[active.Assignment]
 
 			continue
@@ -422,7 +422,13 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 			continue
 		}
 
-		token, rem, err := readTypedValue(pos, p.Type, p.Separator)
+		// A keyword that takes a value (KEYWORD=value) ends at its "=".
+		sep := p.Separator
+		if t := g.types[p.TypeName]; p.Type == TypeKeyword && sep == 0 && t != nil && t.hasValueKeywords() {
+			sep = '='
+		}
+
+		token, rem, err := readTypedValue(pos, p.Type, sep)
 		if err != nil {
 			return nil, err
 		}
@@ -432,6 +438,11 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 		val, redirect, negated, err := g.resolveValue(p.Type, p.TypeName, token)
 		if err != nil {
 			return nil, vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
+		}
+
+		// Its value follows the "=", for the redirected syntax.
+		if p.Type == TypeKeyword && g.takesValue(p.TypeName, val.Str) {
+			pos = skipSeparator(pos, '=')
 		}
 
 		r.set(p.Name, p.ID, negated, val)
@@ -848,6 +859,48 @@ func (g *Grammar) syntaxLater(r *Result, verb *Entry, line string) (*Entry, stri
 	}
 
 	return nil, "", false
+}
+
+// valueKeyword reports whether s, the rest of a command line, starts
+// with "KEYWORD=" for a /value keyword of active's first parameter's
+// type, spelled out in full: SET PROMPT="text" is the PROMPT keyword, not
+// an assignment to a symbol named PROMPT (while SET P=1 still is one).
+func (g *Grammar) valueKeyword(active *Entry, s string) bool {
+	if len(active.Parameters) == 0 || active.Parameters[0].Type != TypeKeyword {
+		return false
+	}
+
+	name, _ := readBareToken(strings.TrimLeft(s, " \t"))
+
+	t := g.types[active.Parameters[0].TypeName]
+	if t == nil {
+		return false
+	}
+
+	for _, k := range t.Keywords {
+		if k.Value && k.Name == name {
+			return true
+		}
+	}
+
+	return false
+}
+
+// takesValue reports whether keyword name of type typeName is a /value
+// keyword.
+func (g *Grammar) takesValue(typeName, name string) bool {
+	t := g.types[typeName]
+	if t == nil {
+		return false
+	}
+
+	for _, k := range t.Keywords {
+		if k.Name == name {
+			return k.Value
+		}
+	}
+
+	return false
 }
 
 // readBareToken reads a run of characters up to the next '=', ':', '/',

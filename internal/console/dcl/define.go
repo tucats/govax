@@ -70,6 +70,9 @@ func ParseGrammar(text string) (*Grammar, error) {
 				case "NONEGATABLE":
 					kw.NoNegate = true
 
+				case "VALUE":
+					kw.Value = true
+
 				default:
 					err = vmserrors.New(vmserrors.CLI_BADSWITCH, "keyword", k)
 				}

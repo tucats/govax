@@ -40,6 +40,12 @@ type Keyword struct {
 	// NoNegate is dclrtl.c's per-keyword DCL_NONEGATE flag (the grammar's
 	// /nonegatable): the keyword can't be given with a NO prefix.
 	NoNegate bool
+
+	// Value is the grammar's /value: the keyword may be written
+	// KEYWORD=value (SET PROMPT="text"), the value going to the first
+	// parameter of the keyword's /syntax=. Spelled out in full, such a
+	// keyword isn't taken for an entry's /assignment= form.
+	Value bool
 }
 
 // Type is a named list of keywords, matching a grammar "type" statement
@@ -51,6 +57,17 @@ type Type struct {
 
 func (t *Type) lookup(name string) (kw *Keyword, negated bool, err error) {
 	return matchKeyword(t.Keywords, name)
+}
+
+// hasValueKeywords reports whether any of t's keywords is a /value one.
+func (t *Type) hasValueKeywords() bool {
+	for _, k := range t.Keywords {
+		if k.Value {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Value holds a literal default (or matched) value for a Parameter or

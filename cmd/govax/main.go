@@ -100,10 +100,7 @@ func main() {
 // meant to catch a runaway *user* program shouldn't also cut short the
 // emulator's own boot sequence.
 func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.Writer, in io.ReadCloser, args []string) error {
-	var (
-		help   *console.Help
-		prompt string
-	)
+	var help *console.Help
 
 	// Squirrel away the command line arguments.
 	argText := strings.Builder{}
@@ -236,12 +233,6 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		fmt.Fprintln(out, "vax.init:", err)
 	}
 
-	if s := settings.Get("vax.console.prompt"); s != "" {
-		prompt = s
-	} else {
-		prompt = "VAX> "
-	}
-
 	// After that, if we're still running, do a console loop.
 	if c.Running() {
 		// Applied only from here on, not during vax.init's own boot sequence
@@ -254,7 +245,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		}
 
 		rl, err := readline.NewEx(&readline.Config{
-			Prompt:      prompt,
+			Prompt:      c.Prompt(),
 			HistoryFile: historyFile,
 			Stdin:       rlStdin,
 		})
@@ -274,13 +265,14 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 			// default in the reference tool; see PHASE-19.md's own scope note).
 			// The debugger's session has its own prompt too, as the VMS
 			// debugger's does. Assembler mode comes first, as it does in
-			// Dispatcher.Dispatch.
+			// Dispatcher.Dispatch. The console's own prompt is asked for
+			// each time, since SET PROMPT can change it.
 			if c.InAssemblerMode() {
 				rl.SetPrompt("ASM> ")
 			} else if c.InDebugger() {
 				rl.SetPrompt(debugger.Prompt)
 			} else {
-				rl.SetPrompt(prompt)
+				rl.SetPrompt(c.Prompt())
 			}
 
 			line, err := rl.Readline()
