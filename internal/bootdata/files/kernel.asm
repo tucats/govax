@@ -1,3 +1,5 @@
+;  Copyright (c) 1997-2026 Forest Edge Software
+;                See LICENSE for applicable MIT license information.
 ;
 ;       MicroKernel OS for VAX.
 ;

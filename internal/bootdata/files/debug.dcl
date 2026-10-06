@@ -1,3 +1,5 @@
+!  Copyright (c) 1997-2026 Forest Edge Software
+!                See LICENSE for applicable MIT license information.
 !
 !   DCLRTL grammar definition for the govax debugger (internal/debugger,
 !   docs/PHASE-42.md). The debugger has its own command set, modeled on

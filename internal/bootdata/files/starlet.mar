@@ -1,3 +1,6 @@
+;  Copyright (c) 1997-2026 Forest Edge Software
+;                See LICENSE for applicable MIT license information.
+;
 ; STARLET.MAR: govax's own system macros.
 ;
 ; This is the source of govax's STARLET.MLB, the macro library MACRO uses

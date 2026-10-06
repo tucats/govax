@@ -1,4 +1,7 @@
 
+;  Copyright (c) 1997-2026 Forest Edge Software
+;                See LICENSE for applicable MIT license information.
+;
 ;	Define the system symbols for each system return value
 
 .set /perm  SS$_NORMAL ^d1
