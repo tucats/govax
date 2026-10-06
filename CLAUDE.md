@@ -11,9 +11,12 @@ never had.
 
 - `docs/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
   index.
-- `docs/PHASE-00.md` … `PHASE-42.md` — one doc per phase: goal, C-source file
+- `docs/PHASE-00.md` … `PHASE-48.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
-  done through 42; 40 follows 38 directly: there is no Phase 39). Read the relevant phase doc
+  done through 42; 40 follows 38 directly: there is no Phase 39). Phases
+  43–48 are the planned multiprocessing program (subprocesses, a scheduler,
+  interprocess mailboxes and shared memory, RMS file sharing);
+  `PHASE-43.md`'s Part A describes the whole program. Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
