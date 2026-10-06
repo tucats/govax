@@ -28,6 +28,15 @@ func (c *Console) ConsoleWriteByte(b byte) {
 	}
 }
 
+// ConsoleWrite is XFC$CONSOLE_PUT: writes a whole string to Out, in one
+// Write, so a line of microkernel output reaches the terminal at once
+// instead of a character at a time. Does nothing if no output is configured.
+func (c *Console) ConsoleWrite(p []byte) {
+	if c.Out != nil {
+		_, _ = c.Out.Write(p)
+	}
+}
+
 // ConsoleReadByte is XFC$CONSOLE_READ. Reads one byte from In, or reports 0
 // if no input source is configured or it's exhausted — matching a real
 // getchar() at EOF returning a sentinel the C source doesn't itself check

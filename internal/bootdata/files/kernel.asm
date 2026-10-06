@@ -120,10 +120,14 @@ exe$base:       .byte 0
 ;   CONSOLE TRANSMIT INTERRUPT HANDLER
 ;--------------------------------------------------------------------
 
+;       The microkernel no longer writes the console through the
+;       transmit data register (TXDB) or waits for its "ready"
+;       interrupt: output goes out through XFC$CONSOLE_PUT and
+;       XFC$CONSOLE_WRITE (see exe$put_one).  This handler stays only
+;       to dismiss the interrupt if a program enables it itself.
 
                 .align          8
-exe$tx:         movl            #1, @#exe$tx_ready
-                rei
+exe$tx:         rei
 
 
 ;--------------------------------------------------------------------
@@ -442,19 +446,12 @@ exe$exit:       ret
                 .set            EXE$PUT_CONSOLE 0
                 .entry          exe$$put_console
 
-;       First, see if the device is ready or not.  This is set
-;       by the ready interrupt service routine when a byte is
-;       successsfully written.
+;       The byte to write is in R5.  It goes straight to the emulator
+;       (XFC$CONSOLE_WRITE writes R0's low byte), so there is no device
+;       to wait for and no interrupt to depend on.
 
-
-_wait:          tstl            @#exe$tx_ready
-                beql            _wait
-
-;       Mark the device as busy, and write a byte to it.
-
-                clrl            @#exe$tx_ready                              
-                mtpr            r5, #VAX$PR_TXDB
-                
+                movzbl          r5, r0
+                xfc             #xfc$console_write
                 movl            #SS$_NORMAL, r0
                 ret
 
@@ -608,15 +605,10 @@ _done:          ret
 exe$initialize: tstl            @#exe$init_done ; If we've already done
                 bneq            exe$init_exit   ; this, just return
 
-;       Set the bit in the TXCS register that says to interrupt
-;       us when the data is successfully written.  This will cause
-;       the EXE$TX interrupt handler to be hit again, which resets 
-;       our internal ready flag at exe$tx_ready.
-
-                mtpr            #^X40,#VAX$PR_TXCS
-
-;       Similarly, let's indicate that we accept interrupts for the
-;       console input.
+;       Console output doesn't use the transmit interrupt (TXCS is
+;       left with interrupts disabled): exe$put_one writes through an
+;       XFC instead.  Input still does: indicate that we accept
+;       interrupts for the console input.
 
                 mtpr            #^X40,#VAX$PR_RXCS
                 
@@ -862,30 +854,25 @@ _exit:          movl            #1, r0
 
 ;               LIB$PUT_ONE( struct dsc$descriptor_s * msg );
 
-                .entry          exe$put_one, ^m<r2,r3,r4,r5,r6>
+;       The argument is either a descriptor's address or, if it is
+;       ^XFF or less, a single character.  Either way one XFC hands it
+;       to the emulator, which writes it to the console: no CHMK, no
+;       console device registers, and no interrupt to wait for.
 
-                movl            b^4(ap), r5          ; Get descriptor address
+                .entry          exe$put_one, ^m<>
 
-                cmpl            r5, #^X0ff             ; see if it's one char.
+                movl            b^4(ap), r0          ; Get descriptor address
+
+                cmpl            r0, #^X0ff           ; see if it's one char.
                 blequ           _byte                ; if so, print it
 
-                clrl            r6                   ; Empty counter register
-                movw            (r5), r6             ; Get count word from desc
-                beql            _exit                ; If zero, then no work
-                movl            b^4(r5), r2          ; Else get address
-                clrl            r4                   ; Clear data register
-
-_loop:          movb            (r2)+, r5            ; Get byte, advance ptr
-                chmk            #EXE$PUT_CONSOLE     ; Output single byte
-                blbc            r0, _errexit         ; If bad RC, done
-                sobgtr          r6, _loop            ; Decrement counter, rpt
+                xfc             #xfc$console_put     ; Write the whole string
                 brb             _exit
 
-_byte:          chmk            #EXE$PUT_CONSOLE     ; Output single byte in R5
-                blbc            r0, _errexit         ; If bad RC, done
+_byte:          xfc             #xfc$console_write   ; Write the byte in R0
 
 _exit:          movl            #SS$_NORMAL, r0      ; Signal success
-_errexit:       ret                                  ; And flee
+                ret                                  ; And flee
 
 
 ;               LIB$QUIT_EMULATION( void )
@@ -1190,7 +1177,6 @@ _done:          ret
                 .align          ^X0200
                 .set            exe$wbase .
                 
-exe$tx_ready:   .long           1               ; Is TXCS available?
 exe$rx_ready:   .long           0               ; Is RXCS available?
 exe$init_done:  .long           0               ; Is kernel initialized?
 exe$int_count:  .long           0               ; Interval timer count

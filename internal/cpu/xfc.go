@@ -16,6 +16,7 @@ const (
 	xfcConsoleWrite = 0x01
 	xfcConsoleRead  = 0x02
 	xfcConsoleCmd   = 0x03
+	xfcConsolePut   = 0x04 // govax's own; not in eVAX (docs/PERFORMANCE.md, Study 1 R1)
 	xfcQuitEmulator = 0x78
 	xfcDCL          = 0x79
 	xfcP1Vector     = 0x7A
@@ -25,6 +26,12 @@ const (
 	xfcVMW          = 0x7E
 	xfcVMR          = 0x7F
 )
+
+// ssNormal is VMS's "normal successful completion" status, SS$_NORMAL. A
+// VMS status is a longword whose low bit set means success, and 1 is the
+// plain success code. (internal/cpu doesn't import internal/vmsdef, which
+// holds VMS's symbol tables, for this one value.)
+const ssNormal = 1
 
 // DCL subfunction codes for xfcDCL, selected by R0 — matching emul_xfc.c's
 // nested switch on vax.R0 within case 0x79.
@@ -71,6 +78,9 @@ func emulXfc(e *Engine, d *Decoded) error {
 
 	case xfcConsoleCmd:
 		return emulXfcConsoleCmd(e)
+
+	case xfcConsolePut:
+		return emulXfcConsolePut(e)
 
 	case xfcQuitEmulator:
 		if e.cpu.PSL().CurMod() != vax.Kernel {
@@ -141,6 +151,56 @@ func emulXfcConsoleCmd(e *Engine) error {
 	}
 
 	e.cpu.SetGPR(vax.R0, e.services.ConsoleCommand(string(buf)))
+
+	return nil
+}
+
+// emulXfcConsolePut is XFC$CONSOLE_PUT: write a whole string to the
+// console in one exit to the emulator. R0 holds the address of a VMS string
+// descriptor, the standard way VAX/VMS code passes a string: a 16-bit
+// length (bytes 0-1), two type/class bytes this ignores (bytes 2-3), and the
+// 32-bit address of the text (bytes 4-7). On return R0 is SS$_NORMAL (1).
+//
+// This replaced the microkernel's original console output, which emulated
+// the console terminal's hardware one character at a time: a CHMK into
+// kernel mode per character, an MTPR to the transmit data register (TXDB),
+// and then a spin until the "transmitter ready" interrupt arrived and set a
+// flag again. That interrupt could only be admitted on an interval-clock
+// tick when another interrupt was in the way, so console output depended on
+// the clock running. One XFC per string has no such dependency, and no
+// privilege is needed: like XFC$CONSOLE_WRITE it can be used from any mode.
+//
+// The descriptor and the text are read with the current mode's access
+// checks, so a program can only print memory it could read itself; a
+// failed read is the ordinary access-violation fault. A zero length writes
+// nothing.
+func emulXfcConsolePut(e *Engine) error {
+	if e.services == nil {
+		return &Fault{Code: ExcPrivileged}
+	}
+
+	dsc := e.cpu.GPR(vax.R0)
+
+	length, err := e.mem.LoadWord(e.cpu, dsc)
+	if err != nil {
+		return err
+	}
+
+	addr, err := e.mem.LoadLongword(e.cpu, dsc+4)
+	if err != nil {
+		return err
+	}
+
+	if length > 0 {
+		buf := make([]byte, length)
+		if err := e.mem.Load(e.cpu, addr, buf); err != nil {
+			return err
+		}
+
+		e.services.ConsoleWrite(buf)
+	}
+
+	e.cpu.SetGPR(vax.R0, ssNormal)
 
 	return nil
 }

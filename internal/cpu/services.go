@@ -32,6 +32,10 @@ type SystemServices interface {
 	ConsoleWriteByte(b byte)
 	ConsoleReadByte() byte
 
+	// ConsoleWrite implements XFC$CONSOLE_PUT: write a whole string (already
+	// read out of emulated memory) to the console in one call.
+	ConsoleWrite(p []byte)
+
 	// ConsoleCommand implements XFC$CONSOLE_CMD: dispatch cmd as a console
 	// command line, returning its status code.
 	ConsoleCommand(cmd string) uint32

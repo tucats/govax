@@ -14,6 +14,7 @@ import (
 var builtinSymbols = map[string]uint32{
 	// XFC function codes.
 	"XFC$CONSOLE_WRITE": 1, "XFC$CONSOLE_READ": 2, "XFC$CONSOLE_CMD": 3,
+	"XFC$CONSOLE_PUT": 4,
 	"XFC$VMR": 0x7F, "XFC$VMW": 0x7E, "XFC$SHIM": 0x7D, "XFC$HALT": 0x7C,
 	"XFC$HALT_SILENT": 0x7B, "XFC$P1VECTOR": 0x7A, "XFC$DCL": 0x79,
 	"XFC$QUIT_EMULATION": 0x78,

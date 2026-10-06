@@ -700,8 +700,8 @@ p1vector: 7FFEDE00-7FFEE91D
 00000360: 61 78 20 62 6F 6F 74 20 62 6C 6F 63 6B 10 00 00
 00000370: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 00000380: 00 00 00 00 00
-sym 10$@189 0000033B flags=82 forward=0
-sym 10$@190 00000347 flags=82 forward=0
+sym 10$@185 0000033B flags=82 forward=0
+sym 10$@186 00000347 flags=82 forward=0
 sym BACK 00000585 flags=2 forward=0
 sym BLKPRV 00000355 flags=2 forward=0
 sym BOOT 0000035D flags=2 forward=0

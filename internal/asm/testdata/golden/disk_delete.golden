@@ -739,8 +739,8 @@ p1vector: 7FFEDE00-7FFEE91D
 00000446: 14 00 00 00 66 04 00 00 00 00 00 00
 0000047A: 53 63 72 61 74 63 68 20 64 61 74 61
 00000492: 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-sym 10$@189 00000367 flags=82 forward=0
-sym 10$@190 00000373 flags=82 forward=0
+sym 10$@185 00000367 flags=82 forward=0
+sym 10$@186 00000373 flags=82 forward=0
 sym BUF 00000486 flags=2 forward=0
 sym CHAN 00000492 flags=2 forward=0
 sym CHECK 0000036D flags=2 forward=0

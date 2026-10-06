@@ -207,19 +207,15 @@ func runAsmRegressionWithKernel(t *testing.T, fixture, entrySymbol string, maxSt
 // hitting the same RTL surface -- not a demand that every one completes
 // cleanly.
 //
-// wantHitCap records which of these are currently known to spin forever
-// rather than fault or complete: LIB$GET_INPUT (input.asm, test.asm) polls
-// a "ready"/"available" flag
-// kernel.asm expects an EXC$CONWRITE/EXC$CONREAD interrupt's own ISR to
-// reset -- this port's TXCS/TXDB/RXCS/RXDB privileged-register handling has
-// no interrupt-delivery modeling at all yet (see
-// TestAssemble_kernelThenHelloRunsBounded's doc comment and
-// docs/PHASE-12.md's own progress log for the full story), so the wait
-// never ends. decc$printf/decc$atoi (atoi.asm, fmt.asm) and sys$trnlnm
-// (logname.asm) don't go through that console-I/O polling loop at all, so
-// they're held to the stricter "must not hit the cap" bar. Nor does
-// LIB$PUT_OUTPUT (foo.asm) any longer: it's internal/librtl's routine,
-// reached through its .SHIM stub, not kernel.asm's polling loop.
+// wantHitCap records which of these are known to spin forever rather than
+// fault or complete. None do now. input.asm and test.asm used to: their
+// output went through kernel.asm's exe$put_one, which wrote a byte at a
+// time to the console's transmit register and then polled a "ready" flag
+// that only the transmit interrupt's handler set again. This test never
+// runs exe$initialize, which enabled that interrupt, so the second byte
+// waited forever. Since docs/PERFORMANCE.md's Study 1 R1, exe$put_one
+// writes through XFC$CONSOLE_PUT instead, with nothing to wait for. The
+// field stays so a fixture that is expected to spin can still say so.
 func TestRegression_rtlDependentAsmFixtures(t *testing.T) {
 	for _, tc := range []struct {
 		fixture, entry string
@@ -228,9 +224,9 @@ func TestRegression_rtlDependentAsmFixtures(t *testing.T) {
 		{"foo.asm", "TEST", false},
 		{"atoi.asm", "TEST", false},
 		{"fmt.asm", "TEST", false},
-		{"input.asm", "INPUT_TEST", true},
+		{"input.asm", "INPUT_TEST", false},
 		{"logname.asm", "MAIN", false},
-		{"test.asm", "TEST", true},
+		{"test.asm", "TEST", false},
 	} {
 		t.Run(tc.fixture, func(t *testing.T) {
 			_, err, hitCap := runAsmRegressionWithKernel(t, tc.fixture, tc.entry, 2_000_000)

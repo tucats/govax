@@ -12,6 +12,8 @@ import (
 type fakeServices struct {
 	writtenByte byte
 	readByte    byte
+	written     []byte // everything XFC$CONSOLE_PUT wrote
+	writeCalls  int    // how many ConsoleWrite calls there were
 
 	consoleCmd string
 	consoleRC  uint32
@@ -38,6 +40,11 @@ type fakeServices struct {
 
 func (f *fakeServices) ConsoleWriteByte(b byte) { f.writtenByte = b }
 func (f *fakeServices) ConsoleReadByte() byte   { return f.readByte }
+
+func (f *fakeServices) ConsoleWrite(p []byte) {
+	f.written = append(f.written, p...)
+	f.writeCalls++
+}
 
 func (f *fakeServices) ConsoleCommand(cmd string) uint32 {
 	f.consoleCmd = cmd
@@ -100,6 +107,63 @@ func TestEmulXfcConsoleWrite(t *testing.T) {
 
 	if f.writtenByte != 'A' {
 		t.Errorf("writtenByte = %#x, want 'A'", f.writtenByte)
+	}
+}
+
+// putDescriptor stores a VMS string descriptor at dsc for text stored at
+// addr: a word of length, two class/type bytes (left zero), and the text's
+// address.
+func putDescriptor(t *testing.T, e *Engine, dsc, addr uint32, text string) {
+	t.Helper()
+
+	if err := e.mem.StoreWord(e.cpu, dsc, uint16(len(text))); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := e.mem.StoreLongword(e.cpu, dsc+4, addr); err != nil {
+		t.Fatal(err)
+	}
+
+	if text != "" {
+		if err := e.mem.Store(e.cpu, addr, []byte(text)); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// TestEmulXfcConsolePut checks that XFC$CONSOLE_PUT writes the whole string
+// a descriptor points at, in one ConsoleWrite, and leaves SS$_NORMAL in R0.
+func TestEmulXfcConsolePut(t *testing.T) {
+	e, f := xfcEngine()
+	putDescriptor(t, e, 0x2000, 0x2100, "Hello, VAX\r\n")
+
+	e.cpu.SetGPR(vax.R0, 0x2000)
+	stepInstruction(t, e, 0xFC, xfcConsolePut)
+
+	if string(f.written) != "Hello, VAX\r\n" || f.writeCalls != 1 {
+		t.Errorf("written = %q in %d calls, want %q in 1", f.written, f.writeCalls, "Hello, VAX\r\n")
+	}
+
+	if got := e.cpu.GPR(vax.R0); got != ssNormal {
+		t.Errorf("R0 = %#x, want SS$_NORMAL", got)
+	}
+}
+
+// TestEmulXfcConsolePutEmpty checks that a zero-length string writes nothing
+// but still succeeds.
+func TestEmulXfcConsolePutEmpty(t *testing.T) {
+	e, f := xfcEngine()
+	putDescriptor(t, e, 0x2000, 0x2100, "")
+
+	e.cpu.SetGPR(vax.R0, 0x2000)
+	stepInstruction(t, e, 0xFC, xfcConsolePut)
+
+	if f.writeCalls != 0 {
+		t.Errorf("ConsoleWrite called %d times, want 0 for an empty string", f.writeCalls)
+	}
+
+	if got := e.cpu.GPR(vax.R0); got != ssNormal {
+		t.Errorf("R0 = %#x, want SS$_NORMAL", got)
 	}
 }
 

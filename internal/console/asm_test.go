@@ -151,19 +151,15 @@ func TestAssemble_helloEntrySymbolAndMask(t *testing.T) {
 // with a bounded step count so a real gap anywhere in the CHMK/RTL dispatch
 // chain reports as a clear, logged outcome rather than hanging the suite.
 //
-// Through Phase 12, this test hit its step cap every time: kernel.asm's own
-// EXE$$PUT_CONSOLE (CHMK 0) writes each byte by clearing a memory flag
-// (exe$tx_ready), doing MTPR to TXDB, then spin-waiting on that same flag --
-// expecting the EXC$CONWRITE interrupt kernel.asm's own ISR (exe$tx) handles
-// to set it back to 1, which setPrivReg's then-plain-register-store TXCS/
-// TXDB cases never delivered. Phase 14 closes that gap (interrupt.go's
-// Engine.Interrupt/quantum-boundary delivery, wired into TXCS/TXDB in
-// procreg.go) -- this test now enables TXCS<IE> directly (the same effect
-// as kernel.asm's own EXE$INITIALIZE, without also running that routine's
-// separate, unrelated boot-message-printing and page-protection machinery,
-// which this test has no need to exercise) and expects hello.asm's whole
-// "Hello world" print plus its own 1,000,000-iteration ADDF2/SOBGTR delay
-// loop to run to completion, not hit the cap.
+// Through Phase 12, this test hit its step cap every time: kernel.asm's
+// EXE$$PUT_CONSOLE (CHMK 0) wrote each byte by clearing a memory flag
+// (exe$tx_ready), doing MTPR to TXDB, then spin-waiting on that flag until
+// the console-transmit interrupt's handler (exe$tx) set it back to 1.
+// Phase 14 modeled that interrupt, and this test enabled it (TXCS<IE>) by
+// hand. Since docs/PERFORMANCE.md's Study 1 R1, the microkernel writes the
+// console through XFC$CONSOLE_PUT, with no device handshake or interrupt,
+// so the test does no device setup at all: it expects hello.asm's "Hello
+// world" print and its delay loop to run to completion, not hit the cap.
 func TestAssemble_kernelThenHelloRunsBounded(t *testing.T) {
 	c := newRunnableConsole(t)
 	c.asmSession = nil // start from a clean session explicitly, for clarity
@@ -184,14 +180,6 @@ func TestAssemble_kernelThenHelloRunsBounded(t *testing.T) {
 	if !hasEntry {
 		t.Fatal("expected hello.asm's \".end main\" to report an entry address")
 	}
-
-	// Enable TXCS<IE> -- the same one-time setup EXE$INITIALIZE's own
-	// `mtpr #40,#VAX$PR_TXCS` performs -- so EXE$$PUT_CONSOLE's ready-flag
-	// wait loop actually gets woken up by the EXC$CONWRITE interrupt its own
-	// ISR (exe$tx) delivers, instead of spinning forever after the first
-	// byte. See this test's own doc comment on why EXE$INITIALIZE itself
-	// isn't run here.
-	c.CPU.SetPR(vax.TXCS, 0x40)
 
 	// The step cap is generous: hello.asm once had a long delay loop, and
 	// the print and kernel-dispatch work alone takes a few hundred steps
