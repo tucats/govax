@@ -100,7 +100,10 @@ func main() {
 // meant to catch a runaway *user* program shouldn't also cut short the
 // emulator's own boot sequence.
 func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.Writer, in io.ReadCloser, args []string) error {
-	var help *console.Help
+	var (
+		help   *console.Help
+		prompt string
+	)
 
 	// Squirrel away the command line arguments.
 	argText := strings.Builder{}
@@ -223,6 +226,12 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		fmt.Fprintln(out, "vax.init:", err)
 	}
 
+	if s := settings.Get("vax.console.prompt"); s != "" {
+		prompt = s
+	} else {
+		prompt = "VAX> "
+	}
+
 	// After that, if we're still running, do a console loop.
 	if c.Running() {
 		// Applied only from here on, not during vax.init's own boot sequence
@@ -235,13 +244,15 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		}
 
 		rl, err := readline.NewEx(&readline.Config{
-			Prompt:      "VAX> ",
+			Prompt:      prompt,
 			HistoryFile: historyFile,
 			Stdin:       rlStdin,
 		})
 		if err != nil {
 			return vmserrors.Wrap(vmserrors.VAX_READLINE, err)
 		}
+
+		c.Verbose = true
 
 		defer rl.Close()
 
@@ -259,7 +270,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 			} else if c.InDebugger() {
 				rl.SetPrompt(debugger.Prompt)
 			} else {
-				rl.SetPrompt("VAX> ")
+				rl.SetPrompt(prompt)
 			}
 
 			line, err := rl.Readline()
@@ -428,6 +439,7 @@ var validConfigs = map[string]bool{
 	"vax.link.library":     true,
 	"vax.path":             true,
 	"vax.quantum":          true,
+	"vax.console.prompt":   true,
 }
 
 func auditConfig() {

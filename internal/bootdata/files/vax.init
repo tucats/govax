@@ -27,11 +27,7 @@ load/nvram/noerror
 
 ;	Assemble the microkernel
 
-print
-print "Type HELP for information on available commands."
-print
-print "Building Microkernel..."
-
+print " "
 asm  "kernel.asm"
 clear sym/all
 

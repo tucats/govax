@@ -1094,7 +1094,7 @@ now live in `internal/debugger` (`runcontrol.go`, `step.go`,
   silent `Breakpoint.Quiet` of the debugger's own. It prints a banner and
   `%DEBUG-I-INITIAL, Language: MACRO, Module: DBGDIS` and opens the
   session. VMS's banner names its own version, so govax prints
-  `govax VAX DEBUG`; the probe logs start after it, so no oracle compares
+  `GOVAX DEBUG`; the probe logs start after it, so no oracle compares
   it. Only language code 0 (MACRO) is known; other codes print `UNKNOWN`
   (unconfirmed).
 - **Image exit.** When the driver's call returns (the outermost run only;

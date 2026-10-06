@@ -1222,7 +1222,7 @@ vaxc$errno:     .long           0
 
 ;       Message descriptors
 
-exe$init_msgb:  .ascii          "Kernel initialized..."
+exe$init_msgb:  .ascii          "%SYSTEM-S-INIT, Kernel initialized"
 exe$init_msg:   .long           . - exe$init_msgb
                 .long           exe$init_msgb   
 

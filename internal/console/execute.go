@@ -124,7 +124,7 @@ func (c *Console) ReportStop(err error) error {
 
 	case errors.Is(err, cpu.ErrHalted):
 		if c.Verbose {
-			c.Printf("HALT instruction executed at PC = %08X\n", c.CPU.GPR(vax.PC))
+			c.Printf("%%SYSTEM-S-HALT, cpu halted at PC = %08X\n", c.CPU.GPR(vax.PC))
 		}
 
 		return nil

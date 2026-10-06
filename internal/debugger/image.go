@@ -45,7 +45,7 @@ func (d *Debugger) startImage(a console.Activation) (runOutcome, error) {
 	// VMS shows its version banner, a blank line, and then the language
 	// and module of the main routine. govax shows its own banner, since
 	// the debugger isn't VMS's.
-	c.Printf("\n         govax VAX DEBUG\n\n")
+	c.Printf("\n         GOVAX DEBUG\n\n")
 	c.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_INITIAL, a.Language, a.Module))
 
 	d.imageDebug = true

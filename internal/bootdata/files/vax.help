@@ -2513,7 +2513,7 @@ $AUTH
 $ABOU
 
     govax is a project of Forest Edge Software.  The emulator is an
-    effort to emulate the behavior of a VAX 3100 class processor.
+    effort to emulate the behavior of a VAX 8600 class processor.
     
     For more information, write:
     
@@ -2529,12 +2529,18 @@ $ABOU
     https://github.com/tucats/govax. IF you find bugs, please open 
     a GitHub issue!
     
-    Contributors to date include:
-    
-        Tom Cole
+    The core VAX emulation, assembler/disassembler, and console was
+    originally written in C by Tom Cole, with additional contributions
+    from: 
+
         Carl Fongheiser
         Hartmut Becker
         Sergey Tikhonov
+    
+    
+    The Go version, MACRO assembler, LINKER, and DEBUG facility were
+    written by Tom Cole, supported by Sonnet 5 and Opus 5.5 LLM models 
+    via Claude Code.
     
 $COMM,PARA
 
