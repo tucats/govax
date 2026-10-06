@@ -34,7 +34,7 @@ func (e *Engine) SetLimits(maxInstructions int, maxDuration time.Duration) {
 }
 
 // BeginRun resets the instruction/time budget, and any pending Ctrl-C
-// interrupt (see Attention), for a new top-level run -- called once by
+// interrupt (see Attention; a pending CTRL/Y is kept), for a new top-level run -- called once by
 // Console.Execute/Call/Step at the start of their own Engine.Step loop, not
 // once per instruction. This is what keeps time spent outside actual
 // instruction execution (console output, formatting, sitting at a
@@ -59,7 +59,10 @@ func (e *Engine) SetLimits(maxInstructions int, maxDuration time.Duration) {
 // has no such issue) when debugging govax's own Go code with a debugger.
 func (e *Engine) BeginRun() {
 	e.instrCount = 0
-	e.attentionKey.Store(0)
+	e.stoppedBy = 0
+
+	// A CTRL/Y waiting is kept (see Attention).
+	e.attentionKey.CompareAndSwap(uint32(AttentionCtrlC), 0)
 
 	if e.timeLimit > 0 {
 		e.runDeadline = time.Now().Add(e.timeLimit)

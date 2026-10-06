@@ -61,6 +61,10 @@ type Engine struct {
 	// plumbing runs on a separate goroutine), hence atomic.
 	attentionKey atomic.Uint32
 
+	// stoppedBy is the attention key that ended the current run with
+	// ErrAttention (StoppedBy), or 0. Written only on Step's goroutine.
+	stoppedBy byte
+
 	// attentionHandler is services' attention half (attention.go), when
 	// it has one: it may turn a pending attention key into a CTRL/C or
 	// CTRL/Y AST instead of stopping the machine.
@@ -242,10 +246,12 @@ func (e *Engine) ClearHalted() { e.halted = false }
 // avoid colliding with Engine's own, unrelated Interrupt method (see
 // ErrAttention's own doc comment). Safe to call from any goroutine, unlike
 // virtually every other Engine method; see main.go's own Ctrl-C handling,
-// the only intended caller. A fresh top-level run (BeginRun) clears this,
-// matching execute_vax's own `vax.halted = 0` at the top of every run — a
-// Ctrl-C pressed while idle at the console prompt, with nothing running,
-// has no effect on the next command.
+// the only intended caller. A fresh top-level run (BeginRun) clears a
+// pending CTRL/C, matching execute_vax's own `vax.halted = 0` at the top
+// of every run — a Ctrl-C pressed while no program runs has no effect on
+// the next command. A pending CTRL/Y is kept: it asks govax itself to
+// stop (cmd/govax/attention.go), so a run that begins after it was typed
+// stops at once.
 func (e *Engine) Attention() { e.AttentionKey(AttentionCtrlC) }
 
 // AttentionKey is Attention for a particular control character: key is
@@ -257,6 +263,17 @@ func (e *Engine) AttentionKey(key byte) { e.attentionKey.Store(uint32(key)) }
 // AttentionRequested reports whether Attention has been called since the
 // last BeginRun (and not taken by an AttentionHandler).
 func (e *Engine) AttentionRequested() bool { return e.attentionKey.Load() != 0 }
+
+// PendingAttention returns the attention key typed and not yet dealt with
+// (AttentionCtrlC or AttentionCtrlY), or 0. Safe to call from any
+// goroutine.
+func (e *Engine) PendingAttention() byte { return byte(e.attentionKey.Load()) }
+
+// StoppedBy returns the attention key that stopped the current run (the
+// last BeginRun's) with ErrAttention, or 0 if none did: a key a program's
+// CTRL/C or CTRL/Y AST took didn't stop it. Call it on the goroutine that
+// runs Step, once the run is over.
+func (e *Engine) StoppedBy() byte { return e.stoppedBy }
 
 // LastDecoded returns whatever instruction the most recent Step call
 // decoded — the same value Step reuses across calls to avoid a fresh heap

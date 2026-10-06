@@ -74,6 +74,11 @@ type Debugger struct {
 	// still going. Only the outermost run opens or closes the session.
 	running int
 
+	// interrupted is set when Ctrl-C (cpu.ErrAttention) stopped the
+	// outermost run in progress (reportStop). Start then opens no session
+	// for a run the console started.
+	interrupted bool
+
 	// imageDebug is true while an image RUN loaded is running under the
 	// debugger (startImage) and hasn't exited. It is what makes the
 	// debugger break on an unhandled condition and report the image's
@@ -160,11 +165,14 @@ func (d *Debugger) Active() bool { return d.active }
 //   - ActivateAttach just opens the session: the DBG> prompt on the
 //     machine as it stands.
 //   - GO, CALL, and STEP run the program. A run the debugger *stopped* (a
-//     breakpoint, a completed STEP, Ctrl-C) opens a session if there was
-//     none, and the DBG> prompt appears. A run that *ended* (a HALT, the
+//     breakpoint, a completed STEP) opens a session if there was none,
+//     and the DBG> prompt appears. A run that *ended* (a HALT, the
 //     CALLed routine's return) leaves no session behind if it opened none,
-//     so GO at the console that halts returns to VAX>. A session that was
-//     open when the run started stays open either way, until EXIT.
+//     so GO at the console that halts returns to VAX>. Ctrl-C returns to
+//     the command line that started the run: a run the console started
+//     (RUN, GO) opens no session, as VMS's DCL takes the CTRL/C and its
+//     prompt comes back. A session that was open when the run started
+//     stays open either way, until EXIT.
 func (d *Debugger) Start(a console.Activation) error {
 	if a.Kind == console.ActivateAttach {
 		d.active = true
@@ -174,6 +182,10 @@ func (d *Debugger) Start(a console.Activation) error {
 
 	nested := d.running > 0
 	d.running++
+
+	if !nested {
+		d.interrupted = false
+	}
 
 	defer func() { d.running-- }()
 
@@ -205,7 +217,7 @@ func (d *Debugger) Start(a console.Activation) error {
 	// A run started inside another one (a condition handler) is a
 	// subroutine of that run; only the outermost one decides whether the
 	// session opens.
-	if !nested && outcome == runStopped && err == nil {
+	if !nested && outcome == runStopped && err == nil && !(d.interrupted && !d.active) {
 		d.active = true
 
 		d.runDo()

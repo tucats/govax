@@ -358,6 +358,8 @@ func (d *Debugger) reportStop(err error) (runOutcome, error) {
 	}
 
 	if errors.Is(err, cpu.ErrAttention) {
+		d.interrupted = true
+
 		return runStopped, nil
 	}
 

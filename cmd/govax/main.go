@@ -189,26 +189,34 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	// rlStdin is what readline.Config.Stdin gets below -- the same reader
 	// c.In uses, so there is only ever one real reader of the terminal
 	// (see attentionStdin's own doc comment). A test-injected in is used
-	// as-is, exactly as before; real interactive use gets an
-	// attentionStdin wrapping the real os.Stdin, so Ctrl-C interrupts a
-	// running VAX program (see cpu.Engine.Attention) instead of arriving
-	// as ordinary input or, since readline's raw mode disables the
-	// terminal's own SIGINT generation, being silently lost.
-	var rlStdin io.ReadCloser
+	// as-is; real use gets an attentionStdin wrapping the real os.Stdin,
+	// which gives the control keys VMS's meanings (attention.go): CTRL/C
+	// interrupts, CTRL/Y ends govax, CTRL/Z is end of file.
+	var (
+		rlStdin io.ReadCloser
+		attn    *attentionStdin
+	)
 
 	if in != nil {
 		c.In = in
 		rlStdin = in
 	} else {
-		attn := newAttentionStdin(os.Stdin, func() *cpu.Engine { return c.Engine })
-		c.In = attn
-		rlStdin = attn
+		restoreTerminal, vmsMode := vmsTerminalMode(int(os.Stdin.Fd()))
+		defer restoreTerminal()
 
-		// Covers the window attentionStdin's own byte filtering can't --
-		// see installSigintAttention's own doc comment (attention.go) for
-		// why a real SIGINT, not just a 0x03 byte, needs handling here too.
-		stopSigint := installSigintAttention(func() *cpu.Engine { return c.Engine })
-		defer stopSigint()
+		// A second CTRL/Y while govax is still ending after the first
+		// (a command that doesn't finish) exits at once.
+		forceExit := func() {
+			restoreTerminal()
+			os.Exit(1)
+		}
+
+		attn = newAttentionStdin(os.Stdin, out, vmsMode, func() *cpu.Engine { return c.Engine }, forceExit)
+		c.In = attn
+		rlStdin = attn.promptReader()
+
+		stopSignals := installKeySignals(attn)
+		defer stopSignals()
 	}
 
 	if err := c.Init(minimumVAXMemory); err != nil {
@@ -271,11 +279,19 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 			historyFile = historyFilePath()
 		}
 
-		rl, err := readline.NewEx(&readline.Config{
+		rlConfig := &readline.Config{
 			Prompt:      c.Prompt(),
 			HistoryFile: historyFile,
 			Stdin:       rlStdin,
-		})
+		}
+
+		keys := newPromptKeys(rlConfig)
+
+		if attn != nil {
+			rlConfig.FuncMakeRaw, rlConfig.FuncExitRaw = attn.rawMode()
+		}
+
+		rl, err := readline.NewEx(rlConfig)
 		if err != nil {
 			return vmserrors.Wrap(vmserrors.VAX_READLINE, err)
 		}
@@ -284,7 +300,17 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 
 		defer rl.Close()
 
-		for c.Running() {
+		// readline's Close waits for its goroutine, which may be waiting
+		// to read; closing attn first (deferred calls run last first) ends
+		// that read.
+		if attn != nil {
+			defer attn.Close()
+		}
+
+		// aborted is CTRL/Y's check (attentionStdin.abortRequested).
+		aborted := func() bool { return attn != nil && attn.abortRequested() }
+
+		for c.Running() && !aborted() {
 			// driver.c's own prompt switches from "VAX> " to "ASM> " while a
 			// bare ASM command has put the console into interactive assembler
 			// mode (docs/PHASE-19.md) -- the ASM_ADDRPROMPT variant that also
@@ -294,21 +320,42 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 			// debugger's does. Assembler mode comes first, as it does in
 			// Dispatcher.Dispatch. The console's own prompt is asked for
 			// each time, since SET PROMPT can change it.
+			prompt := c.Prompt()
+
 			if c.InAssemblerMode() {
-				rl.SetPrompt("ASM> ")
+				prompt = "ASM> "
 			} else if c.InDebugger() {
-				rl.SetPrompt(debugger.Prompt)
-			} else {
-				rl.SetPrompt(c.Prompt())
+				prompt = debugger.Prompt
+			}
+
+			rl.SetPrompt(prompt)
+
+			// CTRL/Z typed after the last line's text makes this read end
+			// of file, with nothing typed.
+			if keys.eofPending() {
+				fmt.Fprint(out, prompt+echoExit+"\n")
+				endOfFile(c, d, out)
+
+				continue
 			}
 
 			line, err := rl.Readline()
-			if err != nil { // io.EOF (Ctrl-D) or readline.ErrInterrupt (Ctrl-C)
-				if errors.Is(err, readline.ErrInterrupt) {
+			if aborted() {
+				break
+			}
+
+			if err != nil {
+				switch {
+				case keys.endOfFile(err):
+					endOfFile(c, d, out)
+
+					continue
+
+				case errors.Is(err, readline.ErrInterrupt): // CTRL/C
 					continue
 				}
 
-				break
+				break // the end of the input (io.EOF)
 			}
 
 			// A command that has shown its own messages (RENAME)
@@ -323,6 +370,20 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	printStats(c, out, stats)
 
 	return c.CommandLineErr()
+}
+
+// endOfFile is CTRL/Z at a prompt: the command line in use ends, as the
+// command EXIT ends it (the debugger's session, or govax at the console's
+// prompt), or, in the interactive assembler, as .END does.
+func endOfFile(c *console.Console, d *console.Dispatcher, out io.Writer) {
+	command := "EXIT"
+	if c.InAssemblerMode() {
+		command = ".END"
+	}
+
+	if err := d.Dispatch(command); err != nil && !vmserrors.MessageInhibited(err) {
+		fmt.Fprintln(out, "%"+err.Error())
+	}
 }
 
 // printStatus dumps out stats if they are enabled to the console when the emulation finishes.

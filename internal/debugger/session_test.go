@@ -5,6 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/debugger"
 	"github.com/tucats/govax/internal/vax"
 )
@@ -165,24 +166,88 @@ func TestDebuggerCallAtPrompt(t *testing.T) {
 	}
 }
 
-// TestCtrlCReturnsToPrompt: Ctrl-C (Engine.Attention) interrupts a running
-// program and leaves it at DBG>.
-func TestCtrlCReturnsToPrompt(t *testing.T) {
-	c, d, db := newRoutedSession(t)
+// interruptWhile runs dispatch while another goroutine types Ctrl-C
+// (Engine.Attention) over and over, the way the host's keyboard does, until
+// dispatch returns. Typing it once could land before the run's BeginRun,
+// which clears a Ctrl-C typed while nothing was running.
+func interruptWhile(t *testing.T, c *console.Console, dispatch func() error) {
+	t.Helper()
+
+	done := make(chan struct{})
+	stopped := make(chan struct{})
+
+	go func() {
+		defer close(stopped)
+
+		for {
+			select {
+			case <-done:
+				return
+			default:
+				c.Engine.Attention()
+			}
+		}
+	}()
+
+	err := dispatch()
+
+	close(done)
+	<-stopped
+
+	if err != nil {
+		t.Fatalf("dispatch: %v", err)
+	}
+}
+
+// loadSpinner loads a program that never ends by itself.
+func loadSpinner(t *testing.T, c *console.Console) {
+	t.Helper()
+
 	loadProgram(t, c, 0x200,
 		opNop,
 		0x11, 0xFD, // BRB back to the NOP
 	)
-	c.Engine.SetLimits(1_000_000, 0)
+	c.Engine.SetLimits(100_000_000, 0)
+}
 
-	go c.Engine.Attention()
+// TestCtrlCReturnsToConsole: Ctrl-C interrupting a program the console
+// started (GO) returns to the console's prompt, as CTRL/C returns to DCL's:
+// it opens no debugger session.
+func TestCtrlCReturnsToConsole(t *testing.T) {
+	c, d, db := newRoutedSession(t)
+	loadSpinner(t, c)
 
-	if err := d.Dispatch("GO 200"); err != nil {
-		t.Fatalf("GO: %v", err)
+	interruptWhile(t, c, func() error { return d.Dispatch("GO 200") })
+
+	if c.Engine.StoppedBy() != cpu.AttentionCtrlC {
+		t.Fatalf("StoppedBy = %#x, want CTRL/C", c.Engine.StoppedBy())
+	}
+
+	if db.Active() {
+		t.Error("Ctrl-C of a console GO opened a debugger session")
+	}
+}
+
+// TestCtrlCReturnsToDebugger: Ctrl-C interrupting a program the debugger
+// started (GO at DBG>) leaves it at DBG>.
+func TestCtrlCReturnsToDebugger(t *testing.T) {
+	c, d, db := newRoutedSession(t)
+	loadSpinner(t, c)
+
+	if err := d.Dispatch("DEBUG"); err != nil {
+		t.Fatalf("DEBUG: %v", err)
+	}
+
+	c.CPU.SetGPR(vax.PC, 0x200)
+
+	interruptWhile(t, c, func() error { return d.Dispatch("GO") })
+
+	if c.Engine.StoppedBy() != cpu.AttentionCtrlC {
+		t.Fatalf("StoppedBy = %#x, want CTRL/C", c.Engine.StoppedBy())
 	}
 
 	if !db.Active() {
-		t.Error("Ctrl-C left no debugger session")
+		t.Error("Ctrl-C of a GO at DBG> ended the debugger session")
 	}
 }
 

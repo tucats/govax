@@ -1826,3 +1826,46 @@ the `.dlg` log, line by line.
   list.
 - `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
   touched are clean.
+
+### 2026-10-06 — After the phase: the control keys
+
+Ad-hoc use found Ctrl-C, Ctrl-Y, and Ctrl-Z not acting as VMS's keys
+(HELP KEYS now describes them; DEVIATIONS.md has the choices made
+without a check on VMS).
+
+- **What was wrong.** Outside the line editor, the host terminal kept its
+  own keys: Ctrl-Z suspended govax (SIGTSTP), Ctrl-Y did nothing (macOS's
+  delayed suspend), and Ctrl-C typed while a program waited for a line
+  was only acted on after RETURN. A console RUN or GO stopped by Ctrl-C
+  opened a debugger session (Decision 2), not the console's prompt. And
+  `rl.Close` could hang govax's exit: nothing closed the reader readline's
+  goroutine might be waiting in.
+- **`cmd/govax`.** `vmsTerminalMode` (`terminal_unix.go`, with
+  `termios_darwin.go`/`termios_linux.go`) sets the terminal's control
+  characters to VMS's for its ordinary mode: interrupt Ctrl-C (SIGINT),
+  quit Ctrl-Y (SIGQUIT, caught), end of file Ctrl-Z, no suspend, no `^X`
+  echo; restored at exit. `attention.go`'s pump turns an empty read into
+  CTRL/Z (echoing `*Exit*`), and a line without a newline into its text,
+  a CTRL/Z ending it, and a CTRL/Z for the next read. Ctrl-C and Ctrl-Y
+  echo `*Interrupt*` and end a program's waiting read
+  (`errReadInterrupted`). Ctrl-Y asks govax to end: the command loop
+  stops after the command (`abortRequested`), unless a program's CTRL/Y
+  AST took the key; a second Ctrl-Y meanwhile exits at once. At a
+  prompt, `promptKeys` (readline's input filter) makes Ctrl-C cancel the
+  line, and Ctrl-Z end of file (EXIT at `$` and `DBG>`, `.END` at `ASM>`)
+  or, after text, RETURN with the end of file next. readline reads
+  through `promptReader`, which takes bytes only while a `Readline` call
+  has the terminal in raw mode, so its goroutine can't take a program's
+  input; `attentionStdin.Close` ends its read before `rl.Close`.
+- **`internal/cpu`.** `Engine.StoppedBy` (the key that stopped the run)
+  and `PendingAttention`; `BeginRun` keeps a pending CTRL/Y.
+- **`internal/debugger`.** A Ctrl-C stop opens no session for a run the
+  console started (`interrupted`); a run started at `DBG>` stays there.
+  `TestCtrlCReturnsToConsole`/`TestCtrlCReturnsToDebugger` replace
+  `TestCtrlCReturnsToPrompt`, whose single Attention could land before
+  BeginRun cleared it.
+- **`internal/rms`.** A terminal `$GET` reading CTRL/Z after text returns
+  the text as a record.
+- **Checked** by unit tests, and by hand through a pseudo-terminal: a
+  spinning image and an RMS reader, RUN at the console and under the
+  debugger, each key at the prompt, mid-run, and at a program's read.

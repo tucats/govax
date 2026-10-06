@@ -626,20 +626,49 @@ changed as a result.
 
 ### [Phase 26] CTRL/C and CTRL/Y AST simplifications
 
-- **Where**: `internal/coreos/ctrlast.go`, `internal/cpu/attention.go`,
+- **Where**: `internal/corevms/ctrlast.go`, `internal/cpu/attention.go`,
   `cmd/govax/attention.go`.
 - **What**:
-  - Only the host's Ctrl-C reaches the program. Host Ctrl-Y isn't
-    intercepted (readline's yank; macOS's DSUSP), so a CTRL/Y AST runs
-    only when Ctrl-C is typed with no CTRL/C AST enabled, as VMS does.
-  - The terminal echoes nothing (VMS echoes `^C`, and `*INTERRUPT*` for
-    a CTRL/Y the command interpreter takes).
-  - A key typed while the program is blocked in a terminal read (waiting
-    for the host) is only seen after the read returns.
+  - ~~Only the host's Ctrl-C reaches the program~~ (fixed 2026-10-06: host
+    Ctrl-Y is now VMS's CTRL/Y, so it reaches a CTRL/Y AST too).
+  - ~~The terminal echoes nothing~~ (fixed 2026-10-06: `*Interrupt*`, as
+    simh's VMS echoes for both keys).
+  - ~~A key typed while the program is blocked in a terminal read is
+    only seen after the read returns~~ (fixed 2026-10-06: the read ends).
+    But it ends as end of file even when the program's AST then takes
+    the key and the program goes on; on VMS the read would presumably
+    wait on (unconfirmed).
   - The requests belong to the process's channels, not to a terminal
     device: every terminal is the console.
   - No `ASTLM` quota.
 - **Status**: open, by design.
+
+### [2026-10-06] The control keys (Ctrl/C, Ctrl/Y, Ctrl/Z): choices unconfirmed
+
+- **Where**: `cmd/govax/attention.go`, `cmd/govax/terminal_unix.go`,
+  `internal/rms/terminal.go`, `internal/debugger/debugger.go`.
+- **What**: the keys follow VMS's meanings (`HELP KEYS`); the author
+  confirmed on simh that both CTRL/C and CTRL/Y echo `*Interrupt*` during
+  a run, that CTRL/Z echoes `*Exit*` on an empty line, and that CTRL/Z
+  after text ends the line with the end of file left for the next read.
+  Chosen without a check:
+  - CTRL/C at a prompt echoes `*Interrupt*` too, and cancels the line.
+  - CTRL/Y ends govax itself (there is no DCL to return to); at the
+    console's prompt CTRL/Z is EXIT, which also ends govax (on VMS,
+    DCL's EXIT at the top level does nothing). Ctrl-D at a prompt is
+    still the host's end of input, which ends govax.
+  - A Ctrl-C stopping a run the console started returns to the console,
+    not DBG> (Phase 42's Decision 2 opened a session): VMS's DCL takes
+    the CTRL/C. DEBUG then examines the stopped program. A new RUN
+    doesn't run down the interrupted image first.
+  - CTRL/Z after text: the record is the text, and the end of file is
+    the next `$GET`'s. A `$QIO` read gets CTRL/Z as its terminator in
+    both reads (the default terminator set has it).
+  - The echoes go where the cursor is, followed by a new line.
+  - Without vmsTerminalMode (not macOS or Linux, or input that isn't a
+    terminal), only Ctrl-C works, and Ctrl-Y and Ctrl-Z keep the host's
+    meanings while a program runs.
+- **Status**: open; check the unconfirmed items on simh.
 
 ### [Phase 26] eVAX `chf()`: SCB offsets as condition values, depths from 1, reversed arguments
 

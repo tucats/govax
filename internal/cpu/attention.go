@@ -46,5 +46,7 @@ func (e *Engine) checkAttention() error {
 		return nil
 	}
 
+	e.stoppedBy = byte(key)
+
 	return ErrAttention
 }

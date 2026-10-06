@@ -55,6 +55,8 @@
 //                          CALL (docs/PHASE-42.md)
 //              10/06/26    Added CONFIG and CONFIG KEYS (the configuration
 //                          settings, and the default volume)
+//              10/06/26    Added KEYS (Ctrl/C, Ctrl/Y, Ctrl/Z); revised GO
+//                          and CALL for Ctrl/C
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -812,12 +814,13 @@ $GO
     of instructions in the virtual VAX.  The command begins execution at the current
     value of the PC register, and can optionally specify a starting address.
 
-    The program runs until it halts.  If a breakpoint, an interrupt from the
-    keyboard (Ctrl-C), or a fault breakpoint stops it first, the debugger
-    starts and its prompt, DBG>, appears; the program is stopped, and the
-    debugger's commands (EXAMINE, STEP, GO, ...) work on it.  EXIT at DBG>
-    returns to the console.  Breakpoints are set from the debugger (see
-    DEBUG), before or after the program starts.
+    The program runs until it halts.  If a breakpoint or a fault breakpoint
+    stops it first, the debugger starts and its prompt, DBG>, appears; the
+    program is stopped, and the debugger's commands (EXAMINE, STEP, GO, ...)
+    work on it.  EXIT at DBG> returns to the console.  Breakpoints are set
+    from the debugger (see DEBUG), before or after the program starts.
+    Ctrl/C stops the program and returns to the console's prompt; DEBUG
+    then examines it (see HELP KEYS).
     
     Syntax:
     
@@ -1019,8 +1022,8 @@ $CALL
     The return value of the procedure is available in R0, and is also copied
     to the variable $STATUS.
 
-    As with GO, a breakpoint or Ctrl-C that stops the procedure starts the
-    debugger at DBG>.
+    As with GO, a breakpoint that stops the procedure starts the debugger
+    at DBG>, and Ctrl/C returns to the console's prompt.
     
     Syntax:
     
@@ -1683,6 +1686,39 @@ $CONF,KEY
                                       devices, process, libinit, rms, or
                                       userstep.
 
+$KEYS
+$KEY 
+
+    govax gives the control keys the meanings VMS gives them:
+
+    Ctrl/C      Stops the command running, such as a RUN or GO, and
+                returns to the prompt of the command line that started it:
+                the console's, or the debugger's DBG>.  A program waiting
+                for a line of input stops too.  At a prompt, it cancels
+                the line being typed.  A program that has enabled a CTRL/C
+                AST gets the AST instead (or its CTRL/Y AST, if it has
+                only that).  govax echoes *Interrupt*.
+
+    Ctrl/Y      Ends govax, returning to the host's shell: the command
+                running stops, mounted volumes are dismounted, and the
+                terminal is put back as it was.  If govax doesn't end (a
+                command that doesn't finish), a second Ctrl/Y exits at
+                once.  A program that has enabled a CTRL/Y AST gets the
+                AST instead.  govax echoes *Interrupt*.
+
+    Ctrl/Z      End of file.  On an empty line, the read waiting gets
+                the end of file, and govax echoes *Exit*.  Typed after
+                some text, it ends the line as RETURN does, and the next
+                read is the end of file.  A program's read sees end of
+                file (RMS$_EOF from $GET).  At the debugger's DBG> it is
+                EXIT, ending the session; at the console's prompt it is
+                EXIT, ending govax; in the interactive assembler (ASM>)
+                it is .END.
+
+    The other control keys keep their host meanings: the line editor's
+    at a prompt, and the host terminal's while a program runs.  Nothing
+    suspends govax.
+
 $HELP
 
     govax a VAX software emulator.  It supports execution of a subset
@@ -1751,6 +1787,7 @@ $HELP
 
     ABOUT           About govax
     CONFIG          govax's configuration settings, and how to set them
+    KEYS            The control keys: Ctrl/C, Ctrl/Y, and Ctrl/Z
     PSL             The processor status longword and its fields
     XFC             govax's extended function codes
     

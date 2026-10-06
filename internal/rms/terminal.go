@@ -7,7 +7,9 @@ import (
 )
 
 // ctrlZ is the character a terminal user types to end input: a $GET that
-// reads it returns RMS$_EOF.
+// reads it first returns RMS$_EOF. Typed after some text, it ends that
+// text's record instead, and the end of file is the next read's (govax's
+// front end delivers a second CTRL/Z for it; cmd/govax/attention.go).
 const ctrlZ = 0x1A
 
 // terminalRecord is SYS$GET's read of one record from the terminal
@@ -17,8 +19,9 @@ const ctrlZ = 0x1A
 // feed (a host "\r\n" pair is one end), neither of which is part of it,
 // or when capacity bytes have been read: the terminal driver ends a read
 // when the buffer fills, and whatever was typed beyond it is the next
-// record. A Ctrl/Z, or the end of the host's input with nothing read,
-// is end of file: status is RMS$_EOF. status is 0 for a record.
+// record. A Ctrl/Z ends a record too, but with nothing read before it it
+// is end of file: status is RMS$_EOF, as it is at the end of the host's
+// input with nothing read. status is 0 for a record.
 func terminalRecord(ctx *Context, rabAddr uint32, capacity int) (record []byte, status uint32, err error) {
 	rop, err := ctx.loadLongword(rabAddr + rabROP)
 	if err != nil {
@@ -48,6 +51,10 @@ func terminalRecord(ctx *Context, rabAddr uint32, capacity int) (record []byte, 
 
 		switch b {
 		case ctrlZ:
+			if len(record) > 0 {
+				return record, 0, nil
+			}
+
 			return nil, rmsEOF, nil
 
 		case '\r':

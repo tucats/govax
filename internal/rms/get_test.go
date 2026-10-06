@@ -372,6 +372,25 @@ func TestSysGet_consoleCtrlZ(t *testing.T) {
 	}
 }
 
+// TestSysGet_consoleCtrlZAfterText: a Ctrl/Z typed after some text ends
+// that text's record, and the second Ctrl/Z the front end sends after it
+// is the next read's end of file.
+func TestSysGet_consoleCtrlZAfterText(t *testing.T) {
+	f, _ := consoleGetFixture(t, "show\x1A\x1Anext\n", "", 80)
+
+	if r0, got := consoleGet(t, f); r0 != rmsNormal || got != "show" {
+		t.Errorf("SYS$GET = %#x, %q; want RMS$_NORMAL, %q", r0, got, "show")
+	}
+
+	if r0, _ := consoleGet(t, f); r0 != rmsEOF {
+		t.Errorf("SYS$GET after the record = %#x, want RMS$_EOF", r0)
+	}
+
+	if r0, got := consoleGet(t, f); r0 != rmsNormal || got != "next" {
+		t.Errorf("SYS$GET after the end of file = %#x, %q; want RMS$_NORMAL, %q", r0, got, "next")
+	}
+}
+
 // TestSysGet_noReadAccess confirms SYS$GET through a RAB that was
 // SYS$CONNECTed for writing only (FAB$V_PUT, arming a Writer but no
 // Reader) fails with RMS$_PRV rather than dereferencing a nil Reader —

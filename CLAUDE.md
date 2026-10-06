@@ -336,7 +336,9 @@ expect adjustment as phases land):
   `analyze --image` is ANALYZE/IMAGE). A one-shot subcommand that fails
   makes govax exit nonzero (124, as timeout(1) does, when `--instruction-limit`
   or `--time-limit` stopped it), and volumes still mounted are dismounted (flushed)
-  when a session ends. Briefly moved to the repo
+  when a session ends. The control keys are VMS's (`attention.go`,
+  `terminal_unix.go`; `HELP KEYS`): Ctrl-C interrupts, Ctrl-Y ends govax,
+  Ctrl-Z is end of file. Briefly moved to the repo
   root (2026-09-17); moved back into `cmd/govax` as the more standard layout
   (`go build ./...`/`go run ./cmd/govax`).
 - `tucats/gopackages` also brings config-settings support (`app-cli/settings`), read at
