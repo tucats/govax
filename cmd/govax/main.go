@@ -83,6 +83,10 @@ func main() {
 	govaxApp.Action = consoleCmd
 
 	err := govaxApp.Run(grammar, os.Args)
+
+	// A --cpu-profile is complete only once the profiler stops.
+	stopCPUProfile()
+
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "govax:", err)
 		os.Exit(1)

@@ -106,6 +106,13 @@ var grammar = []cli.Option{
 		Action:      setStats,
 	},
 	{
+		LongName:             "cpu-profile",
+		Description:          "Write a Go CPU profile of the whole run to a file (for docs/PERFORMANCE.md)",
+		ParameterDescription: "file",
+		OptionType:           cli.StringType,
+		Action:               setCPUProfile,
+	},
+	{
 		LongName:    "path",
 		ShortName:   "p",
 		Description: "Search path for file names",
@@ -569,6 +576,15 @@ func setStats(c *cli.Context) error {
 	stats = true
 
 	return nil
+}
+
+// setCPUProfile starts Go's CPU profiler, writing to the --cpu-profile
+// file; main stops it (stopCPUProfile) when govax finishes. The profile is
+// read with "go tool pprof" -- see docs/PERFORMANCE.md.
+func setCPUProfile(c *cli.Context) error {
+	name, _ := c.String("cpu-profile")
+
+	return startCPUProfile(name)
 }
 
 func setInstructionLimit(c *cli.Context) error {

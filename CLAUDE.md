@@ -22,6 +22,10 @@ never had.
   data symbols and descriptors, the line-number program, and source
   correlation. Usable freely as a reference, though it may have errors;
   check it against real MACRO's output.
+- `docs/PERFORMANCE.md` — performance studies: the profiling method
+  (`govax --cpu-profile FILE`, the `perf` configuration profile), and per
+  workload the observations, ranked recommendations, and an implementation
+  log of the fixes made.
 - `docs/MODE-STACKS.md` — where VMINIT puts each access mode's stack, their sizes and
   page protections, and what was deliberately left unchanged.
 
