@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/tucats/ods2/diskimage"
+	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/volume"
 )
 
@@ -253,6 +254,30 @@ func (t *MountTable) VolumeStats(device string) (volume.VolumeStats, bool, error
 	stats, err := volume.Stats(entry.Volume.Devices[0])
 
 	return stats, true, err
+}
+
+// DirectoryExists reports whether dir, a directory specification such as
+// "[WORK]" or "[WORK.SUB]", names an existing directory on the volume
+// mounted on device. A device with nothing mounted, or a dir that isn't a
+// directory specification, is an error.
+func (t *MountTable) DirectoryExists(device, dir string) (bool, error) {
+	entry, ok := t.mounts[normalizeDeviceName(device)]
+	if !ok {
+		return false, fmt.Errorf("rms: %s: not mounted", normalizeDeviceName(device))
+	}
+
+	spec, err := filespec.Parse(dir, filespec.Spec{})
+	if err != nil {
+		return false, fmt.Errorf("rms: directory %q: %w", dir, err)
+	}
+
+	if spec.Name != "" || spec.Type != "" || spec.Version != "" || spec.Recursive {
+		return false, fmt.Errorf("rms: directory %q: %w", dir, ErrNotDirectorySpec)
+	}
+
+	_, err = filespec.ResolveDirectory(entry.Volume, spec.Dirs)
+
+	return err == nil, nil
 }
 
 // Writable reports whether device's mounted volume was mounted with write

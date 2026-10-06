@@ -141,7 +141,7 @@ var debugConfig = map[string]vax.DebugFlags{
 	"vax.debug.userhalt":   vax.DebugUserHalt,
 	"vax.debug.keyboard":   vax.DebugKeyboard,
 	"vax.debug.images":     vax.DebugImages,
-	"vax.debug.servcies":   vax.DebugServices,
+	"vax.debug.services":   vax.DebugServices,
 	"vax.debug.dcl":        vax.DebugDCL,
 	"vax.debug.command":    vax.DebugExpand,
 	"vax.debug.logicals":   vax.DebugLogicals,

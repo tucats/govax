@@ -222,6 +222,16 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		}
 	}
 
+	// The configured default volume, if any, is mounted and made the
+	// default device and directory (internal/console/defvolume.go).
+	c.MountDefaultVolume(console.DefaultVolume{
+		File:      settings.Get("vax.default.volume.file"),
+		Label:     settings.Get("vax.default.volume.label"),
+		Device:    settings.Get("vax.default.volume.device"),
+		Type:      settings.Get("vax.default.volume.type"),
+		Directory: settings.Get("vax.default.volume.directory"),
+	})
+
 	if err := c.Include("vax.init", d.Dispatch); err != nil {
 		fmt.Fprintln(out, "vax.init:", err)
 	}
@@ -425,7 +435,7 @@ var validConfigs = map[string]bool{
 	"vax.debug.userhalt":   true,
 	"vax.debug.keyboard":   true,
 	"vax.debug.images":     true,
-	"vax.debug.servcies":   true,
+	"vax.debug.services":   true,
 	"vax.debug.dcl":        true,
 	"vax.debug.command":    true,
 	"vax.debug.logicals":   true,
@@ -440,6 +450,13 @@ var validConfigs = map[string]bool{
 	"vax.path":             true,
 	"vax.quantum":          true,
 	"vax.console.prompt":   true,
+
+	"vax.default.volume.file":      true,
+	"vax.default.volume.label":     true,
+	"vax.default.volume.device":    true,
+	"vax.default.volume.type":      true,
+	"vax.default.volume.directory": true,
+	"vax.disassemble.symbolic":     true,
 }
 
 func auditConfig() {
@@ -453,6 +470,8 @@ func auditConfig() {
 			}
 
 			fmt.Printf("   %s\n", key)
+
+			count++
 		}
 	}
 }

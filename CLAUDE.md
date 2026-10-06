@@ -341,6 +341,14 @@ expect adjustment as phases land):
   `/SYMBOLIC` (the VMS debugger's layout and names, Phase 41), and for SHOW
   CALLS'; the trace and STEP show debug images' locations symbolically when
   it's on; true when unset.
+  `vax.default.volume.file`/`.label`/`.device`/`.type`/`.directory` — a
+  container `cmd/govax` mounts at startup (creating it, sized by the type,
+  with the directory in it, if it doesn't exist) and does a SET DEFAULT
+  to (`Console.MountDefaultVolume`, `internal/console/defvolume.go`;
+  defaults WORK, DUA0:, RD54, [WORK]; messages in `vmserrors/codes_mount.go`).
+  Unset file: no default volume, names go to the host. Every key read must
+  be in `cmd/govax/main.go`'s `validConfigs`, and documented in vax.help's
+  `HELP CONFIG KEYS`.
   `vax.library` (string) — the host directory LINK and MACRO look
   in for IMAGELIB.OLB, STARLET.OLB, shareable images, and STARLET.MLB when
   `SYS$LIBRARY`/`SYS$SHARE` don't lead to them (read by the console, not `NewEngine`;

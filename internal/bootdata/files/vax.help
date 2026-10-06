@@ -53,6 +53,8 @@
 //                          SHOW REGISTERS, ...) moved to the debugger and its
 //                          own DEBUG.HELP; added DEBUG; revised RUN, GO, and
 //                          CALL (docs/PHASE-42.md)
+//              10/06/26    Added CONFIG and CONFIG KEYS (the configuration
+//                          settings, and the default volume)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1532,6 +1534,141 @@ $CLEA,STRI
 
         CLEAR STRINGS
 
+$CONF
+$CONFIG
+
+    govax keeps configuration settings in a profile in the .govax
+    directory of your home directory.  They are read each time govax
+    starts.  The settings are set and shown with the govax command's
+    CONFIG verb, from the host shell, not from the VAX> prompt:
+
+        govax config set KEY=VALUE      Set a setting.  A KEY alone,
+                                        with no =VALUE, sets it to true.
+        govax config show               Show every setting in the profile.
+        govax config show KEY           Show one setting's value.
+        govax config delete KEY         Remove a setting, so its default
+                                        applies again.
+        govax config list               List the profiles.
+
+    The global option --profile NAME (before the verb) chooses a profile
+    other than the default one, for example:
+
+        govax --profile test config set vax.quantum=50
+        govax --profile test
+
+    For example, to have govax create (the first time) and mount a work
+    volume each time it starts, and make it the default:
+
+        govax config set vax.default.volume.file="~/vax/work.dsk"
+
+    Keys are case-sensitive and written in lowercase.  govax warns at
+    exit about any key in the profile it doesn't recognize, which usually
+    means a misspelling.
+
+    For the list of keys and what each one does, type:
+
+        HELP CONFIG KEYS
+
+$CONF,KEYS
+$CONF,KEY
+
+    These are the configuration settings govax reads (see HELP CONFIG
+    for how to set them).
+
+    The default volume
+
+        When vax.default.volume.file is set, govax mounts that ODS-2
+        container at startup and does a SET DEFAULT to it, so file
+        commands (DIRECTORY, TYPE, MACRO, LINK, RUN, ...) work on the
+        volume rather than on the host's files.  A container that doesn't
+        exist is created and initialized first, with the default
+        directory in it:
+
+            %MOUNT-I-CREATED, container /home/me/vax/work.dsk created as
+                an RD54 volume labeled WORK
+            %MOUNT-I-MOUNTED, WORK mounted on _DUA0:
+
+        A container that can only be read is mounted read-only, and
+        %MOUNT-I-WRITELOCK says so.  If the volume can't be used (it
+        can't be created, opened, or mounted, its label doesn't match,
+        or the device is already mounted with --mount), a
+        %MOUNT-W-NODEFAULT warning says why and govax starts without it.
+        With no container configured, file names go to the host as they
+        always have.
+
+        vax.default.volume.file       The container's host path.  A
+                                      leading ~/ is your home directory.
+                                      Unset: no default volume.
+
+        vax.default.volume.label      The volume label a new container is
+                                      given.  When set, an existing
+                                      container's label must match it, or
+                                      the volume isn't used.  Default WORK
+                                      (and no check).
+
+        vax.default.volume.device     The device the volume is mounted on.
+                                      Default DUA0:.
+
+        vax.default.volume.type       The disk type (RX50, RD54, RA81, ...)
+                                      that sizes a new container, and that
+                                      the device is defined as.  Default
+                                      RD54 (311,200 blocks).
+
+        vax.default.volume.directory  The default directory, created in
+                                      a new container's MFD.  If it isn't
+                                      on the volume, the default is the
+                                      MFD, [000000].  Default [WORK].
+
+    Files and libraries
+
+        vax.path                      Host directories to search for
+                                      files a console command names, after
+                                      the name as given, separated by
+                                      commas (like the --path option).
+
+        vax.library                   The host directory LINK and MACRO
+                                      look in for the system object and
+                                      macro libraries and shareable
+                                      images, when SYS$LIBRARY and
+                                      SYS$SHARE don't lead to them.
+
+        vax.link.library              The older name for vax.library,
+                                      read when vax.library isn't set.
+
+    The console
+
+        vax.console.prompt            The console's prompt.  Default
+                                      "VAX> ".
+
+        vax.disassemble.symbolic      true or false: whether DISASSEMBLE
+                                      and SHOW CALLS show the VMS
+                                      debugger's symbolic layout by
+                                      default.  Default true.
+
+    The machine
+
+        vax.hardware.clock            true or false: drive the interval
+                                      clock and time-of-year clock from
+                                      the host's real time rather than
+                                      from instruction counts.  Default
+                                      false.
+
+        vax.quantum                   The number of instructions between
+                                      clock ticks when vax.hardware.clock
+                                      is false.  Default 20.
+
+    Debugging switches
+
+        vax.debug.NAME                true or false: the initial state of
+                                      the SET DEBUG switch NAME (see HELP
+                                      SET DEBUG).  NAME is one of vm, tb,
+                                      symbols, exceptions, interrupts,
+                                      chm, registers, fulldisasm,
+                                      userhalt, keyboard, images,
+                                      services, dcl, command, logicals,
+                                      devices, process, libinit, rms, or
+                                      userstep.
+
 $HELP
 
     govax a VAX software emulator.  It supports execution of a subset
@@ -1599,6 +1736,7 @@ $HELP
     Other topics:
 
     ABOUT           About govax
+    CONFIG          govax's configuration settings, and how to set them
     PSL             The processor status longword and its fields
     XFC             govax's extended function codes
     

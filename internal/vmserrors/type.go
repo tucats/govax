@@ -26,13 +26,14 @@ const (
 	Reserved = 0x7 << ReservedPosition
 
 	// Well known faciity codes.
-	SYSFacility = 0  // System and system service facility
-	RMSFacility = 1  // RMS (file I/O) facility
-	CLIFacility = 2  // Command line or DCL errors
-	DBGFacility = 3  // Messages from the debugger
-	LIBFacility = 6  // MEssages from the LIBRTL shims and runtimes
-	CREFacility = 7  // The CREATE command (docs/PHASE-34.md)
-	VAXFacility = 15 // This is the facility used by govax internal messages
+	SYSFacility   = 0  // System and system service facility
+	RMSFacility   = 1  // RMS (file I/O) facility
+	CLIFacility   = 2  // Command line or DCL errors
+	DBGFacility   = 3  // Messages from the debugger
+	LIBFacility   = 6  // MEssages from the LIBRTL shims and runtimes
+	CREFacility   = 7  // The CREATE command (docs/PHASE-34.md)
+	MOUNTFacility = 8  // The MOUNT command and the startup default volume
+	VAXFacility   = 15 // This is the facility used by govax internal messages
 
 	// Well known names for the severity field values. Note that, matching
 	// real VMS's $VMS_STATUS_SUCCESS convention, the low bit of the
@@ -96,13 +97,14 @@ type VMSError struct {
 // or modify the messages.
 
 var FacilityNames = map[uint32]string{
-	SYSFacility: "SYSTEM",
-	RMSFacility: "RMS",
-	CLIFacility: "CLI",
-	DBGFacility: "DEBUG", // as the VMS debugger's messages print it
-	LIBFacility: "LIB",
-	CREFacility: "CREATE",
-	VAXFacility: "VAX", // These are the errors used by govax internally
+	SYSFacility:   "SYSTEM",
+	RMSFacility:   "RMS",
+	CLIFacility:   "CLI",
+	DBGFacility:   "DEBUG", // as the VMS debugger's messages print it
+	LIBFacility:   "LIB",
+	CREFacility:   "CREATE",
+	MOUNTFacility: "MOUNT",
+	VAXFacility:   "VAX", // These are the errors used by govax internally
 }
 
 var MessageNames = map[uint32]string{}

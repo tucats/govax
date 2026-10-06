@@ -208,6 +208,29 @@ type DeviceTable struct {
 	devices []*Device
 }
 
+// DiskTypeOptions returns the DeviceOptions for a disk of the well-known
+// type typeName (such as "RD54"): its geometry from KnownDeviceOptions and
+// its DevType number, so SHOW DEVICE names the type. It's false for a
+// type KnownDeviceOptions doesn't list.
+func DiskTypeOptions(typeName string) (DeviceOptions, bool) {
+	typeName = strings.ToUpper(typeName)
+
+	opts, ok := KnownDeviceOptions[typeName]
+	if !ok {
+		return DeviceOptions{}, false
+	}
+
+	for id, name := range deviceTypeNames {
+		if name == typeName {
+			opts.DevType = id
+
+			break
+		}
+	}
+
+	return opts, true
+}
+
 // KnownDeviceOptions is the default-geometry dictionary Define falls back to for
 // well-known disk device types when a DEFINE/DEVICE qualifier didn't
 // specify Cylinders/Sectors/MaxBlock explicitly. Values come from

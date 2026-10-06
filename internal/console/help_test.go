@@ -93,6 +93,10 @@ func TestLoadHelpFile_phase23Topics(t *testing.T) {
 		{[]string{"ASM", "ADDRESSING"}, "Relative [deferred]"},
 		{[]string{"ASM", "PSEUDO", "QUAD"}, "sign-extended"},
 		{[]string{"ASM", "PSEUDO", "BYTE"}, "signed (-1)"},
+		{[]string{"CONFIG"}, "govax config set KEY=VALUE"},
+		{[]string{"CONFIGURATION"}, "govax config set KEY=VALUE"},
+		{[]string{"CONFIG", "KEYS"}, "vax.default.volume.file"},
+		{[]string{"CONFIG", "KEY"}, "vax.default.volume.directory"},
 	}
 
 	c, buf := newTestConsole(t)
