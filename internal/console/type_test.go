@@ -70,7 +70,7 @@ func TestConsoleType_printsFileContent(t *testing.T) {
 
 	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "hello, world")
 
-	if err := c.Type("FOO.TXT"); err != nil {
+	if err := c.Type("FOO.TXT", false); err != nil {
 		t.Fatalf("Type: %v", err)
 	}
 
@@ -85,7 +85,7 @@ func TestConsoleType_printsFileContent(t *testing.T) {
 func TestConsoleType_notMounted(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.Type("DUB0:FOO.TXT")
+	err := c.Type("DUB0:FOO.TXT", false)
 	if err == nil {
 		t.Fatal("Type against an unmounted device = nil error, want SS_DEVNOTMOUNT")
 	}
@@ -102,7 +102,7 @@ func TestConsoleType_notFound(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.Type("DUA0:NOSUCHFILE.TXT")
+	err := c.Type("DUA0:NOSUCHFILE.TXT", false)
 	if err == nil {
 		t.Fatal("Type of a nonexistent file = nil error, want SS_NOSUCHFILE")
 	}
@@ -130,7 +130,7 @@ func TestConsoleType_ambiguous(t *testing.T) {
 	createConsoleTestFile(t, vol, "FOO.TXT")
 	createConsoleTestFile(t, vol, "BAR.TXT")
 
-	err := c.Type("*.TXT")
+	err := c.Type("*.TXT", false)
 	if err == nil {
 		t.Fatal("Type with a wildcard matching several files = nil error, want CLI_AMBIGUOUS")
 	}
@@ -147,7 +147,7 @@ func TestConsoleType_badFileSpec(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.Type("DUA0:[UNTERMINATED")
+	err := c.Type("DUA0:[UNTERMINATED", false)
 	if err == nil {
 		t.Fatal("Type with an unterminated directory bracket = nil error, want CLI_BADFILESPEC")
 	}

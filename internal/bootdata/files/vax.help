@@ -1640,6 +1640,11 @@ $CONF,KEY
         vax.console.prompt            The console's prompt.  Default
                                       "VAX> ".
 
+        vax.console.lines             The screen's height in lines for
+                                      TYPE/PAGE, used when the terminal's
+                                      own size can't be read (output not
+                                      to a terminal).  Default 24.
+
         vax.disassemble.symbolic      true or false: whether DISASSEMBLE
                                       and SHOW CALLS show the VMS
                                       debugger's symbolic layout by
@@ -3089,7 +3094,7 @@ $TYP
 
     Syntax:
 
-        TYPE <file-spec>
+        TYPE [/PAGE] <file-spec>
 
     Parameter:
 
@@ -3098,11 +3103,21 @@ $TYP
                         out is filled in from the current default device/
                         directory (see SET DEFAULT).
 
+    Qualifier:
+
+        /PAGE           Display the file a screenful at a time.  After
+                        each screen, TYPE prompts "Press RETURN to
+                        continue": RETURN shows the next screen, and any
+                        text typed before RETURN ends the display.  The
+                        screen's size is the terminal's; when that can't
+                        be read, the vax.console.lines setting gives its
+                        height (default 24 lines).
+
     Examples:
 
         TYPE FOO.TXT
 
-        TYPE DUA0:[MYDIR]README.TXT;2
+        TYPE/PAGE DUA0:[MYDIR]README.TXT;2
 
     See also the help for COPY, DIRECTORY, and SET DEFAULT.
 

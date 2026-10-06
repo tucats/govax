@@ -148,6 +148,11 @@ type Console struct {
 	In  io.Reader
 	Out io.Writer
 
+	// ScreenSize, when set, gives the screen's height in lines and width
+	// in columns (0 if unknown) for paged output (TYPE/PAGE, page.go),
+	// instead of asking the terminal. Tests set it; nil asks Out.
+	ScreenSize func() (height, width int)
+
 	// shimBase/shimsReady back Phase 13's SHIM$ stub synthesis (shim.go):
 	// shimBase is the dedicated S0 page VMInit reserves for these stubs,
 	// and shimsReady guards ensureShims so the table (and the SHIM$

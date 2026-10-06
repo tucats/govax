@@ -509,11 +509,15 @@ grammar console
     ! enforced by internal/rms.Session.Type itself, not by this grammar --
     ! see docs/PHASE-23.md's subtask 8.
     !
+    ! /PAGE shows the file a screenful at a time, waiting for RETURN
+    ! between screens (internal/console/page.go).
+    !
     verb type/id=1200
 
         parameter   spec/id=1201                -
                     /type=$string               -
                     /prompt="File specification"
+        qualifier   page/id=1202
 
     !
     ! govax-native extension (Phase 23, internal/console/dcl + internal/rms

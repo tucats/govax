@@ -40,7 +40,7 @@ func TestConsoleCopy_volumeToVolume(t *testing.T) {
 
 	buf.Reset()
 
-	if err := c.Type("BAR.TXT"); err != nil {
+	if err := c.Type("BAR.TXT", false); err != nil {
 		t.Fatalf("Type(BAR.TXT): %v", err)
 	}
 
@@ -139,7 +139,7 @@ func TestConsoleCopy_test(t *testing.T) {
 		t.Errorf("Copy output = %q, want a %%COPY-I-TEST line", out)
 	}
 
-	if err := c.Type("BAR.TXT"); err == nil {
+	if err := c.Type("BAR.TXT", false); err == nil {
 		t.Error("BAR.TXT exists after a /TEST copy -- /TEST must not actually write anything")
 	}
 }
@@ -379,7 +379,7 @@ func TestDispatch_copyHostToContainerAttachedNoSpace(t *testing.T) {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
-	if err := c.Type("BAR.TXT"); err != nil {
+	if err := c.Type("BAR.TXT", false); err != nil {
 		t.Fatalf("Type(BAR.TXT): %v", err)
 	}
 }
@@ -407,7 +407,7 @@ func TestDispatch_copyHostToContainerQuoted(t *testing.T) {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
-	if err := c.Type("BAR.TXT"); err != nil {
+	if err := c.Type("BAR.TXT", false); err != nil {
 		t.Fatalf("Type(BAR.TXT): %v", err)
 	}
 }
@@ -498,7 +498,7 @@ func TestDispatch_copyQuietSuppressesConfirmation(t *testing.T) {
 
 	buf.Reset()
 
-	if err := c.Type("BAR.TXT"); err != nil {
+	if err := c.Type("BAR.TXT", false); err != nil {
 		t.Errorf("Type(BAR.TXT): %v -- /QUIET must not stop the copy from actually happening", err)
 	}
 }
@@ -552,7 +552,7 @@ func TestDispatch_copyVfcAcceptedButIgnored(t *testing.T) {
 		t.Fatalf("Dispatch COPY/VFC: %v", err)
 	}
 
-	if err := c.Type("BAR.TXT"); err != nil {
+	if err := c.Type("BAR.TXT", false); err != nil {
 		t.Errorf("Type(BAR.TXT): %v", err)
 	}
 }

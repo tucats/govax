@@ -47,7 +47,10 @@ import (
 //   - Anything else (a malformed file specification, or a genuine failure
 //     reading the file's own record data) is reported as CLI_BADFILESPEC,
 //     matching Console.Delete/Console.Directory's own catch-all bucket.
-func (c *Console) Type(specText string) error {
+//
+// With paged (TYPE/PAGE), the text is shown a screenful at a time, as
+// Console.Page shows it (page.go).
+func (c *Console) Type(specText string, paged bool) error {
 	text, err := c.ContainerSession.Type(specText)
 	if err != nil {
 		if lnmErr := logicalNameFailure(err); lnmErr != nil {
@@ -70,6 +73,12 @@ func (c *Console) Type(specText string) error {
 		}
 
 		return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, specText)
+	}
+
+	if paged {
+		c.Page(text)
+
+		return nil
 	}
 
 	c.Printf("%s", text)

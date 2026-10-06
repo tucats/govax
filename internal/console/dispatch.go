@@ -418,9 +418,9 @@ func (d *Dispatcher) bindGrammar() {
 	// internal/console/type.go). SPEC carries /prompt= in the grammar
 	// (evax.dcl's own type verb), so Grammar.Dispatch's own required-
 	// parameter machinery already guarantees it's present by the time this
-	// closure runs.
+	// closure runs. /PAGE shows it a screenful at a time.
 	g.Bind("TYPE", func(id int64, r *dcl.Result) error {
-		return d.Console.Type(r.String("SPEC"))
+		return d.Console.Type(r.String("SPEC"), r.Present("PAGE"))
 	})
 
 	// Phase 23 (docs/PHASE-23.md, subtasks 9-10): COPY moves one or more
