@@ -101,6 +101,54 @@ func TestRun_timeLimitStopsARunawayProgram(t *testing.T) {
 	}
 }
 
+// TestRun_limitsStopAOneShotRun is the one-shot counterpart of the two
+// tests above: a command given on govax's command line (here, RUN of a
+// program that loops forever) runs from inside vax.init, through
+// INCLUDE/COMMAND_LINE, so the limits have to be applied there too, not
+// only before the interactive prompt. Each limit is tried on its own, and
+// the boot itself, which runs the microkernel's initialization, mustn't
+// be cut short by them (the run would never start if it were).
+func TestRun_limitsStopAOneShotRun(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "spin.mar")
+
+	// A program whose main routine branches to itself forever.
+	if err := os.WriteFile(src, []byte("\t.PSECT\tC,NOWRT,EXE\n\t.ENTRY\tGO,^M<>\n10$:\tBRB\t10$\n\t.END\tGO\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, command := range []string{macroCommand(src, macroFlags{}), linkCommand([]string{filepath.Join(dir, "spin")}, linkFlags{})} {
+		var buf bytes.Buffer
+		if err := run(nil, 0, 0, &buf, emptyStdin(), []string{command}); err != nil {
+			t.Fatalf("%s: %v\n%s", command, err, buf.String())
+		}
+	}
+
+	runSpin := "RUN " + dclQuote(filepath.Join(dir, "spin.exe"))
+
+	for _, tc := range []struct {
+		name         string
+		instructions int
+		duration     time.Duration
+		want         string
+	}{
+		{"instruction limit", 100_000, 0, "INSTRLIMIT"},
+		{"time limit", 0, 50 * time.Millisecond, "TIMELIMIT"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+
+			// run returns once the limit stops the program; without the
+			// fix it never would, and the test would time out.
+			_ = run(nil, tc.instructions, tc.duration, &buf, emptyStdin(), []string{runSpin})
+
+			if !strings.Contains(buf.String(), tc.want) {
+				t.Errorf("output = %q, want a %s message", buf.String(), tc.want)
+			}
+		})
+	}
+}
+
 // TestRun_pathOverridesEmbeddedForThatFileOnly exercises the per-file search
 // order docs/PHASE-15.md describes: a -path directory holding only a
 // customized vax.init is used for vax.init, while evax.dcl/vax.help still

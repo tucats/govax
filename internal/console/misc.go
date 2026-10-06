@@ -117,6 +117,25 @@ func (c *Console) Time(cmd string, dispatch func(string) error) error {
 	return err
 }
 
+// SetRunLimits records govax's --instruction-limit and --time-limit
+// options, the most instructions and the longest host time one run of the
+// VAX may take (0 is no limit). They don't take effect at once: see
+// ApplyRunLimits, and the fields' comment in machine.go on why.
+func (c *Console) SetRunLimits(instructions int, duration time.Duration) {
+	c.instructionLimit = instructions
+	c.timeLimit = duration
+}
+
+// ApplyRunLimits puts the limits SetRunLimits recorded onto the Engine,
+// so every run from now on is held to them. govax calls it once the boot
+// script is done, before the interactive prompt; IncludeCommandLine calls
+// it before the one-shot command, which runs from inside the boot script.
+func (c *Console) ApplyRunLimits() {
+	if c.Engine != nil {
+		c.Engine.SetLimits(c.instructionLimit, c.timeLimit)
+	}
+}
+
 // IncludeCommandLine implements INCLUDE/COMMAND_LINE: the text left on
 // govax's own command line once its options are parsed
 // (CommandLineString) is dispatched as one command, after which the
@@ -129,6 +148,10 @@ func (c *Console) IncludeCommandLine(dispatch func(string) error) error {
 	text := CommandLineString
 	CommandLineString = ""
 	c.runCommandLine, RunCommandLine = RunCommandLine, ""
+
+	// The command is the user's program, not boot: hold it to the
+	// --instruction-limit and --time-limit options.
+	c.ApplyRunLimits()
 
 	// The command ends the session either way: a failed one-shot command
 	// shouldn't leave the user at a prompt. run (cmd/govax) reports its

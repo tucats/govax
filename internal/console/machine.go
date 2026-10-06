@@ -3,6 +3,7 @@ package console
 import (
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/corevms"
@@ -138,6 +139,16 @@ type Console struct {
 	// govax's command line (IncludeCommandLine), which ends the
 	// session; read via CommandLineErr.
 	commandLineErr error
+
+	// instructionLimit and timeLimit are govax's --instruction-limit and
+	// --time-limit options (SetRunLimits, misc.go). They are held here,
+	// not set on the Engine at once, because the boot script (vax.init)
+	// runs the microkernel's own initialization, which the limits mustn't
+	// cut short. They go onto the Engine (cpu.Engine.SetLimits) just
+	// before the command given on govax's command line runs
+	// (IncludeCommandLine), and before the interactive prompt starts.
+	instructionLimit int
+	timeLimit        time.Duration
 
 	// In/Out are the console's byte-level terminal streams: In backs
 	// XFC$CONSOLE_READ and (shared with RTL) DECC$GETS/EXE$INPUT/EXE$READ's

@@ -509,10 +509,16 @@ is `0bdb2b3`, before R1):
   microkernel initialization, so no clock was ever running) is unchanged
   at 11.19 ms/op, old and new.
 
-Found along the way, not fixed: `govax --time-limit 1s run pi 10000` runs
-to completion in both the old and new builds. The engine's own limit check
-works (`limits_test.go`), so the option apparently doesn't reach the
-engine that `run` uses. Worth a separate look.
+Found along the way, and fixed separately (2026-10-06): `govax --time-limit
+1s run pi 10000` ran to completion, in the old build and the new. A one-shot
+command runs from inside `vax.init` (`INCLUDE/COMMAND_LINE`), but
+`cmd/govax` applied `--instruction-limit` and `--time-limit` only after
+`vax.init` finished, to keep them off the boot sequence, so they never
+reached a one-shot command. The console now holds the limits
+(`Console.SetRunLimits`) and applies them (`ApplyRunLimits`) just before the
+one-shot command and before the interactive prompt. With the fix the same
+command stops at 1.0 s with `%VAX-I-TIMELIMIT`.
+`TestRun_limitsStopAOneShotRun` covers both limits.
 
 ---
 

@@ -233,6 +233,11 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		Directory: settings.Get("vax.default.volume.directory"),
 	})
 
+	// The limits are recorded now but applied only to the user's commands:
+	// the one-shot command (INCLUDE/COMMAND_LINE, at the end of vax.init)
+	// and the interactive prompt below. See this function's doc comment.
+	c.SetRunLimits(instructionLimit, timeLimit)
+
 	if err := c.Include("vax.init", d.Dispatch); err != nil {
 		fmt.Fprintln(out, "vax.init:", err)
 	}
@@ -241,7 +246,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	if c.Running() {
 		// Applied only from here on, not during vax.init's own boot sequence
 		// above -- see this function's own doc comment.
-		c.Engine.SetLimits(instructionLimit, timeLimit)
+		c.ApplyRunLimits()
 
 		historyFile := ""
 		if in == nil { // real interactive use, not a test with an injected reader
