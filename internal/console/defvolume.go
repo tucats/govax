@@ -170,11 +170,7 @@ func (c *Console) MountDefaultVolume(v DefaultVolume) {
 		return
 	}
 
-	if !writable {
-		c.info(vmserrors.New(vmserrors.MOUNT_WRITELOCK))
-	}
-
-	c.info(vmserrors.New(vmserrors.MOUNT_MOUNTED, volLabel, "_"+device+":"))
+	c.reportMounted(device, !writable)
 
 	if created && writable {
 		if _, err := c.ContainerSession.CreateDirectory(device+":"+dir, rms.CreateDirectoryOptions{}); err != nil {

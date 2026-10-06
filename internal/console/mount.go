@@ -100,6 +100,40 @@ func (c *Console) Mount(device, path string, write bool) error {
 	return nil
 }
 
+// MountCommand is the console's MOUNT command: Mount, then, when the
+// console is verbose, VMS's message saying what was mounted where:
+//
+//	%MOUNT-I-MOUNTED, WORK mounted on _DUA0:
+func (c *Console) MountCommand(device, path string, write bool) error {
+	if err := c.Mount(device, path, write); err != nil {
+		return err
+	}
+
+	c.reportMounted(device, false)
+
+	return nil
+}
+
+// reportMounted shows, when the console is verbose, the MOUNTED message
+// for the volume mounted on device (a name Mount accepted, so its
+// translation can't fail), preceded by WRITELOCK when writeLocked says
+// the volume could only be mounted read-only.
+func (c *Console) reportMounted(device string, writeLocked bool) {
+	physical, err := c.mountDevice(device)
+	if err != nil {
+		return
+	}
+
+	label, _ := c.Mounts.VolumeLabel(physical)
+	label = strings.ToUpper(strings.TrimSpace(label))
+
+	if writeLocked {
+		c.info(vmserrors.New(vmserrors.MOUNT_WRITELOCK))
+	}
+
+	c.info(vmserrors.New(vmserrors.MOUNT_MOUNTED, label, "_"+physical+":"))
+}
+
 // mountDevice translates a MOUNT/DISMOUNT device argument into the
 // physical device it names.
 func (c *Console) mountDevice(text string) (string, error) {

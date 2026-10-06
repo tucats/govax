@@ -462,3 +462,40 @@ func TestDispatch_dismountNotMountedViaDCL(t *testing.T) {
 		t.Errorf("Dispatch DISMOUNT error = %v, want SS_DEVNOTMOUNT", err)
 	}
 }
+
+// TestDispatch_mountMessage confirms the MOUNT command reports what it
+// mounted, as VMS's MOUNT does, naming the physical device even when the
+// command named a logical one, and says nothing when the console isn't
+// verbose.
+func TestDispatch_mountMessage(t *testing.T) {
+	c, buf := newTestConsole(t)
+	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+
+	t.Cleanup(func() { _ = c.Mounts.DismountAll() })
+
+	if err := d.Dispatch(`DEFINE MYDISK DUA2:`); err != nil {
+		t.Fatalf("Dispatch DEFINE: %v", err)
+	}
+
+	buf.Reset()
+
+	if err := d.Dispatch(fmt.Sprintf(`MOUNT MYDISK "%s"`, newTestContainer(t, "TESTVOL"))); err != nil {
+		t.Fatalf("Dispatch MOUNT: %v", err)
+	}
+
+	if got, want := buf.String(), "%MOUNT-I-MOUNTED, TESTVOL mounted on _DUA2:\n"; got != want {
+		t.Errorf("MOUNT output = %q, want %q", got, want)
+	}
+
+	c.Verbose = false
+
+	buf.Reset()
+
+	if err := d.Dispatch(fmt.Sprintf(`MOUNT DUA3 "%s"`, newTestContainer(t, "OTHER"))); err != nil {
+		t.Fatalf("Dispatch MOUNT: %v", err)
+	}
+
+	if buf.Len() != 0 {
+		t.Errorf("MOUNT output with the console not verbose = %q, want none", buf.String())
+	}
+}

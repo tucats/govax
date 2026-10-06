@@ -2854,8 +2854,12 @@ $MOUN
     Examples:
 
         MOUNT DUA0 disk1.dsk
+        %MOUNT-I-MOUNTED, USERDISK mounted on _DUA0:
 
         MOUNT/NOWRITE DUA1 "system disk.dsk"
+
+    MOUNT reports the volume's label and the device it was mounted on,
+    as above, unless SET NOVERBOSE has turned the console's messages off.
 
     As on VMS, MOUNT defines the logical name DISK$label (for example
     DISK$USERDISK for a volume labeled USERDISK) in the system table, so

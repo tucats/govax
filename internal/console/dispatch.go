@@ -293,7 +293,7 @@ func (d *Dispatcher) bindGrammar() {
 		// TestParse_mountNowrite in internal/console/dcl/parse_test.go).
 		write := !r.Negated("WRITE")
 
-		return d.Console.Mount(r.String("DEVICE"), r.String("FILE"), write)
+		return d.Console.MountCommand(r.String("DEVICE"), r.String("FILE"), write)
 	})
 
 	g.Bind("DISMOUNT", func(id int64, r *dcl.Result) error {
