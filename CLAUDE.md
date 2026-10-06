@@ -94,6 +94,10 @@ expect adjustment as phases land):
 
 - `internal/vax` — core machine state: registers, PSL, condition codes (Phase 01).
 - `internal/vm` — virtual memory: address translation, load/store primitives (Phase 02).
+  The decoder reads the instruction stream through `fetch.go`'s
+  instruction-fetch window (`FetchByte`/`TryFetchByte`/..., one page
+  translated once; docs/PERFORMANCE.md, Study 1, R4), data through the
+  Load/Store methods; anything that empties the STC empties the window.
 - `internal/cpu` — instruction decode/execute engine and instruction-set emulation
   (Phases 03-07). Phase 35 finished the set: every instruction but LDPCTX and
   SVPCTX has a handler (`TestEveryInstructionImplemented`). Each operand has a

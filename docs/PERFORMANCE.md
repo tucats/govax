@@ -100,7 +100,7 @@ study, promote it to `-s` as a recommendation.
 
 | # | Workload | Date | Baseline | Status |
 |---|---|---|---|---|
-| 1 | `pi.mar`, `run pi 10000` | 2026-10-06 | 9.6 s, 83.3 M instr, 115 ns/instr | R1–R3 done: 4.3–4.5 s, 52–54 ns/instr (quantum mode 22.1 → 4.5 s) |
+| 1 | `pi.mar`, `run pi 10000` | 2026-10-06 | 9.6 s, 83.3 M instr, 115 ns/instr | R1–R4 done: 3.7 s, 44–45 ns/instr (quantum mode 22.1 → 3.8 s) |
 
 ---
 
@@ -362,6 +362,10 @@ about 7 ns. It also fixed a PROBE bug (see the implementation log).*
 
 **R4. Fetch the instruction stream through a cached page (O5). Gain: about
 8–10%. Risk: medium.**
+*Status (2026-10-06): done, as an instruction-fetch window in
+`internal/vm` that every TB invalidation empties, rather than with a
+generation number. The measured gain was 15% (see the implementation
+log).*
 - Give the engine an instruction-fetch window: the physical base of the
   page holding the PC, the virtual page it maps, and a TB generation number
   (bumped on every TB invalidation) to tell when it is stale. Opcode,
@@ -665,6 +669,105 @@ is `3d107cf`, after R2):
 - The gain should be larger for programs that change mode often (system
   services, ASTs), since a mode change no longer costs a 128-entry sweep
   and the walks that followed it. PI changes mode only a few times.
+
+**R4: an instruction-fetch window (2026-10-06).** One commit
+(`8b1a6c1`), done as R4's first bullet proposed, with two changes of
+detail: the window lives in `internal/vm` (beside the STC) rather than in
+the engine, and it is emptied directly instead of being checked against a
+TB generation number.
+
+- *The window* (`internal/vm/fetch.go`). It holds one page of the
+  instruction stream: the virtual address of its first byte, the physical
+  address that byte maps to, and whether it is filled (`limit`, 512 or 0,
+  so a hit is one subtraction and one comparison). `FetchByte`,
+  `FetchWord`, and `FetchLongword` read a page in the window straight from
+  `ram`. A fetch outside it, one that runs off the page's end, or one from
+  a page not wholly in RAM (ROM, NVRAM) takes the old path (`LoadByte` and
+  so on, unchanged) and then points the window at the fetched page. Data
+  accesses never touch it, so an operand in another page no longer evicts
+  the code page.
+- *Keeping it correct*. The window can't hold a translation the old path
+  wouldn't have made:
+  - `stcFlush` empties it too, so everything that empties the STC (TBIA,
+    TBIS, a console PTE write, `InvalidateProtection` at every mode
+    change, every translation fault) empties the window.
+  - `SyncFetchWindow`, which `Step` calls once before decoding each
+    instruction (and `PeekInstruction` before its fetch), empties it when
+    MAPEN or the current mode differs from when it was filled. MAPEN is
+    written directly in several places (exception delivery turns it off
+    to read the SCB; the console's VMINIT and SET MAPEN) that don't go
+    through `internal/vm`. The mode check repeats what
+    `InvalidateProtection` guarantees, as a safety net. Checking once per
+    instruction, not per byte, keeps the fetch itself minimal; decode
+    can't change MAPEN, the mode, or a mapping part-way through an
+    instruction.
+  - It caches where the page is, not its bytes, so a store into the code
+    page is fetched at once.
+  - A PTE rewritten in memory without TBIS keeps its old mapping in the
+    window until something empties it. That is the rule a real VAX's TB
+    imposes (and the old TB and STC already behaved this way); the only
+    difference is that with TBDR set (TB disabled), an STC miss used to
+    walk the page table, and a window hit doesn't.
+- *The decoder* (`internal/cpu/decode.go`, `operand.go`). Every
+  instruction-stream read uses a Fetch method: `fetchSized` (beside
+  `loadSized`) for branch displacements and implicit and `I^#`
+  immediates, and the Fetch methods for opcodes, specifiers,
+  displacements, and absolute addresses. Data reads (a deferred mode's
+  pointer) stay on the Load path. Sixteen-byte immediates (octaword,
+  H_floating) also stay there, since they are rare.
+- *Inlining*. `FetchByte` can't be inlined: its call to the slow path
+  alone takes most of Go's inlining budget (cost 99–105 against 80).
+  Non-inlined, it was 15% of the profile at about 1.7 ns a call. So
+  `TryFetchByte`, the fast path with no call in it, is inlined at the two
+  busiest sites, the opcode and each specifier byte, which fall back to
+  `FetchByte` on a miss. That was worth a further 9% on its own (4.06–4.14 s
+  without it, 3.71–3.75 s with it).
+- *Statistics*. `-s` reports `Fetch Window Hits` and `Fetch Window Fills`.
+  Window hits don't translate, so they no longer count as STC tries or
+  single-byte reads.
+- *Tests*. `internal/vm/fetch_test.go`: every Fetch method returns what
+  the matching Load returns, including across a page boundary into an
+  unrelated physical page; window hits don't translate; a data access
+  leaves the window alone; a store is seen; TBIS, TBIA, and
+  `InvalidateProtection` each empty it, and a remapped page is fetched
+  from its new physical page; `SyncFetchWindow` empties it on a change of
+  mode or MAPEN only; a fetch that faults reports the same fault as
+  `LoadByte` and leaves the window empty; a ROM page isn't cached.
+  `internal/cpu/fetch_test.go` decodes an instruction that runs from one
+  page into an inaccessible one (an access violation at the second page's
+  first byte), then, after the page is made valid and TBIS'd, decodes it
+  whole.
+
+Results, PI to 10,000 places (same machine, same session, alternating
+runs; the old build is `7c91e4e`, after R3):
+
+| | Old, default | New, default | Old, `perf` (quantum) | New, `perf` (quantum) |
+|---|---|---|---|---|
+| Elapsed | 4.33–4.37 s | 3.66–3.72 s | 4.61 s, 4.62 s | 3.83 s, 3.85 s |
+| Instructions | 83,313,083 | 83,313,083 | 83,313,083 | 83,313,083 |
+| Single-byte reads | 329.9 M | 93 K | | |
+| STC tries / hits | 414.1 M / 314.9 M | 58.3 M / 6.1 M | | |
+| TB tries / hits | 99.2 M / 99.2 M | 52.2 M / 52.2 M | | |
+| Fetch window hits / fills | | 355.9 M / 56 K | | |
+| ns per instruction | 52 | 44–45 | 55 | 46 |
+
+- 15% faster in default mode, 17% in quantum mode, more than R4's 8–10%
+  estimate. The window serves 356 M instruction-stream reads (about 4.3 per
+  instruction) and is refilled only 56 K times.
+- The output is byte-identical to the old build's, in both modes.
+- Earlier workloads: `BenchmarkSieve` went from 6.31–6.40 ms/op to
+  5.05–5.09 ms/op (20%).
+- New profile, default run (3.26 s of samples): decode is 33% cum
+  (`decodeOperand` 27%, `TryFetchByte` 5%, the non-inlined `FetchByte`
+  and `FetchLongword` under 2% each). `translate` is down to 3% cum and
+  `phys` under 1%. The handler map lookup (`HandlerFor`, R6) is now 12%,
+  the largest single item, and the debugger's run loop (R7) about 8%.
+  `Operand.Load` and `Store` are 11% and 5%.
+- With the instruction stream gone from it, the STC sees only data, and
+  hits only 10% of the time (6.1 M of 58.3 M); PI's loops touch two or
+  three arrays in turn. Every miss is a TB hit, so this costs little now,
+  but it bears on R5: its fast path should test the TB entry (or a few
+  data slots), not just the single STC slot.
 
 ---
 
