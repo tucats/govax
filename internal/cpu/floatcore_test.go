@@ -21,7 +21,7 @@ func runFloat(t *testing.T, e *Engine, bytes ...byte) error {
 	putBytes(t, e.cpu, e.mem, base, bytes...)
 	e.cpu.SetGPR(vax.PC, base)
 
-	d, err := decodeInstruction(e.cpu, e.mem, instructionTable)
+	d, err := decodeInstructionValue(e.cpu, e.mem, instructionTable)
 	if err != nil {
 		return err
 	}
@@ -210,7 +210,7 @@ func TestEMODFExtensionIsAnInteger(t *testing.T) {
 	putBytes(t, cpu, mem, base, 0x54, 0x08, 0x05, 0x08, regMode(vax.R1), regMode(vax.R2)) // EMODF S^#1.0,S^#5,S^#1.0,R1,R2
 	cpu.SetGPR(vax.PC, base)
 
-	d, err := decodeInstruction(cpu, mem, instructionTable)
+	d, err := decodeInstructionValue(cpu, mem, instructionTable)
 	if err != nil {
 		t.Fatal(err)
 	}

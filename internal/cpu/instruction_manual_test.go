@@ -216,7 +216,7 @@ func TestNewInstructionsDecode(t *testing.T) {
 			cpu.SetGPR(vax.PC, base)
 			putBytes(t, cpu, mem, base, code...)
 
-			d, err := decodeInstruction(cpu, mem, instructionTable)
+			d, err := decodeInstructionValue(cpu, mem, instructionTable)
 			if err != nil {
 				t.Fatalf("decode: %v", err)
 			}

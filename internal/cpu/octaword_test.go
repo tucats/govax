@@ -209,7 +209,7 @@ func TestOctawordRegisterLimit(t *testing.T) {
 			cpu.SetGPR(vax.PC, base)
 			putBytes(t, cpu, mem, base, c.bytes...)
 
-			_, err := decodeInstruction(cpu, mem, instructionTable)
+			_, err := decodeInstructionValue(cpu, mem, instructionTable)
 
 			var f *Fault
 			faulted := errors.As(err, &f) && f.Code == ExcReservedAddr

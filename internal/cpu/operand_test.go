@@ -40,7 +40,7 @@ func TestDecodeOperandRegisterDirect(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestDecodeOperandRegisterDirectPCAlias(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestDecodeOperandShortLiteralInt(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -115,7 +115,7 @@ func TestDecodeOperandShortLiteralFloat(t *testing.T) {
 
 		pc := uint32(base)
 
-		op, err := decodeOperand(cpu, mem, &pc, AccessRead, tc.size, tc.dtype, false)
+		op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, tc.size, tc.dtype, false)
 		if err != nil {
 			t.Fatalf("%v: decodeOperand: %v", tc.dtype, err)
 		}
@@ -130,7 +130,7 @@ func TestDecodeOperandShortLiteralFloat(t *testing.T) {
 	putBytes(t, cpu, mem, base, 0o14)
 
 	pc := uint32(base)
-	if op, _ := decodeOperand(cpu, mem, &pc, AccessRead, 1, DataByte, false); op.Value != 12 {
+	if op, _ := decodeOperandValue(cpu, mem, &pc, AccessRead, 1, DataByte, false); op.Value != 12 {
 		t.Errorf("integer literal = %d, want 12", op.Value)
 	}
 }
@@ -140,7 +140,7 @@ func TestDecodeOperandShortLiteralWriteFaults(t *testing.T) {
 	putBytes(t, cpu, mem, base, 0x05)
 
 	pc := uint32(base)
-	op, err := decodeOperand(cpu, mem, &pc, AccessWrite, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessWrite, 4, DataLongword, false)
 
 	var f *Fault
 
@@ -161,7 +161,7 @@ func TestDecodeOperandRegisterDeferred(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -178,7 +178,7 @@ func TestDecodeOperandAutodecrement(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessModify, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessModify, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -199,7 +199,7 @@ func TestDecodeOperandAutoincrement(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -228,7 +228,7 @@ func TestDecodeOperandAutoincrementDeferred(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessModify, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessModify, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -249,7 +249,7 @@ func TestDecodeOperandByteDisplacement(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -270,7 +270,7 @@ func TestDecodeOperandByteDisplacementNegative(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -288,7 +288,7 @@ func TestDecodeOperandByteDisplacementDeferred(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -305,7 +305,7 @@ func TestDecodeOperandWordDisplacement(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -327,7 +327,7 @@ func TestDecodeOperandWordDisplacementDeferred(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -345,7 +345,7 @@ func TestDecodeOperandLongDisplacement(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -368,7 +368,7 @@ func TestDecodeOperandLongDisplacementDeferred(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -386,7 +386,7 @@ func TestDecodeOperandIndexed(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -405,7 +405,7 @@ func TestDecodeOperandDoubleIndexedFaults(t *testing.T) {
 	putBytes(t, cpu, mem, base, 0x43, 0x45) // mode 4 reg 3, then mode 4 reg 5 (illegal nesting)
 
 	pc := uint32(base)
-	_, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	_, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 
 	var f *Fault
 
@@ -421,7 +421,7 @@ func TestDecodeOperandPCImmediate(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -441,7 +441,7 @@ func TestDecodeOperandPCImmediateSignExtends(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 1, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 1, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -459,7 +459,7 @@ func TestDecodeOperandPCImmediateWriteFaults(t *testing.T) {
 
 	pc := uint32(base)
 
-	_, err := decodeOperand(cpu, mem, &pc, AccessModify, 4, DataLongword, false)
+	_, err := decodeOperandValue(cpu, mem, &pc, AccessModify, 4, DataLongword, false)
 
 	var f *Fault
 
@@ -475,7 +475,7 @@ func TestDecodeOperandPCAbsolute(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -495,7 +495,7 @@ func TestDecodeOperandPCByteRelative(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -513,7 +513,7 @@ func TestDecodeOperandPCByteRelativeDeferred(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -529,7 +529,7 @@ func TestDecodeOperandPCWordRelative(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -547,7 +547,7 @@ func TestDecodeOperandPCWordRelativeDeferred(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -564,7 +564,7 @@ func TestDecodeOperandPCLongRelative(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -583,7 +583,7 @@ func TestDecodeOperandPCLongRelativeDeferred(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessRead, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -599,7 +599,7 @@ func TestDecodeOperandAccessBranch(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessBranch, 1, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessBranch, 1, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -629,7 +629,7 @@ func TestDecodeOperandAccessAddressAllowsRegisterMode(t *testing.T) {
 
 		pc := uint32(base)
 
-		op, err := decodeOperand(cpu, mem, &pc, access, 4, DataLongword, false)
+		op, err := decodeOperandValue(cpu, mem, &pc, access, 4, DataLongword, false)
 		if err != nil {
 			t.Fatalf("access=%v: decodeOperand: %v", access, err)
 		}
@@ -647,7 +647,7 @@ func TestDecodeOperandAccessAddressAllowsMemoryModes(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessAddress, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessAddress, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}
@@ -663,7 +663,7 @@ func TestDecodeOperandAccessImmediate(t *testing.T) {
 
 	pc := uint32(base)
 
-	op, err := decodeOperand(cpu, mem, &pc, AccessImmediate, 4, DataLongword, false)
+	op, err := decodeOperandValue(cpu, mem, &pc, AccessImmediate, 4, DataLongword, false)
 	if err != nil {
 		t.Fatalf("decodeOperand: %v", err)
 	}

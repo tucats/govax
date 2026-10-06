@@ -12,7 +12,7 @@ func TestDecodeInstructionNoOperands(t *testing.T) {
 	cpu.SetGPR(vax.PC, base)
 	putBytes(t, cpu, mem, base, 0x00) // HALT
 
-	d, err := decodeInstruction(cpu, mem, instructionTable)
+	d, err := decodeInstructionValue(cpu, mem, instructionTable)
 	if err != nil {
 		t.Fatalf("decodeInstruction: %v", err)
 	}
@@ -33,7 +33,7 @@ func TestDecodeInstructionTwoOperands(t *testing.T) {
 	// MOVL R1,R2 : opcode 0xD0, src=Rn(1) mode 5 reg 1, dst=Rn mode 5 reg 2
 	putBytes(t, cpu, mem, base, 0xD0, 0x51, 0x52)
 
-	d, err := decodeInstruction(cpu, mem, instructionTable)
+	d, err := decodeInstructionValue(cpu, mem, instructionTable)
 	if err != nil {
 		t.Fatalf("decodeInstruction: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestDecodeInstructionExtendedOpcode(t *testing.T) {
 	putBytes(t, cpu, mem, base, 0xFF, 0xFD)
 	putLongword(t, cpu, mem, base+2, 0x12345678)
 
-	d, err := decodeInstruction(cpu, mem, instructionTable)
+	d, err := decodeInstructionValue(cpu, mem, instructionTable)
 	if err != nil {
 		t.Fatalf("decodeInstruction: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestDecodeInstructionUndefinedExtendedOpcodeFaults(t *testing.T) {
 	cpu.SetGPR(vax.PC, base)
 	putBytes(t, cpu, mem, base, 0xFD, 0x00) // 0xFD-prefixed 0x00 is undefined
 
-	_, err := decodeInstruction(cpu, mem, instructionTable)
+	_, err := decodeInstructionValue(cpu, mem, instructionTable)
 
 	var f *Fault
 
@@ -118,7 +118,7 @@ func TestDecodeInstructionQuadwordRegisterPair(t *testing.T) {
 	// MOVQ R2,R4 : opcode 0x7D, src mode 5 reg 2, dst mode 5 reg 4.
 	putBytes(t, cpu, mem, base, 0x7D, 0x52, 0x54)
 
-	d, err := decodeInstruction(cpu, mem, instructionTable)
+	d, err := decodeInstructionValue(cpu, mem, instructionTable)
 	if err != nil {
 		t.Fatalf("decodeInstruction: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestDecodeInstructionOperandFaultPropagates(t *testing.T) {
 	// operand — decode_operand.c raises a reserved-addressing-mode fault.
 	putBytes(t, cpu, mem, base, 0xD0, 0x05, 0x05)
 
-	d, err := decodeInstruction(cpu, mem, instructionTable)
+	d, err := decodeInstructionValue(cpu, mem, instructionTable)
 
 	var f *Fault
 	if !errors.As(err, &f) || f.Code != ExcReservedAddr {

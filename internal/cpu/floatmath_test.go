@@ -170,7 +170,7 @@ func TestEmulFAddOverflowFaults(t *testing.T) {
 	cpu.SetGPR(vax.PC, base)
 	putBytes(t, cpu, mem, base, 0x40, regMode(vax.R1), regMode(vax.R2)) // ADDF2
 
-	d, err := decodeInstruction(cpu, mem, instructionTable)
+	d, err := decodeInstructionValue(cpu, mem, instructionTable)
 	if err != nil {
 		t.Fatalf("decodeInstruction: %v", err)
 	}

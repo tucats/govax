@@ -85,7 +85,7 @@ func TestEmulCvtFloatToIntOverflow(t *testing.T) {
 		psl.SetC(true)
 		cpu.SetPSL(psl)
 
-		d, err := decodeInstruction(cpu, mem, instructionTable)
+		d, err := decodeInstructionValue(cpu, mem, instructionTable)
 		if err != nil {
 			t.Fatalf("decodeInstruction: %v", err)
 		}

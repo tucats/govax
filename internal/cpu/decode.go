@@ -13,8 +13,10 @@ import (
 type Decoded struct {
 	Opcode      Opcode
 	Instruction *Instruction
-	// Operands holds exactly Instruction.OperandCount entries, in operand
-	// order (operand 0 first).
+	// Operands holds Instruction.OperandCount entries, in operand order
+	// (operand 0 first). Step decodes into a reused Decoded, so the slots
+	// past OperandCount hold whatever an earlier instruction left there;
+	// nothing may read them.
 	Operands [6]Operand
 	// NextPC is the virtual address of the byte immediately following this
 	// instruction's last operand specifier — the C source's `vax.PC` as
@@ -77,12 +79,20 @@ func fetchOpcode(cpu *vax.CPU, mem *vm.Memory, pc uint32) (Opcode, uint32, error
 // via `vax.instruction_PC` for an execute-time one) before signaling the
 // fault — so the intermediate writes are never actually observed. Engine.Step
 // (sub-phase 6) owns saving the start PC and writing NextPC back on success.
-func decodeInstruction(cpu *vax.CPU, mem *vm.Memory, table *Table) (Decoded, error) {
+//
+// decodeInstruction fills in d rather than returning a Decoded: a Decoded is
+// a few hundred bytes, and returning one by value cost a copy on every
+// instruction (docs/PERFORMANCE.md, Study 1, O3). It sets only what this
+// instruction uses: Opcode, Instruction, NextPC, and the first OperandCount
+// operands. On an error, d is left part-way through (Step decodes into a
+// spare buffer for that reason, so LastDecoded never shows a half-decoded
+// instruction).
+func decodeInstruction(cpu *vax.CPU, mem *vm.Memory, table *Table, d *Decoded) error {
 	pc := cpu.GPR(vax.PC)
 
 	opcode, pc, err := fetchOpcode(cpu, mem, pc)
 	if err != nil {
-		return Decoded{}, err
+		return err
 	}
 
 	inst := table.Lookup(opcode)
@@ -90,21 +100,19 @@ func decodeInstruction(cpu *vax.CPU, mem *vm.Memory, table *Table) (Decoded, err
 		// Reserved-to-Digital or otherwise undefined opcode — a privileged/
 		// reserved instruction fault, matching decode_opcode.c's
 		// `set_fault(EXC_PRIV, 0)` for an unrecognized extended opcode.
-		return Decoded{}, &Fault{Code: ExcPrivileged}
+		return &Fault{Code: ExcPrivileged}
 	}
 
-	d := Decoded{Opcode: opcode, Instruction: inst}
+	d.Opcode = opcode
+	d.Instruction = inst
 
 	for i := 0; i < inst.OperandCount; i++ {
-		op, err := decodeOperand(cpu, mem, &pc, inst.Access[i], inst.Scale[i], inst.DataType[i], false)
-		d.Operands[i] = op
-
-		if err != nil {
-			return d, err
+		if err := decodeOperand(cpu, mem, &pc, inst.Access[i], inst.Scale[i], inst.DataType[i], false, &d.Operands[i]); err != nil {
+			return err
 		}
 	}
 
 	d.NextPC = pc
-	
-	return d, nil
+
+	return nil
 }

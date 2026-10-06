@@ -77,10 +77,13 @@ type Engine struct {
 	// otherwise, and then Step never checks for ASTs.
 	astSource ASTSource
 
-	// decoded is Step's own reusable Decoded buffer -- see Step's doc
-	// comment on why this exists (a Phase 12 performance-pass finding, not
-	// part of the original Phase 03 design).
-	decoded Decoded
+	// decoded is Step's own pair of reusable Decoded buffers -- see Step's
+	// doc comment on why they exist (a Phase 12 performance-pass finding,
+	// not part of the original Phase 03 design). decoded[current&1] is the
+	// last instruction decoded whole; Step decodes the next one into the
+	// other buffer and makes it current only if the decode succeeds.
+	decoded [2]Decoded
+	current int
 
 	// Quantum/interrupt-admission state -- see interrupt.go. quantumCurrent/
 	// quantumInitial are zero-valued (quantum disabled, admission masking
@@ -262,7 +265,7 @@ func (e *Engine) AttentionRequested() bool { return e.attentionKey.Load() != 0 }
 // just-executed instruction's operands (e.g. internal/console's
 // DebugFullDisasm trace — see docs/PHASE-17.md sub-phase 8). The zero
 // value if Step has never been called.
-func (e *Engine) LastDecoded() Decoded { return e.decoded }
+func (e *Engine) LastDecoded() Decoded { return e.decoded[e.current&1] }
 
 // InstructionCount returns the number of instructions that have been decoded
 // and executed by the emulation engine.
@@ -311,16 +314,17 @@ func (e *Engine) PeekInstruction() (*Instruction, error) {
 // way a decode-time one is.
 // Step decodes and executes exactly one instruction.
 //
-// decodeInstruction returns a Decoded by value; taking &d on a plain local
-// and passing it through handler (an indirectly-called function value)
-// defeats Go's escape analysis, forcing a fresh heap allocation of the
-// whole [6]Operand-sized struct on every single instruction -- confirmed
-// by profiling (docs/PHASE-12.md's own performance-pass sub-phase):
-// ~1 allocation per Step call, no exceptions, all attributed directly to
-// this function. Decoding into e.decoded (a field of the already-heap-
-// resident *Engine, reused across every Step call) instead avoids that
-// allocation entirely -- copying the freshly decoded value into it is a
-// plain, non-escaping struct copy, not a new allocation.
+// The Decoded lives in the Engine, not in a local: taking &d on a plain
+// local and passing it through handler (an indirectly-called function
+// value) defeats Go's escape analysis, forcing a fresh heap allocation of
+// the whole [6]Operand-sized struct on every single instruction --
+// confirmed by profiling (docs/PHASE-12.md's own performance-pass
+// sub-phase). decodeInstruction fills in one of e.decoded's two buffers
+// directly, so there is neither an allocation nor a copy (Study 1's R2 in
+// docs/PERFORMANCE.md removed the copies). It decodes into the buffer that
+// isn't current, so that a decode fault leaves LastDecoded showing the
+// last instruction decoded whole, as it did when the decode was copied
+// into place only on success.
 func (e *Engine) Step() error {
 	if err := e.checkLimits(); err != nil {
 		return err
@@ -361,21 +365,23 @@ func (e *Engine) Step() error {
 
 	e.instructionPC = e.cpu.GPR(vax.PC)
 
-	dec, err := decodeInstruction(e.cpu, e.mem, e.table)
-	if err != nil {
+	next := e.current ^ 1
+	dec := &e.decoded[next&1]
+
+	if err := decodeInstruction(e.cpu, e.mem, e.table, dec); err != nil {
 		return e.raise(err)
 	}
 
-	e.decoded = dec
+	e.current = next
 
 	// Advance PC past the instruction before dispatching, matching
 	// decode_opcode.c leaving vax.PC there on a successful decode — a
 	// branch/jump Handler expects PC to already be "the next sequential
 	// instruction" as its starting point.
-	e.cpu.SetGPR(vax.PC, e.decoded.NextPC)
+	e.cpu.SetGPR(vax.PC, dec.NextPC)
 
-	handler := e.table.HandlerFor(e.decoded.Instruction)
-	if err := handler(e, &e.decoded); err != nil {
+	handler := e.table.HandlerFor(dec.Instruction)
+	if err := handler(e, dec); err != nil {
 		if errors.Is(err, ErrHalted) {
 			e.halted = true
 

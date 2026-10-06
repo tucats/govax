@@ -96,9 +96,14 @@ func signExtend32(raw uint32, size int) int32 {
 // operand specifier, to reject Indexed mode nested inside itself (see
 // docs/DEVIATIONS.md).
 //
+// The operand is written to *op, which is reset first: decode fills an
+// Operand in place, in the caller's Decoded, rather than returning one by
+// value (docs/PERFORMANCE.md, Study 1, O3). On an error *op holds what was
+// decoded so far, as the returned Operand used to.
+//
 // This is the Go port of decode_operand.c.
-func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, size int, dtype DataType, indexed bool) (Operand, error) {
-	op := Operand{Access: access, Size: size}
+func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, size int, dtype DataType, indexed bool, op *Operand) error {
+	*op = Operand{Access: access, Size: size}
 
 	// Branch and implicit-immediate operands are encoded directly in the
 	// instruction stream with no addressing-mode byte at all — decode_
@@ -108,19 +113,19 @@ func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, 
 	case AccessImmediate:
 		raw, err := loadSized(cpu, mem, *pc, size)
 		if err != nil {
-			return op, err
+			return err
 		}
 
 		op.Kind = OperandImmediate
 		op.Value = uint64(uint32(signExtend32(raw, size)))
 		*pc += uint32(size)
 
-		return op, nil
+		return nil
 
 	case AccessBranch:
 		raw, err := loadSized(cpu, mem, *pc, size)
 		if err != nil {
-			return op, err
+			return err
 		}
 
 		disp := signExtend32(raw, size)
@@ -128,12 +133,12 @@ func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, 
 		op.Kind = OperandMemory
 		op.Addr = uint32(int32(*pc) + disp)
 
-		return op, nil
+		return nil
 	}
 
 	optype, err := mem.LoadByte(cpu, *pc)
 	if err != nil {
-		return op, err
+		return err
 	}
 
 	*pc++
@@ -152,7 +157,7 @@ func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, 
 		// them, Rn through Rn+3; starting past R11 would run into the
 		// PC. See octawordRegisterLimit.
 		if size == 16 && reg > octawordRegisterLimit {
-			return op, &Fault{Code: ExcReservedAddr}
+			return &Fault{Code: ExcReservedAddr}
 		}
 		// A register has no VAX address, so an OP_AD/OP_VA operand (e.g.
 		// MOVAL/PUSHAL's destination, a bitfield base) resolving to
@@ -175,7 +180,7 @@ func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, 
 		// Reverted per user direction (2026-09-15) rather than narrowed to
 		// just CALLG, since neither of those other two consumers ever had
 		// this check in the C source either. See docs/DEVIATIONS.md.
-		return op, nil
+		return nil
 
 	case mode < 4: // Short literal: S^#n (integer) or S^#f (float).
 		op.Kind = OperandImmediate
@@ -195,10 +200,10 @@ func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, 
 			// operand is still returned, same as the C source (which sets
 			// decode_rc but keeps building the operand rather than
 			// returning early).
-			return op, &Fault{Code: ExcReservedAddr}
+			return &Fault{Code: ExcReservedAddr}
 		}
 
-		return op, nil
+		return nil
 
 	case mode >= 8 && reg == vax.PC:
 		return decodePCRelative(cpu, mem, pc, access, size, dtype, mode, op)
@@ -286,35 +291,35 @@ func decodeImmediate(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype D
 // Absolute, and Byte/Word/Long Relative (direct and deferred) — the mode
 // 0x08-0x0F forms selected by using the PC as the addressing-mode byte's
 // register field.
-func decodePCRelative(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, size int, dtype DataType, mode byte, op Operand) (Operand, error) {
+func decodePCRelative(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, size int, dtype DataType, mode byte, op *Operand) error {
 	switch mode {
 	case 0x08: // Immediate: I^#n
-		if err := decodeImmediate(cpu, mem, pc, size, dtype, &op); err != nil {
-			return op, err
+		if err := decodeImmediate(cpu, mem, pc, size, dtype, op); err != nil {
+			return err
 		}
 
 		if access == AccessModify || access == AccessWrite {
-			return op, &Fault{Code: ExcReservedAddr}
+			return &Fault{Code: ExcReservedAddr}
 		}
 
-		return op, nil
+		return nil
 
 	case 0x09: // Absolute: @#addr
 		addr, err := mem.LoadLongword(cpu, *pc)
 		if err != nil {
-			return op, err
+			return err
 		}
 
 		*pc += 4
 		op.Kind = OperandMemory
 		op.Addr = addr
 
-		return op, nil
+		return nil
 
 	case 0x0A, 0x0B: // Byte relative [deferred]
 		raw, err := mem.LoadByte(cpu, *pc)
 		if err != nil {
-			return op, err
+			return err
 		}
 
 		*pc++
@@ -324,7 +329,7 @@ func decodePCRelative(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKin
 	case 0x0C, 0x0D: // Word relative [deferred]
 		raw, err := mem.LoadWord(cpu, *pc)
 		if err != nil {
-			return op, err
+			return err
 		}
 
 		*pc += 2
@@ -334,7 +339,7 @@ func decodePCRelative(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKin
 	case 0x0E, 0x0F: // Long relative [deferred]
 		raw, err := mem.LoadLongword(cpu, *pc)
 		if err != nil {
-			return op, err
+			return err
 		}
 
 		*pc += 4
@@ -350,30 +355,30 @@ func decodePCRelative(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKin
 // deferred, the longword pointed to by pc+disp — one dereference, done at
 // decode time, matching decode_operand.c's byte/word/long relative deferred
 // cases.
-func pcRelativeTarget(cpu *vax.CPU, mem *vm.Memory, pc *uint32, deferred bool, disp int32, op Operand) (Operand, error) {
+func pcRelativeTarget(cpu *vax.CPU, mem *vm.Memory, pc *uint32, deferred bool, disp int32, op *Operand) error {
 	target := uint32(int32(*pc) + disp)
 	op.Kind = OperandMemory
 
 	if !deferred {
 		op.Addr = target
 
-		return op, nil
+		return nil
 	}
 
 	addr, err := mem.LoadLongword(cpu, target)
 	if err != nil {
-		return op, err
+		return err
 	}
 
 	op.Addr = addr
 
-	return op, nil
+	return nil
 }
 
 // decodeGeneral handles the general-register addressing modes: Indexed,
 // Register deferred, Autodecrement, Autoincrement [deferred], and Byte/
 // Word/Long displacement (direct and deferred).
-func decodeGeneral(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype DataType, mode byte, reg vax.Reg, indexed bool, op Operand) (Operand, error) {
+func decodeGeneral(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype DataType, mode byte, reg vax.Reg, indexed bool, op *Operand) error {
 	switch mode {
 	case 0x04: // Indexed: base[Rx]
 		if indexed {
@@ -384,26 +389,26 @@ func decodeGeneral(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype Dat
 			// normal set_fault/vax.fault mechanism entirely, so the
 			// caller ends up handling a stale or mismatched fault instead
 			// of this one; see docs/DEVIATIONS.md.
-			return op, &Fault{Code: ExcReservedAddr}
+			return &Fault{Code: ExcReservedAddr}
 		}
 
 		index := cpu.GPR(reg)
 
-		base, err := decodeOperand(cpu, mem, pc, op.Access, size, dtype, true)
-		if err != nil {
-			return op, err
+		var base Operand
+		if err := decodeOperand(cpu, mem, pc, op.Access, size, dtype, true, &base); err != nil {
+			return err
 		}
 
 		op.Kind = OperandMemory
 		op.Addr = base.Addr + index*uint32(size)
 
-		return op, nil
+		return nil
 
 	case 0x06: // Register deferred: (Rn)
 		op.Kind = OperandMemory
 		op.Addr = cpu.GPR(reg)
 
-		return op, nil
+		return nil
 
 	case 0x07: // Autodecrement: -(Rn)
 		v := cpu.GPR(reg) - uint32(size)
@@ -412,7 +417,7 @@ func decodeGeneral(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype Dat
 		op.Kind = OperandMemory
 		op.Addr = v
 
-		return op, nil
+		return nil
 
 	case 0x08: // Autoincrement: (Rn)+
 		v := cpu.GPR(reg)
@@ -421,7 +426,7 @@ func decodeGeneral(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype Dat
 		op.Kind = OperandMemory
 		op.Addr = v
 
-		return op, nil
+		return nil
 
 	case 0x09: // Autoincrement deferred: @(Rn)+
 		// Rn holds the address of a longword containing the operand's
@@ -437,18 +442,18 @@ func decodeGeneral(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype Dat
 
 		addr, err := mem.LoadLongword(cpu, ptr)
 		if err != nil {
-			return op, err
+			return err
 		}
 
 		op.Kind = OperandMemory
 		op.Addr = addr
 
-		return op, nil
+		return nil
 
 	case 0x0A, 0x0B: // Byte displacement [deferred]: B^n(Rn) / @B^n(Rn)
 		raw, err := mem.LoadByte(cpu, *pc)
 		if err != nil {
-			return op, err
+			return err
 		}
 
 		*pc++
@@ -458,7 +463,7 @@ func decodeGeneral(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype Dat
 	case 0x0C, 0x0D: // Word displacement [deferred]
 		raw, err := mem.LoadWord(cpu, *pc)
 		if err != nil {
-			return op, err
+			return err
 		}
 
 		*pc += 2
@@ -468,7 +473,7 @@ func decodeGeneral(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype Dat
 	case 0x0E, 0x0F: // Long displacement [deferred]
 		raw, err := mem.LoadLongword(cpu, *pc)
 		if err != nil {
-			return op, err
+			return err
 		}
 
 		*pc += 4
@@ -481,22 +486,22 @@ func decodeGeneral(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype Dat
 
 // displacementTarget resolves Rn+disp to a memory operand: that address
 // directly, or, deferred, the longword pointed to by it.
-func displacementTarget(cpu *vax.CPU, mem *vm.Memory, reg vax.Reg, deferred bool, disp int32, op Operand) (Operand, error) {
+func displacementTarget(cpu *vax.CPU, mem *vm.Memory, reg vax.Reg, deferred bool, disp int32, op *Operand) error {
 	target := uint32(int32(cpu.GPR(reg)) + disp)
 	op.Kind = OperandMemory
 
 	if !deferred {
 		op.Addr = target
 
-		return op, nil
+		return nil
 	}
 
 	addr, err := mem.LoadLongword(cpu, target)
 	if err != nil {
-		return op, err
+		return err
 	}
 
 	op.Addr = addr
 
-	return op, nil
+	return nil
 }
