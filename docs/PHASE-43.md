@@ -324,8 +324,9 @@ the same manager (Decision 10).
 7. **Clean room.** Behavior comes from DIGITAL's manuals (System Services
    Reference, RMS Reference, LIB$ Reference, the VAX Architecture
    Reference Manual, the User's Manual), from real VMS output (probes on
-   the user's VMS 7.3 system), and from published books if Decision 6
-   allows. Never from VMS source listings. A rule no source settles is
+   the user's VMS 7.3 system), and from the book *VAX/VMS Internals and
+   Data Structures*, which Decision 6 allows in full, code examples and
+   listings included. Never from VMS source listings. A rule no source settles is
    chosen sensibly and logged as unconfirmed in the phase's doc.
 8. **Phase docs.** Each phase extends its own progress log as it goes, and
    records discoveries (this is a large program; the subtask lists below
@@ -385,12 +386,23 @@ recorded here.
    off. Alternatively it could stay `false` permanently (multiprocessing
    opt-in).
 6. **Reference books.** May the clean room use DIGITAL's published book
-   *VAX/VMS Internals and Data Structures* (in the manuals folder) for
-   concepts such as the boost values, state transitions, and the shape of
-   `$CREPRC`'s process startup? *Decided:* yes, for descriptions only
-   (it is a published DIGITAL book, like the manuals), never for its code
-   excerpts; and the *VMS Internals I ... Listings* course book stays
-   off-limits, as listings.
+   *VAX/VMS Internals and Data Structures* (in the manuals folder,
+   `VAX:VMS Internals and Datastructures.pdf`) for concepts such as the
+   boost values, state transitions, and the shape of `$CREPRC`'s process
+   startup? *Decided:* yes, and without restriction. At planning time the
+   recommendation was descriptions only, never its code excerpts; the
+   author revised that on 2026-10-06, after reviewing the book's rights
+   notices and its purpose. The book was published as a text for learning
+   how VMS works, is widely available as one, and is meant to be used the
+   way a programmer writing this code by hand would use it. So it is
+   reference material in every way, for this program (Phases 43–48) and
+   later phases: its descriptions, tables, figures, data-structure
+   layouts, and its example code and listings may be read, followed, and
+   transcribed where they help. Cite the book (chapter or section) in a
+   comment or the phase doc where something comes from it, as for the
+   manuals. This applies to this one book only: the *VMS Internals I ...
+   Listings* course book and the VMS source archive stay off-limits, as
+   listings.
 7. **VMS 7.3 probes.** Will the author run probe programs on the VMS 7.3
    system, as for earlier phases? *Decided:* yes, for the few things only real
    output settles: the termination message's contents, `$GETJPI` across

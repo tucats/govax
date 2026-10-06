@@ -60,7 +60,8 @@ directly:
   priority is raised by the event's boost (I/O completion, wakeup, event
   flag, resource available, terminal input/output), up to the
   normal-priority ceiling; real-time processes are never boosted. The
-  boost values come from the manuals or Decision 6's book; otherwise
+  boost values come from the manuals or Decision 6's book (*VAX/VMS
+  Internals and Data Structures*, usable in full); otherwise
   chosen and logged as unconfirmed.
 - **Preemption test**: when a process becomes computable with a higher
   current priority than the current process's, a reschedule is requested.

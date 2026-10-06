@@ -74,7 +74,10 @@ never had.
   listings) is off-limits too. Earlier phase docs that cite it record
   history, not a method to follow. When neither a manual nor real VMS
   output settles a rule, make a reasonable choice and log it as
-  unconfirmed in the phase doc.
+  unconfirmed in the phase doc. One exception (2026-10-06, `PHASE-43.md`'s
+  Decision 6): DIGITAL's book *VAX/VMS Internals and Data Structures* is
+  usable in full (descriptions, layouts, example code and listings), cited
+  where used. The *VMS Internals I ... Listings* course book is not.
 - `reference/vms/` — local-only (gitignored, Phase 31): licensed VMS 7.3
   definition files (SDL sources, C headers, BLISS and message listings) that
   `internal/vmsdef`'s tables were first generated from. Nothing in the build
