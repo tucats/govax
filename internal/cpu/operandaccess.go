@@ -49,10 +49,10 @@ func (op Operand) Load(cpu *vax.CPU, mem *vm.Memory) (uint64, error) {
 			return lo | hi<<32, nil
 		}
 
-		return uint64(maskLow(cpu.GPR(op.Reg), op.Size)), nil
+		return uint64(maskLow(cpu.GPR(op.Reg), int(op.Size))), nil
 
 	case OperandMemory:
-		return loadValue(cpu, mem, op.Addr, op.Size)
+		return loadValue(cpu, mem, op.Addr, int(op.Size))
 	}
 
 	panic(fmt.Sprintf("cpu: invalid OperandKind %d", op.Kind))
@@ -88,12 +88,12 @@ func (op Operand) Store(cpu *vax.CPU, mem *vm.Memory, value uint64) error {
 			return nil
 		}
 
-		cpu.SetGPR(op.Reg, mergeLow(cpu.GPR(op.Reg), uint32(value), op.Size))
+		cpu.SetGPR(op.Reg, mergeLow(cpu.GPR(op.Reg), uint32(value), int(op.Size)))
 
 		return nil
 
 	case OperandMemory:
-		return storeValue(cpu, mem, op.Addr, op.Size, value)
+		return storeValue(cpu, mem, op.Addr, int(op.Size), value)
 	}
 
 	panic(fmt.Sprintf("cpu: invalid OperandKind %d", op.Kind))

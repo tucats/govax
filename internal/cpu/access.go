@@ -3,7 +3,7 @@ package cpu
 // AccessKind describes how an instruction may use one of its operands,
 // matching vax.h's OP_NL/OP_RD/OP_WR/OP_MD/OP_AD/OP_VA/OP_BR/OP_IM constants.
 // Each Instruction table entry carries one AccessKind per operand slot.
-type AccessKind int
+type AccessKind uint8
 
 const (
 	AccessNone      AccessKind = iota // OP_NL: operand slot unused

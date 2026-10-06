@@ -33,7 +33,7 @@ func init() {
 // src2 (unsigned) -- exactly subResult's V/C shape (src1 - src2's borrow and
 // overflow), reused here even though CMP never writes a result.
 func emulCmp(e *Engine, d *Decoded) error {
-	size := d.Operands[0].Size
+	size := int(d.Operands[0].Size)
 
 	src1, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
@@ -62,7 +62,7 @@ func emulCmp(e *Engine, d *Decoded) error {
 // C for BIT (it only ever sets a nonzero cbit in the CMP case); see
 // docs/DEVIATIONS.md.
 func emulBit(e *Engine, d *Decoded) error {
-	size := d.Operands[0].Size
+	size := int(d.Operands[0].Size)
 
 	mask, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
@@ -84,7 +84,7 @@ func emulBit(e *Engine, d *Decoded) error {
 // operand's value, which is otherwise unmodified. N/Z from the value, V and
 // C both 0 -- per the manual (matching emul_cmp.c, which gets TST right).
 func emulTst(e *Engine, d *Decoded) error {
-	size := d.Operands[0].Size
+	size := int(d.Operands[0].Size)
 
 	v, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {

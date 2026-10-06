@@ -9,7 +9,7 @@ import (
 )
 
 // OperandKind says where a decoded Operand's value lives.
-type OperandKind int
+type OperandKind uint8
 
 const (
 	// OperandRegister: the value lives in a general register (Reg).
@@ -32,17 +32,25 @@ const (
 // notes for why this is value-based rather than the C source's pointer/
 // scratch-register mechanism (struct OPCODE's address[]/VAXaddr[]/regnum[]
 // fields).
+//
+// Its fields are as narrow as their values allow, and ordered so that Go
+// packs them without padding: four bytes, then Addr, then the two
+// quadwords, 24 bytes in all. Decode fills six of these per instruction and
+// handlers pass them by value to Load and Store, so their size is on the
+// emulator's hot path (docs/PERFORMANCE.md, Study 1, R2; TestOperandSize).
 type Operand struct {
 	Access AccessKind
 	Kind   OperandKind
 	Reg    vax.Reg
-	Addr   uint32
-	Value  uint64
+	// Size is the operand's size in bytes: 1, 2, 4, 8, or 16. Convert it
+	// with int(op.Size) where a size is passed on as an int.
+	Size  uint8
+	Addr  uint32
+	Value uint64
 	// High is the high-order 64 bits of a 16-byte immediate (an octaword
 	// or H_floating I^# operand), whose low-order 64 bits are in Value.
 	// It is zero for every other operand. See LoadOctaword.
 	High uint64
-	Size int
 }
 
 func loadSized(cpu *vax.CPU, mem *vm.Memory, addr uint32, size int) (uint32, error) {
@@ -103,7 +111,7 @@ func signExtend32(raw uint32, size int) int32 {
 //
 // This is the Go port of decode_operand.c.
 func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, size int, dtype DataType, indexed bool, op *Operand) error {
-	*op = Operand{Access: access, Size: size}
+	*op = Operand{Access: access, Size: uint8(size)}
 
 	// Branch and implicit-immediate operands are encoded directly in the
 	// instruction stream with no addressing-mode byte at all — decode_

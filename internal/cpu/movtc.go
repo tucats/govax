@@ -34,14 +34,14 @@ func emulMovtc(e *Engine, d *Decoded) error {
 		return err
 	}
 
-	srcLen := int16(signExtend(l1v, d.Operands[0].Size))
+	srcLen := int16(signExtend(l1v, int(d.Operands[0].Size)))
 
 	l2v, err := d.Operands[4].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
 
-	dstLen := int16(signExtend(l2v, d.Operands[4].Size))
+	dstLen := int16(signExtend(l2v, int(d.Operands[4].Size)))
 
 	fillv, err := d.Operands[2].Load(e.cpu, e.mem)
 	if err != nil {
@@ -168,14 +168,14 @@ func emulMovtuc(e *Engine, d *Decoded) error {
 		return err
 	}
 
-	srcLen := int16(signExtend(l1v, d.Operands[0].Size))
+	srcLen := int16(signExtend(l1v, int(d.Operands[0].Size)))
 
 	l2v, err := d.Operands[4].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
 
-	dstLen := int16(signExtend(l2v, d.Operands[4].Size))
+	dstLen := int16(signExtend(l2v, int(d.Operands[4].Size)))
 
 	escv, err := d.Operands[2].Load(e.cpu, e.mem)
 	if err != nil {

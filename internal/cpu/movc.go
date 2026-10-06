@@ -41,7 +41,7 @@ func emulMovc3(e *Engine, d *Decoded) error {
 		return err
 	}
 
-	length := int32(signExtend(lv, d.Operands[0].Size))
+	length := int32(signExtend(lv, int(d.Operands[0].Size)))
 	src := d.Operands[1].Addr
 	dst := d.Operands[2].Addr
 
@@ -116,14 +116,14 @@ func emulMovc5(e *Engine, d *Decoded) error {
 		return err
 	}
 
-	srcLen := int16(signExtend(l1v, d.Operands[0].Size))
+	srcLen := int16(signExtend(l1v, int(d.Operands[0].Size)))
 
 	l2v, err := d.Operands[3].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
 
-	dstLen := int16(signExtend(l2v, d.Operands[3].Size))
+	dstLen := int16(signExtend(l2v, int(d.Operands[3].Size)))
 
 	fillv, err := d.Operands[2].Load(e.cpu, e.mem)
 	if err != nil {

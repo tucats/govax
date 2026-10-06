@@ -79,7 +79,7 @@ func fieldOperands(cpu *vax.CPU, mem *vm.Memory, posOp, sizeOp Operand) (positio
 		return 0, 0, err
 	}
 
-	return int32(signExtend(p, posOp.Size)), int(signExtend(s, sizeOp.Size)), nil
+	return int32(signExtend(p, int(posOp.Size))), int(signExtend(s, int(sizeOp.Size))), nil
 }
 
 // loadField extracts a bit field from base (a register or memory operand)

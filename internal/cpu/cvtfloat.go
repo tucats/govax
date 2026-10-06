@@ -74,9 +74,9 @@ func cvtFloatToInt(e *Engine, d *Decoded, round bool) error {
 
 	dst := d.Operands[1]
 	exact := value.Int(round)
-	result, overflow := lowOrderBits(exact, dst.Size)
+	result, overflow := lowOrderBits(exact, int(dst.Size))
 
-	setArithPSL(e.cpu, result, overflow, false, dst.Size)
+	setArithPSL(e.cpu, result, overflow, false, int(dst.Size))
 
 	if err := dst.Store(e.cpu, e.mem, result); err != nil {
 		return err
@@ -126,7 +126,7 @@ func emulCvtIntToFloat(e *Engine, d *Decoded) error {
 		return err
 	}
 
-	result, err := e.roundFloat(d, 1, vaxfloat.FromInt(signExtend(raw, src.Size)))
+	result, err := e.roundFloat(d, 1, vaxfloat.FromInt(signExtend(raw, int(src.Size))))
 	if err != nil {
 		return err
 	}

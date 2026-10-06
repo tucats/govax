@@ -6,7 +6,7 @@ import "io"
 // R16 and up are reusable temporaries (see arch.h's T0-T5 mnemonics), carried
 // over from the C source's oversized reg[] array so later phases that burn
 // through temporaries during operand decode have the same room to work with.
-type Reg int
+type Reg uint8
 
 // General register indices, matching arch.h's VAXREG/R*/PC/SP/FP/AP mnemonics.
 // PC, SP, FP and AP are aliases for R15, R14, R13 and R12 respectively — same

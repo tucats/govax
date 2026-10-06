@@ -31,8 +31,8 @@ func init() {
 // found and fixed in emul_integer_math.c/emul_increment.c; see
 // docs/DEVIATIONS.md.
 func emulCvt(e *Engine, d *Decoded) error {
-	srcSize := d.Operands[0].Size
-	dstSize := d.Operands[1].Size
+	srcSize := int(d.Operands[0].Size)
+	dstSize := int(d.Operands[1].Size)
 
 	v, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {

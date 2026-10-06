@@ -3,6 +3,7 @@ package cpu
 import (
 	"errors"
 	"testing"
+	"unsafe"
 
 	"github.com/tucats/govax/internal/vax"
 )
@@ -113,7 +114,7 @@ func TestOperandRegisterQuadwordPair(t *testing.T) {
 
 func TestOperandMemoryRoundTrip(t *testing.T) {
 	cases := []struct {
-		size int
+		size uint8
 		val  uint64
 	}{
 		{1, 0xAB},
@@ -156,5 +157,15 @@ func TestOperandMemoryDoesNotDisturbNeighbors(t *testing.T) {
 
 	if before != 0x11111111 || after != 0x22222222 {
 		t.Errorf("neighboring memory disturbed: before=%#x after=%#x", before, after)
+	}
+}
+
+// TestOperandSize keeps Operand at 24 bytes. Decode fills six per
+// instruction and handlers copy them into Load and Store, so a field added
+// or widened here costs time on every instruction (docs/PERFORMANCE.md,
+// Study 1, R2). If a change really needs the room, update this test.
+func TestOperandSize(t *testing.T) {
+	if got := unsafe.Sizeof(Operand{}); got != 24 {
+		t.Errorf("Operand is %d bytes, want 24", got)
 	}
 }

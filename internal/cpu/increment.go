@@ -20,7 +20,7 @@ func init() {
 
 // emulInc is INC{B,W,L}: the operand is replaced by itself plus one.
 func emulInc(e *Engine, d *Decoded) error {
-	size := d.Operands[0].Size
+	size := int(d.Operands[0].Size)
 
 	v, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
@@ -35,7 +35,7 @@ func emulInc(e *Engine, d *Decoded) error {
 
 // emulDec is DEC{B,W,L}: the operand is replaced by itself minus one.
 func emulDec(e *Engine, d *Decoded) error {
-	size := d.Operands[0].Size
+	size := int(d.Operands[0].Size)
 
 	v, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {

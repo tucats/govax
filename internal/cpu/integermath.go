@@ -57,7 +57,7 @@ func init() {
 // involved in this computation, as longword-sized by what looks like a
 // transcription error).
 func loadPair(e *Engine, d *Decoded) (a, b uint64, size int, err error) {
-	size = d.Operands[0].Size
+	size = int(d.Operands[0].Size)
 
 	if a, err = d.Operands[0].Load(e.cpu, e.mem); err != nil {
 		return

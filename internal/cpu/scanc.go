@@ -39,7 +39,7 @@ func emulScanc(e *Engine, d *Decoded) error {
 		return err
 	}
 
-	length := int32(signExtend(lv, d.Operands[0].Size))
+	length := int32(signExtend(lv, int(d.Operands[0].Size)))
 	addr := d.Operands[1].Addr
 	tbl := d.Operands[2].Addr
 

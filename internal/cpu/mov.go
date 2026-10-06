@@ -50,7 +50,7 @@ func emulMove(e *Engine, d *Decoded) error {
 		return err
 	}
 
-	setNZ(e.cpu, v, d.Operands[1].Size)
+	setNZ(e.cpu, v, int(d.Operands[1].Size))
 	psl := e.cpu.PSL()
 	psl.SetV(false)
 	e.cpu.SetPSL(psl)
@@ -83,7 +83,7 @@ func emulMoveOctaword(e *Engine, d *Decoded) error {
 // source's shared emul_*_negated handlers, whose MCOM branch never touches
 // C, only the MNEG branch does).
 func emulMcom(e *Engine, d *Decoded) error {
-	size := d.Operands[0].Size
+	size := int(d.Operands[0].Size)
 
 	v, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
@@ -118,7 +118,7 @@ func emulMcom(e *Engine, d *Decoded) error {
 //
 // Both are fixed here uniformly across B/W/L. See docs/DEVIATIONS.md.
 func emulMneg(e *Engine, d *Decoded) error {
-	size := d.Operands[0].Size
+	size := int(d.Operands[0].Size)
 
 	v, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {

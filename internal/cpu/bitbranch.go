@@ -38,7 +38,7 @@ func bitBranchPosition(e *Engine, posOp Operand) (int32, error) {
 		return 0, err
 	}
 
-	return int32(signExtend(p, posOp.Size)), nil
+	return int32(signExtend(p, int(posOp.Size))), nil
 }
 
 // emulBb is BBS/BBC: branches to the third operand's target iff the single
