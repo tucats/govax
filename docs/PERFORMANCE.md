@@ -100,7 +100,7 @@ study, promote it to `-s` as a recommendation.
 
 | # | Workload | Date | Baseline | Status |
 |---|---|---|---|---|
-| 1 | `pi.mar`, `run pi 10000` | 2026-10-06 | 9.6 s, 83.3 M instr, 115 ns/instr | R1 done: 7.2 s, 87 ns/instr (quantum mode 22.1 → 7.5 s) |
+| 1 | `pi.mar`, `run pi 10000` | 2026-10-06 | 9.6 s, 83.3 M instr, 115 ns/instr | R1, R2 done: 4.6 s, 55 ns/instr (quantum mode 22.1 → 4.8 s) |
 
 ---
 
@@ -328,6 +328,8 @@ unnecessary (see the implementation log).*
 
 **R2. Decode in place, and shrink `Operand` (O3). Gain: about 10–13%.
 Risk: low; mechanical, and covered by the CPU tests and oracles.**
+*Status (2026-10-06): done. The measured gain was much larger than the
+estimate: 37–40% (see the implementation log).*
 - Have `decodeInstruction` fill `*Decoded` (`&e.decoded`) and
   `decodeOperand` fill `*Operand`, not return values. Reset only the fields
   a decode sets, not all six slots.
@@ -521,6 +523,65 @@ command stops at 1.0 s with `%VAX-I-TIMELIMIT`.
 `TestRun_limitsStopAOneShotRun` covers both limits. A one-shot run that a
 limit stops now also fails: govax exits with status 124 (timeout(1)'s
 convention), showing the limit message only once.
+
+**R2: decode in place; a 24-byte `Operand` (2026-10-06).** Two commits,
+each tested on its own.
+
+1. *Decode in place* (`f1933bb`). `decodeInstruction` fills in its
+   caller's `*Decoded`, and `decodeOperand` (with `decodePCRelative`,
+   `decodeGeneral`, `pcRelativeTarget`, and `displacementTarget`) an
+   `*Operand`, rather than returning them by value. Each operand slot an
+   instruction uses is reset as it is decoded. The slots past
+   `OperandCount` are left as an earlier instruction left them, and
+   `Decoded`'s comment says nothing may read them.
+   - `Step` decodes straight into one of two buffers in the `Engine`
+     (`decoded [2]Decoded`), the one that isn't current, and makes it
+     current only if the decode succeeds. Decoding into a single buffer
+     would have left a half-decoded instruction behind on a decode fault.
+     `LastDecoded` (the debugger's `STEP`, the console's operand trace)
+     would then show it, or, for an undefined opcode, an instruction with
+     a nil `Instruction`. With two buffers it still shows the last
+     instruction decoded whole, as it did when `Step` copied a decode into
+     place only on success.
+   - The tests keep the old value-returning shape through two helpers,
+     `decodeInstructionValue` and `decodeOperandValue`
+     (`internal/cpu/decodehelpers_test.go`).
+2. *A narrower `Operand`* (`090cdd5`). `AccessKind`, `OperandKind`, and
+   `vax.Reg` are now `uint8`, and `Operand.Size` is a `uint8` placed
+   beside them, so Go packs the struct with no padding: 24 bytes, down from
+   56 (`Decoded`: 168 bytes, down from 360). Where a size is passed on as
+   an `int`, callers convert it with `int(op.Size)`. `TestOperandSize`
+   keeps it at 24.
+
+Results, PI to 10,000 places (same machine, same session; the old build
+is `7b3e595`, after R1):
+
+| | Old, default | New, default | Old, `perf` (quantum) | New, `perf` (quantum) |
+|---|---|---|---|---|
+| Elapsed | 7.27–7.99 s | 4.62 s, 4.62 s | 8.39 s, 8.44 s | 4.81 s, 4.83 s |
+| Instructions | 83,313,083 | 83,313,083 | 83,313,083 | 83,313,083 |
+| ns per instruction | 87–96 | 55 | 101 | 58 |
+
+- Step 1 alone took the default run from 7.3–8.0 s to 4.4–4.6 s, about
+  three times R2's estimate. O3 had costed only the lines that copy a
+  `Decoded` or an `Operand` (1.2 s). The flat time in `decodeInstruction`
+  and `Step` was nearly all that copying and the zeroing of a fresh
+  360-byte `Decoded`, more than the line-level attribution showed. Flat
+  time fell from 1.64 s to 0.14 s in `decodeInstruction`, and from 0.71 s
+  to 0.20 s in `Step`.
+- Step 2 is lost in the noise on PI (4.49–4.54 s before it, 4.49–4.57 s
+  after). It mostly makes the remaining copies smaller (handlers pass an
+  `Operand` by value to `Load` and `Store`), and those copies were already
+  cheap.
+- The output is byte-identical to the old build's.
+- Earlier workloads: `BenchmarkSieve` went from 11.46 ms/op (old build) to
+  6.40 ms/op after step 1, and to 6.28 ms/op after step 2.
+- New profile, default run (4.27 s of samples): decode is 46% cum
+  (`decodeOperand` 36%), `LoadByte` 19%, `translate` and `phys` 19% between
+  them, and the handler map lookup 6%. So R4 and R5 (instruction fetch and
+  the memory accessors) and R6 (the map) now have the largest shares.
+  Page-table walks are unchanged at 21.0 M, which leaves R3's gain where
+  it was in absolute terms and a larger share of the run.
 
 ---
 
