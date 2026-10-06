@@ -103,7 +103,15 @@ type Engine struct {
 	// they are SystemTime (systime.go).
 	bootTime   uint64
 	clockTicks uint64
-	lastClock     uint64
+
+	// lastClock is the host clock's reading, in Unix milliseconds, the last
+	// time hardware-clock mode took an interval-clock tick (pollHostClock,
+	// clock.go).
+	lastClock uint64
+
+	// todrOffset is how far the time-of-year register has been set away
+	// from the clock's own reading by a write to it (SetTODR, clock.go).
+	todrOffset uint32
 
 	// Per-run instruction/time budget -- see limits.go. Both zero-valued
 	// (no limit) on a freshly constructed Engine.
@@ -324,42 +332,15 @@ func (e *Engine) Step() error {
 
 	e.instrCount++
 
-	// If we are using a "hardware" clock, then every millisecond,
-	// tick the ICS register and check for interrupt state.
+	// Advance the clocks (clock.go). In hardware-clock mode, look at the
+	// host's clock only every hostClockPollInterval instructions: reading
+	// it costs more than most instructions do. In quantum mode, count this
+	// instruction toward the next emulated millisecond.
 	if e.hardwareClock {
-		t := uint64(time.Now().UnixMilli())
-		// Has at least one millisecond passed since we last did this?
-		if t != e.lastClock {
-			e.lastClock = t
-			e.tickIntervalClock()
-
-			if !e.interruptPending {
-				e.scanInterruptQueue()
-			}
-
-			// Also, update the TODR clock value
-			// 1. Get the current time
-			now := time.Now()
-
-			// 2. Define midnight of January 1st for the current year
-			janFirst := time.Date(now.Year(), time.January, 1, 0, 0, 0, 0, now.Location())
-
-			// 3. Calculate the duration elapsed since Jan 1st
-			durationElapsed := now.Sub(janFirst)
-
-			// 4. Convert the duration into 10-millisecond ticks
-			// (1 tick = 10 milliseconds). Mask it down to 32
-			// bits, and store the value in the TODR privileged
-			// register.
-			ticks := uint64(durationElapsed.Milliseconds() / 10)
-			vaxtodr := uint32(ticks & 0xFFFFFFFF)
-
-			e.cpu.SetPR(vax.TODR, vaxtodr)
+		if e.instrCount&hostClockPollMask == 0 {
+			e.pollHostClock()
 		}
 	} else {
-		// Not bound to hardware clock (which is required for deterministic)
-		// behavior, so use the fake "quantum" which triggers an interval clock
-		// tick every `quantum` instructions of execution.
 		e.tickQuantum()
 	}
 

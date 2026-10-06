@@ -470,7 +470,7 @@ func (c *Console) ShowCPU() error {
 	buff := "    "
 
 	for _, e := range privRegDisplay {
-		buff += fmt.Sprintf("    %-6s:  %08X", e.name, c.CPU.PR(e.reg))
+		buff += fmt.Sprintf("    %-6s:  %08X", e.name, c.Engine.ReadPR(e.reg))
 
 		if len(buff) > 60 {
 			c.Printf("%s\n", buff)
@@ -506,7 +506,8 @@ func (c *Console) ShowRegisterOrPrivReg(name string) error {
 	}
 
 	if pr, ok := privRegNames[name]; ok {
-		c.Printf("%-6s = %08X\n", name, c.CPU.PR(pr))
+		// ReadPR, not the register file: TODR is computed when read.
+		c.Printf("%-6s = %08X\n", name, c.Engine.ReadPR(pr))
 
 		return nil
 	}
@@ -1334,8 +1335,9 @@ func (c *Console) ShowClock() error {
 		return err
 	}
 
-	// 1. Get number of ticks from the TODR register
-	var ticks int64 = int64(c.Engine.CPU().PR(vax.TODR))
+	// 1. Get the number of 10 ms ticks since January 1st from the TODR
+	// register, which the engine computes from its clock when read.
+	var ticks int64 = int64(c.Engine.TODR())
 
 	// 2. Define the target year's starting point (January 1st at midnight)
 	currentYear := time.Now().Year()

@@ -247,6 +247,11 @@ func setPrivReg(e *Engine, reg int, value uint32) error {
 			e.Interrupt(ExcConWrite, 20, 0) // see the IPL note on case TXCS above
 		}
 
+	case vax.TODR:
+		// TODR isn't stored: it's computed from the engine's clock when
+		// read, and a write sets where it counts from (clock.go).
+		e.SetTODR(value)
+
 	case vax.TBIA:
 		e.mem.InvalidateTB()
 
@@ -296,7 +301,9 @@ func emulMfpr(e *Engine, d *Decoded) error {
 		e.cpu.SetPR(vax.RXCS, e.cpu.PR(vax.RXCS)&deviceIE)
 	}
 
-	value := e.cpu.PR(vax.PrivReg(reg))
+	// ReadPR is the register file, except for registers computed when
+	// they're read (TODR; see clock.go).
+	value := e.ReadPR(vax.PrivReg(reg))
 
 	return d.Operands[1].Store(e.cpu, e.mem, uint64(value))
 }

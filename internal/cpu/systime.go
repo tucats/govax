@@ -11,14 +11,15 @@ import (
 // format — 100ns units since 17-Nov-1858 00:00, local time, as VMS keeps
 // it (vmsdef.Time).
 //
-// It is driven by the same thing that drives the interval clock, so the
-// two always agree: one interval-clock tick is one millisecond. With
-// vax.hardware.clock set, ticks come from the wall clock once a
-// millisecond, and the system time simply is the host's local time. Without
-// it (the default), ticks come every quantum of instructions
-// (tickQuantum), and the system time is the local time the Engine was
-// created at plus one millisecond per tick — deterministic, so a program's
-// timers expire after the same number of instructions every run.
+// With vax.hardware.clock set, the system time simply is the host's local
+// time. Without it (the default), the engine counts instructions into
+// emulated milliseconds (tickQuantum, one millisecond per quantum), and the
+// system time is the local time the Engine was created at plus one
+// millisecond per tick — deterministic, so a program's timers expire after
+// the same number of instructions every run. Either way it doesn't depend
+// on the guest's interval-clock interrupt, which the microkernel no longer
+// starts (clock.go). The time-of-year register, TODR, is computed from
+// this same time when it's read, so the two always agree.
 
 // vmsTicksPerMillisecond is one millisecond in VMS time units.
 const vmsTicksPerMillisecond = 10_000

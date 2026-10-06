@@ -9,8 +9,8 @@ import (
 // the process in a wait state that isn't satisfied yet ($WAITFR on a clear
 // event flag, docs/PHASE-26.md). The XFC handler then leaves R0 alone and
 // backs PC up to the XFC instruction, so the next Step calls the service
-// again: the process waits in emulated time, and interrupts (the interval
-// timer, the only asynchronous source today) are still delivered between
+// again: the process waits in emulated time (which goes on advancing, so
+// its timers expire), and interrupts and ASTs are still delivered between
 // attempts, as they would be to a waiting VMS process. Console attention
 // and the instruction/time limits still stop it.
 var ErrServiceWait = errors.New("cpu: system service waiting")

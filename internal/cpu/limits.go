@@ -74,7 +74,11 @@ func (e *Engine) checkLimits() error {
 		return ErrInstructionLimitExceeded
 	}
 
-	if e.timeLimit > 0 && !time.Now().Before(e.runDeadline) {
+	// Reading the host clock costs more than most instructions do, so the
+	// time limit is checked only every hostClockPollInterval instructions
+	// (clock.go), always including a run's first. That can overrun the
+	// limit by that many instructions: a few microseconds.
+	if e.timeLimit > 0 && e.instrCount&hostClockPollMask == 0 && !time.Now().Before(e.runDeadline) {
 		return ErrTimeLimitExceeded
 	}
 	

@@ -56,6 +56,14 @@ func (c *Console) SetSymbolQualified(name string, value uint32, permanent, entry
 	}
 
 	if pr, ok := privRegNames[name]; ok {
+		// TODR isn't stored in the register file; the engine computes it
+		// from its clock, and a write sets where it counts from.
+		if pr == vax.TODR {
+			c.Engine.SetTODR(value)
+
+			return nil
+		}
+
 		c.CPU.SetPR(pr, value)
 
 		return nil
