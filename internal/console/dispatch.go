@@ -200,7 +200,7 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("SHOW_SYM_DCL", func(id int64, r *dcl.Result) error { return d.Console.ShowDCLSymbols(r.String("SYMBOL")) })
 	g.Bind("SHOW_RADIX", func(id int64, r *dcl.Result) error { return d.Console.ShowRadix() })
 	// SHOW VERSION has no bind of its own: its grammar syntax carries
-	// /entry=exe$about (evax.dcl's own "syntax show_version/entry=exe$about"
+	// /entry=exe$about (console.dcl's own "syntax show_version/entry=exe$about"
 	// — it shares ABOUT's real VAX routine), so Dispatch's EntryPoint check
 	// above reaches it before Grammar.Dispatch ever would. The Go-native
 	// ShowVersion stand-in this bind used to call (docs/PHASE-08.md's own
@@ -275,8 +275,8 @@ func (d *Dispatcher) bindGrammar() {
 	// Phase 22 (internal/rms): MOUNT/DISMOUNT attach/detach a disk-image
 	// container file to a device name via internal/rms.MountTable
 	// (Console.Mount/Dismount, internal/console/mount.go). Neither verb has
-	// a reference/eVAX or testdata/dcl/evax.dcl counterpart -- see this
-	// package's own grammar file (internal/bootdata/files/evax.dcl)'s
+	// a reference/eVAX or testdata/dcl/console.dcl counterpart -- see this
+	// package's own grammar file (internal/bootdata/files/console.dcl)'s
 	// "govax-native extension" comment at MOUNT's definition.
 	g.Bind("MOUNT", func(id int64, r *dcl.Result) error {
 		// The WRITE qualifier defaults to present (a bare MOUNT is
@@ -301,7 +301,7 @@ func (d *Dispatcher) bindGrammar() {
 	// forward the old fixed-table INIT command's exact behavior (cmdInit,
 	// removed) now that INIT/INITIALIZE are unified onto this grammar as
 	// one verb, redirected by /VAX vs. /CONTAINER. PAGES has no /prompt= in
-	// the grammar (see evax.dcl's own comment on initialize_vax), so a
+	// the grammar (see console.dcl's own comment on initialize_vax), so a
 	// missing page count is checked explicitly here rather than triggering
 	// a formal-requirement error with different wording -- preserving
 	// CLI_NEEDPAGES's exact original message either way.
@@ -321,7 +321,7 @@ func (d *Dispatcher) bindGrammar() {
 	// Phase 23 (docs/PHASE-23.md, subtask 4): INITIALIZE/CONTAINER formats
 	// a brand-new, empty ODS-2 volume via internal/rms.InitializeContainer
 	// (Console.InitializeContainer, internal/console/initialize.go). PATH
-	// and SIZE both carry /prompt= in the grammar (evax.dcl's own
+	// and SIZE both carry /prompt= in the grammar (console.dcl's own
 	// initialize_container syntax), so -- unlike INITIALIZE_VAX's PAGES --
 	// Grammar.Dispatch's own prompting/required-parameter machinery already
 	// guarantees they're present by the time this closure runs; LABEL and
@@ -342,7 +342,7 @@ func (d *Dispatcher) bindGrammar() {
 	// Phase 23 (docs/PHASE-23.md, subtask 5): DIRECTORY lists the files on
 	// a mounted volume via internal/rms.Session.Directory (Console.
 	// Directory, internal/console/directory.go). SPEC carries no /prompt=
-	// in the grammar (evax.dcl's own directory verb), so a bare DIRECTORY
+	// in the grammar (console.dcl's own directory verb), so a bare DIRECTORY
 	// with nothing typed after it reaches here with r.String("SPEC") == ""
 	// -- exactly the "list the whole current default directory" case
 	// Console.Directory's own doc comment describes, not a missing
@@ -375,7 +375,7 @@ func (d *Dispatcher) bindGrammar() {
 
 	// Phase 23 (docs/PHASE-23.md, subtask 6): DELETE reclaims a file's
 	// storage via internal/rms.Session.Delete (Console.Delete, internal/
-	// console/delete.go). SPEC carries /prompt= in the grammar (evax.dcl's
+	// console/delete.go). SPEC carries /prompt= in the grammar (console.dcl's
 	// own delete verb), so Grammar.Dispatch's own required-parameter
 	// machinery already guarantees it's present by the time this closure
 	// runs -- unlike DIRECTORY's SPEC, a bare DELETE has no sensible
@@ -386,7 +386,7 @@ func (d *Dispatcher) bindGrammar() {
 
 	// Phase 23 (docs/PHASE-23.md, subtask 7): PURGE trims old versions via
 	// internal/rms.Session.Purge (Console.Purge, internal/console/purge.go).
-	// LIMIT carries no /prompt= in the grammar (evax.dcl's own purge verb),
+	// LIMIT carries no /prompt= in the grammar (console.dcl's own purge verb),
 	// so an omitted /LIMIT reaches here as r.Present("LIMIT") == false --
 	// resolved to the default of 1 (ods2's own cmdPurge convention) here,
 	// rather than in internal/rms.Session.Purge itself, since r.Int's own
@@ -413,7 +413,7 @@ func (d *Dispatcher) bindGrammar() {
 	// Phase 23 (docs/PHASE-23.md, subtask 8): TYPE writes one file's
 	// content to the console via internal/rms.Session.Type (Console.Type,
 	// internal/console/type.go). SPEC carries /prompt= in the grammar
-	// (evax.dcl's own type verb), so Grammar.Dispatch's own required-
+	// (console.dcl's own type verb), so Grammar.Dispatch's own required-
 	// parameter machinery already guarantees it's present by the time this
 	// closure runs. /PAGE shows it a screenful at a time.
 	g.Bind("TYPE", func(id int64, r *dcl.Result) error {
@@ -424,7 +424,7 @@ func (d *Dispatcher) bindGrammar() {
 	// files' content between a mounted volume and the host filesystem, or
 	// between two mounted volumes, via internal/rms.Session.Copy
 	// (Console.Copy, internal/console/copy.go). SOURCE and DESTINATION
-	// each carry their own private HOST qualifier (evax.dcl's own copy
+	// each carry their own private HOST qualifier (console.dcl's own copy
 	// verb, using the parameter-scoped-qualifier grammar feature from
 	// subtask 2), read here via r.ParamPresent(paramName, "HOST") rather
 	// than the ordinary entry-level r.Present -- see internal/console/
@@ -437,7 +437,7 @@ func (d *Dispatcher) bindGrammar() {
 	// text-mode copy already always expands VFC carriage control the way
 	// TYPE does, so there is no "un-interpreted" mode /VFC could opt out
 	// of -- see CopyOptions' own doc comment for the fuller reasoning.
-	// /CRLF and /LF's mutual exclusivity is enforced by evax.dcl's own
+	// /CRLF and /LF's mutual exclusivity is enforced by console.dcl's own
 	// "disallow crlf and lf" grammar statement, so this closure never
 	// needs to check for both at once itself.
 	g.Bind("COPY", func(id int64, r *dcl.Result) error {

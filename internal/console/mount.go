@@ -38,7 +38,7 @@ import (
 // real VMS operator's MOUNT command makes a physical (or, here, emulated)
 // disk available to RMS. write selects read/write vs. read-only access,
 // matching MOUNT's own /WRITE (default here) and /NOWRITE — see this
-// package's DCL grammar file (internal/bootdata/files/evax.dcl)'s "verb
+// package's DCL grammar file (internal/bootdata/files/console.dcl)'s "verb
 // mount" for how the console command line maps onto these two arguments.
 //
 // Two things distinguish this from calling c.Mounts.Mount directly:

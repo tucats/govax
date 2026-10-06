@@ -14,7 +14,7 @@
 // qualifier set; $rest_of_line's greedy consume-to-end-of-line behavior;
 // required-parameter/qualifier and DISALLOW-combination checks) directly
 // against a Grammar data structure, built once by parsing the grammar
-// definition text (testdata/dcl/evax.dcl) rather than being derived
+// definition text (testdata/dcl/console.dcl) rather than being derived
 // statement-by-statement through the FSM.
 //
 // Phase 23 adds one grammar-language feature with no dclrtl.c counterpart at

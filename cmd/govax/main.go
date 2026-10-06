@@ -7,7 +7,7 @@
 // history/editing, named explicitly in docs/PHASE-08.md's scope note,
 // rather than a bare fgets(stdin)).
 //
-// File location (evax.dcl/vax.help/vax.init/kernel.asm/ssdef.asm, and any
+// File location (console.dcl/vax.help/vax.init/kernel.asm/ssdef.asm, and any
 // other file a console command names) is docs/PHASE-15.md's own departure
 // from driver.c's hard CWD-relative "console.dcl" lookup: a repeatable -path
 // flag names directories searched, in order, after the name exactly as

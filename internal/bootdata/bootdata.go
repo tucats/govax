@@ -1,6 +1,6 @@
 // Package bootdata embeds the small set of files govax needs to boot a
 // working console with no external testdata/ checkout: the DCL command
-// grammar (evax.dcl), HELP text (vax.help), the startup script (vax.init),
+// grammar (console.dcl), HELP text (vax.help), the startup script (vax.init),
 // and the microkernel source vax.init assembles (kernel.asm, which
 // .INCLUDEs ssdef.asm). These are copies of testdata/dcl and testdata/asm's
 // own files (see docs/PHASE-15.md) — go:embed can only embed files under

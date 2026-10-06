@@ -111,7 +111,7 @@ func TestGrammarSplit(t *testing.T) {
 		{"SHOW CPU_STATUS", debuggerOnly},
 		{"SHOW CLOCK", debuggerOnly},
 		{"SHOW BASE", debuggerOnly},
-		{"SHOW MEMORY", debuggerOnly},
+		{"SHOW MEMORY", both},
 		{"SHOW MAPS", debuggerOnly},
 		{"SHOW TB", debuggerOnly},
 		{"SHOW REGIONS", debuggerOnly},

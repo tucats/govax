@@ -3,7 +3,7 @@ package dcl
 // ValueType identifies the kind of value a parameter or qualifier accepts,
 // matching dclrtl.h's DCL_ANY/DCL_NAME/DCL_STRING/DCL_INTEGER/DCL_KEYWORD
 // datatype codes plus dcldef.h's DCL_KEYWORD__REST_OF_LINE — restricted to
-// the subset testdata/dcl/evax.dcl actually uses (see doc.go).
+// the subset testdata/dcl/console.dcl actually uses (see doc.go).
 type ValueType int
 
 // Value type constants. TypeSwitch marks a qualifier that takes no value at

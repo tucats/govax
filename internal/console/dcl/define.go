@@ -11,7 +11,7 @@ import (
 )
 
 // ParseGrammar parses grammar-definition text (the dialect
-// testdata/dcl/evax.dcl uses: "grammar"/"verb"/"syntax"/"type"/"keyword"/
+// testdata/dcl/console.dcl uses: "grammar"/"verb"/"syntax"/"type"/"keyword"/
 // "qualifier"/"parameter"/"disallow"/"end" statements, "!" line comments,
 // and "-" line-continuation) into a validated Grammar — the Go equivalent
 // of DCLread/DCLdefine/DCLvalidate, minus the FSM/self-hosting machinery
