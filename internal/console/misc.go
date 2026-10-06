@@ -156,8 +156,17 @@ func (c *Console) IncludeCommandLine(dispatch func(string) error) error {
 	// The command ends the session either way: a failed one-shot command
 	// shouldn't leave the user at a prompt. run (cmd/govax) reports its
 	// failure and exits nonzero.
+	c.limitStop = nil
+
 	if status := dispatch(text); status != nil {
 		c.commandLineErr = status
+	} else if c.limitStop != nil {
+		// The program was stopped by --instruction-limit or --time-limit.
+		// ReportStop has shown the message and let the command finish
+		// normally, as it should at the prompt; but a one-shot command
+		// that didn't run to its end has failed. The message is marked as
+		// shown already, so govax doesn't print it a second time.
+		c.commandLineErr = vmserrors.InhibitMessage(c.limitStop)
 	}
 
 	return vmserrors.Wrap(vmserrors.VAX_QUIT, nil)

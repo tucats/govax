@@ -518,7 +518,9 @@ reached a one-shot command. The console now holds the limits
 (`Console.SetRunLimits`) and applies them (`ApplyRunLimits`) just before the
 one-shot command and before the interactive prompt. With the fix the same
 command stops at 1.0 s with `%VAX-I-TIMELIMIT`.
-`TestRun_limitsStopAOneShotRun` covers both limits.
+`TestRun_limitsStopAOneShotRun` covers both limits. A one-shot run that a
+limit stops now also fails: govax exits with status 124 (timeout(1)'s
+convention), showing the limit message only once.
 
 ---
 

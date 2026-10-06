@@ -150,6 +150,14 @@ type Console struct {
 	instructionLimit int
 	timeLimit        time.Duration
 
+	// limitStop is the limit error (cpu.ErrInstructionLimitExceeded or
+	// ErrTimeLimitExceeded) that most recently stopped a run, recorded by
+	// ReportStop (execute.go), which shows the message and otherwise treats
+	// the stop as benign. IncludeCommandLine clears it before the one-shot
+	// command and reads it after, so a one-shot run cut short by a limit
+	// fails, and govax exits nonzero.
+	limitStop error
+
 	// In/Out are the console's byte-level terminal streams: In backs
 	// XFC$CONSOLE_READ and (shared with RTL) DECC$GETS/EXE$INPUT/EXE$READ's
 	// fid-0 case; Out backs XFC$CONSOLE_WRITE and every other console

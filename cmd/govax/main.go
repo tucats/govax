@@ -88,11 +88,29 @@ func main() {
 	stopCPUProfile()
 
 	if err != nil {
+		// A run stopped by --instruction-limit or --time-limit has shown
+		// its own message already; it only needs its exit status.
+		if isLimitStop(err) {
+			os.Exit(limitExitStatus)
+		}
+
 		fmt.Fprintln(os.Stderr, "govax:", err)
 		os.Exit(1)
 	}
 
 	auditConfig()
+}
+
+// limitExitStatus is govax's exit status when --instruction-limit or
+// --time-limit stops the program a one-shot command runs. It is the status
+// the Unix timeout(1) command uses for a command it had to stop, so a
+// script can tell "ran out of budget" from an ordinary failure (status 1).
+const limitExitStatus = 124
+
+// isLimitStop reports whether err is a run stopped by --instruction-limit
+// or --time-limit (the console's IncludeCommandLine returns one, wrapped).
+func isLimitStop(err error) bool {
+	return errors.Is(err, cpu.ErrInstructionLimitExceeded) || errors.Is(err, cpu.ErrTimeLimitExceeded)
 }
 
 // run drives startup and the command loop. in, when non-nil, is used as

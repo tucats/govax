@@ -330,7 +330,8 @@ expect adjustment as phases land):
   `time-limit` options, repeatable `mount`/`mount-write DEVICE=container`,
   `console`/`asm`/`run`/`macro`/`link`/`library`/`analyze` subcommands;
   `analyze --image` is ANALYZE/IMAGE). A one-shot subcommand that fails
-  makes govax exit nonzero, and volumes still mounted are dismounted (flushed)
+  makes govax exit nonzero (124, as timeout(1) does, when `--instruction-limit`
+  or `--time-limit` stopped it), and volumes still mounted are dismounted (flushed)
   when a session ends. Briefly moved to the repo
   root (2026-09-17); moved back into `cmd/govax` as the more standard layout
   (`go build ./...`/`go run ./cmd/govax`).

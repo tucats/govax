@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // emptyStdin lets tests pass a deterministic, immediately-EOF input source
@@ -105,7 +107,9 @@ func TestRun_timeLimitStopsARunawayProgram(t *testing.T) {
 // tests above: a command given on govax's command line (here, RUN of a
 // program that loops forever) runs from inside vax.init, through
 // INCLUDE/COMMAND_LINE, so the limits have to be applied there too, not
-// only before the interactive prompt. Each limit is tried on its own, and
+// only before the interactive prompt. A one-shot run a limit stops has
+// failed: run returns the limit error, and govax exits with
+// limitExitStatus. Each limit is tried on its own, and
 // the boot itself, which runs the microkernel's initialization, mustn't
 // be cut short by them (the run would never start if it were).
 func TestRun_limitsStopAOneShotRun(t *testing.T) {
@@ -139,11 +143,21 @@ func TestRun_limitsStopAOneShotRun(t *testing.T) {
 			var buf bytes.Buffer
 
 			// run returns once the limit stops the program; without the
-			// fix it never would, and the test would time out.
-			_ = run(nil, tc.instructions, tc.duration, &buf, emptyStdin(), []string{runSpin})
+			// limits applied it never would, and the test would time out.
+			err := run(nil, tc.instructions, tc.duration, &buf, emptyStdin(), []string{runSpin})
 
-			if !strings.Contains(buf.String(), tc.want) {
-				t.Errorf("output = %q, want a %s message", buf.String(), tc.want)
+			if strings.Count(buf.String(), tc.want) != 1 {
+				t.Errorf("output = %q, want one %s message", buf.String(), tc.want)
+			}
+
+			// The one-shot command failed, so govax exits with
+			// limitExitStatus; the message isn't shown again.
+			if !isLimitStop(err) {
+				t.Errorf("run = %v, want a limit stop (exit status %d)", err, limitExitStatus)
+			}
+
+			if !vmserrors.MessageInhibited(err) {
+				t.Errorf("run = %v, want its message marked as already shown", err)
 			}
 		})
 	}
