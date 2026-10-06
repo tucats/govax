@@ -1,7 +1,7 @@
 # Phase 42 — The debugger: its own package, grammar, and prompt
 
 **Status:** in progress. Planned and reviewed 2026-10-05 (the author
-took every recommended decision). Subtasks 1 to 15 are done (see the
+took every recommended decision). Subtasks 1 to 16 are done (see the
 progress log).
 
 ## Goal
@@ -1734,5 +1734,67 @@ command is the debugger's (`debug.dcl`).
   each non-alias verb of each grammar against its help file
   (`dcl.Grammar.Verbs`, new, lists them), `TestDebuggerHelpTopics` asks for
   about seventy topics, and `TestDebuggerHelpKeysAreUnique`.
+- `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
+  touched are clean.
+
+### 2026-10-05 — Subtask 16: the session oracle
+
+`TestDebuggerSessionOracle` (`internal/debugger/session_oracle_test.go`)
+replays each of the 18 probe sessions (every `.dbg` of `testdata/dbg` and
+`testdata/dbgcmd`, over the image the VMS run used: DBGDIS and GVDBGDIS,
+DBGTRC, the four TRACE images, FAILLNK, FORTH, and DBGCMD nine times)
+through govax's debugger and compares the output of **every command** with
+the `.dlg` log, line by line.
+
+- **How it aligns.** The log echoes each command (`! command`) and prints
+  its output after, but leaves out the echo of a command that fails, so the
+  harness matches script commands to echoes in order, treats a command
+  whose echo is missing (or comes after a later command's) as part of the
+  one before, and compares each group's output. Error messages are
+  compared too (`%DEBUG-E-...`), as the front end would print them. The
+  program's own output and the log's `%DEBUG-I-VERIFYICF` notes are left
+  out, and `normalize` masks what can't match for a reason that isn't about
+  the debugger: where VMS put its stack and its heap (`7FED....`,
+  descriptor addresses), the sizes of its tables (`SHOW MODULE`, `SHOW
+  IMAGE`), the images only VMS has (DEBUG, DBGSSISHR, DBGTBKMSG, LIBRTL),
+  and govax's own `access mode:` line.
+- **The first run found a lot** (about 150 commands differed), mostly
+  things the earlier per-topic oracles didn't look at. **Fixed:**
+  - An unknown name in any expression is `%DEBUG-E-NOSYMBOL, symbol 'X' is
+    not in the symbol table`, not the console's `%CLI-E-UNDEFSYM`
+    (`console.debuggerSymbolError`), for names, path names, and `%LINE`s.
+  - An unknown *keyword* names the keyword (`SET DEFAULT` is a syntax
+    error "at or near 'DEFAULT'", not 'SET'), and `SET STEP BOGUS` is
+    `%DEBUG-E-SYNTAX` naming BOGUS, not `%CLI-E-BADQUALIFIER`.
+  - `SET MODE NOSYMBOLIC` lays instructions out as the VMS debugger does
+    (`00000485:       MULL2    R2,R0`, operands as numbers), not in the
+    console's old layout (`DisassembleOptions.Numeric`).
+  - `EXAMINE routine` shows `entry mask ^M<R2,R3,R4>` and names the
+    routine (`DBGDIS\START:`), not the data label before it.
+  - `EXAMINE/INSTRUCTION` of an address the program can't read is
+    `%DEBUG-E-NOACCESSR`, not the HALT that reading zeros decodes to.
+  - After the image exits its PC is 0, so `.PC` is that address's
+    NOACCESSR, as VMS's.
+  - `SHOW BREAK` lists the addresses of one `SET BREAK a, b` in reverse
+    (ODD before LOOP; the one probe of it, so unconfirmed beyond that).
+  - A step by line in an image with no line numbers doesn't show the
+    instruction's text (`stepped to DBGDIS\START+20`), only a step by
+    instruction does (`TestStepTraceback` now says `SET STEP
+    INSTRUCTION`, as the log's step did).
+  - `EVALUATE` of a name only the global symbol table has (an image linked
+    with traceback alone) is the longword at that address, not the value:
+    a global constant of 2 reads address 2.
+- **What still differs** is the short list `expectedDifferences`, each with
+  its reason: a WHEN condition's `.LABEL` (a documented choice), the
+  unhandled-exception break leaving the PC in the condition dispatcher
+  (so `.PC` and `SHOW CALLS` there are the dispatcher's), STEP from an
+  exception break, CALL's `%VAL` and "value returned is" (Future
+  features), the `ACCVIO` message's text (`PSL=` in VMS 7.3's run, `PS=`
+  in the generated message table), `EXAMINE/BYTE/WORD` (VMS takes the last
+  type), `%DEBUG-E-LINEINFO` for a line with no code, a data address named
+  by the global constant `GLIMIT+25D`, `SHOW CALLS` in a handler lacking
+  the "above condition handler called" lines, and SET MODE NOLINE not
+  acted on. The test fails for a difference that isn't listed and for a
+  listed one that has gone away, so the list stays what is left.
 - `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
   touched are clean.

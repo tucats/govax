@@ -153,10 +153,25 @@ func (d *Dispatcher) parseError(line string, err error) error {
 	word := strings.ToUpper(firstWord(line))
 	isVerb := true
 
-	var ve vmserrors.VMSError
-	if errors.As(err, &ve) && len(ve.Arguments) >= 2 {
-		isVerb = fmt.Sprint(ve.Arguments[0]) == "verb"
-		word = qualifierAsTyped(line, fmt.Sprint(ve.Arguments[1]), isVerb)
+	// The word is in the error that says it is unrecognized, which a
+	// keyword's failure (SET DEFAULT: "keyword DEFAULT") wraps in an error
+	// about the parameter, so the chain is searched for it.
+	for e := err; e != nil; e = errors.Unwrap(e) {
+		ve, ok := e.(vmserrors.VMSError)
+		if !ok || len(ve.Arguments) < 2 || (ve.Status != vmserrors.CLI_UNRECOGNIZED && ve.Status != vmserrors.CLI_AMBIGUOUS) {
+			continue
+		}
+
+		kind := fmt.Sprint(ve.Arguments[0])
+		isVerb = kind == "verb"
+		word = fmt.Sprint(ve.Arguments[1])
+
+		// A qualifier is reported without the NO the user may have typed.
+		if kind == "qualifier" {
+			word = qualifierAsTyped(line, word, false)
+		}
+
+		break
 	}
 
 	syntax := vmserrors.New(vmserrors.DBG_SYNTAX, word)

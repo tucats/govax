@@ -134,7 +134,7 @@ func (d *Debugger) parseStepWord(word string) error {
 	case is("NOSOURCE"):
 		d.stepDefaults.noSource = true
 	default:
-		return vmserrors.New(vmserrors.CLI_BADQUALIFIER, word)
+		return vmserrors.New(vmserrors.DBG_SYNTAX, word)
 	}
 
 	return nil
@@ -161,12 +161,12 @@ func parseStepModeWord(word string) (StepMode, bool) {
 
 // SetStepMode implements SET STEP: one or more keywords, separated by
 // commas or blanks (SET STEP INSTRUCTION, SET STEP NOSOURCE, SET STEP
-// INTO,LINE). A keyword it doesn't know is %CLI-W-BADQUALIFIER, and the
-// keywords before it have taken effect.
+// INTO,LINE). A keyword it doesn't know is %DEBUG-E-SYNTAX, naming it (the
+// probe's errors.dlg), and the keywords before it have taken effect.
 func (d *Debugger) SetStepMode(words string) error {
 	fields := strings.FieldsFunc(words, func(r rune) bool { return r == ',' || r == ' ' || r == '\t' })
 	if len(fields) == 0 {
-		return vmserrors.New(vmserrors.CLI_BADQUALIFIER, words)
+		return vmserrors.New(vmserrors.DBG_SYNTAX, words)
 	}
 
 	for _, word := range fields {
@@ -581,7 +581,10 @@ func (d *Debugger) reportStep(req stepRequest, pc uint32) {
 		return
 	}
 
-	if req.byInstruction || !c.HasLineInfo(pc) {
+	// The instruction is shown only for a step by instruction. Where an image
+	// has no line numbers a step by line is one instruction too, but without
+	// the instruction's text (dbgtrc.dlg).
+	if req.byInstruction {
 		c.Printf("stepped to %s: %s\n", c.LocationText(pc), c.InstructionText(pc))
 		d.stepSource(req, pc)
 

@@ -1,10 +1,12 @@
 package console
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/dbgsym"
+	"github.com/tucats/govax/internal/disasm"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -63,7 +65,7 @@ func (c *Console) EvalWholeMode(radix int, text string, value bool) (uint32, err
 
 	v, rest, err := ev.Eval(text)
 	if err != nil {
-		return 0, err
+		return 0, debuggerSymbolError(err)
 	}
 
 	if extra := strings.TrimSpace(rest); extra != "" {
@@ -71,6 +73,22 @@ func (c *Console) EvalWholeMode(radix int, text string, value bool) (uint32, err
 	}
 
 	return v, nil
+}
+
+// debuggerSymbolError rewords an "undefined symbol" error of the
+// expression evaluator the way the VMS debugger says it. The console's
+// words are %CLI-E-UNDEFSYM, Undefined symbol "X"; the debugger's are
+// %DEBUG-E-NOSYMBOL, symbol 'X' is not in the symbol table (the probe's
+// sessions show it for a name, a path name, and a %LINE alike). Any other
+// error is returned as it is.
+func debuggerSymbolError(err error) error {
+	var ve vmserrors.VMSError
+
+	if errors.As(err, &ve) && ve.Status == vmserrors.CLI_UNDEFSYM && len(ve.Arguments) > 0 {
+		return vmserrors.New(vmserrors.DBG_NOSYMBOL, ve.Arguments[0])
+	}
+
+	return err
 }
 
 // ParseCall evaluates the parameters of a CALL command: the routine's
@@ -408,4 +426,20 @@ func (c *Console) HasSymbol(name string) bool {
 	_, ok := c.Symbols.Find(name)
 
 	return ok
+}
+
+// EntryMaskText describes the word at addr as a routine's entry mask, as
+// the debugger's EXAMINE of a routine shows it ("entry mask ^M<R2,R3,R4>"),
+// when addr is the start of a routine that is called (CALLS or CALLG), and
+// so begins with one. A VAX routine starts with a 16-bit mask of the
+// registers it saves; ok is false for any other address.
+func (c *Console) EntryMaskText(addr uint32) (text string, ok bool) {
+	name, isEntry := c.entryAt(addr)
+	if !isEntry {
+		return "", false
+	}
+
+	dec := disasm.EntryMask(memByteReader{c: c}, addr, name)
+
+	return dec.Format(disasm.Options{Style: disasm.StyleDebugger}), true
 }

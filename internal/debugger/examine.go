@@ -119,6 +119,7 @@ func (d *Dispatcher) examine(r *dcl.Result) error {
 
 	opts := console.DisassembleOptions{
 		Symbolic:  dbg.symbolic,
+		Numeric:   !dbg.symbolic,
 		Constants: r.Present("CONSTANTS"),
 		Shareable: r.Present("SHAREABLE"),
 		Operands:  dbg.operands,

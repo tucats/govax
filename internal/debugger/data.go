@@ -144,6 +144,15 @@ func (d *Debugger) registerScope() string {
 // address (a routine's code), or just the address in hex.
 func (d *Debugger) locationName(addr uint32) string {
 	if prog := d.Console.DebugProgramAt(addr); prog != nil {
+		// A routine's start is named by the routine, which the data
+		// symbols' nearest-label rule would otherwise miss (START is
+		// DBGDIS\START, not DBGDIS\NOLAB2+19C).
+		if _, isEntry := d.Console.EntryMaskText(addr); isEntry {
+			if name, ok := prog.Symbolize(addr, d.symbolRadix()); ok {
+				return name
+			}
+		}
+
 		if name, ok := prog.DataName(addr, d.symbolRadix()); ok {
 			return name
 		}
@@ -421,6 +430,19 @@ func (d *Debugger) examineAt(r *dcl.Result, addr uint32, inRange bool) error {
 	}
 
 	size, typed := d.typedSize(r)
+
+	// A routine's first word is its entry mask, the registers it saves
+	// (dbgdis.dlg: "DBGDIS\START:   entry mask ^M<R2,R3,R4>").
+	if !typed && datum == nil && !r.Present("PTE") && !r.Present("PSL") {
+		if text, ok := c.EntryMaskText(addr); ok {
+			d.examined = examineState{addr: addr, size: 2, set: true}
+			c.DepositAddr = addr + 2
+
+			c.Printf("%s%s\n", tabPad(d.locationName(addr)+":"), text)
+
+			return nil
+		}
+	}
 
 	switch {
 	case typed:

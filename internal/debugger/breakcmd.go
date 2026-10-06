@@ -230,6 +230,11 @@ func (d *Debugger) setAddressBreaks(list *[]*Breakpoint, proto Breakpoint, targe
 		made = append(made, &bp)
 	}
 
+	// A list typed in one command is listed in reverse (SET BREAK LOOP, ODD
+	// shows ODD first: break.dlg), while the commands themselves follow one
+	// another.
+	slices.Reverse(made)
+
 	for _, bp := range made {
 		// A place has one eventpoint of the user's: a breakpoint, or a
 		// tracepoint, replaces the other of the same address, as the VMS

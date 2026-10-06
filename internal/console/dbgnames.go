@@ -3,6 +3,7 @@ package console
 import (
 	"strings"
 
+	"github.com/tucats/govax/internal/symtab"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -49,6 +50,19 @@ func (n imageNames) DataSize(path string) (uint32, bool) {
 	for _, icb := range n.c.ICBList {
 		d, ok := icb.Debug.DatumPath(path)
 		if !ok {
+			// A name only the image's global symbol table has (an image
+			// linked with traceback alone, or a global the debug records
+			// don't describe) is a location of unknown type, whose value
+			// is the longword stored there: the VMS debugger's EVALUATE of
+			// a global constant of 2 reads address 2 (trlnkdbg.dlg).
+			if icb.Debug != nil && icb.Debug.Globals != nil && !strings.Contains(path, `\`) {
+				if _, described := icb.Debug.Lookup(path); !described {
+					if g, found := icb.Debug.Globals.Get(path); found && g.Flags&symtab.Entry == 0 {
+						return 4, true
+					}
+				}
+			}
+
 			continue
 		}
 
@@ -163,10 +177,18 @@ func (n imageNames) Line(scope string, line int) (uint32, bool) {
 type consoleSymbolizer struct {
 	c     *Console
 	radix int
+
+	// numeric turns naming off: every address is a number, as SET MODE
+	// NOSYMBOLIC shows them.
+	numeric bool
 }
 
 // Symbolize implements disasm.Symbolizer.
 func (s consoleSymbolizer) Symbolize(addr uint32) (string, bool) {
+	if s.numeric {
+		return "", false
+	}
+
 	if p := s.c.debugImageAt(addr); p != nil {
 		return p.Symbolize(addr, s.radix)
 	}
@@ -194,6 +216,10 @@ func (s consoleSymbolizer) Symbolize(addr uint32) (string, bool) {
 // image's line table has a line starting there: how DISASSEMBLE names
 // the first instruction of a range typed as a %LINE, as the debugger does.
 func (s consoleSymbolizer) lineName(addr uint32) (string, bool) {
+	if s.numeric {
+		return "", false
+	}
+
 	if p := s.c.debugImageAt(addr); p != nil {
 		return p.LineName(addr, s.radix)
 	}

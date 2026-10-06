@@ -39,7 +39,7 @@ func TestStepOver_runsCallToCompletion(t *testing.T) {
 		t.Errorf("PC after STEP/OVER = %#x, want 0x209 (past the CALLS, not inside it)", got)
 	}
 
-	if out := buf.String(); out != "stepped to 00000209: RET\n" {
+	if out := buf.String(); out != "stepped to 00000209\n" {
 		t.Errorf("output = %q, want the step's report", out)
 	}
 }

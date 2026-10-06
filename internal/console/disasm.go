@@ -46,6 +46,12 @@ type DisassembleOptions struct {
 	// "ADDRESS: MNEMONIC operands", in the text the assembler reads back.
 	Symbolic bool
 
+	// Numeric lays the instructions out as Symbolic does, the VMS
+	// debugger's way, but names no address: a location and an operand's
+	// target are numbers (the debugger's SET MODE NOSYMBOLIC). It has no
+	// effect with Symbolic.
+	Numeric bool
+
 	// Constants names a short literal or immediate that is exactly one
 	// constant's value in the module holding the instruction (Decision
 	// 5); Shareable shows a G^ reference to a shareable image by the
@@ -89,11 +95,15 @@ func (c *Console) DisassembleWith(start, end uint32, opts DisassembleOptions) er
 		radix = c.symbolRadix()
 	}
 
-	names := consoleSymbolizer{c: c, radix: radix}
+	// The debugger's layout, with or without names; the console's own
+	// layout only when neither is asked for.
+	debuggerLayout := opts.Symbolic || opts.Numeric
+
+	names := consoleSymbolizer{c: c, radix: radix, numeric: !opts.Symbolic}
 	format := c.formatOptions(opts, names)
 
 	for pc := start; pc <= end; {
-		if !opts.Symbolic {
+		if !debuggerLayout {
 			dec, err := c.decodeInstruction(r, pc)
 			if err != nil {
 				return vmserrors.Wrap(vmserrors.CLI_DISASM, err, pc)
@@ -103,6 +113,12 @@ func (c *Console) DisassembleWith(start, end uint32, opts DisassembleOptions) er
 			pc += dec.Length
 
 			continue
+		}
+
+		// An address the program can't read isn't shown as the HALT that
+		// reading zeros decodes to (the debugger: %DEBUG-E-NOACCESSR).
+		if _, err := c.ReadBytes(pc, 1); err != nil {
+			return err
 		}
 
 		dec, err := c.decodeAt(r, pc)
@@ -145,7 +161,7 @@ func (c *Console) DisassembleWith(start, end uint32, opts DisassembleOptions) er
 func (c *Console) formatOptions(opts DisassembleOptions, names consoleSymbolizer) disasm.Options {
 	var format disasm.Options
 
-	if opts.Symbolic {
+	if opts.Symbolic || opts.Numeric {
 		format.Style = disasm.StyleDebugger
 		format.Symbolizer = names
 	}

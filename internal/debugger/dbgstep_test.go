@@ -105,6 +105,8 @@ func TestStepSymbolic(t *testing.T) {
 func TestStepTraceback(t *testing.T) {
 	d, buf, _ := stepImage(t, "dbgtrc.exe")
 
+	dispatchOutput(t, d, buf, "SET STEP INSTRUCTION")
+
 	want := "stepped to DBGDIS\\START+5: MOVL     I^#000003E8,R3\n"
 	if got := withoutStack(dispatchOutput(t, d, buf, "STEP")); got != want {
 		t.Errorf("STEP:\ngot:\n%s\nwant:\n%s", got, want)

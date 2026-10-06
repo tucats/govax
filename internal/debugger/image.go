@@ -141,6 +141,10 @@ func (d *Debugger) imageExit(err error) (ok bool) {
 	d.imageDebug = false
 	d.imageExited = true
 
+	// The program has no program counter left (the VMS debugger's .PC is 0,
+	// and EXAMINE/INSTRUCTION .PC is %DEBUG-E-NOACCESSR at address 0).
+	c.CPU.SetGPR(vax.PC, 0)
+
 	// A STEP/RETURN waiting for a frame of the image is moot now.
 	d.pendingReturn = nil
 

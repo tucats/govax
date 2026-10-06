@@ -114,12 +114,13 @@ func TestBreakAtUnlabeledAddress(t *testing.T) {
 // TestBreakListAndTemporary: a list sets one breakpoint per address, and a
 // temporary one is gone once it has stopped the program (break.dlg).
 //
-// govax lists the breakpoints in the order they were set; the VMS
-// debugger's order is its own (unconfirmed, docs/PHASE-42.md).
+// The breakpoints are listed in the order the commands set them, and those
+// of one command in reverse (break.dlg's SET BREAK LOOP, ODD lists ODD
+// first; the one probe of it, so unconfirmed beyond that).
 func TestBreakListAndTemporary(t *testing.T) {
 	c := probeSession(t)
 
-	say(t, c, "SET BREAK ODD, LAST")
+	say(t, c, "SET BREAK LAST, ODD")
 	say(t, c, "SET BREAK/TEMPORARY LOOP")
 
 	expect(t, "SHOW BREAK", say(t, c, "SHOW BREAK"),
