@@ -355,6 +355,15 @@ func printStats(c *console.Console, out io.Writer, flag bool) {
 		fmt.Fprintf(out, "    TB Cache Tries:         %13s\n", formatLargeNumber(tbTries))
 		fmt.Fprintf(out, "    TB Cache Hits:          %13s\n", formatLargeNumber(tbHits))
 		fmt.Fprintf(out, "    TB Flushes:             %13s\n", formatLargeNumber(tbFlushes))
+
+		// The instruction-fetch window (internal/vm/fetch.go): hits are
+		// instruction-stream reads served straight from RAM, without a
+		// translation (so they appear in none of the counts above); fills
+		// are the times a fetch had to translate a new page into it.
+		fetchHits, fetchFills := c.Engine.Memory().FetchStats()
+
+		fmt.Fprintf(out, "    Fetch Window Hits:      %13s\n", formatLargeNumber(fetchHits))
+		fmt.Fprintf(out, "    Fetch Window Fills:     %13s\n", formatLargeNumber(fetchFills))
 	}
 }
 

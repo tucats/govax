@@ -291,6 +291,10 @@ func (e *Engine) InterruptCount() uint64 {
 // themselves (e.g. a translation fault) is returned as-is and otherwise
 // ignored by the caller, left for the real Step to raise properly.
 func (e *Engine) PeekInstruction() (*Instruction, error) {
+	// The console may have changed MAPEN or the PSL since the last Step;
+	// see Step's own SyncFetchWindow call.
+	e.mem.SyncFetchWindow(e.cpu)
+
 	op, _, err := fetchOpcode(e.cpu, e.mem, e.cpu.GPR(vax.PC))
 	if err != nil {
 		return nil, err
@@ -364,6 +368,16 @@ func (e *Engine) Step() error {
 	}
 
 	e.instructionPC = e.cpu.GPR(vax.PC)
+
+	// The decoder reads the instruction stream through the memory's
+	// instruction-fetch window (internal/vm/fetch.go; docs/PERFORMANCE.md,
+	// Study 1, R4), one page translated once and then read directly.
+	// Memory mapping (MAPEN) or the CPU's access mode may have changed
+	// since the window was filled, by the instruction just executed, an
+	// interrupt or AST delivered above, or the console between steps;
+	// either change empties the window, so the fetches below translate
+	// afresh. Checking once here is cheaper than checking on every byte.
+	e.mem.SyncFetchWindow(e.cpu)
 
 	next := e.current ^ 1
 	dec := &e.decoded[next&1]

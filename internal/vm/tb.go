@@ -221,11 +221,26 @@ type tb struct {
 	stcPPage          uint32
 	stcGrant          tbGrant
 	stcTries, stcHits int64
+
+	// fetch is the instruction-fetch window (fetch.go): one page of the
+	// instruction stream, translated once, that instruction fetches read
+	// without going through translate. It lives here, beside the STC,
+	// because whatever empties the STC must empty it too (see stcFlush).
+	fetch fetchWindow
 }
 
 // stcFlush is the Go equivalent of vm.c's STC_FLUSH macro: it empties the
 // one-slot cache, so the next translation can't hit it.
-func (t *tb) stcFlush() { t.stcGrant = grantNone }
+//
+// It also empties the instruction-fetch window (fetch.go), which has no
+// such equivalent in vm.c. Every reason to stop trusting the STC (a TB
+// invalidation, a change of access mode, a translation fault) is a reason
+// to stop trusting the window as well, so tying the two together here
+// means no invalidation site can forget the window.
+func (t *tb) stcFlush() {
+	t.stcGrant = grantNone
+	t.fetch.flush()
+}
 
 // stcFill makes the STC remember entry's translation for the virtual page
 // starting at vpage, letting through what entry grants the access mode

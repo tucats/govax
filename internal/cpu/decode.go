@@ -38,9 +38,16 @@ type Decoded struct {
 // without the operand-decode side effects (autoincrement/autodecrement)
 // a full decode would incur.
 func fetchOpcode(cpu *vax.CPU, mem *vm.Memory, pc uint32) (Opcode, uint32, error) {
-	f, err := mem.LoadByte(cpu, pc)
-	if err != nil {
-		return Opcode{}, 0, err
+	// TryFetchByte reads the byte with no function call when it's in the
+	// memory's instruction-fetch window (nearly always); FetchByte, the
+	// full fetch, handles the rest. See internal/vm/fetch.go.
+	f, ok := mem.TryFetchByte(pc)
+	if !ok {
+		var err error
+
+		if f, err = mem.FetchByte(cpu, pc); err != nil {
+			return Opcode{}, 0, err
+		}
 	}
 
 	pc++
@@ -48,7 +55,7 @@ func fetchOpcode(cpu *vax.CPU, mem *vm.Memory, pc uint32) (Opcode, uint32, error
 	if f > 0xFC {
 		// Extended (two-byte) opcode: f is the prefix, the next byte is the
 		// actual function code.
-		f2, err := mem.LoadByte(cpu, pc)
+		f2, err := mem.FetchByte(cpu, pc)
 		if err != nil {
 			return Opcode{}, 0, err
 		}

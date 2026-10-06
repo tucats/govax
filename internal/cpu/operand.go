@@ -53,6 +53,8 @@ type Operand struct {
 	High uint64
 }
 
+// loadSized reads a size-byte (1, 2, or 4) data value at addr, through
+// the ordinary data path (mem.LoadByte and friends).
 func loadSized(cpu *vax.CPU, mem *vm.Memory, addr uint32, size int) (uint32, error) {
 	switch size {
 	case 1:
@@ -67,6 +69,38 @@ func loadSized(cpu *vax.CPU, mem *vm.Memory, addr uint32, size int) (uint32, err
 
 	case 4:
 		return mem.LoadLongword(cpu, addr)
+
+	default:
+		panic(fmt.Sprintf("cpu: unsupported operand size %d", size))
+	}
+}
+
+// fetchSized is loadSized for the instruction stream: it reads a size-byte
+// (1, 2, or 4) value that is part of the instruction itself (a branch
+// displacement, or an implicit or I^# immediate) through the memory's
+// instruction-fetch window (vm.Memory.FetchByte and friends; see
+// internal/vm/fetch.go and docs/PERFORMANCE.md, Study 1, R4). It returns
+// exactly what loadSized would, and faults where loadSized would; the
+// window only makes the common case faster.
+//
+// The decoder reads every byte of the instruction stream through a Fetch
+// method, and reads data (the pointer a deferred mode follows) through a
+// Load method, never the reverse: data accesses must not disturb the
+// window, and the window must only ever hold the page the PC is in.
+func fetchSized(cpu *vax.CPU, mem *vm.Memory, addr uint32, size int) (uint32, error) {
+	switch size {
+	case 1:
+		b, err := mem.FetchByte(cpu, addr)
+
+		return uint32(b), err
+
+	case 2:
+		w, err := mem.FetchWord(cpu, addr)
+
+		return uint32(w), err
+
+	case 4:
+		return mem.FetchLongword(cpu, addr)
 
 	default:
 		panic(fmt.Sprintf("cpu: unsupported operand size %d", size))
@@ -119,7 +153,7 @@ func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, 
 	// reads from the instruction stream.
 	switch access {
 	case AccessImmediate:
-		raw, err := loadSized(cpu, mem, *pc, size)
+		raw, err := fetchSized(cpu, mem, *pc, size)
 		if err != nil {
 			return err
 		}
@@ -131,7 +165,7 @@ func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, 
 		return nil
 
 	case AccessBranch:
-		raw, err := loadSized(cpu, mem, *pc, size)
+		raw, err := fetchSized(cpu, mem, *pc, size)
 		if err != nil {
 			return err
 		}
@@ -144,9 +178,16 @@ func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, 
 		return nil
 	}
 
-	optype, err := mem.LoadByte(cpu, *pc)
-	if err != nil {
-		return err
+	// The operand specifier byte: TryFetchByte reads it with no function
+	// call when it's in the memory's instruction-fetch window, as it nearly
+	// always is, and FetchByte handles the rest (see fetchOpcode).
+	optype, ok := mem.TryFetchByte(*pc)
+	if !ok {
+		var err error
+
+		if optype, err = mem.FetchByte(cpu, *pc); err != nil {
+			return err
+		}
 	}
 
 	*pc++
@@ -250,6 +291,11 @@ func decodeImmediate(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype D
 		// integer, so the low half goes in Value and the high half in
 		// High (see LoadOctaword). An H_floating immediate stays as its
 		// raw bits here; the floating code interprets them.
+		//
+		// These are read through the data path rather than the
+		// instruction-fetch window (see fetchSized): 16-byte immediates
+		// are rare, and an instruction-stream read through the data path
+		// gets the same answer, just more slowly.
 		lo, err := mem.LoadQuadword(cpu, *pc)
 		if err != nil {
 			return err
@@ -268,19 +314,19 @@ func decodeImmediate(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype D
 	}
 
 	if size == 8 {
-		lo, err := mem.LoadLongword(cpu, *pc)
+		lo, err := mem.FetchLongword(cpu, *pc)
 		if err != nil {
 			return err
 		}
 
-		hi, err := mem.LoadLongword(cpu, *pc+4)
+		hi, err := mem.FetchLongword(cpu, *pc+4)
 		if err != nil {
 			return err
 		}
 
 		raw = uint64(lo) | uint64(hi)<<32
 	} else {
-		v, err := loadSized(cpu, mem, *pc, size)
+		v, err := fetchSized(cpu, mem, *pc, size)
 		if err != nil {
 			return err
 		}
@@ -313,7 +359,7 @@ func decodePCRelative(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKin
 		return nil
 
 	case 0x09: // Absolute: @#addr
-		addr, err := mem.LoadLongword(cpu, *pc)
+		addr, err := mem.FetchLongword(cpu, *pc)
 		if err != nil {
 			return err
 		}
@@ -325,7 +371,7 @@ func decodePCRelative(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKin
 		return nil
 
 	case 0x0A, 0x0B: // Byte relative [deferred]
-		raw, err := mem.LoadByte(cpu, *pc)
+		raw, err := mem.FetchByte(cpu, *pc)
 		if err != nil {
 			return err
 		}
@@ -335,7 +381,7 @@ func decodePCRelative(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKin
 		return pcRelativeTarget(cpu, mem, pc, mode == 0x0B, int32(int8(raw)), op)
 
 	case 0x0C, 0x0D: // Word relative [deferred]
-		raw, err := mem.LoadWord(cpu, *pc)
+		raw, err := mem.FetchWord(cpu, *pc)
 		if err != nil {
 			return err
 		}
@@ -345,7 +391,7 @@ func decodePCRelative(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKin
 		return pcRelativeTarget(cpu, mem, pc, mode == 0x0D, int32(int16(raw)), op)
 
 	case 0x0E, 0x0F: // Long relative [deferred]
-		raw, err := mem.LoadLongword(cpu, *pc)
+		raw, err := mem.FetchLongword(cpu, *pc)
 		if err != nil {
 			return err
 		}
@@ -459,7 +505,7 @@ func decodeGeneral(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype Dat
 		return nil
 
 	case 0x0A, 0x0B: // Byte displacement [deferred]: B^n(Rn) / @B^n(Rn)
-		raw, err := mem.LoadByte(cpu, *pc)
+		raw, err := mem.FetchByte(cpu, *pc)
 		if err != nil {
 			return err
 		}
@@ -469,7 +515,7 @@ func decodeGeneral(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype Dat
 		return displacementTarget(cpu, mem, reg, mode == 0x0B, int32(int8(raw)), op)
 
 	case 0x0C, 0x0D: // Word displacement [deferred]
-		raw, err := mem.LoadWord(cpu, *pc)
+		raw, err := mem.FetchWord(cpu, *pc)
 		if err != nil {
 			return err
 		}
@@ -479,7 +525,7 @@ func decodeGeneral(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype Dat
 		return displacementTarget(cpu, mem, reg, mode == 0x0D, int32(int16(raw)), op)
 
 	case 0x0E, 0x0F: // Long displacement [deferred]
-		raw, err := mem.LoadLongword(cpu, *pc)
+		raw, err := mem.FetchLongword(cpu, *pc)
 		if err != nil {
 			return err
 		}
