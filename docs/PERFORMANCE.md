@@ -100,7 +100,7 @@ study, promote it to `-s` as a recommendation.
 
 | # | Workload | Date | Baseline | Status |
 |---|---|---|---|---|
-| 1 | `pi.mar`, `run pi 10000` | 2026-10-06 | 9.6 s, 83.3 M instr, 115 ns/instr | Audited; no fixes yet |
+| 1 | `pi.mar`, `run pi 10000` | 2026-10-06 | 9.6 s, 83.3 M instr, 115 ns/instr | R1 done: 7.2 s, 87 ns/instr (quantum mode 22.1 → 7.5 s) |
 
 ---
 
@@ -301,6 +301,10 @@ overlap: removing one cost makes the others a larger share of what's left.
 **R1. Stop reading the wall clock per instruction, and rethink the interval
 clock (O1, O2). Gain: 20–33% (measured: 9.6 → 7.2–7.9 s). Risk: low for the
 first step.**
+*Status (2026-10-06): done, by way of step 3 below. The microkernel no
+longer uses the interval clock or the console transmit interrupt, and the
+engine keeps time without either. Step 2's quantum change turned out
+unnecessary (see the implementation log).*
 1. *Short term:* in hardware-clock mode, check the time only every N
    instructions (N a power of two, e.g. 1024, so the test is a mask). Better
    still, have a goroutine with a `time.Ticker` set an atomic "tick due"
@@ -421,13 +425,105 @@ Instrumentation only so far:
   (local, not in git): the `default` profile's settings with
   `vax.hardware.clock` = false. `vax.debug.registers` was not copied over.
 
-No performance changes yet.
+**R1: the microkernel off the clock; a synthetic clock (2026-10-06).**
+Done as R1's step 3, in three commits, each tested on its own.
+
+1. *Console output through an XFC* (`a01e8d0`). The microkernel's
+   `exe$put_one` wrote the console a character at a time: a CHMK into
+   kernel mode per character, `MTPR` to the transmit data register
+   (TXDB), then a spin on `exe$tx_ready` until the console-transmit
+   interrupt's handler (`exe$tx`) set it again. A queued interrupt is only
+   admitted on a clock tick, so output needed the clock running. Now
+   `exe$put_one` hands the emulator the whole string in one new XFC,
+   `XFC$CONSOLE_PUT` (code 4, govax's own: R0 is a string descriptor's
+   address; `internal/cpu/xfc.go`, `SystemServices.ConsoleWrite`), or a
+   single character to `XFC$CONSOLE_WRITE`. CHMK 0 (`exe$$put_console`)
+   uses `XFC$CONSOLE_WRITE` too. `exe$initialize` no longer enables the
+   transmit interrupt, and `exe$tx_ready` is gone; `exe$tx` is left as a
+   bare `REI` for a program that enables the interrupt itself. The TXCS/
+   TXDB emulation in `procreg.go` is unchanged.
+   - Output is byte-identical (ABOUT, the boot banner, PI).
+   - Two regression fixtures, `input.asm` and `test.asm`, used to spin
+     forever on the ready flag (their test doesn't run `exe$initialize`,
+     so the interrupt was never enabled). They now complete, and
+     `TestRegression_rtlDependentAsmFixtures` expects that.
+     `TestAssemble_kernelThenHelloRunsBounded` no longer has to enable
+     TXCS by hand.
+2. *The interval clock stays stopped* (`482df1f`). `exe$initialize` no
+   longer loads NICR, sets TODR, or starts ICCS. `exe$interval` stays in
+   the SCB for a program that starts the clock itself. Nothing else
+   depended on its interrupt: the RTL's timers and `$GETTIM` already run
+   on `Engine.SystemTime` (`clockTicks` in quantum mode), not on the
+   handler's tick count. PI to 2,000 places in quantum mode went from
+   9.33 M instructions and 583 K interrupts to 3.50 M and none.
+3. *A synthetic clock* (`5372e55`, `internal/cpu/clock.go`).
+   - TODR is computed when it's read (`MFPR`, and the console's SHOW and
+     SET through `Engine.ReadPR`/`TODR`/`SetTODR`): 10 ms units since
+     January 1st by the emulated system time, plus an offset that a write
+     sets. Nothing has to store it every millisecond. It also reads
+     correctly now. Before, the console's `SHOW CLOCK` showed
+     `JAN-01 00:00:00`, since TODR was written only while instructions ran
+     (hardware mode) or counted from 1 (quantum mode).
+   - In hardware-clock mode, `Step` reads the host clock only every 1,024
+     instructions (a mask test on the instruction count), and then only
+     while the interval clock is running or an interrupt is queued
+     (`pollHostClock`). The `--time-limit` check in `checkLimits` is
+     batched the same way.
+   - Quantum mode is unchanged: `tickQuantum` still counts instructions
+     into emulated milliseconds, which keeps timers deterministic.
+   - New tests in `internal/cpu/clock_test.go` cover TODR, `MTPR`/`MFPR`
+     of TODR, and when the host clock is polled.
+
+Results, PI to 10,000 places (same machine, same session; the old build
+is `0bdb2b3`, before R1):
+
+| | Old, default | New, default | Old, `perf` (quantum) | New, `perf` (quantum) |
+|---|---|---|---|---|
+| Elapsed | 9.95 s | 7.22 s, 7.32 s | 22.10 s | 7.46 s, 7.78 s |
+| Instructions | 83,324,133 | 83,313,083 | 222,168,223 | 83,313,083 |
+| Interrupts | 1,106 | 0 | 13,885,515 | 0 |
+| Page-table walks | 21.0 M | 21.0 M | 149.5 M | 21.0 M |
+| ns per instruction | 119 | 87–88 | 99 | 90–93 |
+
+- Default profile: 27% faster, within the 20–33% R1 estimated. `time.Now`
+  no longer shows in the profile: of 6.7 s of samples, `Step`'s own
+  decode and memory work is what's left (decode 52% cum, `LoadByte` 15%,
+  the handler map lookup 6%), so R2–R6 now have larger shares.
+- Quantum profile: 2.9× faster, and the program's instructions are now
+  all it runs. The extra 128 M page-table walks that came with the
+  interrupts are gone too; most likely they were refills after each
+  handler REI's `InvalidateProtection` sweep (O2, O4), though this run
+  didn't instrument that.
+- Both modes now run exactly the same 83,313,083 instructions, run after
+  run, with no interrupts. In hardware mode the count used to vary a
+  little with host speed (O1).
+- Quantum mode is still about 3% slower than default: with `set quantum 1`
+  (`vax.init`), `tickQuantum` calls `tickIntervalClock` and
+  `scanInterruptQueue` on every instruction, each of which now returns at
+  once. Step 2 of R1 (a larger quantum) would remove that, but it also
+  changes how fast emulated time runs for timers, so it isn't worth the
+  behavior change for 3%. Folding these checks behind R7's "slow path
+  pending" flag is the better route.
+- The digits are identical in every run.
+- Earlier workloads: `BenchmarkSieve` (Phase 12, quantum mode, no
+  microkernel initialization, so no clock was ever running) is unchanged
+  at 11.19 ms/op, old and new.
+
+Found along the way, not fixed: `govax --time-limit 1s run pi 10000` runs
+to completion in both the old and new builds. The engine's own limit check
+works (`limits_test.go`), so the option apparently doesn't reach the
+engine that `run` uses. Worth a separate look.
 
 ---
 
 ## Deferred design issues
 
 **Clock, console output, and context switching (from Study 1, 2026-10-06).**
+*Console output and the clock: done (Study 1, R1). The microkernel writes
+the console through `XFC$CONSOLE_PUT` and leaves the interval clock
+stopped, and the engine keeps time itself (`internal/cpu/clock.go`).
+Context switching is still deferred.*
+
 The interval clock interrupt is a holdover from eVAX's goal of emulating VAX
 hardware. govax's focus is now running VMS programs, and the clock
 mainly serves the microkernel's console output. (Its handler,

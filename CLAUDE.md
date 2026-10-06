@@ -336,10 +336,13 @@ expect adjustment as phases land):
   (`go build ./...`/`go run ./cmd/govax`).
 - `tucats/gopackages` also brings config-settings support (`app-cli/settings`), read at
   `Engine` construction (`internal/cpu/engine.go`'s `NewEngine`). Settings implemented
-  so far: `vax.hardware.clock` (bool) — when true, `Engine.Step` drives the interval
-  clock/TODR off `time.Now().UnixMilli()` instead of the deterministic instruction-quantum
-  mechanism (see `tickQuantum`/`tickIntervalClock` in `internal/cpu/interrupt.go`); when
-  false/unset, the old quantum-driven path is used. `vax.quantum` (int) — default
+  so far: `vax.hardware.clock` (bool) — when true, the system time is the
+  host's, and `Engine.Step` looks at the host clock every 1,024 instructions, only while
+  the interval clock runs or an interrupt is queued (`internal/cpu/clock.go`); when
+  false/unset, `tickQuantum` counts instructions into emulated milliseconds
+  (deterministic). TODR is computed when read, in both modes. The microkernel no
+  longer starts the interval clock, and writes the console through XFCs
+  (`XFC$CONSOLE_PUT`), not TXDB and its interrupt (docs/PERFORMANCE.md, Study 1 R1). `vax.quantum` (int) — default
   quantum-tick interval instead of the hard-coded `defaultQuantum` (20); only takes
   effect if `> 0`. `vax.disassemble.symbolic` (bool) — DISASSEMBLE's default for
   `/SYMBOLIC` (the VMS debugger's layout and names, Phase 41), and for SHOW

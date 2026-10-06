@@ -93,9 +93,9 @@ type Engine struct {
 	interruptIPL                   uint32
 	interruptCount                 uint64
 
-	// Hardware clock support? True if the config item vax.hardware.clock
-	// is true, and supports using time.Now().UnixMilli() to capture the
-	// real hardware clock in real time.
+	// hardwareClock is the vax.hardware.clock setting: true to keep time
+	// by the host's real clock, false to count instructions into emulated
+	// milliseconds (quantum mode, deterministic). See clock.go.
 	hardwareClock bool
 
 	// bootTime is the VMS system time the Engine was created at, and
