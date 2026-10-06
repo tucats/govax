@@ -273,10 +273,10 @@ _haltmsg:       .asciz          <^X0A>"%%MKHALT-I-HALT, microkernel halted"<^X0A
 ;--------------------------------------------------------------------
 ;   INTERVAL TIMER HANDLER
 ;
-;   Each time the interval timer goes off (approximately every millisec)
-;   this increments the TODR register, which was initially loaded by the
-;   CPU initialization and then tracks time for the CPU while it's running.
-;   This isn't done if the TODR is set to zero (disabled).
+;   Each time the interval timer goes off this counts the tick and
+;   increments the TODR register, if TODR is nonzero.  The microkernel
+;   no longer starts the interval clock (see exe$initialize), so this
+;   only runs if a program starts the clock itself.
 ;--------------------------------------------------------------------
 
                 .align          8
@@ -611,23 +611,14 @@ exe$initialize: tstl            @#exe$init_done ; If we've already done
 ;       interrupts for the console input.
 
                 mtpr            #^X40,#VAX$PR_RXCS
-                
 
-;       We want an interval timer interrupt every 10 10ms intervals
-;       or so.  
-                mcoml           #^d10, r0
-                mtpr            r0, #VAX$PR_NICR
+;       The interval clock (ICCS/NICR/ICR) is deliberately left
+;       stopped.  Nothing in the microkernel needs its interrupt any
+;       more, and the emulator keeps time itself: the time services
+;       and TODR come from the engine's own clock, not from
+;       exe$interval counting ticks.  A program that wants the
+;       interrupt can still start the clock; exe$interval handles it.
 
-;	The TODR register only increments if it is non-zero.
-
-                mtpr		#1, #VAX$PR_TODR
-                
-
-;       Now that NICR is set up, turn on interrupts, and reload the
-;       ICR from the NICR.
-
-                mtpr            #^X0ff,#VAX$PR_ICCS
-                
 ;       Mark the flag that says we're done
 
                 movl            #1, @#exe$init_done
