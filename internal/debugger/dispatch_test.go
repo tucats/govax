@@ -15,7 +15,9 @@ func TestDispatch_stepAndGo(t *testing.T) {
 	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
 	loadProgram(t, c, 0x200, opNop, opNop, opHalt)
 
-	if err := d.DispatchConsole("STEP 200"); err != nil {
+	c.CPU.SetGPR(vax.PC, 0x200)
+
+	if err := c.Debugger.Dispatch("STEP"); err != nil {
 		t.Fatalf("Dispatch(STEP): %v", err)
 	}
 
@@ -84,7 +86,7 @@ func TestDispatch_callStepStopsAfterOneInstruction(t *testing.T) {
 	}
 
 	// STEP continues past the ADDL2 ...
-	if err := d.DispatchConsole("STEP"); err != nil {
+	if err := c.Debugger.Dispatch("STEP"); err != nil {
 		t.Fatalf("Dispatch(STEP) [ADDL2]: %v", err)
 	}
 
@@ -95,7 +97,7 @@ func TestDispatch_callStepStopsAfterOneInstruction(t *testing.T) {
 	// ... and a further STEP executes the RET, cleanly returning control to
 	// the console (no error) rather than erroring on the internal
 	// console-call-completion signal.
-	if err := d.DispatchConsole("STEP"); err != nil {
+	if err := c.Debugger.Dispatch("STEP"); err != nil {
 		t.Fatalf("Dispatch(STEP) [RET]: %v", err)
 	}
 }

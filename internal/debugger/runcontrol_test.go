@@ -181,9 +181,9 @@ func TestStepOverReturnsToBreakpoint(t *testing.T) {
 func TestInstructionBreakNamesLocation(t *testing.T) {
 	d, buf, _ := stepImage(t, "dbgdis.exe")
 
-	dispatchOutput(t, d, buf, "SET BREAK/INSTRUCTION JSB")
+	dispatchOutput(t, d, buf, "SET BREAK/INSTRUCTION=JSB")
 
-	if got := dispatchOutput(t, d, buf, "GO"); got != "Instruction break at DBGDIS\\START\\%LINE 87\n" {
+	if got := dispatchOutput(t, d, buf, "GO"); got != "break on instruction(s) at DBGDIS\\START\\%LINE 87\n" {
 		t.Errorf("GO: got %q, want the location named", got)
 	}
 }

@@ -66,12 +66,12 @@ func TestRun_helpMountAndDismountFromEmbeddedFile(t *testing.T) {
 
 // TestRun_instructionLimitStopsARunawayProgram exercises govax's own
 // -instruction-limit flag end to end (docs/PHASE-15.md's sub-phase 2):
-// after the embedded vax.init finishes booting (leaving PC at 0x200, per
-// its own "SET PC=200"), an interactively deposited infinite loop (NOP;
-// BRB back to itself) must not hang the process when a low instruction
+// after the embedded vax.init finishes booting, an infinite loop (NOP; BRB
+// back to itself) deposited from the debugger (DEBUG starts a session on
+// the booted machine) must not hang the process when a low instruction
 // limit is configured -- GO should return control to the prompt instead.
 func TestRun_instructionLimitStopsARunawayProgram(t *testing.T) {
-	script := "D 200 01\nD 201 11\nD 202 0FD\nGO\n"
+	script := "DEBUG\nDEPOSIT 200 = 01\nDEPOSIT 201 = 11\nDEPOSIT 202 = 0FD\nGO 200\n"
 	in := io.NopCloser(strings.NewReader(script))
 
 	var buf bytes.Buffer
@@ -87,7 +87,7 @@ func TestRun_instructionLimitStopsARunawayProgram(t *testing.T) {
 // TestRun_timeLimitStopsARunawayProgram is -time-limit's own counterpart to
 // TestRun_instructionLimitStopsARunawayProgram above.
 func TestRun_timeLimitStopsARunawayProgram(t *testing.T) {
-	script := "D 200 01\nD 201 11\nD 202 0FD\nGO\n"
+	script := "DEBUG\nDEPOSIT 200 = 01\nDEPOSIT 201 = 11\nDEPOSIT 202 = 0FD\nGO 200\n"
 	in := io.NopCloser(strings.NewReader(script))
 
 	var buf bytes.Buffer
@@ -162,7 +162,7 @@ func TestRun_asGivenPathWinsOverPathFlag(t *testing.T) {
 // assembler mode, several lines are typed one at a time (matching what a
 // real terminal session would feed the readline loop), and "END <entry>"
 // both exits the mode and auto-CALLs the routine just typed -- confirmed by
-// EXAMINE-ing the register it set afterward, back in ordinary command mode.
+// EXAMINE-ing the register it set afterward from the debugger.
 func TestRun_interactiveAsmRepl(t *testing.T) {
 	script := strings.Join([]string{
 		"ASM",
@@ -170,7 +170,8 @@ func TestRun_interactiveAsmRepl(t *testing.T) {
 		"MOVL #42,R0",
 		"RET",
 		"END MYTEST",
-		"EXAM R0",
+		"DEBUG",
+		"EXAMINE R0",
 	}, "\n") + "\n"
 
 	in := io.NopCloser(strings.NewReader(script))
@@ -181,8 +182,34 @@ func TestRun_interactiveAsmRepl(t *testing.T) {
 	}
 
 	// #42 is decimal, the assembler's default radix as in MACRO-32; the
-	// console's EXAMINE shows it in hex.
+	// debugger's EXAMINE shows it in hex.
 	if !strings.Contains(buf.String(), "0000002A") {
 		t.Errorf("output = %q, want R0 = 0000002A from the auto-CALLed routine", buf.String())
+	}
+}
+
+// TestRun_bareAsmStartsAtX200 checks that, with vax.init no longer setting
+// PC=200 (docs/PHASE-42.md), a bare ASM after boot still assembles at
+// X^200: statements typed with no .ORG land there, which the debugger's
+// EXAMINE/INSTRUCTION then shows.
+func TestRun_bareAsmStartsAtX200(t *testing.T) {
+	script := strings.Join([]string{
+		"ASM",
+		"MOVL #42,R0",
+		"HALT",
+		"END",
+		"DEBUG",
+		"EXAMINE/INSTRUCTION 200",
+	}, "\n") + "\n"
+
+	in := io.NopCloser(strings.NewReader(script))
+
+	var buf bytes.Buffer
+	if err := run(nil, 0, 0, &buf, in, nil); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "MOVL") || !strings.Contains(buf.String(), "R0") {
+		t.Errorf("output = %q, want the MOVL assembled at 200", buf.String())
 	}
 }

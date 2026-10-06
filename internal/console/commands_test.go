@@ -146,94 +146,15 @@ func TestCommands_zero(t *testing.T) {
 	}
 }
 
-// TestCommands_stepGrammar checks STEP's spellings and qualifiers as the
-// grammar reads them.
-func TestCommands_stepGrammar(t *testing.T) {
+// TestCommands_goGrammar checks GO's spellings as the grammar reads them.
+// STEP, EXAMINE, DEPOSIT, and DISASSEMBLE are the debugger's now
+// (docs/PHASE-42.md), and its tests cover them.
+func TestCommands_goGrammar(t *testing.T) {
 	g := loadEvaxGrammar(t)
-
-	cases := []struct {
-		line, qual, addr string
-	}{
-		{"S", "", ""},
-		{"ST/IN", "INTO", ""},
-		{"STEP/INSTRUCTION 200", "INTO", "200"},
-		{"STEP 200 + 4 /OVER", "OVER", "200 + 4"},
-		{"STE/RET", "RETURN", ""},
-	}
-
-	for _, c := range cases {
-		r, err := g.Parse(c.line)
-		if err != nil {
-			t.Errorf("%s: %v", c.line, err)
-
-			continue
-		}
-
-		if r.Active != "STEP" || r.String("ADDRESS") != c.addr {
-			t.Errorf("%s: %s, address %q", c.line, r.Active, r.String("ADDRESS"))
-		}
-
-		if c.qual != "" && !r.Present(c.qual) {
-			t.Errorf("%s: %s not present", c.line, c.qual)
-		}
-	}
-
-	for _, line := range []string{"STEP/OVER/RETURN", "STEP/NOOVER", "STEP/I"} {
-		if _, err := g.Parse(line); err == nil {
-			t.Errorf("%s: no error", line)
-		}
-	}
 
 	for _, line := range []string{"G", "GO 200", "EXEC", "EXECUTE ."} {
 		if r, err := g.Parse(line); err != nil || r.Active != "EXECUTE" {
 			t.Errorf("%s: %v", line, err)
-		}
-	}
-}
-
-// TestCommands_depositExamine checks DEPOSIT's and EXAMINE's spellings,
-// separators, and sizes. DEPOSIT spelled out used to reach no handler:
-// the fixed table knew only DEP and D.
-func TestCommands_depositExamine(t *testing.T) {
-	d, c, buf := newCommandDispatcher(t)
-
-	steps := []string{
-		"DEPOSIT 2000 = 11223344",
-		"DEPOSIT/BYTE 2000=55",
-		"D/WORD 2002 6677",
-		"DEP R0 = 2000 + 4",
-		"D R1=1",
-	}
-
-	for _, line := range steps {
-		if err := d.Dispatch(line); err != nil {
-			t.Fatalf("%s: %v", line, err)
-		}
-	}
-
-	if v, err := c.Mem.LoadLongword(c.CPU, 0x2000); err != nil || v != 0x66773355 {
-		t.Errorf("longword at 2000 = %#x, %v; want 0x66773355", v, err)
-	}
-
-	if got := c.CPU.GPR(vax.R0); got != 0x2004 {
-		t.Errorf("R0 = %#x, want 0x2004", got)
-	}
-
-	for _, line := range []string{"EXA R0", "EX/B 2000 2003", "DUMP 2000", "EXAMINE 2000 /WORD", "DIS 2000", "DISASSEMBLE 2000 2002"} {
-		buf.Reset()
-
-		if err := d.Dispatch(line); err != nil {
-			t.Errorf("%s: %v", line, err)
-		}
-
-		if buf.Len() == 0 {
-			t.Errorf("%s printed nothing", line)
-		}
-	}
-
-	for _, line := range []string{"EXAMINE/BYTE/WORD 2000", "DEPOSIT 2000", "EXAMINE 2004 2000", "DEPOSIT/NOBYTE 2000 1"} {
-		if err := d.Dispatch(line); err == nil {
-			t.Errorf("%s: no error", line)
 		}
 	}
 }
@@ -336,8 +257,6 @@ func TestCommands_set(t *testing.T) {
 		"SET R=5",
 		"SET X = 1 + 2 /PERMANENT",
 		"SET/LBL Y=X",
-		"SET PSL IPL = 1F, N=1",
-		"SET NODISASSEMBLE",
 		"SET NOVERBOSE",
 		"SET UIQ 7",
 		"SET DEBUG VM, NOUSERHALT",
@@ -360,15 +279,11 @@ func TestCommands_set(t *testing.T) {
 		t.Errorf("radix %d after SET RADIX = 10 (an assignment)", c.Radix)
 	}
 
-	if c.CPU.PSL().IPL() != 0x1F || !c.CPU.PSL().N() {
-		t.Errorf("PSL = %#x", uint32(c.CPU.PSL()))
-	}
-
 	if c.Trace || c.Verbose {
 		t.Errorf("Trace %v, Verbose %v; want both off", c.Trace, c.Verbose)
 	}
 
-	for _, line := range []string{"SET NORADIX 10", "SET RADIX", "SET BOGUS", "SET V", "SET PSL IPL", "SET BREAK/BOGUS 100", "SET QUANTUM X"} {
+	for _, line := range []string{"SET NORADIX 10", "SET RADIX", "SET BOGUS", "SET V", "SET BREAK/BOGUS 100", "SET QUANTUM X"} {
 		if err := d.Dispatch(line); err == nil {
 			t.Errorf("%s: no error", line)
 		}

@@ -39,8 +39,6 @@ clear sym/all
 set quantum 1
 go exe$initialize
 
-set PC=200
-
 set debug nouserhalt
 set debug process
 

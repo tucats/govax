@@ -4,8 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/console"
-	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vax"
 )
@@ -179,73 +177,56 @@ func TestExecute_instructionBreakpointAtStartDoesNotStopImmediately(t *testing.T
 	}
 }
 
+// TestDispatch_instructionBreakpoints: the VMS spelling of an instruction
+// breakpoint, SET BREAK/INSTRUCTION=opcode, stops before each execution of
+// that opcode (but not at the instruction GO starts from), SHOW BREAK lists
+// it, and CANCEL BREAK/INSTRUCTION=opcode takes it away.
 func TestDispatch_instructionBreakpoints(t *testing.T) {
 	c, buf := newTestConsole(t)
-	g := consoletest.ConsoleGrammar(t)
-	d := console.NewDispatcher(c, g, nil)
 
-	if err := d.DispatchConsole("SET BREAK/INSTRUCTION NOP"); err != nil {
-		t.Fatalf("Dispatch(SET BREAK/INSTRUCTION NOP): %v", err)
-	}
+	say(t, c, "SET BREAK/INSTRUCTION=NOP")
 
-	if !dbgOf(c).InstructionBreakpoints[cpu.Instructions().ByName("NOP")] {
-		t.Fatal("SET BREAK/INSTRUCTION NOP did not flag NOP")
-	}
-
-	buf.Reset()
-
-	if err := d.DispatchConsole("SHOW BREAKPOINTS/INSTRUCTIONS"); err != nil {
-		t.Fatalf("Dispatch(SHOW BREAKPOINTS/INSTRUCTIONS): %v", err)
-	}
-
-	if !strings.Contains(buf.String(), "NOP") {
-		t.Errorf("output = %q, want NOP listed", buf.String())
+	if out := say(t, c, "SHOW BREAK"); !strings.Contains(out, "NOP") {
+		t.Errorf("SHOW BREAK = %q, want NOP listed", out)
 	}
 
 	loadProgram(t, c, 0x200, opNop, opNop, opHalt)
+	c.CPU.SetGPR(vax.PC, 0x200)
 	buf.Reset()
 
-	if err := d.DispatchConsole("EXEC 200"); err != nil {
-		t.Fatalf("Dispatch(EXEC 200): %v", err)
+	if err := c.Debugger.Dispatch("GO"); err != nil {
+		t.Fatalf("GO: %v", err)
 	}
 
 	if got := c.CPU.GPR(vax.PC); got != 0x201 {
-		t.Errorf("PC after EXEC = %#x, want 0x201 (stopped at the second NOP)", got)
+		t.Errorf("PC after GO = %#x, want 0x201 (stopped at the second NOP)", got)
 	}
 
-	if err := d.DispatchConsole("CLEAR BREAKPOINT/INSTRUCTION NOP"); err != nil {
-		t.Fatalf("Dispatch(CLEAR BREAKPOINT/INSTRUCTION NOP): %v", err)
+	if !strings.Contains(buf.String(), "break on instruction(s) at 00000201") {
+		t.Errorf("output = %q, want an instruction-break message at 0x201", buf.String())
 	}
 
-	if dbgOf(c).InstructionBreakpoints[cpu.Instructions().ByName("NOP")] {
-		t.Fatal("CLEAR BREAKPOINT/INSTRUCTION NOP left NOP flagged")
-	}
+	say(t, c, "CANCEL BREAK/INSTRUCTION=NOP")
 
-	if err := d.DispatchConsole("SET BREAK/INSTRUCTION HALT"); err != nil {
-		t.Fatalf("Dispatch(SET BREAK/INSTRUCTION HALT): %v", err)
-	}
-
-	if err := d.DispatchConsole("CLEAR BREAKPOINT/INSTRUCTION/ALL"); err != nil {
-		t.Fatalf("Dispatch(CLEAR BREAKPOINT/INSTRUCTION/ALL): %v", err)
-	}
-
-	if len(dbgOf(c).InstructionBreakpoints) != 0 {
-		t.Errorf("InstructionBreakpoints left %d entries after CLEAR .../ALL", len(dbgOf(c).InstructionBreakpoints))
+	if out := say(t, c, "SHOW BREAK"); strings.Contains(out, "NOP") {
+		t.Errorf("SHOW BREAK after the cancel = %q, want no NOP", out)
 	}
 }
 
-func TestDispatch_setBreakInstructionRequiresOpcode(t *testing.T) {
-	d, _ := newTestDispatcher(t)
+// TestDispatch_setBreakInstructionBadOpcode: an opcode that is no
+// instruction's mnemonic is refused.
+func TestDispatch_setBreakInstructionBadOpcode(t *testing.T) {
+	c, _ := newTestConsole(t)
 
-	if err := d.DispatchConsole("SET BREAK/INSTRUCTION"); err == nil {
-		t.Error("expected an error for SET BREAK/INSTRUCTION with no mnemonic")
+	if _, err := sayErr(c, "SET BREAK/INSTRUCTION=BOGUSOP"); err == nil {
+		t.Error("expected an error for SET BREAK/INSTRUCTION with an unknown mnemonic")
 	}
 }
 
 func TestDispatch_setBreakBadQualifier(t *testing.T) {
-	d, _ := newTestDispatcher(t)
+	c, _ := newTestConsole(t)
 
-	if err := d.DispatchConsole("SET BREAK/BOGUS 100"); err == nil {
+	if _, err := sayErr(c, "SET BREAK/BOGUS 100"); err == nil {
 		t.Error("expected an error for an unrecognized SET BREAK qualifier")
 	}
 }

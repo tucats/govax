@@ -116,7 +116,7 @@ func TestDispatch_setBreakpointFaultInterceptsExecution(t *testing.T) {
 	loadProgram(t, c, 0x200, 0xFD, 0x00)
 	c.CPU.SetGPR(vax.PC, 0x200)
 
-	if err := d.DispatchConsole("SET BREAKPOINT/FAULT 10"); err != nil {
+	if err := c.Debugger.Dispatch("SET BREAK/FAULT=10"); err != nil {
 		t.Fatalf("Dispatch(SET BREAKPOINT/FAULT): %v", err)
 	}
 
@@ -141,9 +141,9 @@ func TestDispatch_setBreakpointFaultInterceptsExecution(t *testing.T) {
 }
 
 func TestDispatch_setFaultHistory(t *testing.T) {
-	d, c := newTestDispatcher(t)
+	_, c := newTestDispatcher(t)
 
-	if err := d.DispatchConsole("SET FAULT 3"); err != nil {
+	if err := c.Debugger.Dispatch("SET FAULT 3"); err != nil {
 		t.Fatalf("Dispatch(SET FAULT): %v", err)
 	}
 
@@ -151,7 +151,7 @@ func TestDispatch_setFaultHistory(t *testing.T) {
 		t.Errorf("FaultHistorySize() = %d, want 3", got)
 	}
 
-	if err := d.DispatchConsole("SET HISTORY 5"); err != nil {
+	if err := c.Debugger.Dispatch("SET HISTORY 5"); err != nil {
 		t.Fatalf("Dispatch(SET HISTORY): %v", err)
 	}
 
@@ -161,17 +161,17 @@ func TestDispatch_setFaultHistory(t *testing.T) {
 }
 
 func TestDispatch_clearBreakpointFault(t *testing.T) {
-	d, c := newTestDispatcher(t)
+	_, c := newTestDispatcher(t)
 
-	if err := d.DispatchConsole("SET BREAKPOINT/FAULT 10"); err != nil {
+	if err := c.Debugger.Dispatch("SET BREAK/FAULT=10"); err != nil {
 		t.Fatalf("Dispatch(SET BREAKPOINT/FAULT): %v", err)
 	}
 
-	if err := d.DispatchConsole("SET BREAKPOINT/FAULT 14"); err != nil {
+	if err := c.Debugger.Dispatch("SET BREAK/FAULT=14"); err != nil {
 		t.Fatalf("Dispatch(SET BREAKPOINT/FAULT): %v", err)
 	}
 
-	if err := d.DispatchConsole("CLEAR BREAKPOINT/FAULT 10"); err != nil {
+	if err := c.Debugger.Dispatch("CANCEL BREAK/FAULT=10"); err != nil {
 		t.Fatalf("Dispatch(CLEAR BREAKPOINT/FAULT): %v", err)
 	}
 
@@ -180,7 +180,7 @@ func TestDispatch_clearBreakpointFault(t *testing.T) {
 		t.Fatalf("FaultBreakpoints() = %v, want [%#02x]", got, cpu.ExcCustomer)
 	}
 
-	if err := d.DispatchConsole("CLEAR BREAKPOINT/FAULT/ALL"); err != nil {
+	if err := c.Debugger.Dispatch("CANCEL BREAK/FAULT"); err != nil {
 		t.Fatalf("Dispatch(CLEAR BREAKPOINT/FAULT/ALL): %v", err)
 	}
 

@@ -26,26 +26,6 @@ func TestDisassemble_singleInstruction(t *testing.T) {
 	}
 }
 
-func TestDispatch_disassemble(t *testing.T) {
-	d, _ := newTestDispatcher(t)
-
-	if err := d.Console.Deposit("", 0x2000, SizeByte, 0xD4); err != nil {
-		t.Fatalf("Deposit: %v", err)
-	}
-
-	if err := d.Console.Deposit("", 0x2001, SizeByte, 0x53); err != nil {
-		t.Fatalf("Deposit: %v", err)
-	}
-
-	if err := d.Dispatch("DISASSEMBLE 2000"); err != nil {
-		t.Fatalf("Dispatch(DISASSEMBLE): %v", err)
-	}
-
-	if err := d.Dispatch("DIS 2000"); err != nil {
-		t.Fatalf("Dispatch(DIS): %v", err)
-	}
-}
-
 // TestDisassemble_entryMask checks that a word at a known .ENTRY address is
 // disassembled as a register-save mask, not misdecoded as an instruction --
 // the gap reported against testdata/asm/hello.asm's ".entry main, ^m<>":

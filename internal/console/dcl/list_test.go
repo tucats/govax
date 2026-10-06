@@ -285,7 +285,6 @@ func TestConsoleGrammar_logicalNameCommands(t *testing.T) {
 		{"SHOW LOGICAL/TABLE=(LNM$PROCESS,LNM$SYSTEM)", "SHOW_LOGICAL",
 			[]check{{"TABLE", []string{"LNM$PROCESS", "LNM$SYSTEM"}}}, nil},
 		{"SHOW TRANSLATION/TABLE=LNM$SYSTEM X", "SHOW_TRANSLATION", []check{{"NAME", []string{"X"}}}, nil},
-		{"SHOW TRANSLATION_BUFFER", "SHOW_TB", nil, nil},
 	}
 
 	for _, tt := range tests {

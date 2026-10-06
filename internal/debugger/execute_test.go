@@ -8,10 +8,10 @@ import (
 )
 
 func TestDispatch_clearBreakpoint(t *testing.T) {
-	d, c := newTestDispatcher(t)
+	_, c := newTestDispatcher(t)
 	dbgOf(c).AddBreakpoint(0x400)
 
-	if err := d.DispatchConsole("CLEAR BREAKPOINT/ALL"); err != nil {
+	if err := c.Debugger.Dispatch("CANCEL BREAK/ALL"); err != nil {
 		t.Fatalf("Dispatch(CLEAR BREAKPOINT/ALL): %v", err)
 	}
 
@@ -21,9 +21,9 @@ func TestDispatch_clearBreakpoint(t *testing.T) {
 }
 
 func TestDispatch_setBreakTemporary(t *testing.T) {
-	d, c := newTestDispatcher(t)
+	_, c := newTestDispatcher(t)
 
-	if err := d.DispatchConsole("SET BREAK/TEMPORARY 400"); err != nil {
+	if err := c.Debugger.Dispatch("SET BREAK/TEMPORARY 400"); err != nil {
 		t.Fatalf("Dispatch(SET BREAK/TEMPORARY): %v", err)
 	}
 

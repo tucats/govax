@@ -61,7 +61,7 @@ func newShowRunnableDispatcher(t *testing.T) (*Dispatcher, *Console, *bytes.Buff
 func TestShowMode(t *testing.T) {
 	d, _, buf := newShowDispatcher(t)
 
-	if err := d.Dispatch("SHOW MODE"); err != nil {
+	if err := d.Console.ShowMode(); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -104,7 +104,7 @@ func TestShowROM_loaded(t *testing.T) {
 func TestShowShim(t *testing.T) {
 	d, c, buf := newShowRunnableDispatcher(t)
 
-	if err := d.Dispatch("SHOW SHIM"); err != nil {
+	if err := d.Console.ShowShim(); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -126,7 +126,7 @@ func TestShowShim(t *testing.T) {
 
 	buf.Reset()
 
-	if err := d.Dispatch("SHOW SHIM"); err != nil {
+	if err := d.Console.ShowShim(); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -196,7 +196,7 @@ func TestShowString(t *testing.T) {
 func TestShowPage_beforeFirstTouch(t *testing.T) {
 	d, _, buf := newShowRunnableDispatcher(t)
 
-	if err := d.Dispatch("SHOW PAGE 200"); err != nil {
+	if err := d.Console.ShowPage("200", false); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -219,7 +219,7 @@ func TestShowPage(t *testing.T) {
 		t.Fatalf("StoreLongword through P0: %v", err)
 	}
 
-	if err := d.Dispatch("SHOW PAGE 200"); err != nil {
+	if err := d.Console.ShowPage("200", false); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -248,7 +248,7 @@ func TestShowSCB(t *testing.T) {
 
 	c.Symbols.Set("EXE$CHMK_HANDLER", 0x00012340, SymbolUser)
 
-	if err := d.Dispatch("SHOW SCB"); err != nil {
+	if err := d.Console.ShowSCB(); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -301,7 +301,7 @@ func TestShowCallFrames(t *testing.T) {
 		t.Fatalf("seed argc: %v", err)
 	}
 
-	if err := d.Dispatch("SHOW CALL_FRAMES"); err != nil {
+	if err := d.Console.ShowCalls("", symbolicDefault()); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -322,7 +322,7 @@ func TestShowCallFrames(t *testing.T) {
 func TestShowCallFrames_noFrames(t *testing.T) {
 	d, _, _ := newShowDispatcher(t)
 
-	if err := d.Dispatch("SHOW CALL_FRAMES"); err == nil {
+	if err := d.Console.ShowCalls("", symbolicDefault()); err == nil {
 		t.Error("expected an error when FP/AP are both zero (no call frames)")
 	}
 }
@@ -334,7 +334,7 @@ func TestShowRegions(t *testing.T) {
 	c.RTL.RegionSize[1] = 0x2000
 	c.RTL.RegionSize[2] = 0x3000
 
-	if err := d.Dispatch("SHOW REGIONS"); err != nil {
+	if err := d.Console.ShowRegions(); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -373,7 +373,7 @@ func TestShowSharePrefix(t *testing.T) {
 func TestShowImages(t *testing.T) {
 	d, c, buf := newShowDispatcher(t)
 
-	if err := d.Dispatch("SHOW IMAGES"); err != nil {
+	if err := d.Console.ShowImages(false); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -385,7 +385,7 @@ func TestShowImages(t *testing.T) {
 
 	buf.Reset()
 
-	if err := d.Dispatch("SHOW IMAGES"); err != nil {
+	if err := d.Console.ShowImages(false); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -552,7 +552,7 @@ func TestShowQuantum(t *testing.T) {
 func TestShowClock(t *testing.T) {
 	d, c, buf := newShowDispatcher(t)
 
-	if err := d.Dispatch("SHOW CLOCK"); err != nil {
+	if err := d.Console.ShowClock(); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -563,7 +563,7 @@ func TestShowClock(t *testing.T) {
 	c.CPU.SetPR(vax.ICCS, 1)
 	buf.Reset()
 
-	if err := d.Dispatch("SHOW CLOCK"); err != nil {
+	if err := d.Console.ShowClock(); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -599,7 +599,7 @@ func TestShowDebug(t *testing.T) {
 func TestShowTrace(t *testing.T) {
 	d, c, buf := newShowDispatcher(t)
 
-	if err := d.Dispatch("SHOW TRACE"); err != nil {
+	if err := d.Console.ShowTrace(); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -615,7 +615,7 @@ func TestShowTrace(t *testing.T) {
 	
 	buf.Reset()
 
-	if err := d.Dispatch("SHOW TRACE"); err != nil {
+	if err := d.Console.ShowTrace(); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -631,7 +631,7 @@ func TestShowTrace(t *testing.T) {
 func TestShowFault(t *testing.T) {
 	d, c, buf := newShowDispatcher(t)
 
-	if err := d.Dispatch("SHOW FAULT"); err != nil {
+	if err := d.Console.ShowFault(); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -647,7 +647,7 @@ func TestShowFault(t *testing.T) {
 
 	buf.Reset()
 
-	if err := d.Dispatch("SHOW FAULT"); err != nil {
+	if err := d.Console.ShowFault(); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -713,7 +713,7 @@ func TestShowMap(t *testing.T) {
 
 	// "MAP" alone is ambiguous with the "MAPEN" register keyword; the
 	// grammar's own show_types keyword for this command is plural.
-	if err := d.Dispatch("SHOW MAPS"); err != nil {
+	if err := d.Console.ShowMap(); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -725,7 +725,7 @@ func TestShowMap(t *testing.T) {
 func TestShowTB(t *testing.T) {
 	d, _, buf := newShowDispatcher(t)
 
-	if err := d.Dispatch("SHOW TB"); err != nil {
+	if err := d.Console.ShowTB(); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -753,7 +753,7 @@ func TestShowTB_dumpsPopulatedEntry(t *testing.T) {
 
 	buf.Reset()
 
-	if err := d.Dispatch("SHOW TB"); err != nil {
+	if err := d.Console.ShowTB(); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -772,7 +772,7 @@ func TestShowBase_matchesDepositCursor(t *testing.T) {
 
 	buf.Reset()
 
-	if err := d.Dispatch("SHOW BASE"); err != nil {
+	if err := d.Console.ShowBase(); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -790,7 +790,7 @@ func TestShowStack_bareDumpsLiveMemory(t *testing.T) {
 		t.Fatalf("seed stack word: %v", err)
 	}
 
-	if err := d.Dispatch("SHOW STACK"); err != nil {
+	if err := d.Console.ShowStack(StackKSP, true, 0, false); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -814,7 +814,7 @@ func TestShowP1LR(t *testing.T) {
 
 	c.CPU.SetPR(vax.P1LR, 0x1234)
 
-	if err := d.Dispatch("SHOW P1LR"); err != nil {
+	if err := d.Console.ShowRegisterOrPrivReg("P1LR"); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -832,7 +832,7 @@ func TestShowStack_namedModeReadsSavedPointer(t *testing.T) {
 		t.Fatalf("seed ESP stack word: %v", err)
 	}
 
-	if err := d.Dispatch("SHOW ESP"); err != nil {
+	if err := d.Console.ShowStack(StackESP, false, 0, false); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 

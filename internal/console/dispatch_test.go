@@ -10,7 +10,6 @@ import (
 
 	"github.com/tucats/govax/internal/console/dcl"
 	"github.com/tucats/govax/internal/vax"
-	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -55,30 +54,6 @@ func newTestDispatcher(t *testing.T) (*Dispatcher, *Console) {
 	return d, c
 }
 
-func TestDispatch_examine(t *testing.T) {
-	d, _ := newTestDispatcher(t)
-	if err := d.Console.Deposit("", 0x1000, SizeLongword, 0x99887766); err != nil {
-		t.Fatalf("Deposit: %v", err)
-	}
-
-	if err := d.Dispatch("EXAMINE 1000"); err != nil {
-		t.Fatalf("Dispatch: %v", err)
-	}
-}
-
-func TestDispatch_verbAbbreviation(t *testing.T) {
-	d, _ := newTestDispatcher(t)
-	// "EXAM" abbreviates EXAMINE, as any unambiguous prefix does (the
-	// fixed table this test was written for matched four characters).
-	if err := d.Dispatch("EXAMINE R0"); err != nil {
-		t.Fatalf("Dispatch(EXAMINE R0): %v", err)
-	}
-
-	if err := d.Dispatch("EXAM R0"); err != nil {
-		t.Fatalf("Dispatch(EXAM R0): %v", err)
-	}
-}
-
 func TestDispatch_setAndExamineRegister(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	if err := d.Dispatch("SET R4=1234"); err != nil {
@@ -87,26 +62,6 @@ func TestDispatch_setAndExamineRegister(t *testing.T) {
 
 	if got := c.CPU.GPR(vax.R4); got != 0x1234 {
 		t.Errorf("R4 = %#x, want 0x1234 (radix 16 default)", got)
-	}
-}
-
-func TestDispatch_depositAndExamine(t *testing.T) {
-	d, c := newTestDispatcher(t)
-	// A hex literal starting with a letter (A-F) needs a leading digit or
-	// a "^X"/"0X" radix prefix — matching real VAX DCL/MACRO number syntax
-	// (asm_hex/asm_expr3 treat a leading letter as the start of a symbol
-	// name, not a digit) — see internal/console/expr.go.
-	if err := d.Dispatch("D 2000=0ABCD123"); err != nil {
-		t.Fatalf("Dispatch(D): %v", err)
-	}
-
-	v, err := c.Mem.LoadLongword(c.CPU, 0x2000)
-	if err != nil {
-		t.Fatalf("LoadLongword: %v", err)
-	}
-
-	if v != 0x0ABCD123 {
-		t.Errorf("got %#x, want 0x0abcd123", v)
 	}
 }
 
@@ -219,11 +174,11 @@ func TestDispatch_callWithArgumentList(t *testing.T) {
 func TestDispatch_showViaDCL(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 
-	if err := d.Dispatch("SHOW REGISTERS"); err != nil {
+	if err := d.Console.ShowRegisters(); err != nil {
 		t.Fatalf("Dispatch(SHOW REGISTERS): %v", err)
 	}
 
-	if err := d.Dispatch("SHOW PSL"); err != nil {
+	if err := d.Console.ShowPSL(); err != nil {
 		t.Fatalf("Dispatch(SHOW PSL): %v", err)
 	}
 }
@@ -232,7 +187,7 @@ func TestDispatch_showRegisterShortcut(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	c.CPU.SetGPR(vax.R2, 0x55)
 
-	if err := d.Dispatch("SHOW R2"); err != nil {
+	if err := d.Console.ShowRegisterOrPrivReg("R2"); err != nil {
 		t.Fatalf("Dispatch(SHOW R2): %v", err)
 	}
 }
@@ -360,21 +315,17 @@ func TestDispatch_debugDCLTrace(t *testing.T) {
 func TestDispatch_setTraceAndShowTrace(t *testing.T) {
 	d, c := newTestDispatcher(t)
 
-	if err := d.Dispatch("SET TRACE"); err != nil {
-		t.Fatalf("Dispatch(SET TRACE): %v", err)
-	}
+	c.SetTrace(true)
 
 	if !c.Trace {
 		t.Error("Trace = false, want true after SET TRACE")
 	}
 
-	if err := d.Dispatch("SHOW TRACE"); err != nil {
+	if err := d.Console.ShowTrace(); err != nil {
 		t.Fatalf("Dispatch(SHOW TRACE): %v", err)
 	}
 
-	if err := d.Dispatch("SET NOTRACE"); err != nil {
-		t.Fatalf("Dispatch(SET NOTRACE): %v", err)
-	}
+	c.SetTrace(false)
 
 	if c.Trace {
 		t.Error("Trace = true, want false after SET NOTRACE")
@@ -401,71 +352,8 @@ func TestDispatch_setDebugAndShowDebug(t *testing.T) {
 	}
 }
 
-// TestDispatch_setPSL checks SET PSL's own comma-separated field=value
-// clause list (setcommand.go's SET_PSL), including its CUR_MOD alias for SET MODE.
-func TestDispatch_setPSL(t *testing.T) {
+func TestDispatch_setVerbose(t *testing.T) {
 	d, c := newTestDispatcher(t)
-
-	// IPL=10 is evaluated in the console's default radix 16, so this sets
-	// IPL to 16 decimal, not ten -- matching every other numeric literal
-	// this evaluator parses.
-	if err := d.Dispatch("SET PSL N=1,V=1,IPL=10"); err != nil {
-		t.Fatalf("Dispatch(SET PSL): %v", err)
-	}
-
-	psl := c.CPU.PSL()
-	if !psl.N() || !psl.V() || psl.IPL() != 16 {
-		t.Errorf("PSL = %#x, want N/V set and IPL=16 (0x10)", uint32(psl))
-	}
-
-	if err := d.Dispatch("SET PSL BOGUS=1"); err == nil {
-		t.Error("expected an error for an unknown PSL field")
-	}
-}
-
-func TestDispatch_setMode(t *testing.T) {
-	d, c := newTestDispatcher(t)
-	c.CPU.SetPR(vax.ESP, 0x5000)
-
-	if err := d.Dispatch("SET MODE EXEC"); err != nil {
-		t.Fatalf("Dispatch(SET MODE): %v", err)
-	}
-
-	if got := c.CPU.PSL().CurMod(); got != vax.Executive {
-		t.Errorf("CurMod() = %d, want Executive", got)
-	}
-}
-
-func TestDispatch_setVMAndNoVM(t *testing.T) {
-	d, c := newTestDispatcher(t)
-
-	if err := d.Dispatch("SET VM"); err != nil {
-		t.Fatalf("Dispatch(SET VM): %v", err)
-	}
-
-	if c.CPU.PR(vax.MAPEN) != 1 {
-		t.Errorf("MAPEN = %d, want 1", c.CPU.PR(vax.MAPEN))
-	}
-
-	if err := d.Dispatch("SET NOMAPEN"); err != nil {
-		t.Fatalf("Dispatch(SET NOMAPEN): %v", err)
-	}
-
-	if c.CPU.PR(vax.MAPEN) != 0 {
-		t.Errorf("MAPEN = %d, want 0", c.CPU.PR(vax.MAPEN))
-	}
-}
-
-func TestDispatch_setBaseAndVerbose(t *testing.T) {
-	d, c := newTestDispatcher(t)
-
-	if err := d.Dispatch("SET BASE 3000"); err != nil {
-		t.Fatalf("Dispatch(SET BASE): %v", err)
-	}
-
-	if c.DepositAddr != 0x3000 {
-		t.Errorf("DepositAddr = %#x, want 0x3000", c.DepositAddr)
-	}
 
 	if err := d.Dispatch("SET NOVERBOSE"); err != nil {
 		t.Fatalf("Dispatch(SET NOVERBOSE): %v", err)
@@ -537,59 +425,6 @@ func TestDispatch_setSymbolQualifiers(t *testing.T) {
 	}
 }
 
-func TestDispatch_setPTEWithRange(t *testing.T) {
-	d, c, _ := newShowRunnableDispatcher(t)
-
-	if err := d.Dispatch("SET PTE 200 TO 400 VALID=1,PFN=10"); err != nil {
-		t.Fatalf("Dispatch(SET PTE ... TO ...): %v", err)
-	}
-
-	for _, addr := range []uint32{0x200, 0x400} {
-		_, _, pte, err := c.Mem.LookupPTE(c.CPU, addr)
-		if err != nil {
-			t.Fatalf("LookupPTE(%#x): %v", addr, err)
-		}
-
-		if !pte.Valid() {
-			t.Errorf("addr %#x: expected valid bit set", addr)
-		}
-	}
-
-	// 0x000 (page 0) is below the range and must be untouched.
-	if _, _, pte, err := c.Mem.LookupPTE(c.CPU, 0x000); err != nil {
-		t.Fatalf("LookupPTE(0x0): %v", err)
-	} else if pte.Valid() {
-		t.Error("addr 0x0: expected the valid bit untouched (outside the TO range)")
-	}
-}
-
-// TestDispatch_setPTEProtectionNames sets PROT= by the PTE$K_ name SHOW
-// PTE prints for each of the 16 codes, so every name SHOW PTE shows can be
-// typed back into SET PTE.
-func TestDispatch_setPTEProtectionNames(t *testing.T) {
-	d, c, _ := newShowRunnableDispatcher(t)
-
-	if err := d.Dispatch("SET PTE 200 VALID=1,PFN=10"); err != nil {
-		t.Fatalf("Dispatch(SET PTE VALID): %v", err)
-	}
-
-	for code := vm.Protection(0); code < 16; code++ {
-		cmd := "SET PTE 200 PROT=PTE$K_" + code.String()
-		if err := d.Dispatch(cmd); err != nil {
-			t.Fatalf("Dispatch(%s): %v", cmd, err)
-		}
-
-		_, _, pte, err := c.Mem.LookupPTE(c.CPU, 0x200)
-		if err != nil {
-			t.Fatalf("LookupPTE: %v", err)
-		}
-
-		if got := pte.Protection(); got != code {
-			t.Errorf("%s: PROT = %d, want %d", cmd, got, code)
-		}
-	}
-}
-
 func TestDispatch_clearStringsAndInterrupt(t *testing.T) {
 	d, c := newTestDispatcher(t)
 
@@ -611,8 +446,8 @@ func TestDispatch_clearStringsAndInterrupt(t *testing.T) {
 	c.Engine.SetQuantum(4)
 	c.Engine.Interrupt(0x24, 20, 0)
 
-	if err := d.Dispatch("CLEAR INTERRUPT/ALL"); err != nil {
-		t.Fatalf("Dispatch(CLEAR INTERRUPT/ALL): %v", err)
+	if err := c.ClearAllInterrupts(); err != nil {
+		t.Fatalf("ClearAllInterrupts: %v", err)
 	}
 
 	if _, queued := c.Engine.PendingInterrupts(); len(queued) != 0 {

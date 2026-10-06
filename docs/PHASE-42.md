@@ -1,7 +1,7 @@
 # Phase 42 — The debugger: its own package, grammar, and prompt
 
 **Status:** in progress. Planned and reviewed 2026-10-05 (the author
-took every recommended decision). Subtasks 1 to 13 are done (see the
+took every recommended decision). Subtasks 1 to 14 are done (see the
 progress log).
 
 ## Goal
@@ -1657,5 +1657,55 @@ grammar is in `debug.dcl`).
   replacement by a breakpoint, the NOTRACES message) and
   `TestWatchCommands` (`/AFTER`, WHEN, replacement, a STEP over MOVC3,
   a non-symbol address).
+- `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
+  touched are clean.
+
+### 2026-10-05 — Subtask 14: the console after the split
+
+`console.dcl` has only the console's own commands now; every machine
+command is the debugger's (`debug.dcl`).
+
+- **Removed from the console grammar:** the verbs STEP (`ST`, `S`),
+  EXAMINE (`EX`, `DUMP`), DEPOSIT (`D`), and DISASSEMBLE (`DIS`); the SHOW
+  keywords for registers (and every register name), PSL, CPU_STATUS,
+  CLOCK, BASE, MEMORY/VM, MAPS, TB, REGIONS, PAGE/PTE, SCB, SHIM, STACK and
+  the per-stack dumps, CALLS/CALL_FRAMES, EXCEPTIONS/FAULTS, BREAKPOINTS,
+  WATCHPOINTS, TRACE/DISASSEMBLY, STEP_MODE, MODE, and IMAGES; the SET
+  keywords BREAKPOINT, STEP, TRACE, PSL, MODE, PTE, FAULT/HISTORY,
+  VM/MAPEN, and BASE; and CLEAR BREAKPOINT, INTERRUPT, TB, and
+  MEMORY/STATISTICS. The Go side lost the matching bindings, the
+  `examineCommand`/`depositCommand`/`disassembleCommand`/`stepCommand`/
+  `setPTECommand` handlers, and the `console.Eventpoints` interface (the
+  console no longer reaches the debugger's breakpoint lists). The
+  `Console.Show*` methods stay: the debugger's commands call them.
+- **Bug 5, resolved by removing:** `CLEAR ERROR`, `CLEAR PROFILES`,
+  `SHOW ASSEMBLER_FLAGS`, `SHOW COMMAND_ARGS`, `SHOW ERROR`,
+  `SHOW SYMBOL/TEMPORARY`, and `SHOW SYMBOL/UNRESOLVED` had no handler and
+  nothing in the project or the C source gives them a meaning.
+  `SHOW WATCHPOINTS` is the debugger's (subtask 13).
+- **Kept at the console, deliberately:** `SET name=value` still assigns a
+  register as well as a symbol. The assignment form is shared with
+  symbols (`SET R=5` is a symbol named R, since an assignment wins over a
+  keyword), so taking registers out would add a special case for no
+  gain. The debugger's `DEPOSIT R0 = 5` is the VMS spelling.
+- **`vax.init`** no longer says `set PC=200`. A bare `ASM` after boot
+  still assembles at X^200 (`TestRun_bareAsmStartsAtX200`).
+- **Tests.** The console's tests of moved commands were either pointed at
+  the `Console` method (the `Show*` tests call it, not the grammar),
+  deleted where the debugger's tests cover the command (EXAMINE, DEPOSIT,
+  DISASSEMBLE's oracle, SET MODE/VM/BASE), or moved to `internal/debugger`
+  where nothing covered them: `pte_test.go` (SET PTE with a TO range and
+  PROT names, SET PSL fields) and `examine_qual_test.go` (govax's
+  /CONSTANTS and /SHAREABLE). The debugger's run-control tests that
+  reached the debugger through the *console* grammar (`SET BREAK`, `STEP`,
+  `CLEAR BREAKPOINT`) now use the debugger's own spellings
+  (`SET BREAK/FAULT=10`, `CANCEL BREAK/INSTRUCTION=NOP`). The `dcl`
+  package's engine tests, which used SHOW MEMORY and friends from the
+  console grammar as samples, use SHOW INSTRUCTIONS and SHOW QUANTUM.
+  `TestGrammarSplit` (`split_test.go`) lists about 150 command lines and
+  checks each parses in exactly the grammar(s) the split tables assign it.
+- **Discovered along the way:** console `STEP` is gone, so
+  `TestConsoleStepOpensSession` was dropped. `ActivateStep` and
+  `Console.Step` remain in the API for the debugger's use.
 - `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
   touched are clean.

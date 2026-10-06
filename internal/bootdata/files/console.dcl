@@ -210,46 +210,22 @@ grammar console
     ! CALL is in the Phase 37 block at the end of this file.
 
     
+    ! CLEAR (docs/PHASE-42.md): what is left of it at the console. The
+    ! debugger's CANCEL took breakpoints, interrupts, the translation
+    ! buffer, and memory statistics; CLEAR ERROR and CLEAR PROFILES had no
+    ! handler and are gone.
     type clear_types
-        keyword     breakpoint          /syntax=clear_breakpoint
-        keyword     interrupt           /syntax=clear_interrupt
         keyword     memory              /syntax=clear_memory
-        keyword     profiles            /syntax=clear_profiles
         keyword     symbol              /syntax=clear_symbols
         keyword     strings             /syntax=clear_strings
-        keyword     tb                  /syntax=clear_tb
-        keyword     translation_buffer  /syntax=clear_tb
-        keyword     error               /syntax=clear_error
-        
-        
-        
+
     verb clear
-    
+
         parameter   CLEAR_TYPE/type=clear_types/prompt="What"
- 
-  
+
         syntax clear_sym_temp/id=115
-        syntax clear_mem_stat/id=114
-        syntax clear_error/id=113
-        syntax clear_break_all/id=112
         syntax clear_sym_all/id=111
-        syntax clear_interrupt_all/id=110
-        syntax clear_break_fault_all/id=109
-        syntax clear_break_instr_all /id =553
-        syntax clear_break_instr/id=551
-            qualifier   all -
-                        /syntax=clear_break_instr_all
-            parameter   p1 /id=552 -
-                        /type=$rest_of_line -
-                        /prompt="Opcode"
-                        
-        syntax clear_break_fault/id=108
-            qualifier   all                         -
-                        /syntax=clear_break_fault_all
-            parameter   p1 /id=2                    -
-                        /type=$rest_of_line         -
-                        /prompt="Fault"
-        syntax clear_tb/id=107
+        syntax clear_strings/id=105
         syntax clear_symbols/id=106
             qualifier   temporary                   -
                         /syntax=clear_sym_temp
@@ -258,36 +234,14 @@ grammar console
             parameter   p1 /id=1003                 -
                         /type=$name                 -
                         /prompt="Symbol"
-        syntax clear_strings/id=105
-        syntax clear_breakpoint/id=101
-            qualifier   fault                       -
-                        /syntax=clear_break_fault
-            qualifier	instruction		    -
-                        /syntax=clear_break_instr
-            qualifier   all                         -
-                        /syntax=clear_break_all
-            parameter   BREAK_ADDR /id=1            -
-                        /type=$rest_of_line         -
-                        /prompt="Address"
-        syntax clear_interrupt/id=102
-            qualifier   all                         -
-                        /syntax=clear_interrupt_all
-            parameter   INTERRUPT_ID/id=1002        -
-                        /type=$rest_of_line         -
-                        /prompt="Fault"
         syntax clear_memory/id=103
-            qualifier   statistics                  -
-                        /syntax=clear_mem_stat
-        syntax clear_profiles/id=104
-    
-    
+
+
     type show_types
         ! DEFAULT (docs/PHASE-23.md, subtask 3) has no reference/eVAX or
         ! testdata/dcl/console.dcl counterpart -- see this file's own
         ! "govax-native extension" comment at MOUNT's definition below.
         keyword         default         /syntax=show_default
-        keyword		clock		/syntax=show_clock
-        keyword         watchpoints     /syntax=show_watchpoints
         keyword		logical		/syntax=show_logical
         keyword		translation	/syntax=show_translation
         keyword		devices		/syntax=show_device
@@ -295,100 +249,14 @@ grammar console
         keyword         xtest           /syntax=xtest
         keyword         string_pool     /syntax=show_string
         keyword         nvram           /syntax=show_nvram      
-        keyword         error           /syntax=show_error
-        keyword         mode            /syntax=show_mode
-        keyword         shim            /syntax=show_shim
-        keyword         page            /syntax=show_page
-        keyword         pte             /syntax=show_page
-        keyword         call_frames     /syntax=show_call_frames
-        keyword         calls           /syntax=show_call_frames
         keyword         quantum         /syntax=show_quantum
         keyword         debug           /syntax=show_debug
-        keyword         assembler_flags /syntax=show_assembler_flags
         keyword         instructions    /syntax=show_instructions
-        keyword         breakpoints     /syntax=show_break
-        keyword         registers       /syntax=show_reg
-        keyword         reg             /syntax=show_reg
-        keyword         step_mode       /syntax=show_step
-        keyword         psl             /syntax=show_psl
-        keyword         cpu_status      /syntax=show_cpu
-        keyword         base            /syntax=show_base
-        keyword         memory          /syntax=show_memory
-        keyword         vm              /syntax=show_memory
-        keyword         stack           /syntax=show_stack
-        keyword         isp             /syntax=show_isp
-        keyword         ksp             /syntax=show_ksp
-        keyword         esp             /syntax=show_esp
-        keyword         ssp             /syntax=show_ssp
-        keyword         usp             /syntax=show_usp
-        keyword         exceptions      /syntax=show_fault
-        keyword         faults          /syntax=show_fault
         keyword         radix           /syntax=show_radix
-        keyword         trace           /syntax=show_trace
-        keyword         disassembly     /syntax=show_trace
-        keyword         scb             /syntax=show_scb
         keyword         symbols         /syntax=show_sym
         keyword         rom             /syntax=show_rom
-        keyword         tb              /syntax=show_tb
-        keyword         translation_buffer/syntax=show_tb
-        keyword         maps            /syntax=show_map
-        keyword         images          /syntax=show_images
-        keyword         regions         /syntax=show_regions
         keyword         share_prefix    /syntax=show_share
-        keyword         command_args    /syntax=show_command_args
         keyword         expand          /syntax=show_expand
-        keyword         r0
-        keyword         r1
-        keyword         r2
-        keyword         r3
-        keyword         r4
-        keyword         r5
-        keyword         r6
-        keyword         r7
-        keyword         r8
-        keyword         r9
-        keyword         r10
-        keyword         r11
-        keyword         r12
-        keyword         r13
-        keyword         r14
-        keyword         r15
-        keyword         AP
-        keyword         FP
-        keyword         SP
-        keyword         PC
-        keyword         p0br
-        keyword         p0lr
-        keyword         p1br
-        keyword         p1lr
-        keyword         sbr
-        keyword         slr
-        keyword         pcbb
-        keyword         scbb
-        keyword         ipl
-        keyword         astlvl
-        keyword         sirr
-        keyword         sisr
-        keyword         iccs
-        keyword         nicr
-        keyword         icr
-        keyword         todr
-        keyword         rxcs
-        keyword         rxdb
-        keyword         txcs
-        keyword         txdb
-        keyword         tbdr
-        keyword         savisp
-        keyword         savpc
-        keyword         savpsl
-        keyword         wcsa
-        keyword         wcsb
-        keyword         mapen
-        keyword         tbia
-        keyword         tbis
-        keyword         pmr
-        keyword         sid
-        keyword         tbchk
                 
 
 	verb vminit
@@ -426,42 +294,35 @@ grammar console
             qualifier       verify /alias=debug
             qualifier       log /alias=debug
 
+    ! SHOW (docs/PHASE-42.md): the console's keywords. The machine's
+    ! (registers, memory, breakpoints, the stack, ...) are the debugger's.
+    ! SHOW ASSEMBLER_FLAGS, COMMAND_ARGS, ERROR, and SHOW SYMBOL/TEMPORARY and
+    ! /UNRESOLVED had no handler, and are gone.
     verb show/id=120
-    
+
         parameter       SHOW_TYPE/id=160            -
                         /type=show_types            -
                         /prompt="What"
-    
+
         syntax xtest/entry=exe$xtest /id=5001
             parameter   debug /type=debug_types /id = 5002
             qualifier   code/type=$integer /id=5005/nonegatable/default=101
-            parameter   name/type=$any/id=5004                    
+            parameter   name/type=$any/id=5004
 
-        syntax		show_expand/id=188
-        syntax          show_command_args/id=159
-        syntax          show_map/id=156                
-        syntax          show_tb/id=155
+        syntax          show_expand/id=188
         syntax          show_rom/id=154
-        syntax          show_scb/id=148
-            qualifier   all/id=1032
         syntax          show_sym_all/id=150
             parameter   symbol          /id=1021    -
                         /type=$name
         syntax          show_sym_sys/id=151
             parameter   symbol          /id=1021    -
                         /type=$name
-        syntax          show_sym_tmp/id=152
         syntax          show_sym_dcl/id=157
             parameter   symbol          /id=1021    -
                         /type=$name
-        syntax          show_sym_unres/id=153
         syntax          show_sym/id=149
             qualifier   system                      -
                         /syntax=show_sym_sys
-            qualifier   temporary                   -
-                        /syntax=show_sym_tmp
-            qualifier   unresolved                  -
-                        /syntax=show_sym_unres
             qualifier   all                         -
                         /syntax=show_sym_all
             qualifier   dcl                         -
@@ -469,73 +330,11 @@ grammar console
             parameter   symbol          /id=1021    -
                         /type=$name                 -
                         /prompt="Symbol name"
-        syntax          show_trace/id=147
         syntax          show_radix/id=146
-        syntax          show_fault/id=145
-        syntax          show_stack/id=139
-            parameter   count/type=$rest_of_line/id=1031
-            qualifier   all/id=1030
-        syntax          show_usp/id=140
-            parameter   count/type=$rest_of_line/id=1031
-            qualifier   all/id=1030
-        syntax          show_ssp/id=141
-            parameter   count/type=$rest_of_line/id=1031
-            qualifier   all/id=1030
-        syntax          show_esp/id=142
-            parameter   count/type=$rest_of_line/id=1031
-            qualifier   all/id=1030
-        syntax          show_ksp/id=143
-            parameter   count/type=$rest_of_line/id=1031
-            qualifier   all/id=1030
-        syntax          show_isp/id=144
-            parameter   count/type=$rest_of_line/id=1031
-            qualifier   all/id=1030
-        
-        syntax          show_psl/id=135
-        syntax          show_cpu/id=136
-        syntax          show_base/id=137
-        syntax          show_memory/id=138
-            qualifier   statistics/id=1016
-            qualifier   runtime/id=1010
-            qualifier   full/id=1011
-
-        syntax          show_step/id=134
-        syntax          show_reg/id=133
-        syntax          show_break/id=132
-            qualifier	instructions/syntax=show_break_instr
-            qualifier   faults/id=1014
-            qualifier   addresses/id=1015
-            disallow    faults and addresses
         syntax          show_string/id=121
         syntax          show_nvram/id=122
-        syntax          show_error/id=123
-            parameter   code/id=1005                -
-                        /type=$rest_of_line
-        syntax          show_mode/id=124
-        syntax          show_shim/id=125
-        syntax		show_break_instr/id=412
-        syntax          show_watchpoints/id=411
-        syntax          show_page/id=126
-            qualifier   write/id=1006               -
-                        /nonegatable
-            qualifier   read/id=1007                -
-                        /nonegatable
-            parameter   address/id=1008             -
-                        /type=$rest_of_line         -
-                        /prompt="Address"
-            disallow    read and write
-        syntax          show_call_frames/id=127
-            qualifier   symbolic/id=1010
-            parameter   count/id=1009               -
-                        /type=$rest_of_line
         syntax          show_quantum/id=128
         syntax          show_debug/id=129
-        syntax          show_assembler_flags/id=130
-        syntax          show_images/id=160
-            qualifier	full/id=100
-        syntax          show_share/id=161
-        syntax          show_regions/id=162
-        syntax		show_clock/id=500
         syntax          show_instructions/id=131
             qualifier   modes/id=1009
             qualifier   profile/id=1010
@@ -550,11 +349,13 @@ grammar console
             disallow    unimplemented and profile
             disallow    profile and all
         syntax          show_version/entry=exe$about
+        syntax          show_share/id=161
 
         ! DEFAULT (docs/PHASE-23.md, subtask 3) has no reference/eVAX or
         ! testdata/dcl/console.dcl counterpart -- see this file's own
         ! "govax-native extension" comment at MOUNT's definition below.
         syntax          show_default/id=163
+
 
     !
     ! govax-native extension (Phase 22, internal/rms): MOUNT/DISMOUNT have no
@@ -1032,20 +833,6 @@ grammar console
                     /type=$rest_of_line         -
                     /prompt="Command"
 
-    ! STEP[/mode] [address]: /INTO (also /IN, /INSTRUCTION), /OVER, or
-    ! /RETURN, defaulting to SET STEP's mode.
-    verb step/id=1650
-        qualifier   into/id=1651/nonegatable
-        qualifier   in/alias=into
-        qualifier   instruction/alias=into
-        qualifier   over/id=1652/nonegatable
-        qualifier   return/id=1653/nonegatable
-        parameter   address/id=1654             -
-                    /type=$expression
-        disallow    any2(into, over, return)
-    verb st/alias=step
-    verb s/alias=step
-
     ! EXECUTE [address] runs the CPU (GO, G).
     verb execute/id=1660
         parameter   address/id=1661             -
@@ -1083,56 +870,6 @@ grammar console
         qualifier   break/alias=debug
         qualifier   execute/id=1685
     verb r/alias=run
-
-    ! EXAMINE[/size] [start [end]] shows memory (a register by name), from
-    ! start to end; DEPOSIT[/size] target[=]value changes it. The size is
-    ! /BYTE, /WORD, /LONGWORD (the default), /ASCII, or /PTE.
-    verb examine/id=1690
-        qualifier   byte/id=1691/nonegatable
-        qualifier   word/id=1692/nonegatable
-        qualifier   longword/id=1693/nonegatable
-        qualifier   ascii/id=1694/nonegatable
-        qualifier   pte/id=1695/nonegatable
-        parameter   start/id=1696               -
-                    /type=$expression
-        parameter   end/id=1697                 -
-                    /type=$expression
-        disallow    any2(byte, word, longword, ascii, pte)
-    verb ex/alias=examine
-    verb dump/alias=examine
-
-    verb deposit/id=1700
-        qualifier   byte/id=1701/nonegatable
-        qualifier   word/id=1702/nonegatable
-        qualifier   longword/id=1703/nonegatable
-        qualifier   ascii/id=1704/nonegatable
-        qualifier   pte/id=1705/nonegatable
-        parameter   target/id=1706              -
-                    /type=$expression           -
-                    /separator="="              -
-                    /prompt="Location"
-        parameter   value/id=1707               -
-                    /type=$expression           -
-                    /prompt="Value"
-        disallow    any2(byte, word, longword, ascii, pte)
-    verb d/alias=deposit
-
-    ! DISASSEMBLE [start [end]] lists instructions (DIS). /SYMBOLIC
-    ! (the default, unless the vax.disassemble.symbolic setting is false)
-    ! lays them out as the VMS debugger's EXAMINE/INSTRUCTION does, named
-    ! from loaded images' debug symbol tables; /NOSYMBOLIC is the console's
-    ! own layout. /CONSTANTS names constants, and /SHAREABLE a G^
-    ! reference's routine, which the debugger doesn't. A start or end may
-    ! be a path name (FORTH\NEXT) or a line (%LINE 120).
-    verb disassemble/id=1710
-        qualifier   symbolic/id=1713
-        qualifier   constants/id=1714
-        qualifier   shareable/id=1715
-        parameter   start/id=1711               -
-                    /type=$expression
-        parameter   end/id=1712                 -
-                    /type=$expression
-    verb dis/alias=disassemble
 
     ! ASM [file] assembles a file with the console's assembler, or with
     ! no file enters interactive assembler mode. A host file name with
@@ -1174,31 +911,20 @@ grammar console
     ! SET (console_set.c). SET name=value assigns a symbol, register, or
     ! privileged register; console_set.c looks for that form first, so a
     ! name that abbreviates a keyword (SET R=5) is still an assignment.
-    ! Otherwise the keyword picks the syntax. TRACE (DISASSEMBLY,
-    ! DISASSEMBLER), VM (MAPEN), and VERBOSE take NO; the rest don't.
+    ! (The debugger's DEPOSIT does the same for registers, with VMS's
+    ! syntax.) Otherwise the keyword picks the syntax. Docs/PHASE-42.md
+    ! moved the machine's keywords (BREAK, STEP, TRACE, PSL, MODE, PTE, VM,
+    ! BASE, ...) to the debugger's SET; VERBOSE takes NO, the rest don't.
     type set_types
         keyword     radix               /syntax=set_radix/nonegatable
-        keyword     breakpoint          /syntax=set_breakpoint/nonegatable
-        keyword     step                /syntax=set_step/nonegatable
-        keyword     trace               /syntax=set_trace
-        keyword     disassembly         /syntax=set_trace
-        keyword     disassembler        /syntax=set_trace
         keyword     debug               /syntax=set_debug/nonegatable
         keyword     dbg                 /syntax=set_debug/nonegatable
-        keyword     psl                 /syntax=set_psl/nonegatable
-        keyword     mode                /syntax=set_mode/nonegatable
-        keyword     pte                 /syntax=set_pte/nonegatable
-        keyword     page                /syntax=set_pte/nonegatable
-        keyword     fault               /syntax=set_fault_history/nonegatable
-        keyword     history             /syntax=set_fault_history/nonegatable
-        keyword     vm                  /syntax=set_vm
-        keyword     mapen               /syntax=set_vm
-        keyword     base                /syntax=set_base/nonegatable
         keyword     verbose             /syntax=set_verbose
         keyword     verify              /syntax=set_verify/nonegatable
         keyword     quantum             /syntax=set_quantum/nonegatable
         keyword     uiquantum           /syntax=set_uiquantum/nonegatable
         keyword     default             /syntax=set_default/nonegatable
+
 
     verb set/id=1760/assignment=set_symbol
         qualifier   permanent/id=1761/nonegatable
@@ -1231,77 +957,11 @@ grammar console
                     /type=$any                  -
                     /prompt="Radix"
 
-    ! SET BREAKPOINT address; /TEMPORARY (/TMP) for one stop only;
-    ! /INSTRUCTION opcode stops at any instruction with that mnemonic;
-    ! /FAULT name stops when that fault is taken.
-    syntax set_breakpoint/id=1775
-        qualifier   instruction/syntax=set_break_instruction
-        qualifier   temporary/syntax=set_break_temporary
-        qualifier   tmp/alias=temporary
-        qualifier   fault/syntax=set_break_fault
-        parameter   address/id=1776             -
-                    /type=$expression           -
-                    /prompt="Address"
-    syntax set_break_instruction/id=1777
-        parameter   opcode/id=1778              -
-                    /type=$any                  -
-                    /prompt="Opcode"
-    syntax set_break_temporary/id=1779
-        parameter   address/id=1776             -
-                    /type=$expression           -
-                    /prompt="Address"
-    syntax set_break_fault/id=1780
-        parameter   fault/id=1781               -
-                    /type=$any                  -
-                    /prompt="Fault"
-
-    ! SET STEP INTO|IN|INSTRUCTION|OVER|RETURN: STEP's default mode.
-    syntax set_step/id=1782
-        parameter   mode/id=1783                -
-                    /type=$any                  -
-                    /prompt="Mode"
-
-    syntax set_trace/id=1784
-
     ! SET DEBUG [flag[,flag...]]: a flag with NO clears it; no flags sets
     ! NATIVE.
     syntax set_debug/id=1785
         parameter   flags/id=1786               -
                     /type=$any/list
-
-    ! SET PSL field=value[,field=value...].
-    syntax set_psl/id=1787
-        parameter   fields/id=1788              -
-                    /type=$expression/list      -
-                    /prompt="Fields"
-
-    syntax set_mode/id=1789
-        parameter   mode/id=1790                -
-                    /type=$any                  -
-                    /prompt="Mode"
-
-    ! SET PTE address [TO address] field=value[,field=value...]: the
-    ! changes, with the TO range when there is one, are the handler's to
-    ! read.
-    syntax set_pte/id=1791
-        parameter   address/id=1792             -
-                    /type=$expression           -
-                    /prompt="Address"
-        parameter   changes/id=1793             -
-                    /type=$rest_of_line         -
-                    /prompt="Fields"
-
-    syntax set_fault_history/id=1794
-        parameter   count/id=1795               -
-                    /type=$integer              -
-                    /prompt="Count"
-
-    syntax set_vm/id=1796
-
-    syntax set_base/id=1797
-        parameter   address/id=1798             -
-                    /type=$expression           -
-                    /prompt="Address"
 
     syntax set_verbose/id=1799
     syntax set_verify/id=1800

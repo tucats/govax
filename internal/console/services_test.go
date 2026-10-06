@@ -42,8 +42,8 @@ func TestConsoleCommandDispatches(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	c.Dispatcher = d
 
-	if got := c.ConsoleCommand("EXAMINE R0"); got != 0 {
-		t.Errorf("ConsoleCommand(\"EXAMINE R0\") = %d, want 0", got)
+	if got := c.ConsoleCommand("SHOW QUANTUM"); got != 0 {
+		t.Errorf("ConsoleCommand(\"SHOW QUANTUM\") = %d, want 0", got)
 	}
 
 	if got := c.ConsoleCommand("NOT A REAL COMMAND AT ALL"); got != 1 {

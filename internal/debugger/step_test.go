@@ -238,11 +238,11 @@ func TestSetStepMode_andShowStepMode(t *testing.T) {
 }
 
 func TestDispatch_stepQualifiers(t *testing.T) {
-	d, c := newTestDispatcher(t)
+	_, c := newTestDispatcher(t)
 	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
 	loadCallProgram(t, c)
 
-	if err := d.DispatchConsole("SET STEP OVER"); err != nil {
+	if err := c.Debugger.Dispatch("SET STEP OVER"); err != nil {
 		t.Fatalf("Dispatch(SET STEP OVER): %v", err)
 	}
 
@@ -250,17 +250,17 @@ func TestDispatch_stepQualifiers(t *testing.T) {
 		t.Fatalf("StepMode = %v, want OVER", dbgOf(c).StepMode)
 	}
 
-	if err := d.DispatchConsole("SHOW STEP_MODE"); err != nil {
+	if err := c.Debugger.Dispatch("SHOW STEP"); err != nil {
 		t.Fatalf("Dispatch(SHOW STEP_MODE): %v", err)
 	}
 
 	// A bare STEP now defaults to OVER (per the SET STEP above) and should
 	// run the CALLS at 0x202 to completion.
-	if err := d.DispatchConsole("DEP PC = 202"); err != nil {
+	if err := c.Debugger.Dispatch("DEPOSIT PC = 202"); err != nil {
 		t.Fatalf("Dispatch(DEPOSIT PC): %v", err)
 	}
 
-	if err := d.DispatchConsole("STEP"); err != nil {
+	if err := c.Debugger.Dispatch("STEP"); err != nil {
 		t.Fatalf("Dispatch(STEP): %v", err)
 	}
 
@@ -269,11 +269,11 @@ func TestDispatch_stepQualifiers(t *testing.T) {
 	}
 
 	// An explicit /INTO overrides the OVER default for one invocation.
-	if err := d.DispatchConsole("DEP PC = 202"); err != nil {
+	if err := c.Debugger.Dispatch("DEPOSIT PC = 202"); err != nil {
 		t.Fatalf("Dispatch(DEPOSIT PC): %v", err)
 	}
 
-	if err := d.DispatchConsole("STEP/INTO"); err != nil {
+	if err := c.Debugger.Dispatch("STEP/INTO"); err != nil {
 		t.Fatalf("Dispatch(STEP/INTO): %v", err)
 	}
 

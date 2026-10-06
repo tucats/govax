@@ -2,7 +2,6 @@ package console
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/tucats/govax/internal/console/dcl"
@@ -166,24 +165,6 @@ func readCommandVerb(s string) (verb, rest string) {
 	return s, ""
 }
 
-// parseHexOrEmpty parses a SHOW STACK-family "count" parameter, matching
-// console_show.c's own asm_hex parse of it (always hexadecimal,
-// independent of the console's current default radix); "" (the parameter
-// wasn't supplied) returns 0, meaning "use the default".
-func parseHexOrEmpty(s string) (uint32, error) {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return 0, nil
-	}
-
-	v, err := strconv.ParseUint(s, 16, 32)
-	if err != nil {
-		return 0, vmserrors.New(vmserrors.CLI_BADHEXVAL, s)
-	}
-
-	return uint32(v), nil
-}
-
 // bindGrammar binds every DCL verb/syntax this port implements a handler
 // for. Everything else (device/RTL/assembler-dependent SHOW/CLEAR/DEFINE
 // sub-forms, TEST) is deliberately left unbound:
@@ -208,102 +189,17 @@ func (d *Dispatcher) bindGrammar() {
 
 	g.Bind("CLEAR_SYM_ALL", func(id int64, r *dcl.Result) error { return d.Console.ClearSymbol("", true) })
 	g.Bind("CLEAR_SYMBOLS", func(id int64, r *dcl.Result) error { return d.Console.ClearSymbol(r.String("P1"), false) })
-	g.Bind("CLEAR_BREAK_ALL", func(id int64, r *dcl.Result) error {
-		ep, err := d.Console.eventpoints()
-		if err != nil {
-			return err
-		}
-
-		return ep.ClearBreakpoint(0, true)
-	})
-	g.Bind("CLEAR_BREAKPOINT", func(id int64, r *dcl.Result) error {
-		addr, _, err := d.Console.Evaluator().Eval(r.String("BREAK_ADDR"))
-		if err != nil {
-			return err
-		}
-
-		ep, err := d.Console.eventpoints()
-		if err != nil {
-			return err
-		}
-
-		return ep.ClearBreakpoint(addr, false)
-	})
-	g.Bind("CLEAR_BREAK_INSTR_ALL", func(id int64, r *dcl.Result) error {
-		ep, err := d.Console.eventpoints()
-		if err != nil {
-			return err
-		}
-
-		return ep.ClearAllInstructionBreakpoints()
-	})
-	g.Bind("CLEAR_BREAK_INSTR", func(id int64, r *dcl.Result) error {
-		ep, err := d.Console.eventpoints()
-		if err != nil {
-			return err
-		}
-
-		return ep.RemoveInstructionBreakpoint(r.String("P1"))
-	})
-	g.Bind("CLEAR_BREAK_FAULT_ALL", func(id int64, r *dcl.Result) error {
-		ep, err := d.Console.eventpoints()
-		if err != nil {
-			return err
-		}
-
-		return ep.ClearAllFaultBreakpoints()
-	})
-	g.Bind("CLEAR_BREAK_FAULT", func(id int64, r *dcl.Result) error {
-		ep, err := d.Console.eventpoints()
-		if err != nil {
-			return err
-		}
-
-		return ep.RemoveFaultBreakpoint(r.String("P1"))
-	})
 
 	g.Bind("CLEAR_SYM_TEMP", func(id int64, r *dcl.Result) error { return d.Console.ClearSymbolTemporary() })
 	g.Bind("CLEAR_STRINGS", func(id int64, r *dcl.Result) error { return d.Console.ClearString() })
-	g.Bind("CLEAR_TB", func(id int64, r *dcl.Result) error { return d.Console.ClearTB() })
 	g.Bind("CLEAR_MEMORY", func(id int64, r *dcl.Result) error { return d.Console.ClearMemory() })
-	g.Bind("CLEAR_MEM_STAT", func(id int64, r *dcl.Result) error { return d.Console.ClearMemoryStatistics() })
 
-	g.Bind("CLEAR_INTERRUPT", func(id int64, r *dcl.Result) error {
-		code, err := parseHexOrEmpty(r.String("INTERRUPT_ID"))
-		if err != nil {
-			return err
-		}
 
-		return d.Console.ClearInterrupt(code)
-	})
-	g.Bind("CLEAR_INTERRUPT_ALL", func(id int64, r *dcl.Result) error { return d.Console.ClearAllInterrupts() })
-
-	g.Bind("SHOW_REG", func(id int64, r *dcl.Result) error { return d.Console.ShowRegisters() })
-	g.Bind("SHOW_PSL", func(id int64, r *dcl.Result) error { return d.Console.ShowPSL() })
-	g.Bind("SHOW_MEMORY", func(id int64, r *dcl.Result) error { return d.Console.ShowMemory() })
 	g.Bind("SHOW_SYM", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbol(r.String("SYMBOL")) })
 	g.Bind("SHOW_SYM_ALL", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbols(r.String("SYMBOL")) })
 	g.Bind("SHOW_SYM_SYS", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbolsSystem(r.String("SYMBOL")) })
 	g.Bind("SHOW_SYM_DCL", func(id int64, r *dcl.Result) error { return d.Console.ShowDCLSymbols(r.String("SYMBOL")) })
-	g.Bind("SHOW_BREAK", func(id int64, r *dcl.Result) error {
-		ep, err := d.Console.eventpoints()
-		if err != nil {
-			return err
-		}
-
-		return ep.ShowBreakpoints()
-	})
-	g.Bind("SHOW_BREAK_INSTR", func(id int64, r *dcl.Result) error {
-		ep, err := d.Console.eventpoints()
-		if err != nil {
-			return err
-		}
-
-		return ep.ShowInstructionBreakpoints()
-	})
 	g.Bind("SHOW_RADIX", func(id int64, r *dcl.Result) error { return d.Console.ShowRadix() })
-	g.Bind("SHOW_BASE", func(id int64, r *dcl.Result) error { return d.Console.ShowBase() })
-	g.Bind("SHOW_CPU", func(id int64, r *dcl.Result) error { return d.Console.ShowCPU() })
 	// SHOW VERSION has no bind of its own: its grammar syntax carries
 	// /entry=exe$about (evax.dcl's own "syntax show_version/entry=exe$about"
 	// — it shares ABOUT's real VAX routine), so Dispatch's EntryPoint check
@@ -312,85 +208,15 @@ func (d *Dispatcher) bindGrammar() {
 	// "rather than leaving ABOUT/SHOW VERSION with no output at all") is
 	// retired now that the real /entry= redirect works.
 
-	g.Bind("SHOW_STACK", func(id int64, r *dcl.Result) error {
-		count, err := parseHexOrEmpty(r.String("COUNT"))
-		if err != nil {
-			return err
-		}
-
-		return d.Console.ShowStack(StackKSP, true, count, r.Present("ALL"))
-	})
-	g.Bind("SHOW_KSP", func(id int64, r *dcl.Result) error {
-		count, err := parseHexOrEmpty(r.String("COUNT"))
-		if err != nil {
-			return err
-		}
-
-		return d.Console.ShowStack(StackKSP, false, count, r.Present("ALL"))
-	})
-	g.Bind("SHOW_ESP", func(id int64, r *dcl.Result) error {
-		count, err := parseHexOrEmpty(r.String("COUNT"))
-		if err != nil {
-			return err
-		}
-
-		return d.Console.ShowStack(StackESP, false, count, r.Present("ALL"))
-	})
-	g.Bind("SHOW_SSP", func(id int64, r *dcl.Result) error {
-		count, err := parseHexOrEmpty(r.String("COUNT"))
-		if err != nil {
-			return err
-		}
-
-		return d.Console.ShowStack(StackSSP, false, count, r.Present("ALL"))
-	})
-	g.Bind("SHOW_ISP", func(id int64, r *dcl.Result) error {
-		count, err := parseHexOrEmpty(r.String("COUNT"))
-		if err != nil {
-			return err
-		}
-
-		return d.Console.ShowStack(StackISP, false, count, r.Present("ALL"))
-	})
-	g.Bind("SHOW_USP", func(id int64, r *dcl.Result) error {
-		count, err := parseHexOrEmpty(r.String("COUNT"))
-		if err != nil {
-			return err
-		}
-
-		return d.Console.ShowStack(StackUSP, false, count, r.Present("ALL"))
-	})
 
 	g.Bind("SHOW_NVRAM", func(id int64, r *dcl.Result) error { return d.Console.ShowNVRAM() })
 	g.Bind("SHOW_ROM", func(id int64, r *dcl.Result) error { return d.Console.ShowROM() })
-	g.Bind("SHOW_MODE", func(id int64, r *dcl.Result) error { return d.Console.ShowMode() })
-	g.Bind("SHOW_SHIM", func(id int64, r *dcl.Result) error { return d.Console.ShowShim() })
 	g.Bind("SHOW_STRING", func(id int64, r *dcl.Result) error { return d.Console.ShowString() })
 
-	g.Bind("SHOW_PAGE", func(id int64, r *dcl.Result) error {
-		return d.Console.ShowPage(r.String("ADDRESS"), r.Present("WRITE"))
-	})
 
-	g.Bind("SHOW_SCB", func(id int64, r *dcl.Result) error {
-		if r.Present("ALL") {
-			return d.Console.ShowSCBAll()
-		}
 
-		return d.Console.ShowSCB()
-	})
 
-	g.Bind("SHOW_CALL_FRAMES", func(id int64, r *dcl.Result) error {
-		symbolic := symbolicDefault()
-		if r.Present("SYMBOLIC") {
-			symbolic = !r.Negated("SYMBOLIC")
-		}
-
-		return d.Console.ShowCalls(r.String("COUNT"), symbolic)
-	})
-
-	g.Bind("SHOW_REGIONS", func(id int64, r *dcl.Result) error { return d.Console.ShowRegions() })
 	g.Bind("SHOW_SHARE", func(id int64, r *dcl.Result) error { return d.Console.ShowSharePrefix() })
-	g.Bind("SHOW_IMAGES", func(id int64, r *dcl.Result) error { return d.Console.ShowImages(r.Present("FULL")) })
 
 	// Phase 23 (docs/PHASE-23.md, subtask 3): SHOW DEFAULT displays the
 	// operator's current default device/directory (internal/console/
@@ -401,21 +227,8 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("SHOW_DEFAULT", func(id int64, r *dcl.Result) error { return d.Console.ShowDefault() })
 
 	g.Bind("SHOW_QUANTUM", func(id int64, r *dcl.Result) error { return d.Console.ShowQuantum() })
-	g.Bind("SHOW_CLOCK", func(id int64, r *dcl.Result) error { return d.Console.ShowClock() })
-	g.Bind("SHOW_FAULT", func(id int64, r *dcl.Result) error { return d.Console.ShowFault() })
 
-	g.Bind("SHOW_MAP", func(id int64, r *dcl.Result) error { return d.Console.ShowMap() })
-	g.Bind("SHOW_TB", func(id int64, r *dcl.Result) error { return d.Console.ShowTB() })
 	g.Bind("SHOW_DEBUG", func(id int64, r *dcl.Result) error { return d.Console.ShowDebug() })
-	g.Bind("SHOW_TRACE", func(id int64, r *dcl.Result) error { return d.Console.ShowTrace() })
-	g.Bind("SHOW_STEP", func(id int64, r *dcl.Result) error {
-		ep, err := d.Console.eventpoints()
-		if err != nil {
-			return err
-		}
-
-		return ep.ShowStepMode()
-	})
 
 	g.Bind("SHOW_INSTRUCTIONS", func(id int64, r *dcl.Result) error {
 		return d.Console.ShowInstructions(
@@ -424,12 +237,6 @@ func (d *Dispatcher) bindGrammar() {
 		)
 	})
 
-	// The bare SHOW verb is reached for every show_types keyword with no
-	// /syntax= redirect of its own — the plain register/privileged-
-	// register name shortcuts (SHOW R0, SHOW PC, SHOW P0BR, ...).
-	g.Bind("SHOW", func(id int64, r *dcl.Result) error {
-		return d.Console.ShowRegisterOrPrivReg(r.Keyword("SHOW_TYPE"))
-	})
 
 	// Phase 09 (internal/io): device abstraction and logical name tables.
 	g.Bind("SHOW_DEVICE", func(id int64, r *dcl.Result) error {

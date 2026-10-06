@@ -43,7 +43,7 @@ func dispatchOutput(t *testing.T, d *console.Dispatcher, buf *bytes.Buffer, comm
 
 	buf.Reset()
 
-	if err := d.DispatchConsole(command); err != nil {
+	if err := d.Dispatch(command); err != nil {
 		t.Fatalf("%s: %v", command, err)
 	}
 
@@ -177,7 +177,13 @@ func TestShowCallsFault(t *testing.T) {
 		}
 	}
 
-	if got := dispatchOutput(t, d, buf, "SHOW CALLS/NOSYMBOLIC"); !strings.HasPrefix(got, "    FRAME: ") {
+	buf.Reset()
+
+	if err := d.Console.ShowCalls("", false); err != nil {
+		t.Fatalf("ShowCalls: %v", err)
+	}
+
+	if got := buf.String(); !strings.HasPrefix(got, "    FRAME: ") {
 		t.Errorf("SHOW CALLS/NOSYMBOLIC:\n%s", got)
 	}
 

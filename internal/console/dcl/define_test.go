@@ -72,25 +72,25 @@ func TestLoadConsoleGrammar(t *testing.T) {
 		t.Error("SHOW parameter type not resolved")
 	}
 
-	showMemory, ok := g.entries["SHOW_MEMORY"]
+	showInstructions, ok := g.entries["SHOW_INSTRUCTIONS"]
 	if !ok {
-		t.Fatal("missing syntax SHOW_MEMORY")
+		t.Fatal("missing syntax SHOW_INSTRUCTIONS")
 	}
 
-	if _, _, err := showMemory.qualifier("FULL"); err != nil {
-		t.Errorf("SHOW_MEMORY should have a FULL qualifier: %v", err)
+	if _, _, err := showInstructions.qualifier("ALL"); err != nil {
+		t.Errorf("SHOW_INSTRUCTIONS should have an ALL qualifier: %v", err)
 	}
 
 	// Sanity check a keyword-driven redirect resolved during validate().
 	showTypes := g.types["SHOW_TYPES"]
 
-	kw, _, err := showTypes.lookup("MEMORY")
+	kw, _, err := showTypes.lookup("INSTRUCTIONS")
 	if err != nil {
-		t.Fatalf("lookup MEMORY keyword: %v", err)
+		t.Fatalf("lookup INSTRUCTIONS keyword: %v", err)
 	}
 
-	if kw.Syntax != "SHOW_MEMORY" { //nolint:goconst
-		t.Errorf("MEMORY keyword syntax = %q, want SHOW_MEMORY", kw.Syntax)
+	if kw.Syntax != "SHOW_INSTRUCTIONS" { //nolint:goconst
+		t.Errorf("INSTRUCTIONS keyword syntax = %q, want SHOW_INSTRUCTIONS", kw.Syntax)
 	}
 }
 
@@ -107,9 +107,11 @@ func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	// never built in, was dropped (2026-10-04). Phase 37 adds the 32
 	// verbs and aliases of the console's former fixed commands (zero
 	// through set; call moved there). Phase 38 adds analyze. Phase 42
-	// adds debug, which starts a debugger session.
-	if len(g.verbOrder) != 57 {
-		t.Errorf("got %d verbs, want 57: %v", len(g.verbOrder), verbNames(g))
+	// adds debug, which starts a debugger session, and takes step,
+	// examine, deposit, and disassemble (with their aliases, ten verbs)
+	// back out for the debugger's grammar.
+	if len(g.verbOrder) != 47 {
+		t.Errorf("got %d verbs, want 47: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 

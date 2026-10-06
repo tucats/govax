@@ -1,7 +1,6 @@
 package debugger_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/console"
@@ -117,22 +116,6 @@ func TestDebuggerStepAtPrompt(t *testing.T) {
 	}
 }
 
-// TestConsoleStepOpensSession: a STEP typed at the console always stops, so
-// it leaves the DBG> prompt.
-func TestConsoleStepOpensSession(t *testing.T) {
-	c, d, db := newRoutedSession(t)
-	noUserStep(c)
-	loadProgram(t, c, 0x200, opNop, opNop, opHalt)
-
-	if err := d.Dispatch("STEP 200"); err != nil {
-		t.Fatalf("STEP: %v", err)
-	}
-
-	if !db.Active() {
-		t.Error("a STEP at the console left no session")
-	}
-}
-
 // TestCallStepStopsAfterFirstInstruction: CALL/STEP runs only the routine's
 // first instruction and opens a session; a plain CALL that returns doesn't.
 func TestCallStepStopsAfterFirstInstruction(t *testing.T) {
@@ -203,12 +186,13 @@ func TestCtrlCReturnsToPrompt(t *testing.T) {
 	}
 }
 
-// TestEventpointsNeedDebugger: the console's SET BREAK reaches
-// the debugger's list, and says so when there is no debugger.
-func TestEventpointsNeedDebugger(t *testing.T) {
-	_, d, db := newRoutedSession(t)
+// TestSetBreakNeedsNoSession: the debugger's SET BREAK works before any
+// session is open (a breakpoint set ahead of a RUN), and the console, whose
+// grammar has no SET BREAK, refuses it with a syntax error.
+func TestSetBreakNeedsNoSession(t *testing.T) {
+	c, d, db := newRoutedSession(t)
 
-	if err := d.Dispatch("SET BREAK 300"); err != nil {
+	if err := c.Debugger.Dispatch("SET BREAK 300"); err != nil {
 		t.Fatalf("SET BREAK: %v", err)
 	}
 
@@ -216,15 +200,7 @@ func TestEventpointsNeedDebugger(t *testing.T) {
 		t.Errorf("Breakpoints = %+v, want one at 300", db.Breakpoints)
 	}
 
-	var out strings.Builder
-
-	bare := console.New(&out)
-	if err := bare.Init(64 * 1024); err != nil {
-		t.Fatal(err)
-	}
-
-	bd := console.NewDispatcher(bare, consoletest.ConsoleGrammar(t), nil)
-	if err := bd.Dispatch("SET BREAK 300"); err == nil {
-		t.Error("SET BREAK with no debugger installed succeeded")
+	if err := d.DispatchConsole("SET BREAK 300"); err == nil {
+		t.Error("the console accepted SET BREAK")
 	}
 }
