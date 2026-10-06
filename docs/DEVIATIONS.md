@@ -653,10 +653,10 @@ changed as a result.
   after text ends the line with the end of file left for the next read.
   Chosen without a check:
   - CTRL/C at a prompt echoes `*Interrupt*` too, and cancels the line.
-  - CTRL/Y ends govax itself (there is no DCL to return to); at the
-    console's prompt CTRL/Z is EXIT, which also ends govax (on VMS,
-    DCL's EXIT at the top level does nothing). Ctrl-D at a prompt is
-    still the host's end of input, which ends govax.
+  - CTRL/Y ends govax itself (there is no DCL to return to). At the
+    console's prompt CTRL/Z only echoes `*Exit*`, as at DCL's (the
+    author's call, 2026-10-06); Ctrl-D on an empty line does nothing
+    (readline would take it as the end of input and end govax).
   - A Ctrl-C stopping a run the console started returns to the console,
     not DBG> (Phase 42's Decision 2 opened a session): VMS's DCL takes
     the CTRL/C. DEBUG then examines the stopped program. A new RUN

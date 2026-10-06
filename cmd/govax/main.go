@@ -372,13 +372,20 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	return c.CommandLineErr()
 }
 
-// endOfFile is CTRL/Z at a prompt: the command line in use ends, as the
-// command EXIT ends it (the debugger's session, or govax at the console's
-// prompt), or, in the interactive assembler, as .END does.
+// endOfFile is CTRL/Z at a prompt. In the debugger it is EXIT, ending the
+// session, and in the interactive assembler .END. At the console's prompt
+// it does nothing more than echo *Exit*, as at DCL's: govax ends only by
+// EXIT, QUIT, or CTRL/Y.
 func endOfFile(c *console.Console, d *console.Dispatcher, out io.Writer) {
-	command := "EXIT"
-	if c.InAssemblerMode() {
+	var command string
+
+	switch {
+	case c.InAssemblerMode():
 		command = ".END"
+	case c.InDebugger():
+		command = "EXIT"
+	default:
+		return
 	}
 
 	if err := d.Dispatch(command); err != nil && !vmserrors.MessageInhibited(err) {

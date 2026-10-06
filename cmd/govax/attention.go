@@ -507,6 +507,13 @@ func (k *promptKeys) filter(r rune) (rune, bool) {
 	case charCtrlC:
 		k.cfg.InterruptPrompt = echoInterrupt
 
+	case readline.CharDelete:
+		// CTRL/D (or the Delete key) on an empty line would be readline's
+		// end of input, ending govax; VMS gives it no meaning.
+		if k.lineLength.Load() == 0 {
+			return r, false
+		}
+
 	case charCtrlZ:
 		if k.lineLength.Load() > 0 {
 			k.eofNext.Store(true)

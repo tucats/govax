@@ -1852,7 +1852,8 @@ without a check on VMS).
   stops after the command (`abortRequested`), unless a program's CTRL/Y
   AST took the key; a second Ctrl-Y meanwhile exits at once. At a
   prompt, `promptKeys` (readline's input filter) makes Ctrl-C cancel the
-  line, and Ctrl-Z end of file (EXIT at `$` and `DBG>`, `.END` at `ASM>`)
+  line, and Ctrl-Z end of file (EXIT at `DBG>`, `.END` at `ASM>`; at `$`
+  only the echo, as at DCL's: amended the same day)
   or, after text, RETURN with the end of file next. readline reads
   through `promptReader`, which takes bytes only while a `Readline` call
   has the terminal in raw mode, so its goroutine can't take a program's

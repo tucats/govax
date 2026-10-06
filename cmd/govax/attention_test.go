@@ -417,4 +417,18 @@ func TestPromptKeys(t *testing.T) {
 	if k.endOfFile(readline.ErrInterrupt) {
 		t.Error("CTRL/C taken as end of file")
 	}
+
+	// CTRL/D on an empty line is ignored, not readline's end of input;
+	// with text on the line it is readline's delete.
+	k.lineLength.Store(0)
+
+	if _, ok := k.filter(readline.CharDelete); ok {
+		t.Error("CTRL/D on an empty line reached readline")
+	}
+
+	k.lineLength.Store(2)
+
+	if r, ok := k.filter(readline.CharDelete); !ok || r != readline.CharDelete {
+		t.Error("CTRL/D after text didn't reach readline")
+	}
 }

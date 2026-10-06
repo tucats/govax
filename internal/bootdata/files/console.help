@@ -1711,9 +1711,10 @@ $KEY
                 some text, it ends the line as RETURN does, and the next
                 read is the end of file.  A program's read sees end of
                 file (RMS$_EOF from $GET).  At the debugger's DBG> it is
-                EXIT, ending the session; at the console's prompt it is
-                EXIT, ending govax; in the interactive assembler (ASM>)
-                it is .END.
+                EXIT, ending the session; in the interactive assembler
+                (ASM>) it is .END.  At the console's prompt it only
+                echoes *Exit*, as at DCL's: govax ends with EXIT, QUIT,
+                or Ctrl/Y.
 
     The other control keys keep their host meanings: the line editor's
     at a prompt, and the host terminal's while a program runs.  Nothing
