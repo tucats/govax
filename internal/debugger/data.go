@@ -389,6 +389,7 @@ func pslTable(psl uint32) string {
 	put(20, fmt.Sprintf("%d", bit(26)))   // IS
 	put(22+(6-len(mode(24)))/2, mode(24)) // CURMOD
 	put(29+(6-len(mode(22)))/2, mode(22)) // PRVMOD
+	
 	ipl := fmt.Sprintf("%X", psl>>16&31)  // IPL, in hex, ending under IPL's last letter
 	put(39-len(ipl), ipl)
 	put(41, fmt.Sprintf("%d", bit(7))) // DV

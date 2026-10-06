@@ -101,5 +101,4 @@ func TestSetPSLFields(t *testing.T) {
 	if _, err := sayErr(c, "SET PSL BOGUS=1"); err == nil {
 		t.Error("expected an error for an unknown PSL field")
 	}
-
 }

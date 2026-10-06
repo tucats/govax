@@ -91,6 +91,7 @@ func TestMachineStateOracle(t *testing.T) {
 		if strings.HasPrefix(cmd, "SHOW CALLS") && n+1 < len(entries) {
 			want = append([]string{" " + entries[n+1].command}, entries[n+1].output...)
 		}
+		
 		got := strings.Split(strings.TrimSuffix(stripAccessMode(out), "\n"), "\n")
 
 		// The log's blank lines are the ones in the middle of SHOW

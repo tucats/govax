@@ -27,7 +27,7 @@ func probeSession(t *testing.T) *console.Console {
 }
 
 // say sends one command line to c's debugger and returns what it printed.
-// A command that fails fails the test.
+// A command that fails will fail the test.
 func say(t *testing.T, c *console.Console, command string) string {
 	t.Helper()
 

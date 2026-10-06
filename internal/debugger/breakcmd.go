@@ -20,9 +20,28 @@ import (
 //
 //	SET BREAK address [, address...] [WHEN (condition)] [DO (commands)]
 
+const (
+	returnTOKEN      = "RETURN"      // /RETURN routine
+	instructionTOKEN = "INSTRUCTION" // /INSTRUCTION=(opcodes)
+	callTOKEN        = "CALL"        // /CALL
+	branchTOKEN      = "BRANCH"      // /BRANCH
+	lineTOKEN        = "LINE"        // /LINE
+	exceptionTOKEN   = "EXCEPTION"   // /EXCEPTION
+	faultTOKEN       = "FAULT"       // /FAULT
+	whenTOKEN        = "WHEN"        // WHEN (condition)
+	doTOKEN          = "DO"          // DO
+)
+
 // classQualifiers are the qualifiers that choose a *kind* of breakpoint
 // instead of an address, in the order the debugger checks them.
-var classQualifiers = []string{"CALL", "BRANCH", "LINE", "INSTRUCTION", "RETURN", "EXCEPTION", "FAULT"}
+var classQualifiers = []string{
+	callTOKEN,
+	branchTOKEN,
+	lineTOKEN,
+	instructionTOKEN,
+	returnTOKEN,
+	exceptionTOKEN,
+	faultTOKEN}
 
 // bindBreak binds the SET BREAK, SHOW BREAK, and CANCEL BREAK commands.
 func (d *Dispatcher) bindBreak() {
@@ -50,8 +69,8 @@ func (d *Debugger) pointList(trace bool) *[]*Breakpoint {
 func splitClauses(text string) (target, when, do string, err error) {
 	upper := strings.ToUpper(text)
 
-	whenAt := findWord(upper, "WHEN", 0)
-	doAt := findWord(upper, "DO", 0)
+	whenAt := findWord(upper, whenTOKEN, 0)
+	doAt := findWord(upper, doTOKEN, 0)
 
 	// The target runs up to the first clause.
 	end := len(text)
@@ -85,11 +104,11 @@ func splitClauses(text string) (target, when, do string, err error) {
 		return body, nil
 	}
 
-	if when, err = clause(whenAt, "WHEN"); err != nil {
+	if when, err = clause(whenAt, whenTOKEN); err != nil {
 		return "", "", "", err
 	}
 
-	if do, err = clause(doAt, "DO"); err != nil {
+	if do, err = clause(doAt, doTOKEN); err != nil {
 		return "", "", "", err
 	}
 
@@ -172,7 +191,7 @@ func (d *Debugger) setPoint(r *dcl.Result, trace bool) error {
 	}
 
 	// Only an address breakpoint and /RETURN take a parameter.
-	if target != "" && kind != "" && kind != "RETURN" {
+	if target != "" && kind != "" && kind != returnTOKEN {
 		return vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, target)
 	}
 
@@ -180,18 +199,18 @@ func (d *Debugger) setPoint(r *dcl.Result, trace bool) error {
 	case "":
 		return d.setAddressBreaks(list, proto, target)
 
-	case "RETURN":
+	case returnTOKEN:
 		return d.setReturnBreak(list, proto, target)
 
-	case "FAULT":
-		return d.AddFaultBreakpoint(r.String("FAULT"))
+	case faultTOKEN:
+		return d.AddFaultBreakpoint(r.String(faultTOKEN))
 
-	case "INSTRUCTION":
-		return d.setInstructionBreak(list, proto, r.List("INSTRUCTION"))
+	case instructionTOKEN:
+		return d.setInstructionBreak(list, proto, r.List(instructionTOKEN))
 	}
 
 	proto.Kind = map[string]BreakKind{
-		"CALL": BreakCall, "BRANCH": BreakBranch, "LINE": BreakLine, "EXCEPTION": BreakException,
+		callTOKEN: BreakCall, branchTOKEN: BreakBranch, lineTOKEN: BreakLine, exceptionTOKEN: BreakException,
 	}[kind]
 
 	d.replaceClassBreak(list, &proto)
@@ -209,7 +228,7 @@ func (d *Debugger) setAddressBreaks(list *[]*Breakpoint, proto Breakpoint, targe
 
 	// Evaluate every address before making any breakpoint, so a bad one
 	// in the list makes none.
-	var made []*Breakpoint
+	made := make([]*Breakpoint, 0, len(splitTop(target, ',')))
 
 	for _, text := range splitTop(target, ',') {
 		addr, err := d.evalWhole(text)
@@ -499,8 +518,8 @@ func (d *Debugger) cancelBreak(r *dcl.Result) error {
 		d.Console.Engine.ClearFaultBreakpoints()
 		d.InstructionBreakpoints = nil
 
-	case kind == "FAULT":
-		if text := r.String("FAULT"); text != "" {
+	case kind == faultTOKEN:
+		if text := r.String(faultTOKEN); text != "" {
 			err = d.RemoveFaultBreakpoint(text)
 		} else {
 			err = d.ClearAllFaultBreakpoints()
@@ -557,23 +576,23 @@ func (d *Debugger) cancelAddressBreaks(list *[]*Breakpoint, target string) error
 // breakpoint, and /RETURN routine just that routine's.
 func (d *Debugger) cancelClassBreak(list *[]*Breakpoint, kind string, r *dcl.Result) error {
 	switch kind {
-	case "CALL":
+	case callTOKEN:
 		d.removeKind(list, BreakCall)
 
-	case "BRANCH":
+	case branchTOKEN:
 		d.removeKind(list, BreakBranch)
 
-	case "LINE":
+	case lineTOKEN:
 		d.removeKind(list, BreakLine)
 
-	case "EXCEPTION":
+	case exceptionTOKEN:
 		d.removeKind(list, BreakException)
 
-	case "RETURN":
+	case returnTOKEN:
 		return d.cancelReturnBreak(list, strings.TrimSpace(r.String("TARGET")))
 
-	case "INSTRUCTION":
-		return d.cancelInstructionBreak(list, r.List("INSTRUCTION"))
+	case instructionTOKEN:
+		return d.cancelInstructionBreak(list, r.List(instructionTOKEN))
 	}
 
 	return nil
@@ -611,7 +630,7 @@ func (d *Debugger) cancelReturnBreak(list *[]*Breakpoint, target string) error {
 // or the whole breakpoint when no opcodes are given (or it breaks on every
 // instruction). A breakpoint left with no opcodes is removed.
 func (d *Debugger) cancelInstructionBreak(list *[]*Breakpoint, names []string) error {
-	var gone []*cpu.Instruction
+	gone := make([]*cpu.Instruction, 0, len(names))
 
 	for _, name := range names {
 		if name = strings.ToUpper(strings.TrimSpace(name)); name == "" {

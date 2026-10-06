@@ -239,12 +239,13 @@ func (d *Debugger) setModule(list string, all bool) error {
 	}
 
 	names := splitTop(list, ',')
+
 	if len(strings.TrimSpace(list)) == 0 {
 		return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "module")
 	}
 
 	// Check every name before setting any, so a bad one changes nothing.
-	var found []*dbgsym.Module
+	found := make([]*dbgsym.Module, 0, len(names))
 
 	for _, name := range names {
 		name = strings.TrimSpace(name)
@@ -389,7 +390,7 @@ func (d *Debugger) showSymbol(text string, address, typed bool) error {
 		address = true
 	}
 
-	var searched []*dbgsym.Module
+	searched := make([]*dbgsym.Module, 0, len(d.allModules()))
 
 	if modules == nil {
 		for _, m := range d.allModules() {

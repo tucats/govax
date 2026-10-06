@@ -104,9 +104,10 @@ func (d *Debugger) setWatch(r *dcl.Result) error {
 
 	// Work out every location before watching any, so a bad one in the
 	// list makes none.
-	var made []*Watchpoint
+	splits := splitTop(target, ',')
+	made := make([]*Watchpoint, 0, len(splits))
 
-	for _, text := range splitTop(target, ',') {
+	for _, text := range splits {
 		addr, err := d.evalWhole(text)
 		if err != nil {
 			return err

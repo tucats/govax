@@ -123,6 +123,7 @@ func alignScript(lines, script []string) []int {
 		}
 
 		echoes[i] = at
+
 		if at >= 0 {
 			pos = at + 1
 		}
@@ -261,8 +262,7 @@ var (
 // and the sizes SHOW MODULE and SHOW IMAGE print, which are the sizes of
 // VMS's own tables.
 func normalize(command string, lines []string) []string {
-	var out []string
-
+	out := make([]string, 0, len(lines))
 	upper := strings.ToUpper(command)
 
 	for _, l := range lines {

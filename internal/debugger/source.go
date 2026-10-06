@@ -80,7 +80,8 @@ func formatSource(n int, text string) string {
 			chunk = text[:room]
 		}
 
-		b.WriteString(chunk + "\n")
+		b.WriteString(chunk)
+		b.WriteRune('\n')
 
 		text = text[len(chunk):]
 		if text == "" {

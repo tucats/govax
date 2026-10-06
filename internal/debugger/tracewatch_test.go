@@ -33,7 +33,7 @@ func replayLog(t *testing.T, name string, covered func(command string) bool) int
 	// be added to the one before.
 	type result struct{ command, got, want string }
 
-	var results []*result
+	results := make([]*result, 0, len(entries))
 
 	for _, e := range entries {
 		at := -1
