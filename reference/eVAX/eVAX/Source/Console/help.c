@@ -94,7 +94,7 @@ LONGWORD help( char ** P )
     
     *P = p;
     
-    f = xfopen( "vax.help", "r" );
+    f = xfopen( "console.help", "r" );
     if( f == 0L )
         return VAX_NOHELPFILE;
     

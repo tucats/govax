@@ -132,7 +132,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		return vmserrors.Wrap(vmserrors.VAX_GRAMMAR, err)
 	}
 
-	if helpSrc, err := resolver.ReadFile("vax.help"); err != nil {
+	if helpSrc, err := resolver.ReadFile("console.help"); err != nil {
 		fmt.Fprintln(out, "Warning: no help file available:", err)
 	} else {
 		help = console.ParseHelp(string(helpSrc))

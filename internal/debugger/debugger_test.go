@@ -28,7 +28,7 @@ func newSession(t *testing.T) *session {
 
 	c, out := consoletest.New(t)
 
-	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), consoletest.ParseHelp(t, "vax.help"))
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), consoletest.ParseHelp(t, "console.help"))
 	c.Dispatcher = d
 
 	db := debugger.Install(c, consoletest.DebugGrammar(t), consoletest.ParseHelp(t, "debug.help"))

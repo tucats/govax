@@ -5,7 +5,7 @@
 ;
 
 ;
-;  Initialize memory with 16mb of physical RAM
+;  Initialize memory with 8mb of physical RAM
 ;  (the parameter is count of 512b pages)
 ;
 
@@ -14,10 +14,13 @@ init/vax ^d16384
 if defined("console$arg_file" ) then set noverbose
 
 ;
-;   Now, create page tables for the rest of memory. 
-;   Allocate more than there is physical memory for;
-;   we allow sparse address spaces.  Note these values
-;   are all in decimal pages.
+;   Create page tables for the VAX phaysical memory. 
+;   You can allocate more tables than will fit in
+;   physical memory; virtual memory support sparse
+;   memory maps. There is no support for paged 
+;   backing store, though, so you can exhaust the
+;   physical memory by allocaint too many physical
+;   pages.
 
 vminit /p0=16384 /p1=8192 /s0=8192 /ksp=20
 

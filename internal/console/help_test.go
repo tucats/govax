@@ -11,7 +11,7 @@ import (
 
 // vaxHelpPath returns the one true copy of vax.help --
 // internal/bootdata/files/vax.help, the file cmd/govax's own resolver
-// actually reads at runtime (main.go's `resolver.ReadFile("vax.help")`).
+// actually reads at runtime (main.go's `resolver.ReadFile("console.help")`).
 // A second, historical copy used to live at testdata/dcl/vax.help (a
 // git-archive import from the upstream C repo, like testdata/dcl/evax.dcl);
 // it was deleted so there is only one file to keep MOUNT/DISMOUNT's help
@@ -25,7 +25,7 @@ func vaxHelpPath(t *testing.T) string {
 		t.Fatal("runtime.Caller failed")
 	}
 
-	return filepath.Join(filepath.Dir(file), "..", "bootdata", "files", "vax.help")
+	return filepath.Join(filepath.Dir(file), "..", "bootdata", "files", "console.help")
 }
 
 func TestLoadHelpFile_realFixture(t *testing.T) {

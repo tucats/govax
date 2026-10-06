@@ -35,7 +35,7 @@ func TestEveryVerbHasHelp(t *testing.T) {
 		help    string
 	}{
 		{"debugger", "debug", "debug.help"},
-		{"console", "console", "vax.help"},
+		{"console", "console", "console.help"},
 	} {
 		g := consoletest.ConsoleGrammar(t)
 		if tc.grammar == "debug" {
