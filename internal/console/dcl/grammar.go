@@ -235,6 +235,19 @@ func newGrammar(name string) *Grammar {
 	}
 }
 
+// Verbs returns the grammar's verb names in declaration order, with
+// whether each is an alias of another verb (QUIT is an alias of EXIT, S of
+// STEP). A caller checking that every command has documentation wants the
+// real verbs; an alias shares its target's topic.
+func (g *Grammar) Verbs() (names []string, alias []bool) {
+	for _, e := range g.verbOrder {
+		names = append(names, e.Name)
+		alias = append(alias, e.aliasRef != nil)
+	}
+
+	return names, alias
+}
+
 // Bind registers h to be called by Dispatch when the named verb or syntax
 // entry (case-insensitive) ends up active after a Parse.
 func (g *Grammar) Bind(name string, h Handler) {

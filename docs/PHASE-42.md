@@ -1,7 +1,7 @@
 # Phase 42 — The debugger: its own package, grammar, and prompt
 
 **Status:** in progress. Planned and reviewed 2026-10-05 (the author
-took every recommended decision). Subtasks 1 to 14 are done (see the
+took every recommended decision). Subtasks 1 to 15 are done (see the
 progress log).
 
 ## Goal
@@ -1707,5 +1707,32 @@ command is the debugger's (`debug.dcl`).
 - **Discovered along the way:** console `STEP` is gone, so
   `TestConsoleStepOpensSession` was dropped. `ActivateStep` and
   `Console.Step` remain in the API for the debugger's use.
+- `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
+  touched are clean.
+
+### 2026-10-05 — Subtask 15: help
+
+- **`debug.help`** covers every debugger command: each verb (`@`, CALL,
+  CANCEL/CLEAR, DEPOSIT, EVALUATE, EXAMINE, EXIT, GO, HELP, QUIT, SET,
+  SHOW, STEP, SYMBOLIZE), every SET, SHOW, and CANCEL keyword, EXAMINE's
+  qualifiers, and four general topics (EXPRESSIONS, REGISTERS, RADIX,
+  BREAKPOINTS) for a reader new to the VAX or the VMS debugger. A topic
+  says where it is govax's own. HELP matches only the first four letters
+  of each word, so `SHOW REGISTERS` and `SHOW REGIONS` are one key,
+  `SHOW,REGI`, and one topic describes both; `TestDebuggerHelpKeysAreUnique`
+  catches any such collision.
+- **`vax.help`** lost its 46 topic groups for the moved commands (EXAMINE,
+  DEPOSIT's neighbors, DISASSEMBLE, STEP, SET BREAK/PSL/PTE/MODE/..., SHOW
+  REGISTERS/MEMORY/CALLS/..., CLEAR BREAKPOINT/INTERRUPT/TB, and the topics
+  of the removed handler-less commands). The CLEAR, SET, SHOW, and HELP
+  overviews now point at the debugger, and `DEBUG` is a new topic. RUN, GO,
+  and CALL describe starting the debugger (a stop opens `DBG>`; `RUN/DEBUG`
+  stops at the main routine's first instruction, as does an image linked
+  `/DEBUG`; `RUN/NODEBUG`). Verbs the file had never documented (EXIT,
+  EXECUTE, BOOT, ROM, TIME, IF) got topics, which the new test required.
+- **Tests** (`internal/debugger/help_test.go`): `TestEveryVerbHasHelp` checks
+  each non-alias verb of each grammar against its help file
+  (`dcl.Grammar.Verbs`, new, lists them), `TestDebuggerHelpTopics` asks for
+  about seventy topics, and `TestDebuggerHelpKeysAreUnique`.
 - `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
   touched are clean.

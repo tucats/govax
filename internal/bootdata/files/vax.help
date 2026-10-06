@@ -49,6 +49,10 @@
 //              10/05/26    Added LINK/DEBUG (docs/PHASE-29.md)
 //              10/05/26    Added ANALYZE/IMAGE (docs/PHASE-40.md)
 //              10/05/26    MACRO/DEBUG writes debugger records (docs/PHASE-29.md)
+//              10/05/26    Machine commands (EXAMINE, DEPOSIT, STEP, SET BREAK,
+//                          SHOW REGISTERS, ...) moved to the debugger and its
+//                          own DEBUG.HELP; added DEBUG; revised RUN, GO, and
+//                          CALL (docs/PHASE-42.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -410,35 +414,6 @@ $SH  ,DEV
             the device (essentially the device control block contents)
             is displayed.
  
-$CLEA,BREA,/INS
-$CLEA,BR  ,/INS
-    The CLEAR BREAK/INSTRUCTION command clears an instruction breakpoint.
-    Subsequent execution of the instruction will not result in a break
-    operation.  The instruction to be cleared is identified by opcode
-    name.
-
-    Syntax:
-
-        CLEAR BREAKPOINT/INSTRUCTION opcode
-
-        CLEAR BREAKPOINT/INSTRUCTION/ALL
-
-    Parameter:
-
-        opcode    The mnemonic name for the instruction, such as MOVL
-                  or INSQTI.  If you specifiy /ALL instead of an opcode
-                  name then all instruction breakpoints are removed.
-
-           
-$CLEA,PROF
-    The CLEAR PROFILE command zeros out the profile counters for each
-    VAX instruction.  See the SHOW INSTRUCTION PROFILE command for 
-    information on how instruction profiles are used.
-
-    Syntax:
-
-        CLEAR PROFILE
-
 $SHOW,INST
 $SH  ,INST
     The SHOW INSTRUCTION command prints a reminder of the instruction
@@ -531,200 +506,16 @@ $CLEA,SYMB
 
         CLEAR SYMBOL MAIN_ENTRY
 
-$CLEA,INT ,/ALL
-$CLEA,INTE,/ALL
-    The CLEAR INTERRUPTS/ALL command clears all pending interrupts that the
-    processor has queued up.  This will prevent them from being delivered.
-
-    Syntax:
-
-        CLEAR INTERRUPTS/ALL
-
-$CLEA,INT 
-$CLEA,INTE
-    The CLEAR INTERRUPT command is used to remove a specific interrupt from
-    the pending interrupt queue on the processor.  Interrupts may be pending
-    because they are waiting for a lower IPL to dispatch, or because they 
-    are waiting for a delayed delivery to simulate hardware latency.
-
-    Syntax:
-
-        CLEAR INTERRUPT <code>
-
-    Parameter:
-
-        <code>     This is the interrupt code to clear.  If there is more
-                   than one pending interrupt for this code, all the pending
-                   interrupts are removed.
-
-$CLEA,BR  ,/ALL
-$CLEA,BREA,/ALL
-    The CLEAR BREAKPOINT/ALL command is used to clear all breakpoints and
-    release the storage occupied by their definition.  Subsequent execution
-    of the breakpoint locations or incurring the named fault/exception (in
-    the case of /FAULT breakpoints) will not cause a breakpoint halt of the
-    processor.
-
-    Syntax:
-
-        CLEAR BREAKPOINT/ALL
-
-$CLEA,BR  
-$CLEA,BREA
-    The CLEAR BREAKPOINT command is used to clear a specific breakpoint and
-    release storage occupied by it's definition.  Subsequent execution of
-    the breakpoint location will not caus a breakpoint halt of the processor.
-    The command can also be used to clear a breakpoint on a fault as opposed
-    to an instruction address by using the /FAULT qualifier, or clear a
-    breakpoint when a specific instruction is executed with the /INSTRUCTION
-    qualifier.
-
-    Syntax:
-
-        CLEAR BREAKPOINT  <address>
-
-                  or
-
-        CLEAR BREAKPOINT /FAULT <code>
-
-    Parameters:
-
-        <address>       The breakpoint address.  This can be a numeric value
-                        in the current RADIX, or it can be a symbol enclosed
-                        in single quotes.
-
-        <code>          When the command includes the /FAULT qualifier, the
-                        parameter is the fault code instead of an address.
-
 $CLEA
     The CLEAR command is used to clear various attributes of the virtual VAX
     or the console processor.  See the help for
 
         CLEAR MEMORY
-        CLEAR BREAKPOINT
-        CLEAR BREAKPOINT/FAULT
-        CLEAR BREAKPOINT/INSTRUCTION
-        CLEAR INTERRUPT
-        CLEAR PROFILE
         CLEAR STRINGS
         CLEAR SYMBOL
-        CLEAR TB
 
-$CLEA,TB  
-
-    The CLEAR TB command clears the virtual memory translation buffer.  It
-    also resets the counters used to track translation buffer use.  See
-    SHOW TB for more information.
-
-    Syntax:
-
-        CLEAR TB
-
-$DISA
-$EXAM,/INS
-    The DISASSEMBLE command (or its abbreviation DIS) displays the
-    contents of the virtual VAX memory formatted as executable
-    instructions.
-
-    Syntax:
-
-        DISASSEMBLE [/[NO]SYMBOLIC] [/CONSTANTS] [/SHAREABLE]
-                    [<start-addr> [<end-addr>]]
-
-    Parameters:
-
-        <start-addr>    The starting address: an expression in the current
-                        RADIX.  It may use a symbol, a name from a loaded
-                        image's debug symbol table (START, FORTH\NEXT,
-                        DBGDIS\START\LOOP), or a listing line (%LINE 120,
-                        DBGSUB\%LINE 14).  If not given, the current
-                        location is used.
-
-        <end-addr>      The address of the last instruction to
-                        disassemble.  If not given, then one instruction is
-                        disassembled.
-
-    Qualifiers:
-
-        /SYMBOLIC       Lay each instruction out as the VMS debugger's
-                        EXAMINE/INSTRUCTION does: its location (a routine,
-                        label, or line, such as DBGDIS\START\%LINE 42),
-                        then the instruction, with each address an operand
-                        refers to shown by name.  Names come from the debug
-                        symbol tables of the images RUN loaded, and from
-                        the console's symbols.  This is the default unless
-                        the vax.disassemble.symbolic setting is false.
-
-        /NOSYMBOLIC     Show each instruction as its address and the text
-                        the console's assembler accepts.
-
-        /CONSTANTS      Show a literal that is the value of exactly one
-                        constant in the module (LIMIT = 10) by its name.
-
-        /SHAREABLE      Show a G^ reference to a shareable image's routine
-                        by the routine's name (G^LIB$PUT_OUTPUT), instead
-                        of the fixup cell it goes through.
-
-    Examples:
-
-        DISASSEMBLE MAIN
-
-        DISASSEMBLE 0200 0210
-
-        DISASSEMBLE %LINE 47 %LINE 56
-
-        DISASSEMBLE/NOSYMBOLIC FORTH\NEXT FORTH\NEXT+20
-
-$EXAM
-$EX  
-    The EXAMINE command is used to display the contents of memory in the
-    virtual VAX processor  If virtual memory is enabled, the display is
-    of virtual storage, otherwise it is physical storage.
-
-    Syntax:
-
-        EXAMINE [<type>] <start-address> [<end-address>]
-
-    Parameters:
-
-        <type>          The type of data to be displayed from the memory.
-                        Valid values are /ASCII, /BYTE, /WORD, or /LONG. You
-                        can also display floating values with /F_FLOAT or
-                        /D_FLOAT types. If omitted, then LONG is assumed.
-                        
-                        The /ASCII type can be followed by a subtype of
-                        /DESCRIPTOR, /COUNTED, or /ZERO to reflect a
-                        descriptor string, counted ASCII string, or null
-                        terminated string.
-
-        <start-address> The starting address.  This can be a numeric value in
-                        the current RADIX, or it can be a symbol enclosed in
-                        single quotes.
-
-        <end-address>   The ending address.  If omitted, it defaults to the
-                        same value as the starting address.  The end address
-                        must be greater than or equal to the start address.
-
-
-    Examples:
-
-        EXAMINE MYDATA 
-
-        EXAMINE /WORD 0200 0220
-
-        EXAMINE /ASCII /DESCRIPTOR 300
-        
-        EXAMINE /D_FLOAT 200
-
-$EXAM,REGS
-$EXAM,REG 
-$EXAM,REGI
-    The EXAMINE REGISTER command displays the contents of all the virtual VAX
-    registers formatted as longwords, plus the state of the PSL register.
-
-    Syntax:
-    
-        EXAMINE REGISTERS
+    Breakpoints, interrupts, and the translation buffer are the debugger's:
+    see CANCEL in the debugger's help (DEBUG, then HELP CANCEL).
 
 $INIT
 
@@ -806,6 +597,7 @@ $INIT,/CON
 
     See also the help for INITIALIZE, INITIALIZE/VAX, and MOUNT.
 
+$EXIT
 $QUIT
 
     The QUIT command terminates the console processor.  As long as there are
@@ -1004,11 +796,19 @@ $INCL
     a "/" must be in quotes; DCL uppercases unquoted text.
 
 
+$EXEC
 $GO  
 
     The GO command is used to invoke the emulator and begin execution of a stream 
     of instructions in the virtual VAX.  The command begins execution at the current
     value of the PC register, and can optionally specify a starting address.
+
+    The program runs until it halts.  If a breakpoint, an interrupt from the
+    keyboard (Ctrl-C), or a fault breakpoint stops it first, the debugger
+    starts and its prompt, DBG>, appears; the program is stopped, and the
+    debugger's commands (EXAMINE, STEP, GO, ...) work on it.  EXIT at DBG>
+    returns to the console.  Breakpoints are set from the debugger (see
+    DEBUG), before or after the program starts.
     
     Syntax:
     
@@ -1106,13 +906,18 @@ $RUN ,/DEB
     transfer address.  If there is no transfer address, the image is loaded but
     not executed.  
     
-    If the optional /DEBUG qualifier is used, then the image is loaded but not
-    started automatically.  You must use a CALL command to the symbol MAIN (created
-    by the loader) to start the loaded program.
+    If the optional /DEBUG qualifier is used, the image is loaded and then run
+    under the debugger, which stops it at the first instruction of its main
+    routine (after the entry mask) and prompts with DBG>.  GO continues it;
+    STEP, SET BREAK, EXAMINE, and the rest are the debugger's commands.  An
+    image linked with /DEBUG (LINK/DEBUG) starts the debugger the same way,
+    unless RUN/NODEBUG says not to.  An image linked /NOTRACEBACK has no symbols for
+    the debugger, and runs without it.  /STEP and /BREAK are
+    synonyms of /DEBUG, and /NOEXECUTE loads the image without running it.
     
     Syntax:
     
-        RUN [/DEBUG] <image-name>[/HOST]
+        RUN [/DEBUG|/NODEBUG] [/NOEXECUTE] <image-name>[/HOST]
     
     Parameter:
     
@@ -1204,6 +1009,9 @@ $CALL
 
     The return value of the procedure is available in R0, and is also copied
     to the variable $STATUS.
+
+    As with GO, a breakpoint or Ctrl-C that stops the procedure starts the
+    debugger at DBG>.
     
     Syntax:
     
@@ -1236,13 +1044,14 @@ $CALL
 $CALL,/STE
     The CALL/STEP command is used to invoke the emulator and begin execution of a
     stream of instructions in the virtual VAX.  This is similar to the function of
-    the CALL command, except that the /STEP qualifier indicates that the console
-    should only step to the first instruction.  The command begins execution
+    the CALL command, except that the /STEP qualifier indicates that the
+    debugger should only step to the first instruction, and then prompts
+    (DBG>).  The command begins execution
     at the address supplied in the command by invoking it with a CALLS
     procedure call.  The command can pass a varying number of longword 
     parameters to the procedure if desired.  However, only the first instruction
     of the function is executed.  You must use a GO or STEP command to continue
-    execution.
+    execution (STEP or GO at the DBG> prompt).
 
     
     Syntax:
@@ -1274,147 +1083,22 @@ $CALL,/STE
         CALL SUM( ^D35, ^D88 )
 
 
-$STEP,/INT
-$ST  ,/INT
-$STEP,/IN 
-$ST  ,/IN 
-    The STEP/INTO modifies the STEP command.  If the next intruction is a
-    CALL or JSB instruction, then the STEP command begins execution with the
-    first instruction in the procedure or subroutine.  This overrides the
-    default STEP behavior.
-
-    If the next instruction is not a CALL or JSB then the instruction STEPs
-    normally. 
-
-    See the help on the STEP command for more information on how STEP works.
-$STEP,/OVE
-$ST  ,/OVE
-    The STEP/OVER modifies the STEP command.  If the next intruction is a
-    CALL or JSB instruction, then the STEP command sets a temporary breakpoint
-    on the instruction following the CALL or JSB and lets the procedure run
-    normally.  This overrides the default STEP behavior.
-    
-    If the next instruction is not a CALL or JSB then the instruction STEPs
-    normally. 
-
-    See the help on the STEP command for more information on how STEP works.
-$STEP,/RET
-$ST  ,/RET
-    The STEP/RETURN modifies the STEP command.  A temporary breakpoint is set
-    a the return address of the current procedure and execution continues.  
-    When the procedure returns, the breakpoint is triggered.  This allows you
-    to step "out" of the current procedure.  This overrides the default STEP
-    behavior.
-    
-    See the help on the STEP command for more information on how STEP works.
-$STEP
-$ST  
-$S
-
-    The STEP command is used to execute a single instruction in the virtual
-    VAX.  The command is executed at the current value of the PC register,
-    or can optionally be specified using a starting address parameter.
-
-    When an instruction is executed by the STEP command, the instruction that
-    is executed is disassembled, regardless of the setting of the console
-    disassembly mode.  See the help on SET DISASSEMBLE for more information.
-
-    In a loaded image with a debug symbol table, the instruction is shown
-    as DISASSEMBLE/SYMBOLIC shows it, and where STEP stops is named as the
-    VMS debugger names it (Stepped to DBGDIS\START\%LINE 43), as is a
-    breakpoint's location.  The vax.disassemble.symbolic setting, false,
-    turns this off.
-
-    See information on STEP/OVER, STEP/INTO and STEP/RETURN for optional
-    qualifiers to the STEP command.
-
-    Syntax:
-
-        STEP [<address>]
-
-    Parameters:
-
-        <address>       The starting address.  This can be a numeric value in
-                        the current RADIX, or it can be a symbol enclosed in
-                        single quotes.
-                        
-    
-    Examples:
-    
-        STEP
-        
-        STEP  00000200
-        
-        STEP ENTRY_PT
-
-$SET ,FAUL
-$SE  ,FAUL
-   The SET FAULT command sets the size of the fault buffer.  The argument is
-   the number of faults that are tracked in the history buffer.  When the 
-   buffer becomes full, old fault records are discarded to make room for new
-   ones.  See the SHOW FAULT command for information on the display of stored
-   faults and exceptions.
-   
-   When the SET FAULT command is issued, the fault buffer is cleared as a
-   side effect of re-allocating a new buffer.
-
-   Syntax:
-   
-       SET FAULT <size>
-       
-   Parameter:
-   
-       <size> 		The number of fault and exception entries stored in
-                        the fault buffer.
-    
-   Example:
-   
-        SET FAULT 8
-        
-
 $SET 
 
     The SET command is used to set the state of information in the virtual
     VAX or the console processor.  See the help text on:
 
         SET ASSEMBLER
-        SET BASE
-        SET BREAK
         SET DEBUG
         SET DEFAULT
-        SET DISASSEMBLER
-        SET FAULT
-        SET MODE
-        SET PAGE
-        SET PSL
         SET QUANTUM
         SET RADIX
-        SET REGISTER
         SET SYMBOL
-        SET TRACE
         SET VERIFY
-        SET VM
 
-$SET ,REGI
-$SET ,REG 
-
-    The SET command can be used to set a register value.  To do this, 
-    name the register and value separated by an equals symbol.  The
-    register can be a general purpose register such as R3 or a 
-    privileged register such as SCBB.  To set a privileged register,
-    the processor must be in kernel mode.
-
-    Syntax:
-
-        SET <register> = <value>
-
-    Parameters:
-
-       <register>     The register name.
-
-       <value>        Any numeric expression.  The expression is
-                      evaluated and the result stored in the register
-                      named.
+    The settings of the machine itself (breakpoints, stepping, the PSL, page
+    table entries, the base address, the display modes) are the debugger's:
+    see HELP SET in the debugger (type DEBUG, then HELP SET).
 
 $SET ,SYMB
 $SET ,SYM 
@@ -1592,178 +1276,6 @@ $SET ,SYMB
         
         SET MAIN = INIT + 2     ; Set MAIN to value of INIT plus two
 
-$SET ,REG 
-$SET ,REGI
-
-    The SET command can be used to set a virtual VAX machine register by
-    name.  You can use any register name such as R0..R15 or AP, SP, FP,
-    and PC.  You can also specify any of the privileged processor register
-    names such as SIBB or KSP, or the PSL register.
-    
-    Syntax:
-    
-        SET <register> = <value>
-
-    
-    Parameters:
-    
-        <register>      The name of the register to be set.  
-        
-        <value>         Any numeric valid or a symbol value enclosed in single
-                        quotes.  It can also be any valid integer expression.
-
-    Examples:
-    
-        SET R5 = 0200           ; Set R5 to 0200 (in current RADIX)
-        
-        SET AP = INIT           ; Set AP register to value of INIT
-
-        SET SIBB = 0800         ; Set system info base register to 0800
-
-$SET ,PSL 
-
-    The SET PSL command is used to force settings of fields in the PSL, or
-    of the entire PSL longword value.
-
-    Syntax:
-
-        SET PSL = <value>
-
-        or
-
-        SET PSL <field> = <fvalue>  [, <field> = <fvalue>...]
-
-    Parameters:
-
-        <value>    You can set the entire longword value in the PSL by
-                   giving it a single value.  For example, 000003C0 will
-                   reset the PSL to user mode, IPL 0, with no condition
-                   flags set.
-
-        <field>    You can set specific fields in the PSL by naming the
-                   field.  The field names are CM, TP, FPD, IS, CUR_MOD, 
-                   PRV_MOD, IPL, DV, FU, IV, T, N, Z, V, and C.  You can
-                   specify more than one field, separate by commas if you
-                   wish.
-
-        <fvalue>   When setting a field value, the value must be in the
-                   valid numeric range.  For example, the CUR_MOD field
-                   is two bits wide, and contain values between 0 and 3.
-
-    Exmaples:
-
-        SET PSL = 000003C0         ; Reset to default user mode state
-
-        SET PSL CUR_MOD=3, IPL=0   ; Resets just mode and IPL fields.
-
-                
-$SET ,VM  
-$SET ,NOVM
-$SET ,MAPE
-$SET ,NOMA
-
-    The SET VM command can be used to enable or disable virtual memory.  The
-    command can also be expressed as SET MAPENABLE which is the name of the
-    privileged register that stores this state information.
-    
-    Syntax:
-    
-        SET [NO]VM
-            
-            -or-
-        
-        SET [NO]MAPENABLE
-
-    Examples:
-    
-        SET VM          ; Turn on virtual memory mapping
-        
-        SET NOVM        ; Turn off virtual memory mapping
-$SET ,BR  
-$SET ,BREA
-
-    The SET BREAK command specifies a breakpoint.  When the instruction
-    located at the address specified in the breakpoint is about to be
-    executed, the console will halt the processor.  This is used as a
-    debugging tool.
-
-    You can also use the /FAULT qualifier to identify a fault number
-    that is used to trigger a breakpoint.  When the named exception
-    is signalled, the breakpoint is taken and control returns to the
-    console before the exception handler in the SCB is given control.
-   
-    You can also use the /INSTRUCTION qualifier, which identifies a
-    specific opcode that, when executed, will cause a break operation
-    to occur.  The instruction in this case is identified by it's
-    mnemonic opcode name, such as MOVL or INSQTI.
- 
-    Syntax:
-    
-        SET BREAK <address> [ <count> ]
-    
-            or
-
-        SET BREAK /FAULT <exception> 
-
-            or
-
-        SET BREAK /INSTRUCTION <opcode>
-
-
-    Parameter:
-    
-        <address>       The instruction address.  This can be a numeric value
-                        in the current RADIX, or it can be a symbol enclosed
-                        in single quotes.  It can also be any valid integer
-                        expression.
-
-        <count>         The number of times to skip before taking the break
-                        point.  If the value is missing or zero, then the
-                        next time the instruction address is referenced in
-                        instruction decoding, it will break.
-
-        <exception>     If you use the /FAULT qualifier, the value is the
-                        exception code number.  This is the offset into
-                        the SCB for the exception.  For example, an access
-                        violation is at offset 0020 into the SCB, so the
-                        exception value is 20.
-
-        <opcode>        If you use the /INSTRUCTION qualifier, the value
-                        must be the mnemonic name of the instruction on
-                        which to set the breakpoint.
-    
-    Examples:
-    
-        SET BREAK 0200
-        
-        SET BREAK MAIN
-
-        SET BREAK /FAULT  EXC$CONWRITE   ; Use symbolic exception name
-
-        SET BREAK /INSTR  ADDL3          ; Break on any ADDL3 instruction
-
-$SET ,BASE
-
-    The SET BASE command sets the base address from which assembled
-    instructions are stored.  Typically, this is used in a SAVE text
-    file to define the location where the next instructions are to 
-    be placed.
-    
-    Syntax:
-    
-        SET BASE <address>
-    
-    Parameter:
-
-        <address>       The starting address.  This can be a numeric value in
-                        the current RADIX, or it can be a symbol enclosed in
-                        single quotes.
-    Examples:
-    
-        SET BASE 0200
-        
-        SET BASE MYDATA
-
 $SET ,VERI
 $SET ,NOVE
 
@@ -1803,35 +1315,6 @@ $SET ,RADI
         SET RADIX HEXADECIMAL       ; constant will be interpreted as hex
                                     ; numeric values as if the X^ prefix
                                     ; had been used.
-
-$SET ,DISA
-$SET ,NODI
-
-    The SET DISASSEMBLER command enables dynamic disassembly of instructions
-    as they are executed.  This is comparatively very slow but is useful for
-    debugging instruction flow.
-    
-    Note that this command does not affect the use of the DISASM command for
-    explicitly disassembling blocks of memory from the console.
-    
-    
-    Syntax:
-    
-        SET [NO]DISASSEMBLER
-
-$SET ,TRAC
-$SET ,NOTR
-
-    The SET TRACE command enables or disables the trace bit in the PSL of
-    the virtual VAX.  When the trace bit is set, then a T-BIT fault is
-    signalled after the execution of the next instruction.  This technique
-    is used by VMS debuggers, for example, to single step code.  You can
-    test the operation of the T-BIT fault by setting the trace bit with
-    this instruction.
-    
-    Syntax:
-    
-        SET [NO]TRACE
 
 $SHOW,DEBU
 $SH  ,DEBU
@@ -1877,172 +1360,6 @@ $SET ,QUAN
     
         n       The number of instructions to be executed before the 
                 emulator will process interrupts deterministically.
-
-$SHOW,REG
-$SHOW,REGI
-$SH  ,REG
-$SH  ,REGI
-
-    The SHOW REGISTERS command is used to display the processor register
-    set.  
-    
-    Syntax:
-    
-        SHOW REGISTERS
-    
-$SHOW,ASSE
-$SH  ,ASSE
-$SHOW,ASM 
-$SH  ,ASM 
-
-    The SHOW ASSEMBLER command displays settings for the built-in 
-    instruction assembler.
-    
-    Syntax:
-    
-        SHOW ASSEMBLER
-
-$SHOW,BR  
-$SHOW,BREA
-$SH  ,BR  
-$SH  ,BREA
-
-    The SHOW BREAKPOINTS command displays the active breakpoints.
-    
-    Syntax:
-    
-        SHOW BREAKPOINTS
-
-$SHOW,BREA,/INS
-$SH  ,BREA,/INS
-$SHOW,BR  ,/INS
-$SH  ,BR  ,/INS
-
-    The SHOW BREAKPOINT/INSTRUCTION command displays breakpoints set
-    when specific instructions are executed regardless of their
-    address.
-
-    Syntax:
-
-        SHOW BREAKPOINTS/INSTRUCTION
-
-$SH  ,PSL 
-$SHOW,PSL 
-
-    The SHOW PSL command displays the contents of the Processor Status
-    Longword (PSL).  
-    
-    Syntax:
-    
-        SHOW PSL
-    
-    The PSL is displayed as a 32-bit hexadecimal value, and also as the
-    individual fields of the PSL.  These fields are:
-    
-    C       carry bit
-    V       overflow bit
-    Z       zero value
-    N       negative value
-    T       trace pending
-    IV      integer overflow
-    FU      floating point underflow
-    DV      divide-by-zero
-    IPL     current interrupt priority level
-    MOD     current mode (user, kernel, supervisor, executive)
-
-$SH  ,CPU 
-$SHOW,CPU 
-
-    The SHOW CPU command displays the contents of the processor state. This
-    includes the value of each of the processor registers, the privileged
-    processor registers, and the PSL.  The size of physical memory is also
-    displayed.
-    
-    Syntax:
-    
-        SHOW CPU
-
-$SHOW,BASE
-$SH  ,BASE
-$SHOW,DEPO
-$SHOW,DEP
-$SH  ,DEPO
-$SH  ,DEP
-
-    The SHOW BASE command displays the deposit base address.  This is the
-    address set by SET BASE or the .BASE assembler directive.  This address
-    is the next location where the assembler will write instructions or data
-    by default.
-    
-    Syntax:
-    
-        SHOW BASE
-
-$SHOW,VM  
-$SH  ,VM  
-$SHOW,MAPE
-$SH  ,MAPE
-$SHOW,MEM 
-$SH  ,MEM     
-    The SHOW MEMORY command displays the size of the physical memory model
-    used by the emulator, the state of the virtual memory mode of the
-    processor, controlled by the privileged register MAPEN.  Also, if 
-    virtual memory is enabled via the VMINIT command, it will display the 
-    current page table information known to the processor.
-    
-    See the additional help on SHOW MEMORY STATISTICS for information on
-    displaying memory use by the emulator (as opposed to the VAX).
-
-
-    Syntax:
-    
-        SHOW MEMORY
-
-$SHOW,VM  ,STAT
-$SH  ,VM  ,STAT
-$SHOW,MAPE,STAT
-$SH  ,MAPE,STAT
-$SHOW,MEM ,STAT
-$SH  ,MEM ,STAT
-
-    The SHOW MEMORY STATISTICS command will display information about the
-    use of the native memory by the emulator.  The display shows how many 
-    bytes have been allocated and freed, and which are for the emulator 
-    memory model itself.  Other consumers of memory by govax include
-    buffers for console I/O, and storage used for symbol tables, etc. in 
-    the assembler.
-
-    Syntax:
-
-        SHOW VM STATISTICS
-
-$SHOW,STAC
-$SH  ,STAC
-
-    The SHOW STACK command dumps the top of the active processor stack.  You
-    can optionally specify the number of longwords to be dumped.  By default
-    only the top longword is displayed.
-    
-    Syntax:
-    
-        SHOW STACK <count>
-    
-    Parameter:
-    
-        count       The number of longwords to be displayed.  If you specify
-                    a count greater than the size of the stack, the only the
-                    valid stack longwords are displayed.
-
-$SHOW,EXCE
-$SH  ,EXCE
-
-    The SHOW EXCEPTION command displays the most recent exception recorded
-    by the processor.  If there has never been an exception, then a message
-    is displayed showing that there is no exception data.
-    
-    Syntax:
-    
-        SHOW EXCE
 
 $SHOW,RADI
 $SHOW,RAD 
@@ -2146,107 +1463,6 @@ $SH  ,SYM ,/SYS
     
         SHOW SYMBOL/SYSTEM CONSOLE$*
 
-$SHOW,SYMB,/UNR
-$SHOW,SYM ,/UNR
-$SH  ,SYMB,/UNR
-$SH  ,SYM ,/UNR
-
-    The SHOW SYMBOL/UNRESOLVED command displays all symbols that are 
-    defined but whose value is not yet known.  These symbols are created
-    by the assembler when a symbol is used in an instruction but the value
-    of the symbol has not yet been defined.  These symbols must be defined
-    before the console will begin executing code.
-    
-    Syntax:
-    
-        SHOW SYMBOL/UNRESOLVED
-
-$SHOW,TRAC
-$SH  ,TRAC
-    The SHOW TRACE command displays the console trace (dissassembler)
-    flag.  When set, this flag causes the console to display each VAX
-    instruction as it is executed.  This is very slow but is useful in
-    debugging code streams.  When clear (the default) the no disassembly
-    is included as part of instruction execution.
-    
-    Note that the setting of this flag does not affect the use of the
-    DISASM command.
-    
-    Syntax:
-    
-        SHOW TRACE
-
-$SHOW,MEMO
-$SHOW,MEM 
-$SH  ,MEMO
-$SH  ,MEM 
-$SHOW,VM  
-$SH  ,VM  
-
-    The SHOW MEMORY command is used to display the status of the virtual
-    and physical memory layout.  The display shows the amount of physical
-    memory available to the virtual VAX.  If virtual memory is initialized,
-    it also shows the P0, P1, and S0 region sizes, base and length register
-    values, and PTE sizes.
-    
-    Syntax:
-    
-        SHOW MEMORY
-
-$SHOW,CALL
-$SH  ,CALL
-    The SHOW CALLS command displays the current contents of the stack
-    frame array.  This is the list of call frames (implicitly a linked
-    list starting with the current FP).  The frames are displayed until
-    a frame is reached that was started by the console.
-
-    When the PC is in a module of a loaded image that has a debug
-    symbol table (an image linked /DEBUG, or with traceback), SHOW
-    CALLS displays the frames as the VMS debugger does: a line per
-    frame giving its module, routine, and source line (blank when the
-    image has no line table), its PC relative to the routine, and its
-    absolute PC.  For a caller's frame, the line is the one with the
-    call.  Frames are listed while their PCs are in such a module.
-
-    Syntax:
-
-        SHOW CALLS[/[NO]SYMBOLIC] [<count>]
-
-    Qualifier:
-
-        /[NO]SYMBOLIC  /NOSYMBOLIC displays the frames' contents, as
-                   below, even where debug data names them.  The default
-                   is the vax.disassemble.symbolic setting (true when it
-                   isn't set), as for DISASSEMBLE.
-
-    Parameter:
-
-        <count>    If give, this is the number of call frames to display
-                   starting with the current frame.  For example, the
-                   command SHOW CALLS 1 will display only the current
-                   stored frame on the stack pointed to by the FP.
-
-                   If the count is omitted, the debugger's display lists
-                   every frame, and the frames' contents only the
-                   current one.
-$SHOW,ERRO
-$SHOW,ERR 
-$SH  ,ERRO
-$SH  ,ERR 
-    The SHOW ERROR command displays the message associated with a console
-    error code.  If no code is given, it shows the message associated 
-    with the last error code.
-
-    Syntax:
-
-        SHOW ERROR [<code>]
-
-    Parameter:
-
-        <code>     A numeric value or expression that reflects the code
-                   you wish to see the message text for.  If ommitted,
-                   the value of the symbol $STATUS which holds the 
-                   status of the last non-successful console command.
 $SHOW
 $SH
 
@@ -2254,55 +1470,23 @@ $SH
     VAX or the console processor.  For additional SHOW commands, see
     the help for:
     
-        SHOW ASSEMBLER
-        SHOW BASE
-        SHOW BREAKPOINTS
-        SHOW CALLS
-        SHOW CPU
         SHOW DEFAULT
         SHOW DEVICE
-        SHOW DISASSEMBLER
-        SHOW ERROR
-        SHOW EXCEPTION
         SHOW INSTRUCTION
         SHOW INSTRUCTION/PROFILE
         SHOW INSTRUCTION/MODE
         SHOW INSTRUCTION/UNIMPLEMENTED
         SHOW LOGICAL
-        SHOW MEMORY
-        SHOW MODE
-        SHOW PAGE
-        SHOW PSL
         SHOW QUANTUM
         SHOW RADIX
-        SHOW REGISTERS
-        SHOW SCB
-        SHOW SHIMS
-        SHOW STACK
         SHOW STRINGS
         SHOW SYMBOL
-        SHOW TB
         SHOW TRANSLATION
-        
-    The SHOW command is also used to display the contents of a virtual
-    VAX machine register.  This includes the general purpose registers
-    R0-R15 as well as the PSL and any privileged processor register.
 
-    Syntax:
-
-        SHOW <register-name>
-
-    
-    Parameter:
-
-        <register-name>     This is the name of the register whose contents
-                            you wish to display.  This can be a general
-                            purpose register (R0-R15), or one of the valid
-                            synonyms like AP, FP, SP, or PC.  It can also
-                            be a privileged register like SIBB or KSP.
-                            
-                            See the help for REGISTER NAMES for a complete
-                            list of the register names allowed.
+    SHOW also displays the state of the machine itself (registers, memory,
+    the PSL, breakpoints, the call stack, page tables, ...), but those are
+    the debugger's commands.  Type DEBUG to enter the debugger, then
+    HELP SHOW there.
 
 $SHOW,STRI
 $SH  ,STRI
@@ -2348,158 +1532,14 @@ $CLEA,STRI
 
         CLEAR STRINGS
 
-$SHOW,SCB 
-$SH  ,SCB 
-
-    The SHOW SCB command displays the currently active exception
-    vector (system control block).  The base address of this memory
-    is defined by the SCBB processor register.  The command will
-    display the SCBB value (which is a physical address) and then 
-    will display the addresses of the exception handlers declared
-    in the SCB, if any.
-
-    Syntax:
-
-        SHOW SCB
-
-$SHOW,PAGE
-$SH  ,PAGE
-$SHOW,PTE 
-$SH  ,PTE 
-
-    The SHOW PAGE (or SHOW PTE) command displays the virtual memory
-    characteristics for a page of memory given an access type.  This
-    command will not work unless virtual memory is turned on.
-
-    Syntax:
-
-        SHOW PAGE [<mode>] <address>  
-
-    Parameters:
-
-        <address>     Any exprssion representing a page of VAX virtual
-                      memory.  The information displayed is for the 
-                      page containing the specified address.
-
-        <mode>        This must be /READ or /WRITE.  If not given, then
-                      /READ is assumed.  This is used to determine if
-                      the page is accessible in the current mode.
-
-$SET ,PAGE
-$SET ,PTE 
-
-    The SET PAGE (or SET PTE) command allows you to set fields within
-    the page table entry (PTE) for a specific page.  Virtual memory
-    must be enabled for this command to work.
-
-    Note that you can specify multiple fields in a single command
-    just by giving additional field/value pairs.
-    Syntax:
- 
-        SET PAGE <address>  <field>=<value>  [ <field>=<value>...]
-
-    Parameters:
-
-        <address>     Any expression representing a page of VAX virtual
-                      memory.  The PTE selected is the one for the page
-                      containing this virtual address.
-
-        <field>       A field from the PTE.  This can be one of:
-
-                          VALID     Is this PTE valid (mapped)?
-                          PROT      The protection code
-                          M         The modified bit
-                          OWN       The owner field
-                          S         The software bit field
-                          PFN       The page frame number
-
-        <value>       A numeric valid to be assigned to the field given.
-                      This can be an expression or a symbol, as shown
-                      in the example below.
-
-    Example:
-
-        SET PAGE 200 PROT=PTE$K_KWUR
-
-        This sets the page containing the address 00000200 protection
-        field to allow KERNEL writes and reads by any level.  Note that
-        the standard PTE protection mnemonics are predefined for you.
-
-$SHOW,SHIM
-$SH  ,SHIM
-    The SHOW SHIMS command displays the defined runtime library shims
-    that have been defined.  Shims take the place of real sharable images
-    when running a VAX/VMS image with the RUN command.  These represent
-    runtime library offsets that are remapped to real routines in the
-    micro-kernel.  These routines may implement the runtime using native
-    VAX code, or may use a special XFC dispatch code of XFC$SHIM to 
-    transfer control to a runtime support routine in the emulator.
-    
-    Syntax:
-    
-        SHOW SHIM
-        
-$SHOW,TB  
-$SH  ,TB  
-    The SHOW TB command will display the current contents of the virtual
-    memory translation buffer.  This buffer holds recent translations of
-    virtual to physical addresses.  The display will show the efficiency
-    of the buffer in terms of translation attempts that were cached.  It
-    also shows how many times the buffer was flushed or the protection
-    data was flushed.  When a mode change occurs in the VAX, the buffer
-    discards it's understanding of the page protections, so they must
-    be re-tested the next time a buffer translation is used.
-
-    The SHOW TB command will display the virtual address of each page
-    in the translation buffer, it's current physical page mapping, the
-    current protection on that page, and whether or not it is valid
-    for the current mode or not.
-
-    Syntax:
-
-        SHOW TB
-
-$SHOW,MODE
-$SH  ,MODE
-
-    The SHOW MODE command displays the current processor mode.  This
-    will be one of USER, SUPER, EXEC, or KERNEL.  The mode is stored
-    in the CUR_MOD field of the PSL.
-
-    Syntax:
-
-        SHOW MODE
-
-$SET ,MODE
-
-    The SET MODE command sets the current processor mode in the PSL.
-    This is equivalent to using the SET PSL command to set the CUR_MOD
-    field.
-
-    Note that in general the console commands respect the mode settings
-    for the emulated CPU.  For example, if you are in USER mode, the
-    console EXAM command will not allow you to read memory that is not
-    accessible from USER mode.  You can use the SET MODE command to
-    temporarily modify the processor mode so that you can directly
-    manipulate privileged memory or registers.
-
-    Syntax:
-
-        SET MODE <modename>
-
-    Parameter:
-
-        <modename>     This is the name of the mode you wish to set
-                       the processor to.  It can be one of USER, SUPER,
-                       EXEC, or KERNEL.
-
 $HELP
 
     govax a VAX software emulator.  It supports execution of a subset
     of the VAX instruction set.  It also contains emulation of VAX hardware,
     memory management, and console functions.  The console functions are
-    extended beyond existing VAX implementation to include an assembler, 
-    disassembler, and debugging tools like breakpoints.
+    extended beyond existing VAX implementation to include an assembler
+    and a debugger, modeled on the VMS debugger, with breakpoints,
+    stepping, and commands to examine and change the machine.
 
     You can get help on a topic by using the HELP command, followed by
     one or more keywords.  For example, to get help on the SHOW command,
@@ -2507,9 +1547,9 @@ $HELP
 
            HELP SHOW
 
-    To get help on the SHOW REGISTERS subcommand to SHOW, use the command:
+    To get help on the SHOW LOGICAL subcommand to SHOW, use the command:
 
-           HELP SHOW REGISTERS
+           HELP SHOW LOGICAL
 
 
 
@@ -2519,18 +1559,18 @@ $HELP
     ASM             Assemble VAX source into memory
     ASSIGN          Create a logical name (equivalence first)
     CALL            Execute instructions by calling into a procedure
-    CLEAR           Clear memory, symbols, etc.
+    CLEAR           Clear memory, symbols, strings
     COPY            Copy a file between the host and a mounted volume
     CREATE          Create a directory or a logical name table
     DEASSIGN        Delete a logical name
     DEFINE          Create a logical name
     DELETE          Delete a file on a mounted volume
     DIRECTORY       List the files on a mounted volume
-    DISASSEMBLE     Disassemble memory as VAX instructions
+    DEBUG           Start the debugger on the virtual VAX
     DISMOUNT        Detach a device's mounted disk-image container
     DO              Assemble and execute a single instruction
-    EXAMINE         Examine the contents of memory
     GO              Execute VAX instructions
+    IF              Run a command when an expression is true
     INCLUDE         Execute a text file of console commands
     INITIALIZE      Initialize the virtual VAX, or a disk-image container
     LIBRARY         Create, change, or list a macro or object library
@@ -2544,13 +1584,17 @@ $HELP
     RENAME          Rename or move files on a mounted volume
     RUN             Load and run a VAX/VMS image
     SAVE            Save the machine state
-    SET             Set the state of the console or VAX
-    SHOW            Display the state of the console or VAX
-    STEP            Singlestep VAX instructions
+    SET             Set the state of the console
+    SHOW            Display the state of the console
     TEST            Run the emulator's debugging sequences
+    TIME            Run a command and report how long it took
     TYPE            Display a file on a mounted volume
     VMINIT          Initialize a VM map
     ZERO            Clear the virtual VAX's memory
+
+    The commands that examine and control the machine itself (EXAMINE,
+    DEPOSIT, STEP, breakpoints, the registers) are the debugger's; type
+    DEBUG for its prompt, DBG>, and HELP there for its commands.
 
     Other topics:
 
@@ -2558,6 +1602,28 @@ $HELP
     PSL             The processor status longword and its fields
     XFC             govax's extended function codes
     
+
+$DEBU
+    The DEBUG command starts the debugger on the virtual VAX as it stands,
+    with nothing running.  It is the way to examine memory and the
+    registers, or set a breakpoint, before running a program (as typing
+    Ctrl/Y and then DEBUG does for a VMS process).
+
+    Syntax:
+
+        DEBUG
+
+    The prompt changes to DBG>.  The debugger is a separate command set,
+    modeled on the VMS debugger: EXAMINE, DEPOSIT, STEP, GO, SET BREAK,
+    SHOW CALLS, and so on.  The console's own commands (DIRECTORY, MACRO,
+    LINK, RUN, ...) aren't available at DBG>.  EXIT returns to the console,
+    leaving the machine as it is.  HELP at DBG> describes the debugger's
+    commands.
+
+    The debugger also starts by itself when a program stops: a GO or CALL
+    that reaches a breakpoint, RUN/DEBUG, or an image linked /DEBUG.  A
+    program that runs to its end returns to the console prompt, and the
+    debugger doesn't appear.
 
 $DO  
 $.  
@@ -3396,6 +2462,52 @@ $PRIN
 
         <expression>    One or more expressions or quoted string values,
                         separated by commas.
+
+$TIME
+
+    The TIME command runs another console command and reports how long it
+    took.  With no command, it prints the time of day.
+
+    Syntax:
+
+        TIME [<command>]
+
+    Parameter:
+
+        <command>       Any console command.
+
+    Example:
+
+        TIME DIRECTORY
+
+$IF
+
+    The IF command runs a command only when an expression is true (nonzero).
+    It is used in command files (see INCLUDE).
+
+    Syntax:
+
+        IF <expression> [THEN] <command>
+
+    Parameters:
+
+        <expression>    An expression, in the console's radix.  Functions
+                        such as DEFINED("name") may be used in it.
+
+        <command>       Any console command, run as a line of its own when
+                        the expression is nonzero.
+
+    Example:
+
+        IF DEFINED("CONSOLE$ARG_FILE") THEN SET NOVERBOSE
+
+$BOOT
+$ROM
+
+    BOOT and ROM are reserved for booting the virtual VAX from a device and
+    from its console ROM.  They are not implemented yet, and say so when
+    typed.  LOAD/ROM and SAVE/ROM, which read and write the ROM's contents,
+    are (see HELP LOAD and HELP SAVE).
 
 $AUTH
 $ABOU

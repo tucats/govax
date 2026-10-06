@@ -5,29 +5,105 @@
 //
 //  Purpose:    The documentation for the govax debugger, read by the
 //              debugger's HELP command (DBG> HELP). The format is the
-//              same as VAX.HELP's, whose preamble explains it.
+//              same as VAX.HELP's, whose preamble explains it: a "$" line
+//              holds a topic's key, one four-character word for each
+//              word typed after HELP.
 //
 //  History:    10/05/26    Started, with the commands the debugger has so
 //                          far: EXIT, QUIT, HELP, and @ (docs/PHASE-42.md,
 //                          subtask 3).
 //              10/05/26    Added GO, CALL, and STEP (subtask 4).
 //              10/05/26    STEP as VMS's (subtask 7).
+//              10/05/26    Every command and qualifier the debugger has
+//                          (subtask 15).
 //
 
 $HELP
   The govax debugger examines and controls the emulated VAX. It is modeled
-  on the VMS debugger, and the commands it has follow that debugger's
-  syntax. Type HELP topic for more about a command.
+  on the VMS debugger, and its commands follow that debugger's syntax. Type
+  HELP topic for more about a command, and HELP topic keyword for a
+  keyword or a qualifier of it (HELP SET BREAK, HELP EXAMINE /INSTRUCTION).
 
   Additional information available:
 
-  @  CALL  EXIT  GO  HELP  QUIT  STEP
+  @           CALL        CANCEL      CLEAR       DEPOSIT     EVALUATE
+  EXAMINE     EXIT        GO          HELP        QUIT        SET
+  SHOW        STEP        SYMBOLIZE
+
+  Other topics:
+
+  EXPRESSIONS     How an address or a value is written
+  REGISTERS       The names of the registers
+  RADIX           The numbers' radix
+  BREAKPOINTS     The kinds of eventpoints and what they report
 
   The debugger is a separate command set from the console's: the VMS
-  command line (DIRECTORY, MACRO, LINK, ...) isn't available here. EXIT
-  returns to the console, where it is.
+  command line (DIRECTORY, MACRO, LINK, RUN, ...) isn't available here.
+  EXIT returns to the console, where it is.
+
+$EXPR
+$EXPRESSIONS
+  An address or a value is an expression, which may hold:
+
+    numbers          in the input radix (hexadecimal unless SET RADIX says
+                     otherwise); ^X, ^D, ^O, and ^B force a radix, as in
+                     MACRO (^D35)
+    symbols          a routine, label, or data name from the program's
+                     debug symbols, or the console's symbol table
+    path names       MODULE\ROUTINE\LABEL, as in DBGDIS\START\LOOP
+    lines            %LINE n, or MODULE\%LINE n, the code of a source line
+    registers        R0 to R11, AP, FP, SP, PC, PSL (also %R0 and so on),
+                     as their values; PC alone is the program counter
+    .                the current location: the address EXAMINE, DEPOSIT, or
+                     SET BASE last used
+    .name            the contents at an address: .PC, .R1+4
+    operators        + - * / (and parentheses)
+
+  An address range is start:end (EXAMINE A:B), and a list is separated by
+  commas (EXAMINE A,B). A routine's name stands for the address after its
+  entry mask when a breakpoint is set on it.
+
+$REGI
+$REGISTERS
+  The registers the debugger knows:
+
+    R0 to R11, AP (R12), FP (R13), SP (R14), PC (R15)   general registers
+    PSL                                                 processor status
+
+  and the privileged registers: P0BR P0LR P1BR P1LR SBR SLR PCBB SCBB IPL
+  ASTLVL SIRR SISR ICCS NICR ICR TODR RXCS RXDB TXCS TXDB TBDR SAVISP SAVPC
+  SAVPSL WCSA WCSB MAPEN TBIA TBIS PMR SID TBCHK.
+
+  EXAMINE, DEPOSIT, and SHOW show or change them, by name.
+
+$RADI
+$RADIX
+  The debugger reads numbers, and shows them, in a radix: hexadecimal until
+  SET RADIX says otherwise. The input radix is the one numbers typed are
+  read in; the output radix is the one values are shown in. SET RADIX sets
+  both (or SET RADIX/INPUT, SET RADIX/OUTPUT, one of them), SHOW RADIX
+  shows them, and CANCEL RADIX restores hexadecimal. The console has a
+  radix of its own (SET RADIX there); the two don't affect each other.
+
+$BREA
+$BREAKPOINTS
+  The debugger has three kinds of eventpoint:
+
+    breakpoints    stop the program before an instruction runs
+                   (SET BREAK), or when a class of instruction is reached
+                   (/CALL, /BRANCH, /RETURN, /LINE, /INSTRUCTION), or when
+                   an exception is signaled (/EXCEPTION), or, govax's own,
+                   when a machine fault is about to be delivered (/FAULT)
+    tracepoints    report where the program is and go on (SET TRACE)
+    watchpoints    stop after the instruction that changes a location
+                   (SET WATCH)
+
+  The report says where, in the names the program's debug symbols give:
+  "break at DBGDIS\START\%LINE 42" or "trace on lines at ...". SHOW BREAK,
+  SHOW TRACE, and SHOW WATCH list them, and CANCEL takes them away.
 
 $@
+$INCL
   Runs the debugger commands in a command file.
 
   Format:
@@ -48,7 +124,229 @@ $CALL
   The arguments are pushed as a CALLS instruction pushes them. The routine
   runs until it returns, a breakpoint stops it, or Ctrl-C interrupts it.
 
-  /STEP runs only the routine's first instruction and stops.
+  /STEP runs only the routine's first instruction and stops. (/BREAK,
+  /DEBUG, and /DBG mean the same.)
+
+$CANC
+$CLEA
+  Removes eventpoints and settings: the debugger's CANCEL. CLEAR is a
+  synonym for it.
+
+  Format:
+
+    CANCEL keyword [qualifiers] [parameter]
+
+  Additional information available:
+
+  BREAK  INTERRUPT  MEMORY  MODE  RADIX  SOURCE  TB  TRACE  WATCH
+
+$CANC,BREA
+$CLEA,BREA
+  Removes breakpoints.
+
+  Format:
+
+    CANCEL BREAK [qualifier] [address[,address...]]
+
+  With addresses, removes the breakpoints there. With a qualifier, removes
+  the breakpoints of that kind:
+
+    /ALL            every breakpoint
+    /CALL           the breakpoints on calls
+    /BRANCH         the breakpoints on branches
+    /LINE           the breakpoints on source lines
+    /RETURN         the breakpoints on returns
+    /EXCEPTION      the breakpoint on exceptions
+    /INSTRUCTION[=(opcode,...)]
+                    the instruction breakpoints (of the opcodes named, or
+                    all of them)
+    /FAULT[=code]   govax's fault breakpoints (the one for the fault code,
+                    or all of them)
+
+  Cancelling when none is set is %DEBUG-I-NOBREAKS.
+
+$CANC,TRAC
+$CLEA,TRAC
+  Removes tracepoints.
+
+  Format:
+
+    CANCEL TRACE [qualifier] [address[,address...]]
+
+  The qualifiers are /ALL, /CALL, /BRANCH, /LINE, /RETURN, and
+  /INSTRUCTION[=(opcode,...)], as CANCEL BREAK has them.
+
+$CANC,WATC
+$CLEA,WATC
+  Removes watchpoints.
+
+  Format:
+
+    CANCEL WATCH [/ALL] [location[,location...]]
+
+$CANC,SOUR
+$CLEA,SOUR
+  Forgets the directories SET SOURCE named, so source files are looked for
+  where the image says they are.
+
+  Format:
+
+    CANCEL SOURCE
+
+$CANC,RADI
+$CLEA,RADI
+  Restores the radix to hexadecimal, for input and output.
+
+  Format:
+
+    CANCEL RADIX
+
+$CANC,MODE
+$CLEA,MODE
+  Restores SET MODE's defaults (symbolic names, operands explained, and the
+  rest).
+
+  Format:
+
+    CANCEL MODE
+
+$CANC,INTE
+$CLEA,INTE
+  Removes a queued interrupt (govax's own).
+
+  Format:
+
+    CANCEL INTERRUPT [/ALL] [vector]
+
+  vector is the interrupt's SCB offset, in hexadecimal. /ALL removes every
+  queued interrupt.
+
+$CANC,TB
+$CLEA,TB
+  Empties the translation buffer (govax's own), the cache of recent virtual
+  to physical address translations. The next access to each page walks the
+  page tables again.
+
+  Format:
+
+    CANCEL TB
+
+$CANC,MEMO
+$CLEA,MEMO
+  CANCEL MEMORY/STATISTICS zeroes the memory system's counters (govax's
+  own). (At the console, CLEAR MEMORY with no qualifier is a different
+  command, which zeroes the memory itself.)
+
+  Format:
+
+    CANCEL MEMORY/STATISTICS
+
+$DEPO
+$D
+  Stores a value at a location: a register, or an address.
+
+  Format:
+
+    DEPOSIT[/type] location = value
+    DEPOSIT/ASCII[:count] location = "string"
+
+  The value is in the input radix. The type is /BYTE, /WORD, /LONGWORD, or
+  /QUADWORD; without one it is the type of the data the location names in
+  the program's debug symbols, else a longword. /ASCII stores a quoted
+  string, of the count given (padded with blanks) or its own length.
+
+  Examples:
+
+    DEPOSIT R0 = 5
+    DEPOSIT PC = 200
+    DEPOSIT/BYTE 2000 = 0FF
+    DEPOSIT COUNT = 10
+
+$EVAL
+  Shows the value of an expression.
+
+  Format:
+
+    EVALUATE[/radix] expression
+    EVALUATE/ADDRESS expression
+
+  The value is shown in the output radix, or in /HEXADECIMAL, /DECIMAL,
+  /OCTAL, or /BINARY. With a data name, the value is its contents.
+  /ADDRESS shows the address instead.
+
+$EXAM
+$EX
+  Shows what is at a location.
+
+  Format:
+
+    EXAMINE[/qualifier...] [location[,location...]]
+    EXAMINE[/qualifier...] start:end
+
+  A location is an expression (HELP EXPRESSIONS): an address, a name, a
+  register. A range (start:end) shows each item from start through end. With
+  no location, EXAMINE shows the next location after the last one shown.
+
+  Without /INSTRUCTION, EXAMINE shows data: typed by the program's debug
+  symbols where the location names a datum (arrays as TABLE[0:3], strings
+  through their descriptors), and otherwise by the type qualifier given, in
+  the output radix.
+
+  Additional information available:
+
+  /INSTRUCTION  /OPERANDS  /BYTE  /WORD  /LONGWORD  /QUADWORD  /ASCII
+  /HEXADECIMAL  /DECIMAL  /OCTAL  /BINARY  /PSL  /PTE  /CONSTANTS
+  /SHAREABLE  /SYMBOLIC
+
+$EXAM,/INS
+  Shows the machine instruction at each location, in the VMS debugger's
+  layout, with names from the program's debug symbols:
+
+    DBGDIS\START\%LINE 42:  MOVL     S^#0A,R2
+
+  A range lists every instruction in it.
+
+$EXAM,/OPE
+  With /INSTRUCTION, explains each operand: its value, and where it is.
+  /OPERANDS=FULL says more. /NOOPERANDS (the default, unless SET MODE
+  OPERANDS) leaves them out.
+
+$EXAM,/BYT
+$EXAM,/WOR
+$EXAM,/LON
+$EXAM,/QUA
+  Show each item as a byte, a word (two bytes), a longword (four), or a
+  quadword (eight), when the program's debug symbols don't give the type.
+
+$EXAM,/ASC
+  Shows bytes as ASCII text. /ASCII:count shows count bytes.
+
+$EXAM,/HEX
+$EXAM,/DEC
+$EXAM,/OCT
+$EXAM,/BIN
+  Show the value in hexadecimal, decimal, octal, or binary, for this
+  command, instead of the output radix.
+
+$EXAM,/PSL
+  govax's own: shows a longword as a processor status longword, field by
+  field.
+
+$EXAM,/PTE
+  govax's own: shows a longword as a page table entry: its valid bit,
+  protection, modify bit, owner, and page frame number.
+
+$EXAM,/CON
+  govax's own, with /INSTRUCTION: names a constant by the symbol that
+  defines it (MOVL S^#DBGDIS\LIMIT,R2), which the VMS debugger doesn't.
+
+$EXAM,/SHA
+  govax's own, with /INSTRUCTION: names a G^ reference's routine in a
+  shareable image (CALLS S^#01,G^LIB$PUT_OUTPUT).
+
+$EXAM,/SYM
+  Accepted, as VMS has it. SET MODE SYMBOLIC or NOSYMBOLIC chooses whether
+  an instruction's addresses are names.
 
 $EXIT
   Ends the debugger session and returns to the console. The machine is
@@ -88,7 +386,544 @@ $QUIT
 
     QUIT
 
+$SET
+$SE
+  Changes what the debugger does or shows.
+
+  Format:
+
+    SET keyword [qualifiers] [parameters]
+
+  Additional information available:
+
+  BASE     BREAK    FAULT    MODE     MODULE   PSL      PTE      RADIX
+  SOURCE   STEP     TRACE    VM       WATCH
+
+  (SET BREAKPOINT, SET TRACEPOINT, and SET WATCHPOINT are the same as
+  SET BREAK, SET TRACE, and SET WATCH.)
+
+$SET,BREA
+$SE,BREA
+  Sets breakpoints: the program stops before the instruction runs.
+
+  Format:
+
+    SET BREAK [qualifiers] [address[,address...]] [WHEN (condition)]
+              [DO (command[;command...])]
+
+  An address may be a routine's name: the break is after its entry mask, at
+  its first instruction. A qualifier picks a class instead of an address;
+  one at most is given:
+
+    /CALL           each call instruction (CALLS, JSB, ...)
+    /BRANCH         each branch instruction
+    /RETURN routine each RET that ends a call of the routine named
+    /LINE           each source line's first instruction
+    /INSTRUCTION[=(opcode,...)]
+                    each instruction (of the opcodes named, if any)
+    /EXCEPTION      each exception signaled
+    /FAULT=code     govax's own: when the machine fault with that code
+                    (hexadecimal) is about to be delivered
+
+  /AFTER:n skips the first n times the breakpoint is reached. /TEMPORARY
+  removes it when it first stops the program. WHEN (condition) stops only
+  when the condition is nonzero; DO runs the commands at the stop.
+
+  The report is "break at location", "break on lines at ...", and so on.
+  A break at the address a run starts from doesn't stop it at once.
+
+  Examples:
+
+    SET BREAK FACT
+    SET BREAK/TEMPORARY DBGDIS\START\%LINE 47
+    SET BREAK/INSTRUCTION=(MOVC3)
+    SET BREAK SUB2 WHEN (R0 EQL 5) DO (EXAMINE R0)
+
+$SET,TRAC
+$SE,TRAC
+  Sets tracepoints: the program reports where it is and goes on.
+
+  Format:
+
+    SET TRACE [qualifiers] [address[,address...]] [WHEN (condition)]
+              [DO (command[;command...])]
+
+  The qualifiers are /AFTER:n, /TEMPORARY, /CALL, /BRANCH, /LINE, /RETURN,
+  and /INSTRUCTION[=(opcode,...)], as SET BREAK has them. SET TRACE
+  /INSTRUCTION traces every instruction. The report is "trace at
+  location", "trace on lines at ...", and so on.
+
+$SET,WATC
+$SE,WATC
+  Sets watchpoints: the program stops after an instruction that changes a
+  location.
+
+  Format:
+
+    SET WATCH [/AFTER:n] [/TEMPORARY] location [WHEN (condition)]
+              [DO (command[;command...])]
+
+  The location's size comes from the program's debug symbols: a scalar by
+  its type, an array (BUFFER[0:15]) item by item, anything else a
+  longword. The report gives the old and new values:
+
+    watch of DBGCMD\COUNT at DBGCMD\START\%LINE 42
+       old value: 00000000
+       new value: 00000001
+
+$SET,STEP
+$SE,STEP
+  Sets what STEP does when it isn't told.
+
+  Format:
+
+    SET STEP keyword[,keyword...]
+
+  The keywords are:
+
+    LINE | INSTRUCTION     how far a step goes
+    OVER | INTO (IN) | RETURN
+                           what to do at a call (RETURN is govax's: run to
+                           the return of the routine)
+    SILENT | NOSILENT      whether the stop is reported
+    SOURCE | NOSOURCE      whether the source line is shown
+
+  SHOW STEP shows the settings.
+
+$SET,SOUR
+$SE,SOUR
+  Names the directories searched for a program's source files, when they
+  aren't where the image says.
+
+  Format:
+
+    SET SOURCE directory[,directory...]
+
+  SHOW SOURCE lists them, and CANCEL SOURCE forgets them.
+
+$SET,MODE
+$SE,MODE
+  Sets display modes, and govax's access mode.
+
+  Format:
+
+    SET MODE keyword[,keyword...]
+
+  Display modes (the VMS debugger's):
+
+    SYMBOLIC | NOSYMBOLIC  whether an address is shown as a name
+    OPERANDS[=FULL|BRIEF] | NOOPERANDS
+                           whether EXAMINE/INSTRUCTION explains operands
+    LINE | NOLINE          whether the debugger works by source line
+    G_FLOAT | NOG_FLOAT    the floating format
+    SCROLL, DYNAMIC, INTERRUPT, and their NO forms are accepted; screen
+    mode isn't available.
+
+  Access modes (govax's own): KERNEL, EXECUTIVE, SUPERVISOR, USER switch
+  the CPU's mode and its stack pointer, and ISP the interrupt stack.
+
+  SHOW MODE shows the settings, and CANCEL MODE restores the defaults.
+
+$SET,RADI
+$SE,RADI
+  Sets the radix for numbers typed and shown.
+
+  Format:
+
+    SET RADIX [/INPUT|/OUTPUT] radix
+
+  radix is DECIMAL, HEXADECIMAL, OCTAL, or BINARY (also 10, 16, 8, 2).
+  With no qualifier it sets both. HELP RADIX says more.
+
+$SET,MODU
+$SE,MODU
+  Notes that a module's symbols are wanted.
+
+  Format:
+
+    SET MODULE module[,module...]
+    SET MODULE/ALL
+
+  govax reads every module's symbols when it loads an image, so this
+  changes only the "set" column of SHOW MODULE and which modules a SHOW
+  SYMBOL with no IN looks in.
+
+$SET,PSL
+$SE,PSL
+  Changes fields of the processor status longword (govax's own).
+
+  Format:
+
+    SET PSL field=value[,field=value...]
+
+  The fields are C, V, Z, N, T, IV, FU, DV, IPL, and MOD (also CUR_MOD).
+  Values are in the input radix.
+
+  Example:
+
+    SET PSL IPL=1F, N=1
+
+$SET,PTE
+$SET,PAGE
+$SE,PTE
+$SE,PAGE
+  Changes page table entries (govax's own).
+
+  Format:
+
+    SET PTE address [TO address] field=value[,field=value...]
+
+  The fields are VALID (V), PROT, MODIFY (M), OWNER (OWN), SOFT (S), and PFN
+  (PAGE), the page frame number. PROT is a number or the name SHOW PTE prints (PTE$K_KW). With
+  TO, every 512-byte page from the first address through the second is
+  changed.
+
+  Example:
+
+    SET PTE 200 TO 400 VALID=1,PFN=10
+
+$SET,FAUL
+$SET,HIST
+$SE,FAUL
+$SE,HIST
+  Sets how many machine faults are remembered for SHOW EXCEPTIONS (govax's
+  own).
+
+  Format:
+
+    SET FAULT count
+
+$SET,VM
+$SET,MAPE
+$SE,VM
+$SE,MAPE
+  SET VM turns address translation (memory mapping) on, and SET NOVM turns
+  it off (govax's own). The privileged register MAPEN is the switch.
+
+  Format:
+
+    SET VM
+    SET NOVM
+
+$SET,BASE
+$SE,BASE
+  Sets the current location, where EXAMINE with no location starts (govax's
+  own).
+
+  Format:
+
+    SET BASE address
+
+$SHOW
+$SH
+  Displays what the debugger knows.
+
+  Format:
+
+    SHOW keyword [qualifiers] [parameters]
+
+  Additional information available:
+
+  BASE       BREAK      CALLS      CLOCK      CPU_STATUS EXCEPTIONS
+  IMAGE      LANGUAGE   MAPS       MEMORY     MODE       MODULE
+  PAGE       PSL        RADIX      REGIONS    REGISTERS  SCB
+  SCOPE      SHIM       SOURCE     STACK      STEP       SYMBOL
+  TB         TRACE      WATCH
+
+  and the register names: SHOW R0, SHOW PC, SHOW P0BR, and so on. SHOW SP,
+  KSP, ESP, SSP, USP, and ISP dump the longwords on a stack.
+
+$SHOW,BREA
+$SH,BREA
+  Lists the breakpoints, with their counts and clauses.
+
+  Format:
+
+    SHOW BREAK
+
+$SHOW,TRAC
+$SH,TRAC
+  Lists the tracepoints.
+
+  Format:
+
+    SHOW TRACE
+
+$SHOW,WATC
+$SH,WATC
+  Lists the watchpoints.
+
+  Format:
+
+    SHOW WATCH
+
+$SHOW,STEP
+$SH,STEP
+  Shows what STEP does when it isn't told (SET STEP).
+
+  Format:
+
+    SHOW STEP
+
+$SHOW,SOUR
+$SH,SOUR
+  Lists the directories SET SOURCE named.
+
+  Format:
+
+    SHOW SOURCE
+
+$SHOW,CALL
+$SH,CALL
+  Lists the call frames, innermost first, one row each: module, routine,
+  line, and the PC relative to the routine and absolute. A call frame is the
+  record CALLS and CALLG leave on the stack, which links each routine to its
+  caller.
+
+  Format:
+
+    SHOW CALLS [count]
+
+  With a count, only that many frames. In a JSB subroutine, which has no
+  frame of its own, the row is the routine that holds it.
+
+$SHOW,STAC
+$SH,STAC
+  Describes each call frame in full: the saved registers, argument count, and
+  condition handler (VMS's SHOW STACK).
+
+  Format:
+
+    SHOW STACK [count]
+
+  govax's longword dump of a stack is SHOW SP, KSP, ESP, SSP, USP, or ISP.
+
+$SHOW,SP
+$SHOW,KSP
+$SHOW,ESP
+$SHOW,SSP
+$SHOW,USP
+$SHOW,ISP
+$SH,SP
+$SH,KSP
+$SH,ESP
+$SH,SSP
+$SH,USP
+$SH,ISP
+  Dumps the longwords on a stack (govax's own): SHOW SP the current one, and
+  the others the stack of the mode named (kernel, executive, supervisor,
+  user, and the interrupt stack).
+
+  Format:
+
+    SHOW KSP [count] [/ALL]
+
+  count is how many longwords, in hexadecimal; /ALL shows the whole stack.
+
+$SHOW,REGI
+$SHOW,REG
+$SH,REGI
+$SH,REG
+  SHOW REGISTERS shows the general registers and the PSL (govax's own).
+  A single register, general or privileged, is SHOW name (SHOW R3, SHOW PC,
+  SHOW P0BR). HELP REGISTERS lists the names.
+
+  SHOW REGIONS shows the limits of the P0, P1, and S0 regions image
+  activation uses (govax's own).
+
+  Format:
+
+    SHOW REGISTERS
+    SHOW REGIONS
+
+$SHOW,PSL
+$SH,PSL
+  Shows the processor status longword as a number and as its fields
+  (govax's own).
+
+  Format:
+
+    SHOW PSL
+
+$SHOW,CPU_
+$SH,CPU_
+  Shows the registers and the PSL, the stack pointer of each mode, and the
+  privileged registers, then the current location (govax's own).
+
+  Format:
+
+    SHOW CPU_STATUS
+
+$SHOW,CLOC
+$SH,CLOC
+  Shows the interval clock and the time-of-day register (govax's own).
+
+  Format:
+
+    SHOW CLOCK
+
+$SHOW,BASE
+$SH,BASE
+  Shows the current location, where EXAMINE with no location starts
+  (govax's own).
+
+  Format:
+
+    SHOW BASE
+
+$SHOW,MEMO
+$SHOW,VM
+$SH,MEMO
+$SH,VM
+  Shows the size of physical memory and, once VMINIT has made page tables,
+  how much of each region (P0, P1, S0) is used (govax's own). With
+  /STATISTICS, counters of the memory system's work; /RUNTIME and /FULL
+  show more.
+
+  Format:
+
+    SHOW MEMORY [/STATISTICS] [/RUNTIME] [/FULL]
+
+$SHOW,MAPS
+$SH,MAPS
+  Reports that govax has no field-offset map of RMS's data structures to
+  show (the VMS command of this name shows one; govax's RMS code keeps no
+  such table).
+
+  Format:
+
+    SHOW MAPS
+
+$SHOW,TB
+$SH,TB
+  Shows the translation buffer: its hit and miss counts, and each entry in
+  use (govax's own). The translation buffer is the cache of recent virtual
+  to physical address translations.
+
+  Format:
+
+    SHOW TB
+
+$SHOW,PAGE
+$SHOW,PTE
+$SH,PAGE
+$SH,PTE
+  Shows the page table entry for an address (govax's own).
+
+  Format:
+
+    SHOW PAGE [/READ|/WRITE] address
+
+  The entry's fields are shown, with its protection by name (PTE$K_KW).
+  /READ and /WRITE say which access the entry is checked for.
+
+$SHOW,SCB
+$SH,SCB
+  Shows the system control block (SCB), which holds the address of each
+  exception and interrupt routine (govax's own).
+
+  Format:
+
+    SHOW SCB [/ALL]
+
+  Only the vectors in use, unless /ALL.
+
+$SHOW,SHIM
+$SH,SHIM
+  Shows the shims: the stubs that stand in for shareable images' routines,
+  and what each reaches, native code or a microkernel routine (govax's
+  own).
+
+  Format:
+
+    SHOW SHIM
+
+$SHOW,EXCE
+$SHOW,FAUL
+$SH,EXCE
+$SH,FAUL
+  Shows the machine faults and exceptions recently taken, and the interrupts
+  pending (govax's own). SET FAULT chooses how many faults are kept.
+
+  Format:
+
+    SHOW EXCEPTIONS
+
+$SHOW,MODE
+$SH,MODE
+  Shows the display modes (SET MODE), and, on a last line, govax's access
+  mode.
+
+  Format:
+
+    SHOW MODE
+
+$SHOW,RADI
+$SH,RADI
+  Shows the input and output radix.
+
+  Format:
+
+    SHOW RADIX
+
+$SHOW,IMAG
+$SH,IMAG
+  Lists the loaded images, the main one marked with an asterisk: whether
+  it has debug symbols (set), and its first and last address.
+
+  Format:
+
+    SHOW IMAGE [/FULL]
+
+  /FULL (govax's own) adds each image's counts of modules and routines.
+
+$SHOW,MODU
+$SH,MODU
+  Lists the modules of the program's debug symbols, whether each is set,
+  and the size of its symbol records.
+
+  Format:
+
+    SHOW MODULE
+
+$SHOW,SYMB
+$SH,SYMB
+  Lists the symbols matching a pattern.
+
+  Format:
+
+    SHOW SYMBOL [/ADDRESS] [/TYPE] pattern [IN module[,module...]]
+
+  The pattern may have * and % wildcards, and is matched with the symbol's
+  name, or its whole path name if it has a backslash. The symbols are the
+  routines first, then the data and labels, then the program sections, each
+  by name. /ADDRESS shows each one's address, and /TYPE its data type.
+
+  A pattern that matches no symbol of the program is tried against the
+  console's symbol table, and then is %DEBUG-E-NOSYMBOL.
+
+$SHOW,SCOP
+$SH,SCOP
+  Lists the call levels names are looked up in, innermost (level 0, marked
+  with an asterisk) first. A routine entered more than once is numbered
+  (FACT 1).
+
+  Format:
+
+    SHOW SCOPE
+
+$SHOW,LANG
+$SH,LANG
+  Shows the language of the current module (MACRO, for the programs govax
+  runs).
+
+  Format:
+
+    SHOW LANGUAGE
+
 $STEP
+$ST
+$S
   Executes one or more steps of the program and stops again. A step is
   one source line, or one instruction, as SET STEP says.
 
@@ -121,3 +956,16 @@ $STEP
 
   With a qualifier left out, STEP uses what SET STEP chose.
 
+$SYMB
+  Shows each name the debugger has for an address.
+
+  Format:
+
+    SYMBOLIZE address
+
+  The program's routines, labels, and lines come first, then the names in
+  the console's symbol table. An address with no name is shown as itself.
+
+  Example:
+
+    SYMBOLIZE 5A0
