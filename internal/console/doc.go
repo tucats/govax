@@ -1,8 +1,17 @@
 // Package console implements the govax interactive monitor front end: the
-// EXAMINE/DEPOSIT/RUN/STEP/SAVE/LOAD/SET/SHOW/CLEAR/... command set and the
-// DCL grammar-driven verb/qualifier dispatch built on internal/console/dcl,
-// against an internal/cpu.Engine and its internal/vax.CPU/internal/vm.Memory
-// (see docs/PHASE-08.md).
+// VMS-style command line (RUN, MACRO, LINK, MOUNT, DIRECTORY, DEFINE, SET
+// DEFAULT, SAVE/LOAD, ...) and the DCL grammar-driven verb/qualifier dispatch
+// built on internal/console/dcl, against an internal/cpu.Engine and its
+// internal/vax.CPU/internal/vm.Memory (see docs/PHASE-08.md).
+//
+// The machine debugger is not here. Phase 42 moved EXAMINE, DEPOSIT, STEP,
+// breakpoints, and the SHOW/SET/CLEAR keywords for the machine's state to
+// internal/debugger, which has its own grammar (debug.dcl), help file, and
+// "DBG> " prompt, and reaches the machine through this package's exported
+// methods (export.go). The console starts a debugger session when GO, CALL,
+// or RUN stops, and with its DEBUG command; it knows the debugger only
+// through the Debugger interface (debugger.go), and works with none
+// installed (the commands that start one then say it isn't available).
 //
 // This mirrors reference/eVAX/eVAX/Source/Console/console_*.c/driver.c, with
 // the scope adjustments recorded in docs/PHASE-08.md's progress log:

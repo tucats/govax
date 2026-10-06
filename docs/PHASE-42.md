@@ -1,7 +1,7 @@
 # Phase 42 — The debugger: its own package, grammar, and prompt
 
-**Status:** in progress. Planned and reviewed 2026-10-05 (the author
-took every recommended decision). Subtasks 1 to 16 are done (see the
+**Status:** done (2026-10-05). Planned and reviewed 2026-10-05 (the author
+took every recommended decision). All 17 subtasks are done (see the
 progress log).
 
 ## Goal
@@ -1796,5 +1796,33 @@ the `.dlg` log, line by line.
   the "above condition handler called" lines, and SET MODE NOLINE not
   acted on. The test fails for a difference that isn't listed and for a
   listed one that has gone away, so the list stays what is left.
+- `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
+  touched are clean.
+
+### 2026-10-05 — Subtask 17: close-out
+
+- `CLAUDE.md` describes the debugger package, the two grammars, and the
+  session modes; `internal/console/doc.go` and `internal/debugger/doc.go`
+  say what each now is; `PLAN.md`'s index marks the phase done.
+- `DEVIATIONS.md` has three Phase 42 entries: the commands that still
+  differ from VMS's debugger (the session oracle's list, with reasons),
+  the rules chosen without a probe or a manual (collected from this log's
+  "Unconfirmed" notes, for a later simh round), and the console's `SET
+  name=value` keeping registers.
+- **The phase's result.** The debugger is `internal/debugger`, entered with
+  `DEBUG`, a stopped `GO`/`CALL`, or `RUN/DEBUG` (or an image linked
+  `/DEBUG`); the console has the VMS command line only. VMS-compatible
+  breakpoints (address, class, `/AFTER`, `/TEMPORARY`, `WHEN`, `DO`),
+  tracepoints, watchpoints, STEP in all its forms, source lines,
+  EXAMINE/DEPOSIT/EVALUATE/SYMBOLIZE with the program's types, and the
+  commands about images, modules, symbols, and scope all match the logs of
+  VMS 7.3's debugger, 18 probe sessions in all, but for the listed
+  differences. The seven run-control bugs the plan found are fixed or
+  resolved (bug 4 wasn't a bug; bug 5's entries were removed).
+- **For a later phase** (Future features above): CALL's `%VAL`/`%REF`
+  argument forms and its "value returned", the unhandled-exception break
+  at the faulting PC (so `SHOW CALLS` and `.PC` there are VMS's), stepping
+  into a handler, `DEFINE`, `SET SCOPE`, logging, and the rest of that
+  list.
 - `go build`, `go vet`, `go test ./...`, and golangci-lint on the packages
   touched are clean.

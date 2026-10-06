@@ -12,11 +12,36 @@
 //
 // # Sessions
 //
-// A debugger session starts when the console's DEBUG command (or, in
-// later subtasks, GO, CALL, or RUN of a debug image) hands the console's
-// machine to the debugger. From then until EXIT or QUIT, every command
-// line goes to the debugger's Dispatcher, not the console's. EXIT
-// returns to the console; the machine is left as it is.
+// A debugger session starts when the console's DEBUG command hands the
+// console's machine to the debugger, or when a GO, CALL, or STEP stops, or
+// RUN of an image linked /DEBUG (or RUN/DEBUG) begins. A run that ends by
+// itself returns to the console without a session. From the start until
+// EXIT or QUIT, every command line goes to the debugger's Dispatcher, not
+// the console's, and EXIT returns to the console, leaving the machine as
+// it is.
+//
+// # Commands
+//
+// The grammar is debug.dcl and the help is debug.help. The VMS debugger's
+// commands (EXAMINE, DEPOSIT, EVALUATE, SYMBOLIZE, STEP, GO, CALL, SET and
+// CANCEL BREAK/TRACE/WATCH, SHOW CALLS/IMAGE/MODULE/SYMBOL/SCOPE, SET
+// MODE/RADIX/SOURCE, ...) follow it, and govax's own for the machine
+// (SHOW REGISTERS, SET PTE, SET PSL, SHOW MEMORY, ...) are marked as its
+// own in debug.help. A command's messages and layouts are the VMS
+// debugger's, checked against the logs of VMS 7.3's debugger
+// (testdata/dbg and testdata/dbgcmd) by the oracle tests, of which
+// TestDebuggerSessionOracle replays every probe session and lists what
+// still differs.
+//
+// # Where things are
+//
+// debugger.go is the session and its start; runcontrol.go the run loop;
+// eventpoint.go, breakcmd.go, tracepoint.go, watch.go, instbreak.go, and
+// faultbreak.go the eventpoints; step.go and stack.go STEP and the call
+// frames; examine.go, data.go, and modes.go EXAMINE, DEPOSIT, EVALUATE, and
+// the display modes and radix; machine.go the commands for the CPU and
+// kernel state; program.go the commands about the program's symbols;
+// source.go the source lines; image.go RUN under the debugger.
 //
 // # Dependencies
 //

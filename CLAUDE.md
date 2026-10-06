@@ -11,9 +11,9 @@ never had.
 
 - `docs/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
   index.
-- `docs/PHASE-00.md` … `PHASE-41.md` — one doc per phase: goal, C-source file
+- `docs/PHASE-00.md` … `PHASE-42.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
-  done through 41; 40 follows 38 directly: there is no Phase 39). Read the relevant phase doc
+  done through 42; 40 follows 38 directly: there is no Phase 39). Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
@@ -116,19 +116,34 @@ expect adjustment as phases land):
   `$expression` parameter, whose extent the grammar finds and whose value
   the handler gets from the expression evaluator (`expr.go`). Unquoted
   text is uppercased, so a case-sensitive host file name must be quoted.
-- `internal/debugger` — the machine debugger (Phase 42, in progress): a
-  `Debugger` session and its `Dispatcher` over `debug.dcl`
-  (`internal/bootdata/files`), with `debug.help` and the `DBG> ` prompt. It
-  imports `internal/console`, which knows it only through the
-  `console.Debugger` interface (`debugger.go`); `cmd/govax` installs it.
-  The console's `DEBUG` command starts a session, and while one is active
-  `Dispatcher.Dispatch` routes lines to it (`DispatchConsole` is the
-  console's own, for `XFC$CONSOLE_CMD`). Run control is the debugger's
-  since subtask 4 (`runcontrol.go`, `step.go`, `instbreak.go`,
-  `faultbreak.go`; `Console.Execute`/`Call`/`Step` hand runs to
-  `Debugger.Start`, and `console/export.go` is what it reaches back
-  through). The EXAMINE/SET/SHOW commands still live in the console
-  until the later subtasks move them. `internal/console/consoletest` is its test support.
+- `internal/debugger` — the machine debugger (Phase 42), modeled on the VMS
+  debugger: a `Debugger` session and its `Dispatcher` over `debug.dcl`
+  (`internal/bootdata/files`), with `debug.help` and the `DBG> ` prompt.
+  **The console and the debugger are two front ends to one machine, each
+  with its own grammar:** `console.dcl` has the VMS command line (RUN,
+  MACRO, LINK, MOUNT, DIRECTORY, DEFINE, SET DEFAULT, SAVE/LOAD, GO and
+  CALL, ...) and `debug.dcl` the machine's commands (EXAMINE, DEPOSIT,
+  EVALUATE, STEP, SET/SHOW/CANCEL BREAK, TRACE, WATCH, SHOW REGISTERS,
+  CALLS, IMAGE, SYMBOL, SET MODE/RADIX, ...); `TestGrammarSplit` says which
+  command is in which. The debugger imports `internal/console`, which knows
+  it only through the `console.Debugger` interface (`debugger.go`);
+  `cmd/govax` installs it, and the console works without one. A session
+  starts at the console's `DEBUG`, when a `GO`/`CALL` stops, and for `RUN`
+  of an image linked `/DEBUG` (or `RUN/DEBUG`), stopped at the main
+  routine's first instruction; a run that ends by itself returns to
+  `VAX>`. While a session is active `Dispatcher.Dispatch` routes lines to
+  the debugger (`DispatchConsole` is the console's own, for
+  `XFC$CONSOLE_CMD`); `EXIT` returns. Run control (`runcontrol.go`,
+  `step.go`, eventpoints), EXAMINE/DEPOSIT (`data.go`, `examine.go`), the
+  display modes (`modes.go`), source lines (`source.go`), and RUN under the
+  debugger (`image.go`) are here, and the debugger reaches the machine
+  through `console/export.go`. Its output is the VMS debugger's, checked
+  against the VMS 7.3 logs of `testdata/dbg` and `testdata/dbgcmd` by
+  oracle tests; `TestDebuggerSessionOracle` replays every session and
+  keeps the list of what still differs (`expectedDifferences`).
+  `SET MODE` takes the VMS display modes and govax's access modes;
+  the console and the debugger each have their own radix.
+  `internal/console/consoletest` is its test support.
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,
   and LINK: `Symbols` (every symbolic constant, one table; `symbols.go` says

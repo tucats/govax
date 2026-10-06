@@ -2593,6 +2593,66 @@ widened."
   stale register. One sample isn't enough to model it, and it looks like
   a bug, so govax zero-extends; `TestAsm35Object` masks those 8 bytes.
 
+### [Phase 42] The debugger's known differences from the VMS 7.3 debugger
+
+- **Where**: `internal/debugger`; checked by `TestDebuggerSessionOracle`
+  (`session_oracle_test.go`), whose `expectedDifferences` is the
+  authoritative list, each entry with its reason.
+- **What**: the commands that still print something other than VMS's log
+  (docs/PHASE-42.md, subtask 16): (1) a `WHEN` condition's `.LABEL` is the
+  contents at the label, where VMS reads the contents at the address the
+  label holds (`condition.go`); (2) at a break on an unhandled exception
+  the PC is in the condition dispatcher, not at the fault, so `.PC` and
+  `SHOW CALLS` there differ, and STEP from such a break runs the paused
+  dispatcher; (3) `CALL` takes govax's argument forms and prints no
+  "value returned is" (`%VAL`/`%REF`/`%DESCR` are Future features);
+  (4) `EXAMINE` refuses two type qualifiers where VMS takes the last;
+  (5) a `%LINE` with no code is an undefined name, not `%DEBUG-E-LINEINFO`;
+  (6) a data address past the last label is named by that label, where VMS
+  names it by the global constant before it (`GLIMIT+25D`);
+  (7) `SHOW CALLS` in a condition handler lacks the "above condition
+  handler called" lines; (8) `SET MODE NOLINE` and the other display modes
+  are recorded and shown but don't change the output; (9) the `ACCVIO`
+  message's text is `PS=` and mask `02` where VMS 7.3's run prints `PSL=`
+  and `00` (the text is generated from VMS's definition files);
+  (10) SHOW's sizes and image lists (VMS's own tables and images), and
+  addresses on VMS's stack and heap, are of course not govax's.
+- **Status**: deferred (each is logged in the phase doc and in the test);
+  (9) is a message-table question for a later phase.
+
+### [Phase 42] Debugger rules chosen without a probe or a manual to settle them
+
+- **Where**: `internal/debugger`, as listed in docs/PHASE-42.md's progress
+  log under "Unconfirmed".
+- **What**: where neither the *VMS 5.5 Debugger Manual* nor a probe
+  session said, govax made a choice and logged it. The ones a later probe
+  should check: the order of `SHOW BREAK` beyond one list of addresses and
+  the report order of tracepoints that share a PC (each reported moves to
+  the end of the list); `/AFTER` and `WHEN` on tracepoints and watchpoints;
+  `CANCEL TRACE`/`WATCH` of nothing saying `NOTRACES`/`NOWATCHES`;
+  STEP/RETURN's pending frame (a second one replaces it, GO fires it, an
+  unwind or image exit drops it) and STEP/OVER interrupted by a break
+  ending; a line step ending at a RET in the middle of the caller's line;
+  the instruction text added to exception-break locations only under
+  `SET STEP INSTRUCTION`; `EXAMINE` with no location continuing from the
+  last one, and an entry mask's next location being 2 bytes on;
+  `/OPERANDS=FULL` equal to brief, and the layout of operands that name
+  no register or memory; `SHOW SYMBOL` with both `/ADDRESS` and `/TYPE`
+  and multi-dimension array bounds; `SHOW SCOPE`'s numbering past two
+  levels of one routine; `SHOW LANGUAGE`'s `UNKNOWN`; `SET SOURCE`/`SHOW
+  SOURCE` wording and `%DEBUG-E-NOSUCHMODULE`; a source record over 144
+  columns; `EXIT` and `QUIT` being alike.
+- **Status**: deferred, for a later simh round.
+
+### [Phase 42] The console's `SET name=value` still assigns a register
+
+- **Where**: `internal/console/set.go` (`SetSymbolQualified`).
+- **What**: the plan moved register assignment to the debugger
+  (`DEPOSIT R0 = 5`). The console's `SET R=5` still assigns, since the
+  assignment form is shared with symbols and an assignment wins over a
+  keyword it abbreviates; taking registers out would add a special case.
+- **Status**: deliberate (2026-10-05, Phase 42 subtask 14).
+
 <!--
 Entry template:
 
