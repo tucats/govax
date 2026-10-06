@@ -33,6 +33,15 @@ tests run it. Its `input` and `output` words read and write `.FTH` and
 (`FORTH :== $FORTH` then `FORTH 2 3 + .`) or as `govax run forth.exe
 2 3 + .`, it interprets the command's text and exits.
 
+`pi.mar` prints pi to 100 decimal places, or to the count on its
+command line (LIB$GET_FOREIGN; 1 to 100000), by Machin's formula in
+multiple-precision fixed point (base 10^9 longwords, EMUL/EDIV, CVTLP/
+CVTPS for the digits). Every routine is called with CALLS, nesting up to
+four frames deep (PI, COMPUTE_PI, ARCTAN, DIVIDE), so it also serves for
+tracebacks, SHOW CALLS, and breakpoints in nested routines.
+`internal/console`'s `TestPi` tests run it. It hasn't been assembled on
+VMS.
+
 When the volume also holds `GV_NAME.OBJ`, govax's own object for
 `NAME.MAR` written straight onto the volume by govax's MACRO command, the
 script checks each one with `ANALYZE/OBJECT` (`GV_NAME.ANL`) and links

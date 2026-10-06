@@ -1,0 +1,456 @@
+	.TITLE	PI	Compute pi to any number of decimal places
+	.IDENT	/V1.0/
+
+;
+; PI prints pi to a number of decimal places on SYS$OUTPUT: 100 by
+; default, or the count given on the command line when it's run as a
+; foreign command (PI :== $PI, then PI 500), read with LIB$GET_FOREIGN.
+;
+; It uses Machin's formula,
+;
+;	pi = 16 * arctan(1/5) - 4 * arctan(1/239)
+;
+; summing each arctangent's Taylor series,
+;
+;	arctan(1/x) = 1/x - 1/(3*x^3) + 1/(5*x^5) - ...
+;
+; in multiple-precision fixed point. A number is an array of longwords,
+; most significant first: the first holds the integer part, and each of
+; the rest nine more decimal digits of the fraction (each is a "digit" in
+; base 1,000,000,000). Dividing one by a longword is a run of EMUL and
+; EDIV instructions, carrying each remainder into the next longword;
+; adding and subtracting carry from the least significant longword up.
+; Two extra longwords of fraction absorb the error of truncating every
+; division, and the digits printed are truncated, not rounded.
+;
+; Every routine is called with CALLS, so the program also exercises call
+; frames: tracebacks, SHOW CALLS, and breakpoints in nested routines
+; (PI -> COMPUTE_PI -> ARCTAN -> DIVIDE, and PI -> PRINT_PI -> PUT_DIGIT
+; -> FLUSH_LINE). Arrays are passed by reference and counts by value.
+;
+
+	$SSDEF				; SS$_NORMAL, SS$_BADPARAM
+
+BASE = 1000000000		; Each longword holds 9 decimal digits
+DEFAULT_PLACES = 100		; Places when none is given
+MAX_PLACES = 100000		; Most places allowed (keeps the arrays
+				; under 64K bytes, a MOVC5 length)
+GUARD = 2			; Extra longwords against truncation error
+LINE_DIGITS = 50		; Digits printed on each line
+GROUP_DIGITS = 10		; Digits between spaces on a line
+STS$M_INHIB_MSG = ^X10000000	; Status already reported
+
+;
+; Descriptors are written out in full: DSC$K_DTYPE_T (14) is text, and
+; DSC$K_CLASS_S (1) a fixed-length string.
+;
+	.MACRO	STRING_DESC	LEN,ADDR
+	.WORD	LEN
+	.BYTE	14,1
+	.ADDRESS ADDR
+	.ENDM	STRING_DESC
+
+	.PSECT	PI_DATA, WRT, NOEXE, LONG
+
+PLACES:	.LONG	DEFAULT_PLACES	; Decimal places to print
+WORDS:	.LONG	0		; Longwords in each number
+BYTES:	.LONG	0		; Bytes in each number
+SUM:	.LONG	0		; Address of the sum: pi, in the end
+TERM:	.LONG	0		; Address of the series' current power
+QUOT:	.LONG	0		; Address of the current term
+
+CMD_LEN:
+	.WORD	0		; Length of the command line
+CMD_BUF:
+	.BLKB	80		; The command line's text
+CMD_DESC:
+	STRING_DESC	80,CMD_BUF
+
+LINE_PTR:
+	.LONG	0		; Where the next character goes in LINE
+LINE_COUNT:
+	.LONG	0		; Digits on the line so far
+GROUP_COUNT:
+	.LONG	0		; Digits in the line's last group so far
+LINE:	.BLKB	80		; The line being built
+LINE_DESC:
+	STRING_DESC	0,LINE
+
+PACKED:	.BLKB	5		; A longword as a 9-digit packed decimal
+NUMERIC:
+	.BLKB	10		; ... and as a sign and 9 ASCII digits
+
+BAD_MSG:
+	.ASCID	/%PI-E-BADCOUNT, the number of decimal places must be from 1 to 100000/
+
+	.PSECT	PI_CODE, NOWRT, EXE, LONG
+
+	.SBTTL	PI - main routine
+;
+; PI reads the count of places, sizes and allocates the three numbers,
+; computes pi, and prints it.
+;
+	.ENTRY	PI, ^M<R2>
+	PUSHAL	PLACES			; Get the count of places
+	CALLS	#1, GET_PLACES
+	BLBC	R0, 90$			; Bad count: already reported
+
+	DIVL3	#9, PLACES, R0		; Longwords for the fraction,
+	ADDL3	#<1+1+GUARD>, R0, WORDS	; plus the rest, the integer
+	MULL3	#4, WORDS, BYTES	; part, and the guard
+
+	MOVAL	SUM, R2			; Allocate SUM, TERM, and QUOT,
+	PUSHL	R2			; consecutive longwords
+	CALLS	#1, ALLOCATE
+	BLBC	R0, 90$
+	PUSHAL	4(R2)
+	CALLS	#1, ALLOCATE
+	BLBC	R0, 90$
+	PUSHAL	8(R2)
+	CALLS	#1, ALLOCATE
+	BLBC	R0, 90$
+
+	CALLS	#0, COMPUTE_PI		; SUM = pi
+
+	PUSHL	PLACES			; Print it
+	PUSHL	SUM
+	CALLS	#2, PRINT_PI
+	MOVL	#SS$_NORMAL, R0
+90$:	RET
+
+	.SBTTL	GET_PLACES - read the count of places
+;
+; GET_PLACES(places) reads the command line with LIB$GET_FOREIGN. If it
+; has a number, that number, from 1 to MAX_PLACES, goes into the longword
+; at places; if it's empty, places is left alone. Anything else is
+; reported, and GET_PLACES returns SS$_BADPARAM, with STS$M_INHIB_MSG set
+; so that it isn't reported again.
+;
+	.ENTRY	GET_PLACES, ^M<R2,R3,R4>
+	PUSHAW	CMD_LEN			; resultant-length
+	CLRL	-(SP)			; no prompt-string
+	PUSHAQ	CMD_DESC		; resultant-string
+	CALLS	#3, G^LIB$GET_FOREIGN
+	BLBS	R0, 10$
+	CLRW	CMD_LEN			; Unreadable: take the default
+
+10$:	MOVZWL	CMD_LEN, R2		; R2 = characters left
+	MOVAB	CMD_BUF, R3		; R3 = the next one
+	CLRL	R4			; R4 = the number so far
+
+20$:	TSTL	R2			; Skip leading blanks
+	BEQL	80$			; All blank: keep the default
+	CMPB	(R3), #^A/ /
+	BNEQ	30$
+	INCL	R3
+	DECL	R2
+	BRB	20$
+
+30$:	TSTL	R2			; Read digits
+	BEQL	50$
+	SUBB3	#^A/0/, (R3), R0	; R0 = the digit's value, or more
+	CMPB	R0, #9			; than 9 (unsigned) if it isn't one
+	BGTRU	40$
+	MOVZBL	R0, R0
+	MULL2	#10, R4			; Number = number * 10 + digit
+	ADDL2	R0, R4
+	CMPL	R4, #MAX_PLACES
+	BGTR	90$
+	INCL	R3
+	DECL	R2
+	BRB	30$
+
+40$:	CMPB	(R3), #^A/ /		; Only blanks may follow
+	BNEQ	90$
+	INCL	R3
+	DECL	R2
+	TSTL	R2
+	BNEQ	40$
+
+50$:	TSTL	R4			; Zero places isn't allowed (nor
+	BEQL	90$			; is no digit before a blank)
+	MOVL	R4, @4(AP)
+80$:	MOVL	#SS$_NORMAL, R0
+	RET
+
+90$:	PUSHAQ	BAD_MSG
+	CALLS	#1, G^LIB$PUT_OUTPUT
+	MOVL	#<SS$_BADPARAM!STS$M_INHIB_MSG>, R0
+	RET
+
+	.SBTTL	ALLOCATE - allocate a number
+;
+; ALLOCATE(address) gets BYTES bytes from LIB$GET_VM, zeroes them, and
+; stores their address in the longword at address. It returns
+; LIB$GET_VM's status.
+;
+	.ENTRY	ALLOCATE, ^M<R2,R3,R4,R5,R6>
+	MOVL	4(AP), R6
+	PUSHL	R6			; base-address
+	PUSHAL	BYTES			; number-bytes
+	CALLS	#2, G^LIB$GET_VM
+	BLBC	R0, 10$
+	MOVC5	#0, (R6), #0, BYTES, @(R6)	; Zero it (BYTES < 64K)
+	MOVL	#SS$_NORMAL, R0
+10$:	RET
+
+	.SBTTL	COMPUTE_PI - Machin's formula
+;
+; COMPUTE_PI sets SUM to pi: 16 * arctan(1/5) - 4 * arctan(1/239). SUM
+; starts at zero, and ARCTAN adds each series into it.
+;
+	.ENTRY	COMPUTE_PI, ^M<>
+	PUSHL	#1			; Subtract 4 * arctan(1/239)
+	PUSHL	#239
+	PUSHL	#4
+	PUSHL	#0			; ... after adding 16 * arctan(1/5)
+	PUSHL	#5
+	PUSHL	#16
+	CALLS	#3, ARCTAN
+	CALLS	#3, ARCTAN
+	RET
+
+	.SBTTL	ARCTAN - add a multiple of an arctangent to SUM
+;
+; ARCTAN(k, x, negative) adds k * arctan(1/x) to SUM, or subtracts it if
+; negative is 1. TERM holds k / x^n for n = 1, 3, 5, ..., and QUOT each
+; term, TERM / n, which is added to SUM or subtracted from it in turn.
+; The series ends when TERM becomes zero. START, the index of TERM's
+; first nonzero longword, only grows, so each step skips TERM's leading
+; zeros.
+;
+; Registers:	R2 = n		R3 = x^2	R4 = START
+;		R5 = 1 to subtract the next term, 0 to add it
+;
+	.ENTRY	ARCTAN, ^M<R2,R3,R4,R5>
+	MOVC5	#0, (SP), #0, BYTES, @TERM	; TERM = k
+	MOVL	4(AP), @TERM
+	CLRL	R4
+	MOVL	12(AP), R5
+
+	PUSHL	R4			; TERM = TERM / x
+	PUSHL	8(AP)
+	PUSHL	TERM
+	PUSHL	TERM
+	CALLS	#4, DIVIDE
+	MULL3	8(AP), 8(AP), R3
+	MOVL	#1, R2
+
+10$:	PUSHL	R4			; QUOT = TERM / n
+	PUSHL	R2
+	PUSHL	QUOT
+	PUSHL	TERM
+	CALLS	#4, DIVIDE
+
+	PUSHL	R4			; SUM = SUM +/- QUOT
+	PUSHL	QUOT
+	PUSHL	SUM
+	BLBS	R5, 20$
+	CALLS	#3, ADD
+	BRB	30$
+20$:	CALLS	#3, SUBTRACT
+30$:	XORL2	#1, R5			; The signs alternate
+
+	PUSHL	R4			; TERM = TERM / x^2
+	PUSHL	R3
+	PUSHL	TERM
+	PUSHL	TERM
+	CALLS	#4, DIVIDE
+
+	MOVL	TERM, R0		; Skip TERM's new leading zeros
+40$:	TSTL	(R0)[R4]
+	BNEQ	50$
+	AOBLSS	WORDS, R4, 40$
+	RET				; TERM is zero: the series is done
+
+50$:	ADDL2	#2, R2			; n = n + 2
+	BRB	10$
+
+	.SBTTL	DIVIDE - divide a number by a longword
+;
+; DIVIDE(source, destination, divisor, start) sets destination to source
+; / divisor, longword by longword from start to the end; source's
+; longwords before start must be zero, and destination's are left alone.
+; Each step's dividend is the last remainder times BASE plus the next
+; longword. Since the remainder is less than the divisor, the quotient
+; is less than BASE: it fits a longword.
+;
+; Registers:	R2 = source	R3 = destination	R4 = remainder
+;		R5 = index	R6/R7 = the quadword dividend
+;
+	.ENTRY	DIVIDE, ^M<R2,R3,R4,R5,R6,R7>
+	MOVQ	4(AP), R2
+	CLRL	R4
+	MOVL	16(AP), R5
+	CMPL	R5, WORDS
+	BGEQ	20$
+10$:	EMUL	R4, #BASE, (R2)[R5], R6
+	EDIV	12(AP), R6, (R3)[R5], R4
+	AOBLSS	WORDS, R5, 10$
+20$:	RET
+
+	.SBTTL	ADD - add two numbers
+;
+; ADD(sum, addend, start) adds addend to sum; addend's longwords before
+; start are taken to be zero. Each longword's carry goes into the next
+; more significant one.
+;
+; Registers:	R2 = sum	R3 = addend	R4 = carry
+;		R5 = index	R6 = start
+;
+	.ENTRY	ADD, ^M<R2,R3,R4,R5,R6>
+	MOVQ	4(AP), R2
+	MOVL	12(AP), R6
+	CLRL	R4
+	SUBL3	#1, WORDS, R5
+	CMPL	R5, R6
+	BLSS	30$
+10$:	ADDL3	(R2)[R5], (R3)[R5], R0	; Add the longwords and the carry
+	ADDL2	R4, R0
+	CLRL	R4
+	CMPL	R0, #BASE
+	BLSS	20$
+	SUBL2	#BASE, R0		; Carry one
+	MOVL	#1, R4
+20$:	MOVL	R0, (R2)[R5]
+	DECL	R5
+	CMPL	R5, R6
+	BGEQ	10$
+
+30$:	TSTL	R4			; Carry on up from start
+	BEQL	50$
+	TSTL	R5
+	BLSS	50$
+	ADDL3	R4, (R2)[R5], R0
+	CLRL	R4
+	CMPL	R0, #BASE
+	BLSS	40$
+	SUBL2	#BASE, R0
+	MOVL	#1, R4
+40$:	MOVL	R0, (R2)[R5]
+	DECL	R5
+	BRB	30$
+50$:	RET
+
+	.SBTTL	SUBTRACT - subtract one number from another
+;
+; SUBTRACT(difference, subtrahend, start) subtracts subtrahend from
+; difference, borrowing as ADD carries. It's never called on to make a
+; negative number.
+;
+; Registers:	R2 = difference	R3 = subtrahend	R4 = borrow
+;		R5 = index	R6 = start
+;
+	.ENTRY	SUBTRACT, ^M<R2,R3,R4,R5,R6>
+	MOVQ	4(AP), R2
+	MOVL	12(AP), R6
+	CLRL	R4
+	SUBL3	#1, WORDS, R5
+	CMPL	R5, R6
+	BLSS	30$
+10$:	SUBL3	(R3)[R5], (R2)[R5], R0	; Subtract the longwords and the
+	SUBL2	R4, R0			; borrow
+	CLRL	R4
+	TSTL	R0
+	BGEQ	20$
+	ADDL2	#BASE, R0		; Borrow one
+	MOVL	#1, R4
+20$:	MOVL	R0, (R2)[R5]
+	DECL	R5
+	CMPL	R5, R6
+	BGEQ	10$
+
+30$:	TSTL	R4			; Borrow on up from start
+	BEQL	50$
+	TSTL	R5
+	BLSS	50$
+	SUBL3	R4, (R2)[R5], R0
+	CLRL	R4
+	TSTL	R0
+	BGEQ	40$
+	ADDL2	#BASE, R0
+	MOVL	#1, R4
+40$:	MOVL	R0, (R2)[R5]
+	DECL	R5
+	BRB	30$
+50$:	RET
+
+	.SBTTL	PRINT_PI - print the number
+;
+; PRINT_PI(number, places) prints number's integer part, a point, and
+; places digits of its fraction, LINE_DIGITS to a line in groups of
+; GROUP_DIGITS. Each fraction longword becomes nine digits by way of
+; packed decimal: CVTLP, then CVTPS, which keeps the leading zeros.
+; (Both change R0 to R3, so this routine keeps its state in R4 to R8.)
+;
+; Registers:	R7 = places left	R8 = number's address
+;		R4 = longword index	R5 = digits left in the longword
+;		R6 = the next digit's address
+;
+	.ENTRY	PRINT_PI, ^M<R4,R5,R6,R7,R8>
+	MOVL	8(AP), R7
+	MOVL	4(AP), R8
+	MOVAB	LINE, R0		; Start the line with "3."
+	ADDB3	#^A/0/, (R8), (R0)+
+	MOVB	#^A/./, (R0)+
+	MOVL	R0, LINE_PTR
+	CLRL	LINE_COUNT
+	CLRL	GROUP_COUNT
+
+	MOVL	#1, R4
+10$:	CVTLP	(R8)[R4], #9, PACKED
+	CVTPS	#9, PACKED, #9, NUMERIC
+	MOVAB	NUMERIC+1, R6		; Skip the sign
+	MOVL	#9, R5
+20$:	MOVZBL	(R6)+, -(SP)
+	CALLS	#1, PUT_DIGIT
+	DECL	R7
+	BEQL	30$
+	SOBGTR	R5, 20$
+	INCL	R4
+	BRB	10$
+
+30$:	TSTL	LINE_COUNT		; Print the last line
+	BEQL	40$
+	CALLS	#0, FLUSH_LINE
+40$:	RET
+
+	.SBTTL	PUT_DIGIT - add a digit to the line
+;
+; PUT_DIGIT(digit) adds the ASCII digit to LINE, printing a full line
+; first and putting a space between groups.
+;
+	.ENTRY	PUT_DIGIT, ^M<>
+	CMPL	LINE_COUNT, #LINE_DIGITS
+	BLSS	10$
+	CALLS	#0, FLUSH_LINE
+10$:	MOVL	LINE_PTR, R0
+	CMPL	GROUP_COUNT, #GROUP_DIGITS
+	BLSS	20$
+	MOVB	#^A/ /, (R0)+
+	CLRL	GROUP_COUNT
+20$:	MOVB	4(AP), (R0)+
+	MOVL	R0, LINE_PTR
+	INCL	LINE_COUNT
+	INCL	GROUP_COUNT
+	RET
+
+	.SBTTL	FLUSH_LINE - print the line
+;
+; FLUSH_LINE prints LINE with LIB$PUT_OUTPUT and starts the next one,
+; indented two spaces to line up under the first line's digits.
+;
+	.ENTRY	FLUSH_LINE, ^M<>
+	MOVAB	LINE, R1
+	SUBL3	R1, LINE_PTR, R0
+	MOVW	R0, LINE_DESC
+	PUSHAQ	LINE_DESC
+	CALLS	#1, G^LIB$PUT_OUTPUT
+	MOVAB	LINE, R0
+	MOVW	#^A/  /, (R0)+
+	MOVL	R0, LINE_PTR
+	CLRL	LINE_COUNT
+	CLRL	GROUP_COUNT
+	RET
+
+	.END	PI

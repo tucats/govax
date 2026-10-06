@@ -61,7 +61,18 @@ func prepareRun(t *testing.T, c *Console) {
 func runImageBounded(t *testing.T, c *Console, path string, maxSteps int) uint32 {
 	t.Helper()
 
+	return runImageCommand(t, c, path, "", maxSteps)
+}
+
+// runImageCommand is runImageBounded, with command as the text the image
+// reads with LIB$GET_FOREIGN. It's set after the kernel boots, which
+// makes a new RTL environment.
+func runImageCommand(t *testing.T, c *Console, path, command string, maxSteps int) uint32 {
+	t.Helper()
+
 	prepareRun(t, c)
+
+	c.RTL.CommandLine = command
 
 	main, err := c.activateImage(path)
 	if err != nil {
