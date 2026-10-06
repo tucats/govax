@@ -100,7 +100,7 @@ study, promote it to `-s` as a recommendation.
 
 | # | Workload | Date | Baseline | Status |
 |---|---|---|---|---|
-| 1 | `pi.mar`, `run pi 10000` | 2026-10-06 | 9.6 s, 83.3 M instr, 115 ns/instr | R1, R2 done: 4.6 s, 55 ns/instr (quantum mode 22.1 → 4.8 s) |
+| 1 | `pi.mar`, `run pi 10000` | 2026-10-06 | 9.6 s, 83.3 M instr, 115 ns/instr | R1–R3 done: 4.3–4.5 s, 52–54 ns/instr (quantum mode 22.1 → 4.5 s) |
 
 ---
 
@@ -341,6 +341,9 @@ estimate: 37–40% (see the implementation log).*
 **R3. Make a TB entry valid for both reads and writes (O4). Gain: about
 5–8% here (21 M page-table walks removed), more for write-heavy programs.
 Risk: medium. This is the VM core; fidelity matters.**
+*Status (2026-10-06): done. The walks are gone (21.0 M → 59), but the
+measured gain was smaller than the estimate: 2–4%, since a walk cost only
+about 7 ns. It also fixed a PROBE bug (see the implementation log).*
 - Key entries on the page alone. Cache the PTE's protection code and its
   modify (M) bit in the entry.
 - On a hit, check protection against the current mode and access with a
@@ -582,6 +585,86 @@ is `7b3e595`, after R1):
   the memory accessors) and R6 (the map) now have the largest shares.
   Page-table walks are unchanged at 21.0 M, which leaves R3's gain where
   it was in absolute terms and a larger share of the run.
+
+**R3: one TB entry for reads and writes (2026-10-06).** One commit
+(`b7be6f4`), done as R3 proposed.
+
+- *The entry* (`internal/vm/tb.go`). A `tbEntry` caches the page's
+  protection code and modify (M) bit, and `grants`: for each of the four
+  access modes, how much a hit may let through, as a `tbGrant` (none,
+  reads, or reads and writes). It comes from `protGrants`, the protection
+  check precomputed for all 16 codes and 4 modes (`TestProtGrantsMatchesAllows`
+  checks it against `Protection.allows`), and is held to reads while M is
+  clear. The values are ordered so that a hit is one comparison,
+  `tbGrant(access) < entry.grants[mode]`, and an empty entry (all zero)
+  grants nothing.
+- *The hit* (`translate`). The TB hits when the page matches and the
+  grant for the CPU's current mode lets the access through. Everything else
+  walks the page table, as before: a page not cached, a page's first write
+  (the walk sets M in the PTE and refills the entry with M set), and an
+  access the protection code denies, which the walk reports as the same
+  fault, with the same parameters, it always has.
+- *The STC*. It keeps one grant, the cached entry's for the mode at fill
+  time, so a read hits a slot a write filled and the reverse once M is
+  set. It doesn't check the mode on a hit, to stay as cheap as it was, so
+  it must still be emptied at a mode change.
+- *Mode changes*. Since a TB hit checks the current mode,
+  `InvalidateProtection` no longer sweeps the 128 entries; it only empties
+  the STC. Pages stay cached across REI, CHMx, and AST delivery.
+- *A fidelity fix along the way*. PROBER/PROBEW lower the CPU's mode to
+  the probed mode around their translations without
+  `InvalidateProtection` (as eVAX's `emul_probe` does). With the old TB, an
+  entry cached by a kernel-mode read hit any later read, whatever the
+  mode, so probing a kernel-only page for user mode after the kernel had
+  read it reported it accessible. Now the hit checks the probed mode.
+  Logged in `docs/DEVIATIONS.md`; `TestProbeTranslateChecksProbedMode`
+  fails on the old TB. The STC a probe fills under the lowered mode can
+  only under-grant, since a less privileged mode never may do more.
+- *SHOW TB*. Each entry's `MODE=` now says what a hit lets the current
+  mode do (`KERNEL WRITE`, `KERNEL READ`, or `-NONE-`), not the access
+  type it was last checked for (`vm.TBEntry.Permits`).
+- *Tests*. New `internal/vm` tests cover read-then-write (one walk, to
+  set M, then TB hits both ways), write-then-read (an STC hit), a hit
+  checked against the current mode (a kernel-cached, kernel-only page
+  faults from user mode, with the uncached fault's kind, address, and
+  mask), and a write to a read-only page. The tests that expected a mode
+  change to make the TB miss now expect the STC to empty and the TB to
+  hit (`internal/vm`, `internal/cpu`'s `setModeStack`, the console's
+  `SET PSL`).
+
+Results, PI to 10,000 places (same machine, same session; the old build
+is `3d107cf`, after R2):
+
+| | Old, default | New, default | Old, `perf` (quantum) | New, `perf` (quantum) |
+|---|---|---|---|---|
+| Elapsed | 4.43–4.64 s | 4.28–4.50 s | 4.61 s, 4.63 s | 4.51 s, 4.52 s |
+| Instructions | 83,313,083 | 83,313,083 | 83,313,083 | 83,313,083 |
+| Page-table walks | 21,014,393 | 59 | | |
+| Multi-byte reads | 89.1 M | 68.1 M | | |
+| STC tries / hits | 435.1 M / 314.9 M | 414.1 M / 314.9 M | | |
+| TB tries / hits | 120.2 M / 99.2 M | 99.2 M / 99.2 M | | |
+| ns per instruction | 53–56 | 51–54 | 55–56 | 54 |
+
+- In alternating runs of the two builds, the new one was faster every
+  time, by 1–4% (old 4.55/4.56/4.64 s, new 4.50/4.46/4.45 s).
+- That is less than R3's 5–8% estimate. The walks went (the 21 M
+  multi-byte reads they did for PTEs, and the 21 M translations of the
+  PTEs' own S0 addresses, went with them), but a walk was cheap: the PTE's
+  S0 page was nearly always in the TB, so a walk cost about 7 ns. In the
+  profile, `translate`'s cumulative time went only from 0.54 s to 0.52 s
+  of about 4.1 s; its flat time went up a little (0.37 → 0.43 s) with
+  the mode read and grant lookup on each TB hit.
+- The TB now misses only 59 of its 99.2 M tries. What's left is the
+  STC's 99.2 M misses (24% of translations), each now a TB hit. They are
+  page mismatches (O5), mostly the single slot losing the code page to a
+  data operand and back, which R4 (an instruction-fetch window, or
+  separate instruction and data STC slots) addresses.
+- The output is byte-identical to the old build's.
+- Earlier workloads: `BenchmarkSieve` went from 6.60–6.69 ms/op to
+  6.45–6.51 ms/op.
+- The gain should be larger for programs that change mode often (system
+  services, ASTs), since a mode change no longer costs a 128-entry sweep
+  and the walks that followed it. PI changes mode only a few times.
 
 ---
 
