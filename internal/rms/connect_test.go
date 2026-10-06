@@ -130,10 +130,9 @@ func TestSysConnect_invalidIFI(t *testing.T) {
 	}
 }
 
-// TestSysConnect_noAccessRequested confirms a FAB with neither FAB$V_PUT
-// nor FAB$V_GET set (FAB$B_FAC left at 0, after the file was already
-// created some other way) is rejected rather than silently arming
-// nothing and reporting success.
+// TestSysConnect_noAccessRequested: a FAB whose FAB$B_FAC asks for no
+// access at $CONNECT (cleared after the $CREATE) is connected for the
+// access the file was created with: writing.
 func TestSysConnect_noAccessRequested(t *testing.T) {
 	f := newCreateFixture(t, true)
 	newFAB(t, f.ctx, "DUA0:TEST.DAT")
@@ -150,8 +149,13 @@ func TestSysConnect_noAccessRequested(t *testing.T) {
 		t.Fatalf("SysConnect: %v", err)
 	}
 
-	if r0 != rmsPrivilegeViolation {
-		t.Errorf("r0 = %d, want rmsPrivilegeViolation (%d)", r0, rmsPrivilegeViolation)
+	if r0 != rmsNormal {
+		t.Fatalf("r0 = %d, want rmsNormal (%d)", r0, rmsNormal)
+	}
+
+	ifi := readWord(t, f.ctx, testRabAddr+rabISI)
+	if h, _ := f.ctx.Files.Lookup(ifi); h.Writer == nil {
+		t.Error("$CONNECT didn't arm the created file for writing")
 	}
 }
 

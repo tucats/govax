@@ -96,6 +96,11 @@ func armForFAC(ctx *Context, handle *FileHandle, fabAddr uint32) (failStatus uin
 		return 0, err
 	}
 
+	// A FAB that asks for no access gets what $OPEN or $CREATE implied.
+	if fac&facRequests == 0 {
+		fac = handle.Access
+	}
+
 	switch {
 	case fac&facPut != 0:
 		if handle.Writer == nil {

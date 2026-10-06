@@ -610,3 +610,13 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
   (codes 40 and 41) as part of the FORTH fixture's work; see
   [PHASE-36.md](PHASE-36.md), which also records the terminal $GET, DCL
   symbols and foreign commands, and the assembler fixes found on the way.
+- 2026-10-06: LIB$GET_INPUT joined `internal/librtl` (`input.go`, code
+  42, transfer-vector offset 0x410): a program calling it had failed to
+  RUN ("Unresolved shim symbol SHIM$LIBRTL_00000410"). Written from the
+  RTL Library manual, beside LIB$GET_FOREIGN, whose prompted read it
+  shares: `Environment.ReadInputLine` now reads as a terminal read does
+  (`readTerminalLine`, `internal/corevms/input.go`: CR, LF, or CR LF ends
+  a line; CTRL/Z on an empty line is end of file, after text it ends the
+  line), as RMS's terminal `$GET` does. Unconfirmed (DEVIATIONS.md): that
+  the string and length are left alone at end of file, and SYS$INPUT is
+  always the terminal.

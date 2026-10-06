@@ -178,7 +178,25 @@ var (
 	// organizations, neither of which this phase implements (fab.go's own
 	// orgSeq-only scope).
 	facUpd = byte(vmsConst("FAB$M_UPD"))
+
+	// facRequests is every bit of FAB$B_FAC that asks for a kind of record
+	// access: PUT, GET, DEL, UPD, and TRN.
+	facRequests = facPut | facGet | facUpd | byte(vmsConst("FAB$M_DEL")) | byte(vmsConst("FAB$M_TRN"))
 )
+
+// facAccess is the access a FAB$B_FAC of fac asks for, given the access
+// the service implies when it asks for none: a FAB with no access bits set
+// (a $FAB with no FAC=) is opened by $OPEN for GET and created by $CREATE
+// for PUT (RMS Reference, FAB$B_FAC). The FAB itself isn't changed (that
+// VMS leaves it too is unconfirmed); the access is kept in the open file's
+// FileHandle.Access, for $CONNECT.
+func facAccess(fac, implied byte) byte {
+	if fac&facRequests == 0 {
+		return fac | implied
+	}
+
+	return fac
+}
 
 // FAB$C_ORG values (file organizations). orgSeq is the only one this
 // package's handlers actually accept; the rest are named purely so a

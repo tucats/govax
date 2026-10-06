@@ -2,7 +2,6 @@ package corevms
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
@@ -95,17 +94,13 @@ func (env *Environment) WriteOutput(s string) { env.writeConsole(s) }
 
 // ReadInputLine writes prompt to the process's output stream, then reads
 // a line of at most maxLen bytes from its input stream (SYS$INPUT, the
-// console terminal), without the line's terminator. ok is false at the
-// end of the input.
+// console terminal), as a terminal read does (readTerminalLine), without
+// the line's terminator. ok is false at the end of the input: CTRL/Z
+// typed on an empty line, or the end of the host's input.
 func (env *Environment) ReadInputLine(prompt string, maxLen int) (line string, ok bool) {
 	env.writeConsole(prompt)
 
-	line, err := readConsoleLine(env, maxLen)
-	if err != nil {
-		return "", false
-	}
-
-	return strings.TrimRight(line, "\r\n"), true
+	return readTerminalLine(env, maxLen)
 }
 
 // StatusText is the message line for a status value as the system shows

@@ -1,7 +1,9 @@
 package rms
 
 import (
+	"bufio"
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/vax"
@@ -379,13 +381,47 @@ func TestSysOpen_readOnlyMountReadOnlyOK(t *testing.T) {
 	}
 }
 
-// TestSysOpen_facNone confirms a FAB with none of FAB$V_GET/PUT/UPD set is
-// rejected before this package ever consults the mount table or ods2 at
-// all, mirroring SysCreate's own TestSysCreate_facWithoutPut.
+// TestSysOpen_facNone: a FAB that asks for no access (FAB$B_FAC 0, a $FAB
+// with no FAC=) is opened for GET, as the RMS Reference says, and $CONNECT
+// arms it for reading. The FAB's FAC stays 0.
 func TestSysOpen_facNone(t *testing.T) {
+	record := bytes.Repeat([]byte{'N'}, 80)
+	f := newReadOnlyFixtureWithFile(t, false, "NONE.DAT", record)
+
+	newFAB(t, f.ctx, "DUA0:NONE.DAT")
+	putByte(t, f.ctx, testFabAddr+fabFAC, 0)
+
+	r0, err := SysOpen(f.ctx, []uint32{testFabAddr})
+	if err != nil {
+		t.Fatalf("SysOpen: %v", err)
+	}
+
+	if r0 != rmsNormal {
+		t.Fatalf("r0 = %d, want rmsNormal (%d)", r0, rmsNormal)
+	}
+
+	if fac := readByte(t, f.ctx, testFabAddr+fabFAC); fac != 0 {
+		t.Errorf("FAB$B_FAC = %#x after $OPEN, want it left 0", fac)
+	}
+
+	ifi := connectRAB(t, f.ctx, testFabAddr)
+	h, _ := f.ctx.Files.Lookup(ifi)
+
+	if h.Reader == nil || h.Writer != nil {
+		t.Fatalf("$CONNECT armed Reader %v, Writer %v; want reading only", h.Reader != nil, h.Writer != nil)
+	}
+
+	if got, err := h.Reader.Next(); err != nil || !bytes.Equal(got, record) {
+		t.Errorf("record read back = %q, %v; want %q", got, err, record)
+	}
+}
+
+// TestSysOpen_facUnimplementedOnly: a FAB that asks only for access this
+// package doesn't implement (delete) is refused with RMS$_PRV.
+func TestSysOpen_facUnimplementedOnly(t *testing.T) {
 	f := newCreateFixture(t, true)
 	newFAB(t, f.ctx, "DUA0:TEST.DAT")
-	putByte(t, f.ctx, testFabAddr+fabFAC, 0)
+	putByte(t, f.ctx, testFabAddr+fabFAC, byte(vmsConst("FAB$M_DEL")))
 
 	r0, err := SysOpen(f.ctx, []uint32{testFabAddr})
 	if err != nil {
@@ -394,6 +430,37 @@ func TestSysOpen_facNone(t *testing.T) {
 
 	if r0 != rmsPrivilegeViolation {
 		t.Errorf("r0 = %d, want rmsPrivilegeViolation (%d)", r0, rmsPrivilegeViolation)
+	}
+}
+
+// TestSysOpen_terminalFacNone: $OPEN of SYS$INPUT (the terminal) from a
+// $FAB with no FAC=, then $GET, reads a line typed: the common way a VMS
+// program reads its terminal.
+func TestSysOpen_terminalFacNone(t *testing.T) {
+	f := newCreateFixture(t, true)
+	f.ctx.Console = &bytes.Buffer{}
+	f.ctx.ConsoleIn = bufio.NewReader(strings.NewReader("typed\n"))
+	f.ctx.Logicals = newTestLogicals(t)
+
+	newFAB(t, f.ctx, "SYS$INPUT:")
+	putByte(t, f.ctx, testFabAddr+fabFAC, 0)
+
+	r0, err := SysOpen(f.ctx, []uint32{testFabAddr})
+	if err != nil {
+		t.Fatalf("SysOpen: %v", err)
+	}
+
+	if r0 != rmsNormal {
+		t.Fatalf("$OPEN of SYS$INPUT: = %#x, want RMS$_NORMAL", r0)
+	}
+
+	connectRAB(t, f.ctx, testFabAddr)
+	putByte(t, f.ctx, testRabAddr+rabRAC, racSeq)
+	putLongwordAt(t, f.ctx, testRabAddr+rabUBF, testUserBufAddr)
+	putWord(t, f.ctx, testRabAddr+rabUSZ, 80)
+
+	if r0, got := consoleGet(t, f); r0 != rmsNormal || got != "typed" {
+		t.Errorf("$GET = %#x, %q; want RMS$_NORMAL, %q", r0, got, "typed")
 	}
 }
 

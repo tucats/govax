@@ -45,10 +45,11 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
-	// A calling program has to ask for at least one kind of access to open
-	// a file at all — matching SysCreate's own up-front FAB$B_FAC check
-	// (create.go), just against the fuller set of access bits SYS$OPEN
-	// itself recognizes (GET, in addition to CREATE's PUT/UPD).
+	// A FAB that asks for no access is opened for GET.
+	fac = facAccess(fac, facGet)
+
+	// Of the access a FAB can ask for, this package implements GET, PUT,
+	// and UPD; a FAB asking only for others (DEL, TRN) can't be opened.
 	if fac&(facGet|facPut|facUpd) == 0 {
 		return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsPrivilegeViolation)
 	}
@@ -129,7 +130,7 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 		}
 
 		if normalizeDeviceName(p.Lookup) == consoleDeviceName {
-			ifi, failStatus = ctx.Files.Alloc(&FileHandle{Console: ctx.Console}), 0
+			ifi, failStatus = ctx.Files.Alloc(&FileHandle{Console: ctx.Console, Access: fac}), 0
 
 			break
 		}
@@ -252,7 +253,7 @@ func openFID(ctx *Context, fac byte, device string, vol *volume.Volume, fid ondi
 		}
 	}
 
-	return ctx.Files.Alloc(&FileHandle{File: f, Writable: wantsWrite}), 0, nil
+	return ctx.Files.Alloc(&FileHandle{File: f, Writable: wantsWrite, Access: fac}), 0, nil
 }
 
 // parseOpenVersion interprets a file spec's version field (spec.Version —

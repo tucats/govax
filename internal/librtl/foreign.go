@@ -15,11 +15,12 @@ var (
 // program's static descriptor is DSC$K_CLASS_S) is fixed length.
 const dscClassD = 2
 
-// maxPromptLength is the longest prompt LIB$GET_FOREIGN writes.
+// maxPromptLength is the longest prompt LIB$GET_FOREIGN and LIB$GET_INPUT
+// write.
 const maxPromptLength = 255
 
-// maxInputLength is the longest line LIB$GET_FOREIGN reads when it
-// prompts: a string descriptor's length is a word.
+// maxInputLength is the longest line LIB$GET_FOREIGN (when it prompts)
+// and LIB$GET_INPUT read: a string descriptor's length is a word.
 const maxInputLength = 65535
 
 // libGetForeign is LIB$GET_FOREIGN (RTL Library manual):

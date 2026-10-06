@@ -2358,6 +2358,24 @@ widened."
 - **Status**: deferred: govax writes no limit. `TestLibCreateDirOracle`
   masks the field for `[SUBREL]`.
 
+### [2026-10-06] A FAB asking for no access, and LIB$GET_INPUT: choices unconfirmed
+
+- **Where**: `internal/rms/fab.go` (`facAccess`), `open.go`, `create.go`,
+  `connect.go`; `internal/librtl/input.go`.
+- **What**: `$OPEN` and `$CREATE` used to refuse a FAB whose `FAB$B_FAC`
+  asks for no access (a `$FAB` with no `FAC=`) with RMS$_PRV, so a
+  program opening `SYS$INPUT` that way read nothing. Now, as the RMS
+  Reference describes FAB$B_FAC, `$OPEN` implies GET and `$CREATE` PUT;
+  `$CONNECT` of such a FAB arms the file for the access it was opened
+  with (`FileHandle.Access`). Chosen without a check on VMS:
+  - The FAB's FAC is left 0 (VMS may write the implied bit back).
+  - `$CREATE` of a FAB asking for access but not PUT (GET alone) is
+    still refused with RMS$_PRV.
+  - LIB$GET_INPUT leaves get-string and resultant-length alone at end of
+    file, and reads the terminal even if SYS$INPUT is redefined to a
+    file.
+- **Status**: open; check on VMS.
+
 ### [Phase 13] Image sections all got P0's default protection (UW)
 
 - **Where**: `reference/eVAX/eVAX/Source/Console/console_run.c`

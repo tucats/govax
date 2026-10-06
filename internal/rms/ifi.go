@@ -73,6 +73,12 @@ type FileHandle struct {
 	Found    *foundFile
 	Writable bool
 
+	// Access is the FAB$B_FAC access the file was opened or created with,
+	// including what the service implied when the FAB asked for none
+	// (facAccess). $CONNECT arms the file by it when the FAB asks for
+	// none.
+	Access byte
+
 	// Reader/Writer are set once File has actually been armed for
 	// reading or writing respectively (see this type's own doc comment
 	// for why that's a separate step from File being non-nil at all).

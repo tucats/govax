@@ -44,6 +44,7 @@ var Routines = []Routine{
 	{"LIB$CREATE_DIR", 0x0A28, 39, libCreateDir},
 	{"LIB$PUT_OUTPUT", 0x0478, 40, libPutOutput},
 	{"LIB$GET_FOREIGN", 0x0878, 41, libGetForeign},
+	{"LIB$GET_INPUT", 0x0410, 42, libGetInput},
 }
 
 // Register installs every routine in Routines into t.

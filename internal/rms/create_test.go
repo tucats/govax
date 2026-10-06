@@ -294,6 +294,28 @@ func TestSysCreate_facWithoutPut(t *testing.T) {
 	}
 }
 
+// TestSysCreate_facNone: a FAB that asks for no access (a $FAB with no
+// FAC=) is created for PUT, as the RMS Reference says, and can be written.
+func TestSysCreate_facNone(t *testing.T) {
+	f := newCreateFixture(t, true)
+	newFAB(t, f.ctx, "DUA0:TEST.DAT")
+	putByte(t, f.ctx, testFabAddr+fabFAC, 0)
+
+	r0, err := SysCreate(f.ctx, []uint32{testFabAddr})
+	if err != nil {
+		t.Fatalf("SysCreate: %v", err)
+	}
+
+	if r0 != rmsNormal {
+		t.Fatalf("r0 = %d, want rmsNormal (%d)", r0, rmsNormal)
+	}
+
+	ifi := connectRAB(t, f.ctx, testFabAddr)
+	if h, _ := f.ctx.Files.Lookup(ifi); h.Writer == nil {
+		t.Error("$CONNECT didn't arm the created file for writing")
+	}
+}
+
 // TestSysCreate_unsupportedOrg confirms a FAB naming an organization
 // other than sequential (fab.go's orgSeq) fails with RMS$_ORG, matching
 // docs/PHASE-22.md's sequential-only scope.

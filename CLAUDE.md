@@ -182,6 +182,8 @@ expect adjustment as phases land):
   LIB$GET_FOREIGN (`foreign.go`) returns `Environment.CommandLine`: a
   foreign command's text (DCL symbols, `internal/console/dclsym.go`), or
   what follows the image on `govax run IMAGE text...`.
+  LIB$GET_INPUT (`input.go`) reads a line from the terminal with the
+  terminal's rules (`Environment.ReadInputLine`).
 - `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
   Phase 41 so other packages can use it): `Disassemble` decodes one instruction
   with `internal/cpu`'s table into a `Decoded` of structured `Operand`s

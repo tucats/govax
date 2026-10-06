@@ -43,9 +43,10 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
-	// A calling program has to ask for write access to create a file —
-	// matching real RMS, which rejects a CREATE that only asked for GET
-	// access.
+	// A FAB that asks for no access is created for PUT. One that asks
+	// for access, but not PUT, is refused (unconfirmed: govax's choice).
+	fac = facAccess(fac, facPut)
+
 	if fac&facPut == 0 {
 		return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsPrivilegeViolation)
 	}
@@ -118,9 +119,9 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 	)
 
 	if normalizeDeviceName(p.Lookup) == consoleDeviceName {
-		ifi = ctx.Files.Alloc(&FileHandle{Console: ctx.Console})
+		ifi = ctx.Files.Alloc(&FileHandle{Console: ctx.Console, Access: fac})
 	} else {
-		newIFI, found, opened, failStatus, err := createOnVolume(ctx, fabAddr, p, fop&fopCIF != 0)
+		newIFI, found, opened, failStatus, err := createOnVolume(ctx, fabAddr, fac, p, fop&fopCIF != 0)
 		if err != nil {
 			return 0, err
 		}
@@ -200,7 +201,7 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 // own (the caller stores it into the FAB and returns it as R0, via
 // storeStatus); and, when both are zero-valued, ifi is the freshly
 // allocated handle for the newly created file.
-func createOnVolume(ctx *Context, fabAddr uint32, p parsedName, cif bool) (ifi uint16, found foundFile, opened bool, failStatus uint32, err error) {
+func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bool) (ifi uint16, found foundFile, opened bool, failStatus uint32, err error) {
 	spec := p.spec()
 
 	vol, ok := ctx.Mounts.Lookup(spec.Device)
@@ -276,7 +277,7 @@ func createOnVolume(ctx *Context, fabAddr uint32, p parsedName, cif bool) (ifi u
 	// FAB$V_CIF: a file that's already there is opened instead.
 	if cif {
 		if entry, sts := lookupVersion(dir, name, spec.Version); sts == 0 {
-			ifi, sts, err := openFID(ctx, facPut, spec.Device, vol, entry.Fid)
+			ifi, sts, err := openFID(ctx, fac, spec.Device, vol, entry.Fid)
 			if err != nil || sts != 0 {
 				return 0, found, false, sts, err
 			}
@@ -338,7 +339,7 @@ func createOnVolume(ctx *Context, fabAddr uint32, p parsedName, cif bool) (ifi u
 	}
 	found.HighVer, found.LowVer = versionsAround(dir, name, version)
 
-	return ctx.Files.Alloc(&FileHandle{File: f, Writable: true}), found, false, 0, nil
+	return ctx.Files.Alloc(&FileHandle{File: f, Writable: true, Access: fac}), found, false, 0, nil
 }
 
 // loadFileSpecString reads the FAB$L_FNA/FAB$B_FNS pair out of the FAB at
