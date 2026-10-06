@@ -2,6 +2,11 @@ package dcl
 
 import "testing"
 
+const (
+	testShowQuantumCommand = "SHOW QUANTUM"
+	testShowQuantumBinding = "SHOW_QUANTUM"
+)
+
 func TestDispatch(t *testing.T) {
 	var (
 		gotID   int64
@@ -10,14 +15,14 @@ func TestDispatch(t *testing.T) {
 
 	g := loadEvaxGrammar(t)
 
-	g.Bind("SHOW_QUANTUM", func(id int64, r *Result) error {
+	g.Bind(testShowQuantumBinding, func(id int64, r *Result) error {
 		gotID = id
 		gotWhat = r.Active
 
 		return nil
 	})
 
-	r, err := g.Parse("SHOW QUANTUM")
+	r, err := g.Parse(testShowQuantumCommand)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
@@ -26,15 +31,15 @@ func TestDispatch(t *testing.T) {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
-	if gotWhat != "SHOW_QUANTUM" || gotID != r.ActiveID {
-		t.Errorf("handler got id=%d active=%s, want id=%d active=SHOW_QUANTUM", gotID, gotWhat, r.ActiveID)
+	if gotWhat != testShowQuantumBinding || gotID != r.ActiveID {
+		t.Errorf("handler got id=%d active=%s, want id=%d active=%s", gotID, gotWhat, r.ActiveID, testShowQuantumBinding)
 	}
 }
 
 func TestDispatch_noHandlerBound(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
-	r, err := g.Parse("SHOW QUANTUM")
+	r, err := g.Parse(testShowQuantumCommand)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}

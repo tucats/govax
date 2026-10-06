@@ -10,12 +10,15 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// ParseGrammar parses grammar-definition text (the dialect
-// testdata/dcl/console.dcl uses: "grammar"/"verb"/"syntax"/"type"/"keyword"/
-// "qualifier"/"parameter"/"disallow"/"end" statements, "!" line comments,
-// and "-" line-continuation) into a validated Grammar — the Go equivalent
-// of DCLread/DCLdefine/DCLvalidate, minus the FSM/self-hosting machinery
-// (see doc.go).
+// ParseGrammar parses grammar-definition text. This is
+// loosly based on the Digital Command Language (DCL)
+// grammar specifiction, and is sued by the bootdata
+// files "console.dcl" and "help.dcl".
+//
+// The dialect supports "grammar", "verb", "syntax",
+// "type", "keyword", "qualifier, "parameter", "disallow"
+// statements. It supports "!" for line comments, and "-"
+// as a line-continutation operator.
 func ParseGrammar(text string) (*Grammar, error) {
 	var (
 		g       *Grammar
@@ -36,14 +39,14 @@ func ParseGrammar(text string) (*Grammar, error) {
 		}
 
 		switch directive {
-		case "GRAMMAR":
+		case grammarTOKEN:
 			g = newGrammar(name)
 			cur, curType = nil, nil
 
-		case "END":
+		case endTOKEN:
 			// No further statements expected; nothing to reset.
 
-		case "TYPE":
+		case typeTOKEN:
 			if g == nil {
 				return nil, vmserrors.New(vmserrors.CLI_OUTSIDE, lineNo+1, "TYPE", "a grammar")
 			}
@@ -52,7 +55,7 @@ func ParseGrammar(text string) (*Grammar, error) {
 			g.types[upcase(name)] = curType
 			cur = nil
 
-		case "KEYWORD":
+		case keywordTOKEN:
 			if curType == nil {
 				return nil, vmserrors.New(vmserrors.CLI_OUTSIDE, lineNo+1, "KEYWORD", "a TYPE")
 			}
@@ -64,13 +67,13 @@ func ParseGrammar(text string) (*Grammar, error) {
 				case "ID":
 					kw.ID, err = parseID(v)
 
-				case "SYNTAX":
+				case syntaxTOKEN:
 					kw.Syntax = upcase(v)
 
-				case "NONEGATABLE":
+				case nonegatableTOKEN:
 					kw.NoNegate = true
 
-				case "VALUE":
+				case valueTOKEN:
 					kw.Value = true
 
 				default:
@@ -84,25 +87,25 @@ func ParseGrammar(text string) (*Grammar, error) {
 
 			curType.Keywords = append(curType.Keywords, kw)
 
-		case "VERB", "SYNTAX":
+		case verbTOKEN, syntaxTOKEN:
 			if g == nil {
 				return nil, vmserrors.New(vmserrors.CLI_OUTSIDE, lineNo+1, directive, "a grammar")
 			}
 
-			e := &Entry{Name: upcase(name), IsVerb: directive == "VERB"}
+			e := &Entry{Name: upcase(name), IsVerb: directive == verbTOKEN}
 
 			for k, v := range switches {
 				switch k {
-				case "ID":
+				case idTOKEN:
 					e.ID, err = parseID(v)
 
-				case "ENTRY":
+				case entryTOKEN:
 					e.EntryPoint = upcase(v)
 
-				case "ALIAS":
+				case aliasTOKEN:
 					e.Alias = upcase(v)
 
-				case "ASSIGNMENT":
+				case assignmentTOKEN:
 					e.Assignment = upcase(v)
 
 				default:
@@ -125,9 +128,9 @@ func ParseGrammar(text string) (*Grammar, error) {
 
 			cur, curType = e, nil
 
-		case "PARAMETER":
+		case parameterTOKEN:
 			if cur == nil {
-				return nil, vmserrors.New(vmserrors.CLI_OUTSIDE, lineNo+1, "PARAMETER", "a VERB/SYNTAX")
+				return nil, vmserrors.New(vmserrors.CLI_OUTSIDE, lineNo+1, parameterTOKEN, "a VERB/SYNTAX")
 			}
 
 			p := &Parameter{Name: upcase(name)}
@@ -141,13 +144,13 @@ func ParseGrammar(text string) (*Grammar, error) {
 				}
 			}
 
-			if prompt, ok := switches["PROMPT"]; ok {
+			if prompt, ok := switches[promptTOKEN]; ok {
 				p.Prompt = prompt
 			}
 
-			_, p.List = switches["LIST"]
+			_, p.List = switches[listTOKEN]
 
-			if sep, ok := switches["SEPARATOR"]; ok {
+			if sep, ok := switches[separatorTOKEN]; ok {
 				if len(sep) != 1 {
 					err := fmt.Errorf("parameter %s: separator %q isn't one character", p.Name, sep)
 
@@ -159,9 +162,9 @@ func ParseGrammar(text string) (*Grammar, error) {
 
 			cur.Parameters = append(cur.Parameters, p)
 
-		case "QUALIFIER":
+		case qualifierTOKEN:
 			if cur == nil {
-				return nil, vmserrors.New(vmserrors.CLI_OUTSIDE, lineNo+1, "QUALIFIER", "a VERB/SYNTAX")
+				return nil, vmserrors.New(vmserrors.CLI_OUTSIDE, lineNo+1, qualifierTOKEN, "a VERB/SYNTAX")
 			}
 
 			q := &Qualifier{Name: upcase(name)}
@@ -169,28 +172,28 @@ func ParseGrammar(text string) (*Grammar, error) {
 				return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
 			}
 
-			if id, ok := switches["ID"]; ok {
+			if id, ok := switches[idTOKEN]; ok {
 				if q.ID, err = parseID(id); err != nil {
 					return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
 				}
 			}
 
-			if syn, ok := switches["SYNTAX"]; ok {
+			if syn, ok := switches[syntaxTOKEN]; ok {
 				q.Syntax = upcase(syn)
 			}
 
-			if alias, ok := switches["ALIAS"]; ok {
+			if alias, ok := switches[aliasTOKEN]; ok {
 				q.Alias = upcase(alias)
 			}
 
-			if _, ok := switches["NONEGATABLE"]; ok {
+			if _, ok := switches[nonegatableTOKEN]; ok {
 				q.NoNegate = true
 			}
 
-			_, q.List = switches["LIST"]
+			_, q.List = switches[listTOKEN]
 
-			if placement, ok := switches["PLACEMENT"]; ok {
-				if upcase(placement) != "POSITIONAL" {
+			if placement, ok := switches[placementTOKEN]; ok {
+				if upcase(placement) != positionalTOKEN {
 					err := fmt.Errorf("qualifier %s: placement %q isn't supported", q.Name, placement)
 
 					return nil, vmserrors.Wrap(vmserrors.CLI_LINEERR, err, lineNo+1)
@@ -212,7 +215,7 @@ func ParseGrammar(text string) (*Grammar, error) {
 			// already places a qualifier statement right after a parameter
 			// statement without meaning to scope it to that parameter, so
 			// mere adjacency can't be the signal.
-			if paramName, ok := switches["PARAMETER"]; ok {
+			if paramName, ok := switches[parameterTOKEN]; ok {
 				target := findParameter(cur, upcase(paramName))
 				if target == nil {
 					err := vmserrors.New(vmserrors.CLI_PARAMNOTFOUND, q.Name, upcase(paramName))
@@ -237,9 +240,9 @@ func ParseGrammar(text string) (*Grammar, error) {
 				cur.Qualifiers = append(cur.Qualifiers, q)
 			}
 
-		case "DISALLOW":
+		case disallowTOKEN:
 			if cur == nil {
-				return nil, vmserrors.New(vmserrors.CLI_OUTSIDE, lineNo+1, "DISALLOW", "a VERB/SYNTAX")
+				return nil, vmserrors.New(vmserrors.CLI_OUTSIDE, lineNo+1, disallowTOKEN, "a VERB/SYNTAX")
 			}
 
 			d, err := parseDisallow(name)
@@ -331,7 +334,7 @@ func tokenizeStatement(stmt string) (directive, name string, switches map[string
 	fields := strings.SplitN(head, " ", 2)
 
 	directive = upcase(fields[0])
-	if directive == "DISALLOW" {
+	if directive == disallowTOKEN {
 		if len(fields) < 2 {
 			return "", "", nil, vmserrors.New(vmserrors.CLI_DISALLOWEXPR)
 		}
@@ -427,7 +430,7 @@ func findParameter(e *Entry, name string) *Parameter {
 // PARAMETER and QUALIFIER statements, matching DCLdefine_element's handling
 // of DCL_QUALIFIER_TYPE/DCL_QUALIFIER_DEFAULT for both kinds of items.
 func applyValueSwitches(switches map[string]string, typ *ValueType, typeName *string, def **Value) error {
-	if t, ok := switches["TYPE"]; ok {
+	if t, ok := switches[typeTOKEN]; ok {
 		switch upcase(t) {
 		case "$ANY":
 			*typ = TypeAny
@@ -453,7 +456,7 @@ func applyValueSwitches(switches map[string]string, typ *ValueType, typeName *st
 		}
 	}
 
-	if d, ok := switches["DEFAULT"]; ok {
+	if d, ok := switches[defaultTOKEN]; ok {
 		if n, err := strconv.ParseInt(d, 10, 64); err == nil {
 			*def = &Value{Int: n}
 		} else {
