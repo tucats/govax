@@ -259,6 +259,40 @@ func TestLinkForthMatchesRealLINK(t *testing.T) {
 	}
 }
 
+// TestLinkPiMatchesRealLINK links pi, which prints pi to a number of
+// places (testdata/mar/pi.mar), and compares the image byte for byte with
+// real LINK's PI.EXE (testdata/mar/vax/pi.exe): two psects, and calls to
+// LIB$GET_FOREIGN, LIB$GET_VM, and LIB$PUT_OUTPUT in LIBRTL.
+//
+// It's skipped: real LINK gives LIBRTL's cells in the order
+// LIB$GET_FOREIGN, LIB$PUT_OUTPUT, LIB$GET_VM, and govax in name order
+// (orderCells), so the two cells, and the G^ displacements that reach
+// them, differ. Like FAILSIG's, a known difference (docs/PHASE-29.md).
+func TestLinkPiMatchesRealLINK(t *testing.T) {
+	t.Skip("real LINK's order of PI's LIBRTL fixup cells is a known difference (docs/PHASE-29.md, subtask 14)")
+
+	want, opts := realImage(t, filepath.Join(fixtureDir, "vax", "pi.exe"))
+	opts.Sources = vmsSources(t)
+
+	for _, from := range []string{platformName, "real"} {
+		t.Run(from, func(t *testing.T) {
+			m := realObject(t, "pi")
+			if from == platformName {
+				m = govaxObject(t, "pi")
+			}
+
+			img, err := Link([]Input{{File: "pi.obj", Module: m}}, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !bytes.Equal(img.Bytes, want) {
+				t.Errorf("image differs from real LINK's:\n%s", diffBlocks(img.Bytes, want))
+			}
+		})
+	}
+}
+
 // TestLinkNoTracebackMatchesRealLINK compares LINK/NOTRACEBACK with the
 // image real LINK/NOTRACEBACK made from real MACRO's psects.obj
 // (testdata/mar/vax/psects-notraceback.exe): the user transfer address

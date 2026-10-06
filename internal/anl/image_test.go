@@ -19,6 +19,7 @@ import (
 // imageFixtureDirs hold real LINK's images with VMS 7.3's ANALYZE/IMAGE
 // output for each beside them (NAME.EXE and NAME.ANI).
 var imageFixtureDirs = []string{
+	"../../testdata/mar/vax",
 	"../../testdata/link/vax",
 	"../../testdata/mar/list/vax",
 	"../../testdata/mar/round/vax",

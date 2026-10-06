@@ -1,0 +1,599 @@
+PI                              Compute pi to any number of decimal plac  6-OCT-2026 13:39:16  VAX MACRO V5.4-3            Page   0
+Table of contents
+
+    (1)       88        PI - main routine
+    (1)      121        GET_PLACES - read the count of places
+    (1)      181        ALLOCATE - allocate a number
+    (1)      197        COMPUTE_PI - Machin's formula
+    (1)      213        ARCTAN - add a multiple of an arctangent to SUM
+    (1)      269        DIVIDE - divide a number by a longword
+    (1)      292        ADD - add two numbers
+    (1)      335        SUBTRACT - subtract one number from another
+    (1)      378        PRINT_PI - print the number
+    (1)      418        PUT_DIGIT - add a digit to the line
+    (1)      438        FLUSH_LINE - print the line
+PI                              Compute pi to any number of decimal plac  6-OCT-2026 13:39:16  VAX MACRO V5.4-3            Page   1
+V1.0                                                                      6-OCT-2026 13:38:05  DUA1:[000000]PI.MAR;1             (1)
+
+                                     0000     1 	.TITLE	PI	Compute pi to any number of decimal places
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 
+                                     0000     4 ;
+                                     0000     5 ; PI prints pi to a number of decimal places on SYS$OUTPUT: 100 by
+                                     0000     6 ; default, or the count given on the command line when it's run as a
+                                     0000     7 ; foreign command (PI :== $PI, then PI 500), read with LIB$GET_FOREIGN.
+                                     0000     8 ;
+                                     0000     9 ; It uses Machin's formula,
+                                     0000    10 ;
+                                     0000    11 ;	pi = 16 * arctan(1/5) - 4 * arctan(1/239)
+                                     0000    12 ;
+                                     0000    13 ; summing each arctangent's Taylor series,
+                                     0000    14 ;
+                                     0000    15 ;	arctan(1/x) = 1/x - 1/(3*x^3) + 1/(5*x^5) - ...
+                                     0000    16 ;
+                                     0000    17 ; in multiple-precision fixed point. A number is an array of longwords,
+                                     0000    18 ; most significant first: the first holds the integer part, and each of
+                                     0000    19 ; the rest nine more decimal digits of the fraction (each is a "digit" in
+                                     0000    20 ; base 1,000,000,000). Dividing one by a longword is a run of EMUL and
+                                     0000    21 ; EDIV instructions, carrying each remainder into the next longword;
+                                     0000    22 ; adding and subtracting carry from the least significant longword up.
+                                     0000    23 ; Two extra longwords of fraction absorb the error of truncating every
+                                     0000    24 ; division, and the digits printed are truncated, not rounded.
+                                     0000    25 ;
+                                     0000    26 ; Every routine is called with CALLS, so the program also exercises call
+                                     0000    27 ; frames: tracebacks, SHOW CALLS, and breakpoints in nested routines
+                                     0000    28 ; (PI -> COMPUTE_PI -> ARCTAN -> DIVIDE, and PI -> PRINT_PI -> PUT_DIGIT
+                                     0000    29 ; -> FLUSH_LINE). Arrays are passed by reference and counts by value.
+                                     0000    30 ;
+                                     0000    31 
+                                     0000    32 	$SSDEF				; SS$_NORMAL, SS$_BADPARAM
+                                     0000    33 
+                           3B9ACA00  0000    34 BASE = 1000000000		; Each longword holds 9 decimal digits
+                           00000064  0000    35 DEFAULT_PLACES = 100		; Places when none is given
+                           000186A0  0000    36 MAX_PLACES = 100000		; Most places allowed (keeps the arrays
+                                     0000    37 				; under 64K bytes, a MOVC5 length)
+                           00000002  0000    38 GUARD = 2			; Extra longwords against truncation error
+                           00000032  0000    39 LINE_DIGITS = 50		; Digits printed on each line
+                           0000000A  0000    40 GROUP_DIGITS = 10		; Digits between spaces on a line
+                           10000000  0000    41 STS$M_INHIB_MSG = ^X10000000	; Status already reported
+                                     0000    42 
+                                     0000    43 ;
+                                     0000    44 ; Descriptors are written out in full: DSC$K_DTYPE_T (14) is text, and
+                                     0000    45 ; DSC$K_CLASS_S (1) a fixed-length string.
+                                     0000    46 ;
+                                     0000    47 	.MACRO	STRING_DESC	LEN,ADDR
+                                     0000    48 	.WORD	LEN
+                                     0000    49 	.BYTE	14,1
+                                     0000    50 	.ADDRESS ADDR
+                                     0000    51 	.ENDM	STRING_DESC
+                                     0000    52 
+                                 00000000    53 	.PSECT	PI_DATA, WRT, NOEXE, LONG
+                                     0000    54 
+                           00000064  0000    55 PLACES:	.LONG	DEFAULT_PLACES	; Decimal places to print
+                           00000000  0004    56 WORDS:	.LONG	0		; Longwords in each number
+                           00000000  0008    57 BYTES:	.LONG	0		; Bytes in each number
+PI                              Compute pi to any number of decimal plac  6-OCT-2026 13:39:16  VAX MACRO V5.4-3            Page   2
+V1.0                                                                      6-OCT-2026 13:38:05  DUA1:[000000]PI.MAR;1             (1)
+
+                           00000000  000C    58 SUM:	.LONG	0		; Address of the sum: pi, in the end
+                           00000000  0010    59 TERM:	.LONG	0		; Address of the series' current power
+                           00000000  0014    60 QUOT:	.LONG	0		; Address of the current term
+                                     0018    61 
+                                     0018    62 CMD_LEN:
+                               0000  0018    63 	.WORD	0		; Length of the command line
+                                     001A    64 CMD_BUF:
+                           0000006A  001A    65 	.BLKB	80		; The command line's text
+                                     006A    66 CMD_DESC:
+                                     006A    67 	STRING_DESC	80,CMD_BUF
+                                     0072    68 
+                                     0072    69 LINE_PTR:
+                           00000000  0072    70 	.LONG	0		; Where the next character goes in LINE
+                                     0076    71 LINE_COUNT:
+                           00000000  0076    72 	.LONG	0		; Digits on the line so far
+                                     007A    73 GROUP_COUNT:
+                           00000000  007A    74 	.LONG	0		; Digits in the line's last group so far
+                           000000CE  007E    75 LINE:	.BLKB	80		; The line being built
+                                     00CE    76 LINE_DESC:
+                                     00CE    77 	STRING_DESC	0,LINE
+                                     00D6    78 
+                           000000DB  00D6    79 PACKED:	.BLKB	5		; A longword as a 9-digit packed decimal
+                                     00DB    80 NUMERIC:
+                           000000E5  00DB    81 	.BLKB	10		; ... and as a sign and 9 ASCII digits
+                                     00E5    82 
+                                     00E5    83 BAD_MSG:
+2D 45 2D 49 50 25 000000ED'010E0000' 00E5    84 	.ASCID	/%PI-E-BADCOUNT, the number of decimal places must be from 1 to 100000/
+68 74 20 2C 54 4E 55 4F 43 44 41 42  00F3       
+20 66 6F 20 72 65 62 6D 75 6E 20 65  00FF       
+63 61 6C 70 20 6C 61 6D 69 63 65 64  010B       
+66 20 65 62 20 74 73 75 6D 20 73 65  0117       
+30 30 31 20 6F 74 20 31 20 6D 6F 72  0123       
+                           30 30 30  012F       
+                                     0132    85 
+                                 00000000    86 	.PSECT	PI_CODE, NOWRT, EXE, LONG
+                                     0000    87 
+                                     0000    88 	.SBTTL	PI - main routine
+                                     0000    89 ;
+                                     0000    90 ; PI reads the count of places, sizes and allocates the three numbers,
+                                     0000    91 ; computes pi, and prints it.
+                                     0000    92 ;
+                               0004  0000    93 	.ENTRY	PI, ^M<R2>
+                   00000000'EF   DF  0002    94 	PUSHAL	PLACES			; Get the count of places
+              00000079'EF   01   FB  0008    95 	CALLS	#1, GET_PLACES
+                         66 50   E9  000F    96 	BLBC	R0, 90$			; Bad count: already reported
+                                     0012    97 
+         50   00000000'EF   09   C7  0012    98 	DIVL3	#9, PLACES, R0		; Longwords for the fraction,
+         00000004'EF   50   04   C1  001A    99 	ADDL3	#<1+1+GUARD>, R0, WORDS	; plus the rest, the integer
+00000008'EF   00000004'EF   04   C5  0022   100 	MULL3	#4, WORDS, BYTES	; part, and the guard
+                                     002E   101 
+              52   0000000C'EF   DE  002E   102 	MOVAL	SUM, R2			; Allocate SUM, TERM, and QUOT,
+                            52   DD  0035   103 	PUSHL	R2			; consecutive longwords
+              0000010B'EF   01   FB  0037   104 	CALLS	#1, ALLOCATE
+                         37 50   E9  003E   105 	BLBC	R0, 90$
+                         04 A2   DF  0041   106 	PUSHAL	4(R2)
+              0000010B'EF   01   FB  0044   107 	CALLS	#1, ALLOCATE
+                         2A 50   E9  004B   108 	BLBC	R0, 90$
+PI                              Compute pi to any number of decimal plac  6-OCT-2026 13:39:16  VAX MACRO V5.4-3            Page   3
+V1.0                            PI - main routine                         6-OCT-2026 13:38:05  DUA1:[000000]PI.MAR;1             (1)
+
+                         08 A2   DF  004E   109 	PUSHAL	8(R2)
+              0000010B'EF   01   FB  0051   110 	CALLS	#1, ALLOCATE
+                         1D 50   E9  0058   111 	BLBC	R0, 90$
+                                     005B   112 
+              00000132'EF   00   FB  005B   113 	CALLS	#0, COMPUTE_PI		; SUM = pi
+                                     0062   114 
+                   00000000'EF   DD  0062   115 	PUSHL	PLACES			; Print it
+                   0000000C'EF   DD  0068   116 	PUSHL	SUM
+              000002FD'EF   02   FB  006E   117 	CALLS	#2, PRINT_PI
+                       50   01   D0  0075   118 	MOVL	#SS$_NORMAL, R0
+                                 04  0078   119 90$:	RET
+                                     0079   120 
+                                     0079   121 	.SBTTL	GET_PLACES - read the count of places
+                                     0079   122 ;
+                                     0079   123 ; GET_PLACES(places) reads the command line with LIB$GET_FOREIGN. If it
+                                     0079   124 ; has a number, that number, from 1 to MAX_PLACES, goes into the longword
+                                     0079   125 ; at places; if it's empty, places is left alone. Anything else is
+                                     0079   126 ; reported, and GET_PLACES returns SS$_BADPARAM, with STS$M_INHIB_MSG set
+                                     0079   127 ; so that it isn't reported again.
+                                     0079   128 ;
+                               001C  0079   129 	.ENTRY	GET_PLACES, ^M<R2,R3,R4>
+                   00000018'EF   3F  007B   130 	PUSHAW	CMD_LEN			; resultant-length
+                            7E   D4  0081   131 	CLRL	-(SP)			; no prompt-string
+                   0000006A'EF   7F  0083   132 	PUSHAQ	CMD_DESC		; resultant-string
+              00000000'GF   03   FB  0089   133 	CALLS	#3, G^LIB$GET_FOREIGN
+                         06 50   E8  0090   134 	BLBS	R0, 10$
+                   00000018'EF   B4  0093   135 	CLRW	CMD_LEN			; Unreadable: take the default
+                                     0099   136 
+              52   00000018'EF   3C  0099   137 10$:	MOVZWL	CMD_LEN, R2		; R2 = characters left
+              53   0000001A'EF   9E  00A0   138 	MOVAB	CMD_BUF, R3		; R3 = the next one
+                            54   D4  00A7   139 	CLRL	R4			; R4 = the number so far
+                                     00A9   140 
+                            52   D5  00A9   141 20$:	TSTL	R2			; Skip leading blanks
+                            45   13  00AB   142 	BEQL	80$			; All blank: keep the default
+                       20   63   91  00AD   143 	CMPB	(R3), #^A/ /
+                            06   12  00B0   144 	BNEQ	30$
+                            53   D6  00B2   145 	INCL	R3
+                            52   D7  00B4   146 	DECL	R2
+                            F1   11  00B6   147 	BRB	20$
+                                     00B8   148 
+                            52   D5  00B8   149 30$:	TSTL	R2			; Read digits
+                            2E   13  00BA   150 	BEQL	50$
+                  50   63   30   83  00BC   151 	SUBB3	#^A/0/, (R3), R0	; R0 = the digit's value, or more
+                       09   50   91  00C0   152 	CMPB	R0, #9			; than 9 (unsigned) if it isn't one
+                            18   1A  00C3   153 	BGTRU	40$
+                       50   50   9A  00C5   154 	MOVZBL	R0, R0
+                       54   0A   C4  00C8   155 	MULL2	#10, R4			; Number = number * 10 + digit
+                       54   50   C0  00CB   156 	ADDL2	R0, R4
+              000186A0 8F   54   D1  00CE   157 	CMPL	R4, #MAX_PLACES
+                            1F   14  00D5   158 	BGTR	90$
+                            53   D6  00D7   159 	INCL	R3
+                            52   D7  00D9   160 	DECL	R2
+                            DB   11  00DB   161 	BRB	30$
+                                     00DD   162 
+                       20   63   91  00DD   163 40$:	CMPB	(R3), #^A/ /		; Only blanks may follow
+                            14   12  00E0   164 	BNEQ	90$
+                            53   D6  00E2   165 	INCL	R3
+PI                              Compute pi to any number of decimal plac  6-OCT-2026 13:39:16  VAX MACRO V5.4-3            Page   4
+V1.0                            GET_PLACES - read the count of places     6-OCT-2026 13:38:05  DUA1:[000000]PI.MAR;1             (1)
+
+                            52   D7  00E4   166 	DECL	R2
+                            52   D5  00E6   167 	TSTL	R2
+                            F3   12  00E8   168 	BNEQ	40$
+                                     00EA   169 
+                            54   D5  00EA   170 50$:	TSTL	R4			; Zero places isn't allowed (nor
+                            08   13  00EC   171 	BEQL	90$			; is no digit before a blank)
+                    04 BC   54   D0  00EE   172 	MOVL	R4, @4(AP)
+                       50   01   D0  00F2   173 80$:	MOVL	#SS$_NORMAL, R0
+                                 04  00F5   174 	RET
+                                     00F6   175 
+                   000000E5'EF   7F  00F6   176 90$:	PUSHAQ	BAD_MSG
+              00000000'GF   01   FB  00FC   177 	CALLS	#1, G^LIB$PUT_OUTPUT
+              50   10000014 8F   D0  0103   178 	MOVL	#<SS$_BADPARAM!STS$M_INHIB_MSG>, R0
+                                 04  010A   179 	RET
+                                     010B   180 
+                                     010B   181 	.SBTTL	ALLOCATE - allocate a number
+                                     010B   182 ;
+                                     010B   183 ; ALLOCATE(address) gets BYTES bytes from LIB$GET_VM, zeroes them, and
+                                     010B   184 ; stores their address in the longword at address. It returns
+                                     010B   185 ; LIB$GET_VM's status.
+                                     010B   186 ;
+                               007C  010B   187 	.ENTRY	ALLOCATE, ^M<R2,R3,R4,R5,R6>
+                    56   04 AC   D0  010D   188 	MOVL	4(AP), R6
+                            56   DD  0111   189 	PUSHL	R6			; base-address
+                   00000008'EF   DF  0113   190 	PUSHAL	BYTES			; number-bytes
+              00000000'GF   02   FB  0119   191 	CALLS	#2, G^LIB$GET_VM
+                         0E 50   E9  0120   192 	BLBC	R0, 10$
+    00000008'EF   00   66   00   2C  0123   193 	MOVC5	#0, (R6), #0, BYTES, @(R6)	; Zero it (BYTES < 64K)
+                         00 B6       012C       
+                       50   01   D0  012E   194 	MOVL	#SS$_NORMAL, R0
+                                 04  0131   195 10$:	RET
+                                     0132   196 
+                                     0132   197 	.SBTTL	COMPUTE_PI - Machin's formula
+                                     0132   198 ;
+                                     0132   199 ; COMPUTE_PI sets SUM to pi: 16 * arctan(1/5) - 4 * arctan(1/239). SUM
+                                     0132   200 ; starts at zero, and ARCTAN adds each series into it.
+                                     0132   201 ;
+                               0000  0132   202 	.ENTRY	COMPUTE_PI, ^M<>
+                            01   DD  0134   203 	PUSHL	#1			; Subtract 4 * arctan(1/239)
+                   000000EF 8F   DD  0136   204 	PUSHL	#239
+                            04   DD  013C   205 	PUSHL	#4
+                            00   DD  013E   206 	PUSHL	#0			; ... after adding 16 * arctan(1/5)
+                            05   DD  0140   207 	PUSHL	#5
+                            10   DD  0142   208 	PUSHL	#16
+              00000153'EF   03   FB  0144   209 	CALLS	#3, ARCTAN
+              00000153'EF   03   FB  014B   210 	CALLS	#3, ARCTAN
+                                 04  0152   211 	RET
+                                     0153   212 
+                                     0153   213 	.SBTTL	ARCTAN - add a multiple of an arctangent to SUM
+                                     0153   214 ;
+                                     0153   215 ; ARCTAN(k, x, negative) adds k * arctan(1/x) to SUM, or subtracts it if
+                                     0153   216 ; negative is 1. TERM holds k / x^n for n = 1, 3, 5, ..., and QUOT each
+                                     0153   217 ; term, TERM / n, which is added to SUM or subtracted from it in turn.
+                                     0153   218 ; The series ends when TERM becomes zero. START, the index of TERM's
+                                     0153   219 ; first nonzero longword, only grows, so each step skips TERM's leading
+                                     0153   220 ; zeros.
+                                     0153   221 ;
+PI                              Compute pi to any number of decimal plac  6-OCT-2026 13:39:16  VAX MACRO V5.4-3            Page   5
+V1.0                            ARCTAN - add a multiple of an arctangent  6-OCT-2026 13:38:05  DUA1:[000000]PI.MAR;1             (1)
+
+                                     0153   222 ; Registers:	R2 = n		R3 = x^2	R4 = START
+                                     0153   223 ;		R5 = 1 to subtract the next term, 0 to add it
+                                     0153   224 ;
+                               003C  0153   225 	.ENTRY	ARCTAN, ^M<R2,R3,R4,R5>
+    00000008'EF   00   6E   00   2C  0155   226 	MOVC5	#0, (SP), #0, BYTES, @TERM	; TERM = k
+                   00000010'FF       015E       
+           00000010'FF   04 AC   D0  0163   227 	MOVL	4(AP), @TERM
+                            54   D4  016B   228 	CLRL	R4
+                    55   0C AC   D0  016D   229 	MOVL	12(AP), R5
+                                     0171   230 
+                            54   DD  0171   231 	PUSHL	R4			; TERM = TERM / x
+                         08 AC   DD  0173   232 	PUSHL	8(AP)
+                   00000010'EF   DD  0176   233 	PUSHL	TERM
+                   00000010'EF   DD  017C   234 	PUSHL	TERM
+              000001FE'EF   04   FB  0182   235 	CALLS	#4, DIVIDE
+            53   08 AC   08 AC   C5  0189   236 	MULL3	8(AP), 8(AP), R3
+                       52   01   D0  018F   237 	MOVL	#1, R2
+                                     0192   238 
+                            54   DD  0192   239 10$:	PUSHL	R4			; QUOT = TERM / n
+                            52   DD  0194   240 	PUSHL	R2
+                   00000014'EF   DD  0196   241 	PUSHL	QUOT
+                   00000010'EF   DD  019C   242 	PUSHL	TERM
+              000001FE'EF   04   FB  01A2   243 	CALLS	#4, DIVIDE
+                                     01A9   244 
+                            54   DD  01A9   245 	PUSHL	R4			; SUM = SUM +/- QUOT
+                   00000014'EF   DD  01AB   246 	PUSHL	QUOT
+                   0000000C'EF   DD  01B1   247 	PUSHL	SUM
+                         09 55   E8  01B7   248 	BLBS	R5, 20$
+              0000022D'EF   03   FB  01BA   249 	CALLS	#3, ADD
+                            07   11  01C1   250 	BRB	30$
+              0000029A'EF   03   FB  01C3   251 20$:	CALLS	#3, SUBTRACT
+                       55   01   CC  01CA   252 30$:	XORL2	#1, R5			; The signs alternate
+                                     01CD   253 
+                            54   DD  01CD   254 	PUSHL	R4			; TERM = TERM / x^2
+                            53   DD  01CF   255 	PUSHL	R3
+                   00000010'EF   DD  01D1   256 	PUSHL	TERM
+                   00000010'EF   DD  01D7   257 	PUSHL	TERM
+              000001FE'EF   04   FB  01DD   258 	CALLS	#4, DIVIDE
+                                     01E4   259 
+              50   00000010'EF   D0  01E4   260 	MOVL	TERM, R0		; Skip TERM's new leading zeros
+                          6044   D5  01EB   261 40$:	TSTL	(R0)[R4]
+                            09   12  01EE   262 	BNEQ	50$
+           F3 54   00000004'EF   F2  01F0   263 	AOBLSS	WORDS, R4, 40$
+                                 04  01F8   264 	RET				; TERM is zero: the series is done
+                                     01F9   265 
+                       52   02   C0  01F9   266 50$:	ADDL2	#2, R2			; n = n + 2
+                            94   11  01FC   267 	BRB	10$
+                                     01FE   268 
+                                     01FE   269 	.SBTTL	DIVIDE - divide a number by a longword
+                                     01FE   270 ;
+                                     01FE   271 ; DIVIDE(source, destination, divisor, start) sets destination to source
+                                     01FE   272 ; / divisor, longword by longword from start to the end; source's
+                                     01FE   273 ; longwords before start must be zero, and destination's are left alone.
+                                     01FE   274 ; Each step's dividend is the last remainder times BASE plus the next
+                                     01FE   275 ; longword. Since the remainder is less than the divisor, the quotient
+                                     01FE   276 ; is less than BASE: it fits a longword.
+                                     01FE   277 ;
+PI                              Compute pi to any number of decimal plac  6-OCT-2026 13:39:16  VAX MACRO V5.4-3            Page   6
+V1.0                            DIVIDE - divide a number by a longword    6-OCT-2026 13:38:05  DUA1:[000000]PI.MAR;1             (1)
+
+                                     01FE   278 ; Registers:	R2 = source	R3 = destination	R4 = remainder
+                                     01FE   279 ;		R5 = index	R6/R7 = the quadword dividend
+                                     01FE   280 ;
+                               00FC  01FE   281 	.ENTRY	DIVIDE, ^M<R2,R3,R4,R5,R6,R7>
+                    52   04 AC   7D  0200   282 	MOVQ	4(AP), R2
+                            54   D4  0204   283 	CLRL	R4
+                    55   10 AC   D0  0206   284 	MOVL	16(AP), R5
+              00000004'EF   55   D1  020A   285 	CMPL	R5, WORDS
+                            19   18  0211   286 	BGEQ	20$
+  56   6245   3B9ACA00 8F   54   7A  0213   287 10$:	EMUL	R4, #BASE, (R2)[R5], R6
+        54   6345   56   0C AC   7B  021D   288 	EDIV	12(AP), R6, (R3)[R5], R4
+           E7 55   00000004'EF   F2  0224   289 	AOBLSS	WORDS, R5, 10$
+                                 04  022C   290 20$:	RET
+                                     022D   291 
+                                     022D   292 	.SBTTL	ADD - add two numbers
+                                     022D   293 ;
+                                     022D   294 ; ADD(sum, addend, start) adds addend to sum; addend's longwords before
+                                     022D   295 ; start are taken to be zero. Each longword's carry goes into the next
+                                     022D   296 ; more significant one.
+                                     022D   297 ;
+                                     022D   298 ; Registers:	R2 = sum	R3 = addend	R4 = carry
+                                     022D   299 ;		R5 = index	R6 = start
+                                     022D   300 ;
+                               007C  022D   301 	.ENTRY	ADD, ^M<R2,R3,R4,R5,R6>
+                    52   04 AC   7D  022F   302 	MOVQ	4(AP), R2
+                    56   0C AC   D0  0233   303 	MOVL	12(AP), R6
+                            54   D4  0237   304 	CLRL	R4
+         55   00000004'EF   01   C3  0239   305 	SUBL3	#1, WORDS, R5
+                       56   55   D1  0241   306 	CMPL	R5, R6
+                            29   19  0244   307 	BLSS	30$
+              50   6345   6245   C1  0246   308 10$:	ADDL3	(R2)[R5], (R3)[R5], R0	; Add the longwords and the carry
+                       50   54   C0  024C   309 	ADDL2	R4, R0
+                            54   D4  024F   310 	CLRL	R4
+              3B9ACA00 8F   50   D1  0251   311 	CMPL	R0, #BASE
+                            0A   19  0258   312 	BLSS	20$
+              50   3B9ACA00 8F   C2  025A   313 	SUBL2	#BASE, R0		; Carry one
+                       54   01   D0  0261   314 	MOVL	#1, R4
+                     6245   50   D0  0264   315 20$:	MOVL	R0, (R2)[R5]
+                            55   D7  0268   316 	DECL	R5
+                       56   55   D1  026A   317 	CMPL	R5, R6
+                            D7   18  026D   318 	BGEQ	10$
+                                     026F   319 
+                            54   D5  026F   320 30$:	TSTL	R4			; Carry on up from start
+                            26   13  0271   321 	BEQL	50$
+                            55   D5  0273   322 	TSTL	R5
+                            22   19  0275   323 	BLSS	50$
+                50   6245   54   C1  0277   324 	ADDL3	R4, (R2)[R5], R0
+                            54   D4  027C   325 	CLRL	R4
+              3B9ACA00 8F   50   D1  027E   326 	CMPL	R0, #BASE
+                            0A   19  0285   327 	BLSS	40$
+              50   3B9ACA00 8F   C2  0287   328 	SUBL2	#BASE, R0
+                       54   01   D0  028E   329 	MOVL	#1, R4
+                     6245   50   D0  0291   330 40$:	MOVL	R0, (R2)[R5]
+                            55   D7  0295   331 	DECL	R5
+                            D6   11  0297   332 	BRB	30$
+                                 04  0299   333 50$:	RET
+                                     029A   334 
+PI                              Compute pi to any number of decimal plac  6-OCT-2026 13:39:16  VAX MACRO V5.4-3            Page   7
+V1.0                            SUBTRACT - subtract one number from anot  6-OCT-2026 13:38:05  DUA1:[000000]PI.MAR;1             (1)
+
+                                     029A   335 	.SBTTL	SUBTRACT - subtract one number from another
+                                     029A   336 ;
+                                     029A   337 ; SUBTRACT(difference, subtrahend, start) subtracts subtrahend from
+                                     029A   338 ; difference, borrowing as ADD carries. It's never called on to make a
+                                     029A   339 ; negative number.
+                                     029A   340 ;
+                                     029A   341 ; Registers:	R2 = difference	R3 = subtrahend	R4 = borrow
+                                     029A   342 ;		R5 = index	R6 = start
+                                     029A   343 ;
+                               007C  029A   344 	.ENTRY	SUBTRACT, ^M<R2,R3,R4,R5,R6>
+                    52   04 AC   7D  029C   345 	MOVQ	4(AP), R2
+                    56   0C AC   D0  02A0   346 	MOVL	12(AP), R6
+                            54   D4  02A4   347 	CLRL	R4
+         55   00000004'EF   01   C3  02A6   348 	SUBL3	#1, WORDS, R5
+                       56   55   D1  02AE   349 	CMPL	R5, R6
+                            24   19  02B1   350 	BLSS	30$
+              50   6245   6345   C3  02B3   351 10$:	SUBL3	(R3)[R5], (R2)[R5], R0	; Subtract the longwords and the
+                       50   54   C2  02B9   352 	SUBL2	R4, R0			; borrow
+                            54   D4  02BC   353 	CLRL	R4
+                            50   D5  02BE   354 	TSTL	R0
+                            0A   18  02C0   355 	BGEQ	20$
+              50   3B9ACA00 8F   C0  02C2   356 	ADDL2	#BASE, R0		; Borrow one
+                       54   01   D0  02C9   357 	MOVL	#1, R4
+                     6245   50   D0  02CC   358 20$:	MOVL	R0, (R2)[R5]
+                            55   D7  02D0   359 	DECL	R5
+                       56   55   D1  02D2   360 	CMPL	R5, R6
+                            DC   18  02D5   361 	BGEQ	10$
+                                     02D7   362 
+                            54   D5  02D7   363 30$:	TSTL	R4			; Borrow on up from start
+                            21   13  02D9   364 	BEQL	50$
+                            55   D5  02DB   365 	TSTL	R5
+                            1D   19  02DD   366 	BLSS	50$
+                50   6245   54   C3  02DF   367 	SUBL3	R4, (R2)[R5], R0
+                            54   D4  02E4   368 	CLRL	R4
+                            50   D5  02E6   369 	TSTL	R0
+                            0A   18  02E8   370 	BGEQ	40$
+              50   3B9ACA00 8F   C0  02EA   371 	ADDL2	#BASE, R0
+                       54   01   D0  02F1   372 	MOVL	#1, R4
+                     6245   50   D0  02F4   373 40$:	MOVL	R0, (R2)[R5]
+                            55   D7  02F8   374 	DECL	R5
+                            DB   11  02FA   375 	BRB	30$
+                                 04  02FC   376 50$:	RET
+                                     02FD   377 
+                                     02FD   378 	.SBTTL	PRINT_PI - print the number
+                                     02FD   379 ;
+                                     02FD   380 ; PRINT_PI(number, places) prints number's integer part, a point, and
+                                     02FD   381 ; places digits of its fraction, LINE_DIGITS to a line in groups of
+                                     02FD   382 ; GROUP_DIGITS. Each fraction longword becomes nine digits by way of
+                                     02FD   383 ; packed decimal: CVTLP, then CVTPS, which keeps the leading zeros.
+                                     02FD   384 ; (Both change R0 to R3, so this routine keeps its state in R4 to R8.)
+                                     02FD   385 ;
+                                     02FD   386 ; Registers:	R7 = places left	R8 = number's address
+                                     02FD   387 ;		R4 = longword index	R5 = digits left in the longword
+                                     02FD   388 ;		R6 = the next digit's address
+                                     02FD   389 ;
+                               01F0  02FD   390 	.ENTRY	PRINT_PI, ^M<R4,R5,R6,R7,R8>
+                    57   08 AC   D0  02FF   391 	MOVL	8(AP), R7
+PI                              Compute pi to any number of decimal plac  6-OCT-2026 13:39:16  VAX MACRO V5.4-3            Page   8
+V1.0                            PRINT_PI - print the number               6-OCT-2026 13:38:05  DUA1:[000000]PI.MAR;1             (1)
+
+                    58   04 AC   D0  0303   392 	MOVL	4(AP), R8
+              50   0000007E'EF   9E  0307   393 	MOVAB	LINE, R0		; Start the line with "3."
+                  80   68   30   81  030E   394 	ADDB3	#^A/0/, (R8), (R0)+
+                       80   2E   90  0312   395 	MOVB	#^A/./, (R0)+
+              00000072'EF   50   D0  0315   396 	MOVL	R0, LINE_PTR
+                   00000076'EF   D4  031C   397 	CLRL	LINE_COUNT
+                   0000007A'EF   D4  0322   398 	CLRL	GROUP_COUNT
+                                     0328   399 
+                       54   01   D0  0328   400 	MOVL	#1, R4
+       000000D6'EF   09   6844   F9  032B   401 10$:	CVTLP	(R8)[R4], #9, PACKED
+         09   000000D6'EF   09   08  0334   402 	CVTPS	#9, PACKED, #9, NUMERIC
+                   000000DB'EF       033C       
+              56   000000DC'EF   9E  0341   403 	MOVAB	NUMERIC+1, R6		; Skip the sign
+                       55   09   D0  0348   404 	MOVL	#9, R5
+                       7E   86   9A  034B   405 20$:	MOVZBL	(R6)+, -(SP)
+              00000370'EF   01   FB  034E   406 	CALLS	#1, PUT_DIGIT
+                            57   D7  0355   407 	DECL	R7
+                            07   13  0357   408 	BEQL	30$
+                         EF 55   F5  0359   409 	SOBGTR	R5, 20$
+                            54   D6  035C   410 	INCL	R4
+                            CB   11  035E   411 	BRB	10$
+                                     0360   412 
+                   00000076'EF   D5  0360   413 30$:	TSTL	LINE_COUNT		; Print the last line
+                            07   13  0366   414 	BEQL	40$
+              000003B3'EF   00   FB  0368   415 	CALLS	#0, FLUSH_LINE
+                                 04  036F   416 40$:	RET
+                                     0370   417 
+                                     0370   418 	.SBTTL	PUT_DIGIT - add a digit to the line
+                                     0370   419 ;
+                                     0370   420 ; PUT_DIGIT(digit) adds the ASCII digit to LINE, printing a full line
+                                     0370   421 ; first and putting a space between groups.
+                                     0370   422 ;
+                               0000  0370   423 	.ENTRY	PUT_DIGIT, ^M<>
+              32   00000076'EF   D1  0372   424 	CMPL	LINE_COUNT, #LINE_DIGITS
+                            07   19  0379   425 	BLSS	10$
+              000003B3'EF   00   FB  037B   426 	CALLS	#0, FLUSH_LINE
+              50   00000072'EF   D0  0382   427 10$:	MOVL	LINE_PTR, R0
+              0A   0000007A'EF   D1  0389   428 	CMPL	GROUP_COUNT, #GROUP_DIGITS
+                            09   19  0390   429 	BLSS	20$
+                       80   20   90  0392   430 	MOVB	#^A/ /, (R0)+
+                   0000007A'EF   D4  0395   431 	CLRL	GROUP_COUNT
+                    80   04 AC   90  039B   432 20$:	MOVB	4(AP), (R0)+
+              00000072'EF   50   D0  039F   433 	MOVL	R0, LINE_PTR
+                   00000076'EF   D6  03A6   434 	INCL	LINE_COUNT
+                   0000007A'EF   D6  03AC   435 	INCL	GROUP_COUNT
+                                 04  03B2   436 	RET
+                                     03B3   437 
+                                     03B3   438 	.SBTTL	FLUSH_LINE - print the line
+                                     03B3   439 ;
+                                     03B3   440 ; FLUSH_LINE prints LINE with LIB$PUT_OUTPUT and starts the next one,
+                                     03B3   441 ; indented two spaces to line up under the first line's digits.
+                                     03B3   442 ;
+                               0000  03B3   443 	.ENTRY	FLUSH_LINE, ^M<>
+              51   0000007E'EF   9E  03B5   444 	MOVAB	LINE, R1
+         50   00000072'EF   51   C3  03BC   445 	SUBL3	R1, LINE_PTR, R0
+              000000CE'EF   50   B0  03C4   446 	MOVW	R0, LINE_DESC
+                   000000CE'EF   7F  03CB   447 	PUSHAQ	LINE_DESC
+PI                              Compute pi to any number of decimal plac  6-OCT-2026 13:39:16  VAX MACRO V5.4-3            Page   9
+V1.0                            FLUSH_LINE - print the line               6-OCT-2026 13:38:05  DUA1:[000000]PI.MAR;1             (1)
+
+              00000000'GF   01   FB  03D1   448 	CALLS	#1, G^LIB$PUT_OUTPUT
+              50   0000007E'EF   9E  03D8   449 	MOVAB	LINE, R0
+                  80   2020 8F   B0  03DF   450 	MOVW	#^A/  /, (R0)+
+              00000072'EF   50   D0  03E4   451 	MOVL	R0, LINE_PTR
+                   00000076'EF   D4  03EB   452 	CLRL	LINE_COUNT
+                   0000007A'EF   D4  03F1   453 	CLRL	GROUP_COUNT
+                                 04  03F7   454 	RET
+                                     03F8   455 
+                                     03F8   456 	.END	PI
+PI                              Compute pi to any number of decimal plac  6-OCT-2026 13:39:16  VAX MACRO V5.4-3            Page  10
+Symbol table                                                              6-OCT-2026 13:38:05  DUA1:[000000]PI.MAR;1             (1)
+
+ADD                              0000022D RG    03        
+ALLOCATE                         0000010B RG    03        
+ARCTAN                           00000153 RG    03        
+BAD_MSG                          000000E5 R     02        
+BASE                           = 3B9ACA00                 
+BYTES                            00000008 R     02        
+CMD_BUF                          0000001A R     02        
+CMD_DESC                         0000006A R     02        
+CMD_LEN                          00000018 R     02        
+COMPUTE_PI                       00000132 RG    03        
+DEFAULT_PLACES                 = 00000064                 
+DIVIDE                           000001FE RG    03        
+FLUSH_LINE                       000003B3 RG    03        
+GET_PLACES                       00000079 RG    03        
+GROUP_COUNT                      0000007A R     02        
+GROUP_DIGITS                   = 0000000A                 
+GUARD                          = 00000002                 
+LIB$GET_FOREIGN                  ********   X   03        
+LIB$GET_VM                       ********   X   03        
+LIB$PUT_OUTPUT                   ********   X   03        
+LINE                             0000007E R     02        
+LINE_COUNT                       00000076 R     02        
+LINE_DESC                        000000CE R     02        
+LINE_DIGITS                    = 00000032                 
+LINE_PTR                         00000072 R     02        
+MAX_PLACES                     = 000186A0                 
+NUMERIC                          000000DB R     02        
+PACKED                           000000D6 R     02        
+PI                               00000000 RG    03        
+PLACES                           00000000 R     02        
+PRINT_PI                         000002FD RG    03        
+PUT_DIGIT                        00000370 RG    03        
+QUOT                             00000014 R     02        
+SS$_BADPARAM                   = 00000014                 
+SS$_NORMAL                     = 00000001                 
+STS$M_INHIB_MSG                = 10000000                 
+SUBTRACT                         0000029A RG    03        
+SUM                              0000000C R     02        
+TERM                             00000010 R     02        
+WORDS                            00000004 R     02        
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+$ABS$                           00000000  (    0.)  01 (  1.)  NOPIC   USR   CON   ABS   LCL NOSHR   EXE   RD    WRT NOVEC BYTE  
+PI_DATA                         00000132  (  306.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+PI_CODE                         000003F8  ( 1016.)  03 (  3.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+PI                              Compute pi to any number of decimal plac  6-OCT-2026 13:39:16  VAX MACRO V5.4-3            Page  11
+VAX-11 Macro Run Statistics                                               6-OCT-2026 13:38:05  DUA1:[000000]PI.MAR;1             (1)
+
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  429     00:00:00.00    00:00:00.00
+Command processing              922     00:00:00.01    00:00:00.01
+Pass 1                          597     00:00:00.08    00:00:00.08
+Symbol table sort                 1     00:00:00.01    00:00:00.01
+Pass 2                           94     00:00:00.01    00:00:00.01
+Symbol table output               7     00:00:00.00    00:00:00.00
+Psect synopsis output             3     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           2075     00:00:00.11    00:00:00.11
+
+The working set limit was 1112 pages.
+42895 bytes (84 pages) of virtual memory were used to buffer the intermediate code.
+There were 50 pages of symbol table space allocated to hold 770 non-local and 32 local symbols.
+456 source lines were read in Pass 1, producing 49 object records in Pass 2.
+9 pages of virtual memory were used to define 8 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        4        
+
+792 GETS were required to define 4 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST PI.MAR

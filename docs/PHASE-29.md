@@ -1953,3 +1953,24 @@ It also corrected two of them.
   check that VMS accepts a govax `LINK/DEBUG` image whose GST is padded
   (Decision 7; subtask 19 says how). If VMS objects, the fallback is an
   image with a short last block, which means `rms` and ods2 changes.
+
+### 2026-10-06 — Follow-up: PI.EXE's fixup cells
+
+- The author's simh run of `testdata/mar/pi.mar` (its VMS 7.3 object,
+  listing, map, image, and both analyses are now in `testdata/mar/vax`)
+  is a fourth data point for the cell order. Real LINK gives LIBRTL's
+  cells as `LIB$GET_FOREIGN`, `LIB$PUT_OUTPUT`, `LIB$GET_VM`: not name
+  order, but PI's first-reference order, which CELLS's isn't.
+- None of the rules this subtask tried fits, and nor do simple hashes of
+  the names (a sum of characters, CRC-32, multiply-by-31 or -33, or a
+  rotate and XOR, each modulo every table size up to 4100, with or
+  without `LIB$`, buckets taken either way): about 170 of 49,000
+  combinations fit all three images' orders, which is what chance gives
+  for orders this short. LIBRTL's own GST order is still untried, since
+  the clean room can't look into it here.
+- `TestLinkPiMatchesRealLINK` is skipped with that reason, like FAILSIG's
+  images. Everything else of PI's matches: govax's object and listing
+  real MACRO's (`TestFixtureLadderObjects`, `TestFixtureListings`), the
+  map real LINK's (`TestMapMatchesRealLINK`), and ANALYZE/OBJECT and
+  ANALYZE/IMAGE real ANALYZE's (`TestObjectPages`, `TestImagePages`,
+  which now also reads `testdata/mar/vax`).

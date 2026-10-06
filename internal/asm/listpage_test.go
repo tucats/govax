@@ -159,7 +159,7 @@ func TestFixtureListings(t *testing.T) {
 		// forth was listed /CROSS_REFERENCE.
 		cases = append(cases, fixture{
 			name: name, source: path, listing: filepath.Join(marDir, "vax", name+".lis"),
-			starlet: usesStarlet[name], xref: usesStarlet[name],
+			starlet: usesStarlet[name], xref: name == "forth",
 		})
 	}
 

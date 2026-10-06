@@ -1,0 +1,2269 @@
+
+Analyze Object File                           6-OCT-2026 13:39:26.71   Page 1
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 47 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "PI"
+	module version: "V1.0"
+	creation   date/time:  6-OCT-2026 13:39
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 19 bytes
+
+	Textual information:
+	"MACRO/LIST PI.MAR"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 42 bytes
+
+	Textual information:
+	"Compute pi to any number of decimal plac"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 12 bytes
+
+	1)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 02 00 00 00 00 00 BC 09|  0000  |.¼......|
+		                   49 50|  0008  |PI      |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 55 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "LIB$GET_FOREIGN"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                           6-OCT-2026 13:39:26.71   Page 2
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "LIB$GET_VM"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "LIB$PUT_OUTPUT"
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+8.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 15 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+
+Analyze Object File                           6-OCT-2026 13:39:26.71   Page 3
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: "$ABS$"
+
+
+10.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 17 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 306 (%X'00000132')
+		symbol: "PI_DATA"
+
+
+12.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 182 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 26 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 00 00 00 00 64|  0000  |d.......|
+		 00 00 00 00 00 00 00 00|  0008  |........|
+
+Analyze Object File                           6-OCT-2026 13:39:26.71   Page 4
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+		 00 00 00 00 00 00 00 00|  0010  |........|
+		                   00 00|  0018  |..      |
+
+	4)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 80 (%X'00000050')
+
+	5)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             01 0E 00 50|  0000  |P...    |
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 26 (%X'0000001A')
+
+	7)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	8)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 00 00 00 00 00|  0000  |........|
+		             00 00 00 00|  0008  |....    |
+
+	9)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 80 (%X'00000050')
+
+	10)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             01 0E 00 00|  0000  |....    |
+
+	11)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 126 (%X'0000007E')
+
+	12)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	13)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 5 (%X'00000005')
+
+	14)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 10 (%X'0000000A')
+
+	15)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 17694720 (%X'010E0000')
+
+	16)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	17)  TIR$C_STA_PL (6, %X'06')                           stack depth: 1
+		psect: 2
+		value: 233 (%X'000000E9')
+
+	18)  TIR$C_STA_UB (7, %X'07')                           stack depth: 2
+		unsigned value: 4 (%X'00000004')
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.71   Page 5
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	19)  TIR$C_OPR_ADD (51, %X'33')                         stack depth: 1
+
+	20)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	21)  Store Immediate, 69 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 41 42 2D 45 2D 49 50 25|  0000  |%PI-E-BA|
+		 20 2C 54 4E 55 4F 43 44|  0008  |DCOUNT, |
+		 62 6D 75 6E 20 65 68 74|  0010  |the numb|
+		 65 64 20 66 6F 20 72 65|  0018  |er of de|
+		 6C 70 20 6C 61 6D 69 63|  0020  |cimal pl|
+		 73 75 6D 20 73 65 63 61|  0028  |aces mus|
+		 6F 72 66 20 65 62 20 74|  0030  |t be fro|
+		 31 20 6F 74 20 31 20 6D|  0038  |m 1 to 1|
+		          30 30 30 30 30|  0040  |00000   |
+
+	22)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: -77 (%X'FFFFFFB3')
+
+	23)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 69 (%X'00000045')
+
+	24)  TIR$C_STO_W (38, %X'26')                           stack depth: 0
+
+	25)  TIR$C_CTL_AUGRB (81, %X'51')
+		value: 75 (%X'0000004B')
+
+
+13.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 17 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 3
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 1016 (%X'000003F8')
+		symbol: "PI_CODE"
+
+
+14.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 7 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 3
+		value: 0 (%X'00000000')
+
+Analyze Object File                           6-OCT-2026 13:39:26.71   Page 6
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+
+15.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 15 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 3
+		value: 0 (%X'00000000')
+		entry mask: <R2>
+		symbol: "PI"
+
+
+16.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+17.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 155 bytes
+
+	1)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DF|  0000  |ß       |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   01 FB|  0000  |û.      |
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 3
+		value: 121 (%X'00000079')
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.71   Page 7
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	8)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	9)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          09 C7 66 50 E9|  0000  |éPfÇ.   |
+
+	10)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	11)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	12)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	13)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             50 04 C1 50|  0000  |PÁ.P    |
+
+	14)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 4 (%X'00000004')
+
+	15)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	16)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	17)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 C5|  0000  |Å.      |
+
+	18)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 4 (%X'00000004')
+
+	19)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.71   Page 8
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	20)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	21)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 8 (%X'00000008')
+
+	22)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	23)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	24)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DE|  0000  |Þ       |
+
+	25)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 12 (%X'0000000C')
+
+	26)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	27)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	28)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          01 FB 52 DD 52|  0000  |RÝRû.   |
+
+	29)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 267 (%X'0000010B')
+
+	30)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	31)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	32)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 01 FB 04 A2 DF 37 50 E9|  0000  |éP7ß¢.û.|
+
+	33)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 267 (%X'0000010B')
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.71   Page 9
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	34)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	35)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	36)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 01 FB 08 A2 DF 2A 50 E9|  0000  |éP*ß¢.û.|
+
+	37)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 267 (%X'0000010B')
+
+	38)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	39)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	40)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          00 FB 1D 50 E9|  0000  |éP.û.   |
+
+	41)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 306 (%X'00000132')
+
+	42)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	43)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	44)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	45)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	46)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.71   Page 10
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	47)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	48)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	49)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 12 (%X'0000000C')
+
+	50)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	51)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	52)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   02 FB|  0000  |û.      |
+
+	53)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 765 (%X'000002FD')
+
+	54)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	55)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	56)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 50 01 D0|  0000  |Ð.P.    |
+
+	57)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 28 (%X'0000001C')
+
+
+18.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 23 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 3
+		value: 121 (%X'00000079')
+
+Analyze Object File                           6-OCT-2026 13:39:26.72   Page 11
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+		entry mask: <R2,R3,R4>
+		symbol: "GET_PLACES"
+
+
+19.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+20.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 188 bytes
+
+	1)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      3F|  0000  |?       |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 24 (%X'00000018')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                7F 7E D4|  0000  |Ô~.     |
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 106 (%X'0000006A')
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	8)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	9)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+	10)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "LIB$GET_FOREIGN"
+
+	11)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	12)  Store Immediate, 4 bytes:
+
+Analyze Object File                           6-OCT-2026 13:39:26.72   Page 12
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             B4 06 50 E8|  0000  |èP.´    |
+
+	13)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 24 (%X'00000018')
+
+	14)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	15)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	16)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      3C|  0000  |<       |
+
+	17)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 24 (%X'00000018')
+
+	18)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	19)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	20)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   9E 52|  0000  |R.      |
+
+	21)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 26 (%X'0000001A')
+
+	22)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	23)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	24)  Store Immediate, 81 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 91 45 13 52 D5 54 D4 53|  0000  |SÔTÕR.E.|
+		 52 D7 53 D6 06 12 20 63|  0008  |c ..ÖS×R|
+		 30 83 2E 13 52 D5 F1 11|  0010  |.ñÕR...0|
+		 9A 18 1A 09 50 91 50 63|  0018  |cP.P....|
+		 54 50 C0 54 0A C4 50 50|  0020  |PPÄ.TÀPT|
+
+Analyze Object File                           6-OCT-2026 13:39:26.72   Page 13
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+		 14 00 01 86 A0 8F 54 D1|  0028  |ÑT......|
+		 91 DB 11 52 D7 53 D6 1F|  0030  |.ÖS×R.Û.|
+		 52 D7 53 D6 14 12 20 63|  0038  |c ..ÖS×R|
+		 08 13 54 D5 F3 12 52 D5|  0040  |ÕR.óÕT..|
+		 04 50 01 D0 04 BC 54 D0|  0048  |ÐT¼.Ð.P.|
+		                      7F|  0050  |.       |
+
+	25)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 2
+		value: 229 (%X'000000E5')
+
+	26)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	27)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	28)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   01 FB|  0000  |û.      |
+
+	29)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "LIB$PUT_OUTPUT"
+
+	30)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	31)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 04 50 10 00 00 14 8F D0|  0000  |Ð.....P.|
+
+	32)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 124 (%X'0000007C')
+
+
+21.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 21 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 3
+		value: 267 (%X'0000010B')
+		entry mask: <R2,R3,R4,R5,R6>
+		symbol: "ALLOCATE"
+
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.72   Page 14
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+22.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+23.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 54 bytes
+
+	1)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    DF 56 DD 56 04 AC D0|  0000  |Ð¬.VÝVß |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 8 (%X'00000008')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   02 FB|  0000  |û.      |
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "LIB$GET_VM"
+
+	7)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	8)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    00 66 00 2C 0E 50 E9|  0000  |éP.,.f. |
+
+	9)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 8 (%X'00000008')
+
+	10)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	11)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	12)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       04 50 01 D0 00 B6|  0000  |¶.Ð.P.  |
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.72   Page 15
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	13)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+24.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 23 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 3
+		value: 306 (%X'00000132')
+		entry mask: <>
+		symbol: "COMPUTE_PI"
+
+
+25.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+26.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 41 bytes
+
+	1)  Store Immediate, 18 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 EF 8F DD 01 DD|  0000  |Ý.Ý.ï...|
+		 10 DD 05 DD 00 DD 04 DD|  0008  |Ý.Ý.Ý.Ý.|
+		                   03 FB|  0010  |û.      |
+
+	2)  TIR$C_STA_PW (5, %X'05')                            stack depth: 1
+		psect: 3
+		value: 339 (%X'00000153')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+	6)  TIR$C_STA_PW (5, %X'05')                            stack depth: 1
+		psect: 3
+		value: 339 (%X'00000153')
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.72   Page 16
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	8)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	9)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      04|  0000  |.       |
+
+	10)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 60 (%X'0000003C')
+
+
+27.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 3
+		value: 339 (%X'00000153')
+		entry mask: <R2,R3,R4,R5>
+		symbol: "ARCTAN"
+
+
+28.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+29.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 213 bytes
+
+	1)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 6E 00 2C|  0000  |,.n.    |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 8 (%X'00000008')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.72   Page 17
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 16 (%X'00000010')
+
+	6)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      FF|  0000  |.       |
+
+	7)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	8)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                04 AC D0|  0000  |Ð¬.     |
+
+	9)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 16 (%X'00000010')
+
+	10)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      FF|  0000  |.       |
+
+	11)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	12)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 54 DD 55 0C AC D0 54 D4|  0000  |ÔTÐ¬.UÝT|
+		             DD 08 AC DD|  0008  |Ý¬.Ý    |
+
+	13)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 16 (%X'00000010')
+
+	14)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	15)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	16)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	17)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 16 (%X'00000010')
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.72   Page 18
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	18)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	19)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	20)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	21)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 510 (%X'000001FE')
+
+	22)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	23)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	24)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 01 D0 53 08 AC 08 AC C5|  0000  |Å¬.¬.SÐ.|
+		       DD 52 DD 54 DD 52|  0008  |RÝTÝRÝ  |
+
+	25)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 20 (%X'00000014')
+
+	26)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	27)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	28)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	29)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 16 (%X'00000010')
+
+	30)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.72   Page 19
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	31)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	32)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	33)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 510 (%X'000001FE')
+
+	34)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	35)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	36)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 54 DD|  0000  |ÝTÝ     |
+
+	37)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 20 (%X'00000014')
+
+	38)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	39)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	40)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	41)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 12 (%X'0000000C')
+
+	42)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	43)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	44)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          03 FB 09 55 E8|  0000  |èU.û.   |
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.72   Page 20
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	45)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 557 (%X'0000022D')
+
+	46)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	47)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	48)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             03 FB 07 11|  0000  |..û.    |
+
+	49)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 666 (%X'0000029A')
+
+	50)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	51)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	52)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 DD 53 DD 54 DD 55 01 CC|  0000  |Ì.UÝTÝSÝ|
+
+	53)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 16 (%X'00000010')
+
+	54)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	55)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	56)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	57)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 16 (%X'00000010')
+
+	58)  Store Immediate, 1 byte:
+
+Analyze Object File                           6-OCT-2026 13:39:26.72   Page 21
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	59)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	60)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	61)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 510 (%X'000001FE')
+
+	62)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	63)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	64)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      D0|  0000  |Ð       |
+
+	65)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 16 (%X'00000010')
+
+	66)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	67)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	68)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    F2 09 12 60 44 D5 50|  0000  |PÕD`..ò |
+
+	69)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 4 (%X'00000004')
+
+	70)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	71)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.72   Page 22
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	72)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 94 11 52 02 C0 04 F3 54|  0000  |Tó.À.R..|
+
+	73)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 252 (%X'000000FC')
+
+
+30.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 3
+		value: 510 (%X'000001FE')
+		entry mask: <R2,R3,R4,R5,R6,R7>
+		symbol: "DIVIDE"
+
+
+31.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+32.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 53 bytes
+
+	1)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 AC D0 54 D4 52 04 AC 7D|  0000  |}¬.RÔTÐ¬|
+		             55 D1 55 10|  0008  |.UÑU    |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 4 (%X'00000004')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 20 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 9A CA 00 8F 54 7A 19 18|  0000  |..zT..Ê.|
+		 56 0C AC 7B 56 62 45 3B|  0008  |;EbV{¬.V|
+		             F2 54 63 45|  0010  |EcTò    |
+
+Analyze Object File                           6-OCT-2026 13:39:26.72   Page 23
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 4 (%X'00000004')
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	8)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	9)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                04 E7 55|  0000  |Uç.     |
+
+	10)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 124 (%X'0000007C')
+
+
+33.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 16 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 3
+		value: 557 (%X'0000022D')
+		entry mask: <R2,R3,R4,R5,R6>
+		symbol: "ADD"
+
+
+34.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+35.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 113 bytes
+
+	1)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 56 0C AC D0 52 04 AC 7D|  0000  |}¬.RÐ¬.V|
+		             01 C3 54 D4|  0008  |ÔTÃ.    |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 4 (%X'00000004')
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.72   Page 24
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 90 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 45 C1 29 19 56 55 D1 55|  0000  |UÑUV.)ÁE|
+		 D4 50 54 C0 50 63 45 62|  0008  |bEcPÀTPÔ|
+		 3B 9A CA 00 8F 50 D1 54|  0010  |TÑP..Ê.;|
+		 3B 9A CA 00 8F C2 0A 19|  0018  |..Â..Ê.;|
+		 62 45 50 D0 54 01 D0 50|  0020  |PÐ.TÐPEb|
+		 D5 D7 18 56 55 D1 55 D7|  0028  |×UÑUV.×Õ|
+		 C1 22 19 55 D5 26 13 54|  0030  |T.&ÕU."Á|
+		 50 D1 54 D4 50 62 45 54|  0038  |TEbPÔTÑP|
+		 C2 0A 19 3B 9A CA 00 8F|  0040  |..Ê.;..Â|
+		 01 D0 50 3B 9A CA 00 8F|  0048  |..Ê.;PÐ.|
+		 11 55 D7 62 45 50 D0 54|  0050  |TÐPEb×U.|
+		                   04 D6|  0058  |Ö.      |
+
+	6)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 124 (%X'0000007C')
+
+
+36.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 21 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 3
+		value: 666 (%X'0000029A')
+		entry mask: <R2,R3,R4,R5,R6>
+		symbol: "SUBTRACT"
+
+
+37.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+38.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 104 bytes
+
+	1)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 56 0C AC D0 52 04 AC 7D|  0000  |}¬.RÐ¬.V|
+		             01 C3 54 D4|  0008  |ÔTÃ.    |
+
+Analyze Object File                           6-OCT-2026 13:39:26.72   Page 25
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 4 (%X'00000004')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 80 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 45 C3 24 19 56 55 D1 55|  0000  |UÑUV.$ÃE|
+		 D4 50 54 C2 50 62 45 63|  0008  |cEbPÂTPÔ|
+		 00 8F C0 0A 18 50 D5 54|  0010  |TÕP..À..|
+		 D0 54 01 D0 50 3B 9A CA|  0018  |Ê.;PÐ.TÐ|
+		 56 55 D1 55 D7 62 45 50|  0020  |PEb×UÑUV|
+		 55 D5 21 13 54 D5 DC 18|  0028  |.ÜÕT.!ÕU|
+		 D4 50 62 45 54 C3 1D 19|  0030  |..ÃTEbPÔ|
+		 00 8F C0 0A 18 50 D5 54|  0038  |TÕP..À..|
+		 D0 54 01 D0 50 3B 9A CA|  0040  |Ê.;PÐ.TÐ|
+		 04 DB 11 55 D7 62 45 50|  0048  |PEb×U.Û.|
+
+	6)  TIR$C_STA_UW (8, %X'08')                            stack depth: 1
+		unsigned value: 496 (%X'000001F0')
+
+
+39.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 21 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 3
+		value: 765 (%X'000002FD')
+		entry mask: <R4,R5,R6,R7,R8>
+		symbol: "PRINT_PI"
+
+
+40.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.72   Page 26
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+41.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 148 bytes
+
+	1)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 58 04 AC D0 57 08 AC D0|  0000  |Ð¬.WÐ¬.X|
+		                      9E|  0008  |.       |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 126 (%X'0000007E')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 80 2E 90 80 68 30 81 50|  0000  |P.0h....|
+		                   50 D0|  0008  |ÐP      |
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 114 (%X'00000072')
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	8)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	9)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      D4|  0000  |Ô       |
+
+	10)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 118 (%X'00000076')
+
+	11)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	12)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	13)  Store Immediate, 1 byte:
+
+Analyze Object File                           6-OCT-2026 13:39:26.73   Page 27
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      D4|  0000  |Ô       |
+
+	14)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 122 (%X'0000007A')
+
+	15)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	16)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	17)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    09 68 44 F9 54 01 D0|  0000  |Ð.TùDh. |
+
+	18)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 2
+		value: 214 (%X'000000D6')
+
+	19)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	20)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	21)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   09 08|  0000  |..      |
+
+	22)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 2
+		value: 214 (%X'000000D6')
+
+	23)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	24)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	25)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      09|  0000  |.       |
+
+	26)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 2
+		value: 219 (%X'000000DB')
+
+Analyze Object File                           6-OCT-2026 13:39:26.73   Page 28
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+
+	27)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	28)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	29)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9E|  0000  |.       |
+
+	30)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 2
+		value: 219 (%X'000000DB')
+
+	31)  TIR$C_STA_UB (7, %X'07')                           stack depth: 2
+		unsigned value: 1 (%X'00000001')
+
+	32)  TIR$C_OPR_ADD (51, %X'33')                         stack depth: 1
+
+	33)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	34)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	35)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 FB 7E 86 9A 55 09 D0 56|  0000  |VÐ.U..~û|
+		                      01|  0008  |.       |
+
+	36)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 880 (%X'00000370')
+
+	37)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	38)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	39)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 D6 EF 55 F5 07 13 57 D7|  0000  |×W..õUïÖ|
+		             D5 CB 11 54|  0008  |T.ËÕ    |
+
+	40)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 118 (%X'00000076')
+
+Analyze Object File                           6-OCT-2026 13:39:26.73   Page 29
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+
+	41)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	42)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	43)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 FB 07 13|  0000  |..û.    |
+
+	44)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 3
+		value: 947 (%X'000003B3')
+
+	45)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	46)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	47)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      04|  0000  |.       |
+
+	48)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+42.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 22 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 3
+		value: 880 (%X'00000370')
+		entry mask: <>
+		symbol: "PUT_DIGIT"
+
+
+43.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.73   Page 30
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+44.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 86 bytes
+
+	1)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      D1|  0000  |Ñ       |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 118 (%X'00000076')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          00 FB 07 19 32|  0000  |2..û.   |
+
+	6)  TIR$C_STA_PW (5, %X'05')                            stack depth: 1
+		psect: 3
+		value: 947 (%X'000003B3')
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	8)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	9)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      D0|  0000  |Ð       |
+
+	10)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 114 (%X'00000072')
+
+	11)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	12)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	13)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   D1 50|  0000  |PÑ      |
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.73   Page 31
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	14)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 122 (%X'0000007A')
+
+	15)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	16)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	17)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    D4 80 20 90 09 19 0A|  0000  |.... .Ô |
+
+	18)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 122 (%X'0000007A')
+
+	19)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	20)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	21)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       50 D0 80 04 AC 90|  0000  |.¬..ÐP  |
+
+	22)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 114 (%X'00000072')
+
+	23)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	24)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	25)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      D6|  0000  |Ö       |
+
+	26)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 118 (%X'00000076')
+
+	27)  Store Immediate, 1 byte:
+
+Analyze Object File                           6-OCT-2026 13:39:26.73   Page 32
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	28)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	29)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      D6|  0000  |Ö       |
+
+	30)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 122 (%X'0000007A')
+
+	31)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	32)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	33)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      04|  0000  |.       |
+
+	34)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+45.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 23 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 3
+		value: 947 (%X'000003B3')
+		entry mask: <>
+		symbol: "FLUSH_LINE"
+
+
+46.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.73   Page 33
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+47.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 100 bytes
+
+	1)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9E|  0000  |.       |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 126 (%X'0000007E')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                51 C3 51|  0000  |QÃQ     |
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 114 (%X'00000072')
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	8)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	9)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                50 B0 50|  0000  |P°P     |
+
+	10)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 2
+		value: 206 (%X'000000CE')
+
+	11)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	12)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	13)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      7F|  0000  |.       |
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.73   Page 34
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	14)  TIR$C_STA_PW (5, %X'05')                           stack depth: 1
+		psect: 2
+		value: 206 (%X'000000CE')
+
+	15)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	16)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	17)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   01 FB|  0000  |û.      |
+
+	18)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "LIB$PUT_OUTPUT"
+
+	19)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	20)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9E|  0000  |.       |
+
+	21)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 126 (%X'0000007E')
+
+	22)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	23)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	24)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 50 D0 80 20 20 8F B0 50|  0000  |P°.  .ÐP|
+
+	25)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 114 (%X'00000072')
+
+	26)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	27)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	28)  Store Immediate, 1 byte:
+
+Analyze Object File                           6-OCT-2026 13:39:26.73   Page 35
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      D4|  0000  |Ô       |
+
+	29)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 118 (%X'00000076')
+
+	30)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	31)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	32)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      D4|  0000  |Ô       |
+
+	33)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 2
+		value: 122 (%X'0000007A')
+
+	34)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	35)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	36)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      04|  0000  |.       |
+
+
+48.  TRACEBACK INFORMATION (OBJ$C_TBT), 214 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 BE 0A|  0000  |.¾.     |
+
+	2)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 3
+		value: 557 (%X'0000022D')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    00 BE 0F 44 44 41 03|  0000  |.ADD.¾. |
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.73   Page 36
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	5)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 3
+		value: 267 (%X'0000010B')
+
+	6)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	7)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 54 41 43 4F 4C 4C 41 08|  0000  |.ALLOCAT|
+		             00 BE 0D 45|  0008  |E.¾.    |
+
+	8)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 3
+		value: 339 (%X'00000153')
+
+	9)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	10)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 11 4E 41 54 43 52 41 06|  0000  |.ARCTAN.|
+		                   00 BE|  0008  |¾.      |
+
+	11)  TIR$C_STA_PL (6, %X'06')                           stack depth: 1
+		psect: 3
+		value: 306 (%X'00000132')
+
+	12)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	13)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 45 54 55 50 4D 4F 43 0A|  0000  |.COMPUTE|
+		       00 BE 0D 49 50 5F|  0008  |_PI.¾.  |
+
+	14)  TIR$C_STA_PL (6, %X'06')                           stack depth: 1
+		psect: 3
+		value: 510 (%X'000001FE')
+
+	15)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	16)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 11 45 44 49 56 49 44 06|  0000  |.DIVIDE.|
+		                   00 BE|  0008  |¾.      |
+
+	17)  TIR$C_STA_PL (6, %X'06')                           stack depth: 1
+		psect: 3
+		value: 947 (%X'000003B3')
+
+	18)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.73   Page 37
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	19)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 4C 5F 48 53 55 4C 46 0A|  0000  |.FLUSH_L|
+		       00 BE 11 45 4E 49|  0008  |INE.¾.  |
+
+	20)  TIR$C_STA_PL (6, %X'06')                           stack depth: 1
+		psect: 3
+		value: 121 (%X'00000079')
+
+	21)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	22)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 41 4C 50 5F 54 45 47 0A|  0000  |.GET_PLA|
+		       00 BE 09 53 45 43|  0008  |CES.¾.  |
+
+	23)  TIR$C_STA_PL (6, %X'06')                           stack depth: 1
+		psect: 3
+		value: 0 (%X'00000000')
+
+	24)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	25)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       00 BE 0F 49 50 02|  0000  |.PI.¾.  |
+
+	26)  TIR$C_STA_PL (6, %X'06')                           stack depth: 1
+		psect: 3
+		value: 765 (%X'000002FD')
+
+	27)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	28)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 50 5F 54 4E 49 52 50 08|  0000  |.PRINT_P|
+		             00 BE 10 49|  0008  |I.¾.    |
+
+	29)  TIR$C_STA_PL (6, %X'06')                           stack depth: 1
+		psect: 3
+		value: 880 (%X'00000370')
+
+	30)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	31)  Store Immediate, 13 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 47 49 44 5F 54 55 50 09|  0000  |.PUT_DIG|
+		          00 BE 0F 54 49|  0008  |IT.¾.   |
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.73   Page 38
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+	32)  TIR$C_STA_PL (6, %X'06')                           stack depth: 1
+		psect: 3
+		value: 666 (%X'0000029A')
+
+	33)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	34)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 43 41 52 54 42 55 53 08|  0000  |.SUBTRAC|
+		                      54|  0008  |T       |
+
+
+49.  TRACEBACK INFORMATION (OBJ$C_TBT), 44 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 12|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 15 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 41 54 41 44 5F 49 50 07|  0000  |.PI_DATA|
+		    00 B8 12 00 00 01 32|  0008  |2....¸. |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 3
+		value: 0 (%X'00000000')
+
+	6)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	7)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 45 44 4F 43 5F 49 50 07|  0000  |.PI_CODE|
+		       BD 01 00 00 03 F8|  0008  |ø....½  |
+
+
+50.  END OF MODULE (OBJ$C_EOM), 7 bytes
+
+	severity: successful (0)
+	psect: 3
+	value: 0 (%X'00000000')
+
+
+
+Analyze Object File                           6-OCT-2026 13:39:26.73   Page 39
+DUA1:[000000]PI.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   126
+OBJ$C_GSD	   16	   346
+OBJ$C_TIR	   26	  1476
+OBJ$C_EOM	    1	     7
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    3	   270
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   50	  2225
+
+
+The analysis uncovered NO errors.
+
+
+ANAL/OBJ PI.OBJ/OUT=PI.ANL                                                      

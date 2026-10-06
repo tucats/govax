@@ -39,8 +39,12 @@ multiple-precision fixed point (base 10^9 longwords, EMUL/EDIV, CVTLP/
 CVTPS for the digits). Every routine is called with CALLS, nesting up to
 four frames deep (PI, COMPUTE_PI, ARCTAN, DIVIDE), so it also serves for
 tracebacks, SHOW CALLS, and breakpoints in nested routines.
-`internal/console`'s `TestPi` tests run it. It hasn't been assembled on
-VMS.
+`internal/console`'s `TestPi` tests run it. The author assembled it
+`/LIST`, linked it `/MAP`, and analyzed the object and image on VMS 7.3
+(from `testdata/disks/pi-exchange.dsk`, local only): `vax/pi.obj`,
+`.lis`, `.map`, `.exe` (copied out `/BINARY`), `.anl`, and `.ani`.
+govax's object, listing, and map match; its image differs only in the
+order of LIBRTL's fixup cells (docs/PHASE-29.md).
 
 When the volume also holds `GV_NAME.OBJ`, govax's own object for
 `NAME.MAR` written straight onto the volume by govax's MACRO command, the

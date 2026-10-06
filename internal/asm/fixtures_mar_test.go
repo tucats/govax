@@ -149,7 +149,7 @@ func summarizeAssembly(a *Assembler) objectSummary {
 // usesStarlet names the ladder's sources that call system macros ($FAB,
 // $OPEN, and the rest): they're assembled with govax's own STARLET, where
 // real MACRO used VMS's. forth.mar is a FORTH interpreter.
-var usesStarlet = map[string]bool{"forth": true}
+var usesStarlet = map[string]bool{"forth": true, "pi": true}
 
 // ladderSources returns the ladder's sources in dir: its .mar files.
 func ladderSources(t *testing.T, dir string) []string {

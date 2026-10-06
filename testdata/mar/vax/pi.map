@@ -1,0 +1,103 @@
+
+                                                                 6-OCT-2026 13:39        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+PI              V1.0                 1322 DUA1:[000000]PI.OBJ;1                 6-OCT-2026 13:39  VAX MACRO V5.4-3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+PI_DATA                         00000200 00000331 00000132 (        306.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                PI              00000200 00000331 00000132 (        306.) LONG  2
+PI_CODE                         00000400 000007F7 000003F8 (       1016.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                PI              00000400 000007F7 000003F8 (       1016.) LONG  2
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+ADD             0000062D-R        
+ALLOCATE        0000050B-R        
+ARCTAN          00000553-R        
+COMPUTE_PI      00000532-R        
+DIVIDE          000005FE-R        
+FLUSH_LINE      000007B3-R        
+GET_PLACES      00000479-R        
+PI              00000400-R        
+PRINT_PI        000006FD-R        
+PUT_DIGIT       00000770-R        
+SUBTRACT        0000069A-R        
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]PI.EXE;1                                            6-OCT-2026 13:39        Linker V11-39                    Page    2
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000009FF 00000800 (2048. bytes, 4. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        5. (    4. blocks)
+Image name and identification:                    PI V1.0
+Number of files:                                         4.
+Number of modules:                                       3.
+Number of program sections:                              5.
+Number of global symbols:                              317.
+Number of image sections:                                6.
+User transfer address:                            00000400
+Debugger transfer address:                        7FFEDF68
+Number of code references to shareable images:           3.
+Image type:                                       EXECUTABLE.
+Map format:                                       DEFAULT in file DUA1:[000000]PI.MAP;1
+Estimated map length:                             31. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                    86	00:00:00.00	00:00:00.00
+    Pass 1:                                              1367	00:00:00.01	00:00:00.02
+    Allocation/Relocation:                                 69	00:00:00.00	00:00:00.00
+    Pass 2:                                               736	00:00:00.01	00:00:00.01
+    Map data after object module synopsis:                 46	00:00:00.00	00:00:00.00
+    Symbol table output:                                    9	00:00:00.00	00:00:00.00
+Total run values:                                        2313	00:00:00.02	00:00:00.03
+
+Using a working set limited to 812 pages and 110 pages of data storage (excluding image)
+
+Total number object records read (both passes):   174
+    of which 26 were in libraries and 3 were DEBUG data records containing 270 bytes
+218 bytes of DEBUG data were written,starting at VBN 6 with 1 blocks allocated
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 0 global symbol table records was written
+
+LINK/MAP PI.OBJ
