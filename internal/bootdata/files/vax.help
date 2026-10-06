@@ -109,6 +109,13 @@ $SH  ,LOG
            "MYDISK" = "WORK4" (LNM$PROCESS_TABLE)
          1 "WORK4" = "$255$DUA17:" (LNM$SYSTEM_TABLE)
 
+$SHOW,MEMO
+$SHOW,MEM
+$SH  ,MEMO
+$SH  ,MEM
+    The SHOW MEMORY command displays the amount of physical and virtual
+    memory available on the virtual VAX.
+
 $SHOW,TRAN
 $SH  ,TRAN
     The SHOW TRANSLATION command displays one level of translation of a
@@ -1480,6 +1487,7 @@ $SH
         SHOW INSTRUCTION/MODE
         SHOW INSTRUCTION/UNIMPLEMENTED
         SHOW LOGICAL
+        SHOW MEMORY
         SHOW QUANTUM
         SHOW RADIX
         SHOW STRINGS

@@ -194,7 +194,6 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("CLEAR_STRINGS", func(id int64, r *dcl.Result) error { return d.Console.ClearString() })
 	g.Bind("CLEAR_MEMORY", func(id int64, r *dcl.Result) error { return d.Console.ClearMemory() })
 
-
 	g.Bind("SHOW_SYM", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbol(r.String("SYMBOL")) })
 	g.Bind("SHOW_SYM_ALL", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbols(r.String("SYMBOL")) })
 	g.Bind("SHOW_SYM_SYS", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbolsSystem(r.String("SYMBOL")) })
@@ -208,13 +207,9 @@ func (d *Dispatcher) bindGrammar() {
 	// "rather than leaving ABOUT/SHOW VERSION with no output at all") is
 	// retired now that the real /entry= redirect works.
 
-
 	g.Bind("SHOW_NVRAM", func(id int64, r *dcl.Result) error { return d.Console.ShowNVRAM() })
 	g.Bind("SHOW_ROM", func(id int64, r *dcl.Result) error { return d.Console.ShowROM() })
 	g.Bind("SHOW_STRING", func(id int64, r *dcl.Result) error { return d.Console.ShowString() })
-
-
-
 
 	g.Bind("SHOW_SHARE", func(id int64, r *dcl.Result) error { return d.Console.ShowSharePrefix() })
 
@@ -237,6 +232,8 @@ func (d *Dispatcher) bindGrammar() {
 		)
 	})
 
+	// SHOW MEMORY is allowed in both console and debugger
+	g.Bind("SHOW_MEMORY", func(id int64, r *dcl.Result) error { return d.Console.ShowMemory() })
 
 	// Phase 09 (internal/io): device abstraction and logical name tables.
 	g.Bind("SHOW_DEVICE", func(id int64, r *dcl.Result) error {

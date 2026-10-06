@@ -12,6 +12,11 @@ grammar console
         keyword concealed/id=1
         keyword terminal/id=2
 
+    syntax show_memory/id=215
+        qualifier   statistics/id=216
+        qualifier   runtime/id=217
+        qualifier   full/id=218
+
     syntax show_logical
         parameter name/id=301/type=$any/list
         qualifier table/id=300/type=$any/list
@@ -241,6 +246,7 @@ grammar console
         ! DEFAULT (docs/PHASE-23.md, subtask 3) has no reference/eVAX or
         ! testdata/dcl/console.dcl counterpart -- see this file's own
         ! "govax-native extension" comment at MOUNT's definition below.
+        keyword     memory              /syntax=show_memory
         keyword         default         /syntax=show_default
         keyword		logical		/syntax=show_logical
         keyword		translation	/syntax=show_translation
