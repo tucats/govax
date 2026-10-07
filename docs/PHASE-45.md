@@ -861,3 +861,46 @@ for a process created without one.
   SHOW DEVICE. Terminals and mailboxes keep the generic layout; the same
   could be done for them from a VMS run. Test:
   `TestShowDeviceFull_nla0`.
+- 2026-10-07: The process-service macros. `internal/bootdata/files/
+  starlet.mar` gains `$CREPRC_S`, `$DELPRC_S`, `$WAKE_S`, `$HIBER_S`,
+  `$SCHDWK_S`, `$CANWAK_S`, `$FORCEX_S`, `$SUSPND_S`, `$RESUME_S`,
+  `$SETPRI_S`, `$SETPRN_S`, `$GETJPI_S`, `$GETJPIW_S`, `$GETDVI_S`,
+  `$GETDVIW_S`, `$CREMBX_S`, `$DELMBX_S`, `$SETIMR_S`, `$CANTIM_S`,
+  `$WAITFR_S`, `$SETEF_S`, `$CLREF_S`, and `$READEF_S`, from the manual's
+  argument lists and two rounds of `testdata/mp/macros` probes on real
+  MACRO (round 1 in `vax/round1`; round 2, with the true required
+  arguments and a marker after each call, in `vax/`). What the probes
+  showed: the `_S` forms push their arguments last first as the QIO
+  macros do (an omitted address or value is `PUSHL #0`, a word is
+  `MOVZWL`, an address is `$PUSHADR` with the size of what it points to:
+  longword for PIDADR, QUOTA, ITMLST, ASTADR, STATE, PRVPRI, quadword for
+  descriptors, DAYTIM, REPTIM, IOSB, PRVADR, a word for CREMBX's CHAN);
+  `$CREPRC_S` is a 14 argument call (two zeros past STSFLG, with no
+  keyword; ITEMLST= and NODE= are syntax errors) with BASPRI defaulting
+  to 2; `$GETDVI_S` is 8 (keyword NULLARG) and `$CREMBX_S` 8 (keyword
+  FLAGS), `$GETJPI_S` 7; and each macro joins particular adjacent
+  arguments into one `CLRQ` when both are omitted or `#0`: ASTPRM and
+  ASTADR (`$GETJPI`), NULLARG and ASTPRM (`$GETDVI`), LOGNAM and ACMODE and
+  PROMSK and BUFQUO (`$CREMBX`), REQIDT and FLAGS and DAYTIM and EFN
+  (`$SETIMR`), UIC and BASPRI (`$CREPRC`), the two of `$CANTIM`, and no
+  others. A call without a required argument (SCHDWK's DAYTIM, SETPRI's
+  PRI, GETJPI's and GETDVI's ITMLST, CREMBX's CHAN, SETIMR's DAYTIM,
+  DELMBX's CHAN, EFN of WAITFR, SETEF, CLREF, READEF with STATE) is an
+  error here; real MACRO's leaves a broken instruction stream, which
+  govax doesn't copy. `TestServiceMacroObjects` (`internal/asm`, with
+  helpers that rebuild the CODE section's bytes and relocations from an
+  object and split them at the probes' markers) requires govax's macros to
+  make the same code as real MACRO for every `_S` call real MACRO took
+  without an error: 1,300-odd calls in the 23 probes. It found one bug in
+  the older helpers: `$PUSHADRVAL` and `$PUSHVALADR` called `$PUSHADR
+  ADDR,CONTEXT=CONTEXT`, whose formal name is replaced on both sides of
+  the "=", so any sized addressing mode (`-(R6)`, `(R6)+`, `L[R7]`, a
+  literal) failed there ("Undefined symbol Q"): they now pass CONTEXT by
+  position. Not written: the argument-list form (`$NAME`: a `.LONG`
+  count and one `.LONG` per argument, in line, which takes its values
+  without `#`) and `$NAME_G`; the probes' long forms were given `#`
+  values and the `_G` probe gave a keyword, so they showed only that the
+  forms exist (real MACRO's `$CREPRC_G ARGLST=X` stops with an operand
+  syntax error after emitting a CALLG). A third round could settle them.
+  NULLARG and FLAGS were accepted by real MACRO, as the manual's
+  8-argument `$GETDVI` and later `$CREMBX` suggest.

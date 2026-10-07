@@ -1,0 +1,2419 @@
+
+$ MACRO/NOLIST SVC_CREPRC
+                                     13A7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     13A7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     13A7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     13A7       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     13A7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     13A7       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     13A7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     13A7       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     13D7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     13D7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     13D7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     13D7       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     13D7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     13D7       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     13D7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     13D7       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     1407       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1407       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1407       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     1407       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     1407       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     1407       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     1407       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     1407       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     1437       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1437       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1437       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     1437       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     1437       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     1437       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     1437       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     1437       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     1467       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1467       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1467       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     1467       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     1467       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     1467       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     1467       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     1467       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     1497       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1497       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1497       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     1497       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     1497       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     1497       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     1497       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     1497       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     14C7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     14C7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     14C7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     14C7       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     14C7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     14C7       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     14C7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     14C7       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     14F7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     14F7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     14F7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     14F7       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     14F7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     14F7       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     14F7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     14F7       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     1527       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1527       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1527       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     1527       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     1527       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     1527       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     1527       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     1527       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     155B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     155B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     155B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     155B       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     155B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     155B       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     158B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     158B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     158F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     158F       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     158F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     158F       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     15BF       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     15BF       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     15BF       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     15BF       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     15C3       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     15C3       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     15F3       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     15F3       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     15F3       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     15F3       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     15F3       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     15F3       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     1827       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1827       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1867       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1867       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     18A7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     18A7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     18E7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     18E7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     18F7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     18F7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1933       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 1973       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     19B3       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     19B3       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1A2F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1A2F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1A6F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1A6F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1AAB       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 1AEB       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     1B2B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1B2B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1BA7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1BA7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1BE7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1BE7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1C23       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 1C63       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     1CA3       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1CA3       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1D1F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1D1F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1D5F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1D5F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1D9B       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 1DDB       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     1E1B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1E1B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1E97       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1E97       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1ED7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1ED7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1F13       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 1F53       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     1F93       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1F93       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     200F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     200F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     204F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     204F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     208B       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 20CB       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     210B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     210B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     2187       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     2187       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     21C7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     21C7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     2203       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 2243       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     2283       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     2283       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     22FF       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     22FF       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     233F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     233F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     237B       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 23BB       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     23FB       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     23FB       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     2477       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     2477       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     24B7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     24B7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     24F3       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     24F3       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     252F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     252F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     25EB       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     25EB       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 2627       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     266B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     266B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     26A7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     26A7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     26E3       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     26E3       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     279F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     279F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 27DB       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     281F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     281F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     285B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     285B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     2897       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     2897       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     2953       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     2953       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     2993       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     2993       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     29CF       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     29CF       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     2A0B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     2A0B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     2AC7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     2AC7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 2B03       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+$ ANALYZE/OBJECT/OUTPUT=SVC_CREPRC.ANL SVC_CREPRC.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_CREPRC.OBJ;1                           0 errors
+$ MACRO/NOLIST SVC_DELPRC
+                                     01C9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01C9       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     01D5       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 01E5       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     01F5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01F5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0211       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0211       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0221       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0221       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     022D       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 023D       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     024D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     024D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0269       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0269       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+$ ANALYZE/OBJECT/OUTPUT=SVC_DELPRC.ANL SVC_DELPRC.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_DELPRC.OBJ;1                           0 errors
+$ MACRO/NOLIST SVC_WAKE
+                                     01C9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01C9       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     01D5       
+%MACRO-E-ILLEXPR, Illegal expression                                !
+                           00000000' 01E5       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                     01F5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01F5       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0211       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0211       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0221       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0221       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     022D       
+%MACRO-E-ILLEXPR, Illegal expression                                !
+                           00000000' 023D       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                     024D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     024D       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0269       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0269       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+$ ANALYZE/OBJECT/OUTPUT=SVC_WAKE.ANL SVC_WAKE.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_WAKE.OBJ;1                             0 errors
+$ MACRO/NOLIST SVC_HIBER
+                                     0023    31 	$HIBER
+%MACRO-E-UNRECSTMT, Unrecognized statement             !
+                                     0027    33 	$HIBER
+%MACRO-E-UNRECSTMT, Unrecognized statement             !
+                                     002B    35 	$HIBER
+%MACRO-E-UNRECSTMT, Unrecognized statement             !
+$ ANALYZE/OBJECT/OUTPUT=SVC_HIBER.ANL SVC_HIBER.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_HIBER.OBJ;1                            0 errors
+$ MACRO/NOLIST SVC_SCHDWK
+                                     0004       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0004       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0428       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0428       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     043C       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0454       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     046C       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     046C       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0498       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0498       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     04B0       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     04B0       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     04C4       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 04DC       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     04F4       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     04F4       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0520       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0520       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0538       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0538       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     054C       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0564       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     057C       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     057C       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     05A8       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     05A8       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     05C0       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     05C0       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     05D4       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 05EC       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0604       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0604       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0630       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0630       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+$ ANALYZE/OBJECT/OUTPUT=SVC_SCHDWK.ANL SVC_SCHDWK.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_SCHDWK.OBJ;1                           0 errors
+$ MACRO/NOLIST SVC_CANWAK
+                                     01C9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01C9       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     01D5       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 01E5       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     01F5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01F5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0211       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0211       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0221       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0221       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     022D       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 023D       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     024D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     024D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0269       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0269       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+$ ANALYZE/OBJECT/OUTPUT=SVC_CANWAK.ANL SVC_CANWAK.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_CANWAK.OBJ;1                           0 errors
+$ MACRO/NOLIST SVC_FORCEX
+                                     0261       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0261       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0271       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0271       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0281       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0281       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     02CD       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     02CD       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     02D5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     02D5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     02E5       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 02F9       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     030D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     030D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0331       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0331       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0345       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0345       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0355       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0369       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     037D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     037D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     03A1       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     03A1       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     03B5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     03B5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     03C5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     03C5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     03D5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     03D5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     040D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     040D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 041D       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+$ ANALYZE/OBJECT/OUTPUT=SVC_FORCEX.ANL SVC_FORCEX.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_FORCEX.OBJ;1                           0 errors
+$ MACRO/NOLIST SVC_SUSPND
+                                     0261       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0261       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0271       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0271       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0281       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0281       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     02CD       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     02CD       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     02D5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     02D5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     02E5       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 02F9       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     030D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     030D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0331       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0331       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0345       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0345       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0355       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0369       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     037D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     037D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     03A1       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     03A1       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     03B5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     03B5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     03C5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     03C5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     03D5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     03D5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     040D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     040D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 041D       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+$ ANALYZE/OBJECT/OUTPUT=SVC_SUSPND.ANL SVC_SUSPND.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_SUSPND.OBJ;1                           0 errors
+$ MACRO/NOLIST SVC_RESUME
+                                     01C9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01C9       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     01D5       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 01E5       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     01F5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01F5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0211       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0211       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0221       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0221       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     022D       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 023D       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     024D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     024D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0269       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0269       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+$ ANALYZE/OBJECT/OUTPUT=SVC_RESUME.ANL SVC_RESUME.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_RESUME.OBJ;1                           0 errors
+$ MACRO/NOLIST SVC_SETPRI
+                                 DD  0004       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                     0317       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0317       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     032B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     032B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     033F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     033F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0353       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0353       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0367       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0367       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     037B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     037B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     038F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     038F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     03A3       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     03A3       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     03AF       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     03AF       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     03B3       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     03B3       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     03BF       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                                     03C7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     03C7       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                           00000000' 03D3       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     03DB       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     03DB       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     03E7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     03E7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     03EB       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     03EB       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     03FF       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     03FF       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     040B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     040B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     040F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     040F       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     041F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     041F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     041F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     041F       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     042F       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                                     0433       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0433       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                           00000000' 0443       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0447       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0447       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0457       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0457       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0457       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0457       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     046B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     046B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     047B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     047B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     047B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     047B       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     048F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     048F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     04A3       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     04A3       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     04B7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     04B7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     04FB       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     04FB       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 050F       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0527       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0527       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0527       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0527       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0537       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0537       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0537       
+%MACRO-E-ILLEXPR, Illegal expression                       !
+                                     054B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     054B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 054B       
+%MACRO-E-DIRSYNX, Directive syntax error                       !
+                                     055F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     055F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     055F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     055F       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     056F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     056F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0583       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0583       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0583       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0583       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+$ ANALYZE/OBJECT/OUTPUT=SVC_SETPRI.ANL SVC_SETPRI.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_SETPRI.OBJ;1                           0 errors
+$ MACRO/NOLIST SVC_SETPRN
+                                     00EA       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00EA       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     00F2       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 00FE       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     010A       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     010A       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     011E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     011E       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+$ ANALYZE/OBJECT/OUTPUT=SVC_SETPRN.ANL SVC_SETPRN.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_SETPRN.OBJ;1                           0 errors
+$ MACRO/NOLIST SVC_GETJPI
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0789       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0789       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     079D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     079D       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     07BD       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     07BD       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     07C5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     07C5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     07D9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     07D9       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     07E1       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     07E1       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     07F5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     07F5       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     07FD       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     07FD       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0811       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0811       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0819       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0819       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     082D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     082D       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0835       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0835       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0855       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0855       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     091D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     091D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0925       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0925       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0945       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0945       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0965       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0965       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     09CD       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     09CD       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 09ED       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0A15       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0A15       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0A35       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0A59       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0A7D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0A7D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0AC1       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0AC1       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0AE5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0AE5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0B05       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0B29       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0B4D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0B4D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0B91       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0B91       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0BB5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0BB5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0BD5       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0BF9       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0C1D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0C1D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0C61       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0C61       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0C85       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0C85       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0CA5       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0CC9       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0CED       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0CED       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0D31       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0D31       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0D55       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0D55       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0D75       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0D99       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0DBD       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0DBD       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0E01       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0E01       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0E25       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0E25       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0E45       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0E45       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0E65       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0E65       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0ECD       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0ECD       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 0EED       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+$ ANALYZE/OBJECT/OUTPUT=SVC_GETJPI.ANL SVC_GETJPI.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_GETJPI.OBJ;1                           0 errors
+$ MACRO/NOLIST SVC_GETJPIW
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0789       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0789       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     079D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     079D       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     07BD       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     07BD       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     07C5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     07C5       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     07D9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     07D9       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     07E1       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     07E1       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     07F5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     07F5       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     07FD       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     07FD       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0811       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0811       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0819       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0819       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     082D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     082D       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0835       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0835       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0855       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0855       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     091D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     091D       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0925       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0925       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0945       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0945       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0965       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0965       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     09CD       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     09CD       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                           00000000' 09ED       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                     0A15       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0A15       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0A35       
+%MACRO-E-ILLEXPR, Illegal expression                                     !
+                           00000000' 0A59       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                     0A7D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0A7D       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0AC1       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0AC1       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0AE5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0AE5       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0B05       
+%MACRO-E-ILLEXPR, Illegal expression                                     !
+                           00000000' 0B29       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                     0B4D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0B4D       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0B91       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0B91       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0BB5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0BB5       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0BD5       
+%MACRO-E-ILLEXPR, Illegal expression                                     !
+                           00000000' 0BF9       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                     0C1D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0C1D       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0C61       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0C61       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0C85       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0C85       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0CA5       
+%MACRO-E-ILLEXPR, Illegal expression                                     !
+                           00000000' 0CC9       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                     0CED       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0CED       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0D31       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0D31       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0D55       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0D55       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0D75       
+%MACRO-E-ILLEXPR, Illegal expression                                     !
+                           00000000' 0D99       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                     0DBD       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0DBD       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0E01       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0E01       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0E25       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0E25       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0E45       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0E45       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0E65       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0E65       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0ECD       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0ECD       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                           00000000' 0EED       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+$ ANALYZE/OBJECT/OUTPUT=SVC_GETJPIW.ANL SVC_GETJPIW.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_GETJPIW.OBJ;1                          0 errors
+$ MACRO/NOLIST SVC_GETDVI
+                                     0008       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0008       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0815       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0815       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0815       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0815       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0825       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0825       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0835       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0835       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0845       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0845       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0851       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0851       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0865       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0865       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0871       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0871       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0871       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0871       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0881       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0881       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     088D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     088D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     088D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     088D       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     089D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     089D       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     08A9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     08A9       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     08A9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     08A9       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     08B9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     08B9       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     08C5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     08C5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     08C5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     08C5       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     08E5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     08E5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     090D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     090D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     09BD       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     09BD       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     09C9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     09C9       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     09ED       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     09ED       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0A11       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0A11       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0A85       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0A85       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 0AA9       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0AD5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0AD5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0AF9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0AF9       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0B1D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0B1D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0B91       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0B91       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0BB9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0BB9       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0BDD       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0C05       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0C2D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0C2D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0C79       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0C79       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0CA1       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0CA1       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0CC5       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0CED       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0D15       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0D15       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0D61       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0D61       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0D89       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0D89       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0DAD       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0DD5       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0DFD       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0DFD       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0E49       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0E49       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0E71       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0E71       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0E95       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0EBD       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0EE5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0EE5       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0F31       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0F31       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0F59       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0F59       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0F7D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0F7D       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0FA1       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0FA1       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1015       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1015       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 1039       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+$ ANALYZE/OBJECT/OUTPUT=SVC_GETDVI.ANL SVC_GETDVI.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_GETDVI.OBJ;1                           0 errors
+$ MACRO/NOLIST SVC_GETDVIW
+                                     0008       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0008       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0815       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0815       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0815       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0815       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0825       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0825       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0835       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0835       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0845       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0845       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0851       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0851       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0865       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0865       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0871       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0871       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0871       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0871       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0881       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0881       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     088D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     088D       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     088D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     088D       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     089D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     089D       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     08A9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     08A9       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     08A9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     08A9       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     08B9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     08B9       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     08C5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     08C5       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     08C5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     08C5       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     08E5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     08E5       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     090D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     090D       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     09BD       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     09BD       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     09C9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     09C9       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     09ED       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     09ED       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0A11       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0A11       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0A85       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0A85       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                           00000000' 0AA9       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                     0AD5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0AD5       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0AF9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0AF9       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0B1D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0B1D       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0B91       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0B91       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0BB9       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0BB9       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0BDD       
+%MACRO-E-ILLEXPR, Illegal expression                                     !
+                           00000000' 0C05       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                     0C2D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0C2D       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0C79       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0C79       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0CA1       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0CA1       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0CC5       
+%MACRO-E-ILLEXPR, Illegal expression                                     !
+                           00000000' 0CED       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                     0D15       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0D15       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0D61       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0D61       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0D89       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0D89       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0DAD       
+%MACRO-E-ILLEXPR, Illegal expression                                     !
+                           00000000' 0DD5       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                     0DFD       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0DFD       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0E49       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0E49       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0E71       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0E71       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0E95       
+%MACRO-E-ILLEXPR, Illegal expression                                     !
+                           00000000' 0EBD       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                     0EE5       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0EE5       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0F31       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0F31       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0F59       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0F59       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0F7D       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0F7D       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     0FA1       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0FA1       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                     1015       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1015       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                           00000000' 1039       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+$ ANALYZE/OBJECT/OUTPUT=SVC_GETDVIW.ANL SVC_GETDVIW.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_GETDVIW.OBJ;1                          0 errors
+$ MACRO/NOLIST SVC_CREMBX
+                                     000A       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  000A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     07F6       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     07F6       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     07FA       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     07FA       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     07FA       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     07FA       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     07FA       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     07FA       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     07FA       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     07FA       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0812       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0812       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0812       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0812       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0812       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0812       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0812       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0812       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0822       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0822       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     082A       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     082A       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     082A       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     082A       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     082A       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     082A       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     083A       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     083A       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     083E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     083E       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0842       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0842       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0842       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0842       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0852       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0852       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0856       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0856       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0856       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0856       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     085A       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     085A       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     086A       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     086A       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     086E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     086E       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     086E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     086E       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     086E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     086E       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0882       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0882       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0886       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0886       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0886       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0886       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0886       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0886       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0886       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0886       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0896       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0896       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     08C2       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     08C2       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     08EA       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     08EA       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0912       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0912       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     093A       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     093A       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0972       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0972       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0996       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0996       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     09BA       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     09BA       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0A2E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0A2E       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 0A52       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0A7E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0A7E       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0AA2       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0ACA       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0AF2       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0AF2       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0B3E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0B3E       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0B66       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0B66       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0B8A       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0B8A       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0BAE       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0BAE       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0C22       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0C22       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 0C46       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0C72       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0C72       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0C96       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0C96       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0CBA       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0CBA       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0D2E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0D2E       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 0D52       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0D7E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0D7E       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0DA2       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0DA2       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0DC6       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0DC6       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0E3A       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0E3A       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 0E5E       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0E8A       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0E8A       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0EAE       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0EAE       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0ED2       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0ED2       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0F46       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0F46       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 0F6A       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0F96       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0F96       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0FBA       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0FE2       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     100A       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     100A       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     1056       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     1056       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+$ ANALYZE/OBJECT/OUTPUT=SVC_CREMBX.ANL SVC_CREMBX.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_CREMBX.OBJ;1                           0 errors
+$ MACRO/NOLIST SVC_DELMBX
+                                 3C  0002       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0003       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0098       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0098       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     00A0       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00A0       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     00A8       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00A8       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     00B0       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00B0       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     00B8       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00B8       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     00D8       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00D8       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+$ ANALYZE/OBJECT/OUTPUT=SVC_DELMBX.ANL SVC_DELMBX.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_DELMBX.OBJ;1                           0 errors
+$ MACRO/NOLIST SVC_SETIMR
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     04C6       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     04C6       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     04CE       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     04CE       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     04CE       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     04CE       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     04E2       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     04E2       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     04E2       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     04E2       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     04EA       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     04EA       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     04F2       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     04F2       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     04F2       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     04F2       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     04FA       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     04FA       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0506       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0506       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     050E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     050E       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0516       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     0516       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0522       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0522       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0562       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0562       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     057E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     057E       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0586       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0586       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     059E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     059E       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     05B6       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     05B6       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0606       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0606       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 061E       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     063E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     063E       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0656       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0672       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     068E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     068E       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     06C2       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     06C2       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     06DE       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     06DE       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     06F6       
+%MACRO-E-ILLEXPR, Illegal expression                              !
+                           00000000' 0712       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     072E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     072E       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0762       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0762       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     077E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     077E       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0796       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0796       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     07AE       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     07AE       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     07FE       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     07FE       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 0816       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0836       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0836       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     084E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     084E       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0866       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0866       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     08B6       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     08B6       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 08CE       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+$ ANALYZE/OBJECT/OUTPUT=SVC_SETIMR.ANL SVC_SETIMR.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_SETIMR.OBJ;1                           0 errors
+$ MACRO/NOLIST SVC_CANTIM
+                                     017B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     017B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     017B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     017B       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     0187       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0187       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     018F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     018F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     019B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     019B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     01AB       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01AB       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     01B3       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01B3       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     01BF       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01BF       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     01CB       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01CB       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     01F7       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01F7       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 0203       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     0217       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0217       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0223       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0223       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     022F       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     022F       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     025B       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     025B       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 0267       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+$ ANALYZE/OBJECT/OUTPUT=SVC_CANTIM.ANL SVC_CANTIM.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_CANTIM.OBJ;1                           0 errors
+$ MACRO/NOLIST SVC_WAITFR
+                                 DD  0002       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                     00A4       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00A4       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     00AC       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00AC       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     00B4       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00B4       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     00BC       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00BC       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     00C4       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00C4       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     00E4       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00E4       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 00EC       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+$ ANALYZE/OBJECT/OUTPUT=SVC_WAITFR.ANL SVC_WAITFR.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_WAITFR.OBJ;1                           0 errors
+$ MACRO/NOLIST SVC_SETEF
+                                 DD  0002       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                     00A4       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00A4       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     00AC       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00AC       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     00B4       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00B4       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     00BC       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00BC       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     00C4       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00C4       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     00E4       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00E4       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                           00000000' 00EC       
+%MACRO-E-DIRSYNX, Directive syntax error                               !
+$ ANALYZE/OBJECT/OUTPUT=SVC_SETEF.ANL SVC_SETEF.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_SETEF.OBJ;1                            0 errors
+$ MACRO/NOLIST SVC_CLREF
+                                 DD  0002       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                     00A4       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00A4       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     00AC       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00AC       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     00B4       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00B4       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     00BC       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00BC       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     00C4       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00C4       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     00E4       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     00E4       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                           00000000' 00EC       
+%MACRO-E-DIRSYNX, Directive syntax error                               !
+$ ANALYZE/OBJECT/OUTPUT=SVC_CLREF.ANL SVC_CLREF.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_CLREF.OBJ;1                            0 errors
+$ MACRO/NOLIST SVC_READEF
+                                     0002       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0002       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  0003       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0146       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0146       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0152       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0152       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     015E       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     015E       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     016A       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     016A       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     0176       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     0176       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     01A2       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01A2       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 01AE       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                     01BE       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01BE       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     01BE       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     01BE       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     01C6       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01C6       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     01C6       
+%MACRO-E-ILLEXPR, Illegal expression                       !
+                                     01D2       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01D2       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                           00000000' 01D2       
+%MACRO-E-DIRSYNX, Directive syntax error                       !
+                                     01DE       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01DE       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     01DE       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     01DE       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+                                     01E6       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01E6       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     01F2       
+%MACRO-E-ADRLSTSYNX, Address list syntax error         !
+                                     01F2       
+%MACRO-E-DIRSYNX, Directive syntax error                          !
+                                     01F2       
+%MACRO-E-ADRLSTSYNX, Address list syntax error  !
+                                     01F2       
+%MACRO-E-DIRSYNX, Directive syntax error                   !
+$ ANALYZE/OBJECT/OUTPUT=SVC_READEF.ANL SVC_READEF.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]SVC_READEF.OBJ;1                           0 errors
+$ SET NOVERIFY

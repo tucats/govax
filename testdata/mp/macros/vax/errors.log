@@ -1,0 +1,19 @@
+
+$ MACRO/NOLIST ERR_SVC
+                   00000000'EF   FA  0002       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   FA  000D       
+%MACRO-E-OPRNDSYNX, Operand syntax error                             !
+                   00000000'EF   FA  0018       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   FA  0023       
+%MACRO-E-OPRNDSYNX, Operand syntax error                             !
+                           000000EF  004D       
+%MACRO-E-DIRSYNX, Directive syntax error                                             !
+                   00000000'EF   9F  004D       
+%MACRO-E-OPRNDSYNX, Operand syntax error                        !
+                           000000EF  00D8       
+%MACRO-E-DIRSYNX, Directive syntax error                                                   !
+                   00000000'EF   9F  00D8       
+%MACRO-E-OPRNDSYNX, Operand syntax error                              !
+$ SET NOVERIFY
