@@ -1,6 +1,7 @@
 package console_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/debugger"
+	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -281,5 +283,169 @@ func TestSchedulerDebug_everyInstruction(t *testing.T) {
 
 	if countOf(t, c, two) < 10 {
 		t.Errorf("process 2 counted only %d", countOf(t, c, two))
+	}
+}
+
+// Phase 44's subtask 9: a run that stops while another process holds the
+// CPU leaves it there, for EXAMINE and SHOW REGISTERS; the next run, or
+// the debugger's EXIT, gives it back to process 1.
+
+// stopInProcessTwo runs c in short runs, each ending at an instruction
+// limit, until one stops while process 2 holds the CPU.
+func stopInProcessTwo(t *testing.T, c *console.Console, two *corevms.Environment) {
+	t.Helper()
+
+	c.Engine.SetLimits(3, 0)
+
+	for range 50 {
+		if err := c.Execute(nil); err != nil {
+			t.Fatalf("GO: %v", err)
+		}
+
+		if c.RTL.Current() == two {
+			return
+		}
+	}
+
+	t.Fatal("no run stopped in process 2")
+}
+
+// TestSchedulerStop_inProcessTwo: the stop message names process 2, the
+// CPU (and so the console's EXAMINE) is process 2's at the prompt, and
+// the next run gives the CPU back to process 1 first.
+func TestSchedulerStop_inProcessTwo(t *testing.T) {
+	c, out := scheduledConsole(t, "5", counter())
+	one := c.RTL
+	two := handBuiltProcess(t, c, counter())
+
+	setLongword(t, c, one, dataAddr, 1000) // tell the two counts apart
+
+	stopInProcessTwo(t, c, two)
+
+	pc := c.CPU.GPR(vax.PC)
+	if want := fmt.Sprintf("instruction limit reached at PC = %08X in process %08X", pc, two.Process.PID); !strings.Contains(out.String(), want) {
+		t.Errorf("no %q in:\n%s", want, out.String())
+	}
+
+	// The CPU's view of P0 is process 2's.
+	if v, err := c.Mem.LoadLongword(c.CPU, dataAddr); err != nil || v != countOf(t, c, two) {
+		t.Errorf("P0 %08X through the CPU = %d, want process 2's %d", dataAddr, v, countOf(t, c, two))
+	}
+
+	// The debugger's EXAMINE (its radix here is hexadecimal).
+	db := debugger.Install(c, consoletest.DebugGrammar(t), nil)
+	out.Reset()
+
+	if err := db.Dispatch("EXAMINE 600"); err != nil {
+		t.Fatalf("EXAMINE: %v", err)
+	}
+
+	if want := fmt.Sprintf("%08X", countOf(t, c, two)); !strings.Contains(out.String(), want) {
+		t.Errorf("EXAMINE 600 shows %q, want process 2's %s", out.String(), want)
+	}
+
+	// Back to process 1: its own registers and P0, and the scheduler in
+	// step, process 2 computable.
+	pcb, err := cpu.ReadPCB(c.Mem, one.Stacks.PCBB)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.ReturnToProcessOne(); err != nil {
+		t.Fatal(err)
+	}
+
+	if c.RTL.Current() != one || c.CPU.GPR(vax.PC) != pcb.PC {
+		t.Errorf("after returning: process %08X at %08X, want process 1 at %08X",
+			c.RTL.Current().Process.PID, c.CPU.GPR(vax.PC), pcb.PC)
+	}
+
+	if h, _ := one.Scheduler().Current(); uint32(h) != one.Process.PID || stateOf(two) != sched.StateCOM {
+		t.Errorf("scheduler: current %08X, process 2 %s", uint32(h), stateOf(two))
+	}
+
+	// And on: both processes go on counting.
+	a, b := countOf(t, c, one), countOf(t, c, two)
+	c.Engine.SetLimits(100, 0)
+
+	if err := c.Execute(nil); err != nil {
+		t.Fatal(err)
+	}
+
+	if countOf(t, c, one) == a || countOf(t, c, two) == b {
+		t.Errorf("counts %d to %d and %d to %d: both should go on", a, countOf(t, c, one), b, countOf(t, c, two))
+	}
+}
+
+// TestSchedulerStop_debuggerExit: under the debugger, a stop in process 2
+// opens the session in process 2, and EXIT returns the CPU to process 1.
+func TestSchedulerStop_debuggerExit(t *testing.T) {
+	c, _ := scheduledConsole(t, "5", counter())
+	two := handBuiltProcess(t, c, counter())
+	db := debugger.Install(c, consoletest.DebugGrammar(t), nil)
+
+	if err := c.Debugger.Start(console.Activation{Kind: console.ActivateAttach}); err != nil {
+		t.Fatal(err)
+	}
+
+	stopInProcessTwo(t, c, two)
+
+	if !db.Active() || c.RTL.Current() != two {
+		t.Fatalf("session active %v, current is process 2 %v", db.Active(), c.RTL.Current() == two)
+	}
+
+	if err := db.Dispatch("EXIT"); err != nil {
+		t.Fatal(err)
+	}
+
+	if c.RTL.Current() != c.RTL {
+		t.Error("EXIT left the CPU in process 2")
+	}
+}
+
+// TestSchedulerStop_processOneWaiting: when process 1 is hibernating, the
+// CPU still goes back to it (for the console's commands), it stays
+// waiting, and process 2 runs on when the program resumes.
+func TestSchedulerStop_processOneWaiting(t *testing.T) {
+	code, _ := assembleAt(t, hiberCount)
+
+	c, _ := scheduledConsole(t, "5", code)
+	one := c.RTL
+	two := handBuiltProcess(t, c, counter())
+
+	// Process 2 runs first (a newcomer at an equal priority preempts);
+	// run until process 1 has got to its $HIBER.
+	for range 200 {
+		if stateOf(one) == sched.StateHIB {
+			break
+		}
+
+		step(t, c, 1)
+	}
+
+	if stateOf(one) != sched.StateHIB {
+		t.Fatalf("process 1 is %s, not hibernating", stateOf(one))
+	}
+
+	stopInProcessTwo(t, c, two)
+
+	if err := c.ReturnToProcessOne(); err != nil {
+		t.Fatal(err)
+	}
+
+	if c.RTL.Current() != one || stateOf(one) != sched.StateHIB {
+		t.Fatalf("current is process 1: %v, its state %s", c.RTL.Current() == one, stateOf(one))
+	}
+
+	b := countOf(t, c, two)
+	c.Engine.SetLimits(100, 0)
+
+	if err := c.Execute(nil); err != nil {
+		t.Fatal(err)
+	}
+
+	if countOf(t, c, two) == b || countOf(t, c, one) != 0 || stateOf(one) != sched.StateHIB {
+		t.Errorf("process 2 counted %d to %d; process 1 woke %d times, %s",
+			b, countOf(t, c, two), countOf(t, c, one), stateOf(one))
 	}
 }

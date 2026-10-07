@@ -1,7 +1,7 @@
 # Phase 44 — Multiprocessing, part 2: the scheduler
 
 **Status:** in progress (started 2026-10-07); decisions taken 2026-10-06
-(see PHASE-43.md, Part A). Subtasks 1–8 done.
+(see PHASE-43.md, Part A). Subtasks 1–9 done.
 
 The program this phase belongs to — its goal, architecture, rules for
 every commit, decisions, and known bugs — is in
@@ -153,13 +153,15 @@ retries at once: today's behavior, whatever the flag.
   never scheduled; Phase 45 adds real deletion). HALT in another process
   halts the machine (it's a machine-wide instruction) and is reported
   naming the process.
-- **The console's view.** When a run stops, the console switches the
-  CPU back to process 1 before its next command (EXAMINE, SHOW
-  REGISTERS, RUN) unless the stop was in another process, in which case
-  the debugger shows that process's state and switches back when it
-  resumes or exits. Exactly how a stop in a subprocess is presented (a
-  process name in the message, or SHOW PROCESS) is decided in subtask 9
-  with Decision 11.
+- **The console's view** (decided by the author in subtask 9,
+  2026-10-07). A run that stops while another process holds the CPU
+  (CTRL/C, a limit, HALT, a fault break) leaves the CPU in that process:
+  the stop message names it ("... at PC = 00000406 in process
+  00000302"), and EXAMINE and SHOW REGISTERS see its registers and
+  memory. The next run (GO, STEP, CALL, RUN) and the debugger's EXIT
+  give the CPU back to process 1 first, the other process keeping its
+  place in the scheduler. A later debugger command, SET PROCESS, will
+  let the user choose the process (see "Future work").
 - **Stepping** (STEP, `SET STEP`) runs with scheduling frozen (no switches),
   so a step is one instruction of the debugged process; GO unfreezes it.
 - **Breakpoints** carry the process they belong to (process 1, Decision
@@ -223,6 +225,22 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
     another runs it with three quanta and checks the outcomes agree.
 12. **Close-out.** Status, progress log, PLAN.md, CLAUDE.md (`internal/sched`,
     the hook), HELP (SHOW SYSTEM, the settings), PERFORMANCE.md.
+
+## Future work
+
+- **The debugger's `SET PROCESS [pid]`** (asked for by the author,
+  2026-10-07): a command that switches the CPU to the process named
+  (process 1 with no pid, or `SET PROCESS/ALL`-style forms if VMS's
+  debugger has them), so its registers and memory can be examined, as
+  after a stop in that process. `System.SwitchCPU` (subtask 9) does the
+  switch, keeping the scheduler in step. Still to decide: whether STEP
+  and breakpoints then follow that process (Decision 11 now ties them to
+  process 1, and `Console.RunningProcessOne` gates the eventpoints), a
+  SHOW PROCESS showing which one the debugger is looking at, and the
+  command's name and syntax against the VMS debugger's own (its SET
+  PROCESS is for multiprocess programs; a probe could settle the form).
+  Not yet scheduled to a subtask; a candidate for subtask 10, beside
+  SHOW SYSTEM/SHOW PROCESS, or a later phase.
 
 ## Open questions
 
@@ -565,3 +583,32 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
     40 leaves process 2 where it was and GO lets it run. Each fix
     except `BeginStep` fails a test when undone. The Phase 42 debugger
     oracles are unchanged.
+- 2026-10-07: **Subtask 9 done: a stop in another process.** The author
+  chose to leave the CPU in the stopped process (the design section
+  above has the rule).
+  - Stop messages name a process other than process 1 (`Console.
+    ProcessNote`): `%VAX-I-ATTENTION`, `-INSTRLIMIT`, `-TIMELIMIT`,
+    `%SYSTEM-S-HALT` (always shown for another process), and the
+    debugger's "Break on fault".
+  - `Console.ReturnToProcessOne` gives the CPU back to process 1 (doing
+    nothing while scheduling is frozen, so a nested run stays where it
+    is): the console's `Execute` and `Call` and the debugger's
+    outermost `Start` (GO, STEP, CALL, RUN under the debugger) call it
+    first, and the debugger's EXIT/QUIT after ending the session.
+  - It switches with `System.SwitchCPU`: the context switch, then
+    `sched.Choose` (new): the process the CPU held goes back to its
+    queue with its priority and the rest of its quantum, and process 1
+    becomes current; if process 1 is waiting it stays waiting, with no
+    current process and a reschedule requested, so the next run's first
+    boundary decides who runs (the CPU holds process 1 meanwhile, for
+    the console's commands).
+  - The author asked for a debugger `SET PROCESS [pid]` for later
+    (recorded under "Future work").
+  - Tests (`console/schedrun_test.go`): short limited runs until one
+    stops in process 2; the message names it, the CPU's P0 and the
+    debugger's EXAMINE show process 2's count, `ReturnToProcessOne`
+    restores process 1's registers with the scheduler in step, and both
+    go on counting; under the debugger, the session opens in process 2
+    and EXIT returns to process 1; with process 1 hibernating, the CPU
+    goes back to it, it stays in HIB, and process 2 runs on. `sched`:
+    `Choose`.

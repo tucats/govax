@@ -2,6 +2,7 @@ package console
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
@@ -123,6 +124,33 @@ func (c *Console) running() *corevms.Environment {
 // and another process reaching the same address is somewhere else.
 func (c *Console) RunningProcessOne() bool {
 	return c.running() == c.RTL
+}
+
+// ProcessNote is what a stop message adds when the CPU holds a process
+// other than process 1, naming it (" in process 00000302"), and "" when
+// it holds process 1 (docs/PHASE-44.md, subtask 9).
+func (c *Console) ProcessNote() string {
+	if env := c.running(); env != c.RTL {
+		return fmt.Sprintf(" in process %08X", env.Process.PID)
+	}
+
+	return ""
+}
+
+// ReturnToProcessOne gives the CPU back to process 1 if a run stopped in
+// another process (docs/PHASE-44.md, subtask 9). After such a stop the
+// CPU stays in that process, so EXAMINE and SHOW REGISTERS see it; the
+// next run (GO, STEP, CALL, RUN) and the debugger's EXIT come back here,
+// since the console's runs and the debugger's breakpoints are process
+// 1's (docs/PHASE-43.md, Decision 11). The other process keeps its place
+// in the scheduler. While scheduling is frozen (a nested run, inside
+// another process's) it does nothing.
+func (c *Console) ReturnToProcessOne() error {
+	if c.RTL == nil || c.Engine == nil || c.Engine.SchedulingFrozen() || c.running() == c.RTL {
+		return nil
+	}
+
+	return c.RTL.SwitchCPU(c.Engine, c.RTL)
 }
 
 // SystemService delegates to the running process (Phase 10's SYS$

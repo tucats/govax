@@ -341,6 +341,42 @@ func (s *Scheduler) Reschedule() (Handle, bool) {
 	return 0, false
 }
 
+// Choose makes h the current process now, outside the usual choice: for
+// the console taking the CPU back for process 1 after a run stopped in
+// another (docs/PHASE-44.md, subtask 9). The process that was current
+// goes to the back of its queue, keeping its priority and the rest of its
+// quantum. A computable h becomes current, its priority unchanged. A
+// waiting h stays waiting, and then there is no current process and a
+// reschedule is requested, so the next choice decides who runs.
+func (s *Scheduler) Choose(h Handle) error {
+	p, err := s.lookup(h)
+	if err != nil {
+		return err
+	}
+
+	if s.hasCurrent {
+		if s.current == h {
+			return nil
+		}
+
+		s.cur.state = StateCOM
+		s.queues[s.cur.priority] = append(s.queues[s.cur.priority], s.current)
+		s.hasCurrent, s.cur = false, nil
+	}
+
+	if p.state != StateCOM {
+		s.reschedule = true
+
+		return nil
+	}
+
+	s.leaveState(h, p)
+	p.state = StateCUR
+	s.current, s.hasCurrent, s.cur = h, true, p
+
+	return nil
+}
+
 // Current returns the current process, and false if there is none.
 func (s *Scheduler) Current() (Handle, bool) {
 	if !s.hasCurrent {

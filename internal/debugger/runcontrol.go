@@ -357,8 +357,8 @@ const (
 func (d *Debugger) reportStop(err error) (runOutcome, error) {
 	var fb *cpu.FaultBreak
 	if errors.As(err, &fb) {
-		d.Console.Printf("Break on fault %02X %s at PC = %08X\n",
-			uint8(fb.Code), d.Console.ExceptionName(fb.Code), d.Console.CPU.GPR(vax.PC))
+		d.Console.Printf("Break on fault %02X %s at PC = %08X%s\n",
+			uint8(fb.Code), d.Console.ExceptionName(fb.Code), d.Console.CPU.GPR(vax.PC), d.Console.ProcessNote())
 
 		return runStopped, nil
 	}

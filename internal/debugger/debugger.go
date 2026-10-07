@@ -181,6 +181,16 @@ func (d *Debugger) Start(a console.Activation) error {
 	}
 
 	nested := d.running > 0
+
+	// A run stopped in another process left the CPU there; the debugger
+	// runs process 1 (docs/PHASE-44.md, subtask 9). A nested run is in
+	// whatever process its outer run is.
+	if !nested {
+		if err := d.Console.ReturnToProcessOne(); err != nil {
+			return err
+		}
+	}
+
 	d.running++
 
 	if !nested {

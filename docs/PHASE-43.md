@@ -428,7 +428,9 @@ recorded here.
     address in P0 means process 1's P0); stepping freezes the other
     processes; a subprocess's image never starts a debugger of its own
     (VMS would start one if the image was linked `/DEBUG`). A later phase
-    could add debugging a subprocess.
+    could add debugging a subprocess: the author has asked for a debugger
+    `SET PROCESS [pid]` to switch to another process (PHASE-44.md,
+    "Future work").
 12. **The milestone's two creation paths.** *Decided:* the milestone
     runs twice, child created by `$CREPRC` (possible from Phase 45/46) and
     by `LIB$SPAWN` (Phase 48).

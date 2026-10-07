@@ -209,3 +209,32 @@ func (sys *System) StopProcess(env *Environment) {
 		fmt.Fprintf(sys.cpu.DebugWriter(), "DEBUG(PROCESS): %08X's image ended; the process stops\n", env.Process.PID)
 	}
 }
+
+// SwitchCPU moves the CPU to env's process now, outside the scheduler's
+// choice: the console taking the CPU back for process 1 when the user
+// resumes after a run stopped in another process (docs/PHASE-44.md,
+// subtask 9). The process the CPU held keeps its place in the scheduler
+// and runs again when it's chosen (sched.Choose). A waiting env is
+// switched to all the same (the console's commands need its context);
+// the scheduler leaves it waiting and decides who runs at the next
+// instruction.
+func (sys *System) SwitchCPU(e *cpu.Engine, env *Environment) error {
+	cur := sys.Current()
+	if cur == env {
+		return nil
+	}
+
+	if err := sys.switchTo(e, cur, env); err != nil {
+		return err
+	}
+
+	if !env.Stopped {
+		if err := sys.sched.Choose(handle(env)); err != nil {
+			return err
+		}
+	}
+
+	e.RequestReschedule()
+
+	return nil
+}

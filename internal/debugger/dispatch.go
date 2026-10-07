@@ -45,7 +45,9 @@ func (d *Dispatcher) bind() {
 	end := func(id int64, r *dcl.Result) error {
 		d.Debugger.End()
 
-		return nil
+		// The console's prompt is process 1's (docs/PHASE-44.md,
+		// subtask 9).
+		return d.Debugger.Console.ReturnToProcessOne()
 	}
 
 	d.bindBreak()

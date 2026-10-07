@@ -641,6 +641,51 @@ func TestRequestReschedule(t *testing.T) {
 	}
 }
 
+// TestChoose: the console can make a process current by hand; the one it
+// displaces goes to the back of its queue; a waiting process stays
+// waiting, with a reschedule requested.
+func TestChoose(t *testing.T) {
+	s := newScheduler(t, 10, 4, 4, 4)
+	run(s, 3) // process 1 current, 3 instructions used
+
+	if err := s.Choose(3); err != nil {
+		t.Fatal(err)
+	}
+
+	if h, _ := s.Current(); h != 3 || s.RescheduleRequested() {
+		t.Errorf("current %d, reschedule %v; want 3, false", h, s.RescheduleRequested())
+	}
+
+	if want := []Handle{2, 1}; !slices.Equal(s.Computable(), want) {
+		t.Errorf("computable %v, want %v", s.Computable(), want)
+	}
+
+	if info := mustInfo(t, s, 1); info.QuantumLeft != 7 || info.State != StateCOM {
+		t.Errorf("displaced process 1: %+v", info)
+	}
+
+	if err := s.Choose(3); err != nil { // already current
+		t.Fatal(err)
+	}
+
+	if err := s.Wait(2, StateHIB, ResourceNone); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := s.Choose(2); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := s.Current(); ok || !s.RescheduleRequested() || mustInfo(t, s, 2).State != StateHIB {
+		t.Errorf("choosing a waiting process: current %v, reschedule %v, state %s",
+			ok, s.RescheduleRequested(), mustInfo(t, s, 2).State)
+	}
+
+	if err := s.Choose(9); err == nil {
+		t.Error("Choose of an unknown process")
+	}
+}
+
 // TestCharge checks charging instructions in batches: the CPU count,
 // QuantumLeft, and a quantum end inside a batch.
 func TestCharge(t *testing.T) {
