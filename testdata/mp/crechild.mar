@@ -1,0 +1,222 @@
+	.title	crechild
+;
+; Phase 45's multiprocessing program (docs/PHASE-45.md, subtask 13). It
+; creates a subprocess running the image named on the command line
+; (CHILD.EXE, from CHILD.MAR), with a termination mailbox, looks at the
+; child with $GETJPI while it lives, wakes it, and prints the status its
+; termination message reports. It is written to run on VMS and on govax
+; with the same output, apart from the process IDs it doesn't print:
+;
+;	Child: running
+;	Parent: child is in state 7, named CHILD_1
+;	Parent: child's owner and master are this process
+;	Child: awake
+;	Parent: child ended with status 00000007
+;
+; (The child, created at a higher priority, runs at once and hibernates;
+; state 7 is SCH$C_HIB.)
+;
+	$IODEF
+	$JPIDEF
+	$DVIDEF
+	$ACCDEF
+
+; CHECK: end the program with the service's failure status in R0.
+	.macro	check	?ok
+	blbs	r0,ok
+	brw	fail
+ok:
+	.endm
+
+	.psect	data,noexe,wrt
+; Text and descriptors.
+image_desc:	.word	255
+		.byte	14,1
+		.long	image_buf
+image_buf:	.blkb	255
+img_len:	.word	0
+name_desc:	.ascid	/CHILD_1/
+term_desc:	.ascid	/TT:/			; the child writes to our terminal
+
+state_ctl:	.ascid	/Parent: child is in state !UL, named !AD/
+own_ctl:	.ascid	/Parent: child's owner and master are this process/
+bad_ctl:	.ascid	/Parent: child's owner is !XL and master !XL, not !XL/
+end_ctl:	.ascid	/Parent: child ended with status !XL/
+
+out_buf:	.blkb	132
+out_desc:	.word	132
+		.byte	14,1
+		.long	out_buf
+out_len:	.word	0,0
+
+; The mailbox: its channel, and its unit number from $GETDVI.
+mbx_chan:	.word	0,0
+mbx_unit:	.long	0
+dvi_items:	.word	4,DVI$_UNIT
+		.long	mbx_unit,0
+		.long	0
+
+; This process: its PID and base priority.
+my_pid:		.long	0
+my_prib:	.long	0
+my_items:	.word	4,JPI$_PID
+		.long	my_pid,0
+		.word	4,JPI$_PRIB
+		.long	my_prib,0
+		.long	0
+
+; The child: its PID (from $CREPRC) and what $GETJPI says.
+child_pid:	.long	0
+c_state:	.long	0
+c_owner:	.long	0
+c_master:	.long	0
+c_name:		.blkb	15
+c_namelen:	.long	0
+c_items:	.word	4,JPI$_STATE
+		.long	c_state,0
+		.word	4,JPI$_OWNER
+		.long	c_owner,0
+		.word	4,JPI$_MASTER_PID
+		.long	c_master,0
+		.word	15,JPI$_PRCNAM
+		.long	c_name,c_namelen
+		.long	0
+
+; The termination message, and the read's I/O status block.
+term_msg:	.blkb	ACC$K_TERMLEN
+iosb:		.quad	0
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+
+; The child's image comes from the command line.
+	pushal	img_len			; out-len
+	pushl	#0			; prompt
+	pushaq	image_desc
+	calls	#3,g^lib$get_foreign
+	check
+	movw	img_len,image_desc
+
+; A temporary mailbox for the termination message, and its unit number.
+	pushl	#512			; bufquo
+	pushl	#128			; maxmsg
+	pushal	mbx_chan
+	pushl	#0			; prmflg
+	calls	#4,g^sys$crembx
+	check
+	pushal	dvi_items
+	pushl	#0			; devnam
+	movzwl	mbx_chan,-(sp)
+	pushl	#0			; efn
+	calls	#4,g^sys$getdviw
+	check
+
+; Our own PID and base priority; the child gets a higher one, so it runs
+; as soon as it is created.
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushal	my_items
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	calls	#7,g^sys$getjpiw
+	check
+	incl	my_prib
+	incl	my_prib
+
+; $CREPRC pidadr,image,input,output,error,prvadr,quota,prcnam,baspri,
+;	uic,mbxunt,stsflg
+	pushl	#0			; stsflg
+	pushl	mbx_unit		; mbxunt
+	pushl	#0			; uic
+	pushl	my_prib			; baspri
+	pushaq	name_desc		; prcnam
+	pushl	#0			; quota
+	pushl	#0			; prvadr
+	pushl	#0			; error
+	pushaq	term_desc		; output
+	pushl	#0			; input
+	pushaq	image_desc		; image
+	pushal	child_pid		; pidadr
+	calls	#12,g^sys$creprc
+	check
+
+; The child has run and hibernated. Look at it.
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushal	c_items
+	pushl	#0
+	pushal	child_pid
+	pushl	#0
+	calls	#7,g^sys$getjpiw
+	check
+
+	pushal	c_name			; !AD: address
+	pushl	c_namelen		;      length
+	pushl	c_state			; !UL
+	pushal	out_desc
+	pushal	out_len
+	pushaq	state_ctl
+	calls	#6,g^sys$fao
+	check
+	bsbw	print
+
+	cmpl	c_owner,my_pid
+	bneq	notours
+	cmpl	c_master,my_pid
+	bneq	notours
+	pushaq	own_ctl
+	calls	#1,g^lib$put_output
+	brb	wake
+notours:
+	pushl	my_pid
+	pushl	c_master
+	pushl	c_owner
+	pushal	out_desc
+	pushal	out_len
+	pushaq	bad_ctl
+	calls	#6,g^sys$fao
+	check
+	bsbw	print
+
+; Wake the child, and read its termination message.
+wake:	pushl	#0
+	pushal	child_pid
+	calls	#2,g^sys$wake
+	check
+
+	pushl	#0			; p6
+	pushl	#0			; p5
+	pushl	#0			; p4
+	pushl	#0			; p3
+	pushl	#ACC$K_TERMLEN		; p2
+	pushal	term_msg		; p1
+	pushl	#0			; astprm
+	pushl	#0			; astadr
+	pushal	iosb			; iosb
+	pushl	#IO$_READVBLK		; func
+	movzwl	mbx_chan,-(sp)		; chan
+	pushl	#0			; efn
+	calls	#12,g^sys$qiow
+	check
+
+	pushl	term_msg+ACC$L_FINALSTS
+	pushal	out_desc
+	pushal	out_len
+	pushaq	end_ctl
+	calls	#4,g^sys$fao
+	check
+	bsbw	print
+	movl	#1,r0
+fail:	ret
+
+; Print what $FAO formatted into OUT_BUF.
+print:	movw	out_len,out_desc
+	pushaq	out_desc
+	calls	#1,g^lib$put_output
+	movw	#132,out_desc
+	rsb
+
+	.end	start

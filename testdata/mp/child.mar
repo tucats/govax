@@ -1,0 +1,21 @@
+	.title	child
+;
+; The child of CRECHILD.MAR (docs/PHASE-45.md, subtask 13): it says it
+; is running, hibernates until its creator wakes it, says so again, and
+; returns the status 7, which its termination message reports.
+;
+	.psect	data,noexe,wrt
+start_msg:	.ascid	/Child: running/
+wake_msg:	.ascid	/Child: awake/
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+	pushaq	start_msg
+	calls	#1,g^lib$put_output
+	calls	#0,g^sys$hiber
+	pushaq	wake_msg
+	calls	#1,g^lib$put_output
+	movl	#7,r0
+	ret
+
+	.end	start

@@ -652,3 +652,22 @@ for a process created without one.
   `console/stop_test.go` (both forms and the abbreviation, the refusals,
   an owner stopped with its subprocess, INIT deleting what's left) and
   the grammar-split and verb-count tests.
+- 2026-10-07: Subtask 13 (the MACRO test). `testdata/mp/crechild.mar`
+  and `child.mar`: the parent reads the child's image from its command
+  line (`LIB$GET_FOREIGN`; `RunOptions.CommandLine`), `$CREMBX`es a
+  temporary mailbox, finds its unit with `$GETDVIW`, learns its own PID
+  and base priority with `$GETJPIW`, and `$CREPRC`s `CHILD_1` one
+  priority step above itself, with `TT:` as SYS$OUTPUT and the mailbox as
+  its termination mailbox. The child runs at once, prints, and
+  hibernates; the parent `$GETJPIW`s it (state 7, SCH$C_HIB; its name;
+  its owner and master PIDs are the parent's), `$WAKE`s it, and `$QIOW`s
+  the termination message, printing the child's final status, 7. The
+  output is five lines (listed in `crechild.mar`). `TestCreChild`
+  (`console/crechild_test.go`) builds both with govax's MACRO and LINK,
+  runs the parent as process 1's image, and checks them. No govax macros
+  are used (govax has none yet for the process services), so the same
+  sources assemble on VMS, which makes them a run oracle (README.md
+  there); that run has not been made. Also done for this subtask,
+  subtask 1's loose end: `mkdefs` reads
+  `testdata/mp/defs/phase45-defined.txt` as well, so govax's macro
+  library now has `$ACCDEF`, `$MSGDEF`, `$PQLDEF`, and `$PRCDEF`.

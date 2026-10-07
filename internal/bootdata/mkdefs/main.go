@@ -7,8 +7,10 @@
 // Which names each macro defines, and their values, come from
 // testdata/mar/rms/defined.txt: what real VAX MACRO made of govax's
 // definition probes, one $xxxDEF and a .LONG of each candidate name
-// (testdata/mar/rms/decode.go). The macros are generated from that list,
-// not written from VMS's own.
+// (testdata/mar/rms/decode.go); and, since Phase 45, from
+// testdata/mp/defs/phase45-defined.txt ($PRCDEF, $PQLDEF, $ACCDEF, and
+// $MSGDEF, from global symbol directories). The macros are generated
+// from those lists, not written from VMS's own.
 package main
 
 import (
@@ -22,8 +24,12 @@ import (
 	"github.com/tucats/govax/internal/bootdata"
 )
 
-// defined is testdata/mar/rms/defined.txt, from internal/bootdata.
-var defined = filepath.Join("..", "..", "testdata", "mar", "rms", "defined.txt")
+// defined are the lists of what real VAX MACRO defined, from
+// internal/bootdata; a family in both is taken from the first.
+var defined = []string{
+	filepath.Join("..", "..", "testdata", "mar", "rms", "defined.txt"),
+	filepath.Join("..", "..", "testdata", "mp", "defs", "phase45-defined.txt"),
+}
 
 var (
 	headerRE = regexp.MustCompile(`^# \$([A-Z0-9]+)DEF$`)
@@ -39,33 +45,22 @@ type macro struct {
 }
 
 func main() {
-	f, err := os.Open(defined)
-	if err != nil {
-		fail(err)
-	}
-	defer f.Close()
-
 	var macros []*macro
 
-	s := bufio.NewScanner(f)
-	for s.Scan() {
-		line := s.Text()
+	seen := map[string]bool{}
 
-		if m := headerRE.FindStringSubmatch(line); m != nil {
-			macros = append(macros, &macro{family: m[1]})
-
-			continue
+	for _, path := range defined {
+		list, err := readDefined(path)
+		if err != nil {
+			fail(err)
 		}
 
-		if m := valueRE.FindStringSubmatch(line); m != nil && len(macros) > 0 {
-			cur := macros[len(macros)-1]
-			cur.names = append(cur.names, m[1])
-			cur.values = append(cur.values, strings.ToUpper(m[2]))
+		for _, m := range list {
+			if !seen[m.family] {
+				seen[m.family] = true
+				macros = append(macros, m)
+			}
 		}
-	}
-
-	if err := s.Err(); err != nil {
-		fail(err)
 	}
 
 	var b strings.Builder
@@ -123,6 +118,36 @@ func main() {
 	if err := os.WriteFile(filepath.Join("files", bootdata.StarletDefSource), []byte(b.String()), 0o644); err != nil {
 		fail(err)
 	}
+}
+
+// readDefined reads one list of definitions.
+func readDefined(path string) ([]*macro, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var macros []*macro
+
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		line := s.Text()
+
+		if m := headerRE.FindStringSubmatch(line); m != nil {
+			macros = append(macros, &macro{family: m[1]})
+
+			continue
+		}
+
+		if m := valueRE.FindStringSubmatch(line); m != nil && len(macros) > 0 {
+			cur := macros[len(macros)-1]
+			cur.names = append(cur.names, m[1])
+			cur.values = append(cur.values, strings.ToUpper(m[2]))
+		}
+	}
+
+	return macros, s.Err()
 }
 
 func fail(err error) {
