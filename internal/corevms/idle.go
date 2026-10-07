@@ -73,7 +73,9 @@ func (sys *System) idle(e *cpu.Engine) (sched.Handle, bool) {
 			fmt.Fprintf(sys.cpu.DebugWriter(), "DEBUG(PROCESS): IDLE for %d ms\n", (max(t, now)-now)/10_000)
 		}
 
+		sys.accountTime()
 		reached := e.IdleUntil(t, idleWaitLimit)
+		sys.lastCharge = sys.Clock() // the idle time is nobody's
 		sys.pollEvents()
 
 		if h, ok := sys.sched.Reschedule(); ok {

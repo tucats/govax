@@ -27,6 +27,8 @@ func TestSysCodes_matchSSDEF(t *testing.T) {
 		"SS$_LNMCREATED":  SS_LNMCREATED,
 		"SS$_PARENT_DEL":  SS_PARENT_DEL,
 		"SS$_NOLOGTAB":    SS_NOLOGTAB,
+		"SS$_NONEXPR":     SS_NONEXPR,
+		"SS$_IVIDENT":     SS_IVIDENT,
 	}
 
 	for name, got := range codes {

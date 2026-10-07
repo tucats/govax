@@ -70,6 +70,7 @@ func (sys *System) CPUInstructions(env *Environment) uint64 {
 func (sys *System) Schedule(e *cpu.Engine, ran int, preemptible bool) (int, error) {
 	s := sys.sched
 	s.Charge(ran)
+	sys.accountTime()
 
 	// Every process's due timers expire, and a waiting process whose
 	// wait is over becomes computable now, which may preempt the
@@ -223,6 +224,8 @@ func (sys *System) SwitchCPU(e *cpu.Engine, env *Environment) error {
 	if cur == env {
 		return nil
 	}
+
+	sys.accountTime()
 
 	if err := sys.switchTo(e, cur, env); err != nil {
 		return err

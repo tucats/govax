@@ -205,6 +205,12 @@ func (d *Dispatcher) bindGrammar() {
 
 	g.Bind("SHOW_QUANTUM", func(id int64, r *dcl.Result) error { return d.Console.ShowQuantum() })
 
+	// SHOW SYSTEM and SHOW PROCESS (docs/PHASE-44.md, subtask 10).
+	g.Bind("SHOW_SYSTEM", func(id int64, r *dcl.Result) error { return d.Console.ShowSystem() })
+	g.Bind("SHOW_PROCESS", func(id int64, r *dcl.Result) error {
+		return d.Console.ShowProcess(r.String("PROCESS_NAME"), r.String("IDENTIFICATION"))
+	})
+
 	g.Bind("SHOW_DEBUG", func(id int64, r *dcl.Result) error { return d.Console.ShowDebug() })
 
 	g.Bind("SHOW_INSTRUCTIONS", func(id int64, r *dcl.Result) error {

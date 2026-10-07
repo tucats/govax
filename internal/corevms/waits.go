@@ -83,6 +83,7 @@ func (env *Environment) waitOnFlag(efn uint32, over func() bool) error {
 // when vax.process.scheduler is on.
 func (sys *System) InstallScheduler(e *cpu.Engine) {
 	sys.engine = e
+	sys.lastCharge = sys.Clock()
 	e.SetScheduler(sys, sys.ProcessSettings.Preempt.Modes())
 }
 

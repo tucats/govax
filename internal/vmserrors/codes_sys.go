@@ -40,6 +40,11 @@ const (
 	sysLNMCreated  uint32 = 214  // SS$_LNMCREATED: 1713 >> 3
 	sysParentDel   uint32 = 1098 // SS$_PARENT_DEL: 8788 >> 3
 	sysNoLogTab    uint32 = 1106 // SS$_NOLOGTAB:   8852 >> 3
+
+	// Process codes (docs/PHASE-44.md, subtask 10: SHOW PROCESS).
+	// Values and texts as internal/vmsdef's Symbols and Messages.
+	sysNonExpr uint32 = 285  // SS$_NONEXPR:  2280 >> 3
+	sysIvIdent uint32 = 1092 // SS$_IVIDENT:  8740 >> 3
 )
 
 // SYS facility status codes -- SS_ prefix, matching real VMS's own SS$_
@@ -102,6 +107,13 @@ const (
 	SS_LNMCREATED  = SYSFacility<<FacilityPosition | sysLNMCreated<<MessagePosition | StatusSuccess
 	SS_PARENT_DEL  = SYSFacility<<FacilityPosition | sysParentDel<<MessagePosition | StatusSevere
 	SS_NOLOGTAB    = SYSFacility<<FacilityPosition | sysNoLogTab<<MessagePosition | StatusSevere
+
+	// SS_NONEXPR is SS$_NONEXPR, "nonexistent process" (a warning): SHOW
+	// PROCESS naming a process that isn't there. SS_IVIDENT is
+	// SS$_IVIDENT, "invalid identifier format": a process ID that isn't
+	// a hexadecimal number.
+	SS_NONEXPR = SYSFacility<<FacilityPosition | sysNonExpr<<MessagePosition | StatusWarning
+	SS_IVIDENT = SYSFacility<<FacilityPosition | sysIvIdent<<MessagePosition | StatusSevere
 )
 
 func init() {
@@ -122,4 +134,6 @@ func init() {
 	DefineMessage(SS_LNMCREATED, SYSFacility, "LNMCREATED", "logical name table did not exist; has been created")
 	DefineMessage(SS_PARENT_DEL, SYSFacility, "PARENT_DEL", "illegal attempt to delete parent logical name table")
 	DefineMessage(SS_NOLOGTAB, SYSFacility, "NOLOGTAB", "no logical name table name match")
+	DefineMessage(SS_NONEXPR, SYSFacility, "NONEXPR", "nonexistent process")
+	DefineMessage(SS_IVIDENT, SYSFacility, "IVIDENT", "invalid identifier format")
 }

@@ -1,7 +1,7 @@
 # Phase 44 — Multiprocessing, part 2: the scheduler
 
 **Status:** in progress (started 2026-10-07); decisions taken 2026-10-06
-(see PHASE-43.md, Part A). Subtasks 1–9 done.
+(see PHASE-43.md, Part A). Subtasks 1–10 done.
 
 The program this phase belongs to — its goal, architecture, rules for
 every commit, decisions, and known bugs — is in
@@ -612,3 +612,45 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
     and EXIT returns to process 1; with process 1 hibernating, the CPU
     goes back to it, it stays in HIB, and process 2 runs on. `sched`:
     `Choose`.
+- 2026-10-07: **Subtask 10 done: SHOW SYSTEM and SHOW PROCESS** (console
+  commands; `corevms/showsys.go` builds the reports, `console/showsys.go`
+  finds the process and prints).
+  - SHOW SYSTEM's layout is real VMS's, from the author's VMS 7.1 SIMH
+    system's output (in place of the probe Decision 7 planned): title,
+    the column headings verbatim, and each process as `%08X %-15s
+    %-6s%4d%9d<CPU as a delta time>%10d%7d`. `TestSystemLayout` lays
+    out the sample's own values and gets its lines exactly.
+  - The title's words are the author's choice: `GOVAX <govax's version>`
+    (console.BuildVersion) where VMS says `OpenVMS V7.1`, and the node is
+    the host's short name (`os.Hostname` up to the first dot), so it
+    names the system really being looked at. `$GETSYI`'s node name stays
+    GOVAX. **Unconfirmed:** padding of a node name under six characters
+    (to six), and the uptime's day count past 9.
+  - The state column is the scheduler's (a resource wait by its name,
+    RWMBX, ...), or CUR/COM without the scheduler; priority is the
+    current one. I/O and page faults are 0 (govax doesn't count them);
+    Pages is the valid pages in the process's P0 and P1. A stopped
+    process isn't listed.
+  - CPU time: each process is now charged the emulated time that passes
+    while it holds the CPU (`accountTime`, at each scheduling call and
+    before a console switch; idle time is nobody's), `System.CPUTime`
+    (process 1 without the scheduler: the time since boot). `$GETJPI`'s
+    `JPI$_CPUTIM` (10 ms units) is new, from it.
+  - SHOW PROCESS [name] [/IDENTIFICATION=pid] (the console's process by
+    default; a name in its UIC group; the pid in hex, winning over a
+    name): the date, user, PID, node (the host's), name, terminal, UIC
+    (numeric, `[1,4]`), base priority, default directory. The layout is
+    from memory of VMS's (**unconfirmed**; a VMS sample would settle
+    it). A missing process is `%SYSTEM-W-NONEXPR`, a bad PID
+    `%SYSTEM-F-IVIDENT`: both added to `vmserrors` (values and texts from
+    `vmsdef`; the System Messages manual at hand lacks them).
+  - The debugger has no SHOW PROCESS of its own yet: it goes with the
+    future SET PROCESS.
+  - Grammar (`show_system`, `show_process`; a grammar `disallow` works
+    only between qualifiers, so a name and /IDENTIFICATION aren't
+    exclusive), HELP SHOW SYSTEM and SHOW PROCESS, and SHOW's index.
+  - Tests: the layout against the sample; the report's states and the
+    stopped process left out; CPU time and `JPI$_CPUTIM`; through the
+    console's grammar, SHOW SYSTEM with a running and a hibernating
+    process (title by pattern), SHOW PROCESS by default, name, and
+    /IDENTIFICATION, and NONEXPR.

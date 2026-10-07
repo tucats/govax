@@ -53,6 +53,7 @@ var jpiItemsByName = map[string]func(env *Environment) itemValue{
 	"JPI$_IMAGPRIV":   func(env *Environment) itemValue { return itemQuad(env.Process.ImagePrivileges) },
 	"JPI$_PROCPRIV":   func(env *Environment) itemValue { return itemQuad(env.Process.ProcessPrivileges) },
 	"JPI$_PRI":        func(env *Environment) itemValue { return itemLong(env.currentPriority()) },
+	"JPI$_CPUTIM":     func(env *Environment) itemValue { return itemLong(uint32(env.CPUTime(env) / 100_000)) }, // 10ms units
 	"JPI$_PRIB":       func(env *Environment) itemValue { return itemLong(env.Process.BasePriority) },
 	"JPI$_STATE":      func(env *Environment) itemValue { return itemLong(schStateCurrent) },
 	"JPI$_CLINAME":    func(env *Environment) itemValue { return itemString(env.Process.CLIName) },

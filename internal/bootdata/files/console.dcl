@@ -264,6 +264,10 @@ grammar console
         keyword         rom             /syntax=show_rom
         keyword         share_prefix    /syntax=show_share
         keyword         expand          /syntax=show_expand
+        ! SYSTEM and PROCESS (docs/PHASE-44.md, subtask 10): the process
+        ! table and one process, as VMS's DCL shows them.
+        keyword         system          /syntax=show_system
+        keyword         process         /syntax=show_process
                 
 
 	verb vminit
@@ -362,6 +366,15 @@ grammar console
         ! testdata/dcl/console.dcl counterpart -- see this file's own
         ! "govax-native extension" comment at MOUNT's definition below.
         syntax          show_default/id=163
+
+        ! SHOW SYSTEM and SHOW PROCESS [name] [/IDENTIFICATION=pid]
+        ! (docs/PHASE-44.md, subtask 10); internal/console/showsys.go.
+        syntax          show_system/id=164
+        syntax          show_process/id=165
+            qualifier   identification/id=1940      -
+                        /type=$string
+            parameter   process_name/id=1941        -
+                        /type=$string
 
 
     !

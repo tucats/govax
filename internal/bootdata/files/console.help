@@ -1516,10 +1516,12 @@ $SH
         SHOW INSTRUCTION/UNIMPLEMENTED
         SHOW LOGICAL
         SHOW MEMORY
+        SHOW PROCESS
         SHOW QUANTUM
         SHOW RADIX
         SHOW STRINGS
         SHOW SYMBOL
+        SHOW SYSTEM
         SHOW TRANSLATION
 
     SHOW also displays the state of the machine itself (registers, memory,
@@ -3814,6 +3816,54 @@ $SE  ,PROM
         SET PROMPT="vax$ "
 
         SET PROMPT=""
+
+$SHOW,SYST
+$SH  ,SYST
+
+    The SHOW SYSTEM command lists the processes in the system, as VMS's
+    DCL does: each one's process ID, name, scheduling state, current
+    priority, and CPU time.  The first line names the system as govax and
+    its version, and the node as the host computer's name.  States are VMS's: CUR is the process the CPU
+    is running, COM one ready to run, and the wait states are HIB
+    (hibernating), LEF and CEF (waiting for a local or common event
+    flag), SUSP, and a resource wait such as RWMBX (room in a full
+    mailbox).  govax doesn't count I/O operations or page faults, so
+    those columns are 0, and Pages counts the pages each process's
+    address space maps.  Several processes run only with the
+    vax.process.scheduler setting on (HELP CONFIG KEYS).
+
+    Syntax:
+
+        SHOW SYSTEM
+
+    Example:
+
+        GOVAX 1.0-280  on node mymac    7-OCT-2026 11:37:42.07  Uptime  0 00:00:31
+          Pid    Process Name    State  Pri      I/O       CPU       Page flts  Pages
+        00000301 SYSTEM          CUR      4        0   0 00:00:00.31         0    469
+
+$SHOW,PROC
+$SH  ,PROC
+
+    The SHOW PROCESS command displays a process's details: its user,
+    process ID and name, terminal, user identification code (UIC), base
+    priority, and default device and directory.  With no name or
+    /IDENTIFICATION, it shows the console's own process.
+
+    Syntax:
+
+        SHOW PROCESS [process-name] [/IDENTIFICATION=pid]
+
+    Parameter:
+
+        process-name    The name of the process, as SHOW SYSTEM lists
+                        it (quote a name with blanks or lowercase).
+
+    Qualifier:
+
+        /IDENTIFICATION=pid
+                        The process ID, in hexadecimal, as SHOW SYSTEM
+                        lists it.
 
 $SHOW,DEFA
 $SH  ,DEFA

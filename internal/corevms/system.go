@@ -103,6 +103,10 @@ type System struct {
 	// SET DEBUG PROCESS trace notes that only once.
 	idleSpinning bool
 
+	// lastCharge is when CPU time was last charged to the process the
+	// CPU held (showsys.go's accountTime).
+	lastCharge uint64
+
 	// procs is the process table: every process's Environment by its
 	// PID's index, and which one is current (proctable.go).
 	procs *processTable

@@ -152,6 +152,10 @@ type Environment struct {
 	// the scheduler for good (StopProcess): a process other than process
 	// 1, which Phase 45 will delete instead.
 	Stopped bool
+
+	// cpuTime is the CPU time the process has used, in VMS time units
+	// (showsys.go's accountTime).
+	cpuTime uint64
 }
 
 // NewEnvironment returns an Environment for a new VAX process running on
