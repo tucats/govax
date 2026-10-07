@@ -94,6 +94,11 @@ type System struct {
 	// can't start.
 	ActivateImage func(env *Environment, image string, hibernate bool) (uint32, error)
 
+	// ProcessDeleted, if set, is called when a process has been deleted
+	// (DeleteProcess), for what the console keeps for each process (its
+	// image state) to go too.
+	ProcessDeleted func(env *Environment)
+
 	// sched is the scheduler (schedule.go): every process in procs is
 	// in it, by PID. It only decides anything while the engine has the
 	// System installed as its scheduling hook.

@@ -289,8 +289,8 @@ func TestCreprc_limits(t *testing.T) {
 
 // Phase 45's subtask 5: process startup. A created process's first
 // dispatch defines its SYS$ names, activates its image in its own P0,
-// and calls it as RUN calls process 1's; the image's end stops the
-// process (subtask 6 will delete it).
+// and calls it as RUN calls process 1's; the image's end deletes the
+// process (subtask 6).
 
 // childSource is the child's image: it writes a line through
 // LIB$PUT_OUTPUT, on the terminal it shares with process 1, and returns
@@ -313,10 +313,18 @@ msg:	.ascid	/Hello from the child/
 func buildChildImage(t *testing.T, c *console.Console) string {
 	t.Helper()
 
-	dir := t.TempDir()
-	src, obj, exe := filepath.Join(dir, "child.mar"), filepath.Join(dir, "child.obj"), filepath.Join(dir, "child.exe")
+	return buildImage(t, c, "child", childSource)
+}
 
-	if err := os.WriteFile(src, []byte(childSource), 0o644); err != nil {
+// buildImage assembles and links source as name.MAR with govax's MACRO
+// and LINK, returning the image's host path.
+func buildImage(t *testing.T, c *console.Console, name, source string) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	src, obj, exe := filepath.Join(dir, name+".mar"), filepath.Join(dir, name+".obj"), filepath.Join(dir, name+".exe")
+
+	if err := os.WriteFile(src, []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -335,7 +343,7 @@ func buildChildImage(t *testing.T, c *console.Console) string {
 }
 
 // runUntil runs the machine, as the console's run loop does
-// (StepMachine: another process's image end stops that process), until
+// (StepMachine: another process's image end deletes that process), until
 // done reports true, failing after limit instructions.
 func runUntil(t *testing.T, c *console.Console, limit int, done func() bool) {
 	t.Helper()
@@ -355,7 +363,7 @@ func runUntil(t *testing.T, c *console.Console, limit int, done func() bool) {
 
 // TestCreprc_startup: a subprocess runs its image: it starts the first
 // time the scheduler switches to it (preempting process 1, at the same
-// priority), prints its line on the shared terminal, and stops when its
+// priority), prints its line on the shared terminal, and is deleted when its
 // image returns, with the image's status, after which process 1 runs on.
 // Its SYS$OUTPUT is the output $CREPRC gave, in its own process table,
 // and its default directory is process 1's.
@@ -380,7 +388,7 @@ func TestCreprc_startup(t *testing.T) {
 	runUntil(t, c, 100000, func() bool {
 		sawChild = sawChild || c.RTL.Current() == child
 
-		return child.Stopped
+		return child.Deleted
 	})
 
 	if !sawChild {
@@ -452,7 +460,7 @@ done:	brb	done
 
 	setLongword(t, c, one, dataAddr+4, child.Process.PID)
 
-	runUntil(t, c, 100000, func() bool { return child.Stopped })
+	runUntil(t, c, 100000, func() bool { return child.Deleted })
 
 	if !strings.Contains(out.String(), "Hello from the child") || child.Process.ExitStatus != 3 {
 		t.Errorf("after $WAKE: output %q, status %08X", out.String(), child.Process.ExitStatus)
@@ -460,7 +468,7 @@ done:	brb	done
 }
 
 // TestCreprc_startupFails: a process whose image can't be activated
-// stops at once with the failure's status (RMS$_FNF for a missing image;
+// is deleted at once with the failure's status (RMS$_FNF for a missing image;
 // SS$_UNSUPPORTED for LOGINOUT, the command interpreter Phase 48 adds),
 // and the scheduler chooses again before anything runs: process 1 goes
 // on.
@@ -484,9 +492,9 @@ func TestCreprc_startupFails(t *testing.T) {
 		c.Engine.RequestReschedule()
 		step(t, c, 1)
 
-		if !child.Stopped || child.Process.ExitStatus != tt.want {
-			t.Errorf("%q: stopped %v, status %08X; want stopped with %08X",
-				tt.image, child.Stopped, child.Process.ExitStatus, tt.want)
+		if !child.Deleted || child.Process.ExitStatus != tt.want {
+			t.Errorf("%q: deleted %v, status %08X; want deleted with %08X",
+				tt.image, child.Deleted, child.Process.ExitStatus, tt.want)
 		}
 
 		if c.RTL.Current() != one || c.CPU.GPR(vax.PC) != codeAddr {

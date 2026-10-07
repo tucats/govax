@@ -109,8 +109,8 @@ func TestSchedulerRun_otherImageEnds(t *testing.T) {
 				t.Errorf("process 1 counted %d, want 200 (its CALL ended early)", n)
 			}
 
-			if !two.Stopped || c.RTL.Current() == two {
-				t.Errorf("process 2: stopped %v, current %v", two.Stopped, c.RTL.Current() == two)
+			if !two.Deleted || c.RTL.Current() == two {
+				t.Errorf("process 2: deleted %v, current %v", two.Deleted, c.RTL.Current() == two)
 			}
 
 			if _, ok := two.Scheduler().Info(0); ok {

@@ -133,16 +133,11 @@ func systemLine(pid uint32, name, state string, pri int, io uint32, cpu uint64, 
 
 // SystemReport is SHOW SYSTEM's display, a line per process, in PID
 // order, after the title (naming system and node) and the column
-// headings. A stopped process (its image ended; Phase 45 will delete such
-// processes) isn't listed.
+// headings.
 func (sys *System) SystemReport(system, node string) []string {
 	lines := []string{systemTitle(system, node, sys.Clock(), sys.BootTime), systemHeadings}
 
 	for _, env := range sys.Processes() {
-		if env.Stopped {
-			continue
-		}
-
 		state, pri := sys.processState(env)
 		lines = append(lines, systemLine(env.Process.PID, env.Process.Name, state, pri, 0, sys.CPUTime(env), 0, sys.mappedPages(env)))
 	}

@@ -89,8 +89,8 @@ func (sys *System) Schedule(e *cpu.Engine, ran int, preemptible bool) (int, erro
 	}
 
 	// A process starting for the first time may fail to (its image
-	// can't be activated) and stop at once (startup.go): then the choice
-	// is made again, before anything runs.
+	// can't be activated) and be deleted at once (startup.go): then the
+	// choice is made again, before anything runs.
 	for {
 		h, ok := s.Reschedule()
 		if !ok {
@@ -114,7 +114,7 @@ func (sys *System) Schedule(e *cpu.Engine, ran int, preemptible bool) (int, erro
 			return 0, err
 		}
 
-		if !next.Stopped {
+		if !next.Deleted {
 			break
 		}
 	}
@@ -153,14 +153,21 @@ func (sys *System) budget(e *cpu.Engine) int {
 //     fetch window emptied), and the PC and PSL to resume at.
 //  3. next becomes the System's current process, the one the system
 //     service and AST hooks reach.
+//  4. If cur has been deleted (delete.go), the memory it kept while the
+//     CPU ran in it, its page tables, stacks, and PCB among it, is freed
+//     now that the CPU has left it: what VMS does once the deleted
+//     process has saved its context for the last time (VAX/VMS Internals
+//     and Data Structures, section 22.2.1, steps 14 to 16). Saving its
+//     context first, into a PCB about to be freed, is wasted but
+//     harmless, and leaves the CPU on the interrupt stack, where loading
+//     the next context starts from.
 func (sys *System) switchTo(e *cpu.Engine, cur, next *Environment) error {
 	if next.Stacks == nil || next.Stacks.PCB == 0 {
 		return fmt.Errorf("corevms: process %08X has no hardware PCB to switch to", next.Process.PID)
 	}
 
-	// With no process to save (the current one was deleted), the CPU
-	// isn't left on the interrupt stack, where LoadContext starts from.
-	// Nothing deletes the current process yet; Phase 45's deletion will.
+	// There is always a current process to save: a deleted one stays
+	// current until this switch (step 4).
 	if cur == nil {
 		return fmt.Errorf("corevms: no current process to switch from to %08X", next.Process.PID)
 	}
@@ -193,6 +200,10 @@ func (sys *System) switchTo(e *cpu.Engine, cur, next *Environment) error {
 			cur.Process.PID, next.Process.PID, sys.cpu.GPR(vax.PC))
 	}
 
+	if cur.Deleted {
+		sys.releaseMemory(cur)
+	}
+
 	// A process $CREPRC created starts the first time it runs, in its
 	// own context (creprc.go).
 	if next.Startup != nil {
@@ -200,33 +211,6 @@ func (sys *System) switchTo(e *cpu.Engine, cur, next *Environment) error {
 	}
 
 	return nil
-}
-
-// StopProcess ends env's image and takes the process out of scheduling
-// for good: what becomes of a process other than process 1 when its
-// image ends (its main routine returns, or it calls $EXIT), until Phase
-// 45 deletes such processes. Its image is run down (channels, timers,
-// ASTs, exit handlers, ...; ImageRundown), it leaves the scheduler (so
-// it is never chosen again), and the scheduler is asked to choose, since
-// it may have been the current process. It stays in the process table,
-// with its address space, so its memory can still be examined.
-func (sys *System) StopProcess(env *Environment) {
-	env.ImageRundown()
-
-	if env.waiting != nil {
-		env.waiting = nil
-		sys.waiters--
-	}
-
-	env.pendingWait = nil
-	env.Stopped = true
-
-	_ = sys.sched.Remove(handle(env))
-	sys.requestReschedule()
-
-	if sys.cpu.DebugEnabled(vax.DebugProcess) {
-		fmt.Fprintf(sys.cpu.DebugWriter(), "DEBUG(PROCESS): %08X's image ended; the process stops\n", env.Process.PID)
-	}
 }
 
 // SwitchCPU moves the CPU to env's process now, outside the scheduler's
@@ -249,7 +233,7 @@ func (sys *System) SwitchCPU(e *cpu.Engine, env *Environment) error {
 		return err
 	}
 
-	if !env.Stopped {
+	if !env.Deleted {
 		if err := sys.sched.Choose(handle(env)); err != nil {
 			return err
 		}

@@ -136,3 +136,35 @@ func closeVolumeFile(handle *FileHandle) error {
 
 	return handle.File.Close()
 }
+
+// Rundown closes every file t has open and empties the table but for its
+// terminal slot: what RMS's rundown does when a process is deleted
+// (VAX/VMS Internals and Data Structures, section 22.2.1, step 3), so
+// that a file the process was writing ends with its records on the
+// volume, as if the program had closed it. No XABs are applied: no FAB
+// is at hand, as none is on VMS. It returns how many files it closed and
+// the first error a close met (every file is closed regardless).
+func (t *FileTable) Rundown() (int, error) {
+	var (
+		closed   int
+		firstErr error
+	)
+
+	for ifi, h := range t.handles {
+		if h.IsConsole() {
+			continue
+		}
+
+		if err := closeVolumeFile(h); err != nil && firstErr == nil {
+			firstErr = err
+		}
+
+		closed++
+
+		delete(t.handles, ifi)
+	}
+
+	clear(t.searches)
+
+	return closed, firstErr
+}

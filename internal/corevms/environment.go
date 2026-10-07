@@ -148,10 +148,12 @@ type Environment struct {
 	pendingWait *waitCondition
 	waiting     *waitCondition
 
-	// Stopped is set when the process's image ended and the process left
-	// the scheduler for good (StopProcess): a process other than process
-	// 1, which Phase 45 will delete instead.
-	Stopped bool
+	// Deleted is set when the process has been deleted (DeleteProcess,
+	// delete.go): its image ended, or it couldn't start. It's out of the
+	// process table and the scheduler; the Environment is left for its
+	// creator's Go code (and tests) to look at, its ExitStatus among
+	// the rest.
+	Deleted bool
 
 	// Startup is what a process $CREPRC created still has to do before
 	// it runs its image: define its SYS$ names and activate the image

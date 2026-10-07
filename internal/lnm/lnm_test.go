@@ -867,3 +867,42 @@ func TestProcessView_jobsAndGroups(t *testing.T) {
 		t.Errorf("two processes' default table names are both %s", a.Name)
 	}
 }
+
+// TestDeleteJobTable: deleting a job's table, when its job ends, takes
+// its names and any table created under it, and leaves other jobs'
+// tables alone.
+func TestDeleteJobTable(t *testing.T) {
+	first := NewDatabase(testUIC)
+	second := first.NewProcessView(testUIC, first.NewJobTable())
+
+	mustDefine(t, second, "LNM$JOB", "JOBNAME", Supervisor, "SECOND")
+	mustDefine(t, first, "LNM$JOB", "JOBNAME", Supervisor, "FIRST")
+
+	if _, _, err := second.CreateTable("CHILD_TABLE", second.JobTableName, Supervisor, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	before := len(first.Tables())
+
+	if !first.DeleteJobTable(second.JobTableName) {
+		t.Fatalf("DeleteJobTable(%s) found no table", second.JobTableName)
+	}
+
+	if got := len(first.Tables()); got != before-2 {
+		t.Errorf("%d tables after the deletion, want %d (the job table and its child gone)", got, before-2)
+	}
+
+	for _, name := range []string{second.JobTableName, "CHILD_TABLE"} {
+		if _, err := first.ResolveTables(name, User); err == nil {
+			t.Errorf("table %s is still there", name)
+		}
+	}
+
+	if e := mustTranslate(t, first, "LNM$JOB", "JOBNAME"); e.Equivalences[0].Value != "FIRST" {
+		t.Errorf("the first job's JOBNAME = %s", e.Equivalences[0].Value)
+	}
+
+	if first.DeleteJobTable(second.JobTableName) || first.DeleteJobTable(first.GroupTableName) {
+		t.Error("DeleteJobTable deleted a table that isn't a live job table")
+	}
+}

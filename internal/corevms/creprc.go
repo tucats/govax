@@ -373,9 +373,12 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 	}
 
 	// A detached process's job gets its logical-name table now that the
-	// process is sure to exist (a table, once made, is never deleted).
+	// process is sure to exist; the table goes when the process is
+	// deleted (endJob).
 	if detached {
-		child.Logicals = env.Logicals.NewProcessView(uic, env.Logicals.NewJobTable())
+		table := env.Logicals.NewJobTable()
+		child.Logicals = env.Logicals.NewProcessView(uic, table)
+		child.Process.Job.LogicalTable = table
 	}
 
 	env.inheritDefaults(child)

@@ -346,6 +346,10 @@ func (c *Console) newRTL() *corevms.Environment {
 	// image activator (docs/PHASE-45.md, subtask 5).
 	sys.ActivateImage = c.activateCreatedImage
 
+	// A deleted process's image state goes with it (docs/PHASE-45.md,
+	// subtask 6).
+	sys.ProcessDeleted = func(env *corevms.Environment) { delete(c.otherImages, env) }
+
 	// $SETIMR's timers run on the engine's system time, the same time
 	// base as the interval clock (docs/PHASE-26.md subtask 11).
 	if c.Engine != nil {

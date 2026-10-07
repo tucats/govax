@@ -125,8 +125,9 @@ func (c *Console) BeginStep() error {
 // image ending ends the run, as only process 1's image is the console's
 // RUN, CALL, or GO: another process whose image ends (its main routine
 // returning, or $EXIT, both of which reach Step as
-// cpu.ErrConsoleCallReturned) just stops (corevms.System.StopProcess),
-// and the run goes on with the processes that are left. Every other
+// cpu.ErrConsoleCallReturned) is deleted (corevms.System.DeleteProcess,
+// docs/PHASE-45.md), and the run goes on with the processes that are
+// left. Every other
 // error, a HALT in another process included (HALT stops the machine,
 // whoever runs it), is returned as Step returned it.
 func (c *Console) StepMachine() error {
@@ -136,7 +137,7 @@ func (c *Console) StepMachine() error {
 	}
 
 	if env := c.running(); env != c.RTL && errors.Is(err, cpu.ErrConsoleCallReturned) {
-		env.StopProcess(env)
+		env.DeleteProcess(env)
 
 		return nil
 	}

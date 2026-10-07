@@ -405,3 +405,52 @@ for a process created without one.
   directory; `PRC$M_HIBER` (hibernates, writes nothing until process 1's
   `$WAKE`, then runs); and the failures (missing image, empty name,
   LOGINOUT), each leaving process 1 running.
+- 2026-10-07: Subtask 6 (image exit → process deletion; rundown;
+  teardown), from *VAX/VMS Internals and Data Structures*, chapter 22
+  (section 22.2.1's steps). `corevms/delete.go`: `DeleteProcess`
+  replaces Phase 44's `StopProcess`, for a created process whose image
+  ends (the console's `StepMachine`) or can't start (`startProcess`). In
+  the book's order: image rundown (`ImageRundown`), then process rundown
+  (`processRundown`): RMS's rundown closes every open file
+  (`rms.FileTable.Rundown`, new; no XABs apply, as no FAB is at hand), so
+  a record written and never closed is on the volume; host files opened
+  through the C library's descriptors are closed; every channel in every
+  mode is deassigned, so a temporary mailbox whose last channel it was
+  goes, with its name; every device it allocated is deallocated; every
+  AST, exit handler, and I/O request in any mode is forgotten. Then the
+  unused part of the CPU time a subprocess took from its owner goes back
+  to the owner (step 10, the only quota returned; a detached process
+  returns nothing, even when subtask 4 took its limit from a creator
+  without DETACH). A detached process's job ends with it: its job
+  logical-name table, which `$CREPRC` made (`Job.LogicalTable`), is
+  deleted (`lnm.Database.DeleteJobTable`, new; step 19); process 1's job
+  table, and those of test processes sharing its names, are never
+  deleted. The process leaves the scheduler, the table, and its job's
+  and owner's counts, and `Environment.Stopped` is now `Deleted`. Its
+  memory (page tables, P0 and P1 pages, stacks, PCB, image driver: every
+  pool page charged to its PID) is freed at once if the CPU isn't in it;
+  if it is (a process deleting itself), `switchTo` frees it once the CPU
+  has loaded the next process, as VMS frees the deleted process's last
+  pages after its final SVPCTX (steps 14 to 16). Saving its context into
+  the PCB about to be freed is harmless and leaves the CPU on the
+  interrupt stack, where loading the next one starts. `RemoveProcess`
+  is now only for a process that never ran (`$CREPRC`'s clean-up). The
+  System's new `ProcessDeleted` hook lets the console drop the process's
+  image state (`otherImages`). SHOW SYSTEM no longer needs to skip
+  stopped processes. Not done here: the termination message (subtask
+  7), subprocesses deleted with their owner and `$DELPRC` of others
+  (subtask 8); the book's user rundown routines, global sections (Phase
+  46), and private volumes (govax's mounts are system-wide) don't apply.
+  Noticed, not changed: process 1's image rundown doesn't close the
+  image's RMS files as VMS's does at image exit. Tests:
+  `corevms/delete_test.go` (a subprocess's kernel-mode channel and
+  temporary mailbox, its kernel AST and executive exit handler, the
+  counts, the CPU time returned or not; a detached job's table deleted
+  and process 1's kept), `lnm`'s `TestDeleteJobTable`, and
+  `console/deleteprc_test.go`: a child's image return deletes it, its
+  page tables kept while the CPU is in it and freed at the switch to
+  process 1, with none of its pool pages left; 100 children created,
+  run, and deleted one after another leave the S0 pool's pages in use
+  and the physical pages mapped where they were; and a child that
+  `$CREATE`s, `$CONNECT`s, and `$PUT`s without `$CLOSE` leaves its record
+  in the file (the test fails without RMS's rundown).

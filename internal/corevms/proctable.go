@@ -141,18 +141,33 @@ func (sys *System) addProcess(env *Environment) error {
 
 // RemoveProcess takes env's process out of the table, freeing its slot
 // for a later process (which will get a different PID: the slot's
-// sequence number moves on). If it was the current process, there is
-// none until SetCurrent names one. Removing a process that isn't in the
-// table does nothing. A subprocess no longer counts against its owner's
-// and its job's subprocess counts (leaveJob). The physical pages its address space was given
-// (TeardownAddressSpace), and any S0 pool pages still allocated to the
-// process, are freed.
+// sequence number moves on), and gives back its memory (releaseMemory).
+// If it was the current process, there is none until SetCurrent names
+// one. Removing a process that isn't in the table does nothing. It does
+// none of a deletion's rundown (DeleteProcess): it's for a process that
+// never ran, such as one $CREPRC couldn't finish building.
 func (sys *System) RemoveProcess(env *Environment) {
+	if !sys.removeFromTable(env) {
+		return
+	}
+
+	sys.releaseMemory(env)
+
+	if sys.procs.current == env {
+		sys.procs.current = nil
+	}
+}
+
+// removeFromTable takes env's process out of the table and the
+// scheduler, and, as a subprocess, out of its owner's and its job's
+// subprocess counts (leaveJob). It reports whether env was in the table.
+// The process stays current if it was: the CPU still holds its context.
+func (sys *System) removeFromTable(env *Environment) bool {
 	t := sys.procs
 	index := env.Process.PID & pidIndexMask
 
 	if t.slots[index] != env {
-		return
+		return false
 	}
 
 	t.slots[index] = nil
@@ -160,18 +175,7 @@ func (sys *System) RemoveProcess(env *Environment) {
 
 	sys.leaveJob(env)
 
-	// A failure here (the space is the CPU's current one) leaves the
-	// frames allocated, a leak rather than a corruption; FreeProcess below
-	// still gives back the tables' pages.
-	_ = sys.TeardownAddressSpace(env.Space)
-
-	if sys.s0 != nil {
-		sys.s0.FreeProcess(env.Process.PID)
-	}
-
-	if t.current == env {
-		t.current = nil
-	}
+	return true
 }
 
 // Processes returns every process in the table, by index.

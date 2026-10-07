@@ -43,6 +43,12 @@ type Job struct {
 	// every process in the job shares. They're recorded, for $GETJPI
 	// and $CREPRC, but not enforced.
 	Pooled PooledQuotas
+
+	// LogicalTable is the job's logical-name table (LNM$JOB_xxxxxxxx)
+	// when $CREPRC made it for the job, to be deleted with the job's
+	// master process (delete.go's endJob); "" for a job whose table
+	// lasts as long as the System, such as process 1's.
+	LogicalTable string
 }
 
 // PooledQuotas are the limits a job's processes share, as $CREPRC's

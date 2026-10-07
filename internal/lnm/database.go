@@ -2,6 +2,7 @@ package lnm
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -138,6 +139,9 @@ func groupTableName(uic uint32) string {
 	return fmt.Sprintf("LNM$GROUP_%06o", uic>>16)
 }
 
+// jobTablePrefix begins every job table's name.
+const jobTablePrefix = "LNM$JOB_"
+
 // NewJobTable creates a new job's logical name table in the system
 // directory, kernel mode and permanent (no user deletes it: it lasts as
 // long as its job), and returns its name, LNM$JOB_xxxxxxxx. The number
@@ -146,10 +150,32 @@ func groupTableName(uic uint32) string {
 func (db *Database) NewJobTable() string {
 	db.shared.nextJob++
 
-	name := fmt.Sprintf("LNM$JOB_%08X", 0x80000000+db.shared.nextJob<<8)
+	name := fmt.Sprintf("%s%08X", jobTablePrefix, 0x80000000+db.shared.nextJob<<8)
 	db.newPermanentTable(name, db.SystemDirectory)
 
 	return name
+}
+
+// DeleteJobTable deletes the job table name (NewJobTable's), with every
+// name in it and any table created under it, when its job ends: the
+// deletion of its master process (VAX/VMS Internals and Data Structures,
+// section 22.2.1, step 19, where the JIB goes, and the job table with
+// it). It reports whether there was such a table; a name that isn't a
+// job table's (LNM$JOB_xxxxxxxx) deletes nothing.
+func (db *Database) DeleteJobTable(name string) bool {
+	if !strings.HasPrefix(name, jobTablePrefix) {
+		return false
+	}
+
+	for _, t := range db.shared.tables {
+		if t.Name == name && t.Parent == db.SystemDirectory && t.catalog != nil {
+			db.removeEntry(t.catalog)
+
+			return true
+		}
+	}
+
+	return false
 }
 
 // NewProcessView returns a new process's view of db's shareable tables:

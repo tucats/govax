@@ -211,8 +211,12 @@ expect adjustment as phases land):
   each process's image state (`internal/console/images.go`). Phase 44's
   scheduler: the `System` owns a `sched.Scheduler` kept in step with the
   table and is the engine's hook (`schedule.go`: `Schedule`, `switchTo`,
-  `SwitchCPU`, `StopProcess`; installed by the console's `newRTL` with
-  `InstallScheduler` when `vax.process.scheduler` is on). A waiting
+  `SwitchCPU`; installed by the console's `newRTL` with
+  `InstallScheduler` when `vax.process.scheduler` is on). Phase 45:
+  `$CREPRC` (`creprc.go`, quotas in `quotas.go`), process startup in the
+  new process's context (`startup.go`), and deletion (`delete.go`:
+  `DeleteProcess`'s rundown; the memory of the process the CPU is in is
+  freed by `switchTo` once the CPU leaves it). A waiting
   service says what it waits for (`waits.go`: `waitOn`, a state and a Go
   test), the process waits in the scheduler, and each scheduling call
   expires every process's timers and tests the waiters (`pollEvents`);

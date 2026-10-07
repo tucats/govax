@@ -42,7 +42,7 @@ func TestSystemLayout(t *testing.T) {
 }
 
 // TestSystemReport: govax's SHOW SYSTEM lists its processes with their
-// scheduling states, leaving out a stopped one.
+// scheduling states, leaving out a deleted one.
 func TestSystemReport(t *testing.T) {
 	env, _ := fixture()
 	withScheduler(env)
@@ -54,7 +54,7 @@ func TestSystemReport(t *testing.T) {
 	three.Process.Name = "THREE"
 
 	_ = callWaiting(two, serviceSysHiber)
-	env.StopProcess(three)
+	env.DeleteProcess(three)
 
 	lines := env.SystemReport("GOVAX 1.0-1", "myhost")
 	if len(lines) != 4 {

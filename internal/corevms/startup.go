@@ -31,8 +31,8 @@ import (
 //  3. calls the driver as RUN calls an image's, in user mode on the
 //     process's own user stack, on a frame whose return address is
 //     cpu.SentinelReturn: when the image returns (or calls $EXIT, which
-//     unwinds to that frame), the process's image ends, as Phase 44
-//     already handles for any process but process 1.
+//     unwinds to that frame), the process's image ends, and the
+//     process is deleted, as any process but process 1 is (delete.go).
 //
 // Its default device and directory were its creator's when it was
 // created (Environment.inheritDefaults). If any step fails, for instance
@@ -52,10 +52,10 @@ var (
 )
 
 // startProcess starts env, a process $CREPRC created, the first time
-// the scheduler switches to it (see above). A failure ends the process
-// (StopProcess) and isn't an error to the engine: the scheduler sees the
-// process has stopped and chooses another (Schedule). An error is only
-// for what leaves the CPU in no state to continue.
+// the scheduler switches to it (see above). A failure deletes the process
+// (DeleteProcess) and isn't an error to the engine: the scheduler sees the
+// process is gone and chooses another (Schedule). An error is only for
+// what leaves the CPU in no state to continue.
 func (sys *System) startProcess(e *cpu.Engine, env *Environment) error {
 	st := env.Startup
 	env.Startup = nil
@@ -76,7 +76,7 @@ func (sys *System) startProcess(e *cpu.Engine, env *Environment) error {
 		}
 
 		env.Process.ExitStatus = status
-		sys.StopProcess(env)
+		sys.DeleteProcess(env)
 
 		return nil
 	}
