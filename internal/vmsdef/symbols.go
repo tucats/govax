@@ -34,15 +34,17 @@ import (
 //     so the same bit can have several names (IO$M_NOECHO and
 //     IO$M_CANCTRLO are both bit 6).
 //   - SCH$C_: $STATEDEF's scheduling states, what JPI$_STATE returns.
-//   - PRC$: $PRCDEF's $CREPRC status-flag (stsflg) bits and masks.
+//   - PRC$: $PRCDEF's $CREPRC status-flag (stsflg) bits and masks, and
+//     the PRC$_ codes of its item list.
 //   - PQL$_: $PQLDEF's quota-list codes, the bytes of $CREPRC's quota
 //     argument.
-//   - ACC$: $ACCDEF's termination message: the offsets of its fields,
-//     and its length, ACC$K_TERMLEN. MSG$_DELPROC ($MSGDEF) is its type.
-//     These four families are Phase 45's (testdata/mp/defs), the ACC$
-//     offsets from the System Services Reference Manual; the PRC$ and
-//     PQL$ values are unconfirmed until real MACRO's run of the probes
-//     there (docs/PHASE-45.md).
+//   - ACC$: $ACCDEF's accounting messages: the termination message's
+//     field offsets and length (ACC$K_TERMLEN), which a process's
+//     termination mailbox receives, and the other layouts sharing them.
+//   - MSG$_: $MSGDEF's mailbox message types, such as MSG$_DELPROC, the
+//     termination message's.
+//     These four came from real MACRO's output for the Phase 45
+//     definition probes (testdata/mp/defs, docs/PHASE-45.md).
 //   - SYI$: $SYIDEF's $GETSYI item codes and SYI$C_ values.
 //   - DVI$: $DVIDEF's $GETDVI item codes, item-code flags
 //     (DVI$M_SECONDARY), and DVI$C_ values.

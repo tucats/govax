@@ -425,7 +425,8 @@ func TestSymbols_matchLibrarySymbols(t *testing.T) {
 // TestSymbols_CREPRC_values checks the definitions $CREPRC uses (Phase
 // 45): every PRC$M_ stsflg mask is 1 << its PRC$V_ bit, and the
 // termination message's fields ($ACCDEF) sit at the System Services
-// Reference Manual's offsets, the last ending at ACC$K_TERMLEN.
+// Reference Manual's offsets, the last ending at ACC$K_TERMLEN. VMS 7.3
+// puts the job ID at offset 12, which VMS 5.0's manual lists as unused.
 func TestSymbols_CREPRC_values(t *testing.T) {
 	for name, mask := range Symbols {
 		field, ok := strings.CutPrefix(name, "PRC$M_")
@@ -442,7 +443,7 @@ func TestSymbols_CREPRC_values(t *testing.T) {
 	}
 
 	want := map[string]uint32{
-		"ACC$W_MSGTYP": 0, "ACC$L_FINALSTS": 4, "ACC$L_PID": 8,
+		"ACC$W_MSGTYP": 0, "ACC$L_FINALSTS": 4, "ACC$L_PID": 8, "ACC$L_JOBID": 12,
 		"ACC$Q_TERMTIME": 16, "ACC$T_ACCOUNT": 24, "ACC$T_USERNAME": 32,
 		"ACC$L_CPUTIM": 44, "ACC$Q_LOGIN": 72, "ACC$L_OWNER": 80,
 		"ACC$K_TERMLEN": 84, "MSG$_DELPROC": 3,

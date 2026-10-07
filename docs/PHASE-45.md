@@ -237,13 +237,15 @@ for a process created without one.
   Manual's `$CREPRC` entry gives the termination message's offsets
   (`ACC$`, 84 bytes), STARLET.OLB gives `MSG$_DELPROC` (3), and the
   manual names the `PRC$M_` flags and `PQL$_` codes without values.
-  Those are entered **unconfirmed** (`testdata/mp/defs/phase45-expected.txt`,
-  merged with `gen -values`), and `testdata/mp/defs` holds a probe for the
-  author's VMS 7.3 system: `$PRCDEF`, `$PQLDEF`, `$ACCDEF`, and `$MSGDEF`,
-  each called with `GLOBAL`, so the objects' GSDs list every name and
-  value; `decode.go` turns them into `defined.txt` for `gen -replace`
-  (README.md there). `TestSymbols_CREPRC_values` checks the masks against
-  the bits and the message layout. Still to do after the run: confirm the
-  values (and whether 7.3's message has a job ID where 5.0's manual says
-  "not used", offset 12), and have `mkdefs` add `$PRCDEF`/`$PQLDEF`/
-  `$ACCDEF` to govax's STARLET.MLB for subtask 13's MACRO test.
+  The first commit entered expected values, marked unconfirmed, and added
+  a probe, `testdata/mp/defs`: `$PRCDEF`, `$PQLDEF`, `$ACCDEF`, and
+  `$MSGDEF`, each called with `GLOBAL`, so the objects' GSDs list every
+  name and value. The author ran it on VMS 7.3 the same day; `decode.go`
+  turned the objects into `phase45-defined.txt`, and `gen -values` merged
+  all 222 names (README.md there), replacing the expected values. Every
+  expected `PRC$` and `PQL$` value was right. VMS 7.3's message has
+  `ACC$L_JOBID` at offset 12, which the 5.0 manual calls unused; the
+  `MSG$_` values agree with STARLET.OLB's. `TestSymbols_CREPRC_values`
+  checks the masks against the bits and the message layout. Still to do,
+  for subtask 13's MACRO test: have `mkdefs` add `$PRCDEF`/`$PQLDEF`/
+  `$ACCDEF` to govax's STARLET.MLB from `phase45-defined.txt`.

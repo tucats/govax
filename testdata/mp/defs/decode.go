@@ -1,9 +1,10 @@
 //go:build ignore
 
 // decode reads the Phase 45 definition probes' objects (README.md): real
-// VAX MACRO's DEF_*.OBJ, each a $xxxDEF macro called with GLOBAL, so the
+// VAX MACRO's vax/def_*.obj (copied off the exchange volume by
+// copyout.cmd), each a $xxxDEF macro called with GLOBAL, so the
 // object's global symbol directory holds every name the macro defines,
-// with its value. It writes testdata/mp/defs/defined.txt, one "NAME =
+// with its value. It writes testdata/mp/defs/phase45-defined.txt, one "NAME =
 // value" line per name, which internal/vmsdef/gen's -values reads. Run it
 // from the repository root:
 //
@@ -41,7 +42,7 @@ func load(path string) (*obj.Module, error) {
 }
 
 func main() {
-	objects, err := filepath.Glob(filepath.Join(dir, "vax", "DEF_*.OBJ;*"))
+	objects, err := filepath.Glob(filepath.Join(dir, "vax", "def_*.obj"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -56,7 +57,7 @@ func main() {
 
 	b.WriteString("# The names each $xxxDEF macro defines, as real VAX MACRO (VMS 7.3)\n")
 	b.WriteString("# assembled the Phase 45 definition probes: testdata/mp/defs/decode.go\n")
-	b.WriteString("# wrote this from testdata/mp/defs/vax/DEF_*.OBJ.\n")
+	b.WriteString("# wrote this from testdata/mp/defs/vax/def_*.obj.\n")
 
 	for _, path := range objects {
 		m, err := load(path)
@@ -64,7 +65,7 @@ func main() {
 			log.Fatalf("%s: %v", path, err)
 		}
 
-		probe := strings.SplitN(filepath.Base(path), ".", 2)[0]
+		probe := strings.ToUpper(strings.TrimSuffix(filepath.Base(path), ".obj"))
 		fmt.Fprintf(&b, "\n# $%sDEF\n", strings.TrimPrefix(probe, "DEF_"))
 
 		var lines []string
@@ -82,7 +83,7 @@ func main() {
 		}
 	}
 
-	if err := os.WriteFile(filepath.Join(dir, "defined.txt"), []byte(b.String()), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "phase45-defined.txt"), []byte(b.String()), 0o644); err != nil {
 		log.Fatal(err)
 	}
 }

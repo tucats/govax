@@ -14,8 +14,10 @@ VMS's macro library.
 | `def_acc.mar`, `def_msg.mar`, `def_pql.mar`, `def_prc.mar` | `$ACCDEF`, `$MSGDEF`, `$PQLDEF`, `$PRCDEF`, each with `GLOBAL` |
 | `defs.com` | Assembles each with `/NOLIST` and analyzes its object |
 | `exchange.cmd` | The govax console script that builds the exchange volume |
-| `decode.go` | Turns the objects into `defined.txt` |
-| `phase45-expected.txt` | The values govax uses until the run: the `ACC$` offsets from the manual, `MSG$_DELPROC` from STARLET.OLB, and the `PRC$` and `PQL$` values unconfirmed |
+| `copyout.cmd` | The govax console script that copies the results into `vax/` |
+| `vax/` | The VMS 7.3 run's objects, analyses, and log (2026-10-07) |
+| `decode.go` | Turns the objects into `phase45-defined.txt` |
+| `phase45-defined.txt` | Every name and value the four macros define |
 
 ## The VAX run
 
@@ -30,18 +32,21 @@ VMS's macro library.
 
        @DEFS/OUTPUT=DEFS.LOG
 
-3. Copy the results back into `vax/` (names as VMS writes them, as for
-   `testdata/mar/rms/vax`): every `.OBJ`, in the host variable-length
-   record layout, every `.ANL`, and `DEFS.LOG`.
+3. Copy the results back into `vax/`:
 
-## After the run
+       govax console < testdata/mp/defs/copyout.cmd
+
+## Into govax's tables
 
     go run testdata/mp/defs/decode.go
-    go run ./internal/vmsdef/gen -replace -values testdata/mp/defs/defined.txt
+    go run ./internal/vmsdef/gen -values testdata/mp/defs/phase45-defined.txt
 
-The first writes `defined.txt` from the objects; the second merges it into
-`internal/vmsdef`'s `Symbols`, correcting any expected value the run
-contradicts (`-drop NAME` removes an expected name VMS doesn't define).
-Then `phase45-expected.txt`'s unconfirmed groups can go, and
+The first writes `phase45-defined.txt` from the objects; the second merges
+it into `internal/vmsdef`'s `Symbols`. The `MSG$_` values agree with
+STARLET.OLB's (`TestSymbols_matchLibrarySymbols`), and the `ACC$` offsets
+with the manual's, except that VMS 7.3 has `ACC$L_JOBID` at offset 12,
+which VMS 5.0's manual lists as unused.
+
 `internal/bootdata/mkdefs` can build `$PRCDEF`, `$PQLDEF`, and `$ACCDEF`
-for govax's own STARLET.MLB from `defined.txt`.
+for govax's own macro library from `phase45-defined.txt`, when a MACRO
+program needs them (docs/PHASE-45.md, subtask 13).
