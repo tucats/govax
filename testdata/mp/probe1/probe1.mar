@@ -132,6 +132,8 @@ term_msg:	.blkb	ACC$K_TERMLEN
 iosb:		.quad	0
 info_msg:	.blkb	300
 
+read_now = <IO$_READVBLK!IO$M_NOW>	; read a mailbox without waiting
+
 	.psect	code,exe,nowrt
 	.entry	start,^m<r2,r3,r4,r5,r6,r7>
 
@@ -157,67 +159,28 @@ haveimages:
 
 ; The termination mailbox and its unit; the information mailbox, named.
 	step	2
-	pushl	#0			; lognam
-	pushl	#0			; acmode
-	pushl	#0			; promsk
-	pushl	#2048			; bufquo
-	pushl	#128			; maxmsg
-	pushal	term_chan
-	pushl	#0			; prmflg
-	calls	#7,g^sys$crembx
+	$crembx_s	chan=term_chan, maxmsg=#128, bufquo=#2048
 	check
 	step	3
-	pushl	#0			; nullarg
-	pushl	#0			; astprm
-	pushl	#0			; astadr
-	pushl	#0			; iosb
-	pushal	dvi_items
-	pushl	#0
-	movzwl	term_chan,-(sp)
-	pushl	#0
-	calls	#8,g^sys$getdviw
+	$getdviw_s	chan=term_chan, itmlst=dvi_items
 	check
 	step	4
-	pushaq	mbx_lognam
-	pushl	#0			; acmode
-	pushl	#0			; promsk
-	pushl	#2048			; bufquo
-	pushl	#300			; maxmsg
-	pushal	info_chan
-	pushl	#0			; prmflg
-	calls	#7,g^sys$crembx
+	$crembx_s	chan=info_chan, maxmsg=#300, bufquo=#2048, -
+			lognam=mbx_lognam
 	check
 
 ; Our own PID and base priority; the children get a higher one, so each
 ; runs as soon as it is created.
 	step	5
-	pushl	#0
-	pushl	#0
-	pushl	#0
-	pushal	my_items
-	pushl	#0
-	pushl	#0
-	pushl	#0
-	calls	#7,g^sys$getjpiw
+	$getjpiw_s	itmlst=my_items
 	check
 	incl	my_prib
 	incl	my_prib
 
 ; The first child: output to the null device, a termination mailbox.
 	step	6
-	pushl	#0			; stsflg
-	pushl	term_unit
-	pushl	#0			; uic
-	pushl	my_prib
-	pushaq	child_name
-	pushl	#0
-	pushl	#0
-	pushl	#0
-	pushaq	null_desc		; output
-	pushl	#0
-	pushaq	image_desc
-	pushal	child_pid
-	calls	#12,g^sys$creprc
+	$creprc_s	pidadr=child_pid, image=image_desc, output=null_desc, -
+			prcnam=child_name, baspri=my_prib, mbxunt=term_unit
 	check
 
 	step	7
@@ -232,34 +195,17 @@ haveimages:
 
 ; Wake it, and read its termination message.
 	step	8
-	pushl	#0
-	pushal	child_pid
-	calls	#2,g^sys$wake
+	$wake_s	pidadr=child_pid
 	check
-	pushl	#0
-	pushl	#0
-	pushl	#0
-	pushl	#0
-	pushl	#ACC$K_TERMLEN
-	pushal	term_msg
-	pushl	#0
-	pushl	#0
-	pushal	iosb
-	pushl	#IO$_READVBLK
-	movzwl	term_chan,-(sp)
-	pushl	#0
-	calls	#12,g^sys$qiow
+	$qiow_s	chan=term_chan, func=#IO$_READVBLK, iosb=iosb, -
+		p1=term_msg, p2=#ACC$K_TERMLEN
 	check
 	step	9
 	pushaq	msg_head
 	bsbw	say
 	clrl	r6
-10$:	pushl	term_msg(r6)
-	pushl	r6
-	pushal	out_desc
-	pushal	out_len
-	pushaq	msg_ctl
-	calls	#5,g^sys$fao
+10$:	$fao_s	ctrstr=msg_ctl, outlen=out_len, outbuf=out_desc, -
+		p1=r6, p2=term_msg(r6)
 	bsbw	print
 	addl2	#4,r6
 	cmpl	r6,#ACC$K_TERMLEN
@@ -268,77 +214,35 @@ haveimages:
 ; The second child: no input, output, or error; it writes four messages
 ; to PROBE_MBX.
 	step	10
-	movzwl	info_desc,-(sp)
-	movzwl	image_desc,-(sp)
-	pushal	out_desc
-	pushal	out_len
-	pushaq	images_ctl
-	calls	#5,g^sys$fao
+	movzwl	image_desc,r1
+	movzwl	info_desc,r2
+	$fao_s	ctrstr=images_ctl, outlen=out_len, outbuf=out_desc, -
+		p1=r1, p2=r2
 	bsbw	print
 	tstw	info_desc
 	bneq	15$
 	brw	finish
 15$:
-	pushl	#0			; stsflg
-	pushl	term_unit		; mbxunt
-	pushl	#0			; uic
-	pushl	my_prib
-	pushaq	info_name
-	pushl	#0
-	pushl	#0
-	pushl	#0
-	pushl	#0
-	pushl	#0
-	pushaq	info_desc
-	pushal	info_pid
-	calls	#12,g^sys$creprc
+	$creprc_s	pidadr=info_pid, image=info_desc, prcnam=info_name, -
+			baspri=my_prib, mbxunt=term_unit
 	check
 	pushaq	info_head
 	bsbw	say
-	pushl	#0
-	pushl	#0
-	pushl	#0
-	pushl	#0
-	pushl	#ACC$K_TERMLEN
-	pushal	term_msg
-	pushl	#0
-	pushl	#0
-	pushal	iosb
-	pushl	#<IO$_READVBLK!IO$M_NOW>
-	movzwl	term_chan,-(sp)
-	pushl	#0
-	calls	#12,g^sys$qiow
-	pushl	term_msg+ACC$L_FINALSTS
-	movzwl	iosb,-(sp)
-	pushal	out_desc
-	pushal	out_len
-	pushaq	term2_ctl
-	calls	#5,g^sys$fao
+	$qiow_s	chan=term_chan, func=#read_now, iosb=iosb, -
+		p1=term_msg, p2=#ACC$K_TERMLEN
+	movzwl	iosb,r1
+	$fao_s	ctrstr=term2_ctl, outlen=out_len, outbuf=out_desc, -
+		p1=r1, p2=term_msg+ACC$L_FINALSTS
 	bsbw	print
 	movl	#4,r7
-20$:	pushl	#0
-	pushl	#0
-	pushl	#0
-	pushl	#0
-	pushl	#300
-	pushal	info_msg
-	pushl	#0
-	pushl	#0
-	pushal	iosb
-	pushl	#<IO$_READVBLK!IO$M_NOW>
-	movzwl	info_chan,-(sp)
-	pushl	#0
-	calls	#12,g^sys$qiow
+20$:	$qiow_s	chan=info_chan, func=#read_now, iosb=iosb, -
+		p1=info_msg, p2=#300
 	movzwl	iosb,r0
 	blbs	r0,25$
 	brw	finish
 25$:	movzwl	iosb+2,r2
-	pushal	info_msg
-	pushl	r2
-	pushal	out_desc
-	pushal	out_len
-	pushaq	info_ctl
-	calls	#5,g^sys$fao
+	$fao_s	ctrstr=info_ctl, outlen=out_len, outbuf=out_desc, -
+		p1=r2, p2=#info_msg
 	bsbw	print
 	decl	r7
 	bleq	finish
@@ -347,30 +251,18 @@ finish:	movl	#1,r0
 	ret
 
 ; FAIL: a service failed with the status in R0: say so, and end.
-fail:	pushl	r0
-	pushal	out_desc
-	pushal	out_len
-	pushaq	fail_ctl
-	calls	#4,g^sys$fao
+fail:	$fao_s	ctrstr=fail_ctl, outlen=out_len, outbuf=out_desc, p1=r0
 	bsbw	print
 	movl	#1,r0
 	ret
 
 ; MARK: print "step R0".
-mark:	pushl	r0
-	pushal	out_desc
-	pushal	out_len
-	pushaq	step_ctl
-	calls	#4,g^sys$fao
+mark:	$fao_s	ctrstr=step_ctl, outlen=out_len, outbuf=out_desc, p1=r0
 	bsbw	print
 	rsb
 
 ; SAY: print the text whose descriptor address is on the stack (popped).
-say:	pushl	4(sp)
-	pushal	out_desc
-	pushal	out_len
-	pushaq	head_ctl
-	calls	#4,g^sys$fao
+say:	$fao_s	ctrstr=head_ctl, outlen=out_len, outbuf=out_desc, p1=4(sp)
 	bsbw	print
 	movl	(sp)+,(sp)		; drop the argument, keep the return
 	rsb
@@ -388,22 +280,10 @@ show_items:
 	movab	jpi_table,r7
 30$:	movw	(r7),one_item+2
 	clrl	item_val
-	pushl	#0
-	pushl	#0
-	pushl	#0
-	pushal	one_item
-	pushl	#0
-	pushl	r6
-	pushl	#0
-	calls	#7,g^sys$getjpiw
-	pushl	r0			; status
-	pushl	item_val
-	pushal	4(r7)			; !AD address
-	pushl	#16			;     length
-	pushal	out_desc
-	pushal	out_len
-	pushaq	item_ctl
-	calls	#7,g^sys$fao
+	$getjpiw_s	pidadr=(r6), itmlst=one_item
+	movab	4(r7),r1		; !AD address
+	$fao_s	ctrstr=item_ctl, outlen=out_len, outbuf=out_desc, -
+		p1=#16, p2=r1, p3=item_val, p4=r0	; length, name, value, status
 	bsbw	print
 	addl2	#20,r7
 	movab	jpi_end,r0

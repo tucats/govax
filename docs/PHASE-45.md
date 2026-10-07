@@ -315,10 +315,15 @@ waiting on a run on the VAX, or optional work for a later phase.
    form is the one with a variable length (3 plus the P arguments given);
    it matches round 3's calls. `$HIBER` has no list or `_G` macro in real
    MACRO and none here for the list form.
-5. **Use the macros.** `testdata/mp/crechild.mar`, `child.mar`, and the
-   probe programs call the services by hand (`PUSHL ...; CALLS`); they
-   could use `$CREPRC_S` and the others now, as a test of the macros in
-   real programs. Not done.
+5. **Use the macros.** *Done (2026-10-07), after the close-out:* `child.mar`,
+   `crechild.mar`, `probe1/probe1.mar`, `probe1/info.mar`, and
+   `probe2/probe2.mar` call the services through the macros (`$CREPRC_S`,
+   `$CREMBX_S`, `$GETDVIW_S`, `$GETJPIW_S`, `$QIOW_S`, `$FAO_S`, `$TRNLNM_S`,
+   `$SETPRI_S`, and the rest), and their tests print the same output as
+   the hand-written pushes did (160 lines compared, but for the clock
+   fields of the termination message and the length of a temporary path).
+   They have not been assembled by real MACRO; the macros have, in effect,
+   for the same calls (`TestServiceMacroObjects`).
 6. **`SHOW DEVICE/FULL` for terminals and mailboxes** in VMS 7.1's layouts
    (the note under subtask 14 has both): govax prints its generic layout
    for them. Wanted before Phase 46, which makes mailboxes real.

@@ -12,7 +12,7 @@ wake_msg:	.ascid	/Child: awake/
 	.entry	start,^m<>
 	pushaq	start_msg
 	calls	#1,g^lib$put_output
-	calls	#0,g^sys$hiber
+	$hiber_s
 	pushaq	wake_msg
 	calls	#1,g^lib$put_output
 	movl	#7,r0

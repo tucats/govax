@@ -39,49 +39,26 @@ out_desc:	.word	300
 		.long	out_buf
 iosb:		.quad	0
 
+write_now = <IO$_WRITEVBLK!IO$M_NOW>	; write a mailbox without waiting
+
 	.psect	code,exe,nowrt
 	.entry	start,^m<r6,r7>
 
-	pushl	#0			; mbxnam
-	pushl	#0			; acmode
-	pushal	chan
-	pushaq	mbx_name
-	calls	#4,g^sys$assign
+	$assign_s	devnam=mbx_name, chan=chan
 	check
 
 	movab	names,r6
 	movl	#4,r7
 loop:	clrl	equiv_len
-	pushal	items			; itmlst
-	pushl	#0			; acmode
-	pushl	(r6)			; lognam
-	pushaq	table
-	pushl	#0			; attr
-	calls	#5,g^sys$trnlnm
+	$trnlnm_s	tabnam=table, lognam=@0(r6), itmlst=items
 	blbs	r0,found
 	clrl	equiv_len		; none: report an empty translation
-found:	pushal	equiv			; !AD address
-	pushl	equiv_len		;     length
-	pushl	(r6)			; !AS
-	pushal	out_desc
-	pushal	out_len
-	pushaq	ctl
-	calls	#6,g^sys$fao
+found:	$fao_s	ctrstr=ctl, outlen=out_len, outbuf=out_desc, -
+		p1=(r6), p2=equiv_len, p3=#equiv	; !AS, !AD
 	check
 	movw	out_len,out_desc
-	pushl	#0
-	pushl	#0
-	pushl	#0
-	pushl	#0
-	pushl	out_len+0		; (length again below)
-	pushal	out_buf
-	pushl	#0
-	pushl	#0
-	pushal	iosb
-	pushl	#<IO$_WRITEVBLK!IO$M_NOW>
-	movzwl	chan,-(sp)
-	pushl	#0
-	calls	#12,g^sys$qiow
+	$qiow_s	chan=chan, func=#write_now, iosb=iosb, -
+		p1=out_buf, p2=out_len
 	movw	#300,out_desc
 	addl2	#4,r6
 	sobgtr	r7,again

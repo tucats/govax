@@ -167,8 +167,10 @@
 ; The process-management and related services (docs/PHASE-45.md, "the
 ; process-service macros"), written from the System Services Reference
 ; Manual's argument lists and checked against real MACRO's objects for the
-; probes in testdata/mp/macros. Only the short form (NAME_S) is here: the
-; argument-list form (NAME) and NAME_G are not written yet.
+; probes in testdata/mp/macros. NAME_S comes first; the argument-list form
+; (NAME) and NAME_G follow further down. $CREPRC's two last arguments are the
+; keywords ITMLST and NODE (round 3 found them; "have no keyword" below is
+; what the first probes thought).
 ;
 ; What the probes showed, beyond the argument lists: a macro pushes an
 ; omitted argument as zero ($PUSHADR, PUSHL #0); a word argument is pushed
@@ -177,7 +179,7 @@
 ; ASTADR, $GETDVI's NULLARG and ASTPRM, $CREMBX's LOGNAM and ACMODE and
 ; its PROMSK and BUFQUO, $SETIMR's REQIDT and FLAGS and its DAYTIM and
 ; EFN, $CREPRC's UIC and BASPRI, $CANTIM's two); and
-; $CREPRC passes two arguments past STSFLG that have no keyword, as zeros,
+; $CREPRC passes two arguments past STSFLG (ITMLST and NODE), as zeros,
 ; and $GETDVI and $CREMBX have a last one with a keyword (NULLARG, FLAGS).
 ; A missing required argument is an error here (the real macros' error
 ; leaves a broken instruction stream).
