@@ -50,6 +50,10 @@ print " "
 
 define/device tta0/devclass=term/devtype=vt100/devbufsiz=80
 
+; The null device: writes are discarded and reads are at end of file.
+
+define/device nla0/devclass=misc
+
 ; TT and SYS$INPUT/OUTPUT/ERROR/COMMAND are predefined as _TTA0:.
 
 ; If there was a command line argument, assume it is the full text of the

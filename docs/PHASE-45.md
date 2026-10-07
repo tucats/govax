@@ -609,3 +609,22 @@ for a process created without one.
   (`TestGetjpi_otherProcess`: PID, owner, master, state, name by PID and
   by name, a hibernating child, NONEXPR, NOPRIV; `TestGetjpi_wildcard`:
   table order, skipped processes, a deletion).
+- 2026-10-07: Subtask 11 (NL:). The null device is `NLA0:`, defined by
+  `vax.init` (`define/device nla0/devclass=misc`) like TTA0:, with a
+  driver in `corevms/nulldriver.go`. `NL:` (the generic name) is
+  translated to `NLA0` by `deviceName`, so `$ASSIGN`, `$GETDVI`, and
+  `$ALLOC` take either. Its class is `DC$_MISC` (200: new
+  `iodev.DeviceClassMisc`, displayed "miscellaneous", and a `misc`
+  keyword in `dev_class` in `console.dcl`); 200 is from memory and
+  unconfirmed. Functions: writes (virtual, logical, physical) succeed
+  with the full count and the data is discarded (an unreadable buffer is
+  SS$_ACCVIO); reads are SS$_ENDOFFILE with a count of 0 and the buffer
+  untouched; `IO$_WRITEOF`, `IO$_SETMODE`, and `IO$_SETCHAR` succeed;
+  sense-mode returns the class and type; anything else is
+  SS$_ILLIOFUNC. Several processes may have it assigned at once (it is
+  never allocated). RMS on NL: is Phase 46's. A process created with
+  `NL:` as SYS$INPUT, SYS$OUTPUT, or SYS$ERROR already worked, since
+  those are just equivalence names; now the name leads to a device.
+  Tests: `corevms/nulldriver_test.go` (write, read, access violation,
+  sense and set mode, an unknown function, two processes, both names)
+  and `console`'s `TestNullDevice_defined`.

@@ -152,6 +152,7 @@ var ioDrivers = map[iodev.DeviceClass]map[uint32]ioFunc{
 	iodev.DeviceClassTT:      terminalFunctions,
 	iodev.DeviceClassMailbox: mailboxFunctions,
 	iodev.DeviceClassDisk:    diskFunctions,
+	iodev.DeviceClassMisc:    nullFunctions,
 }
 
 // serviceSysQio is SYS$QIO:

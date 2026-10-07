@@ -462,5 +462,10 @@ func (env *Environment) deviceName(name string) (string, uint32) {
 		return "", ssIvDevNam
 	}
 
+	// NL: is the generic name of the null device.
+	if device == "NL" {
+		device = nullDeviceName
+	}
+
 	return device, 0
 }

@@ -110,6 +110,7 @@ grammar console
         keyword	video	/id=99
         keyword	bus	/id=128
         keyword mailbox	/id=160
+        keyword misc	/id=200
         keyword recmsl_storage/id=179
         keyword misc	/id=200
         

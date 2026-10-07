@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -116,5 +117,15 @@ func TestCross_suspendedChild(t *testing.T) {
 
 	if child.Process.ExitStatus != 0x2C {
 		t.Errorf("the child's exit status is %08X, want 2C", child.Process.ExitStatus)
+	}
+}
+
+// TestNullDevice_defined: vax.init defines the null device, NLA0:.
+func TestNullDevice_defined(t *testing.T) {
+	c, _ := scheduledConsole(t, longQuantum, brbSelf)
+
+	d, found := c.Devices.Find("NLA0:")
+	if !found || d.DevClass != iodev.DeviceClassMisc {
+		t.Fatalf("NLA0: found %v, class %v; want the miscellaneous class", found, d)
 	}
 }

@@ -22,12 +22,17 @@ const (
 	DeviceClassDisk    DeviceClass = 1
 	DeviceClassTT      DeviceClass = 66
 	DeviceClassMailbox DeviceClass = 160
+
+	// DeviceClassMisc is DC$_MISC (200), the class of the null device
+	// NLA0: (unconfirmed against VMS).
+	DeviceClassMisc DeviceClass = 200
 )
 
 var deviceClassNames = map[DeviceClass]string{
 	DeviceClassTT:      "terminal",
 	DeviceClassDisk:    "disk",
 	DeviceClassMailbox: "mailbox",
+	DeviceClassMisc:    "miscellaneous",
 	DeviceClassNone:    "none",
 }
 
