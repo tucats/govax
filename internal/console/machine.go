@@ -326,13 +326,23 @@ func (w consoleOutput) Write(p []byte) (int, error) {
 	return w.c.Out.Write(p)
 }
 
-// newRTL returns a fresh RTL environment for the current CPU and memory,
-// sharing the console's devices, logical names, mounts, and session (so
-// a program's RMS calls see SET DEFAULT's default directory), and the
-// engine's system clock.
+// newRTL returns a fresh System for the current CPU and memory, sharing
+// the console's devices and mounts, on the engine's system clock, and the
+// RTL environment of its first process, process 1, sharing the console's
+// logical names and session (so a program's RMS calls see SET DEFAULT's
+// default directory).
 func (c *Console) newRTL() *corevms.Environment {
-	env := corevms.NewEnvironment(c.CPU, c.Mem, c.Devices, c.Logicals, c.Mounts, consoleInput{c}, consoleOutput{c})
-	librtl.Register(env.Shims()) // LIBRTL.EXE's routines (docs/PHASE-34.md)
+	sys := corevms.NewSystem(c.CPU, c.Mem, c.Devices, c.Mounts)
+	librtl.Register(sys.Shims()) // LIBRTL.EXE's routines (docs/PHASE-34.md)
+
+	// $SETIMR's timers run on the engine's system time, the same time
+	// base as the interval clock (docs/PHASE-26.md subtask 11).
+	if c.Engine != nil {
+		sys.Clock = c.Engine.SystemTime
+		sys.BootTime = sys.Clock() // $GETSYI's SYI$_BOOTTIME: now, on that clock
+	}
+
+	env := corevms.NewEnvironment(sys, c.Logicals, consoleInput{c}, consoleOutput{c})
 	env.Session = c.ContainerSession
 
 	// A condition nobody handled goes to the debugger first, if there is
@@ -348,13 +358,6 @@ func (c *Console) newRTL() *corevms.Environment {
 		return c.OnUnhandled != nil && c.OnUnhandled(UnhandledException{
 			Condition: u.Condition, PC: u.PC, Preceding: u.Preceding,
 		})
-	}
-
-	// $SETIMR's timers run on the engine's system time, the same time
-	// base as the interval clock (docs/PHASE-26.md subtask 11).
-	if c.Engine != nil {
-		env.Clock = c.Engine.SystemTime
-		env.BootTime = env.Clock() // $GETSYI's SYI$_BOOTTIME: now, on that clock
 	}
 
 	return env

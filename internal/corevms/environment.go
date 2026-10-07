@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 
-	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
@@ -16,18 +15,23 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Environment is one VAX "process" worth of RTL state: the calling-convention
-// plumbing (SYS$/LIB$ registries) plus the state individual services and
-// shims need — common event flag clusters, region-size bookkeeping shared
-// with Phase 13's image loader and this phase's memory allocator, channels,
-// the emulated process record (process.go, which grew out of
-// docs/PHASE-10.md's "minimal process stub"), and the RMS file table. It
-// is created per-Console (see
-// internal/console), not a package-level singleton, matching this project's
-// state model (docs/PLAN.md).
+// Environment is one VAX process's view of the system: the state VMS
+// keeps per process — its Process record (identity, quotas, privileges,
+// event flags, ASTs; process.go), channels, RMS file table, default
+// directory, heap, timers, and queued I/O — plus a pointer to the System
+// it runs on, which holds what every process shares (system.go:
+// the machine, the service and shim registries, devices, mounts,
+// mailboxes, common event flag clusters, OPCOM, the clock). See
+// docs/PHASE-43.md. It is created by the console (internal/console), not
+// a package-level singleton, matching this project's state model
+// (docs/PLAN.md).
 type Environment struct {
-	mem *vm.Memory
-	cpu *vax.CPU
+	// *System is embedded: Go "promotes" an embedded struct's fields and
+	// methods, so env.Mailboxes, env.Devices, env.Clock, env.mem, and
+	// the rest read and write the System's own fields, exactly as they
+	// did when they were the Environment's. Every Environment of one
+	// System shares them; env.System names the System itself.
+	*System
 
 	// OnUnhandled, when set, is told of every condition no handler
 	// continued, after the catch-all has shown its message and before it
@@ -45,28 +49,18 @@ type Environment struct {
 	// condition.go's startDispatch.
 	OnSignal func(UnhandledCondition)
 
-	shims    *ShimTable
-	services *ServiceTable
-
-	// Devices is Phase 09's device table (internal/io) and Logicals the
-	// process's logical-name database (internal/lnm, Phase 25), both
-	// injected rather than owned here — the console and this Environment
-	// both need to see the same tables.
-	Devices  *iodev.DeviceTable
+	// Logicals is the process's logical-name database (internal/lnm,
+	// Phase 25), injected rather than owned here: the console and this
+	// Environment both need to see the same tables. One lnm.Database
+	// holds both the process directory (process and job tables) and the
+	// system directory (system and group tables), so it stays here until
+	// the two are split for subprocesses (docs/PHASE-45.md).
 	Logicals *lnm.Database
 
 	// Session is the console's rms.Session, whose default directory
 	// SYS$CREATE/SYS$OPEN resolve a spec in (docs/PHASE-25.md); nil means
 	// the master file directory.
 	Session *rms.Session
-
-	// Mounts is docs/PHASE-22.md's device-name -> mounted-ODS-2-volume
-	// table (internal/rms.MountTable), injected the same way Devices/
-	// Logicals are: it's owned by internal/console's Console (constructed
-	// once, alongside Devices/Logicals — a MOUNT command's effect must
-	// still be visible after a later VMInit/Zero rebuilds this Environment
-	// from scratch), not by this Environment itself.
-	Mounts *rms.MountTable
 
 	// files is internal/rms's own "internal file index" table — unlike
 	// Mounts, this really is one-per-process state (a
@@ -84,11 +78,6 @@ type Environment struct {
 	// allocator (memory.go) and Phase 13's image loader both read/write it
 	// directly.
 	RegionSize [3]uint32
-
-	// EventFlagClusters is the system-wide table of common event flag
-	// clusters $ASCEFC creates and associates (eventflags.go). A process's
-	// own event flags and associations are in Process.
-	EventFlagClusters *CommonEventFlags
 
 	channels    []*channel
 	nextChannel uint32
@@ -119,22 +108,6 @@ type Environment struct {
 	openFiles map[uint32]*os.File
 	nextFID   uint32
 
-	// Clock returns the current system time in VMS format (100ns units
-	// since 17-Nov-1858), what $SETIMR's timers run on. NewEnvironment
-	// sets it to the host clock; the console replaces it with its
-	// Engine's SystemTime, the time base the interval clock also uses
-	// (timers.go).
-	Clock func() uint64
-
-	// BootTime is when the system "booted", in VMS time: $GETSYI's
-	// SYI$_BOOTTIME. NewEnvironment sets it to Clock's time; the console
-	// resets it after rebinding Clock, so it's the time of the INIT,
-	// VMINIT, or ZERO that built this Environment.
-	BootTime uint64
-
-	// NodeName is the system's node name ($GETSYI's SYI$_NODENAME).
-	NodeName string
-
 	// CommandLine is the text of the command that ran the current image,
 	// after its verb: what LIB$GET_FOREIGN returns. A foreign command
 	// sets it (internal/console's RunOptions.CommandLine); RUN leaves it
@@ -153,59 +126,29 @@ type Environment struct {
 	pendingIO []*ioRequest
 	qiowWaits []qiowWait
 
-	// Operator is OPCOM's state: the console's operator classes and the
-	// outstanding operator requests (operator.go). System state, like
-	// Mailboxes.
-	Operator *operatorState
-
-	// Mailboxes are the mailboxes $CREMBX has created (mailbox.go). Like
-	// common event flag clusters they're system state, in system memory
-	// on VMS, so INIT/VMINIT/ZERO start with none.
-	Mailboxes *MailboxTable
-
 	// waitingPC is the P1-vector address of a service currently waiting
 	// (ErrWait), so SystemService traces only its first attempt; 0 when
 	// no service is waiting.
 	waitingPC uint32
 }
 
-// NewEnvironment returns an Environment for one VAX process, driving mem/cpu
-// and sharing devices/logicals/mounts with whatever else (the console) also
-// uses them. consoleOut is where non-RMS console writes (print.go, file.go)
-// and the internal/rms package's own TTA0: special case go — typically the
-// same io.Writer as Console.Out; consoleIn is where DECC$GETS/EXE$INPUT read
-// from — typically the console's own input stream. mounts is the shared
-// MountTable a MOUNT command populates (internal/console) — see the Mounts
-// field's own doc comment for why it's injected rather than owned here.
-func NewEnvironment(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, logicals *lnm.Database, mounts *rms.MountTable, consoleIn io.Reader, consoleOut io.Writer) *Environment {
-	env := &Environment{
-		mem:      mem,
-		cpu:      cpu,
-		shims:    NewShimTable(),
-		services: NewServiceTable(),
-		Devices:  devices,
-		Logicals: logicals,
-		Mounts:   mounts,
-		files:    rms.NewFileTable(consoleOut),
-		Process:  NewProcess(),
-
-		EventFlagClusters: NewCommonEventFlags(),
-		Mailboxes:         NewMailboxTable(),
-		Operator:          newOperatorState(),
-		Clock:             wallClock,
-		consoleIn:         consoleIn,
-		consoleOut:        consoleOut,
-		openFiles:         map[uint32]*os.File{},
-		nextFID:           3,
+// NewEnvironment returns an Environment for one VAX process running on
+// sys, with the logical-name database logicals (shared with the console).
+// consoleOut is where non-RMS console writes (print.go, file.go) and the
+// internal/rms package's own TTA0: special case go — typically the same
+// io.Writer as Console.Out; consoleIn is where DECC$GETS/EXE$INPUT read
+// from — typically the console's own input stream.
+func NewEnvironment(sys *System, logicals *lnm.Database, consoleIn io.Reader, consoleOut io.Writer) *Environment {
+	return &Environment{
+		System:     sys,
+		Logicals:   logicals,
+		files:      rms.NewFileTable(consoleOut),
+		Process:    NewProcess(),
+		consoleIn:  consoleIn,
+		consoleOut: consoleOut,
+		openFiles:  map[uint32]*os.File{},
+		nextFID:    3,
 	}
-	env.BootTime = env.Clock()
-	env.removeStaleMailboxes()
-	env.NodeName = nominalNodeName
-
-	registerShims(env.shims)
-	registerServices(env.services)
-
-	return env
 }
 
 // rmsContext bundles this Environment's memory/CPU/mount-table/file-table/

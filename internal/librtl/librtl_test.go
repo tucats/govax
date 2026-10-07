@@ -23,8 +23,8 @@ func fixture(t *testing.T) *corevms.Environment {
 		t.Fatal(err)
 	}
 
-	env := corevms.NewEnvironment(vax.New(), vm.NewMemory(1<<20), iodev.NewDeviceTable(), logicals,
-		rms.NewMountTable(), bytes.NewReader(nil), &bytes.Buffer{})
+	env := corevms.NewEnvironment(corevms.NewSystem(vax.New(), vm.NewMemory(1<<20), iodev.NewDeviceTable(),
+		rms.NewMountTable()), logicals, bytes.NewReader(nil), &bytes.Buffer{})
 	Register(env.Shims())
 
 	return env

@@ -20,8 +20,8 @@ func foreignFixture(t *testing.T, command, typed string) (*corevms.Environment, 
 	t.Helper()
 
 	out := &bytes.Buffer{}
-	env := corevms.NewEnvironment(vax.New(), vm.NewMemory(1<<20), iodev.NewDeviceTable(),
-		lnm.NewDatabase(corevms.NominalUIC), rms.NewMountTable(), strings.NewReader(typed), out)
+	env := corevms.NewEnvironment(corevms.NewSystem(vax.New(), vm.NewMemory(1<<20), iodev.NewDeviceTable(),
+		rms.NewMountTable()), lnm.NewDatabase(corevms.NominalUIC), strings.NewReader(typed), out)
 	Register(env.Shims())
 	env.CommandLine = command
 

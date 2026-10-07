@@ -203,17 +203,36 @@ func TestMailbox_deletion(t *testing.T) {
 	}
 }
 
-// TestMailbox_newEnvironment: an Environment built over a device table
-// holding a previous Environment's mailbox removes it.
-func TestMailbox_newEnvironment(t *testing.T) {
+// TestMailbox_newSystem: a System built over a device table holding a
+// previous System's mailbox removes it.
+func TestMailbox_newSystem(t *testing.T) {
 	env, _ := fixture()
 	a := newArena(t, env)
 	_, _ = crembx(t, env, a, 1, 0, 0, "")
 
-	next := NewEnvironment(env.cpu, env.mem, env.Devices, env.Logicals, env.Mounts, nil, nil)
+	next := NewSystem(env.cpu, env.mem, env.Devices, env.Mounts)
 
 	if _, found := next.Devices.Find("MBA1"); found {
-		t.Error("the old mailbox device survived a new Environment")
+		t.Error("the old mailbox device survived a new System")
+	}
+}
+
+// TestMailbox_newEnvironmentKeepsMailboxes: a second process's
+// Environment on the same System finds the mailboxes the first made
+// (docs/PHASE-43.md, bug 2: building an Environment used to delete them).
+func TestMailbox_newEnvironmentKeepsMailboxes(t *testing.T) {
+	env, _ := fixture()
+	a := newArena(t, env)
+	_, _ = crembx(t, env, a, 1, 0, 0, "")
+
+	next := NewEnvironment(env.System, env.Logicals, nil, nil)
+
+	if _, found := next.Devices.Find("MBA1"); !found {
+		t.Error("a new process's Environment removed the system's mailbox")
+	}
+
+	if len(next.Mailboxes.All()) != 1 {
+		t.Errorf("a new process sees %d mailboxes, want 1", len(next.Mailboxes.All()))
 	}
 }
 

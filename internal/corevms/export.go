@@ -22,8 +22,9 @@ func (env *Environment) CPU() *vax.CPU { return env.cpu }
 func (env *Environment) Memory() *vm.Memory { return env.mem }
 
 // Shims is the table of XFC$SHIM routines: an RTL package registers its
-// routines here (the console does it for each new Environment).
-func (env *Environment) Shims() *ShimTable { return env.shims }
+// routines here (the console does it for each new System). Because
+// Environment embeds *System, env.Shims() reaches it too.
+func (sys *System) Shims() *ShimTable { return sys.shims }
 
 // StringDescriptor reads the string a descriptor at addr describes. ok is
 // false when it's longer than maxLen; err when memory can't be read.

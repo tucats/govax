@@ -165,17 +165,19 @@ func (t *MailboxTable) nextUnit(devices *iodev.DeviceTable) uint32 {
 	return 0
 }
 
-// removeStaleMailboxes deletes the mailbox devices a previous
-// Environment left in the shared device table: their messages were in
-// its memory, so they don't survive INIT/VMINIT/ZERO.
-func (env *Environment) removeStaleMailboxes() {
-	if env.Devices == nil {
+// removeStaleMailboxes deletes the mailbox devices a previous System
+// left in the shared device table: their messages were in its memory, so
+// they don't survive INIT/VMINIT/ZERO. It runs once per System, not per
+// process: a process created later must find the mailboxes other
+// processes have made (docs/PHASE-43.md, bug 2).
+func (sys *System) removeStaleMailboxes() {
+	if sys.Devices == nil {
 		return
 	}
 
-	for _, d := range env.Devices.All() {
+	for _, d := range sys.Devices.All() {
 		if d.DevClass == iodev.DeviceClassMailbox {
-			env.Devices.Remove(d)
+			sys.Devices.Remove(d)
 		}
 	}
 }

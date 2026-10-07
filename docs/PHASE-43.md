@@ -738,3 +738,20 @@ uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
   preempted microkernel routine could leave half-used (for Phase 44).
   The P1 vector holds nothing per process. `Logicals` stays per
   Environment until Phase 45 splits `lnm.Database`.
+- 2026-10-07: Subtask 2 (`corevms.System`). `internal/corevms/system.go`
+  holds the machine (`mem`, `cpu`), the shim and service registries,
+  `Devices`, `Mounts`, `Mailboxes`, `EventFlagClusters`, `Operator`,
+  `Clock`, `BootTime`, and `NodeName`, built by `NewSystem`. Environment
+  embeds `*System`, so every existing `env.Mailboxes`, `env.mem`, ...
+  reads the System's field through Go's field promotion, with no other
+  code changed; `env.System` names it. `NewEnvironment(sys, logicals,
+  in, out)` builds only process state. The console's `newRTL` builds a
+  System and then process 1's Environment; `librtl.Register` now takes
+  `sys.Shims()`, once per System. Bug 2 fixed: `removeStaleMailboxes`
+  runs in `NewSystem`, and `TestMailbox_newEnvironmentKeepsMailboxes`
+  checks that a second Environment on one System keeps the first's
+  mailbox. `OnUnhandled`/`OnSignal` stayed on the Environment (they fire
+  for the current process; the debugger watches process 1). The
+  `MountTable` and `Process` comments that said govax has one process
+  are updated (bug 10, in part; the service comments that still describe
+  one-process behavior change with that behavior, in Phases 45 and 46).

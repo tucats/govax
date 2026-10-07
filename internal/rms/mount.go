@@ -49,14 +49,14 @@ type mountedVolume struct {
 // that device name. MountTable is exactly that: a map from device name to
 // "which mounted volume, if any, currently backs it".
 //
-// A MountTable has no concurrency protection of its own (a mutex, for
-// example) — govax has no concept of multiple VAX processes running at
-// once and sharing one Console (see internal/rtl/environment.go's own
-// doc comment on why Environment is one-per-process), so nothing here
-// needs to guard against two goroutines calling Mount/Dismount at the
-// same time. This matches every other shared table this project already
-// has (internal/io's DeviceTable and internal/lnm's Database are likewise
-// unsynchronized plain Go maps).
+// A MountTable is system state: every VAX process sees the same mounted
+// volumes (internal/corevms.System holds it; docs/PHASE-43.md). It has no
+// concurrency protection of its own (a mutex, for example), and needs
+// none: govax runs all its processes on one engine, in one goroutine,
+// switching between them only between instructions, so two processes
+// never call Mount/Dismount at the same time. This matches every other
+// shared table this project already has (internal/io's DeviceTable and
+// internal/lnm's Database are likewise unsynchronized plain Go maps).
 type MountTable struct {
 	// mounts is keyed by normalized device name (see normalizeDeviceName)
 	// so that "DUA0", "DUA0:", and "dua0:" all name the same entry.

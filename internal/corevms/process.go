@@ -7,12 +7,14 @@ import (
 
 // Process is the emulated VMS process an Environment runs images in: the
 // identity and quota state system services read and update on behalf of
-// "the calling process" (docs/PHASE-26.md). govax has exactly one process
-// per Environment, so there is no process table, no PCB/JIB split, and no
-// scheduling state — just the fields some implemented service needs, with
-// a comment naming the VMS field each one stands in for. Later services
-// that need more process state (quotas, privileges, a process name, ...)
-// add it here rather than as loose Environment fields.
+// "the calling process" (docs/PHASE-26.md). There is one Process per
+// Environment; what every process shares is in the System (system.go).
+// There is no PCB/JIB split and no scheduling state yet
+// (docs/PHASE-43.md through PHASE-45.md add them) — just the fields some
+// implemented service needs, with a comment naming the VMS field each one
+// stands in for. Later services that need more process state (quotas,
+// privileges, a process name, ...) add it here rather than as loose
+// Environment fields.
 //
 // A Process is rebuilt along with its Environment on INIT/VMINIT/ZERO,
 // the emulated equivalent of logging in again.
