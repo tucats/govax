@@ -82,9 +82,15 @@ func (s *Scheduler) Quantum() int {
 }
 
 // SetQuantum changes a full quantum to n instructions (at least 1). A
-// process's quantum already under way is left as it is.
+// process with more than that left of its quantum is cut to the new
+// length, so the change takes effect at once (the console sets the
+// quantum after the system's first process exists).
 func (s *Scheduler) SetQuantum(n int) {
 	s.quantum = max(n, 1)
+
+	for _, p := range s.processes {
+		p.quantumLeft = min(p.quantumLeft, s.quantum)
+	}
 }
 
 // checkPriority reports an error for a priority outside 0-31.
@@ -227,23 +233,31 @@ func (s *Scheduler) Ready(h Handle, class Class) (bool, error) {
 }
 
 // Tick counts one instruction executed by the current process, and
-// returns whether a reschedule is due. This is the per-instruction part,
-// so it's kept short: a count, a decrement, and a compare.
+// returns whether a reschedule is due: Charge(1).
+func (s *Scheduler) Tick() bool {
+	return s.Charge(1)
+}
+
+// Charge counts n instructions executed by the current process, and
+// returns whether a reschedule is due. The engine charges instructions
+// in batches, calling only when the current process's quantum may have
+// run out (QuantumLeft says when) or something else needs a decision.
 //
 // When a quantum runs out, the process gets a fresh one, and a normal
 // process is rescheduled: it goes to the back of its queue, so another
 // computable process of the same priority gets a turn (round robin). If
 // there is none, Reschedule chooses it again, one priority lower if it
 // was above its base. A real-time process just goes on: it has no
-// quantum end (section 10.1.2.1).
-func (s *Scheduler) Tick() bool {
+// quantum end (section 10.1.2.1). (Instructions charged past the end of
+// a quantum aren't carried into the next one.)
+func (s *Scheduler) Charge(n int) bool {
 	p := s.cur
-	if p == nil {
+	if p == nil || n <= 0 {
 		return s.reschedule
 	}
 
-	p.cpu++
-	p.quantumLeft--
+	p.cpu += uint64(n)
+	p.quantumLeft -= n
 
 	if p.quantumLeft <= 0 {
 		p.quantumLeft = s.quantum
@@ -253,6 +267,16 @@ func (s *Scheduler) Tick() bool {
 	}
 
 	return s.reschedule
+}
+
+// QuantumLeft returns how many instructions the current process has
+// left of its quantum, or a full quantum if there is no current process.
+func (s *Scheduler) QuantumLeft() int {
+	if s.cur == nil {
+		return s.quantum
+	}
+
+	return s.cur.quantumLeft
 }
 
 // RescheduleRequested reports whether the current process should give

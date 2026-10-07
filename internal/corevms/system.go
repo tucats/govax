@@ -3,6 +3,7 @@ package corevms
 import (
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 )
@@ -77,9 +78,14 @@ type System struct {
 
 	// ProcessSettings are the multiprocessing settings
 	// (procsettings.go). NewSystem sets the defaults; the console
-	// replaces them with the vax.process.* settings. Nothing acts on
-	// them until Phase 44.
+	// replaces them with the vax.process.* settings
+	// (SetProcessSettings, which also gives the scheduler its quantum).
 	ProcessSettings ProcessSettings
+
+	// sched is the scheduler (schedule.go): every process in procs is
+	// in it, by PID. It only decides anything while the engine has the
+	// System installed as its scheduling hook.
+	sched *sched.Scheduler
 
 	// procs is the process table: every process's Environment by its
 	// PID's index, and which one is current (proctable.go).
@@ -114,6 +120,7 @@ func NewSystem(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, mounts 
 		NodeName:          nominalNodeName,
 		ProcessSettings:   DefaultProcessSettings(),
 		procs:             newProcessTable(),
+		sched:             sched.New(DefaultProcessQuantum),
 	}
 
 	sys.BootTime = sys.Clock()

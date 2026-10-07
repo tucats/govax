@@ -1,6 +1,7 @@
 package corevms
 
 import (
+	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -114,6 +115,12 @@ func (sys *System) addProcess(env *Environment) error {
 			env.Process.Name = ""
 		}
 
+		// The scheduler knows the process from now on, as computable;
+		// it can refuse only a priority outside 0-31.
+		if err := sys.sched.Add(sched.Handle(pid(index, seq)), int(env.Process.BasePriority), sched.ClassNull); err != nil {
+			return err
+		}
+
 		t.sequence[index] = seq
 		t.slots[index] = env
 		env.Process.PID = pid(index, seq)
@@ -144,6 +151,7 @@ func (sys *System) RemoveProcess(env *Environment) {
 	}
 
 	t.slots[index] = nil
+	_ = sys.sched.Remove(handle(env)) // it's in the scheduler, as it was in the table
 
 	// A failure here (the space is the CPU's current one) leaves the
 	// frames allocated, a leak rather than a corruption; FreeProcess below

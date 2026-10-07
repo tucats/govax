@@ -554,6 +554,23 @@ func TestQuantumSetting(t *testing.T) {
 	if s.Quantum() != 300 {
 		t.Errorf("quantum %d", s.Quantum())
 	}
+
+	// A quantum under way is cut to a shorter new length, not lengthened.
+	if err := s.Add(1, 4, ClassNull); err != nil {
+		t.Fatal(err)
+	}
+
+	s.SetQuantum(50)
+
+	if got := mustInfo(t, s, 1).QuantumLeft; got != 50 {
+		t.Errorf("quantum left %d, want 50", got)
+	}
+
+	s.SetQuantum(80)
+
+	if got := mustInfo(t, s, 1).QuantumLeft; got != 50 {
+		t.Errorf("quantum left %d, want 50 still", got)
+	}
 }
 
 // TestFigure10_2 follows the start of the book's Figure 10-2 (section
@@ -604,5 +621,41 @@ func TestFigure10_2(t *testing.T) {
 	// A was preempted, not chosen, so it kept 8, in the computable queue.
 	if info := mustInfo(t, s, a); info.Priority != 8 || info.State != StateCOM {
 		t.Errorf("A %+v", info)
+	}
+}
+
+// TestCharge checks charging instructions in batches: the CPU count,
+// QuantumLeft, and a quantum end inside a batch.
+func TestCharge(t *testing.T) {
+	s := newScheduler(t, 10, 4, 4)
+
+	if got := s.QuantumLeft(); got != 10 {
+		t.Errorf("QuantumLeft with no current process %d, want 10", got)
+	}
+
+	if s.Charge(5) != true {
+		t.Error("no reschedule pending before the first choice")
+	}
+
+	s.Reschedule()
+
+	if s.Charge(4) || s.QuantumLeft() != 6 {
+		t.Errorf("after 4: reschedule %v, quantum left %d", s.RescheduleRequested(), s.QuantumLeft())
+	}
+
+	if s.Charge(0) {
+		t.Error("Charge(0) requested a reschedule")
+	}
+
+	if !s.Charge(7) {
+		t.Error("a batch past the quantum's end didn't reschedule")
+	}
+
+	if info := mustInfo(t, s, 1); info.CPU != 11 || info.QuantumLeft != 10 {
+		t.Errorf("info %+v", info)
+	}
+
+	if h, _ := s.Reschedule(); h != 2 {
+		t.Errorf("chose %d, want 2", h)
 	}
 }

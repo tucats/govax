@@ -1,7 +1,7 @@
 # Phase 44 — Multiprocessing, part 2: the scheduler
 
 **Status:** in progress (started 2026-10-07); decisions taken 2026-10-06
-(see PHASE-43.md, Part A). Subtask 1 done.
+(see PHASE-43.md, Part A). Subtasks 1–2 done.
 
 The program this phase belongs to — its goal, architecture, rules for
 every commit, decisions, and known bugs — is in
@@ -232,8 +232,10 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
   Settled in subtask 1: nothing but a fresh quantum (the book, sections
   10.1.2.1 and 10.1.2.4); real-time processes run until they wait or a
   higher-or-equal priority process preempts them.
-- How much the scheduler's per-instruction work costs; if the decrement
-  in Step is measurable, fold it into the existing `tickQuantum` counter.
+- ~~How much the scheduler's per-instruction work costs~~ Measured in
+  subtask 2: nothing measurable with the flag off, at most about 1% with
+  it on (docs/PERFORMANCE.md, "Check: the scheduler hook"); no need to
+  fold it into `tickQuantum`.
 
 ## Progress log
 
@@ -287,3 +289,54 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
     (higher, equal, lower, boosted, real-time), idling and waking, a
     waiting process keeping its quantum, removal, `SetBasePriority`,
     errors, and the start of the book's Figure 10-2 example.
+- 2026-10-07: **Subtask 2 done: the engine hook.**
+  - `internal/cpu/schedule.go`: the `Scheduler` interface, one method,
+    `Schedule(e, ran, preemptible) (next, err)`: charge `ran`
+    instructions to the current process, decide (and, from subtask 3,
+    switch), and return how many instructions may run before the next
+    call. `Engine.SetScheduler(s, modes)` installs it (nil removes it);
+    it isn't picked up from the system services as `ASTSource` is, so
+    with the flag off the engine has no hook at all and pays one nil
+    test per instruction. `Step` counts down `schedLeft` after interrupt
+    delivery and before AST delivery, calling the hook at zero.
+    `RequestReschedule` makes the next boundary call it, keeping the
+    count of instructions run right. `Preemptible` is the plan's test:
+    IPL below 3, not on the interrupt stack, and the current mode in the
+    `PreemptModes` the setting allows (`corevms.PreemptMode.Modes`).
+  - `internal/corevms/schedule.go`: the `System` owns a
+    `sched.Scheduler` (`System.Scheduler()`), kept in step with the
+    process table: `addProcess` adds each process by PID at its base
+    priority (class `PRI$_NULL`; `$CREPRC`'s creation boost is Phase
+    45's), `RemoveProcess` removes it. `SetProcessSettings` replaces
+    `ProcessSettings` and gives the scheduler its quantum
+    (`sched.SetQuantum` now also cuts a longer quantum under way, since
+    process 1 exists before the console applies the settings).
+    `System.Schedule` is the hook: charge, and when a reschedule is
+    due, choose, if preemption is allowed, or always when the current
+    process has stopped running (waited); a quantum end that isn't
+    preemptible yet is retried at the next boundary (budget 1). It
+    returns the rest of the quantum otherwise. Choosing another process
+    returns `ErrProcessSwitch` until subtask 3, and no computable
+    process `ErrNoComputableProcess` until subtask 5's idle loop.
+  - CPU time: `sched` counts each process's instructions (`Info.CPU`,
+    `System.CPUInstructions`). Turning that into `JPI$_CPUTIM`'s 10 ms
+    units, which `$GETJPI` doesn't return yet, is for `$GETJPI`'s
+    cross-process work in Phase 45.
+  - The console installs the System as the hook in `newRTL` (so on
+    every INIT, VMINIT, and ZERO) when `vax.process.scheduler` is on.
+  - Tests: `internal/cpu/schedule_test.go` (a fake scheduler: when it's
+    called and with what counts, `RequestReschedule`, a budget below 1,
+    removal, errors stopping `Step`, and the preemption test's table);
+    `internal/corevms/schedule_test.go` (the scheduler follows the
+    table, the settings, one process through quantum ends preemptible
+    or not, the not-yet errors); `internal/console/schedule_test.go`
+    (FORTH with the scheduler on and a 997-instruction quantum gives
+    the same session as without, and its instructions are charged to
+    process 1).
+  - Benchmark: `BenchmarkSieveScheduled` beside `BenchmarkSieve`; no
+    measurable cost off, at most about 1% on (docs/PERFORMANCE.md).
+  - For subtask 4: an event that makes another process computable
+    mid-budget (`sched.Ready` requesting a reschedule) has to reach
+    `Engine.RequestReschedule`, or the switch waits for the current
+    quantum's end. The System has no engine pointer yet; the waits'
+    subtask gives it one (or a callback).

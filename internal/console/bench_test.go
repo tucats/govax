@@ -3,6 +3,7 @@ package console
 import (
 	"testing"
 
+	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -17,7 +18,24 @@ import (
 //	go test ./internal/console -run '^$' -bench BenchmarkSieve -cpuprofile cpu.prof
 //	go tool pprof -top cpu.prof
 func BenchmarkSieve(b *testing.B) {
+	benchmarkSieve(b, false)
+}
+
+// BenchmarkSieveScheduled is BenchmarkSieve with the scheduler installed
+// as the engine's hook (vax.process.scheduler on; docs/PHASE-44.md,
+// subtask 2), at the default quantum: what one process pays for the
+// scheduler's per-instruction count.
+func BenchmarkSieveScheduled(b *testing.B) {
+	benchmarkSieve(b, true)
+}
+
+// benchmarkSieve runs SIEVE b.N times, with or without the scheduler.
+func benchmarkSieve(b *testing.B, scheduled bool) {
 	c := newRunnableConsole(b)
+	if scheduled {
+		c.Engine.SetScheduler(c.RTL.System, cpu.PreemptAllModes)
+	}
+
 	if _, _, err := c.Assemble(asmFixturePath(b, "bench.asm")); err != nil {
 		b.Fatalf("Assemble: %v", err)
 	}

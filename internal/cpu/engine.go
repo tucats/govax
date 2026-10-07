@@ -81,6 +81,14 @@ type Engine struct {
 	// otherwise, and then Step never checks for ASTs.
 	astSource ASTSource
 
+	// scheduler is the scheduling hook (schedule.go), or nil when only
+	// one process runs. Step calls it when schedLeft, the instructions
+	// left of the schedBudget its last call allowed, reaches zero;
+	// preemptModes are the access modes it may preempt in.
+	scheduler              Scheduler
+	schedBudget, schedLeft int
+	preemptModes           PreemptModes
+
 	// decoded is Step's own pair of reusable Decoded buffers -- see Step's
 	// doc comment on why they exist (a Phase 12 performance-pass finding,
 	// not part of the original Phase 03 design). decoded[current&1] is the
@@ -373,6 +381,22 @@ func (e *Engine) Step() error {
 		if err := e.deliverPendingInterrupt(); err != nil {
 			return err
 		}
+	}
+
+	// The scheduler's turn (schedule.go): count this instruction against
+	// the current process, and when its budget is used up, let the
+	// scheduler run, which may switch to another process. This comes
+	// after interrupt delivery, so an interrupt handler (on the interrupt
+	// stack, at a raised IPL) is never switched away from, and before AST
+	// delivery, so a process switched to gets its own pending ASTs at once.
+	if e.scheduler != nil {
+		if e.schedLeft <= 0 {
+			if err := e.schedule(); err != nil {
+				return err
+			}
+		}
+
+		e.schedLeft--
 	}
 
 	// An AST, like an interrupt, is taken between instructions. The RTL

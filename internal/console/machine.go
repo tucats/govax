@@ -340,13 +340,20 @@ func (c *Console) newRTL() *corevms.Environment {
 	// image state; process 1's is the console's and stays (images.go).
 	c.otherImages = nil
 
-	sys.ProcessSettings = processSettings()
+	sys.SetProcessSettings(processSettings())
 
 	// $SETIMR's timers run on the engine's system time, the same time
 	// base as the interval clock (docs/PHASE-26.md subtask 11).
 	if c.Engine != nil {
 		sys.Clock = c.Engine.SystemTime
 		sys.BootTime = sys.Clock() // $GETSYI's SYI$_BOOTTIME: now, on that clock
+
+		// With vax.process.scheduler on, the System is the engine's
+		// scheduling hook (docs/PHASE-44.md); off, the engine has none
+		// and never pays for one.
+		if sys.ProcessSettings.Scheduler {
+			c.Engine.SetScheduler(sys, sys.ProcessSettings.Preempt.Modes())
+		}
 	}
 
 	// Process 1 is the first process on a new System, whose process table

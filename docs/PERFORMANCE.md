@@ -771,13 +771,38 @@ runs; the old build is `7c91e4e`, after R3):
 
 ---
 
+## Check: the scheduler hook (Phase 44, 2026-10-07)
+
+Phase 44's subtask 2 gave `Engine.Step` a scheduling hook
+(`internal/cpu/schedule.go`): with no scheduler installed, one nil test
+per instruction; with one, a decrement and a compare, and a call into
+`corevms.System.Schedule` only when the current process's quantum runs
+out. The check was that one process runs no slower either way.
+
+`BenchmarkSieve` and `BenchmarkSieveScheduled` (`internal/console`; the
+second installs the scheduler at the default quantum, 20,000), 6 runs
+each, Apple M5 Max, Go 1.26.0, quantum clock:
+
+| | Before the hook (`f091056`) | Scheduler off | Scheduler on |
+|---|---|---|---|
+| ms/op | 4.63–4.72 | 4.58–4.70 | 4.64–4.68 |
+
+- Scheduler off: no difference beyond run-to-run noise.
+- Scheduler on: within noise of the old build, and at most about 1% over
+  scheduler off. The open question in docs/PHASE-44.md (fold the count
+  into `tickQuantum`'s) isn't worth pursuing at this cost.
+
+---
+
 ## Deferred design issues
 
 **Clock, console output, and context switching (from Study 1, 2026-10-06).**
 *Console output and the clock: done (Study 1, R1). The microkernel writes
 the console through `XFC$CONSOLE_PUT` and leaves the interval clock
 stopped, and the engine keeps time itself (`internal/cpu/clock.go`).
-Context switching is still deferred.*
+Context switching is still deferred.* *(2026-10-07: Phase 44 gates it
+with a per-process instruction count, as suggested below; see "Check: the
+scheduler hook".)*
 
 The interval clock interrupt is a holdover from eVAX's goal of emulating VAX
 hardware. govax's focus is now running VMS programs, and the clock
