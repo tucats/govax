@@ -249,3 +249,26 @@ for a process created without one.
   checks the masks against the bits and the message layout. Still to do,
   for subtask 13's MACRO test: have `mkdefs` add `$PRCDEF`/`$PQLDEF`/
   `$ACCDEF` to govax's STARLET.MLB from `phase45-defined.txt`.
+- 2026-10-07: Subtask 2 (jobs), from *VAX/VMS Internals and Data
+  Structures*, section 20.1.1 (steps 3, 8, 17, 19), figure 20-2, and
+  table 20-3. `corevms/job.go`: a `Job` (VMS's JIB) with the master PID
+  (`JIB$L_MPID`), the subprocess limit and count (`JIB$W_PRCLIM`/
+  `PRCCNT`), and the other pooled quotas' limits (BYTLM, FILLM,
+  PGFLQUOTA, TQELM, ENQLM, JTQUOTA), recorded but not enforced. Each
+  `Process` gains `Owner` (`PCB$L_OWNER`, 0 when detached),
+  `SubprocessCount` (`PCB$W_PRCCNT`, the subprocesses it created itself),
+  and `Job`. `NewEnvironment` makes a detached process, the master of a
+  new job: process 1, and the extra processes Phase 43/44's tests make.
+  `NewSubprocess(owner, in, out)` makes a process in its owner's job,
+  with the owner's user name, account, and UIC, counted against PRCLM
+  first (SS$_EXQUOTA when the job is full, the 5.0 manual's status; VMS
+  also has SS$_EXPRCLM, which a later VMS may return instead:
+  unconfirmed), and given back if the process table is full (SS$_NOSLOT).
+  `RemoveProcess` takes a subprocess out of its owner's and job's counts
+  (`leaveJob`). `$GETJPI` reads the job: `JPI$_MASTER_PID` (was the
+  caller's PID), `JPI$_OWNER` (was 0), and new `JPI$_PRCCNT`,
+  `JPI$_JOBPRCCNT`, `JPI$_PRCLM`, `JPI$_BYTLM`, `JPI$_FILLM`,
+  `JPI$_PGFLQUOTA`, `JPI$_TQLM`, `JPI$_ENQLM`. The quota values are
+  nominal (PRCLM 10, ...), standing in for the SYSTEM account's UAF
+  entry. Tests: `job_test.go` (process 1's job, figure 20-2's tree, PRCLM,
+  a full table).

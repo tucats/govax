@@ -40,7 +40,9 @@ const maxProcessNameLength = 15
 // the current limit $ADJWSL adjusts, since govax has no real working set.
 // The AST items describe Process.ast (see astModeMask and remainingASTs),
 // and JPI$_STATE is always SCH$C_CUR: the process asking is, by
-// definition, the one running.
+// definition, the one running. The job items (JPI$_MASTER_PID,
+// JPI$_JOBPRCCNT, JPI$_PRCLM, and the pooled quotas' limits) read the
+// process's Job (job.go); JPI$_OWNER and JPI$_PRCCNT its own PCB fields.
 var jpiItemsByName = map[string]func(env *Environment) itemValue{
 	"JPI$_ACCOUNT":    func(env *Environment) itemValue { return itemPadded(env.Process.Account, 8) },
 	"JPI$_ASTACT":     func(env *Environment) itemValue { return itemLong(astModeMask(env.Process.ast.active)) },
@@ -62,10 +64,18 @@ var jpiItemsByName = map[string]func(env *Environment) itemValue{
 	"JPI$_EFCU":       func(env *Environment) itemValue { return itemLong(env.Process.LocalEventFlags[1]) },
 	"JPI$_GRP":        func(env *Environment) itemValue { return itemLong(env.Process.UICGroup()) },
 	"JPI$_JOBTYPE":    func(env *Environment) itemValue { return itemLong(jpiLocal) },
-	"JPI$_MASTER_PID": func(env *Environment) itemValue { return itemLong(env.Process.PID) },
+	"JPI$_MASTER_PID": func(env *Environment) itemValue { return itemLong(env.Process.Job.MasterPID) },
 	"JPI$_MEM":        func(env *Environment) itemValue { return itemLong(env.Process.UICMember()) },
 	"JPI$_MODE":       func(env *Environment) itemValue { return itemLong(jpiInteractive) },
-	"JPI$_OWNER":      func(env *Environment) itemValue { return itemLong(0) },
+	"JPI$_OWNER":      func(env *Environment) itemValue { return itemLong(env.Process.Owner) },
+	"JPI$_PRCCNT":     func(env *Environment) itemValue { return itemLong(env.Process.SubprocessCount) },
+	"JPI$_PRCLM":      func(env *Environment) itemValue { return itemLong(env.Process.Job.SubprocessLimit) },
+	"JPI$_JOBPRCCNT":  func(env *Environment) itemValue { return itemLong(env.Process.Job.SubprocessCount) },
+	"JPI$_BYTLM":      func(env *Environment) itemValue { return itemLong(env.Process.Job.Pooled.BYTLM) },
+	"JPI$_FILLM":      func(env *Environment) itemValue { return itemLong(env.Process.Job.Pooled.FILLM) },
+	"JPI$_PGFLQUOTA":  func(env *Environment) itemValue { return itemLong(env.Process.Job.Pooled.PGFLQUOTA) },
+	"JPI$_TQLM":       func(env *Environment) itemValue { return itemLong(env.Process.Job.Pooled.TQELM) },
+	"JPI$_ENQLM":      func(env *Environment) itemValue { return itemLong(env.Process.Job.Pooled.ENQLM) },
 	"JPI$_PID":        func(env *Environment) itemValue { return itemLong(env.Process.PID) },
 	"JPI$_PRCNAM":     func(env *Environment) itemValue { return itemString(env.Process.Name) },
 	"JPI$_TERMINAL":   func(env *Environment) itemValue { return itemString(env.Process.Terminal) },

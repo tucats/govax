@@ -9,10 +9,11 @@ import (
 // identity and quota state system services read and update on behalf of
 // "the calling process" (docs/PHASE-26.md). There is one Process per
 // Environment; what every process shares is in the System (system.go).
-// There is no PCB/JIB split and no scheduling state yet
-// (docs/PHASE-43.md through PHASE-45.md add them) — just the fields some
-// implemented service needs, with a comment naming the VMS field each one
-// stands in for. Later services that need more process state (quotas,
+// It holds what VMS keeps in a process's PCB and process header; what a
+// job's processes share (VMS's JIB) is the Job it points to (job.go), and
+// its scheduling state is the scheduler's (schedule.go). It has just the
+// fields some implemented service needs, with a comment naming the VMS
+// field each one stands in for. Later services that need more process state (quotas,
 // privileges, a process name, ...) add it here rather than as loose
 // Environment fields.
 //
@@ -35,6 +36,16 @@ type Process struct {
 	Account  string
 	Terminal string
 	CLIName  string
+
+	// Owner is the PID of the process that created this one, if it's a
+	// subprocess, or 0 for a detached process (PCB$L_OWNER).
+	// SubprocessCount is how many subprocesses this process has created
+	// that still exist (PCB$W_PRCCNT). Job is the job the process belongs
+	// to (PCB$L_JIB): its own, for a detached process, or its owner's
+	// (job.go).
+	Owner           uint32
+	SubprocessCount uint32
+	Job             *Job
 
 	// UIC is the process's user identification code (PCB$L_UIC), group
 	// in the high word and member in the low word — [1,4] (SYSTEM) by

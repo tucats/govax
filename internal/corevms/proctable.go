@@ -143,7 +143,8 @@ func (sys *System) addProcess(env *Environment) error {
 // for a later process (which will get a different PID: the slot's
 // sequence number moves on). If it was the current process, there is
 // none until SetCurrent names one. Removing a process that isn't in the
-// table does nothing. The physical pages its address space was given
+// table does nothing. A subprocess no longer counts against its owner's
+// and its job's subprocess counts (leaveJob). The physical pages its address space was given
 // (TeardownAddressSpace), and any S0 pool pages still allocated to the
 // process, are freed.
 func (sys *System) RemoveProcess(env *Environment) {
@@ -156,6 +157,8 @@ func (sys *System) RemoveProcess(env *Environment) {
 
 	t.slots[index] = nil
 	_ = sys.sched.Remove(handle(env)) // it's in the scheduler, as it was in the table
+
+	sys.leaveJob(env)
 
 	// A failure here (the space is the CPU's current one) leaves the
 	// frames allocated, a leak rather than a corruption; FreeProcess below
