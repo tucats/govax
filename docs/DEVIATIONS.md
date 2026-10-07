@@ -592,15 +592,18 @@ changed as a result.
 - **Where**: `internal/coreos/mailbox.go`, `internal/coreos/mbxdriver.go`,
   `internal/lnm/database.go`.
 - **What**:
-  - One process: a mailbox connects the process with itself (its AST
-    routines, its parts). The IOSB's process IDs are always its own.
-  - `LNM$TEMPORARY_MAILBOX` is `LNM$PROCESS`, not `LNM$JOB`: govax has
-    no job table.
+  - ~~One process: a mailbox connects the process with itself (its AST
+    routines, its parts). The IOSB's process IDs are always its own.~~
+    Fixed in Phase 46, subtask 2 (mailboxes between processes).
+  - ~~`LNM$TEMPORARY_MAILBOX` is `LNM$PROCESS`, not `LNM$JOB`: govax has
+    no job table.~~ Fixed in Phase 45 (job tables).
   - ~~A write that doesn't fit completes with `SS$_MBFULL`~~ and
     ~~`IO$_SETMODE` has no attention ASTs~~: both fixed in subtask 37
     (resource wait mode, `$SETRWM`, and `IO$M_READATTN`/`WRTATTN`/
-    `MB_ROOM_NOTIFY`). `IO$_SETMODE` still makes no protection changes;
-    `promsk` is recorded, not enforced.
+    `MB_ROOM_NOTIFY`). ~~`IO$_SETMODE` still makes no protection
+    changes; `promsk` is recorded, not enforced.~~ Fixed in Phase 46,
+    subtask 3: the mask is checked on `$ASSIGN`, reads, and writes, and
+    `IO$M_SETPROT` changes it.
   - A waiting writer doesn't show the RWMBX state in `$GETJPI`'s
     `JPI$_STATE`.
   - No `BYTLM` quota (`SS$_EXBYTLM`), shared-memory mailboxes, or

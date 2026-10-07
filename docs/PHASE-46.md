@@ -1,6 +1,6 @@
 # Phase 46 — Multiprocessing, part 4: interprocess communication
 
-**Status:** in progress (subtasks 1-2 done, 2026-10-07); decisions taken
+**Status:** in progress (subtasks 1-3 done, 2026-10-07); decisions taken
 2026-10-06 (see PHASE-43.md, Part A). Needs Phase 45.
 
 The program this phase belongs to is described in
@@ -59,7 +59,7 @@ now they differ.
 
 ### Mailbox protection and lifetime
 
-`$CREMBX`'s protection mask (recorded, not enforced, today) is checked
+`$CREMBX`'s protection mask (recorded, not enforced, before subtask 3) is checked
 against the accessing process's UIC on `$ASSIGN` (SS$_NOPRIV), by the
 System Services manual's rules. A temporary mailbox lives while any
 process has a channel to it; its logical name goes in the job table
@@ -142,6 +142,7 @@ as today).
    mailbox deleted when the last channel in any process goes; logical
    names in the job table; `$GETDVI` of a mailbox from either side
    (message count in `DVI$_DEVDEPEND`, reference count, owner UIC).
+   *Done (2026-10-07).*
 4. **Common event flags across processes**, with CEF waits and temporary
    cluster lifetime. Tests.
 5. **Global sections**: create, map, delete, rundown unmapping, reference
@@ -270,3 +271,43 @@ as today).
     `TestReportEvent_mailboxRoom` checks it (the console cases can't:
     there process 1 waits right after making room, and the scheduler
     finds the writer anyway).
+- 2026-10-07: Subtask 3 (protection and lifetime).
+  - **UIC protection** (`corevms/uicprot.go`, `Process.uicAccess`): the
+    16-bit mask of four categories (SYSTEM, OWNER, GROUP, WORLD; a set
+    bit denies read, write, logical, or physical access), a process in
+    every category it qualifies for (SYSTEM: group up to MAXSYSGROUP,
+    octal 10, or SYSPRV, or GRPPRV in the owner's group), an access
+    allowed if any of its categories allows it; BYPASS allows all,
+    READALL read. From the *Guide to VMS System Security*; ACLs aren't
+    modeled.
+  - **Mailbox protection:** `$ASSIGN`, and `$CREMBX` reaching an
+    existing mailbox by name, need read or write access (SS$_NOPRIV);
+    each read needs read access and each write or end-of-file message
+    write access, checked when the `$QIO` is made. The system's own
+    messages (termination message, OPCOM's replies) aren't checked.
+    `IO$_SETMODE!IO$M_SETPROT` sets the mask from p2, for the owner or a
+    process with BYPASS or SYSPRV. *Unconfirmed:* that either access is
+    enough for `$ASSIGN`; SETPROT's argument and who may use it.
+  - **Owner:** a mailbox's owner (DVI$_PID, DVI$_OWNUIC) stays its
+    creator. Before, every `$ASSIGN` made the assigning process the
+    device's owner, which, with two processes, would have checked the
+    protection against the wrong UIC; other devices keep that rule.
+    *Unconfirmed:* that VMS's DVI$_PID of a mailbox is its creator's.
+  - **Lifetime:** a temporary mailbox already went with its last
+    channel, the reference count being the device's, shared by every
+    process. **Fixed:** its logical name is deleted from the table it
+    went in (`LNM$JOB_xxxxxxxx`, resolved when it's defined), not
+    `LNM$TEMPORARY_MAILBOX` as seen by the deleting process, which, in
+    another job, is another job table: the name was left behind.
+  - **$GETDVI:** a mailbox's DVI$_DEVDEPEND has its message count in the
+    low word (the I/O User's Reference Manual's description; to check
+    with the optional probe), and DVI$_VPROT its protection mask (0
+    for other devices, whose protection govax doesn't model).
+  - Tests (`corevms/mbxprot_test.go`): the access rules; `$ASSIGN` and
+    `$CREMBX` refused and allowed by category and privilege; read-only
+    and write-only access; SETPROT by owner, non-owner, and SYSPRV; a
+    temporary mailbox outliving its creator's channel in a subprocess,
+    invisible by name to another job, going with its last channel in
+    another job (its name with it, from the creator's job table) and
+    with a deleted process's rundown; and `$GETDVI` from both sides and
+    by name.

@@ -53,6 +53,13 @@ import (
 // SS$_MBFULL instead. Nothing has happened to the mailbox while the
 // writer waits: the request is made afresh each time.
 //
+// # Protection
+//
+// A read needs read access to the mailbox, and a write or an end-of-file
+// message write access, by its protection mask (mailbox.go); without
+// it, the $QIO fails with SS$_NOPRIV. The system's own messages (the
+// termination message, OPCOM's replies) aren't checked.
+//
 // # Attention ASTs
 //
 // A program can ask to be told, by an AST, when something happens to a
@@ -84,6 +91,7 @@ var (
 	ioModReadAttn   = ioCode("IO$M_READATTN")
 	ioModWrtAttn    = ioCode("IO$M_WRTATTN")
 	ioModRoomNotify = ioCode("IO$M_MB_ROOM_NOTIFY")
+	ioModSetProt    = ioCode("IO$M_SETPROT")
 )
 
 // mailboxFunctions is the mailbox driver's function table: the read and
@@ -152,6 +160,10 @@ func (m *Mailbox) queuedBytes() uint32 {
 // With IO$M_NOW, an empty mailbox completes the read with SS$_ENDOFFILE
 // instead of leaving it pending. See this file's opening comment.
 func mbxRead(env *Environment, req *ioRequest) (ioStatus, uint32) {
+	if !env.mailboxAccess(req.channel.Device, accessRead) {
+		return ioStatus{}, ssNoPriv
+	}
+
 	if !env.accessible(req.p[0], req.p[1]&0xFFFF, vm.AccessWrite) {
 		return ioStatus{}, ssAccVio
 	}
@@ -221,6 +233,10 @@ func (env *Environment) receive(reader *ioRequest, msg *mailboxMessage) ioStatus
 //
 // See this file's opening comment.
 func mbxWrite(env *Environment, req *ioRequest) (ioStatus, uint32) {
+	if !env.mailboxAccess(req.channel.Device, accessWrite) {
+		return ioStatus{}, ssNoPriv
+	}
+
 	m := env.mailboxFor(req)
 	size := req.p[1] & 0xFFFF
 
@@ -243,6 +259,10 @@ func mbxWrite(env *Environment, req *ioRequest) (ioStatus, uint32) {
 // mbxWriteEOF is IO$_WRITEOF: an end-of-file message, which its reader
 // gets as SS$_ENDOFFILE. It is otherwise a write of no data.
 func mbxWriteEOF(env *Environment, req *ioRequest) (ioStatus, uint32) {
+	if !env.mailboxAccess(req.channel.Device, accessWrite) {
+		return ioStatus{}, ssNoPriv
+	}
+
 	return env.send(env.mailboxFor(req), req, &mailboxMessage{eof: true, pid: env.Process.PID})
 }
 
@@ -330,11 +350,26 @@ func mbxSense(env *Environment, req *ioRequest) (ioStatus, uint32) {
 // With IO$M_READATTN, IO$M_WRTATTN, or IO$M_MB_ROOM_NOTIFY (any of them
 // together), it enables or disables the channel's attention AST of that
 // kind (see this file's opening comment), replacing one the channel
-// already had. Without them (VMS uses it to change the mailbox's
-// protection, which govax doesn't enforce), it does nothing.
+// already had. Without them, it does nothing.
+//
+// With IO$M_SETPROT instead, p2's low word is the mailbox's new
+// protection mask (mailbox.go). Only its owner (a process with its
+// owner's UIC) or a process with BYPASS or SYSPRV may change it, else
+// SS$_NOPRIV. *Unconfirmed:* the argument (p2) and who may set it.
 func mbxSetMode(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	m := env.mailboxFor(req)
 	m.prune()
+
+	if req.modified(ioModSetProt) {
+		p := env.Process
+		if p.UIC != m.Device.OwnUIC && !p.hasAnyPrivilege(privBYPASS|privSYSPRV) {
+			return ioStatus{}, ssNoPriv
+		}
+
+		m.Protection = req.p[1] & 0xFFFF
+
+		return ioStatus{status: ssNormal}, 0
+	}
 
 	mode := max(req.p[2]&3, req.mode)
 

@@ -50,7 +50,7 @@ var dviItemsByName = map[string]dviItemFunc{
 	"DVI$_DEVBUFSIZ":  dviLong(func(d *iodev.Device) uint32 { return d.DevBufSize }),
 	"DVI$_DEVCHAR":    func(env *Environment, d *iodev.Device) itemValue { return itemLong(env.devChar(d)) },
 	"DVI$_DEVCHAR2":   dviLong(func(d *iodev.Device) uint32 { return d.DevChar2 }),
-	"DVI$_DEVDEPEND":  dviLong(func(d *iodev.Device) uint32 { return d.DevDepend }),
+	"DVI$_DEVDEPEND":  func(env *Environment, d *iodev.Device) itemValue { return itemLong(env.devDepend(d)) },
 	"DVI$_DEVDEPEND2": dviLong(func(d *iodev.Device) uint32 { return d.DevDepend2 }),
 	"DVI$_DEVSTS":     dviLong(func(d *iodev.Device) uint32 { return d.DevSts }),
 	"DVI$_STS":        dviLong(func(d *iodev.Device) uint32 { return d.STS }),
@@ -66,6 +66,7 @@ var dviItemsByName = map[string]dviItemFunc{
 	"DVI$_LOCKID":    dviLong(func(d *iodev.Device) uint32 { return d.LockID }),
 	"DVI$_RECSIZ":    dviLong(func(d *iodev.Device) uint32 { return d.RecSize }),
 	"DVI$_SERIALNUM": dviLong(func(d *iodev.Device) uint32 { return d.Serial }),
+	"DVI$_VPROT":     func(env *Environment, d *iodev.Device) itemValue { return itemLong(env.deviceProtection(d)) },
 
 	// Names. A device name is written as VMS writes a physical one: a
 	// leading "_" (so it isn't translated as a logical name) and a
@@ -221,6 +222,29 @@ func (env *Environment) devChar(d *iodev.Device) uint32 {
 	}
 
 	return c
+}
+
+// devDepend is d's DEVDEPEND: for a mailbox, the number of messages
+// waiting in it, in the low word (as the I/O User's Reference Manual
+// describes a mailbox's device-dependent information; unconfirmed on
+// VMS), and otherwise the device record's.
+func (env *Environment) devDepend(d *iodev.Device) uint32 {
+	if m, ok := env.Mailboxes.For(d); ok {
+		return d.DevDepend&^0xFFFF | uint32(min(m.Messages(), 0xFFFF))
+	}
+
+	return d.DevDepend
+}
+
+// deviceProtection is d's protection mask (DVI$_VPROT): a mailbox's
+// (mailbox.go), and 0 for any other device, whose protection govax
+// doesn't model.
+func (env *Environment) deviceProtection(d *iodev.Device) uint32 {
+	if m, ok := env.Mailboxes.For(d); ok {
+		return m.Protection
+	}
+
+	return 0
 }
 
 // volumeFacts are a disk's volume items.

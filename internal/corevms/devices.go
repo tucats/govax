@@ -41,7 +41,8 @@ func (env *Environment) findChannel(number uint32) (*channel, bool) {
 }
 
 // serviceSysAssign is SYS$ASSIGN: given a device name, creates and returns a
-// channel number bound to that device.
+// channel number bound to that device. A mailbox the process may neither
+// read nor write, by its protection (mailbox.go), is SS$_NOPRIV.
 func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 	if len(argv) < 2 {
 		return ssInsfArg, nil
@@ -76,6 +77,10 @@ func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 
 	if dp.Allocated() && dp.PID != env.Process.PID {
 		return ssDevAlloc, nil
+	}
+
+	if !env.mayAssign(dp) {
+		return ssNoPriv, nil
 	}
 
 	// The channel number goes to argv[1]: check it can be written before
@@ -113,7 +118,9 @@ func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 // newChannel assigns a new channel to dp from access mode mode: $ASSIGN's
 // work, shared with $CREMBX. Channel numbers count up by 8 from 8, as
 // eVAX's find_device numbered them. The device's reference count goes up,
-// and its owner becomes this process.
+// and its owner becomes this process, except a mailbox's: that stays the
+// process that created it (mailbox.go), whose UIC its protection is
+// checked against.
 func (env *Environment) newChannel(name string, dp *iodev.Device, mode uint32) *channel {
 	env.nextChannel += 8
 	c := &channel{
@@ -126,8 +133,11 @@ func (env *Environment) newChannel(name string, dp *iodev.Device, mode uint32) *
 
 	env.channels = append(env.channels, c)
 	dp.RefCnt++
-	dp.PID = env.Process.PID
-	dp.OwnUIC = env.Process.UIC
+
+	if _, isMailbox := env.Mailboxes.For(dp); !isMailbox {
+		dp.PID = env.Process.PID
+		dp.OwnUIC = env.Process.UIC
+	}
 
 	return c
 }
@@ -390,7 +400,7 @@ func (env *Environment) releaseChannel(c *channel) {
 		d.RefCnt--
 	}
 
-	if d.RefCnt == 0 && !d.Allocated() {
+	if _, isMailbox := env.Mailboxes.For(d); d.RefCnt == 0 && !d.Allocated() && !isMailbox {
 		d.PID = 0
 	}
 

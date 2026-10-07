@@ -36,9 +36,26 @@ import (
 // Mailbox here holding its messages and waiting requests. govax has one
 // process, so a mailbox connects the process with itself: a program's
 // AST routines, or two parts of a program, can pass messages through it.
-// Mailboxes are system state, like common event flag clusters: an
-// Environment starts with none, and NewEnvironment removes any mailbox
-// devices a previous Environment left in the device table.
+// Mailboxes are system state, like common event flag clusters, shared by
+// every process: one process creates a mailbox, and others assign
+// channels to it by its name or its logical name. A System starts with
+// none, removing any mailbox devices a previous one left in the device
+// table.
+//
+// # Protection and lifetime (docs/PHASE-46.md, subtask 3)
+//
+// A mailbox has an owner, the UIC of the process that created it, and a
+// protection mask ($CREMBX's promsk), checked by the UIC rules of
+// uicprot.go: $ASSIGN (or $CREMBX of an existing name) needs read or
+// write access, a read read access, and a write write access, else
+// SS$_NOPRIV. Its owner, or a process with BYPASS or SYSPRV, can change
+// the mask with IO$_SETMODE!IO$M_SETPROT (mbxdriver.go).
+//
+// A temporary mailbox is deleted when the last channel to it goes, in
+// whichever process that is; so is its logical name, which $CREMBX put
+// in the creating process's job table, where its subprocesses (in the
+// same job) find it and other jobs don't. A permanent mailbox's name is
+// in the system table.
 
 // Status codes the mailbox services and driver return.
 var (
@@ -78,11 +95,14 @@ type Mailbox struct {
 	Permanent, DeletePending bool
 
 	// MaxMsg is the largest message it takes, and BufQuo how many bytes
-	// of messages it can hold. Protection is $CREMBX's promsk, recorded
-	// but not enforced (govax has one process).
+	// of messages it can hold. Protection is $CREMBX's promsk, checked
+	// against the owner, Device.OwnUIC (the creator's UIC).
 	MaxMsg, BufQuo, Protection uint32
 
-	// The logical name $CREMBX gave it, if any: deleted with it.
+	// The logical name $CREMBX gave it, if any: deleted with it. The
+	// table is the one the name went in (LNM$JOB_xxxxxxxx, not
+	// LNM$TEMPORARY_MAILBOX), since the process that deletes the
+	// mailbox may be in another job.
 	logicalName, logicalTable string
 	logicalMode               lnm.Mode
 
@@ -208,7 +228,8 @@ func (sys *System) removeStaleMailboxes() {
 // one by name needs neither.
 //
 // Status: SS$_IVSTSFLG for another prmflg; SS$_NOPRIV for a missing
-// privilege; SS$_BADPARAM for a bufquo over 65355; SS$_IVLOGNAM for a lognam that's empty or over 255 characters;
+// privilege, or an existing mailbox the process may neither read nor
+// write; SS$_BADPARAM for a bufquo over 65355; SS$_IVLOGNAM for a lognam that's empty or over 255 characters;
 // SS$_ACCVIO for a chan that can't be written or a lognam that can't be
 // read; SS$_NOIOCHAN when all 9999 units are in use; an error of the
 // logical-name define (SS$_TOOMANYLNAM, ...).
@@ -259,8 +280,13 @@ func serviceSysCrembx(env *Environment, argv []uint32) (uint32, error) {
 
 		name = s
 
-		// An existing mailbox by that name gets the channel.
+		// An existing mailbox by that name gets the channel, if the
+		// process may use it.
 		if d, ok := env.namedMailbox(table, name); ok {
+			if !env.mayAssign(d) {
+				return ssNoPriv, nil
+			}
+
 			env.storeNewChannel(chanAdr, name, d, mode)
 
 			return ssNormal, nil
@@ -297,8 +323,14 @@ func serviceSysCrembx(env *Environment, argv []uint32) (uint32, error) {
 	m := &Mailbox{Device: d, Unit: unit, Permanent: prmflg == 1, MaxMsg: maxmsg, BufQuo: bufquo, Protection: promsk & 0xFFFF}
 
 	if name != "" {
-		eqv := []lnm.Equivalence{{Value: device + ":", Attrs: lnm.AttrTerminal}}
-		if _, err := env.Logicals.Define(table, name, lnm.Mode(mode), 0, eqv); err != nil {
+		tables, err := env.Logicals.ResolveTables(table, lnm.User)
+		if err == nil {
+			table = tables[0].Name
+			eqv := []lnm.Equivalence{{Value: device + ":", Attrs: lnm.AttrTerminal}}
+			_, err = env.Logicals.Define(table, name, lnm.Mode(mode), 0, eqv)
+		}
+
+		if err != nil {
 			env.Devices.Remove(d)
 
 			return lnmStatus(err)
@@ -307,6 +339,9 @@ func serviceSysCrembx(env *Environment, argv []uint32) (uint32, error) {
 		m.logicalName, m.logicalTable, m.logicalMode = name, table, lnm.Mode(mode)
 	}
 
+	// The creator owns it ($GETDVI's DVI$_PID and DVI$_OWNUIC) for as
+	// long as it exists, whoever else assigns channels to it.
+	d.PID = env.Process.PID
 	env.Mailboxes.byDevice[d] = m
 	env.storeNewChannel(chanAdr, device, d, mode)
 
@@ -329,6 +364,24 @@ func (env *Environment) namedMailbox(table, name string) (*iodev.Device, bool) {
 	_, isMailbox := env.Mailboxes.For(d)
 
 	return d, isMailbox
+}
+
+// mailboxAccess reports whether env's process may have the access in want
+// (accessRead, accessWrite) to the mailbox on d, by its protection. A
+// device that isn't a mailbox has no protection here.
+func (env *Environment) mailboxAccess(d *iodev.Device, want uint32) bool {
+	m, ok := env.Mailboxes.For(d)
+
+	return !ok || env.Process.uicAccess(d.OwnUIC, uint16(m.Protection), want)
+}
+
+// mayAssign reports whether env's process may assign a channel to d: for
+// a mailbox, if it has read or write access. *Unconfirmed:* the System
+// Services manual says $ASSIGN fails with SS$_NOPRIV when the process
+// lacks the privilege to use the device; govax takes either access as
+// enough, leaving the other to be checked by each read or write.
+func (env *Environment) mayAssign(d *iodev.Device) bool {
+	return env.mailboxAccess(d, accessRead) || env.mailboxAccess(d, accessWrite)
 }
 
 // storeNewChannel assigns a channel to d from mode and stores its number
