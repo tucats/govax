@@ -27,6 +27,13 @@ import (
 // and when it next runs its XFC runs again and finishes (or, after an
 // AST, waits again), exactly as before. Testing every waiter at each
 // choice can't miss an event, and with a handful of processes it's cheap.
+//
+// An event that can end a wait is also reported when it happens
+// (reportEvent, docs/PHASE-46.md subtask 1): an I/O request completing,
+// an attention AST, or a timer expiring makes its process computable at
+// once, boosted by the event's own class, and may preempt the process
+// that caused it, as on VMS. The test at each choice remains for the
+// events that aren't reported this way.
 
 // waitCondition is what a waiting process waits for.
 type waitCondition struct {
@@ -131,11 +138,43 @@ func (env *Environment) enterWait(waiting bool) {
 	env.requestReschedule()
 }
 
-// endWait makes a waiting process computable, with its wait's boost.
-func (env *Environment) endWait(class sched.Class) {
+// endWait makes a waiting process computable, boosted by class. It
+// reports whether the process's priority is now at least the current
+// process's, so it may preempt it.
+func (env *Environment) endWait(class sched.Class) bool {
 	env.waiting = nil
 	env.waiters--
-	_, _ = env.sched.Ready(handle(env), class)
+	preempts, _ := env.sched.Ready(handle(env), class)
+
+	return preempts
+}
+
+// reportEvent is an event reported to the scheduler for env's process:
+// what VMS's SCH$RSE does when an I/O request completes for it, an AST
+// is queued to it, or one of its timers expires (VAX/VMS Internals and
+// Data Structures, section 10.2.3). The event matters only if the
+// process is waiting: if its wait is now over, or it can now take an
+// AST where it waits, it becomes computable at once, boosted by the
+// event's class (section 10.2.4, Table 10-3), rather than when the
+// scheduler next looks at its waiters (wakeWaiters). The engine is asked
+// to reschedule when the process's new priority is at least the current
+// one's, so it can preempt. A process that isn't waiting, or is
+// suspended, ignores the event, as SCH$RSE ignores one that isn't
+// significant for the process's state; and without the scheduler no
+// process is ever waiting, so it does nothing.
+func (env *Environment) reportEvent(class sched.Class) {
+	w := env.waiting
+	if w == nil || env.suspended {
+		return
+	}
+
+	if w.over != nil && !w.over() && (w.ignoreASTs || !env.astDeliverable()) {
+		return
+	}
+
+	if env.endWait(class) {
+		env.requestReschedule()
+	}
 }
 
 // pollEvents is what the scheduler does before each choice: every

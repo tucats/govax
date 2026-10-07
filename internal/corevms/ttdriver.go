@@ -119,6 +119,18 @@ var terminalFunctions = map[uint32]ioFunc{
 	ioCode("IO$_SETCHAR"):     ttSetMode,
 }
 
+// terminalInputFunctions are the terminal functions that read: their
+// completion is terminal input's, with its larger priority boost
+// (ioBoost).
+var terminalInputFunctions = map[uint32]bool{
+	ioCode("IO$_READVBLK"):    true,
+	ioCode("IO$_READLBLK"):    true,
+	ioCode("IO$_READPBLK"):    true,
+	ioCode("IO$_TTYREADALL"):  true,
+	ioCode("IO$_TTYREADPALL"): true,
+	ioCode("IO$_READPROMPT"):  true,
+}
+
 // Control characters the terminal driver treats specially.
 const (
 	ttBackspace      = 0x08

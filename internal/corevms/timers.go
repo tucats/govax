@@ -3,6 +3,8 @@ package corevms
 import (
 	"time"
 
+	"github.com/tucats/govax/internal/sched"
+
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -70,6 +72,10 @@ func wallClock() uint64 { return vmsdef.Time(time.Now()) }
 // The engine runs this before every instruction (via NextAST, ast.go),
 // so a timer fires on the tick it's due; the event-flag services also
 // run it, for code driven without an engine (the unit tests).
+//
+// When any has expired, a timer's expiry is reported to the scheduler
+// (reportEvent): a process waiting for it becomes computable with the
+// timer's boost (PRI$_TIMER).
 func (env *Environment) expireTimers() {
 	if len(env.timers) == 0 {
 		return
@@ -77,6 +83,7 @@ func (env *Environment) expireTimers() {
 
 	now := env.Clock()
 	remaining := env.timers[:0]
+	fired := false
 
 	for _, t := range env.timers {
 		if t.expiry > now {
@@ -84,6 +91,8 @@ func (env *Environment) expireTimers() {
 
 			continue
 		}
+
+		fired = true
 
 		if t.wake {
 			env.Process.WakePending = true
@@ -109,6 +118,10 @@ func (env *Environment) expireTimers() {
 	}
 
 	env.timers = remaining
+
+	if fired {
+		env.reportEvent(sched.ClassTimer)
+	}
 }
 
 // serviceSysSetimr is SYS$SETIMR:

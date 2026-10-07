@@ -359,7 +359,11 @@ func withoutChannel(list []attentionRequest, c *channel) []attentionRequest {
 }
 
 // deliverAttention queues every attention AST in list, which is then
-// empty: each is delivered once.
+// empty: each is delivered once. The AST is reported to the scheduler
+// for the process that enabled it, which, if it's waiting and can take
+// the AST there, becomes computable now. Its boost is a nonterminal
+// buffered I/O completion's (PRI$_IOCOM): the class the mailbox driver
+// gives an attention AST is unconfirmed.
 func (env *Environment) deliverAttention(list *[]attentionRequest) {
 	for _, a := range *list {
 		owner := a.owner
@@ -368,6 +372,7 @@ func (env *Environment) deliverAttention(list *[]attentionRequest) {
 		}
 
 		owner.queueAST(a.ast, a.param, a.mode)
+		owner.reportEvent(sched.ClassIOCompletion)
 	}
 
 	*list = nil

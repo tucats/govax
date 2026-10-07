@@ -110,6 +110,10 @@ type ioRequest struct {
 	// termination message), which nothing waits for.
 	owner *Environment
 
+	// boost is the priority increment class of the request's completion
+	// (ioBoost): the boost its owner gets if the completion ends a wait.
+	boost sched.Class
+
 	// done is set once the request has completed (or been cancelled);
 	// cancelled says it was cancelled. A driver holding a pending
 	// request drops it once it's done.
@@ -163,6 +167,26 @@ func driverFor(d *iodev.Device) map[uint32]ioFunc {
 	}
 
 	return ioDrivers[d.DevClass]
+}
+
+// ioBoost is the priority increment class of a request's completion for
+// function on device d (VAX/VMS Internals and Data Structures, Table
+// 10-3): terminal input completing is PRI$_TICOM, the largest boost, so
+// that a process waiting for a person to type gets the CPU soon after;
+// any other terminal function is PRI$_TOCOM; and every other device's
+// I/O (direct I/O to a disk, buffered I/O to a mailbox or the null
+// device) is PRI$_IOCOM. Which class VMS's terminal driver gives its
+// set and sense mode functions is unconfirmed; govax gives output's.
+func ioBoost(d *iodev.Device, function uint32) sched.Class {
+	if d.DevClass != iodev.DeviceClassTT {
+		return sched.ClassIOCompletion
+	}
+
+	if terminalInputFunctions[function] {
+		return sched.ClassTerminalInput
+	}
+
+	return sched.ClassTerminalOutput
 }
 
 // serviceSysQio is SYS$QIO:
@@ -301,6 +325,7 @@ func (env *Environment) queueIO(argv []uint32) (uint32, *ioRequest) {
 		astprm:    astprm,
 		mode:      uint32(env.cpu.PSL().CurMod()),
 		owner:     env,
+		boost:     ioBoost(c.Device, function&ioFunctionCodeMask),
 	}
 
 	for i := range req.p {
@@ -351,8 +376,9 @@ func (env *Environment) queueIO(argv []uint32) (uint32, *ioRequest) {
 // waiting, and a process being deleted sends its termination message to
 // its creator's (docs/PHASE-43.md, "Touching another process's memory").
 // The IOSB is written through the owner's address space, and the event
-// flag, the AST, and the end of its wait (the scheduler's next look at
-// its waiters) are Go state of the owner's.
+// flag and the AST are Go state of the owner's. The completion is then
+// reported to the scheduler (reportEvent): if the owner was waiting for
+// it, the owner becomes computable now, with the request's boost.
 func (env *Environment) completeIO(req *ioRequest, done ioStatus) {
 	if req.done {
 		return
@@ -388,6 +414,8 @@ func (env *Environment) completeIO(req *ioRequest, done ioStatus) {
 	if req.astadr != 0 {
 		owner.queueAST(req.astadr, req.astprm, req.mode)
 	}
+
+	owner.reportEvent(req.boost)
 }
 
 // storeOwn stores data at addr in env's own address space, whichever

@@ -1,7 +1,7 @@
 # Phase 46 — Multiprocessing, part 4: interprocess communication
 
-**Status:** planned (2026-10-06); decisions taken 2026-10-06 (see
-PHASE-43.md, Part A). Not started. Needs Phase 45.
+**Status:** in progress (subtask 1 done, 2026-10-07); decisions taken
+2026-10-06 (see PHASE-43.md, Part A). Needs Phase 45.
 
 The program this phase belongs to is described in
 [PHASE-43.md](PHASE-43.md), Part A. Read that first.
@@ -131,7 +131,7 @@ as today).
    the owner's address space, its event flag, AST, and wait), the
    mailbox driver's read data, and attention ASTs. Still to do: the
    I/O completion boost to the owner, and the audit of the other
-   drivers.
+   drivers. *Done (2026-10-07).*
 2. **Mailboxes between processes.** Tests with two processes for every
    case `mbxdriver.go` documents: waiting read then write, write then
    read, IO$M_NOW both ways, full mailbox with resource wait on and off,
@@ -177,3 +177,54 @@ as today).
 - 2026-10-06: Planned with Phase 43.
 - 2026-10-06: The author took every recommended decision in
   PHASE-43.md, Part A.
+- 2026-10-07: Subtask 1 (request ownership), finishing what Phase 45's
+  subtask 7 started. From *VAX/VMS Internals and Data Structures*,
+  sections 10.2.3 (SCH$RSE) and 10.2.4 (Table 10-3).
+  - **Events are reported when they happen.** `Environment.reportEvent`
+    (`waits.go`) is SCH$RSE's part: if the process is waiting (and not
+    suspended), and its wait is now over or it can now take an AST
+    where it waits, it becomes computable at once, boosted by the
+    *event's* class; the engine is asked to reschedule when its new
+    priority is at least the current process's. A process that isn't
+    waiting ignores the event. Before this, the owner of a completed
+    request stayed in its wait until the scheduler's next call (its
+    test of every waiter), which, with another process spinning, could
+    be a whole quantum later. That test stays for events not reported
+    this way (a `$WAKE`, a `$SETEF`, ...). `endWait` now returns
+    whether the process may preempt.
+  - **Who reports.** `completeIO` reports for the request's owner, with
+    the request's class; the mailbox driver's attention ASTs report for
+    the process that enabled them; `expireTimers` reports when any of a
+    process's timers expired, with PRI$_TIMER (3), so a `$WAITFR` ended
+    by a `$SETIMR` flag now gets 3 rather than an event flag wait's 2.
+  - **The class of a request** (`ioRequest.boost`, `ioBoost` in
+    `qio.go`): terminal reads (`terminalInputFunctions`, `ttdriver.go`)
+    PRI$_TICOM (6), any other terminal function PRI$_TOCOM (4), every
+    other device (disk direct I/O, mailbox and null buffered I/O)
+    PRI$_IOCOM (2). *Unconfirmed:* the class VMS's terminal driver
+    gives set and sense mode (govax: output's), and the class of a
+    mailbox attention AST (govax: PRI$_IOCOM; the book says routines
+    queuing ASTs may choose any class).
+  - **Audit** of the completion paths. Only the mailbox driver completes
+    a request for a process that may not be current: a pending read
+    completed by another process's write, a write waiting for its
+    message to be read, `$CANCEL`/`$DASSGN`, the termination message,
+    and attention ASTs. All go through `completeIO` (or, for the ASTs,
+    `deliverAttention`), so to the owner. Everything else completes
+    during the requester's own call, when the requester is the current
+    process: the terminal driver (reads block, until subtask 7), the
+    disk driver and its ACP functions (`diskcreate.go`, `diskdelete.go`,
+    `diskattr.go`, `disklogical.go`), the null device, and the
+    services that complete like a `$QIO` (`$GETJPI`, `$GETDVI`,
+    `$GETSYI`, `$BRKTHRU`), which write their IOSB through the CPU's
+    own mapping, correctly.
+  - Tests: `corevms/ioboost_test.go` (`reportEvent`'s rules: an event
+    that doesn't end the wait, a suspended process, the event's class
+    winning over the wait's; another process's mailbox write ending a
+    `$QIOW` read at once with a boost of 2; a timer's boost of 3; the
+    class table) and `console/ioboost_test.go` (`TestIOCompletion_preempts`:
+    on a booted machine, process 1 waits for a mailbox read and
+    process 2, at the same base priority, writes with IO$M_NOW and
+    spins; process 1 runs at the next instruction boundary, before
+    process 2 goes on past its `$QIO`. With the report taken out, it
+    fails: with a long quantum, nothing gives process 1 the CPU).
