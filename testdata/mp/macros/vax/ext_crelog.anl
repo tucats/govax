@@ -1,0 +1,3044 @@
+
+Analyze Object File                           7-OCT-2026 18:23:26.74   Page 1
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 55 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "EXT_CRELOG"
+	module version: "V1.0"
+	creation   date/time:  7-OCT-2026 18:23
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 25 bytes
+
+	Textual information:
+	"MACRO/NOLIST EXT_CRELOG"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 23 bytes
+
+	Textual information:
+	"every form of $CRELOG"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 20 bytes
+
+	1)  Store Immediate, 18 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 0A 00 00 00 00 00 BC 11|  0000  |.¼......|
+		 4C 45 52 43 5F 54 58 45|  0008  |EXT_CREL|
+		                   47 4F|  0010  |OG      |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 35 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "ARGLST"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           7-OCT-2026 18:23:26.74   Page 2
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "SYS$CRELOG"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "TBL"
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+8.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 1
+
+Analyze Object File                           7-OCT-2026 18:23:26.74   Page 3
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 112 (%X'00000070')
+		symbol: "DATA"
+
+
+10.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 118 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 112 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 00 00 00 00 00|  0000  |........|
+		 00 00 00 00 00 00 00 00|  0008  |........|
+		 00 00 00 00 00 00 00 00|  0010  |........|
+		 00 00 00 00 00 00 00 00|  0018  |........|
+		 00 00 00 00 00 00 00 00|  0020  |........|
+		 00 00 00 00 00 00 00 00|  0028  |........|
+		 00 00 00 00 00 00 00 00|  0030  |........|
+		 00 00 00 00 00 00 00 00|  0038  |........|
+		 00 00 00 00 00 00 00 00|  0040  |........|
+		 00 00 00 00 00 00 00 00|  0048  |........|
+		 00 00 00 00 00 00 00 00|  0050  |........|
+		 00 00 00 00 00 00 00 00|  0058  |........|
+		 00 00 00 00 00 00 00 00|  0060  |........|
+		 00 00 00 00 00 00 00 00|  0068  |........|
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+
+Analyze Object File                           7-OCT-2026 18:23:26.74   Page 4
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 1867 (%X'0000074B')
+		symbol: "CODE"
+
+
+12.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 7 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 192 (%X'000000C0')
+
+
+13.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 23 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 2
+		value: 0 (%X'00000000')
+		entry mask: <R6,R7>
+		symbol: "EXT_CRELOG"
+
+
+14.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+15.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 462 bytes
+
+	1)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 04 FB 00 DD 9F 9F 00 DD|  0000  |Ý...Ý.û.|
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$CRELOG"
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.75   Page 5
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	3)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	4)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 01|  0000  |..zzÝ.. |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	6)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	7)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	8)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	9)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	10)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	11)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	12)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+	13)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	14)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	15)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 44 8F DD 7A 7A 00 02|  0000  |..zzÝ.D.|
+		                9F 00 00|  0008  |...     |
+
+	16)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.75   Page 6
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	17)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	18)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	19)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	20)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	21)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	22)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	23)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	24)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "TBL"
+
+	25)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	26)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	27)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	28)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	29)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	30)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 44 8F DD 7A 7A 00 03|  0000  |..zzÝ.D.|
+		                9F 00 00|  0008  |...     |
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.75   Page 7
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	31)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	32)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	33)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	34)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	35)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	36)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	37)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	38)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+	39)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	40)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	41)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 04|  0000  |..zzÝ.. |
+
+	42)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	43)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	44)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	45)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:26.75   Page 8
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	46)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	47)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	48)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	49)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	50)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "TBL"
+
+	51)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	52)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	53)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	54)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	55)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	56)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 05|  0000  |..zzÝ.. |
+
+	57)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	58)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.75   Page 9
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	59)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	60)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	61)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	62)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	63)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	64)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	65)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "TBL"
+
+	66)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	67)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	68)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	69)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	70)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	71)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 44 8F DD 7A 7A 00 06|  0000  |..zzÝ.D.|
+		                9F 00 00|  0008  |...     |
+
+	72)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	73)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:26.75   Page 10
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	74)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	75)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	76)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	77)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	78)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	79)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+	80)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	81)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	82)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 07|  0000  |..zzÝ.. |
+
+	83)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	84)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	85)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	86)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.75   Page 11
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	87)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	88)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	89)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	90)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	91)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "TBL"
+
+	92)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	93)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	94)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	95)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	96)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	97)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 08|  0000  |..zzÝ.. |
+
+	98)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	99)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	100)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	101)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:26.75   Page 12
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	102)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	103)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	104)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	105)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	106)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "TBL"
+
+	107)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	108)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	109)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	110)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	111)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	112)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 09|  0000  |..zzÝ.. |
+
+	113)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	114)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.75   Page 13
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	115)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	116)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	117)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	118)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	119)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	120)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	121)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "TBL"
+
+	122)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	123)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	124)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	125)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	126)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	127)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 0A|  0000  |..zzÝ.. |
+
+	128)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	129)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:26.75   Page 14
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	130)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	131)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	132)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+
+16.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 464 bytes
+
+	1)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	2)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "TBL"
+
+	5)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	6)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	7)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	8)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	9)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	10)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 0B|  0000  |..zzÝ.. |
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.75   Page 15
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	11)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	12)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	13)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	14)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	15)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	16)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	17)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	18)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	19)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "TBL"
+
+	20)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	21)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	22)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	23)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	24)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	25)  Store Immediate, 7 bytes:
+
+Analyze Object File                           7-OCT-2026 18:23:26.75   Page 16
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 0C|  0000  |..zzÝ.. |
+
+	26)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	27)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	28)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	29)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	30)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	31)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	32)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	33)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	34)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "TBL"
+
+	35)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	36)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	37)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	38)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.75   Page 17
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	39)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	40)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 0D|  0000  |..zzÝ.. |
+
+	41)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	42)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	43)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	44)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	45)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	46)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	47)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	48)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	49)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "TBL"
+
+	50)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	51)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	52)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.75   Page 18
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	53)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	54)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	55)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 0E|  0000  |..zzÝ.. |
+
+	56)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	57)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	58)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	59)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       04 FB 00 DD 66 9F|  0000  |.fÝ.û.  |
+
+	60)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	61)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	62)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 0F|  0000  |..zzÝ.. |
+
+	63)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	64)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	65)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	66)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       04 FB 00 DD 76 7F|  0000  |.vÝ.û.  |
+
+	67)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.76   Page 19
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	68)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	69)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 10|  0000  |..zzÝ.. |
+
+	70)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	71)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	72)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	73)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      7F|  0000  |.       |
+
+	74)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	75)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gï      |
+
+	76)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	77)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+	78)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	79)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	80)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 11|  0000  |..zzÝ.. |
+
+	81)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	82)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:26.76   Page 20
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	83)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	84)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 00 00 05 8F 7F|  0000  |........|
+		       04 FB 00 DD 00 00|  0008  |..Ý.û.  |
+
+	85)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	86)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	87)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 12|  0000  |..zzÝ.. |
+
+	88)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	89)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	90)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	91)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 7E 7C|  0000  ||~û.    |
+
+	92)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	93)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	94)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 13|  0000  |..zzÝ.. |
+
+	95)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	96)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:26.76   Page 21
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	97)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	98)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	99)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	100)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	101)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	102)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+	103)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	104)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	105)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 66 9F 00 DD 7A 7A 00 14|  0000  |..zzÝ..f|
+		                      9F|  0008  |.       |
+
+	106)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	107)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	108)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	109)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.76   Page 22
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	110)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	111)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	112)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 76 7F 00 DD 7A 7A 00 15|  0000  |..zzÝ..v|
+		                      9F|  0008  |.       |
+
+	113)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	114)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	115)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	116)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+	117)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$CRELOG"
+
+
+17.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	2)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    7F 00 DD 7A 7A 00 16|  0000  |..zzÝ.. |
+
+	3)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	4)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gï      |
+
+	5)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	6)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:26.76   Page 23
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	7)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	8)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	9)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	10)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+	11)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	12)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	13)  Store Immediate, 17 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F 7F 00 DD 7A 7A 00 17|  0000  |..zzÝ...|
+		 00 00 00 00 00 00 00 05|  0008  |........|
+		                      9F|  0010  |.       |
+
+	14)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	15)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	16)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	17)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+	18)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	19)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	20)  Store Immediate, 9 bytes:
+
+Analyze Object File                           7-OCT-2026 18:23:26.76   Page 24
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 18|  0000  |..zzÝ.Ý.|
+		                      9F|  0008  |.       |
+
+	21)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	22)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	23)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	24)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+	25)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	26)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	27)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 19|  0000  |..zzÝ.. |
+
+	28)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	29)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	30)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	31)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	32)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	33)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:26.76   Page 25
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	34)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	35)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+	36)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	37)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	38)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 56 DD 7A 7A 00 1A|  0000  |..zzÝV. |
+
+	39)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	40)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	41)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	42)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	43)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	44)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	45)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	46)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.76   Page 26
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	47)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	48)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	49)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 05 DD 7A 7A 00 1B|  0000  |..zzÝ.. |
+
+	50)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	51)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	52)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	53)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	54)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	55)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	56)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	57)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+	58)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	59)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	60)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 1C|  0000  |..zzÝ.. |
+
+	61)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+Analyze Object File                           7-OCT-2026 18:23:26.76   Page 27
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+
+	62)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	63)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	64)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	65)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	66)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	67)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	68)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+	69)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	70)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	71)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          DD 7A 7A 00 1D|  0000  |..zzÝ   |
+
+	72)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	73)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	74)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	75)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.76   Page 28
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	76)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	77)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	78)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	79)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	80)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	81)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	82)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	83)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+	84)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	85)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	86)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          DD 7A 7A 00 1E|  0000  |..zzÝ   |
+
+	87)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	88)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	89)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	90)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:26.76   Page 29
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	91)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	92)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	93)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	94)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	95)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	96)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	97)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	98)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+	99)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	100)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	101)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 56 78 8F DD 7A 7A 00 1F|  0000  |..zzÝ.xV|
+		                9F 12 34|  0008  |4..     |
+
+	102)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	103)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:26.76   Page 30
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	104)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	105)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	106)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	107)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	108)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	109)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+	110)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	111)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	112)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          DD 7A 7A 00 20|  0000  | .zzÝ   |
+
+	113)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	114)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gï      |
+
+	115)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	116)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.76   Page 31
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	117)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	118)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	119)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	120)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	121)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	122)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	123)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	124)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 00 DD|  0000  |Ý.û.    |
+
+	125)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	126)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+
+18.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 462 bytes
+
+	1)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 21|  0000  |!.zz....|
+
+	2)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.77   Page 32
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	5)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	6)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	7)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	8)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	9)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	10)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 22|  0000  |".zz....|
+
+	11)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	12)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	13)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	14)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	15)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	16)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	17)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	18)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	19)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 23|  0000  |#.zz....|
+
+	20)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "TBL"
+
+	21)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	22)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.77   Page 33
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	23)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	24)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	25)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	26)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 68 (%X'00000044')
+
+	27)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	28)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 24|  0000  |$.zz....|
+
+	29)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	30)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	31)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	32)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	33)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	34)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	35)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 68 (%X'00000044')
+
+	36)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	37)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 25|  0000  |%.zz....|
+
+	38)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "TBL"
+
+	39)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	40)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.77   Page 34
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	41)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	42)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	43)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	44)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	45)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	46)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 26|  0000  |&.zz....|
+
+	47)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "TBL"
+
+	48)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	49)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	50)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	51)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	52)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	53)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	54)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	55)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 27|  0000  |'.zz....|
+
+	56)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	57)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	58)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.77   Page 35
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	59)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	60)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	61)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	62)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 68 (%X'00000044')
+
+	63)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	64)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 28|  0000  |(.zz....|
+
+	65)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "TBL"
+
+	66)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	67)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	68)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	69)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	70)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	71)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	72)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	73)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 29|  0000  |).zz....|
+
+	74)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "TBL"
+
+	75)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	76)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.77   Page 36
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	77)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	78)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	79)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	80)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	81)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	82)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 2A|  0000  |*.zz....|
+
+	83)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "TBL"
+
+	84)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	85)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	86)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	87)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	88)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	89)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	90)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	91)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 2B|  0000  |+.zz....|
+
+	92)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "TBL"
+
+	93)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	94)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.77   Page 37
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	95)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	96)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	97)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	98)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	99)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	100)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 2C|  0000  |,.zz....|
+
+	101)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "TBL"
+
+	102)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	103)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	104)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	105)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	106)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	107)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	108)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	109)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 2D|  0000  |-.zz....|
+
+	110)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "TBL"
+
+	111)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	112)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.77   Page 38
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	113)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	114)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	115)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	116)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	117)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	118)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 2E|  0000  |..zz....|
+
+	119)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "TBL"
+
+	120)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	121)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	122)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	123)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	124)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	125)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	126)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	127)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 2F|  0000  |/.zz....|
+
+	128)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "TBL"
+
+	129)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	130)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.77   Page 39
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	131)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	132)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	133)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	134)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	135)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	136)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 30|  0000  |0.zz....|
+
+	137)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	138)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	139)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	140)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	141)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	142)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	143)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 31|  0000  |1.zz....|
+
+	144)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	145)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	146)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	147)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	148)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.77   Page 40
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	149)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	150)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	151)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	152)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 32|  0000  |2.zz....|
+
+	153)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	154)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	155)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	156)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	157)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	158)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	159)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	160)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	161)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 33|  0000  |3.zz....|
+
+	162)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	163)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	164)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	165)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	166)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.77   Page 41
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	167)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	168)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      34|  0000  |4       |
+
+
+19.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 470 bytes
+
+	1)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    00 00 00 04 7A 7A 00|  0000  |.zz.... |
+
+	2)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	5)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	7)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	8)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	9)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	10)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 35|  0000  |5.zz....|
+
+	11)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	12)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	13)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	14)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	15)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.77   Page 42
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	16)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	17)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 36|  0000  |6.zz....|
+
+	18)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	19)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	20)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	21)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	22)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	23)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	24)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 37|  0000  |7.zz....|
+
+	25)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	26)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	27)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	28)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	29)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	30)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	31)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	32)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	33)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 38|  0000  |8.zz....|
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.77   Page 43
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	34)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	35)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	36)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	37)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	38)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	39)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	40)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	41)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	42)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 39|  0000  |9.zz....|
+
+	43)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	44)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	45)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	46)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	47)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	48)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	49)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 3A|  0000  |:.zz....|
+
+	50)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	51)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.77   Page 44
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	52)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	53)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	54)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	55)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	56)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	57)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	58)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 3B|  0000  |;.zz....|
+
+	59)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	60)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	61)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	62)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	63)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	64)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	65)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 3C|  0000  |<.zz....|
+
+	66)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	67)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	68)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	69)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.78   Page 45
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	70)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	71)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	72)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 3D|  0000  |=.zz....|
+
+	73)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	74)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	75)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	76)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	77)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	78)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	79)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 5 (%X'00000005')
+
+	80)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	81)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 3E|  0000  |>.zz....|
+
+	82)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	83)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	84)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	85)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	86)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.78   Page 46
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	87)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	88)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	89)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	90)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 3F|  0000  |?.zz....|
+
+	91)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	92)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	93)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	94)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	95)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	96)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	97)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	98)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	99)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 40|  0000  |@.zz....|
+
+	100)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	101)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	102)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	103)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	104)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.78   Page 47
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	105)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	106)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 305419896 (%X'12345678')
+
+	107)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	108)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 41|  0000  |A.zz....|
+
+	109)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	110)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	111)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	112)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	113)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	114)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	115)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	116)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	117)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 42|  0000  |B.zz....|
+
+	118)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	119)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	120)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	121)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	122)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.78   Page 48
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	123)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	124)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 04 7A 7A 00 43|  0000  |C.zz....|
+
+	125)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	126)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	127)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	128)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	129)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	130)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	131)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7A 00 45 FA 7A 7A 00 44|  0000  |D.zzúE.z|
+		                   FA 7A|  0008  |zú      |
+
+	132)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	133)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	134)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	135)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	136)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	137)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          FA 7A 7A 00 46|  0000  |F.zzú   |
+
+	138)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "ARGLST"
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.78   Page 49
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	139)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	140)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	141)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	142)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	143)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       66 FA 7A 7A 00 47|  0000  |G.zzúf  |
+
+	144)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	145)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	146)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    04 A6 FA 7A 7A 00 48|  0000  |H.zzú¦. |
+
+	147)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	148)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	149)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          FA 7A 7A 00 49|  0000  |I.zzú   |
+
+	150)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	151)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      FF|  0000  |.       |
+
+	152)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	153)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$CRELOG"
+
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.78   Page 50
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+20.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 99 bytes
+
+	1)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	2)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          FA 7A 7A 00 4A|  0000  |J.zzú   |
+
+	3)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	4)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gï      |
+
+	5)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	7)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	8)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          FA 7A 7A 00 4B|  0000  |K.zzú   |
+
+	9)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	10)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	11)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	12)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	13)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	14)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       76 FA 7A 7A 00 4C|  0000  |L.zzúv  |
+
+	15)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.78   Page 51
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+	16)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	17)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       56 FA 7A 7A 00 4D|  0000  |M.zzúV  |
+
+	18)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$CRELOG"
+
+	19)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	20)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          04 7A 7A 00 4E|  0000  |N.zz.   |
+
+
+21.  TRACEBACK INFORMATION (OBJ$C_TBT), 24 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 BE 11|  0000  |.¾.     |
+
+	2)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 45 52 43 5F 54 58 45 0A|  0000  |.EXT_CRE|
+		                47 4F 4C|  0008  |LOG     |
+
+
+22.  TRACEBACK INFORMATION (OBJ$C_TBT), 38 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 12 bytes:
+
+Analyze Object File                           7-OCT-2026 18:23:26.78   Page 52
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 70 41 54 41 44 04|  0000  |.DATAp..|
+		             00 B8 0F 00|  0008  |..¸.    |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	6)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	7)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 07 4B 45 44 4F 43 04|  0000  |.CODEK..|
+		                BD 01 00|  0008  |..½     |
+
+
+23.  END OF MODULE (OBJ$C_EOM), 7 bytes
+
+	severity: errors (2)
+	psect: 2
+	value: 0 (%X'00000000')
+
+
+
+Analyze Object File                           7-OCT-2026 18:23:26.78   Page 53
+DUA1:[000000]EXT_CRELOG.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   121
+OBJ$C_GSD	    5	   105
+OBJ$C_TIR	   10	  2550
+OBJ$C_EOM	    1	     7
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    3	    82
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   23	  2865
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=EXT_CRELOG.ANL EXT_CRELOG.OBJ                             

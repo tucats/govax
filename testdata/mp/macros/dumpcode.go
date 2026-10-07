@@ -358,7 +358,8 @@ func chunked(bytes []byte, relocs []reloc, callsFile string) {
 		fmt.Printf("=== %d: %s\n", n, calls[n-1])
 
 		chunk := bytes[start:end]
-		isShort := strings.Contains(strings.Fields(calls[n-1] + " x")[0], "_S")
+		first := strings.Fields(calls[n-1] + " x")[0]
+		isShort := strings.HasSuffix(first, "_S") || strings.HasSuffix(first, "_G")
 
 		if isShort {
 			reader := disasm.SliceReader(bytes[:end])

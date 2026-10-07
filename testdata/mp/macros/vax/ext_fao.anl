@@ -1,0 +1,5463 @@
+
+Analyze Object File                           7-OCT-2026 18:23:24.86   Page 1
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 52 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "EXT_FAO"
+	module version: "V1.0"
+	creation   date/time:  7-OCT-2026 18:23
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 22 bytes
+
+	Textual information:
+	"MACRO/NOLIST EXT_FAO"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 20 bytes
+
+	Textual information:
+	"every form of $FAO"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 17 bytes
+
+	1)  Store Immediate, 15 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 07 00 00 00 00 00 BC 0E|  0000  |.¼......|
+		    4F 41 46 5F 54 58 45|  0008  |EXT_FAO |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 24 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "ARGLST"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                           7-OCT-2026 18:23:24.86   Page 2
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "SYS$FAO"
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+8.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 112 (%X'00000070')
+		symbol: "DATA"
+
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.86   Page 3
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+10.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 118 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 112 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 00 00 00 00 00|  0000  |........|
+		 00 00 00 00 00 00 00 00|  0008  |........|
+		 00 00 00 00 00 00 00 00|  0010  |........|
+		 00 00 00 00 00 00 00 00|  0018  |........|
+		 00 00 00 00 00 00 00 00|  0020  |........|
+		 00 00 00 00 00 00 00 00|  0028  |........|
+		 00 00 00 00 00 00 00 00|  0030  |........|
+		 00 00 00 00 00 00 00 00|  0038  |........|
+		 00 00 00 00 00 00 00 00|  0040  |........|
+		 00 00 00 00 00 00 00 00|  0048  |........|
+		 00 00 00 00 00 00 00 00|  0050  |........|
+		 00 00 00 00 00 00 00 00|  0058  |........|
+		 00 00 00 00 00 00 00 00|  0060  |........|
+		 00 00 00 00 00 00 00 00|  0068  |........|
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 3283 (%X'00000CD3')
+		symbol: "CODE"
+
+
+12.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 7 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.86   Page 4
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 192 (%X'000000C0')
+
+
+13.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 20 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 2
+		value: 0 (%X'00000000')
+		entry mask: <R6,R7>
+		symbol: "EXT_FAO"
+
+
+14.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+15.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       03 FB 9F 00 DD 9F|  0000  |.Ý..û.  |
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$FAO"
+
+	3)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	4)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 01|  0000  |..zz.   |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	6)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.86   Page 5
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	7)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	8)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	9)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	10)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	11)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	12)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+	13)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	14)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	15)  Store Immediate, 29 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 77 8F DD 7A 7A 00 02|  0000  |..zzÝ.w.|
+		 00 00 00 66 8F DD 00 00|  0008  |..Ý.f...|
+		 8F DD 00 00 00 55 8F DD|  0010  |Ý.U...Ý.|
+		          9F 00 00 00 44|  0018  |D....   |
+
+	16)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	17)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	18)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	19)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	20)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+Analyze Object File                           7-OCT-2026 18:23:24.86   Page 6
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+
+	21)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	22)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	23)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	24)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	25)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	26)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	27)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   07 FB|  0000  |û.      |
+
+	28)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	29)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	30)  Store Immediate, 29 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 77 8F DD 7A 7A 00 03|  0000  |..zzÝ.w.|
+		 00 00 00 66 8F DD 00 00|  0008  |..Ý.f...|
+		 8F DD 00 00 00 55 8F DD|  0010  |Ý.U...Ý.|
+		          9F 00 00 00 44|  0018  |D....   |
+
+	31)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	32)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	33)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	34)  Store Immediate, 3 bytes:
+
+Analyze Object File                           7-OCT-2026 18:23:24.86   Page 7
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	35)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	36)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	37)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	38)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   07 FB|  0000  |û.      |
+
+	39)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	40)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	41)  Store Immediate, 23 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 77 8F DD 7A 7A 00 04|  0000  |..zzÝ.w.|
+		 00 00 00 66 8F DD 00 00|  0008  |..Ý.f...|
+		    9F 00 00 00 55 8F DD|  0010  |Ý.U.... |
+
+	42)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	43)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	44)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	45)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	46)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	47)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:24.86   Page 8
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	48)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	49)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	50)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	51)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	52)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	53)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   06 FB|  0000  |û.      |
+
+	54)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	55)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	56)  Store Immediate, 23 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 77 8F DD 7A 7A 00 05|  0000  |..zzÝ.w.|
+		 00 00 00 66 8F DD 00 00|  0008  |..Ý.f...|
+		    9F 00 00 00 44 8F DD|  0010  |Ý.D.... |
+
+	57)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	58)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	59)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	60)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.86   Page 9
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	61)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	62)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	63)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	64)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	65)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	66)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	67)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	68)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   06 FB|  0000  |û.      |
+
+	69)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	70)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	71)  Store Immediate, 23 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 77 8F DD 7A 7A 00 06|  0000  |..zzÝ.w.|
+		 00 00 00 55 8F DD 00 00|  0008  |..Ý.U...|
+		    9F 00 00 00 44 8F DD|  0010  |Ý.D.... |
+
+	72)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	73)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.86   Page 10
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	74)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	75)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	76)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	77)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	78)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	79)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	80)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	81)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	82)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	83)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   06 FB|  0000  |û.      |
+
+	84)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	85)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	86)  Store Immediate, 23 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 66 8F DD 7A 7A 00 07|  0000  |..zzÝ.f.|
+		 00 00 00 55 8F DD 00 00|  0008  |..Ý.U...|
+		    9F 00 00 00 44 8F DD|  0010  |Ý.D.... |
+
+	87)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.87   Page 11
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	88)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	89)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	90)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	91)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	92)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	93)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	94)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	95)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	96)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	97)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	98)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   06 FB|  0000  |û.      |
+
+	99)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	100)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	101)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 08|  0000  |..zz.   |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.87   Page 12
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	102)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	103)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	104)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	105)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	106)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	107)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	108)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	109)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	110)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	111)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	112)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	113)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+	114)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$FAO"
+
+	115)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	116)  Store Immediate, 6 bytes:
+
+Analyze Object File                           7-OCT-2026 18:23:24.87   Page 13
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       8F DD 7A 7A 00 09|  0000  |..zzÝ.  |
+
+
+16.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 465 bytes
+
+	1)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 00 00 00 44|  0000  |D....   |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	8)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	9)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	10)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	11)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	12)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 55 8F DD 7A 7A 00 0A|  0000  |..zzÝ.U.|
+		                9F 00 00|  0008  |...     |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.87   Page 14
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	13)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	14)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	15)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	16)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	17)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	18)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	19)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	20)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	21)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	22)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	23)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 66 8F DD 7A 7A 00 0B|  0000  |..zzÝ.f.|
+		                9F 00 00|  0008  |...     |
+
+	24)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	25)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	26)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.87   Page 15
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	27)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	28)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	29)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	30)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	31)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	32)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	33)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	34)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 77 8F DD 7A 7A 00 0C|  0000  |..zzÝ.w.|
+		                9F 00 00|  0008  |...     |
+
+	35)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	36)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	37)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	38)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	39)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	40)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:24.87   Page 16
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	41)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	42)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	43)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	44)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	45)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 0D|  0000  |..zz.   |
+
+	46)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	47)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	48)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	49)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       03 FB 66 9F 00 DD|  0000  |Ý..fû.  |
+
+	50)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	51)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	52)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 0E|  0000  |..zz.   |
+
+	53)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	54)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:24.87   Page 17
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	55)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	56)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       03 FB 76 7F 00 DD|  0000  |Ý..vû.  |
+
+	57)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	58)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	59)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 0F|  0000  |..zz.   |
+
+	60)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	61)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	62)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	63)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                7F 00 DD|  0000  |Ý..     |
+
+	64)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	65)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gï      |
+
+	66)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	67)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.87   Page 18
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	68)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	69)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	70)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 10|  0000  |..zz.   |
+
+	71)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	72)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	73)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	74)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 05 8F 7F 00 DD|  0000  |Ý.......|
+		       03 FB 00 00 00 00|  0008  |....û.  |
+
+	75)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	76)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	77)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 11|  0000  |..zz.   |
+
+	78)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	79)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	80)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	81)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       03 FB 00 DD 00 DD|  0000  |Ý.Ý.û.  |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.87   Page 19
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	82)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	83)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	84)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 12|  0000  |..zz.   |
+
+	85)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	86)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	87)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	88)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	89)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	90)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	91)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	92)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+	93)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	94)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	95)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 13|  0000  |..zz.   |
+
+	96)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+Analyze Object File                           7-OCT-2026 18:23:24.87   Page 20
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+
+	97)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	98)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	99)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 66 9F|  0000  |.f.     |
+
+	100)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	101)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	102)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	103)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+	104)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$FAO"
+
+	105)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	106)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 14|  0000  |..zz.   |
+
+	107)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	108)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	109)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	110)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 76 3F|  0000  |?v.     |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.87   Page 21
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	111)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	112)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	113)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	114)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+	115)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$FAO"
+
+	116)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	117)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 15|  0000  |..zz.   |
+
+	118)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	119)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	120)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	121)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      3F|  0000  |?       |
+
+	122)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	123)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gï      |
+
+	124)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	125)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:24.87   Page 22
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	126)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	127)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	128)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	129)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+	130)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$FAO"
+
+
+17.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 462 bytes
+
+	1)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	2)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 16|  0000  |..zz.   |
+
+	3)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	4)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	5)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	6)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 00 05 8F 3F|  0000  |?....   |
+
+	7)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	8)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:24.87   Page 23
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	9)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	10)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+	11)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	12)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	13)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 17|  0000  |..zz.   |
+
+	14)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	15)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	16)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	17)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	18)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	19)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	20)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	21)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.87   Page 24
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	22)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	23)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	24)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 18|  0000  |..zz.   |
+
+	25)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	26)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	27)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	28)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	29)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	30)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	31)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	32)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	33)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	34)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	35)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	36)  Store Immediate, 2 bytes:
+
+Analyze Object File                           7-OCT-2026 18:23:24.88   Page 25
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+	37)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	38)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	39)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 66 9F 7A 7A 00 19|  0000  |..zz.fÝ.|
+		                      9F|  0008  |.       |
+
+	40)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	41)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	42)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	43)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+	44)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	45)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	46)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 76 7F 7A 7A 00 1A|  0000  |..zz.vÝ.|
+		                      9F|  0008  |.       |
+
+	47)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	48)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	49)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	50)  Store Immediate, 2 bytes:
+
+Analyze Object File                           7-OCT-2026 18:23:24.88   Page 26
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+	51)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	52)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	53)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          7F 7A 7A 00 1B|  0000  |..zz.   |
+
+	54)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	55)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gï      |
+
+	56)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	57)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	58)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	59)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	60)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	61)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+	62)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	63)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	64)  Store Immediate, 17 bytes:
+
+Analyze Object File                           7-OCT-2026 18:23:24.88   Page 27
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 05 8F 7F 7A 7A 00 1C|  0000  |..zz....|
+		 00 DD 00 00 00 00 00 00|  0008  |......Ý.|
+		                      9F|  0010  |.       |
+
+	65)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	66)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	67)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	68)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+	69)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	70)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	71)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 1D|  0000  |..zzÝ.Ý.|
+		                      9F|  0008  |.       |
+
+	72)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	73)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	74)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	75)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+	76)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	77)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.88   Page 28
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	78)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 1E|  0000  |..zz.   |
+
+	79)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	80)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	81)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	82)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	83)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	84)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	85)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	86)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   03 FB|  0000  |û.      |
+
+	87)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	88)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	89)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 56 DD 7A 7A 00 1F|  0000  |..zzÝV. |
+
+	90)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	91)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:24.88   Page 29
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	92)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	93)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	94)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	95)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	96)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	97)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	98)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	99)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	100)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 05 DD 7A 7A 00 20|  0000  | .zzÝ.. |
+
+	101)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	102)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	103)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	104)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.88   Page 30
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	105)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	106)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	107)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	108)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	109)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$FAO"
+
+	110)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	111)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 21|  0000  |!.zzÝ.. |
+
+	112)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	113)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	114)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	115)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	116)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	117)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	118)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	119)  Store Immediate, 2 bytes:
+
+Analyze Object File                           7-OCT-2026 18:23:24.88   Page 31
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	120)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$FAO"
+
+	121)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	122)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          DD 7A 7A 00 22|  0000  |".zzÝ   |
+
+	123)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	124)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	125)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	126)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	127)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	128)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	129)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	130)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	131)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	132)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.88   Page 32
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	133)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	134)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	135)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$FAO"
+
+
+18.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	2)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          DD 7A 7A 00 23|  0000  |#.zzÝ   |
+
+	3)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	4)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	5)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	6)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	7)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	8)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	9)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	10)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	11)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+Analyze Object File                           7-OCT-2026 18:23:24.88   Page 33
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+
+	12)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	13)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	14)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	15)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	16)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	17)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 56 78 8F DD 7A 7A 00 24|  0000  |$.zzÝ.xV|
+		                9F 12 34|  0008  |4..     |
+
+	18)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	19)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	20)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	21)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	22)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	23)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	24)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	25)  Store Immediate, 2 bytes:
+
+Analyze Object File                           7-OCT-2026 18:23:24.88   Page 34
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	26)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	27)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	28)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          DD 7A 7A 00 25|  0000  |%.zzÝ   |
+
+	29)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	30)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gï      |
+
+	31)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	32)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	33)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	34)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	35)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	36)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	37)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	38)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.88   Page 35
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	39)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	40)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	41)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	42)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	43)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 56 DD 7A 7A 00 26|  0000  |&.zzÝV. |
+
+	44)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	45)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	46)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	47)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	48)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	49)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	50)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	51)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	52)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	53)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.88   Page 36
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	54)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 05 DD 7A 7A 00 27|  0000  |'.zzÝ.. |
+
+	55)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	56)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	57)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	58)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	59)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	60)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	61)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	62)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	63)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	64)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	65)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 28|  0000  |(.zzÝ.. |
+
+	66)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	67)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:24.88   Page 37
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	68)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	69)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	70)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	71)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	72)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	73)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	74)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	75)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	76)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          DD 7A 7A 00 29|  0000  |).zzÝ   |
+
+	77)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	78)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	79)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	80)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	81)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+Analyze Object File                           7-OCT-2026 18:23:24.89   Page 38
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+
+	82)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	83)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	84)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	85)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	86)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	87)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	88)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	89)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	90)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	91)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          DD 7A 7A 00 2A|  0000  |*.zzÝ   |
+
+	92)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	93)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	94)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	95)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.89   Page 39
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	96)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	97)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	98)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	99)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	100)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	101)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	102)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	103)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	104)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$FAO"
+
+	105)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	106)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 56 78 8F DD 7A 7A 00 2B|  0000  |+.zzÝ.xV|
+		                9F 12 34|  0008  |4..     |
+
+	107)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	108)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	109)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.89   Page 40
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	110)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	111)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	112)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	113)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	114)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	115)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$FAO"
+
+	116)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	117)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          DD 7A 7A 00 2C|  0000  |,.zzÝ   |
+
+	118)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	119)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gï      |
+
+	120)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	121)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	122)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	123)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:24.89   Page 41
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	124)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	125)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	126)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	127)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	128)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	129)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	130)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$FAO"
+
+	131)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	132)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 56 DD 7A 7A 00 2D|  0000  |-.zzÝV. |
+
+	133)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	134)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	135)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	136)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.89   Page 42
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	137)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	138)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	139)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	140)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	141)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$FAO"
+
+	142)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	143)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 05 DD 7A 7A 00 2E|  0000  |..zzÝ.. |
+
+	144)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	145)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+19.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 468 bytes
+
+	1)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	2)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	3)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	4)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.89   Page 43
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	5)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	6)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	7)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$FAO"
+
+	8)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	9)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 2F|  0000  |/.zzÝ.. |
+
+	10)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	11)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	12)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	13)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	14)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	15)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	16)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	17)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	18)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	19)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.89   Page 44
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	20)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          DD 7A 7A 00 30|  0000  |0.zzÝ   |
+
+	21)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	22)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	23)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	24)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	25)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	26)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	27)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	28)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	29)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	30)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	31)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	32)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	33)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.89   Page 45
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	34)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	35)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          DD 7A 7A 00 31|  0000  |1.zzÝ   |
+
+	36)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	37)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	38)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	39)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	40)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	41)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	42)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	43)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	44)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	45)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	46)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	47)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.89   Page 46
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	48)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	49)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	50)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 56 78 8F DD 7A 7A 00 32|  0000  |2.zzÝ.xV|
+		                9F 12 34|  0008  |4..     |
+
+	51)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	52)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	53)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	54)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	55)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	56)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	57)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	58)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	59)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	60)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	61)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          DD 7A 7A 00 33|  0000  |3.zzÝ   |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.89   Page 47
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	62)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	63)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gï      |
+
+	64)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	65)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	66)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	67)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	68)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	69)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	70)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	71)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	72)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	73)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	74)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	75)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	76)  Store Immediate, 7 bytes:
+
+Analyze Object File                           7-OCT-2026 18:23:24.89   Page 48
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 56 DD 7A 7A 00 34|  0000  |4.zzÝV. |
+
+	77)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	78)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	79)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	80)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	81)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	82)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	83)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	84)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	85)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	86)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	87)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 05 DD 7A 7A 00 35|  0000  |5.zzÝ.. |
+
+	88)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	89)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.89   Page 49
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	90)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	91)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	92)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	93)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	94)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	95)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	96)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	97)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	98)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 36|  0000  |6.zzÝ.. |
+
+	99)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	100)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	101)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	102)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	103)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	104)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:23:24.89   Page 50
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	105)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	106)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	107)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$FAO"
+
+	108)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	109)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          DD 7A 7A 00 37|  0000  |7.zzÝ   |
+
+	110)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	111)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	112)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	113)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	114)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	115)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	116)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	117)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	118)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+Analyze Object File                           7-OCT-2026 18:23:24.90   Page 51
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+
+	119)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	120)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	121)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	122)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$FAO"
+
+	123)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	124)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          DD 7A 7A 00 38|  0000  |8.zzÝ   |
+
+	125)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	126)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	127)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	128)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	129)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	130)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	131)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	132)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.90   Page 52
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	133)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	134)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	135)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	136)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	137)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$FAO"
+
+	138)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	139)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 56 78 8F DD 7A 7A 00 39|  0000  |9.zzÝ.xV|
+		                9F 12 34|  0008  |4..     |
+
+	140)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	141)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	142)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	143)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	144)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	145)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	146)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.90   Page 53
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	147)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	148)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$FAO"
+
+
+20.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	2)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          DD 7A 7A 00 3A|  0000  |:.zzÝ   |
+
+	3)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	4)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gï      |
+
+	5)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	6)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	7)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	8)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	9)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	10)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	11)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.90   Page 54
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	12)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	13)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	14)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	15)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	16)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	17)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 3B|  0000  |;.zz    |
+
+	18)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	19)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	20)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	21)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	22)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	23)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	24)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	25)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	26)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 3C|  0000  |<.zz    |
+
+	27)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	28)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	29)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+Analyze Object File                           7-OCT-2026 18:23:24.90   Page 55
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+
+	30)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	31)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	32)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	33)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	34)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	35)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 3D|  0000  |=.zz    |
+
+	36)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 7 (%X'00000007')
+
+	37)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	38)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	39)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	40)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	41)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	42)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	43)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	44)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 68 (%X'00000044')
+
+	45)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	46)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 85 (%X'00000055')
+
+	47)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	48)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 102 (%X'00000066')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.90   Page 56
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	49)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	50)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 119 (%X'00000077')
+
+	51)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	52)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 3E|  0000  |>.zz    |
+
+	53)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 7 (%X'00000007')
+
+	54)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	55)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	56)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	57)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	58)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	59)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	60)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	61)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 68 (%X'00000044')
+
+	62)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	63)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 85 (%X'00000055')
+
+	64)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	65)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 102 (%X'00000066')
+
+	66)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	67)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 119 (%X'00000077')
+
+	68)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.90   Page 57
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	69)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 3F|  0000  |?.zz    |
+
+	70)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 6 (%X'00000006')
+
+	71)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	72)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	73)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	74)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	75)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	76)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	77)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	78)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 85 (%X'00000055')
+
+	79)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	80)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 102 (%X'00000066')
+
+	81)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	82)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 119 (%X'00000077')
+
+	83)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	84)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 40|  0000  |@.zz    |
+
+	85)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 6 (%X'00000006')
+
+	86)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.90   Page 58
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	87)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	88)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	89)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	90)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	91)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	92)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	93)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 68 (%X'00000044')
+
+	94)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	95)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 102 (%X'00000066')
+
+	96)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	97)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 119 (%X'00000077')
+
+	98)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	99)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 41|  0000  |A.zz    |
+
+	100)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 6 (%X'00000006')
+
+	101)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	102)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	103)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	104)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.90   Page 59
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	105)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	106)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	107)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	108)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 68 (%X'00000044')
+
+	109)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	110)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 85 (%X'00000055')
+
+	111)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	112)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 119 (%X'00000077')
+
+	113)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	114)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 42|  0000  |B.zz    |
+
+	115)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 6 (%X'00000006')
+
+	116)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	117)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	118)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	119)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	120)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	121)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	122)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	123)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 68 (%X'00000044')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.90   Page 60
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	124)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	125)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 85 (%X'00000055')
+
+	126)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	127)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 102 (%X'00000066')
+
+	128)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	129)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 43|  0000  |C.zz    |
+
+	130)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	131)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	132)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	133)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	134)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	135)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	136)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	137)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	138)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 44|  0000  |D.zz    |
+
+	139)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	140)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	141)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.90   Page 61
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	142)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	143)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	144)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	145)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	146)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	147)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 68 (%X'00000044')
+
+	148)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	149)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 45|  0000  |E.zz    |
+
+	150)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	151)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	152)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	153)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	154)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	155)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	156)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	157)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	158)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 85 (%X'00000055')
+
+	159)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	160)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 46|  0000  |F.zz    |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.90   Page 62
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	161)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	162)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	163)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	164)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	165)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	166)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	167)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	168)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	169)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 102 (%X'00000066')
+
+	170)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	171)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 47|  0000  |G.zz    |
+
+	172)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	173)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	174)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	175)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	176)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	177)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	178)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	179)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.90   Page 63
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	180)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 119 (%X'00000077')
+
+	181)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	182)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 48|  0000  |H.zz    |
+
+	183)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	184)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	185)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	186)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	187)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	188)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	189)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 49|  0000  |I.zz    |
+
+	190)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	191)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	192)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	193)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	194)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	195)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	196)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	197)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	198)  Store Immediate, 4 bytes:
+
+Analyze Object File                           7-OCT-2026 18:23:24.91   Page 64
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 4A|  0000  |J.zz    |
+
+	199)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	200)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	201)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	202)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	203)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	204)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	205)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	206)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	207)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 4B|  0000  |K.zz    |
+
+	208)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	209)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	210)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	211)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	212)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	213)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	214)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 4C|  0000  |L.zz    |
+
+	215)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.91   Page 65
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	216)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	217)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	218)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	219)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	220)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	221)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	222)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	223)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 4D|  0000  |M.zz    |
+
+	224)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+
+21.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	2)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	5)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	6)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 4E|  0000  |N.zz    |
+
+	7)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	8)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	9)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+Analyze Object File                           7-OCT-2026 18:23:24.91   Page 66
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+
+	10)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	11)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	12)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	13)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 4F|  0000  |O.zz    |
+
+	14)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	15)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	16)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	17)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	18)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	19)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	20)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	21)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	22)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 50|  0000  |P.zz    |
+
+	23)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	24)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	25)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	26)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	27)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+Analyze Object File                           7-OCT-2026 18:23:24.91   Page 67
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+
+	28)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	29)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	30)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	31)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 51|  0000  |Q.zz    |
+
+	32)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	33)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	34)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	35)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	36)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	37)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	38)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 52|  0000  |R.zz    |
+
+	39)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	40)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	41)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	42)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	43)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	44)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	45)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+Analyze Object File                           7-OCT-2026 18:23:24.91   Page 68
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+
+	46)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	47)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 53|  0000  |S.zz    |
+
+	48)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	49)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	50)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	51)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	52)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	53)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	54)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 54|  0000  |T.zz    |
+
+	55)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	56)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	57)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	58)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	59)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	60)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	61)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 55|  0000  |U.zz    |
+
+	62)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.91   Page 69
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	63)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	64)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	65)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	66)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	67)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	68)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	69)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	70)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 56|  0000  |V.zz    |
+
+	71)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	72)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	73)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	74)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	75)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	76)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	77)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	78)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	79)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 57|  0000  |W.zz    |
+
+	80)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.91   Page 70
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	81)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	82)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	83)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	84)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	85)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	86)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 58|  0000  |X.zz    |
+
+	87)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	88)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	89)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	90)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	91)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	92)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	93)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	94)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	95)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 59|  0000  |Y.zz    |
+
+	96)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 3 (%X'00000003')
+
+	97)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	98)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.91   Page 71
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	99)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	100)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	101)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	102)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 5A|  0000  |Z.zz    |
+
+	103)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	104)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	105)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	106)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	107)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	108)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	109)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	110)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	111)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 5B|  0000  |[.zz    |
+
+	112)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	113)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	114)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	115)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	116)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.91   Page 72
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	117)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	118)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	119)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	120)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 5 (%X'00000005')
+
+	121)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	122)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 5C|  0000  |\.zz    |
+
+	123)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	124)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	125)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	126)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	127)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	128)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	129)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	130)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	131)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	132)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	133)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 5D|  0000  |].zz    |
+
+	134)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.91   Page 73
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	135)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	136)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	137)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	138)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	139)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	140)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	141)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	142)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	143)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	144)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 5E|  0000  |^.zz    |
+
+	145)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	146)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	147)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	148)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	149)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	150)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	151)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	152)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	153)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 305419896 (%X'12345678')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.91   Page 74
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	154)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	155)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 5F|  0000  |_.zz    |
+
+	156)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	157)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	158)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	159)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	160)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	161)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	162)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	163)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	164)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	165)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	166)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 60|  0000  |`.zz    |
+
+	167)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	168)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	169)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	170)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	171)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.91   Page 75
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	172)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	173)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	174)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	175)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 61|  0000  |a.zz    |
+
+	176)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	177)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	178)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	179)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	180)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	181)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	182)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	183)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	184)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 62|  0000  |b.zz    |
+
+	185)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	186)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	187)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	188)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	189)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.92   Page 76
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	190)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	191)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	192)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	193)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 63|  0000  |c.zz    |
+
+	194)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	195)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	196)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	197)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	198)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	199)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	200)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	201)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	202)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 5 (%X'00000005')
+
+	203)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	204)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 64|  0000  |d.zz    |
+
+	205)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	206)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	207)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.92   Page 77
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	208)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	209)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	210)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	211)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	212)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	213)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	214)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	215)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 65|  0000  |e.zz    |
+
+	216)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	217)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	218)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+22.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 469 bytes
+
+	1)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	2)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	5)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	7)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.92   Page 78
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	8)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 66|  0000  |f.zz    |
+
+	9)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	10)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	11)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	12)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	13)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	14)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	15)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	16)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	17)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 305419896 (%X'12345678')
+
+	18)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	19)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 67|  0000  |g.zz    |
+
+	20)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	21)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	22)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	23)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	24)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	25)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.92   Page 79
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	26)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	27)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	28)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	29)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	30)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 68|  0000  |h.zz    |
+
+	31)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	32)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	33)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	34)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	35)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	36)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	37)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	38)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	39)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 69|  0000  |i.zz    |
+
+	40)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	41)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	42)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.92   Page 80
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	43)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	44)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	45)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	46)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	47)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	48)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 6A|  0000  |j.zz    |
+
+	49)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	50)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	51)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	52)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	53)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	54)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	55)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	56)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	57)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 6B|  0000  |k.zz    |
+
+	58)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	59)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	60)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.92   Page 81
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	61)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	62)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	63)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	64)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	65)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	66)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 5 (%X'00000005')
+
+	67)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	68)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 6C|  0000  |l.zz    |
+
+	69)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	70)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	71)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	72)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	73)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	74)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	75)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	76)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	77)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	78)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	79)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 6D|  0000  |m.zz    |
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.92   Page 82
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	80)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	81)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	82)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	83)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	84)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	85)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	86)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	87)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	88)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	89)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	90)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 6E|  0000  |n.zz    |
+
+	91)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	92)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	93)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	94)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	95)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	96)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	97)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.92   Page 83
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	98)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	99)  TIR$C_STA_LW (3, %X'03')                           stack depth: 1
+		value: 305419896 (%X'12345678')
+
+	100)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	101)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 6F|  0000  |o.zz    |
+
+	102)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	103)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	104)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	105)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	106)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	107)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	108)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	109)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	110)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	111)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	112)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 70|  0000  |p.zz    |
+
+	113)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	114)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	115)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.92   Page 84
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	116)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	117)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	118)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	119)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	120)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	121)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 71|  0000  |q.zz    |
+
+	122)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	123)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	124)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	125)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	126)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	127)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	128)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	129)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	130)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 72|  0000  |r.zz    |
+
+	131)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	132)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	133)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.92   Page 85
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	134)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	135)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	136)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	137)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	138)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	139)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 73|  0000  |s.zz    |
+
+	140)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	141)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	142)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	143)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	144)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	145)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	146)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	147)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	148)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 5 (%X'00000005')
+
+	149)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	150)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 74|  0000  |t.zz    |
+
+	151)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.92   Page 86
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	152)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	153)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	154)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	155)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	156)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	157)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	158)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	159)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	160)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	161)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 75|  0000  |u.zz    |
+
+	162)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	163)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	164)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	165)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	166)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	167)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	168)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	169)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	170)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.92   Page 87
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	171)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	172)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 76|  0000  |v.zz    |
+
+	173)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	174)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	175)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	176)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	177)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	178)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	179)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	180)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	181)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 305419896 (%X'12345678')
+
+	182)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	183)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 77|  0000  |w.zz    |
+
+	184)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	185)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	186)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	187)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	188)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.93   Page 88
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	189)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	190)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	191)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	192)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	193)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	194)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 78|  0000  |x.zz    |
+
+	195)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	196)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	197)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	198)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	199)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	200)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	201)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	202)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	203)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 79|  0000  |y.zz    |
+
+	204)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	205)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	206)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.93   Page 89
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	207)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	208)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	209)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	210)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	211)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	212)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7A 00 7B FA 7A 7A 00 7A|  0000  |z.zzú{.z|
+		                   FA 7A|  0008  |zú      |
+
+	213)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	214)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	215)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	216)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$FAO"
+
+
+23.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 171 bytes
+
+	1)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	2)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          FA 7A 7A 00 7C|  0000  ||.zzú   |
+
+	3)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "ARGLST"
+
+	4)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	5)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.93   Page 90
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$FAO"
+
+	7)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	8)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       66 FA 7A 7A 00 7D|  0000  |}.zzúf  |
+
+	9)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$FAO"
+
+	10)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	11)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    04 A6 FA 7A 7A 00 7E|  0000  |~.zzú¦. |
+
+	12)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	13)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	14)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          FA 7A 7A 00 7F|  0000  |..zzú   |
+
+	15)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	16)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      FF|  0000  |.       |
+
+	17)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	18)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	19)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	20)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          FA 7A 7A 00 80|  0000  |..zzú   |
+
+	21)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.93   Page 91
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+	22)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gï      |
+
+	23)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	24)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	25)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	26)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          FA 7A 7A 00 81|  0000  |..zzú   |
+
+	27)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	28)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	29)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	30)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	31)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	32)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       76 FA 7A 7A 00 82|  0000  |..zzúv  |
+
+	33)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	34)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	35)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       56 FA 7A 7A 00 83|  0000  |..zzúV  |
+
+	36)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FAO"
+
+	37)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	38)  Store Immediate, 5 bytes:
+
+Analyze Object File                           7-OCT-2026 18:23:24.93   Page 92
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          04 7A 7A 00 84|  0000  |..zz.   |
+
+
+24.  TRACEBACK INFORMATION (OBJ$C_TBT), 21 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 BE 0E|  0000  |.¾.     |
+
+	2)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 4F 41 46 5F 54 58 45 07|  0000  |.EXT_FAO|
+
+
+25.  TRACEBACK INFORMATION (OBJ$C_TBT), 38 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 70 41 54 41 44 04|  0000  |.DATAp..|
+		             00 B8 0F 00|  0008  |..¸.    |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	6)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	7)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 0C D3 45 44 4F 43 04|  0000  |.CODEÓ..|
+		                BD 01 00|  0008  |..½     |
+
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.93   Page 93
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+26.  END OF MODULE (OBJ$C_EOM), 7 bytes
+
+	severity: errors (2)
+	psect: 2
+	value: 0 (%X'00000000')
+
+
+
+Analyze Object File                           7-OCT-2026 18:23:24.93   Page 94
+DUA1:[000000]EXT_FAO.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   112
+OBJ$C_GSD	    5	    91
+OBJ$C_TIR	   13	  4011
+OBJ$C_EOM	    1	     7
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    3	    76
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   26	  4297
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=EXT_FAO.ANL EXT_FAO.OBJ                                   

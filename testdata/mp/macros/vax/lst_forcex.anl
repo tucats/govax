@@ -1,0 +1,1076 @@
+
+Analyze Object File                           7-OCT-2026 18:23:19.24   Page 1
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 55 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "LST_FORCEX"
+	module version: "V1.0"
+	creation   date/time:  7-OCT-2026 18:23
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 25 bytes
+
+	Textual information:
+	"MACRO/NOLIST LST_FORCEX"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 23 bytes
+
+	Textual information:
+	"every form of $FORCEX"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 20 bytes
+
+	1)  Store Immediate, 18 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 0A 00 00 00 00 00 BC 11|  0000  |.¼......|
+		 43 52 4F 46 5F 54 53 4C|  0008  |LST_FORC|
+		                   58 45|  0010  |EX      |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 27 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "ARGLST"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           7-OCT-2026 18:23:19.25   Page 2
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "SYS$FORCEX"
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+8.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+
+Analyze Object File                           7-OCT-2026 18:23:19.25   Page 3
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+			(11) GPS$V_NOMOD      0
+		allocation: 112 (%X'00000070')
+		symbol: "DATA"
+
+
+10.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 118 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 112 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 00 00 00 00 00|  0000  |........|
+		 00 00 00 00 00 00 00 00|  0008  |........|
+		 00 00 00 00 00 00 00 00|  0010  |........|
+		 00 00 00 00 00 00 00 00|  0018  |........|
+		 00 00 00 00 00 00 00 00|  0020  |........|
+		 00 00 00 00 00 00 00 00|  0028  |........|
+		 00 00 00 00 00 00 00 00|  0030  |........|
+		 00 00 00 00 00 00 00 00|  0038  |........|
+		 00 00 00 00 00 00 00 00|  0040  |........|
+		 00 00 00 00 00 00 00 00|  0048  |........|
+		 00 00 00 00 00 00 00 00|  0050  |........|
+		 00 00 00 00 00 00 00 00|  0058  |........|
+		 00 00 00 00 00 00 00 00|  0060  |........|
+		 00 00 00 00 00 00 00 00|  0068  |........|
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 673 (%X'000002A1')
+		symbol: "CODE"
+
+
+
+Analyze Object File                           7-OCT-2026 18:23:19.25   Page 4
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+12.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 7 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 192 (%X'000000C0')
+
+
+13.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 23 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 2
+		value: 0 (%X'00000000')
+		entry mask: <R6,R7>
+		symbol: "LST_FORCEX"
+
+
+14.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+15.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 03|  0000  |....    |
+
+	2)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	5)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	6)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:19.25   Page 5
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+	7)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	8)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 01|  0000  |..zz....|
+
+	9)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	10)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	11)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	12)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	13)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	14)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	15)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 02|  0000  |..zz....|
+
+	16)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	17)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	18)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	19)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	20)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 51 (%X'00000033')
+
+	21)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	22)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 03|  0000  |..zz....|
+
+	23)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	24)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:19.25   Page 6
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+	25)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	26)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	27)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 51 (%X'00000033')
+
+	28)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	29)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 04|  0000  |..zz....|
+
+	30)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	31)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	32)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	33)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	34)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 51 (%X'00000033')
+
+	35)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	36)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 05|  0000  |..zz....|
+
+	37)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	38)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	39)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	40)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	41)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	42)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:19.25   Page 7
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+	43)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 06|  0000  |..zz....|
+
+	44)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	45)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	46)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	47)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	48)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	49)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	50)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 07|  0000  |..zz....|
+
+	51)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	52)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	53)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	54)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	55)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	56)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	57)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 08|  0000  |..zz....|
+
+	58)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	59)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	60)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:19.25   Page 8
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+	61)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	62)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 51 (%X'00000033')
+
+	63)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	64)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 09|  0000  |..zz....|
+
+	65)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	66)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	67)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	68)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	69)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 0A|  0000  |..zz....|
+
+	70)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	71)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	72)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	73)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	74)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	75)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	76)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 0B|  0000  |..zz....|
+
+	77)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	78)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:19.25   Page 9
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+	79)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	80)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	81)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	82)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	83)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 0C|  0000  |..zz....|
+
+	84)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	85)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	86)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	87)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	88)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 0D|  0000  |..zz....|
+
+	89)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	90)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	91)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	92)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	93)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	94)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	95)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 0E|  0000  |..zz....|
+
+	96)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:19.25   Page 10
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+	97)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	98)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	99)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	100)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 0F|  0000  |..zz....|
+
+	101)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	102)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	103)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	104)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	105)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 10|  0000  |..zz....|
+
+	106)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	107)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	108)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	109)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	110)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	111)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	112)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 11|  0000  |..zz....|
+
+	113)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	114)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	115)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+Analyze Object File                           7-OCT-2026 18:23:19.25   Page 11
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+
+	116)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	117)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	118)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	119)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 12|  0000  |..zz....|
+
+	120)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	121)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	122)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	123)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	124)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 13|  0000  |..zz....|
+
+	125)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	126)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	127)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	128)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	129)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	130)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	131)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 14|  0000  |..zz....|
+
+	132)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	133)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:23:19.25   Page 12
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+	134)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	135)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	136)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 15|  0000  |..zz....|
+
+	137)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	138)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	139)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	140)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	141)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 16|  0000  |..zz....|
+
+	142)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	143)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	144)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	145)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	146)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 5 (%X'00000005')
+
+	147)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	148)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 17|  0000  |..zz....|
+
+	149)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	150)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	151)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:23:19.25   Page 13
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+	152)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	153)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	154)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	155)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 18|  0000  |..zz....|
+
+	156)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	157)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	158)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	159)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	160)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	161)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	162)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 19|  0000  |..zz....|
+
+	163)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	164)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	165)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	166)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	167)  TIR$C_STA_LW (3, %X'03')                          stack depth: 1
+		value: 305419896 (%X'12345678')
+
+	168)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	169)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   00 1A|  0000  |..      |
+
+
+
+Analyze Object File                           7-OCT-2026 18:23:19.25   Page 14
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+16.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 271 bytes
+
+	1)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       00 00 00 03 7A 7A|  0000  |zz....  |
+
+	2)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	5)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	7)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	8)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 1B|  0000  |..zz....|
+
+	9)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	10)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	11)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	12)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	13)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 03 7A 7A 00 1C|  0000  |..zz....|
+
+	14)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	15)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	16)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	17)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	18)  Store Immediate, 10 bytes:
+
+Analyze Object File                           7-OCT-2026 18:23:19.25   Page 15
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7A 00 1E FA 7A 7A 00 1D|  0000  |..zzú..z|
+		                   FA 7A|  0008  |zú      |
+
+	19)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	20)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	21)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	22)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FORCEX"
+
+	23)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	24)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          FA 7A 7A 00 1F|  0000  |..zzú   |
+
+	25)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "ARGLST"
+
+	26)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	27)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	28)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FORCEX"
+
+	29)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	30)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       66 FA 7A 7A 00 20|  0000  | .zzúf  |
+
+	31)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FORCEX"
+
+	32)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	33)  Store Immediate, 7 bytes:
+
+Analyze Object File                           7-OCT-2026 18:23:19.26   Page 16
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    04 A6 FA 7A 7A 00 21|  0000  |!.zzú¦. |
+
+	34)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FORCEX"
+
+	35)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	36)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          FA 7A 7A 00 22|  0000  |".zzú   |
+
+	37)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	38)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      FF|  0000  |.       |
+
+	39)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	40)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FORCEX"
+
+	41)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	42)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          FA 7A 7A 00 23|  0000  |#.zzú   |
+
+	43)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	44)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gï      |
+
+	45)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	46)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FORCEX"
+
+	47)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	48)  Store Immediate, 5 bytes:
+
+Analyze Object File                           7-OCT-2026 18:23:19.26   Page 17
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          FA 7A 7A 00 24|  0000  |$.zzú   |
+
+	49)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	50)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	51)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	52)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FORCEX"
+
+	53)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	54)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       76 FA 7A 7A 00 25|  0000  |%.zzúv  |
+
+	55)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FORCEX"
+
+	56)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	57)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       56 FA 7A 7A 00 26|  0000  |&.zzúV  |
+
+	58)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$FORCEX"
+
+	59)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	60)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          04 7A 7A 00 27|  0000  |'.zz.   |
+
+
+17.  TRACEBACK INFORMATION (OBJ$C_TBT), 24 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 BE 11|  0000  |.¾.     |
+
+
+Analyze Object File                           7-OCT-2026 18:23:19.26   Page 18
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+	2)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 52 4F 46 5F 54 53 4C 0A|  0000  |.LST_FOR|
+		                58 45 43|  0008  |CEX     |
+
+
+18.  TRACEBACK INFORMATION (OBJ$C_TBT), 38 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 70 41 54 41 44 04|  0000  |.DATAp..|
+		             00 B8 0F 00|  0008  |..¸.    |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	6)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	7)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 02 A1 45 44 4F 43 04|  0000  |.CODE¡..|
+		                BD 01 00|  0008  |..½     |
+
+
+19.  END OF MODULE (OBJ$C_EOM), 7 bytes
+
+	severity: errors (2)
+	psect: 2
+	value: 0 (%X'00000000')
+
+
+
+Analyze Object File                           7-OCT-2026 18:23:19.26   Page 19
+DUA1:[000000]LST_FORCEX.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   121
+OBJ$C_GSD	    5	    97
+OBJ$C_TIR	    6	   864
+OBJ$C_EOM	    1	     7
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    3	    82
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   19	  1171
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=LST_FORCEX.ANL LST_FORCEX.OBJ                             
