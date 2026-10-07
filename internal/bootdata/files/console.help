@@ -1830,6 +1830,7 @@ $HELP
     SAVE            Save the machine state
     SET             Set the state of the console
     SHOW            Display the state of the console
+    STOP            Delete a process
     TEST            Run the emulator's debugging sequences
     TIME            Run a command and report how long it took
     TYPE            Display a file on a mounted volume
@@ -2708,6 +2709,37 @@ $PRIN
 
         <expression>    One or more expressions or quoted string values,
                         separated by commas.
+
+$STOP
+
+    The STOP command deletes a process, and the subprocesses it created
+    before it.  The process is named as SHOW PROCESS names one.  Its files
+    are closed, its termination mailbox (if it had one) is sent the
+    termination message, with the final status %SYSTEM-F-ABORT, and a
+    process suspended is resumed first so that it can end.  Process 1, the
+    console's own process, can't be stopped; EXIT ends the session.
+
+    INITIALIZE, VMINIT, ZERO, and leaving govax delete every process but
+    process 1 in the same way.
+
+    Syntax:
+
+        STOP [process-name] [/IDENTIFICATION=pid]
+
+    Parameter:
+
+        process-name    The name of the process, as SHOW SYSTEM lists
+                        it (quote a name with blanks or lowercase).
+
+    Qualifier:
+
+        /IDENTIFICATION=pid
+                        The process ID, in hexadecimal, as SHOW SYSTEM
+                        lists it.
+
+    Example:
+
+        STOP/IDENTIFICATION=00000305
 
 $TIME
 

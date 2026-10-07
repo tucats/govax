@@ -834,6 +834,14 @@ grammar console
     !
     verb zero/id=1600
 
+    ! STOP deletes a process (and its subprocesses): by name, or by its
+    ! hexadecimal PID with /IDENTIFICATION, as SHOW PROCESS names one.
+    verb stop/id=1605
+        qualifier   identification/id=1606      -
+                    /type=$string
+        parameter   process_name/id=1607        -
+                    /type=$string
+
     verb boot/id=1601
     verb rom/id=1602
 

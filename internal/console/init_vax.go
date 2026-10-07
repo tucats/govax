@@ -16,6 +16,8 @@ import (
 func (c *Console) Init(physBytes uint32) error {
 	size := allocPhysMemory(physBytes)
 
+	c.endOtherProcesses()
+
 	c.CPU = vax.New()
 	c.CPU.SetDebugWriter(c.Out)
 	c.Mem = vm.NewMemory(size)
@@ -48,6 +50,8 @@ func (c *Console) Zero() error {
 	if err := c.requireKernelMode(); err != nil {
 		return err
 	}
+
+	c.endOtherProcesses()
 
 	size := c.Mem.Size()
 	c.Mem = vm.NewMemory(size)

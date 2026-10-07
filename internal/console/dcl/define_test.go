@@ -109,9 +109,9 @@ func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	// through set; call moved there). Phase 38 adds analyze. Phase 42
 	// adds debug, which starts a debugger session, and takes step,
 	// examine, deposit, and disassemble (with their aliases, ten verbs)
-	// back out for the debugger's grammar.
-	if len(g.verbOrder) != 47 {
-		t.Errorf("got %d verbs, want 47: %v", len(g.verbOrder), verbNames(g))
+	// back out for the debugger's grammar. Phase 45 adds stop.
+	if len(g.verbOrder) != 48 {
+		t.Errorf("got %d verbs, want 48: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 

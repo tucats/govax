@@ -60,6 +60,7 @@ func TestGrammarSplit(t *testing.T) {
 		{"TIME", consoleOnly},
 		{"TYPE A", consoleOnly},
 		{"VMINIT", consoleOnly},
+		{"STOP SOMEONE", consoleOnly},
 		{"ZERO", consoleOnly},
 
 		// Verbs both have, each its own: starting and ending a run, help,

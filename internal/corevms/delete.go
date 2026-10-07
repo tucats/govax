@@ -326,3 +326,36 @@ func (env *Environment) CloseFiles() {
 		delete(env.openFiles, fd)
 	}
 }
+
+// DeleteNow deletes env's process and, before it, its subprocesses,
+// leaves first, at once and without the scheduler: the console's STOP, and
+// the machine's shutdown (INIT, VMINIT, ZERO, govax's exit). The final
+// status of one whose image hadn't ended is SS$_ABORT, as for $DELPRC. A
+// suspended process is resumed first. Process 1 is never deleted. If the
+// CPU is in a process deleted, its memory is freed once the CPU leaves it
+// (switchTo, or Console.ReturnToProcessOne).
+func (sys *System) DeleteNow(env *Environment) {
+	if env.Deleted || env.isProcessOne() {
+		return
+	}
+
+	for _, sub := range sys.subprocessesOf(env) {
+		sys.DeleteNow(sub)
+	}
+
+	env.resume()
+
+	if env.Process.ExitStatus == 0 {
+		env.Process.ExitStatus = ssAbort
+	}
+
+	sys.DeleteProcess(env)
+}
+
+// DeleteOtherProcesses deletes every process but process 1 (DeleteNow),
+// closing their files and sending their termination messages.
+func (sys *System) DeleteOtherProcesses() {
+	for _, env := range sys.Processes() {
+		sys.DeleteNow(env)
+	}
+}

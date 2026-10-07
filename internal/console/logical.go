@@ -558,11 +558,13 @@ func (c *Console) runDownAbandonedImage() {
 }
 
 // EndSession ends the console's use of the machine as govax exits: an
-// image of process 1's that never exited is run down, and every file
+// image of process 1's that never exited is run down, the other processes
+// are deleted (their files closed), and every file
 // process 1 has open is closed, so that what it wrote reaches the volumes
 // before they're dismounted.
 func (c *Console) EndSession() {
 	c.runDownAbandonedImage()
+	c.endOtherProcesses()
 
 	if c.RTL != nil {
 		c.RTL.CloseFiles()

@@ -628,3 +628,27 @@ for a process created without one.
   Tests: `corevms/nulldriver_test.go` (write, read, access violation,
   sense and set mode, an unknown function, two processes, both names)
   and `console`'s `TestNullDevice_defined`.
+- 2026-10-07: Subtask 12 (the console). `STOP [process-name]` and
+  `STOP/IDENTIFICATION=pid` (VMS's two forms; the PID is hexadecimal, as
+  for SHOW PROCESS, and wins if both are given; `/ID` works as an
+  abbreviation) delete the process and its subprocesses at once
+  (`Console.StopProcess`, `stop.go`; grammar verb `stop` in
+  `console.dcl`). A process that isn't there is NONEXPR, a bad PID
+  IVIDENT, and process 1, named or not, NOPRIV (govax has no logging
+  out; EXIT ends the session). The deletion is immediate rather than the
+  scheduler's: `System.DeleteNow` (new, `delete.go`) deletes the
+  subprocesses first (leaves up), resumes a suspended process, and gives
+  one whose image hadn't ended the final status SS$_ABORT; files are
+  closed and the termination message sent. If the CPU was in the
+  process, `ReturnToProcessOne` moves it to process 1, and the memory is
+  freed at that switch. `System.DeleteOtherProcesses` does this to every
+  process but process 1, and the console calls it, while the old memory
+  is still the machine's (a rundown reads the process's tables), at
+  the start of INIT, VMINIT, and ZERO, and in `EndSession` (govax's
+  exit): so files other processes wrote are on the volumes before
+  they're dismounted, which the earlier replacing of the System in
+  `newRTL` never did. HELP has a STOP topic and lists it. SHOW SYSTEM
+  doesn't show owners: VMS's layout has no column for them. Tests:
+  `console/stop_test.go` (both forms and the abbreviation, the refusals,
+  an owner stopped with its subprocess, INIT deleting what's left) and
+  the grammar-split and verb-count tests.
