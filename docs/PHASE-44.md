@@ -1,7 +1,7 @@
 # Phase 44 — Multiprocessing, part 2: the scheduler
 
 **Status:** in progress (started 2026-10-07); decisions taken 2026-10-06
-(see PHASE-43.md, Part A). Subtasks 1–10 done.
+(see PHASE-43.md, Part A). Subtasks 1–11 done.
 
 The program this phase belongs to — its goal, architecture, rules for
 every commit, decisions, and known bugs — is in
@@ -654,3 +654,12 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
     console's grammar, SHOW SYSTEM with a running and a hibernating
     process (title by pattern), SHOW PROCESS by default, name, and
     /IDENTIFICATION, and NONEXPR.
+- 2026-10-07: **Subtask 11 done: determinism** (`console/schedtrace_test.go`).
+  A three-process workload, booted with the scheduler on in quantum-
+  clock mode (forced, whatever the user's settings): processes 1 and 2
+  hand the CPU back and forth 25 times through `$WAKE`/`$HIBER`, with
+  some busy work each round, while process 3 waits 20 times on a 5 ms
+  `$SETIMR`. Run twice at quantum 7, the instruction-by-instruction
+  record of which process ran is identical; run at quanta 3, 50, and
+  1000, the processes interleave differently (3 and 1000 are checked to
+  differ) but the counts agree (25, 25, 20).
