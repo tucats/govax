@@ -87,6 +87,8 @@ jpi_table:
 	jpi	AUTHPRI
 jpi_end:
 
+fail_ctl:	.ascid	/FAILED with status !XL/
+images_ctl:	.ascid	/images: first !UW, second !UW/
 step_ctl:	.ascid	/step !UL/
 item_ctl:	.ascid	/  !AD = !XL  (status !XL)/
 head_ctl:	.ascid	/!AS/
@@ -265,6 +267,13 @@ haveimages:
 ; The second child: no input, output, or error; it writes four messages
 ; to PROBE_MBX.
 	step	10
+	movzwl	info_desc,-(sp)
+	movzwl	image_desc,-(sp)
+	pushal	out_desc
+	pushal	out_len
+	pushaq	images_ctl
+	calls	#5,g^sys$fao
+	bsbw	print
 	tstw	info_desc
 	bneq	15$
 	brw	finish
@@ -314,7 +323,17 @@ haveimages:
 	bleq	finish
 	brw	20$
 finish:	movl	#1,r0
-fail:	ret
+	ret
+
+; FAIL: a service failed with the status in R0: say so, and end.
+fail:	pushl	r0
+	pushal	out_desc
+	pushal	out_len
+	pushaq	fail_ctl
+	calls	#4,g^sys$fao
+	bsbw	print
+	movl	#1,r0
+	ret
 
 ; MARK: print "step R0".
 mark:	pushl	r0

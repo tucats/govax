@@ -199,13 +199,16 @@ const (
 	nominalTerminal = "TTA0:"
 	nominalCLIName  = "DCL"
 
-	nominalWSDefault  = 150
-	nominalWSQuota    = 256
-	nominalWSExtent   = 1024
+	// Working set values and the AST quota are the SYSTEM account's, as
+	// $GETJPI reported them on a VMS 7.1 run (testdata/mp/probe1/vax).
+	nominalWSDefault  = 512
+	nominalWSQuota    = 1024
+	nominalWSExtent   = 16400
 	nominalMinWSCount = 20
 
 	// The AST quota and priority are VMS's defaults for an interactive
-	// user: ASTLM 24, base priority 4 (SYSGEN DEFPRI).
+	// user: ASTLM 24, base priority 4 (SYSGEN DEFPRI). (The SYSTEM
+	// account on the VMS 7.1 run had ASTLM 50; govax keeps 24.)
 	nominalASTLimit = 24
 	nominalPriority = 4
 

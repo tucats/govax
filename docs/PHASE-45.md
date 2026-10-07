@@ -685,4 +685,38 @@ for a process created without one.
   the default I/O of a process created without any (govax gives it
   none). `TestProbe1` runs the programs under govax; govax's report is in
   its `-v` output for the side-by-side. The VMS run is for the author
-  (`exchange.cmd`, `probe1.com`, `copyout.cmd`); not made yet.
+  (`exchange.cmd`, `probe1.com`, `copyout.cmd`).
+- 2026-10-07: Probe 1's VMS runs (simh, **OpenVMS V7.1**; logs in
+  `testdata/mp/probe1/vax/`). Runs 1 and 2 ended with INSFARG: VMS
+  checks a service's argument count where govax doesn't (`$GETDVIW`
+  needs 8; `$CREMBX` needs all 7 through `lognam`), so the probe and
+  `crechild.mar` pass them; `step n` markers show where a run stops.
+  Run 3 got through the child's `$GETJPI`, the parent's, and the
+  termination message; its second-child section printed nothing and the
+  program ended silently (run 4 will print the failing status and the
+  image lengths). What run 3 settled:
+  - **Termination message**: confirmed as govax builds it for the type
+    word and its neighbor (3, 0), the final status (7), PID, the job ID
+    (0, as the 5.0 manual's "unused" and govax say), the termination and
+    login times, the blank-filled account and user names (`SYSTEM`), and
+    the owner. VMS also fills the counts govax leaves at 0: the page
+    faults (0x5F at +30), +38 (0x80), the buffered and direct I/O counts
+    (5 and 3); the volume count is 0 (as govax's) and the CPU time 0
+    for a child that ran under 10 ms.
+  - **`$GETJPI` of a hibernating subprocess**: STATE 7 (HIB), PRIB 6,
+    OWNER and MASTER_PID the parent's, PRCCNT 0, JOBPRCCNT 1, JOBTYPE
+    and MODE 3 (LOCAL, INTERACTIVE: govax's choice for a job of the
+    console's was right, and a subprocess inherits its master's), TMBU
+    the termination mailbox's unit, CREPRC_FLAGS 0, BIOLM and DIOLM
+    0x12, ASTLM 0x18 (as govax). Differences, taken: the child's
+    AUTHPRI is its base priority (6) rather than the creator's (4), now
+    `max(creator's, base)`; the SYSTEM account's pooled quotas, which
+    govax's nominal values now follow (BYTLM 27392, FILLM 300, PGFLQUOTA
+    40960, TQELM 30, ENQLM 200, from 32768, 100, 50000, 20, 300), and
+    process 1's working set (WSDEFAULT 512, WSQUOTA 1024, WSEXTENT
+    16400, from 150, 256, 1024; `process_services.asm` and its golden
+    file follow). Not taken: the child's current priority was 8, two
+    above its base, where govax says 6 (a boost at creation, or after
+    its run; unconfirmed); a child's working set values are 4 pages
+    above its creator's; the SYSTEM account's ASTLM is 50 (govax 24).
+    The parent's CREPRC_FLAGS is 0x400 (PRC$M_INTER) and its ASTCNT 0x30.

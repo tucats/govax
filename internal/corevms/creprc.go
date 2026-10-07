@@ -421,7 +421,9 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 		pri = min(pri, creator.BasePriority)
 	}
 
-	p.BasePriority, p.Priority, p.AuthorizedPriority = pri, pri, creator.AuthorizedPriority
+	// The authorized priority is the creator's, or the base priority if
+	// that is higher (VMS 7.1 reported 6 for a child created at 6).
+	p.BasePriority, p.Priority, p.AuthorizedPriority = pri, pri, max(creator.AuthorizedPriority, pri)
 
 	if err := env.sched.SetBasePriority(handle(child), int(pri)); err == nil {
 		env.requestReschedule()

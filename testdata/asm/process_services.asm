@@ -6,7 +6,7 @@
 ;   1. sets user mode's stack pointer to ^X5000 - 8 ($ADJSTK), and checks
 ;      the value written back to newadr,
 ;   2. grows the working-set limit by 10 pages ($ADJWSL), and checks the
-;      new limit returned (the default 150, plus 10),
+;      new limit returned (the default 512, plus 10),
 ;   3. allocates TTA0 ($ALLOC), and checks the physical name returned,
 ;   4. associates common event flag cluster "CLUSTER" with cluster 2
 ;      ($ASCEFC), sets flag 65 in it ($SETEF, which was clear), and reads
@@ -42,7 +42,7 @@ ok2:
 	blbs	r0, ok3
 	brw	fail
 ok3:
-	cmpl	@#wslimit, #^D160
+	cmpl	@#wslimit, #^D522
 	beql	ok4
 	brw	fail
 ok4:

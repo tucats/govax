@@ -68,11 +68,11 @@ type PooledQuotas struct {
 const (
 	nominalPRCLM = 10
 
-	nominalBYTLM     = 32768
-	nominalFILLM     = 100
-	nominalPGFLQUOTA = 50000
-	nominalTQELM     = 20
-	nominalENQLM     = 300
+	nominalBYTLM     = 27392
+	nominalFILLM     = 300
+	nominalPGFLQUOTA = 40960
+	nominalTQELM     = 30
+	nominalENQLM     = 200
 	nominalJTQUOTA   = 4096
 )
 
