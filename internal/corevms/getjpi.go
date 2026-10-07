@@ -320,13 +320,10 @@ func (env *Environment) mayAffect(target *Environment) uint32 {
 	return ssNoPriv
 }
 
-// callerTarget is processTarget for the services that so far act only on
-// the calling process ($GETJPI, $SETPRI, $FORCEX, $SCHDWK, $CANWAK; $WAKE
-// reaches any process since docs/PHASE-44.md, subtask 4, and $DELPRC
-// since docs/PHASE-45.md, subtask 8): naming any other process is
-// SS$_NONEXPR, as it was when govax had one process. Acting on another process — its event
-// flags, ASTs, timers, and deletion, which must reach it even while it
-// isn't current — arrives with process creation (docs/PHASE-45.md).
+// callerTarget is processTarget for $GETJPI, which so far describes only
+// the calling process (docs/PHASE-45.md, subtask 10 reaches the others):
+// naming any other process is SS$_NONEXPR. Every other service that
+// takes a pidadr/prcnam reaches any process.
 func (env *Environment) callerTarget(pidadr, prcnam uint32, wildcard bool) uint32 {
 	target, st := env.processTarget(pidadr, prcnam, wildcard)
 	if st != 0 {

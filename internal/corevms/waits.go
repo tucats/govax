@@ -166,7 +166,7 @@ func (sys *System) wakeWaiters() bool {
 	woke := false
 
 	for _, env := range sys.procs.slots {
-		if env == nil || env.waiting == nil {
+		if env == nil || env.waiting == nil || env.suspended {
 			continue
 		}
 
@@ -187,7 +187,7 @@ func (sys *System) wakeWaiters() bool {
 // are checked.
 func (sys *System) retryWaiters() {
 	for _, env := range sys.procs.slots {
-		if env != nil && env.waiting != nil {
+		if env != nil && env.waiting != nil && !env.suspended {
 			env.endWait(sched.ClassNull)
 		}
 	}

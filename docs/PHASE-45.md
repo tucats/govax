@@ -75,8 +75,8 @@ From the *System Services Reference Manual*:
 - `uic` given makes a **detached** process (its own job; no owner);
   otherwise a **subprocess** in the creator's job.
 - `stsflg` bits (`PRC$M_*`): recorded; the ones with an effect govax can
-  have get it — notably `PRC$M_SUSPEND` (start suspended) and
-  `PRC$M_HIBER`-style starts if the manual lists them. Others are logged.
+  have get it — notably `PRC$M_HIBER` (start hibernating; VMS 7.3 has no
+  `PRC$M_SUSPEND`, found in subtask 9). Others are logged.
 - `mbxunt`: the unit of a mailbox to receive the termination message.
 - The returned PID goes to `pidadr`. Errors the manual lists (SS$_ACCVIO,
   SS$_DUPLNAM, SS$_EXQUOTA for PRCLM, SS$_IVQUOTAL, SS$_NOPRIV, SS$_NOSLOT
@@ -554,3 +554,36 @@ for a process created without one.
   whose child has a hibernating grandchild, deleted first; and a child
   whose image returns while its own subprocess hibernates, deleted after
   it. Each deleted process's pool pages and page tables are freed.
+- 2026-10-07: Subtask 9 (the process-control services across processes).
+  `$SCHDWK`, `$CANWAK`, `$FORCEX`, and `$SETPRI` now take any process
+  (`processTarget`), and with `$WAKE` all of them need GROUP or WORLD for
+  a process with another UIC (`mayAffect`: SS$_NOPRIV; `$WAKE` had no
+  check). `$SCHDWK` and `$CANWAK` use the target's own timer queue
+  (`Environment.timers`), expired for every process at each scheduling
+  call (`pollEvents`). `$FORCEX` queues the user-mode `$EXIT` AST on the
+  target (once), and a waiting target that can take it becomes
+  computable (`wakeWaiters`). `$SETPRI` changes the target's base
+  priority in its PCB fields and in the scheduler, limited by the
+  *caller's* ALTPRI and authorized priority; `prvpri` is the target's old
+  base. `$SETPRN` still names only the caller (as the manual has it).
+  `callerTarget` now serves only `$GETJPI` (subtask 10).
+  **Suspension** (`suspend.go`): `$SUSPND [pidadr] [prcnam] [flags]` and
+  `$RESUME [pidadr] [prcnam]`, a process able to suspend itself. A
+  suspended process is in state SUSP and is never chosen; a computable
+  one becomes computable again, unboosted, when resumed; a waiting one
+  (HIB, LEF, ...) keeps its wait, is skipped by `wakeWaiters` and
+  `retryWaiters` while suspended, and goes back to its wait state when
+  resumed, so a wakeup that came meanwhile is acted on only then.
+  `$SUSPND` of a suspended process is SS$_SUSPENDED, `$RESUME` of one
+  that isn't is SS$_NORMAL (both unconfirmed), and `flags` is accepted
+  and ignored. VMS delivers kernel-mode ASTs to a suspended process;
+  govax delivers none, but `$DELPRC` (`markForDeletion`) resumes its
+  target first, as the book's step 2 says, so its deletion runs.
+  `PRC$M_SUSPEND` doesn't exist in VMS 7.3's `$PRCDEF` (the design's
+  guess), so `$CREPRC` has no start-suspended flag. Tests:
+  `corevms/crossprocess_test.go` (the services on a hibernating child,
+  the privilege rules for all seven, suspending computable, waiting, and
+  self, a wakeup during suspension, `$DELPRC` of a suspended process) and
+  `console/crossprocess_test.go` (a MACRO program suspends and wakes a
+  higher-priority child, which stays suspended with its wakeup pending,
+  then `$RESUME`s and `$FORCEX`es it: it exits with status 2C).

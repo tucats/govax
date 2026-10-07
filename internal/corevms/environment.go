@@ -161,6 +161,10 @@ type Environment struct {
 	// scheduler deletes it the next time it gives it the CPU (switchTo).
 	deletePending bool
 
+	// suspended is set while $SUSPND has the process suspended
+	// (suspend.go).
+	suspended bool
+
 	// Startup is what a process $CREPRC created still has to do before
 	// it runs its image: define its SYS$ names and activate the image
 	// (creprc.go). It's nil for process 1 and once the process has

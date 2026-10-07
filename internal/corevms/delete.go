@@ -121,14 +121,17 @@ func (sys *System) DeleteProcess(env *Environment) {
 // Without the scheduler, nothing would ever give env the CPU: it's
 // deleted at once.
 //
-// (VMS also resumes a suspended process here, or its AST could never be
-// delivered; $SUSPND of another process is subtask 9's.)
+// A suspended process is resumed first (suspend.go), as VMS does, or
+// its deletion could never run.
 func (sys *System) markForDeletion(env *Environment) {
 	if env.Deleted || env.deletePending {
 		return
 	}
 
 	env.deletePending = true
+
+	// A suspended process must run to be deleted (the book's step 2).
+	env.resume()
 
 	if env.Process.ExitStatus == 0 {
 		env.Process.ExitStatus = ssAbort

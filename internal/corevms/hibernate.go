@@ -24,8 +24,9 @@ import (
 // On VMS, $WAKE and $SCHDWK usually come from *another* process (a
 // server waking a client), or from an AST routine in the same process,
 // interrupting its own $HIBER. $WAKE reaches any process in the process
-// table (docs/PHASE-44.md, subtask 4); $SCHDWK and $CANWAK still act
-// only on the caller, until Phase 45 makes timers reach other processes.
+// table (docs/PHASE-44.md, subtask 4), as do $SCHDWK and $CANWAK
+// (docs/PHASE-45.md, subtask 9), whose timer queue entries go to the
+// target's own queue, expired by the scheduler with every process's.
 // With the scheduler, a hibernating process is in the HIB state, giving
 // the CPU to others until its wakeup is pending (waits.go).
 
@@ -69,6 +70,10 @@ func serviceSysWake(env *Environment, argv []uint32) (uint32, error) {
 		return st, nil
 	}
 
+	if st := env.mayAffect(target); st != 0 {
+		return st, nil
+	}
+
 	target.Process.WakePending = true
 
 	if target != env {
@@ -102,7 +107,12 @@ const minWakeRepeat = vmsdef.TicksPerSecond / 100 // 10ms
 func serviceSysSchdwk(env *Environment, argv []uint32) (uint32, error) {
 	daytim, reptim := optArg(argv, 2), optArg(argv, 3)
 
-	if st := env.callerTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
+	target, st := env.processTarget(optArg(argv, 0), optArg(argv, 1), false)
+	if st != 0 {
+		return st, nil
+	}
+
+	if st := env.mayAffect(target); st != 0 {
 		return st, nil
 	}
 
@@ -143,7 +153,7 @@ func serviceSysSchdwk(env *Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	env.timers = append(env.timers, &timerRequest{
+	target.timers = append(target.timers, &timerRequest{
 		expiry: expiry,
 		wake:   true,
 		repeat: repeat,
@@ -161,19 +171,24 @@ func serviceSysSchdwk(env *Environment, argv []uint32) (uint32, error) {
 // already happened — the flag $WAKE or an expired $SCHDWK set — stays
 // pending: $CANWAK only removes queued requests.
 func serviceSysCanwak(env *Environment, argv []uint32) (uint32, error) {
-	if st := env.callerTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
+	target, st := env.processTarget(optArg(argv, 0), optArg(argv, 1), false)
+	if st != 0 {
 		return st, nil
 	}
 
-	remaining := env.timers[:0]
+	if st := env.mayAffect(target); st != 0 {
+		return st, nil
+	}
 
-	for _, t := range env.timers {
+	remaining := target.timers[:0]
+
+	for _, t := range target.timers {
 		if !t.wake {
 			remaining = append(remaining, t)
 		}
 	}
 
-	env.timers = remaining
+	target.timers = remaining
 
 	return ssNormal, nil
 }

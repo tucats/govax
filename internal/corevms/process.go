@@ -375,8 +375,9 @@ func (env *Environment) ImageRundown() {
 // The small process-control services (docs/PHASE-26.md subtask 30):
 // $SETPRN, $SETPRI, $FORCEX, and $DELPRC. Each names its target process
 // the usual way ([pidadr] ,[prcnam], processTarget). $DELPRC reaches any
-// process (docs/PHASE-45.md, subtask 8); for the others, until subtask
-// 9, "another process" is SS$_NONEXPR.
+// process (docs/PHASE-45.md, subtask 8), and so do $SETPRI and $FORCEX
+// (subtask 9), with mayAffect's privilege rules; $SETPRN names only the
+// caller.
 
 // maxPriority is the highest scheduling priority: 0-15 are ordinary
 // ("normal") priorities, 16-31 real-time ones.
@@ -435,16 +436,23 @@ func serviceSysSetprn(env *Environment, argv []uint32) (uint32, error) {
 // by processTarget (SS$_NONEXPR, SS$_IVLOGNAM, SS$_ACCVIO); prvpri that
 // can't be written is SS$_ACCVIO, with the priority unchanged.
 func serviceSysSetpri(env *Environment, argv []uint32) (uint32, error) {
-	if st := env.callerTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
+	target, st := env.processTarget(optArg(argv, 0), optArg(argv, 1), false)
+	if st != 0 {
 		return st, nil
 	}
 
-	p := env.Process
+	if st := env.mayAffect(target); st != 0 {
+		return st, nil
+	}
+
+	// The caller's privileges and authorized priority decide how high
+	// the target's priority may be set; the target's own change.
+	caller, p := env.Process, target.Process
 	pri, prvpri := optArg(argv, 2)&maxPriority, optArg(argv, 3)
 
-	// Without ALTPRI, no higher than the authorized priority.
-	if !p.hasPrivilege(privALTPRI) {
-		pri = min(pri, p.AuthorizedPriority)
+	// Without ALTPRI, no higher than the caller's authorized priority.
+	if !caller.hasPrivilege(privALTPRI) {
+		pri = min(pri, caller.AuthorizedPriority)
 	}
 
 	if prvpri != 0 {
@@ -455,7 +463,7 @@ func serviceSysSetpri(env *Environment, argv []uint32) (uint32, error) {
 
 	p.BasePriority, p.Priority = pri, pri
 
-	if err := env.sched.SetBasePriority(handle(env), int(pri)); err == nil {
+	if err := env.sched.SetBasePriority(handle(target), int(pri)); err == nil {
 		env.requestReschedule()
 	}
 
@@ -480,17 +488,28 @@ var exitEntryAddr = p1VectorAddr("SYS$EXIT")
 // or the CPU is in a more privileged mode. A forced exit already queued
 // isn't queued again. The target is picked by processTarget.
 func serviceSysForcex(env *Environment, argv []uint32) (uint32, error) {
-	if st := env.callerTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
+	target, st := env.processTarget(optArg(argv, 0), optArg(argv, 1), false)
+	if st != 0 {
 		return st, nil
 	}
 
-	for _, a := range env.Process.ast.queue {
+	if st := env.mayAffect(target); st != 0 {
+		return st, nil
+	}
+
+	for _, a := range target.Process.ast.queue {
 		if a.routine == exitEntryAddr && a.mode == uint32(vax.User) {
 			return ssNormal, nil
 		}
 	}
 
-	env.queueAST(exitEntryAddr, optArg(argv, 2), uint32(vax.User))
+	// A waiting target that can take the AST becomes computable at the
+	// scheduler's next choice (waits.go).
+	target.queueAST(exitEntryAddr, optArg(argv, 2), uint32(vax.User))
+
+	if target != env {
+		env.requestReschedule()
+	}
 
 	return ssNormal, nil
 }
