@@ -57,6 +57,9 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 		return err
 	}
 
+	// A previous image that was stopped and never exited ends now.
+	c.runDownAbandonedImage()
+
 	savedMode := c.CPU.PSL().CurMod()
 	c.Engine.SetModeStack(vax.Kernel, false)
 	defer c.Engine.SetModeStack(savedMode, false) // safety net on an early-error return

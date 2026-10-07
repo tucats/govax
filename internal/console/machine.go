@@ -331,8 +331,13 @@ func (w consoleOutput) Write(p []byte) (int, error) {
 // the console's devices and mounts, on the engine's system clock, and the
 // RTL environment of its first process, process 1, sharing the console's
 // logical names and session (so a program's RMS calls see SET DEFAULT's
-// default directory).
+// default directory). The files the old process 1 left open are closed
+// first, so what it wrote reaches the volumes (they outlive the machine).
 func (c *Console) newRTL() *corevms.Environment {
+	if c.RTL != nil {
+		c.RTL.CloseFiles()
+	}
+
 	sys := corevms.NewSystem(c.CPU, c.Mem, c.Devices, c.Mounts)
 	librtl.Register(sys.Shims()) // LIBRTL.EXE's routines (docs/PHASE-34.md)
 

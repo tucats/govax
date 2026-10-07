@@ -441,8 +441,8 @@ for a process created without one.
   7), subprocesses deleted with their owner and `$DELPRC` of others
   (subtask 8); the book's user rundown routines, global sections (Phase
   46), and private volumes (govax's mounts are system-wide) don't apply.
-  Noticed, not changed: process 1's image rundown doesn't close the
-  image's RMS files as VMS's does at image exit. Tests:
+  Noticed: process 1's image rundown didn't close the image's RMS files
+  as VMS's does at image exit (fixed next). Tests:
   `corevms/delete_test.go` (a subprocess's kernel-mode channel and
   temporary mailbox, its kernel AST and executive exit handler, the
   counts, the CPU time returned or not; a detached job's table deleted
@@ -454,3 +454,22 @@ for a process created without one.
   and the physical pages mapped where they were; and a child that
   `$CREATE`s, `$CONNECT`s, and `$PUT`s without `$CLOSE` leaves its record
   in the file (the test fails without RMS's rundown).
+- 2026-10-07: Subtask 6 follow-up, at the author's request: an image's
+  files are closed when the image ends, in process 1 too, as RMS's
+  rundown closes them on VMS. `Environment.CloseFiles` (`delete.go`)
+  closes the RMS files (`rms.FileTable.Rundown`) and the C library's host
+  files, and `ImageRundown` now calls it first, so process deletion gets
+  it through image rundown. VMS keeps a process-permanent file (opened in
+  executive mode, by DCL) open across images; govax doesn't record the
+  mode a file was opened in, and closes them all. An image RUN started
+  that was stopped (HALT, CTRL/C, CTRL/Y, a limit) and never resumed is
+  run down when the next RUN starts (`runDownAbandonedImage`), as VMS
+  runs it down when the next image starts. INIT, VMINIT, and ZERO close
+  the old process 1's files before building the new System (`newRTL`),
+  and govax's exit calls the new `Console.EndSession` (run down an
+  abandoned image, close process 1's files) before dismounting the
+  volumes. (A second CTRL/Y's forced exit skips both, as it skips the
+  dismount.) Tests: `console/imagefiles_test.go`: a record written and
+  never closed is on the volume after the image exits, and, for an image
+  the instruction limit stopped, after the next `RUN/NOEXECUTE`, after
+  ZERO, and after `EndSession`; each test fails without its fix.

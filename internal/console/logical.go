@@ -532,8 +532,9 @@ func (c *Console) ShowTranslation(table, name string) error {
 // imageRundown does what VMS does at image exit. For logical names
 // (User's Manual §11.3.5, §11.4) it deletes the user-mode names in the
 // process table, such as those DEFINE/USER_MODE made for the image that
-// just ended. The RTL's own per-image state (user-mode device
-// allocations, docs/PHASE-26.md) is cleaned up by Environment.ImageRundown.
+// just ended. The RTL's own per-image state (the files the image left
+// open, user-mode device allocations, docs/PHASE-26.md) is cleaned up by
+// Environment.ImageRundown.
 func (c *Console) imageRundown() {
 	if n, err := c.Logicals.Delete(lnm.ProcessTableName, "", lnm.User); err == nil && n > 0 {
 		c.traceLogicals("image rundown deleted %d user-mode name(s)", n)
@@ -541,6 +542,30 @@ func (c *Console) imageRundown() {
 
 	if c.RTL != nil {
 		c.RTL.ImageRundown()
+	}
+}
+
+// runDownAbandonedImage runs down an image RUN started that never
+// exited: one a HALT, CTRL/C, CTRL/Y, or an instruction or time limit
+// stopped, and that nothing resumed. On VMS such an image is run down
+// when the next one starts (or the process logs out), closing the files
+// it left open; RUN and EndSession do the same here.
+func (c *Console) runDownAbandonedImage() {
+	if c.imageActive {
+		c.imageActive = false
+		c.imageRundown()
+	}
+}
+
+// EndSession ends the console's use of the machine as govax exits: an
+// image of process 1's that never exited is run down, and every file
+// process 1 has open is closed, so that what it wrote reaches the volumes
+// before they're dismounted.
+func (c *Console) EndSession() {
+	c.runDownAbandonedImage()
+
+	if c.RTL != nil {
+		c.RTL.CloseFiles()
 	}
 }
 

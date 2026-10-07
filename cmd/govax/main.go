@@ -213,8 +213,11 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	}
 
 	// Volumes still mounted when the session ends are dismounted, so
-	// their pending writes reach their containers.
+	// their pending writes reach their containers, after the files
+	// process 1 left open are closed.
 	defer func() {
+		c.EndSession()
+
 		if err := c.Mounts.DismountAll(); err != nil {
 			fmt.Fprintln(out, "%"+err.Error())
 		}

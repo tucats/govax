@@ -341,7 +341,8 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 }
 
 // ImageRundown does the per-image cleanup VMS does when an image exits,
-// for the state this package owns: it deassigns the channels the image
+// for the state this package owns: it closes the files the image left
+// open (CloseFiles), deassigns the channels the image
 // assigned from user mode, then deallocates the devices it allocated in
 // user mode, and disassociates its common event flag clusters (deleting
 // temporary ones nobody else uses), cancels its outstanding $SETIMR
@@ -351,6 +352,7 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 // image started by RUN returns or exits (and does its own logical-name
 // rundown alongside).
 func (env *Environment) ImageRundown() {
+	env.CloseFiles()
 	env.deassignUserChannels()
 	env.deallocateUserDevices()
 	env.disassociateClusters()

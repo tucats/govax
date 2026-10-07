@@ -16,7 +16,7 @@ import (
 // chapter 22, section 22.2.1). In order, that AST
 //
 //   - runs the image down, and RMS's rundown closes every open file
-//     (steps 2 and 3);
+//     (steps 2 and 3; ImageRundown's CloseFiles);
 //   - runs the process down: every channel, in every access mode, is
 //     deassigned, every device it allocated deallocated (steps 5 and 8);
 //   - gives back to the owner, if the process is a subprocess, what the
@@ -91,25 +91,12 @@ func (sys *System) DeleteProcess(env *Environment) {
 }
 
 // processRundown is what process deletion releases beyond image rundown
-// (ImageRundown, which leaves a process's privileged-mode state for its
-// next image): every open RMS file, closed as RMS's rundown closes it,
-// so what the process wrote is on the volume; every host file it opened
-// through the C library's descriptors; every channel, in any access
-// mode, so a temporary mailbox the process held the last channel to is
-// deleted; every device it allocated; and every AST, exit handler, and
-// I/O request still queued, in any mode.
+// (ImageRundown, which has already closed the process's files, and
+// leaves a process's privileged-mode state for its next image): every
+// channel, in any access mode, so a temporary mailbox the process held
+// the last channel to is deleted; every device it allocated; and every
+// AST, exit handler, and I/O request still queued, in any mode.
 func (env *Environment) processRundown() {
-	if n, err := env.files.Rundown(); n > 0 && env.cpu.DebugEnabled(vax.DebugProcess) {
-		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(PROCESS): %08X's rundown closed %d file(s), error %v\n",
-			env.Process.PID, n, err)
-	}
-
-	for fd, f := range env.openFiles {
-		_ = f.Close()
-
-		delete(env.openFiles, fd)
-	}
-
 	for _, c := range append([]*channel(nil), env.channels...) {
 		env.releaseChannel(c)
 	}
@@ -182,5 +169,28 @@ func (sys *System) releaseMemory(env *Environment) {
 
 	if sys.s0 != nil {
 		sys.s0.FreeProcess(env.Process.PID)
+	}
+}
+
+// CloseFiles closes every file the process has open, as RMS's rundown
+// does at image exit and process deletion (VAX/VMS Internals and Data
+// Structures, section 22.2.1, step 3): its RMS files, so that what it
+// wrote and never closed is on the volume (rms.FileTable.Rundown), and
+// the host files it opened through the C library's descriptors, which on
+// VMS are RMS files too. VMS keeps a process-permanent file, one opened
+// in executive mode (by DCL), open across images; govax doesn't record
+// the mode a file was opened in, and every file its programs open is the
+// image's, so it closes them all. Its terminal stays open. A process
+// with no files open is left as it was.
+func (env *Environment) CloseFiles() {
+	if n, err := env.files.Rundown(); n > 0 && env.cpu.DebugEnabled(vax.DebugProcess) {
+		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(PROCESS): %08X's rundown closed %d file(s), error %v\n",
+			env.Process.PID, n, err)
+	}
+
+	for fd, f := range env.openFiles {
+		_ = f.Close()
+
+		delete(env.openFiles, fd)
 	}
 }
