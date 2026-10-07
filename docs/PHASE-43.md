@@ -1,6 +1,6 @@
 # Phase 43 — Multiprocessing, part 1: processes as objects
 
-**Status:** planned (2026-10-06); decisions taken 2026-10-06. Not started.
+**Status:** in progress (started 2026-10-07); decisions taken 2026-10-06.
 
 Phase 43 is the first of six phases (43–48) that let govax run several VMS
 processes at once on one engine. This document has two parts:
@@ -489,29 +489,138 @@ At the end, process 1 runs exactly as today, and a Go test can build
 process 2, switch into it with `LDPCTX` semantics, run code there, and
 switch back, showing that P0/P1 are separate and S0 is shared.
 
-## State inventory (first pass)
+## State inventory
 
-Subtask 1 completes and checks this table; it's the map for subtask 2.
+Subtask 1 completed and checked this table against the code (2026-10-07);
+it's the map for subtask 2 and later phases. "Phase n" in the last column
+says when a piece that isn't moved in Phase 43 moves.
+
+### `corevms.Environment` (`internal/corevms/environment.go`)
+
+| Field | Belongs to | Notes |
+| --- | --- | --- |
+| `mem`, `cpu` | machine | one `vm.Memory` and one `vax.CPU`, shared by every process |
+| `shims`, `services` | system | registries, built once per System (subtask 2); `librtl.Register` adds to `shims` |
+| `Devices` | system | injected by the console; owned by `Console`, survives INIT |
+| `Mounts` | system | injected; owned by `Console`, survives INIT |
+| `Mailboxes`, `EventFlagClusters`, `Operator` | system | built per INIT/VMINIT/ZERO |
+| `Clock`, `BootTime`, `NodeName` | system | `Clock` rebound to `Engine.SystemTime` by `Console.newRTL` |
+| `OnUnhandled`, `OnSignal` | system | debugger hooks; stay per Environment until the debugger is process-aware (Phase 44); they only ever fire for the current process |
+| `Logicals` | split | one `lnm.Database` holds both directories: `ProcessDirectory` (process and job tables) and `SystemDirectory` (system and group tables). Stays a per-Environment pointer in Phase 43 (process 1 shares the console's); Phase 45 splits `lnm.Database` so a process gets its own process directory over the shared system one |
+| `Session` | process | the default directory; process 1's is the console's `ContainerSession` (SET DEFAULT changes both, as today). A new process gets a copy of its creator's (Phase 45) |
+| `files` (RMS IFIs and `$SEARCH` contexts) | process | |
+| `channels`, `nextChannel` | process | a channel names a shared `iodev.Device` |
+| `Process` | process | see below |
+| `RegionSize` | process | P0/P1 high-water marks; [2] (S0) is unused by processes, and the S0 allocator (subtask 6) is the System's |
+| `memAllocated`, `memFreed` | process | the LIB$GET_VM heap, in the process's P0 |
+| `openFiles`, `nextFID` | process | host files of the CRTL shims |
+| `consoleIn`/`consoleInBuf`, `consoleOut` | process | its SYS$INPUT/SYS$OUTPUT; the terminal under them is shared (Phase 46) |
+| `CommandLine` | process | LIB$GET_FOREIGN's text |
+| `timers` | process | `$SETIMR`/`$SCHDWK` requests; expired only by that Environment's `NextAST` (a hazard below) |
+| `attentionASTs` | process | CTRL/C and CTRL/Y ASTs; the terminal's owner gets them (Phase 46) |
+| `pendingIO`, `qiowWaits` | process | |
+| `waitingPC` | process | trace bookkeeping for a waiting service |
+
+### `corevms.Process` (`process.go`)
+
+All per process: `PID`, `Username`, `Name`, `Account`, `Terminal`,
+`CLIName`, `UIC`, the working-set fields, `ASTLimit`, `Priority`,
+`BasePriority`, `AuthorizedPriority`, the four privilege masks,
+`LocalEventFlags`, `CommonClusters` (associations; the clusters are the
+System's), `ResourceWaitDisabled`, `WakePending`, `ast`, `exitHandlers`,
+`ExitStatus`, `putmsg`, `cmode`, `conditions`, `exceptionVectors`, and the
+page locks. `Username`, `Account`, and the quotas VMS keeps in the JIB
+(`PRCLM` and friends, none modeled yet) move to a job record in Phase 45.
+
+### `console.Console` (`internal/console/machine.go`)
+
+| Field | Belongs to | Notes |
+| --- | --- | --- |
+| `Engine`, `CPU`, `Mem` | machine | |
+| `RTL` | process | process 1's Environment, and the one the engine's hooks reach (`services.go`: `SystemService`, `Shim`, `NextAST`, `HandleAttention`, `DispatchException`). Becomes "the current process's" in Phase 44 |
+| `Symbols` | system, with exceptions | console and microkernel symbols. The image activator also writes `MAIN` and `SHARE$xxx_INITIALIZE`/`_TRANSFER_n` here (`image.go`), which are process 1's (bug 5; subtask 10) |
+| `ICBList`, `imageActive`, `runHost`, `runCommandLine` | process | process 1's image state (subtask 10) |
+| `dclSymbols` | process | DCL symbols, a CLI's state: process 1's; `LIB$SPAWN` copies them (Phase 48) |
+| `Regions`, `shimBase`, `shimsReady`, `s0Free` | system | `s0Free` is where the S0 pool starts (subtask 6) |
+| `Devices`, `Logicals`, `Mounts`, `ContainerSession` | system / process 1 | see the Environment's |
+| `Debugger`, `OnUnhandled`, `OnSignal`, `sourceDirs`, `sourceCache` | console | the debugger debugs process 1 (Decision 11) |
+| `asmSession`, `assemblerMode`, `Radix`, `DepositAddr`, `Verbose`, `Verify`, `Trace`, `Dispatcher`, `In`, `Out`, `ScreenSize`, `Paths`, `HostLibrary`, `SharePrefix`, limits, `quit` | console | operator state |
+
+### `internal/rms`
+
+`rms.Context` is built per call from the Environment (`rmsContext`):
+`Mem`, `CPU`, `Mounts` (system), `Files`, `Session`, `Console`,
+`ConsoleIn` (process), `Logicals` (split, as above), `NodeName`
+(system). `rms.Session` holds `Mounts` (system), `Logicals`, and
+`Default` (process). `rms.FileTable` is per process. `MountTable` and
+each mounted `ods2` volume are system state; an open file's
+`volume.File` is per process today, and becomes shared in Phase 47.
+
+### The CPU, the engine, and memory
 
 | Where | Field | Belongs to |
 | --- | --- | --- |
-| `corevms.Environment` | `mem`, `cpu` | machine (shared) |
-| | `shims`, `services` (registries) | system |
-| | `Devices`, `Mounts`, `Mailboxes`, `EventFlagClusters`, `Operator` | system |
-| | `Clock`, `BootTime`, `NodeName` | system |
-| | `Logicals` | split: process directory/table per process, job table per job, system directory and system/group tables shared |
-| | `OnUnhandled`, `OnSignal` (debugger hooks) | system, told which process |
-| | `Process`, `channels`, `nextChannel`, `files` (RMS IFIs), `Session` (default directory) | process |
-| | `RegionSize`, `memAllocated`/`memFreed` (heap), `openFiles`/`nextFID` | process |
-| | `timers`, `attentionASTs`, `pendingIO`, `qiowWaits`, `waitingPC`, `CommandLine` | process |
-| | `consoleIn`/`consoleOut` | process (its SYS$INPUT/SYS$OUTPUT; the terminal itself is shared) |
-| `corevms.Process` | identity, quotas, privileges, event flags, AST state, exit handlers, condition and change-mode stacks, exception vectors, page locks | process; job quotas move to a job record |
-| `console.Console` | `ICBList`, image symbols, the IMAGE$INIT driver, `imageActive`, `runHost` | process |
-| | `Symbols` (system symbols), `shimBase`, `s0Free`, `Regions`, the debugger, run state | system / console |
-| `vax.CPU` registers | R0–R11, AP, FP, SP, PC, PSL, KSP/ESP/SSP/USP, P0BR/P0LR/P1BR/P1LR, ASTLVL | process (saved in its hardware PCB) |
-| | ISP, SBR/SLR, SCBB, PCBB, MAPEN, clock and console registers | system |
-| `cpu.Engine` | everything | system; per-process CPU time accounting is new (Phase 44) |
-| `vm.Memory` | everything | system; TB entries for P0/P1 are per process (flushed on switch) |
+| `vax.CPU` | R0–R11, AP, FP, SP, PC, PSL, KSP/ESP/SSP/USP, P0BR/P0LR/P1BR/P1LR, ASTLVL | process (saved in its hardware PCB) |
+| | ISP, SBR/SLR, SCBB, PCBB, SISR, MAPEN, clock, TODR, and console registers, debug flags | system (IPL is in the PSL, saved per process) |
+| `cpu.Engine` | everything (the decode cache, interrupts, clock, limits, the fault history) | system; per-process CPU time is new (Phase 44). `decoded` is two scratch buffers for the instruction being run, not a cache, so a switch needn't touch it |
+| `vm.Memory` | frames, the TB, the STC, the fetch window | system; P0/P1 TB entries, the STC, and the fetch window describe the current process and are flushed on a switch (subtask 5) |
+
+### `kernel.asm` (the microkernel, in S0)
+
+Nothing in it is laid out per process: it has no stack symbols and no
+`CTL$` cells. Its data cells are system-wide, which matters for these:
+
+- `vaxc$errno` (CRTL's `errno`), `exe$sig_buff`, and `exe$dclstring`
+  are scratch cells that a routine running for one process could be
+  preempted in the middle of using (Decision 3 allows preempting kernel
+  mode at IPL 0). Phase 44 must either keep them per process or not
+  preempt inside the microkernel's routines (`exe$base`..`exe$fend`).
+- `exe$ast_list` is the legacy software-interrupt-2 AST queue, unused
+  now that ASTs are Go state; system-wide.
+- `exe$rxdata`/`exe$rxlen`/`exe$rxbuffer`/`exe$rxptr` buffer the console
+  terminal's input: one terminal, so system-wide (Phase 46).
+- The P1 vector (`.P1VECTOR`) is written once, by ASM, into process 1's
+  demand-zero P1 pages 0x7FFEDE00–0x7FFEE8FF (6 pages). It holds only
+  trampolines (entry mask, `XFC XFC$P1VECTOR`, `RET`) and two data cells
+  nothing reads or writes (`SYS$GL_ASTRET`, `SYS$GL_COMMON`), so every
+  process can map the same physical pages, read-only (subtask 8). No Go
+  code has another fixed P1 address but the user stack top (`spP1`).
+
+No package (`corevms`, `console`, `rms`, `librtl`, `lnm`, `cpu`, `vm`,
+`io`, `debugger`) has a mutable package-level variable; their `var`s are
+constant tables.
+
+### VMINIT's layout and the S0 left over
+
+With `vax.init`'s `VMINIT /P0=16384 /P1=8192 /S0=8192 /KSP=20` on
+16384 pages of memory: the S0 table is 64 pages, P0's 128, P1's 64; then
+the kernel stack (20), a guard and the executive stack (1+8), a guard and
+the supervisor stack (1+8), the interrupt stack, CONSOLE$SCRATCH (1), the
+shim page, the SCB (1), the string pool, and then the microkernel at
+`s0Free`. A new process with VMINIT's sizes needs 192 page-table pages
+and 38 stack pages: 230 (subtask 6 records the arithmetic).
+
+## Cross-process hazards
+
+Every place Go code reads or writes VAX memory, or process state, for a
+process other than the one whose service call is running. Today each
+uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
+`Process`; each must use the owner's once there are several processes.
+
+| Where | What it does | Fixed in |
+| --- | --- | --- |
+| `mbxdriver.go` `receive`, `send` | a write completing a waiting read stores the message into the *reader's* buffer, and completes the reader's or writer's request | Phase 46 |
+| `qio.go` `completeIO` | stores the IOSB, sets the event flag, and queues the AST of a request that may be another process's (from `receive`/`send`, `cancelIO`) | Phase 46 (an `ioRequest` records its Environment) |
+| `mbxdriver.go` `deliverAttention`, `operator.go` `postMailboxMessage`/`operatorReplyTo` | queue attention ASTs and post messages for whichever process enabled them | Phase 46 |
+| `timers.go` `expireTimers` | runs only from the owning Environment's `NextAST`, so a waiting process's timers never expire while another runs | Phase 44 (the scheduler expires every process's) |
+| `ast.go` `NextAST` | pushes an AST frame on the current stack: correct only for the current process; the engine must ask the current one | Phase 44 |
+| `ctrlast.go` `Attention` | CTRL/C and CTRL/Y go to `Console.RTL` | Phase 46 (the terminal's owner) |
+| `hibernate.go` `$WAKE`/`$SCHDWK`, `process.go` `$FORCEX`/`$DELPRC`/`$SETPRI`, `getjpi.go` | act on the target's Go state only (`processTarget`) | Phase 45 |
+| `condition.go`, `cmode.go`, `exit.go`, `unwind.go`, `message.go` | the caller's own stack and state: current process only | — |
+| RMS (`internal/rms`) | synchronous, in the caller's context; only terminal reads wait | Phases 46–47 |
+| console `image.go` (`imageLoad`), `run.go` (`buildImageInitDriver`) | write an image into P0 and the driver into `CONSOLE$SCRATCH` through the CPU's registers | subtask 10 |
+| console EXAMINE/DEPOSIT, `expr.go`'s string pool, `shim.go` | the console's view: process 1's P0/P1, the shared S0 | Phase 44 (the debugger/console show process 1 even when another is current) |
+| console `chf.go` | runs a condition handler in a nested run loop | Phase 44 (bug 7) |
 
 ## Subtasks
 
@@ -621,3 +730,11 @@ Subtask 1 completes and checks this table; it's the map for subtask 2.
   "Decisions"), agreed to run VMS 7.3 probes as needed, and allowed ods2
   changes in parallel. The plan is under the author's review before
   implementation starts.
+- 2026-10-07: Subtask 1 (inventory). Completed the state inventory from
+  the code and added the cross-process hazards list and the kernel.asm
+  and P1-vector findings (above). Answers to the open question about
+  `kernel.asm`: it has no per-process layout, but `vaxc$errno`,
+  `exe$sig_buff`, and `exe$dclstring` are shared scratch cells a
+  preempted microkernel routine could leave half-used (for Phase 44).
+  The P1 vector holds nothing per process. `Logicals` stays per
+  Environment until Phase 45 splits `lnm.Database`.
