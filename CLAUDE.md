@@ -13,9 +13,9 @@ never had.
   index.
 - `docs/PHASE-00.md` … `PHASE-48.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
-  done through 43; 40 follows 38 directly: there is no Phase 39). Phases
+  done through 44; 40 follows 38 directly: there is no Phase 39). Phases
   43–48 are the multiprocessing program (subprocesses, a scheduler,
-  interprocess mailboxes and shared memory, RMS file sharing; 44–48
+  interprocess mailboxes and shared memory, RMS file sharing; 45–48
   planned);
   `PHASE-43.md`'s Part A describes the whole program. Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
@@ -116,7 +116,16 @@ expect adjustment as phases land):
   SVPCTX: every instruction has a handler (`TestEveryInstructionImplemented`).
   `context.go` has the 96-byte hardware PCB (`PCB`, `ReadPCB`/`WritePCB`
   by physical address), the two instructions, and `Engine.SaveContext`/
-  `LoadContext`, the same code for a Go scheduler (Phase 44). Each operand has a
+  `LoadContext`, the same code the Go scheduler uses (Phase 44:
+  `SaveMemoryContext` writes the live P0/P1 registers into the outgoing
+  PCB first). `schedule.go` is the scheduling hook (Phase 44): a
+  `Scheduler` installed with `SetScheduler`, called by `Step` (after
+  interrupt delivery, before AST delivery) when the budget it returned is
+  spent or after `RequestReschedule`; `Preemptible` (IPL < 3, not on the
+  interrupt stack, a mode `PreemptModes` allows); `FreezeScheduling`
+  (STEP, nested runs); `SwitchIfDue` (run loops switch before looking at
+  the next instruction). `idle.go`: `IdleUntil` (the quantum clock
+  jumps, the host clock sleeps) and `InstructionsUntil`. Each operand has a
   `DataType` in the generated table, which decides how a short literal or
   floating operand is read. F, D, G, and H instructions run on
   `internal/vaxfloat` (`fpu.go` is the CPU's side), packed decimal on
@@ -132,6 +141,14 @@ expect adjustment as phases land):
   underflow, reserved operands, and divide by zero; plus EMOD and POLY's
   arithmetic, short literals, and decimal parsing for the assembler. A leaf
   package: no CPU dependency.
+- `internal/sched` — VMS's scheduling rules as plain Go (Phase 44), from
+  *VAX/VMS Internals and Data Structures*, chapter 10: `State` (the
+  `SCH$C_*` codes) and MWAIT `Resource`s, priority-boost `Class`es (Table
+  10-3) and the boost rule, one FIFO queue per priority, `Reschedule`
+  (choose the highest, demoting a boosted normal process by one),
+  `Charge` (quantum; no quantum end for real-time), `Wait`/`Ready` (and
+  the higher-or-equal preemption test), `SetBasePriority`, `Choose`. A
+  leaf package; processes are opaque `Handle`s (PIDs).
 - `internal/console` — interactive monitor + DCL grammar interpreter (Phase 08).
   Every console command is parsed by the DCL grammar
   (`internal/bootdata/files/console.dcl`); Phase 37 moved the last
@@ -191,7 +208,21 @@ expect adjustment as phases land):
   (`addrspace.go`: `BuildAddressSpace`, the shared P1 vector, teardown)
   and `Stacks` (`stacks.go`: privileged stacks and the PCB page). Process
   1 is the console's, on VMINIT's tables and stacks; the console keeps
-  each process's image state (`internal/console/images.go`).
+  each process's image state (`internal/console/images.go`). Phase 44's
+  scheduler: the `System` owns a `sched.Scheduler` kept in step with the
+  table and is the engine's hook (`schedule.go`: `Schedule`, `switchTo`,
+  `SwitchCPU`, `StopProcess`; installed by the console's `newRTL` with
+  `InstallScheduler` when `vax.process.scheduler` is on). A waiting
+  service says what it waits for (`waits.go`: `waitOn`, a state and a Go
+  test), the process waits in the scheduler, and each scheduling call
+  expires every process's timers and tests the waiters (`pollEvents`);
+  with nothing to run, `idle.go` moves time to the next timer. CPU time
+  and SHOW SYSTEM/SHOW PROCESS's reports are in `showsys.go`. The
+  console's engine hooks reach the current process (`Console.running`);
+  `Console.RTL` stays process 1, and only process 1's image ending ends
+  a console run (`Console.StepMachine`). A run that stops in another
+  process leaves the CPU there until the next run or the debugger's EXIT
+  (`Console.ReturnToProcessOne`).
 - `internal/librtl` — LIBRTL.EXE's routines (Phase 34): the LIB$ and STR$
   shims a program reaches through `SHIM$LIBRTL_<offset>` stubs. `Routines`
   lists each with its transfer-vector offset (checked against

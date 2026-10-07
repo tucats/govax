@@ -1704,8 +1704,12 @@ $CONF,KEY
     Processes
 
         These are for running several processes at once, which govax is
-        being extended to do.  govax reads them, but until that work is
-        complete they change nothing.
+        being extended to do.  With vax.process.scheduler on, the CPU
+        is shared among the processes that exist, VMS's way: by
+        priority, a quantum at a time among equals, and giving the CPU
+        to another while one waits (SHOW SYSTEM lists them).  Creating
+        processes ($CREPRC, LIB$SPAWN) comes later, so for now only the
+        console's own process runs.
 
         vax.process.scheduler         true or false: whether processes
                                       other than the console's own can be

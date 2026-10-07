@@ -791,6 +791,15 @@ each, Apple M5 Max, Go 1.26.0, quantum clock:
 - Scheduler on: within noise of the old build, and at most about 1% over
   scheduler off. The open question in docs/PHASE-44.md (fold the count
   into `tickQuantum`'s) isn't worth pursuing at this cost.
+- Later in Phase 44 (subtask 8), the run loops call
+  `Engine.SwitchIfDue` before each instruction. Called out of line it
+  cost about 1.7% (`BenchmarkSieve`, A/B against the previous commit);
+  with a one-compare fast path the compiler inlines into the loops (the
+  slow half `//go:noinline`, and with no scheduler a huge budget so the
+  one compare fails at once), the A/B shows no difference beyond noise
+  (4.81–4.87 vs 4.80–4.82 ms/op, alternating runs). This machine's
+  numbers drifted up about 4% over the day, so compare only runs made
+  together.
 
 ---
 

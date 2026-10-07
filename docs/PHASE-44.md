@@ -1,7 +1,7 @@
 # Phase 44 — Multiprocessing, part 2: the scheduler
 
-**Status:** in progress (started 2026-10-07); decisions taken 2026-10-06
-(see PHASE-43.md, Part A). Subtasks 1–11 done.
+**Status:** done (2026-10-07); decisions taken 2026-10-06 (see
+PHASE-43.md, Part A).
 
 The program this phase belongs to — its goal, architecture, rules for
 every commit, decisions, and known bugs — is in
@@ -663,3 +663,12 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
   record of which process ran is identical; run at quanta 3, 50, and
   1000, the processes interleave differently (3 and 1000 are checked to
   differ) but the counts agree (25, 25, 20).
+- 2026-10-07: **Subtask 12: close-out.** Status set to done; PLAN.md's
+  index, CLAUDE.md (`internal/sched`, the engine's hook and idle, the
+  corevms scheduler pieces), HELP CONFIG KEYS's processes paragraph (the
+  scheduler now shares the CPU; process creation comes in Phase 45), and
+  PERFORMANCE.md updated. Left for later phases, as planned: `$CREPRC`
+  and deletion (a switch away from a deleted current process,
+  `$SCHDWK`/`$CANWAK`/`$SETPRI` on other processes, Ctrl-C ASTs to the
+  terminal's owner: Phase 45), terminal reads that block the machine
+  (Phase 46), and the debugger's SET PROCESS (Future work above).
