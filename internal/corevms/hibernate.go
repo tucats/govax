@@ -52,7 +52,7 @@ func serviceSysHiber(env *Environment, _ []uint32) (uint32, error) {
 // processTarget for how the process is picked and its error statuses.
 // The privileges VMS requires to wake another process always pass.
 func serviceSysWake(env *Environment, argv []uint32) (uint32, error) {
-	if st := env.processTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
+	if st := env.callerTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
 		return st, nil
 	}
 
@@ -85,7 +85,7 @@ const minWakeRepeat = vmsdef.TicksPerSecond / 100 // 10ms
 func serviceSysSchdwk(env *Environment, argv []uint32) (uint32, error) {
 	daytim, reptim := optArg(argv, 2), optArg(argv, 3)
 
-	if st := env.processTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
+	if st := env.callerTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
 		return st, nil
 	}
 
@@ -144,7 +144,7 @@ func serviceSysSchdwk(env *Environment, argv []uint32) (uint32, error) {
 // already happened — the flag $WAKE or an expired $SCHDWK set — stays
 // pending: $CANWAK only removes queued requests.
 func serviceSysCanwak(env *Environment, argv []uint32) (uint32, error) {
-	if st := env.processTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
+	if st := env.callerTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
 		return st, nil
 	}
 

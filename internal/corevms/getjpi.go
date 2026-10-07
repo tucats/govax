@@ -176,7 +176,7 @@ func serviceSysGetjpi(env *Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	if st := env.processTarget(pidadr, prcnam, true); st != 0 {
+	if st := env.callerTarget(pidadr, prcnam, true); st != 0 {
 		return st, nil
 	}
 
@@ -207,69 +207,94 @@ func serviceSysGetjpi(env *Environment, argv []uint32) (uint32, error) {
 	return status, nil
 }
 
-// processTarget checks that pidadr/prcnam — the (PID by reference,
-// process name by descriptor) pair many services use to pick a process —
-// name this process, returning 0 if so. It writes the PID back to pidadr
-// when that holds 0. A PID wins over a name; with neither, the caller is
-// meant. SS$_NONEXPR for any other process, SS$_IVLOGNAM for a bad
-// process name, SS$_ACCVIO for an unreadable or unwritable argument.
+// processTarget finds the process that pidadr/prcnam — the (PID by
+// reference, process name by descriptor) pair many services use to pick
+// a process — name, in the system's process table (proctable.go). A PID
+// wins over a name; with neither, the caller is meant. A name is looked
+// for in the caller's UIC group only, since process names are unique
+// only within a group. When the longword at pidadr holds 0, the target's
+// PID is written back to it. It returns the target, or a status: SS$_NONEXPR
+// for a process that doesn't exist, SS$_IVLOGNAM for a bad process name,
+// SS$_ACCVIO for an unreadable or unwritable argument.
 //
 // With wildcard ($GETJPI only), a PID of -1 starts a wildcard scan and
 // SS$_NOMOREPROC ends it (see jpiWildcard); other services treat -1 as
 // just another PID that doesn't exist.
-func (env *Environment) processTarget(pidadr, prcnam uint32, wildcard bool) uint32 {
-	p := env.Process
+func (env *Environment) processTarget(pidadr, prcnam uint32, wildcard bool) (*Environment, uint32) {
 	pid := uint32(0)
 
 	if pidadr != 0 {
 		v, err := env.mem.LoadLongword(env.cpu, pidadr)
 		if err != nil {
-			return ssAccVio
+			return nil, ssAccVio
 		}
 
 		pid = v
 	}
 
-	writeBack := func(v uint32) uint32 {
+	writeBack := func(target *Environment, v uint32) (*Environment, uint32) {
 		if err := env.mem.StoreLongword(env.cpu, pidadr, v); err != nil {
-			return ssAccVio
+			return nil, ssAccVio
 		}
 
-		return 0
+		return target, 0
 	}
 
 	switch {
 	case wildcard && pid == jpiWildcard:
-		return writeBack(jpiWildcardDone)
+		return writeBack(env, jpiWildcardDone)
 
 	case wildcard && pid == jpiWildcardDone:
-		return ssNoMoreProc
+		return nil, ssNoMoreProc
 
 	case pid != 0:
-		if pid != p.PID {
-			return ssNonExpr
+		target, found := env.FindProcess(pid)
+		if !found {
+			return nil, ssNonExpr
 		}
 
-		return 0
+		return target, 0
 	}
+
+	target := env
 
 	if prcnam != 0 {
 		name, ok, err := strGet(env, prcnam, maxProcessNameLength)
 		if err != nil {
-			return ssAccVio
+			return nil, ssAccVio
 		}
 
 		if !ok || name == "" {
-			return ssIvLogNam
+			return nil, ssIvLogNam
 		}
 
-		if name != p.Name { // exactly: no abbreviation or trailing blanks
-			return ssNonExpr
+		found := false
+		if target, found = env.FindProcessName(env.Process.UICGroup(), name); !found {
+			return nil, ssNonExpr
 		}
 	}
 
 	if pidadr != 0 {
-		return writeBack(p.PID)
+		return writeBack(target, target.Process.PID)
+	}
+
+	return target, 0
+}
+
+// callerTarget is processTarget for the services that so far act only on
+// the calling process ($GETJPI, $SETPRI, $FORCEX, $DELPRC, $WAKE,
+// $SCHDWK, $CANWAK): naming any other process is SS$_NONEXPR, as it was
+// when govax had one process. Acting on another process — its event
+// flags, ASTs, timers, and deletion, which must reach it even while it
+// isn't current — arrives with process creation (docs/PHASE-45.md).
+func (env *Environment) callerTarget(pidadr, prcnam uint32, wildcard bool) uint32 {
+	target, st := env.processTarget(pidadr, prcnam, wildcard)
+	if st != 0 {
+		return st
+	}
+
+	if target != env {
+		return ssNonExpr
 	}
 
 	return 0

@@ -755,3 +755,33 @@ uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
   `MountTable` and `Process` comments that said govax has one process
   are updated (bug 10, in part; the service comments that still describe
   one-process behavior change with that behavior, in Phases 45 and 46).
+- 2026-10-07: Subtask 3 (process table and PIDs). `proctable.go`: the
+  System's `processTable` holds each process's Environment by index
+  (1–255; 0 is the null process's), a sequence number per slot, and the
+  current process. A PID is the slot's sequence number above an 8-bit
+  index; a new process takes the lowest free index and the slot's next
+  sequence number, and `FindProcess` checks the whole PID against the
+  slot's process, so a deleted process's PID finds nothing after its
+  slot is reused. This is the scheme of *VAX/VMS Internals and Data
+  Structures* (V3 edition), 20.1.3 "The PCB Vector" and 20.1.4
+  "Fabrication of Process IDs", figure 20-4 (index in the low word,
+  sequence in the high word there); the 8-bit index, the 13-bit sequence
+  (an extended PID's 21-bit process field), and every slot starting at
+  sequence 2 (so process 1 is 00000301, as before, and process 2 is
+  00000302) are govax's choices, **unconfirmed**. A VMS 7.3 `SHOW SYSTEM`
+  would show whether fresh processes' PIDs share one sequence part as
+  these do. `NewEnvironment` now adds its process to the table and
+  returns an error (SS$_NOSLOT when all 255 slots are taken); the first
+  process is the current one. `RemoveProcess`, `Processes`,
+  `FindProcessName`, `Current`, and `SetCurrent` complete the API.
+  Process names are unique within a UIC group (System Services
+  Reference: $SETPRN's and $CREPRC's SS$_DUPLNAM, $CANWAK's prcnam):
+  `$SETPRN` now returns SS$_DUPLNAM for a name another process in the
+  group has, and a new process whose default name is taken gets none.
+  `processTarget` (bug 3) finds any process in the table, by PID, or by
+  name in the caller's group, writing the found PID back, and returns
+  the target; `callerTarget` wraps it for today's services, which still
+  answer SS$_NONEXPR for any process but the caller until Phase 45 lets
+  them act on another. Tests: `proctable_test.go` (PIDs, reuse,
+  sequence wrap, a full table, names by group, processTarget, $SETPRN's
+  SS$_DUPLNAM).

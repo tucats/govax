@@ -147,9 +147,10 @@ const (
 	vectorLastChance = 2
 )
 
-// Default identity and quotas for the emulated process. The PID is
-// arbitrary (nonzero, so "a process exists" can be told from a zero
-// field). The username and UIC are the SYSTEM account's. The working-set
+// Default identity and quotas for the emulated process. The PID is the
+// one the process table gives process 1 (proctable.go), which replaces it
+// when the process is added to a System; it's nonzero, so "a process
+// exists" can be told from a zero field. The username and UIC are the SYSTEM account's. The working-set
 // numbers are nominal values in the range VMS 5 used for SYSTEM, not
 // taken from any particular system's UAF or SYSGEN parameters.
 const (
@@ -341,8 +342,10 @@ const maxPriority = 31
 // It gives the calling process the name prcnam (1-15 characters), which
 // $GETJPI reports (JPI$_PRCNAM) and the services that take a prcnam
 // argument match. With prcnam omitted the process has no name. SS$_IVLOGNAM
-// for an empty or too-long name, SS$_ACCVIO if it can't be read. A name
-// can't duplicate another process's (SS$_DUPLNAM): there are none.
+// for an empty or too-long name, SS$_ACCVIO if it can't be read, and
+// SS$_DUPLNAM if another process in the caller's UIC group already has
+// the name (names are unique within a group). Renaming a process to the
+// name it has is no error.
 func serviceSysSetprn(env *Environment, argv []uint32) (uint32, error) {
 	prcnam := optArg(argv, 0)
 	if prcnam == 0 {
@@ -358,6 +361,10 @@ func serviceSysSetprn(env *Environment, argv []uint32) (uint32, error) {
 
 	if !ok || name == "" {
 		return ssIvLogNam, nil
+	}
+
+	if other, found := env.FindProcessName(env.Process.UICGroup(), name); found && other != env {
+		return ssDuplNam, nil
 	}
 
 	env.Process.Name = name
@@ -377,7 +384,7 @@ func serviceSysSetprn(env *Environment, argv []uint32) (uint32, error) {
 // SS$_ACCVIO); prvpri that can't be written is SS$_ACCVIO, with the
 // priority unchanged.
 func serviceSysSetpri(env *Environment, argv []uint32) (uint32, error) {
-	if st := env.processTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
+	if st := env.callerTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
 		return st, nil
 	}
 
@@ -418,7 +425,7 @@ var exitEntryAddr = p1VectorAddr("SYS$EXIT")
 // or the CPU is in a more privileged mode. A forced exit already queued
 // isn't queued again. The target is picked by processTarget.
 func serviceSysForcex(env *Environment, argv []uint32) (uint32, error) {
-	if st := env.processTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
+	if st := env.callerTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
 		return st, nil
 	}
 
@@ -465,7 +472,7 @@ func serviceSysSetrwm(env *Environment, argv []uint32) (uint32, error) {
 // The target is picked by processTarget (SS$_NONEXPR, SS$_IVLOGNAM,
 // SS$_ACCVIO).
 func serviceSysDelprc(env *Environment, argv []uint32) (uint32, error) {
-	if st := env.processTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
+	if st := env.callerTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
 		return st, nil
 	}
 

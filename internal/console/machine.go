@@ -342,7 +342,13 @@ func (c *Console) newRTL() *corevms.Environment {
 		sys.BootTime = sys.Clock() // $GETSYI's SYI$_BOOTTIME: now, on that clock
 	}
 
-	env := corevms.NewEnvironment(sys, c.Logicals, consoleInput{c}, consoleOutput{c})
+	// Process 1 is the first process on a new System, whose process table
+	// is empty, so adding it can't fail.
+	env, err := corevms.NewEnvironment(sys, c.Logicals, consoleInput{c}, consoleOutput{c})
+	if err != nil {
+		panic(err)
+	}
+
 	env.Session = c.ContainerSession
 
 	// A condition nobody handled goes to the debugger first, if there is

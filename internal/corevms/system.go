@@ -11,7 +11,8 @@ import (
 // processes run on it (docs/PHASE-43.md): the machine (one CPU, one
 // physical memory), the tables of system services and RTL shims, the
 // devices and mounted volumes, the mailboxes, common event flag clusters,
-// and OPCOM's state, and the system's clock, boot time, and node name.
+// and OPCOM's state, the system's clock, boot time, and node name, and
+// the process table.
 //
 // On VMS this is what lives in system space (S0) and is the same in every
 // process: the I/O database, the mailbox and event-flag-cluster lists,
@@ -73,6 +74,10 @@ type System struct {
 
 	// NodeName is the system's node name ($GETSYI's SYI$_NODENAME).
 	NodeName string
+
+	// procs is the process table: every process's Environment by its
+	// PID's index, and which one is current (proctable.go).
+	procs *processTable
 }
 
 // NewSystem returns a new System driving cpu and mem, sharing devices and
@@ -93,6 +98,7 @@ func NewSystem(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, mounts 
 		Operator:          newOperatorState(),
 		Clock:             wallClock,
 		NodeName:          nominalNodeName,
+		procs:             newProcessTable(),
 	}
 
 	sys.BootTime = sys.Clock()

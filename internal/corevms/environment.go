@@ -132,14 +132,18 @@ type Environment struct {
 	waitingPC uint32
 }
 
-// NewEnvironment returns an Environment for one VAX process running on
-// sys, with the logical-name database logicals (shared with the console).
-// consoleOut is where non-RMS console writes (print.go, file.go) and the
-// internal/rms package's own TTA0: special case go — typically the same
-// io.Writer as Console.Out; consoleIn is where DECC$GETS/EXE$INPUT read
-// from — typically the console's own input stream.
-func NewEnvironment(sys *System, logicals *lnm.Database, consoleIn io.Reader, consoleOut io.Writer) *Environment {
-	return &Environment{
+// NewEnvironment returns an Environment for a new VAX process running on
+// sys, with the logical-name database logicals (shared with the console),
+// and adds it to sys's process table, which gives it its PID: the first
+// process on a System is process 1, PID 00000301 (proctable.go). The
+// first process is also the current one. consoleOut is where non-RMS
+// console writes (print.go, file.go) and the internal/rms package's own
+// TTA0: special case go — typically the same io.Writer as Console.Out;
+// consoleIn is where DECC$GETS/EXE$INPUT read from — typically the
+// console's own input stream. It fails with SS$_NOSLOT when the process
+// table is full.
+func NewEnvironment(sys *System, logicals *lnm.Database, consoleIn io.Reader, consoleOut io.Writer) (*Environment, error) {
+	env := &Environment{
 		System:     sys,
 		Logicals:   logicals,
 		files:      rms.NewFileTable(consoleOut),
@@ -149,6 +153,12 @@ func NewEnvironment(sys *System, logicals *lnm.Database, consoleIn io.Reader, co
 		openFiles:  map[uint32]*os.File{},
 		nextFID:    3,
 	}
+
+	if err := sys.addProcess(env); err != nil {
+		return nil, err
+	}
+
+	return env, nil
 }
 
 // rmsContext bundles this Environment's memory/CPU/mount-table/file-table/

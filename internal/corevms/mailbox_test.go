@@ -225,7 +225,10 @@ func TestMailbox_newEnvironmentKeepsMailboxes(t *testing.T) {
 	a := newArena(t, env)
 	_, _ = crembx(t, env, a, 1, 0, 0, "")
 
-	next := NewEnvironment(env.System, env.Logicals, nil, nil)
+	next, err := NewEnvironment(env.System, env.Logicals, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if _, found := next.Devices.Find("MBA1"); !found {
 		t.Error("a new process's Environment removed the system's mailbox")

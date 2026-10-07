@@ -18,8 +18,12 @@ func TestLibPutOutput(t *testing.T) {
 	out := &bytes.Buffer{}
 	logicals := lnm.NewDatabase(corevms.NominalUIC)
 
-	env := corevms.NewEnvironment(corevms.NewSystem(vax.New(), vm.NewMemory(1<<20), iodev.NewDeviceTable(),
+	env, err := corevms.NewEnvironment(corevms.NewSystem(vax.New(), vm.NewMemory(1<<20), iodev.NewDeviceTable(),
 		rms.NewMountTable()), logicals, bytes.NewReader(nil), out)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	Register(env.Shims())
 
 	a := newArena(t, env)

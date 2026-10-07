@@ -30,7 +30,10 @@ func fixture() (*Environment, *bytes.Buffer) {
 	mounts := rms.NewMountTable()
 
 	out := &bytes.Buffer{}
-	env := NewEnvironment(NewSystem(cpu, mem, devices, mounts), logicals, bytes.NewReader(nil), out)
+	env, err := NewEnvironment(NewSystem(cpu, mem, devices, mounts), logicals, bytes.NewReader(nil), out)
+	if err != nil {
+		panic(err)
+	}
 
 	return env, out
 }

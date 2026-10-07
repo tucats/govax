@@ -18,8 +18,8 @@ func TestSetprn(t *testing.T) {
 	}
 
 	// The new name is the one prcnam arguments now match.
-	wantR0(t, env.processTarget(0, a.desc("WORKER_1"), false), 0)
-	wantR0(t, env.processTarget(0, a.desc("SYSTEM"), false), ssNonExpr)
+	wantR0(t, env.callerTarget(0, a.desc("WORKER_1"), false), 0)
+	wantR0(t, env.callerTarget(0, a.desc("SYSTEM"), false), ssNonExpr)
 
 	// Errors leave the name alone.
 	wantR0(t, callLNM(t, env, serviceSysSetprn, a.desc("")), ssIvLogNam)
