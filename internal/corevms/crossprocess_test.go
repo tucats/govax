@@ -247,3 +247,121 @@ func TestCross_deleteSuspended(t *testing.T) {
 		t.Error("the child was not deleted")
 	}
 }
+
+// callerTarget is processTarget reduced to a status, with any process
+// other than the caller's own a SS$_NONEXPR: what the tests that name
+// only their own process check.
+func (env *Environment) callerTarget(pidadr, prcnam uint32, wildcard bool) uint32 {
+	target, st := env.processTarget(pidadr, prcnam, wildcard)
+	if st != 0 {
+		return st
+	}
+
+	if target != env {
+		return ssNonExpr
+	}
+
+	return 0
+}
+
+// $GETJPI of other processes and wildcard scans (docs/PHASE-45.md,
+// subtask 10).
+
+func TestGetjpi_otherProcess(t *testing.T) {
+	parent, _ := fixture()
+	withScheduler(parent)
+
+	a := newArena(t, parent)
+	child := newSubprocess(t, parent)
+	child.Process.Name = "KID"
+
+	pidBuf, ownerBuf, masterBuf, stateBuf, nameBuf := a.alloc(4), a.alloc(4), a.alloc(4), a.alloc(4), a.alloc(15)
+	list := a.items(
+		item{code: jpiCode(t, "JPI$_PID"), buflen: 4, buf: pidBuf},
+		item{code: jpiCode(t, "JPI$_OWNER"), buflen: 4, buf: ownerBuf},
+		item{code: jpiCode(t, "JPI$_MASTER_PID"), buflen: 4, buf: masterBuf},
+		item{code: jpiCode(t, "JPI$_STATE"), buflen: 4, buf: stateBuf},
+		item{code: jpiCode(t, "JPI$_PRCNAM"), buflen: 15, buf: nameBuf},
+	)
+
+	// By PID, and by name; the child computable.
+	wantR0(t, getjpi(t, parent, 0, a.long(child.Process.PID), 0, list, 0), ssNormal)
+
+	if a.readLong(pidBuf) != child.Process.PID || a.readLong(ownerBuf) != parent.Process.PID ||
+		a.readLong(masterBuf) != parent.Process.PID || a.readLong(stateBuf) != uint32(sched.StateCOM) {
+		t.Errorf("pid %08X owner %08X master %08X state %d", a.readLong(pidBuf), a.readLong(ownerBuf),
+			a.readLong(masterBuf), a.readLong(stateBuf))
+	}
+
+	// Hibernating: the state follows.
+	if err := callWaiting(child, serviceSysHiber); !errors.Is(err, ErrWait) {
+		t.Fatal(err)
+	}
+
+	wantR0(t, getjpi(t, parent, 0, 0, a.desc("KID"), list, 0), ssNormal)
+
+	if a.readLong(stateBuf) != uint32(sched.StateHIB) || a.readLong(pidBuf) != child.Process.PID {
+		t.Errorf("by name: pid %08X state %d", a.readLong(pidBuf), a.readLong(stateBuf))
+	}
+
+	// A process that doesn't exist, and one the caller may not see.
+	wantR0(t, getjpi(t, parent, 0, a.long(0x999), 0, list, 0), ssNonExpr)
+
+	other := newProcess(t, parent)
+	other.Process.UIC = parent.Process.UIC + 0x10000
+	parent.Process.CurrentPrivileges &^= privGROUP | privWORLD
+	wantR0(t, getjpi(t, parent, 0, a.long(other.Process.PID), 0, list, 0), ssNoPriv)
+}
+
+func TestGetjpi_wildcard(t *testing.T) {
+	parent, _ := fixture()
+	a := newArena(t, parent)
+	child := newSubprocess(t, parent)
+	other := newProcess(t, parent)
+	other.Process.UIC = parent.Process.UIC + 0x10000
+
+	pidBuf := a.alloc(4)
+	list := a.items(item{code: jpiCode(t, "JPI$_PID"), buflen: 4, buf: pidBuf})
+
+	scan := func() []uint32 {
+		var pids []uint32
+
+		ctx := a.long(0xFFFFFFFF)
+
+		for range 10 {
+			r0 := getjpi(t, parent, 0, ctx, 0, list, 0)
+			if r0 == ssNoMoreProc {
+				return pids
+			}
+
+			wantR0(t, r0, ssNormal)
+			pids = append(pids, a.readLong(pidBuf))
+		}
+
+		t.Fatal("the scan didn't end")
+
+		return nil
+	}
+
+	// Everyone, in table order.
+	got := scan()
+	want := []uint32{parent.Process.PID, child.Process.PID, other.Process.PID}
+
+	if len(got) != 3 || got[0] != want[0] || got[1] != want[1] || got[2] != want[2] {
+		t.Errorf("scan = %08X, want %08X", got, want)
+	}
+
+	// Without WORLD or GROUP, the other group's process is skipped.
+	parent.Process.CurrentPrivileges &^= privGROUP | privWORLD
+
+	if got = scan(); len(got) != 2 || got[1] != child.Process.PID {
+		t.Errorf("scan without privileges = %08X, want two", got)
+	}
+
+	// A process deleted during a scan is just not seen.
+	parent.DeleteProcess(child)
+
+	if got = scan(); len(got) != 1 {
+		t.Errorf("scan after a deletion = %08X, want only the caller", got)
+	}
+}

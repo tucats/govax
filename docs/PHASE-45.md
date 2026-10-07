@@ -587,3 +587,25 @@ for a process created without one.
   `console/crossprocess_test.go` (a MACRO program suspends and wakes a
   higher-priority child, which stays suspended with its wakeup pending,
   then `$RESUME`s and `$FORCEX`es it: it exits with status 2C).
+- 2026-10-07: Subtask 10 (`$GETJPI` across processes and wildcard
+  scans). `$GETJPI` reads the items of whatever `processTarget` finds
+  (by PID, name, or the scan): every item function already read its
+  environment's process, so it is called with the target's. Looking at
+  another process needs GROUP or WORLD unless it has the caller's UIC
+  (`mayAffect`; SS$_NOPRIV for a named process). `JPI$_STATE` is the
+  scheduler's state code for the target (CUR, COM, HIB, LEF, SUSP,
+  MWAIT, ...), or CUR/COM without the scheduler. `JPI$_JOBTYPE` and
+  `JPI$_MODE` are LOCAL/INTERACTIVE in process 1's job and DETACHED/
+  OTHER in a job `$CREPRC` made, subprocesses included (unconfirmed for
+  subprocesses). Wildcard scan: `-1` starts it and the longword at
+  `pidadr` then holds govax's context, `0xFFFF0000` | the next process
+  table index; each call returns the next process (in index order) the
+  caller may look at and skips the others, and the call after the last is
+  SS$_NOMOREPROC. VMS keeps its own position there, which programs
+  don't read. A process deleted between calls is simply not seen.
+  `callerTarget` is gone (the tests that used it have their own copy).
+  No new items were needed beyond subtasks 2 to 7's. The optional VMS 7.3
+  probe isn't done. Tests: `corevms/crossprocess_test.go`
+  (`TestGetjpi_otherProcess`: PID, owner, master, state, name by PID and
+  by name, a hibernating child, NONEXPR, NOPRIV; `TestGetjpi_wildcard`:
+  table order, skipped processes, a deletion).

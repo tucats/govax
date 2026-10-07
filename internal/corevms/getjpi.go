@@ -3,14 +3,16 @@ package corevms
 import (
 	"fmt"
 
+	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// $GETJPI and $GETJPIW (docs/PHASE-26.md): information about the emulated
-// process, read from corevms.Process. govax has one process, so a request
-// either names it (no process given, PID 0, its own PID, its own name, or
-// the first step of a wildcard) or names no process at all.
+// $GETJPI and $GETJPIW (docs/PHASE-26.md, extended to every process by
+// docs/PHASE-45.md, subtask 10): information about a process, read from
+// its corevms.Process. A request names the caller (no process given), a
+// process by PID or name (processTarget), or scans the process table with
+// a wildcard.
 
 // Status codes $GETJPI returns.
 var (
@@ -19,15 +21,20 @@ var (
 	jpiChain       = uint16(vmsdef.Symbols["JPI$_CHAIN"])
 	jpiInteractive = vmsdef.Symbols["JPI$K_INTERACTIVE"]
 	jpiLocal       = vmsdef.Symbols["JPI$K_LOCAL"]
+	jpiDetached    = vmsdef.Symbols["JPI$K_DETACHED"]
+	jpiOther       = vmsdef.Symbols["JPI$K_OTHER"]
 )
 
 // Wildcard $GETJPI contexts, the longword at pidadr. VMS starts a
 // wildcard scan at -1 and keeps its own position there between calls;
-// programs loop until SS$_NOMOREPROC without interpreting it. govax's one
-// process is returned for -1, and jpiWildcardDone marks the scan finished.
+// programs loop until SS$_NOMOREPROC without interpreting it. govax's
+// context after a process is jpiContext | the process table index to
+// look at next: no real PID has 0xFFFF in its high bits (a PID has 21
+// bits). The scan visits the table in index order, skipping processes
+// the caller may not look at (mayAffect), and ends with SS$_NOMOREPROC.
 const (
-	jpiWildcard     = 0xFFFFFFFF
-	jpiWildcardDone = 0xFFFFFFFE
+	jpiWildcard = 0xFFFFFFFF
+	jpiContext  = 0xFFFF0000
 )
 
 // maxProcessNameLength is the longest process name $GETJPI's prcnam
@@ -39,8 +46,7 @@ const maxProcessNameLength = 15
 // working-set items read corevms.Process's quota fields; JPI$_WSSIZE reports
 // the current limit $ADJWSL adjusts, since govax has no real working set.
 // The AST items describe Process.ast (see astModeMask and remainingASTs),
-// and JPI$_STATE is always SCH$C_CUR: the process asking is, by
-// definition, the one running. The job items (JPI$_MASTER_PID,
+// and JPI$_STATE is the scheduler's state for the process. The job items (JPI$_MASTER_PID,
 // JPI$_JOBPRCCNT, JPI$_PRCLM, and the pooled quotas' limits) read the
 // process's Job (job.go); JPI$_OWNER and JPI$_PRCCNT its own PCB fields.
 // JPI$_BIOLM, JPI$_DIOLM, JPI$_CPULIM, JPI$_CREPRC_FLAGS, and JPI$_TMBU
@@ -60,16 +66,16 @@ var jpiItemsByName = map[string]func(env *Environment) itemValue{
 	"JPI$_PRI":          func(env *Environment) itemValue { return itemLong(env.currentPriority()) },
 	"JPI$_CPUTIM":       func(env *Environment) itemValue { return itemLong(uint32(env.CPUTime(env) / 100_000)) }, // 10ms units
 	"JPI$_PRIB":         func(env *Environment) itemValue { return itemLong(env.Process.BasePriority) },
-	"JPI$_STATE":        func(env *Environment) itemValue { return itemLong(schStateCurrent) },
+	"JPI$_STATE":        func(env *Environment) itemValue { return itemLong(env.schedulingState()) },
 	"JPI$_CLINAME":      func(env *Environment) itemValue { return itemString(env.Process.CLIName) },
 	"JPI$_DFWSCNT":      func(env *Environment) itemValue { return itemLong(env.Process.WSDefault) },
 	"JPI$_EFCS":         func(env *Environment) itemValue { return itemLong(env.Process.LocalEventFlags[0]) },
 	"JPI$_EFCU":         func(env *Environment) itemValue { return itemLong(env.Process.LocalEventFlags[1]) },
 	"JPI$_GRP":          func(env *Environment) itemValue { return itemLong(env.Process.UICGroup()) },
-	"JPI$_JOBTYPE":      func(env *Environment) itemValue { return itemLong(jpiLocal) },
+	"JPI$_JOBTYPE":      func(env *Environment) itemValue { return itemLong(env.jobType()) },
 	"JPI$_MASTER_PID":   func(env *Environment) itemValue { return itemLong(env.Process.Job.MasterPID) },
 	"JPI$_MEM":          func(env *Environment) itemValue { return itemLong(env.Process.UICMember()) },
-	"JPI$_MODE":         func(env *Environment) itemValue { return itemLong(jpiInteractive) },
+	"JPI$_MODE":         func(env *Environment) itemValue { return itemLong(env.jobMode()) },
 	"JPI$_OWNER":        func(env *Environment) itemValue { return itemLong(env.Process.Owner) },
 	"JPI$_PRCCNT":       func(env *Environment) itemValue { return itemLong(env.Process.SubprocessCount) },
 	"JPI$_PRCLM":        func(env *Environment) itemValue { return itemLong(env.Process.Job.SubprocessLimit) },
@@ -97,8 +103,47 @@ var jpiItemsByName = map[string]func(env *Environment) itemValue{
 	"JPI$_LOGINTIM":     func(env *Environment) itemValue { return itemQuad(env.Process.LoginTime) },
 }
 
-// schStateCurrent is SCH$C_CUR, the state of the running process.
-var schStateCurrent = vmsdef.Symbols["SCH$C_CUR"]
+// inConsoleJob reports whether the process belongs to process 1's job,
+// the console's: the only job that is a login (a local interactive one).
+// A job $CREPRC made is detached, and so are its subprocesses.
+func (env *Environment) inConsoleJob() bool {
+	return env.Process.Job.MasterPID&pidIndexMask == 1
+}
+
+// jobType is JPI$_JOBTYPE: LOCAL for the console's job, DETACHED for
+// any other (unconfirmed against VMS for subprocesses).
+func (env *Environment) jobType() uint32 {
+	if env.inConsoleJob() {
+		return jpiLocal
+	}
+
+	return jpiDetached
+}
+
+// jobMode is JPI$_MODE: INTERACTIVE for the console's job, OTHER for
+// any other.
+func (env *Environment) jobMode() uint32 {
+	if env.inConsoleJob() {
+		return jpiInteractive
+	}
+
+	return jpiOther
+}
+
+// schedulingState is JPI$_STATE: the scheduler's state code for the
+// process (SCH$C_CUR, SCH$C_HIB, ...). With no scheduler installed,
+// the process the CPU holds is CUR and the others COM.
+func (env *Environment) schedulingState() uint32 {
+	if info, ok := env.sched.Info(handle(env)); ok && env.engine != nil {
+		return uint32(info.State)
+	}
+
+	if env == env.Current() {
+		return uint32(sched.StateCUR)
+	}
+
+	return uint32(sched.StateCOM)
+}
 
 // astModeMask turns a per-mode flag array (AST enabled, AST active) into
 // the bit vector $GETJPI reports: bit 0 for kernel mode, 1 executive, 2
@@ -196,7 +241,14 @@ func serviceSysGetjpi(env *Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	if st := env.callerTarget(pidadr, prcnam, true); st != 0 {
+	target, st := env.processTarget(pidadr, prcnam, true)
+	if st != 0 {
+		return st, nil
+	}
+
+	// Looking at another process needs GROUP or WORLD, unless it has the
+	// caller's UIC.
+	if st := env.mayAffect(target); st != 0 {
 		return st, nil
 	}
 
@@ -206,7 +258,7 @@ func serviceSysGetjpi(env *Environment, argv []uint32) (uint32, error) {
 			return ssBadParam
 		}
 
-		return env.storeItem(e, item(env))
+		return env.storeItem(e, item(target))
 	})
 	if status == 0 {
 		status = ssNormal
@@ -261,10 +313,21 @@ func (env *Environment) processTarget(pidadr, prcnam uint32, wildcard bool) (*En
 	}
 
 	switch {
-	case wildcard && pid == jpiWildcard:
-		return writeBack(env, jpiWildcardDone)
+	case wildcard && (pid == jpiWildcard || pid&0xFFFF0000 == jpiContext):
+		index := pid & 0xFFFF
+		if pid == jpiWildcard {
+			index = 1
+		}
 
-	case wildcard && pid == jpiWildcardDone:
+		for ; index <= MaxProcesses; index++ {
+			next := env.procs.slots[index]
+			if next == nil || env.mayAffect(next) != 0 {
+				continue
+			}
+
+			return writeBack(next, jpiContext|(index+1))
+		}
+
 		return nil, ssNoMoreProc
 
 	case pid != 0:
@@ -318,23 +381,6 @@ func (env *Environment) mayAffect(target *Environment) uint32 {
 	}
 
 	return ssNoPriv
-}
-
-// callerTarget is processTarget for $GETJPI, which so far describes only
-// the calling process (docs/PHASE-45.md, subtask 10 reaches the others):
-// naming any other process is SS$_NONEXPR. Every other service that
-// takes a pidadr/prcnam reaches any process.
-func (env *Environment) callerTarget(pidadr, prcnam uint32, wildcard bool) uint32 {
-	target, st := env.processTarget(pidadr, prcnam, wildcard)
-	if st != 0 {
-		return st
-	}
-
-	if target != env {
-		return ssNonExpr
-	}
-
-	return 0
 }
 
 func registerJPIServices(t *ServiceTable) {
