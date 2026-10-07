@@ -1,7 +1,7 @@
 # Phase 44 — Multiprocessing, part 2: the scheduler
 
-**Status:** planned (2026-10-06); decisions taken 2026-10-06 (see
-PHASE-43.md, Part A). Not started. Needs Phase 43.
+**Status:** in progress (started 2026-10-07); decisions taken 2026-10-06
+(see PHASE-43.md, Part A). Subtask 1 done.
 
 The program this phase belongs to — its goal, architecture, rules for
 every commit, decisions, and known bugs — is in
@@ -69,10 +69,13 @@ directly:
   processes per priority.
 - **Choosing**: the head of the highest non-empty queue.
 - **Quantum**: each process has a remaining count; the hook decrements it;
-  at zero, a normal process's current priority decays by one (not below
-  base) and it goes to the back of its queue, if another process of the
-  same or higher priority is computable (otherwise it keeps running with
-  a fresh quantum, as VMS does).
+  at zero it gets a fresh quantum, and a normal process is rescheduled: it
+  goes to the back of its queue, so a computable process of the same
+  priority gets a turn; with none, it's chosen again (and keeps the CPU).
+  A real-time process has no quantum end.
+- **Decay**: each time a normal process above its base is *chosen*, its
+  current priority drops by one first (the book, section 10.3.3, step 3),
+  so a compute-bound process drifts back to its base at quantum ends.
 - **Boosts**: when an event ends a normal process's wait, its current
   priority is raised by the event's boost (I/O completion, wakeup, event
   flag, resource available, terminal input/output), up to the
@@ -80,8 +83,10 @@ directly:
   boost values come from the manuals or Decision 6's book (*VAX/VMS
   Internals and Data Structures*, usable in full); otherwise
   chosen and logged as unconfirmed.
-- **Preemption test**: when a process becomes computable with a higher
-  current priority than the current process's, a reschedule is requested.
+- **Preemption test**: when a process becomes computable with a current
+  priority higher than *or equal to* the current process's, a reschedule
+  is requested (the book, section 10.2.3, step 4); an equal one then runs
+  first, the preempted process going behind it.
 
 The package keeps opaque process handles; `corevms` owns the processes.
 
@@ -223,9 +228,10 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
 
 - Whether `$SETPRI`'s and `$GETJPI`'s view of "current priority" should
   include boosts (VMS's `JPI$_PRI` does). Probably yes.
-- What VMS does at quantum end for a process at real-time priority (no
-  quantum preemption among real-time processes, by the manuals' account);
-  confirm in subtask 1.
+- ~~What VMS does at quantum end for a process at real-time priority~~
+  Settled in subtask 1: nothing but a fresh quantum (the book, sections
+  10.1.2.1 and 10.1.2.4); real-time processes run until they wait or a
+  higher-or-equal priority process preempts them.
 - How much the scheduler's per-instruction work costs; if the decrement
   in Step is measurable, fold it into the existing `tickQuantum` counter.
 
@@ -234,3 +240,50 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
 - 2026-10-06: Planned with Phase 43.
 - 2026-10-06: The author took every recommended decision in
   PHASE-43.md, Part A.
+- 2026-10-07: **Subtask 1 done: `internal/sched`.** A leaf package
+  (`doc.go`, `state.go`, `boost.go`, `scheduler.go`), its rules from
+  *VAX/VMS Internals and Data Structures* (Decision 6), chapter 10,
+  cited in the comments:
+  - `State` is VMS's `SCH$C_*` numbering (Table 10-1; `TestStateCodes`
+    checks it against `vmsdef.Symbols`), with `IsWait` and SHOW SYSTEM's
+    names. `Resource` is an MWAIT's resource, numbered as Table 10-2's
+    `RSN$_*` values (`RSN$_ASTWAIT` 1, `RSN$_MAILBOX` 2, ...), named
+    `RWAST`, `RWMBX`, ... by `StateName`. **Unconfirmed:** the book is
+    VMS 3.3's; that VMS 7.3 numbers the resources the same, and SHOW
+    SYSTEM's `RW` names, await the subtask 10 probe. There is no
+    "deleted" state: `Remove` forgets the process, as VMS does.
+  - `Class` is the priority increment class (`PRI$_NULL`, `IOCOM`,
+    `RESAVL` = `TIMER`, `TOCOM`, `TICOM`) and `Boost` its increment, 0,
+    2, 3, 4, 6 (Table 10-3); process creation is the `TICOM` class. The
+    boost rule is the book's three steps (section 10.2.4): base plus the
+    increment, but not below the current priority, and the base if that's
+    above 15 (so real-time processes, and normal ones at base 14 or 15,
+    are never boosted).
+  - `Scheduler`: `Add` (computable, with a creation boost class),
+    `Remove`, `Wait` (state and resource), `Ready` (an event: boost,
+    computable, and whether it preempts), `Tick` (one instruction:
+    CPU count, quantum), `Reschedule` (the book's SCH$RESCHED then
+    SCH$SCHED: current to the back of its queue; head of the highest
+    queue chosen, demoted by one if a normal process above base),
+    `SetBasePriority`, and `Info`/`Handles`/`Computable` for SHOW
+    SYSTEM. Processes are opaque `Handle`s (govax will use PIDs).
+  - Two places the plan's Design differed from the book, now corrected
+    above: decay happens when a process is chosen, not at quantum end
+    as such; and a newly computable process preempts at an *equal*
+    priority too, not only a higher one.
+  - A waiting process keeps the rest of its quantum (VMS does too); VMS's
+    IOTA (a quantum charge per wait) is left out, as is everything about
+    swapping and paging (COMO, LEFO, HIBO, SUSPO, PFW, FPG, COLPG have
+    codes but no use).
+  - `SetBasePriority` sets base and current priority to the new value;
+    Table 10-3's "Set Priority" boost of 2, and how `$SETPRI` combines
+    it, are left for subtask 6. Lowering the current process below
+    (strictly) a computable one reschedules; raising a computable process
+    preempts by the usual test.
+  - Tests (`scheduler_test.go`, 97% coverage): round robin among equals,
+    priority order, quantum end with no competitor or only a lower one
+    keeps the CPU, real-time has no quantum end and no boost or decay,
+    decay floor at base, the boost table and rule, the preemption test
+    (higher, equal, lower, boosted, real-time), idling and waking, a
+    waiting process keeping its quantum, removal, `SetBasePriority`,
+    errors, and the start of the book's Figure 10-2 example.
