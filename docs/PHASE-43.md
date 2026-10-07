@@ -991,3 +991,20 @@ uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
   otherwise use `all` silently). `HELP CONFIG KEYS` has a Processes
   section. Tests: `TestParsePreemptMode`, `TestNewSystemProcessSettings`,
   `TestProcessSettings`.
+- 2026-10-07: Subtask 12 (the hand-switch test).
+  `console/handswitch_test.go` (`TestHandSwitchTwoProcesses`, an
+  external test with the consoletest helpers) boots with `vax.init`,
+  runs a few user-mode instructions in process 1 at P0 0x400, builds
+  process 2 (`BuildAddressSpace`, `BuildStacks`, `InitialPCB` with its
+  PC at the same 0x400), writes its program through its address space,
+  and switches with `SaveContext`, PCBB, and `LoadContext`, then back.
+  It checks: each process stores to P0 0x600 and pushes on its user
+  stack at 0x7FDFFFFC, and each sees its own value at both; both read
+  one S0 longword and the P1 vector's `SYS$EXIT` entry alike; process 1's
+  PCB holds its PC, R0, user SP, PSL, and P0BR while process 2 runs, and
+  process 2's its registers and address space after the switch back;
+  process 1 then carries on. Found writing it: a P1 table must reach
+  down to the user stack top for the stack to be there (4096 pages
+  below P1's top; the vector is 145 pages down), so
+  `corevms.MinP1Pages` (4097) names the smallest useful one. The whole
+  suite passes unchanged.

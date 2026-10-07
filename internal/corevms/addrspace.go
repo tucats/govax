@@ -134,6 +134,14 @@ func (sys *System) ShareP1(base, end uint32) error {
 	return nil
 }
 
+// MinP1Pages is the smallest P1 table that maps a process's initial user
+// stack: UserStackTop (0x7FE00000) is 4096 pages below P1's top, so the
+// table must describe those pages and the one below them, where the first
+// push lands. (The P1 vector, 0x7FFEDE00 up, is within them.) A smaller
+// table is allowed, for a process that never runs user-mode code on that
+// stack, but the stack pointer then points at nothing.
+const MinP1Pages = (0x80000000-UserStackTop)/pageSize + 1
+
 // BuildAddressSpace makes a new process's address space: P0 and P1 page
 // tables of p0Pages and p1Pages entries, in S0 pages from the System's
 // pool (charged to pid), each entry a demand-zero page as ProcessPTE
