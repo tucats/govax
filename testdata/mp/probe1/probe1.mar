@@ -154,11 +154,14 @@ haveimages:
 
 ; The termination mailbox and its unit; the information mailbox, named.
 	step	2
-	pushl	#2048
-	pushl	#128
+	pushl	#0			; lognam
+	pushl	#0			; acmode
+	pushl	#0			; promsk
+	pushl	#2048			; bufquo
+	pushl	#128			; maxmsg
 	pushal	term_chan
-	pushl	#0
-	calls	#4,g^sys$crembx
+	pushl	#0			; prmflg
+	calls	#7,g^sys$crembx
 	check
 	step	3
 	pushl	#0			; nullarg

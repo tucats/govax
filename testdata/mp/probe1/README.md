@@ -55,6 +55,9 @@ Run 1 (2026-10-07, `vax/probe1-run1.log`) ended at once with
 arguments than VMS 7.1 requires (suspects: `$GETDVIW` with 4, `$CREPRC`
 with 12). The programs now print `step n` before each service so a log
 that ends early shows where, and `$GETDVIW` is called with 8 arguments.
+Run 2 (`vax/probe1-run2.log`) stopped at `step 2`: `$CREMBX` with 4
+arguments is `INSFARG` too. VMS 7.1 wants all seven (through `lognam`);
+govax accepts fewer, which is why its tests never noticed.
 
 Nothing else is needed. If a program hangs on VMS (for instance, waiting
 for a termination message that doesn't come), press CTRL/Y and `STOP` the
